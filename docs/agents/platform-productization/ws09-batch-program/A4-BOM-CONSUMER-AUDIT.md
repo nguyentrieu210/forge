@@ -8,14 +8,14 @@ Risk: **STANDARD**
 
 ## 1. Scope truth
 
-A4 owns the Manufacturing/BOM consumer only. It must not invent the shared BatchAction/BatchTransaction contract or executor while A1/A2 are still bootstrap-only.
+A4 owns the Manufacturing/BOM consumer only. It must not invent the shared BatchAction/BatchTransaction contract or executor.
 
-Current upstream worker state at this audit:
+Current upstream worker state at the latest audit:
 
-- A1 PR `#548`, head `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7`: bootstrap/handoff only; no accepted shared contract yet.
-- A2 PR `#549`, head `c8e151d90211baa1fcc828ac1f4d6082c77b9d90`: bootstrap/handoff only; no accepted executor yet.
+- A1 PR `#548`, head `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7`: bootstrap/handoff only; no accepted shared public contract yet.
+- A2 PR `#549`, head `9d55d3c5d4978aee3878262148dff09d2acdc837`: generic executor implementation exists, but its own source marks `BatchExecutionPlan` as runtime-only and explicitly not the public AppAction/BatchAction manifest contract owned by A1.
 
-Therefore this branch continues only independent WS05 work until those shared heads are available.
+Therefore A4 does **not** bind directly to A2's runtime-only plan while A1 is unresolved. Doing so would freeze a consumer against a non-public intermediate contract and violate program ownership. Independent WS05 work continues until the accepted A1 contract can be adapted into A2's executor seam.
 
 ## 2. Existing canonical BOM authority
 
@@ -62,7 +62,7 @@ A4 must not reproduce any of those rules in the generic batch layer.
 
 The Tenant Worker binding scans matching tenant BOM revisions and fails closed if any matching revision is outside the actor's read scope.
 
-## 3. Consumer semantics to preserve when A1/A2 land
+## 3. Consumer semantics to preserve when A1/A2 converge
 
 The A4 adapter must express these vertical semantics without changing the shared primitive:
 
@@ -92,16 +92,16 @@ Executable test status in this session: **UNPROVEN**. The available environment 
 Dependency Request
 From: A4
 To: A1/A2
-Need: accepted shared BatchAction/BatchTransaction contract plus executor/domain-callback seam that A4 can consume without defining a second shared primitive.
-Why owner belongs there: A1 owns shared metadata/result semantics; A2 owns generic execution/idempotency/audit orchestration.
-Blocked scope: final BOM adapter registration into the shared primitive; shared retry/idempotency integration test; combined result-envelope assertion.
-Independent work remaining: yes — exact BOM lifecycle audit, version/correction rules, fixtures/regression, permission/tenant evidence, consumer mapping plan.
-Evidence: `manufacturing-lifecycle.ts`, `manufacturing-bom-bulk.ts`, `manufacturing-bom-bulk-api.ts`, `manufacturing-bom-bulk*.test.mjs`, this audit document.
+Need: accepted A1 BatchAction/BatchTransaction public contract plus the A1->A2 adapter/domain-callback seam that A4 can consume without defining a second shared primitive.
+Why owner belongs there: A1 owns shared metadata/result semantics; A2 owns generic execution/idempotency/audit orchestration and already has a runtime-only executor implementation.
+Blocked scope: final BOM adapter registration into the shared primitive; shared retry/idempotency integration test; combined public result-envelope assertion.
+Independent work remaining: yes — exact BOM lifecycle audit, version/correction rules, focused regression, permission/tenant evidence, consumer mapping plan.
+Evidence: A1 `#548`, A2 `#549`, `manufacturing-lifecycle.ts`, `manufacturing-bom-bulk.ts`, `manufacturing-bom-bulk-api.ts`, `manufacturing-bom-bulk*.test.mjs`, this audit document.
 
 ## 6. Integration checklist once dependency resolves
 
 - consume exact accepted A1 types instead of copying them;
-- consume exact accepted A2 executor/domain callback seam;
+- use A1's canonical adapter into the accepted A2 executor/domain callback seam;
 - expose BOM-specific declaration/adapter only under WS05 ownership;
 - map one batch item to one canonical BOM Draft operation;
 - prove preview produces no writes;
@@ -114,4 +114,4 @@ Evidence: `manufacturing-lifecycle.ts`, `manufacturing-bom-bulk.ts`, `manufactur
 
 ## 7. Maturity recommendation
 
-No capability promotion from this audit alone. Existing BOM parent/child/version capability evidence remains as previously recorded by WS05; shared batch productization is not yet `Wired` for BOM until the A1/A2 primitive is actually consumed and executable integration evidence exists.
+No capability promotion from this audit alone. Existing BOM parent/child/version capability evidence remains as previously recorded by WS05; shared batch productization is not yet `Wired` for BOM until the accepted A1 contract is actually consumed through A2 and executable integration evidence exists.
