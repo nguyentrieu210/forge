@@ -1,0 +1,142 @@
+name: WS01 approved exact-main rebuild
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ent-01-finance-vn-r2
+          fetch-depth: 0
+      - name: Replay audited WS01 net diff onto exact main
+        shell: bash
+        run: |
+          git fetch origin main agent/ent-01-finance-vn
+          base="$(git merge-base origin/main origin/agent/ent-01-finance-vn)"
+          echo "WS01_OLD_MERGE_BASE=$base"
+          mapfile -t rows < <(git diff --name-status "$base" origin/agent/ent-01-finance-vn)
+          for row in "${rows[@]}"; do
+            status="${row%%$'\t'*}"
+            rest="${row#*$'\t'}"
+            # Temporary CI/process files from the stale branch are not product scope.
+            case "$rest" in .github/workflows/*) continue;; esac
+            path="$rest"
+            if [[ "$status" == R* ]]; then
+              old="${rest%%$'\t'*}"
+              path="${rest#*$'\t'}"
+              rm -f "$old"
+            fi
+            if [[ "$status" == M* ]]; then
+              if ! git diff --quiet "$base" origin/main -- "$path"; then
+                case "$path" in
+                  server/package.json|server/packages/clouderp-erpnext/src/registry.ts)
+                    echo "AUDITED_SHARED_OVERLAP $path" ;;
+                  *)
+                    echo "UNRECONCILED_SHARED_OVERLAP $path"
+                    git diff --stat "$base" origin/main -- "$path"
+                    exit 1 ;;
+                esac
+              fi
+            fi
+            if [[ "$status" == D* ]]; then
+              rm -f "$path"
+              continue
+            fi
+            mkdir -p "$(dirname "$path")"
+            git show "origin/agent/ent-01-finance-vn:$path" > "$path"
+          done
+      - name: Renumber append-only migrations and close branch-owned validation defects
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          mapping = {
+            '0048_vn_accounting_statutory_foundation.sql': '0056_vn_accounting_statutory_foundation.sql',
+            '0049_vn_accounting_statutory_registry_integrity.sql': '0057_vn_accounting_statutory_registry_integrity.sql',
+            '0050_vn_einvoice_compliance_evidence.sql': '0058_vn_einvoice_compliance_evidence.sql',
+            '0051_vn_tax_ruleset_dsl_integrity.sql': '0059_vn_tax_ruleset_dsl_integrity.sql',
+            '0052_finance_budget_commitment.sql': '0060_finance_budget_commitment.sql',
+            '0053_finance_budget_submission_closure.sql': '0061_finance_budget_submission_closure.sql',
+            '0054_finance_budget_permission_alignment.sql': '0062_finance_budget_permission_alignment.sql',
+            '0055_vn_vat_dataset_mapping.sql': '0063_vn_vat_dataset_mapping.sql',
+            '0056_vn_accounting_policy_integrity.sql': '0064_vn_accounting_policy_integrity.sql',
+            '0057_tt99_account_company_policy_binding.sql': '0065_tt99_account_company_policy_binding.sql',
+          }
+          mig = Path('server/migrations/tenant')
+          for old, new in mapping.items():
+            oldp, newp = mig / old, mig / new
+            if oldp.exists():
+              if newp.exists(): raise SystemExit(f'migration collision: {new}')
+              oldp.rename(newp)
+
+          # Replace exact filename references without cascading renumber substitutions.
+          token_map = {old: f'__WS01_MIG_{i}__' for i, old in enumerate(mapping)}
+          roots = [Path('server'), Path('docs/agents/workstreams')]
+          for root in roots:
+            for path in root.rglob('*'):
+              if not path.is_file() or path.suffix not in {'.py','.mjs','.ts','.json','.md','.sql'}:
+                continue
+              text = path.read_text()
+              updated = text
+              for old, token in token_map.items(): updated = updated.replace(old, token)
+              for old, token in token_map.items(): updated = updated.replace(token, mapping[old])
+              if updated != text: path.write_text(updated)
+
+          # VAT account mapping: json_type() returns NULL for a missing key. Missing arrays must
+          # hit INVALID, not fall through to the later EMPTY guard.
+          vat = mig / '0063_vn_vat_dataset_mapping.sql'
+          text = vat.read_text()
+          text = text.replace("json_type(data_json,'$.input_vat') <> 'array'", "COALESCE(json_type(data_json,'$.input_vat'),'') <> 'array'")
+          text = text.replace("json_type(data_json,'$.output_vat') <> 'array'", "COALESCE(json_type(data_json,'$.output_vat'),'') <> 'array'")
+          vat.write_text(text)
+
+          # Shared action runtime cannot render Code fields. This is user input JSON, not a code
+          # editor authority, so Text keeps the same backend contract without adding a UI fork.
+          app_path = Path('server/apps-src/vn-accounting/app.json')
+          app = json.loads(app_path.read_text())
+          action = next((a for a in app.get('actions', []) if a.get('name') == 'tax-evaluate'), None)
+          if not action: raise SystemExit('tax-evaluate action missing')
+          field = next((f for f in action.get('fields', []) if f.get('fieldname') == 'input_json'), None)
+          if not field: raise SystemExit('tax-evaluate input_json field missing')
+          field['fieldtype'] = 'Text'
+          app_path.write_text(json.dumps(app, ensure_ascii=False, indent=2) + '\n')
+          PY
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build
+        run: pnpm --filter cloudforge run build
+      - name: Unit
+        run: pnpm --filter cloudforge run test:unit
+      - name: SQL
+        run: pnpm --filter cloudforge run test:sql
+      - name: App/meta
+        run: pnpm --filter cloudforge run app:check
+      - name: Worker typecheck
+        run: pnpm --filter cloudforge run typecheck:workers
+      - name: Persist exact validated WS01 branch
+        run: |
+          git rm .github/workflows/ws01-approved-rebuild-temp.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "feat(ws01): rebuild finance foundation on exact main"
+          git push origin HEAD:agent/ent-01-finance-vn-r2
