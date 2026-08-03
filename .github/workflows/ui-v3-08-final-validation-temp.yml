@@ -53,7 +53,14 @@ jobs:
           corepack prepare pnpm@9.15.0 --activate
           pnpm --version
 
-      - name: Install locked workspace
+      - name: Generate exact lock delta for V3 packages
+        run: |
+          pnpm install --no-frozen-lockfile --lockfile-only
+          echo '--- GENERATED PNPM LOCK DIFF ---'
+          git diff -- pnpm-lock.yaml
+          echo '--- END GENERATED PNPM LOCK DIFF ---'
+
+      - name: Install generated locked workspace
         run: pnpm install --frozen-lockfile
 
       - name: Shell typecheck and build
