@@ -28,7 +28,8 @@ async function expectNoHorizontalOverflow(page: Page) {
 async function expectTouchHeight(locator: Locator, minimum = 44) {
   const box = await locator.boundingBox();
   expect(box, "control must have a bounding box").not.toBeNull();
-  if (box) expect(box.height).toBeGreaterThanOrEqual(minimum);
+  // Device-scale rounding can report a nominal 44px CSS box as 43.99997px.
+  if (box) expect(box.height).toBeGreaterThanOrEqual(minimum - 0.25);
 }
 
 async function attach(page: Page, testInfo: TestInfo, name: string) {
@@ -92,21 +93,24 @@ test.describe("V3-07 runtime mobile acceptance", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Alumdoor login keeps mobile touch ergonomics", async ({ page }, testInfo) => {
+  test("Alumdoor brand seam keeps mobile login ergonomics", async ({ page }, testInfo) => {
     test.skip(!testInfo.project.name.startsWith("mobile-"), "mobile touch acceptance");
     await page.goto("/?alumdoor=1", { waitUntil: "domcontentloaded" });
 
+    const auth = page.getByTestId("forge-auth-login");
+    const brandMark = page.getByRole("img", { name: "Alumdoor" });
     const username = page.locator("#mf-login-usr");
     const password = page.locator("#mf-login-pwd");
     const submit = page.locator('form button[type="submit"]').first();
-    const mobileEntry = page.getByRole("button", { name: /Tải App mobile/ });
 
-    await expect(page.locator("[data-alumdoor-login]")).toBeVisible();
+    // V3-03 deliberately removed product-specific login forks. Alumdoor now uses
+    // the shared auth surface through the existing brand/brandMark seam.
+    await expect(auth).toBeVisible();
+    await expect(brandMark).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expectTouchHeight(username);
     await expectTouchHeight(password);
     await expectTouchHeight(submit);
-    await expectTouchHeight(mobileEntry);
     await attach(page, testInfo, "alumdoor-login");
   });
 
