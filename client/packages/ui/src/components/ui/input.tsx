@@ -10,7 +10,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       className={cn(
         controlBase,
         focusRing,
-        "flex w-full px-[11px] py-1 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground",
+        "flex w-full px-[11px] py-1 file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-foreground/70",
         className,
       )}
       {...props}
