@@ -1,11 +1,6 @@
 name: ALU Apply Employee Lite
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/alu-employee-lite-apply.yml"
   workflow_dispatch:
     inputs:
       confirm:
@@ -27,12 +22,12 @@ concurrency:
 jobs:
   apply:
     name: Apply and verify Employee Lite on ALU
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.confirm == 'ALU_EMPLOYEE_LITE')
+    if: inputs.confirm == 'ALU_EMPLOYEE_LITE'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
     env:
-      TARGET_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
+      TARGET_SHA: ${{ inputs.target_sha || github.sha }}
       FORGE_ORIGIN: https://alu.kairo.vn
       FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
       FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}

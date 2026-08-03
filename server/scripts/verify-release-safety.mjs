@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { serverRoot } from "./wrangler-cli.mjs";
 
-const workflowPath = path.resolve(serverRoot, "..", ".github", "workflows", "alu-build-deploy.yml");
+const repoRoot = path.resolve(serverRoot, "..");
+const workflowsDir = path.join(repoRoot, ".github", "workflows");
+const canonicalWorkflowName = "alu-build-deploy.yml";
+const workflowPath = path.join(workflowsDir, canonicalWorkflowName);
 const workflow = readFileSync(workflowPath, "utf8");
 
 const required = [
@@ -52,4 +55,53 @@ if (automaticGuardIndex < 0 || !workflow.includes('client/*) has_client=true')) 
   throw new Error("automatic production UI lane must retain explicit client-only guard");
 }
 
-console.log("RELEASE_SAFETY_PASS merged-main-target backup-before-migration current-main-verifier no-sql-artifact");
+const workflowFiles = readdirSync(workflowsDir)
+  .filter((name) => /\.ya?ml$/i.test(name))
+  .sort();
+for (const name of workflowFiles) {
+  if (/^tmp-/i.test(name)) {
+    throw new Error(`temporary workflow must not remain active in root workflow topology: ${name}`);
+  }
+  if (name === canonicalWorkflowName) continue;
+
+  const source = readFileSync(path.join(workflowsDir, name), "utf8");
+  const deploysGateway = source.includes("apps/gateway-worker/wrangler.jsonc") && source.includes("wrangler deploy");
+  if (deploysGateway) {
+    throw new Error(`Gateway production deploy must live only in ${canonicalWorkflowName}; found ${name}`);
+  }
+
+  const productionMutation = source.includes("environment: production") && [
+    "--execute",
+    "wrangler deploy",
+    "deploy-tenant.mjs",
+    "migrate-tenant.mjs",
+    "reset-remote-admin-password.mjs",
+  ].some((needle) => source.includes(needle));
+  if (!productionMutation) continue;
+
+  if (hasTopLevelWorkflowEvent(source, "push") || hasTopLevelWorkflowEvent(source, "pull_request")) {
+    throw new Error(`production-mutating maintenance workflow must not run automatically: ${name}`);
+  }
+  if (!hasTopLevelWorkflowEvent(source, "workflow_dispatch")) {
+    throw new Error(`production-mutating maintenance workflow must be explicit workflow_dispatch: ${name}`);
+  }
+}
+
+console.log(
+  `RELEASE_SAFETY_PASS merged-main-target backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
+);
+
+function hasTopLevelWorkflowEvent(source, event) {
+  const lines = source.split(/\r?\n/);
+  let insideOn = false;
+  for (const line of lines) {
+    if (/^on:\s*$/.test(line)) {
+      insideOn = true;
+      continue;
+    }
+    if (!insideOn) continue;
+    if (/^\S/.test(line) && line.trim()) break;
+    if (new RegExp(`^\\s{2}${event}:`).test(line)) return true;
+  }
+  return false;
+}
