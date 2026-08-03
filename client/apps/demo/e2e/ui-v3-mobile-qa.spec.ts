@@ -7,6 +7,21 @@ const SURFACES = [
   { name: "builder", route: "/view/b-dashboard" },
 ] as const;
 
+async function dismissAppearanceSetup(page: Page) {
+  const useTheme = page.getByRole("button", { name: "Dùng giao diện này", exact: true });
+  try {
+    await useTheme.waitFor({ state: "visible", timeout: 1_500 });
+    await useTheme.click();
+  } catch {
+    // Only rendered for a fresh browser profile.
+  }
+}
+
+async function gotoSurface(page: Page, route: string) {
+  await page.goto(route);
+  await dismissAppearanceSetup(page);
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   const dimensions = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
@@ -47,7 +62,7 @@ function cssDurationToMs(value: string): number {
 test.describe("V3-07 mobile / responsive convergence", () => {
   for (const surface of SURFACES) {
     test(`${surface.name} keeps the document inside the viewport`, async ({ page }, testInfo) => {
-      await page.goto(surface.route);
+      await gotoSurface(page, surface.route);
       await expect(page.getByRole("main")).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await attachViewport(page, testInfo, surface.name);
@@ -55,7 +70,7 @@ test.describe("V3-07 mobile / responsive convergence", () => {
   }
 
   test("list switches renderer without creating a second mobile runtime", async ({ page }) => {
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     await expectNoHorizontalOverflow(page);
 
     const width = page.viewportSize()?.width ?? 1440;
@@ -70,7 +85,7 @@ test.describe("V3-07 mobile / responsive convergence", () => {
   test("mobile drawer closes with Escape and restores trigger focus", async ({ page }, testInfo) => {
     test.skip((page.viewportSize()?.width ?? 1440) >= 768, "mobile-only acceptance");
 
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     const trigger = page.getByRole("button", { name: "Mở menu", exact: true });
     await expect(trigger).toBeVisible();
     await expectInsideViewport(page, trigger);
@@ -87,7 +102,7 @@ test.describe("V3-07 mobile / responsive convergence", () => {
   test("workspace keeps its longest navigation label reachable on mobile", async ({ page }, testInfo) => {
     test.skip((page.viewportSize()?.width ?? 1440) >= 768, "mobile-only acceptance");
 
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     await page.getByRole("button", { name: "Mở menu", exact: true }).click();
 
     const navigation = page.getByRole("navigation", { name: "Điều hướng ứng dụng" });
@@ -106,7 +121,7 @@ test.describe("V3-07 mobile / responsive convergence", () => {
 
   test("reduced motion collapses shell transition timings", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
 
     await expect.poll(() => page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
 
