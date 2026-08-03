@@ -220,6 +220,69 @@ Sau khi merge:
 - capability map chỉ đổi maturity khi có evidence;
 - không nhét SHA/branch tạm vào North Star.
 
+## 7A. Automatic multi-agent orchestration
+
+Trước implementation, coordinator phải tự phân loại execution topology:
+
+- `SINGLE`: một owner là an toàn/nhanh nhất;
+- `PROGRAM`: cần nhiều worker agent có ownership tách được.
+
+Không hỏi user xem "có cần agent không" nếu repo evidence đã đủ để quyết định.
+
+### Khi mặc định chọn PROGRAM
+
+Fan-out khi có ít nhất một strong trigger và các hotspot có thể tách sạch:
+
+1. từ hai ownership hotspot độc lập trở lên có thể chạy song song;
+2. task trải qua nhiều workstream/domain/package với authority khác nhau;
+3. có shared foundation/contract rồi nhiều consumer độc lập;
+4. có các lane audit/source-lock, implementation, integration, QA/convergence tách được;
+5. platform-wide rebuild/convergence/hardening wave có nhiều slice thực sự độc lập;
+6. các substream có risk/merge boundary khác nhau, ví dụ UI FAST song song backend STANDARD/CRITICAL.
+
+Giữ `SINGLE` nếu phần lớn thay đổi nằm ở một hotspot, invariant cần chứng minh nguyên khối, hoặc coordination cost lớn hơn implementation.
+
+### Khi chọn PROGRAM, coordinator tự làm
+
+Không chờ user nhắc. Coordinator phải:
+
+1. audit exact current `main`, branch/PR và source bắt buộc;
+2. tạo program/control branch từ exact current `main`;
+3. tạo technical/program spec, Agent Board, NO-STOP rule, dependency graph và acceptance gates;
+4. source-lock/parity matrix nếu benchmark/reference bên ngoài là material;
+5. định nghĩa từng worker: mission, owned hotspot, forbidden zone, risk, dependency, evidence, merge/deploy boundary;
+6. tạo worker branches từ exact program baseline;
+7. seed branch-local handoff + startup prompt cho từng worker;
+8. verify topology trước implementation: worker không được mang code/handoff của owner khác;
+9. cho worker chạy song song theo dependency graph;
+10. coordinator theo dõi exact heads/diffs, route Dependency Request, chống duplicate primitive và quyết định convergence/merge order.
+
+Số agent dùng **ít nhất cần thiết để ownership sạch**. Hướng dẫn mặc định:
+
+- 1: single hotspot/tightly coupled slice;
+- 2–4: cross-package feature hoặc domain hardening bình thường;
+- 5–8: platform rebuild/convergence/enterprise wave;
+- >8: chỉ khi capability graph thật sự có nhiều owner độc lập.
+
+Agent count không phải KPI.
+
+### NO-STOP mặc định
+
+Worker tự audit và quyết định kỹ thuật thông thường theo Skill/North Star/repo evidence.
+
+Worker chỉ dừng hỏi user khi:
+
+1. cần quyết định nghiệp vụ không thể suy ra từ repo/spec;
+2. cần đổi shared authoritative contract thuộc stream khác và không thể cô lập dependency;
+3. cần destructive/production operation;
+4. non-UI work đã sẵn sàng merge/deploy nhưng project policy yêu cầu user duyệt.
+
+Blocker cục bộ không phải lý do dừng. Ghi `Dependency Request`, mô tả phần bị block rồi tiếp tục mọi phần độc lập.
+
+UI-only vẫn theo fast path sau verify blast radius. Non-UI/shared contract/backend/schema/migration/business rule vẫn dừng trước merge/deploy theo production boundary.
+
+Canonical chi tiết: `docs/agents/AUTO_AGENT_ORCHESTRATION.md` và `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`.
+
 ## 8. Definition of Done của một capability
 
 Một capability chỉ được coi là hoàn tất khi phù hợp scope và có đủ:
@@ -378,5 +441,3 @@ Forge hoàn thiện khi:
 - app mới được sinh từ primitive chung thay vì fork core;
 - triển khai/migrate/backup/restore có công cụ;
 - production evidence đủ để biết chính xác thứ gì đang chạy.
-
-Đó là tiêu chuẩn của skill này.
