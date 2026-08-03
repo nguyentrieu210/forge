@@ -1,0 +1,19 @@
+{
+  "name": "CRM Marketing List",
+  "module": "CRM",
+  "autoname": "CRM-LIST-.YYYY.-#####",
+  "title_field": "list_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "list_name", "label": "Tên danh sách", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "segment", "label": "Phân khúc", "fieldtype": "Link", "options": "CRM Segment", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nArchived", "default": "Draft", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

@@ -6,7 +6,7 @@ import { readAppSource } from "./lib/read-app-source.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = path.resolve(here, "..");
-const sources = ["maintenance", "projects", "support", "visits", "hrm", "vn-accounting", "erp-organization-security"];
+const sources = ["maintenance", "projects", "support", "visits", "hrm", "vn-accounting", "erp-organization-security", "manufacturing-qms"];
 const failures = [];
 
 for (const source of sources) {

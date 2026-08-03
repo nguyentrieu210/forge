@@ -1,0 +1,17 @@
+{
+  "name": "Quotation Tax",
+  "module": "CRM",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "account", "label": "Tài khoản thuế", "fieldtype": "Link", "options": "Account", "required": true, "in_list_view": true },
+    { "fieldname": "charge_type", "label": "Cách tính", "fieldtype": "Select", "options": "On Net Total\nOn Previous Row Total\nActual\nOn Item Quantity", "default": "On Net Total", "required": true, "in_list_view": true },
+    { "fieldname": "rate", "label": "Thuế suất (%)", "fieldtype": "Percent", "default": "0", "required": true, "in_list_view": true },
+    { "fieldname": "add_deduct_tax", "label": "Cộng / trừ", "fieldtype": "Select", "options": "Add\nDeduct", "default": "Add" },
+    { "fieldname": "included_in_print_rate", "label": "Đã gồm trong giá", "fieldtype": "Check", "default": false },
+    { "fieldname": "actual_tax_amount", "label": "Số tiền thuế cố định", "fieldtype": "Currency", "depends_on": "eval:doc.charge_type=='Actual'" },
+    { "fieldname": "tax_amount", "label": "Tiền thuế", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "total", "label": "Tổng sau thuế", "fieldtype": "Currency", "read_only": true, "in_list_view": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}

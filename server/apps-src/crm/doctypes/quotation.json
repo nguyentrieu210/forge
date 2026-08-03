@@ -1,0 +1,32 @@
+{
+  "name": "Quotation",
+  "module": "CRM",
+  "is_submittable": true,
+  "autoname": "QTN-.YYYY.-#####",
+  "title_field": "customer",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "crm_deal", "label": "CRM Deal", "fieldtype": "Link", "options": "CRM Deal", "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "mandatory_depends_on": "eval:!doc.crm_deal", "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true, "set_only_once": true, "in_list_view": true },
+    { "fieldname": "transaction_date", "label": "Ngày báo giá", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "valid_till", "label": "Hiệu lực đến", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "selling_price_list", "label": "Bảng giá", "fieldtype": "Link", "options": "Price List", "in_standard_filter": true },
+    { "fieldname": "customer_group", "label": "Nhóm khách hàng", "fieldtype": "Link", "options": "Customer Group", "in_standard_filter": true },
+    { "fieldname": "apply_discount_on", "label": "Chiết khấu trên", "fieldtype": "Select", "options": "Net Total\nGrand Total", "default": "Net Total" },
+    { "fieldname": "additional_discount_percentage", "label": "Chiết khấu toàn đơn (%)", "fieldtype": "Percent", "default": "0" },
+    { "fieldname": "items", "label": "Hàng hóa", "fieldtype": "Table", "options": "Quotation Item", "required": true },
+    { "fieldname": "taxes", "label": "Thuế", "fieldtype": "Table", "options": "Quotation Tax" },
+    { "fieldname": "net_total", "label": "Tiền hàng", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "total_taxes_and_charges", "label": "Thuế và phí", "fieldtype": "Currency", "read_only": true },
+    { "fieldname": "grand_total", "label": "Tổng cộng", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "revision_no", "label": "Phiên bản", "fieldtype": "Int", "read_only": true, "in_list_view": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "create": true, "submit": true, "print": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

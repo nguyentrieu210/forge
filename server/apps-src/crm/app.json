@@ -1,0 +1,242 @@
+{
+  "id": "crm",
+  "name": "CRM & Doanh thu",
+  "version": "0.5.0",
+  "requires": [],
+  "externalDocTypes": [
+    { "name": "Company", "kind": "master", "app": "accounts" },
+    { "name": "Customer", "kind": "master", "app": "selling" },
+    { "name": "Currency", "kind": "master", "app": "accounts" },
+    { "name": "Territory", "kind": "tree", "app": "selling" },
+    { "name": "User", "kind": "system", "app": "core" },
+    { "name": "Sales Order", "kind": "transaction", "app": "selling" },
+    { "name": "Sales Invoice", "kind": "transaction", "app": "selling" },
+    { "name": "Payment Entry", "kind": "transaction", "app": "accounts" }
+  ],
+  "nav": [
+    { "key": "screen:crm-overview", "label": "Tổng quan CRM", "kind": "experience", "icon": "layout-dashboard", "group": "CRM" },
+    { "key": "CRM Lead", "label": "Khách hàng tiềm năng", "kind": "doctype", "icon": "user-round-search", "group": "CRM" },
+    { "key": "CRM Deal", "label": "Deal / cơ hội", "kind": "doctype", "icon": "funnel", "group": "CRM" },
+    { "key": "CRM Organization", "label": "Tổ chức", "kind": "doctype", "icon": "building-2", "group": "CRM" },
+    { "key": "CRM Contact", "label": "Liên hệ", "kind": "doctype", "icon": "contact-round", "group": "CRM" },
+    { "key": "CRM Activity", "label": "Hoạt động", "kind": "doctype", "icon": "activity", "group": "CRM" },
+
+    { "key": "screen:crm-performance", "label": "Chỉ tiêu & hoa hồng", "kind": "experience", "icon": "target", "group": "Quản lý bán hàng" },
+    { "key": "CRM Sales Target", "label": "Chỉ tiêu bán hàng", "kind": "doctype", "icon": "goal", "group": "Quản lý bán hàng" },
+    { "key": "CRM Commission Accrual", "label": "Hoa hồng", "kind": "doctype", "icon": "badge-dollar-sign", "group": "Quản lý bán hàng" },
+    { "key": "CRM Commission Rule", "label": "Chính sách hoa hồng", "kind": "doctype", "icon": "percent", "group": "Quản lý bán hàng" },
+
+    { "key": "screen:crm-marketing", "label": "Marketing & attribution", "kind": "experience", "icon": "megaphone", "group": "Marketing" },
+    { "key": "CRM Campaign", "label": "Chiến dịch", "kind": "doctype", "icon": "megaphone", "group": "Marketing" },
+    { "key": "CRM Marketing List", "label": "Danh sách marketing", "kind": "doctype", "icon": "list-filter", "group": "Marketing" },
+    { "key": "CRM Marketing List Member", "label": "Thành viên marketing", "kind": "doctype", "icon": "users-round", "group": "Marketing" },
+    { "key": "CRM Segment", "label": "Phân khúc", "kind": "doctype", "icon": "scan-search", "group": "Marketing" },
+    { "key": "CRM Campaign Attribution", "label": "Attribution", "kind": "doctype", "icon": "git-compare-arrows", "group": "Marketing" },
+
+    { "key": "crm-pipeline-forecast", "label": "Dự báo pipeline", "kind": "route", "route": "/report/crm-pipeline-forecast", "icon": "chart-no-axes-combined", "group": "Phân tích", "required_roles": ["Sales User", "Sales Manager", "System Manager"] },
+    { "key": "crm-lead-source-performance", "label": "Hiệu quả nguồn lead", "kind": "route", "route": "/report/crm-lead-source-performance", "icon": "chart-bar-big", "group": "Phân tích", "required_roles": ["Sales User", "Sales Manager", "System Manager"] },
+    { "key": "crm-contact-consent", "label": "Đồng ý liên hệ", "kind": "route", "route": "/report/crm-contact-consent", "icon": "shield-check", "group": "Phân tích", "required_roles": ["Sales Manager", "System Manager"] },
+    { "key": "crm-sales-target-summary", "label": "Tổng hợp chỉ tiêu", "kind": "route", "route": "/report/crm-sales-target-summary", "icon": "chart-column", "group": "Phân tích", "required_roles": ["Sales Manager", "System Manager"] },
+    { "key": "crm-commission-summary", "label": "Tổng hợp hoa hồng", "kind": "route", "route": "/report/crm-commission-summary", "icon": "chart-spline", "group": "Phân tích", "required_roles": ["Sales Manager", "System Manager"] },
+    { "key": "crm-campaign-attribution-summary", "label": "Hiệu quả chiến dịch", "kind": "route", "route": "/report/crm-campaign-attribution-summary", "icon": "chart-pie", "group": "Phân tích", "required_roles": ["Sales Manager", "System Manager"] },
+    { "key": "crm-marketing-membership-status", "label": "Trạng thái marketing list", "kind": "route", "route": "/report/crm-marketing-membership-status", "icon": "list-checks", "group": "Phân tích", "required_roles": ["Sales Manager", "System Manager"] },
+
+    { "key": "customer", "label": "Khách hàng ERP", "kind": "route", "route": "/app/Customer", "icon": "users", "group": "ERP / Doanh thu", "required_roles": ["Sales User", "Sales Manager", "System Manager"] },
+    { "key": "sales-order", "label": "Đơn bán hàng ERP", "kind": "route", "route": "/app/Sales%20Order", "icon": "shopping-cart", "group": "ERP / Doanh thu", "required_roles": ["Sales User", "Sales Manager", "System Manager"] },
+    { "key": "sales-invoice", "label": "Hóa đơn bán hàng ERP", "kind": "route", "route": "/app/Sales%20Invoice", "icon": "receipt-text", "group": "ERP / Doanh thu", "required_roles": ["Sales User", "Sales Manager", "Accounts User", "Accounts Manager", "System Manager"] },
+
+    { "key": "CRM Pipeline", "label": "Pipeline bán hàng", "kind": "doctype", "icon": "git-branch", "group": "Thiết lập" },
+    { "key": "CRM Stage", "label": "Giai đoạn bán hàng", "kind": "doctype", "icon": "milestone", "group": "Thiết lập" },
+    { "key": "CRM Lead Source", "label": "Nguồn khách hàng", "kind": "doctype", "icon": "radio-tower", "group": "Thiết lập" },
+    { "key": "CRM Deal Close Reason", "label": "Lý do thắng / mất", "kind": "doctype", "icon": "circle-dot", "group": "Thiết lập" }
+  ],
+  "reports": [
+    {
+      "name": "crm-pipeline-forecast",
+      "label": "Dự báo pipeline",
+      "doctype": "CRM Deal",
+      "columns": [
+        { "field": "sales_stage", "label": "Giai đoạn", "type": "Link", "options": "CRM Stage" },
+        { "field": "name", "label": "Số deal", "type": "Int", "aggregate": "count" },
+        { "field": "opportunity_amount", "label": "Giá trị pipeline", "type": "Currency", "aggregate": "sum" },
+        { "field": "weighted_value", "label": "Giá trị dự báo", "type": "Currency", "aggregate": "sum" }
+      ],
+      "group_by": "sales_stage",
+      "order_by": { "column": "weighted_value", "direction": "desc" },
+      "filters": ["company", "pipeline", "status", "assigned_to", "territory", "expected_close_date"],
+      "limit": 500
+    },
+    {
+      "name": "crm-lead-source-performance",
+      "label": "Hiệu quả nguồn lead",
+      "doctype": "CRM Deal",
+      "columns": [
+        { "field": "lead_source", "label": "Nguồn", "type": "Link", "options": "CRM Lead Source" },
+        { "field": "name", "label": "Số deal", "type": "Int", "aggregate": "count" },
+        { "field": "opportunity_amount", "label": "Giá trị pipeline", "type": "Currency", "aggregate": "sum" },
+        { "field": "weighted_value", "label": "Giá trị dự báo", "type": "Currency", "aggregate": "sum" }
+      ],
+      "group_by": "lead_source",
+      "order_by": { "column": "weighted_value", "direction": "desc" },
+      "filters": ["company", "pipeline", "status", "assigned_to", "territory", "expected_close_date"],
+      "limit": 500
+    },
+    {
+      "name": "crm-contact-consent",
+      "label": "Trạng thái đồng ý liên hệ",
+      "doctype": "CRM Contact",
+      "columns": [
+        { "field": "consent_status", "label": "Trạng thái", "type": "Data" },
+        { "field": "name", "label": "Số liên hệ", "type": "Int", "aggregate": "count" }
+      ],
+      "group_by": "consent_status",
+      "order_by": { "column": "name", "direction": "desc" },
+      "filters": ["company", "organization", "assigned_to", "territory", "status"],
+      "limit": 100
+    },
+    {
+      "name": "crm-sales-target-summary",
+      "label": "Tổng hợp chỉ tiêu bán hàng",
+      "doctype": "CRM Sales Target",
+      "columns": [
+        { "field": "target_owner", "label": "Đối tượng", "type": "Data" },
+        { "field": "name", "label": "Số kỳ", "type": "Int", "aggregate": "count" },
+        { "field": "target_amount", "label": "Tổng chỉ tiêu", "type": "Currency", "aggregate": "sum" }
+      ],
+      "group_by": "target_owner",
+      "order_by": { "column": "target_amount", "direction": "desc" },
+      "filters": ["company", "target_owner_type", "currency", "status", "start_date", "end_date"],
+      "limit": 500
+    },
+    {
+      "name": "crm-commission-summary",
+      "label": "Tổng hợp hoa hồng",
+      "doctype": "CRM Commission Accrual",
+      "columns": [
+        { "field": "payee", "label": "Người hưởng", "type": "Link", "options": "User" },
+        { "field": "name", "label": "Số khoản", "type": "Int", "aggregate": "count" },
+        { "field": "base_amount", "label": "Doanh số tính hoa hồng", "type": "Currency", "aggregate": "sum" },
+        { "field": "commission_amount", "label": "Hoa hồng", "type": "Currency", "aggregate": "sum" }
+      ],
+      "group_by": "payee",
+      "order_by": { "column": "commission_amount", "direction": "desc" },
+      "filters": ["company", "status", "rule", "earned_on"],
+      "limit": 500
+    },
+    {
+      "name": "crm-campaign-attribution-summary",
+      "label": "Hiệu quả chiến dịch",
+      "doctype": "CRM Campaign Attribution",
+      "columns": [
+        { "field": "campaign", "label": "Chiến dịch", "type": "Link", "options": "CRM Campaign" },
+        { "field": "name", "label": "Số attribution", "type": "Int", "aggregate": "count" },
+        { "field": "deal_amount", "label": "Giá trị deal snapshot", "type": "Currency", "aggregate": "sum" },
+        { "field": "attributed_value", "label": "Giá trị attribution", "type": "Currency", "aggregate": "sum" }
+      ],
+      "group_by": "campaign",
+      "order_by": { "column": "attributed_value", "direction": "desc" },
+      "filters": ["company", "status", "model", "deal_status"],
+      "limit": 500
+    },
+    {
+      "name": "crm-marketing-membership-status",
+      "label": "Trạng thái thành viên marketing",
+      "doctype": "CRM Marketing List Member",
+      "columns": [
+        { "field": "status", "label": "Trạng thái", "type": "Data" },
+        { "field": "name", "label": "Số thành viên", "type": "Int", "aggregate": "count" }
+      ],
+      "group_by": "status",
+      "order_by": { "column": "name", "direction": "desc" },
+      "filters": ["company", "marketing_list", "source"],
+      "limit": 100
+    }
+  ],
+  "charts": [
+    {
+      "name": "crm-pipeline-weighted-value",
+      "label": "Dự báo theo giai đoạn",
+      "source": "crm-pipeline-forecast",
+      "type": "Bar",
+      "dimensions": ["sales_stage"],
+      "measures": ["weighted_value", "opportunity_amount"],
+      "roles": ["Sales User", "Sales Manager"],
+      "drilldown": { "route": "/report/crm-pipeline-forecast" },
+      "emptyFallback": "table"
+    },
+    {
+      "name": "crm-campaign-attributed-value",
+      "label": "Attribution theo chiến dịch",
+      "source": "crm-campaign-attribution-summary",
+      "type": "Bar",
+      "dimensions": ["campaign"],
+      "measures": ["attributed_value"],
+      "roles": ["Sales Manager"],
+      "drilldown": { "route": "/report/crm-campaign-attribution-summary" },
+      "emptyFallback": "table"
+    }
+  ],
+  "screens": [
+    {
+      "name": "crm-overview",
+      "label": "Revenue 360",
+      "description": "Lead, deal, danh bạ và hoạt động đang cần xử lý.",
+      "icon": "layout-dashboard",
+      "group": "CRM",
+      "permission_doctype": "CRM Deal",
+      "mode": "desk",
+      "columns": 3,
+      "blocks": [
+        { "id": "open-deals", "label": "Deal đang mở", "type": "metric", "doctype": "CRM Deal", "filters": { "status": "Open" }, "tone": "info", "route": "/app/CRM%20Deal", "span": 1 },
+        { "id": "won-deals", "label": "Deal đã thắng", "type": "metric", "doctype": "CRM Deal", "filters": { "status": "Won" }, "tone": "success", "route": "/app/CRM%20Deal", "span": 1 },
+        { "id": "qualified-leads", "label": "Lead đã qualify", "type": "metric", "doctype": "CRM Lead", "filters": { "status": "Qualified" }, "tone": "neutral", "route": "/app/CRM%20Lead", "span": 1 },
+        { "id": "next-activities", "label": "Việc cần theo dõi", "type": "list", "doctype": "CRM Activity", "fields": ["reference_doctype", "reference_name", "activity_type", "subject", "due_at", "assigned_to"], "filters": { "status": "Open" }, "order_by": "due_at asc", "limit": 10, "empty_text": "Không có hoạt động đang mở.", "span": 2 },
+        { "id": "withdrawn-consent", "label": "Đã rút đồng ý", "type": "list", "doctype": "CRM Contact", "fields": ["full_name", "organization", "consent_status", "assigned_to"], "filters": { "consent_status": "Withdrawn" }, "order_by": "modified_at desc", "limit": 8, "empty_text": "Không có liên hệ rút đồng ý.", "span": 1 },
+        { "id": "recent-organizations", "label": "Tổ chức đang hoạt động", "type": "list", "doctype": "CRM Organization", "fields": ["organization_name", "domain", "territory", "assigned_to", "linked_customer"], "filters": { "status": "Active" }, "order_by": "modified_at desc", "limit": 8, "empty_text": "Chưa có tổ chức CRM.", "span": 3 }
+      ]
+    },
+    {
+      "name": "crm-performance",
+      "label": "Sales Performance",
+      "description": "Chỉ tiêu, hoa hồng chờ duyệt và khoản đã duyệt chờ thanh toán.",
+      "icon": "target",
+      "group": "Quản lý bán hàng",
+      "permission_doctype": "CRM Sales Target",
+      "mode": "desk",
+      "columns": 3,
+      "blocks": [
+        { "id": "active-targets", "label": "Chỉ tiêu đang chạy", "type": "metric", "doctype": "CRM Sales Target", "filters": { "status": "Active" }, "tone": "info", "route": "/app/CRM%20Sales%20Target", "span": 1 },
+        { "id": "draft-commissions", "label": "Hoa hồng chờ duyệt", "type": "metric", "doctype": "CRM Commission Accrual", "filters": { "status": "Draft" }, "tone": "warning", "route": "/app/CRM%20Commission%20Accrual", "span": 1 },
+        { "id": "approved-commissions", "label": "Hoa hồng chờ thanh toán", "type": "metric", "doctype": "CRM Commission Accrual", "filters": { "status": "Approved" }, "tone": "success", "route": "/app/CRM%20Commission%20Accrual", "span": 1 },
+        { "id": "target-list", "label": "Kỳ chỉ tiêu", "type": "list", "doctype": "CRM Sales Target", "fields": ["target_owner_type", "target_owner", "start_date", "end_date", "target_amount", "currency", "status"], "order_by": "start_date desc", "limit": 10, "empty_text": "Chưa có chỉ tiêu bán hàng.", "span": 2 },
+        { "id": "commission-list", "label": "Khoản hoa hồng", "type": "list", "doctype": "CRM Commission Accrual", "fields": ["deal", "payee", "commission_amount", "currency", "status", "payment_reference"], "order_by": "earned_on desc", "limit": 10, "empty_text": "Chưa có khoản hoa hồng.", "span": 1 }
+      ]
+    },
+    {
+      "name": "crm-marketing",
+      "label": "Marketing Operations",
+      "description": "Campaign, consent-safe marketing list và attribution. Trạng thái Active không đồng nghĩa provider đã gửi thông điệp.",
+      "icon": "megaphone",
+      "group": "Marketing",
+      "permission_doctype": "CRM Campaign",
+      "mode": "desk",
+      "columns": 3,
+      "blocks": [
+        { "id": "active-campaigns", "label": "Chiến dịch đang active", "type": "metric", "doctype": "CRM Campaign", "filters": { "status": "Active" }, "tone": "info", "route": "/app/CRM%20Campaign", "span": 1 },
+        { "id": "active-lists", "label": "Marketing list đang active", "type": "metric", "doctype": "CRM Marketing List", "filters": { "status": "Active" }, "tone": "success", "route": "/app/CRM%20Marketing%20List", "span": 1 },
+        { "id": "unsubscribed-members", "label": "Đã unsubscribe", "type": "metric", "doctype": "CRM Marketing List Member", "filters": { "status": "Unsubscribed" }, "tone": "warning", "route": "/app/CRM%20Marketing%20List%20Member", "span": 1 },
+        { "id": "campaign-list", "label": "Chiến dịch", "type": "list", "doctype": "CRM Campaign", "fields": ["campaign_name", "channel", "start_date", "end_date", "budget", "currency", "status"], "order_by": "start_date desc", "limit": 10, "empty_text": "Chưa có chiến dịch.", "span": 2 },
+        { "id": "unsubscribe-list", "label": "Unsubscribe gần đây", "type": "list", "doctype": "CRM Marketing List Member", "fields": ["marketing_list", "contact", "unsubscribed_at", "unsubscribed_reason"], "filters": { "status": "Unsubscribed" }, "order_by": "unsubscribed_at desc", "limit": 10, "empty_text": "Chưa có unsubscribe.", "span": 1 },
+        { "id": "attribution-list", "label": "Attribution gần đây", "type": "list", "doctype": "CRM Campaign Attribution", "fields": ["campaign", "deal", "model", "attribution_percent", "attributed_value", "currency", "status"], "filters": { "status": "Active" }, "order_by": "modified_at desc", "limit": 10, "empty_text": "Chưa có attribution.", "span": 3 }
+      ]
+    }
+  ],
+  "hooks": [],
+  "client": {
+    "brand": "blue",
+    "domain": "crm",
+    "home": { "route": "/x/screen%3Acrm-overview", "doctype": "CRM Deal" },
+    "dimensions": ["company", "territory", "fiscal_year"],
+    "catalog_mode": "hybrid"
+  }
+}

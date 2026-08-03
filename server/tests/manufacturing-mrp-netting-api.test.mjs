@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { routeManufacturingMrpApi } from "../dist/apps/tenant-worker/src/manufacturing-mrp-api.js";
+
+const PREVIEW="https://tenant.test/api/method/metaforge.manufacturing.preview_production_plan_mrp";
+const CREATE="https://tenant.test/api/method/metaforge.manufacturing.create_mrp_material_request";
+function plan(){return{tenant_id:"tenant-a",doctype:"Production Plan",name:"PLAN-1",owner:"planner@example.com",docstatus:1,status:"Submitted",version:1,created_at:"2026-08-03T00:00:00Z",modified_at:"2026-08-03T00:00:00Z",children:[],data:{company:"ACME",posting_at:"2026-08-03",items:[{row_id:"P",item_code:"FG",bom_no:"BOM-FG",planned_qty:"2"}]}};}
+function bom(){return{tenant_id:"tenant-a",doctype:"Bill of Materials",name:"BOM-FG",owner:"planner@example.com",docstatus:1,status:"Submitted",version:1,created_at:"2026-08-03T00:00:00Z",modified_at:"2026-08-03T00:00:00Z",children:[],data:{company:"ACME",item:"FG",quantity:"1",quantity_micros:1_000_000,output_stock_qty_micros:1_000_000,revision:1,bom_status:"Active",effective_from:"2026-01-01",items:[{row_id:"R",item_code:"RM",qty:"3",qty_micros:3_000_000,stock_qty_micros:3_000_000,qty_basis:"Cố định",source_warehouse:"RAW"}]}};}
+function request(url,body){return new Request(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});}
+function ctx({withBalance=true}={}){const creates=[];const value={tenantId:"tenant-a",actor:{user_id:"planner@example.com",roles:["Manufacturing Planner"]},traceId:"trace-net",permissions:{async assert(){},async canReadDocument(){return true;}},async loadProductionPlan(){return plan();},async listBomDocuments(){return[bom()];},async listMaterialRequests(){return[];},async createCanonicalMaterialRequest(document){creates.push(document);return new Response(JSON.stringify({data:{name:"MR-1",docstatus:0}}),{status:201,headers:{"content-type":"application/json"}});}};if(withBalance)value.getStockBalanceMicros=async()=>2_000_000;return{value,creates};}
+
+test("MRP preview can attach explicitly labelled on-hand-only netting",async()=>{const c=ctx();const response=await routeManufacturingMrpApi(request(PREVIEW,{production_plan:"PLAN-1",net_on_hand:1}),new URL(PREVIEW),c.value);assert.equal(response.status,200);const payload=await response.json();assert.equal(payload.message.netting_mode,"gross_only");assert.equal(payload.message.purchase_requirements[0].gross_qty,"6.000000");assert.equal(payload.message.on_hand_netting.netting_mode,"ON_HAND_ONLY_NOT_ATP");assert.equal(payload.message.on_hand_netting.purchase_requirements[0].net_requirement,"4.000000");});
+
+test("MRP on-hand preview fails explicitly when stock-balance dependency is not wired",async()=>{const c=ctx({withBalance:false});await assert.rejects(()=>routeManufacturingMrpApi(request(PREVIEW,{production_plan:"PLAN-1",net_on_hand:1}),new URL(PREVIEW),c.value),/canonical stock-balance planning dependency/);});
+
+test("MRP Material Request conversion remains gross even when caller sends net_on_hand flag",async()=>{const c=ctx();const response=await routeManufacturingMrpApi(request(CREATE,{production_plan:"PLAN-1",material_request_type:"Purchase",net_on_hand:1}),new URL(CREATE),c.value);assert.equal(response.status,200);assert.equal(c.creates.length,1);assert.equal(c.creates[0].mrp_netting_mode,"gross_only");assert.equal(c.creates[0].items[0].qty,"6.000000");});

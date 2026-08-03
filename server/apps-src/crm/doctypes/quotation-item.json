@@ -1,0 +1,18 @@
+{
+  "name": "Quotation Item",
+  "module": "CRM",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "item_code", "label": "Mã hàng", "fieldtype": "Link", "options": "Item", "required": true, "in_list_view": true },
+    { "fieldname": "qty", "label": "Số lượng", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "uom", "label": "ĐVT", "fieldtype": "Link", "options": "UOM", "in_list_view": true },
+    { "fieldname": "conversion_factor", "label": "Hệ số quy đổi", "fieldtype": "Float", "default": "1" },
+    { "fieldname": "rate", "label": "Đơn giá", "fieldtype": "Currency", "default": "0", "required": true, "in_list_view": true },
+    { "fieldname": "discount_percentage", "label": "Chiết khấu (%)", "fieldtype": "Percent", "read_only": true, "in_list_view": true },
+    { "fieldname": "amount", "label": "Thành tiền", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "item_price", "label": "Item Price", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "pricing_rule", "label": "Pricing Rule", "fieldtype": "Data", "read_only": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}

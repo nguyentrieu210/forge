@@ -1,0 +1,22 @@
+{
+  "name": "CRM Sales Target",
+  "module": "CRM",
+  "autoname": "CRM-TARGET-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "target_owner_type", "label": "Loại đối tượng", "fieldtype": "Select", "options": "User\nTerritory\nCRM Sales Team", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "target_owner", "label": "Đối tượng", "fieldtype": "Dynamic Link", "options": "target_owner_type", "required": true, "set_only_once": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true, "set_only_once": true, "in_list_view": true },
+    { "fieldname": "start_date", "label": "Từ ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "end_date", "label": "Đến ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "target_amount", "label": "Chỉ tiêu doanh số", "fieldtype": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nClosed", "default": "Draft", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}

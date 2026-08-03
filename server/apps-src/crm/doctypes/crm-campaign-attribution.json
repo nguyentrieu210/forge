@@ -1,0 +1,24 @@
+{
+  "name": "CRM Campaign Attribution",
+  "module": "CRM",
+  "autoname": "CRM-ATTR-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "campaign", "label": "Chiến dịch", "fieldtype": "Link", "options": "CRM Campaign", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "deal", "label": "Deal", "fieldtype": "Link", "options": "CRM Deal", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "model", "label": "Mô hình attribution", "fieldtype": "Select", "options": "First Touch\nLast Touch\nInfluenced", "required": true, "set_only_once": true, "in_list_view": true },
+    { "fieldname": "attribution_percent", "label": "Tỷ lệ attribution (%)", "fieldtype": "Percent", "required": true, "set_only_once": true, "in_list_view": true },
+    { "fieldname": "deal_status", "label": "Trạng thái deal snapshot", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "deal_amount", "label": "Giá trị deal snapshot", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "attributed_value", "label": "Giá trị attribution", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nCancelled", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
