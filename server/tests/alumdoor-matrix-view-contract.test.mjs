@@ -30,6 +30,7 @@ test("Alumdoor Item Price Matrix sidecar survives canonical App Factory transpor
   assert.equal(matrix.cell.validation, "non_negative");
   assert.equal(matrix.presentation.mobileMode, "step");
 
-  // Compatibility remains declared independently while Matrix parity is incomplete.
-  assert.equal(itemPrice.viewPolicy.bulk.enabled, true);
+  // Compatibility remains on the established legacy mobile.bulk bridge until the
+  // Matrix parity/removal gate is green. Do not invent a second canonical Bulk claim here.
+  assert.equal(itemPrice.viewPolicy?.mobile?.bulk?.enabled, true);
 });
