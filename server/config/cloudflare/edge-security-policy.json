@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "status": "review_only",
+  "owner": "CFMAX-04",
+  "risk": "CRITICAL",
+  "production_activation": "requires_explicit_user_approval",
+  "provider_authority": "Cloudflare Rulesets/Access configuration; CF08 owns production apply and drift",
+  "application_authority": "Forge authentication and server-side authorization remain authoritative",
+  "rollout": ["inventory", "log", "challenge_when_compatible", "block_after_evidence"],
+  "global_invariants": {
+    "never_replace_forge_authentication": true,
+    "never_replace_forge_authorization": true,
+    "never_challenge_machine_traffic": true,
+    "never_store_service_token_secrets_in_git": true,
+    "no_unmeasured_edge_thresholds": true,
+    "preserve_webhook_and_service_binding_compatibility": true
+  },
+  "origin_exposure": {
+    "gateway": {
+      "production_hosts": [
+        "edu.kairo.vn",
+        "hrm.kairo.vn",
+        "chotdon.kairo.vn",
+        "alu.kairo.vn",
+        "phanbon.kairo.vn"
+      ],
+      "workers_dev": false,
+      "preview_urls": false,
+      "reason": "Custom domains are the production ingress authority; alternate Worker hostnames would bypass zone perimeter controls."
+    },
+    "custom_domain_provisioning": {
+      "authority": "control-plane governed tenant route lifecycle",
+      "require_same_perimeter_policy": true,
+      "direct_worker_origin_allowed": false
+    }
+  },
+  "surfaces": [
+    {
+      "id": "health",
+      "match": { "paths": ["/health"], "methods": ["GET", "HEAD"] },
+      "actor": "monitoring/probe",
+      "public": true,
+      "machine_traffic": true,
+      "abuse_cost": "low",
+      "forge_auth": "none",
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": { "mode": "observe", "threshold": null, "count_by": "ip" },
+      "turnstile": "never",
+      "access": "never"
+    },
+    {
+      "id": "client_shell",
+      "match": { "paths": ["/", "/login", "/signup", "/app/*", "/workspace/*", "/report/*", "/shop/*"], "methods": ["GET", "HEAD"] },
+      "actor": "browser",
+      "public": true,
+      "machine_traffic": false,
+      "abuse_cost": "low",
+      "forge_auth": "browser session or bearer after shell load",
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": { "mode": "none", "threshold": null, "count_by": "ip" },
+      "turnstile": "never_on_shell",
+      "access": "never_for_tenant_product"
+    },
+    {
+      "id": "login",
+      "match": { "paths": ["/api/method/login"], "methods": ["POST"] },
+      "actor": "browser/API client",
+      "public": true,
+      "machine_traffic": true,
+      "abuse_cost": "high_pbkdf2_and_credential_attack",
+      "forge_auth": "application login contract",
+      "application_guard": { "kind": "persistent_login_rate_limit", "reference": "30 attempts per client IP per 15 minutes" },
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": {
+        "mode": "observe_then_calibrate",
+        "threshold": null,
+        "count_by": "ip",
+        "reason": "Application guard is authoritative and persistent; edge enforcement must be calibrated from production telemetry and must not break shared-NAT/mobile clients."
+      },
+      "turnstile": "defer_mixed_browser_and_api_clients",
+      "access": "never"
+    },
+    {
+      "id": "public_signup",
+      "match": { "hosts": ["chotdon.kairo.vn"], "paths": ["/api/v1/public/signup", "/v1/public/signup"], "methods": ["POST"] },
+      "actor": "anonymous browser",
+      "public": true,
+      "machine_traffic": false,
+      "abuse_cost": "high_password_hash_and_storage",
+      "forge_auth": "anonymous with server-side anti-abuse",
+      "application_guard": { "kind": "honeypot_plus_hashed_email_ip_limits", "reference": "3/email/hour and 10/ip/hour" },
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": {
+        "mode": "observe_then_calibrate",
+        "threshold": null,
+        "count_by": "ip",
+        "reason": "Do not invent a second lower threshold that conflicts with the current application guard."
+      },
+      "turnstile": "recommended_after_client_token_and_siteverify_seam",
+      "access": "never"
+    },
+    {
+      "id": "password_mfa_session",
+      "match": { "paths": ["/api/method/*password*", "/api/method/*mfa*", "/api/method/*session*"], "methods": ["POST", "PUT", "DELETE"] },
+      "actor": "authenticated browser/API client",
+      "public": true,
+      "machine_traffic": true,
+      "abuse_cost": "high_identity_security",
+      "forge_auth": "signed session or verified bearer plus recent-auth/MFA where required",
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": { "mode": "observe_then_route_specific", "threshold": null, "count_by": "ip" },
+      "turnstile": "never_generic",
+      "access": "never"
+    },
+    {
+      "id": "frappe_api",
+      "match": { "paths": ["/api/method/*", "/api/resource/*"], "methods": ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+      "actor": "browser/API/app callback",
+      "public": true,
+      "machine_traffic": true,
+      "abuse_cost": "variable",
+      "forge_auth": "cookie/bearer/trusted app callback; tenant worker authorizes every operation",
+      "waf": "managed_rules_with_compatibility_exclusions",
+      "edge_rate_limit": { "mode": "none_generic", "threshold": null, "count_by": "ip" },
+      "turnstile": "never_generic",
+      "access": "never"
+    },
+    {
+      "id": "files",
+      "match": { "paths": ["/files/*"], "methods": ["GET", "HEAD", "POST"] },
+      "actor": "browser/API client",
+      "public": true,
+      "machine_traffic": true,
+      "abuse_cost": "bandwidth_and_storage",
+      "forge_auth": "tenant worker decides public/private file access",
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": { "mode": "observe_expensive_writes_only", "threshold": null, "count_by": "ip" },
+      "turnstile": "never",
+      "access": "never"
+    },
+    {
+      "id": "reports_exports_print",
+      "match": { "paths": ["/api/method/*report*", "/api/method/*export*", "/api/method/*print*"], "methods": ["GET", "POST"] },
+      "actor": "authenticated browser/API client",
+      "public": true,
+      "machine_traffic": true,
+      "abuse_cost": "high_compute_and_io",
+      "forge_auth": "Forge permission checks remain authoritative",
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": { "mode": "observe_then_tenant_user_aware_application_quota", "threshold": null, "count_by": "ip" },
+      "turnstile": "never",
+      "access": "never"
+    },
+    {
+      "id": "social_webhook_oauth",
+      "match": { "paths": ["/webhook/*", "/oauth/*", "/facebook/*", "/_app/*"], "methods": ["GET", "POST"] },
+      "actor": "provider/app machine",
+      "public": true,
+      "machine_traffic": true,
+      "abuse_cost": "medium_to_high",
+      "forge_auth": "provider signature/OAuth/app-call credential plus trusted identity as applicable",
+      "waf": "managed_rules_with_explicit_provider_compatibility",
+      "edge_rate_limit": { "mode": "observe_provider_specific", "threshold": null, "count_by": "ip" },
+      "turnstile": "never",
+      "access": "never",
+      "must_not_challenge": true
+    },
+    {
+      "id": "control_plane_admin",
+      "match": { "paths": ["/v1/routes/*", "/v1/audit/*"], "methods": ["GET", "POST", "PUT", "DELETE"] },
+      "actor": "platform operator/service",
+      "public": false,
+      "machine_traffic": true,
+      "abuse_cost": "critical_tenant_control",
+      "forge_auth": "CONTROL_TOKEN remains required until attributable operator auth replaces it",
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": { "mode": "low_volume_observe_then_service_specific", "threshold": null, "count_by": "ip" },
+      "turnstile": "never",
+      "access": "recommended_service_auth_or_staff_access_in_front_of_existing_control_auth",
+      "must_preserve_application_auth": true
+    },
+    {
+      "id": "custom_domain_governance",
+      "match": { "paths": ["/v1/routes/*"], "methods": ["PUT"] },
+      "actor": "platform operator/service",
+      "public": false,
+      "machine_traffic": true,
+      "abuse_cost": "critical_route_takeover",
+      "forge_auth": "CONTROL_TOKEN plus governed route mutation/audit",
+      "waf": "managed_rules_compatible",
+      "edge_rate_limit": { "mode": "observe", "threshold": null, "count_by": "ip" },
+      "turnstile": "never",
+      "access": "recommended_service_auth_or_staff_access_in_front_of_existing_control_auth",
+      "must_preserve_application_auth": true
+    }
+  ],
+  "turnstile": {
+    "adopt_now": false,
+    "candidate": "public_signup",
+    "required_before_adoption": [
+      "accessible client token acquisition",
+      "server-side Siteverify validation",
+      "hostname and action validation",
+      "timeout and provider-failure behavior",
+      "separate non-Turnstile authenticated machine path",
+      "test sitekey/secret regression"
+    ]
+  },
+  "access": {
+    "tenant_product_login": "rejected",
+    "control_plane_admin": "recommended_after_CF08_provider_ownership_is_selected",
+    "service_tokens": {
+      "allowed_for": "selected machine-to-machine administrative integrations only",
+      "secret_storage": "Cloudflare/GitHub secret store; never repository",
+      "rotation_and_revocation_required": true,
+      "application_auth_still_required": true,
+      "browser_embedding_forbidden": true
+    }
+  },
+  "waf_and_rate_limit": {
+    "source_of_truth": "CF08 must choose Terraform or Rulesets API/dashboard export; CF04 does not create a second infrastructure authority",
+    "default_phase": "log/observe",
+    "activation_gate": "provider plan/feature availability plus compatibility evidence plus explicit user approval",
+    "threshold_policy": "A numeric edge threshold is forbidden until backed by Forge traffic/abuse/cost evidence. Existing application limits are references, not automatically copied to Cloudflare."
+  }
+}
