@@ -8,9 +8,10 @@
  *
  * This script intentionally implements the CURRENT persisted Forge password format locally
  * instead of importing server/dist. Production reset must not be blocked by unrelated
- * TypeScript errors elsewhere in the monorepo. A live login is still probed when available,
- * but HTTP 429 is treated as a gateway rate-limit rather than as credential failure because
- * the D1 hash has already been verified byte-for-byte through the same PBKDF2 contract.
+ * TypeScript errors elsewhere in the monorepo. It also deliberately does NOT probe the
+ * public login endpoint after reset: login attempts consume the same account limiter as a
+ * human login and can lock the administrator out. D1 hash verification is the authoritative
+ * credential proof for this maintenance operation.
  *
  * Live execution requires BOTH --execute and --confirm <tenant>.
  */
@@ -19,7 +20,6 @@ import process from "node:process";
 import { d1BindingOf, d1Query, fail, quote, wrangler } from "./wrangler-cli.mjs";
 import {
   findTenantDatabaseId,
-  findTenantOrigin,
   removeTenantConfig,
   writeTenantConfig,
 } from "./tenant-wrangler.mjs";
@@ -89,7 +89,6 @@ const execute = args.includes("--execute");
 const confirm = valueOf("confirm")?.trim();
 const user = (valueOf("user") ?? process.env.FORGE_ADMIN_USER ?? "admin").trim();
 const desiredPassword = process.env.FORGE_ADMIN_PASSWORD ?? "";
-const explicitOrigin = valueOf("origin")?.trim();
 
 if (!tenant) fail("reset-remote-admin-password: --tenant <id> is required");
 if (!/^[a-z0-9][a-z0-9-]*$/i.test(tenant)) fail("tenant id contains unsafe characters");
@@ -103,9 +102,7 @@ if (confirm !== tenant) fail(`refusing remote password reset: add --confirm ${te
 
 const databaseId = findTenantDatabaseId(tenant, wrangler);
 if (!databaseId) fail(`no D1 database named cloudforge-${tenant}`);
-const discoveredOrigin = findTenantOrigin(tenant, wrangler);
-const origin = (explicitOrigin || discoveredOrigin || "").replace(/\/$/, "");
-const { configPath } = writeTenantConfig({ tenant, databaseId, ...(origin ? { publicOrigin: origin } : {}) });
+const { configPath } = writeTenantConfig({ tenant, databaseId });
 
 try {
   const database = d1BindingOf(configPath);
@@ -141,23 +138,6 @@ try {
 
   console.log(`D1_CREDENTIAL_VERIFY_OK tenant=${tenant} user=${user}`);
   console.log(`SESSION_REVOKE_OK tenant=${tenant} user=${user} session_epoch=${after[0].session_epoch}`);
-
-  if (!origin) {
-    console.log(`LIVE_LOGIN_VERIFY_SKIPPED tenant=${tenant} user=${user} reason=no-origin`);
-  } else {
-    const response = await fetch(`${origin}/api/method/login`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ usr: user, pwd: desiredPassword }),
-    });
-    if (response.ok) {
-      console.log(`LIVE_LOGIN_VERIFY_OK tenant=${tenant} user=${user} origin=${origin}`);
-    } else if (response.status === 429) {
-      console.log(`LIVE_LOGIN_VERIFY_RATE_LIMITED tenant=${tenant} user=${user} origin=${origin} status=429`);
-    } else {
-      fail(`credential verification failed at ${origin}: HTTP ${response.status}`);
-    }
-  }
 } finally {
   removeTenantConfig(configPath);
 }
