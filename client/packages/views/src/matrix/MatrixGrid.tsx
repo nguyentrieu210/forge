@@ -26,6 +26,7 @@ interface MatrixTableProps {
   virtualRows: Array<{ index: number; start: number; end: number }>;
   padTop: number;
   padBottom: number;
+  measureRow?: (element: HTMLTableRowElement | null) => void;
   focusedCell: MatrixCoordinate | null;
   onFocusedCellChange: (coordinate: MatrixCoordinate) => void;
   onCellChange?: ((coordinate: MatrixCoordinate, value: unknown) => void | Promise<void>);
@@ -84,7 +85,7 @@ export function MatrixTable(props: MatrixTableProps) {
   };
 
   const renderRow = (row: MatrixMember, absoluteIndex: number) => (
-    <TableRow key={row.id} data-index={absoluteIndex} className="bg-card [&>td]:align-top">
+    <TableRow key={row.id} ref={props.measureRow} data-index={absoluteIndex} className="bg-card [&>td]:align-top">
       <TableCell
         className={cn("border-r bg-card px-3 py-2 font-medium", stickyRowAxis && "sticky left-0 z-[4] shadow-[inset_-1px_0_0_var(--border)]")}
         style={{ minWidth: rowWidth, width: rowWidth }}
