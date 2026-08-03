@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-workflow",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-04",
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  },
+  "services": [
+    { "binding": "CONTROL", "service": "cloudforge-control-plane" }
+  ],
+  "workflows": [
+    {
+      "binding": "ROUTE_INDEX_REBUILD",
+      "name": "cloudforge-route-index-rebuild",
+      "class_name": "RouteIndexRebuildWorkflow",
+      "limits": { "steps": 10000 }
+    }
+  ]
+}
