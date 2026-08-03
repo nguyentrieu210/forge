@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Alumdoor Employee Lite — tenant-scoped metadata customization.
+ * Alumdoor Employee Lite — canonical HRM permission upgrade + tenant-scoped presentation overlay.
  *
  * Goal: Employee on tenant `alu` is an attendance identity, not a miniature HR/accounting setup.
  * Keep only the fields the workshop actually authors:
@@ -10,13 +10,17 @@
  *   - bank_name
  *   - user_id
  *
- * IMPORTANT: this does NOT edit the shared HRM DocType. It writes Property Setter overlays, the
- * canonical tenant customization mechanism, so HRM upgrades can replace the base definition and
- * the Alumdoor choices continue to merge on top.
+ * The sensitive fields remain at permlevel=1. Their write grants belong in the VERSIONED HRM
+ * package, not in Permission Manager: Forge deliberately refuses runtime DocPerm mutation because
+ * an app reinstall would silently erase it. This script therefore installs/upgrades the checked-in
+ * HRM package first, then applies Alumdoor-only Property Setter overlays for visibility/requiredness.
  *
  * Dry-run is the default. Production write requires BOTH `--execute` and `--confirm ALU_EMPLOYEE_LITE`.
  * Credentials come from environment variables and are never accepted as CLI arguments.
  */
+
+import { fileURLToPath } from "node:url";
+import { readAppSource } from "./lib/read-app-source.mjs";
 
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => {
@@ -29,6 +33,8 @@ const confirm = argOf("confirm", "");
 const origin = (argOf("origin", process.env.FORGE_ORIGIN ?? "https://alu.kairo.vn") ?? "").replace(/\/$/, "");
 const user = process.env.FORGE_ADMIN_USER ?? process.env.ALU_META_ADMIN_USER ?? "";
 const password = process.env.FORGE_ADMIN_PASSWORD ?? process.env.ALU_META_ADMIN_PASSWORD ?? "";
+const hrmSource = fileURLToPath(new URL("../apps-src/hrm/", import.meta.url));
+const hrmPackage = await readAppSource(hrmSource);
 
 const KEEP_FIELDS = new Set([
   "employee_name",
@@ -79,6 +85,9 @@ const ALL_EMPLOYEE_FIELDS = [
   "salary_note",
 ];
 
+const fieldLevelRoles = ["HR User", "HR Manager", "System Manager"];
+const sensitiveFields = ["mobile", "bank_account_no", "bank_name"];
+
 const setters = [];
 const setter = (field, property, propertyType, value) => setters.push({
   name: `ALU-Employee-${field}-${property}`,
@@ -107,14 +116,43 @@ setter("mobile", "label", "Data", "Số điện thoại");
 setter("bank_account_no", "label", "Data", "Số tài khoản ngân hàng");
 setter("bank_name", "label", "Data", "Ngân hàng");
 
-// Phone/bank fields stay at permlevel=1. Giving Employee role level 1 would expose private bank
-// data to ordinary employees, so only people who already operate Employee records receive it.
-const fieldLevelRoles = ["HR User", "HR Manager", "System Manager"];
+function flag(value) {
+  return value === true || value === 1 || value === "1";
+}
+
+function hasLevelOneGrant(meta, role) {
+  return (meta.permissions ?? []).some((permission) => (
+    permission.role === role
+    && Number(permission.permlevel ?? 0) === 1
+    && flag(permission.read)
+    && flag(permission.write)
+    && (flag(permission.create) || flag(permission.write))
+  ));
+}
+
+function assertPackagePermissionContract(pkg) {
+  const employee = (pkg.doctypes ?? []).find((doctype) => doctype.name === "Employee");
+  if (!employee) throw new Error("Checked-in HRM package is missing Employee metadata");
+  for (const name of sensitiveFields) {
+    const entry = (employee.fields ?? []).find((field) => field.fieldname === name);
+    if (!entry || Number(entry.permlevel ?? 0) !== 1) {
+      throw new Error(`Checked-in HRM package must keep Employee.${name} at permlevel 1`);
+    }
+  }
+  for (const role of fieldLevelRoles) {
+    if (!hasLevelOneGrant(employee, role)) {
+      throw new Error(`Checked-in HRM package is missing Employee permlevel 1 write grant for ${role}`);
+    }
+  }
+}
+
+assertPackagePermissionContract(hrmPackage);
 
 function summary() {
   return {
     tenant: "alu",
     doctype: "Employee",
+    hrm_package: `${hrmPackage.id}@${hrmPackage.version}`,
     visible_fields: [...KEEP_FIELDS],
     hidden_fields: ALL_EMPLOYEE_FIELDS.filter((field) => !KEEP_FIELDS.has(field)),
     required_removed: REQUIRED_OFF,
@@ -197,21 +235,23 @@ function field(meta, name) {
   return value;
 }
 
-function flag(value) {
-  return value === true || value === 1 || value === "1";
-}
-
 function alreadyApplied(meta) {
   return REQUIRED_OFF.every((name) => !flag(field(meta, name).reqd ?? field(meta, name).required))
     && ALL_EMPLOYEE_FIELDS.filter((name) => !KEEP_FIELDS.has(name)).every((name) => flag(field(meta, name).hidden))
     && field(meta, "user_id").label === "Tài khoản đăng nhập"
     && field(meta, "mobile").label === "Số điện thoại"
     && field(meta, "bank_account_no").label === "Số tài khoản ngân hàng"
-    && field(meta, "bank_name").label === "Ngân hàng";
+    && field(meta, "bank_name").label === "Ngân hàng"
+    && fieldLevelRoles.every((role) => hasLevelOneGrant(meta, role));
 }
 
 console.log(`Authenticating ${origin} as ${user}…`);
 await call("login", { usr: user, pwd: password });
+
+// Canonical fix for the locked SĐT/bank fields: install the versioned HRM metadata that owns
+// Employee DocPerm. Runtime Permission Manager writes are intentionally unsupported on Forge.
+const install = await call("forge.apps.install", { app: hrmPackage });
+console.log(`HRM ${hrmPackage.version}: ${install.outcome} (${install.doctypes} doctypes)`);
 
 const before = await loadEmployeeMeta();
 if (alreadyApplied(before)) {
@@ -223,33 +263,7 @@ for (const record of setters) {
   await request("/api/resource/Property%20Setter", { method: "POST", body: record });
 }
 
-for (const role of fieldLevelRoles) {
-  const current = await call(
-    "frappe.core.page.permission_manager.permission_manager.get_permissions",
-    { doctype: "Employee", role },
-    "GET",
-  );
-  const hasLevelOne = Array.isArray(current) && current.some((row) => Number(row.permlevel ?? 0) === 1);
-  if (!hasLevelOne) {
-    await call("frappe.core.page.permission_manager.permission_manager.add", {
-      parent: "Employee",
-      role,
-      permlevel: 1,
-    });
-  }
-  for (const ptype of ["read", "write", "create"]) {
-    await call("frappe.core.page.permission_manager.permission_manager.update", {
-      doctype: "Employee",
-      role,
-      permlevel: 1,
-      ptype,
-      value: 1,
-      if_owner: 0,
-    });
-  }
-}
-
 const after = await loadEmployeeMeta();
-if (!alreadyApplied(after)) throw new Error("Employee Lite verification failed after applying Property Setters");
+if (!alreadyApplied(after)) throw new Error("Employee Lite verification failed after HRM upgrade + Property Setters");
 
 console.log(JSON.stringify({ mode: "execute", outcome: "applied", effective_revision: after.effective_revision ?? after.revision, ...summary() }, null, 2));
