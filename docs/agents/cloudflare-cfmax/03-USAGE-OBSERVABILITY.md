@@ -1,8 +1,9 @@
 # CF03 — Analytics Engine / Usage / Observability
 
-Status: READY
+Status: REVIEW — request usage seam complete; production binding/live-query evidence gated
 Branch: `cloudflare/cfmax-03-usage-observability`
 Program baseline: `3b4c5c75bce315d03989d7fc05db721ff2668a4e`
+Latest main synchronized: `c10e8d9ec5da740910c4b995e03ea9529fa726b4` via internal PR `#532`
 Primary Forge authority: WS12 SRE
 Consumer authority: WS11 plan/quota/billing
 Risk: STANDARD for telemetry; CRITICAL if used for customer billing enforcement
@@ -87,6 +88,8 @@ field slot | meaning | cardinality expectation | sensitive? | required? | exampl
 
 Do not casually consume five AI Gateway metadata slots and twenty Analytics blobs with overlapping dimensions.
 
+Canonical CF03 allocation now lives in `docs/ops/CFMAX_USAGE_TELEMETRY.md` and `server/packages/usage-telemetry/src/index.ts`.
+
 ## Required queries
 
 At minimum prove query recipes for:
@@ -100,6 +103,8 @@ At minimum prove query recipes for:
 - storage/export volume;
 - tenant plan usage reconciliation candidate;
 - noisy-neighbor detection.
+
+Sampling-correct request queries and a tenant reconciliation candidate are now documented in `docs/ops/CFMAX_USAGE_TELEMETRY.md`. Queue/Workflow/AI/security families remain dependency-owned hooks rather than duplicated local implementations.
 
 ## Billing/entitlement boundary
 
@@ -115,70 +120,148 @@ metered event
 
 The exact authoritative record belongs to WS11. Analytics Engine may provide an approximation signal, not legal/financial truth by itself.
 
+Exact audit confirmed current Control Plane entitlement code stores policy/limits while quota evaluation receives `used` as an input. CF03 does not replace that input with sampled Analytics Engine data.
+
 ## Implementation slices
 
-### A — telemetry inventory
+### A — telemetry inventory — COMPLETE
 
-List current logs/traces/audit/events and identify duplication/gaps.
+Audited platform Worker observability, structured logs/traces, Gateway tenant/plan routing and WS11 entitlement policy. Existing logs/traces remain provider observability authority; Analytics Engine fills the per-tenant usage-contract gap.
 
-### B — event schema package/helper
+### B — event schema package/helper — COMPLETE for v1
 
-If needed, create one tiny typed writer seam so every Worker does not invent blob/double positions independently.
+Added `server/packages/usage-telemetry/src/index.ts`:
 
-### C — gateway/tenant request instrumentation
+- one trusted tenant index;
+- fixed 20 blob / 20 double map;
+- coarse route/operation/status classifiers;
+- 96-byte index guard without truncation;
+- stricter Forge blob budgets;
+- fail-open telemetry writer wrapper that cannot fail customer requests.
 
-Start with bounded high-value events and prove overhead.
+### C — gateway/tenant request instrumentation — COMPLETE as dormant seam
 
-### D — async/AI hooks
+Gateway now constructs one bounded request event after a trusted tenant route is known and an outcome is available. It records plan, coarse route family, operation/status class, latency, Content-Length byte counts and trusted callback app id where applicable.
 
-Consume clean metric events from queues/workflows/AI rather than importing their internals.
+`USAGE_ANALYTICS` remains optional and is intentionally not added to production Wrangler config in this autonomous pass. No dataset or binding has been provisioned/deployed.
 
-### E — query/runbook evidence
+### D — async/AI hooks — DEPENDENCY REQUESTS RECORDED
 
-Add SQL/query examples and operational interpretation.
+CF02 owns Workflow metrics, CF05 owns AI provider/cost semantics, CF04 owns security-event privacy, and CF08 owns common resource/cost taxonomy. CF03 leaves explicit slots/interfaces instead of copying sibling authority.
 
-### F — cost model
+### E — query/runbook evidence — COMPLETE for request family
 
-Estimate data points/request rate and future provider cost under representative tenants.
+`docs/ops/CFMAX_USAGE_TELEMETRY.md` contains sampling-aware SQL for tenant volume, status/error breakdown, weighted p95 latency, bandwidth, noisy-neighbor candidates and one-tenant reconciliation windows.
+
+### F — cost model — COMPLETE for request family planning
+
+One Gateway data point per tenant-resolved request is modeled against the provider source lock. The runbook clearly separates current provider billing state, published future pricing, Forge cost planning and customer pricing.
 
 ## Acceptance gates
 
 Before RC:
 
-- capability mapping;
-- typed schema/dimension budget;
-- PII/secret review;
-- cardinality/load estimate;
-- targeted unit/integration test around writer;
-- sample queries return expected tenant separation;
-- cross-tenant query negative test at Forge API layer if telemetry is exposed to users;
-- performance overhead measurement;
-- cost estimate at low/medium/high tenant traffic;
-- billing reconciliation boundary documented;
-- no customer SLA invented;
-- no production claim without exact dataset/deploy evidence.
+- [x] capability mapping: `O01-003` Metrics + `T01-008` Usage metering; `T01-009` Quota remains WS11 authority;
+- [x] typed schema/dimension budget;
+- [x] PII/secret review;
+- [x] cardinality/load estimate for one-point-per-request slice;
+- [x] targeted unit test source added around writer/schema/privacy classifiers;
+- [ ] exact-head repository build/test PASS in a usable pinned dependency environment;
+- [ ] sample dataset queries return expected tenant separation;
+- [ ] cross-tenant query negative test at Forge API layer if telemetry is exposed to users;
+- [ ] production before/after performance overhead measurement;
+- [x] cost estimate at representative traffic volumes;
+- [x] billing reconciliation boundary documented;
+- [x] no customer SLA invented;
+- [x] no production claim without exact dataset/deploy evidence.
+
+Maturity interpretation:
+
+- `O01-003 Metrics`: remains **Wired**; existing provider metrics plus CF03 per-tenant usage seam, still no new production AE evidence.
+- `T01-008 Usage metering`: **Foundation**; schema/writer/Gateway seam/query contract exist, but binding/live dataset/reconciliation are not yet end-to-end.
+- `T01-009 Quota`: unchanged; CF03 creates no competing quota authority.
 
 ## Dependencies
 
-- CF08 for canonical resource/cost taxonomy;
-- CF02 for workflow metrics;
-- CF05 for AI dimensions/cost fields;
-- CF04 for security event privacy policy;
-- WS11 for authoritative usage/entitlement records.
+### DR-CF03-01 — CF08 resource/cost taxonomy
+
+```text
+Dependency Request
+ID: DR-CF03-01
+Owner: CF08
+Need: canonical Cloudflare resource/cost taxonomy and naming for shared cost attribution.
+Why: CF08 owns production resource/config/cost governance.
+Blocked scope: final cross-primitive cost rollup and budget labels.
+Can continue independently: yes
+Next independent work: request usage seam/query evidence.
+```
+
+### DR-CF03-02 — WS11 authoritative usage reconciliation
+
+```text
+Dependency Request
+ID: DR-CF03-02
+Owner: WS11
+Need: authoritative usage checkpoint/reconciliation record and exact quota/billing consumption contract.
+Why: WS11 owns plan/quota/entitlement/billing authority; Analytics Engine is sampled telemetry.
+Blocked scope: quota enforcement and customer billing from CF03 telemetry.
+Can continue independently: yes
+Next independent work: operational metering and queries.
+```
+
+### DR-CF03-03 — CF02 Workflow metrics
+
+```text
+Dependency Request
+ID: DR-CF03-03
+Owner: CF02
+Need: stable workflow instance/step metric envelope without business payload.
+Why: CF02 owns Workflow orchestration semantics.
+Blocked scope: workflow event family instrumentation.
+Can continue independently: yes
+Next independent work: request family.
+```
+
+### DR-CF03-04 — CF05 AI usage/cost dimensions
+
+```text
+Dependency Request
+ID: DR-CF03-04
+Owner: CF05
+Need: authoritative provider/model/purpose/token/cost source and redaction contract.
+Why: CF05 owns AI policy/provider economics.
+Blocked scope: AI event family instrumentation.
+Can continue independently: yes
+Next independent work: request family.
+```
+
+### DR-CF03-05 — CF04 security telemetry privacy
+
+```text
+Dependency Request
+ID: DR-CF03-05
+Owner: CF04
+Need: approved low-cardinality security outcome taxonomy.
+Why: CF04 owns perimeter/security semantics and privacy implications.
+Blocked scope: security event family instrumentation.
+Can continue independently: yes
+Next independent work: non-security request telemetry.
+```
 
 ## Completion record
 
-Owner: —
-Started from: —
-Head: —
-Status: READY
-Capabilities: —
-Datasets: —
-Dimension allocation: —
-Tests/queries: —
-Cost estimate: —
-Dependency requests: —
-Gaps: —
+Owner: ChatGPT-CF03  
+Started from: synchronized worker branch on `main@d651a3c43a7841cb82cf47561cfae7a89a276b88` via `#524`, then resynchronized exact latest `main@c10e8d9ec5da740910c4b995e03ea9529fa726b4` via `#532`  
+Implementation checkpoint before this handoff update: `606cd497b3b3fb1233653c21a74237ec5a0fc1eb`  
+Status: REVIEW — request-family implementation complete to non-UI merge/infrastructure activation gate  
+Capabilities: `O01-003` Wired (enhanced), `T01-008` Foundation, `T01-009` unchanged/WS11-owned  
+Dataset: proposed `forge_usage_v1`; **NOT created/enabled/deployed**  
+Dimension allocation: fixed 1 index + 20 blob + 20 double contract in code/runbook  
+Tests/queries: `server/tests/cfmax-usage-telemetry.test.mjs` added; sampling-aware SQL documented; exact full repository execution not claimed  
+Cost estimate: one point/tenant-resolved Gateway request; representative 1M/10M/100M/1B monthly planning table documented  
+Dependency requests: DR-CF03-01..05  
+Production evidence: NONE; no dataset/binding/deploy/secret/DNS/customer-data mutation  
+Gaps: pinned exact-head build/test, binding/type regeneration, live tenant separation query, performance measurement, WS11 reconciliation, sibling event families  
 
 ## Startup prompt
 
