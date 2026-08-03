@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
+export const RESERVED_METADATA_TENANTS = Object.freeze(["demo", "__standard__"]);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -17,6 +18,14 @@ function parseManifest(manifestPath) {
   }
   assert(manifest && typeof manifest === "object" && !Array.isArray(manifest), "backup manifest must be a JSON object");
   return manifest;
+}
+
+export function allowedTenantIdsForBackupTable({ table, tenant }) {
+  assert(typeof table === "string" && table.length > 0, "backup table name is required");
+  assert(tenant && /^[a-z][a-z0-9-]*$/.test(tenant), "tenant id is invalid");
+  return table === "doctype_definitions"
+    ? [tenant, ...RESERVED_METADATA_TENANTS]
+    : [tenant];
 }
 
 export function inspectTenantBackup({ sqlPath, tenant, allowUnmanifested = false }) {
