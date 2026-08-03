@@ -22,7 +22,7 @@ import {
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
-import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
+import { D1DocumentListStore, D1MutationStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
 import type {
   CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
   NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
@@ -31,6 +31,7 @@ import type {
 import {
   D1DocumentAccessStore,
   D1MetadataStore,
+  MetadataDocumentListDefinitionResolver,
   MetadataPermissionService,
 } from "../../../packages/frappe-model/src/index.js";
 import coreWorker from "./index-core.js";
@@ -64,6 +65,9 @@ import {
   isManufacturingMrpFrappePath,
   routeManufacturingMrpApi,
 } from "./manufacturing-mrp-api.js";
+import { MatrixSourceActionRegistry, isMatrixApiPath, isMatrixFrappePath, routeMatrixApi } from "./matrix-api.js";
+import { createCanonicalMatrixMutations } from "./matrix-canonical-mutation.js";
+import { registerPricingMatrixBindings } from "./pricing-matrix-binding.js";
 import { mfaKeyRingFromEnv } from "./mfa-config.js";
 import {
   assertRecentNativeSecurityAuthentication,
@@ -100,13 +104,14 @@ export default {
     const manufacturingCapacity = isManufacturingCapacityApiPath(url.pathname);
     const manufacturingCosting = isManufacturingCostingApiPath(url.pathname);
     const manufacturingGenealogy = isManufacturingGenealogyApiPath(url.pathname);
+    const matrix = isMatrixApiPath(url.pathname);
     const qms = isQmsApiPath(url.pathname);
     const sessionManagement = isSessionManagementPath(url.pathname);
     const publicFrappeAuth = isPublicFrappePath(url.pathname);
     const mfaManagement = isMfaRoutePath(url.pathname);
     const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
     if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
-      && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !qms
+      && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !matrix && !qms
       && !sessionManagement && !publicFrappeAuth && !mfaManagement && !nativeSecurity) {
       return coreWorker.fetch(request, env);
     }
@@ -122,7 +127,7 @@ export default {
         // authorization, validation and persistence, so passing step-up must not create a
         // second implementation of any native admin route.
         if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
-          && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !qms
+          && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !matrix && !qms
           && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
           return coreWorker.fetch(request, env);
         }
@@ -184,6 +189,25 @@ export default {
           permissions,
           traceId,
         });
+      } else if (matrix) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(requestDb);
+        const listService = new DocumentListService(
+          new D1DocumentListStore(requestDb),
+          permissions,
+          new MetadataDocumentListDefinitionResolver(metadata),
+        );
+        const registry = registerPricingMatrixBindings(new MatrixSourceActionRegistry(), {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          documents,
+          listService,
+          ...createCanonicalMatrixMutations(request, env, tenantId),
+        });
+        response = await routeMatrixApi(request, url, { traceId, registry });
       } else if (manufacturingBomBulk) {
         const metadata = new D1MetadataStore(requestDb);
         const access = new D1DocumentAccessStore(requestDb);
@@ -317,6 +341,7 @@ export default {
         || isManufacturingCapacityFrappePath(url.pathname)
         || isManufacturingCostingFrappePath(url.pathname)
         || isManufacturingGenealogyFrappePath(url.pathname)
+        || isMatrixFrappePath(url.pathname)
         || isQmsFrappePath(url.pathname)
         || isSessionManagementPath(url.pathname)
         || isPublicFrappePath(url.pathname)
@@ -373,6 +398,7 @@ async function authenticateInterceptedRoute(
     || isManufacturingCapacityFrappePath(url.pathname)
     || isManufacturingCostingFrappePath(url.pathname)
     || isManufacturingGenealogyFrappePath(url.pathname)
+    || isMatrixFrappePath(url.pathname)
     || isQmsFrappePath(url.pathname)
     || isSessionManagementPath(url.pathname)
     || isMfaRoutePath(url.pathname);
