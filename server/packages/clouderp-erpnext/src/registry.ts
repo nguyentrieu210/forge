@@ -14,12 +14,15 @@ import {
 } from "./enterprise-controllers.js";
 import {
   EmployeeOnboardingController, EmployeePromotionController, EmployeeSeparationController,
-  EmployeeTransferController, EmploymentContractController, InterviewController, JobApplicantController,
-  JobOfferController, JobOpeningController,
+  EmployeeTransferController, EmploymentContractController, InterviewController,
+  JobOfferController,
 } from "./hrm-core-controllers.js";
 import {
-  AttendanceController, AttendanceRequestController, EmployeeCheckinController, ShiftAssignmentController, ShiftTypeController,
+  AttendanceController, AttendanceRequestController, ShiftAssignmentController,
 } from "./hrm-shift-attendance-controllers.js";
+import {
+  AttendanceGeofenceController, GeofencedEmployeeCheckinController, GeofencedShiftTypeController,
+} from "./hrm-geofence-controllers.js";
 import {
   HolidayListController, LeaveAllocationController, LeaveApplicationController, LeavePolicyController, OvertimeRequestController,
 } from "./hrm-leave-overtime-controllers.js";
@@ -27,13 +30,28 @@ import {
   AdditionalSalaryController, EmployeeAdvanceController, TrainingEventController, TravelRequestController,
 } from "./hrm-benefit-controllers.js";
 import {
-  GoalController, HrmAppraisalController, HrmPayrollPeriodController, HrmSalaryStructureAssignmentController,
+  HrmAppraisalController, HrmPayrollPeriodController, HrmSalaryStructureAssignmentController,
   SalaryStructureController,
 } from "./hrm-policy-controllers.js";
-import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import {
-  CutOrderController,
-} from "./alumdoor-inventory.js";
+  EmployeeBenefitEnrollmentController, EmployeeLoanController, EmployeeLoanRepaymentController,
+  SalaryBankBatchController, WorkforcePlanController,
+} from "./hrm-workforce-finance-controllers.js";
+import { EmployeeLoanDisbursementController } from "./hrm-loan-disbursement-controller.js";
+import { EmployeeFinalSettlementController } from "./hrm-lifecycle-closure-controllers.js";
+import { AcceptedHiringCompletionController } from "./hrm-recruitment-lifecycle.js";
+import {
+  CareerPostingController, CandidateMatchController, CandidateProfileController, ExtendedJobApplicantController,
+  ExtendedJobOpeningController, InterviewScorecardController, JobOfferResponseController,
+} from "./hrm-recruitment-depth-controllers.js";
+import { EmployeePositionAssignmentController, OrganizationPositionController } from "./hrm-organization-controllers.js";
+import { EmployeeDisciplineController, PersonnelDocumentController } from "./hrm-personnel-controllers.js";
+import {
+  CompetencyAssessmentController, CompetencyController, EmployeeCertificateController, ExtendedGoalController,
+  Review360Controller, SuccessionPlanController, TalentPoolController, TrainingAssessmentController, TrainingCourseController,
+} from "./hrm-talent-controllers.js";
+import { HrmSalarySlipController } from "./hrm-salary-slip.js";
+import { CutOrderController } from "./alumdoor-inventory.js";
 import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
 import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
 import { StockReturnIntegrityController } from "./stock-return-integrity.js";
@@ -64,18 +82,29 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new QualityInspectionController())
     .register(new IssueController())
     .register(new ExpenseClaimController())
+    .register(new OrganizationPositionController())
+    .register(new EmployeePositionAssignmentController())
     .register(new EmploymentContractController())
     .register(new EmployeeOnboardingController())
     .register(new EmployeeTransferController())
     .register(new EmployeePromotionController())
     .register(new EmployeeSeparationController())
-    .register(new JobOpeningController())
-    .register(new JobApplicantController())
+    .register(new EmployeeDisciplineController())
+    .register(new PersonnelDocumentController())
+    .register(new CandidateProfileController())
+    .register(new ExtendedJobOpeningController())
+    .register(new ExtendedJobApplicantController())
+    .register(new CandidateMatchController())
     .register(new InterviewController())
+    .register(new InterviewScorecardController())
     .register(new JobOfferController())
-    .register(new ShiftTypeController())
+    .register(new JobOfferResponseController())
+    .register(new CareerPostingController())
+    .register(new AcceptedHiringCompletionController())
+    .register(new GeofencedShiftTypeController())
+    .register(new AttendanceGeofenceController())
     .register(new ShiftAssignmentController())
-    .register(new EmployeeCheckinController())
+    .register(new GeofencedEmployeeCheckinController())
     .register(new AttendanceRequestController())
     .register(new OvertimeRequestController())
     .register(new HolidayListController())
@@ -83,15 +112,29 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new LeaveAllocationController())
     .register(new LeaveApplicationController())
     .register(new AttendanceController())
+    .register(new WorkforcePlanController())
     .register(new SalaryStructureController())
     .register(new HrmSalaryStructureAssignmentController())
     .register(new HrmPayrollPeriodController())
     .register(new AdditionalSalaryController())
+    .register(new EmployeeBenefitEnrollmentController())
+    .register(new EmployeeLoanDisbursementController())
+    .register(new EmployeeLoanController())
+    .register(new EmployeeLoanRepaymentController())
     .register(new EmployeeAdvanceController())
     .register(new TravelRequestController())
-    .register(new GoalController())
+    .register(new EmployeeFinalSettlementController())
+    .register(new ExtendedGoalController())
     .register(new HrmAppraisalController())
+    .register(new Review360Controller())
+    .register(new CompetencyController())
+    .register(new CompetencyAssessmentController())
+    .register(new TalentPoolController())
+    .register(new SuccessionPlanController())
+    .register(new TrainingCourseController())
     .register(new TrainingEventController())
+    .register(new TrainingAssessmentController())
+    .register(new EmployeeCertificateController())
     .register(new PosOpeningEntryController())
     .register(new PosInvoiceController())
     .register(new PosClosingEntryController())
@@ -99,6 +142,7 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new BankReconciliationController())
     .register(new HrmSalarySlipController())
     .register(new PayrollEntryController())
+    .register(new SalaryBankBatchController())
     .register(new SubscriptionController())
     .register(new EInvoiceSubmissionController())
     .register(new WarehouseCashFundController())
