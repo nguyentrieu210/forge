@@ -73,7 +73,8 @@ test.describe("V3-07 runtime mobile acceptance", () => {
     await attach(page, testInfo, "forge-login");
   });
 
-  test("login keyboard order is stable and visible", async ({ page }) => {
+  test("login keyboard order is stable and visible", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chrome", "desktop keyboard acceptance");
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
     const username = page.locator("#mf-login-usr");
@@ -89,6 +90,7 @@ test.describe("V3-07 runtime mobile acceptance", () => {
   });
 
   test("Alumdoor login keeps mobile touch ergonomics", async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith("mobile-"), "mobile touch acceptance");
     await page.goto("/?alumdoor=1", { waitUntil: "domcontentloaded" });
 
     const username = page.locator("#mf-login-usr");
@@ -98,18 +100,15 @@ test.describe("V3-07 runtime mobile acceptance", () => {
 
     await expect(page.locator("[data-alumdoor-login]")).toBeVisible();
     await expectNoHorizontalOverflow(page);
-
-    if ((page.viewportSize()?.width ?? 1440) < 768) {
-      await expectTouchHeight(username);
-      await expectTouchHeight(password);
-      await expectTouchHeight(submit);
-      await expectTouchHeight(mobileEntry);
-    }
-
+    await expectTouchHeight(username);
+    await expectTouchHeight(password);
+    await expectTouchHeight(submit);
+    await expectTouchHeight(mobileEntry);
     await attach(page, testInfo, "alumdoor-login");
   });
 
-  test("reduced motion clamps global login transition timings", async ({ page }) => {
+  test("reduced motion clamps global login transition timings", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "reduced-motion-dark", "reduced-motion acceptance");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
