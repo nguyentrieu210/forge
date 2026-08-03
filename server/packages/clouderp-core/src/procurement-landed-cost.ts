@@ -16,6 +16,15 @@ export interface ProcurementLandedCostLine extends JsonObject {
   allocated_cost_minor: number;
 }
 
+interface ProcurementLandedCostSourceLine {
+  line_key: string;
+  purchase_receipt: string;
+  row_id: string;
+  item_code: string;
+  warehouse: string;
+  basis_units: number;
+}
+
 export interface ProcurementLandedCostPlan extends JsonObject {
   company: string;
   currency: string;
@@ -49,7 +58,7 @@ export function planProcurementLandedCost(
   const company = requiredText(first.data.company, "purchase_receipt.company");
   const currency = requiredText(first.data.currency, "purchase_receipt.currency");
   const currencyScale = safeScale(first.data.currency_scale ?? 2);
-  const source = new Map<string, Omit<ProcurementLandedCostLine, "allocated_cost_minor">>();
+  const source = new Map<string, ProcurementLandedCostSourceLine>();
 
   for (const receipt of receipts) {
     if (receipt.doctype !== "Purchase Receipt" || receipt.docstatus !== 1) {
