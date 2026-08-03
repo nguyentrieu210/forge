@@ -3,6 +3,7 @@ name: WS09 A2 Batch Executor Validation
 on:
   pull_request:
     branches:
+      - main
       - program/ws09-batch-productization-20260804
     paths:
       - "server/packages/batch-executor/**"
