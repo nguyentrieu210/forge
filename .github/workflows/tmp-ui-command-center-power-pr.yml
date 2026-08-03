@@ -1,0 +1,102 @@
+name: Temp UI Command Center Power PR
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/metaforge-command-center-power-20260803
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Apply scoped power layer
+        run: python scripts/tmp-apply-command-center-power.py
+
+      - name: Build runtime and demo
+        run: |
+          set -euo pipefail
+          pnpm --filter runtime... run build
+          pnpm --filter @metaforge/demo run build
+
+      - name: Add visual contract
+        run: |
+          cat > client/apps/demo/e2e/power-visual.spec.ts <<'TS'
+          import { expect, test } from "@playwright/test";
+          test("power shell uses dark rail and strong active state", async ({ page }, testInfo) => {
+            await page.goto("/");
+            const sidebar = page.locator(".mf-shell-sidebar").first();
+            const active = page.locator('.mf-shell-nav-item[data-active="true"]').first();
+            await expect(sidebar).toBeVisible();
+            await expect(active).toBeVisible();
+            const sidebarStyle = await sidebar.evaluate((el) => getComputedStyle(el));
+            const activeState = await active.evaluate((el) => ({
+              color: getComputedStyle(el).color,
+              backgroundImage: getComputedStyle(el).backgroundImage,
+              fontWeight: Number(getComputedStyle(el).fontWeight),
+            }));
+            expect(sidebarStyle.backgroundImage).toContain("linear-gradient");
+            expect(activeState.color).toBe("rgb(255, 255, 255)");
+            expect(activeState.backgroundImage).toContain("linear-gradient");
+            expect(activeState.fontWeight).toBeGreaterThanOrEqual(700);
+            await page.screenshot({ path: testInfo.outputPath("command-center-power.png"), fullPage: true });
+          });
+          TS
+
+      - name: Install Chromium
+        run: pnpm --filter @metaforge/demo exec playwright install chromium
+
+      - name: Visual interaction gate
+        run: pnpm --filter @metaforge/demo exec playwright test e2e/metaforge-ui.spec.ts e2e/power-visual.spec.ts --config playwright.e2e.config.mjs --project=desktop-chromium
+
+      - name: Verify login isolation
+        run: |
+          set -euo pipefail
+          test -z "$(git diff -- client/packages/shell/src/auth/LoginForm.tsx)"
+          grep -q "METAFORGE COMMAND CENTER · POWER VISUAL LAYER" client/packages/ui/src/styles.css
+
+      - name: Upload visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: command-center-power-pr-visual
+          path: client/apps/demo/test-results/**
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit clean diff
+        run: |
+          set -euo pipefail
+          rm -f client/apps/demo/e2e/power-visual.spec.ts
+          rm -f scripts/tmp-apply-command-center-power.py
+          rm -f .github/workflows/tmp-ui-command-center-power.yml
+          rm -f .github/workflows/tmp-ui-command-center-power-gate.yml
+          rm -f .github/workflows/tmp-ui-command-center-power-pr.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A client/packages/ui/src/styles.css scripts/tmp-apply-command-center-power.py .github/workflows/tmp-ui-command-center-power.yml .github/workflows/tmp-ui-command-center-power-gate.yml .github/workflows/tmp-ui-command-center-power-pr.yml client/apps/demo/e2e/power-visual.spec.ts
+          git commit -m "feat(ui): power up MetaForge command center visuals"
+          git push origin HEAD:ui/metaforge-command-center-power-20260803
