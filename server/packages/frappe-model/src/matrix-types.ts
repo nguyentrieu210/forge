@@ -5,6 +5,30 @@ export type MatrixReadPermissionAction = "read";
 export type MatrixWritePermissionAction = "write" | "create" | "submit";
 export type MatrixEditor = "Data" | "Int" | "Float" | "Currency" | "Percent" | "Check" | "Select" | "Link";
 export type MatrixValueValidation = "positive" | "non_negative";
+export type MatrixActionInputFieldtype =
+  | "Data" | "Small Text" | "Text" | "Int" | "Float" | "Currency" | "Percent"
+  | "Check" | "Select" | "Link" | "Date" | "Datetime" | "Time"
+  | "Attach" | "Attach Image";
+
+export interface MatrixActionInputField extends JsonObject {
+  fieldname: string;
+  label: string;
+  fieldtype: MatrixActionInputFieldtype;
+  options?: string;
+  required?: boolean;
+  default?: string;
+  description?: string;
+}
+
+export interface MatrixActionInputTable extends JsonObject {
+  fieldname: string;
+  label: string;
+  description?: string;
+  columns: MatrixActionInputField[];
+  minRows: number;
+  maxRows: number;
+  allowPaste: boolean;
+}
 
 export interface MatrixSourceRef extends JsonObject {
   kind: MatrixSourceKind;
@@ -71,6 +95,11 @@ export interface MatrixActionRef extends JsonObject {
   action: string;
   permissionDoctype: string;
   permissionAction: MatrixWritePermissionAction;
+  label?: string;
+  description?: string;
+  confirm?: string;
+  fields?: MatrixActionInputField[];
+  inputTables?: MatrixActionInputTable[];
 }
 
 export interface MatrixDocumentUpdateRef extends JsonObject {
