@@ -1,162 +1,146 @@
 # UI04 — ALUMDOOR
 
 Date: 2026-08-03
-Status: **ACTIVE**
+Status: **REVIEW — WAVE A COMPLETE**
 Owner: **GPT-5.6 Thinking / UI04**
 Started from: `main@a9e3cde352dbe78c93b28097094c45fc5baad845`
 Branch: `agent/ui-04-alumdoor`
 Role: reference vertical / UX parity / metadata mapping
 
-## Mission
+## Mission outcome
 
-Treat the current Alumdoor Item Price Manager as the reference UX specimen, not as the future architecture. Capture exactly what makes it good, define parity fixtures, and prepare Alumdoor metadata to consume the generic Matrix contract without a shared-runtime fork.
+The current Alumdoor Item Price Manager is now locked as a **reference UX specimen**, not a future architecture. UI04 captures what must survive genericization, creates deterministic parity data, maps the experience to business-neutral Matrix semantics, and defines the exact evidence gate before removing the current `Item Price` runtime special case.
 
-This branch must protect product quality while allowing genericization.
+UI04 deliberately does **not** implement shared renderer code, canonical Matrix schema, or pricing-domain authoritative writes. Those belong to UI02, UI01 and UI03 respectively.
 
-## Read first
-
-1. exact branch/main/PR state;
-2. `CURRENT_STATUS.md`, `NEXT_TASKS.md`;
-3. `skills/forge-enterprise-completion/SKILL.md`;
-4. `docs/FORGE_ENTERPRISE_NORTH_STAR.md`;
-5. `client/packages/views/src/bulk/ItemPriceMatrixPanel.tsx` in full;
-6. `client/packages/views/src/bulk/BulkGridContainer.tsx` special-case routing;
-7. Alumdoor manifests/brief/views/fixtures related to Item, UOM, Price List, Item Price;
-8. `server/docs/METAFORGE-BULK-VIEW-ARCHITECTURE-20260802.md`;
-9. current production/release evidence only when validating a claim, never as permission to mutate production.
-
-## Owned scope
-
-Preferred ownership:
-
-- Alumdoor app metadata/manifest/brief/view configuration;
-- reference fixtures and UX acceptance docs/tests;
-- Alumdoor-only adapter wiring that consumes generic contracts;
-- no shared renderer implementation;
-- no pricing-domain authoritative logic.
-
-Do not patch generated Alumdoor JSON alone when a generator/source file owns it. Follow repo generator rules.
-
-## Reference behavior inventory
-
-Capture and protect at least these existing behaviors:
-
-1. Price List -> Item Group -> Item navigation;
-2. Price List search;
-3. Item/group search including accent-insensitive behavior where currently supported;
-4. selected Price List context;
-5. selected Item context;
-6. UOM row construction;
-7. stock UOM identification;
-8. UOM conversion-factor editing;
-9. add UOM;
-10. remove UOM;
-11. Price List columns;
-12. effective-date/status display;
-13. enabled/disabled Item Price cell state;
-14. Currency rate editor;
-15. create Price List;
-16. hide/show columns;
-17. focus/full-width mode;
-18. sticky headers/axes;
-19. dirty/save feedback;
-20. conflict/error feedback;
-21. mobile tree -> prices step flow;
-22. desktop split flow;
-23. large catalog completeness/search behavior;
-24. no loss of existing price/UOM data semantics.
-
-If more behavior exists in exact code, include it. The list above is minimum, not a ceiling.
-
-## Deliverables
-
-### A. Reference fixture
-
-Create a deterministic acceptance fixture/document describing representative data:
-
-- multiple Price Lists with effective dates and one disabled list;
-- multi-level Item Groups;
-- several Items with different stock/default UOMs;
-- Item with multiple UOM conversions;
-- sparse Item Price coverage across UOM x Price List;
-- at least one missing cell to test creation;
-- at least one existing cell to test update;
-- at least one UOM removal case;
-- enough items to exercise search/paging assumptions.
-
-### B. Metadata mapping
-
-Map the reference into generic concepts only:
-
-- navigator;
-- row axis;
-- column axis;
-- cell;
-- auxiliary fields;
-- named read source;
-- named write/create actions;
-- interaction policy;
-- responsive policy;
-- design hints.
-
-The mapping must not require shared renderer knowledge of `Item Price`, `Price List`, `UOM` or Alumdoor.
-
-### C. Parity checklist
-
-Create a before/after acceptance table with status and evidence placeholders for desktop/tablet/mobile.
-
-### D. Removal gate
-
-Specify the exact evidence required before deleting the current shared-runtime special case:
-
-```ts
-if (props.doctype === "Item Price") { ... }
-```
-
-Do not delete it on this reference branch unless convergence ownership explicitly assigns that final change.
-
-## Quality rule
-
-Genericization is rejected if it materially worsens the current operator workflow merely to make the schema simpler.
-
-Prefer adding a genuinely reusable primitive over flattening the experience into generic CRUD.
-
-## Parallel boundary
-
-- META owns canonical schema.
-- RUNTIME owns shared renderer.
-- PRICING owns server business semantics.
-- QA owns cross-branch and second-reference proof.
-
-If a needed generic capability is absent, write a Dependency Request. Do not implement it as an Alumdoor fork.
-
-## Acceptance
-
-Wave A is complete when:
-
-- current UX behavior is fully inventoried;
-- deterministic reference fixtures exist;
-- proposed generic metadata mapping exists;
-- parity checklist exists across desktop/tablet/mobile;
-- any missing generic primitive is expressed as a Dependency Request;
-- no shared runtime fork or duplicate pricing authority is added;
-- exact changed-file/test/evidence/handoff state is recorded.
-
-Target maturity: reference specification `RC` quality; runtime capability remains dependent on integration.
-
-## Audit plan
-
-1. Re-audit exact main after Employee Lite delta and confirm it does not change Matrix semantics.
-2. Inventory the full Item Price Manager read/write/responsive behavior from exact source.
-3. Lock deterministic fixture + expected outcomes.
-4. Map the specimen to business-neutral Matrix concepts without inventing canonical UI01 field names.
-5. Add parity/removal-gate acceptance and fixture selfcheck.
-6. Record cross-stream Dependency Requests, then final verification/handoff.
-
-## Exact-state audit snapshot
+## Exact-state audit
 
 - Branch was resynced to exact `main@a9e3cde352dbe78c93b28097094c45fc5baad845` before implementation.
-- The two main commits after the original UI Factory baseline add Alumdoor Employee Lite workflow/docs/script only; they do not modify the Item Price Matrix source, BulkGrid routing or `alumdoor-v2.views.json`.
-- Exact current special case remains in `BulkGridContainer.tsx`: `props.doctype === "Item Price"` routes to `ItemPriceMatrixPanel`.
-- Current matrix still performs compound Item/UOM/Item Price writes in React. That is reference behavior/debt, not the target authority boundary.
-- Existing screen has save spinner/toasts and OCC tokens on individual document writes, but no dedicated dirty indicator, unload guard, keyboard matrix navigation or atomic compound commit. These gaps must not be falsely promoted as parity requirements.
+- The two main commits after the original UI Factory baseline are Alumdoor Employee Lite workflow/docs/script changes and do not touch Matrix source, BulkGrid routing or `alumdoor-v2.views.json`.
+- Exact current compatibility route remains in `client/packages/views/src/bulk/BulkGridContainer.tsx`:
+
+```ts
+if (props.doctype === "Item Price") {
+  return <div className="h-full min-h-0 p-2"><ItemPriceMatrixPanel adapter={adapter} onChanged={viewQ.refetch} /></div>;
+}
+```
+
+- `ItemPriceMatrixPanel.tsx` still performs compound Item/UOM/Item Price mutation from React. This is classified as reference debt, not target authority.
+- Existing specialist UI has OCC on individual document writes and save/toast feedback, but lacks a dedicated dirty indicator/unload guard, structured conflict state, keyboard matrix navigation and atomic compound commit.
+
+## Delivered
+
+### 1. Deterministic reference fixture
+
+Authoritative UI04 fixture:
+
+`docs/agents/ui-factory/fixtures/alumdoor-item-price-matrix-reference.json`
+
+It contains:
+
+- four effective-dated column members including a disabled one;
+- multi-level Vietnamese navigator data;
+- multiple primary/default row-unit patterns;
+- one item with multiple conversion rows;
+- sparse existing cells;
+- create/update/remove/disabled/conflict scenarios;
+- deterministic 405-item synthetic tail with page-boundary anchors at 200/201 and 400/401;
+- business-neutral semantic Matrix mapping;
+- app-side named source/action bindings separated from the generic mapping;
+- explicit architectural debts that must not become parity requirements.
+
+### 2. Full parity and removal gate
+
+Authoritative acceptance document:
+
+`docs/agents/ui-factory/ALUMDOOR-ITEM-PRICE-MATRIX-PARITY.md`
+
+It inventories 57 current behaviors and classifies convergence requirements across desktop/tablet/mobile as `LOCKED` or `IMPROVE`.
+
+The removal gate requires canonical metadata transport, a business-neutral renderer, a server-authoritative pricing commit path, all fixture scenarios, three viewport proofs, dirty/conflict protection, exact-head build/tests and a second non-pricing Matrix reference before the hard-coded route can disappear.
+
+### 3. Reference selfcheck
+
+Added:
+
+`server/tests/alumdoor-item-price-matrix-reference.test.mjs`
+
+The selfcheck locks:
+
+- representative fixture completeness;
+- sparse create/update row-mutation/conflict/large-catalog cases;
+- business-neutral generic mapping with no `Item Price`, `Price List`, `UOM` or `Alumdoor` behavior literals;
+- explicit classification of current architectural debt.
+
+## Verification evidence
+
+- Exact branch vs main before final handoff: **ahead only / behind 0**.
+- Changed blast radius: docs + deterministic fixture + reference selfcheck only; no `client/**`, app brief, schema, migration, pricing authority or production code changed.
+- Fixture JSON content was fetched back from GitHub by blob SHA and parsed successfully in an independent local invariant mirror.
+- Invariant mirror result: **PASS** for effective dates/disabled member, multi-level navigator, row diversity, sparse cells, 0/200/400 paging anchors, all required scenarios, no generic business-literal leakage and all debt classifications.
+- The committed Node selfcheck source was fetched back and audited for syntax/fixture-relative path consistency.
+- Full repository `node --test` execution is **NOT RUN** because the available container cannot resolve `github.com` and has no full Forge checkout. No fake CI claim is made.
+- Browser parity against the future generic renderer is intentionally not runnable on UI04 because UI02/UI01/UI03 convergence does not yet exist.
+
+## Dependency Requests
+
+### DR-UI04-01 -> UI01 / META
+
+- Need: canonical first-class Matrix metadata + validator/compiler/manifest transport able to express the UI04 semantic mapping without app literals.
+- Blocked scope: real Alumdoor `viewPolicy.matrix` wiring.
+- Can continue independently: UI04 Wave A is complete.
+
+### DR-UI04-02 -> UI02 / RUNTIME
+
+- Need: generic renderer for hierarchy/search, row auxiliary editor, sparse cells, column visibility, sticky axes, focus mode, desktop/tablet split, mobile steps, dirty guard and structured conflict state.
+- Blocked scope: browser parity against the generic renderer.
+- Can continue independently: UI04 Wave A is complete.
+
+### DR-UI04-03 -> UI03 / PRICING
+
+- Need: permission-aware bounded read projection and server-authoritative compound commit/create-column/row-member capabilities with OCC/idempotency and explicit atomic/partial-failure semantics.
+- Blocked scope: removal of direct multi-document React mutation.
+- Can continue independently: UI04 Wave A is complete.
+
+### DR-UI04-04 -> UI05 / QA
+
+- Need: convergence E2E/performance evidence and second-reference leakage proof.
+- Blocked scope: final special-case removal and declaration that Matrix is a generic platform primitive.
+- Can continue independently: UI04 Wave A is complete.
+
+## Maturity
+
+| Scope | Maturity |
+| --- | --- |
+| UI04 reference behavior specification | **RC source/spec** |
+| deterministic fixture + semantic mapping | **RC source/spec** |
+| canonical Alumdoor Matrix metadata | **Blocked by UI01** |
+| generic Matrix runtime parity | **Blocked by UI02** |
+| server-authoritative pricing Matrix action | **Blocked by UI03** |
+| whole Matrix convergence/removal | **Not RC until UI05/integration evidence** |
+
+## Changed zones
+
+- `docs/agents/ui-factory/UI04-ALUMDOOR.md`
+- `docs/agents/ui-factory/NO-STOP-RULE.md`
+- `docs/agents/ui-factory/ALUMDOOR-ITEM-PRICE-MATRIX-PARITY.md`
+- `docs/agents/ui-factory/fixtures/alumdoor-item-price-matrix-reference.json`
+- `server/tests/alumdoor-item-price-matrix-reference.test.mjs`
+
+No shared renderer, metadata compiler, pricing package, generated Alumdoor brief, migration, schema or production workflow is modified.
+
+## Merge / deploy classification
+
+This branch is **reference-only UI Factory support**: documentation, deterministic fixture and test. It changes no runtime/backend/business behavior. It is safe to merge as a non-production UI/reference artifact after exact-head PR review.
+
+There is **nothing to deploy** from this branch because no `client/**` or production artifact changes. The actual Matrix renderer/pricing convergence must follow UI00 ownership and its own merge gates.
+
+## Handoff
+
+Workstream: UI04 / ALUM  
+Branch: `agent/ui-04-alumdoor`  
+Status: `REVIEW — WAVE A COMPLETE`  
+Capabilities: Alumdoor Item Price Matrix UX reference, fixture, semantic mapping, parity/removal gate  
+Migration: none  
+Production mutation: none  
+Recommended next integration order: `UI01 META -> UI03 PRICING -> UI02 RUNTIME -> UI04 wiring/parity -> UI05 QA -> remove special case`.
