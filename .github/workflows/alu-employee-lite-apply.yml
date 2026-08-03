@@ -26,10 +26,10 @@ concurrency:
 
 jobs:
   apply:
-    name: Apply and verify Employee Lite on ALU
+    name: Upgrade HRM permission metadata and apply Employee Lite on ALU
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.confirm == 'ALU_EMPLOYEE_LITE')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment: production
     env:
       TARGET_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
@@ -61,6 +61,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Validate checked-in Employee Lite + HRM permission contract
+        run: node server/scripts/apply-alumdoor-employee-lite.mjs
+
       - name: Require production credential
         shell: bash
         run: |
@@ -68,7 +71,7 @@ jobs:
           test -n "$FORGE_ADMIN_USER" || { echo "Missing FORGE_ADMIN_USER/ALU_META_ADMIN_USER"; exit 1; }
           test -n "$FORGE_ADMIN_PASSWORD" || { echo "Missing FORGE_ADMIN_PASSWORD/ALU_META_ADMIN_PASSWORD"; exit 1; }
 
-      - name: Apply tenant-scoped Employee Lite metadata
+      - name: Upgrade HRM package and apply tenant-scoped Employee Lite metadata
         run: node server/scripts/apply-alumdoor-employee-lite.mjs --execute --confirm ALU_EMPLOYEE_LITE
 
       - name: Verify public production health remains available
