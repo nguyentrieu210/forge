@@ -37,27 +37,25 @@ Pull request: #466
 
 ## Validation evidence
 
-Final validation is executed on the GitHub pull-request merge result against current `main`, so it consumes V3-01 foundation and concurrent RC changes rather than validating an obsolete branch snapshot.
+Final validation ran on GitHub pull-request merge ref `b7ef58aca7ea1a870c47ddc3f1f4d1c6ea514431`, which merged V3-02 head `18848ff024a728578db32b8e8b2e972572c802c2` into then-current `main` `bbf79b541ede38222544774ec8b5393f8e1bb1fe`.
 
-Required V3-02 gates:
+Run `30840838170`, job `91777246716`:
 
-- `pnpm --filter @metaforge/shell run typecheck`
-- `pnpm --filter @metaforge/shell run build`
-- `pnpm --filter runtime... run build`
-- `node client/scripts/check-app-shell-mobile.mjs`
-- workspace-navigation selfcheck
+- PASS — `pnpm --filter @metaforge/shell run typecheck`
+- PASS — `pnpm --filter @metaforge/shell run build`
+- PASS — `pnpm --filter runtime... run build`
+- PASS — `node client/scripts/check-app-shell-mobile.mjs`
+- PASS — workspace-navigation selfcheck
+- PASS — repository client typecheck on the converged merge result
+- PASS — client selfchecks (`89` selfcheck groups plus linked form/bulk/workspace/matrix checks)
 
-The prior merge-result validation run `30840297436` / job `91775425358` passed shell typecheck, shell build, mobile/a11y regression and workspace-navigation selfcheck before the final runtime V3 stylesheet opt-in. The final PR run after this evidence file is the release gate for merge.
+The runtime production build compiled the V3 stylesheet consumer successfully. The only build notes were the existing missing local `VITE_FORGE_RELEASE_SHA` warning outside deployment and Rollup chunk-size advisory; the production deploy workflow supplies the release SHA.
 
-## Inherited baseline debt
+## Remaining repository-wide native UI lint debt
 
-The repository-wide baseline currently contains issues outside V3-02 ownership:
+`check-native-ui.mjs` still reports `32` violations across `10` files on the converged main merge result. None are in the V3-02 files `AppShell.tsx`, `ShellV3Chrome.tsx`, `WorkspaceAppShell.tsx`, or `workspace-tab-state.ts`.
 
-- `client/packages/builder/src/formula/formula-rule.ts:68` has TS2322 (`number` returned from a `void` path).
-- Native UI lint reports pre-existing violations in Builder/Views/Matrix files outside the shell workstream.
-- Client selfchecks transitively hit the same Builder typecheck debt.
-
-The focused shell/runtime gates remain authoritative for this UI-only workstream. These baseline failures are recorded, not hidden or reclassified as V3-02 defects.
+The reported debt belongs to Builder, V3-03 auth presentation, Views and Matrix surfaces. It is preserved as cross-workstream evidence rather than being suppressed or silently claimed as V3-02 work.
 
 ## Dependency Request — DR-V3-02-01
 
