@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, WorkflowStep } from "cloudflare:workers";
 import type { WorkflowEvent } from "cloudflare:workers";
-import { errorResponse, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
+import { errorResponse, errors, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
 import {
   assertCursorAdvanced,
   parseRouteIndexRebuildPage,
@@ -117,7 +117,7 @@ export default {
           });
         }
         if (request.method === "POST" && action === "terminate") {
-          await instance.terminate({ reason: "operator-request" });
+          await instance.terminate();
           return jsonResponse({ id: instance.id, details: await instance.status() }, 202, {
             "x-cloudforge-trace-id": traceId,
           });
@@ -134,7 +134,7 @@ export default {
 function assertOperatorAuth(request: Request, env: WorkflowEnv): void {
   const expected = requireConfig(env.WORKFLOW_TOKEN, "WORKFLOW_TOKEN");
   if (!timingSafeEqualString(request.headers.get("authorization") ?? "", `Bearer ${expected}`)) {
-    throw new Error("WORKFLOW_AUTH_REQUIRED");
+    throw errors.authentication("Workflow operator authentication required");
   }
 }
 
