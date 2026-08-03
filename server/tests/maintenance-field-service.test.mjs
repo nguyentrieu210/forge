@@ -49,9 +49,13 @@ test("service contract and warranty keep authoritative provenance correction and
   const claim = json("doctypes/warranty-claim.json");
   const claimWorkflow = json("workflows/warranty-claim.json");
 
+  assert.equal(field(contract, "company").options, "Company");
+  assert.equal(field(contract, "branch").options, "Branch");
   assert.equal(field(contract, "covered_items").options, "Service Contract Item");
   assert.equal(field(covered, "serial_no").options, "Serial No");
   assert.equal(transition(contractWorkflow, "Phê duyệt").allow_self_approval, false);
+  assert.equal(field(request, "company").options, "Company");
+  assert.equal(field(request, "branch").options, "Branch");
   assert.equal(field(request, "service_contract").options, "Service Contract");
   assert.equal(field(request, "source_delivery_note").options, "Delivery Note");
   assert.equal(field(request, "warranty_reference").mandatory_depends_on, "eval:doc.request_type == 'Bảo hành' && !doc.service_contract");
