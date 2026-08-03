@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - cloudflare/cfmax-06-render-export
+  pull_request:
+    branches:
+      - cloudflare/cfmax-06-render-export
   workflow_dispatch:
 
 permissions:
@@ -20,6 +23,8 @@ jobs:
     steps:
       - name: Checkout exact branch head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
