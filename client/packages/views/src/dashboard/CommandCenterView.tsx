@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { ForgeAreaChart, ForgeBarChart, ForgeLineChart, type ForgeChartSeries } from "@metaforge/charts";
+import { Button } from "@metaforge/ui";
 import { AlertBeacon, CommandCenterGrid, DataPanel, EdgeFrame, GlowDivider, MetricNumber, StatusPulse } from "@metaforge/visual";
 import type { DashboardCard, DashboardChartData } from "./DashboardView.js";
 
@@ -63,7 +64,15 @@ export function CommandCenterView({
             {cards.map((card, index) => {
               const clickable = card.route && onNavigate;
               const body = <MetricNumber label={card.label} value={card.value} hint={typeof card.trend === "number" ? `${card.trend > 0 ? "↗" : card.trend < 0 ? "↘" : "→"} ${Math.abs(card.trend)}%` : card.description} accent={index === 0} />;
-              return <EdgeFrame key={`${card.label}-${index}`} className="min-w-0"><div className={`min-h-28 rounded-md border border-white/8 bg-white/[0.025] p-4 ${clickable ? "transition hover:border-[var(--forge-primary,#ef332d)]/35 hover:bg-white/[0.04] motion-reduce:transition-none" : ""}`}>{clickable ? <button type="button" className="h-full w-full text-left focus-visible:outline-none" onClick={() => onNavigate?.(card.route!)}>{body}</button> : body}</div></EdgeFrame>;
+              return (
+                <EdgeFrame key={`${card.label}-${index}`} className="min-w-0">
+                  <div className={`min-h-28 rounded-md border border-white/8 bg-white/[0.025] p-4 ${clickable ? "transition hover:border-[var(--forge-primary,#ef332d)]/35 hover:bg-white/[0.04] motion-reduce:transition-none" : ""}`}>
+                    {clickable ? (
+                      <Button type="button" variant="ghost" className="h-full w-full items-stretch justify-start whitespace-normal rounded-none p-0 text-left text-inherit hover:bg-transparent focus-visible:ring-white/35" onClick={() => onNavigate?.(card.route!)}>{body}</Button>
+                    ) : body}
+                  </div>
+                </EdgeFrame>
+              );
             })}
           </div>
         ) : null}
