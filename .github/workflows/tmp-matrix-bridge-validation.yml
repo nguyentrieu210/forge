@@ -40,7 +40,7 @@ jobs:
           test -f server/dist/apps/tenant-worker/src/matrix-api.js
           test -f server/dist/apps/tenant-worker/src/pricing-matrix-binding.js
           test -f server/dist/apps/tenant-worker/src/matrix-canonical-mutation.js
-          node server/scripts/ensure-tenant-worker-core.mjs
+          (cd server && node scripts/ensure-tenant-worker-core.mjs)
       - name: Server Matrix and App Factory regressions
         working-directory: server
         run: >-
