@@ -1,9 +1,10 @@
 # MetaForge Matrix named-source/action bridge — 2026-08-03
 
-Status: **IMPLEMENTED ON BRANCH / VALIDATION IN PROGRESS / NOT MERGED / NOT DEPLOYED**
+Status: **IMPLEMENTED + OWNED-SCOPE VALIDATED / READY FOR APPROVAL / NOT MERGED / NOT DEPLOYED**
 
 Branch: `feat/matrix-named-source-action-bridge`
-Base after exact-main sync: `main@2e6346a87870961db59cb97869150c3028b07d02`
+Exact-main lineage validated against: `main@82cbb01f768f32583f029d02d2bd9051ecef09fb`
+Validated branch head before CI-cleanup-only commits: `d560eabd483aef72c6f509c86b8a05a95ddc6d45`
 Draft PR: `#419`
 Risk: **STANDARD shared/backend contract**
 
@@ -43,6 +44,8 @@ A closed `MatrixSourceActionRegistry` now maps metadata names to registered doma
 `DoctypeWorkspace` now chooses Matrix from `meta.viewPolicy.matrix`, not `doctype === "Item Price"`. When a DocType declares both Bulk and Matrix, Bulk remains the compatibility default unless `view=matrix` is explicitly selected. This preserves current behavior without a business-name branch in the workspace.
 
 The brief `.views.json` loader now transports a `matrix` block to the canonical top-level authoring field. It performs only shallow shape checks; deep Matrix semantics remain owned by the UI01/App Factory validator and parser. Legacy `mobile.bulk` sidecar behavior remains unchanged.
+
+The shared Link service also no longer special-cases `Price List` by name. Buying/selling narrowing is now derived from the parent business-context policy plus target metadata fields (`selling` / `buying`). The Matrix domain-leak gate found that pre-existing shared-runtime debt and the branch removes it generically rather than suppressing the gate.
 
 ### WRITE AUTHORITY
 
@@ -87,7 +90,7 @@ Required first references:
 4. permission/capability-driven visibility and validation;
 5. cancel/dirty behavior consistent with other Matrix actions.
 
-Why: the old Item Price Manager can add UOMs and create Price Lists. UI01 metadata currently names member actions but does not describe their input form. Hard-coding those dialogs in the generic Matrix renderer would simply move the old special case to a less obvious file.
+Why: the old Item Price Manager can add UOMs and create Price Lists. UI01 metadata currently names member actions but does not specify their input form. Hard-coding those dialogs in the generic Matrix renderer would simply move the old special case to a less obvious file.
 
 Blocked scope:
 
@@ -96,7 +99,7 @@ Blocked scope:
 - deleting the remaining `BulkGridContainer -> ItemPriceMatrixPanel` compatibility branch;
 - claiming Matrix RC.
 
-Can continue independently: **yes**. DR-MATRIX-01, existing-row edit/read/write integration, exact-head build/tests, domain-leak checks and browser harness evidence are independent.
+Can continue independently: **yes**. DR-MATRIX-01, existing-row edit/read/write integration, exact-head build/tests and domain-leak evidence are complete on this branch.
 
 ## Removal gate remains
 
@@ -110,21 +113,29 @@ Do not remove the legacy Item Price path until all are true:
 - second non-pricing Matrix reference passes without a business-name conditional;
 - shared runtime domain-leak gate stays green.
 
-## Validation target
+## Final validation evidence
 
-Temporary PR-only workflow on #419 runs:
+Temporary PR-only workflow run: **30818380398**
 
-- exact server build;
-- Matrix source/action registry regression;
-- view-sidecar transport regression;
-- real Alumdoor brief -> canonical App Factory -> authoritative manifest parser regression;
-- existing pricing authority regression;
-- UI01 Matrix compiler regression;
-- views TypeScript build + Matrix test family;
-- shared Matrix domain-leak gate.
+Validated branch head: `d560eabd483aef72c6f509c86b8a05a95ddc6d45`, which already contains exact `main@82cbb01f768f32583f029d02d2bd9051ecef09fb`.
 
-The temporary workflow must be removed after evidence is captured. Its absence from the final merge diff is part of the cleanup gate.
+Result: **SUCCESS**.
+
+- frozen workspace install: PASS;
+- whole-server TypeScript compile was executed and still returns non-zero because current main contains unrelated pre-existing MRP/CRM/QMS/App Factory exact-optional/export debt;
+- Matrix-owned server paths (`matrix-api.ts`, `pricing-matrix-binding.ts`, `matrix-canonical-mutation.ts`): **0 TypeScript errors**;
+- tenant-worker core emit guard: PASS;
+- targeted server Matrix/App Factory/pricing regressions: **27/27 PASS**;
+- `@metaforge/views` TypeScript build: PASS;
+- Matrix view regression family: **8/8 PASS**;
+- shared Matrix domain-leak gate: PASS;
+- real Alumdoor brief -> view sidecar -> canonical App Factory compiler -> authoritative manifest parser: PASS;
+- pricing permission/OCC/idempotency/fixed-point authority regression: PASS.
+
+During validation the gate found and forced removal of a pre-existing shared `doctype === "Price List"` conditional in `container/services.ts`; it is now metadata-capability-driven.
+
+The temporary workflow was deleted immediately after evidence capture in cleanup commit `55307b64b9736e0bea41a6f94ea6f523d99791a1`; it is not part of the final feature diff.
 
 ## Production boundary
 
-No production migration, Worker deploy, secret/DNS change, tenant/customer-data mutation, or compatibility-path removal is authorized by this branch. Merge/deploy remains blocked on explicit user approval because this changes shared backend/runtime behavior.
+No production migration, Worker deploy, secret/DNS change, tenant/customer-data mutation, or compatibility-path removal has been performed. Merge/deploy remains blocked on explicit user approval because this changes shared backend/runtime behavior.
