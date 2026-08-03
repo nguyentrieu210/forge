@@ -169,7 +169,6 @@ export class StockReconciliationIntegrityController extends StockReconciliationC
     if (!context.existing || context.existing.docstatus !== 1) {
       throw errors.lifecycle("Chỉ phiếu kiểm kê đã ghi sổ mới được đảo");
     }
-    if (!text(data.cancel_reason)) throw errors.validation("Phải nhập lý do đảo phiếu kiểm kê");
     assertReversalApprover(context, text(data.counted_by));
     await assertReversalPeriodOpen(context, data);
 
