@@ -15,8 +15,9 @@ export const focusRing =
  * Chiều cao/viền/nền/chữ chung cho control 1 dòng.
  * `text-base md:text-[13px]`: dưới 16px, Safari iOS TỰ PHÓNG TO trang khi focus vào ô nhập và
  * không thu lại — nên trên màn hình nhỏ dùng 16px, từ md trở lên mới về 13px cho đúng mật độ dày.
+ * `text-foreground` khóa màu chữ theo nền control, không kế thừa chữ sáng từ sidebar tối.
  */
 export const controlBase =
-  "h-8 rounded-md border border-input bg-background text-base md:text-[13px] transition-colors " +
+  "h-8 rounded-md border border-input bg-background text-foreground text-base md:text-[13px] transition-colors " +
   "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted " +
   "aria-[invalid=true]:border-destructive aria-[invalid=true]:border-[1.5px]";
