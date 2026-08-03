@@ -47,12 +47,13 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
           echo "full_server_tsc_status=${status}"
-          if grep -E 'packages/clouderp-erpnext/src/manufacturing-costing-read\.ts|packages/clouderp-erpnext/src/index\.ts' /tmp/closure02-tsc.log; then
+          if grep -E 'packages/clouderp-erpnext/src/manufacturing-costing-read\.ts|packages/clouderp-erpnext/src/index\.ts|apps/tenant-worker/src/manufacturing-mrp-api\.ts' /tmp/closure02-tsc.log; then
             echo "Closure-02 changed Manufacturing source has TypeScript errors"
             exit 1
           fi
           test -f server/dist/packages/clouderp-erpnext/src/manufacturing-costing-read.js
           test -f server/dist/packages/clouderp-erpnext/src/manufacturing-mrp-netting.js
+          test -f server/dist/apps/tenant-worker/src/manufacturing-mrp-api.js
 
       - name: Manufacturing closure regressions
         run: >-
@@ -70,5 +71,5 @@ jobs:
           server/tests/manufacturing-mrp-netting.test.mjs
           server/tests/manufacturing-mrp-netting-api.test.mjs
 
-      - name: Manufacturing metadata package gate
-        run: pnpm --dir server run app:check
+      - name: Manufacturing-QMS package gate
+        run: node server/scripts/pack-app.mjs server/apps-src/manufacturing-qms --check
