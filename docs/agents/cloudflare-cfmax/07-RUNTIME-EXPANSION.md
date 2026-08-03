@@ -1,10 +1,11 @@
 # CF07 — Dynamic Workers / Containers-Sandbox / Hyperdrive / Pipelines
 
-Status: READY
+Status: **REVIEW — decision complete / implementation deferred**
 Branch: `cloudflare/cfmax-07-runtime-expansion`
 Program baseline: `3b4c5c75bce315d03989d7fc05db721ff2668a4e`
 Primary Forge authorities: WS00 architecture, WS09 App Factory, WS10 integrations, WS13 migration depending on primitive
 Risk: CRITICAL
+Decision record: `docs/agents/cloudflare-cfmax/CF07_RUNTIME_EXPANSION_DECISION.md`
 
 ## Mission
 
@@ -216,21 +217,45 @@ A DEFER/REJECT decision is complete when trigger/revisit conditions are explicit
 - WS09 for App Factory extension authority;
 - WS10/WS13 for connector/migration consumers.
 
+## Execution result — 2026-08-04
+
+Exact current `main@d651a3c43a7841cb82cf47561cfae7a89a276b88` was audited in addition to the branch/control baseline. Current main evidence shows:
+
+- the Worker/D1/DO/Queue architecture remains a valid fit; current pressure points are query shape, bounded scans, mutation size and coordination evidence rather than a missing heavy-runtime primitive;
+- App Factory now has a bounded versioned/effective-dated fixed-point formula evaluator, so ordinary tenant formulas do not justify arbitrary Dynamic Worker code;
+- migration keeps workbook decoding in browser/CLI and Worker-side logic consumes normalized tabular data, so no measured Container/Sandbox blocker exists;
+- Integration Hub is HTTP/event/provider-adapter oriented and no concrete first-party PostgreSQL/MySQL source is established, so Hyperdrive has no representative source to prove against;
+- no first-party Dynamic Worker loader, Hyperdrive binding or Pipelines wiring was found;
+- no measured streaming event volume exists that makes Pipelines preferable to Queue/outbox + Analytics Engine/R2.
+
+Official Cloudflare provider documentation was re-checked for Dynamic Workers, Containers/Sandbox, Hyperdrive and Pipelines. Provider feasibility is not the blocker; Forge workload evidence is.
+
+The complete scorecards, future security/authority contracts, trigger metrics and provider references are recorded in `CF07_RUNTIME_EXPANSION_DECISION.md`.
+
+### Dependency Request summary
+
+- `DR-CF07-01 -> CF04`: reusable default-deny untrusted-code perimeter, egress, capability-binding identity and secret-injection policy before any Dynamic Worker/Sandbox network-capable proof.
+- `DR-CF07-02 -> CF08`: quota/cost/config governance for Dynamic Worker creation/request/CPU, Container/Sandbox runtime resources, Hyperdrive config and Pipelines production-risk tracking.
+
+These dependencies do not justify speculative implementation; they become active only if a real workload crosses a proof trigger.
+
 ## Completion record
 
-Owner: —
-Started from: —
-Head: —
-Status: READY
-Capabilities: —
-Dynamic Workers decision: —
-Containers/Sandbox decision: —
-Hyperdrive decision: —
-Pipelines decision: —
-Proofs: —
-Benchmarks: —
-Dependency requests: —
-Gaps/triggers: —
+Owner: **GPT-5.6 Thinking / CF07**
+Started from: **CFMAX program baseline `3b4c5c75bce315d03989d7fc05db721ff2668a4e`; exact current-main audit `d651a3c43a7841cb82cf47561cfae7a89a276b88`**
+Decision record commit: **`20a851a9caf9b5f86753eafb716305302fc5929a`**
+Head: **exact GitHub branch wins; this handoff update follows the decision-record commit**
+Status: **REVIEW — decision complete / implementation deferred**
+Capabilities: **conditional consumers mapped to `B01-013`, `B01-014`, `B01-015`, `B02-014`, `B02-015`, `B02-022`, `I01-007`, `I01-008`, `IM02-002`, `IM02-016`; no new taxonomy and no maturity promotion**
+Dynamic Workers decision: **DEFER**
+Containers/Sandbox decision: **DEFER**
+Hyperdrive decision: **DEFER**
+Pipelines decision: **DEFER**
+Proofs: **NONE — no representative workload crossed the proof gate**
+Benchmarks: **NONE claimed — trigger metrics are defined in the decision record; synthetic tutorial benchmarks were intentionally rejected**
+Dependency requests: **DR-CF07-01 -> CF04; DR-CF07-02 -> CF08**
+Gaps/triggers: **see `CF07_RUNTIME_EXPANSION_DECISION.md`; reopen only from measured workload evidence, not provider feature availability**
+Production evidence: **NONE; no Cloudflare resource, secret, DNS, production config or customer/canonical data was mutated**
 
 ## Startup prompt
 
