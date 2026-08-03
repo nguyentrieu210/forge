@@ -7,7 +7,7 @@
  *
  * Four steps, all of which used to be manual and two of which did not exist:
  *
- *   1. compile   the brief into a full app package  (scripts/lib/compile-brief.mjs)
+ *   1. compile   the brief into a full app package  (scripts/lib/compile-app-brief.mjs)
  *   2. validate  through the SERVER's own parser, so nothing can fail later for shape
  *   3. install   over HTTP into the tenant — a metadata write, no deploy
  *   4. verify    that the client manifest the runtime will boot from actually resolves
@@ -23,7 +23,7 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { compileBrief, BriefError } from "./lib/compile-brief.mjs";
+import { compileBrief, BriefError } from "./lib/compile-app-brief.mjs";
 import { readAppSource } from "./lib/read-app-source.mjs";
 import { readBriefSource } from "./lib/read-brief-source.mjs";
 import { validateBriefSchema } from "./lib/validate-brief-schema.mjs";

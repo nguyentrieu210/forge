@@ -1,4 +1,5 @@
 import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
+import type { MatrixViewPolicy } from "./matrix-types.js";
 
 export type MetaFieldType =
   | "Data"
@@ -138,6 +139,7 @@ export interface DocTypeViewPolicy extends JsonObject {
   form: DocTypeView;
   quickEntry?: DocTypeView;
   bulk?: DocTypeView;
+  matrix?: MatrixViewPolicy;
   kanban?: DocTypeView;
   calendar?: DocTypeView;
   gantt?: DocTypeView;
@@ -228,7 +230,7 @@ export interface DocTypeMeta extends JsonObject {
   sort_order?: "ASC" | "DESC";
   search_fields?: string[];
   fields: DocFieldMeta[];
-  /** Explicitly enables views; a chart/Kanban/calendar/bulk view is never inferred from a coincidental field. */
+  /** Explicitly enables views; a chart/Kanban/calendar/bulk/matrix view is never inferred from a coincidental field. */
   viewPolicy?: DocTypeViewPolicy;
   permissions: DocPermissionMeta[];
   revision: number;
