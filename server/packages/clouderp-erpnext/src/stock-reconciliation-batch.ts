@@ -158,11 +158,13 @@ function normalizeSnapshotRow(
   }
   const itemCode = requiredText(raw.item_code, `snapshot.items[${index}].item_code`);
   const batchNo = optionalText(raw.batch_no);
-  return {
+  const normalized: StockReconciliationBatchDocumentRow = {
     ...raw,
     item_code: itemCode,
-    ...(batchNo ? { batch_no: batchNo } : { batch_no: undefined }),
   };
+  if (batchNo) normalized.batch_no = batchNo;
+  else delete normalized.batch_no;
+  return normalized;
 }
 
 function normalizeBatchRow(raw: StockReconciliationBatchRowInput, index: number): NormalizedBatchRow {
@@ -195,10 +197,11 @@ function applyEditableValues(
   incoming: NormalizedBatchRow,
 ): StockReconciliationBatchDocumentRow {
   const mapped: StockReconciliationBatchDocumentRow = { ...snapshotRow };
+  const target = mapped as JsonObject;
   for (const field of EDITABLE_FIELDS) {
     const value = incoming[field];
-    if (value === undefined) delete mapped[field];
-    else mapped[field] = value;
+    if (value === undefined) delete target[field];
+    else target[field] = value;
   }
   return mapped;
 }
