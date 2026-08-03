@@ -1,0 +1,57 @@
+name: TMP Matrix Member Action Validation
+
+on:
+  pull_request:
+    branches: [feat/matrix-named-source-action-bridge]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.head_ref == 'feat/matrix-member-action-input'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact workspace
+        run: pnpm install --frozen-lockfile
+      - name: Compile server and isolate Matrix member-action errors
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir server exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/server-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "full server tsc status=${status}; inherited baseline debt is reported separately"
+          if grep -E 'packages/frappe-model/src/(matrix-types|matrix-validate)\.ts|packages/clouderp-pricing/src/member-actions\.ts|apps/tenant-worker/src/pricing-matrix-binding\.ts' /tmp/server-tsc.log; then
+            echo "Matrix member-action owned server TypeScript errors remain"
+            exit 1
+          fi
+          test -f server/dist/packages/frappe-model/src/matrix-validate.js
+          test -f server/dist/packages/clouderp-pricing/src/member-actions.js
+          test -f server/dist/apps/tenant-worker/src/pricing-matrix-binding.js
+          (cd server && node scripts/ensure-tenant-worker-core.mjs)
+      - name: Server Matrix member-action regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/matrix-member-action-input.test.mjs
+          tests/alumdoor-matrix-view-contract.test.mjs
+          tests/pricing-matrix-authority.test.mjs
+          tests/matrix-source-action-registry.test.mjs
+          tests/ui01-compile-view-policy.test.mjs
+      - name: Matrix views typecheck and regressions
+        run: pnpm --dir client --filter @metaforge/views run test:matrix
+      - name: Shared Matrix domain-leak gate
+        working-directory: client
+        run: node scripts/check-matrix-domain-leaks.mjs
