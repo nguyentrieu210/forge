@@ -59,12 +59,12 @@
       "import": "./dist/system/Import.js"
     },
     "./action": {
-      "types": "./dist/action/FriendlyActionScreen.d.ts",
-      "import": "./dist/action/FriendlyActionScreen.js"
+      "types": "./dist/action/NativeActionScreen.d.ts",
+      "import": "./dist/action/NativeActionScreen.js"
     },
     "./screen": {
-      "types": "./dist/screen/ScreenView.d.ts",
-      "import": "./dist/screen/ScreenView.js"
+      "types": "./dist/screen/NativeScreenView.d.ts",
+      "import": "./dist/screen/NativeScreenView.js"
     },
     "./matrix": {
       "types": "./dist/matrix/index.d.ts",
