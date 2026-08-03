@@ -18,6 +18,12 @@ import { ContextContainer } from "../container/ContextContainer.js";
 import { TreeContainer } from "../tree/TreeContainer.js";
 import type { UrlStateBridge } from "../list/useListState.js";
 import { buildPrintPath } from "../print/printRoute.js";
+import {
+  V3_CONFIRM_DIALOG_CLASS,
+  V3_DATA_SURFACE_CLASS,
+  V3_QUICK_ENTRY_DIALOG_CLASS,
+  V3_VIEW_SWITCHER_CLASS,
+} from "../data-surface/v3.js";
 
 export interface DoctypeWorkspaceProps {
   doctype: string;
@@ -51,11 +57,11 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const bulkActive = !decoded && !isNew && (isPriceListManager || (bulkEnabled && bridge.get("view") === "bulk"));
 
   const modeTabs = bulkEnabled && !decoded && !isNew && !isPriceListManager ? (
-    <div className="flex shrink-0 items-center gap-1 border-b bg-card px-3 py-2">
+    <div className={V3_VIEW_SWITCHER_CLASS} role="navigation" aria-label={t("common.view", "Chế độ xem")}>
       <Button
         variant={bulkActive ? "ghost" : "secondary"}
         size="sm"
-        className="h-8"
+        className="h-8 rounded-md"
         onClick={() => {
           if (bulkActive && bulkDirty) {
             setConfirmBulkExit(true);
@@ -69,7 +75,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
       <Button
         variant={bulkActive ? "secondary" : "ghost"}
         size="sm"
-        className="h-8"
+        className="h-8 rounded-md"
         onClick={() => bridge.set({ view: "bulk" })}
       >
         <Rows3 /> Nhập hàng loạt
@@ -79,7 +85,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col">
+      <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
         {modeTabs}
         <div className="min-h-0 flex-1">
           {bulkActive ? (
@@ -152,39 +158,43 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
       </div>
 
       <Dialog open={confirmBulkExit} onOpenChange={setConfirmBulkExit}>
-        <DialogContent className="w-[min(92vw,430px)] max-w-none">
-          <DialogHeader>
-            <DialogTitle>Bỏ thay đổi chưa lưu?</DialogTitle>
+        <DialogContent className={V3_CONFIRM_DIALOG_CLASS}>
+          <DialogHeader className="border-b border-border/70 bg-muted/30 px-5 py-4">
+            <DialogTitle className="text-[15px] font-semibold tracking-tight">Bỏ thay đổi chưa lưu?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này.
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirmBulkExit(false)}>Tiếp tục chỉnh</Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setConfirmBulkExit(false);
-                setBulkDirty(false);
-                bridge.set({ view: null });
-              }}
-            >
-              Bỏ thay đổi
-            </Button>
+          <div className="space-y-4 px-5 py-4">
+            <p className="text-sm leading-6 text-muted-foreground">
+              Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này.
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirmBulkExit(false)}>Tiếp tục chỉnh</Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setConfirmBulkExit(false);
+                  setBulkDirty(false);
+                  bridge.set({ view: null });
+                }}
+              >
+                Bỏ thay đổi
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
-          className="fixed left-1/2 top-[5vh] -translate-x-1/2 !translate-y-0 duration-150 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 !zoom-in-100 flex max-h-[90vh] w-[min(96vw,920px)] max-w-none flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl p-0 outline-none focus:outline-none focus-visible:outline-none"
+          className={V3_QUICK_ENTRY_DIALOG_CLASS}
+          data-ui-version="v3"
+          data-surface="quick-entry"
           onInteractOutside={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
           onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
         >
-          <DialogHeader className="shrink-0 border-b border-border/40 bg-card px-5 py-3.5">
-            <DialogTitle className="text-base font-semibold">{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
+          <DialogHeader className="shrink-0 border-b border-border/70 bg-muted/30 px-5 py-4">
+            <DialogTitle className="text-[15px] font-semibold tracking-tight">{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
           </DialogHeader>
-          <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
             <NewFormContainer
               doctype={doctype}
               closeRequest={closeRequest}
