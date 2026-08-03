@@ -2,7 +2,8 @@
 
 Status: **REVIEW / PR GATE**  
 Branch: `rc/w0-capability-status`  
-Exact baseline: `main@3cd2b472068838d0b2b65aa098bbd0bc1a9a8830`  
+Exact branch seed: `main@3cd2b472068838d0b2b65aa098bbd0bc1a9a8830`  
+Latest main audited before PR: `81bbae896e58322b0870769cf2d78f2bd75e5bd5`  
 Risk: documentation + validation tooling; **non-UI, no merge/deploy**
 
 ## Mission
@@ -11,7 +12,7 @@ Establish the exact 956-capability denominator, conservative maturity baseline, 
 
 ## Mandatory reads
 
-Read from exact baseline:
+Read from exact branch seed:
 - `skills/forge-enterprise-completion/SKILL.md`
 - `CURRENT_STATUS.md`
 - `NEXT_TASKS.md`
@@ -19,7 +20,7 @@ Read from exact baseline:
 - `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`
 
 Required but absent:
-- `docs/FORGE_RC_HARDENING_PLAN_20260803.md` -> 404 on exact baseline.
+- `docs/FORGE_RC_HARDENING_PLAN_20260803.md` -> 404 on exact baseline and still absent on latest audited main.
 - repository search also found no canonical `RC-000`, `RC-001`, `RC-004` definitions.
 
 Recorded as `DR-RC01-001`; not blocking because the user-assigned RC-01 request supplies the acceptance contract.
@@ -30,6 +31,14 @@ Recorded as `DR-RC01-001`; not blocking because the user-assigned RC-01 request 
 - Workstream handoffs WS00..WS17 were used as evidence pointers only after comparing against current-main convergence.
 - Current exact source was spot-checked where handoff ambiguity mattered, including the ERPNext controller registry for Asset/HRM/POS/logistics/manufacturing authorities.
 - Old/unmerged PRs were used only as gap/evidence signals, never as current-main implementation truth.
+
+## Concurrent main drift audit
+
+While RC-01 was writing its three owned files, `main` advanced by two commits to `81bbae896e58322b0870769cf2d78f2bd75e5bd5`.
+
+The new source is RC-02 release/SRE hardening plus a UI stylesheet change. It does not overlap RC-01-owned files. RC-02 removed duplicate/stale automatic release workflows, made production maintenance workflows manual-only, aligned backup/restore tenant-scope verification and strengthened release-topology validation. This improves source evidence for `E-SRE`, but RC-02 explicitly records no production deploy, restore drill or destructive rehearsal. Therefore the RC-01 maturity counts do **not** change: no new Hardened claim is justified.
+
+The status registry remains intentionally pinned to the exact branch-seed denominator/source snapshot so its evidence can be reproduced. The PR compare against latest main contains only RC-01 files.
 
 ## Outputs
 
@@ -93,6 +102,7 @@ The committed validator was exercised against the exact canonical family/ID deno
 - Source package `alumdoor@2.2.2` is not called deployed because production evidence is for historical `2.2.1`.
 - Candidate vertical packs remain Missing without pack-level implementation evidence.
 - Provider-specific connectors are Missing/Foundation unless provider execution exists; a generic connector SDK does not magically become sixteen integrations.
+- RC-02 source hardening does not become production proof merely because it landed on main.
 
 ## Dependency Request
 
