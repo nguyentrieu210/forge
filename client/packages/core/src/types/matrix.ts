@@ -4,6 +4,33 @@ export type MatrixWritePermissionAction = "write" | "create" | "submit";
 export type MatrixEditor = "Data" | "Int" | "Float" | "Currency" | "Percent" | "Check" | "Select" | "Link";
 export type MatrixValueValidation = "positive" | "non_negative";
 
+/** Same scalar control vocabulary as AppAction inputs. */
+export type MatrixActionInputFieldtype =
+  | "Data" | "Small Text" | "Text" | "Int" | "Float" | "Currency" | "Percent"
+  | "Check" | "Select" | "Link" | "Date" | "Datetime" | "Time"
+  | "Attach" | "Attach Image";
+
+export interface MatrixActionInputField {
+  fieldname: string;
+  label: string;
+  fieldtype: MatrixActionInputFieldtype;
+  options?: string;
+  required?: boolean;
+  default?: string;
+  description?: string;
+}
+
+/** Repeatable member-action input, semantically aligned with AppAction input_tables. */
+export interface MatrixActionInputTable {
+  fieldname: string;
+  label: string;
+  description?: string;
+  columns: MatrixActionInputField[];
+  minRows: number;
+  maxRows: number;
+  allowPaste: boolean;
+}
+
 export interface MatrixSourceRef {
   kind: MatrixSourceKind;
   name: string;
@@ -65,10 +92,21 @@ export interface MatrixCellPolicy {
   disabledColumnReadOnly?: boolean;
 }
 
+/**
+ * Named domain action offered by a Matrix capability.
+ *
+ * Input fields/tables intentionally reuse the AppAction control vocabulary so the runtime
+ * can render them through the same control registry instead of growing domain dialogs.
+ */
 export interface MatrixActionRef {
   action: string;
   permissionDoctype: string;
   permissionAction: MatrixWritePermissionAction;
+  label?: string;
+  description?: string;
+  confirm?: string;
+  fields?: MatrixActionInputField[];
+  inputTables?: MatrixActionInputTable[];
 }
 
 export type MatrixWriteRef =
