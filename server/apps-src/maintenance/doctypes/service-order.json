@@ -4,7 +4,7 @@
   "is_submittable": true,
   "autoname": "SO-SVC-.YYYY.-#####",
   "title_field": "summary",
-  "search_fields": ["summary", "customer", "maintenance_request", "serial_no"],
+  "search_fields": ["summary", "customer", "company", "branch", "maintenance_request", "serial_no", "warranty_claim", "sales_invoice"],
   "sort_field": "scheduled_start",
   "sort_order": "ASC",
   "track_seen": true,
@@ -13,6 +13,8 @@
     { "fieldname": "warranty_claim", "label": "Yêu cầu bảo hành", "fieldtype": "Link", "options": "Warranty Claim", "in_standard_filter": true },
     { "fieldname": "service_contract", "label": "Hợp đồng dịch vụ", "fieldtype": "Link", "options": "Service Contract", "in_standard_filter": true },
     { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "branch", "label": "Chi nhánh", "fieldtype": "Link", "options": "Branch", "in_standard_filter": true },
     { "fieldname": "summary", "label": "Nội dung công việc", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
     { "fieldname": "priority", "label": "Mức ưu tiên", "fieldtype": "Link", "options": "Maintenance Priority", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "technician", "label": "Kỹ thuật viên", "fieldtype": "Link", "options": "Service Technician", "required": true, "in_list_view": true, "in_standard_filter": true },
@@ -28,17 +30,25 @@
     { "fieldname": "overall_checklist_result", "label": "Kết quả checklist tổng", "fieldtype": "Select", "options": "Đạt\nKhông đạt\nKhông áp dụng", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
     { "fieldname": "work_performed", "label": "Công việc đã thực hiện", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
     { "fieldname": "resolution", "label": "Kết luận / xử lý", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'" },
+    { "fieldname": "resolution_type", "label": "Hình thức xử lý", "fieldtype": "Select", "options": "Sửa chữa\nThay thế\nĐổi trả\nKhông phát hiện lỗi", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'", "in_standard_filter": true },
+    { "fieldname": "replacement_delivery_note", "label": "Phiếu giao hàng thay thế", "fieldtype": "Link", "options": "Delivery Note", "mandatory_depends_on": "eval:doc.resolution_type == 'Thay thế'" },
+    { "fieldname": "replacement_serial_no", "label": "Serial thay thế", "fieldtype": "Link", "options": "Serial No", "mandatory_depends_on": "eval:doc.resolution_type == 'Thay thế'" },
+    { "fieldname": "return_stock_entry", "label": "Chứng từ kho đổi trả", "fieldtype": "Link", "options": "Stock Entry", "mandatory_depends_on": "eval:doc.resolution_type == 'Đổi trả'" },
+    { "fieldname": "billing_mode", "label": "Hình thức tính phí", "fieldtype": "Select", "options": "Bảo hành\nBao gồm hợp đồng\nTính phí", "mandatory_depends_on": "eval:doc.workflow_state == 'Chờ xác nhận' || doc.workflow_state == 'Hoàn tất'", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_invoice", "label": "Hóa đơn dịch vụ", "fieldtype": "Link", "options": "Sales Invoice", "mandatory_depends_on": "eval:doc.billing_mode == 'Tính phí'", "in_standard_filter": true },
     { "fieldname": "photo_evidence", "label": "Ảnh hiện trường tổng", "fieldtype": "Attach" },
     { "fieldname": "customer_confirmed_by", "label": "Người xác nhận phía khách", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.workflow_state == 'Hoàn tất'" },
     { "fieldname": "customer_signature", "label": "Chữ ký / biên nhận", "fieldtype": "Attach" },
     { "fieldname": "completion_note", "label": "Ghi chú hoàn tất", "fieldtype": "Text" },
+    { "fieldname": "correction_of", "label": "Điều chỉnh lệnh dịch vụ", "fieldtype": "Link", "options": "Service Order", "in_standard_filter": true },
+    { "fieldname": "correction_reason", "label": "Lý do điều chỉnh", "fieldtype": "Text", "mandatory_depends_on": "eval:!!doc.correction_of" },
     { "fieldname": "cancel_reason", "label": "Lý do hủy", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hủy'" },
     { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
   ],
   "viewPolicy": {
     "kanban": { "enabled": true, "stageField": "workflow_state", "reasonRequiredOn": ["backward", "cancel"] },
     "calendar": { "enabled": true, "startField": "scheduled_start", "endField": "scheduled_end" },
-    "mobile": { "compactFields": ["customer", "technician", "scheduled_start", "summary", "workflow_state"] }
+    "mobile": { "compactFields": ["customer", "company", "technician", "scheduled_start", "summary", "billing_mode", "workflow_state"] }
   },
   "permissions": [
     { "role": "Maintenance User", "read": true, "print": true, "report": true },
@@ -46,5 +56,5 @@
     { "role": "Maintenance Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 3
+  "revision": 4
 }
