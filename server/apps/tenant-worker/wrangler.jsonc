@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudforge-tenant-demo",
-  "main": "src/index.ts",
+  "main": "src/index-cf6.ts",
   "compatibility_date": "2026-07-23",
   "compatibility_flags": ["nodejs_compat"],
   "placement": { "mode": "smart" },
@@ -43,6 +43,9 @@
   "r2_buckets": [
     { "binding": "FILES", "bucket_name": "cloudforge-files" }
   ],
+  // CFMAX-06: trusted server-side PDF generation. Browser Run Quick Actions require a
+  // browser binding and compatibility_date >= 2026-03-24; this worker is already newer.
+  "browser": { "binding": "BROWSER" },
   "services": [
     { "binding": "SOCIAL_INGRESS", "service": "cloudforge-social-ingress" }
   ]

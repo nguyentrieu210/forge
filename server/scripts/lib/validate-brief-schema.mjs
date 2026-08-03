@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { prepareBriefInputTablesForSchema } from "./action-input-table-brief.mjs";
+import { prepareBriefBatchActionsForSchema } from "./batch-action-brief.mjs";
 import { validateBriefContextDimensions } from "./business-context-dimensions.mjs";
 import { validateBriefUiViewPolicies, withoutUiViewPolicies } from "./brief-ui-view-policy.mjs";
 
@@ -10,10 +11,10 @@ let compiled;
 /**
  * Validates the author-facing brief before semantic compilation.
  *
- * The checked-in schema still predates two first-class authoring additions: AppAction
- * inputTables and DocType Bulk/Matrix policies. Each extension is validated by its owned
- * helper, stripped only from the AJV compatibility view, then validated deeply by the
- * canonical server parser after compilation. All other unknown keys still fail closed.
+ * The checked-in schema predates WS09 inputTables/batch and DocType Bulk/Matrix policies.
+ * Each extension is validated by its owned helper, stripped only from the AJV compatibility
+ * view, then validated deeply by the canonical server parser after compilation. Every other
+ * unknown key still fails closed.
  */
 export async function validateBriefSchema(brief, schemaPath = path.resolve(import.meta.dirname, "../../briefs/brief.schema.json")) {
   if (!compiled) {
@@ -21,7 +22,8 @@ export async function validateBriefSchema(brief, schemaPath = path.resolve(impor
     compiled = new Ajv2020({ allErrors: true, strict: true }).compile(schema);
   }
 
-  const { schemaBrief: inputTableCompatibleBrief, errors: inputTableErrors } = prepareBriefInputTablesForSchema(brief);
+  const { schemaBrief: batchCompatibleBrief, errors: batchErrors } = prepareBriefBatchActionsForSchema(brief);
+  const { schemaBrief: inputTableCompatibleBrief, errors: inputTableErrors } = prepareBriefInputTablesForSchema(batchCompatibleBrief);
   const schemaBrief = withoutUiViewPolicies(inputTableCompatibleBrief);
   const dimensionErrors = validateBriefContextDimensions(brief);
   const uiErrors = validateBriefUiViewPolicies(brief);
@@ -32,5 +34,5 @@ export async function validateBriefSchema(brief, schemaPath = path.resolve(impor
       return `${at} ${error.message ?? "is invalid"}`;
     });
 
-  return [...new Set([...inputTableErrors, ...dimensionErrors, ...uiErrors, ...schemaErrors])];
+  return [...new Set([...batchErrors, ...inputTableErrors, ...dimensionErrors, ...uiErrors, ...schemaErrors])];
 }

@@ -1,0 +1,106 @@
+name: WS09 A2 Batch Executor Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - program/ws09-batch-productization-20260804
+    paths:
+      - "server/packages/batch-executor/**"
+      - "server/packages/app-registry/src/batch-action.ts"
+      - "server/packages/app-registry/src/action-input-table*.ts"
+      - "server/migrations/tenant/0110_batch_replay_claims.sql"
+      - "server/tests/app-batch-action-*.test.mjs"
+      - "server/tests/batch-*.test.mjs"
+      - "server/scripts/test-batch-replay-migration.py"
+      - ".github/workflows/ws09-a2-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ws09-a2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/ws09-batch-02-executor')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused WS09 TypeScript build with baseline classification
+        working-directory: server
+        run: |
+          cat > tsconfig.ws09-a2.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "rootDir": ".",
+              "outDir": "./dist",
+              "declaration": false,
+              "sourceMap": false,
+              "noEmitOnError": false
+            },
+            "include": [
+              "packages/app-registry/src/**/*.ts",
+              "packages/batch-executor/src/**/*.ts",
+              "packages/contracts/src/**/*.ts",
+              "packages/core/src/**/*.ts",
+              "packages/document-kernel/src/**/*.ts",
+              "packages/frappe-model/src/**/*.ts",
+              "packages/money/src/**/*.ts",
+              "packages/outbox/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules", "apps/web"]
+          }
+          JSON
+          set +e
+          pnpm exec tsc -p tsconfig.ws09-a2.json 2>&1 | tee /tmp/ws09-a2-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep "error TS" /tmp/ws09-a2-tsc.log > /tmp/ws09-a2-errors.log || true
+            grep -vE '^packages/app-registry/src/app-factory-definition\.ts|^packages/frappe-model/src/validate\.ts' /tmp/ws09-a2-errors.log > /tmp/ws09-a2-unexpected.log || true
+            if [ -s /tmp/ws09-a2-unexpected.log ]; then
+              echo "Unexpected TypeScript errors in WS09 blast radius:"
+              cat /tmp/ws09-a2-unexpected.log
+              exit 1
+            fi
+            echo "Only known unchanged baseline TypeScript debt was observed:"
+            cat /tmp/ws09-a2-errors.log
+          fi
+
+      - name: A1 canonical contract regressions
+        working-directory: server
+        run: node --test tests/app-batch-action-contract.test.mjs tests/app-batch-action-brief.test.mjs
+
+      - name: A2 executor and A1-A2 integration regressions
+        working-directory: server
+        run: node --test tests/batch-executor.test.mjs tests/batch-a1-a2-integration.test.mjs tests/batch-a1-a2-table-integration.test.mjs tests/batch-d1-replay-store.test.mjs
+
+      - name: Replay migration idempotency and constraints
+        working-directory: server
+        run: python3 scripts/test-batch-replay-migration.py
+
+      - name: SQL repository validation
+        working-directory: server
+        run: python3 scripts/verify-sql.py

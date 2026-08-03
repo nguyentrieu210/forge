@@ -1,0 +1,204 @@
+{
+  "schema": "forge-cloudflare-governance/v1",
+  "program": "CFMAX-08",
+  "owner": "WS12/CF08",
+  "source_lock": "docs/agents/cloudflare-cfmax/CLOUDFLARE_SOURCE_LOCK_20260804.md",
+  "operational_envelope": "docs/ops/CLOUDFLARE_OPERATIONAL_ENVELOPE.md",
+  "remote_observation": {
+    "status": "unverified",
+    "rule": "Source validation is read-only. Production desired-vs-observed drift may only be claimed after a read-only Cloudflare inventory run with explicit account access; absence of remote evidence is never PASS."
+  },
+  "compatibility_date_policy": {
+    "mode": "per-config pinned",
+    "rule": "Heterogeneous compatibility dates are allowed only when each source is explicitly pinned here. Do not mass-bump. A bump requires owner tests for the affected service family, source-lock review for behavior-changing Cloudflare releases, and a rollback/redeploy plan."
+  },
+  "config_sources": [
+    {
+      "path": "server/apps/gateway-worker/wrangler.jsonc",
+      "expected_blob_sha": "7c05c77a630208da4d75e814bd8e76fa9dd06318",
+      "declared_environment": "production",
+      "role": "gateway-shared",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "shared",
+      "compatibility_date": "2026-07-23",
+      "observability": "required",
+      "owner": "WS12/CF08"
+    },
+    {
+      "path": "server/apps/jobs-worker/wrangler.jsonc",
+      "expected_blob_sha": "2476d03db2fe5df1bfe509afd371d70a1fe6fb50",
+      "declared_environment": "production",
+      "role": "jobs-shared",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "shared",
+      "compatibility_date": "2026-07-23",
+      "observability": "required",
+      "owner": "WS12/CF08"
+    },
+    {
+      "path": "server/apps/control-plane-worker/wrangler.jsonc",
+      "expected_blob_sha": "db13756e89d818d8a17791267f14f504cdb20c97",
+      "declared_environment": "production",
+      "role": "control-plane-shared",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "shared",
+      "compatibility_date": "2026-07-23",
+      "observability": "required",
+      "owner": "WS11/WS12"
+    },
+    {
+      "path": "server/apps/workflow-worker/wrangler.jsonc",
+      "expected_blob_sha": "2ec158d49b23e49a98a00490421adbf7c419fb33",
+      "declared_environment": "production-candidate",
+      "role": "workflow-orchestration-shared",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "shared",
+      "compatibility_date": "2026-08-04",
+      "observability": "required",
+      "owner": "WS09/WS12"
+    },
+    {
+      "path": "server/apps/social-ingress-worker/wrangler.jsonc",
+      "expected_blob_sha": "0bbb7fc64eb0157fd4445c07137ff0e86e164366",
+      "declared_environment": "production",
+      "role": "social-ingress-shared",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "shared",
+      "compatibility_date": "2026-07-27",
+      "observability": "required",
+      "owner": "WS10/WS12"
+    },
+    {
+      "path": "server/apps/query-worker/wrangler.jsonc",
+      "expected_blob_sha": "e76143d88e829db6a5bac23f50eeeacae397f9b3",
+      "declared_environment": "production-demo",
+      "role": "tenant-query-demo",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "tenant-demo",
+      "compatibility_date": "2026-07-23",
+      "observability": "required",
+      "owner": "WS12"
+    },
+    {
+      "path": "server/apps/tenant-worker/wrangler.jsonc",
+      "expected_blob_sha": "96b8c7607f64b7aed6235d0428d40a369196a5f9",
+      "declared_environment": "development-demo",
+      "role": "tenant-worker-template",
+      "authority": "source-controlled-template",
+      "tenant_scope": "tenant-demo",
+      "compatibility_date": "2026-07-23",
+      "observability": "required",
+      "owner": "WS00/WS12"
+    },
+    {
+      "path": "server/apps-src/alumdoor-worker/wrangler.jsonc",
+      "expected_blob_sha": "252fee8b38492cd26cbf6fd083210142a227b720",
+      "declared_environment": "production-app",
+      "role": "alumdoor-app-worker",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "app-shared",
+      "compatibility_date": "2026-07-27",
+      "observability": "owner-dependency",
+      "owner": "WS17"
+    },
+    {
+      "path": "server/apps-src/center-worker/wrangler.jsonc",
+      "expected_blob_sha": "3fe27e8936f03b98ee940a2daacc2d073e70ba53",
+      "declared_environment": "production-app",
+      "role": "center-app-worker",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "app-shared",
+      "compatibility_date": "2026-07-23",
+      "observability": "owner-dependency",
+      "owner": "app-owner/WS12-dependency"
+    },
+    {
+      "path": "server/apps-src/ws07-worker/wrangler.jsonc",
+      "expected_blob_sha": "bce4a02194f4483ee7473f74c74eee91442e9240",
+      "declared_environment": "production-app",
+      "role": "ws07-app-worker",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "app-shared",
+      "compatibility_date": "2026-08-03",
+      "observability": "owner-dependency",
+      "owner": "WS07"
+    },
+    {
+      "path": "server/apps-src/vn-accounting-worker/wrangler.jsonc",
+      "expected_blob_sha": "38589113bc7404e0ea774af31e35a86d2df7ea7c",
+      "declared_environment": "production-app",
+      "role": "vn-accounting-app-worker",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "app-shared",
+      "compatibility_date": "2026-08-03",
+      "observability": "owner-dependency",
+      "owner": "WS01"
+    },
+    {
+      "path": "server/apps/purchase-qa-callback/wrangler.jsonc",
+      "expected_blob_sha": "9ad1782eb40c6ac7d088fa5970dbd4e332d33a65",
+      "declared_environment": "qa",
+      "role": "purchase-qa-callback",
+      "authority": "source-controlled-test",
+      "tenant_scope": "qa",
+      "compatibility_date": "2026-07-27",
+      "observability": "not-required",
+      "owner": "QA"
+    },
+    {
+      "path": "server/apps/tenant-worker/wrangler.purchase-qa.jsonc",
+      "expected_blob_sha": "57c38699b1fd3e0d5a02da7836d49e47e41d9a73",
+      "declared_environment": "qa",
+      "role": "purchase-qa-tenant",
+      "authority": "source-controlled-test",
+      "tenant_scope": "qa",
+      "compatibility_date": "2026-07-23",
+      "observability": "not-required",
+      "owner": "QA"
+    },
+    {
+      "path": "server/apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc",
+      "expected_blob_sha": "b64547bf9d5701e75a1cc4df9f3e9bcfe39bb8a8",
+      "declared_environment": "qa",
+      "role": "purchase-qa-alumdoor-app",
+      "authority": "source-controlled-test",
+      "tenant_scope": "qa",
+      "compatibility_date": "2026-07-27",
+      "observability": "not-required",
+      "owner": "QA/WS17"
+    },
+    {
+      "path": "qa/browser-worker/wrangler.jsonc",
+      "expected_blob_sha": "d9db494f9151c48c29da6647a7e3264c42542184",
+      "declared_environment": "qa",
+      "role": "browser-preview-qa",
+      "authority": "source-controlled-test",
+      "tenant_scope": "qa",
+      "compatibility_date": "2026-07-30",
+      "observability": "not-required",
+      "owner": "QA/CF06"
+    }
+  ],
+  "generated_sources": [
+    {
+      "path": "server/scripts/tenant-wrangler.mjs",
+      "expected_blob_sha": "5e7db67f42a64b4093c6cfcecce2ca30f73dcb81",
+      "produces": "server/apps/tenant-worker/wrangler.<tenant>.generated.jsonc",
+      "declared_environment": "production",
+      "authority": "generated-from-source-controlled-template",
+      "tenant_scope": "per-tenant",
+      "owner": "WS00/WS12",
+      "rule": "Generated tenant Wrangler is the production tenant-worker configuration authority. Generated files are ephemeral and must not be committed."
+    }
+  ],
+  "authority_classes": [
+    "source-controlled-declarative",
+    "source-controlled-template",
+    "source-controlled-test",
+    "generated-from-source-controlled-template",
+    "provisioned-by-script-api",
+    "dashboard-manual-exception",
+    "secret-runtime-state",
+    "production-evidence-only"
+  ]
+}

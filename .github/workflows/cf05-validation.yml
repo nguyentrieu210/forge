@@ -1,0 +1,77 @@
+name: CF05 AI Platform Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/ai-policy/**"
+      - "server/apps/tenant-worker/src/ai-assistant.ts"
+      - "server/apps/tenant-worker/src/env.ts"
+      - "server/tests/ai-policy.test.mjs"
+      - "server/tests/ai-assistant.test.mjs"
+      - "docs/agents/cloudflare-cfmax/05-AI-PLATFORM-R2-HANDOFF.md"
+      - ".github/workflows/cf05-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf05-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cf05:
+    if: startsWith(github.head_ref, 'cloudflare/cfmax-05-ai-platform')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused CF05 TypeScript check
+        working-directory: server
+        run: |
+          cat > tsconfig.cf05.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "noEmit": true,
+              "declaration": false
+            },
+            "include": [
+              "packages/ai-policy/src/**/*.ts",
+              "apps/tenant-worker/src/ai-assistant.ts",
+              "apps/tenant-worker/src/env.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.cf05.json
+
+      - name: Focused CF05 build
+        working-directory: server
+        run: |
+          node -e "const fs=require('node:fs'); const p=JSON.parse(fs.readFileSync('tsconfig.cf05.json','utf8')); p.compilerOptions.noEmit=false; p.compilerOptions.declaration=false; p.compilerOptions.sourceMap=false; p.compilerOptions.outDir='dist'; fs.writeFileSync('tsconfig.cf05-build.json', JSON.stringify(p));"
+          pnpm exec tsc -p tsconfig.cf05-build.json
+          test -f dist/packages/ai-policy/src/index.js
+          test -f dist/apps/tenant-worker/src/ai-assistant.js
+
+      - name: AI policy and assistant regressions
+        working-directory: server
+        run: node --test tests/ai-policy.test.mjs tests/ai-assistant.test.mjs
