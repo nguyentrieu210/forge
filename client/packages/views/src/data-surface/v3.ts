@@ -96,7 +96,7 @@ export const V3_DATA_SURFACE_CLASS = [
   "[&_.mf-section-heading_h3]:tracking-[0.06em]",
   "[&_.mf-section-heading_h3]:!text-muted-foreground",
   "[&_.mf-field_input]:min-h-9",
-  "[&_.mf-field_button[role=combobox]]:min-h-9",
+  "[&_.mf-field_button]:min-h-9",
   "[&_.mf-field-error]:rounded-md",
   "[&_.mf-field-error]:bg-destructive/5",
   "[&_.mf-form-footer]:!border-border/70",
