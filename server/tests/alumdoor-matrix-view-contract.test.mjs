@@ -30,6 +30,20 @@ test("Alumdoor Item Price Matrix sidecar survives canonical App Factory transpor
   assert.equal(matrix.cell.validation, "non_negative");
   assert.equal(matrix.presentation.mobileMode, "step");
 
+  assert.equal(matrix.rowMembers.create.action, "pricing.item_uom.add");
+  assert.equal(matrix.rowMembers.create.label, "Thêm đơn vị");
+  assert.deepEqual(matrix.rowMembers.create.fields.map((field) => [field.fieldname, field.fieldtype, field.options, field.required]), [
+    ["uom", "Link", "UOM", true],
+    ["conversion_factor", "Float", undefined, true],
+  ]);
+  assert.equal(matrix.columnMembers.create.action, "pricing.price_list.create");
+  assert.equal(matrix.columnMembers.create.label, "Tạo bảng giá");
+  assert.deepEqual(matrix.columnMembers.create.fields.map((field) => [field.fieldname, field.fieldtype, field.options, field.required]), [
+    ["name", "Data", undefined, true],
+    ["currency", "Link", "Currency", true],
+    ["effective_date", "Date", undefined, undefined],
+  ]);
+
   // Compatibility remains on the established legacy mobile.bulk bridge until the
   // Matrix parity/removal gate is green. Do not invent a second canonical Bulk claim here.
   assert.equal(itemPrice.viewPolicy?.mobile?.bulk?.enabled, true);
