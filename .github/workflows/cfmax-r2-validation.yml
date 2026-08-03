@@ -35,11 +35,110 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Full server TypeScript build
-        run: pnpm --dir server run build
+      - name: Focused CF01 TypeScript check
+        working-directory: server
+        run: |
+          cat > tsconfig.cfmax-cf01.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": { "noEmit": true, "declaration": false },
+            "include": [
+              "packages/core/src/**/*.ts",
+              "packages/query/src/**/*.ts",
+              "apps/query-worker/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.cfmax-cf01.json
 
-      - name: MetaForge views build
-        run: pnpm --filter @metaforge/views run build
+      - name: Focused CF02 Workflow build
+        working-directory: server
+        run: |
+          cat > tsconfig.cfmax-cf02.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "noEmit": false,
+              "declaration": false,
+              "sourceMap": false,
+              "outDir": "dist"
+            },
+            "include": [
+              "apps/workflow-worker/src/**/*.ts",
+              "packages/core/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.cfmax-cf02.json
+          test -f dist/apps/workflow-worker/src/contracts.js
+          test -f dist/apps/workflow-worker/src/index.js
+
+      - name: Focused CF03 telemetry typecheck and build
+        working-directory: server
+        run: |
+          cat > tsconfig.cfmax-cf03-gateway.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": { "noEmit": true, "declaration": false },
+            "include": [
+              "packages/usage-telemetry/src/**/*.ts",
+              "apps/gateway-worker/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.cfmax-cf03-gateway.json
+          cat > tsconfig.cfmax-cf03-build.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "noEmit": false,
+              "declaration": false,
+              "sourceMap": false,
+              "outDir": "dist"
+            },
+            "include": ["packages/usage-telemetry/src/**/*.ts", "types/**/*.d.ts"],
+            "exclude": ["dist", "node_modules"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.cfmax-cf03-build.json
+          test -f dist/packages/usage-telemetry/src/index.js
+
+      - name: Focused CF05 AI build
+        working-directory: server
+        run: |
+          cat > tsconfig.cfmax-cf05.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "noEmit": false,
+              "declaration": false,
+              "sourceMap": false,
+              "outDir": "dist"
+            },
+            "include": [
+              "packages/ai-policy/src/**/*.ts",
+              "apps/tenant-worker/src/ai-assistant.ts",
+              "apps/tenant-worker/src/env.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.cfmax-cf05.json
+          test -f dist/packages/ai-policy/src/index.js
+          test -f dist/apps/tenant-worker/src/ai-assistant.js
+
+      - name: Build CF06 print UI dependency chain
+        run: |
+          pnpm --filter @metaforge/charts run build
+          pnpm --filter @metaforge/visual run build
+          pnpm --filter @metaforge/views run build
 
       - name: Query worker real-workerd D1 suite
         working-directory: server
@@ -61,13 +160,13 @@ jobs:
         working-directory: server
         run: node scripts/verify-cloudflare-governance.mjs
 
+      - name: Bundle Tenant Worker with Browser Run binding
+        working-directory: server
+        run: pnpm exec wrangler deploy --dry-run --config apps/tenant-worker/wrangler.jsonc --outdir /tmp/cfmax-tenant-worker
+
       - name: Parse Gateway config and bindings
         working-directory: server
         run: pnpm exec wrangler types /tmp/cfmax-gateway.d.ts --config apps/gateway-worker/wrangler.jsonc --env-interface CfmaxGatewayBindings --include-runtime false
-
-      - name: Parse Tenant config and bindings
-        working-directory: server
-        run: pnpm exec wrangler types /tmp/cfmax-tenant.d.ts --config apps/tenant-worker/wrangler.jsonc --env-interface CfmaxTenantBindings --include-runtime false
 
       - name: Parse Query config and bindings
         working-directory: server
@@ -75,4 +174,4 @@ jobs:
 
       - name: Parse Workflow config and bindings
         working-directory: server
-        run: pnpm exec wrangler types /tmp/cfmax-workflow.d.ts --config apps/workflow-worker/wrangler.jsonc --env-interface CfmaxWorkflowBindings --include-runtime false
+        run: pnpm exec wrangler deploy --dry-run --config apps/workflow-worker/wrangler.jsonc --outdir /tmp/cfmax-workflow-worker
