@@ -124,23 +124,26 @@ test("P2P supports cumulative partial receipt/invoice and exact billing reversal
   assert.equal(await store.getProcuredQuantityMicros("demo", "PO-PARTIAL", "Billing", "ITEM-1"), 6_000_000);
 });
 
-test("P2P enforces net price variance tolerance without writing a shadow payable", async () => {
+test("P2P enforces net price variance tolerance without leaving financial or progress side effects", async () => {
   const { store, kernel } = setup();
   await createAndSubmit(kernel, po("PO-PRICE", "ITEM-1", 10, 20, {
     receipt_match_required: true,
     invoice_price_tolerance_pct: "5",
   }));
   await createAndSubmit(kernel, receipt("PR-PRICE", "PO-PRICE", "ITEM-1", 10, 20));
-
   await createAndSubmit(kernel, invoice("PI-PRICE-OK", "PO-PRICE", "ITEM-1", 4, "20.8"));
+
+  const beforeHold = store.snapshot();
   await assert.rejects(
     createAndSubmit(kernel, invoice("PI-PRICE-HOLD", "PO-PRICE", "ITEM-1", 1, "21.2")),
     /procurement hold.*price/i,
   );
+  const afterHold = store.snapshot();
 
-  const snapshot = store.snapshot();
-  assert.equal(snapshot.payment_entries.filter((line) => line.against_voucher_no === "PI-PRICE-HOLD").length, 0);
-  assert.equal(snapshot.gl_entries.filter((line) => line.voucher_no === "PI-PRICE-HOLD").length, 0);
+  assert.equal(afterHold.gl_entries.length, beforeHold.gl_entries.length);
+  assert.equal(afterHold.payment_entries.length, beforeHold.payment_entries.length);
+  assert.equal(afterHold.procurement_entries.length, beforeHold.procurement_entries.length);
+  assert.equal(afterHold.documents.some((doc) => doc.doctype === "Purchase Invoice" && doc.name === "PI-PRICE-HOLD"), false);
 });
 
 test("P2P Purchase Invoice supports line-level references to multiple Purchase Orders", async () => {
