@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "requirements": {
+    "typecheck": {
+      "label": "Scoped typecheck",
+      "defaultCommand": "pnpm run typecheck"
+    },
+    "build": {
+      "label": "Scoped production build",
+      "defaultCommand": "pnpm run build"
+    },
+    "unit": {
+      "label": "Unit/self-check regression",
+      "defaultCommand": "pnpm run test"
+    },
+    "targeted_integration": {
+      "label": "Targeted integration regression"
+    },
+    "permission": {
+      "label": "Server-side permission regression"
+    },
+    "tenant_isolation": {
+      "label": "Tenant-isolation regression"
+    },
+    "failure_path": {
+      "label": "Failure-path regression"
+    },
+    "idempotency_retry": {
+      "label": "Idempotency/retry regression"
+    },
+    "migration_replay": {
+      "label": "Migration replay/regression",
+      "defaultCommand": "pnpm --filter cloudforge run test:sql"
+    },
+    "correction_reversal": {
+      "label": "Correction/reversal regression"
+    },
+    "reconciliation": {
+      "label": "Reconciliation regression"
+    },
+    "browser_e2e": {
+      "label": "Desktop browser E2E",
+      "defaultCommand": "pnpm --filter @metaforge/demo exec playwright test e2e/metaforge-ui.spec.ts --config playwright.e2e.config.mjs --tsconfig=e2e/tsconfig.json --project=desktop-chromium"
+    },
+    "mobile_evidence": {
+      "label": "Mobile browser E2E",
+      "defaultCommand": "pnpm --filter @metaforge/demo exec playwright test e2e/metaforge-ui.spec.ts --config playwright.e2e.config.mjs --tsconfig=e2e/tsconfig.json --project=mobile-pixel7 --project=mobile-iphone13"
+    },
+    "production_release_marker": {
+      "label": "Exact production release marker",
+      "kind": "releaseEvidence"
+    }
+  },
+  "lanes": {
+    "FAST": {
+      "required": [
+        "typecheck",
+        "build"
+      ]
+    },
+    "STANDARD": {
+      "required": [
+        "typecheck",
+        "build",
+        "unit",
+        "targeted_integration",
+        "permission",
+        "failure_path"
+      ]
+    },
+    "CRITICAL": {
+      "required": [
+        "typecheck",
+        "build",
+        "unit",
+        "targeted_integration",
+        "permission",
+        "tenant_isolation",
+        "failure_path",
+        "idempotency_retry"
+      ]
+    }
+  },
+  "conditionalRules": [
+    {
+      "id": "standard-or-critical-authoritative-mutation-idempotency",
+      "when": {
+        "minRisk": "STANDARD",
+        "touch": "authoritativeMutation"
+      },
+      "require": [
+        "idempotency_retry"
+      ]
+    },
+    {
+      "id": "tenant-boundary-isolation",
+      "when": {
+        "minRisk": "STANDARD",
+        "touch": "tenantBoundary"
+      },
+      "require": [
+        "tenant_isolation"
+      ]
+    },
+    {
+      "id": "migration-replay",
+      "when": {
+        "minRisk": "STANDARD",
+        "touch": "migration"
+      },
+      "require": [
+        "migration_replay"
+      ]
+    },
+    {
+      "id": "critical-finance-stock-payroll-correction-reconciliation",
+      "when": {
+        "risk": "CRITICAL",
+        "domainAny": [
+          "finance",
+          "stock",
+          "payroll"
+        ]
+      },
+      "require": [
+        "correction_reversal",
+        "reconciliation"
+      ]
+    },
+    {
+      "id": "ui-promotion-browser",
+      "when": {
+        "claim": "UI_PROMOTION",
+        "touch": "ui"
+      },
+      "require": [
+        "browser_e2e"
+      ]
+    },
+    {
+      "id": "ui-promotion-mobile",
+      "when": {
+        "claim": "UI_PROMOTION",
+        "touch": "mobile"
+      },
+      "require": [
+        "mobile_evidence"
+      ]
+    },
+    {
+      "id": "hardened-production-proof",
+      "when": {
+        "claimAny": [
+          "HARDENED",
+          "DEPLOYED"
+        ]
+      },
+      "require": [
+        "production_release_marker"
+      ]
+    }
+  ]
+}
