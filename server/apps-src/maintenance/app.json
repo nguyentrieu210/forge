@@ -1,7 +1,7 @@
 {
   "id": "maintenance",
   "name": "Bảo trì, Bảo hành & Dịch vụ hiện trường",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "requires": [],
   "worker": "cloudforge-app-ws07",
   "validators": [
@@ -13,7 +13,9 @@
   "externalDocTypes": [
     { "name": "Maintenance Priority", "kind": "master", "app": "platform" },
     { "name": "Serial No", "kind": "transaction", "app": "stock" },
-    { "name": "Delivery Note", "kind": "transaction", "app": "selling" }
+    { "name": "Stock Entry", "kind": "transaction", "app": "stock" },
+    { "name": "Delivery Note", "kind": "transaction", "app": "selling" },
+    { "name": "Sales Invoice", "kind": "transaction", "app": "selling" }
   ],
   "reports": [
     {
@@ -23,13 +25,17 @@
       "columns": [
         { "field": "maintenance_request", "label": "Yêu cầu", "type": "Link", "options": "Maintenance Request" },
         { "field": "customer", "label": "Khách hàng", "type": "Link", "options": "Customer" },
+        { "field": "company", "label": "Công ty", "type": "Link", "options": "Company" },
+        { "field": "branch", "label": "Chi nhánh", "type": "Link", "options": "Branch" },
         { "field": "technician", "label": "Kỹ thuật viên", "type": "Link", "options": "Service Technician" },
+        { "field": "billing_mode", "label": "Hình thức tính phí", "type": "Data" },
+        { "field": "sales_invoice", "label": "Hóa đơn dịch vụ", "type": "Link", "options": "Sales Invoice" },
         { "field": "scheduled_start", "label": "Bắt đầu kế hoạch", "type": "Datetime" },
         { "field": "scheduled_end", "label": "Kết thúc kế hoạch", "type": "Datetime" },
         { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
       ],
       "order_by": { "column": "scheduled_start", "direction": "asc" },
-      "filters": ["customer", "technician", "service_contract", "warranty_claim", "workflow_state"],
+      "filters": ["customer", "company", "branch", "technician", "service_contract", "warranty_claim", "billing_mode", "workflow_state"],
       "limit": 200
     },
     {
@@ -39,13 +45,16 @@
       "columns": [
         { "field": "claim_date", "label": "Ngày", "type": "Date" },
         { "field": "customer", "label": "Khách hàng", "type": "Link", "options": "Customer" },
+        { "field": "company", "label": "Công ty", "type": "Link", "options": "Company" },
+        { "field": "branch", "label": "Chi nhánh", "type": "Link", "options": "Branch" },
+        { "field": "source_delivery_note", "label": "Phiếu giao hàng", "type": "Link", "options": "Delivery Note" },
         { "field": "item", "label": "Sản phẩm", "type": "Link", "options": "Item" },
         { "field": "serial_no", "label": "Serial", "type": "Link", "options": "Serial No" },
         { "field": "eligibility_result", "label": "Quyền lợi", "type": "Data" },
         { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
       ],
       "order_by": { "column": "claim_date", "direction": "desc" },
-      "filters": ["customer", "service_contract", "eligibility_result", "workflow_state"],
+      "filters": ["customer", "company", "branch", "service_contract", "source_delivery_note", "eligibility_result", "workflow_state"],
       "limit": 200
     }
   ],
