@@ -1,17 +1,18 @@
 /** @jsxImportSource react */
 /**
  * Generic DocType workspace: desktop dùng List | Form | Context,
- * mobile dùng một pane; tạo mới mở modal lớn. DocType có canonical Bulk policy
- * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
+ * mobile dùng một pane; tạo mới mở modal lớn. DocType có canonical Bulk/Matrix policy
+ * được thêm surface dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { List, Rows3 } from "lucide-react";
+import { List, Rows3, Table2 } from "lucide-react";
 import { resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
 import { SplitView } from "../detail/SplitView.js";
 import { ListContainer } from "../container/ListContainer.js";
 import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
+import { MatrixContainer } from "../matrix/MatrixContainer.js";
 import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
@@ -34,8 +35,9 @@ export interface DoctypeWorkspaceProps {
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
   const [closeRequest, setCloseRequest] = useState(0);
-  const [bulkDirty, setBulkDirty] = useState(false);
-  const [confirmBulkExit, setConfirmBulkExit] = useState(false);
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [confirmEditorExit, setConfirmEditorExit] = useState(false);
+  const [pendingView, setPendingView] = useState<string | null>(null);
   const titleMeta = useMeta(props.doctype);
   const { doctype, name, onNavigate, bridge } = props;
   const base = props.base ?? "/app";
@@ -47,33 +49,55 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const isTree = titleMeta.data?.is_tree === 1;
   const bulkPolicy = useMemo(() => titleMeta.data ? resolveBulkRenderPolicy(titleMeta.data) : undefined, [titleMeta.data]);
   const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree);
-  const isPriceListManager = doctype === "Item Price";
-  const bulkActive = !decoded && !isNew && (isPriceListManager || (bulkEnabled && bridge.get("view") === "bulk"));
+  const matrixEnabled = Boolean(titleMeta.data?.viewPolicy?.matrix?.enabled && !isTree);
+  const requestedView = bridge.get("view");
+  const matrixActive = !decoded && !isNew && matrixEnabled && requestedView === "matrix";
+  // Compatibility default without a business-name branch: when a DocType declares BOTH
+  // Bulk and Matrix, existing Bulk remains the default until metadata grows a generic
+  // default-surface contract and the Matrix parity/removal gate is green.
+  const bulkActive = !decoded && !isNew && !matrixActive && bulkEnabled
+    && (requestedView === "bulk" || (matrixEnabled && requestedView !== "list"));
 
-  const modeTabs = bulkEnabled && !decoded && !isNew && !isPriceListManager ? (
+  const requestView = (view: "list" | "bulk" | "matrix") => {
+    if ((bulkActive || matrixActive) && editorDirty) {
+      setPendingView(view);
+      setConfirmEditorExit(true);
+      return;
+    }
+    setEditorDirty(false);
+    bridge.set({ view });
+  };
+
+  const modeTabs = (bulkEnabled || matrixEnabled) && !decoded && !isNew ? (
     <div className="flex shrink-0 items-center gap-1 border-b bg-card px-3 py-2">
       <Button
-        variant={bulkActive ? "ghost" : "secondary"}
+        variant={!bulkActive && !matrixActive ? "secondary" : "ghost"}
         size="sm"
         className="h-8"
-        onClick={() => {
-          if (bulkActive && bulkDirty) {
-            setConfirmBulkExit(true);
-            return;
-          }
-          bridge.set({ view: null });
-        }}
+        onClick={() => requestView("list")}
       >
         <List /> Danh sách
       </Button>
-      <Button
-        variant={bulkActive ? "secondary" : "ghost"}
-        size="sm"
-        className="h-8"
-        onClick={() => bridge.set({ view: "bulk" })}
-      >
-        <Rows3 /> Nhập hàng loạt
-      </Button>
+      {matrixEnabled ? (
+        <Button
+          variant={matrixActive ? "secondary" : "ghost"}
+          size="sm"
+          className="h-8"
+          onClick={() => requestView("matrix")}
+        >
+          <Table2 /> Ma trận
+        </Button>
+      ) : null}
+      {bulkEnabled ? (
+        <Button
+          variant={bulkActive ? "secondary" : "ghost"}
+          size="sm"
+          className="h-8"
+          onClick={() => requestView("bulk")}
+        >
+          <Rows3 /> Nhập hàng loạt
+        </Button>
+      ) : null}
     </div>
   ) : null;
 
@@ -82,8 +106,12 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
       <div className="flex h-full min-h-0 flex-col">
         {modeTabs}
         <div className="min-h-0 flex-1">
-          {bulkActive ? (
-            <BulkGridContainer doctype={doctype} bridge={bridge} title={displayTitle} onDirtyChange={setBulkDirty} />
+          {matrixActive ? (
+            <div className="h-full min-h-0 p-2">
+              <MatrixContainer doctype={doctype} title={displayTitle} onDirtyChange={setEditorDirty} />
+            </div>
+          ) : bulkActive ? (
+            <BulkGridContainer doctype={doctype} bridge={bridge} title={displayTitle} onDirtyChange={setEditorDirty} />
           ) : (
             <SplitView
               autoSaveId={`mf-split-v3-${doctype}`}
@@ -151,22 +179,23 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         </div>
       </div>
 
-      <Dialog open={confirmBulkExit} onOpenChange={setConfirmBulkExit}>
+      <Dialog open={confirmEditorExit} onOpenChange={setConfirmEditorExit}>
         <DialogContent className="w-[min(92vw,430px)] max-w-none">
           <DialogHeader>
             <DialogTitle>Bỏ thay đổi chưa lưu?</DialogTitle>
           </DialogHeader>
           <p className="text-sm leading-6 text-muted-foreground">
-            Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này.
+            Màn chỉnh sửa đang có thay đổi chưa lưu. Chuyển chế độ sẽ bỏ các chỉnh sửa này.
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirmBulkExit(false)}>Tiếp tục chỉnh</Button>
+            <Button variant="outline" onClick={() => setConfirmEditorExit(false)}>Tiếp tục chỉnh</Button>
             <Button
               variant="destructive"
               onClick={() => {
-                setConfirmBulkExit(false);
-                setBulkDirty(false);
-                bridge.set({ view: null });
+                setConfirmEditorExit(false);
+                setEditorDirty(false);
+                if (pendingView) bridge.set({ view: pendingView });
+                setPendingView(null);
               }}
             >
               Bỏ thay đổi
