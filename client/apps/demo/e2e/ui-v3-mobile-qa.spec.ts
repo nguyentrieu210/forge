@@ -84,18 +84,24 @@ test.describe("V3-07 mobile / responsive convergence", () => {
     await attachViewport(page, testInfo, "mobile-drawer-restored");
   });
 
-  test("workspace keeps long Vietnamese navigation reachable on mobile", async ({ page }, testInfo) => {
+  test("workspace keeps its longest navigation label reachable on mobile", async ({ page }, testInfo) => {
     test.skip((page.viewportSize()?.width ?? 1440) >= 768, "mobile-only acceptance");
 
     await page.goto("/view/list");
-    const trigger = page.getByRole("button", { name: "Mở menu", exact: true });
-    await trigger.click();
+    await page.getByRole("button", { name: "Mở menu", exact: true }).click();
 
     const navigation = page.getByRole("navigation", { name: "Điều hướng ứng dụng" });
     await expect(navigation).toBeVisible();
-    await expect(navigation.getByText(/Trung tâm phân quyền|Danh mục ứng dụng/).first()).toBeVisible();
+    const navItems = navigation.locator(".mf-shell-nav-item");
+    const labels = (await navItems.allTextContents()).map((label) => label.trim()).filter(Boolean);
+    const longestLabel = labels.sort((a, b) => b.length - a.length)[0] ?? "";
+    expect(longestLabel.length, "fixture must exercise a non-trivial localized navigation label").toBeGreaterThanOrEqual(8);
+
+    const longestItem = navItems.filter({ hasText: longestLabel }).first();
+    await expect(longestItem).toBeVisible();
+    await expectInsideViewport(page, longestItem);
     await expectNoHorizontalOverflow(page);
-    await attachViewport(page, testInfo, "mobile-long-labels");
+    await attachViewport(page, testInfo, "mobile-longest-label");
   });
 
   test("reduced motion collapses shell transition timings", async ({ page }) => {
