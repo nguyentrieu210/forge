@@ -1,7 +1,7 @@
 # CF01 R2 — D1 Sessions / Read Replication / Bookmark Consistency
 
 Date: 2026-08-04
-Status: ACTIVE — clean current-main replay; exact-head CI pending
+Status: REVIEW — clean current-main replay and exact-head CI complete; remote replica proof pending
 Branch: `cloudflare/cfmax-01-d1-consistency-r2`
 Baseline: `main@cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`
 Risk: CRITICAL
@@ -52,15 +52,19 @@ Current `FinanceReportCompiler` is preserved.
 - `reports.integration.test.mts`: real workerd+D1 prepared bookmark response, dependent bookmark read, queue execution and primary-first status path;
 - `cfmax-d1-client-bookmark-contract.test.mjs`: locks the already-existing adapter request/response/reset seam.
 
-### Exact-head CI
+### Validation evidence
 
-`.github/workflows/cf01-validation.yml` runs:
+Exact-head run `30853819015`: **PASS**.
 
-1. locked install;
+Passed:
+
+1. locked dependency install;
 2. focused TypeScript;
-3. real-workerd query-worker integration suite;
-4. client bookmark source contract guard;
-5. Wrangler Query Worker config/type parse.
+3. real-workerd query-worker D1 integration: 2 files / 9 tests;
+4. client bookmark transport/reset contract guard;
+5. Query Worker Wrangler config/type parse.
+
+The preceding run `30853646834` had already passed TypeScript and all 9 real-workerd D1 tests; it failed only because the source guard incorrectly counted field initialization as a runtime `this.d1Bookmark` reset. Test-only correction `e47a039a753779a16877d8e051ce93f86300df03` aligned the assertion to the actual three runtime identity boundaries: login, logout and auth/session expiry.
 
 ## Authority / safety
 
@@ -73,7 +77,7 @@ Current `FinanceReportCompiler` is preserved.
 
 ## Remaining RC/Hardened gates
 
-Source completion after green CI supports **Wired**, not RC/Hardened.
+Current source evidence supports **Wired**, not RC/Hardened.
 
 RC still needs provider/non-production evidence for actual replica serving and latency/correctness, plus an explicit concurrency policy for multiple simultaneously advancing browser mutation chains if that scenario must be guaranteed. Hardened needs production rollout, monitoring and rollback evidence.
 
@@ -81,8 +85,11 @@ RC still needs provider/non-production evidence for actual replica serving and l
 
 Owner: coordinator takeover / CF01 R2
 Original branch: `cloudflare/cfmax-01-d1-consistency` — superseded for convergence
+PR: `#567` draft -> `main`
+Validated head: `e47a039a753779a16877d8e051ce93f86300df03`
+Exact-head CI: run `30853819015` **PASS**
 Changed zones: D1 session policy helper, current query-worker, query-worker integration tests, client bookmark contract guard, focused CI, this handoff
 Migration: none
 Production mutation: none
-Exact-head CI: pending
+Remaining RC gap: remote replica serving/latency and stronger multi-chain concurrency proof
 Merge boundary: do not merge to main or enable production read replication without explicit approval
