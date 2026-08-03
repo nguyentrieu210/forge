@@ -42,8 +42,11 @@ jobs:
       - name: CFMAX-06 source regression
         run: node --test server/tests/cfmax-render-export.test.mjs
 
-      - name: Build print UI package
-        run: pnpm --filter @metaforge/views run build
+      - name: Build print UI dependency chain
+        run: |
+          pnpm --filter @metaforge/charts run build
+          pnpm --filter @metaforge/visual run build
+          pnpm --filter @metaforge/views run build
 
       - name: Validate tenant Worker bundle and Browser Run binding
         working-directory: server
