@@ -283,6 +283,27 @@ async function validateWarrantyClosure(
     return "Yêu cầu bảo hành: Delivery Note nguồn không chứng minh sản phẩm/serial đã giao.";
   }
 
+  if (["Chờ xác nhận", "Hoàn tất"].includes(state)) {
+    const serviceOrderName = text(doc.service_order);
+    if (!serviceOrderName) return "Yêu cầu bảo hành: phải liên kết Lệnh dịch vụ trước khi xác nhận hoàn tất.";
+    const serviceOrder = await readRecord(call, "Service Order", serviceOrderName);
+    if (!serviceOrder) return `Yêu cầu bảo hành: Service Order ${serviceOrderName} không tồn tại.`;
+    if (text(serviceOrder.warranty_claim) !== subject.name) {
+      return "Yêu cầu bảo hành: Service Order phải liên kết ngược đúng Warranty Claim này trước khi đóng hồ sơ.";
+    }
+    if (text(serviceOrder.maintenance_request) !== maintenanceRequest) {
+      return "Yêu cầu bảo hành: Service Order không cùng Maintenance Request nguồn.";
+    }
+    if (!sameRequired(doc.customer, serviceOrder.customer)) return "Yêu cầu bảo hành: Service Order thuộc khách hàng khác.";
+    if (!sameRequired(doc.company, serviceOrder.company)) return "Yêu cầu bảo hành: Service Order thuộc công ty khác.";
+    if (!sameIfPresent(doc.branch, serviceOrder.branch)) return "Yêu cầu bảo hành: Service Order thuộc chi nhánh khác.";
+    if (!sameIfPresent(item, serviceOrder.item)) return "Yêu cầu bảo hành: Service Order không cùng sản phẩm.";
+    if (!sameIfPresent(serialNo, serviceOrder.serial_no)) return "Yêu cầu bảo hành: Service Order không cùng serial.";
+    if (!["Chờ xác nhận", "Hoàn tất"].includes(text(serviceOrder.workflow_state))) {
+      return "Yêu cầu bảo hành: Service Order phải hoàn tất xử lý trước khi đóng hồ sơ bảo hành.";
+    }
+  }
+
   const contractName = text(doc.service_contract);
   if (contractName) {
     const contract = await readRecord(call, "Service Contract", contractName);
