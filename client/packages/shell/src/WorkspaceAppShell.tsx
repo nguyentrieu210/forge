@@ -26,6 +26,10 @@ function normalizedGroup(label: string | undefined): string {
   return (label ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
 }
 
+function isCatalogAppWorkspace(item: NavItem): boolean {
+  return normalizedGroup(item.group).startsWith("ung dung · ");
+}
+
 function indexHubKey(item: NavItem | undefined): string | undefined {
   const group = normalizedGroup(item?.group);
   if (group === "bao cao") return "__reports";
@@ -256,7 +260,13 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
  * Khi menu không khai `group`, component rơi về AppShell cũ để không phá app đơn giản.
  */
 export function AppShell(props: AppShellProps) {
-  const modules = useMemo(() => buildWorkspaceModules(props.nav), [props.nav]);
+  /**
+   * App catalog là launcher duy nhất cho các app đã cài. Runtime vẫn giữ các workspace
+   * chéo app để route trực tiếp hoạt động, nhưng shell không lặp chúng thành các dòng
+   * "Ứng dụng · ..." trong sidebar nữa.
+   */
+  const sidebarNav = useMemo(() => props.nav.filter((item) => !isCatalogAppWorkspace(item)), [props.nav]);
+  const modules = useMemo(() => buildWorkspaceModules(sidebarNav), [sidebarNav]);
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
   const [processActive, setProcessActive] = useState(false);
@@ -286,6 +296,7 @@ export function AppShell(props: AppShellProps) {
 
   const shellProps: AppShellProps = {
     ...props,
+    nav: sidebarNav,
     brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 44 : 28} />,
     brandLogoOnly: props.brandLogoOnly ?? isAlumdoorSurface(),
     onChangePassword: props.onChangePassword ?? (() => setPasswordOpen(true)),
@@ -304,10 +315,10 @@ export function AppShell(props: AppShellProps) {
       disabledReason: module.items.some((item) => !item.disabledReason) ? undefined : "Chưa có màn hình khả dụng",
     }));
     const moduleItemKeys = new Set(modules.flatMap((module) => module.items.map((item) => item.key)));
-    const globalNav = props.nav.filter((item) => !moduleItemKeys.has(item.key) && !indexHubKey(item));
+    const globalNav = sidebarNav.filter((item) => !moduleItemKeys.has(item.key) && !indexHubKey(item));
     const overviewItem = globalNav.find((item) => item.key === "__overview");
-    const reportsItem = props.nav.find((item) => item.key === "__reports");
-    const masterItem = props.nav.find((item) => item.key === "__master-data");
+    const reportsItem = sidebarNav.find((item) => item.key === "__reports");
+    const masterItem = sidebarNav.find((item) => item.key === "__master-data");
     const remainingGlobal = globalNav.filter((item) => item.key !== "__overview" && item.key !== "__reports" && item.key !== "__master-data");
     const orderedNav = [
       ...(overviewItem ? [overviewItem] : []),
@@ -336,9 +347,9 @@ export function AppShell(props: AppShellProps) {
     };
 
     const showModule = processActive || Boolean(activeModule);
-    const activeSidebarKey = indexHubKey(props.nav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
-    const reportItems = props.nav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
-    const masterItems = props.nav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
+    const activeSidebarKey = indexHubKey(sidebarNav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
+    const reportItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
+    const masterItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
 
     shell = (
       <BaseAppShell
