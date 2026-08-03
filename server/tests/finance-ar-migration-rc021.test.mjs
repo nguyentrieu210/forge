@@ -8,5 +8,5 @@ test("RC-021 AR migration guards and reconciliation projection pass", () => {
     encoding: "utf8",
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /FINANCE_AR_RECONCILIATION_0111_PASS/);
+  assert.match(result.stdout, /FINANCE_AR_RECONCILIATION_0112_PASS/);
 });
