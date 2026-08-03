@@ -1,0 +1,130 @@
+name: Temp Diagnose ALU UI Deploy
+
+on:
+  push:
+    branches:
+      - ops/diag-alu-ui-deploy-20260803
+    paths:
+      - ".github/workflows/tmp-diag-alu-ui-deploy.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Status helper
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/status.sh" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          state="$1"; context="$2"; description="$3"
+          payload=$(jq -nc --arg state "$state" --arg context "$context" --arg description "$description" '{state:$state,context:$context,description:$description}')
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -d "$payload" >/dev/null
+          EOF
+          chmod +x "$RUNNER_TEMP/status.sh"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Setup
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/status.sh" pending alu-ui-diag/setup "setting up pnpm/node"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        id: install
+        continue-on-error: true
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Report install
+        shell: bash
+        run: |
+          if [ "${{ steps.install.outcome }}" = success ]; then
+            "$RUNNER_TEMP/status.sh" success alu-ui-diag/install "pnpm install passed"
+          else
+            "$RUNNER_TEMP/status.sh" failure alu-ui-diag/install "pnpm install failed"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Build runtime
+        id: runtime
+        continue-on-error: true
+        run: pnpm --filter runtime... run build
+
+      - name: Report runtime
+        shell: bash
+        run: |
+          if [ "${{ steps.runtime.outcome }}" = success ]; then
+            "$RUNNER_TEMP/status.sh" success alu-ui-diag/runtime "runtime dependency build passed"
+          else
+            "$RUNNER_TEMP/status.sh" failure alu-ui-diag/runtime "runtime dependency build failed"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Build mobile types
+        id: mobile_types
+        continue-on-error: true
+        run: pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json
+
+      - name: Report mobile types
+        shell: bash
+        run: |
+          if [ "${{ steps.mobile_types.outcome }}" = success ]; then
+            "$RUNNER_TEMP/status.sh" success alu-ui-diag/mobile-types "warehouse mobile tsc passed"
+          else
+            "$RUNNER_TEMP/status.sh" failure alu-ui-diag/mobile-types "warehouse mobile tsc failed"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Build mobile bundle
+        id: mobile_bundle
+        continue-on-error: true
+        run: pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts
+
+      - name: Report mobile bundle
+        shell: bash
+        run: |
+          if [ "${{ steps.mobile_bundle.outcome }}" = success ]; then
+            "$RUNNER_TEMP/status.sh" success alu-ui-diag/mobile-bundle "warehouse mobile vite build passed"
+          else
+            "$RUNNER_TEMP/status.sh" failure alu-ui-diag/mobile-bundle "warehouse mobile vite build failed"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
