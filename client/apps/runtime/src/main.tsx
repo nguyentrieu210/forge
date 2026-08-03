@@ -460,6 +460,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenAI={() => setAssistantOpen(true)}
         aiConfigured
+        mobileAppHref={manifest.id === "alumdoor" ? "/mobile/warehouse/?tab=account" : undefined}
         onLogout={logout}
         businessContext={<BusinessContextBar compact />}
       >

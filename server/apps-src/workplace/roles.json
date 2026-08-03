@@ -1,0 +1,6 @@
+[
+  {"role":"Workplace User","desk_access":true},
+  {"role":"Workplace Manager","desk_access":true},
+  {"role":"Document Manager","desk_access":true},
+  {"role":"Contract Manager","desk_access":true}
+]
