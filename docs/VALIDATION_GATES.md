@@ -32,8 +32,8 @@ This policy turns the Enterprise Completion Skill risk classes into deterministi
 | migration replay |  | conditional | conditional | required whenever a migration changes |
 | correction/reversal |  |  | conditional | mandatory for finance/stock/payroll CRITICAL |
 | reconciliation |  |  | conditional | mandatory for finance/stock/payroll CRITICAL |
-| browser E2E |  |  |  | required for `UI_PROMOTION` when `touches.ui=true` |
-| mobile evidence |  |  |  | required for `UI_PROMOTION` when `touches.mobile=true` |
+| browser E2E |  |  |  | required for UI `UI_PROMOTION`/`RC`/`HARDENED`/`DEPLOYED` claims when `touches.ui=true` |
+| mobile evidence |  |  |  | required for the same UI claims when `touches.mobile=true` |
 | production release marker |  |  |  | required for `HARDENED` or `DEPLOYED` claim |
 
 Blank cells mean “not required by that lane alone”, not “forbidden”. Conditional rules can still add them.
@@ -144,7 +144,7 @@ For CRITICAL finance/stock/payroll, also wire `tenant_isolation`, `correction_re
 
 ## 7. UI promotion
 
-A UI change can remain FAST for development, but a promotion claim adds runtime evidence:
+A UI change can remain FAST for development, but promotion/maturity claims (`UI_PROMOTION`, `RC`, `HARDENED`, `DEPLOYED`) add runtime browser evidence when the surface is marked applicable:
 
 ```json
 {
