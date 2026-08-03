@@ -1,7 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { EChartsCoreOption, EChartsType } from "echarts/core";
-import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@metaforge/ui";
 import type { ForgeEChartsEngine } from "./engine.js";
 import { compactMetric, resolveForgeChartTokens } from "./theme.js";
 import type { ForgeChartBaseProps, ForgeChartInteraction, ForgeChartRenderer, ForgeChartSeries, ForgeChartTheme } from "./types.js";
@@ -164,7 +163,12 @@ export function ForgeChartSurface({
           <div>
             <div className="text-sm font-medium">Không tải được biểu đồ</div>
             <div className="mt-1 text-xs text-muted-foreground">{error}</div>
-            {onRetry ? <Button type="button" variant="outline" size="sm" onClick={onRetry} className="mt-3">Thử lại</Button> : null}
+            {onRetry ? (
+              <>
+                {/* @allow-native: chart core must stay independently buildable from @metaforge/ui */}
+                <button type="button" onClick={onRetry} className="mt-3 inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">Thử lại</button>
+              </>
+            ) : null}
           </div>
         </div>
       ) : !hasData ? (
@@ -175,19 +179,20 @@ export function ForgeChartSurface({
           {children}
           {labels.length && series.length ? (
             <div className="sr-only">
-              <Table unwrapped aria-label={description}>
-                <TableHeader>
-                  <TableRow><TableHead scope="col">Mốc</TableHead>{series.map((item) => <TableHead scope="col" key={item.name}>{item.name}</TableHead>)}</TableRow>
-                </TableHeader>
-                <TableBody>
+              {/* @allow-native: semantic data table is the accessible non-visual equivalent of the chart */}
+              <table aria-label={description}>
+                <thead>
+                  <tr><th scope="col">Mốc</th>{series.map((item) => <th scope="col" key={item.name}>{item.name}</th>)}</tr>
+                </thead>
+                <tbody>
                   {labels.map((label, index) => (
-                    <TableRow key={`${label}-${index}`}>
-                      <TableHead scope="row">{label}</TableHead>
-                      {series.map((item) => <TableCell key={item.name}>{full(Number(item.values[index] ?? 0))}</TableCell>)}
-                    </TableRow>
+                    <tr key={`${label}-${index}`}>
+                      <th scope="row">{label}</th>
+                      {series.map((item) => <td key={item.name}>{full(Number(item.values[index] ?? 0))}</td>)}
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           ) : null}
           {!labels.length && series.length ? <span className="sr-only">{series.map((item) => `${item.name}: ${compactMetric(Number(item.values.at(-1) ?? 0))}`).join(", ")}</span> : null}
