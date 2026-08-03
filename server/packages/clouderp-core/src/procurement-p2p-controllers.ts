@@ -78,12 +78,13 @@ export class ProcurementP2PPurchaseInvoiceController extends PurchaseInvoiceCont
     // The legacy base controller only understands a single header PO and would reject tolerance
     // before the richer matcher can run. Strip that reference for plan construction, then restore
     // it and perform the complete line-aware validation below. Financial calculations are unchanged.
-    const baseContext = headerPurchaseOrder
+    const { against_purchase_order: _againstPurchaseOrder, ...baseDocument } = input;
+    const baseContext: ControllerContext<PurchaseInvoiceData> = headerPurchaseOrder
       ? {
           ...context,
           command: {
             ...context.command,
-            document: { ...input, against_purchase_order: undefined },
+            document: baseDocument,
           },
         }
       : context;
