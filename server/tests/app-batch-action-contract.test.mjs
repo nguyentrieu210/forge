@@ -8,6 +8,7 @@ import {
   lowerActionInputTablesForInstall,
   normalizeBatchActionInvocation,
   parseAppManifestWithInputTables,
+  toBatchExecutorPlan,
 } from "../dist/packages/app-registry/src/index.js";
 
 function packageWithBatch(overrides = {}) {
@@ -77,6 +78,14 @@ test("batch manifest contract fails closed on unsafe or ambiguous declarations",
   delete missingPreview.actions[0].preview;
   assert.throws(() => parseAppManifestWithInputTables(missingPreview), /requires the AppAction to declare preview/);
 
+  const loweredWithoutPreview = lowerActionInputTablesForInstall(packageWithBatch());
+  delete loweredWithoutPreview.actions[0].preview;
+  assert.throws(
+    () => parseAppManifestWithInputTables(loweredWithoutPreview),
+    /requires the AppAction to declare preview/,
+    "compatibility decode must enforce the same preview invariant as first-class authoring",
+  );
+
   const unknownId = packageWithBatch();
   unknownId.actions[0].batch.item_id_field = "missing_id";
   assert.throws(() => parseAppManifestWithInputTables(unknownId), /item_id_field must name a column/);
@@ -119,7 +128,21 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
       ],
     },
   }, contract, "commit");
-  assert.equal(canonicalBatchRequestMaterial(invocation), canonicalBatchRequestMaterial(sameMeaning));
+  const requestMaterial = canonicalBatchRequestMaterial(invocation);
+  assert.equal(requestMaterial, canonicalBatchRequestMaterial(sameMeaning));
+
+  const plan = toBatchExecutorPlan(invocation, "sha256:request-1");
+  assert.deepEqual(plan, {
+    batchId: "batch-20260804-01",
+    requestHash: "sha256:request-1",
+    mode: "commit",
+    atomicity: "independent",
+    idempotencyKey: "tenant-request-42",
+    items: [
+      { id: "row-1", value: { row_id: "row-1", amount: 10, note: "a" } },
+      { id: "row-2", value: { note: "b", amount: 20, row_id: "row-2" } },
+    ],
+  });
 
   const noKey = structuredClone(request);
   delete noKey.idempotency_key;
