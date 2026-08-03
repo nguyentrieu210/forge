@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { routeManufacturingCostingApi } from "../dist/apps/tenant-worker/src/manufacturing-costing-api.js";
 
-const URL = "https://tenant.test/api/method/metaforge.manufacturing.get_work_order_cost_evidence";
+const COST_URL = "https://tenant.test/api/method/metaforge.manufacturing.get_work_order_cost_evidence";
 
 function doc(doctype, name, data, docstatus = 1) {
   return {
@@ -102,7 +102,7 @@ function ledger() {
 }
 
 function request(body) {
-  return new Request(URL, {
+  return new Request(COST_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -127,7 +127,7 @@ function context({ hidden = new Set(), checksum = "abc" } = {}) {
 }
 
 test("cost evidence API returns recovery-aware read-only ledger evidence", async () => {
-  const response = await routeManufacturingCostingApi(request({ work_order: "WO-1" }), new URL(URL), context());
+  const response = await routeManufacturingCostingApi(request({ work_order: "WO-1" }), new URL(COST_URL), context());
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.message.posting_status, "NOT_POSTED");
@@ -147,7 +147,7 @@ test("cost evidence API fails closed on hidden Work Order BOM or Stock Entry", a
   await assert.rejects(
     () => routeManufacturingCostingApi(
       request({ work_order: "WO-1" }),
-      new URL(URL),
+      new URL(COST_URL),
       context({ hidden: new Set(["BOM-FG"]) }),
     ),
     /BOM is outside/,
@@ -155,7 +155,7 @@ test("cost evidence API fails closed on hidden Work Order BOM or Stock Entry", a
   await assert.rejects(
     () => routeManufacturingCostingApi(
       request({ work_order: "WO-1" }),
-      new URL(URL),
+      new URL(COST_URL),
       context({ hidden: new Set(["STE-1"]) }),
     ),
     /Stock Entry outside/,
@@ -166,7 +166,7 @@ test("cost evidence API rejects mismatched BOM checksum", async () => {
   await assert.rejects(
     () => routeManufacturingCostingApi(
       request({ work_order: "WO-1" }),
-      new URL(URL),
+      new URL(COST_URL),
       context({ checksum: "other" }),
     ),
     /checksum does not match/,
@@ -177,7 +177,7 @@ test("cost evidence API rejects client tenant selection", async () => {
   await assert.rejects(
     () => routeManufacturingCostingApi(
       request({ work_order: "WO-1", tenant_id: "other" }),
-      new URL(URL),
+      new URL(COST_URL),
       context(),
     ),
     /tenant scope is controlled/,
