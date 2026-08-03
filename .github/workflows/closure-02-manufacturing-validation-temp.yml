@@ -1,0 +1,66 @@
+name: Closure 02 Manufacturing Validation Temp
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - "docs/agents/transaction-closure/02-MANUFACTURING.md"
+      - ".github/workflows/closure-02-manufacturing-validation-temp.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: closure-02-manufacturing-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  manufacturing-critical:
+    if: github.head_ref == 'rc/transaction-closure-02-manufacturing'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build server
+        run: pnpm --dir server run build
+
+      - name: Worker typecheck
+        run: pnpm --dir server run typecheck:workers
+
+      - name: Manufacturing closure regressions
+        run: >-
+          node --test
+          server/tests/manufacturing-transaction-closure.test.mjs
+          server/tests/manufacturing-costing-read.test.mjs
+          server/tests/manufacturing-costing-api.test.mjs
+          server/tests/alumdoor-manufacturing-lifecycle.test.mjs
+          server/tests/manufacturing-issue-line-key.test.mjs
+          server/tests/manufacturing-output-uom.test.mjs
+          server/tests/manufacturing-genealogy.test.mjs
+          server/tests/manufacturing-genealogy-api.test.mjs
+          server/tests/manufacturing-mrp.test.mjs
+          server/tests/manufacturing-mrp-api.test.mjs
+          server/tests/manufacturing-mrp-netting.test.mjs
+          server/tests/manufacturing-mrp-netting-api.test.mjs
+
+      - name: Manufacturing metadata package gate
+        run: pnpm --dir server run app:check
