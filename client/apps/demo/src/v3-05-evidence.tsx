@@ -10,7 +10,7 @@ const dark = mode === "command" || params.get("theme") === "dark";
 
 document.documentElement.classList.toggle("dark", dark);
 document.documentElement.dataset.theme = dark ? "dark" : "light";
-applyBrand("red");
+applyBrand("rose");
 
 const labels = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"];
 const revenue = [820, 910, 865, 1_040, 1_120, 1_080, 1_240, 1_330, 1_290, 1_410, 1_520, 1_680];
