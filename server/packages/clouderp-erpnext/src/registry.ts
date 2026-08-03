@@ -37,9 +37,17 @@ import {
 import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
 import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
 import { StockReturnIntegrityController } from "./stock-return-integrity.js";
+import {
+  ManufacturingDowntimeController, ManufacturingRoutingController, WorkstationCapacityCalendarController,
+} from "./manufacturing-capacity.js";
 import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
+import {
+  CapaController, NonConformanceReportController,
+  QualityPlanController, RootCauseAnalysisController,
+} from "./qms-controllers.js";
+import { ManufacturingCalibrationRecordController } from "./qms-calibration.js";
 import {
   WarehouseCashCountController, WarehouseCashFundController,
   WarehouseCashTransferController, WarehouseCashVoucherController,
@@ -53,6 +61,9 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new VersionedBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
     .register(new StockEntryIntegrityController())
+    .register(new ManufacturingRoutingController())
+    .register(new WorkstationCapacityCalendarController())
+    .register(new ManufacturingDowntimeController())
     .register(new AssetController())
     .register(new AssetDepreciationController())
     .register(new ProductionPlanController())
@@ -62,6 +73,11 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new AssetDisposalController())
     .register(new TimesheetController())
     .register(new QualityInspectionController())
+    .register(new QualityPlanController())
+    .register(new NonConformanceReportController())
+    .register(new RootCauseAnalysisController())
+    .register(new CapaController())
+    .register(new ManufacturingCalibrationRecordController())
     .register(new IssueController())
     .register(new ExpenseClaimController())
     .register(new EmploymentContractController())
