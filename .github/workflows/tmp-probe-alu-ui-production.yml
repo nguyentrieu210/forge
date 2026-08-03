@@ -1,0 +1,61 @@
+name: Temp Probe ALU UI Production
+
+on:
+  push:
+    branches:
+      - ops/diag-alu-ui-deploy-20260803
+    paths:
+      - ".github/workflows/tmp-probe-alu-ui-production.yml"
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXPECTED_SHA: 82cbb01f768f32583f029d02d2bd9051ecef09fb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Probe exact production UI release
+        id: probe
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node server/scripts/sre-health-snapshot.mjs \
+            --base https://alu.kairo.vn \
+            --expected-release-sha "$EXPECTED_SHA" \
+            --allow-remote \
+            --confirm-host alu.kairo.vn \
+            --attempts 12 \
+            --delay-ms 5000 \
+            --output "$RUNNER_TEMP/alu-ui-health.json" 2>&1 | tee "$RUNNER_TEMP/probe.log"
+
+      - name: Report probe
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.probe.outcome }}" = success ]; then
+            gh pr comment 417 --body "ALU_UI_PRODUCTION_PROBE result=success expected_sha=$EXPECTED_SHA"
+          else
+            { echo "ALU_UI_PRODUCTION_PROBE result=failure expected_sha=$EXPECTED_SHA"; echo; echo '```text'; tail -100 "$RUNNER_TEMP/probe.log"; echo '```'; } > "$RUNNER_TEMP/probe-comment.md"
+            gh pr comment 417 --body-file "$RUNNER_TEMP/probe-comment.md"
+            exit 1
+          fi
