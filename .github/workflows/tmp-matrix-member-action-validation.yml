@@ -47,6 +47,7 @@ jobs:
           node --test
           tests/matrix-member-action-input.test.mjs
           tests/alumdoor-matrix-view-contract.test.mjs
+          tests/pricing-matrix-member-actions.test.mjs
           tests/pricing-matrix-authority.test.mjs
           tests/matrix-source-action-registry.test.mjs
           tests/ui01-compile-view-policy.test.mjs
