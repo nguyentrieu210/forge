@@ -10,8 +10,8 @@ export default defineConfig({
   testDir: ".",
   testMatch: "ui-tests/v3-mobile-qa.spec.ts",
   outputDir: "./test-results/v3-mobile-qa",
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  timeout: 20_000,
+  expect: { timeout: 5_000 },
   workers: 1,
   fullyParallel: false,
   reporter: [
