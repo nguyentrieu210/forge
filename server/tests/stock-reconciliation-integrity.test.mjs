@@ -76,7 +76,7 @@ function makeContext(document, existing = baseData()) {
   };
 }
 
-function submittedContext({ actor, cancelReason = "Sai số kiểm kê", lockDate = null, tenantId = "tenant-a" } = {}) {
+function submittedContext({ actor, cancelReason = "", lockDate = null, tenantId = "tenant-a" } = {}) {
   const submitted = baseData([
     {
       row_id: "ROW-IN",
@@ -267,13 +267,13 @@ test("positive, negative and zero variance produce only authoritative stock-ledg
   assert.equal(ledgers.bundleUsages.length, 0);
 });
 
-test("cancel reverses exact submitted revision append-only and releases bundle usage", async () => {
+test("standard cancel reverses exact submitted revision append-only and releases bundle usage", async () => {
   const controller = new StockReconciliationIntegrityController();
   const { context, calls } = submittedContext();
   const plan = await controller.buildPlan(context);
   assert.equal(plan.document.docstatus, 2);
   assert.equal(plan.document.status, "Đã đảo kiểm kê");
-  assert.equal(plan.document.data.cancel_reason, "Sai số kiểm kê");
+  assert.equal(plan.document.data.cancel_reason, undefined);
   assert.deepEqual(calls, [["tenant-a", "Stock Reconciliation", "RECON-1", 2]]);
   assert.deepEqual(
     plan.stock_entries.map((line) => [line.line_key, line.actual_qty_micros, line.stock_value_difference_minor]),
@@ -291,13 +291,15 @@ test("cancel reverses exact submitted revision append-only and releases bundle u
   );
 });
 
-test("reconciliation reversal requires reason, authority, separation of duties and open period", async () => {
+test("optional cancellation reason is retained in audit document", async () => {
   const controller = new StockReconciliationIntegrityController();
+  const { context } = submittedContext({ cancelReason: "Đếm nhầm lô" });
+  const plan = await controller.buildPlan(context);
+  assert.equal(plan.document.data.cancel_reason, "Đếm nhầm lô");
+});
 
-  await assert.rejects(
-    () => controller.buildPlan(submittedContext({ cancelReason: "" }).context),
-    /Phải nhập lý do đảo/,
-  );
+test("reconciliation reversal requires authority, separation of duties and open period", async () => {
+  const controller = new StockReconciliationIntegrityController();
   await assert.rejects(
     () => controller.buildPlan(submittedContext({ actor: { user_id: "keeper@example.test", roles: ["Thủ kho"] } }).context),
     /Chỉ Chủ xưởng được đảo/,
