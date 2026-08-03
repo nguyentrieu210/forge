@@ -10,7 +10,8 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./v3.css": "./src/v3.css"
   },
   "scripts": {
     "typecheck": "tsc -b",
