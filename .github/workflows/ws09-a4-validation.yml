@@ -1,0 +1,110 @@
+name: WS09 A4 BOM Batch Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - program/ws09-batch-productization-20260804
+    paths:
+      - "server/packages/clouderp-erpnext/src/manufacturing-bom-*.ts"
+      - "server/apps/tenant-worker/src/manufacturing-bom-bulk-api.ts"
+      - "server/packages/app-registry/src/batch-action.ts"
+      - "server/packages/batch-executor/**"
+      - "server/migrations/tenant/0110_batch_replay_claims.sql"
+      - "server/tests/manufacturing-bom-*.test.mjs"
+      - "server/tests/app-batch-action-*.test.mjs"
+      - "server/tests/batch-*.test.mjs"
+      - "server/scripts/test-batch-replay-migration.py"
+      - ".github/workflows/ws09-a4-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ws09-a4-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/ws09-batch-04-bom')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused manufacturing TypeScript emit and changed-source guard
+        working-directory: server
+        run: |
+          cat > tsconfig.ws09-a4.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "rootDir": ".",
+              "outDir": "./dist",
+              "declaration": false,
+              "sourceMap": false,
+              "noEmitOnError": false
+            },
+            "include": [
+              "apps/tenant-worker/src/manufacturing-bom-bulk-api.ts",
+              "packages/app-registry/src/**/*.ts",
+              "packages/batch-executor/src/**/*.ts",
+              "packages/clouderp-erpnext/src/**/*.ts",
+              "packages/clouderp-stock/src/**/*.ts",
+              "packages/contracts/src/**/*.ts",
+              "packages/core/src/**/*.ts",
+              "packages/document-kernel/src/**/*.ts",
+              "packages/frappe-model/src/**/*.ts",
+              "packages/ledger/src/**/*.ts",
+              "packages/money/src/**/*.ts",
+              "packages/outbox/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules", "apps/web"]
+          }
+          JSON
+          set +e
+          pnpm exec tsc -p tsconfig.ws09-a4.json 2>&1 | tee /tmp/ws09-a4-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep "error TS" /tmp/ws09-a4-tsc.log > /tmp/ws09-a4-errors.log || true
+            grep -E 'manufacturing-bom-batch|manufacturing-bom-bulk-api\.ts|batch-action\.ts|packages/batch-executor/' /tmp/ws09-a4-errors.log > /tmp/ws09-a4-changed-errors.log || true
+            if [ -s /tmp/ws09-a4-changed-errors.log ]; then
+              echo "TypeScript error intersects WS09 A4 changed/shared authority:"
+              cat /tmp/ws09-a4-changed-errors.log
+              exit 1
+            fi
+            echo "TypeScript emitted with baseline errors outside WS09 A4 changed authority:"
+            cat /tmp/ws09-a4-errors.log
+          fi
+
+      - name: Shared batch regressions
+        working-directory: server
+        run: node --test tests/app-batch-action-contract.test.mjs tests/app-batch-action-brief.test.mjs tests/batch-executor.test.mjs tests/batch-a1-a2-integration.test.mjs tests/batch-a1-a2-table-integration.test.mjs tests/batch-d1-replay-store.test.mjs
+
+      - name: BOM batch and lifecycle regressions
+        working-directory: server
+        run: node --test tests/manufacturing-bom-batch-platform-integration.test.mjs tests/manufacturing-bom-bulk.test.mjs tests/manufacturing-bom-bulk-api.test.mjs
+
+      - name: Replay migration and SQL validation
+        working-directory: server
+        run: |
+          python3 scripts/test-batch-replay-migration.py
+          python3 scripts/verify-sql.py
