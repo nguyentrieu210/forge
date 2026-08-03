@@ -1,10 +1,11 @@
 # Platform Productization 01 — WS09 AppAction Input Table Native Client
 
 Date: **2026-08-04**  
-Status: **IMPLEMENTED — DELIVERY PR #542 — VALIDATION PR #543**  
+Status: **IMPLEMENTED — STATIC DIFF AUDIT PASS — EXECUTABLE VALIDATION BLOCKED**  
 Risk: **STANDARD**  
 Execution topology: **SINGLE**  
 Branch: `platform/ws09-appaction-input-table-native-20260804`  
+Delivery PR: **#542**  
 Base: exact `main@c10e8d9ec5da740910c4b995e03ea9529fa726b4`  
 Capability owner: **WS09 App Factory**, shared client consumer boundary coordinated with **WS14**  
 Primary capability: **B02-016 Action builder / first-class action input contract**
@@ -125,29 +126,36 @@ This is deliberately a **deletable presentation adapter**, not a second business
   - malformed first-class metadata fails soft to existing path;
   - row bounds are defensively capped at server contract ceiling.
 
-## 7. Acceptance gates
+## 7. Validation evidence and blocker
 
-Required before merge:
+### Proven in this session
 
-1. locked dependency install succeeds;
-2. `@metaforge/core` typecheck/build PASS;
-3. `@metaforge/views` typecheck/build PASS;
-4. action input-table regression PASS;
-5. runtime production dependency-graph build PASS;
-6. diff audit confirms no backend/schema/migration/business-authority change;
-7. exact branch head and exact main base recorded in PR evidence.
+- exact delivery base is current `main@c10e8d9ec5da740910c4b995e03ea9529fa726b4`;
+- PR #542 changed-file audit contains exactly nine delivery paths, all under `client/packages/core`, `client/packages/views`, tests and this document;
+- **no backend, schema, migration, ledger, tenant/session or permission file is changed**;
+- current main drift was audited and the branch is based on the exact current main after UI-only #529;
+- a targeted regression suite was added for precedence/no-mutation/legacy fallback/malformed metadata/bounds.
 
-Validation uses trusted-base PR **#543** so the temporary workflow is not part of delivery PR **#542**.
+### Executable validation not yet proven
 
-Browser evidence is desirable but not required to prove this compatibility boundary because the grid renderer itself is existing code; this slice changes which metadata source feeds it. Any subsequent visual/grid redesign remains WS14-owned.
+Required executable gates remain:
+
+1. locked dependency install;
+2. `@metaforge/core` typecheck/build;
+3. `@metaforge/views` typecheck/build + `test:action-input-table`;
+4. runtime production dependency-graph build.
+
+A trusted-base validation PR **#543** was created, but GitHub returned **no workflow runs/statuses** for both its head and merge SHA. The current execution environment also cannot resolve `github.com`, so it cannot clone/install dependencies locally. This is an infrastructure/evidence blocker, **not a test PASS or FAIL**.
+
+Therefore this slice remains **implemented but not promotion-ready**. Do not claim RC/Hardened from source review alone.
 
 ## 8. Non-goals / next slices
 
 This slice does **not** claim all WS09 Productization complete.
 
-Next WS09 work after this boundary is proven:
+After executable validation and merge approval, continue with:
 
-1. migrate a real generic consumer declaration to first-class `input_tables` where the package still authors the legacy field;
+1. migrate one real consumer declaration to first-class `input_tables` where the package still authors the legacy field;
 2. define generic `BatchAction / BatchTransaction` execution/result semantics without stock/BOM-specific business rules;
 3. fold the rolling bridge into native server `AppManifest` storage/parser once old-client compatibility window closes;
 4. reusable approval/action lifecycle;
@@ -158,4 +166,4 @@ Next WS09 work after this boundary is proven:
 
 This is a shared metadata/runtime contract and is treated as **STANDARD**, not a cosmetic UI fast-path.
 
-Create PR and collect validation evidence. **Do not merge or deploy automatically.** Merge remains an explicit user approval step.
+Delivery PR **#542 remains draft and must not merge/deploy until executable validation is green and explicit user approval is given**.
