@@ -1,0 +1,135 @@
+{
+  "schema_version": 2,
+  "status": "review_only",
+  "owner": "CFMAX-04-R2",
+  "risk": "CRITICAL",
+  "production_activation": "requires_explicit_user_approval",
+  "provider_authority": "CF08 production governance owns provider apply/drift/rollback",
+  "application_authority": "Forge authentication and server-side authorization remain authoritative",
+  "rollout": ["inventory", "observe", "calibrate", "challenge_when_compatible", "block_after_evidence"],
+  "global_invariants": {
+    "never_replace_forge_authentication": true,
+    "never_replace_forge_authorization": true,
+    "never_generic_challenge_machine_traffic": true,
+    "never_store_service_token_secrets_in_git": true,
+    "no_unmeasured_edge_thresholds": true,
+    "preserve_webhook_oauth_app_callback_compatibility": true
+  },
+  "origin_exposure": {
+    "gateway": {
+      "ingress_authority": "custom_domains",
+      "workers_dev": false,
+      "preview_urls": false,
+      "direct_worker_origin_allowed": false
+    },
+    "new_custom_domains": {
+      "require_equivalent_perimeter_policy": true,
+      "authority": "control-plane governed route lifecycle"
+    }
+  },
+  "surfaces": [
+    {
+      "id": "health",
+      "actor": "probe",
+      "machine_traffic": true,
+      "forge_auth": "none",
+      "edge_rate_limit": { "mode": "observe", "threshold": null },
+      "turnstile": "never",
+      "access": "never"
+    },
+    {
+      "id": "client_shell",
+      "actor": "browser",
+      "machine_traffic": false,
+      "forge_auth": "session_or_bearer_after_shell_load",
+      "edge_rate_limit": { "mode": "none", "threshold": null },
+      "turnstile": "never_on_shell",
+      "access": "never_for_tenant_product"
+    },
+    {
+      "id": "login",
+      "actor": "browser_or_api_client",
+      "machine_traffic": true,
+      "forge_auth": "application_login_contract",
+      "application_guard": "persistent_login_rate_limit",
+      "edge_rate_limit": { "mode": "observe_then_calibrate", "threshold": null },
+      "turnstile": "defer_mixed_browser_api_clients",
+      "access": "never"
+    },
+    {
+      "id": "public_signup",
+      "actor": "anonymous_browser",
+      "machine_traffic": false,
+      "forge_auth": "anonymous_with_server_side_anti_abuse",
+      "application_guard": "honeypot_plus_hashed_email_ip_limits",
+      "edge_rate_limit": { "mode": "observe_then_calibrate", "threshold": null },
+      "turnstile": "candidate_after_siteverify_contract",
+      "access": "never"
+    },
+    {
+      "id": "frappe_api",
+      "actor": "browser_api_or_app_callback",
+      "machine_traffic": true,
+      "forge_auth": "cookie_bearer_or_trusted_app_callback",
+      "edge_rate_limit": { "mode": "no_generic_rule", "threshold": null },
+      "turnstile": "never_generic",
+      "access": "never"
+    },
+    {
+      "id": "provider_callbacks",
+      "actor": "webhook_oauth_or_app_machine",
+      "machine_traffic": true,
+      "forge_auth": "provider_signature_oauth_or_app_credential",
+      "edge_rate_limit": { "mode": "observe_provider_specific", "threshold": null },
+      "turnstile": "never",
+      "access": "never",
+      "must_not_challenge": true
+    },
+    {
+      "id": "reports_exports_print",
+      "actor": "authenticated_browser_or_api_client",
+      "machine_traffic": true,
+      "forge_auth": "Forge_permission_checks",
+      "edge_rate_limit": { "mode": "observe_then_tenant_user_quota", "threshold": null },
+      "turnstile": "never",
+      "access": "never"
+    },
+    {
+      "id": "control_plane_admin",
+      "actor": "platform_operator_or_service",
+      "machine_traffic": true,
+      "forge_auth": "existing_control_auth_stays_required",
+      "edge_rate_limit": { "mode": "observe_then_service_specific", "threshold": null },
+      "turnstile": "never",
+      "access": "recommended_defense_in_depth",
+      "must_preserve_application_auth": true
+    }
+  ],
+  "turnstile": {
+    "adopt_now": false,
+    "candidate": "public_signup",
+    "required_before_adoption": [
+      "accessible client token acquisition",
+      "server_side_siteverify",
+      "hostname_and_action_validation",
+      "timeout_and_provider_failure_behavior",
+      "replay_and_expiry_tests",
+      "machine_path_separation"
+    ]
+  },
+  "access": {
+    "tenant_product_login": "rejected",
+    "control_plane_admin": "recommended_after_CF08_provider_authority_and_recovery_are_ready",
+    "service_tokens": {
+      "selected_machine_admin_integrations_only": true,
+      "application_auth_still_required": true,
+      "browser_embedding_forbidden": true,
+      "rotation_revocation_required": true
+    }
+  },
+  "waf_and_rate_limit": {
+    "default_phase": "observe",
+    "provider_apply_owner": "CF08",
+    "threshold_policy": "Numeric edge thresholds require Forge traffic, abuse, compatibility and cost evidence; application limits are references, not provider defaults."
+  }
+}

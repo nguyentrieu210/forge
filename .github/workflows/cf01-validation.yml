@@ -1,0 +1,76 @@
+name: CF01 D1 Consistency Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/core/src/d1-session-policy.ts"
+      - "server/apps/query-worker/src/index.ts"
+      - "server/apps/query-worker/test/**"
+      - "server/tests/cfmax-d1-client-bookmark-contract.test.mjs"
+      - "docs/agents/cloudflare-cfmax/01-D1-CONSISTENCY-R2-HANDOFF.md"
+      - ".github/workflows/cf01-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf01-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cf01:
+    if: startsWith(github.head_ref, 'cloudflare/cfmax-01-d1-consistency-r2')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused CF01 TypeScript check
+        working-directory: server
+        run: |
+          cat > tsconfig.cf01.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "noEmit": true,
+              "declaration": false
+            },
+            "include": [
+              "packages/core/src/**/*.ts",
+              "packages/query/src/**/*.ts",
+              "apps/query-worker/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.cf01.json
+
+      - name: Query worker real-workerd D1 integration
+        working-directory: server
+        run: pnpm exec vitest run --config apps/query-worker/vitest.config.mts
+
+      - name: Client bookmark contract guard
+        working-directory: server
+        run: node --test tests/cfmax-d1-client-bookmark-contract.test.mjs
+
+      - name: Query Worker Wrangler config/type parse
+        working-directory: server
+        run: pnpm exec wrangler types /tmp/cf01-query-bindings.d.ts --config apps/query-worker/wrangler.jsonc --env-interface Cf01QueryBindings --include-runtime false
