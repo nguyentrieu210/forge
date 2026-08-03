@@ -1,16 +1,20 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-async function runReport(body: unknown): Promise<Response> {
+async function runReport(body: unknown, bookmark?: string): Promise<Response> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (bookmark) headers["x-d1-bookmark"] = bookmark;
   return exports.default.fetch(new Request("https://query.test/api/v1/reports/run", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   }));
 }
 
-async function getPrepared(jobId: string): Promise<Response> {
-  return exports.default.fetch(new Request(`https://query.test/api/v1/reports/prepared/${encodeURIComponent(jobId)}`));
+async function getPrepared(jobId: string, bookmark?: string): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (bookmark) headers["x-d1-bookmark"] = bookmark;
+  return exports.default.fetch(new Request(`https://query.test/api/v1/reports/prepared/${encodeURIComponent(jobId)}`, { headers }));
 }
 
 // Directly invoke the queue consumer with a hand-built batch, so the test does
@@ -35,21 +39,40 @@ async function seedQueued(jobId: string, request: unknown): Promise<void> {
 }
 
 describe("query-worker prepared report pipeline (real workerd + D1)", () => {
-  it("routes a large request to prepared mode and returns a job id", async () => {
+  it("routes a large request to prepared mode and returns a primary-first bookmark", async () => {
     const res = await runReport({ report: "Accounts Receivable", limit: 2000 });
     expect(res.status).toBe(202);
+    expect(res.headers.get("x-d1-bookmark")).toBeTruthy();
     const body = await res.json() as { prepared: boolean; job_id: string; status: string };
     expect(body.prepared).toBe(true);
     expect(typeof body.job_id).toBe("string");
     expect(body.status).toBe("queued");
   });
 
-  it("consumer takes a queued job to completed and the client can read the result", async () => {
+  it("round-trips the caller bookmark into a dependent replica-safe report", async () => {
+    const queued = await runReport({ report: "Accounts Receivable", limit: 2000 });
+    const bookmark = queued.headers.get("x-d1-bookmark");
+    expect(bookmark).toBeTruthy();
+
+    const dependentRead = await runReport({ report: "Accounts Receivable", limit: 20 }, bookmark ?? undefined);
+    expect(dependentRead.status).toBe(200);
+    expect(dependentRead.headers.get("x-d1-bookmark")).toBeTruthy();
+  });
+
+  it("consumer takes a queued job to completed and status remains primary-first", async () => {
     const res = await runReport({ report: "Accounts Receivable", limit: 2000 });
+    const bookmark = res.headers.get("x-d1-bookmark") ?? undefined;
     const { job_id } = await res.json() as { job_id: string };
-    await deliver({ tenant_id: "demo", job_id, actor_id: "Administrator", request: { report: "Accounts Receivable", tenant_id: "demo", limit: 2000 } });
-    const status = await getPrepared(job_id);
+    await deliver({
+      tenant_id: "demo",
+      job_id,
+      actor_id: "Administrator",
+      request: { report: "Accounts Receivable", tenant_id: "demo", limit: 2000 },
+      ...(bookmark ? { bookmark } : {}),
+    });
+    const status = await getPrepared(job_id, bookmark);
     expect(status.status).toBe(200);
+    expect(status.headers.get("x-d1-bookmark")).toBeTruthy();
     const body = await status.json() as { status: string; result: unknown; error: unknown };
     expect(body.status).toBe("completed");
     expect(body.result).not.toBeNull();
