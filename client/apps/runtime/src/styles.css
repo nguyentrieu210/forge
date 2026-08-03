@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@metaforge/ui/styles.css";
+@import "@metaforge/ui/v3.css";
 @source "./";
 @source "../node_modules/@metaforge/ui/dist";
 @source "../node_modules/@metaforge/views/dist";
