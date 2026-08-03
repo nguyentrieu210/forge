@@ -1,10 +1,23 @@
 import type { DomainEvent, JsonObject } from "../../../packages/contracts/src/index.js";
 
+/**
+ * Structural Browser Run binding used by the tenant entrypoint.
+ *
+ * Kept structural instead of importing a Cloudflare SDK type: workerd provides the
+ * binding at runtime, while the application code only needs the Quick Actions RPC
+ * surface. That also keeps tests free to supply a tiny deterministic fake.
+ */
+export interface BrowserRunBinding {
+  quickAction(action: "pdf", input: Record<string, unknown>): Promise<Response>;
+}
+
 export interface TenantEnv {
   DB: D1Database;
   AGGREGATES: DurableObjectNamespace;
   OUTBOX_QUEUE?: Queue<DomainEvent>;
   FILES?: R2Bucket;
+  /** Cloudflare Browser Run Quick Actions binding for trusted server-side PDF rendering. */
+  BROWSER?: BrowserRunBinding;
   TENANT_ID?: string;
   AUTH_MODE?: "development" | "production";
   DEV_ACTOR_JSON?: string;
