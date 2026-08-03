@@ -13,6 +13,7 @@ Theo quyết định repo reset ngày 2026-08-03, toàn bộ PR cũ đã đượ
 Canonical execution blueprint:
 
 - `docs/FORGE_RC_HARDENING_PLAN_20260803.md`
+- Agent lanes/prompts: `docs/agents/RC_AGENT_LANES_20260803.md`
 
 Blueprint này là nguồn điều phối mặc định cho vòng triển khai mới. Nó định nghĩa:
 
@@ -44,16 +45,22 @@ Thứ tự mặc định:
 
 ## Task mở đầu mặc định
 
-Sau khi blueprint được merge, thứ tự khởi động:
+Mở tối đa **5 worker agent** theo `docs/agents/RC_AGENT_LANES_20260803.md`; coordinator chính nằm ngoài 5 worker.
 
-1. `RC-000` Capability Status Registry + completeness validator.
-2. `RC-001` Enterprise Evidence Index.
-3. `RC-002` Current release workflow/SRE audit và cleanup task mới từ current main.
-4. `RC-003` FAST/STANDARD/CRITICAL validation gate contract.
-5. `RC-004` Baseline maturity report + top-30 priority score.
-6. `RC-010..016` Platform P0 hardening.
-7. `RC-020..025` Finance + Inventory authority hardening.
-8. Sau authority freeze mới chạy `RC-030..038` theo domain song song.
+Batch đầu:
+
+1. Agent 1: `RC-000`, `RC-001`, `RC-004` — Capability Truth/Evidence.
+2. Agent 2: `RC-002` + audit `RC-014/015` — Release/SRE.
+3. Agent 3: `RC-003` — Validation/Risk Gates.
+4. Agent 4: `RC-010`, `RC-012` — Kernel/OCC/Auth.
+5. Agent 5: `RC-011`, `RC-013` + contract phần đầu `RC-016` — IAM/Tenant/Offline contract.
+
+Không mở agent thứ 6. Khi một lane xong, tái sử dụng slot cho batch kế tiếp theo dependency graph.
+
+Sau Platform authority freeze:
+
+- Finance/Inventory: `RC-020..025`.
+- Sau đó mới chạy Procurement/CRM/HCM/Manufacturing song song: `RC-030..038`.
 
 ## Quy tắc cho công việc mới
 
@@ -78,6 +85,7 @@ Chúng chỉ được dùng làm historical evidence khi một task RC mới aud
 
 - Trạng thái repo: `CURRENT_STATUS.md`.
 - Execution blueprint: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
+- Agent lanes/prompts: `docs/agents/RC_AGENT_LANES_20260803.md`.
 - Handoff facts/invariants: `AI_HANDOFF.md`.
 - North Star: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
 - Capability map: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`.
