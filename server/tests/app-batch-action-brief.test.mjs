@@ -48,8 +48,21 @@ function batchBrief() {
   };
 }
 
+function tableBatchBrief() {
+  const value = batchBrief();
+  value.actions[0].batch = {
+    contractVersion: 1,
+    inputTable: "lines",
+    itemization: "table",
+    atomicity: "independent",
+    maxItems: 50,
+  };
+  return value;
+}
+
 test("brief validation accepts only the owned batch extension and keeps other unknown keys closed", async () => {
   assert.deepEqual(await validateBriefSchema(batchBrief()), []);
+  assert.deepEqual(await validateBriefSchema(tableBatchBrief()), []);
 
   const invalid = batchBrief();
   invalid.actions[0].batch.mystery = true;
@@ -62,11 +75,12 @@ test("brief validation accepts only the owned batch extension and keeps other un
   assert.ok(unrelatedErrors.some((error) => error.includes("additional properties")), unrelatedErrors.join("\n"));
 });
 
-test("App Factory compiler emits canonical batch metadata and canonical parser round-trips it", () => {
+test("App Factory compiler defaults existing row contracts and canonical parser round-trips them", () => {
   const pkg = compileBrief(batchBrief());
   assert.deepEqual(pkg.actions[0].batch, {
     contract_version: 1,
     input_table: "lines",
+    itemization: "row",
     item_id_field: "row_id",
     atomicity: "independent",
     max_items: 50,
@@ -77,12 +91,41 @@ test("App Factory compiler emits canonical batch metadata and canonical parser r
   assert.equal(parsed.actions[0].input_tables[0].fieldname, "lines");
 });
 
-test("brief compiler fails closed when batch binding or preview contract is invalid", () => {
+test("App Factory compiler emits table-itemized document transaction without fake row identity", () => {
+  const pkg = compileBrief(tableBatchBrief());
+  assert.deepEqual(pkg.actions[0].batch, {
+    contract_version: 1,
+    input_table: "lines",
+    itemization: "table",
+    atomicity: "independent",
+    max_items: 50,
+  });
+  assert.equal(Object.hasOwn(pkg.actions[0].batch, "item_id_field"), false);
+
+  const parsed = parseAppManifestWithInputTables(pkg);
+  assert.deepEqual(parsed.actions[0].batch, pkg.actions[0].batch);
+});
+
+test("brief compiler fails closed when batch binding, itemization or preview contract is invalid", () => {
   const missingIdColumn = batchBrief();
   missingIdColumn.actions[0].batch.itemIdField = "missing";
   assert.throws(
     () => compileBrief(missingIdColumn),
     (error) => error instanceof BriefError && /itemIdField/.test(error.message),
+  );
+
+  const tableWithRowId = tableBatchBrief();
+  tableWithRowId.actions[0].batch.itemIdField = "row_id";
+  assert.throws(
+    () => compileBrief(tableWithRowId),
+    (error) => error instanceof BriefError && /itemIdField chỉ dùng/.test(error.message),
+  );
+
+  const badItemization = batchBrief();
+  badItemization.actions[0].batch.itemization = "document";
+  assert.throws(
+    () => compileBrief(badItemization),
+    (error) => error instanceof BriefError && /itemization/.test(error.message),
   );
 
   const missingPreview = batchBrief();

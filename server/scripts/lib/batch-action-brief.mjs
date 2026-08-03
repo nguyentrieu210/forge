@@ -2,6 +2,7 @@ import { normalizeBriefActionInputTables } from "./action-input-table-brief.mjs"
 
 const FIELDNAME = /^[a-z][a-z0-9_]*$/;
 const ATOMICITY = new Set(["atomic", "independent"]);
+const ITEMIZATION = new Set(["row", "table"]);
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -21,7 +22,9 @@ export function normalizeBriefBatchAction(raw, action, actionIndex) {
   const errors = [];
   if (!isObject(raw)) return { batch: undefined, errors: [`${root} phải là object.`] };
 
-  const allowed = new Set(["contractVersion", "inputTable", "itemIdField", "atomicity", "maxItems"]);
+  const allowed = new Set([
+    "contractVersion", "inputTable", "itemization", "itemIdField", "atomicity", "maxItems",
+  ]);
   for (const key of Object.keys(raw)) if (!allowed.has(key)) errors.push(`${root}.${key} không được hỗ trợ.`);
 
   const contractVersion = raw.contractVersion ?? 1;
@@ -30,8 +33,22 @@ export function normalizeBriefBatchAction(raw, action, actionIndex) {
 
   const inputTable = text(raw.inputTable, `${root}.inputTable`, errors);
   if (inputTable && !FIELDNAME.test(inputTable)) errors.push(`${root}.inputTable phải là fieldname chữ thường.`);
-  const itemIdField = text(raw.itemIdField, `${root}.itemIdField`, errors);
-  if (itemIdField && !FIELDNAME.test(itemIdField)) errors.push(`${root}.itemIdField phải là fieldname chữ thường.`);
+
+  const itemization = raw.itemization === undefined
+    ? "row"
+    : text(raw.itemization, `${root}.itemization`, errors, 16);
+  if (itemization && !ITEMIZATION.has(itemization)) {
+    errors.push(`${root}.itemization phải là row hoặc table.`);
+  }
+
+  let itemIdField;
+  if (itemization === "row") {
+    itemIdField = text(raw.itemIdField, `${root}.itemIdField`, errors);
+    if (itemIdField && !FIELDNAME.test(itemIdField)) errors.push(`${root}.itemIdField phải là fieldname chữ thường.`);
+  } else if (itemization === "table" && raw.itemIdField !== undefined) {
+    errors.push(`${root}.itemIdField chỉ dùng khi itemization là row.`);
+  }
+
   const atomicity = text(raw.atomicity, `${root}.atomicity`, errors, 16);
   if (atomicity && !ATOMICITY.has(atomicity)) errors.push(`${root}.atomicity phải là atomic hoặc independent.`);
 
@@ -41,7 +58,7 @@ export function normalizeBriefBatchAction(raw, action, actionIndex) {
   errors.push(...tablesResult.errors);
   const table = tablesResult.tables.find((candidate) => candidate.fieldname === inputTable);
   if (inputTable && !table) errors.push(`${root}.inputTable phải trỏ tới một inputTables đã khai: "${inputTable}".`);
-  if (table && itemIdField && !table.columns.some((column) => column.fieldname === itemIdField)) {
+  if (table && itemization === "row" && itemIdField && !table.columns.some((column) => column.fieldname === itemIdField)) {
     errors.push(`${root}.itemIdField phải là cột của ${inputTable}: "${itemIdField}".`);
   }
 
@@ -57,7 +74,8 @@ export function normalizeBriefBatchAction(raw, action, actionIndex) {
     batch: {
       contract_version: 1,
       input_table: inputTable,
-      item_id_field: itemIdField,
+      itemization,
+      ...(itemIdField ? { item_id_field: itemIdField } : {}),
       atomicity,
       max_items: maxItems,
     },
