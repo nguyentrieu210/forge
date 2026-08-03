@@ -1,0 +1,19 @@
+{
+  "changeId": "example-ui-promotion",
+  "baseSha": "0000000000000000000000000000000000000000",
+  "headSha": "1111111111111111111111111111111111111111",
+  "risk": "FAST",
+  "domains": [
+    "ui"
+  ],
+  "touches": {
+    "ui": true,
+    "mobile": true,
+    "migration": false,
+    "authoritativeMutation": false,
+    "tenantBoundary": false
+  },
+  "claims": [
+    "UI_PROMOTION"
+  ]
+}
