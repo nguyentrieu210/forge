@@ -7,9 +7,9 @@
     { "fieldname": "qty", "label": "Số lượng", "fieldtype": "Float", "required": true, "in_list_view": true },
     { "fieldname": "uom", "label": "ĐVT", "fieldtype": "Link", "options": "UOM", "required": true, "in_list_view": true },
     { "fieldname": "serial_no", "label": "Serial linh kiện", "fieldtype": "Link", "options": "Serial No", "in_list_view": true },
-    { "fieldname": "stock_reference", "label": "Chứng từ kho tham chiếu", "fieldtype": "Data", "description": "Evidence only until WS04 provides the authoritative stock transaction contract." },
+    { "fieldname": "stock_reference", "label": "Chứng từ kho tham chiếu", "fieldtype": "Link", "options": "Stock Entry", "description": "Chứng từ kho chuẩn đã submit cho việc xuất/nhập linh kiện; bắt buộc trước khi đóng Lệnh dịch vụ có dùng vật tư." },
     { "fieldname": "note", "label": "Ghi chú", "fieldtype": "Text" }
   ],
   "permissions": [],
-  "revision": 1
+  "revision": 2
 }
