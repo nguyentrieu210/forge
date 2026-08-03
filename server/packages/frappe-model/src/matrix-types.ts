@@ -4,6 +4,7 @@ export type MatrixSourceKind = "doctype" | "projection";
 export type MatrixReadPermissionAction = "read";
 export type MatrixWritePermissionAction = "write" | "create" | "submit";
 export type MatrixEditor = "Data" | "Int" | "Float" | "Currency" | "Percent" | "Check" | "Select" | "Link";
+export type MatrixValueValidation = "positive" | "non_negative";
 
 export interface MatrixSourceRef extends JsonObject {
   kind: MatrixSourceKind;
@@ -22,19 +23,26 @@ export interface MatrixAxisPolicy extends JsonObject {
 
 export interface MatrixAuxiliaryFieldPolicy extends JsonObject {
   field: string;
+  label?: string;
   editor?: MatrixEditor;
+  readOnlyWhenField?: string;
+  validation?: MatrixValueValidation;
 }
 
 export interface MatrixRowAxisPolicy extends MatrixAxisPolicy {
+  primaryField?: string;
   auxiliaryFields?: MatrixAuxiliaryFieldPolicy[];
 }
 
 export interface MatrixColumnAxisPolicy extends MatrixAxisPolicy {
   subtitleField?: string;
+  disabledField?: string;
+  selectedFirst?: boolean;
 }
 
 export interface MatrixNavigatorPolicy extends MatrixAxisPolicy {
   parentField: string;
+  secondaryLabelField?: string;
 }
 
 export interface MatrixCellIdentityPolicy extends JsonObject {
@@ -54,6 +62,9 @@ export interface MatrixCellPolicy extends JsonObject {
   valueField: string;
   editor: MatrixEditor;
   enabled?: MatrixCellEnabledPolicy;
+  versionField?: string;
+  validation?: MatrixValueValidation;
+  disabledColumnReadOnly?: boolean;
 }
 
 export interface MatrixActionRef extends JsonObject {
@@ -80,18 +91,23 @@ export type MatrixWriteRef = MatrixDocumentUpdateRef | MatrixNamedActionWriteRef
 export interface MatrixRowMemberPolicy extends JsonObject {
   create?: MatrixActionRef;
   remove?: MatrixActionRef;
+  primaryRemovable?: boolean;
 }
 
 export interface MatrixColumnMemberPolicy extends JsonObject {
   create?: MatrixActionRef;
   allowHide?: boolean;
+  allowHideAll?: boolean;
   allowShow?: boolean;
+  allowShowAll?: boolean;
 }
 
 export interface MatrixQueryPolicy extends JsonObject {
   pageSize: number;
   searchLimit: number;
   minSearchChars: number;
+  searchMode?: "contains" | "prefix" | "token_contains";
+  accentInsensitive?: boolean;
 }
 
 export interface MatrixPresentationPolicy extends JsonObject {
@@ -99,6 +115,10 @@ export interface MatrixPresentationPolicy extends JsonObject {
   stickyColumnAxis: boolean;
   focusMode: "inline" | "toggle";
   mobileMode: "scroll" | "step";
+  navigatorResizable?: boolean;
+  navigatorCollapsible?: boolean;
+  showDirtyIndicator?: boolean;
+  unsavedChangeGuard?: boolean;
 }
 
 export type MatrixDirtyPolicy = "warn" | "block";
