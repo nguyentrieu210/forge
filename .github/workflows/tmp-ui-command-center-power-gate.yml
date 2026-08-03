@@ -1,0 +1,135 @@
+name: Temp UI Command Center Power Gate
+
+on:
+  push:
+    branches:
+      - ui/metaforge-command-center-power-20260803
+    paths:
+      - ".github/workflows/tmp-ui-command-center-power-gate.yml"
+      - "scripts/tmp-apply-command-center-power.py"
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/metaforge-command-center-power-20260803
+          fetch-depth: 0
+
+      - name: Mark gate started
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          payload=$(jq -nc --arg state pending --arg context "ui-command-center-power-gate" --arg description "validating command-center visuals" '{state:$state,context:$context,description:$description}')
+          curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload" >/dev/null
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Apply scoped power layer
+        run: python scripts/tmp-apply-command-center-power.py
+
+      - name: Build runtime and demo
+        run: |
+          set -euo pipefail
+          pnpm --filter runtime... run build
+          pnpm --filter @metaforge/demo run build
+
+      - name: Mark build passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          payload=$(jq -nc --arg state success --arg context "ui-command-center-power-build" --arg description "runtime + demo build passed" '{state:$state,context:$context,description:$description}')
+          curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload" >/dev/null
+
+      - name: Add temporary visual contract
+        run: |
+          cat > client/apps/demo/e2e/power-visual.spec.ts <<'TS'
+          import { expect, test } from "@playwright/test";
+          const color = (value: string) => {
+            const m = value.match(/rgba?\((\d+)[, ]+\s*(\d+)[, ]+\s*(\d+)/);
+            if (!m) throw new Error(`Unsupported color ${value}`);
+            return [Number(m[1]), Number(m[2]), Number(m[3])] as const;
+          };
+          const lum = (rgb: readonly number[]) => {
+            const c = (v: number) => { const n = v / 255; return n <= .03928 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; };
+            return .2126 * c(rgb[0]!) + .7152 * c(rgb[1]!) + .0722 * c(rgb[2]!);
+          };
+          const ratio = (a: readonly number[], b: readonly number[]) => { const x = lum(a), y = lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
+
+          test("command center is high-contrast and decisive", async ({ page }, testInfo) => {
+            await page.goto("/");
+            const sidebar = page.locator(".mf-shell-sidebar").first();
+            const content = page.locator(".mf-shell-content").first();
+            const active = page.locator('.mf-shell-nav-item[data-active="true"]').first();
+            await expect(sidebar).toBeVisible();
+            await expect(content).toBeVisible();
+            await expect(active).toBeVisible();
+            const sidebarBg = color(await sidebar.evaluate((el) => getComputedStyle(el).backgroundColor));
+            const contentBg = color(await content.evaluate((el) => getComputedStyle(el).backgroundColor));
+            expect(ratio(sidebarBg, contentBg)).toBeGreaterThan(7);
+            const state = await active.evaluate((el) => ({ color: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundImage, weight: Number(getComputedStyle(el).fontWeight) }));
+            expect(state.color).toBe("rgb(255, 255, 255)");
+            expect(state.bg).toContain("linear-gradient");
+            expect(state.weight).toBeGreaterThanOrEqual(700);
+            await page.screenshot({ path: testInfo.outputPath("command-center-power.png"), fullPage: true });
+          });
+          TS
+
+      - name: Install Chromium
+        run: pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
+
+      - name: Run desktop visual regression gate
+        run: pnpm --filter @metaforge/demo exec playwright test e2e/metaforge-ui.spec.ts e2e/power-visual.spec.ts --config playwright.e2e.config.mjs --project=desktop-chromium
+
+      - name: Upload visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: command-center-power-visual
+          path: client/apps/demo/test-results/**
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify Alumdoor login untouched
+        run: |
+          set -euo pipefail
+          test -z "$(git diff -- client/packages/shell/src/auth/LoginForm.tsx)"
+          grep -q "METAFORGE COMMAND CENTER · POWER VISUAL LAYER" client/packages/ui/src/styles.css
+
+      - name: Commit clean UI diff
+        run: |
+          set -euo pipefail
+          rm -f client/apps/demo/e2e/power-visual.spec.ts
+          rm -f scripts/tmp-apply-command-center-power.py
+          rm -f .github/workflows/tmp-ui-command-center-power.yml
+          rm -f .github/workflows/tmp-ui-command-center-power-gate.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A client/packages/ui/src/styles.css scripts/tmp-apply-command-center-power.py .github/workflows/tmp-ui-command-center-power.yml .github/workflows/tmp-ui-command-center-power-gate.yml client/apps/demo/e2e/power-visual.spec.ts
+          git commit -m "feat(ui): power up MetaForge command center visuals"
+          git push origin HEAD:ui/metaforge-command-center-power-20260803
+
+      - name: Publish clean-head success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          payload=$(jq -nc --arg state success --arg context "ui-command-center-power" --arg description "build + desktop visual gate passed; Alumdoor login untouched" '{state:$state,context:$context,description:$description}')
+          curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${sha}" -d "$payload" >/dev/null
