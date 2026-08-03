@@ -4,6 +4,46 @@ Ngày cập nhật: **2026-08-04**.
 
 Đây là backlog hiện tại của Forge. AI tự đánh giá cách thực hiện dựa trên code và trạng thái GitHub tại thời điểm làm.
 
+## DONE — CFMAX R2 source convergence
+
+- Canonical PR `#570` đã merge vào `main` tại `88a349e3f4267aa749d791b504cb7a7c13f3e9b5`.
+- Final exact-head candidate `4705fe6c4f22ddaf1fe397d433f7361dd953f94b` có integrated run `30854860156` **SUCCESS**.
+- CF01/02/03/04/05/06/08 source outcomes đã merge; CF07 optional runtime lane kết thúc **DEFERRED**.
+- Source completion không đồng nghĩa RC/Hardened; provider/live evidence còn thiếu được tách thành phase riêng.
+- Canonical evidence: `docs/agents/cloudflare-cfmax/CFMAX_R2_POST_MERGE_20260804.md`.
+
+## NEXT — CFMAX provider / non-production evidence closure
+
+Đây không phải một source rewrite wave mới. Chỉ mở từng primitive khi có environment, quyền và evidence phù hợp.
+
+1. **D1 read replication / consistency proof**
+   - bật read replication trong approved non-production only;
+   - đo `served_by_region` / primary behavior, bookmark correctness và APAC latency;
+   - chứng minh dependent read-after-write không regress trước RC.
+2. **Cloudflare Workflows live recovery proof**
+   - deploy Workflow Worker vào approved non-production;
+   - test retry, resume/restart, terminate, duplicate/idempotency và route-index recovery;
+   - Workflow vẫn gọi control-plane authority, không direct-write D1/KV.
+3. **Usage / Analytics Engine proof nếu adopt**
+   - tạo dataset/binding chỉ khi usage/cost telemetry được quyết định dùng thật;
+   - tenant separation, low-cardinality schema và billing reconciliation phải PASS trước quota/invoice enforcement.
+4. **Edge security provider proof**
+   - WAF/rate-limit/Turnstile/Access chỉ triển khai theo threat-route matrix;
+   - đo false positive và API/PWA/machine compatibility;
+   - Forge auth/permission vẫn authoritative.
+5. **AI Gateway provider proof**
+   - resource/config/spend-policy/privacy evidence;
+   - không cho model output mutate business authority trực tiếp.
+6. **Browser Run live proof**
+   - validate authorized HTML -> PDF path trong approved environment;
+   - permission và tenant-scoped artifact handling phải giữ nguyên.
+7. **CF08 remote governance / recovery**
+   - read-only desired-vs-observed Cloudflare inventory;
+   - drift report, quota/cost evidence;
+   - controlled rollback/restore/PITR exercise với RTO/RPO trước Hardened.
+
+Không tự deploy production, đổi DNS/WAF/secrets, enable replica hoặc chạy PITR chỉ để đóng checklist.
+
 ## DONE — Enterprise Transaction Closure
 
 - Canonical convergence PR `#519` đã squash-merge vào `main` tại `2b1d088c353bd2c15cd6bc2a74b342c98df1dcf7`.
@@ -16,7 +56,7 @@ Ngày cập nhật: **2026-08-04**.
 
 ## NEXT PROGRAM — Platform Productization
 
-Ưu tiên sau Transaction Closure không phải mở thêm horizontal ERP feature wave. Mục tiêu tiếp theo là biến core đã chứng minh thành platform có thể tạo/cài/nâng cấp/vận hành app cho nhiều tenant một cách an toàn.
+Ưu tiên sau Transaction Closure/CFMAX source convergence không phải mở thêm horizontal ERP feature wave. Mục tiêu tiếp theo là biến core đã chứng minh thành platform có thể tạo/cài/nâng cấp/vận hành app cho nhiều tenant một cách an toàn.
 
 Thứ tự ưu tiên:
 
@@ -37,7 +77,8 @@ Thứ tự ưu tiên:
    - tenant bootstrap, app install/upgrade/rollback path.
 4. **WS12 — Production hardening / SRE**
    - release evidence, backup/restore/PITR, rollback, observability, DR;
-   - migration safety và tenant-scoped recovery proof.
+   - migration safety và tenant-scoped recovery proof;
+   - consume CF08 governance và CFMAX provider evidence thay vì dựng control plane cạnh tranh.
 5. **WS01/WS06/VN compliance owners — Vietnam statutory closure**
    - PIT/BHXH/BHYT/BHTN, VAT/CIT, e-invoice/e-sign;
    - versioned effective-date legal rules, fixed-point/rounding semantics, official-source evidence và statutory regression.
@@ -50,6 +91,7 @@ Thứ tự ưu tiên:
 - Mỗi agent phải audit substantive legacy PR trong scope và phân loại `reuse / cherry-pick / superseded / reject` để không vừa mất code tốt vừa kéo nguyên branch stale vào main.
 - Merge theo dependency order trong board; shared hotspots không có hai owner cùng lúc.
 - Transaction Closure worker PR `#498/#501/#502/#506/#507/#510` là lịch sử/evidence; canonical merged result là `#519`, không mở lại worker branch để tạo competing authority.
+- CFMAX worker branches là history/evidence sau `#570`; provider closure phải mở từ exact current `main`, không nối tiếp branch stale để tạo một Cloudflare authority thứ hai.
 
 ## VN Accounting / Finance — WS01
 
@@ -61,7 +103,7 @@ Thứ tự ưu tiên:
 
 ## Frontend/runtime — WS14
 
-- UI V3 đã tiến đáng kể trên `main`; mọi follow-up phải audit exact release state thay vì dùng snapshot trước V3.
+- UI V3/V2 runtime state phải audit exact current release; không dùng snapshot cũ.
 - Production UI evidence vẫn phải chứng minh build -> stage -> Wrangler deploy -> `/health` -> `/release.json` đúng SHA/hash; `Merged` không tự động đồng nghĩa `Deployed`.
 - Offline read/write/background sync/conflict (`U01-003..007`) phải consume WS00/WS11/WS12 tenant/session/cache/OCC/release-freshness contract, không tạo client-only authority.
 - Domain-specific profiles trong shared views phải đưa về metadata qua WS09/domain owner trước khi generic renderer được coi là generic hoàn toàn.
@@ -103,6 +145,7 @@ Transaction Closure đã giữ một Stock Ledger/valuation authority và tăng 
 ## Cross-domain follow-up
 
 - Transaction Closure `Sales -> Manufacturing -> Inventory -> Finance/Daily Ledger -> Procurement -> Warranty/Service`: **DONE for declared scope** qua `#519`.
+- CFMAX source convergence: **DONE for declared source scope** qua `#570`; provider/live evidence là phase riêng.
 - Deferred cross-domain boundaries phải được mở bằng capability ID + owner cụ thể, không tạo một “closure wave” thứ hai mơ hồ.
 - Migration/onboarding/tooling: WS13.
 - Security/IAM/SaaS: WS11.
