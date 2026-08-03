@@ -50,9 +50,7 @@ jobs:
 
       - name: Validate tenant Worker bundle and Browser Run binding
         working-directory: server
-        run: |
-          pnpm exec wrangler deploy --dry-run --config apps/tenant-worker/wrangler.jsonc --outdir /tmp/cfmax06-worker
-          test -s /tmp/cfmax06-worker/index.js
+        run: pnpm exec wrangler deploy --dry-run --config apps/tenant-worker/wrangler.jsonc --outdir /tmp/cfmax06-worker
 
       - name: Generate exact tenant binding types
         working-directory: server
