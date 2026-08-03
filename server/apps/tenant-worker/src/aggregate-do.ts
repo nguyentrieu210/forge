@@ -4,7 +4,11 @@ import { createO2CControllerRegistry } from "../../../packages/clouderp-selling/
 import { registerErpCoreControllers } from "../../../packages/clouderp-core/src/index.js";
 import { registerStockControllers } from "../../../packages/clouderp-stock/src/index.js";
 import { registerErpNextCoreControllers } from "../../../packages/clouderp-erpnext/src/index.js";
-import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel } from "../../../packages/document-kernel/src/index.js";
+import {
+  D1RolloutPurchaseAllocationDomainStore,
+  DocumentKernel,
+  MutationSerialExecutor,
+} from "../../../packages/document-kernel/src/index.js";
 import { errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import type { TenantEnv } from "./env.js";
@@ -18,6 +22,7 @@ interface AggregateStub extends DurableObjectStub {
 }
 
 const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receipt"]);
+const INVENTORY_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 const PURCHASE_EXECUTORS = new WeakMap<object, PurchaseCommandSerialExecutor>();
 
 /**
@@ -79,7 +84,16 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     if (!isInventoryCoordinatedCommand(command as MutationCommand<JsonObject>)) {
       throw errors.validation("mutateInventory accepts only coordinated inventory commands");
     }
-    return this.commandServices().kernel.execute(command);
+
+    // Routing to one Durable Object is not sufficient serialization: RPC methods
+    // can interleave while awaiting D1. Queue the entire kernel invocation so two
+    // differently named vouchers cannot both validate against the same stock state.
+    let executor = INVENTORY_EXECUTORS.get(this);
+    if (!executor) {
+      executor = new MutationSerialExecutor();
+      INVENTORY_EXECUTORS.set(this, executor);
+    }
+    return executor.execute(() => this.commandServices().kernel.execute(command));
   }
 
   /** Called only by another instance in this Worker's AGGREGATES namespace. */
@@ -88,13 +102,16 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
       || !["submit", "cancel"].includes(command.action)) {
       throw errors.validation("mutatePurchase accepts only submitted purchase allocation commands");
     }
-    const kernel = this.commandServices().kernel;
     let executor = PURCHASE_EXECUTORS.get(this);
     if (!executor) {
       executor = new PurchaseCommandSerialExecutor();
       PURCHASE_EXECUTORS.set(this, executor);
     }
-    return executor.execute(() => kernel.execute(command));
+    // Construct request-scoped D1 services only after this mutation reaches the
+    // front of the supplier queue. The retry wrapper invokes this callback again,
+    // so a revision retry also gets a fresh first-primary session and rereads the
+    // authoritative queue state instead of reusing a service created while waiting.
+    return executor.execute(() => this.commandServices().kernel.execute(command));
   }
 
   /**

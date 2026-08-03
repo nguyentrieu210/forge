@@ -1,0 +1,27 @@
+{
+  "name": "Supplier Selection",
+  "module": "Buying",
+  "is_submittable": true,
+  "autoname": "SUP-SEL-.YYYY.-#####",
+  "title_field": "request_for_quotation",
+  "sort_field": "decision_date",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "request_for_quotation", "label": "Yêu cầu báo giá", "fieldtype": "Link", "options": "Request for Quotation", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "supplier_quotation", "label": "Báo giá được chọn", "fieldtype": "Link", "options": "Supplier Quotation", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_standard_filter": true },
+    { "fieldname": "decision_date", "label": "Ngày quyết định", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "selection_reason", "label": "Căn cứ lựa chọn", "fieldtype": "Small Text", "required": true },
+    { "fieldname": "supplier", "label": "Nhà cung cấp được chọn", "fieldtype": "Link", "options": "Supplier", "read_only": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "quotation_currency", "label": "Tiền tệ báo giá", "fieldtype": "Link", "options": "Currency", "read_only": true },
+    { "fieldname": "approved_by", "label": "Người duyệt", "fieldtype": "Link", "options": "User", "read_only": true, "in_list_view": true },
+    { "fieldname": "approved_on", "label": "Thời điểm duyệt", "fieldtype": "Datetime", "read_only": true }
+  ],
+  "permissions": [
+    { "role": "Purchase User", "read": true, "write": true, "create": true, "report": true },
+    { "role": "Purchase Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

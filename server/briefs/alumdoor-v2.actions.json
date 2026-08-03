@@ -1,6 +1,6 @@
 {
-  "version": "2.2.1",
-  "//": "Bulk Transaction v1: một bảng nhiều mã tạo đúng một Purchase Receipt nháp; không submit hay ghi ledger trong action.",
+  "version": "2.2.2",
+  "//": "Bulk Transaction v1 và đối soát giao hàng: app compose input/window; canonical controller giữ transaction, quyền và ledger.",
   "actions": [
     {
       "name": "nhap-nhom-hang-loat",
@@ -13,6 +13,7 @@
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
         "warehouse:Link(Warehouse)! Kho nhập",
+        "posting_at:Datetime Ngày/giờ nhận",
         "supplier_invoice_no:Data! Số phiếu giao NCC",
         "driver:Data Người giao",
         "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã hàng\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true},{\"fieldname\":\"length_m\",\"label\":\"Chiều dài (m)\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"qty_bar\",\"label\":\"Số cây\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"actual_weight_kg\",\"label\":\"Kg thực cân\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"rate\",\"label\":\"Đơn giá/kg\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\",\"required\":true},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"required\":true,\"default\":\"Không\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true})! Chi tiết nhôm nhận"
@@ -20,6 +21,22 @@
       "preview": "alumdoor.purchase.preview_bulk_fifo_receipt | Xem phân bổ hàng loạt",
       "commit": "alumdoor.purchase.bulk_fifo_receipt | Tạo phiếu nhập hàng loạt | Tạo một Purchase Receipt nháp cho toàn bộ dòng đã kiểm tra?",
       "resultTable": "items"
+    },
+    {
+      "name": "doi-soat-giao-hang-ncc",
+      "label": "Đối soát giao hàng NCC",
+      "menu": true,
+      "icon": "scale",
+      "group": "Mua hàng",
+      "description": "Chốt kỳ giao hàng trong dung sai hoặc đảo đối soát để sửa sai. Alumdoor chỉ tìm đúng kỳ; Purchase Settlement của nền tảng kiểm quyền, dung sai, phiên bản và cập nhật phân bổ.",
+      "permission": "Purchase Order",
+      "fields": [
+        "supplier:Link(Supplier) Nhà cung cấp",
+        "queue_key:Data! Mã luồng vật tư",
+        "operation:Select(Đối soát,Đảo đối soát)! Thao tác",
+        "reason:Small Text! Lý do"
+      ],
+      "commit": "alumdoor.purchase.supplier_delivery_settlement | Ghi đối soát | Xác nhận ghi đối soát cho kỳ giao hàng này?"
     }
   ]
 }

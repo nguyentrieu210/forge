@@ -10,7 +10,7 @@ import {
   verifyBearerJwt,
   verifyTrustedIdentity,
 } from "../../../packages/auth/src/index.js";
-import { errorResponse, errors, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
+import { asCloudForgeError, errorResponse, errors, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
 import { isFrappePath, isPublicFilePath, LOGIN_PATH } from "../../../packages/frappe-api/src/index.js";
 
 interface GatewayEnv {
@@ -102,6 +102,20 @@ export default {
       const worker = env.DISPATCHER.get(route.worker_name, {}, { limits: limitsFor(route.plan, url.pathname) });
       return worker.fetch(forwarded);
     } catch (error) {
+      const normalized = asCloudForgeError(error);
+      // Expected 4xx auth/validation failures are client outcomes, not error-tracking
+      // events. Server faults are emitted as structured metadata only: no request body,
+      // token, cookie or raw exception message reaches logs.
+      if (normalized.status >= 500) {
+        console.error(JSON.stringify({
+          level: "error",
+          service: "gateway-worker",
+          code: normalized.code,
+          status: normalized.status,
+          retryable: normalized.retryable,
+          trace_id: traceId,
+        }));
+      }
       return errorResponse(error, traceId);
     }
   },
