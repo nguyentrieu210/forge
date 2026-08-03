@@ -14,28 +14,18 @@ import { FinanceQueryCompiler } from "./finance-aging.js";
  */
 export class AccountsPayableQueryCompiler extends FinanceQueryCompiler {
   override compile(request: QueryRequest, forceSynchronous = false): CompiledQuery {
-    if (request.report === "Supplier Statement") {
-      return compileSupplierStatement(request, forceSynchronous);
-    }
-    if (request.report === "Supplier Reconciliation") {
-      return compileSupplierReconciliation(request, forceSynchronous);
-    }
+    if (request.report === "Supplier Statement") return compileSupplierStatement(request, forceSynchronous);
+    if (request.report === "Supplier Reconciliation") return compileSupplierReconciliation(request, forceSynchronous);
     return super.compile(request, forceSynchronous);
   }
 }
 
 function compileSupplierStatement(request: QueryRequest, forceSynchronous: boolean): CompiledQuery {
   const controls = consumeControls(request.filters ?? [], [
-    "company",
-    "party",
-    "account",
-    "currency",
-    "from_date",
-    "to_date",
+    "company", "party", "account", "currency", "from_date", "to_date",
   ]);
-  if (controls.remaining.length) {
-    throw errors.validation(`Filter is not allowed: ${controls.remaining[0]!.field}`);
-  }
+  if (controls.remaining.length) throw errors.validation(`Filter is not allowed: ${controls.remaining[0]!.field}`);
+  for (const field of ["company", "party", "account", "currency"] as const) assertNonEmpty(controls.values[field], field);
   assertIsoDate(controls.values.from_date, "from_date");
   assertIsoDate(controls.values.to_date, "to_date");
   if (String(controls.values.from_date) > String(controls.values.to_date)) {
@@ -60,7 +50,6 @@ function compileSupplierStatement(request: QueryRequest, forceSynchronous: boole
   ];
   assertOrder(columns, order);
   const { limit, offset } = appendPagination(params, request);
-  const divisor = moneyDivisor("currency_scale");
   const sql = `
     WITH base AS (
       SELECT
@@ -80,9 +69,8 @@ function compileSupplierStatement(request: QueryRequest, forceSynchronous: boole
         AND p.currency=?5
         AND date(p.posting_at)<=date(?7)
     ), opening AS (
-      SELECT
-        COALESCE(SUM(amount_minor),0) AS balance_minor,
-        COALESCE(MAX(currency_scale),2) AS currency_scale
+      SELECT COALESCE(SUM(amount_minor),0) AS balance_minor,
+             COALESCE(MAX(currency_scale),2) AS currency_scale
       FROM base
       WHERE date(posting_at)<date(?6)
     ), period AS (
@@ -103,7 +91,7 @@ function compileSupplierStatement(request: QueryRequest, forceSynchronous: boole
         'Opening balance' AS entry_type,
         0.0 AS debit_amount,
         0.0 AS credit_amount,
-        CAST(opening.balance_minor AS REAL)/${divisor} AS running_balance,
+        CAST(opening.balance_minor AS REAL)/${moneyDivisor("opening.currency_scale")} AS running_balance,
         '' AS against_voucher_type,
         '' AS against_voucher_no
       FROM opening
@@ -129,8 +117,7 @@ function compileSupplierStatement(request: QueryRequest, forceSynchronous: boole
         COALESCE(period.against_voucher_no,'') AS against_voucher_no
       FROM period CROSS JOIN opening
     )
-    SELECT ${columns.map((column) => quoteIdentifier(column.field)).join(", ")}
-    FROM statement${renderOrder(order)} LIMIT ?${limit} OFFSET ?${offset}`;
+    SELECT ${selectColumns(columns)} FROM statement${renderOrder(order)} LIMIT ?${limit} OFFSET ?${offset}`;
   return { sql, params, columns, prepared: prepared(request, forceSynchronous) };
 }
 
@@ -138,6 +125,7 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
   const asOf = extractControl(request.filters ?? [], "as_of_date", true);
   assertIsoDate(asOf.value, "as_of_date");
   const company = extractControl(asOf.remaining, "company", true);
+  assertNonEmpty(company.value, "company");
   const params: unknown[] = [request.tenant_id, asOf.value, company.value];
   const where: string[] = [];
   const allowed = new Set(["party", "account", "currency", "status"]);
@@ -161,6 +149,7 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
         json_extract(d.payload_json,'$.company') AS company,
         p.account,
         COALESCE(json_extract(d.payload_json,'$.company_currency'), p.currency) AS currency,
+        COALESCE(CAST(json_extract(d.payload_json,'$.company_currency_scale') AS INTEGER), p.currency_scale) AS currency_scale,
         SUM(p.base_amount_minor) AS payable_ledger_balance_minor
       FROM payment_ledger_entries p
       INNER JOIN documents d
@@ -172,13 +161,14 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
         AND p.party_type='Supplier'
         AND p.account_type='Payable'
         AND date(p.posting_at)<=date(?2)
-      GROUP BY p.party,company,p.account,currency
+      GROUP BY p.party,company,p.account,currency,currency_scale
     ), gl_balance AS (
       SELECT
         g.party,
         json_extract(d.payload_json,'$.company') AS company,
         g.account,
         g.currency,
+        g.currency_scale,
         SUM(g.credit_minor-g.debit_minor) AS gl_control_balance_minor
       FROM gl_entries g
       INNER JOIN documents d
@@ -190,23 +180,24 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
         AND g.party_type='Supplier'
         AND g.party IS NOT NULL
         AND date(g.posting_at)<=date(?2)
-      GROUP BY g.party,company,g.account,g.currency
+      GROUP BY g.party,company,g.account,g.currency,g.currency_scale
     ), keys AS (
-      SELECT party,company,account,currency FROM payment_balance
+      SELECT party,company,account,currency,currency_scale FROM payment_balance
       UNION
-      SELECT party,company,account,currency FROM gl_balance
+      SELECT party,company,account,currency,currency_scale FROM gl_balance
     ), reconciliation AS (
       SELECT
         keys.party,
         keys.company,
         keys.account,
         keys.currency,
+        keys.currency_scale,
         COALESCE(payment_balance.payable_ledger_balance_minor,0) AS payable_ledger_balance_minor,
         COALESCE(gl_balance.gl_control_balance_minor,0) AS gl_control_balance_minor,
         COALESCE(payment_balance.payable_ledger_balance_minor,0)-COALESCE(gl_balance.gl_control_balance_minor,0) AS difference_minor,
-        CAST(COALESCE(payment_balance.payable_ledger_balance_minor,0) AS REAL)/100.0 AS payable_ledger_balance,
-        CAST(COALESCE(gl_balance.gl_control_balance_minor,0) AS REAL)/100.0 AS gl_control_balance,
-        CAST(COALESCE(payment_balance.payable_ledger_balance_minor,0)-COALESCE(gl_balance.gl_control_balance_minor,0) AS REAL)/100.0 AS difference,
+        CAST(COALESCE(payment_balance.payable_ledger_balance_minor,0) AS REAL)/${moneyDivisor("keys.currency_scale")} AS payable_ledger_balance,
+        CAST(COALESCE(gl_balance.gl_control_balance_minor,0) AS REAL)/${moneyDivisor("keys.currency_scale")} AS gl_control_balance,
+        CAST(COALESCE(payment_balance.payable_ledger_balance_minor,0)-COALESCE(gl_balance.gl_control_balance_minor,0) AS REAL)/${moneyDivisor("keys.currency_scale")} AS difference,
         CASE
           WHEN COALESCE(payment_balance.payable_ledger_balance_minor,0)=COALESCE(gl_balance.gl_control_balance_minor,0)
             THEN 'Reconciled'
@@ -218,22 +209,19 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
        AND payment_balance.company=keys.company
        AND payment_balance.account=keys.account
        AND payment_balance.currency=keys.currency
+       AND payment_balance.currency_scale=keys.currency_scale
       LEFT JOIN gl_balance
         ON gl_balance.party=keys.party
        AND gl_balance.company=keys.company
        AND gl_balance.account=keys.account
        AND gl_balance.currency=keys.currency
+       AND gl_balance.currency_scale=keys.currency_scale
     )
-    SELECT ${columns.map((column) => quoteIdentifier(column.field)).join(", ")}
-    FROM reconciliation${whereSql}${renderOrder(order)} LIMIT ?${limit} OFFSET ?${offset}`;
+    SELECT ${selectColumns(columns)} FROM reconciliation${whereSql}${renderOrder(order)} LIMIT ?${limit} OFFSET ?${offset}`;
   return { sql, params, columns, prepared: prepared(request, forceSynchronous) };
 }
 
-function extractControl(
-  filters: QueryFilter[],
-  field: string,
-  required: boolean,
-): { value: unknown; remaining: QueryFilter[] } {
+function extractControl(filters: QueryFilter[], field: string, required: boolean): { value: unknown; remaining: QueryFilter[] } {
   const matches = filters.filter((filter) => filter.field === field);
   if ((required && matches.length !== 1) || (!required && matches.length > 1)) {
     throw errors.validation(`${field} ${required ? "is required exactly once" : "may appear at most once"}`);
@@ -252,6 +240,10 @@ function consumeControls(filters: QueryFilter[], fields: string[]): { values: Re
     remaining = control.remaining;
   }
   return { values, remaining };
+}
+
+function assertNonEmpty(value: unknown, field: string): asserts value is string {
+  if (typeof value !== "string" || value.trim() === "") throw errors.validation(`${field} must be a non-empty string`);
 }
 
 function assertIsoDate(value: unknown, field: string): asserts value is string {
@@ -297,9 +289,7 @@ function prepared(request: QueryRequest, forceSynchronous: boolean): boolean {
 
 function assertOrder(columns: ReportColumn[], order: QueryOrder[]): void {
   for (const item of order) {
-    if (!columns.some((column) => column.field === item.field)) {
-      throw errors.validation(`Order field is not allowed: ${item.field}`);
-    }
+    if (!columns.some((column) => column.field === item.field)) throw errors.validation(`Order field is not allowed: ${item.field}`);
   }
 }
 
@@ -311,6 +301,10 @@ function renderOrder(order: QueryOrder[]): string {
 
 function moneyDivisor(scale: string): string {
   return `CASE ${scale} WHEN 0 THEN 1 WHEN 1 THEN 10 WHEN 2 THEN 100 WHEN 3 THEN 1000 WHEN 4 THEN 10000 WHEN 5 THEN 100000 ELSE 1000000 END`;
+}
+
+function selectColumns(columns: ReportColumn[]): string {
+  return columns.map((column) => quoteIdentifier(column.field)).join(", ");
 }
 
 function supplierStatementColumns(): ReportColumn[] {
@@ -335,6 +329,7 @@ function supplierReconciliationColumns(): ReportColumn[] {
     { field: "company", label: "Company", type: "Link", options: "Company" },
     { field: "account", label: "Payable Account", type: "Link", options: "Account" },
     { field: "currency", label: "Company Currency", type: "Data" },
+    { field: "currency_scale", label: "Currency Scale", type: "Int" },
     { field: "payable_ledger_balance_minor", label: "Payable Ledger Minor", type: "Int" },
     { field: "gl_control_balance_minor", label: "GL Control Minor", type: "Int" },
     { field: "difference_minor", label: "Difference Minor", type: "Int" },
