@@ -4,92 +4,159 @@ Ngày cập nhật: **2026-08-03**.
 
 ## Trạng thái hiện tại
 
-**Không có task delivery đang active ngoài việc cập nhật tài liệu/plan hiện tại.**
+**RC Hardening Wave 0 đã hoàn tất và hội tụ vào `main`.**
 
-Theo quyết định repo reset ngày 2026-08-03, toàn bộ PR cũ đã được đóng. Các branch/PR/workstream cũ chỉ còn vai trò lịch sử và nguồn tham khảo kỹ thuật; chúng **không phải backlog tự động**.
+Đã đóng:
+- RC-01 Capability Truth: 956/956 registry + Evidence Index + validator + baseline.
+- RC-02 Release/SRE topology + stale workflow cleanup + backup/restore evidence contract.
+- RC-03 executable FAST/STANDARD/CRITICAL validation gates.
+- RC-04 Kernel/Auth failure/retry hardening.
+- RC-05 IAM/Tenant app lifecycle hardening + offline sync contract freeze.
 
-## Chương trình mặc định tiếp theo
+Không reopen PR/branch lịch sử làm canonical backlog. Task mới phải bắt đầu từ exact current `main`.
 
-Canonical execution blueprint:
+## Chương trình canonical
 
-- `docs/FORGE_RC_HARDENING_PLAN_20260803.md`
-- Agent lanes/prompts: `docs/agents/RC_AGENT_LANES_20260803.md`
+- Execution blueprint: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
+- Capability truth: `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
+- Validation policy: `docs/VALIDATION_GATES.md` + `validation/rc-gates.json`.
+- Agent lanes/prompts: `docs/agents/RC_AGENT_LANES_20260803.md`.
 
-Blueprint này là nguồn điều phối mặc định cho vòng triển khai mới. Nó định nghĩa:
+Baseline maturity:
 
-- maturity register đủ 956 capability ID;
-- evidence index + validation lanes;
-- priority scoring;
-- dependency graph;
-- branch/PR convention;
-- tối đa 5 execution lane song song;
-- Wave 0 -> Wave 5;
-- task series RC-000 -> RC-054;
-- Definition of Done và maturity promotion gate;
-- Finance/Stock/Payroll/Security/Migration evidence cho CRITICAL;
-- Alumdoor current-main reference acceptance + production proof.
+```text
+Total: 956
+Hardened: 0
+RC: 4
+Wired: 448
+Foundation: 345
+Missing: 159
+```
 
-Mục tiêu của vòng mới là đưa Forge từ **Wired -> RC -> Hardened**, không mở rộng feature breadth một cách tự phát.
+## Batch tiếp theo — Finance + Inventory Authorities
 
-Thứ tự mặc định:
+Mở tối đa 5 worker, nhưng batch này chỉ cần các lane có dependency hợp lệ. Không mở thêm agent để trang trí GitHub.
 
-1. **Capability Truth**: audit đủ 956 capability ID, tạo Status Registry + Evidence Index + baseline report.
-2. **Platform/Security/SRE RC**: authoritative write, IAM/tenant, validation lanes, release/backup/restore truth, offline contract.
-3. **Finance + Inventory Authorities**: period/posting/reconciliation, backdate/repost/valuation trước khi domain phía trên mở rộng.
-4. **ERP Core RC**: Procurement, CRM/O2C, HCM/Payroll, Manufacturing/QMS theo dependency freeze.
-5. **Enterprise Depth**: Project/Service, BI Semantic, Integration Hub, Workplace/DMS.
-6. **Platform Moat**: App Factory, generic enterprise UI primitives, deterministic AI tool path.
-7. **Alumdoor 95%**: current-main business chain + desktop/mobile + reconciliation + exact production evidence.
+### Lane Finance
 
-Đây là **thứ tự ưu tiên**, không phải lệnh mở đồng loạt nhiều branch. Coordinator chỉ mở batch mới khi prerequisite/authority contract đã đủ rõ.
+#### RC-020 — F01 period/posting/reversal
 
-## Task mở đầu mặc định
+Audit/harden:
+- posting period guard;
+- hard/soft close semantics;
+- submit/cancel/backdate;
+- reversal/correction;
+- tenant/company/branch scope;
+- immutable ledger/audit behavior.
 
-Mở tối đa **5 worker agent** theo `docs/agents/RC_AGENT_LANES_20260803.md`; coordinator chính nằm ngoài 5 worker.
+Risk: **CRITICAL**.
 
-Batch đầu:
+#### RC-021 — F02 AR allocation/reconciliation
 
-1. Agent 1: `RC-000`, `RC-001`, `RC-004` — Capability Truth/Evidence.
-2. Agent 2: `RC-002` + audit `RC-014/015` — Release/SRE.
-3. Agent 3: `RC-003` — Validation/Risk Gates.
-4. Agent 4: `RC-010`, `RC-012` — Kernel/OCC/Auth.
-5. Agent 5: `RC-011`, `RC-013` + contract phần đầu `RC-016` — IAM/Tenant/Offline contract.
+Audit/harden:
+- invoice/payment authority;
+- partial allocation;
+- over/under allocation guards;
+- credit/return/correction;
+- receivable aging and GL reconciliation.
 
-Không mở agent thứ 6. Khi một lane xong, tái sử dụng slot cho batch kế tiếp theo dependency graph.
+Risk: **CRITICAL**.
 
-Sau Platform authority freeze:
+#### RC-022 — F03 AP allocation/reconciliation
 
-- Finance/Inventory: `RC-020..025`.
-- Sau đó mới chạy Procurement/CRM/HCM/Manufacturing song song: `RC-030..038`.
+Audit/harden:
+- supplier invoice/payment authority;
+- partial payment/return/correction;
+- payable aging;
+- GL reconciliation.
 
-## Quy tắc cho công việc mới
+Risk: **CRITICAL**.
 
-Khi mở một yêu cầu mới:
+#### RC-023 — F04 Cash/Bank reconciliation
 
-1. đọc exact current `main` và tài liệu canonical hiện tại;
-2. chọn capability ID trong `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`;
-3. đọc `docs/FORGE_RC_HARDENING_PLAN_20260803.md` để xác định wave/dependency/risk/evidence;
-4. audit code, migration, test và production evidence liên quan;
-5. tạo branch mới từ current `main` theo dạng `rc/<wave>-<domain>-<slice>`;
-6. nếu lịch sử có code hữu ích thì phân loại `reuse / cherry-pick / superseded / reject` bằng exact diff;
-7. không reopen PR cũ hoặc tiếp tục branch cũ như canonical trừ khi user yêu cầu rõ;
-8. shared contract/backend/migration/ops vẫn theo release gate hiện hành; UI-only theo policy UI hiện hành.
+Audit/harden:
+- cash/bank authority;
+- transfer/reversal;
+- reconciliation lifecycle;
+- statement/import boundaries;
+- GL consistency.
 
-## Historical capability references
+Risk: **CRITICAL**.
 
-Các chủ đề từng xuất hiện trong backlog cũ như VN Accounting hardening, statutory payroll evaluator, Stock Reconciliation Bulk, BOM Bulk, AppAction input tables, Daily Detailed Ledger, Matrix follow-up, WMS, Manufacturing/Plastic ERP, offline PWA hay Batch Print/QR **không còn là active queue**.
+### Lane Inventory
 
-Chúng chỉ được dùng làm historical evidence khi một task RC mới audit exact current main và chứng minh code/contract cũ còn giá trị.
+#### RC-024 — W01 Stock reconciliation/correction
+
+Audit/harden:
+- stock reconciliation authority;
+- cycle/count correction;
+- batch/serial where applicable;
+- permission/warehouse/company/tenant scope;
+- finance reconciliation when valuation changes.
+
+Risk: **CRITICAL**.
+
+#### RC-025 — W01 backdate/repost/valuation
+
+Audit/harden:
+- backdated stock mutation;
+- repost ordering;
+- valuation adjustment;
+- correction/reversal;
+- stock ledger ↔ GL reconciliation.
+
+Risk: **CRITICAL**.
+
+## Authority freeze gate
+
+Không mở Procurement/CRM/HCM/Manufacturing RC expansion cho tới khi Finance/Inventory shared authority contract liên quan đủ rõ để domain phía trên không tự phát minh posting/stock behavior.
+
+Sau authority freeze, chạy song song:
+
+- `RC-030` Procurement RFQ -> PO.
+- `RC-031` PO -> Receipt -> Invoice -> Payment partial/correction.
+- `RC-032` CRM core.
+- `RC-033` O2C partial/correction.
+- `RC-034` HCM lifecycle/time.
+- `RC-035` Payroll -> GL.
+- `RC-036` BOM/MRP.
+- `RC-037` Shopfloor/cost.
+- `RC-038` QMS NCR/RCA/CAPA.
+
+## Rules cho mọi RC task mới
+
+1. Đọc exact current `main`, Skill, North Star, Capability Status và RC Hardening Plan.
+2. Gắn capability ID cụ thể.
+3. Audit current code/tests/migrations/evidence trước khi viết mới.
+4. Branch mới dạng `rc/<wave>-<domain>-<slice>`.
+5. Historical code chỉ `reuse/cherry-pick` sau exact diff; không reopen PR cũ tự động.
+6. Maturity promotion phải theo evidence gate, không theo merge/code existence.
+7. Finance/stock/payroll/security/migration là CRITICAL khi chạm authority/invariant.
+8. Bị block cục bộ thì ghi Dependency Request và tiếp tục phần độc lập.
+9. Chỉ dừng hỏi user khi cần business decision không suy ra được, shared contract không thể tách, destructive/production operation, hoặc merge/deploy non-UI.
+
+## Later waves
+
+Sau ERP Core RC:
+
+- `RC-040` WMS.
+- `RC-041` Project/PSA.
+- `RC-042` Service/Field Service.
+- `RC-043` Semantic BI.
+- `RC-044` Integration Foundation.
+- `RC-045` Workplace/DMS/Notifications.
+- `RC-046` App Factory builders/runtime.
+- `RC-047` AI typed tool/preview/approval path.
+- `RC-050..054` Alumdoor reference vertical current-main proof + production hardening.
 
 ## Canonical references
 
-- Trạng thái repo: `CURRENT_STATUS.md`.
-- Execution blueprint: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
-- Agent lanes/prompts: `docs/agents/RC_AGENT_LANES_20260803.md`.
-- Handoff facts/invariants: `AI_HANDOFF.md`.
-- North Star: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
-- Capability map: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`.
-- Historical workstream board: `docs/agents/AGENT_BOARD.md`.
-- Historical PR archive: `docs/agents/LEGACY_PR_INBOX.md`.
+- `CURRENT_STATUS.md`
+- `AI_HANDOFF.md`
+- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`
+- `docs/FORGE_RC_HARDENING_PLAN_20260803.md`
+- `docs/VALIDATION_GATES.md`
+- `docs/FORGE_OFFLINE_SYNC_CONTRACT.md`
+- `docs/agents/RC_AGENT_LANES_20260803.md`
 
-Không tạo backlog mới từ suy đoán của tài liệu lịch sử. Chỉ task RC mới được khởi động từ current code mới trở thành công việc active.
+Không biến tài liệu lịch sử thành backlog sống lại. Repo đã chịu đủ khảo cổ trong một ngày rồi.
