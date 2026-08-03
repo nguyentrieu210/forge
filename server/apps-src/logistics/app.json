@@ -1,0 +1,31 @@
+{
+  "id": "logistics",
+  "name": "Logistics & Giao vận",
+  "version": "0.3.0",
+  "requires": [],
+  "externalDocTypes": [
+    { "name": "Company", "kind": "master", "app": "erpnext" },
+    { "name": "Customer", "kind": "master", "app": "erpnext" },
+    { "name": "Address", "kind": "master", "app": "erpnext" },
+    { "name": "Currency", "kind": "master", "app": "erpnext" },
+    { "name": "Delivery Note", "kind": "transaction", "app": "erpnext" }
+  ],
+  "nav": [
+    { "key": "Delivery Trip", "label": "Chuyến giao hàng", "kind": "doctype", "icon": "route", "group": "Giao vận" },
+    { "key": "Proof of Delivery", "label": "Bằng chứng giao hàng", "kind": "doctype", "icon": "badge-check", "group": "Giao vận" },
+    { "key": "Freight Estimate", "label": "Ước tính cước", "kind": "doctype", "icon": "calculator", "group": "Giao vận" },
+    { "key": "Transport Contract", "label": "Hợp đồng vận chuyển", "kind": "doctype", "icon": "file-text", "group": "Thiết lập giao vận" },
+    { "key": "Carrier", "label": "Đơn vị vận chuyển", "kind": "doctype", "icon": "truck", "group": "Thiết lập giao vận" },
+    { "key": "Vehicle", "label": "Phương tiện", "kind": "doctype", "icon": "truck", "group": "Thiết lập giao vận" },
+    { "key": "Driver", "label": "Tài xế", "kind": "doctype", "icon": "user-round", "group": "Thiết lập giao vận" }
+  ],
+  "hooks": [],
+  "client": {
+    "brand": "teal",
+    "domain": "stock",
+    "home": { "doctype": "Delivery Trip" },
+    "dimensions": ["company"],
+    "catalog_mode": "manifest",
+    "design": { "density": "comfortable", "content_width": "wide" }
+  }
+}
