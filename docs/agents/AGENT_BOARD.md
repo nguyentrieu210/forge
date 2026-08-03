@@ -1,36 +1,44 @@
 # FORGE ENTERPRISE AGENT BOARD
 
-> Canonical location: `main/docs/agents/AGENT_BOARD.md`  
 > Product baseline: **Forge 0.2.0 — Enterprise Parallel Baseline**  
 > North Star: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`  
-> Capability map: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`
+> Capability truth: `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`  
+> RC execution: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`
 
 Ngày sync: **2026-08-03**.
 
 ## Current board state
 
-**IDLE / PHASE CLOSED.**
+**WS00–WS17: PHASE CLOSED / HISTORICAL OWNERSHIP MAP.**
 
-- WS00–WS17 convergence đã hoàn tất ở repository level.
-- GitHub hiện có **0 open PR** sau repo reset ngày 2026-08-03.
-- Không branch nào trong bảng dưới đây được coi là task đang chạy chỉ vì branch còn tồn tại.
-- Các branch `agent/ent-*` là historical ownership/reference branches.
-- Khi user mở việc mới, coordinator/agent phải đọc exact current `main` và tạo branch/PR mới phù hợp với task đó, trừ khi user yêu cầu reuse một branch lịch sử cụ thể.
+RC Hardening hiện là execution model canonical. Không dùng 18 historical workstream branch như 18 task đang chạy.
 
-`Exact GitHub state > current docs > historical handoff.`
+Wave 0 RC-01..RC-05 đã hoàn tất và hội tụ vào `main`:
+
+| RC lane | Scope | Result |
+|---|---|---|
+| RC-01 | Capability Truth | DONE — 956/956 registry/evidence baseline |
+| RC-02 | Release/SRE | DONE — release topology/workflow/data-safety hardening |
+| RC-03 | Validation Gates | DONE — executable FAST/STANDARD/CRITICAL gates |
+| RC-04 | Kernel/Auth | DONE — auth failure/retry boundaries; shared gaps recorded |
+| RC-05 | IAM/Tenant/Offline contract | DONE — app lifecycle guard + offline contract freeze |
+
+Next active program slice is Finance/Inventory authority hardening (`RC-020..025`). Exact task/branch state must be read from GitHub; this board does not hardcode an open-PR count.
+
+`Exact GitHub state > CURRENT_STATUS/NEXT_TASKS > this ownership map > historical handoff.`
 
 ## Status vocabulary
 
-- `IDLE`: không có task active; branch chỉ là history/reference.
-- `ACTIVE`: chỉ dùng khi một task mới đã được mở rõ và đang triển khai.
-- `BLOCKED`: task mới đang chạy nhưng chờ dependency thực sự.
-- `REVIEW`: task mới có PR đang review.
-- `DONE`: task/phase đã merge hoặc được user xác nhận đóng theo scope.
-- `SUPERSEDED`: implementation bị thay thế.
+- `IDLE`: no active RC task using that historical ownership area.
+- `ACTIVE`: a current-main RC task is being implemented.
+- `BLOCKED`: only the blocked dependency is waiting; independent scope continues.
+- `REVIEW`: current RC PR is awaiting required review/merge gate.
+- `DONE`: task/phase delivered to canonical main for its declared scope.
+- `SUPERSEDED`: delivery path replaced by a newer current-main branch/PR.
 
-## Ownership map
+## Historical WS ownership map
 
-| ID | Historical branch | Current status | Primary ownership |
+| ID | Historical branch | State | Primary ownership |
 |---|---|---|---|
 | WS00 | `agent/ent-00-architecture-kernel` | IDLE | platform architecture, contracts, kernel/data model |
 | WS01 | `agent/ent-01-finance-vn` | IDLE | finance, AR/AP, treasury, VN accounting/statutory |
@@ -51,31 +59,41 @@ Ngày sync: **2026-08-03**.
 | WS16 | `agent/ent-16-logistics-pos-commerce` | IDLE | logistics, POS, retail, omnichannel/social commerce |
 | WS17 | `agent/ent-17-alumdoor-reference-vertical` | IDLE | Alumdoor reference vertical and generic extraction |
 
-## New-task rule
+These branches are history/reference only. RC task ownership is derived from capability/domain scope on exact current main.
 
-Một workstream chỉ chuyển từ `IDLE` sang `ACTIVE` khi có yêu cầu mới rõ ràng. Khi đó:
+## RC concurrency model
 
-1. đọc Skill/North Star/Capability Map nếu liên quan;
-2. audit exact current `main`;
-3. audit branch/PR lịch sử trong scope chỉ như nguồn tham khảo;
-4. tạo branch mới từ current main;
-5. ghi dependency request nếu thật sự cần shared contract thuộc owner khác;
-6. không tự phục hồi backlog/PR cũ chỉ vì tài liệu lịch sử từng ghi `READY`, `ACTIVE` hoặc `KEEP`.
+- Maximum **5 worker lanes** plus one coordinator.
+- Do not open a sixth worker merely because one exists in the UI.
+- Shared authority freezes before upper-domain expansion.
+- Finance/Inventory authority lane precedes Procurement/CRM/HCM/Manufacturing expansion where those domains depend on posting/stock semantics.
+- One shared hotspot gets one active owner at a time unless the dependency can be cleanly isolated.
 
 ## Shared ownership boundaries
 
-- `server/packages/document-kernel/**`: WS00.
-- auth/session/permission/control-plane security: WS11.
-- app-registry/compiler/builder contracts: WS09.
-- release/deploy/backup/observability: WS12.
-- shared React runtime/core/views/shell: WS14.
-- generic ledger primitive: WS00 + WS01.
-- migrations: append-only; kiểm exact current main trước khi chọn số mới.
-- Alumdoor generated metadata: sửa generator/source trước, không patch generated output đơn lẻ.
+- `server/packages/document-kernel/**`: platform/kernel authority.
+- auth/session/permission/control-plane security: IAM/security authority.
+- app-registry/compiler/builder contracts: App Factory authority.
+- release/deploy/backup/observability: SRE authority.
+- shared React runtime/core/views/shell: frontend runtime authority.
+- Finance/stock/payroll ledgers remain domain authorities; verticals do not fork them.
+- migrations append-only; inspect exact main before choosing a new number.
+- Alumdoor generated metadata: modify generator/source, not a one-off generated output.
+
+## New-task rule
+
+1. Read Skill, North Star, Capability Status and RC Hardening Plan.
+2. Audit exact current main.
+3. Select capability IDs and risk class.
+4. Create a fresh RC branch.
+5. Historical branch/PR may be used only as evidence/reuse source after exact diff.
+6. Record Dependency Request for real cross-lane blockers and continue independent work.
+7. Apply non-UI merge/deploy approval boundary; UI-only follows current UI policy.
 
 ## Historical references
 
-- Phase convergence: `docs/agents/WS00_17_CONVERGENCE_20260803.md`.
-- Closed legacy PR archive: `docs/agents/LEGACY_PR_INBOX.md`.
-- Current repo state: `CURRENT_STATUS.md`.
-- Active backlog: `NEXT_TASKS.md` (hiện không có task active).
+- WS convergence: `docs/agents/WS00_17_CONVERGENCE_20260803.md`.
+- Legacy PR archive: `docs/agents/LEGACY_PR_INBOX.md`.
+- RC agent lane template: `docs/agents/RC_AGENT_LANES_20260803.md`.
+- Current state: `CURRENT_STATUS.md`.
+- Next work: `NEXT_TASKS.md`.
