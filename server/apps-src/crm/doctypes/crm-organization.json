@@ -1,0 +1,27 @@
+{
+  "name": "CRM Organization",
+  "module": "CRM",
+  "autoname": "CRM-ORG-.YYYY.-#####",
+  "title_field": "organization_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "organization_name", "label": "Tên tổ chức", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nInactive\nDuplicate", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "website", "label": "Website", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "domain", "label": "Tên miền", "fieldtype": "Data", "in_list_view": true, "search_index": true },
+    { "fieldname": "email", "label": "Email chung", "fieldtype": "Data", "search_index": true },
+    { "fieldname": "phone", "label": "Điện thoại", "fieldtype": "Phone", "search_index": true },
+    { "fieldname": "territory", "label": "Khu vực", "fieldtype": "Link", "options": "Territory", "in_standard_filter": true },
+    { "fieldname": "assigned_to", "label": "Phụ trách", "fieldtype": "Link", "options": "User", "in_standard_filter": true },
+    { "fieldname": "linked_customer", "label": "Khách hàng ERP", "fieldtype": "Link", "options": "Customer", "in_standard_filter": true },
+    { "fieldname": "duplicate_of", "label": "Bản ghi chuẩn", "fieldtype": "Link", "options": "CRM Organization", "mandatory_depends_on": "eval:doc.status=='Duplicate'", "depends_on": "eval:doc.status=='Duplicate'" },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

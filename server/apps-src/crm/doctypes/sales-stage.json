@@ -1,0 +1,21 @@
+{
+  "name": "CRM Stage",
+  "module": "CRM",
+  "autoname": "format:{pipeline}::{stage_name}",
+  "title_field": "stage_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "stage_name", "label": "Giai đoạn", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "pipeline", "label": "Pipeline", "fieldtype": "Link", "options": "CRM Pipeline", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "stage_type", "label": "Loại trạng thái", "fieldtype": "Select", "options": "Open\nWon\nLost", "default": "Open", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "probability", "label": "Xác suất (%)", "fieldtype": "Percent", "default": "0", "required": true, "in_list_view": true },
+    { "fieldname": "sort_order", "label": "Thứ tự", "fieldtype": "Int", "default": 0, "in_list_view": true },
+    { "fieldname": "disabled", "label": "Ngừng sử dụng", "fieldtype": "Check", "default": false, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true }
+  ],
+  "revision": 4
+}

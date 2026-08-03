@@ -1,0 +1,21 @@
+{
+  "name": "CRM Sales Team",
+  "module": "CRM",
+  "autoname": "CRM-TEAM-.YYYY.-#####",
+  "title_field": "team_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "team_name", "label": "Tên nhóm", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "manager", "label": "Trưởng nhóm", "fieldtype": "Link", "options": "User", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "territory", "label": "Khu vực", "fieldtype": "Link", "options": "Territory", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nInactive", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
