@@ -24,6 +24,8 @@ export interface SalesItem extends UomLine {
   item_price?: string;
   pricing_rule?: string;
   discount_percentage?: string;
+  /** Source Quotation child row. Required when a Sales Order declares against_quotation. */
+  quotation_item?: string;
 }
 
 export type TaxChargeType = "On Net Total" | "On Previous Row Total" | "Actual" | "On Item Quantity";
@@ -85,6 +87,12 @@ export interface SalesOrderData extends SalesTotalsData, CurrencyContextData {
   transaction_date: string;
   selling_price_list?: string;
   customer_group?: string;
+  /** Submitted Quotation from which this order was mapped. */
+  against_quotation?: string;
+  /** Server-captured revision of against_quotation for immutable traceability. */
+  quotation_revision_no?: number;
+  /** Server-owned amendment generation; starts at 1 and increments from amended_from. */
+  revision_no?: number;
   items: SalesItem[];
   taxes?: TaxRow[];
   delivered_percentage?: string;
