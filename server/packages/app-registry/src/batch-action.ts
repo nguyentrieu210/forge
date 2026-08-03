@@ -23,6 +23,9 @@ export interface AppActionBatchContract {
   max_items: number;
 }
 
+/** Stable public names used by WS09 consumers. */
+export type BatchAction = AppActionBatchContract;
+
 /** Client/route envelope. Trusted tenant/actor/role context is never accepted here. */
 export interface BatchActionRequestEnvelope {
   contract_version: 1;
@@ -44,7 +47,16 @@ export interface NormalizedBatchActionInvocation {
   mode: BatchActionMode;
   atomicity: BatchActionAtomicity;
   idempotency_key?: string;
+  /** Scalar/shared AppAction inputs carried alongside every row but never trusted as server context. */
+  shared_inputs: JsonObject;
   items: NormalizedBatchActionItem[];
+}
+
+export type BatchTransaction = NormalizedBatchActionInvocation;
+
+export interface BatchExecutorItemValue {
+  shared_inputs: JsonObject;
+  item: JsonObject;
 }
 
 /** Structural adapter target matching A2's runtime-only execution plan without importing it. */
@@ -54,7 +66,7 @@ export interface BatchExecutorPlanLike {
   mode: BatchActionMode;
   atomicity: BatchActionAtomicity;
   idempotencyKey?: string;
-  items: Array<{ id: string; value: JsonObject }>;
+  items: Array<{ id: string; value: BatchExecutorItemValue }>;
 }
 
 export interface BatchActionError {
@@ -78,6 +90,8 @@ export interface BatchActionResultEnvelope<T = unknown> {
   items: BatchActionItemResult<T>[];
   error?: BatchActionError;
 }
+
+export type BatchTransactionResult<T = unknown> = BatchActionResultEnvelope<T>;
 
 /** Minimal trace shape A2 or another executor can map into the public result envelope. */
 export interface BatchRuntimeTraceLike<T = unknown> {
@@ -217,10 +231,13 @@ export function normalizeBatchActionInvocation(
     throw errors.validation(`batch request.payload.${contract.input_table} exceeds max_items (${contract.max_items})`);
   }
 
+  const sharedInputs = structuredClone(payload);
+  delete sharedInputs[contract.input_table];
+
   const ids = new Set<string>();
   const items = rawRows.map((row, index): NormalizedBatchActionItem => {
-    const value = object(row, `batch request.payload.${contract.input_table}[${index}]`);
-    const itemId = text(value[contract.item_id_field], `batch item ${index}.${contract.item_id_field}`, 160);
+    const itemValue = object(row, `batch request.payload.${contract.input_table}[${index}]`);
+    const itemId = text(itemValue[contract.item_id_field], `batch item ${index}.${contract.item_id_field}`, 160);
     if (!CORRELATION.test(itemId)) throw errors.validation(`batch item ${index}.${contract.item_id_field} contains unsupported characters`);
     if (ids.has(itemId)) throw errors.validation(`Duplicate batch item id: ${itemId}`);
     ids.add(itemId);
@@ -228,7 +245,7 @@ export function normalizeBatchActionInvocation(
       item_id: itemId,
       index,
       operation_id: `${batchId}:${itemId}`,
-      value: structuredClone(value),
+      value: structuredClone(itemValue),
     };
   });
 
@@ -238,6 +255,7 @@ export function normalizeBatchActionInvocation(
     mode,
     atomicity: contract.atomicity,
     ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+    shared_inputs: sharedInputs,
     items,
   };
 }
@@ -249,6 +267,7 @@ export function canonicalBatchRequestMaterial(invocation: NormalizedBatchActionI
     batch_id: invocation.batch_id,
     mode: invocation.mode,
     atomicity: invocation.atomicity,
+    shared_inputs: invocation.shared_inputs,
     items: invocation.items.map((item) => ({ item_id: item.item_id, index: item.index, value: item.value })),
   });
 }
@@ -265,7 +284,13 @@ export function toBatchExecutorPlan(
     mode: invocation.mode,
     atomicity: invocation.atomicity,
     ...(invocation.idempotency_key ? { idempotencyKey: invocation.idempotency_key } : {}),
-    items: invocation.items.map((item) => ({ id: item.item_id, value: structuredClone(item.value) })),
+    items: invocation.items.map((item) => ({
+      id: item.item_id,
+      value: {
+        shared_inputs: structuredClone(invocation.shared_inputs),
+        item: structuredClone(item.value),
+      },
+    })),
   };
 }
 
@@ -332,5 +357,5 @@ export const BATCH_ACTION_SEMANTICS = Object.freeze({
   operation_id: "batch_id:item_id",
   correction_owner: "domain",
   preview_side_effects: "forbidden",
-  request_hash_material: "canonical-public-request-without-idempotency-key",
+  request_hash_material: "canonical-public-request-including-shared-inputs-without-idempotency-key",
 } as const);
