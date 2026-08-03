@@ -146,7 +146,7 @@ export function CalendarView(props: CalendarViewProps) {
           const dayEvents = byDay.get(cell.key) ?? [];
           if (!dayEvents.length) return null;
           return <section key={cell.key} className="p-3" aria-labelledby={`mf-day-${cell.key}`}>
-            <h3 id={`mf-day-${cell.key}`} className={cn("mb-2 text-sm font-semibold", cell.key === today && "text-primary")}>{cell.label ?? `${cell.day}/${month}`} {cell.key === today ? "· Hôm nay" : ""}</h3>
+            <h3 id={`mf-day-${cell.key}`} className={cn("mb-2 text-sm font-semibold", cell.key === today && "text-accent-foreground")}>{cell.label ?? `${cell.day}/${month}`} {cell.key === today ? "· Hôm nay" : ""}</h3>
             <div className="space-y-2">{dayEvents.map((event) => {
               const time = timeField ? hhmm(event[timeField]) : "";
               const eventTitle = String(event[titleField] ?? event.name);
@@ -163,7 +163,7 @@ export function CalendarView(props: CalendarViewProps) {
       </div>
       <div className="mf-cal-grid grid gap-px bg-border max-md:hidden" style={{ gridTemplateColumns: "repeat(7,1fr)" }} role="group" aria-label={heading}>
         {WEEKDAY_KEYS.map((k) => (
-          <div key={k} className="bg-muted/40 py-1.5 text-center text-xs font-medium text-muted-foreground">{t(k)}</div>
+          <div key={k} className="bg-secondary py-1.5 text-center text-xs font-medium text-secondary-foreground">{t(k)}</div>
         ))}
         {cells.map((cell, i) =>
           cell === null ? (
@@ -185,7 +185,7 @@ export function CalendarView(props: CalendarViewProps) {
               role="group"
               aria-label={`${cell.key}, ${(byDay.get(cell.key) ?? []).length} sự kiện`}
             >
-              <div className={cn("text-xs text-muted-foreground", cell.key === today && "font-semibold text-primary")}>{cell.label ?? cell.day}</div>
+              <div className={cn("text-xs text-foreground/70", cell.key === today && "font-semibold text-accent-foreground")}>{cell.label ?? cell.day}</div>
               {(byDay.get(cell.key) ?? []).map((e) => {
                 const time = timeField ? hhmm(e[timeField]) : "";
                 return (
@@ -194,9 +194,9 @@ export function CalendarView(props: CalendarViewProps) {
                     draggable={Boolean(onReschedule)}
                     onDragStart={onReschedule ? (ev) => onEventDragStart(ev, e) : undefined}
                     className={cn(
-                      "mf-calendar-event rounded bg-primary/10 px-1 py-0.5 text-xs text-primary",
+                      "mf-calendar-event rounded bg-accent px-1 py-0.5 text-xs text-accent-foreground",
                       mode === "week" ? "space-y-0.5" : "truncate",
-                      onEventClick && "cursor-pointer hover:bg-primary/20",
+                      onEventClick && "cursor-pointer hover:bg-accent/80",
                       onReschedule && "cursor-grab active:cursor-grabbing",
                     )}
                     onClick={onEventClick ? () => onEventClick(e) : undefined}
