@@ -1,68 +1,51 @@
 # CFMAX R2 Convergence Evidence — 2026-08-04
 
-Status: REVIEW READY — source convergence complete; provider/production evidence remains gated
+Status: **MERGED TO MAIN — SOURCE CONVERGENCE COMPLETE; PROVIDER/PRODUCTION EVIDENCE PENDING**
 Repository: `nguyentrieu210/forge`
 Exact R2 baseline: `main@cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`
 Convergence branch: `cloudflare/cfmax-09-convergence-r2`
-Draft PR: `#570` -> `main`
+Canonical PR: `#570` — MERGED
+Merged PR head: `4705fe6c4f22ddaf1fe397d433f7361dd953f94b`
+Canonical merge commit: `main@88a349e3f4267aa749d791b504cb7a7c13f3e9b5`
+Final exact-head integrated run: `30854860156` — SUCCESS
 Risk mix: STANDARD + CRITICAL
-Production mutation: NONE
+Production/provider mutation performed by merge: NONE
 
-## 1. Why R2 exists
+## 1. Why R2 existed
 
-The original CFMAX worker sessions stopped at mixed states. Exact GitHub state showed one worker (`CF02`) still at bootstrap `READY`, several workers on stale ancestry, and several workers with implementation but missing exact-head execution evidence.
+The original CFMAX worker sessions stopped at mixed GitHub states. Exact GitHub state showed CF02 still at bootstrap, stale CRITICAL branches, and reusable implementations with uneven verification. The coordinator therefore re-audited exact source, rebuilt stale lanes on current main, converged all eight outcomes, reconciled Cloudflare governance pins, and validated one common candidate before merge.
 
-The coordinator therefore took over rather than trusting chat-level "done" claims:
+## 2. Canonical lane result
 
-1. freeze exact then-current `main`;
-2. create a fresh convergence branch from that SHA;
-3. replay stale CRITICAL lanes onto current source instead of merging stale implementations over newer code;
-4. finish CF02 from zero on a fresh R2 branch;
-5. resynchronize reusable workers to current main before internal convergence;
-6. run lane-level exact-head validation;
-7. reconcile CF08 source-governance pins after all Cloudflare configs converged;
-8. run one integrated convergence gate on the common candidate.
+| Lane | Source result | Current maturity / decision |
+|---|---|---|
+| CF01 | merged | D1 Sessions/bookmark consistency **Wired**; real replica/latency proof pending |
+| CF02 | merged | durable route-index Workflow **Wired**; deployed recovery proof pending |
+| CF03 | merged | `O01-003` Wired; `T01-008` Foundation; Analytics Engine dormant |
+| CF04 | merged | perimeter source contract **Wired**; provider activation proof pending |
+| CF05 | merged | AI policy/Gateway source seam merged; provider/spend-policy proof pending |
+| CF06 | merged | Browser Run render/export source **Wired**; live execution proof pending |
+| CF07 | no runtime adoption | **DEFERRED** for Dynamic Workers, Containers/Sandbox, Hyperdrive and Pipelines |
+| CF08 | merged | source/config governance merged; remote desired-vs-observed state unverified |
 
-No CFMAX worker was merged to `main` and no Cloudflare production resource was changed during this takeover.
+Merged source does not imply production RC or Hardened maturity.
 
-## 2. Converged lane truth
+## 3. CF01 result
 
-| Lane | Execution result | Current source maturity / decision | Evidence |
-|---|---|---|---|
-| CF01 | clean R2 replay on current Query Worker | Wired; remote replica proof pending | exact-head run `30853819015` PASS; 9 real-workerd D1 tests in integrated gate |
-| CF02 | original branch superseded; R2 implemented durable route-index Workflow | Wired; remote Workflow proof pending | exact-head run `30852724589` PASS |
-| CF03 | request usage telemetry seam converged | `O01-003` Wired; `T01-008` Foundation | integrated telemetry build/tests; Analytics Engine remains dormant |
-| CF04 | clean R2 edge replay | Wired; provider activation pending | exact-head run `30853280402` PASS |
-| CF05 | AI policy R2 converged | source review candidate; provider/cost dependencies remain | focused run `30849757932` PASS |
-| CF06 | Browser Run render/export converged | Wired; remote Browser Run proof pending | exact-head run `30849817637` PASS |
-| CF07 | optional runtime evaluation complete | DEFERRED by evidence | Dynamic Workers, Containers/Sandbox, Hyperdrive and Pipelines all deferred |
-| CF08 | production governance source converged | source governance complete; remote observed state unverified | integrated governance validator PASS |
+The stale CF01 branch would have overwritten newer Finance report code. R2 preserved current Query Worker behavior and replayed only the consistency contract:
 
-`REVIEW`/`Wired` does not mean production RC. Source presence, unit tests and dry-run bundle evidence are not substitutes for provider/live evidence.
-
-## 3. CF01 takeover result
-
-The stale CF01 branch could not be merged directly because current main had a newer Finance report compiler. R2 preserved that compiler and replayed only the D1 consistency contract.
-
-Implemented:
-
-- one D1 session-policy seam;
 - authoritative command/status/reconciliation paths use `first-primary`;
-- replica-safe report paths inherit a caller bookmark or start `first-unconstrained`;
+- replica-safe report paths inherit caller bookmark or start `first-unconstrained`;
 - prepared-report queue payload carries the post-command bookmark;
-- the existing client adapter bookmark interceptor remains the only client transport authority;
-- non-sensitive `served_by_region` / `served_by_primary` observation seam;
-- real-workerd D1 report/bookmark coverage.
+- existing client bookmark transport remains the only client consistency state;
+- non-sensitive D1 routing observations are available;
+- real-workerd D1/bookmark regressions pass.
 
 Production read replication was not enabled.
 
-## 4. CF02 takeover result
+## 4. CF02 result
 
-Exact GitHub state proved the original `cloudflare/cfmax-02-workflows` branch never left `READY`.
-
-R2 selected the existing control-plane route-index rebuild as the first representative durable Workflow because it already has a canonical D1 -> KV projection authority and a paginated recovery contract.
-
-Implemented:
+The original CF02 branch never left bootstrap. R2 implemented the first durable Workflow vertical around the existing route-index rebuild authority:
 
 ```text
 operator
@@ -75,40 +58,26 @@ operator
                  -> ROUTES KV projection
 ```
 
-Workflow never writes D1/KV directly. Queue remains the independent fan-out/delivery primitive.
+Workflow does not write D1/KV directly. Queue remains the separate delivery/fan-out primitive. No Workflow resource or secret was deployed by this program.
 
-The repository's local Cloudflare runtime declaration was also extended with the Workflows type surface required by current Cloudflare Workers APIs.
+## 5. CF04 result
 
-No Workflow resource or secret was deployed.
-
-## 5. CF04 takeover result
-
-The stale CF04 branch had policy code but explicitly no executed test evidence. R2 replayed the evidence-backed source change on current main:
+R2 replayed only evidence-backed perimeter source changes:
 
 - `workers_dev=false`;
 - `preview_urls=false`;
-- source-controlled perimeter policy;
-- no arbitrary numeric rate thresholds;
-- no generic Turnstile on machine/API traffic;
-- tenant login remains Forge auth, not Cloudflare Access;
-- Access remains only defense-in-depth for selected operator/service surfaces;
-- CF08 remains provider apply/drift authority.
+- machine-readable perimeter policy;
+- no invented numeric rate thresholds;
+- no generic Turnstile challenge on machine/API traffic;
+- Forge auth remains authoritative;
+- Access is defense-in-depth only for selected operator/service surfaces;
+- CF08 owns provider apply/drift/rollback.
 
-No WAF, Rulesets, Access, Turnstile, DNS or secret mutation occurred.
+No WAF/Rulesets/Access/Turnstile/DNS/secret mutation occurred.
 
 ## 6. CF08 governance reconciliation
 
-After convergence, the original CF08 manifest was intentionally stale because CF02/CF04/CF06 changed Cloudflare configuration sources.
-
-The convergence branch updated `server/config/cloudflare-governance.json` to:
-
-- pin the new Gateway Wrangler blob;
-- pin the new tenant-worker Wrangler blob;
-- pin the changed tenant Wrangler generator blob;
-- classify the new Workflow Worker Wrangler source;
-- keep remote Cloudflare observation explicitly `unverified`.
-
-Integrated validation returned:
+The convergence candidate deliberately reconciled source-governance pins after CF02/CF04/CF06 changed Cloudflare configs. The final validator reported:
 
 ```text
 CLOUDFLARE_GOVERNANCE_PASS
@@ -120,19 +89,13 @@ remote_observation=unverified
 owner_dependencies=4
 ```
 
-The validator was fixed by reconciling source truth, not by weakening or disabling drift checks.
+The validator was satisfied by updating source truth, not by weakening drift checks.
 
-## 7. Integrated validation evidence
+## 7. Final exact-head validation
 
-Source-equivalent convergence head before this evidence-document update:
+PR head `4705fe6c4f22ddaf1fe397d433f7361dd953f94b` ran GitHub Actions `30854860156` and finished **SUCCESS** before merge.
 
-`1d7a4adb8eafd3d2f49b39ce87314f871d267395`
-
-GitHub Actions run:
-
-`30854610958` — **SUCCESS**
-
-Exact-head integrated steps passed:
+Passed in one candidate:
 
 1. locked dependency install;
 2. focused CF01 TypeScript;
@@ -140,56 +103,43 @@ Exact-head integrated steps passed:
 4. focused CF03 telemetry build;
 5. focused CF05 AI build;
 6. CF06 charts/visual/views build chain;
-7. Query Worker real-workerd D1 suite: 2 files / 9 tests;
-8. combined CFMAX Node regressions: 28/28 PASS;
+7. Query Worker real-workerd D1 suite: 9/9;
+8. combined CFMAX Node regressions: 28/28;
 9. CF08 source/blob/config governance validation;
-10. build and stage canonical Gateway runtime + warehouse PWA assets;
-11. Gateway Wrangler dry-run bundle with telemetry + edge source;
-12. Tenant Worker Wrangler dry-run bundle with Browser Run + AI policy;
-13. Query Wrangler binding/type parse;
+10. canonical Gateway runtime + warehouse PWA build/stage/check;
+11. Gateway Wrangler dry-run bundle;
+12. Tenant Worker Wrangler dry-run bundle;
+13. Query Worker binding/type parse;
 14. Workflow Worker Wrangler dry-run bundle.
 
-This is the integrated source/convergence gate. It is not a production Cloudflare test.
+## 8. Baseline-wide TypeScript debt
 
-## 8. Baseline-wide TypeScript debt discovered, not hidden
+An earlier convergence attempt intentionally ran the repository-wide server TypeScript build. It failed in pre-existing Manufacturing, CRM, App Factory, QMS and Frappe-model exact-optional-property errors outside the CFMAX diff.
 
-The first integrated gate attempted the repository-wide server TypeScript build and failed in files outside the CFMAX diff, including existing Manufacturing, CRM, App Factory, QMS and Frappe-model exact-optional-property errors.
+CFMAX did not edit unrelated ERP modules merely to manufacture a global PASS. The final gate therefore used blast-radius compilation plus actual Worker bundle/dry-run validation. The baseline debt remains unresolved and separately owned.
 
-`main -> CFMAX R2` diff was audited and those failure files are not modified by CFMAX.
+## 9. Post-merge state
 
-The convergence gate was therefore corrected to blast-radius validation instead of making CFMAX silently repair unrelated ERP debt. The failed baseline-wide build remains evidence and is not represented as PASS.
+PR `#570` merged at `88a349e3f4267aa749d791b504cb7a7c13f3e9b5`.
 
-## 9. What is complete
+All declared CFMAX source lanes are therefore closed as merged source work except CF07, whose correct outcome is DEFERRED. Post-merge canonical status is recorded in `CFMAX_R2_POST_MERGE_20260804.md` and `AGENT_BOARD.md`.
 
-Complete to the non-production REVIEW boundary:
+## 10. Remaining provider / production gates
 
-- all eight worker outcomes are resolved;
-- original stale/bootstrap branches have a clear R2/superseded interpretation;
-- CF01/02/04 missing execution gaps were closed with exact-head CI;
-- reusable CF03/05/06/07/08 work is converged on one exact-main ancestry;
-- shared Cloudflare config governance is reconciled;
-- one common integrated gate passes;
-- no duplicate D1/document/permission authority was introduced;
-- no optional Cloudflare primitive was adopted merely to increase product count.
+Still open:
 
-## 10. What is deliberately not complete
+- D1 real read-replica enablement, observed serving region/primary behavior and APAC correctness/latency benchmark;
+- deployed Workflow instance with retry/resume/restart/terminate/recovery proof;
+- Analytics Engine live binding/query/reconciliation evidence if adopted;
+- WAF/rate-limit/Turnstile/Access provider activation and measured false-positive/client-compatibility evidence where adopted;
+- AI Gateway resource/config/spend-policy/privacy evidence;
+- Browser Run live execution evidence;
+- read-only Cloudflare desired-vs-observed inventory;
+- controlled rollback/restore/PITR exercise with RTO/RPO evidence;
+- RC/Hardened promotion only after matching provider/production evidence exists.
 
-Still gated behind provider/non-production/production authorization and evidence:
+## 11. Production boundary
 
-- actual D1 read-replica enablement, observed replica serving and APAC latency benchmark;
-- deployed Cloudflare Workflow instance with retry/restart/terminate recovery proof;
-- Analytics Engine dataset/binding and live tenant-separated query evidence;
-- WAF/rate-limit/Turnstile/Access provider activation and measured false-positive evidence;
-- AI Gateway provider resource/config/spend-policy activation;
-- live Browser Run execution evidence if not already available in an approved non-production environment;
-- remote Cloudflare desired-vs-observed inventory;
-- production rollback/PITR/recovery exercise;
-- canonical RC/Hardened maturity promotion.
+The merge to `main` did not deploy Workers, enable D1 replicas, create Workflow/Analytics/AI Gateway resources, modify WAF/Access/Turnstile/DNS/secrets, run PITR or mutate customer data.
 
-These are not source TODOs that an autonomous agent should fake. They are provider/production evidence gates.
-
-## 11. Merge boundary
-
-Draft PR `#570` is the current convergence candidate.
-
-Do not merge it to `main` and do not deploy/provider-apply from it without explicit user approval. Backend/shared/infrastructure policy remains in force.
+Those remain separate CRITICAL operations requiring explicit authorization and environment evidence.
