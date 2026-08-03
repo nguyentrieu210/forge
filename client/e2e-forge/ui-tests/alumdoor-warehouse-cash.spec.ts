@@ -9,18 +9,51 @@ const manifest = {
   brand: "warm",
   home: { route: "/x/alumdoor-operations%3Aworkbench" },
   domain: "alumdoor",
-  nav: [{ key: "alumdoor-operations:workbench", label: "Trung tâm vận hành", kind: "experience", icon: "panels-top-left", group: "Bán hàng" }],
+  nav: [
+    {
+      key: "alumdoor-operations:workbench",
+      label: "Trung tâm vận hành",
+      kind: "experience",
+      icon: "panels-top-left",
+      group: "Bán hàng",
+    },
+  ],
 };
 
 async function mockRuntime(page: Page, roles: string[]) {
   await page.route("**/api/method/metaforge.api.get_boot**", (route) => route.fulfill({
     status: 200,
     headers: JSON_HEADERS,
-    body: JSON.stringify({ message: { user: "qa@example.test", full_name: "QA Alumdoor", roles, user_permissions: {}, lang: "vi", site_name: "alumdoor-ui.test", frappe_version: "16.0.0", csrf_token: "qa-csrf", sysdefaults: { date_format: "dd/mm/yyyy", number_format: "#.###,##", currency: "VND" }, allowed_workspaces: [] } }),
+    body: JSON.stringify({
+      message: {
+        user: "qa@example.test",
+        full_name: "QA Alumdoor",
+        roles,
+        user_permissions: {},
+        lang: "vi",
+        site_name: "alumdoor-ui.test",
+        frappe_version: "16.0.0",
+        csrf_token: "qa-csrf",
+        sysdefaults: { date_format: "dd/mm/yyyy", number_format: "#.###,##", currency: "VND" },
+        allowed_workspaces: [],
+      },
+    }),
   }));
-  await page.route("**/api/method/metaforge.api.get_app_manifest**", (route) => route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ message: manifest }) }));
-  await page.route("**/api/method/metaforge.api.get_application_catalog**", (route) => route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ message: { apps: [] } }) }));
-  await page.route("**/api/method/metaforge.api.get_business_context**", (route) => route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ message: { dimensions: [], selection: {}, policies: {} } }) }));
+  await page.route("**/api/method/metaforge.api.get_app_manifest**", (route) => route.fulfill({
+    status: 200,
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ message: manifest }),
+  }));
+  await page.route("**/api/method/metaforge.api.get_application_catalog**", (route) => route.fulfill({
+    status: 200,
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ message: { apps: [] } }),
+  }));
+  await page.route("**/api/method/metaforge.api.get_business_context**", (route) => route.fulfill({
+    status: 200,
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ message: { dimensions: [], selection: {}, policies: {} } }),
+  }));
 }
 
 test("Thủ kho sees the simplified purchase proposal and internal cash surface", async ({ page }) => {
@@ -45,6 +78,7 @@ test("Thủ kho sees the simplified purchase proposal and internal cash surface"
 test("Kinh doanh still does not get the finance desktop surface", async ({ page }) => {
   await mockRuntime(page, ["Kinh doanh"]);
   await page.goto("/x/alumdoor-operations%3Aworkbench", { waitUntil: "domcontentloaded" });
+
   await expect(page.getByRole("heading", { name: "Trung tâm vận hành Alumdoor" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Đề xuất & quỹ" })).toHaveCount(0);
   await expect(page.locator('[data-testid="warehouse-cash-panel"]')).toHaveCount(0);

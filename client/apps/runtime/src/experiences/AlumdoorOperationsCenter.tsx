@@ -75,7 +75,9 @@ export function AlumdoorOperationsCenter() {
     setDeliveries(result.rows);
   });
   const createDeliveries = () => run("delivery-create", async () => {
-    const result = await adapter.callPost<{ results: Array<{ status: string }>; print_documents: Array<{ doctype: string; name: string }> }>("alumdoor.delivery_batch.create", { delivery_date: deliveryDate, warehouse });
+    const result = await adapter.callPost<{ results: Array<{ status: string }>; print_documents: Array<{ doctype: string; name: string }> }>("alumdoor.delivery_batch.create", {
+      delivery_date: deliveryDate, warehouse,
+    });
     setPrintDocuments(result.print_documents);
     toast.success(`Đã xử lý ${result.results.length} đơn; ${result.print_documents.length} phiếu sẵn sàng để in.`);
     await loadDeliveries();
@@ -101,7 +103,14 @@ export function AlumdoorOperationsCenter() {
         </TabsList>
 
         <TabsContent value="orders" className="rounded-xl border bg-card">
-          <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Đơn / ngày giao</TableHead><TableHead>Khách / phụ trách</TableHead><TableHead>Nhóm hàng</TableHead><TableHead>Thu tiền</TableHead><TableHead>Giao</TableHead><TableHead>Sản xuất</TableHead><TableHead>Lỗi</TableHead><TableHead>Ghi chú</TableHead></TableRow></TableHeader><TableBody>{rows.map((row) => <TableRow key={row.sales_order}><TableCell className="font-medium">{row.sales_order}<div className="text-xs text-muted-foreground">{row.delivery_date || "Chưa hẹn"}</div></TableCell><TableCell>{row.customer}<div className="text-xs text-muted-foreground">{row.customer_group} · {row.responsible_person || "Chưa giao"}</div></TableCell><TableCell>{row.product_group || "—"}</TableCell><TableCell>{money(row.amount_collected)}<div className="text-xs text-muted-foreground">/ {money(row.grand_total)}</div></TableCell><TableCell><Badge variant="outline">{row.delivery_status}</Badge></TableCell><TableCell><Badge variant="outline">{row.production_status}</Badge></TableCell><TableCell><Badge variant={row.defect_status === "Không có" ? "outline" : "destructive"}>{row.defect_status}</Badge></TableCell><TableCell className="max-w-56 whitespace-normal">{row.manual_note || "—"}</TableCell></TableRow>)}{!rows.length && <TableRow><TableCell colSpan={8} className="h-28 text-center text-muted-foreground">Bấm “Làm mới” để tải các đơn đang vận hành.</TableCell></TableRow>}</TableBody></Table></div>
+          <div className="overflow-x-auto"><Table><TableHeader><TableRow>
+            <TableHead>Đơn / ngày giao</TableHead><TableHead>Khách / phụ trách</TableHead><TableHead>Nhóm hàng</TableHead><TableHead>Thu tiền</TableHead><TableHead>Giao</TableHead><TableHead>Sản xuất</TableHead><TableHead>Lỗi</TableHead><TableHead>Ghi chú</TableHead>
+          </TableRow></TableHeader><TableBody>{rows.map((row) => <TableRow key={row.sales_order}>
+            <TableCell className="font-medium">{row.sales_order}<div className="text-xs text-muted-foreground">{row.delivery_date || "Chưa hẹn"}</div></TableCell>
+            <TableCell>{row.customer}<div className="text-xs text-muted-foreground">{row.customer_group} · {row.responsible_person || "Chưa giao"}</div></TableCell>
+            <TableCell>{row.product_group || "—"}</TableCell><TableCell>{money(row.amount_collected)}<div className="text-xs text-muted-foreground">/ {money(row.grand_total)}</div></TableCell>
+            <TableCell><Badge variant="outline">{row.delivery_status}</Badge></TableCell><TableCell><Badge variant="outline">{row.production_status}</Badge></TableCell><TableCell><Badge variant={row.defect_status === "Không có" ? "outline" : "destructive"}>{row.defect_status}</Badge></TableCell><TableCell className="max-w-56 whitespace-normal">{row.manual_note || "—"}</TableCell>
+          </TableRow>)}{!rows.length && <TableRow><TableCell colSpan={8} className="h-28 text-center text-muted-foreground">Bấm “Làm mới” để tải các đơn đang vận hành.</TableCell></TableRow>}</TableBody></Table></div>
         </TabsContent>
 
         <TabsContent value="deliveries" className="space-y-4 rounded-xl border bg-card p-4">
@@ -113,17 +122,32 @@ export function AlumdoorOperationsCenter() {
         {canUseWarehouseCash && <TabsContent value="warehouse-cash" className="space-y-4" data-testid="warehouse-cash-panel">
           <div className="rounded-xl border bg-card p-4 sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><h2 className="font-medium">Đề xuất mua & thu chi nội bộ</h2><p className="mt-1 max-w-3xl text-sm text-muted-foreground">Màn thường ngày chỉ còn hai việc: nhân viên gửi đề xuất mua để Chủ xưởng duyệt, hoặc ghi thu/chi nội bộ. Chuyển quỹ, kiểm quỹ và cấu hình quỹ vẫn tồn tại phía Finance nhưng không chen vào luồng vận hành.</p></div>
+              <div>
+                <h2 className="font-medium">Đề xuất mua & thu chi nội bộ</h2>
+                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Màn thường ngày chỉ còn hai việc: nhân viên gửi đề xuất mua để Chủ xưởng duyệt, hoặc ghi thu/chi nội bộ. Chuyển quỹ, kiểm quỹ và cấu hình quỹ vẫn tồn tại phía Finance nhưng không chen vào luồng vận hành.</p>
+              </div>
               <Button variant="outline" onClick={() => window.location.assign("/mobile/warehouse/?tab=funding")}><Smartphone className="size-4" /> Mở app điện thoại</Button>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Button type="button" variant="outline" className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left" onClick={() => navigate(`/app/${encodeURIComponent("Material Request")}`)} data-testid="warehouse-cash-material-request"><ClipboardList className="size-5 text-primary" /><span className="mt-3 font-medium">Đề xuất mua hàng</span><span className="mt-1 text-sm font-normal text-muted-foreground">Nhân viên lập nháp; Chủ xưởng là người duyệt. Khi chọn chuyển khoản, app lấy ngân hàng và số tài khoản từ hồ sơ Nhân sự.</span></Button>
-              <Button type="button" variant="outline" className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left" onClick={() => navigate(`/app/${encodeURIComponent("Warehouse Cash Voucher")}`)} data-testid="warehouse-cash-voucher"><Banknote className="size-5 text-primary" /><span className="mt-3 font-medium">Thu / chi nội bộ</span><span className="mt-1 text-sm font-normal text-muted-foreground">Chỉ thu, chi và tạm ứng cần dùng hằng ngày. Sổ cái và quyền duyệt vẫn do Finance kiểm soát phía sau.</span></Button>
+              <Button type="button" variant="outline" className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left" onClick={() => navigate(`/app/${encodeURIComponent("Material Request")}`)} data-testid="warehouse-cash-material-request">
+                <ClipboardList className="size-5 text-primary" />
+                <span className="mt-3 font-medium">Đề xuất mua hàng</span>
+                <span className="mt-1 text-sm font-normal text-muted-foreground">Nhân viên lập nháp; Chủ xưởng là người duyệt. Khi chọn chuyển khoản, app lấy ngân hàng và số tài khoản từ hồ sơ Nhân sự.</span>
+              </Button>
+              <Button type="button" variant="outline" className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left" onClick={() => navigate(`/app/${encodeURIComponent("Warehouse Cash Voucher")}`)} data-testid="warehouse-cash-voucher">
+                <Banknote className="size-5 text-primary" />
+                <span className="mt-3 font-medium">Thu / chi nội bộ</span>
+                <span className="mt-1 text-sm font-normal text-muted-foreground">Chỉ thu, chi và tạm ứng cần dùng hằng ngày. Sổ cái và quyền duyệt vẫn do Finance kiểm soát phía sau.</span>
+              </Button>
             </div>
           </div>
         </TabsContent>}
 
-        <TabsContent value="capacity" className="grid gap-4 lg:grid-cols-2"><div className="space-y-3 rounded-xl border bg-card p-4"><div><Label htmlFor="demands">Nhu cầu (m²/bộ/công đoạn/mẻ)</Label><Textarea id="demands" className="min-h-44 font-mono text-xs" value={demands} onChange={(event) => setDemands(event.target.value)} /></div><div><Label htmlFor="resource">Tổ/ca/trạm/tăng ca</Label><Textarea id="resource" className="min-h-28 font-mono text-xs" value={resource} onChange={(event) => setResource(event.target.value)} /></div><Button onClick={calculateCapacity} disabled={Boolean(busy)}>Tính tải và cảnh báo trễ</Button></div><div className="rounded-xl border bg-card p-4"><h2 className="font-medium">Kết quả kế hoạch</h2>{capacity ? <dl className="mt-4 grid grid-cols-2 gap-3">{Object.entries(capacity).map(([key, value]) => <div key={key} className="rounded-lg bg-muted p-3"><dt className="text-xs text-muted-foreground">{key}</dt><dd className="mt-1 text-lg font-semibold">{String(value)}</dd></div>)}</dl> : <p className="mt-3 text-sm text-muted-foreground">Tính tải để thấy công suất ca 8 giờ, tăng ca, phần quá tải và số ngày cần.</p>}</div></TabsContent>
+        <TabsContent value="capacity" className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-3 rounded-xl border bg-card p-4"><div><Label htmlFor="demands">Nhu cầu (m²/bộ/công đoạn/mẻ)</Label><Textarea id="demands" className="min-h-44 font-mono text-xs" value={demands} onChange={(event) => setDemands(event.target.value)} /></div><div><Label htmlFor="resource">Tổ/ca/trạm/tăng ca</Label><Textarea id="resource" className="min-h-28 font-mono text-xs" value={resource} onChange={(event) => setResource(event.target.value)} /></div><Button onClick={calculateCapacity} disabled={Boolean(busy)}>Tính tải và cảnh báo trễ</Button></div>
+          <div className="rounded-xl border bg-card p-4"><h2 className="font-medium">Kết quả kế hoạch</h2>{capacity ? <dl className="mt-4 grid grid-cols-2 gap-3">{Object.entries(capacity).map(([key, value]) => <div key={key} className="rounded-lg bg-muted p-3"><dt className="text-xs text-muted-foreground">{key}</dt><dd className="mt-1 text-lg font-semibold">{String(value)}</dd></div>)}</dl> : <p className="mt-3 text-sm text-muted-foreground">Tính tải để thấy công suất ca 8 giờ, tăng ca, phần quá tải và số ngày cần.</p>}</div>
+        </TabsContent>
+
         <TabsContent value="warranty" className="rounded-xl border bg-card p-6"><h2 className="font-medium">Hồ sơ bảo hành và hàng lỗi</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Mở danh sách “Bảo hành” ở menu để tiếp nhận hồ sơ. Hệ thống bắt buộc truy về đơn bán, phiếu giao, ngày giao và mặt hàng; bốn nguyên nhân chuẩn quyết định nhánh xử lý. Bù trừ nhà cung cấp chỉ hoàn tất sau xác nhận Kế toán tổng hợp/Kế toán trưởng.</p></TabsContent>
       </Tabs>
     </div>
