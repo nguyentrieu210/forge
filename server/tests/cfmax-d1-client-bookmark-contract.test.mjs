@@ -14,9 +14,9 @@ test("Frappe adapter keeps one session-scoped D1 bookmark transport seam", () =>
 
 test("bookmark is cleared at authentication/session boundaries", () => {
   const resets = source.match(/this\.d1Bookmark\s*=\s*""/g) ?? [];
-  // field initialization + auth/session resets. This deliberately fails if the
-  // transport survives logout/login/session expiry and can cross an identity boundary.
-  assert.ok(resets.length >= 4, `expected bookmark initialization/resets, found ${resets.length}`);
+  // Runtime identity boundaries: login, logout and auth/session expiry. Field
+  // initialization is checked separately above and intentionally has no `this.` prefix.
+  assert.ok(resets.length >= 3, `expected login/logout/session-expiry bookmark resets, found ${resets.length}`);
   assert.match(source, /async login\([\s\S]*?this\.d1Bookmark\s*=\s*""/);
   assert.match(source, /async logout\([\s\S]*?this\.d1Bookmark\s*=\s*""/);
   assert.match(source, /coreMapError\(error\)\.kind === "auth"[\s\S]*?this\.d1Bookmark\s*=\s*""/);
