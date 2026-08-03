@@ -5,6 +5,7 @@ export * from "./procurement-decisions.js";
 export * from "./procurement-integrity-controllers.js";
 export * from "./procurement-p2p-controllers.js";
 export * from "./procurement-p2p-rollout-controllers.js";
+export * from "./procurement-landed-cost.js";
 export * from "./procurement-analytics.js";
 export * from "./procurement-schedule.js";
 export * from "./supplier-policy.js";
