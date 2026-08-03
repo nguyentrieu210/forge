@@ -51,6 +51,15 @@ jobs:
           mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
           test "${#backups[@]}" -eq 1
           node server/scripts/verify-tenant-backup.mjs --tenant "$TENANT" --file "${backups[0]}" --output "$RUNNER_TEMP/alu-backup-verification.json"
+      - name: Diagnose release worktree before migration
+        shell: bash
+        run: |
+          echo '--- git status --porcelain=v1 --untracked-files=all ---'
+          git status --porcelain=v1 --untracked-files=all
+          echo '--- tracked diff names ---'
+          git diff --name-only
+          echo '--- untracked non-ignored names ---'
+          git ls-files --others --exclude-standard
       - name: Migrate tenant from clean checkout
         working-directory: server
         run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
