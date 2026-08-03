@@ -1,5 +1,5 @@
 import type { Actor, JsonObject, JsonValue } from "../../contracts/src/index.js";
-import { CloudForgeError, errors } from "../../core/src/index.js";
+import { CloudForgeError, errors, sha256Hex } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 
 export const PRICING_MATRIX_SOURCE = "pricing.item_price_matrix.read";
@@ -432,25 +432,34 @@ export async function readItemPriceMatrix(
       ...(selectedItem ? { item_version: selectedItem.version } : {}),
       item_price_versions: itemPriceVersions,
     },
-    capabilities: {
-      commit: await Promise.all([
-        can(context, "Item", "write"),
-        can(context, "Item Price", "write"),
-        can(context, "Item Price", "create"),
-      ]).then((values) => values.every(Boolean)),
-      create_price_list: await can(context, "Price List", "create"),
-    },
+    capabilities: await Promise.all([
+      can(context, "Item", "write"),
+      can(context, "Item Price", "write"),
+      can(context, "Item Price", "create"),
+      can(context, "Price List", "create"),
+    ]).then(([updateItemUom, updateItemPrice, createItemPrice, createPriceList]) => ({
+      commit: updateItemUom || updateItemPrice || createItemPrice,
+      update_item_uom: updateItemUom,
+      update_item_price: updateItemPrice,
+      create_item_price: createItemPrice,
+      create_price_list: createPriceList,
+    })),
   };
 }
 
 interface PreparedOperation {
   id: string;
+  idempotencyKey: string;
   doctype: string;
   name: string;
   effect: "create" | "update" | "unchanged";
   expectedVersion?: number;
   document?: JsonObject;
   patch?: JsonObject;
+}
+
+async function pricingIdempotencyKey(requestId: string, ...parts: string[]): Promise<string> {
+  return `pricing:${await sha256Hex({ request_id: requestId, operation: parts })}`;
 }
 
 function operationResult(operation: PreparedOperation, record?: PricingMatrixRecord): PricingMatrixOperation {
@@ -584,6 +593,7 @@ export async function commitItemPriceMatrix(
     if (!desiredAlreadyApplied && input.itemVersion !== item.version) throw errors.version(item.version);
     operations.push({
       id: `${requestId}:item`,
+      idempotencyKey: await pricingIdempotencyKey(requestId, "item", itemCode),
       doctype: "Item",
       name: itemCode,
       effect: desiredAlreadyApplied ? "unchanged" : "update",
@@ -621,12 +631,17 @@ export async function commitItemPriceMatrix(
 
     if (!current) {
       if (!change.enabled) {
-        operations.push({ id: `${requestId}:price:${priceList}:${uom}`, doctype: "Item Price", name: `${priceList}:${itemCode}:${uom}`, effect: "unchanged" });
+        operations.push({
+          id: `${requestId}:price:${priceList}:${uom}`,
+          idempotencyKey: await pricingIdempotencyKey(requestId, "price", priceList, itemCode, uom),
+          doctype: "Item Price", name: `${priceList}:${itemCode}:${uom}`, effect: "unchanged",
+        });
         continue;
       }
       await assertPermission(context, "Item Price", "create");
       operations.push({
         id: `${requestId}:price:${priceList}:${uom}`,
+        idempotencyKey: await pricingIdempotencyKey(requestId, "price", priceList, itemCode, uom),
         doctype: "Item Price",
         name: `${priceList}:${itemCode}:${uom}`,
         effect: "create",
@@ -646,6 +661,7 @@ export async function commitItemPriceMatrix(
     const expectedVersion = assertExpectedVersion(current, expectedPriceVersions, desiredAlreadyApplied);
     operations.push({
       id: `${requestId}:price:${current.name}`,
+      idempotencyKey: await pricingIdempotencyKey(requestId, "price", current.name),
       doctype: "Item Price",
       name: current.name,
       effect: desiredAlreadyApplied ? "unchanged" : "update",
@@ -669,6 +685,7 @@ export async function commitItemPriceMatrix(
       const expectedVersion = assertExpectedVersion(current, expectedPriceVersions, false);
       operations.push({
         id: `${requestId}:disable:${current.name}`,
+        idempotencyKey: await pricingIdempotencyKey(requestId, "disable", current.name),
         doctype: "Item Price",
         name: current.name,
         effect: "update",
@@ -691,7 +708,7 @@ export async function commitItemPriceMatrix(
           actor: context.actor,
           doctype: operation.doctype,
           document: operation.document!,
-          idempotencyKey: operation.id,
+          idempotencyKey: operation.idempotencyKey,
         });
         applied.push(operationResult(operation, receipt.record));
       } else {
@@ -702,7 +719,7 @@ export async function commitItemPriceMatrix(
           name: operation.name,
           expectedVersion: operation.expectedVersion!,
           patch: operation.patch!,
-          idempotencyKey: operation.id,
+          idempotencyKey: operation.idempotencyKey,
         });
         applied.push(operationResult(operation, receipt.record));
       }
@@ -735,7 +752,6 @@ export async function createPriceList(
     assertPermission(context, "Price List", "create"),
     assertPermission(context, "Currency", "read", currency),
   ]);
-  if (await getRecord(context, "Price List", name)) throw errors.exists(`Price List ${name} already exists`);
   if (!await getRecord(context, "Currency", currency)) throw errors.reference(`Currency ${currency} does not exist`);
 
   const receipt = await context.mutations.create({
@@ -747,7 +763,7 @@ export async function createPriceList(
       currency,
       ...(effectiveDate ? { effective_date: effectiveDate } : {}),
     },
-    idempotencyKey: `${requestId}:price-list:${name}`,
+    idempotencyKey: await pricingIdempotencyKey(requestId, "price-list", name),
   });
   return {
     contract_version: 1,
