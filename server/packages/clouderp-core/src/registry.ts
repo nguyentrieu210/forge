@@ -1,7 +1,8 @@
 import { ControllerRegistry } from "../../document-kernel/src/index.js";
-import { JournalEntryController, PurchaseInvoiceController, StockEntryController } from "./controllers.js";
+import { JournalEntryController, StockEntryController } from "./controllers.js";
 import { PurchaseFundingMaterialRequestController } from "./purchase-funding-material-request.js";
-import { ProcurementPurchaseOrderController, ProcurementRequestForQuotationController, ProcurementSupplierContractController, ProcurementSupplierQuotationController } from "./procurement-integrity-controllers.js";
+import { ProcurementRequestForQuotationController, ProcurementSupplierContractController, ProcurementSupplierQuotationController } from "./procurement-integrity-controllers.js";
+import { ProcurementP2PPurchaseInvoiceController, ProcurementP2PPurchaseOrderController } from "./procurement-p2p-controllers.js";
 import { PurchaseAllocationOverrideController } from "./purchase-allocation-action-controllers.js";
 import { RolloutPurchaseReceiptController } from "./purchase-allocation-rollout-controllers.js";
 import { PurchaseSettlementLifecycleController } from "./purchase-settlement-lifecycle-controller.js";
@@ -15,13 +16,13 @@ export function registerErpCoreControllers(registry: ControllerRegistry): Contro
     .register(new ProcurementRequestForQuotationController())
     .register(new ProcurementSupplierQuotationController())
     .register(new SupplierSelectionController())
-    .register(new ProcurementPurchaseOrderController())
+    .register(new ProcurementP2PPurchaseOrderController())
     .register(new RolloutPurchaseReceiptController())
     .register(new SupplierQualificationController())
     .register(new SupplierRatingController())
     .register(new ProcurementSupplierContractController())
     .register(new PurchaseSettlementLifecycleController())
     .register(new PurchaseAllocationOverrideController())
-    .register(new PurchaseInvoiceController())
+    .register(new ProcurementP2PPurchaseInvoiceController())
     .register(new StockEntryController());
 }
