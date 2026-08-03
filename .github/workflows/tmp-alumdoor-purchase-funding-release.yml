@@ -65,13 +65,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build exact release once
-        run: |
-          pnpm --filter cloudforge run build
-          pnpm --filter metaforge run build
-          node server/scripts/stage-client-bundle.mjs
-
-      - name: Plan tenant migrations
+      - name: Plan tenant migrations while checkout is clean
         working-directory: server
         run: node scripts/migrate-tenant.mjs --tenant "$TENANT"
 
@@ -92,11 +86,16 @@ jobs:
             --file "${backups[0]}" \
             --output "$RUNNER_TEMP/alu-backup-verification.json"
 
-      - name: Migrate tenant
+      - name: Migrate tenant while release worktree is clean
         working-directory: server
         run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
 
-      - name: Deploy tenant Worker
+      - name: Build exact platform and client artifacts
+        run: |
+          pnpm --filter cloudforge run build
+          pnpm --filter metaforge run build
+
+      - name: Deploy tenant Worker before staging UI bundle
         working-directory: server
         run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
 
@@ -108,6 +107,9 @@ jobs:
             --name "$APP_WORKER" \
             --dispatch-namespace "$DISPATCH_NAMESPACE" \
             --strict
+
+      - name: Stage exact runtime and warehouse mobile bundle
+        run: node server/scripts/stage-client-bundle.mjs
 
       - name: Deploy Gateway and UI
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
