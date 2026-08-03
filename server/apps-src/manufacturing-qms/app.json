@@ -23,5 +23,5 @@
     {"key":"Calibration Record","label":"Hiệu chuẩn","kind":"doctype","icon":"gauge","group":"Đo lường & hiệu chuẩn"}
   ],
   "hooks": [],
-  "client": {"brand":"slate","domain":"manufacturing","home":{"route":"/app/Manufacturing%20Routing","doctype":"Manufacturing Routing"},"dimensions":["company"],"catalog_mode":"hybrid"}
+  "client": {"brand":"zinc","domain":"manufacturing","home":{"route":"/app/Manufacturing%20Routing","doctype":"Manufacturing Routing"},"dimensions":["company"],"catalog_mode":"hybrid"}
 }
