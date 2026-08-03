@@ -41,7 +41,7 @@
     { "fieldname": "customer_signature", "label": "Chữ ký / biên nhận", "fieldtype": "Attach" },
     { "fieldname": "completion_note", "label": "Ghi chú hoàn tất", "fieldtype": "Text" },
     { "fieldname": "correction_of", "label": "Điều chỉnh lệnh dịch vụ", "fieldtype": "Link", "options": "Service Order", "in_standard_filter": true },
-    { "fieldname": "correction_reason", "label": "Lý do điều chỉnh", "fieldtype": "Text", "mandatory_depends_on": "eval:!!doc.correction_of" },
+    { "fieldname": "correction_reason", "label": "Lý do điều chỉnh", "fieldtype": "Text", "mandatory_depends_on": "correction_of" },
     { "fieldname": "cancel_reason", "label": "Lý do hủy", "fieldtype": "Text", "mandatory_depends_on": "eval:doc.workflow_state == 'Hủy'" },
     { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
   ],
