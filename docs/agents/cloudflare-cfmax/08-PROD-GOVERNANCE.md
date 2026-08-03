@@ -1,261 +1,270 @@
 # CF08 — Cloudflare Production Governance / Cost / Drift / Recovery
 
-Status: READY
-Branch: `cloudflare/cfmax-08-prod-governance`
-Program baseline: `3b4c5c75bce315d03989d7fc05db721ff2668a4e`
-Primary Forge authority: WS12 SRE
-SaaS governance authority: WS11
+Status: **REVIEW — source-governance implementation complete; remote production evidence pending**  
+Branch: `cloudflare/cfmax-08-prod-governance`  
+Primary Forge authority: WS12 SRE  
+SaaS governance authority: WS11  
 Risk: CRITICAL
 
 ## Mission
 
-Make Cloudflare infrastructure an auditable, reproducible and cost-governed production substrate for Forge: exact resource inventory, source/config authority, drift detection, capacity limits, recovery, rollout and per-tenant economics.
+Make Cloudflare infrastructure an auditable, reproducible and cost-governed production substrate for Forge: exact resource inventory, source/config authority, drift detection, compatibility governance, capacity/cost taxonomy, recovery, rollout and per-tenant economics.
 
-This lane governs infrastructure truth. It does not take over sibling implementation hotspots.
+CF08 governs infrastructure truth. It does not take over sibling implementation hotspots and it does not treat source presence as production deployment proof.
+
+## Exact execution state
+
+- Worker branch was stale by 127 main commits at start.
+- Internal sync PR `#526` merged exact then-current `main@d651a3c43a7841cb82cf47561cfae7a89a276b88` into CF08 as `65f1804e1fddf8a57e9be3949d47449ae625d7f8`.
+- Main advanced later by UI-only work; CF08 must re-sync exact current main before convergence if it advances again.
+- No production Cloudflare API mutation, DNS/route mutation, secret rotation, PITR, migration, queue replay, rollback or customer-data mutation was performed.
 
 ## Required reading
 
-Common CFMAX docs plus:
-
-- every `wrangler*.jsonc` and deploy/provision script;
-- release workflows and release evidence conventions;
-- `docs/ops/CLOUDFLARE_OPERATIONAL_ENVELOPE.md`;
-- SRE runbook/alerts;
-- D1 PITR/export/migrate scripts;
-- Queue/DLQ configs;
-- R2/KV/D1/dispatch/service bindings;
-- control-plane entitlement/plan/quota store;
-- environment/secret examples and Git ignore rules;
-- current production evidence files, without treating stale evidence as live state.
+- `skills/forge-enterprise-completion/SKILL.md`
+- `docs/agents/cloudflare-cfmax/CFMAX_PROGRAM_SPEC.md`
+- `docs/agents/cloudflare-cfmax/CLOUDFLARE_SOURCE_LOCK_20260804.md`
+- `docs/ops/CLOUDFLARE_OPERATIONAL_ENVELOPE.md`
+- `docs/ops/SRE_RUNBOOK.md`
+- every governed `wrangler*.jsonc`
+- `server/scripts/tenant-wrangler.mjs`
+- release/backup/PITR/rollback/queue/observability verification code
 
 ## Owned scope
 
 - Cloudflare resource inventory by environment;
-- configuration source-of-truth map;
-- config/resource drift detection proposal/tooling;
+- configuration source-of-truth classification;
+- source/config drift detection;
+- remote desired-vs-observed drift evidence contract;
 - compatibility-date/flags policy;
-- resource naming and ownership conventions;
-- limits/quota/capacity registry;
-- cost attribution model by tenant/plan/capability;
-- release dependency order;
-- backup/PITR/export/restore safety;
-- Queue/DLQ/Workflow recovery policy;
-- R2 retention/lifecycle policy;
-- AI spend/Analytics cost governance integration;
-- emergency disable/rollback and feature-flag seams;
-- exact production evidence format for CFMAX.
+- resource naming/ownership and generated-config authority;
+- limits/quota/capacity separation;
+- cost attribution model by primitive/tenant pressure class;
+- release dependency order and resource-before-binding rule;
+- backup/PITR/export/restore safety convergence;
+- Queue/DLQ/Workflow/R2 recovery governance;
+- AI/Analytics/Browser/optional-runtime cost/recovery integration;
+- emergency disable/rollback seams;
+- exact production evidence contract for CFMAX.
 
 ## Forbidden zone
 
 Do not:
 
-- perform production PITR;
+- perform production PITR or restore;
 - mutate DNS/routes/secrets/resources in production without explicit approval;
 - rotate credentials;
 - invent customer SLA/RTO/RPO from provider limits;
 - move business logic into infrastructure scripts;
-- duplicate worker-owned code just to centralize it;
-- commit secrets, backup data, tokens or private production exports.
+- duplicate worker-owned implementation just to centralize it;
+- commit secrets, backup data, tokens or private production exports;
+- call remote drift clean without a read-only observed inventory.
 
-## Resource inventory
+## Implemented slice A — governance source manifest
 
-Create a machine-readable or clearly parseable inventory source covering at minimum:
+`server/config/cloudflare-governance.json`
 
-```text
-resource_type | logical_name | env | binding | owner worker | purpose | tenant/shared | source config | sensitive identifiers? | backup/recovery | cost dimension | production evidence
-```
+The manifest currently classifies:
 
-Resource families:
+- 14 committed Wrangler configs across platform/app/QA surfaces;
+- exact Git blob identity for every governed config;
+- environment, role, authority class, tenant scope, owner and compatibility date;
+- required/owner-dependent/not-required observability status;
+- `server/scripts/tenant-wrangler.mjs` as the production generated-tenant config authority.
 
-- Workers;
-- Workers Assets;
-- dispatch namespaces / Workers for Platforms;
-- service bindings;
-- D1 databases;
-- Durable Object namespaces/classes/migrations;
-- KV namespaces;
-- R2 buckets;
-- Queues + DLQs;
-- cron triggers;
-- Workflows when CF02 adds them;
-- Analytics Engine datasets when CF03 adds them;
-- AI Gateway/Workers AI bindings when CF05 converges them;
-- Browser Run bindings when CF06 adds them;
-- Dynamic Workers/Containers/Hyperdrive/Pipelines if CF07 recommends adoption;
-- public/custom domains and route ownership, without exposing secret credentials.
+Important architecture result: the committed demo tenant Wrangler is not treated as the source of truth for every production tenant. The generator is explicitly governed separately.
 
-## Config authority / drift
+## Implemented slice B — read-only governance validator
 
-For each resource/config classify:
+`server/scripts/verify-cloudflare-governance.mjs`
 
-- source-controlled declarative;
-- generated from source-controlled manifest;
-- provisioned by script/API;
-- dashboard-only/manual;
-- secret runtime state;
-- production evidence only.
+It:
 
-Goal: every non-secret production configuration has one declared authority or an explicit reason it remains dashboard-managed.
+- discovers committed `wrangler*.jsonc` under governed roots;
+- fails on unclassified or missing config;
+- verifies exact Git blob pins;
+- verifies explicit compatibility-date pins;
+- checks authority-class validity;
+- fails secret-like source-controlled `vars`;
+- enforces existing platform observability policy where CF08 owns/consumes it;
+- verifies the tenant-config generator source pin;
+- emits a machine-readable resource inventory with sensitive provider identifiers represented only as presence flags;
+- records remote observation as `unverified` rather than fabricating remote PASS.
 
-Define drift checks that can compare desired versus observed state without mutating production.
-
-## Compatibility-date policy
-
-Audit Worker compatibility dates/flags across services.
-
-Define:
-
-- update cadence;
-- testing matrix before bump;
-- whether all Workers advance together or by service family;
-- rollback procedure;
-- source-lock trigger for behavior-changing Cloudflare releases.
-
-Do not mass-bump dates merely to be current.
-
-## Cost model
-
-Build cost dimensions by primitive:
+Run directly:
 
 ```text
-primitive | billing unit | included allowance | variable unit | tenant attribution possible? | main cost driver | guardrail | telemetry source
+node server/scripts/verify-cloudflare-governance.mjs
+node server/scripts/verify-cloudflare-governance.mjs --json
 ```
 
-Then model representative tenant classes:
+## Implemented slice C — governance/cost/recovery contract
 
-- idle/small;
-- typical SMB;
-- busy/large;
-- pathological/noisy tenant;
-- AI-heavy tenant;
-- import/report-heavy tenant.
+`docs/ops/CLOUDFLARE_PRODUCTION_GOVERNANCE.md`
 
-The model must identify which limits are provider hard limits, Forge engineering defaults, and customer product quotas. Never mix them.
+It defines:
 
-## Capacity/SLO evidence
+- authority classes and source-vs-observed truth;
+- current configuration inventory;
+- three drift layers: source, release/control, remote observed;
+- compatibility-date update policy;
+- primitive cost dimensions and attribution seams;
+- representative tenant pressure classes;
+- provider hard limit vs Forge engineering guard vs customer product quota;
+- capacity evidence gates;
+- D1/Worker/Queue/Workflow/R2/AI/Analytics recovery matrix;
+- resource-before-dependent-code release topology;
+- emergency disable/rollback boundaries;
+- CFMAX production evidence contract.
 
-Provider maximum is not acceptable application latency.
+## Audit findings
 
-Define engineering gates for:
+### Compatibility dates are heterogeneous
 
-- Worker CPU/subrequests;
-- D1 size/query/rows/statement count;
-- DO queue wait;
-- Queue backlog/age/retry/DLQ;
-- Workflow failure/stuck duration once present;
-- R2 bytes/objects/exports;
-- AI spend/tokens/requests;
-- Analytics data-point volume;
-- Browser Run render duration/failure.
+Exact source contains at least:
 
-Customer-facing SLO/SLA remains unset until approved from measured evidence.
+- `2026-07-23` — gateway, jobs, control plane, query/demo tenant family;
+- `2026-07-27` — social ingress and some app/QA configs;
+- `2026-07-30` — Browser Run QA;
+- `2026-08-03` — newer app Workers.
 
-## Recovery model
+Decision: **do not mass-bump**. Each governed config is pinned. A date/flag change requires owner tests, source-lock review when behavior changes, and a compatible redeploy/rollback plan.
 
-### D1
+### Platform/app observability ownership remains split
 
-- Time Travel/PITR is provider-local and destructive;
-- retain verified portable exports as separate recovery evidence;
-- restore flow requires fresh backup/export + explicit authorization + post-restore reconciliation.
+Platform Workers already carry the WS12 logs/traces policy. Several app Workers remain owner dependencies. CF08 records that gap instead of editing vertical hotspots across ownership boundaries.
 
-### Queues/DLQ
+### Remote drift is not yet observed
 
-Define quarantine/replay idempotency and age/retention monitoring. DLQ existence alone is not a recovery plan.
+Source/config governance is implemented, but CF08 did not receive/run a read-only Cloudflare account inventory. Therefore:
 
-### Workflows
+- remote desired-vs-observed drift: **UNVERIFIED**;
+- production resource existence: only prior evidence where separately recorded, not re-proven by CF08;
+- `Hardened`: **not claimable**.
 
-Consume CF02 state/retry/cancel semantics and define operator recovery/alert path.
+## Cost and capacity evidence
 
-### R2
+CF08 reuses the provider facts locked in `CLOUDFLARE_OPERATIONAL_ENVELOPE.md` instead of copying speculative prices.
 
-Define retention/lifecycle, tenant deletion/export and generated-artifact cleanup.
+Current numeric cost inputs used by the governance model include:
 
-### AI/Analytics
+- D1 paid reads: first 25B rows/month included, then `$0.001 / million rows`;
+- D1 paid writes: first 50M rows/month included, then `$1.00 / million rows`;
+- D1 storage: first 5 GB included, then `$0.75 / GB-month`;
+- Queues: first 1M operations/month included, then `$0.40 / million operations`; normal delivery is roughly write + read + delete and retries add cost.
 
-Define what is ephemeral/telemetry versus retained business evidence. Provider logs/telemetry are not canonical business backup.
+Workers/R2/Workflow/AI/Browser/optional-runtime pricing remains an external provider contract and must be re-checked before commercial plan commitments.
+
+CF08 does not invent tenant monthly prices. WS11/product policy owns customer-facing quotas and commercial packaging.
+
+## Recovery convergence
+
+CF08 reuses WS12 tooling/evidence:
+
+- D1 export + manifest/checksum + isolated replay verification;
+- guarded restore drill;
+- guarded destructive PITR with explicit confirmation/reason/fresh verified backup;
+- regular Worker rollback tooling;
+- bounded Queue retry + distinct DLQ enforcement;
+- exact release safety and production health/release marker checks.
+
+Open recovery boundaries remain:
+
+- Workers-for-Platforms tenant/app user-worker canonical version rollback is not provider-proven;
+- DLQ typed inspect/quarantine/replay belongs to WS10;
+- encrypted off-account backup retention belongs to WS11;
+- Workflow recovery waits for CF02 semantics;
+- R2 generated-artifact retention/deletion converges with CF06/WS11;
+- RTO/RPO/DR cadence remain unset.
 
 ## Release topology
 
-Document resource dependency order such as:
+Current full release authority remains:
 
 ```text
-schema/migration validation
- -> shared/control resources
- -> tenant/runtime workers
- -> app workers
+exact merged main target
+ -> build
+ -> migration plan
+ -> fresh backup
+ -> offline replay verify
+ -> migration
+ -> tenant Worker
+ -> app Worker
  -> gateway/assets
- -> smoke/release marker
+ -> exact health/release marker convergence
 ```
 
-Adjust from exact current release flow. CFMAX additions must state where bindings/resources are provisioned before code that depends on them.
+Any CFMAX primitive must provision/verify its required resource or binding before dependent Worker deployment.
 
-## Implementation slices
+## Dependency Requests
 
-### A — exact resource/config inventory
+### DR-CF08-01
+Owner: CF03 / WS11  
+Need: converge usage/cost dimension taxonomy with CF08 resource/cost taxonomy and preserve a reconciliation seam before telemetry is used for monetary billing.  
+Blocked scope: production per-tenant cost reconciliation.  
+Can continue independently: yes.
 
-No production mutation.
+### DR-CF08-02
+Owner: CF02 / WS12  
+Need: Workflow resource authority, stuck/failure/retry/cancel/operator-recovery evidence contract.  
+Blocked scope: Workflow recovery row in remote inventory/recovery evidence.  
+Can continue independently: yes.
 
-### B — desired-state/drift validator
+### DR-CF08-03
+Owner: CF04 / WS11  
+Need: desired-state authority and read-only drift evidence for WAF/rate-limit/Access/Turnstile production configuration.  
+Blocked scope: edge-security resource inventory.  
+Can continue independently: yes.
 
-Read-only comparison preferred. If Cloudflare API access is unavailable in test environment, build schema/config validator and document remote evidence gap rather than guessing.
+### DR-CF08-04
+Owner: CF05 / CF03 / WS11  
+Need: AI Gateway resource/spend/rate metadata and tenant attribution contract.  
+Blocked scope: measured AI cost governance.  
+Can continue independently: yes.
 
-### C — cost/capacity model
+### DR-CF08-05
+Owner: CF06 / WS12 / WS11  
+Need: Browser Run/R2 export retention, generated-artifact cleanup and evidence contract.  
+Blocked scope: render/export recovery/cost proof.  
+Can continue independently: yes.
 
-Use current source-lock/provider docs and mark externally changing prices/limits with verified dates.
+### DR-CF08-06
+Owner: CF07 / WS00  
+Need: every optional primitive actually adopted must supply naming, authority, cost, recovery and rollback classification before production convergence.  
+Blocked scope: optional runtime inventory.  
+Can continue independently: yes.
 
-### D — recovery/convergence runbook
+## Acceptance state
 
-Unify existing D1/Queue/release evidence, do not duplicate runbooks unnecessarily.
-
-### E — CFMAX production evidence contract
-
-Define exact evidence required before each lane can claim production deployment.
-
-## Acceptance gates
-
-Before RC:
-
-- canonical capability mapping;
-- complete source resource inventory;
-- each config has an authority classification;
-- drift detection/validation exists or exact access gap documented;
-- no secrets leaked;
-- compatibility-date policy;
-- cost model across representative tenants;
-- hard-limit vs engineering-guard vs customer-quota separation;
-- backup/PITR/DLQ/Workflow/R2 recovery matrix;
-- release dependency graph;
-- rollback/emergency disable strategy;
-- no destructive production action performed.
-
-Hardened requires remote production inventory evidence, drift-free checks, rehearsed recovery evidence and measured capacity/alert behavior.
-
-## Dependencies
-
-- CF01 for D1 session/read-replica rollout config;
-- CF02 for Workflow resource/recovery semantics;
-- CF03 for usage/cost telemetry;
-- CF04 for security-config authority;
-- CF05 for AI spend/resource policy;
-- CF06 for Browser Run/R2 export resources;
-- CF07 for any new optional primitives.
+| Gate | State |
+|---|---|
+| source resource/config inventory | IMPLEMENTED |
+| config authority classification | IMPLEMENTED |
+| source drift validator | IMPLEMENTED |
+| compatibility-date policy | IMPLEMENTED |
+| cost/capacity taxonomy | IMPLEMENTED |
+| provider-hard vs engineering-guard vs product-quota separation | IMPLEMENTED |
+| recovery matrix | IMPLEMENTED using WS12 evidence + explicit dependencies |
+| release dependency graph | IMPLEMENTED |
+| emergency disable/rollback boundary | IMPLEMENTED |
+| secrets committed by CF08 | NONE |
+| destructive production action | NONE |
+| remote production inventory | NOT RUN / UNVERIFIED |
+| desired-vs-observed production drift | NOT PROVEN |
+| measured production capacity/alerts | dependency / not proven by CF08 |
+| Hardened | NO |
 
 ## Completion record
 
-Owner: —
-Started from: —
-Head: —
-Status: READY
-Capabilities: —
-Resource inventory: —
-Drift checks: —
-Cost model: —
-Recovery evidence: —
-Release topology: —
-Production mutations: none unless explicitly authorized
-Dependency requests: —
-Gaps: —
-
-## Startup prompt
-
-Đọc handoff, Skill, CFMAX docs và exact Wrangler/deploy/SRE code. Xây resource/config authority inventory trước, rồi drift/cost/recovery/release model. Phân biệt rõ provider hard limit, Forge engineering guard và customer quota. Không invent SLA, không commit secret, không PITR/DNS/secret/resource mutation production. Blocker ghi Dependency Request rồi tiếp tục. Dừng trước merge/deploy non-UI khi policy yêu cầu user duyệt.
+Owner: `ChatGPT-CF08`  
+Started from: stale CFMAX baseline, then exact-main sync through PR `#526`  
+Implementation checkpoint before final resync: `f4414cb9a9131a9d95a5d89db95f30a1b8b3beb8`  
+Status: REVIEW  
+Capability family: SRE/resource governance and CFMAX cross-cutting infrastructure; no maturity promotion beyond evidence  
+Resource inventory: 14 committed configs + generated tenant authority classified  
+Drift checks: source validator implemented; remote provider drift unverified  
+Cost model: implemented as dimensions/guardrails, no invented customer pricing  
+Recovery evidence: consumes WS12; no destructive recovery executed  
+Release topology: defined and preserves backup-before-migration/exact convergence  
+Production mutations: **none**  
+Remaining promotion blocker: read-only production inventory/drift + dependent CF lanes + measured recovery/capacity evidence.
