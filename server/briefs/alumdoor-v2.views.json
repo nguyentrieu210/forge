@@ -56,10 +56,38 @@
         },
         "write": { "strategy": "action", "action": "pricing.item_price_matrix.commit", "permissionDoctype": "Item Price", "permissionAction": "write" },
         "rowMembers": {
+          "create": {
+            "action": "pricing.item_uom.add",
+            "permissionDoctype": "Item",
+            "permissionAction": "write",
+            "label": "Thêm đơn vị",
+            "description": "Thêm đơn vị quy đổi cho mặt hàng đang chọn.",
+            "fields": [
+              { "fieldname": "uom", "label": "Đơn vị", "fieldtype": "Link", "options": "UOM", "required": true },
+              { "fieldname": "conversion_factor", "label": "Hệ số quy đổi", "fieldtype": "Float", "required": true, "default": "1", "description": "Số đơn vị gốc tương ứng với 1 đơn vị này." }
+            ]
+          },
           "remove": { "action": "pricing.item_price_matrix.commit", "permissionDoctype": "Item", "permissionAction": "write" },
           "primaryRemovable": false
         },
-        "columnMembers": { "allowHide": true, "allowHideAll": true, "allowShow": true, "allowShowAll": true },
+        "columnMembers": {
+          "create": {
+            "action": "pricing.price_list.create",
+            "permissionDoctype": "Price List",
+            "permissionAction": "create",
+            "label": "Tạo bảng giá",
+            "description": "Tạo bảng giá mới bằng pricing authority của server.",
+            "fields": [
+              { "fieldname": "name", "label": "Tên bảng giá", "fieldtype": "Data", "required": true },
+              { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "required": true },
+              { "fieldname": "effective_date", "label": "Ngày hiệu lực", "fieldtype": "Date" }
+            ]
+          },
+          "allowHide": true,
+          "allowHideAll": true,
+          "allowShow": true,
+          "allowShowAll": true
+        },
         "query": { "pageSize": 100, "searchLimit": 100, "minSearchChars": 1, "searchMode": "token_contains", "accentInsensitive": true },
         "presentation": { "stickyRowAxis": true, "stickyColumnAxis": true, "focusMode": "toggle", "mobileMode": "step", "navigatorResizable": true, "navigatorCollapsible": true, "showDirtyIndicator": true, "unsavedChangeGuard": true },
         "dirtyPolicy": "warn",
