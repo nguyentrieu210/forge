@@ -90,6 +90,18 @@ function validateBulkView(view, source, doctype) {
   };
 }
 
+/**
+ * Matrix semantics are NOT redefined here. This loader checks only that a sidecar is
+ * structurally an object and then puts it on the same top-level authoring field the
+ * canonical UI01/App-Factory validator/compiler already owns. Deep source/action,
+ * permission, paging and presentation validation therefore stays single-source.
+ */
+function validateMatrixView(view, source, doctype) {
+  if (!view || typeof view !== "object" || Array.isArray(view)) throw new Error(`${source}: views.${doctype}.matrix phải là object.`);
+  if (view.enabled !== undefined && typeof view.enabled !== "boolean") throw new Error(`${source}: views.${doctype}.matrix.enabled phải là boolean.`);
+  return structuredClone(view);
+}
+
 function applyViewSidecar(brief, extension, source, briefSource) {
   assertSidecarObject(extension, source);
   const unsupported = Object.keys(extension).filter((key) => key !== "version" && key !== "views" && !key.startsWith("//"));
@@ -100,21 +112,29 @@ function applyViewSidecar(brief, extension, source, briefSource) {
   const replacements = new Map();
   for (const [doctype, declared] of Object.entries(extension.views)) {
     if (!declared || typeof declared !== "object" || Array.isArray(declared)) throw new Error(`${source}: views.${doctype} phải là object.`);
-    const keys = Object.keys(declared).filter((key) => key !== "bulk" && !key.startsWith("//"));
-    if (keys.length) throw new Error(`${source}: views.${doctype} hiện chỉ hỗ trợ bulk; không nhận ${keys.join(", ")}.`);
-    if (!declared.bulk) throw new Error(`${source}: views.${doctype} thiếu bulk.`);
-    replacements.set(doctype, validateBulkView(declared.bulk, source, doctype));
+    const keys = Object.keys(declared).filter((key) => key !== "bulk" && key !== "matrix" && !key.startsWith("//"));
+    if (keys.length) throw new Error(`${source}: views.${doctype} hiện chỉ hỗ trợ bulk/matrix; không nhận ${keys.join(", ")}.`);
+    if (!declared.bulk && !declared.matrix) throw new Error(`${source}: views.${doctype} phải khai bulk hoặc matrix.`);
+    replacements.set(doctype, {
+      ...(declared.bulk ? { bulk: validateBulkView(declared.bulk, source, doctype) } : {}),
+      ...(declared.matrix ? { matrix: validateMatrixView(declared.matrix, source, doctype) } : {}),
+    });
   }
   if (!replacements.size) throw new Error(`${source}: views phải có ít nhất một DocType.`);
 
   const seen = new Set();
   const doctypes = brief.doctypes.map((doctype) => {
     const name = typeof doctype?.name === "string" ? doctype.name : "";
-    const bulk = replacements.get(name);
-    if (!bulk) return doctype;
+    const declared = replacements.get(name);
+    if (!declared) return doctype;
     seen.add(name);
+    if (declared.matrix && doctype.matrix !== undefined) throw new Error(`${source}: ${name} đã khai matrix trong brief; không được ghi đè bằng sidecar.`);
     const mobile = doctype.mobile && typeof doctype.mobile === "object" && !Array.isArray(doctype.mobile) ? doctype.mobile : {};
-    return { ...doctype, mobile: { ...mobile, bulk } };
+    return {
+      ...doctype,
+      ...(declared.bulk ? { mobile: { ...mobile, bulk: declared.bulk } } : {}),
+      ...(declared.matrix ? { matrix: declared.matrix } : {}),
+    };
   });
   const missing = [...replacements.keys()].filter((name) => !seen.has(name));
   if (missing.length) throw new Error(`${source}: DocType không tồn tại trong brief: ${missing.join(", ")}.`);
