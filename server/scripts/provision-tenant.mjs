@@ -103,7 +103,13 @@ try {
   const response = await fetch(`${controlUrl}/v1/routes/${encodeURIComponent(route)}`, {
     method: "PUT",
     headers: { authorization: `Bearer ${process.env.FORGE_CONTROL_TOKEN}`, "content-type": "application/json" },
-    body: JSON.stringify({ tenant_id: tenant, worker_name: script, status: "active", plan }),
+    body: JSON.stringify({
+      tenant_id: tenant,
+      worker_name: script,
+      status: "active",
+      plan,
+      reason: "tenant provisioning workflow",
+    }),
   });
   const body = await response.text();
   if (!response.ok) fail(`control plane refused the route (${response.status}): ${body}`);

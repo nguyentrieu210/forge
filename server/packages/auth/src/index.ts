@@ -23,6 +23,21 @@ export const IDENTITY_SIGNATURE_HEADER = "x-cloudforge-identity-signature";
  */
 export const APP_CALLBACK_HEADER = "x-cloudforge-app-callback";
 
+/** Authentication evidence that originated at the identity provider, not token mint time. */
+export interface AuthenticationContext {
+  /** OIDC-style epoch seconds for the user's actual authentication event. */
+  auth_time: number;
+  /** Authentication methods, e.g. pwd, otp, mfa or hwk. Informational unless a policy names one. */
+  amr?: string[];
+  /** Authentication Context Class Reference from the issuer, when one exists. */
+  acr?: string;
+}
+
+/** Trusted identity plus optional issuer-authenticated evidence for privileged step-up policy. */
+export interface SecurityTrustedIdentity extends TrustedIdentity {
+  authentication?: AuthenticationContext;
+}
+
 export interface JwtVerificationOptions {
   secret: string;
   issuer?: string;
@@ -40,6 +55,10 @@ export interface JwtClaims extends JsonObject {
   aud?: string | string[];
   locale?: string;
   timezone?: string;
+  /** Authentication time is deliberately distinct from JWT iat. */
+  auth_time?: number;
+  amr?: string[];
+  acr?: string;
 }
 
 export async function verifyBearerJwt(request: Request, options: JwtVerificationOptions): Promise<JwtClaims> {
@@ -52,11 +71,11 @@ export async function verifyHs256Jwt(token: string, options: JwtVerificationOpti
   const parts = token.split(".");
   if (parts.length !== 3) throw errors.authentication("Malformed bearer token");
   const [encodedHeader, encodedPayload, encodedSignature] = parts as [string, string, string];
-  const header = parseJson(base64UrlDecode(encodedHeader), "JWT header") as JsonObject;
+  const header = parseJsonObject(base64UrlDecode(encodedHeader), "JWT header");
   if (header.alg !== "HS256" || header.typ !== "JWT") throw errors.authentication("Unsupported bearer token algorithm");
   const expected = await hmacSha256(`${encodedHeader}.${encodedPayload}`, options.secret);
   if (!timingSafeEqual(base64UrlDecodeBytes(encodedSignature), expected)) throw errors.authentication("Invalid bearer token signature");
-  const claims = parseJson(base64UrlDecode(encodedPayload), "JWT payload") as Partial<JwtClaims>;
+  const claims = parseJsonObject(base64UrlDecode(encodedPayload), "JWT payload") as Partial<JwtClaims>;
   const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   if (typeof claims.sub !== "string" || !claims.sub) throw errors.authentication("Bearer token is missing subject");
   if (typeof claims.tenant_id !== "string" || !claims.tenant_id) throw errors.authentication("Bearer token is missing tenant");
@@ -65,9 +84,43 @@ export async function verifyHs256Jwt(token: string, options: JwtVerificationOpti
   }
   if (typeof claims.exp !== "number" || claims.exp <= now) throw errors.authentication("Bearer token expired");
   if (typeof claims.nbf === "number" && claims.nbf > now + 30) throw errors.authentication("Bearer token is not active");
+  if (claims.auth_time !== undefined && (!Number.isInteger(claims.auth_time) || claims.auth_time <= 0 || claims.auth_time > now + 30)) {
+    throw errors.authentication("Bearer token authentication time is invalid");
+  }
+  if (claims.amr !== undefined && (!Array.isArray(claims.amr) || claims.amr.length > 16 || !claims.amr.every((method) => typeof method === "string" && method.length > 0 && method.length <= 64))) {
+    throw errors.authentication("Bearer token authentication methods are invalid");
+  }
+  if (claims.acr !== undefined && (typeof claims.acr !== "string" || !claims.acr || claims.acr.length > 256)) {
+    throw errors.authentication("Bearer token authentication context class is invalid");
+  }
   if (options.issuer && claims.iss !== options.issuer) throw errors.authentication("Bearer token issuer mismatch");
   if (options.audience && !audienceMatches(claims.aud, options.audience)) throw errors.authentication("Bearer token audience mismatch");
   return claims as JwtClaims;
+}
+
+export function authenticationContextFromJwtClaims(claims: JwtClaims): AuthenticationContext | undefined {
+  if (claims.auth_time === undefined) return undefined;
+  return {
+    auth_time: claims.auth_time,
+    ...(claims.amr ? { amr: [...claims.amr] } : {}),
+    ...(claims.acr ? { acr: claims.acr } : {}),
+  };
+}
+
+export function assertRecentAuthenticationContext(
+  authentication: AuthenticationContext | undefined,
+  nowSeconds: number,
+  maxAgeSeconds = 15 * 60,
+  futureClockSkewSeconds = 60,
+): void {
+  const authTime = authentication?.auth_time;
+  if (typeof authTime !== "number" || !Number.isInteger(authTime) || authTime <= 0) {
+    throw errors.authentication("Recent authentication is required for this privileged action");
+  }
+  const ageSeconds = nowSeconds - authTime;
+  if (ageSeconds < -futureClockSkewSeconds || ageSeconds > maxAgeSeconds) {
+    throw errors.authentication("Recent authentication is required for this privileged action");
+  }
 }
 
 /** A per-tenant verification key (the derived key, not the platform master). */
@@ -113,17 +166,20 @@ export async function createTrustedIdentity(input: {
   traceId: string;
   masterSecret: string;
   keyId: string;
+  authentication?: AuthenticationContext;
   nowSeconds?: number;
   ttlSeconds?: number;
-}): Promise<{ encoded: string; signature: string; identity: TrustedIdentity }> {
+}): Promise<{ encoded: string; signature: string; identity: SecurityTrustedIdentity }> {
   const issuedAt = input.nowSeconds ?? Math.floor(Date.now() / 1000);
-  const identity: TrustedIdentity = {
+  if (input.authentication) validateAuthenticationContext(input.authentication, issuedAt);
+  const identity: SecurityTrustedIdentity = {
     tenant_id: input.tenantId,
     actor: input.actor,
     trace_id: input.traceId,
     issued_at: issuedAt,
     expires_at: issuedAt + (input.ttlSeconds ?? 60),
     key_id: input.keyId,
+    ...(input.authentication ? { authentication: cloneAuthenticationContext(input.authentication) } : {}),
   };
   const encoded = base64UrlEncode(JSON.stringify(identity));
   const signingKey = await deriveIdentityKey(input.masterSecret, input.tenantId, input.keyId);
@@ -139,14 +195,14 @@ export async function verifyTrustedIdentity(request: Request, input: {
   masterSecret?: string;
   traceId?: string;
   nowSeconds?: number;
-}): Promise<TrustedIdentity> {
+}): Promise<SecurityTrustedIdentity> {
   const encoded = request.headers.get(IDENTITY_HEADER);
   const signature = request.headers.get(IDENTITY_SIGNATURE_HEADER);
   if (!encoded || !signature) throw errors.authentication("Missing trusted identity context");
   // Read (untrusted) to select the key by id; the value is not trusted until the
   // signature is verified below, and the key is always bound to the caller-
   // supplied tenant, never to the tenant claimed inside the envelope.
-  const identity = parseJson(base64UrlDecode(encoded), "trusted identity") as Partial<TrustedIdentity>;
+  const identity = parseJsonObject(base64UrlDecode(encoded), "trusted identity") as Partial<SecurityTrustedIdentity>;
   if (typeof identity.key_id !== "string" || !identity.key_id) throw errors.authentication("Trusted identity is missing key id");
   const verificationKey = await resolveIdentityKey(input, identity.key_id);
   if (!verificationKey) throw errors.authentication("Trusted identity key id is not recognized");
@@ -161,7 +217,32 @@ export async function verifyTrustedIdentity(request: Request, input: {
   if (!identity.actor || typeof identity.actor.user_id !== "string" || !Array.isArray(identity.actor.roles)) {
     throw errors.authentication("Trusted identity actor is invalid");
   }
-  return identity as TrustedIdentity;
+  if (identity.authentication !== undefined) validateAuthenticationContext(identity.authentication, now);
+  return identity as SecurityTrustedIdentity;
+}
+
+function validateAuthenticationContext(authentication: unknown, nowSeconds: number): asserts authentication is AuthenticationContext {
+  if (!authentication || typeof authentication !== "object" || Array.isArray(authentication)) {
+    throw errors.authentication("Trusted authentication context is invalid");
+  }
+  const candidate = authentication as Partial<AuthenticationContext>;
+  if (typeof candidate.auth_time !== "number" || !Number.isInteger(candidate.auth_time) || candidate.auth_time <= 0 || candidate.auth_time > nowSeconds + 60) {
+    throw errors.authentication("Trusted authentication time is invalid");
+  }
+  if (candidate.amr !== undefined && (!Array.isArray(candidate.amr) || candidate.amr.length > 16 || !candidate.amr.every((method) => typeof method === "string" && method.length > 0 && method.length <= 64))) {
+    throw errors.authentication("Trusted authentication methods are invalid");
+  }
+  if (candidate.acr !== undefined && (typeof candidate.acr !== "string" || !candidate.acr || candidate.acr.length > 256)) {
+    throw errors.authentication("Trusted authentication context class is invalid");
+  }
+}
+
+function cloneAuthenticationContext(authentication: AuthenticationContext): AuthenticationContext {
+  return {
+    auth_time: authentication.auth_time,
+    ...(authentication.amr ? { amr: [...authentication.amr] } : {}),
+    ...(authentication.acr ? { acr: authentication.acr } : {}),
+  };
 }
 
 async function resolveIdentityKey(
@@ -177,7 +258,7 @@ async function resolveIdentityKey(
 
 export function staticDevelopmentActor(serialized?: string): Actor {
   if (!serialized) return { user_id: "Administrator", roles: ["System Manager"] };
-  const parsed = parseJson(serialized, "DEV_ACTOR_JSON") as Partial<Actor>;
+  const parsed = parseJsonObject(serialized, "DEV_ACTOR_JSON") as Partial<Actor>;
   if (typeof parsed.user_id !== "string" || !Array.isArray(parsed.roles) || !parsed.roles.every((role) => typeof role === "string")) {
     throw errors.authentication("DEV_ACTOR_JSON is invalid");
   }
@@ -235,6 +316,14 @@ function audienceMatches(value: string | string[] | undefined, expected: string)
 function parseJson(value: string, name: string): unknown {
   try { return JSON.parse(value) as unknown; }
   catch { throw errors.authentication(`${name} is not valid JSON`); }
+}
+
+function parseJsonObject(value: string, name: string): JsonObject {
+  const parsed = parseJson(value, name);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw errors.authentication(`${name} must be a JSON object`);
+  }
+  return parsed as JsonObject;
 }
 
 function base64UrlEncode(value: string): string {

@@ -1,5 +1,6 @@
 import {
   APP_CALLBACK_HEADER,
+  authenticationContextFromJwtClaims,
   createTrustedIdentity,
   deriveAppCallKey,
   IDENTITY_HEADER,
@@ -77,14 +78,17 @@ export default {
       // it. Null for every ordinary request, so nothing about the normal path changes.
       const callback = await resolveAppCallback(request, env, url, route.tenant_id);
 
-      const actor = callback ? callback.actor : await resolveActor(request, env, url, route.tenant_id);
+      const principal = callback
+        ? { actor: callback.actor, authentication: undefined }
+        : await resolvePrincipal(request, env, url, route.tenant_id);
       const inbound = callback ? new Request(callback.url, request) : request;
       const trusted = await createTrustedIdentity({
         tenantId: route.tenant_id,
-        actor,
+        actor: principal.actor,
         traceId,
         masterSecret: env.INTERNAL_AUTH_SECRET,
         keyId: env.INTERNAL_AUTH_KEY_ID ?? "k1",
+        ...(principal.authentication ? { authentication: principal.authentication } : {}),
       });
       // Freshly minted, and `withPlatformHeaders` strips whatever the caller sent — so
       // the identity the tenant sees is one this gateway just issued, never one an app
@@ -272,33 +276,40 @@ function withPlatformHeaders(request: Request, tenantId: string, traceId: string
 }
 
 /**
- * Resolves the actor for a request.
+ * Resolves the actor and any issuer-authenticated step-up evidence for a request.
  *
- * A Frappe-shaped request may legitimately arrive with no bearer token: the Desk
- * authenticates with a `sid` cookie that the tenant worker verifies itself
- * (it holds the user directory, so it alone can check revocation). The gateway
- * therefore forwards those as GUEST rather than rejecting them — the identity it
- * asserts is deliberately the lowest one, so a tenant worker that ever fell back
- * to the trusted identity on a session path would fail closed rather than
- * inherit somebody's privileges.
+ * `auth_time` is accepted only after the JWT issuer/audience/signature checks pass. Token
+ * issue time (`iat`) is intentionally ignored: minting a new token is not proof that the
+ * human reauthenticated. App callbacks are also deliberately downgraded to actor-only at
+ * the gateway edge, so an app cannot reuse the caller's step-up evidence for privileged
+ * native administration.
  */
-async function resolveActor(request: Request, env: GatewayEnv, url: URL, tenantId: string) {
-  if (env.AUTH_MODE === "development") return staticDevelopmentActor(env.DEV_ACTOR_JSON);
+async function resolvePrincipal(request: Request, env: GatewayEnv, url: URL, tenantId: string) {
+  if (env.AUTH_MODE === "development") {
+    return {
+      actor: staticDevelopmentActor(env.DEV_ACTOR_JSON),
+      authentication: { auth_time: Math.floor(Date.now() / 1000), amr: ["development"] },
+    };
+  }
   // `/files/…` is forwarded as GUEST for the same reason as a Frappe path: a product
   // photograph on the public catalogue arrives with no token and no cookie, and demanding
   // one here would turn every image on the storefront into an authentication failure. The
   // tenant worker still decides — a private file is refused there, where the row that says
   // so lives.
   if ((isFrappePath(url.pathname) || isPublicFilePath(url.pathname)) && !request.headers.get("authorization")) {
-    return { user_id: "Guest", roles: ["Guest"] };
+    return { actor: { user_id: "Guest", roles: ["Guest"] }, authentication: undefined };
   }
-  return claimsToActor(await verifyBearerJwt(request, {
+  const claims = await verifyBearerJwt(request, {
     secret: requireSecret(env.JWT_SECRET, "JWT_SECRET"),
     // Issuer and audience are mandatory in production: without them a token
     // minted for another audience under a shared secret would be accepted.
     issuer: requireSecret(env.JWT_ISSUER, "JWT_ISSUER"),
     audience: requireSecret(env.JWT_AUDIENCE, "JWT_AUDIENCE"),
-  }), tenantId);
+  });
+  return {
+    actor: claimsToActor(claims, tenantId),
+    authentication: authenticationContextFromJwtClaims(claims),
+  };
 }
 
 function limitsFor(plan: TenantRoute["plan"], pathname: string): { cpuMs: number; subRequests: number } {
