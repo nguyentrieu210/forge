@@ -32,7 +32,7 @@ concurrency:
 
 jobs:
   validate:
-    if: startsWith(github.head_ref, 'agent/ws09-batch-05-convergence')
+    if: startsWith(github.head_ref, 'agent/ws09-batch-05-convergence') || github.head_ref == 'program/ws09-batch-productization-20260804'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
