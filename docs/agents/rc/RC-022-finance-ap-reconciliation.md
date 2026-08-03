@@ -3,8 +3,8 @@
 Risk: **CRITICAL**  
 Branch: `rc/w2-finance-ap-reconciliation`  
 Claim base: `main@e18ffb1eb1d9a2d6146252a54094a87e6bf92e8b`  
-Latest main observed before final validation: `e2d6ff28614873dccc65dc32d80e87f5d84bc9bf`  
-Latest-main delta after claim: only RC-023 cash/bank files (`server/migrations/tenant/0110_rc023_cash_bank_reconciliation.sql` and `server/scripts/test-rc023-cash-bank.py`); no AP/query/policy overlap.  
+Latest main observed at finalization: `7819ade8cdb1213d9f99ae92f144ae8aee82b054`  
+Concurrency note: current `main` is four commits ahead of the claim base, but the final GitHub compare reports **no net file delta** after accidental RC-023 writes were reverted; no AP/query/policy overlap remains.  
 Merge/deploy: **NOT PERFORMED**.
 
 ## Capability
