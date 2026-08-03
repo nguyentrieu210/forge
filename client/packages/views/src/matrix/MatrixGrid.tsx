@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { KeyboardEvent, RefObject } from "react";
+import type { KeyboardEvent, Ref } from "react";
 import type { ControlRegistry, FieldServices } from "@metaforge/controls";
 import { Trash2 } from "lucide-react";
 import {
@@ -21,7 +21,7 @@ interface MatrixTableProps {
   services?: FieldServices;
   roles?: string[];
   locked: boolean;
-  scrollRef: RefObject<HTMLDivElement | null>;
+  scrollRef: Ref<HTMLDivElement>;
   virtualized: boolean;
   virtualRows: Array<{ index: number; start: number; end: number }>;
   padTop: number;
