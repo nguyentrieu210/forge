@@ -24,10 +24,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout exact PR merge candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+          fetch-depth: 1
+
+      - name: Record candidate SHA
+        run: |
+          echo "PR_HEAD=${{ github.event.pull_request.head.sha }}"
+          echo "PR_BASE=${{ github.event.pull_request.base.sha }}"
+          echo "MERGE_CANDIDATE=$(git rev-parse HEAD)"
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
