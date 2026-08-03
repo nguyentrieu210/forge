@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT / "migrations/tenant/0111_finance_ar_reconciliation.sql"
+MIGRATION = ROOT / "migrations/tenant/0112_rc021_finance_ar_reconciliation.sql"
 
 
 def payload(**values):
@@ -218,4 +218,4 @@ drift = db.execute(
 ).fetchone()
 assert drift == (100, 0), drift
 
-print("FINANCE_AR_RECONCILIATION_0111_PASS")
+print("FINANCE_AR_RECONCILIATION_0112_PASS")
