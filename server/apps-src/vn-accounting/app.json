@@ -1,33 +1,416 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.1.0",
+  "version": "1.6.0",
+  "worker": "cloudforge-app-vn-accounting",
   "requires": [
-    { "id": "hrm", "version": ">=1.3.0" }
+    {
+      "id": "hrm",
+      "version": ">=1.3.0"
+    }
   ],
   "externalDocTypes": [
-    { "name": "Purchase Receipt", "kind": "transaction", "app": "erpnext" },
-    { "name": "Stock Entry", "kind": "transaction", "app": "erpnext" }
+    {
+      "name": "Purchase Receipt",
+      "kind": "transaction",
+      "app": "erpnext"
+    },
+    {
+      "name": "Stock Entry",
+      "kind": "transaction",
+      "app": "erpnext"
+    },
+    {
+      "name": "E-Invoice Submission",
+      "kind": "transaction",
+      "app": "erpnext"
+    }
+  ],
+  "validators": [
+    {
+      "doctype": "VN Tax Ruleset",
+      "actions": [
+        "submit"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "tax-evaluate",
+      "label": "Tính thử ruleset thuế",
+      "icon": "calculator",
+      "group": "Thuế & tuân thủ",
+      "description": "Chạy ruleset đã duyệt bằng fixed-point minor units. Công ty được lấy từ ruleset, không nhập lại. Không ghi sổ hay nộp tờ khai.",
+      "fields": [
+        {
+          "fieldname": "ruleset",
+          "label": "Ruleset",
+          "fieldtype": "Link",
+          "options": "VN Tax Ruleset",
+          "required": true
+        },
+        {
+          "fieldname": "effective_at",
+          "label": "Ngày áp dụng",
+          "fieldtype": "Date",
+          "required": true
+        },
+        {
+          "fieldname": "input_json",
+          "label": "Đầu vào minor units (JSON)",
+          "fieldtype": "Code",
+          "required": true,
+          "default": "{}"
+        }
+      ],
+      "commit": {
+        "method": "vn-accounting.tax.evaluate",
+        "label": "Tính thử"
+      },
+      "permission_doctype": "VN Tax Ruleset",
+      "permission_action": "read"
+    },
+    {
+      "name": "vat-dataset",
+      "label": "Dữ liệu VAT",
+      "icon": "table-properties",
+      "group": "Thuế & tuân thủ",
+      "description": "Đối chiếu VAT đầu vào/đầu ra từ hóa đơn đã ghi nhận. Chỉ đọc; không tạo sổ thuế hay nộp tờ khai.",
+      "fields": [
+        {
+          "fieldname": "ruleset",
+          "label": "Ruleset VAT",
+          "fieldtype": "Link",
+          "options": "VN Tax Ruleset",
+          "required": true
+        },
+        {
+          "fieldname": "from_date",
+          "label": "Từ ngày",
+          "fieldtype": "Date",
+          "required": true
+        },
+        {
+          "fieldname": "to_date",
+          "label": "Đến ngày",
+          "fieldtype": "Date",
+          "required": true
+        },
+        {
+          "fieldname": "limit_per_type",
+          "label": "Giới hạn mỗi loại hóa đơn",
+          "fieldtype": "Int",
+          "default": 100
+        }
+      ],
+      "commit": {
+        "method": "vn-accounting.vat.dataset",
+        "label": "Lập dữ liệu"
+      },
+      "permission_doctype": "VN Tax Ruleset",
+      "permission_action": "read"
+    }
   ],
   "nav": [
-    { "key": "VN Accounting Policy", "label": "Chính sách kế toán", "kind": "doctype", "icon": "landmark", "group": "Thiết lập kế toán" },
-    { "key": "VN Legal Rule", "label": "Văn bản & quy tắc", "kind": "doctype", "icon": "book-open-check", "group": "Thiết lập kế toán" },
-    { "key": "VN Accounting Period", "label": "Kỳ kế toán", "kind": "doctype", "icon": "calendar-lock", "group": "Kiểm soát" },
-    { "key": "Warehouse Cash Fund", "label": "Quỹ tiền mặt theo kho", "kind": "doctype", "icon": "landmark", "group": "Quỹ kho" },
-    { "key": "Warehouse Cash Voucher", "label": "Phiếu thu chi kho", "kind": "doctype", "icon": "receipt-text", "group": "Quỹ kho" },
-    { "key": "Warehouse Cash Transfer", "label": "Chuyển quỹ", "kind": "doctype", "icon": "arrow-left-right", "group": "Quỹ kho" },
-    { "key": "Warehouse Cash Count", "label": "Kiểm quỹ & bàn giao", "kind": "doctype", "icon": "clipboard-check", "group": "Quỹ kho" },
-    { "key": "Payroll Accounting Batch", "label": "Hạch toán lương", "kind": "doctype", "icon": "badge-dollar-sign", "group": "Kế toán lương" },
-    { "key": "chart-of-accounts", "label": "Hệ thống tài khoản", "kind": "route", "route": "/app/Account", "icon": "list-tree", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
-    { "key": "journal-entry", "label": "Bút toán nhật ký", "kind": "route", "route": "/app/Journal%20Entry", "icon": "notebook-tabs", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] },
-    { "key": "payment-entry", "label": "Thu chi kế toán", "kind": "route", "route": "/app/Payment%20Entry", "icon": "hand-coins", "group": "Sổ sách", "required_roles": ["Accounts User", "Accounts Manager", "System Manager"] }
+    {
+      "key": "VN Accounting Policy",
+      "label": "Chính sách kế toán",
+      "kind": "doctype",
+      "icon": "landmark",
+      "group": "Thiết lập kế toán"
+    },
+    {
+      "key": "VN Legal Rule",
+      "label": "Văn bản & quy tắc",
+      "kind": "doctype",
+      "icon": "book-open-check",
+      "group": "Thiết lập kế toán"
+    },
+    {
+      "key": "VN Accounting Period",
+      "label": "Kỳ kế toán",
+      "kind": "doctype",
+      "icon": "calendar-lock",
+      "group": "Kiểm soát"
+    },
+    {
+      "key": "TT99 Account Map",
+      "label": "Mapping tài khoản TT99",
+      "kind": "doctype",
+      "icon": "git-compare-arrows",
+      "group": "TT99"
+    },
+    {
+      "key": "TT99 Voucher Form",
+      "label": "Mẫu chứng từ TT99",
+      "kind": "doctype",
+      "icon": "file-check-2",
+      "group": "TT99"
+    },
+    {
+      "key": "TT99 Book Form",
+      "label": "Mẫu sổ TT99",
+      "kind": "doctype",
+      "icon": "book-open-text",
+      "group": "TT99"
+    },
+    {
+      "key": "TT99 Financial Statement Template",
+      "label": "Mẫu BCTC TT99",
+      "kind": "doctype",
+      "icon": "file-chart-column",
+      "group": "TT99"
+    },
+    {
+      "key": "VN Tax Ruleset",
+      "label": "Ruleset thuế",
+      "kind": "doctype",
+      "icon": "badge-percent",
+      "group": "Thuế & tuân thủ"
+    },
+    {
+      "key": "tax-evaluate",
+      "label": "Tính thử ruleset thuế",
+      "kind": "route",
+      "route": "/x/action:tax-evaluate",
+      "icon": "calculator",
+      "group": "Thuế & tuân thủ",
+      "required_roles": [
+        "Tax Specialist",
+        "Chief Accountant",
+        "Accounts Manager",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "vat-dataset",
+      "label": "Dữ liệu VAT",
+      "kind": "route",
+      "route": "/x/action:vat-dataset",
+      "icon": "table-properties",
+      "group": "Thuế & tuân thủ",
+      "required_roles": [
+        "Tax Specialist",
+        "Chief Accountant",
+        "Accounts Manager",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "e-invoice-submission",
+      "label": "Hóa đơn điện tử",
+      "kind": "route",
+      "route": "/app/E-Invoice%20Submission",
+      "icon": "receipt",
+      "group": "Thuế & tuân thủ",
+      "required_roles": [
+        "Tax Specialist",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "finance-budget",
+      "label": "Ngân sách",
+      "kind": "route",
+      "route": "/app/Finance%20Budget",
+      "icon": "wallet-cards",
+      "group": "Ngân sách & kiểm soát",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "Chief Accountant",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "finance-budget-revision",
+      "label": "Điều chỉnh ngân sách",
+      "kind": "route",
+      "route": "/app/Finance%20Budget%20Revision",
+      "icon": "file-pen-line",
+      "group": "Ngân sách & kiểm soát",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "Chief Accountant",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "finance-budget-commitment",
+      "label": "Cam kết ngân sách",
+      "kind": "route",
+      "route": "/app/Finance%20Budget%20Commitment",
+      "icon": "shield-check",
+      "group": "Ngân sách & kiểm soát",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "Chief Accountant",
+        "Purchase Manager",
+        "Internal Auditor",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "Warehouse Cash Fund",
+      "label": "Quỹ tiền mặt theo kho",
+      "kind": "doctype",
+      "icon": "landmark",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Warehouse Cash Voucher",
+      "label": "Phiếu thu chi kho",
+      "kind": "doctype",
+      "icon": "receipt-text",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Warehouse Cash Transfer",
+      "label": "Chuyển quỹ",
+      "kind": "doctype",
+      "icon": "arrow-left-right",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Warehouse Cash Count",
+      "label": "Kiểm quỹ & bàn giao",
+      "kind": "doctype",
+      "icon": "clipboard-check",
+      "group": "Quỹ kho"
+    },
+    {
+      "key": "Payroll Accounting Batch",
+      "label": "Hạch toán lương",
+      "kind": "doctype",
+      "icon": "badge-dollar-sign",
+      "group": "Kế toán lương"
+    },
+    {
+      "key": "chart-of-accounts",
+      "label": "Hệ thống tài khoản",
+      "kind": "route",
+      "route": "/app/Account",
+      "icon": "list-tree",
+      "group": "Sổ sách",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "journal-entry",
+      "label": "Bút toán nhật ký",
+      "kind": "route",
+      "route": "/app/Journal%20Entry",
+      "icon": "notebook-tabs",
+      "group": "Sổ sách",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "payment-entry",
+      "label": "Thu chi kế toán",
+      "kind": "route",
+      "route": "/app/Payment%20Entry",
+      "icon": "hand-coins",
+      "group": "Sổ sách",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "general-ledger",
+      "label": "Sổ cái",
+      "kind": "route",
+      "route": "/app/query-report/General%20Ledger",
+      "icon": "book-open",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "trial-balance",
+      "label": "Bảng cân đối số phát sinh",
+      "kind": "route",
+      "route": "/app/query-report/Trial%20Balance",
+      "icon": "scale",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "profit-loss",
+      "label": "Kết quả kinh doanh",
+      "kind": "route",
+      "route": "/app/query-report/Profit%20and%20Loss",
+      "icon": "chart-no-axes-combined",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "balance-sheet",
+      "label": "Bảng cân đối kế toán",
+      "kind": "route",
+      "route": "/app/query-report/Balance%20Sheet",
+      "icon": "table-2",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "cash-flow",
+      "label": "Lưu chuyển tiền tệ",
+      "kind": "route",
+      "route": "/app/query-report/Cash%20Flow",
+      "icon": "waves",
+      "group": "Báo cáo",
+      "required_roles": [
+        "Accounts User",
+        "Accounts Manager",
+        "System Manager"
+      ]
+    }
   ],
   "hooks": [],
   "client": {
     "brand": "warm",
     "domain": "accounts",
-    "home": { "route": "/app/VN%20Accounting%20Period", "doctype": "VN Accounting Period" },
-    "dimensions": ["company", "branch", "warehouse", "fiscal_year"],
+    "home": {
+      "route": "/app/VN%20Accounting%20Period",
+      "doctype": "VN Accounting Period"
+    },
+    "dimensions": [
+      "company",
+      "branch",
+      "warehouse",
+      "fiscal_year"
+    ],
     "catalog_mode": "hybrid"
   }
 }

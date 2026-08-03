@@ -13,6 +13,11 @@ import {
   SubscriptionController,
 } from "./enterprise-controllers.js";
 import {
+  FinanceBudgetCommitmentController,
+  FinanceBudgetController,
+  FinanceBudgetRevisionController,
+} from "./finance-budget.js";
+import {
   EmployeeOnboardingController, EmployeePromotionController, EmployeeSeparationController,
   EmployeeTransferController, EmploymentContractController, InterviewController, JobApplicantController,
   JobOfferController, JobOpeningController,
@@ -97,6 +102,9 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new PosClosingEntryController())
     .register(new BankTransactionController())
     .register(new BankReconciliationController())
+    .register(new FinanceBudgetController())
+    .register(new FinanceBudgetRevisionController())
+    .register(new FinanceBudgetCommitmentController())
     .register(new HrmSalarySlipController())
     .register(new PayrollEntryController())
     .register(new SubscriptionController())

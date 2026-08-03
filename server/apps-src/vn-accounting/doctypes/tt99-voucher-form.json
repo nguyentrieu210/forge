@@ -1,0 +1,35 @@
+{
+  "name": "TT99 Voucher Form",
+  "module": "Accounts",
+  "is_submittable": true,
+  "autoname": "TT99-PHIEU-.YYYY.-#####",
+  "title_field": "label",
+  "sort_field": "effective_from",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "form_code", "label": "Mã mẫu", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "label", "label": "Tên mẫu chứng từ", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty (để trống = mẫu chuẩn)", "fieldtype": "Link", "options": "Company", "in_standard_filter": true },
+    { "fieldname": "legal_rule", "label": "Căn cứ pháp lý", "fieldtype": "Link", "options": "VN Legal Rule", "required": true },
+    { "fieldname": "document_type", "label": "Loại chứng từ", "fieldtype": "Link", "options": "DocType", "required": true, "in_list_view": true },
+    { "fieldname": "template_version", "label": "Phiên bản mẫu", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "template_json", "label": "Schema/bố cục mẫu", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "required_fields_json", "label": "Trường bắt buộc", "fieldtype": "Code", "required": true, "default": "[]" },
+    { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date" },
+    { "fieldname": "test_evidence_json", "label": "Bằng chứng kiểm thử", "fieldtype": "Code", "required": true, "default": "{}" },
+    { "fieldname": "approved_by", "label": "Người phê duyệt", "fieldtype": "Data", "read_only": true },
+    { "fieldname": "approved_at", "label": "Thời điểm phê duyệt", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "workflow_state", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Accounts User", "read": true, "report": true },
+    { "role": "General Accountant", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Chief Accountant", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true },
+    { "role": "Accounts Manager", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true },
+    { "role": "Internal Auditor", "read": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}

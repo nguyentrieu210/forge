@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-app-vn-accounting",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [
+    {
+      "binding": "PLATFORM",
+      "service": "cloudforge-gateway"
+    }
+  ]
+}
