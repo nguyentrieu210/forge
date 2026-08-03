@@ -116,10 +116,10 @@ New `server/packages/app-registry/src/app-upgrade-guard.ts`:
 
 - computes the materialized declaration set for DocTypes, Workflows, Print Formats, Fixtures and Custom Fields;
 - rejects app-id mismatch;
-- rejects any upgrade that drops one of those declarations;
+- rejects any sequential upgrade that drops one of those declarations;
 - requires an explicit reverse migration or uninstall contract before such removal can be accepted.
 
-`server/packages/app-registry/src/platform-aware-installer.ts` now loads the currently installed manifest for the same tenant/app and runs that fail-closed guard before delegating to the unchanged atomic core installer.
+`server/packages/app-registry/src/platform-aware-installer.ts` now loads the currently installed manifest for the same tenant/app and runs that guard before delegating to the unchanged atomic core installer.
 
 Why here: the package barrel exports the installer through `input-table-installer -> platform-aware-installer -> core installer`. This keeps the core D1 transaction unchanged while protecting the canonical public app-install path.
 
@@ -140,14 +140,24 @@ Presentation-only changes remain allowed because nav/reports/charts/client data 
 
 Existing `server/tests/app-revision-history.test.mjs` provides complementary rollback evidence: materialized metadata drift makes rollback non-automatable.
 
+### Remaining concurrency gap
+
+The canonical core installer reads the current `installed_apps` row before building its D1 batch, then upserts `installed_apps` without an optimistic predicate on the previously observed content hash/revision. The new removal guard therefore closes ordinary/sequential orphaning but cannot honestly prove fail-closed behavior if **two upgrades of the same tenant/app race** between preflight and commit.
+
+`app-revision-store.rollbackPresentation()` already demonstrates the desired pattern: optimistic update against the previously observed active content plus failure when the row changed.
+
+`DR-RC05-APP-01 -> app-registry/kernel shared write authority`: add storage-level OCC/serialization for app install/upgrade (`installed_apps` expected content/revision or equivalent authoritative lock), then add a two-writer regression. Do not solve this with a browser/admin UI lock.
+
+This is recorded as a blocker to RC/Hardened app-upgrade maturity, not as a reason to discard the independent sequential hardening in this PR.
+
 ### App lifecycle maturity recommendation
 
 | Capability | Recommendation | Boundary |
 |---|---|---|
 | `B02-002` App dependency | Wired | install-time dependency/version enforcement |
 | `B02-003` App version | Wired | version/hash/revision history + downgrade guard |
-| `B02-004` / `T01-012` App install per tenant | Wired | tenant-scoped atomic install path |
-| `B02-005` / `T01-013` App upgrade per tenant | Wired, strengthened | atomic upgrade + fail-closed removal guard; exact test run still pending |
+| `B02-004` / `T01-012` App install per tenant | Wired | tenant-scoped atomic install path; same-app concurrent install/upgrade OCC remains DR-RC05-APP-01 |
+| `B02-005` / `T01-013` App upgrade per tenant | Wired, strengthened | sequential removal guard; exact test run + concurrent OCC still pending |
 | `B02-006` / `T01-014` App rollback | Foundation/Wired-narrow | presentation rollback wired; general materialized rollback remains blocked without reverse migration |
 
 No claim is made that Forge has a generic reversible schema/data migration language. It does not.
@@ -215,11 +225,13 @@ Repository canonical server commands from `server/package.json` include:
 - production tenant routing, production migration, secret/DNS change, destructive data operation: **NOT RUN by design**;
 - merge/deploy: **NOT RUN by design**.
 
+During execution, `main` advanced by one unrelated UI-only commit touching `client/packages/ui/src/styles.css`. Exact compare showed no overlap with RC-05 files. The branch was not polluted with that unrelated UI commit solely to manufacture an `behind=0` counter.
+
 PR CI/status is the next executable evidence source. A green PR does not by itself promote these CRITICAL capabilities to Hardened; production evidence is still separately required by the Skill.
 
 ## 8. Changed files
 
-- `server/packages/app-registry/src/app-upgrade-guard.ts` — new fail-closed upgrade-removal invariant.
+- `server/packages/app-registry/src/app-upgrade-guard.ts` — new sequential fail-closed upgrade-removal invariant.
 - `server/packages/app-registry/src/platform-aware-installer.ts` — wire guard into canonical tenant app installer.
 - `server/tests/app-upgrade-materialization-guard.test.mjs` — targeted regression.
 - `docs/FORGE_OFFLINE_SYNC_CONTRACT.md` — offline read/write/sync security + OCC contract.
