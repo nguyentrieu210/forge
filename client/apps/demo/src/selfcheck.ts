@@ -1315,7 +1315,8 @@ check("DashboardView render: number card + chart", () => {
   assert.ok(html.includes("Đơn tháng này"));
   assert.ok(html.includes("128"));
   assert.ok(html.includes("Doanh thu"));
-  assert.ok(html.includes("recharts-responsive-container") || html.includes("recharts"), "chart Recharts mount");
+  assert.ok(html.includes('aria-label="Doanh thu"'), "Forge chart surface mount");
+  assert.ok(!html.includes("recharts"), "Dashboard không còn sở hữu Recharts trực tiếp");
 });
 
 // 39. CalendarView render: lưới tháng + event đúng ngày.
