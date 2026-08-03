@@ -16,40 +16,67 @@ jobs:
         with:
           ref: agent/ent-01-finance-vn-r2
           fetch-depth: 0
-      - name: Replay audited WS01 net diff onto exact main
+      - name: Replay reviewed WS01 PR scope onto exact main
         shell: bash
         run: |
           git fetch origin main agent/ent-01-finance-vn
-          base="$(git merge-base origin/main origin/agent/ent-01-finance-vn)"
-          echo "WS01_OLD_MERGE_BASE=$base"
-          mapfile -t rows < <(git diff --name-status "$base" origin/agent/ent-01-finance-vn)
-          for row in "${rows[@]}"; do
-            status="${row%%$'\t'*}"
-            rest="${row#*$'\t'}"
-            # Temporary CI/process files from the stale branch are not product scope.
-            case "$rest" in .github/workflows/*) continue;; esac
-            path="$rest"
-            if [[ "$status" == R* ]]; then
-              old="${rest%%$'\t'*}"
-              path="${rest#*$'\t'}"
-              rm -f "$old"
-            fi
-            if [[ "$status" == M* ]]; then
-              if ! git diff --quiet "$base" origin/main -- "$path"; then
-                case "$path" in
-                  server/package.json|server/packages/clouderp-erpnext/src/registry.ts)
-                    echo "AUDITED_SHARED_OVERLAP $path" ;;
-                  *)
-                    echo "UNRECONCILED_SHARED_OVERLAP $path"
-                    git diff --stat "$base" origin/main -- "$path"
-                    exit 1 ;;
-                esac
-              fi
-            fi
-            if [[ "$status" == D* ]]; then
-              rm -f "$path"
-              continue
-            fi
+          # Replay only the reviewed product/test files from stale PR #312. Deriving a diff from
+          # polluted branch ancestry also replays unrelated main-era files, which is exactly how
+          # innocent e2e stock guards got dragged into a finance rebuild on the previous attempt.
+          paths=(
+            docs/agents/workstreams/WS01-finance-vn.md
+            docs/agents/workstreams/WS01_VALIDATION_EVIDENCE.md
+            server/apps-src/vn-accounting-worker/src/bank-match.ts
+            server/apps-src/vn-accounting-worker/src/evaluator.ts
+            server/apps-src/vn-accounting-worker/src/index.ts
+            server/apps-src/vn-accounting-worker/src/vat-dataset.ts
+            server/apps-src/vn-accounting-worker/src/vat-service.ts
+            server/apps-src/vn-accounting-worker/wrangler.jsonc
+            server/apps-src/vn-accounting/app.json
+            server/apps-src/vn-accounting/doctypes/tt99-account-map.json
+            server/apps-src/vn-accounting/doctypes/tt99-book-form.json
+            server/apps-src/vn-accounting/doctypes/tt99-financial-statement-template.json
+            server/apps-src/vn-accounting/doctypes/tt99-voucher-form.json
+            server/apps-src/vn-accounting/doctypes/vn-accounting-policy.json
+            server/apps-src/vn-accounting/doctypes/vn-legal-rule.json
+            server/apps-src/vn-accounting/doctypes/vn-tax-ruleset.json
+            server/apps-src/vn-accounting/roles.json
+            server/apps-src/vn-accounting/workflows/tt99-account-map.json
+            server/apps-src/vn-accounting/workflows/tt99-book-form.json
+            server/apps-src/vn-accounting/workflows/tt99-financial-statement-template.json
+            server/apps-src/vn-accounting/workflows/tt99-voucher-form.json
+            server/apps-src/vn-accounting/workflows/vn-legal-rule.json
+            server/apps-src/vn-accounting/workflows/vn-tax-ruleset.json
+            server/migrations/tenant/0048_vn_accounting_statutory_foundation.sql
+            server/migrations/tenant/0049_vn_accounting_statutory_registry_integrity.sql
+            server/migrations/tenant/0050_vn_einvoice_compliance_evidence.sql
+            server/migrations/tenant/0051_vn_tax_ruleset_dsl_integrity.sql
+            server/migrations/tenant/0052_finance_budget_commitment.sql
+            server/migrations/tenant/0053_finance_budget_submission_closure.sql
+            server/migrations/tenant/0054_finance_budget_permission_alignment.sql
+            server/migrations/tenant/0055_vn_vat_dataset_mapping.sql
+            server/migrations/tenant/0056_vn_accounting_policy_integrity.sql
+            server/migrations/tenant/0057_tt99_account_company_policy_binding.sql
+            server/package.json
+            server/packages/clouderp-erpnext/src/finance-budget.ts
+            server/packages/clouderp-erpnext/src/registry.ts
+            server/scripts/test-finance-budget-migration.py
+            server/scripts/test-vn-accounting-policy-integrity.py
+            server/scripts/test-vn-accounting-statutory-foundation.py
+            server/scripts/test-vn-accounting-statutory-registry.py
+            server/scripts/test-vn-einvoice-compliance.py
+            server/scripts/test-vn-vat-dataset-migration.py
+            server/tests/finance-budget.test.mjs
+            server/tests/organization-hrms-vn-accounting.test.mjs
+            server/tests/vn-accounting-policy.test.mjs
+            server/tests/vn-accounting-statutory-pack.test.mjs
+            server/tests/vn-accounting-worker.test.mjs
+            server/tests/vn-bank-match.test.mjs
+            server/tests/vn-tax-evaluator.test.mjs
+            server/tests/vn-vat-dataset.test.mjs
+            server/tests/vn-vat-service.test.mjs
+          )
+          for path in "${paths[@]}"; do
             mkdir -p "$(dirname "$path")"
             git show "origin/agent/ent-01-finance-vn:$path" > "$path"
           done
@@ -79,7 +106,6 @@ jobs:
               if newp.exists(): raise SystemExit(f'migration collision: {new}')
               oldp.rename(newp)
 
-          # Replace exact filename references without cascading renumber substitutions.
           token_map = {old: f'__WS01_MIG_{i}__' for i, old in enumerate(mapping)}
           roots = [Path('server'), Path('docs/agents/workstreams')]
           for root in roots:
@@ -92,16 +118,12 @@ jobs:
               for old, token in token_map.items(): updated = updated.replace(token, mapping[old])
               if updated != text: path.write_text(updated)
 
-          # VAT account mapping: json_type() returns NULL for a missing key. Missing arrays must
-          # hit INVALID, not fall through to the later EMPTY guard.
           vat = mig / '0063_vn_vat_dataset_mapping.sql'
           text = vat.read_text()
           text = text.replace("json_type(data_json,'$.input_vat') <> 'array'", "COALESCE(json_type(data_json,'$.input_vat'),'') <> 'array'")
           text = text.replace("json_type(data_json,'$.output_vat') <> 'array'", "COALESCE(json_type(data_json,'$.output_vat'),'') <> 'array'")
           vat.write_text(text)
 
-          # Shared action runtime cannot render Code fields. This is user input JSON, not a code
-          # editor authority, so Text keeps the same backend contract without adding a UI fork.
           app_path = Path('server/apps-src/vn-accounting/app.json')
           app = json.loads(app_path.read_text())
           action = next((a for a in app.get('actions', []) if a.get('name') == 'tax-evaluate'), None)
@@ -134,7 +156,7 @@ jobs:
         run: pnpm --filter cloudforge run typecheck:workers
       - name: Persist exact validated WS01 branch
         run: |
-          git rm .github/workflows/ws01-approved-rebuild-temp.yml
+          git rm -f .github/workflows/ws01-approved-rebuild-temp.yml .github/workflows/ws01-debug-temp.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
