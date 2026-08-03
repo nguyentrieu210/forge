@@ -2,65 +2,36 @@
 
 Ngày cập nhật: **2026-08-03**.
 
-Đây là backlog hiện tại của Forge. AI tự đánh giá cách thực hiện dựa trên code và trạng thái GitHub tại thời điểm làm.
+## Trạng thái hiện tại
 
-## Forge 0.2.0 parallel execution
+**Không có task delivery đang active và không có pull request đang mở.**
 
-- Canonical board: `docs/agents/AGENT_BOARD.md`.
-- Protocol: `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`.
-- 18 branch `agent/ent-00-*` -> `agent/ent-17-*` là workstream ownership mới.
-- Trước implementation, mỗi branch phải được đối chiếu/rebase lên exact current `main` nếu còn dựa snapshot cũ, nhưng phải giữ workstream handoff file của chính nó.
-- Mỗi agent phải audit substantive legacy PR trong scope và phân loại `reuse / cherry-pick / superseded / reject` để không vừa mất code tốt vừa kéo nguyên branch stale vào main.
-- Merge theo dependency order trong board; shared hotspots không có hai owner cùng lúc.
+Theo quyết định repo reset ngày 2026-08-03, toàn bộ PR còn mở đã được đóng. Các branch/PR/workstream cũ chỉ còn vai trò lịch sử và nguồn tham khảo kỹ thuật; chúng **không phải backlog tự động**.
 
-## VN Accounting / Finance — WS01
+## Quy tắc cho công việc mới
 
-- Audit canonical work hiện có quanh `fix/vn-accounting-period-integrity-20260803-r8` và các substantive accounting PR còn mở trước khi viết mới.
-- Migration mới phải kiểm exact `main`; không dùng lại số migration đã có.
-- Regression phải bao phủ Hard/Soft lock, cancel, scope move, tenant isolation, period overlap/range và expanded posting doctypes.
-- Finance/stock/payroll/legal path là CRITICAL: cần exact tests, correction/reversal, reconciliation, permission/tenant boundary và migration replay trước merge.
-- Không production migration/deploy khi chưa có verification đầy đủ và authorization rõ.
+Khi user mở một yêu cầu mới:
 
-## Frontend/runtime — WS14
+1. đọc exact current `main` và tài liệu canonical hiện tại;
+2. audit code, migration, test và production evidence liên quan;
+3. tạo branch mới từ current `main` cho scope mới;
+4. nếu lịch sử có code hữu ích thì phân loại `reuse / cherry-pick / superseded / reject` bằng exact diff;
+5. không reopen PR cũ hoặc tiếp tục branch cũ như canonical trừ khi user yêu cầu rõ;
+6. shared contract/backend/migration/ops vẫn theo release gate hiện hành; UI-only theo policy UI hiện hành.
 
-- Independent UI slices đã merge: mobile shell/a11y/offline truthfulness (`#315`), installable PWA foundation (`#325`), touch-friendly extension child grid (`#328`), stable pull-to-refresh listeners (`#329`), dynamic mobile viewport + drawer focus entry (`#331`).
-- Xác nhận một UI push thực tế đi hết build -> stage -> Wrangler deploy -> `/health` -> `/release.json` đúng SHA/hash; hiện GitHub-connector writes chưa cho run/status quan sát được và container DNS không resolve production host.
-- Sau khi có browser/build lane: chạy client lint/typecheck/runtime build + targeted screenshots/E2E cho 5 slice rồi mới promote `U01-001/002` từ Wired.
-- Base `ChildGrid.tsx` còn table-first trên mobile nhưng chứa formula/pricing/item-default/OCR paths; chỉ refactor touch renderer khi full checkout/build/E2E chạy được, không thay mù file gần 2.000 dòng qua Contents API.
-- Page/Dashboard fallback chờ WS09/WS00 chốt compatibility contract hoặc mapping sang AppScreen/Overview; WS14 không tạo client-only schema.
-- Offline read/write/background sync/conflict (`U01-003..007`) chờ WS00/WS11/WS12 chốt tenant/session/cache/OCC/release-freshness contract.
-- Domain-specific child-grid profiles trong shared views cần WS09 + WS17/domain owners đưa về metadata trước khi shared renderer được coi là generic hoàn toàn.
-- Runtime barrel/chunk split chỉ tối ưu sau khi có build/chunk measurement; PDF heavy libs đã dynamic import đúng điểm tải.
-- Shared React runtime/core/views/shell thuộc WS14; domain agent không tự sửa shared renderer nếu có thể giải bằng metadata.
+## Historical capability references
 
-## HCM / payroll — WS06
+Các chủ đề từng xuất hiện trong backlog cũ như VN Accounting hardening, statutory payroll evaluator, Stock Reconciliation Bulk, BOM Bulk, AppAction input tables, Daily Detailed Ledger, Matrix follow-up, WMS, Manufacturing/Plastic ERP, offline PWA hay Batch Print/QR **không còn là active queue**.
 
-- Audit HRM operational 1.5 và substantive statutory-payroll PR lịch sử.
-- `VN Payroll Rule.formula_json` hiện là versioned/audited evidence trong merged baseline; statutory automation phải có formula schema explicit, fixed-point/rounding semantics, effective-date/version selection, official legal source, approval lifecycle và regression theo từng version pháp lý.
+Chúng chỉ được khởi động lại khi có yêu cầu mới. Khi đó phải đánh giá lại từ current `main`, vì nhiều capability đã thay đổi hoặc đã được hội tụ sau khi các PR cũ được tạo.
 
-## Inventory/WMS — WS04
+## Canonical references
 
-- Stock Reconciliation Bulk Transaction: audit PR lịch sử trước khi viết lại.
-- Backdated/repost/valuation/reconciliation phải giữ một stock ledger/source of truth.
-- WMS core tiếp tục từ inventory nền: bin/putaway/picking/cycle count/mobile scanner theo capability map.
+- Trạng thái repo: `CURRENT_STATUS.md`.
+- Handoff facts/invariants: `AI_HANDOFF.md`.
+- North Star: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
+- Capability map: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`.
+- Historical workstream board: `docs/agents/AGENT_BOARD.md`.
+- Historical PR archive: `docs/agents/LEGACY_PR_INBOX.md`.
 
-## Manufacturing/QMS — WS05
-
-- BOM parent + child/version Bulk Transaction.
-- Audit manufacturing-costing/Plastic ERP PR lịch sử rồi quyết định reuse/cherry-pick/supersede.
-- Không tạo costing/stock ledger cạnh tranh với canonical ledger.
-
-## BPM / App Factory — WS09
-
-- First-class AppAction input-table contract.
-- Batch action primitives dùng chung cho Stock/BOM/other apps khi pattern lặp lại.
-- Shared app-registry/compiler/builder contract chỉ WS09 sở hữu.
-
-## Cross-domain priorities
-
-- P1 Daily Detailed Ledger exact-state review: WS01 + WS08 + WS12.
-- End-to-end closure `Sales -> Production -> Inventory -> Delivery -> Finance -> Daily Ledger -> Warranty`: coordinator chia dependency qua WS02/WS05/WS04/WS01/WS07/WS17.
-- Migration/onboarding/tooling: WS13.
-- Security/IAM/SaaS: WS11.
-- SRE/release/backup/DR: WS12.
-- Alumdoor reference vertical: WS17, không fork Forge core.
+Không tạo backlog mới từ suy đoán của tài liệu lịch sử. Chỉ task mới do user mở hoặc gap mới được audit từ current code mới trở thành công việc active.
