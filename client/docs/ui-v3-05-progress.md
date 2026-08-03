@@ -2,7 +2,9 @@
 
 Date: 2026-08-04
 Work branch: `ui/v3-05-charts-command-center`
-Current-main observed during final convergence check: `bbf79b541ede38222544774ec8b5393f8e1bb1fe`
+Delivery branch: `ui/v3-05-charts-command-center-delivery`
+Delivery base: `main@fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`
+Delivery PR: `#505`
 
 ## Implemented
 
@@ -74,13 +76,17 @@ These are Forge-owned CSS/SVG/React primitives with no DataV runtime dependency.
 - V3-05 does not change server, schema, migration, permission, tenant or business-authority code.
 - command-center motion uses reduced-motion fallbacks.
 - direct Recharts ownership in the two audited dashboard chart surfaces has been removed from implementation code.
+- the clean delivery replay was compared against `main` and contains exactly 24 changed files, all under `client/**`.
+- current `main` versions of `client/packages/views/package.json`, `DashboardView.tsx`, `OverviewChartCard.tsx` and the views barrel were checked before replay; no concurrent V3-02/V3-04/V3-06 drift was overwritten.
 
 ## Validation status
 
 Not yet claimed green.
 
-A temporary branch-only GitHub Actions workflow was attempted and removed after confirming it could not provide PR validation: pull-request workflows are loaded from the base/default branch, while this workflow existed only on the feature branch. The available execution container also cannot retrieve the ECharts package from the required registry/GitHub network path.
+A temporary branch-only GitHub Actions workflow was attempted and removed after confirming it could not provide PR validation: pull-request workflows are loaded from the base/default branch, while this workflow existed only on the feature branch. PR `#505` currently has no generic pull-request workflow run on either its head SHA or generated merge-ref SHA.
 
-Therefore no fabricated `typecheck passed`, `tests passed` or `production deployed` claim is recorded here.
+The available execution container also cannot retrieve the ECharts package from the required registry/GitHub network path.
+
+Therefore no fabricated `typecheck passed`, `tests passed`, `production deployed` or `release converged` claim is recorded here.
 
 The remaining blocker and exact completion commands are recorded in `client/docs/ui-v3-05-dependency-request.md`.
