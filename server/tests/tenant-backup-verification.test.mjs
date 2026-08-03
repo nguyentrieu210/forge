@@ -6,6 +6,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import {
+  allowedTenantIdsForBackupTable,
   assertRestoreVerification,
   inspectTenantBackup,
 } from "../scripts/lib/tenant-backup-verification.mjs";
@@ -140,6 +141,21 @@ test("restore verification fails on corrupt, foreign-key-invalid, or empty resto
       }),
     /no application tables/,
   );
+});
+
+test("backup and remote restore use the same tenant scope policy", () => {
+  assert.deepEqual(allowedTenantIdsForBackupTable({ table: "documents", tenant: "alu" }), ["alu"]);
+  assert.deepEqual(allowedTenantIdsForBackupTable({ table: "installed_apps", tenant: "alu" }), ["alu"]);
+  assert.deepEqual(allowedTenantIdsForBackupTable({ table: "doctype_definitions", tenant: "alu" }), [
+    "alu",
+    "demo",
+    "__standard__",
+  ]);
+
+  const serverRoot = path.resolve(new URL("..", import.meta.url).pathname);
+  const drillSource = readFileSync(path.join(serverRoot, "scripts", "restore-tenant-drill.mjs"), "utf8");
+  assert.match(drillSource, /allowedTenantIdsForBackupTable/);
+  assert.match(drillSource, /tenant_id NOT IN/);
 });
 
 test("offline verifier replays a backup and writes immutable evidence", () => {

@@ -9,6 +9,7 @@ import process from "node:process";
 import { performance } from "node:perf_hooks";
 import { rewriteOversizedInstalledAppRows } from "./lib/d1-backup-import.mjs";
 import {
+  allowedTenantIdsForBackupTable,
   assertRestoreVerification,
   inspectTenantBackup,
 } from "./lib/tenant-backup-verification.mjs";
@@ -114,9 +115,11 @@ try {
     if (!present.has(table)) continue;
     const columns = d1Query(binding, `PRAGMA table_info("${table}")`);
     if (!columns.some((column) => column.name === "tenant_id")) continue;
+    const allowedTenantIds = allowedTenantIdsForBackupTable({ table, tenant });
+    const allowedSql = allowedTenantIds.map((id) => `'${quote(id)}'`).join(", ");
     const row = d1Query(
       binding,
-      `SELECT COUNT(*) AS total FROM "${table}" WHERE tenant_id IS NULL OR tenant_id <> '${quote(tenant)}'`,
+      `SELECT COUNT(*) AS total FROM "${table}" WHERE tenant_id IS NULL OR tenant_id NOT IN (${allowedSql})`,
     )[0];
     tenantScopeViolations[table] = Number(row?.total ?? 0);
   }
