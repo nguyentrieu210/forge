@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:matrix-harness": "vite --config vite.matrix-e2e.config.ts",
     "typecheck": "tsc -b",
-    "build": "tsc -b && vite build"
+    "build": "tsc -b && vite build",
+    "build:matrix-harness": "vite build --config vite.matrix-e2e.config.ts"
   },
   "dependencies": {
     "@metaforge/adapter-frappe": "workspace:*",
