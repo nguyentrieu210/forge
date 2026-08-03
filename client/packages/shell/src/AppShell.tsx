@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { ThemeMode } from "./theme.js";
 import type { BrandMode } from "./brand.js";
 import { ShellV3Chrome } from "./ShellV3Chrome.js";
+import { useWorkspaceTabState } from "./workspace-tab-state.js";
 
 export interface NavItem {
   key: string;
@@ -115,9 +116,26 @@ export interface AppShellProps {
 }
 
 /**
- * V3 shell entry point. Kept deliberately thin so app chrome can evolve without turning
- * this public contract into another monolithic renderer.
+ * V3 shell entry point. Route-level tabs are local presentation history by default.
+ * Apps with richer record/dirty state can replace the whole tab contract without the shell
+ * becoming a second router or document authority.
  */
 export function AppShell(props: AppShellProps) {
-  return <ShellV3Chrome {...props} />;
+  const autoTabs = useWorkspaceTabState(props.nav, props.activeKey, props.onNavigate);
+  if (props.workspaceTabs !== undefined) return <ShellV3Chrome {...props} />;
+
+  return (
+    <ShellV3Chrome
+      {...props}
+      workspaceTabs={autoTabs.tabs}
+      workspaceActiveKey={props.activeKey}
+      onWorkspaceTabNavigate={autoTabs.navigate}
+      onWorkspaceTabClose={autoTabs.close}
+      onWorkspaceTabPin={autoTabs.pin}
+      onWorkspaceTabCloseOthers={autoTabs.closeOthers}
+      onWorkspaceTabCloseRight={autoTabs.closeRight}
+      onWorkspaceTabRefresh={autoTabs.refresh}
+      onWorkspaceTabReorder={autoTabs.reorder}
+    />
+  );
 }
