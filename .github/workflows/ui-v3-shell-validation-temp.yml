@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - "client/apps/runtime/**"
       - "client/packages/shell/**"
       - "client/scripts/check-app-shell-mobile.mjs"
       - ".github/workflows/ui-v3-shell-validation-temp.yml"
@@ -38,6 +39,8 @@ jobs:
         run: pnpm --filter @metaforge/shell run typecheck
       - name: Shell build
         run: pnpm --filter @metaforge/shell run build
+      - name: Runtime production build
+        run: pnpm --filter runtime... run build
       - name: Shell mobile regression
         run: node client/scripts/check-app-shell-mobile.mjs
       - name: Workspace navigation selfcheck
