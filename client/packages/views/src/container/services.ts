@@ -4,7 +4,7 @@
  * hiện tại thành lựa chọn duy nhất vì các chứng từ chuyển kho cần chọn kho đích khác.
  */
 import type { FrappeAdapter } from "@metaforge/adapter-frappe";
-import type { BusinessContextPolicy, BusinessContextSelection } from "@metaforge/core";
+import type { BusinessContextPolicy, BusinessContextSelection, DocTypeMeta } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
 
 export function adapterServices(
@@ -15,6 +15,11 @@ export function adapterServices(
   return {
     searchLink: async (doctype, txt, opts) => {
       const contextFilters: Record<string, unknown> = {};
+      let targetMeta: DocTypeMeta | undefined;
+      const loadTargetMeta = async () => {
+        if (!targetMeta) targetMeta = await adapter.getMeta(doctype);
+        return targetMeta;
+      };
       /**
        * Áp lọc `company` khi DocType đích THỰC SỰ có field đó — hỏi metadata, không đoán
        * theo TÊN.
@@ -31,20 +36,34 @@ export function adapterServices(
        */
       if (context.company) {
         try {
-          const target = await adapter.getMeta(doctype);
+          const target = await loadTargetMeta();
           if (target.fields?.some((field) => field.fieldname === "company")) contextFilters.company = context.company;
         } catch {
           // Không đọc được metadata thì KHÔNG lọc: một ô Link trả về rộng hơn cần thiết vẫn
           // dùng được, còn lọc nhầm thì nó rỗng vĩnh viễn.
         }
       }
-      if (doctype === "Price List") {
-        const parentPolicy = opts?.referenceDoctype ? policies?.[opts.referenceDoctype] : undefined;
-        const supportsSelling = parentPolicy?.supported.includes("selling_price_list");
-        const supportsBuying = parentPolicy?.supported.includes("buying_price_list");
-        if (supportsSelling && !supportsBuying) contextFilters.selling = 1;
-        if (supportsBuying && !supportsSelling) contextFilters.buying = 1;
+
+      /**
+       * Buying/selling scope is also capability-driven. The parent policy says which
+       * business-context dimensions it supports; the TARGET metadata says whether it has
+       * matching `selling` / `buying` flags. No DocType name is authoritative here.
+       */
+      const parentPolicy = opts?.referenceDoctype ? policies?.[opts.referenceDoctype] : undefined;
+      const supportsSelling = parentPolicy?.supported.includes("selling_price_list") ?? false;
+      const supportsBuying = parentPolicy?.supported.includes("buying_price_list") ?? false;
+      if (supportsSelling !== supportsBuying) {
+        try {
+          const target = await loadTargetMeta();
+          const fields = new Set(target.fields?.map((field) => field.fieldname) ?? []);
+          if (supportsSelling && fields.has("selling")) contextFilters.selling = 1;
+          if (supportsBuying && fields.has("buying")) contextFilters.buying = 1;
+        } catch {
+          // Same fail-open behavior as the company filter: never make a Link unusable just
+          // because metadata could not be loaded for an optional narrowing hint.
+        }
       }
+
       const existing = opts?.filters;
       const filters = existing && !Array.isArray(existing)
         ? { ...contextFilters, ...existing }
