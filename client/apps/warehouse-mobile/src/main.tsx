@@ -18,6 +18,7 @@ import {
   Settings,
   Smartphone,
   UserRound,
+  WalletCards,
   Warehouse,
   WifiOff,
 } from "lucide-react";
@@ -52,11 +53,12 @@ import {
   Toaster,
   toast,
 } from "@metaforge/ui";
+import { PurchaseFundingScreen } from "./PurchaseFundingScreen.js";
 import "./styles.css";
 
 const adapter = new FrappeAdapterImpl({});
 
-type MobileTab = "home" | "actions" | "stock" | "account";
+type MobileTab = "home" | "actions" | "funding" | "stock" | "account";
 type Operation = "receipt" | "issue" | "transfer" | "count";
 
 interface WarehouseHistoryState {
@@ -159,7 +161,8 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const requestedAction = params.get("action") as Operation | null;
   const requestedTab = params.get("tab") as MobileTab | null;
-  const [tab, setTab] = useState<MobileTab>(requestedTab && ["home", "actions", "stock", "account"].includes(requestedTab) ? requestedTab : "home");
+  const validTabs: MobileTab[] = ["home", "actions", "funding", "stock", "account"];
+  const [tab, setTab] = useState<MobileTab>(requestedTab && validTabs.includes(requestedTab) ? requestedTab : "home");
   const [operation, setOperation] = useState<Operation | null>(requestedAction && requestedAction in OPERATION_META ? requestedAction : null);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
@@ -188,7 +191,7 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
       const url = new URL(window.location.href);
       const nextTab = url.searchParams.get("tab") as MobileTab | null;
       const nextOperation = url.searchParams.get("action") as Operation | null;
-      setTab(nextTab && ["home", "actions", "stock", "account"].includes(nextTab) ? nextTab : "home");
+      setTab(nextTab && validTabs.includes(nextTab) ? nextTab : "home");
       setOperation(nextOperation && nextOperation in OPERATION_META ? nextOperation : null);
       window.scrollTo({ top: 0, behavior: "auto" });
     };
@@ -241,8 +244,12 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const pageTitle = operation ? OPERATION_META[operation].label : tab === "stock" ? "Tra tồn kho" : tab === "account" ? "Tài khoản" : "Alumdoor Kho";
-  const pageSubtitle = operation ? "Tạo phiếu nghiệp vụ" : "Ứng dụng kho trên điện thoại";
+  const pageTitle = operation
+    ? OPERATION_META[operation].label
+    : tab === "stock" ? "Tra tồn kho"
+      : tab === "funding" ? "Đề xuất & quỹ"
+        : tab === "account" ? "Tài khoản" : "Alumdoor Kho";
+  const pageSubtitle = operation ? "Tạo phiếu nghiệp vụ" : tab === "funding" ? "Mua hàng và thu chi nội bộ" : "Ứng dụng kho trên điện thoại";
 
   return (
     <>
@@ -273,6 +280,8 @@ function WarehouseMobileApp({ boot, logout }: { boot: MetaForgeBootDTO; logout: 
           <HomeScreen fullName={boot.full_name} pending={queue.pending.length} onOpen={openOperation} onAll={() => changeTab("actions")} onStock={() => changeTab("stock")} />
         ) : tab === "actions" ? (
           <OperationScreen onOpen={openOperation} />
+        ) : tab === "funding" ? (
+          <PurchaseFundingScreen adapter={adapter} boot={boot} />
         ) : tab === "stock" ? (
           <StockLookup />
         ) : (
@@ -630,11 +639,12 @@ function BottomNavigation({ active, pending, onChange }: { active: MobileTab; pe
   const items: Array<{ key: MobileTab; label: string; icon: ReactNode }> = [
     { key: "home", label: "Trang chủ", icon: <Home /> },
     { key: "actions", label: "Nghiệp vụ", icon: <ListChecks /> },
+    { key: "funding", label: "Đề xuất", icon: <WalletCards /> },
     { key: "stock", label: "Tra tồn", icon: <PackageSearch /> },
     { key: "account", label: "Tôi", icon: <UserRound /> },
   ];
   return (
-    <nav className="forge-mobile-bottom grid grid-cols-4 gap-1" aria-label="Điều hướng app kho">
+    <nav className="forge-mobile-bottom grid grid-cols-5 gap-1" aria-label="Điều hướng app kho">
       {items.map((item) => (
         <Button key={item.key} variant="ghost" className={`relative h-14 flex-col gap-1 rounded-xl px-1 text-[10px] ${active === item.key ? "bg-primary/10 text-primary" : "text-muted-foreground"}`} onClick={() => onChange(item.key)}>
           <span className="[&_svg]:size-5">{item.icon}</span>
