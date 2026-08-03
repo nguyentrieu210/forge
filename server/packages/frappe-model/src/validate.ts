@@ -2,6 +2,8 @@ import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { DocFieldMeta, DocPermissionMeta, DocTypeKind, DocTypeMeta, DocTypeView, DocTypeViewPolicy, MetaFieldType, WorkflowMeta } from "./types.js";
 import { assertFieldConditionSupported } from "./field-condition.js";
+import { parseBulkViewPolicy } from "./bulk-validate.js";
+import { parseMatrixViewPolicy } from "./matrix-validate.js";
 
 /**
  * Every fieldtype this platform will accept in a DocType.
@@ -97,6 +99,29 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
   if (sortField && !["modified_at", "created_at", "name", "docstatus", "status"].includes(sortField) && !fields.some((field) => field.fieldname === sortField)) {
     throw errors.validation(`Unknown sort field: ${sortField}`);
   }
+
+  const isChild = bool(input.is_child, false);
+  const isTree = bool(input.is_tree, false);
+  const isSingle = bool(input.is_single, false);
+  const isSubmittable = bool(input.is_submittable, false);
+  let viewPolicy: DocTypeViewPolicy | undefined;
+  if (input.viewPolicy !== undefined) {
+    viewPolicy = parseViewPolicy(input.viewPolicy, fields);
+    const rawViewPolicy = input.viewPolicy as Record<string, unknown>;
+    if (rawViewPolicy.bulk !== undefined) viewPolicy.bulk = parseBulkViewPolicy(rawViewPolicy.bulk, fields);
+    if (rawViewPolicy.matrix !== undefined) {
+      viewPolicy.matrix = parseMatrixViewPolicy(rawViewPolicy.matrix, {
+        name,
+        kind,
+        isChild,
+        isTree,
+        isSingle,
+        isSubmittable,
+        fields,
+      });
+    }
+  }
+
   const meta: DocTypeMeta = {
     name,
     ...(kind ? { kind } : {}),
@@ -104,10 +129,10 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
     ...(input.label === undefined ? {} : { label: text(input.label, "label", 160) }),
     module: moduleName,
     custom: bool(input.custom, false),
-    is_child: bool(input.is_child, false),
-    is_tree: bool(input.is_tree, false),
-    is_single: bool(input.is_single, false),
-    is_submittable: bool(input.is_submittable, false),
+    is_child: isChild,
+    is_tree: isTree,
+    is_single: isSingle,
+    is_submittable: isSubmittable,
     track_changes: bool(input.track_changes, true),
     track_seen: bool(input.track_seen, false),
     allow_rename: bool(input.allow_rename, false),
@@ -118,7 +143,7 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
     sort_order: input.sort_order === "ASC" ? "ASC" : "DESC",
     ...(searchFields ? { search_fields: searchFields } : {}),
     fields: fields.map((field, index) => ({ ...field, idx: index + 1 })),
-    ...(input.viewPolicy === undefined ? {} : { viewPolicy: parseViewPolicy(input.viewPolicy, fields) }),
+    ...(viewPolicy ? { viewPolicy } : {}),
     permissions,
     revision,
   };

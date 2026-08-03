@@ -1,4 +1,5 @@
 import type { Fieldtype } from "./fieldtype.js";
+import type { MatrixViewPolicy } from "./matrix.js";
 
 /** DocField — tập thuộc tính adapter cần để render (subset của meta thật, passthrough phần còn lại). */
 export interface DocField {
@@ -99,12 +100,13 @@ export interface DocTypeView {
   [k: string]: unknown;
 }
 
-/** Same view contract parsed by the server; no `Record<string, unknown>` escape hatch at the boundary. */
+/** Same view contract parsed by the server; Matrix is first-class rather than a generic passthrough bag. */
 export interface DocTypeViewPolicy {
   list: DocTypeView;
   form: DocTypeView;
   quickEntry?: DocTypeView;
   bulk?: DocTypeView;
+  matrix?: MatrixViewPolicy;
   kanban?: DocTypeView;
   calendar?: DocTypeView;
   gantt?: DocTypeView;

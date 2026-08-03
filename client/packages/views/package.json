@@ -65,11 +65,16 @@
     "./screen": {
       "types": "./dist/screen/ScreenView.d.ts",
       "import": "./dist/screen/ScreenView.js"
+    },
+    "./matrix": {
+      "types": "./dist/matrix/index.d.ts",
+      "import": "./dist/matrix/index.js"
     }
   },
   "scripts": {
     "typecheck": "tsc -b",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "test:matrix": "tsc -b && node --test tests/matrix-model.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

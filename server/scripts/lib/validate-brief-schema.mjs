@@ -3,28 +3,34 @@ import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { prepareBriefInputTablesForSchema } from "./action-input-table-brief.mjs";
 import { validateBriefContextDimensions } from "./business-context-dimensions.mjs";
+import { validateBriefUiViewPolicies, withoutUiViewPolicies } from "./brief-ui-view-policy.mjs";
 
 let compiled;
 
-/** Validates the author-facing brief before semantic compilation. */
+/**
+ * Validates the author-facing brief before semantic compilation.
+ *
+ * The checked-in schema still predates two first-class authoring additions: AppAction
+ * inputTables and DocType Bulk/Matrix policies. Each extension is validated by its owned
+ * helper, stripped only from the AJV compatibility view, then validated deeply by the
+ * canonical server parser after compilation. All other unknown keys still fail closed.
+ */
 export async function validateBriefSchema(brief, schemaPath = path.resolve(import.meta.dirname, "../../briefs/brief.schema.json")) {
   if (!compiled) {
     const schema = JSON.parse(await readFile(schemaPath, "utf8"));
     compiled = new Ajv2020({ allErrors: true, strict: true }).compile(schema);
   }
 
-  // WS09 transition: the checked-in JSON Schema predates AppAction input tables and keeps
-  // `additionalProperties=false`. Strip exactly `actions[].inputTables` after validating it
-  // with the shared brief helper; all other unknown keys still reach AJV unchanged.
-  const { schemaBrief, errors: inputTableErrors } = prepareBriefInputTablesForSchema(brief);
+  const { schemaBrief: inputTableCompatibleBrief, errors: inputTableErrors } = prepareBriefInputTablesForSchema(brief);
+  const schemaBrief = withoutUiViewPolicies(inputTableCompatibleBrief);
   const dimensionErrors = validateBriefContextDimensions(brief);
+  const uiErrors = validateBriefUiViewPolicies(brief);
   const schemaErrors = compiled(schemaBrief)
     ? []
     : (compiled.errors ?? []).map((error) => {
       const at = error.instancePath || "/";
       return `${at} ${error.message ?? "is invalid"}`;
     });
-  // AJV may report the same unsupported dimension from the enum. Deduplicate exact messages
-  // while preserving semantic guard output, which names the runtime-supported choices.
-  return [...new Set([...inputTableErrors, ...dimensionErrors, ...schemaErrors])];
+
+  return [...new Set([...inputTableErrors, ...dimensionErrors, ...uiErrors, ...schemaErrors])];
 }

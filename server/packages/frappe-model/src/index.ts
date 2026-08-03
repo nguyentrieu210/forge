@@ -1,4 +1,6 @@
 export * from "./types.js";
+export * from "./matrix-types.js";
+export * from "./matrix-validate.js";
 export * from "./validate.js";
 export * from "./store.js";
 export * from "./list-definition.js";
