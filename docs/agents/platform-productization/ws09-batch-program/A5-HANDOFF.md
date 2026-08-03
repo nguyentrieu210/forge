@@ -63,17 +63,19 @@ Canonical A5 artifacts:
    - exact #542 workflow truth;
    - conservative capability maturity baseline.
 2. `A5-CONVERGENCE-CHECKPOINT-01.md`
-   - re-fetches live A1-A4 heads after parallel workers advanced;
-   - audits A2/A3/A4 exact ownership surfaces;
-   - records source-evidence status vs executable evidence;
+   - audits the first live A2/A3/A4 implementation heads;
    - identifies and routes a CRITICAL A2 ambiguous-retry durability blocker;
-   - records why final convergence candidate must not yet be constructed.
+   - records source evidence versus executable evidence.
+3. `A5-CONVERGENCE-CHECKPOINT-02.md`
+   - refreshes exact worker heads after A2/A3 completion/dependency commits;
+   - distinguishes implementation SHA from completion-doc SHA;
+   - confirms the A2 retry blocker remains open and final convergence is still unsafe.
 
-### Live worker truth at checkpoint
+### Live worker truth at latest checkpoint
 
 - A1 #548: `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7` — bootstrap only; canonical public contract absent.
-- A2 #549: `d564569a5350eab411e46d5a61167e352eb30151` — vertical-neutral runtime executor present; static ownership audit PASS; exact executable workflow evidence absent; ambiguous-success retry durability unresolved.
-- A3 #550: `d36981ed3bd53f16552dfff96783fc6bf520fa80` — Stock Reconciliation domain mapper + canonical-controller preview source evidence present; no direct stock authority added; shared commit integration pending A1/A2.
+- A2 #549: `2f5a699e4d2485659f4ecc45acfe866c165d6095` — vertical-neutral runtime executor present; static ownership audit PASS; A2 self-reports isolated strict compile + targeted harness evidence, but exact GitHub workflow evidence remains absent; A5 ambiguous-success retry durability blocker remains unresolved. A2 recommends Foundation only.
+- A3 #550: `0af59fc44f5bd235da7eebfb0aa7934fb02391a2` — completion-doc head; PR identifies implementation head `d36981ed3bd53f16552dfff96783fc6bf520fa80`. Stock Reconciliation domain mapper + canonical-controller preview source evidence present; no direct stock authority added; executable test remains NOT EXECUTED and shared commit integration awaits A1/A2.
 - A4 #551: `25af161e3b22258ab8061b7ef97988a6ac5ce5c9` — BOM lifecycle audit + focused duplicate/Active revision regression; correctly does not bind to provisional A2 before A1.
 
 ### Dependency routing performed
@@ -84,7 +86,7 @@ Canonical A5 artifacts:
 
 **A5-DR-02 -> A2 #549 + A1 #548**
 
-A2 acquires a replay claim, executes authoritative domain work, then finalizes the replay result. If domain commit succeeds but replay finalization fails or the process becomes ambiguous in that window, retry safety depends on per-item canonical idempotency that the current executor does not enforce/prove. A5 routed this directly to A2 and added the corresponding public-contract requirement to A1. A5 will not patch executor semantics from the convergence lane.
+A2 acquires a replay claim, executes authoritative domain work, then finalizes the replay result. If domain commit succeeds but replay finalization fails or the process becomes ambiguous in that window, retry safety depends on per-item canonical idempotency that the current executor does not enforce/prove. A5 routed this directly to A2 and added the corresponding public-contract requirement to A1. Latest A2 dependency docs also identify the absence of a multi-document DocumentKernel transaction scope; A2 correctly refuses to fake `atomic` semantics.
 
 ### Current convergence decision
 
@@ -94,9 +96,10 @@ This is evidence-based, not idle waiting. Final assembly is blocked by:
 
 1. A1 public contract absent;
 2. A2 ambiguous-retry durability not closed/proven;
-3. A3/A4 not yet wired through one accepted A1/A2 revision;
-4. no exact workflow run for current A2/A3/A4 heads;
-5. #542 native client gate remains red.
+3. authoritative multi-document atomic transaction scope absent or not explicitly removed from the public contract;
+4. A3/A4 not yet wired through one accepted A1/A2 revision;
+5. no exact GitHub workflow run for current A2/A3/A4 heads;
+6. #542 native client gate remains red.
 
 No capability promotion is justified yet.
 
@@ -117,15 +120,15 @@ No capability promotion is justified yet.
 ## Completion Record
 
 Baseline: `8259d9bac1d2098d9e66195cb22e14072cd75139`
-A1 head/PR: `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7` / #548 — bootstrap only at checkpoint
-A2 head/PR: `d564569a5350eab411e46d5a61167e352eb30151` / #549 — implementation present; A5-DR-02 open
-A3 head/PR: `d36981ed3bd53f16552dfff96783fc6bf520fa80` / #550 — domain mapper/preview source evidence present
+A1 head/PR: `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7` / #548 — bootstrap only
+A2 head/PR: `2f5a699e4d2485659f4ecc45acfe866c165d6095` / #549 — runtime implementation + dependency docs; A5-DR-02 open
+A3 head/PR: `0af59fc44f5bd235da7eebfb0aa7934fb02391a2` / #550 — completion-doc head; implementation `d36981ed3bd53f16552dfff96783fc6bf520fa80`
 A4 head/PR: `25af161e3b22258ab8061b7ef97988a6ac5ce5c9` / #551 — domain audit/regression present, shared integration intentionally pending
 #542 status: open draft/unmerged; run `30850149684`, job `91807894696` FAILURE; native targeted test/runtime build unproven
-Convergence head/PR: A5 branch / #552; final combined candidate not yet constructed
-Validation runs/jobs: no exact A2/A3/A4 run observable; #542 external failed run recorded above
-Tests executed: A5 claims no local/executable repository test run; static exact-source/PR/workflow audit only
-Tests not executed: final shared contract/executor/Stock/BOM combined matrix; exact A2/A3/A4 gates; #542 targeted/runtime build
+Convergence head/PR: A5 branch / #552; final combined candidate not constructed
+Validation runs/jobs: no exact GitHub A2/A3/A4 run observable; #542 external failed run recorded above
+Tests executed: A5 claims no local/executable repository test run; static exact-source/PR/workflow audit only. A2 worker-reported isolated tests are not promoted to independent A5 PASS.
+Tests not executed: final shared contract/executor/Stock/BOM combined matrix; exact integrated A2/A3/A4 gates; #542 targeted/runtime build
 Migrations: none introduced by A5
 Authority diff audit: A2 vertical-neutral static PASS; A3 no new stock authority static PASS; A4 no duplicate shared/BOM primitive static PASS; final combined audit pending
 Recommended maturity changes: none
