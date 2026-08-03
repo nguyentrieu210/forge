@@ -159,8 +159,13 @@ jobs:
       - name: Integrated authority diff audit
         shell: bash
         run: |
-          git fetch origin main --depth=1
-          git diff --name-only origin/main...HEAD | tee /tmp/transaction-closure-files.txt
+          git fetch origin main
+          merge_base=$(git merge-base origin/main HEAD)
+          test -n "$merge_base"
+          echo "main=$(git rev-parse origin/main)"
+          echo "head=$(git rev-parse HEAD)"
+          echo "merge_base=$merge_base"
+          git diff --name-only "$merge_base"...HEAD | tee /tmp/transaction-closure-files.txt
 
           if grep -E '^server/migrations/' /tmp/transaction-closure-files.txt; then
             echo "Unexpected migration in Transaction Closure convergence"
