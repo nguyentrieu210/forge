@@ -43,6 +43,20 @@ test("backdated issue changes FIFO layers and exposes a later stale issue", () =
   assert.equal(result.mismatches[0].delta_minor, -400);
 });
 
+test("backdated transfer-out participates in FIFO replay before later issue", () => {
+  const result = auditOutgoingValuation([
+    line("IN-OLD", "2026-08-01T08:00:00.000Z", 5 * Q, 500),
+    line("IN-NEW", "2026-08-01T09:00:00.000Z", 5 * Q, 1000),
+    line("TRANSFER-OUT-BACKDATED", "2026-08-01T10:00:00.000Z", -6 * Q, -700),
+    line("OUT-LATER-STALE", "2026-08-02T08:00:00.000Z", -4 * Q, -400),
+  ], "FIFO");
+  assert.equal(result.checked_issue_lines, 2);
+  assert.equal(result.mismatch_count, 1);
+  assert.equal(result.mismatches[0].line_key, "OUT-LATER-STALE");
+  assert.equal(result.mismatches[0].expected_stock_value_difference_minor, -800);
+  assert.equal(result.mismatches[0].delta_minor, -400);
+});
+
 test("backdated stock reconciliation or return inward movement participates in replay like any authoritative receipt", () => {
   const result = auditOutgoingValuation([
     line("IN-OPEN", "2026-08-01T08:00:00.000Z", 10 * Q, 1000),

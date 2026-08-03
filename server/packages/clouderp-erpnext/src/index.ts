@@ -8,6 +8,7 @@ export * from "./d1-physical-stock-ledger-reader.js";
 export * from "./manufacturing-lifecycle.js";
 export * from "./manufacturing-bom-bulk.js";
 export * from "./manufacturing-mrp.js";
+export * from "./manufacturing-mrp-netting.js";
 export * from "./manufacturing-capacity.js";
 export * from "./manufacturing-genealogy.js";
 export * from "./manufacturing-costing-read.js";

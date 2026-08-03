@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { routeManufacturingGenealogyApi } from "../dist/apps/tenant-worker/src/manufacturing-genealogy-api.js";
 
-const URL = "https://tenant.test/api/method/metaforge.manufacturing.get_work_order_genealogy";
+const GENEALOGY_URL = "https://tenant.test/api/method/metaforge.manufacturing.get_work_order_genealogy";
 
 function workOrder() {
   return {
@@ -43,7 +43,7 @@ function ledgerRows() {
 }
 
 function request(body) {
-  return new Request(URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  return new Request(GENEALOGY_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 }
 
 function context({ wo = workOrder(), entries = [stockEntry("STE-1"), stockEntry("STE-C", 2)], unreadable = new Set() } = {}) {
@@ -68,7 +68,7 @@ async function json(response) { return response.json(); }
 
 test("genealogy API returns effective movements and visible cancellation history", async () => {
   const ctx = context();
-  const response = await routeManufacturingGenealogyApi(request({ work_order: "WO-1" }), new URL(URL), ctx.value);
+  const response = await routeManufacturingGenealogyApi(request({ work_order: "WO-1" }), new URL(GENEALOGY_URL), ctx.value);
   assert.equal(response.status, 200);
   const payload = await json(response);
   assert.equal(payload.message.work_order, "WO-1");
@@ -81,7 +81,7 @@ test("genealogy API returns effective movements and visible cancellation history
 test("genealogy API fails closed when the Work Order is unreadable", async () => {
   const ctx = context({ unreadable: new Set(["WO-1"]) });
   await assert.rejects(
-    () => routeManufacturingGenealogyApi(request({ work_order: "WO-1" }), new URL(URL), ctx.value),
+    () => routeManufacturingGenealogyApi(request({ work_order: "WO-1" }), new URL(GENEALOGY_URL), ctx.value),
     /Work Order WO-1 is not readable/,
   );
   assert.equal(ctx.ledgerCalls.length, 0);
@@ -90,7 +90,7 @@ test("genealogy API fails closed when the Work Order is unreadable", async () =>
 test("genealogy API fails closed instead of silently dropping a hidden related Stock Entry", async () => {
   const ctx = context({ unreadable: new Set(["STE-1"]) });
   await assert.rejects(
-    () => routeManufacturingGenealogyApi(request({ work_order: "WO-1" }), new URL(URL), ctx.value),
+    () => routeManufacturingGenealogyApi(request({ work_order: "WO-1" }), new URL(GENEALOGY_URL), ctx.value),
     /Stock Entry outside the current read scope/,
   );
 });
@@ -98,7 +98,7 @@ test("genealogy API fails closed instead of silently dropping a hidden related S
 test("genealogy API rejects client-selected tenant scope", async () => {
   const ctx = context();
   await assert.rejects(
-    () => routeManufacturingGenealogyApi(request({ work_order: "WO-1", tenant_id: "other" }), new URL(URL), ctx.value),
+    () => routeManufacturingGenealogyApi(request({ work_order: "WO-1", tenant_id: "other" }), new URL(GENEALOGY_URL), ctx.value),
     /tenant scope is controlled/,
   );
   assert.equal(ctx.ledgerCalls.length, 0);
@@ -108,7 +108,7 @@ test("genealogy API supports Frappe args JSON transport", async () => {
   const ctx = context();
   const response = await routeManufacturingGenealogyApi(
     request({ args: JSON.stringify({ work_order: "WO-1" }) }),
-    new URL(URL),
+    new URL(GENEALOGY_URL),
     ctx.value,
   );
   assert.equal(response.status, 200);
