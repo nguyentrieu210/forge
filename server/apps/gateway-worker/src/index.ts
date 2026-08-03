@@ -12,6 +12,15 @@ import {
 } from "../../../packages/auth/src/index.js";
 import { asCloudForgeError, errorResponse, errors, jsonResponse, randomId, timingSafeEqualString } from "../../../packages/core/src/index.js";
 import { isFrappePath, isPublicFilePath, LOGIN_PATH } from "../../../packages/frappe-api/src/index.js";
+import {
+  type AnalyticsEngineWriter,
+  operationClassForMethod,
+  recordUsageEvent,
+  routeFamilyFor,
+  statusClassFor,
+  type UsageOperationClass,
+  type UsagePlan,
+} from "../../../packages/usage-telemetry/src/index.js";
 
 interface GatewayEnv {
   ROUTES: KVNamespace;
@@ -31,6 +40,8 @@ interface GatewayEnv {
   ASSETS?: Fetcher;
   CONTROL?: Fetcher;
   FALLBACK_TENANT?: Fetcher;
+  /** Optional because Analytics Engine bindings are unavailable in local development. */
+  USAGE_ANALYTICS?: AnalyticsEngineWriter;
   PLATFORM_SUFFIX?: string;
   AUTH_MODE?: "development" | "production";
   DEV_ACTOR_JSON?: string;
@@ -50,9 +61,21 @@ interface TenantRoute {
   plan?: "free" | "pro" | "enterprise";
 }
 
+interface RequestUsageContext {
+  tenantId: string;
+  plan: UsagePlan;
+  routeFamily: string;
+  operationClass: UsageOperationClass;
+  startedAt: number;
+  requestBytes: number;
+  appId?: string;
+}
+
 export default {
   async fetch(request: Request, env: GatewayEnv): Promise<Response> {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
+    const startedAt = performance.now();
+    let usage: RequestUsageContext | undefined;
     try {
       const url = new URL(request.url);
       if (url.pathname === "/health") return jsonResponse({ ok: true, service: "gateway-worker" });
@@ -60,23 +83,47 @@ export default {
       const raw = await env.ROUTES.get(routeKey);
       if (!raw) return jsonResponse({ error: { code: "TENANT_ROUTE_NOT_FOUND" }, trace_id: traceId }, 404);
       const route = JSON.parse(raw) as TenantRoute;
-      if (route.status !== "active") return jsonResponse({ error: { code: "TENANT_NOT_ACTIVE", status: route.status }, trace_id: traceId }, 423);
+      usage = {
+        tenantId: route.tenant_id,
+        plan: route.plan ?? "unassigned",
+        routeFamily: routeFamilyFor(url.pathname),
+        operationClass: operationClassForMethod(request.method),
+        startedAt,
+        requestBytes: contentLength(request.headers),
+      };
+      if (route.status !== "active") {
+        return finishRequestUsage(
+          env.USAGE_ANALYTICS,
+          usage,
+          jsonResponse({ error: { code: "TENANT_NOT_ACTIVE", status: route.status }, trace_id: traceId }, 423),
+        );
+      }
 
       if (request.method === "POST" && url.pathname === "/api/v1/public/signup" && url.hostname === env.SOCIAL_PUBLIC_HOST) {
-        if (!env.CONTROL) return jsonResponse({ error: { code: "SIGNUP_NOT_CONFIGURED" }, trace_id: traceId }, 503);
+        if (!env.CONTROL) {
+          return finishRequestUsage(
+            env.USAGE_ANALYTICS,
+            usage,
+            jsonResponse({ error: { code: "SIGNUP_NOT_CONFIGURED" }, trace_id: traceId }, 503),
+          );
+        }
         const target = new URL(request.url);
         target.pathname = "/v1/public/signup";
-        return env.CONTROL.fetch(new Request(target, request));
+        const response = await env.CONTROL.fetch(new Request(target, request));
+        return finishRequestUsage(env.USAGE_ANALYTICS, usage, response);
       }
 
       // Deliberately AFTER the route lookup: a hostname with no tenant gets a 404, not
       // an app shell whose login could never succeed. And before actor resolution,
       // because a page load carries no bearer token and must not be asked for one.
-      if (isClientRoute(request, url)) return serveClientShell(env, url, traceId);
+      if (isClientRoute(request, url)) {
+        return finishRequestUsage(env.USAGE_ANALYTICS, usage, await serveClientShell(env, url, traceId));
+      }
 
       // An app Worker calling back into the platform on behalf of the user who invoked
       // it. Null for every ordinary request, so nothing about the normal path changes.
       const callback = await resolveAppCallback(request, env, url, route.tenant_id);
+      if (callback) usage.appId = callback.appId;
 
       const principal = callback
         ? { actor: callback.actor, authentication: undefined }
@@ -98,11 +145,18 @@ export default {
       // tells the tenant's Frappe surface to authenticate from the identity rather than
       // from a cookie it will never have. See APP_CALLBACK_HEADER.
       const forwarded = withPlatformHeaders(inbound, route.tenant_id, traceId, trusted.encoded, trusted.signature, callback?.appId);
-      if (env.FALLBACK_TENANT && route.worker_name === "__fallback__") return env.FALLBACK_TENANT.fetch(forwarded);
+      if (env.FALLBACK_TENANT && route.worker_name === "__fallback__") {
+        const response = await env.FALLBACK_TENANT.fetch(forwarded);
+        return finishRequestUsage(env.USAGE_ANALYTICS, usage, response);
+      }
       const worker = env.DISPATCHER.get(route.worker_name, {}, { limits: limitsFor(route.plan, url.pathname) });
-      return worker.fetch(forwarded);
+      const response = await worker.fetch(forwarded);
+      return finishRequestUsage(env.USAGE_ANALYTICS, usage, response);
     } catch (error) {
       const normalized = asCloudForgeError(error);
+      if (usage) {
+        recordRequestUsage(env.USAGE_ANALYTICS, usage, normalized.status);
+      }
       // Expected 4xx auth/validation failures are client outcomes, not error-tracking
       // events. Server faults are emitted as structured metadata only: no request body,
       // token, cookie or raw exception message reaches logs.
@@ -120,6 +174,42 @@ export default {
     }
   },
 };
+
+function finishRequestUsage(writer: AnalyticsEngineWriter | undefined, usage: RequestUsageContext, response: Response): Response {
+  recordRequestUsage(writer, usage, response.status, contentLength(response.headers));
+  return response;
+}
+
+function recordRequestUsage(
+  writer: AnalyticsEngineWriter | undefined,
+  usage: RequestUsageContext,
+  status: number,
+  responseBytes = 0,
+): void {
+  recordUsageEvent(writer, {
+    tenantId: usage.tenantId,
+    eventFamily: "request",
+    service: "gateway-worker",
+    plan: usage.plan,
+    routeFamily: usage.routeFamily,
+    operationClass: usage.operationClass,
+    statusClass: statusClassFor(status),
+    ...(usage.appId ? { appId: usage.appId } : {}),
+    outcome: status < 400 ? "ok" : "error",
+    source: "gateway",
+    latencyMs: Math.max(0, performance.now() - usage.startedAt),
+    requestBytes: usage.requestBytes,
+    responseBytes,
+    statusCode: status,
+  });
+}
+
+function contentLength(headers: Headers): number {
+  const raw = headers.get("content-length");
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
 
 /**
  * The one path an app Worker may use to call back into the platform.
@@ -302,7 +392,8 @@ async function resolvePrincipal(request: Request, env: GatewayEnv, url: URL, ten
   const claims = await verifyBearerJwt(request, {
     secret: requireSecret(env.JWT_SECRET, "JWT_SECRET"),
     // Issuer and audience are mandatory in production: without them a token
-    // minted for another audience under a shared secret would be accepted.
+    // minted for another audience under the same JWT_SECRET would verify. They must match
+    // the query worker's, which validates the same tokens.
     issuer: requireSecret(env.JWT_ISSUER, "JWT_ISSUER"),
     audience: requireSecret(env.JWT_AUDIENCE, "JWT_AUDIENCE"),
   });
