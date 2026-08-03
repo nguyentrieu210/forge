@@ -43,6 +43,7 @@ function packageWithBatch(overrides = {}) {
       batch: {
         contract_version: 1,
         input_table: "lines",
+        itemization: "row",
         item_id_field: "row_id",
         atomicity: "independent",
         max_items: 50,
@@ -53,6 +54,18 @@ function packageWithBatch(overrides = {}) {
     }],
     ...overrides,
   };
+}
+
+function tablePackage() {
+  const pkg = packageWithBatch();
+  pkg.actions[0].batch = {
+    contract_version: 1,
+    input_table: "lines",
+    itemization: "table",
+    atomicity: "independent",
+    max_items: 50,
+  };
+  return pkg;
 }
 
 test("batch metadata survives lower/install-compatible parse without mutating source", () => {
@@ -73,6 +86,14 @@ test("batch metadata survives lower/install-compatible parse without mutating so
   assert.equal(parsed.actions[0].input_tables[0].fieldname, "lines");
 });
 
+test("legacy v1 row contract without itemization remains row-itemized", () => {
+  const legacy = packageWithBatch();
+  delete legacy.actions[0].batch.itemization;
+  const parsed = parseAppManifestWithInputTables(legacy);
+  assert.equal(parsed.actions[0].batch.itemization, "row");
+  assert.equal(parsed.actions[0].batch.item_id_field, "row_id");
+});
+
 test("batch manifest contract fails closed on unsafe or ambiguous declarations", () => {
   const missingPreview = packageWithBatch();
   delete missingPreview.actions[0].preview;
@@ -90,6 +111,10 @@ test("batch manifest contract fails closed on unsafe or ambiguous declarations",
   unknownId.actions[0].batch.item_id_field = "missing_id";
   assert.throws(() => parseAppManifestWithInputTables(unknownId), /item_id_field must name a column/);
 
+  const tableWithRowId = tablePackage();
+  tableWithRowId.actions[0].batch.item_id_field = "row_id";
+  assert.throws(() => parseAppManifestWithInputTables(tableWithRowId), /item_id_field is only valid when itemization is row/);
+
   const overBound = packageWithBatch();
   overBound.actions[0].batch.max_items = 51;
   assert.throws(() => parseAppManifestWithInputTables(overBound), /cannot exceed lines.max_rows/);
@@ -99,7 +124,7 @@ test("batch manifest contract fails closed on unsafe or ambiguous declarations",
   assert.throws(() => parseAppManifestWithInputTables(noTable), /batch requires input_tables/);
 });
 
-test("commit invocation requires stable tenant-scoped replay key and deterministic item identity", () => {
+test("row-itemized commit requires stable replay key and deterministic item identity", () => {
   const contract = parseAppManifestWithInputTables(packageWithBatch()).actions[0].batch;
   const request = {
     contract_version: 1,
@@ -114,6 +139,7 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
     },
   };
   const invocation = normalizeBatchActionInvocation(request, contract, "commit");
+  assert.equal(invocation.itemization, "row");
   assert.deepEqual(invocation.shared_inputs, { note: "scope-a" });
   assert.deepEqual(invocation.items.map((item) => item.operation_id), [
     "batch-20260804-01:row-1",
@@ -138,11 +164,7 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
     ...request,
     payload: { ...request.payload, note: "scope-b" },
   }, contract, "commit");
-  assert.notEqual(
-    requestMaterial,
-    canonicalBatchRequestMaterial(changedSharedInput),
-    "shared scalar inputs must participate in replay-conflict identity",
-  );
+  assert.notEqual(requestMaterial, canonicalBatchRequestMaterial(changedSharedInput));
 
   const plan = toBatchExecutorPlan(invocation, "sha256:request-1");
   assert.deepEqual(plan, {
@@ -164,6 +186,49 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
   const duplicate = structuredClone(request);
   duplicate.payload.lines[1].row_id = "row-1";
   assert.throws(() => normalizeBatchActionInvocation(duplicate, contract, "commit"), /Duplicate batch item id/);
+});
+
+test("table-itemized batch preserves the complete ordered child table as one domain transaction", () => {
+  const contract = parseAppManifestWithInputTables(tablePackage()).actions[0].batch;
+  const request = {
+    contract_version: 1,
+    batch_id: "batch-document-1",
+    idempotency_key: "idem-document-1",
+    payload: {
+      note: "parent-scope",
+      lines: [
+        { row_id: "row-1", amount: 10 },
+        { row_id: "row-2", amount: 20 },
+      ],
+    },
+  };
+  const invocation = normalizeBatchActionInvocation(request, contract, "commit");
+  assert.equal(invocation.itemization, "table");
+  assert.deepEqual(invocation.shared_inputs, { note: "parent-scope" });
+  assert.deepEqual(invocation.items, [{
+    item_id: "lines",
+    index: 0,
+    operation_id: "batch-document-1:lines",
+    value: { lines: request.payload.lines },
+  }]);
+
+  const plan = toBatchExecutorPlan(invocation, "sha256:document-1");
+  assert.equal(plan.items.length, 1);
+  assert.equal(plan.items[0].id, "lines");
+  assert.deepEqual(plan.items[0].value, {
+    shared_inputs: { note: "parent-scope" },
+    item: { lines: request.payload.lines },
+  });
+
+  const reordered = normalizeBatchActionInvocation({
+    ...request,
+    payload: { ...request.payload, lines: [...request.payload.lines].reverse() },
+  }, contract, "commit");
+  assert.notEqual(
+    canonicalBatchRequestMaterial(invocation),
+    canonicalBatchRequestMaterial(reordered),
+    "child-row order is part of one document transaction identity",
+  );
 });
 
 test("public result envelope is deterministic and preserves stable operation correlation", () => {

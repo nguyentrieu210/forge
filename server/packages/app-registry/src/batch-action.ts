@@ -5,21 +5,25 @@ import type { AppActionInputTable, LegacyBulkTransactionField } from "./action-i
 export type BatchActionAtomicity = "atomic" | "independent";
 export type BatchActionMode = "preview" | "commit";
 export type BatchActionItemStatus = "success" | "error" | "rolled_back" | "skipped";
+export type BatchActionItemization = "row" | "table";
 
 export const BATCH_ACTION_MAX_PAYLOAD_BYTES = 2_000_000;
 
 /**
  * Canonical public metadata for repeatable AppAction execution.
  *
- * The contract is deliberately vertical-neutral. The bound input table describes transport
- * shape; the domain action/controller still owns validation, permission, lifecycle, ledger,
- * correction and side effects.
+ * `row` itemization executes one generic item per table row. `table` itemization executes
+ * the whole repeatable table as one domain-owned transaction, which is required for canonical
+ * documents such as a Stock Reconciliation or BOM whose rows are children of one authority.
+ * The shared layer still knows no vertical fields or business rules.
  */
 export interface AppActionBatchContract {
   contract_version: 1;
   input_table: string;
-  item_id_field: string;
+  itemization: BatchActionItemization;
+  item_id_field?: string;
   atomicity: BatchActionAtomicity;
+  /** Maximum input-table rows accepted by this action, regardless of itemization strategy. */
   max_items: number;
 }
 
@@ -46,8 +50,9 @@ export interface NormalizedBatchActionInvocation {
   batch_id: string;
   mode: BatchActionMode;
   atomicity: BatchActionAtomicity;
+  itemization: BatchActionItemization;
   idempotency_key?: string;
-  /** Scalar/shared AppAction inputs carried alongside every row but never trusted as server context. */
+  /** Scalar/shared AppAction inputs carried alongside every item but never trusted as server context. */
   shared_inputs: JsonObject;
   items: NormalizedBatchActionItem[];
 }
@@ -149,10 +154,22 @@ export function parseAppActionBatchContract(
   const table = inputTables.find((candidate) => candidate.fieldname === inputTable);
   if (!table) throw errors.validation(`${where}.input_table must name one declared input table: ${inputTable}`);
 
-  const itemIdField = text(input.item_id_field, `${where}.item_id_field`, 120);
-  if (!NAME.test(itemIdField)) throw errors.validation(`${where}.item_id_field must be a lowercase fieldname`);
-  if (!table.columns.some((column) => column.fieldname === itemIdField)) {
-    throw errors.validation(`${where}.item_id_field must name a column of ${inputTable}: ${itemIdField}`);
+  const itemization = input.itemization === undefined
+    ? "row"
+    : text(input.itemization, `${where}.itemization`, 16) as BatchActionItemization;
+  if (itemization !== "row" && itemization !== "table") {
+    throw errors.validation(`${where}.itemization must be row or table`);
+  }
+
+  let itemIdField: string | undefined;
+  if (itemization === "row") {
+    itemIdField = text(input.item_id_field, `${where}.item_id_field`, 120);
+    if (!NAME.test(itemIdField)) throw errors.validation(`${where}.item_id_field must be a lowercase fieldname`);
+    if (!table.columns.some((column) => column.fieldname === itemIdField)) {
+      throw errors.validation(`${where}.item_id_field must name a column of ${inputTable}: ${itemIdField}`);
+    }
+  } else if (input.item_id_field !== undefined) {
+    throw errors.validation(`${where}.item_id_field is only valid when itemization is row`);
   }
 
   const atomicity = text(input.atomicity, `${where}.atomicity`, 16) as BatchActionAtomicity;
@@ -172,7 +189,8 @@ export function parseAppActionBatchContract(
   return {
     contract_version: 1,
     input_table: inputTable,
-    item_id_field: itemIdField,
+    itemization,
+    ...(itemIdField ? { item_id_field: itemIdField } : {}),
     atomicity,
     max_items: maxItems,
   };
@@ -234,11 +252,39 @@ export function normalizeBatchActionInvocation(
   const sharedInputs = structuredClone(payload);
   delete sharedInputs[contract.input_table];
 
+  const items = contract.itemization === "table"
+    ? [{
+        item_id: contract.input_table,
+        index: 0,
+        operation_id: `${batchId}:${contract.input_table}`,
+        value: { [contract.input_table]: structuredClone(rawRows) } as JsonObject,
+      }]
+    : normalizeRowItems(rawRows, contract, batchId);
+
+  return {
+    contract_version: 1,
+    batch_id: batchId,
+    mode,
+    atomicity: contract.atomicity,
+    itemization: contract.itemization,
+    ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+    shared_inputs: sharedInputs,
+    items,
+  };
+}
+
+function normalizeRowItems(
+  rawRows: unknown[],
+  contract: AppActionBatchContract,
+  batchId: string,
+): NormalizedBatchActionItem[] {
+  const itemIdField = contract.item_id_field;
+  if (!itemIdField) throw errors.validation("row-itemized batch contract requires item_id_field");
   const ids = new Set<string>();
-  const items = rawRows.map((row, index): NormalizedBatchActionItem => {
+  return rawRows.map((row, index): NormalizedBatchActionItem => {
     const itemValue = object(row, `batch request.payload.${contract.input_table}[${index}]`);
-    const itemId = text(itemValue[contract.item_id_field], `batch item ${index}.${contract.item_id_field}`, 160);
-    if (!CORRELATION.test(itemId)) throw errors.validation(`batch item ${index}.${contract.item_id_field} contains unsupported characters`);
+    const itemId = text(itemValue[itemIdField], `batch item ${index}.${itemIdField}`, 160);
+    if (!CORRELATION.test(itemId)) throw errors.validation(`batch item ${index}.${itemIdField} contains unsupported characters`);
     if (ids.has(itemId)) throw errors.validation(`Duplicate batch item id: ${itemId}`);
     ids.add(itemId);
     return {
@@ -248,16 +294,6 @@ export function normalizeBatchActionInvocation(
       value: structuredClone(itemValue),
     };
   });
-
-  return {
-    contract_version: 1,
-    batch_id: batchId,
-    mode,
-    atomicity: contract.atomicity,
-    ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
-    shared_inputs: sharedInputs,
-    items,
-  };
 }
 
 /** Stable material A2 can hash for replay-conflict detection; idempotency key is excluded. */
@@ -267,6 +303,7 @@ export function canonicalBatchRequestMaterial(invocation: NormalizedBatchActionI
     batch_id: invocation.batch_id,
     mode: invocation.mode,
     atomicity: invocation.atomicity,
+    itemization: invocation.itemization,
     shared_inputs: invocation.shared_inputs,
     items: invocation.items.map((item) => ({ item_id: item.item_id, index: item.index, value: item.value })),
   });
@@ -354,8 +391,9 @@ export const BATCH_ACTION_SEMANTICS = Object.freeze({
   trusted_context: "server",
   commit_idempotency: "tenant-scoped-key-required",
   replay_conflict: "same-key-different-request-rejected",
-  operation_id: "batch_id:item_id",
+  operation_id: "row=batch_id:item_id; table=batch_id:input_table",
   correction_owner: "domain",
   preview_side_effects: "forbidden",
-  request_hash_material: "canonical-public-request-including-shared-inputs-without-idempotency-key",
+  itemization: "row-or-whole-table-domain-transaction",
+  request_hash_material: "canonical-public-request-including-itemization-and-shared-inputs-without-idempotency-key",
 } as const);
