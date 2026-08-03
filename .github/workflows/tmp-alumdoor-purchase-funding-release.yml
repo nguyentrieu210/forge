@@ -42,6 +42,22 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - name: Restore exact release lockfile after pnpm normalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <(git status --porcelain=v1 --untracked-files=all)
+          if [ "${#dirty[@]}" -eq 0 ]; then
+            echo "worktree remained clean after install"
+          elif [ "${#dirty[@]}" -eq 1 ] && [[ "${dirty[0]}" == *" pnpm-lock.yaml" ]]; then
+            echo "pnpm normalized pnpm-lock.yaml despite --frozen-lockfile; restoring exact release blob"
+            git diff --stat -- pnpm-lock.yaml
+            git restore --source=HEAD --worktree -- pnpm-lock.yaml
+          else
+            printf 'Unexpected install-time worktree change: %s\n' "${dirty[@]}"
+            exit 1
+          fi
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
       - name: Backup and replay-verify tenant
         run: |
           set -euo pipefail
@@ -51,6 +67,8 @@ jobs:
           mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
           test "${#backups[@]}" -eq 1
           node server/scripts/verify-tenant-backup.mjs --tenant "$TENANT" --file "${backups[0]}" --output "$RUNNER_TEMP/alu-backup-verification.json"
+      - name: Require clean worktree before migration
+        run: test -z "$(git status --porcelain=v1 --untracked-files=all)"
       - name: Migrate tenant from clean checkout
         working-directory: server
         run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"

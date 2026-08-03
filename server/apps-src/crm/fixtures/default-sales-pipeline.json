@@ -1,0 +1,3 @@
+[
+  { "record_type": "CRM Pipeline", "name": "Default Sales Pipeline", "data": { "pipeline_name": "Default Sales Pipeline", "description": "Default CRM revenue pipeline", "disabled": false } }
+]

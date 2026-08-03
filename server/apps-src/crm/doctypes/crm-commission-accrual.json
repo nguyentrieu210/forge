@@ -1,0 +1,25 @@
+{
+  "name": "CRM Commission Accrual",
+  "module": "CRM",
+  "autoname": "CRM-COMM-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "deal", "label": "Deal thắng", "fieldtype": "Link", "options": "CRM Deal", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "payee", "label": "Người hưởng", "fieldtype": "Link", "options": "User", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "rule", "label": "Chính sách", "fieldtype": "Link", "options": "CRM Commission Rule", "required": true, "set_only_once": true, "in_list_view": true },
+    { "fieldname": "earned_on", "label": "Ngày ghi nhận", "fieldtype": "Date", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "base_amount", "label": "Doanh số tính hoa hồng", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "rate", "label": "Tỷ lệ snapshot (%)", "fieldtype": "Percent", "read_only": true, "in_list_view": true },
+    { "fieldname": "commission_amount", "label": "Hoa hồng", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nApproved\nPaid\nCancelled", "default": "Draft", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "payment_reference", "label": "Payment Entry", "fieldtype": "Link", "options": "Payment Entry", "mandatory_depends_on": "eval:doc.status=='Paid'", "depends_on": "eval:doc.status=='Paid'", "in_list_view": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

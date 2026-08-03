@@ -13,7 +13,8 @@
   },
   "scripts": {
     "typecheck": "tsc -b",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

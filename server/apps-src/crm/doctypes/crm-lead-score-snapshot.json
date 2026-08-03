@@ -1,0 +1,20 @@
+{
+  "name": "CRM Lead Score Snapshot",
+  "module": "CRM",
+  "autoname": "CRM-SCORE-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "lead", "label": "Lead", "fieldtype": "Link", "options": "CRM Lead", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "score", "label": "Điểm", "fieldtype": "Int", "read_only": true, "in_list_view": true },
+    { "fieldname": "matched_rule_count", "label": "Số rule khớp", "fieldtype": "Int", "read_only": true, "in_list_view": true },
+    { "fieldname": "matched_rules", "label": "Rule đã khớp", "fieldtype": "Small Text", "read_only": true },
+    { "fieldname": "scored_at", "label": "Chấm điểm lúc", "fieldtype": "Datetime", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "create": true, "report": true },
+    { "role": "Sales Manager", "read": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

@@ -1,0 +1,40 @@
+import type { JsonObject } from "../../contracts/src/index.js";
+import type { SalesItem, TaxRow } from "./types.js";
+
+export interface QuotationData extends JsonObject {
+  crm_deal?: string;
+  customer?: string;
+  company: string;
+  currency: string;
+  currency_scale?: number;
+  transaction_date: string;
+  valid_till: string;
+  selling_price_list?: string;
+  customer_group?: string;
+  apply_discount_on?: "Net Total" | "Grand Total";
+  additional_discount_percentage?: string | number;
+  discount_amount?: string | number;
+  items: SalesItem[];
+  taxes?: TaxRow[];
+  revision_no?: number;
+  net_total?: string;
+  net_total_minor?: number;
+  total_taxes_and_charges?: string;
+  total_taxes_and_charges_minor?: number;
+  grand_total?: string;
+  grand_total_minor?: number;
+  rounded_total?: string;
+  rounded_total_minor?: number;
+  rounding_adjustment?: string;
+  rounding_adjustment_minor?: number;
+  company_currency?: string;
+  company_currency_scale?: number;
+  conversion_rate?: string;
+  conversion_rate_micros?: number;
+  base_net_total?: string;
+  base_net_total_minor?: number;
+  base_total_taxes_and_charges?: string;
+  base_total_taxes_and_charges_minor?: number;
+  base_grand_total?: string;
+  base_grand_total_minor?: number;
+}

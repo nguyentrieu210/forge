@@ -19,8 +19,15 @@ import {
   type AuthRouteContext,
   type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
-import type { Actor } from "../../../packages/contracts/src/index.js";
+import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
+import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
+import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
+import type {
+  CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
+  NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
+  VersionedBomData, WorkOrderData, WorkstationCapacityCalendarData,
+} from "../../../packages/clouderp-erpnext/src/index.js";
 import {
   D1DocumentAccessStore,
   D1MetadataStore,
@@ -32,6 +39,31 @@ import {
   isDailyLedgerFrappePath,
   routeDailyLedgerApi,
 } from "./daily-ledger-api.js";
+import {
+  isManufacturingBomBulkApiPath,
+  isManufacturingBomBulkFrappePath,
+  routeManufacturingBomBulkApi,
+} from "./manufacturing-bom-bulk-api.js";
+import {
+  isManufacturingCapacityApiPath,
+  isManufacturingCapacityFrappePath,
+  routeManufacturingCapacityApi,
+} from "./manufacturing-capacity-api.js";
+import {
+  isManufacturingCostingApiPath,
+  isManufacturingCostingFrappePath,
+  routeManufacturingCostingApi,
+} from "./manufacturing-costing-api.js";
+import {
+  isManufacturingGenealogyApiPath,
+  isManufacturingGenealogyFrappePath,
+  routeManufacturingGenealogyApi,
+} from "./manufacturing-genealogy-api.js";
+import {
+  isManufacturingMrpApiPath,
+  isManufacturingMrpFrappePath,
+  routeManufacturingMrpApi,
+} from "./manufacturing-mrp-api.js";
 import { mfaKeyRingFromEnv } from "./mfa-config.js";
 import {
   assertRecentNativeSecurityAuthentication,
@@ -42,6 +74,7 @@ import {
   isPhysicalStockFrappePath,
   routePhysicalStockApi,
 } from "./physical-stock-api.js";
+import { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";
 import type { TenantEnv } from "./env.js";
 
 export * from "./index-core.js";
@@ -62,11 +95,19 @@ export default {
     const url = new URL(request.url);
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
+    const manufacturingBomBulk = isManufacturingBomBulkApiPath(url.pathname);
+    const manufacturingMrp = isManufacturingMrpApiPath(url.pathname);
+    const manufacturingCapacity = isManufacturingCapacityApiPath(url.pathname);
+    const manufacturingCosting = isManufacturingCostingApiPath(url.pathname);
+    const manufacturingGenealogy = isManufacturingGenealogyApiPath(url.pathname);
+    const qms = isQmsApiPath(url.pathname);
     const sessionManagement = isSessionManagementPath(url.pathname);
     const publicFrappeAuth = isPublicFrappePath(url.pathname);
     const mfaManagement = isMfaRoutePath(url.pathname);
     const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
-    if (!physicalStock && !dailyLedger && !sessionManagement && !publicFrappeAuth && !mfaManagement && !nativeSecurity) {
+    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
+      && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !qms
+      && !sessionManagement && !publicFrappeAuth && !mfaManagement && !nativeSecurity) {
       return coreWorker.fetch(request, env);
     }
 
@@ -80,7 +121,9 @@ export default {
         // The wrapper owns only the step-up invariant. Core still owns System Manager
         // authorization, validation and persistence, so passing step-up must not create a
         // second implementation of any native admin route.
-        if (!physicalStock && !dailyLedger && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
+        if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
+          && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !qms
+          && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
           return coreWorker.fetch(request, env);
         }
       }
@@ -141,6 +184,116 @@ export default {
           permissions,
           traceId,
         });
+      } else if (manufacturingBomBulk) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingBomBulkApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          findCanonicalRevisions: async (document) => {
+            const company = text(document.company);
+            const item = text(document.item);
+            const revision = integer(document.revision);
+            const all = await documents.listDocumentsByDoctype<JsonObject>(tenantId, "Bill of Materials");
+            const matches = all.filter((candidate) => candidate.data.company === company
+              && candidate.data.item === item && integer(candidate.data.revision) === revision);
+            const readable = [];
+            for (const candidate of matches) {
+              if (await permissions.canReadDocument(authentication.actor, tenantId, candidate)) readable.push(candidate);
+            }
+            if (readable.length !== matches.length) {
+              throw errors.permission("A matching BOM revision is outside the current read scope");
+            }
+            return readable.map((candidate) => ({
+              name: candidate.name,
+              docstatus: candidate.docstatus,
+              status: candidate.status,
+              ...candidate.data,
+            }));
+          },
+          createCanonicalDraft: (document) => createDocumentThroughCore(request, env, "Bill of Materials", document),
+        });
+      } else if (manufacturingMrp) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingMrpApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
+          listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
+          listMaterialRequests: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Material Request"),
+          createCanonicalMaterialRequest: (document) => createDocumentThroughCore(request, env, "Material Request", document),
+        });
+      } else if (manufacturingCapacity) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingCapacityApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
+          listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
+          listRoutings: () => documents.listDocumentsByDoctype<ManufacturingRoutingData>(tenantId, "Manufacturing Routing"),
+          listCalendars: () => documents.listDocumentsByDoctype<WorkstationCapacityCalendarData>(tenantId, "Workstation Capacity Calendar"),
+          listDowntimes: () => documents.listDocumentsByDoctype<ManufacturingDowntimeData>(tenantId, "Manufacturing Downtime"),
+        });
+      } else if (manufacturingCosting) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingCostingApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
+          loadBom: (name) => documents.getDocument<VersionedBomData>(tenantId, "Bill of Materials", name),
+          listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
+          getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
+        });
+      } else if (manufacturingGenealogy) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeManufacturingGenealogyApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
+          listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
+          getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
+        });
+      } else if (qms) {
+        const metadata = new D1MetadataStore(requestDb);
+        const access = new D1DocumentAccessStore(requestDb);
+        const permissions = new MetadataPermissionService(metadata, undefined, access);
+        const documents = new D1MutationStore(env.DB);
+        response = await routeQmsApi(request, url, {
+          tenantId,
+          actor: authentication.actor,
+          permissions,
+          traceId,
+          now: () => new Date().toISOString(),
+          loadQualityPlan: (name) => documents.getDocument<QualityPlanData>(tenantId, "Quality Plan", name),
+          listNcr: () => documents.listDocumentsByDoctype<NonConformanceReportData>(tenantId, "Non Conformance Report"),
+          listRca: () => documents.listDocumentsByDoctype<RootCauseAnalysisData>(tenantId, "Root Cause Analysis"),
+          listCapa: () => documents.listDocumentsByDoctype<CapaData>(tenantId, "CAPA"),
+          listCalibration: () => documents.listDocumentsByDoctype<CalibrationRecordData>(tenantId, "Calibration Record"),
+        });
       } else {
         response = await routeDailyLedgerApi(request, url, {
           db: requestDb,
@@ -159,6 +312,12 @@ export default {
     } catch (error) {
       return isPhysicalStockFrappePath(url.pathname)
         || isDailyLedgerFrappePath(url.pathname)
+        || isManufacturingBomBulkFrappePath(url.pathname)
+        || isManufacturingMrpFrappePath(url.pathname)
+        || isManufacturingCapacityFrappePath(url.pathname)
+        || isManufacturingCostingFrappePath(url.pathname)
+        || isManufacturingGenealogyFrappePath(url.pathname)
+        || isQmsFrappePath(url.pathname)
         || isSessionManagementPath(url.pathname)
         || isPublicFrappePath(url.pathname)
         || isMfaRoutePath(url.pathname)
@@ -209,6 +368,12 @@ async function authenticateInterceptedRoute(
 ): Promise<InterceptedRouteAuthentication> {
   const cookieBound = isPhysicalStockFrappePath(url.pathname)
     || isDailyLedgerFrappePath(url.pathname)
+    || isManufacturingBomBulkFrappePath(url.pathname)
+    || isManufacturingMrpFrappePath(url.pathname)
+    || isManufacturingCapacityFrappePath(url.pathname)
+    || isManufacturingCostingFrappePath(url.pathname)
+    || isManufacturingGenealogyFrappePath(url.pathname)
+    || isQmsFrappePath(url.pathname)
     || isSessionManagementPath(url.pathname)
     || isMfaRoutePath(url.pathname);
   if (!cookieBound) {
@@ -241,6 +406,39 @@ async function authenticateInterceptedRoute(
   }
 
   throw errors.permission("Login to access this resource");
+}
+
+function createDocumentThroughCore(
+  request: Request,
+  env: TenantEnv,
+  doctype: string,
+  document: JsonObject,
+): Promise<Response> {
+  const url = new URL(request.url);
+  url.pathname = `/api/resource/${encodeURIComponent(doctype)}`;
+  url.search = "";
+  const headers = forwardedHeaders(request);
+  headers.set("content-type", "application/json");
+  return coreWorker.fetch(new Request(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(document),
+  }), env);
+}
+
+function forwardedHeaders(request: Request): Headers {
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  return headers;
+}
+
+function text(value: unknown): string {
+  return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+}
+
+function integer(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : 0;
 }
 
 async function authenticateTrustedIdentity(

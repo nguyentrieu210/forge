@@ -1,0 +1,27 @@
+{
+  "id": "manufacturing-qms",
+  "name": "Manufacturing QMS",
+  "version": "1.1.0",
+  "requires": [],
+  "externalDocTypes": [
+    {"name":"Operation","kind":"master","app":"erpnext"},
+    {"name":"Workstation","kind":"master","app":"erpnext"},
+    {"name":"Work Order","kind":"transaction","app":"erpnext"},
+    {"name":"Job Card","kind":"transaction","app":"erpnext"},
+    {"name":"Quality Inspection","kind":"transaction","app":"erpnext"},
+    {"name":"Asset","kind":"transaction","app":"erpnext"}
+  ],
+  "nav": [
+    {"key":"Manufacturing Routing","label":"Quy trình sản xuất","kind":"doctype","icon":"route","group":"Kế hoạch sản xuất"},
+    {"key":"Workstation Capacity Calendar","label":"Lịch công suất","kind":"doctype","icon":"calendar-range","group":"Kế hoạch sản xuất"},
+    {"key":"Manufacturing Downtime","label":"Dừng máy","kind":"doctype","icon":"circle-pause","group":"Điều hành sản xuất"},
+    {"key":"Quality Plan","label":"Kế hoạch chất lượng","kind":"doctype","icon":"clipboard-check","group":"Chất lượng"},
+    {"key":"quality-inspection","label":"Kiểm tra chất lượng","kind":"route","route":"/app/Quality%20Inspection","icon":"scan-search","group":"Chất lượng","required_roles":["Quality User","Quality Manager","System Manager"]},
+    {"key":"Non Conformance Report","label":"NCR / Không phù hợp","kind":"doctype","icon":"triangle-alert","group":"Không phù hợp & CAPA"},
+    {"key":"Root Cause Analysis","label":"Phân tích nguyên nhân","kind":"doctype","icon":"git-fork","group":"Không phù hợp & CAPA"},
+    {"key":"CAPA","label":"CAPA","kind":"doctype","icon":"shield-check","group":"Không phù hợp & CAPA"},
+    {"key":"Calibration Record","label":"Hiệu chuẩn","kind":"doctype","icon":"gauge","group":"Đo lường & hiệu chuẩn"}
+  ],
+  "hooks": [],
+  "client": {"brand":"slate","domain":"manufacturing","home":{"route":"/app/Manufacturing%20Routing","doctype":"Manufacturing Routing"},"dimensions":["company"],"catalog_mode":"hybrid"}
+}

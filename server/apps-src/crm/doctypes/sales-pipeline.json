@@ -1,0 +1,18 @@
+{
+  "name": "CRM Pipeline",
+  "module": "CRM",
+  "autoname": "field:pipeline_name",
+  "title_field": "pipeline_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "pipeline_name", "label": "Pipeline", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "description", "label": "Mô tả", "fieldtype": "Small Text" },
+    { "fieldname": "disabled", "label": "Ngừng sử dụng", "fieldtype": "Check", "default": false, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true }
+  ],
+  "revision": 2
+}

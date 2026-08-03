@@ -1,0 +1,20 @@
+{
+  "name": "Vòng đời CAPA",
+  "document_type": "CAPA",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    {"state":"Nháp","docstatus":0,"allow_edit":"Quality User"},
+    {"state":"Đang triển khai","docstatus":0,"allow_edit":"Quality User"},
+    {"state":"Chờ xác minh","docstatus":0,"allow_edit":"Quality Manager"},
+    {"state":"Đã đóng","docstatus":1,"allow_edit":"Quality Manager"},
+    {"state":"Đã huỷ","docstatus":2,"allow_edit":"Quality Manager"}
+  ],
+  "transitions": [
+    {"state":"Nháp","action":"Bắt đầu triển khai","next_state":"Đang triển khai","allowed_role":"Quality User"},
+    {"state":"Đang triển khai","action":"Gửi xác minh","next_state":"Chờ xác minh","allowed_role":"Quality User"},
+    {"state":"Chờ xác minh","action":"Xác minh và đóng","next_state":"Đã đóng","allowed_role":"Quality Manager","allow_self_approval":false},
+    {"state":"Chờ xác minh","action":"Yêu cầu khắc phục lại","next_state":"Đang triển khai","allowed_role":"Quality Manager"}
+  ],
+  "revision": 1
+}

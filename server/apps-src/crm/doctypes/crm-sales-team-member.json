@@ -1,0 +1,20 @@
+{
+  "name": "CRM Sales Team Member",
+  "module": "CRM",
+  "autoname": "CRM-TEAM-MEMBER-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_team", "label": "Nhóm bán hàng", "fieldtype": "Link", "options": "CRM Sales Team", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "user", "label": "Thành viên", "fieldtype": "Link", "options": "User", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "member_role", "label": "Vai trò", "fieldtype": "Select", "options": "Manager\nMember", "default": "Member", "required": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nInactive", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}
