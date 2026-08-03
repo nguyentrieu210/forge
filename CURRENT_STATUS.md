@@ -2,82 +2,116 @@
 
 Ngày cập nhật: **2026-08-03**.
 
-GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không suy trạng thái từ tài liệu cũ nếu GitHub đã thay đổi.
+GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. Không suy trạng thái từ tài liệu lịch sử nếu GitHub đã thay đổi.
 
 ## Repository snapshot
 
 - Repository: `nguyentrieu210/forge`.
 - Default/canonical branch: `main`.
 - Forge baseline: **0.2.0 — Enterprise Parallel Baseline**.
-- Sau đợt reset, toàn bộ PR delivery cũ đã được đóng; hiện chỉ còn PR tài liệu/plan đang mở.
-- Không có PR/branch delivery cũ nào được coi là công việc đang active.
-- Các branch cũ vẫn được giữ làm lịch sử/audit/cherry-pick reference; **không tự tiếp tục hoặc reopen** chỉ vì branch còn tồn tại.
-- Mọi công việc triển khai mới phải bắt đầu bằng việc đọc exact current `main`, sau đó tạo **branch/PR mới** phù hợp với scope mới.
+- RC Hardening Wave 0 đã hội tụ vào `main`.
+- Các branch/PR cũ ngoài chương trình hiện tại chỉ là history/evidence/cherry-pick reference; không tự reopen hoặc tiếp tục như canonical delivery.
+- Mọi task mới phải đọc exact current `main`, capability status và RC Hardening Plan trước khi tạo branch mới.
 
-## Overall maturity theo Enterprise Completion Skill
+## Enterprise maturity baseline
 
-- Forge hiện được đánh giá ở mức **Wired**, với một số capability/domain đã đạt **RC cục bộ**.
-- Không dùng phần trăm tổng cảm tính. Capability Map hiện có **956 capability ID** và chưa có live maturity register đủ 956/956 trên `main`.
-- Chương trình mặc định tiếp theo là **RC Hardening Program**: `docs/FORGE_RC_HARDENING_PLAN_20260803.md`.
-- Wave đầu của chương trình phải dựng `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` để chấm 956 capability theo `Missing / Foundation / Wired / RC / Hardened` và gắn evidence.
+Canonical registry: `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
+
+RC-01 đã kiểm đủ **956/956 capability ID** và validator xác nhận không thiếu/trùng/unknown ID.
+
+| Maturity | Count | Share |
+|---|---:|---:|
+| Hardened | 0 | 0.00% |
+| RC | 4 | 0.42% |
+| Wired | 448 | 46.86% |
+| Foundation | 345 | 36.09% |
+| Missing | 159 | 16.63% |
+| **Total** | **956** | **100.00%** |
+
+Forge overall vẫn được coi là **Wired**, đang chuyển sang RC hardening. Không suy RC/Hardened từ code existence, merge state hoặc test count đơn lẻ.
+
+## DONE — RC Hardening Wave 0
+
+### RC-01 Capability Truth
+
+- PR `#434` merged.
+- Có live maturity register 956/956, Evidence Index, completeness validator và baseline/top-blocker report.
+- Không claim Hardened vì chưa đủ production/failure/reconciliation evidence.
+
+### RC-02 Release / SRE
+
+- PR `#431` merged.
+- Canonical release topology đã được audit/harden.
+- Duplicate `.github/workflows/deploy-ui-once.yml` và stale one-off `.github/workflows/tmp-alumdoor-purchase-funding-release.yml` đã được loại khỏi main qua RC-02, thay vì dựa vào cleanup PR #427 cũ.
+- Production maintenance workflows liên quan được chuyển về manual/exact-main guarded path.
+- Backup/restore scope contract và release-safety verification đã được harden.
+- Không claim current-main production deploy chỉ vì workflow/source đã merge.
+
+### RC-03 Validation Gates
+
+- PR `#433` merged.
+- `FAST / STANDARD / CRITICAL` đã có machine-readable matrix và executable runner.
+- Finance/stock/payroll bị khóa ở CRITICAL và yêu cầu correction/reversal + reconciliation.
+- UI maturity promotion yêu cầu browser/mobile evidence khi applicable.
+- `HARDENED/DEPLOYED` yêu cầu exact production release marker.
+
+### RC-04 Kernel / Auth
+
+- Original PR `#430` bị supersede sau current-main reconciliation; replacement PR `#435` merged.
+- Logout của valid session fail-closed với CSRF/session-registry/revoke failure.
+- Current browser session chỉ revoke qua canonical logout path, tránh commit-before-response ambiguity qua duplicate revoke surface.
+- Kernel canonical create/save/submit/cancel vẫn dùng OCC/idempotency/audit/outbox/receipt authority; delete/rename maintenance semantics vẫn là explicit shared-contract gap.
+
+### RC-05 IAM / Tenant / Offline Contract
+
+- Original PR `#432` đã đóng superseded; replacement PR `#436` merged.
+- App upgrade fail-closed nếu package bỏ materialized DocType/Workflow/Print Format/Fixture/Custom Field mà chưa có reverse migration/uninstall contract.
+- `docs/FORGE_OFFLINE_SYNC_CONTRACT.md` đã freeze trusted tenant/user partition, access revision, bounded offline lease, stable command id/OCC/conflict/release freshness contract.
+- `U01-003..007` offline read/write/background-sync/conflict vẫn **Missing**; contract freeze không được tính là implementation.
 
 ## DONE — WS00–WS17 convergence
 
 - Phase WS00–WS17 đã đóng ở repository level; canonical deltas đã merge vào `main`.
-- Bản ghi hội tụ: `docs/agents/WS00_17_CONVERGENCE_20260803.md`.
+- Historical convergence record: `docs/agents/WS00_17_CONVERGENCE_20260803.md`.
 - Shared HRM vẫn là application đầy đủ; Alumdoor chỉ chọn surface phù hợp ở product/shell layer, không fork core.
-- Alumdoor tiếp tục là reference vertical chạy trên Forge; primitive generic phải nằm ở platform/domain package khi có bằng chứng tái sử dụng.
-
-## DONE — UI/Matrix convergence foundation
-
-- Matrix metadata/runtime/pricing foundation đã được hội tụ vào `main` qua wave UI00–UI05.
-- Các PR follow-up Matrix từng mở sau đó (`#419`, `#423`, `#424`) đã được **đóng không merge** trong đợt repo reset ngày 2026-08-03.
-- Không coi các branch Matrix đó là active queue. Nếu cần Matrix wave mới, audit current `main` rồi mở branch mới.
-
-## DONE — Alumdoor current product direction
-
-- Alumdoor production/reference vertical đã có các đợt full sync và UI release trước đây với release evidence riêng trong repo.
-- Mobile Alumdoor hiện được định hướng về sales/receivables/delivery use case; các luồng cũ không còn được coi là backlog chỉ vì branch/PR lịch sử còn tồn tại.
-- HRM package trên current `main` đã tiến xa hơn các handoff cũ (ví dụ package hiện ở dòng `1.8.x`); không dùng version/permission assumptions từ PR cũ làm current truth.
-
-## Repository reset — 2026-08-03
-
-Theo quyết định của user, toàn bộ PR còn mở tại thời điểm reset được đóng để repo trở về trạng thái sạch về mặt review queue. Batch đóng gồm các PR gần nhất như:
-
-- repo/workflow cleanup: `#427`;
-- Matrix follow-up/validation: `#419`, `#423`, `#424`;
-- Alumdoor auth/Employee Lite follow-up: `#405`, `#388`;
-- UI grammar planning: `#370`;
-- Procurement/accounting/inventory/manufacturing/ledger legacy work: `#295`, `#286`, `#278`, `#267`, `#216`, `#208`, `#201`, `#199`.
-
-Các PR trên **không được merge trong thao tác đóng**. Branch/history vẫn còn để tra cứu nếu một task mới cần reuse một phần.
-
-## Release/workflow truth
-
-- Workflow release chính hiện có trên `main`: `.github/workflows/alu-build-deploy.yml`.
-- `main` vẫn còn `.github/workflows/deploy-ui-once.yml` và `.github/workflows/tmp-alumdoor-purchase-funding-release.yml` vì cleanup PR `#427` đã được đóng **không merge** theo quyết định reset toàn bộ PR.
-- Vì vậy không được suy diễn rằng cleanup workflow đã vào `main`.
-- Production proof vẫn phải dựa trên exact release SHA + `/health` + `/release.json`/evidence tương ứng; merge state không tự động là deploy proof.
+- Matrix metadata/runtime/pricing foundation đã hội tụ; follow-up PR cũ không tự trở thành active backlog.
 
 ## Active program
 
-Không có feature delivery cũ nào active. Chương trình triển khai tiếp theo được định nghĩa tại:
+Canonical execution blueprint:
 
 - `docs/FORGE_RC_HARDENING_PLAN_20260803.md`
+- `docs/agents/RC_AGENT_LANES_20260803.md`
 
-Thứ tự mặc định:
+Wave 0 đã đóng. Dependency order tiếp theo:
 
-1. Capability truth/evidence register.
-2. Platform/SRE/Security RC.
-3. ERP Core RC.
-4. Enterprise Depth.
-5. App Factory + AI moat.
-6. Alumdoor 95% + production hardening.
+1. **Finance authority hardening** — `RC-020..023`.
+2. **Inventory authority hardening** — `RC-024..025`.
+3. Sau khi Finance/Inventory authority freeze: Procurement, CRM/O2C, HCM/Payroll, Manufacturing/QMS `RC-030..038` chạy theo domain song song.
+4. Enterprise Depth `RC-040..045`.
+5. App Factory/AI moat `RC-046..047`.
+6. Alumdoor reference proof `RC-050..054`.
 
-Mỗi slice chỉ trở thành active task sau khi được mở từ exact current `main`; không resurrect PR cũ làm canonical.
+Không mở thêm feature breadth ngẫu nhiên trước các authority/evidence blocker có priority cao hơn.
+
+## Release / production truth
+
+- Canonical release workflow: `.github/workflows/alu-build-deploy.yml`.
+- Merge state không phải deploy proof.
+- `/health` chứng minh service availability; `/release.json`/release evidence phải khớp exact release SHA + bundle marker cho production claim.
+- RC-01/02/03/04/05 merges trong Wave 0 **không được coi là production deployment**.
+- Không production migration, restore/PITR, secret/DNS hoặc customer-data mutation được thực hiện trong coordinator convergence này.
+
+## Alumdoor direction
+
+- Alumdoor tiếp tục là reference vertical, không fork Forge core.
+- Mobile ưu tiên sales/receivables/delivery.
+- Shared HRM vẫn full; Alumdoor shell chỉ expose Employee + Attendance theo product decision hiện hành.
+- Warehouse Cash là primitive backend thuộc VN Accounting; mobile không cần coi nó là product center.
+- Production/version claim phải đọc release evidence hiện hành, không hardcode snapshot cũ.
 
 ## Guardrails
 
 - Không sửa production secrets/DNS hoặc mutate customer data khi chưa có yêu cầu rõ.
 - Không commit `.env`, `server/work/`, `tmp/`, backup, credential, cookie/token hoặc generated artifact không thuộc source control.
-- UI-only có thể theo policy UI release hiện hành; non-UI/shared/backend/migration/ops vẫn cần gate phù hợp trước merge/deploy.
+- UI-only theo fast path hiện hành; backend/schema/migration/security/accounting/stock/payroll/ops phải dùng risk gate và approval boundary phù hợp.
