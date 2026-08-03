@@ -1,6 +1,14 @@
 import { staticDevelopmentActor, verifyBearerJwt } from "../../../packages/auth/src/index.js";
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import { asCloudForgeError, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
+import {
+  appendD1ObservationHeaders,
+  currentD1Bookmark,
+  D1_BOOKMARK_HEADER,
+  normalizeD1Bookmark,
+  observeD1Session,
+  openD1Session,
+} from "../../../packages/core/src/d1-session-policy.js";
 import { PermissionService } from "../../../packages/policy/src/index.js";
 import type { QueryRequest } from "../../../packages/query/src/index.js";
 import { D1ReportService, parseQueryRequest } from "../../../packages/query/src/index.js";
@@ -11,6 +19,7 @@ interface PreparedReportMessage {
   job_id: string;
   actor_id: string;
   request: QueryRequest;
+  bookmark?: string;
 }
 
 interface QueryEnv {
@@ -42,26 +51,48 @@ export default {
         permission.assertReport(actor, input.report);
         const compiler = new AccountsPayableQueryCompiler();
         const compiled = compiler.compile(input);
+        const inboundBookmark = normalizeD1Bookmark(request.headers.get(D1_BOOKMARK_HEADER));
+
         if (compiled.prepared) {
           if (!env.REPORT_QUEUE) throw new Error("REPORT_QUEUE binding is missing");
           const jobId = crypto.randomUUID();
           const now = new Date();
           const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-          await env.DB.prepare(
+          const commandDb = openD1Session(env.DB, "authoritative");
+          await commandDb.prepare(
             `INSERT INTO prepared_reports(tenant_id,job_id,report_name,actor_id,request_json,status,created_at,expires_at)
              VALUES(?1,?2,?3,?4,?5,'queued',?6,?7)`,
           ).bind(tenantId, jobId, input.report, actor.user_id, JSON.stringify(input), now.toISOString(), expires.toISOString()).run();
-          await env.REPORT_QUEUE.send({ tenant_id: tenantId, job_id: jobId, actor_id: actor.user_id, request: input });
-          return jsonResponse({ prepared: true, report: input.report, job_id: jobId, status: "queued" }, 202);
+          await env.REPORT_QUEUE.send({
+            tenant_id: tenantId,
+            job_id: jobId,
+            actor_id: actor.user_id,
+            request: input,
+            ...(inboundBookmark ? { bookmark: inboundBookmark } : {}),
+          });
+          const headers = new Headers({ "x-cloudforge-trace-id": traceId });
+          const commandBookmark = currentD1Bookmark(commandDb);
+          if (commandBookmark) headers.set(D1_BOOKMARK_HEADER, commandBookmark);
+          return jsonResponse({ prepared: true, report: input.report, job_id: jobId, status: "queued" }, 202, headers);
         }
-        const result = await new D1ReportService(env.DB, compiler).run(input, true);
-        return jsonResponse(result, 200, { "x-cloudforge-trace-id": traceId });
+
+        // Reports are explicitly non-authoritative. A client bookmark preserves
+        // read-your-writes; otherwise D1 may choose the closest replica.
+        const reportDb = openD1Session(env.DB, "replica-safe", inboundBookmark);
+        const result = await new D1ReportService(reportDb, compiler).run(input, true);
+        const observation = await observeD1Session(reportDb);
+        logReadObservation(traceId, tenantId, "synchronous-report", observation);
+        const headers = appendD1ObservationHeaders(new Headers({ "x-cloudforge-trace-id": traceId }), observation);
+        return jsonResponse(result, 200, headers);
       }
 
       const match = url.pathname.match(/^\/api\/v1\/reports\/prepared\/([^/]+)$/);
       if (request.method === "GET" && match) {
         const jobId = decodeURIComponent(match[1]!);
-        const row = await env.DB.prepare(
+        // Job status is interactive control state, not analytical data. Always read
+        // the primary so a just-completed/failed job cannot appear stale.
+        const statusDb = openD1Session(env.DB, "authoritative");
+        const row = await statusDb.prepare(
           `SELECT job_id,report_name,actor_id,status,result_json,error_message,created_at,completed_at,expires_at
            FROM prepared_reports WHERE tenant_id=?1 AND job_id=?2`,
         ).bind(tenantId, jobId).first<{
@@ -73,6 +104,9 @@ export default {
           throw errors.permission("Prepared report belongs to another user");
         }
         permission.assertReport(actor, row.report_name);
+        const headers = new Headers({ "x-cloudforge-trace-id": traceId });
+        const bookmark = currentD1Bookmark(statusDb);
+        if (bookmark) headers.set(D1_BOOKMARK_HEADER, bookmark);
         return jsonResponse({
           job_id: row.job_id,
           report: row.report_name,
@@ -82,7 +116,7 @@ export default {
           created_at: row.created_at,
           completed_at: row.completed_at,
           expires_at: row.expires_at,
-        });
+        }, 200, headers);
       }
 
       return jsonResponse({ error: { code: "ROUTE_NOT_FOUND" } }, 404);
@@ -94,13 +128,21 @@ export default {
   async queue(batch: MessageBatch<PreparedReportMessage>, env: QueryEnv): Promise<void> {
     for (const message of batch.messages) {
       const job = message.body;
+      const commandDb = openD1Session(env.DB, "authoritative");
       try {
-        await env.DB.prepare(
+        await commandDb.prepare(
           `UPDATE prepared_reports SET status='running', started_at=?3
            WHERE tenant_id=?1 AND job_id=?2 AND status='queued'`,
         ).bind(job.tenant_id, job.job_id, new Date().toISOString()).run();
-        const result = await new D1ReportService(env.DB, new AccountsPayableQueryCompiler()).run(job.request, true);
-        await env.DB.prepare(
+
+        // Prepared report execution is read-only and may use a replica. If the
+        // originating request carried a bookmark, the report cannot go behind it.
+        const reportDb = openD1Session(env.DB, "replica-safe", job.bookmark);
+        const result = await new D1ReportService(reportDb, new AccountsPayableQueryCompiler()).run(job.request, true);
+        const observation = await observeD1Session(reportDb);
+        logReadObservation(job.job_id, job.tenant_id, "prepared-report", observation);
+
+        await commandDb.prepare(
           `UPDATE prepared_reports SET status='completed', result_json=?3, completed_at=?4
            WHERE tenant_id=?1 AND job_id=?2`,
         ).bind(job.tenant_id, job.job_id, JSON.stringify(result), new Date().toISOString()).run();
@@ -126,7 +168,7 @@ export default {
           message.retry({ delaySeconds: retryDelaySeconds });
           continue;
         }
-        await env.DB.prepare(
+        await commandDb.prepare(
           `UPDATE prepared_reports SET status='failed', error_message=?3, completed_at=?4
            WHERE tenant_id=?1 AND job_id=?2`,
         ).bind(job.tenant_id, job.job_id, normalized.code, new Date().toISOString()).run();
@@ -142,7 +184,10 @@ export default {
 
 async function reconcileStalePreparedReports(env: QueryEnv): Promise<void> {
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-  const stale = await env.DB.prepare(
+  // Reconciliation decides whether a job needs redelivery, so stale replica state
+  // would create duplicate work. Keep it primary-first.
+  const commandDb = openD1Session(env.DB, "authoritative");
+  const stale = await commandDb.prepare(
     `SELECT job_id, actor_id, request_json FROM prepared_reports
      WHERE tenant_id=?1 AND status='queued' AND created_at < ?2 LIMIT 50`,
   ).bind(env.TENANT_ID, cutoff).all<{ job_id: string; actor_id: string; request_json: string }>();
@@ -163,6 +208,25 @@ async function authenticate(request: Request, env: QueryEnv, tenantId: string): 
   });
   if (claims.tenant_id !== tenantId) throw errors.authentication("Authenticated tenant does not match report tenant");
   return { user_id: claims.sub, roles: [...claims.roles] };
+}
+
+function logReadObservation(
+  correlationId: string,
+  tenantId: string,
+  surface: "synchronous-report" | "prepared-report",
+  observation: { bookmark: string | null; served_by_region: string | null; served_by_primary: boolean | null },
+): void {
+  console.log(JSON.stringify({
+    level: "info",
+    service: "query-worker",
+    scope: "d1-read-routing",
+    correlation_id: correlationId,
+    tenant_id: tenantId,
+    surface,
+    served_by_region: observation.served_by_region,
+    served_by_primary: observation.served_by_primary,
+    bookmark_present: Boolean(observation.bookmark),
+  }));
 }
 
 function requireConfig(value: string | undefined, name: string): string {
