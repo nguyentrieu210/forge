@@ -1,0 +1,13 @@
+{
+  "name": "CRM Sell Out Line",
+  "module": "CRM",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "item_code", "label": "Mã hàng", "fieldtype": "Link", "options": "Item", "required": true, "in_list_view": true },
+    { "fieldname": "qty", "label": "Số lượng bán ra", "fieldtype": "Float", "required": true, "in_list_view": true },
+    { "fieldname": "unit_price", "label": "Đơn giá sell-out", "fieldtype": "Currency", "required": true, "in_list_view": true },
+    { "fieldname": "amount", "label": "Doanh số sell-out", "fieldtype": "Currency", "read_only": true, "in_list_view": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}

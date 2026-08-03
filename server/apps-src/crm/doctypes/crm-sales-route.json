@@ -1,0 +1,23 @@
+{
+  "name": "CRM Sales Route",
+  "module": "CRM",
+  "autoname": "CRM-ROUTE-.YYYY.-#####",
+  "title_field": "route_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "route_name", "label": "Tên tuyến", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "salesperson", "label": "Nhân viên bán hàng", "fieldtype": "Link", "options": "User", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "territory", "label": "Khu vực", "fieldtype": "Link", "options": "Territory", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "start_date", "label": "Từ ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "end_date", "label": "Đến ngày", "fieldtype": "Date", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nClosed", "default": "Draft", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

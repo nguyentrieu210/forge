@@ -1,0 +1,17 @@
+{
+  "name": "CRM Lead Source",
+  "module": "CRM",
+  "autoname": "field:source_name",
+  "title_field": "source_name",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "source_name", "label": "Nguồn khách hàng", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "disabled", "label": "Ngừng sử dụng", "fieldtype": "Check", "default": false, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true }
+  ],
+  "revision": 2
+}

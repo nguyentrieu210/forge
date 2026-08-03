@@ -1,0 +1,8 @@
+[
+  { "record_type": "CRM Stage", "name": "Default Sales Pipeline::Prospecting", "data": { "stage_name": "Prospecting", "pipeline": "Default Sales Pipeline", "stage_type": "Open", "probability": "10", "sort_order": 10, "disabled": false } },
+  { "record_type": "CRM Stage", "name": "Default Sales Pipeline::Qualified", "data": { "stage_name": "Qualified", "pipeline": "Default Sales Pipeline", "stage_type": "Open", "probability": "30", "sort_order": 20, "disabled": false } },
+  { "record_type": "CRM Stage", "name": "Default Sales Pipeline::Proposal", "data": { "stage_name": "Proposal", "pipeline": "Default Sales Pipeline", "stage_type": "Open", "probability": "60", "sort_order": 30, "disabled": false } },
+  { "record_type": "CRM Stage", "name": "Default Sales Pipeline::Negotiation", "data": { "stage_name": "Negotiation", "pipeline": "Default Sales Pipeline", "stage_type": "Open", "probability": "80", "sort_order": 40, "disabled": false } },
+  { "record_type": "CRM Stage", "name": "Default Sales Pipeline::Won", "data": { "stage_name": "Won", "pipeline": "Default Sales Pipeline", "stage_type": "Won", "probability": "100", "sort_order": 90, "disabled": false } },
+  { "record_type": "CRM Stage", "name": "Default Sales Pipeline::Lost", "data": { "stage_name": "Lost", "pipeline": "Default Sales Pipeline", "stage_type": "Lost", "probability": "0", "sort_order": 100, "disabled": false } }
+]

@@ -1,0 +1,22 @@
+{
+  "name": "CRM Marketing List Member",
+  "module": "CRM",
+  "autoname": "CRM-LIST-MEMBER-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "marketing_list", "label": "Danh sách", "fieldtype": "Link", "options": "CRM Marketing List", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "contact", "label": "Liên hệ", "fieldtype": "Link", "options": "CRM Contact", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "source", "label": "Nguồn thêm", "fieldtype": "Select", "options": "Manual\nImport\nSegment", "default": "Manual", "required": true, "set_only_once": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nUnsubscribed", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "added_at", "label": "Thêm lúc", "fieldtype": "Datetime", "read_only": true, "in_list_view": true },
+    { "fieldname": "unsubscribed_at", "label": "Hủy đăng ký lúc", "fieldtype": "Datetime", "read_only": true, "depends_on": "eval:doc.status=='Unsubscribed'", "in_list_view": true },
+    { "fieldname": "unsubscribed_reason", "label": "Lý do hủy đăng ký", "fieldtype": "Small Text", "mandatory_depends_on": "eval:doc.status=='Unsubscribed'", "depends_on": "eval:doc.status=='Unsubscribed'" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}

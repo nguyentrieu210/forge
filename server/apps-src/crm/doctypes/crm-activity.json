@@ -1,0 +1,27 @@
+{
+  "name": "CRM Activity",
+  "module": "CRM",
+  "autoname": "CRM-ACT-.YYYY.-#####",
+  "title_field": "subject",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "reference_doctype", "label": "Loại đối tượng", "fieldtype": "Select", "options": "CRM Lead\nCRM Deal\nCustomer", "required": true, "in_standard_filter": true },
+    { "fieldname": "reference_name", "label": "Đối tượng", "fieldtype": "Dynamic Link", "options": "reference_doctype", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "activity_type", "label": "Loại hoạt động", "fieldtype": "Select", "options": "Call\nEmail\nMeeting\nTask", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "subject", "label": "Nội dung", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Open\nCompleted\nCancelled", "default": "Open", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "activity_at", "label": "Thời gian hoạt động", "fieldtype": "Datetime", "in_list_view": true },
+    { "fieldname": "due_at", "label": "Hạn theo dõi", "fieldtype": "Datetime", "in_list_view": true },
+    { "fieldname": "completed_at", "label": "Hoàn thành lúc", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "assigned_to", "label": "Phụ trách", "fieldtype": "Link", "options": "User", "in_standard_filter": true },
+    { "fieldname": "outcome", "label": "Kết quả", "fieldtype": "Small Text" },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text Editor" }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "print": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 2
+}

@@ -1,0 +1,18 @@
+{
+  "name": "CRM Deal Close Reason",
+  "module": "CRM",
+  "autoname": "field:reason",
+  "title_field": "reason",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "reason", "label": "Lý do thắng / mất", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "outcome", "label": "Kết quả", "fieldtype": "Select", "options": "Won\nLost", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "disabled", "label": "Ngừng sử dụng", "fieldtype": "Check", "default": false, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true }
+  ],
+  "revision": 2
+}

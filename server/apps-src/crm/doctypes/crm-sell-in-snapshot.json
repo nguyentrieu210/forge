@@ -1,0 +1,23 @@
+{
+  "name": "CRM Sell In Snapshot",
+  "module": "CRM",
+  "autoname": "CRM-SELLIN-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "partner", "label": "Đối tác kênh", "fieldtype": "Link", "options": "CRM Channel Partner", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_order", "label": "Sales Order", "fieldtype": "Link", "options": "Sales Order", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_order_version", "label": "Version Sales Order", "fieldtype": "Int", "read_only": true, "in_list_view": true },
+    { "fieldname": "order_status", "label": "Trạng thái đơn snapshot", "fieldtype": "Data", "read_only": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "order_docstatus", "label": "Docstatus snapshot", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "order_total", "label": "Doanh số sell-in snapshot", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "recorded_at", "label": "Ghi nhận lúc", "fieldtype": "Datetime", "read_only": true, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "create": true, "report": true },
+    { "role": "Sales Manager", "read": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

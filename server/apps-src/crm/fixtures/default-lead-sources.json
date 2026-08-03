@@ -1,0 +1,7 @@
+[
+  { "record_type": "CRM Lead Source", "name": "Referral", "data": { "source_name": "Referral", "disabled": false } },
+  { "record_type": "CRM Lead Source", "name": "Website", "data": { "source_name": "Website", "disabled": false } },
+  { "record_type": "CRM Lead Source", "name": "Social", "data": { "source_name": "Social", "disabled": false } },
+  { "record_type": "CRM Lead Source", "name": "Outbound", "data": { "source_name": "Outbound", "disabled": false } },
+  { "record_type": "CRM Lead Source", "name": "Walk-in", "data": { "source_name": "Walk-in", "disabled": false } }
+]

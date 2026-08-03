@@ -1,0 +1,26 @@
+{
+  "name": "CRM Field Check-In",
+  "module": "CRM",
+  "autoname": "CRM-CHECKIN-.YYYY.-#####",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "sales_route", "label": "Tuyến bán hàng", "fieldtype": "Link", "options": "CRM Sales Route", "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "route_stop", "label": "Điểm tuyến", "fieldtype": "Link", "options": "CRM Sales Route Stop", "set_only_once": true, "in_list_view": true },
+    { "fieldname": "partner", "label": "Đối tác", "fieldtype": "Link", "options": "CRM Channel Partner", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "salesperson", "label": "Nhân viên bán hàng", "fieldtype": "Link", "options": "User", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "checked_in_at", "label": "Check-in lúc", "fieldtype": "Datetime", "read_only": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "latitude", "label": "Vĩ độ check-in", "fieldtype": "Float", "required": true, "set_only_once": true },
+    { "fieldname": "longitude", "label": "Kinh độ check-in", "fieldtype": "Float", "required": true, "set_only_once": true },
+    { "fieldname": "distance_m", "label": "Khoảng cách (m)", "fieldtype": "Float", "read_only": true, "in_list_view": true },
+    { "fieldname": "result", "label": "Kết quả", "fieldtype": "Select", "options": "Inside Radius\nOutside Radius\nLocation Unconfigured", "read_only": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "crm_activity", "label": "Hoạt động CRM", "fieldtype": "Link", "options": "CRM Activity", "set_only_once": true },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Small Text", "set_only_once": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "create": true, "report": true },
+    { "role": "Sales Manager", "read": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "create": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}
