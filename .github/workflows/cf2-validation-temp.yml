@@ -1,6 +1,9 @@
 name: CF2 Capability Rebaseline Validation
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - rc/cf2-release-confidence-20260804
