@@ -142,14 +142,16 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
   assertOrder(columns, order);
   const { limit, offset } = appendPagination(params, request);
   const whereSql = where.length ? ` WHERE ${where.join(" AND ")}` : "";
+  const companyCurrency = "COALESCE(json_extract(d.payload_json,'$.company_currency'), p.currency)";
+  const companyScale = "COALESCE(CAST(json_extract(d.payload_json,'$.company_currency_scale') AS INTEGER), p.currency_scale)";
   const sql = `
     WITH payment_balance AS (
       SELECT
         p.party,
         json_extract(d.payload_json,'$.company') AS company,
         p.account,
-        COALESCE(json_extract(d.payload_json,'$.company_currency'), p.currency) AS currency,
-        COALESCE(CAST(json_extract(d.payload_json,'$.company_currency_scale') AS INTEGER), p.currency_scale) AS currency_scale,
+        ${companyCurrency} AS currency,
+        ${companyScale} AS currency_scale,
         SUM(p.base_amount_minor) AS payable_ledger_balance_minor
       FROM payment_ledger_entries p
       INNER JOIN documents d
@@ -161,7 +163,12 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
         AND p.party_type='Supplier'
         AND p.account_type='Payable'
         AND date(p.posting_at)<=date(?2)
-      GROUP BY p.party,company,p.account,currency,currency_scale
+      GROUP BY
+        p.party,
+        json_extract(d.payload_json,'$.company'),
+        p.account,
+        ${companyCurrency},
+        ${companyScale}
     ), gl_balance AS (
       SELECT
         g.party,
@@ -180,7 +187,12 @@ function compileSupplierReconciliation(request: QueryRequest, forceSynchronous: 
         AND g.party_type='Supplier'
         AND g.party IS NOT NULL
         AND date(g.posting_at)<=date(?2)
-      GROUP BY g.party,company,g.account,g.currency,g.currency_scale
+      GROUP BY
+        g.party,
+        json_extract(d.payload_json,'$.company'),
+        g.account,
+        g.currency,
+        g.currency_scale
     ), keys AS (
       SELECT party,company,account,currency,currency_scale FROM payment_balance
       UNION
