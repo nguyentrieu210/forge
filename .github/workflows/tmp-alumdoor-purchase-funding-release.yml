@@ -1,24 +1,17 @@
 name: Temp ALU Purchase Funding Full Release
-
 on:
   push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/tmp-alumdoor-purchase-funding-release.yml"
-
+    branches: [main]
+    paths: [".github/workflows/tmp-alumdoor-purchase-funding-release.yml"]
 permissions:
   contents: read
   issues: write
   pull-requests: write
-
 concurrency:
   group: production-alu-full
   cancel-in-progress: false
-
 jobs:
   full-release:
-    name: Full ALU purchase funding release
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: production
@@ -29,120 +22,68 @@ jobs:
       DISPATCH_NAMESPACE: cloudforge-production
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       VITE_FORGE_RELEASE_SHA: 431fe5f40a7d56887e4d03ea0522c9332a8bda99
-
     steps:
-      - name: Checkout exact target
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Require target merged into main
-        shell: bash
+      - name: Require exact target on main
         run: |
-          set -euo pipefail
           git fetch origin main
-          git cat-file -e "$TARGET_SHA^{commit}"
-          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
-            echo "Refusing production release: $TARGET_SHA is not merged into main."
-            exit 1
-          }
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main
+      - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
           run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Plan tenant migrations while checkout is clean
-        working-directory: server
-        run: node scripts/migrate-tenant.mjs --tenant "$TENANT"
-
-      - name: Backup and replay-verify tenant before migration
-        shell: bash
+      - run: pnpm install --frozen-lockfile
+      - name: Backup and replay-verify tenant
         run: |
           set -euo pipefail
           backup_dir="$RUNNER_TEMP/alu-backup"
           mkdir -p "$backup_dir"
           node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$backup_dir"
           mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
-          [ "${#backups[@]}" -eq 1 ] || {
-            echo "Expected exactly one SQL backup, found ${#backups[@]}."
-            exit 1
-          }
-          node server/scripts/verify-tenant-backup.mjs \
-            --tenant "$TENANT" \
-            --file "${backups[0]}" \
-            --output "$RUNNER_TEMP/alu-backup-verification.json"
-
-      - name: Migrate tenant while release worktree is clean
+          test "${#backups[@]}" -eq 1
+          node server/scripts/verify-tenant-backup.mjs --tenant "$TENANT" --file "${backups[0]}" --output "$RUNNER_TEMP/alu-backup-verification.json"
+      - name: Migrate tenant from clean checkout
         working-directory: server
         run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
-
-      - name: Build exact platform and client artifacts
+      - name: Build platform and client
         run: |
           pnpm --filter cloudforge run build
           pnpm --filter metaforge run build
-
-      - name: Deploy tenant Worker before staging UI bundle
+      - name: Deploy tenant Worker
         working-directory: server
         run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
-
       - name: Deploy Alumdoor app Worker
         working-directory: server
-        run: |
-          pnpm exec wrangler deploy \
-            --config apps-src/alumdoor-worker/wrangler.jsonc \
-            --name "$APP_WORKER" \
-            --dispatch-namespace "$DISPATCH_NAMESPACE" \
-            --strict
-
-      - name: Stage exact runtime and warehouse mobile bundle
+        run: pnpm exec wrangler deploy --config apps-src/alumdoor-worker/wrangler.jsonc --name "$APP_WORKER" --dispatch-namespace "$DISPATCH_NAMESPACE" --strict
+      - name: Stage client bundle
         run: node server/scripts/stage-client-bundle.mjs
-
       - name: Deploy Gateway and UI
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
-
       - name: Verify exact production convergence
-        run: >-
-          node server/scripts/sre-health-snapshot.mjs
-          --base https://alu.kairo.vn
-          --expected-release-sha "$TARGET_SHA"
-          --allow-remote
-          --confirm-host alu.kairo.vn
-          --attempts 10
-          --delay-ms 2000
-          --output "$RUNNER_TEMP/release-health.json"
-
-      - name: Upload backup verification evidence
-        if: always()
+        run: node server/scripts/sre-health-snapshot.mjs --base https://alu.kairo.vn --expected-release-sha "$TARGET_SHA" --allow-remote --confirm-host alu.kairo.vn --attempts 10 --delay-ms 2000 --output "$RUNNER_TEMP/release-health.json"
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: alu-purchase-funding-backup-verification-${{ github.run_id }}
+          name: alu-purchase-funding-backup-${{ github.run_id }}
           path: ${{ runner.temp }}/alu-backup-verification.json
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Upload release health evidence
-        if: always()
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: alu-purchase-funding-release-health-${{ github.run_id }}
+          name: alu-purchase-funding-health-${{ github.run_id }}
           path: ${{ runner.temp }}/release-health.json
           if-no-files-found: warn
           retention-days: 30
-
       - name: Report release result
         if: always()
         env:
