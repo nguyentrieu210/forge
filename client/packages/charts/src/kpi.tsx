@@ -1,6 +1,5 @@
 /** @jsxImportSource react */
 import type { ReactNode } from "react";
-import { Button } from "@metaforge/ui";
 import { ForgeSparkline } from "./specialized.js";
 
 export type ForgeKpiTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -61,9 +60,12 @@ export function ForgeKpiCard({
       {description ? <div className="mt-2 line-clamp-2 text-[11px] leading-4 text-muted-foreground">{description}</div> : null}
     </>
   );
-  const classes = `min-w-0 rounded-lg border bg-card/95 p-4 text-left shadow-[0_1px_0_rgba(0,0,0,.025)] transition-[border-color,box-shadow,transform] duration-150 motion-reduce:transition-none ${onActivate ? "hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-sm" : ""} ${className}`;
+  const classes = `min-w-0 rounded-lg border bg-card/95 p-4 text-left shadow-[0_1px_0_rgba(0,0,0,.025)] transition-[border-color,box-shadow,transform] duration-150 motion-reduce:transition-none ${onActivate ? "hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" : ""} ${className}`;
   return onActivate ? (
-    <Button type="button" variant="ghost" onClick={onActivate} className={`h-auto w-full justify-start whitespace-normal ${classes}`}>{body}</Button>
+    <>
+      {/* @allow-native: charts package remains independent from the compiled @metaforge/ui artifact */}
+      <button type="button" onClick={onActivate} className={`h-auto w-full justify-start whitespace-normal ${classes}`}>{body}</button>
+    </>
   ) : <div className={classes}>{body}</div>;
 }
 
