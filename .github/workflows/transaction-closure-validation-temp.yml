@@ -52,11 +52,12 @@ jobs:
           set -e
           echo "full_server_tsc_status=${status}"
 
-          if grep -E 'packages/clouderp-selling/src/(sales-order-closure-controller|index|registry|types)\.ts|packages/clouderp-erpnext/src/(manufacturing-costing-read|index)\.ts|apps/tenant-worker/src/manufacturing-mrp-api\.ts|packages/clouderp-stock/src/wms-picking\.ts|apps/query-worker/src/index\.ts|packages/policy/src/index\.ts|packages/query/src/(finance-closure|finance-report-compiler|finance-stock-control)\.ts|packages/clouderp-core/src/(procurement-landed-cost|procurement-p2p-controllers|procurement-p2p-rollout-controllers|registry|index)\.ts|apps-src/ws07-worker/src/entry\.ts' /tmp/transaction-closure-tsc.log; then
+          if grep -E 'packages/ledger/src/index\.ts|packages/clouderp-selling/src/(sales-order-closure-controller|index|registry|types)\.ts|packages/clouderp-erpnext/src/(manufacturing-costing-read|index)\.ts|apps/tenant-worker/src/manufacturing-mrp-api\.ts|packages/clouderp-stock/src/wms-picking\.ts|apps/query-worker/src/index\.ts|packages/policy/src/index\.ts|packages/query/src/(finance-closure|finance-report-compiler|finance-stock-control)\.ts|packages/clouderp-core/src/(procurement-landed-cost|procurement-p2p-controllers|procurement-p2p-rollout-controllers|registry|index)\.ts|apps-src/ws07-worker/src/entry\.ts' /tmp/transaction-closure-tsc.log; then
             echo "Transaction Closure changed authoritative source has TypeScript errors"
             exit 1
           fi
 
+          test -f server/dist/packages/ledger/src/index.js
           test -f server/dist/packages/clouderp-selling/src/sales-order-closure-controller.js
           test -f server/dist/packages/clouderp-erpnext/src/manufacturing-costing-read.js
           test -f server/dist/apps/tenant-worker/src/manufacturing-mrp-api.js
