@@ -1,491 +1,1101 @@
-# FORGE RC HARDENING EXECUTION PLAN — 2026-08-03
+# FORGE RC HARDENING EXECUTION BLUEPRINT — 2026-08-03
 
-Status: **PROPOSED EXECUTION PLAN**  
-Baseline: exact current `main` must be re-read before every implementation task.  
+Status: **PROPOSED PROGRAM / NOT YET MERGED**  
+Baseline rule: trước mỗi task phải đọc lại exact current `main`; không dùng SHA/branch trong tài liệu này làm live truth dài hạn.  
 Execution policy: `skills/forge-enterprise-completion/SKILL.md`.  
 Strategic target: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.  
-Capability denominator: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` (**956 capability IDs** at plan creation time).
+Capability denominator: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` (**956 capability IDs** tại thời điểm lập kế hoạch).  
+Current platform assessment: **overall Wired, moving into RC hardening**.
 
-## 1. Mục tiêu của giai đoạn tiếp theo
+---
 
-Forge đã vượt giai đoạn “thiếu module”. WS00–WS17 đã hội tụ ở repository level và kiến trúc nền đã đủ rộng. Giai đoạn tiếp theo không ưu tiên tăng số màn hình; mục tiêu là đưa nền hiện tại từ **Wired** lên **RC**, sau đó chọn các capability quan trọng để lên **Hardened**.
+# 1. Mục tiêu chương trình
 
-Đích của chương trình này:
+Forge đã qua giai đoạn thiếu module. WS00–WS17 đã hội tụ ở repository level, ERP/domain breadth đã rộng, App Factory/runtime/tenant foundation đã có, Alumdoor đã chứng minh được verticalization và production delivery ở nhiều mốc trước đây.
 
-1. Có maturity register cho toàn bộ capability map, không báo tiến độ bằng cảm tính.
-2. Mọi capability được nâng cấp theo vertical slice end-to-end và có evidence đúng risk class.
-3. Đóng các lỗ hổng platform/SRE/security trước khi mở rộng feature breadth.
-4. Đưa ERP core và Vietnam compliance lên RC theo source of truth, correction/reversal/reconciliation.
-5. Hoàn thiện App Factory/AI theo deterministic metadata/tool contract thay vì special case trong runtime.
-6. Dùng Alumdoor làm reference vertical để chứng minh generic platform và production readiness.
+Giai đoạn tiếp theo không lấy số màn hình, số DocType hoặc số PR làm thước đo. Mục tiêu là đưa Forge từ trạng thái **Wired rộng** sang **RC có bằng chứng**, sau đó chọn các capability quan trọng nhất để lên **Hardened**.
 
-## 2. Luật thực thi
+Chương trình phải đạt đồng thời 7 kết quả:
 
-### 2.1 Không resurrect PR cũ
+1. Có live maturity register cho đủ 956 capability ID.
+2. Có evidence index để biết capability nào đang dựa vào code/test/migration/release proof nào.
+3. L0 Platform đạt RC trước khi domain tiếp tục tự mở rộng primitive riêng.
+4. ERP Core đạt business-complete theo flow, không chỉ có schema + UI.
+5. Finance/stock/payroll/security/migration có correction, reconciliation và tenant evidence theo chuẩn CRITICAL.
+6. App Factory + AI trở thành moat generic, không special-case vertical vào runtime chung.
+7. Alumdoor đạt reference-vertical acceptance đủ mạnh để chứng minh platform hiện hành, không dựa vào release evidence lịch sử.
 
-- PR/branch lịch sử chỉ là evidence/reference.
-- Không reopen PR cũ làm canonical task.
-- Nếu code lịch sử còn giá trị, audit exact current `main` rồi cherry-pick/rebuild phần còn đúng contract vào branch mới.
+Program exit target theo North Star:
 
-### 2.2 Mỗi task phải gắn capability ID
+| Layer | Target program exit |
+|---|---:|
+| L0 Platform | >= 95% capability trong scope selected đạt RC+, critical write/security/release path đạt Hardened khi có production proof |
+| L1 ERP Core | >= 90% capability selected đạt business-complete RC+ |
+| L2 Enterprise Depth | >= 75–85% capability selected đạt Wired/RC tùy domain |
+| L3 Alumdoor reference vertical | >= 95% capability VP01 trong scope vận hành được chốt đạt RC+, production paths quan trọng đạt Hardened |
 
-Mỗi branch/PR mới phải ghi tối thiểu:
+Không dùng target trên để suy ngược phần trăm hiện tại. Chỉ tính sau khi Capability Status Registry đủ mẫu số.
+
+---
+
+# 2. Các điều không làm trong phase này
+
+1. Không mở thêm vertical mới chỉ để demo.
+2. Không làm lại feature đã có nếu audit chưa chứng minh current implementation thiếu.
+3. Không reopen PR cũ làm canonical task.
+4. Không nâng maturity chỉ vì có test hoặc đã merge.
+5. Không đẩy business rule xuống React để né backend contract.
+6. Không tạo stock/money/payroll ledger song song.
+7. Không hard-code Alumdoor/Item Price/business names vào shared runtime nếu metadata diễn đạt được.
+8. Không triển khai AI write path nếu deterministic tool/permission/preview/approval chưa khóa.
+9. Không gọi current main là deployed nếu không có exact release marker/evidence.
+10. Không biến GitHub Actions thành full-CI khổng lồ nếu blast-radius validation nhỏ hơn đã đủ evidence.
+
+---
+
+# 3. Operating model
+
+## 3.1 Một task chỉ tồn tại khi có Capability IDs
+
+Mọi branch/PR/task mới phải khai báo:
 
 ```text
+Program: RC Hardening
 Capabilities: <ID list>
-Current maturity: Missing/Foundation/Wired/RC/Hardened
-Target maturity: <target>
-Risk: FAST/STANDARD/CRITICAL
-Authoritative data/source of truth: <path/domain>
-Evidence required: <tests/migration/permission/E2E/reconciliation/release>
+Current maturity: <per ID or grouped>
+Target maturity: <per ID or grouped>
+North Star pillar: <NS-xx>
+Risk: FAST | STANDARD | CRITICAL
+Authoritative source: <domain/controller/ledger/store>
+Dependencies: <capability / branch / shared contract>
+Evidence required: <tests / migration / permission / reconciliation / E2E / release>
+Rollback/correction path: <required when applicable>
 ```
 
-### 2.3 Mỗi slice phải end-to-end
+Không có Capability ID phù hợp thì cập nhật Capability Map trước. Không tạo feature mồ côi.
 
-Ưu tiên:
+## 3.2 Branch policy
 
-`create/input -> validate -> approve/submit -> authoritative side effect -> report/query -> correction/cancel -> audit`
+Mọi implementation bắt đầu từ exact current `main`.
 
-Không coi một DocType mới, một API mới hoặc một màn hình mới là DONE nếu business flow chưa đóng.
+Naming:
 
-### 2.4 Merge/deploy boundary
+```text
+rc/<wave>-<domain>-<slice>
+```
 
-- UI-only: verify đúng blast radius, có thể merge/deploy theo fast path hiện hành.
-- Backend/schema/migration/business rule/security/accounting/stock/payroll: branch + PR + evidence, dừng trước merge/deploy cho tới khi có approval rõ.
-- Không production data mutation, secret/DNS, migration destructive nếu chưa có yêu cầu rõ.
+Ví dụ:
 
-## 3. Capability maturity register
+```text
+rc/w0-capability-status
+rc/w1-release-sre
+rc/w2-finance-period-reconcile
+rc/w2-inventory-repost
+rc/w4-appfactory-action-input
+rc/w5-alumdoor-o2c-proof
+```
 
-### 3.1 Tạo registry canonical
+Không tiếp tục `agent/*`, `feat/*`, `fix/*` cũ như canonical nếu task mới chưa audit exact diff.
 
-Tạo file mới ở wave đầu:
+## 3.3 PR policy
+
+PR description tối thiểu có:
+
+```text
+Capabilities:
+Maturity before -> after:
+Risk:
+Source of truth:
+Invariants:
+Changed contracts:
+Correction/reversal:
+Permission/tenant evidence:
+Tests:
+Migration replay:
+Reconciliation:
+Browser/mobile evidence:
+Production evidence:
+Dependencies / Dependency Requests:
+Known remaining gaps:
+```
+
+UI-only có thể merge/deploy theo UI policy sau verify. Non-UI/shared/backend/schema/migration/security/accounting/stock/payroll/ops dừng trước merge/deploy cho tới khi có approval rõ.
+
+## 3.4 Không block toàn chương trình vì một blocker cục bộ
+
+Nếu một task cần shared contract thuộc owner khác:
+
+1. ghi `Dependency Request`;
+2. tách phần độc lập;
+3. tiếp tục phần độc lập;
+4. chỉ block slice thật sự phụ thuộc.
+
+---
+
+# 4. Capability Status Registry
+
+Canonical file phải được tạo ở Wave 0:
 
 `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`
 
-Mỗi capability có một dòng:
+## 4.1 Schema một capability
 
-| Field | Ý nghĩa |
-|---|---|
-| Capability ID | ID từ Capability Map |
-| Domain/NS | family + North Star pillar |
-| Current maturity | Missing/Foundation/Wired/RC/Hardened |
-| Evidence source | code path / migration / test / release evidence |
-| Permission evidence | server-side permission/tenant proof |
-| Correction evidence | cancel/reversal/amend/retry nếu cần |
-| Reconciliation evidence | finance/stock/payroll/data reconciliation nếu cần |
-| UI evidence | browser/E2E/mobile nếu có UI |
-| Production evidence | exact release marker nếu claim deployed |
-| Blocking gap | gap ngắn nhất chặn mức tiếp theo |
-| Next slice | slice nhỏ nhất có thể nâng maturity |
+| Field | Bắt buộc | Nội dung |
+|---|---:|---|
+| ID | yes | ID từ Capability Map |
+| Family | yes | F01, W01, B02... |
+| North Star | yes | NS-01..NS-12 hoặc cross-cutting |
+| Maturity | yes | Missing/Foundation/Wired/RC/Hardened |
+| Risk | yes | FAST/STANDARD/CRITICAL |
+| Authoritative source | yes nếu Wired+ | controller/service/ledger/package |
+| UI surface | nếu có | renderer/screen/app |
+| Permission evidence | nếu Wired+ | server check/test |
+| Correction evidence | nếu transactional | cancel/reverse/amend/retry |
+| Reconciliation evidence | finance/stock/payroll/data | exact test/report/script |
+| Migration evidence | nếu schema | migration + replay |
+| Browser/mobile evidence | nếu actor UI | E2E/screenshot/run |
+| Production evidence | nếu claim deployed | release SHA/bundle marker/run |
+| Blocking gap | yes nếu < Hardened | gap ngắn nhất |
+| Next slice | yes nếu < RC | smallest maturity-lifting slice |
+| Last audited main | yes | exact SHA tại thời điểm audit |
 
-### 3.2 Quy tắc chấm maturity
+## 4.2 Maturity promotion rules
 
-- **Missing**: không có đường chạy thực tế.
-- **Foundation**: có schema/API seam/metadata nhưng chưa đủ business flow.
-- **Wired**: end-to-end đã nối nhưng evidence/invariant còn mỏng.
-- **RC**: flow chính + invariants + targeted regression đã đủ, còn long-tail/promotion/hardening.
-- **Hardened**: production-grade trong scope công bố, có failure/correction/security/reconciliation/evidence.
+### Missing -> Foundation
 
-Không suy Hardened từ số lượng test hoặc từ việc đã merge.
+Cần tối thiểu:
+- canonical schema/contract hoặc platform seam;
+- ownership/layer đúng kiến trúc;
+- không tạo duplicate authority.
 
-### 3.3 Chỉ số báo cáo sau Wave 0
+### Foundation -> Wired
 
-Sau khi registry hoàn thành, mọi báo cáo tiến độ dùng số thật:
+Cần:
+- end-to-end happy path chạy qua authoritative write/read path;
+- server permission/tenant boundary;
+- basic failure validation;
+- UI/API route thực tế nếu capability yêu cầu.
+
+### Wired -> RC
+
+Cần:
+- invariant tests;
+- failure/retry/idempotency;
+- cancel/reversal/correction khi nghiệp vụ cần;
+- migration replay nếu schema;
+- reconciliation nếu finance/stock/payroll;
+- browser/mobile acceptance nếu có UI;
+- known long-tail được ghi rõ, không giả vờ Hardened.
+
+### RC -> Hardened
+
+Cần:
+- production-grade scope được công bố rõ;
+- failure/correction/security/reconciliation đầy đủ trong scope đó;
+- performance/large-data behavior phù hợp actor;
+- current release proof nếu claim deployed;
+- observability/rollback/backup/migration evidence khi liên quan;
+- không còn blocker Critical trong scope Hardened.
+
+---
+
+# 5. Hệ thống ưu tiên thay vì chọn task cảm tính
+
+Mỗi capability/slice được cho điểm ưu tiên để coordinator chọn batch tiếp theo.
+
+## 5.1 Priority score
+
+Score 0–5 cho từng yếu tố:
+
+| Yếu tố | Trọng số |
+|---|---:|
+| Blocker cho end-to-end flow | x5 |
+| Financial/legal/security/data risk | x5 |
+| Reuse cho nhiều app/domain | x4 |
+| Dependency centrality | x4 |
+| Customer/Alumdoor value | x3 |
+| Migration/onboarding value | x3 |
+| Evidence gap đang chặn RC | x3 |
+| Implementation cost | x-2 |
+| Shared-contract conflict risk | x-2 |
+
+Formula:
 
 ```text
-Total capability: 956
-Wired+: x/956
-RC+: y/956
-Hardened: z/956
-Critical RC+: a/b
-North Star pillar coverage: từng trụ riêng
+Priority =
+5*FlowBlocker +
+5*RiskReduction +
+4*Reuse +
+4*DependencyCentrality +
+3*CustomerValue +
+3*MigrationValue +
+3*EvidenceGap -
+2*ImplementationCost -
+2*ConflictRisk
 ```
 
-Không dùng phần trăm tổng trước khi registry đủ mẫu số.
+Không dùng score như luật cứng. Nó dùng để tránh việc feature dễ demo luôn thắng capability khó nhưng quan trọng.
 
-## 4. Wave 0 — Exact-state audit + evidence system
+## 5.2 P0/P1/P2
 
-Mục tiêu: tạo sự thật đo được trước khi viết thêm feature.
+- **P0:** blocker cross-domain, security/ledger/data integrity, release truth, capability evidence system.
+- **P1:** ERP core RC slice trực tiếp tạo business completeness.
+- **P2:** enterprise depth/moat/UX breadth sau khi source/core đủ ổn.
 
-### W0-01 Capability registry
+---
 
-- Parse 956 ID từ Capability Map.
-- Audit exact current `main` theo family.
-- Chấm maturity bảo thủ, evidence-driven.
-- Không tự nâng mức nếu thiếu correction/permission/reconciliation.
+# 6. Dependency graph chương trình
 
-**Exit:** 956/956 ID có maturity + evidence/gap hoặc explicit `Missing`.
+```mermaid
+flowchart TD
+  W0[Wave 0: Capability Truth + Evidence] --> W1[Wave 1: Platform RC]
+  W1 --> F[Finance/VN]
+  W1 --> S[Security/SaaS/SRE]
+  W1 --> AF[App Factory shared contracts]
+  F --> P[Procurement]
+  F --> I[Inventory/WMS]
+  F --> H[HCM/Payroll]
+  I --> M[Manufacturing/QMS]
+  P --> M
+  I --> C[CRM/O2C fulfillment]
+  F --> C
+  W1 --> BI[BI Semantic]
+  W1 --> INT[Integration Hub]
+  AF --> BI
+  AF --> AI[AI deterministic tools]
+  F --> ALU[Alumdoor Reference]
+  I --> ALU
+  P --> ALU
+  M --> ALU
+  C --> ALU
+  AF --> ALU
+  S --> ALU
+```
 
-### W0-02 Release/workflow truth
+Shared dependency order mặc định:
 
-Audit `.github/workflows/**` trên current main:
+1. Capability truth/evidence.
+2. Kernel/security/SaaS/SRE/release.
+3. App Factory generic contracts.
+4. Finance + Inventory authorities.
+5. Procurement/CRM/HCM.
+6. Manufacturing/QMS.
+7. Enterprise depth.
+8. AI/tooling moat.
+9. Alumdoor current-main production proof.
 
-- xác định canonical release workflow;
-- loại duplicate/one-off workflow khi thật sự stale;
-- không dựa vào PR #427 cũ;
-- đảm bảo UI-only path không deploy non-UI commit;
-- exact `/health` + `/release.json` vẫn là production proof.
+---
 
-Risk: **CRITICAL/OPS**.
+# 7. Concurrency model
 
-### W0-03 Validation lanes
+Không quay lại mô hình 18 nhánh cùng sửa shared files.
 
-Thiết lập/chuẩn hóa validation theo blast radius:
+## 7.1 Tối đa 5 lane active
 
-- shared TypeScript build/typecheck;
-- targeted domain regressions;
-- migration replay cho CRITICAL;
-- permission/tenant isolation;
-- browser/E2E cho UI;
-- accounting/stock/payroll reconciliation;
-- release marker khi production deploy.
+| Lane | Scope | Shared hotspot rule |
+|---|---|---|
+| Lane A | Platform/Security/SRE | owns release/kernel/security contract trong batch |
+| Lane B | Finance/VN | owns financial contracts |
+| Lane C | Inventory/Procurement | không đổi finance authority nếu chưa Dependency Request |
+| Lane D | CRM/HCM/Manufacturing | chỉ chạy slice độc lập khỏi shared hotspot |
+| Lane E | App Factory/UI/Alumdoor evidence | metadata/runtime only theo ownership rõ |
 
-Không cần biến GitHub Actions thành một lễ hội CI kéo dài hàng giờ. Chỉ cần deterministic evidence đủ để promotion maturity.
+Một shared hotspot chỉ có một canonical writer tại một thời điểm.
 
-### W0-04 Evidence index
+## 7.2 Merge window
 
-Tạo một index liên kết capability -> source/tests/migrations/release evidence để tránh cùng một thứ bị audit lại mười lần.
+Sau mỗi batch:
 
-**Wave 0 exit criteria:** Forge có baseline maturity thật và danh sách blockers được xếp hạng theo dependency/risk/value.
+1. freeze shared contract changes;
+2. rebase remaining branches lên current main;
+3. rerun affected evidence;
+4. cập nhật Capability Status;
+5. mở batch kế tiếp.
 
-## 5. Wave 1 — Platform RC foundation
+Không để 20 branch sống hàng tuần rồi hợp nhất bằng niềm tin.
 
-Ưu tiên vì mọi domain phía trên phụ thuộc vào lớp này.
+---
 
-### P1-01 Kernel / authoritative write
+# 8. Wave 0: Capability Truth + Evidence Infrastructure
+
+Mục tiêu: biết Forge thực sự đang ở đâu trước khi harden.
+
+## W0-01 Capability Registry Generator
+
+Capabilities: toàn bộ map, tooling only.
+
+Deliverables:
+- parser lấy đủ 956 IDs;
+- generated registry skeleton;
+- validation fail nếu Capability Map có ID không xuất hiện trong Status Registry;
+- validation fail nếu duplicate ID;
+- maturity vocabulary chỉ nhận 5 giá trị chuẩn.
+
+Exit:
+- 956/956 ID tồn tại trong registry.
+
+## W0-02 Domain Audit Pass
+
+Chia audit thành 12 trụ + cross-cutting.
+
+Audit mỗi capability:
+- schema;
+- service/controller;
+- API;
+- permissions;
+- migration;
+- tests;
+- UI;
+- production evidence.
+
+Exit:
+- 956/956 ID có maturity bảo thủ và blocker/next slice.
+
+## W0-03 Evidence Index
+
+Tạo:
+
+`docs/FORGE_ENTERPRISE_EVIDENCE_INDEX.md`
+
+Index theo capability và file evidence:
+
+```text
+Capability -> code -> tests -> migration -> release proof
+```
+
+Mục tiêu tránh audit lặp lại và tránh một test được kể thành bằng chứng cho 20 capability không liên quan.
+
+## W0-04 Validation Lanes
+
+Chuẩn hóa script/gate:
+
+- `FAST`: relevant typecheck/build + visual/browser khi UI.
+- `STANDARD`: targeted unit/integration + permission + failure path.
+- `CRITICAL`: invariants + migration replay + permission/tenant + correction/reversal + reconciliation + exact-state evidence.
+
+Exit:
+- task template biết chính xác phải chạy gate nào.
+
+## W0-05 Release Truth Cleanup
+
+Audit exact `.github/workflows/**`:
+- canonical release lane;
+- stale one-off workflow;
+- UI-only path filter;
+- full-release manual gate;
+- current release marker contract;
+- backup/migrate/rollback order.
+
+Không reuse PR #427 như canonical. Audit current main rồi mở task mới.
+
+## W0-06 Baseline Report
+
+Tạo report đầu tiên:
+
+```text
+Total = 956
+Missing = ...
+Foundation = ...
+Wired = ...
+RC = ...
+Hardened = ...
+Critical RC+ = .../...
+```
+
+Kèm breakdown theo North Star.
+
+### Wave 0 exit gate
+
+- Capability Registry complete 956/956.
+- Evidence Index usable.
+- Risk validation lanes có contract.
+- Release workflow truth được audit.
+- Top 30 priority slices được score và xếp hàng.
+
+---
+
+# 9. Wave 1: L0 Platform RC
+
+## W1-01 Document Kernel / OCC / Idempotency
+
+Target:
+- trusted server context;
+- OCC/version enforcement;
+- request idempotency;
+- audit/outbox side effects;
+- preview vs commit semantics;
+- no direct-write bypass.
+
+Evidence:
+- concurrent update conflict;
+- exact retry;
+- failed side effect replay;
+- tenant injection rejection;
+- permission before lookup where necessary.
+
+## W1-02 IAM / Permission / Field-level Security
 
 Target families:
-- Document Kernel / OCC / idempotency / audit.
-- trusted tenant context.
-- no direct bypass writes.
+- G01-001..018;
+- G02 security-relevant subset.
 
-Goal: platform write path đạt **RC/Hardened** trong scope generic.
-
-### P1-02 Security / IAM / SaaS
-
-Target:
-- G01 Identity & Access.
-- G02 Governance & Privacy.
-- T01 SaaS Lifecycle.
-
-Ưu tiên:
-- server-side record/field/owner/share/scope enforcement;
-- session/device revocation;
+Priority:
+- RBAC;
+- record/field/owner/share/user-scope;
+- permlevel;
 - privileged action audit;
-- support access/impersonation control;
-- tenant lifecycle guards.
+- session revocation;
+- MFA/OIDC/SSO seams by actual product scope.
 
-### P1-03 SRE / release / backup / restore
+## W1-03 SaaS Tenant Lifecycle
 
-Target:
-- O01 SRE.
-- tenant backup/restore/migration verification.
+Target T01:
+- provision;
+- route/domain;
+- plan/module/app enablement;
+- app install/upgrade/rollback;
+- migrate;
+- backup/restore;
+- suspend/reactivate;
+- delete lifecycle;
+- audited support access.
 
-Ưu tiên:
+Destructive production operations remain gated.
+
+## W1-04 SRE / Release / Backup / Restore
+
+Target O01.
+
+Minimum RC:
+- health;
 - release marker;
+- structured logs/correlation;
+- integrity checks;
 - backup verification;
 - restore drill;
 - migration verification;
-- rollback;
-- integrity checks;
-- rate limit/abuse protection;
-- error/queue visibility.
+- rollback path;
+- rate limit/abuse protection.
 
-### P1-04 Generic runtime/mobile contracts
+## W1-05 Mobile Offline Contract
 
-Target:
-- U01 responsive/installable PWA.
-- offline/session/cache/OCC contracts.
+Target U01-001..007.
 
-Không làm offline write trước khi khóa contract tenant/session/version/conflict.
+Contract first:
+- cache key includes tenant/user/release/schema where needed;
+- encrypted/safe storage policy;
+- session expiry behavior;
+- offline write envelope;
+- OCC conflict payload;
+- background sync retry/idempotency;
+- conflict resolution UX.
 
-**Wave 1 exit:** L0 platform core có bằng chứng RC trên các đường ghi/permission/release quan trọng; domain agent không cần tự chế primitive riêng.
+Không implement write queue trước khi contract khóa.
 
-## 6. Wave 2 — ERP Core RC
+### Wave 1 exit gate
 
-Mỗi domain chạy độc lập khi không chạm shared contract. Shared dependency phải ghi Dependency Request nhưng không chặn phần độc lập.
+- authoritative write path RC;
+- critical server-side permission paths RC;
+- tenant lifecycle/release/backup/restore evidence đủ cho domain hardening;
+- offline contract approved/implemented foundation;
+- no known P0 platform blocker cho ERP core.
 
-### E2-01 Finance + VN compliance
+---
 
-Target families:
-- F01–F04 trước;
-- V01–V04 theo demand pháp lý;
-- F05–F07 sau khi core posting/reconciliation ổn.
+# 10. Wave 2: ERP Core RC
 
-Bắt buộc:
-- fixed-point/decimal semantics;
-- hard/soft period guard;
-- reversal/correction;
+## 10.1 Finance + Vietnam Compliance
+
+Target first:
+- F01 GL/Period;
+- F02 AR;
+- F03 AP;
+- F04 Cash/Bank;
+- V01/V02/V03/V04 theo legal scope thực sự hỗ trợ.
+
+### Finance Slice F-A: Period + Posting Integrity
+
+Flow:
+
+`draft -> submit -> period validation -> GL posting -> cancel/reversal -> report`
+
+Must prove:
+- hard lock;
+- soft close adjustment;
 - backdated behavior;
-- tenant/company/branch scope;
-- AR/AP/payment reconciliation;
-- statutory source/effective-date/version/hash/test fixtures.
+- move scope/date into/out of locked period;
+- immutable posting trace;
+- correction instead of silent rewrite.
 
-Risk: **CRITICAL**.
+### Finance Slice F-B: AR
 
-### E2-02 Procurement 360
+`Sales Invoice -> Payment Entry -> partial allocation -> over/advance -> credit/write-off -> customer reconciliation`
 
-Target:
-- P01 Procurement Core.
-- P02 Supplier Management.
+### Finance Slice F-C: AP
 
-Flow RC ưu tiên:
+`Purchase Invoice -> supplier advance/payment -> partial allocation -> supplier adjustment -> AP reconciliation`
 
-`Purchase Request -> RFQ -> Quote Compare -> Approval -> PO -> Receipt -> Invoice -> Payment -> Return/Correction`
+### Finance Slice F-D: Cash/Bank
 
-Three-way match, partial receipt/invoice/payment, supplier debt và landed cost phải dùng authority hiện hữu, không tạo ledger cạnh tranh.
+`cash/bank transaction -> statement/import -> match -> partial reconcile -> reverse reconcile -> cash position`
 
-### E2-03 Inventory + WMS
+### Finance Slice F-E: VN Statutory
 
-Target:
-- W01 Inventory Core.
-- W02 WMS.
+Rules:
+- effective date;
+- legal source;
+- version/hash;
+- deterministic fixtures;
+- approval;
+- used-rule immutability/traceability.
 
-Ưu tiên:
-- stock reconciliation/cycle count;
-- backdated/repost;
-- valuation adjustment;
-- batch/serial/expiry;
-- reservation/ATP;
-- bin/putaway/pick/pack;
-- barcode/QR/mobile scanner.
+Risk: CRITICAL.
 
-Mọi stock correction phải đối soát stock ledger và finance khi tích hợp.
+## 10.2 Inventory + WMS
 
-### E2-04 CRM / Order-to-Cash
+### Inventory Slice I-A: Reconciliation / Correction
 
-Target:
-- C01 CRM Core.
-- C03 O2C trước C02/C04 breadth.
+`freeze/snapshot -> count -> variance -> approval -> stock posting -> reconciliation -> reversal/correction`
 
-Flow RC:
+### Inventory Slice I-B: Backdate / Repost
 
-`Lead/Customer -> Opportunity -> Quotation -> Sales Order -> Delivery -> Invoice -> Payment -> Return/Credit -> Warranty/Service`
+Must prove:
+- valuation consistency;
+- replay/repost;
+- downstream impact;
+- accounting reconciliation where integrated.
 
-### E2-05 HCM + Payroll VN
+### Inventory Slice I-C: Batch/Serial/Expiry
 
-Target:
-- H01–H05 trước;
-- V03 statutory payroll;
-- H06 talent sau core payroll.
+Receive -> reserve -> move -> issue -> return -> expire/adjust.
 
-Bắt buộc:
-- effective-dated payroll rules;
-- immutable used-rule evidence;
-- deterministic PIT/BHXH formula schema;
-- attendance/leave/OT source freeze;
-- correction/rerun;
+### WMS Slice I-D
+
+Zone/bin -> putaway -> pick -> pack -> dispatch -> cycle count -> mobile scan.
+
+Risk: CRITICAL for valuation/repost, STANDARD for isolated WMS UX depending on scope.
+
+## 10.3 Procurement 360
+
+### Proc Slice P-A
+
+`Purchase Request -> RFQ -> Supplier Quote -> Compare -> Approve -> PO`
+
+### Proc Slice P-B
+
+`PO -> partial Receipt -> QC -> Purchase Invoice -> partial payment -> return/correction`
+
+### Proc Slice P-C
+
+Three-way match + quantity/price variance + landed cost + supplier reconciliation.
+
+Historical Tiến Đạt logic may be cherry-picked only after current-main audit proves contract still valid.
+
+## 10.4 CRM / O2C
+
+### CRM Slice C-A
+
+Lead -> Customer/Contact -> Opportunity -> activity -> quotation.
+
+### CRM Slice C-B
+
+Quotation -> Sales Order -> partial delivery -> partial invoice -> partial payment.
+
+### CRM Slice C-C
+
+Return/exchange -> credit note -> warranty/service continuation.
+
+Customer 360 phải đọc canonical projections, không tạo shadow business truth.
+
+## 10.5 HCM + Payroll VN
+
+### HCM Slice H-A
+
+Employee lifecycle:
+
+`applicant -> offer -> employee -> contract -> transfer/promotion -> separation`
+
+### HCM Slice H-B
+
+Time:
+
+`shift/checkin -> attendance -> leave -> OT -> adjustment`
+
+### Payroll Slice H-C
+
+`source freeze -> salary calculation -> slip -> payroll entry -> GL -> payment/export -> correction/rerun`
+
+Must prove:
+- used-source immutability;
+- effective rule selection;
+- PIT/BHXH versioned evaluator where supported;
 - payroll GL reconciliation.
 
-Risk: **CRITICAL**.
+Risk: CRITICAL.
 
-### E2-06 Manufacturing + QMS
+## 10.6 Manufacturing + QMS
 
-Target:
-- M01–M04.
-- Q01.
+### MFG Slice M-A
 
-Flow RC:
+BOM/version/routing -> plan/MRP -> Work Order.
 
-`Demand -> BOM/Routing -> Plan/MRP -> Work Order -> Material -> Job Card -> FG/Scrap -> Cost/Variance -> Traceability -> Quality/Correction`
+### MFG Slice M-B
 
-Ưu tiên đóng rework/subcontracting/costing/traceability thay vì thêm thêm màn hình quản lý.
+Material issue/transfer -> Job Card -> FG -> scrap -> WIP.
 
-**Wave 2 exit:** các flow ERP core được dùng thực tế theo end-to-end DoD, không chỉ “có module”.
+### MFG Slice M-C
 
-## 7. Wave 3 — Enterprise depth
+Actual cost -> standard cost -> variance -> valuation/GL reconciliation.
 
-Sau khi ERP core đạt RC đủ để làm source cho các lớp phía trên.
+### MFG Slice M-D
 
-### D3-01 Project + Service + Field Service
+Raw lot -> production -> FG lot -> customer traceability.
 
-- J01 Project/PSA.
-- S01 Helpdesk.
-- S02 Field Service.
+### QMS Slice M-E
 
-### D3-02 BI semantic + planning
+Incoming/in-process/final inspection -> NCR -> RCA -> CAPA -> close/reopen evidence.
 
-- A01 semantic metric/dimension/measure.
-- permission-aware query.
-- drill-down/report/export.
-- executive cockpit/forecast/scenario sau trusted semantic layer.
+Rework/subcontracting phải có authority rõ, không direct-write stock/cost ledger.
 
-### D3-03 Integration Hub
+### Wave 2 exit gate
 
-- I01 foundation trước I02 provider breadth.
-- queue/retry/DLQ/idempotency/audit phải RC trước khi thêm nhiều connector.
+Để gọi ERP Core RC, các flow selected phải có:
+- happy path;
+- partial path;
+- correction/cancel;
+- backdate where applicable;
+- permission/tenant;
+- reports/query;
+- migration/import path where required;
+- reconciliation for money/stock/payroll;
+- no Critical unknown trong published scope.
 
-Provider priority theo demand thật:
+---
+
+# 11. Wave 3: Enterprise Depth
+
+## 11.1 Project/PSA
+
+Project -> WBS/task -> resource/time/expense -> procurement/inventory -> billing -> profitability -> change/acceptance.
+
+## 11.2 Helpdesk + Field Service
+
+Ticket/SLA -> assignment/escalation -> service order -> technician -> offline checklist/photo/signature -> parts -> billing -> CSAT.
+
+## 11.3 BI Semantic
+
+Metric/dimension/measure -> permission-aware query -> dashboard/report -> drill -> scheduled export -> planning/forecast.
+
+No AI query raw schema bypassing semantic permission layer.
+
+## 11.4 Integration Hub
+
+I01 foundation must reach RC before connector breadth:
+- OAuth/service account/API key;
+- webhook/event subscription;
+- transform/mapping;
+- queue/retry/DLQ;
+- idempotency;
+- connector audit.
+
+Provider order by business value:
 1. e-invoice/tax/BHXH;
 2. bank/payment;
 3. shipping/e-sign;
-4. email/SMS/Zalo/social;
-5. marketplace/workspace connectors.
+4. email/SMS/Zalo;
+5. marketplaces/workspace.
 
-### D3-04 Digital workplace / DMS / contracts
+## 11.5 Workplace/DMS/CLM
 
-- D01–D03.
-- N01–N03.
+Task/approval/search/notification/file/contract lifecycle first. Fancy collaboration UX comes after permission, retention, version and delivery evidence.
 
-Ưu tiên approval/search/notification/file/contract lifecycle có permission và retention trước các feature trang trí.
+---
 
-## 8. Wave 4 — Platform moat: App Factory + AI
+# 12. Wave 4: App Factory + AI Moat
 
-### M4-01 App Factory RC
+## 12.1 App Factory RC
 
-Target B01/B02:
-- workflow/action/rule/form/list/report/dashboard/print/permission builders;
-- app version/install/upgrade/rollback;
-- preview/test/package export/import.
+Target B01/B02.
 
-Rule: pattern lặp lại từ 2 app trở lên phải được đánh giá để nâng thành primitive generic.
+Must support generic:
+- DocType/Field/Child Table;
+- Form/List;
+- Workflow/Rule/Formula;
+- Action;
+- Report/Dashboard;
+- Print;
+- Role/Permission;
+- manifest/dependency/version;
+- install/upgrade/rollback;
+- preview/test/export/import.
 
-### M4-02 Generic enterprise UI patterns
+## 12.2 Enterprise UI primitive extraction
 
-Matrix, bulk transaction, input-table, approval inbox, command/search, report/dashboard phải đi qua metadata contract; shared runtime không hard-code business doctype nếu metadata biểu diễn được.
+Canonical generic patterns:
+- Matrix;
+- Bulk Transaction;
+- Action Input Table;
+- approval inbox;
+- timeline/activity;
+- report/pivot/dashboard;
+- search/command palette;
+- mobile action surface.
 
-### M4-03 AI deterministic tool path
+Promotion rule:
 
-Target A02:
+> Pattern repeated by >= 2 domains/verticals must be reviewed for metadata/shared primitive extraction.
 
-`intent -> semantic/context -> permission -> deterministic tool -> preview -> approval -> authoritative write`
+## 12.3 AI deterministic tool architecture
 
-AI không trực tiếp ghi ledger/statutory state và không vượt quyền user.
-
-## 9. Wave 5 — Alumdoor reference vertical 95%
-
-Alumdoor không được dùng để vá core. Nó phải chứng minh Forge.
-
-Target VP01:
-- profile/dimension/barem;
-- sales-to-production;
-- material reservation/cutting;
-- supplier delivery/debt/FIFO;
-- catch-weight/physical stock;
-- production completion;
-- delivery/invoice/receivables;
-- warranty/defect;
-- daily detailed ledger/reconciliation;
-- mobile sales/receivables/delivery.
-
-### Alumdoor acceptance
-
-1. Business flow chạy end-to-end trên generic authorities.
-2. Không vertical fork shared runtime.
-3. Desktop + mobile actor flows có evidence.
-4. Stock/money reconciliation khớp.
-5. Production exact release SHA + bundle marker verified.
-6. Backup/restore/release evidence hiện hành.
-
-**Wave 5 exit:** VP01 đạt 95% trong scope nghiệp vụ đã chọn và các primitive generic đã được phản hồi ngược vào Forge.
-
-## 10. Thứ tự triển khai đề xuất
-
-Không mở 18 nhánh chỉ để trông bận rộn. Mở theo dependency và khả năng tạo evidence.
-
-### Batch A — bắt đầu ngay
-
-1. `capability-status` — audit 956 IDs + evidence register.
-2. `release-sre-cleanup` — workflow/release/backup/restore truth.
-3. `validation-gates` — exact test/migration/permission/reconciliation lanes.
-4. `finance-core-rc` — F01/F02/F03/F04 + period/reconciliation.
-5. `inventory-core-rc` — W01 correction/repost/reconciliation.
-
-### Batch B — sau khi Platform/Finance/Inventory contracts ổn
-
-6. `procurement-rc`.
-7. `crm-o2c-rc`.
-8. `hcm-payroll-rc`.
-9. `manufacturing-qms-rc`.
-10. `mobile-offline-contract`.
-
-### Batch C — enterprise depth
-
-11. `project-service-rc`.
-12. `bi-semantic-rc`.
-13. `integration-hub-rc`.
-14. `workplace-dms-rc`.
-15. `app-factory-rc`.
-
-### Batch D — moat + vertical proof
-
-16. `ai-tooling-rc`.
-17. `enterprise-ui-patterns`.
-18. `alumdoor-reference-95`.
-19. `production-hardening`.
-
-## 11. Branch / PR convention cho giai đoạn mới
-
-Mọi task mới tạo từ exact current `main`.
-
-Gợi ý:
+Canonical path:
 
 ```text
-audit/capability-status-<date>
-fix/rc-<domain>-<slice>-<date>
-feat/rc-<domain>-<slice>-<date>
-ui/rc-<surface>-<slice>-<date>
-ops/rc-<release-or-sre>-<date>
+User intent
+  -> permission-scoped semantic/context
+  -> deterministic tool selection
+  -> validated typed input
+  -> preview
+  -> human approval when risk requires
+  -> authoritative domain write
+  -> audit/result
 ```
 
-Không dùng branch lịch sử làm base chỉ vì nó đã có code gần giống.
+AI must never:
+- bypass permission;
+- write financial/statutory ledger directly;
+- invent source data;
+- turn prompt text into permanent business rule authority.
 
-## 12. Definition of Done cho một RC slice
+---
 
-Một slice chỉ được promote lên RC khi có đủ theo scope:
+# 13. Wave 5: Alumdoor Reference Vertical 95%
 
-- business flow usable;
-- authoritative source of truth rõ;
-- server-side permission/tenant enforcement;
-- validation/invariants;
-- retry/idempotency nếu có distributed action;
-- cancel/reversal/correction khi cần;
-- audit/history;
-- report/query để kiểm soát kết quả;
-- targeted tests theo risk class;
-- migration replay nếu có schema;
-- reconciliation nếu finance/stock/payroll;
-- browser/mobile evidence nếu có UI;
-- không tạo duplicate authority;
-- status/capability registry được cập nhật.
+Target VP01-001..015.
 
-`Hardened` yêu cầu thêm production-grade failure handling, operational evidence, long-tail và production release proof trong scope công bố.
-
-## 13. Báo cáo tiến độ chuẩn từ giai đoạn này
-
-Mỗi lần review dùng format:
+## 13.1 Required vertical chain
 
 ```text
-Domain: <ID + tên>
-Current maturity: <level>
-Target maturity: <level>
-Coverage: <x/y capability>
-RC+: <x/y>
-Hardened: <x/y>
-Blocking gaps: <3-7 gap>
-Dependencies: <IDs/domains>
-Risk: <FAST/STANDARD/CRITICAL>
-Next slice: <one vertical slice>
-Evidence required: <list>
+Customer / Quote
+-> Sales Order
+-> material requirement/reservation
+-> supplier procurement/receipt
+-> cutting/production
+-> physical + accounting stock
+-> delivery
+-> invoice
+-> customer receivable/payment
+-> daily ledger/reconciliation
+-> warranty/defect/service
 ```
 
-## 14. Quy tắc dừng
+## 13.2 Current product constraints to preserve
 
-Chỉ dừng để hỏi khi:
+- Shared HRM remains full; Alumdoor shell only exposes Employee + Attendance where product wants simplicity.
+- Mobile focuses on practical sales/receivables/delivery use cases.
+- Vertical logic must not fork generic Finance/Inventory/Manufacturing authorities.
+- Aluminum physical/catch-weight semantics stay domain-specific only where generic UOM/stock model cannot express them cleanly.
 
-1. cần quyết định nghiệp vụ không thể suy từ repo/tài liệu;
-2. cần thay shared contract thuộc workstream khác và không thể tách dependency;
-3. cần destructive/production operation;
-4. cần merge/deploy non-UI.
+## 13.3 Alumdoor RC acceptance
 
-Nếu chỉ bị block cục bộ: ghi Dependency Request và tiếp tục phần độc lập.
+- desktop actor journeys;
+- mobile actor journeys;
+- permission roles;
+- partial/correction flows;
+- stock/money reconciliation;
+- current-main build;
+- exact production release marker;
+- backup/restore evidence;
+- no vertical special-case leak into shared runtime.
 
-## 15. Kết luận thực thi
+## 13.4 Alumdoor Hardened acceptance
 
-Giai đoạn tiếp theo của Forge là **RC Hardening Program**, không phải Feature Expansion Program.
+Only claim Hardened for a published scope when:
+- production current release verified;
+- current backup/restore proof;
+- customer-data reconciliation passes;
+- failure/rollback/correction demonstrated;
+- operational support/release path documented;
+- no Critical unresolved gap inside claimed scope.
 
-Thứ tự chuẩn:
+---
 
-`Capability truth -> Platform/SRE RC -> ERP Core RC -> Enterprise Depth -> App Factory/AI moat -> Alumdoor 95% -> Hardened production proof`
+# 14. Evidence matrix theo risk class
 
-Khi làm đúng thứ tự này, mỗi commit mới sẽ làm tăng enterprise completeness có đo được thay vì chỉ làm repository to hơn.
+| Evidence | FAST | STANDARD | CRITICAL |
+|---|:---:|:---:|:---:|
+| Scope typecheck/build | Required | Required | Required |
+| Unit tests | As needed | Required | Required |
+| Targeted integration | As needed | Required | Required |
+| Permission path | if relevant | Required | Required |
+| Tenant isolation | if relevant | if multi-tenant | Required |
+| Failure path | basic | Required | Required |
+| Idempotency/retry | if action | if action | Required where mutation/retry exists |
+| Migration replay | no | if migration | Required if migration |
+| Correction/reversal | if transactional | required if applicable | Required |
+| Reconciliation | no | if data-sensitive | Required finance/stock/payroll |
+| Browser/E2E | UI | UI | UI if actor path |
+| Mobile | mobile scope | mobile scope | required if field/mobile critical |
+| Production release marker | if deployed | if deployed | Required for Hardened/deployed claim |
+| Backup/rollback evidence | no | deployment-specific | Required when production/data-changing |
+
+---
+
+# 15. Definition of Done cho một slice
+
+Một slice chỉ DONE khi:
+
+1. Capability IDs rõ.
+2. Current -> target maturity được chứng minh.
+3. Layer/authority đúng kiến trúc.
+4. Happy path usable.
+5. Server permission/tenant enforced.
+6. Validation/invariants có test.
+7. Error state rõ.
+8. Cancel/reverse/correct/retry có khi cần.
+9. Import/migration path có nếu khách phải đưa dữ liệu vào.
+10. Report/query đủ để kiểm soát kết quả.
+11. Desktop/mobile phù hợp actor nếu có UI.
+12. Không duplicate source of truth.
+13. Evidence index cập nhật.
+14. Capability Status cập nhật sau merge.
+15. Production claim chỉ có khi exact release evidence tồn tại.
+
+Finance/stock/payroll thêm bắt buộc:
+- exact rounding/scaling;
+- posting period guard;
+- backdate semantics;
+- reconciliation;
+- immutable/traceable ledger behavior.
+
+---
+
+# 16. Chương trình task cụ thể đầu tiên
+
+## Batch 0A: Truth & hygiene
+
+| Task | Capabilities | Risk | Output |
+|---|---|---|---|
+| RC-000 | all 956 | STANDARD tooling | Capability Status Registry skeleton + completeness validator |
+| RC-001 | all families | STANDARD | Evidence Index |
+| RC-002 | O01/T01 | CRITICAL OPS | current release workflow audit + stale workflow cleanup PR |
+| RC-003 | cross-cutting | CRITICAL tooling | validation lanes + risk gate contract |
+| RC-004 | all | STANDARD | baseline maturity report + top-30 score |
+
+## Batch 0B: Platform P0
+
+| Task | Scope | Risk |
+|---|---|---|
+| RC-010 | Kernel OCC/idempotency/preview/audit | CRITICAL |
+| RC-011 | permission/permlevel/share/user-scope | CRITICAL |
+| RC-012 | session revocation/rate-limit/auth evidence | CRITICAL |
+| RC-013 | tenant app install/upgrade/rollback | CRITICAL |
+| RC-014 | backup/restore/migration verification | CRITICAL |
+| RC-015 | release marker + rollback + observability | CRITICAL |
+| RC-016 | offline/cache/OCC contract | CRITICAL design + STANDARD implementation slices |
+
+## Batch 1A: Finance/Inventory authorities
+
+| Task | Scope | Risk |
+|---|---|---|
+| RC-020 | F01 period/posting/reversal | CRITICAL |
+| RC-021 | F02 AR allocation/reconciliation | CRITICAL |
+| RC-022 | F03 AP allocation/reconciliation | CRITICAL |
+| RC-023 | F04 cash/bank reconciliation | CRITICAL |
+| RC-024 | W01 reconciliation/correction | CRITICAL |
+| RC-025 | W01 backdate/repost/valuation | CRITICAL |
+
+## Batch 1B: ERP flows
+
+| Task | Scope | Risk |
+|---|---|---|
+| RC-030 | P01 RFQ-to-PO | STANDARD |
+| RC-031 | P01 PO-to-Payment partial/correction | CRITICAL |
+| RC-032 | C01 CRM core | STANDARD |
+| RC-033 | C03 O2C partial/correction | CRITICAL |
+| RC-034 | H03/H04 lifecycle/time | STANDARD |
+| RC-035 | H05/V03 payroll-to-GL | CRITICAL |
+| RC-036 | M01/M02 BOM/MRP | STANDARD/CRITICAL |
+| RC-037 | M03/M04 shopfloor/cost | CRITICAL |
+| RC-038 | Q01 NCR/RCA/CAPA | STANDARD |
+
+## Batch 2: Enterprise + moat
+
+| Task | Scope | Risk |
+|---|---|---|
+| RC-040 | W02 WMS | STANDARD/CRITICAL by valuation touch |
+| RC-041 | J01 Project/PSA | STANDARD |
+| RC-042 | S01/S02 Service/Field | STANDARD |
+| RC-043 | A01 Semantic BI | STANDARD/CRITICAL permission |
+| RC-044 | I01 Integration Foundation | CRITICAL infra |
+| RC-045 | D/N Workplace/DMS/Notifications | STANDARD |
+| RC-046 | B01/B02 App Factory builders | CRITICAL shared runtime |
+| RC-047 | A02 AI tool/preview/approval | CRITICAL when mutation-capable |
+
+## Batch 3: Alumdoor proof
+
+| Task | Scope | Risk |
+|---|---|---|
+| RC-050 | VP01 capability audit against current generic platform | STANDARD |
+| RC-051 | Sales->Delivery->AR mobile/desktop proof | CRITICAL business data |
+| RC-052 | Procurement->Stock->Production proof | CRITICAL |
+| RC-053 | Daily ledger/reconciliation proof | CRITICAL |
+| RC-054 | Current-main release + backup/restore + smoke | CRITICAL PROD |
+
+---
+
+# 17. Batch scheduling rule
+
+Không mở toàn bộ table trên cùng lúc.
+
+Coordinator chỉ mở batch khi prerequisites thỏa:
+
+```text
+Batch 0A
+  -> Batch 0B
+  -> Batch 1A
+  -> Batch 1B (có thể chạy song song theo domain sau authority lock)
+  -> Batch 2
+  -> Batch 3
+```
+
+Trong Batch 1B có thể chạy song song:
+- Procurement;
+- CRM;
+- HCM;
+- Manufacturing;
+
+nhưng chỉ sau khi các shared Finance/Inventory/Permission contract liên quan đã freeze cho batch.
+
+---
+
+# 18. Dependency Request format
+
+Khi agent bị block:
+
+```md
+## Dependency Request DR-<domain>-<nn>
+
+Requester capability:
+Blocking capability/contract:
+Owner:
+Why current contract is insufficient:
+Minimal required change:
+Files/contracts expected to change:
+Can requester continue independently?: yes/no
+Fallback if deferred:
+Evidence required from dependency owner:
+```
+
+Agent tiếp tục mọi phần `yes` thay vì đứng chờ.
+
+---
+
+# 19. Maturity reporting format
+
+Sau mỗi merge batch, cập nhật:
+
+```text
+Baseline main: <sha>
+Total capability: 956
+Missing: x
+Foundation: x
+Wired: x
+RC: x
+Hardened: x
+Wired+: x/956
+RC+: x/956
+Critical RC+: x/y
+```
+
+Theo North Star:
+
+| Pillar | Selected denominator | Wired+ | RC+ | Hardened | Top blockers |
+|---|---:|---:|---:|---:|---|
+| NS-01 Finance/VN | | | | | |
+| NS-02 CRM | | | | | |
+| NS-03 Procurement | | | | | |
+| NS-04 Inventory/WMS | | | | | |
+| NS-05 MRP/QMS | | | | | |
+| NS-06 HCM/Payroll | | | | | |
+| NS-07 Project/Service | | | | | |
+| NS-08 BI | | | | | |
+| NS-09 BPM/App Factory | | | | | |
+| NS-10 Integrations | | | | | |
+| NS-11 Security/SaaS/SRE | | | | | |
+| NS-12 Migration/Implementation | | | | | |
+| VP01 Alumdoor | | | | | |
+
+Không thay số bằng cảm tính.
+
+---
+
+# 20. Review checklist cho coordinator
+
+Trước khi coi PR sẵn sàng merge:
+
+- [ ] exact base current enough / conflict audited;
+- [ ] capability IDs đúng;
+- [ ] maturity promotion hợp lệ;
+- [ ] source of truth không bị fork;
+- [ ] shared contract ownership đúng;
+- [ ] server permission/tenant evidence;
+- [ ] correction/reversal/retry evidence;
+- [ ] migration replay nếu có;
+- [ ] reconciliation nếu finance/stock/payroll;
+- [ ] UI/browser/mobile evidence nếu cần;
+- [ ] docs/status/evidence index update;
+- [ ] known gaps ghi rõ;
+- [ ] non-UI merge/deploy approval nếu policy yêu cầu;
+- [ ] production mutation gate riêng nếu có.
+
+---
+
+# 21. Exit criteria toàn chương trình
+
+RC Hardening Program chỉ đóng khi:
+
+1. 956/956 capability có live maturity record.
+2. Không còn capability Critical bị `Unknown/Unaudited`.
+3. L0 platform đạt target RC/Hardened đã công bố.
+4. ERP core selected scope đạt business-complete RC+.
+5. Finance/stock/payroll có reconciliation + correction/backdate evidence.
+6. Security/tenant boundary có authoritative server evidence.
+7. Migration/backup/restore/release path được chứng minh trên current architecture.
+8. App Factory tạo được app/surface mới qua metadata/shared primitive thay vì fork runtime.
+9. AI mutation path, nếu bật, đi qua typed tool + permission + preview + approval + audit.
+10. Alumdoor đạt >=95% VP01 selected scope và current-main production proof.
+11. `CURRENT_STATUS.md`, Capability Status và Evidence Index cùng phản ánh một sự thật.
+12. Không còn claim “Hardened” thiếu production/failure/reconciliation evidence trong scope công bố.
+
+---
+
+# 22. Trình tự hành động ngay sau khi plan được merge
+
+Không cần thêm một vòng “lên kế hoạch cho kế hoạch”. Thứ tự thực thi mặc định:
+
+1. Mở `rc/w0-capability-status`.
+2. Sinh registry đủ 956 ID và completeness validator.
+3. Chia audit theo 12 North Star pillar + cross-cutting, cập nhật maturity bảo thủ.
+4. Mở song song `rc/w0-release-sre` để audit workflow/release truth.
+5. Mở `rc/w0-validation-gates` để khóa evidence requirements.
+6. Xuất baseline report và priority score top 30.
+7. Khóa P0 Platform contracts.
+8. Chạy Finance + Inventory RC trước.
+9. Sau đó chạy Procurement/CRM/HCM/Manufacturing song song theo dependency freeze.
+10. Chỉ khi core RC ổn mới tăng Enterprise Depth/App Factory/AI breadth.
+11. Cuối chương trình dùng Alumdoor làm current-main integration + production acceptance vertical.
+
+Canonical direction:
+
+```text
+Capability Truth
+-> Platform/Security/SRE RC
+-> Finance + Inventory Authorities
+-> ERP Core RC
+-> Enterprise Depth
+-> App Factory + AI Moat
+-> Alumdoor 95%
+-> Hardened Production Proof
+```
+
+Đây là chương trình chuyển Forge từ “rộng và đã nối” thành “đo được, đối soát được, sửa sai được, triển khai được và chứng minh được”.
