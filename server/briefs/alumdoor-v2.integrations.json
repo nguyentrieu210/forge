@@ -1,13 +1,15 @@
 {
-  "//purpose": "Alumdoor surfaces Warehouse Cash owned by vn-accounting without copying Finance schemas or ledger logic.",
-  "version": "2.2.2",
+  "//purpose": "Alumdoor consumes canonical Finance and HR contracts: Warehouse Cash stays in vn-accounting; purchase funding reads employee identity/bank details from HRM instead of duplicating them.",
+  "version": "2.2.3",
   "requires": [
-    { "id": "vn-accounting", "version": "1.1.0" }
+    { "id": "vn-accounting", "version": "1.1.0" },
+    { "id": "hrm", "version": "1.5.0" }
   ],
   "externalDocTypes": [
     { "name": "Warehouse Cash Fund", "kind": "master", "app": "vn-accounting", "version": "1.1.0" },
     { "name": "Warehouse Cash Voucher", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
     { "name": "Warehouse Cash Transfer", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
-    { "name": "Warehouse Cash Count", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" }
+    { "name": "Warehouse Cash Count", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Employee", "kind": "master", "app": "hrm", "version": "1.5.0" }
   ]
 }
