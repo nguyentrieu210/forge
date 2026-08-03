@@ -1,0 +1,50 @@
+name: CF04 Edge Security Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/apps/gateway-worker/wrangler.jsonc"
+      - "server/config/cloudflare/edge-security-policy.json"
+      - "server/tests/edge-security-policy.test.mjs"
+      - "docs/agents/cloudflare-cfmax/04-EDGE-SECURITY-R2-HANDOFF.md"
+      - ".github/workflows/cf04-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf04-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cf04:
+    if: startsWith(github.head_ref, 'cloudflare/cfmax-04-edge-security-r2')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Edge security regressions
+        working-directory: server
+        run: node --test tests/edge-security-policy.test.mjs
+
+      - name: Validate Gateway Wrangler binding/config parse
+        working-directory: server
+        run: pnpm exec wrangler types /tmp/cf04-gateway-bindings.d.ts --config apps/gateway-worker/wrangler.jsonc --env-interface Cf04GatewayBindings --include-runtime false
