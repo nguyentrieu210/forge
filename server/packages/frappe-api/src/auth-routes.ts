@@ -52,7 +52,7 @@ export async function establishSession(request: Request, context: AuthRouteConte
   const sid = readSid(request);
   if (!sid) return null;
 
-  const session = await verifySession(sid, context.tenantId, context.sessionSecret);
+  const session = await verifySession(sid, context.tenantId, context.sessionSecret, isoSeconds(context.now()));
   const user = await context.users.assertSessionStillValid(context.tenantId, session.actor.user_id, session.epoch);
   if (session.sessionId) {
     const sessions = optionalSessionRegistry(context.users);
@@ -199,7 +199,7 @@ async function handleLogout(request: Request, context: AuthRouteContext): Promis
   const sid = readSid(request);
   if (sid) {
     try {
-      const session = await verifySession(sid, context.tenantId, context.sessionSecret);
+      const session = await verifySession(sid, context.tenantId, context.sessionSecret, isoSeconds(context.now()));
       assertCsrf(request, session);
       if (session.sessionId) {
         await optionalSessionRegistry(context.users)?.revokeCurrent(

@@ -12,7 +12,8 @@ const NOW = "2026-08-03T04:00:00.000Z";
 const NOW_SECONDS = Math.floor(Date.parse(NOW) / 1000);
 const ACTOR = { user_id: "user@example.com", roles: ["Sales User"] };
 
-function fixture(authenticatedAt = NOW_SECONDS) {
+function fixture(authenticatedAt) {
+  if (arguments.length === 0) authenticatedAt = NOW_SECONDS;
   const calls = [];
   const mfa = {
     async status(...args) { calls.push(["status", ...args]); return { enabled: true, pending: false, factor_type: "totp", recovery_codes_remaining: 7 }; },

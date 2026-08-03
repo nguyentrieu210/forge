@@ -63,7 +63,7 @@ interface SecretEnvelope {
 
 export class D1MfaService {
   private readonly db: D1Database | D1DatabaseSession;
-  private readonly keys?: MfaKeyRing;
+  private readonly keys: MfaKeyRing | undefined;
 
   constructor(db: D1Database, keys?: MfaKeyRing) {
     this.db = db.withSession?.("first-primary") ?? db;

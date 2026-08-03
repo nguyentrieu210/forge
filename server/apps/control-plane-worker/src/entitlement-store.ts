@@ -1,12 +1,11 @@
 import { errors, randomId } from "../../../packages/core/src/index.js";
-import type { JsonObject } from "../../../packages/contracts/src/index.js";
 import {
   validatePlanEntitlement,
   type PlanEntitlement,
   type SaaSPlan,
 } from "./entitlements.js";
 
-export interface StoredPlanEntitlement extends JsonObject {
+export interface StoredPlanEntitlement {
   plan: SaaSPlan;
   entitlement: PlanEntitlement;
   version: number;
@@ -65,7 +64,7 @@ export class D1PlanEntitlementStore {
     requireIso(input.now);
     const current = await this.get(input.plan, entitlement.key);
     if (input.expectedVersion !== undefined && current?.version !== input.expectedVersion) {
-      throw errors.conflict("Plan entitlement version changed");
+      throw errors.version(current?.version);
     }
     const nextVersion = (current?.version ?? 0) + 1;
     const eventId = randomId("entitlement");
@@ -131,7 +130,7 @@ export class D1PlanEntitlementStore {
     const current = await this.get(input.plan, input.key);
     if (!current) return false;
     if (input.expectedVersion !== undefined && current.version !== input.expectedVersion) {
-      throw errors.conflict("Plan entitlement version changed");
+      throw errors.version(current?.version);
     }
     const reason = requireReason(input.reason);
     const actor = requireText(input.actorKey, "actorKey", 320);

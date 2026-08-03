@@ -14,7 +14,7 @@ export interface NetworkAccessDecision {
  */
 export function parseIpAllowlist(value: unknown): string[] {
   if (value === null || value === undefined || value === "") return [];
-  let parsed = value;
+  let parsed: unknown = value;
   if (typeof value === "string") {
     try { parsed = JSON.parse(value) as unknown; }
     catch { throw errors.validation("Security Policy IP allowlist is not valid JSON"); }
@@ -142,7 +142,7 @@ function maskPrefix(bytes: Uint8Array, prefix: number): Uint8Array {
     if (remaining >= 8) { remaining -= 8; continue; }
     if (remaining <= 0) output[index] = 0;
     else {
-      output[index] &= (0xff << (8 - remaining)) & 0xff;
+      output[index] = output[index]! & ((0xff << (8 - remaining)) & 0xff);
       remaining = 0;
     }
   }
