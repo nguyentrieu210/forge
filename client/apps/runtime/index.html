@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#7c3aed" />
+    <meta name="theme-color" content="#f36c21" />
     <meta name="description" content="Forge — nền tảng vận hành doanh nghiệp từ văn phòng đến hiện trường." />
     <meta name="forge-release" content="%VITE_FORGE_RELEASE_SHA%" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -19,7 +19,7 @@
         const alumdoor = location.hostname.toLowerCase() === "alu.kairo.vn" || params.get("alumdoor") === "1";
         if (!alumdoor) return;
         const logo = "/alumdoor/app-icon-192.png";
-        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f45b24");
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f36c21");
         document.getElementById("app-icon")?.setAttribute("href", logo);
         document.getElementById("app-touch-icon")?.setAttribute("href", logo);
       })();
@@ -36,5 +36,7 @@
       if (fixture) import("/src/dialog-wheel-fixture-main.tsx");
       else import("/src/bootstrap.ts");
     </script>
+    <!-- Loaded after the Vite entry so this presentation-only authority wins the cascade. -->
+    <link rel="stylesheet" href="/forge-v3-orange-black.css" />
   </body>
 </html>
