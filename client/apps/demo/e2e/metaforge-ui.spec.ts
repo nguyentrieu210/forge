@@ -95,6 +95,28 @@ test.describe("MetaForge MISA-style workspace", () => {
     await page.screenshot({ path: testInfo.outputPath("report-builder.png"), fullPage: true });
   });
 
+  test("renders the v3 Meta Studio authoring surfaces", async ({ page }, testInfo) => {
+    await page.goto("/view/b-doctype");
+    await expect(page.getByRole("heading", { name: "DocType Builder", exact: true })).toBeVisible();
+    await expect(page.getByText("Thư viện trường", { exact: true })).toBeVisible();
+    await expect(page.getByText("Xem trước runtime", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Tìm loại trường", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("builder-doctype-v3.png"), fullPage: true });
+
+    await page.goto("/view/b-workflow");
+    await expect(page.getByRole("heading", { name: "Workflow Builder", exact: true })).toBeVisible();
+    await expect(page.getByText("Trạng thái", { exact: true })).toBeVisible();
+    await expect(page.getByText("Chuyển tiếp", { exact: true })).toBeVisible();
+    await expect(page.getByText("Sơ đồ quy trình", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("builder-workflow-v3.png"), fullPage: true });
+
+    await page.goto("/view/b-print");
+    await expect(page.getByRole("heading", { name: "Print Format Builder", exact: true })).toBeVisible();
+    await expect(page.getByText("Trường trên mẫu in", { exact: true })).toBeVisible();
+    await expect(page.getByText("Xem trước trang in", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("builder-print-v3.png"), fullPage: true });
+  });
+
   test("exposes exactly 13 color palettes", async () => {
     expect(BRAND_COLOR_COUNT).toBe(13);
     expect(BRANDS).toHaveLength(13);
