@@ -12,6 +12,7 @@ import type {
   MatrixCell,
   MatrixMember,
   MatrixNavigatorNode,
+  MatrixSearchScope,
   MatrixViewModel,
 } from "./types.js";
 
@@ -33,6 +34,7 @@ type GenericMatrixSnapshot = {
   contract_version: number;
   source: string;
   action?: string;
+  server_search_scopes?: MatrixSearchScope[];
   subject?: { id: string; label?: string; subtitle?: string; version?: number } | null;
   navigator?: { label?: string; nodes?: MatrixNavigatorNode[]; selected_id?: string };
   rows?: Array<MatrixMember & { values?: Record<string, unknown>; is_primary?: boolean }>;
@@ -291,9 +293,9 @@ export function MatrixContainer(props: MatrixContainerProps) {
       confirmDiscard={() => window.confirm("Bỏ các thay đổi chưa lưu?")}
       onNavigatorSelect={(id) => { void load({ selected_id: id }); }}
       onSearch={(query, context) => {
-        if (dirty || context.signal.aborted) return;
+        if (dirty || context.signal.aborted || !snapshot?.server_search_scopes?.includes(context.scope)) return;
         void load({
-          ...(snapshot?.subject?.id ? { selected_id: snapshot.subject.id } : {}),
+          ...(snapshot.subject?.id ? { selected_id: snapshot.subject.id } : {}),
           search: { scope: context.scope, query },
         }, true);
       }}
