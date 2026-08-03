@@ -2,8 +2,7 @@
 import type { ReactNode } from "react";
 import type { ThemeMode } from "./theme.js";
 import type { BrandMode } from "./brand.js";
-import { ShellV3Chrome } from "./ShellV3Chrome.js";
-import { useWorkspaceTabState } from "./workspace-tab-state.js";
+import { AppShell as V2AppShell } from "./AppShellV2.js";
 
 export interface NavItem {
   key: string;
@@ -33,10 +32,7 @@ export interface NotificationItem {
 export type ShellLayoutMode = "mixed" | "sidebar" | "header";
 export type ShellDensity = "compact" | "standard" | "comfortable";
 
-/**
- * Presentation-only workspace entry. The shell owns tab chrome only; document/query
- * authority stays in the route/runtime/view layer that supplies these entries.
- */
+/** Compatibility-only V3 type. V2 runtime does not render V3 workspace-tab chrome. */
 export interface WorkspaceTab {
   key: string;
   label: string;
@@ -48,19 +44,14 @@ export interface WorkspaceTab {
 
 export interface AppShellProps {
   brand?: string;
-  /** Palette do manifest app kiểm soát. Có giá trị thì preference local không được ghi đè. */
   brandMode?: BrandMode;
-  /** Logo app (ReactNode). Không có ⇒ rơi về chữ cái đầu của `brand`. */
   brandMark?: ReactNode;
-  /** Hiển thị riêng logo ngang, không ghép thêm tên app ở cạnh. */
   brandLogoOnly?: boolean;
-
-  /** Context navigation supplied by the existing manifest/runtime. */
   nav: NavItem[];
   activeKey: string;
   onNavigate: (key: string) => void;
 
-  /** Optional explicit App Rail. If omitted, V3 derives `workspace-module:*` entries from nav. */
+  /** Retained only for source compatibility with V3-era callers. V2 ignores App Rail. */
   railNav?: NavItem[];
   activeRailKey?: string;
   onRailNavigate?: (key: string) => void;
@@ -70,14 +61,10 @@ export interface AppShellProps {
   userSubtitle?: string;
   theme: ThemeMode;
   onThemeChange: (mode: ThemeMode) => void;
-  /** Khóa bảng màu ở cấp app khi thương hiệu do quản trị nền tảng quyết định. */
   allowBrandChange?: boolean;
-
-  /** Existing app-owned search remains authoritative when supplied; shell provides a nav fallback otherwise. */
   onOpenPalette?: () => void;
   onOpenAI?: () => void;
   aiConfigured?: boolean;
-  /** Lối vào app mobile/PWA do runtime app cấp; shell chỉ quyết định vị trí hiển thị. */
   mobileAppHref?: string;
 
   notificationCount?: number;
@@ -90,17 +77,11 @@ export interface AppShellProps {
   onMarkAllRead?: () => void;
 
   onLogout?: () => void;
-  /** menu tài khoản: "Đổi mật khẩu" — ẩn nếu app không cấp. */
   onChangePassword?: () => void;
-  /** menu tài khoản: "Đăng xuất khỏi thiết bị khác" — ẩn nếu app không cấp. */
   onLogoutOtherSessions?: () => void;
-
   businessContext?: ReactNode;
 
-  /**
-   * Optional first-class workspace chrome. Supplying apps own routing, dirty truth and
-   * restoration; shell only renders commands and emits presentation intents.
-   */
+  /** Retained only so V3-era source continues to typecheck; V2 does not render these. */
   workspaceTabs?: WorkspaceTab[];
   workspaceActiveKey?: string;
   onWorkspaceTabNavigate?: (key: string) => void;
@@ -116,26 +97,9 @@ export interface AppShellProps {
 }
 
 /**
- * V3 shell entry point. Route-level tabs are local presentation history by default.
- * Apps with richer record/dirty state can replace the whole tab contract without the shell
- * becoming a second router or document authority.
+ * Runtime authority is V2 again. The V3-only props above remain as a compatibility seam so
+ * newer source files can compile without making V3 chrome reachable in production.
  */
 export function AppShell(props: AppShellProps) {
-  const autoTabs = useWorkspaceTabState(props.nav, props.activeKey, props.onNavigate);
-  if (props.workspaceTabs !== undefined) return <ShellV3Chrome {...props} />;
-
-  return (
-    <ShellV3Chrome
-      {...props}
-      workspaceTabs={autoTabs.tabs}
-      workspaceActiveKey={props.activeKey}
-      onWorkspaceTabNavigate={autoTabs.navigate}
-      onWorkspaceTabClose={autoTabs.close}
-      onWorkspaceTabPin={autoTabs.pin}
-      onWorkspaceTabCloseOthers={autoTabs.closeOthers}
-      onWorkspaceTabCloseRight={autoTabs.closeRight}
-      onWorkspaceTabRefresh={autoTabs.refresh}
-      onWorkspaceTabReorder={autoTabs.reorder}
-    />
-  );
+  return <V2AppShell {...props} />;
 }
