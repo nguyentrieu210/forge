@@ -103,7 +103,7 @@ export { OverviewView, type OverviewViewProps } from "./overview/OverviewView.js
 export { OverviewContainer } from "./overview/OverviewContainer.js";
 export { ProcessView } from "./process/ProcessView.js";
 export { ProcessContainer } from "./process/ProcessContainer.js";
-export { ScreenView, type ScreenViewProps } from "./screen/ScreenView.js";
+export { ScreenView, type ScreenViewProps } from "./screen/NativeScreenView.js";
 export { PermissionCenter } from "./access/PermissionCenter.js";
 export { FormGuide, type FormGuideContent, type FormGuideMap } from "./form/FormGuide.js";
 export { ImportContent } from "./system/Import.js";
