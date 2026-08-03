@@ -129,6 +129,46 @@ interface ForgeChartSurfaceProps extends Pick<ForgeChartBaseProps, "title" | "he
   prepareEngine?: CanvasProps["prepareEngine"];
 }
 
+function RetryAction({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onRetry}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onRetry();
+        }
+      }}
+      className="mt-3 inline-flex min-h-9 cursor-pointer items-center justify-center rounded-md border px-3 py-1.5 text-xs font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+    >
+      Thử lại
+    </div>
+  );
+}
+
+function AccessibleDataTable({ description, labels, series, format }: { description: string; labels: string[]; series: ForgeChartSeries[]; format: (value: number) => string }) {
+  return (
+    <div className="sr-only" role="table" aria-label={description}>
+      <div role="rowgroup">
+        <div role="row">
+          <span role="columnheader">Mốc</span>
+          {series.map((item) => <span key={item.name} role="columnheader">{item.name}</span>)}
+        </div>
+      </div>
+      <div role="rowgroup">
+        {labels.map((label, index) => (
+          <div key={`${label}-${index}`} role="row">
+            <span role="rowheader">{label}</span>
+            {series.map((item) => <span key={item.name} role="cell">{format(Number(item.values[index] ?? 0))}</span>)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ForgeChartSurface({
   title,
   height = 260,
@@ -155,12 +195,12 @@ export function ForgeChartSurface({
   const description = ariaLabel ?? title ?? "Biểu đồ dữ liệu";
 
   return (
-    <div className={`relative min-w-0 ${className}`} style={{ height }} aria-label={description}>
+    <div className={`relative min-w-0 ${className}`} style={{ height: height }} aria-label={description}>
       {loading ? (
         <div className="h-full w-full animate-pulse rounded-md border bg-muted/35 motion-reduce:animate-none" aria-busy="true"><span className="sr-only">Đang tải biểu đồ</span></div>
       ) : error ? (
         <div className="grid h-full place-items-center rounded-md border border-dashed p-4 text-center" role="alert">
-          <div><div className="text-sm font-medium">Không tải được biểu đồ</div><div className="mt-1 text-xs text-muted-foreground">{error}</div>{onRetry ? <button type="button" onClick={onRetry} className="mt-3 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted">Thử lại</button> : null}</div>
+          <div><div className="text-sm font-medium">Không tải được biểu đồ</div><div className="mt-1 text-xs text-muted-foreground">{error}</div>{onRetry ? <RetryAction onRetry={onRetry} /> : null}</div>
         </div>
       ) : !hasData ? (
         <div className="grid h-full place-items-center rounded-md border border-dashed px-4 text-sm text-muted-foreground">{emptyText}</div>
@@ -168,13 +208,7 @@ export function ForgeChartSurface({
         <>
           <EChartCanvas dataKey={dataKey} theme={theme} renderer={renderer} animation={animation} buildOption={buildOption} onActivate={onActivate} prepareEngine={prepareEngine} />
           {children}
-          {labels.length && series.length ? (
-            <table className="sr-only">
-              <caption>{description}</caption>
-              <thead><tr><th>Mốc</th>{series.map((item) => <th key={item.name}>{item.name}</th>)}</tr></thead>
-              <tbody>{labels.map((label, index) => <tr key={`${label}-${index}`}><th>{label}</th>{series.map((item) => <td key={item.name}>{full(Number(item.values[index] ?? 0))}</td>)}</tr>)}</tbody>
-            </table>
-          ) : null}
+          {labels.length && series.length ? <AccessibleDataTable description={description} labels={labels} series={series} format={full} /> : null}
           {!labels.length && series.length ? <span className="sr-only">{series.map((item) => `${item.name}: ${compactMetric(Number(item.values.at(-1) ?? 0))}`).join(", ")}</span> : null}
         </>
       )}
