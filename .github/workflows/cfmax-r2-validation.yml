@@ -77,22 +77,9 @@ jobs:
           test -f dist/apps/workflow-worker/src/contracts.js
           test -f dist/apps/workflow-worker/src/index.js
 
-      - name: Focused CF03 telemetry typecheck and build
+      - name: Focused CF03 telemetry build
         working-directory: server
         run: |
-          cat > tsconfig.cfmax-cf03-gateway.json <<'JSON'
-          {
-            "extends": "./tsconfig.json",
-            "compilerOptions": { "noEmit": true, "declaration": false },
-            "include": [
-              "packages/usage-telemetry/src/**/*.ts",
-              "apps/gateway-worker/src/**/*.ts",
-              "types/**/*.d.ts"
-            ],
-            "exclude": ["dist", "node_modules"]
-          }
-          JSON
-          pnpm exec tsc -p tsconfig.cfmax-cf03-gateway.json
           cat > tsconfig.cfmax-cf03-build.json <<'JSON'
           {
             "extends": "./tsconfig.json",
@@ -160,18 +147,18 @@ jobs:
         working-directory: server
         run: node scripts/verify-cloudflare-governance.mjs
 
-      - name: Bundle Tenant Worker with Browser Run binding
+      - name: Bundle Gateway with usage telemetry and edge source
+        working-directory: server
+        run: pnpm exec wrangler deploy --dry-run --config apps/gateway-worker/wrangler.jsonc --outdir /tmp/cfmax-gateway-worker
+
+      - name: Bundle Tenant Worker with Browser Run and AI policy
         working-directory: server
         run: pnpm exec wrangler deploy --dry-run --config apps/tenant-worker/wrangler.jsonc --outdir /tmp/cfmax-tenant-worker
-
-      - name: Parse Gateway config and bindings
-        working-directory: server
-        run: pnpm exec wrangler types /tmp/cfmax-gateway.d.ts --config apps/gateway-worker/wrangler.jsonc --env-interface CfmaxGatewayBindings --include-runtime false
 
       - name: Parse Query config and bindings
         working-directory: server
         run: pnpm exec wrangler types /tmp/cfmax-query.d.ts --config apps/query-worker/wrangler.jsonc --env-interface CfmaxQueryBindings --include-runtime false
 
-      - name: Parse Workflow config and bindings
+      - name: Bundle Workflow worker and binding
         working-directory: server
         run: pnpm exec wrangler deploy --dry-run --config apps/workflow-worker/wrangler.jsonc --outdir /tmp/cfmax-workflow-worker
