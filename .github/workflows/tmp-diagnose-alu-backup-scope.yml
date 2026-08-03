@@ -1,0 +1,62 @@
+name: Temp Diagnose ALU Backup Scope
+
+on:
+  push:
+    branches:
+      - ops/diagnose-alu-backup-scope-20260803
+    paths:
+      - .github/workflows/tmp-diagnose-alu-backup-scope.yml
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Read tenant-scope counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          runq() {
+            local label="$1"
+            local sql="$2"
+            echo "### $label" >> /tmp/scope.txt
+            pnpm --dir server exec wrangler d1 execute cloudforge-alu --remote --json --command "$sql" >> /tmp/scope.txt
+            echo >> /tmp/scope.txt
+          }
+          : > /tmp/scope.txt
+          runq doctype_definitions "SELECT tenant_id, COUNT(*) AS rows FROM doctype_definitions GROUP BY tenant_id ORDER BY tenant_id"
+          runq documents "SELECT tenant_id, COUNT(*) AS rows FROM documents GROUP BY tenant_id ORDER BY tenant_id"
+          runq installed_apps "SELECT tenant_id, COUNT(*) AS rows FROM installed_apps GROUP BY tenant_id ORDER BY tenant_id"
+          runq metadata_provenance "SELECT tenant_id, modified_by, COUNT(*) AS rows FROM doctype_definitions GROUP BY tenant_id, modified_by ORDER BY tenant_id, rows DESC"
+          runq demo_vs_standard "SELECT d.tenant_id, COUNT(*) AS rows, COUNT(DISTINCT d.doctype) AS doctypes FROM doctype_definitions d WHERE d.tenant_id IN ('demo','__standard__') GROUP BY d.tenant_id ORDER BY d.tenant_id"
+      - name: Report read-only diagnosis
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo 'ALU_BACKUP_SCOPE_DIAGNOSIS'
+            echo '```text'
+            cat /tmp/scope.txt 2>/dev/null || true
+            echo '```'
+          } > /tmp/comment.txt
+          gh pr comment 383 --body-file /tmp/comment.txt
