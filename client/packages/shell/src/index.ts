@@ -31,6 +31,9 @@ export {
   AuthBoundary, type AuthBoundaryProps, type AuthState, type AuthedContext,
 } from "./auth/AuthBoundary.js";
 export { LoginForm, type LoginFormProps } from "./auth/LoginForm.js";
+export {
+  AuthBootScreen, AuthErrorScreen, AuthNotice, AuthVisualStyles, type AuthNoticeKind,
+} from "./auth/AuthPresentation.js";
 export { ChangePasswordDialog, type ChangePasswordDialogProps } from "./auth/ChangePasswordDialog.js";
 export { useBrand, applyBrand, isBrandMode, BRANDS, BRAND_COLOR_COUNT, type BrandMode } from "./brand.js";
 export { applyDesign } from "./design.js";
