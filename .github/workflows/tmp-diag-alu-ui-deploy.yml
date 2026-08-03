@@ -10,6 +10,8 @@ on:
 permissions:
   contents: read
   statuses: write
+  issues: write
+  pull-requests: write
 
 jobs:
   diagnose:
@@ -43,13 +45,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Setup
-        shell: bash
-        run: |
-          "$RUNNER_TEMP/status.sh" pending alu-ui-diag/setup "setting up pnpm/node"
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
@@ -64,67 +59,92 @@ jobs:
       - name: Install dependencies
         id: install
         continue-on-error: true
-        run: pnpm install --frozen-lockfile --prefer-offline
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm install --frozen-lockfile --prefer-offline 2>&1 | tee "$RUNNER_TEMP/install.log"
 
       - name: Report install
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.install.outcome }}" = success ]; then
             "$RUNNER_TEMP/status.sh" success alu-ui-diag/install "pnpm install passed"
           else
             "$RUNNER_TEMP/status.sh" failure alu-ui-diag/install "pnpm install failed"
+            { echo 'ALU UI deploy diagnostic: **install failed**'; echo; echo '```text'; tail -80 "$RUNNER_TEMP/install.log"; echo '```'; } > "$RUNNER_TEMP/comment.md"
+            gh pr comment 417 --body-file "$RUNNER_TEMP/comment.md"
             exit 1
           fi
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Build runtime
+      - name: Build runtime dependencies
         id: runtime
         continue-on-error: true
-        run: pnpm --filter runtime... run build
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter runtime... run build 2>&1 | tee "$RUNNER_TEMP/runtime.log"
 
       - name: Report runtime
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.runtime.outcome }}" = success ]; then
             "$RUNNER_TEMP/status.sh" success alu-ui-diag/runtime "runtime dependency build passed"
           else
             "$RUNNER_TEMP/status.sh" failure alu-ui-diag/runtime "runtime dependency build failed"
+            { echo 'ALU UI deploy diagnostic: **runtime build failed**'; echo; echo '```text'; tail -120 "$RUNNER_TEMP/runtime.log"; echo '```'; } > "$RUNNER_TEMP/comment.md"
+            gh pr comment 417 --body-file "$RUNNER_TEMP/comment.md"
             exit 1
           fi
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Build mobile types
         id: mobile_types
         continue-on-error: true
-        run: pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json 2>&1 | tee "$RUNNER_TEMP/mobile-types.log"
 
       - name: Report mobile types
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.mobile_types.outcome }}" = success ]; then
             "$RUNNER_TEMP/status.sh" success alu-ui-diag/mobile-types "warehouse mobile tsc passed"
           else
             "$RUNNER_TEMP/status.sh" failure alu-ui-diag/mobile-types "warehouse mobile tsc failed"
+            { echo 'ALU UI deploy diagnostic: **mobile type build failed**'; echo; echo '```text'; tail -120 "$RUNNER_TEMP/mobile-types.log"; echo '```'; } > "$RUNNER_TEMP/comment.md"
+            gh pr comment 417 --body-file "$RUNNER_TEMP/comment.md"
             exit 1
           fi
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Build mobile bundle
         id: mobile_bundle
         continue-on-error: true
-        run: pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts 2>&1 | tee "$RUNNER_TEMP/mobile-bundle.log"
 
       - name: Report mobile bundle
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.mobile_bundle.outcome }}" = success ]; then
             "$RUNNER_TEMP/status.sh" success alu-ui-diag/mobile-bundle "warehouse mobile vite build passed"
+            gh pr comment 417 --body "ALU UI deploy diagnostic: all build stages passed."
           else
             "$RUNNER_TEMP/status.sh" failure alu-ui-diag/mobile-bundle "warehouse mobile vite build failed"
+            { echo 'ALU UI deploy diagnostic: **mobile bundle failed**'; echo; echo '```text'; tail -120 "$RUNNER_TEMP/mobile-bundle.log"; echo '```'; } > "$RUNNER_TEMP/comment.md"
+            gh pr comment 417 --body-file "$RUNNER_TEMP/comment.md"
             exit 1
           fi
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
