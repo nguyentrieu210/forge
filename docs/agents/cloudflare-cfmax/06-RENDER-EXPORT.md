@@ -1,10 +1,11 @@
 # CF06 — Browser Run / PDF / Export Delivery
 
-Status: READY
+Status: WIRED — REMOTE PROOF PENDING
 Branch: `cloudflare/cfmax-06-render-export`
 Program baseline: `3b4c5c75bce315d03989d7fc05db721ff2668a4e`
 Primary Forge authorities: WS14 presentation/runtime, WS12 operational execution
 Risk: STANDARD; security-sensitive where arbitrary content/URLs/files are involved
+Execution evidence: `CF06_RENDER_EXPORT_EVIDENCE_20260804.md`
 
 ## Mission
 
@@ -77,6 +78,8 @@ Cover:
 - file/attachment download;
 - scheduled/subscribed report if present.
 
+The executed matrix and deliberate deferrals are recorded in `CF06_RENDER_EXPORT_EVIDENCE_20260804.md`.
+
 ## Rendering contract
 
 Define:
@@ -105,6 +108,8 @@ If URL rendering is used:
 - strip/avoid sensitive cookies/tokens unless explicit same-origin design requires a scoped mechanism;
 - coordinate with CF04.
 
+CF06's representative implementation does **not** expose URL rendering. It submits only authorized server-rendered HTML and applies a self-contained CSP before Browser Run.
+
 ## R2 artifact policy
 
 If PDFs/exports are persisted:
@@ -117,23 +122,29 @@ If PDFs/exports are persisted:
 - deletion follows source/tenant/legal policy;
 - no assumption that R2 object listing itself enforces business ACL.
 
+The representative PDF is streamed and not retained, so CF06 intentionally introduces no second artifact lifecycle.
+
 ## Implementation slices
 
 ### A — exact renderer inventory
 
+Recorded in `CF06_RENDER_EXPORT_EVIDENCE_20260804.md`.
+
 ### B — Browser Run proof on one canonical existing Print Format
 
-Choose a stable fixture with current regression evidence.
+Wired through the canonical Print Format/permission route and Cloudflare Browser Run binding. Remote provider execution artifact remains a pre-RC gate.
 
 ### C — deterministic compare
 
-Compare visual/text/layout requirements and business values with current output. Pixel-identical is not required if existing renderer is non-deterministic, but business content and approved layout contract must match.
+Static/business-authority regressions are present. Golden remote PDF content/layout fixtures remain a pre-RC gate.
 
 ### D — async retained export
 
-Only if representative use case benefits; otherwise document Queue/Workflow seam and defer.
+Deferred because the representative direct PDF path does not justify Queue/R2 persistence yet. The existing job/file seams remain the required authority if measurements later justify async retention.
 
 ### E — failure/security/performance evidence
+
+SSRF/arbitrary-URL and configuration regressions are pinned. Remote Browser Run timeout/error, measured latency/cost and provider-failure fixtures remain pending.
 
 ## Acceptance gates
 
@@ -151,6 +162,8 @@ Before RC:
 - performance and provider cost/limit estimate;
 - no production deployment claim without exact evidence.
 
+Current maturity remains **Wired** because the remote/golden/performance gates are not yet satisfied.
+
 ## Dependencies
 
 - CF04 for perimeter/SSRF security;
@@ -160,17 +173,17 @@ Before RC:
 
 ## Completion record
 
-Owner: —
-Started from: —
-Head: —
-Status: READY
-Capabilities: —
-Representative print format: —
-Changed zones: —
-Tests/screenshots/PDF checks: —
-R2 policy: —
-Dependency requests: —
-Gaps: —
+Owner: CF06 render/export lane  
+Started from: current `main` synchronized into `cloudflare/cfmax-06-render-export` before implementation and again during execution  
+Head: exact final validation SHA is recorded by the CFMAX-06 workflow/PR evidence; docs may be newer without changing runtime code  
+Status: **Wired — not RC/Hardened**  
+Capabilities: `A01-016` PDF export — representative single-document vertical only  
+Representative print format: existing stored Print Format resolved by canonical `frappe.www.printview.get_html_and_style`; no parallel template created  
+Changed zones: tenant Worker entrypoint/env/Wrangler config + generated tenant config/types; print UI; focused CF06 tests; validation workflow; evidence docs  
+Tests/screenshots/PDF checks: focused regressions + UI dependency build + Wrangler dry-run/typegen; remote PDF artifact/golden layout proof still pending  
+R2 policy: direct PDF is streamed with `private, no-store`; no CF06 R2 persistence; any later retained export must reuse existing tenant-scoped file/R2 lifecycle  
+Dependency requests: none required for the Wired slice; CF04/CF08 remain promotion dependencies  
+Gaps: remote Browser Run artifact, denied-user invocation-count fixture, Vietnamese/golden PDF fixtures, report-PDF breadth, timeout/provider failure, measured performance/cost, async/retention only if justified  
 
 ## Startup prompt
 
