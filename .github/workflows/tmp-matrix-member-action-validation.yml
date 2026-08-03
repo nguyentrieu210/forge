@@ -2,7 +2,7 @@ name: TMP Matrix Member Action Validation
 
 on:
   pull_request:
-    branches: [feat/matrix-named-source-action-bridge]
+    branches: [main]
 
 permissions:
   contents: read
