@@ -10,16 +10,28 @@ import {
   inspectTenantBackup,
 } from "../scripts/lib/tenant-backup-verification.mjs";
 
-function fixture({ tenant = "alu", crossTenant = false } = {}) {
+function fixture({ tenant = "alu", crossTenant = false, metadataCatalogs = false, foreignMetadata = false } = {}) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "forge-backup-test-"));
   const sqlPath = path.join(dir, `${tenant}-backup.sql`);
+  const metadataRows = [
+    `INSERT INTO doctype_definitions (tenant_id,name) VALUES ('${tenant}','DocType');`,
+    ...(metadataCatalogs
+      ? [
+          "INSERT INTO doctype_definitions (tenant_id,name) VALUES ('demo','Legacy Catalog');",
+          "INSERT INTO doctype_definitions (tenant_id,name) VALUES ('__standard__','Standard Catalog');",
+        ]
+      : []),
+    ...(foreignMetadata
+      ? ["INSERT INTO doctype_definitions (tenant_id,name) VALUES ('other','Foreign Metadata');"]
+      : []),
+  ].join("\n");
   const sql = `
 CREATE TABLE d1_migrations (id INTEGER PRIMARY KEY, name TEXT UNIQUE, applied_at TEXT NOT NULL);
 INSERT INTO d1_migrations (id,name,applied_at) VALUES (1,'0001_init.sql','2026-08-03T00:00:00Z');
 CREATE TABLE documents (tenant_id TEXT NOT NULL, name TEXT NOT NULL, PRIMARY KEY (tenant_id,name));
 INSERT INTO documents (tenant_id,name) VALUES ('${crossTenant ? "other" : tenant}','DOC-1');
 CREATE TABLE doctype_definitions (tenant_id TEXT NOT NULL, name TEXT NOT NULL, PRIMARY KEY (tenant_id,name));
-INSERT INTO doctype_definitions (tenant_id,name) VALUES ('${tenant}','DocType');
+${metadataRows}
 CREATE TABLE installed_apps (tenant_id TEXT NOT NULL, app_id TEXT NOT NULL, manifest_json TEXT NOT NULL CHECK(json_valid(manifest_json)), PRIMARY KEY (tenant_id,app_id));
 INSERT INTO installed_apps (tenant_id,app_id,manifest_json) VALUES ('${tenant}','core','{}');
 `;
@@ -38,6 +50,22 @@ INSERT INTO installed_apps (tenant_id,app_id,manifest_json) VALUES ('${tenant}',
   };
   writeFileSync(`${sqlPath}.json`, `${JSON.stringify(manifest)}\n`);
   return { dir, sqlPath, manifest };
+}
+
+function runVerifier(item, output) {
+  const serverRoot = path.resolve(new URL("..", import.meta.url).pathname);
+  return spawnSync(
+    process.execPath,
+    [
+      "scripts/verify-tenant-backup.mjs",
+      "--tenant",
+      "alu",
+      "--file",
+      item.sqlPath,
+      ...(output ? ["--output", output] : []),
+    ],
+    { cwd: serverRoot, encoding: "utf8" },
+  );
 }
 
 test("backup manifest validation binds tenant, filename, bytes and checksum", () => {
@@ -118,20 +146,7 @@ test("offline verifier replays a backup and writes immutable evidence", () => {
   const item = fixture();
   const evidencePath = path.join(item.dir, "verify.json");
   try {
-    const serverRoot = path.resolve(new URL("..", import.meta.url).pathname);
-    const result = spawnSync(
-      process.execPath,
-      [
-        "scripts/verify-tenant-backup.mjs",
-        "--tenant",
-        "alu",
-        "--file",
-        item.sqlPath,
-        "--output",
-        evidencePath,
-      ],
-      { cwd: serverRoot, encoding: "utf8" },
-    );
+    const result = runVerifier(item, evidencePath);
     assert.equal(result.status, 0, result.stderr || result.stdout);
     const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
     assert.equal(evidence.manifest_verified, true);
@@ -142,7 +157,29 @@ test("offline verifier replays a backup and writes immutable evidence", () => {
       doctype_definitions: 0,
       installed_apps: 0,
     });
+    assert.deepEqual(evidence.metadata_catalog_rows, {});
     assert.equal(evidence.cloudflare_mutated, false);
+  } finally {
+    rmSync(item.dir, { recursive: true, force: true });
+  }
+});
+
+test("offline verifier accepts only reserved metadata catalog namespaces", () => {
+  const item = fixture({ metadataCatalogs: true });
+  const evidencePath = path.join(item.dir, "verify.json");
+  try {
+    const result = runVerifier(item, evidencePath);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+    assert.deepEqual(evidence.tenant_scope_violations, {
+      documents: 0,
+      doctype_definitions: 0,
+      installed_apps: 0,
+    });
+    assert.deepEqual(evidence.metadata_catalog_rows, {
+      __standard__: 1,
+      demo: 1,
+    });
   } finally {
     rmSync(item.dir, { recursive: true, force: true });
   }
@@ -151,14 +188,22 @@ test("offline verifier replays a backup and writes immutable evidence", () => {
 test("offline verifier rejects cross-tenant core rows", () => {
   const item = fixture({ crossTenant: true });
   try {
-    const serverRoot = path.resolve(new URL("..", import.meta.url).pathname);
-    const result = spawnSync(
-      process.execPath,
-      ["scripts/verify-tenant-backup.mjs", "--tenant", "alu", "--file", item.sqlPath],
-      { cwd: serverRoot, encoding: "utf8" },
-    );
+    const result = runVerifier(item);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /cross-tenant core rows/);
+    assert.match(result.stderr, /documents=1/);
+  } finally {
+    rmSync(item.dir, { recursive: true, force: true });
+  }
+});
+
+test("offline verifier rejects unknown metadata tenant namespaces", () => {
+  const item = fixture({ metadataCatalogs: true, foreignMetadata: true });
+  try {
+    const result = runVerifier(item);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /cross-tenant core rows/);
+    assert.match(result.stderr, /doctype_definitions=1/);
   } finally {
     rmSync(item.dir, { recursive: true, force: true });
   }
