@@ -1,12 +1,23 @@
 {
-  "//purpose": "Stock Entry là chứng từ ghi sổ kho. Thủ kho và Chủ xưởng được post; Sản xuất chỉ lập/sửa nháp để tách người chuẩn bị khỏi người ghi sổ; Kế toán chỉ đọc.",
-  "version": "2.1.1",
+  "//purpose": "Tách người lập khỏi người duyệt ở hai luồng có hậu quả sổ sách: Stock Entry và đề xuất mua. Nhân viên chỉ lập/sửa nháp Material Request; Chủ xưởng mới được submit/cancel. Kế toán đọc để đối chiếu.",
+  "version": "2.2.3",
   "permissions": {
     "Stock Entry": {
       "Chủ xưởng": "rwcs",
       "Thủ kho": "rwcs",
       "Sản xuất": "rwc",
       "Kế toán": "r"
+    },
+    "Material Request": {
+      "Chủ xưởng": "rwcsxa",
+      "Kinh doanh": "rwc",
+      "Thủ kho": "rwc",
+      "Sản xuất": "rwc",
+      "Kế toán": "r",
+      "General Accountant": "r",
+      "Chief Accountant": "r",
+      "Kế toán tổng hợp": "r",
+      "Kế toán trưởng": "r"
     }
   }
 }

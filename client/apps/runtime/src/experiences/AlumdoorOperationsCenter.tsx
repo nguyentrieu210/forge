@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { ArrowLeftRight, Banknote, CalendarClock, ClipboardCheck, Factory, Landmark, Loader2, RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import { Banknote, CalendarClock, ClipboardList, Factory, Loader2, RefreshCw, ShieldCheck, Smartphone, Truck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useMetaForge } from "@metaforge/views/provider";
 import {
@@ -31,46 +31,10 @@ interface DeliveryRow {
 }
 
 const WAREHOUSE_CASH_ROLES = new Set([
-  "Warehouse Cash User",
-  "Warehouse Cash Manager",
-  "Thủ kho",
-  "Chủ xưởng",
-  "General Accountant",
-  "Chief Accountant",
-  "Kế toán trưởng",
-  "Kế toán tổng hợp",
-  "Kế toán",
-  "Accounts Manager",
-  "System Manager",
-  "Administrator",
+  "Warehouse Cash User", "Warehouse Cash Manager", "Thủ kho", "Chủ xưởng",
+  "General Accountant", "Chief Accountant", "Kế toán trưởng", "Kế toán tổng hợp",
+  "Kế toán", "Accounts Manager", "System Manager", "Administrator",
 ]);
-
-const WAREHOUSE_CASH_SHORTCUTS = [
-  {
-    doctype: "Warehouse Cash Fund",
-    label: "Quỹ tiền mặt theo kho",
-    description: "Xem quỹ, kho, người giữ quỹ, hạn mức ngày và tài khoản tiền mặt đã map.",
-    icon: Landmark,
-  },
-  {
-    doctype: "Warehouse Cash Voucher",
-    label: "Phiếu thu / chi kho",
-    description: "Thu, chi, nạp/hoàn quỹ, tạm ứng/hoàn ứng và điều chỉnh có kiểm soát.",
-    icon: Banknote,
-  },
-  {
-    doctype: "Warehouse Cash Transfer",
-    label: "Chuyển quỹ",
-    description: "Bàn giao tiền giữa hai quỹ kho; không tính vào hạn mức chi phí trực tiếp trong ngày.",
-    icon: ArrowLeftRight,
-  },
-  {
-    doctype: "Warehouse Cash Count",
-    label: "Kiểm quỹ / bàn giao",
-    description: "Chốt ngày, bàn giao ca hoặc kiểm đột xuất theo số dư GL authoritative.",
-    icon: ClipboardCheck,
-  },
-] as const;
 
 const today = () => {
   const date = new Date();
@@ -126,14 +90,14 @@ export function AlumdoorOperationsCenter() {
   return (
     <div className="h-full overflow-auto p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">Trung tâm vận hành Alumdoor</h1><p className="text-sm text-muted-foreground">Theo dõi đơn, tải xưởng, giao hàng, quỹ kho và hồ sơ lỗi từ chứng từ gốc.</p></div>
+        <div><h1 className="text-xl font-semibold">Trung tâm vận hành Alumdoor</h1><p className="text-sm text-muted-foreground">Theo dõi đơn, tải xưởng, giao hàng, đề xuất mua và hồ sơ lỗi từ chứng từ gốc.</p></div>
         <Button variant="outline" onClick={loadOverview} disabled={Boolean(busy)}>{busy === "overview" ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Làm mới</Button>
       </div>
       <Tabs defaultValue="orders" className="space-y-4">
         <TabsList className="h-auto flex-wrap justify-start">
           <TabsTrigger value="orders"><CalendarClock className="size-4" /> Theo dõi chung</TabsTrigger>
           <TabsTrigger value="deliveries"><Truck className="size-4" /> Giao theo ngày</TabsTrigger>
-          {canUseWarehouseCash && <TabsTrigger value="warehouse-cash" data-testid="warehouse-cash-tab"><Banknote className="size-4" /> Quỹ kho</TabsTrigger>}
+          {canUseWarehouseCash && <TabsTrigger value="warehouse-cash" data-testid="warehouse-cash-tab"><Banknote className="size-4" /> Đề xuất & quỹ</TabsTrigger>}
           <TabsTrigger value="capacity"><Factory className="size-4" /> Năng lực & tăng ca</TabsTrigger>
           <TabsTrigger value="warranty"><ShieldCheck className="size-4" /> Bảo hành/lỗi</TabsTrigger>
         </TabsList>
@@ -159,30 +123,22 @@ export function AlumdoorOperationsCenter() {
           <div className="rounded-xl border bg-card p-4 sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="font-medium">Quỹ tiền mặt theo từng kho</h2>
-                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Thu/chi, chuyển quỹ và kiểm quỹ dùng chứng từ Warehouse Cash canonical của Kế toán Việt Nam. Bút toán đi thẳng vào GL; người tạo chứng từ không được tự duyệt.</p>
+                <h2 className="font-medium">Đề xuất mua & thu chi nội bộ</h2>
+                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Màn thường ngày chỉ còn hai việc: nhân viên gửi đề xuất mua để Chủ xưởng duyệt, hoặc ghi thu/chi nội bộ. Chuyển quỹ, kiểm quỹ và cấu hình quỹ vẫn tồn tại phía Finance nhưng không chen vào luồng vận hành.</p>
               </div>
-              <Badge variant="outline">Finance authoritative</Badge>
+              <Button variant="outline" onClick={() => window.location.assign("/mobile/warehouse/?tab=funding")}><Smartphone className="size-4" /> Mở app điện thoại</Button>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {WAREHOUSE_CASH_SHORTCUTS.map((item) => {
-                const Icon = item.icon;
-                return <Button
-                  key={item.doctype}
-                  type="button"
-                  variant="outline"
-                  className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left"
-                  onClick={() => navigate(`/app/${encodeURIComponent(item.doctype)}`)}
-                  data-testid={`warehouse-cash-${item.doctype.toLowerCase().replaceAll(" ", "-")}`}
-                >
-                  <Icon className="size-5 text-primary" />
-                  <span className="mt-3 font-medium">{item.label}</span>
-                  <span className="mt-1 text-sm font-normal text-muted-foreground">{item.description}</span>
-                </Button>;
-              })}
-            </div>
-            <div className="mt-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-              Thanh toán trực tiếp công nợ Purchase/Sales Invoice vẫn đi qua Payment Entry. Gắn nhà cung cấp/khách hàng trên phiếu quỹ chỉ là dimension kế toán, không tự tất toán công nợ.
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Button type="button" variant="outline" className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left" onClick={() => navigate(`/app/${encodeURIComponent("Material Request")}`)} data-testid="warehouse-cash-material-request">
+                <ClipboardList className="size-5 text-primary" />
+                <span className="mt-3 font-medium">Đề xuất mua hàng</span>
+                <span className="mt-1 text-sm font-normal text-muted-foreground">Nhân viên lập nháp; Chủ xưởng là người duyệt. Khi chọn chuyển khoản, app lấy ngân hàng và số tài khoản từ hồ sơ Nhân sự.</span>
+              </Button>
+              <Button type="button" variant="outline" className="h-auto flex-col items-start justify-start whitespace-normal rounded-xl p-4 text-left" onClick={() => navigate(`/app/${encodeURIComponent("Warehouse Cash Voucher")}`)} data-testid="warehouse-cash-voucher">
+                <Banknote className="size-5 text-primary" />
+                <span className="mt-3 font-medium">Thu / chi nội bộ</span>
+                <span className="mt-1 text-sm font-normal text-muted-foreground">Chỉ thu, chi và tạm ứng cần dùng hằng ngày. Sổ cái và quyền duyệt vẫn do Finance kiểm soát phía sau.</span>
+              </Button>
             </div>
           </div>
         </TabsContent>}
