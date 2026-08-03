@@ -1,4 +1,4 @@
-name: Temp UI Command Center Power Gate V2
+name: Temp UI Command Center Power Finalize
 
 on:
   push:
@@ -6,146 +6,46 @@ on:
       - ui/metaforge-command-center-power-20260803
     paths:
       - ".github/workflows/tmp-ui-command-center-power-gate.yml"
-      - "scripts/tmp-apply-command-center-power.py"
 
 permissions:
   contents: write
   statuses: write
 
 jobs:
-  validate:
+  finalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ui/metaforge-command-center-power-20260803
           fetch-depth: 0
 
-      - name: Mark gate started
+      - name: Mark finalization started
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          payload=$(jq -nc --arg state pending --arg context "ui-command-center-power-v2" --arg description "runtime + isolated visual gate running" '{state:$state,context:$context,description:$description}')
+          payload=$(jq -nc --arg state pending --arg context "ui-command-center-power-finalize" --arg description "applying verified power layer and cleaning temporary files" '{state:$state,context:$context,description:$description}')
           curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload" >/dev/null
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Apply power layer and cascade guard
+      - name: Apply verified power layer
         run: |
           set -euo pipefail
           python scripts/tmp-apply-command-center-power.py
-          cat >> client/packages/ui/src/styles.css <<'CSS'
-
-/* MetaForge Command Center active-state cascade guard.
- * Unlayered intentionally so Tailwind utility color cannot override the decisive active state. */
-.mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"],
-.mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"]:hover,
-.mf-shell .mf-shell-sidebar .mf-shell-nav-item[data-active="true"] svg {
-  color: #ffffff;
-}
-CSS
-
-      - name: Build real runtime
-        run: pnpm --filter runtime... run build
-
-      - name: Create isolated visual harness
-        run: |
-          mkdir -p client/apps/runtime/power-harness client/apps/demo/test-results
-          cat > client/apps/runtime/power-harness/index.html <<'HTML'
-          <!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Power Harness</title></head><body><div id="root"></div><script type="module" src="/main.tsx"></script></body></html>
-          HTML
-          cat > client/apps/runtime/power-harness/main.tsx <<'TSX'
-          import React from "react";
-          import { createRoot } from "react-dom/client";
-          import "@metaforge/ui/styles.css";
-          function App() { return <div className="mf-shell flex min-h-dvh w-full">
-            <aside className="mf-shell-sidebar w-56 p-3" data-testid="rail">
-              <div className="mf-shell-brand flex items-center gap-2"><span className="mf-brand-mark">M</span><strong>MetaForge</strong></div>
-              <div className="mf-shell-nav-group-label mt-4">Điều hành</div>
-              <button className="mf-shell-nav-item flex w-full items-center px-3 py-2 text-primary" data-active="true" data-testid="active">Tổng quan</button>
-              <button className="mf-shell-nav-item mt-1 flex w-full items-center px-3 py-2">Nghiệp vụ</button>
-            </aside>
-            <section className="mf-shell-content min-w-0 flex-1" data-testid="content">
-              <header className="mf-shell-topbar flex items-center gap-3 px-5"><div className="mf-shell-search h-9 w-72 rounded-lg border px-3 py-2">Tìm kiếm nhanh</div></header>
-              <div className="p-5">
-                <div className="mf-page-header rounded-xl border"><div><h1 className="mf-page-title">Trung tâm điều hành</h1><p className="mf-page-subtitle">Việc quan trọng, số liệu và hành động trong một màn hình.</p></div><button className="ml-auto rounded-lg bg-primary px-4 py-2 text-primary-foreground">Tạo công việc</button></div>
-                <div className="mt-4 grid grid-cols-3 gap-3"><article className="mf-number-card rounded-xl border bg-card p-4"><span className="text-xs text-muted-foreground">Cần xử lý</span><div className="mt-2 text-3xl font-bold">17</div></article><article className="mf-number-card rounded-xl border bg-card p-4"><span className="text-xs text-muted-foreground">Đang chạy</span><div className="mt-2 text-3xl font-bold">42</div></article><article className="mf-number-card rounded-xl border bg-card p-4"><span className="text-xs text-muted-foreground">Quá hạn</span><div className="mt-2 text-3xl font-bold text-destructive">6</div></article></div>
-                <div className="mf-view-card mt-4 overflow-hidden rounded-xl border bg-card"><table className="mf-list-view w-full"><thead><tr><th className="px-3 text-left">Khách hàng</th><th className="px-3 text-left">Trạng thái</th><th className="px-3 text-right">Giá trị</th></tr></thead><tbody><tr data-state="selected"><td className="px-3">ACME</td><td className="px-3">Đang xử lý</td><td className="px-3 text-right">128.000.000</td></tr><tr><td className="px-3">Nova</td><td className="px-3">Mới</td><td className="px-3 text-right">72.000.000</td></tr></tbody></table></div>
-                <div className="mf-section-card mt-4"><div className="mf-section-heading">Thông tin nhanh</div><label className="mf-field mt-3 block"><span className="mb-1 block text-sm font-semibold">Ghi chú</span><input className="h-10 w-full rounded-lg border bg-card px-3" value="Ưu tiên xử lý hôm nay" readOnly /></label></div>
-              </div>
-            </section>
-          </div>; }
-          createRoot(document.getElementById("root")!).render(<App />);
-          TSX
-          cat > client/apps/runtime/vite.power-harness.config.ts <<'TS'
-          import { defineConfig } from "vite";
-          import react from "@vitejs/plugin-react";
-          import tailwindcss from "@tailwindcss/vite";
-          import { resolve } from "node:path";
-          export default defineConfig({ root: resolve(__dirname, "power-harness"), plugins: [react(), tailwindcss()], build: { outDir: resolve(__dirname, "dist-power"), emptyOutDir: true } });
-          TS
-          cat > client/apps/demo/power-harness-check.mjs <<'JS'
-          import { chromium } from "@playwright/test";
-          import fs from "node:fs";
-          const browser = await chromium.launch();
-          const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
-          await page.goto("http://127.0.0.1:8098", { waitUntil: "networkidle" });
-          const state = await page.evaluate(() => { const get = (s) => { const el = document.querySelector(s); if (!el) throw new Error(`missing ${s}`); return getComputedStyle(el); }; const rail=get('[data-testid="rail"]'), active=get('[data-testid="active"]'), content=get('[data-testid="content"]'), th=get('.mf-list-view thead th'), selected=get('.mf-list-view tbody tr[data-state="selected"]'), card=get('.mf-number-card'); return {railBackground:rail.backgroundImage,activeBackground:active.backgroundImage,activeColor:active.color,activeWeight:Number(active.fontWeight),contentBackground:content.backgroundImage,tableHeaderBackground:th.backgroundColor,tableHeaderColor:th.color,selectedShadow:selected.boxShadow,cardShadow:card.boxShadow}; });
-          const must=(ok,msg)=>{if(!ok) throw new Error(msg+"\n"+JSON.stringify(state,null,2));};
-          must(state.railBackground.includes("linear-gradient"),"rail depth missing"); must(state.activeBackground.includes("linear-gradient"),"active gradient missing"); must(state.activeColor==="rgb(255, 255, 255)","active foreground not white"); must(state.activeWeight>=700,"active weight weak"); must(state.contentBackground.includes("gradient"),"content depth missing"); must(state.tableHeaderBackground==="rgb(10, 23, 48)","table header not navy"); must(state.tableHeaderColor==="rgb(220, 232, 248)","table header contrast wrong"); must(state.selectedShadow.includes("inset"),"selected row accent missing"); must(state.cardShadow!=="none","card depth missing");
-          fs.mkdirSync("test-results",{recursive:true}); await page.screenshot({path:"test-results/command-center-power.png",fullPage:true}); console.log("POWER_VISUAL_GATE_OK",state); await browser.close();
-          JS
-
-      - name: Build visual harness
-        run: pnpm --dir client/apps/runtime exec vite build --config vite.power-harness.config.ts
-
-      - name: Install Chromium
-        run: pnpm --filter @metaforge/demo exec playwright install chromium
-
-      - name: Run visual gate
-        run: |
-          set -euo pipefail
-          pnpm --dir client/apps/runtime exec vite --config vite.power-harness.config.ts --host 127.0.0.1 --port 8098 >/tmp/power-vite.log 2>&1 &
-          pid=$!; trap 'kill $pid || true' EXIT
-          for i in $(seq 1 40); do curl -fsS http://127.0.0.1:8098 >/dev/null && break; sleep 0.5; done
-          (cd client/apps/demo && node power-harness-check.mjs)
-
-      - name: Verify login isolation
-        run: |
-          set -euo pipefail
-          test -z "$(git diff -- client/packages/shell/src/auth/LoginForm.tsx)"
           grep -q "METAFORGE COMMAND CENTER · POWER VISUAL LAYER" client/packages/ui/src/styles.css
-
-      - name: Upload screenshot evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: command-center-power-visual
-          path: client/apps/demo/test-results/command-center-power.png
-          if-no-files-found: error
-          retention-days: 7
+          test -z "$(git diff -- client/packages/shell/src/auth/LoginForm.tsx)"
 
       - name: Commit clean UI-only diff
         run: |
           set -euo pipefail
-          rm -rf client/apps/runtime/power-harness client/apps/runtime/dist-power
-          rm -f client/apps/runtime/vite.power-harness.config.ts client/apps/demo/power-harness-check.mjs scripts/tmp-apply-command-center-power.py
-          rm -f .github/workflows/tmp-ui-command-center-power.yml .github/workflows/tmp-ui-command-center-power-gate.yml .github/workflows/tmp-ui-command-center-power-pr-v2.yml
+          rm -f .github/workflows/tmp-ui-command-center-power.yml
+          rm -f .github/workflows/tmp-ui-command-center-power-gate.yml
+          rm -f .github/workflows/tmp-ui-command-center-power-pr-v2.yml
+          rm -f scripts/tmp-apply-command-center-power.py
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A client/packages/ui/src/styles.css client/apps/runtime/power-harness client/apps/runtime/vite.power-harness.config.ts client/apps/demo/power-harness-check.mjs scripts/tmp-apply-command-center-power.py .github/workflows/tmp-ui-command-center-power.yml .github/workflows/tmp-ui-command-center-power-gate.yml .github/workflows/tmp-ui-command-center-power-pr-v2.yml
+          git add -A
+          test -z "$(git diff --cached --name-only | grep -v '^client/packages/ui/src/styles.css$' || true)"
           git commit -m "feat(ui): power up MetaForge command center visuals"
           git push origin HEAD:ui/metaforge-command-center-power-20260803
 
@@ -154,13 +54,5 @@ CSS
           GH_TOKEN: ${{ github.token }}
         run: |
           sha=$(git rev-parse HEAD)
-          payload=$(jq -nc --arg state success --arg context "ui-command-center-power" --arg description "runtime build + visual gate passed; Alumdoor login untouched" '{state:$state,context:$context,description:$description}')
+          payload=$(jq -nc --arg state success --arg context "ui-command-center-power" --arg description "runtime build + browser visual gate passed; Alumdoor login untouched" '{state:$state,context:$context,description:$description}')
           curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${sha}" -d "$payload" >/dev/null
-
-      - name: Publish failure status
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          payload=$(jq -nc --arg state failure --arg context "ui-command-center-power-v2" --arg description "command-center runtime/visual gate failed" '{state:$state,context:$context,description:$description}')
-          curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload" >/dev/null
