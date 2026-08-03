@@ -2,8 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudforge-gateway",
   "main": "src/index.ts",
-  "workers_dev": true,
-  "preview_urls": true,
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-07-23",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
@@ -36,10 +36,10 @@
     "binding": "ASSETS",
     "not_found_handling": "none"
   },
-  // Custom domains, so each tenant is reached at its OWN hostname and the gateway
-  // resolves the tenant from it. Previously each tenant needed a gateway Worker of its
-  // own because the credential could not create DNS records; one gateway serving many
-  // hostnames is the design this was always meant to have.
+  // Custom domains are the production ingress authority. workers.dev and Preview URLs are
+  // intentionally disabled above so WAF/Access/rate-limit policy cannot be bypassed through
+  // an alternate Worker hostname. Local `wrangler dev` remains available for development.
+  // Each tenant is reached at its OWN hostname and the gateway resolves the tenant from it.
   "routes": [
     { "pattern": "edu.kairo.vn", "custom_domain": true },
     { "pattern": "hrm.kairo.vn", "custom_domain": true },
