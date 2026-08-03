@@ -31,17 +31,24 @@ export class SalesOrderClosureController extends SalesOrderController {
 
     let revisionNo = existing ? revision(existing) : 1;
     if (!existing && context.command.amended_from) {
-      const source = await requireSalesOrder(context, context.command.amended_from);
-      if (source.docstatus !== 2) {
-        throw errors.lifecycle("A revised Sales Order may amend only a cancelled Sales Order");
+      // Amend validity is a DocumentKernel/storage invariant. Read the source only to add
+      // Sales-specific revision/provenance when it is a valid cancelled source; otherwise
+      // deliberately defer failure to the canonical amend-chain guard so D1 and in-memory
+      // adapters keep one error contract (AMEND_SOURCE_NOT_CANCELLED / ALREADY_AMENDED).
+      const source = await context.reader.getDocument<SalesOrderData>(
+        context.command.tenant_id,
+        "Sales Order",
+        context.command.amended_from,
+      );
+      if (source?.docstatus === 2) {
+        assertSameCommercialContext(data, source.data, context.command.amended_from);
+        const sourceQuotation = text((source.data as JsonObject).against_quotation);
+        if (sourceQuotation && !quotationName) quotationName = sourceQuotation;
+        if (sourceQuotation !== quotationName) {
+          throw errors.reference("Revised Sales Order must preserve its Quotation source");
+        }
+        revisionNo = revision(source.data) + 1;
       }
-      assertSameCommercialContext(data, source.data, context.command.amended_from);
-      const sourceQuotation = text((source.data as JsonObject).against_quotation);
-      if (sourceQuotation && !quotationName) quotationName = sourceQuotation;
-      if (sourceQuotation !== quotationName) {
-        throw errors.reference("Revised Sales Order must preserve its Quotation source");
-      }
-      revisionNo = revision(source.data) + 1;
     }
 
     const result = { ...data, revision_no: revisionNo } as SalesOrderData;
@@ -148,15 +155,6 @@ async function requireQuotation(
   const quotation = await context.reader.getDocument<QuotationData>(context.command.tenant_id, "Quotation", name);
   if (!quotation) throw errors.reference(`Quotation ${name} does not exist or is unavailable`);
   return quotation;
-}
-
-async function requireSalesOrder(
-  context: ControllerContext<SalesOrderData>,
-  name: string,
-): Promise<CanonicalDocument<SalesOrderData>> {
-  const order = await context.reader.getDocument<SalesOrderData>(context.command.tenant_id, "Sales Order", name);
-  if (!order) throw errors.reference(`Sales Order ${name} does not exist or is unavailable`);
-  return order;
 }
 
 function assertSameQuotationContext(order: SalesOrderData, quotation: QuotationData, name: string): void {
