@@ -54,6 +54,12 @@ test("supplier reconciliation compares canonical base payable ledger with Suppli
   assert.match(compiled.sql, /p\.tenant_id=\?1/);
   assert.match(compiled.sql, /g\.tenant_id=\?1/);
   assert.match(compiled.sql, /json_extract\(d\.payload_json,'\$\.company'\)=\?3/);
+  assert.match(compiled.sql, /LEFT JOIN master_records company_master/);
+  assert.match(compiled.sql, /company_master\.record_type='Company'/);
+  assert.match(compiled.sql, /json_extract\(company_master\.data_json,'\$\.default_currency'\)/);
+  assert.match(compiled.sql, /LEFT JOIN master_records currency_master/);
+  assert.match(compiled.sql, /currency_master\.record_type='Currency'/);
+  assert.match(compiled.sql, /json_extract\(currency_master\.data_json,'\$\.currency_scale'\)/);
   assert.match(compiled.sql, /company_currency_scale/);
   assert.match(compiled.sql, /CASE keys\.currency_scale WHEN 0 THEN 1/);
   assert.match(compiled.sql, /THEN 'Reconciled'/);
