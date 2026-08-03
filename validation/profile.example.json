@@ -1,0 +1,54 @@
+{
+  "changeId": "example-critical-finance",
+  "baseSha": "0000000000000000000000000000000000000000",
+  "headSha": "1111111111111111111111111111111111111111",
+  "risk": "CRITICAL",
+  "domains": [
+    "finance"
+  ],
+  "touches": {
+    "ui": false,
+    "mobile": false,
+    "migration": true,
+    "authoritativeMutation": true,
+    "tenantBoundary": true
+  },
+  "claims": [],
+  "checks": {
+    "targeted_integration": {
+      "command": "pnpm --filter cloudforge run test:workers"
+    },
+    "permission": {
+      "command": "node --test server/tests/<permission-test>.test.mjs"
+    },
+    "tenant_isolation": {
+      "command": "node --test server/tests/<tenant-test>.test.mjs"
+    },
+    "failure_path": {
+      "command": "node --test server/tests/<failure-test>.test.mjs"
+    },
+    "idempotency_retry": {
+      "command": "node --test server/tests/<retry-test>.test.mjs"
+    },
+    "migration_replay": {
+      "command": "python3 server/scripts/<targeted-migration-test>.py"
+    },
+    "correction_reversal": {
+      "command": "node --test server/tests/<correction-test>.test.mjs"
+    },
+    "reconciliation": {
+      "command": "node --test server/tests/<reconciliation-test>.test.mjs"
+    }
+  },
+  "diagnostics": [
+    {
+      "id": "full-suite",
+      "command": "pnpm run verify",
+      "inherited": {
+        "baseSha": "0000000000000000000000000000000000000000",
+        "tracking": "issue-or-doc-reference",
+        "reason": "Example only: unrelated failure already present on exact base."
+      }
+    }
+  ]
+}
