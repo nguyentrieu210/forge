@@ -1,0 +1,32 @@
+{
+  "name": "Support Ticket Lifecycle",
+  "document_type": "Support Ticket",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Mới", "docstatus": 0, "allow_edit": "Support Manager" },
+    { "state": "Đã phân công", "docstatus": 0, "allow_edit": "Support User" },
+    { "state": "Đang xử lý", "docstatus": 0, "allow_edit": "Support User" },
+    { "state": "Chờ khách hàng", "docstatus": 0, "allow_edit": "Support User" },
+    { "state": "Đã xử lý", "docstatus": 0, "allow_edit": "Support Manager" },
+    { "state": "Đã leo thang", "docstatus": 0, "allow_edit": "Support Manager" },
+    { "state": "Đóng", "docstatus": 0, "allow_edit": "Support Manager" },
+    { "state": "Hủy", "docstatus": 0, "allow_edit": "Support Manager" }
+  ],
+  "transitions": [
+    { "state": "Mới", "action": "Phân công", "next_state": "Đã phân công", "allowed_role": "Support Manager" },
+    { "state": "Đã phân công", "action": "Bắt đầu xử lý", "next_state": "Đang xử lý", "allowed_role": "Support User" },
+    { "state": "Đang xử lý", "action": "Chờ khách hàng", "next_state": "Chờ khách hàng", "allowed_role": "Support User" },
+    { "state": "Chờ khách hàng", "action": "Tiếp tục", "next_state": "Đang xử lý", "allowed_role": "Support User" },
+    { "state": "Đang xử lý", "action": "Hoàn tất xử lý", "next_state": "Đã xử lý", "allowed_role": "Support User" },
+    { "state": "Đã xử lý", "action": "Đóng phiếu", "next_state": "Đóng", "allowed_role": "Support Manager", "allow_self_approval": false },
+    { "state": "Đã xử lý", "action": "Trả lại", "next_state": "Đang xử lý", "allowed_role": "Support Manager" },
+    { "state": "Đã phân công", "action": "Leo thang", "next_state": "Đã leo thang", "allowed_role": "Support User" },
+    { "state": "Đang xử lý", "action": "Leo thang", "next_state": "Đã leo thang", "allowed_role": "Support User" },
+    { "state": "Đã leo thang", "action": "Tiếp tục xử lý", "next_state": "Đang xử lý", "allowed_role": "Support Manager" },
+    { "state": "Mới", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Support Manager" },
+    { "state": "Đã phân công", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Support Manager" },
+    { "state": "Đang xử lý", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Support Manager" }
+  ],
+  "revision": 1
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Service Contract Item",
+  "module": "Maintenance",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "item", "label": "Sản phẩm / vật tư", "fieldtype": "Link", "options": "Item", "required": true, "in_list_view": true },
+    { "fieldname": "serial_no", "label": "Số serial", "fieldtype": "Link", "options": "Serial No", "in_list_view": true },
+    { "fieldname": "coverage_type", "label": "Phạm vi", "fieldtype": "Select", "options": "Bảo hành toàn phần\nBảo trì định kỳ\nLinh kiện\nCông việc", "required": true, "in_list_view": true },
+    { "fieldname": "coverage_start", "label": "Hiệu lực từ", "fieldtype": "Date" },
+    { "fieldname": "coverage_end", "label": "Hiệu lực đến", "fieldtype": "Date" },
+    { "fieldname": "notes", "label": "Ghi chú", "fieldtype": "Text" }
+  ],
+  "permissions": [],
+  "revision": 1
+}

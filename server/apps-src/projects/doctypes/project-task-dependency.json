@@ -1,0 +1,12 @@
+{
+  "name": "Project Task Dependency",
+  "module": "Projects",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "depends_on", "label": "Phụ thuộc công việc", "fieldtype": "Link", "options": "Project Task", "required": true, "in_list_view": true },
+    { "fieldname": "dependency_type", "label": "Kiểu phụ thuộc", "fieldtype": "Select", "options": "Finish-to-Start\nStart-to-Start\nFinish-to-Finish\nStart-to-Finish", "default": "Finish-to-Start", "required": true, "in_list_view": true },
+    { "fieldname": "lag_hours", "label": "Độ trễ (giờ)", "fieldtype": "Float", "default": 0, "in_list_view": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}

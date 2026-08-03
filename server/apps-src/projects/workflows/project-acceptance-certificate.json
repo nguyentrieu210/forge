@@ -1,0 +1,21 @@
+{
+  "name": "Project Acceptance Approval",
+  "document_type": "Project Acceptance Certificate",
+  "state_field": "workflow_state",
+  "is_active": true,
+  "states": [
+    { "state": "Nháp", "docstatus": 0, "allow_edit": "Project User" },
+    { "state": "Chờ xác nhận", "docstatus": 0, "allow_edit": "Project Manager" },
+    { "state": "Đã xác nhận", "docstatus": 1, "allow_edit": "Project Manager" },
+    { "state": "Từ chối", "docstatus": 2, "allow_edit": "Project Manager" },
+    { "state": "Hủy", "docstatus": 2, "allow_edit": "Project Manager" }
+  ],
+  "transitions": [
+    { "state": "Nháp", "action": "Gửi xác nhận", "next_state": "Chờ xác nhận", "allowed_role": "Project User" },
+    { "state": "Chờ xác nhận", "action": "Xác nhận nghiệm thu", "next_state": "Đã xác nhận", "allowed_role": "Project Manager", "allow_self_approval": false },
+    { "state": "Chờ xác nhận", "action": "Từ chối", "next_state": "Từ chối", "allowed_role": "Project Manager", "allow_self_approval": false },
+    { "state": "Nháp", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Project Manager" },
+    { "state": "Chờ xác nhận", "action": "Hủy", "next_state": "Hủy", "allowed_role": "Project Manager" }
+  ],
+  "revision": 1
+}

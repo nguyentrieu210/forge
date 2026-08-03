@@ -1,0 +1,4 @@
+[
+  { "role": "Project User", "desk_access": true },
+  { "role": "Project Manager", "desk_access": true }
+]

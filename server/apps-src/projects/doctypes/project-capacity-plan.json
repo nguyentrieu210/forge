@@ -1,0 +1,25 @@
+{
+  "name": "Project Capacity Plan",
+  "module": "Projects",
+  "autoname": "PCP-.YYYY.-#####",
+  "title_field": "plan_name",
+  "search_fields": ["plan_name", "company"],
+  "sort_field": "period_start",
+  "sort_order": "DESC",
+  "track_seen": true,
+  "fields": [
+    { "fieldname": "plan_name", "label": "Tên kế hoạch năng lực", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_standard_filter": true },
+    { "fieldname": "period_start", "label": "Từ ngày", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "period_end", "label": "Đến ngày", "fieldtype": "Date", "required": true, "in_list_view": true },
+    { "fieldname": "resources", "label": "Năng lực nguồn lực", "fieldtype": "Table", "options": "Project Capacity Line", "required": true },
+    { "fieldname": "planning_note", "label": "Ghi chú hoạch định", "fieldtype": "Text" },
+    { "fieldname": "is_active", "label": "Đang áp dụng", "fieldtype": "Check", "default": 1, "in_list_view": true, "in_standard_filter": true }
+  ],
+  "permissions": [
+    { "role": "Project User", "read": true, "report": true },
+    { "role": "Project Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "delete": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

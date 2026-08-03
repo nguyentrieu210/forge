@@ -1,0 +1,14 @@
+{
+  "name": "Support SLA Priority",
+  "module": "Support",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "priority", "label": "Mức ưu tiên", "fieldtype": "Select", "options": "P1\nP2\nP3\nP4", "required": true, "in_list_view": true },
+    { "fieldname": "response_minutes", "label": "Phản hồi trong (phút)", "fieldtype": "Int", "required": true, "in_list_view": true },
+    { "fieldname": "resolution_minutes", "label": "Xử lý trong (phút)", "fieldtype": "Int", "required": true, "in_list_view": true },
+    { "fieldname": "escalation_minutes", "label": "Leo thang sau (phút)", "fieldtype": "Int", "required": true, "in_list_view": true },
+    { "fieldname": "is_default", "label": "Mặc định", "fieldtype": "Check", "in_list_view": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}

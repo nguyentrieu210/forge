@@ -1,0 +1,13 @@
+{
+  "name": "Service Checklist Item",
+  "module": "Maintenance",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "check_item", "label": "Hạng mục kiểm tra", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "result", "label": "Kết quả", "fieldtype": "Select", "options": "Đạt\nKhông đạt\nKhông áp dụng", "required": true, "in_list_view": true },
+    { "fieldname": "evidence_note", "label": "Ghi nhận / bằng chứng", "fieldtype": "Text" },
+    { "fieldname": "photo", "label": "Ảnh hạng mục", "fieldtype": "Attach" }
+  ],
+  "permissions": [],
+  "revision": 1
+}

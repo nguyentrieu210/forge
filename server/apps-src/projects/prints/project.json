@@ -1,0 +1,9 @@
+{
+  "name": "Phiếu dự án",
+  "doc_type": "Project",
+  "format_type": "Jinja",
+  "html": "<h1>PHIẾU DỰ ÁN</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Tên dự án:</strong> {{ doc.project_name }}</p><p><strong>Công ty:</strong> {{ doc.company }}</p><p><strong>Khách hàng:</strong> {{ doc.customer }}</p><p><strong>Mẫu:</strong> {{ doc.template }}</p><p><strong>Thời gian:</strong> {{ doc.planned_start }} - {{ doc.planned_end }}</p><h3>Mục tiêu / phạm vi</h3><p>{{ doc.objective }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 14px; } h3 { font-size: 14px; margin: 12px 0 4px; } p { margin: 4px 0; line-height: 1.45; }",
+  "is_default": true,
+  "revision": 1
+}

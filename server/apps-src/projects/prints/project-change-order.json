@@ -1,0 +1,9 @@
+{
+  "name": "Phiếu thay đổi dự án",
+  "doc_type": "Project Change Order",
+  "format_type": "Jinja",
+  "html": "<h1>PHIẾU THAY ĐỔI DỰ ÁN</h1><p><strong>Số:</strong> {{ doc.name }}</p><p><strong>Dự án:</strong> {{ doc.project }}</p><p><strong>Nội dung:</strong> {{ doc.title }}</p><p><strong>Loại:</strong> {{ doc.change_type }}</p><p><strong>Người đề nghị:</strong> {{ doc.requested_by }}</p><p><strong>Thời điểm:</strong> {{ doc.requested_at }}</p><h3>Lý do</h3><p>{{ doc.reason }}</p><h3>Phạm vi thay đổi</h3><p>{{ doc.scope_change }}</p><p><strong>Ảnh hưởng tiến độ:</strong> {{ doc.schedule_impact_days }} ngày</p><p><strong>Ảnh hưởng nguồn lực:</strong> {{ doc.resource_impact }}</p><p><strong>Tham chiếu thương mại:</strong> {{ doc.commercial_reference }}</p><p><strong>Trạng thái:</strong> {{ doc.workflow_state }}</p>",
+  "css": "h1 { font-size: 18px; text-align: center; margin-bottom: 14px; } h3 { font-size: 14px; margin: 12px 0 4px; } p { margin: 4px 0; line-height: 1.45; }",
+  "is_default": true,
+  "revision": 1
+}

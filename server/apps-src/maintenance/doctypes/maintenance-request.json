@@ -4,15 +4,24 @@
   "is_submittable": true,
   "autoname": "MR-.YYYY.-#####",
   "title_field": "summary",
-  "search_fields": ["summary"],
+  "search_fields": ["summary", "customer", "serial_no"],
   "sort_field": "reported_at",
   "sort_order": "DESC",
   "track_seen": true,
   "fields": [
     { "fieldname": "summary", "label": "Tóm tắt", "fieldtype": "Data", "required": true, "in_list_view": true, "search_index": true },
     { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "request_type", "label": "Loại yêu cầu", "fieldtype": "Select", "options": "Sự cố\nBảo hành\nBảo trì định kỳ\nKiểm tra", "required": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "priority", "label": "Mức ưu tiên", "fieldtype": "Link", "options": "Maintenance Priority", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "reported_at", "label": "Thời điểm báo", "fieldtype": "Datetime", "required": true, "in_list_view": true },
+    { "fieldname": "preferred_visit_at", "label": "Thời điểm mong muốn", "fieldtype": "Datetime" },
+    { "fieldname": "service_contract", "label": "Hợp đồng dịch vụ", "fieldtype": "Link", "options": "Service Contract", "in_standard_filter": true },
+    { "fieldname": "source_delivery_note", "label": "Phiếu giao hàng nguồn", "fieldtype": "Link", "options": "Delivery Note" },
+    { "fieldname": "item", "label": "Sản phẩm / vật tư", "fieldtype": "Link", "options": "Item", "in_standard_filter": true },
+    { "fieldname": "serial_no", "label": "Số serial", "fieldtype": "Link", "options": "Serial No", "search_index": true },
+    { "fieldname": "warranty_reference", "label": "Tham chiếu bảo hành", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.request_type == 'Bảo hành' && !doc.service_contract" },
+    { "fieldname": "contact_name", "label": "Người liên hệ", "fieldtype": "Data" },
+    { "fieldname": "contact_phone", "label": "Điện thoại", "fieldtype": "Data" },
     { "fieldname": "needs_parts", "label": "Cần vật tư", "fieldtype": "Check" },
     { "fieldname": "parts_note", "label": "Vật tư dự kiến", "fieldtype": "Data", "mandatory_depends_on": "eval:doc.needs_parts == 1" },
     { "fieldname": "detail", "label": "Mô tả", "fieldtype": "Text" },
@@ -20,8 +29,9 @@
   ],
   "permissions": [
     { "role": "Maintenance User", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "Maintenance Technician", "read": true, "print": true },
     { "role": "Maintenance Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "amend": true, "print": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 3
 }
