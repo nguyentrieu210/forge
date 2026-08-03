@@ -2,8 +2,9 @@
 
 Status: **PR READY — NOT MERGED / NOT DEPLOYED**
 Branch: `rc/transaction-closure-06-warranty-service`
+PR: `#507`
 Program baseline: `rc/transaction-closure-00-control@641a909ee27dad8ff9766dacaeecd82ec0da8911`
-Implementation audit baseline: current `main` drift reviewed through `fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`; drift since the worker merge-base is UI-only and does not overlap this service implementation.
+Implementation audit baseline: current `main` reviewed through `fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`; the five commits after the worker merge-base are UI-only and do not overlap this service implementation.
 Risk: **CRITICAL at stock/finance boundary**
 
 ## Mission
@@ -21,12 +22,13 @@ Closure-06 owns warranty/service lifecycle and verification. It does **not** cre
 Canonical evidence consumed by this branch:
 
 - delivered ownership/provenance: `Delivery Note` + `Serial No`;
+- warranty/service entitlement: `Warranty Claim` or active `Service Contract`;
 - spare-part and return movement: submitted `Stock Entry`;
 - billable service: submitted `Sales Invoice`;
 - tenant boundary: platform callback executes in the current tenant and actor identity;
-- company/branch boundary: service documents carry `company` / `branch` and the validator refuses mismatched authoritative evidence when those dimensions are present.
+- company/branch boundary: Maintenance Request, Service Contract, Warranty Claim and Service Order carry explicit scope and the validator refuses inconsistent authoritative evidence.
 
-Creation/reversal of stock and finance documents stays with their owning workstreams. Closure-06 fails closed when the required canonical evidence does not exist.
+Creation/reversal of stock and finance documents stays with their owning workstreams. Closure-06 fails closed when required canonical evidence does not exist.
 
 ## Historical audit / disposition
 
@@ -44,28 +46,48 @@ Creation/reversal of stock and finance documents stays with their owning workstr
 
 ## Implemented closure hardening
 
-### 1. Warranty provenance and eligibility
+### 1. Scoped intake / entitlement authority
 
-`Warranty Claim` now carries explicit:
+`Maintenance Request` now carries `company` and `branch`; company becomes mandatory once the request leaves its initial workflow state.
+
+`Service Contract` now carries required `company` plus `branch`, so a service entitlement cannot float across company scope merely because customer names happen to match.
+
+`Warranty Claim` carries explicit:
 
 - `company`;
 - `branch`;
 - canonical `source_delivery_note`;
 - `correction_of` + mandatory `correction_reason` lineage.
 
-The server-side WS07 entry validator now verifies, once a claim leaves the initial state:
+### 2. Warranty provenance and eligibility
 
-- Maintenance Request exists and agrees with claim customer/item/serial/delivery provenance when those source fields are populated;
+The server-side WS07 entry validator verifies, once a claim leaves the initial state:
+
+- Maintenance Request exists and agrees with customer/company/branch/item/serial/delivery provenance when the source dimensions are populated;
 - source Delivery Note exists and is submitted;
 - an **eligible** claim belongs to the same delivered customer/company/branch;
-- delivered item/serial appears on the Delivery Note, or the canonical Serial No directly points back to that Delivery Note;
+- delivered item/serial appears on the Delivery Note, or canonical Serial No directly points back to that Delivery Note;
 - Serial No item/customer/company lineage is consistent when those authoritative fields are populated;
-- Service Contract claims use a submitted `Hiệu lực` contract, valid claim date and matching covered item/serial window;
+- Service Contract claims use a submitted `Hiệu lực` contract for the same customer/company/branch, valid claim date and matching covered item/serial window;
 - non-contract warranty requires a serial whose `warranty_expiry_date` covers the claim date.
 
-Invalid ownership or expired warranty is therefore allowed to be **recorded as rejected evidence**, but cannot be marked `Đủ điều kiện`.
+Invalid ownership or expired warranty may still be **recorded as rejected evidence**, but cannot be marked `Đủ điều kiện`.
 
-### 2. Duplicate / retry / correction behavior
+### 3. Claim -> Service Order reciprocal closure
+
+A Warranty Claim in `Chờ xác nhận` / `Hoàn tất` cannot close merely because `service_order` contains the name of an existing document.
+
+The linked Service Order must:
+
+- exist;
+- link back to the exact Warranty Claim;
+- share the same Maintenance Request;
+- agree on customer/company/branch/item/serial;
+- itself be in `Chờ xác nhận` or `Hoàn tất`.
+
+This closes the two-way claim/service lineage rather than accepting a decorative Link field.
+
+### 4. Duplicate / retry / correction behavior
 
 Before accepting another Warranty Claim for the same `Maintenance Request`, the validator queries the authoritative Warranty Claim collection.
 
@@ -76,19 +98,35 @@ Before accepting another Warranty Claim for the same `Maintenance Request`, the 
 
 This is lineage, not silent historical mutation.
 
-### 3. Spare-part stock closure
+### 5. Free-service authority fails closed
+
+`Service Order.billing_mode` supports:
+
+- `Bảo hành`;
+- `Bao gồm hợp đồng`;
+- `Tính phí`.
+
+A finalizing service cannot claim a free-service path without the authority it names:
+
+- `Bảo hành` requires a linked eligible Warranty Claim;
+- `Bao gồm hợp đồng` requires a submitted `Hiệu lực` Service Contract for the same customer/company/branch, within the service date and covering the service item/serial;
+- `Tính phí` requires the canonical submitted Sales Invoice described below.
+
+This prevents “free because the select box says so”, a surprisingly popular accounting model when software forgets to object.
+
+### 6. Spare-part stock closure
 
 `Service Part Usage.stock_reference` changed from free-form `Data` to `Link -> Stock Entry`.
 
 Before a Service Order enters `Chờ xác nhận` / `Hoàn tất`, every used-part row must have a canonical submitted Stock Entry that:
 
 - exists in the current tenant;
-- matches company/branch when the stock document exposes those dimensions;
+- matches the Service Order company and branch when branch is exposed by the stock document;
 - contains the referenced item and serial when serial evidence is provided.
 
 The service worker does not create or value stock. It only refuses to close service without authoritative stock evidence.
 
-### 4. Replacement / return traceability
+### 7. Replacement / return traceability
 
 `Service Order` now declares:
 
@@ -102,28 +140,25 @@ For replacement closure:
 - replacement Delivery Note must be submitted;
 - `issue_purpose` must be `Đổi bảo hành`;
 - customer/company/branch must remain aligned;
-- the replacement item/serial must be present on the Delivery Note.
+- replacement item/serial must be present on the Delivery Note.
 
 For return closure:
 
-- a submitted canonical Stock Entry must evidence receipt/movement of the returned item/serial.
+- a submitted canonical Stock Entry must evidence movement of the returned item/serial under the same company/branch scope.
 
 No replacement inventory state is stored locally in Maintenance.
 
-### 5. Service billing boundary
+### 8. Service billing boundary
 
-`Service Order` now declares:
+`Service Order` now declares `sales_invoice: Link -> Sales Invoice`.
 
-- `billing_mode`: Bảo hành / Bao gồm hợp đồng / Tính phí;
-- `sales_invoice: Link -> Sales Invoice`.
-
-A finalizing `Tính phí` service cannot close without a submitted non-return Sales Invoice for the same customer/company/branch when those dimensions are present.
+A finalizing `Tính phí` service cannot close without a submitted, non-return Sales Invoice for the same customer/company/branch.
 
 No amount, outstanding balance or settlement status is copied into Service Order. AR/payment/GL remain Finance authority.
 
-### 6. Scope and audit surfaces
+### 9. Scope and audit surfaces
 
-Warranty Claim and Service Order reports now expose/filter company, branch and the relevant delivery/billing reference. Existing technician mutation scope is retained: only the technician assigned through `Service Technician -> User` may mutate the Service Order / linked Warranty Claim unless a supervisory role applies.
+Warranty Claim and Service Order reports expose/filter company, branch and the relevant delivery/billing reference. Existing technician mutation scope is retained: only the technician assigned through `Service Technician -> User` may mutate the Service Order / linked Warranty Claim unless a supervisory role applies.
 
 `maintenance` package version is now `1.5.0`; external contracts explicitly declare `Stock Entry` and `Sales Invoice` in addition to existing Delivery Note / Serial No seams.
 
@@ -134,13 +169,14 @@ Warranty Claim and Service Order reports now expose/filter company, branch and t
 - `server/tests/maintenance-field-service.test.mjs`
   - package 1.5.0;
   - canonical external dependencies;
-  - company/branch/correction metadata;
+  - Maintenance Request / Service Contract / Claim / Order company-branch metadata;
+  - correction metadata;
   - `Stock Entry` typed part reference;
   - Sales Invoice / replacement / return fields.
 
 - `server/tests/ws07-scope-validator.test.mjs`
   - keeps assignment-scope tests valid with the new provenance checks;
-  - callback fake now supports authoritative collection lookup used by duplicate protection.
+  - callback fake supports authoritative collection lookup used by duplicate protection.
 
 ### Added
 
@@ -150,21 +186,28 @@ Warranty Claim and Service Order reports now expose/filter company, branch and t
   - expired warranty denial;
   - duplicate/retry claim refusal;
   - explicit terminal correction path;
+  - warranty mode cannot close without Warranty Claim authority;
+  - contract-included mode validates active company-scoped coverage;
   - spare-part Stock Entry required and matched;
   - billable service Sales Invoice required and company-scoped;
   - replacement Delivery Note / serial trace;
   - return Stock Entry trace;
   - Service Order correction boundary.
 
+- `server/tests/transaction-closure-warranty-linkage.test.mjs`
+  - claim close rejects a Service Order linked to another Warranty Claim;
+  - reciprocal claim/Service Order lineage passes when request/customer/company/branch/item/serial and service state agree.
+
 ## Verification status
 
 ### Executed in this session
 
 - exact repository/Skill/North Star/program/historical WS07 source audit through GitHub connector;
-- current-main drift comparison: post-merge-base drift is UI-only, no overlapping service file found;
-- isolated TypeScript syntax/type-shape check of the modified `entry.ts` using `tsc --noEmit` with minimal Cloudflare stubs: **PASS**;
-- `node --check` on the new transaction-closure test and updated maintenance metadata test: **PASS**;
-- JSON replacement payloads were structurally generated/validated before commit.
+- current-main comparison: branch is behind `main` by five UI-only commits from merge-base `a99af64b6509477238bc9dc848e226828531b599`; no service-file overlap was found and GitHub reports PR #507 mergeable;
+- isolated TypeScript `tsc --noEmit` syntax/type-shape check of the WS07 entry validator through the principal closure hardening pass using minimal Cloudflare stubs: **PASS**;
+- `node --check` on the main transaction-closure test and the final reciprocal-linkage test source: **PASS**;
+- earlier `node --check` on the maintenance metadata test source: **PASS** before the final assertion-only company/branch additions;
+- GitHub Actions for the latest checked head exposed only `RC-021 Critical Validation`, conclusion **skipped**; combined commit status contains no checks. This is explicitly **not** CI PASS.
 
 ### NOT RUN — do not treat as PASS
 
@@ -232,4 +275,4 @@ Per Forge policy:
 
 ## Completion record
 
-Closure-06 independent work is complete to **PR READY / REVIEW** with critical stock/finance boundaries fail-closed and regression evidence authored. It is **not claimed RC/HARDENED** until exact-checkout CRITICAL gates and staging lifecycle evidence run successfully, and the cross-workstream automatic stock/billing Dependency Requests are resolved.
+Closure-06 independent work is complete to **PR READY / REVIEW** with warranty/service authority, stock evidence, billing evidence and correction lineage fail-closed at the boundaries owned by this workstream. It is **not claimed RC/HARDENED** until exact-checkout CRITICAL gates and staging lifecycle evidence run successfully, and the cross-workstream automatic stock/billing Dependency Requests are resolved.
