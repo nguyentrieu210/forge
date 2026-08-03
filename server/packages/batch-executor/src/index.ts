@@ -31,10 +31,12 @@ export interface BatchItemExecutionContext<TActor> extends TrustedBatchExecution
   batchId: string;
   itemId: string;
   itemIndex: number;
+  /** Stable command correlation key for domain-kernel idempotency on retry. */
   operationId: string;
 }
 
 export interface BatchDomainExecutor<TItem, TValue, TActor> {
+  /** Preview and commit are separate so preview can never accidentally call the commit callback. */
   preview(item: TItem, context: BatchItemExecutionContext<TActor>): Promise<TValue>;
   commit(item: TItem, context: BatchItemExecutionContext<TActor>): Promise<TValue>;
 }
@@ -117,10 +119,7 @@ export interface BatchExecutionTrace<TValue> {
 }
 
 export class BatchExecutionError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-  ) {
+  constructor(readonly code: string, message: string) {
     super(message);
     this.name = "BatchExecutionError";
   }
@@ -178,15 +177,8 @@ export async function executeBatch<TItem, TValue, TActor>(
     const claim = await options.replayStore.claim(scope);
     if (claim.state === "replay") {
       assertMatchingReplayHash(scope, claim.requestHash);
-      const replayed = { ...claim.result, replayed: true };
-      await audit(options.audit, {
-        type: "batch.replayed",
-        tenantId: context.tenantId,
-        traceId: context.traceId,
-        batchId: plan.batchId,
-        mode: plan.mode,
-        atomicity: plan.atomicity,
-      });
+      const replayed: BatchExecutionTrace<TValue> = { ...claim.result, replayed: true };
+      await audit(options.audit, batchEvent(options, "batch.replayed"));
       return replayed;
     }
     if (claim.state === "in_flight") {
@@ -199,14 +191,7 @@ export async function executeBatch<TItem, TValue, TActor>(
     ownsReplayClaim = true;
   }
 
-  await audit(options.audit, {
-    type: "batch.started",
-    tenantId: context.tenantId,
-    traceId: context.traceId,
-    batchId: plan.batchId,
-    mode: plan.mode,
-    atomicity: plan.atomicity,
-  });
+  await audit(options.audit, batchEvent(options, "batch.started"));
 
   try {
     const result = plan.mode === "preview"
@@ -220,29 +205,12 @@ export async function executeBatch<TItem, TValue, TActor>(
       ownsReplayClaim = false;
     }
 
-    await audit(options.audit, {
-      type: "batch.completed",
-      tenantId: context.tenantId,
-      traceId: context.traceId,
-      batchId: plan.batchId,
-      mode: plan.mode,
-      atomicity: plan.atomicity,
-    });
+    await audit(options.audit, batchEvent(options, "batch.completed"));
     return result;
   } catch (error) {
-    if (ownsReplayClaim && scope && options.replayStore) {
-      await options.replayStore.release(scope);
-    }
+    if (ownsReplayClaim && scope && options.replayStore) await options.replayStore.release(scope);
     const serialized = serializeError(error);
-    await audit(options.audit, {
-      type: "batch.failed",
-      tenantId: context.tenantId,
-      traceId: context.traceId,
-      batchId: plan.batchId,
-      mode: plan.mode,
-      atomicity: plan.atomicity,
-      errorCode: serialized.code,
-    });
+    await audit(options.audit, { ...batchEvent(options, "batch.failed"), errorCode: serialized.code });
     throw error;
   }
 }
@@ -250,52 +218,47 @@ export async function executeBatch<TItem, TValue, TActor>(
 async function executePreview<TItem, TValue, TActor>(
   options: ExecuteBatchOptions<TItem, TValue, TActor>,
 ): Promise<BatchExecutionTrace<TValue>> {
-  const items: BatchItemExecutionOutcome<TValue>[] = [];
+  const outcomes: BatchItemExecutionOutcome<TValue>[] = [];
   for (let index = 0; index < options.plan.items.length; index += 1) {
     const entry = options.plan.items[index];
     if (!entry) continue;
     const itemContext = createItemContext(options.context, options.plan.batchId, entry.id, index);
     try {
       const value = await options.domain.preview(entry.value, itemContext);
-      items.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "success", value });
+      outcomes.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "success", value });
       await auditItem(options, "item.previewed", entry.id, index, itemContext.operationId);
     } catch (error) {
       const serialized = serializeError(error);
-      items.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "error", error: serialized });
+      outcomes.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "error", error: serialized });
       await auditItem(options, "item.failed", entry.id, index, itemContext.operationId, serialized.code);
       if (options.plan.atomicity === "atomic") {
-        for (let rest = index + 1; rest < options.plan.items.length; rest += 1) {
-          const pending = options.plan.items[rest];
-          if (!pending) continue;
-          const pendingContext = createItemContext(options.context, options.plan.batchId, pending.id, rest);
-          items.push({ rest, index: rest, itemId: pending.id, operationId: pendingContext.operationId, status: "skipped" } as BatchItemExecutionOutcome<TValue>);
-        }
-        return trace(options, items, serialized);
+        appendSkipped(options, outcomes, index + 1);
+        return trace(options, outcomes, serialized);
       }
     }
   }
-  return trace(options, items);
+  return trace(options, outcomes);
 }
 
 async function executeIndependentCommit<TItem, TValue, TActor>(
   options: ExecuteBatchOptions<TItem, TValue, TActor>,
 ): Promise<BatchExecutionTrace<TValue>> {
-  const items: BatchItemExecutionOutcome<TValue>[] = [];
+  const outcomes: BatchItemExecutionOutcome<TValue>[] = [];
   for (let index = 0; index < options.plan.items.length; index += 1) {
     const entry = options.plan.items[index];
     if (!entry) continue;
     const itemContext = createItemContext(options.context, options.plan.batchId, entry.id, index);
     try {
       const value = await options.domain.commit(entry.value, itemContext);
-      items.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "success", value });
+      outcomes.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "success", value });
       await auditItem(options, "item.committed", entry.id, index, itemContext.operationId);
     } catch (error) {
       const serialized = serializeError(error);
-      items.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "error", error: serialized });
+      outcomes.push({ index, itemId: entry.id, operationId: itemContext.operationId, status: "error", error: serialized });
       await auditItem(options, "item.failed", entry.id, index, itemContext.operationId, serialized.code);
     }
   }
-  return trace(options, items);
+  return trace(options, outcomes);
 }
 
 async function executeAtomicCommit<TItem, TValue, TActor>(
@@ -327,33 +290,23 @@ async function executeAtomicCommit<TItem, TValue, TActor>(
   } catch (error) {
     if (!(error instanceof AtomicExecutionFailure)) throw error;
     const failure = error.failure as AtomicFailure<TValue>;
-    const items: BatchItemExecutionOutcome<TValue>[] = failure.outcomes.map((outcome) => ({
-      index: outcome.index,
-      itemId: outcome.itemId,
-      operationId: outcome.operationId,
-      status: "rolled_back",
-    }));
-    for (const outcome of items) {
+    for (const outcome of failure.outcomes) {
       await auditItem(options, "item.rolled_back", outcome.itemId, outcome.index, outcome.operationId);
     }
-    const failed = options.plan.items[failure.failedIndex];
-    if (failed) {
-      const itemContext = createItemContext(options.context, options.plan.batchId, failed.id, failure.failedIndex);
-      items.push({
-        index: failure.failedIndex,
-        itemId: failed.id,
-        operationId: itemContext.operationId,
-        status: "error",
-        error: failure.error,
-      });
-    }
-    for (let index = failure.failedIndex + 1; index < options.plan.items.length; index += 1) {
-      const pending = options.plan.items[index];
-      if (!pending) continue;
-      const itemContext = createItemContext(options.context, options.plan.batchId, pending.id, index);
-      items.push({ index, itemId: pending.id, operationId: itemContext.operationId, status: "skipped" });
-    }
     throw new BatchExecutionError("BATCH_ATOMIC_COMMIT_FAILED", failure.error.message);
+  }
+}
+
+function appendSkipped<TItem, TValue, TActor>(
+  options: ExecuteBatchOptions<TItem, TValue, TActor>,
+  outcomes: BatchItemExecutionOutcome<TValue>[],
+  startIndex: number,
+): void {
+  for (let index = startIndex; index < options.plan.items.length; index += 1) {
+    const pending = options.plan.items[index];
+    if (!pending) continue;
+    const context = createItemContext(options.context, options.plan.batchId, pending.id, index);
+    outcomes.push({ index, itemId: pending.id, operationId: context.operationId, status: "skipped" });
   }
 }
 
@@ -379,13 +332,7 @@ function createItemContext<TActor>(
   itemId: string,
   itemIndex: number,
 ): BatchItemExecutionContext<TActor> {
-  return {
-    ...context,
-    batchId,
-    itemId,
-    itemIndex,
-    operationId: `${batchId}:${itemId}`,
-  };
+  return { ...context, batchId, itemId, itemIndex, operationId: `${batchId}:${itemId}` };
 }
 
 function validatePlan<TItem>(plan: BatchExecutionPlan<TItem>): void {
@@ -419,6 +366,20 @@ function serializeError(error: unknown): SerializedBatchError {
   return { code: "BATCH_ITEM_FAILED", message: "Batch item failed" };
 }
 
+function batchEvent<TItem, TValue, TActor>(
+  options: ExecuteBatchOptions<TItem, TValue, TActor>,
+  type: BatchAuditEventType,
+): BatchAuditEvent {
+  return {
+    type,
+    tenantId: options.context.tenantId,
+    traceId: options.context.traceId,
+    batchId: options.plan.batchId,
+    mode: options.plan.mode,
+    atomicity: options.plan.atomicity,
+  };
+}
+
 async function audit(sink: BatchAuditSink | undefined, event: BatchAuditEvent): Promise<void> {
   if (sink) await sink.record(event);
 }
@@ -432,12 +393,7 @@ async function auditItem<TItem, TValue, TActor>(
   errorCode?: string,
 ): Promise<void> {
   await audit(options.audit, {
-    type,
-    tenantId: options.context.tenantId,
-    traceId: options.context.traceId,
-    batchId: options.plan.batchId,
-    mode: options.plan.mode,
-    atomicity: options.plan.atomicity,
+    ...batchEvent(options, type),
     itemId,
     itemIndex,
     operationId,
