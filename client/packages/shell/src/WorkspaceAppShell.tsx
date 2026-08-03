@@ -27,9 +27,12 @@ function normalizedGroup(label: string | undefined): string {
 }
 
 const ALUMDOOR_SIDEBAR_GROUPS = new Set([
-  "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh", "nhan su",
+  "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
   "bao cao", "danh muc", "he thong", "quy kho",
 ]);
+
+const ALUMDOOR_HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong & ca"]);
+const ALUMDOOR_HR_KEYS = new Set(["Employee", "Attendance"]);
 
 const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {
   "report:Đơn hàng theo khách": ["Bán hàng"],
@@ -75,7 +78,10 @@ function isCatalogNavigation(item: NavItem): boolean {
 
 function isVisibleProductNavigation(item: NavItem): boolean {
   if (!isAlumdoorSurface()) return !isCatalogNavigation(item);
-  return !isCatalogNavigation(item) && ALUMDOOR_SIDEBAR_GROUPS.has(normalizedGroup(item.group));
+  if (item.key === "catalog") return false;
+  const group = normalizedGroup(item.group);
+  if (ALUMDOOR_HR_GROUPS.has(group)) return ALUMDOOR_HR_KEYS.has(item.key);
+  return !isCatalogNavigation(item) && ALUMDOOR_SIDEBAR_GROUPS.has(group);
 }
 
 function scopedWorkspaceMeta(items: NavItem[], module: WorkspaceModule, affinity: Record<string, string[]>): NavItem[] {

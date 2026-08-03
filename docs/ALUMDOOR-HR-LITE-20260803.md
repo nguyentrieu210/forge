@@ -1,7 +1,7 @@
 # Alumdoor — Nhân sự tối giản
 
 Ngày: 2026-08-03
-Trạng thái: UI metadata hoàn tất trên nhánh `ui/alumdoor-hr-lite-20260803`.
+Trạng thái: UI-only, giới hạn riêng bề mặt Alumdoor.
 
 ## Quyết định nghiệp vụ
 
@@ -14,15 +14,18 @@ Không đưa tuyển dụng, nghỉ phép, ca/phân ca, tạm ứng, lương, c�
 
 ## Cách thực hiện
 
-- Rút navigation của app HRM xuống đúng `Employee` và `Attendance`.
-- Home của app đi thẳng `/app/Employee`.
-- Business context chỉ bắt buộc `company`; bỏ `branch` và `fiscal_year` khỏi context bắt buộc của trải nghiệm này.
-- Giữ nguyên các DocType/workflow/backend hiện có để không xóa dữ liệu hay phá contract; thay đổi này là presentation/navigation.
-- Cho phép group `Nhân sự` đi qua Alumdoor sidebar whitelist để hai mục không bị shell ẩn trên `alu.kairo.vn`.
+- Giữ nguyên app HRM dùng chung, gồm đầy đủ metadata, DocType, workflow, home và business context cho các tenant khác.
+- Chỉ tại bề mặt Alumdoor, shell nhận diện các nhóm HR (`Nhân sự`, `Vòng đời nhân sự`, `Chấm công & ca`) và chỉ cho hai key `Employee` + `Attendance` đi qua.
+- Không xóa dữ liệu, không đổi schema, workflow, permission hay contract backend.
+- Catalog/cross-app navigation tiếp tục bị ẩn trên Alumdoor như thiết kế hiện hành.
 
 ## Acceptance
 
-- Sidebar/workspace Nhân sự chỉ có `Nhân viên` và `Chấm công`.
-- Không còn menu tuyển dụng, nghỉ phép, lương, tạm ứng, công tác, đánh giá, đào tạo trong app HRM.
-- Mở app mặc định vào danh sách Nhân viên.
-- Alumdoor shell vẫn giữ nguyên các module khác và không mở lại catalog/cross-app workspace đã chủ động ẩn.
+- Trên Alumdoor, phần Nhân sự chỉ hiện `Nhân viên` và `Chấm công`.
+- Các menu tuyển dụng, nghỉ phép, ca/phân ca, tạm ứng, lương, công tác, đánh giá, đào tạo không xuất hiện trong trải nghiệm Alumdoor.
+- App HRM dùng chung vẫn giữ đầy đủ chức năng và cấu trúc navigation ngoài bề mặt Alumdoor.
+- Các module Alumdoor khác không thay đổi.
+
+## Audit phạm vi
+
+Bản sửa đầu tiên đã rút trực tiếp manifest HRM dùng chung. Audit sau merge xác định blast radius này không phù hợp với yêu cầu riêng Alumdoor, nên thay đổi đó được đảo lại và chuyển thành filter presentation tại Alumdoor shell.
