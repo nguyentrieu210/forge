@@ -1,0 +1,78 @@
+name: CFMAX R2 Integrated Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cfmax-r2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  integrated:
+    if: startsWith(github.head_ref, 'cloudflare/cfmax-09-convergence-r2')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full server TypeScript build
+        run: pnpm --dir server run build
+
+      - name: MetaForge views build
+        run: pnpm --filter @metaforge/views run build
+
+      - name: Query worker real-workerd D1 suite
+        working-directory: server
+        run: pnpm exec vitest run --config apps/query-worker/vitest.config.mts
+
+      - name: CFMAX integrated regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/cfmax-d1-client-bookmark-contract.test.mjs \
+            tests/cfmax-workflow-orchestration.test.mjs \
+            tests/edge-security-policy.test.mjs \
+            tests/cfmax-usage-telemetry.test.mjs \
+            tests/ai-policy.test.mjs \
+            tests/ai-assistant.test.mjs \
+            tests/cfmax-render-export.test.mjs
+
+      - name: Cloudflare governance source/drift validation
+        working-directory: server
+        run: node scripts/verify-cloudflare-governance.mjs
+
+      - name: Parse Gateway config and bindings
+        working-directory: server
+        run: pnpm exec wrangler types /tmp/cfmax-gateway.d.ts --config apps/gateway-worker/wrangler.jsonc --env-interface CfmaxGatewayBindings --include-runtime false
+
+      - name: Parse Tenant config and bindings
+        working-directory: server
+        run: pnpm exec wrangler types /tmp/cfmax-tenant.d.ts --config apps/tenant-worker/wrangler.jsonc --env-interface CfmaxTenantBindings --include-runtime false
+
+      - name: Parse Query config and bindings
+        working-directory: server
+        run: pnpm exec wrangler types /tmp/cfmax-query.d.ts --config apps/query-worker/wrangler.jsonc --env-interface CfmaxQueryBindings --include-runtime false
+
+      - name: Parse Workflow config and bindings
+        working-directory: server
+        run: pnpm exec wrangler types /tmp/cfmax-workflow.d.ts --config apps/workflow-worker/wrangler.jsonc --env-interface CfmaxWorkflowBindings --include-runtime false
