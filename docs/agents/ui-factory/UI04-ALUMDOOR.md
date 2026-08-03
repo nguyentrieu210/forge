@@ -1,10 +1,12 @@
 # UI04 — ALUMDOOR
 
 Date: 2026-08-03
-Status: **REVIEW — WAVE A COMPLETE**
+Status: **DONE — WAVE A MERGED**
 Owner: **GPT-5.6 Thinking / UI04**
 Started from: `main@a9e3cde352dbe78c93b28097094c45fc5baad845`
 Branch: `agent/ui-04-alumdoor`
+Merged PR: `#384`
+Merge SHA: `281ddcccf9c3d05f173dad0d565e10c2bc996130`
 Role: reference vertical / UX parity / metadata mapping
 
 ## Mission outcome
@@ -74,7 +76,8 @@ The selfcheck locks:
 
 ## Verification evidence
 
-- Exact branch vs main before final handoff: **ahead only / behind 0**.
+- Exact branch vs main before PR: **ahead only / behind 0**.
+- PR `#384` was mergeable and squash-merged at `281ddcccf9c3d05f173dad0d565e10c2bc996130`.
 - Changed blast radius: docs + deterministic fixture + reference selfcheck only; no `client/**`, app brief, schema, migration, pricing authority or production code changed.
 - Fixture JSON content was fetched back from GitHub by blob SHA and parsed successfully in an independent local invariant mirror.
 - Invariant mirror result: **PASS** for effective dates/disabled member, multi-level navigator, row diversity, sparse cells, 0/200/400 paging anchors, all required scenarios, no generic business-literal leakage and all debt classifications.
@@ -129,17 +132,20 @@ The selfcheck locks:
 
 No shared renderer, metadata compiler, pricing package, generated Alumdoor brief, migration, schema or production workflow is modified.
 
-## Merge / deploy classification
+## Merge / deploy result
 
-This branch is **reference-only UI Factory support**: documentation, deterministic fixture and test. It changes no runtime/backend/business behavior. It is safe to merge as a non-production UI/reference artifact after exact-head PR review.
-
-There is **nothing to deploy** from this branch because no `client/**` or production artifact changes. The actual Matrix renderer/pricing convergence must follow UI00 ownership and its own merge gates.
+- PR `#384`: **MERGED**.
+- Merge SHA: `281ddcccf9c3d05f173dad0d565e10c2bc996130`.
+- Deployment: **NOT APPLICABLE**. This Wave A branch contains no `client/**` or production artifact change, so triggering a Gateway deployment would merely burn compute to redistribute identical code, a surprisingly popular ritual that Forge does not need.
+- The actual Matrix renderer/pricing convergence must follow UI00 ownership and its own merge gates.
 
 ## Handoff
 
 Workstream: UI04 / ALUM  
 Branch: `agent/ui-04-alumdoor`  
-Status: `REVIEW — WAVE A COMPLETE`  
+Status: `DONE — WAVE A MERGED`  
+PR: `#384`  
+Merge SHA: `281ddcccf9c3d05f173dad0d565e10c2bc996130`  
 Capabilities: Alumdoor Item Price Matrix UX reference, fixture, semantic mapping, parity/removal gate  
 Migration: none  
 Production mutation: none  
