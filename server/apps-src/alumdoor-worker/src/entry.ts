@@ -3,6 +3,7 @@ import { validateItemCatalogInvariants } from "./item-catalog-invariants.js";
 import { handlePurchaseFifoRequest } from "./purchase-fifo-receipt.js";
 import { handleBulkPurchaseFifoRequest } from "./bulk-purchase-fifo-receipt.js";
 import { handlePurchaseSupplierDashboard } from "./purchase-supplier-dashboard.js";
+import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -11,9 +12,9 @@ type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
  * Entrypoint triển khai của Alumdoor.
  *
  * Item đi qua cả validator lịch sử và các invariant catalog mới. Nhập nhôm FIFO có hai
- * controller: một dòng tương thích cũ và Bulk Transaction nhiều mã tạo một chứng từ nháp
- * atomic. Dashboard giao hàng NCC chỉ đọc chứng từ + allocation timeline authoritative;
- * mọi route khác chuyển nguyên vẹn về worker hiện hữu.
+ * controller: một dòng tương thích cũ và Bulk Transaction nhiều mã tạo một chứng từ nháp.
+ * Dashboard giao hàng NCC đọc allocation timeline authoritative; đối soát chỉ compose
+ * Purchase Settlement canonical, không tạo ledger cạnh tranh. Mọi route khác delegate nguyên vẹn.
  */
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: WorkerContext): Promise<Response> {
@@ -22,6 +23,9 @@ export default {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
       if (method === "alumdoor.purchase.supplier_delivery_dashboard") {
         return handlePurchaseSupplierDashboard(request, env);
+      }
+      if (method === "alumdoor.purchase.supplier_delivery_settlement") {
+        return handlePurchaseSupplierSettlement(request, env);
       }
       if (method === "alumdoor.purchase.preview_fifo_receipt") {
         return handlePurchaseFifoRequest(request, env, false);

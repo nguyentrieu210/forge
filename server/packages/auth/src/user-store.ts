@@ -1,13 +1,15 @@
 /**
- * Tenant user directory: credentials, role grants and the session epoch.
+ * Tenant user directory: credentials, role grants and account-security state.
  *
  * Kept out of the generic `documents` store on purpose. A document row is served
  * to clients by the read APIs, so a credential held there would eventually be
- * handed to a browser; this table is never exposed through a document endpoint.
+ * handed to a browser; this table family is never exposed through a document endpoint.
  */
 
 import { errors } from "../../core/src/index.js";
+import { D1MfaService, type MfaKeyRing } from "./mfa.js";
 import { D1RbacAdministrationService } from "./rbac-administration.js";
+import { D1SessionRegistry } from "./session-registry.js";
 
 export interface UserRecord {
   user_id: string;
@@ -36,15 +38,24 @@ export interface AuthenticatedUser extends UserRecord {
   roles: string[];
 }
 
+export { D1MfaService } from "./mfa.js";
+export type { MfaAuditContext, MfaConfirmation, MfaEnrollment, MfaKey, MfaKeyRing, MfaStatus } from "./mfa.js";
+export { D1SessionRegistry } from "./session-registry.js";
+export type { RegisteredUserSession, SessionAuditContext } from "./session-registry.js";
+
 export class D1UserStore {
   private readonly db: D1Database | D1DatabaseSession;
   readonly administration: D1RbacAdministrationService;
+  readonly sessions: D1SessionRegistry;
+  readonly mfa: D1MfaService;
 
-  constructor(db: D1Database) {
-    // Authentication must never read a stale replica: a just-revoked session or a
-    // just-changed password has to take effect immediately.
+  constructor(db: D1Database, mfaKeys?: MfaKeyRing) {
+    // Authentication must never read a stale replica: a just-revoked session, consumed
+    // TOTP timestep/recovery code or changed password has to take effect immediately.
     this.db = db.withSession?.("first-primary") ?? db;
     this.administration = new D1RbacAdministrationService(db);
+    this.sessions = new D1SessionRegistry(db);
+    this.mfa = new D1MfaService(db, mfaKeys);
   }
 
   async findByLogin(tenantId: string, login: string): Promise<{ user: UserRecord; passwordHash: string } | null> {
@@ -127,9 +138,6 @@ export class D1UserStore {
        * (`upsert({ userId, passwordHash })`) also blanked the user's full name, reset their
        * email to their login id, cleared language and time zone, and — the one that matters —
        * set `enabled` back to 1, silently reactivating an account somebody had disabled.
-       *
-       * The empty-string sentinel for the hash stays, because "" is not a valid hash and a
-       * profile update must never clear a credential.
        */
       `INSERT INTO users(tenant_id,user_id,full_name,email,enabled,user_type,password_hash,language,time_zone,created_at,modified_at)
        VALUES(?1,?2,COALESCE(?3,''),COALESCE(?4,?2),COALESCE(?5,1),COALESCE(?6,'System User'),?7,COALESCE(?8,''),COALESCE(?9,''),?10,?10)
@@ -162,8 +170,6 @@ export class D1UserStore {
       this.db.prepare(`DELETE FROM user_roles WHERE tenant_id=?1 AND user_id=?2`).bind(tenantId, userId),
     ];
     for (const role of unique) {
-      // The role must already exist; the storage trigger enforces this so a typo
-      // cannot create a grant that matches no DocPerm.
       statements.push(this.db.prepare(
         `INSERT INTO user_roles(tenant_id,user_id,role) VALUES(?1,?2,?3)`,
       ).bind(tenantId, userId, role));
@@ -187,17 +193,7 @@ export class D1UserStore {
     return (result.results ?? []).map((row) => row.role);
   }
 
-  /**
-   * Everyone on this tenant, with their roles.
-   *
-   * Its absence was not a missing convenience. The permission screen could load ONE
-   * profile if you already knew the login and typed it exactly — so an administrator had
-   * no way to answer "who can get into this system", which is the first question anyone
-   * asks of a permission screen, and no way to notice an account they meant to close.
-   *
-   * Roles come back in the same read because the list shows them; one query per row would
-   * be one round trip per user.
-   */
+  /** Everyone on this tenant, with their roles. */
   async list(tenantId: string, limit = 500): Promise<Array<UserRecord & { roles: string[]; last_login_at?: string }>> {
     const bounded = Math.min(Math.max(limit, 1), 1000);
     const result = await this.db.prepare(
@@ -214,19 +210,11 @@ export class D1UserStore {
     return (result.results ?? []).map((row) => ({
       ...toRecord(row),
       ...(row.last_login_at ? { last_login_at: row.last_login_at } : {}),
-      // Joined on the unit separator, not a comma: a role name may contain a comma.
-      roles: row.roles ? row.roles.split("").filter(Boolean).sort() : [],
+      roles: row.roles ? row.roles.split("\u001f").filter(Boolean).sort() : [],
     }));
   }
 
-  /**
-   * Closes or reopens a login. Deleting is deliberately not offered.
-   *
-   * The user id is the `owner` of every document that person created, so removing the row
-   * turns their history into dangling references. Disabling stops access at the next
-   * request — `enabled=0` fails the login check — and the epoch bump ends sessions already
-   * open, which deleting the row would not do by itself.
-   */
+  /** Closes or reopens a login. Deleting is deliberately not offered. */
   async setEnabled(tenantId: string, userId: string, enabled: boolean, now: string): Promise<void> {
     const row = await this.db.prepare(
       `UPDATE users SET enabled=?3, session_epoch=session_epoch+1, modified_at=?4
