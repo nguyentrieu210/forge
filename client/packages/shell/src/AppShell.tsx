@@ -116,17 +116,20 @@ export interface AppShellProps {
 }
 
 /**
- * V3 shell entry point. Route-level tabs are local presentation history by default.
- * Apps with richer record/dirty state can replace the whole tab contract without the shell
- * becoming a second router or document authority.
+ * V3 shell entry point. Forge now converges desktop navigation onto one canonical
+ * hierarchical sidebar. Supplying an explicit empty rail keeps all manifest navigation
+ * entries in ContextNavigation instead of splitting workspace-module entries into a
+ * second App Rail. Route-level tabs remain local presentation history by default.
  */
 export function AppShell(props: AppShellProps) {
   const autoTabs = useWorkspaceTabState(props.nav, props.activeKey, props.onNavigate);
-  if (props.workspaceTabs !== undefined) return <ShellV3Chrome {...props} />;
+  const singleSidebarProps = { ...props, railNav: [] as NavItem[] };
+
+  if (props.workspaceTabs !== undefined) return <ShellV3Chrome {...singleSidebarProps} />;
 
   return (
     <ShellV3Chrome
-      {...props}
+      {...singleSidebarProps}
       workspaceTabs={autoTabs.tabs}
       workspaceActiveKey={props.activeKey}
       onWorkspaceTabNavigate={autoTabs.navigate}

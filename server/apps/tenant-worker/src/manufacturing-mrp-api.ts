@@ -26,7 +26,7 @@ export interface ManufacturingMrpApiContext {
   loadProductionPlan(name: string): Promise<CanonicalDocument<ProductionPlanData> | null>;
   listBomDocuments(): Promise<Array<CanonicalDocument<VersionedBomData>>>;
   listMaterialRequests(): Promise<Array<CanonicalDocument<JsonObject>>>;
-  getStockBalanceMicros(itemCode: string, warehouse: string): Promise<number>;
+  getStockBalanceMicros?: (itemCode: string, warehouse: string) => Promise<number>;
   createCanonicalMaterialRequest(document: JsonObject): Promise<Response>;
 }
 
@@ -73,8 +73,11 @@ export async function routeManufacturingMrpApi(
 
   if (url.pathname === PREVIEW_PATH) {
     const useOnHand = body.net_on_hand === true || body.net_on_hand === 1 || body.net_on_hand === "1";
+    if (useOnHand && typeof context.getStockBalanceMicros !== "function") {
+      throw errors.database("MRP on-hand preview requires the canonical stock-balance planning dependency");
+    }
     const onHandNetting = useOnHand
-      ? await netMrpAgainstOnHand(result, context.getStockBalanceMicros)
+      ? await netMrpAgainstOnHand(result, context.getStockBalanceMicros!)
       : undefined;
     return jsonResponse(
       { message: onHandNetting ? { ...result, on_hand_netting: onHandNetting } : result },
