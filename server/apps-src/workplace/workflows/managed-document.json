@@ -1,0 +1,9 @@
+{
+  "name":"Duyệt tài liệu",
+  "document_type":"Managed Document",
+  "state_field":"workflow_state",
+  "is_active":true,
+  "states":[{"state":"Nháp","docstatus":0,"allow_edit":"Document Manager"},{"state":"Chờ duyệt","docstatus":0,"allow_edit":"Document Manager"},{"state":"Đã duyệt","docstatus":1,"allow_edit":"Document Manager"},{"state":"Từ chối","docstatus":2,"allow_edit":"Document Manager"}],
+  "transitions":[{"state":"Nháp","action":"Gửi duyệt","next_state":"Chờ duyệt","allowed_role":"Document Manager"},{"state":"Chờ duyệt","action":"Phê duyệt","next_state":"Đã duyệt","allowed_role":"Document Manager","allow_self_approval":false},{"state":"Chờ duyệt","action":"Từ chối","next_state":"Từ chối","allowed_role":"Document Manager"}],
+  "revision":1
+}
