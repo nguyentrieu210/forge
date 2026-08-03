@@ -228,13 +228,55 @@ test("RC-021 canonical AR flow covers partial, multi-invoice, advance, credit co
   assert.equal(glBase, paymentBase);
 });
 
+test("credit-note submit/cancel stays behind the Sales Invoice server permission boundary", async () => {
+  const { store, kernel } = setup();
+  await createAndSubmit(kernel, { doctype: "Sales Invoice", name: "SI-PERM", document: invoice(100) });
+  const credit = { ...invoice(10), is_return: true, return_against: "SI-PERM" };
+  const accountsUser = { user_id: "accounts-user", roles: ["Accounts User"] };
+  const accountsManager = { user_id: "accounts-manager", roles: ["Accounts Manager"] };
+
+  await mutate(kernel, {
+    commandId: "CN-PERM-create",
+    doctype: "Sales Invoice",
+    name: "CN-PERM",
+    action: "create",
+    expectedVersion: null,
+    document: credit,
+    actor: accountsUser,
+  });
+
+  await assert.rejects(
+    mutate(kernel, {
+      commandId: "CN-PERM-submit-denied",
+      doctype: "Sales Invoice",
+      name: "CN-PERM",
+      action: "submit",
+      expectedVersion: 1,
+      document: credit,
+      actor: accountsUser,
+    }),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+
+  await mutate(kernel, {
+    commandId: "CN-PERM-submit-approved",
+    doctype: "Sales Invoice",
+    name: "CN-PERM",
+    action: "submit",
+    expectedVersion: 1,
+    document: credit,
+    actor: accountsManager,
+  });
+  assert.equal(await store.getOutstandingMinor("demo", "Sales Invoice", "SI-PERM"), 9000);
+});
+
 test("AR aging compiler remains Payment-Ledger authoritative and tenant-bound", () => {
   const compiler = new FinanceQueryCompiler();
   const compiled = compiler.compile({
     report: "Accounts Receivable Aging",
     tenant_id: "tenant-a",
     filters: [{ field: "as_of_date", operator: "=", value: "2026-08-31" }],
-  }, true);
+  });
   assert.match(compiled.sql, /payment_ledger_entries/);
   assert.match(compiled.sql, /finance_invoice_terms/);
   assert.match(compiled.sql, /p\.tenant_id=\?1/);
