@@ -62,21 +62,42 @@ Audit exact BOM lifecycle and historical bulk/version gaps; define fixtures for 
 - manufacturing package gates appropriate to changed code;
 - no merge/deploy without approval.
 
+## Current A4 progress — 2026-08-04
+
+Exact BOM/WS05 audit is recorded in `A4-BOM-CONSUMER-AUDIT.md`.
+
+Independent regression added to `server/tests/manufacturing-bom-bulk-api.test.mjs`:
+
+- duplicate matching company/item/revision records fail before write;
+- an Active/submitted revision is never overwritten even if the requested business payload otherwise matches.
+
+The existing canonical bulk path already proves, at source level, Draft-only mapping, stable child ordering/fingerprint, side-effect-free preview, exact readable Draft replay, fail-closed payload collision, canonical resource creation and trusted server tenant/read scope. No shared batch primitive was duplicated.
+
+### Dependency Request
+
+From: A4
+To: A1/A2
+Need: accepted shared BatchAction/BatchTransaction contract plus executor/domain-callback seam.
+Why owner belongs there: A1 owns the shared metadata/result contract; A2 owns generic execution/idempotency/audit orchestration.
+Blocked scope: final BOM adapter registration, shared retry/idempotency integration evidence and shared result-envelope assertions.
+Independent work remaining: BOM lifecycle/version/correction audit and focused regression are complete enough to integrate once the shared heads exist.
+Evidence: `A4-BOM-CONSUMER-AUDIT.md`, `manufacturing-lifecycle.ts`, `manufacturing-bom-bulk.ts`, `manufacturing-bom-bulk-api.ts`, `manufacturing-bom-bulk*.test.mjs`.
+
 ## Completion Record
 
-Baseline:
-A1/A2 heads consumed:
-Head:
-PR:
-Changed authority:
-Risk final:
-Tests executed:
-Tests not executed:
-Migrations:
-Permission/tenant evidence:
-Version/correction evidence:
-Dependencies remaining:
-Recommended maturity:
+Baseline: `8259d9bac1d2098d9e66195cb22e14072cd75139`
+A1/A2 heads consumed: **NONE YET** — observed bootstrap-only heads A1 `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7`, A2 `c8e151d90211baa1fcc828ac1f4d6082c77b9d90`; no accepted shared implementation available at audit time.
+Head: `35e2b8e1ebd7640e85bbe8a566df904ab9e0acda` before this handoff update.
+PR: `#551` draft -> `program/ws09-batch-productization-20260804`
+Changed authority: no BOM write/lifecycle authority changed; only focused regression + A4 audit/evidence docs.
+Risk final: **STANDARD**; no stock/GL/cost side effects entered scope.
+Tests executed: no executable test run in this session; source/diff audit only.
+Tests not executed: `server/tests/manufacturing-bom-bulk.test.mjs`, `server/tests/manufacturing-bom-bulk-api.test.mjs`, final A1/A2 integration matrix, manufacturing package gates. Direct GitHub clone failed because the execution container could not resolve `github.com`.
+Migrations: none.
+Permission/tenant evidence: Tenant Worker supplies authenticated `tenantId`/actor, requires BOM create+read permission, filters matching revisions through `canReadDocument`, and fails closed when a matching revision is outside read scope.
+Version/correction evidence: canonical lifecycle rejects duplicate submitted revision/effective overlap; bulk create replays only an exact Draft, refuses Active/submitted revision overwrite, and therefore preserves correction/version history through canonical lifecycle/new revision rather than silent mutation.
+Dependencies remaining: A1 accepted contract + A2 accepted executor seam, then A4 adapter wiring and executable shared idempotency evidence.
+Recommended maturity: **no promotion** for shared BOM batch productization until A1/A2 are actually consumed and executable integration evidence exists.
 Merge/deploy performed: NO
 
 ## Startup prompt
