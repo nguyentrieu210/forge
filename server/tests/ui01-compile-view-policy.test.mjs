@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compileBrief } from "../scripts/lib/compile-app-brief.mjs";
+import { compileBrief } from "../scripts/lib/compile-brief-app-factory.mjs";
 import { validateBriefSchema } from "../scripts/lib/validate-brief-schema.mjs";
 import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
 
@@ -123,7 +123,7 @@ test("brief schema accepts first-class Bulk and Matrix policy blocks", async () 
   assert.deepEqual(await validateBriefSchema(brief()), []);
 });
 
-test("UI-aware compiler preserves Bulk and Matrix through the authoritative manifest parser", () => {
+test("canonical App Factory compiler preserves Bulk and Matrix through the authoritative manifest parser", () => {
   const input = brief();
   const compiled = compileBrief(input);
   const manifest = parseAppManifest(compiled);
