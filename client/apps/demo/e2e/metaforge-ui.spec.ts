@@ -8,6 +8,16 @@ async function expectNoHorizontalOverflow(locator: Locator) {
   ).toBeLessThanOrEqual(1);
 }
 
+async function dismissAppearanceSetup(page: Page) {
+  const useTheme = page.getByRole("button", { name: "Dùng giao diện này", exact: true });
+  try {
+    await useTheme.waitFor({ state: "visible", timeout: 5_000 });
+    await useTheme.click();
+  } catch {
+    // Appearance onboarding only shows on a fresh browser profile.
+  }
+}
+
 async function buttonInsideViewport(page: Page, label: string): Promise<Locator | null> {
   const viewport = page.viewportSize();
   const candidates = page.getByRole("button", { name: label, exact: true });
@@ -41,6 +51,7 @@ async function openSidebarModule(page: Page, label: string) {
 test.describe("MetaForge MISA-style workspace", () => {
   test("keeps overview in sidebar and compact nghiệp vụ tabs", async ({ page }, testInfo) => {
     await page.goto("/");
+    await dismissAppearanceSetup(page);
 
     await expect(page).toHaveURL(/\/view\/overview$/);
     await expect(page.getByRole("heading", { name: "Tổng quan điều hành" })).toBeVisible();
@@ -70,6 +81,7 @@ test.describe("MetaForge MISA-style workspace", () => {
 
   test("opens the Meta report builder with data, widget, canvas and inspector panels", async ({ page }, testInfo) => {
     await page.goto("/view/meta-process");
+    await dismissAppearanceSetup(page);
 
     const metaTabs = page.locator(".mf-workspace-tabs nav");
     await expect(metaTabs.getByRole("button")).toHaveText([
@@ -93,6 +105,29 @@ test.describe("MetaForge MISA-style workspace", () => {
     await expect(page.getByText("Chỉ tiêu 1", { exact: true })).toBeVisible();
     await expect(page.locator('input[value="Chỉ tiêu 1"]')).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("report-builder.png"), fullPage: true });
+  });
+
+  test("renders the v3 Meta Studio authoring surfaces", async ({ page }, testInfo) => {
+    await page.goto("/view/b-doctype");
+    await dismissAppearanceSetup(page);
+    await expect(page.getByRole("heading", { name: "DocType Builder", exact: true })).toBeVisible();
+    await expect(page.getByText("Thư viện trường", { exact: true })).toBeVisible();
+    await expect(page.getByText("Xem trước runtime", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Tìm loại trường", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("builder-doctype-v3.png"), fullPage: true });
+
+    await page.goto("/view/b-workflow");
+    await expect(page.getByRole("heading", { name: "Workflow Builder", exact: true })).toBeVisible();
+    await expect(page.getByText("Trạng thái", { exact: true })).toBeVisible();
+    await expect(page.getByText("Chuyển tiếp", { exact: true })).toBeVisible();
+    await expect(page.getByText("Sơ đồ quy trình", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("builder-workflow-v3.png"), fullPage: true });
+
+    await page.goto("/view/b-print");
+    await expect(page.getByRole("heading", { name: "Print Format Builder", exact: true })).toBeVisible();
+    await expect(page.getByText("Trường trên mẫu in", { exact: true })).toBeVisible();
+    await expect(page.getByText("Xem trước trang in", { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("builder-print-v3.png"), fullPage: true });
   });
 
   test("exposes exactly 13 color palettes", async () => {
