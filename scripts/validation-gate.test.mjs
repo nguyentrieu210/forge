@@ -60,11 +60,13 @@ test("CRITICAL finance requires correction and reconciliation", () => {
   assert(required.has("reconciliation"));
 });
 
-test("UI promotion requires desktop browser and mobile when touched", () => {
-  const p = profile({ risk: "FAST", domains: ["ui"], touches: { ui: true, mobile: true }, claims: ["UI_PROMOTION"] });
-  const required = new Set(requiredChecks(p, matrix).keys());
-  assert(required.has("browser_e2e"));
-  assert(required.has("mobile_evidence"));
+test("UI maturity/promotion claims require desktop browser and mobile when touched", () => {
+  for (const claim of ["UI_PROMOTION", "RC", "HARDENED", "DEPLOYED"]) {
+    const p = profile({ risk: "FAST", domains: ["ui"], touches: { ui: true, mobile: true }, claims: [claim] });
+    const required = new Set(requiredChecks(p, matrix).keys());
+    assert(required.has("browser_e2e"), `${claim}: browser_e2e`);
+    assert(required.has("mobile_evidence"), `${claim}: mobile_evidence`);
+  }
 });
 
 test("HARDENED and DEPLOYED claims require exact production marker", () => {
