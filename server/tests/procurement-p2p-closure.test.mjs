@@ -143,7 +143,15 @@ test("P2P enforces net price variance tolerance without leaving financial or pro
   assert.equal(afterHold.gl_entries.length, beforeHold.gl_entries.length);
   assert.equal(afterHold.payment_entries.length, beforeHold.payment_entries.length);
   assert.equal(afterHold.procurement_entries.length, beforeHold.procurement_entries.length);
-  assert.equal(afterHold.documents.some((doc) => doc.doctype === "Purchase Invoice" && doc.name === "PI-PRICE-HOLD"), false);
+
+  // DocumentKernel intentionally permits Draft creation before authoritative submit validation.
+  // A procurement hold must therefore preserve the correctable Draft while preventing every
+  // posting/progress side effect. Deleting the Draft would contradict the canonical lifecycle and
+  // force users to recreate an otherwise valid invoice merely to fix a tolerance violation.
+  const held = await store.getDocument("demo", "Purchase Invoice", "PI-PRICE-HOLD");
+  assert.ok(held, "held invoice remains available as a correctable Draft");
+  assert.equal(held.docstatus, 0);
+  assert.equal(held.version, 1, "failed submit does not mutate the Draft version");
 });
 
 test("P2P Purchase Invoice supports line-level references to multiple Purchase Orders", async () => {
