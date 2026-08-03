@@ -2,13 +2,14 @@
 
 **Risk:** CRITICAL  
 **Branch:** `rc/w2-finance-ar-reconciliation`  
-**Exact base:** `main@e18ffb1eb1d9a2d6146252a54094a87e6bf92e8b`  
-**Status:** implementation complete on branch; **not merge-ready until RC-020 shared posting dependency is reconciled and exact-head CRITICAL execution evidence is green**.  
-**Merge/deploy:** not performed.
+**Exact creation base:** `main@e18ffb1eb1d9a2d6146252a54094a87e6bf92e8b`  
+**PR:** #440 (Draft)  
+**Merge/deploy:** NOT performed.  
+**Recommendation:** settlement/reconciliation slice is **RC-candidate, gated**; F02 overall is not globally RC/Hardened.
 
-## 1. Mandatory source audit
+## 1. Mandatory audit
 
-Read from exact branch/main evidence before changing code:
+Read before implementation:
 
 - `skills/forge-enterprise-completion/SKILL.md`
 - `PROJECT_CONTEXT.md`
@@ -21,295 +22,373 @@ Read from exact branch/main evidence before changing code:
 - `docs/VALIDATION_GATES.md`
 - `docs/agents/workstreams/WS01-finance-vn.md`
 
-Required `docs/FORGE_RC_HARDENING_PLAN_20260803.md` is absent on exact current main. See **DR-RC021-02**.
+Required `docs/FORGE_RC_HARDENING_PLAN_20260803.md` is absent on exact current-main history audited by RC-021. This is recorded as DR-RC021-02 rather than fabricated.
 
-Historical accounting/AR implementation was audited as evidence only. No old PR was reopened or used as branch base:
+Historical accounting/AR work was audited as evidence only. No historical PR was reopened, cherry-picked, or used as the branch base:
 
 - PR #15 — invoice due date / AR aging foundation;
-- PR #139 — partial Payment Entry, advance, Payment Allocation, Party Statement, Debt Summary;
-- PR #278 — accounting integrity proposal, selective evidence only;
-- PR #367 — exact-main Finance/VN convergence checkpoint.
+- PR #139 — partial Payment Entry, customer advance, Payment Allocation, Party Statement, Debt Summary;
+- PR #278 — accounting integrity evidence;
+- PR #367 — Finance/VN exact-main convergence checkpoint.
 
-## 2. Capability scope
+## 2. Authority / source of truth
 
-Capability map F02 contains `F02-001..F02-018`.
-
-This RC lane directly hardens the canonical settlement/reconciliation slice:
-
-| Capability | RC-021 evidence | Recommendation |
-| --- | --- | --- |
-| F02-001 Customer account | Customer + receivable account are validated server-side and carried on Payment Ledger + GL | RC-candidate |
-| F02-002 Sales Invoice posting | Existing fixed-point Sales Invoice GL + Payment Ledger; RC-021 routes runtime through hardened AR subclass | RC-candidate |
-| F02-003 Customer advance | Safe Payment Entry requires explicit `allow_unallocated`; advance is negative Payment Ledger balance against Payment Entry | RC-candidate |
-| F02-004 Payment schedule | Explicit invoice due date/aging exists; installment schedule is not proven | Wired |
-| F02-005 Payment allocation | Append-only Payment Allocation consumes advance and reduces invoice outstanding without duplicate GL | RC-candidate |
-| F02-006 Partial payment | Existing controller + RC-021 regression | RC-candidate |
-| F02-007 Overpayment | Over-allocation fails; under-allocation becomes explicit advance | RC-candidate |
-| F02-008 Credit note | RC-021 adds return/credit Sales Invoice correction against live outstanding | RC-candidate after gates |
-| F02-009 Debit note | Ordinary Sales Invoice can increase AR, but first-class debit-note correction linkage is not proven | Wired / gap |
-| F02-010 Write-off | No RC-021 first-class AR write-off authority added | Wired / gap |
-| F02-011 Bad debt | No RC-021 bad-debt lifecycle added | Wired / gap |
-| F02-012 AR aging | `FinanceQueryCompiler` derives outstanding from Payment Ledger by cutoff | RC-candidate |
-| F02-013 Customer statement | Party Statement from Payment Ledger | RC-candidate |
-| F02-017 Customer reconciliation | New derived `finance_ar_reconciliation` compares Payment Ledger base balance to customer GL control | RC-candidate after gates |
-| F02-018 Multi-currency receivable | Existing historical-rate/base-outstanding FX tests and GL exchange-difference path | RC-candidate |
-
-F02-014..016 are outside the settlement/reconciliation closure in this lane and are not promoted by this document.
-
-**Overall F02 recommendation:** do not promote the entire F02 family to RC yet. The settlement core is RC-candidate, but first-class debit-note/write-off/bad-debt and fully-paid-invoice refund policy remain open, and exact-head execution + production evidence are not present.
-
-## 3. Source of truth / authority
-
-The authoritative path remains:
+RC-021 preserves the canonical settlement path:
 
 `Sales Invoice -> Payment Entry / Payment Allocation -> Payment Ledger + GL`
 
-No RC-021 change creates:
+It does **not** introduce:
 
 - a shadow receivable ledger;
-- a mutable customer balance table;
-- frontend settlement authority;
-- an independent `paid_amount` balance source.
+- a mutable duplicate customer-balance table;
+- frontend-only settlement state;
+- an independent `paid_amount` authority competing with Payment Ledger / GL.
 
-Specific evidence:
+Existing authoritative evidence:
 
 - `server/packages/clouderp-selling/src/finance-controllers.ts`
-  - live outstanding is read through `getOutstandingMinor` / `getBaseOutstandingMinor`;
-  - allocations are bounded by submitted invoice outstanding;
-  - unallocated receipt is represented as a Payment Ledger advance;
-  - Payment Allocation moves append-only Payment Ledger balances and intentionally posts no duplicate cash/party GL;
-  - cancel emits reversal rows.
+  - reads live transaction/base outstanding from the document reader;
+  - bounds invoice allocations by live outstanding;
+  - supports one Payment Entry referencing multiple invoices;
+  - represents residual customer receipt as explicit Payment Ledger advance;
+  - Payment Allocation redistributes Payment Ledger references and intentionally creates no duplicate cash/party GL;
+  - cancellation emits reversal rows.
 - `server/packages/clouderp-selling/src/safe-finance-payment-entry.ts`
-  - customer/supplier advance requires explicit operator confirmation;
-  - registry uses this safe controller.
+  - unallocated customer receipt requires explicit `allow_unallocated` confirmation.
 - `server/packages/document-kernel/src/d1-store.ts`
-  - production outstanding queries are tenant-bound and sum immutable Payment Ledger rows;
-  - mutation receipts provide command idempotency/retry identity.
+  - outstanding is tenant-bound `SUM` over immutable Payment Ledger rows;
+  - mutation receipts provide command retry/idempotency identity.
 - `server/packages/query/src/finance-aging.ts`
-  - AR Aging, Party Statement, Debt Summary and Advance Balance read Payment Ledger.
-- `server/migrations/tenant/0030_finance_invoice_aging.sql`
-  - explicitly retains Payment Ledger as outstanding authority.
-- `server/migrations/tenant/0031_finance_payment_allocations.sql`
-  - database guards prevent invoice outstanding below zero and prevent advance over-consumption.
+  - Accounts Receivable Aging, Party Statement, Debt Summary and Advance Balance derive from Payment Ledger.
+- migrations `0030_finance_invoice_aging.sql` and `0031_finance_payment_allocations.sql`
+  - preserve Payment Ledger as balance authority and fail closed on negative invoice outstanding / advance over-consumption.
 
-## 4. RC-021 implementation
+Hydrated `outstanding_amount` remains a projection/status convenience. It is not settlement authority.
 
-### 4.1 Credit / return correction
+## 3. Capability coverage
 
-Added `server/packages/clouderp-selling/src/ar-sales-invoice-controller.ts` and routed Sales Invoice to it in `registry.ts`.
+Capability map F02 contains `F02-001..F02-018`.
+
+| Capability | RC-021 evidence | Recommendation |
+| --- | --- | --- |
+| F02-001 Customer account | customer + receivable account server validation; Payment Ledger + GL party dimension | RC-candidate |
+| F02-002 Sales Invoice posting | fixed-point Sales Invoice GL + Payment Ledger; runtime routed through hardened AR subclass | RC-candidate |
+| F02-003 Customer advance | explicit unallocated-receipt semantics; negative Payment Ledger balance against Payment Entry | RC-candidate |
+| F02-004 Payment schedule | due date/aging proven; installment schedule not proven | Wired |
+| F02-005 Payment allocation | append-only source/target Payment Ledger redistribution, no duplicate GL | RC-candidate |
+| F02-006 Partial payment | focused canonical-flow regression | RC-candidate |
+| F02-007 Overpayment | over-allocation rejected; under-allocation becomes explicit advance | RC-candidate |
+| F02-008 Credit note | RC-021 return/credit Sales Invoice against live authoritative outstanding | RC-candidate, gated |
+| F02-009 Debit note | ordinary invoice can increase AR; first-class linked debit-note correction not proven | Wired / gap |
+| F02-010 Write-off | no first-class RC write-off lifecycle added | Wired / gap |
+| F02-011 Bad debt | no dedicated bad-debt lifecycle added | Wired / gap |
+| F02-012 AR aging | Payment-Ledger-derived cutoff aging | RC-candidate |
+| F02-013 Customer statement | Party Statement running balance from Payment Ledger | RC-candidate |
+| F02-017 Customer reconciliation | `finance_ar_reconciliation` Payment Ledger base vs customer GL control | RC-candidate, gated |
+| F02-018 Multi-currency receivable | historical/base outstanding + exchange-difference regressions | RC-candidate |
+
+F02-014..016 are outside this settlement/reconciliation closure and are not promoted by RC-021.
+
+## 4. Implementation
+
+### 4.1 AR-hardened Sales Invoice controller
+
+Added:
+
+`server/packages/clouderp-selling/src/ar-sales-invoice-controller.ts`
+
+and changed `server/packages/clouderp-selling/src/registry.ts` so Sales Invoice is handled by `ArSalesInvoiceController`.
+
+Normal Sales Invoice behavior delegates to the existing canonical controller.
 
 Credit/return behavior:
 
-- remains a `Sales Invoice`, not a new AR ledger/doc authority;
-- requires `is_return=true` + `return_against`;
-- source invoice must be submitted, non-return, same tenant/customer/company/currency/receivable account;
-- amount must be positive and cannot exceed live transaction/base outstanding;
-- credit note must not advance Sales Order billing;
-- normal Sales Invoice GL calculation is reused then reversed for the credit note;
-- Payment Ledger receives one negative correction against the original Sales Invoice;
-- the credit note itself has zero standalone outstanding;
-- cancellation reverses the exact historical credit-note GL and reverses the Payment Ledger correction;
-- event types distinguish credit-note submit/cancel from normal Sales Invoice progress.
+- uses `Sales Invoice` with `is_return=true`; no new AR ledger authority;
+- requires `return_against`;
+- rejects self-reference;
+- source must be submitted and non-return;
+- source is read in the current tenant;
+- customer, company, currency, company currency and receivable account must match;
+- amount must be positive;
+- transaction/base credit cannot exceed live transaction/base source outstanding;
+- credit note cannot advance Sales Order billing;
+- normal canonical invoice GL is reused and reversed;
+- one negative Payment Ledger correction is posted against the original Sales Invoice;
+- credit note itself has zero standalone outstanding;
+- cancel reads the exact historical credit-note GL revision and appends reversal GL + Payment Ledger rows;
+- events distinguish credit submit/cancel from ordinary invoice progress.
 
-This preserves the invariant that invoice outstanding is always rebuilt from Payment Ledger.
+This keeps original-invoice outstanding rebuildable exclusively from Payment Ledger.
 
-### 4.2 Database guards + reconciliation projection
+### 4.2 D1 guard + reconciliation projection
 
-Added forward-only migration:
+Forward migration:
 
-`server/migrations/tenant/0111_finance_ar_reconciliation.sql`
+`server/migrations/tenant/0112_rc021_finance_ar_reconciliation.sql`
 
 It adds:
 
-- submitted credit-note source guards at D1 level;
-- same-tenant/customer/company/currency/debit-account validation;
-- metadata-driven `is_return` / `return_against` fields without hard-coding frontend state;
-- `finance_ar_reconciliation`, a derived read-only projection comparing:
-  - `SUM(payment_ledger_entries.base_amount_minor)` for Customer/Receivable;
-  - `SUM(gl_entries.debit_minor-credit_minor)` for customer-dimension AR control;
-  - grouped by tenant/company/customer/account/company currency/scale.
+1. fail-closed submitted credit-note source guards;
+2. same-tenant/customer/company/currency/receivable-account checks;
+3. metadata-driven Sales Invoice `is_return` and `return_against` fields;
+4. read-only `finance_ar_reconciliation` projection.
 
-`difference_minor != 0` is surfaced as unreconciled. The view never repairs or mutates ledger data.
+The projection compares, by tenant/company/customer/account/company currency/scale:
 
-## 5. Flow coverage
+- `SUM(payment_ledger_entries.base_amount_minor)` for Customer/Receivable;
+- `SUM(gl_entries.debit_minor-credit_minor)` for customer-dimension AR control.
 
-Required business flow is covered as follows:
+It returns `difference_minor` and `reconciled`. A mismatch is surfaced, never silently repaired.
 
-`Sales Invoice -> partial Payment -> second Payment -> advance -> Payment Allocation -> credit/return correction -> cancel/reissue correction -> final Payment -> reconciliation -> aging`
+Payment Allocation has no GL by design and its source/target Payment Ledger rows net to zero at control-account scope.
 
-Focused source: `server/tests/finance-ar-rc021.test.mjs`.
+## 5. Required flow proof
 
-Coverage:
+Focused regression:
+
+`server/tests/finance-ar-rc021.test.mjs`
+
+Proven flow:
+
+`Sales Invoice -> partial Payment -> second multi-invoice Payment -> customer advance -> Payment Allocation -> credit/return -> cancel/reissue correction -> final Payment -> cancel/replacement Payment -> reconciliation -> aging/report`
+
+Covered states and failures:
 
 - partial allocation;
-- second payment;
-- one Payment Entry allocated to multiple invoices;
+- multiple invoices;
+- one Payment Entry across multiple invoices;
 - under-allocation as explicit customer advance;
 - unallocated receipt without explicit confirmation rejected;
-- later Payment Allocation consumes advance;
-- active paid invoice cancel rejected;
-- over-credit/return beyond live outstanding rejected;
-- credit note reduces only original authoritative outstanding;
-- credit-note cancel restores original outstanding with reversal rows;
-- final payment retry with the same command id is idempotent and does not duplicate ledger rows;
-- cancelled final Payment Entry restores invoice outstanding;
+- advance subsequently allocated to invoices;
+- over-allocation rejected by canonical controller/DB invariants;
+- active settled invoice cancel rejected;
+- credit larger than live outstanding rejected;
+- credit reduces original invoice outstanding only;
+- credit note has no competing standalone AR balance;
+- credit cancel restores original outstanding using reversal rows;
+- final payment retry with same command id returns the same receipt and does not duplicate ledger rows;
+- Payment Entry cancel restores prior invoice balances;
 - replacement final payment settles both invoices;
-- Payment Ledger base balance equals customer GL control balance;
-- AR aging compiler remains tenant-bound and Payment-Ledger authoritative.
+- customer Payment Ledger base balance equals customer GL control balance;
+- aging SQL remains tenant-bound and Payment-Ledger authoritative.
 
-Existing exact-main regressions retained and relevant:
+Existing `server/tests/o2c.test.mjs` additionally proves:
 
-- `server/tests/o2c.test.mjs`
-  - exact minor-unit O2C GL/payment settlement;
-  - payment allocation cannot exceed live outstanding;
-  - cross-aggregate payment race cannot make receivable outstanding negative;
-  - partial then final settlement status;
-  - foreign-currency settlement and exchange difference;
-  - final partial FX allocation consumes exact base outstanding.
-- `server/tests/finance-aging-policy.test.mjs`
-  - Accounts roles may run AR aging;
-  - unrelated roles are denied.
+- exact minor-unit O2C GL/payment settlement;
+- payment allocation cannot exceed live outstanding;
+- cross-aggregate payment race cannot make receivable outstanding negative;
+- partial/final settlement status;
+- multi-currency invoice/payment GL;
+- exchange gain/loss;
+- final partial FX allocation consumes exact base outstanding.
 
-## 6. Partial states and edge semantics
+## 6. Customer ledger / reports
 
-| State | Authority / behavior |
-| --- | --- |
-| Invoice unpaid | positive Payment Ledger balance against Sales Invoice |
-| Partial payment | negative Payment Entry allocation reduces invoice Payment Ledger balance |
-| Multiple invoices | one Payment Entry may carry multiple bounded references |
-| Under-allocation | residual becomes explicit negative advance against Payment Entry |
-| Advance allocation | Payment Allocation increases source advance toward zero and decreases invoice outstanding by equal amount |
-| Over-allocation | controller + D1 guard fail closed before invoice balance becomes negative |
-| Cancel payment | GL + Payment Ledger reversal rows restore prior state |
-| Credit/return | reversed invoice GL + negative Payment Ledger correction against original invoice |
-| Cancel credit | exact GL reversal + Payment Ledger reversal restores original outstanding |
-| Aging | rebuilds invoice balance from Payment Ledger at report cutoff |
-| Reconciliation | rebuilds both Payment Ledger base and customer GL control, surfaces difference only |
+`server/tests/finance-report-suite.test.mjs` proves:
 
-No mutable `outstanding` column is used as settlement authority. Hydrated `outstanding_amount` remains a projection for document/status presentation.
+- Party Statement requires bounded party/account/currency/date context;
+- opening + running customer balance comes from Payment Ledger;
+- Debt Summary nets invoice balances with advances;
+- Advance Balance derives from append-only Payment Ledger rows and recognizes Payment Allocation;
+- report parameters are bound rather than interpolated.
 
-## 7. Tenant / company / permission / audit
+`server/tests/finance-aging-query.test.mjs` proves AR Aging tenant/cutoff binding and expected aging columns.
 
-### Tenant
+`server/tests/finance-aging-policy.test.mjs` proves report permission boundaries.
 
-- D1 `getDocument`, `getOutstandingMinor`, `getBaseOutstandingMinor`, voucher GL reads and report SQL bind `tenant_id`.
-- migration guard source lookup requires `source.tenant_id=NEW.tenant_id`.
-- migration regression contains same customer/invoice identifiers in two tenants and proves reconciliation does not mix them.
+## 7. Permission evidence
 
-### Company/account/currency
+Write authority remains the existing server permission layer. RC-021 adds no side write endpoint.
 
-Payment Entry, Payment Allocation and RC-021 credit note all fail closed on cross-company/party/account/currency context.
+`server/packages/policy/src/index.ts` currently requires:
 
-### Permission
+- Sales Invoice create/save: allowed user roles including Accounts User;
+- Sales Invoice submit/cancel: Accounts Manager / System Manager authority;
+- Payment Entry and Payment Allocation submit/cancel: Accounts Manager / System Manager authority.
 
-- writes continue through the existing document kernel/API permission boundary; RC-021 does not introduce a side write API;
-- existing Sales Invoice / Payment Entry DocPerm remains the permission authority;
-- Payment Allocation metadata from migration 0031 allows Accounts Manager/System Manager submit/cancel and does not grant Accounts User submit/cancel;
-- `finance-aging-policy.test.mjs` is focused report-permission evidence for AR aging.
+RC-021 regression explicitly proves:
 
-### Audit / immutability
+- Accounts User may create a credit-note draft;
+- Accounts User cannot submit it (`PERMISSION_DENIED`);
+- Accounts Manager can submit it;
+- successful authorized submit changes authoritative source outstanding.
 
-- correction and cancellation append reversal ledger rows;
-- no ledger row is updated in place;
-- command receipt idempotency prevents duplicate mutation effects on identical retry;
+## 8. Tenant / company scope
+
+Tenant evidence:
+
+- D1 document/outstanding/GL readers bind `tenant_id`;
+- report SQL binds tenant as a parameter;
+- credit source D1 guard requires `source.tenant_id=NEW.tenant_id`;
+- migration semantic regression seeds identical invoice/customer identifiers in two tenants and proves reconciliation remains separated.
+
+Legal/accounting context evidence:
+
+- Payment Entry, Payment Allocation and credit-note correction fail closed on company/party/account/currency mismatch;
+- reconciliation groups by tenant/company/customer/receivable account/company currency/scale.
+
+RC-020 shared posting/branch/period scope is a merge-time dependency; see DR-RC021-01.
+
+## 9. Audit / correction / immutability / retry
+
+- ledger corrections and cancels append reversal rows;
+- RC-021 never updates GL/Payment Ledger rows in place;
+- credit cancel reads exact historical GL before reversing;
+- mutation receipt identity prevents duplicate effects for same-command retries;
+- focused retry regression asserts ledger-row count is unchanged on identical submit retry;
 - reconciliation is derived and non-mutating.
 
-## 8. Migration verification
+## 10. Migration semantic regression
 
 Added:
 
 - `server/scripts/test-finance-ar-reconciliation.py`
-- `server/tests/finance-ar-migration-rc021.test.mjs` to invoke the semantic migration regression from the normal Node unit-test glob.
+- `server/tests/finance-ar-migration-rc021.test.mjs`
 
-The migration regression covers:
+It verifies:
 
-- replay/idempotent migration execution;
+- migration replay/idempotency;
 - metadata field uniqueness;
-- cross-tenant/company credit-note rejection;
-- self-reference rejection;
 - missing source rejection;
-- tenant-separated reconciliation;
+- self-reference rejection;
+- cross-tenant/company invalid-source rejection;
+- tenant-separated Payment Ledger/GL reconciliation;
 - Payment Allocation net-zero control effect;
-- deliberate GL drift surfaced as `difference_minor != 0` / `reconciled=0`.
+- deliberate GL drift appears as nonzero `difference_minor` / `reconciled=0`.
 
-An isolated SQLite syntax/semantic smoke of the exact migration SQL was executed during implementation and passed. This is **not** a substitute for exact-head repository build/typecheck/full test execution.
+Success marker:
 
-## 9. Validation gates
+`FINANCE_AR_RECONCILIATION_0112_PASS`
 
-CRITICAL required evidence from `docs/VALIDATION_GATES.md`:
+## 11. Validation evidence
 
-| Gate | Evidence state |
+Dedicated non-deploy workflow:
+
+`.github/workflows/rc021-validation.yml`
+
+It checks out the exact PR head and runs:
+
+- locked dependency install;
+- full-server build baseline for inherited-debt visibility;
+- emitted AR artifact verification;
+- focused RC-021 TypeScript check;
+- focused RC-021 build to `.rc021-dist`;
+- full worker typecheck baseline for inherited-debt visibility;
+- focused AR/O2C/report/permission/failure/idempotency tests;
+- repository SQL verification;
+- RC-021 migration/tenant/reconciliation semantics.
+
+A completed earlier exact-PR-head focused run (`15998291c83cd4666a0aef03e44f4e3557de7442`, Actions run `30835877786`) produced:
+
+- focused RC-021 TypeScript: PASS;
+- focused tests: **36/36 PASS**;
+- repository SQL verification: PASS;
+- `FINANCE_AR_RECONCILIATION_0111_PASS` at the then-current migration number;
+- no RC-021 TypeScript errors in the full-server baseline output.
+
+After that run, RC-021 added an explicit credit-note write-permission regression, customer-ledger report suite coverage, a focused build step, and proactively renumbered its unchanged reconciliation migration to `0112` because RC-020 reserved 0110-0111. The PR workflow is configured to rerun on the final exact head; the PR check result is the authoritative execution status for those final edits.
+
+### Inherited whole-repository build/typecheck debt
+
+The full-server build and full-worker typecheck baseline currently report pre-existing errors in unrelated MRP/QMS/CRM/App Registry/Frappe-model/quotation files. The RC-021 workflow deliberately keeps those baselines visible with `continue-on-error` so inherited debt does not suppress focused CRITICAL AR evidence.
+
+No RC-021 changed file was identified in those baseline errors. RC-021 does **not** claim the whole repository build/typecheck is green.
+
+### Gate matrix
+
+| Gate | RC-021 evidence |
 | --- | --- |
-| Targeted build / typecheck | PENDING exact-head CI/executable checkout |
-| Focused unit/integration | Source added; exact-head execution PENDING |
-| Permission | Existing focused AR aging policy regression; exact-head execution PENDING |
-| Tenant isolation | New migration regression + production D1 tenant predicates; exact-head execution PENDING |
-| Failure paths | New unsafe-advance/active-cancel/over-credit source + existing over-allocation/race regressions; execution PENDING |
-| Correction/cancel | New credit cancel/reissue + existing Payment Entry cancel reversal; execution PENDING |
-| Allocation edge cases | New partial/multiple/advance path + existing over-allocation/race; execution PENDING |
-| Reconciliation | New Payment Ledger vs GL projection + drift regression; execution PENDING |
-| GL consistency | New control-account equality assertion + existing O2C/FX tests; execution PENDING |
-| Idempotency/retry | New same-command retry/no duplicate ledger assertion; execution PENDING |
-| Migration replay | New 0111 semantic replay source; execution PENDING |
+| Focused build | dedicated RC-021 compile/build workflow step |
+| Focused typecheck | dedicated RC-021 TypeScript step |
+| Unit/integration | canonical flow + O2C/report suites |
+| Permission | write permission regression + aging report policy |
+| Tenant | D1 predicates + tenant-separated migration regression |
+| Failure | unsafe advance, over-allocation/credit, active cancel, race guards |
+| Correction/cancel | credit cancel/reissue + Payment Entry cancel/replacement |
+| Allocation edges | partial, multiple invoices, one-payment-many, advance allocation, over-allocation rejection |
+| Reconciliation | Payment Ledger base vs customer GL control + deliberate drift detection |
+| GL consistency | control-account equality + existing exact O2C/FX assertions |
+| Customer ledger | Party Statement / Debt Summary / Advance Balance from Payment Ledger |
+| Audit | append-only reversal behavior |
+| Idempotency/retry | same-command retry/no duplicate ledger rows |
+| Migration replay | 0112 semantic replay regression |
 | Production evidence | NOT RUN / NOT CLAIMED |
 
-Local checkout was unavailable because the execution shell could not resolve `github.com`; therefore no fake local PASS is claimed. GitHub PR CI must provide the exact-head execution evidence.
+## 12. Concurrent main drift audit
 
-## 10. Dependency Requests
+Branch creation was correctly pinned to `main@e18ffb1e...`.
+
+During implementation, main advanced through RC-023 cash/bank commits and then explicit revert commits. Latest audited main was `7819ade8cdb1213d9f99ae92f144ae8aee82b054`.
+
+Comparison from RC-021 exact creation base to that main reports four history commits but **no net changed files** after the RC-023 reverts. Therefore RC-021 has no semantic current-main tree delta to consume from those four commits. The branch remains historically diverged, which will still be reconciled before any eventual merge.
+
+## 13. Dependency Requests
 
 ### DR-RC021-01 — RC-020 shared posting / period contract
 
-**Owner:** RC-020 / Finance Posting & Period lane.  
-**State:** OPEN.
+**Owner:** RC-020 Finance Posting/Period lane  
+**State:** OPEN
 
-RC-020 branch `rc/w2-finance-period-posting` is concurrently ahead of the same main base and currently owns migration `0110_rc020_finance_posting_period_integrity.sql`. Its shared posting/period contract is not yet on main/frozen.
+Latest audited `rc/w2-finance-period-posting` is not frozen/on main and currently owns:
+
+- `0110_rc020_finance_posting_period_integrity.sql`;
+- `0111_rc020_finance_gl_scope_reconciliation.sql`;
+- finance query-scope changes and RC-020 reconciliation tests.
 
 RC-021 response:
 
-- consumed exact current main only, per authority instruction;
-- did not cherry-pick or couple to the RC-020 branch;
-- moved RC-021 migration to `0111` to avoid a filename collision;
-- continued all independent AR work.
+- consumed exact current main only;
+- did not cherry-pick RC-020;
+- continued all independent AR work;
+- moved its migration to `0112_rc021_finance_ar_reconciliation.sql` to avoid the expected migration namespace collision.
 
-**Before RC-021 merge:** rebase on the main that contains frozen RC-020, audit `0111` against any new authoritative accounting scope/branch/period columns, rerun CRITICAL gates, and change the reconciliation projection only if RC-020 establishes a different shared scope contract.
+**Before merge:** consume the main containing frozen RC-020, audit branch/period/legal-entity shared scope against `finance_ar_reconciliation`, resolve any genuine contract delta, then rerun CRITICAL gates on the new exact head.
 
-### DR-RC021-02 — required RC Hardening Plan missing
+### DR-RC021-02 — required RC Hardening Plan absent
 
-**Owner:** release-control/documentation lane.  
-**State:** OPEN.
+**Owner:** release-control/documentation lane  
+**State:** OPEN
 
-`docs/FORGE_RC_HARDENING_PLAN_20260803.md` is required by the task but returns Not Found on exact main. RC-021 used Capability Status, Validation Gates, North Star and WS01 evidence instead; absence is recorded rather than fabricated.
+`docs/FORGE_RC_HARDENING_PLAN_20260803.md` required by the task was not found on the audited exact main. RC-021 used North Star, Capability Map/Status, Validation Gates and WS01 evidence and records the absence explicitly.
 
-### DR-RC021-03 — fully-paid invoice refund / excess customer credit policy
+### DR-RC021-03 — fully-paid invoice refund / excess credit policy
 
-**Owner:** Finance business/shared posting contract.  
-**State:** OPEN.
+**Owner:** Finance business/shared posting contract  
+**State:** OPEN
 
-Current authoritative Payment Ledger guards correctly prohibit a Sales Invoice balance below zero. RC-021 credit notes therefore apply only up to live outstanding. A return after the invoice is fully paid would require an explicit policy for customer refund versus reusable customer credit/advance and a canonical ledger representation for that liability/refund.
+Current authoritative invariants prohibit a Sales Invoice outstanding balance below zero. RC-021 therefore applies credit/return correction only up to live invoice outstanding.
 
-RC-021 does **not** invent a negative invoice balance or shadow credit ledger. This does not block partial-outstanding correction, advance allocation, cancellation, reconciliation or aging work completed here.
+A return after an invoice is fully paid requires a non-inferable canonical policy for:
 
-## 11. Remaining gaps
+- customer cash refund versus reusable customer credit/advance;
+- liability/receivable representation;
+- linkage and GL treatment.
 
-1. First-class debit-note correction linkage is not proven; normal Sales Invoice posting can increase AR but is not promoted as F02-009 RC evidence.
-2. Dedicated write-off / bad-debt AR lifecycle is not completed by this lane.
-3. Fully-paid invoice return/refund/excess credit is DR-RC021-03.
-4. `finance_ar_reconciliation` is a backend/database control projection; a dedicated generic report/navigation surface is not added here. Existing AR Aging, Party Statement and Debt Summary remain report surfaces.
-5. RC-020 must land/freeze before final merge audit because it owns shared period/posting scope and migration 0110.
-6. Exact-head build/typecheck/unit/integration/migration execution is still required.
-7. Production/staging migration, live tenant reconciliation and production evidence were not run; Hardened is impossible to claim.
+RC-021 intentionally does not invent a negative invoice balance, shadow credit ledger, or competing customer-balance source.
 
-## 12. Maturity recommendation
+This DR does not block partial-outstanding correction, customer advance, Payment Allocation, cancellation, reconciliation, customer ledger or aging already completed here.
+
+## 14. Remaining gaps
+
+1. First-class linked debit-note correction is not proven.
+2. Dedicated write-off / bad-debt lifecycle is not completed by this lane.
+3. Fully-paid invoice return/refund/excess credit remains DR-RC021-03.
+4. `finance_ar_reconciliation` is a backend/database control projection; no dedicated navigation/report UI is added in this backend RC lane.
+5. RC-020 must freeze/land and be consumed before merge.
+6. Whole-repository TypeScript baseline has inherited unrelated failures; focused RC-021 gates are isolated and must remain green.
+7. No staging/production migration, live-tenant reconciliation, or production evidence was run.
+
+## 15. Maturity recommendation
 
 **RC-021 settlement/reconciliation slice:** **RC-candidate, gated**.  
-**F02 overall:** **Wired with RC-candidate core**, not yet globally RC.  
+**F02 overall:** **Wired with an RC-candidate settlement core**, not globally RC.  
 **Hardened:** **No**.
 
-Promotion requires:
+Promotion beyond this recommendation requires:
 
-1. RC-020 freeze/merge and exact-main reconciliation of shared accounting scope;
-2. exact-head CRITICAL CI PASS for build/typecheck/unit/integration/migration/permission/tenant/failure/correction/reconciliation/idempotency;
-3. explicit resolution of any capabilities being promoted beyond the settlement core;
-4. staging/production evidence for any later Hardened claim.
+1. RC-020 shared posting/period contract frozen on main and consumed;
+2. exact-head focused CRITICAL checks green after that integration;
+3. explicit resolution/evidence for any additional F02 capabilities being promoted;
+4. production/staging evidence before any Hardened claim.
 
-No merge, deploy, production migration, secret/DNS change or customer-data mutation was performed by RC-021.
+No merge, deploy, production migration, secret/DNS change, or customer-data mutation was performed by RC-021.
