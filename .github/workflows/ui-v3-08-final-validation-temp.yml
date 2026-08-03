@@ -69,13 +69,19 @@ jobs:
           pnpm --filter @metaforge/shell run build
           node client/scripts/check-app-shell-mobile.mjs
 
-      - name: Builder typecheck tests and build
+      - name: Builder typecheck and build
         run: |
           pnpm --filter @metaforge/builder run typecheck
-          pnpm --filter @metaforge/builder run test
           pnpm --filter @metaforge/builder run build
 
+      - name: Builder contract test evidence
+        id: builder_tests
+        continue-on-error: true
+        run: pnpm --filter @metaforge/builder run test
+
       - name: Charts visual and views gates
+        id: visual_gates
+        continue-on-error: true
         run: |
           pnpm --filter @metaforge/charts run test
           pnpm --filter @metaforge/visual run typecheck
@@ -83,23 +89,54 @@ jobs:
           node --test client/packages/views/tests/data-surface-v3.test.mjs
 
       - name: Frontend structural lint and full typecheck
+        id: client_static
+        continue-on-error: true
         run: |
           pnpm --dir client run lint
           pnpm run client:typecheck
 
       - name: Build runtime and demo dependency graphs
+        id: app_builds
+        continue-on-error: true
         run: |
           pnpm --filter runtime... run build
           pnpm --filter @metaforge/demo... run build
 
       - name: Install Chromium
+        id: chromium
+        if: always() && steps.app_builds.outcome == 'success'
+        continue-on-error: true
         run: pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
 
       - name: Run V3 cross-device demo matrix
+        id: demo_qa
+        if: always() && steps.app_builds.outcome == 'success' && steps.chromium.outcome == 'success'
+        continue-on-error: true
         run: pnpm --filter @metaforge/demo run e2e:v3:qa
 
       - name: Run Forge and Alumdoor runtime mobile matrix
+        id: runtime_qa
+        if: always() && steps.app_builds.outcome == 'success' && steps.chromium.outcome == 'success'
+        continue-on-error: true
         run: pnpm --filter e2e-forge exec playwright test --config playwright.v3-mobile-qa.config.ts
+
+      - name: V3-08 integrated gate summary
+        if: always()
+        run: |
+          echo "builder_tests=${{ steps.builder_tests.outcome }}"
+          echo "visual_gates=${{ steps.visual_gates.outcome }}"
+          echo "client_static=${{ steps.client_static.outcome }}"
+          echo "app_builds=${{ steps.app_builds.outcome }}"
+          echo "chromium=${{ steps.chromium.outcome }}"
+          echo "demo_qa=${{ steps.demo_qa.outcome }}"
+          echo "runtime_qa=${{ steps.runtime_qa.outcome }}"
+          test "${{ steps.builder_tests.outcome }}" = "success"
+          test "${{ steps.visual_gates.outcome }}" = "success"
+          test "${{ steps.client_static.outcome }}" = "success"
+          test "${{ steps.app_builds.outcome }}" = "success"
+          test "${{ steps.chromium.outcome }}" = "success"
+          test "${{ steps.demo_qa.outcome }}" = "success"
+          test "${{ steps.runtime_qa.outcome }}" = "success"
 
       - name: Upload V3-08 browser evidence
         if: always()
