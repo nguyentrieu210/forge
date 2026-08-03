@@ -49,6 +49,8 @@ export interface AppShellProps {
   onOpenPalette?: () => void;
   onOpenAI?: () => void;
   aiConfigured?: boolean;
+  /** Lối vào app mobile/PWA do runtime app cấp; shell chỉ quyết định vị trí hiển thị. */
+  mobileAppHref?: string;
   notificationCount?: number;
   notifications?: NotificationItem[];
   notificationsLoading?: boolean;
@@ -371,6 +373,23 @@ export function AppShell(props: AppShellProps) {
             <div className="flex-1" />
             {props.onOpenAI ? (
               <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" className="h-8 shrink-0 gap-1.5 px-2" onClick={props.onOpenAI} aria-label="Hỏi AI"><Sparkles className={cn("size-4", props.aiConfigured === false ? "text-muted-foreground" : "text-primary")} /><span className="hidden sm:inline">Hỏi AI</span></Button></TooltipTrigger><TooltipContent>Hỏi AI về màn hình đang xem</TooltipContent></Tooltip>
+            ) : null}
+            {props.mobileAppHref ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 shrink-0 gap-1.5 px-2"
+                    onClick={() => window.location.assign(props.mobileAppHref!)}
+                    aria-label="Tải App mobile"
+                  >
+                    <MonitorSmartphone className="size-4" />
+                    <span className="hidden lg:inline">Tải App</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Tải App mobile</TooltipContent>
+              </Tooltip>
             ) : null}
             <NotificationMenu {...props} />
             <DropdownMenu>

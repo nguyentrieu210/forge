@@ -285,6 +285,17 @@ export function LoginForm({
           {!busy ? <ArrowRight className="size-4" /> : null}
         </Button>
 
+        {alumdoor && !warehouseApp ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full rounded-xl font-semibold"
+            onClick={() => window.location.assign("/mobile/warehouse/?tab=account")}
+          >
+            <Smartphone className="size-4" /> Tải App mobile
+          </Button>
+        ) : null}
+
         <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-2">
           <span className="inline-flex items-center gap-1.5"><LockKeyhole className="size-3.5 text-primary" /> Cookie cùng nguồn</span>
           <span className="inline-flex items-center gap-1.5 sm:justify-end"><ShieldCheck className="size-3.5 text-primary" /> Phân quyền phía server</span>
