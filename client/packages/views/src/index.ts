@@ -86,6 +86,7 @@ export { PrintView, type PrintViewProps } from "./print/PrintView.js";
 export { PrintContainer, type PrintContainerProps } from "./print/PrintContainer.js";
 export { buildPrintPath } from "./print/printRoute.js";
 export { DashboardView, type DashboardViewProps, type DashboardCard, type DashboardChartData } from "./dashboard/DashboardView.js";
+export { CommandCenterView, type CommandCenterViewProps, type CommandCenterAlert } from "./dashboard/CommandCenterView.js";
 export { CalendarView, type CalendarViewProps } from "./calendar/CalendarView.js";
 export { CalendarContainer, type CalendarContainerProps } from "./calendar/CalendarContainer.js";
 export { GanttView, type GanttViewProps, type GanttTask } from "./gantt/GanttView.js";
