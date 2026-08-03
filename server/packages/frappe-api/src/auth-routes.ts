@@ -12,6 +12,7 @@ import type { AuthenticatedUser, D1SessionRegistry, D1UserStore } from "../../au
 import { visitorKey } from "../../frappe-model/src/index.js";
 import { readFrappeArgs } from "./args.js";
 import { faultResponse, methodResponse } from "./envelope.js";
+import { assertLoginSecondFactor } from "./login-mfa.js";
 import { verifyPassword } from "./password.js";
 import {
   assertCsrf, clearedSessionCookie, mintSession, randomToken, readSid, sessionCookie, verifySession, type Session,
@@ -98,6 +99,18 @@ async function handleLogin(request: Request, url: URL, context: AuthRouteContext
   if (!found.passwordHash) throw invalidCredentials();
   if (!await verifyPassword(password, found.passwordHash)) throw invalidCredentials();
   if (!found.user.enabled) throw invalidCredentials();
+
+  // MFA is checked only after primary-password proof, and before clearing the successful-login
+  // limiter, recording login time or minting any browser session. `mfa_code` is canonical;
+  // `otp` is retained as a compatibility alias for Frappe-shaped clients.
+  await assertLoginSecondFactor({
+    tenantId: context.tenantId,
+    userId: found.user.user_id,
+    traceId: context.traceId,
+    now: context.now(),
+    mfa: context.users.mfa,
+  }, args.text("mfa_code") ?? args.text("otp") ?? undefined);
+
   if (context.rateLimit) await clearSuccessfulLoginLimit(context, login);
 
   const roles = await context.users.listRoles(context.tenantId, found.user.user_id);
