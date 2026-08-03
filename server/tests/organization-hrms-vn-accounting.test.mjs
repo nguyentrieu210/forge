@@ -17,7 +17,7 @@ test("HRM package exposes complete operational HR, time and payroll dimensions",
   const parsed = parseAppManifest(source);
 
   assert.equal(parsed.id, "hrm");
-  assert.equal(parsed.version, "1.5.0");
+  assert.equal(parsed.version, "1.5.1");
   for (const key of [
     "Branch", "Department", "Job Opening", "Job Applicant", "Job Offer", "Employee", "Employment Contract",
     "Employee Transfer", "Employee Separation", "Leave Policy", "Leave Allocation", "Leave Application", "Holiday List",
@@ -44,6 +44,13 @@ test("HRM package exposes complete operational HR, time and payroll dimensions",
   assert.equal(employeeFields.get("employee_number")?.set_only_once, true);
   for (const sensitive of ["personal_email", "mobile", "bank_account_no", "tax_code", "social_insurance_number"]) {
     assert.equal(employeeFields.get(sensitive)?.permlevel, 1, `${sensitive} must be protected at permlevel 1`);
+  }
+  for (const role of ["HR User", "HR Manager", "System Manager"]) {
+    const levelOne = employee.permissions.find((permission) => permission.role === role && Number(permission.permlevel ?? 0) === 1);
+    assert.ok(levelOne, `${role} must receive Employee permlevel 1`);
+    assert.equal(levelOne.read, true, `${role} must read private Employee fields`);
+    assert.equal(levelOne.write, true, `${role} must edit private Employee fields`);
+    assert.equal(levelOne.create, true, `${role} must author private Employee fields during create`);
   }
 
   const leave = parsed.doctypes.find((item) => item.name === "Leave Application");
