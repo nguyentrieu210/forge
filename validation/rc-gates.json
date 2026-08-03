@@ -130,7 +130,12 @@
     {
       "id": "ui-promotion-browser",
       "when": {
-        "claim": "UI_PROMOTION",
+        "claimAny": [
+          "UI_PROMOTION",
+          "RC",
+          "HARDENED",
+          "DEPLOYED"
+        ],
         "touch": "ui"
       },
       "require": [
@@ -140,7 +145,12 @@
     {
       "id": "ui-promotion-mobile",
       "when": {
-        "claim": "UI_PROMOTION",
+        "claimAny": [
+          "UI_PROMOTION",
+          "RC",
+          "HARDENED",
+          "DEPLOYED"
+        ],
         "touch": "mobile"
       },
       "require": [
