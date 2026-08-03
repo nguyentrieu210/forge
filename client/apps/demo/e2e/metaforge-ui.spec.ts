@@ -10,7 +10,12 @@ async function expectNoHorizontalOverflow(locator: Locator) {
 
 async function dismissAppearanceSetup(page: Page) {
   const useTheme = page.getByRole("button", { name: "Dùng giao diện này", exact: true });
-  if (await useTheme.isVisible({ timeout: 2_000 }).catch(() => false)) await useTheme.click();
+  try {
+    await useTheme.waitFor({ state: "visible", timeout: 5_000 });
+    await useTheme.click();
+  } catch {
+    // Appearance onboarding only shows on a fresh browser profile.
+  }
 }
 
 async function buttonInsideViewport(page: Page, label: string): Promise<Locator | null> {
