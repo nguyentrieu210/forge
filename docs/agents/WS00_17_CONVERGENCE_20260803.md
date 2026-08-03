@@ -1,152 +1,133 @@
-# WS00–WS17 convergence record — 2026-08-03
+# WS00–WS17 phase convergence record — 2026-08-03
 
-Status: **CONVERGENCE COMPLETE / APPROVAL GATES REMAIN**  
+Status: **PHASE CLOSED / CANONICAL DELTAS MERGED**  
 Evidence priority: exact GitHub state > workstream handoff/status prose > `NEXT_TASKS.md` > project context > North Star.  
 Policy: `skills/forge-enterprise-completion/SKILL.md` + `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`.  
-Final cleanup snapshot main: `57461b481a8b22c8ab687af3e3f40468a9880958`.
+Code-convergence snapshot before this checkpoint merge: `main@9571f173a5e7fcb861cd2defa11952f5eb16a61d`.
 
-## Rules applied
+## Phase-close result
 
-1. Stale workstream history was never merged back into `main` merely to remove conflicts.
-2. Conflicted workstreams were rebuilt from exact current `main` and only their audited net delta was replayed.
-3. Shared hot spots were reconciled against current `main`; newer auth, stock-integrity, runtime, SRE and release changes were preserved.
-4. Tenant migrations were globally renumbered rather than reusing stale WS-local numbers.
-5. UI-only work may use the project fast path. Backend/schema/business-rule changes remain approval-gated.
-6. Existing test files are evidence of coverage, not evidence that a run passed. Missing CI/runtime evidence stays NOT RUN / UNPROVEN.
-7. Stale PRs may be closed as superseded. Branch deletion was not performed because it is destructive cleanup.
-8. Later main-only UI Factory reference/docs changes were replayed into the clean queue only when exact comparison proved no workstream overlap.
+The user explicitly approved non-UI merge/convergence for this phase. The seven previously review-gated convergence deltas are now merged into `main`.
 
-## WS00–WS17 final convergence matrix
-
-| WS | Domain | Canonical state | Remaining gate |
+| WS | Domain | Canonical merged PR | Merge result / migration |
 |---|---|---|---|
-| WS00 | Kernel / platform contracts | **MERGED** #306 | Foundation on main. |
-| WS01 | Finance + VN compliance | **CLEAN PR #367** | One net commit on snapshot main. Finance/VN statutory source, TT99, VAT/e-invoice/tax evaluator and Finance Budget preserved. Migrations `0089..0098`. Backend/schema approval required. |
-| WS02 | CRM / Revenue 360 | **CLEAN PR #321** | One net commit on snapshot main, exact `behind 0`. No migration. Business-rule/metadata approval required. Shared conversion/provider/projection dependencies remain boundaries. |
-| WS03 | Procurement | **MERGED** #347 | #342/#353 superseded/closed. |
-| WS04 | Inventory / WMS | **MERGED** #307 | Canonical stock foundation remains authority for WS05/WS16. |
-| WS05 | Manufacturing / MRP II / QMS | **CLEAN PR #380** | Exact 50-path domain delta, one net commit, `behind 0`. Bulk BOM closure, MRP/netting, capacity, costing read, genealogy, QMS lifecycle and 15 targeted tests preserved. No tenant migration. Backend/runtime approval required. |
-| WS06 | HCM + statutory payroll | **CLEAN PR #372** | One net commit on snapshot main. Deterministic/effective-dated payroll evaluator, workforce/recruitment/lifecycle/geofence/employee-finance/talent preserved. Migrations `0099..0104`. Loan-at-separation policy remains a business decision. |
-| WS07 | Project / service / field service | **MERGED** #352 | Canonical current-main implementation. |
-| WS08 | BI / reporting | **MERGED** #311 | Canonical reporting foundation. |
-| WS09 | BPM + App Factory | **CLEAN PR #362** | One net commit, exact `behind 0`. AppAction repeatable input tables, compatibility lowering, BPM formula/rule/approval/timer/trigger, App Factory revision/rollback preserved. Migration `0088`. Approval required. |
-| WS10 | Integration Hub | **MERGED** #308 | Provider-specific delivery/e-sign/extraction remains an integration boundary for dependent WSs. |
-| WS11 | IAM / SaaS security | **MERGED** #317 | Canonical IAM/security authority. |
-| WS12 | SRE / operations | **MERGED** #320 | Release/deploy truth remains evidence-driven. |
-| WS13 | Migration / onboarding | **MERGED** #313 | Canonical migration/onboarding foundation. |
-| WS14 | Frontend runtime / mobile | **UI fast-path merged** | UI/runtime slices and Alumdoor HR/Employee Lite changes are on main. Generic runtime/browser evidence is still not inferred without exact release evidence. |
-| WS15 | Workplace / DMS / Contract / Collaboration | **CLEAN PR #377** | One net commit on snapshot main. Migrations `0105..0109`. Notification ACL separation, owner scoping, DMS/contract controls and evidence-backed OCR/signature states preserved. Backend/schema/auth approval required. |
-| WS16 | Logistics / POS / Social Commerce | **CLEAN PR #310** | One net commit on snapshot main, exact `behind 0`. Logistics/POD/freight/loading, POS hardening and social-commerce canonical order/profile deltas preserved. No migration. Business-rule approval required. |
-| WS17 | Alumdoor vertical | **MERGED** #316 | Vertical baseline plus later product-specific Alumdoor overlays on main. |
+| WS09 | BPM + App Factory | #362 | merged; `0088` |
+| WS01 | Finance + VN compliance | #367 | merged; `0089..0098` |
+| WS02 | CRM / Revenue 360 | #321 | merged; no tenant migration |
+| WS16 | Logistics / POS / Social Commerce | #310 | merged; no tenant migration |
+| WS05 | Manufacturing / MRP II / QMS | #404 | rebuilt on current main, exact 50-path delta; no tenant migration |
+| WS06 | HCM + statutory payroll | #414 | rebuilt on current main, exact 82-path delta; `0099..0104` |
+| WS15 | Workplace / DMS / Contract / Collaboration | #415 | rebuilt on current main, exact 35-path delta; `0105..0109` |
 
-## Clean review queue
+The original conflict-only review PRs were retained as historical evidence and closed as superseded:
 
-All seven non-UI convergence branches were replayed directly on snapshot main `57461b481a8b22c8ab687af3e3f40468a9880958`; no stale-main sync PR is required:
+- WS05 #380 → superseded by merged #404.
+- WS06 #372 → superseded by merged #414.
+- WS15 #377 → superseded by merged #415.
 
-- WS09 — #362 — migration `0088`.
-- WS01 — #367 — migrations `0089..0098`.
-- WS06 — #372 — migrations `0099..0104`.
-- WS15 — #377 — migrations `0105..0109`.
-- WS05 — #380 — no tenant migration.
-- WS02 — #321 — no tenant migration.
-- WS16 — #310 — no tenant migration.
+No source branch was deleted. Branch deletion remains destructive cleanup and was not required to close the phase.
 
-These PRs are intentionally **not merged or deployed** by convergence cleanup because they contain non-UI backend/schema/business-rule changes and require explicit approval.
+## WS00–WS17 canonical phase state
 
-## Final-head CI evidence
+| WS | Canonical state |
+|---|---|
+| WS00 | **MERGED** #306 |
+| WS01 | **MERGED** #367 |
+| WS02 | **MERGED** #321 |
+| WS03 | **MERGED** #347; #342/#353 superseded |
+| WS04 | **MERGED** #307 |
+| WS05 | **MERGED** #404; #380 superseded |
+| WS06 | **MERGED** #414; #372 superseded |
+| WS07 | **MERGED** #352 |
+| WS08 | **MERGED** #311 |
+| WS09 | **MERGED** #362 |
+| WS10 | **MERGED** #308 |
+| WS11 | **MERGED** #317 |
+| WS12 | **MERGED** #320 |
+| WS13 | **MERGED** #313 |
+| WS14 | **UI fast-path merged**; Alumdoor HR/Employee Lite overlays remain on main |
+| WS15 | **MERGED** #415; #377 superseded |
+| WS16 | **MERGED** #310 |
+| WS17 | **MERGED** #316 plus later Alumdoor overlays |
 
-Evidence was queried after the last replay onto `57461b48`.
+Shared HRM remains a full shared application. Alumdoor continues to expose only Employee + Attendance at the shell/product layer; this phase does not reduce the shared HRM manifest.
 
-| PR | Final head | PR workflow runs | Combined commit statuses | Evidence state |
+## Migration map now merged
+
+The convergence migration sequence is no longer a reservation. It is merged on main:
+
+- `0088` — WS09 App Factory revision history.
+- `0089..0098` — WS01 Finance / VN compliance.
+- `0099..0104` — WS06 HCM / statutory payroll.
+- `0105..0109` — WS15 Workplace / DMS / collaboration.
+
+Parallel Alumdoor work used an older-numbered product migration path and did not collide with `0088..0109` during this phase-close audit.
+
+## Exact final-head CI evidence
+
+GitHub Actions PR workflow runs and combined commit statuses were queried after the final convergence heads were established.
+
+| Canonical PR | Final review head | PR workflow runs | Combined statuses | Evidence state |
 |---|---|---:|---:|---|
 | #362 WS09 | `ff05c35313246419cc6df1463564523521782c24` | 0 | 0 | **NOT RUN / UNPROVEN** |
 | #367 WS01 | `e1e8a70a0122ffcbe5c13ff670d6805fefad681a` | 0 | 0 | **NOT RUN / UNPROVEN** |
-| #372 WS06 | `974fccf61e20bb74237d64f6aa98eb971a0cf45e` | 0 | 0 | **NOT RUN / UNPROVEN** |
-| #377 WS15 | `508ec596b90ec44b3c95225e6112b57375b16f95` | 0 | 0 | **NOT RUN / UNPROVEN** |
-| #380 WS05 | `7afb134e5f4cb45e40e96471c297240ce9228af4` | 0 | 0 | **NOT RUN / UNPROVEN** |
 | #321 WS02 | `7135633163609b16ff453e0bf915a1b3180d369e` | 0 | 0 | **NOT RUN / UNPROVEN** |
 | #310 WS16 | `1e202f86912ef5499c16cbc656e80824932822b4` | 0 | 0 | **NOT RUN / UNPROVEN** |
+| #404 WS05 | `40844ba40cb172949f4347f5814adb53a97f55d2` | 0 | 0 | **NOT RUN / UNPROVEN** |
+| #414 WS06 | `d994cdd3b44772b1592d6e3384a8fdd1bee2206f` | 0 | 0 | **NOT RUN / UNPROVEN** |
+| #415 WS15 | `3a77d568732a01ef1ad98951771f23020585ee33` | 0 | 0 | **NOT RUN / UNPROVEN** |
 
-Committed tests remain useful regression source, but none of these final heads may be described as CI-green from current GitHub evidence.
+Committed tests and migration regressions are source evidence only. This record does not convert missing CI into a PASS claim.
 
-## Migration convergence map
+## Reconciliation decisions made during merge
 
-Current merged main remains occupied through the existing pre-convergence range (at least `0087`). The approval queue reserves:
+### WS05 current-main rebuild
 
-- `0088` — WS09 App Factory revision history (#362).
-- `0089..0098` — WS01 Finance/VN (#367).
-- `0099..0104` — WS06 HCM/payroll (#372).
-- `0105..0109` — WS15 Workplace/DMS (#377).
+PR #404 reconstructed the exact 50-path WS05 delta on a current-main ancestry. Shared `server/package.json` and ERPNext controller registry were explicitly reconciled so current Finance, Logistics, stock-integrity, App Factory and Alumdoor state remained intact while Manufacturing/QMS controllers and gates were added.
 
-Reservation is coordination, not merge permission. Immediately before each approved merge, re-audit current main migration occupancy and renumber if another merged change has claimed the range.
+### WS06 current-main rebuild
 
-## Remaining Dependency Requests
+PR #414 reconstructed the exact 82-path WS06 delta. Shared package and ERPNext registry state was explicitly unioned with the already-converged Finance/Logistics/Manufacturing state.
 
-### DR-WS06-BIZ-001 — Employee Loan at separation
+Employee Loan at separation remains intentionally **not auto-settled by WS06 without an explicit business policy**. The unresolved policy is therefore a future business Dependency Request, not a reason to invent behavior or block the safe baseline merge.
 
-The repository does not establish one authoritative business policy for an outstanding Employee Loan when an employee separates. Valid models include acceleration into final settlement, continued receivable/recovery, approved restructuring or write-off. WS06 does not silently choose one.
+### WS15 current-main rebuild
 
-### DR-WS05-BIZ-001 — Rework operating model
+PR #415 reconstructed the exact 35-path WS15 delta. `notification-runner.ts` and `services.ts` were re-audited three-way; current main still matched the pre-WS15 convergence snapshot for those paths, so the audited WS15 blobs were safe transplants. `server/package.json` preserved current gates and added only the WS15 SQL regressions plus Workplace pack gate.
 
-WS05 preserves NCR disposition and QMS/manufacturing controls without inventing whether rework must be a dedicated Work Order, Stock Entry path, operation loop or company-specific hybrid.
+Notification routing remains permission-scoped and is not treated as ACL authority.
 
-### DR-WS05-INT-002 — Subcontract / demand integration
+## Dependency Requests carried forward
 
-Subcontract orchestration and demand-source policy remain cross-workstream integration boundaries. MRP/QMS baseline remains deterministic without duplicating Procurement/Inventory/Finance authorities.
+These do not reopen the closed convergence phase; they are follow-on product/integration decisions:
 
-### DR-WS15-001 — Scheduled collaboration/contract jobs
+1. **WS06 business:** decide the company policy for outstanding Employee Loan at separation. Current code deliberately does not auto-settle it.
+2. **WS05 business/integration:** define rework operating model and subcontract/demand-source orchestration without duplicating Inventory/Procurement/Finance authorities.
+3. **WS15 platform/integration:** periodic scheduler jobs, generic OCR/extraction, and external e-sign/delivery provider/credential lifecycle.
+4. **WS02 shared orchestration:** conversion/merge, provider messaging, Customer 360/funnel projections, Quotation→Sales Order orchestration and replayable sell-in projections remain shared boundaries.
+5. **WS14 release evidence:** generic browser/E2E/deployment evidence remains evidence-driven; merge state alone is not deployment proof.
 
-Periodic reminders, recurrence, retention/archive, contract expiry and obligation schedules require the shared scheduler/job boundary owned by platform/SRE workstreams.
+## Legacy / parallel PRs intentionally retained
 
-### DR-WS15-002 — OCR / external signature providers
+These PRs were audited and were **not** ceremonially closed because they contain independent deltas not proven absorbed by the WS00–17 canonical queue:
 
-WS15 enforces evidence-backed success states but does not fabricate OCR or e-sign provider success. OCR/extraction remains an integration capability; provider credential/delivery/e-sign lifecycle remains WS10/WS11 territory.
+- #278 accounting integrity hardening — KEEP / RECONCILE.
+- #286 TT99 localization hardening — KEEP / RECONCILE.
+- #267 bulk Stock Reconciliation — KEEP.
+- #201 manufacturing actual costing — KEEP.
+- #208 Plastic ERP Production Run — KEEP.
+- #216 pricing matrix UI — KEEP.
+- #295 Tiến Đạt purchase completion — KEEP.
+- #199 Daily Detailed Ledger hardening — KEEP.
 
-### DR-WS14-EVIDENCE-001 — Generic runtime/release evidence
+The follow-on UI Factory program (#381/#382/#387/#388/#389/#390/#391/#370 and related later work) is separate from this WS00–17 phase-close record and must not be classified as stale convergence debris.
 
-Merge state alone is not deployment proof. For generic WS14 slices not covered by a concrete production apply/release identity, browser/E2E and release evidence stays evidence-driven.
+## Production boundary
 
-### DR-WS02-* — Shared CRM orchestration/provider projections
+This phase-close operation merged and converged repository changes after explicit approval. It did **not** perform a production tenant migration, Cloudflare/Worker deployment, secret mutation, DNS operation, customer-data mutation, or branch deletion.
 
-Atomic Lead conversion/reversible merge, provider messaging, Customer 360/funnel projections, Quotation→Sales Order orchestration and replayable sell-in projections remain shared-kernel/integration/runtime dependencies. #321 does not duplicate their authorities.
+Production deployment remains a separate production/destructive gate and requires its own explicit approval plus release evidence.
 
-## Superseded PR cleanup completed
+## Final statement
 
-Closed/superseded examples include:
-
-- WS03 stale/reverse-sync #342/#353, canonical merged #347.
-- WS09 stale/reverse-sync #319/#356, canonical clean #362.
-- WS01 stale/invalid/sync paths including #312/#349/#350, canonical clean #367.
-- WS06 stale/sync #322/#355 and legacy Wave-1 #269, canonical clean #372.
-- WS15 stale #314 and reverse-sync #357, canonical clean #377.
-- WS05 stale #327 and reverse-sync #354, canonical clean #380.
-- Temporary exact-main sync PRs that became zero-diff after tree replay were closed/no-longer-needed.
-
-Stale source branches were **not deleted** during this pass.
-
-## Legacy/parallel PRs intentionally not closed
-
-A PR was not closed merely because it is old. Exact file audit found material independent deltas:
-
-- **#278 accounting integrity hardening — KEEP / RECONCILE:** core accounting controllers, ledger company/branch scope, FX Journal Entry, purchase-receipt/stock-entry/delivery-note valuation/GL guards, reconciliation case and migrations are not represented by WS01 #367.
-- **#286 TT99 localization hardening — KEEP / RECONCILE:** `TT99 Transition Map`, standalone `E-Invoice Document`, localization-specific integrity/update migrations and tests are not represented by WS01 #367.
-- **#267 bulk Stock Reconciliation — KEEP:** independent WS04 maturity delta.
-- **#201 manufacturing actual costing — KEEP:** independent costing/freeze/valuation work not proven absorbed by WS05 #380.
-- **#208 Plastic ERP Production Run — KEEP:** separate vertical/domain delta.
-- **#216 pricing matrix UI — KEEP:** separate UI/pricing delta relevant to later Matrix extraction work.
-- **#295 Tiến Đạt purchase completion — KEEP:** separate procurement/accounting operational delta.
-- **#199 Daily Detailed Ledger hardening — KEEP:** separate ledger hardening delta.
-
-These are outside the WS00–17 branch-convergence cleanup and require their own exact-main reconciliation rather than ceremonial closure.
-
-## Final approval boundary
-
-Convergence and PR cleanup are complete at snapshot `57461b48`. Remaining work:
-
-1. produce exact executable verification evidence for the seven final review heads;
-2. resolve genuine business decisions where release scope requires them;
-3. reconcile the explicitly retained parallel PRs against canonical workstreams;
-4. approve and merge non-UI PRs in a migration-safe order;
-5. deploy only after corresponding approval/release gates.
-
-No convergence cleanup step merged the seven non-UI review PRs or performed their production deploys.
+WS00–WS17 convergence is closed at the repository level: canonical workstream deltas are on main, migration ranges `0088..0109` are merged, conflict-only PRs have been superseded, independent legacy deltas remain explicitly queued for later reconciliation, and CI truth is recorded as **NOT RUN / UNPROVEN** rather than inferred.
