@@ -1,0 +1,54 @@
+name: UI V3 Shell Validation Temp
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "client/packages/shell/**"
+      - ".github/workflows/ui-v3-shell-validation-temp.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-v3-shell-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  shell:
+    if: github.head_ref == 'ui/v3-02-shell-exec-20260804'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Shell typecheck
+        run: pnpm --filter @metaforge/shell run typecheck
+      - name: Full client typecheck baseline
+        continue-on-error: true
+        run: pnpm run client:typecheck
+      - name: Native UI lint baseline
+        continue-on-error: true
+        run: node client/scripts/check-native-ui.mjs
+      - name: Shell mobile regression
+        run: node client/scripts/check-app-shell-mobile.mjs
+      - name: Workspace navigation selfcheck
+        working-directory: client
+        run: pnpm --filter @metaforge/demo exec tsx ../../packages/shell/src/workspace-navigation-selfcheck.ts
+      - name: Client selfchecks
+        run: pnpm --filter metaforge run test
+      - name: Shell build
+        run: pnpm --filter @metaforge/shell run build
