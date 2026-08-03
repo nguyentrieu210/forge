@@ -15,7 +15,7 @@
   "config_sources": [
     {
       "path": "server/apps/gateway-worker/wrangler.jsonc",
-      "expected_blob_sha": "efd5345574b90b027eec9a0c1c54462b59a2c2c7",
+      "expected_blob_sha": "7c05c77a630208da4d75e814bd8e76fa9dd06318",
       "declared_environment": "production",
       "role": "gateway-shared",
       "authority": "source-controlled-declarative",
@@ -47,6 +47,17 @@
       "owner": "WS11/WS12"
     },
     {
+      "path": "server/apps/workflow-worker/wrangler.jsonc",
+      "expected_blob_sha": "2ec158d49b23e49a98a00490421adbf7c419fb33",
+      "declared_environment": "production-candidate",
+      "role": "workflow-orchestration-shared",
+      "authority": "source-controlled-declarative",
+      "tenant_scope": "shared",
+      "compatibility_date": "2026-08-04",
+      "observability": "required",
+      "owner": "WS09/WS12"
+    },
+    {
       "path": "server/apps/social-ingress-worker/wrangler.jsonc",
       "expected_blob_sha": "0bbb7fc64eb0157fd4445c07137ff0e86e164366",
       "declared_environment": "production",
@@ -70,7 +81,7 @@
     },
     {
       "path": "server/apps/tenant-worker/wrangler.jsonc",
-      "expected_blob_sha": "129fbe1e186ee1f10e5094aa7c0a69ae74f107f3",
+      "expected_blob_sha": "96b8c7607f64b7aed6235d0428d40a369196a5f9",
       "declared_environment": "development-demo",
       "role": "tenant-worker-template",
       "authority": "source-controlled-template",
@@ -171,7 +182,7 @@
   "generated_sources": [
     {
       "path": "server/scripts/tenant-wrangler.mjs",
-      "expected_blob_sha": "5837a03223f28991bef9fc1ac527b708bee54080",
+      "expected_blob_sha": "5e7db67f42a64b4093c6cfcecce2ca30f73dcb81",
       "produces": "server/apps/tenant-worker/wrangler.<tenant>.generated.jsonc",
       "declared_environment": "production",
       "authority": "generated-from-source-controlled-template",
