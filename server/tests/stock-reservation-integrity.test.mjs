@@ -65,6 +65,22 @@ test("giảm một phần qty giữ nguyên Đang giữ và vẫn đi qua availa
   assert.equal(normalized.state, "Đang giữ");
 });
 
+test("release reservation bắt buộc lý do và terminal record không được hồi sinh", async () => {
+  const controller = new StockReservationIntegrityController();
+  const existing = reservation();
+  await assert.rejects(
+    () => controller.normalize(context({ existing, document: reservation({ state: "Đã nhả", released_reason: "" }) })),
+    /Phải nhập lý do nhả giữ chỗ/,
+  );
+  const released = await controller.normalize(context({ existing, document: reservation({ state: "Đã nhả", released_reason: "Huỷ kế hoạch" }) }));
+  assert.equal(released.state, "Đã nhả");
+  assert.equal(released.released_reason, "Huỷ kế hoạch");
+  await assert.rejects(
+    () => controller.normalize(context({ existing: released, document: { ...released, state: "Đang giữ", qty_reserved: "20" } })),
+    /đã kết thúc và không thể sửa/,
+  );
+});
+
 test("reservation đã quá hạn không được chỉnh để sống lại; system chỉ được chuyển Hết hạn", async () => {
   const controller = new StockReservationIntegrityController();
   const expired = reservation({ expires_at: "2026-08-03T09:00:00.000Z" });
