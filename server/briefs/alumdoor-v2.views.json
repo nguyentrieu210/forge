@@ -1,6 +1,6 @@
 {
   "//purpose": "Bulk View cho master data ALUM. Chỉ document_update; transaction, tree và child-table không được mass-edit trực tiếp.",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "views": {
     "UOM": { "bulk": { "columns": ["uom_name", "must_be_whole_number", "disabled"], "editableFields": ["must_be_whole_number", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 } },
     "Brand": { "bulk": { "columns": ["brand_name", "country", "website", "disabled"], "editableFields": ["country", "website", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 } },
@@ -15,7 +15,57 @@
     "Customer": { "bulk": { "columns": ["customer_name", "customer_type", "price_group", "account_manager", "phone", "email", "tax_id", "credit_limit", "payment_terms", "disabled"], "editableFields": ["customer_type", "price_group", "account_manager", "phone", "email", "tax_id", "credit_limit", "payment_terms", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 } },
     "Supplier": { "bulk": { "columns": ["supplier_name", "supplier_group", "account_manager", "contact_person", "phone", "email", "tax_id", "payment_terms", "receipt_tolerance_pct", "disabled"], "editableFields": ["supplier_group", "account_manager", "contact_person", "phone", "email", "tax_id", "payment_terms", "receipt_tolerance_pct", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 } },
     "Price List": { "bulk": { "columns": ["price_list_name", "note", "disabled"], "editableFields": ["note", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 } },
-    "Item Price": { "bulk": { "columns": ["price_list", "item_code", "uom", "rate", "note", "disabled"], "editableFields": ["rate", "note", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 } },
+    "Item Price": {
+      "bulk": { "columns": ["price_list", "item_code", "uom", "rate", "note", "disabled"], "editableFields": ["rate", "note", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 },
+      "matrix": {
+        "enabled": true,
+        "navigator": {
+          "source": { "kind": "projection", "name": "pricing.item_price_matrix.read", "permissionDoctype": "Item", "permissionAction": "read" },
+          "keyField": "id",
+          "labelField": "label",
+          "parentField": "parent_id",
+          "secondaryLabelField": "subtitle",
+          "searchFields": ["label", "subtitle"]
+        },
+        "rowAxis": {
+          "source": { "kind": "projection", "name": "pricing.item_price_matrix.read", "permissionDoctype": "Item", "permissionAction": "read" },
+          "keyField": "id",
+          "labelField": "label",
+          "primaryField": "is_primary",
+          "auxiliaryFields": [
+            { "field": "conversion_factor", "label": "Hệ số quy đổi", "editor": "Float", "readOnlyWhenField": "is_primary", "validation": "positive" }
+          ]
+        },
+        "columnAxis": {
+          "source": { "kind": "projection", "name": "pricing.item_price_matrix.read", "permissionDoctype": "Price List", "permissionAction": "read" },
+          "keyField": "id",
+          "labelField": "label",
+          "subtitleField": "subtitle",
+          "disabledField": "disabled",
+          "selectedFirst": true
+        },
+        "cell": {
+          "source": { "kind": "projection", "name": "pricing.item_price_matrix.read", "permissionDoctype": "Item Price", "permissionAction": "read" },
+          "identity": { "rowField": "row_id", "columnField": "column_id", "recordField": "record_id" },
+          "valueField": "value",
+          "editor": "Currency",
+          "enabled": { "field": "enabled", "when": "truthy" },
+          "versionField": "version",
+          "validation": "non_negative",
+          "disabledColumnReadOnly": true
+        },
+        "write": { "strategy": "action", "action": "pricing.item_price_matrix.commit", "permissionDoctype": "Item Price", "permissionAction": "write" },
+        "rowMembers": {
+          "remove": { "action": "pricing.item_price_matrix.commit", "permissionDoctype": "Item", "permissionAction": "write" },
+          "primaryRemovable": false
+        },
+        "columnMembers": { "allowHide": true, "allowHideAll": true, "allowShow": true, "allowShowAll": true },
+        "query": { "pageSize": 100, "searchLimit": 100, "minSearchChars": 1, "searchMode": "token_contains", "accentInsensitive": true },
+        "presentation": { "stickyRowAxis": true, "stickyColumnAxis": true, "focusMode": "toggle", "mobileMode": "step", "navigatorResizable": true, "navigatorCollapsible": true, "showDirtyIndicator": true, "unsavedChangeGuard": true },
+        "dirtyPolicy": "warn",
+        "conflictPolicy": "prompt_reload"
+      }
+    },
     "Pricing Rule": { "bulk": { "columns": ["title", "price_list", "item_code", "party", "customer_group", "min_qty", "max_qty", "valid_from", "valid_upto", "rate", "discount_percentage", "priority", "disabled"], "editableFields": ["min_qty", "max_qty", "valid_from", "valid_upto", "rate", "discount_percentage", "priority", "disabled"], "commitStrategy": "document_update", "allowPaste": true, "allowFillDown": true, "pageSize": 100 } }
   }
 }
