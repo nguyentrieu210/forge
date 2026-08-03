@@ -152,6 +152,11 @@ function sameIfPresent(expected: unknown, actual: unknown): boolean {
   return !left || !right || left === right;
 }
 
+function sameRequired(expected: unknown, actual: unknown): boolean {
+  const left = text(expected);
+  return Boolean(left) && left === text(actual);
+}
+
 function serialTokens(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(text).filter(Boolean);
   return text(value).split(/[\n,;]+/).map((entry) => entry.trim()).filter(Boolean);
@@ -242,7 +247,9 @@ async function validateWarrantyClosure(
 
   const intake = await readRecord(call, "Maintenance Request", maintenanceRequest);
   if (!intake) return `Yêu cầu bảo hành: Maintenance Request ${maintenanceRequest} không tồn tại.`;
-  if (!sameIfPresent(doc.customer, intake.customer)) return "Yêu cầu bảo hành: khách hàng không khớp Maintenance Request nguồn.";
+  if (!sameRequired(doc.customer, intake.customer)) return "Yêu cầu bảo hành: khách hàng không khớp Maintenance Request nguồn.";
+  if (!sameIfPresent(doc.company, intake.company)) return "Yêu cầu bảo hành: Công ty không khớp Maintenance Request nguồn.";
+  if (!sameIfPresent(doc.branch, intake.branch)) return "Yêu cầu bảo hành: chi nhánh không khớp Maintenance Request nguồn.";
   if (!sameIfPresent(doc.item, intake.item)) return "Yêu cầu bảo hành: sản phẩm không khớp Maintenance Request nguồn.";
   if (!sameIfPresent(doc.serial_no, intake.serial_no)) return "Yêu cầu bảo hành: serial không khớp Maintenance Request nguồn.";
   if (!sameIfPresent(doc.source_delivery_note, intake.source_delivery_note)) return "Yêu cầu bảo hành: Delivery Note không khớp Maintenance Request nguồn.";
@@ -254,8 +261,8 @@ async function validateWarrantyClosure(
   const eligible = text(doc.eligibility_result) === "Đủ điều kiện";
   if (!eligible) return null;
 
-  if (!sameIfPresent(doc.customer, delivery?.customer)) return "Yêu cầu bảo hành: khách hàng không sở hữu Delivery Note nguồn.";
-  if (!sameIfPresent(doc.company, delivery?.company)) return "Yêu cầu bảo hành: Delivery Note thuộc công ty khác.";
+  if (!sameRequired(doc.customer, delivery?.customer)) return "Yêu cầu bảo hành: khách hàng không sở hữu Delivery Note nguồn.";
+  if (!sameRequired(doc.company, delivery?.company)) return "Yêu cầu bảo hành: Delivery Note thuộc công ty khác.";
   if (!sameIfPresent(doc.branch, delivery?.branch)) return "Yêu cầu bảo hành: Delivery Note thuộc chi nhánh khác.";
 
   const item = text(doc.item);
@@ -282,7 +289,9 @@ async function validateWarrantyClosure(
     if (!submitted(contract) || text(contract?.workflow_state) !== "Hiệu lực") {
       return `Yêu cầu bảo hành: Service Contract ${contractName} chưa có hiệu lực.`;
     }
-    if (!sameIfPresent(doc.customer, contract?.customer)) return "Yêu cầu bảo hành: Service Contract thuộc khách hàng khác.";
+    if (!sameRequired(doc.customer, contract?.customer)) return "Yêu cầu bảo hành: Service Contract thuộc khách hàng khác.";
+    if (!sameRequired(doc.company, contract?.company)) return "Yêu cầu bảo hành: Service Contract thuộc công ty khác.";
+    if (!sameIfPresent(doc.branch, contract?.branch)) return "Yêu cầu bảo hành: Service Contract thuộc chi nhánh khác.";
     if (!withinDate(doc.claim_date, contract?.effective_from, contract?.effective_to)) {
       return "Yêu cầu bảo hành: ngày khiếu nại nằm ngoài hiệu lực Service Contract.";
     }
@@ -314,7 +323,7 @@ async function validateStockReference(
 ): Promise<string | null> {
   const stockEntry = await readRecord(call, "Stock Entry", reference);
   if (!submitted(stockEntry)) return `${label}: cần Stock Entry ${reference} đã submit.`;
-  if (!sameIfPresent(company, stockEntry?.company)) return `${label}: Stock Entry ${reference} thuộc công ty khác.`;
+  if (!sameRequired(company, stockEntry?.company)) return `${label}: Stock Entry ${reference} thuộc công ty khác.`;
   if (!sameIfPresent(branch, stockEntry?.branch)) return `${label}: Stock Entry ${reference} thuộc chi nhánh khác.`;
   if (!documentHasItem(stockEntry!, item, serialNo)) return `${label}: Stock Entry ${reference} không chứa sản phẩm/serial tương ứng.`;
   return null;
@@ -343,20 +352,55 @@ async function validateServiceOrderClosure(
   const requestName = text(doc.maintenance_request);
   const intake = await readRecord(call, "Maintenance Request", requestName);
   if (!intake) return `Lệnh dịch vụ: Maintenance Request ${requestName} không tồn tại.`;
-  if (!sameIfPresent(doc.customer, intake.customer)) return "Lệnh dịch vụ: khách hàng không khớp Maintenance Request.";
+  if (!sameRequired(doc.customer, intake.customer)) return "Lệnh dịch vụ: khách hàng không khớp Maintenance Request.";
+  if (!sameIfPresent(company, intake.company)) return "Lệnh dịch vụ: Công ty không khớp Maintenance Request.";
+  if (!sameIfPresent(branch, intake.branch)) return "Lệnh dịch vụ: chi nhánh không khớp Maintenance Request.";
   if (!sameIfPresent(doc.item, intake.item)) return "Lệnh dịch vụ: sản phẩm không khớp Maintenance Request.";
   if (!sameIfPresent(doc.serial_no, intake.serial_no)) return "Lệnh dịch vụ: serial không khớp Maintenance Request.";
 
+  const billingMode = text(doc.billing_mode);
   const warrantyClaim = text(doc.warranty_claim);
+  const serviceContract = text(doc.service_contract);
+  if (billingMode === "Bảo hành" && !warrantyClaim) {
+    return "Lệnh dịch vụ bảo hành: phải liên kết Warranty Claim đủ điều kiện.";
+  }
+  if (billingMode === "Bao gồm hợp đồng" && !serviceContract) {
+    return "Lệnh dịch vụ theo hợp đồng: phải liên kết Service Contract có hiệu lực.";
+  }
   if (warrantyClaim) {
     const claim = await readRecord(call, "Warranty Claim", warrantyClaim);
     if (!claim) return `Lệnh dịch vụ: Warranty Claim ${warrantyClaim} không tồn tại.`;
     if (text(claim.eligibility_result) !== "Đủ điều kiện") return "Lệnh dịch vụ: Warranty Claim liên quan chưa đủ điều kiện.";
-    if (!sameIfPresent(doc.customer, claim.customer)) return "Lệnh dịch vụ: khách hàng không khớp Warranty Claim.";
+    if (!sameRequired(doc.customer, claim.customer)) return "Lệnh dịch vụ: khách hàng không khớp Warranty Claim.";
     if (!sameIfPresent(doc.item, claim.item)) return "Lệnh dịch vụ: sản phẩm không khớp Warranty Claim.";
     if (!sameIfPresent(doc.serial_no, claim.serial_no)) return "Lệnh dịch vụ: serial không khớp Warranty Claim.";
     if (!sameIfPresent(company, claim.company)) return "Lệnh dịch vụ: Warranty Claim thuộc công ty khác.";
     if (!sameIfPresent(branch, claim.branch)) return "Lệnh dịch vụ: Warranty Claim thuộc chi nhánh khác.";
+  }
+
+  if (billingMode === "Bao gồm hợp đồng") {
+    const contract = await readRecord(call, "Service Contract", serviceContract);
+    if (!submitted(contract) || text(contract?.workflow_state) !== "Hiệu lực") {
+      return `Lệnh dịch vụ theo hợp đồng: Service Contract ${serviceContract} chưa có hiệu lực.`;
+    }
+    if (!sameRequired(doc.customer, contract?.customer)) return "Lệnh dịch vụ theo hợp đồng: Service Contract thuộc khách hàng khác.";
+    if (!sameRequired(company, contract?.company)) return "Lệnh dịch vụ theo hợp đồng: Service Contract thuộc công ty khác.";
+    if (!sameIfPresent(branch, contract?.branch)) return "Lệnh dịch vụ theo hợp đồng: Service Contract thuộc chi nhánh khác.";
+    const serviceDate = doc.actual_end ?? doc.actual_start ?? doc.scheduled_start;
+    if (!withinDate(serviceDate, contract?.effective_from, contract?.effective_to)) {
+      return "Lệnh dịch vụ theo hợp đồng: thời điểm dịch vụ nằm ngoài hiệu lực Service Contract.";
+    }
+    const item = text(doc.item);
+    const serialNo = text(doc.serial_no);
+    if (item) {
+      const covered = rows(contract?.covered_items).some((row) => {
+        if (rowItem(row) !== item) return false;
+        const coveredSerial = text(row.serial_no);
+        if (coveredSerial && coveredSerial !== serialNo) return false;
+        return withinDate(serviceDate, row.coverage_start ?? contract?.effective_from, row.coverage_end ?? contract?.effective_to);
+      });
+      if (!covered) return "Lệnh dịch vụ theo hợp đồng: sản phẩm/serial không nằm trong phạm vi Service Contract.";
+    }
   }
 
   for (const part of rows(doc.parts_used)) {
@@ -374,14 +418,14 @@ async function validateServiceOrderClosure(
     if (violation) return violation;
   }
 
-  if (text(doc.billing_mode) === "Tính phí") {
+  if (billingMode === "Tính phí") {
     const invoiceName = text(doc.sales_invoice);
     if (!invoiceName) return "Lệnh dịch vụ tính phí: phải liên kết Sales Invoice chuẩn trước khi hoàn tất.";
     const invoice = await readRecord(call, "Sales Invoice", invoiceName);
     if (!submitted(invoice)) return `Lệnh dịch vụ tính phí: cần Sales Invoice ${invoiceName} đã submit.`;
     if (Boolean(invoice?.is_return)) return "Lệnh dịch vụ tính phí: không được dùng Sales Invoice hoàn trả làm hóa đơn dịch vụ.";
-    if (!sameIfPresent(doc.customer, invoice?.customer)) return "Lệnh dịch vụ tính phí: Sales Invoice thuộc khách hàng khác.";
-    if (!sameIfPresent(company, invoice?.company)) return "Lệnh dịch vụ tính phí: Sales Invoice thuộc công ty khác.";
+    if (!sameRequired(doc.customer, invoice?.customer)) return "Lệnh dịch vụ tính phí: Sales Invoice thuộc khách hàng khác.";
+    if (!sameRequired(company, invoice?.company)) return "Lệnh dịch vụ tính phí: Sales Invoice thuộc công ty khác.";
     if (!sameIfPresent(branch, invoice?.branch)) return "Lệnh dịch vụ tính phí: Sales Invoice thuộc chi nhánh khác.";
   }
 
@@ -392,8 +436,8 @@ async function validateServiceOrderClosure(
     const delivery = await readRecord(call, "Delivery Note", deliveryName);
     if (!submitted(delivery)) return `Lệnh dịch vụ thay thế: cần Delivery Note ${deliveryName} đã submit.`;
     if (text(delivery?.issue_purpose) !== "Đổi bảo hành") return "Lệnh dịch vụ thay thế: Delivery Note phải có mục đích Đổi bảo hành.";
-    if (!sameIfPresent(doc.customer, delivery?.customer)) return "Lệnh dịch vụ thay thế: Delivery Note thuộc khách hàng khác.";
-    if (!sameIfPresent(company, delivery?.company)) return "Lệnh dịch vụ thay thế: Delivery Note thuộc công ty khác.";
+    if (!sameRequired(doc.customer, delivery?.customer)) return "Lệnh dịch vụ thay thế: Delivery Note thuộc khách hàng khác.";
+    if (!sameRequired(company, delivery?.company)) return "Lệnh dịch vụ thay thế: Delivery Note thuộc công ty khác.";
     if (!sameIfPresent(branch, delivery?.branch)) return "Lệnh dịch vụ thay thế: Delivery Note thuộc chi nhánh khác.";
     if (!documentHasItem(delivery!, text(doc.item), replacementSerial)) {
       return "Lệnh dịch vụ thay thế: Delivery Note không chứa sản phẩm/serial thay thế.";
