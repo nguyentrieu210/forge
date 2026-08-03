@@ -1,9 +1,9 @@
 name: Closure 02 Manufacturing Wire Temp
 
 on:
-  push:
+  pull_request:
     branches:
-      - rc/transaction-closure-02-manufacturing
+      - main
     paths:
       - ".github/workflows/closure-02-manufacturing-wire-temp.yml"
 
@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   wire:
+    if: github.head_ref == 'rc/transaction-closure-02-manufacturing'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
