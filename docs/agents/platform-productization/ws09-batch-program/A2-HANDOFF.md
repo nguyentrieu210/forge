@@ -26,7 +26,7 @@ Implement one generic server-side batch executor that consumes the canonical A1 
 - trusted context propagation;
 - batch idempotency/replay guard;
 - atomicity implementation matching A1 declaration;
-- deterministic ordered result envelope;
+- deterministic ordered execution trace for A1 result mapping;
 - audit/correlation metadata;
 - generic failure/retry tests.
 
@@ -40,44 +40,80 @@ Implement one generic server-side batch executor that consumes the canonical A1 
 
 ## Work before A1 lands
 
-You may audit current primitives, write interface fixtures, identify transaction boundaries and prepare tests. Do not freeze a second public contract. If A1 is incomplete, create a Dependency Request and continue infrastructure work that does not constrain semantics.
+A1 PR #548 is still bootstrap-only at `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7`; no canonical contract implementation is available to consume. Per NO-STOP, A2 continued only infrastructure work that does not freeze the public manifest/result contract.
 
-## Critical invariants
+Implemented pre-contract infrastructure:
 
-- trusted tenant/user/role comes from server context, never client payload;
-- repeated idempotency key cannot duplicate committed side effects;
-- preview cannot mutate authoritative data;
-- all-or-nothing mode must actually roll back/avoid partial commit;
-- independent-item mode must expose each item outcome deterministically;
-- domain validator is invoked for each operation;
-- retry after ambiguous transport failure is deterministic;
-- ordering and result correlation are stable;
-- audit trail links batch -> item -> domain operation.
+- new vertical-neutral `@cloudforge/batch-executor` package;
+- runtime-only `BatchExecutionPlan` / `BatchExecutionTrace` adapter seam explicitly documented as non-public and replaceable by A1 mapping;
+- trusted server context (`tenantId`, actor, trace) is supplied separately from item payload;
+- stable `operationId = batchId:itemId` propagated to each domain callback for canonical command idempotency/correlation;
+- preview and commit use separate domain callbacks so preview never invokes the commit callback;
+- commit requires an idempotency key and an atomic replay-store claim before side effects;
+- same key + different request hash fails closed;
+- same completed key + same hash returns stored trace without re-executing side effects;
+- in-flight duplicate commit fails closed for retry rather than double execution;
+- independent-item mode preserves deterministic input ordering and records per-item failure without silently dropping later rows;
+- atomic commit refuses to execute without an authoritative transaction runner;
+- audit events correlate batch -> item -> stable domain operation.
 
-## Acceptance
+## Kernel audit / atomicity truth
 
-- targeted success/failure/idempotency/retry tests;
-- tenant/permission boundary tests;
-- atomicity tests appropriate to actual persistence layer;
-- no domain-specific names in generic package;
-- migration replay if schema is introduced;
-- exact execution evidence recorded;
-- no merge/deploy without approval.
+Current `MutationStore` exposes one-plan `execute(plan)` as the authoritative document mutation boundary. `D1MutationStore.execute()` builds one D1 `batch()` containing document/version/ledger/outbox/mutation-receipt work, and recovers ambiguous completion through the persisted receipt.
+
+That is strong single-document atomic/idempotent authority, but it is **not** an exposed multi-document transaction scope. A2 therefore does not call several document mutations and claim they are all-or-nothing. Production atomic BatchAction wiring is blocked on an authoritative transaction runner or an explicit contract decision that multi-document atomic mode is unsupported.
+
+See `A2-DEPENDENCY-REQUESTS.md`.
+
+## Critical invariants status
+
+- trusted tenant/user/role comes from server context, never client payload: **FOUNDATION PROVEN in executor seam/test; route/domain permission wiring pending**;
+- repeated idempotency key cannot duplicate committed side effects: **FOUNDATION PROVEN with atomic claim interface/in-memory replay test; durable D1 adapter pending**;
+- preview cannot mutate authoritative data: **executor calls preview callback only; domain preview purity still consumer-owned and pending A3/A4 evidence**;
+- all-or-nothing mode must actually roll back/avoid partial commit: **fail-closed unless `AtomicBatchRunner` exists; production runner unavailable**;
+- independent-item mode exposes outcomes deterministically: **targeted test PASS**;
+- domain validator is invoked for each operation: **domain callback is mandatory, concrete controller/permission path pending consumers**;
+- retry after ambiguous transport failure is deterministic: **stable operation correlation + replay interface present; durable replay/domain wiring UNPROVEN**;
+- ordering and result correlation are stable: **targeted test PASS**;
+- audit trail links batch -> item -> domain operation: **event contract + rollback/replay correlation tested; durable audit sink pending**.
+
+## Targeted execution evidence
+
+Because the GitHub connector session has no repository checkout and GitHub Actions returned no workflow run for the new head, full-repo CI remains **UNPROVEN**.
+
+A local isolated reconstruction of the exact A2 implementation source was executed with the repository TypeScript version available in the environment:
+
+- TypeScript 5.8.3 strict compile (`ES2022`, `NodeNext`, `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `useUnknownInCatchVariables`): **PASS**.
+- A2 targeted runtime harness: **7/7 PASS** covering preview/commit separation, trusted tenant context, deterministic order/operation IDs, independent failure continuation, exact replay/no duplicate callback, idempotency conflict, missing replay guard, missing atomic runner, atomic rollback correlation/replay release and duplicate item IDs.
+- GitHub Actions for branch head: **NO RUN OBSERVED — UNPROVEN**.
+
+The isolated harness is targeted implementation evidence, not a substitute for repository build/test/typecheck or Cloudflare/D1 integration evidence.
+
+## Acceptance remaining
+
+- A1 canonical contract import/adapter and public result envelope;
+- durable D1 replay claim/completion implementation after A1 key/version semantics freeze;
+- authoritative multi-document atomic transaction primitive, or explicit removal/restriction of atomic mode;
+- concrete route + MetadataPermissionService/domain-controller tenant/permission evidence;
+- durable audit sink correlation with document-kernel audit/outbox;
+- repository package build/typecheck/test and worker integration tests;
+- A3/A4 consumer evidence for preview purity and domain idempotency;
+- no migration replay currently required because A2 introduced no schema.
 
 ## Completion Record
 
-Baseline:
-A1 contract head consumed:
-Head:
-PR:
-Changed authority:
-Tests executed:
-Tests not executed:
-Migrations:
-Permission/tenant evidence:
-Idempotency/retry evidence:
-Dependencies remaining:
-Recommended maturity:
+Baseline: `program/ws09-batch-productization-20260804@8259d9bac1d2098d9e66195cb22e14072cd75139`
+A1 contract head consumed: **NONE — #548 is bootstrap-only at `e1dd7b4b69296d4916c0a5172ece92aac3cf23d7`**
+Implementation evidence head before this handoff update: `2b739f43a9171322bf196414e10b6596f04da63b`
+PR: #549
+Changed authority: new generic server execution mechanics only; **not wired to production routes/domain authority**
+Tests executed: isolated strict TypeScript compile PASS; targeted A2 harness 7/7 PASS
+Tests not executed: full `server` build/unit suite, worker tests, D1 integration, consumer permission tests, GitHub CI (**no run observed**)
+Migrations: NONE
+Permission/tenant evidence: trusted context is separate from item payload and propagated unchanged; concrete permission service integration pending
+Idempotency/retry evidence: atomic replay claim contract + conflict/in-flight/replay behavior; stable per-item operationId; durable D1 replay adapter pending
+Dependencies remaining: DR-A2-01 A1 canonical contract; DR-A2-02 authoritative multi-document atomic transaction scope; downstream A3/A4 integration
+Recommended maturity: **Foundation** only; not Wired/RC/Hardened
 Merge/deploy performed: NO
 
 ## Startup prompt
