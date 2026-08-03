@@ -4,6 +4,7 @@ import { PermissionService } from "../dist/packages/policy/src/index.js";
 
 const permission = new PermissionService();
 const actor = (roles) => ({ user_id: "user@example.com", roles });
+const mutation = (roles, doctype, action) => ({ actor: actor(roles), doctype, action });
 
 test("accounting roles may run supplier statement and reconciliation", () => {
   for (const role of ["Accounts Manager", "Accounts User", "System Manager"]) {
@@ -26,5 +27,27 @@ test("unrelated roles cannot run AP control reports", () => {
       () => permission.assertReport(actor(["Stock User"]), report),
       (error) => error.code === "PERMISSION_DENIED",
     );
+  }
+});
+
+test("Purchase Invoice submit remains accounting-controlled", () => {
+  assert.doesNotThrow(() => permission.assert(mutation(["Purchase User"], "Purchase Invoice", "create")));
+  assert.throws(
+    () => permission.assert(mutation(["Purchase Manager"], "Purchase Invoice", "submit")),
+    (error) => error.code === "PERMISSION_DENIED",
+  );
+  assert.doesNotThrow(() => permission.assert(mutation(["Accounts Manager"], "Purchase Invoice", "submit")));
+  assert.doesNotThrow(() => permission.assert(mutation(["Accounts Manager"], "Purchase Invoice", "cancel")));
+});
+
+test("supplier settlement and adjustment submit/cancel require Accounts Manager", () => {
+  for (const doctype of ["Payment Entry", "Payment Allocation", "Debit Note"]) {
+    assert.doesNotThrow(() => permission.assert(mutation(["Accounts User"], doctype, "create")));
+    assert.throws(
+      () => permission.assert(mutation(["Accounts User"], doctype, "submit")),
+      (error) => error.code === "PERMISSION_DENIED",
+    );
+    assert.doesNotThrow(() => permission.assert(mutation(["Accounts Manager"], doctype, "submit")));
+    assert.doesNotThrow(() => permission.assert(mutation(["Accounts Manager"], doctype, "cancel")));
   }
 });
