@@ -110,6 +110,31 @@ def grant(user, role, tenant="demo"):
     DB.execute("INSERT INTO user_roles VALUES(?,?,?)", (tenant, user, role))
 
 
+def raw_gl(
+    voucher_no,
+    line_key,
+    debit,
+    credit,
+    *,
+    voucher_type="Journal Entry",
+    tenant="demo",
+    revision=1,
+    dimensions="{}",
+    posting_at="2026-11-01T08:00:00Z",
+    account="1110",
+):
+    DB.execute(
+        """INSERT INTO gl_entries(
+          tenant_id,voucher_type,voucher_no,voucher_revision,line_key,account,party_type,party,
+          debit_minor,credit_minor,currency,currency_scale,cost_center,dimensions_json,remarks,posting_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            tenant, voucher_type, voucher_no, revision, line_key, account, None, None,
+            debit, credit, "VND", 0, None, dimensions, None, posting_at,
+        ),
+    )
+
+
 CHIEF = "chief.accountant@example.test"
 MANAGER = "accounts.manager@example.test"
 GENERAL = "general.accountant@example.test"
@@ -220,17 +245,32 @@ expect_rejected("ACCOUNTING_PERIOD_SOFT_CLOSED", lambda: insert_doc(
             adjustment_reason="Period disallows adjustments", adjustment_approved_by=CHIEF), actor=CHIEF,
 ))
 
-# Canonical GL source scope is mandatory for new ledger rows.
-def raw_gl(voucher_no, line_key, debit, credit, *, tenant="demo", revision=1, dimensions="{}"):
-    DB.execute(
-        """INSERT INTO gl_entries(
-          tenant_id,voucher_type,voucher_no,voucher_revision,line_key,account,party_type,party,
-          debit_minor,credit_minor,currency,currency_scale,cost_center,dimensions_json,remarks,posting_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-        (tenant, "Journal Entry", voucher_no, revision, line_key, "1110", None, None,
-         debit, credit, "VND", 0, None, dimensions, None, "2026-11-01T08:00:00Z"),
-    )
+# Canonical GL boundary is a universal backstop. Credit Note is intentionally not
+# in 0042's document-trigger list, so a future/new GL controller cannot bypass
+# RC-020 merely by having a different doctype name.
+insert_doc("Credit Note", "CN-HARD", 1, payload(company="ALUMDOOR", posting_at="2026-07-22T08:00:00Z"), actor=CHIEF)
+DB.commit()
+expect_rejected("ACCOUNTING_PERIOD_HARD_LOCKED", lambda: raw_gl(
+    "CN-HARD", "ROW-1", 100, 0, voucher_type="Credit Note", posting_at="2026-07-22T08:00:00Z",
+))
+insert_doc("Credit Note", "CN-SOFT-FORGED", 1, payload(
+    company="ALUMDOOR", branch="HN", posting_at="2026-08-22T08:00:00Z",
+    approved_adjustment=1, adjustment_reason="Forged GL-boundary adjustment", adjustment_approved_by=CHIEF,
+), actor=GENERAL)
+DB.commit()
+expect_rejected("ACCOUNTING_PERIOD_SOFT_CLOSED", lambda: raw_gl(
+    "CN-SOFT-FORGED", "ROW-1", 100, 0, voucher_type="Credit Note", posting_at="2026-08-22T08:00:00Z",
+))
+insert_doc("Credit Note", "CN-SOFT-VALID", 1, payload(
+    company="ALUMDOOR", branch="HN", posting_at="2026-08-23T08:00:00Z",
+    approved_adjustment=1, adjustment_reason="Authorized GL-boundary adjustment", adjustment_approved_by=GENERAL,
+), actor=CHIEF)
+DB.commit()
+raw_gl("CN-SOFT-VALID", "ROW-1", 100, 0, voucher_type="Credit Note", posting_at="2026-08-23T08:00:00Z", account="1110")
+raw_gl("CN-SOFT-VALID", "ROW-2", 0, 100, voucher_type="Credit Note", posting_at="2026-08-23T08:00:00Z", account="3310")
+DB.commit()
 
+# Canonical GL source scope is mandatory for every new ledger row.
 expect_rejected("GL_COMPANY_SCOPE_REQUIRED", lambda: raw_gl("JV-NO-SOURCE", "ROW-1", 1, 0))
 insert_doc("Journal Entry", "JV-BR-MISMATCH", 2, payload(company="REPORTCO", branch="HN", posting_at="2026-11-01T08:00:00Z"), actor=MANAGER)
 DB.commit()
@@ -320,6 +360,7 @@ assert 'if (previousReceipt)' in kernel and 'return previousReceipt;' in kernel
 assert 'this.permission.assert({' in kernel
 assert "INSERT INTO versions" in store and "INSERT INTO gl_entries" in store and "INSERT INTO mutation_receipts" in store
 assert "await database.batch(statements)" in store
+assert store.index("INSERT INTO documents") < store.index("INSERT INTO gl_entries")
 assert "getVoucherGlEntries" in store and "FROM gl_entries" in store
 assert '"General Ledger"' in query and '"Trial Balance"' in query
 for role in ("Chief Accountant", "Accounts Manager", "System Manager"):
