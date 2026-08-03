@@ -1,11 +1,14 @@
 # CFMAX Agent Board
 
 Program: Forge Cloudflare Maximization
-Control branch: `cloudflare/cfmax-00-control`
-Source baseline: `main@fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`
-Status: bootstrap
+Original control branch: `cloudflare/cfmax-00-control`
+Original bootstrap baseline: `main@fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`
+R2 takeover baseline: `main@cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`
+R2 convergence branch: `cloudflare/cfmax-09-convergence-r2`
+Draft convergence PR: `#570` -> `main`
+Status: **CONVERGENCE REVIEW READY — provider/production evidence pending**
 
-Exact GitHub branch/PR/diff state always wins this board if it becomes stale.
+Exact GitHub branch/PR/diff/CI state always wins this board if it becomes stale.
 
 ## Status vocabulary
 
@@ -13,180 +16,154 @@ Exact GitHub branch/PR/diff state always wins this board if it becomes stale.
 - `CLAIMED`: worker has recorded alias/start SHA.
 - `ACTIVE`: audit/implementation in progress.
 - `BLOCKED`: only blocked subsection; worker continues independent scope.
-- `REVIEW`: PR-ready evidence/handoff exists.
-- `DONE`: merged + verified + canonical evidence updated.
-- `DEFERRED`: conditional primitive has explicit trigger, no implementation now.
+- `REVIEW`: source/audit work reached its allowed non-production review boundary with evidence.
+- `DONE`: merged to canonical target + verified + canonical evidence updated. **No CFMAX lane is called DONE merely because a worker said it finished.**
+- `DEFERRED`: conditional primitive has an explicit revisit trigger and no implementation is justified now.
 - `REJECTED`: adoption decision says no measurable value or violates architecture.
 
-## Workers
+## Coordinator takeover record
 
-| ID | Branch | Primary authority | Forge owners consumed | Risk | Immediate mission | Depends on |
-|---|---|---|---|---|---|---|
-| CF01 | `cloudflare/cfmax-01-d1-consistency` | D1 Sessions/read-replica/cache consistency | WS00, WS14 | CRITICAL | prove end-to-end bookmark/session policy and production-read-replica readiness | control |
-| CF02 | `cloudflare/cfmax-02-workflows` | Workflows + durable orchestration contract | WS09, WS11, WS13, WS12 | CRITICAL | replace ad-hoc long-process orchestration only where Workflow semantics are superior | CF01 for consistency rules; control |
-| CF03 | `cloudflare/cfmax-03-usage-observability` | Analytics Engine + usage/cost telemetry | WS12, WS11 | STANDARD/CRITICAL | design per-tenant operational usage plane and billing reconciliation seam | control; CF08 cost taxonomy |
-| CF04 | `cloudflare/cfmax-04-edge-security` | WAF/rate-limit/Turnstile/Access perimeter | WS11 | CRITICAL | harden public/admin/service perimeter without weakening Forge authorization | control |
-| CF05 | `cloudflare/cfmax-05-ai-platform` | AI Gateway + Workers AI + Vectorize/AI Search policy | WS08, WS11 | STANDARD/CRITICAL | centralize AI provider/cost/security/retrieval semantics | CF03 usage dimensions; CF04 security policy |
-| CF06 | `cloudflare/cfmax-06-render-export` | Browser Run/PDF/R2 export delivery | WS14, WS12 | STANDARD | server-render print/export without replacing Print Format authority | CF04 security rules; control |
-| CF07 | `cloudflare/cfmax-07-runtime-expansion` | Dynamic Workers/Containers/Hyperdrive/Pipelines decision lane | WS00, WS09, WS10, WS13 | CRITICAL | prove go/no-go thresholds before adopting optional runtime primitives | CF04 sandbox/security; CF08 governance |
-| CF08 | `cloudflare/cfmax-08-prod-governance` | resource inventory/cost/drift/release/recovery | WS12, WS11 | CRITICAL | establish production resource/config/cost/recovery control plane | control |
+The original worker sessions stopped at mixed GitHub states. The coordinator re-audited exact branches instead of trusting chat-level completion claims.
 
-## Ownership and forbidden zones
+Findings:
+
+- CF02 original branch was still `READY` with no implementation/test head;
+- CF01 and CF04 contained useful work but were stale against current main and could not safely converge as-is;
+- CF03/05/06/08 had reusable implementation with different verification/provider gaps;
+- CF07 correctly completed as a decision lane whose result was DEFER.
+
+Takeover actions:
+
+1. create `cloudflare/cfmax-09-convergence-r2` from exact then-current main;
+2. create fresh R2 branches for CF01, CF02 and CF04;
+3. finish CF02 implementation from zero on R2;
+4. replay CF01/CF04 onto current source instead of overwriting newer code;
+5. synchronize reusable lanes to current main before internal convergence;
+6. reconcile CF08 source-governance blob pins after Cloudflare config convergence;
+7. run one integrated exact-head gate on the common candidate.
+
+No worker was merged to `main` and no production Cloudflare resource was mutated during takeover.
+
+## Current worker state
+
+| ID | Authoritative execution branch for convergence | Status | Result / maturity truth | Primary evidence |
+|---|---|---|---|---|
+| CF01 | `cloudflare/cfmax-01-d1-consistency-r2` | **REVIEW** | D1 Sessions/bookmark source is **Wired**; remote replica/latency proof pending | PR `#567`; run `30853819015` PASS; integrated real-workerd 9/9 |
+| CF02 | `cloudflare/cfmax-02-workflows-r2` | **REVIEW** | durable route-index Workflow is **Wired**; remote Workflow/recovery proof pending | PR `#555`; run `30852724589` PASS |
+| CF03 | `cloudflare/cfmax-03-usage-observability` | **REVIEW** | `O01-003` Wired; `T01-008` Foundation; Analytics Engine remains dormant | PR `#536`; integrated telemetry build/tests PASS |
+| CF04 | `cloudflare/cfmax-04-edge-security-r2` | **REVIEW** | perimeter source contract **Wired**; provider activation pending | PR `#566`; run `30853280402` PASS |
+| CF05 | `cloudflare/cfmax-05-ai-platform-r2` | **REVIEW** | AI policy/Gateway seam source complete; provider/cost dependencies remain | PR `#531`; run `30849757932` PASS |
+| CF06 | `cloudflare/cfmax-06-render-export` | **REVIEW** | Browser Run render/export source **Wired**; remote proof pending | PR `#534`; run `30849817637` PASS |
+| CF07 | `cloudflare/cfmax-07-runtime-expansion` | **DEFERRED** | Dynamic Workers, Containers/Sandbox, Hyperdrive and Pipelines all deferred by evidence | PR `#528`; decision record complete |
+| CF08 | `cloudflare/cfmax-08-prod-governance` | **REVIEW** | source governance complete; remote desired-vs-observed state unverified | PR `#539`; integrated governance validator PASS |
+
+The original `cloudflare/cfmax-01-d1-consistency`, `cloudflare/cfmax-02-workflows`, `cloudflare/cfmax-04-edge-security` and `cloudflare/cfmax-05-ai-platform` branches are **superseded for convergence** by the R2 branches listed above.
+
+No worker remains `READY` or `ACTIVE` for source work after coordinator takeover.
+
+## Integrated convergence gate
+
+Source-equivalent convergence head before the final evidence/board documentation commits:
+
+`1d7a4adb8eafd3d2f49b39ce87314f871d267395`
+
+GitHub Actions run `30854610958`: **SUCCESS**.
+
+Passed in one candidate:
+
+- locked monorepo install;
+- focused CF01 TypeScript;
+- focused CF02 Workflow build;
+- focused CF03 telemetry build;
+- focused CF05 AI build;
+- CF06 charts/visual/views build chain;
+- Query Worker real-workerd D1 suite: 9/9;
+- combined CFMAX Node regressions: 28/28;
+- CF08 source/blob/config governance validator;
+- canonical Gateway runtime + warehouse PWA build/stage/check;
+- Gateway Wrangler dry-run bundle;
+- Tenant Worker Wrangler dry-run bundle;
+- Query Wrangler binding/type parse;
+- Workflow Worker Wrangler dry-run bundle.
+
+Detailed convergence evidence: `docs/agents/cloudflare-cfmax/CFMAX_R2_CONVERGENCE_20260804.md`.
+
+## Baseline debt evidence
+
+An earlier convergence attempt intentionally tried the repository-wide server TypeScript build. It failed in existing Manufacturing, CRM, App Factory, QMS and Frappe-model files.
+
+`main -> CFMAX R2` diff was checked and those failure files are outside CFMAX changes.
+
+The integrated gate therefore uses blast-radius compilation plus Worker bundle/dry-run validation. The baseline-wide build failure is recorded as debt, not hidden and not falsely reported as PASS.
+
+## Ownership / authority invariants retained
 
 ### CF01
 
-Owns proposals/implementation around D1 session creation, bookmark transport, read-path policy and consistency observability.
+Owns D1 session creation, bookmark transport, replica-safe report policy and consistency observability.
 
-Forbidden without dependency request:
-- changing document/ledger business invariants;
-- changing auth model;
-- rewriting frontend shared state unrelated to bookmark transport;
-- changing domain query semantics merely to improve benchmark numbers.
+Must not change business ledger/document invariants, weaken OCC/idempotency, or use replica state as authoritative validation.
 
 ### CF02
 
-Owns generic Workflow adapter/contract and selected platform orchestration slices.
+Owns generic durable Workflow orchestration and selected platform long-process slices.
 
-Forbidden:
-- direct finance/stock/payroll writes;
-- owning domain reversal semantics;
-- replacing Queue event fan-out blindly;
-- implementing tenant-auth changes.
+Queue remains independent fan-out/delivery. Workflow never becomes database authority and does not own domain reversal semantics.
 
 ### CF03
 
-Owns telemetry schemas, Analytics Engine binding/use, usage aggregation and observability query contracts.
+Owns operational usage telemetry and Analytics Engine schema/query contracts.
 
-Forbidden:
-- declaring Analytics Engine the audit ledger;
-- creating customer invoices directly from sampled telemetry without reconciliation contract;
-- logging secrets/raw sensitive payloads.
+Analytics Engine is not immutable audit or authoritative billing. Deterministic reconciliation belongs to WS11 before quota/invoice enforcement.
 
 ### CF04
 
-Owns perimeter/security rules and compatibility architecture.
+Owns perimeter/security compatibility policy.
 
-Forbidden:
-- replacing Forge server permission;
-- silently changing tenant business auth semantics;
-- production DNS/security-rule rollout without authorization;
-- broad challenge rules that break APIs/mobile clients without evidence.
+Cloudflare perimeter does not replace Forge authentication or server-side authorization. Provider apply/drift/rollback remains CF08 authority.
 
 ### CF05
 
-Owns AI provider abstraction, AI Gateway policy and derived semantic retrieval architecture.
+Owns hosted AI provider/model/cost/privacy policy seams.
 
-Forbidden:
-- direct business mutation by model output;
-- bypassing permission/approval;
-- embedding secrets or unrestricted private data;
-- treating Vectorize as canonical data.
+AI output remains advisory; model output does not directly mutate D1 or bypass permission/approval.
 
 ### CF06
 
-Owns rendering/export execution plane.
+Owns server render/export execution.
 
-Forbidden:
-- redesigning domain print formats;
-- changing business document authority;
-- arbitrary-url Browser Run surface without SSRF controls;
-- exposing R2 objects outside permission-aware facade.
+Print Format/document authority remains canonical Forge metadata/business logic. Browser Run receives only already-authorized render input.
 
 ### CF07
 
-Owns optional-runtime evaluation and isolated proofs only.
+Owns optional-runtime evaluation only until proof gates are crossed.
 
-Forbidden:
-- moving normal CRUD/API to Containers;
-- granting broad dynamic-code bindings;
-- making Hyperdrive/external SQL a canonical tenant store;
-- routing authoritative transaction state through Pipelines.
+Do not adopt optional primitives merely to collect bindings.
 
 ### CF08
 
-Owns resource inventory, config/drift/cost/recovery/release policy and supporting tooling.
+Owns resource inventory, source/config drift, compatibility, cost/recovery/release governance.
 
-Forbidden:
-- destructive PITR;
-- production secret/DNS mutation;
-- taking ownership of other workers' implementation hotspots;
-- inventing customer SLA without measured/approved policy.
+Remote state must remain `unverified` until a real read-only provider inventory is performed.
 
-## Dependency requests
+## Remaining provider / production gates
 
-Use exactly:
+These are not autonomous source-work blockers and must not be fabricated:
 
-```text
-Dependency Request
-ID: DR-CFxx-NN
-Owner: <target worker/workstream>
-Need: <specific contract/evidence/change>
-Why: <why target owns it>
-Blocked scope: <exact subsection>
-Can continue independently: yes/no
-Next independent work: <what continues now>
-```
+- D1 actual read-replica enablement, observed region/primary evidence and APAC benchmark;
+- deployed non-production Workflow instance with retry/restart/terminate recovery proof;
+- Analytics Engine dataset/binding and tenant-separated live query evidence;
+- WAF/rate-limit/Turnstile/Access provider proof and measured false-positive behavior where adopted;
+- AI Gateway provider resource/config/spend-policy activation;
+- live Browser Run provider execution evidence where still absent;
+- remote desired-vs-observed Cloudflare resource inventory;
+- production rollback/PITR/recovery exercise;
+- canonical RC/Hardened maturity promotion after merge/provider evidence.
 
-No worker may copy another worker's logic locally to avoid a dependency if that creates a duplicate authority.
+## Merge / deploy boundary
 
-## Common evidence ledger
+`#570` is the only current CFMAX convergence candidate for `main`.
 
-Each branch-local handoff must track:
+It remains **draft**.
 
-- exact base/head;
-- canonical Forge capability IDs;
-- current maturity;
-- source evidence;
-- code/config evidence;
-- tests;
-- migration impact;
-- permission/tenant isolation evidence;
-- failure/retry/replay evidence;
-- performance/cost evidence;
-- production evidence, if any;
-- dependency requests;
-- adoption decision: REQUIRED/RECOMMENDED/CONDITIONAL/EXPERIMENTAL/REJECTED;
-- remaining gaps.
-
-## Parallel start rule
-
-All eight workers may start **audit immediately**.
-
-Implementation constraints:
-
-- CF01/CF04/CF08 can implement independent seams first.
-- CF02 may implement generic Workflow foundation after exact audit; consumers must not duplicate domain command logic.
-- CF03 telemetry schema should coordinate dimension taxonomy with CF08.
-- CF05 consumes CF03 usage/cost dimensions and CF04 security policy.
-- CF06 can proceed if it preserves existing print authority and security facade.
-- CF07 should stay decision/proof oriented until security/governance contracts exist.
-
-## Convergence order
-
-Default:
-
-```text
-CONTROL
-  -> CF01
-  -> CF04 + CF08
-  -> CF02
-  -> CF03
-  -> CF05
-  -> CF06
-  -> CF07 only for approved/justified primitives
-  -> CONTROL convergence audit
-```
-
-Independent PRs can review earlier, but shared authority merges in dependency order.
-
-## Coordinator checklist
-
-Before any worker is considered correctly bootstrapped:
-
-1. branch starts from exact control baseline;
-2. only branch-local handoff bootstrap differs from control;
-3. no implementation from sibling worker leaked in;
-4. startup prompt exists;
-5. owned/forbidden zones are explicit;
-6. risk and merge boundary are explicit;
-7. worker can proceed without asking user ordinary technical questions.
+Do not merge to `main`, deploy, enable D1 replicas, create Workflow/Analytics/AI Gateway resources, mutate WAF/Access/Turnstile/DNS/secrets, run PITR, or touch customer data without explicit user approval and the required provider evidence.
