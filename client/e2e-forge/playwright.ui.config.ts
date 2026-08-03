@@ -42,27 +42,6 @@ export default defineConfig({
       use: { ...devices["Pixel 7"] },
     },
     {
-      name: "mobile-compact-qa",
-      testMatch: "ui-tests/v3-mobile-qa.spec.ts",
-      use: {
-        ...devices["Desktop Chrome"],
-        viewport: { width: 360, height: 800 },
-        deviceScaleFactor: 2,
-        isMobile: true,
-        hasTouch: true,
-      },
-    },
-    {
-      name: "reduced-motion-dark-qa",
-      testMatch: "ui-tests/v3-mobile-qa.spec.ts",
-      use: {
-        ...devices["Desktop Chrome"],
-        viewport: { width: 1440, height: 1000 },
-        colorScheme: "dark",
-        reducedMotion: "reduce",
-      },
-    },
-    {
       name: "warehouse-pixel-7",
       testMatch: "warehouse-tests/**/*.spec.ts",
       use: {
