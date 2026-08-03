@@ -1,0 +1,179 @@
+{
+  "fixtureVersion": "ui05-second-reference-v1",
+  "purpose": "QA semantic fixtures only; this file is not the canonical viewPolicy.matrix metadata contract.",
+  "references": [
+    {
+      "id": "supplier-item",
+      "status": "ready-for-integration",
+      "risk": "STANDARD",
+      "axisA": {
+        "semantic": "supplier",
+        "members": [
+          { "key": "SUP-A", "label": "Supplier A" },
+          { "key": "SUP-B", "label": "Supplier B" },
+          { "key": "SUP-C", "label": "Supplier C" }
+        ]
+      },
+      "axisB": {
+        "semantic": "item",
+        "members": [
+          { "key": "ITEM-AL", "label": "Aluminium profile" },
+          { "key": "ITEM-GLASS", "label": "Glass 8 mm" },
+          { "key": "ITEM-HINGE", "label": "Hinge" },
+          { "key": "ITEM-SEAL", "label": "Seal" }
+        ]
+      },
+      "cells": [
+        { "a": "SUP-A", "b": "ITEM-AL", "value": { "supplierSku": "A-AL-01", "minimumOrderQty": 20, "leadTimeDays": 5, "preferred": true } },
+        { "a": "SUP-A", "b": "ITEM-HINGE", "value": { "supplierSku": "A-HG-02", "minimumOrderQty": 100, "leadTimeDays": 7, "preferred": false } },
+        { "a": "SUP-B", "b": "ITEM-GLASS", "value": { "supplierSku": "B-GL-08", "minimumOrderQty": 10, "leadTimeDays": 3, "preferred": true } },
+        { "a": "SUP-C", "b": "ITEM-SEAL", "value": { "supplierSku": "C-SEAL", "minimumOrderQty": 50, "leadTimeDays": 9, "preferred": false } }
+      ],
+      "negativeCases": [
+        "cell references missing supplier",
+        "cell references missing item",
+        "negative minimum order quantity",
+        "unauthorized write",
+        "stale OCC token"
+      ],
+      "acceptance": {
+        "sparse": true,
+        "writeAuthority": "named-domain-action",
+        "requiresRendererBusinessConditional": false
+      }
+    },
+    {
+      "id": "item-warehouse-reorder",
+      "status": "ready-for-integration",
+      "risk": "STANDARD",
+      "axisA": {
+        "semantic": "item",
+        "members": [
+          { "key": "ITEM-AL", "label": "Aluminium profile" },
+          { "key": "ITEM-GLASS", "label": "Glass 8 mm" },
+          { "key": "ITEM-HINGE", "label": "Hinge" }
+        ]
+      },
+      "axisB": {
+        "semantic": "warehouse",
+        "members": [
+          { "key": "WH-RAW", "label": "Raw Materials" },
+          { "key": "WH-FG", "label": "Finished Goods" },
+          { "key": "WH-SERVICE", "label": "Service Stock" }
+        ]
+      },
+      "cells": [
+        { "a": "ITEM-AL", "b": "WH-RAW", "value": { "reorderLevel": 150, "reorderQty": 300 } },
+        { "a": "ITEM-GLASS", "b": "WH-RAW", "value": { "reorderLevel": 40, "reorderQty": 80 } },
+        { "a": "ITEM-HINGE", "b": "WH-SERVICE", "value": { "reorderLevel": 20, "reorderQty": 50 } }
+      ],
+      "negativeCases": [
+        "negative reorder level",
+        "negative reorder quantity",
+        "warehouse outside trusted tenant",
+        "stale parent version"
+      ],
+      "acceptance": {
+        "sparse": true,
+        "writeAuthority": "named-domain-action",
+        "requiresRendererBusinessConditional": false
+      }
+    },
+    {
+      "id": "item-group-account",
+      "status": "ready-for-integration",
+      "risk": "CRITICAL",
+      "axisA": {
+        "semantic": "item-group",
+        "members": [
+          { "key": "GROUP-RAW", "label": "Raw Materials" },
+          { "key": "GROUP-FG", "label": "Finished Goods" },
+          { "key": "GROUP-SERVICE", "label": "Services" }
+        ]
+      },
+      "axisB": {
+        "semantic": "posting-purpose",
+        "members": [
+          { "key": "inventory", "label": "Inventory Asset" },
+          { "key": "cogs", "label": "Cost of Goods Sold" },
+          { "key": "income", "label": "Sales Income" }
+        ]
+      },
+      "cells": [
+        { "a": "GROUP-RAW", "b": "inventory", "value": { "account": "152-RAW" } },
+        { "a": "GROUP-RAW", "b": "cogs", "value": { "account": "632-RAW" } },
+        { "a": "GROUP-FG", "b": "inventory", "value": { "account": "155-FG" } },
+        { "a": "GROUP-FG", "b": "income", "value": { "account": "511-FG" } },
+        { "a": "GROUP-SERVICE", "b": "income", "value": { "account": "511-SVC" } }
+      ],
+      "negativeCases": [
+        "account belongs to another company",
+        "account purpose mismatch",
+        "client role claim attempts to bypass server permission",
+        "stale OCC token"
+      ],
+      "acceptance": {
+        "sparse": true,
+        "writeAuthority": "named-domain-action",
+        "requiresRendererBusinessConditional": false
+      }
+    },
+    {
+      "id": "user-role",
+      "status": "deferred-ws11-security-review",
+      "risk": "CRITICAL",
+      "axisA": {
+        "semantic": "user",
+        "members": [
+          { "key": "user-a@example.test", "label": "User A" },
+          { "key": "user-b@example.test", "label": "User B" }
+        ]
+      },
+      "axisB": {
+        "semantic": "role",
+        "members": [
+          { "key": "ROLE-OPS", "label": "Operations" },
+          { "key": "ROLE-FIN", "label": "Finance" }
+        ]
+      },
+      "cells": [
+        { "a": "user-a@example.test", "b": "ROLE-OPS", "value": { "enabled": true } }
+      ],
+      "negativeCases": [
+        "privilege escalation",
+        "self-grant protected role",
+        "cross-tenant role assignment",
+        "client-supplied role claims treated as authority"
+      ],
+      "acceptance": {
+        "sparse": true,
+        "writeAuthority": "security-owned-action-after-ws11-review",
+        "requiresRendererBusinessConditional": false
+      }
+    }
+  ],
+  "performanceEnvelopes": [
+    {
+      "id": "bounded-medium",
+      "axisA": 500,
+      "axisB": 40,
+      "sparseCells": 1200,
+      "assertions": [
+        "no per-cell network request",
+        "do not require materializing the full Cartesian product",
+        "search/page source is bounded"
+      ]
+    },
+    {
+      "id": "bounded-large",
+      "axisA": 5000,
+      "axisB": 200,
+      "sparseCells": 10000,
+      "assertions": [
+        "visible-window or equivalent bounded rendering seam",
+        "stale search results can be cancelled or ignored",
+        "repeated cell edits do not trigger full source reload"
+      ]
+    }
+  ]
+}
