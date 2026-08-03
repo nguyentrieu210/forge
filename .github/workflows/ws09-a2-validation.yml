@@ -95,7 +95,7 @@ jobs:
 
       - name: A2 executor and A1-A2 integration regressions
         working-directory: server
-        run: node --test tests/batch-executor.test.mjs tests/batch-a1-a2-integration.test.mjs tests/batch-d1-replay-store.test.mjs
+        run: node --test tests/batch-executor.test.mjs tests/batch-a1-a2-integration.test.mjs tests/batch-a1-a2-table-integration.test.mjs tests/batch-d1-replay-store.test.mjs
 
       - name: Replay migration idempotency and constraints
         working-directory: server
