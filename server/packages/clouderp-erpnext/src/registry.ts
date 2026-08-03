@@ -5,9 +5,15 @@ import {
 } from "./controllers.js";
 import {
   AssetDisposalController, AssetMaintenanceController, AssetMovementController, ExpenseClaimController,
-  IssueController, JobCardController, PosClosingEntryController, PosInvoiceController, PosOpeningEntryController,
+  IssueController, JobCardController,
   ProductionPlanController, QualityInspectionController, TimesheetController,
 } from "./suite-controllers.js";
+import {
+  HardenedPosClosingEntryController, HardenedPosOpeningEntryController,
+} from "./pos-session-hardening.js";
+import { ExactCancelPosInvoiceController } from "./pos-cancel-exact.js";
+import { DeliveryTripController, ProofOfDeliveryController } from "./logistics-controllers.js";
+import { FreightEstimateController, TransportContractController } from "./freight-controllers.js";
 import {
   BankReconciliationController, BankTransactionController, EInvoiceSubmissionController, PayrollEntryController,
   SubscriptionController,
@@ -97,9 +103,13 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new GoalController())
     .register(new HrmAppraisalController())
     .register(new TrainingEventController())
-    .register(new PosOpeningEntryController())
-    .register(new PosInvoiceController())
-    .register(new PosClosingEntryController())
+    .register(new HardenedPosOpeningEntryController())
+    .register(new ExactCancelPosInvoiceController())
+    .register(new HardenedPosClosingEntryController())
+    .register(new DeliveryTripController())
+    .register(new ProofOfDeliveryController())
+    .register(new TransportContractController())
+    .register(new FreightEstimateController())
     .register(new BankTransactionController())
     .register(new BankReconciliationController())
     .register(new FinanceBudgetController())
