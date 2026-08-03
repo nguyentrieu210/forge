@@ -80,10 +80,10 @@ function pricingAuthority(binding: PricingMatrixBindingContext): PricingMatrixAu
     records: {
       get: async ({ doctype, name }) => await getRecord(binding, doctype, name),
       list: async (query) => await listRecords(binding, query.doctype, {
-        filters: query.filters,
-        search: query.search,
+        ...(query.filters ? { filters: query.filters } : {}),
+        ...(query.search ? { search: query.search } : {}),
         limit: query.limit,
-        cursor: query.cursor,
+        ...(query.cursor ? { cursor: query.cursor } : {}),
       }),
     },
     permissions: {
@@ -339,8 +339,8 @@ function navigatorNodes(navigation: JsonObject): JsonObject[] {
   const buildGroup = (node: JsonObject): JsonObject => {
     const groupName = requiredText(node.group_name, "group_name");
     const children = (byParent.get(groupName) ?? []).map((child) => optionalText(child.group_name) ? buildGroup(child) : child);
-    const output = { ...node, ...(children.length ? { children } : {}) };
-    delete output.group_name;
+    const output: JsonObject = { ...node, ...(children.length ? { children } : {}) };
+    delete output["group_name"];
     return output;
   };
   return (byParent.get("") ?? []).map((node) => optionalText(node.group_name) ? buildGroup(node) : node);
