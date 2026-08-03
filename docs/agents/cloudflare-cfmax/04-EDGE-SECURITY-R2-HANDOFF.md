@@ -1,7 +1,7 @@
 # CF04 R2 — Cloudflare Edge Security
 
 Date: 2026-08-04
-Status: ACTIVE — clean current-main replay; exact-head CI pending
+Status: REVIEW — current-main replay and exact-head CI complete; provider activation pending
 Branch: `cloudflare/cfmax-04-edge-security-r2`
 Baseline: `main@cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`
 Risk: CRITICAL
@@ -42,6 +42,16 @@ Custom domains remain the intended production ingress. This closes alternate Wor
    - policy regression execution;
    - Wrangler type/config parse for Gateway.
 
+## Validation evidence
+
+Exact-head run `30853280402`: **PASS**.
+
+Passed:
+
+- locked dependency install;
+- edge-security regression execution;
+- Gateway Wrangler config/type parse.
+
 ## Explicit non-actions
 
 R2 does **not**:
@@ -58,15 +68,17 @@ Those are provider/production operations and remain behind explicit approval plu
 
 ## Maturity
 
-After exact-head CI green, source evidence supports **Wired** for the CF04 perimeter contract. RC requires non-production provider rule/application proof with compatibility tests. Hardened requires production activation, measured false-positive/abuse behavior, rollback and alert evidence.
+Current source evidence supports **Wired** for the CF04 perimeter contract. RC requires non-production provider rule/application proof with compatibility tests. Hardened requires production activation, measured false-positive/abuse behavior, rollback and alert evidence.
 
 ## Completion record
 
 Owner: coordinator takeover / CF04 R2
 Original branch: `cloudflare/cfmax-04-edge-security` — superseded for convergence
+PR: `#566` draft -> `main`
+Validated head: `565de123ad7e49b03214c1f01fc5ae7d34d877d2`
+Exact-head CI: run `30853280402` **PASS**
 Changed zones: Gateway Wrangler source, edge policy JSON, focused regression, focused CI, this handoff
 Migration: none
 Production mutation: none
-Exact-head CI: pending
 Remaining RC gaps: provider feature/plan inventory, measured thresholds, non-production WAF/Turnstile/Access proof where adopted, production rollback evidence
 Merge boundary: do not merge to main or deploy/provider-apply without explicit approval
