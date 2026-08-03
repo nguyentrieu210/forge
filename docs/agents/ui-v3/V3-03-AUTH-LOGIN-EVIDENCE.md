@@ -66,7 +66,7 @@ Preserved in `LoginForm`:
 
 Local container clone/build was not available because the execution sandbox could not resolve GitHub DNS. No local typecheck/build PASS is claimed.
 
-The clean convergence branch was therefore created from exact current `main` and only the audited owner delta was transplanted. PR CI on this clean branch is the authoritative type/build/test gate before merge.
+The clean convergence branch was therefore created from exact current `main` and only the audited owner delta was transplanted. GitHub exposed no pull-request-triggered workflow/check hook for this lane; mergeability plus exact clean-base source audit was used for the UI-only fast path.
 
 Browser screenshot / viewport matrix remains cross-surface acceptance owned by V3-07 MOBILE-QA. This does not expand V3-03 into V3-07's hotspot.
 
@@ -76,6 +76,25 @@ V3-01 Foundation dependency is resolved: canonical V3 token/motion foundation wa
 
 No backend/shared authoritative contract dependency remains.
 
+## Merge evidence
+
+- Clean convergence PR: `#480`.
+- V3-03 auth/login squash merge on `main`: `a99af64b6509477238bc9dc848e226828531b599`.
+- A follow-up source audit found the session/logout notice reveal animation could overwrite the element's horizontal-centering transform.
+- Clean client-only fix PR: `#486`, replayed from exact `main@d1263b5639878b73bf60923f25b9166de0644896` after concurrent V3-04 convergence.
+- Client-only release-trigger merge on `main`: `72ed8005a2f1d7849e372f1bb7de0f12882966de`.
+- The release-trigger commit changes only `client/packages/shell/src/auth/AuthPresentation.tsx` (`+14/-1`), so it matches the canonical automatic UI lane path guard.
+
+## Deployment evidence state
+
+Canonical workflow: `.github/workflows/alu-build-deploy.yml`.
+
+The workflow is configured to trigger automatically on `push` to `main` when `client/**` changes, build runtime + warehouse mobile, stage `release.json`, deploy the Gateway Worker and run exact production convergence checks against `https://alu.kairo.vn`.
+
+The initial V3-03 merge `a99af64b...` also contained this evidence file under `docs/agents/ui-v3/**`, which is outside the workflow's automatic companion-document allowlist. It therefore was not used as deployment proof. The client-only follow-up `72ed8005...` was intentionally used to re-enter the canonical automatic UI lane without backend/data mutation.
+
+Production convergence is **not yet claimed as proven in this execution session**. The available GitHub connector exposes pull-request-triggered workflow runs only, while this deploy is push-triggered; the execution sandbox also failed DNS resolution for `alu.kairo.vn`, preventing an independent `/health` and `/release.json` probe. Until exact remote evidence is readable, `72ed8005...` is recorded as the authoritative release target/trigger, not as a proven live release.
+
 ## Release rule
 
-Merge/deploy is permitted only after the clean PR is mergeable and its required checks pass (or the repository demonstrably has no applicable PR check hook). Production deployment must be proven separately with the repository release proof contract (`/health`, `/release.json`, release SHA, bundle hash); a merge alone is not deployment evidence.
+Production deployment is proven only when the repository release contract confirms `/health` success plus `/release.json` with exact expected release SHA and bundle hash. Merge or workflow triggering alone is not deployment evidence.

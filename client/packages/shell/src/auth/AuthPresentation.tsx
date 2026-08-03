@@ -36,6 +36,10 @@ const AUTH_STYLES = `
     animation: mf-auth-error-reveal var(--forge-motion-duration-micro-slow, 160ms) var(--forge-motion-ease-enter, cubic-bezier(.16,1,.3,1)) both;
   }
 
+  .mf-auth-notice-reveal {
+    animation: mf-auth-notice-reveal var(--forge-motion-duration-micro-slow, 160ms) var(--forge-motion-ease-enter, cubic-bezier(.16,1,.3,1)) both;
+  }
+
   .mf-auth-node {
     animation: mf-auth-node-float 5.6s var(--forge-motion-ease-standard, cubic-bezier(.2,.8,.2,1)) infinite alternate;
   }
@@ -112,6 +116,11 @@ const AUTH_STYLES = `
     to { opacity: 1; transform: translateY(0); }
   }
 
+  @keyframes mf-auth-notice-reveal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   @keyframes mf-auth-grid-drift {
     from { background-position: 0 0, 0 0; }
     to { background-position: 42px 42px, 42px 42px; }
@@ -142,6 +151,10 @@ const AUTH_STYLES = `
     .mf-auth-progress {
       animation: none !important;
       transform: none !important;
+    }
+
+    .mf-auth-notice-reveal {
+      animation: none !important;
     }
 
     .mf-auth-primary-button,
@@ -240,7 +253,7 @@ export function AuthNotice({ kind }: { kind: AuthNoticeKind }) {
   const expired = kind === "session-expired";
   return (
     <div
-      className="mf-auth-error-reveal fixed left-1/2 top-[max(1rem,env(safe-area-inset-top))] z-[120] w-[min(92vw,34rem)] -translate-x-1/2 rounded-lg border px-4 py-3 shadow-xl backdrop-blur-xl"
+      className="mf-auth-notice-reveal fixed left-1/2 top-[max(1rem,env(safe-area-inset-top))] z-[120] w-[min(92vw,34rem)] -translate-x-1/2 rounded-lg border px-4 py-3 shadow-xl backdrop-blur-xl"
       style={{
         background: expired ? "color-mix(in srgb, #7f1d1d 86%, transparent)" : "color-mix(in srgb, #111317 90%, transparent)",
         borderColor: expired ? "color-mix(in srgb, #fca5a5 26%, transparent)" : "color-mix(in srgb, white 13%, transparent)",
