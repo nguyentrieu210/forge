@@ -1,10 +1,11 @@
 # AGENT 02 — MANUFACTURING CLOSURE
 
-Status: IMPLEMENTED — CRITICAL VALIDATION PENDING
+Status: PR READY — MERGE/DEPLOY APPROVAL REQUIRED
 Branch: `rc/transaction-closure-02-manufacturing`
 Program baseline: `rc/transaction-closure-00-control@641a909ee27dad8ff9766dacaeecd82ec0da8911`
-Exact current-main sync: `main@bbf79b541ede38222544774ec8b5393f8e1bb1fe` via internal worker sync PR `#494`
+Exact current-main sync: `main@fe0c2f1a9c490eb400e19a5d55baea9a4b60c307` via worker-only sync PR `#509`
 Risk: CRITICAL
+PR: `#501`
 
 ## Mission
 
@@ -68,7 +69,7 @@ PR-ready autonomously. Non-UI merge/deploy requires explicit user approval.
 
 ## 1. Exact-state and historical audit
 
-Worker branch was first converged to exact current `main@bbf79b541ede38222544774ec8b5393f8e1bb1fe` using PR `#494` with `main` as the PR head and this worker branch as the base. That operation changed the worker branch only; it did not mutate `main` or production.
+Worker branch was initially converged to `main@bbf79b541ede38222544774ec8b5393f8e1bb1fe` using worker-only sync PR `#494`, then re-synced to exact current `main@fe0c2f1a9c490eb400e19a5d55baea9a4b60c307` using worker-only sync PR `#509` after V3-02 shell landed. Both operations used `main` as the PR head and this worker branch as the base; neither mutated `main` or production.
 
 Historical manufacturing work was classified before implementation:
 
@@ -157,6 +158,21 @@ A separate backdate scenario proves:
 
 Actual repost/revaluation remains Agent 03 authority.
 
+### 2.3 MRP runtime hardening
+
+Audit exposed a pre-existing mismatch between the optional on-hand MRP preview and runtime wiring. Closure-02 now:
+
+- exports the canonical `manufacturing-mrp-netting` seam from the ERPNext package index;
+- treats the stock-balance reader as an optional dependency because gross-only MRP does not require it;
+- fails closed with an explicit platform error when `net_on_hand` is requested but the canonical stock-balance dependency is not wired;
+- preserves Material Request creation as **gross-only** so an on-hand preview cannot silently become ATP/reservation authority.
+
+No projected-availability or reservation contract was invented.
+
+### 2.4 Manufacturing package metadata correction
+
+`server/apps-src/manufacturing-qms/app.json` still declared legacy `client.brand = slate`, while the canonical app manifest no longer recognizes `slate`. Closure-02 changes the app to supported neutral `zinc`, with no domain, permission or business behavior change.
+
 ## 3. Existing evidence retained
 
 The closure regression composes with already-merged focused evidence instead of cloning it:
@@ -223,35 +239,50 @@ Raw material -> finished-good genealogy is already canonical at `WORK_ORDER_GROU
 - Stock authority change: **none**.
 - GL authority change: **none**.
 - Permission model widening: **none**.
-- API change: additive read-only cost evidence fields only.
+- API change: additive read-only cost evidence fields plus explicit fail-closed MRP dependency handling.
 
 Risk remains **CRITICAL** because the changed read model reconciles stock value / manufacturing cost evidence and the regression covers backdate/correction semantics.
 
-## 6. Validation gate
+## 6. CRITICAL validation evidence
 
-Required before PR is considered ready:
+Exact-code validation run:
 
-- server TypeScript build;
-- focused Manufacturing transaction-closure regression;
-- costing read/API regression;
-- existing lifecycle/genealogy/MRP regressions;
-- worker typecheck because the bounded API consumes the additive evidence contract;
-- no migration replay required because there is no schema/migration delta;
-- final exact diff audit must show no Stock/GL/shared-authority implementation change.
+- GitHub Actions run: `30842956339` (`Closure 02 Manufacturing Validation Temp`, run `#15`);
+- tested head: `d0eecd4c49b00bc0dc73bc5688afdf31a45715cd`;
+- exact-main baseline consumed by worker: `fe0c2f1a9c490eb400e19a5d55baea9a4b60c307`;
+- install locked dependencies: **PASS**;
+- server dist emit + changed-source classification: **PASS**;
+- Manufacturing regression matrix: **56/56 PASS**;
+- Manufacturing-QMS package check: **PASS**.
 
-Validation execution evidence is recorded only after an exact-head GitHub run succeeds. No PASS is inferred from source existence.
+Focused regression coverage includes BOM version/effective selection, immutable Work Order snapshot, split-line guards, exact retry/idempotency, partial/short/excess consumption, Material Transfer reversal, scrap/offcut value conservation, concurrent manufacture guard, recovery-aware costing, permission/tenant fail-closed reads, genealogy, multi-level MRP, optional on-hand netting behavior, output-UOM scaling, correction and backdated valuation audit.
+
+### Exact-main TypeScript baseline debt
+
+Full `server/tsconfig.json` still exits non-zero on exact current main due pre-existing repository debt outside this closure's authoritative delta. The validation job emits `dist`, records the baseline, and fails if Closure-02 changed authoritative files produce TypeScript errors. The exact tested Closure-02 files passed that changed-source classification.
+
+Observed baseline debt includes:
+
+- `manufacturing-bom-bulk-api.ts`: legacy `exactOptionalPropertyTypes` typing for `qty_basis`;
+- `manufacturing-mrp.ts`: legacy optional-property construction at recursive explosion call sites;
+- QMS controllers: existing optional-property typing debt;
+- unrelated App Registry, CRM/Selling, Quotation and Frappe-model typing debt.
+
+These are not represented as a successful full-server build. They remain repo baseline debt and must be converged by their owning workstreams rather than hidden behind a false global PASS.
+
+No migration replay is required because Closure-02 adds no schema or migration delta.
 
 ## 7. Maturity statement
 
 Do not promote all `M01..M04` to Hardened from this closure alone.
 
-Eligible after validation:
+Evidence supports:
 
-- BOM version / Work Order snapshot / guarded production/correction: retain RC-candidate evidence;
-- MRP/capacity/genealogy: retain their existing Wired/RC-by-path evidence;
+- BOM version / Work Order snapshot / guarded production/correction: RC-candidate path evidence;
+- MRP/capacity/genealogy: existing Wired/RC-by-path evidence strengthened by fail-closed netting behavior;
 - actual cost/variance: stronger **Wired read-only** reconciliation evidence;
-- rework, subcontract, posted operation cost and FG->customer remain explicit dependencies.
+- rework, subcontract, posted operation cost, canonical valuation repost completion and FG->customer remain explicit dependencies.
 
 ## 8. Merge/deploy state
 
-No merge to `main`, production deploy, migration, secret/DNS change or customer-data mutation is authorized by this worker. After CRITICAL validation this branch will stop at a PR for explicit non-UI merge approval.
+PR `#501` is open and mergeable. No merge to `main`, production deploy, migration, secret/DNS change or customer-data mutation has been performed. Closure-02 is a non-UI CRITICAL workstream and stops here for explicit merge/deploy approval after final temporary-workflow cleanup and exact diff audit.
