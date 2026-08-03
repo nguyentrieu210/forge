@@ -198,6 +198,9 @@ test("a revised Quotation carries its revision into the mapped Sales Order", asy
     document: quote,
     amendedFrom: "Q-REV-1",
   });
+  const revisedDraft = await store.getDocument("demo", "Quotation", "Q-REV-2");
+  assert.equal(revisedDraft.amended_from, "Q-REV-1", "kernel/store owns amendment lineage at create");
+
   await mutate(kernel, {
     commandId: "q-rev-2-submit",
     doctype: "Quotation",
@@ -209,7 +212,6 @@ test("a revised Quotation carries its revision into the mapped Sales Order", asy
 
   const revisedQuote = await store.getDocument("demo", "Quotation", "Q-REV-2");
   assert.equal(revisedQuote.data.revision_no, 2);
-  assert.equal(revisedQuote.amended_from, "Q-REV-1");
 
   await createAndSubmit(kernel, {
     doctype: "Sales Order",
