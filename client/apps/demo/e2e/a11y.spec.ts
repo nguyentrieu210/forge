@@ -1,5 +1,20 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+
+async function dismissAppearanceSetup(page: Page) {
+  const useTheme = page.getByRole("button", { name: "Dùng giao diện này", exact: true });
+  try {
+    await useTheme.waitFor({ state: "visible", timeout: 1_500 });
+    await useTheme.click();
+  } catch {
+    // Appearance onboarding only renders for a fresh browser profile.
+  }
+}
+
+async function gotoSurface(page: Page, route: string) {
+  await page.goto(route);
+  await dismissAppearanceSetup(page);
+}
 
 /**
  * E2E a11y (P5) — kiểm landmark/aria/keyboard cơ bản (không cần backend, mock mode).
@@ -7,14 +22,14 @@ import AxeBuilder from "@axe-core/playwright";
  */
 test.describe("a11y — bàn phím + nhãn truy cập", () => {
   test("landmark: có navigation + main", async ({ page }) => {
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     await expect(page.getByRole("navigation").first()).toBeVisible();
     await expect(page.getByRole("main")).toBeVisible();
   });
 
   for (const route of ["/view/list", "/view/form", "/view/kanban", "/view/calendar", "/view/dashboard"]) {
     test(`axe không có lỗi nghiêm trọng: ${route}`, async ({ page }) => {
-      await page.goto(route);
+      await gotoSurface(page, route);
       const results = await new AxeBuilder({ page }).analyze();
       const blocking = results.violations.filter((violation) => violation.impact === "critical" || violation.impact === "serious");
       const report = blocking.flatMap((violation) => violation.nodes.map((node) => ({ rule: violation.id, target: node.target.join(" "), html: node.html.slice(0, 180) })));
@@ -23,7 +38,7 @@ test.describe("a11y — bàn phím + nhãn truy cập", () => {
   }
 
   test("Awesomebar mở bằng Ctrl+K và đóng bằng Esc", async ({ page }) => {
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     await page.keyboard.press("Control+k");
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -34,14 +49,14 @@ test.describe("a11y — bàn phím + nhãn truy cập", () => {
   });
 
   test("Awesomebar mở bằng phím /", async ({ page }) => {
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     await page.keyboard.press("/");
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
   });
 
   test("nút biểu tượng có aria-label (không nút trống)", async ({ page }) => {
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     // các nút icon quan trọng ở topbar có nhãn
     await expect(page.getByRole("button", { name: "Thông báo" })).toBeVisible();
     if ((page.viewportSize()?.width ?? 1024) < 768) {
@@ -53,7 +68,7 @@ test.describe("a11y — bàn phím + nhãn truy cập", () => {
   });
 
   test("checkbox chọn tất cả có nhãn", async ({ page }) => {
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     if ((page.viewportSize()?.width ?? 1024) < 768) {
       const checkbox = page.locator(".mf-list-mobile [role='checkbox']").first();
       await expect(checkbox).toBeVisible();
@@ -62,7 +77,7 @@ test.describe("a11y — bàn phím + nhãn truy cập", () => {
   });
 
   test("bỏ qua menu và mở một dòng danh sách bằng bàn phím", async ({ page }) => {
-    await page.goto("/view/list");
+    await gotoSurface(page, "/view/list");
     await page.getByRole("link", { name: /Bỏ qua menu/ }).focus();
     await expect(page.getByRole("link", { name: /Bỏ qua menu/ })).toBeFocused();
     await page.keyboard.press("Enter");
