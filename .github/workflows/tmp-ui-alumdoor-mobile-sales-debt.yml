@@ -6,15 +6,12 @@ on:
       - ui/alumdoor-mobile-sales-debt-20260803
     paths:
       - ".github/workflows/tmp-ui-alumdoor-mobile-sales-debt.yml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/tmp-ui-alumdoor-mobile-sales-debt.yml"
 
 permissions:
   contents: write
   statuses: write
+  pull-requests: write
+  issues: write
 
 jobs:
   patch-build-clean:
@@ -41,6 +38,8 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Patch mobile shell and sales navigation
+        id: patch
+        continue-on-error: true
         shell: python
         run: |
           from pathlib import Path
@@ -79,10 +78,7 @@ jobs:
   return (
     <div className="space-y-4">
       <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#2e2e2e] via-[#3b302c] to-[#f45b24] p-5 text-white shadow-lg">
-        <div className="flex items-start justify-between gap-4">
-          <div><p className="text-sm text-white/80">Xin chào {firstName}</p><h1 className="mt-1 text-2xl font-bold tracking-tight">Công việc sale hôm nay</h1></div>
-          <ForgeBrandLogo size={44} className="rounded-md bg-white p-1" />
-        </div>
+        <div className="flex items-start justify-between gap-4"><div><p className="text-sm text-white/80">Xin chào {firstName}</p><h1 className="mt-1 text-2xl font-bold tracking-tight">Công việc sale hôm nay</h1></div><ForgeBrandLogo size={44} className="rounded-md bg-white p-1" /></div>
         <div className="mt-5 flex items-center gap-2 rounded-2xl bg-white/12 px-3 py-2 text-xs backdrop-blur">{pending ? <WifiOff className="size-4" /> : <CheckCircle2 className="size-4" />}<span>{pending ? `${pending} thao tác cũ đang chờ gửi` : "Dữ liệu đã đồng bộ"}</span></div>
       </section>
       <section className="space-y-2">
@@ -117,12 +113,43 @@ jobs:
           replace_once(main, 'Alumdoor Kho tập trung nghiệp vụ hiện trường trên điện thoại. Báo cáo và cấu hình đầy đủ tiếp tục dùng bản desktop.', 'Alumdoor Sale tập trung tra cứu và nghiệp vụ bán hàng trên điện thoại. Cấu hình quản trị đầy đủ tiếp tục dùng bản desktop.')
           replace_once(main, 'brand="Alumdoor Kho" title="Đăng nhập app kho Alumdoor" subtitle="Dùng tài khoản nội bộ đã được Alumdoor cấp quyền."', 'brand="Alumdoor Sale" title="Đăng nhập Alumdoor Sale" subtitle="Dùng tài khoản nội bộ đã được Alumdoor cấp quyền."')
 
-      - name: Build runtime and mobile PWA
+      - name: Report patch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          pnpm --filter runtime... run build
-          pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json
-          pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts
+          state=${{ steps.patch.outcome }}
+          [ "$state" = success ] && api_state=success || api_state=failure
+          payload=$(jq -nc --arg state "$api_state" --arg context "ui-mobile-sales/patch" --arg description "patch stage: $state" '{state:$state,context:$context,description:$description}')
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload" >/dev/null
+          [ "$state" = success ]
+
+      - name: Build runtime and mobile PWA
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          { pnpm --filter runtime... run build && pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json && pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts; } 2>&1 | tee "$RUNNER_TEMP/mobile-build.log"
+
+      - name: Report build
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=${{ steps.build.outcome }}
+          [ "$state" = success ] && api_state=success || api_state=failure
+          payload=$(jq -nc --arg state "$api_state" --arg context "ui-mobile-sales/build" --arg description "runtime + mobile build: $state" '{state:$state,context:$context,description:$description}')
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -d "$payload" >/dev/null
+          if [ "$state" != success ]; then
+            tail -n 120 "$RUNNER_TEMP/mobile-build.log" > "$RUNNER_TEMP/tail.log"
+            body=$(python - <<'PY'
+          from pathlib import Path
+          print('Mobile sales build failed:\n```text\n' + Path('${RUNNER_TEMP}/tail.log').read_text()[-12000:] + '\n```')
+          PY
+            )
+            gh pr comment 422 --repo "$GITHUB_REPOSITORY" --body "$body" || true
+            exit 1
+          fi
 
       - name: Commit clean client-only diff
         run: |
@@ -141,4 +168,4 @@ jobs:
           set -euo pipefail
           sha=$(git rev-parse HEAD)
           payload=$(jq -nc --arg state success --arg context "ui-alumdoor-mobile-sales-debt" --arg description "runtime + mobile build passed; client-only sales/debt slice" '{state:$state,context:$context,description:$description}')
-          curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${sha}" -d "$payload" >/dev/null
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${sha}" -d "$payload" >/dev/null
