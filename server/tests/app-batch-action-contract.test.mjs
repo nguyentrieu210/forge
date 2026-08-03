@@ -106,6 +106,7 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
     batch_id: "batch-20260804-01",
     idempotency_key: "tenant-request-42",
     payload: {
+      note: "scope-a",
       lines: [
         { row_id: "row-1", amount: 10, note: "a" },
         { note: "b", amount: 20, row_id: "row-2" },
@@ -113,6 +114,7 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
     },
   };
   const invocation = normalizeBatchActionInvocation(request, contract, "commit");
+  assert.deepEqual(invocation.shared_inputs, { note: "scope-a" });
   assert.deepEqual(invocation.items.map((item) => item.operation_id), [
     "batch-20260804-01:row-1",
     "batch-20260804-01:row-2",
@@ -126,10 +128,21 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
         { note: "a", amount: 10, row_id: "row-1" },
         { row_id: "row-2", amount: 20, note: "b" },
       ],
+      note: "scope-a",
     },
   }, contract, "commit");
   const requestMaterial = canonicalBatchRequestMaterial(invocation);
   assert.equal(requestMaterial, canonicalBatchRequestMaterial(sameMeaning));
+
+  const changedSharedInput = normalizeBatchActionInvocation({
+    ...request,
+    payload: { ...request.payload, note: "scope-b" },
+  }, contract, "commit");
+  assert.notEqual(
+    requestMaterial,
+    canonicalBatchRequestMaterial(changedSharedInput),
+    "shared scalar inputs must participate in replay-conflict identity",
+  );
 
   const plan = toBatchExecutorPlan(invocation, "sha256:request-1");
   assert.deepEqual(plan, {
@@ -139,8 +152,8 @@ test("commit invocation requires stable tenant-scoped replay key and determinist
     atomicity: "independent",
     idempotencyKey: "tenant-request-42",
     items: [
-      { id: "row-1", value: { row_id: "row-1", amount: 10, note: "a" } },
-      { id: "row-2", value: { note: "b", amount: 20, row_id: "row-2" } },
+      { id: "row-1", value: { shared_inputs: { note: "scope-a" }, item: { row_id: "row-1", amount: 10, note: "a" } } },
+      { id: "row-2", value: { shared_inputs: { note: "scope-a" }, item: { note: "b", amount: 20, row_id: "row-2" } } },
     ],
   });
 
