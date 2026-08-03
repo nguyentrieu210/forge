@@ -38,6 +38,25 @@ test("picking exposes shortage and serial candidate must equal one unit", () => 
   assert.throws(() => planPicking(Q, [{ warehouse: "A", serial_no: "S1", sequence: 1, available_qty_micros: 2 * Q }]), /exactly one unit/);
 });
 
+test("serial picking is atomic and cannot mix tracked identity modes", () => {
+  assert.throws(
+    () => planPicking(Q / 2, [{ warehouse: "A", serial_no: "S1", sequence: 1, available_qty_micros: Q }]),
+    /whole number of stock units/,
+  );
+  assert.throws(
+    () => planPicking(Q, [
+      { warehouse: "A", serial_no: "S1", sequence: 1, available_qty_micros: Q },
+      { warehouse: "A", batch_no: "B1", sequence: 2, available_qty_micros: Q },
+    ]),
+    /cannot mix serial and non-serial candidate identities/,
+  );
+  const plan = planPicking(2 * Q, [
+    { warehouse: "A", serial_no: "S2", sequence: 2, available_qty_micros: Q },
+    { warehouse: "A", serial_no: "S1", sequence: 1, available_qty_micros: Q },
+  ]);
+  assert.deepEqual(plan.allocations.map((x) => [x.serial_no, x.qty_micros]), [["S1", Q], ["S2", Q]]);
+});
+
 test("inventory position subtracts reservations without moving physical stock", () => {
   assert.deepEqual(inventoryPosition({ on_hand_qty_micros: 100 * Q, inbound_qty_micros: 20 * Q, outbound_qty_micros: 15 * Q, reserved_qty_micros: 30 * Q }), {
     on_hand_qty_micros: 100 * Q, inbound_qty_micros: 20 * Q, outbound_qty_micros: 15 * Q, reserved_qty_micros: 30 * Q, projected_qty_micros: 75 * Q,
