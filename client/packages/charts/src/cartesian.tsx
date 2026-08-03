@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { EChartsOption } from "echarts/core";
+import type { EChartsCoreOption } from "echarts/core";
 import { ForgeChartSurface, type ForgeOptionBuilder } from "./ChartSurface.js";
 import { chartHasData } from "./model.js";
 import { compactMetric } from "./theme.js";
@@ -81,7 +81,7 @@ function cartesianOption(kind: "line" | "area" | "bar" | "stacked-bar", props: F
         };
       }),
     };
-    return option as EChartsOption;
+    return option as EChartsCoreOption;
   };
 }
 
