@@ -1,0 +1,170 @@
+name: Transaction Closure Integrated Validation Temp
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - "docs/agents/transaction-closure/**"
+      - ".github/workflows/transaction-closure-validation-temp.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: transaction-closure-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  closure-critical:
+    if: github.head_ref == 'rc/transaction-closure-07-convergence'
+    name: Transaction Closure CRITICAL gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit server dist and reject Transaction Closure TypeScript regressions
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir server exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/transaction-closure-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "full_server_tsc_status=${status}"
+
+          if grep -E 'packages/clouderp-selling/src/(sales-order-closure-controller|index|registry|types)\.ts|packages/clouderp-erpnext/src/(manufacturing-costing-read|index)\.ts|apps/tenant-worker/src/manufacturing-mrp-api\.ts|packages/clouderp-stock/src/wms-picking\.ts|apps/query-worker/src/index\.ts|packages/policy/src/index\.ts|packages/query/src/(finance-closure|finance-report-compiler|finance-stock-control)\.ts|packages/clouderp-core/src/(procurement-landed-cost|procurement-p2p-controllers|procurement-p2p-rollout-controllers|registry|index)\.ts|apps-src/ws07-worker/src/entry\.ts' /tmp/transaction-closure-tsc.log; then
+            echo "Transaction Closure changed authoritative source has TypeScript errors"
+            exit 1
+          fi
+
+          test -f server/dist/packages/clouderp-selling/src/sales-order-closure-controller.js
+          test -f server/dist/packages/clouderp-erpnext/src/manufacturing-costing-read.js
+          test -f server/dist/apps/tenant-worker/src/manufacturing-mrp-api.js
+          test -f server/dist/packages/clouderp-stock/src/wms-picking.js
+          test -f server/dist/packages/query/src/finance-closure.js
+          test -f server/dist/packages/query/src/finance-stock-control.js
+          test -f server/dist/packages/clouderp-core/src/procurement-p2p-controllers.js
+          test -f server/dist/apps-src/ws07-worker/src/entry.js
+
+      - name: Sales O2C closure regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/transaction-closure-sales-o2c.test.mjs
+          tests/o2c.test.mjs
+          tests/amend-chain.test.mjs
+          tests/finance-ar-rc021.test.mjs
+          tests/finance-ar-migration-rc021.test.mjs
+
+      - name: Manufacturing closure regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/manufacturing-transaction-closure.test.mjs
+          tests/manufacturing-costing-read.test.mjs
+          tests/manufacturing-costing-api.test.mjs
+          tests/alumdoor-manufacturing-lifecycle.test.mjs
+          tests/manufacturing-issue-line-key.test.mjs
+          tests/manufacturing-output-uom.test.mjs
+          tests/manufacturing-genealogy.test.mjs
+          tests/manufacturing-genealogy-api.test.mjs
+          tests/manufacturing-mrp.test.mjs
+          tests/manufacturing-mrp-api.test.mjs
+          tests/manufacturing-mrp-netting.test.mjs
+          tests/manufacturing-mrp-netting-api.test.mjs
+
+      - name: Inventory WMS and valuation regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/inventory-planning.test.mjs
+          tests/stock-reservation-integrity.test.mjs
+          tests/stock-reconciliation-integrity.test.mjs
+          tests/repost-item-valuation-integrity.test.mjs
+          tests/valuation-audit.test.mjs
+
+      - name: Finance Daily Ledger and cross-ledger regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/finance-closure-query.test.mjs
+          tests/finance-closure-policy.test.mjs
+          tests/finance-stock-control-query.test.mjs
+          tests/finance-stock-control-policy.test.mjs
+          tests/finance-report-compiler.test.mjs
+          tests/finance-aging-query.test.mjs
+          tests/finance-aging-policy.test.mjs
+          tests/finance-ap-reconciliation-query.test.mjs
+          tests/finance-ap-reconciliation-policy.test.mjs
+
+      - name: Finance SQL, period, AP and bank-control regressions
+        working-directory: server
+        run: |
+          python3 scripts/verify-sql.py
+          python3 scripts/test-rc020-finance-period-posting.py
+          python3 scripts/test-finance-ap-reconciliation.py
+          python3 scripts/test-finance-payment-allocation-migration.py
+          python3 scripts/test-rc023-cash-bank.py
+
+      - name: Procurement P2P closure regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/procurement-decisions.test.mjs
+          tests/procurement-app-source.test.mjs
+          tests/procurement-p2p-closure.test.mjs
+          tests/procurement-p2p-correction-boundary.test.mjs
+          tests/procurement-landed-cost.test.mjs
+          tests/erp-core.test.mjs
+          tests/erpnext-core.test.mjs
+
+      - name: Warranty and service closure regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/maintenance-field-service.test.mjs
+          tests/transaction-closure-warranty-service.test.mjs
+          tests/transaction-closure-warranty-linkage.test.mjs
+          tests/ws07-scope-validator.test.mjs
+
+      - name: Domain metadata package gates
+        run: |
+          node server/scripts/pack-app.mjs server/apps-src/manufacturing-qms --check
+          node server/scripts/pack-app.mjs server/apps-src/procurement --check
+          node server/scripts/pack-app.mjs server/apps-src/maintenance --check
+
+      - name: Integrated authority diff audit
+        shell: bash
+        run: |
+          git fetch origin main --depth=1
+          git diff --name-only origin/main...HEAD | tee /tmp/transaction-closure-files.txt
+
+          if grep -E '^server/migrations/' /tmp/transaction-closure-files.txt; then
+            echo "Unexpected migration in Transaction Closure convergence"
+            exit 1
+          fi
+
+          if grep -E '^client/' /tmp/transaction-closure-files.txt; then
+            echo "Unexpected client/UI delta in backend Transaction Closure convergence"
+            exit 1
+          fi
