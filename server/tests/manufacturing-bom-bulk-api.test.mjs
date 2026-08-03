@@ -128,6 +128,34 @@ test("bulk BOM conflicting payload on the same readable company/item/revision fa
   assert.equal(ctx.createCalls.length, 0);
 });
 
+test("bulk BOM refuses ambiguous duplicate revision records before any canonical write", async () => {
+  const first = existingDraft({ name: "BOM-0002-A" });
+  const second = existingDraft({ name: "BOM-0002-B" });
+  const ctx = context({ revisions: [first, second] });
+  await assert.rejects(
+    () => routeManufacturingBomBulkApi(request(CREATE), new URL(CREATE), ctx.value),
+    /Multiple BOM documents already use FG-100 revision 2/,
+  );
+  assert.equal(ctx.lookupCalls.length, 1);
+  assert.equal(ctx.createCalls.length, 0);
+});
+
+test("bulk BOM never overwrites an Active revision even when its business payload matches", async () => {
+  const active = existingDraft({
+    name: "BOM-ACTIVE-0002",
+    docstatus: 1,
+    status: "Submitted",
+    bom_status: "Active",
+  });
+  const ctx = context({ revisions: [active] });
+  await assert.rejects(
+    () => routeManufacturingBomBulkApi(request(CREATE), new URL(CREATE), ctx.value),
+    /already exists with a different payload or lifecycle state/,
+  );
+  assert.equal(ctx.lookupCalls.length, 1);
+  assert.equal(ctx.createCalls.length, 0);
+});
+
 test("bulk BOM create delegates only a Draft canonical BOM and preserves the D1 bookmark", async () => {
   const ctx = context();
   const response = await routeManufacturingBomBulkApi(request(CREATE), new URL(CREATE), ctx.value);
