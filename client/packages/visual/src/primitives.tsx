@@ -31,7 +31,7 @@ export function EdgeFrame({ children, className = "" }: { children: ReactNode; c
 }
 
 export function GlowDivider({ className = "" }: { className?: string }) {
-  return <div className={`h-px w-full ${className}`} style={{ background: `linear-gradient(90deg, transparent, ${RED}, transparent)`, opacity: 0.48 }} aria-hidden="true" />;
+  return <div className={`h-px w-full bg-[linear-gradient(90deg,transparent,var(--forge-primary,#ef332d),transparent)] opacity-50 ${className}`} aria-hidden="true" />;
 }
 
 export function MetricNumber({ label, value, suffix, hint, accent = false }: { label?: string; value: string | number; suffix?: string; hint?: string; accent?: boolean }) {
@@ -72,7 +72,12 @@ export function RadarFrame({ rings = 4, spokes = 6, className = "" }: { rings?: 
 
 export function CommandCenterGrid({ children, fullscreen = false, className = "", style }: { children: ReactNode; fullscreen?: boolean; className?: string; style?: CSSProperties }) {
   const backgroundImage = "linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px), radial-gradient(circle at 50% 0%, rgba(239,51,45,.09), transparent 34%)";
-  return <div className={`${fullscreen ? "min-h-screen" : "min-h-[32rem] rounded-xl"} relative overflow-hidden bg-[#090909] text-white ${className}`} style={{ backgroundImage, backgroundSize: "28px 28px, 28px 28px, 100% 100%", ...style }}>{children}</div>;
+  const gridStyle = {
+    "--mf-command-grid-image": backgroundImage,
+    "--mf-command-grid-size": "28px 28px, 28px 28px, 100% 100%",
+    ...style,
+  } as CSSProperties;
+  return <div className={`${fullscreen ? "min-h-screen" : "min-h-[32rem] rounded-xl"} relative overflow-hidden bg-[#090909] [background-image:var(--mf-command-grid-image)] [background-size:var(--mf-command-grid-size)] text-white ${className}`} style={gridStyle}>{children}</div>;
 }
 
 export function AlertBeacon({ label, detail, active = false, severity = "warning" }: { label: string; detail?: string; active?: boolean; severity?: "info" | "warning" | "danger" }) {
