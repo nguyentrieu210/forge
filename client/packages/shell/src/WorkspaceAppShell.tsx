@@ -26,8 +26,8 @@ function normalizedGroup(label: string | undefined): string {
   return (label ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
 }
 
-function isCatalogAppWorkspace(item: NavItem): boolean {
-  return normalizedGroup(item.group).startsWith("ung dung · ");
+function isCatalogNavigation(item: NavItem): boolean {
+  return item.key === "__catalog" || normalizedGroup(item.group).startsWith("ung dung · ");
 }
 
 function indexHubKey(item: NavItem | undefined): string | undefined {
@@ -261,11 +261,10 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
  */
 export function AppShell(props: AppShellProps) {
   /**
-   * App catalog là launcher duy nhất cho các app đã cài. Runtime vẫn giữ các workspace
-   * chéo app để route trực tiếp hoạt động, nhưng shell không lặp chúng thành các dòng
-   * "Ứng dụng · ..." trong sidebar nữa.
+   * App catalog và workspace chéo app không thuộc sidebar nghiệp vụ. Runtime vẫn giữ các
+   * route đó để launcher/direct-link hoạt động, nhưng shell chỉ hiển thị nav của app hiện tại.
    */
-  const sidebarNav = useMemo(() => props.nav.filter((item) => !isCatalogAppWorkspace(item)), [props.nav]);
+  const sidebarNav = useMemo(() => props.nav.filter((item) => !isCatalogNavigation(item)), [props.nav]);
   const modules = useMemo(() => buildWorkspaceModules(sidebarNav), [sidebarNav]);
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
