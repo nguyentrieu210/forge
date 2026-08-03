@@ -1,5 +1,6 @@
 export * from "./types.js";
 export * from "./valuation.js";
+export * from "./valuation-audit.js";
 export * from "./tracking.js";
 export * from "./tracking-integrity.js";
 export * from "./warehouse-scope.js";

@@ -76,6 +76,112 @@ function makeContext(document, existing = baseData()) {
   };
 }
 
+function submittedContext({ actor, cancelReason = "", lockDate = null, tenantId = "tenant-a" } = {}) {
+  const submitted = baseData([
+    {
+      row_id: "ROW-IN",
+      item_code: "ITEM-IN",
+      batch_no: "B-IN",
+      serial_and_batch_bundle: "BUNDLE-IN",
+      book_qty: "10.000000",
+      book_qty_micros: 10_000_000,
+      book_stock_value_minor: 1_000,
+      counted_qty: "12.000000",
+      variance_qty: "2.000000",
+      variance_qty_micros: 2_000_000,
+      variance_reason: "Sai số đếm",
+    },
+    {
+      row_id: "ROW-OUT",
+      item_code: "ITEM-OUT",
+      batch_no: "B-OUT",
+      serial_and_batch_bundle: "BUNDLE-OUT",
+      book_qty: "10.000000",
+      book_qty_micros: 10_000_000,
+      book_stock_value_minor: 1_000,
+      counted_qty: "9.000000",
+      variance_qty: "-1.000000",
+      variance_qty_micros: -1_000_000,
+      variance_reason: "Sai số đếm",
+    },
+  ]);
+  submitted.recon_state = "Đã ghi sổ";
+  const requestedActor = actor ?? { user_id: "manager@example.test", roles: ["Chủ xưởng"] };
+  const originalStock = [
+    {
+      line_key: "RECON-ROW-IN",
+      item_code: "ITEM-IN",
+      warehouse: "KHO-1",
+      batch_no: "B-IN",
+      actual_qty_micros: 2_000_000,
+      valuation_rate_minor: 100,
+      stock_value_difference_minor: 200,
+      qty_scale: 6,
+      currency_scale: 0,
+      currency: "VND",
+      posting_at: SNAPSHOT,
+      allow_negative_stock: false,
+    },
+    {
+      line_key: "RECON-ROW-OUT",
+      item_code: "ITEM-OUT",
+      warehouse: "KHO-1",
+      batch_no: "B-OUT",
+      actual_qty_micros: -1_000_000,
+      valuation_rate_minor: 100,
+      stock_value_difference_minor: -100,
+      qty_scale: 6,
+      currency_scale: 0,
+      currency: "VND",
+      posting_at: SNAPSHOT,
+      allow_negative_stock: false,
+    },
+  ];
+  const calls = [];
+  return {
+    calls,
+    context: {
+      command: {
+        schema_version: 1,
+        command_id: "cmd-cancel",
+        tenant_id: tenantId,
+        actor: requestedActor,
+        aggregate: { doctype: "Stock Reconciliation", name: "RECON-1" },
+        action: "cancel",
+        expected_version: 2,
+        payload_hash: "b".repeat(64),
+        document: cancelReason ? { cancel_reason: cancelReason } : {},
+      },
+      existing: {
+        tenant_id: tenantId,
+        doctype: "Stock Reconciliation",
+        name: "RECON-1",
+        owner: "counter@example.test",
+        docstatus: 1,
+        status: "Đã ghi sổ",
+        version: 2,
+        created_at: SNAPSHOT,
+        modified_at: NOW,
+        data: submitted,
+        children: [],
+      },
+      nextVersion: 3,
+      now: NOW,
+      reader: {
+        async getVoucherStockEntries(...args) {
+          calls.push(args);
+          return structuredClone(originalStock);
+        },
+        async getPeriodLockDate(readTenant, company) {
+          assert.equal(readTenant, tenantId);
+          assert.equal(company, "ALU");
+          return lockDate;
+        },
+      },
+    },
+  };
+}
+
 test("reorder keeps frozen book values attached to item and batch identity", async () => {
   const controller = new StockReconciliationIntegrityController();
   const existing = baseData();
@@ -133,5 +239,77 @@ test("new physical rows must stay inside the frozen item-group scope", async () 
   await assert.rejects(
     () => controller.normalize(makeContext(document, existing)),
     /nằm ngoài nhóm hàng Nhôm/,
+  );
+});
+
+test("positive, negative and zero variance produce only authoritative stock-ledger deltas", async () => {
+  const controller = new StockReconciliationIntegrityController();
+  const data = baseData([
+    { row_id: "PLUS", item_code: "PLUS", book_qty_micros: 10_000_000, book_stock_value_minor: 1_000, counted_qty: "12", variance_qty_micros: 2_000_000, variance_reason: "Sai số đếm" },
+    { row_id: "MINUS", item_code: "MINUS", book_qty_micros: 20_000_000, book_stock_value_minor: 4_000, counted_qty: "15", variance_qty_micros: -5_000_000, variance_reason: "Sai số đếm" },
+    { row_id: "ZERO", item_code: "ZERO", book_qty_micros: 7_000_000, book_stock_value_minor: 700, counted_qty: "7", variance_qty_micros: 0 },
+  ]);
+  const ctx = makeContext(data, data);
+  ctx.command.action = "submit";
+  ctx.command.actor = { user_id: "manager@example.test", roles: ["Chủ xưởng"] };
+  ctx.reader.getMasterRecordData = async (_tenantId, type, name) => {
+    if (type === "Item") return { item_code: name, has_batch_no: false, has_serial_no: false };
+    return null;
+  };
+  const ledgers = await controller.ledger(ctx, data);
+  assert.deepEqual(
+    ledgers.stock.map((line) => [line.line_key, line.actual_qty_micros, line.stock_value_difference_minor]),
+    [
+      ["RECON-PLUS", 2_000_000, 200],
+      ["RECON-MINUS", -5_000_000, -1_000],
+    ],
+  );
+  assert.equal(ledgers.bundleUsages.length, 0);
+});
+
+test("standard cancel reverses exact submitted revision append-only and releases bundle usage", async () => {
+  const controller = new StockReconciliationIntegrityController();
+  const { context, calls } = submittedContext();
+  const plan = await controller.buildPlan(context);
+  assert.equal(plan.document.docstatus, 2);
+  assert.equal(plan.document.status, "Đã đảo kiểm kê");
+  assert.equal(plan.document.data.cancel_reason, undefined);
+  assert.deepEqual(calls, [["tenant-a", "Stock Reconciliation", "RECON-1", 2]]);
+  assert.deepEqual(
+    plan.stock_entries.map((line) => [line.line_key, line.actual_qty_micros, line.stock_value_difference_minor]),
+    [
+      ["REV-RECON-ROW-IN", -2_000_000, -200],
+      ["REV-RECON-ROW-OUT", 1_000_000, 100],
+    ],
+  );
+  assert.deepEqual(
+    plan.stock_bundle_usages.map((line) => [line.bundle_name, line.direction, line.usage_delta]),
+    [
+      ["BUNDLE-IN", "Inward", -1],
+      ["BUNDLE-OUT", "Outward", -1],
+    ],
+  );
+});
+
+test("optional cancellation reason is retained in audit document", async () => {
+  const controller = new StockReconciliationIntegrityController();
+  const { context } = submittedContext({ cancelReason: "Đếm nhầm lô" });
+  const plan = await controller.buildPlan(context);
+  assert.equal(plan.document.data.cancel_reason, "Đếm nhầm lô");
+});
+
+test("reconciliation reversal requires authority, separation of duties and open period", async () => {
+  const controller = new StockReconciliationIntegrityController();
+  await assert.rejects(
+    () => controller.buildPlan(submittedContext({ actor: { user_id: "keeper@example.test", roles: ["Thủ kho"] } }).context),
+    /Chỉ Chủ xưởng được đảo/,
+  );
+  await assert.rejects(
+    () => controller.buildPlan(submittedContext({ actor: { user_id: "counter@example.test", roles: ["Chủ xưởng"] } }).context),
+    /Người đếm không được tự đảo/,
+  );
+  await assert.rejects(
+    () => controller.buildPlan(submittedContext({ lockDate: "2026-08-03" }).context),
+    /thuộc kỳ đã khoá/,
   );
 });
