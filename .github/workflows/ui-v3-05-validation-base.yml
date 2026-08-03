@@ -17,7 +17,7 @@ jobs:
   validate:
     if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'ui/v3-05-charts-command-center-delivery'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     env:
       DELIVERY_HEAD: ${{ github.event.pull_request.head.sha }}
       DELIVERY_BRANCH: ${{ github.event.pull_request.head.ref }}
@@ -48,6 +48,16 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
+
+      - name: Prove exact main production-build baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline="$RUNNER_TEMP/ui-v3-05-main-baseline"
+          git worktree add --detach "$baseline" "$DELIVERY_BASE_MAIN"
+          pnpm --dir "$baseline" install --frozen-lockfile --prefer-offline
+          pnpm --dir "$baseline" --filter runtime... run build
+          git worktree remove --force "$baseline"
 
       - name: Generate root workspace lockfile
         run: pnpm install --no-frozen-lockfile
@@ -160,6 +170,7 @@ jobs:
 
           Passed on the exact delivery source head after deterministic lock generation:
 
+          - exact main baseline production dependency-graph build;
           - root workspace dependency resolution;
           - nested client workspace dependency resolution;
           - root frozen-lock install replay;
