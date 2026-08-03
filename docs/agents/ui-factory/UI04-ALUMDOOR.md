@@ -1,7 +1,7 @@
 # UI04 — ALUMDOOR
 
 Date: 2026-08-03
-Status: **CLAIMED**
+Status: **ACTIVE**
 Owner: **GPT-5.6 Thinking / UI04**
 Started from: `main@a9e3cde352dbe78c93b28097094c45fc5baad845`
 Branch: `agent/ui-04-alumdoor`
@@ -152,3 +152,11 @@ Target maturity: reference specification `RC` quality; runtime capability remain
 4. Map the specimen to business-neutral Matrix concepts without inventing canonical UI01 field names.
 5. Add parity/removal-gate acceptance and fixture selfcheck.
 6. Record cross-stream Dependency Requests, then final verification/handoff.
+
+## Exact-state audit snapshot
+
+- Branch was resynced to exact `main@a9e3cde352dbe78c93b28097094c45fc5baad845` before implementation.
+- The two main commits after the original UI Factory baseline add Alumdoor Employee Lite workflow/docs/script only; they do not modify the Item Price Matrix source, BulkGrid routing or `alumdoor-v2.views.json`.
+- Exact current special case remains in `BulkGridContainer.tsx`: `props.doctype === "Item Price"` routes to `ItemPriceMatrixPanel`.
+- Current matrix still performs compound Item/UOM/Item Price writes in React. That is reference behavior/debt, not the target authority boundary.
+- Existing screen has save spinner/toasts and OCC tokens on individual document writes, but no dedicated dirty indicator, unload guard, keyboard matrix navigation or atomic compound commit. These gaps must not be falsely promoted as parity requirements.
