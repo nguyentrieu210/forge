@@ -1,0 +1,92 @@
+name: UI V3-08 Final Integrated Gate
+
+on:
+  push:
+    branches:
+      - ui/v3-08-release-final-20260804
+    paths:
+      - "client/**"
+      - "docs/agents/ui-v3/**"
+      - ".github/workflows/ui-v3-08-final-validation-temp.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-v3-08-final-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrated-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm 9.15
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+          pnpm --version
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Shell typecheck and build
+        run: |
+          pnpm --filter @metaforge/shell run typecheck
+          pnpm --filter @metaforge/shell run build
+          node client/scripts/check-app-shell-mobile.mjs
+
+      - name: Builder typecheck tests and build
+        run: |
+          pnpm --filter @metaforge/builder run typecheck
+          pnpm --filter @metaforge/builder run test
+          pnpm --filter @metaforge/builder run build
+
+      - name: Charts visual and views gates
+        run: |
+          pnpm --filter @metaforge/charts run test
+          pnpm --filter @metaforge/visual run typecheck
+          pnpm --filter @metaforge/views run typecheck
+          node --test client/packages/views/tests/data-surface-v3.test.mjs
+
+      - name: Frontend structural lint and full typecheck
+        run: |
+          pnpm --dir client run lint
+          pnpm run client:typecheck
+
+      - name: Build runtime and demo dependency graphs
+        run: |
+          pnpm --filter runtime... run build
+          pnpm --filter @metaforge/demo... run build
+
+      - name: Install Chromium
+        run: pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
+
+      - name: Run V3 cross-device demo matrix
+        run: pnpm --filter @metaforge/demo run e2e:v3:qa
+
+      - name: Run Forge and Alumdoor runtime mobile matrix
+        run: pnpm --filter e2e-forge exec playwright test --config playwright.v3-mobile-qa.config.ts
+
+      - name: Upload V3-08 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-v3-08-final-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            client/apps/demo/playwright-report/v3-mobile-qa/**
+            client/apps/demo/test-results/**
+            client/e2e-forge/playwright-report/v3-mobile-qa/**
+            client/e2e-forge/test-results/v3-mobile-qa/**
