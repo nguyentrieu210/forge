@@ -2,7 +2,7 @@
 
 Date: 2026-08-03
 Original baseline: `main@55e105e7a03f6bffc70a5ddb0e52d125e5b8d270`
-Current convergence target: `main@faec4cbe4f9c62ac565ad14dd6bb807851d65090`
+Current convergence target: `main@a97c7c48e792aaf5b6af98225270dd54d64389bc`
 Branch: `agent/ui-01-meta`
 PR: `#387` — `feat(ui01): canonical Matrix metadata contract`
 Role: canonical UI Grammar + Matrix metadata contract
@@ -168,7 +168,8 @@ Wave A is complete when:
 - Added `toFrappeDocType` transport assertion to prove Matrix metadata is not dropped.
 - `node --check` passed for the two new compiler modules during branch audit.
 - GitHub exposed no PR workflow/status checks for the feature head during implementation, so full repository build/unit execution is **not claimed**. The tests are committed as evidence but await the repository's normal validation environment.
-- Latest `main@faec4cbe...` was audited: its new Alumdoor purchase-funding/internal-cash commit does not overlap UI01-owned core/parser/compiler files.
+- `main@faec4cbe...` purchase-funding/internal-cash changes were audited with no UI01-owned core/parser/compiler overlap.
+- `main@a97c7c48...` adds only the temporary Alumdoor purchase-funding deploy workflow; it was audited and merged into this branch with no UI01 overlap.
 
 ### Maturity
 
