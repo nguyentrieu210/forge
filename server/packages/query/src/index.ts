@@ -32,6 +32,9 @@ export interface ReportDefinition {
 }
 export interface CompiledQuery { sql: string; params: unknown[]; columns: ReportColumn[]; prepared: boolean }
 
+const companyColumn: ReportColumn = { field: "company", label: "Company", type: "Link", options: "Company" };
+const branchColumn: ReportColumn = { field: "branch", label: "Branch", type: "Link", options: "Branch" };
+
 const DEFINITIONS: Record<string, ReportDefinition> = {
   "Accounts Receivable": {
     name: "Accounts Receivable",
@@ -66,20 +69,22 @@ const DEFINITIONS: Record<string, ReportDefinition> = {
   "General Ledger": {
     name: "General Ledger", source: "general_ledger_report", tenantField: "tenant_id",
     columns: [
+      companyColumn, branchColumn,
       { field: "posting_at", label: "Posting Date", type: "Date" }, { field: "voucher_type", label: "Voucher Type", type: "Data" },
       { field: "voucher_no", label: "Voucher", type: "Link" }, { field: "account", label: "Account", type: "Link" },
       { field: "party_type", label: "Party Type", type: "Data" }, { field: "party", label: "Party", type: "Link" },
       { field: "currency", label: "Currency", type: "Data" }, { field: "debit", label: "Debit", type: "Currency" },
       { field: "credit", label: "Credit", type: "Currency" }, { field: "cost_center", label: "Cost Center", type: "Link" },
     ],
-    allowedFilters: ["posting_at","voucher_type","voucher_no","account","party_type","party","currency","cost_center"],
-    defaultOrder: [{ field: "posting_at", direction: "asc" }, { field: "voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["company","branch","posting_at","voucher_type","voucher_no","account","party_type","party","currency","cost_center"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "posting_at", direction: "asc" }, { field: "voucher_no", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Trial Balance": {
     name: "Trial Balance", source: "trial_balance", tenantField: "tenant_id",
-    columns: [ { field: "account", label: "Account", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
+    columns: [ companyColumn, branchColumn, { field: "account", label: "Account", type: "Link" }, { field: "currency", label: "Currency", type: "Data" },
       { field: "debit", label: "Debit", type: "Currency" }, { field: "credit", label: "Credit", type: "Currency" }, { field: "balance", label: "Balance", type: "Currency" } ],
-    allowedFilters: ["account","currency","debit","credit","balance"], defaultOrder: [{ field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+    allowedFilters: ["company","branch","account","currency","debit","credit","balance"],
+    defaultOrder: [{ field: "company", direction: "asc" }, { field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
   },
   "Stock Ledger": {
     name: "Stock Ledger", source: "stock_ledger_report", tenantField: "tenant_id",
@@ -254,6 +259,19 @@ const DEFINITIONS: Record<string, ReportDefinition> = {
     ],
     allowedFilters: ["account","currency","net_cash_flow"],
     defaultOrder: [{ field: "account", direction: "asc" }], maxRows: 5000, preparedThreshold: 1000,
+  },
+  "Finance GL Integrity Exceptions": {
+    name: "Finance GL Integrity Exceptions", source: "finance_gl_integrity_exceptions", tenantField: "tenant_id",
+    columns: [
+      { field: "severity", label: "Severity", type: "Data" }, { field: "code", label: "Code", type: "Data" },
+      companyColumn, branchColumn,
+      { field: "voucher_type", label: "Voucher Type", type: "Data" }, { field: "voucher_no", label: "Voucher", type: "Link" },
+      { field: "voucher_revision", label: "Revision", type: "Int" }, { field: "details", label: "Details", type: "Data" },
+    ],
+    allowedFilters: ["severity","code","company","branch","voucher_type","voucher_no","voucher_revision"],
+    defaultOrder: [{ field: "severity", direction: "asc" }, { field: "company", direction: "asc" }, { field: "voucher_no", direction: "asc" }],
+    maxRows: 5000,
+    preparedThreshold: 1000,
   },
   "Stock Balance": {
     name: "Stock Balance",
