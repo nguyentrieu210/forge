@@ -79,10 +79,12 @@
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "@metaforge/adapter-frappe": "workspace:*",
+    "@metaforge/charts": "workspace:*",
     "@metaforge/controls": "workspace:*",
     "@metaforge/core": "workspace:*",
     "@metaforge/shell": "workspace:*",
     "@metaforge/ui": "workspace:*",
+    "@metaforge/visual": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.14.8",
@@ -90,7 +92,6 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^0.460.0",
     "react-hook-form": "^7.82.0",
-    "recharts": "^3.10.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.4.3"
   },
