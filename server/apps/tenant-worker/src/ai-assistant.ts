@@ -108,7 +108,7 @@ async function readReceiptImageInner(env: TenantEnv, tenantId: string, body: Jso
     "Tuyệt đối không bịa dòng không có trên ảnh.",
   ].join("\n");
 
-  const execution = await runForgeAi(env.AI, {
+  const execution = await runForgeAi(env.AI!, {
     tenantId,
     app: "tenant-worker",
     purpose: "receipt_ocr",
@@ -171,7 +171,7 @@ async function askAssistantInner(
   const context = JSON.stringify(body.context ?? {}).slice(0, 12_000);
   const tenantId = audit?.tenantId ?? env.TENANT_ID ?? "";
 
-  const execution = await runForgeAi(env.AI, {
+  const execution = await runForgeAi(env.AI!, {
     tenantId,
     ...(audit?.userId ? { userId: audit.userId } : {}),
     app: "tenant-worker",
