@@ -94,9 +94,35 @@ jobs:
       - name: Run client selfchecks
         run: pnpm --dir client run test
 
-      - name: Run repository native UI lint
-        id: native-lint
-        run: pnpm --dir client run lint
+      - name: Observe native UI baseline and gate V3-05 files
+        id: native-ui
+        shell: bash
+        run: |
+          set +e
+          (cd client && node scripts/check-native-ui.mjs) | tee "$RUNNER_TEMP/native-ui.log"
+          native_status=${PIPESTATUS[0]}
+          set -e
+          total="$(grep -Eo '→ [0-9]+ vi phạm' "$RUNNER_TEMP/native-ui.log" | tail -1 | grep -Eo '[0-9]+' || true)"
+          echo "baseline_status=${native_status}" >> "$GITHUB_OUTPUT"
+          echo "baseline_total=${total:-unknown}" >> "$GITHUB_OUTPUT"
+          if grep -E '^(packages/charts/|packages/visual/|packages/views/src/dashboard/(DashboardView|CommandCenterView)\.tsx|packages/views/src/overview/OverviewChartCard\.tsx)' "$RUNNER_TEMP/native-ui.log"; then
+            echo "V3-05 introduced native-UI violations."
+            exit 1
+          fi
+          echo "V3-05 native-UI scope is clean; repository baseline status=${native_status}, total=${total:-unknown}."
+
+      - name: Run remaining client structural lint gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd client
+          node scripts/check-hook-order.mjs
+          node scripts/check-app-shell-mobile.mjs
+          node scripts/check-pwa-installability.mjs
+          node scripts/check-child-grid-mobile.mjs
+          node scripts/check-pull-to-refresh.mjs
+          node scripts/check-matrix-domain-leaks.mjs
+          node --check ../server/scripts/stage-client-bundle.mjs
 
       - name: Build runtime dependency graph
         run: pnpm --filter runtime... run build
@@ -143,7 +169,8 @@ jobs:
           - \`@metaforge/views\` typecheck;
           - complete client workspace typecheck;
           - client selfchecks with the Forge chart-surface contract;
-          - repository native UI lint;
+          - V3-05 native-UI scope: zero violations;
+          - remaining client structural lint gates;
           - runtime dependency-graph production build;
           - dashboard visual evidence at 1440×1000, 768×1024 and 390×844;
           - light and dark dashboard evidence;
@@ -151,6 +178,8 @@ jobs:
           - repeated command-center resize without ECharts canvas multiplication;
           - reduced-motion media behavior;
           - WCAG A/AA serious-or-critical Axe scan for dashboard and command-center evidence surfaces.
+
+          Repository-wide native-UI baseline remains separate from this workstream: status \`${{ steps.native-ui.outputs.baseline_status }}\`, violations \`${{ steps.native-ui.outputs.baseline_total }}\`. The V3-05 gate explicitly fails if any violation is emitted from V3-05 chart, visual, dashboard or overview files.
 
           The Playwright evidence harness is isolated under \`client/apps/demo/v3-05.html\` and uses mock presentation data only. It does not create an authoritative production route or metadata contract.
 
