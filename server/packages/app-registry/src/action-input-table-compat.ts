@@ -155,7 +155,7 @@ export function decorateActionInputTables(actions: AppAction[]): AppActionWithIn
       const table = parseLegacyBulkTransactionField(field);
       if (!table) continue;
       tables.push(table);
-      const candidate = parseLegacyBatchActionField(field, table);
+      const candidate = parseLegacyBatchActionField(field, table, action.preview !== undefined);
       if (!candidate) continue;
       if (batch) throw errors.validation(`AppAction ${action.name} stores more than one batch contract`);
       batch = candidate;
