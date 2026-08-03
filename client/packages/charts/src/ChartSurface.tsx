@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { EChartsCoreOption, EChartsType } from "echarts/core";
+import { Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@metaforge/ui";
 import type { ForgeEChartsEngine } from "./engine.js";
 import { compactMetric, resolveForgeChartTokens } from "./theme.js";
 import type { ForgeChartBaseProps, ForgeChartInteraction, ForgeChartRenderer, ForgeChartSeries, ForgeChartTheme } from "./types.js";
@@ -155,12 +156,16 @@ export function ForgeChartSurface({
   const description = ariaLabel ?? title ?? "Biểu đồ dữ liệu";
 
   return (
-    <div className={`relative min-w-0 ${className}`} style={{ height }} aria-label={description}>
+    <div className={`relative min-w-0 ${className}`} style={{ height: `${height}px` }} aria-label={description}>
       {loading ? (
         <div className="h-full w-full animate-pulse rounded-md border bg-muted/35 motion-reduce:animate-none" aria-busy="true"><span className="sr-only">Đang tải biểu đồ</span></div>
       ) : error ? (
         <div className="grid h-full place-items-center rounded-md border border-dashed p-4 text-center" role="alert">
-          <div><div className="text-sm font-medium">Không tải được biểu đồ</div><div className="mt-1 text-xs text-muted-foreground">{error}</div>{onRetry ? <button type="button" onClick={onRetry} className="mt-3 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted">Thử lại</button> : null}</div>
+          <div>
+            <div className="text-sm font-medium">Không tải được biểu đồ</div>
+            <div className="mt-1 text-xs text-muted-foreground">{error}</div>
+            {onRetry ? <Button type="button" variant="outline" size="sm" onClick={onRetry} className="mt-3">Thử lại</Button> : null}
+          </div>
         </div>
       ) : !hasData ? (
         <div className="grid h-full place-items-center rounded-md border border-dashed px-4 text-sm text-muted-foreground">{emptyText}</div>
@@ -169,11 +174,21 @@ export function ForgeChartSurface({
           <EChartCanvas dataKey={dataKey} theme={theme} renderer={renderer} animation={animation} buildOption={buildOption} onActivate={onActivate} prepareEngine={prepareEngine} />
           {children}
           {labels.length && series.length ? (
-            <table className="sr-only">
-              <caption>{description}</caption>
-              <thead><tr><th>Mốc</th>{series.map((item) => <th key={item.name}>{item.name}</th>)}</tr></thead>
-              <tbody>{labels.map((label, index) => <tr key={`${label}-${index}`}><th>{label}</th>{series.map((item) => <td key={item.name}>{full(Number(item.values[index] ?? 0))}</td>)}</tr>)}</tbody>
-            </table>
+            <div className="sr-only">
+              <Table unwrapped aria-label={description}>
+                <TableHeader>
+                  <TableRow><TableHead scope="col">Mốc</TableHead>{series.map((item) => <TableHead scope="col" key={item.name}>{item.name}</TableHead>)}</TableRow>
+                </TableHeader>
+                <TableBody>
+                  {labels.map((label, index) => (
+                    <TableRow key={`${label}-${index}`}>
+                      <TableHead scope="row">{label}</TableHead>
+                      {series.map((item) => <TableCell key={item.name}>{full(Number(item.values[index] ?? 0))}</TableCell>)}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : null}
           {!labels.length && series.length ? <span className="sr-only">{series.map((item) => `${item.name}: ${compactMetric(Number(item.values.at(-1) ?? 0))}`).join(", ")}</span> : null}
         </>
