@@ -6,16 +6,9 @@
  * isolated temporary SQLite database, then fails closed on structural integrity,
  * foreign-key, or cross-tenant core-table violations.
  *
- * `doctype_definitions` is the one deliberate exception to single-tenant rows:
- * migrations keep two reserved provisioning catalog namespaces in every tenant DB.
- * `demo` is the legacy seed catalog and `__standard__` is the canonical standard
- * catalog copied from it. They are metadata only; runtime tenant reads are exact-
- * tenant scoped. Any other foreign tenant id still fails closed.
- *
- * Usage:
- *   node scripts/verify-tenant-backup.mjs --tenant alu --file backups/alu/alu-....sql
- *   node scripts/verify-tenant-backup.mjs --tenant alu --file ... --output /tmp/alu-backup-verify.json
- *   node scripts/verify-tenant-backup.mjs --tenant alu --file ... --allow-unmanifested
+ * `doctype_definitions` deliberately allows the reserved provisioning catalog
+ * namespaces declared by the shared backup tenant-scope policy. Any other foreign
+ * tenant id fails closed.
  */
 import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -25,11 +18,11 @@ import process from "node:process";
 import { performance } from "node:perf_hooks";
 import { rewriteOversizedInstalledAppRows } from "./lib/d1-backup-import.mjs";
 import {
+  RESERVED_METADATA_TENANTS,
+  allowedTenantIdsForBackupTable,
   assertRestoreVerification,
   inspectTenantBackup,
 } from "./lib/tenant-backup-verification.mjs";
-
-const RESERVED_METADATA_TENANTS = ["demo", "__standard__"];
 
 const args = process.argv.slice(2);
 const argOf = (name) => {
@@ -88,29 +81,25 @@ try {
     const columns = database.prepare(`PRAGMA table_info(${JSON.stringify(table)})`).all();
     if (!columns.some((column) => column.name === "tenant_id")) continue;
 
-    if (table === "doctype_definitions") {
-      const row = database
-        .prepare(`SELECT COUNT(*) AS total FROM "${table}"
-          WHERE tenant_id IS NULL
-             OR (tenant_id <> ? AND tenant_id NOT IN (?, ?))`)
-        .get(tenant, ...RESERVED_METADATA_TENANTS);
-      tenantScopeViolations[table] = Number(row?.total ?? 0);
+    const allowedTenantIds = allowedTenantIdsForBackupTable({ table, tenant });
+    const placeholders = allowedTenantIds.map(() => "?").join(", ");
+    const row = database
+      .prepare(`SELECT COUNT(*) AS total FROM "${table}"
+        WHERE tenant_id IS NULL OR tenant_id NOT IN (${placeholders})`)
+      .get(...allowedTenantIds);
+    tenantScopeViolations[table] = Number(row?.total ?? 0);
 
+    if (table === "doctype_definitions") {
+      const catalogPlaceholders = RESERVED_METADATA_TENANTS.map(() => "?").join(", ");
       const catalogRows = database
         .prepare(`SELECT tenant_id, COUNT(*) AS total FROM "${table}"
-          WHERE tenant_id IN (?, ?)
+          WHERE tenant_id IN (${catalogPlaceholders})
           GROUP BY tenant_id ORDER BY tenant_id`)
         .all(...RESERVED_METADATA_TENANTS);
       for (const catalog of catalogRows) {
         metadataCatalogRows[String(catalog.tenant_id)] = Number(catalog.total ?? 0);
       }
-      continue;
     }
-
-    const row = database
-      .prepare(`SELECT COUNT(*) AS total FROM "${table}" WHERE tenant_id IS NULL OR tenant_id <> ?`)
-      .get(tenant);
-    tenantScopeViolations[table] = Number(row?.total ?? 0);
   }
   const leaked = Object.entries(tenantScopeViolations).filter(([, count]) => count !== 0);
   if (leaked.length > 0) {
