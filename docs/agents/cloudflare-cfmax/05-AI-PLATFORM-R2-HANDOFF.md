@@ -89,7 +89,7 @@ Focused CF05 gate covers:
 - existing assistant success/empty-answer behavior;
 - selected model in business audit.
 
-The first focused run on the pre-replay head passed. After `main` advanced by one unrelated UI-only commit, R2 was force-replayed from exact `main@c10e8d9...`; the focused gate must pass again on the replayed head before this handoff can claim final executable evidence.
+After `main` advanced by one unrelated UI-only commit, R2 was force-replayed from exact `main@c10e8d9...`. Focused run `30849639508` on replayed code head `4a487bb63c266e5e47185958e8ae1dace2b88115` passed locked dependency install, focused TypeScript, focused build, and both AI regression suites. The documentation-only evidence commit after that run must retain the same code tree; its gate is the final PR-head confirmation.
 
 ## Vectorize / AI Search decision
 
@@ -143,4 +143,4 @@ Capabilities supported: `A02-004`, `A02-005`, `A02-025` foundation; OCR path inv
 AI call sites: 4 material surfaces inventoried; 2 tenant-worker paths migrated.  
 Cost evidence: dependency on CF03/CF08; no fabricated numbers.  
 Production evidence: none; no provider/config/deploy change.  
-Remaining gaps: replayed-head CI, Alumdoor consumer adapter, browser BYOK decision, plan/quota/cost integration.
+Remaining gaps: Alumdoor consumer adapter, browser BYOK decision, plan/quota/cost integration.
