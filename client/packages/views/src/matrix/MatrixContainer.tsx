@@ -12,7 +12,6 @@ import type {
   MatrixCell,
   MatrixMember,
   MatrixNavigatorNode,
-  MatrixSearchScope,
   MatrixViewModel,
 } from "./types.js";
 
@@ -229,15 +228,16 @@ export function MatrixContainer(props: MatrixContainerProps) {
     const key = matrixCellKey(rowId, columnId);
     const current = cells[key];
     if (current?.readOnly || current?.editable === false) return;
+    const hasValue = Object.prototype.hasOwnProperty.call(patch, "value");
     setConflict(undefined);
     setCellDrafts((all) => ({
       ...all,
       [key]: {
         rowId,
         columnId,
-        value: patch.value ?? all[key]?.value ?? current?.value ?? null,
+        value: hasValue ? patch.value : (all[key]?.value ?? current?.value ?? null),
         enabled: patch.enabled ?? all[key]?.enabled ?? current?.enabled ?? false,
-        recordId: all[key]?.recordId ?? text(current?.metadata?.record_id) || undefined,
+        recordId: all[key]?.recordId ?? (text(current?.metadata?.record_id) || undefined),
       },
     }));
   }, [cells]);
@@ -294,7 +294,7 @@ export function MatrixContainer(props: MatrixContainerProps) {
         if (dirty || context.signal.aborted) return;
         void load({
           ...(snapshot?.subject?.id ? { selected_id: snapshot.subject.id } : {}),
-          search: { scope: context.scope satisfies MatrixSearchScope, query },
+          search: { scope: context.scope, query },
         }, true);
       }}
       onCellChange={({ rowId, columnId }, value) => changeCell(rowId, columnId, { value })}
@@ -307,7 +307,11 @@ export function MatrixContainer(props: MatrixContainerProps) {
         if (actionId === "save") void save();
         else if (actionId === "discard") { setCellDrafts({}); setAuxDrafts({}); setRemovedRows(new Set()); setConflict(undefined); }
         else if (actionId === "reload") void load(snapshot?.subject?.id ? { selected_id: snapshot.subject.id } : {});
-        else if (actionId === "remove-row" && context.rowId) setRemovedRows((current) => new Set([...current, context.rowId!]));
+        else if (actionId === "remove-row" && context.rowId) {
+          const row = rows.find((candidate) => candidate.id === context.rowId);
+          if (!row || truthy(rowValuesOf(row).is_primary)) return;
+          setRemovedRows((current) => new Set([...current, context.rowId!]));
+        }
       }}
     />
   );
