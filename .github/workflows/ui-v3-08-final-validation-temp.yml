@@ -93,18 +93,22 @@ jobs:
 
       - name: Structural client invariants excluding historical native-ui debt
         run: |
-          node client/scripts/check-hook-order.mjs
-          node client/scripts/check-app-shell-mobile.mjs
-          node client/scripts/check-pwa-installability.mjs
-          node client/scripts/check-child-grid-mobile.mjs
-          node client/scripts/check-pull-to-refresh.mjs
-          node client/scripts/check-matrix-domain-leaks.mjs
+          cd client
+          node scripts/check-hook-order.mjs
+          node scripts/check-app-shell-mobile.mjs
+          node scripts/check-pwa-installability.mjs
+          node scripts/check-child-grid-mobile.mjs
+          node scripts/check-pull-to-refresh.mjs
+          node scripts/check-matrix-domain-leaks.mjs
+          cd ..
           node --check server/scripts/stage-client-bundle.mjs
 
       - name: Historical native-ui baseline evidence
         id: native_baseline
         continue-on-error: true
-        run: node client/scripts/check-native-ui.mjs
+        run: |
+          cd client
+          node scripts/check-native-ui.mjs
 
       - name: No new native-ui violations versus current main
         run: |
