@@ -1,0 +1,46 @@
+name: WS01 temporary blocker inspection
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ent-01-finance-vn-r2
+          fetch-depth: 0
+      - name: Replay branch files for inspection
+        shell: bash
+        run: |
+          git fetch origin main agent/ent-01-finance-vn
+          base="$(git merge-base origin/main origin/agent/ent-01-finance-vn)"
+          mapfile -t rows < <(git diff --name-status "$base" origin/agent/ent-01-finance-vn)
+          for row in "${rows[@]}"; do
+            status="${row%%$'\t'*}"
+            rest="${row#*$'\t'}"
+            case "$rest" in .github/workflows/*) continue;; esac
+            path="$rest"
+            if [[ "$status" == R* ]]; then path="${rest#*$'\t'}"; fi
+            if [[ "$status" == D* ]]; then rm -f "$path"; continue; fi
+            mkdir -p "$(dirname "$path")"
+            git show "origin/agent/ent-01-finance-vn:$path" > "$path"
+          done
+          echo '===== ACCOUNTING POLICY ====='
+          nl -ba server/packages/clouderp-erpnext/src/vn-accounting-policy.ts | sed -n '180,280p' || true
+          echo '===== ACCOUNTING POLICY TEST ====='
+          nl -ba server/tests/vn-accounting-policy.test.mjs | sed -n '470,560p' || true
+          echo '===== WORKER TEST ====='
+          nl -ba server/tests/vn-accounting-worker.test.mjs | sed -n '1,280p' || true
+          echo '===== WORKER INDEX ====='
+          nl -ba server/apps-src/vn-accounting-worker/src/index.ts | sed -n '1,360p' || true
+          echo '===== VAT SERVICE TEST ====='
+          nl -ba server/tests/vn-vat-service.test.mjs | sed -n '120,210p' || true
+          echo '===== VAT SERVICE ====='
+          nl -ba server/apps-src/vn-accounting-worker/src/vat-service.ts | sed -n '1,360p' || true
