@@ -17,6 +17,7 @@ export * from "./crm-types.js";
 export * from "./finance-controllers.js";
 export * from "./quotation-controller.js";
 export * from "./quotation-types.js";
+export * from "./sales-order-closure-controller.js";
 export * from "./registry.js";
 export * from "./totals.js";
 export * from "./types.js";

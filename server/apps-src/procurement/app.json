@@ -1,7 +1,7 @@
 {
   "id": "procurement",
   "name": "Mua hàng & Nhà cung cấp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "metaContractVersion": 1,
   "requires": [],
   "externalDocTypes": [
@@ -41,6 +41,44 @@
         "in_standard_filter": true
       },
       "insert_after": "supplier_contract"
+    },
+    {
+      "name": "Purchase Order-receipt_match_required",
+      "dt": "Purchase Order",
+      "fieldname": "receipt_match_required",
+      "field": {
+        "label": "Bắt buộc đối chiếu nhập hàng trước hóa đơn",
+        "fieldtype": "Check",
+        "default": 1,
+        "description": "Bật cho mua hàng tồn kho; có thể tắt cho dịch vụ để dùng đối chiếu PO - hóa đơn hai chiều."
+      },
+      "insert_after": "supplier_selection"
+    },
+    {
+      "name": "Purchase Order-invoice_quantity_tolerance_pct",
+      "dt": "Purchase Order",
+      "fieldname": "invoice_quantity_tolerance_pct",
+      "field": {
+        "label": "Dung sai số lượng hóa đơn (%)",
+        "fieldtype": "Float",
+        "default": 0,
+        "non_negative": true,
+        "description": "Dung sai tối đa khi đối chiếu số lượng hóa đơn với PO và phiếu nhập; máy chủ giới hạn tối đa 50%."
+      },
+      "insert_after": "receipt_match_required"
+    },
+    {
+      "name": "Purchase Order-invoice_price_tolerance_pct",
+      "dt": "Purchase Order",
+      "fieldname": "invoice_price_tolerance_pct",
+      "field": {
+        "label": "Dung sai đơn giá hóa đơn (%)",
+        "fieldtype": "Float",
+        "default": 0,
+        "non_negative": true,
+        "description": "Dung sai đơn giá thuần khi đối chiếu hóa đơn với PO; máy chủ giới hạn tối đa 100%."
+      },
+      "insert_after": "invoice_quantity_tolerance_pct"
     }
   ],
   "nav": [
