@@ -21,7 +21,7 @@
         "enabled": true,
         "navigator": {
           "source": { "kind": "projection", "name": "pricing.item_price_matrix.read", "permissionDoctype": "Item", "permissionAction": "read" },
-          "keyField": "id",
+          "keyField": "node_id",
           "labelField": "label",
           "parentField": "parent_id",
           "secondaryLabelField": "subtitle",
@@ -29,7 +29,7 @@
         },
         "rowAxis": {
           "source": { "kind": "projection", "name": "pricing.item_price_matrix.read", "permissionDoctype": "Item", "permissionAction": "read" },
-          "keyField": "id",
+          "keyField": "row_id",
           "labelField": "label",
           "primaryField": "is_primary",
           "auxiliaryFields": [
@@ -38,7 +38,7 @@
         },
         "columnAxis": {
           "source": { "kind": "projection", "name": "pricing.item_price_matrix.read", "permissionDoctype": "Price List", "permissionAction": "read" },
-          "keyField": "id",
+          "keyField": "column_id",
           "labelField": "label",
           "subtitleField": "subtitle",
           "disabledField": "disabled",
