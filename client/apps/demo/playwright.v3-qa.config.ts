@@ -11,8 +11,9 @@ const RESPONSIVE_SUITE = ["**/ui-v3-mobile-qa.spec.ts"];
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
-  workers: 1,
-  timeout: 45_000,
+  workers: 2,
+  maxFailures: 5,
+  timeout: 30_000,
   expect: { timeout: 8_000 },
   reporter: [
     ["list"],
