@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { ForgeSparkline } from "./specialized.js";
 
 export type ForgeKpiTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -60,8 +60,17 @@ export function ForgeKpiCard({
       {description ? <div className="mt-2 line-clamp-2 text-[11px] leading-4 text-muted-foreground">{description}</div> : null}
     </>
   );
-  const classes = `min-w-0 rounded-lg border bg-card/95 p-4 text-left shadow-[0_1px_0_rgba(0,0,0,.025)] transition-[border-color,box-shadow,transform] duration-150 motion-reduce:transition-none ${onActivate ? "hover:-translate-y-px hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" : ""} ${className}`;
-  return onActivate ? <button type="button" onClick={onActivate} className={classes}>{body}</button> : <div className={classes}>{body}</div>;
+  const classes = `min-w-0 rounded-lg border bg-card/95 p-4 text-left shadow-[0_1px_0_rgba(0,0,0,.025)] transition-[border-color,box-shadow,transform] duration-150 motion-reduce:transition-none ${onActivate ? "cursor-pointer hover:-translate-y-px hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" : ""} ${className}`;
+  if (!onActivate) return <div className={classes}>{body}</div>;
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onActivate();
+    }
+  };
+
+  return <div role="button" tabIndex={0} onClick={onActivate} onKeyDown={handleKeyDown} className={classes}>{body}</div>;
 }
 
 export function ForgeKpiStrip({ children, className = "" }: { children: ReactNode; className?: string }) {
