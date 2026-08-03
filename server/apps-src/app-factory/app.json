@@ -1,0 +1,29 @@
+{
+  "id": "app-factory",
+  "name": "App Factory",
+  "version": "0.1.0",
+  "metaContractVersion": 1,
+  "requires": [],
+  "externalDocTypes": [
+    { "name": "DocType", "kind": "system", "app": "core" }
+  ],
+  "nav": [
+    {
+      "key": "App Factory Definition",
+      "label": "Định nghĩa App Factory",
+      "kind": "doctype",
+      "icon": "workflow",
+      "group": "App Factory",
+      "required_roles": ["App Factory Manager", "System Manager"]
+    }
+  ],
+  "hooks": [],
+  "validators": [],
+  "client": {
+    "brand": "violet",
+    "domain": "platform",
+    "home": { "doctype": "App Factory Definition" },
+    "catalog_mode": "native",
+    "design": { "density": "comfortable", "radius": "soft", "content_width": "wide" }
+  }
+}
