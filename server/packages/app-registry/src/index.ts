@@ -1,5 +1,6 @@
 export * from "./manifest.js";
 export * from "./action-input-table.js";
+export * from "./batch-action.js";
 export * from "./action-input-table-compat.js";
 export * from "./bpm-approval.js";
 export * from "./bpm-timer.js";

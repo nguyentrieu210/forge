@@ -5,11 +5,72 @@ declare module "cloudflare:workers" {
     protected readonly env: Env;
     constructor(ctx: DurableObjectState, env: Env);
   }
+
+  export interface WorkflowEvent<Params = unknown> {
+    payload: Params;
+    timestamp: Date;
+    instanceId: string;
+  }
+
+  export interface WorkflowStepContext {
+    readonly attempt: number;
+  }
+
+  export interface WorkflowStepConfig {
+    retries?: {
+      limit: number;
+      delay?: string | number;
+      backoff?: "constant" | "linear" | "exponential";
+    };
+    timeout?: string | number;
+  }
+
+  export class WorkflowStep {
+    do<T>(name: string, callback: (ctx: WorkflowStepContext) => T | Promise<T>): Promise<T>;
+    do<T>(name: string, config: WorkflowStepConfig, callback: (ctx: WorkflowStepContext) => T | Promise<T>): Promise<T>;
+  }
+
+  export abstract class WorkflowEntrypoint<Env = unknown, Params = unknown> {
+    protected readonly env: Env;
+    constructor(ctx: ExecutionContext, env: Env);
+    abstract run(event: WorkflowEvent<Params>, step: WorkflowStep): Promise<unknown>;
+  }
 }
 
 declare interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
+}
+
+declare interface WorkflowInstanceCreateOptions<Params = unknown> {
+  id?: string;
+  params?: Params;
+  retention?: {
+    successRetention?: string;
+    errorRetention?: string;
+  };
+}
+
+declare interface WorkflowInstanceStatus {
+  status: "queued" | "running" | "paused" | "errored" | "terminated" | "complete" | "waiting" | "waitingForPause" | "unknown";
+  error?: { name: string; message: string };
+  output?: unknown;
+  rollback?: { outcome: "complete" | "failed"; error: { name: string; message: string } | null } | null;
+}
+
+declare interface WorkflowInstance {
+  readonly id: string;
+  pause(): Promise<void>;
+  resume(): Promise<void>;
+  restart(options?: { from?: { name: string; count?: number; type?: "do" | "sleep" | "waitForEvent" } }): Promise<void>;
+  terminate(options?: { rollback?: boolean }): Promise<void>;
+  status(): Promise<WorkflowInstanceStatus>;
+}
+
+declare interface Workflow<Params = unknown> {
+  create(options?: WorkflowInstanceCreateOptions<Params>): Promise<WorkflowInstance>;
+  createBatch(batch: Array<WorkflowInstanceCreateOptions<Params> & { id: string; params: Params }>): Promise<WorkflowInstance[]>;
+  get(id: string): Promise<WorkflowInstance>;
 }
 
 declare interface DurableObjectId {
