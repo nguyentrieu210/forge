@@ -1,10 +1,12 @@
 import { errors } from "../../core/src/index.js";
-import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
+import type { JsonObject } from "../../contracts/src/index.js";
 import type { AppActionInputTable, LegacyBulkTransactionField } from "./action-input-table.js";
 
 export type BatchActionAtomicity = "atomic" | "independent";
 export type BatchActionMode = "preview" | "commit";
 export type BatchActionItemStatus = "success" | "error" | "rolled_back" | "skipped";
+
+export const BATCH_ACTION_MAX_PAYLOAD_BYTES = 2_000_000;
 
 /**
  * Canonical public metadata for repeatable AppAction execution.
@@ -43,6 +45,16 @@ export interface NormalizedBatchActionInvocation {
   atomicity: BatchActionAtomicity;
   idempotency_key?: string;
   items: NormalizedBatchActionItem[];
+}
+
+/** Structural adapter target matching A2's runtime-only execution plan without importing it. */
+export interface BatchExecutorPlanLike {
+  batchId: string;
+  requestHash: string;
+  mode: BatchActionMode;
+  atomicity: BatchActionAtomicity;
+  idempotencyKey?: string;
+  items: Array<{ id: string; value: JsonObject }>;
 }
 
 export interface BatchActionError {
@@ -189,6 +201,11 @@ export function normalizeBatchActionInvocation(
   }
 
   const payload = object(input.payload, "batch request.payload");
+  const payloadBytes = new TextEncoder().encode(stableJson(payload)).byteLength;
+  if (payloadBytes > BATCH_ACTION_MAX_PAYLOAD_BYTES) {
+    throw errors.validation(`batch request.payload exceeds ${BATCH_ACTION_MAX_PAYLOAD_BYTES} bytes`);
+  }
+
   const rawRows = payload[contract.input_table];
   if (!Array.isArray(rawRows)) throw errors.validation(`batch request.payload.${contract.input_table} must be an array`);
   if (!rawRows.length) throw errors.validation(`batch request.payload.${contract.input_table} must not be empty`);
@@ -232,10 +249,28 @@ export function canonicalBatchRequestMaterial(invocation: NormalizedBatchActionI
   });
 }
 
+/** A2 adapter seam: hashing policy stays with execution infrastructure, public semantics stay here. */
+export function toBatchExecutorPlan(
+  invocation: NormalizedBatchActionInvocation,
+  requestHash: string,
+): BatchExecutorPlanLike {
+  const hash = text(requestHash, "batch request hash", 256);
+  return {
+    batchId: invocation.batch_id,
+    requestHash: hash,
+    mode: invocation.mode,
+    atomicity: invocation.atomicity,
+    ...(invocation.idempotency_key ? { idempotencyKey: invocation.idempotency_key } : {}),
+    items: invocation.items.map((item) => ({ id: item.item_id, value: structuredClone(item.value) })),
+  };
+}
+
 /** Map a runtime trace into the one public deterministic result envelope. */
 export function createBatchActionResultEnvelope<T>(trace: BatchRuntimeTraceLike<T>): BatchActionResultEnvelope<T> {
   const batchId = text(trace.batchId, "batch result.batchId", 160);
   const traceId = text(trace.traceId, "batch result.traceId", 200);
+  if (trace.mode !== "preview" && trace.mode !== "commit") throw errors.validation("batch result.mode is invalid");
+  if (trace.atomicity !== "atomic" && trace.atomicity !== "independent") throw errors.validation("batch result.atomicity is invalid");
   const seen = new Set<number>();
   const items = [...trace.items].sort((left, right) => left.index - right.index).map((item): BatchActionItemResult<T> => {
     if (!Number.isInteger(item.index) || item.index < 0) throw errors.validation("batch result item index must be a non-negative integer");
@@ -293,4 +328,5 @@ export const BATCH_ACTION_SEMANTICS = Object.freeze({
   operation_id: "batch_id:item_id",
   correction_owner: "domain",
   preview_side_effects: "forbidden",
+  request_hash_material: "canonical-public-request-without-idempotency-key",
 } as const);
