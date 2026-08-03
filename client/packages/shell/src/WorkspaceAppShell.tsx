@@ -26,8 +26,62 @@ function normalizedGroup(label: string | undefined): string {
   return (label ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
 }
 
+const ALUMDOOR_SIDEBAR_GROUPS = new Set([
+  "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
+  "bao cao", "danh muc", "he thong", "quy kho",
+]);
+
+const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {
+  "report:Đơn hàng theo khách": ["Bán hàng"],
+  "report:Báo giá theo khách": ["Bán hàng"],
+  "report:Lắp đặt theo đội": ["Bán hàng"],
+  "report:Mua hàng theo nhà cung cấp": ["Mua hàng"],
+  "report:Đơn mua chưa nhận đủ": ["Mua hàng"],
+  "report:Stock Balance": ["Kho"],
+  "report:Stock Ledger": ["Kho"],
+  "report:Lệnh sản xuất theo mặt hàng": ["Sản xuất"],
+  "report:Work Order Progress": ["Sản xuất"],
+  "report:Công nợ theo khách hàng": ["Công nợ"],
+  "report:Accounts Receivable": ["Công nợ"],
+  "report:Accounts Payable": ["Công nợ"],
+};
+
+const ALUMDOOR_MASTER_WORKSPACES: Record<string, string[]> = {
+  Item: ["Bán hàng", "Kho", "Mua hàng", "Sản xuất", "Bảo hành"],
+  "Item Group": ["Kho", "Sản xuất"],
+  UOM: ["Kho", "Mua hàng", "Sản xuất"],
+  Warehouse: ["Kho", "Mua hàng", "Sản xuất"],
+  Customer: ["Bán hàng", "Công nợ", "Bảo hành"],
+  Supplier: ["Mua hàng", "Công nợ", "Bảo hành"],
+  "Price List": ["Bán hàng"],
+  "Item Price": ["Bán hàng"],
+  "Pricing Rule": ["Bán hàng"],
+  "Cutting Policy": ["Sản xuất"],
+  "Measurement Profile": ["Kho", "Sản xuất"],
+  "Item Color": ["Kho", "Sản xuất"],
+  "Material Grade": ["Kho", "Sản xuất"],
+  "Material Specification": ["Kho", "Sản xuất"],
+  "Item Attribute": ["Kho", "Sản xuất"],
+  "Supplier Item": ["Mua hàng"],
+  Brand: ["Bán hàng", "Mua hàng"],
+  Manufacturer: ["Mua hàng"],
+  "Lý do huỷ": ["Kho"],
+  "Nguyên nhân chênh lệch": ["Kho"],
+};
+
 function isCatalogNavigation(item: NavItem): boolean {
   return item.key === "__catalog" || normalizedGroup(item.group).startsWith("ung dung · ");
+}
+
+function isVisibleProductNavigation(item: NavItem): boolean {
+  if (!isAlumdoorSurface()) return !isCatalogNavigation(item);
+  return !isCatalogNavigation(item) && ALUMDOOR_SIDEBAR_GROUPS.has(normalizedGroup(item.group));
+}
+
+function scopedWorkspaceMeta(items: NavItem[], module: WorkspaceModule, affinity: Record<string, string[]>): NavItem[] {
+  if (!isAlumdoorSurface()) return items;
+  const target = normalizedGroup(module.label);
+  return items.filter((item) => (affinity[item.key] ?? []).some((workspace) => normalizedGroup(workspace) === target));
 }
 
 function indexHubKey(item: NavItem | undefined): string | undefined {
@@ -135,7 +189,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
           </div>
         </header>
 
-        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className={cn("grid items-start gap-3", reports.length && "lg:grid-cols-[minmax(0,1fr)_18rem]")}>
           <div className="flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
             <div className="order-2 border-b bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent px-3 py-3 sm:px-4">
               <div className="flex items-center justify-between gap-3">
@@ -199,31 +253,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
             ) : null}
           </div>
 
-          <aside className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            {masters.length ? (
-              <div className="hidden">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Danh mục nhanh</h3>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Dữ liệu nền dùng thường xuyên trong phân hệ.</p>
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-xs text-primary" onClick={() => onNavigate("__master-data")}>Tất cả danh mục</Button>
-                </div>
-                <div className="space-y-1.5">
-                  {masters.slice(0, 5).map((item) => (
-                    <Button
-                      key={item.key}
-                      variant="ghost"
-                      className="h-auto min-h-11 w-full justify-start gap-2.5 rounded-lg border border-transparent bg-card px-2.5 py-2 text-left text-xs shadow-sm transition-all hover:border-primary/25 hover:bg-card hover:shadow-sm"
-                      onClick={() => onNavigate(item.key)}
-                    >
-                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/[0.08] text-primary [&_svg]:size-3.5">{item.icon ?? <CheckCircle2 />}</span>
-                      <span className="line-clamp-2 min-w-0 font-medium leading-4">{item.label}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+          {reports.length ? <aside className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             <div className="border-b bg-gradient-to-br from-primary/[0.09] via-transparent to-transparent px-4 py-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Phân tích</p>
               <h2 className="mt-0.5 text-base font-semibold tracking-tight">Báo cáo</h2>
@@ -242,12 +272,11 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                   <span className="size-1.5 shrink-0 rounded-full bg-primary/[0.35] transition-colors group-hover:bg-primary" />
                 </Button>
               ))}
-              {!reports.length ? <div className="rounded-xl border border-dashed bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">Chưa có báo cáo khả dụng.</div> : null}
             </div>
             <div className="border-t p-2.5">
               <Button variant="outline" className="h-9 w-full rounded-lg text-primary" onClick={() => onNavigate("__reports")}>Xem tất cả báo cáo</Button>
             </div>
-          </aside>
+          </aside> : null}
         </div>
       </section>
     </div>
@@ -261,10 +290,10 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
  */
 export function AppShell(props: AppShellProps) {
   /**
-   * App catalog và workspace chéo app không thuộc sidebar nghiệp vụ. Runtime vẫn giữ các
-   * route đó để launcher/direct-link hoạt động, nhưng shell chỉ hiển thị nav của app hiện tại.
+   * Alumdoor chỉ nhận các nhóm đã khai trong brief gốc cộng Quỹ kho. Các app cài kèm vẫn
+   * giữ route/dữ liệu của chúng, nhưng không được tự biến thành sidebar của sản phẩm này.
    */
-  const sidebarNav = useMemo(() => props.nav.filter((item) => !isCatalogNavigation(item)), [props.nav]);
+  const sidebarNav = useMemo(() => props.nav.filter(isVisibleProductNavigation), [props.nav]);
   const modules = useMemo(() => buildWorkspaceModules(sidebarNav), [sidebarNav]);
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
@@ -347,8 +376,10 @@ export function AppShell(props: AppShellProps) {
 
     const showModule = processActive || Boolean(activeModule);
     const activeSidebarKey = indexHubKey(sidebarNav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
-    const reportItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
-    const masterItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
+    const allReportItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
+    const allMasterItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
+    const reportItems = scopedWorkspaceMeta(allReportItems, selectedModule, ALUMDOOR_REPORT_WORKSPACES);
+    const masterItems = scopedWorkspaceMeta(allMasterItems, selectedModule, ALUMDOOR_MASTER_WORKSPACES);
 
     shell = (
       <BaseAppShell
