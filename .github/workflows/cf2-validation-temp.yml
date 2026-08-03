@@ -1,0 +1,28 @@
+name: CF2 Capability Rebaseline Validation
+
+on:
+  push:
+    branches:
+      - rc/cf2-release-confidence-20260804
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact CF2 head
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate canonical 956 capability registry
+        run: node server/scripts/validate-enterprise-capability-status.mjs
+
+      - name: Run CF2 current-main rebaseline
+        run: node server/scripts/cf2-release-confidence-rebaseline.mjs
