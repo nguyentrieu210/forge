@@ -9,7 +9,11 @@ import {
   assertSessionCsrf,
   establishSession,
   faultResponse,
+  isMfaRoutePath,
+  isPublicFrappePath,
   isSessionManagementPath,
+  routeFrappeAuth,
+  routeMfaApi,
   routeSessionManagementApi,
   slideSession,
   type AuthRouteContext,
@@ -28,6 +32,7 @@ import {
   isDailyLedgerFrappePath,
   routeDailyLedgerApi,
 } from "./daily-ledger-api.js";
+import { mfaKeyRingFromEnv } from "./mfa-config.js";
 import {
   assertRecentNativeSecurityAuthentication,
   requiresRecentNativeSecurityAuthentication,
@@ -49,7 +54,7 @@ interface InterceptedRouteAuthentication {
 
 /**
  * Thin entrypoint wrapper for bounded authenticated report/operation routes, cookie-bound
- * session management, and the privileged native-administration step-up boundary. Existing
+ * account security, and the privileged native-administration step-up boundary. Existing
  * core route semantics and scheduled tasks remain delegated to index-core.ts.
  */
 export default {
@@ -58,8 +63,12 @@ export default {
     const physicalStock = isPhysicalStockApiPath(url.pathname);
     const dailyLedger = isDailyLedgerApiPath(url.pathname);
     const sessionManagement = isSessionManagementPath(url.pathname);
+    const publicFrappeAuth = isPublicFrappePath(url.pathname);
+    const mfaManagement = isMfaRoutePath(url.pathname);
     const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
-    if (!physicalStock && !dailyLedger && !sessionManagement && !nativeSecurity) return coreWorker.fetch(request, env);
+    if (!physicalStock && !dailyLedger && !sessionManagement && !publicFrappeAuth && !mfaManagement && !nativeSecurity) {
+      return coreWorker.fetch(request, env);
+    }
 
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
@@ -71,14 +80,35 @@ export default {
         // The wrapper owns only the step-up invariant. Core still owns System Manager
         // authorization, validation and persistence, so passing step-up must not create a
         // second implementation of any native admin route.
-        if (!physicalStock && !dailyLedger && !sessionManagement) return coreWorker.fetch(request, env);
+        if (!physicalStock && !dailyLedger && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
+          return coreWorker.fetch(request, env);
+        }
+      }
+
+      if (publicFrappeAuth) {
+        const authContext = createAuthContext(request, env, tenantId, traceId);
+        const response = await routeFrappeAuth(request, url, authContext);
+        if (response) return response;
+        return coreWorker.fetch(request, env);
       }
 
       const authentication = await authenticateInterceptedRoute(request, url, env, tenantId, traceId);
       const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
 
       let response: Response | null;
-      if (sessionManagement) {
+      if (mfaManagement) {
+        const established = authentication.established;
+        const authContext = authentication.authContext;
+        if (!established || !authContext) throw errors.permission("A browser session is required for MFA management");
+        response = await routeMfaApi(request, url, {
+          tenantId,
+          actor: established.actor,
+          traceId,
+          authenticatedAt: established.session.authenticatedAt,
+          now: authContext.now(),
+          mfa: authContext.users.mfa,
+        });
+      } else if (sessionManagement) {
         const established = authentication.established;
         const authContext = authentication.authContext;
         if (!established || !authContext) throw errors.permission("A browser session is required for session management");
@@ -130,6 +160,8 @@ export default {
       return isPhysicalStockFrappePath(url.pathname)
         || isDailyLedgerFrappePath(url.pathname)
         || isSessionManagementPath(url.pathname)
+        || isPublicFrappePath(url.pathname)
+        || isMfaRoutePath(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);
     }
@@ -148,6 +180,26 @@ function resolveTenant(request: Request, env: TenantEnv): string | null {
   return env.TENANT_ID ?? routed;
 }
 
+function createAuthContext(
+  request: Request,
+  env: TenantEnv,
+  tenantId: string,
+  traceId: string,
+): AuthRouteContext {
+  return {
+    tenantId,
+    users: new D1UserStore(env.DB, mfaKeyRingFromEnv(env)),
+    sessionSecret: env.SESSION_SECRET ?? "",
+    traceId,
+    now: () => new Date().toISOString(),
+    rateLimit: {
+      db: env.DB,
+      salt: env.INTERNAL_AUTH_SECRET,
+      clientAddress: request.headers.get("CF-Connecting-IP") ?? "unknown",
+    },
+  };
+}
+
 async function authenticateInterceptedRoute(
   request: Request,
   url: URL,
@@ -157,26 +209,15 @@ async function authenticateInterceptedRoute(
 ): Promise<InterceptedRouteAuthentication> {
   const cookieBound = isPhysicalStockFrappePath(url.pathname)
     || isDailyLedgerFrappePath(url.pathname)
-    || isSessionManagementPath(url.pathname);
+    || isSessionManagementPath(url.pathname)
+    || isMfaRoutePath(url.pathname);
   if (!cookieBound) {
     return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
   }
 
   const sessionSecret = env.SESSION_SECRET;
   const appCallback = request.headers.get(APP_CALLBACK_HEADER);
-  const users = new D1UserStore(env.DB);
-  const authContext: AuthRouteContext = {
-    tenantId,
-    users,
-    sessionSecret: sessionSecret ?? "",
-    traceId,
-    now: () => new Date().toISOString(),
-    rateLimit: {
-      db: env.DB,
-      salt: env.INTERNAL_AUTH_SECRET,
-      clientAddress: request.headers.get("CF-Connecting-IP") ?? "unknown",
-    },
-  };
+  const authContext = createAuthContext(request, env, tenantId, traceId);
 
   if (sessionSecret && !appCallback) {
     const established = await establishSession(request, authContext);
@@ -186,10 +227,9 @@ async function authenticateInterceptedRoute(
     }
   }
 
-  if (isSessionManagementPath(url.pathname)) {
-    // Session administration is account-security authority. App callbacks deliberately
-    // cannot borrow the user's actor identity for it.
-    throw errors.permission("A browser session is required for session management");
+  if (isSessionManagementPath(url.pathname) || isMfaRoutePath(url.pathname)) {
+    // Account-security administration cannot borrow an app callback identity.
+    throw errors.permission("A browser session is required for account security management");
   }
 
   if (appCallback) {
