@@ -6,3 +6,8 @@ body,
 #root {
   height: 100%;
 }
+
+/* Active tab keeps Forge red as border/surface accent, not low-contrast body text. */
+.mf-workspace-tabs [aria-current="page"] {
+  color: var(--foreground);
+}
