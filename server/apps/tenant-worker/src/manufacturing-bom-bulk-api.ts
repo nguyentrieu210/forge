@@ -172,7 +172,9 @@ function parseRows(value: unknown): BulkBomDraftInput["rows"] {
       ...(row.conversion_factor !== undefined
         ? { conversion_factor: decimal(row.conversion_factor, `rows[${index}].conversion_factor`) }
         : {}),
-      ...(row.qty_basis !== undefined ? { qty_basis: scalar(row.qty_basis) as BulkBomDraftInput["rows"][number]["qty_basis"] } : {}),
+      ...(row.qty_basis !== undefined
+        ? { qty_basis: scalar(row.qty_basis) as NonNullable<BulkBomDraftInput["rows"][number]["qty_basis"]> }
+        : {}),
     };
   });
 }
