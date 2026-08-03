@@ -157,7 +157,7 @@
   --popover: #191c21;
   --popover-foreground: #f7f7f8;
   --primary: #ef332d;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #0b0c0e;
   --secondary: #191c21;
   --secondary-foreground: #f7f7f8;
   --muted: #17191d;
@@ -199,6 +199,7 @@
   --forge-primary-soft: #3a1514;
   --forge-primary-border: #6f2522;
   --forge-focus: #ff5a54;
+  --mf-primary-fg: #0b0c0e;
 
   --forge-surface-l0: #0b0c0e;
   --forge-surface-l1: #131519;
