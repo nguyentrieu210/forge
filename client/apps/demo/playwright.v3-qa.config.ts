@@ -3,10 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   testMatch: [
-    "a11y.spec.ts",
-    "list-responsive.spec.ts",
-    "metaforge-ui.spec.ts",
-    "ui-v3-mobile-qa.spec.ts",
+    "**/a11y.spec.ts",
+    "**/list-responsive.spec.ts",
+    "**/metaforge-ui.spec.ts",
+    "**/ui-v3-mobile-qa.spec.ts",
   ],
   fullyParallel: false,
   workers: 1,
