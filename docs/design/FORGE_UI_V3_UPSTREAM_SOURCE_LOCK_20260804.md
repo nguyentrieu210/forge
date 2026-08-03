@@ -8,6 +8,7 @@ Program: MetaForge UI V3 / Forge Vben Next
 
 - Program baseline / branch merge-base: `main@7819ade8cdb1213d9f99ae92f144ae8aee82b054`.
 - Exact current `main` observed before implementation: `7626576feb67a4428e3c9bbfd41ad40e1f0c4641`.
+- Pre-PR drift recheck: `main@bc0083cb6db177273f31cd475f2fa9d2d1443d99`.
 - Drift from the program baseline is finance/inventory/RC validation work only; no `client/packages/ui/**` file changed in that drift window.
 - Therefore V3-01 can implement its exclusive UI-package scope without importing backend drift or changing authoritative contracts.
 
