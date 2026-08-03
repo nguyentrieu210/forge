@@ -2,54 +2,61 @@
 
 Ngày cập nhật: **2026-08-03**.
 
-Tài liệu này chỉ lưu facts, checkpoints và business invariants của Forge. Không định nghĩa quy trình làm việc cho AI.
+Tài liệu này lưu facts/checkpoints/invariants để AI tiếp theo không tự tiếp tục công việc lịch sử như thể nó vẫn active.
 
-## Repository
+## Repository truth
 
 - Repository: `nguyentrieu210/forge`.
-- GitHub lưu code, branch, PR, commit và release history.
-- `CURRENT_STATUS.md` lưu trạng thái dự án; `NEXT_TASKS.md` lưu backlog.
+- Canonical branch: `main`.
+- GitHub là nguồn sự thật cho exact code, branch, PR, merge và release.
+- **Open PR = 0** sau repo reset ngày 2026-08-03.
+- Không có workstream/feature branch nào được coi là active delivery queue.
+- Branch cũ vẫn được giữ làm history/audit/reference; không reopen hoặc tiếp tục mặc định.
+- Việc mới phải bắt đầu từ exact current `main` trên branch/PR mới.
 
-## VN Accounting Period Integrity Hardening
+## Closed-phase facts
 
-- Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1`.
-- HRM đã dùng migration `0039-0041`; accounting hardening dùng migration append-only `0042_vn_accounting_period_hardening.sql`.
-- `0042` thay accounting-period guards cũ và bổ sung: valid/non-overlap period theo tenant/company/branch; Hard Locked chặn submit/cancel/scope move; Soft Closed chỉ cho approved adjustment khi period cho phép và có reason + approver.
-- Guard bao phủ Journal/Invoice/Payment, Purchase Receipt, Delivery Note, Payroll, Stock Reconciliation/Stock Entry và Warehouse Cash Voucher/Transfer.
-- Regression riêng `server/scripts/test-vn-accounting-period-hardening.py` replay `0035+0039+0040+0041+0042` để không sửa acceptance HRM hiện có.
-- Targeted SQLite regression của logic `0042` đã PASS trong session. Full exact regression script, Python syntax và relevant backend/typecheck/lint/build trên full checkout vẫn chưa có evidence; chưa PR/merge/deploy production.
+- WS00–WS17 canonical convergence đã đóng ở repository level; bản ghi: `docs/agents/WS00_17_CONVERGENCE_20260803.md`.
+- UI00–UI05 Matrix foundation đã được hội tụ vào main trước repo reset.
+- Các Matrix follow-up PR `#419/#423/#424` đã đóng không merge; nếu có Matrix task mới phải audit current main trước.
+- Các PR legacy/accounting/inventory/manufacturing/procurement/ledger còn mở trước reset cũng đã đóng không merge; không coi chúng là backlog.
 
-## HRM operational 1.5
+## Product/architecture invariants
 
-- PR `#261` squash-merge tại `b3dc2cf59ec5c85a977833da6edc986ac1bfe6fb`.
-- HRM scope: recruitment, hire-to-retire, leave, attendance/overtime, payroll inputs, employee expenses, goals/appraisal/training.
-- Salary Slip/Payroll Entry/GL là accounting source of truth; HRM cung cấp payroll inputs, không có payroll ledger cạnh tranh.
-- Submitted Salary Slip khóa các source Attendance/Leave/OT/Salary Structure Assignment/Additional Salary đã dùng; correction đi qua cancel/amend/rerun.
-- `VN Payroll Rule` có effective period, legal source, approval metadata và formula evidence; rule đã dùng là append-only.
-- `formula_json` hiện là audited/versioned evidence, chưa phải statutory PIT/BHXH evaluator.
+- Alumdoor là reference vertical trên Forge, không fork core.
+- `gl_entries` là money source of truth; projections/balance/daily views phải rebuildable.
+- Invoice settlement dùng canonical Payment Entry/payment allocation; party dimension không tự tạo AR/AP settlement authority mới.
+- Stock/manufacturing features không được tạo stock/costing ledger cạnh tranh với canonical ledger.
+- Generic Bulk View master-only không tự thay thế controller-backed flow cho transaction/submittable/ledger paths.
+- Shared HRM là application đầy đủ; Alumdoor có thể chỉ expose Employee/Attendance ở product layer mà không thu nhỏ shared manifest.
 
-## Production release evidence
+## HRM truth
 
-- Checkpoint: `a0ae5f4f00a6be7311efcaff87c4caabea60f6be`.
-- `stage-client-bundle.mjs` có thể tạo `/release.json` chứa `releaseSha` + `bundleHash`.
-- `/health` chứng minh service sống; `/release.json` dùng đối chiếu revision UI đang phục vụ.
+- Các handoff cũ ghi HRM 1.5 là historical checkpoint, không phải current version authority.
+- Current `main` đã có HRM ở dòng `1.8.x`; phải đọc package/meta hiện tại trước mọi thay đổi HRM/payroll.
+- Salary Slip/Payroll Entry/GL vẫn là accounting authority; HRM cung cấp payroll inputs.
+- Statutory PIT/BHXH automation chỉ được làm như task mới với legal-source/version/test evidence tương ứng.
 
-## UI deploy implementation
+## Release/workflow truth
 
-- Workflow: `.github/workflows/manual-release-alu.yml` (`ALU Build and Deploy`).
-- UI fast path hiện có trigger push cho các nhánh UI và build runtime + warehouse mobile trước khi deploy Gateway.
-- Full ALU deploy vẫn tồn tại trong cùng workflow qua `workflow_dispatch`.
-- Các thay đổi workflow gần đây tập trung giảm thời gian setup/build và giảm false-fail sau deploy.
+- Canonical current release workflow trên main: `.github/workflows/alu-build-deploy.yml`.
+- `.github/workflows/deploy-ui-once.yml` và `.github/workflows/tmp-alumdoor-purchase-funding-release.yml` vẫn tồn tại trên `main` tại thời điểm handoff vì cleanup PR `#427` đã đóng không merge.
+- Không dùng tài liệu cũ nhắc `.github/workflows/manual-release-alu.yml`; file đó không tồn tại trên current main.
+- Production proof phải dựa trên exact release evidence (`/health`, `/release.json`, release SHA/bundle evidence khi applicable), không suy từ merge alone.
 
-## Website/CMS v1
+## Historical PR policy
 
-- PR `#254` squash-merge tại `b25fc30b0f37d1218cafbb4dac40e37479bba0b9`.
-- Public API allowlist: `forge.website.manifest`, `forge.website.page`.
-- Public Website resolver tenant-scoped và published-only.
+Các PR đóng vẫn có thể chứa code/evidence hữu ích. Nếu task mới chạm cùng domain:
 
-## Business checkpoints
+1. compare exact current main với branch/PR lịch sử;
+2. chỉ lấy phần còn đúng contract;
+3. chạy lại validation trên current baseline;
+4. mở PR mới;
+5. không biến PR cũ thành canonical bằng cách reopen mặc định.
 
-- Warehouse Cash schema/controller/ledger thuộc `vn-accounting`; Alumdoor consume qua integration metadata/generic routes.
-- `gl_entries` là money source of truth; balance/daily usage là projections rebuildable.
-- Party dimension không đồng nghĩa settle AR/AP; invoice settlement dùng canonical Payment Entry/payment allocation.
-- Generic Bulk View hiện master-only; transaction/submittable/ledger cần controller-backed flow riêng.
+## Canonical docs
+
+- `CURRENT_STATUS.md`: trạng thái hiện tại.
+- `NEXT_TASKS.md`: active backlog; hiện trống cho tới khi user mở việc mới.
+- `docs/agents/AGENT_BOARD.md`: ownership map/historical board, không phải queue đang chạy.
+- `docs/agents/LEGACY_PR_INBOX.md`: archive/reference cho PR lịch sử.
