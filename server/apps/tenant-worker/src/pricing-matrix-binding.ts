@@ -3,6 +3,10 @@ import { errors } from "../../../packages/core/src/index.js";
 import type { DocumentListService, D1MutationStore } from "../../../packages/document-kernel/src/index.js";
 import type { MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import {
+  PRICING_ITEM_UOM_ADD_ACTION,
+  addItemUom,
+} from "../../../packages/clouderp-pricing/src/member-actions.js";
+import {
   PRICING_MATRIX_COMMIT_ACTION,
   PRICING_MATRIX_SOURCE,
   PRICING_PRICE_LIST_CREATE_ACTION,
@@ -61,6 +65,15 @@ export function registerPricingMatrixBindings(
   });
   registry.registerAction(PRICING_MATRIX_COMMIT_ACTION, async (input) => {
     return await commitItemPriceMatrix(authority, commitInput(input));
+  });
+  registry.registerAction(PRICING_ITEM_UOM_ADD_ACTION, async (input) => {
+    return await addItemUom(authority, {
+      requestId: requiredText(input.request_id ?? input.requestId, "request_id"),
+      itemCode: requiredText(input.subject_id ?? input.itemCode, "subject_id"),
+      ...(input.subject_version === undefined ? {} : { itemVersion: integer(input.subject_version, "subject_version") }),
+      uom: requiredText(input.uom, "uom"),
+      conversionFactor: requiredScalar(input.conversion_factor ?? input.conversionFactor, "conversion_factor"),
+    });
   });
   registry.registerAction(PRICING_PRICE_LIST_CREATE_ACTION, async (input) => {
     return await createPriceList(authority, {
