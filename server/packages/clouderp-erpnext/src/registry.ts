@@ -45,10 +45,13 @@ import {
   SalaryStructureController,
 } from "./hrm-policy-controllers.js";
 import {
-  EmployeeBenefitEnrollmentController, EmployeeLoanController, EmployeeLoanRepaymentController,
+  EmployeeBenefitEnrollmentController, EmployeeLoanController,
   SalaryBankBatchController, WorkforcePlanController,
 } from "./hrm-workforce-finance-controllers.js";
-import { EmployeeLoanDisbursementController } from "./hrm-loan-disbursement-controller.js";
+import {
+  ReconciledEmployeeLoanDisbursementController,
+  ReconciledEmployeeLoanRepaymentController,
+} from "./hrm-loan-finance-reconciliation.js";
 import { EmployeeFinalSettlementController } from "./hrm-lifecycle-closure-controllers.js";
 import { AcceptedHiringCompletionController } from "./hrm-recruitment-lifecycle.js";
 import {
@@ -145,9 +148,9 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new HrmPayrollPeriodController())
     .register(new AdditionalSalaryController())
     .register(new EmployeeBenefitEnrollmentController())
-    .register(new EmployeeLoanDisbursementController())
+    .register(new ReconciledEmployeeLoanDisbursementController())
     .register(new EmployeeLoanController())
-    .register(new EmployeeLoanRepaymentController())
+    .register(new ReconciledEmployeeLoanRepaymentController())
     .register(new EmployeeAdvanceController())
     .register(new TravelRequestController())
     .register(new EmployeeFinalSettlementController())
