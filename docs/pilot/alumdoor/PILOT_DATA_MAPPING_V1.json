@@ -1,0 +1,165 @@
+{
+  "format": "forge-alumdoor-pilot-data-mapping/v1",
+  "version": 1,
+  "status": "FROZEN_SCHEMA",
+  "tenant": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "batch_manifest_required": [
+    "pilot_batch_id",
+    "source_system",
+    "cutoff_at",
+    "extract_at",
+    "local_display_timezone",
+    "mapping_version",
+    "files[].name",
+    "files[].sha256",
+    "files[].row_count",
+    "files[].source_totals",
+    "extractor_identity"
+  ],
+  "global_rules": {
+    "source_key_required": true,
+    "source_lineage_required": true,
+    "tenant_scope": "alu",
+    "duplicate_policy": "fail-on-ambiguous-or-conflicting-source-key",
+    "unknown_reference_policy": "fail-closed",
+    "money_storage": "integer-minor-units",
+    "quantity_policy": "preserve-canonical-axis-and-source-uom",
+    "direct_d1_write": false,
+    "preview_before_write": true,
+    "zero_unexplained_variance": true
+  },
+  "datasets": [
+    {
+      "id": "customers",
+      "target": "Customer",
+      "kind": "master",
+      "required": ["source_key", "customer_name"],
+      "optional": ["customer_group", "tax_id", "phone", "email", "address", "active"],
+      "reconcile": ["row_count", "unique_source_key_count"]
+    },
+    {
+      "id": "contacts",
+      "target": "Contact",
+      "kind": "master",
+      "required": ["source_key", "customer_source_key", "full_name"],
+      "optional": ["phone", "email", "is_primary"],
+      "reconcile": ["row_count", "unique_source_key_count", "resolved_customer_reference_count"]
+    },
+    {
+      "id": "suppliers",
+      "target": "Supplier",
+      "kind": "master",
+      "required": ["source_key", "supplier_name"],
+      "optional": ["tax_id", "phone", "email", "address", "active"],
+      "reconcile": ["row_count", "unique_source_key_count"]
+    },
+    {
+      "id": "items",
+      "target": "Item",
+      "kind": "master",
+      "required": ["source_key", "item_code", "item_name", "stock_uom"],
+      "optional": ["item_group", "sales_uom", "purchase_uom", "commercial_quantity_role", "stock_quantity_role", "allocation_quantity_role", "material_identity", "active"],
+      "rules": [
+        "do-not-synthesize-actual-weight-from-count",
+        "preserve-theoretical-vs-measured-evidence-kind",
+        "preserve-item-code-identity"
+      ],
+      "reconcile": ["row_count", "unique_item_code_count"]
+    },
+    {
+      "id": "boms",
+      "target": "BOM",
+      "kind": "master",
+      "required": ["source_key", "item_code", "revision", "effective_from", "components"],
+      "optional": ["routing", "operations", "effective_to", "active"],
+      "reconcile": ["row_count", "component_count", "active_revision_count"]
+    },
+    {
+      "id": "work_centers",
+      "target": "Work Center",
+      "kind": "master",
+      "required": ["source_key", "work_center_name"],
+      "optional": ["capacity", "calendar", "active"],
+      "reconcile": ["row_count"]
+    },
+    {
+      "id": "warehouses",
+      "target": "Warehouse",
+      "kind": "master",
+      "required": ["source_key", "warehouse_name"],
+      "optional": ["parent_warehouse", "address", "active"],
+      "reconcile": ["row_count", "unique_source_key_count"]
+    },
+    {
+      "id": "opening_stock",
+      "target": "Stock Reconciliation",
+      "kind": "opening",
+      "required": ["source_key", "item_code", "warehouse", "stock_qty", "stock_uom", "valuation_rate"],
+      "optional": ["batch", "serial", "commercial_qty", "commercial_uom", "allocation_qty", "allocation_uom", "physical_measures", "material_identity", "source_document"],
+      "rules": [
+        "stock-quantity-and-commercial-quantity-may-be-different-axes",
+        "physical-measure-evidence-must-retain-evidence-kind",
+        "no-unexplained-default-warehouse-remap"
+      ],
+      "reconcile": ["row_count", "stock_qty_by_item_warehouse", "stock_value_by_item_warehouse"]
+    },
+    {
+      "id": "opening_ar",
+      "target": "canonical AR opening path",
+      "kind": "opening",
+      "required": ["source_key", "customer_source_key", "reference", "posting_date", "due_date", "amount_vnd"],
+      "optional": ["currency", "exchange_rate", "remarks"],
+      "rules": ["store-money-as-vnd-minor-units", "reference-must-remain-source-bound"],
+      "reconcile": ["row_count", "amount_by_customer", "amount_by_reference", "total_amount"]
+    },
+    {
+      "id": "opening_ap",
+      "target": "canonical AP opening path",
+      "kind": "opening",
+      "required": ["source_key", "supplier_source_key", "reference", "posting_date", "due_date", "amount_vnd"],
+      "optional": ["currency", "exchange_rate", "remarks"],
+      "rules": ["store-money-as-vnd-minor-units", "supplier-delivery-debt-is-not-accounts-payable"],
+      "reconcile": ["row_count", "amount_by_supplier", "amount_by_reference", "total_amount"]
+    },
+    {
+      "id": "opening_cash_bank",
+      "target": "VN Accounting canonical cash/bank opening path",
+      "kind": "opening-optional",
+      "required": ["source_key", "account", "balance_vnd"],
+      "optional": ["bank_account", "currency", "remarks"],
+      "rules": ["only-import-when-explicitly-in-pilot-scope", "store-money-as-vnd-minor-units"],
+      "reconcile": ["balance_by_account", "total_balance"]
+    },
+    {
+      "id": "employees",
+      "target": "Employee",
+      "kind": "master",
+      "required": ["source_key", "employee_name"],
+      "optional": ["employee_code", "department", "designation", "status"],
+      "reconcile": ["row_count", "unique_source_key_count"]
+    },
+    {
+      "id": "pilot_users",
+      "target": "User + role assignment",
+      "kind": "access",
+      "required": ["source_key", "account", "persona", "roles", "active"],
+      "allowed_personas": ["Giám đốc", "Chủ xưởng", "Kinh doanh", "Thủ kho", "Kế toán", "Sản xuất"],
+      "optional": ["employee_source_key", "notes"],
+      "rules": [
+        "named-accounts-only",
+        "no-privilege-expansion-outside-frozen-personas",
+        "giám-đốc-named-account-required-before-pilot-04"
+      ],
+      "reconcile": ["account_count", "active_account_count", "roles_by_account"]
+    }
+  ],
+  "preview_acceptance": {
+    "all_required_fields_present": true,
+    "all_source_keys_unique_or-explicitly-dispositioned": true,
+    "all_references_resolved": true,
+    "tenant_scope_violations": 0,
+    "unexplained_reconciliation_variance": 0,
+    "production_write_authorized": false
+  }
+}
