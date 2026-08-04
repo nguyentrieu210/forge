@@ -54,6 +54,14 @@ class D1Adapter {
   }
 }
 
+function plainRow(row) {
+  return row ? { ...row } : row;
+}
+
+function plainRows(rows) {
+  return rows.map((row) => ({ ...row }));
+}
+
 function pkg(version, label = "Thing", overrides = {}) {
   return {
     id: "demo",
@@ -77,21 +85,21 @@ function insertActive(db, version, manifest, hash, modifiedAt) {
 }
 
 function migrate(db) {
-  db.db.exec(readFileSync(new URL("../migrations/tenant/0049_app_revision_history.sql", import.meta.url), "utf8"));
+  db.db.exec(readFileSync(new URL("../migrations/tenant/0088_app_revision_history.sql", import.meta.url), "utf8"));
 }
 
-test("0049 seeds the active package and atomically records later package views", async () => {
+test("0088 seeds the active package and atomically records later package views", async () => {
   const db = new D1Adapter();
   insertActive(db, "1.0.0", pkg("1.0.0"), "a".repeat(64), "2026-01-01T00:00:00Z");
   migrate(db);
 
-  assert.deepEqual(db.db.prepare("SELECT revision_no,version FROM app_revisions ORDER BY revision_no").all(), [
+  assert.deepEqual(plainRows(db.db.prepare("SELECT revision_no,version FROM app_revisions ORDER BY revision_no").all()), [
     { revision_no: 1, version: "1.0.0" },
   ]);
 
   db.db.prepare(`UPDATE installed_apps SET version=?,content_hash=?,manifest_json=?,modified_at=?
     WHERE tenant_id=? AND app_id=?`).run("2.0.0", "b".repeat(64), JSON.stringify(pkg("2.0.0", "Thing v2")), "2026-02-01T00:00:00Z", "t", "demo");
-  assert.deepEqual(db.db.prepare("SELECT revision_no,version FROM app_revisions ORDER BY revision_no").all(), [
+  assert.deepEqual(plainRows(db.db.prepare("SELECT revision_no,version FROM app_revisions ORDER BY revision_no").all()), [
     { revision_no: 1, version: "1.0.0" },
     { revision_no: 2, version: "2.0.0" },
   ]);
@@ -126,9 +134,9 @@ test("AppRevisionStore lists active history, plans and activates a presentation-
   assert.equal(activation.to_revision_no, 1);
   assert.equal(activation.actor, "admin@example.com");
   const active = db.db.prepare("SELECT version,content_hash FROM installed_apps WHERE tenant_id='t' AND app_id='demo'").get();
-  assert.deepEqual(active, { version: "1.0.0", content_hash: "a".repeat(64) });
+  assert.deepEqual(plainRow(active), { version: "1.0.0", content_hash: "a".repeat(64) });
   const audit = db.db.prepare("SELECT from_revision_no,to_revision_no,action,actor FROM app_revision_activations").get();
-  assert.deepEqual(audit, { from_revision_no: 2, to_revision_no: 1, action: "rollback", actor: "admin@example.com" });
+  assert.deepEqual(plainRow(audit), { from_revision_no: 2, to_revision_no: 1, action: "rollback", actor: "admin@example.com" });
   const activationHistory = await store.listActivations("t", "demo");
   assert.equal(activationHistory.length, 1);
   assert.equal(activationHistory[0].activation_id, activation.activation_id);

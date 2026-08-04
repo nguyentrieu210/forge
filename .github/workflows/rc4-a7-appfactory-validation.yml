@@ -1,0 +1,112 @@
+name: RC4 A7 App Factory Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/app-registry/src/**"
+      - "server/apps/tenant-worker/src/aggregate-do.ts"
+      - "server/apps-src/app-factory/**"
+      - "server/migrations/tenant/0114_app_factory_approval_runtime.sql"
+      - "server/tests/app-factory-approval-runtime.test.mjs"
+      - "server/tests/app-revision-history.test.mjs"
+      - "server/tests/app-factory-meta.test.mjs"
+      - "docs/agents/rc4/RC4_A7_APPFACTORY_RESIDUAL_HANDOFF.md"
+      - ".github/workflows/rc4-a7-appfactory-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a7-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/rc4-07-appfactory-residual')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact A7 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit App Factory graph and reject A7 TypeScript errors
+        working-directory: server
+        run: |
+          cat > tsconfig.rc4-a7.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "rootDir": ".",
+              "outDir": "./dist",
+              "declaration": false,
+              "sourceMap": false,
+              "noEmitOnError": false
+            },
+            "include": [
+              "apps/tenant-worker/src/aggregate-do.ts",
+              "packages/app-registry/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules", "apps/web"]
+          }
+          JSON
+          set +e
+          pnpm exec tsc -p tsconfig.rc4-a7.json 2>&1 | tee /tmp/rc4-a7-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep "error TS" /tmp/rc4-a7-tsc.log > /tmp/rc4-a7-errors.log || true
+            grep -E 'app-factory-approval-runtime\.ts|app-factory-definition(-resolver)?\.ts|apps/tenant-worker/src/aggregate-do\.ts|packages/app-registry/src/index\.ts' /tmp/rc4-a7-errors.log > /tmp/rc4-a7-owned-errors.log || true
+            if [ -s /tmp/rc4-a7-owned-errors.log ]; then
+              echo "TypeScript error intersects RC4-A7 authority:"
+              cat /tmp/rc4-a7-owned-errors.log
+              exit 1
+            fi
+            echo "Only baseline TypeScript errors outside RC4-A7 changed authority remain:"
+            cat /tmp/rc4-a7-errors.log
+          fi
+
+      - name: Approval, timer, definition and package regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/bpm-approval.test.mjs
+          tests/bpm-timer.test.mjs
+          tests/app-factory-definition.test.mjs
+          tests/app-factory-definition-effective-window.test.mjs
+          tests/app-factory-definition-resolver.test.mjs
+          tests/app-factory-approval-runtime.test.mjs
+          tests/app-factory-meta.test.mjs
+
+      - name: Rollback and revision-history regressions
+        working-directory: server
+        run: node --test tests/app-rollback-plan.test.mjs tests/app-revision-history.test.mjs
+
+      - name: SQL repository validation
+        working-directory: server
+        run: python3 scripts/verify-sql.py
+
+      - name: Guard App Factory runtime authority boundary
+        run: |
+          grep -q 'registerAppFactoryControllers' server/apps/tenant-worker/src/aggregate-do.ts
+          grep -q 'APP_FACTORY_APPROVAL_PROCESS_DOCTYPE' server/apps/tenant-worker/src/aggregate-do.ts
+          if grep -Eiq 'INSERT[[:space:]]+INTO[[:space:]]+(documents|gl_entries|stock_ledger|payment_ledger)' server/packages/app-registry/src/app-factory-approval-runtime.ts; then
+            echo "A7 approval runtime must not direct-write document or ledger authority"
+            exit 1
+          fi

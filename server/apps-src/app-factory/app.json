@@ -1,7 +1,7 @@
 {
   "id": "app-factory",
   "name": "App Factory",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "metaContractVersion": 1,
   "requires": [],
   "externalDocTypes": [
@@ -23,7 +23,7 @@
     "brand": "violet",
     "domain": "platform",
     "home": { "doctype": "App Factory Definition" },
-    "catalog_mode": "native",
+    "catalog_mode": "manifest",
     "design": { "density": "comfortable", "radius": "soft", "content_width": "wide" }
   }
 }

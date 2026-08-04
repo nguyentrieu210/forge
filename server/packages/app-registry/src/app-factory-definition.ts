@@ -20,7 +20,9 @@ export interface AppFactoryDefinitionData extends JsonObject {
   definition_json: JsonObject;
   effective_from: string;
   effective_to?: string;
-  status: AppFactoryDefinitionStatus;
+  definition_status: AppFactoryDefinitionStatus;
+  /** Legacy read compatibility for pre-canonical branch fixtures/documents. Never emitted. */
+  status?: AppFactoryDefinitionStatus;
   status_reason?: string;
 }
 
@@ -57,10 +59,13 @@ function kind(value: unknown): AppFactoryDefinitionKind {
   if (!KINDS.has(normalized)) throw errors.validation("definition_kind must be Process, Decision Rules or Formula Rules");
   return normalized;
 }
-function status(value: unknown): AppFactoryDefinitionStatus {
-  const normalized = text(value, "status", 32) as AppFactoryDefinitionStatus;
-  if (!STATUSES.has(normalized)) throw errors.validation("status must be Draft, Active or Retired");
+function definitionStatus(value: unknown): AppFactoryDefinitionStatus {
+  const normalized = text(value, "definition_status", 32) as AppFactoryDefinitionStatus;
+  if (!STATUSES.has(normalized)) throw errors.validation("definition_status must be Draft, Active or Retired");
   return normalized;
+}
+function storedDefinitionStatus(document: CanonicalDocument<AppFactoryDefinitionData>): AppFactoryDefinitionStatus {
+  return definitionStatus(document.data.definition_status ?? document.data.status ?? document.status);
 }
 function validateDefinitionPayload(definitionKind: AppFactoryDefinitionKind, definition: JsonObject, knownFields: ReadonlySet<string>): JsonObject {
   if (definitionKind === "Decision Rules") return parseDecisionRuleSet(definition, knownFields) as unknown as JsonObject;
@@ -101,10 +106,11 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
     const targetDoctype = text(input.target_doctype ?? existing?.data.target_doctype, "target_doctype", 160);
     const targetMeta = await this.metadata.getDocType(context.command.tenant_id, targetDoctype);
     if (!targetMeta) throw errors.reference(`App Factory target DocType is not active: ${targetDoctype}`);
-    const nextStatus = status(input.status ?? existing?.data.status ?? "Draft");
+    const existingStatus = existing ? storedDefinitionStatus(existing) : null;
+    const nextStatus = definitionStatus(input.definition_status ?? input.status ?? existingStatus ?? "Draft");
     if (!existing && nextStatus !== "Draft") throw errors.validation("App Factory Definition must be created as Draft");
     const reason = optionalText(input.status_reason, "status_reason");
-    if (existing) assertStatusTransition(existing.data.status, nextStatus, reason);
+    if (existingStatus) assertStatusTransition(existingStatus, nextStatus, reason);
     if (existing) {
       if (definitionKey !== existing.data.definition_key) throw errors.validation("definition_key cannot change after creation");
       if (definitionKind !== existing.data.definition_kind) throw errors.validation("definition_kind cannot change after creation");
@@ -117,19 +123,34 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
     const versionNo = existing?.data.version_no ?? (Math.max(0, ...siblings.map((document) => Number(document.data.version_no) || 0)) + 1);
     if (!Number.isSafeInteger(versionNo) || versionNo <= 0) throw errors.validation("App Factory Definition version_no is invalid");
     if (input.version_no !== undefined && Number(input.version_no) !== versionNo) throw errors.validation("version_no is server-assigned and cannot be changed");
-    if (nextStatus === "Active" && siblings.some((document) => document.data.status === "Active")) throw errors.validation(`Retire the active ${definitionKind} definition for ${definitionKey} before activating another version`);
+    if (nextStatus === "Active" && siblings.some((document) => storedDefinitionStatus(document) === "Active")) throw errors.validation(`Retire the active ${definitionKind} definition for ${definitionKey} before activating another version`);
 
     const effectiveFrom = date(input.effective_from ?? existing?.data.effective_from, "effective_from");
     const effectiveTo = input.effective_to === undefined && existing?.data.effective_to === undefined ? undefined : date(input.effective_to ?? existing?.data.effective_to, "effective_to");
     if (effectiveTo && effectiveTo < effectiveFrom) throw errors.validation("effective_to must not precede effective_from");
-    if (existing?.data.status !== "Draft" && (effectiveFrom !== existing.data.effective_from || (effectiveTo ?? null) !== (existing.data.effective_to ?? null))) {
+    if (existing && existingStatus !== "Draft" && (effectiveFrom !== existing.data.effective_from || (effectiveTo ?? null) !== (existing.data.effective_to ?? null))) {
       throw errors.validation("Retire/replace an App Factory Definition before changing its active effective window");
     }
 
     const definitionInput = parseJsonObject(input.definition_json ?? existing?.data.definition_json, "definition_json");
     const knownFields = new Set(["name", "owner", "status", "docstatus", ...targetMeta.fields.map((field) => field.fieldname)]);
+    if (existing && existingStatus !== "Draft" && input.definition_json !== undefined) {
+      const existingInput = parseJsonObject(existing.data.definition_json, "stored definition_json");
+      if (JSON.stringify(definitionInput) !== JSON.stringify(existingInput)) {
+        throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+      }
+    }
     const definitionJson = validateDefinitionPayload(definitionKind, definitionInput, knownFields);
-    if (existing?.data.status !== "Draft" && JSON.stringify(definitionJson) !== JSON.stringify(existing.data.definition_json)) throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+    if (existing && existingStatus !== "Draft") {
+      const existingCanonical = validateDefinitionPayload(
+        definitionKind,
+        parseJsonObject(existing.data.definition_json, "stored definition_json"),
+        knownFields,
+      );
+      if (JSON.stringify(definitionJson) !== JSON.stringify(existingCanonical)) {
+        throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+      }
+    }
 
     const data: AppFactoryDefinitionData = {
       definition_key: definitionKey,
@@ -139,10 +160,10 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
       definition_json: definitionJson,
       effective_from: effectiveFrom,
       ...(effectiveTo ? { effective_to: effectiveTo } : {}),
-      status: nextStatus,
+      definition_status: nextStatus,
       ...(reason ? { status_reason: reason } : existing?.data.status_reason ? { status_reason: existing.data.status_reason } : {}),
     };
-    const statusChanged = existing !== null && existing.data.status !== nextStatus;
+    const statusChanged = existingStatus !== null && existingStatus !== nextStatus;
     const eventType = context.command.action === "create" ? "app_factory_definition.created" : statusChanged && nextStatus === "Active" ? "app_factory_definition.activated" : statusChanged && nextStatus === "Retired" ? "app_factory_definition.retired" : "app_factory_definition.updated";
     const document: CanonicalDocument<AppFactoryDefinitionData> = {
       tenant_id: context.command.tenant_id, doctype: this.doctype, name: context.command.aggregate.name,

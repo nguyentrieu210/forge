@@ -10,6 +10,7 @@ export * from "./bpm-trigger.js";
 export * from "./bpm-analytics.js";
 export * from "./app-factory-definition.js";
 export * from "./app-factory-definition-resolver.js";
+export * from "./app-factory-approval-runtime.js";
 export * from "./app-rollback.js";
 export * from "./app-revision-store.js";
 export {
