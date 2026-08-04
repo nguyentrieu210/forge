@@ -23,15 +23,23 @@ R6 Production Certification đã hoàn tất với `PILOT-GO` cho exact deployed
 
 `49315112a21182d2ce077b08a1fb9e26db07fd36`
 
-Pilot-00 is **DONE / PILOT-00-LOCKED**. Current pilot authority:
+Pilot-00 is **DONE / PILOT-00-LOCKED**.
+
+Current Pilot-01 state is **PILOT-01-WAITING-SOURCE-BATCH**: preview tooling/control-plane is ready, but no approved immutable real Alumdoor customer/master/opening source batch is currently available to certify as `PREVIEW_PASS`.
+
+Current pilot authority:
 
 1. `docs/pilot/alumdoor/README.md`
 2. `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`
 3. `docs/pilot/alumdoor/PILOT_00_LOCK.json`
 4. `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`
-5. `NEXT_TASKS.md`
+5. `docs/pilot/alumdoor/PILOT_01_READINESS.md`
+6. `docs/pilot/alumdoor/PILOT_01_STATUS.json`
+7. `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`
+8. `docs/pilot/alumdoor/PILOT_01_SOURCE_BATCH_REQUIREMENTS.md`
+9. `NEXT_TASKS.md`
 
-Active phase is **Pilot-01 — Master + Opening Data Readiness**. Pilot-00 did not write real customer/master/opening data.
+Pilot-01 source validation is preview-only. Real customer/master/opening source files stay outside Git and real production import/write remains a separate authorization boundary.
 
 Final R6 entry authority remains:
 
