@@ -66,9 +66,7 @@ jobs:
           const fs = require('node:fs');
           const cfg = JSON.parse(fs.readFileSync('server/config/cloudflare-governance.json', 'utf8'));
           const status = cfg?.remote_observation?.status;
-          if (status !== 'unverified') {
-            throw new Error(`A19 refuses implicit provider promotion: remote_observation.status=${status}`);
-          }
+          if (status !== 'unverified') throw new Error(`A19 refuses implicit provider promotion: remote_observation.status=${status}`);
           console.log('remote_observation.status=unverified');
           NODE
 
@@ -105,13 +103,19 @@ jobs:
           - lane: A4-VN-Statutory
             sha: 84f25a829bb7eb28ab8bce053dc336435b46e77f
           - lane: A5-HCM-Payroll
-            sha: 4310d2afbb9ee048b80161cfb2b0464e6fa49644
+            sha: 1baaf38d92f5aa0d53cfd2260d5baade850be8dd
+          - lane: A7-App-Factory
+            sha: e656c19d54450f1290ad44e8bba8819e650b42ef
           - lane: A11-Procurement
-            sha: a157f4aab5d5a5a0ee867bee77aedbe4af812436
+            sha: 27c616c2a77f08bb0284a0de4ea141637ce82462
           - lane: A13-Manufacturing-QMS
             sha: 5c9c47ba4e5092fd83c4752785047ad7e69be34c
+          - lane: A15-Semantic-AI
+            sha: 3c6db92969d80aab92afdc9ef4f07db0cbe2565b
           - lane: A17-Commerce
             sha: f2504064dbdf929ba6c03107eea624463943fce1
+          - lane: A18-Alumdoor
+            sha: b3e428d21b4be13337694fde9a78d77b37c8db93
     steps:
       - name: Checkout pinned worker head
         uses: actions/checkout@v4
@@ -144,27 +148,16 @@ jobs:
           set -e
           echo "repository_tsc_status=${status}"
           case "${{ matrix.lane }}" in
-            A1-IAM)
-              pattern='packages/(auth|frappe-api|organization-security)/src/|apps/tenant-worker/src/(index|mfa-config|native-security)\.ts'
-              ;;
-            A3-Migration)
-              pattern='packages/migration/src/|apps/tenant-worker/src/(index|migration-api)\.ts'
-              ;;
-            A4-VN-Statutory)
-              pattern='apps-src/vn-accounting-worker/src/(legal-evidence|vat-service)\.ts'
-              ;;
-            A5-HCM-Payroll)
-              pattern='packages/(hrm|ledger|payment-ledger)/src/|apps-src/hrm/'
-              ;;
-            A11-Procurement)
-              pattern='packages/clouderp-core/src/(supplier-lifecycle-controllers|procurement-.*)\.ts'
-              ;;
-            A13-Manufacturing-QMS)
-              pattern='packages/(clouderp-erpnext|clouderp-core)/src/.*(manufactur|quality|qms|capacity|mrp)'
-              ;;
-            A17-Commerce)
-              pattern='packages/social-commerce/src/api\.ts'
-              ;;
+            A1-IAM) pattern='packages/(auth|frappe-api|organization-security)/src/|apps/tenant-worker/src/(index|mfa-config|native-security)\.ts' ;;
+            A3-Migration) pattern='packages/migration/src/|apps/tenant-worker/src/(index|migration-api)\.ts' ;;
+            A4-VN-Statutory) pattern='apps-src/vn-accounting-worker/src/(legal-evidence|vat-service)\.ts' ;;
+            A5-HCM-Payroll) pattern='packages/(hrm|ledger|payment-ledger)/src/|apps-src/hrm/' ;;
+            A7-App-Factory) pattern='packages/app-registry/src/(app-factory-approval-runtime|app-factory-definition|index)\.ts|apps/tenant-worker/src/aggregate-do\.ts' ;;
+            A11-Procurement) pattern='packages/clouderp-core/src/(supplier-lifecycle-controllers|procurement-.*)\.ts' ;;
+            A13-Manufacturing-QMS) pattern='packages/clouderp-erpnext/src/(manufacturing-.*|qms-controllers)\.ts' ;;
+            A15-Semantic-AI) pattern='packages/semantic/src/(ai-dashboard|dashboard|recommendation)\.ts' ;;
+            A17-Commerce) pattern='packages/social-commerce/src/api\.ts' ;;
+            A18-Alumdoor) pattern='a^' ;;
           esac
           if grep 'error TS' /tmp/a19-tsc.log | grep -E "$pattern"; then
             echo "TypeScript regression intersects pinned lane authority"
@@ -177,61 +170,39 @@ jobs:
         run: |
           case "${{ matrix.lane }}" in
             A1-IAM)
-              node --test \
-                tests/rc4-iam-auth-integration.test.mjs \
-                tests/rc4-iam-session-revalidation.test.mjs \
-                tests/login-mfa.test.mjs \
-                tests/mfa-service.test.mjs \
-                tests/session-registry.test.mjs \
-                tests/security-recent-auth.test.mjs \
-                tests/authentication-context.test.mjs \
-                tests/network-policy.test.mjs
+              node --test tests/rc4-iam-auth-integration.test.mjs tests/rc4-iam-session-revalidation.test.mjs tests/login-mfa.test.mjs tests/mfa-service.test.mjs tests/session-registry.test.mjs tests/security-recent-auth.test.mjs tests/authentication-context.test.mjs tests/network-policy.test.mjs
               python3 scripts/test-user-session-registry-migration.py
               python3 scripts/test-user-mfa-totp-migration.py
               ;;
             A3-Migration)
-              node --test \
-                tests/migration-plan.test.mjs \
-                tests/migration-orchestration.test.mjs \
-                tests/migration-orchestrator.test.mjs \
-                tests/migration-durable-orchestrator.test.mjs \
-                tests/migration-kernel-port.test.mjs
+              node --test tests/migration-plan.test.mjs tests/migration-orchestration.test.mjs tests/migration-orchestrator.test.mjs tests/migration-durable-orchestrator.test.mjs tests/migration-kernel-port.test.mjs
               python3 scripts/test-migration-run-journal.py
               ;;
             A4-VN-Statutory)
-              node --test \
-                tests/vn-accounting-policy.test.mjs \
-                tests/vn-accounting-statutory-pack.test.mjs \
-                tests/vn-legal-evidence.test.mjs \
-                tests/vn-vat-service.test.mjs
+              node --test tests/vn-accounting-policy.test.mjs tests/vn-accounting-statutory-pack.test.mjs tests/vn-legal-evidence.test.mjs tests/vn-vat-service.test.mjs
               python3 scripts/test-vn-vat-dataset-migration.py
               ;;
             A5-HCM-Payroll)
-              node --test \
-                tests/hrm-vn-pit-2026-source-lock.test.mjs \
-                tests/hrm-payroll-correction-reconciliation.test.mjs \
-                tests/hrm-operational.test.mjs \
-                tests/hrm-statutory-payroll.test.mjs
+              node --test tests/hrm-vn-pit-2026-source-lock.test.mjs tests/hrm-payroll-correction-reconciliation.test.mjs tests/hrm-operational.test.mjs tests/hrm-statutory-payroll.test.mjs
+              ;;
+            A7-App-Factory)
+              node --test tests/bpm-approval.test.mjs tests/bpm-timer.test.mjs tests/app-factory-definition.test.mjs tests/app-factory-definition-effective-window.test.mjs tests/app-factory-definition-resolver.test.mjs tests/app-factory-approval-runtime.test.mjs tests/app-rollback-plan.test.mjs tests/app-revision-history.test.mjs
               ;;
             A11-Procurement)
-              node --test \
-                tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs \
-                tests/supplier-lifecycle.test.mjs \
-                tests/supplier-contract-release.test.mjs \
-                tests/procurement-p2p-closure.test.mjs \
-                tests/procurement-p2p-correction-boundary.test.mjs \
-                tests/procurement-landed-cost.test.mjs
+              node --test tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs tests/supplier-lifecycle.test.mjs tests/supplier-contract-release.test.mjs tests/procurement-p2p-closure.test.mjs tests/procurement-p2p-correction-boundary.test.mjs tests/procurement-landed-cost.test.mjs
               ;;
             A13-Manufacturing-QMS)
-              node --test \
-                tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs \
-                tests/manufacturing-capacity-api.test.mjs \
-                tests/manufacturing-transaction-closure.test.mjs \
-                tests/manufacturing-cost-evidence.test.mjs \
-                tests/qms-lifecycle.test.mjs
+              node --test tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs tests/manufacturing-capacity-api.test.mjs tests/manufacturing-transaction-closure.test.mjs tests/manufacturing-cost-evidence.test.mjs tests/qms-lifecycle.test.mjs
+              ;;
+            A15-Semantic-AI)
+              node --test tests/semantic-dashboard.test.mjs tests/semantic-ai-dashboard.test.mjs tests/semantic-recommendation.test.mjs
               ;;
             A17-Commerce)
               node --test tests/ws16-omnichannel-source-contract.test.mjs
+              ;;
+            A18-Alumdoor)
+              node --check scripts/verify-alumdoor-golden-order-readonly.mjs
+              node --test tests/alumdoor-golden-order-readonly.test.mjs
               ;;
           esac
 
