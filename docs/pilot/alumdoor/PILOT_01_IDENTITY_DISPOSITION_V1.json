@@ -1,0 +1,32 @@
+{
+  "format": "forge-alumdoor-pilot-01-identity-disposition/v1",
+  "status": "LOCKED",
+  "authorized_at": "2026-08-05",
+  "tenant": "alu",
+  "production_data_mutated": false,
+  "customer_duplicate_policy": {
+    "match": "customer_name normalized by NFKC, trim, collapsed whitespace and vi-VN case-insensitive comparison",
+    "retain": "first source row in immutable source order",
+    "duplicate_action": "drop duplicate Customer output row",
+    "reference_action": "map duplicate customer_source_key references to retained source_key",
+    "conflicting_duplicate_fields": "do not overwrite retained Customer; retain duplicate-row disposition in normalization evidence",
+    "applies_to_references": ["contacts.customer_source_key", "opening_ar.customer_source_key"]
+  },
+  "item_code_collision_policy": {
+    "match": "exact trimmed item_code collision",
+    "retain": "first source row keeps original item_code",
+    "duplicate_action": "append the lowest available two-digit ordinal to the original code, starting at 01",
+    "examples": [
+      { "source": "AL548", "first": "AL548", "second": "AL54801", "third": "AL54802" }
+    ],
+    "collision_guard": "never overwrite a code that already exists in the original source or was already assigned",
+    "lineage": ["source_code_original", "source_key", "identity_disposition"]
+  },
+  "explicit_non_scope": {
+    "item_alias_gap_policy": "NOT_RESOLVED_BY_DUPLICATE_SUFFIXING",
+    "reason": "journal item-code strings that differ from the item master are alias/reference gaps, not duplicate item_code collisions; they still require canonical reconciliation",
+    "fuzzy_item_matching": false
+  },
+  "preview_rule": "apply identity normalization before validate-pilot-batch; normalized datasets must still satisfy unique keys, resolved references and zero unexplained variance",
+  "production_write_authorized": false
+}

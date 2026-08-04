@@ -6,9 +6,14 @@
   "mapping": "docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json",
   "mapping_version": 1,
   "source_ingest_evidence": "docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json",
+  "identity_disposition": "docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json",
   "tooling": {
     "validator": "docs/pilot/alumdoor/tools/validate-pilot-batch.mjs",
-    "tests": "docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs",
+    "identity_normalizer": "docs/pilot/alumdoor/tools/normalize-pilot-identities.mjs",
+    "tests": [
+      "docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs",
+      "docs/pilot/alumdoor/tools/normalize-pilot-identities.test.mjs"
+    ],
     "contract_verifier": "docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs",
     "manifest_template": "docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json",
     "ci": ".github/workflows/pilot-01-data-readiness.yml",
@@ -23,10 +28,21 @@
     "normalized_private_batch_ready": false,
     "current_phase": "reconcile-and-normalize"
   },
+  "identity_resolution": {
+    "customer_duplicate_policy_locked": true,
+    "customer_duplicate_observed_count": 2,
+    "customer_duplicate_action": "keep first canonical customer and remap duplicate references",
+    "item_duplicate_policy_locked": true,
+    "item_duplicate_action": "keep first code; suffix later exact collisions with 01, 02, 03... while preserving source_code_original",
+    "observed_item_master_unique_codes": 277,
+    "observed_item_master_duplicate_codes": 0,
+    "item_alias_gap_still_open": true,
+    "item_alias_gap_count": 60
+  },
   "observed_source_coverage": {
-    "customers": "present",
+    "customers": "present_duplicate_policy_locked",
     "suppliers": "present_with_role_gaps",
-    "items": "present_with_alias_gaps",
+    "items": "present_with_alias_gaps_no_observed_master_code_duplicates",
     "physical_aluminum_stock": "present_without_actual_kg",
     "operational_journal": "present",
     "cash_bank": "present_with_older_snapshot_hint",
@@ -41,7 +57,8 @@
     "required_datasets_present": false,
     "file_hashes_match": true,
     "required_fields_present": false,
-    "source_keys_unambiguous": false,
+    "customer_duplicate_identity_dispositioned": true,
+    "item_duplicate_collision_policy_locked": true,
     "references_resolved": false,
     "canonical_opening_stock_quantity_and_value_ready": false,
     "opening_ar_ap_proven": false,
@@ -51,15 +68,14 @@
   },
   "remaining_before_pilot_01_ready": [
     "freeze one coherent business cutoff across Stock/AR/AP/cash-bank",
-    "disposition duplicate customer identities and unresolved party roles/aliases",
-    "resolve canonical item aliases for transaction and aluminum-profile source identities",
+    "resolve supplier roles and canonical item aliases for the 60 unmatched journal item-code strings",
     "obtain actual measured Kg/value evidence for opening aluminum stock without substituting theoretical kg/m",
     "obtain complete opening AR/AP snapshots at the frozen cutoff",
     "disposition stock scope drift and two future-dated VIPST700 rows",
     "lock VND fractional rounding policy",
     "complete employee/work-center/BOM inputs required by pilot scope",
     "freeze named pilot account allowlist including exactly one active Giám đốc account",
-    "generate private normalized batch and obtain PREVIEW_PASS"
+    "generate private normalized batch using the locked identity disposition and obtain PREVIEW_PASS"
   ],
   "production_data_mutated": false
 }

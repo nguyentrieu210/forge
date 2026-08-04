@@ -13,6 +13,7 @@ Ngày cập nhật: **2026-08-05**.
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
 - Pilot-01 control plane: **READY / PREVIEW-ONLY**.
 - Pilot-01 real uploaded source set: **OBSERVED / HASHED / INGESTED**.
+- Pilot-01 duplicate identity policy: **LOCKED**.
 - Current truthful Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
 - Exact frozen pilot software baseline: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Release bundle: `838218167db020d8`.
@@ -20,66 +21,39 @@ Ngày cập nhật: **2026-08-05**.
 - Active profile: `alumdoor-pilot@1`, valid, no blocked capabilities.
 - Capability truth remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956** unless a newer materialized convergence record changes it.
 
-Pilot authorities:
+Pilot authorities include `PILOT_01_IDENTITY_DISPOSITION_V1.json`, `PILOT_01_STATUS.json`, the source-ingest evidence, Mapping V1 and the Pilot-00 lock.
 
-- `docs/pilot/alumdoor/README.md`;
-- `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`;
-- `docs/pilot/alumdoor/PILOT_00_LOCK.json`;
-- `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
-- `docs/pilot/alumdoor/PILOT_01_READINESS.md`;
-- `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
-- `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json`;
-- `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`;
-- `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`.
+## Locked duplicate rule
 
-## What is next
+- Duplicate Customer names: retain the first canonical row in immutable source order; later duplicate Customer rows are dropped and their `customer_source_key` references are remapped to the retained Customer.
+- Exact duplicate item codes: keep the first original code; later exact collisions receive the lowest free `01`, `02`, `03`... suffix and preserve `source_code_original`.
+- The uploaded item master is already **277/277 unique**, so suffixing currently acts as a normalization collision guard.
+- The **60 journal item strings not matching master codes remain open alias/reference gaps**; do not manufacture `01` codes for them and do not fuzzy-match them.
 
-Active phase remains **Pilot-01 — Master + Opening Data Readiness**, but source acquisition is no longer the blocker. The uploaded Alumdoor files are real source evidence. The next work is reconciliation + normalization into a private Mapping-V1 batch.
+## Remaining blockers to PREVIEW_PASS
 
-Observed source coverage includes:
-
-1. 277-row unique item-code master export;
-2. 258 customer source rows / 256 exact customer names;
-3. 8 supplier-master rows;
-4. 730 typed operating-journal rows;
-5. current TIẾN ĐẠT purchase-order reference;
-6. 11-sheet customer order/history workbook;
-7. aluminum lot workbook with 21 total sheets / 18 inventory sheets / 1,506 source lot rows;
-8. supplied business-process/formula specification.
-
-Raw customer workbooks remain outside Git. Their exact SHA-256 digests and structural evidence are recorded in `PILOT_01_SOURCE_INGEST_20260805.json`.
-
-## Current blockers to PREVIEW_PASS
-
-- no single proven business cutoff across Stock + AR/AP + cash/bank;
-- two duplicate customer identities need source-owner disposition;
-- supplier role/party aliases remain after preserving canonical TIẾN ĐẠT;
-- 60 distinct journal item-code strings do not exact-match the uploaded item export and need canonical alias reconciliation;
-- aluminum lots contain length/piece evidence but no populated actual-Kg values; canonical `Nhôm cây/lá` Stock UOM is Kg and theoretical kg/m must not be relabelled as measured quantity;
-- process specification says 23 aluminum sheets + 2 mesh sheets, while the uploaded aluminum workbook has 21 total / 18 inventory sheets and no separate mesh source was observed;
-- two `VIPST700` source rows carry future date `23/12/2026`;
-- opening AR/AP cannot be safely reconstructed from the observed activity window;
-- 45 typed journal rows contain fractional `Tổng thanh toán` and need a deterministic integer-VND rule;
-- complete work-center/BOM/employee/pilot-user datasets are not migration-ready;
-- exactly one active named `Giám đốc` pilot account remains required.
+- one coherent Stock/AR/AP/cash-bank cutoff is not frozen;
+- supplier role/party aliases remain;
+- 60 item alias/reference gaps remain;
+- opening aluminum Stock has no populated actual-Kg evidence;
+- stock source scope differs from the process specification and has two future-dated `VIPST700` rows;
+- complete opening AR/AP at the common cutoff is not proven;
+- 45 journal rows need a deterministic integer-VND rounding rule;
+- work-center/BOM/employee/pilot-user inputs remain incomplete;
+- exactly one active named `Giám đốc` account is still required.
 
 ## Next execution order
 
-1. reconcile item codes against canonical Alumdoor aliases/standardization;
-2. reconcile customer/supplier party identities without fuzzy merging;
-3. freeze one coherent source cutoff;
-4. obtain matching AR/AP/cash-bank opening snapshots at that cutoff;
-5. disposition stock sheet scope and the two future dates;
-6. obtain actual measured Kg/value evidence for opening aluminum stock, or an explicitly approved source-bound conversion policy that does not mislabel theoretical evidence;
-7. complete work-center/BOM/employee scope and named pilot accounts;
-8. generate a private normalized batch and run `validate-pilot-batch.mjs`;
-9. only a real zero-variance `PREVIEW_PASS` advances Pilot-01 to READY.
+1. apply the locked identity normalizer to the private batch;
+2. resolve canonical item aliases and remaining supplier party roles;
+3. freeze one coherent source cutoff and matching opening snapshots;
+4. close Stock quantity/value evidence and stock-source anomalies;
+5. lock VND conversion/rounding and remaining operating/access masters;
+6. generate the private Mapping-V1 batch and run `validate-pilot-batch.mjs` until real zero-variance `PREVIEW_PASS`.
 
 ## Production boundary
 
-No Pilot-01 real production import/write has occurred.
-
-A `PREVIEW_PASS` still does not authorize real customer/master/opening-data import/write. Production import, cutover, DNS/route/secret/provider mutation, restore/PITR and destructive state operations remain explicit authorization boundaries.
+No Pilot-01 production import/write has occurred. `PREVIEW_PASS` still does not authorize real customer/master/opening-data import/write. Production import, cutover, DNS/route/secret/provider mutation, restore/PITR and destructive state operations remain explicit authorization boundaries.
 
 ## Read order
 
@@ -87,8 +61,8 @@ A `PREVIEW_PASS` still does not authorize real customer/master/opening-data impo
 2. `CURRENT_STATUS.md`;
 3. `NEXT_TASKS.md`;
 4. `docs/pilot/alumdoor/README.md`;
-5. `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`;
+5. `docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json`;
 6. `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
-7. `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
-8. `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md` for certified entry provenance;
-9. `PROJECT_CONTEXT.md` and architecture/domain contracts as needed.
+7. `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`;
+8. `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
+9. `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md`.
