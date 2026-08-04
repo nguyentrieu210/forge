@@ -9,16 +9,19 @@ R6 is the final certification program between R5 engineering convergence and the
 
 R6 does **not** reopen R5 as another implementation wave. It proves that one exact release candidate can be deployed, observed, recovered, reconciled and operated safely enough to enter the Alumdoor pilot.
 
+After R6-05 emits the release verdict, R6-06 performs a separate post-certification capability reconciliation so the repository records exact updated maturity counts across all 956 enterprise capabilities instead of carrying stale pre-R6 totals.
+
 ## Read order
 
 1. `R6_PRODUCTION_CERTIFICATION_PLAN.md` — scope, invariants, lanes and GO/NO-GO.
 2. `OPEN_ORDER.md` — exact order for opening agents and dependency rules.
-3. `AGENT_PROMPTS.md` — copy-paste prompts for R6 agents.
-4. `EVIDENCE_MATRIX.md` — evidence IDs, producer, consumer and acceptance criteria.
-5. `docs/ops/SRE_RUNBOOK.md` — canonical release/recovery operator intent.
-6. `docs/ops/CLOUDFLARE_PRODUCTION_GOVERNANCE.md` — desired-vs-observed provider governance.
-7. `docs/VALIDATION_GATES.md` — exact-SHA validation and production evidence rules.
-8. `docs/ALUMDOOR-REFERENCE-VERTICAL-CONTRACT.md` — vertical authority boundary.
+3. `AGENT_PROMPTS.md` — copy-paste prompts for R6-00 through R6-05.
+4. `R6_06_CAPABILITY_RECONCILIATION.md` — post-certification 956-ID maturity recount contract.
+5. `EVIDENCE_MATRIX.md` — evidence IDs, producer, consumer and acceptance criteria.
+6. `docs/ops/SRE_RUNBOOK.md` — canonical release/recovery operator intent.
+7. `docs/ops/CLOUDFLARE_PRODUCTION_GOVERNANCE.md` — desired-vs-observed provider governance.
+8. `docs/VALIDATION_GATES.md` — exact-SHA validation and production evidence rules.
+9. `docs/ALUMDOOR-REFERENCE-VERTICAL-CONTRACT.md` — vertical authority boundary.
 
 ## Program shape
 
@@ -43,6 +46,11 @@ Release          Migration        Perf/Recovery    Golden Flow
              PILOT-GO / PILOT-NO-GO
                     |
                     v
+          R6-06 Capability Reconciliation
+                    |
+          956-ID maturity recount + delta
+                    |
+                    v
           Alumdoor Controlled Pilot
 ```
 
@@ -59,6 +67,8 @@ Every R6 claim is bound to an immutable certification identity:
 - provider observation timestamp/environment identity.
 
 If R6 requires a source fix, evidence tied to the old SHA is stale. The affected certification lanes must rerun against the new exact candidate.
+
+R6-06 inherits the same provenance rule: no capability may be promoted from evidence that no longer proves the final relevant source/release state.
 
 ## Explicit R5 waiver carry-forward
 
@@ -81,11 +91,23 @@ The following remain explicit authorization boundaries:
 - customer production data writes/import/cutover;
 - destructive queue replay or state rewind.
 
+R6-06 has no production mutation authority. Its only writes are repository evidence/status updates justified by already accepted evidence.
+
 ## Definition of done
 
-R6 is complete only when `R6-05` publishes one exact final record with either:
+Release certification is complete when `R6-05` publishes one exact final record with either:
 
 - `PILOT-GO`, with all mandatory evidence satisfied; or
 - `PILOT-NO-GO`, with explicit blockers and owners.
 
-After convergence, temporary `OPEN_ORDER.md` and `AGENT_PROMPTS.md` may be removed from `main`; the final certification record and durable evidence contract must remain.
+Post-certification capability accounting is complete when `R6-06` additionally publishes:
+
+- exact `Hardened / RC / Wired / Foundation / Missing` before/after counts;
+- a per-ID promotion/demotion ledger with evidence;
+- remaining Missing inventory;
+- a 956/956 completeness proof from `server/scripts/validate-enterprise-capability-status.mjs`;
+- `R6-06-CAPABILITY-RECONCILED` or an explicit evidence-accounting blocker.
+
+R6-06 does not alter the R6-05 release verdict and does not automatically promote pilot-used capabilities to Hardened.
+
+After convergence, temporary `OPEN_ORDER.md` and `AGENT_PROMPTS.md` may be removed from `main`; the final certification record, durable evidence contract, and post-R6 capability reconciliation record must remain.
