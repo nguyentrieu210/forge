@@ -1,0 +1,67 @@
+name: RC3 A0 Finalize Capability Status
+
+on:
+  push:
+    branches:
+      - agent/rc3-00-capability-convergence
+    paths:
+      - "server/scripts/rc3-finalize-capability-status.mjs"
+      - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
+      - "CURRENT_STATUS.md"
+      - "NEXT_TASKS.md"
+      - "docs/agents/rc/RC3_CONVERGENCE_20260804.md"
+      - ".github/workflows/rc3-a0-finalize-capability-status.yml"
+  pull_request:
+    branches:
+      - program/rc3-exact-main-release-confidence-20260804
+      - main
+    paths:
+      - "server/scripts/rc3-finalize-capability-status.mjs"
+      - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
+      - "CURRENT_STATUS.md"
+      - "NEXT_TASKS.md"
+      - "docs/agents/rc/RC3_CONVERGENCE_20260804.md"
+      - ".github/workflows/rc3-a0-finalize-capability-status.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate RC3 canonical status
+        run: node server/scripts/rc3-finalize-capability-status.mjs
+
+      - name: Validate 956 capability registry
+        run: node server/scripts/validate-enterprise-capability-status.mjs
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Commit generated convergence on A0 push only
+        if: github.event_name == 'push'
+        run: |
+          if git diff --quiet; then
+            echo "RC3 canonical files already generated."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md CURRENT_STATUS.md NEXT_TASKS.md docs/agents/rc/RC3_CONVERGENCE_20260804.md
+          git commit -m "docs(rc3): finalize capability truth convergence"
+          git push origin HEAD:agent/rc3-00-capability-convergence
+          echo "Generated commit: $(git rev-parse HEAD)"
+          node server/scripts/validate-enterprise-capability-status.mjs
