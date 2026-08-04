@@ -1,13 +1,13 @@
 {
-  "schema_version": 1,
-  "work_item": "RC4-A20",
-  "mission": "Converge A1-A19 evidence into the canonical 956-capability registry without maturity inflation.",
+  "schema_version": 2,
+  "work_item": "RC4-A20-R2",
+  "mission": "Re-converge A1-A19 evidence on exact current main, allow only integrated-tree capability promotion, and keep branch-only evidence out of canonical maturity.",
   "snapshot": {
     "date": "2026-08-04",
-    "main_sha": "1f0b08934101640ca15b2379b5dd7ca3ef018e33",
+    "main_sha": "269c690bda7abf90ea13225204352bdff908d63b",
     "canonical_status_blob_sha": "5189e90422edb8a0e3c75bcce7d11838b3f97965",
-    "observed_through_pr": 606,
-    "note": "Point-in-time RC4 convergence snapshot. Later worker commits/runs require a new manifest revision before they can affect maturity."
+    "observed_through_pr": 620,
+    "note": "R2 supersedes the stale A20 snapshot. A6 was merged into main before A20 #612, while other RC4 workers continued to advance on unmerged branches. Canonical maturity may change only when the capability implementation/evidence is integrated into this convergence tree."
   },
   "baseline_counts": {
     "Hardened": 0,
@@ -18,12 +18,21 @@
   },
   "candidate_counts": {
     "Hardened": 0,
-    "RC": 65,
-    "Wired": 407,
+    "RC": 66,
+    "Wired": 406,
     "Foundation": 327,
     "Missing": 157
   },
-  "maturity_changes": [],
+  "maturity_changes": [
+    {
+      "id": "U01-001",
+      "from": "Wired",
+      "to": "RC",
+      "agent": "A6",
+      "evidence_ref": "E-UI",
+      "reason": "A6 is merged into current main and exact cross-device browser evidence closes the responsive-PWA RC blocker without claiming offline or production Hardened evidence."
+    }
+  ],
   "lanes": [
     {
       "agent": "A1",
@@ -34,8 +43,9 @@
       "evidence_kind": "exact-executable",
       "validated_head_sha": "47bb2b8355af6ecc4abffde9d83cb0c8b7621479",
       "workflow_run": 30867988724,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Exact backend IAM evidence is green, but A1 explicitly keeps MFA/session capabilities Wired pending A6 browser/device evidence and keeps provider/privacy gaps below RC."
+      "reason": "Backend IAM evidence is green. A6 now closes generic responsive browser evidence, but A1 still lacks the complete MFA enrollment/recovery/session-inventory/revoke browser slice and provider/privacy lifecycle depth required for further promotion."
     },
     {
       "agent": "A2",
@@ -44,8 +54,9 @@
       "head_sha": "6efa89b46548d6a958e04ffd8ea8c7dcdc9cd60a",
       "status": "BLOCKED",
       "evidence_kind": "audit-only",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Lane explicitly reports zero promotions/demotions; remote Cloudflare observation remains unverified and provider/recovery drills are absent."
+      "reason": "Remote Cloudflare observation remains unverified; provider recovery, restore/PITR, replication and production-state claims still lack direct environment evidence."
     },
     {
       "agent": "A3",
@@ -56,8 +67,9 @@
       "evidence_kind": "exact-executable",
       "validated_head_sha": "792f7f311d52f3ed0882c284b1e3d9ff5f34b359",
       "workflow_run": 30868113636,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Durable migration runtime and retry evidence are green, but A3 explicitly withholds RC promotion pending domain reconciliation, restore/PITR/cutover and applied-state evidence."
+      "reason": "Durable migration runtime and retry evidence are green, but the implementation is not integrated into the R2 tree and restore/PITR/cutover, opening-data reconciliation and applied-state evidence remain dependencies."
     },
     {
       "agent": "A4",
@@ -65,9 +77,10 @@
       "pr": 602,
       "head_sha": "84f25a829bb7eb28ab8bce053dc336435b46e77f",
       "status": "BLOCKED",
-      "evidence_kind": "partial-executable",
+      "evidence_kind": "exact-failing",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "SQLite migration replay is green, but focused Node execution is unproven and the lane explicitly makes no registry promotion."
+      "reason": "A19 still reproduces the VN statutory App Registry method-contract failure on this head. A9 now supplies a green GL aggregate seam on its own branch, but A4 has not consumed it in an integrated candidate."
     },
     {
       "agent": "A5",
@@ -75,59 +88,87 @@
       "pr": 604,
       "head_sha": "1baaf38d92f5aa0d53cfd2260d5baade850be8dd",
       "status": "BLOCKED",
-      "evidence_kind": "source-static",
+      "evidence_kind": "independent-executable",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "PIT source-lock and payroll correction regressions are authored, but exact execution is not accepted and BHXH/BHYT/BHTN clause-level numeric authority remains incomplete."
+      "reason": "A19 independently passes the current A5 code slice, but clause-complete BHXH/BHYT/BHTN numeric authority remains open and the branch is not integrated into current main."
     },
     {
       "agent": "A6",
       "branch": "agent/rc4-06-ui-mobile-offline",
       "pr": 598,
-      "head_sha": "007572266465b9fb4944929f382162166740884b",
-      "status": "BLOCKED",
-      "evidence_kind": "harness-only",
-      "accepted_for_maturity": false,
-      "reason": "Browser/mobile/PWA matrices are authored but the worker has no accepted exact browser run; offline authority remains explicitly Missing."
+      "head_sha": "6a6e7d8bdc0c543bd37d214415852f6fa67aa506",
+      "status": "DONE",
+      "evidence_kind": "exact-executable-integrated",
+      "validated_head_sha": "67b4e71fa245eec2a16e075b3a5c388de45ff7ed",
+      "workflow_run": 30871503111,
+      "integrated_in_tree": true,
+      "merge_commit_sha": "834da8cf8fbf496f6c58cb0d8ba2119c40a6b66c",
+      "post_validation_allowed_paths": [
+        ".github/workflows/rc4-a6-browser-evidence.yml",
+        "docs/agents/rc4/RC4_A6_UI_MOBILE_HANDOFF.md",
+        "docs/agents/rc4/RC4_A6_UI_MOBILE_PROGRESS.md"
+      ],
+      "accepted_for_maturity": true,
+      "promotion_evidence": {
+        "capabilities": ["U01-001"],
+        "paths": [
+          "client/apps/demo/playwright.rc4-v2-qa.config.ts",
+          "client/apps/demo/e2e/ui-v2-mobile-qa.spec.ts",
+          "client/e2e-forge/playwright.rc4-v2-mobile-qa.config.ts",
+          "client/e2e-forge/ui-tests/rc4-pwa-installability.spec.ts",
+          "docs/agents/rc4/RC4_A6_UI_MOBILE_PROGRESS.md"
+        ]
+      },
+      "reason": "A6 is merged on main. Exact run 30871503111 passed demo build, 50 current-V2 browser checks, runtime build and 19 runtime/login/PWA checks; only docs/workflow cleanup changed after the validated source head. This closes U01-001 Responsive PWA from Wired to RC while leaving installability/offline/device/production claims conservative."
     },
     {
       "agent": "A7",
       "branch": "agent/rc4-07-appfactory-residual",
       "pr": 606,
-      "head_sha": "4998c7d21b698e3604ef8b3ca9d8c324db979fc6",
-      "status": "RUNNING",
-      "evidence_kind": "source-static",
+      "head_sha": "5d422009700caf029ca202e98c176c1915c2fd63",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "validated_head_sha": "5d422009700caf029ca202e98c176c1915c2fd63",
+      "workflow_run": 30869504929,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Persisted App Factory approval runtime candidate is substantive, but exact-head validation has not been accepted in this A20 snapshot and its PR states promotions remain evidence-gated."
+      "reason": "A7 repaired its earlier failures and exact final validation is green, but the backend/schema branch is still unmerged. R2 records B01-005/B01-009/B01-010 as evidence candidates only; no branch-only promotion enters main."
     },
     {
       "agent": "A8",
       "branch": "agent/rc4-08-integration-provider",
-      "pr": null,
-      "head_sha": null,
-      "status": "RUNNING",
-      "evidence_kind": "source-static",
+      "pr": 615,
+      "head_sha": "8e43a4e04818fc1d956c5173190f1794dfc802b8",
+      "status": "READY",
+      "evidence_kind": "independent-executable",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Provider/DLQ source implementation exists, but no independently accepted final PR head and executable provider/retry evidence were available at snapshot time."
+      "reason": "Typed provider/DLQ seams and isolated strict tests exist and A19 independently passes the lane, but physical quarantine/replay, credential lifecycle and real provider evidence remain outside the unmerged branch."
     },
     {
       "agent": "A9",
       "branch": "agent/rc4-09-architecture-kernel",
-      "pr": null,
-      "head_sha": null,
-      "status": "BOOTSTRAPPED",
-      "evidence_kind": "bootstrap",
+      "pr": 619,
+      "head_sha": "32001d70a4ef87a5e14bd7df2dcc100cd0f8d243",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "validated_head_sha": "32001d70a4ef87a5e14bd7df2dcc100cd0f8d243",
+      "workflow_run": 30870090636,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+      "reason": "Authoritative read-only GL aggregate boundary is exact-head green and independently replayed by A19, but it is not integrated into current main and does not by itself close A4 Finance capabilities."
     },
     {
       "agent": "A10",
       "branch": "agent/rc4-10-crm-revenue",
-      "pr": null,
-      "head_sha": null,
-      "status": "BOOTSTRAPPED",
-      "evidence_kind": "bootstrap",
+      "pr": 617,
+      "head_sha": "d90085ba440f07c278e2e620a1409611b89ca9ab",
+      "status": "BLOCKED",
+      "evidence_kind": "exact-failing",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+      "reason": "A19 reports the Customer 360 regression file fails to parse near line 292. Authored CRM source therefore remains non-acceptance evidence until a new immutable green head exists."
     },
     {
       "agent": "A11",
@@ -138,89 +179,103 @@
       "evidence_kind": "exact-executable",
       "validated_head_sha": "a157f4aab5d5a5a0ee867bee77aedbe4af812436",
       "workflow_run": 30868323326,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Supplier cancellation/permission hardening has exact green evidence, but the lane does not claim whole Supplier Rating/Contract capability promotion and retains landed-cost/allocation dependencies."
+      "reason": "Supplier cancellation/permission hardening is green and independently replayed, but the branch is unmerged and does not prove whole supplier-governance or landed-cost capability depth."
     },
     {
       "agent": "A12",
       "branch": "agent/rc4-12-inventory-wms",
-      "pr": null,
-      "head_sha": null,
-      "status": "BOOTSTRAPPED",
-      "evidence_kind": "bootstrap",
+      "pr": 616,
+      "head_sha": "68f1ab9e6ee3721e2ed66444fad9dfe03eaf2fc4",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "validated_head_sha": "68f1ab9e6ee3721e2ed66444fad9dfe03eaf2fc4",
+      "workflow_run": 30869414261,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+      "reason": "Scanner/WMS and valuation-focused gates are green and A19 independently passes the lane, but the backend branch is unmerged; source-targeted landed-cost valuation and cross-owner GL propagation remain open."
     },
     {
       "agent": "A13",
       "branch": "agent/rc4-13-manufacturing-qms",
       "pr": 603,
-      "head_sha": "d6b7a503e8dacaeaa37fd4180f81b0314a339b50",
-      "status": "RUNNING",
-      "evidence_kind": "source-static",
+      "head_sha": "5c9c47ba4e5092fd83c4752785047ad7e69be34c",
+      "status": "BLOCKED",
+      "evidence_kind": "exact-failing",
+      "workflow_run": 30868433145,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Manufacturing/QMS release-confidence tests and workflow exist, but exact-head CI had not been accepted in this A20 snapshot; cross-owner rework/subcontract/cost/repost dependencies remain."
+      "reason": "The URL-constructor test defect was fixed at 5c9c47b, but exact RC4 A13 validation still fails on lane-owned TypeScript/QMS issues according to A19. No maturity promotion is accepted."
     },
     {
       "agent": "A14",
       "branch": "agent/rc4-14-project-service-field",
-      "pr": null,
-      "head_sha": null,
-      "status": "BOOTSTRAPPED",
-      "evidence_kind": "bootstrap",
+      "pr": 613,
+      "head_sha": "8ca102b3fbdf30cb2db0366ce32ac0b9102c732a",
+      "status": "READY",
+      "evidence_kind": "independent-executable",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+      "reason": "A19 independently passes the current Project/Service/Field lane, but the business-rule/metadata branch remains unmerged and durable SLA/finance/row-policy/channel/offline dependencies remain."
     },
     {
       "agent": "A15",
       "branch": "agent/rc4-15-bi-semantic-ai",
-      "pr": null,
-      "head_sha": null,
-      "status": "RUNNING",
-      "evidence_kind": "source-static",
+      "pr": 608,
+      "head_sha": "3c6db92969d80aab92afdc9ef4f07db0cbe2565b",
+      "status": "READY",
+      "evidence_kind": "independent-executable",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Semantic/AI implementation and tests exist, but no independently accepted final PR head/exact execution was available in this snapshot."
+      "reason": "A19 independently passes the semantic/AI lane, but dashboard/recommendation implementation is still branch-only and UI/provider productization dependencies remain."
     },
     {
       "agent": "A16",
       "branch": "agent/rc4-16-workplace-dms-collab",
-      "pr": null,
-      "head_sha": null,
-      "status": "BOOTSTRAPPED",
-      "evidence_kind": "bootstrap",
+      "pr": 614,
+      "head_sha": "26db2690deedc23613ae9179815f4cfe25cc32ec",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "validated_head_sha": "26db2690deedc23613ae9179815f4cfe25cc32ec",
+      "workflow_run": 30869407232,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+      "reason": "Workplace reminder/expiry regressions are exact-head green and independently replayed, but the branch is unmerged and shared maintenance scheduling/provider wiring remains outside the candidate."
     },
     {
       "agent": "A17",
       "branch": "agent/rc4-17-logistics-pos-commerce",
       "pr": 601,
       "head_sha": "f2504064dbdf929ba6c03107eea624463943fce1",
-      "status": "BLOCKED",
-      "evidence_kind": "source-static",
+      "status": "READY",
+      "evidence_kind": "independent-executable",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Authorization hardening is substantive, but focused execution is not accepted; skipped default workflows are not evidence and Finance/Inventory/UI dependencies remain."
+      "reason": "A19 independently passes route authorization for the current branch, but it remains unmerged and POS payment, stock reservation/return and dedicated device/offline dependencies remain."
     },
     {
       "agent": "A18",
       "branch": "agent/rc4-18-alumdoor-vertical",
-      "pr": null,
-      "head_sha": null,
-      "status": "BOOTSTRAPPED",
-      "evidence_kind": "bootstrap",
+      "pr": 611,
+      "head_sha": "b3e428d21b4be13337694fde9a78d77b37c8db93",
+      "status": "READY",
+      "evidence_kind": "independent-executable",
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Only bootstrap handoff was observed; historical vertical production evidence cannot prove the current RC4 candidate."
+      "reason": "Golden Order exact-release verification logic has local 12/12 evidence and A19 independently passes the lane, but authenticated live Golden Order/current production evidence is absent and the branch is unmerged."
     },
     {
       "agent": "A19",
       "branch": "agent/rc4-19-independent-adversarial-qa",
       "pr": 605,
-      "head_sha": "102f887c92d58eb3c80365a053431d90ff20b330",
-      "status": "RUNNING",
-      "evidence_kind": "independent-qa-in-progress",
-      "workflow_run": 30868619676,
+      "head_sha": "0220ced899dc1ffaa2bbb55e46f841674eb07f50",
+      "status": "BLOCKED",
+      "evidence_kind": "independent-qa-partial",
+      "workflow_run": 30871944096,
+      "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "Independent adversarial replay is still in progress and A19 itself requires a second exact-converged-head replay before RC4 maturity promotion."
+      "reason": "A19 now has reviewable A1-A18 heads and reports 13 independent PASS, A6 deferred, with A4/A7/A10/A13 blocked in its snapshot. A7 subsequently produced a new own-lane green head, so A19 is useful cross-lane evidence but is stale for A7 and its overall run still fails."
     }
   ]
 }
