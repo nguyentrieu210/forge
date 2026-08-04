@@ -74,36 +74,102 @@ jobs:
           fi
 
       - name: Migration sequence checksum and append-only governance
+        id: migration_governance
+        continue-on-error: true
         working-directory: server
         run: |
           node scripts/verify-migration-governance.mjs --base-ref "${{ github.event.pull_request.base.sha }}"
           node --test tests/migration-governance.test.mjs
 
       - name: Representative opening import order and reconciliation fixtures
+        id: migration_fixtures
+        continue-on-error: true
         working-directory: server
         run: |
           node --test tests/migration-opening.test.mjs
           node --test tests/migration-manifest-reconcile.test.mjs
 
       - name: Canonical App Registry package lifecycle regressions
+        id: app_registry
+        continue-on-error: true
         working-directory: server
         run: node --test tests/app-registry.test.mjs
 
-      - name: First-party package source dry checks
+      - name: HRM package source dry check
+        id: pack_hrm
+        continue-on-error: true
         working-directory: server
-        run: |
-          node scripts/pack-app.mjs apps-src/hrm --check
-          node scripts/pack-app.mjs apps-src/vn-accounting --check
-          node scripts/pack-app.mjs apps-src/manufacturing-qms --check
-          node scripts/pack-app.mjs apps-src/maintenance --check
+        run: node scripts/pack-app.mjs apps-src/hrm --check
+
+      - name: VN Accounting package source dry check
+        id: pack_vn_accounting
+        continue-on-error: true
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/vn-accounting --check
+
+      - name: Manufacturing QMS package source dry check
+        id: pack_manufacturing_qms
+        continue-on-error: true
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/manufacturing-qms --check
+
+      - name: Maintenance package source dry check
+        id: pack_maintenance
+        continue-on-error: true
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/maintenance --check
 
       - name: Disposable workerd tenant bootstrap install reinstall upgrade rollback isolation
+        id: disposable_tenant
+        continue-on-error: true
         working-directory: server
         run: pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts --config apps/tenant-worker/vitest.config.mts
 
       - name: Diff hygiene
+        id: diff_hygiene
+        continue-on-error: true
         run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
 
       - name: R5-01 minimum-version dependency contract gate
+        id: minimum_version
+        continue-on-error: true
         working-directory: server
         run: node --test tests/r5-package-migration-rehearsal.test.mjs
+
+      - name: Aggregate rehearsal verdict
+        if: always()
+        env:
+          MIGRATION_GOVERNANCE: ${{ steps.migration_governance.outcome }}
+          MIGRATION_FIXTURES: ${{ steps.migration_fixtures.outcome }}
+          APP_REGISTRY: ${{ steps.app_registry.outcome }}
+          PACK_HRM: ${{ steps.pack_hrm.outcome }}
+          PACK_VN_ACCOUNTING: ${{ steps.pack_vn_accounting.outcome }}
+          PACK_MANUFACTURING_QMS: ${{ steps.pack_manufacturing_qms.outcome }}
+          PACK_MAINTENANCE: ${{ steps.pack_maintenance.outcome }}
+          DISPOSABLE_TENANT: ${{ steps.disposable_tenant.outcome }}
+          DIFF_HYGIENE: ${{ steps.diff_hygiene.outcome }}
+          MINIMUM_VERSION: ${{ steps.minimum_version.outcome }}
+        run: |
+          failed=0
+          for item in \
+            "migration_governance=$MIGRATION_GOVERNANCE" \
+            "migration_fixtures=$MIGRATION_FIXTURES" \
+            "app_registry=$APP_REGISTRY" \
+            "pack_hrm=$PACK_HRM" \
+            "pack_vn_accounting=$PACK_VN_ACCOUNTING" \
+            "pack_manufacturing_qms=$PACK_MANUFACTURING_QMS" \
+            "pack_maintenance=$PACK_MAINTENANCE" \
+            "disposable_tenant=$DISPOSABLE_TENANT" \
+            "diff_hygiene=$DIFF_HYGIENE" \
+            "minimum_version=$MINIMUM_VERSION"
+          do
+            echo "$item"
+            case "$item" in
+              *=success) ;;
+              *) failed=1 ;;
+            esac
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "R5-06 rehearsal BLOCKED: one or more executable gates failed."
+            exit 1
+          fi
