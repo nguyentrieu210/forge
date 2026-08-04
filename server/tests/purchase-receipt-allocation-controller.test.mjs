@@ -22,6 +22,7 @@ function seedMasters(store) {
     measurement_profile: "AL-BAR",
     has_catch_weight: true,
     weight_uom: "Kg",
+    purchase_stock_qty_field: "qty_bar",
     purchase_allocation_qty_field: "qty_bar",
     purchase_allocation_uom: "Cây",
   });
