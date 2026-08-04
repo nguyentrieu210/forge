@@ -4,100 +4,139 @@ Ngày cập nhật: **2026-08-04**.
 
 Đây là **active queue** của Forge. Lịch sử đã hoàn thành nằm trong Git/PR/convergence evidence, không lặp lại ở đây.
 
-## 0. Immediate coordination
+## 0. Current state
 
-1. Hoàn tất documentation cleanup và merge sau khi được duyệt.
-2. Re-audit/rebase draft R5 planning PRs `#624` và `#626` lên exact current `main` sau cleanup.
-3. Không mở thêm RC4 worker lane. RC4 đã đóng qua PR `#627`.
+- RC4: DONE.
+- R5: **DONE / merged via PR #638**.
+- R5 merge commit: `7940331c589d4e5699cf00e2ec843c5a7b8c50ac`.
+- Active program: **R6 Production Certification**.
+- Next milestone after R6: **Alumdoor Controlled Pilot**.
 
-## 1. R5 — Integrated hardening / productization
+Do not reopen R5 merely because production evidence is missing; that evidence belongs to R6.
 
-Mục tiêu: biến integrated RC4 tree thành một release candidate có thể triển khai lặp lại cho khách mà không cần sửa source riêng từng tenant.
+## 1. R6-00 — Release Lock + Evidence Contract
 
-### Wave 0 — Integration control
+Open first and alone.
 
-- Audit exact current `main` và branch/PR còn mở.
-- Khóa integration manifest và dependency order.
-- Phân loại mọi residual là `integrate / already-main / defer / pilot-blocker`.
-- Chống duplicate authority và stale branch replay.
+Required output:
 
-### Wave 1 — chạy song song
+- exact current `main`;
+- initial R6 candidate SHA;
+- package/app/profile identity;
+- expected migration inventory/checksum digest;
+- target environment identity without secrets;
+- evidence index;
+- read-only vs mutation-gated action matrix;
+- dependency order;
+- `R6-00-LOCKED`.
 
-- **R5-01 Package + Capability Profile**: package lifecycle, dependency resolver, activation/deactivation semantics, profile metadata/UI contract.
-- **R5-02 Finance + HCM**: statutory/reconciliation/correction residuals cần cho pilot.
-- **R5-03 Commercial + Supply Chain**: CRM/Sales/Procurement/Inventory integrated behavior.
-- **R5-04 Manufacturing + Service**: Manufacturing/QMS/Project/Service/Warranty integration.
-- **R5-05 Integration + BI + Workplace + Logistics**: shared provider-neutral seams, semantic/workplace/commerce integration.
+Canonical plan: `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`.
 
-R5 không triển khai toàn bộ 157 Missing capabilities. Chỉ mở capability nếu nó là pilot blocker hoặc shared safety/authority dependency.
+## 2. R6 worker wave — open after R6-00-LOCKED
 
-### Wave 2 — Package/migration rehearsal
+Open in parallel:
 
-- fresh tenant bootstrap;
-- dependency install order;
-- install/upgrade/idempotent reinstall;
-- capability activate/deactivate without data destruction;
-- migration numbering/checksum/applied-state verification;
-- failed-upgrade recovery semantics;
-- import/reconciliation on disposable/non-production data.
+### R6-01 Provider + Exact Release
 
-### Wave 3 — Independent integrated QA
+- Cloudflare source governance;
+- desired-vs-observed provider inventory;
+- exact health/auth boundary;
+- exact release SHA + bundle hash;
+- observability evidence.
 
-Trên **một exact candidate head**:
+### R6-02 Data Safety + Migration + Cutover
 
-- IAM/session/tenant/permission;
-- App Factory/package/profile;
-- O2C/P2P/Inventory/Manufacturing/Finance/HCM/Service;
-- cross-ledger reconciliation;
-- migration governance;
-- browser/mobile/PWA smoke;
-- representative performance gates.
+- expected/applied migration inventory;
+- fresh backup verification;
+- isolated replay;
+- disposable restore drill;
+- PITR/rollback decision evidence;
+- production-like cutover/opening reconciliation rehearsal.
 
-### Wave 4 — R5 final convergence
+### R6-03 Security + Performance + Recovery
 
-Output bắt buộc:
+- IAM/session/admin/tenant isolation;
+- secret/config hygiene;
+- queue retry/DLQ safety;
+- truthful Worker/app recovery semantics;
+- bounded representative p50/p95/p99/error/RPS;
+- logs/traces/cost-pressure evidence.
 
-- immutable R5 candidate SHA;
-- exact integrated evidence;
-- materialized 956-capability status;
-- exact Alumdoor Pilot Capability Set;
-- `R5-GO` hoặc `R5-NO-GO`.
+### R6-04 Alumdoor Exact-Release Golden Flow
 
-## 2. R6 — Production certification
+- exact Alumdoor package/profile identity;
+- authenticated canonical Golden Flow;
+- Stock/Payment/GL readback;
+- duplicate/idempotent retry;
+- fail-closed invalid/insufficient action;
+- correction/settlement path;
+- warranty linked to exact delivery source.
 
-Chỉ bắt đầu khi R5-GO.
+No subjective visual/pixel QA gate is required. Functional browser smoke is used only if necessary to prove an authenticated real user path.
 
-1. Lock exact R5 candidate/release/package/profile versions.
-2. Observe Cloudflare desired-vs-observed state for resources actually used.
-3. Run approved backup/restore/PITR/rollback drill.
-4. Read target applied migration inventory and rehearse cutover on production-like snapshot.
-5. Prove exact release SHA/hash after build/deploy pipeline in approved environment.
-6. Measure representative p95/p99/error/load/cost without uncontrolled production stress.
-7. Run security/provider recovery acceptance.
-8. Run authenticated Alumdoor Golden Flow + correction paths.
-9. Emit `PILOT-GO` or `PILOT-NO-GO`.
+## 3. R6-05 — Independent Final Certification
 
-## 3. Alumdoor controlled pilot
+Open only after R6-01 through R6-04 have final evidence or explicit blocker disposition.
 
-Chỉ bắt đầu sau `PILOT-GO`.
+R6-05 must:
 
-1. Freeze `Alumdoor Production Profile` and scope.
-2. Map/import master + opening data and reconcile totals.
-3. Dry run representative real-world transactions and failure/correction cases.
-4. Parallel run against current operational source for at least one meaningful operating cycle.
-5. Reconcile Stock, AR/AP, payments, revenue/COGS, manufacturing movements and GL.
-6. Cutover: freeze old writes -> backup -> delta import -> reconcile -> smoke -> Forge write authority.
-7. Hypercare with P0/P1 triage and daily reconciliation.
-8. Pilot Exit Gate -> `Accepted Production Reference` -> GA/commercial rollout.
+- independently resolve exact candidate identity;
+- reject stale-SHA evidence;
+- verify R6 evidence IDs `R6-E01..R6-E23`;
+- verify no unauthorized production mutation;
+- verify no unresolved P0/P1 in pilot scope;
+- emit exact certified SHA and `PILOT-GO` or `PILOT-NO-GO`.
 
-## 4. Standing boundaries
+R6-05 is an auditor, not another implementation worker.
 
-- Global capability score is not a reason to reopen a blanket implementation wave.
+## 4. Source-fix rule during R6
+
+If R6 finds a pilot-blocking source defect:
+
+1. record failed invariant;
+2. make smallest owner-correct fix;
+3. merge through normal boundary;
+4. issue new candidate SHA;
+5. rerun every affected evidence lane;
+6. never treat old-SHA evidence as proof of new candidate.
+
+Do not create separate release candidates per R6 lane.
+
+## 5. Explicit authorization boundaries
+
+Opening R6 agents does **not** authorize:
+
+- production deploy/redeploy/rollback;
+- production migration;
+- production restore/PITR;
+- customer production data import/write/cutover;
+- DNS/route/secret/provider mutation;
+- destructive queue replay.
+
+Agents should exhaust read-only/local/disposable work and record the exact remaining live operation instead of stopping the whole program early.
+
+## 6. After PILOT-GO
+
+Move to Alumdoor Controlled Pilot:
+
+1. freeze Alumdoor Production Profile;
+2. map/import real master + opening data under explicit authorization;
+3. dry run representative transactions;
+4. parallel run against current operational source;
+5. daily Stock/AR/AP/payment/revenue/COGS/manufacturing/GL reconciliation;
+6. cutover;
+7. hypercare;
+8. Pilot Exit Gate -> Accepted Production Reference -> GA.
+
+## 7. Standing boundaries
+
+- Global capability score is not a reason to reopen a blanket feature wave.
 - Vertical apps consume shared authorities; no copied HRM/CRM/Finance/Stock implementation inside Alumdoor.
-- Capability disable != package uninstall.
+- Capability disable != package uninstall/data purge.
 - Production/provider evidence must be observed directly; source presence is insufficient.
-- Non-UI merge/deploy, production migration, restore/PITR, DNS/secret/provider mutation and customer-data mutation remain explicit authorization boundaries.
+- Worker rollback != data rollback.
+- R5 browser/visual QA waiver is not a reason to fabricate a browser PASS; it simply is not a release blocker.
 
-## 5. Documentation discipline
+## 8. Documentation discipline
 
-Use `docs/README.md` as the documentation map. Do not resurrect deleted board/handoff files from history unless a specific historical audit requires them.
+Use `docs/README.md` as the documentation map and `docs/agents/r6/README.md` as the active R6 entrypoint. After R6 converges, remove temporary agent prompts/order from `main` and retain the final certification/evidence record.
