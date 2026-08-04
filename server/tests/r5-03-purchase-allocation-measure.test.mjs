@@ -43,12 +43,38 @@ test("purchase allocation falls back to canonical stock quantity when no separat
   assert.equal(purchaseAllocationQtyMicros(line), 12_000_000);
 });
 
-test("purchase normalization overwrites client allocation-axis claims from Item master", async () => {
+test("purchase normalization can snapshot an exact observed stock quantity instead of rounded conversion output", async () => {
+  const clientLine = {
+    item_code: "PACKED-ITEM",
+    qty: "644.184",
+    uom: "Kg",
+    piece_count: "230",
+    conversion_factor: "0.357041",
+    purchase_stock_qty_field: "qty",
+  };
+  const [normalized] = await applyUomConversion(
+    uomContext({
+      stock_uom: "Cây",
+      default_purchase_uom: "Kg",
+      purchase_stock_qty_field: "piece_count",
+    }),
+    [clientLine],
+    { transactionKind: "purchase" },
+  );
+
+  assert.equal(normalized.purchase_stock_qty_field, "piece_count");
+  assert.equal(normalized.stock_qty, "230");
+  assert.equal(stockQtyMicros(normalized), 230_000_000);
+  assert.equal(purchaseAllocationQtyMicros(normalized), 230_000_000);
+});
+
+test("purchase normalization overwrites client quantity-axis claims from Item master", async () => {
   const clientLine = {
     item_code: "PACKED-ITEM",
     qty: "10",
     uom: "Kg",
     package_count: "2",
+    purchase_stock_qty_field: "package_count",
     purchase_allocation_qty_field: "qty",
     purchase_allocation_uom: "Kg",
   };
@@ -58,6 +84,7 @@ test("purchase normalization overwrites client allocation-axis claims from Item 
     [clientLine],
     { transactionKind: "purchase" },
   );
+  assert.equal(withoutAxis.purchase_stock_qty_field, undefined);
   assert.equal(withoutAxis.purchase_allocation_qty_field, undefined);
   assert.equal(withoutAxis.purchase_allocation_uom, undefined);
   assert.equal(purchaseAllocationQtyMicros(withoutAxis), 10_000_000);
@@ -72,13 +99,14 @@ test("purchase normalization overwrites client allocation-axis claims from Item 
     [clientLine],
     { transactionKind: "purchase" },
   );
+  assert.equal(withAxis.purchase_stock_qty_field, undefined);
   assert.equal(withAxis.purchase_allocation_qty_field, "package_count");
   assert.equal(withAxis.purchase_allocation_uom, "Case");
   assert.equal(stockQtyMicros(withAxis), 10_000_000);
   assert.equal(purchaseAllocationQtyMicros(withAxis), 2_000_000);
 });
 
-test("declared allocation axis fails closed on missing unit, invalid field or non-positive quantity", async () => {
+test("declared quantity axes fail closed on incomplete, invalid or inconsistent metadata", async () => {
   assert.throws(
     () => purchaseAllocationQtyMicros({
       item_code: "PACKED-1", qty: "10", pack_count: 2,
@@ -91,7 +119,7 @@ test("declared allocation axis fails closed on missing unit, invalid field or no
       item_code: "PACKED-2", qty: "10", "pack.count": 2,
       purchase_allocation_qty_field: "pack.count", purchase_allocation_uom: "Pack",
     }),
-    /trường số lượng phân bổ mua không hợp lệ/i,
+    /khai trường không hợp lệ/i,
   );
   assert.throws(
     () => purchaseAllocationQtyMicros({
@@ -111,5 +139,19 @@ test("declared allocation axis fails closed on missing unit, invalid field or no
       { transactionKind: "purchase" },
     ),
     /phải được khai cùng nhau/i,
+  );
+  await assert.rejects(
+    applyUomConversion(
+      uomContext({
+        stock_uom: "Cây",
+        default_purchase_uom: "Kg",
+        purchase_stock_qty_field: "piece_count",
+      }),
+      [{
+        item_code: "PACKED-ITEM", qty: "100", uom: "Kg", piece_count: "10", conversion_factor: "0.2",
+      }],
+      { transactionKind: "purchase" },
+    ),
+    /hệ số quy đổi không khớp/i,
   );
 });
