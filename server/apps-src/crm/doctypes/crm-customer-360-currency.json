@@ -1,0 +1,18 @@
+{
+  "name": "CRM Customer 360 Currency",
+  "module": "CRM",
+  "is_child": true,
+  "fields": [
+    { "fieldname": "currency", "label": "Tiền tệ", "fieldtype": "Link", "options": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "pipeline_amount", "label": "Pipeline mở", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "weighted_pipeline_amount", "label": "Pipeline trọng số", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "won_deal_amount", "label": "Deal thắng", "fieldtype": "Currency", "read_only": true },
+    { "fieldname": "quoted_amount", "label": "Đã báo giá", "fieldtype": "Currency", "read_only": true },
+    { "fieldname": "ordered_amount", "label": "Đã đặt hàng", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "invoiced_amount", "label": "Đã xuất hóa đơn", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "outstanding_amount", "label": "Còn phải thu", "fieldtype": "Currency", "read_only": true, "in_list_view": true },
+    { "fieldname": "received_amount", "label": "Đã thu", "fieldtype": "Currency", "read_only": true, "in_list_view": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}
