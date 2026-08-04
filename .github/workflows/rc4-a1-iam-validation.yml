@@ -8,6 +8,7 @@ on:
       - "server/packages/auth/**"
       - "server/packages/frappe-api/**"
       - "server/packages/organization-security/**"
+      - "server/apps/gateway-worker/src/index.ts"
       - "server/apps/tenant-worker/src/index.ts"
       - "server/apps/tenant-worker/src/mfa-config.ts"
       - "server/apps/tenant-worker/src/native-security.ts"
@@ -78,6 +79,7 @@ jobs:
               "packages/frappe-api/src/**/*.ts",
               "packages/frappe-model/src/**/*.ts",
               "packages/organization-security/src/**/*.ts",
+              "apps/gateway-worker/src/index.ts",
               "apps/tenant-worker/src/index.ts",
               "apps/tenant-worker/src/index-core.ts",
               "apps/tenant-worker/src/mfa-config.ts",
