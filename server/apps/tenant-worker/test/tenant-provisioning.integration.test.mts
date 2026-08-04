@@ -20,7 +20,7 @@ const ERP_CORE = [
   "Item", "Customer", "Warehouse", "Item Price",
   "Sales Order", "Delivery Note", "Sales Invoice", "Payment Entry",
   "Supplier", "Purchase Order", "Purchase Receipt",
-  "Stock Entry", "Account", "Journal Entry",
+  "Stock Entry", "Account", "Journal Entry", "Fiscal Year",
   "Bill of Materials", "Work Order",
 ];
 
@@ -51,7 +51,7 @@ describe("provisioning a tenant that is not demo", () => {
     const result = await store.provisionStandardCatalog("acme", "Administrator", NOW);
     expect(result.doctypes).toBeGreaterThan(0);
 
-    for (const doctype of ["Item", "Customer", "Sales Order", "Warehouse"]) {
+    for (const doctype of ["Item", "Customer", "Sales Order", "Warehouse", "Fiscal Year"]) {
       const meta = await store.getDocType("acme", doctype);
       expect(meta).not.toBeNull();
     }
