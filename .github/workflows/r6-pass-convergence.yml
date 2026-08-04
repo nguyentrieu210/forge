@@ -16,7 +16,7 @@ jobs:
   validate:
     name: Full release build and source safety
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 60
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
@@ -51,17 +51,59 @@ jobs:
         working-directory: server
         run: node --test tests/d1-migrate-remote-safety.test.mjs tests/sre-destructive-guards.test.mjs
 
-      - name: Run full production-like tenant workerd evidence
+      - name: Workerd evidence — health and ERP lifecycle
+        id: workerd_health
+        continue-on-error: true
         working-directory: server
         shell: bash
         run: |
           set -o pipefail
-          pnpm exec vitest run \
-            apps/tenant-worker/test/health.integration.test.mts \
-            apps/tenant-worker/test/frappe-facade.integration.test.mts \
-            apps/tenant-worker/test/tenant-provisioning.integration.test.mts \
+          pnpm exec vitest run apps/tenant-worker/test/health.integration.test.mts \
             --config apps/tenant-worker/vitest.config.mts \
-            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-evidence.log
+            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-health.log
+
+      - name: Workerd evidence — Frappe session and facade
+        id: workerd_frappe
+        continue-on-error: true
+        working-directory: server
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts \
+            --config apps/tenant-worker/vitest.config.mts \
+            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-frappe.log
+
+      - name: Workerd evidence — tenant provisioning
+        id: workerd_provisioning
+        continue-on-error: true
+        working-directory: server
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run apps/tenant-worker/test/tenant-provisioning.integration.test.mts \
+            --config apps/tenant-worker/vitest.config.mts \
+            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-provisioning.log
+
+      - name: Upload workerd diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-workerd-diagnostics-${{ github.run_id }}
+          path: /tmp/r6-workerd-*.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Assert production-like workerd evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "health=${{ steps.workerd_health.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "frappe=${{ steps.workerd_frappe.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "provisioning=${{ steps.workerd_provisioning.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          test "${{ steps.workerd_health.outcome }}" = success
+          test "${{ steps.workerd_frappe.outcome }}" = success
+          test "${{ steps.workerd_provisioning.outcome }}" = success
 
       - name: Verify release safety authority
         working-directory: server
