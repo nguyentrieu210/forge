@@ -8,6 +8,8 @@ export * from "./warehouse-location.js";
 export * from "./inventory-policy.js";
 export * from "./inventory-analytics.js";
 export * from "./inventory-scan.js";
+export * from "./inventory-scan-resolution.js";
+export * from "./landed-cost.js";
 export * from "./wms-putaway.js";
 export * from "./wms-picking.js";
 export * from "./wms-wave.js";
