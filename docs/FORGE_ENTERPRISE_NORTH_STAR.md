@@ -5,6 +5,7 @@
 > Live state: `../CURRENT_STATUS.md`  
 > Active queue: `../NEXT_TASKS.md`  
 > Execution skill: `../skills/forge-enterprise-completion/SKILL.md`  
+> Skill/task recipe matrix: `FORGE_SKILL_MATRIX.md`  
 > Detailed capability checklist: `FORGE_ENTERPRISE_CAPABILITY_MAP.md`
 
 Ngày khởi tạo: **2026-08-03**.
@@ -478,6 +479,30 @@ Rule:
 
 > Vertical phải tái sử dụng platform/generic ERP càng nhiều càng tốt; phần đặc thù phải đóng gói độc lập và không làm bẩn core.
 
+### 6.1 Customer/App Factory provisioning doctrine
+
+Mục tiêu của App Factory không chỉ là “tạo được app”, mà là để một yêu cầu khách hàng có thể được resolve **deterministic** thành process, capability, owner, package, DocType, tenant configuration, data onboarding và acceptance evidence mà không phụ thuộc vào việc agent nhớ repo.
+
+Canonical execution order:
+
+`customer intent -> business model -> processes -> capabilities -> authority owners -> package/profile -> app/DocType gap -> tenant bootstrap -> users/roles -> data/integrations -> dry-run -> acceptance -> authorized apply/cutover`
+
+| Tình huống | Hướng xử lý chuẩn | Không được làm |
+|---|---|---|
+| Khách mới, vertical/profile hiện có đã phù hợp | Provision tenant, cài dependency-closed packages, apply capability profile, bootstrap master/user và validate | Clone app/vertical chỉ để đổi tên khách |
+| Khách mới, generic capabilities đã đủ nhưng chưa có vertical | Compose existing packages/profile; customer policy nằm ở tenant/app metadata | Cài mọi package hoặc tạo schema riêng cho khách |
+| App cần dùng `Customer`, `Item`, `Employee`, `Warehouse` hoặc DocType shared | Reuse canonical DocType; khai dependency/`externalDocTypes` | Copy shared DocType thành source-of-truth thứ hai |
+| Shared DocType chỉ thiếu field ngành/khách | Dùng owned metadata extension/`custom_fields` khi contract cho phép | Tạo `CustomerXYZ`, `ItemXYZ`, `EmployeeXYZ` chỉ vì thiếu field |
+| Xuất hiện business fact thực sự ngành-specific | Tạo app-owned DocType/capability trong app package | Nhét schema ngành vào shared runtime/kernel |
+| Xuất hiện invariant dùng được cho nhiều ngành | Nâng về canonical domain/platform owner rồi để vertical consume | Giữ generic rule trong vertical đầu tiên cần nó |
+| Form/list/report/action/screen biểu đạt được bằng metadata | Brief -> compiler -> manifest/App Registry | Viết React/shared route riêng cho từng khách |
+| Cần calculation/integration phức tạp ngoài metadata | Bounded app Worker dùng public Forge APIs dưới caller identity | Direct D1/ledger write hoặc import private implementation internals |
+| Khách có dữ liệu cũ/opening balances | Hash -> map -> normalize -> preview -> reconcile -> authorized import | Direct DB import hoặc coi preview là quyền ghi production |
+| Thay đổi UI-only | Metadata/presentation first; classify FAST + release impact riêng | Reopen R6 lịch sử hoặc trộn UI change với business authority |
+| Finance/stock/payroll/statutory/security/migration thay đổi | Route tới canonical specialist authority + reconciliation/evidence | Hạ risk chỉ vì diff nhỏ hoặc để vertical tự sở hữu ledger/rule |
+
+Skill/task recipe chi tiết, exact repository routing và acceptance matrix nằm tại `FORGE_SKILL_MATRIX.md`. North Star chỉ giữ doctrine; Skill Matrix phải giữ đường đi thực thi và luôn nhường exact code/GitHub state nếu có drift.
+
 ## 7. Execution waves
 
 ### Wave A — ERP Core 90%
@@ -564,12 +589,15 @@ Forge đạt “Enterprise Complete v1” khi:
 - Backup/restore/release/rollback có evidence.
 - Security/tenant isolation có regression.
 - App Factory có thể tạo một app nghiệp vụ chuẩn mà không sửa runtime core.
+- Customer provisioning có thể resolve requirement -> process -> capability -> package/profile -> tenant/data/access -> acceptance mà không cần fork core hoặc tự đoán authority.
 - AI có thể đọc/đề xuất/thực thi tool có approval mà không vượt permission.
 
 ## 10. Điều không được làm
 
 - Không tạo 700 màn hình rỗng để tăng “coverage”.
 - Không fork core cho từng khách hàng.
+- Không để agent tự đoán package/DocType/owner khi canonical registry/code có thể resolve.
+- Không hard-code tên khách, hostname hay customer policy vào shared runtime/controller khi tenant/app metadata diễn đạt được.
 - Không nhét rule kế toán/pháp lý vào prompt AI.
 - Không hard-code business schema vào generic runtime nếu metadata giải quyết được.
 - Không tự nhận parity chỉ vì tên DocType giống ERPNext/MISA.
@@ -588,7 +616,7 @@ Forge cần trở thành nền mà một doanh nghiệp có thể:
 3. đáp ứng quy định Việt Nam;
 4. tích hợp hệ sinh thái ngoài;
 5. tự tạo workflow/report/app mới;
-6. triển khai tenant mới nhanh;
+6. triển khai tenant mới nhanh từ business requirement bằng provisioning recipe deterministic;
 7. tạo vertical app sâu mà không fork core;
 8. dùng AI như lớp điều phối thông minh trên dữ liệu và tool có kiểm soát.
 
