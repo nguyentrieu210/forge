@@ -98,6 +98,8 @@ jobs:
             sha: e656c19d54450f1290ad44e8bba8819e650b42ef
           - lane: A8-Integration
             sha: 8e43a4e04818fc1d956c5173190f1794dfc802b8
+          - lane: A9-Kernel
+            sha: 32001d70a4ef87a5e14bd7df2dcc100cd0f8d243
           - lane: A10-CRM
             sha: d90085ba440f07c278e2e620a1409611b89ca9ab
           - lane: A11-Procurement
@@ -148,6 +150,7 @@ jobs:
             A5-HCM-Payroll) pattern='packages/(hrm|ledger|payment-ledger)/src/|apps-src/hrm/' ;;
             A7-App-Factory) pattern='packages/app-registry/src/(app-factory-approval-runtime|app-factory-definition|index)\.ts|apps/tenant-worker/src/aggregate-do\.ts' ;;
             A8-Integration) pattern='packages/integration-hub/src/(einvoice-provider|queue-recovery)\.ts|apps/tenant-worker/src/aggregate-do\.ts' ;;
+            A9-Kernel) pattern='packages/document-kernel/src/(general-ledger-aggregate|index)\.ts' ;;
             A10-CRM) pattern='packages/clouderp-selling/src/crm-customer-360-(controller|types)\.ts' ;;
             A11-Procurement) pattern='packages/clouderp-core/src/(supplier-lifecycle-controllers|procurement-.*)\.ts' ;;
             A12-Inventory-WMS) pattern='packages/clouderp-stock/src/inventory-scan-resolution\.ts|apps/tenant-worker/src/inventory-scan-api\.ts' ;;
@@ -188,6 +191,16 @@ jobs:
               ;;
             A8-Integration)
               node --test tests/integration-hub-einvoice-provider.test.mjs tests/integration-hub-kernel-registration.test.mjs tests/integration-hub-queue-recovery.test.mjs
+              ;;
+            A9-Kernel)
+              node --test tests/rc4-kernel-gl-aggregate.test.mjs
+              grep -q 'export \* from "./general-ledger-aggregate.js"' packages/document-kernel/src/index.ts
+              grep -q 'FROM gl_entries g' packages/document-kernel/src/general-ledger-aggregate.ts
+              grep -q 'INNER JOIN documents d' packages/document-kernel/src/general-ledger-aggregate.ts
+              if grep -Eiq '(INSERT|UPDATE|DELETE)[[:space:]]+(INTO|FROM)?[[:space:]]*(documents|gl_entries|stock_ledger_entries|payment_ledger_entries)' packages/document-kernel/src/general-ledger-aggregate.ts; then
+                echo "A19 rejects write authority in A9 GL aggregate reader"
+                exit 1
+              fi
               ;;
             A10-CRM)
               node --test tests/crm-customer-360.test.mjs
@@ -249,7 +262,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 007572266465b9fb4944929f382162166740884b
+          ref: 422cc5ce7460a9e326e77ccdc20dac5a36a412ca
       - uses: actions/setup-node@v4
         with:
           node-version: 22
