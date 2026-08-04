@@ -18,21 +18,26 @@ const transition = (workflow, action) => {
   assert.ok(found, `${workflow.name}.${action} must exist`);
   return found;
 };
+const report = (app, name) => {
+  const found = app.reports.find((entry) => entry.name === name);
+  assert.ok(found, `missing report ${name}`);
+  return found;
+};
 
 test("projects exposes portfolio planning execution capacity acceptance and validators", () => {
   const app = json("app.json");
   const roles = json("roles.json");
   assert.equal(app.id, "projects");
-  assert.equal(app.version, "1.3.0");
+  assert.equal(app.version, "1.3.1");
   assert.equal(app.worker, "cloudforge-app-ws07");
-  for (const doctype of ["Project Portfolio", "Project Template", "Project Capacity Plan", "Project", "Project Task", "Project Timesheet", "Project Acceptance Certificate"]) {
+  for (const doctype of ["Project Portfolio", "Project Template", "Project Capacity Plan", "Project", "Project Task", "Project Timesheet", "Project Change Order", "Project Acceptance Certificate"]) {
     assert.ok(app.validators.some((entry) => entry.doctype === doctype), `missing validator ${doctype}`);
   }
   for (const key of ["Project Portfolio", "Project Template", "Project Capacity Plan", "Project", "Project Task", "Project Change Order", "Project Acceptance Certificate", "Project Timesheet"]) {
     assert.ok(app.nav.some((entry) => entry.key === key), `missing nav ${key}`);
   }
-  for (const report of ["Project Task Control", "Project Timesheet Control", "Project Change Order Control", "Project Acceptance Control"]) {
-    assert.ok(app.reports.some((entry) => entry.name === report), `missing report ${report}`);
+  for (const name of ["Project Task Control", "Project Timesheet Control", "Project Change Order Control", "Project Acceptance Control"]) {
+    assert.ok(app.reports.some((entry) => entry.name === name), `missing report ${name}`);
   }
   assert.ok(roles.some((entry) => entry.role === "Project User" && entry.desk_access === true));
   assert.ok(roles.some((entry) => entry.role === "Project Manager" && entry.desk_access === true));
@@ -101,7 +106,8 @@ test("timesheet approval preserves actor ownership and no billing shadow fields"
   }
 });
 
-test("change orders and acceptance separate operational approval from finance", () => {
+test("change orders acceptance and timesheets expose operational evidence without finance authority", () => {
+  const app = json("app.json");
   const change = json("doctypes/project-change-order.json");
   const changeWorkflow = json("workflows/project-change-order.json");
   const acceptance = json("doctypes/project-acceptance-certificate.json");
@@ -113,6 +119,9 @@ test("change orders and acceptance separate operational approval from finance", 
   assert.equal(field(acceptance, "commercial_reference").fieldtype, "Data");
   assert.equal(acceptance.permissions.find((entry) => entry.role === "Project User").if_owner, true);
   assert.equal(transition(acceptanceWorkflow, "Xác nhận nghiệm thu").allow_self_approval, false);
+  assert.ok(report(app, "Project Timesheet Control").columns.some((entry) => entry.field === "user"));
+  assert.ok(report(app, "Project Change Order Control").columns.some((entry) => entry.field === "commercial_reference"));
+  assert.ok(report(app, "Project Acceptance Control").columns.some((entry) => entry.field === "commercial_reference"));
 });
 
 test("project prints and package compiler preserve the contract", () => {
