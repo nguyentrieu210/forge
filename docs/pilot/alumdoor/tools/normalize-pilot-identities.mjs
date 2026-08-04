@@ -24,14 +24,21 @@ function requireItemCode(row, index) {
 }
 
 export function normalizeDuplicateItemCodes(items = []) {
-  const used = new Set();
+  const originalCodes = items.map((row, index) => {
+    requireSourceKey(row, "items", index);
+    return requireItemCode(row, index);
+  });
+  const reserved = new Set(originalCodes);
+  const seenOriginal = new Set();
+  const assigned = new Set();
   const counters = new Map();
   const collisions = [];
+
   const normalized = items.map((row, index) => {
-    requireSourceKey(row, "items", index);
-    const original = requireItemCode(row, index);
-    if (!used.has(original)) {
-      used.add(original);
+    const original = originalCodes[index];
+    if (!seenOriginal.has(original)) {
+      seenOriginal.add(original);
+      assigned.add(original);
       return { ...row, item_code: original };
     }
 
@@ -40,9 +47,9 @@ export function normalizeDuplicateItemCodes(items = []) {
     do {
       candidate = `${original}${String(ordinal).padStart(2, "0")}`;
       ordinal += 1;
-    } while (used.has(candidate));
+    } while (reserved.has(candidate) || assigned.has(candidate));
     counters.set(original, ordinal);
-    used.add(candidate);
+    assigned.add(candidate);
     collisions.push({
       source_index: index,
       source_key: String(row.source_key),
