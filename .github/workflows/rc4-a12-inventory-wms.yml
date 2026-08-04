@@ -1,0 +1,85 @@
+name: RC4 A12 Inventory WMS Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/packages/clouderp-stock/**"
+      - "server/apps/tenant-worker/src/inventory-scan-api.ts"
+      - "server/tests/inventory-scan-resolution.test.mjs"
+      - "server/tests/wms-wave-scan.test.mjs"
+      - "server/tests/inventory-planning.test.mjs"
+      - "server/tests/stock-reservation-integrity.test.mjs"
+      - "server/tests/valuation-audit.test.mjs"
+      - "server/tests/repost-item-valuation-integrity.test.mjs"
+      - "server/tests/procurement-landed-cost.test.mjs"
+      - "docs/agents/rc4/A12-*.md"
+      - ".github/workflows/rc4-a12-inventory-wms.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a12-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.head_ref == 'agent/rc4-12-inventory-wms'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit exact-head server dist and reject A12 TypeScript regressions
+        working-directory: server
+        run: |
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/rc4-a12-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/clouderp-stock/src/inventory-scan-resolution.js
+          test -f dist/apps/tenant-worker/src/inventory-scan-api.js
+          if grep -E "(inventory-scan-resolution|inventory-scan-api)\.ts.*error TS" /tmp/rc4-a12-tsc.log; then
+            echo "A12 changed sources contain TypeScript errors"
+            exit 1
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo "Full-server TypeScript baseline remains non-zero outside A12 changed sources."
+            grep "error TS" /tmp/rc4-a12-tsc.log > /tmp/rc4-a12-typescript-baseline.log || true
+            cat /tmp/rc4-a12-typescript-baseline.log
+          fi
+
+      - name: Inventory scanner and WMS regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/inventory-scan-resolution.test.mjs \
+            tests/wms-wave-scan.test.mjs \
+            tests/inventory-planning.test.mjs \
+            tests/stock-reservation-integrity.test.mjs
+
+      - name: Valuation landed-cost and repost regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/valuation-audit.test.mjs \
+            tests/repost-item-valuation-integrity.test.mjs \
+            tests/procurement-landed-cost.test.mjs
