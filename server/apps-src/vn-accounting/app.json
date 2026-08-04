@@ -1,7 +1,7 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "worker": "cloudforge-app-vn-accounting",
   "requires": [
     {
@@ -58,13 +58,13 @@
         {
           "fieldname": "input_json",
           "label": "Đầu vào minor units (JSON)",
-          "fieldtype": "Code",
+          "fieldtype": "Small Text",
           "required": true,
           "default": "{}"
         }
       ],
       "commit": {
-        "method": "vn-accounting.tax.evaluate",
+        "method": "vn_accounting.tax.evaluate",
         "label": "Tính thử"
       },
       "permission_doctype": "VN Tax Ruleset",
@@ -100,11 +100,11 @@
           "fieldname": "limit_per_type",
           "label": "Giới hạn mỗi loại hóa đơn",
           "fieldtype": "Int",
-          "default": 100
+          "default": "100"
         }
       ],
       "commit": {
-        "method": "vn-accounting.vat.dataset",
+        "method": "vn_accounting.vat.dataset",
         "label": "Lập dữ liệu"
       },
       "permission_doctype": "VN Tax Ruleset",

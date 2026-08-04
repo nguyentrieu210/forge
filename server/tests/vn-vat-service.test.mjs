@@ -25,6 +25,23 @@ function ruleset(overrides = {}) {
   };
 }
 
+function legalRule(overrides = {}) {
+  return {
+    name: "VAT-2026",
+    docstatus: 1,
+    rule_type: "VAT",
+    rule_version: "2026.1",
+    document_no: "VAT-OFFICIAL-2026",
+    regime_code: "Tax-specific",
+    taxpayer_segment: "enterprise",
+    effective_from: "2026-01-01",
+    effective_to: "2026-12-31",
+    source_url: "https://official.example/vat-2026",
+    source_file_hash: "b".repeat(64),
+    ...overrides,
+  };
+}
+
 function invoice(doctype, name, account, taxMinor, overrides = {}) {
   return {
     name,
@@ -56,7 +73,7 @@ function request(method, args) {
   });
 }
 
-test("VAT invoice reconciliation reads approved same-company ruleset and source invoice", async () => {
+test("VAT invoice reconciliation reads approved same-company ruleset, legal evidence and source invoice", async () => {
   const seen = [];
   const platform = {
     async fetch(req) {
@@ -64,6 +81,9 @@ test("VAT invoice reconciliation reads approved same-company ruleset and source 
       const url = new URL(req.url);
       if (url.pathname.endsWith("/resource/VN%20Tax%20Ruleset/VAT-KAIRO-2026")) {
         return Response.json({ data: ruleset() });
+      }
+      if (url.pathname.endsWith("/resource/VN%20Legal%20Rule/VAT-2026")) {
+        return Response.json({ data: legalRule() });
       }
       if (url.pathname.endsWith("/resource/Sales%20Invoice/SI-001")) {
         return Response.json({ data: invoice("Sales Invoice", "SI-001", "33311-KAIRO", 100_000) });
@@ -83,7 +103,10 @@ test("VAT invoice reconciliation reads approved same-company ruleset and source 
   const body = await response.json();
   assert.equal(body.message.row.output_vat_minor, 100_000);
   assert.equal(body.message.ready_for_filing_dataset, true);
-  assert.equal(seen.length, 2);
+  assert.equal(body.message.legal_evidence.rule, "VAT-2026");
+  assert.equal(body.message.legal_evidence.document_no, "VAT-OFFICIAL-2026");
+  assert.equal(body.message.legal_evidence.source_file_hash, "b".repeat(64));
+  assert.equal(seen.length, 3);
   assert.ok(seen.every((entry) => entry.method === "GET"));
   assert.ok(seen.every((entry) => entry.identity === "identity"));
 });
@@ -93,6 +116,7 @@ test("VAT dataset scans bounded submitted invoice lists and returns deterministi
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname.endsWith("/resource/VN%20Tax%20Ruleset/VAT-KAIRO-2026")) return Response.json({ data: ruleset() });
+      if (url.pathname.endsWith("/resource/VN%20Legal%20Rule/VAT-2026")) return Response.json({ data: legalRule() });
       if (url.pathname.endsWith("/resource/Sales%20Invoice") && url.search) {
         assert.equal(url.searchParams.get("limit_page_length"), "100");
         const filters = JSON.parse(url.searchParams.get("filters"));
@@ -118,6 +142,7 @@ test("VAT dataset scans bounded submitted invoice lists and returns deterministi
   assert.equal(body.message.summary.ready_for_filing_dataset, true);
   assert.equal(body.message.truncated, false);
   assert.deepEqual(body.message.errors, []);
+  assert.equal(body.message.legal_evidence.source_url, "https://official.example/vat-2026");
 });
 
 test("VAT dataset fails readiness on malformed source and conservative truncation", async () => {
@@ -126,6 +151,7 @@ test("VAT dataset fails readiness on malformed source and conservative truncatio
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname.endsWith("/resource/VN%20Tax%20Ruleset/VAT-KAIRO-2026")) return Response.json({ data: ruleset() });
+      if (url.pathname.endsWith("/resource/VN%20Legal%20Rule/VAT-2026")) return Response.json({ data: legalRule() });
       if (url.pathname.endsWith("/resource/Sales%20Invoice") && url.search) return Response.json({ data: salesRows });
       if (url.pathname.endsWith("/resource/Purchase%20Invoice") && url.search) return Response.json({ data: [] });
       if (url.pathname.endsWith("/resource/Sales%20Invoice/SI-1")) {
@@ -147,12 +173,13 @@ test("VAT dataset fails readiness on malformed source and conservative truncatio
   assert.ok(body.message.summary.exception_count >= 3);
 });
 
-test("VAT service refuses wrong ruleset type, cross-company invoice and invalid period", async () => {
-  async function run(rule, source) {
+test("VAT service refuses wrong ruleset type, legal-evidence drift, cross-company invoice and invalid period", async () => {
+  async function run(rule, source, legal = legalRule()) {
     const platform = {
       async fetch(req) {
         const url = new URL(req.url);
         if (url.pathname.includes("VN%20Tax%20Ruleset")) return Response.json({ data: rule });
+        if (url.pathname.includes("VN%20Legal%20Rule")) return Response.json({ data: legal });
         return Response.json({ data: source });
       },
     };
@@ -160,6 +187,8 @@ test("VAT service refuses wrong ruleset type, cross-company invoice and invalid 
     return handleVatMethod("vn-accounting.vat.invoice_reconcile", request("vn-accounting.vat.invoice_reconcile", args), { PLATFORM: platform }, args);
   }
   assert.equal((await run(ruleset({ rule_type: "CIT" }), invoice("Sales Invoice", "SI-001", "33311-KAIRO", 1))).status, 422);
+  assert.equal((await run(ruleset(), invoice("Sales Invoice", "SI-001", "33311-KAIRO", 1), legalRule({ rule_type: "CIT" }))).status, 422);
+  assert.equal((await run(ruleset(), invoice("Sales Invoice", "SI-001", "33311-KAIRO", 1), legalRule({ effective_to: "2026-06-30" }))).status, 422);
   assert.equal((await run(ruleset(), invoice("Sales Invoice", "SI-001", "33311-KAIRO", 1, { company: "Other" }))).status, 422);
-  assert.equal((await run(ruleset({ effective_to: "2026-07-31" }), invoice("Sales Invoice", "SI-001", "33311-KAIRO", 1))).status, 422);
+  assert.equal((await run(ruleset({ effective_to: "2026-07-31" }), invoice("Sales Invoice", "SI-001", "33311-KAIRO", 1), legalRule({ effective_to: "2026-07-31" }))).status, 422);
 });
