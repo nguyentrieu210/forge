@@ -1,8 +1,9 @@
 # RC4-A16 — Workplace / DMS / Collaboration
 
-Status: **IMPLEMENTATION IN PROGRESS — SHARED MAINTENANCE WIRING PENDING**  
+Status: **A16-OWNED IMPLEMENTATION VERIFIED — SHARED MAINTENANCE WIRING PENDING**  
 Baseline: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Branch: `agent/rc4-16-workplace-dms-collab`  
+PR: `#614`  
 Risk: **STANDARD backend**
 
 ## Mission
@@ -76,21 +77,34 @@ Added:
 
 The PR gate checks:
 
-- focused TypeScript for the A16 path and canonical permission/auth dependencies;
-- `apps-src/workplace --check`;
+- exact PR-head checkout on Node 22;
+- focused A16 TypeScript delta over the exact-main baseline;
+- emitted A16 runtime artifact;
+- workplace package delta over the exact-main baseline;
 - A16 due-date/reminder decisions;
 - existing WS15 notification authorization;
 - assignment access;
 - collaboration assignment lifecycle;
 - workplace metadata regression.
 
+Run `RC4 A16 Workplace Validation #5` (`30869313715`) at head `f8757313c995b3b64d3da0b7d782d05f4a4feb64` passed all A16 gate steps. The targeted Node suite passed **23/23** tests, **0 failures**.
+
+## Inherited exact-main debt kept visible
+
+A16 does not hide baseline failures or claim a green repository build.
+
+1. Full `server:build` still reports pre-existing TypeScript errors in App Factory, MRP/QMS, CRM controllers and `frappe-model/src/validate.ts`; the A16 workflow keeps that step visible with `continue-on-error` and separately gates the A16 TypeScript delta.
+2. The exact-main `workplace` package still fails the newer App Factory parser on the legacy reserved field name `status`. A16 changes no `apps-src/workplace/**` file, so the workflow accepts only the exact known `PACK_FAILED workplace: Field name is reserved: status` baseline message and rejects every other pack failure.
+
+These are baseline/shared-contract debts, not promoted as A16 success.
+
 ## Capability truth after this commit
 
-No maturity is promoted yet merely because the engine exists.
+No maturity is promoted merely because the engine and tests exist.
 
-- `D01-013` / `N02-008`: **Foundation+** — runnable engine exists, but shared maintenance registration is still pending.
-- `D02-012`: **Foundation+** — scheduled expiry engine exists, registration pending.
-- `D03-006`: remains **Wired** — expiry lifecycle existed; scheduled alert is implemented but not registered yet.
+- `D01-013` / `N02-008`: **Foundation+** — runnable, permission-safe engine is verified, but shared maintenance registration is still pending.
+- `D02-012`: **Foundation+** — scheduled expiry engine is verified, registration pending.
+- `D03-006`: remains **Wired** — expiry lifecycle existed; scheduled alert is verified but not registered yet.
 - `D03-007`: **Foundation+** — renewal notice decision and alert engine exist; renewal transaction itself is not invented.
 - `D01-015`: remains **Foundation** — existing task recurrence fields must be reconciled with canonical Auto Repeat rather than creating a second recurrence engine.
 
@@ -123,16 +137,25 @@ A16 will not write directly into `auto_repeat` or create a competing recurrence 
 - RC4 A1 + HR/privacy owner: privacy-safe employee-directory projection for `D01-010`.
 - Shared search/platform owner: true FTS/fuzzy/AI search residuals; A16 will not fork the current permission-aware `D1SearchStore`.
 - Shared frontend runtime A6: any dedicated folder tree / published-announcement audience UX must reuse generic experiences and permission semantics.
+- Shared App Factory/schema owner: reconcile the legacy `workplace` `status` metadata field with the parser's current reserved-field contract through an explicit compatibility/migration decision, not an A16-local silent rename.
+
+## Known hardening boundaries
+
+- The maintenance runner is intentionally bounded and recovery-oriented; it is not promoted to RC/Hardened before shared scheduler registration and operational evidence.
+- Date-only expiry/renewal decisions currently use the scheduler clock's ISO calendar date because the shared maintenance seam does not expose an authoritative tenant business timezone contract. A16 does not invent a second timezone setting.
+- External notification transports remain truthful `unavailable/skipped` until Integration Hub supplies real providers.
 
 ## Verification state
 
 - Source audit against exact branch: **DONE**.
-- Focused regression + workflow authored: **DONE**.
-- GitHub Actions exact PR-head run: **PENDING PR**.
-- Full server build/test: **NOT CLAIMED**.
+- A16 implementation + focused regression: **DONE**.
+- Exact PR-head A16 CI evidence: **PASS** on run `30869313715`, head `f8757313c995b3b64d3da0b7d782d05f4a4feb64`.
+- Targeted tests: **23/23 PASS**.
+- Full repository/server build: **NOT GREEN / NOT CLAIMED** due inherited exact-main TypeScript debt listed above.
+- Workplace package parser: **KNOWN BASELINE FAILURE / NOT CLAIMED GREEN** due legacy reserved `status` field; A16 metadata diff is zero.
 - Production migration: **NONE**.
 - Customer-data mutation: **NONE**.
 - Secret/DNS change: **NONE**.
 - Merge/deploy: **NOT DONE**.
 
-This branch contains backend behavior. Per project policy, after verification it must stop before merge/deploy until the user explicitly approves.
+This branch contains backend behavior. Per project policy, it stops before merge/deploy until the user explicitly approves.
