@@ -4,6 +4,7 @@ import {
   summarizeVatDataset,
   type VatInvoiceReconciliation,
 } from "./vat-dataset.js";
+import { parseVnLegalEvidence, type VnLegalEvidence } from "./legal-evidence.js";
 
 interface Env {
   PLATFORM?: Fetcher;
@@ -44,6 +45,7 @@ async function invoiceReconcile(request: Request, env: Env, args: Record<string,
         company: ruleset.company,
         legal_rule: ruleset.legal_rule,
         source_hash: ruleset.source_hash,
+        legal_evidence: ruleset.legal_evidence,
         row,
         ready_for_filing_dataset: row.reconciliation_ok && row.unmapped_tax_accounts.length === 0,
       },
@@ -123,6 +125,7 @@ async function vatDataset(request: Request, env: Env, args: Record<string, unkno
         company: ruleset.company,
         legal_rule: ruleset.legal_rule,
         source_hash: ruleset.source_hash,
+        legal_evidence: ruleset.legal_evidence,
         from_date: fromDate,
         to_date: toDate,
         limit_per_type: limitPerType,
@@ -168,6 +171,7 @@ async function readVatRuleset(call: PlatformCall, name: string): Promise<{
   source_hash: string;
   effective_from: string;
   effective_to: string;
+  legal_evidence: VnLegalEvidence;
   mapping: ReturnType<typeof parseVatAccountMapping>;
 }> {
   const ruleset = await readDocument(call, "VN Tax Ruleset", name);
@@ -176,12 +180,15 @@ async function readVatRuleset(call: PlatformCall, name: string): Promise<{
   const company = requiredText(ruleset.company, `VN Tax Ruleset ${name} company`);
   const effectiveFrom = isoDate(ruleset.effective_from, `VN Tax Ruleset ${name} effective_from`);
   const effectiveTo = ruleset.effective_to ? isoDate(ruleset.effective_to, `VN Tax Ruleset ${name} effective_to`) : "9999-12-31";
+  const legalRule = requiredText(ruleset.legal_rule, `VN Tax Ruleset ${name} legal_rule`);
+  const legalDocument = await readDocument(call, "VN Legal Rule", legalRule);
   return {
     company,
-    legal_rule: requiredText(ruleset.legal_rule, `VN Tax Ruleset ${name} legal_rule`),
+    legal_rule: legalRule,
     source_hash: requiredText(ruleset.source_hash, `VN Tax Ruleset ${name} source_hash`),
     effective_from: effectiveFrom,
     effective_to: effectiveTo,
+    legal_evidence: parseVnLegalEvidence(legalDocument, legalRule, "VAT", effectiveFrom, effectiveTo),
     mapping: parseVatAccountMapping(ruleset.tax_accounts_json),
   };
 }
