@@ -226,7 +226,7 @@ export class NonConformanceReportController extends SuiteController<NonConforman
       company,
       posting_at: postingAt,
       ...(sourceInspection ? { source_inspection: sourceInspection } : {}),
-      ...(referenceType ? { reference_type: referenceType, reference_name: referenceName } : {}),
+      ...(referenceType && referenceName ? { reference_type: referenceType, reference_name: referenceName } : {}),
       item_code: itemCode,
       severity,
       defect_category: defectCategory,
@@ -314,6 +314,7 @@ export class CapaController extends SuiteController<CapaData> {
     const verificationResult = input.verification_result
       ? requiredChoice(input.verification_result, VERIFICATION_RESULTS, "verification_result") as CapaData["verification_result"]
       : undefined;
+    const closureNote = optionalText(input.closure_note);
     if (verifiedAt && !implementedAt) throw errors.validation("verified_at requires implemented_at");
     if (implementedAt && implementedAt < openedAt) throw errors.validation("implemented_at cannot be before opened_at");
     if (verifiedAt && implementedAt && verifiedAt < implementedAt) throw errors.validation("verified_at cannot be before implemented_at");
@@ -326,7 +327,7 @@ export class CapaController extends SuiteController<CapaData> {
         const rcaDoc = await requireSubmittedDocument<RootCauseAnalysisData>(context, "Root Cause Analysis", rca);
         if (rcaDoc.data.ncr !== ncr || rcaDoc.data.company !== company) throw errors.reference("CAPA RCA does not match NCR/company");
       }
-      if (!implementedAt || !verifiedAt || verificationResult !== "Effective" || !requiredText(input.closure_note, "closure_note")) {
+      if (!implementedAt || !verifiedAt || verificationResult !== "Effective" || !closureNote) {
         throw errors.lifecycle("CAPA can close only after implementation, verification Effective, and closure note");
       }
     }
@@ -345,7 +346,7 @@ export class CapaController extends SuiteController<CapaData> {
       ...(implementedAt ? { implemented_at: implementedAt } : {}),
       ...(verifiedAt ? { verified_at: verifiedAt } : {}),
       ...(verificationResult ? { verification_result: verificationResult } : {}),
-      ...(optionalText(input.closure_note) ? { closure_note: optionalText(input.closure_note) } : {}),
+      ...(closureNote ? { closure_note: closureNote } : {}),
     };
   }
 
