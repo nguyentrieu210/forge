@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { parseAppManifest } from "../dist/packages/app-registry/src/manifest.js";
 import { createO2CControllerRegistry } from "../dist/packages/clouderp-selling/src/index.js";
 import { DocumentKernel, InMemoryMutationStore } from "../dist/packages/document-kernel/src/index.js";
 import { readAppSource } from "../scripts/lib/read-app-source.mjs";
@@ -10,6 +9,7 @@ import { createAndSubmit, mutate, seedStandardMasters } from "./helpers.mjs";
 const NOW = "2026-08-04T12:00:00.000Z";
 const PIPELINE = "Customer 360 Pipeline";
 const STAGE = `${PIPELINE}::Proposal`;
+const CUSTOMER_360_DOCTYPES = ["CRM Customer 360", "CRM Customer 360 Currency", "CRM Customer 360 Activity"];
 
 function setup() {
   const store = new InMemoryMutationStore();
@@ -170,12 +170,14 @@ async function seedCustomerLifecycle(kernel) {
   });
 }
 
-test("CRM app packages the Customer 360 snapshot and child evidence doctypes", async () => {
+test("CRM source packages the Customer 360 metadata without adding reserved status fields", async () => {
   const source = await readAppSource(fileURLToPath(new URL("../apps-src/crm/", import.meta.url)));
-  const parsed = parseAppManifest(source);
-  for (const name of ["CRM Customer 360", "CRM Customer 360 Currency", "CRM Customer 360 Activity"]) {
-    assert.ok(parsed.doctypes.some((doctype) => doctype.name === name), `${name} must be packaged`);
+  for (const name of CUSTOMER_360_DOCTYPES) {
+    const doctype = source.doctypes.find((candidate) => candidate.name === name);
+    assert.ok(doctype, `${name} must be packaged`);
+    assert.equal(doctype.fields.some((field) => field.fieldname === "status"), false, `${name} must not add the reserved status field`);
   }
+  assert.ok(source.externalDocTypes.some((entry) => entry.name === "Customer Group"), "Customer Group external ownership must be declared");
 });
 
 test("Customer 360 refreshes CRM timeline and exact O2C amounts without cross-currency collapse", async () => {
