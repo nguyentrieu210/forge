@@ -15,13 +15,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - Pilot-00 Freeze Production Profile + Pilot Contract: **DONE / PILOT-00-LOCKED**.
 - Pilot-01 preview/control-plane: **READY**.
 - Pilot-01 real uploaded source set: **OBSERVED / HASHED / INGESTED**.
-- Pilot-01 current verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED** pending reconciliation/normalization.
+- Pilot-01 identity disposition: **LOCKED** for duplicate customers and exact duplicate item-code collisions.
+- Pilot-01 current verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED** pending remaining reconciliation/normalization.
 - Exact R6 certified/deployed source SHA and frozen initial pilot software baseline: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Canonical full production deploy run: `30952411424` — **SUCCESS**.
 - Final post-release certification run: `30952703083` — **SUCCESS**.
 - Final machine evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json`.
 - Pilot-00 authority: `docs/pilot/alumdoor/PILOT_00_CONTRACT.md` and `docs/pilot/alumdoor/PILOT_00_LOCK.json`.
-- Pilot-01 authority: `docs/pilot/alumdoor/PILOT_01_STATUS.json`, `PILOT_01_SOURCE_INGEST_20260805.json` and `PILOT_01_SOURCE_INGEST_20260805.md`.
+- Pilot-01 authority: `docs/pilot/alumdoor/PILOT_01_STATUS.json`, `PILOT_01_SOURCE_INGEST_20260805.json`, `PILOT_01_SOURCE_INGEST_20260805.md` and `PILOT_01_IDENTITY_DISPOSITION_V1.json`.
 
 Evidence/docs/control-plane commits after the certified SHA may advance `main`; they do not change the exact deployed product identity. Any later product-runtime/source change requires new affected release evidence before it can replace the frozen pilot baseline.
 
@@ -94,18 +95,24 @@ Observed real-source coverage:
 
 The stock workbook's own status formula can classify blank statuses from length/piece count. Replaying only that source formula yields **1,152 available lot rows / 41,137 pieces-leaves**. This is physical evidence, not canonical opening Stock quantity.
 
-Current blockers are evidence-specific:
+### Identity disposition now locked
+
+- Duplicate customer names: keep the first canonical customer in immutable source order; drop later duplicate Customer rows and remap their references to the retained `source_key`.
+- Exact duplicate item codes: keep the first code; later collisions receive the lowest free suffix `01`, `02`, `03`... while preserving `source_code_original` and source lineage.
+- The uploaded item master currently has **277/277 unique codes**, so no observed master row is changed by the suffix rule yet.
+- The separate **60 unmatched journal item-code strings remain an alias/reference blocker**. They are not duplicate-code collisions and are not auto-fuzzy-matched.
+
+Current remaining blockers are evidence-specific:
 
 1. no proven single common cutoff across Stock + AR/AP + cash/bank;
-2. two duplicate customer identities need disposition;
-3. supplier-role and party-alias gaps remain after preserving canonical TIẾN ĐẠT;
-4. 60 journal item codes do not exact-match the uploaded item export and require canonical alias reconciliation;
-5. aluminum source contains **zero populated actual-Kg cells** while canonical `Nhôm cây/lá` Stock UOM is Kg; theoretical kg/m must not be promoted to measured quantity;
-6. process source expects 23 aluminum + 2 mesh sheets, while observed aluminum workbook has 21 total / 18 inventory sheets and no separate mesh source in the set;
-7. two `VIPST700` rows have future source date `23/12/2026`;
-8. observed activity cannot safely reconstruct opening AR/AP;
-9. 45 typed journal rows contain fractional `Tổng thanh toán` and require a deterministic integer-VND rule;
-10. complete work-center/BOM/employee/pilot-user data is not migration-ready.
+2. supplier-role and party-alias gaps remain after preserving canonical TIẾN ĐẠT;
+3. 60 journal item codes do not exact-match the uploaded item export and require canonical alias reconciliation;
+4. aluminum source contains **zero populated actual-Kg cells** while canonical `Nhôm cây/lá` Stock UOM is Kg; theoretical kg/m must not be promoted to measured quantity;
+5. process source expects 23 aluminum + 2 mesh sheets, while observed aluminum workbook has 21 total / 18 inventory sheets and no separate mesh source in the set;
+6. two `VIPST700` rows have future source date `23/12/2026`;
+7. observed activity cannot safely reconstruct opening AR/AP;
+8. 45 typed journal rows contain fractional `Tổng thanh toán` and require a deterministic integer-VND rule;
+9. complete work-center/BOM/employee/pilot-user data is not migration-ready.
 
 Therefore Pilot-01 is **SOURCE INGESTED but PREVIEW BLOCKED**, not `WAITING-SOURCE-BATCH` and not READY.
 
@@ -125,7 +132,7 @@ No Pilot-01 production import/write has occurred.
 
 ## 7. Active sequence
 
-`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 SOURCE INGESTED -> reconcile/normalize -> real PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
+`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 SOURCE INGESTED -> identity disposition LOCKED -> reconcile/normalize -> real PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
 
 The active queue is `NEXT_TASKS.md`.
 
@@ -142,4 +149,4 @@ The active queue is `NEXT_TASKS.md`.
 
 ## 9. Documentation authority
 
-Start at `docs/README.md`, then `docs/pilot/alumdoor/README.md`, `PILOT_01_SOURCE_INGEST_20260805.md` and `NEXT_TASKS.md`. R6 final evidence remains historical entry authority for the frozen pilot baseline.
+Start at `docs/README.md`, then `docs/pilot/alumdoor/README.md`, `PILOT_01_IDENTITY_DISPOSITION_V1.json`, `PILOT_01_SOURCE_INGEST_20260805.md` and `NEXT_TASKS.md`. R6 final evidence remains historical entry authority for the frozen pilot baseline.
