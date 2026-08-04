@@ -25,8 +25,11 @@ jobs:
           node --check docs/pilot/alumdoor/tools/validate-pilot-batch.mjs
           node --check docs/pilot/alumdoor/tools/normalize-pilot-identities.mjs
           node --check docs/pilot/alumdoor/tools/normalize-pilot-aliases-suppliers.mjs
+          node --check docs/pilot/alumdoor/tools/verify-pilot-01-cutoff-feasibility.mjs
       - name: Verify Pilot-00 / Pilot-01 identity contract
         run: node docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs
+      - name: Verify cutoff feasibility evidence remains fail-closed
+        run: node docs/pilot/alumdoor/tools/verify-pilot-01-cutoff-feasibility.mjs
       - name: Run fail-closed batch validator tests
         run: node --test docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs
       - name: Run identity normalization tests
@@ -42,3 +45,4 @@ jobs:
           grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json
           grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json
           grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_ALIAS_SUPPLIER_RECONCILIATION_V1.json
+          grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json
