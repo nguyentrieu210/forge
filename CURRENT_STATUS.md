@@ -13,13 +13,16 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - R5 integrated hardening/productization: **DONE / R5-GO** via PR `#638`.
 - R6 Production Certification: **DONE / PILOT-GO**.
 - Pilot-00 Freeze Production Profile + Pilot Contract: **DONE / PILOT-00-LOCKED**.
+- Pilot-01 preview/control-plane: **READY**.
+- Pilot-01 real immutable source batch: **NOT YET AVAILABLE / PILOT-01-WAITING-SOURCE-BATCH**.
 - Exact R6 certified/deployed source SHA and frozen initial pilot software baseline: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Canonical full production deploy run: `30952411424` — **SUCCESS**.
 - Final post-release certification run: `30952703083` — **SUCCESS**.
 - Final machine evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json`.
 - Pilot-00 authority: `docs/pilot/alumdoor/PILOT_00_CONTRACT.md` and `docs/pilot/alumdoor/PILOT_00_LOCK.json`.
+- Pilot-01 authority: `docs/pilot/alumdoor/PILOT_01_READINESS.md` and `docs/pilot/alumdoor/PILOT_01_STATUS.json`.
 
-Evidence/docs commits after the certified SHA may advance `main`; they do not change the exact deployed product identity. Any later product-source change requires new affected release evidence before it can replace the frozen pilot baseline.
+Evidence/docs/control-plane commits after the certified SHA may advance `main`; they do not change the exact deployed product identity. Any later product-runtime/source change requires new affected release evidence before it can replace the frozen pilot baseline.
 
 ## 2. Capability truth
 
@@ -36,7 +39,7 @@ Latest accepted materialized distribution remains:
 | Missing | 157 |
 | **Total** | **956** |
 
-R6/Pilot-00 do not reopen a blanket capability-promotion wave. Pilot-critical acceptance is governed by exact package/profile/runtime/domain evidence instead.
+R6/Pilot-00/Pilot-01 do not reopen a blanket capability-promotion wave. Pilot-critical acceptance is governed by exact package/profile/runtime/domain/data evidence instead.
 
 ## 3. R6 final certification truth
 
@@ -71,14 +74,14 @@ No unresolved R6 blocker remains in controlled-pilot scope.
 
 ## 4. Pilot-00 locked truth
 
-Pilot-00 has frozen the governance/data-readiness contract before any real opening/master data write.
+Pilot-00 froze the governance/data-readiness contract before any real opening/master data write.
 
 Locked scope:
 
 - target: tenant `alu` only at `https://alu.kairo.vn`;
 - software/package/profile identity: exact R6-certified identity above;
 - pilot personas: `Giám đốc`, `Chủ xưởng`, `Kinh doanh`, `Thủ kho`, `Kế toán`, `Sản xuất`;
-- business cutover authority: one named account holding `Giám đốc` role, to be bound before Pilot-04;
+- business cutover authority: one named account holding `Giám đốc` role;
 - named-account allowlist required before Pilot-02;
 - permitted transaction families limited to canonical Sales/CRM, Procurement, Stock, Manufacturing/Alumdoor, Finance and Warranty/Service paths;
 - frozen source cutoff/extract manifest rules;
@@ -90,17 +93,37 @@ Locked scope:
 
 Pilot-00 performed **no real customer/master/opening-data production mutation**.
 
-## 5. Active phase — Pilot-01
+## 5. Pilot-01 current truth
 
-Active work is now **Master + Opening Data Readiness** using:
+Pilot-01 now has a complete preview-only source intake/control plane:
 
-- `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`;
-- `docs/pilot/alumdoor/PILOT_00_LOCK.json`;
-- `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`.
+- frozen mapping: `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
+- immutable manifest template: `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`;
+- preview validator: `docs/pilot/alumdoor/tools/validate-pilot-batch.mjs`;
+- fail-closed tests: `docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs`;
+- identity verifier: `docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs`;
+- CI: `.github/workflows/pilot-01-data-readiness.yml`;
+- source handoff checklist: `docs/pilot/alumdoor/PILOT_01_SOURCE_BATCH_REQUIREMENTS.md`.
 
-Pilot-01 must create an immutable source batch manifest, deterministic mappings, duplicate/reference checks, tenant-scope checks and preview reconciliations for customer/contact, supplier, item/BOM/work-center, warehouse/opening stock, AR/AP, optional cash-bank, employee and named pilot-user datasets.
+The validator enforces:
 
-Real production import/write is a later explicit operation, not implied by Pilot-00 closure.
+- immutable SHA-256/file identity and exact row counts;
+- required datasets/fields;
+- duplicate source-key/item/account refusal;
+- unknown Customer/Supplier/Item/Warehouse/Employee reference refusal;
+- frozen Pilot-00 personas;
+- exactly one active named `Giám đốc` account;
+- integer money semantics;
+- non-negative opening stock quantity/rate;
+- exact Stock/AR/AP/cash-bank opening source-total reconciliation;
+- zero unexplained variance;
+- `production_write_authorized=false` and `production_data_mutated=false`.
+
+Current missing input is a **real approved immutable source batch**. Package fixtures, demo records and R6 Golden Flow data are not accepted as real opening/customer migration evidence.
+
+Pilot-01 therefore remains `PILOT-01-WAITING-SOURCE-BATCH`, not READY.
+
+No Pilot-01 real production import/write has occurred.
 
 ## 6. Current architecture authorities
 
@@ -116,19 +139,20 @@ Real production import/write is a later explicit operation, not implied by Pilot
 
 ## 7. Active sequence
 
-`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 Data Readiness -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
+`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 WAITING SOURCE BATCH -> real PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
 
 The active queue is `NEXT_TASKS.md`.
 
 ## 8. Standing boundaries
 
 - Controlled pilot is not GA.
+- A Pilot-01 preview PASS is not production-write authorization.
 - Real customer/master/opening-data import or mutation remains an explicit authorization boundary.
 - Production cutover, restore/PITR, DNS/route/secret/provider mutation and destructive queue/state operations remain explicit authorization boundaries.
 - Pilot cutover requires accepted reconciliation plus explicit `Giám đốc` business acceptance.
 - Worker rollback does not imply D1/KV/R2/external-state rollback.
 - Source/config presence does not equal observed provider state.
-- Future source/package/profile changes invalidate affected exact-identity claims until required evidence reruns.
+- Future product-source/package/profile changes invalidate affected exact-identity claims until required evidence reruns.
 
 ## 9. Documentation authority
 

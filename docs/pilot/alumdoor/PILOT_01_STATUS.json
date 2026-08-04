@@ -1,0 +1,40 @@
+{
+  "format": "forge-alumdoor-pilot-01-status/v1",
+  "status": "PILOT-01-WAITING-SOURCE-BATCH",
+  "certified_product_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "pilot_00_lock": "docs/pilot/alumdoor/PILOT_00_LOCK.json",
+  "mapping": "docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json",
+  "mapping_version": 1,
+  "tooling": {
+    "validator": "docs/pilot/alumdoor/tools/validate-pilot-batch.mjs",
+    "tests": "docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs",
+    "contract_verifier": "docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs",
+    "manifest_template": "docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json",
+    "ci": ".github/workflows/pilot-01-data-readiness.yml",
+    "preview_only": true,
+    "production_mutation_path": false
+  },
+  "source_batch": {
+    "approved_batch_available_at_execution": false,
+    "raw_customer_data_committed_to_repo": false,
+    "required_next_input": "approved immutable source extracts normalized to mapping v1 in a secure batch directory"
+  },
+  "required_preview_acceptance": {
+    "required_datasets_present": true,
+    "file_hashes_match": true,
+    "required_fields_present": true,
+    "source_keys_unambiguous": true,
+    "references_resolved": true,
+    "named_cutover_approver_account": true,
+    "unexplained_reconciliation_variance": 0,
+    "production_write_authorized": false
+  },
+  "remaining_before_pilot_01_ready": [
+    "approved source extracts",
+    "immutable manifest with SHA-256 and cutoff/extract timestamps",
+    "named pilot account allowlist including exactly one active Giám đốc account",
+    "PREVIEW_PASS on the real batch",
+    "human/source-owner disposition for every source ambiguity or discrepancy"
+  ],
+  "production_data_mutated": false
+}
