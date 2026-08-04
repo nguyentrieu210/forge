@@ -36,6 +36,18 @@ test('workers for platforms adds script overage and its own base plan', () => {
   assert.equal(result.total_monthly_usd, 29);
 });
 
+test('R2 overage rounds up to provider billing units', () => {
+  const result = estimateCloudflareMonthlyCost({ usage: {
+    r2_storage_gb_month: 11.1,
+    r2_class_a_ops: 1_000_001,
+    r2_class_b_ops: 10_000_001,
+  }, rates });
+  const line = (name) => result.lines.find((entry) => entry.name === name);
+  assert.equal(line('r2_storage_gb_month').billable, 2);
+  assert.equal(line('r2_class_a_ops').billable, 1_000_000);
+  assert.equal(line('r2_class_b_ops').billable, 1_000_000);
+});
+
 test('negative usage is rejected', () => {
   assert.throws(() => estimateCloudflareMonthlyCost({ usage: { workers_requests: -1 }, rates }), /non-negative/);
 });
