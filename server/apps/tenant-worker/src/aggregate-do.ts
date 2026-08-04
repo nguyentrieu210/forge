@@ -16,6 +16,7 @@ import {
 } from "../../../packages/document-kernel/src/index.js";
 import { errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
+import { registerIntegrationHubControllers } from "../../../packages/integration-hub/src/registry.js";
 import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
 import { isInventoryCoordinatedCommand, resolveInventoryCoordinatorKey } from "./inventory-coordinator.js";
@@ -146,11 +147,13 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
    */
   private commandServices(): { kernel: DocumentKernel; store: D1RolloutPurchaseAllocationDomainStore } {
     const metadata = new D1MetadataStore(this.env.DB);
-    const registry = registerAppFactoryControllers(
-      registerErpNextCoreControllers(
-        registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+    const registry = registerIntegrationHubControllers(
+      registerAppFactoryControllers(
+        registerErpNextCoreControllers(
+          registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+        ),
+        metadata,
       ),
-      metadata,
     ).setFallback(new GenericMetadataController(metadata));
     const store = new D1RolloutPurchaseAllocationDomainStore(this.env.DB);
     return {
