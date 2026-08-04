@@ -141,7 +141,7 @@ jobs:
           set -euo pipefail
           ! grep -RInE 'INSERT[[:space:]]+INTO[[:space:]]+(gl_entries|stock_ledger_entries|payment_ledger)|UPDATE[[:space:]]+(gl_entries|stock_ledger_entries|payment_ledger)' \
             server/apps-src/alumdoor-worker/src
-          ! grep -RInE 'from[[:space:]]+["'"'][^"'"']*packages/(clouderp|document-kernel|finance|stock)' \
+          ! grep -RInE '\bD1Database\b|env\.(DB|TENANT_DB)|\.prepare\(' \
             server/apps-src/alumdoor-worker/src
 
       - name: Diff hygiene
