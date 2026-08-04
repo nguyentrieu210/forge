@@ -3,6 +3,7 @@
 Date: **2026-08-04**  
 Agent: **RC4-A1**  
 Branch: `agent/rc4-01-iam-privacy`  
+Draft PR: `#597`  
 Exact seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Risk: **CRITICAL**  
 Production deploy/provider mutation: **NONE**
@@ -123,6 +124,14 @@ The gate executes on the exact PR head and covers:
 8. `git diff --check`.
 
 A green run is executable evidence only. It is not provider/browser/production evidence and does not justify Hardened.
+
+### Validation observation
+
+- Draft PR: `#597`.
+- Initial PR head: `9980abe89648b715eb450bca7a031c1394ffeb65`.
+- Immediately after PR creation, GitHub exposed no workflow run/check for that head.
+- Direct local checkout could not be used because the execution environment could not resolve `github.com`.
+- No PASS is inferred from either absence. This evidence document update creates a new PR synchronization event so the branch-local exact-head gate can be observed if GitHub accepts the newly introduced workflow.
 
 ## Dependency Requests
 
