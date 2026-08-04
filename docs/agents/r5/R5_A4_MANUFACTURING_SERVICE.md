@@ -1,12 +1,30 @@
 # R5-04 — Manufacturing + Service
 
-Status: **PR VALIDATION PENDING — NON-UI MERGE/DEPLOY APPROVAL REQUIRED**  
-Date: **2026-08-04**  
-Branch: `agent/r5-04-manufacturing-service`  
-Baseline: `main@30346e08eabb7074f8623eeedae09efec25da072`  
+Status: **R5-00 CONTROL SYNCED — PR VALIDATION PENDING — NON-UI MERGE/DEPLOY APPROVAL REQUIRED**
+Date: **2026-08-04**
+Branch: `agent/r5-04-manufacturing-service`
+Baseline: `main@30346e08eabb7074f8623eeedae09efec25da072`
+Control authority: `agent/r5-00-integration-control@ef2a4d80b70164048aa6c3f516580350009234b2` / PR #629
 Risk: **CRITICAL validation/evidence** at stock/cost/warranty boundaries
 
-## 1. Mission and authority boundary
+## 1. R5-00 control sync
+
+R5-04 consumed the latest R5-00 Integration Control and machine-readable manifest before finalizing its candidate.
+
+R5-00 establishes:
+
+- `GO_WAVE_1` for R5-01..R5-05 in parallel;
+- exact R5 execution baseline remains current `main@30346e08eabb7074f8623eeedae09efec25da072`;
+- there are zero RC4 worker branches left to replay into R5;
+- R5-04 has no hard dependencies;
+- R5-03 Inventory/Procurement and R5-02 Finance/Cost are conditional dependencies only at shared authority seams;
+- Manufacturing/Service may orchestrate evidence but may not create competing stock, WIP, costing or GL ledgers;
+- rework policy is required only if the Alumdoor pilot actually needs the rework flow;
+- provider/live certification remains R6/approved-environment evidence, not an R5 source prerequisite.
+
+R5-00 PR #629 is governance/control source and is not cherry-picked into this worker. R5-04 remains based on the exact shared `main` baseline to avoid duplicating control artifacts when R5-00 later converges.
+
+## 2. Mission and authority boundary
 
 R5-04 proves the integrated Manufacturing/MRP/QMS + Service/Warranty paths used by the Alumdoor reference pilot without reopening broad feature work.
 
@@ -21,11 +39,11 @@ Canonical authorities are preserved:
 
 No second stock ledger, costing ledger, service billing ledger, migration, schema or production mutation is introduced by R5-04.
 
-## 2. Exact-main audit result
+## 3. Exact-main audit result
 
 R5-04 started from exact `main@30346e08eabb7074f8623eeedae09efec25da072`, the RC4 post-integration closure head.
 
-The audit found the following already integrated and canonical:
+The audit found the following already integrated and canonical.
 
 ### Manufacturing / MRP / QMS
 
@@ -47,7 +65,7 @@ The existing read-only Golden Order verifier already requires:
 
 That means R5-04 does not need a new production orchestration primitive merely to prove the pilot lineage.
 
-## 3. Residual decision
+## 4. Residual decision
 
 No new runtime defect was established strongly enough on exact main to justify changing authoritative Manufacturing, Stock, Finance or Service behavior.
 
@@ -63,7 +81,7 @@ Artifacts:
 - `.github/workflows/r5-04-manufacturing-service.yml`;
 - this handoff.
 
-## 4. New integrated R5-04 regression
+## 5. New integrated R5-04 regression
 
 `server/tests/r5-04-manufacturing-service-integration.test.mjs` pins three cross-domain invariants:
 
@@ -73,7 +91,7 @@ Artifacts:
 
 The test consumes existing authorities; it does not create a second implementation of them.
 
-## 5. Exact-head validation gate
+## 6. Exact-head validation gate
 
 `.github/workflows/r5-04-manufacturing-service.yml` is branch-scoped to `agent/r5-04-manufacturing-service` and contains no deploy step.
 
@@ -115,7 +133,9 @@ The gate runs:
 
 The workflow emits server `dist` even if the known repository-wide TypeScript baseline is non-zero, then executes exact emitted code. A non-zero global baseline must remain visible and is not represented as a global TypeScript PASS.
 
-## 6. Pilot-scope readiness matrix
+First R5-04 run `30878712953` proved all executable Manufacturing, QMS, Warranty/Service, cross-ledger and package steps green, then failed only on Markdown trailing-whitespace hygiene in this handoff. This revision removes that hygiene defect; the new exact-head run is the authoritative final gate.
+
+## 7. Pilot-scope readiness matrix
 
 | Pilot concern | Current evidence on baseline | R5-04 disposition |
 |---|---|---|
@@ -137,7 +157,7 @@ The workflow emits server `dist` even if the known repository-wide TypeScript ba
 
 No maturity row is promoted by R5-04 before exact-head executable evidence is green and later convergence accepts the evidence.
 
-## 7. Explicit gaps / Dependency Requests
+## 8. Explicit gaps / Dependency Requests
 
 ### DR-R5-04-01 — Persisted qualitative Quality Inspection contract
 
@@ -145,7 +165,7 @@ No maturity row is promoted by R5-04 before exact-head executable evidence is gr
 
 Quality Plan can evaluate Numeric / Pass-Fail / Text, but persisted shared `Quality Inspection` reading still has a numeric-oriented contract. Do not encode qualitative results into numeric fields.
 
-Blocks: persisted qualitative inspection parity.  
+Blocks: persisted qualitative inspection parity.
 Does not block: numeric/current Alumdoor pilot QMS checkpoints.
 
 ### DR-R5-04-02 — Backdated valuation repost + stock/finance restatement
@@ -154,7 +174,7 @@ Does not block: numeric/current Alumdoor pilot QMS checkpoints.
 
 Manufacturing can detect stale outgoing valuation after backdated movement. Canonical repost execution and downstream Finance reconciliation remain outside Manufacturing authority.
 
-Blocks: full backdated valuation/accounting hardening.  
+Blocks: full backdated valuation/accounting hardening.
 Does not block: normal-order manufacturing pilot path.
 
 ### DR-R5-04-03 — Posted labor/machine/overhead + manufacturing variance
@@ -163,17 +183,17 @@ Does not block: normal-order manufacturing pilot path.
 
 Current material/FG evidence is Stock Ledger-derived; posted operation cost and period/variance accounting remain Finance policy. R5-04 keeps `NOT_POSTED` semantics.
 
-Blocks: full `M04-004..010` closure.  
+Blocks: full `M04-004..010` closure.
 Does not block: physical production and read-only cost evidence.
 
-### DR-R5-04-04 — Rework operating model
+### DR-R5-04-04 / DR-R5-00-05 — Rework operating model
 
-**Owner:** product/business policy, then Manufacturing.
+**Owner:** R5-04 / product owner only if the Alumdoor pilot requires rework.
 
-Repository evidence does not determine whether rework consumes rejected FG, references the original WO, uses a dedicated BOM/routing or records incremental-only work. R5-04 does not invent a universal rule.
+Repository evidence does not determine whether rework consumes rejected FG, references the original WO, uses a dedicated BOM/routing or records incremental-only work. Per latest R5-00 control, R5-04 keeps rework outside the selected pilot flow unless a concrete pilot requirement makes the decision necessary.
 
-Blocks: `M03-009`.  
-Pilot disposition: outside selected base flow unless an explicit Alumdoor rework requirement is introduced.
+Blocks: `M03-009` only.
+Does not block: selected base Alumdoor pilot flow.
 
 ### DR-R5-04-05 — Subcontract manufacturing
 
@@ -181,7 +201,7 @@ Pilot disposition: outside selected base flow unless an explicit Alumdoor rework
 
 Needs supplier, send/return material and valuation authority. No local substitute is added.
 
-Blocks: `M03-010`.  
+Blocks: `M03-010`.
 Pilot disposition: outside selected base flow.
 
 ### DR-R5-04-06 — Automatic service stock commands and billing/credit orchestration
@@ -190,7 +210,7 @@ Pilot disposition: outside selected base flow.
 
 Current Service closure safely requires already-submitted canonical Stock Entry / Delivery Note / Sales Invoice evidence. Automatic idempotent creation/reversal remains an owner contract, not a Service-local ledger.
 
-Blocks: fully automatic after-sales stock/billing orchestration.  
+Blocks: fully automatic after-sales stock/billing orchestration.
 Does not block: authoritative manual-document pilot path.
 
 ### DR-R5-04-07 — Assignment-based READ row policy
@@ -199,7 +219,7 @@ Does not block: authoritative manual-document pilot path.
 
 WS07 mutation assignment scope is server-enforced; full confidentiality hardening still needs canonical read-row policy for assigned tasks/orders/claims.
 
-Blocks: assignment confidentiality Hardening.  
+Blocks: assignment confidentiality Hardening.
 Does not block: current tenant/DocPerm mutation-safety evidence.
 
 ### DR-R5-04-08 — Authenticated same-order production evidence
@@ -208,10 +228,10 @@ Does not block: current tenant/DocPerm mutation-safety evidence.
 
 Historical production does not prove current source. Exact-current authenticated Golden Order / Warranty-Service evidence belongs to approved R6 staging/production evidence, not R5 source convergence.
 
-Blocks: Hardened/current-production claim.  
+Blocks: Hardened/current-production claim.
 Does not block: R5 source candidate.
 
-## 8. Capability truth retained
+## 9. Capability truth retained
 
 Current RC4 capability baseline remains authoritative:
 
@@ -224,7 +244,7 @@ Current RC4 capability baseline remains authoritative:
 
 R5-04 does not alter `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` before independent exact-head execution/convergence evidence.
 
-## 9. Safety / merge boundary
+## 10. Safety / merge boundary
 
 R5-04 delta is validation/evidence-only but exercises CRITICAL Manufacturing/Stock/Service boundaries.
 
@@ -235,4 +255,4 @@ R5-04 delta is validation/evidence-only but exercises CRITICAL Manufacturing/Sto
 - deploy step: **none**;
 - merge/deploy: **STOP before merge/deploy pending explicit authorization**.
 
-Final status must be updated with the exact PR head and workflow run conclusion. Authored tests alone are not PASS.
+Final PR state must use the latest exact-head workflow conclusion. Authored tests alone are not PASS.
