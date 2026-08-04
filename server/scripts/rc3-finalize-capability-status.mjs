@@ -12,6 +12,7 @@ function writeIfChanged(path, content) {
 }
 function replaceOnce(text, pattern, replacement, label) {
   if (typeof pattern === "string") {
+    if (text.split("\n").map((line) => line.trimEnd()).join("\n").includes(replacement.split("\n").map((line) => line.trimEnd()).join("\n"))) return text;
     if (text.includes(replacement)) return text;
     if (!text.includes(pattern)) throw new Error(`RC3 convergence pattern missing: ${label}`);
     return text.replace(pattern, replacement);
