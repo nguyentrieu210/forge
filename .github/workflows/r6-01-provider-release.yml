@@ -1,0 +1,148 @@
+name: R6-01 Provider and Release Evidence
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/r6-01-provider-release.yml"
+      - "server/scripts/r6-provider-readonly.mjs"
+      - "docs/agents/r6/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provider-release-evidence:
+    name: Locked candidate read-only evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CANDIDATE_SHA: 4149af7c3e49b25fb1f43a50b62f99d7c04e6488
+      BASE_URL: https://alu.kairo.vn
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout R6-01 evidence control
+        uses: actions/checkout@v4
+        with:
+          path: control
+          persist-credentials: false
+
+      - name: Checkout exact locked candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          path: candidate
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Prepare evidence directory
+        run: mkdir -p evidence
+
+      - name: R6-E01 source governance
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE_SHA"
+          node candidate/server/scripts/verify-cloudflare-governance.mjs --json > evidence/r6-e01-cloudflare-source.json
+          node candidate/server/scripts/verify-observability-config.mjs > evidence/r6-e01-observability-source.txt
+
+      - name: R6-E03 and R6-E04 exact public release probe
+        id: release
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          node candidate/server/scripts/sre-health-snapshot.mjs \
+            --base "$BASE_URL" \
+            --expected-release-sha "$CANDIDATE_SHA" \
+            --allow-remote \
+            --confirm-host alu.kairo.vn \
+            --attempts 2 \
+            --delay-ms 1000 \
+            --output "$GITHUB_WORKSPACE/evidence/r6-e03-e04-release.json"
+
+      - name: R6-E02 and R6-E05 provider inventory
+        id: provider
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          node control/server/scripts/r6-provider-readonly.mjs \
+            --source-sha "$CANDIDATE_SHA" \
+            --output "$GITHUB_WORKSPACE/evidence/r6-e02-e05-provider.json"
+
+      - name: Materialize lane summary
+        if: always()
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = process.env.GITHUB_WORKSPACE;
+          const read = (name) => {
+            try { return JSON.parse(fs.readFileSync(path.join(root, 'evidence', name), 'utf8')); }
+            catch { return null; }
+          };
+          const source = read('r6-e01-cloudflare-source.json');
+          const release = read('r6-e03-e04-release.json');
+          const provider = read('r6-e02-e05-provider.json');
+          const candidate = process.env.CANDIDATE_SHA;
+          const rows = [];
+          rows.push(['R6-E01', source ? 'PASS' : 'BLOCKED', source ? 'governed Cloudflare source validator passed' : 'source evidence missing']);
+          rows.push(['R6-E02', provider?.result?.ok ? 'PASS' : 'BLOCKED', provider?.result?.ok ? 'pilot-used provider inventory converged' : (provider?.result?.blockers ?? []).map(x => x.name).join(', ') || 'provider evidence missing']);
+          const healthOk = release?.checks?.health?.status === 200 && release?.checks?.health?.ok === true;
+          const rootOk = Number(release?.checks?.root?.status ?? 0) >= 200 && Number(release?.checks?.root?.status ?? 0) < 400;
+          const bootOk = release?.checks?.guest_boot?.status === 403;
+          rows.push(['R6-E03', healthOk && rootOk && bootOk ? 'PASS' : 'BLOCKED', `health=${release?.checks?.health?.status ?? 'missing'} root=${release?.checks?.root?.status ?? 'missing'} guestBoot=${release?.checks?.guest_boot?.status ?? 'missing'}`]);
+          const releaseSha = String(release?.checks?.release?.release_sha ?? '');
+          const bundleHash = String(release?.checks?.release?.bundle_hash ?? '');
+          const releaseOk = releaseSha.toLowerCase() === candidate.toLowerCase() && /^[0-9a-f]{16}$/i.test(bundleHash);
+          rows.push(['R6-E04', releaseOk ? 'PASS' : 'BLOCKED', `releaseSha=${releaseSha || 'missing'} bundleHash=${bundleHash || 'missing'}`]);
+          const providerObs = provider?.checks ?? [];
+          const obsNames = ['gateway-observability', 'tenant-observability', 'alumdoor-app-observability'];
+          const obsOk = obsNames.every(name => providerObs.some(x => x.name === name && x.ok === true));
+          rows.push(['R6-E05', obsOk ? 'PASS' : 'BLOCKED', obsOk ? 'gateway/tenant/app observability observed' : 'provider observability incomplete']);
+          const pass = rows.every(([, status]) => status === 'PASS');
+          const lines = [
+            '# R6-01 CI evidence summary',
+            '',
+            `- sourceSha: \`${candidate}\``,
+            `- observedAt: \`${new Date().toISOString()}\``,
+            '- mutation: `NONE`',
+            '',
+            '| Evidence | Status | Detail |',
+            '|---|---|---|',
+            ...rows.map(([id, status, detail]) => `| ${id} | ${status} | ${String(detail).replaceAll('|', '\\|')} |`),
+            '',
+            pass ? 'R6-01-PASS' : 'R6-01-BLOCKED: one or more exact provider/release evidence items did not converge',
+            '',
+          ];
+          fs.writeFileSync(path.join(root, 'evidence', 'r6-01-summary.md'), lines.join('\n'));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+          NODE
+
+      - name: Upload R6-01 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-01-provider-release-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce R6-01 exact evidence gate
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^R6-01-PASS$' evidence/r6-01-summary.md
