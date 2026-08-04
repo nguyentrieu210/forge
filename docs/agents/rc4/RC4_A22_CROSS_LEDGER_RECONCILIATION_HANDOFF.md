@@ -2,6 +2,7 @@
 
 Status: **READY**  
 Branch: `agent/rc4-22-cross-ledger-reconciliation`  
+PR: `#609`  
 Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Risk: **CRITICAL**
 
@@ -58,6 +59,13 @@ Isolated auditor logic:
 
 Full exact-branch checkout/gates were not executable because the shell environment could not resolve `github.com`. This is recorded as `NOT RUN`, not converted into PASS.
 
+## PR checkpoint
+
+- PR `#609`: `feat(rc4-a22): add independent cross-ledger reconciliation audit`.
+- Base: `main`.
+- PR was open and mergeable at the first post-create audit.
+- Re-check exact PR head/status immediately before any merge because this handoff update advances the worker head.
+
 ## Merge / deploy boundary
 
-PR is required. Stop before merge/deploy unless explicitly approved because this is a non-UI CRITICAL lane.
+Stop before merge/deploy unless explicitly approved because this is a non-UI CRITICAL lane.
