@@ -1,135 +1,102 @@
-# R6-06 — Post-Certification Capability Reconciliation
+# R6-06 — Source/Live Capability Reconciliation
 
-Status: PLANNED  
-Runs after: `R6-05` final certification  
-Release authority: none — this lane does not change `PILOT-GO` / `PILOT-NO-GO`  
+Status: ACTIVE CONTRACT  
+Authority model: source/live-first  
+Release authority: none  
 Capability denominator: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` (956 IDs)
 
 ## 1. Mission
 
-R6-06 converts the final R6 evidence into an exact capability-maturity recount so the repository does not finish production certification with stale headline numbers.
+R6-06 answers one question from current observable truth:
 
-R6-05 answers whether one exact candidate may enter controlled pilot.
+> What capability maturity can Forge prove now, from the exact source, current CI and directly observed runtime/provider/data state?
 
-R6-06 answers:
+R6-06 is an evidence accountant. It is not an implementation lane and is not a release deployer.
 
-> After consuming all accepted R6 evidence, what are the exact `Hardened / RC / Wired / Foundation / Missing` counts across all 956 enterprise capabilities, and which IDs changed maturity?
+## 2. Authority order
 
-This is an evidence-reconciliation lane, not an implementation lane and not a second release-certification verdict.
+Use evidence in this order:
 
-## 2. Inputs
+1. exact current repository/candidate SHA and current source tree;
+2. current GitHub Actions runs, job steps and raw logs on that source;
+3. direct read-only production release markers and provider observations;
+4. direct installed-package and active capability-profile observations;
+5. direct migration, backup/restore, reconciliation and Golden Flow artifacts from the relevant exact run;
+6. `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` only as the previous 956-ID registry baseline.
 
-R6-06 must read exact current `main` and use:
+`R6-00` through `R6-05` reports are historical context only. They are **not authority for current state**, must not be required inputs, and must never override newer source/CI/live evidence.
 
-1. `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`;
-2. `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`;
-3. the final `R6-05` certification record;
-4. accepted R6-01 provider/release evidence;
-5. accepted R6-02 data/migration/recovery evidence;
-6. accepted R6-03 security/performance/recovery/observability evidence;
-7. accepted R6-04 Golden Flow/correction/reconciliation evidence;
-8. `docs/VALIDATION_GATES.md` and the existing capability maturity truth rules.
+If prose conflicts with a current job log, provider observation, release marker or exact source, the direct observation wins.
 
-No stale pre-fix SHA evidence may be used to promote a capability whose semantics changed after that evidence was collected.
+## 3. Maturity truth rules
 
-## 3. Truth rules
+- `Missing`: no real path proven or no authoritative current evidence found.
+- `Foundation`: schema/API/metadata/provider seam exists but path/evidence is incomplete.
+- `Wired`: meaningful path exists but release-grade evidence is incomplete.
+- `RC`: current source has the declared main path, invariants and focused executable regression evidence.
+- `Hardened`: production-grade scope with failure/correction/security/reconciliation, UI/E2E where relevant, **and exact deployed-release evidence** for deployed claims.
 
-R6-06 must preserve the existing maturity meanings:
+### Exact-live rule
 
-- `Missing`: no real path proven or no authoritative evidence found;
-- `Foundation`: schema/API/metadata/provider seam exists but path/evidence is incomplete;
-- `Wired`: meaningful path exists but release-grade evidence is incomplete;
-- `RC`: declared scope has main path, invariants and focused regression evidence;
-- `Hardened`: production-grade scope with failure/correction/security/reconciliation, UI/E2E where relevant, and exact release evidence for deployed claims.
+A current-source capability cannot be promoted to `Hardened` when production is running a different source SHA.
 
-### No automatic promotion from release verdict
+A failed deployment does not erase valid source-side RC evidence, but it also cannot manufacture production-grade evidence.
 
-`PILOT-GO` does **not** mean every pilot-used capability becomes `Hardened`.
+### Per-ID rule
 
-A capability may be promoted only when the evidence bundle for that exact ID satisfies the target maturity definition. Capabilities outside the certified pilot scope remain unchanged unless R6 produced directly applicable evidence for them.
-
-`PILOT-NO-GO` also does not invalidate valid lower-level evidence. R6-06 may still record justified `Foundation/Wired/RC` promotions, but it must not infer `Hardened` from a failed release certification.
-
-### Demotions are allowed
-
-If R6 proves that a previous maturity claim relied on stale SHA, shadow authority, unobserved provider state, missing correction/reconciliation, or another invalid assumption, R6-06 must demote that capability and record the reason.
+No bulk promotion by app, domain, package, workflow name or overall CI green status. Every changed capability ID needs direct evidence that satisfies its target maturity definition.
 
 ## 4. Required procedure
 
-1. Resolve exact current `main` SHA.
-2. Resolve the exact `certifiedSha` or final blocked candidate from R6-05.
-3. Run the existing capability-status completeness validator before edits:
+1. Resolve current repository `main` and the exact runtime candidate being assessed.
+2. Read the latest relevant CI runs and raw job logs; do not summarize from old R6 reports.
+3. Observe the pilot/production target directly and record:
+   - deployed release SHA/bundle identity;
+   - provider bindings and observability;
+   - installed app versions/content hashes;
+   - active capability profile identity when observable;
+   - migration/data/reconciliation state only when directly observed.
+4. Run `node server/scripts/validate-enterprise-capability-status.mjs` to prove the existing registry denominator is 956 before any status edit.
+5. Treat the current status file as the **baseline registry**, not as a new post-R6 result.
+6. Build an evidence-to-capability matrix from current source/CI/live evidence.
+7. For every proposed change record capability ID, before/after maturity, exact run/SHA/environment and why the target rule is satisfied.
+8. Update `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` only for justified per-ID changes.
+9. Re-run the validator and prove 956/956, zero missing/unknown/duplicate IDs.
+10. Publish a durable actual-state report.
 
-```bash
-node server/scripts/validate-enterprise-capability-status.mjs
-```
+## 5. Mandatory actual-state output
 
-4. Snapshot the pre-R6-06 maturity assignment for every one of the 956 IDs.
-5. Build an R6 evidence-to-capability matrix. Every proposed maturity change must name:
-   - capability ID;
-   - old maturity;
-   - new maturity;
-   - exact evidence ID/file/run;
-   - exact SHA/environment when relevant;
-   - reason the target maturity definition is satisfied.
-6. Reject bulk family promotion without per-ID evidence.
-7. Update `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` only for justified changes.
-8. Re-run the completeness validator.
-9. Independently count all five maturity classes and verify the sum is exactly 956.
-10. Publish the post-R6 report and delta ledger.
+The report must separate observed runtime truth from registry accounting.
 
-## 5. Mandatory outputs
+### A. Observed state
 
-Create a durable report named like:
-
-`docs/agents/r6/R6_06_CAPABILITY_RECONCILIATION_YYYYMMDD.md`
-
-It must contain:
-
-### A. Exact identity
-
-- current `main` SHA;
-- R6 `certifiedSha` or blocked candidate SHA;
-- final R6 verdict;
-- capability-map denominator SHA/content identity if available;
-- capability-status source SHA before reconciliation.
-
-### B. Before/after headline counts
+At minimum:
 
 ```text
-POST-R6 CAPABILITY STATUS
-
-              Before   After   Delta
-Hardened           ?       ?      ?
-RC                 ?       ?      ?
-Wired              ?       ?      ?
-Foundation         ?       ?      ?
-Missing            ?       ?      ?
-------------------------------------
-Total            956     956      0
+Source/build gates       PASS | FAIL | UNKNOWN
+Provider/bindings        PASS | FAIL | UNKNOWN
+Exact production SHA     PASS | FAIL | UNKNOWN
+Package identity         PASS | FAIL | UNKNOWN
+Active profile identity  PASS | FAIL | UNKNOWN
+Migration/data state     PASS | FAIL | UNKNOWN | NOT_RUN
+Golden/reconciliation    PASS | FAIL | UNKNOWN | NOT_RUN
 ```
+
+### B. Capability accounting
+
+If a full per-ID recount is proven, publish exact before/after/delta counts for all five maturity classes.
+
+If it is not proven, say **NOT RECONCILED**. Do not copy old headline numbers and present them as a new result.
+
+The previous registry counts may be shown only under a label such as `baseline registry (not post-R6 recount)`.
 
 ### C. Promotion/demotion ledger
 
-For every changed ID:
+Every changed ID must have exact evidence. No evidence means no change.
 
-| Capability | Before | After | Evidence | Reason |
-|---|---|---|---|---|
-| `Fxx-xxx` | RC | Hardened | exact R6 evidence | target maturity rule satisfied |
+### D. Completeness proof
 
-No changed ID may lack evidence.
-
-### D. Domain summary
-
-At minimum summarize changes by major family: Finance/VN, CRM/Sales, Procurement, Stock/WMS, Manufacturing, HCM, Service, App Factory, IAM/SRE, UI, Migration and Alumdoor.
-
-### E. Unchanged Missing inventory
-
-Report the final Missing count and list/range the remaining Missing IDs. Do not hide candidate vertical packs or long-tail enterprise capabilities from the denominator.
-
-### F. Completeness proof
-
-The report must include successful output equivalent to:
+Any status mutation must end with validator output equivalent to:
 
 ```text
 Capability map: 956 unique IDs
@@ -137,7 +104,6 @@ Capability status: 956 unique IDs
 Missing from status: 0
 Unknown in status: 0
 Duplicate status IDs: 0
-Maturity: Hardened=? RC=? Wired=? Foundation=? Missing=?
 Capability status completeness: 956/956
 ```
 
@@ -145,41 +111,21 @@ Capability status completeness: 956/956
 
 R6-06 must not:
 
+- use R6-00..R6-05 prose as current-state authority;
+- infer a live state from a planned/old evidence matrix;
 - implement missing business features;
-- edit production data;
-- deploy/redeploy/rollback infrastructure;
-- reinterpret `PILOT-GO` as proof of every capability;
-- promote an ID merely because its app/package was installed;
-- promote an ID merely because source code exists;
-- reuse evidence from a stale SHA after a semantics-changing fix;
-- reduce the denominator to make percentages look better;
-- delete Missing IDs from the capability map;
-- change R6-05's release verdict.
-
-If a proposed promotion needs evidence that does not exist, leave the maturity unchanged and record the evidence gap as a next task.
+- deploy, migrate or mutate provider/customer state;
+- promote an ID merely because source exists or a package is installed;
+- promote `Hardened` while exact current-source deployment is unproven;
+- reduce the 956 denominator;
+- invent a five-way recount when per-ID evidence has not been reconciled.
 
 ## 7. Gate
 
-R6-06 succeeds only when:
+`R6-06-CAPABILITY-RECONCILED` is allowed only when the current evidence set supports an exact per-ID accounting and the validator proves 956/956.
 
-- exactly 956 capability IDs are represented once;
-- the five maturity counts sum to 956;
-- every maturity delta has exact evidence;
-- every demotion has an explicit reason;
-- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` headline counts match its registry;
-- the existing validator passes;
-- the durable post-R6 report exists.
+Otherwise finish with:
 
-Final line:
+`R6-06-BLOCKED: <current direct evidence reason>`
 
-`R6-06-CAPABILITY-RECONCILED`
-
-or
-
-`R6-06-BLOCKED: <exact evidence/accounting reason>`
-
-## 8. Relationship to pilot
-
-R6-06 is post-certification accounting. It does not delay an already valid `PILOT-GO` unless the reconciliation uncovers evidence fraud/staleness severe enough that R6-05 itself was based on invalid provenance; in that case the issue must be escalated back to release control rather than silently changing the verdict here.
-
-The controlled pilot may later produce new sustained real-operation evidence. That evidence belongs to a later Pilot Exit capability reconciliation and may justify additional `Hardened` promotions.
+Historical reports may explain how Forge got here, but they do not decide this gate.
