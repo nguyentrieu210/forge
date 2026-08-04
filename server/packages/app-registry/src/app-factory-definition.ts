@@ -128,8 +128,23 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
 
     const definitionInput = parseJsonObject(input.definition_json ?? existing?.data.definition_json, "definition_json");
     const knownFields = new Set(["name", "owner", "status", "docstatus", ...targetMeta.fields.map((field) => field.fieldname)]);
+    if (existing && existing.data.status !== "Draft" && input.definition_json !== undefined) {
+      const existingInput = parseJsonObject(existing.data.definition_json, "stored definition_json");
+      if (JSON.stringify(definitionInput) !== JSON.stringify(existingInput)) {
+        throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+      }
+    }
     const definitionJson = validateDefinitionPayload(definitionKind, definitionInput, knownFields);
-    if (existing && existing.data.status !== "Draft" && JSON.stringify(definitionJson) !== JSON.stringify(existing.data.definition_json)) throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+    if (existing && existing.data.status !== "Draft") {
+      const existingCanonical = validateDefinitionPayload(
+        definitionKind,
+        parseJsonObject(existing.data.definition_json, "stored definition_json"),
+        knownFields,
+      );
+      if (JSON.stringify(definitionJson) !== JSON.stringify(existingCanonical)) {
+        throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+      }
+    }
 
     const data: AppFactoryDefinitionData = {
       definition_key: definitionKey,
