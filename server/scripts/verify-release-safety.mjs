@@ -65,7 +65,9 @@ for (const name of workflowFiles) {
   if (name === canonicalWorkflowName) continue;
 
   const source = readFileSync(path.join(workflowsDir, name), "utf8");
-  const deploysGateway = source.includes("apps/gateway-worker/wrangler.jsonc") && source.includes("wrangler deploy");
+  const liveDeployLines = source.split(/\r?\n/)
+    .filter((line) => line.includes("wrangler deploy") && !line.includes("--dry-run"));
+  const deploysGateway = source.includes("apps/gateway-worker/wrangler.jsonc") && liveDeployLines.length > 0;
   if (deploysGateway) {
     throw new Error(`Gateway production deploy must live only in ${canonicalWorkflowName}; found ${name}`);
   }

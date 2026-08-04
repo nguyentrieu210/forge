@@ -11,7 +11,7 @@ import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { performance } from "node:perf_hooks";
-import { assertPitrRequest, findString, requireBookmark } from "./lib/pitr-guard.mjs";
+import { assertPitrRequest, classifyPitrStorage, findString, requireBookmark } from "./lib/pitr-guard.mjs";
 import { fail, serverRoot, wrangler } from "./wrangler-cli.mjs";
 import { findTenantDatabaseId } from "./tenant-wrangler.mjs";
 
@@ -30,15 +30,7 @@ const backupDirArg = argOf("backup-dir")?.trim();
 const outputArg = argOf("output")?.trim();
 
 try {
-  assertPitrRequest({
-    tenant,
-    timestamp,
-    bookmark,
-    execute,
-    confirm,
-    reason,
-    backupDir: backupDirArg,
-  });
+  assertPitrRequest({ tenant, timestamp, bookmark, execute, confirm, reason, backupDir: backupDirArg });
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
@@ -48,9 +40,11 @@ const databaseId = findTenantDatabaseId(tenant, wrangler);
 if (!databaseId) fail(`no D1 database named ${databaseName}`);
 
 const info = parseJson(wrangler(["d1", "info", databaseName, "--json"]));
-const version = findString(info, "version");
-if (version !== "production") {
-  fail(`${databaseName} reports D1 version=${version ?? "unknown"}; Time Travel requires production storage`);
+let storage;
+try {
+  storage = classifyPitrStorage(info);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
 }
 
 const currentInfo = parseJson(wrangler(["d1", "time-travel", "info", databaseName, "--json"]));
@@ -74,7 +68,11 @@ const baseEvidence = {
   format: "forge-d1-pitr/v1",
   tenant,
   database_name: databaseName,
-  d1_version: version,
+  database_id: databaseId,
+  d1_version_reported: storage.reportedVersion,
+  d1_version_direct_probe_required: storage.requiresDirectProbe,
+  time_travel_supported: true,
+  time_travel_support_evidence: "current and target bookmarks resolved by read-only wrangler d1 time-travel info",
   planned_at: new Date().toISOString(),
   reason: reason ?? null,
   requested_timestamp: timestamp ?? null,
@@ -86,7 +84,8 @@ const baseEvidence = {
 
 console.log(`tenant      ${tenant}`);
 console.log(`database    ${databaseName}`);
-console.log(`d1 version  ${version}`);
+console.log(`d1 version  ${storage.reportedVersion ?? "not reported"}`);
+console.log("TT probe    supported (bookmark resolved)");
 console.log(`current     ${currentBookmark}`);
 console.log(`target      ${targetBookmark}${timestamp ? ` (${timestamp})` : ""}`);
 console.log(`mode        ${execute ? "DESTRUCTIVE PITR" : "plan/read-only"}`);
@@ -108,11 +107,7 @@ const createdSql = readdirSync(backupDir)
 if (createdSql.length !== 1) fail(`expected one fresh pre-PITR SQL backup, found ${createdSql.length}`);
 const backupFile = createdSql[0];
 const backupVerifyEvidence = `${backupFile}.verify.json`;
-runNode("verify-tenant-backup.mjs", [
-  "--tenant", tenant,
-  "--file", backupFile,
-  "--output", backupVerifyEvidence,
-]);
+runNode("verify-tenant-backup.mjs", ["--tenant", tenant, "--file", backupFile, "--output", backupVerifyEvidence]);
 
 const startedAt = performance.now();
 const restoreResponse = parseJson(wrangler([
@@ -128,9 +123,7 @@ try {
   fail(error instanceof Error ? error.message : String(error));
 }
 const providerPreviousBookmark = findString(restoreResponse, "previous_bookmark");
-if (providerBookmark !== targetBookmark) {
-  fail(`PITR provider restored ${providerBookmark}, expected target ${targetBookmark}`);
-}
+if (providerBookmark !== targetBookmark) fail(`PITR provider restored ${providerBookmark}, expected target ${targetBookmark}`);
 if (providerPreviousBookmark && providerPreviousBookmark !== currentBookmark) {
   fail(`PITR provider previous bookmark ${providerPreviousBookmark} != preflight ${currentBookmark}`);
 }
@@ -142,9 +135,7 @@ try {
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
-if (currentBookmarkAfter !== targetBookmark) {
-  fail(`PITR provider returned but current bookmark ${currentBookmarkAfter} != target ${targetBookmark}`);
-}
+if (currentBookmarkAfter !== targetBookmark) fail(`PITR provider returned but current bookmark ${currentBookmarkAfter} != target ${targetBookmark}`);
 
 const undoBookmark = providerPreviousBookmark ?? currentBookmark;
 const evidence = {

@@ -58,6 +58,24 @@ export function findString(value, key) {
   return null;
 }
 
+/**
+ * D1 `info --json` has changed shape across Wrangler/API revisions. An explicit
+ * legacy/alpha version is a hard stop; a missing version is not proof that Time
+ * Travel is unsupported. In that case the caller must make the direct read-only
+ * `d1 time-travel info` probe and only proceed when a bookmark is returned.
+ */
+export function classifyPitrStorage(info) {
+  const reportedVersion = findString(info, "version");
+  const normalized = reportedVersion?.trim().toLowerCase() ?? null;
+  if (normalized === "alpha" || normalized === "legacy") {
+    throw new Error(`D1 version=${reportedVersion} does not support Time Travel`);
+  }
+  return {
+    reportedVersion,
+    requiresDirectProbe: normalized !== "production" && normalized !== "beta",
+  };
+}
+
 export function requireBookmark(value, label) {
   const found = findString(value, "bookmark");
   if (!found) throw new Error(`${label} Time Travel response has no bookmark`);
