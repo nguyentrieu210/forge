@@ -27,6 +27,11 @@ test("V3 data surface covers the canonical everyday business surfaces", () => {
   }
 });
 
+test("V3 list puts the summary strip above the toolbar", () => {
+  assert.match(surface, /mf-list-view>\[aria-label\^='Tổng'\]/);
+  assert.match(surface, /order-first/);
+});
+
 test("V3 data surface stays generic and presentation-only", () => {
   for (const literal of ["Alumdoor", "Purchase Order", "Sales Invoice", "Item Price", "Warehouse Cash"]) {
     assert.equal(surface.includes(literal), false, `generic V3 surface leaked domain literal: ${literal}`);
