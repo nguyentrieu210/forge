@@ -44,6 +44,24 @@ jobs:
         with:
           node-version: 22
 
+      - name: Repair generator regex syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("server/scripts/rc3-finalize-capability-status.mjs")
+          lines = path.read_text().splitlines()
+          repaired = False
+          for i, line in enumerate(lines):
+              if i > 0 and "Object.entries(evidence)" in lines[i - 1] and "const re = new RegExp(" in line:
+                  lines[i] = '  const re = new RegExp("^- `" + key + "`:[^\\\\n]*$", "m");'
+                  repaired = True
+                  break
+          if not repaired:
+              raise SystemExit("RC3 evidence regex line not found")
+          path.write_text("\n".join(lines) + "\n")
+          PY
+          node --check server/scripts/rc3-finalize-capability-status.mjs
+
       - name: Generate RC3 canonical status
         run: node server/scripts/rc3-finalize-capability-status.mjs
 
@@ -62,7 +80,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md CURRENT_STATUS.md NEXT_TASKS.md docs/agents/rc/RC3_CONVERGENCE_20260804.md
+          git add server/scripts/rc3-finalize-capability-status.mjs docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md CURRENT_STATUS.md NEXT_TASKS.md docs/agents/rc/RC3_CONVERGENCE_20260804.md
           git commit -m "docs(rc3): finalize capability truth convergence"
           git push origin HEAD:agent/rc3-00-capability-convergence
           echo "Generated commit: $(git rev-parse HEAD)"
