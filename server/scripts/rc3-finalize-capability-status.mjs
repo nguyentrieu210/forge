@@ -12,6 +12,7 @@ function writeIfChanged(path, content) {
 }
 function replaceOnce(text, pattern, replacement, label) {
   if (typeof pattern === "string") {
+    if (text.split("\n").map((line) => line.trimEnd()).join("\n").includes(replacement.split("\n").map((line) => line.trimEnd()).join("\n"))) return text;
     if (text.includes(replacement)) return text;
     if (!text.includes(pattern)) throw new Error(`RC3 convergence pattern missing: ${label}`);
     return text.replace(pattern, replacement);
@@ -61,7 +62,7 @@ const evidence = {
   "E-UI": "- `E-UI`: exact RC3 source authority is **MetaForge V2** after the V3 rollback; responsive/installable PWA remains Wired. Barcode/QR/geolocation/signature are Wired source paths; Push and offline cache/write/sync/conflict remain Missing where evidence is absent. Current browser/device/exact-release proof remains required for RC.",
 };
 for (const [key, replacement] of Object.entries(evidence)) {
-  const re = new RegExp(`^- \\`${key}\\`:[^\\n]*$`, "m");
+  const re = new RegExp("^- `" + key + "`:[^\\n]*$", "m");
   if (!re.test(status)) throw new Error(`Evidence bundle not found: ${key}`);
   status = status.replace(re, replacement);
 }
@@ -171,11 +172,11 @@ const top30 = `## Top-30 blockers / next tasks
 4. \`T01-020\`: attributed/audited support access or impersonation lifecycle.
 5. \`G02-003..G02-005\`: canonical PII classification, masking and retention taxonomy.
 6. \`T01-019\`: tenant/data deletion, retention/legal-hold and recovery boundary.
-7. \`T01-016..T01-017`, \`O01-013..O01-016\`: restore/PITR/DR/rollback drill + RTO/RPO.
+7. \`T01-016..T01-017\`, \`O01-013..O01-016\`: restore/PITR/DR/rollback drill + RTO/RPO.
 8. \`O01-006..O01-012\`: durable alert/error/DLQ/retry/integrity operations.
 9. \`O01-020..O01-021\`: edge policy, API/PWA compatibility and false-positive provider proof.
 10. \`IM02-006..IM02-009\`: resumable retry/correction/incremental migration/post-migration reconciliation.
-11. \`T01-015`, \`IM02-016\`: cutover/rollback/crash-window/reconciliation proof.
+11. \`T01-015\`, \`IM02-016\`: cutover/rollback/crash-window/reconciliation proof.
 12. Migration execution slice: applied-state-aware resolution of duplicate \`0110_*\` prefixes; no unsafe rename.
 13. \`F01-011..F01-013\`: automated close aggregate, retained earnings and close/reopen semantics.
 14. \`V02-011..V02-014\`: PIT resident/progressive/deduction/annual settlement with official effective-dated fixtures.

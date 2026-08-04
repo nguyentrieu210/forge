@@ -1,11 +1,11 @@
 # RC3 — Capability Truth Convergence
 
-Date: 2026-08-04  
-Agent: **RC3-A0 — Coordinator / Capability Truth Convergence**  
-Branch: `agent/rc3-00-capability-convergence`  
-Program control branch: `program/rc3-exact-main-release-confidence-20260804`  
-Exact program seed: `main@98b5e1b22858ae85b977ccd1ad3ae8d74e9ceed7`  
-Risk: **STANDARD governance/evidence**; any runtime/schema/security/provider/production mutation would be CRITICAL and is out of A0 scope.  
+Date: 2026-08-04
+Agent: **RC3-A0 — Coordinator / Capability Truth Convergence**
+Branch: `agent/rc3-00-capability-convergence`
+Program control branch: `program/rc3-exact-main-release-confidence-20260804`
+Exact program seed: `main@98b5e1b22858ae85b977ccd1ad3ae8d74e9ceed7`
+Risk: **STANDARD governance/evidence**; any runtime/schema/security/provider/production mutation would be CRITICAL and is out of A0 scope.
 Status: **RUNNING — FOUNDATION FROZEN; FINAL CONVERGENCE PENDING A1-A5 EVIDENCE**
 
 ## 1. A0 mission and boundary
@@ -182,10 +182,10 @@ A5 will independently spot-check the converged candidate rather than becoming a 
 
 ## 10. Program topology at A0 bootstrap
 
-Execution topology: **PROGRAM**  
-Coordinator: **A0**  
-Worker agents: **5 (A1-A5)**  
-A0 coordinator branch: `agent/rc3-00-capability-convergence` — **RUNNING**  
+Execution topology: **PROGRAM**
+Coordinator: **A0**
+Worker agents: **5 (A1-A5)**
+A0 coordinator branch: `agent/rc3-00-capability-convergence` — **RUNNING**
 Control branch: `program/rc3-exact-main-release-confidence-20260804` from exact seed `98b5e1b22858ae85b977ccd1ad3ae8d74e9ceed7`.
 
 | Agent | Branch | PR | Mission | Status | Dependency / blocker |
@@ -256,3 +256,29 @@ This branch is documentation/governance and **not UI-only**.
 - A0 does not merge itself.
 - RC3 program branch must not merge to `main` without explicit user approval.
 - No production deploy is part of A0.
+
+
+<!-- RC3_FINAL_CONVERGENCE_START -->
+## Final A0 convergence candidate
+
+Exact seed: `main@98b5e1b22858ae85b977ccd1ad3ae8d74e9ceed7`.
+
+Accepted worker evidence: A1 #590, A2 #589, A3 #586, A4 #588, A5 #591. A5 independently accepted A1's 61 scoped RC promotions, all A2 7 promotions + 3 demotions, A3's 0/0 provider-conservative result and A4's 4 Wired promotions + Push demotion.
+
+Final maturity candidate before validator:
+
+| Maturity | RC-01 | RC3 | Delta |
+|---|---:|---:|---:|
+| Hardened | 0 | 0 | 0 |
+| RC | 4 | 65 | +61 |
+| Wired | 448 | 407 | -41 |
+| Foundation | 345 | 327 | -18 |
+| Missing | 159 | 157 | -2 |
+| Total | 956 | 956 | 0 |
+
+The duplicate `0110_*` numeric-prefix anomaly remains a tracked governance blocker; because the migration runner journals complete filenames, RC3 does not rename potentially applied migrations without environment applied-state evidence.
+
+Required final structural gate: `node server/scripts/validate-enterprise-capability-status.mjs` must report 956 map IDs, 956 status IDs, zero missing/unknown/duplicate IDs and matching maturity arithmetic.
+
+No production/provider mutation is part of this convergence.
+<!-- RC3_FINAL_CONVERGENCE_END -->

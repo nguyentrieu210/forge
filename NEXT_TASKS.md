@@ -4,6 +4,13 @@ Ngày cập nhật: **2026-08-04**.
 
 Đây là backlog hiện tại của Forge. AI tự đánh giá cách thực hiện dựa trên code và trạng thái GitHub tại thời điểm làm.
 
+## DONE — RC3 release-confidence rebaseline
+
+- Capability truth reconciled from A0-A5 against exact WS09 main seed.
+- New maturity candidate: **Hardened 0 / RC 65 / Wired 407 / Foundation 327 / Missing 157** across exactly 956 IDs.
+- WS09 Batch Productization source convergence is DONE; remaining App Factory work is residual RC evidence/rollback/workflow depth, not another generic batch rewrite.
+- Next work should follow the RC3 top-30 queue: WS11 IAM/privacy, WS12 provider/SRE recovery, WS13 migration/cutover, WS01/WS06 statutory + reconciliation depth, then WS14 browser/mobile/offline evidence.
+
 ## DONE — CFMAX R2 source convergence
 
 - Canonical PR `#570` đã merge vào `main` tại `88a349e3f4267aa749d791b504cb7a7c13f3e9b5`.
@@ -54,34 +61,18 @@ Không tự deploy production, đổi DNS/WAF/secrets, enable replica hoặc ch�
 - Full repository TypeScript vẫn có exact-main baseline debt ngoài changed authority set; phase này không tự phong global TypeScript PASS hoặc `Hardened`.
 - Completion evidence: `docs/agents/transaction-closure/07-CONVERGENCE.md` và phase-close record cùng thư mục.
 
-## NEXT PROGRAM — Platform Productization
+## NEXT PROGRAM — RC3 residual release-confidence closure
 
-Ưu tiên sau Transaction Closure/CFMAX source convergence không phải mở thêm horizontal ERP feature wave. Mục tiêu tiếp theo là biến core đã chứng minh thành platform có thể tạo/cài/nâng cấp/vận hành app cho nhiều tenant một cách an toàn.
+Ưu tiên sau RC3 là đóng các blocker còn ngăn capability từ Wired/Foundation lên RC, không mở lại các source wave đã hội tụ.
 
 Thứ tự ưu tiên:
 
-1. **WS09 — App Factory operationalization**
-   - first-class `AppAction` input-table contract;
-   - generic batch-action / batch-transaction primitives dùng chung cho Stock/BOM/other apps;
-   - reusable action/approval primitives;
-   - shared app-registry/compiler/builder contract vẫn do WS09 sở hữu;
-   - không hard-code vertical schema vào generic runtime.
-2. **WS11 — SaaS / IAM / Security closure**
-   - tenant provisioning và organization/company isolation;
-   - role/permission authority, MFA/SSO/step-up, session lifecycle;
-   - module entitlement / suspend-reactivate boundaries;
-   - security/audit control surface và server-side row-scope nơi còn thiếu.
-3. **WS13 — Migration / onboarding / tooling**
-   - Excel/ERPNext import, mapping, dry-run, retry/idempotency;
-   - reconciliation/cutover evidence;
-   - tenant bootstrap, app install/upgrade/rollback path.
-4. **WS12 — Production hardening / SRE**
-   - release evidence, backup/restore/PITR, rollback, observability, DR;
-   - migration safety và tenant-scoped recovery proof;
-   - consume CF08 governance và CFMAX provider evidence thay vì dựng control plane cạnh tranh.
-5. **WS01/WS06/VN compliance owners — Vietnam statutory closure**
-   - PIT/BHXH/BHYT/BHTN, VAT/CIT, e-invoice/e-sign;
-   - versioned effective-date legal rules, fixed-point/rounding semantics, official-source evidence và statutory regression.
+1. **WS11 — IAM / privacy / SaaS operational evidence**: MFA browser/recovery, OIDC/SAML/SSO/SCIM lifecycle, support access, PII taxonomy/masking/retention.
+2. **WS12 — SRE / provider / recovery evidence**: restore/PITR/DR/RTO-RPO, DLQ/alerts, edge policy, D1/Workflow/provider proofs.
+3. **WS13 — Migration / onboarding / cutover**: retry/correction/incremental/reconciliation, cutover rollback and applied-state-aware migration numbering governance.
+4. **WS01/WS06 — Finance/Vietnam statutory residuals**: year-end close, official effective-dated PIT/BHXH/BHYT/BHTN fixtures, e-invoice provider closure, landed-cost and Stock/GL repost reconciliation.
+5. **WS14 — Current V2 browser/mobile/offline evidence**: desktop/tablet/Android/360px/a11y/PWA, then tenant/session/OCC-safe offline queue/conflict behavior.
+6. **WS09 residual**: generic materialized rollback/reverse migration and approval quorum/timer/escalation only; do not rebuild BatchAction/BatchTransaction.
 
 ## Forge 0.2.0 parallel execution
 
@@ -133,7 +124,7 @@ Transaction Closure đã giữ một Stock Ledger/valuation authority và tăng 
 
 ## BPM / App Factory — WS09
 
-Đây là workstream ưu tiên số 1 của program kế tiếp:
+WS09 Batch Productization source convergence đã DONE qua #553; chỉ mở residual RC gaps có capability/evidence cụ thể:
 
 - first-class AppAction input-table contract;
 - generic Batch Transaction / Batch Action primitives;

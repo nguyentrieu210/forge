@@ -44,8 +44,69 @@ jobs:
         with:
           node-version: 22
 
+      - name: Repair generator syntax and idempotency deterministically
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("server/scripts/rc3-finalize-capability-status.mjs")
+          lines = path.read_text().splitlines()
+
+          repaired_regex = False
+          for i, line in enumerate(lines):
+              if i > 0 and "Object.entries(evidence)" in lines[i - 1] and "const re = new RegExp(" in line:
+                  lines[i] = '  const re = new RegExp("^- `" + key + "`:[^\\\\n]*$", "m");'
+                  repaired_regex = True
+                  break
+          if not repaired_regex:
+              raise SystemExit("RC3 evidence regex line not found")
+
+          # Treat the already-materialized canonical Markdown as a no-op even after
+          # whitespace normalization removed Markdown hard-break trailing spaces.
+          block_start = next((i for i, line in enumerate(lines) if line.strip() == 'if (typeof pattern === "string") {'), None)
+          if block_start is None:
+              raise SystemExit("RC3 replaceOnce string block not found")
+          normalized_guard = '    if (text.split("\\n").map((line) => line.trimEnd()).join("\\n").includes(replacement.split("\\n").map((line) => line.trimEnd()).join("\\n"))) return text;'
+          if normalized_guard not in lines[block_start + 1:block_start + 5]:
+              lines.insert(block_start + 1, normalized_guard)
+
+          start = next((i for i, line in enumerate(lines) if line.startswith("const top30 = `")), None)
+          if start is None:
+              raise SystemExit("RC3 top30 template start not found")
+          end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == "`;"), None)
+          if end is None:
+              raise SystemExit("RC3 top30 template end not found")
+          for i in range(start + 1, end):
+              line = lines[i]
+              out = []
+              for j, ch in enumerate(line):
+                  if ch == "`" and (j == 0 or line[j - 1] != "\\"):
+                      out.append("\\`")
+                  else:
+                      out.append(ch)
+              lines[i] = "".join(out)
+
+          path.write_text("\n".join(lines) + "\n")
+          PY
+          node --check server/scripts/rc3-finalize-capability-status.mjs
+
       - name: Generate RC3 canonical status
         run: node server/scripts/rc3-finalize-capability-status.mjs
+
+      - name: Normalize generated Markdown whitespace
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in [
+              "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md",
+              "CURRENT_STATUS.md",
+              "NEXT_TASKS.md",
+              "docs/agents/rc/RC3_CONVERGENCE_20260804.md",
+          ]:
+              path = Path(name)
+              text = path.read_text()
+              path.write_text("\n".join(line.rstrip() for line in text.splitlines()) + "\n")
+          PY
 
       - name: Validate 956 capability registry
         run: node server/scripts/validate-enterprise-capability-status.mjs
@@ -62,7 +123,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md CURRENT_STATUS.md NEXT_TASKS.md docs/agents/rc/RC3_CONVERGENCE_20260804.md
+          git add server/scripts/rc3-finalize-capability-status.mjs docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md CURRENT_STATUS.md NEXT_TASKS.md docs/agents/rc/RC3_CONVERGENCE_20260804.md
           git commit -m "docs(rc3): finalize capability truth convergence"
           git push origin HEAD:agent/rc3-00-capability-convergence
           echo "Generated commit: $(git rev-parse HEAD)"
