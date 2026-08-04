@@ -74,3 +74,60 @@ jobs:
 
       - name: Diff hygiene
         run: git diff --check
+
+  observe-identity:
+    name: Read-only pilot package/profile identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Observe E18 without mutation
+        id: observe
+        continue-on-error: true
+        working-directory: server
+        run: >-
+          node scripts/r6-convergence-identity-readonly.mjs
+          --tenant alu
+          --origin https://alu.kairo.vn
+          --expected-release-sha "${{ github.event.pull_request.head.sha || github.sha }}"
+          --output "$RUNNER_TEMP/r6-e18.json"
+
+      - name: Publish E18 observation
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/r6-e18.json" ]; then
+            cat "$RUNNER_TEMP/r6-e18.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload E18 observation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-e18-${{ github.run_id }}
+          path: ${{ runner.temp }}/r6-e18.json
+          if-no-files-found: warn
+          retention-days: 30
