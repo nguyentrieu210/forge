@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { evaluateGoldenOrderEvidence } from "../scripts/lib/alumdoor-golden-order-readonly.mjs";
+import { evaluateGoldenOrderEvidence, linkedDeliveryNames } from "../scripts/lib/alumdoor-golden-order-readonly.mjs";
+import { evaluateReferenceReleaseEvidence, warrantyLookupFilters } from "../scripts/lib/alumdoor-reference-release-evidence.mjs";
 
 function fixture(overrides = {}) {
   return {
@@ -91,11 +92,82 @@ test("warranty is optional unless the verifier explicitly requires it", () => {
   assert.throws(() => evaluateGoldenOrderEvidence(fixture({ warrantyClaims: [], requireWarranty: true })), /Warranty Claim/);
 });
 
-test("live verifier is read-only after login and uses canonical ledger reports", async () => {
+test("delivery-only Warranty Claim is valid evidence for the same Golden Order", () => {
+  const result = evaluateGoldenOrderEvidence(fixture({
+    warrantyClaims: [{ name: "WC-DN", sales_order: "", delivery_note: "DN-1" }],
+  }));
+  assert.deepEqual(result.warranty_claims, ["WC-DN"]);
+});
+
+test("Delivery Note lineage helper excludes unrelated customer deliveries before warranty lookup", () => {
+  const names = linkedDeliveryNames([
+    ...fixture().deliveryNotes,
+    { name: "DN-OTHER", against_sales_order: "SO-OTHER", docstatus: 1, items: [] },
+    { name: "DN-ITEM-LINK", docstatus: 1, items: [{ sales_order: "SO-GOLDEN" }] },
+    { name: "DN-DRAFT", against_sales_order: "SO-GOLDEN", docstatus: 0, items: [] },
+  ], "SO-GOLDEN");
+  assert.deepEqual(names, ["DN-1", "DN-ITEM-LINK"]);
+});
+
+test("warranty lookup covers direct Sales Order and exact Delivery Note linkage once", () => {
+  assert.deepEqual(warrantyLookupFilters("SO-GOLDEN", ["DN-1", "DN-1", "DN-2", ""]), [
+    ["sales_order", "=", "SO-GOLDEN"],
+    ["delivery_note", "=", "DN-1"],
+    ["delivery_note", "=", "DN-2"],
+  ]);
+});
+
+test("release evidence binds live package and release marker to exact current source", () => {
+  const result = evaluateReferenceReleaseEvidence({
+    releaseMarker: {
+      ok: true,
+      service: "gateway-ui",
+      releaseSha: "0123456789abcdef0123456789abcdef01234567",
+      bundleHash: "0123456789abcdef",
+    },
+    sourceApp: { id: "alumdoor", version: "2.2.2" },
+    liveManifest: { id: "alumdoor", version: "2.2.2" },
+    expectedReleaseSha: "0123456789abcdef0123456789abcdef01234567",
+    expectedBundleHash: "0123456789abcdef",
+  });
+  assert.equal(result.release_matches_source, true);
+  assert.equal(result.bundle_matches_expected, true);
+  assert.equal(result.source_version, "2.2.2");
+  assert.equal(result.live_version, "2.2.2");
+});
+
+test("stale live package or release cannot prove current source", () => {
+  const base = {
+    releaseMarker: {
+      ok: true,
+      service: "gateway-ui",
+      releaseSha: "0123456789abcdef0123456789abcdef01234567",
+      bundleHash: "0123456789abcdef",
+    },
+    sourceApp: { id: "alumdoor", version: "2.2.2" },
+    expectedReleaseSha: "0123456789abcdef0123456789abcdef01234567",
+  };
+  assert.throws(() => evaluateReferenceReleaseEvidence({
+    ...base,
+    liveManifest: { id: "alumdoor", version: "2.2.1" },
+  }), /historical deployment/);
+  assert.throws(() => evaluateReferenceReleaseEvidence({
+    ...base,
+    liveManifest: { id: "alumdoor", version: "2.2.2" },
+    expectedReleaseSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  }), /không khớp expected source/);
+});
+
+test("live verifier is read-only after login and pins release/package evidence", async () => {
   const source = await readFile(new URL("../scripts/verify-alumdoor-golden-order-readonly.mjs", import.meta.url), "utf8");
   assert.match(source, /frappe\.desk\.query_report\.run/);
   assert.match(source, /"Stock Ledger"/);
   assert.match(source, /"Accounts Receivable"/);
+  assert.match(source, /"\/release\.json"/);
+  assert.match(source, /get_app_manifest\?app=alumdoor/);
+  assert.match(source, /linkedDeliveryNames/);
+  assert.match(source, /warrantyLookupFilters/);
+  assert.match(source, /expected-release-sha/);
   assert.doesNotMatch(source, /frappe\.client\.submit/);
   assert.doesNotMatch(source, /raw\("(?:PUT|PATCH|DELETE)"/);
   assert.doesNotMatch(source, /raw\("POST", `\/api\/resource/);

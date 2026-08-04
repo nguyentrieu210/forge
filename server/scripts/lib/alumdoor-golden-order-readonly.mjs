@@ -24,6 +24,15 @@ function linksSalesOrder(row, salesOrder) {
   return rows(row?.items).some((item) => text(item.sales_order ?? item.against_sales_order) === salesOrder);
 }
 
+export function linkedDeliveryNames(deliveryNotes, salesOrderName) {
+  const salesOrder = text(salesOrderName);
+  if (!salesOrder) throw new Error("Thiếu Sales Order để lọc Delivery Note lineage.");
+  return [...new Set(rows(deliveryNotes)
+    .filter((row) => submitted(row) && linksSalesOrder(row, salesOrder))
+    .map((row) => text(row.name))
+    .filter(Boolean))];
+}
+
 function paymentReferencesInvoice(entry, invoiceNames) {
   return rows(entry?.references).some((ref) =>
     text(ref.reference_doctype) === "Sales Invoice"
@@ -105,7 +114,7 @@ export function evaluateGoldenOrderEvidence(input) {
   const deliveryNotes = rows(input.deliveryNotes)
     .filter((row) => submitted(row) && linksSalesOrder(row, salesOrderName));
   if (!deliveryNotes.length) throw new Error(`Không có Delivery Note submitted cho ${salesOrderName}.`);
-  const deliveryNames = new Set(deliveryNotes.map((row) => text(row.name)).filter(Boolean));
+  const deliveryNames = new Set(linkedDeliveryNames(deliveryNotes, salesOrderName));
   const deliveredRows = deliveryRowIds(deliveryNotes);
   if (!deliveredRows.size) {
     throw new Error(`Delivery Note của ${salesOrderName} thiếu sales_order_row_id để nối về dòng sản xuất.`);
