@@ -1,70 +1,63 @@
 # RC4-A20 — Capability Convergence
 
-- Status: **CONVERGING — PR/exact-head validation pending**
-- Branch: `agent/rc4-20-capability-convergence`
-- Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`
+- Status: **R2 CONVERGING — exact-head validation pending**
+- Branch: `agent/rc4-20-capability-convergence-r2`
+- Exact seed: `main@269c690bda7abf90ea13225204352bdff908d63b`
 - Risk: **STANDARD governance/evidence**
 
-## Mission
+## Why R2
 
-Converge evidence from A1-A19 into the canonical 956-capability registry without inflating maturity.
+A20 v1 used a stale `main@1f0b089...` worker snapshot. RC4-A6 subsequently completed browser evidence and was merged into main before A20 #612, so the merged capability registry understated current-main truth.
 
-## Own
+R2 re-audits A1-A19 and makes canonical maturity depend on **integrated convergence-tree evidence**, not merely a green worker branch.
 
-- capability-status convergence tooling;
-- evidence index normalization;
-- missing/duplicate/unknown ID validation;
-- maturity arithmetic and top blocker queue;
-- exact-head provenance checks.
+## R2 maturity result
 
-## Forbidden
+One promotion is accepted:
 
-- no domain implementation;
-- no capability promotion without direct source/test/migration/permission/reconciliation/UI/provider/production evidence appropriate to the level;
-- no promotion from branch existence, PR existence, source presence, authored-but-unrun tests, skipped CI or in-progress CI;
-- no production/provider mutation.
+- `U01-001 Responsive PWA`: **Wired -> RC** from merged A6 PR #598 and exact browser run `30871503111` / job `91874277369`.
 
-## Snapshot result
-
-Point-in-time RC4 evidence was audited through PR `#606`; A19 independent run `30868619676` was still in progress at the convergence cutoff.
-
-Candidate maturity remains conservatively unchanged:
+Candidate counts:
 
 - Hardened: `0`;
-- RC: `65`;
-- Wired: `407`;
+- RC: `66`;
+- Wired: `406`;
 - Foundation: `327`;
 - Missing: `157`;
 - Total: `956`.
 
-No A1-A19 maturity promotion/demotion is accepted in this snapshot. Strong executable evidence from A1/A3/A11 is retained, but each lane still has an explicit capability-level promotion blocker or does not claim the broader capability promotion.
+No Hardened promotion is accepted. `U01-002` remains Wired; offline `U01-003..007` and Push `U01-013` remain Missing.
 
-## Delivered
+## Updated worker truth
 
-- `docs/agents/rc4/RC4_A20_EVIDENCE_MANIFEST.json` — machine-readable A1-A19 snapshot/provenance and zero-change maturity decision;
-- `server/scripts/validate-rc4-capability-convergence.mjs` — RC4 provenance/evidence/arithmetic gate layered on the canonical 956 validator;
-- `docs/agents/rc4/RC4_A20_CAPABILITY_CONVERGENCE.md` — convergence analysis, ranked blockers and Dependency Requests;
-- `.github/workflows/rc4-a20-capability-convergence.yml` — exact PR-head gate pinned to the actual PR base SHA.
+- A7, A9, A12 and A16 now have exact-head green validation and are recorded READY.
+- A8, A14, A15, A17 and A18 have independent A19 PASS evidence.
+- A4, A10 and A13 remain substantive blockers.
+- A19 overall remains red and its A7 snapshot is stale because A7 fixed its lane after the A19 pin.
+- Except A6, those implementations remain unmerged, so R2 does not promote their branch-only candidates into canonical main maturity.
 
-## Acceptance
+## Delivered / updated
 
-The new validator requires:
+- `server/scripts/rc4-a20-r2-materialize.mjs` — deterministic current-main status materializer;
+- `docs/agents/rc4/RC4_A20_EVIDENCE_MANIFEST.json` — schema v2 current evidence snapshot;
+- `server/scripts/validate-rc4-capability-convergence.mjs` — now requires integrated-tree ancestry for any maturity promotion;
+- `docs/agents/rc4/RC4_A20_CAPABILITY_CONVERGENCE_R2.md` — detailed R2 convergence record;
+- R2 exact-head workflow materializes and commits the canonical status before final validation.
 
-- exactly 956/956 unique capability IDs;
-- zero missing/unknown/duplicate IDs;
-- maturity totals reconcile to 956;
-- all Evidence Index references are defined exactly once and used;
-- A1-A19 occur exactly once in the evidence manifest;
-- PR-backed lane evidence carries immutable head SHA;
-- every future maturity change points to an accepted lane with exact validated head, executable workflow provenance, explicit capability IDs and direct non-circular evidence;
-- stale A20 snapshot fails closed when PR base `main` SHA changes.
+## Promotion contract
 
-## Current dependency boundary
+A capability promotion must now have:
 
-- A19 must complete the independent worker-head replay and later replay the final converged candidate head before RC4 maturity promotion.
-- A21/A22/A24 must consume A20's provenance contract for migration governance, cross-ledger evidence and final QA.
-- Domain/provider/browser/legal gaps remain owned by A1-A18; A20 records them but does not bypass their authority.
+- exact worker head and validated head;
+- executable workflow provenance;
+- explicit capability IDs and direct evidence paths;
+- implementation integrated into convergence `HEAD`;
+- merge commit and final lane head proven as Git ancestors;
+- explicit allowlist for any post-validation cleanup drift;
+- canonical Evidence Index reference and exact maturity arithmetic.
+
+A19 remains a cross-branch/final release-confidence gate, not a global veto over an isolated capability already merged into current main with complete capability-specific evidence.
 
 ## Output boundary
 
-Open convergence PR and collect exact-head validation. This is non-UI governance/evidence work: **stop before merge/deploy unless explicitly approved**.
+Open R2 convergence PR and collect exact-head validation. This is non-UI governance/evidence work: **stop before merge unless explicitly approved**. No production deploy is required by R2 itself.
