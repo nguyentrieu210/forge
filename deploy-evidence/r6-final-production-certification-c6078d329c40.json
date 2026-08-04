@@ -1,21 +1,21 @@
 {
-  "format": "forge-r6-final-production-certification/v1",
+  "format": "forge-r6-final-production-certification/v2",
   "status": "PILOT-NO-GO",
   "candidate_sha": "c6078d329c4022d55df8c16071b885b6f7a43d46",
   "tenant": "alu",
   "origin": "https://alu.kairo.vn",
-  "mutation": "AUTHORIZED_PRODUCTION_DEMO",
-  "completed_at": "2026-08-04T16:13:31.407Z",
-  "workflow_run_id": "30927940485",
+  "mutation": "AUTHORIZED_PRODUCTION",
+  "completed_at": "2026-08-04T16:19:56.637Z",
+  "workflow_run_id": "30928357604",
   "outcomes": {
     "checkout": "success",
     "ancestry": "success",
     "credentials": "success",
     "build": "success",
-    "workerd": "failure",
-    "backup": "skipped",
-    "drill_create": "skipped",
-    "drill_restore": "skipped",
+    "workerd": "success",
+    "backup": "success",
+    "drill_create": "success",
+    "drill_restore": "failure",
     "cutover": "skipped",
     "migrate": "skipped",
     "migration_verify": "skipped",
@@ -30,11 +30,41 @@
     "identity": "skipped",
     "pitr": "skipped",
     "matrix": "skipped",
-    "drill_cleanup": "skipped"
+    "drill_cleanup": "success"
   },
   "evidence_matrix": null,
   "migration": null,
-  "backup": null,
+  "backup": {
+    "format": "forge-backup-verification/v1",
+    "tenant": "alu",
+    "source_file": "alu-2026-08-04T16-19-20-474Z.sql",
+    "source_sha256": "eb69ce2d6fd91b90811e089fc952a297417651e3c2a4209f4664d34b7af16f86",
+    "source_bytes": 11913547,
+    "manifest_verified": true,
+    "source_created_at": "2026-08-04T16:19:26.524Z",
+    "source_database_name": "cloudforge-alu",
+    "verified_at": "2026-08-04T16:19:42.164Z",
+    "local_restore_duration_ms": 15484,
+    "table_count": 97,
+    "migration_count": 79,
+    "quick_check": "ok",
+    "foreign_key_violations": 0,
+    "tenant_scope_violations": {
+      "documents": 0,
+      "doctype_definitions": 0,
+      "installed_apps": 0
+    },
+    "metadata_catalog_rows": {
+      "__standard__": 90,
+      "demo": 93
+    },
+    "import_rewrites": {
+      "oversized_installed_app_rows": 3,
+      "generated_statements": 199,
+      "max_statement_bytes": 32655
+    },
+    "cloudflare_mutated": false
+  },
   "restore": null,
   "reconciliation": null,
   "pitr": null,
