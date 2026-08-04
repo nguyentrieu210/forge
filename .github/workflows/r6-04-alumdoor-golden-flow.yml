@@ -6,8 +6,6 @@ on:
     paths:
       - "server/scripts/r6-04-alumdoor-identity-readonly.mjs"
       - "server/tests/r6-04-alumdoor-golden-flow.test.mjs"
-      - "docs/agents/r6/R6_A4_ALUMDOOR_GOLDEN_FLOW.md"
-      - "docs/agents/r6/R6_A4_EVIDENCE.json"
       - ".github/workflows/r6-04-alumdoor-golden-flow.yml"
 
 permissions:
