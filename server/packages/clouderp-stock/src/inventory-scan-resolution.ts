@@ -125,7 +125,10 @@ export class D1InventoryScanLookup implements InventoryScanLookup {
             OR EXISTS (
               SELECT 1 FROM json_each(data_json,'$.barcodes') AS barcode
               WHERE (barcode.type='text' AND barcode.atom=?2)
-                OR (barcode.type='object' AND json_extract(barcode.value,'$.barcode')=?2)
+                OR CASE WHEN barcode.type='object'
+                  THEN json_extract(barcode.value,'$.barcode')=?2
+                  ELSE 0
+                END
             )
           ))
           OR (record_type='Batch' AND (
