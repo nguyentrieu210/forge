@@ -10,12 +10,19 @@ Status: **PASS — 18/18 worker lanes independently replayed; provider truth rem
 
 A19 independently replayed every RC4 worker lane A1-A18 from immutable heads and verified baseline capability, SQL, Cloudflare source/provider and A6 browser-evidence provenance. It owns QA/evidence only and does not mutate another lane's business authority.
 
-Decisive workflow:
+Decisive worker workflow:
 
 - workflow: **RC4 A19 Independent Adversarial QA**;
-- run: `30875686652`;
-- workflow head: `3cd312a30ba7e2b98860935a5070f5f8fb575dd2`;
+- worker-matrix run: `30875686652`;
+- worker-matrix workflow head: `3cd312a30ba7e2b98860935a5070f5f8fb575dd2`;
 - conclusion: **SUCCESS**.
+
+Final documentation/provenance replay:
+
+- final branch head before this evidence-only note: `bfdff28cfcb2f052775f1a6812793235009cbb0c`;
+- run: `30875784687`;
+- conclusion: **SUCCESS**;
+- the run repeated the full A1-A18 pinned matrix plus baseline/provider/A6 provenance gates after the PASS handoff was written.
 
 ## Independent worker disposition
 
