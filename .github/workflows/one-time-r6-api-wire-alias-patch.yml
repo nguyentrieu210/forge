@@ -1,4 +1,5 @@
 name: One-time R6 API Wire Alias Patch
+# retrigger after workflow exists on main
 on:
   push:
     branches: [main]
