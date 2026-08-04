@@ -122,14 +122,14 @@ export class AppFactoryDefinitionController implements DocumentController<AppFac
     const effectiveFrom = date(input.effective_from ?? existing?.data.effective_from, "effective_from");
     const effectiveTo = input.effective_to === undefined && existing?.data.effective_to === undefined ? undefined : date(input.effective_to ?? existing?.data.effective_to, "effective_to");
     if (effectiveTo && effectiveTo < effectiveFrom) throw errors.validation("effective_to must not precede effective_from");
-    if (existing?.data.status !== "Draft" && (effectiveFrom !== existing.data.effective_from || (effectiveTo ?? null) !== (existing.data.effective_to ?? null))) {
+    if (existing && existing.data.status !== "Draft" && (effectiveFrom !== existing.data.effective_from || (effectiveTo ?? null) !== (existing.data.effective_to ?? null))) {
       throw errors.validation("Retire/replace an App Factory Definition before changing its active effective window");
     }
 
     const definitionInput = parseJsonObject(input.definition_json ?? existing?.data.definition_json, "definition_json");
     const knownFields = new Set(["name", "owner", "status", "docstatus", ...targetMeta.fields.map((field) => field.fieldname)]);
     const definitionJson = validateDefinitionPayload(definitionKind, definitionInput, knownFields);
-    if (existing?.data.status !== "Draft" && JSON.stringify(definitionJson) !== JSON.stringify(existing.data.definition_json)) throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
+    if (existing && existing.data.status !== "Draft" && JSON.stringify(definitionJson) !== JSON.stringify(existing.data.definition_json)) throw errors.validation("Retire/replace an App Factory Definition before changing its active definition_json");
 
     const data: AppFactoryDefinitionData = {
       definition_key: definitionKey,
