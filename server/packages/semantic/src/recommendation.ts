@@ -163,6 +163,17 @@ export class SemanticRecommendationService {
       order_by: [...(request.order_by ?? [])],
       limit: request.limit,
     });
+    if (source.row_count !== source.result.length) throw errors.validation("recommendation source row_count does not match result length");
+    for (const [rowIndex, row] of source.result.entries()) {
+      for (const metricId of metrics) {
+        if (!(metricId in row)) throw errors.validation(`recommendation source row ${rowIndex} is missing metric ${metricId}`);
+        const definition = metricById.get(metricId)!;
+        const value = row[metricId];
+        if (definition.value.exact === true && (typeof value !== "number" || !Number.isSafeInteger(value))) {
+          throw errors.validation(`recommendation source row ${rowIndex} metric ${metricId} must be a safe integer for an exact metric`);
+        }
+      }
+    }
 
     const providerInput: SemanticRecommendationProviderInput = {
       objective,
