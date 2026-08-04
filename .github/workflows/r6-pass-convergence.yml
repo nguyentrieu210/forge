@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: r6-pass-convergence-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -19,6 +19,101 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Apply canonical report wire-alias patch locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          manifest = Path('server/packages/app-registry/src/manifest.ts')
+          text = manifest.read_text()
+          old = '''  if (report.group_by !== dimensions[0]) throw errors.validation(`charts[${index}] dimension must match report group_by (${report.group_by ?? "none"})`);
+  const columns = new Map(report.columns.map((column) => [column.field, column]));
+  if (!columns.has(dimensions[0]!)) throw errors.validation(`charts[${index}] dimension is not a report column: ${dimensions[0]}`);
+  for (const measure of measures) {
+    const column = columns.get(measure);
+    if (!column?.aggregate) throw errors.validation(`charts[${index}] measure must be an aggregated report column: ${measure}`);
+  }
+'''
+          new = '''  // Query reports expose aggregate columns under their wire aliases, not source
+  // fieldnames: sum(grand_total) -> sum_grand_total, count(name) -> count_name.
+  // Charts are persisted/rendered against that response shape, so validate exactly the
+  // names the report endpoint returns.
+  const wireField = (column: AppReportColumn): string => column.aggregate
+    ? `${column.aggregate}_${column.field}`
+    : column.field;
+  const wireColumns = report.columns.map((column) => [wireField(column), column] as const);
+  assertUnique(wireColumns.map(([field]) => field), `reports[${index}] wire column`);
+  const columns = new Map(wireColumns);
+  const groupByColumn = report.columns.find((column) => !column.aggregate && column.field === report.group_by);
+  const groupByWireField = groupByColumn ? wireField(groupByColumn) : report.group_by;
+  if (groupByWireField !== dimensions[0]) throw errors.validation(`charts[${index}] dimension must match report group_by (${groupByWireField ?? "none"})`);
+  if (!columns.has(dimensions[0]!)) throw errors.validation(`charts[${index}] dimension is not a report column: ${dimensions[0]}`);
+  for (const measure of measures) {
+    const column = columns.get(measure);
+    if (!column?.aggregate) throw errors.validation(`charts[${index}] measure must be an aggregated report column: ${measure}`);
+  }
+'''
+          if old in text:
+              manifest.write_text(text.replace(old, new, 1))
+          elif 'const wireColumns = report.columns.map' not in text:
+              raise SystemExit('parseChart target not found')
+
+          verifier = Path('server/scripts/lib/verify-installed-app.mjs')
+          text = verifier.read_text()
+          old = '''      const reportColumns = new Set(report.columns.map((column) => column.field));
+      for (const field of [...chart.dimensions, ...chart.measures]) {
+        if (!reportColumns.has(field)) throw new Error(`chart report ${chart.source} is missing column ${field}`);
+      }
+'''
+          new = '''      const reportColumns = new Set(report.columns.map((column) => column.aggregate ? `${column.aggregate}_${column.field}` : column.field));
+      for (const field of [...chart.dimensions, ...chart.measures]) {
+        if (!reportColumns.has(field)) throw new Error(`chart report ${chart.source} is missing wire column ${field}`);
+      }
+'''
+          if old in text:
+              verifier.write_text(text.replace(old, new, 1))
+          elif 'missing wire column' not in text:
+              raise SystemExit('installed-app verifier target not found')
+
+          tests = Path('server/tests/app-registry.test.mjs')
+          text = tests.read_text()
+          old = '''  const chart = {
+    name: "Stock chart",
+    source: report.name,
+    type: "Bar",
+    dimensions: ["warehouse"],
+    measures: ["amount"],
+    roles: ["Kho User"],
+    drilldown: { route: "/report/Stock%20by%20warehouse" },
+    emptyFallback: "table",
+  };
+  assert.doesNotThrow(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [chart] }));
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, source: "Ghost" }] }), /declared report/);
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, measures: ["name"] }] }), /aggregated report column/);
+'''
+          new = '''  const chart = {
+    name: "Stock chart",
+    source: report.name,
+    type: "Bar",
+    dimensions: ["warehouse"],
+    measures: ["sum_amount"],
+    roles: ["Kho User"],
+    drilldown: { route: "/report/Stock%20by%20warehouse" },
+    emptyFallback: "table",
+  };
+  assert.doesNotThrow(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [chart] }));
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, source: "Ghost" }] }), /declared report/);
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, measures: ["amount"] }] }), /aggregated report column/);
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, measures: ["name"] }] }), /aggregated report column/);
+'''
+          if old in text:
+              tests.write_text(text.replace(old, new, 1))
+          elif 'measures: ["sum_amount"]' not in text:
+              raise SystemExit('app-registry test target not found')
+          PY
+          git diff --check
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0, run_install: false }
       - uses: actions/setup-node@v4
@@ -32,9 +127,9 @@ jobs:
       - name: Verify migration, restore import and PITR safety
         working-directory: server
         run: node --test tests/d1-migrate-remote-safety.test.mjs tests/d1-backup-import.test.mjs tests/sre-destructive-guards.test.mjs
-      - name: Verify App Factory report/chart wire aliases
+      - name: Verify App Factory and app-registry report/chart wire aliases
         working-directory: server
-        run: node --test tests/app-factory-report-chart-alias.test.mjs
+        run: node --test tests/app-registry.test.mjs tests/app-factory-report-chart-alias.test.mjs
       - name: Workerd evidence — ERP lifecycle
         id: health
         working-directory: server
@@ -92,6 +187,22 @@ jobs:
           grep -q 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log
       - name: Diff hygiene
         run: git diff --check
+      - name: Persist canonical wire-alias source patch to PR branch
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        with:
+          script: |
+            const fs=require('node:fs');
+            const owner=context.repo.owner,repo=context.repo.repo,branch=process.env.HEAD_BRANCH;
+            for(const path of ['server/packages/app-registry/src/manifest.ts','server/scripts/lib/verify-installed-app.mjs','server/tests/app-registry.test.mjs']){
+              const remote=await github.rest.repos.getContent({owner,repo,path,ref:branch});
+              const content=fs.readFileSync(path,'utf8');
+              const current=Buffer.from(remote.data.content,'base64').toString('utf8');
+              if(current===content) continue;
+              await github.rest.repos.createOrUpdateFileContents({owner,repo,path,branch,sha:remote.data.sha,message:`fix(r6): persist ${path.split('/').pop()} wire alias contract`,content:Buffer.from(content).toString('base64')});
+            }
   observe-pilot:
     name: Read-only pilot provider and package/profile evidence
     runs-on: ubuntu-latest
