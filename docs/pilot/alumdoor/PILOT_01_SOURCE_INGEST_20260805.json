@@ -1,0 +1,159 @@
+{
+  "format": "forge-alumdoor-pilot-01-source-ingest/v1",
+  "status": "PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED",
+  "tenant": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "mapping_version": 1,
+  "ingest_observed_at": "2026-08-04T22:23:58Z",
+  "production_data_mutated": false,
+  "raw_customer_data_committed_to_repo": false,
+  "source_files": [
+    {
+      "name": "Hàng hoá _ Vật tư-20260728-2018 (1).xlsx",
+      "sha256": "a34ec3fad49f0b8fe49160c17742644b6c09a02b7c63d3674971cf1e1dadd765",
+      "bytes": 120176,
+      "role": "item-master-export",
+      "observed": { "sheets": 1, "item_rows": 277, "unique_item_codes": 277 }
+    },
+    {
+      "name": "MS LIÊN BS.xlsx",
+      "sha256": "64820a840aa22d763875930d13095076a2a3f33d9fa7027e3263d8a7d4ee2e41",
+      "bytes": 3900046,
+      "role": "customer-supplier-master-and-operational-ledger",
+      "observed": {
+        "sheets": 17,
+        "customer_source_rows": 258,
+        "unique_customer_names": 256,
+        "supplier_master_rows": 8,
+        "typed_journal_rows": 730,
+        "sales_rows": 515,
+        "customer_receipt_rows": 178,
+        "purchase_rows": 14,
+        "supplier_return_rows": 6,
+        "other_expense_rows": 16,
+        "transfer_rows": 1,
+        "journal_min_date": "2026-02-02",
+        "journal_max_date": "2026-07-02",
+        "cash_bank_snapshot_hint": "30/06/2026"
+      }
+    },
+    {
+      "name": "Đơn mua hàng-20260730-1550.xlsx",
+      "sha256": "a384a31a77003363e66e09bd7020799f2871cdf7fd2dbc55aa461481fb7dd89a",
+      "bytes": 16686,
+      "role": "purchase-order-summary",
+      "observed": {
+        "rows": 1,
+        "supplier": "TIẾN ĐẠT",
+        "order_date": "2026-07-30",
+        "expected_delivery_date": "2026-07-31",
+        "total_vnd": 84883448,
+        "received_pct": 0
+      }
+    },
+    {
+      "name": "CTY SÁU HỒNG.xlsx",
+      "sha256": "bf68dce77e522e3571dbf0be245bab215ba4bf63d746d7cdbd3ec881665a1f9a",
+      "bytes": 343666,
+      "role": "customer-order-history-reference",
+      "observed": { "sheets": 11, "nonempty_product_or_adjustment_rows_after_header": 176 }
+    },
+    {
+      "name": "TỒN NHÔM 2026 NEW.xlsx",
+      "sha256": "c2e6c8fa2a64dd36ba8ec3f8f64926acfc72529ef609f737efd00e077ca2e20c",
+      "bytes": 2440354,
+      "role": "aluminum-lot-stock-source",
+      "observed": {
+        "sheets_total": 21,
+        "inventory_sheets": 18,
+        "control_or_history_sheets": 3,
+        "raw_lot_rows": 1506,
+        "available_lot_rows_after_source_status_formula": 1152,
+        "available_piece_qty": 41137,
+        "ended_lot_rows_after_source_status_formula": 354,
+        "actual_kg_cells_present": 0,
+        "future_dated_rows_after_2026_08_05": 2,
+        "future_date": "2026-12-23"
+      }
+    },
+    {
+      "name": "25.7 QUY TRÌNH.docx",
+      "sha256": "5f247c253a7e0bb22e14387a06bdc0c4a26e65e27b2df8aff0baed350e2e42a7",
+      "bytes": 704162,
+      "role": "business-process-and-formula-source"
+    }
+  ],
+  "dataset_coverage": {
+    "customers": "SOURCE_PRESENT_NEEDS_DEDUP_DISPOSITION",
+    "contacts": "PARTIAL_NOT_MASTER_READY",
+    "suppliers": "SOURCE_PRESENT_NEEDS_ROLE_REFERENCE_RECONCILIATION",
+    "items": "SOURCE_PRESENT_NEEDS_CANONICAL_ALIAS_RECONCILIATION",
+    "boms": "PARTIAL_FROM_DINH_MUC_NOT_CANONICAL_BOM_READY",
+    "work_centers": "NOT_OBSERVED",
+    "warehouses": "POLICY_DEFAULT_EXISTS_BUT_MASTER_BINDING_NOT_OBSERVED",
+    "opening_stock": "SOURCE_PRESENT_NOT_CANONICAL_QUANTITY_VALUE_READY",
+    "opening_ar": "ACTIVITY_PRESENT_OPENING_BALANCE_NOT_PROVEN",
+    "opening_ap": "ACTIVITY_PRESENT_OPENING_BALANCE_NOT_PROVEN",
+    "opening_cash_bank": "SOURCE_PRESENT_WITH_OLDER_SNAPSHOT_HINT_SCOPE_NOT_YET_LOCKED",
+    "employees": "PARTIAL_NOT_MASTER_READY",
+    "pilot_users": "NOT_OBSERVED"
+  },
+  "blocking_findings": [
+    {
+      "code": "SOURCE_CUTOFF_NOT_COHERENT",
+      "detail": "Uploaded sources do not prove one common business cutoff: cash/bank is labelled 30/06, operational journal ends 02/07, stock contains receipt dates through 23/07 plus two 23/12 future-date anomalies, item export filename is dated 28/07 and purchase-order export 30/07."
+    },
+    {
+      "code": "CUSTOMER_DUPLICATE_IDENTITY",
+      "count": 2,
+      "detail": "258 customer source rows resolve to 256 exact names; duplicate-name pairs require source-owner disposition rather than automatic merge."
+    },
+    {
+      "code": "SUPPLIER_ROLE_GAPS",
+      "detail": "Four purchase-party names are not typed as NCC in the uploaded supplier master. Existing canonical Forge standardization already materializes TIẾN ĐẠT; three remaining source-role mappings still require disposition."
+    },
+    {
+      "code": "ITEM_ALIAS_GAPS",
+      "count": 60,
+      "detail": "60 distinct journal item codes do not exact-match the 277-code uploaded item export. Canonical standardization/alias evidence must resolve them; no guessed code merge is allowed."
+    },
+    {
+      "code": "STOCK_ACTUAL_KG_MISSING",
+      "count": 1152,
+      "detail": "The aluminum workbook contains length/piece evidence for available lots but zero populated SỐ KG TỔNG cells. Canonical Nhôm cây/lá stock authority uses Kg; theoretical kg/m evidence must not be promoted to measured stock quantity."
+    },
+    {
+      "code": "STOCK_SHEET_SCOPE_DRIFT",
+      "detail": "Business process source describes 23 aluminum sheets plus 2 mesh sheets, while the uploaded aluminum workbook contains 21 total sheets, only 18 of which are inventory sheets; no separate mesh opening-stock source was observed."
+    },
+    {
+      "code": "STOCK_FUTURE_DATE",
+      "count": 2,
+      "detail": "Two VIPST700 source rows carry 23/12/2026 receipt dates, later than the 05/08/2026 ingest date, and require source-owner correction/disposition."
+    },
+    {
+      "code": "AR_OPENING_NOT_DERIVABLE_FROM_ACTIVITY",
+      "detail": "Available journal activity contains 515 sales rows and 178 receipt rows, with receipts exceeding sales in the observed period; carry-in receivables therefore exist outside the observed activity window and opening AR cannot be inferred safely."
+    },
+    {
+      "code": "AP_OPENING_NOT_DERIVABLE_FROM_ACTIVITY",
+      "detail": "Purchase activity exists but no complete supplier opening/payment history at one common cutoff is proven by the uploaded set."
+    },
+    {
+      "code": "VND_ROUNDING_POLICY_REQUIRED",
+      "count": 45,
+      "detail": "45 typed journal rows expose fractional Tổng thanh toán values. Pilot mapping requires integer VND minor-unit semantics, so a source-bound rounding rule must be locked before opening/transaction import."
+    },
+    {
+      "code": "PILOT_ACCESS_MASTER_MISSING",
+      "detail": "No named pilot account allowlist or complete employee/user source was observed; exactly one active named Giám đốc account remains required before Pilot-02/Pilot-04 gates."
+    }
+  ],
+  "verdict": {
+    "source_batch_exists": true,
+    "pilot_01_waiting_for_any_source_data": false,
+    "pilot_01_preview_pass": false,
+    "next_state": "SOURCE_INGESTED_RECONCILE_AND_NORMALIZE",
+    "production_write_authorized": false
+  }
+}
