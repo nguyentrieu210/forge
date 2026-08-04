@@ -16,7 +16,6 @@ on:
   pull_request:
     branches:
       - program/rc3-exact-main-release-confidence-20260804
-      - main
     paths:
       - "server/scripts/rc3-finalize-capability-status.mjs"
       - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
