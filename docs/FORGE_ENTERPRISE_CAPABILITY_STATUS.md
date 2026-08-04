@@ -26,15 +26,15 @@ For finance/stock/payroll, missing correction/reconciliation blocks Hardened and
 | Maturity | Count | Share |
 |---|---:|---:|
 | Hardened | 0 | 0.00% |
-| RC | 65 | 6.80% |
-| Wired | 407 | 42.57% |
+| RC | 66 | 6.90% |
+| Wired | 406 | 42.47% |
 | Foundation | 327 | 34.21% |
 | Missing | 157 | 16.42% |
 | **Total** | **956** | **100.00%** |
 
-**Hardened = 0 by evidence.** RC3 retains the four narrow historical RC claims and adds **61 scoped RC promotions** accepted by A5 from exact Transaction Closure / WS09 executable evidence. A2 contributes seven lower-level promotions plus three privacy demotions; A4 contributes four device-capability promotions plus one Push demotion. No merge, source presence, provider config or historical production release is treated as Hardened evidence.
+**Hardened = 0 by evidence.** RC3 retains the four narrow historical RC claims and adds **61 scoped RC promotions** accepted by A5 from exact Transaction Closure / WS09 executable evidence. A2 contributes seven lower-level promotions plus three privacy demotions; A4 contributes four device-capability promotions plus one Push demotion. RC4-A20 R2 adds **one current-main promotion** (`U01-001` Wired -> RC) from merged A6 exact cross-device browser evidence. No branch-only implementation, source presence, provider config or historical production release is treated as Hardened evidence.
 
-Historical RC-01 counts were `Hardened=0 / RC=4 / Wired=448 / Foundation=345 / Missing=159`; RC3 delta is `0 / +61 / -41 / -18 / -2`.
+Historical RC-01 counts were `Hardened=0 / RC=4 / Wired=448 / Foundation=345 / Missing=159`; current RC4-A20 R2 delta is `0 / +62 / -42 / -18 / -2` after integrating A6 responsive-browser evidence on main.
 
 ## Evidence Index
 
@@ -57,7 +57,7 @@ Each registry row inherits one bundle. Every bundle covers **source / test / mig
 - `E-IAM`: RC3 exact-source audit wires MFA before session issuance, security-alert read model and suspend/reactivate governance; OIDC/SSO remain Foundation and privacy taxonomy/masking/retention are Missing. No provider lifecycle or exact-production security proof is inferred.
 - `E-SRE`: CFMAX R2 source convergence #570 and exact source tooling are retained, but remote provider observation remains `unverified`; D1 replica/APAC, Workflow recovery, edge security, AI Gateway/Browser Run and restore/PITR/DR drills require approved non-production/provider evidence. Historical production release does not prove current main.
 - `E-DX`: src CLI/generator/compiler/test tooling; tests fragmented/no single promotion suite; mig tooling varies; perm N/A or server-auth when executed; recon N/A; UI developer-only; prod none.
-- `E-UI`: exact RC3 source authority is **MetaForge V2** after the V3 rollback; responsive/installable PWA remains Wired. Barcode/QR/geolocation/signature are Wired source paths; Push and offline cache/write/sync/conflict remain Missing where evidence is absent. Current browser/device/exact-release proof remains required for RC.
+- `E-UI`: exact source authority is **MetaForge V2**. RC4-A6 PR #598 is merged on current main and exact browser run `30871503111` / job `91874277369` passed demo build, 50 browser checks, runtime build and 19 runtime/login/PWA checks across desktop/tablet/Pixel/360px/dark/reduced-motion; `U01-001` Responsive PWA therefore reaches RC. `U01-002` Installable PWA remains Wired because standalone installed-launch proof is absent; `U01-003..007` and `U01-013` remain Missing; `U01-009..012` remain Wired pending physical/authorized device evidence. Exact production `/health` + `/release.json` proof remains absent, so no UI Hardened claim is made.
 - `E-MDM`: src canonical masters/metadata/kernel; broad source evidence but no RC-01 dedicated suite; mig app/meta; perm DocPerm/User Permission; recon duplicate/merge/steward/effective-date depth incomplete; UI metadata; prod unproven.
 - `E-MIGRATION`: src migration package + Data Import + merged #313; targeted SQLite/strict-harness evidence and authored tests, full repo NOT RUN; mig durable journal lineage; perm import/create + canonical kernel; recon retry/reconcile contract exists, opening providers/content-hash crash-window open; UI mapping/correction pending; prod cutover not run.
 - `E-ALUMDOOR`: src Alumdoor + merged #316; Golden Order isolated 7/7 PASS and byte-identical #295 historical validation; mig product path on main; perm callback/caller identity boundary; recon supplier settlement reversal + Golden Order verifier; UI production evidence belongs to historical 2.2.1; prod source 2.2.2 not claimed deployed.
@@ -425,7 +425,8 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### U01 (13)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `U01-001` `U01-002` `U01-009..U01-012` | `E-UI` |
+| RC | `U01-001` | `E-UI` |
+| Wired | `U01-002` `U01-009..U01-012` | `E-UI` |
 | Foundation | `U01-008` | `E-UI` |
 | Missing | `U01-003..U01-007` `U01-013` | `E-UI` |
 ### U02 (12)
