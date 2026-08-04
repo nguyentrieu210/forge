@@ -20,12 +20,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Syntax check validator
-        run: node --check docs/pilot/alumdoor/tools/validate-pilot-batch.mjs
+      - name: Syntax check Pilot-01 tools
+        run: |
+          node --check docs/pilot/alumdoor/tools/validate-pilot-batch.mjs
+          node --check docs/pilot/alumdoor/tools/normalize-pilot-identities.mjs
       - name: Verify Pilot-00 / Pilot-01 identity contract
         run: node docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs
       - name: Run fail-closed batch validator tests
         run: node --test docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs
+      - name: Run identity normalization tests
+        run: node --test docs/pilot/alumdoor/tools/normalize-pilot-identities.test.mjs
       - name: Assert no production mutation authority
         shell: bash
         run: |
@@ -33,3 +37,4 @@ jobs:
           ! grep -R --line-number -E 'wrangler deploy|--execute|migrate-tenant\.mjs|deploy-tenant\.mjs|reset-remote-admin-password\.mjs' \
             docs/pilot/alumdoor/tools .github/workflows/pilot-01-data-readiness.yml
           grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json
+          grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json
