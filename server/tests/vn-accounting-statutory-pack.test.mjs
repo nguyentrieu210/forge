@@ -28,7 +28,7 @@ test("VN accounting exposes statutory registries, tax worker and finance budget 
   assert.ok(evaluator);
   assert.equal(evaluator.permission_doctype, "VN Tax Ruleset");
   assert.equal(evaluator.permission_action, "read");
-  assert.equal(evaluator.commit.method, "vn-accounting.tax.evaluate");
+  assert.equal(evaluator.commit.method, "vn_accounting.tax.evaluate");
   assert.equal(evaluator.fields.find((field) => field.fieldname === "input_json")?.fieldtype, "Small Text");
   assert.ok(parsed.nav.some((item) => item.key === "tax-evaluate" && item.route === "/x/action:tax-evaluate"));
 
