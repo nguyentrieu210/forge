@@ -101,12 +101,17 @@ test("System Manager previews and applies capability changes", async ({ page }) 
   await page.goto("/app-factory/capabilities");
   await expect(page.getByRole("heading", { name: "Capability Profile" })).toBeVisible();
   await expect(page.getByText("Version hiện tại: 1")).toBeVisible();
-  await expect(page.getByText("Cash & Bank")).toBeVisible();
-  await expect(page.getByRole("switch", { name: /Bắt buộc/ })).toBeDisabled();
 
-  const payrollSwitch = page.getByRole("switch", { name: /Bật/ }).last();
+  const requiredRow = page.getByText("vn-accounting.cash-bank", { exact: true }).locator("xpath=../..");
+  await expect(requiredRow.getByRole("switch")).toBeDisabled();
+  await expect(requiredRow.getByRole("switch")).toHaveText(/Bắt buộc/);
+
+  const payrollRow = page.getByText("hrm.payroll", { exact: true }).locator("xpath=../..");
+  const payrollSwitch = payrollRow.getByRole("switch");
+  await expect(payrollSwitch).toHaveAttribute("aria-checked", "true");
   await payrollSwitch.click();
   await expect(payrollSwitch).toHaveAttribute("aria-checked", "false");
+  await expect(payrollSwitch).toHaveText(/Tắt/);
 
   await page.getByRole("button", { name: "Kiểm tra kế hoạch" }).click();
   await expect(page.getByText("Preview thay đổi")).toBeVisible();
