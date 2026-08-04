@@ -1,0 +1,92 @@
+{
+  "fixture_id": "VN-PIT-RESIDENT-WAGES-2026",
+  "status": "regression-only-not-production-seed",
+  "effective_from": "2026-01-01",
+  "effective_to": "2026-12-31",
+  "currency": "VND",
+  "currency_scale": 0,
+  "scope": "Resident individual employment income; core family deductions and progressive PIT table only. Mandatory insurance and other lawful deductions are typed runtime inputs, not hard-coded legal rates in this fixture.",
+  "legal_sources": [
+    {
+      "document_no": "109/2025/QH15",
+      "official_url": "https://vanban.chinhphu.vn/?docid=216495&pageid=27160",
+      "evidence": "Articles 8-10 define resident employment-income taxable base, 5 progressive monthly bands (10m/30m/60m/100m at 5/10/20/30/35 percent), and family deductions 15.5m taxpayer + 6.2m per dependent; employment-income rules apply from tax year 2026."
+    },
+    {
+      "document_no": "110/2025/UBTVQH15",
+      "official_url": "https://vanban.chinhphu.vn/?docid=215927&pageid=27160",
+      "evidence": "Family deduction 15.5m VND/month for taxpayer and 6.2m VND/month per dependent, effective 2026-01-01 and applicable from tax year 2026."
+    },
+    {
+      "document_no": "09/2026/QH16",
+      "official_url": "https://vanban.chinhphu.vn/?docid=218095&pageid=27160",
+      "evidence": "Amendment reviewed before fixture derivation; Article 1 amends Article 7 business-income threshold and does not alter Articles 8-10 resident employment-income PIT bands/family deductions."
+    }
+  ],
+  "formula": {
+    "schema_version": 1,
+    "currency": "VND",
+    "inputs": {
+      "dependent_count": { "type": "integer", "required": true, "min": 0, "max": 50 },
+      "mandatory_insurance_deduction": { "type": "currency", "required": false, "default": "0", "min": "0" },
+      "other_lawful_deductions": { "type": "currency", "required": false, "default": "0", "min": "0" }
+    },
+    "outputs": {
+      "family_deduction_self": { "const_minor": "15500000" },
+      "family_deduction_dependents": {
+        "op": "mul_int",
+        "value": { "const_minor": "6200000" },
+        "factor": { "input": "dependent_count" }
+      },
+      "taxable_income": {
+        "op": "floor_zero",
+        "value": {
+          "op": "sub",
+          "args": [
+            {
+              "op": "sub",
+              "args": [
+                {
+                  "op": "sub",
+                  "args": [
+                    {
+                      "op": "sub",
+                      "args": [
+                        { "input": "gross_earnings" },
+                        { "input": "mandatory_insurance_deduction" }
+                      ]
+                    },
+                    { "input": "other_lawful_deductions" }
+                  ]
+                },
+                { "output": "family_deduction_self" }
+              ]
+            },
+            { "output": "family_deduction_dependents" }
+          ]
+        }
+      },
+      "pit": {
+        "op": "progressive",
+        "value": { "output": "taxable_income" },
+        "tiers": [
+          { "up_to": "10000000", "rate_bps": 500 },
+          { "up_to": "30000000", "rate_bps": 1000 },
+          { "up_to": "60000000", "rate_bps": 2000 },
+          { "up_to": "100000000", "rate_bps": 3000 },
+          { "up_to": null, "rate_bps": 3500 }
+        ]
+      }
+    }
+  },
+  "vectors": [
+    { "gross_earnings": 15500000, "dependent_count": 0, "mandatory_insurance_deduction": 0, "other_lawful_deductions": 0, "expected_taxable_income": 0, "expected_pit": 0 },
+    { "gross_earnings": 25500000, "dependent_count": 0, "mandatory_insurance_deduction": 0, "other_lawful_deductions": 0, "expected_taxable_income": 10000000, "expected_pit": 500000 },
+    { "gross_earnings": 45500000, "dependent_count": 0, "mandatory_insurance_deduction": 0, "other_lawful_deductions": 0, "expected_taxable_income": 30000000, "expected_pit": 2500000 },
+    { "gross_earnings": 75500000, "dependent_count": 0, "mandatory_insurance_deduction": 0, "other_lawful_deductions": 0, "expected_taxable_income": 60000000, "expected_pit": 8500000 },
+    { "gross_earnings": 115500000, "dependent_count": 0, "mandatory_insurance_deduction": 0, "other_lawful_deductions": 0, "expected_taxable_income": 100000000, "expected_pit": 20500000 },
+    { "gross_earnings": 135500000, "dependent_count": 0, "mandatory_insurance_deduction": 0, "other_lawful_deductions": 0, "expected_taxable_income": 120000000, "expected_pit": 27500000 },
+    { "gross_earnings": 37900000, "dependent_count": 2, "mandatory_insurance_deduction": 0, "other_lawful_deductions": 0, "expected_taxable_income": 10000000, "expected_pit": 500000 },
+    { "gross_earnings": 55500000, "dependent_count": 0, "mandatory_insurance_deduction": 10000000, "other_lawful_deductions": 0, "expected_taxable_income": 30000000, "expected_pit": 2500000 }
+  ]
+}
