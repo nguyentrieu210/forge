@@ -37,7 +37,7 @@ Current repository state:
 - R5 integrated client/runtime productization: complete;
 - R6 exact-release certification: `PILOT-GO` for the frozen Alumdoor candidate;
 - Pilot-00: locked;
-- Pilot-01: preview/control-plane ready, waiting for approved real source data.
+- Pilot-01: real source set observed/hashed/ingested; reconciliation/normalization is blocking `PREVIEW_PASS`.
 
 Do not use old client RC labels or historical standalone MetaForge reports to infer current Forge release state. Use `../CURRENT_STATUS.md`.
 
