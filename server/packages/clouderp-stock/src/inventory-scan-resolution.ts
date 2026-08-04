@@ -41,7 +41,7 @@ export interface ResolvedInventoryScanCandidate extends JsonObject {
   expiry_date?: string;
 }
 
-export interface InventoryScanResolution extends JsonObject {
+export interface InventoryScanResolution {
   scan: NormalizedInventoryScan;
   status: "resolved" | "not_found" | "ambiguous";
   candidate?: ResolvedInventoryScanCandidate;
@@ -124,7 +124,8 @@ export class D1InventoryScanLookup implements InventoryScanLookup {
             OR json_extract(data_json,'$.qr_code')=?2
             OR EXISTS (
               SELECT 1 FROM json_each(data_json,'$.barcodes') AS barcode
-              WHERE barcode.value=?2 OR json_extract(barcode.value,'$.barcode')=?2
+              WHERE (barcode.type='text' AND barcode.atom=?2)
+                OR (barcode.type='object' AND json_extract(barcode.value,'$.barcode')=?2)
             )
           ))
           OR (record_type='Batch' AND (
@@ -173,7 +174,7 @@ function withinContext(candidate: InventoryScanCandidateRecord, company: string 
     if (candidate.doctype === "Warehouse" && candidate.name !== warehouse) return false;
     if (dataWarehouse && dataWarehouse !== warehouse) return false;
   }
-  if (candidate.doctype === "Warehouse" && Number(candidate.data.is_group ?? 0) === 1) return false;
+  if (candidate.doctype === "Warehouse" && isTruthyFlag(candidate.data.is_group)) return false;
   return true;
 }
 
@@ -221,6 +222,10 @@ function optionalText(value: unknown, field: string): string | undefined {
 function optionalCandidateText(value: unknown): string | undefined {
   const normalized = text(value);
   return normalized || undefined;
+}
+
+function isTruthyFlag(value: unknown): boolean {
+  return value === true || value === 1 || value === "1";
 }
 
 function copyText(target: ResolvedInventoryScanCandidate, key: keyof ResolvedInventoryScanCandidate, value: unknown): void {
