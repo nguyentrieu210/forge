@@ -14,9 +14,9 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: "pnpm --dir ../apps/runtime run dev -- --host 127.0.0.1 --port 4174",
+    command: "pnpm --dir ../apps/runtime exec vite preview --host 127.0.0.1 --port 4174 --strictPort",
     url: "http://127.0.0.1:4174/app-factory/capabilities",
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 30_000,
   },
 });
