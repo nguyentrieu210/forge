@@ -11,8 +11,8 @@ export interface CrmSalesTargetData extends JsonObject {
   start_date: string;
   end_date: string;
   target_amount: string;
-  status?: CrmSalesTargetStatus;
-  notes?: string;
+  status?: CrmSalesTargetStatus | undefined;
+  notes?: string | undefined;
 }
 
 export type CrmCommissionRuleStatus = "Active" | "Inactive";
@@ -22,9 +22,9 @@ export interface CrmCommissionRuleData extends JsonObject {
   rule_name: string;
   rate: string;
   effective_from: string;
-  effective_to?: string;
-  status?: CrmCommissionRuleStatus;
-  notes?: string;
+  effective_to?: string | undefined;
+  status?: CrmCommissionRuleStatus | undefined;
+  notes?: string | undefined;
 }
 
 export type CrmCommissionAccrualStatus = "Draft" | "Approved" | "Paid" | "Cancelled";
@@ -34,12 +34,12 @@ export interface CrmCommissionAccrualData extends JsonObject {
   deal: string;
   payee: string;
   rule: string;
-  currency?: string;
+  currency?: string | undefined;
   earned_on: string;
-  base_amount?: string;
-  rate?: string;
-  commission_amount?: string;
-  status?: CrmCommissionAccrualStatus;
-  payment_reference?: string;
-  notes?: string;
+  base_amount?: string | undefined;
+  rate?: string | undefined;
+  commission_amount?: string | undefined;
+  status?: CrmCommissionAccrualStatus | undefined;
+  payment_reference?: string | undefined;
+  notes?: string | undefined;
 }
