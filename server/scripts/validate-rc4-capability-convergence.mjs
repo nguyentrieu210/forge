@@ -50,7 +50,7 @@ const mapText = fs.readFileSync(mapPath, "utf8");
 const statusText = fs.readFileSync(statusPath, "utf8");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
-const mapIds = [...mapText.matchAll(new RegExp(`^\\s*-\\s+\\`(${idPattern})\\``, "gm"))].map((match) => match[1]);
+const mapIds = [...mapText.matchAll(/^\s*-\s+`([A-Z]{1,2}\d{2}-\d{3})`/gm)].map((match) => match[1]);
 const mapSet = new Set(mapIds);
 const mapDuplicates = duplicates(mapIds);
 if (mapDuplicates.length) fail(`capability map duplicates: ${mapDuplicates.join(", ")}`);
