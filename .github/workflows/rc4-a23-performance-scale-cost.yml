@@ -1,0 +1,85 @@
+name: RC4 A23 Performance Scale Cost Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/config/cloudflare-cost-rates-20260804.json"
+      - "server/config/cloudflare-cost-scenarios.engineering.json"
+      - "server/config/performance-regression-policy.json"
+      - "server/scripts/cloudflare-cost-project.mjs"
+      - "server/scripts/lib/cloudflare-cost.mjs"
+      - "server/scripts/lib/perf-regression.mjs"
+      - "server/scripts/perf-regression.mjs"
+      - "server/scripts/sqlite-large-data-benchmark.py"
+      - "server/tests/cloudflare-cost.test.mjs"
+      - "server/tests/perf-regression.test.mjs"
+      - "docs/agents/rc4/RC4_A23_*"
+      - "docs/agents/rc4/evidence/a23-local-large-data-100k.json"
+      - ".github/workflows/rc4-a23-performance-scale-cost.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact head
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run targeted deterministic regressions
+        run: node --test server/tests/cloudflare-cost.test.mjs server/tests/perf-regression.test.mjs
+
+      - name: Validate engineering cost scenarios
+        run: node server/scripts/cloudflare-cost-project.mjs --input server/config/cloudflare-cost-scenarios.engineering.json --rates server/config/cloudflare-cost-rates-20260804.json > /tmp/a23-cost.json
+
+      - name: Run bounded 100k local query-shape benchmark
+        run: python3 server/scripts/sqlite-large-data-benchmark.py --rows 100000 --iterations 20 --output /tmp/a23-large-data.json > /tmp/a23-large-data.stdout
+
+      - name: Validate benchmark evidence shape
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('/tmp/a23-large-data.json').read_text())
+          assert data['format']=='forge-sqlite-large-data-benchmark/v1'
+          assert data['rows_per_shape']==100000
+          assert data['iterations']==20
+          required={'document_list_50','document_list_status_50','ledger_report_28d','payment_reconciliation','queue_backlog_oldest','batch_upsert_1000'}
+          assert required.issubset(data['results'])
+          for name in required:
+              result=data['results'][name]
+              assert result['p95_ms'] >= 0 and result['p99_ms'] >= 0
+              assert result['p99_ms'] >= result['p95_ms']
+          print('RC4-A23 benchmark evidence shape: PASS')
+          PY
+
+      - name: Enforce A23 non-production authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          git diff --check "$base...HEAD"
+          changed="$(git diff --name-only "$base...HEAD")"
+          echo "$changed"
+          if echo "$changed" | grep -E '^(server/migrations/|server/apps/.*/src/|server/packages/.*/src/|client/)' ; then
+            echo "A23 changed runtime/schema/UI authority outside its tooling/evidence scope"
+            exit 1
+          fi
