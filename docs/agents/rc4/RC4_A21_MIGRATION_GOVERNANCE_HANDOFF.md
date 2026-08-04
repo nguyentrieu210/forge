@@ -2,7 +2,7 @@
 
 Date: 2026-08-04  
 Agent: **RC4-A21**  
-Status: **RUNNING — corrected from exact-head evidence; revalidation pending**  
+Status: **READY — exact-head governance validation green; merge/deploy gated**  
 Branch: `agent/rc4-21-migration-governance`  
 PR: **#607** (draft; non-UI CRITICAL merge gate)  
 Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
@@ -107,7 +107,17 @@ Initial isolated Node evidence before repository write: **3/3 PASS** plus `node 
 - append-only delta validation against the exact PR base;
 - focused migration-governance regressions.
 
-The first run failing on previously unenumerated legacy collisions is retained as useful evidence; the gate was not weakened or bypassed. The configuration was corrected to freeze the exact repository state and is being revalidated.
+Validation evidence after correcting the exact legacy inventory:
+
+- candidate head: `5e2d723d974560876f05cf0064fb9c4428abb6a6`;
+- workflow: **RC4 A21 Migration Governance Validation**;
+- run: `30868848596`;
+- job: `91866411914`;
+- repository snapshot + append-only delta: **PASS**;
+- focused migration-governance regressions: **PASS**;
+- run conclusion: **SUCCESS**.
+
+The initial failing run is retained as useful evidence; the gate was not weakened or bypassed.
 
 ## Replay / crash-window interpretation
 
@@ -158,6 +168,6 @@ Until that exists:
 
 This lane is **non-UI CRITICAL**.
 
-- Implementation is on the worker branch.
-- PR #607 remains draft.
-- **Stop before merge/deploy until explicit user approval.**
+- Implementation and source-governance validation are complete.
+- PR #607 remains draft/READY.
+- **No merge or deploy performed. Explicit approval is required before merge/deploy.**
