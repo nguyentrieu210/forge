@@ -1,0 +1,211 @@
+{
+  "format": "forge-r6-final-production-certification/v3",
+  "status": "PILOT-NO-GO",
+  "candidate_sha": "cda08faf3b2d0af5e5582f8f3b8e737cc44d92b2",
+  "tenant": "alu",
+  "origin": "https://alu.kairo.vn",
+  "mutation": "AUTHORIZED_PRODUCTION",
+  "completed_at": "2026-08-04T16:48:59.659Z",
+  "workflow_run_id": "30930160942",
+  "outcomes": {
+    "checkout": "success",
+    "ancestry": "success",
+    "credentials": "success",
+    "build": "success",
+    "workerd": "success",
+    "backup": "success",
+    "drill_create": "success",
+    "drill_restore": "success",
+    "cutover": "success",
+    "migrate": "success",
+    "migration_verify": "success",
+    "tenant_deploy": "success",
+    "app_deploy": "success",
+    "package_install": "failure",
+    "profile": "skipped",
+    "gateway": "skipped",
+    "pressure": "skipped",
+    "health": "skipped",
+    "provider": "skipped",
+    "identity": "skipped",
+    "pitr": "skipped",
+    "matrix": "skipped"
+  },
+  "evidence_matrix": null,
+  "migration": {
+    "format": "forge-r6-migration-convergence/v3",
+    "evidence_id": "R6-E06",
+    "candidate_sha": "cda08faf3b2d0af5e5582f8f3b8e737cc44d92b2",
+    "observed_at": "2026-08-04T16:45:12.468Z",
+    "expected": 80,
+    "applied": 80,
+    "pending": [],
+    "unknown": [],
+    "status": "PASS"
+  },
+  "backup": {
+    "format": "forge-backup-verification/v1",
+    "tenant": "alu",
+    "source_file": "alu-2026-08-04T16-41-38-649Z.sql",
+    "source_sha256": "695bae834b48d2d5daacecfd0773a5240f1b94fd87169f08a8039ec35aed6d8b",
+    "source_bytes": 11913547,
+    "manifest_verified": true,
+    "source_created_at": "2026-08-04T16:41:45.785Z",
+    "source_database_name": "cloudforge-alu",
+    "verified_at": "2026-08-04T16:44:01.474Z",
+    "local_restore_duration_ms": 135538,
+    "table_count": 97,
+    "migration_count": 79,
+    "quick_check": "ok",
+    "foreign_key_violations": 0,
+    "tenant_scope_violations": {
+      "documents": 0,
+      "doctype_definitions": 0,
+      "installed_apps": 0
+    },
+    "metadata_catalog_rows": {
+      "__standard__": 90,
+      "demo": 93
+    },
+    "import_rewrites": {
+      "oversized_installed_app_rows": 6,
+      "generated_statements": 398,
+      "max_statement_bytes": 32674
+    },
+    "cloudflare_mutated": false
+  },
+  "restore": {
+    "format": "forge-restore-drill/v1",
+    "tenant": "alu",
+    "source_file": "alu-2026-08-04T16-41-38-649Z.sql",
+    "source_sha256": "695bae834b48d2d5daacecfd0773a5240f1b94fd87169f08a8039ec35aed6d8b",
+    "source_bytes": 11913547,
+    "backup_manifest_verified": true,
+    "source_created_at": "2026-08-04T16:41:45.785Z",
+    "target_database_name": "cloudforge-drill-r6-30930160942",
+    "target_database_id": "9be8aad3-0455-4acb-ab77-ded5a7c98b99",
+    "restored_at": "2026-08-04T16:44:22.101Z",
+    "restore_duration_ms": 15295,
+    "table_count": 97,
+    "migration_count": 79,
+    "integrity": [
+      {
+        "quick_check": "ok"
+      }
+    ],
+    "foreign_key_violations": 0,
+    "tenant_scope_violations": {
+      "documents": 0,
+      "doctype_definitions": 0,
+      "installed_apps": 0
+    },
+    "import_rewrites": {
+      "oversized_installed_app_rows": 6,
+      "generated_statements": 398,
+      "max_statement_bytes": 32674
+    },
+    "routes_changed": false
+  },
+  "reconciliation": {
+    "format": "forge-r6-cutover-reconciliation/v3",
+    "evidence_id": "R6-E11",
+    "candidate_sha": "cda08faf3b2d0af5e5582f8f3b8e737cc44d92b2",
+    "observed_at": "2026-08-04T16:44:57.105Z",
+    "comparisons": [
+      {
+        "metric": "documents",
+        "source": {
+          "rows": "4269"
+        },
+        "restored": {
+          "rows": "4269"
+        },
+        "matches": true
+      },
+      {
+        "metric": "masters",
+        "source": {
+          "rows": "76"
+        },
+        "restored": {
+          "rows": "76"
+        },
+        "matches": true
+      },
+      {
+        "metric": "apps",
+        "source": {
+          "rows": "3"
+        },
+        "restored": {
+          "rows": "3"
+        },
+        "matches": true
+      },
+      {
+        "metric": "revisions",
+        "source": {
+          "rows": "3"
+        },
+        "restored": {
+          "rows": "3"
+        },
+        "matches": true
+      },
+      {
+        "metric": "migrations",
+        "source": {
+          "rows": "79"
+        },
+        "restored": {
+          "rows": "79"
+        },
+        "matches": true
+      },
+      {
+        "metric": "stock",
+        "source": {
+          "rows": "0",
+          "qty_micros": "0"
+        },
+        "restored": {
+          "rows": "0",
+          "qty_micros": "0"
+        },
+        "matches": true
+      },
+      {
+        "metric": "payment",
+        "source": {
+          "rows": "0",
+          "amount_minor": "0"
+        },
+        "restored": {
+          "rows": "0",
+          "amount_minor": "0"
+        },
+        "matches": true
+      },
+      {
+        "metric": "gl",
+        "source": {
+          "rows": "0",
+          "debit_minor": "0",
+          "credit_minor": "0"
+        },
+        "restored": {
+          "rows": "0",
+          "debit_minor": "0",
+          "credit_minor": "0"
+        },
+        "matches": true
+      }
+    ],
+    "status": "PASS"
+  },
+  "pitr": null,
+  "performance": null,
+  "release_health": null,
+  "provider": null,
+  "identity": null
+}
