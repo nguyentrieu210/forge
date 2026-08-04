@@ -47,7 +47,7 @@ test("VN Accounting Policy is versioned, evidence-bound and four-eyes controlled
 
 test("VAT dataset action is read-only and ruleset carries explicit account mapping", async () => {
   const parsed = parseAppManifest(await readAppSource(fileURLToPath(root)));
-  assert.equal(parsed.version, "1.6.0");
+  assert.equal(parsed.version, "1.6.1");
   const tax = parsed.doctypes.find((item) => item.name === "VN Tax Ruleset");
   assert.ok(tax);
   assert.equal(fields(tax).get("tax_accounts_json")?.fieldtype, "Code");
