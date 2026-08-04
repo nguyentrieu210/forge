@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SQLite regression for VN VAT account mapping migration 0096."""
+"""SQLite regression for VN VAT account mapping migrations 0096 + 0113."""
 
 import json
 import sqlite3
@@ -56,9 +56,13 @@ db.execute(
     ("demo", "VN Tax Ruleset", "Accounts", 0, 1, 0, 1, json.dumps(seed_meta), 0, "seed", "2026-08-03T00:00:00Z"),
 )
 migration = (root / "migrations/tenant/0096_vn_vat_dataset_mapping.sql").read_text(encoding="utf-8")
-db.executescript(migration)
-# Replay must not duplicate the field and trigger recreation must remain safe.
-db.executescript(migration)
+hardening = (root / "migrations/tenant/0113_vn_vat_account_mapping_guard_hardening.sql").read_text(encoding="utf-8")
+
+# Replay the canonical ordered pair. 0096 must remain untouched for applied-state
+# safety; 0113 deterministically replaces only its guards.
+for _ in range(2):
+    db.executescript(migration)
+    db.executescript(hardening)
 
 meta = json.loads(db.execute(
     "SELECT metadata_json FROM doctype_definitions WHERE tenant_id='demo' AND doctype='VN Tax Ruleset'"
@@ -99,6 +103,7 @@ def expect(marker, fn):
 
 expect("VN_VAT_ACCOUNT_MAPPING_INVALID", lambda: insert("VAT-BAD-JSON", "{"))
 expect("VN_VAT_ACCOUNT_MAPPING_INVALID", lambda: insert("VAT-MISSING-ARRAY", json.dumps({"input_vat": []})))
+expect("VN_VAT_ACCOUNT_MAPPING_INVALID", lambda: insert("VAT-WRONG-SHAPE", json.dumps({"input_vat": {}, "output_vat": []})))
 expect("VN_VAT_ACCOUNT_MAPPING_EMPTY", lambda: insert("VAT-EMPTY", json.dumps({"input_vat": [], "output_vat": []})))
 expect("VN_VAT_ACCOUNT_MAPPING_AMBIGUOUS", lambda: insert(
     "VAT-AMBIGUOUS", json.dumps({"input_vat": ["1331"], "output_vat": ["1331"]})
@@ -115,6 +120,9 @@ db.commit()
 # Real form flow is draft -> submit UPDATE and must enforce the same gate.
 draft = insert("VAT-DRAFT", "{}", docstatus=0)
 db.commit()
+draft["tax_accounts_json"] = json.dumps({"input_vat": []})
+expect("VN_VAT_ACCOUNT_MAPPING_INVALID", lambda: update_submit("VAT-DRAFT", draft))
+
 draft["tax_accounts_json"] = json.dumps({"input_vat": [], "output_vat": []})
 expect("VN_VAT_ACCOUNT_MAPPING_EMPTY", lambda: update_submit("VAT-DRAFT", draft))
 
@@ -123,4 +131,4 @@ update_submit("VAT-DRAFT", draft)
 db.commit()
 
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-print("VN_VAT_ACCOUNT_MAPPING_0096_PASS")
+print("VN_VAT_ACCOUNT_MAPPING_0096_0113_PASS")
