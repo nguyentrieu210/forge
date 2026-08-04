@@ -9,6 +9,7 @@ import {
   calculateSupplierRating,
   validateSupplierContractPolicy,
 } from "./supplier-policy.js";
+import type { PurchaseOrderData } from "./types.js";
 
 export interface SupplierQualificationData extends JsonObject {
   supplier: string;
@@ -61,6 +62,7 @@ abstract class SupplierLifecycleController<T extends JsonObject> implements Docu
   abstract submittedStatus: string;
 
   async buildPlan(context: ControllerContext<T>): Promise<MutationPlan<T>> {
+    if (context.command.action === "cancel") requirePurchaseManager(context);
     const existing = context.existing;
     const data = context.command.action === "cancel"
       ? structuredClone(requireExisting(existing).data)
@@ -161,6 +163,24 @@ export class SupplierQualificationController extends SupplierLifecycleController
 export class SupplierContractController extends SupplierLifecycleController<SupplierContractData> {
   readonly doctype = "Supplier Contract";
   submittedStatus = "Active";
+
+  override async buildPlan(context: ControllerContext<SupplierContractData>): Promise<MutationPlan<SupplierContractData>> {
+    if (context.command.action === "cancel") {
+      requirePurchaseManager(context);
+      const purchaseOrders = await context.reader.listDocumentsByDoctype<PurchaseOrderData>(
+        context.command.tenant_id,
+        "Purchase Order",
+      );
+      for (const purchaseOrder of purchaseOrders) {
+        if (purchaseOrder.docstatus !== 1) continue;
+        const raw = purchaseOrder.data as JsonObject;
+        if (raw.supplier_contract === context.command.aggregate.name) {
+          throw errors.reference(`Supplier Contract cannot be cancelled while submitted Purchase Order ${purchaseOrder.name} uses it`);
+        }
+      }
+    }
+    return super.buildPlan(context);
+  }
 
   async normalize(context: ControllerContext<SupplierContractData>): Promise<SupplierContractData> {
     const input = context.command.document;
