@@ -80,7 +80,8 @@ jobs:
           cd /tmp/a22
           python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
           python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
-          git diff --check 19daa919bf4a4af561ff0c5033db0d39c6276603...HEAD -- server/scripts/rc4-cross-ledger-reconciliation.py .github/workflows/rc4-a22-cross-ledger-reconciliation.yml
+          git merge-base --is-ancestor e7ed63c5f2f90c443b7b552d99bfa79cb5b2a742 HEAD
+          git diff --quiet e7ed63c5f2f90c443b7b552d99bfa79cb5b2a742...HEAD -- server/scripts/rc4-cross-ledger-reconciliation.py .github/workflows/rc4-a22-cross-ledger-reconciliation.yml
 
       - name: Revalidate current A23 performance-scale head
         shell: bash
