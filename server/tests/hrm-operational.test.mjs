@@ -57,6 +57,12 @@ const employee = {
   employee_status: "Đang làm việc",
 };
 
+const operationalPayrollFormula = JSON.stringify({
+  schema_version: 1,
+  currency: "USD",
+  outputs: { noop: { const_minor: "0" } },
+});
+
 test("approved employee transfer becomes effective state for later HR transactions", async () => {
   const masters = {
     "Employee:EMP-1": employee,
@@ -113,7 +119,7 @@ test("salary slip input is generated from effective structure, attendance and se
     "VN Payroll Rule:RULE-1": {
       rule_code: "RULE-1", effective_from: "2026-01-01", effective_to: "2026-12-31",
       legal_document_no: "LEGAL-2026", source_url: "https://example.test/legal-2026",
-      formula_json: "{\"version\":1}", approved_by: "payroll.manager@example.test", approved_at: "2026-01-01T00:00:00Z",
+      formula_json: operationalPayrollFormula, approved_by: "payroll.manager@example.test", approved_at: "2026-01-01T00:00:00Z",
     },
   };
   const documents = {
@@ -165,7 +171,7 @@ test("generated salary slip recomputes authoritative inputs instead of trusting 
     "VN Payroll Rule:RULE-1": {
       rule_code: "RULE-1", effective_from: "2026-01-01", effective_to: "2026-12-31",
       legal_document_no: "LEGAL-2026", source_url: "https://example.test/legal-2026",
-      formula_json: "{\"version\":1}", approved_by: "payroll.manager@example.test", approved_at: "2026-01-01T00:00:00Z",
+      formula_json: operationalPayrollFormula, approved_by: "payroll.manager@example.test", approved_at: "2026-01-01T00:00:00Z",
     },
   };
   const documents = {
