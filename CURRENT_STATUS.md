@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Ngày cập nhật: **2026-08-04**.
+Ngày cập nhật: **2026-08-05**.
 
 GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge và production evidence. File này chỉ giữ **live verified state**, không giữ lịch sử dài.
 
@@ -9,11 +9,16 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
 - Product baseline: **Forge 0.2.0 — Enterprise Parallel Baseline**.
-- RC4 integrated closure: DONE.
-- R5 integrated hardening/productization: **DONE / R5-GO**.
-- R5 merge commit: `main@7940331c589d4e5699cf00e2ec843c5a7b8c50ac` via PR `#638`.
-- R5 final verdict used an explicit project-owner waiver for the remaining browser/visual QA gate; non-visual engineering/package/runtime/domain/migration/reconciliation gates were green before merge.
-- No production deploy, production migration, DNS/secret/provider mutation or customer-data cutover is implied by R5 closure.
+- RC4 integrated closure: **DONE**.
+- R5 integrated hardening/productization: **DONE / R5-GO** via PR `#638`.
+- R6 Production Certification: **DONE / PILOT-GO**.
+- Exact R6 certified/deployed source SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
+- Canonical full production deploy run: `30952411424` — **SUCCESS**.
+- Final post-release certification run: `30952703083` — **SUCCESS**.
+- Final machine evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json`.
+- Authorization/orchestration evidence: `deploy-evidence/r6-authorized-orchestrator-49315112a211.json`.
+
+Evidence/docs commits after the certified SHA may advance `main`; they do not change the exact deployed product identity. Any later product-source change requires new exact-release evidence before it can be claimed as deployed/certified.
 
 ## 2. Capability truth
 
@@ -30,42 +35,52 @@ Latest accepted materialized distribution remains:
 | Missing | 157 |
 | **Total** | **956** |
 
-R5 focused on integration/productization and did not justify reopening a blanket capability-promotion wave.
+R6 did not reopen a blanket capability-promotion wave. Pilot-critical acceptance was proven by exact package/profile/runtime/domain evidence instead.
 
-## 3. R5 closure state
+## 3. R6 final certification truth
 
-R5 converged the implementation needed before production certification, including:
+The exact candidate `49315112a21182d2ce077b08a1fb9e26db07fd36` is certified **PILOT-GO** for the ALU Alumdoor controlled pilot.
 
-- package dependency/version hardening;
-- canonical capability-profile persistence and activation semantics;
-- System Manager/session/CSRF guarded capability profile snapshot/preview/apply;
-- hosted capability-profile authoring surface;
-- capability-aware hook fanout and retry suppression;
-- canonical Workplace scheduled notification wiring;
-- Finance/HCM reconciliation;
-- commercial/supply-chain quantity authority cleanup;
-- Manufacturing/QMS/Service integrated regression;
-- package lifecycle, migration governance, cross-ledger and runtime build evidence.
+Verified final identity:
 
-The historical R5 browser/visual QA waiver does not reopen R5. R6 may still use bounded functional browser evidence when required to prove an authenticated exact-release path or Alumdoor Golden Flow.
+- release SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`;
+- UI bundle hash: `838218167db020d8`;
+- Alumdoor: `2.2.3`;
+- HRM: `1.8.0`;
+- VN Accounting: `1.6.1`;
+- active capability profile: `alumdoor-pilot@1`;
+- profile valid: `true`;
+- blocked capabilities: none.
 
-## 4. Current production/provider truth
+Final evidence state:
 
-Forge is **not yet production-certified for the new R5 candidate**.
+- R6 evidence matrix: **23/23 PASS** (`R6-E01..R6-E23`);
+- migration inventory: **80 expected / 80 applied / 0 pending / 0 unknown**;
+- fresh production backup manifest/replay: PASS;
+- disposable remote D1 restore: PASS;
+- source/restored reconciliation: PASS;
+- PITR capability/read-only bookmark plan: PASS;
+- auth/session/CSRF/tenant-isolation evidence: PASS;
+- provider/bindings/observability evidence: PASS;
+- exact release health and guest boundary: PASS;
+- authenticated Golden Flow + Stock/Finance readback + correction/idempotency/warranty lineage: PASS;
+- bounded live pressure: 50 requests, concurrency 5, 0 errors, p50 21.84 ms, p95 78.08 ms, p99 97.82 ms, 141.85 RPS.
 
-Still to prove in R6:
+No unresolved R6 blocker remains in controlled-pilot scope.
 
-- exact candidate/release/package/profile identity lock;
-- Cloudflare desired-vs-observed state for pilot-used resources;
-- exact deployed release marker and bundle hash;
-- applied migration inventory on the target context;
-- backup replay + disposable restore/cutover rehearsal;
-- truthful PITR/rollback/recovery boundaries;
-- representative bounded performance/observability evidence;
-- auth/tenant/security acceptance on the candidate;
-- authenticated exact-release Alumdoor Golden Flow with correction/readback evidence.
+## 4. Current production/pilot truth
 
-Historical ALU production releases are operational history, not proof that `7940331c...` or any future R6 candidate is deployed.
+`https://alu.kairo.vn` has been observed serving the exact certified R6 release SHA and bundle hash.
+
+This means Forge is **production-certified for entry into the controlled Alumdoor pilot**. It does **not** mean:
+
+- customer opening/master data has been imported;
+- parallel run has completed;
+- business cutover has been accepted;
+- hypercare has completed;
+- GA has been declared.
+
+Those are Controlled Pilot gates, not R6 gates.
 
 ## 5. Current architecture authorities
 
@@ -81,29 +96,30 @@ Historical ALU production releases are operational history, not proof that `7940
 
 ## 6. Active program
 
-The active program is now:
+The active sequence is now:
 
-`R5 COMPLETE -> R6 production certification -> Alumdoor controlled pilot -> GA`
+`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Alumdoor Controlled Pilot -> Pilot Exit Gate -> Accepted Production Reference -> GA`
 
-Canonical R6 planning on the active planning branch:
+The active queue is `NEXT_TASKS.md`.
 
-- `docs/agents/r6/README.md`
-- `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`
-- `docs/agents/r6/OPEN_ORDER.md`
-- `docs/agents/r6/AGENT_PROMPTS.md`
-- `docs/agents/r6/EVIDENCE_MATRIX.md`
+R6 durable evidence remains under:
 
-R6 starts from R5 merge commit `7940331c...`, but R6-00 must resolve exact current `main` before locking the certification candidate.
+- `docs/agents/r6/README.md`;
+- `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md`;
+- `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`;
+- `docs/agents/r6/EVIDENCE_MATRIX.md`;
+- `deploy-evidence/r6-final-production-certification-49315112a211.json`.
 
 ## 7. Standing boundaries
 
-- Do not implement all 157 Missing capabilities to raise a score; only pilot-critical/shared-safety gaps can become bounded R6 fixes.
-- Source/config presence does not equal observed provider state.
-- Exact release evidence is invalid after a source-changing fix unless affected lanes rerun on the new SHA.
-- Production deploy/migration/restore/PITR, DNS/route/secret/provider mutation and customer-data write/cutover remain explicit authorization boundaries.
+- R6 `PILOT-GO` authorizes entry into controlled pilot; it is not GA.
+- Real customer/master/opening-data import or mutation remains an explicit authorization boundary.
+- Production restore/PITR, DNS/route/secret/provider mutation and destructive queue/state operations remain explicit authorization boundaries.
+- Pilot cutover requires reconciliation and an explicit cutover decision; it is not implied by technical certification.
 - Worker rollback does not imply D1/KV/R2/external-state rollback.
-- R5's subjective browser/visual QA waiver stands; R6 does not re-open visual polish as a release program.
+- Source/config presence does not equal observed provider state.
+- A future source-changing fix invalidates exact-SHA deployment claims until affected release evidence reruns.
 
 ## 8. Documentation authority
 
-Start at `docs/README.md`, then `docs/agents/r6/README.md` for the active certification program. Old agent boards/prompts/handoffs from closed programs are provenance, not live authority.
+Start at `docs/README.md`, then `NEXT_TASKS.md` for the controlled-pilot queue. R6 coordination prompts/order are removed after closure; Git history retains their provenance.
