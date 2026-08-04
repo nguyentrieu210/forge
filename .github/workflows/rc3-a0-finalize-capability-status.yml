@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/rc3-00-capability-convergence
+      - program/rc3-exact-main-release-confidence-20260804
     paths:
       - "server/scripts/rc3-finalize-capability-status.mjs"
       - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
@@ -61,8 +62,6 @@ jobs:
           if not repaired_regex:
               raise SystemExit("RC3 evidence regex line not found")
 
-          # Treat the already-materialized canonical Markdown as a no-op even after
-          # whitespace normalization removed Markdown hard-break trailing spaces.
           block_start = next((i for i, line in enumerate(lines) if line.strip() == 'if (typeof pattern === "string") {'), None)
           if block_start is None:
               raise SystemExit("RC3 replaceOnce string block not found")
@@ -115,7 +114,7 @@ jobs:
         run: git diff --check
 
       - name: Materialize generated convergence on A0 head
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/rc3-00-capability-convergence' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: (github.event_name == 'push' && github.ref_name == 'agent/rc3-00-capability-convergence') || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/rc3-00-capability-convergence' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           if git diff --quiet; then
             echo "RC3 canonical files already generated."
