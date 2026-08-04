@@ -44,20 +44,60 @@ jobs:
         with:
           node-version: 22
 
-      - name: Repair generator regex syntax
+      - name: Repair generator syntax deterministically
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
           path = Path("server/scripts/rc3-finalize-capability-status.mjs")
           lines = path.read_text().splitlines()
-          repaired = False
+
+          # Repair the Evidence Index regex without nested JS template-literal backticks.
+          repaired_regex = False
           for i, line in enumerate(lines):
               if i > 0 and "Object.entries(evidence)" in lines[i - 1] and "const re = new RegExp(" in line:
                   lines[i] = '  const re = new RegExp("^- `" + key + "`:[^\\\\n]*$", "m");'
-                  repaired = True
+                  repaired_regex = True
                   break
-          if not repaired:
+          if not repaired_regex:
               raise SystemExit("RC3 evidence regex line not found")
+
+          # Markdown code ticks inside these multiline JS template literals must be escaped.
+          starts = (
+              "const top30 = `",
+              "const currentBlock = `",
+              "const rc3Next = `",
+          )
+          in_block = False
+          for i, line in enumerate(lines):
+              stripped = line.strip()
+              if not in_block and any(stripped.startswith(prefix) for prefix in starts):
+                  in_block = True
+                  # Preserve the opening delimiter, escape only additional ticks on the start line.
+                  first = line.find("`")
+                  prefix, rest = line[: first + 1], line[first + 1 :]
+                  out = []
+                  for j, ch in enumerate(rest):
+                      if ch == "`" and (j == 0 or rest[j - 1] != "\\"):
+                          out.append("\\`")
+                      else:
+                          out.append(ch)
+                  lines[i] = prefix + "".join(out)
+                  continue
+              if in_block:
+                  if stripped == "`;":
+                      in_block = False
+                      continue
+                  out = []
+                  for j, ch in enumerate(line):
+                      if ch == "`" and (j == 0 or line[j - 1] != "\\"):
+                          out.append("\\`")
+                      else:
+                          out.append(ch)
+                  lines[i] = "".join(out)
+          if in_block:
+              raise SystemExit("RC3 multiline template sanitizer found an unterminated block")
+
           path.write_text("\n".join(lines) + "\n")
           PY
           node --check server/scripts/rc3-finalize-capability-status.mjs
