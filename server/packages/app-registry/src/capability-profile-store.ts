@@ -53,6 +53,30 @@ function canonicalProposal(proposal: CapabilityProfileProposal): CapabilityProfi
   };
 }
 
+/**
+ * OCC and preview deltas describe the APPLY command, not the desired active profile.
+ * They must not participate in idempotency: retrying the same composition after version
+ * 1 naturally carries expected_version=1 and an empty current-vs-proposed diff, while the
+ * tenant's effective capability state is byte-for-byte the same.
+ */
+function semanticProfileState(proposal: CapabilityProfileProposal, resolution: CapabilityResolutionPlan) {
+  const normalized = canonicalProposal(proposal);
+  return {
+    proposal: {
+      profile_id: normalized.profile_id,
+      selections: normalized.selections,
+    },
+    resolution: {
+      profile_id: resolution.profile_id,
+      valid: resolution.valid,
+      capabilities: resolution.capabilities,
+      errors: resolution.errors,
+      implicit_enables: resolution.implicit_enables,
+      package_requirements: resolution.package_requirements,
+    },
+  };
+}
+
 export class CapabilityProfileStore {
   private readonly db: D1Database | D1DatabaseSession;
 
@@ -143,8 +167,10 @@ export class CapabilityProfileStore {
     if (expected !== null && expected !== currentVersion) throw errors.version(currentVersion);
 
     const normalized = canonicalProposal(proposal);
-    const fingerprint = await sha256Hex({ proposal: normalized, resolution });
-    const currentFingerprint = current ? await sha256Hex({ proposal: canonicalProposal(current.proposal), resolution: current.resolution }) : null;
+    const fingerprint = await sha256Hex(semanticProfileState(normalized, resolution));
+    const currentFingerprint = current
+      ? await sha256Hex(semanticProfileState(current.proposal, current.resolution))
+      : null;
     if (current && current.profile_id === proposal.profile_id && fingerprint === currentFingerprint) {
       return { ...current, outcome: "unchanged" };
     }
