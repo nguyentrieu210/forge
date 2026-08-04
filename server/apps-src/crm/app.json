@@ -6,6 +6,7 @@
   "externalDocTypes": [
     { "name": "Company", "kind": "master", "app": "accounts" },
     { "name": "Customer", "kind": "master", "app": "selling" },
+    { "name": "Customer Group", "kind": "tree", "app": "selling" },
     { "name": "Currency", "kind": "master", "app": "accounts" },
     { "name": "Territory", "kind": "tree", "app": "selling" },
     { "name": "User", "kind": "system", "app": "core" },
