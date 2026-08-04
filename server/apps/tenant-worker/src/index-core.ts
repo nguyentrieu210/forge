@@ -8,7 +8,7 @@ import {
   type HookDeliveryOutcome,
   type HookTarget,
 } from "../../../packages/app-registry/src/index.js";
-import type { DomainEvent, JsonObject } from "../../../packages/contracts/src/index.js";
+import type { DomainEvent, JsonObject, JsonValue } from "../../../packages/contracts/src/index.js";
 import { errorResponse, jsonResponse } from "../../../packages/core/src/index.js";
 import {
   runWorkplaceScheduledNotifications,
@@ -108,6 +108,10 @@ export async function runMaintenance(
   }
 }
 
+function jsonSafe(value: unknown): JsonValue {
+  return JSON.parse(JSON.stringify(value)) as JsonValue;
+}
+
 function jsonResponseFrom(base: Response, body: JsonObject): Response {
   const headers = new Headers(base.headers);
   headers.set("content-type", "application/json; charset=utf-8");
@@ -134,7 +138,7 @@ export default {
         const event = await eventRequest.json() as DomainEvent;
         const body = await response.json() as JsonObject;
         const hooks = await fanOutEffectiveHooks(env, event.tenant_id, event);
-        return jsonResponseFrom(response, { ...body, hooks } as JsonObject);
+        return jsonResponseFrom(response, { ...body, hooks: jsonSafe(hooks) });
       }
 
       if (request.method === "POST" && url.pathname === "/internal/maintenance") {
@@ -151,7 +155,7 @@ export default {
           ? (await dispatcherFor(env).sweep(tenantId, now)).length
           : 0;
         const workplace = await runWorkplaceScheduledNotifications(env.DB, tenantId, now);
-        return jsonResponseFrom(response, { ...body, hooks, workplace } as JsonObject);
+        return jsonResponseFrom(response, { ...body, hooks, workplace: jsonSafe(workplace) });
       }
 
       return baseWorker.fetch(request, env);
