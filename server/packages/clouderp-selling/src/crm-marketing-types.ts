@@ -6,11 +6,11 @@ export type CrmConsentRequirement = "Any" | "Granted";
 export interface CrmSegmentData extends JsonObject {
   company: string;
   segment_name: string;
-  territory?: string;
-  lead_source?: string;
-  consent_requirement?: CrmConsentRequirement;
-  status?: CrmMarketingConfigStatus;
-  notes?: string;
+  territory?: string | undefined;
+  lead_source?: string | undefined;
+  consent_requirement?: CrmConsentRequirement | undefined;
+  status?: CrmMarketingConfigStatus | undefined;
+  notes?: string | undefined;
 }
 
 export type CrmMarketingListStatus = "Draft" | "Active" | "Archived";
@@ -18,9 +18,9 @@ export type CrmMarketingListStatus = "Draft" | "Active" | "Archived";
 export interface CrmMarketingListData extends JsonObject {
   company: string;
   list_name: string;
-  segment?: string;
-  status?: CrmMarketingListStatus;
-  notes?: string;
+  segment?: string | undefined;
+  status?: CrmMarketingListStatus | undefined;
+  notes?: string | undefined;
 }
 
 export type CrmMarketingMemberStatus = "Active" | "Unsubscribed";
@@ -30,11 +30,11 @@ export interface CrmMarketingListMemberData extends JsonObject {
   company: string;
   marketing_list: string;
   contact: string;
-  source?: CrmMarketingMemberSource;
-  status?: CrmMarketingMemberStatus;
-  added_at?: string;
-  unsubscribed_at?: string;
-  unsubscribed_reason?: string;
+  source?: CrmMarketingMemberSource | undefined;
+  status?: CrmMarketingMemberStatus | undefined;
+  added_at?: string | undefined;
+  unsubscribed_at?: string | undefined;
+  unsubscribed_reason?: string | undefined;
 }
 
 export type CrmCampaignChannel = "Email" | "SMS" | "Phone" | "Social" | "Other";
@@ -49,9 +49,9 @@ export interface CrmCampaignData extends JsonObject {
   budget: string;
   start_date: string;
   end_date: string;
-  owner_user?: string;
-  status?: CrmCampaignStatus;
-  notes?: string;
+  owner_user?: string | undefined;
+  status?: CrmCampaignStatus | undefined;
+  notes?: string | undefined;
 }
 
 export type CrmAttributionModel = "First Touch" | "Last Touch" | "Influenced";
@@ -63,10 +63,10 @@ export interface CrmCampaignAttributionData extends JsonObject {
   deal: string;
   model: CrmAttributionModel;
   attribution_percent: string;
-  deal_amount?: string;
-  currency?: string;
-  deal_status?: string;
-  attributed_value?: string;
-  status?: CrmAttributionStatus;
-  notes?: string;
+  deal_amount?: string | undefined;
+  currency?: string | undefined;
+  deal_status?: string | undefined;
+  attributed_value?: string | undefined;
+  status?: CrmAttributionStatus | undefined;
+  notes?: string | undefined;
 }
