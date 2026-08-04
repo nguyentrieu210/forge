@@ -9,15 +9,25 @@ Tài liệu trong repo được chia theo **authority**, không theo số lượ
 1. `README.md` — entrypoint dự án.
 2. `CURRENT_STATUS.md` — trạng thái đã xác minh gần nhất.
 3. `NEXT_TASKS.md` — hàng đợi active, hiện là Alumdoor Controlled Pilot.
-4. `docs/pilot/alumdoor/README.md` — active pilot authority/read order.
-5. `PROJECT_CONTEXT.md` — kiến trúc và source-of-truth hiện hành.
-6. `AI_HANDOFF.md` — handoff ngắn cho phiên tiếp theo.
-7. `docs/ops/SRE_RUNBOOK.md` — release/recovery/data-safety operator intent.
-8. `skills/forge-enterprise-completion/SKILL.md` — execution policy cho agent.
+4. `PROJECT_CONTEXT.md` — architecture/source-of-truth hiện hành.
+5. `docs/pilot/alumdoor/README.md` — active pilot authority/read order.
+6. `docs/BRAND_AND_NAMING.md` — product/technical naming authority.
+7. `AI_HANDOFF.md` — handoff ngắn cho phiên tiếp theo.
+8. `docs/ops/SRE_RUNBOOK.md` — release/recovery/data-safety operator intent.
+9. `skills/forge-enterprise-completion/SKILL.md` — execution policy cho agent.
 
-Không dùng board/handoff của program cũ để suy live state.
+Không dùng board/handoff/status snapshot của program/component cũ để suy live state.
 
-## 2. Active program — Alumdoor Controlled Pilot
+## 2. Product / strategic authority
+
+- `docs/FORGE_ENTERPRISE_NORTH_STAR.md` — strategic completion target.
+- `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` — canonical capability denominator/checklist.
+- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` — materialized maturity truth.
+- `docs/ROADMAP.md` — strategic sequencing, không phải live task queue.
+- `docs/BRAND_AND_NAMING.md` — một product brand Forge; technical identifiers được phân loại riêng.
+- `docs/FORGE_REPOSITORY_NORTH_STAR_AUDIT_20260805.md` — repo-wide docs/brand/hygiene rebaseline record.
+
+## 3. Active program — Alumdoor Controlled Pilot
 
 R6 Production Certification đã hoàn tất với `PILOT-GO` cho exact deployed candidate:
 
@@ -49,13 +59,6 @@ Final R6 entry authority remains:
 4. `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`
 5. `docs/agents/r6/EVIDENCE_MATRIX.md`
 
-## 3. Strategic authority
-
-- `docs/FORGE_ENTERPRISE_NORTH_STAR.md` — đích sản phẩm dài hạn.
-- `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` — mẫu số capability.
-- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` — maturity materialized gần nhất.
-- `docs/ROADMAP.md` — hướng dài hạn, không phải live status.
-
 ## 4. Architecture / product contracts
 
 - `docs/ARCHITECTURE.md`
@@ -80,7 +83,19 @@ History được giữ khi cần chứng minh vì sao current state tồn tại.
 
 Worker evidence cụ thể có thể được giữ nếu chứa test/provenance/decision chưa được final record thay thế hoàn toàn.
 
-## 6. Files không nên sống lâu trên `main`
+## 6. Brand rule
+
+Product brand cấp platform là **Forge**.
+
+- `MetaForge` / `CloudForge` không còn được dùng như umbrella product brands trong live prose.
+- `@metaforge/*`, `metaforge.api.*`, `cloudforge-*` được giữ khi là technical identifier thật.
+- `Kairo` chỉ giữ khi là exact environment/domain identifier hoặc historical evidence; không dùng làm brand mới mặc định.
+- Alumdoor giữ identity vertical riêng.
+- Frappe/ERPNext là compatibility/benchmark/reference, không phải tagline của Forge.
+
+Chi tiết: `BRAND_AND_NAMING.md`.
+
+## 7. Files không nên sống lâu trên `main`
 
 Sau khi một program đã converge/merge, mặc định xóa khỏi `main` các tài liệu chỉ phục vụ điều phối tạm thời:
 
@@ -90,11 +105,12 @@ Sau khi một program đã converge/merge, mặc định xóa khỏi `main` các
 - `NO_STOP_RULE.md` riêng khi Skill/Protocol đã bao phủ;
 - `*-HANDOFF.md` chỉ chứa branch/PR/snapshot đã superseded;
 - topology/bootstrap verification chỉ dùng để khởi tạo program;
-- legacy PR inbox đã được disposition xong.
+- legacy PR inbox đã được disposition xong;
+- point-in-time deploy/status/local consolidation notes đã có durable evidence thay thế.
 
 Git history và PR history là nơi tra provenance của các file đã xóa; không cần giữ bản stale trên `main`.
 
-## 7. Retention rule
+## 8. Retention rule
 
 Giữ file nếu nó còn ít nhất một trong các vai trò sau:
 
@@ -105,4 +121,17 @@ Giữ file nếu nó còn ít nhất một trong các vai trò sau:
 - final convergence/audit record;
 - user-facing operating documentation.
 
-Nếu file chỉ mô tả một branch/agent/wave đã đóng và final evidence đã thay thế, ưu tiên xóa thay vì gắn thêm nhãn `SUPERSEDED` rồi để tồn tại vô hạn.
+Nếu file chỉ mô tả một branch/agent/component version/deploy snapshot đã đóng và final evidence đã thay thế, ưu tiên xóa thay vì gắn thêm nhãn `SUPERSEDED` rồi để tồn tại vô hạn.
+
+## 9. Hygiene checkpoint — 2026-08-05
+
+Repository hygiene/rebaseline branch removes superseded coordination/status artifacts and refreshes current entrypoints against the North Star.
+
+Historical names may still appear in:
+
+- technical package/import/API identifiers;
+- exact Cloudflare resource/domain names;
+- historical final evidence;
+- commit/PR history.
+
+Those occurrences do not create a second current product brand or live authority.

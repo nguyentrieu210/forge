@@ -1,78 +1,131 @@
 # FORGE ROADMAP
 
-> **NOT LIVE STATUS.** Tài liệu này chỉ giữ hướng chiến lược. Không dùng để suy ra branch hiện tại, CI, production state hoặc task đang làm.
->
+> **Strategic roadmap, not live status.**  
 > Live state: `../CURRENT_STATUS.md`  
 > Active queue: `../NEXT_TASKS.md`  
-> Operating rules: `../RUNBOOK.md`
+> Strategic completion target: `FORGE_ENTERPRISE_NORTH_STAR.md`
 
-Ngày làm sạch: **2026-08-02**.
+Ngày rebaseline: **2026-08-05**.
 
-## Nền tảng đã hình thành
+## 1. Product direction
 
-Forge là monorepo gồm CloudForge backend và MetaForge frontend, hướng tới nền ERP tương thích hành vi Frappe trên Cloudflare với metadata/app factory và nghiệp vụ ERP riêng.
+Forge is one enterprise operating platform, not separate CloudForge/MetaForge products.
 
-Các capability nền đã có source/test/evidence qua nhiều đợt phát triển:
+North Star:
 
-- Frappe-shaped API, cookie session + CSRF, document lifecycle và permission enforcement.
-- Custom Field / Property Setter và effective metadata.
-- App package/install/migrate contract và first-party metadata compiler.
-- MetaForge Desk, builder, canonical Form renderer và view-policy boundary.
-- Sales-to-Production, Purchase/Tiến Đạt FIFO, stock ledger, physical stock, catch-weight, stock RBAC và reservation availability.
-- Cloudflare deployment/release workflows và production evidence ở các checkpoint trước.
+- deep ERP core + Vietnam compliance;
+- metadata-driven multi-tenant Cloudflare platform;
+- App Factory/BPM/semantic BI/AI;
+- fast verticalization without runtime forks;
+- migration, implementation and SRE strong enough for real customer adoption.
 
-Danh sách này không có nghĩa mọi capability đã được deploy production ở cùng một SHA.
+Frappe/ERPNext and MISA are benchmarks/reference sources, not product identity.
 
-## Hướng phát triển nghiệp vụ
+## 2. Current program position
 
-### P0 — Stock acceptance
+Completed:
 
-Hoàn tất acceptance tồn kho bằng dữ liệu/auth thật ở local/ephemeral QA:
+- RC4 integrated engineering/evidence closure;
+- R5 integrated hardening/productization;
+- R6 production certification with `PILOT-GO`;
+- Alumdoor Pilot-00 contract/profile/data-mapping lock.
 
-- QR + batch/bundle/voucher lineage end-to-end;
-- cleanup QA không residue;
-- desktop/mobile + permission/session/CSRF failure paths.
+Current active gate:
 
-Reservation/available-stock acceptance đã merge trong PR `#175`; không mở lại cùng slice nếu không có regression cụ thể.
+- **Pilot-01 — Master + Opening Data Readiness**;
+- preview/control-plane ready;
+- waiting for an approved immutable real source batch;
+- no production import/write authorization implied.
 
-### P1 — Daily detailed ledger
+The exact operational sequence is maintained only in `../NEXT_TASKS.md`.
 
-- snapshot theo ngày và dimension nghiệp vụ;
-- freeze sau khóa;
-- adjustment append-only với reason/actor/timestamp;
-- reconciliation Sales/Purchase/Inventory/Manufacturing/Finance;
-- tenant + permission boundary.
+## 3. Near-term roadmap — prove one real operating reference
 
-### P2 — Warranty / defects / capacity
+Priority is not another blanket feature wave. Priority is proving that the frozen Alumdoor candidate can become an accepted production reference.
 
-- bảo hành và defect ownership/cost;
-- supplier provisional AP hold/offset có phê duyệt;
-- capacity theo department/workstation calendar;
-- overtime/overload policy và evidence.
+Sequence:
 
-### P3 — End-to-end acceptance
+1. Pilot-01 real source batch + `PREVIEW_PASS`.
+2. Pilot-02 representative transaction dry run.
+3. Pilot-03 bounded parallel run + daily reconciliation.
+4. Pilot-04 explicit cutover decision.
+5. Pilot-05 hypercare + Pilot Exit Gate.
+6. Accepted Production Reference.
 
-Khóa hành trình xuyên miền:
+Only after this proof should broad platform maturity work reopen unless a pilot blocker requires it.
 
-`Sales Order -> Production -> Material/Stock -> Delivery -> Invoice/Debt -> Daily Ledger -> Adjustment -> Warranty`
+## 4. North Star expansion priorities
 
-Acceptance phải dùng role nghiệp vụ và authoritative persistence; không thay bằng mock-only evidence.
+After/alongside pilot lessons, product investment follows the 12 North Star pillars rather than old component/version roadmaps.
 
-## Hướng phát triển nền tảng
+### Priority A — ERP financial/transaction correctness
 
-Các việc nền tảng chỉ mở khi có nhu cầu nghiệp vụ hoặc lỗi được chứng minh, thay vì tạo một hàng đợi song song không có owner:
+- Finance + Vietnam compliance;
+- CRM/Revenue 360;
+- Source-to-Pay;
+- Inventory/WMS;
+- MRP II/QMS;
+- HCM/statutory payroll;
+- Project/Service/Field Service.
 
-- Frappe/API compatibility gaps còn thực sự được client/app dùng;
-- metadata compiler/runtime safety;
-- app packaging/installer evolution;
-- performance/multi-tenant hardening;
-- release/rollback/backup evidence;
-- MetaForge usability/accessibility trên desktop/mobile.
+Target: end-to-end flows with correction/reversal, permission, reconciliation, import/export and reporting—not screen count.
 
-## Production boundary
+### Priority B — platform moat
 
-Roadmap không cấp quyền deploy. Production deploy, production migration, production secret/DNS và customer-data mutation chỉ thực hiện khi user yêu cầu rõ theo `RUNBOOK.md` và `DELIVERY_POLICY.md`.
+- BPM + App Factory;
+- semantic BI/planning;
+- Integration Hub;
+- enterprise IAM/SaaS control plane/SRE;
+- migration/implementation/customer success;
+- permission-aware AI/automation.
 
-## Hồ sơ lịch sử
+### Priority C — verticalization
 
-Chi tiết implementation cũ phải tra bằng Git history, merged PR và docs chuyên đề tương ứng. Không giữ snapshot branch/CI/deploy cũ trong roadmap vì chúng nhanh chóng trở thành thông tin sai cho agent kế tiếp.
+Open new verticals only when there is market/customer demand and the vertical can reuse shared authorities.
+
+Alumdoor remains the reference vertical for proving:
+
+- package/profile composition;
+- industry-specific rules isolated from core;
+- migration/onboarding;
+- operational reporting;
+- production pilot/cutover discipline.
+
+## 5. Maturity targets
+
+Strategic targets from the North Star:
+
+| Layer | Target |
+|---|---:|
+| L0 Platform | 95%+ Hardened/RC |
+| L1 ERP Core | 90%+ business-complete |
+| L2 Enterprise Depth | 75–85%+ |
+| L3 chosen vertical | 95% industry workflow coverage |
+
+These are targets, not current claims. Current maturity truth remains in `FORGE_ENTERPRISE_CAPABILITY_STATUS.md` and `CURRENT_STATUS.md`.
+
+## 6. Rules for opening work
+
+A roadmap item should become active only when one of these is true:
+
+- required by current pilot/customer outcome;
+- closes a proven correctness/security/reconciliation gap;
+- materially advances a North Star pillar;
+- creates a reusable platform primitive needed by more than one app/domain;
+- is required for legal/compliance/release evidence.
+
+Do not create horizontal feature waves solely to increase capability counts.
+
+## 7. Brand and architecture rule
+
+Product-facing language uses **Forge**.
+
+`@metaforge/*`, `metaforge.api.*`, `cloudforge-*` and `kairo.vn` may remain as technical identifiers/environment names where changing them would create compatibility or migration cost. See `BRAND_AND_NAMING.md`.
+
+## 8. Production boundary
+
+Roadmap does not authorize deploy, migration, customer-data mutation, restore/PITR, secrets/DNS/provider changes or cutover. Those remain governed by `../RUNBOOK.md`, `../DELIVERY_POLICY.md`, current pilot contracts and explicit authorization.
+
+## 9. History
+
+Old phase/component roadmaps, branch snapshots and temporary agent plans belong in Git/PR history or final convergence evidence, not in this live strategic roadmap.

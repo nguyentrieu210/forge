@@ -1,17 +1,25 @@
-# Kairo Nhân sự
+# Forge Nhân sự
 
-App MetaForge mỏng sinh bởi create-metaforge-app. Runtime có sẵn:
+HRM app surface chạy trên shared Forge client/runtime.
 
-- Global Business Context theo role/User Permission (Company · Fiscal Year · Warehouse).
-- Tổng quan KPI và Quy trình nghiệp vụ.
-- Danh mục đầy đủ từ Workspace Frappe, lọc theo quyền hiệu lực.
-- Form/List/Link/Child Table, modal tạo mới và display-title resolver.
+`@metaforge/*` và `create-metaforge-app` là technical package/tool namespace được giữ để tránh breaking change; chúng không phải product brand riêng.
 
-## Chạy
+App sử dụng runtime có sẵn cho:
+
+- server-resolved Business Context;
+- role/User Permission-aware navigation and data access;
+- Form/List/Link/Child Table và shared interaction primitives;
+- metadata/workspace-driven catalog;
+- mobile-oriented experience routes như duyệt nghỉ phép.
+
+## Chạy local
+
 ```bash
 pnpm install
 pnpm dev
 pnpm build
 ```
 
-Sửa `src/app-manifest.ts` để đổi domain, brand, home và mục tùy chỉnh. Engine không bị copy vào app.
+Business/domain behavior phải tái sử dụng shared HRM/platform authorities. Không copy engine hoặc dựng shadow permission/business state trong app.
+
+Current repository status: xem `../../../CURRENT_STATUS.md`. Naming policy: `../../../docs/BRAND_AND_NAMING.md`.

@@ -1,26 +1,38 @@
 # PROJECT CONTEXT
 
-Ngày cập nhật: **2026-08-04**.
+Ngày cập nhật: **2026-08-05**.
 
-File này mô tả **kiến trúc và source-of-truth hiện hành**, không lưu branch/version/migration snapshot tạm thời. Exact GitHub/code/migration/test luôn thắng prose nếu có drift.
+File này mô tả **kiến trúc và source-of-truth hiện hành**. Không dùng nó để lưu branch/CI snapshot tạm thời. Exact GitHub state, code, migration, tests và production evidence thắng prose khi có drift.
 
-## 1. Product
+## 1. Product model
 
-Forge là enterprise operating platform/ERP đa tenant trên Cloudflare, gồm:
+**Forge** là enterprise operating platform/ERP đa tenant trên Cloudflare.
 
-- **CloudForge** — authoritative backend/kernel, document lifecycle, permission, ledger, workflow, tenant/runtime infrastructure.
-- **MetaForge** — React metadata-driven Desk/runtime/builder.
-- **First-party domain apps/packages** — Finance/VN Accounting, HRM, CRM/Sales, Procurement, Stock/WMS, Manufacturing/QMS, Projects/Service, Workplace, Commerce và các domain khác.
-- **Vertical apps** — Alumdoor là reference vertical; vertical phải compose shared authorities, không fork core.
+Một platform gồm:
+
+- shared platform kernel/runtime;
+- ERP/domain packages: Finance/VN Accounting, HRM, CRM/Sales, Procurement, Stock/WMS, Manufacturing/QMS, Projects/Service, Workplace, Commerce và các domain khác;
+- App Registry/App Factory + capability profile;
+- shared metadata-driven client/runtime/builder;
+- vertical apps, với **Alumdoor** là reference vertical đầu tiên.
+
+`@metaforge/*`, `metaforge.api.*` và `cloudforge-*` là technical identifiers/compatibility namespaces đã tồn tại, không phải các umbrella product brand riêng. Naming authority: `docs/BRAND_AND_NAMING.md`.
 
 Strategic target: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
 Capability denominator/status: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` + `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
 
-## 2. Current engineering checkpoint
+## 2. Current engineering/release checkpoint
 
-RC4 integrated closure đã PASS và merge qua PR `#627` tại checkpoint `main@30346e08eabb7074f8623eeedae09efec25da072`.
+- RC4: **DONE**.
+- R5 integrated hardening/productization: **DONE / R5-GO** via PR `#638`.
+- R6 Production Certification: **DONE / PILOT-GO**.
+- Pilot-00: **DONE / PILOT-00-LOCKED**.
+- Pilot-01 control plane: **READY / PREVIEW-ONLY**.
+- Pilot-01 real source batch: **PILOT-01-WAITING-SOURCE-BATCH**.
+- Frozen certified pilot source: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
+- R6 certification matrix: **23/23 PASS**.
 
-Canonical maturity after RC4:
+Canonical maturity distribution remains:
 
 - Hardened: 0
 - RC: 66
@@ -29,96 +41,127 @@ Canonical maturity after RC4:
 - Missing: 157
 - Total: 956
 
-Canonical evidence: `docs/agents/rc4/RC4_POST_INTEGRATION_FINAL.md`.
+R6/Pilot scope certification does not imply all 956 capabilities are Hardened/GA.
 
-RC4 closure là engineering/evidence closure, không phải production certification của exact next release.
+## 3. Runtime authority
 
-## 3. Backend authority
+### Request / tenant routing
 
-### Request/runtime
+- Gateway resolves trusted tenant routing from host/control-plane state.
+- Tenant/runtime worker owns authenticated application/API composition.
+- Query, Jobs, Control Plane, Social Ingress and other workers provide bounded platform services where configured.
+- Exact `cloudforge-*` worker/resource names may remain as deployment identifiers until a dedicated migration proves a rename safe.
 
-- Gateway resolves tenant and dispatches trusted identity to tenant/runtime workers.
-- Tenant Worker owns authenticated API/runtime composition.
-- Query/Jobs/Control Plane/Social Ingress workers provide bounded platform services where configured.
+### Document/business writes
 
-### Document writes
+Authoritative business mutation flows through the Document Kernel / aggregate serialization path.
 
-Authoritative business mutation flows through the Document Kernel / aggregate serialization path. Do not direct-write business documents/ledgers to bypass lifecycle, OCC, idempotency, permission or audit.
+Do not direct-write business documents or ledgers to bypass:
+
+- lifecycle/state transitions;
+- OCC/version checks;
+- idempotency;
+- permission/tenant rules;
+- audit/outbox;
+- canonical side effects.
 
 ### Storage
 
-- D1 is the authoritative tenant/query persistence layer under append-only migration governance.
-- Durable Objects serialize authoritative mutation where required.
-- Queues support outbox/background/retry/DLQ contracts.
-- R2 stores files/artifacts where used.
-- KV is cache/routing/config support, not a substitute for business authority.
+- D1: authoritative tenant/query persistence under append-only migration governance.
+- Durable Objects: serialization/coordination where required.
+- Queues: outbox/background/retry/DLQ processing.
+- R2: files/artifacts where configured.
+- KV: routing/cache/config support, not authoritative ERP storage.
 
 ## 4. Domain source-of-truth rules
 
-- **Finance:** canonical GL + Payment Ledger; no domain/vertical shadow ledger.
-- **Inventory:** canonical Stock Ledger/valuation/repost semantics; no Alumdoor-specific inventory ledger.
-- **Payroll:** Salary Structure/Assignment -> Salary Slip -> Payroll Entry -> canonical Finance posting.
-- **CRM/Sales:** canonical customer/contact/opportunity/order document authorities; read models such as Customer 360 do not become write authorities.
+- **Finance:** canonical GL + Payment Ledger; no app/vertical shadow finance ledger.
+- **Inventory:** canonical Stock Ledger/valuation/repost semantics; no Alumdoor-specific stock authority.
+- **Payroll:** salary/payroll domain posts through canonical Finance authority.
+- **CRM/Sales:** canonical customer/contact/opportunity/order authorities; Customer 360/read models do not become write authorities.
 - **Procurement:** supplier/PO/receipt/invoice lineage consumes canonical Stock/Finance side effects.
-- **Manufacturing:** BOM/Work Order/operations consume canonical Stock and Finance authorities.
-- **Legal/statutory:** effective-dated, versioned, source-bound, auditable rules; unsupported numeric legal claims fail closed.
+- **Manufacturing:** BOM/Work Order/operations consume canonical Stock/Finance authorities.
+- **Legal/statutory:** rules are effective-dated, versioned, source-bound and auditable; unsupported numeric claims fail closed.
 
-## 5. App packaging / App Factory
+## 5. App Registry / App Factory / capability profiles
 
-Canonical app lifecycle lives in App Registry/App Factory contracts under `server/packages/app-registry/**` plus app compiler/install tooling.
+Canonical lifecycle is server-authoritative.
 
 Principles:
 
 1. platform authority stays shared;
-2. domain package owns generic business behavior;
-3. vertical app/profile composes required domain capabilities;
-4. capability activation is separate from package installation;
-5. disabling a capability must not automatically uninstall a package or erase historical data;
-6. source edits should be required only when introducing/changing a capability contract, not for ordinary tenant composition.
+2. domain packages own reusable generic business behavior;
+3. vertical apps/profiles compose capabilities;
+4. capability activation is distinct from package installation;
+5. disabling a capability does not uninstall a package or erase historical data;
+6. ordinary tenant composition should not require source forks;
+7. install/upgrade/profile state must remain versioned and auditable.
 
-Fine-grained capability-profile authoring/resolution is an R5 productization target; do not claim a completed GUI until exact implementation evidence exists.
+R5 completed the capability-profile productization path used by the current Alumdoor pilot. Do not repeat old prose that describes this as a future target.
 
-## 6. Frontend authority
+## 6. Client/runtime authority
 
 - Shared React runtime renders app surfaces from metadata/manifest contracts.
-- Frappe-shaped adapter is the primary client/backend compatibility boundary.
-- Server-side permission is authoritative; client visibility/editability is UX only.
-- Shared views/shell/runtime should not contain vertical business schema when metadata/domain contracts can express it.
-- Browser/mobile/PWA evidence must bind to exact source/release when used for maturity or production claims.
+- Existing `@metaforge/*` packages are the technical namespace of the Forge client stack.
+- Frappe-shaped API compatibility remains a boundary used by the client and interoperability tests; it is not the product identity.
+- Server-side permission is authoritative; client permission is UX only.
+- Shared runtime must not hard-code vertical business schema where metadata/domain contracts can express it.
+- Browser/mobile/PWA evidence must bind to exact source/release when used for production/maturity claims.
 
 ## 7. Alumdoor role
 
-Alumdoor is the first reference vertical/pilot candidate. It should consume shared:
+Alumdoor is the first controlled-pilot/reference vertical.
 
-- Employee/HR directory primitives;
-- Customer/CRM primitives;
-- Sales/Procurement;
+It consumes shared:
+
+- HR/Employee primitives;
+- CRM/Customer/Sales;
+- Procurement;
 - Stock/WMS;
 - Manufacturing/QMS;
 - Finance/AR/AP/Payment/GL;
 - Warranty/Service.
 
-Alumdoor-specific logic stays vertical only when genuinely industry-specific. Reusable behavior should move to domain/platform authority rather than be copied.
+Industry-specific cut/order rules remain vertical. Reusable behavior moves down to domain/platform authority instead of being copied.
 
-## 8. Security / tenant boundary
+## 8. Current pilot boundary
+
+Pilot-00 froze software/package/profile/data-mapping authority.
+
+Pilot-01 has preview tooling/control-plane ready but is waiting for a real approved immutable customer/master/opening source batch. `PREVIEW_PASS` is required before Pilot-01 can become READY.
+
+No Pilot-01 real production import/write has occurred.
+
+Active sequence:
+
+`R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 source PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
+
+Exact queue: `NEXT_TASKS.md`.
+
+## 9. Security / tenant boundary
 
 - Trusted tenant/user identity comes from server/runtime context, not arbitrary client fields.
-- Role/DocPerm/owner/share/user-permission and sensitive security controls are enforced server-side.
-- Authentication/session/revocation/provider credentials and security-sensitive operations follow canonical IAM contracts.
-- No secret, production credential, private backup or customer data belongs in docs/source control.
+- Role/DocPerm/owner/share/user-permission and sensitive controls are server-enforced.
+- Authentication/session/revocation/provider credentials follow canonical IAM contracts.
+- No secret, private backup or customer source data belongs in docs/source control.
 
-## 9. Migration/release boundary
+## 10. Migration / release boundary
 
-- Never rewrite a migration that may have been applied; add append-only migration under migration governance.
-- Applied-state claims require target-environment inventory/checksum evidence.
+- Never rewrite an applied migration; add append-only migrations.
+- Applied-state claims require environment/checksum evidence.
 - Merge != deploy.
-- Production-ready claims require exact release SHA/hash plus the relevant provider/browser/recovery evidence.
-- Production migration, backup restore/PITR, DNS/secrets/provider mutation and non-UI deployment require explicit authorization.
+- Source/config presence != provider/live proof.
+- Production claims require exact release SHA/hash and required browser/provider/recovery evidence.
+- Production migration, restore/PITR, DNS/secrets/provider mutation, customer-data import/write, cutover and non-UI deploy require explicit authorization.
 
-## 10. Current direction
+## 11. Documentation / brand authority
 
-Current sequence:
+Read current state via:
 
-`RC4 DONE -> R5 integrated hardening/productization -> R6 production certification -> Alumdoor controlled pilot -> GA`
+1. `CURRENT_STATUS.md`;
+2. `NEXT_TASKS.md`;
+3. `docs/README.md`;
+4. `docs/BRAND_AND_NAMING.md`;
+5. `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
 
-Active work is defined only in `NEXT_TASKS.md`. Documentation map/retention policy: `docs/README.md`.
+Historical CloudForge/MetaForge component snapshots do not override live Forge authority.
