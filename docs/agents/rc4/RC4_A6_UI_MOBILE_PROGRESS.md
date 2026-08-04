@@ -3,61 +3,95 @@
 Date: 2026-08-04
 Branch: `agent/rc4-06-ui-mobile-offline`
 Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`
-Risk: **STANDARD evidence/test tooling**
+Risk: **STANDARD evidence/test tooling + UI-only accessibility fixes**
+Status: **COMPLETE**
 
 ## Exact authority decision
 
-RC3-A4/A5 and exact current source agree that **MetaForge V2 is the current presentation authority**. V3 QA assets are reusable test infrastructure only; they are not evidence that V3 chrome is current.
+RC3-A4/A5 and exact current source agree that **MetaForge V2 is the current presentation authority**. Historical V3 QA assets remain reusable infrastructure only; they are not evidence that V3 chrome is current.
 
-## Completed independent slice
+RC4-A6 therefore created a dedicated current-V2 acceptance spec and kept the compatibility bridge explicitly subordinate to canonical V2 tokens.
 
-Added explicit RC4/current-V2 Playwright entrypoints without changing runtime/business authority:
+## Completed implementation / evidence slice
+
+### Browser matrix
 
 - `client/apps/demo/playwright.rc4-v2-qa.config.ts`
   - desktop Chromium `1440x1000`;
   - tablet Chromium `834x1112`;
   - Pixel 7 emulation;
   - compact touch `360x800`;
-  - dark + reduced-motion;
-  - reuses existing list/form/dashboard/Builder, a11y, list-responsive and shell acceptance specs.
-- `client/apps/demo/package.json`
-  - adds `e2e:rc4:v2`.
-- `client/e2e-forge/playwright.rc4-v2-mobile-qa.config.ts`
-  - current runtime/login cross-device matrix with separate RC4 artifact paths.
-- `client/e2e-forge/package.json`
-  - adds `test:rc4:v2`.
-- `client/e2e-forge/ui-tests/rc4-pwa-installability.spec.ts`
-  - browser-loads the linked manifest and asserts root `id/start_url/scope`, `display=standalone`, and 192/512 icon declarations;
-  - explicitly asserts that installability evidence does **not** imply a registered offline service worker.
+  - dark + reduced-motion.
+- `client/apps/demo/e2e/ui-v2-mobile-qa.spec.ts`
+  - List/Form/Dashboard/Builder document containment;
+  - mobile list renderer adaptation;
+  - mobile drawer Escape + focus restoration;
+  - longest localized navigation item remains reachable;
+  - reduced-motion transition clamp.
+- existing Axe/keyboard/list-responsive acceptance was made first-run-safe without weakening serious/critical gates.
 
-No shared renderer, backend, schema, session, permission, storage, OCC or business rule was changed.
+### Runtime / PWA matrix
 
-## Verification truth
+- `client/e2e-forge/playwright.rc4-v2-mobile-qa.config.ts`;
+- `client/e2e-forge/ui-tests/rc4-pwa-installability.spec.ts`;
+- browser acceptance for root-scoped manifest, `display=standalone`, 192/512 icons;
+- explicit assertion that installability evidence does **not** imply a registered offline service worker;
+- Forge login and Alumdoor brand/mobile seams reused from the existing runtime QA harness.
 
-This execution environment cannot resolve `github.com` from the shell, so a full checkout/dependency install/local Playwright execution is unavailable here. The new lane is therefore **NOT YET execution evidence**. A PR/workflow run or another environment with the repository checkout must execute the commands below before capability promotion:
+### UI defects corrected from failed browser runs
 
-```bash
-pnpm --filter @metaforge/demo... run build
-pnpm --filter @metaforge/demo run e2e:rc4:v2
-pnpm --filter runtime... run build
-pnpm --filter e2e-forge run test:rc4:v2
-```
+- first-run Theme Welcome interaction no longer creates false a11y/list failures;
+- shared Input placeholder opacity is explicit;
+- semantic success/status badge tint no longer pushes small text below AA contrast;
+- V2 sidebar search background/text cascade is restored through the compatibility CSS surface;
+- demo and runtime now evaluate the same V2 compatibility CSS surface for release-confidence QA.
+
+No backend/schema/session/permission/storage/OCC/ledger/business-rule authority changed.
+
+## Final browser evidence
+
+GitHub Actions workflow: **RC4 A6 Browser Evidence #12**
+
+- run: `30871503111`;
+- job: `91874277369`;
+- executed branch head: `67b4e71fa245eec2a16e075b3a5c388de45ff7ed`;
+- executed PR merge candidate: `51e4787017563356081278457bf7106013c2d6e2`;
+- demo build: **PASS**;
+- demo current-V2 browser matrix: **50 passed, 6 skipped**;
+- runtime build: **PASS**;
+- runtime/login/PWA matrix: **19 passed, 11 skipped**;
+- evidence artifact id: `8878084897`;
+- artifact digest: `sha256:a1e97b86677ff64abbf70f700a2aa207a13fbdf61d274ddf168a1124714700bb`;
+- artifact expiry: `2026-11-02T02:20:40Z`.
+
+The intentionally skipped tests are project-inapplicable variants (for example mobile-only drawer checks on desktop/tablet or keyboard-only checks outside their target project), not disabled failing assertions.
 
 ## Maturity impact
 
-No maturity promotion is claimed from source-only test additions.
+A0 remains registry owner; A6 records evidence recommendations:
 
-- `U01-001 Responsive PWA`: remains **Wired** pending exact-current browser execution.
-- `U01-002 Installable PWA`: remains **Wired** pending exact-current browser/standalone installation proof.
-- `U01-003..007`: remain **Missing**; no offline implementation was added.
-- `U01-009..012`: retain current Wired candidates; physical/authorized device-path evidence remains missing.
-- `U01-013 Push notifications`: remains **Missing**; no subscription/delivery path was invented.
+- `U01-001 Responsive PWA`: **RC candidate**. The exact-current integrated cross-device browser blocker from RC3-A4 is now closed.
+- `U01-002 Installable PWA`: remains **Wired**. Manifest/installability is browser-proven, but actual installed standalone-launch evidence is still absent.
+- `U01-003..007`: remain **Missing**. No offline implementation was added.
+- `U01-008`: remains **Foundation**.
+- `U01-009..012`: retain **Wired candidates**; physical/authorized device evidence remains missing.
+- `U01-013 Push notifications`: remains **Missing**; no subscription/delivery path exists in this slice.
 
-## Dependencies / blockers
+No capability is promoted to Hardened by A6.
+
+## Dependencies / blockers that remain
 
 - A1/WS11: authoritative session/auth-strength/privacy constraints for offline access.
-- A2/WS12: release-freshness/provider/recovery evidence and observable release proof.
+- A2/WS12: release-freshness/provider/recovery evidence and production observable release proof.
 - WS00: tenant/OCC/cache authority for offline data semantics.
 - WS09/A7: metadata/AppAction ownership where generic renderer contracts are missing.
 
-Offline read/write/background sync/conflict implementation remains intentionally blocked until these contracts are consumable on exact current main. Independent browser/mobile/a11y/PWA evidence work continues without crossing that boundary.
+These dependencies block offline/mobile authority expansion, not the completed responsive browser slice.
+
+## Production truth
+
+This lane is release-candidate browser evidence, not production deployment evidence. The runtime build warning for missing `VITE_FORGE_RELEASE_SHA` is expected in this non-production CI lane. Production UI truth still requires the repository's guarded UI deploy flow and exact `/health` + `/release.json` SHA/hash evidence.
+
+## Non-blocking hardening follow-up
+
+`DashboardBuilder` currently renders an inner semantic `<main>` beneath the shell's authoritative main landmark. Current RC4 viewport/browser gates pass, but normalize that inner landmark to a section/region before claiming broad frontend Hardened maturity.
