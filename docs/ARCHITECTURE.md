@@ -160,7 +160,22 @@ It consumes shared:
 
 Cutting/configuration rules that are truly aluminum-door-specific remain vertical. Generic transaction behavior belongs in platform/domain packages.
 
-## 10. Release / evidence architecture
+## 10. Pilot/data architecture
+
+Pilot-00 froze software/package/profile/data-mapping authority. Pilot-01 has now ingested real operator-provided source files as immutable/hash-bound evidence without committing raw customer workbooks to Git.
+
+Source ingestion is **not** canonical opening data. Current Pilot-01 architecture gate is reconciliation/normalization:
+
+- prove one coherent cutoff across Stock + AR/AP + cash/bank;
+- resolve party/item aliases deterministically;
+- preserve source provenance and zero-unexplained-variance rules;
+- do not promote theoretical aluminum kg/m into measured stock Kg without approved source-bound evidence/policy;
+- produce a private Mapping-V1 batch and run preview validation;
+- only a real `PREVIEW_PASS` advances the pilot.
+
+No Pilot-01 production import/write is implied by source ingestion or preview evidence.
+
+## 11. Release / evidence architecture
 
 Forge separates:
 
@@ -175,13 +190,13 @@ Merge does not imply deploy. Source/config does not imply provider state. Produc
 
 Current certified Alumdoor pilot baseline and final R6 evidence are indexed from `CURRENT_STATUS.md` and `docs/agents/r6/README.md`.
 
-## 11. Naming boundary
+## 12. Naming boundary
 
 Do not mass-rename package/API/worker/resource identifiers as a branding exercise.
 
 `@metaforge/*`, `metaforge.api.*`, `cloudforge-*` and exact `kairo.vn` environment names can remain until a dedicated compatibility/migration program proves a rename safe. Product-facing documentation/UI should use Forge.
 
-## 12. Strategic direction
+## 13. Strategic direction
 
 Architecture decisions should advance `FORGE_ENTERPRISE_NORTH_STAR.md`:
 
