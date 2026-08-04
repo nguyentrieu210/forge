@@ -52,3 +52,16 @@
   --forge-motion-ease-exit: cubic-bezier(.4,0,1,1);
   --forge-motion-ease-linear-flow: linear;
 }
+
+/* V2 sidebar search uses a dark rail. Keep this override unlayered so it wins over
+ * Tailwind's bg-background utility carried by the shared Input primitive. */
+.mf-shell .mf-shell-sidebar input[aria-label="Tìm menu"] {
+  border-color: #2d3b50;
+  background-color: #151f2f;
+  color: #f8fafc;
+}
+
+.mf-shell .mf-shell-sidebar input[aria-label="Tìm menu"]::placeholder {
+  color: #8fa0b8;
+  opacity: 1;
+}
