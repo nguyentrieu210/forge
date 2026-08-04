@@ -1,8 +1,9 @@
 # RC4-A15 — BI / Semantic / AI
 
-Status: IMPLEMENTED / PR PENDING
+Status: PR OPEN / SELF-REVIEWED
 Baseline: main@1f0b08934101640ca15b2379b5dd7ca3ef018e33
 Branch: agent/rc4-15-bi-semantic-ai
+PR: #608 — `feat(semantic): close RC4 A15 dashboard and recommendation residuals` (Draft)
 Risk: STANDARD with CRITICAL sensitivity at permission/data-boundary seams
 
 Mission: close semantic metrics, analytics/BI, planning and permission-aware AI residuals. Prefer deterministic semantic definitions, governed measures, drill-through lineage, tenant/permission filtering and evidence over cosmetic dashboards.
@@ -93,11 +94,18 @@ Covered by source-level regression intent:
 - strict AI dashboard proposal parsing;
 - audit-before-read and denied/error completion;
 - recommendation provider data-boundary isolation;
+- exact metric safe-integer validation;
 - evidence-row/member provenance;
 - rejection of provider write/action fields.
 
+Self-review:
+- PR diff contains only A15 handoff + new semantic package modules/tests; no shared app-registry, IAM, finance, tenant-worker, UI runtime, migrations or deployment files changed.
+- Strict-source audit accounts for `noUncheckedIndexedAccess` on layout/evidence row access and avoids relying on unchecked non-null indexing in the new recommendation path.
+- Dashboard catalog/execution follows the existing `SemanticAccessController` permission boundary; widget execution still uses canonical `SemanticQueryExecutor` for row-scope enforcement.
+
 Executable status:
-- **NOT RUN / NOT CLAIMED**: server TypeScript build and Node regressions. Runtime has no Forge checkout/dependency tree; direct `git clone` failed because DNS could not resolve `github.com`. This is recorded as missing execution evidence, not reported as PASS.
+- **NOT RUN / NOT CLAIMED**: server TypeScript build and Node regressions. Runtime has no Forge checkout/dependency tree; direct `git clone` failed because DNS could not resolve `github.com`.
+- PR-head GitHub workflow observations: `CFMAX R2 Integrated Validation` run `30868693310` = **skipped**; `RC-021 Critical Validation` run `30868693302` = **skipped**. Skipped workflows are not PASS evidence.
 - No migration, authoritative write schema, production data mutation, secret/DNS/provider change or deploy occurred.
 
 ## Dependency Requests
@@ -119,4 +127,4 @@ Executable status:
 
 ## Merge/deploy boundary
 
-This branch changes non-UI semantic/backend behavior. Per Forge policy: open PR after audit, **stop before merge/deploy until explicit user approval**.
+This branch changes non-UI semantic/backend behavior. PR #608 is open as a Draft and **must not be merged/deployed until explicit user approval**.
