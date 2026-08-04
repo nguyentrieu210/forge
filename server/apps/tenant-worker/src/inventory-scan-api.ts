@@ -17,17 +17,6 @@ const FRAPPE_RESOLVE_PATH = "/api/method/metaforge.inventory.resolve_scan";
 const MAX_BODY_BYTES = 8_192;
 const ALLOWED_FIELDS = new Set(["raw", "symbology", "scanned_at", "expected_doctype", "company", "warehouse"]);
 
-export interface InventoryScanPermissionGateway {
-  assert(request: {
-    actor: Actor;
-    tenantId?: string;
-    doctype: string;
-    name?: string;
-    data?: JsonObject;
-    action: "read";
-  }): Promise<void>;
-}
-
 export interface InventoryScanApiContext {
   db: D1Database;
   tenantId: string;
@@ -87,7 +76,7 @@ export async function routeInventoryScanApi(
 }
 
 export class MetadataInventoryScanAccessPolicy implements InventoryScanAccessPolicy {
-  constructor(private readonly permissions: InventoryScanPermissionGateway) {}
+  constructor(private readonly permissions: Pick<MetadataPermissionService, "assert">) {}
 
   async canRead(actor: Actor, tenantId: string, candidate: { doctype: InventoryScanDoctype; name: string; data: JsonObject }): Promise<boolean> {
     try {
