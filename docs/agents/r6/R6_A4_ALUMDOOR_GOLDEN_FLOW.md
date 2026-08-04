@@ -30,14 +30,15 @@ Expected identity from R6-00:
 
 ## Exact-candidate source evidence
 
-R6-04 source evidence was executed against a branch rooted at the locked candidate with no runtime/business-authority delta. Supporting regressions passed:
+R6-04 source evidence was executed against a branch rooted at the locked candidate with no runtime/business-authority delta. The final source job for run `30908748960` passed every evidence step and diff hygiene. Supporting regressions passed:
 
 - capability profile, App Registry and R6-04 observer guards: **53/53 PASS**;
 - Sales O2C and Procurement P2P/correction: **39/39 PASS**;
 - Manufacturing, Warranty/Service and same-order Golden Order lineage: **36/36 PASS**;
 - canonical cross-ledger auditor self-test: **PASS**;
 - Alumdoor package compile/dry-run: **PASS**, `alumdoor@2.2.3`, 74 doctypes, 1 workflow, 11 roles, 57 fixtures, 79 nav entries;
-- vertical shadow-authority guard: **PASS** — Alumdoor Worker has no direct D1 authority and no direct Stock/GL/Payment ledger SQL.
+- vertical shadow-authority guard: **PASS** — Alumdoor Worker has no direct D1 authority and no direct Stock/GL/Payment ledger SQL;
+- branch diff hygiene: **PASS**.
 
 These are deterministic supporting evidence only. They are not promoted to `PRODUCTION_LIKE_OBSERVED`.
 
@@ -45,24 +46,27 @@ The locked candidate also has pre-existing strict TypeScript build debt outside 
 
 ## Pilot-target read-only observation
 
-Read-only observation on 2026-08-04 returned:
+Final R6-04 run `30908748960` observed the target twice without mutation:
 
 - `GET /health`: HTTP 200;
 - guest boot probe: HTTP 403 as expected;
 - `GET /release.json`: HTTP 200;
 - locked expected release SHA: `4149af7c3e49b25fb1f43a50b62f99d7c04e6488`;
-- observed live release SHA: `cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`;
-- observed bundle hash: `0f569841cc0ff19c`.
+- observed at `2026-08-04T12:21:48Z`: release SHA `450aaf0e3e70c0c8af2ebffabb0fa2632b61b603`, bundle `39de9138edeb6ebc`;
+- observed again at `2026-08-04T12:22:46Z`: the same release SHA and bundle;
+- an earlier R6-04 run had observed `cf5dd0da5b0154374a4ce371d7b122cd059a0bb2`, demonstrating that the pilot release moved during the certification window.
 
-The pilot target therefore is **not running the exact locked R6 candidate**. R6-01 independently observed the same release mismatch. That alone prevents R6-E18 from proving exact-release package/profile identity and prevents E19-E23 from being certified as fresh exact-candidate production-like evidence.
+`450aaf0e…` is the UI-only PR #645 commit, not the R6-00 locked candidate. Exact-release certification does not treat a UI-only descendant as SHA-equivalent. The pilot target therefore is **not running the exact locked R6 candidate**. That alone blocks R6-E18 and prevents E19-E23 from being certified as fresh exact-candidate production-like evidence.
 
-The R6-04 observer remains read-only: release/package/profile GETs plus a remote D1 `SELECT` for active capability-profile identity. It performs no business-document mutation, app install, migration, provider change or D1 write.
+The protected identity observer also found that `ALU_META_ADMIN_USER` and `ALU_META_ADMIN_PASSWORD` are not populated in the GitHub production environment, so authenticated package/profile API observation was not attempted. The Cloudflare token was present, but the remote read-only D1 `SELECT` path returned `wrangler_command_failed`; therefore active capability-profile ID/version/hash was not proven. No secret value was printed.
+
+The R6-04 observer remains read-only: release/package/profile GETs plus an attempted remote D1 `SELECT` for active capability-profile identity. It performs no business-document mutation, app install, migration, provider change or D1 write.
 
 ## Evidence matrix
 
 | ID | Required level | Status | Reason |
 |---|---|---|---|
-| R6-E18 | `PRODUCTION_LIKE_OBSERVED` | `BLOCKED` | pilot release SHA is `cf5dd0da…`, not locked `4149af7c…`; exact package/profile identity cannot certify the locked candidate while target release is stale |
+| R6-E18 | `PRODUCTION_LIKE_OBSERVED` | `BLOCKED` | live release is `450aaf0e…`, not locked `4149af7c…`; authenticated package/profile secrets are absent and the read-only D1 profile query failed, so exact package/profile identity is not proven |
 | R6-E19 | `PRODUCTION_LIKE_OBSERVED` | `BLOCKED` | exact candidate is not on the pilot target and no approved writable production-like exact-candidate environment exists for a fresh authenticated Golden Flow |
 | R6-E20 | `PRODUCTION_LIKE_OBSERVED` | `BLOCKED` | depends on fresh E19 lineage; local canonical-ledger regressions cannot substitute for environment-bound Stock/AR/Payment/GL readback |
 | R6-E21 | `PRODUCTION_LIKE_OBSERVED` | `BLOCKED` | retry/duplicate and invalid-action evidence requires an approved writable exact-candidate production-like environment |
@@ -87,7 +91,7 @@ Alternative: explicitly authorize Golden Flow writes against real pilot customer
 Owner: R6-01 / release owner
 Status: OPEN
 
-Converge the pilot target to the exact locked candidate and close provider/release blockers before R6-04 exact-release certification is rerun. Current observation is `cf5dd0da5b0154374a4ce371d7b122cd059a0bb2` versus locked `4149af7c3e49b25fb1f43a50b62f99d7c04e6488`.
+Converge the pilot target from observed `450aaf0e3e70c0c8af2ebffabb0fa2632b61b603` to locked `4149af7c3e49b25fb1f43a50b62f99d7c04e6488` and close provider/release blockers before R6-04 exact-release certification is rerun.
 
 R6-01 additionally reports a missing tenant `BROWSER` binding and Alumdoor app observability not observed. Those are provider/release-owned findings; R6-04 does not mutate provider configuration or deploy production to make its own evidence green.
 
@@ -98,6 +102,13 @@ Status: OPEN
 
 Prove the official release build path for the locked candidate or repair the pre-existing `exactOptionalPropertyTypes` debt and relock the candidate. The strict repository TypeScript build currently reports errors in shared `clouderp-selling` CRM/Quotation controllers and `frappe-model` validation code. R6-04 does not change those shared contracts from an evidence lane.
 
+### DR-R6-04-04 — protected read-only identity access
+
+Owner: R6 environment/secrets owner
+Status: OPEN
+
+Populate or otherwise provide the approved read-only identity path needed by R6-E18. `ALU_META_ADMIN_USER` and `ALU_META_ADMIN_PASSWORD` are currently absent from the GitHub production environment, and the Cloudflare-token D1 `SELECT` attempt returned `wrangler_command_failed`. The rerun must prove installed package versions and active capability-profile ID/version/content-hash without granting R6-04 any mutation authority.
+
 ## Safety boundary
 
 No production deployment, migration, restore/PITR, DNS/secret/provider mutation or customer-data write was performed by R6-04. The existing full ALU release workflow was not invoked by this lane.
@@ -106,4 +117,4 @@ This is non-UI certification work. PR #644 remains draft and must stop before me
 
 ## Current lane verdict
 
-`R6-04-BLOCKED: pilot target is not on the exact locked candidate; E19-E23 also lack approved writable production-like exact-candidate execution state.`
+`R6-04-BLOCKED: pilot target is not on the exact locked candidate; R6-E18 package/profile identity is incomplete; E19-E23 lack approved writable production-like exact-candidate execution state.`
