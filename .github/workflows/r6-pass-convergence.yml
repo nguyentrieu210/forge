@@ -59,9 +59,14 @@ jobs:
         working-directory: server
         run: npm run verify:queue-safety
 
-      - name: Verify Alumdoor package
+      - name: Verify Alumdoor package composition
         working-directory: server
-        run: node scripts/pack-app.mjs apps-src/alumdoor --check
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run | tee /tmp/r6-alumdoor-package.log
+          grep -q 'app=alumdoor@2.2.3' /tmp/r6-alumdoor-package.log
+          grep -q 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log
 
       - name: Diff hygiene
         run: git diff --check
