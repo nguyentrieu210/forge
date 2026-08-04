@@ -1,0 +1,102 @@
+{
+  "schema": "forge-r5-independent-qa/v1",
+  "generated_at": "2026-08-04",
+  "repository": "nguyentrieu210/forge",
+  "qa_branch": "agent/r5-07-independent-integrated-qa",
+  "seed_main_sha": "8316d2a5f24863d3347cf9f92ec5987145b8dc9e",
+  "candidate_sha": null,
+  "verdict": "BLOCKED_PRECONDITION",
+  "reason_code": "R5_INTEGRATED_CANDIDATE_SHA_MISSING",
+  "independent_setup_allowed": true,
+  "integrated_pass_allowed": false,
+  "worker_self_verdicts_are_integrated_evidence": false,
+  "lanes": {
+    "r5-00": {
+      "pr": 629,
+      "head": "ef2a4d80b70164048aa6c3f516580350009234b2",
+      "state": "OPEN_DRAFT",
+      "qa_disposition": "WAITING_EXPLICIT_INTEGRATED_CANDIDATE"
+    },
+    "r5-01": {
+      "pr": 634,
+      "head": "93a8a95470f60e3bedc9f11b97d7c61d218d40af",
+      "reported_validated_merge_candidate": "78f7747cdab940acabaf50545f9b9fc8d18410b4",
+      "reported_validation_run": "30880602165",
+      "state": "OPEN_DRAFT",
+      "qa_disposition": "UNMERGED_OWNER_CANDIDATE"
+    },
+    "r5-02": {
+      "pr": 632,
+      "head": "406032e7f4e8b668809b41d60f893fecba3b0d68",
+      "reported_validation_run": "30879586860",
+      "state": "OPEN_DRAFT",
+      "qa_disposition": "UNMERGED_OWNER_CANDIDATE"
+    },
+    "r5-03": {
+      "pr": 636,
+      "head": "f1c3b53a20d0d517266d37af1ce2f17481c38a0e",
+      "reported_validation_run": "30881368060",
+      "state": "OPEN_DRAFT",
+      "qa_disposition": "UNMERGED_OWNER_CANDIDATE"
+    },
+    "r5-04": {
+      "pr": 628,
+      "head": "714f7ec3c61aa1f782164bb78291ca7960a4613e",
+      "reported_validation_run": "30878962512",
+      "state": "OPEN_DRAFT",
+      "qa_disposition": "UNMERGED_OWNER_CANDIDATE"
+    },
+    "r5-05": {
+      "pr": 630,
+      "head": "d816eedd74291d18748f4ec10f23fb1c2e9bc19b",
+      "state": "OPEN_DRAFT_BLOCKED",
+      "qa_disposition": "OWNER_DEPENDENCIES_OPEN"
+    },
+    "r5-06": {
+      "pr": 635,
+      "head": "aa06e3edb5bb5431dd3ec6d8ab28596132725536",
+      "reported_focused_technical_head": "f2e74bd71a9a07829fd804b02678b8697a9d0be0",
+      "reported_focused_validation_run": "30880334427",
+      "state": "OPEN_DRAFT_BLOCKED",
+      "qa_disposition": "FULL_REHEARSAL_WAITING_INTEGRATED_CANDIDATE"
+    }
+  },
+  "dependency_requests": [
+    {
+      "id": "DR-R5-A7-01",
+      "owner": "R5-00",
+      "requirement": "Publish one immutable integrated R5 candidate SHA with accepted source heads, reconciliation order, migration collision check and authority-overlap disposition."
+    }
+  ],
+  "known_owner_dependencies": [
+    "R5-01 canonical minimum dependency-version semantics",
+    "R5-02 HRM Bank Account external-DocType package integrity",
+    "R5-02/R5-03 receipt-targeted landed-cost valuation and historical Stock/COGS-to-GL propagation",
+    "R5-05 canonical Workplace scheduler registration",
+    "R5-01/R5-05 effective capability state consumption by hooks/jobs/integrations/provider dispatch",
+    "R5-06 candidate-bound package/migration/profile lifecycle rehearsal"
+  ],
+  "candidate_qa_lanes": [
+    "exact_candidate_identity",
+    "build_and_type",
+    "iam_session_tenant_permission",
+    "package_profile",
+    "sales_o2c",
+    "procurement_p2p",
+    "inventory_valuation",
+    "manufacturing_qms",
+    "finance_hcm_payroll",
+    "warranty_service",
+    "cross_ledger_reconciliation",
+    "migration_checksum",
+    "browser_mobile_pwa",
+    "representative_performance",
+    "authority_and_stale_branch_contamination"
+  ],
+  "non_claims": [
+    "No integrated R5 PASS",
+    "No production/provider certification",
+    "No production deployment",
+    "No production migration or customer-data mutation"
+  ]
+}
