@@ -167,7 +167,8 @@ export class SemanticRecommendationService {
     for (const [rowIndex, row] of source.result.entries()) {
       for (const metricId of metrics) {
         if (!(metricId in row)) throw errors.validation(`recommendation source row ${rowIndex} is missing metric ${metricId}`);
-        const definition = metricById.get(metricId)!;
+        const definition = metricById.get(metricId);
+        if (!definition) throw errors.validation(`Unknown recommendation metric ${metricId}`);
         const value = row[metricId];
         if (definition.value.exact === true && (typeof value !== "number" || !Number.isSafeInteger(value))) {
           throw errors.validation(`recommendation source row ${rowIndex} metric ${metricId} must be a safe integer for an exact metric`);
@@ -179,11 +180,13 @@ export class SemanticRecommendationService {
       objective,
       model: request.model,
       dimensions: dimensions.map((id) => {
-        const definition = dimensionById.get(id)!;
+        const definition = dimensionById.get(id);
+        if (!definition) throw errors.validation(`Unknown recommendation dimension ${id}`);
         return { id, label: definition.label, kind: definition.kind };
       }),
       metrics: metrics.map((id) => {
-        const definition = metricById.get(id)!;
+        const definition = metricById.get(id);
+        if (!definition) throw errors.validation(`Unknown recommendation metric ${id}`);
         return { id, label: definition.label, value: structuredClone(definition.value) };
       }),
       rows: structuredClone(source.result),
@@ -218,8 +221,10 @@ export class SemanticRecommendationService {
         requireMemberId(pointer.member, `recommendation[${index}].evidence[${evidenceIndex}].member`);
         if (!selected.has(pointer.member)) throw errors.validation(`recommendation[${index}] cites unselected member ${pointer.member}`);
         const row = source.result[pointer.row];
-        if (!(pointer.member in row)) throw errors.validation(`recommendation[${index}] evidence member ${pointer.member} is absent from source row ${pointer.row}`);
-        return { row: pointer.row, member: pointer.member, observed: structuredClone(row[pointer.member]) };
+        if (!row) throw errors.validation(`recommendation[${index}] evidence row ${pointer.row} is outside the permission-visible source`);
+        const observed = row[pointer.member];
+        if (observed === undefined) throw errors.validation(`recommendation[${index}] evidence member ${pointer.member} is absent from source row ${pointer.row}`);
+        return { row: pointer.row, member: pointer.member, observed: structuredClone(observed) };
       });
       return {
         id: candidate.id,
