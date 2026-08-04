@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
 const statusPath = path.join(root, "docs", "FORGE_ENTERPRISE_CAPABILITY_STATUS.md");
+const manifestPath = path.join(root, "docs", "agents", "rc4", "RC4_A20_EVIDENCE_MANIFEST.json");
 
 let text = fs.readFileSync(statusPath, "utf8");
 
@@ -38,4 +39,61 @@ const newU01 = "| RC | `U01-001` | `E-UI` |\n| Wired | `U01-002` `U01-009..U01-0
 converge(oldU01, newU01, "U01 registry rows");
 
 fs.writeFileSync(statusPath, text, "utf8");
-console.log("RC4-A20 R2 materialization: U01-001 Wired -> RC; counts 66/406/327/157");
+
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+manifest.snapshot.observed_through_pr = 623;
+manifest.snapshot.note = "Final RC4 worker evidence re-convergence: A19 independently replays A1-A18 green; A22/A23 exact-head gates are green outside the A1-A19 maturity manifest. Canonical maturity still changes only for implementation integrated into this convergence tree.";
+
+const laneByAgent = new Map(manifest.lanes.map((lane) => [lane.agent, lane]));
+function updateLane(agent, patch) {
+  const lane = laneByAgent.get(agent);
+  if (!lane) throw new Error(`RC4-A20 R2 materializer cannot find ${agent}`);
+  Object.assign(lane, patch);
+}
+
+updateLane("A4", {
+  head_sha: "068ca98ba6446d367aed7667d6ba19170ec5869f",
+  status: "READY",
+  evidence_kind: "independent-executable",
+  validated_head_sha: "068ca98ba6446d367aed7667d6ba19170ec5869f",
+  workflow_run: 30875686652,
+  integrated_in_tree: false,
+  accepted_for_maturity: false,
+  reason: "A19 final worker matrix independently passes the repaired VN statutory lane, including canonical App Action method naming, VAT/statutory regressions and four-eyes policy retirement. The backend/migration branch remains unmerged, so no branch-only maturity promotion is accepted."
+});
+
+updateLane("A10", {
+  head_sha: "00b071130155d6a7359e4ab0eb1849048b57a139",
+  status: "READY",
+  evidence_kind: "independent-executable",
+  validated_head_sha: "00b071130155d6a7359e4ab0eb1849048b57a139",
+  workflow_run: 30875686652,
+  integrated_in_tree: false,
+  accepted_for_maturity: false,
+  reason: "A19 final worker matrix independently passes Customer 360 after syntax, external ownership and new-metadata reserved-field repairs. Legacy CRM metadata debt remains separate; the A10 implementation is unmerged and therefore does not change canonical maturity."
+});
+
+updateLane("A13", {
+  head_sha: "0822b9237b3d1485cc5d9bf72ff03e0834a10383",
+  status: "READY",
+  evidence_kind: "exact-executable",
+  validated_head_sha: "0822b9237b3d1485cc5d9bf72ff03e0834a10383",
+  workflow_run: 30874796558,
+  integrated_in_tree: false,
+  accepted_for_maturity: false,
+  reason: "Manufacturing/QMS lane-owned exactOptionalPropertyTypes defects are repaired; own exact-head validation and A19 adversarial replay are green. The branch remains unmerged and domain dependencies still bound any maturity promotion."
+});
+
+updateLane("A19", {
+  head_sha: "fea98132a0adfbef1c6ca3066082320d28be364d",
+  status: "DONE",
+  evidence_kind: "independent-executable",
+  validated_head_sha: "bfdff28cfcb2f052775f1a6812793235009cbb0c",
+  workflow_run: 30875784687,
+  integrated_in_tree: false,
+  accepted_for_maturity: false,
+  reason: "A19 independently replayed all A1-A18 worker lanes plus baseline truth, A2 provider/source separation and merged A6 browser provenance. Run 30875784687 is green after PASS handoff materialization; the latest A19 change is evidence-only and QA itself never promotes capability maturity."
+});
+
+fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+console.log("RC4-A20 R2 materialization: final worker truth recorded; U01-001 Wired -> RC; counts 66/406/327/157");
