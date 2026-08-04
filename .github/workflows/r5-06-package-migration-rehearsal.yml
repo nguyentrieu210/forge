@@ -1,0 +1,99 @@
+name: R5 06 Package Migration Rehearsal
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/app-registry/**"
+      - "server/apps/tenant-worker/**"
+      - "server/apps-src/hrm/**"
+      - "server/apps-src/vn-accounting/**"
+      - "server/apps-src/manufacturing-qms/**"
+      - "server/apps-src/maintenance/**"
+      - "server/migrations/**"
+      - "server/scripts/pack-app.mjs"
+      - "server/scripts/forge-app.mjs"
+      - "server/scripts/verify-migration-governance.mjs"
+      - "server/tests/app-registry.test.mjs"
+      - "server/tests/migration-governance.test.mjs"
+      - "server/tests/r5-package-migration-rehearsal.test.mjs"
+      - "docs/agents/r5/R5_A6_PACKAGE_MIGRATION_REHEARSAL.md"
+      - ".github/workflows/r5-06-package-migration-rehearsal.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r5-06-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rehearsal:
+    if: github.head_ref == 'agent/r5-06-package-migration-rehearsal'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact head
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit exact-head server dist and record baseline TypeScript debt
+        working-directory: server
+        run: |
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/r5-06-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/app-registry/src/index.js
+          if [ "$status" -ne 0 ]; then
+            echo "Full-server TypeScript baseline remains non-zero; exact emitted App Registry code is exercised below."
+            grep "error TS" /tmp/r5-06-tsc.log > /tmp/r5-06-typescript-baseline.log || true
+            cat /tmp/r5-06-typescript-baseline.log
+          fi
+
+      - name: Migration sequence checksum and append-only governance
+        working-directory: server
+        run: |
+          node scripts/verify-migration-governance.mjs --base-ref "${{ github.event.pull_request.base.sha }}"
+          node --test tests/migration-governance.test.mjs
+
+      - name: Canonical App Registry package lifecycle regressions
+        working-directory: server
+        run: node --test tests/app-registry.test.mjs
+
+      - name: First-party package source dry checks
+        working-directory: server
+        run: |
+          node scripts/pack-app.mjs apps-src/hrm --check
+          node scripts/pack-app.mjs apps-src/vn-accounting --check
+          node scripts/pack-app.mjs apps-src/manufacturing-qms --check
+          node scripts/pack-app.mjs apps-src/maintenance --check
+
+      - name: Disposable workerd tenant bootstrap install reinstall upgrade rollback isolation
+        working-directory: server
+        run: pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts --config apps/tenant-worker/vitest.config.mts
+
+      - name: Diff hygiene
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+
+      - name: R5-01 minimum-version dependency contract gate
+        working-directory: server
+        run: node --test tests/r5-package-migration-rehearsal.test.mjs
