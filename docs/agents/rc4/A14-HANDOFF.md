@@ -32,8 +32,8 @@ Close project/PSA/helpdesk/field-service/warranty residuals that are owned by WS
 ### Helpdesk / SLA / CSAT
 
 - SLA policy requires non-empty priority and workday tables.
-- Priority targets remain positive and now enforce `response <= escalation <= resolution`; duplicate priority and duplicate weekday controls remain.
-- At most one SLA priority may be marked default.
+- Priority targets remain positive, keep `response <= resolution`, and require escalation not to occur after the resolution deadline. Early escalation remains valid because the current `Leo thang sau (phút)` contract does not prove it must wait until the response deadline.
+- Duplicate priority/weekday controls remain; at most one SLA priority may be marked default.
 - Support Ticket cancellation now requires server-side reason evidence in addition to assignment/resolution/escalation controls.
 - Support Feedback/CSAT is now pre-commit validated: integer rating 1..5 and mandatory follow-up note when follow-up is requested.
 - Support Ticket Queue now exposes customer, source channel, response deadline and resolution deadline fields already owned by the ticket model.
@@ -53,10 +53,10 @@ Close project/PSA/helpdesk/field-service/warranty residuals that are owned by WS
 - Updated `server/tests/projects-psa.test.mjs` for `projects@1.3.1`, Change Order validation and report evidence.
 - Updated `server/tests/support-helpdesk.test.mjs` for `support@1.2.1`, CSAT validator and SLA deadline queue evidence.
 - Updated `server/tests/maintenance-field-service.test.mjs` for `maintenance@1.5.1` and closure/correction report evidence.
-- Added `server/tests/rc4-a14-project-service-field.test.mjs` covering service contract coverage, warranty/service terminal evidence, WBS cycles, task dependencies/completion, timesheet integrity, Change Order/Acceptance exceptions, SLA target coherence and CSAT/cancel failure paths.
+- Added `server/tests/rc4-a14-project-service-field.test.mjs` covering service contract coverage, warranty/service terminal evidence, WBS cycles, task dependencies/completion, timesheet integrity, Change Order/Acceptance exceptions, SLA target bounds including valid early escalation, and CSAT/cancel failure paths.
 - Existing Transaction Closure warranty/service tests were audited for compatibility; A14 does not replace their canonical stock/sales/provenance coverage.
 
-Executable Node/package tests are **NOT RUN** in this session because the available environment has GitHub connector access but no repository checkout/network path to GitHub. Do not report PASS from authored tests alone. No production deploy or migration was attempted.
+Executable Node/package tests are **NOT RUN** in this session because the available environment has GitHub connector access but no repository checkout/network path to GitHub. Do not report PASS from authored tests alone. GitHub PR workflows observed for the A14 head were skipped rather than executed. No production deploy or migration was attempted.
 
 ## Dependency Requests
 
