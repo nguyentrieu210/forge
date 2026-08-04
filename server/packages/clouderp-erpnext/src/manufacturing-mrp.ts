@@ -132,9 +132,9 @@ export function explodeProductionPlanMrp(
       rootRowId: rowId,
       rootItemCode: itemCode,
       parentQtyMicros: qtyMicros,
-      parentWarehouse: warehouse,
-      scheduleDate,
-      dimensions,
+      ...(warehouse ? { parentWarehouse: warehouse } : {}),
+      ...(scheduleDate ? { scheduleDate } : {}),
+      ...(dimensions ? { dimensions } : {}),
       selected,
       byItem,
       path: [itemCode],
@@ -260,15 +260,16 @@ function explodeBom(input: {
         throw errors.reference(`MRP detected circular BOM path ${[...input.path, row.item_code].join(" -> ")}`);
       }
       explodeBom({
-        ...input,
+        rootRowId: input.rootRowId,
+        rootItemCode: input.rootItemCode,
         parentQtyMicros: requiredMicros,
-        parentWarehouse: warehouse,
-        // A subassembly may have its own dimensional semantics. Inheriting the finished
-        // product dimensions would be guesswork, so only fixed rows are allowed below root
-        // until an explicit dimension mapping contract exists.
-        dimensions: undefined,
+        ...(warehouse ? { parentWarehouse: warehouse } : {}),
+        ...(input.scheduleDate ? { scheduleDate: input.scheduleDate } : {}),
         selected: childBoms[0]!,
+        byItem: input.byItem,
         path: [...input.path, row.item_code],
+        requirements: input.requirements,
+        warnings: input.warnings,
         depth: input.depth + 1,
       });
     } else {
