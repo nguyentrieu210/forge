@@ -7,12 +7,15 @@
   "mapping_version": 1,
   "source_ingest_evidence": "docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json",
   "identity_disposition": "docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json",
+  "alias_supplier_reconciliation": "docs/pilot/alumdoor/PILOT_01_ALIAS_SUPPLIER_RECONCILIATION_V1.json",
   "tooling": {
     "validator": "docs/pilot/alumdoor/tools/validate-pilot-batch.mjs",
     "identity_normalizer": "docs/pilot/alumdoor/tools/normalize-pilot-identities.mjs",
+    "alias_supplier_normalizer": "docs/pilot/alumdoor/tools/normalize-pilot-aliases-suppliers.mjs",
     "tests": [
       "docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs",
-      "docs/pilot/alumdoor/tools/normalize-pilot-identities.test.mjs"
+      "docs/pilot/alumdoor/tools/normalize-pilot-identities.test.mjs",
+      "docs/pilot/alumdoor/tools/normalize-pilot-aliases-suppliers.test.mjs"
     ],
     "contract_verifier": "docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs",
     "manifest_template": "docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json",
@@ -36,13 +39,22 @@
     "item_duplicate_action": "keep first code; suffix later exact collisions with 01, 02, 03... while preserving source_code_original",
     "observed_item_master_unique_codes": 277,
     "observed_item_master_duplicate_codes": 0,
-    "item_alias_gap_still_open": true,
-    "item_alias_gap_count": 60
+    "journal_item_identity_gap_still_open": false,
+    "journal_item_identity_count": 60,
+    "journal_item_alias_to_existing_master_count": 41,
+    "journal_item_supplemental_identity_count": 18,
+    "journal_item_composite_explode_count": 1,
+    "supplemental_uom_or_quantity_semantics_still_open": true,
+    "supplier_role_gap_still_open": false,
+    "observed_purchase_party_count": 8,
+    "supplier_role_gap_before": 4,
+    "supplier_role_gap_after": 0,
+    "normalized_supplier_count_if_materialized": 12
   },
   "observed_source_coverage": {
     "customers": "present_duplicate_policy_locked",
-    "suppliers": "present_with_role_gaps",
-    "items": "present_with_alias_gaps_no_observed_master_code_duplicates",
+    "suppliers": "present_role_reconciliation_locked",
+    "items": "present_60_historical_journal_identities_dispositioned_axis_semantics_pending",
     "physical_aluminum_stock": "present_without_actual_kg",
     "operational_journal": "present",
     "cash_bank": "present_with_older_snapshot_hint",
@@ -59,6 +71,8 @@
     "required_fields_present": false,
     "customer_duplicate_identity_dispositioned": true,
     "item_duplicate_collision_policy_locked": true,
+    "journal_item_identity_dispositioned": true,
+    "supplier_roles_dispositioned": true,
     "references_resolved": false,
     "canonical_opening_stock_quantity_and_value_ready": false,
     "opening_ar_ap_proven": false,
@@ -68,14 +82,14 @@
   },
   "remaining_before_pilot_01_ready": [
     "freeze one coherent business cutoff across Stock/AR/AP/cash-bank",
-    "resolve supplier roles and canonical item aliases for the 60 unmatched journal item-code strings",
+    "materialize the 18 supplemental source identities only after canonical UOM/quantity semantics are accepted; three existing-master aliases also retain quantity-axis reconciliation",
     "obtain actual measured Kg/value evidence for opening aluminum stock without substituting theoretical kg/m",
     "obtain complete opening AR/AP snapshots at the frozen cutoff",
     "disposition stock scope drift and two future-dated VIPST700 rows",
     "lock VND fractional rounding policy",
     "complete employee/work-center/BOM inputs required by pilot scope",
     "freeze named pilot account allowlist including exactly one active Giám đốc account",
-    "generate private normalized batch using the locked identity disposition and obtain PREVIEW_PASS"
+    "generate private normalized batch using the locked identity dispositions and obtain PREVIEW_PASS"
   ],
   "production_data_mutated": false
 }
