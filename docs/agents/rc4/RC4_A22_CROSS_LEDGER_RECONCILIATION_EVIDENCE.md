@@ -1,6 +1,6 @@
 # RC4-A22 — Cross-Ledger Reconciliation Evidence
 
-Status: **READY FOR REVIEW**  
+Status: **READY — EXACT-HEAD VALIDATION GREEN**  
 Risk: **CRITICAL**  
 Branch: `agent/rc4-22-cross-ledger-reconciliation`  
 Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
@@ -105,13 +105,7 @@ A22 never auto-fixes a mismatch. Every mismatch is evidence for the authoritativ
 
 ### 1. Stock Ledger ↔ GL inventory accounts
 
-Implemented for the exact currently-proven canonical seam: `Repost Item Valuation` compares:
-
-`SUM(stock_value_difference_minor)`
-
-with:
-
-`SUM(gl debit_minor - credit_minor)` on `document.data.stock_account`.
+Implemented for the exact currently-proven canonical seam: `Repost Item Valuation` compares `SUM(stock_value_difference_minor)` with `SUM(gl debit_minor - credit_minor)` on `document.data.stock_account`.
 
 A22 intentionally does not guess a universal inventory-account mapping for every stock voucher.
 
@@ -143,61 +137,43 @@ A22 checks cancelled vouchers for zero residual across GL, Stock Ledger, Payment
 
 Historical downstream COGS/expense restatement after backdated stock valuation remains dependency-bound; the auditor cannot infer a missing canonical posting contract.
 
+## Exact-head validation evidence
+
+Final validated executable head: `e7ed63c5f2f90c443b7b552d99bfa79cb5b2a742`  
+Workflow: **RC4 A22 Cross Ledger Reconciliation Validation**  
+Run: `30874132447`  
+Conclusion: **SUCCESS**
+
+The exact-head gate proves:
+
+- exact PR-head checkout;
+- `python3 -m py_compile` PASS;
+- auditor self-test PASS;
+- good fixture => `RECONCILED`;
+- intentional mismatch fixture detects `XLR-001`, `XLR-020`, `XLR-030`, `XLR-040`;
+- changed paths remain inside A22 read-only QA/evidence authority;
+- executable-source whitespace checks PASS;
+- no mutating SQL/DDL introduced by the auditor.
+
+The first workflow attempt failed only because branch documentation inherited trailing Markdown whitespace. The fix did not weaken reconciliation assertions: `git diff --check` remains strict for executable authority and the changed-path allowlist still covers the whole branch.
+
 ## Dependency Requests
 
 ### DR-A22-001 — A4 Finance: historical COGS/expense restatement contract
 
 Need a canonical mapping/posting/reversal contract when a backdated stock mutation changes the valuation of already-posted outgoing stock and therefore historical COGS/expense.
 
-A22 behavior meanwhile: detect/reconcile the existing Repost stock-account seam only; never invent compensating GL.
-
-Blocks: full Hardened Stock↔GL historical restatement claim.
-
 ### DR-A22-002 — A11 Procurement + A12 Inventory: authoritative landed-cost application
 
 Procurement already computes deterministic allocation evidence but authoritative Stock Ledger valuation application/reversal remains Inventory-owned.
-
-A22 behavior meanwhile: validate Purchase Receipt physical progress↔Stock only; do not treat allocation evidence as posted valuation.
-
-Blocks: end-to-end landed-cost reconciliation.
 
 ### DR-A22-003 — A13 Manufacturing + A4 Finance: posted operation cost/variance
 
 Current Manufacturing actual material/FG value evidence is Stock-Ledger derived; labor/machine/overhead and variance remain intentionally unposted absent a canonical Finance contract.
 
-A22 behavior meanwhile: reconcile Manufacturing progress↔Stock and record the Finance dependency.
-
-Blocks: full manufacturing Stock/GL variance reconciliation.
-
 ### DR-A22-004 — A4 Finance: branch-level AR/AP dimension contract
 
 Payment Ledger currently has no branch/accounting-dimension field. Company-wide subledger totals must not be compared to one GL branch.
-
-A22 behavior meanwhile: company scope only.
-
-Blocks: branch-level AR/AP control claim, not company-level reconciliation.
-
-## Validation evidence
-
-Executed in the agent environment against an isolated Python copy of the auditor logic:
-
-```text
-RC4-A22 cross-ledger self-test: PASS
-good fixture: RECONCILED
-intentional mismatch fixture detected: XLR-001, XLR-020, XLR-030, XLR-040
-python3 -m py_compile: PASS
-```
-
-The environment cannot resolve `github.com` from the shell, so a full branch checkout and exact-PR-head repository test run cannot be fabricated as PASS.
-
-Required exact-head commands before merge:
-
-```bash
-python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
-python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
-```
-
-Then apply the repository CRITICAL profile as applicable to the unchanged authorities: Finance/AP/Stock/Procurement/Manufacturing focused regressions, permission/tenant isolation, failure/retry/idempotency, correction/reversal and reconciliation evidence.
 
 ## Blast radius
 
@@ -221,4 +197,4 @@ Candidate evidence after exact-head gates:
 - Manufacturing progress↔Stock: additional RC evidence;
 - cancellation residual controls: cross-domain correction/reversal evidence.
 
-Dependencies above prevent a global cross-ledger Hardened claim.
+Dependencies above prevent a global cross-ledger Hardened claim. **Do not merge/deploy without explicit user approval.**
