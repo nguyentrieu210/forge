@@ -1,6 +1,6 @@
 # RC4-A20 — Capability Convergence
 
-- Status: **R2 CONVERGING — exact-head validation pending**
+- Status: **R2 READY — materialized convergence green; final owner-authored exact-head rerun**
 - Branch: `agent/rc4-20-capability-convergence-r2`
 - Exact seed: `main@269c690bda7abf90ea13225204352bdff908d63b`
 - Risk: **STANDARD governance/evidence**
@@ -44,6 +44,21 @@ No Hardened promotion is accepted. `U01-002` remains Wired; offline `U01-003..00
 - `docs/agents/rc4/RC4_A20_CAPABILITY_CONVERGENCE_R2.md` — detailed R2 convergence record;
 - R2 exact-head workflow materializes and commits the canonical status before final validation.
 
+## Validation checkpoint
+
+R2 workflow run `30872704358` materialized canonical status and then revalidated the generated commit in the same checkout:
+
+- capability denominator `956/956`;
+- missing/unknown/duplicate IDs `0/0/0`;
+- Evidence Index `22/22`;
+- worker lanes `19/19`;
+- integrated maturity lanes `1`;
+- maturity changes `1`;
+- final counts `Hardened=0 / RC=66 / Wired=406 / Foundation=327 / Missing=157`;
+- diff hygiene PASS.
+
+The generated status commit was authored by `github-actions[bot]`, causing follow-up workflow events to require action rather than execute automatically. This owner-authored handoff checkpoint intentionally creates a normal final-head PR event so exact-head gates can rerun without treating bot-trigger suppression as acceptance evidence.
+
 ## Promotion contract
 
 A capability promotion must now have:
@@ -60,4 +75,4 @@ A19 remains a cross-branch/final release-confidence gate, not a global veto over
 
 ## Output boundary
 
-Open R2 convergence PR and collect exact-head validation. This is non-UI governance/evidence work: **stop before merge unless explicitly approved**. No production deploy is required by R2 itself.
+R2 convergence PR is ready after exact-head gates. This is non-UI governance/evidence work: **stop before merge unless explicitly approved**. No production deploy is required by R2 itself.
