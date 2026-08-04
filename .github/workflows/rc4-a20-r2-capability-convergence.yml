@@ -1,0 +1,75 @@
+name: RC4 A20 R2 Capability Convergence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
+      - "docs/agents/rc4/RC4_A20_EVIDENCE_MANIFEST.json"
+      - "docs/agents/rc4/RC4_A20_CAPABILITY_CONVERGENCE_R2.md"
+      - "docs/agents/rc4/RC4_A20_CAPABILITY_CONVERGENCE_HANDOFF.md"
+      - "server/scripts/rc4-a20-r2-materialize.mjs"
+      - "server/scripts/validate-rc4-capability-convergence.mjs"
+      - ".github/workflows/rc4-a20-r2-capability-convergence.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rc4-a20-r2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  converge:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Pin exact expected PR head
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Materialize current-main maturity
+        run: node server/scripts/rc4-a20-r2-materialize.mjs
+
+      - name: Validate canonical 956-capability registry
+        run: node server/scripts/validate-enterprise-capability-status.mjs
+
+      - name: Syntax-check R2 validator
+        run: node --check server/scripts/validate-rc4-capability-convergence.mjs
+
+      - name: Validate integrated evidence provenance and maturity arithmetic
+        env:
+          RC4_EXPECTED_MAIN_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node server/scripts/validate-rc4-capability-convergence.mjs
+
+      - name: Generated diff hygiene
+        run: git diff --check
+
+      - name: Commit deterministic capability status
+        id: materialize
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if git diff --quiet -- docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md
+          git commit -m "docs(rc4-a20-r2): materialize current-main capability status"
+          git push origin "HEAD:${HEAD_REF}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Validate exact materialized head
+        env:
+          RC4_EXPECTED_MAIN_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          node server/scripts/validate-enterprise-capability-status.mjs
+          node server/scripts/validate-rc4-capability-convergence.mjs
+          git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
