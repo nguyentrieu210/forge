@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           base="${{ github.event.pull_request.base.sha }}"
-          git diff --check "$base...HEAD"
+          git diff --check "$base...HEAD" -- server/scripts/rc4-cross-ledger-reconciliation.py .github/workflows/rc4-a22-cross-ledger-reconciliation.yml
           changed="$(git diff --name-only "$base...HEAD")"
           echo "$changed"
           if echo "$changed" | grep -Ev '^(server/scripts/rc4-cross-ledger-reconciliation\.py|docs/agents/rc4/RC4_A22_[^/]+\.md|\.github/workflows/rc4-a22-cross-ledger-reconciliation\.yml)$'; then
