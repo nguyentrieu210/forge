@@ -4,6 +4,11 @@
   "main": "src/entry.ts",
   "compatibility_date": "2026-07-27",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  },
   "services": [
     {
       "binding": "PLATFORM",
