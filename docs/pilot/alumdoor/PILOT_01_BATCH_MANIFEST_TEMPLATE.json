@@ -1,0 +1,55 @@
+{
+  "format": "forge-alumdoor-pilot-batch/v1",
+  "status": "TEMPLATE_NOT_EVIDENCE",
+  "pilot_batch_id": "REPLACE_WITH_IMMUTABLE_BATCH_ID",
+  "tenant": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "source_system": "REPLACE_WITH_SOURCE_SYSTEM",
+  "cutoff_at": "YYYY-MM-DDTHH:MM:SSZ",
+  "extract_at": "YYYY-MM-DDTHH:MM:SSZ",
+  "local_display_timezone": "Asia/Ho_Chi_Minh",
+  "mapping_version": 1,
+  "extractor_identity": "REPLACE_WITH_PERSON_OR_TOOL_IDENTITY",
+  "scope": {
+    "opening_cash_bank": false
+  },
+  "files": [
+    { "dataset_id": "customers", "name": "customers.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    { "dataset_id": "contacts", "name": "contacts.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    { "dataset_id": "suppliers", "name": "suppliers.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    { "dataset_id": "items", "name": "items.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    { "dataset_id": "boms", "name": "boms.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    { "dataset_id": "work_centers", "name": "work_centers.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    { "dataset_id": "warehouses", "name": "warehouses.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    {
+      "dataset_id": "opening_stock",
+      "name": "opening_stock.json",
+      "sha256": "REPLACE_WITH_SHA256",
+      "row_count": 0,
+      "source_totals": { "stock_qty_total": "0", "stock_value_total": "0" }
+    },
+    {
+      "dataset_id": "opening_ar",
+      "name": "opening_ar.json",
+      "sha256": "REPLACE_WITH_SHA256",
+      "row_count": 0,
+      "source_totals": { "total_amount_vnd": "0" }
+    },
+    {
+      "dataset_id": "opening_ap",
+      "name": "opening_ap.json",
+      "sha256": "REPLACE_WITH_SHA256",
+      "row_count": 0,
+      "source_totals": { "total_amount_vnd": "0" }
+    },
+    { "dataset_id": "employees", "name": "employees.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} },
+    { "dataset_id": "pilot_users", "name": "pilot_users.json", "sha256": "REPLACE_WITH_SHA256", "row_count": 0, "source_totals": {} }
+  ],
+  "notes": [
+    "All data files are canonical JSON arrays generated from approved source extracts.",
+    "A dataset with zero approved rows must still be represented by an empty JSON array and its exact SHA-256.",
+    "If opening_cash_bank is true, add opening_cash_bank.json with source_totals.total_balance_vnd.",
+    "Do not store real customer/master/opening source files in Git. Use an approved secure batch directory.",
+    "Passing preview does not authorize a production write."
+  ]
+}
