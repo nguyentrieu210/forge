@@ -258,8 +258,7 @@ function normalizeSocialEvent(message: JsonObject): NormalizedQueueMessage {
   requireText(message.worker_name, "worker_name", 320);
   requireText(message.page_key_hmac, "page_key_hmac", 256);
   requireIso(message.received_at, "received_at");
-  const rawBody = requireText(message.raw_body, "raw_body", 1_100_000);
-  if (new TextEncoder().encode(rawBody).byteLength > 1_000_000) throw new Error("Social event raw_body exceeds payload limit");
+  requireRawBody(message.raw_body, "raw_body", 1_000_000);
   return { tenant_id: tenantId, idempotency_identity: eventId, message_schema_version: 1, message: cloneJsonObject(message) };
 }
 
@@ -287,6 +286,12 @@ function requireText(value: unknown, field: string, max: number): string {
   const normalized = value.trim();
   if (!normalized || normalized.length > max || /[\r\n\0]/.test(normalized)) throw new Error(`Invalid ${field}`);
   return normalized;
+}
+
+function requireRawBody(value: unknown, field: string, maxBytes: number): string {
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0")) throw new Error(`Invalid ${field}`);
+  if (new TextEncoder().encode(value).byteLength > maxBytes) throw new Error(`${field} exceeds payload limit`);
+  return value;
 }
 
 function requireIso(value: unknown, field: string): string {
