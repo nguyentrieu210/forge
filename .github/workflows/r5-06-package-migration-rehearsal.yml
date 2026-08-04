@@ -20,7 +20,6 @@ on:
       - "server/tests/migration-opening.test.mjs"
       - "server/tests/migration-manifest-reconcile.test.mjs"
       - "server/tests/r5-package-migration-rehearsal.test.mjs"
-      - "docs/agents/r5/R5_A6_PACKAGE_MIGRATION_REHEARSAL.md"
       - ".github/workflows/r5-06-package-migration-rehearsal.yml"
 
 permissions:
