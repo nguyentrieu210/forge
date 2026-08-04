@@ -7,7 +7,13 @@
   "target": {
     "environmentClass": "PILOT_TARGET_OBSERVED",
     "tenant": "alu",
-    "origin": "https://alu.kairo.vn"
+    "origin": "https://alu.kairo.vn",
+    "observedReleaseSha": "cf5dd0da5b0154374a4ce371d7b122cd059a0bb2",
+    "observedBundleHash": "0f569841cc0ff19c",
+    "healthHttpStatus": 200,
+    "releaseHttpStatus": 200,
+    "guestBootHttpStatus": 403,
+    "matchesLockedCandidate": false
   },
   "expectedPackages": {
     "alumdoor": "2.2.3",
@@ -16,13 +22,40 @@
     "manufacturing-qms": "1.1.0",
     "maintenance": "1.5.1"
   },
+  "supportingSourceEvidence": {
+    "level": "DETERMINISTIC_SOURCE_SUPPORT",
+    "capabilityProfileAndObserver": { "pass": 53, "fail": 0 },
+    "commercialGoldenFlow": { "pass": 39, "fail": 0 },
+    "manufacturingWarrantyLineage": { "pass": 36, "fail": 0 },
+    "crossLedgerSelfTest": "PASS",
+    "alumdoorPackageDryRun": {
+      "status": "PASS",
+      "app": "alumdoor@2.2.3",
+      "doctypes": 74,
+      "workflows": 1,
+      "roles": 11,
+      "fixtures": 57,
+      "nav": 79
+    },
+    "verticalShadowAuthorityGuard": "PASS"
+  },
+  "buildBaseline": {
+    "strictBuild": "BLOCKED_BY_LOCKED_CANDIDATE_BASELINE",
+    "areas": [
+      "server/packages/clouderp-selling/src/crm-*.ts",
+      "server/packages/clouderp-selling/src/quotation-controller.ts",
+      "server/packages/frappe-model/src/validate.ts"
+    ],
+    "rule": "R6-04 records but does not repair shared locked-candidate build debt from an evidence lane."
+  },
   "evidence": [
     {
       "id": "R6-E18",
       "name": "Exact Alumdoor package/profile identity",
       "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
       "mutation": "NONE",
-      "status": "PENDING_REMOTE_OBSERVATION",
+      "status": "BLOCKED",
+      "reason": "Pilot target release marker is cf5dd0da5b0154374a4ce371d7b122cd059a0bb2, not locked candidate 4149af7c3e49b25fb1f43a50b62f99d7c04e6488. Package/profile observations therefore cannot certify exact locked-candidate identity.",
       "support": [
         "server/scripts/r6-04-alumdoor-identity-readonly.mjs",
         ".github/workflows/r6-04-alumdoor-golden-flow.yml"
@@ -34,7 +67,7 @@
       "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
       "mutation": "AUTHORIZED_NON_PROD",
       "status": "BLOCKED",
-      "reason": "No approved writable production-like R6 environment is currently materialized for a fresh exact-candidate authenticated transaction chain. Local and historical production evidence are supporting only."
+      "reason": "Exact candidate is not on the pilot target and no approved writable production-like exact-candidate environment is materialized for a fresh authenticated transaction chain."
     },
     {
       "id": "R6-E20",
@@ -42,7 +75,7 @@
       "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
       "mutation": "AUTHORIZED_NON_PROD",
       "status": "BLOCKED",
-      "reason": "Depends on the fresh R6-E19 production-like transaction lineage; existing local canonical-ledger regressions cannot substitute for environment-bound readback."
+      "reason": "Depends on fresh R6-E19 exact-candidate lineage; local canonical-ledger regressions cannot substitute for production-like Stock/AR/Payment/GL readback."
     },
     {
       "id": "R6-E21",
@@ -50,7 +83,7 @@
       "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
       "mutation": "AUTHORIZED_NON_PROD",
       "status": "BLOCKED",
-      "reason": "Requires an approved production-like writable environment for exact-candidate authoritative action retry/failure evidence."
+      "reason": "Requires an approved writable exact-candidate production-like environment for retry, duplicate and invalid authoritative-action evidence."
     },
     {
       "id": "R6-E22",
@@ -58,7 +91,7 @@
       "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
       "mutation": "AUTHORIZED_NON_PROD",
       "status": "BLOCKED",
-      "reason": "Requires an approved production-like writable environment for exact-candidate correction and partial/equivalent receivable transition evidence."
+      "reason": "Requires approved exact-candidate production-like state for correction and partial/equivalent receivable transition evidence."
     },
     {
       "id": "R6-E23",
@@ -66,7 +99,7 @@
       "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
       "mutation": "AUTHORIZED_NON_PROD",
       "status": "BLOCKED",
-      "reason": "Requires the fresh R6-E19 delivered source document in an approved production-like writable environment."
+      "reason": "Requires the fresh R6-E19 delivered source document in an approved writable exact-candidate production-like environment."
     }
   ],
   "dependencyRequests": [
@@ -74,8 +107,20 @@
       "id": "DR-R6-04-01",
       "owner": "R6 program / environment owner",
       "status": "OPEN",
-      "request": "Provide an approved production-like writable environment running the exact locked candidate and active Alumdoor profile for fresh Golden Flow E19-E23 execution, or explicitly authorize Golden Flow writes against pilot customer state. Production credentials or an existing production environment do not imply write authorization."
+      "request": "Provide an approved production-like writable environment running the exact locked candidate and active Alumdoor profile for fresh Golden Flow E19-E23 execution, or explicitly authorize Golden Flow writes against pilot customer state. Production credentials or read access do not imply write authorization."
+    },
+    {
+      "id": "DR-R6-04-02",
+      "owner": "R6-01 / release owner",
+      "status": "OPEN",
+      "request": "Converge alu.kairo.vn from observed cf5dd0da5b0154374a4ce371d7b122cd059a0bb2 to locked 4149af7c3e49b25fb1f43a50b62f99d7c04e6488 and close provider/release blockers before exact-release Golden Flow certification is rerun."
+    },
+    {
+      "id": "DR-R6-04-03",
+      "owner": "R6 program / Selling-Model owners",
+      "status": "OPEN",
+      "request": "Prove the official release build path for the locked candidate or repair the pre-existing exactOptionalPropertyTypes debt in shared Selling/Model code and relock the candidate. R6-04 does not change shared contracts from an evidence lane."
     }
   ],
-  "laneVerdict": "R6-04-RUNNING"
+  "laneVerdict": "R6-04-BLOCKED: pilot target is not on the exact locked candidate; E19-E23 also lack approved writable production-like exact-candidate execution state."
 }
