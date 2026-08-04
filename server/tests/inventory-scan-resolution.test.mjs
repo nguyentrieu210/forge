@@ -147,6 +147,21 @@ test("inventory scan API rejects client tenant selectors before lookup", async (
   );
 });
 
+test("inventory scan API rejects unsupported symbology before lookup", async () => {
+  const request = new Request("https://tenant.example/api/v1/inventory/scan/resolve", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ raw: "ITEM-1", symbology: "PDF417" }),
+  });
+  await assert.rejects(
+    () => routeInventoryScanApi(request, new URL(request.url), apiContext(), {
+      lookup: lookup([]),
+      access: allow(),
+    }),
+    /Unsupported scan symbology PDF417/,
+  );
+});
+
 test("inventory scan API returns native and Frappe envelopes from the same permission-aware resolver", async () => {
   const records = [{ doctype: "Item", name: "ITEM-1", data: { item_code: "ITEM-1" } }];
   const nativeRequest = new Request("https://tenant.example/api/v1/inventory/scan/resolve", {
@@ -159,7 +174,7 @@ test("inventory scan API returns native and Frappe envelopes from the same permi
     access: allow(),
   });
   assert.equal(nativeResponse?.status, 200);
-  assert.equal(nativeResponse?.headers.get("cache-control"), "private, no-store");
+  assert.equal(nativeResponse?.headers.get("cache-control"), "no-store");
   const nativeBody = await nativeResponse.json();
   assert.equal(nativeBody.status, "resolved");
   assert.equal(nativeBody.candidate.name, "ITEM-1");
