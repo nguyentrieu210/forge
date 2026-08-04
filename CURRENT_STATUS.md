@@ -14,13 +14,14 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - R6 Production Certification: **DONE / PILOT-GO**.
 - Pilot-00 Freeze Production Profile + Pilot Contract: **DONE / PILOT-00-LOCKED**.
 - Pilot-01 preview/control-plane: **READY**.
-- Pilot-01 real immutable source batch: **NOT YET AVAILABLE / PILOT-01-WAITING-SOURCE-BATCH**.
+- Pilot-01 real uploaded source set: **OBSERVED / HASHED / INGESTED**.
+- Pilot-01 current verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED** pending reconciliation/normalization.
 - Exact R6 certified/deployed source SHA and frozen initial pilot software baseline: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Canonical full production deploy run: `30952411424` — **SUCCESS**.
 - Final post-release certification run: `30952703083` — **SUCCESS**.
 - Final machine evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json`.
 - Pilot-00 authority: `docs/pilot/alumdoor/PILOT_00_CONTRACT.md` and `docs/pilot/alumdoor/PILOT_00_LOCK.json`.
-- Pilot-01 authority: `docs/pilot/alumdoor/PILOT_01_READINESS.md` and `docs/pilot/alumdoor/PILOT_01_STATUS.json`.
+- Pilot-01 authority: `docs/pilot/alumdoor/PILOT_01_STATUS.json`, `PILOT_01_SOURCE_INGEST_20260805.json` and `PILOT_01_SOURCE_INGEST_20260805.md`.
 
 Evidence/docs/control-plane commits after the certified SHA may advance `main`; they do not change the exact deployed product identity. Any later product-runtime/source change requires new affected release evidence before it can replace the frozen pilot baseline.
 
@@ -57,20 +58,7 @@ Verified identity:
 - profile valid: `true`;
 - blocked capabilities: none.
 
-Final R6 evidence:
-
-- matrix: **23/23 PASS** (`R6-E01..R6-E23`);
-- migration inventory: **80 expected / 80 applied / 0 pending / 0 unknown**;
-- fresh production backup/replay: PASS;
-- disposable remote D1 restore and source/restored reconciliation: PASS;
-- PITR read-only plan: PASS;
-- auth/session/CSRF/tenant-isolation: PASS;
-- provider/bindings/observability: PASS;
-- exact release health/guest boundary: PASS;
-- authenticated Golden Flow + Stock/Finance readback + correction/idempotency/warranty lineage: PASS;
-- bounded live pressure: 50 requests, concurrency 5, 0 errors, p50 21.84 ms, p95 78.08 ms, p99 97.82 ms, 141.85 RPS.
-
-No unresolved R6 blocker remains in controlled-pilot scope.
+Final R6 evidence remains **23/23 PASS**, migrations **80/80**, recovery/security/provider/Golden Flow/pressure evidence PASS. No unresolved R6 blocker remains in controlled-pilot scope.
 
 ## 4. Pilot-00 locked truth
 
@@ -83,47 +71,45 @@ Locked scope:
 - pilot personas: `Giám đốc`, `Chủ xưởng`, `Kinh doanh`, `Thủ kho`, `Kế toán`, `Sản xuất`;
 - business cutover authority: one named account holding `Giám đốc` role;
 - named-account allowlist required before Pilot-02;
-- permitted transaction families limited to canonical Sales/CRM, Procurement, Stock, Manufacturing/Alumdoor, Finance and Warranty/Service paths;
-- frozen source cutoff/extract manifest rules;
-- frozen master/opening mapping contract V1;
+- canonical Sales/Procurement/Stock/Manufacturing/Finance/Warranty authorities only;
+- frozen source cutoff/extract and mapping V1 rules;
 - reconciliation default: **zero unexplained variance**;
-- direct D1/ledger writes and vertical shadow ledgers prohibited;
-- product-source changes create a new candidate and require affected release evidence rerun;
-- code rollback does not imply data rollback; destructive restore/PITR remains a separate operation.
+- direct D1/ledger writes and vertical shadow ledgers prohibited.
 
 Pilot-00 performed **no real customer/master/opening-data production mutation**.
 
 ## 5. Pilot-01 current truth
 
-Pilot-01 now has a complete preview-only source intake/control plane:
+Pilot-01 no longer waits for source acquisition. The operator-provided uploads have been ingested as immutable source evidence without committing raw customer workbooks to Git.
 
-- frozen mapping: `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
-- immutable manifest template: `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`;
-- preview validator: `docs/pilot/alumdoor/tools/validate-pilot-batch.mjs`;
-- fail-closed tests: `docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs`;
-- identity verifier: `docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs`;
-- CI: `.github/workflows/pilot-01-data-readiness.yml`;
-- source handoff checklist: `docs/pilot/alumdoor/PILOT_01_SOURCE_BATCH_REQUIREMENTS.md`.
+Observed real-source coverage:
 
-The validator enforces:
+- item master: **277 rows / 277 unique item codes**;
+- customer source: **258 rows / 256 exact names**;
+- supplier master: **8 typed NCC rows**;
+- operating journal: **730 typed rows** (515 sales, 178 receipts, 14 purchases, 6 supplier returns, 16 other expenses, 1 transfer);
+- purchase-order reference: **TIẾN ĐẠT / 84,883,448 VND / 0% received**;
+- customer order/history reference: **11 sheets**;
+- aluminum stock source: **21 total sheets / 18 inventory sheets / 1,506 source lot rows**.
 
-- immutable SHA-256/file identity and exact row counts;
-- required datasets/fields;
-- duplicate source-key/item/account refusal;
-- unknown Customer/Supplier/Item/Warehouse/Employee reference refusal;
-- frozen Pilot-00 personas;
-- exactly one active named `Giám đốc` account;
-- integer money semantics;
-- non-negative opening stock quantity/rate;
-- exact Stock/AR/AP/cash-bank opening source-total reconciliation;
-- zero unexplained variance;
-- `production_write_authorized=false` and `production_data_mutated=false`.
+The stock workbook's own status formula can classify blank statuses from length/piece count. Replaying only that source formula yields **1,152 available lot rows / 41,137 pieces-leaves**. This is physical evidence, not canonical opening Stock quantity.
 
-Current missing input is a **real approved immutable source batch**. Package fixtures, demo records and R6 Golden Flow data are not accepted as real opening/customer migration evidence.
+Current blockers are evidence-specific:
 
-Pilot-01 therefore remains `PILOT-01-WAITING-SOURCE-BATCH`, not READY.
+1. no proven single common cutoff across Stock + AR/AP + cash/bank;
+2. two duplicate customer identities need disposition;
+3. supplier-role and party-alias gaps remain after preserving canonical TIẾN ĐẠT;
+4. 60 journal item codes do not exact-match the uploaded item export and require canonical alias reconciliation;
+5. aluminum source contains **zero populated actual-Kg cells** while canonical `Nhôm cây/lá` Stock UOM is Kg; theoretical kg/m must not be promoted to measured quantity;
+6. process source expects 23 aluminum + 2 mesh sheets, while observed aluminum workbook has 21 total / 18 inventory sheets and no separate mesh source in the set;
+7. two `VIPST700` rows have future source date `23/12/2026`;
+8. observed activity cannot safely reconstruct opening AR/AP;
+9. 45 typed journal rows contain fractional `Tổng thanh toán` and require a deterministic integer-VND rule;
+10. complete work-center/BOM/employee/pilot-user data is not migration-ready.
 
-No Pilot-01 real production import/write has occurred.
+Therefore Pilot-01 is **SOURCE INGESTED but PREVIEW BLOCKED**, not `WAITING-SOURCE-BATCH` and not READY.
+
+No Pilot-01 production import/write has occurred.
 
 ## 6. Current architecture authorities
 
@@ -139,7 +125,7 @@ No Pilot-01 real production import/write has occurred.
 
 ## 7. Active sequence
 
-`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 WAITING SOURCE BATCH -> real PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
+`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 SOURCE INGESTED -> reconcile/normalize -> real PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
 
 The active queue is `NEXT_TASKS.md`.
 
@@ -156,4 +142,4 @@ The active queue is `NEXT_TASKS.md`.
 
 ## 9. Documentation authority
 
-Start at `docs/README.md`, then `docs/pilot/alumdoor/README.md` and `NEXT_TASKS.md` for the controlled-pilot queue. R6 final evidence remains historical entry authority for the frozen pilot baseline.
+Start at `docs/README.md`, then `docs/pilot/alumdoor/README.md`, `PILOT_01_SOURCE_INGEST_20260805.md` and `NEXT_TASKS.md`. R6 final evidence remains historical entry authority for the frozen pilot baseline.
