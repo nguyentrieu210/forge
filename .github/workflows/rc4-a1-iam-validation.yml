@@ -1,0 +1,138 @@
+name: RC4 A1 IAM Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/packages/auth/**"
+      - "server/packages/frappe-api/**"
+      - "server/packages/organization-security/**"
+      - "server/apps/gateway-worker/src/index.ts"
+      - "server/apps/tenant-worker/src/index.ts"
+      - "server/apps/tenant-worker/src/mfa-config.ts"
+      - "server/apps/tenant-worker/src/native-security.ts"
+      - "server/migrations/tenant/0050_user_session_registry.sql"
+      - "server/migrations/tenant/0051_user_mfa_totp.sql"
+      - "server/tests/*mfa*.test.mjs"
+      - "server/tests/*session*.test.mjs"
+      - "server/tests/authentication-context.test.mjs"
+      - "server/tests/native-security.test.mjs"
+      - "server/tests/security-alerts.test.mjs"
+      - "server/tests/security-recent-auth.test.mjs"
+      - "server/tests/network-policy.test.mjs"
+      - "server/tests/rc4-iam-auth-integration.test.mjs"
+      - "server/tests/rc4-iam-session-revalidation.test.mjs"
+      - "server/scripts/test-user-session-registry-migration.py"
+      - "server/scripts/test-user-mfa-totp-migration.py"
+      - "docs/agents/rc/RC4_A1_IAM_PRIVACY_EVIDENCE.md"
+      - ".github/workflows/rc4-a1-iam-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a1-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/rc4-01-iam-privacy')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused IAM TypeScript emit with baseline classification
+        working-directory: server
+        run: |
+          cat > tsconfig.rc4-a1.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "rootDir": ".",
+              "outDir": "./dist",
+              "declaration": false,
+              "sourceMap": false,
+              "noEmitOnError": false
+            },
+            "include": [
+              "packages/auth/src/**/*.ts",
+              "packages/contracts/src/**/*.ts",
+              "packages/core/src/**/*.ts",
+              "packages/frappe-api/src/**/*.ts",
+              "packages/frappe-model/src/**/*.ts",
+              "packages/organization-security/src/**/*.ts",
+              "apps/gateway-worker/src/index.ts",
+              "apps/tenant-worker/src/index.ts",
+              "apps/tenant-worker/src/index-core.ts",
+              "apps/tenant-worker/src/mfa-config.ts",
+              "apps/tenant-worker/src/native-security.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules", "apps/web"]
+          }
+          JSON
+          set +e
+          pnpm exec tsc -p tsconfig.rc4-a1.json --pretty false 2>&1 | tee /tmp/rc4-a1-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep "error TS" /tmp/rc4-a1-tsc.log > /tmp/rc4-a1-errors.log || true
+            grep -E '^(packages/auth/|packages/frappe-api/|packages/organization-security/|apps/tenant-worker/src/(index|mfa-config|native-security)\.ts)' /tmp/rc4-a1-errors.log > /tmp/rc4-a1-owned-errors.log || true
+            if [ -s /tmp/rc4-a1-owned-errors.log ]; then
+              echo "TypeScript errors inside RC4-A1 IAM authority:"
+              cat /tmp/rc4-a1-owned-errors.log
+              exit 1
+            fi
+            echo "Only errors outside RC4-A1 IAM authority were observed:"
+            cat /tmp/rc4-a1-errors.log
+          fi
+
+      - name: MFA and session authority regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/rc4-iam-auth-integration.test.mjs \
+            tests/rc4-iam-session-revalidation.test.mjs \
+            tests/login-mfa.test.mjs \
+            tests/mfa-service.test.mjs \
+            tests/mfa-routes.test.mjs \
+            tests/mfa-config.test.mjs \
+            tests/session-registry.test.mjs
+
+      - name: Recent-auth, trusted identity and security evidence regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/security-recent-auth.test.mjs \
+            tests/authentication-context.test.mjs \
+            tests/native-security.test.mjs \
+            tests/security-alerts.test.mjs \
+            tests/network-policy.test.mjs
+
+      - name: IAM migration replay and constraints
+        working-directory: server
+        run: |
+          python3 scripts/test-user-session-registry-migration.py
+          python3 scripts/test-user-mfa-totp-migration.py
+          python3 scripts/verify-sql.py
+
+      - name: Diff safety
+        run: git diff --check
