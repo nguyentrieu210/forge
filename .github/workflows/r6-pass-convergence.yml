@@ -50,8 +50,26 @@ jobs:
         run: pnpm exec vitest run apps/tenant-worker/test/tenant-provisioning.integration.test.mts --config apps/tenant-worker/vitest.config.mts --reporter=verbose
       - name: Workerd evidence — R6 Golden Flow
         id: golden
+        continue-on-error: true
         working-directory: server
-        run: pnpm exec vitest run apps/tenant-worker/test/r6-golden-flow.integration.test.mts --config apps/tenant-worker/vitest.config.mts --reporter=verbose
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run apps/tenant-worker/test/r6-golden-flow.integration.test.mts \
+            --config apps/tenant-worker/vitest.config.mts \
+            --reporter=verbose 2>&1 | tee /tmp/r6-golden-flow.log
+      - name: Upload Golden Flow diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-golden-flow-${{ github.run_id }}
+          path: /tmp/r6-golden-flow.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Assert Golden Flow
+        if: always()
+        shell: bash
+        run: test "${{ steps.golden.outcome }}" = success
       - name: Verify release safety authority
         working-directory: server
         run: npm run verify:release-safety
