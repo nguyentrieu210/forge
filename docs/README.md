@@ -35,7 +35,13 @@ R6 Production Certification đã hoàn tất với `PILOT-GO` cho exact deployed
 
 Pilot-00 is **DONE / PILOT-00-LOCKED**.
 
-Current Pilot-01 state is **PILOT-01-WAITING-SOURCE-BATCH**: preview tooling/control-plane is ready, but no approved immutable real Alumdoor customer/master/opening source batch is currently available to certify as `PREVIEW_PASS`.
+Pilot-01 real source acquisition is also complete at the evidence-ingest level: the supplied Alumdoor source set has been observed, SHA-256-bound and structurally ingested without committing raw customer workbooks to Git.
+
+Current truthful Pilot-01 verdict is:
+
+**`PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`**
+
+The blocker is now reconciliation/normalization, not source acquisition. Key unresolved evidence includes common cutoff alignment, party/item aliases, actual-Kg stock evidence, opening AR/AP, integer-VND normalization and incomplete work-center/BOM/employee/pilot-user data.
 
 Current pilot authority:
 
@@ -43,13 +49,14 @@ Current pilot authority:
 2. `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`
 3. `docs/pilot/alumdoor/PILOT_00_LOCK.json`
 4. `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`
-5. `docs/pilot/alumdoor/PILOT_01_READINESS.md`
-6. `docs/pilot/alumdoor/PILOT_01_STATUS.json`
-7. `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`
-8. `docs/pilot/alumdoor/PILOT_01_SOURCE_BATCH_REQUIREMENTS.md`
-9. `NEXT_TASKS.md`
+5. `docs/pilot/alumdoor/PILOT_01_STATUS.json`
+6. `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json`
+7. `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`
+8. `docs/pilot/alumdoor/PILOT_01_READINESS.md`
+9. `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`
+10. `NEXT_TASKS.md`
 
-Pilot-01 source validation is preview-only. Real customer/master/opening source files stay outside Git and real production import/write remains a separate authorization boundary.
+Pilot-01 source ingestion/preview evidence does not authorize production import/write. Raw customer/master/opening source files remain outside Git.
 
 Final R6 entry authority remains:
 
@@ -80,6 +87,7 @@ History được giữ khi cần chứng minh vì sao current state tồn tại.
 - `docs/agents/rc/RC3_CONVERGENCE_20260804.md` — RC3 convergence history.
 - `docs/agents/cloudflare-cfmax/CFMAX_R2_CONVERGENCE_20260804.md` và `CFMAX_R2_POST_MERGE_20260804.md` — Cloudflare source convergence.
 - `docs/agents/transaction-closure/07-CONVERGENCE.md` — cross-domain transaction closure.
+- `server/docs/spec/**` — legacy source-exact/parity/oracle corpus; entrypoint `server/docs/spec/README.md` explains why old names remain there.
 
 Worker evidence cụ thể có thể được giữ nếu chứa test/provenance/decision chưa được final record thay thế hoàn toàn.
 
@@ -89,7 +97,7 @@ Product brand cấp platform là **Forge**.
 
 - `MetaForge` / `CloudForge` không còn được dùng như umbrella product brands trong live prose.
 - `@metaforge/*`, `metaforge.api.*`, `cloudforge-*` được giữ khi là technical identifier thật.
-- `Kairo` chỉ giữ khi là exact environment/domain identifier hoặc historical evidence; không dùng làm brand mới mặc định.
+- `Kairo` chỉ giữ khi là exact environment/domain identifier, historical evidence hoặc một product surface có contract riêng; không dùng làm brand mới mặc định.
 - Alumdoor giữ identity vertical riêng.
 - Frappe/ERPNext là compatibility/benchmark/reference, không phải tagline của Forge.
 
@@ -106,7 +114,8 @@ Sau khi một program đã converge/merge, mặc định xóa khỏi `main` các
 - `*-HANDOFF.md` chỉ chứa branch/PR/snapshot đã superseded;
 - topology/bootstrap verification chỉ dùng để khởi tạo program;
 - legacy PR inbox đã được disposition xong;
-- point-in-time deploy/status/local consolidation notes đã có durable evidence thay thế.
+- point-in-time deploy/status/local consolidation notes đã có durable evidence thay thế;
+- one-off debug/lab scripts có credential hoặc không còn regression value.
 
 Git history và PR history là nơi tra provenance của các file đã xóa; không cần giữ bản stale trên `main`.
 
@@ -119,18 +128,20 @@ Giữ file nếu nó còn ít nhất một trong các vai trò sau:
 - legal/source-lock evidence;
 - migration/release/recovery evidence;
 - final convergence/audit record;
-- user-facing operating documentation.
+- user-facing operating documentation;
+- source-exact/oracle/regression artifact còn được tooling sử dụng.
 
 Nếu file chỉ mô tả một branch/agent/component version/deploy snapshot đã đóng và final evidence đã thay thế, ưu tiên xóa thay vì gắn thêm nhãn `SUPERSEDED` rồi để tồn tại vô hạn.
 
 ## 9. Hygiene checkpoint — 2026-08-05
 
-Repository hygiene/rebaseline branch removes superseded coordination/status artifacts and refreshes current entrypoints against the North Star.
+Repository hygiene/rebaseline branch removes superseded coordination/status/debug artifacts and refreshes current entrypoints against the North Star.
 
 Historical names may still appear in:
 
 - technical package/import/API identifiers;
 - exact Cloudflare resource/domain names;
+- source-exact/parity/oracle corpus;
 - historical final evidence;
 - commit/PR history.
 
