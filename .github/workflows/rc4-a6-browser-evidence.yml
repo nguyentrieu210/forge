@@ -1,0 +1,58 @@
+name: RC4 A6 Browser Evidence
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "client/apps/demo/**"
+      - "client/apps/runtime/**"
+      - "client/e2e-forge/**"
+      - "client/packages/controls/**"
+      - "client/packages/shell/**"
+      - "client/packages/views/**"
+      - ".github/workflows/rc4-a6-browser-evidence.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install Chromium
+        run: pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
+      - name: Build demo dependency graph
+        run: pnpm --filter @metaforge/demo... run build
+      - name: Run current V2 demo browser matrix
+        run: pnpm --filter @metaforge/demo run e2e:rc4:v2
+      - name: Build runtime dependency graph
+        run: pnpm --filter runtime... run build
+      - name: Run current V2 runtime and PWA matrix
+        run: pnpm --filter e2e-forge run test:rc4:v2
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc4-a6-browser-evidence
+          path: |
+            client/apps/demo/playwright-report/rc4-v2-mobile-qa
+            client/apps/demo/test-results
+            client/e2e-forge/playwright-report/rc4-v2-mobile-qa
+            client/e2e-forge/test-results/rc4-v2-mobile-qa
+          if-no-files-found: ignore
