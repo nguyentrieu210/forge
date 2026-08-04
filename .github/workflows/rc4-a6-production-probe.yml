@@ -1,0 +1,74 @@
+name: RC4 A6 Production Probe
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/rc4-a6-production-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  production-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wait until production release contains RC4-A6
+        shell: bash
+        env:
+          A6_MERGE_SHA: 834da8cf8fbf496f6c58cb0d8ba2119c40a6b66c
+        run: |
+          set -euo pipefail
+          observed=""
+          for attempt in $(seq 1 30); do
+            git fetch origin main --quiet
+            body="$(curl -fsS --max-time 10 -H 'cache-control: no-cache' https://alu.kairo.vn/release.json || true)"
+            release_sha="$(printf '%s' "$body" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);process.stdout.write(String(j.release_sha||j.sha||""))}catch{}})')"
+            echo "attempt=$attempt release_sha=${release_sha:-unavailable}"
+            if [[ "$release_sha" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              git fetch origin "$release_sha" --quiet || true
+              if git cat-file -e "$release_sha^{commit}" 2>/dev/null && git merge-base --is-ancestor "$A6_MERGE_SHA" "$release_sha"; then
+                observed="$release_sha"
+                break
+              fi
+            fi
+            sleep 10
+          done
+          test -n "$observed" || {
+            echo "Production release did not converge to an A6-containing commit within probe window."
+            exit 1
+          }
+          echo "$observed" > "$RUNNER_TEMP/observed-release-sha.txt"
+          echo "Observed production release containing A6: $observed"
+      - name: Verify production health and exact observed release
+        shell: bash
+        run: |
+          set -euo pipefail
+          observed="$(cat "$RUNNER_TEMP/observed-release-sha.txt")"
+          node server/scripts/sre-health-snapshot.mjs \
+            --base https://alu.kairo.vn \
+            --expected-release-sha "$observed" \
+            --allow-remote \
+            --confirm-host alu.kairo.vn \
+            --attempts 3 \
+            --delay-ms 2000 \
+            --output "$RUNNER_TEMP/rc4-a6-production-health.json"
+      - name: Upload production evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc4-a6-production-probe
+          path: |
+            ${{ runner.temp }}/observed-release-sha.txt
+            ${{ runner.temp }}/rc4-a6-production-health.json
+          if-no-files-found: warn
+          retention-days: 30
