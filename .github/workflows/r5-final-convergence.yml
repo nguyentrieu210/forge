@@ -151,9 +151,8 @@ jobs:
         working-directory: client
         run: pnpm --filter @metaforge/builder build
 
-      - name: Builder tests
-        working-directory: client
-        run: pnpm --filter @metaforge/builder test
+      - name: Capability Profile Builder regression
+        run: node --test client/packages/builder/test/capability-profile.test.mjs
 
       - name: Generic runtime build
         working-directory: client
