@@ -1,0 +1,67 @@
+name: R6 Pass Convergence
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r6-pass-convergence-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Full release build and source safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CloudForge exactly as full production release
+        run: pnpm --filter cloudforge run build
+
+      - name: Build MetaForge exactly as full production release
+        run: pnpm --filter metaforge run build
+
+      - name: Verify release safety authority
+        working-directory: server
+        run: npm run verify:release-safety
+
+      - name: Verify observability source contract
+        working-directory: server
+        run: npm run verify:observability
+
+      - name: Verify queue safety
+        working-directory: server
+        run: npm run verify:queue-safety
+
+      - name: Verify Alumdoor package
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/alumdoor --check
+
+      - name: Diff hygiene
+        run: git diff --check
