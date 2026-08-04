@@ -106,7 +106,7 @@ export async function verifyInstalledApp({ manifest, clientManifest, call, admin
       const columns = Array.isArray(report?.columns) ? report.columns : [];
       const fields = new Set(columns.map((column) => column?.fieldname));
       for (const field of [...stringArray(chart.dimensions), ...stringArray(chart.measures)]) {
-        assert(fields.has(field), `chart report ${chart.source} is missing column ${field}`);
+        assert(fields.has(field), `chart report ${chart.source} is missing wire column ${field}`);
       }
       assert(Array.isArray(report?.result), `chart report ${chart.source} did not return a result array`);
       checkedReports += 1;
