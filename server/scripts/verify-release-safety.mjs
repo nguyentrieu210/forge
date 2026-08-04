@@ -15,6 +15,9 @@ const required = [
   'paths:\n      - "client/**"',
   "inputs.scope == 'full' && inputs.confirm == 'alu'",
   "git merge-base --is-ancestor \"$TARGET_SHA\" origin/main",
+  "name: Reconcile frozen-install worktree",
+  "pnpm-lock.yaml)",
+  "git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml",
   "name: Guard full-release generated worktree",
   "client/apps/kho/dist-mobile/*|server/apps/gateway-worker/public/*)",
   "node server/scripts/verify-tenant-backup.mjs",
@@ -30,17 +33,34 @@ for (const invariant of required) {
   if (!workflow.includes(invariant)) throw new Error(`release safety invariant missing: ${invariant}`);
 }
 
-const buildIndex = workflow.indexOf("- name: Build once");
-const generatedGuardIndex = workflow.indexOf("- name: Guard full-release generated worktree");
-const backupIndex = workflow.indexOf("node server/scripts/backup-tenant.mjs");
-const verifyIndex = workflow.indexOf("node server/scripts/verify-tenant-backup.mjs");
-const migrateIndex = workflow.indexOf('node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute');
-const tenantDeployIndex = workflow.indexOf('node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute');
-if (!(buildIndex >= 0 && buildIndex < generatedGuardIndex && generatedGuardIndex < backupIndex)) {
+const buildDeployIndex = workflow.indexOf("build-deploy:");
+const installIndex = workflow.indexOf("- name: Install dependencies", buildDeployIndex);
+const installGuardIndex = workflow.indexOf("- name: Reconcile frozen-install worktree", buildDeployIndex);
+const buildIndex = workflow.indexOf("- name: Build once", buildDeployIndex);
+const generatedGuardIndex = workflow.indexOf("- name: Guard full-release generated worktree", buildDeployIndex);
+const backupIndex = workflow.indexOf("node server/scripts/backup-tenant.mjs", buildDeployIndex);
+const verifyIndex = workflow.indexOf("node server/scripts/verify-tenant-backup.mjs", buildDeployIndex);
+const migrateIndex = workflow.indexOf('node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute', buildDeployIndex);
+const tenantDeployIndex = workflow.indexOf('node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute', buildDeployIndex);
+if (!(buildDeployIndex >= 0 && installIndex > buildDeployIndex && installIndex < installGuardIndex && installGuardIndex < buildIndex)) {
+  throw new Error("full release must reconcile frozen-install source changes before exact build");
+}
+if (!(buildIndex < generatedGuardIndex && generatedGuardIndex < backupIndex)) {
   throw new Error("generated release worktree must be narrowed immediately after exact build and before production data operations");
 }
 if (!(backupIndex >= 0 && backupIndex < verifyIndex && verifyIndex < migrateIndex && migrateIndex < tenantDeployIndex)) {
   throw new Error("full release order must remain backup -> replay verify -> migrate -> tenant deploy");
+}
+
+const installGuardBlock = workflow.slice(installGuardIndex, buildIndex);
+if (!installGuardBlock.includes("pnpm-lock.yaml)")) {
+  throw new Error("frozen-install worktree reconciliation must remain limited to pnpm-lock.yaml");
+}
+for (const forbidden of ["client/*)", "server/*)", "*) git restore", "git reset --hard", "git clean -fd"]) {
+  if (installGuardBlock.includes(forbidden)) throw new Error(`frozen-install source reconciliation is too broad: ${forbidden}`);
+}
+if (!installGuardBlock.includes('test -z "$(git status --porcelain --untracked-files=all)"')) {
+  throw new Error("frozen-install reconciliation must end with an exact clean-worktree assertion");
 }
 
 const generatedGuardBlock = workflow.slice(generatedGuardIndex, backupIndex);
@@ -58,7 +78,7 @@ for (const broadRoot of ["client/*)", "server/*)", "client/apps/kho/*)", "server
 const migrationLine = workflow.split(/\r?\n/).find((line) => line.includes('migrate-tenant.mjs --tenant "$TENANT" --execute')) ?? "";
 const tenantDeployLine = workflow.split(/\r?\n/).find((line) => line.includes('deploy-tenant.mjs --tenant "$TENANT" --execute')) ?? "";
 if (!migrationLine.includes("--allow-dirty") || !tenantDeployLine.includes("--allow-dirty")) {
-  throw new Error("full release mutation may bypass the generic dirty guard only after the generated-release-path guard");
+  throw new Error("full release mutation may bypass the generic dirty guard only after both exact-source reconciliation guards");
 }
 
 const verifyJobIndex = workflow.indexOf("verify-production:");
@@ -116,7 +136,7 @@ for (const name of workflowFiles) {
 }
 
 console.log(
-  `RELEASE_SAFETY_PASS merged-main-target deterministic-generated-roots backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
+  `RELEASE_SAFETY_PASS merged-main-target frozen-install-reconciled deterministic-generated-roots backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
 );
 
 function hasTopLevelWorkflowEvent(source, event) {
