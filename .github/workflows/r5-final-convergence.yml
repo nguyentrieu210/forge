@@ -147,12 +147,17 @@ jobs:
       - name: Capability denominator and current maturity arithmetic
         run: node server/scripts/validate-enterprise-capability-status.mjs
 
-      - name: Builder and generic runtime build
+      - name: Builder build
         working-directory: client
-        run: |
-          pnpm --filter @metaforge/builder build
-          pnpm --filter @metaforge/builder test
-          pnpm --filter runtime build
+        run: pnpm --filter @metaforge/builder build
+
+      - name: Builder tests
+        working-directory: client
+        run: pnpm --filter @metaforge/builder test
+
+      - name: Generic runtime build
+        working-directory: client
+        run: pnpm --filter runtime build
 
       - name: Install Chromium for bounded R5 browser smoke
         working-directory: client/e2e-forge
