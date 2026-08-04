@@ -47,6 +47,10 @@ jobs:
       - name: Build MetaForge exactly as full production release
         run: pnpm --filter metaforge run build
 
+      - name: Verify migration and PITR safety
+        working-directory: server
+        run: node --test tests/d1-migrate-remote-safety.test.mjs tests/sre-destructive-guards.test.mjs
+
       - name: Verify release safety authority
         working-directory: server
         run: npm run verify:release-safety
