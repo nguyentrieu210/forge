@@ -16,7 +16,7 @@ const required = [
   "inputs.scope == 'full' && inputs.confirm == 'alu'",
   "git merge-base --is-ancestor \"$TARGET_SHA\" origin/main",
   "name: Guard full-release generated worktree",
-  "server/apps/gateway-worker/public/*)",
+  "client/apps/kho/dist-mobile/*|server/apps/gateway-worker/public/*)",
   "node server/scripts/verify-tenant-backup.mjs",
   "node scripts/migrate-tenant.mjs --tenant \"$TENANT\" --execute --confirm \"$TENANT\" --allow-dirty",
   "node scripts/deploy-tenant.mjs --tenant \"$TENANT\" --execute --confirm \"$TENANT\" --allow-dirty",
@@ -41,6 +41,18 @@ if (!(buildIndex >= 0 && buildIndex < generatedGuardIndex && generatedGuardIndex
 }
 if (!(backupIndex >= 0 && backupIndex < verifyIndex && verifyIndex < migrateIndex && migrateIndex < tenantDeployIndex)) {
   throw new Error("full release order must remain backup -> replay verify -> migrate -> tenant deploy");
+}
+
+const generatedGuardBlock = workflow.slice(generatedGuardIndex, backupIndex);
+const approvedGeneratedRoots = [
+  "client/apps/kho/dist-mobile/*",
+  "server/apps/gateway-worker/public/*",
+];
+for (const root of approvedGeneratedRoots) {
+  if (!generatedGuardBlock.includes(root)) throw new Error(`generated release guard must allow deterministic output root: ${root}`);
+}
+for (const broadRoot of ["client/*)", "server/*)", "client/apps/kho/*)", "server/apps/gateway-worker/*)"]) {
+  if (generatedGuardBlock.includes(broadRoot)) throw new Error(`generated release guard is too broad: ${broadRoot}`);
 }
 
 const migrationLine = workflow.split(/\r?\n/).find((line) => line.includes('migrate-tenant.mjs --tenant "$TENANT" --execute')) ?? "";
@@ -104,7 +116,7 @@ for (const name of workflowFiles) {
 }
 
 console.log(
-  `RELEASE_SAFETY_PASS merged-main-target generated-worktree-guard backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
+  `RELEASE_SAFETY_PASS merged-main-target deterministic-generated-roots backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
 );
 
 function hasTopLevelWorkflowEvent(source, event) {
