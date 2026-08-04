@@ -6,7 +6,7 @@
     { "fieldname": "activity", "label": "Hoạt động", "fieldtype": "Link", "options": "CRM Activity", "read_only": true, "in_list_view": true },
     { "fieldname": "activity_type", "label": "Loại", "fieldtype": "Data", "read_only": true, "in_list_view": true },
     { "fieldname": "subject", "label": "Nội dung", "fieldtype": "Data", "read_only": true, "in_list_view": true },
-    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true },
+    { "fieldname": "activity_status", "label": "Trạng thái", "fieldtype": "Data", "read_only": true, "in_list_view": true },
     { "fieldname": "reference_doctype", "label": "Loại tham chiếu", "fieldtype": "Data", "read_only": true },
     { "fieldname": "reference_name", "label": "Tham chiếu", "fieldtype": "Data", "read_only": true },
     { "fieldname": "activity_at", "label": "Thời điểm", "fieldtype": "Datetime", "read_only": true, "in_list_view": true },
