@@ -20,6 +20,7 @@
 
 import type { D1UserStore } from "../../auth/src/index.js";
 import type { JsonObject } from "../../contracts/src/index.js";
+import { errors } from "../../core/src/index.js";
 import type { MetadataStore } from "../../frappe-model/src/index.js";
 import {
   AppInstaller as CoreAppInstaller,
@@ -27,6 +28,7 @@ import {
 } from "./installer.js";
 import { assertAppUpgradeMaterializationCompatible } from "./app-upgrade-guard.js";
 import { parseAppManifest } from "./manifest.js";
+import { satisfiesMinimumVersionRequirement } from "./version-requirement.js";
 
 type D1Target = D1Database | D1DatabaseSession;
 
@@ -149,6 +151,30 @@ export class AppInstaller extends CoreAppInstaller {
     now: string,
   ): Promise<InstallResult> {
     const manifest = parseAppManifest(packageValue);
+
+    // The historical core comparator treats version strings as numeric components.
+    // That is correct for the original bare-minimum contract but permissive for an
+    // operator-prefixed requirement such as `>=1.3.0` (`>=1` became 0). Enforce the
+    // canonical requirement grammar and minimum here before delegating so a malformed
+    // or too-old dependency cannot reach the transactional installer.
+    if (manifest.requires.length) {
+      const rows = await this.sourceDb.prepare(
+        "SELECT app_id,version FROM installed_apps WHERE tenant_id=?1",
+      ).bind(tenantId).all<{ app_id: string; version: string }>();
+      const installedVersions = new Map((rows.results ?? []).map((row) => [row.app_id, row.version]));
+      for (const dependency of manifest.requires) {
+        const installedVersion = installedVersions.get(dependency.id);
+        if (!installedVersion) {
+          throw errors.validation(`${manifest.id} requires ${dependency.id} ${dependency.version}`);
+        }
+        if (!satisfiesMinimumVersionRequirement(installedVersion, dependency.version)) {
+          throw errors.validation(
+            `${manifest.id} requires ${dependency.id} ${dependency.version}; installed is ${installedVersion}`,
+          );
+        }
+      }
+    }
+
     const installed = await this.sourceDb.prepare(
       "SELECT manifest_json FROM installed_apps WHERE tenant_id=?1 AND app_id=?2",
     ).bind(tenantId, manifest.id).first<{ manifest_json: string }>();
