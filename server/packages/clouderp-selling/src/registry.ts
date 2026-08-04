@@ -12,7 +12,7 @@ import { ArSalesInvoiceController } from "./ar-sales-invoice-controller.js";
 import { DeliveryNoteController } from "./controllers.js";
 import { PaymentAllocationController } from "./finance-controllers.js";
 import { QuotationController } from "./quotation-controller.js";
-import { SafeFinancePaymentEntryController } from "./safe-finance-payment-entry.js";
+import { R5FinanceHcmPaymentEntryController } from "./r5-finance-hcm-payment-entry.js";
 import { SalesOrderClosureController } from "./sales-order-closure-controller.js";
 
 export function createO2CControllerRegistry(): ControllerRegistry {
@@ -44,6 +44,6 @@ export function createO2CControllerRegistry(): ControllerRegistry {
     .register(new SalesOrderClosureController())
     .register(new DeliveryNoteController())
     .register(new ArSalesInvoiceController())
-    .register(new SafeFinancePaymentEntryController())
+    .register(new R5FinanceHcmPaymentEntryController())
     .register(new PaymentAllocationController());
 }
