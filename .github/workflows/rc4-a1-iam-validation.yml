@@ -21,6 +21,7 @@ on:
       - "server/tests/security-recent-auth.test.mjs"
       - "server/tests/network-policy.test.mjs"
       - "server/tests/rc4-iam-auth-integration.test.mjs"
+      - "server/tests/rc4-iam-session-revalidation.test.mjs"
       - "server/scripts/test-user-session-registry-migration.py"
       - "server/scripts/test-user-mfa-totp-migration.py"
       - "docs/agents/rc/RC4_A1_IAM_PRIVACY_EVIDENCE.md"
@@ -107,12 +108,12 @@ jobs:
         run: |
           node --test \
             tests/rc4-iam-auth-integration.test.mjs \
+            tests/rc4-iam-session-revalidation.test.mjs \
             tests/login-mfa.test.mjs \
             tests/mfa-service.test.mjs \
             tests/mfa-routes.test.mjs \
             tests/mfa-config.test.mjs \
-            tests/session-registry.test.mjs \
-            tests/frappe-session.test.mjs
+            tests/session-registry.test.mjs
 
       - name: Recent-auth, trusted identity and security evidence regressions
         working-directory: server
