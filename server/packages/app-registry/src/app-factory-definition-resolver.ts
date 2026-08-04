@@ -21,6 +21,13 @@ function day(value: string): string {
   return normalized;
 }
 
+function lifecycle(document: CanonicalDocument<AppFactoryDefinitionData>): string {
+  // `status` was used by historical WS09 branch fixtures before canonical metadata validation
+  // rejected it as a reserved field. Read it as compatibility evidence, but all new writes emit
+  // `definition_status`; top-level canonical status remains the final fallback.
+  return document.data.definition_status ?? document.data.status ?? document.status;
+}
+
 /**
  * Read-side source of truth for Process/Decision/Formula definitions.
  *
@@ -43,7 +50,7 @@ export class AppFactoryDefinitionResolver {
       .filter((document) => document.data.definition_key === input.definition_key)
       .filter((document) => document.data.definition_kind === input.definition_kind)
       .filter((document) => document.data.target_doctype === input.target_doctype)
-      .filter((document) => document.data.status === "Active")
+      .filter((document) => lifecycle(document) === "Active")
       .filter((document) => document.data.effective_from <= effectiveOn)
       .filter((document) => !document.data.effective_to || document.data.effective_to >= effectiveOn)
       .sort((left, right) => right.data.version_no - left.data.version_no || right.version - left.version);
