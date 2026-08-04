@@ -23,7 +23,7 @@ INSERT OR IGNORE INTO doctype_definitions (
   0,
   0,
   1,
-  '{"name":"Fiscal Year","module":"Accounts","autoname":"field:year","title_field":"year","search_fields":"year","fields":[{"fieldname":"year","label":"Fiscal Year","fieldtype":"Data","reqd":1,"unique":1},{"fieldname":"year_start_date","label":"Year Start Date","fieldtype":"Date","reqd":1},{"fieldname":"year_end_date","label":"Year End Date","fieldtype":"Date","reqd":1},{"fieldname":"disabled","label":"Disabled","fieldtype":"Check","default":"0"}],"permissions":[{"role":"Accounts Manager","read":1,"write":1,"create":1,"delete":1},{"role":"Accounts User","read":1},{"role":"System Manager","read":1,"write":1,"create":1,"delete":1}]}',
+  '{"name":"Fiscal Year","module":"Accounts","autoname":"field:year","title_field":"year","search_fields":["year"],"fields":[{"fieldname":"year","label":"Fiscal Year","fieldtype":"Data","reqd":1,"unique":1},{"fieldname":"year_start_date","label":"Year Start Date","fieldtype":"Date","reqd":1},{"fieldname":"year_end_date","label":"Year End Date","fieldtype":"Date","reqd":1},{"fieldname":"disabled","label":"Disabled","fieldtype":"Check","default":"0"}],"permissions":[{"role":"Accounts Manager","read":1,"write":1,"create":1,"delete":1},{"role":"Accounts User","read":1},{"role":"System Manager","read":1,"write":1,"create":1,"delete":1}]}',
   0,
   'migration:0116_standard_fiscal_year',
   '2026-08-04T00:00:00.000Z'
