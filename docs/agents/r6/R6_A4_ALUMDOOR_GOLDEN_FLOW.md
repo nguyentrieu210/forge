@@ -113,9 +113,9 @@ Status: OPEN
 
 Populate or otherwise provide the approved read-only identity path needed by R6-E18. `ALU_META_ADMIN_USER` and `ALU_META_ADMIN_PASSWORD` are currently absent from the GitHub production environment, and the Cloudflare-token D1 `SELECT` attempt returned `wrangler_command_failed`. The rerun must prove installed package versions and active capability-profile ID/version/content-hash without granting R6-04 any mutation authority.
 
-## Evidence-run stabilization
+## Frozen evidence policy
 
-The R6-04 workflow now triggers only when its harness, regression guard or workflow changes. Handoff-only documentation updates do not retrigger live observation, preventing an evidence-record update from chasing unrelated concurrent UI-only deployments indefinitely.
+Run `30909243450` is the authoritative R6-04 observation for this handoff. GitHub `pull_request` path filtering can evaluate the cumulative PR changed-file set, so later documentation-only synchronize events may still start collector runs because the PR already contains harness/workflow files. Those later runs are non-authoritative unless R6-04 is intentionally rerun after dependencies are closed. Do not chase unrelated concurrent UI-only deployments by rewriting the frozen evidence snapshot.
 
 ## Safety boundary
 
