@@ -16,7 +16,7 @@ jobs:
   validate:
     name: Full release build and source safety
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
@@ -50,6 +50,18 @@ jobs:
       - name: Verify migration and PITR safety
         working-directory: server
         run: node --test tests/d1-migrate-remote-safety.test.mjs tests/sre-destructive-guards.test.mjs
+
+      - name: Run full production-like tenant workerd evidence
+        working-directory: server
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run \
+            apps/tenant-worker/test/health.integration.test.mts \
+            apps/tenant-worker/test/frappe-facade.integration.test.mts \
+            apps/tenant-worker/test/tenant-provisioning.integration.test.mts \
+            --config apps/tenant-worker/vitest.config.mts \
+            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-evidence.log
 
       - name: Verify release safety authority
         working-directory: server
