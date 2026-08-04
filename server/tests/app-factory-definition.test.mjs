@@ -34,7 +34,7 @@ function command(document, action = "create", name = "APP-DEF-1") {
 function canonical(name, data, version = 1) {
   return {
     tenant_id: "t", doctype: "App Factory Definition", name,
-    owner: "admin@example.com", docstatus: 0, status: data.status,
+    owner: "admin@example.com", docstatus: 0, status: data.definition_status ?? data.status,
     version, created_at: "2026-08-03T00:00:00.000Z", modified_at: "2026-08-03T00:00:00.000Z",
     data, children: [],
   };
@@ -78,15 +78,16 @@ function draft(kind = "Process", definition = processDefinition()) {
     target_doctype: "Purchase Order",
     definition_json: definition,
     effective_from: "2026-08-01",
-    status: "Draft",
+    definition_status: "Draft",
   };
 }
 
 test("process definition is normalized, versioned by server and emits audit event", async () => {
   const controller = new AppFactoryDefinitionController(metadata);
-  const older = canonical("APP-DEF-OLD", { ...draft(), version_no: 3, status: "Retired" });
+  const older = canonical("APP-DEF-OLD", { ...draft(), version_no: 3, definition_status: "Retired" });
   const plan = await controller.buildPlan(context(draft(), { siblings: [older] }));
   assert.equal(plan.document.data.version_no, 4);
+  assert.equal(plan.document.data.definition_status, "Draft");
   assert.equal(plan.document.data.definition_json.approval_plan.stages[0].mode, "quorum");
   assert.equal(plan.events[0].event_type, "app_factory_definition.created");
   assert.equal(plan.events[0].payload.version_no, 4);
@@ -95,12 +96,12 @@ test("process definition is normalized, versioned by server and emits audit even
 test("JSON TextArea string input normalizes before active immutability comparison", async () => {
   const controller = new AppFactoryDefinitionController(metadata);
   const normalized = (await controller.buildPlan(context(draft()))).document.data;
-  const existing = canonical("APP-DEF-1", { ...normalized, status: "Active", status_reason: "published" });
+  const existing = canonical("APP-DEF-1", { ...normalized, definition_status: "Active", status_reason: "published" });
   const plan = await controller.buildPlan(context({
     ...existing.data,
     definition_json: JSON.stringify(existing.data.definition_json),
   }, { existing, action: "save", nextVersion: 2 }));
-  assert.equal(plan.document.data.status, "Active");
+  assert.equal(plan.document.data.definition_status, "Active");
   assert.deepEqual(plan.document.data.definition_json, existing.data.definition_json);
 });
 
@@ -109,13 +110,13 @@ test("activation requires a reason and refuses a second active sibling", async (
   const initial = (await controller.buildPlan(context(draft()))).document.data;
   const existing = canonical("APP-DEF-1", initial);
   await assert.rejects(
-    () => controller.buildPlan(context({ ...initial, status: "Active" }, { existing, action: "save", nextVersion: 2 })),
+    () => controller.buildPlan(context({ ...initial, definition_status: "Active" }, { existing, action: "save", nextVersion: 2 })),
     /status_reason is required/,
   );
 
-  const activeSibling = canonical("APP-DEF-OLD", { ...initial, version_no: 1, status: "Active" });
+  const activeSibling = canonical("APP-DEF-OLD", { ...initial, version_no: 1, definition_status: "Active" });
   await assert.rejects(
-    () => controller.buildPlan(context({ ...initial, status: "Active", status_reason: "activate" }, { existing, siblings: [activeSibling], action: "save", nextVersion: 2 })),
+    () => controller.buildPlan(context({ ...initial, definition_status: "Active", status_reason: "activate" }, { existing, siblings: [activeSibling], action: "save", nextVersion: 2 })),
     /Retire the active/,
   );
 });
@@ -123,7 +124,7 @@ test("activation requires a reason and refuses a second active sibling", async (
 test("active definition JSON is immutable and lifecycle is Draft -> Active -> Retired", async () => {
   const controller = new AppFactoryDefinitionController(metadata);
   const initial = (await controller.buildPlan(context(draft()))).document.data;
-  const active = canonical("APP-DEF-1", { ...initial, status: "Active", status_reason: "published" }, 2);
+  const active = canonical("APP-DEF-1", { ...initial, definition_status: "Active", status_reason: "published" }, 2);
   await assert.rejects(
     () => controller.buildPlan(context({
       ...active.data,
@@ -131,13 +132,33 @@ test("active definition JSON is immutable and lifecycle is Draft -> Active -> Re
     }, { existing: active, action: "save", nextVersion: 3 })),
     /Retire\/replace/,
   );
-  const retired = await controller.buildPlan(context({ ...active.data, status: "Retired", status_reason: "superseded" }, { existing: active, action: "save", nextVersion: 3 }));
-  assert.equal(retired.document.data.status, "Retired");
+  const retired = await controller.buildPlan(context({ ...active.data, definition_status: "Retired", status_reason: "superseded" }, { existing: active, action: "save", nextVersion: 3 }));
+  assert.equal(retired.document.data.definition_status, "Retired");
   assert.equal(retired.events[0].event_type, "app_factory_definition.retired");
   await assert.rejects(
-    () => controller.buildPlan(context({ ...retired.document.data, status: "Draft", status_reason: "undo" }, { existing: retired.document, action: "save", nextVersion: 4 })),
+    () => controller.buildPlan(context({ ...retired.document.data, definition_status: "Draft", status_reason: "undo" }, { existing: retired.document, action: "save", nextVersion: 4 })),
     /cannot change Retired -> Draft/,
   );
+});
+
+test("legacy data.status remains readable but new writes normalize to definition_status", async () => {
+  const controller = new AppFactoryDefinitionController(metadata);
+  const legacy = canonical("APP-DEF-1", {
+    ...draft(),
+    definition_status: undefined,
+    status: "Active",
+    version_no: 1,
+    status_reason: "legacy published",
+  });
+  delete legacy.data.definition_status;
+  const saved = await controller.buildPlan(context({
+    ...legacy.data,
+    status: undefined,
+    definition_status: "Retired",
+    status_reason: "replace legacy",
+  }, { existing: legacy, action: "save", nextVersion: 2 }));
+  assert.equal(saved.document.data.definition_status, "Retired");
+  assert.equal(saved.document.data.status, undefined);
 });
 
 test("Decision Rules and Formula Rules reuse target field validation", async () => {
