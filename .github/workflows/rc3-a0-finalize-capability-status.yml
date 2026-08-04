@@ -44,7 +44,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Repair generator syntax deterministically
+      - name: Repair generator syntax and idempotency deterministically
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -60,6 +60,15 @@ jobs:
                   break
           if not repaired_regex:
               raise SystemExit("RC3 evidence regex line not found")
+
+          # Treat the already-materialized canonical Markdown as a no-op even after
+          # whitespace normalization removed Markdown hard-break trailing spaces.
+          block_start = next((i for i, line in enumerate(lines) if line.strip() == 'if (typeof pattern === "string") {'), None)
+          if block_start is None:
+              raise SystemExit("RC3 replaceOnce string block not found")
+          normalized_guard = '    if (text.split("\\n").map((line) => line.trimEnd()).join("\\n").includes(replacement.split("\\n").map((line) => line.trimEnd()).join("\\n"))) return text;'
+          if normalized_guard not in lines[block_start + 1:block_start + 5]:
+              lines.insert(block_start + 1, normalized_guard)
 
           start = next((i for i, line in enumerate(lines) if line.startswith("const top30 = `")), None)
           if start is None:
