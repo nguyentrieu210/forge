@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  AppInstaller,
   capabilityIsEnabled,
   capabilitySurfaceEnabled,
   parseAppManifest,
@@ -119,15 +120,82 @@ test("cycle, conflict, unknown dependency and minimum package mismatch all fail 
   assert.match(resolveCapabilityProfile([mismatch], [{ app_id: "sales", version: "1.2.0" }], { profile_id: "p", selections: [] }).errors.join("\n"), /requires sales >= 2.0.0/);
 });
 
-test("disabling a capability removes its declared surface without removing package identity", () => {
+test("disable then re-enable restores surfaces without package reinstall", () => {
   const packageContract = salesContract();
-  const plan = resolveCapabilityProfile(
+  const installed = [{ app_id: "sales", version: "1.2.0", content_hash: "same-package" }];
+  const disabled = resolveCapabilityProfile(
+    [packageContract], installed,
+    { profile_id: "pilot", selections: [{ capability_id: "sales.analytics", state: "disabled" }] },
+  );
+  assert.equal(capabilitySurfaceEnabled([packageContract], disabled, "sales", "nav", "sales-home"), true);
+  assert.equal(capabilitySurfaceEnabled([packageContract], disabled, "sales", "nav", "sales-analytics"), false);
+
+  const enabled = resolveCapabilityProfile(
+    [packageContract], installed,
+    { profile_id: "pilot", selections: [{ capability_id: "sales.analytics", state: "enabled" }] },
+    disabled,
+  );
+  assert.equal(capabilitySurfaceEnabled([packageContract], enabled, "sales", "nav", "sales-analytics"), true);
+  assert.equal(installed[0].content_hash, "same-package", "activation must not reinstall or mutate package identity");
+});
+
+test("App Registry exposes a server-side permission gate for inactive capabilities", async () => {
+  const packageContract = salesContract();
+  const disabled = resolveCapabilityProfile(
     [packageContract], [{ app_id: "sales", version: "1.2.0" }],
     { profile_id: "pilot", selections: [{ capability_id: "sales.analytics", state: "disabled" }] },
   );
-  assert.equal(capabilitySurfaceEnabled([packageContract], plan, "sales", "nav", "sales-home"), true);
-  assert.equal(capabilitySurfaceEnabled([packageContract], plan, "sales", "nav", "sales-analytics"), false);
-  assert.deepEqual({ app_id: "sales", version: "1.2.0" }, { app_id: "sales", version: "1.2.0" });
+  const installer = Object.create(AppInstaller.prototype);
+  installer.currentCapabilityResolution = async () => disabled;
+  await assert.rejects(
+    installer.assertCapability("tenant-a", "sales.analytics"),
+    (error) => error?.code === "PERMISSION_DENIED" || error?.status === 403,
+  );
+});
+
+test("Alumdoor profile composes cross-package capabilities without copying shared finance authority", () => {
+  const finance = contract(app({
+    id: "vn-accounting",
+    name: "Vietnam Accounting",
+    version: "2.3.0",
+    nav: [{ key: "cash-bank", label: "Cash Bank", kind: "route", route: "/finance/cash-bank" }],
+    capabilities: [{
+      id: "vn-accounting.cash-bank",
+      label: "Cash and bank",
+      required: true,
+      surfaces: { nav: ["cash-bank"] },
+    }],
+  }));
+  const alumdoor = contract(app({
+    id: "alumdoor",
+    name: "Alumdoor",
+    version: "2.0.35",
+    nav: [{ key: "workshop", label: "Workshop", kind: "route", route: "/alumdoor/workshop" }],
+    capabilities: [{
+      id: "alumdoor.workshop",
+      label: "Workshop",
+      default_state: "disabled",
+      requires: [{ capability: "vn-accounting.cash-bank", min_package_version: "2.0.0" }],
+      surfaces: { nav: ["workshop"] },
+    }],
+  }));
+  const installed = [
+    { app_id: "vn-accounting", version: "2.3.0" },
+    { app_id: "alumdoor", version: "2.0.35" },
+  ];
+  const plan = resolveCapabilityProfile(
+    [alumdoor, finance], installed,
+    { profile_id: "alumdoor-pilot", selections: [{ capability_id: "alumdoor.workshop", state: "enabled" }] },
+  );
+  assert.equal(plan.valid, true);
+  assert.equal(capabilityIsEnabled(plan, "alumdoor.workshop"), true);
+  assert.equal(capabilityIsEnabled(plan, "vn-accounting.cash-bank"), true);
+  assert.deepEqual(plan.package_requirements, [{
+    capability_id: "alumdoor.workshop",
+    package_id: "vn-accounting",
+    min_version: "2.0.0",
+    installed_version: "2.3.0",
+  }]);
 });
 
 test("current-vs-proposed diff is stable and unknown profile capability ids are refused", () => {
