@@ -27,6 +27,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build CloudForge exactly as full production release
         run: pnpm --filter cloudforge run build
+      - name: Verify app report canonical aggregate fields
+        working-directory: server
+        run: node --test tests/query.test.mjs
       - name: Build MetaForge exactly as full production release
         run: pnpm --filter metaforge run build
       - name: Verify migration, restore import and PITR safety
