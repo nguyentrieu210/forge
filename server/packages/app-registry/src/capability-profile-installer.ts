@@ -13,7 +13,8 @@ import {
 } from "./capability-profile.js";
 import { CapabilityProfileService, type CapabilityProfileApplyResult, type CapabilityProfilePreview } from "./capability-profile-store.js";
 import { AppInstaller as InputTableAppInstaller, type InstalledAppRecordWithInputTables } from "./input-table-installer.js";
-import { parseAppManifest, type AppClientManifest, type InstallResult } from "./manifest.js";
+import type { InstallResult } from "./installer.js";
+import { parseAppManifest, type AppClientManifest } from "./manifest.js";
 
 export type CapabilityAwareInstalledAppRecord = InstalledAppRecordWithInputTables & {
   capability_profile?: {
@@ -23,10 +24,11 @@ export type CapabilityAwareInstalledAppRecord = InstalledAppRecordWithInputTable
 };
 
 function filteredClient(
-  client: AppClientManifest | null,
+  client: AppClientManifest | null | undefined,
   nav: InstalledAppRecordWithInputTables["nav"],
 ): AppClientManifest | null {
-  if (!client?.home?.route) return client;
+  if (!client) return null;
+  if (!client.home?.route) return client;
   if (nav.some((entry) => entry.route === client.home?.route || entry.key === client.home?.route)) return client;
   const { home: _home, ...rest } = client;
   return rest;
