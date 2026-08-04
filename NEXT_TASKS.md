@@ -12,9 +12,9 @@ Ngày cập nhật: **2026-08-05**.
 - Exact certified/deployed R6 SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Final R6 evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json` — **23/23 PASS**.
 - Pilot-00 Freeze Production Profile + Pilot Contract: **DONE / PILOT-00-LOCKED**.
-- Pilot-00 authority: `docs/pilot/alumdoor/PILOT_00_CONTRACT.md` + `PILOT_00_LOCK.json`.
 - Pilot-01 control plane: **READY / PREVIEW-ONLY**.
 - Pilot-01 real uploaded source set: **OBSERVED / HASHED / INGESTED**.
+- Pilot-01 duplicate identity policy: **LOCKED**.
 - Pilot-01 preview verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED**.
 - Active phase: **Pilot-01 — reconcile + normalize Master/Opening Data**.
 - Next milestone: **private normalized real batch `PREVIEW_PASS` -> Pilot-01 READY -> Pilot-02 Representative Transaction Dry Run**.
@@ -47,9 +47,11 @@ Status: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED**.
 ### Control plane already prepared
 
 - frozen schema: `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
+- identity disposition: `docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json`;
 - immutable manifest template: `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`;
+- identity normalizer: `docs/pilot/alumdoor/tools/normalize-pilot-identities.mjs`;
 - preview validator: `docs/pilot/alumdoor/tools/validate-pilot-batch.mjs`;
-- fail-closed tests: `docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs`;
+- fail-closed tests for validator + identity normalization;
 - Pilot-00/Pilot-01 identity verifier: `docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs`;
 - machine status: `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
 - source ingest machine evidence: `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json`;
@@ -70,24 +72,31 @@ Operator-provided uploads contain real Alumdoor master/operational evidence:
 
 No raw customer workbook is committed to Git. Only immutable source digests, counts and blocker summaries are materialized.
 
-### Reconciliation blockers before `PILOT-01-READY`
+### Duplicate identity policy — DONE
+
+- **Customer duplicate:** keep one canonical Customer — the first row in immutable source order. Later duplicate names are dropped from Customer output; `contacts`/`opening_ar` references are remapped to the retained `source_key`.
+- **Exact item-code duplicate:** first row keeps the original code; later exact collisions receive `01`, `02`, `03`... using the lowest free suffix and preserving `source_code_original`.
+- Existing source codes are reserved so suffixing never overwrites a real pre-existing code.
+- The uploaded item master is already **277/277 unique**, so this rule is currently a guard rather than a transformation of those 277 rows.
+- The **60 journal item strings that do not match master codes are still an alias/reference issue**, not a duplicate-code issue; do not create fake `01` codes for those automatically.
+
+### Remaining reconciliation blockers before `PILOT-01-READY`
 
 1. **Common cutoff:** Stock, AR/AP and cash/bank do not yet prove one common business cutoff.
-2. **Customer identity:** two exact duplicate customer names need source-owner disposition.
-3. **Supplier identity:** uploaded purchase activity references parties not typed NCC; canonical `TIẾN ĐẠT` already exists, remaining role mappings need disposition.
-4. **Item identity:** 60 distinct journal item-code strings do not exact-match the uploaded 277-code item export; use canonical alias/standardization evidence, never fuzzy guessing.
-5. **Opening Stock:** uploaded aluminum lots preserve length/piece/color/condition but contain zero populated actual-Kg cells; theoretical kg/m must not masquerade as measured Stock quantity.
-6. **Stock scope drift:** process source describes 23 aluminum sheets + 2 mesh sheets; uploaded aluminum workbook has 21 total / 18 inventory sheets and no separate mesh opening source in the observed set.
-7. **Future stock dates:** two `VIPST700` rows carry `23/12/2026` and require disposition.
-8. **Opening AR:** observed activity proves carry-in receivables exist; opening AR cannot be reconstructed safely from the observed period alone.
-9. **Opening AP:** purchase activity exists but complete opening/payment state at the same cutoff is not proven.
-10. **VND rounding:** 45 typed journal rows expose fractional `Tổng thanh toán`; deterministic integer-VND conversion policy must be frozen.
-11. **Operating/access masters:** complete work-center/BOM/employee/pilot-user sources are not migration-ready; exactly one active named `Giám đốc` account remains required.
+2. **Supplier identity:** uploaded purchase activity references parties not typed NCC; canonical `TIẾN ĐẠT` already exists, remaining role mappings need disposition.
+3. **Item aliases:** 60 distinct journal item-code strings do not exact-match the uploaded 277-code item export; use canonical alias/standardization evidence, never fuzzy guessing.
+4. **Opening Stock:** uploaded aluminum lots preserve length/piece/color/condition but contain zero populated actual-Kg cells; theoretical kg/m must not masquerade as measured Stock quantity.
+5. **Stock scope drift:** process source describes 23 aluminum sheets + 2 mesh sheets; uploaded aluminum workbook has 21 total / 18 inventory sheets and no separate mesh opening source in the observed set.
+6. **Future stock dates:** two `VIPST700` rows carry `23/12/2026` and require disposition.
+7. **Opening AR/AP:** observed activity does not prove complete opening balances at one common cutoff.
+8. **VND rounding:** 45 typed journal rows expose fractional `Tổng thanh toán`; deterministic integer-VND conversion policy must be frozen.
+9. **Operating/access masters:** complete work-center/BOM/employee/pilot-user sources are not migration-ready; exactly one active named `Giám đốc` account remains required.
 
 ### Next execution order
 
+- apply locked customer/item duplicate normalization to the private batch;
 - normalize item aliases against canonical Alumdoor standardization;
-- reconcile customer/supplier party identities;
+- reconcile remaining supplier party identities;
 - freeze one coherent business cutoff;
 - obtain matching AR/AP/cash-bank opening snapshots;
 - disposition stock sheet-scope drift/future dates;
@@ -180,6 +189,7 @@ Pilot:
 - `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`;
 - `docs/pilot/alumdoor/PILOT_00_LOCK.json`;
 - `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
+- `docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json`;
 - `docs/pilot/alumdoor/PILOT_01_READINESS.md`;
 - `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
 - `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json`;
