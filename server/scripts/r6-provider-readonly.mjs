@@ -90,11 +90,12 @@ const gatewayBindings = sanitizeBindings(gatewaySettings?.bindings);
 checkBindingSet("gateway-bindings", gatewayBindings, ["ASSETS", "ROUTES", "DISPATCHER", "CONTROL"]);
 
 const gatewayDeployments = await api(`/accounts/${accountId}/workers/scripts/cloudforge-gateway/deployments`, { allowFailure: true });
+const deploymentList = deploymentItems(gatewayDeployments.result);
 record(
   "gateway-deployment",
-  gatewayDeployments.ok && Array.isArray(gatewayDeployments.result) && gatewayDeployments.result.length > 0,
+  gatewayDeployments.ok && deploymentList.length > 0,
   gatewayDeployments.ok
-    ? { deployment_count_observed: Array.isArray(gatewayDeployments.result) ? gatewayDeployments.result.length : 0 }
+    ? { deployment_count_observed: deploymentList.length, latest_deployment_present: deploymentList.length > 0 }
     : gatewayDeployments.message,
 );
 
@@ -177,6 +178,12 @@ function checkBindingSet(name, actual, expectedNames) {
   const names = new Set(actual.map((entry) => entry.name));
   const missing = expectedNames.filter((expected) => !names.has(expected));
   record(name, missing.length === 0, { bindings: actual, missing });
+}
+
+function deploymentItems(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.deployments)) return value.deployments;
+  return [];
 }
 
 function sanitizeBindings(value) {
