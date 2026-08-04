@@ -1,8 +1,9 @@
 # RC4-A10 — CRM / Revenue
 
-Status: IMPLEMENTED / PR PENDING  
+Status: PR OPEN / REVIEW REQUIRED  
 Baseline: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Branch: `agent/rc4-10-crm-revenue`  
+PR: `#617` — `feat(rc4-a10): close CRM customer 360 residual`  
 Risk: STANDARD, with read-only financial analytics sourced from canonical O2C/payment state
 
 ## Mission
@@ -80,7 +81,10 @@ Regression fixture authored:
 
 - Source/metadata/test evidence: AUTHORED.
 - Local executable build/test evidence: NOT RUN / UNPROVEN in this agent session because no sanctioned repository checkout/runtime was available through the connector.
-- PR CI evidence: pending PR creation; do not upgrade maturity based on authored tests alone.
+- PR `#617`: OPEN and mergeable at the first post-create check.
+- PR-triggered `RC-021 Critical Validation`: SKIPPED on head `135ae18ca7ad92dbaf7d368b036190a2821358a8`.
+- PR-triggered `CFMAX R2 Integrated Validation`: SKIPPED on the same head.
+- Therefore CI remains NOT RUN / UNPROVEN; do not upgrade maturity based on authored tests alone.
 - Production deploy evidence: NOT RUN.
 
 ## Dependencies
