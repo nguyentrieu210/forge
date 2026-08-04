@@ -289,4 +289,4 @@ test("Customer 360 enforces one immutable company/customer snapshot and stays dr
     expectedVersion: 1,
     document: {},
   }), /cannot be submitted or cancelled/);
-}
+});
