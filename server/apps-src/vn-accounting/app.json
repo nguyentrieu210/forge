@@ -64,7 +64,7 @@
         }
       ],
       "commit": {
-        "method": "vn-accounting.tax.evaluate",
+        "method": "vn_accounting.tax.evaluate",
         "label": "Tính thử"
       },
       "permission_doctype": "VN Tax Ruleset",
@@ -104,7 +104,7 @@
         }
       ],
       "commit": {
-        "method": "vn-accounting.vat.dataset",
+        "method": "vn_accounting.vat.dataset",
         "label": "Lập dữ liệu"
       },
       "permission_doctype": "VN Tax Ruleset",
