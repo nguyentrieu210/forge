@@ -1,7 +1,7 @@
 {
   "id": "vn-accounting",
   "name": "Kế toán Việt Nam",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "worker": "cloudforge-app-vn-accounting",
   "requires": [
     {
@@ -58,7 +58,7 @@
         {
           "fieldname": "input_json",
           "label": "Đầu vào minor units (JSON)",
-          "fieldtype": "Code",
+          "fieldtype": "Small Text",
           "required": true,
           "default": "{}"
         }
