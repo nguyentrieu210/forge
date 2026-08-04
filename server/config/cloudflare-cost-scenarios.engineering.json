@@ -1,0 +1,76 @@
+{
+  "scenarios": [
+    {
+      "scenario": "engineering-small-100-tenants",
+      "notes": ["Capacity model only; not a Forge product tier or customer price."],
+      "usage": {
+        "workers_mode": "workers_for_platforms",
+        "worker_scripts": 200,
+        "workers_requests": 5000000,
+        "workers_cpu_ms": 20000000,
+        "d1_rows_read": 5000000000,
+        "d1_rows_written": 10000000,
+        "d1_storage_gb_month": 50,
+        "queue_messages": 100000,
+        "queue_average_payload_bytes": 8000,
+        "queue_average_delivery_attempts": 1.05,
+        "kv_reads": 3000000,
+        "kv_writes": 300000,
+        "kv_deletes": 50000,
+        "kv_lists": 20000,
+        "kv_storage_gb_month": 2,
+        "r2_storage_gb_month": 100,
+        "r2_class_a_ops": 200000,
+        "r2_class_b_ops": 3000000
+      }
+    },
+    {
+      "scenario": "engineering-medium-1000-tenants",
+      "notes": ["Capacity model only; assumes one user Worker script per tenant plus shared scripts."],
+      "usage": {
+        "workers_mode": "workers_for_platforms",
+        "worker_scripts": 1200,
+        "workers_requests": 50000000,
+        "workers_cpu_ms": 250000000,
+        "d1_rows_read": 60000000000,
+        "d1_rows_written": 120000000,
+        "d1_storage_gb_month": 700,
+        "queue_messages": 2000000,
+        "queue_average_payload_bytes": 12000,
+        "queue_average_delivery_attempts": 1.1,
+        "kv_reads": 40000000,
+        "kv_writes": 5000000,
+        "kv_deletes": 1000000,
+        "kv_lists": 1000000,
+        "kv_storage_gb_month": 20,
+        "r2_storage_gb_month": 1500,
+        "r2_class_a_ops": 5000000,
+        "r2_class_b_ops": 50000000
+      }
+    },
+    {
+      "scenario": "engineering-large-5000-tenants",
+      "notes": ["Stress/capacity model only; provider/account limits must be re-checked before adoption."],
+      "usage": {
+        "workers_mode": "workers_for_platforms",
+        "worker_scripts": 5200,
+        "workers_requests": 300000000,
+        "workers_cpu_ms": 1800000000,
+        "d1_rows_read": 350000000000,
+        "d1_rows_written": 800000000,
+        "d1_storage_gb_month": 5000,
+        "queue_messages": 15000000,
+        "queue_average_payload_bytes": 18000,
+        "queue_average_delivery_attempts": 1.15,
+        "kv_reads": 300000000,
+        "kv_writes": 40000000,
+        "kv_deletes": 10000000,
+        "kv_lists": 8000000,
+        "kv_storage_gb_month": 120,
+        "r2_storage_gb_month": 12000,
+        "r2_class_a_ops": 40000000,
+        "r2_class_b_ops": 500000000
+      }
+    }
+  ]
+}
