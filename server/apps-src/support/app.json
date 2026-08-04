@@ -1,12 +1,13 @@
 {
   "id": "support",
   "name": "Helpdesk & Customer Service",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "requires": [],
   "worker": "cloudforge-app-ws07",
   "validators": [
     { "doctype": "Support SLA Policy" },
-    { "doctype": "Support Ticket" }
+    { "doctype": "Support Ticket" },
+    { "doctype": "Support Feedback" }
   ],
   "reports": [
     {
@@ -15,15 +16,19 @@
       "doctype": "Support Ticket",
       "columns": [
         { "field": "subject", "label": "Chủ đề", "type": "Data" },
+        { "field": "customer", "label": "Khách hàng", "type": "Link", "options": "Customer" },
+        { "field": "source_channel", "label": "Kênh tiếp nhận", "type": "Data" },
         { "field": "priority", "label": "Ưu tiên", "type": "Data" },
         { "field": "team", "label": "Nhóm", "type": "Link", "options": "Support Team" },
         { "field": "assignee", "label": "Người xử lý", "type": "Link", "options": "User" },
         { "field": "opened_at", "label": "Mở lúc", "type": "Datetime" },
+        { "field": "response_due_at", "label": "Hạn phản hồi", "type": "Datetime" },
+        { "field": "resolution_due_at", "label": "Hạn xử lý", "type": "Datetime" },
         { "field": "workflow_state", "label": "Trạng thái", "type": "Data" },
         { "field": "sla_state", "label": "SLA", "type": "Data" }
       ],
       "order_by": { "column": "opened_at", "direction": "desc" },
-      "filters": ["priority", "team", "assignee", "workflow_state", "sla_state"],
+      "filters": ["customer", "source_channel", "priority", "team", "assignee", "workflow_state", "sla_state"],
       "limit": 200
     },
     {
