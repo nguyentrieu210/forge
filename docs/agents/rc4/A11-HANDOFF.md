@@ -49,17 +49,20 @@ Added `server/tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs` cov
 
 ## Verification
 
-Exact candidate `9affaebb19fa324acbb42c6c7e31ce79d15257a0`:
+Two exact PR-head candidates passed the temporary A11 CRITICAL workflow:
 
-- GitHub Actions run `30868233834`: SUCCESS;
-- job `91864577582` — `RC4 A11 Procurement CRITICAL gate`: SUCCESS;
+- `9affaebb19fa324acbb42c6c7e31ce79d15257a0` -> run `30868233834`, job `91864577582`: SUCCESS;
+- `a157f4aab5d5a5a0ee867bee77aedbe4af812436` -> run `30868323326`, job `91864846731`: SUCCESS.
+
+Both successful gates proved:
+
 - changed-zone TypeScript gate: PASS;
 - supplier lifecycle + RFQ/selection/contract + procurement analytics + P2P/landed-cost + ERP regressions: PASS;
 - procurement metadata package gate: PASS;
 - scope/authority audit: PASS;
 - no `server/migrations/**` or `client/**` delta.
 
-The temporary validation workflow is PR evidence only and must be removed before merge. Removing that workflow does not alter the verified server/test blobs.
+Temporary workflow removal commit: `f42190a0c4569b8fcd421fbff5b335afbf8cab47`. The diff from the latest green candidate `a157f4aa...` to that commit removes only `.github/workflows/rc4-a11-procurement-validation-temp.yml`; verified server/test blobs are unchanged. This final handoff update is documentation-only.
 
 ## Dependency Requests
 
