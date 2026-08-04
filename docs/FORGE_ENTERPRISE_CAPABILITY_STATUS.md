@@ -1,9 +1,9 @@
 # Forge Enterprise Capability Status
 
-> RC-01 capability truth baseline  
-> Baseline: `main@3cd2b472068838d0b2b65aa098bbd0bc1a9a8830`  
-> Branch: `rc/w0-capability-status`  
-> Date: 2026-08-03  
+> RC3 exact-main release-confidence convergence
+> Program seed: `main@98b5e1b22858ae85b977ccd1ad3ae8d74e9ceed7`
+> Control: `program/rc3-exact-main-release-confidence-20260804`
+> Date: 2026-08-04
 > Denominator: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`
 
 ## Truth rules
@@ -26,36 +26,38 @@ For finance/stock/payroll, missing correction/reconciliation blocks Hardened and
 | Maturity | Count | Share |
 |---|---:|---:|
 | Hardened | 0 | 0.00% |
-| RC | 4 | 0.42% |
-| Wired | 448 | 46.86% |
-| Foundation | 345 | 36.09% |
-| Missing | 159 | 16.63% |
+| RC | 65 | 6.80% |
+| Wired | 407 | 42.57% |
+| Foundation | 327 | 34.21% |
+| Missing | 157 | 16.42% |
 | **Total** | **956** | **100.00%** |
 
-**Hardened = 0 by evidence.** Exact-current-main production/failure/reconciliation evidence is not sufficient to make a defensible Hardened claim. The four RC IDs are intentionally narrow: `I01-014`, `G02-001`, `VP01-007`, `VP01-008`.
+**Hardened = 0 by evidence.** RC3 retains the four narrow historical RC claims and adds **61 scoped RC promotions** accepted by A5 from exact Transaction Closure / WS09 executable evidence. A2 contributes seven lower-level promotions plus three privacy demotions; A4 contributes four device-capability promotions plus one Push demotion. No merge, source presence, provider config or historical production release is treated as Hardened evidence.
+
+Historical RC-01 counts were `Hardened=0 / RC=4 / Wired=448 / Foundation=345 / Missing=159`; RC3 delta is `0 / +61 / -41 / -18 / -2`.
 
 ## Evidence Index
 
 Each registry row inherits one bundle. Every bundle covers **source / test / migration / permission / reconciliation-correction / UI / production**; `none/unproven` is evidence of absence, never PASS.
 
-- `E-FIN`: src Finance/O2C/ERPNext/query + merged #367; test regressions exist but convergence head had 0 runs/statuses; mig `0042`, `0089..0098`; perm server DocPerm/org-security; recon correction/period paths exist but close + stock↔GL/full cross-ledger incomplete; UI generic metadata, no family browser proof; prod exact-current-main unproven.
+- `E-FIN`: RC3 consumes RC-020/021/023 plus Transaction Closure run `30847056639` / job `91797832548` (221/221 focused regressions) for only the named Finance RC slices; exact current source/migration remains authoritative; year-end close, broader FX/consolidation/statutory/provider and exact-production evidence remain below RC/Hardened.
 - `E-VN`: src VN accounting/tax/e-invoice seams; tests source only/exact-head CI unproven; mig finance/VN chain; perm server; recon legal/source/provider long-tail incomplete; UI metadata; prod unproven.
 - `E-CRM`: src CRM app/controllers + merged #321; `crm-revenue.test.mjs` authored, executable green not claimed; mig none; perm company/tenant/DocPerm; recon lifecycle correction exists but atomic conversion/merge/360 missing; UI metadata only; prod none.
-- `E-PROC`: src canonical purchasing/allocation; focused tests source, exact execution thin; mig none/local dependent; perm canonical document path; recon partial/cancel exists, 3-way match/variance/landed-cost orchestration incomplete; UI partial/vertical; prod none.
-- `E-STOCK`: src stock controllers/integrity + merged #307; focused regression source, full later run NOT RUN; mig none WS04; perm warehouse/company/tenant; recon reversal exists but stock↔GL repost/reconcile open; UI scanner/mobile partial; prod none.
+- `E-PROC`: RC3 uses Transaction Closure P2P 30/30 executable evidence for named Purchase Invoice/partial receipt/invoice/3-way-match/variance capabilities; landed-cost authoritative stock-value application/reversal and supplier-management breadth remain open; production proof none.
+- `E-STOCK`: RC3 combines Transaction Closure Inventory/WMS/valuation 38/38 with WS09 final run `30860236052` Stock Reconciliation 16/16; named reconciliation/FIFO/moving-average/valuation-adjustment slices reach RC, while full historical repost->Finance and persisted WMS task/mobile proof remain open; production exact-current unproven.
 - `E-COMMERCE`: src POS/logistics/social + merged #310; focused tests authored, exact-head run NOT RUN; mig none; perm actor/company/DocPerm; recon POS close/POD correction exist, refund/reservation/COD finance gaps; UI no dedicated production POS/offline E2E; prod none.
-- `E-MFG`: src manufacturing/QMS + merged #404; many regressions authored, convergence head 0 runs/statuses; mig metadata/no WS05 SQL; perm bounded APIs; recon stock trace exists, finance actual-cost/repost/rework/subcontract gaps; UI metadata; prod none.
+- `E-MFG`: RC3 combines Transaction Closure Manufacturing 56/56 with WS09 BOM 18/18 exact execution; named BOM lifecycle and guarded shop-floor transaction/correction slices reach RC; rework, subcontract, broad actual-cost/variance posting and full stock->Finance restatement remain below RC; production none.
 - `E-ASSET`: src exact-main ERPNext registry includes Asset, Depreciation, Movement, Maintenance, Disposal plus WS07 service/maintenance; tests not audited as one family suite; mig mixed; perm canonical; recon disposal/depreciation correction depth not promoted; UI metadata; prod unproven.
 - `E-HCM`: src HRM/payroll + merged #414; Node/SQLite regression source, exact-head CI NOT RUN; mig `0099..0104`; perm server with sensitive-field follow-up debt; recon payroll/loan closure partial, Finance/loan-exit policy open; UI ESS/mobile specialized evidence incomplete; prod unproven.
 - `E-SERVICE`: src projects/support/maintenance + merged #352; tests authored, exact checkout execution absent; mig package-specific; perm mutation assignment scope, READ row-scope DR; recon correction/cancel present, finance/stock dependencies; UI metadata/mobile partial; prod none.
 - `E-WORKPLACE`: src workplace/DMS/CLM + merged #415; isolated SQLite integrity PASS, full build/tests NOT RUN; mig `0105..0109`; perm explicit share + notification read recheck; recon workflow/history exists, scheduler/provider gaps; UI generic; prod none.
-- `E-APPFACTORY`: src app-registry/compiler/workflow/builder + merged #362; regressions source, final head 0 runs/statuses; mig `0088`; perm server permission authority; recon install/upgrade transactional but rollback/quorum/timer missing; UI builder exists, browser proof thin; prod none.
+- `E-APPFACTORY`: WS09 #553 is current source authority for first-class `AppAction.input_tables`, row/table BatchAction/BatchTransaction and durable replay; final run `30860236052` validates the declared shared slice. Generic materialized rollback/reverse migration, quorum/timer/escalation breadth and browser evidence remain below RC.
 - `E-BI`: src semantic/query/report + merged #311; semantic tests authored, executable NOT RUN; mig none; perm authorize-before-query/trusted tenant; recon read/planning only; UI ReportView/export, builder depth incomplete; prod none.
 - `E-INTEGRATION`: src integration-hub/outbox/jobs/social + merged #308; targeted tests source, full build NOT RUN; mig none; perm trusted tenant/target guards, secret vault delegated; recon idempotency/retry contracts exist but physical DLQ/replay wiring incomplete; UI admin metadata; prod none.
-- `E-IAM`: src auth/session/permission/org-security/control-plane + merged #317; focused security regressions source, full exact-head CI absent; mig none; perm is the subject, deny-by-default; recon session epoch/audit exist, native step-up/MFA/SSO/privacy/SaaS gaps; UI not authority; prod unproven.
-- `E-SRE`: src release/backup/PITR/rollback/observability + merged #320; isolated helper evidence 21/21 PASS, full repo NOT RUN; mig release-verification dependent; perm guarded operator confirmation; recon backup/integrity tooling exists but prod restore/rollback/reconcile drills unproven; UI release marker checks; prod older Alumdoor evidence only, not exact current main.
+- `E-IAM`: RC3 exact-source audit wires MFA before session issuance, security-alert read model and suspend/reactivate governance; OIDC/SSO remain Foundation and privacy taxonomy/masking/retention are Missing. No provider lifecycle or exact-production security proof is inferred.
+- `E-SRE`: CFMAX R2 source convergence #570 and exact source tooling are retained, but remote provider observation remains `unverified`; D1 replica/APAC, Workflow recovery, edge security, AI Gateway/Browser Run and restore/PITR/DR drills require approved non-production/provider evidence. Historical production release does not prove current main.
 - `E-DX`: src CLI/generator/compiler/test tooling; tests fragmented/no single promotion suite; mig tooling varies; perm N/A or server-auth when executed; recon N/A; UI developer-only; prod none.
-- `E-UI`: src shared MetaForge + merged WS14 slices; source check scripts, full build/browser NOT RUN; mig none; perm server-authoritative; recon offline/OCC conflict contract absent; UI responsive/installable Wired but browser/mobile proof missing; prod exact current main unproven.
+- `E-UI`: exact RC3 source authority is **MetaForge V2** after the V3 rollback; responsive/installable PWA remains Wired. Barcode/QR/geolocation/signature are Wired source paths; Push and offline cache/write/sync/conflict remain Missing where evidence is absent. Current browser/device/exact-release proof remains required for RC.
 - `E-MDM`: src canonical masters/metadata/kernel; broad source evidence but no RC-01 dedicated suite; mig app/meta; perm DocPerm/User Permission; recon duplicate/merge/steward/effective-date depth incomplete; UI metadata; prod unproven.
 - `E-MIGRATION`: src migration package + Data Import + merged #313; targeted SQLite/strict-harness evidence and authored tests, full repo NOT RUN; mig durable journal lineage; perm import/create + canonical kernel; recon retry/reconcile contract exists, opening providers/content-hash crash-window open; UI mapping/correction pending; prod cutover not run.
 - `E-ALUMDOOR`: src Alumdoor + merged #316; Golden Order isolated 7/7 PASS and byte-identical #295 historical validation; mig product path on main; perm callback/caller identity boundary; recon supplier settlement reversal + Golden Order verifier; UI production evidence belongs to historical 2.2.1; prod source 2.2.2 not claimed deployed.
@@ -73,27 +75,27 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### F01 (25)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `F01-001..F01-016` | `E-FIN` |
-| Foundation | `F01-017..F01-025` | `E-FIN` |
-
+| RC | `F01-003` `F01-007..F01-010` `F01-014` `F01-015` `F01-022` `F01-024` `F01-025` | `E-FIN` |
+| Wired | `F01-001` `F01-002` `F01-004..F01-006` `F01-011..F01-013` `F01-016` | `E-FIN` |
+| Foundation | `F01-017..F01-021` `F01-023` | `E-FIN` |
 ### F02 (18)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `F02-001..F02-012` | `E-FIN` |
-| Foundation | `F02-013..F02-018` | `E-FIN` |
-
+| RC | `F02-001..F02-003` `F02-005..F02-008` `F02-012` `F02-013` `F02-017` `F02-018` | `E-FIN` |
+| Wired | `F02-004` `F02-009..F02-011` | `E-FIN` |
+| Foundation | `F02-014..F02-016` | `E-FIN` |
 ### F03 (13)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `F03-001..F03-009` | `E-FIN` |
-| Foundation | `F03-010..F03-013` | `E-FIN` |
-
+| RC | `F03-003` `F03-006..F03-010` | `E-FIN` |
+| Wired | `F03-001` `F03-002` `F03-004` `F03-005` | `E-FIN` |
+| Foundation | `F03-011..F03-013` | `E-FIN` |
 ### F04 (20)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `F04-001..F04-010` | `E-FIN` |
-| Foundation | `F04-011..F04-020` | `E-FIN` |
-
+| RC | `F04-001..F04-006` `F04-008..F04-013` | `E-FIN` |
+| Wired | `F04-007` | `E-FIN` |
+| Foundation | `F04-014..F04-020` | `E-FIN` |
 ### F05 (16)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -164,10 +166,10 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### P01 (20)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `P01-002..P01-004` `P01-008` `P01-010..P01-014` | `E-PROC` |
-| Foundation | `P01-001` `P01-007` `P01-009` `P01-015..P01-018` `P01-020` | `E-PROC` |
-| Missing | `P01-005` `P01-006` `P01-019` | `E-PROC` |
-
+| RC | `P01-011` `P01-013` `P01-014` `P01-017..P01-019` | `E-PROC` |
+| Wired | `P01-002..P01-004` `P01-008` `P01-010` `P01-012` | `E-PROC` |
+| Foundation | `P01-001` `P01-007` `P01-009` `P01-015` `P01-016` `P01-020` | `E-PROC` |
+| Missing | `P01-005` `P01-006` | `E-PROC` |
 ### P02 (10)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -178,10 +180,10 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### W01 (32)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `W01-001..W01-020` `W01-022` `W01-025` | `E-STOCK` |
+| RC | `W01-011` `W01-013` `W01-014` `W01-022` | `E-STOCK` |
+| Wired | `W01-001..W01-010` `W01-012` `W01-015..W01-020` `W01-025` | `E-STOCK` |
 | Foundation | `W01-021` `W01-023` `W01-024` `W01-026..W01-031` | `E-STOCK` |
 | Missing | `W01-032` | `E-STOCK` |
-
 ### W02 (14)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -198,10 +200,10 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### M01 (12)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `M01-001..M01-005` `M01-009..M01-012` | `E-MFG` |
+| RC | `M01-001..M01-005` | `E-MFG` |
+| Wired | `M01-009..M01-012` | `E-MFG` |
 | Foundation | `M01-006` | `E-MFG` |
 | Missing | `M01-007` `M01-008` | `E-MFG` |
-
 ### M02 (10)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -212,10 +214,10 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### M03 (14)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `M03-001..M03-008` `M03-011` `M03-012` | `E-MFG` |
+| RC | `M03-001` `M03-003..M03-008` | `E-MFG` |
+| Wired | `M03-002` `M03-011` `M03-012` | `E-MFG` |
 | Foundation | `M03-013` `M03-014` | `E-MFG` |
 | Missing | `M03-009` `M03-010` | `E-MFG` |
-
 ### M04 (10)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -341,9 +343,8 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 | Maturity | ID expression | Evidence |
 |---|---|---|
 | Wired | `B02-001..B02-005` `B02-016` | `E-APPFACTORY` |
-| Foundation | `B02-007..B02-013` `B02-017..B02-023` | `E-APPFACTORY` |
-| Missing | `B02-006` `B02-014` `B02-015` | `E-APPFACTORY` |
-
+| Foundation | `B02-006..B02-013` `B02-017..B02-023` | `E-APPFACTORY` |
+| Missing | `B02-014` `B02-015` | `E-APPFACTORY` |
 ### A01 (20)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -375,24 +376,22 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### G01 (18)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `G01-001..G01-010` `G01-016` `G01-017` | `E-IAM` |
-| Foundation | `G01-018` | `E-IAM` |
-| Missing | `G01-011..G01-015` | `E-IAM` |
-
+| Wired | `G01-001..G01-011` `G01-016` `G01-017` | `E-IAM` |
+| Foundation | `G01-012` `G01-014` `G01-018` | `E-IAM` |
+| Missing | `G01-013` `G01-015` | `E-IAM` |
 ### G02 (9)
 | Maturity | ID expression | Evidence |
 |---|---|---|
 | RC | `G02-001` | `E-IAM` |
-| Wired | `G02-002` `G02-007` | `E-IAM` |
-| Foundation | `G02-003..G02-006` `G02-008` `G02-009` | `E-IAM` |
-
+| Wired | `G02-002` `G02-007` `G02-008` | `E-IAM` |
+| Foundation | `G02-006` `G02-009` | `E-IAM` |
+| Missing | `G02-003..G02-005` | `E-IAM` |
 ### T01 (20)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `T01-001..T01-005` `T01-012` `T01-013` | `E-IAM` |
-| Foundation | `T01-006..T01-011` `T01-015..T01-018` | `E-IAM` |
-| Missing | `T01-014` `T01-019` `T01-020` | `E-IAM` |
-
+| Wired | `T01-001..T01-005` `T01-012` `T01-013` `T01-018` | `E-IAM` |
+| Foundation | `T01-006..T01-011` `T01-014..T01-017` | `E-IAM` |
+| Missing | `T01-019` `T01-020` | `E-IAM` |
 ### O01 (21)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -426,10 +425,9 @@ Range syntax is inclusive. Example `F01-001..F01-016` expands to sixteen individ
 ### U01 (13)
 | Maturity | ID expression | Evidence |
 |---|---|---|
-| Wired | `U01-001` `U01-002` | `E-UI` |
-| Foundation | `U01-008..U01-013` | `E-UI` |
-| Missing | `U01-003..U01-007` | `E-UI` |
-
+| Wired | `U01-001` `U01-002` `U01-009..U01-012` | `E-UI` |
+| Foundation | `U01-008` | `E-UI` |
+| Missing | `U01-003..U01-007` `U01-013` | `E-UI` |
 ### U02 (12)
 | Maturity | ID expression | Evidence |
 |---|---|---|
@@ -492,37 +490,36 @@ RC-01 generator-side assertion against the exact Capability Map family denominat
 
 ## Top-30 blockers / next tasks
 
-1. Publish missing RC hardening plan / task-ID contract.
-2. Deterministic FAST/STANDARD/CRITICAL exact-head validation lanes.
-3. Exact-current-main `/health` + `/release.json` + worker/release identity proof.
-4. Canonical workflow topology: non-UI commits must not trigger UI-only deploy.
-5. Close current-main backup verification / restore-drill gaps before DR promotion.
-6. Migration applied-content checksum + crash-window/replay safety.
-7. Finance close/open/reopen + period lock truth.
-8. Finance cross-ledger reconciliation: GL/stock/AP/AR/payment/payroll.
-9. Consolidation/intercompany/elimination depth (`F06`).
-10. FX revaluation + realized/unrealized correction.
-11. VN e-invoice/tax provider + legal-source closure.
-12. Payroll official numeric fixture promotion.
-13. Payroll→GL/payment reconciliation + Employee Loan correction/separation policy.
-14. Generic stock reservation lifecycle.
-15. Stock backdate/repost→Finance reconciliation.
-16. Persisted WMS task + permission-safe scanner/mobile wiring.
-17. Procurement three-way match + quantity/price variance + hold.
-18. Supplier approved-list/rating/quality/contract/blanket/portal.
-19. CRM atomic conversion + Contact/Organization + Customer 360.
-20. CRM duplicate/merge/scoring/forecast/team/quota/commission/marketing.
-21. Recurring subscription billing/renewal orchestration.
-22. Manufacturing rework policy + subcontract/demand orchestration.
-23. Manufacturing actual-cost posting + variance reconciliation.
-24. IAM privileged-step-up parity across native + Frappe surfaces.
-25. MFA/OIDC/SAML/SSO/SCIM.
-26. Sensitive Employee field/permlevel exact-main hardening.
-27. Credential vault/rotation/revocation/audited use.
-28. Integration Hub physical delivery persistence + DLQ inspect/quarantine/replay/metrics.
-29. Offline cache/write/sync/OCC/conflict/revoke-purge contract.
-30. Browser/mobile/UI promotion evidence, including base ChildGrid and Matrix named-source/action bridge.
-
+1. `G01-011`: MFA exact login/enroll/recovery/browser + operational evidence to RC.
+2. `G01-012..G01-015`: complete OIDC/SAML/SSO/SCIM provider lifecycle.
+3. `G01-016..G01-017`: exact-current session/revocation/recent-auth regression across surfaces.
+4. `T01-020`: attributed/audited support access or impersonation lifecycle.
+5. `G02-003..G02-005`: canonical PII classification, masking and retention taxonomy.
+6. `T01-019`: tenant/data deletion, retention/legal-hold and recovery boundary.
+7. `T01-016..T01-017`, `O01-013..O01-016`: restore/PITR/DR/rollback drill + RTO/RPO.
+8. `O01-006..O01-012`: durable alert/error/DLQ/retry/integrity operations.
+9. `O01-020..O01-021`: edge policy, API/PWA compatibility and false-positive provider proof.
+10. `IM02-006..IM02-009`: resumable retry/correction/incremental migration/post-migration reconciliation.
+11. `T01-015`, `IM02-016`: cutover/rollback/crash-window/reconciliation proof.
+12. Migration execution slice: applied-state-aware resolution of duplicate `0110_*` prefixes; no unsafe rename.
+13. `F01-011..F01-013`: automated close aggregate, retained earnings and close/reopen semantics.
+14. `V02-011..V02-014`: PIT resident/progressive/deduction/annual settlement with official effective-dated fixtures.
+15. `V03-001..V03-010`: clause-verified PIT/BHXH/BHYT/BHTN numeric fixtures + exact statutory regression.
+16. `V04-006..V04-010`: e-invoice provider/signing/submission/retry/status synchronization.
+17. `P01-016`, `W01-021`: landed-cost authoritative stock-value application/reversal + Stock/GL reconciliation.
+18. `W01-023..W01-024`: historical stock repost/replay through downstream COGS/Finance correction.
+19. `W02-004`, `W02-013`: persisted putaway/warehouse-task state machine.
+20. `W02-009`, `W02-014`: dedicated cycle-count/freeze workflow closure.
+21. `M03-009..M03-010`: rework operating model + subcontract material/procurement/valuation contract.
+22. `M04-004..M04-010`: actual labor/machine/overhead cost + variance posting/reconciliation.
+23. `B02-006`, `T01-014`: materialized schema/data reverse migration + transactional rollback.
+24. `B01-005`, `B01-009..B01-011`: persisted parallel/quorum approval, escalation, SLA/timer/scheduled actions.
+25. `I01-011..I01-015`: physical attempt persistence, quarantine/replay and DLQ metrics while preserving idempotency.
+26. `U01-001..U01-002`: current V2 cross-device/a11y + installed standalone PWA evidence.
+27. `U01-003..U01-007`: tenant/session-aware offline cache/write queue/background replay/OCC conflict UX.
+28. `R01-014`: offline POS consuming canonical offline/OCC/idempotency authority.
+29. `A02-021..A02-024`: AI proposal/tool/preview/human approval with permission/audit authority.
+30. `O01-002`, `VP01-007..VP01-008`: exact current release SHA/bundle/authenticated live evidence before Hardened.
 ## Interpretation
 
 Forge is implementation-heavy and evidence-light: most capabilities are Wired/Foundation, but exact-head validation, reconciliation, browser/mobile proof, and exact-current-main production evidence lag behind. The shortest path to higher maturity is to close shared evidence gates first, then fill true Missing capability gaps. Merge count is not a maturity model.

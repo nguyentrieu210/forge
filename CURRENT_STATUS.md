@@ -12,6 +12,17 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Component versioning độc lập theo `docs/VERSIONING.md`; bump root version không đồng nghĩa production deploy.
 - Warehouse Cash Alumdoor merge checkpoint: `c3dbcd20a7a88c17c1a9f10c4fff82b329e27855`.
 
+## DONE — RC3 exact-main release-confidence convergence
+
+- Program seed: `main@98b5e1b22858ae85b977ccd1ad3ae8d74e9ceed7`; A0-A5 evidence converged through `program/rc3-exact-main-release-confidence-20260804`.
+- Canonical capability denominator remains **956/956**. RC3 candidate maturity: **Hardened 0 / RC 65 / Wired 407 / Foundation 327 / Missing 157**.
+- Delta vs RC-01: **RC +61 / Wired -41 / Foundation -18 / Missing -2 / Hardened unchanged 0**.
+- Promotions are scoped to exact evidence; no global TypeScript PASS, provider/live PASS or current-production PASS is inferred.
+- Current shared shell authority is **MetaForge V2**; V3 history is not current presentation authority.
+- Duplicate `0110_*` migration prefixes are tracked as an applied-state/governance blocker; no potentially applied migration was renamed.
+- No production deploy, provider mutation, DNS/secret change, restore/PITR or customer-data mutation occurred in RC3.
+- Canonical evidence: `docs/agents/rc/RC3_CONVERGENCE_20260804.md` and A1-A5 evidence files.
+
 ## DONE — CFMAX R2 Cloudflare-native source convergence
 
 - Canonical convergence PR `#570` đã merge vào `main` tại `88a349e3f4267aa749d791b504cb7a7c13f3e9b5` sau coordinator takeover toàn bộ 8 CFMAX lane.
@@ -59,7 +70,9 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, merge và release. 
 - Không production deploy/migration trong task HRM này.
 - Boundary còn lại: `formula_json` là versioned/audited legal-rule evidence, chưa phải statutory PIT/BHXH evaluator. Nếu cần tự động hóa luật Việt Nam phải làm task CRITICAL riêng với schema công thức explicit, effective versions, nguồn chính thức và regression pháp lý.
 
-## ACTIVE — VN Accounting Period Integrity Hardening r8
+## SUPERSEDED — VN Accounting Period Integrity Hardening r8
+
+The r8 branch is historical/superseded by canonical RC-020/Transaction Closure authority on current main; retain the bullets below only as provenance, not active work.
 
 - Canonical branch: `fix/vn-accounting-period-integrity-20260803-r8`, clean-based on current `main@560c7cfc140f04e5ca555c87dfa31541c8867ec1` sau khi main thay đổi handoff/process docs.
 - Migration accounting dùng số kế tiếp `0042_vn_accounting_period_hardening.sql`; không đụng lại HRM migrations `0039-0041`.
