@@ -1,0 +1,35 @@
+{
+  "format": "forge-r6-demo-production-certification-phase2/v1",
+  "status": "BLOCKED",
+  "candidate_sha": "fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5",
+  "tenant": "alu",
+  "mutation": "AUTHORIZED_PRODUCTION_DEMO",
+  "completed_at": "2026-08-04T15:10:45.073Z",
+  "workflow_run_id": "30922660421",
+  "outcomes": {
+    "preflight": "success",
+    "server_build": "success",
+    "migrate": "failure",
+    "migration_verify": "skipped",
+    "tenant_deploy": "skipped",
+    "app_deploy": "skipped",
+    "package_install": "skipped",
+    "profile": "skipped",
+    "client_build": "skipped",
+    "gateway_deploy": "skipped",
+    "pressure": "skipped",
+    "health": "skipped",
+    "provider": "skipped",
+    "identity": "skipped",
+    "pitr": "skipped"
+  },
+  "evidence": {
+    "e06": null,
+    "e10": null,
+    "e17": null,
+    "e18_profile": null,
+    "e03_e04": null,
+    "e02_e05": null,
+    "e18_identity": null
+  }
+}
