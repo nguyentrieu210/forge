@@ -1,0 +1,136 @@
+{
+  "format": "forge-r5-a5-source-provider-matrix/v1",
+  "date": "2026-08-04",
+  "lane": "R5-05 Integration + BI + Workplace + Logistics",
+  "branch": "agent/r5-05-integration-bi-workplace-logistics",
+  "execution_baseline": "30346e08eabb7074f8623eeedae09efec25da072",
+  "rc4_integrated_validation": {
+    "run_id": "30878142334",
+    "result": "SUCCESS",
+    "provider_live_state": "unverified"
+  },
+  "overall_verdict": "BLOCKED",
+  "blocking_dependency_requests": [
+    "DR-R5-A5-01"
+  ],
+  "waiting_dependency_requests": [
+    "DR-R5-A5-02"
+  ],
+  "lanes": [
+    {
+      "id": "integration-hub",
+      "source_status": "READY",
+      "provider_status": "UNVERIFIED",
+      "authority": "Integration Hub transport/recovery contracts; business mutation remains domain-owned",
+      "source_evidence": [
+        "server/packages/integration-hub/src/queue-recovery.ts",
+        "server/packages/integration-hub/src/einvoice-provider.ts",
+        "server/tests/integration-hub-queue-recovery.test.mjs",
+        "server/tests/integration-hub-einvoice-provider.test.mjs",
+        "server/tests/integration-hub-kernel-registration.test.mjs"
+      ],
+      "r5_claims": [
+        "typed quarantine/replay contract preserves tenant/schema/idempotency identity",
+        "provider-neutral e-invoice seam returns canonical evidence only",
+        "Integration Subscription uses canonical controller registration"
+      ],
+      "not_claimed": [
+        "physical durable DLQ/quarantine execution",
+        "generic durable external-delivery attempt runtime",
+        "credential lifecycle provider proof",
+        "named e-invoice provider conformance"
+      ],
+      "next_phase": "R6 provider/recovery evidence"
+    },
+    {
+      "id": "bi-semantic",
+      "source_status": "READY",
+      "provider_status": "UNVERIFIED",
+      "authority": "SemanticQueryExecutor and registered semantic definitions remain trusted read authority; AI output is advisory",
+      "source_evidence": [
+        "server/packages/semantic/src/dashboard.ts",
+        "server/packages/semantic/src/ai-dashboard.ts",
+        "server/packages/semantic/src/recommendation.ts",
+        "server/tests/semantic-dashboard.test.mjs",
+        "server/tests/semantic-ai-dashboard.test.mjs",
+        "server/tests/semantic-recommendation.test.mjs"
+      ],
+      "r5_claims": [
+        "permission-aware dashboard discovery and execution boundary",
+        "trusted tenant/filter resolution",
+        "advisory recommendation evidence bound to permission-visible semantic rows"
+      ],
+      "not_claimed": [
+        "AI Gateway/provider live invocation",
+        "provider spend/privacy operational proof",
+        "browser dashboard productization",
+        "authoritative AI write/action behavior"
+      ],
+      "next_phase": "R6/provider proof where adopted; shared UI owner for presentation"
+    },
+    {
+      "id": "workplace",
+      "source_status": "BLOCKED_SHARED_WIRING",
+      "provider_status": "NOT_REQUIRED_FOR_IN_APP_SOURCE",
+      "authority": "Canonical tenant runMaintenance scheduler + permission-safe Workplace runner",
+      "source_evidence": [
+        "server/packages/frappe-api/src/workplace-maintenance.ts",
+        "server/tests/rc4-a16-workplace-maintenance.test.mjs",
+        "server/apps/tenant-worker/src/index-core.ts"
+      ],
+      "r5_claims": [
+        "permission-safe deterministic Workplace alert engine exists and was integrated/tested in RC4"
+      ],
+      "not_claimed": [
+        "scheduler registration on exact current main",
+        "external email/SMS/Zalo/push delivery",
+        "Workplace recurrence adapter to Auto Repeat"
+      ],
+      "exact_gap": "runMaintenance() does not import/invoke runWorkplaceScheduledNotifications() and does not return workplace counters",
+      "dependency_request": "DR-R5-A5-01"
+    },
+    {
+      "id": "logistics-pos-commerce",
+      "source_status": "READY_FOR_SELECTED_PILOT_BOUNDARY",
+      "provider_status": "NOT_REQUIRED_FOR_CURRENT_SOURCE_SCOPE",
+      "authority": "Canonical Sales Order, Delivery Note, Stock and Finance remain authoritative; Social Commerce is a permissioned channel layer",
+      "source_evidence": [
+        "server/packages/social-commerce/src/api.ts",
+        "server/tests/ws16-omnichannel-source-contract.test.mjs"
+      ],
+      "r5_claims": [
+        "route-class permission gates are integrated",
+        "cart/order/shipment paths preserve canonical domain authorities"
+      ],
+      "not_claimed": [
+        "POS partial-payment Finance closure",
+        "generic atomic POS return commitment",
+        "dedicated POS offline/mobile evidence",
+        "broad optional social-commerce pilot enablement"
+      ],
+      "next_phase": "domain owner only if selected profile enables those optional capabilities"
+    },
+    {
+      "id": "capability-profile-interaction",
+      "source_status": "WAITING",
+      "provider_status": "NOT_APPLICABLE",
+      "authority": "R5-01 server-authoritative package/capability profile contract",
+      "source_evidence": [],
+      "r5_claims": [],
+      "not_claimed": [
+        "local/client-only activation flags",
+        "secondary profile store"
+      ],
+      "exact_gap": "agent/r5-01-package-capability-profile has no delta from execution baseline at R5-05 audit time",
+      "dependency_request": "DR-R5-A5-02"
+    }
+  ],
+  "safety": {
+    "production_deploy": false,
+    "production_migration": false,
+    "provider_mutation": false,
+    "dns_or_secret_change": false,
+    "customer_data_mutation": false,
+    "capability_maturity_promotion": false
+  }
+}
