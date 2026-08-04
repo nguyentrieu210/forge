@@ -1,0 +1,82 @@
+name: RC4 A3 Migration Cutover Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/apps/tenant-worker/src/index.ts"
+      - "server/apps/tenant-worker/src/migration-api.ts"
+      - "server/packages/migration/**"
+      - "server/tests/migration-*.test.mjs"
+      - "server/scripts/test-migration-run-journal.py"
+      - "docs/agents/rc4/RC4_A3_MIGRATION_CUTOVER.md"
+      - ".github/workflows/rc4-a3-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a3-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/rc4-03-migration-cutover')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Focused migration and tenant-worker TypeScript emit
+        working-directory: server
+        run: |
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/rc4-a3-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep "error TS" /tmp/rc4-a3-tsc.log > /tmp/rc4-a3-errors.log || true
+            grep -E 'apps/tenant-worker/src/(index|migration-api)\.ts|packages/migration/src/' /tmp/rc4-a3-errors.log > /tmp/rc4-a3-changed-errors.log || true
+            if [ -s /tmp/rc4-a3-changed-errors.log ]; then
+              echo "TypeScript error intersects RC4 A3 changed authority:"
+              cat /tmp/rc4-a3-changed-errors.log
+              exit 1
+            fi
+            echo "TypeScript emitted with baseline errors outside RC4 A3 changed authority:"
+            cat /tmp/rc4-a3-errors.log
+          fi
+
+      - name: Durable migration regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/migration-plan.test.mjs \
+            tests/migration-orchestration.test.mjs \
+            tests/migration-orchestrator.test.mjs \
+            tests/migration-durable-orchestrator.test.mjs \
+            tests/migration-kernel-port.test.mjs \
+            tests/migration-frappe-source.test.mjs \
+            tests/migration-opening.test.mjs
+
+      - name: Migration journal SQL replay
+        working-directory: server
+        run: |
+          python3 scripts/test-migration-run-journal.py
+          python3 scripts/verify-sql.py

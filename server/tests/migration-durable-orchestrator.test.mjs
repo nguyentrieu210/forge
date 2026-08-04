@@ -164,3 +164,53 @@ test("durable executor marks retryable failure only after receipt lookup says no
   assert.equal(events.includes("recover:C-1"), true);
   assert.equal(events.at(-1), "run:failed");
 });
+
+test("durable executor replays an already-applied run without executing writes again", async () => {
+  const plan = await buildPlan();
+  const row = plan.rows[0];
+  let portCalls = 0;
+  const journal = {
+    async ensureRun() { return { run_id: plan.plan_id, state: "applied" }; },
+    async listRows() {
+      return [{
+        row_key: row.row_key,
+        source_row_number: row.row_number,
+        row_fingerprint: row.fingerprint,
+        target_doctype: plan.target_doctype,
+        target_name: "C-1",
+        intended_action: "create",
+        status: "imported",
+        command_id: "frappe-" + "1".repeat(40),
+        command_payload_hash: "2".repeat(64),
+        document: row.document,
+        error: null,
+        attempt_count: 1,
+        created_at: "t0",
+        modified_at: "t1",
+        staging_purged_at: null,
+      }];
+    },
+  };
+  const port = {
+    async lookup() { portCalls += 1; throw new Error("must not run"); },
+    async prepareCreate() { portCalls += 1; throw new Error("must not run"); },
+    async prepareUpdate() { portCalls += 1; throw new Error("must not run"); },
+  };
+
+  const result = await executeDurableMigrationPlan({
+    tenant_id: "demo",
+    actor: "Administrator",
+    now: () => "2026-08-03T12:00:00Z",
+    plan,
+    journal,
+    port,
+  });
+
+  assert.equal(portCalls, 0);
+  assert.equal(result.run_id, plan.plan_id);
+  assert.equal(result.imported, 1);
+  assert.equal(result.failed, 0);
+  assert.equal(result.processed, 1);
+  assert.equal(result.recovered_from_receipt, 0);
+  assert.deepEqual(result.outcomes.map((outcome) => outcome.status), ["imported"]);
+});

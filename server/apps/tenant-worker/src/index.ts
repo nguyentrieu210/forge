@@ -19,7 +19,7 @@ import {
   type AuthRouteContext,
   type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
-import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
+import type { Actor, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
 import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
 import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
@@ -64,6 +64,7 @@ import {
   isManufacturingMrpFrappePath,
   routeManufacturingMrpApi,
 } from "./manufacturing-mrp-api.js";
+import { isMigrationApiPath, routeMigrationApi } from "./migration-api.js";
 import { mfaKeyRingFromEnv } from "./mfa-config.js";
 import {
   assertRecentNativeSecurityAuthentication,
@@ -100,13 +101,14 @@ export default {
     const manufacturingCapacity = isManufacturingCapacityApiPath(url.pathname);
     const manufacturingCosting = isManufacturingCostingApiPath(url.pathname);
     const manufacturingGenealogy = isManufacturingGenealogyApiPath(url.pathname);
+    const migration = isMigrationApiPath(url.pathname);
     const qms = isQmsApiPath(url.pathname);
     const sessionManagement = isSessionManagementPath(url.pathname);
     const publicFrappeAuth = isPublicFrappePath(url.pathname);
     const mfaManagement = isMfaRoutePath(url.pathname);
     const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
     if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
-      && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !qms
+      && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !migration && !qms
       && !sessionManagement && !publicFrappeAuth && !mfaManagement && !nativeSecurity) {
       return coreWorker.fetch(request, env);
     }
@@ -122,7 +124,7 @@ export default {
         // authorization, validation and persistence, so passing step-up must not create a
         // second implementation of any native admin route.
         if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
-          && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !qms
+          && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !migration && !qms
           && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
           return coreWorker.fetch(request, env);
         }
@@ -172,6 +174,14 @@ export default {
             },
             authContext.now(),
           ),
+        });
+      } else if (migration) {
+        response = await routeMigrationApi(request, url, {
+          db: requestDb,
+          tenantId,
+          actor: authentication.actor,
+          traceId,
+          runCommand: (command) => executeCommandThroughCore(request, env, command),
         });
       } else if (physicalStock) {
         const metadata = new D1MetadataStore(requestDb);
@@ -424,6 +434,37 @@ function createDocumentThroughCore(
     headers,
     body: JSON.stringify(document),
   }), env);
+}
+
+async function executeCommandThroughCore(
+  request: Request,
+  env: TenantEnv,
+  command: MutationCommand,
+): Promise<MutationReceipt> {
+  const url = new URL(request.url);
+  url.pathname = "/api/v1/commands";
+  url.search = "";
+  const headers = forwardedHeaders(request);
+  headers.set("content-type", "application/json");
+  const input = { ...command } as Record<string, unknown>;
+  delete input.actor;
+  const response = await coreWorker.fetch(new Request(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(input),
+  }), env);
+  const raw = await response.text();
+  if (!response.ok) {
+    let message = `Migration command failed with HTTP ${response.status}`;
+    try {
+      const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
+      if (typeof parsed.error?.message === "string" && parsed.error.message.trim()) message = parsed.error.message;
+    } catch {
+      if (raw.trim()) message = raw.slice(0, 1000);
+    }
+    throw new Error(message);
+  }
+  return JSON.parse(raw) as MutationReceipt;
 }
 
 function forwardedHeaders(request: Request): Headers {

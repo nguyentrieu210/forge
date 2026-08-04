@@ -28,6 +28,21 @@ def run_row():
     )
 
 
+def expect_integrity(label, statement, params):
+    """Assert one constraint failure without rolling back unrelated test fixtures."""
+    savepoint = f"expected_{label}"
+    db.execute(f"SAVEPOINT {savepoint}")
+    try:
+        db.execute(statement, params)
+    except sqlite3.IntegrityError:
+        db.execute(f"ROLLBACK TO {savepoint}")
+        db.execute(f"RELEASE {savepoint}")
+    else:
+        db.execute(f"ROLLBACK TO {savepoint}")
+        db.execute(f"RELEASE {savepoint}")
+        raise AssertionError(f"{label} should be rejected")
+
+
 db.execute(
     """INSERT INTO migration_runs(
       tenant_id,run_id,plan_id,manifest_id,source_id,source_kind,source_fingerprint,target_doctype,
@@ -49,19 +64,16 @@ db.execute(
     ),
 )
 
-# Applying without a command identity must fail at the database boundary.
-try:
-    db.execute(
-        """INSERT INTO migration_row_receipts(
-          tenant_id,run_id,row_key,source_row_number,row_fingerprint,target_doctype,target_name,
-          intended_action,status,created_at,modified_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
-        (TENANT, RUN, "CUST-2", 3, "c" * 64, "Customer", "CUST-2", "update", "applying", NOW, NOW),
-    )
-except sqlite3.IntegrityError:
-    db.rollback()
-else:
-    raise AssertionError("applying row without command_id should be rejected")
+# Applying without a command identity must fail at the database boundary. Use a
+# savepoint so the expected failure cannot roll back the run/reservation fixtures.
+expect_integrity(
+    "applying_without_command_id",
+    """INSERT INTO migration_row_receipts(
+      tenant_id,run_id,row_key,source_row_number,row_fingerprint,target_doctype,target_name,
+      intended_action,status,created_at,modified_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+    (TENANT, RUN, "CUST-2", 3, "c" * 64, "Customer", "CUST-2", "update", "applying", NOW, NOW),
+)
 
 # Reserve -> applying stores the exact kernel command identity.
 COMMAND = "frappe-" + "d" * 40
@@ -106,22 +118,19 @@ checkpoint = db.execute(
 ).fetchone()
 assert checkpoint == ("erpnext-prod", "erpnext-rest-v1", 1), checkpoint
 
-# One command cannot be claimed by two migration rows in the same tenant.
-try:
-    db.execute(
-        """INSERT INTO migration_row_receipts(
-          tenant_id,run_id,row_key,source_row_number,row_fingerprint,target_doctype,target_name,
-          intended_action,status,command_id,command_payload_hash,document_json,attempt_count,created_at,modified_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-        (
-            TENANT, RUN, "CUST-3", 4, "1" * 64, "Customer", "CUST-3", "update", "applying",
-            COMMAND, "2" * 64, json.dumps({"customer_name": "Other"}), 1, NOW, NOW,
-        ),
-    )
-except sqlite3.IntegrityError:
-    db.rollback()
-else:
-    raise AssertionError("duplicate command_id should be rejected")
+# One command cannot be claimed by two migration rows in the same tenant. Preserve the
+# first row/receipt/checkpoint while exercising this expected uniqueness failure.
+expect_integrity(
+    "duplicate_command_id",
+    """INSERT INTO migration_row_receipts(
+      tenant_id,run_id,row_key,source_row_number,row_fingerprint,target_doctype,target_name,
+      intended_action,status,command_id,command_payload_hash,document_json,attempt_count,created_at,modified_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+    (
+        TENANT, RUN, "CUST-3", 4, "1" * 64, "Customer", "CUST-3", "update", "applying",
+        COMMAND, "2" * 64, json.dumps({"customer_name": "Other"}), 1, NOW, NOW,
+    ),
+)
 
 # Tenant isolation allows another tenant to use the same logical run/row/command names.
 OTHER = "other"
