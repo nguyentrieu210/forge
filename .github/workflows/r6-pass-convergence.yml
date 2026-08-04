@@ -29,9 +29,9 @@ jobs:
         run: pnpm --filter cloudforge run build
       - name: Build MetaForge exactly as full production release
         run: pnpm --filter metaforge run build
-      - name: Verify migration and PITR safety
+      - name: Verify migration, restore import and PITR safety
         working-directory: server
-        run: node --test tests/d1-migrate-remote-safety.test.mjs tests/sre-destructive-guards.test.mjs
+        run: node --test tests/d1-migrate-remote-safety.test.mjs tests/d1-backup-import.test.mjs tests/sre-destructive-guards.test.mjs
       - name: Workerd evidence — ERP lifecycle
         id: health
         working-directory: server
