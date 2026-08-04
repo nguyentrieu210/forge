@@ -10,7 +10,6 @@
     { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "as_of", "label": "Dữ liệu tại thời điểm", "fieldtype": "Datetime", "read_only": true, "in_list_view": true },
-    { "fieldname": "status", "label": "Trạng thái snapshot", "fieldtype": "Select", "options": "Current", "read_only": true, "in_list_view": true },
     { "fieldname": "organization_count", "label": "Tổ chức", "fieldtype": "Int", "read_only": true },
     { "fieldname": "contact_count", "label": "Liên hệ", "fieldtype": "Int", "read_only": true },
     { "fieldname": "open_deal_count", "label": "Deal đang mở", "fieldtype": "Int", "read_only": true, "in_list_view": true },
