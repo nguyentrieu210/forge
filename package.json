@@ -2,7 +2,7 @@
   "name": "forge",
   "version": "0.2.0",
   "private": true,
-  "description": "Forge — independent cloud-native ERP and enterprise operating platform on Cloudflare",
+  "description": "Forge ERP — cloud-native, metadata-driven enterprise operating platform on Cloudflare",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

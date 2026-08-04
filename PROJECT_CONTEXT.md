@@ -1,30 +1,28 @@
-# PROJECT CONTEXT
+# FORGE ERP — PROJECT CONTEXT
 
 Ngày cập nhật: **2026-08-05**.
 
-File này mô tả **kiến trúc và source-of-truth hiện hành**. Exact GitHub/code/migration/test luôn thắng prose nếu có drift. Live execution phase nằm trong `CURRENT_STATUS.md`, `NEXT_TASKS.md` và phase authority tương ứng.
+File này mô tả kiến trúc và source-of-truth hiện hành của Forge ERP. Exact GitHub state, code, migration và tests luôn thắng prose nếu có drift. Live execution phase được xác định từ `CURRENT_STATUS.md`, `NEXT_TASKS.md` và phase authority đang active.
 
-## 1. Product identity
+## 1. Product
 
-Forge là một **ERP / enterprise operating platform độc lập**, multi-tenant, metadata-driven và cloud-native trên Cloudflare.
+**Forge ERP** là enterprise resource planning và operating platform multi-tenant, metadata-driven, cloud-native trên Cloudflare.
 
-Forge không phụ thuộc Frappe/ERPNext hoặc ERP bên thứ ba để làm runtime/source of truth. Các external framework/ERP chỉ có thể xuất hiện như benchmark, migration source, interoperability adapter hoặc regression/reference corpus.
+Sản phẩm được tổ chức thành các lớp chính:
 
-Các lớp sản phẩm chính:
-
-- **CloudForge** — authoritative backend/kernel, document lifecycle, permission, ledger, workflow, jobs, storage và tenant/runtime infrastructure.
+- **CloudForge** — authoritative backend/kernel, document lifecycle, permission, workflow, ledgers, jobs, storage và tenant/runtime infrastructure.
 - **MetaForge** — React metadata-driven workspace/runtime/builder.
-- **First-party domain packages** — Finance/VN Accounting, HCM, CRM/Sales, Procurement, Stock/WMS, Manufacturing/QMS, Projects/Service, Workplace, Commerce và các domain khác.
-- **Vertical apps** — Alumdoor là reference vertical; vertical compose shared authorities, không fork core.
-- **Compatibility/migration surfaces** — các adapter/source connector mang tên external system nếu còn tồn tại; chúng không được trở thành architectural authority.
+- **First-party domain packages** — Finance/VN Accounting, HCM, CRM/Sales, Procurement, Stock/WMS, Manufacturing/QMS, Projects/Service, Workplace, Commerce và các capability doanh nghiệp khác.
+- **Vertical applications** — các ứng dụng ngành compose shared authorities và chỉ sở hữu logic đặc thù ngành.
+- **Integration & migration services** — các boundary phục vụ nhập dữ liệu, tích hợp hệ thống và chuyển đổi vận hành mà không thay đổi authoritative business model.
 
-Strategic target: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
-Capability denominator/status: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` + `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
+Strategic target: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.  
+Capability denominator/status: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` + `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.  
 Execution doctrine: `skills/forge-enterprise-completion/SKILL.md`.
 
 ## 2. Current verified phase
 
-Forge đã hoàn tất:
+Forge ERP đã hoàn tất:
 
 - RC4 integrated closure — **DONE**;
 - R5 hardening/productization — **DONE / R5-GO**;
@@ -42,9 +40,9 @@ Certified/deployed R6 baseline:
 
 Current phase: **CONTROLLED_PILOT**.
 
-Pilot-01 real source set has been observed/hashed/ingested. Current verdict is `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`; active work is reconciliation + normalization toward a private real `PREVIEW_PASS` batch.
+Pilot-01 đã ingest source thực và đang reconcile + normalize master/opening data để đạt một private `PREVIEW_PASS` batch theo contract.
 
-Portfolio maturity remains:
+Portfolio maturity hiện hành:
 
 - Hardened: 0
 - RC: 66
@@ -53,78 +51,78 @@ Portfolio maturity remains:
 - Missing: 157
 - Total: 956
 
-This maturity distribution is a portfolio metric, not a reason to reopen a blanket foundation wave while the controlled-pilot gate is active.
+Portfolio maturity là thước đo độ phủ sản phẩm, không thay thế current gate hoặc release/pilot evidence.
 
 ## 3. Backend authority
 
 ### Request/runtime
 
-- Gateway resolves tenant and dispatches trusted identity to tenant/runtime workers.
-- Tenant Worker owns authenticated API/runtime composition.
-- Query/Jobs/Control Plane/Social Ingress workers provide bounded platform services where configured.
-- Forge-native business/runtime contracts are authoritative. Compatibility routes/adapters may translate external shapes but may not own business semantics.
+- Gateway resolve tenant và dispatch trusted identity tới tenant/runtime workers.
+- Tenant Worker sở hữu authenticated API/runtime composition.
+- Query, Jobs, Control Plane và Social Ingress workers cung cấp các bounded platform services theo deployment contract.
+- Business/runtime contracts của Forge ERP là authoritative source cho lifecycle, permission, state transition và domain behavior.
 
 ### Document writes
 
-Authoritative business mutation flows through the **Document Kernel / aggregate serialization path**. Do not direct-write business documents/ledgers to bypass lifecycle, OCC, idempotency, permission or audit.
+Authoritative business mutation đi qua **Document Kernel / aggregate serialization path**. Không direct-write business documents hoặc ledgers để bypass lifecycle, OCC, idempotency, permission hoặc audit.
 
 ### Storage
 
-- D1 is the authoritative tenant/query persistence layer under append-only migration governance.
-- Durable Objects serialize authoritative mutation where required.
-- Queues support outbox/background/retry/DLQ contracts.
-- R2 stores files/artifacts where used.
-- KV is cache/routing/config support, not a substitute for business authority.
+- D1 là authoritative tenant/query persistence layer dưới append-only migration governance.
+- Durable Objects serialize authoritative mutation khi cần.
+- Queues hỗ trợ outbox, background jobs, retry và DLQ.
+- R2 lưu files/artifacts/backups theo configured role.
+- KV phục vụ cache/routing/config support, không thay thế business authority.
 
-## 4. Domain source-of-truth rules
+## 4. Domain source-of-truth
 
-- **Finance:** canonical GL + Payment Ledger; no domain/vertical shadow ledger.
-- **Inventory:** canonical Stock Ledger/valuation/repost semantics; no Alumdoor-specific inventory ledger.
+- **Finance:** canonical GL + Payment Ledger.
+- **Inventory:** canonical Stock Ledger, valuation và repost semantics.
 - **Payroll:** Salary Structure/Assignment -> Salary Slip -> Payroll Entry -> canonical Finance posting.
-- **CRM/Sales:** canonical customer/contact/opportunity/order document authorities; read models such as Customer 360 do not become write authorities.
-- **Procurement:** supplier/PO/receipt/invoice lineage consumes canonical Stock/Finance side effects.
-- **Manufacturing:** BOM/Work Order/operations consume canonical Stock and Finance authorities.
-- **Legal/statutory:** effective-dated, versioned, source-bound, auditable rules; unsupported numeric legal claims fail closed.
+- **CRM/Sales:** canonical customer/contact/opportunity/order document authorities.
+- **Procurement:** supplier/PO/receipt/invoice lineage gắn với canonical Stock/Finance side effects.
+- **Manufacturing:** BOM/Work Order/operations sử dụng canonical Stock và Finance authorities.
+- **Legal/statutory:** effective-dated, versioned, source-bound và auditable rules.
+
+Read models, dashboards và vertical projections không được trở thành write authority thứ hai.
 
 ## 5. App packaging / App Factory
 
-Canonical app lifecycle lives in App Registry/App Factory contracts under `server/packages/app-registry/**` plus app compiler/install tooling.
+Canonical app lifecycle nằm trong App Registry/App Factory contracts tại `server/packages/app-registry/**` cùng app compiler/install tooling.
 
 Principles:
 
-1. platform authority stays shared;
-2. domain package owns generic business behavior;
-3. vertical app/profile composes required domain capabilities;
-4. capability activation is separate from package installation;
-5. disabling a capability must not automatically uninstall a package or erase historical data;
-6. source edits should be required only when introducing/changing a capability contract, not for ordinary tenant composition;
-7. app/vertical extension must not redefine canonical Finance/Stock/Permission/Document authorities.
+1. platform authority được giữ shared;
+2. domain package sở hữu generic business behavior;
+3. vertical app/profile compose các capability cần thiết;
+4. capability activation tách khỏi package installation;
+5. disable capability không tự động xóa package hoặc historical data;
+6. source edits chỉ cần khi thay đổi capability contract;
+7. app/vertical extension không được định nghĩa lại canonical Finance, Stock, Permission hoặc Document authorities.
 
 ## 6. Frontend authority
 
-- **MetaForge** is Forge's shared React metadata-driven runtime/builder.
-- UI surfaces consume Forge-owned metadata, document, query, permission and action contracts.
-- Server-side permission is authoritative; client visibility/editability is UX only.
-- Shared views/shell/runtime should not contain vertical business schema when metadata/domain contracts can express it.
-- Browser/mobile/PWA evidence must bind to exact source/release when used for maturity or production claims.
-- Legacy/external-shaped adapters may remain for compatibility; they are translation boundaries only and must not dictate Forge's product model, naming, state machine or authoritative behavior.
+- **MetaForge** là shared React metadata-driven runtime/builder của Forge ERP.
+- UI surfaces consume Forge metadata, document, query, permission và action contracts.
+- Server-side permission là authoritative; client visibility/editability chỉ phục vụ UX.
+- Shared views/shell/runtime không hard-code vertical business schema khi metadata/domain contracts có thể diễn đạt.
+- Browser/mobile/PWA evidence phải bind tới exact source/release khi dùng cho maturity hoặc production claims.
 
-## 7. External compatibility boundary
+## 7. Integration & migration boundary
 
-Forge may deliberately support external system shapes for migration/interoperability/backward compatibility.
+Forge ERP hỗ trợ integration, import và migration thông qua bounded adapters/services.
 
 Rules:
 
-- compatibility is **optional/bounded**, not product identity;
-- compatibility package names do not imply runtime dependency;
-- translation occurs at edges;
-- canonical validation, permission, lifecycle, idempotency and ledger semantics remain Forge-owned;
-- new Forge capabilities should target Forge-native contracts first;
-- external parity is a benchmark/interop concern, not an architecture constraint unless a current accepted contract explicitly requires it.
+- translation diễn ra ở integration edge;
+- canonical validation, permission, lifecycle, idempotency và ledger semantics luôn do Forge ERP sở hữu;
+- imported data phải qua normalization, mapping, validation và reconciliation phù hợp;
+- integration contract không được tạo duplicate source of truth;
+- production import/write vẫn tuân theo explicit authorization boundary của phase hiện hành.
 
 ## 8. Alumdoor role
 
-Alumdoor is the first reference vertical and controlled pilot. It consumes shared:
+Alumdoor là reference vertical và controlled pilot đầu tiên. Alumdoor consume shared:
 
 - Employee/HCM primitives;
 - Customer/CRM primitives;
@@ -134,30 +132,30 @@ Alumdoor is the first reference vertical and controlled pilot. It consumes share
 - Finance/AR/AP/Payment/GL;
 - Warranty/Service.
 
-Alumdoor-specific logic stays vertical only when genuinely industry-specific. Reusable behavior moves to domain/platform authority rather than being copied.
+Logic đặc thù cửa nhôm ở vertical layer; reusable behavior được nâng về domain/platform authority.
 
 ## 9. Security / tenant boundary
 
-- Trusted tenant/user identity comes from server/runtime context, not arbitrary client fields.
-- Role/DocPerm/owner/share/user-permission and sensitive security controls are enforced server-side.
-- Authentication/session/revocation/provider credentials and security-sensitive operations follow canonical IAM contracts.
-- No secret, production credential, private backup or raw customer data belongs in docs/source control.
+- Trusted tenant/user identity đến từ server/runtime context.
+- Role/DocPerm/owner/share/user-permission và security-sensitive controls được enforce server-side.
+- Authentication/session/revocation/provider credentials theo canonical IAM contracts.
+- Secrets, production credentials, private backups và raw customer data không được lưu trong docs/source control.
 
-## 10. Migration/release boundary
+## 10. Migration / release boundary
 
-- Never rewrite a migration that may have been applied; add append-only migration under migration governance.
-- Applied-state claims require target-environment inventory/checksum evidence.
+- Không rewrite migration có khả năng đã được apply; thêm append-only migration.
+- Applied-state claims cần environment/checksum evidence.
 - Merge != deploy.
-- Production-ready claims require exact release SHA/hash plus relevant provider/browser/recovery evidence.
-- R6 historical PASS remains tied to its exact certified candidate.
-- A later product-source change creates a new candidate; only affected evidence must rerun/relock according to the current evidence matrix/phase contract.
-- Production migration, backup restore/PITR, DNS/secrets/provider mutation, customer-data mutation, cutover and unauthorized non-UI deployment remain explicit authorization boundaries.
+- Production-ready claims cần exact release SHA/hash cùng provider/browser/recovery evidence phù hợp.
+- R6 historical PASS giữ nguyên theo exact certified candidate.
+- Product-source change tạo candidate mới và rerun/relock affected evidence theo current evidence matrix/phase contract.
+- Production migration, restore/PITR, DNS/secrets/provider mutation, customer-data mutation, cutover và non-UI production deployment là explicit authorization boundaries.
 
 ## 11. Current execution doctrine
 
-Forge is no longer driven by a static foundation/completion wave.
+Forge ERP được điều hành theo live phase thay vì static completion wave.
 
-Before every task, resolve live phase from `CURRENT_STATUS.md`, `NEXT_TASKS.md` and the active phase authority.
+Trước mọi task, resolve current phase từ `CURRENT_STATUS.md`, `NEXT_TASKS.md` và active phase authority.
 
 Current sequence:
 
@@ -167,4 +165,4 @@ Default priority:
 
 `current gate blocker -> correctness/regression -> pilot/operator usability -> evidence gap -> required reusable primitive -> post-gate hardening -> enterprise backlog`
 
-North Star remains strategic direction. It does not override the current gate or reopen a closed certification program by itself.
+North Star giữ vai trò strategic direction; current gate và exact evidence quyết định execution priority.

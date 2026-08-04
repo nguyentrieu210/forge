@@ -1,21 +1,21 @@
-# Forge Documentation Index
+# Forge ERP Documentation
 
 Ngày cập nhật: **2026-08-05**.
 
-Tài liệu trong repo được chia theo **authority**, không theo số lượng file. Exact GitHub state, code, migration và test luôn thắng prose stale.
+Tài liệu được tổ chức theo **authority và execution phase**. Exact GitHub state, code, migration và tests luôn thắng prose stale.
 
-Forge hiện được vận hành theo mô hình **phase-aware**: North Star giữ vai trò đích chiến lược dài hạn, còn việc phải làm ngay được quyết định bởi live phase, current gate và exact release/data evidence. Không dùng backlog/wave cũ để tự mở lại một program đã đóng.
+Forge ERP được vận hành theo mô hình **phase-aware**: North Star giữ vai trò đích chiến lược dài hạn; việc phải làm ngay được quyết định bởi live phase, current gate và exact release/data evidence.
 
 ## 1. Live authority — đọc trước
 
-1. `README.md` — entrypoint dự án.
+1. `README.md` — product entrypoint.
 2. `CURRENT_STATUS.md` — trạng thái đã xác minh gần nhất.
 3. `NEXT_TASKS.md` — hàng đợi active và current gate.
 4. `docs/pilot/alumdoor/README.md` — active pilot authority/read order khi Alumdoor Controlled Pilot còn là phase hiện hành.
 5. `PROJECT_CONTEXT.md` — kiến trúc và source-of-truth hiện hành.
 6. `AI_HANDOFF.md` — handoff ngắn cho phiên tiếp theo.
 7. `docs/ops/SRE_RUNBOOK.md` — release/recovery/data-safety operator intent.
-8. `skills/forge-enterprise-completion/SKILL.md` — **phase-aware operating doctrine** cho agent: resolve live phase trước, bảo vệ authoritative contracts/certified identity, phân biệt engineering risk với release impact, và ưu tiên current gate trước enterprise backlog.
+8. `skills/forge-enterprise-completion/SKILL.md` — phase-aware operating doctrine cho agent.
 
 Không dùng board/handoff của program cũ để suy live state. North Star và capability map không phải live queue.
 
@@ -59,16 +59,16 @@ Final R6 entry authority remains:
 4. `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`
 5. `docs/agents/r6/EVIDENCE_MATRIX.md`
 
-R6 is historical certification truth for the frozen pilot baseline. A later product-source change creates a new candidate and requires only the **affected** release evidence to be rerun/relocked according to the evidence matrix; it does not retroactively turn the certified R6 candidate into a failure.
+R6 is historical certification truth for the frozen pilot baseline. A later product-source change creates a new candidate and requires only the affected release evidence to be rerun/relocked according to the evidence matrix.
 
 ## 3. Strategic authority
 
-- `docs/FORGE_ENTERPRISE_NORTH_STAR.md` — đích sản phẩm dài hạn; strategic compass, **không phải live execution queue**.
+- `docs/FORGE_ENTERPRISE_NORTH_STAR.md` — đích sản phẩm dài hạn; strategic compass, không phải live execution queue.
 - `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` — mẫu số capability/portfolio coverage.
 - `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` — maturity materialized gần nhất.
 - `docs/ROADMAP.md` — hướng dài hạn, không phải live status.
 
-North Star tiếp tục định hướng kiến trúc, reusable primitives, enterprise completeness và backlog sau gate; current phase/current gate quyết định thứ tự thực thi trước mắt.
+North Star định hướng kiến trúc, reusable primitives, enterprise completeness và backlog sau gate; current phase/current gate quyết định thứ tự thực thi trước mắt.
 
 ## 4. Architecture / product contracts
 
