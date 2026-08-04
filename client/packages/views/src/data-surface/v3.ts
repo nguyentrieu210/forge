@@ -20,6 +20,7 @@ export const V3_DATA_SURFACE_CLASS = [
 
   // List / table: business-neutral hierarchy instead of the legacy command-center treatment.
   "[&_.mf-list-view]:!bg-background",
+  "[&_.mf-list-view>[aria-label^='Tổng']]:order-first",
   "[&_.mf-list-toolbar]:sticky",
   "[&_.mf-list-toolbar]:top-0",
   "[&_.mf-list-toolbar]:z-20",
