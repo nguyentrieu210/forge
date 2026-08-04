@@ -5,7 +5,7 @@ import {
   serializeCapabilityProfile,
   setCapabilityDesiredState,
   validateCapabilityProfile,
-} from "../dist/index.js";
+} from "../dist/capability/capability-profile.js";
 
 function model() {
   return capabilityProfileFromResolution({
