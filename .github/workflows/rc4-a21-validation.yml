@@ -1,0 +1,46 @@
+name: RC4 A21 Migration Governance Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/migrations/**"
+      - "server/scripts/verify-migration-governance.mjs"
+      - "server/tests/migration-governance.test.mjs"
+      - "server/package.json"
+      - "docs/agents/rc4/RC4_A21_MIGRATION_GOVERNANCE_HANDOFF.md"
+      - ".github/workflows/rc4-a21-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a21-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/rc4-21-migration-governance')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR head with history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch exact base ref
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}"
+
+      - name: Migration governance snapshot and append-only delta
+        run: node server/scripts/verify-migration-governance.mjs --base-ref "origin/${{ github.event.pull_request.base.ref }}"
+
+      - name: Migration governance regressions
+        run: node --test server/tests/migration-governance.test.mjs
