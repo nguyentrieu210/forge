@@ -1,0 +1,308 @@
+name: One-time R6 Demo Production Certification
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/one-time-r6-demo-certification.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-r6-demo-production-certification
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    name: Certify ALU demo production
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: production
+    env:
+      TARGET_SHA: fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5
+      TENANT: alu
+      ORIGIN: https://alu.kairo.vn
+      APP_WORKER: cloudforge-app-alumdoor
+      DISPATCH_NAMESPACE: cloudforge-production
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD }}
+      VITE_FORGE_RELEASE_SHA: fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5
+
+    steps:
+      - name: Checkout exact relocked candidate
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prove exact candidate is merged
+        id: ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main
+
+      - name: Require demo-production credentials
+        id: credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$FORGE_ADMIN_PASSWORD"
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: pnpm-lock.yaml }
+
+      - name: Install and build exact candidate
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm --filter cloudforge run build
+          pnpm --filter metaforge run build
+          node server/scripts/stage-client-bundle.mjs
+          node server/scripts/verify-cloudflare-governance.mjs --json > "$RUNNER_TEMP/r6-e01.json"
+          (cd server && npm run verify:release-safety && npm run verify:observability && npm run verify:queue-safety)
+
+      - name: Fresh verified ALU backup
+        id: backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/r6-backup"
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$RUNNER_TEMP/r6-backup"
+          mapfile -t files < <(find "$RUNNER_TEMP/r6-backup" -maxdepth 1 -type f -name '*.sql' -print | sort)
+          test "${#files[@]}" -eq 1
+          echo "R6_BACKUP_FILE=${files[0]}" >> "$GITHUB_ENV"
+          node server/scripts/verify-tenant-backup.mjs --tenant "$TENANT" --file "${files[0]}" --output "$RUNNER_TEMP/r6-e07-e08.json"
+
+      - name: Create disposable remote D1
+        id: drill_create
+        shell: bash
+        run: |
+          set -euo pipefail
+          drill="cloudforge-drill-r6-${GITHUB_RUN_ID}"
+          pnpm --dir server exec wrangler d1 create "$drill"
+          echo "R6_DRILL=$drill" >> "$GITHUB_ENV"
+
+      - name: Restore backup into disposable remote D1
+        id: drill_restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/restore-tenant-drill.mjs --tenant "$TENANT" --target "$R6_DRILL" --file "$R6_BACKUP_FILE" --execute --confirm "$R6_DRILL"
+          evidence="$R6_BACKUP_FILE.$R6_DRILL.restore.json"
+          test -f "$evidence"
+          cp "$evidence" "$RUNNER_TEMP/r6-e09.json"
+
+      - name: Reconcile source and restored D1
+        id: cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          import path from 'node:path';
+          import { d1Query, wrangler } from './server/scripts/wrangler-cli.mjs';
+          import { findTenantDatabaseId, removeTenantConfig, writeTenantConfig } from './server/scripts/tenant-wrangler.mjs';
+          const tenant=process.env.TENANT, drillName=process.env.R6_DRILL;
+          const liveId=findTenantDatabaseId(tenant,wrangler);
+          const databases=JSON.parse(wrangler(['d1','list','--json']));
+          const drill=databases.find(x=>x.name===drillName);
+          if(!liveId||!drill?.uuid) throw new Error('missing source or disposable D1');
+          const lc=writeTenantConfig({tenant,databaseId:liveId,publicOrigin:process.env.ORIGIN});
+          const dc=writeTenantConfig({tenant:`drill-${tenant}`,databaseId:drill.uuid,databaseName:drillName});
+          const live={name:`cloudforge-${tenant}`,id:liveId,configArg:lc.relativeConfig};
+          const copy={name:drillName,id:drill.uuid,configArg:dc.relativeConfig};
+          const has=(db,t)=>Number(d1Query(db,`SELECT COUNT(*) total FROM sqlite_schema WHERE type='table' AND name='${t}'`)[0]?.total??0)===1;
+          const one=(db,sql)=>Object.fromEntries(Object.entries(d1Query(db,sql)[0]??{}).map(([k,v])=>[k,String(v??'')]));
+          const metric=(db,t,sql)=>has(db,t)?one(db,sql):{absent:'true'};
+          const collect=db=>({
+            documents:metric(db,'documents','SELECT COUNT(*) rows FROM documents'),
+            masters:metric(db,'master_records','SELECT COUNT(*) rows FROM master_records'),
+            apps:metric(db,'installed_apps','SELECT COUNT(*) rows FROM installed_apps'),
+            migrations:metric(db,'d1_migrations','SELECT COUNT(*) rows FROM d1_migrations'),
+            stock:metric(db,'stock_ledger_entries','SELECT COUNT(*) rows, COALESCE(SUM(actual_qty_micros),0) qty_micros FROM stock_ledger_entries'),
+            ar:metric(db,'payment_ledger_entries',"SELECT COUNT(*) rows, COALESCE(SUM(amount_minor),0) amount_minor FROM payment_ledger_entries WHERE against_voucher_type='Sales Invoice'"),
+            ap:metric(db,'payment_ledger_entries',"SELECT COUNT(*) rows, COALESCE(SUM(amount_minor),0) amount_minor FROM payment_ledger_entries WHERE against_voucher_type='Purchase Invoice'"),
+            payment:metric(db,'payment_ledger_entries','SELECT COUNT(*) rows, COALESCE(SUM(amount_minor),0) amount_minor FROM payment_ledger_entries'),
+            gl:metric(db,'gl_entries','SELECT COUNT(*) rows, COALESCE(SUM(debit_minor),0) debit_minor, COALESCE(SUM(credit_minor),0) credit_minor, COALESCE(SUM(debit_minor-credit_minor),0) balance_minor FROM gl_entries')
+          });
+          try{
+            const source=collect(live), restored=collect(copy);
+            const comparisons=Object.keys(source).map(metric=>({metric,source:source[metric],restored:restored[metric],matches:JSON.stringify(source[metric])===JSON.stringify(restored[metric])}));
+            const evidence={format:'forge-r6-cutover-reconciliation/v1',evidence_id:'R6-E11',observed_at:new Date().toISOString(),environment_class:'DISPOSABLE_REMOTE',source_database:`cloudforge-${tenant}`,restored_database:drillName,comparisons,status:comparisons.every(x=>x.matches)?'PASS':'BLOCKED'};
+            writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-e11.json'),JSON.stringify(evidence,null,2)+'\n');
+            if(evidence.status!=='PASS') throw new Error('restore reconciliation mismatch');
+          } finally { removeTenantConfig(lc.configPath); removeTenantConfig(dc.configPath); }
+          NODE
+
+      - name: Delete disposable D1
+        id: drill_cleanup
+        if: always() && env.R6_DRILL != ''
+        continue-on-error: true
+        run: pnpm --dir server exec wrangler d1 delete "$R6_DRILL" --skip-confirmation
+
+      - name: Apply all ALU tenant migrations
+        id: migrate
+        run: node server/scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Verify migration convergence
+        id: migration_verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readdirSync,writeFileSync } from 'node:fs'; import path from 'node:path';
+          import { d1Query,wrangler } from './server/scripts/wrangler-cli.mjs';
+          import { findTenantDatabaseId,removeTenantConfig,writeTenantConfig } from './server/scripts/tenant-wrangler.mjs';
+          const t=process.env.TENANT,id=findTenantDatabaseId(t,wrangler); if(!id) throw new Error('missing tenant D1');
+          const c=writeTenantConfig({tenant:t,databaseId:id,publicOrigin:process.env.ORIGIN});
+          try{const db={name:`cloudforge-${t}`,id,configArg:c.relativeConfig};const expected=readdirSync('./server/migrations/tenant').filter(x=>x.endsWith('.sql')).sort();const applied=d1Query(db,'SELECT name FROM d1_migrations ORDER BY name').map(x=>String(x.name));const a=new Set(applied),e=new Set(expected);const pending=expected.filter(x=>!a.has(x)),unknown=applied.filter(x=>!e.has(x));const evidence={format:'forge-r6-migration-convergence/v1',evidence_id:'R6-E06',observed_at:new Date().toISOString(),expected:expected.length,applied:applied.length,pending,unknown,status:pending.length===0&&unknown.length===0?'PASS':'BLOCKED'};writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-e06.json'),JSON.stringify(evidence,null,2)+'\n');if(evidence.status!=='PASS')throw new Error(`migration drift pending=${pending.length} unknown=${unknown.length}`);}finally{removeTenantConfig(c.configPath);}
+          NODE
+
+      - name: Deploy ALU tenant Worker
+        id: tenant_deploy
+        run: node server/scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+
+      - name: Deploy Alumdoor app Worker
+        id: app_deploy
+        working-directory: server
+        run: pnpm exec wrangler deploy --config apps-src/alumdoor-worker/wrangler.jsonc --name "$APP_WORKER" --dispatch-namespace "$DISPATCH_NAMESPACE" --strict
+
+      - name: Install or upgrade pilot packages
+        id: package_install
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin="${FORGE_ADMIN_USER:-Administrator}"
+          node server/scripts/forge-app.mjs server/apps-src/hrm --origin "$ORIGIN" --admin "$admin"
+          node server/scripts/forge-app.mjs server/apps-src/vn-accounting --origin "$ORIGIN" --admin "$admin"
+          node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --origin "$ORIGIN" --admin "$admin"
+
+      - name: Apply Alumdoor capability profile
+        id: capability_profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {writeFileSync} from 'node:fs'; import path from 'node:path';
+          const origin=process.env.ORIGIN.replace(/\/$/,''),user=process.env.FORGE_ADMIN_USER||'Administrator',pwd=process.env.FORGE_ADMIN_PASSWORD;
+          const jar=new Map();let csrf='';const cookie=()=>[...jar].map(([k,v])=>`${k}=${v}`).join('; ');
+          const store=r=>{for(const v of r.headers.getSetCookie?.()??[]){const p=v.split(';')[0],i=p.indexOf('=');if(i>0)jar.set(p.slice(0,i).trim(),p.slice(i+1).trim());}};
+          async function call(pathname,{method='GET',body}={}){const r=await fetch(origin+pathname,{method,headers:{...(body?{'content-type':'application/json'}:{}),...(jar.size?{cookie:cookie()}:{}),...(csrf&&method!=='GET'?{'x-frappe-csrf-token':csrf}:{})},...(body?{body:JSON.stringify(body)}:{})});store(r);csrf=r.headers.get('x-frappe-csrf-token')||csrf;const text=await r.text();let data;try{data=JSON.parse(text)}catch{data=text}if(!r.ok)throw new Error(`${pathname} HTTP ${r.status}: ${data?.message??String(text).slice(0,300)}`);return data?.message??data;}
+          await call('/api/method/login',{method:'POST',body:{usr:user,pwd}});
+          const before=await call('/api/method/metaforge.api.get_capability_profile');const expected=Number(before?.version??0);
+          const applied=await call('/api/method/metaforge.api.apply_capability_profile',{method:'POST',body:{profile_id:'alumdoor-pilot',expected_version:expected,selections:[]}});
+          const after=await call('/api/method/metaforge.api.get_capability_profile');
+          const ev={format:'forge-r6-profile-apply/v1',evidence_id:'R6-E18',observed_at:new Date().toISOString(),before_version:expected,apply_result:applied,active:after,status:after?.profile_id==='alumdoor-pilot'&&Number(after?.version??0)>expected&&after?.resolution?.valid!==false?'PASS':'BLOCKED'};
+          writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-e18-profile.json'),JSON.stringify(ev,null,2)+'\n');if(ev.status!=='PASS')throw new Error('profile did not converge');
+          NODE
+
+      - name: Deploy exact Gateway release
+        id: gateway_deploy
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+      - name: Bounded live pressure
+        id: pressure
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import {writeFileSync} from 'node:fs';import path from 'node:path';const url=process.env.ORIGIN.replace(/\/$/,'')+'/health',total=50,c=5,lat=[],start=performance.now();let next=0,errors=0;async function w(){for(;;){const i=next++;if(i>=total)return;const t=performance.now();try{const r=await fetch(url);if(r.status!==200)errors++;await r.arrayBuffer();}catch{errors++;}lat.push(performance.now()-t);}}await Promise.all(Array.from({length:c},w));lat.sort((a,b)=>a-b);const p=q=>Number(lat[Math.min(lat.length-1,Math.ceil(lat.length*q)-1)]?.toFixed(2)??0),ms=performance.now()-start;const ev={format:'forge-r6-pilot-pressure/v1',evidence_id:'R6-E17',observed_at:new Date().toISOString(),requests:total,concurrency:c,errors,error_rate:errors/total,rps:Number((total/(ms/1000)).toFixed(2)),latency_ms:{p50:p(.5),p95:p(.95),p99:p(.99)},status:errors===0?'PASS':'BLOCKED'};writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-e17.json'),JSON.stringify(ev,null,2)+'\n');if(errors)throw new Error(`${errors} live pressure errors`);
+          NODE
+
+      - name: Verify exact release marker and auth boundary
+        id: health
+        run: node server/scripts/sre-health-snapshot.mjs --base "$ORIGIN" --expected-release-sha "$TARGET_SHA" --allow-remote --confirm-host alu.kairo.vn --attempts 10 --delay-ms 2000 --output "$RUNNER_TEMP/r6-e03-e04.json"
+
+      - name: Observe provider convergence
+        id: provider
+        run: node server/scripts/r6-provider-readonly.mjs --source-sha "$TARGET_SHA" --output "$RUNNER_TEMP/r6-e02-e05.json"
+
+      - name: Observe exact package/profile identity
+        id: identity
+        run: node server/scripts/r6-convergence-identity-readonly.mjs --tenant "$TENANT" --origin "$ORIGIN" --expected-release-sha "$TARGET_SHA" --output "$RUNNER_TEMP/r6-e18-identity.json"
+
+      - name: Fresh PITR decision evidence
+        id: pitr
+        shell: bash
+        run: |
+          ts="$(date -u -d '5 minutes ago' '+%Y-%m-%dT%H:%M:%SZ')"
+          node server/scripts/d1-pitr.mjs --tenant "$TENANT" --timestamp "$ts" --output "$RUNNER_TEMP/r6-e10.json"
+
+      - name: Remove plaintext backup
+        if: always() && env.R6_BACKUP_FILE != ''
+        run: rm -f "$R6_BACKUP_FILE" "$R6_BACKUP_FILE.json" "$R6_BACKUP_FILE".*.restore.json "$R6_BACKUP_FILE".d1-safe-*.sql
+
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-demo-cert-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/r6-e01.json
+            ${{ runner.temp }}/r6-e06.json
+            ${{ runner.temp }}/r6-e07-e08.json
+            ${{ runner.temp }}/r6-e09.json
+            ${{ runner.temp }}/r6-e10.json
+            ${{ runner.temp }}/r6-e11.json
+            ${{ runner.temp }}/r6-e17.json
+            ${{ runner.temp }}/r6-e18-profile.json
+            ${{ runner.temp }}/r6-e03-e04.json
+            ${{ runner.temp }}/r6-e02-e05.json
+            ${{ runner.temp }}/r6-e18-identity.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Record execution verdict on main
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          O_CHECKOUT: ${{ steps.checkout.outcome }}
+          O_ANCESTRY: ${{ steps.ancestry.outcome }}
+          O_CREDENTIALS: ${{ steps.credentials.outcome }}
+          O_BUILD: ${{ steps.build.outcome }}
+          O_BACKUP: ${{ steps.backup.outcome }}
+          O_DRILL_CREATE: ${{ steps.drill_create.outcome }}
+          O_DRILL_RESTORE: ${{ steps.drill_restore.outcome }}
+          O_CUTOVER: ${{ steps.cutover.outcome }}
+          O_MIGRATE: ${{ steps.migrate.outcome }}
+          O_MIGRATION_VERIFY: ${{ steps.migration_verify.outcome }}
+          O_TENANT_DEPLOY: ${{ steps.tenant_deploy.outcome }}
+          O_APP_DEPLOY: ${{ steps.app_deploy.outcome }}
+          O_PACKAGE_INSTALL: ${{ steps.package_install.outcome }}
+          O_PROFILE: ${{ steps.capability_profile.outcome }}
+          O_GATEWAY: ${{ steps.gateway_deploy.outcome }}
+          O_PRESSURE: ${{ steps.pressure.outcome }}
+          O_HEALTH: ${{ steps.health.outcome }}
+          O_PROVIDER: ${{ steps.provider.outcome }}
+          O_IDENTITY: ${{ steps.identity.outcome }}
+          O_PITR: ${{ steps.pitr.outcome }}
+          O_DRILL_CLEANUP: ${{ steps.drill_cleanup.outcome }}
+        with:
+          script: |
+            const fs=require('node:fs'),path=require('node:path');
+            const keys=['CHECKOUT','ANCESTRY','CREDENTIALS','BUILD','BACKUP','DRILL_CREATE','DRILL_RESTORE','CUTOVER','MIGRATE','MIGRATION_VERIFY','TENANT_DEPLOY','APP_DEPLOY','PACKAGE_INSTALL','PROFILE','GATEWAY','PRESSURE','HEALTH','PROVIDER','IDENTITY','PITR'];
+            const outcomes=Object.fromEntries(keys.map(k=>[k.toLowerCase(),process.env[`O_${k}`]||'not-run']));outcomes.drill_cleanup=process.env.O_DRILL_CLEANUP||'not-run';
+            const status=keys.every(k=>outcomes[k.toLowerCase()]==='success')?'PASS':'BLOCKED';
+            const read=n=>{try{return JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,n),'utf8'))}catch{return null}};
+            const payload={format:'forge-r6-demo-production-certification/v2',status,candidate_sha:process.env.TARGET_SHA,tenant:process.env.TENANT,origin:process.env.ORIGIN,mutation:'AUTHORIZED_PRODUCTION_DEMO',completed_at:new Date().toISOString(),workflow_run_id:String(context.runId),outcomes,evidence:{e06:read('r6-e06.json'),e07_e08:read('r6-e07-e08.json'),e09:read('r6-e09.json'),e10:read('r6-e10.json'),e11:read('r6-e11.json'),e17:read('r6-e17.json'),e18_profile:read('r6-e18-profile.json'),e03_e04:read('r6-e03-e04.json'),e02_e05:read('r6-e02-e05.json'),e18_identity:read('r6-e18-identity.json')}};
+            const p=`deploy-evidence/r6-demo-production-certification-${process.env.TARGET_SHA.slice(0,12)}.json`;let sha;try{const r=await github.rest.repos.getContent({owner:context.repo.owner,repo:context.repo.repo,path:p,ref:'main'});if(!Array.isArray(r.data))sha=r.data.sha}catch(e){if(e.status!==404)throw e}
+            await github.rest.repos.createOrUpdateFileContents({owner:context.repo.owner,repo:context.repo.repo,path:p,message:`ops(r6): record ${status} demo certification ${process.env.TARGET_SHA.slice(0,12)}`,content:Buffer.from(JSON.stringify(payload,null,2)+'\n').toString('base64'),branch:'main',...(sha?{sha}:{})});
+
+      - name: Enforce PASS
+        if: always()
+        shell: bash
+        run: |
+          required=( '${{ steps.checkout.outcome }}' '${{ steps.ancestry.outcome }}' '${{ steps.credentials.outcome }}' '${{ steps.build.outcome }}' '${{ steps.backup.outcome }}' '${{ steps.drill_create.outcome }}' '${{ steps.drill_restore.outcome }}' '${{ steps.cutover.outcome }}' '${{ steps.migrate.outcome }}' '${{ steps.migration_verify.outcome }}' '${{ steps.tenant_deploy.outcome }}' '${{ steps.app_deploy.outcome }}' '${{ steps.package_install.outcome }}' '${{ steps.capability_profile.outcome }}' '${{ steps.gateway_deploy.outcome }}' '${{ steps.pressure.outcome }}' '${{ steps.health.outcome }}' '${{ steps.provider.outcome }}' '${{ steps.identity.outcome }}' '${{ steps.pitr.outcome }}' )
+          for o in "${required[@]}"; do test "$o" = success; done
+          echo "R6_DEMO_PRODUCTION_EXECUTION_PASS candidate=$TARGET_SHA"
