@@ -27,6 +27,9 @@
  * us. `wrangler d1 migrations list` stays truthful afterwards, and the two commands
  * remain interchangeable.
  *
+ * Dry-run is a hard read-only contract: it may inspect sqlite_schema and the existing
+ * d1_migrations rows, but it must never create the bookkeeping table or apply SQL.
+ *
  * Usage:
  *   node scripts/d1-migrate-remote.mjs --config apps/tenant-worker/wrangler.jsonc
  *   node scripts/d1-migrate-remote.mjs --config … --dry-run
@@ -34,6 +37,7 @@
 import { readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { readAppliedMigrationNames } from "./lib/d1-migration-bookkeeping.mjs";
 import { d1BindingOf, d1Query, fail, serverRoot, wrangler } from "./wrangler-cli.mjs";
 
 const args = process.argv.slice(2);
@@ -48,16 +52,14 @@ if (!database.migrationsDir) fail(`${database.configArg} declares no migrations_
 
 console.log(`database   ${database.name} (${database.id ?? "id not pinned"})`);
 console.log(`migrations ${path.relative(serverRoot, database.migrationsDir)}`);
-console.log(`mode       ${dryRun ? "dry run" : "APPLY (remote)"}\n`);
+console.log(`mode       ${dryRun ? "dry run (read-only)" : "APPLY (remote)"}\n`);
 
-// Same shape wrangler creates, so either command can pick up where the other left off.
-d1Query(database, `CREATE TABLE IF NOT EXISTS d1_migrations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT UNIQUE,
-  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-)`);
+const migrationState = readAppliedMigrationNames({ database, dryRun, query: d1Query });
+const applied = new Set(migrationState.names);
+if (dryRun && !migrationState.trackingTablePresent) {
+  console.log("tracking  d1_migrations is absent; read-only dry run treats the applied set as empty");
+}
 
-const applied = new Set(d1Query(database, "SELECT name FROM d1_migrations").map((row) => row.name));
 const files = readdirSync(database.migrationsDir).filter((name) => name.endsWith(".sql")).sort();
 if (files.length === 0) fail(`no .sql files in ${path.relative(serverRoot, database.migrationsDir)}`);
 
@@ -72,7 +74,7 @@ for (const name of pending) console.log(`  · ${name}`);
 console.log();
 
 if (dryRun) {
-  console.log("dry run — nothing was sent.");
+  console.log("dry run — read-only inspection complete; no SQL or bookkeeping mutation was sent.");
   process.exit(0);
 }
 
