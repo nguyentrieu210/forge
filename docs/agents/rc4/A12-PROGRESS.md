@@ -1,6 +1,6 @@
 # RC4-A12 — Inventory / WMS Progress
 
-Status: IMPLEMENTED INDEPENDENT SLICE — PR VALIDATION REQUIRED  
+Status: FOCUSED VALIDATION GREEN — MERGE/DEPLOY APPROVAL REQUIRED  
 Branch: `agent/rc4-12-inventory-wms`  
 Baseline: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Risk: **CRITICAL**  
@@ -82,7 +82,16 @@ The workflow is PR-only, branch-scoped to `agent/rc4-12-inventory-wms`, has no d
 - running scanner/WMS regressions;
 - running valuation/repost/procurement-landed-cost regressions.
 
-No test PASS is claimed until the workflow actually completes green on the PR head.
+Validation run #4 (`30869241688`) completed green on exact code head `0c63ae06c6ee0caccb75bc8f5341fff283f3a532` before this progress-only commit:
+
+- A12 changed-source TypeScript/emitted-dist gate: **PASS**;
+- scanner/WMS suite: **26/26 PASS**;
+- valuation/landed-cost/repost suite: **20/20 PASS**;
+- focused total: **46/46 PASS, 0 fail**.
+
+The full-server TypeScript command still reports pre-existing errors outside A12-owned changed sources; these are recorded by the workflow and were not hidden or reclassified as A12 failures. Existing repository workflows `RC-021 Critical Validation` and `CFMAX R2 Integrated Validation` were skipped by their own conditions on this PR head; they are **not** claimed as passed.
+
+Because this progress record changes the PR head and is included in the exact-head workflow path filter, A12 requires the same focused workflow to rerun green on the final docs-only head before merge approval is actionable.
 
 ## 3. Landed-cost valuation audit — blocker found, unsafe shortcut rejected
 
@@ -118,9 +127,9 @@ Result:
 
 | Capability area | A12 disposition |
 | --- | --- |
-| `W02-010 Barcode` | backend server resolution slice implemented; exact-head validation still required |
-| `W02-011 QR` | same backend resolver; exact-head validation still required |
-| `W02-012 Mobile scanner` | server resolution contract implemented; end-to-end route mount + UI remains dependency-bound |
+| `W02-010 Barcode` | backend server resolution slice implemented and focused validation green; shared route mount remains dependency-bound |
+| `W02-011 QR` | same backend resolver; focused validation green; shared route mount remains dependency-bound |
+| `W02-012 Mobile scanner` | server resolution contract validated; end-to-end route mount + UI remains dependency-bound |
 | `W02-004 Putaway task` | remains Missing until shared persisted Warehouse Task/action contract exists |
 | `W02-013 Warehouse task assignment` | remains Missing until shared persisted Warehouse Task/action contract exists |
 | `W02-009/014 Cycle count/freeze` | continue to reuse canonical Stock Reconciliation; no second count ledger created |
@@ -200,12 +209,12 @@ No capability is promoted to Hardened from branch-local source presence alone.
 
 ## 7. Validation truth
 
-Local Forge checkout is unavailable in this execution environment because direct GitHub network access from the container fails DNS resolution. Therefore no local build/test PASS is claimed.
+Local Forge checkout is unavailable in this execution environment because direct GitHub network access from the container fails DNS resolution. No local build/test PASS is claimed.
 
-Exact-head validation is delegated to the PR-only workflow `.github/workflows/rc4-a12-inventory-wms.yml`. Before merge, A12 requires green focused scanner/WMS/valuation gates and the CRITICAL validation evidence required by the Forge completion skill.
+GitHub exact-head focused validation is the authoritative A12 evidence. The last code-changing head `0c63ae06c6ee0caccb75bc8f5341fff283f3a532` passed all A12 gates in workflow run #4 (`30869241688`): **46/46 focused tests, 0 failures**, with A12 changed-source TypeScript/emitted-dist clean. A final workflow rerun is required after this docs-only progress commit so the final PR head itself is also green.
 
 ## 8. Merge/deploy disposition
 
 **STOP before merge/deploy.**
 
-A12 changes backend behavior and is a CRITICAL Inventory/WMS lane. Open PR autonomously, collect exact-head evidence, then require explicit user approval before merge into `main` or any production deployment.
+A12 changes backend behavior and is a CRITICAL Inventory/WMS lane. PR #616 is open. After the final docs-only exact-head rerun is green and main drift is checked, explicit user approval is still required before merge into `main` or any production deployment.
