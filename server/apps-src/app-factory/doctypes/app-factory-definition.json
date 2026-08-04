@@ -15,12 +15,12 @@
     { "fieldname": "definition_json", "label": "Định nghĩa", "fieldtype": "JSON", "required": true },
     { "fieldname": "effective_from", "label": "Hiệu lực từ", "fieldtype": "Date", "required": true, "in_standard_filter": true },
     { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date", "in_standard_filter": true },
-    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nRetired", "required": true, "default": "Draft", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "definition_status", "label": "Trạng thái", "fieldtype": "Select", "options": "Draft\nActive\nRetired", "required": true, "default": "Draft", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "status_reason", "label": "Lý do đổi trạng thái", "fieldtype": "Small Text" }
   ],
   "permissions": [
     { "role": "App Factory Manager", "read": true, "write": true, "create": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
