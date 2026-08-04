@@ -1,0 +1,232 @@
+name: R6 04 Alumdoor Golden Flow Evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/scripts/r6-04-alumdoor-identity-readonly.mjs"
+      - "server/tests/r6-04-alumdoor-golden-flow.test.mjs"
+      - "docs/agents/r6/R6_A4_ALUMDOOR_GOLDEN_FLOW.md"
+      - "docs/agents/r6/R6_A4_EVIDENCE.json"
+      - ".github/workflows/r6-04-alumdoor-golden-flow.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r6-04-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  LOCKED_R6_SHA: 4149af7c3e49b25fb1f43a50b62f99d7c04e6488
+  ALUMDOOR_ORIGIN: https://alu.kairo.vn
+
+jobs:
+  source-evidence:
+    name: Exact candidate source and canonical authority evidence
+    if: github.head_ref == 'agent/r6-04-alumdoor-golden-flow'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert R6-04 is evidence-only on the locked candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git cat-file -e "$LOCKED_R6_SHA^{commit}"
+          git merge-base --is-ancestor "$LOCKED_R6_SHA" HEAD
+          mapfile -t changed < <(git diff --name-only "$LOCKED_R6_SHA...HEAD")
+          test "${#changed[@]}" -gt 0
+          for file in "${changed[@]}"; do
+            case "$file" in
+              .github/workflows/r6-04-alumdoor-golden-flow.yml|\
+              server/scripts/r6-04-alumdoor-identity-readonly.mjs|\
+              server/tests/r6-04-alumdoor-golden-flow.test.mjs|\
+              docs/agents/r6/R6_A4_ALUMDOOR_GOLDEN_FLOW.md|\
+              docs/agents/r6/R6_A4_EVIDENCE.json) ;;
+              *)
+                echo "R6-04 refuses runtime/business-authority delta: $file"
+                exit 1
+                ;;
+            esac
+          done
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build canonical server candidate
+        run: pnpm --filter cloudforge run build
+
+      - name: R6-04 evidence harness and capability-profile regressions
+        working-directory: server
+        run: |
+          node --check scripts/r6-04-alumdoor-identity-readonly.mjs
+          node --test \
+            tests/r6-04-alumdoor-golden-flow.test.mjs \
+            tests/capability-profile.test.mjs \
+            tests/capability-profile-store.test.mjs \
+            tests/app-registry.test.mjs
+
+      - name: Commercial Golden Flow supporting regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/transaction-closure-sales-o2c.test.mjs \
+            tests/o2c.test.mjs \
+            tests/procurement-p2p-closure.test.mjs \
+            tests/procurement-p2p-correction-boundary.test.mjs
+
+      - name: Manufacturing warranty and same-order lineage regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/alumdoor-manufacturing-lifecycle.test.mjs \
+            tests/r5-04-manufacturing-service-integration.test.mjs \
+            tests/maintenance-field-service.test.mjs \
+            tests/transaction-closure-warranty-service.test.mjs \
+            tests/transaction-closure-warranty-linkage.test.mjs \
+            tests/alumdoor-golden-order-readonly.test.mjs
+
+      - name: Canonical cross-ledger auditor self-test
+        run: |
+          python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
+          python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
+
+      - name: Exact Alumdoor package composition gate
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run | tee /tmp/r6-04-package.log
+          grep -q 'app=alumdoor@2.2.3' /tmp/r6-04-package.log
+          grep -q 'DRY_RUN_PASS alumdoor' /tmp/r6-04-package.log
+
+      - name: No vertical shadow authority guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -RInE 'INSERT[[:space:]]+INTO[[:space:]]+(gl_entries|stock_ledger_entries|payment_ledger)|UPDATE[[:space:]]+(gl_entries|stock_ledger_entries|payment_ledger)' \
+            server/apps-src/alumdoor-worker/src
+          ! grep -RInE 'from[[:space:]]+["'"'][^"'"']*packages/(clouderp|document-kernel|finance|stock)' \
+            server/apps-src/alumdoor-worker/src
+
+      - name: Diff hygiene
+        run: git diff --check "$LOCKED_R6_SHA...HEAD"
+
+  public-target-observation:
+    name: Read-only public pilot-target release observation
+    if: github.head_ref == 'agent/r6-04-alumdoor-golden-flow'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Observe public health auth and release marker without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/r6-04"
+          health_code="$(curl --silent --show-error --output "$RUNNER_TEMP/r6-04/health.json" --write-out '%{http_code}' "$ALUMDOOR_ORIGIN/health" || true)"
+          release_code="$(curl --silent --show-error --output "$RUNNER_TEMP/r6-04/release.json" --write-out '%{http_code}' "$ALUMDOOR_ORIGIN/release.json" || true)"
+          guest_code="$(curl --silent --show-error --output "$RUNNER_TEMP/r6-04/guest.json" --write-out '%{http_code}' "$ALUMDOOR_ORIGIN/api/method/metaforge.api.get_boot" || true)"
+          release_sha="$(jq -r '.releaseSha // .deployedSha // empty' "$RUNNER_TEMP/r6-04/release.json" 2>/dev/null || true)"
+          bundle_hash="$(jq -r '.bundleHash // empty' "$RUNNER_TEMP/r6-04/release.json" 2>/dev/null || true)"
+          status=BLOCKED
+          if [ "$health_code" = 200 ] && [ "$release_code" = 200 ] && [ "$guest_code" = 403 ] && [ "$release_sha" = "$LOCKED_R6_SHA" ] && [ -n "$bundle_hash" ]; then
+            status=PASS
+          fi
+          jq -n \
+            --arg observed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg origin "$ALUMDOOR_ORIGIN" \
+            --arg expected_sha "$LOCKED_R6_SHA" \
+            --arg health_code "$health_code" \
+            --arg release_code "$release_code" \
+            --arg guest_code "$guest_code" \
+            --arg release_sha "$release_sha" \
+            --arg bundle_hash "$bundle_hash" \
+            --arg status "$status" \
+            '{schema:"forge-r6-04-public-observation/v1",evidence_id:"R6-E18",producer:"R6-04",observed_at:$observed_at,environment_class:"PILOT_TARGET_OBSERVED",mutation:"NONE",target:{origin:$origin},expected_source_sha:$expected_sha,http:{health:($health_code|tonumber? // 0),release:($release_code|tonumber? // 0),guest_boot:($guest_code|tonumber? // 0)},release:{release_sha:($release_sha|select(length>0)),bundle_hash:($bundle_hash|select(length>0))},status:$status}' \
+            > "$RUNNER_TEMP/r6-04/public-observation.json"
+          cat "$RUNNER_TEMP/r6-04/public-observation.json"
+
+      - name: Upload public target observation
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-04-public-target-${{ github.run_id }}
+          path: ${{ runner.temp }}/r6-04/public-observation.json
+          if-no-files-found: error
+          retention-days: 30
+
+  protected-target-identity:
+    name: Read-only authenticated package profile identity
+    needs: source-evidence
+    if: github.head_ref == 'agent/r6-04-alumdoor-golden-flow'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      FORGE_ADMIN_USER: ${{ secrets.ALU_META_ADMIN_USER }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.ALU_META_ADMIN_PASSWORD }}
+      FORGE_ORIGIN: https://alu.kairo.vn
+      FORGE_EXPECTED_RELEASE_SHA: 4149af7c3e49b25fb1f43a50b62f99d7c04e6488
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node and pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies for Wrangler read-only SELECT
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Observe exact release package and active profile identity
+        working-directory: server
+        run: >-
+          node scripts/r6-04-alumdoor-identity-readonly.mjs
+          --tenant alu
+          --origin "$FORGE_ORIGIN"
+          --expected-release-sha "$FORGE_EXPECTED_RELEASE_SHA"
+          --output "$RUNNER_TEMP/r6-04-identity.json"
+
+      - name: Publish redacted identity observation
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/r6-04-identity.json" ]; then
+            cat "$RUNNER_TEMP/r6-04-identity.json" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload identity observation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-04-identity-${{ github.run_id }}
+          path: ${{ runner.temp }}/r6-04-identity.json
+          if-no-files-found: warn
+          retention-days: 30
