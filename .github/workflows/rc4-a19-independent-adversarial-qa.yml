@@ -258,7 +258,7 @@ jobs:
   a6-browser-truth:
     name: Pinned A6 browser/mobile/PWA truth
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -273,8 +273,12 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Chromium
-        run: pnpm --dir client/e2e-forge exec playwright install --with-deps chromium
-      - name: Build runtime and workspace dependencies
+        run: pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
+      - name: Build demo dependency graph
+        run: pnpm --filter @metaforge/demo... run build
+      - name: Run current V2 demo browser matrix
+        run: pnpm --filter @metaforge/demo run e2e:rc4:v2
+      - name: Build runtime dependency graph
         run: pnpm --filter runtime... run build
-      - name: Run RC4 V2 browser/mobile/PWA matrix
+      - name: Run current V2 runtime and PWA matrix
         run: pnpm --dir client/e2e-forge run test:rc4:v2
