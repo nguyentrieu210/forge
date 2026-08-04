@@ -1,4 +1,5 @@
 name: One-time R6 Wire Alias Branch Patch
+# retrigger after workflow exists on branch
 on:
   push:
     branches: [program/r6-report-alias-relock-20260804]
