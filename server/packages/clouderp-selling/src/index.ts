@@ -2,6 +2,8 @@ export * from "./controllers.js";
 export * from "./crm-channel-controllers.js";
 export * from "./crm-channel-types.js";
 export * from "./crm-controllers.js";
+export * from "./crm-customer-360-controller.js";
+export * from "./crm-customer-360-types.js";
 export * from "./crm-directory-controllers.js";
 export * from "./crm-directory-types.js";
 export * from "./crm-marketing-consent-controller.js";
