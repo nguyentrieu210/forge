@@ -14,6 +14,45 @@ import { attachBriefUiViewPolicies } from "./brief-ui-view-policy.mjs";
 export { BriefError };
 
 /**
+ * The app-report runtime aliases aggregate columns before they cross the wire:
+ * `sum(grand_total)` -> `sum_grand_total`, `count(name)` -> `count_name`.
+ *
+ * The legacy brief compiler validates charts against the SOURCE field (`grand_total`) and
+ * historically persisted that source name into chart metadata. The report endpoint then
+ * correctly returned `sum_grand_total`, so a package could install and still fail the
+ * post-install chart contract. Normalize at the App Factory boundary because this is the
+ * compiler path that ships packages through forge-app.mjs.
+ */
+function alignChartFieldsWithReportWireShape(pkg) {
+  if (!Array.isArray(pkg?.charts) || !pkg.charts.length) return pkg;
+  const reports = new Map((pkg.reports ?? []).map((report) => [report.name, report]));
+
+  const wireField = (report, sourceField, chartName) => {
+    const matches = (report.columns ?? []).filter((column) => column.field === sourceField);
+    if (!matches.length) return sourceField;
+    const aliases = [...new Set(matches.map((column) => column.aggregate ? `${column.aggregate}_${column.field}` : column.field))];
+    if (aliases.length !== 1) {
+      throw new BriefError(
+        `chart ${chartName} uses ambiguous report field "${sourceField}" from ${report.name}; `
+        + `the report exposes ${aliases.join(", ")}. Use distinct source fields rather than multiple projections of one field.`,
+      );
+    }
+    return aliases[0];
+  };
+
+  pkg.charts = pkg.charts.map((chart) => {
+    const report = reports.get(chart.source);
+    if (!report) return chart;
+    return {
+      ...chart,
+      dimensions: (chart.dimensions ?? []).map((field) => wireField(report, field, chart.name)),
+      measures: (chart.measures ?? []).map((field) => wireField(report, field, chart.name)),
+    };
+  });
+  return pkg;
+}
+
+/**
  * WS09 App Factory compiler adapter.
  *
  * The established compiler still owns every existing brief rule. This layer adds repeatable
@@ -37,7 +76,7 @@ export function compileBrief(brief) {
     });
   }
 
-  const pkg = compileBaseBrief(source);
+  const pkg = alignChartFieldsWithReportWireShape(compileBaseBrief(source));
 
   if (Array.isArray(brief?.actions) && brief.actions.length) {
     pkg.actions = pkg.actions.map((action, actionIndex) => {
