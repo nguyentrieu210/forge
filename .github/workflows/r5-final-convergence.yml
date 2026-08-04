@@ -154,9 +154,35 @@ jobs:
       - name: Capability Profile Builder regression
         run: node --test client/packages/builder/test/capability-profile.test.mjs
 
-      - name: Generic runtime build
+      - name: Runtime typecheck
         working-directory: client
-        run: pnpm --filter runtime build
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter runtime typecheck 2>&1 | tee /tmp/r5-runtime-typecheck.log
+
+      - name: Upload runtime typecheck diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r5-runtime-typecheck-diagnostics
+          path: /tmp/r5-runtime-typecheck.log
+          if-no-files-found: ignore
+
+      - name: Runtime Vite bundle
+        working-directory: client/apps/runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vite build 2>&1 | tee /tmp/r5-runtime-vite.log
+
+      - name: Upload runtime Vite diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r5-runtime-vite-diagnostics
+          path: /tmp/r5-runtime-vite.log
+          if-no-files-found: ignore
 
       - name: Install Chromium for bounded R5 browser smoke
         working-directory: client/e2e-forge
