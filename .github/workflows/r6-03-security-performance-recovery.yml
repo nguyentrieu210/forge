@@ -116,7 +116,7 @@ jobs:
         working-directory: server
         shell: bash
         run: |
-          cat > apps/tenant-worker/test/r6-03-security.generated.test.mts <<'TEST'
+          cat > apps/tenant-worker/test/r6-03-security.generated.integration.test.mts <<'TEST'
           import { env, exports } from "cloudflare:workers";
           import { beforeAll, describe, expect, it } from "vitest";
           import { hashPassword, mintSession } from "../../../packages/frappe-api/src/index.js";
@@ -251,7 +251,7 @@ jobs:
           TEST
 
           set -o pipefail
-          pnpm exec vitest run apps/tenant-worker/test/r6-03-security.generated.test.mts \
+          pnpm exec vitest run apps/tenant-worker/test/r6-03-security.generated.integration.test.mts \
             --config apps/tenant-worker/vitest.config.mts \
             2>&1 | tee /tmp/r6-03-generated.log
           grep 'R6_PERF_EVIDENCE=' /tmp/r6-03-generated.log | tail -1 | sed 's/^.*R6_PERF_EVIDENCE=//' > /tmp/r6-03-perf.json
