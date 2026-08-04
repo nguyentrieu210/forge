@@ -13,8 +13,10 @@ Ngày cập nhật: **2026-08-05**.
 - Final R6 evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json` — **23/23 PASS**.
 - Pilot-00 Freeze Production Profile + Pilot Contract: **DONE / PILOT-00-LOCKED**.
 - Pilot-00 authority: `docs/pilot/alumdoor/PILOT_00_CONTRACT.md` + `PILOT_00_LOCK.json`.
+- Pilot-01 control plane: **READY / PREVIEW-ONLY**.
+- Pilot-01 source batch: **WAITING APPROVED REAL SOURCE DATA**.
 - Active phase: **Pilot-01 — Master + Opening Data Readiness**.
-- Next milestone: **Pilot-01 READY -> Pilot-02 Representative Transaction Dry Run**.
+- Next milestone: **real batch `PREVIEW_PASS` -> Pilot-01 READY -> Pilot-02 Representative Transaction Dry Run**.
 
 Do not reopen R6 merely because controlled-pilot business/data/cutover work remains. Those are downstream pilot gates.
 
@@ -39,36 +41,49 @@ Pilot-00 performed **no real customer/master/opening-data production write**.
 
 ## 2. Pilot-01 — Master + Opening Data Readiness
 
-Use `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json` as the frozen schema.
+Status: **PILOT-01-WAITING-SOURCE-BATCH**.
 
-Prepare one immutable batch manifest and validate, before any production write:
+Control plane already prepared:
+
+- frozen schema: `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
+- immutable manifest template: `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`;
+- preview validator: `docs/pilot/alumdoor/tools/validate-pilot-batch.mjs`;
+- fail-closed tests: `docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs`;
+- Pilot-00/Pilot-01 identity verifier: `docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs`;
+- machine status: `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
+- durable readiness record: `docs/pilot/alumdoor/PILOT_01_READINESS.md`.
+
+The real source batch must contain one immutable, SHA-256-bound JSON-array dataset for:
 
 - customers/contacts;
 - suppliers;
-- items/BOM/routing/work centers where applicable;
-- warehouses and opening stock;
-- AR/AP opening balances;
-- cash/bank opening balances only if explicitly included in pilot scope;
-- employees and named pilot user/role allowlist;
-- Alumdoor-specific reference masters that do not duplicate shared authorities.
+- items/BOM/work centers;
+- warehouses/opening stock;
+- opening AR/AP;
+- employees;
+- named pilot users/roles;
+- opening cash/bank only if explicitly included by the batch scope.
 
-Required controls:
+Required controls before `PILOT-01-READY`:
 
 - explicit `pilot_batch_id`, source system, cutoff and extract timestamps;
-- SHA-256 per source extract;
+- SHA-256 per file;
 - deterministic mapping and source provenance;
 - duplicate/conflict detection;
 - unknown-reference fail-closed behavior;
-- tenant scope validation;
-- preview row counts/totals;
-- exact Stock/AR/AP/cash-bank/GL opening reconciliation;
-- every non-zero discrepancy gets owner/root-cause/disposition/recheck evidence.
+- exact file row counts;
+- exact Stock/AR/AP/cash-bank source-total reconciliation;
+- zero unexplained variance;
+- exactly one active named `Giám đốc` pilot account;
+- every non-zero discrepancy receives owner/root-cause/disposition/recheck evidence.
 
-**Production write/import is not authorized by Pilot-00 closure.** Pilot-01 should exhaust source inspection, mapping, dry-run and preview work first.
+Current dependency: no approved immutable real Alumdoor source batch is available to the preview validator. Do not substitute package fixtures, demo data or R6 Golden Flow data for opening/customer migration evidence.
+
+**Production write/import remains unauthorized.** A real `PREVIEW_PASS` still does not authorize a production write.
 
 ## 3. Pilot-02 — Representative Transaction Dry Run
 
-Only after Pilot-01 is accepted and named account allowlist is frozen.
+Only after Pilot-01 is accepted and the named account allowlist is frozen.
 
 Using approved pilot data/users, exercise representative business paths:
 
@@ -137,6 +152,7 @@ Final verdict is `PILOT-ACCEPTED` or `PILOT-REJECTED`. Only `PILOT-ACCEPTED` may
 - Worker rollback != data rollback.
 - R6 certification is exact-SHA bound; future product-source changes require affected evidence rerun.
 - Pilot package/profile changes require identity re-lock and affected runtime/Golden Flow evidence rerun.
+- Real customer/master/opening files should not be committed to Git.
 - Controlled pilot is not GA.
 
 ## 8. Authorities
@@ -146,7 +162,9 @@ Pilot:
 - `docs/pilot/alumdoor/README.md`;
 - `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`;
 - `docs/pilot/alumdoor/PILOT_00_LOCK.json`;
-- `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`.
+- `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
+- `docs/pilot/alumdoor/PILOT_01_READINESS.md`;
+- `docs/pilot/alumdoor/PILOT_01_STATUS.json`.
 
 R6 closure:
 
