@@ -1,132 +1,124 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-04**.
+Ngày cập nhật: **2026-08-05**.
 
 Đây là **active queue** của Forge. Lịch sử đã hoàn thành nằm trong Git/PR/convergence evidence, không lặp lại ở đây.
 
 ## 0. Current state
 
-- RC4: DONE.
-- R5: **DONE / merged via PR #638**.
-- R5 merge commit: `7940331c589d4e5699cf00e2ec843c5a7b8c50ac`.
-- Active program: **R6 Production Certification**.
-- Next milestone after R6: **Alumdoor Controlled Pilot**.
+- RC4: **DONE**.
+- R5: **DONE / R5-GO**.
+- R6 Production Certification: **DONE / PILOT-GO**.
+- Exact certified/deployed R6 SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
+- Final evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json` — **23/23 PASS**.
+- Active program: **Alumdoor Controlled Pilot**.
+- Next milestone: **Pilot Exit Gate -> Accepted Production Reference -> GA**.
 
-Do not reopen R5 merely because production evidence is missing; that evidence belongs to R6.
+Do not reopen R6 merely because controlled-pilot business/data/cutover work remains. Those are downstream pilot gates.
 
-## 1. R6-00 — Release Lock + Evidence Contract
+## 1. Pilot-00 — Freeze Production Profile + Pilot Contract
 
-Open first and alone.
+Before importing real operational data:
 
-Required output:
+- freeze exact certified software baseline and `alumdoor-pilot@1` capability profile;
+- define pilot users/roles/site scope and permitted transaction families;
+- freeze master/opening-data mapping templates;
+- define source-system extraction timestamp/cutoff rules;
+- define daily reconciliation dimensions and tolerances;
+- define stop/rollback/forward-fix criteria;
+- define explicit business owner for cutover acceptance.
 
-- exact current `main`;
-- initial R6 candidate SHA;
-- package/app/profile identity;
-- expected migration inventory/checksum digest;
-- target environment identity without secrets;
-- evidence index;
-- read-only vs mutation-gated action matrix;
-- dependency order;
-- `R6-00-LOCKED`.
+Any source-changing product fix creates a new release candidate and must rerun affected release evidence before use in the pilot.
 
-Canonical plan: `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`.
+## 2. Pilot-01 — Master + Opening Data Readiness
 
-## 2. R6 worker wave — open after R6-00-LOCKED
+Prepare and validate before production write:
 
-Open in parallel:
+- customers/contacts;
+- suppliers;
+- items/BOM/routing/work centers where applicable;
+- warehouses and opening stock;
+- AR/AP opening balances;
+- cash/bank opening balances where in scope;
+- employees/users/roles required for the pilot;
+- Alumdoor-specific reference masters that do not duplicate shared authorities.
 
-### R6-01 Provider + Exact Release
+Required controls:
 
-- Cloudflare source governance;
-- desired-vs-observed provider inventory;
-- exact health/auth boundary;
-- exact release SHA + bundle hash;
-- observability evidence.
+- deterministic mapping and source provenance;
+- duplicate/conflict detection;
+- tenant scope validation;
+- dry-run counts/totals;
+- Stock/AR/AP/cash-bank/GL opening reconciliation.
 
-### R6-02 Data Safety + Migration + Cutover
+Real production data import/write requires explicit authorization.
 
-- expected/applied migration inventory;
-- fresh backup verification;
-- isolated replay;
-- disposable restore drill;
-- PITR/rollback decision evidence;
-- production-like cutover/opening reconciliation rehearsal.
+## 3. Pilot-02 — Representative Transaction Dry Run
 
-### R6-03 Security + Performance + Recovery
+Using approved pilot data and users, exercise representative business paths:
 
-- IAM/session/admin/tenant isolation;
-- secret/config hygiene;
-- queue retry/DLQ safety;
-- truthful Worker/app recovery semantics;
-- bounded representative p50/p95/p99/error/RPS;
-- logs/traces/cost-pressure evidence.
+- quotation -> sales order;
+- procurement/material demand -> purchase -> receipt;
+- manufacturing/work order and stock movements;
+- delivery -> sales invoice -> payment;
+- return/correction/cancel paths;
+- warranty/service lineage;
+- partial/final settlement;
+- duplicate/idempotent retry and fail-closed invalid actions.
 
-### R6-04 Alumdoor Exact-Release Golden Flow
+Use canonical shared authorities only. Do not create vertical shadow stock/finance/HRM/CRM state to make the pilot pass.
 
-- exact Alumdoor package/profile identity;
-- authenticated canonical Golden Flow;
-- Stock/Payment/GL readback;
-- duplicate/idempotent retry;
-- fail-closed invalid/insufficient action;
-- correction/settlement path;
-- warranty linked to exact delivery source.
+## 4. Pilot-03 — Parallel Run + Daily Reconciliation
 
-No subjective visual/pixel QA gate is required. Functional browser smoke is used only if necessary to prove an authenticated real user path.
+Run Forge alongside the current operational source for an agreed bounded period.
 
-## 3. R6-05 — Independent Final Certification
+Daily reconcile at minimum:
 
-Open only after R6-01 through R6-04 have final evidence or explicit blocker disposition.
+- Stock quantity/value;
+- AR/AP;
+- payment/cash/bank where in scope;
+- revenue;
+- COGS;
+- manufacturing/WIP where applicable;
+- GL debit/credit/balance;
+- document counts/statuses and unresolved exceptions.
 
-R6-05 must:
+Every discrepancy must have owner, root cause, disposition and recheck evidence. Do not hide residuals in manual adjustment without source-bound reasoning.
 
-- independently resolve exact candidate identity;
-- reject stale-SHA evidence;
-- verify R6 evidence IDs `R6-E01..R6-E23`;
-- verify no unauthorized production mutation;
-- verify no unresolved P0/P1 in pilot scope;
-- emit exact certified SHA and `PILOT-GO` or `PILOT-NO-GO`.
+## 5. Pilot-04 — Cutover Decision
 
-R6-05 is an auditor, not another implementation worker.
+Cutover is allowed only when:
 
-## 4. Source-fix rule during R6
+- opening and parallel-run reconciliations are accepted;
+- no unresolved P0/P1 pilot blocker remains;
+- user/access readiness is accepted;
+- backup/recovery state is fresh and verified;
+- delta/cutoff procedure is deterministic;
+- business owner explicitly accepts cutover.
 
-If R6 finds a pilot-blocking source defect:
+Production cutover, live customer-data mutation, DNS/route changes and destructive recovery actions remain explicit authorization boundaries.
 
-1. record failed invariant;
-2. make smallest owner-correct fix;
-3. merge through normal boundary;
-4. issue new candidate SHA;
-5. rerun every affected evidence lane;
-6. never treat old-SHA evidence as proof of new candidate.
+## 6. Pilot-05 — Hypercare + Exit Gate
 
-Do not create separate release candidates per R6 lane.
+After cutover:
 
-## 5. Explicit authorization boundaries
+- monitor health/errors/queues/provider pressure;
+- reconcile Stock/AR/AP/payment/revenue/COGS/manufacturing/GL daily;
+- track support incidents and correction paths;
+- verify backup/recovery continuity;
+- close pilot residuals or explicitly defer them with owner/risk.
 
-Opening R6 agents does **not** authorize:
+Pilot Exit Gate requires a durable final record with:
 
-- production deploy/redeploy/rollback;
-- production migration;
-- production restore/PITR;
-- customer production data import/write/cutover;
-- DNS/route/secret/provider mutation;
-- destructive queue replay.
+- exact deployed release identity;
+- exact package/profile identity;
+- accepted reconciliation period;
+- incident/blocker disposition;
+- recovery evidence currency;
+- business acceptance;
+- verdict `PILOT-ACCEPTED` or `PILOT-REJECTED`.
 
-Agents should exhaust read-only/local/disposable work and record the exact remaining live operation instead of stopping the whole program early.
-
-## 6. After PILOT-GO
-
-Move to Alumdoor Controlled Pilot:
-
-1. freeze Alumdoor Production Profile;
-2. map/import real master + opening data under explicit authorization;
-3. dry run representative transactions;
-4. parallel run against current operational source;
-5. daily Stock/AR/AP/payment/revenue/COGS/manufacturing/GL reconciliation;
-6. cutover;
-7. hypercare;
-8. Pilot Exit Gate -> Accepted Production Reference -> GA.
+Only `PILOT-ACCEPTED` may advance to **Accepted Production Reference -> GA**.
 
 ## 7. Standing boundaries
 
@@ -135,8 +127,15 @@ Move to Alumdoor Controlled Pilot:
 - Capability disable != package uninstall/data purge.
 - Production/provider evidence must be observed directly; source presence is insufficient.
 - Worker rollback != data rollback.
-- R5 browser/visual QA waiver is not a reason to fabricate a browser PASS; it simply is not a release blocker.
+- R6 certification is exact-SHA bound; future source changes require affected evidence rerun.
+- Controlled pilot is not GA.
 
-## 8. Documentation discipline
+## 8. R6 closure reference
 
-Use `docs/README.md` as the documentation map and `docs/agents/r6/README.md` as the active R6 entrypoint. After R6 converges, remove temporary agent prompts/order from `main` and retain the final certification/evidence record.
+R6 final authority:
+
+- `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md`;
+- `deploy-evidence/r6-final-production-certification-49315112a211.json`;
+- `deploy-evidence/r6-authorized-orchestrator-49315112a211.json`.
+
+Do not reopen temporary R6 agent coordination artifacts; Git history retains them.
