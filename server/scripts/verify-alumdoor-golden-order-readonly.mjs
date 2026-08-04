@@ -2,7 +2,10 @@
 /**
  * Read-only Golden Order verifier for an existing Alumdoor Sales Order.
  *
- * It authenticates through the same cookie path as the browser, then only performs:
+ * It first pins the live environment to exact source evidence, then authenticates through
+ * the same cookie path as the browser. Evidence collection performs only:
+ * - GET /release.json;
+ * - GET /api/method/metaforge.api.get_app_manifest?app=alumdoor;
  * - GET /api/resource/... reads;
  * - POST /api/method/frappe.desk.query_report.run for read-only ledger reports.
  *
@@ -10,10 +13,13 @@
  *
  * Example:
  *   FORGE_ADMIN_PASSWORD=... node scripts/verify-alumdoor-golden-order-readonly.mjs \
- *     --origin https://alu.kairo.vn --sales-order SO-0001 --require-warranty
+ *     --origin https://alu.kairo.vn --sales-order SO-0001 \
+ *     --expected-release-sha <40-char-sha> --require-warranty
  */
 import process from "node:process";
-import { evaluateGoldenOrderEvidence } from "./lib/alumdoor-golden-order-readonly.mjs";
+import { evaluateGoldenOrderEvidence, linkedDeliveryNames } from "./lib/alumdoor-golden-order-readonly.mjs";
+import { evaluateReferenceReleaseEvidence, warrantyLookupFilters } from "./lib/alumdoor-reference-release-evidence.mjs";
+import { readBriefSource } from "./lib/read-brief-source.mjs";
 
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => {
@@ -26,6 +32,8 @@ const ORIGIN = String(argOf("origin", process.env.FORGE_ORIGIN) ?? "").replace(/
 const SALES_ORDER = String(argOf("sales-order", "") ?? "").trim();
 const USER = String(argOf("admin", process.env.FORGE_ADMIN_USER ?? "admin"));
 const PASSWORD = process.env.FORGE_ADMIN_PASSWORD;
+const EXPECTED_RELEASE_SHA = String(argOf("expected-release-sha", process.env.FORGE_EXPECTED_RELEASE_SHA) ?? "").trim();
+const EXPECTED_BUNDLE_HASH = String(argOf("expected-bundle-hash", process.env.FORGE_EXPECTED_BUNDLE_HASH) ?? "").trim();
 const REQUIRE_WARRANTY = hasFlag("require-warranty");
 const PAGE_SIZE = 200;
 const MAX_ROWS = 5_000;
@@ -38,6 +46,7 @@ function fail(message) {
 if (!ORIGIN) fail("--origin is required");
 if (!SALES_ORDER) fail("--sales-order is required");
 if (!PASSWORD) fail("FORGE_ADMIN_PASSWORD is required");
+if (!EXPECTED_RELEASE_SHA) fail("--expected-release-sha or FORGE_EXPECTED_RELEASE_SHA is required");
 
 let cookie = "";
 let csrf = "";
@@ -91,9 +100,9 @@ async function listDocs(doctype, fields, filters = []) {
       order_by: "name asc",
     });
     const page = await call("GET", `/api/resource/${encodeURIComponent(doctype)}?${query}`);
-    const rows = Array.isArray(page) ? page : [];
-    output.push(...rows);
-    if (rows.length < PAGE_SIZE) return output;
+    const pageRows = Array.isArray(page) ? page : [];
+    output.push(...pageRows);
+    if (pageRows.length < PAGE_SIZE) return output;
   }
   throw new Error(`${doctype} vượt ${MAX_ROWS} dòng; từ chối kết luận từ dữ liệu bị cắt cụt.`);
 }
@@ -116,10 +125,22 @@ async function report(reportName, filters) {
   return Array.isArray(result?.result) ? result.result : [];
 }
 
+const sourceApp = await readBriefSource(new URL("../briefs/alumdoor-v2.json", import.meta.url));
+const releaseMarker = await call("GET", "/release.json");
+
 const login = await raw("POST", "/api/method/login", { usr: USER, pwd: PASSWORD });
 if (!login.ok) fail(`login failed (${login.status})`);
 
 try {
+  const liveManifest = await call("GET", "/api/method/metaforge.api.get_app_manifest?app=alumdoor");
+  const releaseEvidence = evaluateReferenceReleaseEvidence({
+    releaseMarker,
+    sourceApp,
+    liveManifest,
+    expectedReleaseSha: EXPECTED_RELEASE_SHA,
+    expectedBundleHash: EXPECTED_BUNDLE_HASH,
+  });
+
   const salesOrder = await readDoc("Sales Order", SALES_ORDER);
   const customer = String(salesOrder.customer ?? "").trim();
   const company = String(salesOrder.company ?? "").trim();
@@ -170,20 +191,28 @@ try {
   );
   const paymentEntries = await fullDocs("Payment Entry", paymentStubs);
 
-  const warrantyStubs = await listDocs(
-    "Warranty Claim",
-    ["name", "sales_order", "delivery_note", "warranty_status", "docstatus"],
-    [["sales_order", "=", SALES_ORDER]],
-  );
-  const warrantyClaims = await fullDocs("Warranty Claim", warrantyStubs);
+  const targetDeliveryNames = linkedDeliveryNames(deliveryNotes, SALES_ORDER);
+  const targetDeliverySet = new Set(targetDeliveryNames);
+  const warrantyByName = new Map();
+  for (const filter of warrantyLookupFilters(SALES_ORDER, targetDeliveryNames)) {
+    const stubs = await listDocs(
+      "Warranty Claim",
+      ["name", "sales_order", "delivery_note", "warranty_status", "docstatus"],
+      [filter],
+    );
+    for (const row of await fullDocs("Warranty Claim", stubs)) warrantyByName.set(row.name, row);
+  }
+  const warrantyClaims = [...warrantyByName.values()];
+  if (warrantyClaims.length > MAX_ROWS) throw new Error(`Warranty Claim vượt ${MAX_ROWS} dòng unique; từ chối kết luận.`);
 
   const itemCodes = new Set();
   for (const note of deliveryNotes) {
+    if (!targetDeliverySet.has(String(note.name ?? "").trim())) continue;
     for (const item of Array.isArray(note.items) ? note.items : []) {
       if (item?.item_code) itemCodes.add(String(item.item_code));
     }
   }
-  if (!itemCodes.size) throw new Error(`Không lấy được item_code từ Delivery Note của khách ${customer}.`);
+  if (!itemCodes.size) throw new Error(`Không lấy được item_code từ Delivery Note của ${SALES_ORDER}.`);
 
   const stockLedgerRows = [];
   for (const itemCode of itemCodes) {
@@ -198,7 +227,7 @@ try {
     ...(company ? { company } : {}),
   });
 
-  const evidence = evaluateGoldenOrderEvidence({
+  const goldenOrderEvidence = evaluateGoldenOrderEvidence({
     salesOrder,
     productionRequests,
     workOrders,
@@ -212,7 +241,7 @@ try {
   });
 
   console.log("PASS  Alumdoor Golden Order read-only authority chain");
-  console.log(JSON.stringify(evidence, null, 2));
+  console.log(JSON.stringify({ release: releaseEvidence, golden_order: goldenOrderEvidence }, null, 2));
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
