@@ -1,0 +1,181 @@
+name: RC4 Post Integration Final
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/rc4-post-integration-final.yml"
+      - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
+      - "docs/agents/rc4/RC4_POST_INTEGRATION_FINAL.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-post-integration-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  integrated-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact candidate and integration baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "5e0e67d8e3dae0b07010f3159ec86adce8fce0dc"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify worker integration ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for sha in \
+            47bb2b8355af6ecc4abffde9d83cb0c8b7621479 \
+            6efa89b46548d6a958e04ffd8ea8c7dcdc9cd60a \
+            792f7f311d52f3ed0882c284b1e3d9ff5f34b359 \
+            068ca98ba6446d367aed7667d6ba19170ec5869f \
+            1baaf38d92f5aa0d53cfd2260d5baade850be8dd \
+            834da8cf8fbf496f6c58cb0d8ba2119c40a6b66c \
+            5d422009700caf029ca202e98c176c1915c2fd63 \
+            b5c75c3db277045eafd2300f07be1c8b2ea88f6a \
+            32001d70a4ef87a5e14bd7df2dcc100cd0f8d243 \
+            00b071130155d6a7359e4ab0eb1849048b57a139 \
+            27c616c2a77f08bb0284a0de4ea141637ce82462 \
+            68f1ab9e6ee3721e2ed66444fad9dfe03eaf2fc4 \
+            0822b9237b3d1485cc5d9bf72ff03e0834a10383 \
+            8ca102b3fbdf30cb2db0366ce32ac0b9102c732a \
+            3c6db92969d80aab92afdc9ef4f07db0cbe2565b \
+            26db2690deedc23613ae9179815f4cfe25cc32ec \
+            f2504064dbdf929ba6c03107eea624463943fce1 \
+            b3e428d21b4be13337694fde9a78d77b37c8db93 \
+            fe473ccc3723f46094c5db4719b2acac0c9bf8db \
+            e3df86ae5e1645ad75f21bccd7584b20c2d94ef3 \
+            7d7aff633a943b881d7488cd50e661fbdcffaace; do
+            git merge-base --is-ancestor "$sha" origin/main
+          done
+          echo "RC4 worker ancestry: PASS"
+
+      - name: Capability and migration truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/validate-enterprise-capability-status.mjs
+          grep -F '| RC | 66 | 6.90% |' docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md
+          grep -F '| Wired | 406 | 42.47% |' docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md
+          grep -F '| Foundation | 327 | 34.21% |' docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md
+          grep -F '| Missing | 157 | 16.42% |' docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md
+          python3 server/scripts/verify-sql.py
+          node server/scripts/verify-migration-governance.mjs --base-ref origin/main
+          node --test server/tests/migration-governance.test.mjs
+
+      - name: Integrated A1 IAM regression
+        working-directory: server
+        run: |
+          node --test tests/rc4-iam-auth-integration.test.mjs tests/rc4-iam-session-revalidation.test.mjs tests/login-mfa.test.mjs tests/mfa-service.test.mjs tests/session-registry.test.mjs tests/security-recent-auth.test.mjs tests/authentication-context.test.mjs tests/network-policy.test.mjs
+          python3 scripts/test-user-session-registry-migration.py
+          python3 scripts/test-user-mfa-totp-migration.py
+
+      - name: Integrated A3-A5 migration and VN statutory regressions
+        working-directory: server
+        run: |
+          node --test tests/migration-plan.test.mjs tests/migration-orchestration.test.mjs tests/migration-orchestrator.test.mjs tests/migration-durable-orchestrator.test.mjs tests/migration-kernel-port.test.mjs
+          python3 scripts/test-migration-run-journal.py
+          node --test tests/vn-accounting-policy.test.mjs tests/vn-accounting-statutory-pack.test.mjs tests/vn-legal-evidence.test.mjs tests/vn-vat-service.test.mjs
+          python3 scripts/test-vn-vat-dataset-migration.py
+          node --test tests/hrm-vn-pit-2026-source-lock.test.mjs tests/hrm-payroll-correction-reconciliation.test.mjs tests/hrm-operational.test.mjs tests/hrm-statutory-payroll.test.mjs
+
+      - name: Integrated A7-A10 platform integration regressions
+        working-directory: server
+        run: |
+          node --test tests/bpm-approval.test.mjs tests/bpm-timer.test.mjs tests/app-factory-definition.test.mjs tests/app-factory-definition-effective-window.test.mjs tests/app-factory-definition-resolver.test.mjs tests/app-factory-approval-runtime.test.mjs tests/app-rollback-plan.test.mjs tests/app-revision-history.test.mjs
+          node --test tests/integration-hub-einvoice-provider.test.mjs tests/integration-hub-kernel-registration.test.mjs tests/integration-hub-queue-recovery.test.mjs
+          node --test tests/rc4-kernel-gl-aggregate.test.mjs
+          node --test tests/crm-customer-360.test.mjs
+
+      - name: Integrated A11-A13 ERP core regressions
+        working-directory: server
+        run: |
+          node --test tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs tests/supplier-lifecycle.test.mjs tests/supplier-contract-release.test.mjs tests/procurement-p2p-closure.test.mjs tests/procurement-p2p-correction-boundary.test.mjs tests/procurement-landed-cost.test.mjs
+          node --test tests/inventory-scan-resolution.test.mjs tests/wms-wave-scan.test.mjs tests/inventory-planning.test.mjs tests/stock-reservation-integrity.test.mjs tests/valuation-audit.test.mjs tests/repost-item-valuation-integrity.test.mjs tests/procurement-landed-cost.test.mjs
+          node --test tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs tests/manufacturing-capacity-api.test.mjs tests/manufacturing-transaction-closure.test.mjs tests/manufacturing-cost-evidence.test.mjs tests/qms-lifecycle.test.mjs
+
+      - name: Integrated A14-A18 product regressions
+        working-directory: server
+        run: |
+          node --test tests/projects-psa.test.mjs tests/support-helpdesk.test.mjs tests/maintenance-field-service.test.mjs tests/rc4-a14-project-service-field.test.mjs
+          node --test tests/semantic-dashboard.test.mjs tests/semantic-ai-dashboard.test.mjs tests/semantic-recommendation.test.mjs
+          node --test tests/rc4-a16-workplace-maintenance.test.mjs tests/ws15-notification-delivery.test.mjs tests/ws15-assignment-access.test.mjs tests/ws15-collaboration-assignment-lifecycle.test.mjs tests/ws15-workplace-metadata.test.mjs
+          node --test tests/ws16-omnichannel-source-contract.test.mjs
+          node --check scripts/verify-alumdoor-golden-order-readonly.mjs
+          node --test tests/alumdoor-golden-order-readonly.test.mjs
+
+      - name: Revalidate A22 cross-ledger reconciliation
+        shell: bash
+        run: |
+          python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
+          python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
+
+      - name: Revalidate A23 performance and cost envelope
+        shell: bash
+        run: |
+          node --test server/tests/cloudflare-cost.test.mjs server/tests/perf-regression.test.mjs
+          node server/scripts/cloudflare-cost-project.mjs --input server/config/cloudflare-cost-scenarios.engineering.json --rates server/config/cloudflare-cost-rates-20260804.json > /tmp/rc4-cost.json
+          python3 server/scripts/sqlite-large-data-benchmark.py --rows 100000 --iterations 20 --output /tmp/rc4-large-data.json > /tmp/rc4-large-data.stdout
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/rc4-large-data.json').read_text())
+          assert data['format'] == 'forge-sqlite-large-data-benchmark/v1'
+          assert data['rows_per_shape'] == 100000
+          assert data['iterations'] == 20
+          required = {'document_list_50','document_list_status_50','ledger_report_28d','payment_reconciliation','queue_backlog_oldest','batch_upsert_1000'}
+          assert required.issubset(data['results'])
+          for name in required:
+              result = data['results'][name]
+              assert result['p95_ms'] >= 0
+              assert result['p99_ms'] >= result['p95_ms']
+          print('RC4 integrated performance evidence: PASS')
+          PY
+
+      - name: Preserve provider and production non-claims
+        shell: bash
+        run: |
+          node server/scripts/verify-cloudflare-governance.mjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const cfg = JSON.parse(fs.readFileSync('server/config/cloudflare-governance.json','utf8'));
+          if (cfg?.remote_observation?.status !== 'unverified') throw new Error(`unexpected provider claim: ${cfg?.remote_observation?.status}`);
+          console.log('Provider/live remains explicitly unverified: PASS');
+          NODE
+
+      - name: Candidate authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only origin/main...HEAD)
+          echo "$changed"
+          if echo "$changed" | grep -Ev '^(\.github/workflows/rc4-post-integration-final\.yml|docs/FORGE_ENTERPRISE_CAPABILITY_STATUS\.md|docs/agents/rc4/RC4_POST_INTEGRATION_FINAL\.md)$'; then
+            echo "Post-integration convergence crossed governance/evidence authority"
+            exit 1
+          fi
