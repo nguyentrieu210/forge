@@ -1,17 +1,21 @@
 {
   "id": "social-commerce",
   "name": "Bán hàng đa kênh",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "requires": [],
   "externalDocTypes": [
     { "name": "Company", "kind": "master", "app": "erpnext" },
     { "name": "Customer", "kind": "master", "app": "erpnext" },
     { "name": "Currency", "kind": "master", "app": "erpnext" },
-    { "name": "Price List", "kind": "master", "app": "erpnext" }
+    { "name": "Price List", "kind": "master", "app": "erpnext" },
+    { "name": "Item", "kind": "master", "app": "erpnext" },
+    { "name": "Warehouse", "kind": "master", "app": "erpnext" }
   ],
   "nav": [
     { "key": "social-commerce:dashboard", "label": "Trung tâm bán hàng", "kind": "experience", "icon": "messages-square", "group": "Bán hàng" },
-    { "key": "Social Commerce Profile", "label": "Cấu hình kênh bán", "kind": "doctype", "icon": "settings-2", "group": "Thiết lập bán hàng" }
+    { "key": "Commerce Channel Profile", "label": "Gian hàng TMĐT", "kind": "doctype", "icon": "store", "group": "Bán hàng đa kênh" },
+    { "key": "Marketplace SKU Mapping", "label": "Ánh xạ SKU sàn", "kind": "doctype", "icon": "replace", "group": "Bán hàng đa kênh" },
+    { "key": "Social Commerce Profile", "label": "Cấu hình kênh xã hội", "kind": "doctype", "icon": "settings-2", "group": "Thiết lập bán hàng" }
   ],
   "hooks": []
 }
