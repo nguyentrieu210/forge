@@ -69,30 +69,66 @@ jobs:
           node server/scripts/verify-migration-governance.mjs --base-ref "${GITHUB_WORKSPACE}/.git/refs/remotes/origin/main" || node server/scripts/verify-migration-governance.mjs --base-ref origin/main
           node --test server/tests/migration-governance.test.mjs
 
-      - name: Verify A22/A23 closure evidence
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Revalidate current A22 cross-ledger head
         shell: bash
         run: |
           set -euo pipefail
-          check_run() {
-            id="$1"; expected="$2"; label="$3"
-            json=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${id}")
-            node -e 'const r=JSON.parse(process.argv[1]); const expected=process.argv[2]; const label=process.argv[3]; if(r.status!=="completed"||r.conclusion!=="success"||r.head_sha!==expected) throw new Error(label+":"+JSON.stringify({status:r.status,conclusion:r.conclusion,head_sha:r.head_sha})); console.log(label+": PASS")' "$json" "$expected" "$label"
+          cd "$GITHUB_WORKSPACE"
+          git fetch origin agent/rc4-22-cross-ledger-reconciliation
+          test "$(git rev-parse origin/agent/rc4-22-cross-ledger-reconciliation)" = "e3df86ae5e1645ad75f21bccd7584b20c2d94ef3"
+          git worktree add /tmp/a22 e3df86ae5e1645ad75f21bccd7584b20c2d94ef3
+          cd /tmp/a22
+          python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
+          python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
+          git diff --check 19daa919bf4a4af561ff0c5033db0d39c6276603...HEAD -- server/scripts/rc4-cross-ledger-reconciliation.py .github/workflows/rc4-a22-cross-ledger-reconciliation.yml
+
+      - name: Revalidate current A23 performance-scale head
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git fetch origin agent/rc4-23-performance-scale-cost
+          test "$(git rev-parse origin/agent/rc4-23-performance-scale-cost)" = "7d7aff633a943b881d7488cd50e661fbdcffaace"
+          git worktree add /tmp/a23 7d7aff633a943b881d7488cd50e661fbdcffaace
+          cd /tmp/a23
+          node --test server/tests/cloudflare-cost.test.mjs server/tests/perf-regression.test.mjs
+          node server/scripts/cloudflare-cost-project.mjs --input server/config/cloudflare-cost-scenarios.engineering.json --rates server/config/cloudflare-cost-rates-20260804.json > /tmp/a23-cost.json
+          python3 server/scripts/sqlite-large-data-benchmark.py --rows 100000 --iterations 20 --output /tmp/a23-large-data.json > /tmp/a23-large-data.stdout
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('/tmp/a23-large-data.json').read_text())
+          assert data['format'] == 'forge-sqlite-large-data-benchmark/v1'
+          assert data['rows_per_shape'] == 100000
+          assert data['iterations'] == 20
+          required = {
+              'document_list_50',
+              'document_list_status_50',
+              'ledger_report_28d',
+              'payment_reconciliation',
+              'queue_backlog_oldest',
+              'batch_upsert_1000',
           }
-          check_run 30875326244 e3df86ae5e1645ad75f21bccd7584b20c2d94ef3 A22
-          check_run 30874137767 7d7aff633a943b881d7488cd50e661fbdcffaace A23
+          assert required.issubset(data['results'])
+          for name in required:
+              result = data['results'][name]
+              assert result['p95_ms'] >= 0
+              assert result['p99_ms'] >= result['p95_ms']
+          print('A23 current-head deterministic evidence: PASS')
+          PY
 
       - name: Verify A6 browser evidence is merged
         shell: bash
         run: |
           set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git merge-base --is-ancestor 834da8cf8fbf496f6c58cb0d8ba2119c40a6b66c origin/main
 
       - name: Preserve provider and production non-claims
         shell: bash
         run: |
           set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           node - <<'NODE'
           const fs = require('node:fs');
           const cfg = JSON.parse(fs.readFileSync('server/config/cloudflare-governance.json','utf8'));
@@ -106,6 +142,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           base="${{ github.event.pull_request.base.sha }}"
           changed=$(git diff --name-only "$base...HEAD")
           echo "$changed"
