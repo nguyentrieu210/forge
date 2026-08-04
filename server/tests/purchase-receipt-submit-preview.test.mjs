@@ -23,6 +23,8 @@ function seedMasters(store) {
     measurement_profile: "Nhôm cây/lá",
     has_catch_weight: true,
     weight_uom: "Kg",
+    purchase_allocation_qty_field: "qty_bar",
+    purchase_allocation_uom: "Cây",
   });
 }
 
@@ -99,11 +101,14 @@ function receiptData(qtyBar, postingAt = "2026-07-03T00:00:00.000Z") {
       conversion_factor: 1,
       rate: 100_000,
       valuation_rate: 100_000,
+      // A client cannot choose the allocation axis. The Item master snapshot below must overwrite this.
+      purchase_allocation_qty_field: "qty",
+      purchase_allocation_uom: "Kg",
     }],
   };
 }
 
-test("submit preview uses bar count for aluminium FIFO while commercial quantity stays kg", async () => {
+test("submit preview uses declared allocation count while commercial and stock quantity stay kg", async () => {
   const store = new InMemoryRolloutPurchaseAllocationMutationStore();
   store.setPurchaseAllocationEnabled(true);
   seedMasters(store);
@@ -118,7 +123,10 @@ test("submit preview uses bar count for aluminium FIFO while commercial quantity
 
   assert.equal(draft.data.items[0].stock_uom, "Kg");
   assert.equal(Number(draft.data.items[0].qty), 644.184);
+  assert.equal(Number(draft.data.items[0].stock_qty), 644.184);
   assert.equal(Number(draft.data.items[0].qty_bar), 230);
+  assert.equal(draft.data.items[0].purchase_allocation_qty_field, "qty_bar");
+  assert.equal(draft.data.items[0].purchase_allocation_uom, "Cây");
 
   const before = structuredClone(store.snapshot());
   const preview = await previewPurchaseReceiptSubmission({

@@ -28,7 +28,7 @@ import {
   PurchaseReceiptController,
 } from "./controllers.js";
 import type { PurchaseItem, PurchaseOrderData, PurchaseReceiptData } from "./types.js";
-import { applyUomConversion, stockQtyMicros } from "./uom.js";
+import { applyUomConversion, purchaseAllocationQtyMicros } from "./uom.js";
 import {
   canonicalizePurchaseMaterial,
   planPurchaseReceiptAllocation,
@@ -663,28 +663,6 @@ async function canonicalMaterialOf(item: PurchaseItem) {
     measurement_profile: item.measurement_profile ?? "",
     stock_uom: item.stock_uom ?? item.uom ?? "",
   });
-}
-
-/**
- * Procurement/accounting quantity and supplier-delivery quantity are not always the same thing.
- * Aluminium is bought and valued in kg, while the factory obligation and FIFO are defined by the
- * counted number of bars/leaves. Keeping this decision here means the canonical allocation ledger,
- * submit preview, settlement and cancellation all share one quantity basis instead of delegating
- * Tiến Đạt to a second FIFO implementation.
- */
-function purchaseAllocationQtyMicros(item: PurchaseItem, index: number): number {
-  const data = item as JsonObject;
-  const inventoryMode = textOrEmpty(data.inventory_mode);
-  if (inventoryMode === "Nhôm cây/lá") {
-    const bars = decimalField(data.qty_bar);
-    if (bars === undefined) {
-      throw errors.validation(`Bar quantity is required for aluminium at row ${index + 1}`);
-    }
-    const qty = toScaledInt(bars, 6, `items[${index}].qty_bar`);
-    if (qty <= 0) throw errors.validation(`Bar quantity must be positive at row ${index + 1}`);
-    return qty;
-  }
-  return stockQtyMicros(item);
 }
 
 function theoreticalBaremWeightMicros(item: PurchaseItem, allocationQty: number, index: number): number {
