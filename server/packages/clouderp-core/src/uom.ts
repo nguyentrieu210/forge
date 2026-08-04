@@ -6,6 +6,7 @@ import { fromScaledInt, multiplyScaled, toScaledInt } from "../../money/src/inde
 import type { UomLine } from "./types.js";
 
 const ONE = 1_000_000;
+const SAFE_FIELDNAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 function stockUomOf(master: JsonObject | null): string | undefined {
   const declared = master?.stock_uom;
@@ -196,6 +197,13 @@ export async function applyUomConversion<T extends UomLine>(
     const stockUom = stockUomOf(master);
     const inventoryMode = itemText(master, "inventory_mode") || "Hàng thường";
     const measurementProfile = itemText(master, "measurement_profile");
+    const purchaseAllocationQtyField = itemText(master, "purchase_allocation_qty_field");
+    const purchaseAllocationUom = itemText(master, "purchase_allocation_uom");
+    if (transactionKind === "purchase" && purchaseAllocationQtyField && !purchaseAllocationUom) {
+      throw errors.validation(
+        `Mặt hàng ${item.item_code}: purchase_allocation_qty_field phải đi cùng purchase_allocation_uom`,
+      );
+    }
     return {
       ...item,
       ...(uom ? { uom } : {}),
@@ -210,28 +218,44 @@ export async function applyUomConversion<T extends UomLine>(
         measurement_profile: measurementProfile,
         has_catch_weight: master.has_catch_weight === true || master.has_catch_weight === 1,
         ...(typeof master.weight_uom === "string" ? { weight_uom: master.weight_uom } : {}),
+        ...(purchaseAllocationQtyField ? { purchase_allocation_qty_field: purchaseAllocationQtyField } : {}),
+        ...(purchaseAllocationUom ? { purchase_allocation_uom: purchaseAllocationUom } : {}),
       } : {}),
     };
   });
 }
 
-/**
- * Số lượng nghĩa vụ/tồn của một dòng.
- *
- * Nhôm cây/lá mua và định giá theo kg nhưng nhà máy nợ theo số cây/lá. `inventory_mode`
- * là snapshot server từ Item, nên chỉ khi server xác nhận đúng chế độ này mới đọc `qty_bar`.
- */
+/** Canonical stock quantity. It is derived only from the declared stock UOM conversion. */
 export function stockQtyMicros(line: UomLine): number {
-  if (line.inventory_mode === "Nhôm cây/lá") {
-    const qtyBar = line.qty_bar;
-    if (typeof qtyBar !== "string" && typeof qtyBar !== "number") {
-      throw errors.validation(`Mặt hàng ${line.item_code}: Nhôm cây/lá phải có số cây/lá`);
-    }
-    const bars = toScaledInt(qtyBar, 6, "qty_bar");
-    if (bars <= 0) throw errors.validation(`Mặt hàng ${line.item_code}: số cây/lá phải lớn hơn 0`);
-    return bars;
-  }
   return line.stock_qty_micros ?? line.qty_micros ?? toScaledInt(line.qty, 6, "qty");
+}
+
+/**
+ * Supplier-delivery obligation quantity may intentionally differ from stock/commercial quantity.
+ * The Item master declares the line field and UOM that carry that axis; the server snapshots both
+ * onto the document so historical allocation never depends on a vertical literal or mutable UI rule.
+ */
+export function purchaseAllocationQtyMicros(line: UomLine, index = 0): number {
+  const data = line as JsonObject;
+  const rawField = data.purchase_allocation_qty_field;
+  const field = typeof rawField === "string" ? rawField.trim() : "";
+  if (!field) return stockQtyMicros(line);
+  if (!SAFE_FIELDNAME.test(field)) {
+    throw errors.validation(`Mặt hàng ${line.item_code}: trường số lượng phân bổ mua không hợp lệ`);
+  }
+  const allocationUom = data.purchase_allocation_uom;
+  if (typeof allocationUom !== "string" || !allocationUom.trim()) {
+    throw errors.validation(`Mặt hàng ${line.item_code}: thiếu đơn vị của số lượng phân bổ mua`);
+  }
+  const raw = data[field];
+  if (typeof raw !== "string" && typeof raw !== "number") {
+    throw errors.validation(`Mặt hàng ${line.item_code}: thiếu ${field} cho số lượng phân bổ mua (dòng ${index + 1})`);
+  }
+  const qty = toScaledInt(raw, 6, `items[${index}].${field}`);
+  if (qty <= 0) {
+    throw errors.validation(`Mặt hàng ${line.item_code}: ${field} phải lớn hơn 0 (dòng ${index + 1})`);
+  }
+  return qty;
 }
 
 export function pricedQtyMicros(line: UomLine): number {
