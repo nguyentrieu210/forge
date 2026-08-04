@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { CapabilityProfileAdmin } from "./CapabilityProfileAdmin.js";
 import "./styles.css";
+import "./alumdoor-dark-palette.css";
 
 if (window.location.pathname === "/app-factory/capabilities") {
   const root = document.getElementById("root");

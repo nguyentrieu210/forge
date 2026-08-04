@@ -1,0 +1,180 @@
+/*
+ * Alumdoor authenticated dark-mode palette contract.
+ *
+ * Exactly three base colors are allowed on the authenticated dark UI:
+ *   black  #000000 — surfaces/backgrounds
+ *   orange #f45b24 — action, focus and semantic emphasis
+ *   white  #ffffff — content, borders and muted content via alpha
+ *
+ * Alpha/color-mix variants may derive hierarchy from those three primitives only.
+ * The Alumdoor logo asset remains unchanged.
+ */
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) {
+  --alu-black: #000000;
+  --alu-orange: #f45b24;
+  --alu-white: #ffffff;
+
+  color-scheme: dark;
+  --background: var(--alu-black);
+  --foreground: var(--alu-white);
+  --card: var(--alu-black);
+  --card-foreground: var(--alu-white);
+  --popover: var(--alu-black);
+  --popover-foreground: var(--alu-white);
+  --primary: var(--alu-orange);
+  --primary-foreground: var(--alu-white);
+  --secondary: var(--alu-black);
+  --secondary-foreground: var(--alu-white);
+  --muted: var(--alu-black);
+  --muted-foreground: color-mix(in srgb, var(--alu-white) 68%, transparent);
+  --accent: color-mix(in srgb, var(--alu-orange) 22%, var(--alu-black));
+  --accent-foreground: var(--alu-white);
+  --border: color-mix(in srgb, var(--alu-white) 18%, transparent);
+  --input: color-mix(in srgb, var(--alu-white) 28%, transparent);
+  --ring: var(--alu-orange);
+  --subtle: color-mix(in srgb, var(--alu-white) 62%, transparent);
+
+  /* Semantic states deliberately collapse to the brand accent in this theme. */
+  --info: var(--alu-orange);
+  --info-text: var(--alu-white);
+  --success: var(--alu-orange);
+  --success-text: var(--alu-white);
+  --warning: var(--alu-orange);
+  --warning-text: var(--alu-white);
+  --destructive: var(--alu-orange);
+  --destructive-text: var(--alu-white);
+
+  --sidebar: var(--alu-black);
+  --sidebar-foreground: var(--alu-white);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar {
+  background: var(--alu-black);
+  border-right-color: color-mix(in srgb, var(--alu-white) 18%, transparent);
+  color: var(--alu-white);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-brand {
+  border-color: color-mix(in srgb, var(--alu-white) 28%, transparent);
+  background: var(--alu-white);
+  box-shadow:
+    0 10px 26px -17px color-mix(in srgb, var(--alu-black) 72%, transparent),
+    inset 0 -2px 0 color-mix(in srgb, var(--alu-orange) 18%, transparent);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) [data-alumdoor-logo] {
+  background: var(--alu-white);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar input[aria-label="Tìm menu"] {
+  border-color: color-mix(in srgb, var(--alu-white) 24%, transparent);
+  background: var(--alu-black);
+  color: var(--alu-white);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar input[aria-label="Tìm menu"]::placeholder,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-group-label,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item > span:first-child,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar > div:last-child .text-muted-foreground {
+  color: color-mix(in srgb, var(--alu-white) 62%, transparent);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar > div:last-child {
+  color: color-mix(in srgb, var(--alu-white) 84%, transparent);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-group-label:hover {
+  background: color-mix(in srgb, var(--alu-white) 6%, transparent);
+  color: var(--alu-white);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item:hover {
+  background: var(--alu-black);
+  color: var(--alu-white);
+  box-shadow: inset 2px 0 0 var(--alu-orange);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item[data-active="true"],
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item[data-active="true"]:hover {
+  background: var(--alu-orange);
+  border-color: var(--alu-orange);
+  color: var(--alu-white);
+  box-shadow:
+    0 11px 24px -14px color-mix(in srgb, var(--alu-orange) 85%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--alu-white) 18%, transparent);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item[data-active="true"]::before {
+  background: var(--alu-white);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item[data-active="true"] > span,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-shell-sidebar .mf-shell-nav-item[data-active="true"] svg {
+  color: var(--alu-white);
+}
+
+/* Canonical V3 list/form surfaces: no blue/green/yellow/red tint survives in dark mode. */
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-toolbar,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-form-header,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-form-footer,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-form-section,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-scroll,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-context-frame,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-context-panel,
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-context-tabs {
+  background: var(--alu-black);
+  border-color: color-mix(in srgb, var(--alu-white) 18%, transparent);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-list-view thead th {
+  background: var(--alu-black);
+  color: var(--alu-white);
+  border-bottom-color: var(--alu-black);
+  box-shadow: inset 0 2px 0 var(--alu-orange), var(--mf-sticky-edge);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-form-section {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--alu-black) 72%, transparent),
+    0 10px 26px color-mix(in srgb, var(--alu-black) 82%, transparent);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-section-heading > span {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--alu-orange) 72%, transparent),
+    color-mix(in srgb, var(--alu-white) 18%, transparent) 35%,
+    transparent 100%
+  );
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) .mf-field :is(input, textarea, button[role="combobox"]):focus-visible {
+  border-color: var(--alu-orange);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--alu-orange) 18%, transparent),
+    0 5px 14px color-mix(in srgb, var(--alu-black) 76%, transparent);
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) :is(
+  .bg-success,
+  .bg-warning,
+  .bg-destructive,
+  .bg-info
+) {
+  background-color: var(--alu-orange) !important;
+}
+
+[data-theme="dark"] .mf-shell:has(.mf-shell-sidebar [data-alumdoor-logo]) :is(
+  .text-success,
+  .text-success-text,
+  .text-warning,
+  .text-warning-text,
+  .text-destructive,
+  .text-destructive-text,
+  .text-info,
+  .text-info-text
+) {
+  color: var(--alu-white) !important;
+}
