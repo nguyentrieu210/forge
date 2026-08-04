@@ -190,7 +190,21 @@ jobs:
 
       - name: Browser-test capability profile authoring
         working-directory: client/e2e-forge
-        run: pnpm exec playwright test --config playwright.r5-capability.config.ts
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec playwright test --config playwright.r5-capability.config.ts 2>&1 | tee /tmp/r5-browser.log
+
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r5-browser-diagnostics
+          path: |
+            /tmp/r5-browser.log
+            client/e2e-forge/test-results
+            client/e2e-forge/playwright-report
+          if-no-files-found: ignore
 
       - name: Candidate hygiene and no production mutation guard
         shell: bash
