@@ -1,11 +1,6 @@
 import type { JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
-import type {
-  SemanticFilter,
-  SemanticFilterOperator,
-  SemanticModelRegistry,
-  SemanticQueryRequest,
-} from "./index.js";
+import type { SemanticFilter, SemanticFilterOperator, SemanticModelRegistry, SemanticQueryRequest } from "./index.js";
 import type { SemanticInsightRegistry } from "./insights.js";
 import type { SemanticAccessController, SemanticQueryExecutor, SemanticQueryResult } from "./service.js";
 import { assertSemanticFilterRuntimeInput } from "./validation.js";
@@ -61,15 +56,7 @@ export interface SemanticDashboardSummary {
   label: string;
   description?: string;
   kind: SemanticDashboardKind;
-  widgets: Array<{
-    id: string;
-    label?: string;
-    insight: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }>;
+  widgets: SemanticDashboardWidgetDefinition[];
   filters: Array<{
     id: string;
     label: string;
@@ -80,11 +67,7 @@ export interface SemanticDashboardSummary {
 
 export interface SemanticDashboardResult {
   dashboard: string;
-  widgets: Array<{
-    widget: string;
-    insight: string;
-    result: SemanticQueryResult;
-  }>;
+  widgets: Array<{ widget: string; insight: string; result: SemanticQueryResult }>;
 }
 
 const STABLE_ID = /^[a-z][a-z0-9_.-]{0,95}$/;
@@ -126,10 +109,7 @@ function cloneDefinition(definition: SemanticDashboardDefinition): SemanticDashb
   return structuredClone(definition);
 }
 
-/**
- * Trusted dashboard composition over registered semantic insights.
- * Definitions contain semantic IDs and layout only: no SQL, physical fields, routes or tenant identifiers.
- */
+/** Trusted dashboard composition over registered semantic insights only. */
 export class SemanticDashboardRegistry {
   private readonly dashboards = new Map<string, SemanticDashboardDefinition>();
 
@@ -167,10 +147,12 @@ export class SemanticDashboardRegistry {
     }
 
     for (let left = 0; left < definition.widgets.length; left += 1) {
+      const a = definition.widgets[left];
+      if (!a) throw errors.validation(`Dashboard ${definition.id} contains an invalid widget entry`);
       for (let right = left + 1; right < definition.widgets.length; right += 1) {
-        if (rectanglesOverlap(definition.widgets[left], definition.widgets[right])) {
-          throw errors.validation(`Dashboard ${definition.id} widgets ${definition.widgets[left].id} and ${definition.widgets[right].id} overlap`);
-        }
+        const b = definition.widgets[right];
+        if (!b) throw errors.validation(`Dashboard ${definition.id} contains an invalid widget entry`);
+        if (rectanglesOverlap(a, b)) throw errors.validation(`Dashboard ${definition.id} widgets ${a.id} and ${b.id} overlap`);
       }
     }
 
@@ -203,7 +185,8 @@ export class SemanticDashboardRegistry {
         if (!widgetIds.has(binding.widget)) throw errors.validation(`Dashboard ${definition.id} filter ${filter.id} targets unknown widget ${binding.widget}`);
         if (boundWidgets.has(binding.widget)) throw errors.validation(`Dashboard ${definition.id} filter ${filter.id} repeats widget ${binding.widget}`);
         boundWidgets.add(binding.widget);
-        const widget = definition.widgets.find((candidate) => candidate.id === binding.widget)!;
+        const widget = definition.widgets.find((candidate) => candidate.id === binding.widget);
+        if (!widget) throw errors.validation(`Dashboard ${definition.id} filter ${filter.id} targets unknown widget ${binding.widget}`);
         const insight = this.insights.get(widget.insight);
         if (!(insight.scopeDimensions ?? []).includes(binding.dimension)) {
           throw errors.validation(`Dashboard ${definition.id} filter ${filter.id} dimension ${binding.dimension} is not an allowed scope dimension on insight ${insight.id}`);
@@ -220,21 +203,19 @@ export class SemanticDashboardRegistry {
   }
 
   list(): SemanticDashboardSummary[] {
-    return [...this.dashboards.values()]
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .map((definition) => ({
-        id: definition.id,
-        label: definition.label,
-        ...(definition.description ? { description: definition.description } : {}),
-        kind: definition.kind,
-        widgets: definition.widgets.map((widget) => ({ ...widget })),
-        filters: (definition.filters ?? []).map((filter) => ({
-          id: filter.id,
-          label: filter.label,
-          operators: [...filter.operators],
-          required: filter.required === true,
-        })),
-      }));
+    return [...this.dashboards.values()].sort((a, b) => a.id.localeCompare(b.id)).map((definition) => ({
+      id: definition.id,
+      label: definition.label,
+      ...(definition.description ? { description: definition.description } : {}),
+      kind: definition.kind,
+      widgets: definition.widgets.map((widget) => structuredClone(widget)),
+      filters: (definition.filters ?? []).map((filter) => ({
+        id: filter.id,
+        label: filter.label,
+        operators: [...filter.operators],
+        required: filter.required === true,
+      })),
+    }));
   }
 
   requiredModels(id: string): string[] {
@@ -255,7 +236,13 @@ export class SemanticDashboardRegistry {
       const definition = definitions.get(input.filter);
       if (!definition) throw errors.validation(`Dashboard ${id} does not expose filter ${input.filter}`);
       if (!definition.operators.includes(input.operator)) throw errors.validation(`Dashboard ${id} filter ${input.filter} does not allow operator ${input.operator}`);
-      const probe: SemanticFilter = { dimension: definition.bindings[0].dimension, operator: input.operator, ...(input.value !== undefined ? { value: input.value } : {}) };
+      const firstBinding = definition.bindings[0];
+      if (!firstBinding) throw errors.validation(`Dashboard ${id} filter ${input.filter} has no binding`);
+      const probe: SemanticFilter = {
+        dimension: firstBinding.dimension,
+        operator: input.operator,
+        ...(input.value !== undefined ? { value: input.value } : {}),
+      };
       assertSemanticFilterRuntimeInput(probe, `Dashboard ${id} filter ${input.filter}`);
       normalized.push(structuredClone(input));
     }
@@ -273,24 +260,22 @@ export class SemanticDashboardRegistry {
     return dashboard.widgets.map((widget) => {
       const scope: SemanticFilter[] = [];
       for (const input of filters) {
-        const definition = definitions.get(input.filter)!;
+        const definition = definitions.get(input.filter);
+        if (!definition) throw errors.validation(`Dashboard ${id} does not expose filter ${input.filter}`);
         const binding = definition.bindings.find((candidate) => candidate.widget === widget.id);
         if (!binding) continue;
-        scope.push({ dimension: binding.dimension, operator: input.operator, ...(input.value !== undefined ? { value: structuredClone(input.value) } : {}) });
+        scope.push({
+          dimension: binding.dimension,
+          operator: input.operator,
+          ...(input.value !== undefined ? { value: structuredClone(input.value) } : {}),
+        });
       }
-      return {
-        widget: widget.id,
-        insight: widget.insight,
-        query: this.insights.query(widget.insight, tenantId, scope),
-      };
+      return { widget: widget.id, insight: widget.insight, query: this.insights.query(widget.insight, tenantId, scope) };
     });
   }
 }
 
-/**
- * Catalog hides a whole dashboard when any widget is not authorized. This avoids revealing
- * executive-cockpit composition through labels while preserving fail-closed semantics.
- */
+/** Hides a whole dashboard when any widget model is denied. */
 export class PermissionAwareSemanticDashboardCatalogService {
   constructor(
     private readonly dashboards: SemanticDashboardRegistry,
@@ -317,11 +302,7 @@ export class PermissionAwareSemanticDashboardCatalogService {
   }
 }
 
-/**
- * Executes a dashboard only after every referenced model has passed authorization. The
- * executor still rechecks permission/row scope per query; the preflight prevents partial
- * dashboard reads when a later widget would be denied.
- */
+/** Preflights every model before the first widget query, then reuses the canonical executor. */
 export class SemanticDashboardService {
   constructor(
     private readonly dashboards: SemanticDashboardRegistry,
@@ -337,11 +318,8 @@ export class SemanticDashboardService {
       const model = this.semantic.get(modelId);
       await this.access.authorize({ tenantId, model: model.id, permission: model.permission });
     }
-
     const widgets: SemanticDashboardResult["widgets"] = [];
-    for (const plan of plans) {
-      widgets.push({ widget: plan.widget, insight: plan.insight, result: await this.executor.run(plan.query) });
-    }
+    for (const plan of plans) widgets.push({ widget: plan.widget, insight: plan.insight, result: await this.executor.run(plan.query) });
     return { dashboard: dashboardId, widgets };
   }
 }
