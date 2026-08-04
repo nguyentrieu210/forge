@@ -65,6 +65,21 @@ test("social shipment is a projection of canonical Delivery Note and COD cannot 
   assert.match(bridge, /\["company", "customer", "currency"\]/);
 });
 
+test("social API enforces least-privilege route classes before tenant data access", async () => {
+  const { api } = await sources();
+  for (const route of ["summary", "pages", "events", "carts"]) {
+    assert.match(api, new RegExp(`request\\.method === "GET" && url\\.pathname === "/api/v1/social/${route}"\\) \\{\\n    requireReader\\(actor\\);`));
+  }
+  assert.match(api, /url\.pathname === "\/api\/v1\/social\/rules"\) \{\n    requireManager\(actor\);/);
+  assert.match(api, /if \(request\.method === "POST" && shipment\) \{\n    requireFulfillment\(actor\);/);
+  assert.match(api, /if \(request\.method === "POST" && reconcile\) \{\n    requireCodReconciler\(actor\);/);
+
+  assert.match(api, /MANAGER_ROLES = new Set\(\["System Manager", "Social Commerce Manager", "Sales Manager"\]\)/);
+  assert.match(api, /FULFILLMENT_ROLES = new Set\(\[[^\]]*"Stock Manager", "Stock User"\]\)/);
+  assert.match(api, /COD_RECONCILE_ROLES = new Set\(\["System Manager", "Social Commerce Manager", "Accounts Manager", "Accounts User"\]\)/);
+  assert.doesNotMatch(api, /COD_RECONCILE_ROLES = new Set\(\[[^\]]*"Sales User"/);
+});
+
 test("logistics POD keeps trip immutable and correction goes through a separate submittable aggregate", async () => {
   const { logistics } = await sources();
   assert.match(logistics, /visited: false/);
