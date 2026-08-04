@@ -1,0 +1,78 @@
+name: RC4 A9 Kernel Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/document-kernel/src/general-ledger-aggregate.ts"
+      - "server/packages/document-kernel/src/index.ts"
+      - "server/tests/rc4-kernel-gl-aggregate.test.mjs"
+      - "docs/agents/rc4/A9-HANDOFF.md"
+      - ".github/workflows/rc4-a9-kernel-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a9-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/rc4-09-architecture-kernel')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact A9 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit A9 kernel aggregate graph
+        working-directory: server
+        run: |
+          cat > tsconfig.rc4-a9.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "rootDir": ".",
+              "outDir": "./dist",
+              "declaration": false,
+              "sourceMap": false,
+              "noEmitOnError": false
+            },
+            "include": [
+              "packages/document-kernel/src/general-ledger-aggregate.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules", "apps/web"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.rc4-a9.json
+
+      - name: GL aggregate contract regressions
+        working-directory: server
+        run: node --test tests/rc4-kernel-gl-aggregate.test.mjs
+
+      - name: Guard read-only kernel authority
+        run: |
+          grep -q 'export \* from "./general-ledger-aggregate.js"' server/packages/document-kernel/src/index.ts
+          grep -q 'FROM gl_entries g' server/packages/document-kernel/src/general-ledger-aggregate.ts
+          grep -q 'INNER JOIN documents d' server/packages/document-kernel/src/general-ledger-aggregate.ts
+          if grep -Eiq '(INSERT|UPDATE|DELETE)[[:space:]]+(INTO|FROM)?[[:space:]]*(documents|gl_entries|stock_ledger_entries|payment_ledger_entries)' server/packages/document-kernel/src/general-ledger-aggregate.ts; then
+            echo "RC4-A9 aggregate reader must remain read-only"
+            exit 1
+          fi
