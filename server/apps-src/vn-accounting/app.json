@@ -100,7 +100,7 @@
           "fieldname": "limit_per_type",
           "label": "Giới hạn mỗi loại hóa đơn",
           "fieldtype": "Int",
-          "default": 100
+          "default": "100"
         }
       ],
       "commit": {
