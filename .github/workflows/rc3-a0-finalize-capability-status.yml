@@ -31,6 +31,7 @@ permissions:
 
 jobs:
   finalize:
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'agent/rc3-00-capability-convergence' || github.event.pull_request.head.ref == 'program/rc3-exact-main-release-confidence-20260804'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
