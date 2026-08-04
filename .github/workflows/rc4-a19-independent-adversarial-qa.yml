@@ -1,0 +1,259 @@
+name: RC4 A19 Independent Adversarial QA
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/rc4-a19-independent-adversarial-qa.yml"
+      - "docs/agents/rc4/RC4_A19_INDEPENDENT_ADVERSARIAL_QA.md"
+      - "docs/agents/rc4/RC4_A19_INDEPENDENT_ADVERSARIAL_QA_HANDOFF.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a19-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  baseline-truth:
+    name: Baseline truth and stale-evidence guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact A19 PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Exact-main ancestry and A19 authority boundary
+        shell: bash
+        run: |
+          git fetch origin main
+          main_sha=$(git rev-parse origin/main)
+          merge_base=$(git merge-base origin/main HEAD)
+          echo "main=${main_sha}"
+          echo "head=$(git rev-parse HEAD)"
+          echo "merge_base=${merge_base}"
+          git diff --name-only "${merge_base}"...HEAD | tee /tmp/a19-files.txt
+          if grep -Ev '^(\.github/workflows/rc4-a19-independent-adversarial-qa\.yml|docs/agents/rc4/RC4_A19_INDEPENDENT_ADVERSARIAL_QA(_HANDOFF)?\.md)$' /tmp/a19-files.txt | grep -q .; then
+            echo "A19 crossed its evidence/test authority boundary"
+            exit 1
+          fi
+
+      - name: Canonical capability registry structure
+        run: node server/scripts/validate-enterprise-capability-status.mjs
+
+      - name: Cloudflare provider evidence must remain explicit
+        run: |
+          node server/scripts/verify-cloudflare-governance.mjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const cfg = JSON.parse(fs.readFileSync('server/config/cloudflare-governance.json', 'utf8'));
+          const status = cfg?.remote_observation?.status;
+          if (status !== 'unverified') {
+            throw new Error(`A19 refuses implicit provider promotion: remote_observation.status=${status}`);
+          }
+          console.log('remote_observation.status=unverified');
+          NODE
+
+      - name: Repository SQL structure and duplicate-prefix observation
+        shell: bash
+        run: |
+          python3 server/scripts/verify-sql.py
+          python3 - <<'PY'
+          from collections import defaultdict
+          from pathlib import Path
+          groups = defaultdict(list)
+          for path in sorted(Path('server/migrations/tenant').glob('*.sql')):
+              prefix = path.name.split('_', 1)[0]
+              if prefix.isdigit():
+                  groups[prefix].append(path.name)
+          duplicates = {k:v for k,v in groups.items() if len(v) > 1}
+          print('duplicate migration prefixes:', duplicates)
+          if '0110' not in duplicates:
+              print('0110 no longer duplicated; require applied-state evidence review before treating this as resolved')
+          PY
+
+  pinned-worker-adversarial:
+    name: Pinned ${{ matrix.lane }} adversarial replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: A1-IAM
+            sha: 47bb2b8355af6ecc4abffde9d83cb0c8b7621479
+          - lane: A3-Migration
+            sha: 792f7f311d52f3ed0882c284b1e3d9ff5f34b359
+          - lane: A4-VN-Statutory
+            sha: 84f25a829bb7eb28ab8bce053dc336435b46e77f
+          - lane: A11-Procurement
+            sha: a157f4aab5d5a5a0ee867bee77aedbe4af812436
+          - lane: A17-Commerce
+            sha: f2504064dbdf929ba6c03107eea624463943fce1
+    steps:
+      - name: Checkout pinned worker head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact pinned SHA
+        run: test "$(git rev-parse HEAD)" = "${{ matrix.sha }}"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit server dist with lane-local error classification
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir server exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/a19-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "repository_tsc_status=${status}"
+          case "${{ matrix.lane }}" in
+            A1-IAM)
+              pattern='packages/(auth|frappe-api|organization-security)/src/|apps/tenant-worker/src/(index|mfa-config|native-security)\.ts'
+              ;;
+            A3-Migration)
+              pattern='packages/migration/src/|apps/tenant-worker/src/(index|migration-api)\.ts'
+              ;;
+            A4-VN-Statutory)
+              pattern='apps-src/vn-accounting-worker/src/(legal-evidence|vat-service)\.ts'
+              ;;
+            A11-Procurement)
+              pattern='packages/clouderp-core/src/(supplier-lifecycle-controllers|procurement-.*)\.ts'
+              ;;
+            A17-Commerce)
+              pattern='packages/social-commerce/src/api\.ts'
+              ;;
+          esac
+          if grep 'error TS' /tmp/a19-tsc.log | grep -E "$pattern"; then
+            echo "TypeScript regression intersects pinned lane authority"
+            exit 1
+          fi
+
+      - name: Execute adversarial regression slice
+        working-directory: server
+        shell: bash
+        run: |
+          case "${{ matrix.lane }}" in
+            A1-IAM)
+              node --test \
+                tests/rc4-iam-auth-integration.test.mjs \
+                tests/rc4-iam-session-revalidation.test.mjs \
+                tests/login-mfa.test.mjs \
+                tests/mfa-service.test.mjs \
+                tests/session-registry.test.mjs \
+                tests/security-recent-auth.test.mjs \
+                tests/authentication-context.test.mjs \
+                tests/network-policy.test.mjs
+              python3 scripts/test-user-session-registry-migration.py
+              python3 scripts/test-user-mfa-totp-migration.py
+              ;;
+            A3-Migration)
+              node --test \
+                tests/migration-plan.test.mjs \
+                tests/migration-orchestration.test.mjs \
+                tests/migration-orchestrator.test.mjs \
+                tests/migration-durable-orchestrator.test.mjs \
+                tests/migration-kernel-port.test.mjs
+              python3 scripts/test-migration-run-journal.py
+              ;;
+            A4-VN-Statutory)
+              node --test \
+                tests/vn-accounting-policy.test.mjs \
+                tests/vn-accounting-statutory-pack.test.mjs \
+                tests/vn-legal-evidence.test.mjs \
+                tests/vn-vat-service.test.mjs
+              python3 scripts/test-vn-vat-dataset-migration.py
+              ;;
+            A11-Procurement)
+              node --test \
+                tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs \
+                tests/supplier-lifecycle.test.mjs \
+                tests/supplier-contract-release.test.mjs \
+                tests/procurement-p2p-closure.test.mjs \
+                tests/procurement-p2p-correction-boundary.test.mjs \
+                tests/procurement-landed-cost.test.mjs
+              ;;
+            A17-Commerce)
+              node --test tests/ws16-omnichannel-source-contract.test.mjs
+              ;;
+          esac
+
+      - name: SQL and diff safety
+        working-directory: server
+        run: python3 scripts/verify-sql.py
+
+  a2-provider-truth:
+    name: Pinned A2 provider/source separation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 6efa89b46548d6a958e04ffd8ea8c7dcdc9cd60a
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify governance source and provider non-claim
+        run: |
+          node server/scripts/verify-cloudflare-governance.mjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const cfg = JSON.parse(fs.readFileSync('server/config/cloudflare-governance.json', 'utf8'));
+          if (cfg?.remote_observation?.status !== 'unverified') process.exit(1);
+          NODE
+
+  a6-browser-truth:
+    name: Pinned A6 browser/mobile/PWA truth
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 007572266465b9fb4944929f382162166740884b
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --dir client/e2e-forge exec playwright install --with-deps chromium
+      - name: Build current runtime authority
+        run: pnpm --dir client/apps/runtime run build
+      - name: Run RC4 V2 browser/mobile/PWA matrix
+        run: pnpm --dir client/e2e-forge run test:rc4:v2
