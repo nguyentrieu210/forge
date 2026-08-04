@@ -8,7 +8,7 @@ const port = process.env.FORGE_RC4_V2_QA_PORT ?? "4192";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: "ui-tests/v3-mobile-qa.spec.ts",
+  testMatch: ["ui-tests/v3-mobile-qa.spec.ts", "ui-tests/rc4-pwa-installability.spec.ts"],
   outputDir: "./test-results/rc4-v2-mobile-qa",
   timeout: 20_000,
   expect: { timeout: 5_000 },
