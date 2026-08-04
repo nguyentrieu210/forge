@@ -249,7 +249,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Install Chromium
         run: pnpm --dir client/e2e-forge exec playwright install --with-deps chromium
-      - name: Build current runtime authority
-        run: pnpm --dir client/apps/runtime run build
+      - name: Build runtime and workspace dependencies
+        run: pnpm --filter runtime... run build
       - name: Run RC4 V2 browser/mobile/PWA matrix
         run: pnpm --dir client/e2e-forge run test:rc4:v2
