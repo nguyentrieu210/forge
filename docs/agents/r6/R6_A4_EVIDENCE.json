@@ -1,0 +1,81 @@
+{
+  "$schema": "forge-r6-lane-evidence/v1",
+  "program": "R6",
+  "lane": "R6-04",
+  "mission": "Alumdoor Exact-Release Golden Flow",
+  "lockedSourceSha": "4149af7c3e49b25fb1f43a50b62f99d7c04e6488",
+  "target": {
+    "environmentClass": "PILOT_TARGET_OBSERVED",
+    "tenant": "alu",
+    "origin": "https://alu.kairo.vn"
+  },
+  "expectedPackages": {
+    "alumdoor": "2.2.3",
+    "hrm": "1.8.0",
+    "vn-accounting": "1.6.1",
+    "manufacturing-qms": "1.1.0",
+    "maintenance": "1.5.1"
+  },
+  "evidence": [
+    {
+      "id": "R6-E18",
+      "name": "Exact Alumdoor package/profile identity",
+      "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
+      "mutation": "NONE",
+      "status": "PENDING_REMOTE_OBSERVATION",
+      "support": [
+        "server/scripts/r6-04-alumdoor-identity-readonly.mjs",
+        ".github/workflows/r6-04-alumdoor-golden-flow.yml"
+      ]
+    },
+    {
+      "id": "R6-E19",
+      "name": "Golden transaction lineage",
+      "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
+      "mutation": "AUTHORIZED_NON_PROD",
+      "status": "BLOCKED",
+      "reason": "No approved writable production-like R6 environment is currently materialized for a fresh exact-candidate authenticated transaction chain. Local and historical production evidence are supporting only."
+    },
+    {
+      "id": "R6-E20",
+      "name": "Canonical Stock/Finance readback",
+      "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
+      "mutation": "AUTHORIZED_NON_PROD",
+      "status": "BLOCKED",
+      "reason": "Depends on the fresh R6-E19 production-like transaction lineage; existing local canonical-ledger regressions cannot substitute for environment-bound readback."
+    },
+    {
+      "id": "R6-E21",
+      "name": "Failure/idempotency path",
+      "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
+      "mutation": "AUTHORIZED_NON_PROD",
+      "status": "BLOCKED",
+      "reason": "Requires an approved production-like writable environment for exact-candidate authoritative action retry/failure evidence."
+    },
+    {
+      "id": "R6-E22",
+      "name": "Correction/settlement path",
+      "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
+      "mutation": "AUTHORIZED_NON_PROD",
+      "status": "BLOCKED",
+      "reason": "Requires an approved production-like writable environment for exact-candidate correction and partial/equivalent receivable transition evidence."
+    },
+    {
+      "id": "R6-E23",
+      "name": "Warranty/source-document lineage",
+      "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
+      "mutation": "AUTHORIZED_NON_PROD",
+      "status": "BLOCKED",
+      "reason": "Requires the fresh R6-E19 delivered source document in an approved production-like writable environment."
+    }
+  ],
+  "dependencyRequests": [
+    {
+      "id": "DR-R6-04-01",
+      "owner": "R6 program / environment owner",
+      "status": "OPEN",
+      "request": "Provide an approved production-like writable environment running the exact locked candidate and active Alumdoor profile for fresh Golden Flow E19-E23 execution, or explicitly authorize Golden Flow writes against pilot customer state. Production credentials or an existing production environment do not imply write authorization."
+    }
+  ],
+  "laneVerdict": "R6-04-RUNNING"
+}
