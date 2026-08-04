@@ -187,6 +187,27 @@ jobs:
           pnpm --filter metaforge run build
           node server/scripts/stage-client-bundle.mjs
 
+      - name: Guard full-release generated worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              server/apps/gateway-worker/public/*) ;;
+              *)
+                echo "Refusing full release: unexpected worktree change after exact build: $file"
+                exit 1
+                ;;
+            esac
+          done
+          printf 'Approved generated release paths (%s):\n' "${#dirty[@]}"
+          printf '  %s\n' "${dirty[@]}"
+
       - name: Plan tenant migrations
         working-directory: server
         run: node scripts/migrate-tenant.mjs --tenant "$TENANT"
@@ -210,11 +231,11 @@ jobs:
 
       - name: Migrate tenant
         working-directory: server
-        run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+        run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
 
       - name: Deploy tenant Worker
         working-directory: server
-        run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT"
+        run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
 
       - name: Deploy Alumdoor app Worker
         working-directory: server

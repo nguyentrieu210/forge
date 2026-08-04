@@ -15,8 +15,11 @@ const required = [
   'paths:\n      - "client/**"',
   "inputs.scope == 'full' && inputs.confirm == 'alu'",
   "git merge-base --is-ancestor \"$TARGET_SHA\" origin/main",
+  "name: Guard full-release generated worktree",
+  "server/apps/gateway-worker/public/*)",
   "node server/scripts/verify-tenant-backup.mjs",
-  "node scripts/migrate-tenant.mjs --tenant \"$TENANT\" --execute --confirm \"$TENANT\"",
+  "node scripts/migrate-tenant.mjs --tenant \"$TENANT\" --execute --confirm \"$TENANT\" --allow-dirty",
+  "node scripts/deploy-tenant.mjs --tenant \"$TENANT\" --execute --confirm \"$TENANT\" --allow-dirty",
   "name: Verify exact production convergence",
   "ref: main",
   "node server/scripts/sre-health-snapshot.mjs",
@@ -27,12 +30,23 @@ for (const invariant of required) {
   if (!workflow.includes(invariant)) throw new Error(`release safety invariant missing: ${invariant}`);
 }
 
+const buildIndex = workflow.indexOf("- name: Build once");
+const generatedGuardIndex = workflow.indexOf("- name: Guard full-release generated worktree");
 const backupIndex = workflow.indexOf("node server/scripts/backup-tenant.mjs");
 const verifyIndex = workflow.indexOf("node server/scripts/verify-tenant-backup.mjs");
 const migrateIndex = workflow.indexOf('node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute');
 const tenantDeployIndex = workflow.indexOf('node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute');
+if (!(buildIndex >= 0 && buildIndex < generatedGuardIndex && generatedGuardIndex < backupIndex)) {
+  throw new Error("generated release worktree must be narrowed immediately after exact build and before production data operations");
+}
 if (!(backupIndex >= 0 && backupIndex < verifyIndex && verifyIndex < migrateIndex && migrateIndex < tenantDeployIndex)) {
   throw new Error("full release order must remain backup -> replay verify -> migrate -> tenant deploy");
+}
+
+const migrationLine = workflow.split(/\r?\n/).find((line) => line.includes('migrate-tenant.mjs --tenant "$TENANT" --execute')) ?? "";
+const tenantDeployLine = workflow.split(/\r?\n/).find((line) => line.includes('deploy-tenant.mjs --tenant "$TENANT" --execute')) ?? "";
+if (!migrationLine.includes("--allow-dirty") || !tenantDeployLine.includes("--allow-dirty")) {
+  throw new Error("full release mutation may bypass the generic dirty guard only after the generated-release-path guard");
 }
 
 const verifyJobIndex = workflow.indexOf("verify-production:");
@@ -90,7 +104,7 @@ for (const name of workflowFiles) {
 }
 
 console.log(
-  `RELEASE_SAFETY_PASS merged-main-target backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
+  `RELEASE_SAFETY_PASS merged-main-target generated-worktree-guard backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
 );
 
 function hasTopLevelWorkflowEvent(source, event) {
