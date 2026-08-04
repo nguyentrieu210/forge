@@ -1,363 +1,55 @@
-import {
-  APP_CALLBACK_HEADER,
-  D1UserStore,
-  staticDevelopmentActor,
-  verifyTrustedIdentity,
-  type TrustedIdentityKey,
-} from "../../../packages/auth/src/index.js";
+import { D1UserStore } from "../../../packages/auth/src/index.js";
+import { AppInstaller } from "../../../packages/app-registry/src/index.js";
+import type { JsonObject } from "../../../packages/contracts/src/index.js";
+import { errors, jsonResponse, readJson } from "../../../packages/core/src/index.js";
 import {
   assertSessionCsrf,
   establishSession,
   faultResponse,
-  isMfaRoutePath,
-  isPublicFrappePath,
-  isSessionManagementPath,
-  routeFrappeAuth,
-  routeMfaApi,
-  routeSessionManagementApi,
   slideSession,
   type AuthRouteContext,
   type EstablishedSession,
 } from "../../../packages/frappe-api/src/index.js";
-import type { Actor, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
-import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
-import { errorResponse, errors, randomId } from "../../../packages/core/src/index.js";
-import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
-import type {
-  CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
-  NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
-  VersionedBomData, WorkOrderData, WorkstationCapacityCalendarData,
-} from "../../../packages/clouderp-erpnext/src/index.js";
-import {
-  D1DocumentAccessStore,
-  D1MetadataStore,
-  MetadataPermissionService,
-} from "../../../packages/frappe-model/src/index.js";
-import coreWorker from "./index-core.js";
-import {
-  isDailyLedgerApiPath,
-  isDailyLedgerFrappePath,
-  routeDailyLedgerApi,
-} from "./daily-ledger-api.js";
-import {
-  isManufacturingBomBulkApiPath,
-  isManufacturingBomBulkFrappePath,
-  routeManufacturingBomBulkApi,
-} from "./manufacturing-bom-bulk-api.js";
-import {
-  isManufacturingCapacityApiPath,
-  isManufacturingCapacityFrappePath,
-  routeManufacturingCapacityApi,
-} from "./manufacturing-capacity-api.js";
-import {
-  isManufacturingCostingApiPath,
-  isManufacturingCostingFrappePath,
-  routeManufacturingCostingApi,
-} from "./manufacturing-costing-api.js";
-import {
-  isManufacturingGenealogyApiPath,
-  isManufacturingGenealogyFrappePath,
-  routeManufacturingGenealogyApi,
-} from "./manufacturing-genealogy-api.js";
-import {
-  isManufacturingMrpApiPath,
-  isManufacturingMrpFrappePath,
-  routeManufacturingMrpApi,
-} from "./manufacturing-mrp-api.js";
-import { isMigrationApiPath, routeMigrationApi } from "./migration-api.js";
-import { mfaKeyRingFromEnv } from "./mfa-config.js";
-import {
-  assertRecentNativeSecurityAuthentication,
-  requiresRecentNativeSecurityAuthentication,
-} from "./native-security.js";
-import {
-  isPhysicalStockApiPath,
-  isPhysicalStockFrappePath,
-  routePhysicalStockApi,
-} from "./physical-stock-api.js";
-import { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";
+import { D1MetadataStore } from "../../../packages/frappe-model/src/index.js";
+import baseWorker from "./index-base.js";
 import type { TenantEnv } from "./env.js";
 
-export * from "./index-core.js";
+export * from "./index-base.js";
 
-interface InterceptedRouteAuthentication {
-  actor: Actor;
-  established?: EstablishedSession;
-  authContext?: AuthRouteContext;
+const CAPABILITY_GET = "/api/method/metaforge.api.get_capability_profile";
+const CAPABILITY_PREVIEW = "/api/method/metaforge.api.preview_capability_profile";
+const CAPABILITY_APPLY = "/api/method/metaforge.api.apply_capability_profile";
+
+function isCapabilityRoute(pathname: string): boolean {
+  return pathname === CAPABILITY_GET || pathname === CAPABILITY_PREVIEW || pathname === CAPABILITY_APPLY;
 }
 
-/**
- * Thin entrypoint wrapper for bounded authenticated report/operation routes, cookie-bound
- * account security, and the privileged native-administration step-up boundary. Existing
- * core route semantics and scheduled tasks remain delegated to index-core.ts.
- */
-export default {
-  async fetch(request: Request, env: TenantEnv, _ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-    const physicalStock = isPhysicalStockApiPath(url.pathname);
-    const dailyLedger = isDailyLedgerApiPath(url.pathname);
-    const manufacturingBomBulk = isManufacturingBomBulkApiPath(url.pathname);
-    const manufacturingMrp = isManufacturingMrpApiPath(url.pathname);
-    const manufacturingCapacity = isManufacturingCapacityApiPath(url.pathname);
-    const manufacturingCosting = isManufacturingCostingApiPath(url.pathname);
-    const manufacturingGenealogy = isManufacturingGenealogyApiPath(url.pathname);
-    const migration = isMigrationApiPath(url.pathname);
-    const qms = isQmsApiPath(url.pathname);
-    const sessionManagement = isSessionManagementPath(url.pathname);
-    const publicFrappeAuth = isPublicFrappePath(url.pathname);
-    const mfaManagement = isMfaRoutePath(url.pathname);
-    const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
-    if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
-      && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !migration && !qms
-      && !sessionManagement && !publicFrappeAuth && !mfaManagement && !nativeSecurity) {
-      return coreWorker.fetch(request, env);
-    }
-
-    const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
-    try {
-      const tenantId = resolveTenant(request, env);
-      if (!tenantId) throw errors.authentication("Missing tenant context");
-
-      if (nativeSecurity) {
-        await assertRecentNativeSecurityAuthentication(request, env, tenantId, traceId);
-        // The wrapper owns only the step-up invariant. Core still owns System Manager
-        // authorization, validation and persistence, so passing step-up must not create a
-        // second implementation of any native admin route.
-        if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
-          && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !migration && !qms
-          && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
-          return coreWorker.fetch(request, env);
-        }
-      }
-
-      if (publicFrappeAuth) {
-        const authContext = createAuthContext(request, env, tenantId, traceId);
-        const response = await routeFrappeAuth(request, url, authContext);
-        if (response) return response;
-        return coreWorker.fetch(request, env);
-      }
-
-      const authentication = await authenticateInterceptedRoute(request, url, env, tenantId, traceId);
-      const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
-
-      let response: Response | null;
-      if (mfaManagement) {
-        const established = authentication.established;
-        const authContext = authentication.authContext;
-        if (!established || !authContext) throw errors.permission("A browser session is required for MFA management");
-        response = await routeMfaApi(request, url, {
-          tenantId,
-          actor: established.actor,
-          traceId,
-          authenticatedAt: established.session.authenticatedAt,
-          now: authContext.now(),
-          mfa: authContext.users.mfa,
-        });
-      } else if (sessionManagement) {
-        const established = authentication.established;
-        const authContext = authentication.authContext;
-        if (!established || !authContext) throw errors.permission("A browser session is required for session management");
-        response = await routeSessionManagementApi(request, url, {
-          tenantId,
-          userId: established.actor.user_id,
-          traceId,
-          now: authContext.now(),
-          sessions: authContext.users.sessions,
-          ...(established.session.sessionId ? { currentSessionId: established.session.sessionId } : {}),
-          revokeAllSessions: () => authContext.users.administration.revokeSessions(
-            tenantId,
-            established.actor.user_id,
-            {
-              actorUserId: established.actor.user_id,
-              traceId,
-              source: "metaforge.api.logout_other_sessions",
-            },
-            authContext.now(),
-          ),
-        });
-      } else if (migration) {
-        response = await routeMigrationApi(request, url, {
-          db: requestDb,
-          tenantId,
-          actor: authentication.actor,
-          traceId,
-          runCommand: (command) => executeCommandThroughCore(request, env, command),
-        });
-      } else if (physicalStock) {
-        const metadata = new D1MetadataStore(requestDb);
-        const access = new D1DocumentAccessStore(requestDb);
-        const permissions = new MetadataPermissionService(metadata, undefined, access);
-        response = await routePhysicalStockApi(request, url, {
-          db: requestDb,
-          tenantId,
-          actor: authentication.actor,
-          permissions,
-          traceId,
-        });
-      } else if (manufacturingBomBulk) {
-        const metadata = new D1MetadataStore(requestDb);
-        const access = new D1DocumentAccessStore(requestDb);
-        const permissions = new MetadataPermissionService(metadata, undefined, access);
-        const documents = new D1MutationStore(env.DB);
-        response = await routeManufacturingBomBulkApi(request, url, {
-          tenantId,
-          actor: authentication.actor,
-          permissions,
-          traceId,
-          findCanonicalRevisions: async (document) => {
-            const company = text(document.company);
-            const item = text(document.item);
-            const revision = integer(document.revision);
-            const all = await documents.listDocumentsByDoctype<JsonObject>(tenantId, "Bill of Materials");
-            const matches = all.filter((candidate) => candidate.data.company === company
-              && candidate.data.item === item && integer(candidate.data.revision) === revision);
-            const readable = [];
-            for (const candidate of matches) {
-              if (await permissions.canReadDocument(authentication.actor, tenantId, candidate)) readable.push(candidate);
-            }
-            if (readable.length !== matches.length) {
-              throw errors.permission("A matching BOM revision is outside the current read scope");
-            }
-            return readable.map((candidate) => ({
-              name: candidate.name,
-              docstatus: candidate.docstatus,
-              status: candidate.status,
-              ...candidate.data,
-            }));
-          },
-          createCanonicalDraft: (document) => createDocumentThroughCore(request, env, "Bill of Materials", document),
-        });
-      } else if (manufacturingMrp) {
-        const metadata = new D1MetadataStore(requestDb);
-        const access = new D1DocumentAccessStore(requestDb);
-        const permissions = new MetadataPermissionService(metadata, undefined, access);
-        const documents = new D1MutationStore(env.DB);
-        response = await routeManufacturingMrpApi(request, url, {
-          tenantId,
-          actor: authentication.actor,
-          permissions,
-          traceId,
-          loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
-          listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
-          listMaterialRequests: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Material Request"),
-          createCanonicalMaterialRequest: (document) => createDocumentThroughCore(request, env, "Material Request", document),
-        });
-      } else if (manufacturingCapacity) {
-        const metadata = new D1MetadataStore(requestDb);
-        const access = new D1DocumentAccessStore(requestDb);
-        const permissions = new MetadataPermissionService(metadata, undefined, access);
-        const documents = new D1MutationStore(env.DB);
-        response = await routeManufacturingCapacityApi(request, url, {
-          tenantId,
-          actor: authentication.actor,
-          permissions,
-          traceId,
-          loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
-          listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
-          listRoutings: () => documents.listDocumentsByDoctype<ManufacturingRoutingData>(tenantId, "Manufacturing Routing"),
-          listCalendars: () => documents.listDocumentsByDoctype<WorkstationCapacityCalendarData>(tenantId, "Workstation Capacity Calendar"),
-          listDowntimes: () => documents.listDocumentsByDoctype<ManufacturingDowntimeData>(tenantId, "Manufacturing Downtime"),
-        });
-      } else if (manufacturingCosting) {
-        const metadata = new D1MetadataStore(requestDb);
-        const access = new D1DocumentAccessStore(requestDb);
-        const permissions = new MetadataPermissionService(metadata, undefined, access);
-        const documents = new D1MutationStore(env.DB);
-        response = await routeManufacturingCostingApi(request, url, {
-          tenantId,
-          actor: authentication.actor,
-          permissions,
-          traceId,
-          loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
-          loadBom: (name) => documents.getDocument<VersionedBomData>(tenantId, "Bill of Materials", name),
-          listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
-          getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
-        });
-      } else if (manufacturingGenealogy) {
-        const metadata = new D1MetadataStore(requestDb);
-        const access = new D1DocumentAccessStore(requestDb);
-        const permissions = new MetadataPermissionService(metadata, undefined, access);
-        const documents = new D1MutationStore(env.DB);
-        response = await routeManufacturingGenealogyApi(request, url, {
-          tenantId,
-          actor: authentication.actor,
-          permissions,
-          traceId,
-          loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
-          listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
-          getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
-        });
-      } else if (qms) {
-        const metadata = new D1MetadataStore(requestDb);
-        const access = new D1DocumentAccessStore(requestDb);
-        const permissions = new MetadataPermissionService(metadata, undefined, access);
-        const documents = new D1MutationStore(env.DB);
-        response = await routeQmsApi(request, url, {
-          tenantId,
-          actor: authentication.actor,
-          permissions,
-          traceId,
-          now: () => new Date().toISOString(),
-          loadQualityPlan: (name) => documents.getDocument<QualityPlanData>(tenantId, "Quality Plan", name),
-          listNcr: () => documents.listDocumentsByDoctype<NonConformanceReportData>(tenantId, "Non Conformance Report"),
-          listRca: () => documents.listDocumentsByDoctype<RootCauseAnalysisData>(tenantId, "Root Cause Analysis"),
-          listCapa: () => documents.listDocumentsByDoctype<CapaData>(tenantId, "CAPA"),
-          listCalibration: () => documents.listDocumentsByDoctype<CalibrationRecordData>(tenantId, "Calibration Record"),
-        });
-      } else {
-        response = await routeDailyLedgerApi(request, url, {
-          db: requestDb,
-          tenantId,
-          actor: authentication.actor,
-          traceId,
-        });
-      }
-      if (!response) return coreWorker.fetch(request, env);
-
-      if (authentication.established && authentication.authContext) {
-        const refreshed = await slideSession(authentication.established, authentication.authContext);
-        if (refreshed) response.headers.append("set-cookie", refreshed);
-      }
-      return response;
-    } catch (error) {
-      return isPhysicalStockFrappePath(url.pathname)
-        || isDailyLedgerFrappePath(url.pathname)
-        || isManufacturingBomBulkFrappePath(url.pathname)
-        || isManufacturingMrpFrappePath(url.pathname)
-        || isManufacturingCapacityFrappePath(url.pathname)
-        || isManufacturingCostingFrappePath(url.pathname)
-        || isManufacturingGenealogyFrappePath(url.pathname)
-        || isQmsFrappePath(url.pathname)
-        || isSessionManagementPath(url.pathname)
-        || isPublicFrappePath(url.pathname)
-        || isMfaRoutePath(url.pathname)
-        ? faultResponse(error, traceId)
-        : errorResponse(error, traceId);
-    }
-  },
-
-  async scheduled(controller: unknown, env: TenantEnv, ctx: ExecutionContext): Promise<void> {
-    await coreWorker.scheduled(controller, env, ctx);
-  },
-};
-
-function resolveTenant(request: Request, env: TenantEnv): string | null {
+function resolveTenant(request: Request, env: TenantEnv): string {
   const routed = request.headers.get("x-cloudforge-tenant");
   if (env.TENANT_ID && routed && routed !== env.TENANT_ID) {
     throw errors.misconfigured("Tenant binding mismatch");
   }
-  return env.TENANT_ID ?? routed;
+  const tenantId = env.TENANT_ID ?? routed;
+  if (!tenantId) throw errors.authentication("Missing tenant context");
+  return tenantId;
 }
 
-function createAuthContext(
-  request: Request,
-  env: TenantEnv,
-  tenantId: string,
-  traceId: string,
-): AuthRouteContext {
-  return {
+function requireSystemManager(established: EstablishedSession): void {
+  const actor = established.actor;
+  if (actor.user_id === "Administrator" || actor.roles.includes("Administrator") || actor.roles.includes("System Manager")) return;
+  throw errors.permission("System Manager is required");
+}
+
+async function capabilityResponse(request: Request, env: TenantEnv): Promise<Response> {
+  const traceId = request.headers.get("x-cloudforge-trace-id") ?? crypto.randomUUID();
+  const tenantId = resolveTenant(request, env);
+  if (!env.SESSION_SECRET && env.AUTH_MODE !== "development") {
+    throw errors.misconfigured("Session authentication is not configured");
+  }
+  const users = new D1UserStore(env.DB);
+  const authContext: AuthRouteContext = {
     tenantId,
-    users: new D1UserStore(env.DB, mfaKeyRingFromEnv(env)),
+    users,
     sessionSecret: env.SESSION_SECRET ?? "",
     traceId,
     now: () => new Date().toISOString(),
@@ -367,147 +59,48 @@ function createAuthContext(
       clientAddress: request.headers.get("CF-Connecting-IP") ?? "unknown",
     },
   };
-}
+  const established = await establishSession(request, authContext);
+  if (!established) throw errors.permission("Login to access this resource");
+  if (request.method !== "GET") assertSessionCsrf(request, established);
+  requireSystemManager(established);
 
-async function authenticateInterceptedRoute(
-  request: Request,
-  url: URL,
-  env: TenantEnv,
-  tenantId: string,
-  traceId: string,
-): Promise<InterceptedRouteAuthentication> {
-  const cookieBound = isPhysicalStockFrappePath(url.pathname)
-    || isDailyLedgerFrappePath(url.pathname)
-    || isManufacturingBomBulkFrappePath(url.pathname)
-    || isManufacturingMrpFrappePath(url.pathname)
-    || isManufacturingCapacityFrappePath(url.pathname)
-    || isManufacturingCostingFrappePath(url.pathname)
-    || isManufacturingGenealogyFrappePath(url.pathname)
-    || isQmsFrappePath(url.pathname)
-    || isSessionManagementPath(url.pathname)
-    || isMfaRoutePath(url.pathname);
-  if (!cookieBound) {
-    return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
-  }
-
-  const sessionSecret = env.SESSION_SECRET;
-  const appCallback = request.headers.get(APP_CALLBACK_HEADER);
-  const authContext = createAuthContext(request, env, tenantId, traceId);
-
-  if (sessionSecret && !appCallback) {
-    const established = await establishSession(request, authContext);
-    if (established) {
-      assertSessionCsrf(request, established);
-      return { actor: established.actor, established, authContext };
-    }
-  }
-
-  if (isSessionManagementPath(url.pathname) || isMfaRoutePath(url.pathname)) {
-    // Account-security administration cannot borrow an app callback identity.
-    throw errors.permission("A browser session is required for account security management");
-  }
-
-  if (appCallback) {
-    return { actor: await authenticateTrustedIdentity(request, env, tenantId, traceId) };
-  }
-
-  if (!sessionSecret && env.AUTH_MODE === "development") {
-    return { actor: staticDevelopmentActor(env.DEV_ACTOR_JSON) };
-  }
-
-  throw errors.permission("Login to access this resource");
-}
-
-function createDocumentThroughCore(
-  request: Request,
-  env: TenantEnv,
-  doctype: string,
-  document: JsonObject,
-): Promise<Response> {
+  const db = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
+  const installer = new AppInstaller(db, new D1MetadataStore(db), users);
   const url = new URL(request.url);
-  url.pathname = `/api/resource/${encodeURIComponent(doctype)}`;
-  url.search = "";
-  const headers = forwardedHeaders(request);
-  headers.set("content-type", "application/json");
-  return coreWorker.fetch(new Request(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(document),
-  }), env);
+  let message: unknown;
+  if (url.pathname === CAPABILITY_GET && request.method === "GET") {
+    message = await installer.currentCapabilityProfile(tenantId);
+  } else if (url.pathname === CAPABILITY_PREVIEW && request.method === "POST") {
+    message = await installer.previewCapabilityProfile(tenantId, await readJson<JsonObject>(request, 128_000));
+  } else if (url.pathname === CAPABILITY_APPLY && request.method === "POST") {
+    message = await installer.applyCapabilityProfile(
+      tenantId,
+      await readJson<JsonObject>(request, 128_000),
+      established.actor.user_id,
+      authContext.now(),
+    );
+  } else {
+    throw errors.notFound("Capability profile route not found");
+  }
+
+  const response = jsonResponse({ message: message as JsonObject }, 200, { "x-cloudforge-trace-id": traceId });
+  const refreshed = await slideSession(established, authContext);
+  if (refreshed) response.headers.append("set-cookie", refreshed);
+  return response;
 }
 
-async function executeCommandThroughCore(
-  request: Request,
-  env: TenantEnv,
-  command: MutationCommand,
-): Promise<MutationReceipt> {
-  const url = new URL(request.url);
-  url.pathname = "/api/v1/commands";
-  url.search = "";
-  const headers = forwardedHeaders(request);
-  headers.set("content-type", "application/json");
-  const input = { ...command } as Record<string, unknown>;
-  delete input.actor;
-  const response = await coreWorker.fetch(new Request(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(input),
-  }), env);
-  const raw = await response.text();
-  if (!response.ok) {
-    let message = `Migration command failed with HTTP ${response.status}`;
+export default {
+  async fetch(request: Request, env: TenantEnv, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    if (!isCapabilityRoute(url.pathname)) return baseWorker.fetch(request, env, ctx);
     try {
-      const parsed = JSON.parse(raw) as { error?: { message?: unknown } };
-      if (typeof parsed.error?.message === "string" && parsed.error.message.trim()) message = parsed.error.message;
-    } catch {
-      if (raw.trim()) message = raw.slice(0, 1000);
+      return await capabilityResponse(request, env);
+    } catch (error) {
+      const traceId = request.headers.get("x-cloudforge-trace-id") ?? "r5-capability-profile";
+      return faultResponse(error, traceId);
     }
-    throw new Error(message);
-  }
-  return JSON.parse(raw) as MutationReceipt;
-}
-
-function forwardedHeaders(request: Request): Headers {
-  const headers = new Headers(request.headers);
-  headers.delete("content-length");
-  return headers;
-}
-
-function text(value: unknown): string {
-  return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
-}
-
-function integer(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isSafeInteger(parsed) ? parsed : 0;
-}
-
-async function authenticateTrustedIdentity(
-  request: Request,
-  env: TenantEnv,
-  tenantId: string,
-  traceId: string,
-): Promise<Actor> {
-  if (env.AUTH_MODE === "development") return staticDevelopmentActor(env.DEV_ACTOR_JSON);
-  const keys = trustedIdentityKeys(env);
-  const identity = await verifyTrustedIdentity(request, {
-    tenantId,
-    traceId,
-    ...(keys.length > 0 ? { keys } : { masterSecret: env.INTERNAL_AUTH_SECRET }),
-  });
-  return identity.actor;
-}
-
-function trustedIdentityKeys(env: TenantEnv): TrustedIdentityKey[] {
-  const keys: TrustedIdentityKey[] = [];
-  if (env.INTERNAL_AUTH_KEY_ID) {
-    keys.push({ key_id: env.INTERNAL_AUTH_KEY_ID, secret: env.INTERNAL_AUTH_SECRET });
-  }
-  if (env.INTERNAL_AUTH_KEY_ID_PREVIOUS && env.INTERNAL_AUTH_SECRET_PREVIOUS) {
-    keys.push({
-      key_id: env.INTERNAL_AUTH_KEY_ID_PREVIOUS,
-      secret: env.INTERNAL_AUTH_SECRET_PREVIOUS,
-    });
-  }
-  return keys;
-}
+  },
+  scheduled(controller: unknown, env: TenantEnv, ctx: ExecutionContext): Promise<void> | void {
+    return baseWorker.scheduled?.(controller, env, ctx);
+  },
+};

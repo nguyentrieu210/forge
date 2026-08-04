@@ -1,0 +1,220 @@
+name: R5 Final Convergence
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r5-final-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  final-convergence:
+    if: github.head_ref == 'program/r5-final-convergence-20260804'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - name: Checkout exact R5 candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact candidate and integrated R5 ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git fetch origin main
+          for sha in \
+            d99f00da854bcaab5ae7a7c30810fc6cde31b4c7 \
+            8ac3435dbd80f16a5616995d4e473178aeebd21e \
+            8cbc8e31905f65e52a0b40db34a7be0dd4ece6c6 \
+            e83a2d6db376345d0dc4a9d57c5336f7c1545223 \
+            4474ceff18497a20d4c57a097d4a55dc81614970; do
+            git merge-base --is-ancestor "$sha" HEAD
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit server and fail on R5-owned TypeScript diagnostics
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/r5-final-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/app-registry/src/index.js
+          test -f dist/apps/tenant-worker/src/index.js
+          if grep 'error TS' /tmp/r5-final-tsc.log | grep -E '(app-registry/src/(version-requirement|capability-profile|hooks|platform-aware-installer)|tenant-worker/src/(index|index-core)|hrm-loan-finance-reconciliation|r5-finance-hcm-payment-entry|purchase-allocation-controllers|uom)' ; then
+            echo 'R5-owned TypeScript diagnostic detected'
+            exit 1
+          fi
+          echo "repository_tsc_status=$status"
+
+      - name: R5 capability package and runtime authority
+        working-directory: server
+        run: |
+          node --test \
+            tests/r5-final-convergence.test.mjs \
+            tests/capability-profile.test.mjs \
+            tests/capability-profile-store.test.mjs \
+            tests/app-hooks.test.mjs \
+            tests/app-registry.test.mjs
+
+      - name: R5 Finance and HCM reconciliation
+        working-directory: server
+        run: |
+          node --test \
+            tests/r5-finance-hcm-loan-reconciliation.test.mjs \
+            tests/hrm-operational.test.mjs \
+            tests/hrm-statutory-payroll.test.mjs \
+            tests/hrm-vn-pit-2026-source-lock.test.mjs
+
+      - name: R5 Commercial and Supply Chain
+        working-directory: server
+        run: |
+          node --test \
+            tests/r5-03-purchase-allocation-measure.test.mjs \
+            tests/purchase-allocation-actions.test.mjs \
+            tests/purchase-receipt-allocation-controller.test.mjs \
+            tests/purchase-receipt-submit-preview.test.mjs \
+            tests/procurement-p2p-closure.test.mjs \
+            tests/procurement-p2p-correction-boundary.test.mjs \
+            tests/inventory-scan-resolution.test.mjs \
+            tests/wms-wave-scan.test.mjs \
+            tests/valuation-audit.test.mjs \
+            tests/repost-item-valuation-integrity.test.mjs
+
+      - name: R5 Manufacturing QMS Warranty Service
+        working-directory: server
+        run: |
+          node --test \
+            tests/r5-04-manufacturing-service-integration.test.mjs \
+            tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs \
+            tests/manufacturing-transaction-closure.test.mjs \
+            tests/manufacturing-cost-evidence.test.mjs \
+            tests/qms-lifecycle.test.mjs \
+            tests/maintenance-field-service.test.mjs \
+            tests/rc4-a14-project-service-field.test.mjs \
+            tests/alumdoor-golden-order-readonly.test.mjs
+
+      - name: Cross-ledger and deterministic performance evidence
+        working-directory: server
+        run: |
+          python3 -m py_compile scripts/rc4-cross-ledger-reconciliation.py
+          python3 scripts/rc4-cross-ledger-reconciliation.py --self-test
+          node --test tests/cloudflare-cost.test.mjs tests/perf-regression.test.mjs
+
+      - name: Migration governance and representative opening reconciliation
+        working-directory: server
+        run: |
+          python3 scripts/verify-sql.py
+          node scripts/verify-migration-governance.mjs --base-ref "${{ github.event.pull_request.base.sha }}"
+          node --test tests/migration-governance.test.mjs tests/migration-opening.test.mjs tests/migration-manifest-reconcile.test.mjs
+
+      - name: First-party package dry checks
+        working-directory: server
+        run: |
+          node scripts/pack-app.mjs apps-src/hrm --check
+          node scripts/pack-app.mjs apps-src/vn-accounting --check
+          node scripts/pack-app.mjs apps-src/manufacturing-qms --check
+          node scripts/pack-app.mjs apps-src/maintenance --check
+
+      - name: Disposable tenant package lifecycle
+        working-directory: server
+        run: >-
+          pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts
+          --config apps/tenant-worker/vitest.config.mts
+          -t "logs in with a real password hash|repairs an older tenant from the standard catalogue|refuses a request routed for a different tenant|installs an app, and re-installing the identical package|upgrades an app REPEATEDLY|rolls an app install back atomically|refuses to uninstall an app whose doctypes still hold documents"
+
+      - name: Capability denominator and current maturity arithmetic
+        run: node server/scripts/validate-enterprise-capability-status.mjs
+
+      - name: Builder build
+        working-directory: client
+        run: pnpm --filter @metaforge/builder build
+
+      - name: Capability Profile Builder regression
+        run: node --test client/packages/builder/test/capability-profile.test.mjs
+
+      - name: Runtime typecheck
+        working-directory: client
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter runtime typecheck 2>&1 | tee /tmp/r5-runtime-typecheck.log
+
+      - name: Upload runtime typecheck diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r5-runtime-typecheck-diagnostics
+          path: /tmp/r5-runtime-typecheck.log
+          if-no-files-found: ignore
+
+      - name: Runtime Vite bundle
+        working-directory: client/apps/runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vite build 2>&1 | tee /tmp/r5-runtime-vite.log
+
+      - name: Upload runtime Vite diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r5-runtime-vite-diagnostics
+          path: /tmp/r5-runtime-vite.log
+          if-no-files-found: ignore
+
+      - name: Install Chromium for bounded R5 browser smoke
+        working-directory: client/e2e-forge
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser-test capability profile authoring
+        working-directory: client/e2e-forge
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec playwright test --config playwright.r5-capability.config.ts 2>&1 | tee /tmp/r5-browser.log
+
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r5-browser-diagnostics
+          path: |
+            /tmp/r5-browser.log
+            client/e2e-forge/test-results
+            client/e2e-forge/playwright-report
+          if-no-files-found: ignore
+
+      - name: Candidate hygiene and no production mutation guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+          changed=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...HEAD")
+          echo "$changed"
+          if echo "$changed" | grep -E '(^|/)(wrangler\.toml|\.dev\.vars|\.env($|\.)|deploy-evidence/|backups/)' ; then
+            echo 'R5 final candidate crossed production/provider artifact boundary'
+            exit 1
+          fi
+          echo 'R5 FINAL ENGINEERING CONVERGENCE: PASS'

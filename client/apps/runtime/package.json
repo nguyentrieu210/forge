@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:matrix-harness": "vite --config vite.matrix-e2e.config.ts",
-    "typecheck": "tsc -b",
+    "typecheck": "pnpm --workspace-root --filter \"runtime^...\" run build && tsc -b",
     "build": "tsc -b && vite build",
     "build:matrix-harness": "vite build --config vite.matrix-e2e.config.ts"
   },

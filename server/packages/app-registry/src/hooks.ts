@@ -85,6 +85,12 @@ export interface HookDispatcherEnv {
    * platform's own internal credential. See `deriveAppCallKey`.
    */
   INTERNAL_AUTH_SECRET?: string;
+  /**
+   * Optional canonical runtime resolver. When supplied, every new delivery and retry
+   * re-checks the package's effective capability profile before reaching the app Worker.
+   * Returning null means the hook is disabled/removed and the pending delivery is closed.
+   */
+  resolveTarget?: (tenantId: string, appId: string, eventType: string) => Promise<HookTarget | null>;
 }
 
 export class AppHookDispatcher {
@@ -103,14 +109,23 @@ export class AppHookDispatcher {
    */
   async fanOut(tenantId: string, event: DomainEvent, targets: HookTarget[], now: string): Promise<HookDeliveryOutcome[]> {
     if (!targets.length) return [];
-    await this.db.batch(targets.map((target) => this.db.prepare(
+    const effectiveTargets: HookTarget[] = [];
+    for (const target of targets) {
+      const effective = this.env.resolveTarget
+        ? await this.env.resolveTarget(tenantId, target.appId, event.event_type)
+        : target;
+      if (effective) effectiveTargets.push(effective);
+    }
+    if (!effectiveTargets.length) return [];
+
+    await this.db.batch(effectiveTargets.map((target) => this.db.prepare(
       `INSERT INTO app_hook_deliveries(tenant_id,app_id,event_id,event_type,status,attempts,next_attempt_at,created_at,modified_at)
        VALUES(?1,?2,?3,?4,'pending',0,?5,?5,?5)
        ON CONFLICT(tenant_id,app_id,event_id) DO NOTHING`,
     ).bind(tenantId, target.appId, event.event_id, event.event_type, now)));
 
     const outcomes: HookDeliveryOutcome[] = [];
-    for (const target of targets) {
+    for (const target of effectiveTargets) {
       // Sequential and individually guarded: one app's failure must not abort the
       // loop and starve the apps after it.
       outcomes.push(await this.deliverOne(tenantId, event, target, now));
@@ -138,10 +153,14 @@ export class AppHookDispatcher {
     const outcomes: HookDeliveryOutcome[] = [];
     for (const row of due.results ?? []) {
       const manifest = JSON.parse(row.manifest_json) as AppManifest;
-      if (!manifest.worker) {
-        // The app dropped its worker in an upgrade; there is nowhere to deliver, so
-        // the row is closed rather than retried forever.
-        await this.abandon(tenantId, row.app_id, row.event_id, "App no longer declares a worker", row.attempts, now);
+      let target: HookTarget | null = manifest.worker ? { appId: row.app_id, worker: manifest.worker } : null;
+      if (this.env.resolveTarget) {
+        target = await this.env.resolveTarget(tenantId, row.app_id, row.event_type);
+      }
+      if (!target) {
+        // An app upgrade, uninstall, or capability deactivation can remove the executable
+        // surface while a retry is queued. Close it instead of running disabled behavior.
+        await this.abandon(tenantId, row.app_id, row.event_id, "App hook is no longer active", row.attempts, now);
         outcomes.push({ appId: row.app_id, status: "abandoned", attempts: row.attempts });
         continue;
       }
@@ -151,7 +170,7 @@ export class AppHookDispatcher {
         outcomes.push({ appId: row.app_id, status: "abandoned", attempts: row.attempts });
         continue;
       }
-      outcomes.push(await this.deliverOne(tenantId, event, { appId: row.app_id, worker: manifest.worker }, now));
+      outcomes.push(await this.deliverOne(tenantId, event, target, now));
     }
     return outcomes;
   }

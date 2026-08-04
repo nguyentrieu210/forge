@@ -9,6 +9,7 @@ import {
   resolveCapabilityProfile,
   type CapabilityProfileProposal,
   type CapabilityResolutionPlan,
+  type CapabilitySurfaceKind,
   type PackageCapabilityContract,
 } from "./capability-profile.js";
 import { CapabilityProfileService, type CapabilityProfileApplyResult, type CapabilityProfilePreview } from "./capability-profile-store.js";
@@ -22,6 +23,12 @@ export type CapabilityAwareInstalledAppRecord = InstalledAppRecordWithInputTable
     version: number;
   };
 };
+
+export interface CapabilityProfileSnapshot {
+  profile_id: string;
+  version: number;
+  resolution: CapabilityResolutionPlan | null;
+}
 
 function filteredClient(
   client: AppClientManifest | null | undefined,
@@ -88,20 +95,32 @@ export class AppInstaller extends InputTableAppInstaller {
     return this.capabilityProfiles.apply(tenantId, installed, proposal, actor, now);
   }
 
-  async currentCapabilityResolution(tenantId: string): Promise<CapabilityResolutionPlan | null> {
+  async currentCapabilityProfile(tenantId: string): Promise<CapabilityProfileSnapshot> {
     const installed = await super.list(tenantId);
     const contracts = await this.capabilityProfiles.store.contractsForInstalled(tenantId, installed);
     const active = await this.capabilityProfiles.store.active(tenantId);
     if (active) {
-      return resolveCapabilityProfile(contracts, installed, active.proposal, active.resolution);
+      return {
+        profile_id: active.profile_id,
+        version: active.version,
+        resolution: resolveCapabilityProfile(contracts, installed, active.proposal, active.resolution),
+      };
     }
-    if (!contracts.length) return null;
-    return resolveCapabilityProfile(
-      contracts,
-      installed,
-      { profile_id: "default", expected_version: 0, selections: [] },
-      null,
-    );
+    if (!contracts.length) return { profile_id: "default", version: 0, resolution: null };
+    return {
+      profile_id: "default",
+      version: 0,
+      resolution: resolveCapabilityProfile(
+        contracts,
+        installed,
+        { profile_id: "default", expected_version: 0, selections: [] },
+        null,
+      ),
+    };
+  }
+
+  async currentCapabilityResolution(tenantId: string): Promise<CapabilityResolutionPlan | null> {
+    return (await this.currentCapabilityProfile(tenantId)).resolution;
   }
 
   async assertCapability(tenantId: string, capabilityId: string): Promise<void> {
@@ -112,6 +131,34 @@ export class AppInstaller extends InputTableAppInstaller {
     if (capability.state !== "enabled" && capability.state !== "required") {
       throw errors.permission(`Capability is not active: ${capabilityId}`);
     }
+  }
+
+  /**
+   * Single server-side authority for non-visual runtime consumers such as hooks,
+   * scheduled jobs and provider dispatch. Packages without a capability contract stay
+   * active for backward compatibility; a contracted surface follows the effective
+   * tenant profile and never trusts client-side flags.
+   */
+  async isCapabilitySurfaceEnabled(
+    tenantId: string,
+    packageId: string,
+    kind: CapabilitySurfaceKind,
+    surface: string,
+  ): Promise<boolean> {
+    const installed = await super.list(tenantId);
+    const contracts = await this.capabilityProfiles.store.contractsForInstalled(tenantId, installed);
+    const packageContracts = contracts.filter((contract) => contract.package_id === packageId);
+    if (!packageContracts.length) return true;
+    const active = await this.capabilityProfiles.store.active(tenantId);
+    const plan = active
+      ? resolveCapabilityProfile(contracts, installed, active.proposal, active.resolution)
+      : resolveCapabilityProfile(
+        contracts,
+        installed,
+        { profile_id: "default", expected_version: 0, selections: [] },
+        null,
+      );
+    return capabilitySurfaceEnabled(packageContracts, plan, packageId, kind, surface);
   }
 
   override async list(tenantId: string): Promise<CapabilityAwareInstalledAppRecord[]> {
