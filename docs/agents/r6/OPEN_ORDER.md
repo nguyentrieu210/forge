@@ -77,7 +77,7 @@ Open only when R6-01 through R6-04 have one of:
 - PASS on the same candidate; or
 - explicit BLOCKED record with a dependency/authorization requirement.
 
-## 4. Final lane
+## 4. Final certification lane
 
 ### R6-05 — Independent Final Certification
 
@@ -102,7 +102,39 @@ Output:
 
 R6-05 must not fix business code. A code defect returns to the owning lane, creates a new candidate SHA, and causes affected certification evidence to rerun.
 
-## 5. Merge order
+## 5. Post-certification capability reconciliation
+
+### R6-06 — Capability Reconciliation
+
+Open only after R6-05 has published its final durable verdict.
+
+Branch:
+
+`agent/r6-06-capability-reconciliation`
+
+Contract:
+
+`docs/agents/r6/R6_06_CAPABILITY_RECONCILIATION.md`
+
+Inputs:
+
+- current 956-ID capability map/status;
+- R6-05 final certification record;
+- accepted evidence from R6-01 through R6-04;
+- exact SHA/environment provenance required by the maturity truth rules.
+
+Output:
+
+- exact before/after counts for `Hardened / RC / Wired / Foundation / Missing`;
+- a per-capability promotion/demotion ledger with evidence;
+- remaining Missing inventory;
+- updated `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` when justified;
+- successful `node server/scripts/validate-enterprise-capability-status.mjs` proof;
+- `R6-06-CAPABILITY-RECONCILED` or explicit blocker.
+
+R6-06 is post-certification accounting. It does not change `PILOT-GO` / `PILOT-NO-GO`, does not implement missing features, and must not bulk-promote capabilities merely because the release passed.
+
+## 6. Merge order
 
 Preferred merge sequence for any R6 source fixes:
 
@@ -112,11 +144,12 @@ R6-00 governance/docs if needed
  -> re-lock candidate
  -> rerun affected worker evidence
  -> R6-05 final evidence/convergence docs
+ -> R6-06 capability status reconciliation
 ```
 
 Do not merge lane evidence that claims a stale exact SHA as current after a source-changing lane has merged.
 
-## 6. Authorization checkpoints
+## 7. Authorization checkpoints
 
 Agents stop and request explicit authorization before any of these:
 
@@ -129,7 +162,9 @@ Agents stop and request explicit authorization before any of these:
 
 An agent should continue all independent read-only/local/disposable work instead of blocking the entire lane on a future authorization.
 
-## 7. Recommended human opening sequence
+R6-06 is read-only/evidence-accounting except for repository documentation/status updates; it has no production mutation authority.
+
+## 8. Recommended human opening sequence
 
 ```text
 1. Open R6-00 only.
@@ -140,9 +175,11 @@ An agent should continue all independent read-only/local/disposable work instead
 6. Re-lock if any source fix changes the candidate SHA.
 7. Open R6-05 only after four worker lanes are final.
 8. Accept PILOT-GO or resolve blockers and rerun affected lanes.
+9. Open R6-06 after the final R6-05 verdict to recount all 956 capabilities.
+10. Record the exact post-R6 maturity totals and deltas before treating capability status as current.
 ```
 
-## 8. Stop conditions
+## 9. Stop conditions
 
 An agent may stop early only for:
 
@@ -150,5 +187,7 @@ An agent may stop early only for:
 - an irreducible business/pilot scope decision;
 - a shared-contract dependency that cannot be safely separated;
 - discovery that the candidate SHA changed and its evidence is stale.
+
+For R6-06, an additional valid stop condition is an irreducible evidence-provenance conflict that prevents a truthful maturity assignment.
 
 Ordinary technical choices should be resolved from repo authority, runbooks, tests and exact evidence without asking the user.
