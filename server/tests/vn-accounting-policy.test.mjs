@@ -28,8 +28,8 @@ test("VN Accounting Policy is versioned, evidence-bound and four-eyes controlled
   for (const role of ["Chief Accountant", "Accounts Manager", "System Manager"]) {
     const permission = policy.permissions.find((entry) => entry.role === role);
     assert.ok(permission?.submit, `${role} must be able to approve policy`);
-    assert.equal(permission?.cancel, undefined, `${role} must not cancel approved policy history`);
-    assert.equal(permission?.amend, undefined, `${role} must not amend approved policy history`);
+    assert.equal(permission?.cancel, false, `${role} must not cancel approved policy history`);
+    assert.equal(permission?.amend, false, `${role} must not amend approved policy history`);
   }
 
   const workflow = parsed.workflows.find((item) => item.document_type === "VN Accounting Policy");
