@@ -1,0 +1,53 @@
+name: RC4 A22 Cross Ledger Reconciliation Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/scripts/rc4-cross-ledger-reconciliation.py"
+      - "docs/agents/rc4/RC4_A22_*"
+      - ".github/workflows/rc4-a22-cross-ledger-reconciliation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact head
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile read-only auditor
+        run: python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
+
+      - name: Run cross-ledger adversarial self-test
+        run: python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
+
+      - name: Enforce A22 authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          git diff --check "$base...HEAD"
+          changed="$(git diff --name-only "$base...HEAD")"
+          echo "$changed"
+          if echo "$changed" | grep -Ev '^(server/scripts/rc4-cross-ledger-reconciliation\.py|docs/agents/rc4/RC4_A22_[^/]+\.md|\.github/workflows/rc4-a22-cross-ledger-reconciliation\.yml)$'; then
+            echo "A22 changed a path outside its read-only QA/evidence authority"
+            exit 1
+          fi
+          if git diff "$base...HEAD" -- server/scripts/rc4-cross-ledger-reconciliation.py | grep -E '^\+.*\b(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE TABLE)\b' ; then
+            echo "A22 auditor introduced mutating SQL/DDL"
+            exit 1
+          fi
