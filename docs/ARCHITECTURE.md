@@ -1,12 +1,10 @@
-# Kiến trúc Forge
+# Forge ERP Architecture
 
 Ngày cập nhật: **2026-08-05**.
 
-Forge là **ERP / enterprise operating platform độc lập** trên Cloudflare. Kiến trúc của Forge được định nghĩa bởi Forge-owned contracts: Document Kernel, permission, metadata, domain services, ledgers, App Registry/App Factory, tenant runtime và MetaForge frontend.
+Forge ERP là enterprise resource planning và operating platform multi-tenant, metadata-driven, cloud-native trên Cloudflare. Kiến trúc được tổ chức quanh các authority lõi: Document Kernel, permission, metadata, domain services, canonical ledgers, App Registry/App Factory, tenant runtime và MetaForge frontend.
 
-Các adapter mang hình dạng API của hệ thống ngoài chỉ là **bounded compatibility surfaces**. Chúng không phải source of truth, không sở hữu business semantics và không định nghĩa product identity.
-
-## 1. Hình dạng hệ thống
+## 1. System shape
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
@@ -23,10 +21,10 @@ Các adapter mang hình dạng API của hệ thống ngoài chỉ là **bounded
                 │                              │
                 ▼                              ▼
 ┌────────────────────────────┐    ┌────────────────────────────┐
-│ Document / Domain Kernel   │    │ Compatibility / Integration│
-│ lifecycle · permission     │    │ migration · interop facade │
-│ validation · workflow      │    │ external API translations  │
-│ idempotency · audit        │    │ no business authority      │
+│ Document / Domain Kernel   │    │ Integration Services       │
+│ lifecycle · permission     │    │ import · migration · APIs  │
+│ validation · workflow      │    │ mapping · normalization    │
+│ idempotency · audit        │    │ governed translation       │
 └───────────────┬────────────┘    └────────────────────────────┘
                 │
         ┌───────┼───────────┬──────────────┐
@@ -35,7 +33,7 @@ Các adapter mang hình dạng API của hệ thống ngoài chỉ là **bounded
    tenant DB  Objects    outbox/jobs     files/artifacts
 ```
 
-Cloudflare is the infrastructure substrate; Forge remains the application/runtime authority.
+Cloudflare cung cấp infrastructure substrate; Forge ERP sở hữu application/runtime contracts và business authority.
 
 ## 2. Product layers
 
@@ -49,11 +47,11 @@ Authoritative backend/kernel gồm:
 - server-side permission;
 - workflow/action execution;
 - domain services/controllers;
-- Finance/Stock/Payment and other authoritative ledgers;
+- Finance/Stock/Payment và các authoritative ledgers;
 - outbox/jobs/retry/DLQ;
 - App Registry/App Factory lifecycle;
 - files, import/export, reporting/query services;
-- release, migration, recovery and operational contracts.
+- release, migration, recovery và operational contracts.
 
 ### MetaForge
 
@@ -65,13 +63,13 @@ Shared frontend/runtime gồm:
 - workflow/action UI;
 - permission-aware presentation;
 - builder/configuration surfaces;
-- responsive/PWA behavior where supported.
+- responsive/PWA behavior theo capability hỗ trợ.
 
-MetaForge renders Forge metadata/contracts. It must not become the owner of business rules or server authorization.
+MetaForge render metadata/contracts của Forge ERP và không sở hữu server-side business rules hoặc authorization.
 
 ### Domain packages
 
-Generic ERP behavior belongs to shared domain authority, including:
+Generic business behavior thuộc shared domain authority, gồm:
 
 - Finance / VN Accounting;
 - CRM / Sales;
@@ -81,21 +79,21 @@ Generic ERP behavior belongs to shared domain authority, including:
 - HCM / Payroll;
 - Projects / Service;
 - Workplace / collaboration;
-- other enterprise capabilities as materialized.
+- các enterprise capabilities khác theo capability map.
 
-### Vertical apps
+### Vertical applications
 
-Verticals such as Alumdoor compose shared capabilities and only own genuinely industry-specific behavior.
+Verticals như Alumdoor compose shared capabilities và chỉ sở hữu business behavior đặc thù ngành.
 
-A vertical must not create duplicate Finance, Stock, HCM, CRM or document authorities merely to make its flow pass.
+Vertical không tạo duplicate Finance, Stock, HCM, CRM hoặc document authorities.
 
 ## 3. Authoritative request/write path
 
 ```text
-User/Client
+User / Client
   -> Gateway resolves trusted tenant context
   -> Tenant runtime authenticates principal
-  -> server-side permission/contract validation
+  -> server-side permission + contract validation
   -> domain controller / workflow / action
   -> Document Kernel / authoritative service
   -> Durable Object serialization where required
@@ -105,25 +103,25 @@ User/Client
 
 Non-negotiable invariants:
 
-- tenant/user/role authority comes from trusted server context;
-- OCC/version/idempotency must survive retries;
-- business document writes do not bypass lifecycle;
-- ledger/history is corrected through explicit correction/reversal semantics;
-- verticals and adapters cannot direct-write shadow state.
+- tenant/user/role authority đến từ trusted server context;
+- OCC/version/idempotency phải survive retries;
+- business document writes không bypass lifecycle;
+- ledger/history correction dùng explicit correction/reversal semantics;
+- verticals và integrations không tạo shadow authoritative state.
 
 ## 4. Storage and runtime authority
 
 | Primitive | Role |
 |---|---|
-| D1 | authoritative tenant/query persistence under append-only migration governance |
-| Durable Objects | serialized authoritative mutation/state where required |
-| Queues | outbox, async jobs, bounded retry and DLQ |
-| R2 | files/artifacts/backups where configured |
-| KV | cache/routing/config support; not business source of truth |
-| Workers | Gateway, tenant runtime and bounded platform/domain services |
-| Workers for Platforms | isolated app/tenant execution where current deployment contract uses it |
+| D1 | authoritative tenant/query persistence dưới append-only migration governance |
+| Durable Objects | serialized authoritative mutation/state khi cần |
+| Queues | outbox, async jobs, bounded retry và DLQ |
+| R2 | files/artifacts/backups theo configured role |
+| KV | cache/routing/config support; không phải business source of truth |
+| Workers | Gateway, tenant runtime và bounded platform/domain services |
+| Workers for Platforms | isolated app/tenant execution khi deployment contract sử dụng |
 
-Presence of a provider resource does not prove production state; production claims require exact observed release/evidence.
+Provider resource tồn tại không đồng nghĩa production state đã được chứng minh; production claims cần exact observed release/evidence.
 
 ## 5. Domain source-of-truth
 
@@ -133,93 +131,94 @@ Presence of a provider resource does not prove production state; production clai
 - **CRM/Sales:** canonical customer/contact/opportunity/order documents.
 - **Procurement:** canonical supplier/PO/receipt/invoice lineage.
 - **Manufacturing:** BOM/Work Order/operations consuming canonical Stock/Finance.
-- **Legal/statutory:** source-bound, effective-dated, versioned and auditable rule contracts.
+- **Legal/statutory:** source-bound, effective-dated, versioned và auditable rule contracts.
 
-Read models, dashboards, compatibility APIs and vertical-specific projections must never silently become write authorities.
+Read models, dashboards và vertical-specific projections không trở thành write authorities.
 
 ## 6. Metadata and App Factory
 
-Forge is metadata-first, not metadata-only.
+Forge ERP là metadata-first, không phải metadata-only.
 
-Metadata may define:
+Metadata có thể định nghĩa:
 
 - DocType/fields/child tables;
 - forms/lists/workspaces;
 - roles/DocPerm;
-- workflow/rules/formulas where supported;
+- workflow/rules/formulas theo capability hỗ trợ;
 - reports/dashboards/prints;
 - app manifest/dependency/configuration.
 
-Business invariants that must execute atomically with authoritative writes remain code/domain contracts when metadata cannot safely express them.
+Business invariants phải execute atomically với authoritative writes vẫn thuộc code/domain contracts khi metadata không thể diễn đạt an toàn.
 
-App lifecycle is owned by Forge App Registry/App Factory. Installing/disabling a capability is distinct from deleting package/history/data.
+App lifecycle thuộc Forge App Registry/App Factory. Capability activation, package installation và historical data lifecycle là các concern tách biệt.
 
-## 7. Frontend/API boundary
+## 7. Frontend / API contracts
 
-The architectural rule is **Forge-owned semantics, edge-level translation**.
+New product behavior được xây trên Forge-owned document, domain, query và action contracts.
 
-New product behavior should target Forge-owned document/domain/action contracts. A compatibility facade may expose alternate URL/envelope/parameter shapes for existing clients or migrations, but:
+API/runtime boundary phải bảo toàn:
 
-- it contains no authoritative business rule;
-- it cannot weaken permission, idempotency or validation;
-- it cannot redefine document lifecycle/status semantics;
-- it cannot make an external framework a runtime dependency;
-- its removal/replacement must not require rewriting canonical business state.
+- permission;
+- lifecycle/state transition;
+- validation;
+- idempotency;
+- tenant isolation;
+- ledger invariants;
+- auditability.
 
-Legacy package names such as `adapter-frappe`, `frappe-api` or `frappe-source` should therefore be read as compatibility/interop seams, not as Forge's architectural identity.
+Frontend có thể tối ưu presentation và interaction nhưng không thay thế authoritative server contracts.
 
-## 8. External ERP/framework references
+## 8. Integration & migration architecture
 
-Frappe/ERPNext, MISA and other systems may be used for:
+Integration services phục vụ:
 
-- benchmark/parity analysis;
-- migration adapters;
-- import mapping;
-- interoperability;
-- deterministic regression/reference source locks.
+- data import/export;
+- migration;
+- third-party API integration;
+- mapping/transformation;
+- event/webhook flows;
+- reconciliation.
 
-They do **not** determine Forge's roadmap, internal data model or authoritative behavior.
-
-Forge should benchmark the depth of mature ERP systems without cloning their UI, internal architecture or product identity.
+Integration layer chỉ translate và orchestrate. Canonical business state luôn được validate và ghi qua Forge ERP authorities.
 
 ## 9. Security and permission
 
-- Server-side permission is authoritative.
-- UI visibility/editability is UX only.
-- Trusted tenant/user identity must not come from arbitrary client fields.
-- Role/DocPerm/owner/share/user-permission rules are enforced server-side.
-- Secrets, production credentials, private backups and raw customer data do not belong in Git/docs.
+- Server-side permission là authoritative.
+- UI visibility/editability là UX.
+- Trusted tenant/user identity không lấy từ arbitrary client fields.
+- Role/DocPerm/owner/share/user-permission rules được enforce server-side.
+- Secrets, production credentials, private backups và raw customer data không thuộc Git/docs.
 
 ## 10. Migration and release
 
-- migrations are append-only;
-- never rewrite a migration that may have been applied;
-- applied-state claims require environment/checksum evidence;
+- migrations append-only;
+- không rewrite migration có khả năng đã được apply;
+- applied-state claims cần environment/checksum evidence;
 - merge != deploy;
-- production identity is exact SHA/artifact/package/profile evidence;
-- a new source/artifact creates a new candidate, not a retroactive failure of an old certified candidate;
-- rerun affected evidence according to the current change/evidence matrix;
-- production migration, restore/PITR, DNS/secret/provider mutation, customer-data write and cutover require explicit authorization.
+- production identity là exact SHA/artifact/package/profile evidence;
+- source/artifact mới tạo candidate mới;
+- rerun affected evidence theo current change/evidence matrix;
+- production migration, restore/PITR, DNS/secret/provider mutation, customer-data write và cutover cần explicit authorization.
 
 ## 11. Current phase
 
-Current live sequence is controlled by `CURRENT_STATUS.md`, `NEXT_TASKS.md` and the active phase authority.
+Live sequence được điều khiển bởi `CURRENT_STATUS.md`, `NEXT_TASKS.md` và active phase authority.
 
-At the 2026-08-05 audit:
+Tại audit ngày 2026-08-05:
 
 `R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 reconcile/normalize -> PREVIEW_PASS -> Pilot-02 -> Pilot-03 -> Pilot-04 -> Pilot-05 -> ACCEPTED_REFERENCE -> GA_EVOLUTION`
 
-This snapshot must not be hard-coded by agents as permanent truth. Resolve phase again before each task.
+Snapshot này không phải permanent truth. Agent phải resolve phase lại trước mỗi task.
 
 ## 12. Canonical reading
 
 - `PROJECT_CONTEXT.md`
 - `CURRENT_STATUS.md`
 - `NEXT_TASKS.md`
-- `docs/pilot/alumdoor/README.md` while Controlled Pilot is active
+- `docs/pilot/alumdoor/README.md` khi Controlled Pilot đang active
 - `skills/forge-enterprise-completion/SKILL.md`
 - `docs/FORGE_ENTERPRISE_NORTH_STAR.md`
 - `docs/API_SURFACE.md`
 - `docs/APP_FACTORY.md`
 
-Git history retains older architecture decisions. Current docs should describe the current Forge architecture, not preserve obsolete product identity as if it were still authoritative.
+Git history giữ historical architecture decisions; current docs mô tả kiến trúc đang có hiệu lực.
