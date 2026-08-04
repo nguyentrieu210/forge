@@ -10,14 +10,11 @@
  * External email/SMS/Zalo/push and e-sign remain Integration Hub/provider concerns.
  */
 
-import { D1UserStore } from "../../auth/src/index.js";
-import type { DomainEvent, JsonObject } from "../../contracts/src/index.js";
-import { D1MutationStore } from "../../document-kernel/src/index.js";
-import {
-  D1DocumentAccessStore,
-  D1MetadataStore,
-  MetadataPermissionService,
-} from "../../frappe-model/src/index.js";
+import { D1UserStore } from "../../auth/src/user-store.js";
+import type { JsonObject } from "../../contracts/src/index.js";
+import { D1MutationStore } from "../../document-kernel/src/d1-store.js";
+import { D1DocumentAccessStore, MetadataPermissionService } from "../../frappe-model/src/permission.js";
+import { D1MetadataStore } from "../../frappe-model/src/store.js";
 import { D1DeskViewStore } from "./desk-views.js";
 
 export const WORKPLACE_ALERT_EVENTS = {
@@ -43,7 +40,8 @@ export interface WorkplaceScheduledAlert {
 
 export interface WorkplaceMaintenanceResult {
   candidates: number;
-  inserted: number;
+  /** Notifications that are guaranteed to exist after this sweep; retries may be no-ops. */
+  recorded: number;
   skipped: number;
   failed: number;
 }
@@ -199,7 +197,7 @@ export async function runWorkplaceScheduledNotifications(
      AND date(json_extract(payload_json,'$.due_date'))>=date(?2,'-90 days')
      AND COALESCE(json_extract(payload_json,'$.status'),'Open') NOT IN ('Done','Waived')`, today, limit));
 
-  const result: WorkplaceMaintenanceResult = { candidates: 0, inserted: 0, skipped: 0, failed: 0 };
+  const result: WorkplaceMaintenanceResult = { candidates: 0, recorded: 0, skipped: 0, failed: 0 };
   const inbox = new D1DeskViewStore(db);
   const documents = new D1MutationStore(db);
   const users = new D1UserStore(db);
@@ -229,16 +227,7 @@ export async function runWorkplaceScheduledNotifications(
         }
         const recipients = new Set(alert.recipient_hints);
         for (const user of await sharedReaders(db, tenantId, alert.doctype, alert.name)) recipients.add(user);
-
-        const event: DomainEvent = {
-          event_id: scheduledEventId(alert),
-          tenant_id: tenantId,
-          event_type: alert.event_key,
-          aggregate: { doctype: alert.doctype, name: alert.name },
-          actor: alert.owner || "Administrator",
-          payload: alert.payload,
-          occurred_at: now,
-        };
+        const eventId = scheduledEventId(alert);
 
         for (const userId of recipients) {
           try {
@@ -258,16 +247,17 @@ export async function runWorkplaceScheduledNotifications(
             }
 
             // D1DeskViewStore uses ON CONFLICT DO NOTHING. The deterministic name makes
-            // maintenance retries safe; a redelivery cannot create a second inbox row.
+            // maintenance retries safe; after notify returns this record exists even if
+            // the insert itself was an idempotent no-op.
             await inbox.notify(tenantId, {
-              name: `${event.event_id}:${userId}`,
+              name: `${eventId}:${userId}`,
               forUser: userId,
               subject: alert.subject,
               documentType: alert.doctype,
               documentName: alert.name,
-              fromUser: event.actor,
+              fromUser: alert.owner || "Administrator",
             }, now);
-            result.inserted += 1;
+            result.recorded += 1;
           } catch {
             // One stale/invalid recipient must not prevent other authorized recipients
             // from receiving the same due alert.
