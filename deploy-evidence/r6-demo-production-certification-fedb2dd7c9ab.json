@@ -1,0 +1,220 @@
+{
+  "format": "forge-r6-demo-production-certification/v2",
+  "status": "BLOCKED",
+  "candidate_sha": "fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5",
+  "tenant": "alu",
+  "origin": "https://alu.kairo.vn",
+  "mutation": "AUTHORIZED_PRODUCTION_DEMO",
+  "completed_at": "2026-08-04T15:05:55.290Z",
+  "workflow_run_id": "30922060440",
+  "outcomes": {
+    "checkout": "success",
+    "ancestry": "success",
+    "credentials": "success",
+    "build": "success",
+    "backup": "success",
+    "drill_create": "success",
+    "drill_restore": "success",
+    "cutover": "success",
+    "migrate": "failure",
+    "migration_verify": "skipped",
+    "tenant_deploy": "skipped",
+    "app_deploy": "skipped",
+    "package_install": "skipped",
+    "profile": "skipped",
+    "gateway": "skipped",
+    "pressure": "skipped",
+    "health": "skipped",
+    "provider": "skipped",
+    "identity": "skipped",
+    "pitr": "skipped",
+    "drill_cleanup": "success"
+  },
+  "evidence": {
+    "e06": null,
+    "e07_e08": {
+      "format": "forge-backup-verification/v1",
+      "tenant": "alu",
+      "source_file": "alu-2026-08-04T15-04-22-055Z.sql",
+      "source_sha256": "9d595183b2c831b2cd9ce9ee29248f5700bdf0af55b3e689e2e93a55b2320faf",
+      "source_bytes": 10553979,
+      "manifest_verified": true,
+      "source_created_at": "2026-08-04T15:04:28.727Z",
+      "source_database_name": "cloudforge-alu",
+      "verified_at": "2026-08-04T15:04:46.804Z",
+      "local_restore_duration_ms": 17935,
+      "table_count": 88,
+      "migration_count": 49,
+      "quick_check": "ok",
+      "foreign_key_violations": 0,
+      "tenant_scope_violations": {
+        "documents": 0,
+        "doctype_definitions": 0,
+        "installed_apps": 0
+      },
+      "metadata_catalog_rows": {
+        "__standard__": 90,
+        "demo": 90
+      },
+      "import_rewrites": {
+        "oversized_installed_app_rows": 3,
+        "generated_statements": 199,
+        "max_statement_bytes": 32655
+      },
+      "cloudflare_mutated": false
+    },
+    "e09": {
+      "format": "forge-restore-drill/v1",
+      "tenant": "alu",
+      "source_file": "alu-2026-08-04T15-04-22-055Z.sql",
+      "source_sha256": "9d595183b2c831b2cd9ce9ee29248f5700bdf0af55b3e689e2e93a55b2320faf",
+      "source_bytes": 10553979,
+      "backup_manifest_verified": true,
+      "source_created_at": "2026-08-04T15:04:28.727Z",
+      "target_database_name": "cloudforge-drill-r6-30922060440",
+      "target_database_id": "d8c314be-ca07-4143-9110-5ec1d7cf5d71",
+      "restored_at": "2026-08-04T15:05:07.978Z",
+      "restore_duration_ms": 15504,
+      "table_count": 88,
+      "migration_count": 49,
+      "integrity": [
+        {
+          "quick_check": "ok"
+        }
+      ],
+      "foreign_key_violations": 0,
+      "tenant_scope_violations": {
+        "documents": 0,
+        "doctype_definitions": 0,
+        "installed_apps": 0
+      },
+      "import_rewrites": {
+        "oversized_installed_app_rows": 3,
+        "generated_statements": 199,
+        "max_statement_bytes": 32655
+      },
+      "routes_changed": false
+    },
+    "e10": null,
+    "e11": {
+      "format": "forge-r6-cutover-reconciliation/v1",
+      "evidence_id": "R6-E11",
+      "observed_at": "2026-08-04T15:05:51.842Z",
+      "environment_class": "DISPOSABLE_REMOTE",
+      "source_database": "cloudforge-alu",
+      "restored_database": "cloudforge-drill-r6-30922060440",
+      "comparisons": [
+        {
+          "metric": "documents",
+          "source": {
+            "rows": "4269"
+          },
+          "restored": {
+            "rows": "4269"
+          },
+          "matches": true
+        },
+        {
+          "metric": "masters",
+          "source": {
+            "rows": "76"
+          },
+          "restored": {
+            "rows": "76"
+          },
+          "matches": true
+        },
+        {
+          "metric": "apps",
+          "source": {
+            "rows": "3"
+          },
+          "restored": {
+            "rows": "3"
+          },
+          "matches": true
+        },
+        {
+          "metric": "migrations",
+          "source": {
+            "rows": "49"
+          },
+          "restored": {
+            "rows": "49"
+          },
+          "matches": true
+        },
+        {
+          "metric": "stock",
+          "source": {
+            "rows": "0",
+            "qty_micros": "0"
+          },
+          "restored": {
+            "rows": "0",
+            "qty_micros": "0"
+          },
+          "matches": true
+        },
+        {
+          "metric": "ar",
+          "source": {
+            "rows": "0",
+            "amount_minor": "0"
+          },
+          "restored": {
+            "rows": "0",
+            "amount_minor": "0"
+          },
+          "matches": true
+        },
+        {
+          "metric": "ap",
+          "source": {
+            "rows": "0",
+            "amount_minor": "0"
+          },
+          "restored": {
+            "rows": "0",
+            "amount_minor": "0"
+          },
+          "matches": true
+        },
+        {
+          "metric": "payment",
+          "source": {
+            "rows": "0",
+            "amount_minor": "0"
+          },
+          "restored": {
+            "rows": "0",
+            "amount_minor": "0"
+          },
+          "matches": true
+        },
+        {
+          "metric": "gl",
+          "source": {
+            "rows": "0",
+            "debit_minor": "0",
+            "credit_minor": "0",
+            "balance_minor": "0"
+          },
+          "restored": {
+            "rows": "0",
+            "debit_minor": "0",
+            "credit_minor": "0",
+            "balance_minor": "0"
+          },
+          "matches": true
+        }
+      ],
+      "status": "PASS"
+    },
+    "e17": null,
+    "e18_profile": null,
+    "e03_e04": null,
+    "e02_e05": null,
+    "e18_identity": null
+  }
+}
