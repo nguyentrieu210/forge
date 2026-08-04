@@ -1,10 +1,10 @@
 # RC4-A20 — 956-Capability Convergence
 
-Date: **2026-08-04**  
-Branch: `agent/rc4-20-capability-convergence`  
-Exact snapshot baseline: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
-Status: **CONVERGING — validator/PR gate pending**  
-Risk: **STANDARD governance/evidence; inherited CRITICAL claims remain evidence-gated**
+- Date: **2026-08-04**
+- Branch: `agent/rc4-20-capability-convergence`
+- Exact snapshot baseline: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`
+- Status: **CONVERGING — validator/PR gate pending**
+- Risk: **STANDARD governance/evidence; inherited CRITICAL claims remain evidence-gated**
 
 ## Mission
 
