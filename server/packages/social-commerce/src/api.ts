@@ -7,6 +7,9 @@ import {
 } from "./canonical-order.js";
 
 const WRITE_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager", "Sales User"]);
+const MANAGER_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager"]);
+const FULFILLMENT_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager", "Stock Manager", "Stock User"]);
+const COD_RECONCILE_ROLES = new Set(["System Manager", "Social Commerce Manager", "Accounts Manager", "Accounts User"]);
 
 export interface SocialOrderConversionInput {
   cart_id: string;
@@ -50,6 +53,7 @@ export async function routeSocialCommerceApi(
   if (!url.pathname.startsWith("/api/v1/social/")) return null;
 
   if (request.method === "GET" && url.pathname === "/api/v1/social/summary") {
+    requireReader(actor);
     const [pages, events, carts, orders, cod] = await db.batch([
       db.prepare("SELECT COUNT(*) AS value FROM social_pages WHERE tenant_id=?1 AND status='active'").bind(tenantId),
       db.prepare("SELECT COUNT(*) AS value FROM social_events WHERE tenant_id=?1 AND received_at>=datetime('now','-1 day')").bind(tenantId),
@@ -60,16 +64,19 @@ export async function routeSocialCommerceApi(
     return jsonResponse({ active_pages: scalar(pages), events_today: scalar(events), open_carts: scalar(carts), active_orders: scalar(orders), cod_pending_minor: scalar(cod) });
   }
   if (request.method === "GET" && url.pathname === "/api/v1/social/pages") {
+    requireReader(actor);
     const result = await db.prepare("SELECT page_id,page_name,provider,status,created_at,modified_at FROM social_pages WHERE tenant_id=?1 ORDER BY page_name").bind(tenantId).all();
     return jsonResponse({ pages: result.results ?? [] });
   }
   if (request.method === "GET" && url.pathname === "/api/v1/social/events") {
+    requireReader(actor);
     const result = await db.prepare(
       "SELECT event_id,page_id,event_kind,external_actor_id,message_text,occurred_at,received_at FROM social_events WHERE tenant_id=?1 ORDER BY received_at DESC LIMIT 100",
     ).bind(tenantId).all();
     return jsonResponse({ events: result.results ?? [] });
   }
   if (request.method === "GET" && url.pathname === "/api/v1/social/carts") {
+    requireReader(actor);
     const result = await db.prepare(
       `SELECT c.cart_id,c.page_id,c.external_actor_id,c.status,c.customer_name,c.phone,c.address,c.modified_at,
        COALESCE(SUM(i.quantity),0) AS item_quantity FROM social_carts c LEFT JOIN social_cart_items i
@@ -78,7 +85,7 @@ export async function routeSocialCommerceApi(
     return jsonResponse({ carts: result.results ?? [] });
   }
   if (request.method === "POST" && url.pathname === "/api/v1/social/rules") {
-    requireWriter(actor);
+    requireManager(actor);
     const body = await readJson<JsonObject>(request, 16_000);
     const pageId = text(body.page_id, "page_id", 160); const keyword = text(body.keyword, "keyword", 160); const sku = text(body.sku, "sku", 160);
     const quantity = Number(body.quantity ?? 1); if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > 10_000) throw errors.validation("quantity is invalid");
@@ -207,7 +214,7 @@ export async function routeSocialCommerceApi(
 
   const shipment = url.pathname.match(/^\/api\/v1\/social\/orders\/([^/]+)\/shipments$/);
   if (request.method === "POST" && shipment) {
-    requireWriter(actor);
+    requireFulfillment(actor);
     const orderId = pathId(shipment[1]!, "order_id");
     const body = await readJson<JsonObject>(request, 16_000);
     const order = await db.prepare(
@@ -244,7 +251,7 @@ export async function routeSocialCommerceApi(
 
   const reconcile = url.pathname.match(/^\/api\/v1\/social\/shipments\/([^/]+)\/cod-reconcile$/);
   if (request.method === "POST" && reconcile) {
-    requireWriter(actor);
+    requireCodReconciler(actor);
     const shipmentId = pathId(reconcile[1]!, "shipment_id");
     const body = await readJson<JsonObject>(request, 16_000);
     const collected = Number(body.cod_collected_minor);
@@ -293,7 +300,12 @@ async function socialCommerceProfile(db: D1Database, tenantId: string, pageId: s
 }
 
 function scalar(result: D1Result | undefined): number { const value = (result?.results?.[0] as { value?: unknown } | undefined)?.value; return typeof value === "number" ? value : Number(value ?? 0); }
-function requireWriter(actor: Actor): void { if (!actor.roles.some((role) => WRITE_ROLES.has(role))) throw errors.permission("Social Commerce write permission is required"); }
+function requireWriter(actor: Actor): void { requireAnyRole(actor, WRITE_ROLES, "Social Commerce write permission is required"); }
+function requireReader(actor: Actor): void { requireAnyRole(actor, WRITE_ROLES, "Social Commerce read permission is required"); }
+function requireManager(actor: Actor): void { requireAnyRole(actor, MANAGER_ROLES, "Social Commerce manager permission is required"); }
+function requireFulfillment(actor: Actor): void { requireAnyRole(actor, FULFILLMENT_ROLES, "Social Commerce fulfillment permission is required"); }
+function requireCodReconciler(actor: Actor): void { requireAnyRole(actor, COD_RECONCILE_ROLES, "Social Commerce COD reconciliation permission is required"); }
+function requireAnyRole(actor: Actor, allowed: ReadonlySet<string>, message: string): void { if (!actor.roles.some((role) => allowed.has(role))) throw errors.permission(message); }
 function text(value: unknown, field: string, max: number): string { if (typeof value !== "string" || !value.trim() || value.length > max) throw errors.validation(`${field} is invalid`); return value.trim(); }
 function optionalText(value: unknown, field: string, max: number): string | undefined { if (value === undefined || value === null || value === "") return undefined; return text(value, field, max); }
 function pathId(value: string, field: string): string { const decoded = decodeURIComponent(value).trim(); if (!decoded || decoded.length > 200 || !/^[A-Za-z0-9_.:-]+$/.test(decoded)) throw errors.validation(`${field} is invalid`); return decoded; }
