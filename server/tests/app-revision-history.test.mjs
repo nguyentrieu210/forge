@@ -77,10 +77,10 @@ function insertActive(db, version, manifest, hash, modifiedAt) {
 }
 
 function migrate(db) {
-  db.db.exec(readFileSync(new URL("../migrations/tenant/0049_app_revision_history.sql", import.meta.url), "utf8"));
+  db.db.exec(readFileSync(new URL("../migrations/tenant/0088_app_revision_history.sql", import.meta.url), "utf8"));
 }
 
-test("0049 seeds the active package and atomically records later package views", async () => {
+test("0088 seeds the active package and atomically records later package views", async () => {
   const db = new D1Adapter();
   insertActive(db, "1.0.0", pkg("1.0.0"), "a".repeat(64), "2026-01-01T00:00:00Z");
   migrate(db);
