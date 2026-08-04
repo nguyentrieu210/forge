@@ -27,27 +27,21 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Enable pnpm
         run: |
           corepack enable
           corepack prepare pnpm@9.15.0 --activate
-
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Exact-main ancestry and A19 authority boundary
         shell: bash
         run: |
           git fetch origin main
-          main_sha=$(git rev-parse origin/main)
           merge_base=$(git merge-base origin/main HEAD)
-          echo "main=${main_sha}"
+          echo "main=$(git rev-parse origin/main)"
           echo "head=$(git rev-parse HEAD)"
           echo "merge_base=${merge_base}"
           git diff --name-only "${merge_base}"...HEAD | tee /tmp/a19-files.txt
@@ -55,21 +49,18 @@ jobs:
             echo "A19 crossed its evidence/test authority boundary"
             exit 1
           fi
-
       - name: Canonical capability registry structure
         run: node server/scripts/validate-enterprise-capability-status.mjs
-
       - name: Cloudflare provider evidence must remain explicit
         run: |
           node server/scripts/verify-cloudflare-governance.mjs
           node - <<'NODE'
           const fs = require('node:fs');
           const cfg = JSON.parse(fs.readFileSync('server/config/cloudflare-governance.json', 'utf8'));
-          const status = cfg?.remote_observation?.status;
-          if (status !== 'unverified') throw new Error(`A19 refuses implicit provider promotion: remote_observation.status=${status}`);
-          console.log('remote_observation.status=unverified');
+          if (cfg?.remote_observation?.status !== 'unverified') {
+            throw new Error(`A19 refuses implicit provider promotion: remote_observation.status=${cfg?.remote_observation?.status}`);
+          }
           NODE
-
       - name: Repository SQL structure and duplicate-prefix observation
         shell: bash
         run: |
@@ -80,8 +71,7 @@ jobs:
           groups = defaultdict(list)
           for path in sorted(Path('server/migrations/tenant').glob('*.sql')):
               prefix = path.name.split('_', 1)[0]
-              if prefix.isdigit():
-                  groups[prefix].append(path.name)
+              if prefix.isdigit(): groups[prefix].append(path.name)
           duplicates = {k:v for k,v in groups.items() if len(v) > 1}
           print('duplicate migration prefixes:', duplicates)
           if '0110' not in duplicates:
@@ -106,12 +96,22 @@ jobs:
             sha: 1baaf38d92f5aa0d53cfd2260d5baade850be8dd
           - lane: A7-App-Factory
             sha: e656c19d54450f1290ad44e8bba8819e650b42ef
+          - lane: A8-Integration
+            sha: 8e43a4e04818fc1d956c5173190f1794dfc802b8
+          - lane: A10-CRM
+            sha: d90085ba440f07c278e2e620a1409611b89ca9ab
           - lane: A11-Procurement
             sha: 27c616c2a77f08bb0284a0de4ea141637ce82462
+          - lane: A12-Inventory-WMS
+            sha: 0c63ae06c6ee0caccb75bc8f5341fff283f3a532
           - lane: A13-Manufacturing-QMS
             sha: 5c9c47ba4e5092fd83c4752785047ad7e69be34c
+          - lane: A14-Project-Service
+            sha: 8ca102b3fbdf30cb2db0366ce32ac0b9102c732a
           - lane: A15-Semantic-AI
             sha: 3c6db92969d80aab92afdc9ef4f07db0cbe2565b
+          - lane: A16-Workplace
+            sha: 9e24087161851a78376023f1210e50b4a2220590
           - lane: A17-Commerce
             sha: f2504064dbdf929ba6c03107eea624463943fce1
           - lane: A18-Alumdoor
@@ -122,23 +122,17 @@ jobs:
         with:
           ref: ${{ matrix.sha }}
           fetch-depth: 0
-
       - name: Assert exact pinned SHA
         run: test "$(git rev-parse HEAD)" = "${{ matrix.sha }}"
-
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Enable pnpm
         run: |
           corepack enable
           corepack prepare pnpm@9.15.0 --activate
-
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Emit server dist with lane-local error classification
         shell: bash
         run: |
@@ -153,9 +147,14 @@ jobs:
             A4-VN-Statutory) pattern='apps-src/vn-accounting-worker/src/(legal-evidence|vat-service)\.ts' ;;
             A5-HCM-Payroll) pattern='packages/(hrm|ledger|payment-ledger)/src/|apps-src/hrm/' ;;
             A7-App-Factory) pattern='packages/app-registry/src/(app-factory-approval-runtime|app-factory-definition|index)\.ts|apps/tenant-worker/src/aggregate-do\.ts' ;;
+            A8-Integration) pattern='packages/integration-hub/src/(einvoice-provider|queue-recovery)\.ts|apps/tenant-worker/src/aggregate-do\.ts' ;;
+            A10-CRM) pattern='packages/clouderp-selling/src/crm-customer-360-(controller|types)\.ts' ;;
             A11-Procurement) pattern='packages/clouderp-core/src/(supplier-lifecycle-controllers|procurement-.*)\.ts' ;;
+            A12-Inventory-WMS) pattern='packages/clouderp-stock/src/inventory-scan-resolution\.ts|apps/tenant-worker/src/inventory-scan-api\.ts' ;;
             A13-Manufacturing-QMS) pattern='packages/clouderp-erpnext/src/(manufacturing-.*|qms-controllers)\.ts' ;;
+            A14-Project-Service) pattern='apps-src/ws07-worker/src/index\.ts' ;;
             A15-Semantic-AI) pattern='packages/semantic/src/(ai-dashboard|dashboard|recommendation)\.ts' ;;
+            A16-Workplace) pattern='packages/frappe-api/src/workplace-maintenance\.ts' ;;
             A17-Commerce) pattern='packages/social-commerce/src/api\.ts' ;;
             A18-Alumdoor) pattern='a^' ;;
           esac
@@ -163,7 +162,6 @@ jobs:
             echo "TypeScript regression intersects pinned lane authority"
             exit 1
           fi
-
       - name: Execute adversarial regression slice
         working-directory: server
         shell: bash
@@ -188,14 +186,29 @@ jobs:
             A7-App-Factory)
               node --test tests/bpm-approval.test.mjs tests/bpm-timer.test.mjs tests/app-factory-definition.test.mjs tests/app-factory-definition-effective-window.test.mjs tests/app-factory-definition-resolver.test.mjs tests/app-factory-approval-runtime.test.mjs tests/app-rollback-plan.test.mjs tests/app-revision-history.test.mjs
               ;;
+            A8-Integration)
+              node --test tests/integration-hub-einvoice-provider.test.mjs tests/integration-hub-kernel-registration.test.mjs tests/integration-hub-queue-recovery.test.mjs
+              ;;
+            A10-CRM)
+              node --test tests/crm-customer-360.test.mjs
+              ;;
             A11-Procurement)
               node --test tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs tests/supplier-lifecycle.test.mjs tests/supplier-contract-release.test.mjs tests/procurement-p2p-closure.test.mjs tests/procurement-p2p-correction-boundary.test.mjs tests/procurement-landed-cost.test.mjs
+              ;;
+            A12-Inventory-WMS)
+              node --test tests/inventory-scan-resolution.test.mjs tests/wms-wave-scan.test.mjs tests/inventory-planning.test.mjs tests/stock-reservation-integrity.test.mjs tests/valuation-audit.test.mjs tests/repost-item-valuation-integrity.test.mjs tests/procurement-landed-cost.test.mjs
               ;;
             A13-Manufacturing-QMS)
               node --test tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs tests/manufacturing-capacity-api.test.mjs tests/manufacturing-transaction-closure.test.mjs tests/manufacturing-cost-evidence.test.mjs tests/qms-lifecycle.test.mjs
               ;;
+            A14-Project-Service)
+              node --test tests/projects-psa.test.mjs tests/support-helpdesk.test.mjs tests/maintenance-field-service.test.mjs tests/rc4-a14-project-service-field.test.mjs
+              ;;
             A15-Semantic-AI)
               node --test tests/semantic-dashboard.test.mjs tests/semantic-ai-dashboard.test.mjs tests/semantic-recommendation.test.mjs
+              ;;
+            A16-Workplace)
+              node --test tests/rc4-a16-workplace-maintenance.test.mjs tests/ws15-notification-delivery.test.mjs tests/ws15-assignment-access.test.mjs tests/ws15-collaboration-assignment-lifecycle.test.mjs tests/ws15-workplace-metadata.test.mjs
               ;;
             A17-Commerce)
               node --test tests/ws16-omnichannel-source-contract.test.mjs
@@ -205,7 +218,6 @@ jobs:
               node --test tests/alumdoor-golden-order-readonly.test.mjs
               ;;
           esac
-
       - name: SQL and diff safety
         working-directory: server
         run: python3 scripts/verify-sql.py
