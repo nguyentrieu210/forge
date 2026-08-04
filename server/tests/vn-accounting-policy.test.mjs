@@ -43,6 +43,10 @@ test("VN Accounting Policy is versioned, evidence-bound and four-eyes controlled
   assert.equal(retire?.allowed_role, "Chief Accountant");
   assert.equal(retire?.allow_self_approval, false);
   assert.equal(workflow.states.find((state) => state.state === "Hết hiệu lực")?.docstatus, 1);
+
+  const taxEvaluate = parsed.actions.find((item) => item.name === "tax-evaluate");
+  assert.ok(taxEvaluate);
+  assert.equal(taxEvaluate.commit.method, "vn_accounting.tax.evaluate");
 });
 
 test("VAT dataset action is read-only and ruleset carries explicit account mapping", async () => {
@@ -53,7 +57,7 @@ test("VAT dataset action is read-only and ruleset carries explicit account mappi
   assert.equal(fields(tax).get("tax_accounts_json")?.fieldtype, "Code");
   const action = parsed.actions.find((item) => item.name === "vat-dataset");
   assert.ok(action);
-  assert.equal(action.commit.method, "vn-accounting.vat.dataset");
+  assert.equal(action.commit.method, "vn_accounting.vat.dataset");
   assert.equal(action.permission_doctype, "VN Tax Ruleset");
   assert.equal(action.permission_action, "read");
   assert.equal(action.preview, undefined);
