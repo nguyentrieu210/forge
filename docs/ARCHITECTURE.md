@@ -1,128 +1,225 @@
 # Kiến trúc Forge
 
-## Hình dạng hệ thống
+Ngày cập nhật: **2026-08-05**.
 
-```
-                    ┌─────────────────────────────────────────┐
-                    │  client/  — MetaForge Desk + Builder    │
-                    │  @metaforge/adapter-frappe (KHÔNG SỬA)  │
-                    └───────────────────┬─────────────────────┘
-                                        │ /api/method/*  /api/resource/*
-                                        │ cookie sid + X-Frappe-CSRF-Token
-                    ┌───────────────────▼─────────────────────┐
-                    │  server/packages/frappe-api  ← MỚI      │
-                    │  lớp vỏ dịch API Frappe ⇄ kernel        │
-                    └───────────────────┬─────────────────────┘
-                                        │
-   gateway-worker ──► tenant-worker (Durable Object khoá aggregate) ──► D1 riêng mỗi tenant
-                              │
-                              ├──► outbox ──► jobs-worker (Queues)
-                              └──► query-worker (báo cáo, đọc)
-```
+Forge là **ERP / enterprise operating platform độc lập** trên Cloudflare. Kiến trúc của Forge được định nghĩa bởi Forge-owned contracts: Document Kernel, permission, metadata, domain services, ledgers, App Registry/App Factory, tenant runtime và MetaForge frontend.
 
-## ADR-001 — Vì sao chọn lớp vỏ Frappe thay vì viết adapter native {#adr-001}
+Các adapter mang hình dạng API của hệ thống ngoài chỉ là **bounded compatibility surfaces**. Chúng không phải source of truth, không sở hữu business semantics và không định nghĩa product identity.
 
-**Bối cảnh.** MetaForge FE (19.238 dòng, builder đã verify live) gọi 68 endpoint hình dạng Frappe qua
-`frappe-react-sdk`. CloudForge có API riêng sạch hơn (idempotency key, `expected_version` số nguyên,
-cursor phân trang) nhưng khác hoàn toàn.
+## 1. Hình dạng hệ thống
 
-**Ba lựa chọn đã cân nhắc.**
-
-1. Viết nốt `metaforge-cloudforge-adapter` cho đủ ~70 method của interface `Adapter`.
-2. CloudForge mọc lớp vỏ hình dạng Frappe; MetaForge dùng `adapter-frappe` sẵn có, không sửa.
-3. Làm cả hai bề mặt.
-
-**Chọn (2).** Lý do:
-
-- Interface `Adapter` của MetaForge **vốn đã hình dạng Frappe** (`getBoot`, `docinfo`, `searchLink`,
-  `getdoctype`). Chọn (1) vẫn phải mô phỏng gần hết Frappe, nhưng mất luôn khả năng cắm client khác.
-- `adapter-frappe` đã được test live với Frappe v16 thật. Giữ nguyên nó nghĩa là giữ nguyên toàn bộ
-  bằng chứng đó; mọi lỗi mới phát sinh chắc chắn nằm ở lớp vỏ, không phải ở FE.
-- Bề mặt cần làm là **hữu hạn và đã đếm được**: 47 endpoint Frappe + 21 endpoint `metaforge.api.*` +
-  REST `/api/resource/*`. Xem [API_SURFACE.md](API_SURFACE.md).
-
-**Cái giá phải trả — ghi rõ, không giấu.**
-
-- Phải bắt chước cả những chỗ kỳ cục của Frappe: envelope `{message: …}`, `getdoc` trả `{docs:[…], docinfo}`,
-  filter dạng mảng lồng `[[dt, field, op, value]]`, tham số JSON-trong-query-string.
-- **Xung đột mô hình khoá lạc quan.** CloudForge dùng `version` số nguyên tăng dần; Frappe dùng timestamp
-  `modified` và trả **HTTP 417 TimestampMismatch**. Lớp vỏ phải dịch hai chiều và giữ `modified` đủ
-  chính xác để không bao giờ hai bản ghi khác nhau có cùng `modified`.
-- Idempotency: CloudForge bắt buộc `command_id`; REST Frappe không có khái niệm đó. Lớp vỏ phải tự sinh
-  `command_id` tất định từ (tenant, doctype, name, action, hash payload) để retry không tạo bút toán kép.
-
-## Ranh giới các tầng
-
-| Tầng | Ở đâu | Được phép biết gì |
-|---|---|---|
-| Desk/Builder | `client/packages/*` | Chỉ biết API Frappe. Không biết Cloudflare, D1, Durable Object |
-| Lớp vỏ | `server/packages/frappe-api` | Dịch hình dạng. **Không** chứa logic nghiệp vụ |
-| Kernel tài liệu | `server/packages/document-kernel`, `frappe-model` | Lifecycle, quyền, workflow, phiên bản |
-| Nghiệp vụ | `server/packages/clouderp-*` | Sổ cái, kho, giá, sản xuất |
-| Hạ tầng | `server/apps/*` | Worker, DO, D1, Queue, R2 |
-
-Quy tắc bất di bất dịch: **tenant, actor, roles, tỉ giá, giá vốn, tài khoản kế toán do server quyết định**,
-không bao giờ lấy từ header hay payload client. Lớp vỏ không được phá quy tắc này để chiều Frappe.
-
-## Cơ chế cài app (mục tiêu "cài app mới nhanh")
-
-App = **dữ liệu**, không phải code. Một gói app gồm:
-
-```
-app.json          — manifest (id, name, version, phụ thuộc, nav)
-doctypes/*.json   — định nghĩa DocType
-workflows/*.json  — workflow
-prints/*.json     — mẫu in
-reports/*.json    — báo cáo
-roles.json        — vai trò + DocPerm
-fixtures/*.json   — dữ liệu mồi (master records)
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ MetaForge                                                   │
+│ React metadata-driven workspace/runtime/builder             │
+│ list · form · report · dashboard · workflow · app surfaces  │
+└─────────────────────────────┬────────────────────────────────┘
+                              │ Forge application/API contracts
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│ Gateway / Tenant Runtime                                    │
+│ tenant resolution · auth/session · routing · API composition│
+└───────────────┬──────────────────────────────┬───────────────┘
+                │                              │
+                ▼                              ▼
+┌────────────────────────────┐    ┌────────────────────────────┐
+│ Document / Domain Kernel   │    │ Compatibility / Integration│
+│ lifecycle · permission     │    │ migration · interop facade │
+│ validation · workflow      │    │ external API translations  │
+│ idempotency · audit        │    │ no business authority      │
+└───────────────┬────────────┘    └────────────────────────────┘
+                │
+        ┌───────┼───────────┬──────────────┐
+        ▼       ▼           ▼              ▼
+      D1      Durable     Queues           R2
+   tenant DB  Objects    outbox/jobs     files/artifacts
 ```
 
-Cài = ghi metadata vào D1 của tenant, trong một giao dịch, có ghi `installed_apps` kèm version. Không
-build lại, không deploy lại, không downtime.
+Cloudflare is the infrastructure substrate; Forge remains the application/runtime authority.
 
-**Logic riêng của app** — chỗ Frappe dùng `hooks.py` — không thể là Python trên Workers. Thay bằng
-**Workers for Platforms**: mỗi app có thể kèm một Worker đẩy vào dispatch namespace (hạ tầng này
-CloudForge đã có sẵn). Kernel phát sự kiện vòng đời qua outbox; Worker của app nhận và xử lý. Sandbox
-mỗi app tách biệt, không sập lẫn nhau.
+## 2. Product layers
 
-Xem [ROADMAP.md](ROADMAP.md) Pha 4–5. Nguồn app mẫu thật: [server/apps-src/visits/](../server/apps-src/visits/),
-đóng gói bằng `npm run app:pack apps-src/visits`.
+### CloudForge
 
-### Vì sao bộ ERP hiện tại KHÔNG thể là một app dữ liệu
+Authoritative backend/kernel gồm:
 
-Lộ trình ban đầu định "đóng gói lại `clouderp-*` thành app đầu tiên để tự chứng minh
-cơ chế". Khi làm tới thì thấy điều đó **không đúng về bản chất**, nên ghi lại thay vì
-làm cho có:
+- tenant/runtime composition;
+- Document Kernel / aggregate serialization;
+- metadata and document lifecycle;
+- server-side permission;
+- workflow/action execution;
+- domain services/controllers;
+- Finance/Stock/Payment and other authoritative ledgers;
+- outbox/jobs/retry/DLQ;
+- App Registry/App Factory lifecycle;
+- files, import/export, reporting/query services;
+- release, migration, recovery and operational contracts.
 
-26 DocType của bộ ERP (Sales Order, Payment Entry, Stock Entry, Salary Slip…) không
-phải metadata. Chúng là **controller TypeScript** trong kernel: `SalesOrderController`
-tính thành tiền theo số nguyên scaled, dựng bút toán cân đối, trừ tồn theo FIFO, kiểm
-khoá kỳ kế toán. Không có cách nào diễn đạt những thứ đó bằng JSON.
+### MetaForge
 
-Nghĩa là ranh giới thật của mô hình app là:
+Shared frontend/runtime gồm:
 
-| Loại | Cơ chế |
+- metadata-driven app shell;
+- list/form/child-table rendering;
+- report/dashboard/workspace surfaces;
+- workflow/action UI;
+- permission-aware presentation;
+- builder/configuration surfaces;
+- responsive/PWA behavior where supported.
+
+MetaForge renders Forge metadata/contracts. It must not become the owner of business rules or server authorization.
+
+### Domain packages
+
+Generic ERP behavior belongs to shared domain authority, including:
+
+- Finance / VN Accounting;
+- CRM / Sales;
+- Procurement;
+- Stock / WMS;
+- Manufacturing / QMS;
+- HCM / Payroll;
+- Projects / Service;
+- Workplace / collaboration;
+- other enterprise capabilities as materialized.
+
+### Vertical apps
+
+Verticals such as Alumdoor compose shared capabilities and only own genuinely industry-specific behavior.
+
+A vertical must not create duplicate Finance, Stock, HCM, CRM or document authorities merely to make its flow pass.
+
+## 3. Authoritative request/write path
+
+```text
+User/Client
+  -> Gateway resolves trusted tenant context
+  -> Tenant runtime authenticates principal
+  -> server-side permission/contract validation
+  -> domain controller / workflow / action
+  -> Document Kernel / authoritative service
+  -> Durable Object serialization where required
+  -> D1 authoritative persistence + ledger/outbox
+  -> query/readback/report/audit
+```
+
+Non-negotiable invariants:
+
+- tenant/user/role authority comes from trusted server context;
+- OCC/version/idempotency must survive retries;
+- business document writes do not bypass lifecycle;
+- ledger/history is corrected through explicit correction/reversal semantics;
+- verticals and adapters cannot direct-write shadow state.
+
+## 4. Storage and runtime authority
+
+| Primitive | Role |
 |---|---|
-| DocType chỉ có dữ liệu + form + workflow + quyền | ✅ app dữ liệu, cài bằng một lần ghi metadata |
-| Logic nghiệp vụ đứng ngoài (gửi mail, đồng bộ, tính toán phái sinh) | ✅ Worker của app qua hook (Pha 5) |
-| Logic phải chạy **trong** giao dịch ghi — sổ cái, giá vốn, tồn kho, guard tính toàn vẹn | ❌ phải là controller trong kernel |
+| D1 | authoritative tenant/query persistence under append-only migration governance |
+| Durable Objects | serialized authoritative mutation/state where required |
+| Queues | outbox, async jobs, bounded retry and DLQ |
+| R2 | files/artifacts/backups where configured |
+| KV | cache/routing/config support; not business source of truth |
+| Workers | Gateway, tenant runtime and bounded platform/domain services |
+| Workers for Platforms | isolated app/tenant execution where current deployment contract uses it |
 
-Cột thứ ba là lý do bộ `clouderp-*` ở lại trong kernel. Cố nhồi nó vào app dữ liệu sẽ
-phải hoặc bịa ra một ngôn ngữ tính toán trong JSON, hoặc cho app chạy code tuỳ ý bên
-trong đường ghi của aggregate — thứ mà [ADR về hook](#) đã bác vì một app chậm là treo
-mọi lệnh ghi lên aggregate đó.
+Presence of a provider resource does not prove production state; production claims require exact observed release/evidence.
 
-Nói cách khác: **app dữ liệu mở rộng được bề rộng, không mở rộng được tầng kế toán.**
-Thêm một ngành mới (viếng thăm, bảo trì, tuyển sinh) là gói app. Thêm một cách tính giá
-vốn mới thì phải sửa kernel.
+## 5. Domain source-of-truth
 
-## Tin tốt phát hiện lúc khảo sát
+- **Finance:** canonical GL + Payment Ledger.
+- **Inventory:** canonical Stock Ledger / valuation / repost semantics.
+- **Payroll:** canonical HCM/payroll lifecycle feeding Finance authority.
+- **CRM/Sales:** canonical customer/contact/opportunity/order documents.
+- **Procurement:** canonical supplier/PO/receipt/invoice lineage.
+- **Manufacturing:** BOM/Work Order/operations consuming canonical Stock/Finance.
+- **Legal/statutory:** source-bound, effective-dated, versioned and auditable rule contracts.
 
-Kiểm toán CloudForge độc lập tìm ra một loạt metadata **khai báo nhưng không ai đọc**: `depends_on`,
-`fetch_from`, `mandatory_depends_on`, `read_only_depends_on`. Nhưng MetaForge FE **đã hiện thực đủ**
-những thứ này ở phía client (safe-eval allowlist cho `depends_on`, resolver cho `fetch_from`, đều đã
-đóng gate). Vậy chỉ cần lớp vỏ **trả đúng metadata** là chúng sống dậy, không phải viết lại.
+Read models, dashboards, compatibility APIs and vertical-specific projections must never silently become write authorities.
 
-Còn `mandatory_depends_on` vẫn phải cưỡng chế **thêm ở server** — client-side validation không bao giờ
-là hàng rào thật.
+## 6. Metadata and App Factory
+
+Forge is metadata-first, not metadata-only.
+
+Metadata may define:
+
+- DocType/fields/child tables;
+- forms/lists/workspaces;
+- roles/DocPerm;
+- workflow/rules/formulas where supported;
+- reports/dashboards/prints;
+- app manifest/dependency/configuration.
+
+Business invariants that must execute atomically with authoritative writes remain code/domain contracts when metadata cannot safely express them.
+
+App lifecycle is owned by Forge App Registry/App Factory. Installing/disabling a capability is distinct from deleting package/history/data.
+
+## 7. Frontend/API boundary
+
+The architectural rule is **Forge-owned semantics, edge-level translation**.
+
+New product behavior should target Forge-owned document/domain/action contracts. A compatibility facade may expose alternate URL/envelope/parameter shapes for existing clients or migrations, but:
+
+- it contains no authoritative business rule;
+- it cannot weaken permission, idempotency or validation;
+- it cannot redefine document lifecycle/status semantics;
+- it cannot make an external framework a runtime dependency;
+- its removal/replacement must not require rewriting canonical business state.
+
+Legacy package names such as `adapter-frappe`, `frappe-api` or `frappe-source` should therefore be read as compatibility/interop seams, not as Forge's architectural identity.
+
+## 8. External ERP/framework references
+
+Frappe/ERPNext, MISA and other systems may be used for:
+
+- benchmark/parity analysis;
+- migration adapters;
+- import mapping;
+- interoperability;
+- deterministic regression/reference source locks.
+
+They do **not** determine Forge's roadmap, internal data model or authoritative behavior.
+
+Forge should benchmark the depth of mature ERP systems without cloning their UI, internal architecture or product identity.
+
+## 9. Security and permission
+
+- Server-side permission is authoritative.
+- UI visibility/editability is UX only.
+- Trusted tenant/user identity must not come from arbitrary client fields.
+- Role/DocPerm/owner/share/user-permission rules are enforced server-side.
+- Secrets, production credentials, private backups and raw customer data do not belong in Git/docs.
+
+## 10. Migration and release
+
+- migrations are append-only;
+- never rewrite a migration that may have been applied;
+- applied-state claims require environment/checksum evidence;
+- merge != deploy;
+- production identity is exact SHA/artifact/package/profile evidence;
+- a new source/artifact creates a new candidate, not a retroactive failure of an old certified candidate;
+- rerun affected evidence according to the current change/evidence matrix;
+- production migration, restore/PITR, DNS/secret/provider mutation, customer-data write and cutover require explicit authorization.
+
+## 11. Current phase
+
+Current live sequence is controlled by `CURRENT_STATUS.md`, `NEXT_TASKS.md` and the active phase authority.
+
+At the 2026-08-05 audit:
+
+`R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 reconcile/normalize -> PREVIEW_PASS -> Pilot-02 -> Pilot-03 -> Pilot-04 -> Pilot-05 -> ACCEPTED_REFERENCE -> GA_EVOLUTION`
+
+This snapshot must not be hard-coded by agents as permanent truth. Resolve phase again before each task.
+
+## 12. Canonical reading
+
+- `PROJECT_CONTEXT.md`
+- `CURRENT_STATUS.md`
+- `NEXT_TASKS.md`
+- `docs/pilot/alumdoor/README.md` while Controlled Pilot is active
+- `skills/forge-enterprise-completion/SKILL.md`
+- `docs/FORGE_ENTERPRISE_NORTH_STAR.md`
+- `docs/API_SURFACE.md`
+- `docs/APP_FACTORY.md`
+
+Git history retains older architecture decisions. Current docs should describe the current Forge architecture, not preserve obsolete product identity as if it were still authoritative.
