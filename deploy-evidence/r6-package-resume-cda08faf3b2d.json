@@ -1,0 +1,11 @@
+{
+  "format": "forge-r6-package-resume/v1",
+  "candidate_sha": "cda08faf3b2d0af5e5582f8f3b8e737cc44d92b2",
+  "observed_at": "2026-08-04T16:54:07.026Z",
+  "outcomes": {
+    "hrm": "failure",
+    "accounting": "skipped",
+    "alumdoor": "skipped"
+  },
+  "status": "BLOCKED"
+}
