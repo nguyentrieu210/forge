@@ -485,9 +485,16 @@ export function compileAppReport(spec: AppReportSpec, request: QueryRequest): Co
     where.push(`${expression} ${filter.operator === "like" ? "LIKE" : filter.operator} ?${params.length}`);
   }
 
-  // Aliased so the client keys rows the same way it does everywhere else; without an
-  // alias, `COALESCE(SUM(...),0)` comes back as the column NAME and nothing matches.
-  const alias = (column: AppReportSpec["columns"][number]) => (column.aggregate ? `${column.aggregate}_${column.field}` : column.field);
+  // A report column has one public/canonical key: its declared `field`. Aggregation is
+  // how that value is calculated, not a second field identity. Charts, Frappe report
+  // metadata and row objects all address the declared field, so prefixing it with
+  // `sum_`/`count_` creates two incompatible contracts for the same column.
+  const outputFields = new Set<string>();
+  for (const column of spec.columns) {
+    if (outputFields.has(column.field)) throw errors.validation(`Duplicate report column: ${column.field}`);
+    outputFields.add(column.field);
+  }
+  const alias = (column: AppReportSpec["columns"][number]) => column.field;
   const selected = spec.columns.map((column) => {
     const expression = fieldExpression(column.field);
     const sql = column.aggregate ? AGGREGATE_SQL[column.aggregate]?.(expression) : expression;
