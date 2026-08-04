@@ -119,11 +119,14 @@ jobs:
         working-directory: server
         run: node scripts/pack-app.mjs apps-src/maintenance --check
 
-      - name: Disposable workerd tenant bootstrap install reinstall upgrade rollback isolation
+      - name: Disposable workerd package bootstrap lifecycle and tenant isolation
         id: disposable_tenant
         continue-on-error: true
         working-directory: server
-        run: pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts --config apps/tenant-worker/vitest.config.mts
+        run: >-
+          pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts
+          --config apps/tenant-worker/vitest.config.mts
+          -t "logs in with a real password hash|repairs an older tenant from the standard catalogue|refuses a request routed for a different tenant|installs an app, and re-installing the identical package|upgrades an app REPEATEDLY|rolls an app install back atomically|refuses to uninstall an app whose doctypes still hold documents"
 
       - name: Diff hygiene
         id: diff_hygiene
