@@ -1,0 +1,121 @@
+name: R5-01 Capability Profile Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/app-registry/src/**"
+      - "server/migrations/tenant/0115_capability_profiles.sql"
+      - "server/tests/capability-profile*.test.mjs"
+      - "client/packages/builder/src/capability/**"
+      - "client/packages/builder/src/index.ts"
+      - "client/packages/builder/test/capability-profile.test.mjs"
+      - "docs/agents/r5/R5_A1_PACKAGE_CAPABILITY_PROFILE.md"
+      - ".github/workflows/r5-01-capability-profile-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r5-01-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.head_ref == 'agent/r5-01-package-capability-profile'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact PR merge candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify candidate contains current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          echo "candidate=$(git rev-parse HEAD)"
+          echo "main=$(git rev-parse origin/main)"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit App Registry graph and reject R5-01 TypeScript errors
+        working-directory: server
+        shell: bash
+        run: |
+          cat > tsconfig.r5-a1.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "rootDir": ".",
+              "outDir": "./dist",
+              "declaration": false,
+              "sourceMap": false,
+              "noEmitOnError": false
+            },
+            "include": [
+              "packages/app-registry/src/**/*.ts",
+              "packages/query/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules", "apps/web"]
+          }
+          JSON
+          set +e
+          pnpm exec tsc -p tsconfig.r5-a1.json 2>&1 | tee /tmp/r5-a1-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep "error TS" /tmp/r5-a1-tsc.log > /tmp/r5-a1-errors.log || true
+            grep -E 'capability-profile|packages/app-registry/src/index\.ts' /tmp/r5-a1-errors.log > /tmp/r5-a1-owned-errors.log || true
+            if [ -s /tmp/r5-a1-owned-errors.log ]; then
+              echo "TypeScript error intersects R5-01 authority:"
+              cat /tmp/r5-a1-owned-errors.log
+              exit 1
+            fi
+            echo "Only baseline TypeScript errors outside R5-01 changed authority remain:"
+            cat /tmp/r5-a1-errors.log
+          fi
+          test -f dist/packages/app-registry/src/capability-profile.js
+          test -f dist/packages/app-registry/src/capability-profile-store.js
+          test -f dist/packages/app-registry/src/capability-profile-installer.js
+          test -f dist/packages/query/src/index.js
+
+      - name: Capability profile server regressions
+        working-directory: server
+        run: node --test tests/capability-profile.test.mjs tests/capability-profile-store.test.mjs tests/app-registry.test.mjs
+
+      - name: Builder build and R5-01 regression
+        run: |
+          pnpm --filter @metaforge/builder build
+          node --test client/packages/builder/test/capability-profile.test.mjs
+
+      - name: SQL and migration governance
+        working-directory: server
+        run: |
+          python3 scripts/verify-sql.py
+          node scripts/verify-migration-governance.mjs --base-ref origin/main
+          node --test tests/migration-governance.test.mjs
+
+      - name: Capability-profile non-destructive authority guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eiq 'DELETE[[:space:]]+FROM[[:space:]]+(documents|gl_entries|stock_ledger_entries|payment_ledger|installed_apps)' server/packages/app-registry/src/capability-profile*.ts
+          ! grep -Eiq 'DROP[[:space:]]+TABLE|DELETE[[:space:]]+FROM[[:space:]]+(documents|gl_entries|stock_ledger_entries|payment_ledger|installed_apps)' server/migrations/tenant/0115_capability_profiles.sql
+          grep -q 'Required capability cannot be disabled' server/packages/app-registry/src/capability-profile.ts
+          grep -q 'errors.version' server/packages/app-registry/src/capability-profile-store.ts

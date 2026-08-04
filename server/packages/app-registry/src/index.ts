@@ -13,13 +13,16 @@ export * from "./app-factory-definition-resolver.js";
 export * from "./app-factory-approval-runtime.js";
 export * from "./app-rollback.js";
 export * from "./app-revision-store.js";
+export * from "./capability-profile.js";
+export * from "./capability-profile-store.js";
 export {
   combinedNavigation,
   type InstalledAppRecord,
   type InstallResult,
   type UninstallResult,
 } from "./installer.js";
-export { AppInstaller, type InstalledAppRecordWithInputTables } from "./input-table-installer.js";
+export { type InstalledAppRecordWithInputTables } from "./input-table-installer.js";
+export { AppInstaller, type CapabilityAwareInstalledAppRecord } from "./capability-profile-installer.js";
 export { canAdoptPlatformDocType } from "./platform-aware-installer.js";
 export * from "./hooks.js";
 export * from "./method-dispatch.js";

@@ -46,4 +46,11 @@ export { serializePrintFormat, validatePrintFormat, printHtml, type PrintFormatP
 export { DashboardBuilder, blankDashboard, type DashboardBuilderProps, type DashboardModel, type DashCardCfg, type DashChartCfg } from "./dashboard/DashboardBuilder.js";
 export { serializeDashboard, validateDashboard, type DashboardPlan, type DashboardValidationResult } from "./dashboard/serialize.js";
 
+export { CapabilityProfileBuilder, type CapabilityProfileBuilderProps } from "./capability/CapabilityProfileBuilder.js";
+export {
+  capabilityProfileFromResolution, setCapabilityDesiredState, validateCapabilityProfile, serializeCapabilityProfile,
+  type CapabilityDesiredState, type CapabilityEffectiveState, type CapabilityCatalogItem,
+  type CapabilityProfileModel, type CapabilityProfilePayload, type CapabilityProfileValidation,
+} from "./capability/capability-profile.js";
+
 export const BUILDER_VERSION = "0.1.0";
