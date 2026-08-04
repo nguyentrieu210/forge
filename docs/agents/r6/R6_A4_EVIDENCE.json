@@ -4,14 +4,19 @@
   "lane": "R6-04",
   "mission": "Alumdoor Exact-Release Golden Flow",
   "lockedSourceSha": "4149af7c3e49b25fb1f43a50b62f99d7c04e6488",
+  "frozenEvidenceRunId": 30909243450,
   "target": {
     "environmentClass": "PILOT_TARGET_OBSERVED",
     "tenant": "alu",
     "origin": "https://alu.kairo.vn",
-    "observedAt": "2026-08-04T12:22:46.220Z",
-    "observedReleaseSha": "450aaf0e3e70c0c8af2ebffabb0fa2632b61b603",
-    "observedBundleHash": "39de9138edeb6ebc",
-    "previousObservedReleaseSha": "cf5dd0da5b0154374a4ce371d7b122cd059a0bb2",
+    "publicObservedAt": "2026-08-04T12:28:28Z",
+    "protectedObservedAt": "2026-08-04T12:29:18.766Z",
+    "observedReleaseSha": "86958c8bb79dda5d7615078535ece35af280f45b",
+    "observedBundleHash": "ccd4004197f51940",
+    "previousObservedReleaseShas": [
+      "cf5dd0da5b0154374a4ce371d7b122cd059a0bb2",
+      "450aaf0e3e70c0c8af2ebffabb0fa2632b61b603"
+    ],
     "healthHttpStatus": 200,
     "releaseHttpStatus": 200,
     "guestBootHttpStatus": 403,
@@ -25,8 +30,9 @@
     "maintenance": "1.5.1"
   },
   "protectedIdentityObservation": {
-    "runId": 30908748960,
+    "runId": 30909243450,
     "mutation": "NONE",
+    "releaseObserved": true,
     "authentication": {
       "attempted": false,
       "succeeded": false,
@@ -39,10 +45,15 @@
       "databaseReason": "wrangler_command_failed",
       "identityMatches": false
     },
-    "status": "BLOCKED"
+    "status": "BLOCKED",
+    "blockers": [
+      "locked_candidate_release_not_observed",
+      "locked_package_versions_not_observed",
+      "active_capability_profile_identity_not_proven"
+    ]
   },
   "supportingSourceEvidence": {
-    "runId": 30908748960,
+    "runId": 30909243450,
     "status": "PASS",
     "level": "DETERMINISTIC_SOURCE_SUPPORT",
     "capabilityProfileAndObserver": { "pass": 53, "fail": 0 },
@@ -77,7 +88,7 @@
       "minimumLevel": "PRODUCTION_LIKE_OBSERVED",
       "mutation": "NONE",
       "status": "BLOCKED",
-      "reason": "Pilot target release marker is 450aaf0e3e70c0c8af2ebffabb0fa2632b61b603, not locked candidate 4149af7c3e49b25fb1f43a50b62f99d7c04e6488. Authenticated package/profile secrets are absent and the read-only D1 profile query failed, so exact package/profile identity is not proven.",
+      "reason": "Pilot target release marker is 86958c8bb79dda5d7615078535ece35af280f45b, not locked candidate 4149af7c3e49b25fb1f43a50b62f99d7c04e6488. Authenticated package/profile secrets are absent and the read-only D1 profile query failed, so exact package/profile identity is not proven.",
       "support": [
         "server/scripts/r6-04-alumdoor-identity-readonly.mjs",
         ".github/workflows/r6-04-alumdoor-golden-flow.yml"
@@ -135,7 +146,7 @@
       "id": "DR-R6-04-02",
       "owner": "R6-01 / release owner",
       "status": "OPEN",
-      "request": "Converge alu.kairo.vn from observed 450aaf0e3e70c0c8af2ebffabb0fa2632b61b603 to locked 4149af7c3e49b25fb1f43a50b62f99d7c04e6488 and close provider/release blockers before exact-release Golden Flow certification is rerun."
+      "request": "Converge alu.kairo.vn from observed 86958c8bb79dda5d7615078535ece35af280f45b to locked 4149af7c3e49b25fb1f43a50b62f99d7c04e6488 and close provider/release blockers before exact-release Golden Flow certification is rerun."
     },
     {
       "id": "DR-R6-04-03",
@@ -150,5 +161,6 @@
       "request": "Provide the approved read-only R6-E18 identity path. ALU_META_ADMIN_USER/PASSWORD are absent in the GitHub production environment and the Cloudflare-token D1 SELECT attempt returned wrangler_command_failed. The rerun must prove package versions and active capability-profile ID/version/content-hash without mutation authority."
     }
   ],
+  "workflowTriggerPolicy": "R6-04 live observation reruns only for harness/test/workflow changes; handoff-only documentation updates do not retrigger live evidence collection.",
   "laneVerdict": "R6-04-BLOCKED: pilot target is not on the exact locked candidate; R6-E18 package/profile identity is incomplete; E19-E23 lack approved writable production-like exact-candidate execution state."
 }
