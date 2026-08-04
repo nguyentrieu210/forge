@@ -23,17 +23,18 @@ Primary RC3 blocker scope:
 
 - WS13 durable migration core is already merged and includes `D1MigrationJournal`, `KernelMigrationApplyPort`, receipt recovery, correction data, incremental cursor/checkpoint and reconciliation primitives.
 - Native `/api/v1/import/apply` on the RC4 seed still executes its own row loop and does **not** compose the WS13 durable journal/orchestrator.
-- `executeDurableMigrationPlan()` currently validates `command_id` as 64 lowercase hex, while Forge's canonical `buildCommand()` emits deterministic IDs such as `frappe-<40 hex>`. Existing WS13 durable tests already use the canonical prefixed form, so the current validation contract is internally inconsistent and blocks real wiring.
+- Canonical `buildCommand()` already emits deterministic IDs such as `frappe-<40 hex>`, and the durable orchestrator correctly accepts non-empty command IDs; existing WS13 tests exercise that prefixed form. No command-ID format incompatibility exists. A3 only adds a bounded-length guard while retaining command IDs as opaque stable identifiers.
+- The remaining crash-window gap is at whole-run replay: an identical request retried after all rows committed and the run reached `applied/completed` was rejected by lifecycle state rather than returning its durable outcomes.
 - Exact seed contains duplicate historical `0110_*` migration prefixes. The D1 runner journals full filenames, so A3 will not rename potentially applied migrations without environment applied-state evidence.
 
 ## Implementation direction
 
-- treat canonical command IDs as opaque non-empty stable IDs; continue requiring SHA-256 payload hashes;
+- keep canonical command IDs opaque/non-empty/stable and continue requiring SHA-256 payload hashes;
 - add whole-run replay semantics so a lost HTTP response after an `applied/completed` run can return the durable result instead of failing lifecycle validation;
 - intercept the existing native import apply route in the tenant-worker wrapper and execute through WS13 durable planning/journal + `KernelMigrationApplyPort` while delegating authoritative writes back to the existing core command endpoint;
 - preserve import/create permission checks and add per-document save permission for explicit update policy;
 - expose durable `run_id`, retry recovery count and row outcomes without weakening the existing default create/error behavior;
-- add targeted regression for canonical prefixed command IDs and applied-run replay.
+- add targeted regression for applied-run replay while retaining existing prefixed-command-ID coverage.
 
 ## Dependencies / no-stop
 
