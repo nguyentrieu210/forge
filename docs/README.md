@@ -9,10 +9,11 @@ Tài liệu trong repo được chia theo **authority**, không theo số lượ
 1. `README.md` — entrypoint dự án.
 2. `CURRENT_STATUS.md` — trạng thái đã xác minh gần nhất.
 3. `NEXT_TASKS.md` — hàng đợi active, hiện là Alumdoor Controlled Pilot.
-4. `PROJECT_CONTEXT.md` — kiến trúc và source-of-truth hiện hành.
-5. `AI_HANDOFF.md` — handoff ngắn cho phiên tiếp theo.
-6. `docs/ops/SRE_RUNBOOK.md` — release/recovery/data-safety operator intent.
-7. `skills/forge-enterprise-completion/SKILL.md` — execution policy cho agent.
+4. `docs/pilot/alumdoor/README.md` — active pilot authority/read order.
+5. `PROJECT_CONTEXT.md` — kiến trúc và source-of-truth hiện hành.
+6. `AI_HANDOFF.md` — handoff ngắn cho phiên tiếp theo.
+7. `docs/ops/SRE_RUNBOOK.md` — release/recovery/data-safety operator intent.
+8. `skills/forge-enterprise-completion/SKILL.md` — execution policy cho agent.
 
 Không dùng board/handoff của program cũ để suy live state.
 
@@ -22,17 +23,23 @@ R6 Production Certification đã hoàn tất với `PILOT-GO` cho exact deployed
 
 `49315112a21182d2ce077b08a1fb9e26db07fd36`
 
-Final R6 authority:
+Pilot-00 is **DONE / PILOT-00-LOCKED**. Current pilot authority:
+
+1. `docs/pilot/alumdoor/README.md`
+2. `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`
+3. `docs/pilot/alumdoor/PILOT_00_LOCK.json`
+4. `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`
+5. `NEXT_TASKS.md`
+
+Active phase is **Pilot-01 — Master + Opening Data Readiness**. Pilot-00 did not write real customer/master/opening data.
+
+Final R6 entry authority remains:
 
 1. `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md`
 2. `deploy-evidence/r6-final-production-certification-49315112a211.json`
 3. `deploy-evidence/r6-authorized-orchestrator-49315112a211.json`
 4. `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`
 5. `docs/agents/r6/EVIDENCE_MATRIX.md`
-
-R6 coordination artifacts `OPEN_ORDER.md` và `AGENT_PROMPTS.md` đã hết vai trò sau convergence và được xóa khỏi `main`; Git history giữ provenance.
-
-Active execution queue cho Controlled Pilot nằm trong `NEXT_TASKS.md`.
 
 ## 3. Strategic authority
 
@@ -63,7 +70,7 @@ History được giữ khi cần chứng minh vì sao current state tồn tại.
 - `docs/agents/cloudflare-cfmax/CFMAX_R2_CONVERGENCE_20260804.md` và `CFMAX_R2_POST_MERGE_20260804.md` — Cloudflare source convergence.
 - `docs/agents/transaction-closure/07-CONVERGENCE.md` — cross-domain transaction closure.
 
-Các worker evidence cụ thể có thể được giữ nếu chứa test/provenance/decision chưa được final record thay thế hoàn toàn.
+Worker evidence cụ thể có thể được giữ nếu chứa test/provenance/decision chưa được final record thay thế hoàn toàn.
 
 ## 6. Files không nên sống lâu trên `main`
 
