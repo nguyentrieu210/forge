@@ -199,10 +199,13 @@ export async function applyUomConversion<T extends UomLine>(
     const measurementProfile = itemText(master, "measurement_profile");
     const purchaseAllocationQtyField = itemText(master, "purchase_allocation_qty_field");
     const purchaseAllocationUom = itemText(master, "purchase_allocation_uom");
-    if (transactionKind === "purchase" && purchaseAllocationQtyField && !purchaseAllocationUom) {
+    if (transactionKind === "purchase" && Boolean(purchaseAllocationQtyField) !== Boolean(purchaseAllocationUom)) {
       throw errors.validation(
-        `Mặt hàng ${item.item_code}: purchase_allocation_qty_field phải đi cùng purchase_allocation_uom`,
+        `Mặt hàng ${item.item_code}: purchase_allocation_qty_field và purchase_allocation_uom phải được khai cùng nhau`,
       );
+    }
+    if (purchaseAllocationQtyField && !SAFE_FIELDNAME.test(purchaseAllocationQtyField)) {
+      throw errors.validation(`Mặt hàng ${item.item_code}: purchase_allocation_qty_field không hợp lệ`);
     }
     return {
       ...item,
@@ -213,13 +216,14 @@ export async function applyUomConversion<T extends UomLine>(
       stock_qty: fromScaledInt(stockQty, 6),
       stock_qty_micros: stockQty,
       ...applyRateUnit(item, master, uom, qtyMicros, index),
+      // Allocation-axis authority is master data. Always overwrite/clear client-supplied descriptors.
+      purchase_allocation_qty_field: purchaseAllocationQtyField || undefined,
+      purchase_allocation_uom: purchaseAllocationUom || undefined,
       ...(master ? {
         inventory_mode: inventoryMode,
         measurement_profile: measurementProfile,
         has_catch_weight: master.has_catch_weight === true || master.has_catch_weight === 1,
         ...(typeof master.weight_uom === "string" ? { weight_uom: master.weight_uom } : {}),
-        ...(purchaseAllocationQtyField ? { purchase_allocation_qty_field: purchaseAllocationQtyField } : {}),
-        ...(purchaseAllocationUom ? { purchase_allocation_uom: purchaseAllocationUom } : {}),
       } : {}),
     };
   });
