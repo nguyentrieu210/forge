@@ -1,5 +1,5 @@
-/* Demo — nạp design system của kit (tokens + Tailwind), rồi override riêng cho demo. */
-@import "@metaforge/ui/styles.css";
+/* Demo — nạp canonical V2 tokens qua compatibility bridge dùng chung với runtime. */
+@import "@metaforge/ui/v3.css";
 
 html,
 body,
