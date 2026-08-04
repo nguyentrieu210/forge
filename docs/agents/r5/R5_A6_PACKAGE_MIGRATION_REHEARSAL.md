@@ -84,24 +84,61 @@ It executes on the exact PR head and has **no deploy step**.
 
 The tenant-worker gate is intentionally targeted rather than running all 78 Frappe-facade scenarios. Run `30879982782` proved the full file currently has unrelated baseline failures in share/report/fieldtype/notification/web-form scenarios. Those failures are not package/migration evidence and must not mask the R5-06 scenarios. The relevant package lifecycle scenarios themselves passed in that run except the stale large-package ownership assertion described in DR-R5-A6-05.
 
-## Executable evidence — run 30879982782
+## Final focused technical run — 30880334427
 
-Exact head: `8c5ac56c7b333d7d65a90031d6419931d9ca3607`
+Exact technical head: `f2e74bd71a9a07829fd804b02678b8697a9d0be0`
+Job: `91900143764`
+Base used for migration append-only comparison: `8316d2a5f24863d3347cf9f92ec5987145b8dc9e`
+Final job conclusion: **FAIL / BLOCKED by owner dependencies**
 
-| Gate | Result | Evidence |
+The harness itself has no remaining R5-06-owned failure. The aggregate is deliberately fail-closed because exactly two executable gates remain red on the current-main rehearsal surface: HRM package integrity and dependency minimum-version semantics.
+
+| Gate | Final focused result | Exact evidence |
 |---|---|---|
-| exact head + locked install | PASS | checkout/assert succeeded; frozen lockfile installed |
-| target dist emission | PASS with unrelated baseline debt | App Registry and Migration dist emitted; existing full-server TypeScript debt remains outside R5-06 scope |
-| migration governance | PASS | 85 SQL files / 3 migration dirs; append-only delta PASS; 3/3 governance tests |
-| opening import + reconciliation | PASS | 5/5 opening tests and 4/4 manifest/reconciliation tests |
+| exact head checkout/assert | PASS | checked out and asserted `f2e74bd71a9a07829fd804b02678b8697a9d0be0` |
+| frozen dependency install | PASS | `pnpm install --frozen-lockfile` completed |
+| target dist emission | PASS with unrelated baseline debt | App Registry and Migration dist emitted; pre-existing full-server TypeScript errors remain in unrelated selling/model paths |
+| migration governance | PASS | 85 SQL files across 3 migration dirs; append-only delta PASS; 3/3 governance tests |
+| opening import | PASS | 5/5 opening tests |
+| migration manifest + reconciliation | PASS | 4/4 tests, including `master -> opening -> transaction` order and exact decimal reconciliation |
 | App Registry unit regression | PASS | 40/40 tests |
-| HRM package dry check | **FAIL / BLOCKED** | missing external `Bank Account` declaration; DR-R5-A6-04 |
-| VN Accounting package dry check | PASS | `vn-accounting@1.6.1` validated |
-| Manufacturing/QMS package dry check | PASS | `manufacturing-qms@1.1.0` validated |
-| Maintenance package dry check | PASS | `maintenance@1.5.1` validated |
-| full tenant-worker file | baseline noisy | 66/78 passed; R5-06 package lifecycle scenarios were green except stale 127-row ownership assertion |
-| diff hygiene | FAIL — harness defect | markdown hard-break trailing spaces; corrected after this run |
-| minimum-version contract | **FAIL / BLOCKED** | `1.2.9` incorrectly satisfies manifest requirement `>=1.3.0`; DR-R5-A6-01 |
+| HRM package dry check | **FAIL / BLOCKED** | `Salary Bank Batch.bank_account` links to undeclared external `Bank Account`; DR-R5-A6-04 |
+| VN Accounting package dry check | PASS | `vn-accounting@1.6.1`, 13 DocTypes, 7 workflows, 12 roles, 27 nav |
+| Manufacturing/QMS package dry check | PASS | `manufacturing-qms@1.1.0`, 11 DocTypes, 1 workflow, 4 roles, 9 nav |
+| Maintenance package dry check | PASS | `maintenance@1.5.1`, 8 DocTypes, 4 workflows, 4 prints, 3 roles, 3 fixtures, 7 nav |
+| targeted disposable Workerd/D1 lifecycle + isolation | PASS | 7/7 selected scenarios PASS; 71 unrelated scenarios skipped |
+| diff hygiene | PASS | `git diff --check` clean |
+| plain minimum-version monotonicity | PASS | `1.2.9 < 1.3.0 <= 1.8.0` behaves correctly for plain versions |
+| first-party `>=` dependency syntax | **FAIL / BLOCKED** | `1.2.9` incorrectly satisfies manifest requirement `>=1.3.0`; DR-R5-A6-01 |
+
+Aggregate gate values from the final focused run:
+
+```text
+MIGRATION_GOVERNANCE=success
+MIGRATION_FIXTURES=success
+APP_REGISTRY=success
+PACK_HRM=failure
+PACK_VN_ACCOUNTING=success
+PACK_MANUFACTURING_QMS=success
+PACK_MAINTENANCE=success
+DISPOSABLE_TENANT=success
+DIFF_HYGIENE=success
+MINIMUM_VERSION=failure
+```
+
+The targeted Workerd/D1 lane proves the intended R5-06 lifecycle surface on the current-main fixture:
+
+- real authenticated bootstrap path;
+- older tenant standard-catalogue repair before dependency resolution;
+- tenant route/binding mismatch fails closed with `DEPLOYMENT_MISCONFIGURED`;
+- first install succeeds and identical reinstall is idempotent;
+- repeated package upgrades succeed;
+- late install metadata failure rolls back atomically;
+- uninstall is refused when package-owned DocTypes still contain documents.
+
+## Earlier exploratory evidence — 30879982782
+
+Run `30879982782` was useful for finding both product blockers and harness noise. It established the same migration/App Registry/package results, surfaced DR-R5-A6-04, exposed the stale 127-row ownership assertion later routed as DR-R5-A6-05, and found a markdown trailing-space issue in the R5-06 handoff. The R5-06-owned whitespace defect was corrected; final run `30880334427` proves diff hygiene PASS. Unrelated full-facade baseline failures were removed from the R5-06 verdict by targeting only package/bootstrap/isolation scenarios.
 
 ## Dependency Requests
 
@@ -183,11 +220,11 @@ Status below is updated only from executable evidence; source presence is not a 
 
 | Rehearsal requirement | Current verdict | Evidence / blocker |
 |---|---|---|
-| fresh/disposable tenant bootstrap | PASS on current-main fixture | older tenant standard-catalogue repair passed in Workerd/D1; integrated-candidate rerun still required |
+| fresh/disposable tenant bootstrap | PASS on current-main fixture | targeted Workerd/D1 bootstrap/repair PASS; integrated-candidate rerun still required |
 | deterministic package dependency install order | BLOCKED | minimum-version semantics DR-R5-A6-01 plus exact candidate DR-R5-A6-03 |
 | minimum package version resolution | **FAIL / BLOCKED** | pinned regression demonstrates `>=` contract mismatch; DR-R5-A6-01 |
-| install + idempotent reinstall | PASS on current-main fixture | tenant-worker package scenario passed |
-| package upgrade path | PASS on current-main fixture | repeated multi-version upgrade scenario passed |
+| install + idempotent reinstall | PASS on current-main fixture | targeted Workerd/D1 package scenario PASS |
+| package upgrade path | PASS on current-main fixture | repeated multi-version upgrade scenario PASS |
 | capability profile apply/deactivate/reactivate | BLOCKED | DR-R5-A6-02 |
 | disabled capability preserves package/data | BLOCKED | DR-R5-A6-02 |
 | migration sequence/checksum/applied-state semantics | PASS on current main | governance 3/3 + 85-file append-only/checksum evidence |
@@ -213,9 +250,11 @@ Status below is updated only from executable evidence; source presence is not a 
 
 ## Current verdict
 
-**R5-06 = BLOCKED, independent rehearsal harness implemented and materially exercised.**
+**R5-06 = BLOCKED, independent rehearsal harness implemented, cleaned and materially exercised.**
 
-The branch now distinguishes harness failures from owner-contract failures and keeps independent gates executable. It cannot become `READY` until:
+Final focused run `30880334427` proves there are no remaining R5-06-owned harness failures. Exactly two executable current-main gates remain red and have already been routed to their owners: DR-R5-A6-01 and DR-R5-A6-04. Capability-profile lifecycle and exact integrated-candidate rehearsal remain prerequisite-blocked rather than falsely simulated.
+
+R5-06 cannot become `READY` until:
 
 1. DR-R5-A6-01 is closed by the canonical package owner;
 2. DR-R5-A6-02 has a stable profile contract;
