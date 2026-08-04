@@ -99,19 +99,43 @@ jobs:
           const candidate = process.env.CANDIDATE_SHA;
           const rows = [];
           rows.push(['R6-E01', source ? 'PASS' : 'BLOCKED', source ? 'governed Cloudflare source validator passed' : 'source evidence missing']);
-          rows.push(['R6-E02', provider?.result?.ok ? 'PASS' : 'BLOCKED', provider?.result?.ok ? 'pilot-used provider inventory converged' : (provider?.result?.blockers ?? []).map(x => x.name).join(', ') || 'provider evidence missing']);
+
+          const providerChecks = provider?.checks ?? [];
+          const inventoryNames = [
+            'gateway-bindings',
+            'gateway-deployment',
+            'control-service-worker',
+            'dispatch-namespace',
+            'tenant-worker',
+            'tenant-bindings',
+            'alumdoor-app-worker',
+            'alumdoor-app-bindings',
+          ];
+          const inventoryFailures = inventoryNames.filter(name => !providerChecks.some(x => x.name === name && x.ok === true));
+          rows.push([
+            'R6-E02',
+            inventoryFailures.length === 0 ? 'PASS' : 'BLOCKED',
+            inventoryFailures.length === 0 ? 'pilot-used provider inventory converged' : inventoryFailures.join(', '),
+          ]);
+
           const healthOk = release?.checks?.health?.status === 200 && release?.checks?.health?.ok === true;
           const rootOk = Number(release?.checks?.root?.status ?? 0) >= 200 && Number(release?.checks?.root?.status ?? 0) < 400;
           const bootOk = release?.checks?.guest_boot?.status === 403;
           rows.push(['R6-E03', healthOk && rootOk && bootOk ? 'PASS' : 'BLOCKED', `health=${release?.checks?.health?.status ?? 'missing'} root=${release?.checks?.root?.status ?? 'missing'} guestBoot=${release?.checks?.guest_boot?.status ?? 'missing'}`]);
+
           const releaseSha = String(release?.checks?.release?.release_sha ?? '');
           const bundleHash = String(release?.checks?.release?.bundle_hash ?? '');
           const releaseOk = releaseSha.toLowerCase() === candidate.toLowerCase() && /^[0-9a-f]{16}$/i.test(bundleHash);
           rows.push(['R6-E04', releaseOk ? 'PASS' : 'BLOCKED', `releaseSha=${releaseSha || 'missing'} bundleHash=${bundleHash || 'missing'}`]);
-          const providerObs = provider?.checks ?? [];
+
           const obsNames = ['gateway-observability', 'tenant-observability', 'alumdoor-app-observability'];
-          const obsOk = obsNames.every(name => providerObs.some(x => x.name === name && x.ok === true));
-          rows.push(['R6-E05', obsOk ? 'PASS' : 'BLOCKED', obsOk ? 'gateway/tenant/app observability observed' : 'provider observability incomplete']);
+          const obsFailures = obsNames.filter(name => !providerChecks.some(x => x.name === name && x.ok === true));
+          rows.push([
+            'R6-E05',
+            obsFailures.length === 0 ? 'PASS' : 'BLOCKED',
+            obsFailures.length === 0 ? 'gateway/tenant/app observability observed' : obsFailures.join(', '),
+          ]);
+
           const pass = rows.every(([, status]) => status === 'PASS');
           const lines = [
             '# R6-01 CI evidence summary',
