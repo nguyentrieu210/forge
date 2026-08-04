@@ -58,6 +58,32 @@ export async function executeDurableMigrationPlan(input: {
 }): Promise<DurableMigrationSummary> {
   const run = await input.journal.ensureRun(input.tenant_id, input.plan, input.actor, input.now(), input.manifest_id);
   let runState = run.state;
+
+  // Whole-request retries must be idempotent too. A response can disappear after every
+  // row committed and the run moved to `applied`/`completed`; replaying the identical
+  // plan must return its durable outcomes rather than rejecting the lifecycle state and
+  // forcing an operator to guess whether business writes happened.
+  if (runState === "applied" || runState === "completed") {
+    const outcomes = (await input.journal.listRows(input.tenant_id, run.run_id)).map(rowOutcome);
+    let imported = 0;
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+    for (const outcome of outcomes) {
+      ({ imported, updated, skipped, failed } = increment(outcome, imported, updated, skipped, failed));
+    }
+    return {
+      run_id: run.run_id,
+      imported,
+      updated,
+      skipped,
+      failed,
+      processed: outcomes.length,
+      recovered_from_receipt: 0,
+      outcomes,
+    };
+  }
+
   if (runState === "draft") {
     runState = (await input.journal.transitionRun(input.tenant_id, run.run_id, "validated", input.now())).state;
   }
@@ -217,7 +243,9 @@ export async function executeDurableMigrationPlan(input: {
 function validatePrepared(prepared: PreparedMigrationCommand, expectedTarget?: string): void {
   if (!prepared.target_name?.trim()) throw errors.validation("Prepared migration command requires target_name");
   if (expectedTarget && prepared.target_name !== expectedTarget) throw errors.idempotency();
-  if (!prepared.command_id?.trim()) throw errors.validation("Prepared migration command requires command_id");
+  const commandId = prepared.command_id?.trim();
+  if (!commandId) throw errors.validation("Prepared migration command requires command_id");
+  if (commandId.length > 240) throw errors.validation("Prepared migration command_id must be at most 240 characters");
   if (!/^[a-f0-9]{64}$/.test(prepared.payload_hash)) throw errors.validation("Prepared migration command requires SHA-256 payload_hash");
 }
 
