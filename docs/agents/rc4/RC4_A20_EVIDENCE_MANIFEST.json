@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "work_item": "RC4-A20",
+  "mission": "Converge A1-A19 evidence into the canonical 956-capability registry without maturity inflation.",
+  "snapshot": {
+    "date": "2026-08-04",
+    "main_sha": "1f0b08934101640ca15b2379b5dd7ca3ef018e33",
+    "canonical_status_blob_sha": "5189e90422edb8a0e3c75bcce7d11838b3f97965",
+    "observed_through_pr": 606,
+    "note": "Point-in-time RC4 convergence snapshot. Later worker commits/runs require a new manifest revision before they can affect maturity."
+  },
+  "baseline_counts": {
+    "Hardened": 0,
+    "RC": 65,
+    "Wired": 407,
+    "Foundation": 327,
+    "Missing": 157
+  },
+  "candidate_counts": {
+    "Hardened": 0,
+    "RC": 65,
+    "Wired": 407,
+    "Foundation": 327,
+    "Missing": 157
+  },
+  "maturity_changes": [],
+  "lanes": [
+    {
+      "agent": "A1",
+      "branch": "agent/rc4-01-iam-privacy",
+      "pr": 597,
+      "head_sha": "47bb2b8355af6ecc4abffde9d83cb0c8b7621479",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "validated_head_sha": "47bb2b8355af6ecc4abffde9d83cb0c8b7621479",
+      "workflow_run": 30867988724,
+      "accepted_for_maturity": false,
+      "reason": "Exact backend IAM evidence is green, but A1 explicitly keeps MFA/session capabilities Wired pending A6 browser/device evidence and keeps provider/privacy gaps below RC."
+    },
+    {
+      "agent": "A2",
+      "branch": "agent/rc4-02-sre-provider-recovery",
+      "pr": 596,
+      "head_sha": "6efa89b46548d6a958e04ffd8ea8c7dcdc9cd60a",
+      "status": "BLOCKED",
+      "evidence_kind": "audit-only",
+      "accepted_for_maturity": false,
+      "reason": "Lane explicitly reports zero promotions/demotions; remote Cloudflare observation remains unverified and provider/recovery drills are absent."
+    },
+    {
+      "agent": "A3",
+      "branch": "agent/rc4-03-migration-cutover",
+      "pr": 599,
+      "head_sha": "792f7f311d52f3ed0882c284b1e3d9ff5f34b359",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "validated_head_sha": "792f7f311d52f3ed0882c284b1e3d9ff5f34b359",
+      "workflow_run": 30868113636,
+      "accepted_for_maturity": false,
+      "reason": "Durable migration runtime and retry evidence are green, but A3 explicitly withholds RC promotion pending domain reconciliation, restore/PITR/cutover and applied-state evidence."
+    },
+    {
+      "agent": "A4",
+      "branch": "agent/rc4-04-finance-vn-statutory",
+      "pr": 602,
+      "head_sha": "84f25a829bb7eb28ab8bce053dc336435b46e77f",
+      "status": "BLOCKED",
+      "evidence_kind": "partial-executable",
+      "accepted_for_maturity": false,
+      "reason": "SQLite migration replay is green, but focused Node execution is unproven and the lane explicitly makes no registry promotion."
+    },
+    {
+      "agent": "A5",
+      "branch": "agent/rc4-05-hcm-payroll-statutory",
+      "pr": 604,
+      "head_sha": "1baaf38d92f5aa0d53cfd2260d5baade850be8dd",
+      "status": "BLOCKED",
+      "evidence_kind": "source-static",
+      "accepted_for_maturity": false,
+      "reason": "PIT source-lock and payroll correction regressions are authored, but exact execution is not accepted and BHXH/BHYT/BHTN clause-level numeric authority remains incomplete."
+    },
+    {
+      "agent": "A6",
+      "branch": "agent/rc4-06-ui-mobile-offline",
+      "pr": 598,
+      "head_sha": "007572266465b9fb4944929f382162166740884b",
+      "status": "BLOCKED",
+      "evidence_kind": "harness-only",
+      "accepted_for_maturity": false,
+      "reason": "Browser/mobile/PWA matrices are authored but the worker has no accepted exact browser run; offline authority remains explicitly Missing."
+    },
+    {
+      "agent": "A7",
+      "branch": "agent/rc4-07-appfactory-residual",
+      "pr": 606,
+      "head_sha": "4998c7d21b698e3604ef8b3ca9d8c324db979fc6",
+      "status": "RUNNING",
+      "evidence_kind": "source-static",
+      "accepted_for_maturity": false,
+      "reason": "Persisted App Factory approval runtime candidate is substantive, but exact-head validation has not been accepted in this A20 snapshot and its PR states promotions remain evidence-gated."
+    },
+    {
+      "agent": "A8",
+      "branch": "agent/rc4-08-integration-provider",
+      "pr": null,
+      "head_sha": null,
+      "status": "RUNNING",
+      "evidence_kind": "source-static",
+      "accepted_for_maturity": false,
+      "reason": "Provider/DLQ source implementation exists, but no independently accepted final PR head and executable provider/retry evidence were available at snapshot time."
+    },
+    {
+      "agent": "A9",
+      "branch": "agent/rc4-09-architecture-kernel",
+      "pr": null,
+      "head_sha": null,
+      "status": "BOOTSTRAPPED",
+      "evidence_kind": "bootstrap",
+      "accepted_for_maturity": false,
+      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+    },
+    {
+      "agent": "A10",
+      "branch": "agent/rc4-10-crm-revenue",
+      "pr": null,
+      "head_sha": null,
+      "status": "BOOTSTRAPPED",
+      "evidence_kind": "bootstrap",
+      "accepted_for_maturity": false,
+      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+    },
+    {
+      "agent": "A11",
+      "branch": "agent/rc4-11-procurement-p2p",
+      "pr": 600,
+      "head_sha": "27c616c2a77f08bb0284a0de4ea141637ce82462",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "validated_head_sha": "a157f4aab5d5a5a0ee867bee77aedbe4af812436",
+      "workflow_run": 30868323326,
+      "accepted_for_maturity": false,
+      "reason": "Supplier cancellation/permission hardening has exact green evidence, but the lane does not claim whole Supplier Rating/Contract capability promotion and retains landed-cost/allocation dependencies."
+    },
+    {
+      "agent": "A12",
+      "branch": "agent/rc4-12-inventory-wms",
+      "pr": null,
+      "head_sha": null,
+      "status": "BOOTSTRAPPED",
+      "evidence_kind": "bootstrap",
+      "accepted_for_maturity": false,
+      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+    },
+    {
+      "agent": "A13",
+      "branch": "agent/rc4-13-manufacturing-qms",
+      "pr": 603,
+      "head_sha": "d6b7a503e8dacaeaa37fd4180f81b0314a339b50",
+      "status": "RUNNING",
+      "evidence_kind": "source-static",
+      "accepted_for_maturity": false,
+      "reason": "Manufacturing/QMS release-confidence tests and workflow exist, but exact-head CI had not been accepted in this A20 snapshot; cross-owner rework/subcontract/cost/repost dependencies remain."
+    },
+    {
+      "agent": "A14",
+      "branch": "agent/rc4-14-project-service-field",
+      "pr": null,
+      "head_sha": null,
+      "status": "BOOTSTRAPPED",
+      "evidence_kind": "bootstrap",
+      "accepted_for_maturity": false,
+      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+    },
+    {
+      "agent": "A15",
+      "branch": "agent/rc4-15-bi-semantic-ai",
+      "pr": null,
+      "head_sha": null,
+      "status": "RUNNING",
+      "evidence_kind": "source-static",
+      "accepted_for_maturity": false,
+      "reason": "Semantic/AI implementation and tests exist, but no independently accepted final PR head/exact execution was available in this snapshot."
+    },
+    {
+      "agent": "A16",
+      "branch": "agent/rc4-16-workplace-dms-collab",
+      "pr": null,
+      "head_sha": null,
+      "status": "BOOTSTRAPPED",
+      "evidence_kind": "bootstrap",
+      "accepted_for_maturity": false,
+      "reason": "Only bootstrap handoff was observed; branch existence is not maturity evidence."
+    },
+    {
+      "agent": "A17",
+      "branch": "agent/rc4-17-logistics-pos-commerce",
+      "pr": 601,
+      "head_sha": "f2504064dbdf929ba6c03107eea624463943fce1",
+      "status": "BLOCKED",
+      "evidence_kind": "source-static",
+      "accepted_for_maturity": false,
+      "reason": "Authorization hardening is substantive, but focused execution is not accepted; skipped default workflows are not evidence and Finance/Inventory/UI dependencies remain."
+    },
+    {
+      "agent": "A18",
+      "branch": "agent/rc4-18-alumdoor-vertical",
+      "pr": null,
+      "head_sha": null,
+      "status": "BOOTSTRAPPED",
+      "evidence_kind": "bootstrap",
+      "accepted_for_maturity": false,
+      "reason": "Only bootstrap handoff was observed; historical vertical production evidence cannot prove the current RC4 candidate."
+    },
+    {
+      "agent": "A19",
+      "branch": "agent/rc4-19-independent-adversarial-qa",
+      "pr": 605,
+      "head_sha": "102f887c92d58eb3c80365a053431d90ff20b330",
+      "status": "RUNNING",
+      "evidence_kind": "independent-qa-in-progress",
+      "workflow_run": 30868619676,
+      "accepted_for_maturity": false,
+      "reason": "Independent adversarial replay is still in progress and A19 itself requires a second exact-converged-head replay before RC4 maturity promotion."
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+name: RC4 A20 Capability Convergence
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
+      - "docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md"
+      - "docs/agents/rc4/RC4_A20_**"
+      - "server/scripts/validate-enterprise-capability-status.mjs"
+      - "server/scripts/validate-rc4-capability-convergence.mjs"
+      - ".github/workflows/rc4-a20-capability-convergence.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Validate canonical 956-capability registry
+        run: node server/scripts/validate-enterprise-capability-status.mjs
+
+      - name: Syntax-check RC4 convergence validator
+        run: node --check server/scripts/validate-rc4-capability-convergence.mjs
+
+      - name: Validate RC4 evidence provenance and maturity arithmetic
+        env:
+          RC4_EXPECTED_MAIN_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node server/scripts/validate-rc4-capability-convergence.mjs
+
+      - name: Diff hygiene
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}"
