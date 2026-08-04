@@ -1,0 +1,76 @@
+{
+  "format": "forge-alumdoor-pilot-lock/v1",
+  "status": "PILOT-00-LOCKED",
+  "pilot": {
+    "tenant": "alu",
+    "origin": "https://alu.kairo.vn",
+    "site_scope": "single-certified-alu-tenant-only"
+  },
+  "certified_release": {
+    "source_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "bundle_hash": "838218167db020d8",
+    "r6_evidence": "deploy-evidence/r6-final-production-certification-49315112a211.json",
+    "r6_evidence_count": {
+      "pass": 23,
+      "total": 23
+    }
+  },
+  "packages": [
+    {
+      "app_id": "alumdoor",
+      "version": "2.2.3",
+      "content_hash": "342527752ee0387bea85a71e6f4c254b26209b0ba0da2190cc6699d6da870a56"
+    },
+    {
+      "app_id": "hrm",
+      "version": "1.8.0",
+      "content_hash": "d6b3ff3f1365131d83571144968f288c86d0a17e6a8e7e04148f8a4f05a8f6e8"
+    },
+    {
+      "app_id": "vn-accounting",
+      "version": "1.6.1",
+      "content_hash": "dc7e8fa00b8fba4cc5ca2cc16f6f43ebbaafdf42d0d993d946ad16115833298c"
+    }
+  ],
+  "capability_profile": {
+    "profile_id": "alumdoor-pilot",
+    "version": 1,
+    "content_hash": "3e3124018aa3c7d233f0af8b81f751cd3e4a8329b94a2c9295956bc58ac8f7f8",
+    "valid": true,
+    "blocked_capabilities": []
+  },
+  "business_governance": {
+    "cutover_approver_role": "Giám đốc",
+    "single_accountable_approver": true,
+    "named_account_binding_required_before": "Pilot-04"
+  },
+  "pilot_personas": [
+    "Giám đốc",
+    "Chủ xưởng",
+    "Kinh doanh",
+    "Thủ kho",
+    "Kế toán",
+    "Sản xuất"
+  ],
+  "account_policy": {
+    "named_accounts_only": true,
+    "account_allowlist_required_before": "Pilot-02",
+    "role_expansion_requires_contract_change": true
+  },
+  "reconciliation_policy": {
+    "default_variance_tolerance": 0,
+    "money_unit": "VND minor units",
+    "stock_rule": "compare like-for-like canonical quantity axes at stored precision",
+    "nonzero_variance": "exception-required"
+  },
+  "source_cutoff_policy": {
+    "cutoff_at_required": true,
+    "cutoff_at_format": "RFC3339 UTC",
+    "local_display_timezone": "Asia/Ho_Chi_Minh",
+    "immutable_extract_hash_required": true,
+    "post_cutoff_delta_separate": true,
+    "reextract_creates_new_batch": true
+  },
+  "production_data_mutated_by_pilot_00": false
+}
