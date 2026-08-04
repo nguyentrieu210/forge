@@ -7,6 +7,8 @@ Ngày cập nhật: **2026-08-05**.
 ## Current checkpoint
 
 - Repo: `nguyentrieu210/forge`.
+- Product brand: **Forge**. Naming authority: `docs/BRAND_AND_NAMING.md`.
+- Repo/docs North Star rebaseline audit: `docs/FORGE_REPOSITORY_NORTH_STAR_AUDIT_20260805.md`.
 - RC4: **DONE**.
 - R5: **DONE / R5-GO** via PR `#638`.
 - R6 Production Certification: **DONE / PILOT-GO**.
@@ -19,6 +21,8 @@ Ngày cập nhật: **2026-08-05**.
 - Packages: Alumdoor `2.2.3`, HRM `1.8.0`, VN Accounting `1.6.1`.
 - Active profile: `alumdoor-pilot@1`, valid, no blocked capabilities.
 - Capability truth remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956** unless a newer materialized convergence record changes it.
+
+Technical identifiers such as `@metaforge/*`, `metaforge.api.*`, `cloudforge-*` and exact `kairo.vn` hostnames may remain. Do not reinterpret them as separate current product brands or mass-rename them without a compatibility/migration program.
 
 Pilot authorities:
 
@@ -75,6 +79,10 @@ Raw customer workbooks remain outside Git. Their exact SHA-256 digests and struc
 8. generate a private normalized batch and run `validate-pilot-batch.mjs`;
 9. only a real zero-variance `PREVIEW_PASS` advances Pilot-01 to READY.
 
+## Documentation / hygiene rule
+
+Do not restore deleted handoff/status/candidate/debug files because an old workflow, PR or commit mentions them. Historical provenance belongs in Git/PR history and final convergence evidence. Current authority/read order is defined by `docs/README.md`.
+
 ## Production boundary
 
 No Pilot-01 real production import/write has occurred.
@@ -86,9 +94,11 @@ A `PREVIEW_PASS` still does not authorize real customer/master/opening-data impo
 1. exact GitHub `main` + relevant PR/branch;
 2. `CURRENT_STATUS.md`;
 3. `NEXT_TASKS.md`;
-4. `docs/pilot/alumdoor/README.md`;
-5. `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`;
-6. `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
-7. `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
-8. `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md` for certified entry provenance;
-9. `PROJECT_CONTEXT.md` and architecture/domain contracts as needed.
+4. `PROJECT_CONTEXT.md`;
+5. `docs/README.md`;
+6. `docs/BRAND_AND_NAMING.md`;
+7. `docs/pilot/alumdoor/README.md`;
+8. `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`;
+9. `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
+10. `docs/FORGE_ENTERPRISE_NORTH_STAR.md`;
+11. `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md` for certified entry provenance.

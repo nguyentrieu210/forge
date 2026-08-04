@@ -9,6 +9,8 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - Repository: `nguyentrieu210/forge`.
 - Default branch: `main`.
 - Product baseline: **Forge 0.2.0 — Enterprise Parallel Baseline**.
+- Product brand/positioning authority: **Forge — Enterprise Operating Platform**; naming rules ở `docs/BRAND_AND_NAMING.md`.
+- North Star repository/docs rebaseline audit: `docs/FORGE_REPOSITORY_NORTH_STAR_AUDIT_20260805.md`.
 - RC4 integrated closure: **DONE**.
 - R5 integrated hardening/productization: **DONE / R5-GO** via PR `#638`.
 - R6 Production Certification: **DONE / PILOT-GO**.
@@ -120,7 +122,7 @@ No Pilot-01 production import/write has occurred.
 - Permission: server-side tenant/role/DocPerm/owner/share/user-permission enforcement.
 - App lifecycle: App Registry / App Factory install/upgrade contracts.
 - Capability activation: versioned server-authoritative profile; disable != uninstall/data purge.
-- Frontend: shared metadata-driven MetaForge runtime; verticals do not fork shared runtime.
+- Frontend: shared metadata-driven **Forge runtime**; existing `@metaforge/*` names are technical namespaces, not a separate product brand.
 - Alumdoor: reference vertical consuming generic Finance/CRM/Procurement/Stock/Manufacturing/HCM/Service authorities.
 
 ## 7. Active sequence
@@ -142,4 +144,4 @@ The active queue is `NEXT_TASKS.md`.
 
 ## 9. Documentation authority
 
-Start at `docs/README.md`, then `docs/pilot/alumdoor/README.md`, `PILOT_01_SOURCE_INGEST_20260805.md` and `NEXT_TASKS.md`. R6 final evidence remains historical entry authority for the frozen pilot baseline.
+Start at `docs/README.md`, then `docs/pilot/alumdoor/README.md`, `PILOT_01_SOURCE_INGEST_20260805.md` and `NEXT_TASKS.md`. Product naming is governed by `docs/BRAND_AND_NAMING.md`; the repository rebaseline record is `docs/FORGE_REPOSITORY_NORTH_STAR_AUDIT_20260805.md`. R6 final evidence remains historical entry authority for the frozen pilot baseline.

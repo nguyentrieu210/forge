@@ -1,65 +1,78 @@
-# CloudForge v1.0.0 — ERPNext Business Suite RC
+# Forge Server / Platform Runtime
 
-CloudForge is a Cloudflare-native ERP platform built on Workers for Platforms, Durable Objects, tenant D1, Queues/R2 and a metadata-driven React Desk. v1.0.0 is a broad **source-ready release candidate**, not a drop-in Frappe/ERPNext replacement and not production-approved from this environment.
+`server/` contains the authoritative backend/runtime of Forge: Cloudflare Workers, tenant routing, Document Kernel, domain packages, App Registry/App Factory, migrations, integration services and release tooling.
 
-## Implemented suite
+Existing identifiers such as `cloudforge-*`, `metaforge.api.*` and package paths containing historical names are **technical contracts**, not separate current product brands. Product-facing documentation uses **Forge**.
 
-- Frappe Core subset: tenant DocType metadata, generic form/list, workflow subset, Permission V2, versions, collaboration, files, print and CSV import/export.
-- Selling/O2C and Buying/P2P transaction chains.
-- Journal Entry, Expense Claim, receivable/payable ledgers and bounded financial reports.
-- Stock Entry, FIFO/Moving Average, serial/batch, returns, pricing and valuation adjustment preview.
-- BOM, Work Order, Production Plan, Job Card and Manufacture.
-- Asset depreciation, movement, maintenance and disposal.
-- Project Timesheet costing/profitability, Quality Inspection, Support Issue/SLA and cash POS sessions.
-- Bounded Bank Transaction/Reconciliation engine with reversible partial matching and commit guards.
-- Salary Slip accounting and Payroll Entry grouping.
-- Subscription schedule calculation from server-owned plans.
-- Source-bound E-Invoice Submission provider queue with uniqueness and role guards.
-- Lead, Opportunity and Portal User metadata foundations.
+Naming authority: `../docs/BRAND_AND_NAMING.md`.
 
-## Verify
+## Runtime shape
 
-```bash
-npm run verify:manifest
-npm ci
-npm run check:business-suite
-npm run typecheck:web
-npm run test:workers
-npm --prefix apps/web run build
-```
+Forge server uses:
 
-The packaged environment did not provide target-OS web/Workerd dependencies, so those executions remain mandatory promotion evidence.
+- Cloudflare Workers / Workers for Platforms where configured;
+- Durable Objects for serialization/coordination where required;
+- D1 for tenant/query persistence under append-only migration governance;
+- Queues for outbox/background/retry/DLQ paths;
+- R2 for files/artifacts where configured;
+- KV for routing/cache/config support;
+- a Frappe-shaped compatibility API used by the shared client and integration contracts.
 
-## Read before use
+## Authoritative business boundaries
 
-- `FEATURE_MATRIX_v1.0.0.md`
-- `RELEASE_NOTES_v1.0.0.md`
-- `RUNBOOK_BUSINESS_SUITE_RC.md`
-- `COMMERCIAL_COMPATIBILITY.md`
-- `COMMERCIAL_RELEASE_GATE.md`
-- `STATUS.md`
+- Document/business writes use the canonical Document Kernel / aggregate path.
+- Finance uses canonical GL + Payment Ledger authorities.
+- Inventory uses canonical Stock Ledger/valuation authorities.
+- Domain/vertical apps do not create shadow Finance/Stock ledgers.
+- Tenant/role/DocPerm/owner/share/user-permission checks are server-authoritative.
+- Money, stock and legal/statutory behavior must remain deterministic, auditable and correction-aware.
+- Applied migrations are append-only; do not rewrite migration history.
 
-## Boundary
+## App Registry / App Factory
 
-Do not market this artifact as “complete ERPNext on Cloudflare.” It does not provide Python/Frappe app compatibility, full HR lifecycle/statutory payroll, automatic subscription invoicing, complete bank statement connectors/auto-matching, complete fiscal consolidation, full MRP/subcontracting, full customer/supplier portal parity or certified country statutory packs.
+Forge supports versioned app/package lifecycle and server-authoritative capability profiles.
 
-E-invoice support is an audited provider queue seam. It is not legal certification in any jurisdiction.
+Metadata-oriented apps can contribute DocTypes, workflows, reports, print/templates, permissions and fixtures. Business logic that must participate atomically in authoritative accounting/stock/security remains in platform/domain code.
 
-## Authenticated command example
+Capability disable is not package uninstall and must not erase historical data.
 
-```http
-POST /api/v1/commands
-Authorization: Bearer <signed-jwt>
-Content-Type: application/json
+## Current repository/release context
 
-{
-  "command_id": "client-generated-idempotency-key",
-  "doctype": "Sales Order",
-  "name": "SO-00001",
-  "action": "create",
-  "expected_version": null,
-  "document": {}
-}
-```
+Do not use historical CloudForge v0.x/v1.0 component release notes as current Forge state.
 
-Tenant, actor, roles, exchange rates, valuation, payroll accounts, subscription rates and authoritative accounting fields are resolved by the server, never from client identity headers.
+Current authority is `../CURRENT_STATUS.md`:
+
+- RC4: DONE;
+- R5: DONE / R5-GO;
+- R6: DONE / PILOT-GO;
+- Pilot-00: LOCKED;
+- Pilot-01: real source set observed/hashed/ingested; reconciliation/normalization is blocking `PREVIEW_PASS`.
+
+The frozen Alumdoor pilot software baseline is exact-release/evidence bound. See `../docs/agents/r6/README.md` and `../docs/pilot/alumdoor/README.md`.
+
+## Verification
+
+Use repository scripts/workflows appropriate to the touched blast radius. Typical server checks include TypeScript/typecheck, domain tests, migration validation, permission/tenant tests and workerd/integration tests where applicable.
+
+Do not claim production readiness from source presence or a single test suite. Production claims require the evidence level defined by `../docs/VALIDATION_GATES.md`.
+
+## Compatibility
+
+Frappe/ERPNext is a compatibility/benchmark reference where useful. Forge is not a Python/Frappe runtime and should not be marketed as a complete ERPNext clone or drop-in replacement.
+
+Compatibility behavior must never weaken Forge's own tenant, permission, idempotency, ledger, migration or audit invariants.
+
+## Operational boundary
+
+Merge != deploy.
+
+Production deploy, migration, restore/PITR, DNS/routes/secrets/provider mutation, real customer-data import/write and cutover remain explicit authorization boundaries under `../RUNBOOK.md`, `../DELIVERY_POLICY.md` and current pilot contracts.
+
+## Read next
+
+- `../CURRENT_STATUS.md`
+- `../PROJECT_CONTEXT.md`
+- `../docs/ARCHITECTURE.md`
+- `../docs/BRAND_AND_NAMING.md`
+- `../docs/FORGE_ENTERPRISE_NORTH_STAR.md`
+- `../docs/VALIDATION_GATES.md`

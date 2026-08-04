@@ -1,18 +1,18 @@
 import type { AppManifest } from "@metaforge/core";
 
 /**
- * Kairo Nhân sự — app NGHIỆP VỤ, không phải Desk chung.
+ * Forge Nhân sự — app nghiệp vụ HRM trên shared Forge runtime.
  *
- * Trang chủ là màn tác nghiệp (`/x/leave-approval`), không phải một danh sách: người
- * dùng chính là quản lý duyệt đơn trên điện thoại, mở app ra phải thấy việc cần làm
- * chứ không phải một cái bảng để tự tìm.
+ * `@metaforge/*` remains the technical package namespace; the product-facing
+ * brand is Forge. Trang chủ là màn tác nghiệp (`/x/leave-approval`) để quản lý
+ * mở app là thấy ngay việc cần xử lý.
  *
- * Các DocType vẫn nằm trong nav để tra cứu và nhập liệu đầy đủ — App-mode và Desk-mode
- * dùng chung một nguồn dữ liệu, chỉ khác cách trình bày.
+ * Các DocType vẫn nằm trong nav để tra cứu và nhập liệu đầy đủ — App-mode và
+ * Desk-mode dùng chung một nguồn dữ liệu, chỉ khác cách trình bày.
  */
 export const APP_MANIFEST: AppManifest = {
   id: "hrm",
-  name: "Kairo Nhân sự",
+  name: "Forge Nhân sự",
   version: "1.0.0",
   brand: "blue",
   domain: "hr",
