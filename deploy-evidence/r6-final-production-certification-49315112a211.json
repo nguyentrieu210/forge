@@ -1,0 +1,793 @@
+{
+  "format": "forge-r6-post-release-certification/v1",
+  "status": "PILOT-GO",
+  "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "tenant": "alu",
+  "origin": "https://alu.kairo.vn",
+  "mutation": "AUTHORIZED_PRODUCTION_CERTIFICATION",
+  "completed_at": "2026-08-04T21:38:09.741Z",
+  "workflow_run_id": "30952703083",
+  "outcomes": {
+    "checkout": "success",
+    "ancestry": "success",
+    "credentials": "success",
+    "source": "success",
+    "workerd": "success",
+    "backup": "success",
+    "drill_create": "success",
+    "drill_restore": "success",
+    "reconciliation": "success",
+    "migration": "success",
+    "packages": "success",
+    "profile": "success",
+    "pressure": "success",
+    "health": "success",
+    "provider": "success",
+    "identity": "success",
+    "pitr": "success",
+    "matrix": "success"
+  },
+  "evidence_matrix": {
+    "format": "forge-r6-final-evidence-matrix/v4",
+    "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "observed_at": "2026-08-04T21:38:08.412Z",
+    "environment": "alu demo production + disposable remote D1 + exact real-workerd",
+    "mutation": "AUTHORIZED_PRODUCTION_CERTIFICATION",
+    "counts": {
+      "pass": 23,
+      "total": 23
+    },
+    "evidence": [
+      {
+        "id": "R6-E01",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "source governance",
+        "level": "SOURCE",
+        "proof": "exact source governance + release safety"
+      },
+      {
+        "id": "R6-E02",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "provider inventory",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "desired-vs-observed provider inventory"
+      },
+      {
+        "id": "R6-E03",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "health/auth boundary",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "exact health snapshot"
+      },
+      {
+        "id": "R6-E04",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "release marker",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "exact release SHA + bundle hash"
+      },
+      {
+        "id": "R6-E05",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "observability",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "tenant/app provider observability"
+      },
+      {
+        "id": "R6-E06",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "migration inventory",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "zero pending/unknown"
+      },
+      {
+        "id": "R6-E07",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "backup",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "fresh backup hash/manifest"
+      },
+      {
+        "id": "R6-E08",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "isolated replay",
+        "level": "DISPOSABLE_REMOTE",
+        "proof": "offline SQLite quick_check/FK"
+      },
+      {
+        "id": "R6-E09",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "remote restore",
+        "level": "DISPOSABLE_REMOTE",
+        "proof": "fresh disposable D1 restore"
+      },
+      {
+        "id": "R6-E10",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "PITR/rollback",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "fresh PITR plan + governed rollback contracts"
+      },
+      {
+        "id": "R6-E11",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "opening reconciliation",
+        "level": "DISPOSABLE_REMOTE",
+        "proof": "source/restored ledgers and package history match"
+      },
+      {
+        "id": "R6-E12",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "auth/session/admin",
+        "level": "PRODUCTION_LIKE_OBSERVED",
+        "proof": "real-workerd auth/CSRF"
+      },
+      {
+        "id": "R6-E13",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "tenant isolation",
+        "level": "PRODUCTION_LIKE_OBSERVED",
+        "proof": "real-workerd cross-tenant refusal"
+      },
+      {
+        "id": "R6-E14",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "queue/retry/DLQ",
+        "level": "SOURCE",
+        "proof": "queue safety verifier"
+      },
+      {
+        "id": "R6-E15",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "recovery",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "restore drill + governed forward-redeploy contract"
+      },
+      {
+        "id": "R6-E16",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "performance",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "bounded live pressure p50/p95/p99/error/RPS"
+      },
+      {
+        "id": "R6-E17",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "telemetry/cost pressure",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "provider telemetry + bounded pressure"
+      },
+      {
+        "id": "R6-E18",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "package/profile identity",
+        "level": "PILOT_TARGET_OBSERVED",
+        "proof": "exact installed Alumdoor package/profile"
+      },
+      {
+        "id": "R6-E19",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "Golden lineage",
+        "level": "PRODUCTION_LIKE_OBSERVED",
+        "proof": "real-workerd authenticated Golden Flow"
+      },
+      {
+        "id": "R6-E20",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "Stock/Finance readback",
+        "level": "PRODUCTION_LIKE_OBSERVED",
+        "proof": "canonical stock/payment/GL assertions"
+      },
+      {
+        "id": "R6-E21",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "failure/idempotency",
+        "level": "PRODUCTION_LIKE_OBSERVED",
+        "proof": "duplicate/retry/invalid action assertions"
+      },
+      {
+        "id": "R6-E22",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "correction/settlement",
+        "level": "PRODUCTION_LIKE_OBSERVED",
+        "proof": "correction + partial/final settlement"
+      },
+      {
+        "id": "R6-E23",
+        "status": "PASS",
+        "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "scope": "warranty lineage",
+        "level": "PRODUCTION_LIKE_OBSERVED",
+        "proof": "warranty/service source-document lineage"
+      }
+    ],
+    "status": "PILOT-GO"
+  },
+  "migration": {
+    "format": "forge-r6-migration-convergence/v4",
+    "evidence_id": "R6-E06",
+    "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "observed_at": "2026-08-04T21:36:49.991Z",
+    "expected": 80,
+    "applied": 80,
+    "pending": [],
+    "unknown": [],
+    "status": "PASS"
+  },
+  "backup": {
+    "format": "forge-backup-verification/v1",
+    "tenant": "alu",
+    "source_file": "alu-2026-08-04T21-35-12-963Z.sql",
+    "source_sha256": "0a50593d97fd6b9b683c1a53d466e862c179b6b8d8e8a1707bb81550ce125bc2",
+    "source_bytes": 13920392,
+    "manifest_verified": true,
+    "source_created_at": "2026-08-04T21:35:18.288Z",
+    "source_database_name": "cloudforge-alu",
+    "verified_at": "2026-08-04T21:35:37.655Z",
+    "local_restore_duration_ms": 19108,
+    "table_count": 97,
+    "migration_count": 80,
+    "quick_check": "ok",
+    "foreign_key_violations": 0,
+    "tenant_scope_violations": {
+      "documents": 0,
+      "doctype_definitions": 0,
+      "installed_apps": 0
+    },
+    "metadata_catalog_rows": {
+      "__standard__": 91,
+      "demo": 94
+    },
+    "import_rewrites": {
+      "oversized_installed_app_rows": 9,
+      "generated_statements": 677,
+      "max_statement_bytes": 32674
+    },
+    "cloudflare_mutated": false
+  },
+  "restore": {
+    "format": "forge-restore-drill/v1",
+    "tenant": "alu",
+    "source_file": "alu-2026-08-04T21-35-12-963Z.sql",
+    "source_sha256": "0a50593d97fd6b9b683c1a53d466e862c179b6b8d8e8a1707bb81550ce125bc2",
+    "source_bytes": 13920392,
+    "backup_manifest_verified": true,
+    "source_created_at": "2026-08-04T21:35:18.288Z",
+    "target_database_name": "cloudforge-drill-r6-30952703083",
+    "target_database_id": "cce40a7c-e522-462e-8d79-b349b277bfbe",
+    "restored_at": "2026-08-04T21:36:02.434Z",
+    "restore_duration_ms": 19632,
+    "table_count": 97,
+    "migration_count": 80,
+    "integrity": [
+      {
+        "quick_check": "ok"
+      }
+    ],
+    "foreign_key_violations": 0,
+    "tenant_scope_violations": {
+      "documents": 0,
+      "doctype_definitions": 0,
+      "installed_apps": 0
+    },
+    "import_rewrites": {
+      "oversized_installed_app_rows": 9,
+      "generated_statements": 677,
+      "max_statement_bytes": 32674
+    },
+    "routes_changed": false
+  },
+  "reconciliation": {
+    "format": "forge-r6-cutover-reconciliation/v4",
+    "evidence_id": "R6-E11",
+    "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "observed_at": "2026-08-04T21:36:44.950Z",
+    "environment_class": "DISPOSABLE_REMOTE",
+    "comparisons": [
+      {
+        "metric": "documents",
+        "source": {
+          "rows": "4269"
+        },
+        "restored": {
+          "rows": "4269"
+        },
+        "matches": true
+      },
+      {
+        "metric": "masters",
+        "source": {
+          "rows": "76"
+        },
+        "restored": {
+          "rows": "76"
+        },
+        "matches": true
+      },
+      {
+        "metric": "apps",
+        "source": {
+          "rows": "3"
+        },
+        "restored": {
+          "rows": "3"
+        },
+        "matches": true
+      },
+      {
+        "metric": "revisions",
+        "source": {
+          "rows": "6"
+        },
+        "restored": {
+          "rows": "6"
+        },
+        "matches": true
+      },
+      {
+        "metric": "migrations",
+        "source": {
+          "rows": "80"
+        },
+        "restored": {
+          "rows": "80"
+        },
+        "matches": true
+      },
+      {
+        "metric": "stock",
+        "source": {
+          "rows": "0",
+          "qty_micros": "0"
+        },
+        "restored": {
+          "rows": "0",
+          "qty_micros": "0"
+        },
+        "matches": true
+      },
+      {
+        "metric": "payment",
+        "source": {
+          "rows": "0",
+          "amount_minor": "0"
+        },
+        "restored": {
+          "rows": "0",
+          "amount_minor": "0"
+        },
+        "matches": true
+      },
+      {
+        "metric": "gl",
+        "source": {
+          "rows": "0",
+          "debit_minor": "0",
+          "credit_minor": "0"
+        },
+        "restored": {
+          "rows": "0",
+          "debit_minor": "0",
+          "credit_minor": "0"
+        },
+        "matches": true
+      }
+    ],
+    "status": "PASS"
+  },
+  "pitr": {
+    "format": "forge-d1-pitr/v1",
+    "tenant": "alu",
+    "database_name": "cloudforge-alu",
+    "database_id": "6781cbc1-8635-4b6e-af46-09297c120cff",
+    "d1_version_reported": null,
+    "d1_version_direct_probe_required": true,
+    "time_travel_supported": true,
+    "time_travel_support_evidence": "current and target bookmarks resolved by read-only wrangler d1 time-travel info",
+    "planned_at": "2026-08-04T21:38:08.362Z",
+    "reason": null,
+    "requested_timestamp": "2026-08-04T21:33:01Z",
+    "requested_bookmark": null,
+    "current_bookmark_before": "00000059-0000012a-000050bd-06a161af78060fb78851d61b708f0b64",
+    "target_bookmark": "00000059-000000e4-000050bd-331b1476e0308334c2c87e77c8fc4c16",
+    "destructive": false,
+    "executed": false
+  },
+  "performance": {
+    "format": "forge-r6-pilot-pressure/v4",
+    "evidence_id": "R6-E16",
+    "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "observed_at": "2026-08-04T21:37:53.133Z",
+    "requests": 50,
+    "concurrency": 5,
+    "errors": 0,
+    "error_rate": 0,
+    "rps": 141.85,
+    "latency_ms": {
+      "p50": 21.84,
+      "p95": 78.08,
+      "p99": 97.82
+    },
+    "status": "PASS"
+  },
+  "release_health": {
+    "format": "forge-sre-health-snapshot/v1",
+    "observed_at": "2026-08-04T21:37:53.443Z",
+    "duration_ms": 261,
+    "attempt": 1,
+    "attempts": 10,
+    "target": {
+      "base": "https://alu.kairo.vn",
+      "host": "alu.kairo.vn",
+      "remote": true
+    },
+    "expected_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "checks": {
+      "health": {
+        "status": 200,
+        "ok": true
+      },
+      "root": {
+        "status": 200
+      },
+      "guest_boot": {
+        "status": 403
+      },
+      "release": {
+        "status": 200,
+        "release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+        "bundle_hash": "838218167db020d8"
+      }
+    },
+    "result": {
+      "ok": true,
+      "failures": [],
+      "release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+      "bundle_hash": "838218167db020d8"
+    }
+  },
+  "provider": {
+    "format": "forge-r6-provider-readonly/v1",
+    "evidence_ids": [
+      "R6-E02",
+      "R6-E05"
+    ],
+    "producer": "R6-CONVERGENCE",
+    "source_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "environment_class": "PILOT_TARGET_OBSERVED",
+    "target": {
+      "tenant": "alu",
+      "base_url": "https://alu.kairo.vn",
+      "gateway_worker": "cloudforge-gateway",
+      "control_worker": "cloudforge-control-plane",
+      "dispatch_namespace": "cloudforge-production",
+      "tenant_worker": "cloudforge-tenant-alu",
+      "app_worker": "cloudforge-app-alumdoor"
+    },
+    "observed_at": "2026-08-04T21:37:53.497Z",
+    "mutation": "NONE",
+    "provider_account": {
+      "identity_hash": "9f6639ea09c5",
+      "selection": "token-visible account containing cloudforge-gateway"
+    },
+    "checks": [
+      {
+        "name": "gateway-bindings",
+        "ok": true,
+        "detail": {
+          "bindings": [
+            {
+              "name": "ASSETS",
+              "type": "assets"
+            },
+            {
+              "name": "AUTH_MODE",
+              "type": "plain_text"
+            },
+            {
+              "name": "CONTROL",
+              "type": "service"
+            },
+            {
+              "name": "DISPATCHER",
+              "type": "dispatch_namespace"
+            },
+            {
+              "name": "INTERNAL_AUTH_KEY_ID",
+              "type": "plain_text"
+            },
+            {
+              "name": "INTERNAL_AUTH_SECRET",
+              "type": "secret_text"
+            },
+            {
+              "name": "JWT_AUDIENCE",
+              "type": "plain_text"
+            },
+            {
+              "name": "JWT_ISSUER",
+              "type": "plain_text"
+            },
+            {
+              "name": "JWT_SECRET",
+              "type": "secret_text"
+            },
+            {
+              "name": "PLATFORM_SUFFIX",
+              "type": "plain_text"
+            },
+            {
+              "name": "ROUTES",
+              "type": "kv_namespace"
+            },
+            {
+              "name": "SOCIAL_PUBLIC_HOST",
+              "type": "plain_text"
+            }
+          ],
+          "missing": []
+        }
+      },
+      {
+        "name": "gateway-deployment",
+        "ok": true,
+        "detail": {
+          "deployment_count_observed": 10,
+          "latest_deployment_present": true
+        }
+      },
+      {
+        "name": "gateway-observability",
+        "ok": true,
+        "detail": {
+          "observed": true,
+          "enabled": true,
+          "logs_enabled": true,
+          "traces_enabled": true,
+          "logpush": false
+        }
+      },
+      {
+        "name": "control-service-worker",
+        "ok": true,
+        "detail": {
+          "readable": true
+        }
+      },
+      {
+        "name": "dispatch-namespace",
+        "ok": true,
+        "detail": {
+          "readable": true
+        }
+      },
+      {
+        "name": "tenant-worker",
+        "ok": true,
+        "detail": {
+          "readable": true,
+          "compatibility_date": "2026-07-23",
+          "compatibility_flags": [
+            "nodejs_compat"
+          ]
+        }
+      },
+      {
+        "name": "tenant-bindings",
+        "ok": true,
+        "detail": {
+          "bindings": [
+            {
+              "name": "AGGREGATES",
+              "type": "durable_object_namespace"
+            },
+            {
+              "name": "AI",
+              "type": "ai"
+            },
+            {
+              "name": "AUTH_MODE",
+              "type": "plain_text"
+            },
+            {
+              "name": "BROWSER",
+              "type": "browser"
+            },
+            {
+              "name": "DB",
+              "type": "d1"
+            },
+            {
+              "name": "DISPATCHER",
+              "type": "dispatch_namespace"
+            },
+            {
+              "name": "FILES",
+              "type": "r2_bucket"
+            },
+            {
+              "name": "INTERNAL_AUTH_SECRET",
+              "type": "secret_text"
+            },
+            {
+              "name": "INTERNAL_SERVICE_TOKEN",
+              "type": "secret_text"
+            },
+            {
+              "name": "OUTBOX_QUEUE",
+              "type": "queue"
+            },
+            {
+              "name": "PUBLIC_ORIGIN",
+              "type": "plain_text"
+            },
+            {
+              "name": "SESSION_SECRET",
+              "type": "secret_text"
+            },
+            {
+              "name": "SOCIAL_INGRESS",
+              "type": "service"
+            },
+            {
+              "name": "TENANT_ID",
+              "type": "plain_text"
+            }
+          ],
+          "missing": []
+        }
+      },
+      {
+        "name": "tenant-observability",
+        "ok": true,
+        "detail": {
+          "observed": true,
+          "enabled": true,
+          "logs_enabled": true,
+          "traces_enabled": true,
+          "logpush": false
+        }
+      },
+      {
+        "name": "alumdoor-app-worker",
+        "ok": true,
+        "detail": {
+          "readable": true,
+          "compatibility_date": "2026-07-27",
+          "compatibility_flags": [
+            "nodejs_compat"
+          ]
+        }
+      },
+      {
+        "name": "alumdoor-app-bindings",
+        "ok": true,
+        "detail": {
+          "bindings": [
+            {
+              "name": "AI",
+              "type": "ai"
+            },
+            {
+              "name": "PLATFORM",
+              "type": "service"
+            }
+          ],
+          "missing": []
+        }
+      },
+      {
+        "name": "alumdoor-app-observability",
+        "ok": true,
+        "detail": {
+          "observed": true,
+          "enabled": true,
+          "logs_enabled": true,
+          "traces_enabled": true,
+          "logpush": false
+        }
+      }
+    ],
+    "result": {
+      "ok": true,
+      "blockers": []
+    }
+  },
+  "identity": {
+    "schema": "forge-r6-convergence-identity/v1",
+    "evidence_id": "R6-E18",
+    "observed_at": "2026-08-04T21:37:55.769Z",
+    "environment_class": "PILOT_TARGET_OBSERVED",
+    "mutation": "NONE",
+    "target": {
+      "tenant": "alu",
+      "origin": "https://alu.kairo.vn",
+      "database_name": "cloudforge-alu"
+    },
+    "expected_source_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "release": {
+      "http_status": 200,
+      "release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+      "bundle_hash": "838218167db020d8",
+      "matches_candidate": true
+    },
+    "schema_state": {
+      "installed_apps": true,
+      "capability_profile_active": true,
+      "capability_profile_revisions": true
+    },
+    "packages": [
+      {
+        "app_id": "alumdoor",
+        "app_name": "Alumdoor",
+        "version": "2.2.3",
+        "content_hash": "342527752ee0387bea85a71e6f4c254b26209b0ba0da2190cc6699d6da870a56"
+      },
+      {
+        "app_id": "hrm",
+        "app_name": "Quản lý nhân sự",
+        "version": "1.8.0",
+        "content_hash": "d6b3ff3f1365131d83571144968f288c86d0a17e6a8e7e04148f8a4f05a8f6e8"
+      },
+      {
+        "app_id": "vn-accounting",
+        "app_name": "Kế toán Việt Nam",
+        "version": "1.6.1",
+        "content_hash": "dc7e8fa00b8fba4cc5ca2cc16f6f43ebbaafdf42d0d993d946ad16115833298c"
+      }
+    ],
+    "capability_profile": {
+      "profile_id": "alumdoor-pilot",
+      "version": 1,
+      "content_hash": "3e3124018aa3c7d233f0af8b81f751cd3e4a8329b94a2c9295956bc58ac8f7f8",
+      "valid": true,
+      "blocked_capabilities": []
+    },
+    "status": "PASS",
+    "blockers": []
+  },
+  "profile": {
+    "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "before": {
+      "profile_id": "default",
+      "version": 0,
+      "resolution": null
+    },
+    "active": {
+      "profile_id": "alumdoor-pilot",
+      "version": 1,
+      "resolution": {
+        "profile_id": "alumdoor-pilot",
+        "valid": true,
+        "capabilities": [],
+        "errors": [],
+        "implicit_enables": [],
+        "package_requirements": [],
+        "diff": []
+      }
+    },
+    "status": "PASS"
+  }
+}
