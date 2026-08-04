@@ -14,16 +14,22 @@ export class ReconciledEmployeeLoanDisbursementController extends EmployeeLoanDi
     const normalized = await super.normalize(context);
     const paymentName = requiredText(normalized.payment_entry, "Employee Loan Disbursement payment_entry");
     const payment = await requireSubmittedPayment(context, paymentName);
+    assertEmployeePaymentIdentity(payment, normalized, paymentName);
     if (text(payment.payment_type) !== "Pay") {
       throw errors.reference(`Payment Entry ${paymentName} must be a Pay payment for Employee Loan Disbursement`);
     }
+
+    const currency = requiredText(normalized.currency, "Employee Loan Disbursement currency");
+    const currencyData = await context.reader.getMasterRecordData(context.command.tenant_id, "Currency", currency);
+    const scale = currencyScale(currencyData, currency);
+    assertExactPaymentAmount(payment, normalized.amount, scale, paymentName, "Employee Loan Disbursement");
 
     const loanName = requiredText(normalized.employee_loan, "Employee Loan Disbursement employee_loan");
     const receivableAccount = await loanReceivableAccount(context, loanName);
     if (text(payment.paid_to) !== receivableAccount) {
       throw errors.reference(`Payment Entry ${paymentName} must debit Employee Loan receivable account ${receivableAccount}`);
     }
-    await assertPaymentEvidenceUnique(context, paymentName, context.command.aggregate.name);
+    await assertPaymentEvidenceUnique(context, paymentName);
     return normalized;
   }
 }
@@ -38,6 +44,7 @@ export class ReconciledEmployeeLoanRepaymentController extends EmployeeLoanRepay
     const normalized = await super.normalize(context);
     const paymentName = requiredText(normalized.payment_entry, "Employee Loan Repayment payment_entry");
     const payment = await requireSubmittedPayment(context, paymentName);
+    assertEmployeePaymentIdentity(payment, normalized, paymentName);
     if (text(payment.payment_type) !== "Receive") {
       throw errors.reference(`Payment Entry ${paymentName} must be a Receive payment for Employee Loan Repayment`);
     }
@@ -45,26 +52,14 @@ export class ReconciledEmployeeLoanRepaymentController extends EmployeeLoanRepay
     const currency = requiredText(normalized.currency, "Employee Loan Repayment currency");
     const currencyData = await context.reader.getMasterRecordData(context.command.tenant_id, "Currency", currency);
     const scale = currencyScale(currencyData, currency);
-    const paymentCurrency = text(payment.currency) || text(payment.paid_from_account_currency) || text(payment.paid_to_account_currency);
-    if (paymentCurrency && paymentCurrency !== currency) {
-      throw errors.reference(`Payment Entry ${paymentName} currency does not match Employee Loan Repayment`);
-    }
-    const repaymentMinor = toScaledInt(normalized.amount as string | number, scale, "Employee Loan Repayment amount");
-    const rawPaymentAmount = payment.received_amount ?? payment.paid_amount;
-    if (rawPaymentAmount === undefined || rawPaymentAmount === null || rawPaymentAmount === "") {
-      throw errors.reference(`Payment Entry ${paymentName} must contain an authoritative received amount`);
-    }
-    const paymentMinor = toScaledInt(rawPaymentAmount as string | number, scale, `Payment Entry ${paymentName} amount`);
-    if (paymentMinor !== repaymentMinor) {
-      throw errors.reference(`Payment Entry ${paymentName} amount does not equal Employee Loan Repayment amount`);
-    }
+    assertExactPaymentAmount(payment, normalized.amount, scale, paymentName, "Employee Loan Repayment");
 
     const loanName = requiredText(normalized.employee_loan, "Employee Loan Repayment employee_loan");
     const receivableAccount = await loanReceivableAccount(context, loanName);
     if (text(payment.paid_from) !== receivableAccount) {
       throw errors.reference(`Payment Entry ${paymentName} must credit Employee Loan receivable account ${receivableAccount}`);
     }
-    await assertPaymentEvidenceUnique(context, paymentName, context.command.aggregate.name);
+    await assertPaymentEvidenceUnique(context, paymentName);
     return normalized;
   }
 }
@@ -77,6 +72,40 @@ async function requireSubmittedPayment(context: ControllerContext<JsonObject>, p
   return paymentDocument.data;
 }
 
+function assertEmployeePaymentIdentity(payment: JsonObject, normalized: JsonObject, paymentName: string): void {
+  const expectedCompany = requiredText(normalized.company, "loan evidence company");
+  const expectedEmployee = requiredText(normalized.employee, "loan evidence employee");
+  const expectedCurrency = requiredText(normalized.currency, "loan evidence currency");
+  if (text(payment.company) !== expectedCompany) {
+    throw errors.reference(`Payment Entry ${paymentName} company does not match loan evidence`);
+  }
+  if (text(payment.party_type) !== "Employee" || text(payment.party) !== expectedEmployee) {
+    throw errors.reference(`Payment Entry ${paymentName} must belong to Employee ${expectedEmployee}`);
+  }
+  const paymentCurrency = text(payment.currency) || text(payment.paid_from_account_currency) || text(payment.paid_to_account_currency);
+  if (paymentCurrency !== expectedCurrency) {
+    throw errors.reference(`Payment Entry ${paymentName} currency does not match loan evidence`);
+  }
+}
+
+function assertExactPaymentAmount(
+  payment: JsonObject,
+  expectedAmount: unknown,
+  scale: number,
+  paymentName: string,
+  evidenceLabel: string,
+): void {
+  const expectedMinor = toScaledInt(expectedAmount as string | number, scale, `${evidenceLabel} amount`);
+  const rawPaymentAmount = payment.received_amount ?? payment.paid_amount;
+  if (rawPaymentAmount === undefined || rawPaymentAmount === null || rawPaymentAmount === "") {
+    throw errors.reference(`Payment Entry ${paymentName} must contain an authoritative amount`);
+  }
+  const paymentMinor = toScaledInt(rawPaymentAmount as string | number, scale, `Payment Entry ${paymentName} amount`);
+  if (paymentMinor !== expectedMinor) {
+    throw errors.reference(`Payment Entry ${paymentName} amount does not equal ${evidenceLabel} amount`);
+  }
+}
+
 async function loanReceivableAccount(context: ControllerContext<JsonObject>, loanName: string): Promise<string> {
   const loan = await context.reader.getDocument<JsonObject>(context.command.tenant_id, "Employee Loan", loanName);
   if (!loan || loan.docstatus === 2) throw errors.reference(`Employee Loan ${loanName} does not exist or is cancelled`);
@@ -87,16 +116,12 @@ async function loanReceivableAccount(context: ControllerContext<JsonObject>, loa
   return requiredText(component?.account, `Salary Component ${componentName} account`);
 }
 
-async function assertPaymentEvidenceUnique(
-  context: ControllerContext<JsonObject>,
-  paymentName: string,
-  currentEvidenceName: string,
-): Promise<void> {
+async function assertPaymentEvidenceUnique(context: ControllerContext<JsonObject>, paymentName: string): Promise<void> {
   if (context.command.action !== "submit") return;
   for (const doctype of ["Employee Loan Disbursement", "Employee Loan Repayment"] as const) {
     const documents = await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, doctype);
     const duplicate = documents.find((document) => document.docstatus === 1
-      && document.name !== currentEvidenceName
+      && !(doctype === context.command.aggregate.doctype && document.name === context.command.aggregate.name)
       && text(document.data.payment_entry) === paymentName);
     if (duplicate) {
       throw errors.reference(`Payment Entry ${paymentName} is already consumed by submitted ${doctype} ${duplicate.name}`);
