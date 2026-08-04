@@ -10,6 +10,7 @@ on:
       - "CURRENT_STATUS.md"
       - "NEXT_TASKS.md"
       - "docs/agents/rc/RC3_CONVERGENCE_20260804.md"
+      - "docs/agents/rc/RC3_A0_FINALIZATION_REQUEST.md"
       - ".github/workflows/rc3-a0-finalize-capability-status.yml"
   pull_request:
     branches:
@@ -21,6 +22,7 @@ on:
       - "CURRENT_STATUS.md"
       - "NEXT_TASKS.md"
       - "docs/agents/rc/RC3_CONVERGENCE_20260804.md"
+      - "docs/agents/rc/RC3_A0_FINALIZATION_REQUEST.md"
       - ".github/workflows/rc3-a0-finalize-capability-status.yml"
 
 permissions:
@@ -51,8 +53,8 @@ jobs:
       - name: Diff safety
         run: git diff --check
 
-      - name: Commit generated convergence on A0 push only
-        if: github.event_name == 'push'
+      - name: Materialize generated convergence on A0 head
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/rc3-00-capability-convergence' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           if git diff --quiet; then
             echo "RC3 canonical files already generated."
