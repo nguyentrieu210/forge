@@ -1,9 +1,9 @@
 # RC4-A20 — Capability Convergence
 
-Status: **CONVERGING — PR/exact-head validation pending**  
-Branch: `agent/rc4-20-capability-convergence`  
-Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
-Risk: **STANDARD governance/evidence**
+- Status: **CONVERGING — PR/exact-head validation pending**
+- Branch: `agent/rc4-20-capability-convergence`
+- Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`
+- Risk: **STANDARD governance/evidence**
 
 ## Mission
 
