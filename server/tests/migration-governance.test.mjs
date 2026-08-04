@@ -13,6 +13,7 @@ import {
 const CONFIG = {
   legacyPrefixCollisions: {
     'tenant/0110': [
+      '0110_batch_replay_claims.sql',
       '0110_rc020_finance_posting_period_integrity.sql',
       '0110_rc023_cash_bank_reconciliation.sql',
     ],
@@ -24,8 +25,9 @@ function fixture() {
   const tenant = path.join(serverRoot, 'migrations', 'tenant');
   mkdirSync(tenant, { recursive: true });
   writeFileSync(path.join(tenant, '0001_init.sql'), 'CREATE TABLE t(id INTEGER);\n');
-  writeFileSync(path.join(tenant, '0110_rc020_finance_posting_period_integrity.sql'), '-- historical a\n');
-  writeFileSync(path.join(tenant, '0110_rc023_cash_bank_reconciliation.sql'), '-- historical b\n');
+  writeFileSync(path.join(tenant, '0110_batch_replay_claims.sql'), '-- historical batch\n');
+  writeFileSync(path.join(tenant, '0110_rc020_finance_posting_period_integrity.sql'), '-- historical finance a\n');
+  writeFileSync(path.join(tenant, '0110_rc023_cash_bank_reconciliation.sql'), '-- historical finance b\n');
   writeFileSync(path.join(tenant, '0111_next.sql'), '-- next\n');
   return serverRoot;
 }
@@ -34,11 +36,11 @@ function sha256(text) {
   return createHash('sha256').update(text).digest('hex');
 }
 
-test('exact legacy prefix collision is grandfathered but cannot grow', () => {
+test('exact legacy prefix collision set is grandfathered but cannot grow', () => {
   const root = fixture();
   try {
-    assert.equal(scanMigrationTree(root, CONFIG).length, 4);
-    writeFileSync(path.join(root, 'migrations', 'tenant', '0110_third.sql'), '-- forbidden\n');
+    assert.equal(scanMigrationTree(root, CONFIG).length, 5);
+    writeFileSync(path.join(root, 'migrations', 'tenant', '0110_fourth.sql'), '-- forbidden\n');
     assert.throws(() => scanMigrationTree(root, CONFIG), /legacy collision tenant\/0110 changed/);
   } finally {
     rmSync(root, { recursive: true, force: true });
