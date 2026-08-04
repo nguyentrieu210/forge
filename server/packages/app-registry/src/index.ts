@@ -1,4 +1,5 @@
 export * from "./manifest.js";
+export * from "./version-requirement.js";
 export * from "./action-input-table.js";
 export * from "./batch-action.js";
 export * from "./action-input-table-compat.js";
