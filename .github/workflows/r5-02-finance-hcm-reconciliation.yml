@@ -1,0 +1,110 @@
+name: R5-02 Finance HCM Reconciliation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/clouderp-selling/src/r5-finance-hcm-payment-entry.ts"
+      - "server/packages/clouderp-selling/src/registry.ts"
+      - "server/packages/clouderp-erpnext/src/hrm-loan-finance-reconciliation.ts"
+      - "server/packages/clouderp-erpnext/src/registry.ts"
+      - "server/tests/r5-finance-hcm-loan-reconciliation.test.mjs"
+      - "docs/agents/r5/R5_A2_FINANCE_HCM_RECONCILIATION.md"
+      - ".github/workflows/r5-02-finance-hcm-reconciliation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r5-02-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.head_ref == 'agent/r5-02-finance-hcm-reconciliation'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact head and current main ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit server artifacts and reject changed-source TypeScript errors
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/r5-02-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/clouderp-selling/src/r5-finance-hcm-payment-entry.js
+          test -f dist/packages/clouderp-erpnext/src/hrm-loan-finance-reconciliation.js
+          if grep -E '(r5-finance-hcm-payment-entry|hrm-loan-finance-reconciliation|clouderp-selling/src/registry|clouderp-erpnext/src/registry)' /tmp/r5-02-tsc.log; then
+            echo "Changed R5-02 authoritative source has TypeScript errors"
+            exit 1
+          fi
+          echo "repository_tsc_status=${status}"
+
+      - name: Finance HCM loan correction and reconciliation regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/r5-finance-hcm-loan-reconciliation.test.mjs \
+            tests/hrm-loan-disbursement.test.mjs \
+            tests/hrm-workforce-finance.test.mjs \
+            tests/hrm-payroll-correction-reconciliation.test.mjs
+
+      - name: Preserve statutory payroll fail-closed evidence
+        working-directory: server
+        run: |
+          node --test \
+            tests/hrm-vn-pit-2026-source-lock.test.mjs \
+            tests/hrm-statutory-payroll.test.mjs
+
+      - name: Revalidate canonical finance read and cross-ledger evidence
+        working-directory: server
+        run: |
+          node --test tests/rc4-kernel-gl-aggregate.test.mjs
+          python3 -m py_compile scripts/rc4-cross-ledger-reconciliation.py
+          python3 scripts/rc4-cross-ledger-reconciliation.py --self-test
+
+      - name: Enforce R5-02 authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git diff --check origin/main...HEAD
+          changed="$(git diff --name-only origin/main...HEAD)"
+          echo "$changed"
+          if echo "$changed" | grep -Ev '^(server/packages/clouderp-selling/src/(r5-finance-hcm-payment-entry|registry)\.ts|server/packages/clouderp-erpnext/src/(hrm-loan-finance-reconciliation|registry)\.ts|server/tests/r5-finance-hcm-loan-reconciliation\.test\.mjs|docs/agents/r5/R5_A2_FINANCE_HCM_RECONCILIATION\.md|\.github/workflows/r5-02-finance-hcm-reconciliation\.yml)$'; then
+            echo "R5-02 crossed its declared Finance/HCM authority boundary"
+            exit 1
+          fi
+          if echo "$changed" | grep '^server/migrations/'; then
+            echo "R5-02 unexpectedly introduced a migration"
+            exit 1
+          fi
