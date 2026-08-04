@@ -1,239 +1,159 @@
 # FORGE MULTI-AGENT EXECUTION PROTOCOL
 
-## 1. Mục tiêu
+Ngày cập nhật: **2026-08-04**.
 
-Cho phép nhiều agent audit và triển khai Forge song song mà không biến monorepo thành bãi merge conflict.
+Protocol này áp dụng khi một Forge task được phân loại `PROGRAM`. Exact GitHub state và `skills/forge-enterprise-completion/SKILL.md` là authority cao hơn mọi board/handoff snapshot.
 
-Multi-agent execution không cần user phải yêu cầu thủ công. Coordinator phải tự phân loại task theo `skills/forge-enterprise-completion/SKILL.md` và `docs/agents/AUTO_AGENT_ORCHESTRATION.md`.
+## 1. Chọn topology
 
-## 2. Trước khi làm
+Coordinator tự chọn:
 
-Mỗi worker phải đọc theo thứ tự:
-1. exact branch head của chính mình;
-2. `skills/forge-enterprise-completion/SKILL.md`;
-3. `docs/FORGE_ENTERPRISE_NORTH_STAR.md`;
-4. `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`;
-5. workstream/branch-local handoff file riêng;
-6. `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `PROJECT_CONTEXT.md`;
-7. code/migration/test/spec liên quan.
+- `SINGLE` — một owner là an toàn/nhanh nhất;
+- `PROGRAM` — nhiều ownership hotspot độc lập có thể chạy song song.
 
-Code + migration + tests + exact GitHub state thắng tài liệu stale.
+Không fan-out để tăng số agent. Dùng số worker ít nhất đủ tách authority sạch.
 
-## 2A. Automatic execution topology
+Default `PROGRAM` khi có nhiều domain/package authority, shared foundation + independent consumers, hoặc audit/implementation/integration/QA có thể tách rõ.
 
-Trước implementation, coordinator phải tự chọn:
+Giữ `SINGLE` khi nhiều worker sẽ cùng sửa một authority hoặc invariant cần chứng minh nguyên khối.
 
-- `SINGLE`: một owner là execution model tốt nhất;
-- `PROGRAM`: fan-out thành nhiều worker agent.
+## 2. Required reading
 
-Không hỏi user xem có cần agent không khi repo evidence đã đủ.
+Trước implementation:
 
-Default `PROGRAM` khi có clean parallel boundaries như:
+1. exact current `main`, active branch/PR/diff;
+2. `CURRENT_STATUS.md`;
+3. `NEXT_TASKS.md`;
+4. `PROJECT_CONTEXT.md`;
+5. `docs/README.md`;
+6. Forge Enterprise Completion Skill;
+7. North Star + capability map/status;
+8. scope-specific code/migration/test/spec/evidence.
 
-- từ hai ownership hotspot độc lập trở lên;
-- nhiều workstream/domain/package authority;
-- shared foundation/contract rồi nhiều consumer;
-- audit/source-lock, implementation, integration và QA có thể tách;
-- platform rebuild/convergence/hardening wave có nhiều slice độc lập;
-- UI FAST và backend/shared-contract STANDARD/CRITICAL có merge boundary khác nhau.
+Code + migration + tests + exact GitHub state thắng prose stale.
 
-Giữ `SINGLE` khi concurrency sẽ làm nhiều worker cùng sửa một authority, invariant cần chứng minh nguyên khối, hoặc coordination overhead lớn hơn lợi ích.
+## 3. PROGRAM bootstrap
 
-Chi tiết canonical: `docs/agents/AUTO_AGENT_ORCHESTRATION.md`.
+Coordinator phải:
 
-## 2B. PROGRAM bootstrap — coordinator tự làm
+1. tạo control/program branch từ exact current `main`;
+2. khóa mission, scope, risk và acceptance gate;
+3. tạo **program-local** spec + agent board/dependency graph khi cần;
+4. định nghĩa từng worker: ownership, forbidden/shared hotspots, dependencies, evidence, merge/deploy boundary;
+5. tạo worker branches từ cùng exact program baseline;
+6. seed branch-local handoff/startup prompt nếu cần;
+7. verify worker topology trước fan-out.
 
-Khi chọn `PROGRAM`, coordinator không chờ user nhắc. Phải:
+Không dùng một global long-lived `AGENT_BOARD.md` làm live authority cho mọi program. Board là artifact của chính program và có thể bị xóa sau convergence.
 
-1. audit exact current `main`, active branch/PR và historical substantive work trong scope;
-2. tạo program/control branch từ exact current `main`;
-3. tạo technical/program spec;
-4. tạo Agent Board;
-5. tạo common NO-STOP rule;
-6. tạo source-lock/parity matrix nếu benchmark/reference bên ngoài là material;
-7. khóa ownership/hotspot/forbidden zone/risk/dependency/acceptance của từng worker;
-8. tạo worker branches từ exact program baseline;
-9. seed branch-local handoff + startup prompt;
-10. compare từng worker với program baseline để chứng minh topology sạch trước implementation.
-
-Bootstrap branch mong đợi:
+Bootstrap kỳ vọng:
 
 ```text
-ahead: 1 hoặc số commit coordination được giải thích
+ahead: chỉ coordination/handoff commits được giải thích
 behind: 0
-changes: handoff/coordination artifacts của chính worker
+implementation leakage từ worker khác: none
 ```
 
-Không dùng stale historical branch làm base chỉ vì đã có code gần giống.
+## 4. Worker status
 
-## 3. Claim nhánh
+Dùng vocabulary nhất quán:
 
-Trong `PROGRAM`, coordinator tạo branch trước; worker nhận branch đã được seed handoff.
+- `BOOTSTRAPPED`
+- `RUNNING`
+- `BLOCKED`
+- `READY`
+- `CONVERGING`
+- `DONE`
+- `SUPERSEDED/CLOSED`
 
-Commit/record đầu tiên của worker phải ghi trong workstream/handoff file:
-- `Status: CLAIMED`;
-- `Owner: <alias>`;
-- `Started from: <exact branch SHA>`;
-- audit plan ngắn.
+Không gọi branch là `RUNNING` chỉ vì nó tồn tại.
 
-Sau audit chuyển `ACTIVE`. Khi có PR/handoff chuyển `REVIEW`.
+## 5. Ownership
 
-Không tự lấy branch khác nếu branch mình blocked.
+- Một authoritative hotspot chỉ có một primary owner tại một thời điểm.
+- Shared primitive thuộc platform/domain owner, không copy xuống consumer để né dependency.
+- Vertical không fork Finance/Stock/IAM/App Factory/runtime authority.
+- Business writes không bypass Document Kernel/aggregate path.
+- Permission/tenant isolation phải enforce server-side.
+- Migration mới phải audit exact current numbering/applied-state contract; không sửa migration có thể đã applied.
 
-Nếu một task ban đầu là `SINGLE` nhưng audit phát hiện clean parallel boundaries, coordinator có thể promote thành `PROGRAM` rồi bootstrap theo mục 2B.
+## 6. NO-STOP behavior
 
-## 4. Quy tắc ownership
+Worker không hỏi user cho quyết định kỹ thuật thông thường nếu repo/Skill/spec đủ bằng chứng.
 
-- Chỉ sửa primary ownership của workstream.
-- Shared hotspot phải thông qua owner tương ứng.
-- Nếu phát hiện primitive dùng chung đang nằm sai layer, không copy logic. Ghi dependency request.
-- Domain agent ưu tiên metadata/app package; không hard-code schema app vào shared runtime.
-- Frontend domain-specific nên đi qua metadata trước; thay đổi shared renderer thuộc owner frontend/runtime tương ứng.
-- Business write không bypass kernel/Durable Object.
-- Permission phải server-side.
-- Không có hai worker cùng primary-own một shared hotspot.
-- Coordinator chịu trách nhiệm phát hiện overlap sớm, không đợi tới merge conflict mới phát hiện rằng hai agent đã cùng "tối ưu" một file.
+Chỉ dừng khi:
 
-## 5. NO-STOP behavior
+1. cần business/product decision không thể suy ra;
+2. shared authoritative contract dependency không thể cô lập;
+3. destructive/production operation;
+4. non-UI merge/deploy cần explicit approval.
 
-Worker không hỏi user về quyết định kỹ thuật thông thường.
+Blocker cục bộ: ghi Dependency Request và tiếp tục phần độc lập.
 
-Worker phải tự audit Skill/North Star/repo evidence và chọn phương án tốt nhất trong ownership của mình.
+## 7. Dependency Request
 
-Chỉ dừng hỏi user khi:
-
-1. cần quyết định nghiệp vụ không thể suy ra từ repo/spec;
-2. cần thay shared authoritative contract thuộc stream khác và dependency không thể cô lập;
-3. cần destructive/production operation;
-4. non-UI work đã sẵn sàng merge/deploy nhưng project policy yêu cầu user duyệt.
-
-Blocker cục bộ không phải lý do dừng.
-
-Nếu bị block một phần:
-
-1. ghi Dependency Request;
-2. ghi exact blocked scope;
-3. tiếp tục mọi phần độc lập;
-4. để lại fixture/interface/test/handoff giúp convergence deterministic.
-
-## 6. Dependency request
-
-Trong workstream file ghi tối thiểu:
-
-```md
-### Dependency request DR-<WS>-<NN>
-- Target stream: WSxx
-- Need: ...
-- Why generic: ...
-- Contract proposed: ...
-- Blocking: yes/no
-- Temporary workaround: none / ...
-```
-
-Hoặc dùng format program-neutral:
+Format tối thiểu:
 
 ```text
 Dependency Request
-Owner: <target worker/workstream>
+Owner: <target worker/domain>
 Need: <specific contract/evidence/change>
-Why: <why this belongs to target owner>
+Why: <why target owns it>
 Blocked scope: <exact subsection>
 Can continue independently: yes/no
-Next independent work: <what the worker continues now>
+Next independent work: <what continues>
 ```
 
-Không tự sửa target hotspot khi chưa phối hợp. Không copy logic sang local layer để né dependency nếu điều đó tạo duplicate source of truth.
+Không sửa hotspot của owner khác để “tạm unblock” nếu tạo duplicate source of truth.
 
-## 7. Workstream deliverables
+## 8. Worker deliverables
 
-Mỗi nhánh phải để lại tối thiểu:
+Mỗi worker phải để lại:
 
-1. capability audit có ID khi capability map áp dụng;
-2. current maturity + evidence;
-3. target architecture;
-4. data/API/state/invariant contract;
-5. implementation slices theo dependency;
-6. code/migrations/tests nếu được giao implementation;
-7. risk class;
-8. blockers/dependency requests;
-9. verification evidence;
-10. PR/handoff rõ file nào authoritative;
-11. completion record trong branch-local handoff;
-12. exact changed zones và remaining gaps.
+- exact branch/head + scope;
+- capability IDs nếu áp dụng;
+- current/target maturity và evidence;
+- contract/invariants;
+- changed zones;
+- tests/verification thực chạy;
+- dependency requests/blockers;
+- known gaps/non-claims;
+- PR/handoff và merge boundary.
 
-## 8. Definition of Done
+Không claim PASS từ authored tests chưa chạy. Không claim `Hardened` từ test count.
 
-Theo `forge-enterprise-completion` skill. Không gọi xong chỉ vì có màn hình hoặc happy path.
+## 9. Coordinator reporting
 
-Finance/stock/payroll/legal/migration/security bắt buộc xem correction/reversal, reconciliation, tenant/permission, backdate/effective-date và migration replay theo scope.
+Mỗi checkpoint program phải công khai:
 
-Một program cũng không hoàn tất chỉ vì mọi worker đều có commit. Coordinator phải convergence và chứng minh shared authority duy nhất.
+- worker agent count;
+- active worker branch count + exact names;
+- control branch + current head;
+- từng worker: branch, PR, mission, status, dependency/blocker;
+- merged/closed/superseded workers vẫn xuất hiện trong final convergence record.
 
-## 9. Merge discipline
+## 10. Convergence
 
-- Backend/schema/business rule/shared authoritative contract: branch + PR + review, không tự merge/deploy nếu chưa được user duyệt theo project policy.
-- UI-only có thể theo fast path riêng của dự án sau verify blast radius.
-- Destructive production operation luôn cần explicit authorization.
-- PR phải liệt kê capability IDs và dependency stream khi áp dụng.
-- Rebase/merge latest main trước final verification nếu base đã trôi đáng kể.
-- Không sửa migration đã chạy.
-- Không commit secret, backup, generated runtime artifact ngoài source-control contract.
-- Worker không tự merge chỉ vì dependency branch đã xong; coordinator quyết định convergence order.
+Coordinator phải integrate theo dependency/authority order, không theo worker hoàn thành trước.
 
-## 10. Handoff format
+Final candidate phải được verify trên **một exact combined head**. Worker-level green evidence không tự động chứng minh combined candidate.
 
-```text
-Workstream: WSxx / <program worker>
-Branch: ...
-Owner: ...
-Head: ...
-Status: REVIEW/BLOCKED
-Capabilities: ...
-Changed zones: ...
-Tests: ...
-Migration: ...
-Dependency requests: ...
-Known gaps: ...
-Recommended merge order: ...
-```
+Khi main drift đáng kể, re-audit/rebase/reconcile trước final validation.
 
-## 11. Coordinator
+## 11. Merge/deploy discipline
 
-Coordinator là control plane, không phải worker thứ N+1.
+- UI-only FAST: có thể theo fast path sau blast-radius verification nếu project policy cho phép.
+- Backend/schema/migration/business/security/legal/shared contract: branch + PR + verify, dừng trước merge/deploy nếu chưa có explicit approval.
+- Production migration, restore/PITR, provider/DNS/secret/customer-data mutation luôn cần explicit authorization.
+- Merge != deploy; source/config != provider/live evidence.
 
-Vai trò:
-- đọc exact current `main`, worker heads, PRs và diffs;
-- tự quyết định `SINGLE` hay `PROGRAM`;
-- bootstrap program/worker branches khi cần;
-- cập nhật `AGENT_BOARD.md` hoặc program board;
-- phát hiện overlap;
-- điều phối dependency;
-- audit concurrent main drift;
-- tìm reusable work thay vì kéo stale branch nguyên khối;
-- ngăn duplicate primitive/source of truth;
-- đề xuất/quyết định convergence order theo evidence;
-- giữ đúng risk-specific merge/deploy boundary;
-- chỉ cập nhật canonical status/maturity sau merge + verification.
+## 12. Program closure + documentation cleanup
 
-Coordinator không code thay worker trừ khi:
-- task thật sự quay về `SINGLE`;
-- user chỉ định;
-- hoặc một integration seam thuộc chính control/convergence ownership.
+Sau khi program đã converge và canonical final evidence tồn tại:
 
-Nếu board khác GitHub, GitHub thắng.
+- giữ final spec/evidence/convergence record nếu còn giá trị audit;
+- cập nhật `CURRENT_STATUS.md` và `NEXT_TASKS.md`;
+- xóa program board, startup prompts, duplicate NO-STOP rules, bootstrap topology snapshots và handoff đã superseded khỏi `main` nếu không còn là evidence cần thiết;
+- provenance vẫn tồn tại trong Git/PR history.
 
-## 12. Program convergence gate
-
-Trước khi gọi một multi-agent program hoàn tất, coordinator phải kiểm:
-
-- worker ownership sạch;
-- không còn overlap chưa xử lý;
-- dependency requests resolved hoặc explicit deferred;
-- shared contracts chỉ còn một authority;
-- không có duplicate runtime/domain primitive;
-- tests/build/typecheck/migration/browser evidence đạt theo risk;
-- final integrated diff được audit lại với exact current `main`;
-- status/capability evidence không tự nâng maturity quá chứng cứ;
-- merge/deploy tuân đúng production boundary.
-
-Canonical bootstrap/detail: `docs/agents/AUTO_AGENT_ORCHESTRATION.md`.
+Mục tiêu là không để coordination artifacts của wave cũ trở thành live documentation debt.
