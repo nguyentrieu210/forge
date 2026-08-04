@@ -1,11 +1,19 @@
 {
-  "format": "forge-r6-package-resume/v1",
+  "format": "forge-r6-package-resume/v2",
   "candidate_sha": "cda08faf3b2d0af5e5582f8f3b8e737cc44d92b2",
-  "observed_at": "2026-08-04T16:54:07.026Z",
+  "observed_at": "2026-08-04T16:56:40.369Z",
   "outcomes": {
     "hrm": "failure",
     "accounting": "skipped",
     "alumdoor": "skipped"
+  },
+  "diagnostics": {
+    "hrm": [
+      "Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/runner/work/forge/forge/server/dist/packages/app-registry/src/index.js' imported from /home/runner/work/forge/forge/server/scripts/forge-app.mjs",
+      "  url: 'file:///home/runner/work/forge/forge/server/dist/packages/app-registry/src/index.js'"
+    ],
+    "accounting": [],
+    "alumdoor": []
   },
   "status": "BLOCKED"
 }
