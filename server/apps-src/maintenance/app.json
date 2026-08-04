@@ -1,7 +1,7 @@
 {
   "id": "maintenance",
   "name": "Bảo trì, Bảo hành & Dịch vụ hiện trường",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "requires": [],
   "worker": "cloudforge-app-ws07",
   "validators": [
@@ -30,12 +30,15 @@
         { "field": "technician", "label": "Kỹ thuật viên", "type": "Link", "options": "Service Technician" },
         { "field": "billing_mode", "label": "Hình thức tính phí", "type": "Data" },
         { "field": "sales_invoice", "label": "Hóa đơn dịch vụ", "type": "Link", "options": "Sales Invoice" },
+        { "field": "resolution_type", "label": "Hình thức xử lý", "type": "Data" },
         { "field": "scheduled_start", "label": "Bắt đầu kế hoạch", "type": "Datetime" },
         { "field": "scheduled_end", "label": "Kết thúc kế hoạch", "type": "Datetime" },
+        { "field": "actual_end", "label": "Kết thúc thực tế", "type": "Datetime" },
+        { "field": "correction_of", "label": "Điều chỉnh của", "type": "Link", "options": "Service Order" },
         { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
       ],
       "order_by": { "column": "scheduled_start", "direction": "asc" },
-      "filters": ["customer", "company", "branch", "technician", "service_contract", "warranty_claim", "billing_mode", "workflow_state"],
+      "filters": ["customer", "company", "branch", "technician", "service_contract", "warranty_claim", "billing_mode", "resolution_type", "correction_of", "workflow_state"],
       "limit": 200
     },
     {
@@ -51,10 +54,13 @@
         { "field": "item", "label": "Sản phẩm", "type": "Link", "options": "Item" },
         { "field": "serial_no", "label": "Serial", "type": "Link", "options": "Serial No" },
         { "field": "eligibility_result", "label": "Quyền lợi", "type": "Data" },
+        { "field": "service_order", "label": "Lệnh dịch vụ", "type": "Link", "options": "Service Order" },
+        { "field": "resolution_date", "label": "Xử lý xong", "type": "Datetime" },
+        { "field": "correction_of", "label": "Điều chỉnh của", "type": "Link", "options": "Warranty Claim" },
         { "field": "workflow_state", "label": "Trạng thái", "type": "Data" }
       ],
       "order_by": { "column": "claim_date", "direction": "desc" },
-      "filters": ["customer", "company", "branch", "service_contract", "source_delivery_note", "eligibility_result", "workflow_state"],
+      "filters": ["customer", "company", "branch", "service_contract", "source_delivery_note", "eligibility_result", "correction_of", "workflow_state"],
       "limit": 200
     }
   ],
