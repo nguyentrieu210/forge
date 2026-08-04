@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build package runtime
+        run: pnpm --filter cloudforge run build
       - name: HRM provision and install
         id: hrm
         continue-on-error: true
@@ -72,7 +74,7 @@ jobs:
               return (relevant.length?relevant:lines).slice(-60).map(line=>line.slice(0,800));
             };
             const outcomes={hrm:process.env.O_HRM||'not-run',accounting:process.env.O_ACCOUNTING||'not-run',alumdoor:process.env.O_ALUMDOOR||'not-run'};
-            const payload={format:'forge-r6-package-resume/v2',candidate_sha:process.env.TARGET_SHA,observed_at:new Date().toISOString(),outcomes,diagnostics:{hrm:clean('hrm'),accounting:clean('accounting'),alumdoor:clean('alumdoor')},status:Object.values(outcomes).every(x=>x==='success')?'PASS':'BLOCKED'};
+            const payload={format:'forge-r6-package-resume/v3',candidate_sha:process.env.TARGET_SHA,observed_at:new Date().toISOString(),outcomes,diagnostics:{hrm:clean('hrm'),accounting:clean('accounting'),alumdoor:clean('alumdoor')},status:Object.values(outcomes).every(x=>x==='success')?'PASS':'BLOCKED'};
             const p=`deploy-evidence/r6-package-resume-${process.env.TARGET_SHA.slice(0,12)}.json`; let sha;
             try{const r=await github.rest.repos.getContent({owner:context.repo.owner,repo:context.repo.repo,path:p,ref:'main'});sha=r.data.sha}catch(e){if(e.status!==404)throw e}
             await github.rest.repos.createOrUpdateFileContents({owner:context.repo.owner,repo:context.repo.repo,path:p,message:`ops(r6): record package resume ${payload.status}`,content:Buffer.from(JSON.stringify(payload,null,2)+'\n').toString('base64'),branch:'main',...(sha?{sha}:{})});
