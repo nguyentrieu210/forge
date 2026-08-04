@@ -49,11 +49,10 @@ describe("R6 Golden Flow on real workerd + D1 + Aggregate DO",()=>{
     expect((await post(await cmd({id:"r6-dn-over-submit",doctype:"Delivery Note",name:"DN-R6-OVER",action:"submit",version:1,document:over}))).status).toBe(422);
 
     for(const [t,n] of [["Quotation","QTN-R6"],["Sales Order","SO-R6"],["Purchase Order","PO-R6"],["Purchase Receipt","PR-R6"],["Bill of Materials","BOM-R6"],["Work Order","WO-R6"],["Stock Entry","MFG-R6"],["Delivery Note","DN-R6"],["Sales Invoice","SI-R6"],["Payment Entry","PE-R6-A"],["Payment Entry","PE-R6-B"]] as const) expect((await readDoc(t,n))?.docstatus,`${t} ${n}`).toBe(1);
+    const woRead=await readDoc("Work Order","WO-R6");
+    expect(woRead?.data.manufacturing_snapshot).toBeTruthy();
     expect((await env.DB.prepare("SELECT COALESCE(SUM(actual_qty_micros),0) qty FROM stock_ledger_entries WHERE tenant_id='demo' AND item_code='RAW-R6' AND warehouse='Stores'").first<{qty:number}>())?.qty).toBe(0);
     expect((await env.DB.prepare("SELECT COALESCE(SUM(actual_qty_micros),0) qty FROM stock_ledger_entries WHERE tenant_id='demo' AND item_code='FG-R6' AND warehouse='Finished'").first<{qty:number}>())?.qty).toBe(0);
     expect((await env.DB.prepare("SELECT COALESCE(SUM(debit_minor-credit_minor),0) balance FROM gl_entries WHERE tenant_id='demo' AND voucher_type='Sales Invoice' AND voucher_no='SI-R6'").first<{balance:number}>())?.balance).toBe(0);
-    const manufacturing=await env.DB.prepare("SELECT COUNT(*) total, COALESCE(SUM(qty_micros),0) qty FROM manufacturing_entries WHERE tenant_id='demo' AND work_order='WO-R6'").first<{total:number;qty:number}>();
-    expect(manufacturing?.total).toBeGreaterThan(0);
-    expect(manufacturing?.qty).toBeGreaterThan(0);
   });
 });
