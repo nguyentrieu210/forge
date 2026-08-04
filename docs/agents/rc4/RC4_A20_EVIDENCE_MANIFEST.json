@@ -6,8 +6,8 @@
     "date": "2026-08-04",
     "main_sha": "269c690bda7abf90ea13225204352bdff908d63b",
     "canonical_status_blob_sha": "5189e90422edb8a0e3c75bcce7d11838b3f97965",
-    "observed_through_pr": 620,
-    "note": "R2 supersedes the stale A20 snapshot. A6 was merged into main before A20 #612, while other RC4 workers continued to advance on unmerged branches. Canonical maturity may change only when the capability implementation/evidence is integrated into this convergence tree."
+    "observed_through_pr": 623,
+    "note": "Final RC4 worker evidence re-convergence: A19 independently replays A1-A18 green; A22/A23 exact-head gates are green outside the A1-A19 maturity manifest. Canonical maturity still changes only for implementation integrated into this convergence tree."
   },
   "baseline_counts": {
     "Hardened": 0,
@@ -75,12 +75,14 @@
       "agent": "A4",
       "branch": "agent/rc4-04-finance-vn-statutory",
       "pr": 602,
-      "head_sha": "84f25a829bb7eb28ab8bce053dc336435b46e77f",
-      "status": "BLOCKED",
-      "evidence_kind": "exact-failing",
+      "head_sha": "068ca98ba6446d367aed7667d6ba19170ec5869f",
+      "status": "READY",
+      "evidence_kind": "independent-executable",
       "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "A19 still reproduces the VN statutory App Registry method-contract failure on this head. A9 now supplies a green GL aggregate seam on its own branch, but A4 has not consumed it in an integrated candidate."
+      "reason": "A19 final worker matrix independently passes the repaired VN statutory lane, including canonical App Action method naming, VAT/statutory regressions and four-eyes policy retirement. The backend/migration branch remains unmerged, so no branch-only maturity promotion is accepted.",
+      "validated_head_sha": "068ca98ba6446d367aed7667d6ba19170ec5869f",
+      "workflow_run": 30875686652
     },
     {
       "agent": "A5",
@@ -111,7 +113,9 @@
       ],
       "accepted_for_maturity": true,
       "promotion_evidence": {
-        "capabilities": ["U01-001"],
+        "capabilities": [
+          "U01-001"
+        ],
         "paths": [
           "client/apps/demo/playwright.rc4-v2-qa.config.ts",
           "client/apps/demo/e2e/ui-v2-mobile-qa.spec.ts",
@@ -163,12 +167,14 @@
       "agent": "A10",
       "branch": "agent/rc4-10-crm-revenue",
       "pr": 617,
-      "head_sha": "d90085ba440f07c278e2e620a1409611b89ca9ab",
-      "status": "BLOCKED",
-      "evidence_kind": "exact-failing",
+      "head_sha": "00b071130155d6a7359e4ab0eb1849048b57a139",
+      "status": "READY",
+      "evidence_kind": "independent-executable",
       "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "A19 reports the Customer 360 regression file fails to parse near line 292. Authored CRM source therefore remains non-acceptance evidence until a new immutable green head exists."
+      "reason": "A19 final worker matrix independently passes Customer 360 after syntax, external ownership and new-metadata reserved-field repairs. Legacy CRM metadata debt remains separate; the A10 implementation is unmerged and therefore does not change canonical maturity.",
+      "validated_head_sha": "00b071130155d6a7359e4ab0eb1849048b57a139",
+      "workflow_run": 30875686652
     },
     {
       "agent": "A11",
@@ -200,13 +206,14 @@
       "agent": "A13",
       "branch": "agent/rc4-13-manufacturing-qms",
       "pr": 603,
-      "head_sha": "5c9c47ba4e5092fd83c4752785047ad7e69be34c",
-      "status": "BLOCKED",
-      "evidence_kind": "exact-failing",
-      "workflow_run": 30868433145,
+      "head_sha": "0822b9237b3d1485cc5d9bf72ff03e0834a10383",
+      "status": "READY",
+      "evidence_kind": "exact-executable",
+      "workflow_run": 30874796558,
       "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "The URL-constructor test defect was fixed at 5c9c47b, but exact RC4 A13 validation still fails on lane-owned TypeScript/QMS issues according to A19. No maturity promotion is accepted."
+      "reason": "Manufacturing/QMS lane-owned exactOptionalPropertyTypes defects are repaired; own exact-head validation and A19 adversarial replay are green. The branch remains unmerged and domain dependencies still bound any maturity promotion.",
+      "validated_head_sha": "0822b9237b3d1485cc5d9bf72ff03e0834a10383"
     },
     {
       "agent": "A14",
@@ -269,13 +276,14 @@
       "agent": "A19",
       "branch": "agent/rc4-19-independent-adversarial-qa",
       "pr": 605,
-      "head_sha": "0220ced899dc1ffaa2bbb55e46f841674eb07f50",
-      "status": "BLOCKED",
-      "evidence_kind": "independent-qa-partial",
-      "workflow_run": 30871944096,
+      "head_sha": "fea98132a0adfbef1c6ca3066082320d28be364d",
+      "status": "DONE",
+      "evidence_kind": "independent-executable",
+      "workflow_run": 30875784687,
       "integrated_in_tree": false,
       "accepted_for_maturity": false,
-      "reason": "A19 now has reviewable A1-A18 heads and reports 13 independent PASS, A6 deferred, with A4/A7/A10/A13 blocked in its snapshot. A7 subsequently produced a new own-lane green head, so A19 is useful cross-lane evidence but is stale for A7 and its overall run still fails."
+      "reason": "A19 independently replayed all A1-A18 worker lanes plus baseline truth, A2 provider/source separation and merged A6 browser provenance. Run 30875784687 is green after PASS handoff materialization; the latest A19 change is evidence-only and QA itself never promotes capability maturity.",
+      "validated_head_sha": "bfdff28cfcb2f052775f1a6812793235009cbb0c"
     }
   ]
 }
