@@ -1,0 +1,139 @@
+name: R5 03 Commercial Supply Chain Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/clouderp-core/src/uom.ts"
+      - "server/packages/clouderp-core/src/purchase-allocation-*.ts"
+      - "server/packages/clouderp-core/src/procurement-*.ts"
+      - "server/packages/clouderp-selling/**"
+      - "server/packages/clouderp-stock/**"
+      - "server/packages/document-kernel/src/purchase-*.ts"
+      - "server/tests/r5-03-*.test.mjs"
+      - "server/tests/purchase-*.test.mjs"
+      - "server/tests/procurement-*.test.mjs"
+      - "server/tests/catch-weight-valuation.test.mjs"
+      - "server/tests/transaction-closure-sales-o2c.test.mjs"
+      - "server/tests/o2c.test.mjs"
+      - "server/tests/inventory-*.test.mjs"
+      - "server/tests/stock-*.test.mjs"
+      - "server/tests/valuation-audit.test.mjs"
+      - "server/tests/repost-item-valuation-integrity.test.mjs"
+      - "server/scripts/rc4-cross-ledger-reconciliation.py"
+      - "docs/agents/r5/R5_A3_COMMERCIAL_SUPPLY_CHAIN.md"
+      - ".github/workflows/r5-03-commercial-supply-chain.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r5-03-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.head_ref == 'agent/r5-03-commercial-supply-chain'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact head
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit exact-head server dist and record baseline TypeScript debt
+        working-directory: server
+        shell: bash
+        run: |
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/r5-03-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/clouderp-core/src/index.js
+          test -f dist/packages/clouderp-selling/src/index.js
+          test -f dist/packages/clouderp-stock/src/index.js
+          if [ "$status" -ne 0 ]; then
+            echo "Repository-wide TypeScript baseline remains non-zero; emitted exact-head artifacts will be exercised below."
+            grep "error TS" /tmp/r5-03-tsc.log > /tmp/r5-03-typescript-baseline.log || true
+            cat /tmp/r5-03-typescript-baseline.log
+          fi
+
+      - name: Generic allocation-axis boundary
+        working-directory: server
+        shell: bash
+        run: |
+          if grep -nE 'Nhôm cây/lá|qty_bar' packages/clouderp-core/src/purchase-allocation-controllers.ts; then
+            echo "Purchase Allocation controller still contains a vertical quantity selector"
+            exit 1
+          fi
+          if grep -nF 'line.inventory_mode === "Nhôm cây/lá"' packages/clouderp-core/src/uom.ts; then
+            echo "Stock quantity still depends on the Alumdoor inventory-mode literal"
+            exit 1
+          fi
+          node --test \
+            tests/r5-03-purchase-allocation-measure.test.mjs \
+            tests/purchase-receipt-submit-preview.test.mjs \
+            tests/purchase-receipt-allocation-controller.test.mjs \
+            tests/purchase-allocation-actions.test.mjs \
+            tests/catch-weight-valuation.test.mjs
+
+      - name: Procurement P2P and correction regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/procurement-decisions.test.mjs \
+            tests/procurement-app-source.test.mjs \
+            tests/procurement-p2p-closure.test.mjs \
+            tests/procurement-p2p-correction-boundary.test.mjs \
+            tests/procurement-landed-cost.test.mjs \
+            tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs \
+            tests/supplier-lifecycle.test.mjs \
+            tests/supplier-contract-release.test.mjs
+
+      - name: Sales O2C regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/transaction-closure-sales-o2c.test.mjs \
+            tests/o2c.test.mjs
+
+      - name: Inventory valuation and WMS regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/inventory-scan-resolution.test.mjs \
+            tests/wms-wave-scan.test.mjs \
+            tests/inventory-planning.test.mjs \
+            tests/stock-reservation-integrity.test.mjs \
+            tests/valuation-audit.test.mjs \
+            tests/repost-item-valuation-integrity.test.mjs
+
+      - name: Cross-ledger auditor compatibility
+        run: |
+          python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
+          python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
+
+      - name: Procurement package gate
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/procurement --check
+
+      - name: Diff hygiene
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
