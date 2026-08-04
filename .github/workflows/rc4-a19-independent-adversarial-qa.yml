@@ -93,7 +93,7 @@ jobs:
   pinned-worker-adversarial:
     name: Pinned ${{ matrix.lane }} adversarial replay
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -104,8 +104,12 @@ jobs:
             sha: 792f7f311d52f3ed0882c284b1e3d9ff5f34b359
           - lane: A4-VN-Statutory
             sha: 84f25a829bb7eb28ab8bce053dc336435b46e77f
+          - lane: A5-HCM-Payroll
+            sha: 4310d2afbb9ee048b80161cfb2b0464e6fa49644
           - lane: A11-Procurement
             sha: a157f4aab5d5a5a0ee867bee77aedbe4af812436
+          - lane: A13-Manufacturing-QMS
+            sha: 5c9c47ba4e5092fd83c4752785047ad7e69be34c
           - lane: A17-Commerce
             sha: f2504064dbdf929ba6c03107eea624463943fce1
     steps:
@@ -149,8 +153,14 @@ jobs:
             A4-VN-Statutory)
               pattern='apps-src/vn-accounting-worker/src/(legal-evidence|vat-service)\.ts'
               ;;
+            A5-HCM-Payroll)
+              pattern='packages/(hrm|ledger|payment-ledger)/src/|apps-src/hrm/'
+              ;;
             A11-Procurement)
               pattern='packages/clouderp-core/src/(supplier-lifecycle-controllers|procurement-.*)\.ts'
+              ;;
+            A13-Manufacturing-QMS)
+              pattern='packages/(clouderp-erpnext|clouderp-core)/src/.*(manufactur|quality|qms|capacity|mrp)'
               ;;
             A17-Commerce)
               pattern='packages/social-commerce/src/api\.ts'
@@ -196,6 +206,13 @@ jobs:
                 tests/vn-vat-service.test.mjs
               python3 scripts/test-vn-vat-dataset-migration.py
               ;;
+            A5-HCM-Payroll)
+              node --test \
+                tests/hrm-vn-pit-2026-source-lock.test.mjs \
+                tests/hrm-payroll-correction-reconciliation.test.mjs \
+                tests/hrm-operational.test.mjs \
+                tests/hrm-statutory-payroll.test.mjs
+              ;;
             A11-Procurement)
               node --test \
                 tests/procurement-rc4-supplier-lifecycle-permissions.test.mjs \
@@ -204,6 +221,14 @@ jobs:
                 tests/procurement-p2p-closure.test.mjs \
                 tests/procurement-p2p-correction-boundary.test.mjs \
                 tests/procurement-landed-cost.test.mjs
+              ;;
+            A13-Manufacturing-QMS)
+              node --test \
+                tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs \
+                tests/manufacturing-capacity-api.test.mjs \
+                tests/manufacturing-transaction-closure.test.mjs \
+                tests/manufacturing-cost-evidence.test.mjs \
+                tests/qms-lifecycle.test.mjs
               ;;
             A17-Commerce)
               node --test tests/ws16-omnichannel-source-contract.test.mjs
