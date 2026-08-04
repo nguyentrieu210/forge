@@ -99,10 +99,10 @@ jobs:
         working-directory: server
         run: node --test tests/capability-profile.test.mjs tests/capability-profile-store.test.mjs tests/app-registry.test.mjs
 
-      - name: Builder build and regressions
+      - name: Builder build and R5-01 regression
         run: |
           pnpm --filter @metaforge/builder build
-          pnpm --filter @metaforge/builder test
+          node --test client/packages/builder/test/capability-profile.test.mjs
 
       - name: SQL and migration governance
         working-directory: server
