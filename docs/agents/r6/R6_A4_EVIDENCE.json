@@ -161,6 +161,6 @@
       "request": "Provide the approved read-only R6-E18 identity path. ALU_META_ADMIN_USER/PASSWORD are absent in the GitHub production environment and the Cloudflare-token D1 SELECT attempt returned wrangler_command_failed. The rerun must prove package versions and active capability-profile ID/version/content-hash without mutation authority."
     }
   ],
-  "workflowTriggerPolicy": "R6-04 live observation reruns only for harness/test/workflow changes; handoff-only documentation updates do not retrigger live evidence collection.",
+  "frozenEvidencePolicy": "Run 30909243450 is authoritative for this handoff. Later pull_request synchronize collector runs caused by cumulative PR changed-file filtering are non-authoritative unless R6-04 is intentionally rerun after dependencies close.",
   "laneVerdict": "R6-04-BLOCKED: pilot target is not on the exact locked candidate; R6-E18 package/profile identity is incomplete; E19-E23 lack approved writable production-like exact-candidate execution state."
 }
