@@ -1,20 +1,16 @@
 # RC4 Post-Integration Final
 
-Status: **VALIDATION RUNNING**
+Status: **PASS — RC4 INTEGRATED CLOSURE GO**
 Date: 2026-08-04
-Baseline: `main@5e0e67d8e3dae0b07010f3159ec86adce8fce0dc`
-
-## Purpose
-
-Close RC4 on the actual integrated tree after the approved backend merges. This supersedes pre-integration A19/A20/A24 wording that correctly treated backend worker branches as unmerged at that earlier checkpoint.
+Integration baseline: `main@5e0e67d8e3dae0b07010f3159ec86adce8fce0dc`
+Validated candidate head: `c2889b4274957d1fac180e77f49d02ccde89425c`
+Decisive validation run: `30878059197` — **SUCCESS**
 
 ## Integrated scope
 
-A1-A18 worker implementation/evidence is now in `main`, including A6 from its earlier merge and A8 through conflict-safe reconciliation PR #625. A21 migration governance, A22 cross-ledger reconciliation and A23 performance/scale/cost evidence are also integrated.
+A1-A18 are integrated in the RC4 main line, including A6 from its earlier merge and A8 through reconciliation PR #625. A21 migration governance, A22 cross-ledger reconciliation, and A23 performance/scale/cost evidence are also integrated.
 
-## Capability decision
-
-Canonical status materializes the already-validated A20 promotion only:
+## Capability truth
 
 - Hardened: 0
 - RC: 66
@@ -23,14 +19,28 @@ Canonical status materializes the already-validated A20 promotion only:
 - Missing: 157
 - Total: 956
 
-The accepted promotion remains `U01-001 Responsive PWA: Wired -> RC`. Integration alone does not manufacture additional maturity promotions; unresolved provider/live, legal, recovery, offline, productization and other evidence-depth dependencies remain conservative.
+The accepted promotion remains `U01-001 Responsive PWA: Wired -> RC`. Integration by itself does not justify additional maturity changes.
 
-## Final validation
+## Integrated validation
 
-The `RC4 Post Integration Final` workflow replays the RC4 regression slices directly on the integrated candidate, verifies worker ancestry, 956 arithmetic, migration governance, A22 reconciliation, A23 deterministic performance/cost evidence, and provider/live non-claims.
+Run `30878059197` passed every final step:
 
-Final run/result will be recorded after the exact candidate head completes.
+- exact baseline and candidate checks;
+- worker ancestry;
+- 956/956 capability registry and maturity arithmetic;
+- SQL and migration governance;
+- IAM/session/MFA;
+- migration/cutover and Vietnam statutory accounting/payroll;
+- App Factory, Integration Hub, kernel and CRM;
+- Procurement, Inventory/WMS and Manufacturing/QMS;
+- Project/Service/Field, BI/Semantic/AI, Workplace/DMS, Logistics/POS/Commerce and Alumdoor;
+- A22 cross-ledger reconciliation;
+- A23 deterministic performance/cost evidence and 100k-row benchmark;
+- Cloudflare provider observation remains explicitly `unverified`;
+- governance/evidence authority boundary.
 
-## Safety boundary
+Historical RC3/A20 phase workflows are scoped to their own phase branches so superseded snapshots cannot rewrite the post-RC4 status.
 
-No production deploy, production migration, provider mutation, DNS/secret change or customer-data mutation is part of this convergence. Provider/live evidence remains explicitly unverified unless separately proven in an approved environment.
+## Verdict
+
+**RC4 is closed at the integrated engineering/evidence boundary and is ready to leave RC4.**
