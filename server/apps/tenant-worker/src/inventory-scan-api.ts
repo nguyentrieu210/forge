@@ -1,5 +1,6 @@
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import { asCloudForgeError, errors, jsonResponse, readJson } from "../../../packages/core/src/index.js";
+import type { ScanSymbology } from "../../../packages/clouderp-stock/src/inventory-scan.js";
 import {
   D1InventoryScanLookup,
   INVENTORY_SCAN_DOCTYPES,
@@ -16,6 +17,7 @@ const RESOLVE_PATH = "/api/v1/inventory/scan/resolve";
 const FRAPPE_RESOLVE_PATH = "/api/method/metaforge.inventory.resolve_scan";
 const MAX_BODY_BYTES = 8_192;
 const ALLOWED_FIELDS = new Set(["raw", "symbology", "scanned_at", "expected_doctype", "company", "warehouse"]);
+const SCAN_SYMBOLOGIES = new Set<ScanSymbology>(["CODE128", "EAN13", "QR", "DATA_MATRIX", "UNKNOWN"]);
 
 export interface InventoryScanApiContext {
   db: D1Database;
@@ -103,8 +105,7 @@ function parseInventoryScanRequest(body: JsonObject): InventoryScanResolutionInp
     if (!ALLOWED_FIELDS.has(key)) throw errors.validation(`Unknown inventory scan field: ${key}`);
   }
   if (typeof body.raw !== "string") throw errors.validation("raw is required");
-  const symbology = body.symbology;
-  if (symbology !== undefined && typeof symbology !== "string") throw errors.validation("symbology must be a string");
+  const symbology = parseSymbology(body.symbology);
   const scannedAt = optionalString(body.scanned_at, "scanned_at", 80);
   const expected = optionalString(body.expected_doctype, "expected_doctype", 40);
   if (expected && !(INVENTORY_SCAN_DOCTYPES as readonly string[]).includes(expected)) {
@@ -115,7 +116,7 @@ function parseInventoryScanRequest(body: JsonObject): InventoryScanResolutionInp
   return {
     scan: {
       raw: body.raw,
-      ...(symbology ? { symbology: symbology as InventoryScanResolutionInput["scan"]["symbology"] } : {}),
+      ...(symbology ? { symbology } : {}),
       ...(scannedAt ? { scanned_at: scannedAt } : {}),
     },
     ...(expected ? { expected_doctype: expected as InventoryScanDoctype } : {}),
@@ -148,6 +149,16 @@ function rejectTenantSelector(body: JsonObject): void {
   if (Object.hasOwn(body, "tenant_id") || Object.hasOwn(body, "tenantId")) {
     throw errors.validation("Inventory scan tenant scope is controlled by the authenticated server context");
   }
+}
+
+function parseSymbology(value: unknown): ScanSymbology | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string") throw errors.validation("symbology must be a string");
+  const normalized = value.normalize("NFC").trim();
+  if (!SCAN_SYMBOLOGIES.has(normalized as ScanSymbology)) {
+    throw errors.validation(`Unsupported scan symbology ${normalized}`);
+  }
+  return normalized as ScanSymbology;
 }
 
 function optionalString(value: unknown, field: string, maxLength: number): string | undefined {
