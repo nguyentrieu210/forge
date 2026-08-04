@@ -69,6 +69,7 @@ jobs:
             },
             "include": [
               "packages/app-registry/src/**/*.ts",
+              "packages/query/src/**/*.ts",
               "types/**/*.d.ts"
             ],
             "exclude": ["dist", "node_modules", "apps/web"]
@@ -92,6 +93,7 @@ jobs:
           test -f dist/packages/app-registry/src/capability-profile.js
           test -f dist/packages/app-registry/src/capability-profile-store.js
           test -f dist/packages/app-registry/src/capability-profile-installer.js
+          test -f dist/packages/query/src/index.js
 
       - name: Capability profile server regressions
         working-directory: server
