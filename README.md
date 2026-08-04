@@ -1,47 +1,71 @@
 # Forge — nền ERP tương thích Frappe chạy trên Cloudflare
 
-**Forge product baseline: `0.2.0` — Enterprise Parallel Baseline.** Xem [`docs/VERSIONING.md`](docs/VERSIONING.md) và [`CHANGELOG.md`](CHANGELOG.md). Version source không đồng nghĩa production deploy.
+**Forge product baseline: `0.2.0` — Enterprise Parallel Baseline.** Version source không đồng nghĩa production deploy.
 
-Monorepo hợp nhất CloudForge backend và MetaForge frontend để xây nền ERP meta-driven: tương thích hành vi Frappe ở boundary cần thiết, chạy trên Cloudflare và hỗ trợ đóng gói/cài app nghiệp vụ.
+Forge hợp nhất CloudForge backend và MetaForge frontend thành một nền ERP/enterprise operating platform metadata-driven, multi-tenant trên Cloudflare, với app package/domain authority và vertical apps như Alumdoor.
 
 | Thư mục | Vai trò |
 |---|---|
-| [`server/`](server/) | Kernel/backend: Workers for Platforms, Durable Objects, D1 tenant, Queues/R2, ERP domain và Frappe-shaped API |
-| [`client/`](client/) | MetaForge Desk React: metadata-driven UI, form/list/report/builder và app surfaces |
+| `server/` | Kernel/backend, Workers, D1/DO/Queues/R2, ERP domains và Frappe-shaped API |
+| `client/` | MetaForge React runtime/builder, metadata-driven list/form/report/app surfaces |
+| `docs/` | architecture, product contracts, capability truth, evidence và operations docs |
+| `skills/` | execution policy cho agent |
 
-## Trạng thái vận hành
+## Đọc trước khi làm
 
-**README không phải live status.** Agent và người phát triển phải dùng các file canonical sau:
+**README không phải live status.** Thứ tự canonical:
 
-1. [`RUNBOOK.md`](RUNBOOK.md) — quy tắc vận hành.
-2. [`CURRENT_STATUS.md`](CURRENT_STATUS.md) — snapshot trạng thái hiện tại đã xác minh.
-3. [`NEXT_TASKS.md`](NEXT_TASKS.md) — hàng đợi công việc active.
-4. [`AI_HANDOFF.md`](AI_HANDOFF.md) — handoff kỹ thuật cô đọng.
-5. [`docs/FORGE_ENTERPRISE_NORTH_STAR.md`](docs/FORGE_ENTERPRISE_NORTH_STAR.md) — đích hoàn thiện enterprise dài hạn, không phải live status.
-6. [`skills/forge-enterprise-completion/SKILL.md`](skills/forge-enterprise-completion/SKILL.md) — quy trình agent dùng để audit, ưu tiên và đóng capability theo North Star.
-7. [`docs/agents/AGENT_BOARD.md`](docs/agents/AGENT_BOARD.md) — board điều phối 18 workstream song song; GitHub exact state vẫn thắng board stale.
-8. [`docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`](docs/agents/PARALLEL_EXECUTION_PROTOCOL.md) — ownership/dependency/merge discipline cho multi-agent.
+1. `CURRENT_STATUS.md` — trạng thái verified gần nhất.
+2. `NEXT_TASKS.md` — active queue.
+3. `PROJECT_CONTEXT.md` — architecture/source-of-truth hiện hành.
+4. `AI_HANDOFF.md` — handoff cô đọng.
+5. `docs/README.md` — documentation index + retention policy.
+6. `RUNBOOK.md` và `DELIVERY_POLICY.md` — operational/merge/deploy boundary.
+7. `skills/forge-enterprise-completion/SKILL.md` — cách audit/implement/verify.
+8. `docs/FORGE_ENTERPRISE_NORTH_STAR.md` + capability map/status — strategic target và maturity truth.
+9. `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md` khi task cần multi-agent/program execution.
 
-GitHub là nguồn sự thật cho exact branch head, pull request, CI, merge và release evidence. Không suy trạng thái hiện tại từ bảng tiến độ cũ, lịch sử chat hoặc tên branch được ghi trong tài liệu lịch sử.
+Exact GitHub state, code, migrations và tests luôn thắng snapshot prose cũ.
+
+## Current checkpoint
+
+RC4 integrated engineering/evidence closure đã merge qua PR `#627`. Canonical final record:
+
+`docs/agents/rc4/RC4_POST_INTEGRATION_FINAL.md`
+
+Current capability materialization sau RC4:
+
+- Hardened: 0
+- RC: 66
+- Wired: 406
+- Foundation: 327
+- Missing: 157
+- Total: 956
+
+RC4 closure không đồng nghĩa exact next candidate đã production-certified. Active direction nằm trong `NEXT_TASKS.md`.
 
 ## Kiến trúc chính
 
-Forge dùng CloudForge làm authoritative backend/kernel và MetaForge làm Desk/client. Boundary phía client hướng theo Frappe-shaped contracts để tận dụng mô hình DocType, document lifecycle, permission, metadata và builder mà không phụ thuộc vào Frappe Python runtime.
+Forge giữ các nguyên tắc:
+
+- authoritative business writes đi qua Document Kernel / aggregate serialization;
+- server-side tenant/permission enforcement là security authority;
+- GL/Payment Ledger và Stock Ledger không bị fork theo app/vertical;
+- migrations append-only và applied-state-aware;
+- frontend dùng shared metadata-driven runtime;
+- first-party apps được install/upgrade qua App Registry/App Factory;
+- vertical apps compose domain capabilities thay vì copy domain code.
 
 Tài liệu nền:
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/API_SURFACE.md`](docs/API_SURFACE.md)
-- [`docs/APP_FACTORY.md`](docs/APP_FACTORY.md)
-- [`docs/FORGE_ENTERPRISE_NORTH_STAR.md`](docs/FORGE_ENTERPRISE_NORTH_STAR.md) — **strategic completion target, NOT LIVE STATUS**
-- [`docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`](docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md) — capability checklist dùng làm mẫu số đo coverage
-- [`docs/VERSIONING.md`](docs/VERSIONING.md) — product/component version semantics và production release boundary
-- [`docs/ROADMAP.md`](docs/ROADMAP.md) — **strategic only, NOT LIVE STATUS**
-- [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — evidence theo checkpoint, không thay thế CI hiện tại
-
-## Công xưởng app
-
-Forge hỗ trợ authoring app/brief và cài app qua metadata/compiler/runtime thay vì phải tạo một frontend riêng cho từng app. Contract, mặc định an toàn và hướng dẫn authoring nằm trong [`docs/APP_FACTORY.md`](docs/APP_FACTORY.md).
+- `docs/ARCHITECTURE.md`
+- `docs/API_SURFACE.md`
+- `docs/APP_FACTORY.md`
+- `docs/FORGE_ENTERPRISE_NORTH_STAR.md`
+- `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`
+- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`
+- `docs/VERSIONING.md`
+- `docs/VALIDATION_GATES.md`
 
 ## Chạy local
 
@@ -52,12 +76,12 @@ pnpm run typecheck
 pnpm run test
 ```
 
-Các package server/client có script riêng trong workspace tương ứng. Chạy gate theo phạm vi thay đổi và kiểm tra workflow GitHub trước khi kết luận PASS.
+Chạy gate theo blast radius; không suy PASS từ việc source tồn tại hoặc PR merge.
 
 ## Production boundary
 
-Không tự hiểu yêu cầu sửa code là authorization deploy production. Cloudflare/production deploy, production migration, production secret/DNS và customer-data mutation chỉ thực hiện khi user yêu cầu rõ theo [`RUNBOOK.md`](RUNBOOK.md) và [`DELIVERY_POLICY.md`](DELIVERY_POLICY.md).
+Không tự hiểu yêu cầu sửa code là authorization deploy production. Production migration, restore/PITR, secrets/DNS/provider mutation, customer-data mutation và non-UI deploy chỉ thực hiện khi có authorization rõ theo `RUNBOOK.md` và `DELIVERY_POLICY.md`.
 
-## Nguồn đối chiếu
+## Compatibility source
 
-Frappe/ERPNext upstream được khóa phiên bản/SHA tại [`server/source-lock.json`](server/source-lock.json) cho các bài đối chiếu compatibility. Forge là implementation riêng; không dùng README để suy ra compatibility hoặc release status mới nhất.
+Frappe/ERPNext upstream được source-lock trong repo cho compatibility/parity audit. Forge là implementation riêng; benchmark không thay thế current code/evidence.

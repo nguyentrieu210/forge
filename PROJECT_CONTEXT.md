@@ -1,121 +1,124 @@
 # PROJECT CONTEXT
 
-## 1. Dự án và mục tiêu
+Ngày cập nhật: **2026-08-04**.
 
-**Forge / CloudForge + MetaForge** là một ERP đa tenant chạy trên Cloudflare, cung cấp API tương thích hình dạng Frappe để một frontend React dùng chung có thể render ứng dụng từ metadata. Tuyên bố sản phẩm và ranh giới tương thích nằm tại `README.md`; các workspace thực tế được khai báo trong `pnpm-workspace.yaml`.
+File này mô tả **kiến trúc và source-of-truth hiện hành**, không lưu branch/version/migration snapshot tạm thời. Exact GitHub/code/migration/test luôn thắng prose nếu có drift.
 
-Mục tiêu kiến trúc là:
+## 1. Product
 
-- **CloudForge** xử lý document lifecycle, metadata, permission, ledger, workflow, file và hạ tầng tenant trong `server/`.
-- **MetaForge** là Desk/builder React metadata-driven trong `client/`.
-- Ứng dụng nghiệp vụ được đóng gói bằng manifest/brief, cài vào tenant dưới dạng metadata và dữ liệu thay vì fork giao diện. Luồng này nằm ở `server/packages/app-registry/src/manifest.ts`, `server/packages/app-registry/src/installer.ts` và `server/scripts/forge-app.mjs`.
+Forge là enterprise operating platform/ERP đa tenant trên Cloudflare, gồm:
 
-Người dùng mục tiêu là doanh nghiệp cần ERP theo vai trò: quản trị tenant, kế toán, bán hàng, kho, mua hàng, sản xuất/bảo trì và các nghiệp vụ ngành dọc. Alumdoor là ứng dụng ngành dọc đang được phát triển tích cực; nguồn brief hiện hành là `server/briefs/alumdoor-v2.json`, được sinh từ `server/scripts/build-alumdoor-v2-brief.mjs`.
+- **CloudForge** — authoritative backend/kernel, document lifecycle, permission, ledger, workflow, tenant/runtime infrastructure.
+- **MetaForge** — React metadata-driven Desk/runtime/builder.
+- **First-party domain apps/packages** — Finance/VN Accounting, HRM, CRM/Sales, Procurement, Stock/WMS, Manufacturing/QMS, Projects/Service, Workplace, Commerce và các domain khác.
+- **Vertical apps** — Alumdoor là reference vertical; vertical phải compose shared authorities, không fork core.
 
-## 2. Chức năng đã có
+Strategic target: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
+Capability denominator/status: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` + `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
 
-### Nền tảng
+## 2. Current engineering checkpoint
 
-- API document CRUD, metadata, workflow, collaboration, print, import/export, report và app catalog được mount trong `server/packages/frappe-api/src/router.ts`.
-- Native API và điều phối request nằm trong `server/apps/tenant-worker/src/index.ts`.
-- Gateway phân giải tenant theo hostname, phục vụ SPA cùng origin và dispatch Worker trong `server/apps/gateway-worker/src/index.ts`.
-- Document mutation có idempotency, lifecycle/controller và receipt trong `server/packages/document-kernel/src/kernel.ts` và `server/packages/document-kernel/src/d1-store.ts`.
-- Metadata, custom field, property setter, workflow và print format được đọc từ D1 qua `server/packages/frappe-model/src/store.ts`.
-- Quyền theo role, DocPerm, permlevel, owner, share và user permission được thực thi bởi `server/packages/frappe-model/src/permission.ts`.
-- Outbox, ledger, report/query, social commerce và app hooks đã có package/service riêng trong `server/packages/`.
+RC4 integrated closure đã PASS và merge qua PR `#627` tại checkpoint `main@30346e08eabb7074f8623eeedae09efec25da072`.
 
-### Frontend
+Canonical maturity after RC4:
 
-- Runtime React chung khởi động tại `client/apps/runtime/src/main.tsx`.
-- Router hỗ trợ list/form/new form/print/report/workspace/overview/action screen/import trong cùng file; route in chuẩn là `/print/:doctype/:name?format=<tên mẫu>` và trường hợp chưa cấu hình mẫu là empty-state, không phải lỗi trang.
-- Mọi gọi API Frappe-shaped đi qua `client/packages/adapter-frappe/src/frappe-adapter.ts`, gồm cả tải danh sách mẫu in theo chứng từ trước khi gọi renderer.
-- Print format Alumdoor mới phải tái sử dụng brand system của Purchase Order mặc định: `/alumdoor-order-logo.png`, `/alumdoor-company-header.png`, letterhead `194mm × 17mm`, lề trên `23.7mm` và tiêu đề `#f15a24`; regression `alumdoor-print-brand-consistency.test.mjs` khóa contract này.
-- Form/list/child table được render từ metadata bởi `client/packages/views/src/container/`, `client/packages/views/src/form/` và registry tại `client/packages/views/src/registry.ts`.
-- Field state như hidden, masked, locked và editable được suy ra bởi `client/packages/core/src/meta/resolver.ts`.
-- Session boundary/login nằm tại `client/packages/shell/src/auth/AuthBoundary.tsx`.
+- Hardened: 0
+- RC: 66
+- Wired: 406
+- Foundation: 327
+- Missing: 157
+- Total: 956
 
-### Alumdoor
+Canonical evidence: `docs/agents/rc4/RC4_POST_INTEGRATION_FINAL.md`.
 
-- Brief v2 hiện là `2.0.34`, gồm metadata hàng hóa, mua hàng, bán hàng, kho, báo cáo, action và print format trong `server/briefs/alumdoor-v2.json`.
-- Logic chuyên biệt gồm công thức cửa, cắt nhôm, giữ/trả tồn, reconciliation, khóa kỳ kế toán, quote/order/receipt/FIFO/delivery/OCR trong `server/apps-src/alumdoor-worker/src/`.
-- Migration tenant hiện đi tới `server/migrations/tenant/0026_supplier_receipt_tolerance.sql`.
-- Công việc gần nhất là bản in Purchase Order Alumdoor và sửa lưu partial document. Nguồn print phải sửa ở `server/scripts/build-alumdoor-v2-brief.mjs`, sau đó sinh lại `server/briefs/alumdoor-v2.json`; không nên sửa riêng JSON rồi để generator ghi đè.
+RC4 closure là engineering/evidence closure, không phải production certification của exact next release.
 
-## 3. Phần đang dở hoặc giới hạn
+## 3. Backend authority
 
-- `client/apps/runtime/src/main.tsx` còn `DeskFallback` cho một số page/dashboard chưa có renderer chuyên biệt.
-- `ProcessContainer` đã có phía client nhưng comment trong luồng gọi cho biết API process chưa hoàn chỉnh; `server/packages/frappe-api/src/router.ts` vẫn có nhánh trả not-implemented cho method không được đăng ký.
-- UI collaboration mới nối một phần: picker assign, upload attachment và inline tag còn được ghi Partial trong `client/docs/implementation-traceability.md`.
-- Lint frontend đã được đưa về 0 vi phạm và full test đã chạy hết sau khi đồng bộ contract Alumdoor v2.0.34; chi tiết ở `CURRENT_STATUS.md`.
-- `server/STATUS.md` và một số tài liệu cũ không còn phản ánh migration/phiên bản hiện tại. Khi mâu thuẫn, ưu tiên code, migration và manifest đang build.
+### Request/runtime
 
-## 4. Luồng nghiệp vụ chính
+- Gateway resolves tenant and dispatches trusted identity to tenant/runtime workers.
+- Tenant Worker owns authenticated API/runtime composition.
+- Query/Jobs/Control Plane/Social Ingress workers provide bounded platform services where configured.
 
-1. Gateway nhận hostname và tìm route tenant từ KV trong `server/apps/gateway-worker/src/index.ts`.
-2. Static route nhận SPA từ Assets; API được ký trusted identity và dispatch tới tenant Worker.
-3. Tenant Worker xác thực tenant header, session/JWT và chuyển Frappe endpoint vào `server/packages/frappe-api/src/router.ts`.
-4. Router tải metadata và permission, validate input, rồi mọi write đi qua `runCommand`/document kernel.
-5. Durable Object serialize mutation; D1 lưu document, metadata, ledger, receipt và outbox.
-6. Frontend lấy boot + app manifest, dựng navigation/router và dùng metadata để render list/form.
-7. Ứng dụng ngành dọc đăng ký validators/hooks/app methods qua manifest và app Worker; platform callback dùng signed internal identity.
+### Document writes
 
-## 5. Stack thực tế
+Authoritative business mutation flows through the Document Kernel / aggregate serialization path. Do not direct-write business documents/ledgers to bypass lifecycle, OCC, idempotency, permission or audit.
 
-- Node.js `>=22`, pnpm workspace 9.
-- TypeScript ESM.
-- Frontend: React 19, React Router, TanStack Query/Table, React Hook Form, Zod, Tailwind CSS v4, Radix/shadcn, Vite, Recharts, jsPDF/html2canvas/xlsx.
-- Backend: Cloudflare Workers, Workers for Platforms/dispatch namespace, D1, Durable Objects, KV, R2, Queues và tùy chọn Workers AI.
-- Test: Vitest, `@cloudflare/vitest-pool-workers`, Node test runner và SQL verification scripts.
-- Deploy: Wrangler 4 và các script trong `server/scripts/`.
+### Storage
 
-## 6. Kiến trúc frontend, backend và database
+- D1 is the authoritative tenant/query persistence layer under append-only migration governance.
+- Durable Objects serialize authoritative mutation where required.
+- Queues support outbox/background/retry/DLQ contracts.
+- R2 stores files/artifacts where used.
+- KV is cache/routing/config support, not a substitute for business authority.
 
-- Frontend là generic runtime, không chứa schema cứng cho từng app. `client/apps/runtime/src/main.tsx` khởi tạo adapter, boot, manifest và provider.
-- Backend gồm Gateway, Tenant, Query, Jobs, Control Plane và Social Ingress Worker trong `server/apps/*`.
-- Service/domain logic nằm ở `server/packages/*`; app logic độc lập nằm ở `server/apps-src/*`.
-- D1 schema được quản lý tuần tự tại `server/migrations/tenant/`, `server/migrations/control/` và `server/migrations/jobs/`.
-- Durable Object `AGGREGATES` là điểm serialize write; D1 là store/query replica; Queue đảm nhiệm outbox và prepared report; R2 lưu file.
+## 4. Domain source-of-truth rules
 
-## 7. Frontend gọi backend
+- **Finance:** canonical GL + Payment Ledger; no domain/vertical shadow ledger.
+- **Inventory:** canonical Stock Ledger/valuation/repost semantics; no Alumdoor-specific inventory ledger.
+- **Payroll:** Salary Structure/Assignment -> Salary Slip -> Payroll Entry -> canonical Finance posting.
+- **CRM/Sales:** canonical customer/contact/opportunity/order document authorities; read models such as Customer 360 do not become write authorities.
+- **Procurement:** supplier/PO/receipt/invoice lineage consumes canonical Stock/Finance side effects.
+- **Manufacturing:** BOM/Work Order/operations consume canonical Stock and Finance authorities.
+- **Legal/statutory:** effective-dated, versioned, source-bound, auditable rules; unsupported numeric legal claims fail closed.
 
-`client/packages/adapter-frappe/src/frappe-adapter.ts` là ranh giới API duy nhất cho giao diện. Adapter gọi endpoint Frappe-shaped (`/api/resource/*`, `/api/method/*`) cùng origin, xử lý CSRF/session, cache metadata và D1 bookmark để read-your-writes. Không nên gọi `fetch` rải rác trong component mới nếu adapter có thể mở rộng.
+## 5. App packaging / App Factory
 
-## 8. Xác thực và phân quyền
+Canonical app lifecycle lives in App Registry/App Factory contracts under `server/packages/app-registry/**` plus app compiler/install tooling.
 
-- Cookie `sid` được ký HMAC, `HttpOnly`, `Secure`, `SameSite=Lax`; session có TTL, sliding renewal và epoch revoke trong `server/packages/frappe-api/src/session.ts`.
-- Login/logout, PBKDF2 password verification và rate limit nằm tại `server/packages/frappe-api/src/auth-routes.ts`.
-- Native API dùng Bearer JWT HS256 với issuer/audience bắt buộc trong production.
-- Gateway loại bỏ platform identity header không tin cậy rồi ký envelope ngắn hạn cho tenant.
-- UI dùng capability/meta để ẩn hoặc khóa thao tác, nhưng server-side `MetadataPermissionService` mới là nguồn cưỡng chế cuối cùng.
+Principles:
 
-## 9. Metadata render giao diện
+1. platform authority stays shared;
+2. domain package owns generic business behavior;
+3. vertical app/profile composes required domain capabilities;
+4. capability activation is separate from package installation;
+5. disabling a capability must not automatically uninstall a package or erase historical data;
+6. source edits should be required only when introducing/changing a capability contract, not for ordinary tenant composition.
 
-1. Tenant đọc installed apps và metadata từ D1.
-2. Server tạo client manifest đã lọc quyền qua app registry/Frappe router.
-3. Runtime tải manifest bằng `metaforge.api.get_app_manifest` tại `client/apps/runtime/src/main.tsx`.
-4. `MetaForgeProvider` trong `client/packages/views/src/container/provider.tsx` giữ adapter, registry, roles, scope và locale.
-5. Resolver tại `client/packages/core/src/meta/resolver.ts` tính visibility/editability.
-6. List/Form/ChildGrid chọn control từ `client/packages/views/src/registry.ts`.
+Fine-grained capability-profile authoring/resolution is an R5 productization target; do not claim a completed GUI until exact implementation evidence exists.
 
-## 10. Module hiện có
+## 6. Frontend authority
 
-- Platform workers: gateway, tenant, query, jobs, control-plane, social-ingress (`server/apps/`).
-- Core packages: frappe-api, document-kernel, frappe-model, app-registry, query, ledger, money, outbox (`server/packages/`).
-- ERP/domain packages: clouderp-core, erpnext, selling, stock, pricing và social-commerce (`server/packages/`).
-- App packages/brief: Alumdoor, Center, Assets, Phân bón, HRM, Maintenance, Visits, Social Commerce (`server/briefs/`, `server/apps-src/`).
-- Frontend packages: core, adapter-frappe, ui, controls, views, builder, shell, stock-vn (`client/packages/`).
+- Shared React runtime renders app surfaces from metadata/manifest contracts.
+- Frappe-shaped adapter is the primary client/backend compatibility boundary.
+- Server-side permission is authoritative; client visibility/editability is UX only.
+- Shared views/shell/runtime should not contain vertical business schema when metadata/domain contracts can express it.
+- Browser/mobile/PWA evidence must bind to exact source/release when used for maturity or production claims.
 
-## 11. Quyết định kiến trúc không nên đổi tùy tiện
+## 7. Alumdoor role
 
-- Giữ API Frappe-shaped làm compatibility boundary (`README.md`, `server/packages/frappe-api/src/router.ts`).
-- Không bypass document kernel/Durable Object khi ghi dữ liệu.
-- Không lấy UI permission làm lớp bảo mật duy nhất.
-- Không hard-code schema app vào runtime chung; dùng metadata/manifest.
-- Không chỉnh migration đã chạy; thêm migration mới theo số thứ tự.
-- Không sửa riêng file brief sinh tự động khi có generator tương ứng.
-- Không đưa secret, D1/KV/R2 identifier sản xuất hoặc `.dev.vars` vào Git/tài liệu.
-- Không deploy tenant bằng config chung; dùng `server/scripts/deploy-tenant.mjs` để tránh bind nhầm database.
+Alumdoor is the first reference vertical/pilot candidate. It should consume shared:
 
-## 12. Vấn đề kỹ thuật và hướng tiếp theo
+- Employee/HR directory primitives;
+- Customer/CRM primitives;
+- Sales/Procurement;
+- Stock/WMS;
+- Manufacturing/QMS;
+- Finance/AR/AP/Payment/GL;
+- Warranty/Service.
 
-Ưu tiên hiện tại là giữ GitHub Actions xanh, bổ sung test render/PDF ổn định và hoàn thiện renderer/API còn fallback. Sau đó mới tối ưu bundle Vite đang cảnh báo chunk 500 KB–1.1 MB. Backlog cụ thể ở `NEXT_TASKS.md`.
+Alumdoor-specific logic stays vertical only when genuinely industry-specific. Reusable behavior should move to domain/platform authority rather than be copied.
+
+## 8. Security / tenant boundary
+
+- Trusted tenant/user identity comes from server/runtime context, not arbitrary client fields.
+- Role/DocPerm/owner/share/user-permission and sensitive security controls are enforced server-side.
+- Authentication/session/revocation/provider credentials and security-sensitive operations follow canonical IAM contracts.
+- No secret, production credential, private backup or customer data belongs in docs/source control.
+
+## 9. Migration/release boundary
+
+- Never rewrite a migration that may have been applied; add append-only migration under migration governance.
+- Applied-state claims require target-environment inventory/checksum evidence.
+- Merge != deploy.
+- Production-ready claims require exact release SHA/hash plus the relevant provider/browser/recovery evidence.
+- Production migration, backup restore/PITR, DNS/secrets/provider mutation and non-UI deployment require explicit authorization.
+
+## 10. Current direction
+
+Current sequence:
+
+`RC4 DONE -> R5 integrated hardening/productization -> R6 production certification -> Alumdoor controlled pilot -> GA`
+
+Active work is defined only in `NEXT_TASKS.md`. Documentation map/retention policy: `docs/README.md`.
