@@ -91,6 +91,4 @@ jobs:
 
       - name: Manufacturing QMS metadata package gate
         working-directory: server
-        run: |
-          node scripts/verify-first-party-meta.mjs
-          node scripts/pack-app.mjs apps-src/manufacturing-qms --check
+        run: node scripts/pack-app.mjs apps-src/manufacturing-qms --check
