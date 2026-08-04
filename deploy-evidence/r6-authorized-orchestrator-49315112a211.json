@@ -1,0 +1,16 @@
+{
+  "format": "forge-r6-authorized-orchestrator/v2",
+  "target_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "completed_at": "2026-08-04T21:38:20.241Z",
+  "authorization": "USER_EXPLICIT",
+  "canonical_deploy_workflow": "alu-build-deploy.yml",
+  "certification_workflow": "r6-post-release-certification.yml",
+  "deploy_run_id": "30952411424",
+  "certification_run_id": "30952703083",
+  "outcomes": {
+    "deploy": "success",
+    "certification": "success"
+  },
+  "reason": "evidence_23_of_23",
+  "status": "PILOT-GO"
+}
