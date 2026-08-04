@@ -274,7 +274,7 @@ export async function executeEInvoiceProviderOperation(input: {
         response_body: responseBody,
         http_status: response.status,
         idempotency_key: idempotencyKey,
-        signature_reference: signature.signature_reference,
+        ...(signature.signature_reference ? { signature_reference: signature.signature_reference } : {}),
         observed_at: (input.now ?? new Date()).toISOString(),
       });
     }
