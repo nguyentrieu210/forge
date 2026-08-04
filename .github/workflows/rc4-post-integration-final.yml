@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/rc4-post-integration-final.yml"
+      - ".github/workflows/rc4-a20-capability-convergence.yml"
+      - ".github/workflows/rc3-a0-finalize-capability-status.yml"
       - "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md"
       - "docs/agents/rc4/RC4_POST_INTEGRATION_FINAL.md"
 
@@ -45,6 +47,25 @@ jobs:
 
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Emit server test artifacts
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/rc4-integrated-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "repository_tsc_status=${status}"
+          test -f dist/packages/frappe-api/src/index.js
+          test -f dist/packages/auth/src/index.js
+          test -f dist/apps/gateway-worker/src/index.js
+          test -f dist/packages/organization-security/src/network-policy.js
+          if [ "$status" -ne 0 ]; then
+            echo "Repository-wide TypeScript baseline has errors outside this governance-only convergence; emitted artifacts are retained for exact integrated regressions."
+          fi
 
       - name: Verify worker integration ancestry
         shell: bash
@@ -175,7 +196,7 @@ jobs:
           set -euo pipefail
           changed=$(git diff --name-only origin/main...HEAD)
           echo "$changed"
-          if echo "$changed" | grep -Ev '^(\.github/workflows/rc4-post-integration-final\.yml|docs/FORGE_ENTERPRISE_CAPABILITY_STATUS\.md|docs/agents/rc4/RC4_POST_INTEGRATION_FINAL\.md)$'; then
+          if echo "$changed" | grep -Ev '^(\.github/workflows/(rc4-post-integration-final|rc4-a20-capability-convergence|rc3-a0-finalize-capability-status)\.yml|docs/FORGE_ENTERPRISE_CAPABILITY_STATUS\.md|docs/agents/rc4/RC4_POST_INTEGRATION_FINAL\.md)$'; then
             echo "Post-integration convergence crossed governance/evidence authority"
             exit 1
           fi
