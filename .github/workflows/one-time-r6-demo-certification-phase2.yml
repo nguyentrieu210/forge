@@ -1,0 +1,168 @@
+name: One-time R6 Demo Certification Phase 2
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/one-time-r6-demo-certification-phase2.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-time-r6-demo-production-certification-phase2
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    name: Migrate deploy and observe ALU demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: production
+    env:
+      TARGET_SHA: fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5
+      TENANT: alu
+      ORIGIN: https://alu.kairo.vn
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD }}
+      VITE_FORGE_RELEASE_SHA: fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5
+    steps:
+      - name: Checkout exact candidate
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prove candidate is merged and credentials exist
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$FORGE_ADMIN_PASSWORD"
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: pnpm-lock.yaml }
+      - name: Build server release authority
+        id: server_build
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm --filter cloudforge run build
+          node server/scripts/verify-cloudflare-governance.mjs --json > "$RUNNER_TEMP/r6-phase2-e01.json"
+          (cd server && npm run verify:release-safety && npm run verify:observability && npm run verify:queue-safety)
+      - name: Apply ALU migrations after fresh backup/restore proof
+        id: migrate
+        run: node server/scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+      - name: Verify zero pending and unknown migrations
+        id: migration_verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readdirSync,writeFileSync } from 'node:fs'; import path from 'node:path';
+          import { d1Query,wrangler } from './server/scripts/wrangler-cli.mjs';
+          import { findTenantDatabaseId,removeTenantConfig,writeTenantConfig } from './server/scripts/tenant-wrangler.mjs';
+          const t=process.env.TENANT,id=findTenantDatabaseId(t,wrangler);if(!id)throw new Error('missing tenant D1');const c=writeTenantConfig({tenant:t,databaseId:id,publicOrigin:process.env.ORIGIN});
+          try{const db={name:`cloudforge-${t}`,id,configArg:c.relativeConfig};const expected=readdirSync('./server/migrations/tenant').filter(x=>x.endsWith('.sql')).sort();const applied=d1Query(db,'SELECT name FROM d1_migrations ORDER BY name').map(x=>String(x.name));const a=new Set(applied),e=new Set(expected),pending=expected.filter(x=>!a.has(x)),unknown=applied.filter(x=>!e.has(x));const ev={format:'forge-r6-migration-convergence/v1',evidence_id:'R6-E06',observed_at:new Date().toISOString(),expected:expected.length,applied:applied.length,pending,unknown,status:pending.length===0&&unknown.length===0?'PASS':'BLOCKED'};writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-phase2-e06.json'),JSON.stringify(ev,null,2)+'\n');if(ev.status!=='PASS')throw new Error(`migration drift pending=${pending.length} unknown=${unknown.length}`);}finally{removeTenantConfig(c.configPath)}
+          NODE
+      - name: Deploy ALU tenant Worker with BROWSER binding
+        id: tenant_deploy
+        run: node server/scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+      - name: Deploy Alumdoor app Worker with required observability
+        id: app_deploy
+        working-directory: server
+        run: pnpm exec wrangler deploy --config apps-src/alumdoor-worker/wrangler.jsonc --name cloudforge-app-alumdoor --dispatch-namespace cloudforge-production --strict
+      - name: Install or upgrade HRM VN accounting and Alumdoor
+        id: package_install
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin="${FORGE_ADMIN_USER:-Administrator}"
+          node server/scripts/forge-app.mjs server/apps-src/hrm --origin "$ORIGIN" --admin "$admin"
+          node server/scripts/forge-app.mjs server/apps-src/vn-accounting --origin "$ORIGIN" --admin "$admin"
+          node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --origin "$ORIGIN" --admin "$admin"
+      - name: Apply Alumdoor pilot capability profile
+        id: profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {writeFileSync} from 'node:fs';import path from 'node:path';const origin=process.env.ORIGIN.replace(/\/$/,''),user=process.env.FORGE_ADMIN_USER||'Administrator',pwd=process.env.FORGE_ADMIN_PASSWORD;const jar=new Map();let csrf='';const cookies=()=>[...jar].map(([k,v])=>`${k}=${v}`).join('; ');function store(r){for(const v of r.headers.getSetCookie?.()??[]){const p=v.split(';')[0],i=p.indexOf('=');if(i>0)jar.set(p.slice(0,i).trim(),p.slice(i+1).trim())}}async function call(p,{method='GET',body}={}){const r=await fetch(origin+p,{method,headers:{...(body?{'content-type':'application/json'}:{}),...(jar.size?{cookie:cookies()}:{}),...(csrf&&method!=='GET'?{'x-frappe-csrf-token':csrf}:{})},...(body?{body:JSON.stringify(body)}:{})});store(r);csrf=r.headers.get('x-frappe-csrf-token')||csrf;const text=await r.text();let d;try{d=JSON.parse(text)}catch{d=text}if(!r.ok)throw new Error(`${p} HTTP ${r.status}: ${d?.message??String(text).slice(0,300)}`);return d?.message??d}await call('/api/method/login',{method:'POST',body:{usr:user,pwd}});const before=await call('/api/method/metaforge.api.get_capability_profile');const expected=Number(before?.version??0);const result=await call('/api/method/metaforge.api.apply_capability_profile',{method:'POST',body:{profile_id:'alumdoor-pilot',expected_version:expected,selections:[]}});const after=await call('/api/method/metaforge.api.get_capability_profile');const ev={format:'forge-r6-profile-apply/v1',evidence_id:'R6-E18',observed_at:new Date().toISOString(),before_version:expected,result,active:after,status:after?.profile_id==='alumdoor-pilot'&&Number(after?.version??0)>expected&&after?.resolution?.valid!==false?'PASS':'BLOCKED'};writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-phase2-e18-profile.json'),JSON.stringify(ev,null,2)+'\n');if(ev.status!=='PASS')throw new Error('capability profile failed to converge');
+          NODE
+      - name: Build and stage exact Gateway UI
+        id: client_build
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter metaforge run build
+          node server/scripts/stage-client-bundle.mjs
+      - name: Deploy exact Gateway release marker
+        id: gateway_deploy
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+      - name: Bounded live pressure
+        id: pressure
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import{writeFileSync}from'node:fs';import path from'node:path';const url=process.env.ORIGIN.replace(/\/$/,'')+'/health',total=50,c=5,lat=[];let n=0,errors=0;const start=performance.now();async function w(){for(;;){const i=n++;if(i>=total)return;const t=performance.now();try{const r=await fetch(url);await r.arrayBuffer();if(r.status!==200)errors++}catch{errors++}lat.push(performance.now()-t)}}await Promise.all(Array.from({length:c},w));lat.sort((a,b)=>a-b);const p=q=>Number(lat[Math.min(lat.length-1,Math.ceil(lat.length*q)-1)]?.toFixed(2)??0),ms=performance.now()-start,ev={format:'forge-r6-pilot-pressure/v1',evidence_id:'R6-E17',observed_at:new Date().toISOString(),requests:total,concurrency:c,errors,error_rate:errors/total,rps:Number((total/(ms/1000)).toFixed(2)),latency_ms:{p50:p(.5),p95:p(.95),p99:p(.99)},status:errors===0?'PASS':'BLOCKED'};writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-phase2-e17.json'),JSON.stringify(ev,null,2)+'\n');if(errors)throw new Error(`${errors} pressure errors`);
+          NODE
+      - name: Verify exact release and auth boundary
+        id: health
+        run: node server/scripts/sre-health-snapshot.mjs --base "$ORIGIN" --expected-release-sha "$TARGET_SHA" --allow-remote --confirm-host alu.kairo.vn --attempts 10 --delay-ms 2000 --output "$RUNNER_TEMP/r6-phase2-e03-e04.json"
+      - name: Verify remote provider convergence
+        id: provider
+        run: node server/scripts/r6-provider-readonly.mjs --source-sha "$TARGET_SHA" --output "$RUNNER_TEMP/r6-phase2-e02-e05.json"
+      - name: Verify exact package profile identity
+        id: identity
+        run: node server/scripts/r6-convergence-identity-readonly.mjs --tenant "$TENANT" --origin "$ORIGIN" --expected-release-sha "$TARGET_SHA" --output "$RUNNER_TEMP/r6-phase2-e18-identity.json"
+      - name: Capture PITR decision evidence
+        id: pitr
+        shell: bash
+        run: |
+          ts="$(date -u -d '5 minutes ago' '+%Y-%m-%dT%H:%M:%SZ')"
+          node server/scripts/d1-pitr.mjs --tenant "$TENANT" --timestamp "$ts" --output "$RUNNER_TEMP/r6-phase2-e10.json"
+      - name: Upload Phase 2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-demo-cert-phase2-${{ github.run_id }}
+          path: ${{ runner.temp }}/r6-phase2-*.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Record Phase 2 verdict
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          O_PREFLIGHT: ${{ steps.preflight.outcome }}
+          O_SERVER_BUILD: ${{ steps.server_build.outcome }}
+          O_MIGRATE: ${{ steps.migrate.outcome }}
+          O_MIGRATION_VERIFY: ${{ steps.migration_verify.outcome }}
+          O_TENANT_DEPLOY: ${{ steps.tenant_deploy.outcome }}
+          O_APP_DEPLOY: ${{ steps.app_deploy.outcome }}
+          O_PACKAGE_INSTALL: ${{ steps.package_install.outcome }}
+          O_PROFILE: ${{ steps.profile.outcome }}
+          O_CLIENT_BUILD: ${{ steps.client_build.outcome }}
+          O_GATEWAY_DEPLOY: ${{ steps.gateway_deploy.outcome }}
+          O_PRESSURE: ${{ steps.pressure.outcome }}
+          O_HEALTH: ${{ steps.health.outcome }}
+          O_PROVIDER: ${{ steps.provider.outcome }}
+          O_IDENTITY: ${{ steps.identity.outcome }}
+          O_PITR: ${{ steps.pitr.outcome }}
+        with:
+          script: |
+            const fs=require('node:fs'),path=require('node:path');const keys=['PREFLIGHT','SERVER_BUILD','MIGRATE','MIGRATION_VERIFY','TENANT_DEPLOY','APP_DEPLOY','PACKAGE_INSTALL','PROFILE','CLIENT_BUILD','GATEWAY_DEPLOY','PRESSURE','HEALTH','PROVIDER','IDENTITY','PITR'];const outcomes=Object.fromEntries(keys.map(k=>[k.toLowerCase(),process.env[`O_${k}`]||'not-run'])),status=keys.every(k=>outcomes[k.toLowerCase()]==='success')?'PASS':'BLOCKED';const read=n=>{try{return JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,n),'utf8'))}catch{return null}};const payload={format:'forge-r6-demo-production-certification-phase2/v1',status,candidate_sha:process.env.TARGET_SHA,tenant:process.env.TENANT,mutation:'AUTHORIZED_PRODUCTION_DEMO',completed_at:new Date().toISOString(),workflow_run_id:String(context.runId),outcomes,evidence:{e06:read('r6-phase2-e06.json'),e10:read('r6-phase2-e10.json'),e17:read('r6-phase2-e17.json'),e18_profile:read('r6-phase2-e18-profile.json'),e03_e04:read('r6-phase2-e03-e04.json'),e02_e05:read('r6-phase2-e02-e05.json'),e18_identity:read('r6-phase2-e18-identity.json')}};const p=`deploy-evidence/r6-demo-production-certification-phase2-${process.env.TARGET_SHA.slice(0,12)}.json`;let sha;try{const r=await github.rest.repos.getContent({owner:context.repo.owner,repo:context.repo.repo,path:p,ref:'main'});if(!Array.isArray(r.data))sha=r.data.sha}catch(e){if(e.status!==404)throw e}await github.rest.repos.createOrUpdateFileContents({owner:context.repo.owner,repo:context.repo.repo,path:p,message:`ops(r6): record phase2 ${status} ${process.env.TARGET_SHA.slice(0,12)}`,content:Buffer.from(JSON.stringify(payload,null,2)+'\n').toString('base64'),branch:'main',...(sha?{sha}:{})});
+      - name: Enforce Phase 2 PASS
+        if: always()
+        shell: bash
+        run: |
+          required=( '${{ steps.preflight.outcome }}' '${{ steps.server_build.outcome }}' '${{ steps.migrate.outcome }}' '${{ steps.migration_verify.outcome }}' '${{ steps.tenant_deploy.outcome }}' '${{ steps.app_deploy.outcome }}' '${{ steps.package_install.outcome }}' '${{ steps.profile.outcome }}' '${{ steps.client_build.outcome }}' '${{ steps.gateway_deploy.outcome }}' '${{ steps.pressure.outcome }}' '${{ steps.health.outcome }}' '${{ steps.provider.outcome }}' '${{ steps.identity.outcome }}' '${{ steps.pitr.outcome }}' )
+          for o in "${required[@]}"; do test "$o" = success; done
+          echo "R6_PHASE2_PASS candidate=$TARGET_SHA"
