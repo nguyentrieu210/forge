@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Runtime E2E: MetaForge Desk in a real browser against the Forge Frappe-compatible façade (cookie session, no token).",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:rc4:v2": "playwright test --config playwright.rc4-v2-mobile-qa.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

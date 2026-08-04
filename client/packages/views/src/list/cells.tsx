@@ -60,12 +60,12 @@ export function statusVariant(value: string): "default" | "secondary" | "destruc
 }
 
 type Tone = "info" | "warning" | "success" | "destructive" | "subtle";
-// Bản *-text đạt WCAG AA; --info/--warning/--success thô chỉ ~3:1 trên nền card sáng mà đây là
-// chữ 12.5px (cột trạng thái của mọi danh sách).
+// Bản *-text đạt WCAG AA. Success dùng tint 5% vì #15803d trên tint xanh 10% nằm ngay dưới
+// ngưỡng 4.5:1 trong Chromium/Axe; giảm nền thay vì đổi semantic text token toàn hệ thống.
 const TONE_CLS: Record<Tone, string> = {
   info: "border-info/25 bg-info/10 text-info-text",
   warning: "border-warning/30 bg-warning/12 text-warning-text",
-  success: "border-success/25 bg-success/10 text-success-text",
+  success: "border-success/25 bg-success/5 text-success-text",
   destructive: "border-destructive/25 bg-destructive/10 text-destructive-text",
   subtle: "border-border bg-muted text-subtle",
 };

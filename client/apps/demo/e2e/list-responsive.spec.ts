@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const VIEWPORTS = [
   { width: 390, height: 844, mode: "mobile" },
@@ -8,12 +8,23 @@ const VIEWPORTS = [
   { width: 1440, height: 900, mode: "desktop" },
 ] as const;
 
+async function dismissAppearanceSetup(page: Page) {
+  const useTheme = page.getByRole("button", { name: "Dùng giao diện này", exact: true });
+  try {
+    await useTheme.waitFor({ state: "visible", timeout: 1_500 });
+    await useTheme.click();
+  } catch {
+    // Only rendered for a fresh browser profile.
+  }
+}
+
 test("List giữ đúng renderer và không tràn trang ở 5 breakpoint chuẩn", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chromium", "Một browser run kiểm đủ 5 viewport");
 
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     await page.goto("/view/list");
+    await dismissAppearanceSetup(page);
     await expect(page.getByPlaceholder("Tìm kiếm…")).toBeVisible();
 
     const layout = await page.evaluate(() => ({
