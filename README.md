@@ -40,12 +40,12 @@ Canonical order:
 - R6 Production Certification: **DONE / PILOT-GO**.
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
 - Pilot-01 preview/control-plane: **READY**.
-- Pilot-01 real immutable source batch: **WAITING APPROVED SOURCE DATA**.
-- Current truthful Pilot-01 state: `PILOT-01-WAITING-SOURCE-BATCH`.
+- Pilot-01 real source set: **OBSERVED / HASHED / INGESTED**.
+- Current Pilot-01 verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED** pending reconciliation/normalization.
 - Frozen certified pilot software baseline: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Final R6 evidence: `R6-E01..R6-E23 = 23/23 PASS`.
 
-See `CURRENT_STATUS.md` for exact identity/evidence and `NEXT_TASKS.md` for the controlled-pilot sequence.
+See `CURRENT_STATUS.md` and `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md` for current data-ingest evidence; `NEXT_TASKS.md` owns the controlled-pilot sequence.
 
 ## Product architecture
 
