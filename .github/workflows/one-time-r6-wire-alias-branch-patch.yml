@@ -1,0 +1,131 @@
+name: One-time R6 Wire Alias Branch Patch
+on:
+  push:
+    branches: [program/r6-report-alias-relock-20260804]
+    paths: [".github/workflows/one-time-r6-wire-alias-branch-patch.yml"]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: program/r6-report-alias-relock-20260804
+          fetch-depth: 0
+      - name: Patch canonical parser, verifier, regression and R6 gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          manifest = Path('server/packages/app-registry/src/manifest.ts')
+          text = manifest.read_text()
+          old = '''  if (report.group_by !== dimensions[0]) throw errors.validation(`charts[${index}] dimension must match report group_by (${report.group_by ?? "none"})`);
+  const columns = new Map(report.columns.map((column) => [column.field, column]));
+  if (!columns.has(dimensions[0]!)) throw errors.validation(`charts[${index}] dimension is not a report column: ${dimensions[0]}`);
+  for (const measure of measures) {
+    const column = columns.get(measure);
+    if (!column?.aggregate) throw errors.validation(`charts[${index}] measure must be an aggregated report column: ${measure}`);
+  }
+'''
+          new = '''  // Query reports expose aggregate columns under their wire aliases, not source
+  // fieldnames: sum(grand_total) -> sum_grand_total, count(name) -> count_name.
+  // Charts are persisted/rendered against that response shape, so validate exactly the
+  // names the report endpoint returns.
+  const wireField = (column: AppReportColumn): string => column.aggregate
+    ? `${column.aggregate}_${column.field}`
+    : column.field;
+  const wireColumns = report.columns.map((column) => [wireField(column), column] as const);
+  assertUnique(wireColumns.map(([field]) => field), `reports[${index}] wire column`);
+  const columns = new Map(wireColumns);
+  const groupByColumn = report.columns.find((column) => !column.aggregate && column.field === report.group_by);
+  const groupByWireField = groupByColumn ? wireField(groupByColumn) : report.group_by;
+  if (groupByWireField !== dimensions[0]) throw errors.validation(`charts[${index}] dimension must match report group_by (${groupByWireField ?? "none"})`);
+  if (!columns.has(dimensions[0]!)) throw errors.validation(`charts[${index}] dimension is not a report column: ${dimensions[0]}`);
+  for (const measure of measures) {
+    const column = columns.get(measure);
+    if (!column?.aggregate) throw errors.validation(`charts[${index}] measure must be an aggregated report column: ${measure}`);
+  }
+'''
+          if old not in text:
+              raise SystemExit('parseChart target not found exactly')
+          manifest.write_text(text.replace(old, new, 1))
+
+          tests = Path('server/tests/app-registry.test.mjs')
+          text = tests.read_text()
+          old = '''  const chart = {
+    name: "Stock chart",
+    source: report.name,
+    type: "Bar",
+    dimensions: ["warehouse"],
+    measures: ["amount"],
+    roles: ["Kho User"],
+    drilldown: { route: "/report/Stock%20by%20warehouse" },
+    emptyFallback: "table",
+  };
+  assert.doesNotThrow(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [chart] }));
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, source: "Ghost" }] }), /declared report/);
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, measures: ["name"] }] }), /aggregated report column/);
+'''
+          new = '''  const chart = {
+    name: "Stock chart",
+    source: report.name,
+    type: "Bar",
+    dimensions: ["warehouse"],
+    measures: ["sum_amount"],
+    roles: ["Kho User"],
+    drilldown: { route: "/report/Stock%20by%20warehouse" },
+    emptyFallback: "table",
+  };
+  assert.doesNotThrow(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [chart] }));
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, source: "Ghost" }] }), /declared report/);
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, measures: ["amount"] }] }), /aggregated report column/);
+  assert.throws(() => manifest({ doctypes: [request], externalDocTypes: [], reports: [report], nav, charts: [{ ...chart, measures: ["name"] }] }), /aggregated report column/);
+'''
+          if old not in text:
+              raise SystemExit('app-registry chart test target not found exactly')
+          tests.write_text(text.replace(old, new, 1))
+
+          verifier = Path('server/scripts/lib/verify-installed-app.mjs')
+          text = verifier.read_text()
+          old = '''      const reportColumns = new Set(report.columns.map((column) => column.field));
+      for (const field of [...chart.dimensions, ...chart.measures]) {
+        if (!reportColumns.has(field)) throw new Error(`chart report ${chart.source} is missing column ${field}`);
+      }
+'''
+          new = '''      const reportColumns = new Set(report.columns.map((column) => column.aggregate ? `${column.aggregate}_${column.field}` : column.field));
+      for (const field of [...chart.dimensions, ...chart.measures]) {
+        if (!reportColumns.has(field)) throw new Error(`chart report ${chart.source} is missing wire column ${field}`);
+      }
+'''
+          if old not in text:
+              raise SystemExit('installed-app verifier chart target not found exactly')
+          verifier.write_text(text.replace(old, new, 1))
+
+          workflow = Path('.github/workflows/r6-pass-convergence.yml')
+          text = workflow.read_text()
+          old = '''      - name: Verify App Factory report/chart wire aliases
+        working-directory: server
+        run: node --test tests/app-factory-report-chart-alias.test.mjs
+'''
+          new = '''      - name: Verify App Factory and app-registry report/chart wire aliases
+        working-directory: server
+        run: node --test tests/app-registry.test.mjs tests/app-factory-report-chart-alias.test.mjs
+'''
+          if old not in text:
+              raise SystemExit('R6 alias gate target not found exactly')
+          workflow.write_text(text.replace(old, new, 1))
+          PY
+          git diff --check
+      - name: Commit canonical patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add server/packages/app-registry/src/manifest.ts server/tests/app-registry.test.mjs server/scripts/lib/verify-installed-app.mjs .github/workflows/r6-pass-convergence.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix(r6): validate charts against aggregate report wire aliases"
+          git push origin HEAD:program/r6-report-alias-relock-20260804
