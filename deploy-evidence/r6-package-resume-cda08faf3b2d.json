@@ -1,19 +1,30 @@
 {
-  "format": "forge-r6-package-resume/v2",
+  "format": "forge-r6-package-resume/v3",
   "candidate_sha": "cda08faf3b2d0af5e5582f8f3b8e737cc44d92b2",
-  "observed_at": "2026-08-04T16:56:40.369Z",
+  "observed_at": "2026-08-04T16:59:02.762Z",
   "outcomes": {
-    "hrm": "failure",
-    "accounting": "skipped",
-    "alumdoor": "skipped"
+    "hrm": "success",
+    "accounting": "success",
+    "alumdoor": "failure"
   },
   "diagnostics": {
     "hrm": [
-      "Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/runner/work/forge/forge/server/dist/packages/app-registry/src/index.js' imported from /home/runner/work/forge/forge/server/scripts/forge-app.mjs",
-      "  url: 'file:///home/runner/work/forge/forge/server/dist/packages/app-registry/src/index.js'"
+      "1 compiled   app=hrm@1.8.0 doctypes=70 workflows=11 roles=7 fixtures=19 nav=62",
+      "4 provisioning standard metadata … ok (0 doctypes, 0 print formats, 0 roles added)",
+      "5 installing  hrm@1.8.0 … unchanged (0 doctypes, 0 workflows, 0 fixtures)",
+      "7 verifying   installed form/link/chart contract … ok (form Additional Salary, User Link Employee.user_id, 0 charts, 0 reports)"
     ],
-    "accounting": [],
-    "alumdoor": []
+    "accounting": [
+      "1 compiled   app=vn-accounting@1.6.1 doctypes=13 workflows=7 roles=12 fixtures=0 nav=27",
+      "4 installing  vn-accounting@1.6.1 … unchanged (0 doctypes, 0 workflows, 0 fixtures)",
+      "6 verifying   installed form/link/chart contract … ok (form Payroll Accounting Batch, User Link Warehouse Cash Count.handover_from, 0 charts, 0 reports)"
+    ],
+    "alumdoor": [
+      "1 compiled   app=alumdoor@2.2.3 doctypes=74 workflows=1 roles=11 fixtures=57 nav=79",
+      "4 installing  alumdoor@2.2.3 … unchanged (0 doctypes, 0 workflows, 0 fixtures)",
+      "6 verifying   installed form/link/chart contract … FAILED",
+      "  installed, but the metadata contract does not resolve: chart report Đơn hàng theo khách is missing column grand_total"
+    ]
   },
   "status": "BLOCKED"
 }
