@@ -1,0 +1,48 @@
+name: One-time R6 Resume Demo Migrations R2
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/one-time-r6-resume-migrations-r2.yml"]
+permissions:
+  contents: write
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 60
+    env:
+      TARGET_SHA: fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5
+      TENANT: alu
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ env.TARGET_SHA }}", fetch-depth: 1, persist-credentials: false }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Resume migrations with explicit demo authorization
+        id: migrate
+        run: node server/scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+      - name: Observe inventory
+        id: observe
+        if: always()
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import{readdirSync,writeFileSync}from'node:fs';import path from'node:path';import{d1Query,wrangler}from'./server/scripts/wrangler-cli.mjs';import{findTenantDatabaseId,removeTenantConfig,writeTenantConfig}from'./server/scripts/tenant-wrangler.mjs';const t=process.env.TENANT,id=findTenantDatabaseId(t,wrangler);if(!id)throw new Error('missing D1');const c=writeTenantConfig({tenant:t,databaseId:id});try{const db={name:`cloudforge-${t}`,id,configArg:c.relativeConfig},expected=readdirSync('./server/migrations/tenant').filter(x=>x.endsWith('.sql')).sort(),applied=d1Query(db,'SELECT name FROM d1_migrations ORDER BY name').map(x=>String(x.name)),A=new Set(applied),E=new Set(expected),pending=expected.filter(x=>!A.has(x)),unknown=applied.filter(x=>!E.has(x)),ev={format:'forge-r6-migration-resume/v2',candidate_sha:process.env.TARGET_SHA,observed_at:new Date().toISOString(),expected:expected.length,applied:applied.length,pending,unknown,migrate_outcome:'${{ steps.migrate.outcome }}',status:pending.length===0&&unknown.length===0?'PASS':'BLOCKED'};writeFileSync(path.join(process.env.RUNNER_TEMP,'r6-migration-resume-r2.json'),JSON.stringify(ev,null,2)+'\n')}finally{removeTenantConfig(c.configPath)}
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "r6-migration-resume-r2-${{ github.run_id }}", path: "${{ runner.temp }}/r6-migration-resume-r2.json", if-no-files-found: warn }
+      - name: Record evidence
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('node:fs'),path=require('node:path');let ev=null;try{ev=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'r6-migration-resume-r2.json'),'utf8'))}catch{};const payload={status:ev?.status??'BLOCKED',candidate_sha:process.env.TARGET_SHA,workflow_run_id:String(context.runId),evidence:ev};const p='deploy-evidence/r6-migration-resume-r2-fedb2dd7c9ab.json';let sha;try{const r=await github.rest.repos.getContent({owner:context.repo.owner,repo:context.repo.repo,path:p,ref:'main'});if(!Array.isArray(r.data))sha=r.data.sha}catch(e){if(e.status!==404)throw e}await github.rest.repos.createOrUpdateFileContents({owner:context.repo.owner,repo:context.repo.repo,path:p,message:`ops(r6): record migration resume r2 ${payload.status}`,content:Buffer.from(JSON.stringify(payload,null,2)+'\n').toString('base64'),branch:'main',...(sha?{sha}:{})});
+      - name: Enforce PASS
+        if: always()
+        run: test '${{ steps.migrate.outcome }}' = success && test '${{ steps.observe.outcome }}' = success
