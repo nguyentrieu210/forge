@@ -1,0 +1,494 @@
+{
+  "format": "forge-r6-restore-size-diagnostic/v1",
+  "candidate_sha": "c6078d329c4022d55df8c16071b885b6f7a43d46",
+  "observed_at": "2026-08-04T16:26:19.848Z",
+  "source_bytes": 11913547,
+  "sanitized_bytes": 11941005,
+  "rewrite": {
+    "rewrittenRows": 3,
+    "generatedStatements": 199,
+    "maxGeneratedStatementBytes": 32655
+  },
+  "buckets": {
+    "gt8k": 68,
+    "gt12k": 33,
+    "gt16k": 25,
+    "gt24k": 16,
+    "gt30k": 13,
+    "gt32k": 12
+  },
+  "largest": [
+    {
+      "index": 13859,
+      "bytes": 805307,
+      "table": "app_revisions",
+      "prefix": "INSERT INTO \"app_revisions\" (\"tenant_id\",\"app_id\",\"revision_no\",\"version\",\"content_hash\",\"manifest_json\",\"recorded_at\") "
+    },
+    {
+      "index": 13860,
+      "bytes": 274970,
+      "table": "app_revisions",
+      "prefix": "INSERT INTO \"app_revisions\" (\"tenant_id\",\"app_id\",\"revision_no\",\"version\",\"content_hash\",\"manifest_json\",\"recorded_at\") "
+    },
+    {
+      "index": 13387,
+      "bytes": 272577,
+      "table": "OTHER",
+      "prefix": "hệ thống phân bổ FIFO theo đơn cũ, xem trước toàn bộ rồi tạo một Purchase Receipt nháp duy nhất.\",\"fields\":[{\"fieldname\""
+    },
+    {
+      "index": 12607,
+      "bytes": 142558,
+      "table": "OTHER",
+      "prefix": "lưu cùng lô nhận để đối chiếu giá nhà cung cấp.\",\"valueSource\":\"default\",\"editMode\":\"editable\",\"surface\":\"quick\",\"server"
+    },
+    {
+      "index": 12603,
+      "bytes": 141993,
+      "table": "OTHER",
+      "prefix": "lô THÔ sẽ tự sinh việc sơn.\",\"valueSource\":\"formula\",\"editMode\":\"readonly\",\"surface\":\"expanded\",\"serverEnforced\":true,\"s"
+    },
+    {
+      "index": 12608,
+      "bytes": 115313,
+      "table": "OTHER",
+      "prefix": "trường thời gian chữ cũ chỉ còn tương thích.\",\"valueSource\":\"user\",\"editMode\":\"editable\",\"surface\":\"expanded\",\"serverEnf"
+    },
+    {
+      "index": 12597,
+      "bytes": 112557,
+      "table": "OTHER",
+      "prefix": "CREATE TABLE property_setters ( tenant_id TEXT NOT NULL, name TEXT NOT NULL, doc_type TEXT NOT NULL, -- 'DocFiel"
+    },
+    {
+      "index": 13397,
+      "bytes": 102873,
+      "table": "OTHER",
+      "prefix": "}\",\"is_default\":true,\"disabled\":false,\"revision\":1}]')) WHERE \"tenant_id\"='alu' AND \"app_id\"='hrm'; UPDATE \"installed_ap"
+    },
+    {
+      "index": 13861,
+      "bytes": 85747,
+      "table": "app_revisions",
+      "prefix": "INSERT INTO \"app_revisions\" (\"tenant_id\",\"app_id\",\"revision_no\",\"version\",\"content_hash\",\"manifest_json\",\"recorded_at\") "
+    },
+    {
+      "index": 12598,
+      "bytes": 73547,
+      "table": "OTHER",
+      "prefix": "Cửa Đức dùng kg cân thực tế.\",\"valueSource\":\"user\",\"editMode\":\"editable\",\"surface\":\"expanded\",\"serverEnforced\":false,\"se"
+    },
+    {
+      "index": 12604,
+      "bytes": 48815,
+      "table": "OTHER",
+      "prefix": "tuyệt đối không coi số Bộ/Cái là kg. Chia cho tổng mét, số cây hoặc số lượng giao dịch. Số để đối chiếu, không vào sổ.\","
+    },
+    {
+      "index": 13380,
+      "bytes": 39445,
+      "table": "OTHER",
+      "prefix": "khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.\",\"leaf_formula\":\"Kiểu Đức\"}},{\"record_type\":\"Cutting Policy\",\"name\":\"Cử"
+    },
+    {
+      "index": 8011,
+      "bytes": 32764,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 12601,
+      "bytes": 30619,
+      "table": "OTHER",
+      "prefix": "lô THÔ sẽ tự sinh việc sơn.\",\"valueSource\":\"formula\",\"editMode\":\"readonly\",\"surface\":\"expanded\",\"serverEnforced\":true,\"s"
+    },
+    {
+      "index": 8021,
+      "bytes": 25998,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8019,
+      "bytes": 24716,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8055,
+      "bytes": 22841,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8042,
+      "bytes": 22358,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8079,
+      "bytes": 20623,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8051,
+      "bytes": 18733,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8023,
+      "bytes": 18460,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8018,
+      "bytes": 18225,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 12599,
+      "bytes": 17734,
+      "table": "OTHER",
+      "prefix": "để trống nếu loại cửa không có ngoại lệ.\",\"valueSource\":\"user\",\"editMode\":\"editable\",\"surface\":\"expanded\",\"serverEnforce"
+    },
+    {
+      "index": 8235,
+      "bytes": 17392,
+      "table": "print_formats",
+      "prefix": "INSERT INTO \"print_formats\" (\"tenant_id\",\"name\",\"doc_type\",\"is_default\",\"disabled\",\"revision\",\"format_json\",\"modified_by"
+    },
+    {
+      "index": 8040,
+      "bytes": 17260,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8159,
+      "bytes": 16274,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8022,
+      "bytes": 14963,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8189,
+      "bytes": 14431,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 8038,
+      "bytes": 14149,
+      "table": "doctype_definitions",
+      "prefix": "INSERT INTO \"doctype_definitions\" (\"tenant_id\",\"doctype\",\"module\",\"is_custom\",\"is_submittable\",\"is_child\",\"revision\",\"me"
+    },
+    {
+      "index": 12905,
+      "bytes": 13700,
+      "table": "OTHER",
+      "prefix": "base64,iVBORw0KGgoAAAANSUhEUgAAAVYAAABBCAIAAAAFaRtDAAAkeElEQVR4nO2dd3gU1frH50zZlrrZ9AQSCIQeAggKN5GOFPUCiuIjiMqlC1gABQtNw"
+    }
+  ],
+  "by_table": [
+    [
+      "app_revisions",
+      {
+        "count": 3,
+        "max": 805307,
+        "gt16k": 3,
+        "gt24k": 3,
+        "gt30k": 3
+      }
+    ],
+    [
+      "OTHER",
+      {
+        "count": 1574,
+        "max": 272577,
+        "gt16k": 11,
+        "gt24k": 10,
+        "gt30k": 9
+      }
+    ],
+    [
+      "doctype_definitions",
+      {
+        "count": 370,
+        "max": 32764,
+        "gt16k": 10,
+        "gt24k": 3,
+        "gt30k": 1
+      }
+    ],
+    [
+      "print_formats",
+      {
+        "count": 26,
+        "max": 17392,
+        "gt16k": 1,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "documents",
+      {
+        "count": 4269,
+        "max": 11720,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "versions",
+      {
+        "count": 22,
+        "max": 4204,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "document_search",
+      {
+        "count": 4253,
+        "max": 3510,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "ai_logs",
+      {
+        "count": 43,
+        "max": 1545,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "workflows",
+      {
+        "count": 13,
+        "max": 1133,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "master_records",
+      {
+        "count": 76,
+        "max": 1130,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "document_children",
+      {
+        "count": 6,
+        "max": 956,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "erp_organization_scope_grants",
+      {
+        "count": 1,
+        "max": 902,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "outbox",
+      {
+        "count": 30,
+        "max": 869,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "custom_fields",
+      {
+        "count": 10,
+        "max": 696,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "rbac_audit_events",
+      {
+        "count": 11,
+        "max": 689,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "inbound_events",
+      {
+        "count": 3295,
+        "max": 629,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "mutation_receipts",
+      {
+        "count": 29,
+        "max": 521,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "users",
+      {
+        "count": 3,
+        "max": 439,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "notification_log",
+      {
+        "count": 2,
+        "max": 358,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "files",
+      {
+        "count": 1,
+        "max": 354,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "login_rate_limits",
+      {
+        "count": 124,
+        "max": 265,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "app_objects",
+      {
+        "count": 238,
+        "max": 199,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "maintenance_runs",
+      {
+        "count": 1,
+        "max": 199,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "roles",
+      {
+        "count": 46,
+        "max": 169,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "naming_series",
+      {
+        "count": 6,
+        "max": 159,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "purchase_settlement_windows",
+      {
+        "count": 1,
+        "max": 153,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "d1_migrations",
+      {
+        "count": 79,
+        "max": 142,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "user_roles",
+      {
+        "count": 19,
+        "max": 103,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ],
+    [
+      "sqlite_sequence",
+      {
+        "count": 1,
+        "max": 72,
+        "gt16k": 0,
+        "gt24k": 0,
+        "gt30k": 0
+      }
+    ]
+  ]
+}
