@@ -1,17 +1,22 @@
 # R5-A3 — Commercial + Supply Chain
 
-Status: **READY FOR PR / EXACT-HEAD CI PENDING / NON-UI MERGE GATE**  
-Initial branch baseline: `main@30346e08eabb7074f8623eeedae09efec25da072`  
-Latest audited `main`: `8316d2a5f24863d3347cf9f92ec5987145b8dc9e`  
-R5-00 control consumed: PR `#629`, `agent/r5-00-integration-control@ef2a4d80b70164048aa6c3f516580350009234b2`  
-Branch: `agent/r5-03-commercial-supply-chain`  
+Status: **EXACT-HEAD SUBSTANTIVE PASS / FINAL HYGIENE RERUN PENDING / NON-UI MERGE GATE**
+
+Initial branch baseline: `main@30346e08eabb7074f8623eeedae09efec25da072`
+
+Latest audited `main`: `8316d2a5f24863d3347cf9f92ec5987145b8dc9e`
+
+R5-00 control consumed: PR `#629`, `agent/r5-00-integration-control@ef2a4d80b70164048aa6c3f516580350009234b2`
+
+Branch: `agent/r5-03-commercial-supply-chain`
+
 Risk: **CRITICAL stock/procurement quantity semantics; non-UI**
 
 ## Mission
 
 Converge the already-integrated CRM/Sales, Procurement/P2P and Inventory/WMS authorities for the Alumdoor pilot without reopening RC4 or creating a second Stock/AR/AP/GL authority.
 
-R5-00 established that all substantive RC4 A10/A11/A12/A17/A18 source is already on `main`. R5-03 therefore treats Transaction Closure + RC4 as the baseline and only fixes a reproducible residual contract gap or adds integrated release-confidence evidence.
+R5-00 established that all substantive RC4 A10/A11/A12/A17/A18 source is already on `main`. R5-03 therefore treats Transaction Closure + RC4 as the baseline and only fixes reproducible residual contract gaps or adds integrated release-confidence evidence.
 
 ## Exact-state / drift audit
 
@@ -24,38 +29,39 @@ Canonical authority retained:
 - Inventory: existing Stock Ledger, valuation, reservation, Stock Reconciliation, Batch/Serial and WMS planning authority.
 - Finance: existing GL/Payment Ledger and read-only cross-ledger reconciliation; R5-03 does not post finance corrections.
 
-## Reproducible residual fixed — purchase allocation quantity axis
+## Reproducible residual fixed — independent purchase quantity axes
 
 ### Problem on exact main
 
-Shared `clouderp-core` mixed three quantities that are not always identical:
+Shared `clouderp-core` mixed quantities that are not always identical:
 
 1. commercial/priced quantity;
 2. canonical stock quantity;
-3. supplier-delivery obligation/allocation quantity.
+3. exact observed purchase stock quantity for dual-measure materials;
+4. supplier-delivery obligation/allocation quantity.
 
-Two shared selectors special-cased the Alumdoor literal `inventory_mode === "Nhôm cây/lá"` and field `qty_bar`. This made a vertical field name part of generic Procurement/Stock authority and also caused `stockQtyMicros()` to return bar count even when the declared stock UOM was Kg.
+Two shared selectors special-cased the Alumdoor literal `inventory_mode === "Nhôm cây/lá"` and field `qty_bar`. This made a vertical field name part of generic Procurement/Stock authority. The fallback conversion path also exposed a fixed-point drift: a counted quantity such as exactly 230 pieces could become `230.000100` after multiplying a rounded six-decimal conversion factor.
 
-That conflicts with the Alumdoor Reference Vertical contract: a reusable quantity axis must be declarative, and Stock Ledger quantity must remain the declared stock-UOM quantity.
+That conflicts with the reference-vertical contract: physical quantity roles must be declarative, server-authoritative and exact where the source observation is exact.
 
 ### Generic contract implemented
 
 `server/packages/clouderp-core/src/uom.ts` now separates the axes:
 
-- `stockQtyMicros()` is stock-only and reads canonical `stock_qty_micros`/transaction quantity; it no longer selects `qty_bar` from a vertical inventory-mode literal.
+- `stockQtyMicros()` is stock-only and reads the canonical server-snapshotted stock quantity. It no longer selects `qty_bar` from a vertical inventory-mode literal.
+- Item master may declare `purchase_stock_qty_field` when a purchase line contains an exact observed stock quantity that must not be reconstructed from a rounded conversion factor.
 - `purchaseAllocationQtyMicros()` is a separate Procurement allocation selector.
-- Item master may declare:
-  - `purchase_allocation_qty_field` — the line field containing the supplier-delivery obligation quantity;
-  - `purchase_allocation_uom` — the UOM of that allocation quantity.
-- if no separate allocation axis is declared, Procurement falls back to canonical stock quantity.
-- descriptor field names are validated and quantity must be positive fixed-point data.
-- field/UOM descriptors must be declared together.
+- Item master may declare `purchase_allocation_qty_field` plus `purchase_allocation_uom` when supplier-delivery obligation quantity differs from stock quantity.
+- if no separate Purchase Allocation axis is declared, Procurement falls back to canonical stock quantity.
+- descriptor field names are constrained to safe field identifiers; values are fixed-point and must be positive.
+- allocation field/UOM descriptors must be declared together.
+- when `purchase_stock_qty_field` is declared, the exact observed stock quantity is authoritative while the declared conversion factor remains a consistency check. It is not multiplied again to manufacture an approximate count.
 
-`applyUomConversion()` snapshots the descriptor from authoritative Item master data onto purchase lines. Client-provided descriptor claims are always overwritten or cleared, so a caller cannot switch a Purchase Order/Receipt from one quantity axis to another.
+`applyUomConversion()` snapshots or clears all quantity descriptors from authoritative Item master data. Client-provided descriptor claims are therefore overwritten and cannot switch a Purchase Order/Receipt to another stock or allocation axis.
 
-`server/packages/clouderp-core/src/purchase-allocation-controllers.ts` now consumes that generic selector. The controller no longer contains `Nhôm cây/lá` or `qty_bar` quantity-selection logic.
+`server/packages/clouderp-core/src/purchase-allocation-controllers.ts` now consumes the generic selector. The controller no longer contains `Nhôm cây/lá` or `qty_bar` quantity-selection logic.
 
-This keeps one Purchase Allocation ledger and one Stock Ledger while allowing a material to be priced/stocked in one unit and settled against supplier obligation in another.
+This keeps one Purchase Allocation ledger and one Stock Ledger while allowing commercial price, stock and supplier-delivery obligation to use different declared physical measures without vertical branching in the shared controller.
 
 ## Regression evidence added
 
@@ -64,19 +70,17 @@ This keeps one Purchase Allocation ledger and one Stock Ledger while allowing a 
 Covers:
 
 - a non-Alumdoor example whose Stock quantity is 120 units while Purchase Allocation is 3 pallets;
-- fallback to Stock quantity when no separate axis exists;
-- server master overriding/clearing client-supplied allocation descriptors;
+- fallback to Stock quantity when no separate allocation axis exists;
+- exact observed purchase stock quantity replacing rounded conversion output;
+- server master overriding/clearing client-supplied stock/allocation descriptors;
 - field/UOM pair validation;
-- invalid field and non-positive allocation quantity fail-closed behavior.
+- invalid, incomplete, inconsistent and non-positive quantity metadata fail-closed behavior.
 
-### Existing Aluminium preview regression strengthened
+### Existing allocation regressions strengthened
 
-`server/tests/purchase-receipt-submit-preview.test.mjs` now declares the allocation axis through Item master metadata and proves simultaneously:
+`server/tests/purchase-receipt-submit-preview.test.mjs` proves a representative shape can keep commercial + stock quantity at `644.184 Kg` while supplier FIFO allocation is exactly `230` counted pieces, with client attempts to change the allocation descriptor overwritten by Item master.
 
-- commercial + stock quantity remain Kg for the representative shape;
-- supplier FIFO allocation remains 230 counted pieces;
-- client attempts to claim `qty`/Kg as the allocation axis are overwritten by Item master `qty_bar`/Cây;
-- preview stays side-effect free.
+`server/tests/purchase-receipt-allocation-controller.test.mjs` and `server/tests/purchase-allocation-actions.test.mjs` now declare the generic stock/allocation axes in Item master fixtures. Small-quantity fixtures derive conversion factors from the exact rounded transaction quantity, so consistency validation remains strict instead of hiding fixture drift behind tolerance.
 
 ### Exact-head workflow
 
@@ -94,7 +98,7 @@ Added `.github/workflows/r5-03-commercial-supply-chain.yml` with:
 - diff hygiene;
 - **no deploy step**.
 
-Authored tests are not reported PASS until this workflow completes successfully on the exact PR head.
+Run `30880985337` on exact head `d7e55c8bc05d8bfd31fbfbfd01ef82bf8e6ee77d` passed every substantive domain gate above. Its only failure was final `git diff --check`; this documentation update removes the trailing-whitespace source and triggers the final exact-head rerun. No authored test is promoted beyond the final exact-head result.
 
 ## Integrated scenario disposition
 
@@ -109,7 +113,8 @@ Authored tests are not reported PASS until this workflow completes successfully 
 | Stock valuation | single Stock Ledger/valuation authority retained |
 | AR/AP/Payment/GL | Finance authority only; no Commercial/Supply-Chain shadow ledger |
 | Stock <-> Finance reconciliation | A22 read-only auditor reused in exact-head workflow |
-| separate supplier-delivery quantity axis | generic master-declared selector added in this lane |
+| exact purchase stock quantity | generic master-declared `purchase_stock_qty_field` added in this lane |
+| separate supplier-delivery quantity axis | generic master-declared allocation field/UOM added in this lane |
 
 ## Dependency Requests
 
@@ -125,13 +130,16 @@ Current main can deterministically allocate landed-cost amount and can perform s
 
 Blocking: end-to-end `P01-016 Landed Cost` / historical Stock->GL correctness claim only. All independent Commercial/P2P/Stock continuity work proceeds.
 
-### DR-R5-03-02 -> Alumdoor package/profile owner / R5 package composition — allocation-axis consumer metadata
+### DR-R5-03-02 -> Alumdoor package/profile owner / R5 package composition — quantity-axis consumer metadata
 
-The generic core no longer knows the Alumdoor field name `qty_bar`. Before the new selector is activated for an installed Alumdoor package whose stock UOM differs from supplier-delivery count, the installed Item/profile metadata must declare the generic pair `purchase_allocation_qty_field` + `purchase_allocation_uom` (representative value: `qty_bar` + `Cây`).
+The generic core no longer knows the Alumdoor field name `qty_bar`. Before an installed package activates a shape whose purchase transaction, stock and supplier-delivery measures differ, installed Item/profile metadata must materialize the appropriate generic descriptors:
 
-R5-03 tests prove the generic contract with a representative Alumdoor shape, but this lane does not silently mutate tenant master data or rewrite historical import SQL merely to make the new contract appear deployed.
+- `purchase_stock_qty_field` when exact observed stock quantity is carried by a dedicated line field;
+- `purchase_allocation_qty_field` plus `purchase_allocation_uom` when supplier-delivery obligation quantity differs from stock quantity.
 
-Blocking: installed-package/pilot activation of the separate allocation axis. Not blocking generic domain source validation. R5-06 package/migration rehearsal must verify the composed package actually materializes the descriptor before pilot certification.
+Representative counted-stock values are `qty_bar` for `purchase_stock_qty_field`, and `qty_bar` + `Cây` for the allocation descriptor. R5-03 tests prove the generic contract but do not silently mutate tenant master data or rewrite historical import SQL merely to make the contract appear deployed.
+
+Blocking: installed-package/pilot activation of the separate quantity axes. Not blocking generic domain source validation. R5-06 package/migration rehearsal must verify the composed package materializes the descriptors before pilot certification.
 
 ### DR-R5-03-03 -> Measurement Profile / Inventory metadata owner — remaining generic physical-measure extraction
 
@@ -154,8 +162,8 @@ R5-03 performs no production deployment, tenant-data mutation, migration executi
 
 The branch is non-UI and changes shared Stock/Procurement quantity semantics. Per Forge Enterprise Completion policy:
 
-1. open PR from the exact R5-03 branch;
-2. collect exact-head CI evidence;
+1. keep PR `#636` on the exact R5-03 branch;
+2. collect final exact-head CI evidence;
 3. reconcile any concrete main overlap before integration;
-4. keep DR-R5-03-01/02 explicit in composed R5 evidence;
+4. keep DR-R5-03-01/02/03 explicit in composed R5 evidence;
 5. **stop before merge/deploy pending explicit user authorization**.
