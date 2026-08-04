@@ -181,6 +181,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Reconcile frozen-install worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              pnpm-lock.yaml)
+                echo "Restoring exact candidate lockfile after successful frozen install."
+                git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml
+                ;;
+              *)
+                echo "Refusing full release: dependency install changed unexpected source path: $file"
+                exit 1
+                ;;
+            esac
+          done
+          test -z "$(git status --porcelain --untracked-files=all)"
+
       - name: Build once
         run: |
           pnpm --filter cloudforge run build
