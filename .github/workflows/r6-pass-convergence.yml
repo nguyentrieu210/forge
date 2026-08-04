@@ -32,6 +32,9 @@ jobs:
       - name: Verify migration, restore import and PITR safety
         working-directory: server
         run: node --test tests/d1-migrate-remote-safety.test.mjs tests/d1-backup-import.test.mjs tests/sre-destructive-guards.test.mjs
+      - name: Verify App Factory report/chart wire aliases
+        working-directory: server
+        run: node --test tests/app-factory-report-chart-alias.test.mjs
       - name: Workerd evidence — ERP lifecycle
         id: health
         working-directory: server
