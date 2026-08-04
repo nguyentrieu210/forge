@@ -14,9 +14,10 @@ Ngày cập nhật: **2026-08-05**.
 - Pilot-00 Freeze Production Profile + Pilot Contract: **DONE / PILOT-00-LOCKED**.
 - Pilot-00 authority: `docs/pilot/alumdoor/PILOT_00_CONTRACT.md` + `PILOT_00_LOCK.json`.
 - Pilot-01 control plane: **READY / PREVIEW-ONLY**.
-- Pilot-01 source batch: **WAITING APPROVED REAL SOURCE DATA**.
-- Active phase: **Pilot-01 — Master + Opening Data Readiness**.
-- Next milestone: **real batch `PREVIEW_PASS` -> Pilot-01 READY -> Pilot-02 Representative Transaction Dry Run**.
+- Pilot-01 real uploaded source set: **OBSERVED / HASHED / INGESTED**.
+- Pilot-01 preview verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED**.
+- Active phase: **Pilot-01 — reconcile + normalize Master/Opening Data**.
+- Next milestone: **private normalized real batch `PREVIEW_PASS` -> Pilot-01 READY -> Pilot-02 Representative Transaction Dry Run**.
 
 Do not reopen R6 merely because controlled-pilot business/data/cutover work remains. Those are downstream pilot gates.
 
@@ -41,9 +42,9 @@ Pilot-00 performed **no real customer/master/opening-data production write**.
 
 ## 2. Pilot-01 — Master + Opening Data Readiness
 
-Status: **PILOT-01-WAITING-SOURCE-BATCH**.
+Status: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED**.
 
-Control plane already prepared:
+### Control plane already prepared
 
 - frozen schema: `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
 - immutable manifest template: `docs/pilot/alumdoor/PILOT_01_BATCH_MANIFEST_TEMPLATE.json`;
@@ -51,35 +52,51 @@ Control plane already prepared:
 - fail-closed tests: `docs/pilot/alumdoor/tools/validate-pilot-batch.test.mjs`;
 - Pilot-00/Pilot-01 identity verifier: `docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs`;
 - machine status: `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
-- durable readiness record: `docs/pilot/alumdoor/PILOT_01_READINESS.md`.
+- source ingest machine evidence: `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json`;
+- source ingest disposition: `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`.
 
-The real source batch must contain one immutable, SHA-256-bound JSON-array dataset for:
+### Real source set now observed
 
-- customers/contacts;
-- suppliers;
-- items/BOM/work centers;
-- warehouses/opening stock;
-- opening AR/AP;
-- employees;
-- named pilot users/roles;
-- opening cash/bank only if explicitly included by the batch scope.
+Operator-provided uploads contain real Alumdoor master/operational evidence:
 
-Required controls before `PILOT-01-READY`:
+- 277-row / 277-code item master export;
+- 258 customer source rows / 256 exact customer names;
+- 8 supplier-master rows;
+- 730 typed operating-journal rows;
+- one current TIẾN ĐẠT purchase-order summary;
+- 11-sheet customer order/history workbook;
+- aluminum physical-lot workbook with 21 total sheets / 18 inventory sheets and 1,506 source lot rows;
+- business process/formula specification.
 
-- explicit `pilot_batch_id`, source system, cutoff and extract timestamps;
-- SHA-256 per file;
-- deterministic mapping and source provenance;
-- duplicate/conflict detection;
-- unknown-reference fail-closed behavior;
-- exact file row counts;
-- exact Stock/AR/AP/cash-bank source-total reconciliation;
-- zero unexplained variance;
-- exactly one active named `Giám đốc` pilot account;
-- every non-zero discrepancy receives owner/root-cause/disposition/recheck evidence.
+No raw customer workbook is committed to Git. Only immutable source digests, counts and blocker summaries are materialized.
 
-Current dependency: no approved immutable real Alumdoor source batch is available to the preview validator. Do not substitute package fixtures, demo data or R6 Golden Flow data for opening/customer migration evidence.
+### Reconciliation blockers before `PILOT-01-READY`
 
-**Production write/import remains unauthorized.** A real `PREVIEW_PASS` still does not authorize a production write.
+1. **Common cutoff:** Stock, AR/AP and cash/bank do not yet prove one common business cutoff.
+2. **Customer identity:** two exact duplicate customer names need source-owner disposition.
+3. **Supplier identity:** uploaded purchase activity references parties not typed NCC; canonical `TIẾN ĐẠT` already exists, remaining role mappings need disposition.
+4. **Item identity:** 60 distinct journal item-code strings do not exact-match the uploaded 277-code item export; use canonical alias/standardization evidence, never fuzzy guessing.
+5. **Opening Stock:** uploaded aluminum lots preserve length/piece/color/condition but contain zero populated actual-Kg cells; theoretical kg/m must not masquerade as measured Stock quantity.
+6. **Stock scope drift:** process source describes 23 aluminum sheets + 2 mesh sheets; uploaded aluminum workbook has 21 total / 18 inventory sheets and no separate mesh opening source in the observed set.
+7. **Future stock dates:** two `VIPST700` rows carry `23/12/2026` and require disposition.
+8. **Opening AR:** observed activity proves carry-in receivables exist; opening AR cannot be reconstructed safely from the observed period alone.
+9. **Opening AP:** purchase activity exists but complete opening/payment state at the same cutoff is not proven.
+10. **VND rounding:** 45 typed journal rows expose fractional `Tổng thanh toán`; deterministic integer-VND conversion policy must be frozen.
+11. **Operating/access masters:** complete work-center/BOM/employee/pilot-user sources are not migration-ready; exactly one active named `Giám đốc` account remains required.
+
+### Next execution order
+
+- normalize item aliases against canonical Alumdoor standardization;
+- reconcile customer/supplier party identities;
+- freeze one coherent business cutoff;
+- obtain matching AR/AP/cash-bank opening snapshots;
+- disposition stock sheet-scope drift/future dates;
+- obtain actual measured Kg/value evidence for opening aluminum stock or an explicitly approved source-bound conversion that does not relabel theoretical evidence;
+- freeze employee/work-center/BOM scope and named pilot accounts;
+- generate private normalized JSON batch;
+- run `validate-pilot-batch.mjs` until `PREVIEW_PASS` with zero unexplained variance.
+
+**Production write/import remains unauthorized.** `PREVIEW_PASS` still does not authorize a production write.
 
 ## 3. Pilot-02 — Representative Transaction Dry Run
 
@@ -164,7 +181,9 @@ Pilot:
 - `docs/pilot/alumdoor/PILOT_00_LOCK.json`;
 - `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
 - `docs/pilot/alumdoor/PILOT_01_READINESS.md`;
-- `docs/pilot/alumdoor/PILOT_01_STATUS.json`.
+- `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
+- `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.json`;
+- `docs/pilot/alumdoor/PILOT_01_SOURCE_INGEST_20260805.md`.
 
 R6 closure:
 
