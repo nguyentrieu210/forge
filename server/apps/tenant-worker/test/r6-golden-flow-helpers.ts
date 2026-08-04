@@ -16,8 +16,8 @@ export async function post(value: Awaited<ReturnType<typeof cmd>>) {
 
 export async function createAndSubmit(doctype:string,name:string,document:Record<string,unknown>) {
   const key=name.toLowerCase().replace(/[^a-z0-9]+/g,"-");
-  expect((await post(await cmd({id:`r6-${key}-create`,doctype,name,action:"create",version:null,document}))).status,`${doctype} ${name} create`).toBe(200);
-  expect((await post(await cmd({id:`r6-${key}-submit`,doctype,name,action:"submit",version:1,document}))).status,`${doctype} ${name} submit`).toBe(200);
+  expect((await post(await cmd({id:`r6-${key}-create`,doctype,name,action:"create",version:null,document}))).status).toBe(200);
+  expect((await post(await cmd({id:`r6-${key}-submit`,doctype,name,action:"submit",version:1,document}))).status).toBe(200);
 }
 
 export async function seedMaster(recordType:string,name:string,data:Record<string,unknown>={}) {
