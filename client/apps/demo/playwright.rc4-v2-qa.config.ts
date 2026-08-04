@@ -4,9 +4,9 @@ const FULL_DESKTOP_SUITE = [
   "**/a11y.spec.ts",
   "**/list-responsive.spec.ts",
   "**/metaforge-ui.spec.ts",
-  "**/ui-v3-mobile-qa.spec.ts",
+  "**/ui-v2-mobile-qa.spec.ts",
 ];
-const RESPONSIVE_SUITE = ["**/ui-v3-mobile-qa.spec.ts"];
+const RESPONSIVE_SUITE = ["**/ui-v2-mobile-qa.spec.ts"];
 
 export default defineConfig({
   testDir: "./e2e",
