@@ -28,13 +28,16 @@ Completed:
 - RC4 integrated engineering/evidence closure;
 - R5 integrated hardening/productization;
 - R6 production certification with `PILOT-GO`;
-- Alumdoor Pilot-00 contract/profile/data-mapping lock.
+- Alumdoor Pilot-00 contract/profile/data-mapping lock;
+- Pilot-01 real-source acquisition/ingestion into immutable evidence.
 
 Current active gate:
 
 - **Pilot-01 — Master + Opening Data Readiness**;
 - preview/control-plane ready;
-- waiting for an approved immutable real source batch;
+- real source set observed/hashed/ingested;
+- current verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`;
+- next work: reconciliation, normalization and a real zero-variance `PREVIEW_PASS`;
 - no production import/write authorization implied.
 
 The exact operational sequence is maintained only in `../NEXT_TASKS.md`.
@@ -45,7 +48,7 @@ Priority is not another blanket feature wave. Priority is proving that the froze
 
 Sequence:
 
-1. Pilot-01 real source batch + `PREVIEW_PASS`.
+1. Pilot-01 reconcile/normalize the ingested source evidence into a private Mapping-V1 batch and obtain `PREVIEW_PASS`.
 2. Pilot-02 representative transaction dry run.
 3. Pilot-03 bounded parallel run + daily reconciliation.
 4. Pilot-04 explicit cutover decision.
