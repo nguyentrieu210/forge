@@ -28,7 +28,8 @@ Capability denominator/status: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` + `docs
 - R6 Production Certification: **DONE / PILOT-GO**.
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
 - Pilot-01 control plane: **READY / PREVIEW-ONLY**.
-- Pilot-01 real source batch: **PILOT-01-WAITING-SOURCE-BATCH**.
+- Pilot-01 real source set: **OBSERVED / HASHED / INGESTED**.
+- Pilot-01 current verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED** pending reconciliation/normalization.
 - Frozen certified pilot source: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - R6 certification matrix: **23/23 PASS**.
 
@@ -128,13 +129,22 @@ Industry-specific cut/order rules remain vertical. Reusable behavior moves down 
 
 Pilot-00 froze software/package/profile/data-mapping authority.
 
-Pilot-01 has preview tooling/control-plane ready but is waiting for a real approved immutable customer/master/opening source batch. `PREVIEW_PASS` is required before Pilot-01 can become READY.
+Pilot-01 has now ingested the operator-provided real source set as immutable/hash-bound evidence. Raw customer workbooks remain outside Git. The current gate is **reconciliation and normalization**, not source acquisition.
 
-No Pilot-01 real production import/write has occurred.
+Current evidence blockers include:
+
+- no single proven cutoff across Stock + AR/AP + cash/bank;
+- customer/supplier identity and item-alias dispositions;
+- opening aluminum source lacks populated actual-Kg evidence while canonical stock UOM is Kg;
+- opening AR/AP cannot yet be safely reconstructed;
+- some journal totals require a deterministic integer-VND rule;
+- work-center/BOM/employee/pilot-user datasets are not yet migration-ready.
+
+Only a real zero-unexplained-variance `PREVIEW_PASS` can move Pilot-01 to READY. No Pilot-01 production import/write has occurred.
 
 Active sequence:
 
-`R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 source PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
+`R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 SOURCE INGESTED -> reconcile/normalize -> PREVIEW_PASS -> Pilot-02 Dry Run -> Pilot-03 Parallel Run -> Pilot-04 Cutover Decision -> Pilot-05 Hypercare/Exit -> Accepted Production Reference -> GA`
 
 Exact queue: `NEXT_TASKS.md`.
 
