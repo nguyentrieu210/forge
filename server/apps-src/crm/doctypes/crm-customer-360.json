@@ -1,0 +1,36 @@
+{
+  "name": "CRM Customer 360",
+  "module": "CRM",
+  "autoname": "C360-.YYYY.-#####",
+  "title_field": "customer",
+  "search_fields": ["customer"],
+  "track_seen": true,
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "customer", "label": "Khách hàng", "fieldtype": "Link", "options": "Customer", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "as_of", "label": "Dữ liệu tại thời điểm", "fieldtype": "Datetime", "read_only": true, "in_list_view": true },
+    { "fieldname": "status", "label": "Trạng thái snapshot", "fieldtype": "Select", "options": "Current", "read_only": true, "in_list_view": true },
+    { "fieldname": "organization_count", "label": "Tổ chức", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "contact_count", "label": "Liên hệ", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "open_deal_count", "label": "Deal đang mở", "fieldtype": "Int", "read_only": true, "in_list_view": true },
+    { "fieldname": "won_deal_count", "label": "Deal thắng", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "lost_deal_count", "label": "Deal thua", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "open_activity_count", "label": "Hoạt động đang mở", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "overdue_activity_count", "label": "Hoạt động quá hạn", "fieldtype": "Int", "read_only": true, "in_list_view": true },
+    { "fieldname": "last_activity_at", "label": "Hoạt động gần nhất", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "quotation_count", "label": "Báo giá đã submit", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "sales_order_count", "label": "Đơn bán đã submit", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "delivery_count", "label": "Phiếu giao đã submit", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "sales_invoice_count", "label": "Hóa đơn bán đã submit", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "payment_count", "label": "Phiếu thu đã submit", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "currency_summary", "label": "Tổng hợp theo tiền tệ", "fieldtype": "Table", "options": "CRM Customer 360 Currency", "read_only": true },
+    { "fieldname": "recent_activities", "label": "Dòng thời gian hoạt động gần nhất", "fieldtype": "Table", "options": "CRM Customer 360 Activity", "read_only": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
