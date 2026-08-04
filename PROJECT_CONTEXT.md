@@ -1,26 +1,50 @@
 # PROJECT CONTEXT
 
-Ngày cập nhật: **2026-08-04**.
+Ngày cập nhật: **2026-08-05**.
 
-File này mô tả **kiến trúc và source-of-truth hiện hành**, không lưu branch/version/migration snapshot tạm thời. Exact GitHub/code/migration/test luôn thắng prose nếu có drift.
+File này mô tả **kiến trúc và source-of-truth hiện hành**. Exact GitHub/code/migration/test luôn thắng prose nếu có drift. Live execution phase nằm trong `CURRENT_STATUS.md`, `NEXT_TASKS.md` và phase authority tương ứng.
 
-## 1. Product
+## 1. Product identity
 
-Forge là enterprise operating platform/ERP đa tenant trên Cloudflare, gồm:
+Forge là một **ERP / enterprise operating platform độc lập**, multi-tenant, metadata-driven và cloud-native trên Cloudflare.
 
-- **CloudForge** — authoritative backend/kernel, document lifecycle, permission, ledger, workflow, tenant/runtime infrastructure.
-- **MetaForge** — React metadata-driven Desk/runtime/builder.
-- **First-party domain apps/packages** — Finance/VN Accounting, HRM, CRM/Sales, Procurement, Stock/WMS, Manufacturing/QMS, Projects/Service, Workplace, Commerce và các domain khác.
-- **Vertical apps** — Alumdoor là reference vertical; vertical phải compose shared authorities, không fork core.
+Forge không phụ thuộc Frappe/ERPNext hoặc ERP bên thứ ba để làm runtime/source of truth. Các external framework/ERP chỉ có thể xuất hiện như benchmark, migration source, interoperability adapter hoặc regression/reference corpus.
+
+Các lớp sản phẩm chính:
+
+- **CloudForge** — authoritative backend/kernel, document lifecycle, permission, ledger, workflow, jobs, storage và tenant/runtime infrastructure.
+- **MetaForge** — React metadata-driven workspace/runtime/builder.
+- **First-party domain packages** — Finance/VN Accounting, HCM, CRM/Sales, Procurement, Stock/WMS, Manufacturing/QMS, Projects/Service, Workplace, Commerce và các domain khác.
+- **Vertical apps** — Alumdoor là reference vertical; vertical compose shared authorities, không fork core.
+- **Compatibility/migration surfaces** — các adapter/source connector mang tên external system nếu còn tồn tại; chúng không được trở thành architectural authority.
 
 Strategic target: `docs/FORGE_ENTERPRISE_NORTH_STAR.md`.
 Capability denominator/status: `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` + `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md`.
+Execution doctrine: `skills/forge-enterprise-completion/SKILL.md`.
 
-## 2. Current engineering checkpoint
+## 2. Current verified phase
 
-RC4 integrated closure đã PASS và merge qua PR `#627` tại checkpoint `main@30346e08eabb7074f8623eeedae09efec25da072`.
+Forge đã hoàn tất:
 
-Canonical maturity after RC4:
+- RC4 integrated closure — **DONE**;
+- R5 hardening/productization — **DONE / R5-GO**;
+- R6 Production Certification — **DONE / PILOT-GO**;
+- Pilot-00 — **DONE / PILOT-00-LOCKED**.
+
+Certified/deployed R6 baseline:
+
+- source SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`;
+- UI bundle hash: `838218167db020d8`;
+- Alumdoor `2.2.3`;
+- HRM `1.8.0`;
+- VN Accounting `1.6.1`;
+- capability profile `alumdoor-pilot@1`.
+
+Current phase: **CONTROLLED_PILOT**.
+
+Pilot-01 real source set has been observed/hashed/ingested. Current verdict is `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`; active work is reconciliation + normalization toward a private real `PREVIEW_PASS` batch.
+
+Portfolio maturity remains:
 
 - Hardened: 0
 - RC: 66
@@ -29,9 +53,7 @@ Canonical maturity after RC4:
 - Missing: 157
 - Total: 956
 
-Canonical evidence: `docs/agents/rc4/RC4_POST_INTEGRATION_FINAL.md`.
-
-RC4 closure là engineering/evidence closure, không phải production certification của exact next release.
+This maturity distribution is a portfolio metric, not a reason to reopen a blanket foundation wave while the controlled-pilot gate is active.
 
 ## 3. Backend authority
 
@@ -40,10 +62,11 @@ RC4 closure là engineering/evidence closure, không phải production certifica
 - Gateway resolves tenant and dispatches trusted identity to tenant/runtime workers.
 - Tenant Worker owns authenticated API/runtime composition.
 - Query/Jobs/Control Plane/Social Ingress workers provide bounded platform services where configured.
+- Forge-native business/runtime contracts are authoritative. Compatibility routes/adapters may translate external shapes but may not own business semantics.
 
 ### Document writes
 
-Authoritative business mutation flows through the Document Kernel / aggregate serialization path. Do not direct-write business documents/ledgers to bypass lifecycle, OCC, idempotency, permission or audit.
+Authoritative business mutation flows through the **Document Kernel / aggregate serialization path**. Do not direct-write business documents/ledgers to bypass lifecycle, OCC, idempotency, permission or audit.
 
 ### Storage
 
@@ -74,23 +97,36 @@ Principles:
 3. vertical app/profile composes required domain capabilities;
 4. capability activation is separate from package installation;
 5. disabling a capability must not automatically uninstall a package or erase historical data;
-6. source edits should be required only when introducing/changing a capability contract, not for ordinary tenant composition.
-
-Fine-grained capability-profile authoring/resolution is an R5 productization target; do not claim a completed GUI until exact implementation evidence exists.
+6. source edits should be required only when introducing/changing a capability contract, not for ordinary tenant composition;
+7. app/vertical extension must not redefine canonical Finance/Stock/Permission/Document authorities.
 
 ## 6. Frontend authority
 
-- Shared React runtime renders app surfaces from metadata/manifest contracts.
-- Frappe-shaped adapter is the primary client/backend compatibility boundary.
+- **MetaForge** is Forge's shared React metadata-driven runtime/builder.
+- UI surfaces consume Forge-owned metadata, document, query, permission and action contracts.
 - Server-side permission is authoritative; client visibility/editability is UX only.
 - Shared views/shell/runtime should not contain vertical business schema when metadata/domain contracts can express it.
 - Browser/mobile/PWA evidence must bind to exact source/release when used for maturity or production claims.
+- Legacy/external-shaped adapters may remain for compatibility; they are translation boundaries only and must not dictate Forge's product model, naming, state machine or authoritative behavior.
 
-## 7. Alumdoor role
+## 7. External compatibility boundary
 
-Alumdoor is the first reference vertical/pilot candidate. It should consume shared:
+Forge may deliberately support external system shapes for migration/interoperability/backward compatibility.
 
-- Employee/HR directory primitives;
+Rules:
+
+- compatibility is **optional/bounded**, not product identity;
+- compatibility package names do not imply runtime dependency;
+- translation occurs at edges;
+- canonical validation, permission, lifecycle, idempotency and ledger semantics remain Forge-owned;
+- new Forge capabilities should target Forge-native contracts first;
+- external parity is a benchmark/interop concern, not an architecture constraint unless a current accepted contract explicitly requires it.
+
+## 8. Alumdoor role
+
+Alumdoor is the first reference vertical and controlled pilot. It consumes shared:
+
+- Employee/HCM primitives;
 - Customer/CRM primitives;
 - Sales/Procurement;
 - Stock/WMS;
@@ -98,27 +134,37 @@ Alumdoor is the first reference vertical/pilot candidate. It should consume shar
 - Finance/AR/AP/Payment/GL;
 - Warranty/Service.
 
-Alumdoor-specific logic stays vertical only when genuinely industry-specific. Reusable behavior should move to domain/platform authority rather than be copied.
+Alumdoor-specific logic stays vertical only when genuinely industry-specific. Reusable behavior moves to domain/platform authority rather than being copied.
 
-## 8. Security / tenant boundary
+## 9. Security / tenant boundary
 
 - Trusted tenant/user identity comes from server/runtime context, not arbitrary client fields.
 - Role/DocPerm/owner/share/user-permission and sensitive security controls are enforced server-side.
 - Authentication/session/revocation/provider credentials and security-sensitive operations follow canonical IAM contracts.
-- No secret, production credential, private backup or customer data belongs in docs/source control.
+- No secret, production credential, private backup or raw customer data belongs in docs/source control.
 
-## 9. Migration/release boundary
+## 10. Migration/release boundary
 
 - Never rewrite a migration that may have been applied; add append-only migration under migration governance.
 - Applied-state claims require target-environment inventory/checksum evidence.
 - Merge != deploy.
-- Production-ready claims require exact release SHA/hash plus the relevant provider/browser/recovery evidence.
-- Production migration, backup restore/PITR, DNS/secrets/provider mutation and non-UI deployment require explicit authorization.
+- Production-ready claims require exact release SHA/hash plus relevant provider/browser/recovery evidence.
+- R6 historical PASS remains tied to its exact certified candidate.
+- A later product-source change creates a new candidate; only affected evidence must rerun/relock according to the current evidence matrix/phase contract.
+- Production migration, backup restore/PITR, DNS/secrets/provider mutation, customer-data mutation, cutover and unauthorized non-UI deployment remain explicit authorization boundaries.
 
-## 10. Current direction
+## 11. Current execution doctrine
+
+Forge is no longer driven by a static foundation/completion wave.
+
+Before every task, resolve live phase from `CURRENT_STATUS.md`, `NEXT_TASKS.md` and the active phase authority.
 
 Current sequence:
 
-`RC4 DONE -> R5 integrated hardening/productization -> R6 production certification -> Alumdoor controlled pilot -> GA`
+`RC4 DONE -> R5 DONE -> R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 reconcile/normalize -> Pilot-02 dry run -> Pilot-03 parallel run -> Pilot-04 cutover decision -> Pilot-05 hypercare/exit -> ACCEPTED_REFERENCE -> GA_EVOLUTION`
 
-Active work is defined only in `NEXT_TASKS.md`. Documentation map/retention policy: `docs/README.md`.
+Default priority:
+
+`current gate blocker -> correctness/regression -> pilot/operator usability -> evidence gap -> required reusable primitive -> post-gate hardening -> enterprise backlog`
+
+North Star remains strategic direction. It does not override the current gate or reopen a closed certification program by itself.
