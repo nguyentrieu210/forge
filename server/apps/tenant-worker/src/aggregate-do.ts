@@ -5,6 +5,11 @@ import { registerErpCoreControllers } from "../../../packages/clouderp-core/src/
 import { registerStockControllers } from "../../../packages/clouderp-stock/src/index.js";
 import { registerErpNextCoreControllers } from "../../../packages/clouderp-erpnext/src/index.js";
 import {
+  APP_FACTORY_APPROVAL_PROCESS_DOCTYPE,
+  AppFactoryApprovalRuntime,
+  registerAppFactoryControllers,
+} from "../../../packages/app-registry/src/index.js";
+import {
   D1RolloutPurchaseAllocationDomainStore,
   DocumentKernel,
   MutationSerialExecutor,
@@ -12,6 +17,7 @@ import {
 import { errors } from "../../../packages/core/src/index.js";
 import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
 import { registerIntegrationHubControllers } from "../../../packages/integration-hub/src/registry.js";
+import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
 import { isInventoryCoordinatedCommand, resolveInventoryCoordinatorKey } from "./inventory-coordinator.js";
 import { PurchaseCommandSerialExecutor } from "./purchase-command-retry.js";
@@ -25,6 +31,7 @@ interface AggregateStub extends DurableObjectStub {
 const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receipt"]);
 const INVENTORY_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 const PURCHASE_EXECUTORS = new WeakMap<object, PurchaseCommandSerialExecutor>();
+const APP_FACTORY_APPROVAL_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 
 /**
  * One class serves several logical coordinator roles inside the existing AGGREGATES
@@ -33,7 +40,9 @@ const PURCHASE_EXECUTORS = new WeakMap<object, PurchaseCommandSerialExecutor>();
  * - document key: tenant:doctype:name for ordinary aggregates;
  * - inventory key: inventory:tenant:company for stock posting, cutting,
  *   reconciliation and reservation read-check-write mutations;
- * - purchase key: purchase:tenant:company:supplier for PO/Receipt allocation.
+ * - purchase key: purchase:tenant:company:supplier for PO/Receipt allocation;
+ * - App Factory approval key: tenant:App Factory Approval Process:process-id for persisted
+ *   process-control facts. It never writes the target business document or a ledger.
  *
  * Company-wide inventory serialization is deliberately broader than batch-level locking:
  * one multi-row voucher has exactly one lock, so there is no lock-order deadlock and no
@@ -45,6 +54,21 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
   }
 
   async mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt> {
+    if (command.aggregate.doctype === APP_FACTORY_APPROVAL_PROCESS_DOCTYPE) {
+      let executor = APP_FACTORY_APPROVAL_EXECUTORS.get(this);
+      if (!executor) {
+        executor = new MutationSerialExecutor();
+        APP_FACTORY_APPROVAL_EXECUTORS.set(this, executor);
+      }
+      // Construct request-scoped D1/security services only when this process command reaches
+      // the front of its Durable Object queue. That prevents two approvers from satisfying
+      // one expected process revision concurrently while keeping unrelated processes parallel.
+      return executor.execute(() => this.appFactoryApprovalRuntime().execute(
+        command as MutationCommand<JsonObject>,
+        new Date().toISOString(),
+      ));
+    }
+
     const { kernel, store } = this.commandServices();
     const inventoryKey = await resolveInventoryCoordinatorKey(
       command as MutationCommand<JsonObject>,
@@ -124,8 +148,11 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
   private commandServices(): { kernel: DocumentKernel; store: D1RolloutPurchaseAllocationDomainStore } {
     const metadata = new D1MetadataStore(this.env.DB);
     const registry = registerIntegrationHubControllers(
-      registerErpNextCoreControllers(
-        registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+      registerAppFactoryControllers(
+        registerErpNextCoreControllers(
+          registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
+        ),
+        metadata,
       ),
     ).setFallback(new GenericMetadataController(metadata));
     const store = new D1RolloutPurchaseAllocationDomainStore(this.env.DB);
@@ -137,6 +164,18 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
         new MetadataPermissionService(metadata, undefined, new D1DocumentAccessStore(this.env.DB)),
       ),
     };
+  }
+
+  private appFactoryApprovalRuntime(): AppFactoryApprovalRuntime {
+    const metadata = new D1MetadataStore(this.env.DB);
+    const access = new D1DocumentAccessStore(this.env.DB);
+    const reader = new D1RolloutPurchaseAllocationDomainStore(this.env.DB);
+    return new AppFactoryApprovalRuntime(
+      this.env.DB,
+      reader,
+      new MetadataPermissionService(metadata, undefined, access),
+      new D1OrganizationSecurityGuard(this.env.DB, metadata),
+    );
   }
 }
 
