@@ -1,0 +1,6 @@
+{
+  "max_p95_regression_pct": 15,
+  "max_p99_regression_pct": 20,
+  "max_error_rate_delta": 0.005,
+  "max_rps_drop_pct": 15
+}
