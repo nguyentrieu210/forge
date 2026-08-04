@@ -360,9 +360,7 @@ function validateSlaPolicy(doc: Record<string, unknown>): string | null {
     const resolution = Number(row.resolution_minutes);
     const escalation = Number(row.escalation_minutes);
     if (response > resolution) return `Chính sách SLA ${text(row.priority)}: thời gian phản hồi không được lớn hơn thời gian xử lý.`;
-    if (escalation < response || escalation > resolution) {
-      return `Chính sách SLA ${text(row.priority)}: thời điểm leo thang phải nằm từ hạn phản hồi đến hạn xử lý.`;
-    }
+    if (escalation > resolution) return `Chính sách SLA ${text(row.priority)}: thời điểm leo thang không được sau hạn xử lý.`;
     if (checked(row.is_default)) defaultCount += 1;
   }
   if (defaultCount > 1) return "Chính sách SLA: chỉ được có một mức ưu tiên mặc định.";
