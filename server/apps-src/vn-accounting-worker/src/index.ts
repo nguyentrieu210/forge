@@ -257,14 +257,17 @@ export default {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/hooks/validate") return handleValidation(request);
     if (request.method === "POST" && url.pathname.startsWith("/api/method/")) {
-      const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
+      const requestedMethod = decodeURIComponent(url.pathname.slice("/api/method/".length));
+      const method = requestedMethod.startsWith("vn_accounting.")
+        ? `vn-accounting.${requestedMethod.slice("vn_accounting.".length)}`
+        : requestedMethod;
       const rawBody = await request.json().catch(() => ({}));
       const body = objectJson(rawBody, "method body") as unknown as MethodBody;
       if (method === "vn-accounting.tax.evaluate") return evaluateMethod(request, env, body.args ?? {});
       if (method === "vn-accounting.bank.match_candidates") return bankMatchMethod(request, env, body.args ?? {});
       const vatResponse = await handleVatMethod(method, request, env, body.args ?? {});
       if (vatResponse) return vatResponse;
-      return json({ message: `Unknown vn-accounting method: ${method}` }, 404);
+      return json({ message: `Unknown vn-accounting method: ${requestedMethod}` }, 404);
     }
     if (request.method === "GET" && url.pathname === "/health") return json({ ok: true, app: "vn-accounting" });
     return json({ message: "Not found" }, 404);
