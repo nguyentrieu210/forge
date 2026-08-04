@@ -120,7 +120,7 @@ jobs:
           - lane: A3-Migration
             sha: 792f7f311d52f3ed0882c284b1e3d9ff5f34b359
           - lane: A4-VN-Statutory
-            sha: 6e00aa759a7dee7a022e03e7ffa3f58a3eeb0c34
+            sha: 068ca98ba6446d367aed7667d6ba19170ec5869f
           - lane: A5-HCM-Payroll
             sha: 1baaf38d92f5aa0d53cfd2260d5baade850be8dd
           - lane: A7-App-Factory
@@ -130,7 +130,7 @@ jobs:
           - lane: A9-Kernel
             sha: 32001d70a4ef87a5e14bd7df2dcc100cd0f8d243
           - lane: A10-CRM
-            sha: 68f1ace5a225a442290eadd760e1e764c55a219a
+            sha: 00b071130155d6a7359e4ab0eb1849048b57a139
           - lane: A11-Procurement
             sha: 27c616c2a77f08bb0284a0de4ea141637ce82462
           - lane: A12-Inventory-WMS
