@@ -52,7 +52,6 @@ jobs:
           path = Path("server/scripts/rc3-finalize-capability-status.mjs")
           lines = path.read_text().splitlines()
 
-          # Repair Evidence Index regex without nested JS template-literal backticks.
           repaired_regex = False
           for i, line in enumerate(lines):
               if i > 0 and "Object.entries(evidence)" in lines[i - 1] and "const re = new RegExp(" in line:
@@ -62,7 +61,6 @@ jobs:
           if not repaired_regex:
               raise SystemExit("RC3 evidence regex line not found")
 
-          # Only top30 is a real multiline template with accidental raw Markdown ticks.
           start = next((i for i, line in enumerate(lines) if line.startswith("const top30 = `")), None)
           if start is None:
               raise SystemExit("RC3 top30 template start not found")
@@ -85,6 +83,21 @@ jobs:
 
       - name: Generate RC3 canonical status
         run: node server/scripts/rc3-finalize-capability-status.mjs
+
+      - name: Normalize generated Markdown whitespace
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in [
+              "docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md",
+              "CURRENT_STATUS.md",
+              "NEXT_TASKS.md",
+              "docs/agents/rc/RC3_CONVERGENCE_20260804.md",
+          ]:
+              path = Path(name)
+              text = path.read_text()
+              path.write_text("\n".join(line.rstrip() for line in text.splitlines()) + "\n")
+          PY
 
       - name: Validate 956 capability registry
         run: node server/scripts/validate-enterprise-capability-status.mjs
