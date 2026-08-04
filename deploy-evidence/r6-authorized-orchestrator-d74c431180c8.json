@@ -1,11 +1,11 @@
 {
   "format": "forge-r6-authorized-orchestrator/v2",
   "target_sha": "d74c431180c8bdd204e68949706006fc9f93acda",
-  "completed_at": "2026-08-04T21:17:44.367Z",
+  "completed_at": "2026-08-04T21:21:08.513Z",
   "authorization": "USER_EXPLICIT",
   "canonical_deploy_workflow": "alu-build-deploy.yml",
   "certification_workflow": "r6-post-release-certification.yml",
-  "deploy_run_id": "30951552770",
+  "deploy_run_id": "30951744670",
   "certification_run_id": null,
   "outcomes": {
     "deploy": "failure",
