@@ -2,8 +2,9 @@
 
 Date: 2026-08-04  
 Agent: **RC4-A21**  
-Status: **RUNNING — implementation complete, exact-head PR validation pending**  
+Status: **RUNNING — corrected from exact-head evidence; revalidation pending**  
 Branch: `agent/rc4-21-migration-governance`  
+PR: **#607** (draft; non-UI CRITICAL merge gate)  
 Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Risk: **CRITICAL**
 
@@ -13,20 +14,36 @@ Close migration-governance defects independently from A3 runtime migration/cutov
 
 ## Exact findings
 
-- Exact seed contains two historical tenant migrations with the same numeric prefix:
+The first exact-PR-head validator run (`30868679096`, job `91865908274`) correctly failed and exposed broader historical numbering debt than the initial RC3 summary described. Exact source contains these legacy tenant-prefix collision sets:
+
+- `0030`:
+  - `0030_finance_invoice_aging.sql`;
+  - `0030_purchase_unapplied_weight_attribution.sql`;
+  - `0030_rbac_audit.sql`;
+- `0031`:
+  - `0031_finance_payment_allocations.sql`;
+  - `0031_purchase_allocation_control_metadata.sql`;
+- `0032`:
+  - `0032_finance_explicit_advances.sql`;
+  - `0032_purchase_reversed_window_corrections.sql`;
+- `0110`:
+  - `0110_batch_replay_claims.sql`;
   - `0110_rc020_finance_posting_period_integrity.sql`;
   - `0110_rc023_cash_bank_reconciliation.sql`.
-- These files are potentially applied. Renaming either one without environment applied-state evidence would break filename identity used by D1 migration bookkeeping.
-- `server/scripts/d1-migrate-remote.mjs` records full migration filenames in `d1_migrations`, but the historical table does not contain content checksums.
-- A3 (`agent/rc4-03-migration-cutover`, PR #599) independently closes runtime import/cutover retry windows and explicitly preserves the duplicate historical filenames pending read-only environment inventory. A21 therefore owns future-only numbering/content governance and does not duplicate A3 runtime authority.
+
+These files are potentially applied. Renaming or rewriting any member without environment applied-state evidence would break the full-filename identity used by D1 migration bookkeeping.
+
+`server/scripts/d1-migrate-remote.mjs` records full migration filenames in `d1_migrations`, but the historical table does not contain content checksums.
+
+A3 (`agent/rc4-03-migration-cutover`, PR #599) independently closes runtime import/cutover retry windows and explicitly preserves historical duplicate filenames pending read-only environment inventory. A21 therefore owns future-only numbering/content governance and does not duplicate A3 runtime authority.
 
 ## Implementation
 
 ### 1. Frozen historical collision contract
 
-`server/migrations/migration-governance.json` records the **exact two-member** `tenant/0110` collision.
+`server/migrations/migration-governance.json` records the **exact members** of all four observed legacy collision sets (`0030`, `0031`, `0032`, `0110`).
 
-The allowlist is closed, not prefix-wide: adding a third `0110_*` file or removing/renaming either historical member fails validation.
+The allowlist is closed, not prefix-wide: adding, removing or renaming a member makes validation fail. This records existing debt; it does not permit new low-number migrations.
 
 ### 2. Exact repository sequence validator
 
@@ -36,13 +53,13 @@ The allowlist is closed, not prefix-wide: adding a third `0110_*` file or removi
 - requires deterministic four-digit migration filenames;
 - rejects case-insensitive duplicate filenames;
 - rejects any unapproved duplicate numeric prefix;
-- verifies approved legacy collisions still contain exactly the frozen members;
+- verifies approved legacy collision sets still contain exactly the frozen members;
 - computes SHA-256 for every migration file;
 - accepts `--base-ref <git-ref>` and enforces append-only migration history against that exact base:
   - existing SQL migration modify/delete/rename/copy is rejected;
   - a new migration must allocate a numeric prefix strictly greater than the base maximum for its migration directory.
 
-This closes the exact-main sequencing defect without renaming potentially applied files.
+Thus legacy collisions are preserved safely while all future migration allocation must move forward from the exact base maximum.
 
 ### 3. Applied-state identity/checksum contract
 
@@ -76,11 +93,11 @@ No historical checksum is fabricated: environment adoption requires observed app
 
 `server/tests/migration-governance.test.mjs` proves:
 
-1. the exact historical `0110` pair is accepted but a third collision is rejected;
+1. the exact historical `0110` set is accepted but a fourth member is rejected;
 2. applied-state SHA-256 match succeeds and content drift fails;
 3. append-only delta allows a new prefix above base max and rejects late-prefix insertion, modification and deletion.
 
-Local isolated Node evidence before repository write: **3/3 PASS** plus `node --check` PASS for the validator.
+Initial isolated Node evidence before repository write: **3/3 PASS** plus `node --check` PASS for the validator.
 
 ### 5. Exact-head validation workflow
 
@@ -89,6 +106,8 @@ Local isolated Node evidence before repository write: **3/3 PASS** plus `node --
 - repository migration snapshot validation;
 - append-only delta validation against the exact PR base;
 - focused migration-governance regressions.
+
+The first run failing on previously unenumerated legacy collisions is retained as useful evidence; the gate was not weakened or bypassed. The configuration was corrected to freeze the exact repository state and is being revalidated.
 
 ## Replay / crash-window interpretation
 
@@ -123,7 +142,7 @@ Need: read-only `d1_migrations` inventory from every relevant D1 environment bef
 
 Until that exists:
 
-- preserve both historical `0110_*` files exactly;
+- preserve all frozen historical collision members exactly;
 - do not claim which collision member is applied in which environment;
 - do not write or mutate production migration state.
 
@@ -140,5 +159,5 @@ Until that exists:
 This lane is **non-UI CRITICAL**.
 
 - Implementation is on the worker branch.
-- Open a draft PR and verify exact head.
+- PR #607 remains draft.
 - **Stop before merge/deploy until explicit user approval.**
