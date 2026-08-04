@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@metaforge/adapter-frappe": "workspace:*",
-    "@metaforge/builder": "workspace:*",
     "@metaforge/controls": "workspace:*",
     "@metaforge/core": "workspace:*",
     "@metaforge/shell": "workspace:*",
