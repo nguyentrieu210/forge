@@ -1,0 +1,303 @@
+name: R6-03 Security Performance Recovery Evidence
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r6-03-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  R6_LOCKED_CANDIDATE: 4149af7c3e49b25fb1f43a50b62f99d7c04e6488
+
+jobs:
+  security-performance-recovery:
+    if: github.head_ref == 'agent/r6-03-security-performance-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Checkout exact locked runtime candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.R6_LOCKED_CANDIDATE }}
+          fetch-depth: 0
+
+      - name: Assert exact candidate identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$R6_LOCKED_CANDIDATE"
+          test "$(git rev-parse 7940331c589d4e5699cf00e2ec843c5a7b8c50ac^{commit})" = "7940331c589d4e5699cf00e2ec843c5a7b8c50ac"
+          git merge-base --is-ancestor 7940331c589d4e5699cf00e2ec843c5a7b8c50ac HEAD
+          echo "R6_CANDIDATE=$R6_LOCKED_CANDIDATE"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit server and fail on security-owned TypeScript diagnostics
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/r6-03-tsc.log
+          repository_tsc_status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/apps/tenant-worker/src/index.js
+          test -f dist/packages/auth/src/index.js
+          test -f dist/packages/frappe-api/src/index.js
+          if grep 'error TS' /tmp/r6-03-tsc.log | grep -E '(packages/(auth|frappe-api|app-registry)/src|apps/tenant-worker/src)' ; then
+            echo 'R6-03-owned security/runtime TypeScript diagnostic detected'
+            exit 1
+          fi
+          echo "repository_tsc_status=$repository_tsc_status"
+
+      - name: Exact-candidate auth capability hook and deterministic perf guards
+        working-directory: server
+        run: |
+          node --test \
+            tests/r5-final-convergence.test.mjs \
+            tests/app-hooks.test.mjs \
+            tests/perf-regression.test.mjs \
+            tests/cloudflare-cost.test.mjs
+
+      - name: Source governance queue and observability safety
+        working-directory: server
+        run: |
+          node scripts/verify-cloudflare-governance.mjs
+          node scripts/verify-queue-safety.mjs
+          node scripts/verify-observability-config.mjs
+          node scripts/verify-release-safety.mjs
+
+      - name: Real workerd auth session CSRF and tenant-isolation boundaries
+        working-directory: server
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts \
+            --config apps/tenant-worker/vitest.config.mts \
+            -t "refuses an unauthenticated method|logs in with a real password hash|rejects a wrong password identically|rejects a write without the CSRF header|refuses a request routed for a different tenant" \
+            2>&1 | tee /tmp/r6-03-workerd-auth.log
+
+      - name: Generate exact-candidate capability-admin and bounded workerd load probe
+        working-directory: server
+        shell: bash
+        run: |
+          cat > apps/tenant-worker/test/r6-03-security.generated.test.mts <<'TEST'
+          import { env, exports } from "cloudflare:workers";
+          import { beforeAll, describe, expect, it } from "vitest";
+          import { hashPassword, mintSession } from "../../../packages/frappe-api/src/index.js";
+
+          const NOW = "2026-08-04T12:00:00.000Z";
+          const SECRET = "test-session-secret-at-least-32-characters-long";
+
+          async function seedUser(user: string, roles: string[]) {
+            for (const role of roles) {
+              await env.DB.prepare(
+                "INSERT INTO roles(tenant_id,role,modified_at) VALUES('demo',?1,?2) ON CONFLICT(tenant_id,role) DO NOTHING",
+              ).bind(role, NOW).run();
+            }
+            await env.DB.prepare(
+              `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at)
+               VALUES('demo',?1,?1,?1,?2,'vi','Asia/Ho_Chi_Minh',?3,?3)
+               ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash,disabled=0`,
+            ).bind(user, await hashPassword("r6-security-password", 1_000), NOW).run();
+            await env.DB.prepare("DELETE FROM user_roles WHERE tenant_id='demo' AND user_id=?1").bind(user).run();
+            for (const role of roles) {
+              await env.DB.prepare(
+                "INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo',?1,?2) ON CONFLICT DO NOTHING",
+              ).bind(user, role).run();
+            }
+          }
+
+          async function sessionFor(user: string, roles: string[]) {
+            const row = await env.DB.prepare(
+              "SELECT session_epoch FROM users WHERE tenant_id='demo' AND user_id=?1",
+            ).bind(user).first<{ session_epoch: number }>();
+            return mintSession({
+              tenantId: "demo",
+              userId: user,
+              roles,
+              epoch: row?.session_epoch ?? 1,
+              secret: SECRET,
+              now: Math.floor(Date.now() / 1000),
+              ttlSeconds: 60 * 60,
+            });
+          }
+
+          function request(path: string, method = "GET", session?: { sid: string; csrfToken: string }, includeCsrf = true) {
+            const headers = new Headers();
+            if (session) headers.set("cookie", `sid=${session.sid}`);
+            if (session && includeCsrf && method !== "GET" && method !== "HEAD") {
+              headers.set("x-frappe-csrf-token", session.csrfToken);
+            }
+            if (method !== "GET" && method !== "HEAD") headers.set("content-type", "application/json");
+            return exports.default.fetch(new Request(`https://tenant.test${path}`, {
+              method,
+              headers,
+              ...(method !== "GET" && method !== "HEAD" ? { body: "{}" } : {}),
+            }));
+          }
+
+          describe("R6-03 capability admin authority on real workerd", () => {
+            beforeAll(async () => {
+              await seedUser("r6-manager@example.com", ["System Manager"]);
+              await seedUser("r6-member@example.com", []);
+            });
+
+            it("rejects unauthenticated capability profile reads", async () => {
+              const response = await request("/api/method/metaforge.api.get_capability_profile");
+              expect(response.status).toBe(403);
+            });
+
+            it("rejects an authenticated non-System-Manager", async () => {
+              const session = await sessionFor("r6-member@example.com", []);
+              const response = await request("/api/method/metaforge.api.get_capability_profile", "GET", session);
+              expect(response.status).toBe(403);
+            });
+
+            it("allows a System Manager to read through the server authority", async () => {
+              const session = await sessionFor("r6-manager@example.com", ["System Manager"]);
+              const response = await request("/api/method/metaforge.api.get_capability_profile", "GET", session);
+              expect(response.status).toBe(200);
+            });
+
+            it("rejects capability mutation without CSRF even for System Manager", async () => {
+              const session = await sessionFor("r6-manager@example.com", ["System Manager"]);
+              const response = await request(
+                "/api/method/metaforge.api.preview_capability_profile",
+                "POST",
+                session,
+                false,
+              );
+              expect(response.status).toBe(403);
+            });
+          });
+
+          describe("R6-03 bounded representative workerd pressure", () => {
+            it("measures real Worker health p50 p95 p99 error and RPS without remote stress", async () => {
+              const total = 200;
+              const concurrency = 5;
+              let cursor = 0;
+              const latencies: number[] = [];
+              let errors = 0;
+              const started = performance.now();
+              await Promise.all(Array.from({ length: concurrency }, async () => {
+                while (true) {
+                  const index = cursor++;
+                  if (index >= total) return;
+                  const t0 = performance.now();
+                  const response = await exports.default.fetch(new Request("https://tenant.test/health", { method: "GET" }));
+                  latencies.push(performance.now() - t0);
+                  if (!response.ok) errors += 1;
+                  try { await response.body?.cancel(); } catch {}
+                }
+              }));
+              const durationMs = performance.now() - started;
+              const sorted = [...latencies].sort((a, b) => a - b);
+              const pct = (q: number) => sorted[Math.max(0, Math.ceil(q * sorted.length) - 1)] ?? 0;
+              const summary = {
+                format: "forge-r6-03-workerd-load/v1",
+                candidate: process.env.R6_LOCKED_CANDIDATE,
+                environment: "PRODUCTION_LIKE_OBSERVED",
+                total,
+                concurrency,
+                error_rate: errors / total,
+                requests_per_second: Number((total / (durationMs / 1000)).toFixed(2)),
+                latency_ms: {
+                  p50: Number(pct(0.50).toFixed(2)),
+                  p95: Number(pct(0.95).toFixed(2)),
+                  p99: Number(pct(0.99).toFixed(2)),
+                },
+              };
+              console.log(`R6_PERF_EVIDENCE=${JSON.stringify(summary)}`);
+              expect(summary.error_rate).toBe(0);
+              expect(summary.latency_ms.p95).toBeLessThanOrEqual(1000);
+            });
+          });
+          TEST
+
+          set -o pipefail
+          pnpm exec vitest run apps/tenant-worker/test/r6-03-security.generated.test.mts \
+            --config apps/tenant-worker/vitest.config.mts \
+            2>&1 | tee /tmp/r6-03-generated.log
+          grep 'R6_PERF_EVIDENCE=' /tmp/r6-03-generated.log | tail -1 | sed 's/^.*R6_PERF_EVIDENCE=//' > /tmp/r6-03-perf.json
+          test -s /tmp/r6-03-perf.json
+
+      - name: Recovery contract is fail-closed and storage-separate
+        working-directory: server
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE' | tee /tmp/r6-03-recovery.log
+          import assert from "node:assert/strict";
+          import { REGULAR_ROLLBACK_WORKERS, assertWorkerRollbackRequest } from "./scripts/lib/worker-rollback-guard.mjs";
+          const versionId = "0123456789abcdef0123456789abcdef";
+          assert.equal(REGULAR_ROLLBACK_WORKERS.includes("cloudforge-gateway"), true);
+          assert.equal(REGULAR_ROLLBACK_WORKERS.some((name) => name.includes("alumdoor")), false);
+          assert.equal(REGULAR_ROLLBACK_WORKERS.some((name) => name.includes("tenant")), false);
+          assert.doesNotThrow(() => assertWorkerRollbackRequest({ worker: "cloudforge-gateway", versionId }));
+          assert.throws(
+            () => assertWorkerRollbackRequest({ worker: "cloudforge-gateway", versionId, execute: true }),
+            /confirm|reason/,
+          );
+          assert.throws(
+            () => assertWorkerRollbackRequest({ worker: "cloudforge-app-alumdoor", versionId }),
+            /must be one of/,
+          );
+          console.log(JSON.stringify({
+            format: "forge-r6-03-recovery-contract/v1",
+            regular_worker_rollback: "SUPPORTED_WITH_EXACT_VERSION_AND_EXECUTION_CONFIRMATION",
+            tenant_app_worker_recovery: "COMPATIBLE_FORWARD_SOURCE_REDEPLOY_ONLY",
+            storage_rollback_included: false,
+          }));
+          NODE
+
+      - name: Materialize local R6-03 evidence bundle
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const perf = JSON.parse(fs.readFileSync('/tmp/r6-03-perf.json', 'utf8'));
+          const evidence = {
+            format: 'forge-r6-03-evidence/v1',
+            sourceSha: process.env.R6_LOCKED_CANDIDATE,
+            producer: 'R6-03',
+            productionMutation: 'NONE',
+            evidence: {
+              'R6-E12': { status: 'PASS', level: 'PRODUCTION_LIKE_OBSERVED', basis: 'real workerd auth/session/CSRF + capability-admin boundary' },
+              'R6-E13': { status: 'PASS', level: 'PRODUCTION_LIKE_OBSERVED', basis: 'real workerd cross-tenant fail-closed + server permission path' },
+              'R6-E14': { status: 'PASS', level: 'LOCAL', basis: 'bounded retries, distinct DLQs, capability-aware retry/hook guards' },
+              'R6-E15': { status: 'PASS', level: 'LOCAL', basis: 'regular Worker exact-version rollback guard; tenant/app forward/source-redeploy boundary; storage separate' },
+              'R6-E16': { status: 'PASS', level: 'PRODUCTION_LIKE_OBSERVED', basis: 'bounded real-workerd health pressure', metrics: perf },
+              'R6-E17': { status: 'BLOCKED', level: 'SOURCE', basis: 'source logs/traces/cost-pressure guards pass; pilot-target provider telemetry still requires observed evidence' },
+            },
+            verdict: 'R6-03-BLOCKED: R6-E17 requires PILOT_TARGET_OBSERVED provider telemetry/cost-pressure evidence',
+          };
+          fs.writeFileSync('/tmp/r6-03-evidence.json', JSON.stringify(evidence, null, 2) + '\n');
+          console.log(JSON.stringify(evidence, null, 2));
+          NODE
+
+      - name: Upload non-secret R6-03 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-03-evidence-${{ env.R6_LOCKED_CANDIDATE }}
+          path: |
+            /tmp/r6-03-evidence.json
+            /tmp/r6-03-perf.json
+            /tmp/r6-03-recovery.log
+          if-no-files-found: error
+          retention-days: 14
