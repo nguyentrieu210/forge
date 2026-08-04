@@ -23,7 +23,7 @@
     "brand": "violet",
     "domain": "platform",
     "home": { "doctype": "App Factory Definition" },
-    "catalog_mode": "native",
+    "catalog_mode": "manifest",
     "design": { "density": "comfortable", "radius": "soft", "content_width": "wide" }
   }
 }
