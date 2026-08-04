@@ -75,13 +75,14 @@ jobs:
       - name: Diff hygiene
         run: git diff --check
 
-  observe-identity:
-    name: Read-only pilot package/profile identity
+  observe-pilot:
+    name: Read-only pilot provider and package/profile evidence
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
@@ -104,8 +105,17 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Observe E02 and E05 without mutation
+        id: provider
+        continue-on-error: true
+        working-directory: server
+        run: >-
+          node scripts/r6-provider-readonly.mjs
+          --source-sha "${{ github.event.pull_request.head.sha || github.sha }}"
+          --output "$RUNNER_TEMP/r6-e02-e05.json"
+
       - name: Observe E18 without mutation
-        id: observe
+        id: identity
         continue-on-error: true
         working-directory: server
         run: >-
@@ -115,19 +125,25 @@ jobs:
           --expected-release-sha "${{ github.event.pull_request.head.sha || github.sha }}"
           --output "$RUNNER_TEMP/r6-e18.json"
 
-      - name: Publish E18 observation
+      - name: Publish read-only pilot observation
         if: always()
         shell: bash
         run: |
-          if [ -f "$RUNNER_TEMP/r6-e18.json" ]; then
-            cat "$RUNNER_TEMP/r6-e18.json" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for file in "$RUNNER_TEMP/r6-e02-e05.json" "$RUNNER_TEMP/r6-e18.json"; do
+            if [ -f "$file" ]; then
+              echo '```json' >> "$GITHUB_STEP_SUMMARY"
+              cat "$file" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
-      - name: Upload E18 observation
+      - name: Upload pilot observation
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: r6-e18-${{ github.run_id }}
-          path: ${{ runner.temp }}/r6-e18.json
+          name: r6-pilot-observed-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/r6-e02-e05.json
+            ${{ runner.temp }}/r6-e18.json
           if-no-files-found: warn
           retention-days: 30
