@@ -4,99 +4,68 @@ Date: 2026-08-04
 Branch: `agent/rc4-19-independent-adversarial-qa`  
 Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Risk: **STANDARD evidence / CRITICAL inherited targets**  
-Status: **NO-GO — 18/18 worker lanes reviewable; A4/A7/A10/A13 blocked; A6 deferred by operator waiver**
+Status: **PASS — 18/18 worker lanes independently replayed; provider truth remains explicitly unverified**
 
-## Mission
+## Mission result
 
-A19 independently attacks RC4 release-confidence claims. It owns QA/evidence only: adversarial validation, exact-head replay, stale-evidence detection, blocker findings and Dependency Requests. It does not silently fix another lane's runtime/schema/business authority and does not mutate production/provider state.
+A19 independently replayed every RC4 worker lane A1-A18 from immutable heads and verified baseline capability, SQL, Cloudflare source/provider and A6 browser-evidence provenance. It owns QA/evidence only and does not mutate another lane's business authority.
 
-## Exact-head coverage
+Decisive workflow:
 
-A19 has reviewable heads for all A1-A18 lanes. A6 browser/accessibility evidence is explicitly deferred by operator decision on 2026-08-04. Deferred does not mean PASS and must not be used as maturity evidence.
+- workflow: **RC4 A19 Independent Adversarial QA**;
+- run: `30875686652`;
+- workflow head: `3cd312a30ba7e2b98860935a5070f5f8fb575dd2`;
+- conclusion: **SUCCESS**.
 
-| Lane | PR | Immutable head | Independent disposition |
+## Independent worker disposition
+
+| Lane | PR | Pinned head | Result |
 |---|---:|---|---|
 | A1 IAM/privacy | #597 | `47bb2b8355af6ecc4abffde9d83cb0c8b7621479` | PASS |
-| A2 SRE/provider/recovery | #596 | `6efa89b46548d6a958e04ffd8ea8c7dcdc9cd60a` | PASS source/governance; provider remains `unverified` |
+| A2 SRE/provider/recovery | #596 | `6efa89b46548d6a958e04ffd8ea8c7dcdc9cd60a` | PASS source/governance; provider still `unverified` |
 | A3 migration/cutover | #599 | `792f7f311d52f3ed0882c284b1e3d9ff5f34b359` | PASS |
-| A4 finance/VN statutory | #602 | `84f25a829bb7eb28ab8bce053dc336435b46e77f` | **BLOCKED** |
+| A4 finance/VN statutory | #602 | `068ca98ba6446d367aed7667d6ba19170ec5869f` | PASS |
 | A5 HCM/VN payroll | #604 | `1baaf38d92f5aa0d53cfd2260d5baade850be8dd` | PASS |
-| A6 UI/mobile/PWA | #598 | current worker head may move | **DEFERRED / WAIVED FROM CURRENT A19 BLOCKING GATE — NOT PASS** |
-| A7 App Factory | #606 | `e656c19d54450f1290ad44e8bba8819e650b42ef` | **BLOCKED** |
+| A6 UI/mobile/PWA | #598 | merged source `67b4e71fa245eec2a16e075b3a5c388de45ff7ed` | PASS provenance; browser run `30871503111` SUCCESS |
+| A7 App Factory | #606 | `5d422009700caf029ca202e98c176c1915c2fd63` | PASS |
 | A8 Integration/provider | #615 | `8e43a4e04818fc1d956c5173190f1794dfc802b8` | PASS |
-| A9 Architecture/kernel | #619 | `32001d70a4ef87a5e14bd7df2dcc100cd0f8d243` | **PASS** independently in A19 run `30870548500` |
-| A10 CRM/revenue | #617 | `d90085ba440f07c278e2e620a1409611b89ca9ab` | **BLOCKED** |
-| A11 procurement/P2P | #600 | `27c616c2a77f08bb0284a0de4ea141637ce82462` | PASS |
-| A12 Inventory/WMS | #616 | `0c63ae06c6ee0caccb75bc8f5341fff283f3a532` | PASS |
-| A13 manufacturing/QMS | #603 | `5c9c47ba4e5092fd83c4752785047ad7e69be34c` | **BLOCKED** |
+| A9 Architecture/kernel | #619 | `32001d70a4ef87a5e14bd7df2dcc100cd0f8d243` | PASS |
+| A10 CRM/revenue | #617 | `00b071130155d6a7359e4ab0eb1849048b57a139` | PASS |
+| A11 Procurement/P2P | #600 | `27c616c2a77f08bb0284a0de4ea141637ce82462` | PASS |
+| A12 Inventory/WMS | #616 | `68f1ab9e6ee3721e2ed66444fad9dfe03eaf2fc4` | PASS |
+| A13 Manufacturing/QMS | #603 | `0822b9237b3d1485cc5d9bf72ff03e0834a10383` | PASS |
 | A14 Project/service/field | #613 | `8ca102b3fbdf30cb2db0366ce32ac0b9102c732a` | PASS |
 | A15 BI/semantic/AI | #608 | `3c6db92969d80aab92afdc9ef4f07db0cbe2565b` | PASS |
-| A16 Workplace/DMS/collab | #614 | `9e24087161851a78376023f1210e50b4a2220590` | PASS runtime/authorization slice |
-| A17 logistics/POS/commerce | #601 | `f2504064dbdf929ba6c03107eea624463943fce1` | PASS |
+| A16 Workplace/DMS/collab | #614 | `26db2690deedc23613ae9179815f4cfe25cc32ec` | PASS |
+| A17 Logistics/POS/commerce | #601 | `f2504064dbdf929ba6c03107eea624463943fce1` | PASS |
 | A18 Alumdoor vertical | #611 | `b3e428d21b4be13337694fde9a78d77b37c8db93` | PASS |
 
-Current tally: **13 PASS / 4 BLOCKED / 1 DEFERRED / 18 total**.
+Tally: **18 PASS / 0 BLOCKED / 0 DEFERRED** at the worker-evidence layer.
 
-## Confirmed blockers
+## Repairs proved by the final replay
 
-### A4 — VN statutory / App Registry contract
+The final A19 run independently verifies the RC4 repairs that previously blocked release confidence:
 
-Exact head `84f25a82...` fails focused statutory replay because `commit.method = vn-accounting.tax.evaluate` is not a canonical plain method name. A19 will not change the shared App Registry contract from the QA lane.
+- A4 App Action methods now satisfy the canonical App Registry method contract while the worker preserves compatibility; policy retirement has an explicit four-eyes submitted-state transition.
+- A7 final App Factory approval/runtime head is green.
+- A10 Customer 360 syntax and external ownership issues are fixed; its new metadata does not add another reserved `status` field. Legacy CRM reserved-field debt remains a pre-existing package-wide compatibility issue and is not misrepresented as A10-owned closure.
+- A13 lane-owned `exactOptionalPropertyTypes` defects are fixed and its focused Manufacturing/QMS replay passes.
+- A6 merged browser evidence is independently bound to its real decisive run and merge ancestry.
 
-### A7 — App Factory definition invariants
+## Remaining non-A19 boundaries
 
-Exact head `e656c19d...` remains red on effective-window equality / validation-order behavior and revision-history evidence portability. A19 does not repair another lane's runtime/tests.
+A19 PASS does **not** claim production hardening:
 
-### A10 — Customer 360 test evidence does not parse
+- Cloudflare `remote_observation.status` remains `unverified`;
+- live/non-production provider restore/PITR/replication evidence is still environment-owned;
+- applied `d1_migrations` inventory remains required before historical migration-filename remediation;
+- branch-only backend implementations are not canonical main maturity until integrated through an approved convergence path;
+- no capability is promoted merely because A19 passes.
 
-Exact head `d90085ba...` passes lane-owned TypeScript classification, but `server/tests/crm-customer-360.test.mjs` fails before execution with `SyntaxError: missing ) after argument list` around line 292.
+## Next gate
 
-### A13 — Manufacturing/QMS lane-owned TypeScript failures
-
-Exact head `5c9c47ba...` has `exactOptionalPropertyTypes` failures in `manufacturing-mrp.ts` and `qms-controllers.ts`. Passing business regressions alone do not make the exact head release-green.
-
-## A6 operator waiver / deferred evidence
-
-A6 previously exposed serious browser `color-contrast` failures on its earlier exact-head evidence. The worker later moved again and had another browser-evidence run in progress when checked.
-
-Operator decision on 2026-08-04: **defer A6 UI/mobile/PWA evidence and do not let it block the current A19 execution**.
-
-This waiver has strict semantics:
-
-- A6 is **not PASS**;
-- no accessibility/PWA maturity promotion may cite this waiver;
-- A19 does not repair A6;
-- A6 can be reintroduced into the convergence gate later when UI evidence is required.
-
-## A9 closure
-
-A9 PR #619 final head `32001d70...` has its own successful kernel validation and passes A19 independent replay in run `30870548500`:
-
-- exact immutable SHA assertion;
-- lane-owned TypeScript classification;
-- `rc4-kernel-gl-aggregate` regression;
-- read-only General Ledger aggregate authority/export guard;
-- SQL safety.
-
-The former A9 Dependency Request is closed.
-
-## Stale-evidence findings
-
-A19 observed multiple worker-head moves during the same RC4 wave. Branch names, PR prose and older green runs are insufficient release evidence; immutable exact-head replay is required for lanes counted as PASS.
-
-## Dependency Requests
-
-- **DR-RC4-A19-A4 -> A4:** resolve the canonical App Registry action-method contract mismatch and provide a new immutable head.
-- **DR-RC4-A19-A7 -> A7:** repair App Factory definition/revision evidence failures and provide a new immutable head.
-- **DR-RC4-A19-A10 -> A10:** repair syntactically invalid Customer 360 test evidence and provide a new immutable head.
-- **DR-RC4-A19-A13 -> A13:** repair lane-owned TypeScript errors and provide a new immutable head.
-- **DR-RC4-A19-A6-DEFERRED -> A6/convergence:** A6 browser/mobile/PWA evidence is deferred by operator waiver; reintroduce only when UI convergence evidence is required. This is not a PASS claim.
-- **DR-RC4-A19-CONVERGENCE -> RC4 convergence:** after blocking workers are repaired and converged, run a second exact-converged-head adversarial replay before maturity promotion, respecting the recorded A6 waiver unless it is explicitly revoked.
-- **DR-RC4-A19-MIGRATION -> migration/environment governance:** provide read-only applied `d1_migrations` inventory before historical migration filename remediation.
-- **DR-RC4-A19-PROVIDER -> A2/environment owner:** provide non-production provider evidence before provider/recovery/replication-state promotion.
+A20 must re-converge exact evidence and maturity without importing branch-only implementations into canonical status. A24 must then evaluate the final RC4 convergence candidate and distinguish worker/evidence closure from production/provider hardening.
 
 ## Merge / deploy boundary
 
-A19 changes QA workflow + evidence documentation only, but it is a **non-UI release-confidence lane**. Stop before merge/deploy pending explicit approval.
-
-No production deploy, provider mutation, migration rename, schema/business-rule change, secret/DNS operation or customer-data mutation is authorized by A19.
+A19 is non-UI release-confidence work. **Do not merge/deploy without explicit user approval.** No production deploy, provider mutation, migration rename, schema/business-rule mutation, secret/DNS operation or customer-data mutation is authorized by A19.
