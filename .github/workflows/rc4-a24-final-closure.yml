@@ -57,7 +57,19 @@ jobs:
           grep -F '| RC | 66 | 6.90% |' docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md
           grep -F '| Wired | 406 | 42.47% |' docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md
 
-      - name: Verify A21/A22/A23 closure evidence
+      - name: Revalidate current A21 migration-governance head
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git fetch origin agent/rc4-21-migration-governance
+          test "$(git rev-parse origin/agent/rc4-21-migration-governance)" = "fe473ccc3723f46094c5db4719b2acac0c9bf8db"
+          git worktree add /tmp/a21 fe473ccc3723f46094c5db4719b2acac0c9bf8db
+          cd /tmp/a21
+          node server/scripts/verify-migration-governance.mjs --base-ref "${GITHUB_WORKSPACE}/.git/refs/remotes/origin/main" || node server/scripts/verify-migration-governance.mjs --base-ref origin/main
+          node --test server/tests/migration-governance.test.mjs
+
+      - name: Verify A22/A23 closure evidence
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -68,7 +80,6 @@ jobs:
             json=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${id}")
             node -e 'const r=JSON.parse(process.argv[1]); const expected=process.argv[2]; const label=process.argv[3]; if(r.status!=="completed"||r.conclusion!=="success"||r.head_sha!==expected) throw new Error(label+":"+JSON.stringify({status:r.status,conclusion:r.conclusion,head_sha:r.head_sha})); console.log(label+": PASS")' "$json" "$expected" "$label"
           }
-          check_run 30868898863 fe473ccc3723f46094c5db4719b2acac0c9bf8db A21
           check_run 30875326244 e3df86ae5e1645ad75f21bccd7584b20c2d94ef3 A22
           check_run 30874137767 7d7aff633a943b881d7488cd50e661fbdcffaace A23
 
