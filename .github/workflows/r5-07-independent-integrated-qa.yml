@@ -1,0 +1,100 @@
+name: R5-07 Independent Integrated QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/r5-07-independent-integrated-qa.yml"
+      - "docs/agents/r5/R5_A7_INDEPENDENT_INTEGRATED_QA.md"
+      - "docs/agents/r5/R5_A7_QA_EVIDENCE_MANIFEST.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r5-07-independent-qa-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  setup-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact QA head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact QA branch and baseline ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git fetch origin main
+          git merge-base --is-ancestor 8316d2a5f24863d3347cf9f92ec5987145b8dc9e HEAD
+          echo "R5-07 seed ancestry: PASS"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Assert fail-closed candidate precondition
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('docs/agents/r5/R5_A7_QA_EVIDENCE_MANIFEST.json', 'utf8'));
+          if (manifest.schema !== 'forge-r5-independent-qa/v1') throw new Error('unexpected manifest schema');
+          if (manifest.seed_main_sha !== '8316d2a5f24863d3347cf9f92ec5987145b8dc9e') throw new Error('unexpected seed main SHA');
+          if (manifest.candidate_sha !== null) throw new Error('setup gate must not invent an integrated candidate');
+          if (manifest.verdict !== 'BLOCKED_PRECONDITION') throw new Error('setup gate must remain fail-closed');
+          if (manifest.integrated_pass_allowed !== false) throw new Error('integrated PASS must be disabled without candidate');
+          console.log('R5-07 candidate precondition: correctly BLOCKED');
+          NODE
+
+      - name: Revalidate immutable capability and migration baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/validate-enterprise-capability-status.mjs
+          python3 server/scripts/verify-sql.py
+          node server/scripts/verify-migration-governance.mjs --base-ref origin/main
+          node --test server/tests/migration-governance.test.mjs
+
+      - name: Revalidate independent reconciliation and deterministic performance tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
+          python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
+          node --test server/tests/cloudflare-cost.test.mjs server/tests/perf-regression.test.mjs
+
+      - name: Assert QA-only authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only origin/main...HEAD)
+          echo "$changed"
+          unexpected=$(echo "$changed" | grep -Ev '^(\.github/workflows/r5-07-independent-integrated-qa\.yml|docs/agents/r5/R5_A7_INDEPENDENT_INTEGRATED_QA\.md|docs/agents/r5/R5_A7_QA_EVIDENCE_MANIFEST\.json)$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "R5-07 setup crossed QA/evidence authority:"
+            echo "$unexpected"
+            exit 1
+          fi
+          echo "R5-07 QA/evidence boundary: PASS"
+
+      - name: Preserve non-claims
+        run: |
+          echo "Integrated R5 PASS is NOT claimed."
+          echo "Provider/live/production evidence is NOT claimed."
+          echo "Await DR-R5-A7-01 explicit integrated candidate SHA."
