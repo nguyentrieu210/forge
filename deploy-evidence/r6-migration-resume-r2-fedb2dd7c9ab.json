@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "candidate_sha": "fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5",
+  "workflow_run_id": "30923486993",
+  "evidence": {
+    "format": "forge-r6-migration-resume/v2",
+    "candidate_sha": "fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5",
+    "observed_at": "2026-08-04T15:21:08.273Z",
+    "expected": 79,
+    "applied": 79,
+    "pending": [],
+    "unknown": [],
+    "migrate_outcome": "success",
+    "status": "PASS"
+  }
+}
