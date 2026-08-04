@@ -1,0 +1,129 @@
+name: R5 04 Manufacturing Service Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/clouderp-erpnext/src/manufacturing-*.ts"
+      - "server/packages/clouderp-erpnext/src/qms-*.ts"
+      - "server/apps/tenant-worker/src/manufacturing-*.ts"
+      - "server/apps/tenant-worker/src/qms-api.ts"
+      - "server/apps-src/manufacturing-qms/**"
+      - "server/apps-src/maintenance/**"
+      - "server/apps-src/ws07-worker/**"
+      - "server/scripts/lib/alumdoor-golden-order-readonly.mjs"
+      - "server/scripts/lib/alumdoor-reference-release-evidence.mjs"
+      - "server/scripts/rc4-cross-ledger-reconciliation.py"
+      - "server/tests/manufacturing-*.test.mjs"
+      - "server/tests/qms-*.test.mjs"
+      - "server/tests/maintenance-field-service.test.mjs"
+      - "server/tests/transaction-closure-warranty-*.test.mjs"
+      - "server/tests/alumdoor-golden-order-readonly.test.mjs"
+      - "server/tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs"
+      - "server/tests/rc4-a14-project-service-field.test.mjs"
+      - "server/tests/r5-04-manufacturing-service-integration.test.mjs"
+      - "docs/agents/r5/R5_A4_MANUFACTURING_SERVICE.md"
+      - ".github/workflows/r5-04-manufacturing-service.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r5-04-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.head_ref == 'agent/r5-04-manufacturing-service'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Assert exact head
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit exact-head server dist and record baseline TypeScript debt
+        working-directory: server
+        run: |
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/r5-04-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/clouderp-erpnext/src/index.js
+          test -f dist/apps-src/ws07-worker/src/entry.js
+          if [ "$status" -ne 0 ]; then
+            echo "Full-server TypeScript baseline remains non-zero; exact emitted dist will be exercised below."
+            grep "error TS" /tmp/r5-04-tsc.log > /tmp/r5-04-typescript-baseline.log || true
+            cat /tmp/r5-04-typescript-baseline.log
+          fi
+
+      - name: Manufacturing transaction MRP genealogy costing regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/alumdoor-manufacturing-lifecycle.test.mjs \
+            tests/manufacturing-transaction-closure.test.mjs \
+            tests/manufacturing-issue-line-key.test.mjs \
+            tests/manufacturing-output-uom.test.mjs \
+            tests/manufacturing-costing-read.test.mjs \
+            tests/manufacturing-costing-api.test.mjs \
+            tests/manufacturing-genealogy.test.mjs \
+            tests/manufacturing-genealogy-api.test.mjs \
+            tests/manufacturing-mrp.test.mjs \
+            tests/manufacturing-mrp-api.test.mjs \
+            tests/manufacturing-mrp-netting.test.mjs \
+            tests/manufacturing-mrp-netting-api.test.mjs \
+            tests/manufacturing-capacity.test.mjs \
+            tests/manufacturing-capacity-api.test.mjs
+
+      - name: QMS lifecycle and release-confidence regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/qms-lifecycle.test.mjs \
+            tests/qms-api.test.mjs \
+            tests/qms-sampling.test.mjs \
+            tests/rc4-a13-manufacturing-qms-release-confidence.test.mjs
+
+      - name: Warranty service and Alumdoor lineage regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/maintenance-field-service.test.mjs \
+            tests/transaction-closure-warranty-service.test.mjs \
+            tests/transaction-closure-warranty-linkage.test.mjs \
+            tests/rc4-a14-project-service-field.test.mjs \
+            tests/alumdoor-golden-order-readonly.test.mjs \
+            tests/r5-04-manufacturing-service-integration.test.mjs
+
+      - name: Cross-ledger auditor compatibility
+        run: |
+          python3 -m py_compile server/scripts/rc4-cross-ledger-reconciliation.py
+          python3 server/scripts/rc4-cross-ledger-reconciliation.py --self-test
+
+      - name: Manufacturing and maintenance metadata package gates
+        working-directory: server
+        run: |
+          node scripts/pack-app.mjs apps-src/manufacturing-qms --check
+          node scripts/pack-app.mjs apps-src/maintenance --check
+
+      - name: Diff hygiene
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
