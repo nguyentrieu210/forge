@@ -12,24 +12,27 @@ This directory is the durable authority for the controlled Alumdoor pilot after 
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
 - Pilot-01 control plane: **READY / PREVIEW-ONLY**.
 - Pilot-01 real uploaded source set: **OBSERVED / HASHED / INGESTED**.
+- Pilot-01 duplicate identity policy: **LOCKED**.
 - Current truthful Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
 - Active work: source reconciliation + normalization into a private Mapping-V1 batch.
 
-Do not advance to Pilot-02 merely because real files exist. Pilot-01 requires one coherent cutoff, resolved identities/references, canonical Stock/money semantics and a real zero-variance `PREVIEW_PASS` first.
+Do not advance to Pilot-02 merely because real files exist. Pilot-01 requires one coherent cutoff, resolved references, canonical Stock/money semantics and a real zero-variance `PREVIEW_PASS` first.
 
 ## Read order
 
 1. `PILOT_00_CONTRACT.md` — frozen pilot scope, roles, transaction families, reconciliation and stop/cutover rules.
 2. `PILOT_00_LOCK.json` — machine-readable exact release/package/profile and governance lock.
 3. `PILOT_DATA_MAPPING_V1.json` — frozen master/opening-data mapping contract.
-4. `PILOT_01_SOURCE_INGEST_20260805.md` — disposition of the real uploaded Alumdoor source set.
-5. `PILOT_01_SOURCE_INGEST_20260805.json` — immutable source digests, structural counts and blocker state.
-6. `PILOT_01_READINESS.md` — source-batch, validation and preview acceptance contract.
-7. `PILOT_01_STATUS.json` — machine-readable current Pilot-01 state.
-8. `PILOT_01_BATCH_MANIFEST_TEMPLATE.json` — immutable normalized batch manifest template.
-9. `tools/validate-pilot-batch.mjs` — preview-only validator; never writes production.
-10. `../../agents/r6/R6_FINAL_CERTIFICATION_20260805.md` — exact R6 entry evidence.
-11. `../../../NEXT_TASKS.md` — active pilot queue.
+4. `PILOT_01_IDENTITY_DISPOSITION_V1.json` — locked duplicate Customer/item-code normalization policy.
+5. `PILOT_01_SOURCE_INGEST_20260805.md` — disposition of the real uploaded Alumdoor source set.
+6. `PILOT_01_SOURCE_INGEST_20260805.json` — immutable source digests, structural counts and original blocker observations.
+7. `PILOT_01_READINESS.md` — source-batch, validation and preview acceptance contract.
+8. `PILOT_01_STATUS.json` — machine-readable current Pilot-01 state.
+9. `PILOT_01_BATCH_MANIFEST_TEMPLATE.json` — immutable normalized batch manifest template.
+10. `tools/normalize-pilot-identities.mjs` — deterministic duplicate normalization; no production write.
+11. `tools/validate-pilot-batch.mjs` — preview-only validator; never writes production.
+12. `../../agents/r6/R6_FINAL_CERTIFICATION_20260805.md` — exact R6 entry evidence.
+13. `../../../NEXT_TASKS.md` — active pilot queue.
 
 ## Program shape
 
@@ -37,6 +40,7 @@ Do not advance to Pilot-02 merely because real files exist. Pilot-01 requires on
 R6 PILOT-GO
   -> Pilot-00 Freeze Contract [LOCKED]
   -> Pilot-01 Source ingest [DONE]
+  -> Pilot-01 Duplicate identity disposition [LOCKED]
   -> Pilot-01 Reconcile + normalize [ACTIVE / PREVIEW-BLOCKED]
   -> real PREVIEW_PASS
   -> Pilot-02 Representative Transaction Dry Run
@@ -45,6 +49,16 @@ R6 PILOT-GO
   -> Pilot-05 Hypercare + Exit Gate
   -> PILOT-ACCEPTED / PILOT-REJECTED
 ```
+
+## Duplicate identity rule
+
+The operator-approved rule is deterministic:
+
+- duplicate Customer names normalize to one canonical Customer: retain the first source row, drop later duplicate Customer output rows, and remap Customer references to the retained `source_key`;
+- exact duplicate item codes retain the first code; later collisions receive the lowest free suffix `01`, `02`, `03`... and preserve `source_code_original`;
+- pre-existing source codes are reserved, so a generated suffix never overwrites a real code;
+- the uploaded item master currently has 277/277 unique codes, so the suffix rule is a collision guard for normalization rather than a change to those observed rows;
+- 60 journal item strings that do not match master codes remain an alias/reference problem and are not auto-created as suffixed codes.
 
 ## Real-source handling
 
@@ -66,12 +80,13 @@ The eventual private normalized batch is bound by:
 - exact source system/cutoff/extract timestamps;
 - exact SHA-256 for every normalized data file;
 - frozen mapping v1;
+- locked identity disposition v1;
 - exact source-authoritative opening totals;
 - named account allowlist;
 - exactly one active named `Giám đốc` account;
 - zero unexplained reconciliation variance.
 
-Current source evidence is not yet a normalized `PREVIEW_PASS` batch. Major blockers include common-cutoff drift, unresolved party/item aliases, missing actual Kg evidence for aluminum opening stock, unproven opening AR/AP, stock-sheet scope drift and incomplete access/operating masters.
+Current source evidence is not yet a normalized `PREVIEW_PASS` batch. Remaining major blockers include common-cutoff drift, supplier/item alias gaps, missing actual Kg evidence for aluminum opening stock, unproven opening AR/AP, stock-sheet scope drift and incomplete access/operating masters.
 
 The validator returns `PREVIEW_PASS` or `PREVIEW_FAIL`. It has no deployment/import/migration path and always reports `production_write_authorized=false`.
 
