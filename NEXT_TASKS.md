@@ -10,52 +10,67 @@ Ngày cập nhật: **2026-08-05**.
 - R5: **DONE / R5-GO**.
 - R6 Production Certification: **DONE / PILOT-GO**.
 - Exact certified/deployed R6 SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
-- Final evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json` — **23/23 PASS**.
-- Active program: **Alumdoor Controlled Pilot**.
-- Next milestone: **Pilot Exit Gate -> Accepted Production Reference -> GA**.
+- Final R6 evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json` — **23/23 PASS**.
+- Pilot-00 Freeze Production Profile + Pilot Contract: **DONE / PILOT-00-LOCKED**.
+- Pilot-00 authority: `docs/pilot/alumdoor/PILOT_00_CONTRACT.md` + `PILOT_00_LOCK.json`.
+- Active phase: **Pilot-01 — Master + Opening Data Readiness**.
+- Next milestone: **Pilot-01 READY -> Pilot-02 Representative Transaction Dry Run**.
 
 Do not reopen R6 merely because controlled-pilot business/data/cutover work remains. Those are downstream pilot gates.
 
-## 1. Pilot-00 — Freeze Production Profile + Pilot Contract
+## 1. Pilot-00 — DONE / PILOT-00-LOCKED
 
-Before importing real operational data:
+Frozen:
 
-- freeze exact certified software baseline and `alumdoor-pilot@1` capability profile;
-- define pilot users/roles/site scope and permitted transaction families;
-- freeze master/opening-data mapping templates;
-- define source-system extraction timestamp/cutoff rules;
-- define daily reconciliation dimensions and tolerances;
-- define stop/rollback/forward-fix criteria;
-- define explicit business owner for cutover acceptance.
+- exact certified software baseline `49315112a21182d2ce077b08a1fb9e26db07fd36`;
+- release bundle `838218167db020d8`;
+- Alumdoor `2.2.3`, HRM `1.8.0`, VN Accounting `1.6.1`;
+- capability profile `alumdoor-pilot@1` with frozen content hash;
+- single pilot target `alu` / `https://alu.kairo.vn`;
+- pilot personas and named-account allowlist policy;
+- `Giám đốc` as the single business cutover approval role;
+- permitted transaction families;
+- source cutoff/extract manifest rules;
+- data mapping contract V1;
+- zero-unexplained-variance reconciliation contract;
+- stop, correction, rollback/forward-fix and cutover rules.
 
-Any source-changing product fix creates a new release candidate and must rerun affected release evidence before use in the pilot.
+Pilot-00 performed **no real customer/master/opening-data production write**.
 
 ## 2. Pilot-01 — Master + Opening Data Readiness
 
-Prepare and validate before production write:
+Use `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json` as the frozen schema.
+
+Prepare one immutable batch manifest and validate, before any production write:
 
 - customers/contacts;
 - suppliers;
 - items/BOM/routing/work centers where applicable;
 - warehouses and opening stock;
 - AR/AP opening balances;
-- cash/bank opening balances where in scope;
-- employees/users/roles required for the pilot;
+- cash/bank opening balances only if explicitly included in pilot scope;
+- employees and named pilot user/role allowlist;
 - Alumdoor-specific reference masters that do not duplicate shared authorities.
 
 Required controls:
 
+- explicit `pilot_batch_id`, source system, cutoff and extract timestamps;
+- SHA-256 per source extract;
 - deterministic mapping and source provenance;
 - duplicate/conflict detection;
+- unknown-reference fail-closed behavior;
 - tenant scope validation;
-- dry-run counts/totals;
-- Stock/AR/AP/cash-bank/GL opening reconciliation.
+- preview row counts/totals;
+- exact Stock/AR/AP/cash-bank/GL opening reconciliation;
+- every non-zero discrepancy gets owner/root-cause/disposition/recheck evidence.
 
-Real production data import/write requires explicit authorization.
+**Production write/import is not authorized by Pilot-00 closure.** Pilot-01 should exhaust source inspection, mapping, dry-run and preview work first.
 
 ## 3. Pilot-02 — Representative Transaction Dry Run
 
-Using approved pilot data and users, exercise representative business paths:
+Only after Pilot-01 is accepted and named account allowlist is frozen.
+
+Using approved pilot data/users, exercise representative business paths:
 
 - quotation -> sales order;
 - procurement/material demand -> purchase -> receipt;
@@ -83,18 +98,19 @@ Daily reconcile at minimum:
 - GL debit/credit/balance;
 - document counts/statuses and unresolved exceptions.
 
-Every discrepancy must have owner, root cause, disposition and recheck evidence. Do not hide residuals in manual adjustment without source-bound reasoning.
+Default tolerance is zero unexplained variance. Every discrepancy must have owner, root cause, disposition and recheck evidence.
 
 ## 5. Pilot-04 — Cutover Decision
 
 Cutover is allowed only when:
 
+- exact locked release/package/profile identity still matches production;
 - opening and parallel-run reconciliations are accepted;
 - no unresolved P0/P1 pilot blocker remains;
-- user/access readiness is accepted;
+- named user/access readiness is accepted;
 - backup/recovery state is fresh and verified;
 - delta/cutoff procedure is deterministic;
-- business owner explicitly accepts cutover.
+- the named account holding `Giám đốc` authority explicitly accepts cutover.
 
 Production cutover, live customer-data mutation, DNS/route changes and destructive recovery actions remain explicit authorization boundaries.
 
@@ -108,17 +124,9 @@ After cutover:
 - verify backup/recovery continuity;
 - close pilot residuals or explicitly defer them with owner/risk.
 
-Pilot Exit Gate requires a durable final record with:
+Pilot Exit Gate requires a durable final record with exact deployed identity, package/profile identity, accepted reconciliation period, incident/blocker disposition, recovery evidence currency and business acceptance.
 
-- exact deployed release identity;
-- exact package/profile identity;
-- accepted reconciliation period;
-- incident/blocker disposition;
-- recovery evidence currency;
-- business acceptance;
-- verdict `PILOT-ACCEPTED` or `PILOT-REJECTED`.
-
-Only `PILOT-ACCEPTED` may advance to **Accepted Production Reference -> GA**.
+Final verdict is `PILOT-ACCEPTED` or `PILOT-REJECTED`. Only `PILOT-ACCEPTED` may advance to **Accepted Production Reference -> GA**.
 
 ## 7. Standing boundaries
 
@@ -127,15 +135,21 @@ Only `PILOT-ACCEPTED` may advance to **Accepted Production Reference -> GA**.
 - Capability disable != package uninstall/data purge.
 - Production/provider evidence must be observed directly; source presence is insufficient.
 - Worker rollback != data rollback.
-- R6 certification is exact-SHA bound; future source changes require affected evidence rerun.
+- R6 certification is exact-SHA bound; future product-source changes require affected evidence rerun.
+- Pilot package/profile changes require identity re-lock and affected runtime/Golden Flow evidence rerun.
 - Controlled pilot is not GA.
 
-## 8. R6 closure reference
+## 8. Authorities
 
-R6 final authority:
+Pilot:
+
+- `docs/pilot/alumdoor/README.md`;
+- `docs/pilot/alumdoor/PILOT_00_CONTRACT.md`;
+- `docs/pilot/alumdoor/PILOT_00_LOCK.json`;
+- `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`.
+
+R6 closure:
 
 - `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md`;
 - `deploy-evidence/r6-final-production-certification-49315112a211.json`;
 - `deploy-evidence/r6-authorized-orchestrator-49315112a211.json`.
-
-Do not reopen temporary R6 agent coordination artifacts; Git history retains them.
