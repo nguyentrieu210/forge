@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "candidate_sha": "fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5",
+  "workflow_run_id": "30923135779",
+  "evidence": {
+    "format": "forge-r6-migration-0090-recovery/v1",
+    "candidate_sha": "fedb2dd7c9abab71fedc4b747ef1d41b6db44ed5",
+    "observed_at": "2026-08-04T15:15:17.971Z",
+    "tenant": "alu",
+    "expected_triggers": [
+      "tt99_registry_insert_guard",
+      "tt99_registry_update_guard",
+      "tt99_registry_immutable_update_guard",
+      "tt99_registry_immutable_delete_guard",
+      "vn_tax_ruleset_insert_guard",
+      "vn_tax_ruleset_update_guard",
+      "vn_tax_ruleset_immutable_update_guard",
+      "vn_tax_ruleset_immutable_delete_guard"
+    ],
+    "observed_triggers": [
+      "tt99_registry_immutable_delete_guard",
+      "tt99_registry_immutable_update_guard",
+      "tt99_registry_insert_guard",
+      "tt99_registry_update_guard",
+      "vn_tax_ruleset_immutable_delete_guard",
+      "vn_tax_ruleset_immutable_update_guard",
+      "vn_tax_ruleset_insert_guard",
+      "vn_tax_ruleset_update_guard"
+    ],
+    "bookkeeping_before": 0,
+    "bookkeeping_after": 1,
+    "mutation": "BOOKKEEPING_RECOVERY_ONLY",
+    "status": "PASS"
+  }
+}
