@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CapabilityProfileBuilder,
+} from "../../../packages/builder/src/capability/CapabilityProfileBuilder.js";
+import {
   capabilityProfileFromResolution,
   type CapabilityCatalogItem,
   type CapabilityProfileModel,
   type CapabilityProfilePayload,
-} from "@metaforge/builder";
+} from "../../../packages/builder/src/capability/capability-profile.js";
 import { FrappeAdapterImpl, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
 import { AuthBoundary, I18nProvider, LoginForm } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
