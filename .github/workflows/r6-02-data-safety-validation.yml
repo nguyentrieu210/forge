@@ -1,0 +1,189 @@
+name: R6 02 Data Safety Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/migrations/**"
+      - "server/scripts/d1-migrate-remote.mjs"
+      - "server/scripts/observe-tenant-migrations.mjs"
+      - "server/scripts/lib/d1-migration-bookkeeping.mjs"
+      - "server/scripts/backup-tenant.mjs"
+      - "server/scripts/verify-tenant-backup.mjs"
+      - "server/scripts/restore-tenant-drill.mjs"
+      - "server/scripts/d1-pitr.mjs"
+      - "server/tests/d1-migrate-remote-safety.test.mjs"
+      - "server/tests/migration-governance.test.mjs"
+      - "server/tests/tenant-backup-verification.test.mjs"
+      - "server/tests/sre-destructive-guards.test.mjs"
+      - "docs/agents/r6/R6_02_DATA_MIGRATION_RECOVERY_HANDOFF.md"
+      - ".github/workflows/r6-02-data-safety-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r6-02-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  local-certification:
+    if: startsWith(github.head_ref, 'agent/r6-02-data-migration-recovery')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LOCKED_SOURCE_SHA: 4149af7c3e49b25fb1f43a50b62f99d7c04e6488
+      LOCKED_MIGRATION_COUNT: "86"
+      LOCKED_MIGRATION_DIGEST: 904907b05c579898bed18966c6b2d348dc957a498d703dd90ecd57ca012695c8
+    steps:
+      - name: Checkout exact PR head with history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify locked candidate and migration digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "$LOCKED_SOURCE_SHA^{commit}"
+          git merge-base --is-ancestor "$LOCKED_SOURCE_SHA" HEAD
+          git diff --exit-code "$LOCKED_SOURCE_SHA" -- server/migrations
+          python3 - <<'PY'
+          import hashlib, os, pathlib
+          root = pathlib.Path('server/migrations')
+          rows = []
+          for p in sorted(root.rglob('*.sql')):
+              rel = p.relative_to(root).as_posix()
+              digest = hashlib.sha256(p.read_bytes()).hexdigest()
+              rows.append(f"{rel}\t{digest}\n")
+          aggregate = hashlib.sha256(''.join(rows).encode()).hexdigest()
+          expected_count = int(os.environ['LOCKED_MIGRATION_COUNT'])
+          expected_digest = os.environ['LOCKED_MIGRATION_DIGEST']
+          assert len(rows) == expected_count, (len(rows), expected_count)
+          assert aggregate == expected_digest, (aggregate, expected_digest)
+          print(f"migration inventory PASS count={len(rows)} digest={aggregate}")
+          PY
+
+      - name: Syntax-check R6-02 tooling
+        run: |
+          node --check server/scripts/d1-migrate-remote.mjs
+          node --check server/scripts/observe-tenant-migrations.mjs
+          node --check server/scripts/lib/d1-migration-bookkeeping.mjs
+
+      - name: Focused migration and backup regressions
+        run: |
+          node --test \
+            server/tests/d1-migrate-remote-safety.test.mjs \
+            server/tests/migration-governance.test.mjs \
+            server/tests/tenant-backup-verification.test.mjs \
+            server/tests/sre-destructive-guards.test.mjs
+
+      - name: Migration governance snapshot and append-only proof
+        run: node server/scripts/verify-migration-governance.mjs --base-ref "$LOCKED_SOURCE_SHA"
+
+      - name: Full SQL replay verifier
+        run: python3 server/scripts/verify-sql.py
+
+      - name: Durable migration journal replay
+        run: python3 server/scripts/test-migration-run-journal.py
+
+  pilot-readonly-evidence:
+    name: Pilot target read-only evidence
+    if: startsWith(github.head_ref, 'agent/r6-02-data-migration-recovery')
+    needs: local-certification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TENANT: alu
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Observe applied migrations without mutation
+        id: migrations
+        continue-on-error: true
+        run: |
+          node server/scripts/observe-tenant-migrations.mjs \
+            --tenant "$TENANT" \
+            --output "$RUNNER_TEMP/r6-e06-applied-migrations.json"
+
+      - name: Fresh read-only export plus isolated replay verification
+        id: backup
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_dir="$RUNNER_TEMP/r6-02-backup"
+          mkdir -p "$backup_dir"
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$backup_dir"
+          mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
+          [ "${#backups[@]}" -eq 1 ]
+          node server/scripts/verify-tenant-backup.mjs \
+            --tenant "$TENANT" \
+            --file "${backups[0]}" \
+            --output "$RUNNER_TEMP/r6-e07-e08-backup-replay.json"
+          rm -f "${backups[0]}" "${backups[0]}.json"
+
+      - name: Read-only D1 Time Travel plan
+        id: pitr
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_ts="$(date -u -d '5 minutes ago' '+%Y-%m-%dT%H:%M:%SZ')"
+          node server/scripts/d1-pitr.mjs \
+            --tenant "$TENANT" \
+            --timestamp "$target_ts" \
+            --output "$RUNNER_TEMP/r6-e10-pitr-plan.json"
+
+      - name: Upload sanitized evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r6-02-readonly-evidence-${{ github.event.pull_request.head.sha }}
+          path: |
+            ${{ runner.temp }}/r6-e06-applied-migrations.json
+            ${{ runner.temp }}/r6-e07-e08-backup-replay.json
+            ${{ runner.temp }}/r6-e10-pitr-plan.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce read-only evidence gate after exhausting all probes
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'E06 migration observation: %s\n' '${{ steps.migrations.outcome }}'
+          printf 'E07/E08 backup replay: %s\n' '${{ steps.backup.outcome }}'
+          printf 'E10 PITR plan: %s\n' '${{ steps.pitr.outcome }}'
+          test '${{ steps.migrations.outcome }}' = success
+          test '${{ steps.backup.outcome }}' = success
+          test '${{ steps.pitr.outcome }}' = success
