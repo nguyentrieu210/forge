@@ -24,6 +24,12 @@ export type CapabilityAwareInstalledAppRecord = InstalledAppRecordWithInputTable
   };
 };
 
+export interface CapabilityProfileSnapshot {
+  profile_id: string;
+  version: number;
+  resolution: CapabilityResolutionPlan | null;
+}
+
 function filteredClient(
   client: AppClientManifest | null | undefined,
   nav: InstalledAppRecordWithInputTables["nav"],
@@ -89,20 +95,32 @@ export class AppInstaller extends InputTableAppInstaller {
     return this.capabilityProfiles.apply(tenantId, installed, proposal, actor, now);
   }
 
-  async currentCapabilityResolution(tenantId: string): Promise<CapabilityResolutionPlan | null> {
+  async currentCapabilityProfile(tenantId: string): Promise<CapabilityProfileSnapshot> {
     const installed = await super.list(tenantId);
     const contracts = await this.capabilityProfiles.store.contractsForInstalled(tenantId, installed);
     const active = await this.capabilityProfiles.store.active(tenantId);
     if (active) {
-      return resolveCapabilityProfile(contracts, installed, active.proposal, active.resolution);
+      return {
+        profile_id: active.profile_id,
+        version: active.version,
+        resolution: resolveCapabilityProfile(contracts, installed, active.proposal, active.resolution),
+      };
     }
-    if (!contracts.length) return null;
-    return resolveCapabilityProfile(
-      contracts,
-      installed,
-      { profile_id: "default", expected_version: 0, selections: [] },
-      null,
-    );
+    if (!contracts.length) return { profile_id: "default", version: 0, resolution: null };
+    return {
+      profile_id: "default",
+      version: 0,
+      resolution: resolveCapabilityProfile(
+        contracts,
+        installed,
+        { profile_id: "default", expected_version: 0, selections: [] },
+        null,
+      ),
+    };
+  }
+
+  async currentCapabilityResolution(tenantId: string): Promise<CapabilityResolutionPlan | null> {
+    return (await this.currentCapabilityProfile(tenantId)).resolution;
   }
 
   async assertCapability(tenantId: string, capabilityId: string): Promise<void> {
