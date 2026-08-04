@@ -4,7 +4,7 @@ Date: 2026-08-04
 Branch: `agent/rc4-19-independent-adversarial-qa`  
 Seed: `main@1f0b08934101640ca15b2379b5dd7ca3ef018e33`  
 Risk: **STANDARD evidence / CRITICAL inherited targets**  
-Status: **NO-GO — 18/18 worker lanes now reviewable; A4/A6/A7/A10/A13 blocked**
+Status: **NO-GO — 18/18 worker lanes reviewable; A4/A7/A10/A13 blocked; A6 deferred by operator waiver**
 
 ## Mission
 
@@ -12,7 +12,7 @@ A19 independently attacks RC4 release-confidence claims. It owns QA/evidence onl
 
 ## Exact-head coverage
 
-A19 now has immutable reviewable heads for **all A1-A18 lanes**. A9 was added after its final PR became available, and A6 was repinned after its head moved.
+A19 has reviewable heads for all A1-A18 lanes. A6 browser/accessibility evidence is explicitly deferred by operator decision on 2026-08-04. Deferred does not mean PASS and must not be used as maturity evidence.
 
 | Lane | PR | Immutable head | Independent disposition |
 |---|---:|---|---|
@@ -21,7 +21,7 @@ A19 now has immutable reviewable heads for **all A1-A18 lanes**. A9 was added af
 | A3 migration/cutover | #599 | `792f7f311d52f3ed0882c284b1e3d9ff5f34b359` | PASS |
 | A4 finance/VN statutory | #602 | `84f25a829bb7eb28ab8bce053dc336435b46e77f` | **BLOCKED** |
 | A5 HCM/VN payroll | #604 | `1baaf38d92f5aa0d53cfd2260d5baade850be8dd` | PASS |
-| A6 UI/mobile/PWA | #598 | `422cc5ce7460a9e326e77ccdc20dac5a36a412ca` | **BLOCKED** on exact-head browser accessibility gate |
+| A6 UI/mobile/PWA | #598 | current worker head may move | **DEFERRED / WAIVED FROM CURRENT A19 BLOCKING GATE — NOT PASS** |
 | A7 App Factory | #606 | `e656c19d54450f1290ad44e8bba8819e650b42ef` | **BLOCKED** |
 | A8 Integration/provider | #615 | `8e43a4e04818fc1d956c5173190f1794dfc802b8` | PASS |
 | A9 Architecture/kernel | #619 | `32001d70a4ef87a5e14bd7df2dcc100cd0f8d243` | **PASS** independently in A19 run `30870548500` |
@@ -35,31 +35,13 @@ A19 now has immutable reviewable heads for **all A1-A18 lanes**. A9 was added af
 | A17 logistics/POS/commerce | #601 | `f2504064dbdf929ba6c03107eea624463943fce1` | PASS |
 | A18 Alumdoor vertical | #611 | `b3e428d21b4be13337694fde9a78d77b37c8db93` | PASS |
 
-Current tally: **13 PASS / 5 BLOCKED / 18 total**.
+Current tally: **13 PASS / 4 BLOCKED / 1 DEFERRED / 18 total**.
 
 ## Confirmed blockers
 
 ### A4 — VN statutory / App Registry contract
 
 Exact head `84f25a82...` fails focused statutory replay because `commit.method = vn-accounting.tax.evaluate` is not a canonical plain method name. A19 will not change the shared App Registry contract from the QA lane.
-
-### A6 — final browser evidence is red
-
-A6 moved from the earlier A19-pinned head `00757226...` to final head `422cc5ce...`. The old green A19 runtime/PWA result is therefore stale.
-
-A6's own exact-final-head workflow run `30870225543` installs/builds successfully, then runs 56 demo browser tests: **45 pass, 6 skip, 5 fail**. The five failures are serious axe `color-contrast` violations on:
-
-- `/view/list`;
-- `/view/form`;
-- `/view/kanban`;
-- `/view/calendar`;
-- `/view/dashboard`.
-
-Common failing UI includes the menu-search input (`Tìm trong danh mục…`); List also exposes status-chip contrast failures. Because the demo browser matrix is red, the worker workflow does not reach its runtime/PWA step.
-
-A19 run `30870548500` was expanded to replay both the final-head demo browser matrix and the runtime/PWA matrix, rather than trusting the stale narrower old-head result.
-
-**Decision:** final A6 head is not release-green until the accessibility failures are corrected and a new immutable head is replayed. This is UI evidence/runtime presentation authority owned by A6; A19 records the blocker rather than patching the worker lane.
 
 ### A7 — App Factory definition invariants
 
@@ -73,9 +55,22 @@ Exact head `d90085ba...` passes lane-owned TypeScript classification, but `serve
 
 Exact head `5c9c47ba...` has `exactOptionalPropertyTypes` failures in `manufacturing-mrp.ts` and `qms-controllers.ts`. Passing business regressions alone do not make the exact head release-green.
 
+## A6 operator waiver / deferred evidence
+
+A6 previously exposed serious browser `color-contrast` failures on its earlier exact-head evidence. The worker later moved again and had another browser-evidence run in progress when checked.
+
+Operator decision on 2026-08-04: **defer A6 UI/mobile/PWA evidence and do not let it block the current A19 execution**.
+
+This waiver has strict semantics:
+
+- A6 is **not PASS**;
+- no accessibility/PWA maturity promotion may cite this waiver;
+- A19 does not repair A6;
+- A6 can be reintroduced into the convergence gate later when UI evidence is required.
+
 ## A9 closure
 
-A9 PR #619 final head `32001d70...` has its own successful kernel validation and now also passes A19 independent replay in run `30870548500`:
+A9 PR #619 final head `32001d70...` has its own successful kernel validation and passes A19 independent replay in run `30870548500`:
 
 - exact immutable SHA assertion;
 - lane-owned TypeScript classification;
@@ -87,16 +82,16 @@ The former A9 Dependency Request is closed.
 
 ## Stale-evidence findings
 
-A19 has now observed multiple worker-head moves during the same RC4 wave: A5, A11 and A6. Branch names, PR prose and older green runs are therefore insufficient release evidence; immutable exact-head replay is required.
+A19 observed multiple worker-head moves during the same RC4 wave. Branch names, PR prose and older green runs are insufficient release evidence; immutable exact-head replay is required for lanes counted as PASS.
 
 ## Dependency Requests
 
 - **DR-RC4-A19-A4 -> A4:** resolve the canonical App Registry action-method contract mismatch and provide a new immutable head.
-- **DR-RC4-A19-A6 -> A6:** fix serious browser color-contrast failures on the final head and provide a new immutable head for demo + runtime/PWA replay.
 - **DR-RC4-A19-A7 -> A7:** repair App Factory definition/revision evidence failures and provide a new immutable head.
 - **DR-RC4-A19-A10 -> A10:** repair syntactically invalid Customer 360 test evidence and provide a new immutable head.
 - **DR-RC4-A19-A13 -> A13:** repair lane-owned TypeScript errors and provide a new immutable head.
-- **DR-RC4-A19-CONVERGENCE -> RC4 convergence:** after blocking workers are repaired and converged, run a second exact-converged-head adversarial replay before maturity promotion.
+- **DR-RC4-A19-A6-DEFERRED -> A6/convergence:** A6 browser/mobile/PWA evidence is deferred by operator waiver; reintroduce only when UI convergence evidence is required. This is not a PASS claim.
+- **DR-RC4-A19-CONVERGENCE -> RC4 convergence:** after blocking workers are repaired and converged, run a second exact-converged-head adversarial replay before maturity promotion, respecting the recorded A6 waiver unless it is explicitly revoked.
 - **DR-RC4-A19-MIGRATION -> migration/environment governance:** provide read-only applied `d1_migrations` inventory before historical migration filename remediation.
 - **DR-RC4-A19-PROVIDER -> A2/environment owner:** provide non-production provider evidence before provider/recovery/replication-state promotion.
 
