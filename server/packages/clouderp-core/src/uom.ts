@@ -99,6 +99,19 @@ function dynamicSetStockQtyMicros(
   return setsMicros;
 }
 
+function lineQuantityMicros(line: UomLine, field: string, index: number, label: string): number {
+  if (!SAFE_FIELDNAME.test(field)) {
+    throw errors.validation(`Mặt hàng ${line.item_code}: ${label} khai trường không hợp lệ`);
+  }
+  const raw = (line as JsonObject)[field];
+  if (typeof raw !== "string" && typeof raw !== "number") {
+    throw errors.validation(`Mặt hàng ${line.item_code}: thiếu ${field} cho ${label} (dòng ${index + 1})`);
+  }
+  const qty = toScaledInt(raw, 6, `items[${index}].${field}`);
+  if (qty <= 0) throw errors.validation(`Mặt hàng ${line.item_code}: ${field} phải lớn hơn 0 (dòng ${index + 1})`);
+  return qty;
+}
+
 function resolveFactorMicros(line: UomLine, master: JsonObject | null, uom: string, index: number): number {
   if (master && uom && !allowedUoms(master).has(uom)) {
     throw errors.validation(
@@ -175,15 +188,37 @@ export async function applyUomConversion<T extends UomLine>(
     const transactionKind = options.transactionKind ?? "stock";
     const uom = transactionUomOf(item, master, transactionKind);
     const qtyMicros = item.qty_micros ?? toScaledInt(item.qty, 6, `items[${index}].qty`);
+    const purchaseStockQtyField = transactionKind === "purchase" ? itemText(master, "purchase_stock_qty_field") : "";
+    if (purchaseStockQtyField && !SAFE_FIELDNAME.test(purchaseStockQtyField)) {
+      throw errors.validation(`Mặt hàng ${item.item_code}: purchase_stock_qty_field không hợp lệ`);
+    }
+    const exactPurchaseStockQty = purchaseStockQtyField
+      ? lineQuantityMicros(item, purchaseStockQtyField, index, "số lượng tồn mua")
+      : undefined;
     const dynamicStockQty = dynamicSetStockQtyMicros(item, master, uom, qtyMicros, index);
-    const factorMicros = dynamicStockQty === undefined
-      ? resolveFactorMicros(item, master, uom, index)
-      : toScaledInt(
+    if (exactPurchaseStockQty !== undefined && dynamicStockQty !== undefined) {
+      throw errors.validation(`Mặt hàng ${item.item_code}: có hai nguồn số lượng tồn mua cùng lúc`);
+    }
+    const factorMicros = exactPurchaseStockQty === undefined && dynamicStockQty !== undefined
+      ? toScaledInt(
           Number(fromScaledInt(dynamicStockQty, 6)) / Number(fromScaledInt(qtyMicros, 6)),
           6,
           `items[${index}].conversion_factor`,
+        )
+      : resolveFactorMicros(item, master, uom, index);
+    if (exactPurchaseStockQty !== undefined) {
+      const expectedFactor = toScaledInt(
+        Number(fromScaledInt(exactPurchaseStockQty, 6)) / Number(fromScaledInt(qtyMicros, 6)),
+        6,
+        `items[${index}].conversion_factor`,
+      );
+      if (Math.abs(factorMicros - expectedFactor) > 1) {
+        throw errors.validation(
+          `Mặt hàng ${item.item_code} (dòng ${index + 1}): hệ số quy đổi không khớp ${purchaseStockQtyField}`,
         );
-    const stockQty = dynamicStockQty ?? (factorMicros === ONE
+      }
+    }
+    const stockQty = exactPurchaseStockQty ?? dynamicStockQty ?? (factorMicros === ONE
       ? qtyMicros
       : multiplyScaled(
           fromScaledInt(qtyMicros, 6),
@@ -216,7 +251,8 @@ export async function applyUomConversion<T extends UomLine>(
       stock_qty: fromScaledInt(stockQty, 6),
       stock_qty_micros: stockQty,
       ...applyRateUnit(item, master, uom, qtyMicros, index),
-      // Allocation-axis authority is master data. Always overwrite/clear client-supplied descriptors.
+      // Quantity-axis authority is master data. Always overwrite/clear client-supplied descriptors.
+      purchase_stock_qty_field: purchaseStockQtyField || undefined,
       purchase_allocation_qty_field: purchaseAllocationQtyField || undefined,
       purchase_allocation_uom: purchaseAllocationUom || undefined,
       ...(master ? {
@@ -229,7 +265,7 @@ export async function applyUomConversion<T extends UomLine>(
   });
 }
 
-/** Canonical stock quantity. It is derived only from the declared stock UOM conversion. */
+/** Canonical stock quantity. It is always the server-snapshotted stock-UOM quantity. */
 export function stockQtyMicros(line: UomLine): number {
   return line.stock_qty_micros ?? line.qty_micros ?? toScaledInt(line.qty, 6, "qty");
 }
@@ -244,22 +280,11 @@ export function purchaseAllocationQtyMicros(line: UomLine, index = 0): number {
   const rawField = data.purchase_allocation_qty_field;
   const field = typeof rawField === "string" ? rawField.trim() : "";
   if (!field) return stockQtyMicros(line);
-  if (!SAFE_FIELDNAME.test(field)) {
-    throw errors.validation(`Mặt hàng ${line.item_code}: trường số lượng phân bổ mua không hợp lệ`);
-  }
   const allocationUom = data.purchase_allocation_uom;
   if (typeof allocationUom !== "string" || !allocationUom.trim()) {
     throw errors.validation(`Mặt hàng ${line.item_code}: thiếu đơn vị của số lượng phân bổ mua`);
   }
-  const raw = data[field];
-  if (typeof raw !== "string" && typeof raw !== "number") {
-    throw errors.validation(`Mặt hàng ${line.item_code}: thiếu ${field} cho số lượng phân bổ mua (dòng ${index + 1})`);
-  }
-  const qty = toScaledInt(raw, 6, `items[${index}].${field}`);
-  if (qty <= 0) {
-    throw errors.validation(`Mặt hàng ${line.item_code}: ${field} phải lớn hơn 0 (dòng ${index + 1})`);
-  }
-  return qty;
+  return lineQuantityMicros(line, field, index, "số lượng phân bổ mua");
 }
 
 export function pricedQtyMicros(line: UomLine): number {
