@@ -1,4 +1,5 @@
 name: One-time R6 Authorized Orchestrator
+# retrigger after workflow exists on main
 
 on:
   push:
