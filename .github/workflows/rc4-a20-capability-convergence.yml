@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   validate:
+    if: startsWith(github.head_ref, 'agent/rc4-20-capability-convergence')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
