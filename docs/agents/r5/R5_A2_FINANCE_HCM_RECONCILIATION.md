@@ -1,9 +1,9 @@
 # R5-02 — Finance / HCM Reconciliation
 
-Date: **2026-08-04**  
-Branch: `agent/r5-02-finance-hcm-reconciliation`  
-Draft PR: **#632**  
-Risk: **CRITICAL**  
+Date: **2026-08-04**
+Branch: `agent/r5-02-finance-hcm-reconciliation`
+Draft PR: **#632**
+Risk: **CRITICAL**
 Baseline after worker-only sync: current `main@8316d2a5f24863d3347cf9f92ec5987145b8dc9e`
 
 ## Verdict
