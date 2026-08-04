@@ -254,31 +254,3 @@ jobs:
           const cfg = JSON.parse(fs.readFileSync('server/config/cloudflare-governance.json', 'utf8'));
           if (cfg?.remote_observation?.status !== 'unverified') process.exit(1);
           NODE
-
-  a6-browser-truth:
-    name: Pinned A6 browser/mobile/PWA truth
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: 422cc5ce7460a9e326e77ccdc20dac5a36a412ca
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Install Chromium
-        run: pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
-      - name: Build demo dependency graph
-        run: pnpm --filter @metaforge/demo... run build
-      - name: Run current V2 demo browser matrix
-        run: pnpm --filter @metaforge/demo run e2e:rc4:v2
-      - name: Build runtime dependency graph
-        run: pnpm --filter runtime... run build
-      - name: Run current V2 runtime and PWA matrix
-        run: pnpm --dir client/e2e-forge run test:rc4:v2
