@@ -6,9 +6,12 @@ const n = (value, name) => {
 const over = (usage, included) => Math.max(0, usage - included);
 const money = (value) => Number(value.toFixed(6));
 
-function component(name, usage, included, unitPrice, divisor = 1) {
-  const billable = over(usage, included);
-  return { name, usage, included, billable, unit_price_usd: unitPrice, cost_usd: money((billable / divisor) * unitPrice) };
+function component(name, usage, included, unitPrice, divisor = 1, roundBillableUnits = false) {
+  const rawBillable = over(usage, included);
+  const billableUnits = rawBillable / divisor;
+  const chargedUnits = roundBillableUnits && rawBillable > 0 ? Math.ceil(billableUnits) : billableUnits;
+  const billable = chargedUnits * divisor;
+  return { name, usage, included, billable, unit_price_usd: unitPrice, cost_usd: money(chargedUnits * unitPrice) };
 }
 
 export function estimateQueueOperations({ messages, average_payload_bytes, average_delivery_attempts = 1 }) {
@@ -68,9 +71,9 @@ export function estimateCloudflareMonthlyCost({ usage = {}, rates }) {
   lines.push(component('kv_lists', n(usage.kv_lists, 'kv_lists'), n(kv.lists_included, 'kv lists included'), n(kv.list_overage_per_million_usd, 'kv list price'), 1_000_000));
   lines.push(component('kv_storage_gb_month', n(usage.kv_storage_gb_month, 'kv_storage_gb_month'), n(kv.storage_gb_month_included, 'kv storage included'), n(kv.storage_overage_per_gb_month_usd, 'kv storage price')));
 
-  lines.push(component('r2_storage_gb_month', n(usage.r2_storage_gb_month, 'r2_storage_gb_month'), n(r2.storage_gb_month_included, 'r2 storage included'), n(r2.storage_per_gb_month_usd, 'r2 storage price')));
-  lines.push(component('r2_class_a_ops', n(usage.r2_class_a_ops, 'r2_class_a_ops'), n(r2.class_a_included, 'r2 class A included'), n(r2.class_a_per_million_usd, 'r2 class A price'), 1_000_000));
-  lines.push(component('r2_class_b_ops', n(usage.r2_class_b_ops, 'r2_class_b_ops'), n(r2.class_b_included, 'r2 class B included'), n(r2.class_b_per_million_usd, 'r2 class B price'), 1_000_000));
+  lines.push(component('r2_storage_gb_month', n(usage.r2_storage_gb_month, 'r2_storage_gb_month'), n(r2.storage_gb_month_included, 'r2 storage included'), n(r2.storage_per_gb_month_usd, 'r2 storage price'), 1, true));
+  lines.push(component('r2_class_a_ops', n(usage.r2_class_a_ops, 'r2_class_a_ops'), n(r2.class_a_included, 'r2 class A included'), n(r2.class_a_per_million_usd, 'r2 class A price'), 1_000_000, true));
+  lines.push(component('r2_class_b_ops', n(usage.r2_class_b_ops, 'r2_class_b_ops'), n(r2.class_b_included, 'r2 class B included'), n(r2.class_b_per_million_usd, 'r2 class B price'), 1_000_000, true));
 
   const total = money(lines.reduce((sum, line) => sum + line.cost_usd, 0));
   return {
