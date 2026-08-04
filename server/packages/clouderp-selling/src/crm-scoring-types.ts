@@ -9,19 +9,19 @@ export interface CrmLeadScoreRuleData extends JsonObject {
   rule_name: string;
   fact: CrmLeadScoreFact;
   operator: CrmLeadScoreOperator;
-  match_value?: string;
+  match_value?: string | undefined;
   points: number;
   effective_from: string;
-  effective_to?: string;
-  status?: CrmLeadScoreRuleStatus;
-  notes?: string;
+  effective_to?: string | undefined;
+  status?: CrmLeadScoreRuleStatus | undefined;
+  notes?: string | undefined;
 }
 
 export interface CrmLeadScoreSnapshotData extends JsonObject {
   company: string;
   lead: string;
-  score?: number;
-  matched_rule_count?: number;
-  matched_rules?: string;
-  scored_at?: string;
+  score?: number | undefined;
+  matched_rule_count?: number | undefined;
+  matched_rules?: string | undefined;
+  scored_at?: string | undefined;
 }
