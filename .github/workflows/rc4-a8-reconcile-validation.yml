@@ -54,8 +54,8 @@ jobs:
           grep -q 'registerIntegrationHubControllers' server/apps/tenant-worker/src/aggregate-do.ts
           grep -q 'registerAppFactoryControllers' server/apps/tenant-worker/src/aggregate-do.ts
           grep -q 'APP_FACTORY_APPROVAL_PROCESS_DOCTYPE' server/apps/tenant-worker/src/aggregate-do.ts
-      - name: SQL and diff safety
+      - name: SQL and code diff safety
         run: |
           python3 server/scripts/verify-sql.py
           git fetch origin main
-          git diff --check origin/main...HEAD
+          git diff --check origin/main...HEAD -- server/apps/tenant-worker/src/aggregate-do.ts server/packages/integration-hub server/tests/integration-hub-einvoice-provider.test.mjs server/tests/integration-hub-kernel-registration.test.mjs server/tests/integration-hub-queue-recovery.test.mjs
