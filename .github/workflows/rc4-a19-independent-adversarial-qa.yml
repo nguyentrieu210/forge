@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: rc4-a19-${{ github.event.pull_request.number }}
@@ -78,6 +79,34 @@ jobs:
               print('0110 no longer duplicated; require applied-state evidence review before treating this as resolved')
           PY
 
+  a6-merged-browser-evidence:
+    name: Merged A6 browser evidence provenance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify accepted A6 source and merge ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          accepted_source=67b4e71fa245eec2a16e075b3a5c388de45ff7ed
+          merge_commit=834da8cf8fbf496f6c58cb0d8ba2119c40a6b66c
+          git merge-base --is-ancestor "$accepted_source" HEAD
+          git merge-base --is-ancestor "$merge_commit" HEAD
+          echo "A6 accepted browser source and merge are ancestors of current main"
+      - name: Verify decisive A6 workflow provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          json=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/30871503111")
+          node -e 'const r=JSON.parse(process.argv[1]); if(r.status!=="completed"||r.conclusion!=="success"||r.head_sha!=="51e4787017563356081278457bf7106013c2d6e2") throw new Error(JSON.stringify({status:r.status,conclusion:r.conclusion,head_sha:r.head_sha})); console.log("A6 decisive browser run: SUCCESS")' "$json"
+
   pinned-worker-adversarial:
     name: Pinned ${{ matrix.lane }} adversarial replay
     runs-on: ubuntu-latest
@@ -91,29 +120,29 @@ jobs:
           - lane: A3-Migration
             sha: 792f7f311d52f3ed0882c284b1e3d9ff5f34b359
           - lane: A4-VN-Statutory
-            sha: 84f25a829bb7eb28ab8bce053dc336435b46e77f
+            sha: f017c1f70cf67676bd883d74fa75f4fa00d2312e
           - lane: A5-HCM-Payroll
             sha: 1baaf38d92f5aa0d53cfd2260d5baade850be8dd
           - lane: A7-App-Factory
-            sha: e656c19d54450f1290ad44e8bba8819e650b42ef
+            sha: 5d422009700caf029ca202e98c176c1915c2fd63
           - lane: A8-Integration
             sha: 8e43a4e04818fc1d956c5173190f1794dfc802b8
           - lane: A9-Kernel
             sha: 32001d70a4ef87a5e14bd7df2dcc100cd0f8d243
           - lane: A10-CRM
-            sha: d90085ba440f07c278e2e620a1409611b89ca9ab
+            sha: 419ee8e90361c28350a1f6dd20a9be2480161d7d
           - lane: A11-Procurement
             sha: 27c616c2a77f08bb0284a0de4ea141637ce82462
           - lane: A12-Inventory-WMS
-            sha: 0c63ae06c6ee0caccb75bc8f5341fff283f3a532
+            sha: 68f1ab9e6ee3721e2ed66444fad9dfe03eaf2fc4
           - lane: A13-Manufacturing-QMS
-            sha: 5c9c47ba4e5092fd83c4752785047ad7e69be34c
+            sha: d6b7a503e8dacaeaa37fd4180f81b0314a339b50
           - lane: A14-Project-Service
             sha: 8ca102b3fbdf30cb2db0366ce32ac0b9102c732a
           - lane: A15-Semantic-AI
             sha: 3c6db92969d80aab92afdc9ef4f07db0cbe2565b
           - lane: A16-Workplace
-            sha: 9e24087161851a78376023f1210e50b4a2220590
+            sha: 26db2690deedc23613ae9179815f4cfe25cc32ec
           - lane: A17-Commerce
             sha: f2504064dbdf929ba6c03107eea624463943fce1
           - lane: A18-Alumdoor
@@ -146,7 +175,7 @@ jobs:
           case "${{ matrix.lane }}" in
             A1-IAM) pattern='packages/(auth|frappe-api|organization-security)/src/|apps/tenant-worker/src/(index|mfa-config|native-security)\.ts' ;;
             A3-Migration) pattern='packages/migration/src/|apps/tenant-worker/src/(index|migration-api)\.ts' ;;
-            A4-VN-Statutory) pattern='apps-src/vn-accounting-worker/src/(legal-evidence|vat-service)\.ts' ;;
+            A4-VN-Statutory) pattern='apps-src/vn-accounting-worker/src/(index|legal-evidence|vat-service)\.ts' ;;
             A5-HCM-Payroll) pattern='packages/(hrm|ledger|payment-ledger)/src/|apps-src/hrm/' ;;
             A7-App-Factory) pattern='packages/app-registry/src/(app-factory-approval-runtime|app-factory-definition|index)\.ts|apps/tenant-worker/src/aggregate-do\.ts' ;;
             A8-Integration) pattern='packages/integration-hub/src/(einvoice-provider|queue-recovery)\.ts|apps/tenant-worker/src/aggregate-do\.ts' ;;
