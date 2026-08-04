@@ -191,18 +191,25 @@ test("change order and acceptance require explicit exception evidence", async ()
   assert.match(await message(acceptance), /điều kiện hoặc tồn tại/i);
 });
 
-test("SLA policy requires executable target tables and coherent escalation windows", async () => {
+test("SLA policy requires executable target tables and bounded escalation windows", async () => {
   const empty = await validate("support", "Support SLA Policy", { active_from: "2026-08-01", priorities: [], workdays: [] });
   assert.equal(empty.status, 422);
   assert.match(await message(empty), /mục tiêu theo mức ưu tiên/i);
 
   const escalation = await validate("support", "Support SLA Policy", {
     active_from: "2026-08-01",
-    priorities: [{ priority: "P1", response_minutes: 30, escalation_minutes: 10, resolution_minutes: 60 }],
+    priorities: [{ priority: "P1", response_minutes: 30, escalation_minutes: 90, resolution_minutes: 60 }],
     workdays: [{ weekday: "Thứ Hai", start_time: "08:00", end_time: "17:00" }],
   });
   assert.equal(escalation.status, 422);
   assert.match(await message(escalation), /leo thang/i);
+
+  const earlyEscalation = await validate("support", "Support SLA Policy", {
+    active_from: "2026-08-01",
+    priorities: [{ priority: "P1", response_minutes: 30, escalation_minutes: 10, resolution_minutes: 60 }],
+    workdays: [{ weekday: "Thứ Hai", start_time: "08:00", end_time: "17:00" }],
+  });
+  assert.equal(earlyEscalation.status, 200, await message(earlyEscalation));
 
   const defaults = await validate("support", "Support SLA Policy", {
     active_from: "2026-08-01",
