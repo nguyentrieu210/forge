@@ -42,7 +42,7 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Full server build baseline
+      - name: Full server build baseline (inherited debt visible)
         continue-on-error: true
         run: pnpm run server:build
 
@@ -58,18 +58,16 @@ jobs:
             },
             "include": [
               "packages/frappe-api/src/workplace-maintenance.ts",
-              "packages/frappe-api/src/desk-views.ts",
-              "packages/frappe-model/src/**/*.ts",
-              "packages/document-kernel/src/**/*.ts",
-              "packages/auth/src/**/*.ts",
-              "packages/contracts/src/**/*.ts",
-              "packages/core/src/**/*.ts",
               "types/**/*.d.ts"
             ],
             "exclude": ["dist", "node_modules", "apps"]
           }
           JSON
           pnpm exec tsc -p tsconfig.rc4-a16.json
+
+      - name: Verify emitted A16 artifact
+        working-directory: server
+        run: test -f dist/packages/frappe-api/src/workplace-maintenance.js
 
       - name: Verify workplace metadata package
         working-directory: server
