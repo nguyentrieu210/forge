@@ -92,13 +92,13 @@
     },
     {
       "path": "server/apps-src/alumdoor-worker/wrangler.jsonc",
-      "expected_blob_sha": "252fee8b38492cd26cbf6fd083210142a227b720",
+      "expected_blob_sha": "1fca8a06a965521ae1d024ff9a0b1eba6385ef8d",
       "declared_environment": "production-app",
       "role": "alumdoor-app-worker",
       "authority": "source-controlled-declarative",
       "tenant_scope": "app-shared",
       "compatibility_date": "2026-07-27",
-      "observability": "owner-dependency",
+      "observability": "required",
       "owner": "WS17"
     },
     {
