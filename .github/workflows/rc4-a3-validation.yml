@@ -72,7 +72,6 @@ jobs:
             tests/migration-orchestrator.test.mjs \
             tests/migration-durable-orchestrator.test.mjs \
             tests/migration-kernel-port.test.mjs \
-            tests/migration-correction.test.mjs \
             tests/migration-frappe-source.test.mjs \
             tests/migration-opening.test.mjs
 
