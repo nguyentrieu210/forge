@@ -6,9 +6,11 @@ on:
     paths:
       - "server/packages/app-registry/src/**"
       - "server/apps/tenant-worker/src/aggregate-do.ts"
+      - "server/apps-src/app-factory/**"
       - "server/migrations/tenant/0114_app_factory_approval_runtime.sql"
       - "server/tests/app-factory-approval-runtime.test.mjs"
       - "server/tests/app-revision-history.test.mjs"
+      - "server/tests/app-factory-meta.test.mjs"
       - "docs/agents/rc4/RC4_A7_APPFACTORY_RESIDUAL_HANDOFF.md"
       - ".github/workflows/rc4-a7-appfactory-validation.yml"
 
@@ -80,7 +82,7 @@ jobs:
             cat /tmp/rc4-a7-errors.log
           fi
 
-      - name: Approval, timer and definition regressions
+      - name: Approval, timer, definition and package regressions
         working-directory: server
         run: >-
           node --test
@@ -90,6 +92,7 @@ jobs:
           tests/app-factory-definition-effective-window.test.mjs
           tests/app-factory-definition-resolver.test.mjs
           tests/app-factory-approval-runtime.test.mjs
+          tests/app-factory-meta.test.mjs
 
       - name: Rollback and revision-history regressions
         working-directory: server
