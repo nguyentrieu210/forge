@@ -22,7 +22,7 @@ const transition = (workflow, action) => {
 test("maintenance exposes authoritative warranty closure dependencies", () => {
   const app = json("app.json");
   const roles = json("roles.json");
-  assert.equal(app.version, "1.5.0");
+  assert.equal(app.version, "1.5.1");
   assert.equal(app.worker, "cloudforge-app-ws07");
   assert.deepEqual(app.validators.map((entry) => entry.doctype), ["Maintenance Request", "Service Contract", "Warranty Claim", "Service Order"]);
   for (const key of ["Maintenance Request", "Warranty Claim", "Service Order", "Service Contract", "Service Technician"]) {
@@ -36,8 +36,19 @@ test("maintenance exposes authoritative warranty closure dependencies", () => {
   ]) {
     assert.ok(app.externalDocTypes.some((entry) => entry.name === external[0] && entry.app === external[1]), `missing external ${external[0]}`);
   }
-  assert.ok(app.reports.some((entry) => entry.name === "Service Order Control" && entry.filters.includes("billing_mode")));
-  assert.ok(app.reports.some((entry) => entry.name === "Warranty Claim Control" && entry.filters.includes("source_delivery_note")));
+  const serviceReport = app.reports.find((entry) => entry.name === "Service Order Control");
+  const warrantyReport = app.reports.find((entry) => entry.name === "Warranty Claim Control");
+  assert.ok(serviceReport?.filters.includes("billing_mode"));
+  assert.ok(serviceReport?.filters.includes("resolution_type"));
+  assert.ok(serviceReport?.filters.includes("correction_of"));
+  for (const name of ["resolution_type", "actual_end", "correction_of"]) {
+    assert.ok(serviceReport?.columns.some((entry) => entry.field === name), `missing service report ${name}`);
+  }
+  assert.ok(warrantyReport?.filters.includes("source_delivery_note"));
+  assert.ok(warrantyReport?.filters.includes("correction_of"));
+  for (const name of ["service_order", "resolution_date", "correction_of"]) {
+    assert.ok(warrantyReport?.columns.some((entry) => entry.field === name), `missing warranty report ${name}`);
+  }
   assert.ok(roles.some((entry) => entry.role === "Maintenance Technician" && entry.desk_access === true));
 });
 
