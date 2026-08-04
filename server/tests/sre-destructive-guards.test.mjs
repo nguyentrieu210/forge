@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assertPitrRequest, assertPastTimestamp, findString, requireBookmark } from "../scripts/lib/pitr-guard.mjs";
+import {
+  assertPitrRequest,
+  assertPastTimestamp,
+  classifyPitrStorage,
+  findString,
+  requireBookmark,
+} from "../scripts/lib/pitr-guard.mjs";
 import { assertWorkerRollbackRequest, containsString } from "../scripts/lib/worker-rollback-guard.mjs";
 
 const NOW = Date.parse("2026-08-03T03:00:00Z");
@@ -37,6 +43,18 @@ test("destructive PITR requires exact tenant confirmation, reason and backup dir
   assert.equal(assertPitrRequest({
     ...base, confirm: "alu", reason: "recover", backupDir: "/secure",
   }).execute, true);
+});
+
+test("PITR storage preflight rejects explicit legacy storage but permits direct probe when version is omitted", () => {
+  assert.deepEqual(classifyPitrStorage({ version: "production" }), {
+    reportedVersion: "production",
+    requiresDirectProbe: false,
+  });
+  assert.deepEqual(classifyPitrStorage({ database: { name: "cloudforge-alu" } }), {
+    reportedVersion: null,
+    requiresDirectProbe: true,
+  });
+  assert.throws(() => classifyPitrStorage({ result: { version: "alpha" } }), /does not support Time Travel/);
 });
 
 test("PITR bookmark extraction verifies nested provider responses", () => {
