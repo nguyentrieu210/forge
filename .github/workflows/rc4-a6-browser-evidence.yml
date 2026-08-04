@@ -10,6 +10,7 @@ on:
       - "client/e2e-forge/**"
       - "client/packages/controls/**"
       - "client/packages/shell/**"
+      - "client/packages/ui/**"
       - "client/packages/views/**"
       - ".github/workflows/rc4-a6-browser-evidence.yml"
 
