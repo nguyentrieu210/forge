@@ -5,8 +5,8 @@
   "tenant": "alu",
   "origin": "https://alu.kairo.vn",
   "mutation": "AUTHORIZED_PRODUCTION_CERTIFICATION",
-  "completed_at": "2026-08-04T21:38:09.741Z",
-  "workflow_run_id": "30952703083",
+  "completed_at": "2026-08-04T21:48:39.225Z",
+  "workflow_run_id": "30953493831",
   "outcomes": {
     "checkout": "success",
     "ancestry": "success",
@@ -30,7 +30,7 @@
   "evidence_matrix": {
     "format": "forge-r6-final-evidence-matrix/v4",
     "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
-    "observed_at": "2026-08-04T21:38:08.412Z",
+    "observed_at": "2026-08-04T21:48:37.895Z",
     "environment": "alu demo production + disposable remote D1 + exact real-workerd",
     "mutation": "AUTHORIZED_PRODUCTION_CERTIFICATION",
     "counts": {
@@ -229,7 +229,7 @@
     "format": "forge-r6-migration-convergence/v4",
     "evidence_id": "R6-E06",
     "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
-    "observed_at": "2026-08-04T21:36:49.991Z",
+    "observed_at": "2026-08-04T21:47:28.321Z",
     "expected": 80,
     "applied": 80,
     "pending": [],
@@ -239,14 +239,14 @@
   "backup": {
     "format": "forge-backup-verification/v1",
     "tenant": "alu",
-    "source_file": "alu-2026-08-04T21-35-12-963Z.sql",
-    "source_sha256": "0a50593d97fd6b9b683c1a53d466e862c179b6b8d8e8a1707bb81550ce125bc2",
-    "source_bytes": 13920392,
+    "source_file": "alu-2026-08-04T21-45-52-614Z.sql",
+    "source_sha256": "f0f40d0d61810b9d3402be10f5d17a23d3032258c89ffc605adeb8e56aab45c2",
+    "source_bytes": 13920233,
     "manifest_verified": true,
-    "source_created_at": "2026-08-04T21:35:18.288Z",
+    "source_created_at": "2026-08-04T21:45:58.317Z",
     "source_database_name": "cloudforge-alu",
-    "verified_at": "2026-08-04T21:35:37.655Z",
-    "local_restore_duration_ms": 19108,
+    "verified_at": "2026-08-04T21:46:14.685Z",
+    "local_restore_duration_ms": 16098,
     "table_count": 97,
     "migration_count": 80,
     "quick_check": "ok",
@@ -270,15 +270,15 @@
   "restore": {
     "format": "forge-restore-drill/v1",
     "tenant": "alu",
-    "source_file": "alu-2026-08-04T21-35-12-963Z.sql",
-    "source_sha256": "0a50593d97fd6b9b683c1a53d466e862c179b6b8d8e8a1707bb81550ce125bc2",
-    "source_bytes": 13920392,
+    "source_file": "alu-2026-08-04T21-45-52-614Z.sql",
+    "source_sha256": "f0f40d0d61810b9d3402be10f5d17a23d3032258c89ffc605adeb8e56aab45c2",
+    "source_bytes": 13920233,
     "backup_manifest_verified": true,
-    "source_created_at": "2026-08-04T21:35:18.288Z",
-    "target_database_name": "cloudforge-drill-r6-30952703083",
-    "target_database_id": "cce40a7c-e522-462e-8d79-b349b277bfbe",
-    "restored_at": "2026-08-04T21:36:02.434Z",
-    "restore_duration_ms": 19632,
+    "source_created_at": "2026-08-04T21:45:58.317Z",
+    "target_database_name": "cloudforge-drill-r6-30953493831",
+    "target_database_id": "8705c247-df21-49f9-b261-30d6b1c2fb68",
+    "restored_at": "2026-08-04T21:46:40.572Z",
+    "restore_duration_ms": 20136,
     "table_count": 97,
     "migration_count": 80,
     "integrity": [
@@ -303,7 +303,7 @@
     "format": "forge-r6-cutover-reconciliation/v4",
     "evidence_id": "R6-E11",
     "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
-    "observed_at": "2026-08-04T21:36:44.950Z",
+    "observed_at": "2026-08-04T21:47:22.647Z",
     "environment_class": "DISPOSABLE_REMOTE",
     "comparisons": [
       {
@@ -406,12 +406,12 @@
     "d1_version_direct_probe_required": true,
     "time_travel_supported": true,
     "time_travel_support_evidence": "current and target bookmarks resolved by read-only wrangler d1 time-travel info",
-    "planned_at": "2026-08-04T21:38:08.362Z",
+    "planned_at": "2026-08-04T21:48:37.841Z",
     "reason": null,
-    "requested_timestamp": "2026-08-04T21:33:01Z",
+    "requested_timestamp": "2026-08-04T21:43:30Z",
     "requested_bookmark": null,
-    "current_bookmark_before": "00000059-0000012a-000050bd-06a161af78060fb78851d61b708f0b64",
-    "target_bookmark": "00000059-000000e4-000050bd-331b1476e0308334c2c87e77c8fc4c16",
+    "current_bookmark_before": "00000059-0000017a-000050bd-6da15067a9569800c969de4c0857d7a9",
+    "target_bookmark": "00000059-0000013e-000050bd-04bfba7b5bb9dcca70c468954ca2d1e2",
     "destructive": false,
     "executed": false
   },
@@ -419,23 +419,23 @@
     "format": "forge-r6-pilot-pressure/v4",
     "evidence_id": "R6-E16",
     "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
-    "observed_at": "2026-08-04T21:37:53.133Z",
+    "observed_at": "2026-08-04T21:48:22.816Z",
     "requests": 50,
     "concurrency": 5,
     "errors": 0,
     "error_rate": 0,
-    "rps": 141.85,
+    "rps": 205.43,
     "latency_ms": {
-      "p50": 21.84,
-      "p95": 78.08,
-      "p99": 97.82
+      "p50": 14.02,
+      "p95": 61.11,
+      "p99": 83.6
     },
     "status": "PASS"
   },
   "release_health": {
     "format": "forge-sre-health-snapshot/v1",
-    "observed_at": "2026-08-04T21:37:53.443Z",
-    "duration_ms": 261,
+    "observed_at": "2026-08-04T21:48:23.031Z",
+    "duration_ms": 159,
     "attempt": 1,
     "attempts": 10,
     "target": {
@@ -486,7 +486,7 @@
       "tenant_worker": "cloudforge-tenant-alu",
       "app_worker": "cloudforge-app-alumdoor"
     },
-    "observed_at": "2026-08-04T21:37:53.497Z",
+    "observed_at": "2026-08-04T21:48:23.096Z",
     "mutation": "NONE",
     "provider_account": {
       "identity_hash": "9f6639ea09c5",
@@ -718,7 +718,7 @@
   "identity": {
     "schema": "forge-r6-convergence-identity/v1",
     "evidence_id": "R6-E18",
-    "observed_at": "2026-08-04T21:37:55.769Z",
+    "observed_at": "2026-08-04T21:48:24.933Z",
     "environment_class": "PILOT_TARGET_OBSERVED",
     "mutation": "NONE",
     "target": {
@@ -771,9 +771,17 @@
   "profile": {
     "candidate_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
     "before": {
-      "profile_id": "default",
-      "version": 0,
-      "resolution": null
+      "profile_id": "alumdoor-pilot",
+      "version": 1,
+      "resolution": {
+        "profile_id": "alumdoor-pilot",
+        "valid": true,
+        "capabilities": [],
+        "errors": [],
+        "implicit_enables": [],
+        "package_requirements": [],
+        "diff": []
+      }
     },
     "active": {
       "profile_id": "alumdoor-pilot",
