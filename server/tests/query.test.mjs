@@ -41,6 +41,40 @@ test("app report compiler stays on one tenant and one manifest-owned doctype", (
   assert.deepEqual(compiled.params.slice(0, 3), ["tenant-a", "Enrollment", "CLASS-1' OR 1=1 --"]);
 });
 
+test("app report aggregates preserve their declared field keys for charts and report rows", () => {
+  const report = {
+    name: "Orders by customer",
+    doctype: "Sales Order",
+    columns: [
+      { field: "customer", label: "Customer", type: "Link" },
+      { field: "grand_total", label: "Total", type: "Currency", aggregate: "sum" },
+      { field: "name", label: "Orders", type: "Int", aggregate: "count" },
+    ],
+    group_by: "customer",
+    order_by: { column: "grand_total", direction: "desc" },
+    filters: [],
+    limit: 500,
+  };
+  const compiled = compileAppReport(report, { report: report.name, tenant_id: "tenant-a" });
+  assert.match(compiled.sql, /COALESCE\(SUM\(CAST\(.+grand_total.+ AS REAL\)\),0\) AS "grand_total"/);
+  assert.match(compiled.sql, /COUNT\(\*\) AS "name"/);
+  assert.match(compiled.sql, /ORDER BY "grand_total" DESC/);
+  assert.deepEqual(compiled.columns.map((column) => column.field), ["customer", "grand_total", "name"]);
+  assert.ok(!compiled.sql.includes("sum_grand_total"));
+  assert.ok(!compiled.sql.includes("count_name"));
+});
+
+test("app report compiler rejects duplicate public column keys", () => {
+  assert.throws(() => compileAppReport({
+    ...appReport,
+    columns: [
+      { field: "class_group", label: "Class", type: "Link" },
+      { field: "name", label: "Count", type: "Int", aggregate: "count" },
+      { field: "name", label: "Maximum", type: "Data", aggregate: "max" },
+    ],
+  }, { report: appReport.name, tenant_id: "tenant-a" }), (error) => error.code === "VALIDATION_ERROR");
+});
+
 test("app report compiler refuses a forged filter operator even if a caller bypasses request parsing", () => {
   assert.throws(() => compileAppReport(appReport, {
     report: appReport.name,
