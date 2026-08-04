@@ -5,7 +5,8 @@
   "requires": [],
   "externalDocTypes": [
     {"name":"Salary Component","kind":"master","app":"erpnext"},
-    {"name":"Expense Claim","kind":"transaction","app":"erpnext"}
+    {"name":"Expense Claim","kind":"transaction","app":"erpnext"},
+    {"name":"Bank Account","kind":"master","app":"erpnext"}
   ],
   "nav": [
     {"key":"company-master","label":"Công ty","kind":"route","route":"/app/Company","icon":"building-2","group":"Tổ chức","required_roles":["HR Manager","Accounts Manager","System Manager"]},
