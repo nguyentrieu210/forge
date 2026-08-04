@@ -1,0 +1,86 @@
+name: RC4 A16 Workplace Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/packages/frappe-api/src/workplace-maintenance.ts"
+      - "server/packages/frappe-api/src/index.ts"
+      - "server/tests/rc4-a16-workplace-maintenance.test.mjs"
+      - "server/apps-src/workplace/**"
+      - "docs/agents/rc4/A16-HANDOFF.md"
+      - ".github/workflows/rc4-a16-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc4-a16-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  workplace:
+    if: github.head_ref == 'agent/rc4-16-workplace-dms-collab'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Full server build baseline
+        continue-on-error: true
+        run: pnpm run server:build
+
+      - name: Focused A16 TypeScript check
+        working-directory: server
+        run: |
+          cat > tsconfig.rc4-a16.json <<'JSON'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "noEmit": true,
+              "declaration": false
+            },
+            "include": [
+              "packages/frappe-api/src/workplace-maintenance.ts",
+              "packages/frappe-api/src/desk-views.ts",
+              "packages/frappe-model/src/**/*.ts",
+              "packages/document-kernel/src/**/*.ts",
+              "packages/auth/src/**/*.ts",
+              "packages/contracts/src/**/*.ts",
+              "packages/core/src/**/*.ts",
+              "types/**/*.d.ts"
+            ],
+            "exclude": ["dist", "node_modules", "apps"]
+          }
+          JSON
+          pnpm exec tsc -p tsconfig.rc4-a16.json
+
+      - name: Verify workplace metadata package
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/workplace --check
+
+      - name: A16 scheduled alert and WS15 authorization regressions
+        working-directory: server
+        run: >-
+          node --test
+          tests/rc4-a16-workplace-maintenance.test.mjs
+          tests/ws15-notification-delivery.test.mjs
+          tests/ws15-assignment-access.test.mjs
+          tests/ws15-collaboration-assignment-lifecycle.test.mjs
+          tests/ws15-workplace-metadata.test.mjs
