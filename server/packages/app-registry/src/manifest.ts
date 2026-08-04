@@ -646,8 +646,19 @@ function parseChart(
   if (dimensions.length !== 1) throw errors.validation(`charts[${index}] needs exactly one dimension`);
   if (measures.length < 1 || measures.length > 3) throw errors.validation(`charts[${index}] needs 1 to 3 measures`);
   assertUnique([...dimensions, ...measures], `charts[${index}] field`);
-  if (report.group_by !== dimensions[0]) throw errors.validation(`charts[${index}] dimension must match report group_by (${report.group_by ?? "none"})`);
-  const columns = new Map(report.columns.map((column) => [column.field, column]));
+  // Query reports expose aggregate columns under their wire aliases, not source
+  // fieldnames: sum(grand_total) -> sum_grand_total, count(name) -> count_name.
+  // Charts are persisted/rendered against that response shape, so validate exactly the
+  // names the report endpoint returns.
+  const wireField = (column: AppReportColumn): string => column.aggregate
+    ? `${column.aggregate}_${column.field}`
+    : column.field;
+  const wireColumns = report.columns.map((column) => [wireField(column), column] as const);
+  assertUnique(wireColumns.map(([field]) => field), `reports[${index}] wire column`);
+  const columns = new Map(wireColumns);
+  const groupByColumn = report.columns.find((column) => !column.aggregate && column.field === report.group_by);
+  const groupByWireField = groupByColumn ? wireField(groupByColumn) : report.group_by;
+  if (groupByWireField !== dimensions[0]) throw errors.validation(`charts[${index}] dimension must match report group_by (${groupByWireField ?? "none"})`);
   if (!columns.has(dimensions[0]!)) throw errors.validation(`charts[${index}] dimension is not a report column: ${dimensions[0]}`);
   for (const measure of measures) {
     const column = columns.get(measure);
