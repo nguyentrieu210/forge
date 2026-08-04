@@ -2,13 +2,14 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const EXPECTED_TOTAL = 956;
 const MATURITY = ["Missing", "Foundation", "Wired", "RC", "Hardened"];
 const VALID_MATURITY = new Set(MATURITY);
 const VALID_LANE_STATUS = new Set(["BOOTSTRAPPED", "RUNNING", "BLOCKED", "READY", "CONVERGING", "DONE", "SUPERSEDED/CLOSED"]);
-const NON_PROMOTION_EVIDENCE = new Set(["bootstrap", "audit-only", "source-static", "harness-only", "independent-qa-in-progress"]);
+const NON_PROMOTION_EVIDENCE = new Set(["bootstrap", "audit-only", "source-static", "harness-only", "independent-qa-in-progress", "independent-qa-partial", "exact-failing"]);
 const idPattern = "[A-Z]{1,2}\\d{2}-\\d{3}";
 const shaPattern = /^[0-9a-f]{40}$/;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -44,6 +45,20 @@ function countTotal(counts, label) {
     else total += counts[maturity];
   }
   if (total !== EXPECTED_TOTAL) fail(`${label} totals ${total}, expected ${EXPECTED_TOTAL}`);
+}
+function git(args) {
+  return spawnSync("git", args, { cwd: root, encoding: "utf8" });
+}
+function isAncestor(ancestor, descendant = "HEAD") {
+  return git(["merge-base", "--is-ancestor", ancestor, descendant]).status === 0;
+}
+function changedFiles(base, head) {
+  const result = git(["diff", "--name-only", `${base}..${head}`]);
+  if (result.status !== 0) {
+    fail(`git diff failed for ${base}..${head}: ${(result.stderr || result.stdout || "unknown").trim()}`);
+    return [];
+  }
+  return result.stdout.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
 }
 
 const mapText = fs.readFileSync(mapPath, "utf8");
@@ -90,7 +105,10 @@ if (unknown.length) fail(`registry unknown IDs: ${unknown.join(", ")}`);
 const actualCounts = Object.fromEntries(MATURITY.map((maturity) => [maturity, 0]));
 for (const { maturity } of assignments.values()) actualCounts[maturity] += 1;
 
-const evidenceIndexText = statusText.slice(statusText.indexOf("## Evidence Index"), statusText.indexOf("## Dependency Request"));
+const evidenceStart = statusText.indexOf("## Evidence Index");
+const evidenceEnd = statusText.indexOf("## Dependency Request");
+if (evidenceStart < 0 || evidenceEnd <= evidenceStart) fail("Evidence Index section is missing or malformed");
+const evidenceIndexText = evidenceStart >= 0 && evidenceEnd > evidenceStart ? statusText.slice(evidenceStart, evidenceEnd) : "";
 const evidenceDefs = [...evidenceIndexText.matchAll(/^- `(E-[A-Z0-9-]+)`:/gm)].map((match) => match[1]);
 const evidenceDefSet = new Set(evidenceDefs);
 const duplicateEvidenceDefs = duplicates(evidenceDefs);
@@ -98,20 +116,18 @@ if (duplicateEvidenceDefs.length) fail(`duplicate Evidence Index bundles: ${dupl
 for (const evidence of new Set(evidenceRefs)) if (!evidenceDefSet.has(evidence)) fail(`registry references undefined evidence bundle: ${evidence}`);
 for (const evidence of evidenceDefSet) if (!evidenceRefs.includes(evidence)) fail(`Evidence Index bundle is unused by registry: ${evidence}`);
 
-if (manifest.schema_version !== 1) fail(`unsupported manifest schema_version: ${manifest.schema_version}`);
-if (manifest.work_item !== "RC4-A20") fail(`manifest work_item must be RC4-A20`);
-if (!shaPattern.test(manifest.snapshot?.main_sha ?? "")) fail(`snapshot.main_sha must be an exact 40-char SHA`);
+if (manifest.schema_version !== 2) fail(`unsupported manifest schema_version: ${manifest.schema_version}`);
+if (manifest.work_item !== "RC4-A20-R2") fail(`manifest work_item must be RC4-A20-R2`);
+if (!shaPattern.test(manifest.snapshot?.main_sha ?? "")) fail("snapshot.main_sha must be an exact 40-char SHA");
 const expectedMain = process.env.RC4_EXPECTED_MAIN_SHA;
 if (expectedMain && manifest.snapshot?.main_sha !== expectedMain) fail(`snapshot main ${manifest.snapshot?.main_sha} != PR base ${expectedMain}`);
 countTotal(manifest.baseline_counts, "baseline_counts");
 countTotal(manifest.candidate_counts, "candidate_counts");
 for (const maturity of MATURITY) {
-  if (manifest.candidate_counts?.[maturity] !== actualCounts[maturity]) {
-    fail(`candidate ${maturity}=${manifest.candidate_counts?.[maturity]} != canonical registry ${actualCounts[maturity]}`);
-  }
+  if (manifest.candidate_counts?.[maturity] !== actualCounts[maturity]) fail(`candidate ${maturity}=${manifest.candidate_counts?.[maturity]} != canonical registry ${actualCounts[maturity]}`);
 }
 
-if (!Array.isArray(manifest.lanes)) fail(`manifest.lanes must be an array`);
+if (!Array.isArray(manifest.lanes)) fail("manifest.lanes must be an array");
 const expectedAgents = Array.from({ length: 19 }, (_, index) => `A${index + 1}`);
 const laneAgents = Array.isArray(manifest.lanes) ? manifest.lanes.map((lane) => lane.agent) : [];
 for (const agent of expectedAgents) if (!laneAgents.includes(agent)) fail(`missing worker lane: ${agent}`);
@@ -132,21 +148,32 @@ for (const lane of manifest.lanes ?? []) {
   if (typeof lane.reason !== "string" || lane.reason.trim().length < 20) fail(`${lane.agent}: convergence reason is missing/too weak`);
 
   if (lane.accepted_for_maturity === true) {
-    if (lane.status === "BOOTSTRAPPED") fail(`${lane.agent}: bootstrap lane cannot be accepted for maturity`);
+    if (lane.status === "BOOTSTRAPPED" || lane.status === "BLOCKED") fail(`${lane.agent}: ${lane.status} lane cannot be accepted for maturity`);
     if (!shaPattern.test(lane.head_sha ?? "")) fail(`${lane.agent}: accepted lane requires exact head_sha`);
     if (!shaPattern.test(lane.validated_head_sha ?? "")) fail(`${lane.agent}: accepted lane requires exact validated_head_sha`);
     if (!Number.isInteger(lane.workflow_run) || lane.workflow_run <= 0) fail(`${lane.agent}: accepted lane requires executable workflow_run`);
     if (NON_PROMOTION_EVIDENCE.has(lane.evidence_kind)) fail(`${lane.agent}: ${lane.evidence_kind} cannot justify maturity promotion`);
+    if (lane.integrated_in_tree !== true) fail(`${lane.agent}: accepted lane must be integrated into the convergence tree`);
+    if (!shaPattern.test(lane.merge_commit_sha ?? "")) fail(`${lane.agent}: accepted integrated lane requires merge_commit_sha`);
+    else if (!isAncestor(lane.merge_commit_sha, "HEAD")) fail(`${lane.agent}: merge commit ${lane.merge_commit_sha} is not an ancestor of convergence HEAD`);
+    if (shaPattern.test(lane.head_sha ?? "") && !isAncestor(lane.head_sha, "HEAD")) fail(`${lane.agent}: final lane head ${lane.head_sha} is not integrated into convergence HEAD`);
     if (!Array.isArray(lane.promotion_evidence?.capabilities) || lane.promotion_evidence.capabilities.length === 0) fail(`${lane.agent}: accepted lane requires explicit capability IDs`);
     if (!Array.isArray(lane.promotion_evidence?.paths) || lane.promotion_evidence.paths.length === 0) fail(`${lane.agent}: accepted lane requires direct evidence paths`);
     for (const id of lane.promotion_evidence?.capabilities ?? []) if (!mapSet.has(id)) fail(`${lane.agent}: unknown promoted capability ${id}`);
     for (const evidencePath of lane.promotion_evidence?.paths ?? []) {
       if (evidencePath.includes("RC4_A20_")) fail(`${lane.agent}: circular A20 evidence is forbidden: ${evidencePath}`);
+      if (!fs.existsSync(path.join(root, evidencePath))) fail(`${lane.agent}: direct evidence path is not integrated: ${evidencePath}`);
+    }
+    if (lane.validated_head_sha !== lane.head_sha) {
+      if (!isAncestor(lane.validated_head_sha, lane.head_sha)) fail(`${lane.agent}: validated head is not an ancestor of final lane head`);
+      const allowed = new Set(lane.post_validation_allowed_paths ?? []);
+      if (allowed.size === 0) fail(`${lane.agent}: post-validation changes require an explicit path allowlist`);
+      for (const changed of changedFiles(lane.validated_head_sha, lane.head_sha)) if (!allowed.has(changed)) fail(`${lane.agent}: post-validation source drift is not allowed: ${changed}`);
     }
   }
 }
 
-if (!Array.isArray(manifest.maturity_changes)) fail(`maturity_changes must be an array`);
+if (!Array.isArray(manifest.maturity_changes)) fail("maturity_changes must be an array");
 const changeIds = (manifest.maturity_changes ?? []).map((change) => change.id);
 const duplicateChanges = duplicates(changeIds);
 if (duplicateChanges.length) fail(`duplicate maturity changes: ${duplicateChanges.join(", ")}`);
@@ -156,11 +183,12 @@ for (const change of manifest.maturity_changes ?? []) {
   if (!VALID_MATURITY.has(change.from) || !VALID_MATURITY.has(change.to) || change.from === change.to) fail(`${change.id}: invalid maturity transition ${change.from} -> ${change.to}`);
   const lane = laneByAgent.get(change.agent);
   if (!lane || lane.accepted_for_maturity !== true) fail(`${change.id}: change lane ${change.agent} is not accepted for maturity`);
+  if (!(lane?.promotion_evidence?.capabilities ?? []).includes(change.id)) fail(`${change.id}: change is not listed in ${change.agent} promotion evidence`);
   if (!evidenceDefSet.has(change.evidence_ref)) fail(`${change.id}: undefined evidence_ref ${change.evidence_ref}`);
   const current = assignments.get(change.id);
   if (current?.maturity !== change.to) fail(`${change.id}: canonical registry is ${current?.maturity}, manifest target is ${change.to}`);
   if (current?.evidence !== change.evidence_ref) fail(`${change.id}: canonical evidence ${current?.evidence} != change evidence ${change.evidence_ref}`);
-  if (VALID_MATURITY.has(change.from) && VALID_MATURITY.has(change.to) && change.from !== change.to) {
+  if (VALID_MATURITY.has(change.from) && VALID_MATURITY.has(change.to)) {
     arithmetic[change.from] -= 1;
     arithmetic[change.to] += 1;
   }
@@ -172,10 +200,10 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`RC4 A20 capability convergence: PASS`);
+console.log("RC4 A20 R2 capability convergence: PASS");
 console.log(`Capability denominator: ${assignments.size}/${EXPECTED_TOTAL}`);
 console.log(`Evidence bundles: ${evidenceDefSet.size} defined / ${new Set(evidenceRefs).size} referenced`);
 console.log(`Worker lanes: ${laneAgents.length}/19`);
-console.log(`Accepted maturity lanes: ${(manifest.lanes ?? []).filter((lane) => lane.accepted_for_maturity === true).length}`);
+console.log(`Integrated maturity lanes: ${(manifest.lanes ?? []).filter((lane) => lane.accepted_for_maturity === true).length}`);
 console.log(`Maturity changes: ${(manifest.maturity_changes ?? []).length}`);
 console.log(`Maturity: Hardened=${actualCounts.Hardened} RC=${actualCounts.RC} Wired=${actualCounts.Wired} Foundation=${actualCounts.Foundation} Missing=${actualCounts.Missing}`);
