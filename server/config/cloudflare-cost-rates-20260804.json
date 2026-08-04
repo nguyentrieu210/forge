@@ -1,0 +1,62 @@
+{
+  "checked_at": "2026-08-04",
+  "source_scope": "Cloudflare public pricing; re-check before production capacity, contract, or customer pricing decisions.",
+  "sources": {
+    "workers": "https://developers.cloudflare.com/workers/platform/pricing/",
+    "workers_for_platforms": "https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/reference/pricing/",
+    "d1": "https://developers.cloudflare.com/d1/platform/pricing/",
+    "queues": "https://developers.cloudflare.com/queues/platform/pricing/",
+    "kv": "https://developers.cloudflare.com/kv/platform/pricing/",
+    "r2": "https://developers.cloudflare.com/r2/pricing/"
+  },
+  "workers_standard": {
+    "base_monthly_usd": 5,
+    "requests_included": 10000000,
+    "request_overage_per_million_usd": 0.3,
+    "cpu_ms_included": 30000000,
+    "cpu_overage_per_million_ms_usd": 0.02
+  },
+  "workers_for_platforms": {
+    "base_monthly_usd": 25,
+    "requests_included": 20000000,
+    "request_overage_per_million_usd": 0.3,
+    "cpu_ms_included": 60000000,
+    "cpu_overage_per_million_ms_usd": 0.02,
+    "scripts_included": 1000,
+    "script_overage_usd": 0.02
+  },
+  "d1_paid": {
+    "rows_read_included": 25000000000,
+    "rows_read_overage_per_million_usd": 0.001,
+    "rows_written_included": 50000000,
+    "rows_written_overage_per_million_usd": 1,
+    "storage_gb_month_included": 5,
+    "storage_overage_per_gb_month_usd": 0.75
+  },
+  "queues_paid": {
+    "operations_included": 1000000,
+    "operations_overage_per_million_usd": 0.4,
+    "billing_chunk_bytes": 64000,
+    "approx_internal_metadata_bytes": 100
+  },
+  "kv_paid": {
+    "reads_included": 10000000,
+    "read_overage_per_million_usd": 0.5,
+    "writes_included": 1000000,
+    "write_overage_per_million_usd": 5,
+    "deletes_included": 1000000,
+    "delete_overage_per_million_usd": 5,
+    "lists_included": 1000000,
+    "list_overage_per_million_usd": 5,
+    "storage_gb_month_included": 1,
+    "storage_overage_per_gb_month_usd": 0.5
+  },
+  "r2_standard": {
+    "storage_gb_month_included": 10,
+    "storage_per_gb_month_usd": 0.015,
+    "class_a_included": 1000000,
+    "class_a_per_million_usd": 4.5,
+    "class_b_included": 10000000,
+    "class_b_per_million_usd": 0.36
+  }
+}

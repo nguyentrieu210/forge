@@ -1,0 +1,64 @@
+{
+  "format": "forge-sqlite-large-data-benchmark/v1",
+  "measured_at": "2026-08-04T01:25:23Z",
+  "scope": "local SQLite query-shape evidence only; not D1/provider latency or customer SLO",
+  "rows_per_shape": 100000,
+  "iterations": 20,
+  "sqlite_version": "3.46.1",
+  "results": {
+    "document_list_50": {
+      "p50_ms": 0.089,
+      "p95_ms": 0.105,
+      "p99_ms": 0.137,
+      "min_ms": 0.088,
+      "max_ms": 0.137,
+      "query_plan": ["SEARCH documents USING INDEX idx_documents_tenant_doctype_modified (tenant_id=? AND doctype=?)"]
+    },
+    "document_list_status_50": {
+      "p50_ms": 0.055,
+      "p95_ms": 0.058,
+      "p99_ms": 0.08,
+      "min_ms": 0.055,
+      "max_ms": 0.08,
+      "query_plan": ["SEARCH documents USING COVERING INDEX idx_documents_tenant_doctype_status_modified (tenant_id=? AND doctype=? AND status=?)"]
+    },
+    "ledger_report_28d": {
+      "p50_ms": 17.78,
+      "p95_ms": 18.292,
+      "p99_ms": 19.692,
+      "min_ms": 17.624,
+      "max_ms": 19.692,
+      "query_plan": [
+        "SEARCH gl_entries USING INDEX idx_gl_tenant_date_account (tenant_id=? AND posting_date>? AND posting_date<?)",
+        "USE TEMP B-TREE FOR GROUP BY"
+      ]
+    },
+    "payment_reconciliation": {
+      "p50_ms": 18.733,
+      "p95_ms": 18.925,
+      "p99_ms": 19.021,
+      "min_ms": 18.226,
+      "max_ms": 19.021,
+      "query_plan": [
+        "SEARCH payment_ledger_entries USING INDEX idx_payment_tenant_date_party (tenant_id=? AND posting_date>? AND posting_date<?)",
+        "USE TEMP B-TREE FOR GROUP BY"
+      ]
+    },
+    "queue_backlog_oldest": {
+      "p50_ms": 0.008,
+      "p95_ms": 0.009,
+      "p99_ms": 0.011,
+      "min_ms": 0.008,
+      "max_ms": 0.011,
+      "query_plan": ["SEARCH queue_jobs USING INDEX idx_queue_tenant_status_available (tenant_id=? AND status=? AND available_at<?)"]
+    },
+    "batch_upsert_1000": {
+      "p50_ms": 2.899,
+      "p95_ms": 2.941,
+      "p99_ms": 2.964,
+      "min_ms": 2.45,
+      "max_ms": 2.964,
+      "query_plan": ["PRIMARY KEY(tenant_id,item_key); transaction-scoped executemany"]
+    }
+  }
+}
