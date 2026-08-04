@@ -46,7 +46,7 @@ Current authority is `../CURRENT_STATUS.md`:
 - R5: DONE / R5-GO;
 - R6: DONE / PILOT-GO;
 - Pilot-00: LOCKED;
-- Pilot-01: preview/control-plane ready, waiting for an approved immutable real source batch.
+- Pilot-01: real source set observed/hashed/ingested; reconciliation/normalization is blocking `PREVIEW_PASS`.
 
 The frozen Alumdoor pilot software baseline is exact-release/evidence bound. See `../docs/agents/r6/README.md` and `../docs/pilot/alumdoor/README.md`.
 
