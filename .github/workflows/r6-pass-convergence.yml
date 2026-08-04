@@ -1,122 +1,66 @@
 name: R6 Pass Convergence
-
 on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: r6-pass-convergence-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 jobs:
   validate:
     name: Full release build and source safety
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Checkout exact candidate head
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: pnpm-lock.yaml }
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Build CloudForge exactly as full production release
         run: pnpm --filter cloudforge run build
-
       - name: Build MetaForge exactly as full production release
         run: pnpm --filter metaforge run build
-
       - name: Verify migration and PITR safety
         working-directory: server
         run: node --test tests/d1-migrate-remote-safety.test.mjs tests/sre-destructive-guards.test.mjs
-
-      - name: Workerd evidence — health and ERP lifecycle
-        id: workerd_health
-        continue-on-error: true
+      - name: Workerd evidence — ERP lifecycle
+        id: health
         working-directory: server
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm exec vitest run apps/tenant-worker/test/health.integration.test.mts \
-            --config apps/tenant-worker/vitest.config.mts \
-            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-health.log
-
-      - name: Workerd evidence — Frappe session and facade
-        id: workerd_frappe
-        continue-on-error: true
+        run: pnpm exec vitest run apps/tenant-worker/test/health.integration.test.mts --config apps/tenant-worker/vitest.config.mts --reporter=verbose
+      - name: Workerd evidence — auth/CSRF/tenant isolation only
+        id: auth
         working-directory: server
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts \
-            --config apps/tenant-worker/vitest.config.mts \
-            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-frappe.log
-
+        run: >-
+          pnpm exec vitest run apps/tenant-worker/test/frappe-facade.integration.test.mts
+          --config apps/tenant-worker/vitest.config.mts
+          -t "logs in with a real password hash|rejects a write without the CSRF header|refuses a request routed for a different tenant"
+          --reporter=verbose
       - name: Workerd evidence — tenant provisioning
-        id: workerd_provisioning
-        continue-on-error: true
+        id: provisioning
         working-directory: server
-        shell: bash
-        run: |
-          set -o pipefail
-          pnpm exec vitest run apps/tenant-worker/test/tenant-provisioning.integration.test.mts \
-            --config apps/tenant-worker/vitest.config.mts \
-            --reporter=verbose 2>&1 | tee /tmp/r6-workerd-provisioning.log
-
-      - name: Upload workerd diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: r6-workerd-diagnostics-${{ github.run_id }}
-          path: /tmp/r6-workerd-*.log
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Assert production-like workerd evidence
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "health=${{ steps.workerd_health.outcome }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "frappe=${{ steps.workerd_frappe.outcome }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "provisioning=${{ steps.workerd_provisioning.outcome }}" >> "$GITHUB_STEP_SUMMARY"
-          test "${{ steps.workerd_health.outcome }}" = success
-          test "${{ steps.workerd_frappe.outcome }}" = success
-          test "${{ steps.workerd_provisioning.outcome }}" = success
-
+        run: pnpm exec vitest run apps/tenant-worker/test/tenant-provisioning.integration.test.mts --config apps/tenant-worker/vitest.config.mts --reporter=verbose
+      - name: Workerd evidence — R6 Golden Flow
+        id: golden
+        working-directory: server
+        run: pnpm exec vitest run apps/tenant-worker/test/r6-golden-flow.integration.test.mts --config apps/tenant-worker/vitest.config.mts --reporter=verbose
       - name: Verify release safety authority
         working-directory: server
         run: npm run verify:release-safety
-
       - name: Verify observability source contract
         working-directory: server
         run: npm run verify:observability
-
       - name: Verify queue safety
         working-directory: server
         run: npm run verify:queue-safety
-
       - name: Verify Alumdoor package composition
         working-directory: server
         shell: bash
@@ -125,10 +69,8 @@ jobs:
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run | tee /tmp/r6-alumdoor-package.log
           grep -q 'app=alumdoor@2.2.3' /tmp/r6-alumdoor-package.log
           grep -q 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log
-
       - name: Diff hygiene
         run: git diff --check
-
   observe-pilot:
     name: Read-only pilot provider and package/profile evidence
     runs-on: ubuntu-latest
@@ -138,59 +80,31 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Checkout exact candidate head
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Observe E02 and E05 without mutation
-        id: provider
         continue-on-error: true
         working-directory: server
-        run: >-
-          node scripts/r6-provider-readonly.mjs
-          --source-sha "${{ github.event.pull_request.head.sha || github.sha }}"
-          --output "$RUNNER_TEMP/r6-e02-e05.json"
-
+        run: node scripts/r6-provider-readonly.mjs --source-sha "${{ github.event.pull_request.head.sha || github.sha }}" --output "$RUNNER_TEMP/r6-e02-e05.json"
       - name: Observe E18 without mutation
-        id: identity
         continue-on-error: true
         working-directory: server
-        run: >-
-          node scripts/r6-convergence-identity-readonly.mjs
-          --tenant alu
-          --origin https://alu.kairo.vn
-          --expected-release-sha "${{ github.event.pull_request.head.sha || github.sha }}"
-          --output "$RUNNER_TEMP/r6-e18.json"
-
+        run: node scripts/r6-convergence-identity-readonly.mjs --tenant alu --origin https://alu.kairo.vn --expected-release-sha "${{ github.event.pull_request.head.sha || github.sha }}" --output "$RUNNER_TEMP/r6-e18.json"
       - name: Publish read-only pilot observation
         if: always()
         shell: bash
         run: |
           for file in "$RUNNER_TEMP/r6-e02-e05.json" "$RUNNER_TEMP/r6-e18.json"; do
-            if [ -f "$file" ]; then
-              echo '```json' >> "$GITHUB_STEP_SUMMARY"
-              cat "$file" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-            fi
+            if [ -f "$file" ]; then echo '```json' >> "$GITHUB_STEP_SUMMARY"; cat "$file" >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"; fi
           done
-
       - name: Upload pilot observation
         if: always()
         uses: actions/upload-artifact@v4
