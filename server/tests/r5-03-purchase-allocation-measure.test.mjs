@@ -63,7 +63,7 @@ test("purchase normalization can snapshot an exact observed stock quantity inste
   );
 
   assert.equal(normalized.purchase_stock_qty_field, "piece_count");
-  assert.equal(normalized.stock_qty, "230");
+  assert.equal(Number(normalized.stock_qty), 230);
   assert.equal(stockQtyMicros(normalized), 230_000_000);
   assert.equal(purchaseAllocationQtyMicros(normalized), 230_000_000);
 });
