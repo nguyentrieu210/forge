@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "server/packages/app-registry/**"
+      - "server/packages/migration/**"
       - "server/apps/tenant-worker/**"
       - "server/apps-src/hrm/**"
       - "server/apps-src/vn-accounting/**"
@@ -16,6 +17,8 @@ on:
       - "server/scripts/verify-migration-governance.mjs"
       - "server/tests/app-registry.test.mjs"
       - "server/tests/migration-governance.test.mjs"
+      - "server/tests/migration-opening.test.mjs"
+      - "server/tests/migration-manifest-reconcile.test.mjs"
       - "server/tests/r5-package-migration-rehearsal.test.mjs"
       - "docs/agents/r5/R5_A6_PACKAGE_MIGRATION_REHEARSAL.md"
       - ".github/workflows/r5-06-package-migration-rehearsal.yml"
@@ -63,8 +66,9 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
           test -f dist/packages/app-registry/src/index.js
+          test -f dist/packages/migration/src/public.js
           if [ "$status" -ne 0 ]; then
-            echo "Full-server TypeScript baseline remains non-zero; exact emitted App Registry code is exercised below."
+            echo "Full-server TypeScript baseline remains non-zero; exact emitted App Registry and Migration code is exercised below."
             grep "error TS" /tmp/r5-06-tsc.log > /tmp/r5-06-typescript-baseline.log || true
             cat /tmp/r5-06-typescript-baseline.log
           fi
@@ -74,6 +78,12 @@ jobs:
         run: |
           node scripts/verify-migration-governance.mjs --base-ref "${{ github.event.pull_request.base.sha }}"
           node --test tests/migration-governance.test.mjs
+
+      - name: Representative opening import order and reconciliation fixtures
+        working-directory: server
+        run: |
+          node --test tests/migration-opening.test.mjs
+          node --test tests/migration-manifest-reconcile.test.mjs
 
       - name: Canonical App Registry package lifecycle regressions
         working-directory: server
