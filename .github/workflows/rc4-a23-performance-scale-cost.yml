@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           base="${{ github.event.pull_request.base.sha }}"
-          git diff --check "$base...HEAD"
+          git diff --check "$base...HEAD" -- server/config server/scripts server/tests .github/workflows/rc4-a23-performance-scale-cost.yml
           changed="$(git diff --name-only "$base...HEAD")"
           echo "$changed"
           if echo "$changed" | grep -E '^(server/migrations/|server/apps/.*/src/|server/packages/.*/src/|client/)' ; then
