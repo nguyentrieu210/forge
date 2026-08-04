@@ -11,28 +11,31 @@ This directory is the durable authority for the controlled Alumdoor pilot after 
 
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
 - Pilot-01 control plane: **READY / PREVIEW-ONLY**.
-- Pilot-01 real uploaded source set: **OBSERVED / HASHED / INGESTED**.
-- Pilot-01 duplicate identity policy: **LOCKED**.
-- Current truthful Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
-- Active work: source reconciliation + normalization into a private Mapping-V1 batch.
+- Pilot-01 real source set: **OBSERVED / HASHED / INGESTED**.
+- duplicate Customer/item-code policy: **LOCKED**.
+- 60 historical journal item identities: **60/60 DISPOSITIONED**.
+- supplier purchase-party roles: **RECONCILED / 4 -> 0 gaps**.
+- current Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
+- active work: **cutoff + quantity/UOM + opening-data reconciliation**.
 
-Do not advance to Pilot-02 merely because real files exist. Pilot-01 requires one coherent cutoff, resolved references, canonical Stock/money semantics and a real zero-variance `PREVIEW_PASS` first.
+Do not advance to Pilot-02 until one coherent cutoff, canonical quantity/money semantics, resolved opening references and a real zero-variance `PREVIEW_PASS` exist.
 
 ## Read order
 
-1. `PILOT_00_CONTRACT.md` — frozen pilot scope, roles, transaction families, reconciliation and stop/cutover rules.
-2. `PILOT_00_LOCK.json` — machine-readable exact release/package/profile and governance lock.
-3. `PILOT_DATA_MAPPING_V1.json` — frozen master/opening-data mapping contract.
-4. `PILOT_01_IDENTITY_DISPOSITION_V1.json` — locked duplicate Customer/item-code normalization policy.
-5. `PILOT_01_SOURCE_INGEST_20260805.md` — disposition of the real uploaded Alumdoor source set.
-6. `PILOT_01_SOURCE_INGEST_20260805.json` — immutable source digests, structural counts and original blocker observations.
-7. `PILOT_01_READINESS.md` — source-batch, validation and preview acceptance contract.
-8. `PILOT_01_STATUS.json` — machine-readable current Pilot-01 state.
-9. `PILOT_01_BATCH_MANIFEST_TEMPLATE.json` — immutable normalized batch manifest template.
-10. `tools/normalize-pilot-identities.mjs` — deterministic duplicate normalization; no production write.
-11. `tools/validate-pilot-batch.mjs` — preview-only validator; never writes production.
-12. `../../agents/r6/R6_FINAL_CERTIFICATION_20260805.md` — exact R6 entry evidence.
-13. `../../../NEXT_TASKS.md` — active pilot queue.
+1. `PILOT_00_CONTRACT.md`
+2. `PILOT_00_LOCK.json`
+3. `PILOT_DATA_MAPPING_V1.json`
+4. `PILOT_01_IDENTITY_DISPOSITION_V1.json`
+5. `PILOT_01_ALIAS_SUPPLIER_RECONCILIATION_V1.json`
+6. `PILOT_01_SOURCE_INGEST_20260805.md`
+7. `PILOT_01_SOURCE_INGEST_20260805.json`
+8. `PILOT_01_READINESS.md`
+9. `PILOT_01_STATUS.json`
+10. `PILOT_01_BATCH_MANIFEST_TEMPLATE.json`
+11. `tools/normalize-pilot-identities.mjs`
+12. `tools/normalize-pilot-aliases-suppliers.mjs`
+13. `tools/validate-pilot-batch.mjs`
+14. `../../../NEXT_TASKS.md`
 
 ## Program shape
 
@@ -40,8 +43,9 @@ Do not advance to Pilot-02 merely because real files exist. Pilot-01 requires on
 R6 PILOT-GO
   -> Pilot-00 Freeze Contract [LOCKED]
   -> Pilot-01 Source ingest [DONE]
-  -> Pilot-01 Duplicate identity disposition [LOCKED]
-  -> Pilot-01 Reconcile + normalize [ACTIVE / PREVIEW-BLOCKED]
+  -> Duplicate identity disposition [LOCKED]
+  -> Journal item identity 60/60 + supplier roles [DONE]
+  -> Cutoff/UOM/opening reconciliation [ACTIVE / PREVIEW-BLOCKED]
   -> real PREVIEW_PASS
   -> Pilot-02 Representative Transaction Dry Run
   -> Pilot-03 Parallel Run + Daily Reconciliation
@@ -50,53 +54,59 @@ R6 PILOT-GO
   -> PILOT-ACCEPTED / PILOT-REJECTED
 ```
 
-## Duplicate identity rule
+## Identity rules
 
-The operator-approved rule is deterministic:
+### Duplicate identities
 
-- duplicate Customer names normalize to one canonical Customer: retain the first source row, drop later duplicate Customer output rows, and remap Customer references to the retained `source_key`;
-- exact duplicate item codes retain the first code; later collisions receive the lowest free suffix `01`, `02`, `03`... and preserve `source_code_original`;
-- pre-existing source codes are reserved, so a generated suffix never overwrites a real code;
-- the uploaded item master currently has 277/277 unique codes, so the suffix rule is a collision guard for normalization rather than a change to those observed rows;
-- 60 journal item strings that do not match master codes remain an alias/reference problem and are not auto-created as suffixed codes.
+- duplicate Customer names: retain the first source row and remap references to it;
+- exact duplicate item codes: retain first; later collisions receive lowest free `01`, `02`, `03`... suffix and preserve `source_code_original`;
+- existing source codes are reserved, so generated suffixes never overwrite real codes.
+
+### 60 historical journal item strings
+
+They are no longer unresolved identity gaps:
+
+- 41 explicit source-backed aliases map to existing master Items;
+- 18 source-only stock/component/service identities remain explicit supplemental identities;
+- `NVL-LD-3LD` explodes to the canonical atomic leaf-bottom items.
+
+No fuzzy matching and no fake suffix codes are used.
+
+Identity resolution does **not** imply quantity-axis acceptance. The 18 supplemental identities and three existing-master aliases retain quantity/UOM reconciliation where source units differ from canonical Stock/commercial axes.
+
+### Supplier roles
+
+Four purchase-party role gaps are dispositioned without fuzzy party merge:
+
+- `TIẾN ĐẠT` -> existing canonical Supplier;
+- `ANH HIẾU CẦN THƠ` -> Supplier under the same exact name while preserving Customer role;
+- `PHÁT AN KHANG` -> exact Supplier identity;
+- `VIỆT ĐÔNG HƯNG` -> exact Supplier identity.
 
 ## Real-source handling
 
-The source set supplied through the operator conversation includes item-master, customer/supplier/operational-ledger, purchase-order, customer-order history, aluminum-stock and process/formula files.
+Raw customer workbooks are intentionally **not committed to Git**. Git retains only source file identity/hash, structural counts, non-sensitive findings and normalization contracts.
 
-Raw customer workbooks are intentionally **not committed to Git**. Git retains only:
+## Remaining preview blockers
 
-- source file name/role;
-- SHA-256 digest;
-- structural row/sheet counts;
-- non-sensitive validation/reconciliation findings;
-- normalized acceptance/evidence contracts.
+- one coherent Stock/AR/AP/cash-bank cutoff is not yet proven; `30/06/2026` is only a candidate;
+- supplemental/axis-sensitive quantity and UOM semantics remain to be accepted;
+- aluminum opening Stock has physical evidence but no populated actual-Kg cells;
+- stock-source scope differs from process specification and contains two future-dated `VIPST700` rows;
+- complete opening AR/AP at the same cutoff is not proven;
+- 45 journal rows require deterministic integer-VND rounding;
+- minimum BOM/work-center/employee/pilot-user datasets are incomplete;
+- exactly one active named `Giám đốc` account remains required.
 
-## Pilot-01 preview rule
+## Preview rule
 
-The eventual private normalized batch is bound by:
-
-- one immutable batch ID;
-- exact source system/cutoff/extract timestamps;
-- exact SHA-256 for every normalized data file;
-- frozen mapping v1;
-- locked identity disposition v1;
-- exact source-authoritative opening totals;
-- named account allowlist;
-- exactly one active named `Giám đốc` account;
-- zero unexplained reconciliation variance.
-
-Current source evidence is not yet a normalized `PREVIEW_PASS` batch. Remaining major blockers include common-cutoff drift, supplier/item alias gaps, missing actual Kg evidence for aluminum opening stock, unproven opening AR/AP, stock-sheet scope drift and incomplete access/operating masters.
-
-The validator returns `PREVIEW_PASS` or `PREVIEW_FAIL`. It has no deployment/import/migration path and always reports `production_write_authorized=false`.
+The private normalized batch must be SHA-256 bound, Mapping-V1 conformant, fully reference-resolved and reconcile with **zero unexplained variance**. `validate-pilot-batch.mjs` remains preview-only and reports `production_write_authorized=false`.
 
 ## Non-negotiable boundaries
 
-- The certified product identity remains exact-SHA bound. Documentation/evidence/control-plane commits on `main` do not change the deployed product identity.
-- Any product-source change creates a new release candidate and must rerun affected release evidence before use in the pilot.
-- Any package/profile identity change invalidates the corresponding pilot identity lock until affected runtime/Golden Flow evidence is rerun.
-- Real customer/master/opening-data import or write is not authorized by Pilot-00 or a Pilot-01 preview PASS.
-- No direct D1 edits, vertical shadow Stock/Finance ledgers, or bypass of canonical lifecycle APIs are allowed.
-- Theoretical kg/m evidence is not measured opening-stock Kg unless an explicit source-bound conversion policy is approved and its evidence semantics remain distinct.
-- Code rollback does not imply data rollback. PITR/restore remains a separate explicit operation.
-- Package fixtures/demo/Golden Flow records are not accepted as real opening-data evidence.
+- Certified product identity remains exact-SHA bound.
+- Real customer/master/opening-data import/write is not authorized by Pilot-01 preview work.
+- No direct D1 edits or shadow Stock/Finance ledgers.
+- Theoretical kg/m is not silently relabelled as measured Kg.
+- Code rollback does not imply data rollback.
+- Production cutover, destructive recovery and provider mutation remain explicit authorization boundaries.
