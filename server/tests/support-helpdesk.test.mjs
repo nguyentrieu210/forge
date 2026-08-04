@@ -23,9 +23,9 @@ test("support exposes queue SLA knowledge responses CSAT and validators", () => 
   const app = json("app.json");
   const roles = json("roles.json");
   assert.equal(app.id, "support");
-  assert.equal(app.version, "1.2.0");
+  assert.equal(app.version, "1.2.1");
   assert.equal(app.worker, "cloudforge-app-ws07");
-  assert.deepEqual(app.validators.map((entry) => entry.doctype), ["Support SLA Policy", "Support Ticket"]);
+  assert.deepEqual(app.validators.map((entry) => entry.doctype), ["Support SLA Policy", "Support Ticket", "Support Feedback"]);
   for (const key of ["Support Ticket", "Support Team", "Support SLA Policy", "Support Knowledge Article", "Support Canned Response", "Support Feedback"]) {
     assert.ok(app.nav.some((entry) => entry.key === key), `missing nav ${key}`);
   }
@@ -35,7 +35,7 @@ test("support exposes queue SLA knowledge responses CSAT and validators", () => 
   assert.ok(roles.some((entry) => entry.role === "Support Manager"));
 });
 
-test("ticket lifecycle requires assignment resolution and escalation evidence", () => {
+test("ticket lifecycle requires assignment resolution escalation and cancellation evidence", () => {
   const ticket = json("doctypes/support-ticket.json");
   const workflow = json("workflows/support-ticket.json");
   assert.equal(field(ticket, "team").options, "Support Team");
@@ -46,6 +46,7 @@ test("ticket lifecycle requires assignment resolution and escalation evidence", 
   assert.equal(field(ticket, "sla_state").read_only, true);
   assert.equal(field(ticket, "escalation_reason").mandatory_depends_on, "eval:doc.workflow_state == 'Đã leo thang'");
   assert.equal(field(ticket, "escalated_to").mandatory_depends_on, "eval:doc.workflow_state == 'Đã leo thang'");
+  assert.equal(field(ticket, "cancel_reason").mandatory_depends_on, "eval:doc.workflow_state == 'Hủy'");
   assert.equal(transition(workflow, "Phân công").allowed_role, "Support Manager");
   assert.equal(transition(workflow, "Bắt đầu xử lý").allowed_role, "Support User");
   assert.equal(transition(workflow, "Leo thang").next_state, "Đã leo thang");
@@ -68,6 +69,17 @@ test("SLA policy is governed without pretending deadline scheduler already exist
   assert.equal(field(workday, "end_time").required, true);
   assert.equal(app.worker, "cloudforge-app-ws07");
   assert.deepEqual(app.hooks, []);
+});
+
+test("support queue exposes customer channel and SLA deadline evidence", () => {
+  const app = json("app.json");
+  const queue = app.reports.find((entry) => entry.name === "Support Ticket Queue");
+  assert.ok(queue);
+  for (const name of ["customer", "source_channel", "response_due_at", "resolution_due_at", "sla_state"]) {
+    assert.ok(queue.columns.some((entry) => entry.field === name), `missing queue column ${name}`);
+  }
+  assert.ok(queue.filters.includes("customer"));
+  assert.ok(queue.filters.includes("source_channel"));
 });
 
 test("email chat social and portal remain provenance labels until connector work lands", () => {
