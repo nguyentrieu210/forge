@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "filenamePattern": "^\\d{4}_[a-z0-9][a-z0-9_-]*\\.sql$",
+  "legacyPrefixCollisions": {
+    "tenant/0110": [
+      "0110_rc020_finance_posting_period_integrity.sql",
+      "0110_rc023_cash_bank_reconciliation.sql"
+    ]
+  }
+}
