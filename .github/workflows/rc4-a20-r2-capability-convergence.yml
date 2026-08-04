@@ -10,6 +10,7 @@ on:
       - "docs/agents/rc4/RC4_A20_CAPABILITY_CONVERGENCE_HANDOFF.md"
       - "server/scripts/rc4-a20-r2-materialize.mjs"
       - "server/scripts/validate-rc4-capability-convergence.mjs"
+      - ".github/workflows/rc3-a0-finalize-capability-status.yml"
       - ".github/workflows/rc4-a20-r2-capability-convergence.yml"
 
 permissions:
