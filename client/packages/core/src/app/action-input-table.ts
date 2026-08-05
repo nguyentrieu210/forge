@@ -14,6 +14,8 @@ export interface AppActionInputTablePresentation {
   row_doctype?: string;
   fit_viewport?: boolean;
   emphasize_editable?: boolean;
+  /** Optional money precision for this table presentation (for example VND => 0). */
+  money_precision?: number;
   /** Existing Print Format to use after a successful commit when save + print is chosen. */
   print_format?: string;
 }
