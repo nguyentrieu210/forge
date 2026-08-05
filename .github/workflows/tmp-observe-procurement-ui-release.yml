@@ -1,0 +1,49 @@
+name: TMP Observe Procurement UI Release
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-observe-procurement-ui-release.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    name: Verify exact deployed UI release marker
+    if: github.head_ref == 'ops/observe-procurement-ui-release-20260805'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout current main SRE observer
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Observe exact production UI identity
+        run: >-
+          node server/scripts/sre-health-snapshot.mjs
+          --base https://alu.kairo.vn
+          --expected-release-sha 818818b27379450dae5e6e16991ea01438bd5fc0
+          --allow-remote
+          --confirm-host alu.kairo.vn
+          --attempts 10
+          --delay-ms 2000
+          --output "$RUNNER_TEMP/procurement-ui-release.json"
+
+      - name: Upload observation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: procurement-ui-release-${{ github.run_id }}
+          path: ${{ runner.temp }}/procurement-ui-release.json
+          if-no-files-found: warn
+          retention-days: 30
