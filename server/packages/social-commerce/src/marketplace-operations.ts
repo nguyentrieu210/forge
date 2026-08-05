@@ -14,6 +14,7 @@ import {
 } from "./marketplace-customer-identity.js";
 import { ensureCanonicalMarketplaceSalesOrder, marketplaceOrderSourceKey, type MarketplaceOrderResult } from "./marketplace-order.js";
 import type { ResolvedMarketplaceOrder } from "./marketplace-profile.js";
+import { evaluateMarketplaceFulfillmentSla, type MarketplaceSlaObservation } from "./marketplace-sla.js";
 
 export interface MarketplaceOperationalOrderResult extends MarketplaceOrderResult {
   order_id: string;
@@ -29,6 +30,7 @@ export interface MarketplaceOperationalOrderRow {
   order_id: string;
   source_key: string;
   provider: string;
+  channel_profile: string | null;
   sales_order_name: string | null;
   customer: string | null;
   customer_identity_status: MarketplaceCustomerIdentityStatus;
@@ -37,6 +39,7 @@ export interface MarketplaceOperationalOrderRow {
   currency: string;
   created_at: string;
   modified_at: string;
+  sla: MarketplaceSlaObservation | null;
 }
 
 /**
@@ -145,12 +148,24 @@ export async function listMarketplaceOperationalOrders(
       LEFT JOIN documents so
         ON so.tenant_id=o.tenant_id AND so.doctype='Sales Order' AND so.name=o.sales_order_name
       WHERE o.tenant_id=?1 AND o.cart_id LIKE 'marketplace:%'
+    ), fulfillment AS (
+      SELECT order_id,MIN(created_at) AS fulfilled_at
+      FROM social_shipments
+      WHERE tenant_id=?1
+      GROUP BY order_id
     )
     SELECT
       mo.*,
+      provider_state.provider AS provider,
+      provider_state.channel_profile AS channel_profile,
       identity.payload_json AS identity_payload,
-      identity.docstatus AS identity_docstatus
+      identity.docstatus AS identity_docstatus,
+      sla_policy.payload_json AS sla_payload,
+      fulfillment.fulfilled_at AS fulfilled_at
     FROM marketplace_orders mo
+    LEFT JOIN marketplace_provider_order_state provider_state
+      ON provider_state.tenant_id=?1
+      AND provider_state.source_key=substr(mo.cart_id,length('marketplace:')+1)
     LEFT JOIN documents identity
       ON identity.tenant_id=?1
       AND identity.doctype='CRM Customer External Identity'
@@ -159,6 +174,12 @@ export async function listMarketplaceOperationalOrders(
         THEN 'CRM-EXT-' || substr(mo.actor_lineage, length('crm-external-identity:') + 1)
         ELSE NULL
       END
+    LEFT JOIN documents sla_policy
+      ON sla_policy.tenant_id=?1
+      AND sla_policy.doctype='Marketplace SLA Policy'
+      AND sla_policy.name=provider_state.channel_profile
+      AND sla_policy.docstatus<>2
+    LEFT JOIN fulfillment ON fulfillment.order_id=mo.order_id
     ORDER BY mo.modified_at DESC
     LIMIT ?2
   `).bind(tenantId, bounded).all<{
@@ -169,19 +190,25 @@ export async function listMarketplaceOperationalOrders(
     actor_lineage: string | null;
     identity_payload: string | null;
     identity_docstatus: number | null;
+    provider: string | null;
+    channel_profile: string | null;
+    sla_payload: string | null;
+    fulfilled_at: string | null;
     status: string;
     cod_amount_minor: number;
     currency: string;
     created_at: string;
     modified_at: string;
   }>();
+  const observedAt = new Date();
   return (result.results ?? []).map((row) => {
     const sourceKey = marketplaceSourceKeyFromCart(row.cart_id);
     const customer = typeof row.customer === "string" && row.customer.trim() ? row.customer.trim() : null;
     return {
       order_id: row.order_id,
       source_key: sourceKey,
-      provider: sourceKey.split("-", 1)[0] ?? "unknown",
+      provider: typeof row.provider === "string" && row.provider ? row.provider : sourceKey.split("-", 1)[0] ?? "unknown",
+      channel_profile: typeof row.channel_profile === "string" && row.channel_profile.trim() ? row.channel_profile.trim() : null,
       sales_order_name: row.sales_order_name,
       customer,
       customer_identity_status: readIdentityStatus(row.actor_lineage, row.identity_payload, row.identity_docstatus, customer),
@@ -190,6 +217,12 @@ export async function listMarketplaceOperationalOrders(
       currency: row.currency,
       created_at: row.created_at,
       modified_at: row.modified_at,
+      sla: evaluateMarketplaceFulfillmentSla(row.sla_payload, {
+        order_status: row.status,
+        order_created_at: row.created_at,
+        fulfilled_at: row.fulfilled_at,
+        now: observedAt,
+      }),
     };
   });
 }
