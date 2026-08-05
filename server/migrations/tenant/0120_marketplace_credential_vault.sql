@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS marketplace_credential_vault (
   envelope_json TEXT NOT NULL,
   vault_status TEXT NOT NULL DEFAULT 'active' CHECK (vault_status IN ('active','revoked')),
   created_by TEXT NOT NULL,
+  modified_by TEXT NOT NULL,
   created_at TEXT NOT NULL,
   modified_at TEXT NOT NULL,
   PRIMARY KEY (tenant_id, secret_ref),
