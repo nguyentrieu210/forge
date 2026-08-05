@@ -26,8 +26,8 @@ test("complete synthetic evidence yields GO but never authorizes real cutover", 
   const result = evaluatePilot04Synthetic(passing(), authorities);
   assert.equal(result.synthetic_verdict, "GO");
   assert.equal(result.blockers.length, 0);
-  assert.equal(result.gate_count, 10);
-  assert.equal(result.passed_gate_count, 10);
+  assert.equal(result.gate_count, 11);
+  assert.equal(result.passed_gate_count, 11);
   assert.equal(result.production_write_authorized, false);
   assert.equal(result.cutover_authorized, false);
   assert.equal(result.real_pilot_transition_allowed, false);
