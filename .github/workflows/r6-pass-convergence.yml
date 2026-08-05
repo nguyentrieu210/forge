@@ -91,6 +91,9 @@ jobs:
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run | tee /tmp/r6-alumdoor-package.log
           grep -Fq "app=alumdoor@${expected_version}" /tmp/r6-alumdoor-package.log
           grep -Fq 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log
+      - name: Verify R6 E18 package version authority
+        working-directory: server
+        run: node --test tests/r6-e18-package-version-authority.test.mjs
       - name: Diff hygiene
         run: git diff --check
   observe-pilot:
@@ -112,6 +115,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Resolve source-authoritative Alumdoor package version
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_version="$(node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const brief = await readBriefSource('briefs/alumdoor-v2.json'); if (brief.id !== 'alumdoor' || typeof brief.version !== 'string' || !brief.version) process.exit(2); process.stdout.write(brief.version);")"
+          echo "EXPECTED_ALUMDOOR_VERSION=$expected_version" >> "$GITHUB_ENV"
       - name: Observe E02 and E05 without mutation
         continue-on-error: true
         working-directory: server
@@ -119,7 +129,7 @@ jobs:
       - name: Observe E18 without mutation
         continue-on-error: true
         working-directory: server
-        run: node scripts/r6-convergence-identity-readonly.mjs --tenant alu --origin https://alu.kairo.vn --expected-release-sha "${{ github.event.pull_request.head.sha || github.sha }}" --output "$RUNNER_TEMP/r6-e18.json"
+        run: node scripts/r6-convergence-identity-readonly.mjs --tenant alu --origin https://alu.kairo.vn --expected-release-sha "${{ github.event.pull_request.head.sha || github.sha }}" --expected-alumdoor-version "$EXPECTED_ALUMDOOR_VERSION" --output "$RUNNER_TEMP/r6-e18.json"
       - name: Publish read-only pilot observation
         if: always()
         shell: bash

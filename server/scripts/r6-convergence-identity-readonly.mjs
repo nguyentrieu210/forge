@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
 import process from "node:process";
+import { readBriefSource } from "./lib/read-brief-source.mjs";
 import { d1Query, quote, wrangler } from "./wrangler-cli.mjs";
 import { findTenantDatabaseId, removeTenantConfig, writeTenantConfig } from "./tenant-wrangler.mjs";
 
@@ -14,10 +16,18 @@ const argOf = (name) => {
 const tenant = argOf("tenant")?.trim();
 const origin = argOf("origin")?.trim()?.replace(/\/$/, "");
 const expectedReleaseSha = argOf("expected-release-sha")?.trim();
+const explicitExpectedAlumdoorVersion = argOf("expected-alumdoor-version")?.trim();
 const output = argOf("output")?.trim();
 if (!tenant || !/^[a-z][a-z0-9-]*$/.test(tenant)) throw new Error("--tenant <id> is required");
 if (!origin) throw new Error("--origin <https://host> is required");
 if (!/^[0-9a-f]{40}$/i.test(expectedReleaseSha ?? "")) throw new Error("--expected-release-sha <40-hex> is required");
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const sourceBrief = await readBriefSource(path.resolve(here, "../briefs/alumdoor-v2.json"));
+const expectedAlumdoorVersion = explicitExpectedAlumdoorVersion || (sourceBrief?.id === "alumdoor" ? String(sourceBrief.version ?? "").trim() : "");
+if (!expectedAlumdoorVersion || !/^[0-9A-Za-z][0-9A-Za-z._+-]*$/.test(expectedAlumdoorVersion)) {
+  throw new Error("expected Alumdoor version is missing or invalid");
+}
 
 const observedAt = new Date().toISOString();
 const releaseResponse = await fetch(`${origin}/release.json`, { redirect: "error" });
@@ -77,7 +87,7 @@ if (releaseSha !== expectedReleaseSha) blockers.push("exact_release_sha_not_obse
 if (!bundleHash) blockers.push("bundle_hash_missing");
 if (!schema.installed_apps) blockers.push("installed_apps_schema_missing");
 if (!alumdoor) blockers.push("alumdoor_package_not_observed");
-else if (alumdoor.version !== "2.2.3") blockers.push(`alumdoor_version_${alumdoor.version}_not_2.2.3`);
+else if (alumdoor.version !== expectedAlumdoorVersion) blockers.push(`alumdoor_version_${alumdoor.version}_not_${expectedAlumdoorVersion}`);
 if (!schema.capability_profile_active || !schema.capability_profile_revisions) blockers.push("capability_profile_schema_pending");
 else if (!profile) blockers.push("active_capability_profile_not_observed");
 else if (profile.valid === false || profile.blocked_capabilities.length > 0) blockers.push("active_capability_profile_not_valid");
@@ -90,6 +100,7 @@ const evidence = {
   mutation: "NONE",
   target: { tenant, origin, database_name: `cloudforge-${tenant}` },
   expected_source_sha: expectedReleaseSha,
+  expected_packages: { alumdoor: expectedAlumdoorVersion },
   release: {
     http_status: releaseResponse.status,
     release_sha: releaseSha || null,
