@@ -9,91 +9,65 @@ Không dùng file này thay exact GitHub state.
 - Repo `nguyentrieu210/forge`.
 - RC4 **DONE**; R5 **DONE / R5-GO**; R6 **DONE / PILOT-GO**.
 - Pilot-00 **DONE / PILOT-00-LOCKED**.
-- Pilot-01 source set **OBSERVED / HASHED / INGESTED**.
-- duplicate identity policy **LOCKED**.
-- journal item identities **60/60 DISPOSITIONED**.
-- supplier role gaps **4 -> 0**.
-- UOM/quantity review **21 reviewed / 19 resolved-or-classified / 2 fail-closed**.
-- evaluated cutoff `30/06/2026`: **NOT PROVEN / NOT FROZEN**.
-- Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
+- Pilot-01 real source set **OBSERVED / HASHED / INGESTED**.
+- journal identities **60/60 DISPOSITIONED**; supplier gaps **4 -> 0**.
+- UOM/quantity **21 reviewed / 19 resolved-or-classified / 2 fail-closed**.
+- VND rounding **LOCKED** for 45 fractional `Tổng thanh toán` rows.
+- two future-dated `VIPST700` rows **QUARANTINED**, not rewritten.
+- cutoff `30/06/2026` **NOT PROVEN / NOT FROZEN**.
+- Pilot-01 verdict `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
 - Exact frozen product baseline `49315112a21182d2ce077b08a1fb9e26db07fd36`.
-- Capability truth remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956** until a newer convergence record changes it.
+- Capability truth remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956**.
 
-## Identity + UOM truth
+## Latest locked decisions
 
-Identity work is closed for the original 60 unmatched journal strings. UOM semantics are now materially narrowed:
+### Money
 
-- 10 source identities have accepted opening/stock UOM semantics;
-- 9 are accepted as non-stock service or legacy derived commercial transaction lines;
-- 2 stock identities remain blocked: `NVL-AL595-GS` and `NVL-BO1VIS AL71`.
+`PILOT_01_MONEY_ROUNDING_V1.json` locks source-backed integer VND semantics:
 
-Critical correction: `NVL-TON-DL7.2Dx124-XNXLC` is an overloaded legacy code, not a safe global alias.
+- source display format: `#,##0 ₫`;
+- 45 underlying `Tổng thanh toán` rows are fractional;
+- normalize each row/document before integer storage using nearest VND, exact half away from zero;
+- preserve raw source amount + explicit rounding delta;
+- raw fractional-row sum `469262369.969`, per-row rounded sum `469262376`, declared delta `+6.031`.
 
-- stock/opening/purchase -> raw source identity, `Kg`; source snapshot `552 Kg`, 27/03/2026;
-- sales -> `TP-TOLEKEM124_6D`, `m2`;
-- missing context -> fail closed.
+### Stock future dates
 
-Deterministic helpers are in `docs/pilot/alumdoor/tools/reconcile-pilot-uom.mjs` and never write production.
+`PILOT_01_STOCK_ANOMALY_DISPOSITION_V1.json` quarantines two `VIPST700` source rows dated `23/12/2026`:
 
-Other locked examples:
+- row 46: 6.8m / 101 lá;
+- row 47: 3.77m / 56 lá.
 
-- ray `NVL-TOLE1.2x190-CORON` -> `TP-RS7P (CÓ RON)` / Mét / length × pieces; row 327 remains blocked because structured fields are absent;
-- trục `NVL-TRUC114_2.4LY` -> `TP-TRUC140` / Mét;
-- `CROMATE 3+`, `TẨY NHÔM` -> Kg;
-- `MŨI MÀI HỘP KIM` -> Cái;
-- `NVL-VIS-BANLO2P` -> Con from inventory source; no auto conversion from the historical `1 KG` sales description;
-- CPVC/phụ thu/labor -> services, stock_uom null;
-- legacy derived sales lines -> commercial m2 only, not opening Stock.
+No `VIPST700` history row proves a replacement date, so the date is not guessed or rewritten. Both rows stay outside opening until corrected by the source owner.
 
-Blocked UOM evidence:
+Physical opening-eligible source-status metrics after quarantine: **1,150 rows / 40,980 pieces-leaves**. These are not canonical Kg/value.
 
-- `NVL-AL595-GS`: source inventory `504 KG/M` and sales m2 use; `KG/M` is rate-like, so no stock quantity conversion is inferred.
-- `NVL-BO1VIS AL71`: source purchase `159 KG` versus canonical family Stock `Con`; no Kg-to-Con evidence.
+Stock source scope remains incomplete (process expects 23 aluminum + 2 mesh; upload exposes 18 inventory sheets and no separate mesh opening source).
 
-## Cutoff review
+## Existing UOM truth
 
-Authority: `docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json`.
-
-30/06 cannot be frozen from current uploads:
-
-- cash has partial support through 30/06;
-- AR carry-in is proven, but AR opening column has 0 populated rows;
-- AP opening column has 0 populated rows and no source-proven historical zero state;
-- physical Stock history exists, but actual Kg/value and complete stock scope are not proven.
-
-Missing AR/AP opening values must never be interpreted as zero.
+- `NVL-TON-DL7.2Dx124-XNXLC` requires context split: raw Stock Kg vs commercial Sales m2.
+- blocked UOM identities remain `NVL-AL595-GS` and `NVL-BO1VIS AL71`.
+- no rate-like `KG/M` or `KG/M2` label may silently become stock quantity.
 
 ## Remaining blockers
 
-1. source-authoritative full-customer AR opening snapshot at one named cutoff;
-2. source-authoritative full-supplier AP opening snapshot at the same cutoff;
-3. canonical Stock quantity + value at the same cutoff and complete stock scope;
+1. authoritative full-customer AR opening snapshot at one named cutoff;
+2. authoritative full-supplier AP opening snapshot at the same cutoff;
+3. canonical Stock quantity + value at the same cutoff with complete scope and aluminum Kg/value;
 4. matching cash/bank balances if in scope;
-5. source-owner evidence for the two blocked UOM identities plus two row-level quantity conflicts;
-6. stock scope/future-date disposition;
-7. deterministic integer-VND rounding for 45 fractional rows;
-8. minimum BOM/work-center/employee/pilot-user inputs and exactly one active named `Giám đốc` account.
+5. source-owner resolution for two blocked UOM identities and two row-level quantity conflicts;
+6. source-owner corrected dates for quarantined VIPST700 rows plus missing stock scope;
+7. minimum BOM/work-center/employee/pilot-user data and exactly one active named `Giám đốc` account.
 
 ## Next execution order
 
-- finish this UOM branch through CI/merge;
-- next safe independent pass: VND rounding + stock date anomaly disposition where source behavior is deterministic;
-- continue searching existing uploads for authoritative opening data;
-- missing AR/AP/Stock opening authority and unresolved physical conversions remain external source dependencies, never synthesized;
-- after one common cutoff is proven, generate private Mapping-V1 batch and run validator to zero-variance `PREVIEW_PASS`.
+- finish rounding/anomaly branch through CI/merge;
+- search existing uploaded files/File Library for additional authoritative opening/access data before declaring an external dependency;
+- materialize deterministic minimum operating/access masters only where source evidence exists;
+- never synthesize missing AR/AP/Stock openings or UOM conversions;
+- after one common cutoff is proven, generate private Mapping-V1 batch and drive validator to zero-variance `PREVIEW_PASS`.
 
 ## Production boundary
 
-No Pilot-01 production import/write has occurred. `PREVIEW_PASS` does not authorize production write. Production import, cutover, provider mutation, DNS/routes/secrets, restore/PITR and destructive state operations remain explicit authorization boundaries.
-
-## Read order
-
-1. exact GitHub state;
-2. `CURRENT_STATUS.md`;
-3. `NEXT_TASKS.md`;
-4. `docs/pilot/alumdoor/README.md`;
-5. `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
-6. `docs/pilot/alumdoor/PILOT_01_UOM_RECONCILIATION_V1.json`;
-7. `docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json`;
-8. `docs/pilot/alumdoor/PILOT_01_ALIAS_SUPPLIER_RECONCILIATION_V1.json`;
-9. `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`.
+No Pilot-01 production import/write has occurred. `PREVIEW_PASS` does not authorize production write. Production import, cutover, provider/DNS/secret mutation, restore/PITR and destructive state operations remain explicit authorization boundaries.

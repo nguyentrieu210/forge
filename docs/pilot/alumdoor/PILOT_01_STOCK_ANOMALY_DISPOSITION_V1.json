@@ -1,0 +1,72 @@
+{
+  "format": "forge-alumdoor-pilot-01-stock-anomaly-disposition/v1",
+  "status": "PARTIAL_LOCK_PREVIEW_ONLY",
+  "tenant": "alu",
+  "source": {
+    "file": "TỒN NHÔM 2026 NEW.xlsx",
+    "sha256": "c2e6c8fa2a64dd36ba8ec3f8f64926acfc72529ef609f737efd00e077ca2e20c"
+  },
+  "future_date_anomalies": {
+    "profile": "VIPST700",
+    "source_sheet": "VIPST700",
+    "raw_rows": [
+      {
+        "row": 46,
+        "raw_excel_serial": 46379,
+        "raw_date": "2026-12-23",
+        "color": "THÔ",
+        "condition": "TĐ",
+        "length_m": "6.8",
+        "piece_qty": "101",
+        "source_status": "TỒN"
+      },
+      {
+        "row": 47,
+        "raw_excel_serial": 46379,
+        "raw_date": "2026-12-23",
+        "color": "THÔ",
+        "condition": "TĐ",
+        "length_m": "3.77",
+        "piece_qty": "56",
+        "source_status": "TỒN"
+      }
+    ],
+    "row_count": 2,
+    "piece_qty": 157,
+    "history_evidence": {
+      "LICH_SU_matching_profile_rows": 0,
+      "LỊCH_SỬ_matching_profile_rows": 0,
+      "safe_replacement_date_proven": false
+    },
+    "disposition": "QUARANTINE_EXCLUDE_FROM_OPENING_UNTIL_SOURCE_DATE_CORRECTED",
+    "opening_eligible": false,
+    "date_rewritten": false,
+    "reason": "Both rows are future-dated relative to the 2026-08-05 ingest and no profile-specific history entry proves a replacement date. A guessed correction would corrupt opening provenance."
+  },
+  "source_status_totals": {
+    "available_rows_before_quarantine": 1152,
+    "available_piece_qty_before_quarantine": 41137,
+    "quarantined_rows": 2,
+    "quarantined_piece_qty": 157,
+    "opening_eligible_physical_rows_after_quarantine": 1150,
+    "opening_eligible_piece_qty_after_quarantine": 40980,
+    "note": "These are physical row/piece metrics only; they are not canonical opening Stock Kg or valuation."
+  },
+  "scope_drift": {
+    "process_expected_aluminum_sheets": 23,
+    "process_expected_mesh_sheets": 2,
+    "uploaded_inventory_sheets": 18,
+    "separate_mesh_opening_source_observed": false,
+    "status": "UNRESOLVED_EXTERNAL_SOURCE_SCOPE_DEPENDENCY",
+    "opening_scope_complete": false
+  },
+  "rules": [
+    "quarantine future-dated source rows when no source-authoritative corrected date exists",
+    "retain raw date and row provenance; never silently rewrite the source date",
+    "quarantined rows are explained exclusions, not unexplained reconciliation variance",
+    "physical piece metrics do not substitute for canonical Kg/value opening evidence",
+    "stock scope drift remains a blocker until missing source scope is supplied or explicitly excluded by the source owner"
+  ],
+  "production_write_authorized": false,
+  "production_data_mutated": false
+}
