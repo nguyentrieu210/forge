@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  AlertTriangle, Facebook, Inbox, Loader2, PackageCheck, RefreshCw,
+  AlertTriangle, Facebook, Inbox, Link2, Loader2, PackageCheck, RefreshCw,
   ShoppingCart, Truck, Unplug,
 } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ interface MarketplaceOrder {
   source_key: string;
   provider: string;
   sales_order_name: string | null;
+  customer: string | null;
   status: string;
   amount_minor: number;
   currency: string;
@@ -171,7 +172,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
         <TabsContent value="overview">
           {loading ? <OverviewSkeleton /> : <Overview summary={summary} pages={pages} providerCounts={providerCounts} orders={orders} settlements={settlements} canManageConnections={canManageConnections} onConnect={() => void connectFacebook()} />}
         </TabsContent>
-        <TabsContent value="orders">{loading ? <ListSkeleton /> : <MarketplaceOrderList orders={orders} />}</TabsContent>
+        <TabsContent value="orders">{loading ? <ListSkeleton /> : <MarketplaceOrderList orders={orders} onReload={load} />}</TabsContent>
         <TabsContent value="settlements">{loading ? <ListSkeleton /> : <SettlementList settlements={settlements} restricted={settlementRestricted} />}</TabsContent>
         <TabsContent value="inbox">{loading ? <ListSkeleton /> : <InboxList events={events} />}</TabsContent>
         <TabsContent value="carts">{loading ? <ListSkeleton /> : <CartList carts={carts} />}</TabsContent>
@@ -232,19 +233,111 @@ function Overview({ summary, pages, providerCounts, orders, settlements, canMana
   );
 }
 
-function MarketplaceOrderList({ orders }: { orders: MarketplaceOrder[] }) {
+function MarketplaceOrderList({ orders, onReload }: { orders: MarketplaceOrder[]; onReload: () => Promise<void> }) {
+  const [selected, setSelected] = useState<MarketplaceOrder>();
+  const [customer, setCustomer] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState<"link" | "revoke">();
+
+  function openIdentity(order: MarketplaceOrder) {
+    setSelected(order);
+    setCustomer(order.customer ?? "");
+    setReason("");
+  }
+
+  async function saveIdentity() {
+    if (!selected || !customer.trim() || saving) return;
+    setSaving("link");
+    try {
+      const result = await api<{ customer: string; idempotent_replay: boolean }>(
+        `/api/v1/social/marketplace/orders/${encodeURIComponent(selected.order_id)}/customer-identity`,
+        { method: "POST", body: JSON.stringify({ customer: customer.trim(), ...(reason.trim() ? { change_reason: reason.trim() } : {}) }) },
+      );
+      toast.success(result.idempotent_replay ? "Danh tính khách đã được liên kết trước đó" : "Đã liên kết danh tính khách cho các đơn mới");
+      setSelected(undefined);
+      await onReload();
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : "Không liên kết được danh tính khách");
+    } finally {
+      setSaving(undefined);
+    }
+  }
+
+  async function revokeIdentity() {
+    if (!selected || !reason.trim() || saving) {
+      if (selected && !reason.trim()) toast.warning("Cần nhập lý do thu hồi liên kết");
+      return;
+    }
+    setSaving("revoke");
+    try {
+      await api(`/api/v1/social/marketplace/orders/${encodeURIComponent(selected.order_id)}/customer-identity/revoke`, {
+        method: "POST",
+        body: JSON.stringify({ change_reason: reason.trim() }),
+      });
+      toast.success("Đã thu hồi liên kết danh tính khách");
+      setSelected(undefined);
+      await onReload();
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : "Không thu hồi được danh tính khách");
+    } finally {
+      setSaving(undefined);
+    }
+  }
+
   if (!orders.length) return <section className="rounded-lg border bg-card"><EmptyState icon={<PackageCheck />} title="Chưa có đơn từ sàn" detail="Sau khi connector đồng bộ và SKU được ánh xạ, đơn sẽ xuất hiện ở đây." /></section>;
   return (
     <section className="overflow-hidden rounded-lg border bg-card shadow-sm">
-      <div className="p-3 md:p-4"><h2 className="text-sm font-semibold">Đơn hàng marketplace</h2><p className="text-xs text-muted-foreground">Mỗi dòng liên kết về Sales Order canonical của ERP.</p></div>
-      <Separator />
-      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kênh</TableHead><TableHead>Mã đơn</TableHead><TableHead>Sales Order</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Giá trị</TableHead><TableHead className="text-right">Cập nhật</TableHead></TableRow></TableHeader><TableBody>
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:p-4">
+        <div><h2 className="text-sm font-semibold">Đơn hàng marketplace</h2><p className="text-xs text-muted-foreground">Mỗi dòng liên kết về Sales Order và Customer canonical của ERP.</p></div>
+        <Button variant="outline" size="sm" onClick={() => window.location.assign("/app/CRM%20Customer%20External%20Identity")}><Link2 className="size-4" /> Danh tính kênh</Button>
+      </div>
+      {selected ? (
+        <div className="border-y bg-muted/20 p-3 md:p-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] lg:items-end">
+            <label className="grid gap-1.5 text-xs font-medium">
+              Customer ERP
+              <input
+                className="h-9 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                value={customer}
+                onChange={(event) => setCustomer(event.target.value)}
+                placeholder="CUST-0001"
+                maxLength={160}
+                autoComplete="off"
+              />
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">
+              Lý do thay đổi / thu hồi
+              <input
+                className="h-9 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Bắt buộc khi đổi Customer hoặc thu hồi"
+                maxLength={500}
+                autoComplete="off"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" disabled={!customer.trim() || Boolean(saving)} onClick={() => void saveIdentity()}>
+                {saving === "link" ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />} Liên kết
+              </Button>
+              <Button variant="outline" size="sm" disabled={Boolean(saving)} onClick={() => void revokeIdentity()}>Thu hồi</Button>
+              <Button variant="ghost" size="sm" disabled={Boolean(saving)} onClick={() => setSelected(undefined)}>Đóng</Button>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Đơn {selected.order_id}. Liên kết chỉ chọn Customer cho các đơn mới từ cùng tài khoản sàn; Sales Order đã submit giữ nguyên Customer lịch sử.
+          </p>
+        </div>
+      ) : null}
+      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kênh</TableHead><TableHead>Mã đơn</TableHead><TableHead>Customer</TableHead><TableHead>Sales Order</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Giá trị</TableHead><TableHead className="text-right">Danh tính</TableHead><TableHead className="text-right">Cập nhật</TableHead></TableRow></TableHeader><TableBody>
         {orders.map((order) => <TableRow key={order.order_id}>
           <TableCell><ProviderBadge provider={order.provider} /></TableCell>
           <TableCell className="max-w-56 truncate font-medium">{order.order_id}</TableCell>
+          <TableCell className="max-w-44 truncate">{order.customer ?? "—"}</TableCell>
           <TableCell>{order.sales_order_name ?? "—"}</TableCell>
           <TableCell><StatusBadge tone={orderTone(order.status)}>{orderStatus(order.status)}</StatusBadge></TableCell>
           <TableCell className="text-right tabular-nums">{money(order.amount_minor, order.currency)}</TableCell>
+          <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openIdentity(order)}><Link2 className="size-4" /> Link</Button></TableCell>
           <TableCell className="whitespace-nowrap text-right text-xs text-muted-foreground">{dateTime(order.modified_at)}</TableCell>
         </TableRow>)}
       </TableBody></Table></div>
@@ -295,7 +388,7 @@ function OverviewSkeleton() { return <div className="space-y-4" aria-label="Đan
 function ListSkeleton() { return <div className="space-y-2 rounded-lg border bg-card p-3"><Skeleton className="h-8 w-56" />{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}</div>; }
 
 class SocialApiError extends Error { constructor(message: string, readonly status: number, readonly code?: string) { super(message); this.name = "SocialApiError"; } }
-async function api<T>(url: string, init?: RequestInit): Promise<T> {
+async function api<T = unknown>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: "include", ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
   const body = await response.json().catch(() => ({})) as T & { error?: { message?: string; code?: string } };
   if (!response.ok) {
