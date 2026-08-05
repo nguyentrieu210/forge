@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudforge-control-plane",
-  "main": "src/index-v2.ts",
+  "main": "src/index-v2b.ts",
   "compatibility_date": "2026-07-23",
   "observability": {
     "enabled": true,
