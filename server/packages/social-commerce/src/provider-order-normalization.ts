@@ -24,11 +24,11 @@ function normalizeShopee(channel: string, record: JsonObject): MarketplaceProvid
   const transactionDate = dateTimeFrom(firstValue(record, ["create_time", "update_time"]), "Shopee transaction_date").slice(0, 10);
   const buyer = firstOptional(record, ["buyer_user_id", "buyer_username", "buyer_id"], 240);
   const rawItems = arrayFrom(record, ["item_list", "order_items", "items"], "Shopee item_list");
-  const items = aggregateLines(rawItems.map((item, index) => ({
-    external_sku: firstRequired(item, ["model_sku", "item_sku", "seller_sku", "item_id"], `Shopee item ${index + 1} SKU`, 200),
-    external_variant_key: firstOptional(item, ["model_id", "variation_id", "sku_id"], 200),
-    quantity: positiveQuantity(firstValue(item, ["model_quantity_purchased", "quantity", "qty"]), `Shopee item ${index + 1} quantity`),
-  })));
+  const items = aggregateLines(rawItems.map((item, index) => providerLine(
+    firstRequired(item, ["model_sku", "item_sku", "seller_sku", "item_id"], `Shopee item ${index + 1} SKU`, 200),
+    firstOptional(item, ["model_id", "variation_id", "sku_id"], 200),
+    positiveQuantity(firstValue(item, ["model_quantity_purchased", "quantity", "qty"]), `Shopee item ${index + 1} quantity`),
+  )));
   return {
     channel_profile: channel,
     external_order_id: externalOrderId,
@@ -50,11 +50,11 @@ function normalizeLazada(channel: string, record: JsonObject): MarketplaceProvid
   const transactionDate = dateTimeFrom(firstValue(record, ["created_at", "created_time", "updated_at"]), "Lazada transaction_date").slice(0, 10);
   const buyer = firstOptional(record, ["customer_id", "buyer_id"], 240);
   const rawItems = arrayFrom(record, ["items", "order_items"], "Lazada order items");
-  const items = aggregateLines(rawItems.map((item, index) => ({
-    external_sku: firstRequired(item, ["shop_sku", "seller_sku", "sku"], `Lazada item ${index + 1} SKU`, 200),
-    external_variant_key: firstOptional(item, ["sku_id", "variation_id", "seller_sku_id"], 200),
-    quantity: positiveQuantity(firstValue(item, ["quantity", "qty"]), `Lazada item ${index + 1} quantity`, 1),
-  })));
+  const items = aggregateLines(rawItems.map((item, index) => providerLine(
+    firstRequired(item, ["shop_sku", "seller_sku", "sku"], `Lazada item ${index + 1} SKU`, 200),
+    firstOptional(item, ["sku_id", "variation_id", "seller_sku_id"], 200),
+    positiveQuantity(firstValue(item, ["quantity", "qty"]), `Lazada item ${index + 1} quantity`, 1),
+  )));
   return {
     channel_profile: channel,
     external_order_id: externalOrderId,
@@ -76,11 +76,11 @@ function normalizeTikTokShop(channel: string, record: JsonObject): MarketplacePr
   const items = aggregateLines(rawItems.map((item, index) => {
     const sellerSku = firstOptional(item, ["seller_sku", "platform_sku"], 200);
     const skuId = firstOptional(item, ["sku_id", "product_sku_id"], 200);
-    return {
-      external_sku: sellerSku ?? requireValue(skuId, `TikTok Shop item ${index + 1} SKU`),
-      ...(sellerSku && skuId ? { external_variant_key: skuId } : {}),
-      quantity: positiveQuantity(firstValue(item, ["quantity", "qty"]), `TikTok Shop item ${index + 1} quantity`, 1),
-    };
+    return providerLine(
+      sellerSku ?? requireValue(skuId, `TikTok Shop item ${index + 1} SKU`),
+      sellerSku ? skuId : undefined,
+      positiveQuantity(firstValue(item, ["quantity", "qty"]), `TikTok Shop item ${index + 1} quantity`, 1),
+    );
   }));
   return {
     channel_profile: channel,
@@ -90,6 +90,14 @@ function normalizeTikTokShop(channel: string, record: JsonObject): MarketplacePr
     transaction_date: transactionDate,
     ...(buyer ? { external_buyer_id: buyer } : {}),
     items,
+  };
+}
+
+function providerLine(externalSku: string, externalVariantKey: string | undefined, quantity: number): MarketplaceProviderOrderItemInput {
+  return {
+    external_sku: externalSku,
+    ...(externalVariantKey ? { external_variant_key: externalVariantKey } : {}),
+    quantity,
   };
 }
 
