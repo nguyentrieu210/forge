@@ -1,3 +1,9 @@
+CREATE TABLE IF NOT EXISTS provider_authority (
+  authority_key TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  modified_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS tenant_security_profiles (
   tenant_id TEXT PRIMARY KEY,
   generation INTEGER NOT NULL CHECK(generation IN (1, 2)),
