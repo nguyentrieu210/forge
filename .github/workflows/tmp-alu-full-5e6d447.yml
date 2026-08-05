@@ -1,0 +1,172 @@
+name: TMP ALU Full Release Dispatch 5e6d447
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-alu-full-5e6d447.yml"
+      - "ops/releases/alu-full-5e6d447-authorization.txt"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: release-alu-tenant-production-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch-and-wait:
+    name: Dispatch canonical full ALU release and wait
+    if: github.head_ref == 'release/alu-full-5e6d447-20260805'
+    runs-on: ubuntu-latest
+    timeout-minutes: 140
+    environment: production
+    env:
+      TARGET_SHA: 5e6d4478576339e3d3b6ae9c88cc3f606a10aa31
+      SOURCE_HEAD_SHA: 22f5ed507af6ae472dcaa1254a982be6bf8f9ec8
+      AUTH_FILE: ops/releases/alu-full-5e6d447-authorization.txt
+      WORKFLOW_FILE: alu-build-deploy.yml
+      R6_RUN: '30984925591'
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout temporary authorization branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify explicit authorization and immutable merged target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$AUTH_FILE"
+          grep -Fxq 'ACTION=FULL_ALU_PRODUCTION_RELEASE' "$AUTH_FILE"
+          grep -Fxq 'TENANT=alu' "$AUTH_FILE"
+          grep -Fxq "TARGET_SHA=$TARGET_SHA" "$AUTH_FILE"
+          grep -Fxq 'SOURCE_PR=714' "$AUTH_FILE"
+          grep -Fxq "SOURCE_HEAD_SHA=$SOURCE_HEAD_SHA" "$AUTH_FILE"
+          grep -Fxq "R6_RUN=$R6_RUN" "$AUTH_FILE"
+          grep -Fxq 'APP_VERSION=2.2.7' "$AUTH_FILE"
+          grep -Fxq 'APPROVAL=EXPLICIT_USER_APPROVAL_2026-08-05' "$AUTH_FILE"
+
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$TARGET_SHA" || {
+            echo "Refusing production release: authorized target $TARGET_SHA is not current main $current_main."
+            exit 1
+          }
+
+          mapfile -t changed < <(git diff --name-only "$TARGET_SHA"...HEAD | sort -u)
+          test "${#changed[@]}" -eq 2 || {
+            printf 'Unexpected temporary branch diff:\n%s\n' "${changed[*]}"
+            exit 1
+          }
+          printf '%s\n' "${changed[@]}" | grep -Fxq '.github/workflows/tmp-alu-full-5e6d447.yml'
+          printf '%s\n' "${changed[@]}" | grep -Fxq 'ops/releases/alu-full-5e6d447-authorization.txt'
+
+      - name: Verify source R6 convergence evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          run="$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$R6_RUN")"
+          test "$(jq -r '.name' <<<"$run")" = 'R6 Pass Convergence'
+          test "$(jq -r '.head_sha' <<<"$run")" = "$SOURCE_HEAD_SHA"
+          test "$(jq -r '.status' <<<"$run")" = 'completed'
+          test "$(jq -r '.conclusion' <<<"$run")" = 'success'
+
+      - name: Dispatch canonical full production release
+        id: dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          dispatched_epoch="$(date -u +%s)"
+          printf 'dispatched_at=%s\ndispatched_epoch=%s\n' "$dispatched_at" "$dispatched_epoch" >> "$GITHUB_OUTPUT"
+
+          payload="$(jq -cn \
+            --arg ref main \
+            --arg target "$TARGET_SHA" \
+            '{ref:$ref,inputs:{scope:"full",confirm:"alu",target_sha:$target}}')"
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW_FILE/dispatches" \
+            -d "$payload"
+          echo "Canonical ALU full release dispatched for $TARGET_SHA at $dispatched_at."
+
+      - name: Resolve canonical run
+        id: canonical
+        shell: bash
+        env:
+          DISPATCH_EPOCH: ${{ steps.dispatch.outputs.dispatched_epoch }}
+        run: |
+          set -euo pipefail
+          run_id=''
+          run_url=''
+          for attempt in $(seq 1 60); do
+            runs="$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW_FILE/runs?event=workflow_dispatch&branch=main&per_page=30")"
+            run_id="$(jq -r --arg sha "$TARGET_SHA" --argjson since "$DISPATCH_EPOCH" '
+              [.workflow_runs[] | select(.head_sha == $sha and ((.created_at | fromdateiso8601) >= ($since - 2)))]
+              | sort_by(.created_at) | last | .id // empty' <<<"$runs")"
+            run_url="$(jq -r --argjson id "${run_id:-0}" '.workflow_runs[] | select(.id == $id) | .html_url' <<<"$runs" | head -n1)"
+            if [ -n "$run_id" ]; then break; fi
+            sleep 5
+          done
+          test -n "$run_id" || {
+            echo 'Canonical workflow_dispatch run was not observed.'
+            exit 1
+          }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "run_url=$run_url" >> "$GITHUB_OUTPUT"
+          echo "Canonical run: $run_url"
+
+      - name: Wait for canonical production release
+        shell: bash
+        env:
+          RUN_ID: ${{ steps.canonical.outputs.run_id }}
+          RUN_URL: ${{ steps.canonical.outputs.run_url }}
+        run: |
+          set -euo pipefail
+          status='queued'
+          conclusion=''
+          for attempt in $(seq 1 240); do
+            run="$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")"
+            status="$(jq -r '.status' <<<"$run")"
+            conclusion="$(jq -r '.conclusion // ""' <<<"$run")"
+            echo "canonical run $RUN_ID: status=$status conclusion=${conclusion:-pending}"
+            if [ "$status" = completed ]; then break; fi
+            sleep 30
+          done
+          test "$status" = completed || {
+            echo "Timed out waiting for canonical release: $RUN_URL"
+            exit 1
+          }
+          test "$conclusion" = success || {
+            echo "Canonical production release failed: $RUN_URL conclusion=$conclusion"
+            exit 1
+          }
+          {
+            echo '# ALU full production release dispatch'
+            echo
+            echo "- target: \`$TARGET_SHA\`"
+            echo "- source PR: #714"
+            echo "- R6: $R6_RUN (success)"
+            echo "- canonical run: $RUN_URL"
+            echo "- result: SUCCESS"
+          } >> "$GITHUB_STEP_SUMMARY"
