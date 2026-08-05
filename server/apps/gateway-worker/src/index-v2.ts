@@ -1,4 +1,5 @@
 import baseGateway from "./index.js";
+import { deriveTenantAuthSecretV2 } from "../../../packages/auth/src/security-v2.js";
 
 type BaseGatewayEnv = Parameters<typeof baseGateway.fetch>[1];
 type GatewayV2Env = BaseGatewayEnv & { INTERNAL_AUTH_SECRET_V2?: string };
@@ -12,8 +13,9 @@ interface SecurityProfile {
 
 /**
  * Security Generation V2 is opt-in per tenant. No profile means legacy generation 1.
- * This wrapper deliberately leaves the certified gateway implementation untouched and
- * only swaps the signing master/key id before delegating to it.
+ * The platform V2 master never leaves this shared Worker. We derive a tenant-scoped
+ * auth root first, then delegate to the existing gateway so trusted-identity and app-call
+ * derivation stay exactly aligned with the tenant without exposing the platform master.
  */
 export default {
   async fetch(request: Request, env: GatewayV2Env): Promise<Response> {
@@ -24,9 +26,10 @@ export default {
     if (!v2Master) return securityUnavailable("INTERNAL_AUTH_SECRET_V2");
     if (profile.key_id !== "k2") return securityUnavailable("unsupported V2 key id");
 
+    const tenantAuthRoot = await deriveTenantAuthSecretV2(v2Master, profile.tenant_id);
     return baseGateway.fetch(request, {
       ...env,
-      INTERNAL_AUTH_SECRET: v2Master,
+      INTERNAL_AUTH_SECRET: tenantAuthRoot,
       INTERNAL_AUTH_KEY_ID: profile.key_id,
     });
   },
