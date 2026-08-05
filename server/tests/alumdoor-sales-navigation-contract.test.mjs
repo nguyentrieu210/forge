@@ -65,7 +65,8 @@ test("Alumdoor sales exposes composer, canonical order/output, dispatch and in-t
   assert.equal(calculator?.menu, false);
 
   const legacyReport = brief.reports.find((entry) => entry.name === "Đơn hàng theo khách");
-  assert.equal(legacyReport?.menu, false);
+  assert.equal(legacyReport?.label, "Đơn hàng theo khách");
+  assert.equal(legacyReport?.group, "Báo cáo", "legacy tabular report stays available outside the daily Sales strip");
 
   const pkg = compileBrief(brief);
   assert.equal(pkg.version, "2.3.0");
@@ -91,7 +92,7 @@ test("Alumdoor sales exposes composer, canonical order/output, dispatch and in-t
   const navByKey = new Map(pkg.nav.map((entry) => [entry.key, entry]));
   assert.equal(navByKey.has("action:tinh-cong-thuc-cua"), false);
   assert.equal(navByKey.has("action:giao-hang-theo-ngay"), false);
-  assert.equal(navByKey.has("report:Đơn hàng theo khách"), false);
+  assert.equal(navByKey.get("report:Đơn hàng theo khách")?.group, "Báo cáo");
   assert.equal(navByKey.get("action:giao-hang-dispatch")?.kind, "experience");
   assert.equal(navByKey.get("action:bao-cao-ban-hang")?.kind, "experience");
   assert.equal(navByKey.get("alumdoor-operations:workbench")?.kind, "experience");
