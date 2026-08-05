@@ -48,6 +48,15 @@ interface MarketplaceConnection {
   refresh_managed: boolean;
   access_expires_at?: string;
   refresh_expires_at?: string;
+  sync_health?: {
+    state: string;
+    attempts: number;
+    checkpoint: number;
+    completed_at: string | null;
+    next_attempt_at: string | null;
+    last_error_code: string | null;
+    updated_at: string;
+  } | null;
 }
 
 export interface SocialCommerceProps {
@@ -502,7 +511,10 @@ function MarketplaceConnectionCard({ connection, busy, anyBusy, onConnect }: { c
   const runnable = connection.connection_status !== "disabled" && connection.connection_status !== "invalid" && connection.provider !== null;
   const credentialTone = connection.credential_status === "active" ? "success" : connection.credential_status === "reauthorization_required" ? "warning" : "muted";
   const credentialLabel = connection.credential_status === "active" ? "Đã ủy quyền" : connection.credential_status === "reauthorization_required" ? "Cần ủy quyền lại" : "Chưa có credential";
-  return <article className="rounded-lg border bg-background p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-medium">{connection.provider ? providerLabel(connection.provider) : "Connection không hợp lệ"}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{connection.connection_id}</p></div><StatusBadge tone={credentialTone}>{credentialLabel}</StatusBadge></div><div className="mt-3 flex flex-wrap items-center gap-2"><Badge variant="outline">{connection.connection_status}</Badge>{connection.refresh_managed ? <Badge variant="secondary">Auto refresh</Badge> : null}</div>{connection.access_expires_at ? <p className="mt-2 text-xs text-muted-foreground">Access token hết hạn: {dateTime(connection.access_expires_at)}</p> : null}<Button className="mt-3 w-full" variant={connection.credential_status === "active" ? "outline" : "default"} size="sm" disabled={!runnable || anyBusy} onClick={onConnect}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}{connection.credential_status === "active" ? "Ủy quyền lại" : "Kết nối seller"}</Button></article>;
+  const sync = connection.sync_health;
+  const syncTone = !sync ? "muted" : sync.state === "succeeded" ? "success" : sync.state === "running" ? "info" : ["retry_scheduled", "error"].includes(sync.state) ? "warning" : "muted";
+  const syncLabel = !sync ? "Chưa đồng bộ" : sync.state === "succeeded" ? "Đồng bộ OK" : sync.state === "running" ? "Đang đồng bộ" : sync.state === "retry_scheduled" ? "Chờ thử lại" : sync.state === "error" ? "Đồng bộ lỗi" : sync.state;
+  return <article className="rounded-lg border bg-background p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-medium">{connection.provider ? providerLabel(connection.provider) : "Connection không hợp lệ"}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{connection.connection_id}</p></div><StatusBadge tone={credentialTone}>{credentialLabel}</StatusBadge></div><div className="mt-3 flex flex-wrap items-center gap-2"><Badge variant="outline">{connection.connection_status}</Badge>{connection.refresh_managed ? <Badge variant="secondary">Auto refresh</Badge> : null}</div><div className="mt-3 rounded-md border bg-muted/20 p-2.5"><div className="flex flex-wrap items-center justify-between gap-2"><StatusBadge tone={syncTone}>{syncLabel}</StatusBadge>{sync ? <span className="text-xs text-muted-foreground">CP {sync.checkpoint} · {sync.attempts} lần</span> : <span className="text-xs text-muted-foreground">Chưa có checkpoint</span>}</div>{sync?.last_error_code ? <p className="mt-2 text-xs text-warning-text">Lỗi gần nhất: <span className="font-mono">{sync.last_error_code}</span></p> : null}{sync?.next_attempt_at ? <p className="mt-1 text-xs text-muted-foreground">Thử lại: {dateTime(sync.next_attempt_at)}</p> : sync?.completed_at ? <p className="mt-1 text-xs text-muted-foreground">Hoàn tất: {dateTime(sync.completed_at)}</p> : null}</div>{connection.access_expires_at ? <p className="mt-2 text-xs text-muted-foreground">Access token hết hạn: {dateTime(connection.access_expires_at)}</p> : null}<Button className="mt-3 w-full" variant={connection.credential_status === "active" ? "outline" : "default"} size="sm" disabled={!runnable || anyBusy} onClick={onConnect}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}{connection.credential_status === "active" ? "Ủy quyền lại" : "Kết nối seller"}</Button></article>;
 }
 function ProviderBadge({ provider }: { provider: string }) { return <Badge variant="outline">{providerLabel(provider)}</Badge>; }
 function ErrorNotice({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm" role="alert"><AlertTriangle className="size-4 shrink-0 text-destructive" /><div className="min-w-0 flex-1"><p className="font-medium text-destructive">Không tải được Trung tâm bán hàng</p><p className="mt-0.5 text-xs text-muted-foreground">{message}</p></div><Button variant="outline" size="sm" onClick={onRetry}><RefreshCw className="size-4" /> Thử lại</Button></div>; }
