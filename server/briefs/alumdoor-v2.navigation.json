@@ -1,6 +1,6 @@
 {
-  "version": "2.2.8",
-  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; bốn tab còn lại do metadata này sở hữu. Nhập hàng trỏ trực tiếp tới action child-grid canonical; FIFO workspace cũ vẫn installed/callable nhưng không còn là tab vận hành.",
+  "version": "2.2.9",
+  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; bốn tab còn lại do metadata này sở hữu. Nhập hàng là Purchase Receipt trực tiếp không bắt buộc Đơn NCC; FIFO workspace cũ vẫn installed/callable nhưng không còn là tab vận hành.",
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",

@@ -3,6 +3,7 @@ import { validateItemCatalogInvariants } from "./item-catalog-invariants.js";
 import { handlePurchaseOrderCreate } from "./purchase-order-create.js";
 import { handlePurchaseFifoRequest } from "./purchase-fifo-receipt.js";
 import { handleBulkPurchaseFifoRequest } from "./bulk-purchase-fifo-receipt.js";
+import { handleBulkPurchaseDirectReceipt } from "./bulk-purchase-direct-receipt.js";
 import { handlePurchaseSupplierDashboard } from "./purchase-supplier-dashboard.js";
 import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement.js";
 
@@ -12,10 +13,11 @@ type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
 /**
  * Entrypoint triển khai của Alumdoor.
  *
- * Item đi qua cả validator lịch sử và các invariant catalog mới. Tạo đơn mua, nhập nhôm FIFO
- * và Bulk Transaction đều chỉ compose chứng từ chuẩn rồi gọi ngược platform dưới đúng danh tính
- * người dùng. Dashboard giao hàng NCC đọc allocation timeline authoritative; đối soát chỉ compose
- * Purchase Settlement canonical, không tạo ledger cạnh tranh. Mọi route khác delegate nguyên vẹn.
+ * Item đi qua cả validator lịch sử và các invariant catalog mới. Tạo đơn mua, nhập trực tiếp,
+ * nhập nhôm FIFO và Bulk Transaction đều chỉ compose chứng từ chuẩn rồi gọi ngược platform
+ * dưới đúng danh tính người dùng. Dashboard giao hàng NCC đọc allocation timeline authoritative;
+ * đối soát chỉ compose Purchase Settlement canonical, không tạo ledger cạnh tranh. Mọi route
+ * khác delegate nguyên vẹn.
  */
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: WorkerContext): Promise<Response> {
@@ -30,6 +32,12 @@ export default {
       }
       if (method === "alumdoor.purchase.supplier_delivery_settlement") {
         return handlePurchaseSupplierSettlement(request, env);
+      }
+      if (method === "alumdoor.purchase.preview_bulk_direct_receipt") {
+        return handleBulkPurchaseDirectReceipt(request, env, false);
+      }
+      if (method === "alumdoor.purchase.bulk_direct_receipt") {
+        return handleBulkPurchaseDirectReceipt(request, env, true);
       }
       if (method === "alumdoor.purchase.preview_fifo_receipt") {
         return handlePurchaseFifoRequest(request, env, false);
