@@ -35,6 +35,7 @@ const required = [
   "github.event.comment.author_association == 'OWNER'",
   "startsWith(github.event.comment.body, '/forge-security-v2-bootstrap')",
   "node server/scripts/parse-security-v2-command.mjs",
+  "name: Reconcile Security V2 frozen-install worktree",
   "name: Backup Control D1 before Security V2 migration",
   "name: Apply append-only Control Security V2 migration",
   "name: Coordinate V2 platform masters before first V2 tenant",
@@ -67,15 +68,7 @@ if (!(backupIndex >= 0 && backupIndex < verifyIndex && verifyIndex < migrateInde
 }
 
 const installGuardBlock = workflow.slice(installGuardIndex, buildIndex);
-if (!installGuardBlock.includes("pnpm-lock.yaml)")) {
-  throw new Error("frozen-install worktree reconciliation must remain limited to pnpm-lock.yaml");
-}
-for (const forbidden of ["client/*)", "server/*)", "*) git restore", "git reset --hard", "git clean -fd"]) {
-  if (installGuardBlock.includes(forbidden)) throw new Error(`frozen-install source reconciliation is too broad: ${forbidden}`);
-}
-if (!installGuardBlock.includes('test -z "$(git status --porcelain --untracked-files=all)"')) {
-  throw new Error("frozen-install reconciliation must end with an exact clean-worktree assertion");
-}
+assertNarrowLockfileReconciliation(installGuardBlock, "frozen-install source reconciliation");
 
 const generatedGuardBlock = workflow.slice(generatedGuardIndex, backupIndex);
 const approvedGeneratedRoots = [
@@ -98,6 +91,10 @@ if (!migrationLine.includes("--allow-dirty") || !tenantDeployLine.includes("--al
 const securityBootstrapIndex = workflow.indexOf("security-v2-bootstrap:");
 const securityParserIndex = workflow.indexOf("parse-security-v2-command.mjs", securityBootstrapIndex);
 const securityMergedMainIndex = workflow.indexOf("Require Security V2 target to be merged into main", securityBootstrapIndex);
+const securityInstallIndex = workflow.indexOf("Install locked Security V2 dependencies", securityBootstrapIndex);
+const securityInstallGuardIndex = workflow.indexOf("Reconcile Security V2 frozen-install worktree", securityBootstrapIndex);
+const securityBuildIndex = workflow.indexOf("Build Security V2 release candidate and exact Gateway client bundle", securityBootstrapIndex);
+const securityGeneratedGuardIndex = workflow.indexOf("Guard Security V2 generated worktree", securityBootstrapIndex);
 const securityBackupIndex = workflow.indexOf("Backup Control D1 before Security V2 migration", securityBootstrapIndex);
 const securityMigrationIndex = workflow.indexOf("Apply append-only Control Security V2 migration", securityBootstrapIndex);
 const securityPrepareIndex = workflow.indexOf("Coordinate V2 platform masters before first V2 tenant", securityBootstrapIndex);
@@ -109,7 +106,11 @@ if (!(
   securityBootstrapIndex >= 0
   && securityParserIndex > securityBootstrapIndex
   && securityMergedMainIndex > securityParserIndex
-  && securityBackupIndex > securityMergedMainIndex
+  && securityInstallIndex > securityMergedMainIndex
+  && securityInstallGuardIndex > securityInstallIndex
+  && securityBuildIndex > securityInstallGuardIndex
+  && securityGeneratedGuardIndex > securityBuildIndex
+  && securityBackupIndex > securityGeneratedGuardIndex
   && securityMigrationIndex > securityBackupIndex
   && securityPrepareIndex > securityMigrationIndex
   && securityControlDeployIndex > securityPrepareIndex
@@ -117,8 +118,20 @@ if (!(
   && securityGatewayDeployIndex > securityJobsDeployIndex
   && securityFinalizeIndex > securityGatewayDeployIndex
 )) {
-  throw new Error("Security V2 release order must remain owner auth -> merged-main check -> control backup -> migration -> coordinated masters -> control -> jobs -> gateway -> finalize");
+  throw new Error("Security V2 release order must remain owner auth -> merged-main check -> frozen install -> lockfile-only reconcile -> exact build -> generated guard -> control backup -> migration -> coordinated masters -> control -> jobs -> gateway -> finalize");
 }
+
+const securityInstallGuardBlock = workflow.slice(securityInstallGuardIndex, securityBuildIndex);
+assertNarrowLockfileReconciliation(securityInstallGuardBlock, "Security V2 frozen-install reconciliation");
+
+const securityGeneratedGuardBlock = workflow.slice(securityGeneratedGuardIndex, securityBackupIndex);
+for (const root of approvedGeneratedRoots) {
+  if (!securityGeneratedGuardBlock.includes(root)) throw new Error(`Security V2 generated guard must allow deterministic output root: ${root}`);
+}
+for (const broadRoot of ["client/*)", "server/*)", "client/apps/kho/*)", "server/apps/gateway-worker/*)"]) {
+  if (securityGeneratedGuardBlock.includes(broadRoot)) throw new Error(`Security V2 generated guard is too broad: ${broadRoot}`);
+}
+
 const securityBlock = workflow.slice(securityBootstrapIndex, workflow.indexOf("verify-production:", securityBootstrapIndex));
 if (!securityBlock.includes("environment: production")) throw new Error("Security V2 bootstrap must remain under production environment governance");
 if (!securityBlock.includes("control-pre-security-v2.sql")) throw new Error("Security V2 bootstrap must retain pre-migration Control D1 backup evidence");
@@ -184,8 +197,23 @@ for (const name of workflowFiles) {
 }
 
 console.log(
-  `RELEASE_SAFETY_PASS merged-main-target frozen-install-reconciled deterministic-generated-roots backup-before-migration current-main-verifier security-v2-canonical-owner-gate no-sql-artifact topology=${workflowFiles.join(",")}`,
+  `RELEASE_SAFETY_PASS merged-main-target frozen-install-reconciled deterministic-generated-roots backup-before-migration current-main-verifier security-v2-lockfile-reconciled security-v2-canonical-owner-gate no-sql-artifact topology=${workflowFiles.join(",")}`,
 );
+
+function assertNarrowLockfileReconciliation(block, label) {
+  if (!block.includes("pnpm-lock.yaml)")) {
+    throw new Error(`${label} must remain limited to pnpm-lock.yaml`);
+  }
+  for (const forbidden of ["client/*)", "server/*)", "*) git restore", "git reset --hard", "git clean -fd"]) {
+    if (block.includes(forbidden)) throw new Error(`${label} is too broad: ${forbidden}`);
+  }
+  if (!block.includes("git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml")) {
+    throw new Error(`${label} must restore only the exact candidate pnpm-lock.yaml`);
+  }
+  if (!block.includes('test -z "$(git status --porcelain --untracked-files=all)"')) {
+    throw new Error(`${label} must end with an exact clean-worktree assertion`);
+  }
+}
 
 function hasTopLevelWorkflowEvent(source, event) {
   const lines = source.split(/\r?\n/);
