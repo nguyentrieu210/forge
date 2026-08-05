@@ -59,6 +59,17 @@ test("browser start accepts only connection id after canonical whoami System Man
   assert.doesNotMatch(startBridge, /body\.(?:tenant_id|actor_id|provider|shop_id|secret_ref)/);
 });
 
+test("manager connection list exposes only canonical connection and non-secret credential health", () => {
+  assert.match(startBridge, /\/api\/v1\/social\/marketplace\/connections/);
+  assert.match(startBridge, /doctype='Marketplace Connection'/);
+  assert.match(startBridge, /resolveMarketplaceConnection\(env\.DB, tenantId, row\.name\)/);
+  assert.match(startBridge, /new D1MarketplaceCredentialVault\(env\.DB, env\.MARKETPLACE_CREDENTIAL_KEK\)/);
+  assert.match(startBridge, /reauthorization_required/);
+  assert.match(startBridge, /access_expires_at/);
+  assert.match(startBridge, /refresh_expires_at/);
+  assert.doesNotMatch(startBridge, /credential\.material|access_token|refresh_token|partner_key|app_secret/);
+});
+
 test("social ingress mounts marketplace OAuth before existing Facebook webhook routing", () => {
   assert.match(ingress, /routeMarketplaceOAuth\(request, url, env\)/);
   assert.match(ingress, /if \(marketplaceOAuthResponse\) return marketplaceOAuthResponse/);
