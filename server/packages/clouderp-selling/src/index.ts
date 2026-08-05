@@ -6,6 +6,8 @@ export * from "./crm-customer-360-controller.js";
 export * from "./crm-customer-360-types.js";
 export * from "./crm-directory-controllers.js";
 export * from "./crm-directory-types.js";
+export * from "./crm-external-identity-controller.js";
+export * from "./crm-external-identity-types.js";
 export * from "./crm-marketing-consent-controller.js";
 export * from "./crm-marketing-controllers.js";
 export * from "./crm-marketing-types.js";
