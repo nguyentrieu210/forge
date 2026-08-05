@@ -16,7 +16,7 @@ export interface CrmCustomerExternalIdentityData extends JsonObject {
   scope_label?: string;
   linked_customer: string;
   crm_contact?: string;
-  status: CrmExternalIdentityStatus;
+  identity_status: CrmExternalIdentityStatus;
   source: string;
   linked_at: string;
   linked_by: string;
@@ -38,6 +38,6 @@ export interface CrmCustomer360ExternalIdentityData extends JsonObject {
   identity: string;
   provider: CrmExternalIdentityProvider;
   scope_label?: string;
-  status: CrmExternalIdentityStatus;
+  identity_status: CrmExternalIdentityStatus;
   linked_at: string;
 }
