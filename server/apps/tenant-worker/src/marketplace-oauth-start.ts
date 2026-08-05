@@ -35,7 +35,7 @@ export async function routeMarketplaceOAuthStart(
   }), env);
   if (!identityResponse.ok) return identityResponse;
   const identity = await parseWhoAmI(identityResponse);
-  if (!identity.roles.includes("System Manager")) {
+  if (!canManageMarketplaceConnections(identity)) {
     return jsonResponse({ error: { code: "PERMISSION_DENIED" } }, 403);
   }
 
@@ -109,6 +109,12 @@ async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Pro
     }
   }
   return jsonResponse({ connections }, 200, { "cache-control": "no-store" });
+}
+
+function canManageMarketplaceConnections(identity: WhoAmI): boolean {
+  return identity.actor_id === "Administrator"
+    || identity.roles.includes("Administrator")
+    || identity.roles.includes("System Manager");
 }
 
 async function parseWhoAmI(response: Response): Promise<WhoAmI> {
