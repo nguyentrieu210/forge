@@ -28,6 +28,8 @@ on:
       - "server/tests/ws16-*.test.mjs"
       - "client/apps/runtime/src/experiences/SocialCommerce.tsx"
       - "client/apps/runtime/src/experiences/Marketplace*.tsx"
+      - "docs/OMNICHANNEL_COMMERCE_ERP.md"
+      - "docs/agents/workstreams/WS16-OMNICHANNEL-MARKETPLACE-20260805.md"
       - ".github/workflows/commerce-ci.yml"
 
 permissions:
