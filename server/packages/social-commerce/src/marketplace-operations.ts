@@ -30,6 +30,7 @@ export interface MarketplaceOperationalOrderRow {
   source_key: string;
   provider: string;
   sales_order_name: string | null;
+  customer: string | null;
   status: string;
   amount_minor: number;
   currency: string;
@@ -134,15 +135,20 @@ export async function listMarketplaceOperationalOrders(
 ): Promise<MarketplaceOperationalOrderRow[]> {
   const bounded = Number.isSafeInteger(limit) ? Math.min(Math.max(limit, 1), 500) : 100;
   const result = await db.prepare(`
-    SELECT order_id,cart_id,sales_order_name,status,cod_amount_minor,currency,created_at,modified_at
-    FROM social_orders
-    WHERE tenant_id=?1 AND cart_id LIKE 'marketplace:%'
-    ORDER BY modified_at DESC
+    SELECT
+      o.order_id,o.cart_id,o.sales_order_name,o.status,o.cod_amount_minor,o.currency,o.created_at,o.modified_at,
+      CASE WHEN d.docstatus IS NULL OR d.docstatus=2 THEN NULL ELSE json_extract(d.payload_json,'$.customer') END AS customer
+    FROM social_orders o
+    LEFT JOIN documents d
+      ON d.tenant_id=o.tenant_id AND d.doctype='Sales Order' AND d.name=o.sales_order_name
+    WHERE o.tenant_id=?1 AND o.cart_id LIKE 'marketplace:%'
+    ORDER BY o.modified_at DESC
     LIMIT ?2
   `).bind(tenantId, bounded).all<{
     order_id: string;
     cart_id: string;
     sales_order_name: string | null;
+    customer: string | null;
     status: string;
     cod_amount_minor: number;
     currency: string;
@@ -151,11 +157,13 @@ export async function listMarketplaceOperationalOrders(
   }>();
   return (result.results ?? []).map((row) => {
     const sourceKey = marketplaceSourceKeyFromCart(row.cart_id);
+    const customer = typeof row.customer === "string" && row.customer.trim() ? row.customer.trim() : null;
     return {
       order_id: row.order_id,
       source_key: sourceKey,
       provider: sourceKey.split("-", 1)[0] ?? "unknown",
       sales_order_name: row.sales_order_name,
+      customer,
       status: row.status,
       amount_minor: Number(row.cod_amount_minor),
       currency: row.currency,
