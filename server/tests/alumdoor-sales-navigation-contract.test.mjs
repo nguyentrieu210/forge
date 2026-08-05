@@ -18,10 +18,10 @@ const SALES_KEYS = [
 ];
 const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Phiếu xuất kho", "Giao hàng", "Báo cáo"];
 
-test("Alumdoor sales exposes five metadata tabs after the shell Quy trình tab", async () => {
+test("Alumdoor sales exposes five operational tabs in 2.3.0", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.2.10");
+  assert.equal(brief.version, "2.3.0");
   assert.deepEqual(brief.navigation.items.slice(0, SALES_KEYS.length), SALES_KEYS);
 
   const experience = brief.experiences.find((entry) => entry.key === "alumdoor-operations:workbench");
@@ -50,7 +50,7 @@ test("Alumdoor sales exposes five metadata tabs after the shell Quy trình tab",
   assert.equal(salesReport?.group, "Bán hàng");
 
   const pkg = compileBrief(brief);
-  assert.equal(pkg.version, "2.2.10");
+  assert.equal(pkg.version, "2.3.0");
   const sales = pkg.nav.filter((entry) => entry.group === "Bán hàng");
   assert.deepEqual(sales.map((entry) => entry.key), SALES_KEYS);
   assert.deepEqual(sales.map((entry) => entry.label), SALES_LABELS);
@@ -59,7 +59,6 @@ test("Alumdoor sales exposes five metadata tabs after the shell Quy trình tab",
   assert.equal(navByKey.has("action:tinh-cong-thuc-cua"), false);
   assert.equal(navByKey.get("alumdoor-operations:workbench")?.kind, "experience");
 
-  // Hidden calculator remains callable and the canonical document authorities stay installed.
   assert.ok(pkg.actions.some((entry) => entry.name === "tinh-cong-thuc-cua"));
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Sales Order"));
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Delivery Note"));
