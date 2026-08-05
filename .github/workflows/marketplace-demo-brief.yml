@@ -5,9 +5,14 @@ on:
     paths:
       - "server/briefs/marketplace-demo.json"
       - "server/briefs/brief.schema.json"
+      - "server/demo-seeds/marketplace-demo.json"
+      - "server/scripts/create-demo-tenant.mjs"
+      - "server/scripts/seed-demo-data.mjs"
+      - "server/scripts/lib/demo-seed.mjs"
       - "server/scripts/forge-app.mjs"
       - "server/scripts/lib/compile-brief*.mjs"
       - "server/scripts/lib/validate-brief-schema.mjs"
+      - "server/tests/demo-seed.test.mjs"
       - ".github/workflows/marketplace-demo-brief.yml"
   push:
     branches:
@@ -15,9 +20,14 @@ on:
     paths:
       - "server/briefs/marketplace-demo.json"
       - "server/briefs/brief.schema.json"
+      - "server/demo-seeds/marketplace-demo.json"
+      - "server/scripts/create-demo-tenant.mjs"
+      - "server/scripts/seed-demo-data.mjs"
+      - "server/scripts/lib/demo-seed.mjs"
       - "server/scripts/forge-app.mjs"
       - "server/scripts/lib/compile-brief*.mjs"
       - "server/scripts/lib/validate-brief-schema.mjs"
+      - "server/tests/demo-seed.test.mjs"
       - ".github/workflows/marketplace-demo-brief.yml"
 
 permissions:
@@ -25,7 +35,7 @@ permissions:
 
 jobs:
   validate:
-    name: Compile marketplace brief through canonical parser
+    name: Compile marketplace brief and seed through canonical tooling
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -52,3 +62,17 @@ jobs:
 
       - name: Compile and validate marketplace demo
         run: node server/scripts/forge-app.mjs server/briefs/marketplace-demo.json --dry-run
+
+      - name: Verify generic demo seed primitives
+        run: node --test server/tests/demo-seed.test.mjs
+
+      - name: Validate rich marketplace seed manifest
+        run: node server/scripts/seed-demo-data.mjs server/demo-seeds/marketplace-demo.json --dry-run
+
+      - name: Verify Demo Factory resolves repo-root brief path and matching seed
+        run: >-
+          node server/scripts/create-demo-tenant.mjs
+          server/briefs/marketplace-demo.json
+          --customer "Thúy"
+          --slug thuy
+          --dry-run
