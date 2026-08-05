@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   finalize-metadata:
-    name: Install Alumdoor 2.2.7 metadata and verify production
+    name: Install purchase metadata and verify production
     if: github.head_ref == 'release/alu-full-5e6d447-20260805'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -29,7 +29,8 @@ jobs:
       R6_RUN: '30984925591'
       CANONICAL_RUN: '30985667526'
       FORGE_ORIGIN: https://alu.kairo.vn
-      EXPECTED_APP_VERSION: 2.2.7
+      SOURCE_ACTION_VERSION: 2.2.7
+      EXPECTED_APP_VERSION: 2.2.6
       FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
       FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
       GH_TOKEN: ${{ github.token }}
@@ -55,7 +56,7 @@ jobs:
           grep -Fxq 'SOURCE_PR=714' "$AUTH_FILE"
           grep -Fxq "SOURCE_HEAD_SHA=$SOURCE_HEAD_SHA" "$AUTH_FILE"
           grep -Fxq "R6_RUN=$R6_RUN" "$AUTH_FILE"
-          grep -Fxq "APP_VERSION=$EXPECTED_APP_VERSION" "$AUTH_FILE"
+          grep -Fxq "APP_VERSION=$SOURCE_ACTION_VERSION" "$AUTH_FILE"
           grep -Fxq 'APPROVAL=EXPLICIT_USER_APPROVAL_2026-08-05' "$AUTH_FILE"
           test -n "${FORGE_ADMIN_USER:-}"
           test -n "${FORGE_ADMIN_PASSWORD:-}"
@@ -112,6 +113,25 @@ jobs:
 
       - name: Build CloudForge metadata tooling
         run: pnpm --filter cloudforge run build
+
+      - name: Verify source package version authority
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' | tee "$EVIDENCE_DIR/source-version.txt"
+          import { readFile } from 'node:fs/promises';
+          import { readBriefSource } from './scripts/lib/read-brief-source.mjs';
+          const action = JSON.parse(await readFile('./briefs/alumdoor-v2.actions.json', 'utf8'));
+          const nav = JSON.parse(await readFile('./briefs/alumdoor-v2.navigation.json', 'utf8'));
+          const merged = await readBriefSource('./briefs/alumdoor-v2.json');
+          if (action.version !== process.env.SOURCE_ACTION_VERSION) throw new Error(`action sidecar ${action.version}`);
+          if (merged.version !== process.env.EXPECTED_APP_VERSION) throw new Error(`final package ${merged.version}`);
+          console.log(`action_sidecar=${action.version}`);
+          console.log(`navigation_sidecar=${nav.version}`);
+          console.log(`final_package=${merged.version}`);
+          NODE
+          printf 'source_action_version=%s\nsource_package_version=%s\n' "$SOURCE_ACTION_VERSION" "$EXPECTED_APP_VERSION" >> "$EVIDENCE_DIR/state.txt"
 
       - name: Install Alumdoor metadata through canonical browser path
         working-directory: server
@@ -175,7 +195,8 @@ jobs:
           if (!purchase || purchase.label !== 'Mua hàng') throw new Error('Mua hàng navigation missing after metadata install');
           process.stdout.write(JSON.stringify({
             app: 'alumdoor',
-            expected_version: process.env.EXPECTED_APP_VERSION,
+            package_version: process.env.EXPECTED_APP_VERSION,
+            action_sidecar_version: process.env.SOURCE_ACTION_VERSION,
             purchase_action: 'tao-don-mua',
             child_grid_inline: true,
             discount_percentage: true,
