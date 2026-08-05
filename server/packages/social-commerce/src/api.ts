@@ -13,6 +13,7 @@ import {
   releaseMarketplaceReservationForCart,
 } from "./marketplace-operations.js";
 import { resolveMarketplaceOrderFromMetadata, type MarketplaceProviderOrderInput } from "./marketplace-profile.js";
+import { routeMarketplaceSettlementApi } from "./marketplace-settlement-api.js";
 
 const WRITE_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager", "Sales User"]);
 const MANAGER_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager"]);
@@ -59,6 +60,9 @@ export async function routeSocialCommerceApi(
   domain?: SocialCommerceDomainPort,
 ): Promise<Response | null> {
   if (!url.pathname.startsWith("/api/v1/social/")) return null;
+
+  const marketplaceSettlement = await routeMarketplaceSettlementApi(request, url, db, tenantId, actor);
+  if (marketplaceSettlement) return marketplaceSettlement;
 
   if (request.method === "GET" && url.pathname === "/api/v1/social/summary") {
     requireReader(actor);
