@@ -31,8 +31,8 @@ test("provider watermark is recorded only after canonical order acceptance so re
 });
 
 test("provider event evidence never mutates canonical order, stock or finance lifecycle", () => {
-  assert.doesNotMatch(state, /UPDATE\s+social_orders/i);
-  assert.doesNotMatch(state, /INSERT INTO\s+social_orders/i);
-  assert.doesNotMatch(state, /(?:INSERT INTO|UPDATE)\s+(?:stock|gl|payment|ledger)/i);
-  assert.doesNotMatch(state, /Delivery Note|Stock Return|Sales Invoice|Payment Entry/);
+  assert.doesNotMatch(state, /(?:INSERT INTO|UPDATE|DELETE FROM)\s+social_orders/i);
+  assert.doesNotMatch(state, /(?:INSERT INTO|UPDATE|DELETE FROM)\s+social_shipments/i);
+  assert.doesNotMatch(state, /(?:INSERT INTO|UPDATE|DELETE FROM)\s+documents/i);
+  assert.doesNotMatch(state, /(?:INSERT INTO|UPDATE|DELETE FROM)\s+(?:stock|gl|payment|ledger)/i);
 });
