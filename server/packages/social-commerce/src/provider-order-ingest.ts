@@ -1,4 +1,10 @@
 import type { Actor, JsonObject } from "../../contracts/src/index.js";
+import { asCloudForgeError } from "../../core/src/index.js";
+import {
+  mappingExceptionFromErrorDetails,
+  recordMarketplaceMappingException,
+  resolveMarketplaceMappingExceptions,
+} from "./marketplace-mapping-exception.js";
 import type { MarketplaceProvider } from "./marketplace-order.js";
 import { ingestResolvedMarketplaceOrder, type MarketplaceOperationalOrderResult } from "./marketplace-operations.js";
 import {
@@ -28,10 +34,27 @@ export async function ingestMarketplaceProviderRecord(
   provider_event_state: MarketplaceProviderOrderEventState;
 }> {
   const normalized = normalizeMarketplaceProviderOrderRecord(input.provider, input.channel_profile, input.record);
-  const resolved = await resolveMarketplaceOrderFromMetadata(db, tenantId, normalized);
+  let resolved;
+  try {
+    resolved = await resolveMarketplaceOrderFromMetadata(db, tenantId, normalized);
+  } catch (error) {
+    const mappingException = mappingExceptionFromErrorDetails(asCloudForgeError(error).details);
+    if (mappingException) await recordMarketplaceMappingException(db, tenantId, mappingException);
+    throw error;
+  }
   if (resolved.order.provider !== input.provider) {
     throw new Error(`Provider record ${input.provider} does not match Commerce Channel Profile ${resolved.channel_profile}`);
   }
+
+  // Once metadata resolution succeeds, any previously-open exception for these
+  // exact SKU/variant identities is resolved. The Marketplace SKU Mapping document
+  // remains the authority; this table is only an operator inbox projection.
+  await resolveMarketplaceMappingExceptions(db, tenantId, {
+    provider: resolved.order.provider,
+    channel_profile: resolved.channel_profile,
+    items: normalized.items,
+  });
+
   const result = await ingestResolvedMarketplaceOrder(db, tenantId, actor, resolved);
 
   // Persist external lifecycle evidence only after canonical acceptance. If this
