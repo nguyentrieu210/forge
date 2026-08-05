@@ -1,0 +1,54 @@
+name: Demo Issue Command Validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/demo-provision-issue-command.yml"
+      - ".github/workflows/demo-issue-command-validation.yml"
+      - "server/scripts/parse-demo-command.mjs"
+      - "server/scripts/lib/demo-command.mjs"
+      - "server/tests/demo-command.test.mjs"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/demo-provision-issue-command.yml"
+      - ".github/workflows/demo-issue-command-validation.yml"
+      - "server/scripts/parse-demo-command.mjs"
+      - "server/scripts/lib/demo-command.mjs"
+      - "server/tests/demo-command.test.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Syntax-check command tooling
+        run: |
+          node --check server/scripts/lib/demo-command.mjs
+          node --check server/scripts/parse-demo-command.mjs
+      - name: Run command parser tests
+        run: node --test server/tests/demo-command.test.mjs
+      - name: Exercise CLI authorization and GitHub outputs
+        shell: bash
+        env:
+          FORGE_DEMO_COMMAND_BODY: |
+            /forge-demo-provision
+            {"customer_name":"Thúy","slug":"thuy","brief":"marketplace-demo","admin_user":"admin","plan":"pro","provision_standard":false,"target_sha":"c014a79547dc3b379fa80b0545f0395b95effcdc","confirm":"demo"}
+          FORGE_DEMO_COMMAND_ISSUE: "686"
+          FORGE_DEMO_COMMAND_AUTHOR: "nguyentrieu210"
+          FORGE_DEMO_COMMAND_ASSOCIATION: "OWNER"
+          FORGE_REPOSITORY_OWNER: "nguyentrieu210"
+        run: |
+          out=$(mktemp)
+          GITHUB_OUTPUT="$out" node server/scripts/parse-demo-command.mjs
+          grep -Fx 'customer_name=Thúy' "$out"
+          grep -Fx 'slug=thuy' "$out"
+          grep -Fx 'brief=marketplace-demo' "$out"
+          grep -Fx 'target_sha=c014a79547dc3b379fa80b0545f0395b95effcdc' "$out"
+          grep -Fx 'confirm=demo' "$out"
