@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -8,6 +9,7 @@ import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const briefPath = path.resolve(here, "../briefs/alumdoor-v2.json");
+const composerPath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorSalesComposer.tsx");
 const OPERATIONAL_REPORT_PREFIX = "OperationalReport:";
 
 const SALES_KEYS = [
@@ -104,4 +106,27 @@ test("Alumdoor sales exposes composer, canonical order/output, dispatch and in-t
   assert.ok(pkg.reports.some((entry) => entry.name === "Đơn hàng theo khách"), "legacy report stays installed/callable");
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Sales Order"));
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Delivery Note"));
+});
+
+test("Sales composer takes technical choices from Cutting Policy and reserves stock before submit", async () => {
+  const source = await readFile(composerPath, "utf8");
+
+  assert.match(source, /adapter\.getList\("Cutting Policy"/);
+  assert.match(source, /adapter\.getDoc\("Cutting Policy", formula\.policy_name\)/);
+  assert.doesNotMatch(source, /<Input value=\{line\.rayType\}/, "ray must not regress to free text");
+  assert.doesNotMatch(source, /<Input value=\{line\.leafVariant\}/, "leaf variant must not regress to free text");
+  assert.match(source, /<select[^>]+value=\{line\.rayType\}/);
+  assert.match(source, /<select[^>]+value=\{line\.leafVariant\}/);
+
+  const reserveAt = source.indexOf('adapter.callPost<ReservationResult>("alumdoor.reserve.create"');
+  const submitAt = source.indexOf("adapter.submit(created)");
+  const releaseAt = source.indexOf('adapter.callPost("alumdoor.reserve.release"');
+  assert.ok(reserveAt >= 0, "confirm must create canonical Stock Reservation");
+  assert.ok(submitAt > reserveAt, "reservations must be established before Sales Order submit");
+  assert.ok(releaseAt > submitAt, "failure path must release reservations after a failed submit/reservation sequence");
+  assert.match(source, /source_doctype:\s*"Sales Order"/);
+  assert.match(source, /source_name:\s*created\.name/);
+  assert.match(source, /min_length_m:\s*Number\(formula\.cut_width_m\)/);
+  assert.match(source, /qty_reserved:\s*Number\(formula\.total_leaf_count\)/);
+  assert.match(source, /Xác nhận & giữ chỗ/);
 });
