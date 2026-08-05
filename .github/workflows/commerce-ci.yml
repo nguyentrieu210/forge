@@ -1,0 +1,59 @@
+name: Omnichannel Commerce CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "server/packages/social-commerce/**"
+      - "server/packages/clouderp-stock/**"
+      - "server/packages/integration-hub/**"
+      - "server/apps-src/social-commerce/**"
+      - "server/migrations/tenant/0117_commercial_stock_reservations.sql"
+      - "server/migrations/tenant/0118_marketplace_settlement_evidence.sql"
+      - "server/tests/ws16-*.test.mjs"
+      - "client/apps/runtime/src/experiences/SocialCommerce.tsx"
+      - ".github/workflows/commerce-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: omnichannel-commerce-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feature/omnichannel-commerce-erp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build CloudForge
+        run: pnpm --filter cloudforge run build
+
+      - name: Run omnichannel commerce contract tests
+        working-directory: server
+        run: node --test tests/ws16-marketplace-order-source-contract.test.mjs tests/ws16-omnichannel-closure-contract.test.mjs
+
+      - name: Build MetaForge runtime
+        run: pnpm --filter metaforge run build
