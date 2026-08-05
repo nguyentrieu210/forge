@@ -48,6 +48,15 @@ test("marketplace order ingestion is provider-neutral and maps into canonical Sa
   assert.doesNotMatch(marketplace, /UPDATE\s+(?:stock|gl|payment)/i);
 });
 
+test("canonical marketplace Sales Order persists opaque customer identity lineage, not provider buyer id", async () => {
+  const { marketplace } = await sources();
+  assert.match(marketplace, /crmCustomerExternalIdentityKey\(\s*normalized\.provider,\s*normalized\.shop_id,\s*normalized\.external_buyer_id/);
+  assert.match(marketplace, /marketplaceCustomerIdentityLineage\(/);
+  assert.match(marketplace, /external_actor_id: externalActorLineage/);
+  assert.match(marketplace, /return `crm-external-identity:\$\{identityKey\}`/);
+  assert.doesNotMatch(marketplace, /external_actor_id:\s*normalized\.external_buyer_id/);
+});
+
 test("authenticated marketplace ingest resolves metadata then reserves ATP before canonical conversion", async () => {
   const { api, operations } = await sources();
   assert.match(api, /\/api\/v1\/social\/marketplace\/orders\/ingest/);
