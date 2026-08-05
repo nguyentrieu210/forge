@@ -49,9 +49,12 @@ test("tenant descriptor derives provider and shop scope from canonical Marketpla
   assert.doesNotMatch(descriptor, /access_token|refresh_token|partner_key|app_secret/i);
 });
 
-test("browser start accepts only connection id after canonical whoami System Manager authorization", () => {
+test("browser start accepts only connection id after canonical manager authorization", () => {
   assert.match(startBridge, /\/api\/v1\/social\/marketplace\/oauth\/start/);
   assert.match(startBridge, /new URL\("\/api\/v1\/whoami"/);
+  assert.match(startBridge, /canManageMarketplaceConnections\(identity\)/);
+  assert.match(startBridge, /identity\.actor_id === "Administrator"/);
+  assert.match(startBridge, /identity\.roles\.includes\("Administrator"\)/);
   assert.match(startBridge, /identity\.roles\.includes\("System Manager"\)/);
   assert.match(startBridge, /const connectionId = text\(body\.connection_id/);
   assert.match(startBridge, /tenant_id: identity\.tenant_id/);
