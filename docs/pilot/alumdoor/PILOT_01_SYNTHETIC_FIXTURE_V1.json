@@ -1,0 +1,62 @@
+{
+  "format": "forge-alumdoor-pilot-01-synthetic-fixture/v1",
+  "status": "SYNTHETIC_TEST_ONLY",
+  "pilot_batch_id": "ALU-SYNTHETIC-PILOT-01-V1",
+  "tenant": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "mapping_version": 1,
+  "generator": "docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.mjs",
+  "test": "docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.test.mjs",
+  "synthetic": true,
+  "contains_real_customer_data": false,
+  "satisfies_real_pilot_01_readiness": false,
+  "production_write_authorized": false,
+  "production_data_mutated": false,
+  "dataset_counts": {
+    "customers": 4,
+    "contacts": 4,
+    "suppliers": 3,
+    "items": 6,
+    "boms": 2,
+    "work_centers": 2,
+    "warehouses": 3,
+    "opening_stock": 6,
+    "opening_ar": 3,
+    "opening_ap": 2,
+    "employees": 6,
+    "pilot_users": 6
+  },
+  "opening_totals": {
+    "opening_stock": {
+      "stock_qty_total": "5468",
+      "stock_value_total": "89500000"
+    },
+    "opening_ar": {
+      "total_amount_vnd": "22750000"
+    },
+    "opening_ap": {
+      "total_amount_vnd": "13000000"
+    }
+  },
+  "coverage": {
+    "all_12_required_datasets": true,
+    "all_six_frozen_personas": true,
+    "exactly_one_active_giam_doc": true,
+    "resolved_customer_references": true,
+    "resolved_supplier_references": true,
+    "resolved_item_and_warehouse_references": true,
+    "resolved_employee_user_references": true,
+    "bom_component_references": true,
+    "zero_unexplained_reconciliation_variance": true,
+    "immutable_file_sha256_manifest": true,
+    "opening_cash_bank_in_scope": false
+  },
+  "safety": {
+    "all_source_keys_prefixed_SYN": true,
+    "all_test_accounts_use_example_invalid": true,
+    "source_system": "SYNTHETIC_FIXTURE_NOT_CUSTOMER_DATA",
+    "real_opening_dependencies_remain_blocking": true,
+    "preview_pass_does_not_authorize_production_write": true
+  },
+  "usage": "node docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.mjs <output-dir>"
+}
