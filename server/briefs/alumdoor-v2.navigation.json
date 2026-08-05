@@ -1,6 +1,6 @@
 {
-  "version": "2.2.6",
-  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; bốn tab còn lại do metadata này sở hữu. Không có workspace React riêng hay route hardcode.",
+  "version": "2.2.8",
+  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; bốn tab còn lại do metadata này sở hữu. Nhập hàng trỏ trực tiếp tới action child-grid canonical; FIFO workspace cũ vẫn installed/callable nhưng không còn là tab vận hành.",
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",
@@ -27,13 +27,13 @@
       "group": "Mua hàng"
     },
     "nhap-nhom-fifo": {
-      "label": "Nhập hàng",
-      "menu": true,
-      "icon": "truck",
-      "group": "Mua hàng"
+      "menu": false
     },
     "nhap-nhom-hang-loat": {
-      "menu": false
+      "label": "Nhập hàng",
+      "menu": true,
+      "icon": "package-check",
+      "group": "Mua hàng"
     },
     "doi-soat-giao-hang-ncc": {
       "menu": false
@@ -41,7 +41,7 @@
   },
   "items": [
     "action:tao-don-mua",
-    "action:nhap-nhom-fifo",
+    "action:nhap-nhom-hang-loat",
     "report:Mua hàng theo nhà cung cấp",
     "Purchase Order"
   ]
