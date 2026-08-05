@@ -1,5 +1,7 @@
 import type { JsonObject } from "../../../packages/contracts/src/index.js";
 import { jsonResponse, readJson } from "../../../packages/core/src/index.js";
+import { D1MarketplaceCredentialVault } from "../../../packages/integration-hub/src/marketplace-credential-vault.js";
+import { resolveMarketplaceConnection } from "../../../packages/social-commerce/src/index.js";
 import baseWorker from "./index-core-base.js";
 import type { TenantEnv } from "./env.js";
 
@@ -9,23 +11,25 @@ interface WhoAmI {
   roles: string[];
 }
 
+interface ConnectionNameRow { name: string }
+
 /**
- * Browser-facing start bridge. Authentication and tenant binding are delegated back to
- * the unchanged tenant core through /api/v1/whoami; this extension never trusts actor,
- * role, tenant or provider fields from the request body.
+ * Browser-facing marketplace connection/OAuth bridge.
+ *
+ * Authentication and tenant binding are delegated back to the unchanged tenant core
+ * through /api/v1/whoami. The browser never supplies actor, role, tenant, provider,
+ * shop scope or secret_ref; only a canonical Marketplace Connection name can be chosen.
  */
 export async function routeMarketplaceOAuthStart(
   request: Request,
   url: URL,
   env: TenantEnv,
 ): Promise<Response | null> {
-  if (request.method !== "POST" || url.pathname !== "/api/v1/social/marketplace/oauth/start") return null;
-  if (!env.SOCIAL_INGRESS || !env.PUBLIC_ORIGIN) {
-    return jsonResponse({ error: { code: "MARKETPLACE_OAUTH_NOT_CONFIGURED" } }, 503);
-  }
+  const isStart = request.method === "POST" && url.pathname === "/api/v1/social/marketplace/oauth/start";
+  const isList = request.method === "GET" && url.pathname === "/api/v1/social/marketplace/connections";
+  if (!isStart && !isList) return null;
 
-  const whoamiUrl = new URL("/api/v1/whoami", request.url);
-  const identityResponse = await baseWorker.fetch(new Request(whoamiUrl, {
+  const identityResponse = await baseWorker.fetch(new Request(new URL("/api/v1/whoami", request.url), {
     method: "GET",
     headers: request.headers,
   }), env);
@@ -33,6 +37,11 @@ export async function routeMarketplaceOAuthStart(
   const identity = await parseWhoAmI(identityResponse);
   if (!identity.roles.includes("System Manager")) {
     return jsonResponse({ error: { code: "PERMISSION_DENIED" } }, 403);
+  }
+
+  if (isList) return listMarketplaceConnections(env, identity.tenant_id);
+  if (!env.SOCIAL_INGRESS || !env.PUBLIC_ORIGIN) {
+    return jsonResponse({ error: { code: "MARKETPLACE_OAUTH_NOT_CONFIGURED" } }, 503);
   }
 
   const body = await readJson<JsonObject>(request, 16_000);
@@ -52,6 +61,53 @@ export async function routeMarketplaceOAuthStart(
     }),
   });
   return new Response(response.body, { status: response.status, headers: response.headers });
+}
+
+async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Promise<Response> {
+  const rows = await env.DB.prepare(`
+    SELECT name FROM documents
+    WHERE tenant_id=?1 AND doctype='Marketplace Connection' AND docstatus<>2
+    ORDER BY name ASC LIMIT 100
+  `).bind(tenantId).all<ConnectionNameRow>();
+  const vault = env.MARKETPLACE_CREDENTIAL_KEK
+    ? new D1MarketplaceCredentialVault(env.DB, env.MARKETPLACE_CREDENTIAL_KEK)
+    : null;
+  const connections = [];
+  for (const row of rows.results ?? []) {
+    try {
+      const resolved = await resolveMarketplaceConnection(env.DB, tenantId, row.name);
+      const status = vault
+        ? await vault.status({
+          tenant_id: tenantId,
+          connection_id: resolved.connection.connection_id,
+          secret_ref: resolved.connection.secret_ref,
+          provider: resolved.provider,
+        })
+        : null;
+      connections.push({
+        connection_id: resolved.connection.connection_id,
+        provider: resolved.provider,
+        connection_status: resolved.connection.status,
+        credential_status: !status?.active
+          ? "unavailable"
+          : status.reauthorization_required
+            ? "reauthorization_required"
+            : "active",
+        refresh_managed: status?.refresh_managed ?? false,
+        access_expires_at: status?.access_expires_at,
+        refresh_expires_at: status?.refresh_expires_at,
+      });
+    } catch {
+      connections.push({
+        connection_id: row.name,
+        provider: null,
+        connection_status: "invalid",
+        credential_status: "unavailable",
+        refresh_managed: false,
+      });
+    }
+  }
+  return jsonResponse({ connections }, 200, { "cache-control": "no-store" });
 }
 
 async function parseWhoAmI(response: Response): Promise<WhoAmI> {
