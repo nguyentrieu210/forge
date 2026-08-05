@@ -23,10 +23,10 @@ test("tenant wrapper mounts fulfillment read before base social routing", () => 
 });
 
 test("fulfillment mutations remain canonical Social Commerce operations", () => {
-  assert.match(api, /\/api\/v1\/social\/orders\/\(\[\^\/\]\+\)\\\/cancel/);
-  assert.match(api, /\/api\/v1\/social\/orders\/\(\[\^\/\]\+\)\\\/shipments/);
-  assert.match(api, /\/api\/v1\/social\/shipments\/\(\[\^\/\]\+\)\\\/status/);
-  assert.match(api, /\/api\/v1\/social\/orders\/\(\[\^\/\]\+\)\\\/returns/);
+  assert.ok(api.includes('const cancelOrder = url.pathname.match(/^\\/api\\/v1\\/social\\/orders\\/([^/]+)\\/cancel$/);'));
+  assert.ok(api.includes('const shipment = url.pathname.match(/^\\/api\\/v1\\/social\\/orders\\/([^/]+)\\/shipments$/);'));
+  assert.ok(api.includes('const shipmentStatus = url.pathname.match(/^\\/api\\/v1\\/social\\/shipments\\/([^/]+)\\/status$/);'));
+  assert.ok(api.includes('const orderReturn = url.pathname.match(/^\\/api\\/v1\\/social\\/orders\\/([^/]+)\\/returns$/);'));
   assert.match(api, /cancelCanonicalSocialSalesOrder/);
   assert.match(api, /resolveCanonicalDeliveryShipment/);
   assert.match(api, /resolveCanonicalSalesStockReturn/);
