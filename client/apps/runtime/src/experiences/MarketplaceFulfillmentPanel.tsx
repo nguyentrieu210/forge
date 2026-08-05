@@ -22,11 +22,22 @@ interface Shipment {
   modified_at: string;
 }
 
+interface ProviderEventState {
+  latest_external_status: string;
+  latest_occurred_at: string;
+  observed_at: string;
+  event_count: number;
+  stale_event_count: number;
+  duplicate_event_count: number;
+  conflict_event_count: number;
+}
+
 interface FulfillmentProjection {
   order_id: string;
   sales_order_name: string | null;
   status: string;
   currency: string;
+  provider_event: ProviderEventState | null;
   shipments: Shipment[];
 }
 
@@ -170,7 +181,7 @@ export function MarketplaceFulfillmentPanel({
     setStockReturn("");
   }
 
-  const current = projection ?? { ...order, shipments: [] };
+  const current = projection ?? { ...order, provider_event: null, shipments: [] };
   const terminal = current.status === "cancelled" || current.status === "returned";
 
   return (
@@ -190,6 +201,26 @@ export function MarketplaceFulfillmentPanel({
       </div>
 
       {loading ? <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Đang tải shipment...</div> : null}
+
+      {current.provider_event ? (
+        <section className="mt-4 rounded-lg border bg-background p-3" aria-label="Provider event health">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-sm font-medium">Tín hiệu trạng thái từ sàn</h4>
+                <StatusBadge tone={current.provider_event.conflict_event_count ? "warning" : "info"}>{current.provider_event.latest_external_status}</StatusBadge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Event mới nhất xảy ra {dateTime(current.provider_event.latest_occurred_at)}. Đây chỉ là evidence từ provider, không điều khiển trạng thái Sales Order / Delivery Note / Stock Return của ERP.</p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge variant="outline">{current.provider_event.event_count} event</Badge>
+              <Badge variant="outline">{current.provider_event.stale_event_count} stale</Badge>
+              <Badge variant="outline">{current.provider_event.duplicate_event_count} duplicate</Badge>
+              <Badge variant={current.provider_event.conflict_event_count ? "secondary" : "outline"}>{current.provider_event.conflict_event_count} conflict</Badge>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <section className="rounded-lg border bg-background p-3">
