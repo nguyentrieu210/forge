@@ -4,7 +4,7 @@
  *
  * This is an orchestrator, not a second provisioning implementation. It reuses:
  * - Cloudflare D1 as the tenant database authority;
- * - provision-tenant.mjs for migrations/Worker/secrets/route/admin;
+ * - provision-tenant-v2.mjs for migration/Worker/V2 security/route/admin;
  * - forge-app.mjs for metadata install + browser-path verification;
  * - seed-demo-data.mjs for optional synthetic canonical demo documents.
  *
@@ -26,10 +26,7 @@ import {
   resolveWorkersDevOrigin,
   waitForTenantShell,
 } from "./lib/demo-provisioning.mjs";
-import {
-  resolveCloudflareAccountId,
-  resolveDemoPlatformSecrets,
-} from "./lib/demo-provider-credentials.mjs";
+import { resolveCloudflareAccountId } from "./lib/demo-provider-credentials.mjs";
 
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => {
@@ -38,9 +35,7 @@ const argOf = (name, fallback) => {
 };
 
 const briefArg = args[0] && !args[0].startsWith("--") ? args[0] : null;
-if (!briefArg) fail("usage: node scripts/create-demo-tenant.mjs <brief.json> --customer <name> [--slug thuy] [--admin admin] [--plan pro] [--seed seed.json] [--dry-run]");
-// Child scripts run with cwd=serverRoot. Resolve the caller's path NOW so both
-// `server/briefs/x.json` (repo-root workflow) and `briefs/x.json` (server cwd) work.
+if (!briefArg) fail("usage: node scripts/create-demo-tenant.mjs <brief.json> --customer <name> [--slug thuy] [--admin admin] [--plan pro] [--seed seed.json] [--source-sha <sha>] [--dry-run]");
 const briefPath = path.resolve(process.cwd(), briefArg);
 if (!existsSync(briefPath)) fail(`brief not found: ${briefPath}`);
 const explicitSeed = argOf("seed");
@@ -56,31 +51,23 @@ const origin = `https://${hostname}`;
 const databaseName = demoDatabaseName(slug);
 const accountHint = argOf("account", process.env.CLOUDFLARE_ACCOUNT_ID ?? "");
 const namespace = argOf("namespace", process.env.FORGE_DISPATCH_NAMESPACE ?? "cloudforge-production");
-const referenceTenantScript = argOf("reference-tenant-script", process.env.FORGE_REFERENCE_TENANT_SCRIPT ?? "cloudforge-tenant-alu");
 const adminUser = argOf("admin", process.env.FORGE_ADMIN_USER ?? "admin");
 const plan = argOf("plan", "pro");
+const sourceSha = String(argOf("source-sha", process.env.FORGE_SOURCE_SHA ?? "")).trim().toLowerCase();
 const explicitControlUrl = (argOf("control-url", process.env.FORGE_CONTROL_URL) ?? "").replace(/\/$/, "");
 const dryRun = args.includes("--dry-run");
 const provisionStandard = args.includes("--provision-standard");
 
 if (!customer && !argOf("slug")) fail("--customer <name> or --slug <slug> is required");
 if (!/^(free|pro|enterprise)$/.test(plan)) fail("--plan must be free, pro or enterprise");
+if (!dryRun && !/^[a-f0-9]{40}$/.test(sourceSha)) fail("live provisioning requires --source-sha <40-char merged main SHA> or FORGE_SOURCE_SHA");
 
 const sensitiveValues = [];
 function addSensitive(value) {
   const text = String(value ?? "");
   if (text && !sensitiveValues.includes(text)) sensitiveValues.push(text);
 }
-for (const name of [
-  "CLOUDFLARE_API_TOKEN",
-  "FORGE_INTERNAL_AUTH_SECRET",
-  "INTERNAL_AUTH_SECRET",
-  "FORGE_INTERNAL_SERVICE_TOKEN",
-  "INTERNAL_SERVICE_TOKEN",
-  "FORGE_CONTROL_TOKEN",
-  "CONTROL_TOKEN",
-  "FORGE_ADMIN_PASSWORD",
-]) addSensitive(process.env[name]);
+for (const name of ["CLOUDFLARE_API_TOKEN", "FORGE_ADMIN_PASSWORD"]) addSensitive(process.env[name]);
 
 function redact(value) {
   let out = String(value ?? "");
@@ -106,7 +93,8 @@ console.log(`tenant   ${slug}`);
 console.log(`origin   ${origin}`);
 console.log(`brief    ${briefPath}`);
 console.log(`seed     ${seedPath ?? "(none)"}`);
-console.log(`plan     ${plan}\n`);
+console.log(`plan     ${plan}`);
+console.log(`security ${dryRun ? "planned" : "generation-v2"}\n`);
 
 if (dryRun) {
   runNode("forge-app.mjs", [briefPath, "--dry-run"]);
@@ -119,32 +107,14 @@ const token = String(process.env.CLOUDFLARE_API_TOKEN ?? "").trim();
 if (!token) fail("CLOUDFLARE_API_TOKEN is required");
 if (!process.env.FORGE_ADMIN_PASSWORD) fail("FORGE_ADMIN_PASSWORD is required");
 
-// Provider identity + shared credential resolution happen BEFORE the first D1/provider
-// mutation. The account can be selected from the token-visible account containing the
-// canonical gateway. Existing shared secret values are reused only when supplied by the
-// environment or actually returned by the provider; metadata-only secret reads fail closed.
 let accountResolution;
-let platformSecrets;
 try {
   accountResolution = await resolveCloudflareAccountId({ token, accountHint });
-  platformSecrets = await resolveDemoPlatformSecrets({
-    token,
-    accountId: accountResolution.accountId,
-    namespace,
-    referenceTenantScript,
-    env: process.env,
-  });
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
 const accountId = accountResolution.accountId;
-const providerEnv = {
-  CLOUDFLARE_ACCOUNT_ID: accountId,
-  ...platformSecrets.values,
-};
-for (const value of Object.values(platformSecrets.values)) addSensitive(value);
 console.log(`0 provider  ${accountResolution.selection}`);
-console.log(`  secrets   ${Object.entries(platformSecrets.source).map(([name, source]) => `${name}:${source}`).join(", ")}`);
 
 const database = await ensureDemoDatabase({ accountId, token, databaseName });
 console.log(`1 database  ${database.name} (${database.id}) ${database.created ? "created" : "reused"}`);
@@ -165,9 +135,13 @@ const provisionArgs = [
   "--control-url", controlUrl,
   "--admin", adminUser,
   "--plan", plan,
+  "--source-sha", sourceSha,
 ];
-console.log("3 provision tenant lifecycle");
-runNode("provision-tenant.mjs", provisionArgs, providerEnv);
+console.log("3 provision Security Generation V2 tenant lifecycle");
+runNode("provision-tenant-v2.mjs", provisionArgs, {
+  CLOUDFLARE_ACCOUNT_ID: accountId,
+  FORGE_SOURCE_SHA: sourceSha,
+});
 
 process.stdout.write("4 readiness tenant shell … ");
 const ready = await waitForTenantShell(origin);
@@ -187,6 +161,6 @@ if (seedPath) {
 }
 
 console.log(`\nLIVE ${origin}`);
-console.log(`tenant=${slug} database=${database.name} admin=${adminUser}`);
+console.log(`tenant=${slug} database=${database.name} admin=${adminUser} security_generation=2`);
 console.log(`seed=${seedPath ? path.basename(seedPath) : "none"}`);
 console.log("No DNS/resource cleanup was attempted. Failed runs retain evidence for diagnosis and safe retry.");

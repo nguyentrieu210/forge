@@ -62,9 +62,6 @@ jobs:
       TARGET_SHA: ${{ inputs.target_sha || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
-      FORGE_INTERNAL_AUTH_SECRET: ${{ secrets.FORGE_INTERNAL_AUTH_SECRET || secrets.INTERNAL_AUTH_SECRET }}
-      FORGE_INTERNAL_SERVICE_TOKEN: ${{ secrets.FORGE_INTERNAL_SERVICE_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
-      FORGE_CONTROL_TOKEN: ${{ secrets.FORGE_CONTROL_TOKEN || secrets.CONTROL_TOKEN }}
       FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_DEMO_ADMIN_PASSWORD || secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
       FORGE_DEMO_BASE_DOMAIN: kairo.vn
       FORGE_DISPATCH_NAMESPACE: cloudforge-production
@@ -123,7 +120,12 @@ jobs:
         run: pnpm --filter cloudforge run build
 
       - name: Verify Demo Factory helpers
-        run: node --test server/tests/demo-provisioning.test.mjs server/tests/demo-provider-credentials.test.mjs
+        run: >-
+          node --test
+          server/tests/demo-provisioning.test.mjs
+          server/tests/demo-provider-credentials.test.mjs
+          server/tests/security-generation-v2.test.mjs
+          server/tests/control-security-v2.test.mjs
 
       - name: Compile and validate app before provider mutation
         shell: bash
@@ -143,6 +145,7 @@ jobs:
         id: provision
         shell: bash
         env:
+          FORGE_SOURCE_SHA: ${{ env.TARGET_SHA }}
           BRIEF: ${{ steps.input.outputs.brief }}
           CUSTOMER_NAME: ${{ inputs.customer_name }}
           SLUG: ${{ inputs.slug }}
@@ -151,7 +154,7 @@ jobs:
           PROVISION_STANDARD: ${{ inputs.provision_standard }}
         run: |
           set -euo pipefail
-          args=("$BRIEF" --customer "$CUSTOMER_NAME" --admin "$ADMIN_USER" --plan "$PLAN")
+          args=("$BRIEF" --customer "$CUSTOMER_NAME" --admin "$ADMIN_USER" --plan "$PLAN" --source-sha "$FORGE_SOURCE_SHA")
           if [ -n "$SLUG" ]; then args+=(--slug "$SLUG"); fi
           if [ "$PROVISION_STANDARD" = "true" ]; then args+=(--provision-standard); fi
           output=$(node server/scripts/create-demo-tenant.mjs "${args[@]}")
@@ -175,6 +178,7 @@ jobs:
             echo "- App brief: $BRIEF_NAME"
             echo "- URL: $LIVE_URL"
             echo "- Admin: $ADMIN_USER"
+            echo "- Security generation: 2"
             echo "- Source SHA: $TARGET_SHA"
             echo
             echo "Password remains in GitHub Secrets and is never written to the job summary."

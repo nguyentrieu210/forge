@@ -1,0 +1,141 @@
+name: Security Generation V2 Validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/alu-build-deploy.yml"
+      - ".github/workflows/security-v2-validation.yml"
+      - ".github/workflows/demo-provision.yml"
+      - ".github/workflows/demo-provision-issue-command.yml"
+      - "server/apps/gateway-worker/**"
+      - "server/apps/jobs-worker/**"
+      - "server/apps/control-plane-worker/**"
+      - "server/packages/auth/src/security-v2.ts"
+      - "server/migrations/control/0003_security_generation_v2.sql"
+      - "server/scripts/bootstrap-security-v2.mjs"
+      - "server/scripts/provision-tenant-v2.mjs"
+      - "server/scripts/create-demo-tenant.mjs"
+      - "server/scripts/tenant-wrangler.mjs"
+      - "server/scripts/lib/security-v2-command.mjs"
+      - "server/scripts/parse-security-v2-command.mjs"
+      - "server/tests/security-generation-v2.test.mjs"
+      - "server/tests/control-security-v2.test.mjs"
+      - "server/tests/security-v2-command.test.mjs"
+      - "server/scripts/test-security-v2-migration.py"
+      - "server/scripts/verify-release-safety.mjs"
+      - "skills/forge-demo-factory/SKILL.md"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/alu-build-deploy.yml"
+      - ".github/workflows/security-v2-validation.yml"
+      - ".github/workflows/demo-provision.yml"
+      - ".github/workflows/demo-provision-issue-command.yml"
+      - "server/apps/gateway-worker/**"
+      - "server/apps/jobs-worker/**"
+      - "server/apps/control-plane-worker/**"
+      - "server/packages/auth/src/security-v2.ts"
+      - "server/migrations/control/0003_security_generation_v2.sql"
+      - "server/scripts/bootstrap-security-v2.mjs"
+      - "server/scripts/provision-tenant-v2.mjs"
+      - "server/scripts/create-demo-tenant.mjs"
+      - "server/scripts/tenant-wrangler.mjs"
+      - "server/scripts/lib/security-v2-command.mjs"
+      - "server/scripts/parse-security-v2-command.mjs"
+      - "server/tests/security-generation-v2.test.mjs"
+      - "server/tests/control-security-v2.test.mjs"
+      - "server/tests/security-v2-command.test.mjs"
+      - "server/scripts/test-security-v2-migration.py"
+      - "server/scripts/verify-release-safety.mjs"
+      - "skills/forge-demo-factory/SKILL.md"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build canonical server artifacts
+        run: pnpm --filter cloudforge run build
+
+      - name: Execute focused V2 contracts
+        run: |
+          node --test \
+            server/tests/security-generation-v2.test.mjs \
+            server/tests/control-security-v2.test.mjs \
+            server/tests/security-v2-command.test.mjs
+          python3 server/scripts/test-security-v2-migration.py
+
+      - name: Syntax-check production orchestration
+        run: |
+          node --check server/scripts/bootstrap-security-v2.mjs
+          node --check server/scripts/provision-tenant-v2.mjs
+          node --check server/scripts/create-demo-tenant.mjs
+          node --check server/scripts/parse-security-v2-command.mjs
+
+      - name: Lock V2 entrypoints and canonical production topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow=.github/workflows/alu-build-deploy.yml
+          grep -Fq '"main": "src/index-v2.ts"' server/apps/gateway-worker/wrangler.jsonc
+          grep -Fq '"main": "src/index-v2.ts"' server/apps/jobs-worker/wrangler.jsonc
+          grep -Fq '"main": "src/index-v2b.ts"' server/apps/control-plane-worker/wrangler.jsonc
+          grep -Fq '"pattern": "*.kairo.vn/*", "zone_name": "kairo.vn"' server/apps/gateway-worker/wrangler.jsonc
+          grep -Fq 'issue_comment:' "$workflow"
+          grep -Fq 'security-v2-bootstrap:' "$workflow"
+          grep -Fq 'environment: production' "$workflow"
+          grep -Fq "github.event.comment.user.login == github.repository_owner" "$workflow"
+          grep -Fq "github.event.comment.author_association == 'OWNER'" "$workflow"
+          grep -Fq "startsWith(github.event.comment.body, '/forge-security-v2-bootstrap')" "$workflow"
+          grep -Fq 'parse-security-v2-command.mjs' "$workflow"
+          grep -Fq 'Backup Control D1 before Security V2 migration' "$workflow"
+          grep -Fq 'Deploy Control Plane V2 wrapper' "$workflow"
+          grep -Fq 'Deploy Jobs V2 wrapper' "$workflow"
+          grep -Fq 'Deploy Gateway V2 wrapper' "$workflow"
+          test ! -e .github/workflows/security-v2-bootstrap.yml
+          ! grep -q 'FORGE_INTERNAL_AUTH_SECRET\|FORGE_INTERNAL_SERVICE_TOKEN\|FORGE_CONTROL_TOKEN' .github/workflows/demo-provision-issue-command.yml
+          ! grep -q 'resolveDemoPlatformSecrets' server/scripts/create-demo-tenant.mjs
+          secret_line=$(grep -n '/v1/provider/tenant-secrets/' server/scripts/provision-tenant-v2.mjs | head -1 | cut -d: -f1)
+          route_line=$(grep -n '/v1/provider/routes/' server/scripts/provision-tenant-v2.mjs | head -1 | cut -d: -f1)
+          test -n "$secret_line" -a -n "$route_line"
+          test "$secret_line" -lt "$route_line"
+          grep -Fq 'SECURITY_GENERATION: "2"' server/scripts/tenant-wrangler.mjs
+          ! grep -q 'INTERNAL_AUTH_KEY_ID: "k2"' server/scripts/tenant-wrangler.mjs
+
+      - name: Release safety accepts and locks canonical V2 lane
+        working-directory: server
+        run: npm run verify:release-safety
+
+      - name: Demo Factory dry-run remains provider-free
+        run: >-
+          node server/scripts/create-demo-tenant.mjs
+          server/briefs/marketplace-demo.json
+          --customer Thúy
+          --slug thuy
+          --admin admin
+          --plan pro
+          --dry-run
+
+      - name: Diff hygiene
+        run: git diff --check
