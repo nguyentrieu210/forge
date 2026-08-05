@@ -8,71 +8,74 @@ Không dùng file này thay exact GitHub state.
 
 - Repo `nguyentrieu210/forge`.
 - RC4 **DONE**; R5 **DONE / R5-GO**; R6 **DONE / PILOT-GO**.
+- Exact certified/deployed R6 SHA `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Pilot-00 **DONE / PILOT-00-LOCKED**.
-- Pilot-01 source set **OBSERVED / HASHED / INGESTED**.
-- Identity: **60/60 journal identities dispositioned; supplier gaps 4 -> 0; duplicate rules locked**.
-- UOM/quantity: **21 reviewed / 19 resolved-or-classified / 2 fail-closed**.
-- VND rounding **LOCKED**.
-- two future-dated `VIPST700` rows **QUARANTINED**.
-- cutoff `30/06/2026` **NOT PROVEN / NOT FROZEN**.
-- Current uploads + File Library were reviewed; **no additional Alumdoor-authoritative opening/access source was found**.
-- Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`, blocking mode `EXTERNAL_SOURCE_DEPENDENCY`.
-- Exact frozen product baseline `49315112a21182d2ce077b08a1fb9e26db07fd36`.
+- Real Pilot-01 **SOURCE INGESTED / PREVIEW-BLOCKED / EXTERNAL SOURCE DEPENDENCY**.
+- Synthetic Pilot-01 **PREVIEW_PASS / TEST ONLY**.
+- Synthetic Pilot-02 **DRY-RUN PASS / 9 of 9 segments**; initial executable run `30968821466`.
+- Real Pilot-02 **NOT STARTED**, gated by real Pilot-01 READY.
+- Next synthetic validation step: **Pilot-03 synthetic parallel-run + daily reconciliation**.
 - Capability truth remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956**.
 
-## Source-search exhaustion
+## Synthetic validation lane
 
-Authority: `docs/pilot/alumdoor/PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json`.
+### Pilot-01 synthetic
 
-The search covered:
+`docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json` + `tools/generate-pilot-01-synthetic-batch.mjs` generate all 12 Mapping-V1 datasets, all six personas and exactly one active synthetic `Giám đốc` account. Validator result: `PREVIEW_PASS`, zero unexplained variance, no real customer data.
 
-- all six accepted Alumdoor uploads in the current conversation;
-- File Library;
-- current repository authorities.
+### Pilot-02 synthetic
 
-No additional Alumdoor-specific source-authoritative AR/AP opening snapshot, canonical stock Kg/value opening, missing stock-scope source, or named pilot-user allowlist was found.
+Authorities:
 
-Do not use as substitutes:
+- `docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json`;
+- `docs/pilot/alumdoor/PILOT_02_STATUS.json`;
+- `.github/workflows/pilot-02-synthetic-dry-run.yml`.
 
-- generic Kairo sales collateral that lists roles but no named Alumdoor accounts;
-- unrelated phone-store opening-debt templates;
-- TOKA/CRM/architecture documents for other businesses/projects.
+Initial run `30968821466` passed:
 
-## External dependencies now required
+1. synthetic Pilot-01 handoff;
+2. Sales/O2C;
+3. Procurement/P2P;
+4. Stock/fulfilment;
+5. Manufacturing;
+6. Finance settlement + cross-ledger reconciliation;
+7. correction/return negative paths;
+8. warranty/service/replacement/return lineage;
+9. idempotency/retry safety.
+
+The workflow uses GitHub-hosted local CI/workerd/in-memory fixtures only. It loads no production Cloudflare secrets, calls no production origin, performs no deploy/migration and does not write remote D1.
+
+## Real Pilot-01 remains externally blocked
+
+Already closed from accepted real sources:
+
+- 60/60 journal identities;
+- Supplier role gaps `4 -> 0`;
+- duplicate Customer/item rules;
+- UOM `19/21` resolved/classified, two fail-closed;
+- per-row integer VND rounding;
+- two future-dated `VIPST700` rows quarantined;
+- `30/06/2026` evaluated and rejected as an unproven common cutoff.
+
+Required real source-owner evidence remains:
 
 1. full-customer AR opening at one named cutoff;
 2. full-supplier AP opening at the same cutoff;
-3. canonical Stock quantity + value at that cutoff, with actual aluminum Kg/value and complete source scope;
-4. matching cash/bank balances if cash/bank stays in pilot scope, or explicit scope exclusion;
-5. source-owner UOM evidence for `NVL-AL595-GS`;
-6. source-owner UOM evidence for `NVL-BO1VIS AL71`;
-7. corrected dates for the two quarantined VIPST700 rows before opening inclusion;
-8. named pilot-account allowlist with exactly one active named `Giám đốc` account.
+3. canonical Stock quantity/value with actual aluminum Kg/value and complete scope;
+4. cash/bank at the same cutoff if in scope, or explicit exclusion;
+5. UOM evidence for `NVL-AL595-GS`;
+6. UOM evidence for `NVL-BO1VIS AL71`;
+7. corrected dates for quarantined VIPST700 rows;
+8. named pilot account allowlist with exactly one active named `Giám đốc`.
 
-None of these may be synthesized from unrelated templates, blanks, theoretical kg/m or guessed conversions.
+These values may not be synthesized for the real pilot.
 
-## Already locked from current source
+## Next execution
 
-- duplicate Customer/item-code rules;
-- 60/60 journal identity dispositions;
-- supplier roles 4 -> 0;
-- context split for `NVL-TON-DL7.2Dx124-XNXLC` (raw Stock Kg vs Sales m2);
-- UOM rules for 19/21 reviewed identities, fail-closed for 2;
-- integer-VND per-row rounding for 45 fractional source rows;
-- quarantine of the two future-dated VIPST700 rows;
-- 30/06 evaluated and rejected as an unproven common cutoff.
+Synthetic lane: build **Pilot-03 parallel-run/reconciliation harness** with repeated business-day replay and zero-tolerance reconciliation across Stock, AR/AP, scoped cash/bank, revenue/COGS, Manufacturing/WIP, GL and document state.
 
-## Next action when source owner supplies evidence
-
-1. hash/bind the new source extracts;
-2. update the external-dependency evidence;
-3. freeze a source-proven common cutoff;
-4. normalize under Mapping V1 and locked identity/UOM/money policies;
-5. generate the private batch;
-6. run validator to zero-unexplained-variance `PREVIEW_PASS`.
-
-Until then, Pilot-01 is correctly blocked on external source evidence rather than code/tooling.
+Real lane: wait for source-owner evidence, then hash/bind extracts, freeze one common cutoff, generate private batch and require real `PREVIEW_PASS` before real Pilot-02.
 
 ## Production boundary
 
-No Pilot-01 production import/write has occurred. `PREVIEW_PASS` does not authorize production write. Production import, cutover, provider/DNS/secret mutation, restore/PITR and destructive state operations remain explicit authorization boundaries.
+Synthetic PASS does not authorize production write. Real customer/master/opening import, cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
