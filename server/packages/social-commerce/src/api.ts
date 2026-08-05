@@ -5,6 +5,8 @@ import {
   ensureCanonicalSocialSalesOrder,
   resolveCanonicalDeliveryShipment,
 } from "./canonical-order.js";
+import { ensureCanonicalMarketplaceSalesOrder } from "./marketplace-order.js";
+import { resolveMarketplaceOrderFromMetadata, type MarketplaceProviderOrderInput } from "./marketplace-profile.js";
 
 const WRITE_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager", "Sales User"]);
 const MANAGER_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager"]);
@@ -83,6 +85,22 @@ export async function routeSocialCommerceApi(
        ON i.tenant_id=c.tenant_id AND i.cart_id=c.cart_id WHERE c.tenant_id=?1 GROUP BY c.cart_id ORDER BY c.modified_at DESC LIMIT 100`,
     ).bind(tenantId).all();
     return jsonResponse({ carts: result.results ?? [] });
+  }
+  if (request.method === "POST" && url.pathname === "/api/v1/social/marketplace/orders/ingest") {
+    requireWriter(actor);
+    const body = await readJson<JsonObject>(request, 64_000);
+    const resolved = await resolveMarketplaceOrderFromMetadata(
+      db,
+      tenantId,
+      body as unknown as MarketplaceProviderOrderInput,
+    );
+    const canonical = await ensureCanonicalMarketplaceSalesOrder(db, tenantId, actor, resolved.order);
+    return jsonResponse({
+      channel_profile: resolved.channel_profile,
+      warehouse: resolved.warehouse,
+      ...canonical,
+      stock_reservation: "pending_ws04_generic_reservation",
+    }, 201);
   }
   if (request.method === "POST" && url.pathname === "/api/v1/social/rules") {
     requireManager(actor);
