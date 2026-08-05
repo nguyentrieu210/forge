@@ -2,7 +2,9 @@
   "id": "social-commerce",
   "name": "Bán hàng đa kênh",
   "version": "0.4.0",
-  "requires": [],
+  "requires": [
+    { "id": "crm", "version": "0.5.0" }
+  ],
   "externalDocTypes": [
     { "name": "Company", "kind": "master", "app": "erpnext" },
     { "name": "Customer", "kind": "master", "app": "erpnext" },
@@ -14,7 +16,9 @@
     { "name": "Delivery Note", "kind": "transaction", "app": "erpnext" },
     { "name": "Stock Return", "kind": "transaction", "app": "erpnext" },
     { "name": "Sales Invoice", "kind": "transaction", "app": "erpnext" },
-    { "name": "Payment Entry", "kind": "transaction", "app": "erpnext" }
+    { "name": "Payment Entry", "kind": "transaction", "app": "erpnext" },
+    { "name": "CRM Contact", "kind": "master", "app": "crm", "version": "0.5.0" },
+    { "name": "CRM Customer External Identity", "kind": "master", "app": "crm", "version": "0.5.0" }
   ],
   "nav": [
     { "key": "social-commerce:dashboard", "label": "Trung tâm bán hàng", "kind": "experience", "icon": "messages-square", "group": "Bán hàng" },
