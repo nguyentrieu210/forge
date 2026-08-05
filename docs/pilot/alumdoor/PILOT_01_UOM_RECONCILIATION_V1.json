@@ -1,0 +1,156 @@
+{
+  "format": "forge-alumdoor-pilot-01-uom-reconciliation/v1",
+  "status": "PARTIAL_LOCK_PREVIEW_ONLY",
+  "tenant": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "source_files": {
+    "operations": "MS LIÊN BS.xlsx",
+    "item_master": "Hàng hoá _ Vật tư-20260728-2018 (1).xlsx"
+  },
+  "scope": {
+    "identities_reviewed": 21,
+    "opening_or_stock_uom_resolved": 10,
+    "legacy_non_stock_or_derived_resolved": 9,
+    "stock_uom_blocked": 2
+  },
+  "supersedes_identity_resolution_for": {
+    "NVL-TON-DL7.2Dx124-XNXLC": {
+      "previous_v1_disposition": "global alias to TP-TOLEKEM124_6D",
+      "new_disposition": "context split",
+      "reason": "Trang tính29 row 158 is an inventory snapshot for the same source code: 552 KG on 2026-03-27. The source code therefore represents raw stock in inventory context and cannot globally collapse into a finished m2 Item.",
+      "stock_context": {
+        "item_code": "NVL-TON-DL7.2Dx124-XNXLC",
+        "item_name": "TÔN KẼM ĐÀI LOAN 7.2D XN-XLC",
+        "stock_uom": "Kg",
+        "source_snapshot_qty": "552",
+        "source_snapshot_date": "2026-03-27",
+        "source_snapshot_sheet": "Trang tính29",
+        "source_snapshot_row": 158
+      },
+      "sales_context": {
+        "commercial_item_code": "TP-TOLEKEM124_6D",
+        "commercial_uom": "m2",
+        "quantity_rule": "area_m2 = height_m * width_m * set_qty; prefer source area/weight column R when populated",
+        "observed_rows": [388, 389]
+      }
+    }
+  },
+  "resolved_stock_identities": {
+    "NVL-TOLE1.2x190-CORON": {
+      "target_item_code": "TP-RS7P (CÓ RON)",
+      "stock_uom": "Mét",
+      "source_uom_label": "KG/M",
+      "source_uom_interpretation": "legacy rate/formula label, not canonical stock quantity",
+      "quantity_rule": "stock_qty_m = length_m * piece_qty",
+      "source_fields": {"length_m": "O", "piece_qty": "Q"},
+      "complete_examples": [
+        {"row": 67, "length_m": "3.5", "piece_qty": "4", "stock_qty_m": "14"},
+        {"row": 324, "length_m": "4", "piece_qty": "2", "stock_qty_m": "8"}
+      ],
+      "row_level_blockers": [{"row": 327, "reason": "length/piece quantity are blank; no stock quantity may be synthesized from description text during deterministic batch normalization"}]
+    },
+    "NVL-TON-DL7.2Dx124-XNXLC": {
+      "target_item_code": "NVL-TON-DL7.2Dx124-XNXLC",
+      "stock_uom": "Kg",
+      "source_authority": "Trang tính29 row 158",
+      "context_split_required": true
+    },
+    "NVL-TRUC114_2.4LY": {
+      "target_item_code": "TP-TRUC140",
+      "stock_uom": "Mét",
+      "source_uom_label": "M",
+      "quantity_rule": "stock_qty_m = length_m * piece_qty",
+      "source_fields": {"length_m": "P", "piece_qty": "Q"},
+      "observed_example": {"row": 29, "length_m": "6", "piece_qty": "4", "stock_qty_m": "24"}
+    },
+    "CROMATE 3+": {
+      "target_item_code": "CROMATE 3+",
+      "item_nature": "Hàng tồn kho",
+      "material_stage": "Vật tư tiêu hao",
+      "stock_uom": "Kg",
+      "source_purchase_rows": [532, 541]
+    },
+    "MŨI MÀI HỘP KIM": {
+      "target_item_code": "MŨI MÀI HỘP KIM",
+      "item_nature": "Hàng tồn kho",
+      "material_stage": "Vật tư tiêu hao",
+      "stock_uom": "Cái",
+      "source_purchase_rows": [543]
+    },
+    "NVL-VIS-BANLO2P": {
+      "target_item_code": "NVL-VIS-BANLO2P",
+      "item_nature": "Hàng tồn kho",
+      "stock_uom": "Con",
+      "source_authority": "Trang tính29 row 31",
+      "source_snapshot_qty": "110666.6667",
+      "source_snapshot_date": "2026-04-03",
+      "historical_sales_axis_blocker": "journal row 46 description says 1 KG while the source snapshot and journal UOM cell use CON; do not invent a Kg-to-Con conversion"
+    },
+    "TP-Tanker-Than1000kg": {
+      "target_item_code": "TP-Tanker-Than1000kg",
+      "item_nature": "Hàng tồn kho",
+      "material_stage": "Hàng hoá",
+      "stock_uom": "Cái",
+      "source_sales_rows": [200]
+    },
+    "TP-Tanker-Than600kg": {
+      "target_item_code": "TP-Tanker-Than600kg",
+      "item_nature": "Hàng tồn kho",
+      "material_stage": "Hàng hoá",
+      "stock_uom": "Cái",
+      "source_return_rows": [119]
+    },
+    "TP-YHLD-Than500kg": {
+      "target_item_code": "TP-YHLD-Than500kg",
+      "item_nature": "Hàng tồn kho",
+      "material_stage": "Hàng hoá",
+      "stock_uom": "Cái",
+      "source_sales_rows": [387]
+    },
+    "TẨY NHÔM": {
+      "target_item_code": "TẨY NHÔM",
+      "item_nature": "Hàng tồn kho",
+      "material_stage": "Vật tư tiêu hao",
+      "stock_uom": "Kg",
+      "source_purchase_rows": [533, 542]
+    }
+  },
+  "resolved_legacy_non_stock_or_derived": {
+    "CPVC": {"classification": "service", "item_nature": "Dịch vụ", "stock_uom": null, "sales_uom": null, "meaning": "CHI PHÍ VẬN CHUYỂN"},
+    "NVL-LUOIMV_STD": {"classification": "legacy-derived-transaction-line", "opening_stock_item": false, "commercial_context_item": "TP-LUOI-MV-STD - TRONBO", "commercial_uom": "m2", "quantity_rule": "use source R = O * P * Q when populated"},
+    "NVL-TDAL70THO": {"classification": "legacy-derived-transaction-line", "opening_stock_item": false, "commercial_context_item": "TP-TD-AL70 (2 LỚP)", "commercial_uom": "m2", "quantity_rule": "use source R = O * P * Q when populated"},
+    "NVL-TOLE0.42x598-TR-XLC": {"classification": "legacy-derived-transaction-line", "opening_stock_item": false, "commercial_context_item": "TP-UC KT 4.6D", "commercial_uom": "m2", "quantity_rule": "use source R = O * P * Q when populated"},
+    "NVL-TON3.8D-XN-VK": {"classification": "legacy-derived-transaction-line", "opening_stock_item": false, "commercial_context_item": "TP-UC KT 4D", "commercial_uom": "m2", "quantity_rule": "use source R = O * P * Q when populated"},
+    "PHUTHU-UC<7m²": {"classification": "service", "item_nature": "Dịch vụ", "stock_uom": null, "sales_uom": "Bộ"},
+    "PHUTHU_SONRAY_MSK": {"classification": "service", "item_nature": "Dịch vụ", "stock_uom": null, "sales_uom": "Mét"},
+    "TIỀN CÔNG CẮT LẠI CỬA": {"classification": "service", "item_nature": "Dịch vụ", "stock_uom": null, "sales_uom": null},
+    "TIỀN CÔNG LẮP ĐẶT": {"classification": "service", "item_nature": "Dịch vụ", "stock_uom": null, "sales_uom": null}
+  },
+  "blocked_stock_uom_identities": {
+    "NVL-AL595-GS": {
+      "reason": "Trang tính29 row 73 records stock quantity 504 with UOM KG/M, while June sales rows use the same source code with area in column R and pricing per m2. KG/M is dimensionally a rate, not a stock quantity axis; no safe conversion to canonical Kg or m2 is source-proven.",
+      "source_snapshot": {"qty": "504", "uom": "KG/M", "date": "2026-03-27", "row": 73},
+      "required_evidence": "source-owner confirmation of the physical stock axis and conversion/provenance for AL595 GS"
+    },
+    "NVL-BO1VIS AL71": {
+      "reason": "purchase row 539 records quantity 159 with UOM KG, but canonical family Item TP-BO 1VIS 503N-71-595 uses stock UOM Con. No Kg-to-Con conversion evidence is present.",
+      "candidate_canonical_item": "TP-BO 1VIS 503N-71-595",
+      "source_purchase": {"qty": "159", "uom": "KG", "row": 539},
+      "required_evidence": "confirm whether 159 means Con, Kg, or another package/count unit; do not assume"
+    }
+  },
+  "remaining_row_level_quantity_blockers": [
+    {"source_code": "NVL-TOLE1.2x190-CORON", "row": 327, "reason": "missing deterministic length/piece fields"},
+    {"source_code": "NVL-VIS-BANLO2P", "row": 46, "reason": "sales description says 1 KG while source stock UOM is CON; commercial-to-stock conversion is unproven"}
+  ],
+  "rules": [
+    "stock identity and commercial pricing identity may be different axes",
+    "context split is required when one legacy source code is overloaded across raw-stock and sales contexts",
+    "rate-like source labels KG/M and KG/M2 are never promoted directly to stock quantities",
+    "service identities have no stock_uom",
+    "missing conversion evidence fails closed",
+    "opening quantity is never reconstructed from free-text description when structured source fields are missing"
+  ],
+  "production_write_authorized": false,
+  "production_data_mutated": false
+}
