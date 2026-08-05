@@ -3,10 +3,35 @@ import type { ConnectorManifest } from "./catalog.js";
 import { validateConnectorManifest } from "./catalog.js";
 import type { ExternalSyncPage } from "./sync.js";
 
+export type ProviderHttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+/**
+ * A provider adapter describes the business request. The executor is supplied by the
+ * credential boundary and owns provider signing/token injection. Adapters therefore
+ * never receive app secrets, refresh tokens or signing keys.
+ */
+export interface ProviderSignedRequest {
+  operation: string;
+  method: ProviderHttpMethod;
+  url: string;
+  headers?: Readonly<Record<string, string>>;
+  body?: string;
+}
+
+export interface ProviderSignedResponse {
+  status: number;
+  body: string;
+  headers?: Readonly<Record<string, string>>;
+}
+
+export type ProviderSignedRequestExecutor = (request: ProviderSignedRequest) => Promise<ProviderSignedResponse>;
+
 export interface ProviderInboundContext {
   tenant_id: string;
   connection_id: string;
   received_at: string;
+  /** Non-secret connection config. Plaintext credentials are rejected by connection validation. */
+  config?: JsonObject;
 }
 
 export interface NormalizedProviderEvent {
@@ -22,14 +47,20 @@ export interface ProviderSyncContext {
   stream: string;
   cursor: string | null;
   limit: number;
-  /** Resolved provider headers are supplied ephemerally by the credential boundary. */
+  /** Backward-compatible bearer/header material for providers that do not require body/query signing. */
   credential_headers: Readonly<Record<string, string>>;
+  /** Non-secret connection config. */
+  config?: JsonObject;
+  /** Preferred boundary for providers whose API request must be signed with a secret. */
+  signed_request?: ProviderSignedRequestExecutor;
 }
 
 export interface ProviderHealthContext {
   tenant_id: string;
   connection_id: string;
   credential_headers: Readonly<Record<string, string>>;
+  config?: JsonObject;
+  signed_request?: ProviderSignedRequestExecutor;
 }
 
 export interface ProviderHealthResult {
@@ -101,6 +132,30 @@ export function validateProviderHealthResult(result: ProviderHealthResult): Prov
   requireText(result.code, "provider health code", 160);
   if (result.detail !== undefined) requireText(result.detail, "provider health detail", 2_000);
   return result;
+}
+
+export function requireSignedProviderRequest(context: ProviderSyncContext | ProviderHealthContext): ProviderSignedRequestExecutor {
+  if (typeof context.signed_request !== "function") {
+    throw new Error("Provider requires the WS11 signed-request credential boundary");
+  }
+  return context.signed_request;
+}
+
+export function validateProviderSignedRequest(request: ProviderSignedRequest): ProviderSignedRequest {
+  requireText(request.operation, "provider operation", 160);
+  if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(request.method)) throw new Error("Invalid provider HTTP method");
+  let url: URL;
+  try { url = new URL(request.url); } catch { throw new Error("Invalid provider request URL"); }
+  if (url.protocol !== "https:" || url.username || url.password || url.hash) throw new Error("Provider request URL must be credential-free HTTPS");
+  if (request.body !== undefined && request.body.length > 1_000_000) throw new Error("Provider request body exceeds limit");
+  for (const [name, value] of Object.entries(request.headers ?? {})) {
+    requireText(name, "provider header name", 160);
+    if (/authorization|access[-_]token|refresh[-_]token|secret|api[-_]key/i.test(name)) {
+      throw new Error("Provider adapter must not inject credential headers");
+    }
+    if (typeof value !== "string" || value.length > 8_192 || /[\r\n\0]/.test(value)) throw new Error("Invalid provider header value");
+  }
+  return request;
 }
 
 function requireText(value: string, field: string, max: number): string {
