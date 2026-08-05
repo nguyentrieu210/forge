@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronDown, ChevronUp, Loader2, PackageCheck, Pencil, ShoppingCart, TriangleAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Doc } from "@metaforge/core";
 import { useMetaForge } from "@metaforge/views/provider";
-import { Badge, Button, Input, Label, toast } from "@metaforge/ui";
+import { Button, Input, Label, toast } from "@metaforge/ui";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 type StepState = "LOCKED" | "ACTIVE" | "COMPLETE" | "STALE" | "ERROR";
@@ -22,6 +22,9 @@ type FormulaResult = Record<string, unknown> & {
   leaf_error?: string | null;
   ray_type?: string | null;
   formula_explanation?: string;
+  bom_no?: string | null;
+  stock_profile_item?: string | null;
+  stock_profile_error?: string | null;
 };
 
 type PriceResult = {
@@ -144,7 +147,7 @@ function WizardSection({ number, title, state, active, summary, onOpen, children
   active: boolean;
   summary?: string;
   onOpen: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const done = state === "COMPLETE";
   return <section className={`overflow-hidden rounded-xl border bg-card ${active ? "ring-1 ring-primary/20" : ""}`} data-sales-wizard-step={number} data-step-state={state}>
@@ -231,6 +234,7 @@ export function AlumdoorOperationsCenter() {
   const checkCustomer = () => {
     if (!customer.customer.trim()) return setError("Cần chọn khách hàng."), false;
     if (!["Đại lý", "Lẻ"].includes(customer.customerGroup)) return setError("Hồ sơ khách chưa có Nhóm giá Đại lý/Lẻ."), false;
+    if (!customer.priceList.trim()) return setError("Cần chọn Bảng giá. Đơn Alumdoor không cho phép bỏ trống bảng giá."), false;
     if (!customer.deliveryDate) return setError("Cần ngày giao dự kiến."), false;
     return true;
   };
@@ -246,6 +250,7 @@ export function AlumdoorOperationsCenter() {
         ray_type: door.rayType, width_input_basis: door.widthBasis, height_input_basis: door.heightBasis,
         width_m: Number(door.widthM), height_m: Number(door.heightM), set_count: Number(door.setCount),
         has_butterfly_bracket: door.hasButterflyBracket, leaf_variant: door.leafVariant || undefined,
+        color: door.color || undefined, delivery_date: customer.deliveryDate,
       });
       if (result.leaf_error) throw new Error(result.leaf_error);
       setFormula(result); setPrice(null); setStock(null); complete(2);
@@ -255,10 +260,11 @@ export function AlumdoorOperationsCenter() {
 
   const calculatePrice = async () => {
     if (!formula) { setError("Cần tính cấu hình trước."); return; }
+    if (!customer.priceList.trim()) { setError("Cần chọn Bảng giá trước khi tính giá."); return; }
     setBusy("price"); setError("");
     try {
       const result = await adapter.callPost<PriceResult>("alumdoor.sales.item_context", {
-        item_code: door.itemCode.trim(), uom: "m2", price_list: customer.priceList || undefined,
+        item_code: door.itemCode.trim(), uom: "m2", price_list: customer.priceList,
         currency: "VND", warehouse: door.warehouse || undefined,
       });
       if (result.price_missing || result.rate == null) throw new Error(result.price_error || "Chưa có đơn giá bán.");
@@ -269,15 +275,17 @@ export function AlumdoorOperationsCenter() {
 
   const checkStock = async () => {
     if (!formula || !door.warehouse) { setError("Cần chọn kho và tính cấu hình trước."); return; }
+    const stockProfile = String(formula.stock_profile_item ?? "").trim();
+    if (!stockProfile) { setError(formula.stock_profile_error || "BOM chưa xác định được mã nhôm nguyên liệu để kiểm tra lô."); return; }
     const sheets = Number(formula.leaf_count);
     const cutWidth = Number(formula.cut_width_m);
     if (!Number.isInteger(sheets) || sheets <= 0 || !Number.isFinite(cutWidth) || cutWidth <= 0) {
-      setError("Công thức chưa trả về số lá/rộng cắt hợp lệ để kiểm tra lô nhôm."); return;
+      setError("Công thức chưa trả về số lá nguyên/rộng cắt hợp lệ để kiểm tra lô nhôm."); return;
     }
     setBusy("stock"); setError("");
     try {
       const result = await adapter.callPost<StockProposal>("alumdoor.cut.propose", {
-        item_code: door.itemCode.trim(), warehouse: door.warehouse, color: door.color || undefined,
+        item_code: stockProfile, warehouse: door.warehouse, color: door.color || undefined,
         colour: door.color || undefined, cut_width_m: cutWidth, sheets,
       });
       setStock(result); complete(4);
@@ -297,19 +305,35 @@ export function AlumdoorOperationsCenter() {
       const qty = Number(formula.billable_area_sqm);
       const rate = Number(price.rate);
       const line = {
-        item_code: door.itemCode.trim(), item_name: door.itemCode.trim(), color: door.color || undefined,
-        inventory_mode: "Thành phẩm theo m2", width_m: width, height_m: height, set_count: Number(door.setCount),
-        sales_mode: door.salesMode, has_butterfly_bracket: door.hasButterflyBracket ? 1 : 0,
-        formula_policy: formula.policy_name, width_basis: formula.width_basis, cut_width_m: formula.cut_width_m,
-        billable_area_sqm: qty, uom: price.selected_uom || "m2", qty, rate, amount: qty * rate,
-        motor_model: door.motorModel || undefined, accessories: door.accessories || undefined,
+        row_id: "WIZARD-1",
+        item_code: door.itemCode.trim(),
+        color: door.color || undefined,
+        width_m: width,
+        height_m: height,
+        set_count: Number(door.setCount),
+        sales_mode: door.salesMode,
+        has_butterfly_bracket: door.hasButterflyBracket ? 1 : 0,
+        formula_policy: formula.policy_name,
+        width_basis: formula.width_basis,
+        cut_width_m: formula.cut_width_m,
+        billable_area_sqm: qty,
+        uom: price.selected_uom || "m2",
+        qty,
+        rate,
+        motor_model: door.motorModel || undefined,
+        accessories: door.accessories || undefined,
         warehouse: door.warehouse || undefined,
       };
       const created = await adapter.createDoc("Sales Order", {
-        customer: customer.customer, company: "ALUMDOOR", currency: "VND", transaction_date: today(),
-        delivery_date: customer.deliveryDate, selling_price_list: customer.priceList || undefined,
-        customer_group: customer.customerGroup, install_address: customer.installAddress || undefined,
-        items: [line], grand_total: total,
+        customer: customer.customer,
+        company: "ALUMDOOR",
+        currency: "VND",
+        transaction_date: today(),
+        delivery_date: customer.deliveryDate,
+        selling_price_list: customer.priceList,
+        customer_group: customer.customerGroup,
+        install_address: customer.installAddress || undefined,
+        items: [line],
       });
       const finalDoc = draftOnly ? created : await adapter.submit(created);
       setCreatedOrder(finalDoc); complete(5);
@@ -321,7 +345,7 @@ export function AlumdoorOperationsCenter() {
   const customerSummary = customer.customer ? `${customer.customer} · ${customer.customerGroup || "chưa có nhóm"} · giao ${customer.deliveryDate || "—"}` : "Chưa chọn khách";
   const configSummary = formula ? `${door.itemCode} · ${fmt(formula.cover_width_m ?? formula.measured_width_m)} × ${fmt(formula.cover_height_m)} m · ${fmt(formula.leaf_count, 1)} lá` : "Chưa tính cấu hình";
   const priceSummary = price && formula ? `${fmt(formula.billable_area_sqm)} m² · ${money(price.rate)}/m² · ${money(total)}` : "Chưa tính giá";
-  const stockSummary = stock ? `Đủ lô nhôm · ${(stock.picks ?? []).length} lô đề xuất` : "Chưa kiểm tra lô nhôm";
+  const stockSummary = stock ? `${formula?.stock_profile_item ?? "Nhôm"} · đủ · ${(stock.picks ?? []).length} lô đề xuất` : "Chưa kiểm tra lô nhôm";
   const confirmSummary = createdOrder ? `${createdOrder.name} · ${Number(createdOrder.docstatus ?? 0) === 1 ? "Đã xác nhận" : "Nháp"}` : `Tổng ${money(total)}`;
 
   return <div className="h-full overflow-auto bg-muted/20 p-3 sm:p-5">
@@ -340,7 +364,7 @@ export function AlumdoorOperationsCenter() {
           <div className="space-y-1.5"><Label>Nhóm giá</Label><Input value={customer.customerGroup} readOnly placeholder="Lấy từ hồ sơ khách" /></div>
           <div className="space-y-1.5"><Label>Số điện thoại</Label><Input value={customer.phone} onChange={(e) => setCustomer((s) => ({ ...s, phone: e.target.value }))} /></div>
           <div className="space-y-1.5"><Label>Ngày giao dự kiến *</Label><Input type="date" value={customer.deliveryDate} onChange={(e) => { setCustomer((s) => ({ ...s, deliveryDate: e.target.value })); invalidate(1); }} /></div>
-          <LinkPicker label="Bảng giá" doctype="Price List" value={customer.priceList} onChange={(value) => { setCustomer((s) => ({ ...s, priceList: value })); invalidate(3); }} placeholder="Để trống nếu giá nhập tay" />
+          <LinkPicker label="Bảng giá" doctype="Price List" value={customer.priceList} onChange={(value) => { setCustomer((s) => ({ ...s, priceList: value })); invalidate(3); }} required placeholder="Chọn bảng giá bán" />
           <div className="space-y-1.5 md:col-span-2"><Label>Địa chỉ giao / lắp</Label><Input value={customer.installAddress} onChange={(e) => setCustomer((s) => ({ ...s, installAddress: e.target.value }))} /></div>
         </div>
         <div className="mt-4 flex justify-end"><Button onClick={() => { if (checkCustomer()) complete(1); }}>Tiếp tục</Button></div>
@@ -363,38 +387,42 @@ export function AlumdoorOperationsCenter() {
           <div className="space-y-1.5 md:col-span-2"><Label>Phụ kiện</Label><Input value={door.accessories} onChange={(e) => setDoor((s) => ({ ...s, accessories: e.target.value }))} /></div>
           <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"><input type="checkbox" checked={door.hasButterflyBracket} onChange={(e) => { setDoor((s) => ({ ...s, hasButterflyBracket: e.target.checked })); invalidate(2); }} /> Có bản bướm</label>
         </div>
-        {formula ? <div className="mt-4 grid gap-2 rounded-lg border bg-muted/20 p-3 sm:grid-cols-4">
-          <div><span className="text-xs text-muted-foreground">Rộng phủ bì</span><strong className="block">{fmt(formula.cover_width_m ?? formula.measured_width_m)} m</strong></div>
-          <div><span className="text-xs text-muted-foreground">Cao phủ bì</span><strong className="block">{fmt(formula.cover_height_m)} m</strong></div>
-          <div><span className="text-xs text-muted-foreground">Rộng cắt lá</span><strong className="block">{fmt(formula.cut_width_m)} m</strong></div>
-          <div><span className="text-xs text-muted-foreground">Số lá</span><strong className="block">{fmt(formula.leaf_count, 1)}</strong></div>
-        </div> : null}
+        {formula ? <>
+          <div className="mt-4 grid gap-2 rounded-lg border bg-muted/20 p-3 sm:grid-cols-4">
+            <div><span className="text-xs text-muted-foreground">Rộng phủ bì</span><strong className="block">{fmt(formula.cover_width_m ?? formula.measured_width_m)} m</strong></div>
+            <div><span className="text-xs text-muted-foreground">Cao phủ bì</span><strong className="block">{fmt(formula.cover_height_m)} m</strong></div>
+            <div><span className="text-xs text-muted-foreground">Rộng cắt lá</span><strong className="block">{fmt(formula.cut_width_m)} m</strong></div>
+            <div><span className="text-xs text-muted-foreground">Số lá</span><strong className="block">{fmt(formula.leaf_count, 1)}</strong></div>
+          </div>
+          {formula.stock_profile_error ? <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300"><TriangleAlert className="mt-0.5 size-4 shrink-0" />{formula.stock_profile_error}</div> : formula.stock_profile_item ? <p className="mt-2 text-xs text-muted-foreground">BOM {formula.bom_no ?? "—"} → nhôm kiểm tra lô: <strong>{formula.stock_profile_item}</strong></p> : null}
+        </> : null}
         <div className="mt-4 flex justify-end"><Button onClick={() => void calculateConfiguration()} disabled={busy === "formula"}>{busy === "formula" ? <Loader2 className="size-4 animate-spin" /> : null} Tính & tiếp tục</Button></div>
       </WizardSection>
 
       <WizardSection number={3} title="Giá bán" state={stateOf(3)} active={active === 3} summary={priceSummary} onOpen={() => { if (doneThrough >= 2) setActive(3); }}>
         {formula ? <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border p-3"><span className="text-xs text-muted-foreground">Diện tích tính giá</span><strong className="mt-1 block text-lg">{fmt(formula.billable_area_sqm)} m²</strong></div>
-          <div className="rounded-lg border p-3"><span className="text-xs text-muted-foreground">Đơn giá</span><strong className="mt-1 block text-lg">{price?.rate != null ? `${money(price.rate)}/m²` : "Chưa tra"}</strong></div>
-          <div className="rounded-lg border p-3"><span className="text-xs text-muted-foreground">Thành tiền</span><strong className="mt-1 block text-lg text-primary">{price ? money(total) : "—"}</strong></div>
+          <div className="rounded-lg border p-3"><span className="text-xs text-muted-foreground">Đơn giá server</span><strong className="mt-1 block text-lg">{price?.rate != null ? `${money(price.rate)}/m²` : "Chưa tra"}</strong></div>
+          <div className="rounded-lg border p-3"><span className="text-xs text-muted-foreground">Thành tiền dự kiến</span><strong className="mt-1 block text-lg text-primary">{price ? money(total) : "—"}</strong></div>
         </div> : <p className="text-sm text-muted-foreground">Chưa có cấu hình.</p>}
         {price?.availability_status ? <p className="mt-3 text-sm text-muted-foreground">{price.availability_status}</p> : null}
+        <p className="mt-2 text-xs text-muted-foreground">Đây là preview. Khi lưu/xác nhận, Sales Order controller tra lại Item Price/Pricing Rule và ghi đè giá phía client.</p>
         <div className="mt-4 flex justify-end"><Button onClick={() => void calculatePrice()} disabled={busy === "price"}>{busy === "price" ? <Loader2 className="size-4 animate-spin" /> : null} Kiểm tra giá & tiếp tục</Button></div>
       </WizardSection>
 
       <WizardSection number={4} title="Khả năng đáp ứng kho" state={stateOf(4)} active={active === 4} summary={stockSummary} onOpen={() => { if (doneThrough >= 3) setActive(4); }}>
         {stock ? <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
           <div className="flex items-center gap-2 font-semibold text-emerald-700 dark:text-emerald-300"><PackageCheck className="size-5" /> Đủ lô nhôm theo khổ cần cắt</div>
-          <p className="mt-1 text-sm text-muted-foreground">Cần {fmt(formula?.leaf_count, 1)} lá · khổ tối thiểu {fmt(formula?.cut_width_m)} m · {(stock.picks ?? []).length} lô được đề xuất.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Mã nhôm {formula?.stock_profile_item} · cần {fmt(formula?.leaf_count, 1)} lá · khổ tối thiểu {fmt(formula?.cut_width_m)} m · {(stock.picks ?? []).length} lô được đề xuất.</p>
           {(stock.picks ?? []).length ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{(stock.picks ?? []).slice(0, 6).map((pick, index) => <div key={index} className="rounded border bg-background px-3 py-2 text-xs"><strong>{String(pick.batch_no ?? pick.name ?? pick.lot ?? `Lô ${index + 1}`)}</strong><div className="mt-1 text-muted-foreground">{Object.entries(pick).slice(0, 4).map(([k,v]) => `${k}: ${String(v)}`).join(" · ")}</div></div>)}</div> : null}
-        </div> : <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Hệ thống sẽ hỏi trực tiếp engine chọn lô theo mã · màu · kho · rộng cắt · số lá. Không dùng tồn tổng để kết luận.</div>}
+        </div> : formula?.stock_profile_error ? <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-300">{formula.stock_profile_error}</div> : <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Hệ thống lấy mã nhôm từ BOM hiệu lực rồi hỏi engine chọn lô theo mã · màu · kho · rộng cắt · số lá. Không dùng tồn tổng hoặc mã thành phẩm để kết luận.</div>}
         <div className="mt-4 flex justify-end"><Button onClick={() => void checkStock()} disabled={busy === "stock"}>{busy === "stock" ? <Loader2 className="size-4 animate-spin" /> : null} Kiểm tra lô & tiếp tục</Button></div>
       </WizardSection>
 
       <WizardSection number={5} title="Xác nhận đơn" state={stateOf(5)} active={active === 5} summary={confirmSummary} onOpen={() => { if (doneThrough >= 4) setActive(5); }}>
         {createdOrder ? <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4"><div className="flex items-center gap-2 font-semibold"><Check className="size-5 text-emerald-600" /> {createdOrder.name}</div><p className="mt-1 text-sm text-muted-foreground">{Number(createdOrder.docstatus ?? 0) === 1 ? "Đơn đã được xác nhận." : "Đơn đang ở trạng thái nháp."}</p><Button className="mt-3" variant="outline" onClick={() => navigate(`/app/${encodeURIComponent("Sales Order")}/${encodeURIComponent(String(createdOrder.name))}`)}>Mở đơn hàng</Button></div> : <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-lg border p-4"><span className="text-xs text-muted-foreground">Khách hàng</span><strong className="block">{customer.customer}</strong><div className="mt-2 text-sm text-muted-foreground">{customer.installAddress || "Chưa nhập địa chỉ"}<br />Giao dự kiến: {customer.deliveryDate}</div></div>
-          <div className="rounded-lg border p-4"><span className="text-xs text-muted-foreground">Đơn hàng</span><strong className="block">{door.itemCode} · {door.setCount} bộ</strong><div className="mt-2 text-sm text-muted-foreground">{fmt(formula?.billable_area_sqm)} m² · {fmt(formula?.leaf_count, 1)} lá<br />Kho: đủ · Tổng: {money(total)}</div></div>
+          <div className="rounded-lg border p-4"><span className="text-xs text-muted-foreground">Đơn hàng</span><strong className="block">{door.itemCode} · {door.setCount} bộ</strong><div className="mt-2 text-sm text-muted-foreground">{fmt(formula?.billable_area_sqm)} m² · {fmt(formula?.leaf_count, 1)} lá<br />Kho: đủ · Tổng dự kiến: {money(total)}</div></div>
         </div>}
         {!createdOrder ? <div className="mt-4 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => void submitOrder(true)} disabled={Boolean(busy)}>{busy === "draft" ? <Loader2 className="size-4 animate-spin" /> : null} Lưu nháp</Button><Button onClick={() => void submitOrder(false)} disabled={Boolean(busy)}>{busy === "submit" ? <Loader2 className="size-4 animate-spin" /> : null} Xác nhận đơn</Button></div> : null}
       </WizardSection>
