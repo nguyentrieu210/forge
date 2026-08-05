@@ -1,0 +1,32 @@
+{
+  "format": "forge-alumdoor-pilot-03-status/v1",
+  "real_pilot_03": {
+    "status": "NOT_STARTED_REAL_DATA_GATED",
+    "gate": "real Pilot-01 READY -> real Pilot-02 accepted dry run -> real Pilot-03",
+    "production_write_authorized": false
+  },
+  "synthetic_pilot_03": {
+    "status": "SYNTHETIC_PARALLEL_PASS",
+    "contract": "docs/pilot/alumdoor/PILOT_03_SYNTHETIC_PARALLEL_V1.json",
+    "workflow": ".github/workflows/pilot-03-synthetic-parallel.yml",
+    "integration_test": "server/apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts",
+    "initial_pass_run_id": 30970432986,
+    "initial_pass_head_sha": "77d380738a555d38b74a68e1c0cebae0e3ee4322",
+    "business_days": 3,
+    "days_reconciled": 3,
+    "axis_variances": 0,
+    "default_tolerance": 0,
+    "independent_cross_ledger_pass": true,
+    "independent_ar_pass": true,
+    "independent_ap_pass": true,
+    "artifact_id": 8916292176,
+    "artifact_zip_sha256": "6728e53db65f663915211249a8cc5987e2c1fa6736e08d4834d53179172b132a",
+    "contains_real_customer_data": false,
+    "uses_production_environment": false,
+    "production_write_authorized": false,
+    "production_data_mutated": false
+  },
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "next_synthetic_step": "Pilot-04 synthetic cutover decision rehearsal",
+  "claim_boundary": "Synthetic Pilot-03 PASS validates bounded parallel reconciliation only and cannot advance the real pilot or authorize production mutation/cutover."
+}
