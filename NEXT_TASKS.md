@@ -10,106 +10,91 @@ Ngày cập nhật: **2026-08-05**.
 - R5: **DONE / R5-GO**.
 - R6 Production Certification: **DONE / PILOT-GO**.
 - Exact certified/deployed R6 SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
-- Final R6 evidence: `deploy-evidence/r6-final-production-certification-49315112a211.json` — **23/23 PASS**.
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
-- Pilot-01 source set: **OBSERVED / HASHED / INGESTED**.
-- Duplicate identity policy: **LOCKED**.
-- Journal item identities: **60/60 DISPOSITIONED**.
-- Supplier purchase-party roles: **4 -> 0 gaps**.
+- Pilot-01 real source set: **OBSERVED / HASHED / INGESTED**.
+- Identity: **60/60 journal identities dispositioned; supplier gaps 4 -> 0; duplicate rules locked**.
 - UOM/quantity: **21 reviewed / 19 resolved-or-classified / 2 fail-closed**.
-- VND rounding: **LOCKED / 45 fractional rows normalized per-row to integer VND**.
-- Future stock dates: **2 VIPST700 rows QUARANTINED / source dates not rewritten**.
-- Cutoff candidate `30/06/2026`: **EVALUATED / NOT PROVEN / NOT FROZEN**.
-- Pilot-01 verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED**.
-- Active phase: **source-authoritative opening evidence + residual source-owner/access blockers**.
-- Next milestone: **one proven common cutoff -> private normalized batch `PREVIEW_PASS` -> Pilot-01 READY -> Pilot-02**.
+- VND rounding: **LOCKED**.
+- Future-date stock rows: **2 VIPST700 rows QUARANTINED**.
+- Cutoff `30/06/2026`: **EVALUATED / NOT PROVEN / NOT FROZEN**.
+- Current uploads + File Library: **REVIEWED; no additional Alumdoor-authoritative opening/access source found**.
+- Pilot-01 verdict: **PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED / EXTERNAL_SOURCE_DEPENDENCY**.
+- Next milestone: **source owner supplies missing opening/access evidence -> one proven common cutoff -> private normalized batch `PREVIEW_PASS` -> Pilot-01 READY -> Pilot-02**.
 
-## 1. Pilot-01 work completed from current uploads
+## 1. Safe normalization already completed
 
-- real source set ingested by SHA-256/evidence;
-- duplicate Customer/item-code policy locked;
-- 60 historical journal identities fully dispositioned;
-- supplier role gaps closed without fuzzy party merge;
-- 21 UOM identities reviewed, with deterministic context/UOM rules for 19 and fail-closed refusal for 2;
-- unsafe global alias for `NVL-TON-DL7.2Dx124-XNXLC` replaced by context split: raw Stock `Kg` vs commercial Sales `m2`;
-- VND integer storage rule locked from source workbook display semantics;
-- two future-dated `VIPST700` rows explicitly quarantined from opening instead of guessing a replacement date;
-- preview-only tests/CI guards enforce no production mutation.
+Current accepted Alumdoor sources have already been pushed as far as the evidence safely allows:
 
-### VND rounding — DONE
+- duplicate Customer references collapse to one retained canonical Customer;
+- exact duplicate Item codes, if encountered, use the lowest free `01`, `02`, `03`... suffix with source lineage;
+- all 60 historical journal item strings have deterministic identity disposition;
+- supplier purchase-party role gaps are closed without fuzzy matching;
+- overloaded `NVL-TON-DL7.2Dx124-XNXLC` is context-split between raw Stock `Kg` and commercial Sales `m2`;
+- 19/21 reviewed UOM identities are resolved/classified; two remain fail-closed;
+- 45 fractional VND totals use locked per-row integer-VND rounding with raw-value provenance;
+- two future-dated `VIPST700` rows are quarantined, not silently redated;
+- `30/06/2026` was tested and rejected as an unproven common cutoff.
 
-Authority: `docs/pilot/alumdoor/PILOT_01_MONEY_ROUNDING_V1.json`.
+Authorities:
 
-The source `Tổng thanh toán` column is formatted as integer VND (`#,##0 ₫`) while 45 underlying rows are fractional. Pilot normalization therefore rounds **each monetary row/document** to nearest integer VND, exact `.5` away from zero, before integer-minor-unit storage.
-
-Observed fractional subset:
-
-- raw sum: `469,262,369.969` VND;
-- per-row rounded sum: `469,262,376` VND;
-- declared rounding delta: `+6.031` VND.
-
-Raw fractional source values and per-row rounding deltas remain provenance. Rounding the aggregate only is prohibited because it does not reproduce per-document source display semantics.
-
-### Future-date stock anomaly — DISPOSITIONED
-
-Authority: `docs/pilot/alumdoor/PILOT_01_STOCK_ANOMALY_DISPOSITION_V1.json`.
-
-`VIPST700` rows 46–47 contain raw date `23/12/2026`, later than the source-ingest date, with:
-
-- row 46: 6.8m / 101 lá;
-- row 47: 3.77m / 56 lá.
-
-No matching `VIPST700` entry in either history table proves a replacement date. Therefore both rows are **quarantined and excluded from opening** until the source owner supplies a corrected date. Their raw date is retained unchanged.
-
-Physical source-status denominator becomes, after this explained quarantine:
-
-- 1,152 -> **1,150** opening-eligible physical rows;
-- 41,137 -> **40,980** opening-eligible pieces/leaves.
-
-These remain physical metrics only, **not** canonical opening Kg/value.
-
-## 2. Remaining blockers before `PILOT-01-READY`
-
-1. **AR opening:** source-authoritative full-customer opening snapshot at one named cutoff.
-2. **AP opening:** source-authoritative full-supplier opening snapshot at the same cutoff.
-3. **Stock opening:** canonical quantity + value at the same cutoff, including complete scope and aluminum Kg/value evidence.
-4. **Cash/bank:** matching balances at the same cutoff if cash/bank remains in scope.
-5. **Residual UOM:** source-owner evidence for `NVL-AL595-GS` (`KG/M` ambiguity) and `NVL-BO1VIS AL71` (Kg vs Con), plus row-level quantity evidence for ray row 327 and the historical VIS sales conversion.
-6. **Stock source scope:** process specification expects 23 aluminum + 2 mesh sheets while current upload exposes 18 inventory sheets and no separate mesh opening source.
-7. **Future-date correction:** the two quarantined VIPST700 rows need source-owner corrected dates before they may enter opening Stock.
-8. **Operating/access masters:** minimum BOM/work-center/employee/pilot-user inputs and exactly one active named `Giám đốc` account.
-
-`30/06/2026` remains only an evaluated candidate; it cannot be frozen because AR/AP and canonical Stock opening are not source-proven there.
-
-## 3. Next execution order
-
-- search the existing uploaded set/file library for any additional authoritative AR/AP/opening/access source that has not yet been bound into Pilot-01;
-- materialize any deterministic minimum BOM/work-center/employee data already present in the process/master files without inventing identities;
-- if full AR/AP/Stock opening evidence or the two blocked UOM conversions are absent, record them as external source-owner dependencies rather than synthesizing values;
-- once one common cutoff is source-proven, build the private Mapping-V1 batch and run `validate-pilot-batch.mjs` until zero-variance `PREVIEW_PASS`.
-
-**Production write/import remains unauthorized.** `PREVIEW_PASS` does not authorize production mutation.
-
-## 4. Pilot-02 onward
-
-Pilot-02 Dry Run starts only after Pilot-01 READY and named accounts are frozen. Pilot-03 then runs parallel reconciliation; Pilot-04 is the explicit cutover decision; Pilot-05 is hypercare/exit. Only `PILOT-ACCEPTED` advances to Accepted Production Reference -> GA.
-
-## 5. Standing boundaries
-
-- Controlled pilot is not GA.
-- Raw customer/master/opening files stay outside Git.
-- Missing opening values are never assumed zero.
-- Rate-like `KG/M` / `KG/M2` labels are never silently promoted to stock quantities.
-- Future-dated source rows are never silently rewritten.
-- Real production data write/import, cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
-
-## 6. Authorities
-
-- `docs/pilot/alumdoor/PILOT_01_STATUS.json`;
+- `docs/pilot/alumdoor/PILOT_01_IDENTITY_DISPOSITION_V1.json`;
+- `docs/pilot/alumdoor/PILOT_01_ALIAS_SUPPLIER_RECONCILIATION_V1.json`;
 - `docs/pilot/alumdoor/PILOT_01_UOM_RECONCILIATION_V1.json`;
 - `docs/pilot/alumdoor/PILOT_01_MONEY_ROUNDING_V1.json`;
 - `docs/pilot/alumdoor/PILOT_01_STOCK_ANOMALY_DISPOSITION_V1.json`;
-- `docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json`;
-- `docs/pilot/alumdoor/PILOT_01_ALIAS_SUPPLIER_RECONCILIATION_V1.json`;
-- `docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json`;
-- `docs/agents/r6/R6_FINAL_CERTIFICATION_20260805.md`.
+- `docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json`.
+
+## 2. Source search exhausted
+
+Authority: `docs/pilot/alumdoor/PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json`.
+
+The current-conversation uploads, File Library and repository authorities were reviewed for additional Alumdoor opening/access evidence. No additional source-authoritative Alumdoor AR/AP opening snapshot, canonical actual-Kg/value stock opening, missing stock-scope file, or named pilot-user allowlist was found.
+
+Rejected as invalid substitutes:
+
+- generic Kairo sales collateral that lists roles but no named Alumdoor accounts;
+- an unrelated phone-store spreadsheet that contains an opening-debt column;
+- TOKA/CRM/architecture documents from different businesses/projects.
+
+Do **not** use unrelated templates or generic role documents to make Pilot-01 pass.
+
+## 3. External source-owner dependencies
+
+The following inputs now require real source-owner evidence and may not be synthesized:
+
+1. **AR opening** — full-customer source-authoritative opening balances at one named cutoff.
+2. **AP opening** — full-supplier source-authoritative opening balances at the same cutoff.
+3. **Stock opening** — canonical quantity + value at that cutoff, including actual aluminum Kg/value and complete aluminum/mesh source scope.
+4. **Cash/bank** — matching balances at the same cutoff if cash/bank stays in pilot scope, or an explicit scope exclusion.
+5. **UOM `NVL-AL595-GS`** — confirm physical stock axis/conversion; `KG/M` is rate-like and is not accepted as stock quantity.
+6. **UOM `NVL-BO1VIS AL71`** — confirm whether source `159 KG` represents Kg, Con, package count or another axis; no Kg-to-Con conversion is inferred.
+7. **VIPST700 dates** — source-owner corrected dates for the two quarantined rows before opening inclusion.
+8. **Pilot access** — named pilot-account allowlist with exactly one active named `Giám đốc` account.
+
+Remaining source-local work such as minimum BOM/work-center/employee extraction may continue only where the accepted Alumdoor sources explicitly support it; it cannot remove the opening/access dependencies above.
+
+## 4. Transition rule
+
+Pilot-01 stays PREVIEW-BLOCKED until the external source inputs are supplied and one common cutoff is source-proven. Then:
+
+1. bind the new source extracts by SHA-256 and provenance;
+2. normalize them under Mapping V1 and the locked identity/UOM/money policies;
+3. generate the private batch;
+4. run `validate-pilot-batch.mjs`;
+5. require **zero unexplained variance** and `PREVIEW_PASS`.
+
+**`PREVIEW_PASS` still does not authorize production write/import.**
+
+## 5. Pilot-02 onward
+
+Pilot-02 Dry Run starts only after Pilot-01 READY and named accounts are frozen. Pilot-03 is parallel run/reconciliation; Pilot-04 is explicit cutover decision; Pilot-05 is hypercare/exit. Only `PILOT-ACCEPTED` advances to Accepted Production Reference -> GA.
+
+## 6. Standing boundaries
+
+- Controlled pilot is not GA.
+- Raw customer/master/opening files remain outside Git.
+- Missing opening values are never assumed zero.
+- Rate-like `KG/M` / `KG/M2` labels are never silently promoted to stock quantities.
+- Future-dated source rows are never silently rewritten.
+- Unrelated templates/documents are never substituted for Alumdoor source evidence.
+- Real production data write/import, cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
