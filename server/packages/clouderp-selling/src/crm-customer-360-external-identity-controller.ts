@@ -26,7 +26,7 @@ export class CrmCustomer360ExternalIdentityController implements DocumentControl
     const rows = identities
       .filter((document) => document.data.company === data.company
         && document.data.linked_customer === data.customer
-        && document.data.status === "Active")
+        && document.data.identity_status === "Active")
       .sort((left, right) => left.data.provider.localeCompare(right.data.provider)
         || (left.data.scope_label ?? "").localeCompare(right.data.scope_label ?? "")
         || left.name.localeCompare(right.name))
@@ -35,7 +35,7 @@ export class CrmCustomer360ExternalIdentityController implements DocumentControl
         identity: document.name,
         provider: document.data.provider,
         ...(document.data.scope_label ? { scope_label: document.data.scope_label } : {}),
-        status: document.data.status,
+        identity_status: document.data.identity_status,
         linked_at: document.data.linked_at,
       }));
 
