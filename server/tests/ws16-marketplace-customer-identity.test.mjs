@@ -157,7 +157,7 @@ test("CRM Contact link must already point to the same canonical Customer", async
       nextVersion: 1,
       reader: reader({ contact }),
     }),
-    (error) => error?.code === "REFERENCE_ERROR",
+    (error) => error?.code === "REFERENCE_VALIDATION_FAILED",
   );
 });
 
