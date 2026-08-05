@@ -28,6 +28,8 @@ export interface CanonicalSocialOrderInput {
   transaction_date: string;
   items: Array<{ item_code: string; quantity: number }>;
   taxes: JsonObject[];
+  /** Optional external reconciliation assertion. It is never used as pricing input. */
+  expected_grand_total_minor?: number;
 }
 
 export interface CanonicalSocialOrderResult {
@@ -56,11 +58,13 @@ export async function ensureCanonicalSocialSalesOrder(
   actor: Actor,
   input: CanonicalSocialOrderInput,
 ): Promise<CanonicalSocialOrderResult> {
+  validateExpectedTotal(input.expected_grand_total_minor);
   const name = salesOrderName(input.cart_id);
   const { store, kernel, organizationSecurity } = kernelBundle(db);
   let existing = await store.getDocument<JsonObject>(tenantId, "Sales Order", name);
   if (existing?.docstatus === 1) {
     assertExistingLineage(existing.data, input);
+    assertExpectedCommercialTotal(name, existing.data, input.expected_grand_total_minor);
     return commercialResult(name, existing.data, existing.status);
   }
   if (existing?.docstatus === 2) {
@@ -92,6 +96,7 @@ export async function ensureCanonicalSocialSalesOrder(
   if (existing) {
     if (existing.docstatus === 1) {
       assertExistingLineage(existing.data, input);
+      assertExpectedCommercialTotal(name, existing.data, input.expected_grand_total_minor);
       return commercialResult(name, existing.data, existing.status);
     }
     if (existing.docstatus !== 0) throw errors.lifecycle(`Canonical Sales Order ${name} is not resumable`);
@@ -101,6 +106,11 @@ export async function ensureCanonicalSocialSalesOrder(
 
   const draft = await store.getDocument<JsonObject>(tenantId, "Sales Order", name);
   if (!draft || draft.docstatus !== 0) throw errors.lifecycle(`Canonical Sales Order ${name} draft is unavailable for submission`);
+  // The draft has already been normalized/priced by the canonical Sales Order
+  // controller. Reconcile external evidence here, before submit makes the order
+  // commercially authoritative. On mismatch the repairable draft remains and
+  // no submitted Sales Order is created.
+  assertExpectedCommercialTotal(name, draft.data, input.expected_grand_total_minor);
   const submit = await buildCommand({
     tenantId,
     actor,
@@ -115,6 +125,7 @@ export async function ensureCanonicalSocialSalesOrder(
   const submitted = await store.getDocument<JsonObject>(tenantId, "Sales Order", name);
   if (!submitted || submitted.docstatus !== 1) throw errors.ledger(`Canonical Sales Order ${name} was not submitted`);
   assertExistingLineage(submitted.data, input);
+  assertExpectedCommercialTotal(name, submitted.data, input.expected_grand_total_minor);
   return commercialResult(name, submitted.data, submitted.status);
 }
 
@@ -238,6 +249,25 @@ function assertDraftCartShape(data: JsonObject, input: CanonicalSocialOrderInput
     const object = row as JsonObject;
     const qty = Number(object.qty_micros ?? Number(object.qty ?? 0) * 1_000_000);
     if (object.item_code !== expected.item_code || qty !== expected.quantity * 1_000_000) throw errors.idempotency();
+  }
+}
+function validateExpectedTotal(expected: number | undefined): void {
+  if (expected !== undefined && (!Number.isSafeInteger(expected) || expected < 0)) {
+    throw errors.validation("expected_grand_total_minor must be a non-negative safe integer");
+  }
+}
+function assertExpectedCommercialTotal(name: string, data: JsonObject, expected: number | undefined): void {
+  if (expected === undefined) return;
+  const actual = data.grand_total_minor;
+  if (typeof actual !== "number" || !Number.isSafeInteger(actual) || actual < 0) {
+    throw errors.ledger(`Canonical Sales Order ${name} has invalid commercial total for reconciliation`);
+  }
+  if (actual !== expected) {
+    throw errors.reference("External commercial total does not match canonical Sales Order total", {
+      sales_order_name: name,
+      expected_grand_total_minor: expected,
+      canonical_grand_total_minor: actual,
+    });
   }
 }
 function commercialResult(name: string, data: JsonObject, status: string): CanonicalSocialOrderResult {
