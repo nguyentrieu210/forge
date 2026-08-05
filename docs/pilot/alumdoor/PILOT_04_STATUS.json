@@ -1,0 +1,26 @@
+{
+  "format": "forge-alumdoor-pilot-04-status/v1",
+  "real_pilot_04": {
+    "status": "NOT_STARTED_REAL_DATA_GATED",
+    "gate": "real Pilot-01 READY -> real Pilot-02 accepted -> real Pilot-03 accepted -> explicit Giám đốc cutover decision",
+    "production_write_authorized": false,
+    "cutover_authorized": false
+  },
+  "synthetic_pilot_04": {
+    "status": "SYNTHETIC_DECISION_REHEARSAL_CANDIDATE",
+    "contract": "docs/pilot/alumdoor/PILOT_04_SYNTHETIC_DECISION_V1.json",
+    "decision_engine": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.mjs",
+    "test": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.test.mjs",
+    "workflow": ".github/workflows/pilot-04-synthetic-decision.yml",
+    "expected_go_scenarios": 1,
+    "expected_no_go_scenario_classes": 6,
+    "contains_real_customer_data": false,
+    "uses_production_environment": false,
+    "production_write_authorized": false,
+    "cutover_authorized": false,
+    "real_pilot_transition_allowed": false,
+    "production_data_mutated": false
+  },
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "claim_boundary": "Synthetic decision rehearsal may produce a synthetic GO only as test evidence; it never authorizes a real cutover or production mutation."
+}
