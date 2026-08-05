@@ -10,6 +10,7 @@ import {
 } from "@metaforge/ui";
 import { MarketplaceFulfillmentPanel } from "./MarketplaceFulfillmentPanel";
 import { MarketplaceSettlementPanel } from "./MarketplaceSettlementPanel";
+import { MarketplaceSlaQueue } from "./MarketplaceSlaQueue";
 
 type Tab = "overview" | "orders" | "mapping" | "settlements" | "inbox" | "carts";
 interface Summary { active_pages: number; events_today: number; open_carts: number; active_orders: number; cod_pending_minor: number }
@@ -260,7 +261,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
             onConnectMarketplace={(connectionId) => void connectMarketplace(connectionId)}
           />}
         </TabsContent>
-        <TabsContent value="orders">{loading ? <ListSkeleton /> : <MarketplaceOrderList orders={orders} onReload={load} onAuthenticationRequired={onAuthenticationRequired} />}</TabsContent>
+        <TabsContent value="orders">{loading ? <ListSkeleton /> : <div className="space-y-4"><MarketplaceSlaQueue orders={orders} /><MarketplaceOrderList orders={orders} onReload={load} onAuthenticationRequired={onAuthenticationRequired} /></div>}</TabsContent>
         {canManageConnections ? <TabsContent value="mapping">{loading ? <ListSkeleton /> : <MarketplaceMappingExceptionList exceptions={mappingExceptions} />}</TabsContent> : null}
         <TabsContent value="settlements">
           {loading ? <ListSkeleton /> : settlementRestricted ? (
@@ -610,7 +611,7 @@ function ProviderBadge({ provider }: { provider: string }) { return <Badge varia
 function ErrorNotice({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm" role="alert"><AlertTriangle className="size-4 shrink-0 text-destructive" /><div className="min-w-0 flex-1"><p className="font-medium text-destructive">Không tải được Trung tâm bán hàng</p><p className="mt-0.5 text-xs text-muted-foreground">{message}</p></div><Button variant="outline" size="sm" onClick={onRetry}><RefreshCw className="size-4" /> Thử lại</Button></div>; }
 function EmptyState({ icon, title, detail, action }: { icon: ReactNode; title: string; detail: string; action?: ReactNode }) { return <div className="grid min-h-52 place-items-center p-6 text-center"><div><span className="mx-auto grid size-11 place-items-center rounded-xl bg-muted text-muted-foreground [&>svg]:size-5">{icon}</span><p className="mt-3 text-sm font-medium">{title}</p><p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{detail}</p>{action ? <div className="mt-4">{action}</div> : null}</div></div>; }
 function OverviewSkeleton() { return <div className="space-y-4" aria-label="Đang tải tổng quan"><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-24" />)}</div><Skeleton className="h-72" /></div>; }
-function ListSkeleton() { return <div className="space-y-2 rounded-lg border bg-card p-3"><Skeleton className="h-8 w-56" />{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}</div>; }
+function ListSkeleton() { return <div className="space-y-2 rounded-lg border bg-card p-3"><Skeleton className="h-8 w-56" />{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />}</div>; }
 
 class SocialApiError extends Error { constructor(message: string, readonly status: number, readonly code?: string) { super(message); this.name = "SocialApiError"; } }
 async function api<T = unknown>(url: string, init?: RequestInit): Promise<T> {
