@@ -37,6 +37,7 @@ function baseAction() {
         row_doctype: "Stock Reconciliation Item",
         fit_viewport: true,
         emphasize_editable: true,
+        money_precision: 0,
         print_format: "Stock Reconciliation",
       },
       summary: {
@@ -69,6 +70,7 @@ test("first-class input_tables win over matching legacy fallback without mutatin
   assert.equal(spec.allowPaste, true);
   assert.deepEqual(spec.columns.map((column) => column.fieldname), ["item_code", "qty"]);
   assert.equal(spec.columns[0].link_filters, '[["Item","disabled","=",0]]');
+  assert.equal(spec.presentation.money_precision, 0);
   assert.deepEqual(spec.presentation, source.input_tables[0].presentation);
   assert.deepEqual(spec.summary, source.input_tables[0].summary);
   assert.deepEqual(normalized.input_tables[0].presentation, source.input_tables[0].presentation);
