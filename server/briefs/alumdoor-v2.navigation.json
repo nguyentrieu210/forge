@@ -1,6 +1,6 @@
 {
-  "version": "2.2.10",
-  "//": "Bán hàng và Mua hàng dùng chung một sidecar presentation nhưng giữ group/tab độc lập. Nhập hàng tạo Purchase Receipt trực tiếp không bắt buộc Đơn NCC; Báo cáo Mua hàng dùng MasterDetailList inline; calculator/FIFO/đối soát legacy vẫn installed/callable nhưng ẩn khỏi daily tabs.",
+  "version": "2.3.0",
+  "//": "Bán hàng và Mua hàng dùng chung sidecar presentation. 2.3.0 chuyển các màn nhập chính sang operational UX: Sales live composer full-width và Purchase/Receipt grid rút gọn.",
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",
