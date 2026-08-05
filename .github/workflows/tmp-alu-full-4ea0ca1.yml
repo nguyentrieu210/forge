@@ -1,0 +1,245 @@
+name: TMP ALU Full Production Release 4ea0ca1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-alu-full-4ea0ca1.yml"
+      - "ops/releases/alu-full-4ea0ca1-authorization.txt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-alu-tenant-production
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Backup, migrate, deploy ALU full release and verify
+    if: github.head_ref == 'release/alu-full-4ea0ca1-20260805'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: production
+    env:
+      TENANT: alu
+      TARGET_SHA: 4ea0ca19b24257aab55d65a5c57ebc8e3b096bc7
+      AUTH_FILE: ops/releases/alu-full-4ea0ca1-authorization.txt
+      APP_WORKER: cloudforge-app-alumdoor
+      DISPATCH_NAMESPACE: cloudforge-production
+      FORGE_ORIGIN: https://alu.kairo.vn
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_FORGE_RELEASE_SHA: 4ea0ca19b24257aab55d65a5c57ebc8e3b096bc7
+      EVIDENCE_DIR: /tmp/alu-full-release-evidence
+
+    steps:
+      - name: Checkout temporary release authorization branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify explicit authorization and immutable main target
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          test -f "$AUTH_FILE"
+          grep -Fxq 'ACTION=FULL_ALU_PRODUCTION_RELEASE' "$AUTH_FILE"
+          grep -Fxq 'TENANT=alu' "$AUTH_FILE"
+          grep -Fxq 'TARGET_SHA=4ea0ca19b24257aab55d65a5c57ebc8e3b096bc7' "$AUTH_FILE"
+          grep -Fxq 'SOURCE_PR=711' "$AUTH_FILE"
+          grep -Fxq 'R6_RUN=30977062886' "$AUTH_FILE"
+          grep -Fxq 'APPROVAL=EXPLICIT_USER_APPROVAL_2026-08-05' "$AUTH_FILE"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$TARGET_SHA" || {
+            echo "Refusing production release: authorized target $TARGET_SHA is not current main $current_main."
+            exit 1
+          }
+          mapfile -t changed < <(git diff --name-only "$TARGET_SHA"...HEAD | sort -u)
+          test "${#changed[@]}" -eq 2
+          printf '%s\n' "${changed[@]}" | grep -Fxq '.github/workflows/tmp-alu-full-4ea0ca1.yml'
+          printf '%s\n' "${changed[@]}" | grep -Fxq 'ops/releases/alu-full-4ea0ca1-authorization.txt'
+          printf 'run_id=%s\ntarget_sha=%s\ntenant=%s\nsource_pr=711\nr6_run=30977062886\nauthorization=explicit\nstarted_at=%s\n' \
+            "$GITHUB_RUN_ID" "$TARGET_SHA" "$TENANT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/state.txt"
+
+      - name: Checkout exact authorized merged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Reconcile frozen-install worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              pnpm-lock.yaml)
+                echo "Restoring exact candidate lockfile after successful frozen install."
+                git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml
+                ;;
+              *)
+                echo "Refusing full release: dependency install changed unexpected source path: $file"
+                exit 1
+                ;;
+            esac
+          done
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+      - name: Build exact production candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter cloudforge run build
+          pnpm --filter metaforge run build
+          node server/scripts/stage-client-bundle.mjs
+          printf 'build=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Run procurement regression locks before mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test \
+            server/tests/alumdoor-procurement-navigation-contract.test.mjs \
+            server/tests/alumdoor-purchase-order-create.test.mjs \
+            server/tests/app-registry-external-action-reference.test.mjs \
+            2>&1 | tee "$EVIDENCE_DIR/procurement-tests.log"
+          npm --prefix server run verify:release-safety \
+            2>&1 | tee "$EVIDENCE_DIR/release-safety.log"
+          printf 'procurement_regression=pass\nrelease_safety=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Guard generated release worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              client/apps/kho/dist-mobile/*|server/apps/gateway-worker/public/*) ;;
+              *)
+                echo "Refusing full release: unexpected worktree change after exact build: $file"
+                exit 1
+                ;;
+            esac
+          done
+          printf 'Approved generated release paths (%s):\n' "${#dirty[@]}"
+          printf '  %s\n' "${dirty[@]}"
+
+      - name: Plan tenant migrations
+        working-directory: server
+        run: node scripts/migrate-tenant.mjs --tenant "$TENANT"
+
+      - name: Backup and verify tenant before migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup_dir="$RUNNER_TEMP/alu-backup"
+          mkdir -p "$backup_dir"
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$backup_dir"
+          mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
+          [ "${#backups[@]}" -eq 1 ] || {
+            echo "Expected exactly one SQL backup, found ${#backups[@]}."
+            exit 1
+          }
+          node server/scripts/verify-tenant-backup.mjs \
+            --tenant "$TENANT" \
+            --file "${backups[0]}" \
+            --output "$RUNNER_TEMP/alu-backup-verification.json"
+          backup_sha="$(node -e "const fs=require('fs');const p=process.argv[1];const j=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(j.sha256||j.source_sha256||'')" "$RUNNER_TEMP/alu-backup-verification.json")"
+          printf 'backup=pass\nbackup_sha256=%s\n' "$backup_sha" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Migrate tenant
+        working-directory: server
+        run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+
+      - name: Deploy tenant Worker
+        working-directory: server
+        run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+
+      - name: Deploy Alumdoor app Worker
+        working-directory: server
+        run: |
+          pnpm exec wrangler deploy \
+            --config apps-src/alumdoor-worker/wrangler.jsonc \
+            --name "$APP_WORKER" \
+            --dispatch-namespace "$DISPATCH_NAMESPACE" \
+            --strict
+
+      - name: Deploy Gateway and exact UI bundle
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+      - name: Verify production convergence and exact release marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/sre-health-snapshot.mjs \
+            --base "$FORGE_ORIGIN" \
+            --allow-remote \
+            --confirm-host alu.kairo.vn \
+            --expected-release-sha "$TARGET_SHA" \
+            --attempts 12 \
+            --delay-ms 5000 \
+            --output "$EVIDENCE_DIR/health.json" \
+            2>&1 | tee "$EVIDENCE_DIR/health.log"
+          printf 'migration=pass\ntenant_worker=deployed\nalumdoor_worker=deployed\ngateway=deployed\nproduction_health=pass\ncompleted_at=%s\n' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Upload backup verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-full-backup-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/alu-backup-verification.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-full-release-${{ github.run_id }}
+          path: /tmp/alu-full-release-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish release summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '# Temporary ALU full production release'
+            echo
+            echo '```text'
+            cat "$EVIDENCE_DIR/state.txt" 2>/dev/null || echo 'state.txt missing'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
