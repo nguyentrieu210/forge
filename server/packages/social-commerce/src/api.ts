@@ -7,6 +7,10 @@ import {
 } from "./canonical-order.js";
 import { resolveCanonicalSalesStockReturn } from "./canonical-return.js";
 import {
+  linkMarketplaceOrderCustomerIdentity,
+  revokeMarketplaceOrderCustomerIdentity,
+} from "./marketplace-customer-identity.js";
+import {
   commitMarketplaceReservationForCart,
   ingestResolvedMarketplaceOrder,
   listMarketplaceOperationalOrders,
@@ -17,6 +21,7 @@ import { routeMarketplaceSettlementApi } from "./marketplace-settlement-api.js";
 
 const WRITE_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager", "Sales User"]);
 const MANAGER_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager"]);
+const CUSTOMER_IDENTITY_ROLES = new Set(["System Manager", "Sales Manager"]);
 const FULFILLMENT_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager", "Stock Manager", "Stock User"]);
 const COD_RECONCILE_ROLES = new Set(["System Manager", "Social Commerce Manager", "Accounts Manager", "Accounts User"]);
 
@@ -117,6 +122,33 @@ export async function routeSocialCommerceApi(
       stock_reservation: operational.reservation.idempotent_replay ? "idempotent" : "active",
     }, 201);
   }
+
+  const identityLink = url.pathname.match(/^\/api\/v1\/social\/marketplace\/orders\/([^/]+)\/customer-identity$/);
+  if (request.method === "POST" && identityLink) {
+    requireCustomerIdentityManager(actor);
+    const orderId = pathId(identityLink[1]!, "order_id");
+    const body = await readJson<JsonObject>(request, 12_000);
+    const result = await linkMarketplaceOrderCustomerIdentity(db, tenantId, actor, {
+      order_id: orderId,
+      customer: text(body.customer, "customer", 160),
+      ...(optionalText(body.crm_contact, "crm_contact", 160) ? { crm_contact: optionalText(body.crm_contact, "crm_contact", 160)! } : {}),
+      ...(optionalText(body.change_reason, "change_reason", 500) ? { change_reason: optionalText(body.change_reason, "change_reason", 500)! } : {}),
+    });
+    return jsonResponse(result, result.idempotent_replay ? 200 : 201);
+  }
+
+  const identityRevoke = url.pathname.match(/^\/api\/v1\/social\/marketplace\/orders\/([^/]+)\/customer-identity\/revoke$/);
+  if (request.method === "POST" && identityRevoke) {
+    requireCustomerIdentityManager(actor);
+    const orderId = pathId(identityRevoke[1]!, "order_id");
+    const body = await readJson<JsonObject>(request, 8_000);
+    const result = await revokeMarketplaceOrderCustomerIdentity(db, tenantId, actor, {
+      order_id: orderId,
+      change_reason: text(body.change_reason, "change_reason", 500),
+    });
+    return jsonResponse(result);
+  }
+
   if (request.method === "POST" && url.pathname === "/api/v1/social/rules") {
     requireManager(actor);
     const body = await readJson<JsonObject>(request, 16_000);
@@ -412,6 +444,7 @@ function scalar(result: D1Result | undefined): number { const value = (result?.r
 function requireWriter(actor: Actor): void { requireAnyRole(actor, WRITE_ROLES, "Social Commerce write permission is required"); }
 function requireReader(actor: Actor): void { requireAnyRole(actor, WRITE_ROLES, "Social Commerce read permission is required"); }
 function requireManager(actor: Actor): void { requireAnyRole(actor, MANAGER_ROLES, "Social Commerce manager permission is required"); }
+function requireCustomerIdentityManager(actor: Actor): void { requireAnyRole(actor, CUSTOMER_IDENTITY_ROLES, "Sales Manager permission is required to link marketplace customer identities"); }
 function requireFulfillment(actor: Actor): void { requireAnyRole(actor, FULFILLMENT_ROLES, "Social Commerce fulfillment permission is required"); }
 function requireCodReconciler(actor: Actor): void { requireAnyRole(actor, COD_RECONCILE_ROLES, "Social Commerce COD reconciliation permission is required"); }
 function requireAnyRole(actor: Actor, allowed: ReadonlySet<string>, message: string): void { if (!actor.roles.some((role) => allowed.has(role))) throw errors.permission(message); }
