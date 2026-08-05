@@ -197,25 +197,27 @@ function applyActionSidecar(brief, extension, source, briefSource) {
 
 /**
  * Navigation is presentation metadata, not business authority. A navigation sidecar can
- * hide an installed DocType/action/report, rename/regroup it, and declare the tab order
- * without copying its schema/action/report definition. Direct links, permissions and
- * canonical controllers stay untouched. Applied last so appended actions can be targeted.
+ * hide an installed DocType/action/report, rename/regroup it, rename/regroup a native
+ * experience, and declare the tab order without copying the owned definitions. Direct
+ * links, permissions and canonical controllers stay untouched. Applied last so appended
+ * actions can be targeted.
  */
 const NAVIGATION_OVERRIDE_KEYS = new Set(["menu", "label", "icon", "group"]);
+const EXPERIENCE_NAVIGATION_OVERRIDE_KEYS = new Set(["label", "icon", "group"]);
 
-function applyNavigationOverrides(items, overrides, source, section) {
+function applyNavigationOverrides(items, overrides, source, section, identityField = "name", allowedKeys = NAVIGATION_OVERRIDE_KEYS) {
   if (overrides === undefined) return items;
-  if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) throw new Error(`${source}: ${section} phải là object theo name.`);
+  if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) throw new Error(`${source}: ${section} phải là object theo ${identityField}.`);
   if (!Array.isArray(items)) throw new Error(`${source}: brief không có mảng ${section} để override navigation.`);
 
   const requested = new Map();
   for (const [name, override] of Object.entries(overrides)) {
     if (!override || typeof override !== "object" || Array.isArray(override)) throw new Error(`${source}: ${section}.${name} phải là object.`);
-    const unsupported = Object.keys(override).filter((key) => !NAVIGATION_OVERRIDE_KEYS.has(key) && !key.startsWith("//"));
-    if (unsupported.length) throw new Error(`${source}: ${section}.${name} chỉ nhận menu, label, icon, group; không nhận ${unsupported.join(", ")}.`);
-    if (override.menu !== undefined && typeof override.menu !== "boolean") throw new Error(`${source}: ${section}.${name}.menu phải là boolean.`);
+    const unsupported = Object.keys(override).filter((key) => !allowedKeys.has(key) && !key.startsWith("//"));
+    if (unsupported.length) throw new Error(`${source}: ${section}.${name} không nhận ${unsupported.join(", ")}.`);
+    if (allowedKeys.has("menu") && override.menu !== undefined && typeof override.menu !== "boolean") throw new Error(`${source}: ${section}.${name}.menu phải là boolean.`);
     for (const key of ["label", "icon", "group"]) {
-      if (override[key] !== undefined && (typeof override[key] !== "string" || !override[key].trim())) throw new Error(`${source}: ${section}.${name}.${key} phải là chuỗi không rỗng.`);
+      if (allowedKeys.has(key) && override[key] !== undefined && (typeof override[key] !== "string" || !override[key].trim())) throw new Error(`${source}: ${section}.${name}.${key} phải là chuỗi không rỗng.`);
     }
     requested.set(name, override);
   }
@@ -223,7 +225,7 @@ function applyNavigationOverrides(items, overrides, source, section) {
 
   const seen = new Set();
   const next = items.map((item) => {
-    const name = typeof item?.name === "string" ? item.name : "";
+    const name = typeof item?.[identityField] === "string" ? item[identityField] : "";
     const override = requested.get(name);
     if (!override) return item;
     seen.add(name);
@@ -253,10 +255,11 @@ function applyNavigationItemOrder(navigation, items, source) {
 
 function applyNavigationSidecar(brief, extension, source) {
   assertSidecarObject(extension, source);
-  const unsupported = Object.keys(extension).filter((key) => !["version", "doctypes", "reports", "actions", "items"].includes(key) && !key.startsWith("//"));
-  if (unsupported.length) throw new Error(`${source}: chỉ nhận version, doctypes, reports, actions, items và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
-  if (extension.doctypes === undefined && extension.reports === undefined && extension.actions === undefined && extension.items === undefined) {
-    throw new Error(`${source}: phải khai doctypes, reports, actions hoặc items.`);
+  const supported = ["version", "doctypes", "reports", "actions", "experiences", "items"];
+  const unsupported = Object.keys(extension).filter((key) => !supported.includes(key) && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: chỉ nhận ${supported.join(", ")} và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  if (extension.doctypes === undefined && extension.reports === undefined && extension.actions === undefined && extension.experiences === undefined && extension.items === undefined) {
+    throw new Error(`${source}: phải khai doctypes, reports, actions, experiences hoặc items.`);
   }
 
   return {
@@ -265,6 +268,7 @@ function applyNavigationSidecar(brief, extension, source) {
     doctypes: applyNavigationOverrides(brief.doctypes, extension.doctypes, source, "doctypes"),
     reports: applyNavigationOverrides(brief.reports ?? [], extension.reports, source, "reports"),
     actions: applyNavigationOverrides(brief.actions ?? [], extension.actions, source, "actions"),
+    experiences: applyNavigationOverrides(brief.experiences ?? [], extension.experiences, source, "experiences", "key", EXPERIENCE_NAVIGATION_OVERRIDE_KEYS),
     navigation: applyNavigationItemOrder(brief.navigation, extension.items, source),
   };
 }

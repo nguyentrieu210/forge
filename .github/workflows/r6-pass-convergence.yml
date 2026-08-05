@@ -27,6 +27,16 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build CloudForge exactly as full production release
         run: pnpm --filter cloudforge run build
+      - name: Verify converged Alumdoor sales and procurement contracts
+        working-directory: server
+        run: >-
+          node --test
+          tests/alumdoor-purchase-direct-receipt.test.mjs
+          tests/purchase-receipt-optional-order.test.mjs
+          tests/alumdoor-procurement-navigation-contract.test.mjs
+          tests/tien-dat-purchase-bulk-fifo.test.mjs
+          tests/alumdoor-sales-navigation-contract.test.mjs
+          tests/sales-wizard-context.test.mjs
       - name: Verify app report canonical aggregate fields
         working-directory: server
         run: node --test tests/query.test.mjs

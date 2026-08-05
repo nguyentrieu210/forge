@@ -1,6 +1,6 @@
 {
-  "version": "2.2.8",
-  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; bốn tab còn lại do metadata này sở hữu. Nhập hàng trỏ trực tiếp tới action child-grid canonical; FIFO workspace cũ vẫn installed/callable nhưng không còn là tab vận hành.",
+  "version": "2.2.10",
+  "//": "Bán hàng và Mua hàng dùng chung một sidecar presentation nhưng giữ group/tab độc lập. Nhập hàng tạo Purchase Receipt trực tiếp không bắt buộc Đơn NCC; Báo cáo Mua hàng dùng MasterDetailList inline; calculator/FIFO/đối soát legacy vẫn installed/callable nhưng ẩn khỏi daily tabs.",
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",
@@ -10,13 +10,30 @@
     },
     "Purchase Receipt": {
       "menu": false
+    },
+    "Sales Order": {
+      "label": "Đơn hàng",
+      "menu": true,
+      "icon": "shopping-cart",
+      "group": "Bán hàng"
+    },
+    "Delivery Note": {
+      "label": "Phiếu xuất kho",
+      "menu": true,
+      "icon": "package-minus",
+      "group": "Bán hàng"
     }
   },
   "reports": {
     "Mua hàng theo nhà cung cấp": {
+      "label": "Mua theo nhà cung cấp",
+      "icon": "bar-chart-3",
+      "group": "Báo cáo"
+    },
+    "Đơn hàng theo khách": {
       "label": "Báo cáo",
       "icon": "bar-chart-3",
-      "group": "Mua hàng"
+      "group": "Bán hàng"
     }
   },
   "actions": {
@@ -35,14 +52,41 @@
       "icon": "package-check",
       "group": "Mua hàng"
     },
+    "bao-cao-giao-hang-ncc": {
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "bar-chart-3",
+      "group": "Mua hàng"
+    },
     "doi-soat-giao-hang-ncc": {
+      "menu": false
+    },
+    "giao-hang-theo-ngay": {
+      "label": "Giao hàng",
+      "menu": true,
+      "icon": "calendar-check",
+      "group": "Bán hàng"
+    },
+    "tinh-cong-thuc-cua": {
       "menu": false
     }
   },
+  "experiences": {
+    "alumdoor-operations:workbench": {
+      "label": "Bán hàng",
+      "icon": "shopping-cart",
+      "group": "Bán hàng"
+    }
+  },
   "items": [
+    "alumdoor-operations:workbench",
+    "Sales Order",
+    "Delivery Note",
+    "action:giao-hang-theo-ngay",
+    "report:Đơn hàng theo khách",
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
-    "report:Mua hàng theo nhà cung cấp",
+    "action:bao-cao-giao-hang-ncc",
     "Purchase Order"
   ]
 }
