@@ -1,0 +1,24 @@
+{
+  "name": "Marketplace Connection",
+  "module": "Platform",
+  "is_submittable": false,
+  "autoname": "INT-MKT-.#####",
+  "title_field": "connector_key",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "connector_key", "label": "Connector", "fieldtype": "Select", "options": "shopee-marketplace\nlazada-marketplace\ntiktok-shop-marketplace", "required": true, "in_list_view": true, "in_standard_filter": true, "set_only_once": true },
+    { "fieldname": "connector_version", "label": "Phiên bản connector", "fieldtype": "Data", "required": true, "default": "1.0.0", "in_list_view": true, "set_only_once": true },
+    { "fieldname": "auth_kind", "label": "Kiểu xác thực", "fieldtype": "Select", "options": "oauth2", "required": true, "default": "oauth2", "set_only_once": true },
+    { "fieldname": "secret_ref", "label": "Tham chiếu credential", "fieldtype": "Data", "required": true, "description": "Chỉ lưu secret_ref. Access token, refresh token và app secret không được lưu trong document." },
+    { "fieldname": "config", "label": "Cấu hình không bí mật", "fieldtype": "JSON", "required": true, "description": "Ví dụ shop_id, shop_cipher, api_base, lookback_seconds. Plaintext credential bị từ chối ở server." },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "draft\nactive\ndisabled\nerror", "required": true, "default": "draft", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status_reason", "label": "Lý do đổi trạng thái", "fieldtype": "Small Text" }
+  ],
+  "permissions": [
+    { "role": "Integration Admin", "read": true, "write": true, "create": true, "report": true, "export": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
