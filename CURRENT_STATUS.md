@@ -10,7 +10,10 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - RC4: **DONE**.
 - R5: **DONE / R5-GO**.
 - R6: **DONE / PILOT-GO**.
-- Exact certified/deployed product SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
+- Historical R6 certified product SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
+- Current observed production UI release SHA: `818818b27379450dae5e6e16991ea01438bd5fc0`.
+- Current observed production UI bundle hash: `05030fa9308b7ca5`.
+- Current Alumdoor metadata package: `2.2.5`.
 - R6 final evidence: **23/23 PASS**.
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
 - Real Pilot-01: **SOURCE INGESTED / PREVIEW-BLOCKED / EXTERNAL SOURCE DEPENDENCY**.
@@ -23,21 +26,29 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - Synthetic Pilot-05 run `30972650497`: **SUCCESS**.
 - **Synthetic validation lane: COMPLETE / TEST ONLY**.
 
-Synthetic evidence does not change the exact deployed R6 product identity and never authorizes real pilot transition, production write, cutover, Accepted Production Reference or GA.
+Synthetic evidence does not change the historical R6 certification and never authorizes real pilot transition, production business-data write, cutover, Accepted Production Reference or GA.
 
-### R6 package relock — Alumdoor 2.2.4 (2026-08-05): PASS
+### Production UI + metadata relock — declaration-driven Procurement / Alumdoor 2.2.5 (2026-08-05): PASS
 
-- Historical R6 certification remains historical evidence and is not rewritten by the package relock.
-- Current observed Worker/UI release marker: `3999c2929053f11d4f1c5b59ccc2f0934446b750`.
-- Current observed UI bundle hash: `05c918e048271583`.
-- Alumdoor package metadata: `2.2.4`.
-- Alumdoor package content hash: `e6a5a1d55b4aa8b7cbe62173e9532a08298eac13472dd79ff2c9fb7e949a284d`.
-- Active capability profile: `alumdoor-pilot` v1, hash `3e3124018aa3c7d233f0af8b81f751cd3e4a8329b94a2c9295956bc58ac8f7f8`, `valid=true`, zero blocked capabilities.
-- Protected production metadata install run `30969702876`, job `92191164491`: **SUCCESS**.
-- R6 package relock run `30970665494`, job `92194053937`: **SUCCESS / E18 PASS / zero blockers**.
-- Relock source authority: `1f7ca95760998c4ab30bdf6c9870647f5ee2938f`; this is source authority for the relock, not a claim that current `main` is the deployed Worker/UI release.
-- No Worker/client deploy occurred during metadata upgrade or package relock. Business data was not written by the relock.
-- Durable evidence: `deploy-evidence/r6-alumdoor-package-relock-20260805.json`.
+- Historical R6 certification remains historical evidence and is not rewritten by this UI/metadata relock.
+- UI hardcode removal source: PR `#704`, merged source SHA `818818b27379450dae5e6e16991ea01438bd5fc0`.
+- The bespoke `ProcurementOperatingWorkspace` and method-based Alumdoor purchase-action interception were removed; generic metadata-driven `NativeActionScreen` is authoritative again.
+- Read-only production observation run `30973431872`, job `92202452867`: **SUCCESS**.
+- Current observed Worker/UI release marker: `818818b27379450dae5e6e16991ea01438bd5fc0`.
+- Current observed UI bundle hash: `05030fa9308b7ca5`.
+- Production health `200`, guest boot `403`, release marker `200`, zero release-observation failures.
+- Metadata declaration source: PR `#706`, source SHA `95dc7548259f1662ab6f696a1235e2552d35acb6`.
+- Alumdoor package metadata: `2.2.5`.
+- Procurement navigation is declaration-driven and authenticated production assertion confirms `Purchase Order`, `Purchase Receipt`, `Nhập nhôm FIFO theo đơn cũ`, bulk receipt and supplier settlement entries.
+- Metadata candidate validation run `30972713085`: **SUCCESS**.
+- Protected production metadata install run `30972964743`, job `92201047629`: **SUCCESS**.
+- Fresh production backup SHA-256: `b8d900b4f67b8070caaafc5b0883c55948319fe2ab1a1362b2c7f126ca864931`; protected backup artifact ID `8917235200`.
+- The same backup restored successfully into two isolated D1 drill databases before install; each verified 97 application tables; both drills were cleaned up after verification.
+- Production install evidence artifact ID `8917288137`; UI observation artifact ID `8917365777`.
+- Temporary production install PR `#707` and read-only observation PR `#708` were intentionally closed **unmerged** so temporary workflow/authorization files did not enter `main`.
+- Prior Alumdoor `2.2.4` package relock remains valid historical evidence in `deploy-evidence/r6-alumdoor-package-relock-20260805.json`; it is no longer the current package identity.
+- Durable current evidence: `deploy-evidence/alumdoor-procurement-ui-meta-relock-20260805.json`.
+- Later non-client commits on `main` do not imply a different deployed UI SHA; product-source identity and deployed UI identity remain reported separately.
 - Controlled pilot remains **not GA**.
 
 ## 2. Capability truth
