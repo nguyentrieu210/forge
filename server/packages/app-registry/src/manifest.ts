@@ -460,6 +460,11 @@ export function parseAppManifest(value: unknown): AppManifest {
   const doctypeNames = new Set(doctypes.map((meta) => meta.name));
   assertUnique(doctypes.map((meta) => meta.name), "doctype");
 
+  const externalDocTypes = array(input.externalDocTypes ?? [], "externalDocTypes").map((entry, index) => parseExternalDocType(entry, index));
+  assertUnique(externalDocTypes.map((entry) => entry.name), "external DocType");
+  const externalNames = new Set(externalDocTypes.map((entry) => entry.name));
+  if (metaContractVersion === 1) validateDocTypeReferences(doctypes, doctypeNames, externalNames);
+
   const workflows = array(input.workflows ?? [], "workflows").map((entry) => validateWorkflow(entry));
   for (const workflow of workflows) {
     // A workflow for a doctype the app does not ship would silently attach to
@@ -499,7 +504,7 @@ export function parseAppManifest(value: unknown): AppManifest {
   }
   // Parsed BEFORE nav so a nav entry naming an action/screen that does not exist is refused here
   // rather than installing a menu line whose screen cannot be built.
-  const actions = array(input.actions ?? [], "actions").map((entry, index) => parseAction(entry, index, doctypeNames));
+  const actions = array(input.actions ?? [], "actions").map((entry, index) => parseAction(entry, index, doctypeNames, externalNames));
   assertUnique(actions.map((action) => action.name), "action name");
   const actionsByName = new Map(actions.map((action) => [action.name, action]));
   const screens = array(input.screens ?? [], "screens").map((entry, index) => parseScreen(entry, index, id, doctypes, actionsByName));
@@ -531,11 +536,6 @@ export function parseAppManifest(value: unknown): AppManifest {
 
   const reports = array(input.reports ?? [], "reports").map((entry, index) => parseReport(entry, index, doctypeNames));
   assertUnique(reports.map((report) => report.name), "report name");
-
-  const externalDocTypes = array(input.externalDocTypes ?? [], "externalDocTypes").map((entry, index) => parseExternalDocType(entry, index));
-  assertUnique(externalDocTypes.map((entry) => entry.name), "external DocType");
-  const externalNames = new Set(externalDocTypes.map((entry) => entry.name));
-  if (metaContractVersion === 1) validateDocTypeReferences(doctypes, doctypeNames, externalNames);
 
   const charts = array(input.charts ?? [], "charts").map((entry, index) => parseChart(entry, index, reports, nav, roleNames));
   if (charts.length > 3) throw errors.validation("An app overview may declare at most 3 charts");
@@ -958,11 +958,17 @@ const ACTION_FIELDTYPES = new Set([
   "Attach", "Attach Image",
 ]);
 
-function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<string>): AppAction {
+function parseAction(
+  value: JsonValue,
+  index: number,
+  doctypeNames: ReadonlySet<string>,
+  externalNames: ReadonlySet<string> = new Set(),
+): AppAction {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`actions[${index}] must be an object`);
   const entry = value as JsonObject;
   const name = text(entry.name, `actions[${index}].name`, 64);
   if (!ACTION_NAME.test(name)) throw errors.validation(`actions[${index}].name must be lowercase letters, digits and hyphens: ${name}`);
+  const declaredDoctype = (doctype: string) => doctypeNames.has(doctype) || externalNames.has(doctype);
 
   const call = (raw: JsonValue | undefined, where: string) => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
@@ -983,10 +989,10 @@ function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<
   if (!["read", "save"].includes(permissionAction)) {
     throw errors.validation(`actions[${index}].permission_action must be read or save`);
   }
-  // A gate naming a doctype the app does not ship cannot be evaluated, so the screen would
-  // either be shown to everyone or to nobody — both silently.
-  if (!doctypeNames.has(permissionDoctype)) {
-    throw errors.validation(`actions[${index}].permission_doctype points at ${permissionDoctype}, which this app does not define`);
+  // A gate may target an app-owned DocType or an explicitly declared external DocType.
+  // Anything else cannot be evaluated reliably and must fail closed.
+  if (!declaredDoctype(permissionDoctype)) {
+    throw errors.validation(`actions[${index}].permission_doctype points at ${permissionDoctype}, which this app neither defines nor declares external`);
   }
 
   const fields = array(entry.fields ?? [], `actions[${index}].fields`).map((raw, position) => {
@@ -1003,8 +1009,8 @@ function parseAction(value: JsonValue, index: number, doctypeNames: ReadonlySet<
     if ((fieldtype === "Link" || fieldtype === "Select") && !options) {
       throw errors.validation(`${where} is a ${fieldtype} but names no options`);
     }
-    if (fieldtype === "Link" && !doctypeNames.has(options!)) {
-      throw errors.validation(`${where} links to ${options}, which this app does not define`);
+    if (fieldtype === "Link" && !declaredDoctype(options!)) {
+      throw errors.validation(`${where} links to ${options}, which this app neither defines nor declares external`);
     }
     return {
       fieldname: text(field.fieldname, `${where}.fieldname`, 120),

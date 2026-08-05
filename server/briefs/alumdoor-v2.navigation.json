@@ -1,26 +1,48 @@
 {
-  "version": "2.2.5",
-  "//": "Procurement presentation follows canonical DocType/AppAction declarations. No bespoke operating-workspace consolidation or hidden daily procurement entries.",
+  "version": "2.2.6",
+  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; bốn tab còn lại do metadata này sở hữu. Không có workspace React riêng hay route hardcode.",
   "doctypes": {
     "Purchase Order": {
-      "menu": true
+      "label": "Lịch sử mua hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Mua hàng"
     },
     "Purchase Receipt": {
-      "menu": true
+      "menu": false
+    }
+  },
+  "reports": {
+    "Mua hàng theo nhà cung cấp": {
+      "label": "Báo cáo",
+      "icon": "bar-chart-3",
+      "group": "Mua hàng"
     }
   },
   "actions": {
+    "tao-don-mua": {
+      "label": "Mua hàng",
+      "menu": true,
+      "icon": "shopping-bag",
+      "group": "Mua hàng"
+    },
     "nhap-nhom-fifo": {
-      "label": "Nhập nhôm FIFO theo đơn cũ",
+      "label": "Nhập hàng",
       "menu": true,
       "icon": "truck",
       "group": "Mua hàng"
     },
     "nhap-nhom-hang-loat": {
-      "menu": true
+      "menu": false
     },
     "doi-soat-giao-hang-ncc": {
-      "menu": true
+      "menu": false
     }
-  }
+  },
+  "items": [
+    "action:tao-don-mua",
+    "action:nhap-nhom-fifo",
+    "report:Mua hàng theo nhà cung cấp",
+    "Purchase Order"
+  ]
 }
