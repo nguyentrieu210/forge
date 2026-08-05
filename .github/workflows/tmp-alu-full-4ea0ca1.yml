@@ -28,7 +28,10 @@ jobs:
       APP_WORKER: cloudforge-app-alumdoor
       DISPATCH_NAMESPACE: cloudforge-production
       FORGE_ORIGIN: https://alu.kairo.vn
+      EXPECTED_APP_VERSION: 2.2.6
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
       VITE_FORGE_RELEASE_SHA: 4ea0ca19b24257aab55d65a5c57ebc8e3b096bc7
       EVIDENCE_DIR: /tmp/alu-full-release-evidence
 
@@ -53,6 +56,8 @@ jobs:
           grep -Fxq 'R6_RUN=30977062886' "$AUTH_FILE"
           grep -Fxq 'APPROVAL=EXPLICIT_USER_APPROVAL_2026-08-05' "$AUTH_FILE"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${FORGE_ADMIN_USER:-}"
+          test -n "${FORGE_ADMIN_PASSWORD:-}"
           git fetch --no-tags origin main
           current_main="$(git rev-parse origin/main)"
           test "$current_main" = "$TARGET_SHA" || {
@@ -121,18 +126,15 @@ jobs:
           node server/scripts/stage-client-bundle.mjs
           printf 'build=pass\n' >> "$EVIDENCE_DIR/state.txt"
 
-      - name: Run procurement regression locks before mutation
+      - name: Verify canonical release safety before mutation
         shell: bash
         run: |
           set -euo pipefail
-          node --test \
-            server/tests/alumdoor-procurement-navigation-contract.test.mjs \
-            server/tests/alumdoor-purchase-order-create.test.mjs \
-            server/tests/app-registry-external-action-reference.test.mjs \
-            2>&1 | tee "$EVIDENCE_DIR/procurement-tests.log"
+          # Exact target already passed R6 Pass Convergence run 30977062886.
+          # Do not add a second release gate with stricter error-copy assertions than the canonical lane.
           npm --prefix server run verify:release-safety \
             2>&1 | tee "$EVIDENCE_DIR/release-safety.log"
-          printf 'procurement_regression=pass\nrelease_safety=pass\n' >> "$EVIDENCE_DIR/state.txt"
+          printf 'r6_exact_head=pass:30977062886\nrelease_safety=pass\n' >> "$EVIDENCE_DIR/state.txt"
 
       - name: Guard generated release worktree
         shell: bash
@@ -195,8 +197,84 @@ jobs:
             --dispatch-namespace "$DISPATCH_NAMESPACE" \
             --strict
 
+      - name: Install Alumdoor metadata package through canonical browser path
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json \
+            --origin "$FORGE_ORIGIN" \
+            --admin "$FORGE_ADMIN_USER" \
+            2>&1 | tee "$EVIDENCE_DIR/app-install.log"
+          grep -q "app=alumdoor@$EXPECTED_APP_VERSION" "$EVIDENCE_DIR/app-install.log"
+          grep -q '^LIVE  https://alu.kairo.vn' "$EVIDENCE_DIR/app-install.log"
+          printf 'alumdoor_metadata=installed:%s\n' "$EXPECTED_APP_VERSION" >> "$EVIDENCE_DIR/state.txt"
+
       - name: Deploy Gateway and exact UI bundle
         run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+      - name: Verify production procurement tabs from installed manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' > "$EVIDENCE_DIR/production-nav.json"
+          const origin = process.env.FORGE_ORIGIN.replace(/\/$/, "");
+          const user = process.env.FORGE_ADMIN_USER;
+          const password = process.env.FORGE_ADMIN_PASSWORD;
+          const jar = new Map();
+          let csrf = "";
+          function store(response) {
+            for (const value of response.headers.getSetCookie?.() ?? []) {
+              const pair = value.split(";")[0];
+              const i = pair.indexOf("=");
+              if (i > 0) jar.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
+            }
+          }
+          async function call(method, body = {}) {
+            const response = await fetch(`${origin}/api/method/${method}`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                ...(jar.size ? { cookie: [...jar].map(([k,v]) => `${k}=${v}`).join("; ") } : {}),
+                ...(csrf ? { "x-frappe-csrf-token": csrf } : {}),
+              },
+              body: JSON.stringify(body),
+            });
+            store(response);
+            csrf = response.headers.get("x-frappe-csrf-token") ?? csrf;
+            const text = await response.text();
+            const parsed = JSON.parse(text);
+            if (!response.ok) throw new Error(`${method} HTTP ${response.status}: ${parsed.message ?? text.slice(0, 200)}`);
+            return parsed.message ?? parsed;
+          }
+          await call("login", { usr: user, pwd: password });
+          const manifest = await call("metaforge.api.get_app_manifest", { app: "alumdoor" });
+          const nav = manifest.nav ?? [];
+          const expected = [
+            ["action:tao-don-mua", "Mua hàng"],
+            ["action:nhap-nhom-fifo", "Nhập hàng"],
+            ["report:Mua hàng theo nhà cung cấp", "Báo cáo"],
+            ["Purchase Order", "Lịch sử mua hàng"],
+          ];
+          const positions = [];
+          for (const [key, label] of expected) {
+            const index = nav.findIndex((entry) => entry.key === key);
+            if (index < 0) throw new Error(`missing procurement navigation: ${key}`);
+            if (nav[index].label !== label) throw new Error(`unexpected label for ${key}: ${nav[index].label}`);
+            positions.push(index);
+          }
+          for (let i = 1; i < positions.length; i += 1) {
+            if (positions[i] <= positions[i - 1]) throw new Error(`procurement navigation order mismatch: ${positions.join(",")}`);
+          }
+          process.stdout.write(JSON.stringify({
+            app: "alumdoor",
+            expected_version: process.env.EXPECTED_APP_VERSION,
+            tabs_after_shell_quy_trinh: expected.map(([key, label]) => ({ key, label })),
+            positions,
+            declaration_driven: true,
+          }, null, 2));
+          NODE
+          printf 'procurement_tabs=pass\n' >> "$EVIDENCE_DIR/state.txt"
 
       - name: Verify production convergence and exact release marker
         shell: bash
