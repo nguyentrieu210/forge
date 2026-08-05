@@ -1,6 +1,6 @@
 {
-  "version": "2.2.8",
-  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; bốn tab còn lại do metadata này sở hữu. Nhập hàng trỏ trực tiếp tới action child-grid canonical; FIFO workspace cũ vẫn installed/callable nhưng không còn là tab vận hành.",
+  "version": "2.2.9",
+  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; Mua hàng và Nhập hàng giữ child-grid hiện tại; Báo cáo là MasterDetailList inline; report tổng cũ vẫn ở nhóm Báo cáo chung.",
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",
@@ -14,9 +14,9 @@
   },
   "reports": {
     "Mua hàng theo nhà cung cấp": {
-      "label": "Báo cáo",
+      "label": "Mua theo nhà cung cấp",
       "icon": "bar-chart-3",
-      "group": "Mua hàng"
+      "group": "Báo cáo"
     }
   },
   "actions": {
@@ -35,6 +35,12 @@
       "icon": "package-check",
       "group": "Mua hàng"
     },
+    "bao-cao-giao-hang-ncc": {
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "bar-chart-3",
+      "group": "Mua hàng"
+    },
     "doi-soat-giao-hang-ncc": {
       "menu": false
     }
@@ -42,7 +48,7 @@
   "items": [
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
-    "report:Mua hàng theo nhà cung cấp",
+    "action:bao-cao-giao-hang-ncc",
     "Purchase Order"
   ]
 }
