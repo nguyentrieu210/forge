@@ -3,14 +3,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const marketplacePath = new URL("../packages/social-commerce/src/marketplace-order.ts", import.meta.url);
+const resolverPath = new URL("../packages/social-commerce/src/marketplace-profile.ts", import.meta.url);
 const canonicalPath = new URL("../packages/social-commerce/src/canonical-order.ts", import.meta.url);
 const appPath = new URL("../apps-src/social-commerce/app.json", import.meta.url);
 const profilePath = new URL("../apps-src/social-commerce/doctypes/commerce-channel-profile.json", import.meta.url);
 const mappingPath = new URL("../apps-src/social-commerce/doctypes/marketplace-sku-mapping.json", import.meta.url);
 
 async function sources() {
-  const [marketplace, canonical, appRaw, profileRaw, mappingRaw] = await Promise.all([
+  const [marketplace, resolver, canonical, appRaw, profileRaw, mappingRaw] = await Promise.all([
     readFile(marketplacePath, "utf8"),
+    readFile(resolverPath, "utf8"),
     readFile(canonicalPath, "utf8"),
     readFile(appPath, "utf8"),
     readFile(profilePath, "utf8"),
@@ -18,6 +20,7 @@ async function sources() {
   ]);
   return {
     marketplace,
+    resolver,
     canonical,
     app: JSON.parse(appRaw),
     profile: JSON.parse(profileRaw),
@@ -47,6 +50,21 @@ test("marketplace commercial total is an assertion, never a trusted pricing inpu
   assert.match(marketplace, /selling_price_list: normalized\.selling_price_list/);
   assert.doesNotMatch(marketplace, /rate:\s*item\./);
   assert.doesNotMatch(marketplace, /unit_price/);
+});
+
+test("provider input cannot choose ERP master data or canonical Item codes", async () => {
+  const { resolver } = await sources();
+  assert.match(resolver, /resolveMarketplaceOrderFromMetadata/);
+  assert.match(resolver, /Commerce Channel Profile/);
+  assert.match(resolver, /Marketplace SKU Mapping/);
+  assert.match(resolver, /const company = jsonText\(profile\.company/);
+  assert.match(resolver, /const customer = jsonText\(profile\.default_customer/);
+  assert.match(resolver, /const currency = jsonText\(profile\.currency/);
+  assert.match(resolver, /const sellingPriceList = jsonText\(profile\.selling_price_list/);
+  assert.match(resolver, /const warehouse = jsonText\(profile\.warehouse/);
+  assert.match(resolver, /item_code: jsonText\(mapping\.item_code/);
+  const providerInterface = resolver.slice(resolver.indexOf("export interface MarketplaceProviderOrderInput"), resolver.indexOf("export interface ResolvedMarketplaceOrder"));
+  assert.doesNotMatch(providerInterface, /item_code|company|customer|currency|selling_price_list|warehouse/);
 });
 
 test("marketplace profile and SKU mapping are metadata-first, unique and secret-free", async () => {
@@ -81,9 +99,11 @@ test("marketplace profile and SKU mapping are metadata-first, unique and secret-
 });
 
 test("marketplace contract rejects malformed duplicate lines and unbounded quantities", async () => {
-  const { marketplace } = await sources();
+  const { marketplace, resolver } = await sources();
   assert.match(marketplace, /Marketplace order requires 1\.\.500 items/);
   assert.match(marketplace, /Duplicate marketplace SKU\/variant line/);
   assert.match(marketplace, /Number\.isSafeInteger\(item\.quantity\)/);
   assert.match(marketplace, /provider_merchandise_total_minor must be a non-negative safe integer/);
+  assert.match(resolver, /Marketplace provider order requires 1\.\.500 items/);
+  assert.match(resolver, /Duplicate marketplace provider SKU\/variant line/);
 });
