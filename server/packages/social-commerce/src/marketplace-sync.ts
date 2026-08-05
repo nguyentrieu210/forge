@@ -57,7 +57,7 @@ export async function ingestMarketplaceSyncPage(
         external_index: index,
         order_id: result.order_id,
         sales_order_name: result.sales_order_name,
-        idempotent_replay: result.idempotent_replay,
+        idempotent_replay: result.reservation.idempotent_replay,
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message.slice(0, 320) : "Marketplace record ingest failed";
