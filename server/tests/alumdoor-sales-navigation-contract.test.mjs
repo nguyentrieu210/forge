@@ -156,7 +156,7 @@ test("Sales composer takes technical choices from Cutting Policy and reserves st
   assert.match(source, /Xác nhận & giữ chỗ/);
 });
 
-test("SelectionBatch preview never opts delivery documents in implicitly", async () => {
+test("SelectionBatch requires explicit choice, respects confirmation and has no Sales-specific open hardcode", async () => {
   const source = await readFile(selectionBatchPath, "utf8");
   const previewStart = source.indexOf("const runPreview = async () =>");
   const previewEnd = source.indexOf("useEffect(() =>", previewStart);
@@ -164,4 +164,8 @@ test("SelectionBatch preview never opts delivery documents in implicitly", async
   const previewSource = source.slice(previewStart, previewEnd);
   assert.match(previewSource, /setSelected\(\[\]\)/);
   assert.doesNotMatch(previewSource, /setSelected\(available\.filter/, "preview must not auto-select every eligible Sales Order");
+  assert.match(source, /action\.commit\.confirm/);
+  assert.match(source, /window\.confirm\(action\.commit\.confirm\)/);
+  assert.match(source, /config\.openDoctype \|\| inferredDoctype\(config\.rowKey\)/);
+  assert.doesNotMatch(source, /onOpen\("Sales Order"/, "generic batch renderer must not hardcode Sales Order");
 });
