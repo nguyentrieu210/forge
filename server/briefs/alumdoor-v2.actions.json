@@ -54,6 +54,24 @@
       "commit": "alumdoor.purchase.supplier_delivery_dashboard | Làm mới"
     },
     {
+      "name": "giao-hang-dispatch",
+      "label": "Giao hàng",
+      "menu": true,
+      "icon": "calendar-check",
+      "group": "Bán hàng",
+      "permission": "Delivery Note",
+      "description": "Tự tải các đơn đến hạn, cho chọn rõ từng đơn rồi mới tạo Phiếu xuất nháp. Không còn thao tác ngầm trên toàn bộ danh sách.",
+      "fields": [
+        "delivery_date:Date!=(Today) Ngày giao",
+        "driver:Data Người giao / lái xe",
+        "vehicle:Data Biển số",
+        "selection_config:Text(SelectionBatch:{\"rowsKey\":\"rows\",\"rowKey\":\"sales_order\",\"selectedArg\":\"sales_orders\",\"statusField\":\"status\",\"selectableValue\":\"Sẵn sàng\",\"columns\":[{\"field\":\"sales_order\",\"label\":\"Đơn hàng\"},{\"field\":\"customer\",\"label\":\"Khách hàng\"},{\"field\":\"status\",\"label\":\"Trạng thái\"},{\"field\":\"existing_delivery_note\",\"label\":\"Phiếu đã có\"}],\"emptyText\":\"Không có đơn đến hạn cần tạo phiếu giao.\"}) Cấu hình chọn đơn"
+      ],
+      "preview": "alumdoor.delivery_batch.preview | Tải đơn đến hạn",
+      "commit": "alumdoor.delivery_batch.create | Tạo phiếu cho đơn đã chọn | Chỉ tạo Phiếu xuất nháp cho đúng các đơn đang được chọn?",
+      "resultTable": "results"
+    },
+    {
       "name": "doi-soat-giao-hang-ncc",
       "label": "Đối soát giao hàng NCC",
       "menu": true,
