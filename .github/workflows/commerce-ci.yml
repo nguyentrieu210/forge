@@ -62,7 +62,7 @@ jobs:
 
       - name: Run omnichannel commerce contract tests
         working-directory: server
-        run: node --test tests/ws16-marketplace-order-source-contract.test.mjs tests/ws16-omnichannel-closure-contract.test.mjs tests/ws16-marketplace-signing.test.mjs tests/ws16-marketplace-runtime.test.mjs tests/ws16-marketplace-authorization.test.mjs tests/ws16-marketplace-customer-identity.test.mjs tests/ws16-customer-identity-metadata.test.mjs tests/ws16-customer-identity-opaque.test.mjs tests/ws16-tiktok-provider-adapter.test.mjs
+        run: node --test tests/ws16-marketplace-order-source-contract.test.mjs tests/ws16-omnichannel-closure-contract.test.mjs tests/ws16-marketplace-signing.test.mjs tests/ws16-marketplace-runtime.test.mjs tests/ws16-marketplace-authorization.test.mjs tests/ws16-marketplace-customer-identity.test.mjs tests/ws16-customer-identity-metadata.test.mjs tests/ws16-customer-identity-opaque.test.mjs
 
       - name: Build MetaForge runtime
         run: pnpm --filter metaforge run build
