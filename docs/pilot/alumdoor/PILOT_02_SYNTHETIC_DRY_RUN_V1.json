@@ -1,0 +1,94 @@
+{
+  "format": "forge-alumdoor-pilot-02-synthetic-dry-run/v1",
+  "status": "SYNTHETIC_DRY_RUN_CANDIDATE",
+  "tenant_profile": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "synthetic": true,
+  "contains_real_customer_data": false,
+  "satisfies_real_pilot_01_readiness": false,
+  "satisfies_real_pilot_02_acceptance": false,
+  "production_write_authorized": false,
+  "production_data_mutated": false,
+  "precondition": {
+    "pilot_01_synthetic_fixture": "docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json",
+    "required_preview_status": "PREVIEW_PASS",
+    "required_dataset_count": 12,
+    "all_six_personas": true,
+    "exactly_one_active_giam_doc": true
+  },
+  "execution_surface": {
+    "workflow": ".github/workflows/pilot-02-synthetic-dry-run.yml",
+    "environment": "github-hosted-ci-local-only",
+    "production_environment_used": false,
+    "cloudflare_production_secrets_used": false,
+    "production_origin_called": false,
+    "direct_d1_write": false,
+    "deploy_or_migration": false
+  },
+  "representative_segments": [
+    {
+      "id": "P02-SYN-01",
+      "segment": "pilot_01_fixture_handoff",
+      "evidence": "generate-pilot-01-synthetic-batch.mjs -> validate-pilot-batch.mjs",
+      "acceptance": "synthetic batch reaches PREVIEW_PASS with zero unexplained variance"
+    },
+    {
+      "id": "P02-SYN-02",
+      "segment": "sales_o2c",
+      "evidence": "server/apps/tenant-worker/test/r6-golden-flow.integration.test.mts + server/tests/transaction-closure-sales-o2c.test.mjs + server/tests/o2c.test.mjs",
+      "acceptance": "quotation/order/delivery/invoice/payment lineage and over-fulfilment guards pass"
+    },
+    {
+      "id": "P02-SYN-03",
+      "segment": "procurement_p2p",
+      "evidence": "server/apps/tenant-worker/test/r6-golden-flow.integration.test.mts + server/tests/procurement-p2p-closure.test.mjs + server/tests/procurement-p2p-correction-boundary.test.mjs",
+      "acceptance": "purchase order/receipt and correction boundaries pass"
+    },
+    {
+      "id": "P02-SYN-04",
+      "segment": "stock_and_fulfillment",
+      "evidence": "server/apps/tenant-worker/test/r6-golden-flow.integration.test.mts",
+      "acceptance": "canonical stock ledger readback, negative/raw-to-finished movement and delivery consumption reconcile"
+    },
+    {
+      "id": "P02-SYN-05",
+      "segment": "manufacturing",
+      "evidence": "server/apps/tenant-worker/test/r6-golden-flow.integration.test.mts + server/tests/manufacturing-transaction-closure.test.mjs + server/tests/alumdoor-manufacturing-lifecycle.test.mjs",
+      "acceptance": "BOM/work-order/manufacture lifecycle and production lineage pass"
+    },
+    {
+      "id": "P02-SYN-06",
+      "segment": "finance_settlement",
+      "evidence": "server/apps/tenant-worker/test/r6-golden-flow.integration.test.mts + server/tests/rc4-kernel-gl-aggregate.test.mjs + server/scripts/rc4-cross-ledger-reconciliation.py --self-test",
+      "acceptance": "GL/payment-ledger settlement and cross-ledger reconciliation pass"
+    },
+    {
+      "id": "P02-SYN-07",
+      "segment": "correction_return_negative_paths",
+      "evidence": "server/tests/transaction-closure-sales-o2c.test.mjs + server/tests/procurement-p2p-correction-boundary.test.mjs + server/tests/transaction-closure-warranty-service.test.mjs",
+      "acceptance": "correction/reversal/return boundaries remain canonical and fail closed on invalid evidence"
+    },
+    {
+      "id": "P02-SYN-08",
+      "segment": "warranty_service",
+      "evidence": "server/tests/maintenance-field-service.test.mjs + server/tests/transaction-closure-warranty-service.test.mjs + server/tests/transaction-closure-warranty-linkage.test.mjs + server/tests/alumdoor-golden-order-readonly.test.mjs",
+      "acceptance": "delivery provenance, warranty eligibility, service stock/billing/replacement/return lineage and reciprocal linkage pass"
+    },
+    {
+      "id": "P02-SYN-09",
+      "segment": "idempotency",
+      "evidence": "server/apps/tenant-worker/test/r6-golden-flow.integration.test.mts",
+      "acceptance": "replayed Payment Entry submit does not duplicate GL entries and settlement state remains stable"
+    }
+  ],
+  "acceptance": {
+    "all_segments_pass": true,
+    "synthetic_preview_pass": true,
+    "zero_unexplained_variance": true,
+    "canonical_authority_only": true,
+    "no_shadow_stock_or_finance": true,
+    "no_production_mutation": true,
+    "real_pilot_transition_allowed": false
+  },
+  "transition_rule": "A synthetic Pilot-02 PASS validates executable business paths only. Real Pilot-02 remains gated by real Pilot-01 READY, source-authoritative opening data and named pilot accounts."
+}
