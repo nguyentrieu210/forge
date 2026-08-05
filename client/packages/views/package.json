@@ -34,10 +34,6 @@
       "types": "./dist/process/ProcessContainer.d.ts",
       "import": "./dist/process/ProcessContainer.js"
     },
-    "./operating": {
-      "types": "./dist/operating/index.d.ts",
-      "import": "./dist/operating/index.js"
-    },
     "./calendar": {
       "types": "./dist/calendar/CalendarContainer.d.ts",
       "import": "./dist/calendar/CalendarContainer.js"
@@ -79,8 +75,7 @@
     "typecheck": "tsc -b",
     "build": "tsc -b",
     "test:matrix": "tsc -b && node --test tests/matrix-model.test.mjs",
-    "test:action-input-table": "tsc -b && node --test tests/action-input-table.test.mjs",
-    "test:procurement-workspace": "node --test tests/procurement-operating-workspace.test.mjs"
+    "test:action-input-table": "tsc -b && node --test tests/action-input-table.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
