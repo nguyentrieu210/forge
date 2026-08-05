@@ -71,3 +71,4 @@ export * from "./provider-order-ingest.js";
 export * from "./marketplace-sync.js";
 export * from "./marketplace-sync-config.js";
 export * from "./marketplace-sync-runner.js";
+export * from "./marketplace-maintenance.js";
