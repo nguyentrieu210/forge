@@ -197,9 +197,9 @@ function applyActionSidecar(brief, extension, source, briefSource) {
 
 /**
  * Navigation is presentation metadata, not business authority. A navigation sidecar can
- * hide an installed DocType/action from the daily menu or rename/regroup it without copying
- * its schema/action definition. Direct links, permissions and canonical controllers stay
- * untouched. Applied after action/integration sidecars so it may target appended actions.
+ * hide an installed DocType/action/report, rename/regroup it, and declare the tab order
+ * without copying its schema/action/report definition. Direct links, permissions and
+ * canonical controllers stay untouched. Applied last so appended actions can be targeted.
  */
 const NAVIGATION_OVERRIDE_KEYS = new Set(["menu", "label", "icon", "group"]);
 
@@ -235,17 +235,37 @@ function applyNavigationOverrides(items, overrides, source, section) {
   return next;
 }
 
+function applyNavigationItemOrder(navigation, items, source) {
+  if (items === undefined) return navigation;
+  if (!Array.isArray(items) || items.length === 0 || !items.every((key) => typeof key === "string" && key.trim())) {
+    throw new Error(`${source}: items phải là mảng nav key không rỗng.`);
+  }
+  const requested = items.map((key) => key.trim());
+  if (new Set(requested).size !== requested.length) throw new Error(`${source}: items không được chứa nav key trùng.`);
+  const current = navigation?.items ?? [];
+  if (!Array.isArray(current)) throw new Error(`${source}: brief.navigation.items hiện có phải là mảng.`);
+  const requestedSet = new Set(requested);
+  return {
+    ...(navigation ?? {}),
+    items: [...requested, ...current.filter((key) => !requestedSet.has(key))],
+  };
+}
+
 function applyNavigationSidecar(brief, extension, source) {
   assertSidecarObject(extension, source);
-  const unsupported = Object.keys(extension).filter((key) => !["version", "doctypes", "actions"].includes(key) && !key.startsWith("//"));
-  if (unsupported.length) throw new Error(`${source}: chỉ nhận version, doctypes, actions và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
-  if (extension.doctypes === undefined && extension.actions === undefined) throw new Error(`${source}: phải khai doctypes hoặc actions.`);
+  const unsupported = Object.keys(extension).filter((key) => !["version", "doctypes", "reports", "actions", "items"].includes(key) && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: chỉ nhận version, doctypes, reports, actions, items và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  if (extension.doctypes === undefined && extension.reports === undefined && extension.actions === undefined && extension.items === undefined) {
+    throw new Error(`${source}: phải khai doctypes, reports, actions hoặc items.`);
+  }
 
   return {
     ...brief,
     ...(extension.version ? { version: extension.version } : {}),
     doctypes: applyNavigationOverrides(brief.doctypes, extension.doctypes, source, "doctypes"),
+    reports: applyNavigationOverrides(brief.reports ?? [], extension.reports, source, "reports"),
     actions: applyNavigationOverrides(brief.actions ?? [], extension.actions, source, "actions"),
+    navigation: applyNavigationItemOrder(brief.navigation, extension.items, source),
   };
 }
 
