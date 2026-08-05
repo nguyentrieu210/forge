@@ -68,8 +68,9 @@ export function SelectionBatchActionScreen({ action, onOpen }: ActionScreenProps
     try {
       const result = await adapter.callPost<Json>(action.preview.method, effective);
       setPreview(result);
-      const available = Array.isArray(result[config.rowsKey]) ? result[config.rowsKey] as Json[] : [];
-      setSelected(available.filter((row) => !config.statusField || !config.selectableValue || text(row[config.statusField]) === config.selectableValue).map((row) => text(row[config.rowKey])).filter(Boolean));
+      // Batch actions must require an explicit operator choice after every refresh.
+      // Showing eligible rows is not consent to process all of them.
+      setSelected([]);
     } catch (caught) { setPreview(undefined); setSelected([]); setError(adapter.mapError(caught).message); }
     finally { setBusy(undefined); }
   };
