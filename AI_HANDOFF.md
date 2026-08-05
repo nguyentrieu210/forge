@@ -12,45 +12,40 @@ Không dùng file này thay exact GitHub state.
 - Pilot-00 **DONE / PILOT-00-LOCKED**.
 - Real Pilot-01 **SOURCE INGESTED / PREVIEW-BLOCKED / EXTERNAL SOURCE DEPENDENCY**.
 - Synthetic Pilot-01 **PREVIEW_PASS / TEST ONLY**.
-- Synthetic Pilot-02 **DRY-RUN PASS / 9 of 9 segments**; latest verified run `30969301875`.
-- Accompanying R6/source-safety run `30969301881` **SUCCESS**.
-- Real Pilot-02 **NOT STARTED**, gated by real Pilot-01 READY.
-- Next synthetic validation step: **Pilot-03 synthetic parallel-run + daily reconciliation**.
+- Synthetic Pilot-02 **DRY-RUN PASS / 9 of 9 segments**.
+- Synthetic Pilot-03 **PARALLEL RECONCILIATION PASS / 3 of 3 days / zero variance**; run `30970432986`.
+- Real Pilot-02 and Real Pilot-03 **NOT STARTED**, gated by real Pilot-01 READY.
+- Next synthetic validation step: **Pilot-04 synthetic cutover-decision rehearsal**.
 - Capability truth remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956**.
 
 ## Synthetic validation lane
 
-### Pilot-01 synthetic
+### Pilot-01
 
-`docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json` + `tools/generate-pilot-01-synthetic-batch.mjs` generate all 12 Mapping-V1 datasets, all six personas and exactly one active synthetic `Giám đốc` account. Validator result: `PREVIEW_PASS`, zero unexplained variance, no real customer data.
+`PILOT_01_SYNTHETIC_FIXTURE_V1.json` generates all 12 Mapping-V1 datasets and reaches `PREVIEW_PASS` with zero unexplained variance, no real customer data and exactly one active synthetic `Giám đốc`.
 
-### Pilot-02 synthetic
+### Pilot-02
+
+`PILOT_02_SYNTHETIC_DRY_RUN_V1.json` records nine passing representative segments across Sales, Procurement, Stock, Manufacturing, Finance, corrections/returns, warranty/service and idempotency.
+
+### Pilot-03
 
 Authorities:
 
-- `docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json`;
-- `docs/pilot/alumdoor/PILOT_02_STATUS.json`;
-- `.github/workflows/pilot-02-synthetic-dry-run.yml`.
+- `docs/pilot/alumdoor/PILOT_03_SYNTHETIC_PARALLEL_V1.json`;
+- `docs/pilot/alumdoor/PILOT_03_STATUS.json`;
+- `.github/workflows/pilot-03-synthetic-parallel.yml`;
+- `server/apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts`.
 
-Latest verified run `30969301875` passed:
+Run `30970432986` passed three cumulative business-day checkpoints in one local workerd/D1 state. Default tolerance: `0`.
 
-1. synthetic Pilot-01 handoff;
-2. Sales/O2C;
-3. Procurement/P2P;
-4. Stock/fulfilment;
-5. Manufacturing;
-6. Finance settlement + cross-ledger reconciliation;
-7. correction/return negative paths;
-8. warranty/service/replacement/return lineage;
-9. idempotency/retry safety.
+All three days had zero variance for Stock qty/value, AR, AP, Bank, revenue, COGS, Manufacturing progress, WIP closing quantity, GL balance, document count/status and Payment Entry retry idempotency. Independent cross-ledger, AR and AP auditors also passed.
 
-The workflow uses GitHub-hosted local CI/workerd/in-memory fixtures only. It loads no production Cloudflare secrets, calls no production origin, performs no deploy/migration and does not write remote D1.
+Artifact: ID `8916292176`; zip SHA-256 `6728e53db65f663915211249a8cc5987e2c1fa6736e08d4834d53179172b132a`.
 
 ## Real Pilot-01 remains externally blocked
 
-Already closed from accepted real sources: 60/60 journal identities, Supplier role gaps `4 -> 0`, duplicate rules, UOM `19/21`, deterministic VND rounding, two VIPST700 rows quarantined, and `30/06/2026` rejected as an unproven common cutoff.
-
-Required real source-owner evidence remains:
+Required source-owner evidence remains:
 
 1. full-customer AR opening at one named cutoff;
 2. full-supplier AP opening at the same cutoff;
@@ -65,10 +60,19 @@ These values may not be synthesized for the real pilot.
 
 ## Next execution
 
-Synthetic lane: build **Pilot-03 parallel-run/reconciliation harness** with repeated business-day replay and zero-tolerance reconciliation across Stock, AR/AP, scoped cash/bank, revenue/COGS, Manufacturing/WIP, GL and document state.
+Synthetic lane: build **Pilot-04 cutover-decision rehearsal**. Required deterministic cases:
+
+- complete synthetic evidence + zero variance + exact release/profile + one Giám đốc approval -> synthetic GO;
+- P0/P1 blocker -> NO-GO;
+- non-zero reconciliation variance -> NO-GO;
+- missing/duplicate Giám đốc approval -> NO-GO;
+- release/profile/package drift -> NO-GO;
+- stale/missing recovery evidence -> NO-GO.
+
+Even a synthetic GO must keep `production_write_authorized=false`, `cutover_authorized=false`, and `real_pilot_transition_allowed=false`.
 
 Real lane: wait for source-owner evidence, then hash/bind extracts, freeze one common cutoff, generate private batch and require real `PREVIEW_PASS` before real Pilot-02.
 
 ## Production boundary
 
-Synthetic PASS does not authorize production write. Real customer/master/opening import, cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
+Synthetic PASS does not authorize production write or cutover. Real customer/master/opening import, cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
