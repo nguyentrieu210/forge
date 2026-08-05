@@ -83,6 +83,12 @@
       "icon": "chart-no-axes-combined",
       "group": "Bán hàng"
     },
+    "lich-su-ban-hang": {
+      "label": "Lịch sử bán hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Bán hàng"
+    },
     "tinh-cong-thuc-cua": {
       "menu": false
     }
@@ -100,6 +106,7 @@
     "Delivery Note",
     "action:giao-hang-dispatch",
     "action:bao-cao-ban-hang",
+    "action:lich-su-ban-hang",
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
     "action:bao-cao-giao-hang-ncc",
