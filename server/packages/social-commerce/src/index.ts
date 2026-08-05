@@ -67,3 +67,4 @@ export * from "./marketplace-operations.js";
 export * from "./marketplace-settlement.js";
 export * from "./provider-order-normalization.js";
 export * from "./provider-order-ingest.js";
+export * from "./marketplace-sync.js";
