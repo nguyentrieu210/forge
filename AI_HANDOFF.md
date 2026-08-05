@@ -9,64 +9,69 @@ Không dùng file này thay exact GitHub state.
 - Repo `nguyentrieu210/forge`.
 - RC4 **DONE**; R5 **DONE / R5-GO**; R6 **DONE / PILOT-GO**.
 - Pilot-00 **DONE / PILOT-00-LOCKED**.
-- Pilot-01 real source set **OBSERVED / HASHED / INGESTED**.
-- journal identities **60/60 DISPOSITIONED**; supplier gaps **4 -> 0**.
-- UOM/quantity **21 reviewed / 19 resolved-or-classified / 2 fail-closed**.
-- VND rounding **LOCKED** for 45 fractional `Tổng thanh toán` rows.
-- two future-dated `VIPST700` rows **QUARANTINED**, not rewritten.
+- Pilot-01 source set **OBSERVED / HASHED / INGESTED**.
+- Identity: **60/60 journal identities dispositioned; supplier gaps 4 -> 0; duplicate rules locked**.
+- UOM/quantity: **21 reviewed / 19 resolved-or-classified / 2 fail-closed**.
+- VND rounding **LOCKED**.
+- two future-dated `VIPST700` rows **QUARANTINED**.
 - cutoff `30/06/2026` **NOT PROVEN / NOT FROZEN**.
-- Pilot-01 verdict `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
+- Current uploads + File Library were reviewed; **no additional Alumdoor-authoritative opening/access source was found**.
+- Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`, blocking mode `EXTERNAL_SOURCE_DEPENDENCY`.
 - Exact frozen product baseline `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Capability truth remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956**.
 
-## Latest locked decisions
+## Source-search exhaustion
 
-### Money
+Authority: `docs/pilot/alumdoor/PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json`.
 
-`PILOT_01_MONEY_ROUNDING_V1.json` locks source-backed integer VND semantics:
+The search covered:
 
-- source display format: `#,##0 ₫`;
-- 45 underlying `Tổng thanh toán` rows are fractional;
-- normalize each row/document before integer storage using nearest VND, exact half away from zero;
-- preserve raw source amount + explicit rounding delta;
-- raw fractional-row sum `469262369.969`, per-row rounded sum `469262376`, declared delta `+6.031`.
+- all six accepted Alumdoor uploads in the current conversation;
+- File Library;
+- current repository authorities.
 
-### Stock future dates
+No additional Alumdoor-specific source-authoritative AR/AP opening snapshot, canonical stock Kg/value opening, missing stock-scope source, or named pilot-user allowlist was found.
 
-`PILOT_01_STOCK_ANOMALY_DISPOSITION_V1.json` quarantines two `VIPST700` source rows dated `23/12/2026`:
+Do not use as substitutes:
 
-- row 46: 6.8m / 101 lá;
-- row 47: 3.77m / 56 lá.
+- generic Kairo sales collateral that lists roles but no named Alumdoor accounts;
+- unrelated phone-store opening-debt templates;
+- TOKA/CRM/architecture documents for other businesses/projects.
 
-No `VIPST700` history row proves a replacement date, so the date is not guessed or rewritten. Both rows stay outside opening until corrected by the source owner.
+## External dependencies now required
 
-Physical opening-eligible source-status metrics after quarantine: **1,150 rows / 40,980 pieces-leaves**. These are not canonical Kg/value.
+1. full-customer AR opening at one named cutoff;
+2. full-supplier AP opening at the same cutoff;
+3. canonical Stock quantity + value at that cutoff, with actual aluminum Kg/value and complete source scope;
+4. matching cash/bank balances if cash/bank stays in pilot scope, or explicit scope exclusion;
+5. source-owner UOM evidence for `NVL-AL595-GS`;
+6. source-owner UOM evidence for `NVL-BO1VIS AL71`;
+7. corrected dates for the two quarantined VIPST700 rows before opening inclusion;
+8. named pilot-account allowlist with exactly one active named `Giám đốc` account.
 
-Stock source scope remains incomplete (process expects 23 aluminum + 2 mesh; upload exposes 18 inventory sheets and no separate mesh opening source).
+None of these may be synthesized from unrelated templates, blanks, theoretical kg/m or guessed conversions.
 
-## Existing UOM truth
+## Already locked from current source
 
-- `NVL-TON-DL7.2Dx124-XNXLC` requires context split: raw Stock Kg vs commercial Sales m2.
-- blocked UOM identities remain `NVL-AL595-GS` and `NVL-BO1VIS AL71`.
-- no rate-like `KG/M` or `KG/M2` label may silently become stock quantity.
+- duplicate Customer/item-code rules;
+- 60/60 journal identity dispositions;
+- supplier roles 4 -> 0;
+- context split for `NVL-TON-DL7.2Dx124-XNXLC` (raw Stock Kg vs Sales m2);
+- UOM rules for 19/21 reviewed identities, fail-closed for 2;
+- integer-VND per-row rounding for 45 fractional source rows;
+- quarantine of the two future-dated VIPST700 rows;
+- 30/06 evaluated and rejected as an unproven common cutoff.
 
-## Remaining blockers
+## Next action when source owner supplies evidence
 
-1. authoritative full-customer AR opening snapshot at one named cutoff;
-2. authoritative full-supplier AP opening snapshot at the same cutoff;
-3. canonical Stock quantity + value at the same cutoff with complete scope and aluminum Kg/value;
-4. matching cash/bank balances if in scope;
-5. source-owner resolution for two blocked UOM identities and two row-level quantity conflicts;
-6. source-owner corrected dates for quarantined VIPST700 rows plus missing stock scope;
-7. minimum BOM/work-center/employee/pilot-user data and exactly one active named `Giám đốc` account.
+1. hash/bind the new source extracts;
+2. update the external-dependency evidence;
+3. freeze a source-proven common cutoff;
+4. normalize under Mapping V1 and locked identity/UOM/money policies;
+5. generate the private batch;
+6. run validator to zero-unexplained-variance `PREVIEW_PASS`.
 
-## Next execution order
-
-- finish rounding/anomaly branch through CI/merge;
-- search existing uploaded files/File Library for additional authoritative opening/access data before declaring an external dependency;
-- materialize deterministic minimum operating/access masters only where source evidence exists;
-- never synthesize missing AR/AP/Stock openings or UOM conversions;
-- after one common cutoff is proven, generate private Mapping-V1 batch and drive validator to zero-variance `PREVIEW_PASS`.
+Until then, Pilot-01 is correctly blocked on external source evidence rather than code/tooling.
 
 ## Production boundary
 

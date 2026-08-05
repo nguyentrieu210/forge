@@ -1,6 +1,7 @@
 {
   "format": "forge-alumdoor-pilot-01-status/v1",
   "status": "PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED",
+  "blocking_mode": "EXTERNAL_SOURCE_DEPENDENCY",
   "certified_product_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
   "pilot_00_lock": "docs/pilot/alumdoor/PILOT_00_LOCK.json",
   "mapping": "docs/pilot/alumdoor/PILOT_DATA_MAPPING_V1.json",
@@ -12,6 +13,7 @@
   "money_rounding": "docs/pilot/alumdoor/PILOT_01_MONEY_ROUNDING_V1.json",
   "stock_anomaly_disposition": "docs/pilot/alumdoor/PILOT_01_STOCK_ANOMALY_DISPOSITION_V1.json",
   "cutoff_feasibility": "docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json",
+  "external_source_dependencies": "docs/pilot/alumdoor/PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json",
   "tooling": {
     "validator": "docs/pilot/alumdoor/tools/validate-pilot-batch.mjs",
     "identity_normalizer": "docs/pilot/alumdoor/tools/normalize-pilot-identities.mjs",
@@ -19,6 +21,7 @@
     "uom_reconciler": "docs/pilot/alumdoor/tools/reconcile-pilot-uom.mjs",
     "money_normalizer": "docs/pilot/alumdoor/tools/normalize-pilot-money.mjs",
     "stock_anomaly_verifier": "docs/pilot/alumdoor/tools/verify-pilot-01-stock-anomalies.mjs",
+    "external_dependency_verifier": "docs/pilot/alumdoor/tools/verify-pilot-01-external-dependencies.mjs",
     "ci": ".github/workflows/pilot-01-data-readiness.yml",
     "preview_only": true,
     "production_mutation_path": false
@@ -28,8 +31,11 @@
     "source_file_count": 6,
     "immutable_file_digests_recorded": true,
     "raw_customer_data_committed_to_repo": false,
+    "current_conversation_uploads_reviewed": true,
+    "file_library_reviewed": true,
+    "additional_alumdoor_authoritative_opening_or_access_source_found": false,
     "normalized_private_batch_ready": false,
-    "current_phase": "source-authoritative-opening-evidence"
+    "current_phase": "external-source-dependency"
   },
   "identity_resolution": {
     "customer_duplicate_policy_locked": true,
@@ -84,6 +90,22 @@
     "stock_actual_kg_cells_populated": 0,
     "cutoff_must_not_treat_missing_opening_as_zero": true
   },
+  "external_dependency_resolution": {
+    "source_search_exhausted": true,
+    "external_dependency_count": 8,
+    "required_external_ids": [
+      "EXT-AR-OPENING",
+      "EXT-AP-OPENING",
+      "EXT-STOCK-OPENING",
+      "EXT-CASH-BANK-CUTOFF",
+      "EXT-UOM-AL595",
+      "EXT-UOM-BO1VIS",
+      "EXT-STOCK-DATE-VIPST700",
+      "EXT-PILOT-USERS"
+    ],
+    "unrelated_file_library_candidates_rejected": true,
+    "missing_values_may_be_synthesized": false
+  },
   "required_preview_acceptance": {
     "common_cutoff_frozen": false,
     "required_datasets_present": false,
@@ -95,6 +117,7 @@
     "uom_reconciliation_fail_closed": true,
     "integer_vnd_rounding_locked": true,
     "future_stock_dates_dispositioned": true,
+    "source_search_exhausted_external_dependencies_recorded": true,
     "references_resolved": false,
     "canonical_opening_stock_quantity_and_value_ready": false,
     "opening_ar_ap_proven": false,
@@ -103,15 +126,14 @@
     "production_write_authorized": false
   },
   "remaining_before_pilot_01_ready": [
-    "obtain or identify source-authoritative full-customer AR opening snapshot at one named cutoff",
-    "obtain or identify source-authoritative full-supplier AP opening snapshot at the same cutoff",
-    "obtain canonical Stock quantity and value evidence at the same cutoff with complete stock scope",
-    "match cash/bank balances to the same cutoff when cash/bank remains in pilot scope",
-    "resolve source-owner UOM evidence for NVL-AL595-GS and NVL-BO1VIS AL71; do not infer KG/M or Kg-to-Con conversions",
-    "resolve row-level quantity evidence for NVL-TOLE1.2x190-CORON source row 327 and NVL-VIS-BANLO2P historical sales conversion",
-    "resolve stock source scope drift: process specification expects 23 aluminum + 2 mesh sheets while current source exposes 18 inventory sheets and no separate mesh opening source",
-    "obtain source-owner correction for the two quarantined VIPST700 dates before they can enter opening Stock",
-    "complete minimum BOM/work-center/employee/pilot-user inputs and exactly one active named Giám đốc account",
+    "source owner supplies full-customer AR opening snapshot at one named cutoff",
+    "source owner supplies full-supplier AP opening snapshot at the same cutoff",
+    "source owner supplies canonical Stock quantity and value evidence at the same cutoff with complete stock scope",
+    "source owner confirms matching cash/bank balances at the same cutoff or explicitly excludes cash/bank from pilot scope",
+    "source owner resolves UOM evidence for NVL-AL595-GS and NVL-BO1VIS AL71",
+    "source owner supplies corrected dates for the two quarantined VIPST700 rows before opening inclusion",
+    "named pilot user allowlist is supplied with exactly one active named Giám đốc account",
+    "complete minimum BOM/work-center/employee inputs where required by the accepted pilot scope",
     "generate private normalized batch and obtain PREVIEW_PASS with zero unexplained variance"
   ],
   "production_data_mutated": false
