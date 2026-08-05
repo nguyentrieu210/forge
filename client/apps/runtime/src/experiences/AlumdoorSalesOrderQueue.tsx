@@ -7,6 +7,8 @@ import { Button, Input } from "@metaforge/ui";
 
 type QueueFilter = "all" | "overdue" | "today" | "upcoming";
 
+const PAGE_SIZE = 250;
+const MAX_ORDERS = 10_000;
 const dayKey = (value?: unknown) => String(value ?? "").slice(0, 10);
 const todayKey = () => {
   const value = new Date();
@@ -22,6 +24,8 @@ const money = (value: unknown, currency = "VND") => new Intl.NumberFormat("vi-VN
   currency: currency || "VND",
   maximumFractionDigits: 0,
 }).format(Number(value) || 0);
+const normalizedStatus = (value: unknown) => String(value ?? "").trim().toLocaleLowerCase("vi");
+const TERMINAL_STATUSES = new Set(["completed", "closed", "cancelled", "canceled", "đã hoàn tất", "đã đóng", "đã huỷ", "đã hủy"]);
 
 function dueBucket(row: Doc, today: string, sevenDays: string): QueueFilter {
   const due = dayKey(row.delivery_date);
@@ -52,16 +56,28 @@ export function AlumdoorSalesOrderQueue() {
   const load = useCallback(async () => {
     setError("");
     setRows(null);
+    if (!company) {
+      setRows([]);
+      setError("Cần chọn Công ty trên thanh ngữ cảnh trước khi xem Đơn hàng.");
+      return;
+    }
     try {
-      const filters: [string, "=", unknown][] = [["docstatus", "=", 1]];
-      if (company) filters.push(["company", "=", company]);
-      const result = await adapter.getList("Sales Order", {
-        fields: ["name", "customer", "transaction_date", "delivery_date", "status", "grand_total", "currency", "per_delivered", "modified", "company"],
-        filters,
-        orderBy: "delivery_date asc",
-        pageLength: 100,
-      });
-      setRows(result.filter((row) => !["Completed", "Closed", "Cancelled"].includes(String(row.status ?? ""))));
+      const all: Doc[] = [];
+      for (let start = 0; start < MAX_ORDERS; start += PAGE_SIZE) {
+        const page = await adapter.getList("Sales Order", {
+          fields: ["name", "customer", "transaction_date", "delivery_date", "status", "grand_total", "currency", "per_delivered", "modified", "company"],
+          filters: [["docstatus", "=", 1], ["company", "=", company]],
+          orderBy: "delivery_date asc",
+          limitStart: start,
+          pageLength: PAGE_SIZE,
+        });
+        all.push(...page);
+        if (page.length < PAGE_SIZE) {
+          setRows(all.filter((row) => !TERMINAL_STATUSES.has(normalizedStatus(row.status))));
+          return;
+        }
+      }
+      throw new Error(`Sales Order vượt ${MAX_ORDERS} bản ghi đã xác nhận trong ${company}; từ chối cắt cụt work queue.`);
     } catch (caught) {
       setError(adapter.mapError(caught).message);
       setRows([]);
@@ -102,16 +118,16 @@ export function AlumdoorSalesOrderQueue() {
     { key: "upcoming", label: "Sắp tới", count: summary.upcoming },
   ];
 
-  return <div className="h-full overflow-auto bg-muted/20 p-3 md:p-4 xl:p-5">
-    <div className="space-y-4">
+  return <div className="h-full w-full max-w-none overflow-auto bg-muted/20 p-3 md:p-4 xl:p-5">
+    <div className="w-full max-w-none space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2"><CalendarClock className="size-5 text-primary" /><h1 className="text-xl font-semibold">Đơn hàng</h1></div>
-          <p className="mt-1 text-sm text-muted-foreground">Work queue các Sales Order đã xác nhận còn phải xử lý giao hàng. Dữ liệu đọc trực tiếp từ Sales Order canonical.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Work queue các Sales Order đã xác nhận còn phải xử lý giao hàng trong Công ty đang chọn. Dữ liệu đọc trực tiếp từ Sales Order canonical.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => void load()} disabled={rows === null}><RefreshCw className={rows === null ? "animate-spin" : ""} /> Làm mới</Button>
-          <Button onClick={() => navigate(`/x/${encodeURIComponent("action:giao-hang-dispatch")}`)}><Truck /> Giao hàng</Button>
+          <Button disabled={!company} onClick={() => navigate(`/x/${encodeURIComponent("action:giao-hang-dispatch")}`)}><Truck /> Giao hàng</Button>
         </div>
       </header>
 
