@@ -1,8 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowDown, ArrowDownToLine, ArrowUp, Columns3, Copy, Pin, PinOff, Plus, RotateCcw, Trash2, Undo2, X,
-} from "lucide-react";
+import { Columns3, Plus, RotateCcw, Trash2, Undo2, X } from "lucide-react";
 import { resolveField, type AppActionInputTable, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import {
@@ -12,15 +10,12 @@ import {
 import { resolveChildGridColumns } from "../form/ChildGrid.js";
 
 interface GridLayout {
-  weights: Record<string, number>;
-  order: string[];
   hidden: string[];
-  pinned: string[];
-  labels: Record<string, string>;
+  order: string[];
 }
 
-const EMPTY_LAYOUT: GridLayout = { weights: {}, order: [], hidden: [], pinned: [], labels: {} };
-const MIN_WEIGHT = 3;
+const EMPTY_LAYOUT: GridLayout = { hidden: [], order: [] };
+const NUMERIC_TYPES = new Set(["Int", "Float", "Currency", "Percent"]);
 
 export interface ActionChildGridProps {
   actionName: string;
@@ -40,6 +35,15 @@ function layoutField(field: DocField | string): boolean {
   return ["Section Break", "Column Break", "Tab Break", "Fold", "Heading", "HTML", "Button", "Table", "Table MultiSelect"].includes(fieldtype);
 }
 
+function text(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function numeric(value: unknown): number | undefined {
+  const parsed = Number(String(value ?? "").replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function rowKey(row: Doc, index: number): string {
   return String(row.name ?? `row-${index}`);
 }
@@ -55,21 +59,6 @@ function seedRow(meta: DocTypeMeta, table: AppActionInputTable, index: number): 
   return row;
 }
 
-function numeric(value: unknown): number | undefined {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function text(value: unknown): string {
-  return String(value ?? "").trim();
-}
-
-function roundTo(value: number, precision: number | undefined): number {
-  if (precision === undefined) return value;
-  const factor = 10 ** precision;
-  return Math.round(value * factor) / factor;
-}
-
 function parsePasted(field: DocField, raw: string): unknown {
   const valueText = raw.trim();
   if (!valueText) return undefined;
@@ -79,7 +68,7 @@ function parsePasted(field: DocField, raw: string): unknown {
     if (["0", "false", "no", "n", "không", "khong"].includes(value)) return 0;
     return undefined;
   }
-  if (["Currency", "Float", "Int", "Percent"].includes(field.fieldtype)) {
+  if (NUMERIC_TYPES.has(field.fieldtype)) {
     const normalized = valueText.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
     const value = Number(normalized);
     return Number.isFinite(value) ? value : undefined;
@@ -87,9 +76,9 @@ function parsePasted(field: DocField, raw: string): unknown {
   return valueText;
 }
 
-function computed(row: Doc, meta: DocTypeMeta): Doc {
-  const has = (fieldname: string) => (meta.fields ?? []).some((field) => field.fieldname === fieldname);
+function optimisticComputed(row: Doc, meta: DocTypeMeta): Doc {
   const next = { ...row } as Doc;
+  const has = (fieldname: string) => (meta.fields ?? []).some((field) => field.fieldname === fieldname);
   if (String(next.inventory_mode ?? "") === "Nhôm cây/lá" && has("theoretical_kg")) {
     const length = numeric(next.length_m);
     const bars = numeric(next.qty_bar);
@@ -97,18 +86,7 @@ function computed(row: Doc, meta: DocTypeMeta): Doc {
     if (length && length > 0 && bars && bars > 0 && kgPerM && kgPerM > 0) {
       const kg = length * bars * kgPerM;
       next.theoretical_kg = kg;
-      if (has("qty")) next.qty = kg;
-    }
-  }
-  if (String(next.inventory_mode ?? "") === "Thành phẩm theo m2" && has("qty")) {
-    const width = numeric(next.width_m);
-    const height = numeric(next.height_m);
-    const sets = numeric(next.set_count) ?? 1;
-    const uom = String(next.uom ?? "").trim().toLocaleLowerCase("vi");
-    if (width && width > 0 && height && height > 0 && sets > 0 && ["m2", "m²", "sqm"].includes(uom)) {
-      next.qty = Math.max(width * height, numeric(next.min_area_sqm) ?? 0) * sets;
-    } else if (sets > 0 && ["bộ", "bo", "set"].includes(uom)) {
-      next.qty = sets;
+      if (has("qty") && (next.qty == null || next.qty === "")) next.qty = kg;
     }
   }
   const qty = numeric(next.qty);
@@ -119,31 +97,38 @@ function computed(row: Doc, meta: DocTypeMeta): Doc {
 
 function shortLabel(field: DocField): string {
   const labels: Record<string, string> = {
-    item_code: "Mã SP", length_m: "Kích thước", theoretical_kg_per_m: "Kg/m", qty_bundle: "Bó",
-    qty_bar: "Cây", theoretical_kg: "Kg BR", qty: "SL", uom: "ĐVT", rate: "Đ.Giá",
-    amount: "T.Tiền", color: "Màu", colour: "Màu", is_stamped: "Dập", so_no: "SO NCC",
-    warehouse: "Kho", note: "G.Chú", width_m: "Rộng", height_m: "Cao", set_count: "Bộ",
+    item_code: "Mã SP", length_m: "Dài", theoretical_kg_per_m: "Kg/m", qty_bundle: "Bó",
+    qty_bar: "Cây/Lá", theoretical_kg: "Kg BR", actual_weight_kg: "Kg cân", qty: "SL", uom: "ĐVT",
+    rate: "Đơn giá", amount: "Thành tiền", color: "Màu", colour: "Màu", is_stamped: "Dập",
+    so_no: "SO NCC", warehouse: "Kho", note: "Ghi chú", width_m: "Rộng", height_m: "Cao", set_count: "Bộ/Cái",
   };
   return labels[field.fieldname] ?? field.label ?? field.fieldname;
 }
 
-function defaultWeight(field: DocField): number {
-  const fixed: Record<string, number> = {
-    item_code: 12, length_m: 6.5, theoretical_kg_per_m: 5, qty_bundle: 4, qty_bar: 4.5,
-    theoretical_kg: 5.5, qty: 4.5, uom: 5, rate: 7, amount: 8, color: 6, colour: 6,
-    is_stamped: 4.5, so_no: 6, warehouse: 7, note: 8, width_m: 5, height_m: 5, set_count: 4.5,
-  };
-  return fixed[field.fieldname] ?? (["Currency", "Float", "Int", "Percent"].includes(field.fieldtype) ? 6 : 8);
+function columnWidth(field: DocField): number {
+  if (field.fieldname === "item_code") return 210;
+  if (["warehouse", "supplier", "customer"].includes(field.fieldname)) return 180;
+  if (["note", "description"].includes(field.fieldname)) return 220;
+  if (["color", "colour", "so_no"].includes(field.fieldname)) return 135;
+  if (["rate", "amount"].includes(field.fieldname) || field.fieldtype === "Currency") return 135;
+  if (field.fieldtype === "Link" || field.fieldtype === "Dynamic Link") return 155;
+  if (field.fieldtype === "Select") return 125;
+  if (NUMERIC_TYPES.has(field.fieldtype)) return 105;
+  if (field.fieldtype === "Check") return 82;
+  return 145;
 }
 
-function normalizeWeights(cols: DocField[], weights: Record<string, number>): Record<string, number> {
-  const raw = cols.map((field) => Math.max(MIN_WEIGHT, weights[field.fieldname] ?? defaultWeight(field)));
-  const sum = raw.reduce((total, value) => total + value, 0) || 1;
-  return Object.fromEntries(cols.map((field, index) => [field.fieldname, (raw[index]! / sum) * 100]));
+function isAutoField(fieldname: string): boolean {
+  return [
+    "stock_uom", "inventory_mode", "measurement_profile", "material_specification", "theoretical_kg_per_m",
+    "theoretical_kg", "actual_kg_per_m", "actual_kg_per_sqm", "amount", "item_name", "description",
+  ].includes(fieldname);
 }
 
 export function ActionChildGrid(props: ActionChildGridProps) {
   const { actionName, table, childMeta, rows, onChange, registry, services, roles, parentDoc, readOnly } = props;
+  const latestRows = useRef(rows);
+  useEffect(() => { latestRows.current = rows; }, [rows]);
   const [pickedRow, setPickedRow] = useState<number | null>(rows.length ? 0 : null);
   const [pickedColumn, setPickedColumn] = useState(0);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -152,12 +137,10 @@ export function ActionChildGrid(props: ActionChildGridProps) {
   const [detailRow, setDetailRow] = useState<number | null>(null);
   const [allowedColors, setAllowedColors] = useState<Record<string, string[]>>({});
   const [allowedUoms, setAllowedUoms] = useState<Record<string, string[]>>({});
-  const latestRows = useRef(rows);
-  useEffect(() => { latestRows.current = rows; }, [rows]);
+  const [enrichmentErrors, setEnrichmentErrors] = useState<Record<number, string>>({});
 
   const declaredByName = useMemo(() => new Map(table.columns.map((column) => [column.fieldname, column])), [table.columns]);
   const canonicalCols = resolveChildGridColumns(childMeta, rows, parentDoc, roles);
-  const moneyPrecision = table.presentation?.money_precision;
   const baseCols = useMemo(() => canonicalCols.map((metaField) => {
     const declared = declaredByName.get(metaField.fieldname);
     return {
@@ -165,18 +148,15 @@ export function ActionChildGrid(props: ActionChildGridProps) {
       ...(declared?.link_filters ? { link_filters: declared.link_filters } : {}),
       ...(declared?.required ? { reqd: 1 as const } : {}),
       ...(declared?.default != null ? { default: declared.default } : {}),
-      ...(metaField.fieldtype === "Currency" && moneyPrecision !== undefined ? { precision: String(moneyPrecision) } : {}),
       in_list_view: 1 as const,
     } as DocField;
-  }), [canonicalCols, declaredByName, moneyPrecision]);
+  }), [canonicalCols, declaredByName]);
 
-  // v2 intentionally drops the first inline-grid layout because that version exposed a
-  // different column set. Default now mirrors the canonical expanded ChildGrid exactly.
-  const storageKey = `mf-action-grid-layout:${actionName}:${table.fieldname}:${table.presentation?.row_doctype ?? childMeta.name}:v2`;
+  const storageKey = `mf-action-grid-layout:${actionName}:${table.fieldname}:${table.presentation?.row_doctype ?? childMeta.name}:v3`;
   const [layout, setLayout] = useState<GridLayout>(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
-      return saved ? { ...EMPTY_LAYOUT, ...(JSON.parse(saved) as Partial<GridLayout>) } : { ...EMPTY_LAYOUT };
+      const raw = localStorage.getItem(storageKey);
+      return raw ? { ...EMPTY_LAYOUT, ...(JSON.parse(raw) as Partial<GridLayout>) } : { ...EMPTY_LAYOUT };
     } catch { return { ...EMPTY_LAYOUT }; }
   });
   useEffect(() => {
@@ -193,117 +173,107 @@ export function ActionChildGrid(props: ActionChildGridProps) {
     ?? baseCols.find((field) => ["Link", "Dynamic Link"].includes(field.fieldtype))?.fieldname
     ?? baseCols[0]?.fieldname;
   const cols = ordered.filter((field) => field.fieldname === identity || !layout.hidden.includes(field.fieldname));
-  const weights = normalizeWeights(cols, layout.weights);
-
-  const saveRows = (next: Doc[]) => { latestRows.current = next; onChange(next); };
   const selectedSet = new Set(selectedRows);
-  const normalizeValue = (fieldname: string, value: unknown): unknown => {
-    const field = baseCols.find((entry) => entry.fieldname === fieldname);
-    if (field?.fieldtype !== "Currency" || moneyPrecision === undefined || value == null || value === "") return value;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? roundTo(parsed, moneyPrecision) : value;
-  };
-  const computeRow = (row: Doc): Doc => {
-    const next = computed(row, childMeta);
-    if (moneyPrecision !== undefined && numeric(next.amount) !== undefined) next.amount = roundTo(Number(next.amount), moneyPrecision);
-    return next;
-  };
+  const saveRows = (next: Doc[]) => { latestRows.current = next; onChange(next); };
 
   const dynamicField = (field: DocField, row: Doc): DocField => {
-    const item = String(row.item_code ?? "").trim();
-    let next = field;
-    if (field.fieldtype === "Currency" && moneyPrecision !== undefined) next = { ...next, precision: String(moneyPrecision) };
+    const item = text(row.item_code);
     if ((field.fieldname === "color" || field.fieldname === "colour") && item && Object.hasOwn(allowedColors, item)) {
       const values = allowedColors[item] ?? [];
-      next = { ...next, link_filters: JSON.stringify([["Item Color", "name", "in", values.length ? values : ["__NO_ALLOWED_COLOR__"]]]) };
+      return { ...field, link_filters: JSON.stringify([["Item Color", "name", "in", values.length ? values : ["__NO_ALLOWED_COLOR__"]]]) };
     }
     if (field.fieldname === "uom" && item && Object.hasOwn(allowedUoms, item)) {
       const values = allowedUoms[item] ?? [];
-      next = { ...next, link_filters: JSON.stringify([["UOM", "name", "in", values.length ? values : ["__NO_ALLOWED_UOM__"]]]) };
+      return { ...field, link_filters: JSON.stringify([["UOM", "name", "in", values.length ? values : ["__NO_ALLOWED_UOM__"]]]) };
     }
-    return next;
+    return field;
   };
 
-  const enrichItem = async (rowIndex: number, itemCode: string, snapshot: Doc[]) => {
+  const enrichItem = async (rowIndex: number, itemCode: string) => {
     if (!services?.fetchDocument && !services?.fetchValue) return;
-    const item = services.fetchDocument
-      ? await services.fetchDocument("Item", itemCode).catch(() => undefined)
-      : undefined;
-    const readItemValue = async (fieldname: string): Promise<unknown> => {
-      const fromDocument = item?.[fieldname];
-      if (fromDocument !== undefined && fromDocument !== null && fromDocument !== "") return fromDocument;
-      return services?.fetchValue?.("Item", itemCode, fieldname).catch(() => undefined);
-    };
-    const has = (name: string) => (childMeta.fields ?? []).some((field) => field.fieldname === name);
-    const target = snapshot[rowIndex];
-    if (!target || String(target.item_code ?? "") !== itemCode) return;
-    const next = { ...target } as Doc;
+    setEnrichmentErrors((current) => { const next = { ...current }; delete next[rowIndex]; return next; });
+    try {
+      const item = services.fetchDocument ? await services.fetchDocument("Item", itemCode) : undefined;
+      const readItemValue = async (fieldname: string): Promise<unknown> => {
+        const direct = item?.[fieldname];
+        if (direct !== undefined && direct !== null && direct !== "") return direct;
+        return services?.fetchValue ? services.fetchValue("Item", itemCode, fieldname) : undefined;
+      };
+      const current = latestRows.current;
+      const target = current[rowIndex];
+      if (!target || text(target.item_code) !== itemCode) return;
+      const next = { ...target } as Doc;
+      const has = (name: string) => (childMeta.fields ?? []).some((field) => field.fieldname === name);
 
-    const plan: Array<[string, string]> = [
-      ["stock_uom", "stock_uom"], ["inventory_mode", "inventory_mode"], ["measurement_profile", "measurement_profile"],
-      ["material_specification", "material_specification"], ["item_name", "item_name"], ["description", "description"],
-      ["min_area_sqm", "min_area_sqm"], ["default_color", "color"], ["default_warehouse", "warehouse"],
-    ];
-    await Promise.all(plan.map(async ([source, destination]) => {
-      if (!has(destination) || (next[destination] != null && next[destination] !== "")) return;
-      const value = await readItemValue(source);
-      if (value != null && value !== "") next[destination] = value;
-    }));
+      const plan: Array<[string, string]> = [
+        ["stock_uom", "stock_uom"], ["inventory_mode", "inventory_mode"], ["measurement_profile", "measurement_profile"],
+        ["material_specification", "material_specification"], ["item_name", "item_name"], ["description", "description"],
+        ["min_area_sqm", "min_area_sqm"], ["default_color", "color"], ["default_warehouse", "warehouse"],
+      ];
+      await Promise.all(plan.map(async ([source, destination]) => {
+        if (!has(destination) || (next[destination] != null && next[destination] !== "")) return;
+        const value = await readItemValue(source);
+        if (value != null && value !== "") next[destination] = value;
+      }));
 
-    const purchaseUom = text(await readItemValue("default_purchase_uom"))
-      || text(await readItemValue("purchase_uom"))
-      || text(await readItemValue("stock_uom"));
-    if (has("uom") && !next.uom && purchaseUom) next.uom = purchaseUom;
+      const purchaseUom = text(await readItemValue("default_purchase_uom"))
+        || text(await readItemValue("purchase_uom"))
+        || text(await readItemValue("stock_uom"));
+      if (has("uom") && !next.uom && purchaseUom) next.uom = purchaseUom;
 
-    const rawConversions = await readItemValue("uom_conversions");
-    const rawUoms = Array.isArray(item?.uoms) ? item.uoms : [];
-    const conversions = Array.isArray(rawConversions) ? rawConversions : [];
-    const convertedUoms = [...conversions, ...rawUoms]
-      .map((entry) => entry && typeof entry === "object" ? text((entry as Record<string, unknown>).uom) : "")
-      .filter(Boolean);
-    const stockUom = text(await readItemValue("stock_uom"));
-    const allowedUomValues = [...new Set([purchaseUom, stockUom, ...convertedUoms].filter(Boolean))];
-    setAllowedUoms((current) => ({ ...current, [itemCode]: allowedUomValues }));
+      const rawConversions = await readItemValue("uom_conversions");
+      const rawUoms = Array.isArray(item?.uoms) ? item.uoms : [];
+      const conversions = Array.isArray(rawConversions) ? rawConversions : [];
+      const conversionUoms = [...conversions, ...rawUoms]
+        .map((entry) => entry && typeof entry === "object" ? text((entry as Record<string, unknown>).uom) : "")
+        .filter(Boolean);
+      setAllowedUoms((currentMap) => ({ ...currentMap, [itemCode]: [...new Set([purchaseUom, text(awaitable(item?.stock_uom)), ...conversionUoms].filter(Boolean))] }));
 
-    const rawColors = await readItemValue("allowed_colors");
-    const colors = Array.isArray(rawColors)
-      ? rawColors.map((entry) => entry && typeof entry === "object" ? text((entry as Record<string, unknown>).color) : "").filter(Boolean)
-      : [];
-    setAllowedColors((current) => ({ ...current, [itemCode]: colors }));
-    if (next.color && !colors.includes(String(next.color))) next.color = undefined;
-    if (next.colour && !colors.includes(String(next.colour))) next.colour = undefined;
+      const rawColors = await readItemValue("allowed_colors");
+      const colors = Array.isArray(rawColors)
+        ? rawColors.map((entry) => entry && typeof entry === "object" ? text((entry as Record<string, unknown>).color) : "").filter(Boolean)
+        : [];
+      setAllowedColors((currentMap) => ({ ...currentMap, [itemCode]: colors }));
+      if (next.color && colors.length && !colors.includes(text(next.color))) next.color = undefined;
+      if (next.colour && colors.length && !colors.includes(text(next.colour))) next.colour = undefined;
 
-    const specification = text(next.material_specification || await readItemValue("material_specification"));
-    if (specification && has("material_specification") && !next.material_specification) next.material_specification = specification;
-    if (specification && has("theoretical_kg_per_m")) {
-      const spec = services?.fetchDocument
-        ? await services.fetchDocument("Material Specification", specification).catch(() => undefined)
-        : undefined;
-      const fetched = spec?.theoretical_kg_per_m ?? await services?.fetchValue?.("Material Specification", specification, "theoretical_kg_per_m").catch(() => undefined);
-      const kgPerM = numeric(fetched);
-      if (kgPerM && kgPerM > 0) next.theoretical_kg_per_m = kgPerM;
+      const specificationName = text(next.material_specification || await readItemValue("material_specification"));
+      if (specificationName) {
+        const specification = services.fetchDocument ? await services.fetchDocument("Material Specification", specificationName) : undefined;
+        const readSpec = async (fieldname: string): Promise<unknown> => {
+          const direct = specification?.[fieldname];
+          if (direct !== undefined && direct !== null && direct !== "") return direct;
+          return services?.fetchValue ? services.fetchValue("Material Specification", specificationName, fieldname) : undefined;
+        };
+        const kgPerM = numeric(await readSpec("theoretical_kg_per_m"));
+        if (has("theoretical_kg_per_m") && kgPerM && kgPerM > 0) next.theoretical_kg_per_m = kgPerM;
+        const standardLength = numeric(await readSpec("standard_length_m"));
+        if (has("length_m") && !next.length_m && standardLength && standardLength > 0) next.length_m = standardLength;
+      }
+
+      const live = latestRows.current;
+      if (!live[rowIndex] || text(live[rowIndex]!.item_code) !== itemCode) return;
+      saveRows(live.map((row, index) => index === rowIndex ? optimisticComputed({ ...row, ...next }, childMeta) : row));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Không tự điền được dữ liệu mặt hàng.";
+      setEnrichmentErrors((current) => ({ ...current, [rowIndex]: message }));
     }
-
-    const current = latestRows.current;
-    if (!current[rowIndex] || String(current[rowIndex]!.item_code ?? "") !== itemCode) return;
-    saveRows(current.map((row, index) => index === rowIndex ? computeRow({ ...row, ...next }) : row));
   };
 
   const setCell = (rowIndex: number, fieldname: string, value: unknown) => {
     const current = latestRows.current;
-    const normalized = normalizeValue(fieldname, value);
     const next = current.map((row, index) => {
       if (index !== rowIndex) return row;
-      const changingItem = fieldname === "item_code" && normalized !== row.item_code;
+      const changingItem = fieldname === "item_code" && text(value) !== text(row.item_code);
       const cleared = changingItem ? {
         color: undefined, colour: undefined, uom: undefined, stock_uom: undefined, inventory_mode: undefined,
         measurement_profile: undefined, material_specification: undefined, theoretical_kg_per_m: undefined,
         theoretical_kg: undefined, amount: undefined,
       } : {};
-      return computeRow({ ...row, ...cleared, [fieldname]: normalized } as Doc);
+      return optimisticComputed({ ...row, ...cleared, [fieldname]: value } as Doc, childMeta);
     });
     saveRows(next);
-    if (fieldname === "item_code" && normalized) void enrichItem(rowIndex, String(normalized), next);
+    if (fieldname === "item_code" && text(value)) void enrichItem(rowIndex, text(value));
   };
 
   const addRows = (count: number) => {
@@ -312,60 +282,25 @@ export function ActionChildGrid(props: ActionChildGridProps) {
     if (!actual) return;
     saveRows([...rows, ...Array.from({ length: actual }, (_, index) => seedRow(childMeta, table, rows.length + index))]);
   };
+
   const deleteRows = (indexes: number[]) => {
     const unique = [...new Set(indexes)].filter((index) => index >= 0 && index < rows.length).sort((a, b) => a - b);
     if (!unique.length) return;
     setLastDeleted(unique.map((index) => ({ row: rows[index]!, index })));
     const removing = new Set(unique);
-    let next = rows.filter((_, index) => !removing.has(index));
+    const next = rows.filter((_, index) => !removing.has(index));
     while (next.length < table.min_rows) next.push(seedRow(childMeta, table, next.length));
     saveRows(next);
     setSelectedRows([]);
     setPickedRow(next.length ? Math.min(unique[0]!, next.length - 1) : null);
   };
+
   const undoDelete = () => {
     if (!lastDeleted?.length) return;
     const next = [...rows];
     for (const entry of [...lastDeleted].sort((a, b) => a.index - b.index)) next.splice(Math.min(entry.index, next.length), 0, entry.row);
     saveRows(next.slice(0, table.max_rows));
     setLastDeleted(null);
-  };
-  const moveRows = (offset: number) => {
-    const chosen = selectedRows.length
-      ? rows.map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1).filter((index) => index >= 0)
-      : pickedRow == null ? [] : [pickedRow];
-    if (!chosen.length) return;
-    const moving = new Set(chosen);
-    const next = [...rows];
-    const order = offset < 0 ? chosen : [...chosen].reverse();
-    for (const index of order) {
-      const target = index + offset;
-      if (target < 0 || target >= next.length || moving.has(target)) continue;
-      [next[index], next[target]] = [next[target]!, next[index]!];
-      moving.delete(index); moving.add(target);
-    }
-    saveRows(next);
-    if (pickedRow != null) setPickedRow(Math.max(0, Math.min(next.length - 1, pickedRow + offset)));
-  };
-  const clonePicked = () => {
-    if (pickedRow == null || rows.length >= table.max_rows) return;
-    const source = rows[pickedRow]; if (!source) return;
-    const copy = { ...source, name: `new-${Date.now()}` } as Doc;
-    saveRows([...rows.slice(0, pickedRow + 1), copy, ...rows.slice(pickedRow + 1)]);
-  };
-  const fillDown = () => {
-    if (pickedRow == null) return;
-    const source = rows[pickedRow]; if (!source) return;
-    saveRows(rows.map((row, index) => {
-      if (index <= pickedRow) return row;
-      const next = { ...row } as Doc;
-      for (const field of baseCols) {
-        if (field.read_only || field.fieldname === "name") continue;
-        const value = source[field.fieldname];
-        if (value != null && value !== "" && (next[field.fieldname] == null || next[field.fieldname] === "")) next[field.fieldname] = value;
-      }
-      return computeRow(next);
-    }));
   };
 
   const gridRef = useRef<HTMLDivElement>(null);
@@ -375,6 +310,7 @@ export function ActionChildGrid(props: ActionChildGridProps) {
     target?.focus();
     if (target instanceof HTMLInputElement) target.select();
   };
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (readOnly) return;
     const holder = (event.target as HTMLElement).closest<HTMLElement>("[data-cell]");
@@ -384,13 +320,15 @@ export function ActionChildGrid(props: ActionChildGridProps) {
       const nr = Math.max(0, Math.min(rows.length - 1, r + dr));
       const nc = Math.max(0, Math.min(cols.length - 1, c + dc));
       if (nr === r && nc === c) return;
-      event.preventDefault(); focusCell(nr, nc);
+      event.preventDefault();
+      focusCell(nr, nc);
     };
     if (event.key === "ArrowDown" || (event.key === "Enter" && !event.shiftKey)) go(1, 0);
     else if (event.key === "ArrowUp" || (event.key === "Enter" && event.shiftKey)) go(-1, 0);
-    else if (event.key === "Tab" && !event.shiftKey) c < cols.length - 1 ? go(0, 1) : (r < rows.length - 1 && (event.preventDefault(), focusCell(r + 1, 0)));
-    else if (event.key === "Tab" && event.shiftKey) c > 0 ? go(0, -1) : (r > 0 && (event.preventDefault(), focusCell(r - 1, cols.length - 1)));
+    else if (event.key === "Tab" && !event.shiftKey && c < cols.length - 1) go(0, 1);
+    else if (event.key === "Tab" && event.shiftKey && c > 0) go(0, -1);
   };
+
   const onPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     if (readOnly || !table.allow_paste) return;
     const clipboard = event.clipboardData.getData("text/plain");
@@ -406,166 +344,111 @@ export function ActionChildGrid(props: ActionChildGridProps) {
       if (rowIndex >= table.max_rows) return;
       if (!next[rowIndex]) next[rowIndex] = seedRow(childMeta, table, rowIndex);
       const row = { ...next[rowIndex]! } as Doc;
-      const before = String(row.item_code ?? "");
+      const before = text(row.item_code);
       cells.forEach((raw, columnOffset) => {
-        const field = cols[startColumn + columnOffset]; if (!field) return;
+        const field = cols[startColumn + columnOffset];
+        if (!field) return;
         const value = parsePasted(field, raw);
-        if (value !== undefined) row[field.fieldname] = normalizeValue(field.fieldname, value);
+        if (value !== undefined) row[field.fieldname] = value;
       });
-      next[rowIndex] = computeRow(row);
-      const item = String(row.item_code ?? "");
+      next[rowIndex] = optimisticComputed(row, childMeta);
+      const item = text(row.item_code);
       if (item && item !== before) enrich.push({ index: rowIndex, item });
     });
     saveRows(next);
-    enrich.forEach(({ index, item }) => { void enrichItem(index, item, next); });
-  };
-  const onCopy = (event: React.ClipboardEvent<HTMLDivElement>) => {
-    if (window.getSelection()?.toString()) return;
-    event.preventDefault();
-    const line = (values: unknown[]) => values.map((value) => String(value ?? "")).join("\t");
-    event.clipboardData.setData("text/plain", [line(cols.map((field) => layout.labels[field.fieldname] || shortLabel(field))), ...rows.map((row) => line(cols.map((field) => row[field.fieldname])))].join("\n"));
+    enrich.forEach(({ index, item }) => void enrichItem(index, item));
   };
 
-  const dragged = useRef<string | null>(null);
-  const dropColumn = (target: string) => {
-    const source = dragged.current; dragged.current = null;
-    if (!source || source === target) return;
-    const current = cols.map((field) => field.fieldname);
-    const without = current.filter((name) => name !== source);
-    const at = without.indexOf(target);
-    if (at < 0) return;
-    setLayout((value) => ({ ...value, order: [...without.slice(0, at), source, ...without.slice(at)] }));
-  };
-  const startResize = (fieldname: string, event: React.PointerEvent<HTMLElement>) => {
-    event.preventDefault(); event.stopPropagation();
-    const index = cols.findIndex((field) => field.fieldname === fieldname);
-    const neighbor = cols[index + 1] ?? cols[index - 1];
-    if (!neighbor) return;
-    const handle = event.currentTarget;
-    const container = gridRef.current?.getBoundingClientRect().width ?? 1000;
-    const startX = event.clientX;
-    const initial = normalizeWeights(cols, layout.weights);
-    const own = initial[fieldname] ?? 8;
-    const other = initial[neighbor.fieldname] ?? 8;
-    handle.setPointerCapture(event.pointerId);
-    const move = (pointer: PointerEvent) => {
-      const delta = ((pointer.clientX - startX) / container) * 100;
-      const nextOwn = Math.max(MIN_WEIGHT, Math.min(own + other - MIN_WEIGHT, own + delta));
-      const nextOther = own + other - nextOwn;
-      setLayout((value) => ({ ...value, weights: { ...value.weights, ...initial, [fieldname]: nextOwn, [neighbor.fieldname]: nextOther } }));
-    };
-    const done = () => {
-      handle.releasePointerCapture(event.pointerId);
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", done);
-    };
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", done);
-  };
+  const numericControl = (field: DocField, value: unknown, rowIndex: number, cellReadOnly: boolean) => (
+    <Input
+      className="h-8 min-w-0 border-0 bg-transparent px-2 text-right tabular-nums shadow-none focus-visible:ring-1"
+      value={value == null ? "" : String(value)}
+      inputMode={field.fieldtype === "Int" ? "numeric" : "decimal"}
+      readOnly={cellReadOnly}
+      onChange={(event) => setCell(rowIndex, field.fieldname, event.target.value)}
+    />
+  );
 
-  const pinnedOffsets = new Map<string, number>();
-  let left = readOnly ? 2.5 : 5;
-  for (const field of cols) {
-    if (field.fieldname !== identity && !layout.pinned.includes(field.fieldname)) continue;
-    pinnedOffsets.set(field.fieldname, left);
-    left += 5;
-  }
-  const sticky = (fieldname: string, header = false) => {
-    const offset = pinnedOffsets.get(fieldname);
-    return {
-      className: offset === undefined ? "" : `sticky ${header ? "z-30" : "z-10"} bg-card shadow-[inset_-1px_0_0_var(--border)]`,
-      style: offset === undefined ? undefined : { left: `${offset}rem` },
-    };
-  };
-
-  const totals = new Map<string, number>();
-  for (const field of cols.filter((entry) => ["Currency", "Float", "Int", "Percent"].includes(entry.fieldtype))) {
-    const values = rows.map((row) => numeric(row[field.fieldname])).filter((value): value is number => value !== undefined);
-    if (values.length) totals.set(field.fieldname, values.reduce((sum, value) => sum + value, 0));
-  }
-  const strongEditable = table.presentation?.emphasize_editable !== false;
-  const formatTotal = (field: DocField, value: number): string => {
-    const precision = field.fieldtype === "Currency" ? moneyPrecision : undefined;
-    return services?.fmt?.number ? services.fmt.number(value, precision) : value.toLocaleString("vi-VN", precision === undefined ? undefined : { minimumFractionDigits: precision, maximumFractionDigits: precision });
-  };
+  const errorRows = Object.entries(enrichmentErrors).filter(([index]) => Number(index) < rows.length);
 
   return (
-    <div className="space-y-2" data-action-child-grid={table.fieldname}>
+    <div className="min-w-0 space-y-2" data-action-child-grid={table.fieldname}>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" size="sm" disabled={readOnly || rows.length >= table.max_rows} onClick={() => addRows(1)}><Plus /> Dòng</Button>
-        <Button type="button" variant="outline" size="sm" disabled={readOnly} onClick={() => setColumnSettingsOpen(true)}><Columns3 /> Cột</Button>
-        <Button type="button" variant="ghost" size="sm" disabled={readOnly || (pickedRow == null && !selectedRows.length)} onClick={() => moveRows(-1)}><ArrowUp /> Lên</Button>
-        <Button type="button" variant="ghost" size="sm" disabled={readOnly || (pickedRow == null && !selectedRows.length)} onClick={() => moveRows(1)}><ArrowDown /> Xuống</Button>
-        <Button type="button" variant="outline" size="sm" disabled={readOnly || rows.length >= table.max_rows} onClick={() => addRows(10)}><Plus /> 10 dòng</Button>
-        <Button type="button" variant="outline" size="sm" disabled={readOnly || pickedRow == null || rows.length >= table.max_rows} onClick={clonePicked}><Copy /> Nhân bản</Button>
-        <Button type="button" variant="outline" size="sm" disabled={readOnly || pickedRow == null} onClick={fillDown}><ArrowDownToLine /> Điền xuống</Button>
+        <Button type="button" variant="outline" size="sm" disabled={readOnly || rows.length >= table.max_rows} onClick={() => addRows(10)}>+10 dòng</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setColumnSettingsOpen(true)}><Columns3 /> Cột</Button>
         {selectedRows.length ? <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRows(rows.map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1).filter((index) => index >= 0))}><Trash2 /> Xóa {selectedRows.length}</Button> : null}
         {lastDeleted?.length ? <Button type="button" variant="ghost" size="sm" onClick={undoDelete}><Undo2 /> Hoàn tác</Button> : null}
-        <span className="ml-auto text-xs text-muted-foreground">{rows.length}/{table.max_rows} dòng · Ctrl+V từ Excel</span>
+        <span className="ml-auto text-xs text-muted-foreground">{rows.length}/{table.max_rows} dòng{table.allow_paste ? " · dán trực tiếp từ Excel" : ""}</span>
       </div>
 
-      <div ref={gridRef} className="min-w-0 overflow-hidden rounded-md border" onPaste={onPaste} onCopy={onCopy} onKeyDown={onKeyDown}>
-        <Table className="w-full table-fixed text-[12px]">
-          <colgroup>
-            {!readOnly ? <col style={{ width: "2.5rem" }} /> : null}
-            <col style={{ width: "2.5rem" }} />
-            {cols.map((field) => <col key={field.fieldname} style={{ width: `${weights[field.fieldname] ?? 5}%` }} />)}
-            {!readOnly ? <col style={{ width: "4rem" }} /> : null}
-          </colgroup>
+      <div ref={gridRef} className="max-w-full overflow-x-auto rounded-md border" onPaste={onPaste} onKeyDown={onKeyDown}>
+        <Table unwrapped className="w-max min-w-full text-[12px]">
           <TableHeader className="bg-muted/50">
-            <TableRow className="h-8 hover:bg-transparent">
-              {!readOnly ? <TableHead className="sticky left-0 z-40 bg-card p-1 text-center"><Checkbox checked={rows.length > 0 && selectedRows.length === rows.length} onCheckedChange={() => setSelectedRows(selectedRows.length === rows.length ? [] : rows.map(rowKey))} /></TableHead> : null}
-              <TableHead className={`sticky z-40 bg-card px-1 text-right ${readOnly ? "left-0" : "left-10"}`}>#</TableHead>
+            <TableRow className="h-9 hover:bg-transparent">
+              {!readOnly ? <TableHead className="sticky left-0 z-40 w-10 min-w-10 bg-card p-1 text-center"><Checkbox checked={rows.length > 0 && selectedRows.length === rows.length} onCheckedChange={() => setSelectedRows(selectedRows.length === rows.length ? [] : rows.map(rowKey))} /></TableHead> : null}
+              <TableHead className={`sticky z-40 w-11 min-w-11 bg-card px-1 text-right ${readOnly ? "left-0" : "left-10"}`}>#</TableHead>
               {cols.map((field) => {
-                const pin = sticky(field.fieldname, true);
-                return <TableHead key={field.fieldname} draggable={!readOnly} onDragStart={() => { dragged.current = field.fieldname; }} onDragOver={(event) => { if (dragged.current) event.preventDefault(); }} onDrop={() => dropColumn(field.fieldname)} className={`group relative truncate whitespace-nowrap px-1.5 text-[11px] font-bold ${pin.className}`} style={pin.style} title="Kéo tiêu đề để đổi chỗ · kéo mép phải để đổi rộng">
-                  {layout.labels[field.fieldname] || shortLabel(field)}{field.reqd ? <span className="text-destructive">*</span> : null}
-                  {!readOnly ? <span onPointerDown={(event) => startResize(field.fieldname, event)} onDragStart={(event) => event.preventDefault()} className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-primary" /> : null}
+                const isIdentity = field.fieldname === identity;
+                const stickyLeft = readOnly ? 44 : 84;
+                return <TableHead
+                  key={field.fieldname}
+                  className={`${isIdentity ? "sticky z-30 bg-card shadow-[inset_-1px_0_0_var(--border)]" : ""} whitespace-nowrap px-2 text-[11px] font-bold`}
+                  style={{ width: columnWidth(field), minWidth: columnWidth(field), ...(isIdentity ? { left: stickyLeft } : {}) }}
+                >
+                  {shortLabel(field)}{field.reqd ? <span className="text-destructive">*</span> : null}
                 </TableHead>;
               })}
-              {!readOnly ? <TableHead className="px-1" /> : null}
+              {!readOnly ? <TableHead className="w-20 min-w-20" /> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row, rowIndex) => <TableRow key={rowKey(row, rowIndex)} className={pickedRow === rowIndex || selectedSet.has(rowKey(row, rowIndex)) ? "bg-primary/[0.05] hover:bg-primary/[0.05]" : "hover:bg-transparent"} onClick={() => setPickedRow(rowIndex)}>
-              {!readOnly ? <TableCell className="sticky left-0 z-20 bg-card p-1 text-center"><Checkbox checked={selectedSet.has(rowKey(row, rowIndex))} onCheckedChange={() => setSelectedRows((current) => current.includes(rowKey(row, rowIndex)) ? current.filter((value) => value !== rowKey(row, rowIndex)) : [...current, rowKey(row, rowIndex)])} /></TableCell> : null}
-              <TableCell className={`sticky z-20 bg-card px-1 text-right text-[11px] text-muted-foreground ${readOnly ? "left-0" : "left-10"}`}>{rowIndex + 1}</TableCell>
+            {rows.map((row, rowIndex) => <TableRow key={rowKey(row, rowIndex)} className={pickedRow === rowIndex || selectedSet.has(rowKey(row, rowIndex)) ? "bg-primary/[0.04]" : ""} onClick={() => setPickedRow(rowIndex)}>
+              {!readOnly ? <TableCell className="sticky left-0 z-20 w-10 min-w-10 bg-card p-1 text-center"><Checkbox checked={selectedSet.has(rowKey(row, rowIndex))} onCheckedChange={() => setSelectedRows((current) => current.includes(rowKey(row, rowIndex)) ? current.filter((value) => value !== rowKey(row, rowIndex)) : [...current, rowKey(row, rowIndex)])} /></TableCell> : null}
+              <TableCell className={`sticky z-20 w-11 min-w-11 bg-card px-1 text-right text-[11px] text-muted-foreground ${readOnly ? "left-0" : "left-10"}`}>{rowIndex + 1}</TableCell>
               {cols.map((field, columnIndex) => {
-                const pin = sticky(field.fieldname);
                 const effective = dynamicField(field, row);
                 const resolved = resolveField(effective, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
-                const cellReadOnly = Boolean(readOnly || resolved.readOnly || !resolved.visible);
-                if (!resolved.visible) return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-editable="false" className={`h-9 !bg-muted/80 px-1 text-center font-semibold text-muted-foreground ${pin.className}`} style={pin.style}>—</TableCell>;
+                const cellReadOnly = Boolean(readOnly || resolved.readOnly || isAutoField(field.fieldname));
                 const Control = registry.resolve(effective.fieldtype) ?? FallbackControl;
-                const editableClass = strongEditable
-                  ? "!bg-primary/[0.16] font-bold ring-2 ring-inset ring-primary/55 focus-within:!bg-primary/[0.24] focus-within:ring-[3px] focus-within:ring-primary"
-                  : "!bg-primary/[0.07] ring-1 ring-inset ring-primary/25 focus-within:ring-2";
-                return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-editable={cellReadOnly ? "false" : "true"} className={`${cellReadOnly ? "!bg-muted/70 text-muted-foreground" : editableClass} h-9 px-1 py-0.5 ${pin.className}`} style={pin.style} onFocusCapture={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }} onClick={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }}>
-                  <Control field={effective} value={row[field.fieldname]} onChange={(value: unknown) => setCell(rowIndex, field.fieldname, value)} readOnly={cellReadOnly} masked={resolved.masked} services={services} docname={String(row.name ?? "")} linkTarget={effective.fieldtype === "Link" ? effective.options : undefined} parentDoctype={childMeta.name} docValues={row} roles={roles} compact />
+                const isIdentity = field.fieldname === identity;
+                const stickyLeft = readOnly ? 44 : 84;
+                return <TableCell
+                  key={field.fieldname}
+                  data-cell={`${rowIndex}:${columnIndex}`}
+                  data-editable={cellReadOnly ? "false" : "true"}
+                  className={`${cellReadOnly ? "bg-muted/45 text-muted-foreground" : "bg-background focus-within:bg-primary/[0.04]"} h-9 p-0 ${isIdentity ? "sticky z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]" : ""}`}
+                  style={{ width: columnWidth(field), minWidth: columnWidth(field), ...(isIdentity ? { left: stickyLeft } : {}) }}
+                  onFocusCapture={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }}
+                  onClick={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }}
+                >
+                  {!resolved.visible ? <div className="px-2 text-center">—</div>
+                    : NUMERIC_TYPES.has(effective.fieldtype) ? numericControl(effective, row[field.fieldname], rowIndex, cellReadOnly)
+                    : <Control field={effective} value={row[field.fieldname]} onChange={(value: unknown) => setCell(rowIndex, field.fieldname, value)} readOnly={cellReadOnly} masked={resolved.masked} services={services} docname={String(row.name ?? "")} linkTarget={effective.fieldtype === "Link" ? effective.options : undefined} parentDoctype={childMeta.name} docValues={row} roles={roles} compact />}
                 </TableCell>;
               })}
-              {!readOnly ? <TableCell className="whitespace-nowrap px-1 py-0.5"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setDetailRow(rowIndex)} title="Chi tiết dòng">⋯</Button><Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" onClick={() => deleteRows([rowIndex])}><X /></Button></TableCell> : null}
+              {!readOnly ? <TableCell className="w-20 min-w-20 whitespace-nowrap px-1 py-0.5"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setDetailRow(rowIndex)} title="Chi tiết dòng">⋯</Button><Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" onClick={() => deleteRows([rowIndex])}><X /></Button></TableCell> : null}
             </TableRow>)}
-            {rows.length > 0 && totals.size > 0 ? <TableRow className="h-8 border-t-2 bg-muted/40 font-bold hover:bg-muted/40">
-              {!readOnly ? <TableCell className="sticky left-0 z-20 bg-muted/40" /> : null}<TableCell className={`sticky z-20 bg-muted/40 px-1 text-right ${readOnly ? "left-0" : "left-10"}`}>Σ</TableCell>
-              {cols.map((field) => <TableCell key={field.fieldname} className="truncate px-1 text-right tabular-nums">{totals.has(field.fieldname) ? formatTotal(field, totals.get(field.fieldname)!) : null}</TableCell>)}
-              {!readOnly ? <TableCell /> : null}
-            </TableRow> : null}
           </TableBody>
         </Table>
       </div>
 
+      {errorRows.length ? <div className="space-y-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+        {errorRows.slice(0, 3).map(([index, message]) => <div key={index}>Dòng {Number(index) + 1}: {message}</div>)}
+        {errorRows.length > 3 ? <div>… và {errorRows.length - 3} dòng khác.</div> : null}
+      </div> : null}
+
       <Dialog open={columnSettingsOpen} onOpenChange={setColumnSettingsOpen}>
-        <DialogContent className="max-h-[82vh] w-[min(94vw,680px)] max-w-none overflow-y-auto">
-          <DialogHeader><DialogTitle>Tùy chỉnh cột</DialogTitle><DialogDescription>Hiện/ẩn, đổi tên và ghim. Kéo trực tiếp tiêu đề để đổi vị trí hoặc kích thước.</DialogDescription></DialogHeader>
+        <DialogContent className="max-h-[82vh] w-[min(94vw,620px)] max-w-none overflow-y-auto">
+          <DialogHeader><DialogTitle>Cột hiển thị</DialogTitle><DialogDescription>Ẩn field ít dùng khỏi màn nhập chính. Dữ liệu kỹ thuật vẫn còn trong chi tiết và document canonical.</DialogDescription></DialogHeader>
           <div className="space-y-1">
             {baseCols.map((field) => {
-              const hidden = layout.hidden.includes(field.fieldname); const isIdentity = field.fieldname === identity; const pinned = isIdentity || layout.pinned.includes(field.fieldname);
-              return <div key={field.fieldname} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border px-3 py-2">
+              const hidden = layout.hidden.includes(field.fieldname);
+              const isIdentity = field.fieldname === identity;
+              return <label key={field.fieldname} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
                 <Checkbox checked={!hidden} disabled={isIdentity} onCheckedChange={() => setLayout((value) => ({ ...value, hidden: hidden ? value.hidden.filter((name) => name !== field.fieldname) : [...value.hidden, field.fieldname] }))} />
-                <Input className="h-8" value={layout.labels[field.fieldname] ?? shortLabel(field)} onChange={(event) => setLayout((value) => ({ ...value, labels: { ...value.labels, [field.fieldname]: event.target.value } }))} />
-                <Button type="button" variant={pinned ? "secondary" : "ghost"} size="icon-sm" disabled={hidden || isIdentity} onClick={() => setLayout((value) => ({ ...value, pinned: pinned ? value.pinned.filter((name) => name !== field.fieldname) : [...value.pinned, field.fieldname] }))}>{pinned ? <PinOff /> : <Pin />}</Button>
-              </div>;
+                <span className="min-w-0 flex-1"><span className="font-medium">{shortLabel(field)}</span><span className="ml-2 text-xs text-muted-foreground">{field.fieldname}</span></span>
+              </label>;
             })}
           </div>
           <Button type="button" variant="outline" onClick={() => setLayout({ ...EMPTY_LAYOUT })}><RotateCcw /> Cột về mặc định</Button>
@@ -573,15 +456,24 @@ export function ActionChildGrid(props: ActionChildGridProps) {
       </Dialog>
 
       <Dialog open={detailRow != null} onOpenChange={(open) => { if (!open) setDetailRow(null); }}>
-        <DialogContent className="max-h-[88vh] w-[min(96vw,900px)] max-w-none overflow-y-auto">
+        <DialogContent className="max-h-[88vh] w-[min(96vw,960px)] max-w-none overflow-y-auto">
           <DialogHeader><DialogTitle>{childMeta.label ?? childMeta.name} · dòng {detailRow == null ? "" : detailRow + 1}</DialogTitle></DialogHeader>
           {detailRow != null && rows[detailRow] ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(childMeta.fields ?? []).filter((field) => !layoutField(field.fieldtype)).map((field) => {
-            const row = rows[detailRow]!; const effective = dynamicField(field, row); const resolved = resolveField(effective, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
-            if (!resolved.visible) return null; const Control = registry.resolve(effective.fieldtype) ?? FallbackControl;
-            return <label key={field.fieldname} className="grid min-w-0 gap-1 text-sm font-medium"><span>{field.label ?? field.fieldname}{field.reqd ? <span className="text-destructive">*</span> : null}</span><Control field={effective} value={row[field.fieldname]} onChange={(value: unknown) => setCell(detailRow, field.fieldname, value)} readOnly={Boolean(readOnly || resolved.readOnly)} masked={resolved.masked} services={services} docname={String(row.name ?? "")} linkTarget={effective.fieldtype === "Link" ? effective.options : undefined} parentDoctype={childMeta.name} docValues={row} roles={roles} /></label>;
+            const row = rows[detailRow]!;
+            const effective = dynamicField(field, row);
+            const resolved = resolveField(effective, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
+            if (!resolved.visible) return null;
+            const Control = registry.resolve(effective.fieldtype) ?? FallbackControl;
+            const cellReadOnly = Boolean(readOnly || resolved.readOnly || isAutoField(field.fieldname));
+            return <label key={field.fieldname} className="grid min-w-0 gap-1 text-sm font-medium"><span>{field.label ?? field.fieldname}{field.reqd ? <span className="text-destructive">*</span> : null}</span>{NUMERIC_TYPES.has(effective.fieldtype) ? numericControl(effective, row[field.fieldname], detailRow, cellReadOnly) : <Control field={effective} value={row[field.fieldname]} onChange={(value: unknown) => setCell(detailRow, field.fieldname, value)} readOnly={cellReadOnly} masked={resolved.masked} services={services} docname={String(row.name ?? "")} linkTarget={effective.fieldtype === "Link" ? effective.options : undefined} parentDoctype={childMeta.name} docValues={row} roles={roles} />}</label>;
           })}</div> : null}
         </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+/** Helper keeps setAllowedUoms construction synchronous without re-reading the Item. */
+function awaitable(value: unknown): unknown {
+  return value;
 }
