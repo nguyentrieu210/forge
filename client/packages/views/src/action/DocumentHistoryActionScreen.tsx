@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { CalendarDays, FileClock, RefreshCw, Search } from "lucide-react";
+import { CalendarDays, FileClock, RefreshCw, Search, TriangleAlert } from "lucide-react";
 import type { AppAction, Doc } from "@metaforge/core";
 import { Button, Input } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
@@ -92,6 +92,7 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
@@ -106,18 +107,36 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
   const reload = useCallback(() => {
     setLoading(true);
     setError(undefined);
-    Promise.all(config.sources.map(async (source) => (await loadSource(adapter, source, company)).map((doc) => ({ source, doc, date: day(doc[source.dateField]) }))))
-      .then((sets) => setRows(sets.flat().sort((left, right) => right.date.localeCompare(left.date) || text(right.doc.name).localeCompare(text(left.doc.name), "vi"))))
-      .catch((caught) => { setRows([]); setError(adapter.mapError(caught).message); })
-      .finally(() => setLoading(false));
+    setWarnings([]);
+    Promise.allSettled(config.sources.map(async (source) => ({
+      source,
+      docs: await loadSource(adapter, source, company),
+    }))).then((results) => {
+      const loaded: HistoryRow[] = [];
+      const failed: string[] = [];
+      for (const [index, result] of results.entries()) {
+        const source = config.sources[index]!;
+        if (result.status === "fulfilled") {
+          loaded.push(...result.value.docs.map((doc) => ({ source, doc, date: day(doc[source.dateField]) })));
+        } else {
+          failed.push(`${source.label}: ${adapter.mapError(result.reason).message}`);
+        }
+      }
+      loaded.sort((left, right) => right.date.localeCompare(left.date) || text(right.doc.name).localeCompare(text(left.doc.name), "vi"));
+      setRows(loaded);
+      if (!loaded.length && failed.length === config.sources.length) setError(`Không đọc được nguồn lịch sử nào. ${failed.join(" · ")}`);
+      else setWarnings(failed);
+    }).catch((caught) => {
+      setRows([]);
+      setError(adapter.mapError(caught).message);
+    }).finally(() => setLoading(false));
   }, [adapter, company, config]);
 
   useEffect(() => { reload(); }, [reload]);
 
-  const visible = useMemo(() => {
+  const matchingRows = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("vi");
     return rows.filter((row) => {
-      if (sourceFilter !== "all" && row.source.doctype !== sourceFilter) return false;
       if (fromDate && row.date && row.date < fromDate) return false;
       if (toDate && row.date && row.date > toDate) return false;
       if (!needle) return true;
@@ -125,9 +144,13 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
       return [row.doc.name, row.doc[source.partyField], source.referenceField ? row.doc[source.referenceField] : undefined, source.statusField ? row.doc[source.statusField] : undefined]
         .some((value) => text(value).toLocaleLowerCase("vi").includes(needle));
     });
-  }, [fromDate, query, rows, sourceFilter, toDate]);
+  }, [fromDate, query, rows, toDate]);
 
-  const sourceCounts = useMemo(() => Object.fromEntries(config.sources.map((source) => [source.doctype, visible.filter((row) => row.source.doctype === source.doctype).length])), [config.sources, visible]);
+  const visible = useMemo(() => sourceFilter === "all"
+    ? matchingRows
+    : matchingRows.filter((row) => row.source.doctype === sourceFilter), [matchingRows, sourceFilter]);
+
+  const sourceCounts = useMemo(() => Object.fromEntries(config.sources.map((source) => [source.doctype, matchingRows.filter((row) => row.source.doctype === source.doctype).length])), [config.sources, matchingRows]);
   const submitted = visible.filter((row) => Number(row.doc.docstatus ?? 0) === 1).length;
   const cancelled = visible.filter((row) => Number(row.doc.docstatus ?? 0) === 2).length;
 
@@ -135,9 +158,12 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
     if (!row.source.valueField) return "—";
     const value = number(row.doc[row.source.valueField]);
     const currency = row.source.currencyField ? text(row.doc[row.source.currencyField]) : "";
-    return currency
-      ? new Intl.NumberFormat("vi-VN", { style: "currency", currency, maximumFractionDigits: 0 }).format(value)
-      : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value);
+    if (!currency) return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value);
+    try {
+      return new Intl.NumberFormat("vi-VN", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+    } catch {
+      return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value)} ${currency}`;
+    }
   };
 
   return <section className="space-y-4" aria-label={action.label}>
@@ -150,6 +176,7 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
     </div>
 
     {error ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div> : null}
+    {warnings.length ? <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300"><TriangleAlert className="mt-0.5 size-4 shrink-0" /><div><strong>Một số nguồn không đọc được; dữ liệu còn lại vẫn hiển thị.</strong>{warnings.map((warning) => <div key={warning} className="mt-1 text-xs">{warning}</div>)}</div></div> : null}
 
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Metric label="Tổng chứng từ" value={visible.length} icon={<FileClock className="size-4" />} />
@@ -158,7 +185,7 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
       <Metric label="Ngày gần nhất" value={visible[0]?.date || "—"} icon={<CalendarDays className="size-4" />} />
     </div>
 
-    <div className="flex flex-wrap gap-2">{config.sources.map((source) => <button key={source.doctype} type="button" className="rounded-full border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted" onClick={() => setSourceFilter(source.doctype)}>{source.label} <span className="ml-1 tabular-nums text-muted-foreground">{sourceCounts[source.doctype] ?? 0}</span></button>)}</div>
+    <div className="flex flex-wrap gap-2"><button type="button" className={`rounded-full border px-3 py-1.5 text-xs font-medium ${sourceFilter === "all" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`} onClick={() => setSourceFilter("all")}>Tất cả <span className="ml-1 tabular-nums opacity-75">{matchingRows.length}</span></button>{config.sources.map((source) => <button key={source.doctype} type="button" className={`rounded-full border px-3 py-1.5 text-xs font-medium ${sourceFilter === source.doctype ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`} onClick={() => setSourceFilter(source.doctype)}>{source.label} <span className="ml-1 tabular-nums opacity-75">{sourceCounts[source.doctype] ?? 0}</span></button>)}</div>
 
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="border-b px-3 py-2 text-sm font-semibold">Dòng thời gian chứng từ</div>
