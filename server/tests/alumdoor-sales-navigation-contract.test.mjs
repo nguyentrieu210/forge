@@ -133,7 +133,7 @@ test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and can
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Sales Invoice"));
 });
 
-test("Sales composer takes technical choices from Cutting Policy and reserves stock before submit", async () => {
+test("Sales composer takes technical choices from Cutting Policy, reserves stock safely and blocks duplicate confirmation", async () => {
   const source = await readFile(composerPath, "utf8");
 
   assert.match(source, /adapter\.getList\("Cutting Policy"/);
@@ -153,6 +153,11 @@ test("Sales composer takes technical choices from Cutting Policy and reserves st
   assert.match(source, /source_name:\s*created\.name/);
   assert.match(source, /min_length_m:\s*Number\(formula\.cut_width_m\)/);
   assert.match(source, /qty_reserved:\s*Number\(formula\.total_leaf_count\)/);
+  assert.match(source, /const submittedOrder = Boolean\(createdOrder && Number\(createdOrder\.docstatus/);
+  assert.match(source, /if \(createdOrder && Number\(createdOrder\.docstatus \?\? 0\) === 1\)/);
+  assert.match(source, /reservationRecovery\.length/);
+  assert.match(source, /setReservationRecovery\(failedReleases\)/);
+  assert.match(source, /Không thử xác nhận lại trước khi xử lý các giữ chỗ này/);
   assert.match(source, /Xác nhận & giữ chỗ/);
 });
 
