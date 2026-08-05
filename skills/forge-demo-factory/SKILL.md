@@ -125,6 +125,9 @@ explicitly authorized operation.
 `.github/workflows/demo-provision.yml` is the operator entry point. It requires an exact merged-main
 SHA and `confirm=demo`, runs in the `production` environment, validates/compiles before mutation,
 then provisions and reports the live URL. Secrets stay in GitHub Actions/Cloudflare runtime state.
+Before dispatching a live run, record the user's explicit production authorization together with the
+exact merged-main SHA, customer slug and brief id in the execution evidence; a dry-run PASS alone is
+not authorization to mutate production provider state.
 
 ## Required runtime credentials
 
