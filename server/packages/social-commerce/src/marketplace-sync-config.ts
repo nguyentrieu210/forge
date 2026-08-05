@@ -13,11 +13,59 @@ interface DocumentRow {
   payload_json: string;
 }
 
-export interface ConfiguredMarketplaceSync {
-  channel_profile: string;
+export interface ResolvedMarketplaceConnection {
   provider: MarketplaceProvider;
-  external_shop_id: string;
   connection: ConnectorConnection;
+}
+
+export interface ConfiguredMarketplaceSync extends ResolvedMarketplaceConnection {
+  channel_profile: string;
+  external_shop_id: string;
+}
+
+/**
+ * Resolve one Marketplace Connection from canonical tenant metadata.
+ *
+ * Provider identity is derived from the registered connector manifest, never from a
+ * request payload. Credential administration may use draft/disabled connections so a
+ * secret can be installed before activation; polling callers set require_active=true.
+ */
+export async function resolveMarketplaceConnection(
+  db: D1Database,
+  tenantId: string,
+  connectionIdInput: string,
+  options: { require_active?: boolean } = {},
+): Promise<ResolvedMarketplaceConnection> {
+  const connectionId = text(connectionIdInput, "connection_id", 160);
+  const connectionRow = await readDocument(db, tenantId, "Marketplace Connection", connectionId);
+  if (!connectionRow || connectionRow.docstatus === 2) throw errors.reference(`Marketplace Connection ${connectionId} not found`);
+  const connectionData = payload(connectionRow.payload_json, "Marketplace Connection");
+  const connectionStatus = integrationStatus(connectionData.connection_status);
+  if (options.require_active && connectionStatus !== "active") {
+    throw errors.lifecycle(`Marketplace Connection ${connectionId} is not active`);
+  }
+
+  const connection: ConnectorConnection = {
+    schema_version: 1,
+    connection_id: connectionId,
+    tenant_id: tenantId,
+    connector_key: textValue(connectionData.connector_key, "connector_key", 80),
+    connector_version: textValue(connectionData.connector_version, "connector_version", 80),
+    auth_kind: authKind(connectionData.auth_kind),
+    secret_ref: textValue(connectionData.secret_ref, "secret_ref", 320),
+    status: connectionStatus,
+    config: jsonObject(connectionData.config, "config"),
+  };
+
+  try {
+    const adapter = marketplaceAdapter(connection.connector_key, connection.connector_version);
+    validateConnectorConnection(connection, adapter.manifest);
+    adapter.validateConfig(connection.config);
+    const provider = marketplaceProvider(adapter.manifest.provider);
+    return { provider, connection };
+  } catch (error) {
+    throw errors.reference(error instanceof Error ? error.message : "Marketplace Connection is invalid");
+  }
 }
 
 /**
@@ -42,37 +90,12 @@ export async function resolveConfiguredMarketplaceSync(
   const provider = marketplaceProvider(profile.provider);
   const connectionId = textValue(profile.connection_id, "connection_id", 160);
   const externalShopId = textValue(profile.external_shop_id, "external_shop_id", 200);
-  const connectionRow = await readDocument(db, tenantId, "Marketplace Connection", connectionId);
-  if (!connectionRow || connectionRow.docstatus === 2) throw errors.reference(`Marketplace Connection ${connectionId} not found`);
-  const connectionData = payload(connectionRow.payload_json, "Marketplace Connection");
-  const connectionStatus = integrationStatus(connectionData.connection_status);
-  if (connectionStatus !== "active") throw errors.lifecycle(`Marketplace Connection ${connectionId} is not active`);
-
-  const connection: ConnectorConnection = {
-    schema_version: 1,
-    connection_id: connectionId,
-    tenant_id: tenantId,
-    connector_key: textValue(connectionData.connector_key, "connector_key", 80),
-    connector_version: textValue(connectionData.connector_version, "connector_version", 80),
-    auth_kind: authKind(connectionData.auth_kind),
-    secret_ref: textValue(connectionData.secret_ref, "secret_ref", 320),
-    status: connectionStatus,
-    config: jsonObject(connectionData.config, "config"),
-  };
-
-  let adapter;
-  try {
-    adapter = marketplaceAdapter(connection.connector_key, connection.connector_version);
-    validateConnectorConnection(connection, adapter.manifest);
-    adapter.validateConfig(connection.config);
-  } catch (error) {
-    throw errors.reference(error instanceof Error ? error.message : "Marketplace Connection is invalid");
-  }
-  if (adapter.manifest.provider !== provider) {
+  const resolved = await resolveMarketplaceConnection(db, tenantId, connectionId, { require_active: true });
+  if (resolved.provider !== provider) {
     throw errors.reference(`Commerce Channel Profile ${profileName} provider does not match Marketplace Connection`);
   }
   if (provider === "shopee") {
-    const scopedShop = textValue(connection.config.shop_id, "shop_id", 200);
+    const scopedShop = textValue(resolved.connection.config.shop_id, "shop_id", 200);
     if (scopedShop !== externalShopId) throw errors.reference("Shopee Channel Profile shop does not match Marketplace Connection scope");
   }
 
@@ -80,7 +103,7 @@ export async function resolveConfiguredMarketplaceSync(
     channel_profile: profileName,
     provider,
     external_shop_id: externalShopId,
-    connection,
+    connection: resolved.connection,
   };
 }
 
@@ -107,7 +130,7 @@ function jsonObject(value: unknown, field: string): JsonObject {
 
 function marketplaceProvider(value: unknown): MarketplaceProvider {
   if (value === "shopee" || value === "lazada" || value === "tiktok_shop") return value;
-  throw errors.reference("Commerce Channel Profile provider is invalid");
+  throw errors.reference("Marketplace provider is invalid");
 }
 
 function integrationStatus(value: unknown): ConnectorConnection["status"] {
