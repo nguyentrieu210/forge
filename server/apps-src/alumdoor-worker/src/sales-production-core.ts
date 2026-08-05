@@ -703,7 +703,7 @@ export async function previewSalesProduction(call: ProductionPlatformCall, args:
       lines: items.length,
       work_orders: items.length,
       estimated_minutes: round(items.reduce((sum, line) => sum + line.estimated_minutes, 0), 2),
-      estimated_weight_kg: round(items.reduce((sum, line) => sum + Number(line.estimated_weight_kg ?? 0), 0, 0), 3),
+      estimated_weight_kg: round(items.reduce((sum, line) => sum + Number(line.estimated_weight_kg ?? 0), 0), 3),
       warnings,
       items,
     });
