@@ -1,0 +1,203 @@
+/** @jsxImportSource react */
+import { useEffect, useMemo, useState } from "react";
+import type { AppAction, AppActionField, AppActionInputTable, Doc, DocField, DocTypeMeta, Fieldtype } from "@metaforge/core";
+import { Button, Input, Label } from "@metaforge/ui";
+import { useMetaForge } from "../container/provider.js";
+import { ActionChildGrid } from "./ActionChildGrid.js";
+import type { ActionScreenProps } from "./ActionScreen.js";
+
+type Values = Record<string, unknown>;
+type CommitResult = { doctype?: string; name?: string; message?: string; [key: string]: unknown };
+
+function resolveActionDefault(field: AppActionField): unknown {
+  if (field.default === "Today" && field.fieldtype === "Date") return new Date().toISOString().slice(0, 10);
+  return field.default;
+}
+
+function initialValues(action: AppAction, table: AppActionInputTable): Values {
+  const values: Values = {};
+  for (const field of action.fields) {
+    if (field.fieldname === table.fieldname) continue;
+    const value = resolveActionDefault(field);
+    if (value != null) values[field.fieldname] = value;
+  }
+  values[table.fieldname] = [];
+  return values;
+}
+
+function toDocField(field: AppActionField): DocField {
+  return {
+    fieldname: field.fieldname,
+    label: field.label,
+    fieldtype: field.fieldtype as Fieldtype,
+    ...(field.options ? { options: field.options } : {}),
+    ...(field.required ? { reqd: 1 as const } : {}),
+    ...(field.default == null ? {} : { default: field.default }),
+  };
+}
+
+function blankRows(table: AppActionInputTable, meta: DocTypeMeta): Doc[] {
+  return Array.from({ length: table.min_rows }, (_, index) => {
+    const row: Doc = { name: `new-${Date.now()}-${index}`, doctype: meta.name } as Doc;
+    for (const field of meta.fields ?? []) if (field.default != null && field.default !== "") row[field.fieldname] = field.default;
+    for (const column of table.columns) if (column.default != null && (row[column.fieldname] == null || row[column.fieldname] === "")) row[column.fieldname] = column.default;
+    return row;
+  });
+}
+
+function empty(value: unknown): boolean {
+  return value == null || (typeof value === "string" && !value.trim());
+}
+
+function number(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function asResult(value: unknown): CommitResult {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as CommitResult : {};
+}
+
+export function isRichAction(action: AppAction): boolean {
+  return (action.input_tables ?? []).some((table) => table.presentation?.mode === "child-grid-inline" && Boolean(table.presentation?.row_doctype));
+}
+
+/**
+ * Generic rich AppAction renderer. Business rules stay in metadata/worker/controller:
+ * this screen only composes scalar controls, canonical child metadata and a computed preview.
+ */
+export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
+  const { adapter, registry, services, fmt, roles, businessContext } = useMetaForge();
+  const table = (action.input_tables ?? []).find((candidate) => candidate.presentation?.mode === "child-grid-inline" && candidate.presentation.row_doctype)!;
+  const rowDoctype = table.presentation!.row_doctype!;
+  const [meta, setMeta] = useState<DocTypeMeta>();
+  const [metaError, setMetaError] = useState<string>();
+  const [values, setValues] = useState<Values>(() => initialValues(action, table));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [result, setResult] = useState<CommitResult>();
+
+  useEffect(() => {
+    let active = true;
+    setMeta(undefined); setMetaError(undefined);
+    void adapter.getMeta(rowDoctype).then((loaded) => {
+      if (!active) return;
+      setMeta(loaded);
+      setValues((current) => {
+        const rows = Array.isArray(current[table.fieldname]) ? current[table.fieldname] as Doc[] : [];
+        return rows.length ? current : { ...current, [table.fieldname]: blankRows(table, loaded) };
+      });
+    }).catch((caught) => {
+      if (active) setMetaError(adapter.mapError(caught).message);
+    });
+    return () => { active = false; };
+  }, [adapter, rowDoctype, table]);
+
+  const tableNames = useMemo(() => new Set((action.input_tables ?? []).map((entry) => entry.fieldname)), [action.input_tables]);
+  const summaryFields = useMemo(() => new Set([
+    table.summary?.discount_percentage_field,
+    table.summary?.vat_percentage_field,
+  ].filter((value): value is string => Boolean(value))), [table.summary]);
+  const headerFields = action.fields.filter((field) => !tableNames.has(field.fieldname) && !summaryFields.has(field.fieldname));
+  const rows = Array.isArray(values[table.fieldname]) ? values[table.fieldname] as Doc[] : [];
+
+  const missing = useMemo(() => {
+    const list: string[] = [];
+    for (const field of headerFields) if (field.required && empty(values[field.fieldname])) list.push(field.label);
+    if (rows.length < table.min_rows) list.push(`${table.label}: cần ít nhất ${table.min_rows} dòng`);
+    rows.forEach((row, rowIndex) => table.columns.forEach((column) => {
+      if (column.required && empty(row[column.fieldname])) list.push(`Dòng ${rowIndex + 1} · ${column.label}`);
+    }));
+    for (const fieldname of summaryFields) {
+      const value = number(values[fieldname]);
+      if (value < 0 || value > 100) list.push(`${fieldname}: phải từ 0 đến 100`);
+    }
+    return list;
+  }, [headerFields, rows, summaryFields, table, values]);
+
+  const subtotal = table.summary
+    ? rows.reduce((sum, row) => sum + number(row[table.summary!.subtotal_field]), 0)
+    : 0;
+  const discountPct = table.summary?.discount_percentage_field ? number(values[table.summary.discount_percentage_field]) : 0;
+  const discountAmount = subtotal * discountPct / 100;
+  const afterDiscount = Math.max(0, subtotal - discountAmount);
+  const vatPct = table.summary?.vat_percentage_field ? number(values[table.summary.vat_percentage_field]) : 0;
+  const vatAmount = afterDiscount * vatPct / 100;
+  const grandTotal = afterDiscount + vatAmount;
+
+  const changeValue = (fieldname: string, value: unknown) => {
+    setValues((current) => ({ ...current, [fieldname]: value }));
+    setError(undefined); setResult(undefined);
+  };
+
+  const commit = async (printAfter: boolean) => {
+    if (missing.length) {
+      setError(`Còn thiếu hoặc chưa hợp lệ: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? ` và ${missing.length - 8} mục khác` : ""}.`);
+      return;
+    }
+    const printWindow = printAfter ? window.open("about:blank", "_blank") : null;
+    setBusy(true); setError(undefined); setResult(undefined);
+    try {
+      const args = { ...businessContext, ...values } as Record<string, unknown>;
+      const answer = asResult(await adapter.callPost<unknown>(action.commit.method, args));
+      setResult(answer);
+      const doctype = String(answer.doctype ?? "").trim();
+      const name = String(answer.name ?? "").trim();
+      if (printAfter) {
+        if (!doctype || !name) throw new Error("Đã lưu nhưng kết quả không trả về chứng từ để in.");
+        const blob = await adapter.downloadPdf(doctype, name, table.presentation?.print_format);
+        const url = URL.createObjectURL(blob);
+        if (printWindow) printWindow.location.replace(url);
+        else window.open(url, "_blank", "noopener,noreferrer");
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+    } catch (caught) {
+      printWindow?.close();
+      setError(adapter.mapError(caught).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (metaError) return <div className="w-full border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">{metaError}</div>;
+  if (!meta) return <div className="w-full p-4 text-sm text-muted-foreground">Đang tải metadata dòng hàng…</div>;
+
+  return (
+    <div className="flex w-full max-w-none flex-col gap-3" data-rich-action={action.name}>
+      {action.description ? <p className="text-xs text-muted-foreground">{action.description}</p> : null}
+
+      <div className="grid w-full gap-2 border-b pb-3 sm:grid-cols-2 lg:grid-cols-3">
+        {headerFields.map((field) => {
+          const docField = toDocField(field); const Control = registry.resolve(docField.fieldtype); const id = `rich-${action.name}-${field.fieldname}`;
+          return <div key={field.fieldname} className="grid min-w-0 gap-1">
+            <Label htmlFor={id} className="text-xs font-semibold">{field.label}{field.required ? <span className="text-destructive">*</span> : null}</Label>
+            {Control ? <Control field={docField} value={values[field.fieldname] ?? ""} onChange={(value: unknown) => changeValue(field.fieldname, value)} id={id} required={field.required} services={services} {...(field.fieldtype === "Link" && field.options ? { linkTarget: field.options } : {})} docValues={values} roles={roles} compact /> : <Input id={id} value={String(values[field.fieldname] ?? "")} onChange={(event) => changeValue(field.fieldname, event.target.value)} />}
+          </div>;
+        })}
+      </div>
+
+      <section className="min-w-0">
+        <div className="mb-2 flex items-center justify-between"><div><h2 className="text-sm font-bold">{table.label}</h2>{table.description ? <p className="text-xs text-muted-foreground">{table.description}</p> : null}</div></div>
+        <ActionChildGrid actionName={action.name} table={table} childMeta={meta} rows={rows} onChange={(next) => changeValue(table.fieldname, next)} registry={registry} services={services} roles={roles} parentDoc={{ ...businessContext, ...values }} />
+      </section>
+
+      {table.summary ? <div className="ml-auto grid w-full max-w-[430px] grid-cols-[minmax(0,1fr)_150px] items-center gap-x-3 gap-y-1.5 border-t pt-3 text-sm tabular-nums">
+        <span className="text-muted-foreground">Tạm tính</span><strong className="text-right">{fmt.number(subtotal)}</strong>
+        {table.summary.discount_percentage_field ? <><Label htmlFor={`summary-${table.summary.discount_percentage_field}`}>Chiết khấu (%)</Label><Input id={`summary-${table.summary.discount_percentage_field}`} className="h-8 text-right font-semibold" inputMode="decimal" value={String(values[table.summary.discount_percentage_field] ?? "")} onChange={(event) => changeValue(table.summary!.discount_percentage_field!, event.target.value)} /></> : null}
+        {table.summary.discount_percentage_field ? <><span className="text-muted-foreground">Tổng chiết khấu</span><strong className="text-right">-{fmt.number(discountAmount)}</strong></> : null}
+        {table.summary.vat_percentage_field ? <><Label htmlFor={`summary-${table.summary.vat_percentage_field}`}>VAT (%)</Label><Input id={`summary-${table.summary.vat_percentage_field}`} className="h-8 text-right font-semibold" inputMode="decimal" value={String(values[table.summary.vat_percentage_field] ?? "")} onChange={(event) => changeValue(table.summary!.vat_percentage_field!, event.target.value)} /></> : null}
+        {table.summary.vat_percentage_field ? <><span className="text-muted-foreground">Tiền VAT</span><strong className="text-right">{fmt.number(vatAmount)}</strong></> : null}
+        <span className="border-t pt-2 text-base font-extrabold">TỔNG</span><strong className="border-t pt-2 text-right text-base font-extrabold">{fmt.number(grandTotal)}</strong>
+      </div> : null}
+
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3">
+        {missing.length ? <span className="mr-auto text-xs text-muted-foreground">Còn {missing.length} mục bắt buộc/chưa hợp lệ</span> : null}
+        <Button type="button" variant="outline" disabled={busy} onClick={() => void commit(false)}>{busy ? "Đang lưu…" : "Lưu"}</Button>
+        <Button type="button" disabled={busy} onClick={() => void commit(true)}>{busy ? "Đang lưu…" : "Lưu & In PDF"}</Button>
+      </div>
+
+      {error ? <div className="border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">{error}</div> : null}
+      {result ? <div className="flex items-center gap-2 border bg-muted/20 px-3 py-2 text-sm"><span>{String(result.message ?? "Đã lưu chứng từ.")}</span>{onOpen && result.doctype && result.name ? <Button type="button" variant="link" className="ml-auto h-auto p-0" onClick={() => onOpen(String(result.doctype), String(result.name))}>Mở {String(result.name)}</Button> : null}</div> : null}
+    </div>
+  );
+}
