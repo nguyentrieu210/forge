@@ -11,7 +11,7 @@ import {
 import { MarketplaceFulfillmentPanel } from "./MarketplaceFulfillmentPanel";
 import { MarketplaceSettlementPanel } from "./MarketplaceSettlementPanel";
 
-type Tab = "overview" | "orders" | "settlements" | "inbox" | "carts";
+type Tab = "overview" | "orders" | "mapping" | "settlements" | "inbox" | "carts";
 interface Summary { active_pages: number; events_today: number; open_carts: number; active_orders: number; cod_pending_minor: number }
 interface Page { page_id: string; page_name: string; status: string }
 interface Event { event_id: string; event_kind: string; message_text?: string; external_actor_id?: string; received_at: string }
@@ -40,6 +40,17 @@ interface MarketplaceSettlement {
   status: "reconciled" | "variance";
   cash_evidence_verified: boolean;
 }
+interface MarketplaceMappingException {
+  provider: "shopee" | "lazada" | "tiktok_shop";
+  channel_profile: string;
+  external_sku: string;
+  external_variant_key: string;
+  reason_code: "missing" | "disabled" | "channel_mismatch" | "sku_mismatch" | "variant_mismatch";
+  first_seen_at: string;
+  last_seen_at: string;
+  occurrence_count: number;
+  resolved_at: string | null;
+}
 interface MarketplaceConnection {
   connection_id: string;
   provider: "shopee" | "lazada" | "tiktok_shop" | null;
@@ -58,6 +69,10 @@ interface MarketplaceConnection {
     updated_at: string;
   } | null;
 }
+interface MarketplaceConnectionResponse {
+  connections: MarketplaceConnection[];
+  mapping_exceptions: MarketplaceMappingException[];
+}
 
 export interface SocialCommerceProps {
   canManageConnections: boolean;
@@ -73,6 +88,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
   const [orders, setOrders] = useState<MarketplaceOrder[]>([]);
   const [settlements, setSettlements] = useState<MarketplaceSettlement[]>([]);
   const [connections, setConnections] = useState<MarketplaceConnection[]>([]);
+  const [mappingExceptions, setMappingExceptions] = useState<MarketplaceMappingException[]>([]);
   const [settlementRestricted, setSettlementRestricted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -92,8 +108,8 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
     setError(undefined);
     try {
       const connectionRequest = canManageConnections
-        ? api<{ connections: MarketplaceConnection[] }>("/api/v1/social/marketplace/connections")
-        : Promise.resolve({ connections: [] as MarketplaceConnection[] });
+        ? api<MarketplaceConnectionResponse>("/api/v1/social/marketplace/connections")
+        : Promise.resolve({ connections: [] as MarketplaceConnection[], mapping_exceptions: [] as MarketplaceMappingException[] });
       const [nextSummary, nextPages, nextEvents, nextCarts, nextOrders, nextConnections] = await Promise.all([
         api<Summary>("/api/v1/social/summary"),
         api<{ pages: Page[] }>("/api/v1/social/pages"),
@@ -108,6 +124,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
       setCarts(nextCarts.carts);
       setOrders(nextOrders.orders);
       setConnections(nextConnections.connections);
+      setMappingExceptions(nextConnections.mapping_exceptions);
       try {
         const nextSettlements = await api<{ settlements: MarketplaceSettlement[] }>("/api/v1/social/marketplace/settlements?limit=200");
         setSettlements(nextSettlements.settlements);
@@ -223,6 +240,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
         <TabsList aria-label="Khu vực bán hàng đa kênh" className="max-w-full overflow-x-auto">
           <TabsTrigger value="overview"><PackageCheck className="size-4" /> Tổng quan</TabsTrigger>
           <TabsTrigger value="orders">Đơn sàn {orders.length ? <Badge variant="secondary">{orders.length}</Badge> : null}</TabsTrigger>
+          {canManageConnections ? <TabsTrigger value="mapping"><AlertTriangle className="size-4" /> Lỗi SKU {mappingExceptions.length ? <Badge variant="secondary">{mappingExceptions.length}</Badge> : null}</TabsTrigger> : null}
           <TabsTrigger value="settlements">Đối soát {settlements.length ? <Badge variant="secondary">{settlements.length}</Badge> : null}</TabsTrigger>
           <TabsTrigger value="inbox"><Inbox className="size-4" /> Inbox {events.length ? <Badge variant="secondary">{events.length}</Badge> : null}</TabsTrigger>
           <TabsTrigger value="carts"><ShoppingCart className="size-4" /> Giỏ Facebook {carts.length ? <Badge variant="secondary">{carts.length}</Badge> : null}</TabsTrigger>
@@ -243,6 +261,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
           />}
         </TabsContent>
         <TabsContent value="orders">{loading ? <ListSkeleton /> : <MarketplaceOrderList orders={orders} onReload={load} onAuthenticationRequired={onAuthenticationRequired} />}</TabsContent>
+        {canManageConnections ? <TabsContent value="mapping">{loading ? <ListSkeleton /> : <MarketplaceMappingExceptionList exceptions={mappingExceptions} />}</TabsContent> : null}
         <TabsContent value="settlements">
           {loading ? <ListSkeleton /> : settlementRestricted ? (
             <SettlementList settlements={settlements} restricted />
@@ -341,6 +360,35 @@ function Overview({ summary, pages, providerCounts, orders, settlements, connect
         ))}</div> : <EmptyState icon={<Unplug />} title="Chưa kết nối Facebook Page" detail="TMĐT vẫn hoạt động độc lập; kết nối Facebook khi cần bán social commerce." action={canManageConnections ? <Button onClick={onConnect}><Facebook className="size-4" /> Kết nối ngay</Button> : undefined} />}
       </section>
     </div>
+  );
+}
+
+function MarketplaceMappingExceptionList({ exceptions }: { exceptions: MarketplaceMappingException[] }) {
+  if (!exceptions.length) {
+    return <section className="rounded-lg border bg-card shadow-sm"><EmptyState icon={<PackageCheck />} title="Không có SKU bị chặn" detail="Các SKU marketplace đang đi qua metadata resolution mà không có exception mở." action={<Button variant="outline" onClick={() => window.location.assign("/app/Marketplace%20SKU%20Mapping")}>Mở danh sách ánh xạ SKU</Button>} /></section>;
+  }
+  return (
+    <section className="overflow-hidden rounded-lg border bg-card shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:p-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-2"><h2 className="text-sm font-semibold">SKU đang chặn đồng bộ đơn</h2><StatusBadge tone="warning">{exceptions.length} exception mở</StatusBadge></div>
+          <p className="mt-1 text-xs text-muted-foreground">Read-only evidence từ metadata resolver. Sửa mapping tại DocType canonical; inbox tự đóng khi exact SKU/variant resolve thành công.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => window.location.assign("/app/Marketplace%20SKU%20Mapping")}><Link2 className="size-4" /> Mở ánh xạ SKU</Button>
+      </div>
+      <Separator />
+      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kênh</TableHead><TableHead>Gian hàng</TableHead><TableHead>SKU sàn</TableHead><TableHead>Variant</TableHead><TableHead>Lý do</TableHead><TableHead className="text-right">Số lần</TableHead><TableHead className="text-right">Lần gần nhất</TableHead></TableRow></TableHeader><TableBody>
+        {exceptions.map((row) => <TableRow key={`${row.channel_profile}:${row.provider}:${row.external_sku}:${row.external_variant_key}`}>
+          <TableCell><ProviderBadge provider={row.provider} /></TableCell>
+          <TableCell className="max-w-56 truncate">{row.channel_profile}</TableCell>
+          <TableCell className="max-w-56 truncate font-medium">{row.external_sku}</TableCell>
+          <TableCell className="max-w-48 truncate font-mono text-xs">{row.external_variant_key}</TableCell>
+          <TableCell><StatusBadge tone="warning">{mappingReasonLabel(row.reason_code)}</StatusBadge></TableCell>
+          <TableCell className="text-right tabular-nums">{row.occurrence_count}</TableCell>
+          <TableCell className="whitespace-nowrap text-right text-xs text-muted-foreground">{dateTime(row.last_seen_at)}</TableCell>
+        </TableRow>)}
+      </TableBody></Table></div>
+    </section>
   );
 }
 
@@ -540,6 +588,7 @@ async function api<T = unknown>(url: string, init?: RequestInit): Promise<T> {
   return body;
 }
 function providerLabel(value: string | null) { if (value === "tiktok_shop") return "TikTok Shop"; if (value === "shopee") return "Shopee"; if (value === "lazada") return "Lazada"; return value || "Marketplace"; }
+function mappingReasonLabel(value: MarketplaceMappingException["reason_code"]) { if (value === "missing") return "Chưa có mapping"; if (value === "disabled") return "Mapping bị tắt"; if (value === "channel_mismatch") return "Sai gian hàng"; if (value === "sku_mismatch") return "Sai SKU"; if (value === "variant_mismatch") return "Sai variant"; return value; }
 function eventKind(value: string) { if (value.includes("message")) return "Tin nhắn"; if (value.includes("comment")) return "Bình luận"; return value; }
 function cartStatus(value: string) { if (value === "open") return "Đang mở"; if (value === "confirmed") return "Đã xác nhận"; if (value === "converted") return "Đã tạo đơn"; if (value === "abandoned") return "Đã bỏ"; return value; }
 function orderStatus(value: string) { if (value === "confirmed") return "Đã xác nhận"; if (value === "packing") return "Đóng gói"; if (value === "shipped") return "Đang giao"; if (value === "completed") return "Hoàn tất"; if (value === "cancelled") return "Đã hủy"; if (value === "returned") return "Đã trả"; return value; }
