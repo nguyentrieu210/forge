@@ -398,6 +398,25 @@ function MarketplaceOrderList({ orders, onReload, onAuthenticationRequired }: { 
   const [customer, setCustomer] = useState("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState<"link" | "revoke">();
+  const [query, setQuery] = useState("");
+  const [providerFilter, setProviderFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [missingLinkOnly, setMissingLinkOnly] = useState(false);
+
+  const providerOptions = useMemo(() => [...new Set(orders.map((order) => order.provider))].sort(), [orders]);
+  const statusOptions = useMemo(() => [...new Set(orders.map((order) => order.status))].sort(), [orders]);
+  const missingLinkCount = useMemo(() => orders.filter((order) => !order.sales_order_name || !order.customer).length, [orders]);
+  const filteredOrders = useMemo(() => {
+    const needle = query.normalize("NFC").trim().toLocaleLowerCase("vi-VN");
+    return orders.filter((order) => {
+      if (providerFilter !== "all" && order.provider !== providerFilter) return false;
+      if (statusFilter !== "all" && order.status !== statusFilter) return false;
+      if (missingLinkOnly && order.sales_order_name && order.customer) return false;
+      if (!needle) return true;
+      return [order.order_id, order.sales_order_name ?? "", order.customer ?? "", providerLabel(order.provider)]
+        .some((value) => value.normalize("NFC").toLocaleLowerCase("vi-VN").includes(needle));
+    });
+  }, [missingLinkOnly, orders, providerFilter, query, statusFilter]);
 
   function openIdentity(order: MarketplaceOrder) {
     setFulfillmentOrder(undefined);
@@ -457,6 +476,29 @@ function MarketplaceOrderList({ orders, onReload, onAuthenticationRequired }: { 
         <div><h2 className="text-sm font-semibold">Đơn hàng marketplace</h2><p className="text-xs text-muted-foreground">Mỗi dòng liên kết về Sales Order, Delivery Note, Stock Return và Customer canonical của ERP.</p></div>
         <Button variant="outline" size="sm" onClick={() => window.location.assign("/app/CRM%20Customer%20External%20Identity")}><Link2 className="size-4" /> Danh tính kênh</Button>
       </div>
+      <div className="grid gap-2 border-t bg-muted/10 p-3 md:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto_auto] md:items-center md:p-4">
+        <input
+          className="h-9 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Tìm mã đơn / Sales Order / Customer"
+          maxLength={240}
+          autoComplete="off"
+          aria-label="Tìm đơn marketplace"
+        />
+        <select className="h-9 rounded-md border bg-background px-3 text-sm" value={providerFilter} onChange={(event) => setProviderFilter(event.target.value)} aria-label="Lọc theo kênh">
+          <option value="all">Tất cả kênh</option>
+          {providerOptions.map((provider) => <option key={provider} value={provider}>{providerLabel(provider)}</option>)}
+        </select>
+        <select className="h-9 rounded-md border bg-background px-3 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Lọc theo trạng thái">
+          <option value="all">Tất cả trạng thái</option>
+          {statusOptions.map((status) => <option key={status} value={status}>{orderStatus(status)}</option>)}
+        </select>
+        <Button variant={missingLinkOnly ? "default" : "outline"} size="sm" onClick={() => setMissingLinkOnly((value) => !value)}>
+          <AlertTriangle className="size-4" /> Thiếu liên kết ERP {missingLinkCount ? <Badge variant="secondary">{missingLinkCount}</Badge> : null}
+        </Button>
+        <span className="text-right text-xs text-muted-foreground tabular-nums">{filteredOrders.length}/{orders.length} đơn</span>
+      </div>
       {selected ? (
         <div className="border-y bg-muted/20 p-3 md:p-4">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] lg:items-end">
@@ -503,18 +545,18 @@ function MarketplaceOrderList({ orders, onReload, onAuthenticationRequired }: { 
           onAuthenticationRequired={onAuthenticationRequired}
         />
       ) : null}
-      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kênh</TableHead><TableHead>Mã đơn</TableHead><TableHead>Customer</TableHead><TableHead>Sales Order</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Giá trị</TableHead><TableHead className="text-right">Thao tác</TableHead><TableHead className="text-right">Cập nhật</TableHead></TableRow></TableHeader><TableBody>
-        {orders.map((order) => <TableRow key={order.order_id}>
+      {filteredOrders.length ? <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kênh</TableHead><TableHead>Mã đơn</TableHead><TableHead>Customer</TableHead><TableHead>Sales Order</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Giá trị</TableHead><TableHead className="text-right">Thao tác</TableHead><TableHead className="text-right">Cập nhật</TableHead></TableRow></TableHeader><TableBody>
+        {filteredOrders.map((order) => <TableRow key={order.order_id}>
           <TableCell><ProviderBadge provider={order.provider} /></TableCell>
           <TableCell className="max-w-56 truncate font-medium">{order.order_id}</TableCell>
-          <TableCell className="max-w-44 truncate">{order.customer ?? "—"}</TableCell>
-          <TableCell>{order.sales_order_name ?? "—"}</TableCell>
+          <TableCell className="max-w-44 truncate">{order.customer ?? <StatusBadge tone="warning">Thiếu Customer</StatusBadge>}</TableCell>
+          <TableCell>{order.sales_order_name ?? <StatusBadge tone="warning">Thiếu Sales Order</StatusBadge>}</TableCell>
           <TableCell><StatusBadge tone={orderTone(order.status)}>{orderStatus(order.status)}</StatusBadge></TableCell>
           <TableCell className="text-right tabular-nums">{money(order.amount_minor, order.currency)}</TableCell>
           <TableCell className="text-right"><div className="flex justify-end gap-1"><Button variant="ghost" size="sm" onClick={() => openIdentity(order)}><Link2 className="size-4" /> Danh tính</Button><Button variant="ghost" size="sm" onClick={() => openFulfillment(order)}><Truck className="size-4" /> Vận hành</Button></div></TableCell>
           <TableCell className="whitespace-nowrap text-right text-xs text-muted-foreground">{dateTime(order.modified_at)}</TableCell>
         </TableRow>)}
-      </TableBody></Table></div>
+      </TableBody></Table></div> : <EmptyState icon={<PackageCheck />} title="Không có đơn khớp bộ lọc" detail="Đổi từ khóa hoặc bộ lọc kênh/trạng thái để xem các đơn marketplace khác." />}
     </section>
   );
 }
