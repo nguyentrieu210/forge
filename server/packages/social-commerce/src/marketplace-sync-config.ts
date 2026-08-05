@@ -2,9 +2,9 @@ import type { JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import {
   validateConnectorConnection,
-  type ConnectorAuthKind,
   type ConnectorConnection,
 } from "../../integration-hub/src/connection.js";
+import type { ConnectorAuthKind } from "../../integration-hub/src/index.js";
 import { marketplaceAdapter } from "../../integration-hub/src/marketplace-runtime.js";
 import type { MarketplaceProvider } from "./marketplace-order.js";
 
