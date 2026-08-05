@@ -1,0 +1,22 @@
+{
+  "format": "forge-alumdoor-pilot-03-status/v1",
+  "real_pilot_03": {
+    "status": "NOT_STARTED_REAL_DATA_GATED",
+    "gate": "real Pilot-01 READY -> real Pilot-02 accepted dry run -> real Pilot-03",
+    "production_write_authorized": false
+  },
+  "synthetic_pilot_03": {
+    "status": "SYNTHETIC_PARALLEL_CANDIDATE",
+    "contract": "docs/pilot/alumdoor/PILOT_03_SYNTHETIC_PARALLEL_V1.json",
+    "workflow": ".github/workflows/pilot-03-synthetic-parallel.yml",
+    "integration_test": "server/apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts",
+    "business_days": 3,
+    "default_tolerance": 0,
+    "contains_real_customer_data": false,
+    "uses_production_environment": false,
+    "production_write_authorized": false,
+    "production_data_mutated": false
+  },
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "claim_boundary": "Synthetic Pilot-03 evidence is test-only and cannot advance the real pilot or authorize production mutation/cutover."
+}
