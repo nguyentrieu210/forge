@@ -1,5 +1,6 @@
 import type { Actor, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
+import { crmCustomerExternalIdentityKey } from "../../clouderp-selling/src/index.js";
 import { ensureCanonicalSocialSalesOrder } from "./canonical-order.js";
 
 export const MARKETPLACE_PROVIDERS = ["shopee", "lazada", "tiktok_shop"] as const;
@@ -65,15 +66,22 @@ export async function ensureCanonicalMarketplaceSalesOrder(
   const normalized = normalizeMarketplaceOrderInput(input);
   const sourceKey = await marketplaceOrderSourceKey(normalized.provider, normalized.shop_id, normalized.external_order_id);
   const channelId = await marketplaceChannelId(normalized.provider, normalized.connection_id, normalized.shop_id);
+  const externalActorLineage = normalized.external_buyer_id
+    ? marketplaceCustomerIdentityLineage(await crmCustomerExternalIdentityKey(
+        normalized.provider,
+        normalized.shop_id,
+        normalized.external_buyer_id,
+      ))
+    : `marketplace:${normalized.provider}:guest`;
 
   // Reuse the already hardened social -> canonical Sales Order bridge. The
   // synthetic cart/page identifiers are deterministic marketplace lineage,
-  // not a second order source of truth. A future rename may generalize the
-  // legacy social_* field names without changing the canonical authority.
+  // not a second order source of truth. Buyer identity is an opaque CRM
+  // fingerprint: provider buyer/user ids never enter the canonical Sales Order.
   const canonical = await ensureCanonicalSocialSalesOrder(db, tenantId, actor, {
     cart_id: `marketplace:${sourceKey}`,
     page_id: channelId,
-    external_actor_id: normalized.external_buyer_id ?? `marketplace:${normalized.provider}:guest`,
+    external_actor_id: externalActorLineage,
     company: normalized.company,
     customer: normalized.customer,
     currency: normalized.currency,
@@ -156,6 +164,19 @@ export async function marketplaceChannelId(
   return `marketplace:${provider}:${digest.slice(0, 40)}`;
 }
 
+export function marketplaceCustomerIdentityLineage(identityKey: string): string {
+  if (typeof identityKey !== "string" || !/^[a-f0-9]{64}$/.test(identityKey)) {
+    throw errors.validation("Marketplace customer identity fingerprint is invalid");
+  }
+  return `crm-external-identity:${identityKey}`;
+}
+
+export function marketplaceCustomerIdentityKeyFromLineage(value: string): string | null {
+  if (typeof value !== "string") return null;
+  const match = /^crm-external-identity:([a-f0-9]{64})$/.exec(value);
+  return match?.[1] ?? null;
+}
+
 function normalizeItems(items: MarketplaceOrderItemInput[]): MarketplaceOrderItemInput[] {
   if (!Array.isArray(items) || items.length === 0 || items.length > 500) {
     throw errors.validation("Marketplace order requires 1..500 items");
@@ -208,7 +229,7 @@ function isoDate(value: string, field: string): string {
 
 function isoDateTime(value: string, field: string): string {
   const normalized = requiredText(value, field, 64);
-  if (Number.isNaN(Date.parse(normalized))) throw errors.validation(`${field} must be an ISO date-time`);
+  if (Number.isNaN(Date.parse(normalized)) ) throw errors.validation(`${field} must be an ISO date-time`);
   return new Date(normalized).toISOString();
 }
 
