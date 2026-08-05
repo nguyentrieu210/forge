@@ -62,7 +62,7 @@ test("browser start accepts only connection id after canonical manager authoriza
   assert.doesNotMatch(startBridge, /body\.(?:tenant_id|actor_id|provider|shop_id|secret_ref)/);
 });
 
-test("manager connection list exposes only canonical connection and non-secret credential health", () => {
+test("manager connection list exposes canonical credential and non-secret sync health only", () => {
   assert.match(startBridge, /\/api\/v1\/social\/marketplace\/connections/);
   assert.match(startBridge, /doctype='Marketplace Connection'/);
   assert.match(startBridge, /resolveMarketplaceConnection\(env\.DB, tenantId, row\.name\)/);
@@ -72,6 +72,13 @@ test("manager connection list exposes only canonical connection and non-secret c
   assert.match(startBridge, /reauthorization_required/);
   assert.match(startBridge, /access_expires_at/);
   assert.match(startBridge, /refresh_expires_at/);
+  assert.match(startBridge, /FROM marketplace_sync_state/);
+  assert.match(startBridge, /stream='orders'/);
+  assert.match(startBridge, /sync_health: sync/);
+  assert.match(startBridge, /last_error_code: sync\.last_error_code/);
+  assert.match(startBridge, /checkpoint: Number\(sync\.checkpoint\)/);
+  assert.doesNotMatch(startBridge, /SELECT[^`]*\bcursor\b/s);
+  assert.doesNotMatch(startBridge, /SELECT[^`]*\brun_id\b/s);
   assert.doesNotMatch(startBridge, /credential\.material|access_token|refresh_token|partner_key|app_secret/);
 });
 
