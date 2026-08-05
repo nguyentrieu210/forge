@@ -2,51 +2,147 @@
 
 Date: **2026-08-05**  
 Branch: `feature/omnichannel-commerce-erp`  
-Base: `main@5db9b0dff0c1aade9b807bf0977311127b4fb956`
+PR: `#675`  
+Base target: `main`
 
 ## Outcome
 
-Opened the marketplace extension as a WS16 consumer of existing Forge authorities rather than a new ERP codebase.
+WS16 extends Forge as a consumer/orchestrator of existing ERP authorities rather than introducing a second ERP runtime or marketplace-specific business ledger.
 
-Implemented independent scope:
+Current candidate covers Shopee, Lazada and TikTok Shop, while reusing the existing Facebook/Social Commerce surface.
 
-- Shopee/Lazada/TikTok Shop provider-neutral order contract;
-- collision-resistant deterministic external-order lineage;
-- `Commerce Channel Profile` metadata;
-- deterministic `Marketplace SKU Mapping` metadata;
-- server-side resolution of Company/Customer/Currency/Price List/Warehouse/Item from tenant metadata;
-- canonical Sales Order conversion through the existing DocumentKernel/O2C bridge;
+## Implemented engineering scope
+
+### Channel / connector authority
+
+- metadata-driven `Commerce Channel Profile`;
+- deterministic `Marketplace SKU Mapping`;
+- canonical `Marketplace Connection` metadata with one-connection-per-channel guard;
+- Shopee/Lazada/TikTok provider adapters and signed-request boundaries;
+- encrypted tenant credential vault with `secret_ref` only in metadata;
+- server-side OAuth code exchange and token refresh lifecycle;
+- existing control-plane `oauth_transactions` reused for single-use OAuth state;
+- browser connection health and re-authorization without browser access to seller secrets.
+
+### Order / inventory authority
+
+- provider-neutral bounded order contract;
+- collision-resistant SHA-256 external-order lineage;
+- server-side Company/Customer/Currency/Price List/Warehouse/Item resolution;
 - fail-closed provider merchandise-total reconciliation;
-- source-contract regression;
-- product architecture and dependency map in `docs/OMNICHANNEL_COMMERCE_ERP.md`.
+- canonical Sales Order conversion through DocumentKernel/O2C;
+- generic shared commercial ATP/reservation before conversion;
+- reservation release on failure/cancel and commit through canonical fulfillment;
+- no marketplace-specific physical stock ledger.
+
+### Sync / operational evidence
+
+- D1 CAS sync checkpoint/lease state;
+- bounded page loops and retry/backoff;
+- cursor advances only after canonical ingest;
+- fair least-recently-synced tenant polling with per-shop failure isolation;
+- TikTok update-time high-watermark + overlap replay protection;
+- read-only connection sync health with attempts/checkpoint/retry/error visibility;
+- monotonic provider-order external-status watermark with stale/duplicate/conflict counters;
+- provider event state remains evidence-only and cannot drive canonical lifecycle.
+
+### Mapping exception evidence
+
+- exact structured mapping failure reasons: missing, disabled, channel mismatch, SKU mismatch, variant mismatch;
+- tenant/channel/provider/SKU/variant exception inbox with first/last seen and occurrence count;
+- exact exception is resolved automatically once authoritative metadata resolution succeeds;
+- no buyer/order payload or credential material is stored;
+- exception state cannot create/edit `Marketplace SKU Mapping` or choose canonical Item.
+
+### Customer / fulfillment / finance
+
+- exact provider/shop-scoped CRM external customer identity authority;
+- submitted Sales Order customer history preserved on replay/reassignment;
+- cancel through canonical Sales Order lifecycle;
+- shipment registration requires existing canonical Delivery Note;
+- return registration requires existing canonical Stock Return;
+- server-enforced shipment transitions;
+- COD reconciliation constrained by canonical Delivery Note amount;
+- settlement evidence/variance workspace for payout, fee, voucher, refund and subsidy;
+- optional canonical Sales Invoice + Payment Entry evidence verification;
+- no marketplace GL, Payment Ledger or Finance source of truth.
+
+### MetaForge operator surfaces
+
+- Marketplace Connection credential + sync health cards;
+- seller OAuth/re-auth entry points;
+- marketplace order identity + fulfillment/return actions;
+- provider external-event health shown in fulfillment panel as evidence only;
+- settlement exception workspace in `Đối soát`;
+- mapping exception data exposed read-only through the authenticated connection projection; dedicated mapping inbox UI remains polish.
 
 ## Authority guard
 
-No Stock, GL, Payment or provider credential source of truth was added. Marketplace state remains channel/orchestration evidence around canonical ERP documents.
+No parallel authority was introduced for:
 
-The current compatibility bridge uses deterministic marketplace lineage through the existing `social_*` Sales Order lineage fields. Generalizing those shared fields is optional future cleanup and was not taken here because it would widen the shared contract blast radius without being required for authority correctness.
+- Stock / ATP physical truth;
+- GL / Payment / settlement ledger;
+- Customer master;
+- SKU mapping;
+- credential material;
+- OAuth state;
+- fulfillment lifecycle;
+- provider lifecycle;
+- sync scheduler/lease;
+- tenant routing.
 
-## Dependencies
+Marketplace remains orchestration and operational evidence around canonical Forge authorities. Provider/browser input cannot choose ERP master data, stock truth, finance truth, tenant identity, actor identity, credential scope or canonical lifecycle state.
 
-- `DR-COMMERCE-01 / WS04`: generic atomic stock reservation/ATP.
-- `DR-COMMERCE-02 / WS01`: provider payout/fee/voucher/shipping/refund settlement into canonical finance.
-- `DR-COMMERCE-03 / WS10+WS11+WS12`: production provider adapters, credential lifecycle, queue/DLQ/replay/health.
-- `DR-COMMERCE-04 / WS02`: customer identity linking policy.
+## Dependency status
 
-Independent implementation continues to be valid without inventing substitutes for these dependencies.
+- `DR-COMMERCE-01 / WS04`: **engineering satisfied** — shared commercial reservation/ATP is reused.
+- `DR-COMMERCE-02 / WS01`: **authority boundary satisfied** — settlement/COD evidence links to canonical Finance without parallel ledger; live provider statement certification remains external.
+- `DR-COMMERCE-03 / WS10+WS11+WS12`: **production-shaped code seams implemented** — real developer apps, seller authorization, redirect URLs, certification/live webhooks and provider-specific operational/DLQ requirements remain external.
+- `DR-COMMERCE-04 / WS02`: **engineering satisfied** — exact privacy-safe CRM identity authority is reused.
 
-## Validation state
+## Validation policy
 
-Source-contract test added at:
+Commerce validation is owned by `.github/workflows/commerce-ci.yml` and now watches WS16 source, UI, migrations, tests and the two commerce governance documents.
 
-`server/tests/ws16-marketplace-order-source-contract.test.mjs`
+Required exact-head evidence before merge/promotion:
 
-Executable exact-head build/test evidence is required before merge. Do not infer PASS from authored tests alone.
+- Omnichannel Commerce CI success;
+- production-equivalent CloudForge + MetaForge builds;
+- migration/restore/PITR safety;
+- Workerd ERP lifecycle;
+- auth/CSRF/tenant isolation;
+- tenant provisioning;
+- R6 Golden Flow;
+- release-safety / observability / queue safety;
+- Alumdoor composition/E18 authority;
+- read-only pilot evidence.
+
+The PR body is the authoritative location for the current validated SHA and workflow run IDs so this source checkpoint does not create a self-referential documentation commit loop.
+
+## Remaining external / product work
+
+External readiness:
+
+- register real Shopee/Lazada/TikTok developer apps;
+- configure Worker/provider secrets and redirect URLs;
+- authorize real seller accounts;
+- complete provider certification and live webhook verification;
+- implement provider-specific production operational/DLQ requirements where certification requires them;
+- controlled production promotion.
+
+Product polish/future scope:
+
+- dedicated mapping-exception inbox UI;
+- richer order search/SLA cockpit;
+- outbound listing/price/promotion management;
+- provider-specific refund/label flows;
+- dedicated BI profitability/SLA report pack.
 
 ## Release classification
 
-- Engineering risk: **STANDARD** for this isolated slice.
+- Engineering risk: **STANDARD**.
 - Release impact: **NEW_CANDIDATE**.
 - Frozen Alumdoor R6/Pilot baseline: unchanged.
 - Production mutation/deploy: none.
+- PR #675 remains Draft.
 - Merge/deploy: explicit approval boundary.
