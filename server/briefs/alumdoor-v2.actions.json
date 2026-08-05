@@ -1,6 +1,6 @@
 {
-  "version": "2.2.7",
-  "//": "Màn Mua hàng dùng metadata của Purchase Order Item để render bảng lớn inline; worker chỉ compose chứng từ canonical, không sở hữu UI hay ledger.",
+  "version": "2.2.8",
+  "//": "Màn Mua hàng và Nhập hàng dùng metadata child doctype để render bảng lớn inline; worker/controller giữ authoritative validation, FIFO và ledger.",
   "actions": [
     {
       "name": "tao-don-mua",
@@ -22,22 +22,22 @@
     },
     {
       "name": "nhap-nhom-hang-loat",
-      "label": "Nhập nhôm hàng loạt",
+      "label": "Nhập hàng",
       "menu": true,
-      "icon": "table-properties",
+      "icon": "package-check",
       "group": "Mua hàng",
-      "description": "Nhập nhiều mã nhôm trong một lần. Có thể thêm dòng hoặc dán vùng từ Excel/Google Sheets; hệ thống phân bổ FIFO theo đơn cũ, xem trước toàn bộ rồi tạo một Purchase Receipt nháp duy nhất.",
+      "description": "Màn nhập chung cho mọi mặt hàng. Chọn mã hàng để bảng tự áp metadata Purchase Receipt Item; nhôm giữ luồng FIFO theo đơn cũ và các loại hàng khác dùng cùng cấu trúc dòng chứng từ canonical.",
       "permission": "Purchase Receipt",
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
         "warehouse:Link(Warehouse)! Kho nhập",
         "posting_at:Datetime Ngày/giờ nhận",
         "supplier_invoice_no:Data! Số phiếu giao NCC",
-        "driver:Data Người giao",
-        "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã hàng\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true},{\"fieldname\":\"length_m\",\"label\":\"Chiều dài (m)\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"qty_bar\",\"label\":\"Số cây\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"actual_weight_kg\",\"label\":\"Kg thực cân\",\"fieldtype\":\"Float\",\"required\":true},{\"fieldname\":\"rate\",\"label\":\"Đơn giá/kg\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\",\"required\":true},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"required\":true,\"default\":\"Không\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true})! Chi tiết nhôm nhận"
+        "driver:Data Tài xế / người giao",
+        "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã SP\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true,\"link_filters\":\"[[\\\"Item\\\",\\\"disabled\\\",\\\"=\\\",0],[\\\"Item\\\",\\\"is_purchase_item\\\",\\\"=\\\",1]]\"},{\"fieldname\":\"length_m\",\"label\":\"Dài\",\"fieldtype\":\"Float\"},{\"fieldname\":\"width_m\",\"label\":\"Rộng\",\"fieldtype\":\"Float\"},{\"fieldname\":\"height_m\",\"label\":\"Cao\",\"fieldtype\":\"Float\"},{\"fieldname\":\"set_count\",\"label\":\"Bộ/Cái\",\"fieldtype\":\"Int\",\"default\":\"1\"},{\"fieldname\":\"theoretical_kg_per_m\",\"label\":\"Kg/m\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bundle\",\"label\":\"Bó\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bar\",\"label\":\"Cây\",\"fieldtype\":\"Float\"},{\"fieldname\":\"theoretical_kg\",\"label\":\"Kg BR\",\"fieldtype\":\"Float\"},{\"fieldname\":\"actual_weight_kg\",\"label\":\"Kg thực\",\"fieldtype\":\"Float\"},{\"fieldname\":\"actual_kg_per_m\",\"label\":\"Kg/m thực\",\"fieldtype\":\"Float\"},{\"fieldname\":\"actual_kg_per_sqm\",\"label\":\"Kg/m² thực\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty\",\"label\":\"SL\",\"fieldtype\":\"Float\"},{\"fieldname\":\"uom\",\"label\":\"ĐVT\",\"fieldtype\":\"Link\",\"options\":\"UOM\"},{\"fieldname\":\"rate\",\"label\":\"Đ.Giá\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"amount\",\"label\":\"T.Tiền\",\"fieldtype\":\"Currency\"},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\"},{\"fieldname\":\"condition\",\"label\":\"Tình trạng\",\"fieldtype\":\"Select\",\"options\":\"Thô\\nĐã sơn\\nLỗi\"},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"default\":\"Không\"},{\"fieldname\":\"so_no\",\"label\":\"SO NCC\",\"fieldtype\":\"Data\"},{\"fieldname\":\"note\",\"label\":\"G.Chú\",\"fieldtype\":\"Data\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true,\"presentation\":{\"mode\":\"child-grid-inline\",\"row_doctype\":\"Purchase Receipt Item\",\"fit_viewport\":true,\"emphasize_editable\":true}})! Danh sách mặt hàng"
       ],
-      "preview": "alumdoor.purchase.preview_bulk_fifo_receipt | Xem phân bổ hàng loạt",
-      "commit": "alumdoor.purchase.bulk_fifo_receipt | Tạo phiếu nhập hàng loạt | Tạo một Purchase Receipt nháp duy nhất cho toàn bộ dòng đã kiểm tra?",
+      "preview": "alumdoor.purchase.preview_bulk_fifo_receipt | Xem phân bổ FIFO",
+      "commit": "alumdoor.purchase.bulk_fifo_receipt | Tạo phiếu nhập | Tạo một Purchase Receipt nháp duy nhất cho toàn bộ dòng đã kiểm tra?",
       "resultTable": "items"
     },
     {
