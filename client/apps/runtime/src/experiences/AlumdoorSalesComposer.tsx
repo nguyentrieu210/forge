@@ -10,6 +10,10 @@ type Json = Record<string, unknown>;
 type FormulaResult = Json & {
   policy_name?: string;
   formula_version?: string;
+  item_group?: string;
+  door_type?: string;
+  ray_type?: string | null;
+  leaf_variant?: string | null;
   width_basis?: string;
   measured_width_m?: number;
   cover_width_m?: number;
@@ -18,6 +22,13 @@ type FormulaResult = Json & {
   billable_area_sqm?: number;
   leaf_count?: number;
   total_leaf_count?: number;
+  single_layer_leaf_count?: number | null;
+  double_layer_leaf_count?: number | null;
+  leaf_height_deduction_m?: number | null;
+  leaf_divisor_m?: number | null;
+  leaf_rounding?: string;
+  estimated_weight_kg?: number | null;
+  formula_explanation?: string;
   leaf_error?: string | null;
   bom_no?: string | null;
   stock_profile_item?: string | null;
@@ -43,6 +54,20 @@ type StockProposal = {
   message?: string;
 };
 
+type ReservationResult = {
+  reservation?: string;
+  state?: string;
+  message?: string;
+};
+
+type PolicyChoice = {
+  policy_name?: string;
+  door_type?: string;
+  item_group?: string;
+  ray_type?: string;
+  disabled?: unknown;
+};
+
 interface CustomerState {
   name: string;
   group: string;
@@ -64,6 +89,7 @@ interface DoorLine {
   rayType: string;
   hasButterflyBracket: boolean;
   leafVariant: string;
+  leafVariantOptions: string[];
   motorModel: string;
   accessories: string;
   formula: FormulaResult | null;
@@ -76,6 +102,12 @@ interface DoorLine {
 const today = () => {
   const date = new Date();
   return new Date(date.valueOf() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+};
+
+const reservationExpiry = (deliveryDate: string) => {
+  const endOfDeliveryDay = new Date(`${deliveryDate}T23:59:59.999`);
+  if (!Number.isFinite(endOfDeliveryDay.valueOf())) throw new Error("Ngày giao không hợp lệ để giữ chỗ tồn kho.");
+  return endOfDeliveryDay.toISOString();
 };
 
 const newLine = (): DoorLine => ({
@@ -91,6 +123,7 @@ const newLine = (): DoorLine => ({
   rayType: "",
   hasButterflyBracket: false,
   leafVariant: "",
+  leafVariantOptions: [],
   motorModel: "",
   accessories: "",
   formula: null,
@@ -110,6 +143,7 @@ const money = (value: unknown, currency = "VND") => new Intl.NumberFormat("vi-VN
   currency: currency || "VND",
   maximumFractionDigits: 0,
 }).format(Number(value) || 0);
+const checked = (value: unknown) => value === true || value === 1 || value === "1" || String(value ?? "").toLocaleLowerCase("vi") === "true";
 
 function CanonicalLink({ label, doctype, value, onChange, required, readOnly }: {
   label: string;
@@ -170,6 +204,7 @@ export function AlumdoorOperationsCenter() {
   const [deliveryDate, setDeliveryDate] = useState(today());
   const [customer, setCustomer] = useState<CustomerState>({ name: "", group: "", phone: "", address: "", priceList: "" });
   const [lines, setLines] = useState<DoorLine[]>([newLine()]);
+  const [policyChoices, setPolicyChoices] = useState<PolicyChoice[]>([]);
   const [saving, setSaving] = useState<"" | "draft" | "submit">("");
   const [globalError, setGlobalError] = useState("");
   const [createdOrder, setCreatedOrder] = useState<Doc | null>(null);
@@ -177,6 +212,20 @@ export function AlumdoorOperationsCenter() {
 
   useEffect(() => { if (contextCompany) setCompany(contextCompany); }, [contextCompany]);
   useEffect(() => { if (contextWarehouse) setWarehouse(contextWarehouse); }, [contextWarehouse]);
+
+  useEffect(() => {
+    let active = true;
+    void adapter.getList("Cutting Policy", {
+      fields: ["policy_name", "door_type", "item_group", "ray_type", "disabled"],
+      orderBy: "policy_name asc",
+      pageLength: 500,
+    }).then((rows) => {
+      if (active) setPolicyChoices(rows as PolicyChoice[]);
+    }).catch((error) => {
+      if (active) setGlobalError(`Không đọc được lựa chọn Cutting Policy: ${adapter.mapError(error).message}`);
+    });
+    return () => { active = false; };
+  }, [adapter]);
 
   useEffect(() => {
     if (!company) { setCurrency(""); return; }
@@ -219,6 +268,8 @@ export function AlumdoorOperationsCenter() {
     })),
   }), [company, currency, warehouse, deliveryDate, customer.name, customer.group, customer.priceList, lines]);
 
+  useEffect(() => { setCreatedOrder(null); }, [inputFingerprint]);
+
   useEffect(() => {
     const generation = ++previewGeneration.current;
     const timer = window.setTimeout(() => {
@@ -226,7 +277,7 @@ export function AlumdoorOperationsCenter() {
       setLines((current) => current.map((line) => ({ ...line, busy: Boolean(line.itemCode && positive(line.widthM) && positive(line.heightM)), error: "" })));
       void Promise.all(lines.map(async (line, index) => {
         if (!line.itemCode.trim() || !positive(line.widthM) || !positive(line.heightM) || !Number.isInteger(Number(line.setCount)) || Number(line.setCount) <= 0) {
-          if (generation === previewGeneration.current) setLines((current) => current.map((entry, i) => i === index ? { ...entry, formula: null, price: null, stock: null, busy: false, error: "" } : entry));
+          if (generation === previewGeneration.current) setLines((current) => current.map((entry, i) => i === index ? { ...entry, formula: null, price: null, stock: null, leafVariantOptions: [], busy: false, error: "" } : entry));
           return;
         }
         try {
@@ -245,7 +296,13 @@ export function AlumdoorOperationsCenter() {
             ...(line.color ? { color: line.color } : {}),
             delivery_date: deliveryDate,
           });
-          if (formula.leaf_error) throw new Error(formula.leaf_error);
+
+          let leafVariantOptions: string[] = [];
+          if (formula.policy_name) {
+            const policy = await adapter.getDoc("Cutting Policy", formula.policy_name);
+            const variants = Array.isArray(policy.doc.leaf_variants) ? policy.doc.leaf_variants as Json[] : [];
+            leafVariantOptions = [...new Set(variants.map((row) => String(row.variant_label ?? "").trim()).filter(Boolean))];
+          }
 
           let price: PriceResult | null = null;
           if (canPrice) {
@@ -259,7 +316,7 @@ export function AlumdoorOperationsCenter() {
           }
 
           let stock: StockProposal | null = null;
-          if (warehouse && formula.stock_profile_item) {
+          if (!formula.leaf_error && warehouse && formula.stock_profile_item) {
             const sheets = Number(formula.total_leaf_count);
             const cutWidth = Number(formula.cut_width_m);
             if (!Number.isInteger(sheets) || sheets <= 0 || !Number.isFinite(cutWidth) || cutWidth <= 0) {
@@ -275,10 +332,13 @@ export function AlumdoorOperationsCenter() {
           }
 
           if (generation !== previewGeneration.current) return;
-          setLines((current) => current.map((entry, i) => i === index ? { ...entry, formula, price, stock, busy: false, error: stock && Number(stock.short ?? 0) > 0 ? (stock.message || `Thiếu ${stock.short} lá.`) : "" } : entry));
+          const lineError = formula.leaf_error
+            || (stock && Number(stock.short ?? 0) > 0 ? (stock.message || `Thiếu ${stock.short} lá.`) : "")
+            || "";
+          setLines((current) => current.map((entry, i) => i === index ? { ...entry, formula, price, stock, leafVariantOptions, busy: false, error: lineError } : entry));
         } catch (error) {
           if (generation !== previewGeneration.current) return;
-          setLines((current) => current.map((entry, i) => i === index ? { ...entry, formula: null, price: null, stock: null, busy: false, error: adapter.mapError(error).message } : entry));
+          setLines((current) => current.map((entry, i) => i === index ? { ...entry, formula: null, price: null, stock: null, leafVariantOptions: [], busy: false, error: adapter.mapError(error).message } : entry));
         }
       }));
     }, 450);
@@ -292,7 +352,19 @@ export function AlumdoorOperationsCenter() {
     setLines((current) => current.map((line, i) => i === index ? { ...line, ...patch, formula: patch.formula ?? null, price: patch.price ?? null, stock: patch.stock ?? null, error: "" } : line));
   };
 
-  const readyLines = lines.filter((line) => line.formula && line.price && (!warehouse || line.stock));
+  const rayOptionsFor = (line: DoorLine) => {
+    const doorType = String(line.formula?.door_type ?? "").trim();
+    const itemGroup = String(line.formula?.item_group ?? "").trim();
+    if (!doorType) return [];
+    return [...new Set(policyChoices
+      .filter((policy) => !checked(policy.disabled))
+      .filter((policy) => String(policy.door_type ?? "").trim() === doorType)
+      .filter((policy) => !String(policy.item_group ?? "").trim() || String(policy.item_group ?? "").trim() === itemGroup)
+      .map((policy) => String(policy.ray_type ?? "").trim())
+      .filter(Boolean))];
+  };
+
+  const readyLines = lines.filter((line) => line.formula && !line.formula.leaf_error && line.price && (!warehouse || line.stock));
   const blockers = lines.flatMap((line, index) => {
     const out: string[] = [];
     if (!line.itemCode.trim()) out.push(`Bộ ${index + 1}: chưa chọn mặt hàng`);
@@ -313,10 +385,13 @@ export function AlumdoorOperationsCenter() {
     if (!["Đại lý", "Lẻ"].includes(customer.group)) return setGlobalError("Khách hàng chưa có Nhóm giá Đại lý/Lẻ."), undefined;
     if (!customer.priceList) return setGlobalError("Khách hàng chưa có Bảng giá mặc định; hãy chọn Bảng giá."), undefined;
     if (!deliveryDate) return setGlobalError("Cần ngày giao dự kiến."), undefined;
+    if (deliveryDate < today()) return setGlobalError("Ngày giao không được ở quá khứ."), undefined;
     if (!warehouse) return setGlobalError("Cần chọn Kho để kiểm tra khả năng đáp ứng."), undefined;
     if (blockers.length || readyLines.length !== lines.length) return setGlobalError(blockers[0] || "Các dòng chưa tính xong giá/kho."), undefined;
 
     setSaving(draftOnly ? "draft" : "submit");
+    let created: Doc | null = null;
+    const reservations: string[] = [];
     try {
       for (const [index, line] of lines.entries()) {
         const formula = line.formula!;
@@ -345,11 +420,21 @@ export function AlumdoorOperationsCenter() {
           set_count: Number(line.setCount),
           sales_mode: line.salesMode,
           has_butterfly_bracket: line.hasButterflyBracket ? 1 : 0,
+          ...(formula.door_type ? { door_type: formula.door_type } : {}),
+          ...(formula.leaf_variant ? { leaf_variant: formula.leaf_variant } : {}),
           formula_policy: formula.policy_name,
           formula_version: formula.formula_version,
           width_basis: formula.width_basis,
           cut_width_m: formula.cut_width_m,
           billable_area_sqm: qty,
+          leaf_count: formula.leaf_count,
+          ...(formula.single_layer_leaf_count == null ? {} : { single_layer_leaf_count: formula.single_layer_leaf_count }),
+          ...(formula.double_layer_leaf_count == null ? {} : { double_layer_leaf_count: formula.double_layer_leaf_count }),
+          ...(formula.leaf_height_deduction_m == null ? {} : { leaf_height_deduction_m: formula.leaf_height_deduction_m }),
+          ...(formula.leaf_divisor_m == null ? {} : { leaf_divisor_m: formula.leaf_divisor_m }),
+          ...(formula.leaf_rounding ? { leaf_rounding: formula.leaf_rounding } : {}),
+          ...(formula.estimated_weight_kg == null ? {} : { estimated_weight_kg: formula.estimated_weight_kg }),
+          ...(formula.formula_explanation ? { formula_explanation: formula.formula_explanation } : {}),
           uom: price.selected_uom,
           qty,
           rate: Number(price.rate),
@@ -359,7 +444,8 @@ export function AlumdoorOperationsCenter() {
         };
       });
 
-      const created = await adapter.createDoc("Sales Order", {
+      const existingDraft = createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? createdOrder : null;
+      created = existingDraft ?? await adapter.createDoc("Sales Order", {
         customer: customer.name,
         company,
         currency,
@@ -370,11 +456,49 @@ export function AlumdoorOperationsCenter() {
         install_address: customer.address || undefined,
         items,
       });
-      const finalDoc = draftOnly ? created : await adapter.submit(created);
+
+      if (draftOnly) {
+        setCreatedOrder(created);
+        toast.success(`Đã lưu nháp ${created.name}.`);
+        return;
+      }
+
+      const expiresAt = reservationExpiry(deliveryDate);
+      for (const [index, line] of lines.entries()) {
+        const formula = line.formula!;
+        const result = await adapter.callPost<ReservationResult>("alumdoor.reserve.create", {
+          item_code: String(formula.stock_profile_item),
+          warehouse,
+          ...(line.color ? { color: line.color } : {}),
+          min_length_m: Number(formula.cut_width_m),
+          qty_reserved: Number(formula.total_leaf_count),
+          source_doctype: "Sales Order",
+          source_name: created.name,
+          expires_at: expiresAt,
+        });
+        const reservation = String(result.reservation ?? "").trim();
+        if (!reservation) throw new Error(`Bộ ${index + 1}: giữ chỗ thành công nhưng không trả về mã phiếu.`);
+        reservations.push(reservation);
+      }
+
+      const finalDoc = await adapter.submit(created);
       setCreatedOrder(finalDoc);
-      toast.success(draftOnly ? `Đã lưu nháp ${finalDoc.name}.` : `Đã xác nhận đơn ${finalDoc.name}.`);
+      toast.success(`Đã xác nhận đơn ${finalDoc.name} và giữ ${reservations.length} nhu cầu nhôm.`);
     } catch (error) {
-      setGlobalError(adapter.mapError(error).message);
+      const failedReleases: string[] = [];
+      for (const reservation of reservations.reverse()) {
+        try {
+          await adapter.callPost("alumdoor.reserve.release", {
+            reservation,
+            released_reason: "Hoàn tác tự động vì xác nhận Sales Order không hoàn tất.",
+          });
+        } catch {
+          failedReleases.push(reservation);
+        }
+      }
+      if (created && Number(created.docstatus ?? 0) === 0) setCreatedOrder(created);
+      const mapped = adapter.mapError(error).message;
+      setGlobalError(`${mapped}${created ? ` Đơn nháp ${created.name} vẫn được giữ để kiểm tra.` : ""}${failedReleases.length ? ` Không nhả tự động được: ${failedReleases.join(", ")}.` : ""}`);
     } finally {
       setSaving("");
     }
@@ -396,7 +520,7 @@ export function AlumdoorOperationsCenter() {
         <div className="grid gap-1.5"><Label>Nhóm giá</Label><Input value={customer.group} readOnly placeholder="Tự lấy từ khách" /></div>
         <CanonicalLink label="Bảng giá" doctype="Price List" value={customer.priceList} onChange={(priceList) => setCustomer((current) => ({ ...current, priceList }))} required />
         {contextWarehouse ? <div className="grid gap-1.5"><Label>Kho ATP</Label><Input value={warehouse} readOnly /></div> : <CanonicalLink label="Kho ATP" doctype="Warehouse" value={warehouse} onChange={setWarehouse} required />}
-        <div className="grid gap-1.5"><Label>Ngày giao *</Label><Input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
+        <div className="grid gap-1.5"><Label>Ngày giao *</Label><Input type="date" min={today()} value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
         <div className="grid gap-1.5 md:col-span-2 xl:col-span-3"><Label>Điện thoại</Label><Input value={customer.phone} readOnly placeholder="Tự lấy từ khách" /></div>
         <div className="grid gap-1.5 md:col-span-2 xl:col-span-3"><Label>Địa chỉ giao / lắp</Label><Input value={customer.address} onChange={(event) => setCustomer((current) => ({ ...current, address: event.target.value }))} placeholder="Tự lấy từ khách; sửa cho riêng đơn này nếu cần" /></div>
       </section>
@@ -405,6 +529,7 @@ export function AlumdoorOperationsCenter() {
         {lines.map((line, index) => {
           const estimated = Number(line.formula?.billable_area_sqm ?? 0) * Number(line.price?.rate ?? 0);
           const short = Number(line.stock?.short ?? 0);
+          const rayOptions = rayOptionsFor(line);
           return <section key={line.id} className="overflow-hidden rounded-xl border bg-card">
             <div className="flex items-center gap-2 border-b bg-muted/25 px-3 py-2">
               <strong className="text-sm">Bộ cửa {index + 1}</strong>
@@ -415,7 +540,7 @@ export function AlumdoorOperationsCenter() {
             <div className="grid min-w-0 xl:grid-cols-[minmax(430px,1.15fr)_minmax(300px,.85fr)_minmax(300px,.8fr)]">
               <div className="grid content-start gap-3 border-b p-3 xl:border-b-0 xl:border-r">
                 <div className="grid gap-3 md:grid-cols-2">
-                  <CanonicalLink label="Mặt hàng cửa" doctype="Item" value={line.itemCode} onChange={(itemCode) => updateLine(index, { itemCode })} required />
+                  <CanonicalLink label="Mặt hàng cửa" doctype="Item" value={line.itemCode} onChange={(itemCode) => updateLine(index, { itemCode, rayType: "", leafVariant: "", leafVariantOptions: [] })} required />
                   <CanonicalLink label="Màu" doctype="Item Color" value={line.color} onChange={(color) => updateLine(index, { color })} />
                 </div>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -432,8 +557,8 @@ export function AlumdoorOperationsCenter() {
                 <details className="rounded-lg border bg-muted/15 p-3">
                   <summary className="cursor-pointer text-sm font-medium">Tùy chọn nâng cao</summary>
                   <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <div className="grid gap-1.5"><Label>Loại ray</Label><Input value={line.rayType} onChange={(event) => updateLine(index, { rayType: event.target.value })} placeholder="Để trống = policy tự chọn" /></div>
-                    <div className="grid gap-1.5"><Label>Biến thể chia lá</Label><Input value={line.leafVariant} onChange={(event) => updateLine(index, { leafVariant: event.target.value })} /></div>
+                    {rayOptions.length ? <div className="grid gap-1.5"><Label>Loại ray</Label><select className="h-10 rounded-md border bg-background px-2 text-sm" value={line.rayType} onChange={(event) => updateLine(index, { rayType: event.target.value, leafVariant: "" })}><option value="">Tự chọn theo policy</option>{rayOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select>{!line.rayType && line.formula?.ray_type ? <span className="text-[11px] text-muted-foreground">Đang áp: {line.formula.ray_type}</span> : null}</div> : null}
+                    {line.leafVariantOptions.length ? <div className="grid gap-1.5"><Label>Biến thể chia lá</Label><select className="h-10 rounded-md border bg-background px-2 text-sm" value={line.leafVariant} onChange={(event) => updateLine(index, { leafVariant: event.target.value })}><option value="">Chọn theo loại motor</option>{line.leafVariantOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></div> : null}
                     <CanonicalLink label="Mô tơ" doctype="Item" value={line.motorModel} onChange={(motorModel) => updateLine(index, { motorModel })} />
                     <div className="grid gap-1.5 md:col-span-2 xl:col-span-3"><Label>Phụ kiện / ghi chú cấu hình</Label><Input value={line.accessories} onChange={(event) => updateLine(index, { accessories: event.target.value })} /></div>
                   </div>
@@ -473,7 +598,7 @@ export function AlumdoorOperationsCenter() {
                     {short > 0 ? `Thiếu ${fmt(short, 0)} lá` : "Đủ lô nhôm để đáp ứng"}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">{line.stock.message || `${(line.stock.picks ?? []).length} lô được đề xuất.`}</div>
-                </div> : <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Đang chờ kết quả ATP…</div> : <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">Chọn Kho ATP để kiểm tra khả năng đáp ứng.</div>}
+                </div> : <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{line.formula?.leaf_error ? "Chọn đủ biến thể kỹ thuật để tính ATP." : "Đang chờ kết quả ATP…"}</div> : <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">Chọn Kho ATP để kiểm tra khả năng đáp ứng.</div>}
 
                 {line.error ? <div className="flex gap-2 rounded-lg border border-destructive/35 bg-destructive/5 p-3 text-sm text-destructive"><TriangleAlert className="mt-0.5 size-4 shrink-0" />{line.error}</div> : null}
               </div>
@@ -488,10 +613,10 @@ export function AlumdoorOperationsCenter() {
         <div className="min-w-0 flex-1">
           <div className="text-xs text-muted-foreground">{lines.length} cấu hình · {blockers.length ? `${blockers.length} điểm chưa sẵn sàng` : "sẵn sàng xác nhận"}</div>
           <div className="text-lg font-bold tabular-nums">Dự kiến {money(estimatedTotal, currency || "VND")}</div>
-          <div className="text-[11px] text-muted-foreground">Controller Sales Order vẫn tra/ghi lại giá canonical khi lưu.</div>
+          <div className="text-[11px] text-muted-foreground">Xác nhận đơn sẽ tạo giữ chỗ canonical theo đúng nhôm/BOM; tồn thực chỉ thay đổi khi cắt/xuất.</div>
         </div>
         <Button type="button" variant="outline" disabled={Boolean(saving)} onClick={() => void submitOrder(true)}>{saving === "draft" ? <Loader2 className="size-4 animate-spin" /> : null} Lưu nháp</Button>
-        <Button type="button" disabled={Boolean(saving) || blockers.length > 0} onClick={() => void submitOrder(false)}>{saving === "submit" ? <Loader2 className="size-4 animate-spin" /> : null} Xác nhận đơn</Button>
+        <Button type="button" disabled={Boolean(saving) || blockers.length > 0} onClick={() => void submitOrder(false)}>{saving === "submit" ? <Loader2 className="size-4 animate-spin" /> : null} Xác nhận & giữ chỗ</Button>
       </div>
 
       {globalError ? <div className="rounded-lg border border-destructive/35 bg-destructive/5 px-3 py-2 text-sm text-destructive">{globalError}</div> : null}
