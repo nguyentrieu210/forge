@@ -50,8 +50,8 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build MetaForge runtime
-        run: pnpm --filter runtime run build
+      - name: Build MetaForge workspace
+        run: pnpm run client:build
 
       - name: Stage runtime assets
         run: node server/scripts/stage-client-bundle.mjs
