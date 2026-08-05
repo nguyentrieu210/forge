@@ -72,6 +72,34 @@
       "resultTable": "results"
     },
     {
+      "name": "bao-cao-ban-hang",
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "chart-no-axes-combined",
+      "group": "Bán hàng",
+      "description": "Dashboard vận hành đọc trực tiếp Sales Order canonical: doanh số đơn, số đơn đang mở, quá hạn giao, top khách và tiến độ giao.",
+      "permission": "Sales Order",
+      "permissionAction": "read",
+      "fields": [
+        "report_config:Text(OperationalReport:{\"sourceDoctype\":\"Sales Order\",\"submittedOnly\":true,\"dateField\":\"transaction_date\",\"keyField\":\"customer\",\"valueField\":\"grand_total\",\"statusField\":\"status\",\"progressField\":\"per_delivered\",\"dueDateField\":\"delivery_date\",\"currencyField\":\"currency\",\"companyField\":\"company\",\"openDoctype\":\"Sales Order\",\"chartTop\":8,\"labels\":{\"key\":\"Khách hàng\",\"value\":\"Doanh số đơn\",\"documents\":\"Số đơn\",\"open\":\"Chưa giao đủ\",\"overdue\":\"Quá hạn giao\",\"progress\":\"Tiến độ giao\",\"search\":\"Tìm khách hàng, mã đơn…\",\"detail\":\"Đơn hàng của khách\"}}) Cấu hình dashboard"
+      ],
+      "commit": "alumdoor.delivery_batch.preview | Làm mới"
+    },
+    {
+      "name": "lich-su-mua-hang",
+      "label": "Lịch sử mua hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Mua hàng",
+      "description": "Dòng thời gian hợp nhất Purchase Order và Purchase Receipt canonical. Chỉ là read model; mỗi dòng mở lại đúng chứng từ gốc, không tạo sổ lịch sử riêng.",
+      "permission": "Purchase Order",
+      "permissionAction": "read",
+      "fields": [
+        "history_config:Text(DocumentHistory:{\"sources\":[{\"doctype\":\"Purchase Order\",\"label\":\"Đơn mua\",\"dateField\":\"transaction_date\",\"partyField\":\"supplier\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"companyField\":\"company\"},{\"doctype\":\"Purchase Receipt\",\"label\":\"Phiếu nhập\",\"dateField\":\"posting_at\",\"partyField\":\"supplier\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"referenceField\":\"supplier_invoice_no\",\"companyField\":\"company\"}],\"labels\":{\"party\":\"Nhà cung cấp\",\"reference\":\"Phiếu giao NCC\",\"value\":\"Giá trị\",\"date\":\"Ngày\",\"type\":\"Nghiệp vụ\"}}) Cấu hình lịch sử"
+      ],
+      "commit": "alumdoor.purchase.supplier_delivery_dashboard | Làm mới"
+    },
+    {
       "name": "doi-soat-giao-hang-ncc",
       "label": "Đối soát giao hàng NCC",
       "menu": true,
