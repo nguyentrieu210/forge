@@ -5,7 +5,13 @@ import {
   ensureCanonicalSocialSalesOrder,
   resolveCanonicalDeliveryShipment,
 } from "./canonical-order.js";
-import { ensureCanonicalMarketplaceSalesOrder } from "./marketplace-order.js";
+import { resolveCanonicalSalesStockReturn } from "./canonical-return.js";
+import {
+  commitMarketplaceReservationForCart,
+  ingestResolvedMarketplaceOrder,
+  listMarketplaceOperationalOrders,
+  releaseMarketplaceReservationForCart,
+} from "./marketplace-operations.js";
 import { resolveMarketplaceOrderFromMetadata, type MarketplaceProviderOrderInput } from "./marketplace-profile.js";
 
 const WRITE_ROLES = new Set(["System Manager", "Social Commerce Manager", "Sales Manager", "Sales User"]);
@@ -86,6 +92,11 @@ export async function routeSocialCommerceApi(
     ).bind(tenantId).all();
     return jsonResponse({ carts: result.results ?? [] });
   }
+  if (request.method === "GET" && url.pathname === "/api/v1/social/marketplace/orders") {
+    requireReader(actor);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    return jsonResponse({ orders: await listMarketplaceOperationalOrders(db, tenantId, limit) });
+  }
   if (request.method === "POST" && url.pathname === "/api/v1/social/marketplace/orders/ingest") {
     requireWriter(actor);
     const body = await readJson<JsonObject>(request, 64_000);
@@ -94,12 +105,12 @@ export async function routeSocialCommerceApi(
       tenantId,
       body as unknown as MarketplaceProviderOrderInput,
     );
-    const canonical = await ensureCanonicalMarketplaceSalesOrder(db, tenantId, actor, resolved.order);
+    const operational = await ingestResolvedMarketplaceOrder(db, tenantId, actor, resolved);
     return jsonResponse({
       channel_profile: resolved.channel_profile,
       warehouse: resolved.warehouse,
-      ...canonical,
-      stock_reservation: "pending_ws04_generic_reservation",
+      ...operational,
+      stock_reservation: operational.reservation.idempotent_replay ? "idempotent" : "active",
     }, 201);
   }
   if (request.method === "POST" && url.pathname === "/api/v1/social/rules") {
@@ -211,7 +222,10 @@ export async function routeSocialCommerceApi(
       "SELECT cart_id,sales_order_name,status FROM social_orders WHERE tenant_id=?1 AND order_id=?2",
     ).bind(tenantId, orderId).first<{ cart_id: string; sales_order_name: string | null; status: string }>();
     if (!order) throw errors.notFound("Social order not found");
-    if (order.status === "cancelled") return jsonResponse({ order_id: orderId, sales_order_name: order.sales_order_name, status: "cancelled", idempotent_replay: true });
+    if (order.status === "cancelled") {
+      await releaseMarketplaceReservationForCart(db, tenantId, order.cart_id, "Order already cancelled");
+      return jsonResponse({ order_id: orderId, sales_order_name: order.sales_order_name, status: "cancelled", idempotent_replay: true });
+    }
     if (!order.sales_order_name) throw errors.lifecycle("Social order is not linked to a canonical Sales Order");
     const reconciledCod = await db.prepare(
       "SELECT COUNT(*) AS value FROM social_shipments WHERE tenant_id=?1 AND order_id=?2 AND cod_reconciled_at IS NOT NULL",
@@ -225,9 +239,10 @@ export async function routeSocialCommerceApi(
     await db.batch([
       db.prepare("UPDATE social_orders SET status='cancelled',modified_at=?3 WHERE tenant_id=?1 AND order_id=?2").bind(tenantId, orderId, now),
       db.prepare("UPDATE social_carts SET status='cancelled',modified_at=?3 WHERE tenant_id=?1 AND cart_id=?2").bind(tenantId, order.cart_id, now),
-      db.prepare("UPDATE social_shipments SET status='cancelled',modified_at=?3 WHERE tenant_id=?1 AND order_id=?2 AND cod_reconciled_at IS NULL").bind(tenantId, orderId, now),
+      db.prepare("UPDATE social_shipments SET status='failed',modified_at=?3 WHERE tenant_id=?1 AND order_id=?2 AND cod_reconciled_at IS NULL AND status NOT IN ('delivered','returned')").bind(tenantId, orderId, now),
     ]);
-    return jsonResponse({ order_id: orderId, sales_order_name: canonical.sales_order_name, status: "cancelled", idempotent_replay: canonical.idempotent_replay });
+    const released = await releaseMarketplaceReservationForCart(db, tenantId, order.cart_id, "Canonical Sales Order cancelled");
+    return jsonResponse({ order_id: orderId, sales_order_name: canonical.sales_order_name, status: "cancelled", idempotent_replay: canonical.idempotent_replay, stock_reservations_released: released });
   }
 
   const shipment = url.pathname.match(/^\/api\/v1\/social\/orders\/([^/]+)\/shipments$/);
@@ -236,8 +251,8 @@ export async function routeSocialCommerceApi(
     const orderId = pathId(shipment[1]!, "order_id");
     const body = await readJson<JsonObject>(request, 16_000);
     const order = await db.prepare(
-      "SELECT status,sales_order_name,currency FROM social_orders WHERE tenant_id=?1 AND order_id=?2",
-    ).bind(tenantId, orderId).first<{ status: string; sales_order_name: string | null; currency: string }>();
+      "SELECT cart_id,status,sales_order_name,currency FROM social_orders WHERE tenant_id=?1 AND order_id=?2",
+    ).bind(tenantId, orderId).first<{ cart_id: string; status: string; sales_order_name: string | null; currency: string }>();
     if (!order || ["cancelled", "returned"].includes(order.status)) throw errors.notFound("Active order not found");
     if (!order.sales_order_name) throw errors.lifecycle("Social order is not linked to a canonical Sales Order");
 
@@ -255,7 +270,8 @@ export async function routeSocialCommerceApi(
         || existingShipment.carrier !== carrier
         || (existingShipment.tracking_code ?? "") !== tracking
         || existingShipment.cod_expected_minor !== canonicalDelivery.grand_total_minor) throw errors.idempotency();
-      return jsonResponse({ shipment_id: shipmentId, delivery_note_name: shipmentId, sales_order_name: order.sales_order_name, status: existingShipment.status, cod_expected_minor: existingShipment.cod_expected_minor, idempotent_replay: true });
+      const committed = await commitMarketplaceReservationForCart(db, tenantId, order.cart_id);
+      return jsonResponse({ shipment_id: shipmentId, delivery_note_name: shipmentId, sales_order_name: order.sales_order_name, status: existingShipment.status, cod_expected_minor: existingShipment.cod_expected_minor, stock_reservations_committed: committed, idempotent_replay: true });
     }
 
     const now = new Date().toISOString();
@@ -264,7 +280,66 @@ export async function routeSocialCommerceApi(
         VALUES(?1,?2,?3,?4,?5,'ready',?6,?7,?7)`).bind(tenantId, shipmentId, orderId, carrier, tracking || null, canonicalDelivery.grand_total_minor, now),
       db.prepare("UPDATE social_orders SET status='packing',modified_at=?3 WHERE tenant_id=?1 AND order_id=?2").bind(tenantId, orderId, now),
     ]);
-    return jsonResponse({ shipment_id: shipmentId, delivery_note_name: shipmentId, sales_order_name: order.sales_order_name, status: "ready", cod_expected_minor: canonicalDelivery.grand_total_minor }, 201);
+    const committed = await commitMarketplaceReservationForCart(db, tenantId, order.cart_id);
+    return jsonResponse({ shipment_id: shipmentId, delivery_note_name: shipmentId, sales_order_name: order.sales_order_name, status: "ready", cod_expected_minor: canonicalDelivery.grand_total_minor, stock_reservations_committed: committed }, 201);
+  }
+
+  const shipmentStatus = url.pathname.match(/^\/api\/v1\/social\/shipments\/([^/]+)\/status$/);
+  if (request.method === "POST" && shipmentStatus) {
+    requireFulfillment(actor);
+    const shipmentId = pathId(shipmentStatus[1]!, "shipment_id");
+    const body = await readJson<JsonObject>(request, 8_000);
+    const desired = text(body.status, "status", 40);
+    if (!["picked_up", "in_transit", "delivered", "failed"].includes(desired)) throw errors.validation("Shipment status is invalid");
+    const current = await db.prepare(`
+      SELECT s.order_id,s.status,o.status AS order_status
+      FROM social_shipments s JOIN social_orders o ON o.tenant_id=s.tenant_id AND o.order_id=s.order_id
+      WHERE s.tenant_id=?1 AND s.shipment_id=?2
+    `).bind(tenantId, shipmentId).first<{ order_id: string; status: string; order_status: string }>();
+    if (!current) throw errors.notFound("Shipment not found");
+    if (current.status === desired) return jsonResponse({ shipment_id: shipmentId, order_id: current.order_id, status: desired, idempotent_replay: true });
+    assertShipmentTransition(current.status, desired);
+    const orderStatus = desired === "delivered" ? "completed" : desired === "failed" ? "packing" : "shipped";
+    const now = new Date().toISOString();
+    await db.batch([
+      db.prepare("UPDATE social_shipments SET status=?3,modified_at=?4 WHERE tenant_id=?1 AND shipment_id=?2").bind(tenantId, shipmentId, desired, now),
+      db.prepare("UPDATE social_orders SET status=?3,modified_at=?4 WHERE tenant_id=?1 AND order_id=?2").bind(tenantId, current.order_id, orderStatus, now),
+    ]);
+    return jsonResponse({ shipment_id: shipmentId, order_id: current.order_id, status: desired, order_status: orderStatus });
+  }
+
+  const orderReturn = url.pathname.match(/^\/api\/v1\/social\/orders\/([^/]+)\/returns$/);
+  if (request.method === "POST" && orderReturn) {
+    requireFulfillment(actor);
+    const orderId = pathId(orderReturn[1]!, "order_id");
+    const body = await readJson<JsonObject>(request, 12_000);
+    const deliveryNoteName = text(body.delivery_note_name, "delivery_note_name", 200);
+    const stockReturnName = text(body.stock_return_name, "stock_return_name", 200);
+    const order = await db.prepare(
+      "SELECT sales_order_name,status FROM social_orders WHERE tenant_id=?1 AND order_id=?2",
+    ).bind(tenantId, orderId).first<{ sales_order_name: string | null; status: string }>();
+    if (!order?.sales_order_name) throw errors.notFound("Canonical commerce order not found");
+    const shipmentRow = await db.prepare(
+      "SELECT status FROM social_shipments WHERE tenant_id=?1 AND shipment_id=?2 AND order_id=?3",
+    ).bind(tenantId, deliveryNoteName, orderId).first<{ status: string }>();
+    if (!shipmentRow) throw errors.reference("Delivery Note is not registered as a shipment for this order");
+    if (order.status === "returned" && shipmentRow.status === "returned") {
+      return jsonResponse({ order_id: orderId, sales_order_name: order.sales_order_name, delivery_note_name: deliveryNoteName, stock_return_name: stockReturnName, status: "returned", idempotent_replay: true });
+    }
+    const canonicalReturn = await resolveCanonicalSalesStockReturn(
+      db,
+      tenantId,
+      actor,
+      order.sales_order_name,
+      deliveryNoteName,
+      stockReturnName,
+    );
+    const now = new Date().toISOString();
+    await db.batch([
+      db.prepare("UPDATE social_shipments SET status='returned',modified_at=?3 WHERE tenant_id=?1 AND shipment_id=?2").bind(tenantId, deliveryNoteName, now),
+      db.prepare("UPDATE social_orders SET status='returned',modified_at=?3 WHERE tenant_id=?1 AND order_id=?2").bind(tenantId, orderId, now),
+    ]);
+    return jsonResponse({ order_id: orderId, ...canonicalReturn, status: "returned" }, 201);
   }
 
   const reconcile = url.pathname.match(/^\/api\/v1\/social\/shipments\/([^/]+)\/cod-reconcile$/);
@@ -286,7 +361,7 @@ export async function routeSocialCommerceApi(
       throw errors.validation("COD collected amount does not match the canonical Delivery Note amount", { expected_minor: shipmentRow.cod_expected_minor, collected_minor: collected });
     }
     const now = new Date().toISOString();
-    const result = await db.prepare(`UPDATE social_shipments SET cod_collected_minor=?3,cod_reconciled_at=?4,modified_at=?4,status='cod_reconciled'
+    const result = await db.prepare(`UPDATE social_shipments SET cod_collected_minor=?3,cod_reconciled_at=?4,modified_at=?4,status='delivered'
       WHERE tenant_id=?1 AND shipment_id=?2 AND cod_reconciled_at IS NULL`).bind(tenantId, shipmentId, collected, now).run();
     if ((result.meta?.changes ?? 0) !== 1) throw errors.lifecycle("COD was already reconciled or shipment does not exist");
     return jsonResponse({
@@ -315,6 +390,18 @@ async function socialCommerceProfile(db: D1Database, tenantId: string, pageId: s
     currency: text(data.currency, "profile.currency", 32),
     selling_price_list: text(data.selling_price_list, "profile.selling_price_list", 160),
   };
+}
+
+function assertShipmentTransition(current: string, desired: string): void {
+  const allowed: Record<string, readonly string[]> = {
+    ready: ["picked_up", "in_transit", "failed"],
+    picked_up: ["in_transit", "delivered", "failed"],
+    in_transit: ["delivered", "failed"],
+    failed: ["picked_up", "in_transit"],
+    delivered: [],
+    returned: [],
+  };
+  if (!(allowed[current] ?? []).includes(desired)) throw errors.lifecycle(`Shipment cannot move from ${current} to ${desired}`);
 }
 
 function scalar(result: D1Result | undefined): number { const value = (result?.results?.[0] as { value?: unknown } | undefined)?.value; return typeof value === "number" ? value : Number(value ?? 0); }
