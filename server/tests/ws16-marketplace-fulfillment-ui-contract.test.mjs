@@ -16,6 +16,18 @@ test("marketplace fulfillment projection delegates authentication to canonical s
   assert.doesNotMatch(projection, /\b(?:INSERT|UPDATE|DELETE)\b/i);
 });
 
+test("fulfillment projection exposes provider event watermark as observational health only", () => {
+  assert.match(projection, /SELECT order_id,source_key,sales_order_name,status,currency/);
+  assert.match(projection, /FROM marketplace_provider_order_state/);
+  assert.match(projection, /WHERE tenant_id=\?1 AND source_key=\?2/);
+  assert.match(projection, /provider_event: providerEvent/);
+  assert.match(projection, /latest_external_status: providerEvent\.latest_external_status/);
+  assert.match(projection, /stale_event_count: Number\(providerEvent\.stale_event_count\)/);
+  assert.match(projection, /duplicate_event_count: Number\(providerEvent\.duplicate_event_count\)/);
+  assert.match(projection, /conflict_event_count: Number\(providerEvent\.conflict_event_count\)/);
+  assert.doesNotMatch(projection, /provider_event[\s\S]{0,500}(?:INSERT|UPDATE|DELETE)/i);
+});
+
 test("tenant wrapper mounts fulfillment read before base social routing", () => {
   assert.match(core, /routeMarketplaceFulfillmentRead/);
   assert.match(core, /const marketplaceFulfillmentResponse = await routeMarketplaceFulfillmentRead\(request, url, env\)/);
