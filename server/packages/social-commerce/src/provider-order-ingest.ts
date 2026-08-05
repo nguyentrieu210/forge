@@ -11,7 +11,7 @@ import {
   observeMarketplaceProviderOrderEvent,
   type MarketplaceProviderOrderEventState,
 } from "./marketplace-provider-order-state.js";
-import { resolveMarketplaceOrderFromMetadata } from "./marketplace-profile.js";
+import { resolveMarketplaceOrderFromMetadata, type ResolvedMarketplaceOrder } from "./marketplace-profile.js";
 import { normalizeMarketplaceProviderOrderRecord } from "./provider-order-normalization.js";
 
 /**
@@ -34,7 +34,7 @@ export async function ingestMarketplaceProviderRecord(
   provider_event_state: MarketplaceProviderOrderEventState;
 }> {
   const normalized = normalizeMarketplaceProviderOrderRecord(input.provider, input.channel_profile, input.record);
-  let resolved;
+  let resolved: ResolvedMarketplaceOrder;
   try {
     resolved = await resolveMarketplaceOrderFromMetadata(db, tenantId, normalized);
   } catch (error) {
