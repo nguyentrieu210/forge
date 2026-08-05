@@ -1,5 +1,6 @@
 import type { Actor, JsonObject } from "../../contracts/src/index.js";
 import { errors, jsonResponse, readJson } from "../../core/src/index.js";
+import { routeMarketplaceBiApi } from "./marketplace-bi-api.js";
 import {
   listMarketplaceSettlements,
   reconcileMarketplaceSettlement,
@@ -21,6 +22,9 @@ export async function routeMarketplaceSettlementApi(
   tenantId: string,
   actor: Actor,
 ): Promise<Response | null> {
+  const bi = await routeMarketplaceBiApi(request, url, db, tenantId, actor);
+  if (bi) return bi;
+
   if (url.pathname === "/api/v1/social/marketplace/settlements" && request.method === "GET") {
     requireSettlementRole(actor);
     const limit = Number(url.searchParams.get("limit") ?? 100);
