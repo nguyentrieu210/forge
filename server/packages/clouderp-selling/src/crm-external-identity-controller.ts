@@ -35,7 +35,7 @@ export class CrmCustomerExternalIdentityController implements DocumentController
       name: context.command.aggregate.name,
       owner: context.existing?.owner ?? context.command.actor.user_id,
       docstatus: 0,
-      status: data.status,
+      status: data.identity_status,
       version: context.nextVersion,
       created_at: context.existing?.created_at ?? context.now,
       modified_at: context.now,
@@ -63,7 +63,7 @@ export class CrmCustomerExternalIdentityController implements DocumentController
           provider: data.provider,
           identity_key: data.identity_key,
           linked_customer: data.linked_customer,
-          status: data.status,
+          status: data.identity_status,
           ...(data.crm_contact ? { crm_contact: data.crm_contact } : {}),
           ...(data.last_change_reason ? { reason: data.last_change_reason } : {}),
         },
@@ -73,7 +73,7 @@ export class CrmCustomerExternalIdentityController implements DocumentController
         name: context.command.aggregate.name,
         version: context.nextVersion,
         docstatus: 0,
-        status: data.status,
+        status: data.identity_status,
       },
     };
   }
@@ -110,7 +110,7 @@ async function normalizeCreate(
     ...(scopeLabel ? { scope_label: scopeLabel } : {}),
     linked_customer: linkedCustomer,
     ...(crmContact ? { crm_contact: crmContact } : {}),
-    status: "Active",
+    identity_status: "Active",
     source,
     linked_at: context.now,
     linked_by: context.command.actor.user_id,
@@ -140,10 +140,10 @@ async function normalizeUpdate(
 
   const linkedCustomer = requiredText(command.linked_customer ?? existing.linked_customer, "Linked Customer", 160);
   const crmContact = optionalText(command.crm_contact ?? existing.crm_contact, 160);
-  const status = statusValue(command.status ?? existing.status);
+  const identityStatus = statusValue(command.identity_status ?? existing.identity_status);
   const scopeLabel = optionalText(command.scope_label ?? existing.scope_label, 240);
   const targetChanged = linkedCustomer !== existing.linked_customer || crmContact !== existing.crm_contact;
-  const statusChanged = status !== existing.status;
+  const statusChanged = identityStatus !== existing.identity_status;
   const changeReason = optionalText(command.change_reason, 500);
   if ((targetChanged || statusChanged) && !changeReason) {
     throw errors.validation("Reassigning, revoking or reactivating an external identity requires change_reason");
@@ -160,14 +160,14 @@ async function normalizeUpdate(
     ...(scopeLabel ? { scope_label: scopeLabel } : {}),
     linked_customer: linkedCustomer,
     ...(crmContact ? { crm_contact: crmContact } : {}),
-    status,
+    identity_status: identityStatus,
     source,
     linked_at: existing.linked_at,
     linked_by: existing.linked_by,
     ...(changeReason ? { last_change_reason: changeReason } : existing.last_change_reason ? { last_change_reason: existing.last_change_reason } : {}),
   };
 
-  if (status === "Revoked") {
+  if (identityStatus === "Revoked") {
     data.revoked_at = statusChanged ? context.now : existing.revoked_at ?? context.now;
     data.revoked_by = statusChanged ? context.command.actor.user_id : existing.revoked_by ?? context.command.actor.user_id;
     data.revocation_reason = statusChanged ? changeReason! : existing.revocation_reason ?? changeReason ?? "Revoked";
@@ -180,7 +180,7 @@ function identityEventType(
   data: CrmCustomerExternalIdentityData,
 ): string {
   if (!existing) return "crm.customer_external_identity.linked";
-  if (existing.status !== data.status) return data.status === "Revoked"
+  if (existing.identity_status !== data.identity_status) return data.identity_status === "Revoked"
     ? "crm.customer_external_identity.revoked"
     : "crm.customer_external_identity.reactivated";
   if (existing.linked_customer !== data.linked_customer || existing.crm_contact !== data.crm_contact) {
