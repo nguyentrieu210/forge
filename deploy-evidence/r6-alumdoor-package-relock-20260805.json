@@ -1,0 +1,44 @@
+{
+  "schema": "forge-r6-alumdoor-package-relock/v1",
+  "status": "PASS",
+  "observed_at": "2026-08-05T02:54:25.215Z",
+  "mutation": "NONE",
+  "source_authority_sha": "1f7ca95760998c4ab30bdf6c9870647f5ee2938f",
+  "deployed_release_sha": "3999c2929053f11d4f1c5b59ccc2f0934446b750",
+  "bundle_hash": "05c918e048271583",
+  "alumdoor": {
+    "version": "2.2.4",
+    "content_hash": "e6a5a1d55b4aa8b7cbe62173e9532a08298eac13472dd79ff2c9fb7e949a284d"
+  },
+  "capability_profile": {
+    "profile_id": "alumdoor-pilot",
+    "version": 1,
+    "content_hash": "3e3124018aa3c7d233f0af8b81f751cd3e4a8329b94a2c9295956bc58ac8f7f8",
+    "valid": true,
+    "blocked_capabilities": []
+  },
+  "production_install": {
+    "run_id": 30969702876,
+    "job_id": 92191164491,
+    "backup_sha256": "62b0e5e2d88b47c9576a735f677452603be43329e454bee5338ae4d3a928955b",
+    "backup_artifact_id": 8916075999,
+    "install_evidence_artifact_id": 8916125332
+  },
+  "relock_validation": {
+    "run_id": 30970665494,
+    "job_id": 92194053937,
+    "artifact_id": 8916371354,
+    "artifact_sha256": "9d5c7c3a79e16b38b88e8eddc7eead02428f49e5749b4b3e6d925ae88b778d46",
+    "source_package_hash_matches_live": true,
+    "release_marker_matches": true,
+    "e18": "PASS",
+    "blockers": []
+  },
+  "scope": {
+    "worker_or_client_deployed": false,
+    "package_metadata_changed": true,
+    "business_data_written": false,
+    "pilot_class": "PILOT_TARGET_OBSERVED"
+  },
+  "historical_note": "Prior R6 PASS remains historical; this evidence relocks the currently deployed Worker/UI identity with Alumdoor package metadata 2.2.4."
+}
