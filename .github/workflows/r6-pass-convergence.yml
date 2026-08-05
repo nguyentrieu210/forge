@@ -91,6 +91,9 @@ jobs:
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run | tee /tmp/r6-alumdoor-package.log
           grep -Fq "app=alumdoor@${expected_version}" /tmp/r6-alumdoor-package.log
           grep -Fq 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log
+      - name: Verify R6 E18 package version authority
+        working-directory: server
+        run: node --test tests/r6-e18-package-version-authority.test.mjs
       - name: Diff hygiene
         run: git diff --check
   observe-pilot:
