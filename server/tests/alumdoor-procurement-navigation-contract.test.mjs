@@ -49,9 +49,10 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   assert.equal(bulk?.label, "Nhập hàng");
   assert.equal(bulk?.menu, true);
   assert.equal(bulk?.group, "Mua hàng");
-  assert.match(bulk?.preview ?? "", /^alumdoor\.purchase\.preview_bulk_fifo_receipt\s*\|/);
-  assert.match(bulk?.commit ?? "", /^alumdoor\.purchase\.bulk_fifo_receipt\s*\|/);
+  assert.match(bulk?.preview ?? "", /^alumdoor\.purchase\.preview_bulk_direct_receipt\s*\|/);
+  assert.match(bulk?.commit ?? "", /^alumdoor\.purchase\.bulk_direct_receipt\s*\|/);
   assert.ok(bulk?.fields.some((field) => typeof field === "string" && field.startsWith("lines:Text(BulkTransaction:")));
+  assert.equal(bulk?.fields.some((field) => typeof field === "string" && /purchase_order|Đơn NCC/.test(field)), false);
 
   assert.equal(reportAction?.label, "Báo cáo");
   assert.equal(reportAction?.menu, true);
