@@ -30,6 +30,7 @@ jobs:
           node --check docs/pilot/alumdoor/tools/verify-pilot-01-cutoff-feasibility.mjs
           node --check docs/pilot/alumdoor/tools/verify-pilot-01-stock-anomalies.mjs
           node --check docs/pilot/alumdoor/tools/verify-pilot-01-external-dependencies.mjs
+          node --check docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.mjs
       - name: Verify Pilot-00 / Pilot-01 identity contract
         run: node docs/pilot/alumdoor/tools/verify-pilot-01-contract.mjs
       - name: Verify cutoff feasibility evidence remains fail-closed
@@ -50,6 +51,8 @@ jobs:
           node --test docs/pilot/alumdoor/tools/normalize-pilot-aliases-suppliers.test.mjs
           node --test docs/pilot/alumdoor/tools/reconcile-pilot-uom.test.mjs
           node --test docs/pilot/alumdoor/tools/normalize-pilot-money.test.mjs
+      - name: Generate and validate synthetic PREVIEW_PASS batch
+        run: node --test docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.test.mjs
       - name: Assert no production mutation authority
         shell: bash
         run: |
@@ -64,3 +67,4 @@ jobs:
           grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_STOCK_ANOMALY_DISPOSITION_V1.json
           grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json
           grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json
+          grep -q 'production_write_authorized.*false' docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json
