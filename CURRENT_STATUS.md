@@ -16,12 +16,12 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 - Real Pilot-01: **SOURCE INGESTED / PREVIEW-BLOCKED / EXTERNAL SOURCE DEPENDENCY**.
 - Synthetic Pilot-01: **PREVIEW_PASS / TEST ONLY**.
 - Synthetic Pilot-02: **DRY-RUN PASS / 9 of 9 representative segments**.
-- Latest verified synthetic Pilot-02 run `30969301875`: **SUCCESS**.
-- Accompanying R6/source-safety run `30969301881`: **SUCCESS**.
-- Real Pilot-02: **NOT STARTED**, gated by real Pilot-01 READY.
-- Next synthetic validation step: **Pilot-03 synthetic parallel-run + daily reconciliation**.
+- Synthetic Pilot-03: **PARALLEL RECONCILIATION PASS / 3 of 3 days / zero variance**.
+- Pilot-03 executable run `30970432986`: **SUCCESS**.
+- Real Pilot-02 and Real Pilot-03: **NOT STARTED**, gated by real Pilot-01 READY.
+- Next synthetic validation step: **Pilot-04 synthetic cutover-decision rehearsal**.
 
-Documentation/test evidence does not change the exact deployed R6 product identity.
+Synthetic documentation/test evidence does not change the exact deployed R6 product identity.
 
 ## 2. Capability truth
 
@@ -50,46 +50,51 @@ These values may not be synthesized for the real pilot.
 
 ## 4. Synthetic Pilot-01 truth
 
-Authority: `docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json`.
-
-The deterministic synthetic batch covers all 12 Mapping-V1 datasets, all six personas and exactly one active synthetic `Giám đốc`. It reaches `PREVIEW_PASS` with zero unexplained reconciliation variance and contains no real customer data.
-
-Synthetic opening totals are Stock qty `5468`, Stock value `89,500,000` VND, AR `22,750,000` VND and AP `13,000,000` VND.
+`docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json` covers all 12 Mapping-V1 datasets, all six personas and exactly one active synthetic `Giám đốc`. It reaches `PREVIEW_PASS` with zero unexplained reconciliation variance and contains no real customer data.
 
 ## 5. Synthetic Pilot-02 truth
 
+`docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json` records a nine-segment executable PASS across Sales/O2C, Procurement/P2P, Stock, Manufacturing, Finance, correction/return, warranty/service and idempotency. It uses local CI/workerd/in-memory fixtures only.
+
+## 6. Synthetic Pilot-03 truth
+
 Authorities:
 
-- `docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json`;
-- `docs/pilot/alumdoor/PILOT_02_STATUS.json`;
-- `.github/workflows/pilot-02-synthetic-dry-run.yml`.
+- `docs/pilot/alumdoor/PILOT_03_SYNTHETIC_PARALLEL_V1.json`;
+- `docs/pilot/alumdoor/PILOT_03_STATUS.json`;
+- `.github/workflows/pilot-03-synthetic-parallel.yml`;
+- `server/apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts`.
 
-Latest verified executable run `30969301875`: **SUCCESS**.
+Run `30970432986`: **SUCCESS**. Three cumulative business days were executed in one local workerd/D1 state with default tolerance `0`.
 
-Nine representative segments passed: synthetic Pilot-01 handoff, Sales/O2C, Procurement/P2P, Stock/fulfilment, Manufacturing, Finance settlement + cross-ledger reconciliation, correction/return negative paths, warranty/service lineage, and idempotency/retry safety.
+Every daily checkpoint reconciled exactly across Stock quantity/value, AR/AP, Bank, revenue/COGS, Manufacturing progress, WIP closing quantity, GL debit/credit equality, document count/status and Payment Entry retry idempotency. All recorded variances were `0` on all three days.
 
-Execution is GitHub-hosted local CI/workerd/in-memory only: no production environment, no production Cloudflare secrets, no production origin call, no deploy/migration and no remote D1 mutation.
+Independent RC4 cross-ledger, Finance AR and Finance AP auditors also passed. Artifact ID `8916292176`; artifact zip SHA-256 `6728e53db65f663915211249a8cc5987e2c1fa6736e08d4834d53179172b132a`.
 
-A synthetic PASS validates executable paths only. It does not make real Pilot-01/Pilot-02 ready.
+This is synthetic/test evidence only and does not satisfy real Pilot-01/Pilot-03 acceptance.
 
-## 6. Active sequence
+## 7. Active sequence
 
 ```text
 REAL:
-R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 EXTERNAL SOURCE BLOCKED -> real PREVIEW_PASS -> real Pilot-02 -> Pilot-03 -> Pilot-04 -> Pilot-05
+R6 PILOT-GO -> Pilot-00 LOCKED -> Pilot-01 EXTERNAL SOURCE BLOCKED -> real PREVIEW_PASS -> real Pilot-02 -> real Pilot-03 -> real Pilot-04 -> Pilot-05
 
 SYNTHETIC:
-Pilot-01 PREVIEW_PASS -> Pilot-02 DRY-RUN PASS (9/9) -> Pilot-03 parallel reconciliation [NEXT]
+Pilot-01 PREVIEW_PASS -> Pilot-02 DRY-RUN PASS (9/9) -> Pilot-03 PARALLEL PASS (3/3, variance 0) -> Pilot-04 decision rehearsal [NEXT]
 ```
 
-## 7. Standing boundaries
+## 8. Next synthetic gate
+
+Pilot-04 synthetic is a **decision rehearsal only**. It must prove deterministic `GO`/`NO-GO` behavior for complete evidence versus blockers such as P0/P1 defects, non-zero reconciliation variance, missing/duplicate Giám đốc approval, release/profile drift or stale recovery evidence. Even a synthetic `GO` must retain `production_write_authorized=false`, `cutover_authorized=false` and `real_pilot_transition_allowed=false`.
+
+## 9. Standing boundaries
 
 - Synthetic values are never substituted for missing real openings.
-- `PREVIEW_PASS` and synthetic Pilot-02 PASS do not authorize production write.
+- Synthetic PASS does not authorize production write or real cutover.
 - No guessed opening balances, guessed UOM conversions, silent source-date rewrites or unrelated-source substitution.
 - Real customer/master/opening-data write/import, cutover, provider/DNS/secret mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
 - Controlled pilot is not GA.
 
-## 8. Documentation authority
+## 10. Documentation authority
 
-Start with `docs/pilot/alumdoor/README.md`, `NEXT_TASKS.md`, `PILOT_01_STATUS.json`, `PILOT_02_STATUS.json`, `PILOT_02_SYNTHETIC_DRY_RUN_V1.json`, and `PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json`.
+Start with `docs/pilot/alumdoor/README.md`, `NEXT_TASKS.md`, `PILOT_01_STATUS.json`, `PILOT_02_STATUS.json`, `PILOT_03_STATUS.json`, `PILOT_03_SYNTHETIC_PARALLEL_V1.json`, and `PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json`.
