@@ -46,3 +46,21 @@ test("Customer 360 metadata exposes active channel identity references without r
   assert.equal(childFields.get("identity_status")?.fieldtype, "Data");
   assert.equal(childFields.has("external_identity"), false);
 });
+
+test("social-commerce install explicitly requires the CRM identity authority", async () => {
+  const app = await json("../apps-src/social-commerce/app.json");
+  assert.deepEqual(app.requires, [{ id: "crm", version: "0.5.0" }]);
+  const external = new Map(app.externalDocTypes.map((entry) => [entry.name, entry]));
+  assert.deepEqual(external.get("CRM Contact"), {
+    name: "CRM Contact",
+    kind: "master",
+    app: "crm",
+    version: "0.5.0",
+  });
+  assert.deepEqual(external.get("CRM Customer External Identity"), {
+    name: "CRM Customer External Identity",
+    kind: "master",
+    app: "crm",
+    version: "0.5.0",
+  });
+});
