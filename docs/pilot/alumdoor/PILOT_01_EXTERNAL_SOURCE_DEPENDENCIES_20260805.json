@@ -1,0 +1,113 @@
+{
+  "format": "forge-alumdoor-pilot-01-external-source-dependencies/v1",
+  "status": "SOURCE_SEARCH_EXHAUSTED_EXTERNAL_DEPENDENCIES_REMAIN",
+  "tenant": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "mapping_version": 1,
+  "reviewed_at": "2026-08-05",
+  "production_write_authorized": false,
+  "production_data_mutated": false,
+  "search_scope": {
+    "current_conversation_uploaded_files_reviewed": true,
+    "file_library_reviewed": true,
+    "repository_authorities_reviewed": true,
+    "current_conversation_alumdoor_source_file_count": 6,
+    "no_additional_alumdoor_authoritative_opening_or_access_source_found": true
+  },
+  "accepted_current_sources": [
+    "25.7 QUY TRÌNH.docx",
+    "CTY SÁU HỒNG.xlsx",
+    "Hàng hoá _ Vật tư-20260728-2018 (1).xlsx",
+    "MS LIÊN BS.xlsx",
+    "TỒN NHÔM 2026 NEW.xlsx",
+    "Đơn mua hàng-20260730-1550.xlsx"
+  ],
+  "rejected_search_candidates": [
+    {
+      "source": "Kairo - Ho so & So tay Sale (Ban day du).pdf",
+      "reason": "Generic Kairo sales collateral describes roles such as Giám đốc/Kế toán/Thủ kho but does not contain named Alumdoor pilot accounts or an Alumdoor access allowlist. It cannot satisfy Pilot-01 access evidence."
+    },
+    {
+      "source": "app_tiem_dien_thoai_imei_kiot_chuan_google_sheet.xlsx",
+      "reason": "Contains a generic phone-store partner/opening-debt template and is not an Alumdoor source system extract. It cannot satisfy Alumdoor AR/AP opening evidence."
+    },
+    {
+      "source": "TOKA Holding Chuyen Doi So 2026-2028.docx and architecture/CRM specifications",
+      "reason": "Different business/project specifications; not source-authoritative Alumdoor master/opening/access data."
+    }
+  ],
+  "already_resolved_from_current_sources": {
+    "duplicate_customer_policy": true,
+    "item_duplicate_collision_policy": true,
+    "journal_item_identity_disposition_60_of_60": true,
+    "supplier_role_gap_4_to_0": true,
+    "uom_identity_review": "19 resolved/classified of 21; 2 fail-closed",
+    "integer_vnd_rounding": true,
+    "future_dated_vipst700_rows_quarantined": 2,
+    "cutoff_2026_06_30_evaluated_and_rejected_as_unproven": true
+  },
+  "external_source_dependencies": [
+    {
+      "id": "EXT-AR-OPENING",
+      "required": "Full-customer source-authoritative AR opening snapshot at one named business cutoff",
+      "current_evidence": "AR carry-in is proven, but CHI TIẾT CNO KH has 0 populated opening rows",
+      "owner_action": "Provide/export the actual customer opening balances with customer identity, reference if applicable, posting/due date or approved migration reference, and exact source total at the chosen cutoff",
+      "may_be_synthesized": false
+    },
+    {
+      "id": "EXT-AP-OPENING",
+      "required": "Full-supplier source-authoritative AP opening snapshot at the same cutoff",
+      "current_evidence": "CNO NCC has 0 populated opening rows and observed journal does not prove historical AP was zero",
+      "owner_action": "Provide/export supplier opening balances and exact source total at the chosen cutoff",
+      "may_be_synthesized": false
+    },
+    {
+      "id": "EXT-STOCK-OPENING",
+      "required": "Canonical opening Stock quantity and value at the same cutoff with complete source scope",
+      "current_evidence": "Aluminum physical evidence exists but actual Kg cells are blank, valuation is absent, and expected aluminum/mesh source scope is incomplete",
+      "owner_action": "Provide actual measured Kg/value or approved source-bound stock opening extract plus the missing stock scope/mesh source",
+      "may_be_synthesized": false
+    },
+    {
+      "id": "EXT-CASH-BANK-CUTOFF",
+      "required": "Cash/bank balances at the same business cutoff when cash/bank remains in pilot scope",
+      "current_evidence": "THU-CHI supports activity through 30/06 but does not by itself prove the common opening state",
+      "owner_action": "Provide/confirm source-authoritative cash/bank balances at the accepted common cutoff, or explicitly exclude cash/bank from Pilot-01 scope",
+      "may_be_synthesized": false
+    },
+    {
+      "id": "EXT-UOM-AL595",
+      "required": "Source-owner physical quantity/UOM semantics for NVL-AL595-GS",
+      "current_evidence": "Source inventory records 504 KG/M while sales use commercial m2; KG/M is rate-like and not a canonical stock quantity",
+      "owner_action": "Confirm the physical stock quantity axis and source-bound conversion/provenance",
+      "may_be_synthesized": false
+    },
+    {
+      "id": "EXT-UOM-BO1VIS",
+      "required": "Source-owner physical quantity/UOM semantics for NVL-BO1VIS AL71",
+      "current_evidence": "Purchase source records 159 KG while canonical BỌ family stock is Con",
+      "owner_action": "Confirm whether 159 represents Kg, Con or another package/count unit and provide any conversion evidence",
+      "may_be_synthesized": false
+    },
+    {
+      "id": "EXT-STOCK-DATE-VIPST700",
+      "required": "Corrected source dates for the two quarantined VIPST700 rows",
+      "current_evidence": "Both are dated 23/12/2026 and no matching history event proves a replacement date",
+      "owner_action": "Correct/confirm the source receipt or re-entry date for the two rows before opening inclusion",
+      "may_be_synthesized": false
+    },
+    {
+      "id": "EXT-PILOT-USERS",
+      "required": "Named Pilot account allowlist with exactly one active named Giám đốc account",
+      "current_evidence": "Generic role descriptions exist but no Alumdoor named-user allowlist was found",
+      "owner_action": "Provide the named user accounts, employee binding where applicable, persona/roles and active state; exactly one active account must hold Giám đốc for the pilot approval contract",
+      "may_be_synthesized": false
+    }
+  ],
+  "non_external_remaining_work": [
+    "Materialize deterministic minimum BOM/work-center/employee data only where current accepted Alumdoor source evidence is sufficient",
+    "Resolve row-level quantity evidence for NVL-TOLE1.2x190-CORON row 327 and the historical NVL-VIS-BANLO2P sales conversion only if a source-backed rule is found",
+    "Build the private Mapping-V1 normalized batch after the external source dependencies above are supplied"
+  ],
+  "pilot_01_transition_rule": "Pilot-01 remains PREVIEW-BLOCKED. Do not claim PREVIEW_PASS or freeze a common cutoff until every required opening/access dependency is source-authoritatively satisfied and the normalized batch reconciles with zero unexplained variance."
+}
