@@ -1,4 +1,5 @@
 [
   { "role": "Social Commerce Manager", "desk_access": true },
-  { "role": "Sales User", "desk_access": true }
+  { "role": "Sales User", "desk_access": true },
+  { "role": "Sales Manager", "desk_access": true }
 ]
