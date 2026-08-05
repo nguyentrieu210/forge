@@ -1,6 +1,6 @@
 {
   "format": "forge-alumdoor-pilot-04-synthetic-decision-contract/v1",
-  "status": "SYNTHETIC_DECISION_REHEARSAL_CANDIDATE",
+  "status": "SYNTHETIC_DECISION_REHEARSAL_PASS",
   "tenant_profile": "alu",
   "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
   "synthetic": true,
@@ -20,6 +20,21 @@
   "decision_engine": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.mjs",
   "test": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.test.mjs",
   "workflow": ".github/workflows/pilot-04-synthetic-decision.yml",
+  "execution_evidence": {
+    "initial_pass_run_id": 30972065238,
+    "initial_pass_head_sha": "7b4fc303176642efde4e366afa970084b6c89f3f",
+    "workflow_conclusion": "success",
+    "baseline_synthetic_verdict": "GO",
+    "go_gate_count": 11,
+    "go_gates_passed": 11,
+    "negative_test_blocks_passed": 7,
+    "negative_scenario_classes_passed": 7,
+    "artifact_id": 8916878582,
+    "artifact_zip_sha256": "315dc49d345c0cbead7a6b1c6f02034e455c51df32bd6fcdc7e3521bd798d072",
+    "production_write_authorized": false,
+    "cutover_authorized": false,
+    "real_pilot_transition_allowed": false
+  },
   "required_go_gates": [
     "SYNTHETIC_ONLY",
     "LOCKED_RELEASE_IDENTITY",
@@ -40,7 +55,8 @@
     {"id":"P04-SYN-NOGO-DIRECTOR","expected":"NO-GO","description":"missing or duplicate named Giám đốc approval"},
     {"id":"P04-SYN-NOGO-IDENTITY-DRIFT","expected":"NO-GO","description":"release, bundle, package or profile drift"},
     {"id":"P04-SYN-NOGO-RECOVERY","expected":"NO-GO","description":"stale, future or failed recovery evidence"},
-    {"id":"P04-SYN-NOGO-CUTOFF","expected":"NO-GO","description":"cutoff/delta is not deterministic and source-bound"}
+    {"id":"P04-SYN-NOGO-CUTOFF","expected":"NO-GO","description":"cutoff/delta is not deterministic and source-bound"},
+    {"id":"P04-SYN-NOGO-NON-SYNTHETIC","expected":"NO-GO","description":"non-synthetic invocation cannot obtain a rehearsal GO"}
   ],
   "recovery_freshness_policy": {
     "max_age_hours": 24,
@@ -57,6 +73,7 @@
     "baseline_go": true,
     "all_negative_scenarios_no_go": true,
     "gate_count": 11,
+    "negative_scenario_classes": 7,
     "production_write_authorized": false,
     "cutover_authorized": false,
     "real_pilot_transition_allowed": false
