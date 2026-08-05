@@ -31,6 +31,7 @@ export interface MarketplaceOperationalOrderRow {
   provider: string;
   sales_order_name: string | null;
   customer: string | null;
+  customer_identity_status: MarketplaceCustomerIdentityStatus;
   status: string;
   amount_minor: number;
   currency: string;
@@ -135,20 +136,39 @@ export async function listMarketplaceOperationalOrders(
 ): Promise<MarketplaceOperationalOrderRow[]> {
   const bounded = Number.isSafeInteger(limit) ? Math.min(Math.max(limit, 1), 500) : 100;
   const result = await db.prepare(`
+    WITH marketplace_orders AS (
+      SELECT
+        o.order_id,o.cart_id,o.sales_order_name,o.status,o.cod_amount_minor,o.currency,o.created_at,o.modified_at,
+        CASE WHEN so.docstatus IS NULL OR so.docstatus=2 THEN NULL ELSE json_extract(so.payload_json,'$.customer') END AS customer,
+        CASE WHEN so.docstatus IS NULL OR so.docstatus=2 THEN NULL ELSE json_extract(so.payload_json,'$.social_external_actor_id') END AS actor_lineage
+      FROM social_orders o
+      LEFT JOIN documents so
+        ON so.tenant_id=o.tenant_id AND so.doctype='Sales Order' AND so.name=o.sales_order_name
+      WHERE o.tenant_id=?1 AND o.cart_id LIKE 'marketplace:%'
+    )
     SELECT
-      o.order_id,o.cart_id,o.sales_order_name,o.status,o.cod_amount_minor,o.currency,o.created_at,o.modified_at,
-      CASE WHEN d.docstatus IS NULL OR d.docstatus=2 THEN NULL ELSE json_extract(d.payload_json,'$.customer') END AS customer
-    FROM social_orders o
-    LEFT JOIN documents d
-      ON d.tenant_id=o.tenant_id AND d.doctype='Sales Order' AND d.name=o.sales_order_name
-    WHERE o.tenant_id=?1 AND o.cart_id LIKE 'marketplace:%'
-    ORDER BY o.modified_at DESC
+      mo.*,
+      identity.payload_json AS identity_payload,
+      identity.docstatus AS identity_docstatus
+    FROM marketplace_orders mo
+    LEFT JOIN documents identity
+      ON identity.tenant_id=?1
+      AND identity.doctype='CRM Customer External Identity'
+      AND identity.name = CASE
+        WHEN mo.actor_lineage LIKE 'crm-external-identity:%'
+        THEN 'CRM-EXT-' || substr(mo.actor_lineage, length('crm-external-identity:') + 1)
+        ELSE NULL
+      END
+    ORDER BY mo.modified_at DESC
     LIMIT ?2
   `).bind(tenantId, bounded).all<{
     order_id: string;
     cart_id: string;
     sales_order_name: string | null;
     customer: string | null;
+    actor_lineage: string | null;
+    identity_payload: string | null;
+    identity_docstatus: number | null;
     status: string;
     cod_amount_minor: number;
     currency: string;
@@ -164,6 +184,7 @@ export async function listMarketplaceOperationalOrders(
       provider: sourceKey.split("-", 1)[0] ?? "unknown",
       sales_order_name: row.sales_order_name,
       customer,
+      customer_identity_status: readIdentityStatus(row.actor_lineage, row.identity_payload, row.identity_docstatus, customer),
       status: row.status,
       amount_minor: Number(row.cod_amount_minor),
       currency: row.currency,
@@ -229,6 +250,25 @@ export function marketplaceCartId(sourceKey: string): string {
 
 export function isMarketplaceCartId(cartId: string): boolean {
   return typeof cartId === "string" && cartId.startsWith("marketplace:") && cartId.length > "marketplace:".length;
+}
+
+function readIdentityStatus(
+  actorLineage: string | null,
+  identityPayload: string | null,
+  identityDocstatus: number | null,
+  orderCustomer: string | null,
+): MarketplaceCustomerIdentityStatus {
+  if (!actorLineage || /^marketplace:(shopee|lazada|tiktok_shop):guest$/.test(actorLineage)) return "anonymous";
+  if (!actorLineage.startsWith("crm-external-identity:")) return "unmapped";
+  if (!identityPayload || identityDocstatus === 2) return "unmapped";
+  try {
+    const identity = JSON.parse(identityPayload) as { identity_status?: unknown; linked_customer?: unknown };
+    if (identity.identity_status !== "Active") return "historical";
+    if (typeof identity.linked_customer !== "string" || identity.linked_customer !== orderCustomer) return "historical";
+    return "linked";
+  } catch {
+    return "historical";
+  }
 }
 
 function marketplaceSourceKeyFromCart(cartId: string): string {
