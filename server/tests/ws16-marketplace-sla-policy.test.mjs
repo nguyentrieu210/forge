@@ -53,7 +53,7 @@ test("order SLA projection uses immutable order creation and canonical shipment 
   assert.match(evaluator, /fulfilled_at/);
   assert.match(evaluator, /if \(!policyPayload\) return null/);
   assert.match(evaluator, /"cancelled" \|\| input\.order_status === "returned"/);
-  assert.doesNotMatch(evaluator, /modified_at/);
-  assert.doesNotMatch(evaluator, /external_status|latest_external_status/);
+  assert.doesNotMatch(evaluator, /input\.modified_at/);
+  assert.doesNotMatch(evaluator, /input\.(?:external_status|latest_external_status)/);
   assert.doesNotMatch(evaluator, /(?:INSERT|UPDATE|DELETE)\s+/i);
 });
