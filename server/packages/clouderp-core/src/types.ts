@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
-import type { TaxRow } from "../../clouderp-selling/src/types.js";
+import type { DiscountBasis, TaxRow } from "../../clouderp-selling/src/types.js";
 
 /**
  * Một dòng có ĐƠN VỊ GIAO DỊCH khác đơn vị tồn kho.
@@ -108,6 +108,10 @@ export interface PurchaseOrderData extends JsonObject {
   supplier_quotation?: string;
   items: PurchaseItem[];
   taxes?: TaxRow[];
+  apply_discount_on?: DiscountBasis;
+  additional_discount_percentage?: DecimalInput;
+  discount_amount?: DecimalInput;
+  discount_amount_minor?: number;
   net_total?: string;
   net_total_minor?: number;
   total_taxes_and_charges?: string;
