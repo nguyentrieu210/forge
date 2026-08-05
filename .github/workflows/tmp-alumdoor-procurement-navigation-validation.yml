@@ -17,7 +17,7 @@ jobs:
   validate:
     if: github.head_ref == 'feat/alumdoor-procurement-primary-nav-20260805'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
@@ -42,7 +42,10 @@ jobs:
         working-directory: server
         run: node --test tests/alumdoor-procurement-navigation-contract.test.mjs
 
-      - name: Build MetaForge exactly as package tool expects
+      - name: Build CloudForge exactly as release tooling expects
+        run: pnpm --filter cloudforge run build
+
+      - name: Build MetaForge exactly as full production release
         run: pnpm --filter metaforge run build
 
       - name: Compile exact Alumdoor package candidate
