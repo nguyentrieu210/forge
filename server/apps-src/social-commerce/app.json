@@ -1,7 +1,7 @@
 {
   "id": "social-commerce",
   "name": "Bán hàng đa kênh",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "requires": [],
   "externalDocTypes": [
     { "name": "Company", "kind": "master", "app": "erpnext" },
@@ -9,7 +9,12 @@
     { "name": "Currency", "kind": "master", "app": "erpnext" },
     { "name": "Price List", "kind": "master", "app": "erpnext" },
     { "name": "Item", "kind": "master", "app": "erpnext" },
-    { "name": "Warehouse", "kind": "master", "app": "erpnext" }
+    { "name": "Warehouse", "kind": "master", "app": "erpnext" },
+    { "name": "Sales Order", "kind": "transaction", "app": "erpnext" },
+    { "name": "Delivery Note", "kind": "transaction", "app": "erpnext" },
+    { "name": "Stock Return", "kind": "transaction", "app": "erpnext" },
+    { "name": "Sales Invoice", "kind": "transaction", "app": "erpnext" },
+    { "name": "Payment Entry", "kind": "transaction", "app": "erpnext" }
   ],
   "nav": [
     { "key": "social-commerce:dashboard", "label": "Trung tâm bán hàng", "kind": "experience", "icon": "messages-square", "group": "Bán hàng" },
