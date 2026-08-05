@@ -1,0 +1,150 @@
+name: TMP Complete Alumdoor 2.2.10 Gateway Production V2 2026-08-05
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-complete-alu-main-1c6baab-v2-20260805.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-alu-tenant-production
+  cancel-in-progress: false
+
+jobs:
+  complete:
+    name: Build exact source, verify metadata, deploy Gateway, exact verify
+    if: github.head_ref == 'release/alu-main-1c6baab-20260805'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      TARGET_SHA: 1c6baab0a1de69a5f35f16f7bcc18855ec77ab39
+      FORGE_ORIGIN: https://alu.kairo.vn
+      EVIDENCE_DIR: /tmp/alu-main-1c6baab-gateway-v2
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Checkout bridge
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Exact-main guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${FORGE_ADMIN_USER:-}"
+          test -n "${FORGE_ADMIN_PASSWORD:-}"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          printf 'target_sha=%s\npackage=alumdoor@2.2.10\nprior_release_run=31026329482\nprior_backup_sha256=4b7faf7f25c7ddebc0012c670333ec6424a30b129b4ead7282a0750b359922fe\nprior_backup_artifact=8938828860\nprior_restore_drills=pass\nprior_tenant_worker=pass\nprior_app_worker_version=9fc4d5ad-eacd-4c32-a589-02349e30ced2\nprior_metadata_install=pass\n' "$TARGET_SHA" > "$EVIDENCE_DIR/state.txt"
+
+      - name: Checkout exact main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$TARGET_SHA"
+          git checkout --force --detach "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git clean -fdx
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build CloudForge and verify package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter cloudforge run build 2>&1 | tee "$EVIDENCE_DIR/cloudforge-build.log"
+          node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --dry-run 2>&1 | tee "$EVIDENCE_DIR/package-source.log"
+          grep -Fq 'DRY_RUN_PASS alumdoor' "$EVIDENCE_DIR/package-source.log"
+          grep -Fq 'app=alumdoor@2.2.10' "$EVIDENCE_DIR/package-source.log"
+          printf 'cloudforge_build=pass\nsource_package=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify installed metadata before Gateway mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' | tee "$EVIDENCE_DIR/pre-gateway-manifest.log"
+          const origin=process.env.FORGE_ORIGIN.replace(/\/$/,''); const jar=new Map(); let csrf='';
+          function store(r){for(const v of r.headers.getSetCookie?.()??[]){const p=v.split(';')[0],i=p.indexOf('=');if(i>0)jar.set(p.slice(0,i).trim(),p.slice(i+1).trim());}}
+          async function call(method,body={}){const r=await fetch(`${origin}/api/method/${method}`,{method:'POST',headers:{'content-type':'application/json','cache-control':'no-cache',...(jar.size?{cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}:{}),...(csrf?{'x-frappe-csrf-token':csrf}:{})},body:JSON.stringify(body)});store(r);csrf=r.headers.get('x-frappe-csrf-token')??csrf;const t=await r.text();const j=JSON.parse(t);if(!r.ok)throw new Error(`${method} HTTP ${r.status}: ${j.message??t.slice(0,200)}`);return j.message??j;}
+          await call('login',{usr:process.env.FORGE_ADMIN_USER,pwd:process.env.FORGE_ADMIN_PASSWORD});
+          const m=await call('metaforge.api.get_app_manifest',{app:'alumdoor'}); const nav=Array.isArray(m.nav)?m.nav:[];
+          for(const key of ['action:tao-don-mua','action:nhap-nhom-hang-loat','action:bao-cao-giao-hang-ncc','Purchase Order','alumdoor-operations:workbench','Sales Order','Delivery Note','action:giao-hang-theo-ngay','report:Đơn hàng theo khách']) if(!nav.some(e=>e?.key===key)) throw new Error(`missing installed nav ${key}`);
+          console.log(`INSTALLED_MANIFEST_PASS nav=${nav.length}`);
+          NODE
+          printf 'installed_metadata=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Build and stage exact client
+        shell: bash
+        run: |
+          set -euo pipefail
+          VITE_FORGE_RELEASE_SHA="$TARGET_SHA" pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/metaforge-build.log"
+          VITE_FORGE_RELEASE_SHA="$TARGET_SHA" node server/scripts/stage-client-bundle.mjs 2>&1 | tee "$EVIDENCE_DIR/stage.log"
+          grep -Fq "release=$TARGET_SHA" "$EVIDENCE_DIR/stage.log"
+          node server/scripts/stage-client-bundle.mjs --check 2>&1 | tee "$EVIDENCE_DIR/stage-check.log"
+          printf 'metaforge_build=pass\nclient_stage=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Recheck main and deploy Gateway
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          pnpm exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc 2>&1 | tee "$EVIDENCE_DIR/gateway-deploy.log"
+          printf 'gateway_deploy=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Exact production verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl -sS --max-time 15 -o /tmp/health.json -w '%{http_code}' -H 'Cache-Control: no-cache' "$FORGE_ORIGIN/health?sha=$TARGET_SHA&run=$GITHUB_RUN_ID")" = 200
+          ok=false
+          for n in $(seq 1 20); do
+            code="$(curl -sS --max-time 15 -o /tmp/release.json -w '%{http_code}' -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' "$FORGE_ORIGIN/release.json?sha=$TARGET_SHA&run=$GITHUB_RUN_ID&attempt=$n" || true)"
+            if [ "$code" = 200 ] && node - /tmp/release.json "$TARGET_SHA" <<'NODE'
+          const fs=require('fs');const [p,e]=process.argv.slice(2);const r=JSON.parse(fs.readFileSync(p,'utf8'));if(r.releaseSha!==e||!r.bundleHash)process.exit(2);console.log(`EXACT_RELEASE_PASS sha=${r.releaseSha} bundle=${r.bundleHash}`);
+          NODE
+            then ok=true; break; fi
+            sleep 2
+          done
+          [ "$ok" = true ]
+          bundle="$(node -e "const r=require('/tmp/release.json');process.stdout.write(r.bundleHash||'')")"
+          test "$(curl -sS --max-time 15 -o /tmp/guest.json -w '%{http_code}' -H 'content-type: application/json' -H 'Cache-Control: no-cache' -X POST "$FORGE_ORIGIN/api/method/frappe.desk.desktop.get_bootinfo?sha=$TARGET_SHA&run=$GITHUB_RUN_ID" --data '{}')" = 403
+          printf 'health=pass\nrelease_marker=pass\nbundle_hash=%s\nguest_boundary=pass\n' "$bundle" >> "$EVIDENCE_DIR/state.txt"
+
+          node --input-type=module <<'NODE' | tee "$EVIDENCE_DIR/final-manifest.log"
+          const origin=process.env.FORGE_ORIGIN.replace(/\/$/,'');const jar=new Map();let csrf='';function store(r){for(const v of r.headers.getSetCookie?.()??[]){const p=v.split(';')[0],i=p.indexOf('=');if(i>0)jar.set(p.slice(0,i).trim(),p.slice(i+1).trim());}}async function call(method,body={}){const r=await fetch(`${origin}/api/method/${method}`,{method:'POST',headers:{'content-type':'application/json','cache-control':'no-cache',...(jar.size?{cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}:{}),...(csrf?{'x-frappe-csrf-token':csrf}:{})},body:JSON.stringify(body)});store(r);csrf=r.headers.get('x-frappe-csrf-token')??csrf;const t=await r.text(),j=JSON.parse(t);if(!r.ok)throw new Error(`${method} HTTP ${r.status}: ${j.message??t.slice(0,200)}`);return j.message??j;}await call('login',{usr:process.env.FORGE_ADMIN_USER,pwd:process.env.FORGE_ADMIN_PASSWORD});const m=await call('metaforge.api.get_app_manifest',{app:'alumdoor'}),nav=Array.isArray(m.nav)?m.nav:[];const p=nav.filter(e=>e?.group==='Mua hàng'),s=nav.filter(e=>e?.group==='Bán hàng');const pk=['action:tao-don-mua','action:nhap-nhom-hang-loat','action:bao-cao-giao-hang-ncc','Purchase Order'],pl=['Mua hàng','Nhập hàng','Báo cáo','Lịch sử mua hàng'],sk=['alumdoor-operations:workbench','Sales Order','Delivery Note','action:giao-hang-theo-ngay','report:Đơn hàng theo khách'],sl=['Bán hàng','Đơn hàng','Phiếu xuất kho','Giao hàng','Báo cáo'];if(JSON.stringify(p.map(e=>e.key))!==JSON.stringify(pk)||JSON.stringify(p.map(e=>e.label))!==JSON.stringify(pl))throw new Error(`procurement mismatch ${JSON.stringify(p)}`);if(JSON.stringify(s.map(e=>e.key))!==JSON.stringify(sk)||JSON.stringify(s.map(e=>e.label))!==JSON.stringify(sl))throw new Error(`sales mismatch ${JSON.stringify(s)}`);for(const h of ['Purchase Receipt','action:nhap-nhom-fifo','action:doi-soat-giao-hang-ncc','action:tinh-cong-thuc-cua'])if(nav.some(e=>e?.key===h))throw new Error(`hidden entry visible ${h}`);console.log(`ALUMDOOR_DECLARATION_PASS nav=${nav.length} procurement=${p.length} sales=${s.length}`);
+          NODE
+          printf 'navigation=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          { echo '# Alumdoor exact Gateway completion V2'; echo '```text'; cat "$EVIDENCE_DIR/state.txt" 2>/dev/null || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-main-1c6baab-gateway-v2-${{ github.run_id }}
+          path: /tmp/alu-main-1c6baab-gateway-v2/
+          if-no-files-found: warn
+          retention-days: 30
