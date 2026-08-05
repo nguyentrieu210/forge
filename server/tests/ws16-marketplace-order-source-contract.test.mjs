@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const marketplacePath = new URL("../packages/social-commerce/src/marketplace-order.ts", import.meta.url);
 const resolverPath = new URL("../packages/social-commerce/src/marketplace-profile.ts", import.meta.url);
+const operationsPath = new URL("../packages/social-commerce/src/marketplace-operations.ts", import.meta.url);
 const canonicalPath = new URL("../packages/social-commerce/src/canonical-order.ts", import.meta.url);
 const apiPath = new URL("../packages/social-commerce/src/api.ts", import.meta.url);
 const appPath = new URL("../apps-src/social-commerce/app.json", import.meta.url);
@@ -11,9 +12,10 @@ const profilePath = new URL("../apps-src/social-commerce/doctypes/commerce-chann
 const mappingPath = new URL("../apps-src/social-commerce/doctypes/marketplace-sku-mapping.json", import.meta.url);
 
 async function sources() {
-  const [marketplace, resolver, canonical, api, appRaw, profileRaw, mappingRaw] = await Promise.all([
+  const [marketplace, resolver, operations, canonical, api, appRaw, profileRaw, mappingRaw] = await Promise.all([
     readFile(marketplacePath, "utf8"),
     readFile(resolverPath, "utf8"),
+    readFile(operationsPath, "utf8"),
     readFile(canonicalPath, "utf8"),
     readFile(apiPath, "utf8"),
     readFile(appPath, "utf8"),
@@ -23,6 +25,7 @@ async function sources() {
   return {
     marketplace,
     resolver,
+    operations,
     canonical,
     api,
     app: JSON.parse(appRaw),
@@ -31,7 +34,7 @@ async function sources() {
   };
 }
 
-test("marketplace order ingestion is provider-neutral and idempotently maps into canonical Sales Order", async () => {
+test("marketplace order ingestion is provider-neutral and maps into canonical Sales Order", async () => {
   const { marketplace, canonical } = await sources();
   assert.match(marketplace, /MARKETPLACE_PROVIDERS = \["shopee", "lazada", "tiktok_shop"\]/);
   assert.match(marketplace, /await marketplaceOrderSourceKey\(normalized\.provider, normalized\.shop_id, normalized\.external_order_id\)/);
@@ -45,13 +48,15 @@ test("marketplace order ingestion is provider-neutral and idempotently maps into
   assert.doesNotMatch(marketplace, /UPDATE\s+(?:stock|gl|payment)/i);
 });
 
-test("authenticated marketplace ingest resolves metadata before canonical conversion", async () => {
-  const { api } = await sources();
+test("authenticated marketplace ingest resolves metadata then reserves ATP before canonical conversion", async () => {
+  const { api, operations } = await sources();
   assert.match(api, /\/api\/v1\/social\/marketplace\/orders\/ingest/);
   assert.match(api, /requireWriter\(actor\)/);
   assert.match(api, /resolveMarketplaceOrderFromMetadata\(\s*db,\s*tenantId/);
-  assert.match(api, /ensureCanonicalMarketplaceSalesOrder\(db, tenantId, actor, resolved\.order\)/);
-  assert.match(api, /stock_reservation: "pending_ws04_generic_reservation"/);
+  assert.match(api, /ingestResolvedMarketplaceOrder\(db, tenantId, actor, resolved\)/);
+  assert.match(api, /stock_reservation: operational\.reservation\.idempotent_replay \? "idempotent" : "active"/);
+  assert.ok(operations.indexOf("reserveCommercialStock") < operations.indexOf("ensureCanonicalMarketplaceSalesOrder"));
+  assert.match(operations, /catch \(error\)[\s\S]*releaseCommercialStockReservations/);
 });
 
 test("marketplace commercial total is reconciled before submit and never trusted as pricing input", async () => {
@@ -83,11 +88,12 @@ test("provider input cannot choose ERP master data or canonical Item codes", asy
 test("marketplace profile and SKU mapping are metadata-first, unique and secret-free", async () => {
   const { app, profile, mapping } = await sources();
   assert.equal(app.id, "social-commerce");
-  assert.equal(app.version, "0.3.0");
+  assert.equal(app.version, "0.4.0");
   assert.ok(app.nav.some((entry) => entry.key === "Commerce Channel Profile"));
   assert.ok(app.nav.some((entry) => entry.key === "Marketplace SKU Mapping"));
-  assert.ok(app.externalDocTypes.some((entry) => entry.name === "Item"));
-  assert.ok(app.externalDocTypes.some((entry) => entry.name === "Warehouse"));
+  for (const name of ["Item", "Warehouse", "Sales Order", "Delivery Note", "Stock Return", "Sales Invoice", "Payment Entry"]) {
+    assert.ok(app.externalDocTypes.some((entry) => entry.name === name), `missing ${name} dependency`);
+  }
 
   assert.equal(profile.name, "Commerce Channel Profile");
   assert.equal(mapping.name, "Marketplace SKU Mapping");
@@ -105,9 +111,7 @@ test("marketplace profile and SKU mapping are metadata-first, unique and secret-
   assert.equal(mappingFields.get("external_variant_key")?.default, "BASE");
 
   for (const doc of [profile, mapping]) {
-    for (const field of doc.fields) {
-      assert.doesNotMatch(field.fieldname, /(secret|password|access_token|refresh_token|api_key|private_key)/i);
-    }
+    for (const field of doc.fields) assert.doesNotMatch(field.fieldname, /(secret|password|access_token|refresh_token|api_key|private_key)/i);
   }
 });
 
