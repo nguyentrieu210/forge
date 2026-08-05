@@ -1,7 +1,10 @@
 import type { JsonObject } from "../../../packages/contracts/src/index.js";
 import { jsonResponse, readJson } from "../../../packages/core/src/index.js";
 import { D1MarketplaceCredentialVault } from "../../../packages/integration-hub/src/marketplace-credential-vault.js";
-import { resolveMarketplaceConnection } from "../../../packages/social-commerce/src/index.js";
+import {
+  listOpenMarketplaceMappingExceptions,
+  resolveMarketplaceConnection,
+} from "../../../packages/social-commerce/src/index.js";
 import baseWorker from "./index-core-base.js";
 import type { TenantEnv } from "./env.js";
 
@@ -74,7 +77,7 @@ export async function routeMarketplaceOAuthStart(
 }
 
 async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Promise<Response> {
-  const [rows, syncRows] = await Promise.all([
+  const [rows, syncRows, mappingExceptions] = await Promise.all([
     env.DB.prepare(`
       SELECT name FROM documents
       WHERE tenant_id=?1 AND doctype='Marketplace Connection' AND docstatus<>2
@@ -86,6 +89,7 @@ async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Pro
       WHERE tenant_id=?1 AND stream='orders'
       ORDER BY connection_id ASC LIMIT 200
     `).bind(tenantId).all<MarketplaceSyncHealthRow>(),
+    listOpenMarketplaceMappingExceptions(env.DB, tenantId, 200),
   ]);
   const syncByConnection = new Map((syncRows.results ?? []).map((row) => [row.connection_id, row] as const));
   const vault = env.MARKETPLACE_CREDENTIAL_KEK
@@ -138,7 +142,7 @@ async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Pro
       });
     }
   }
-  return jsonResponse({ connections }, 200, { "cache-control": "no-store" });
+  return jsonResponse({ connections, mapping_exceptions: mappingExceptions }, 200, { "cache-control": "no-store" });
 }
 
 function canManageMarketplaceConnections(identity: WhoAmI): boolean {
