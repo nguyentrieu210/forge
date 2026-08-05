@@ -21,7 +21,7 @@ const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Phiếu xuất kho", "Giao h
 test("Alumdoor sales exposes five metadata tabs after the shell Quy trình tab", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.2.9");
+  assert.equal(brief.version, "2.2.10");
   assert.deepEqual(brief.navigation.items.slice(0, SALES_KEYS.length), SALES_KEYS);
 
   const experience = brief.experiences.find((entry) => entry.key === "alumdoor-operations:workbench");
@@ -50,6 +50,7 @@ test("Alumdoor sales exposes five metadata tabs after the shell Quy trình tab",
   assert.equal(salesReport?.group, "Bán hàng");
 
   const pkg = compileBrief(brief);
+  assert.equal(pkg.version, "2.2.10");
   const sales = pkg.nav.filter((entry) => entry.group === "Bán hàng");
   assert.deepEqual(sales.map((entry) => entry.key), SALES_KEYS);
   assert.deepEqual(sales.map((entry) => entry.label), SALES_LABELS);
