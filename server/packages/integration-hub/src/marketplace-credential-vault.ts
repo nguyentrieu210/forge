@@ -78,7 +78,7 @@ export class D1MarketplaceCredentialVault implements MarketplaceCredentialResolv
   constructor(db: D1Database, private readonly kekBase64: string, options: MarketplaceCredentialVaultOptions = {}) {
     this.db = db.withSession?.("first-primary") ?? db;
     this.now = options.now ?? (() => new Date());
-    this.http = options.http;
+    if (options.http) this.http = options.http;
   }
 
   async put(input: PutMarketplaceCredentialInput): Promise<{ secret_ref: string; provider: MarketplaceCredentialMaterial["provider"]; rotated: boolean; refresh_managed: boolean }> {
