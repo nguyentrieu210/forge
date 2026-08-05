@@ -63,8 +63,8 @@ export async function ensureCanonicalMarketplaceSalesOrder(
   input: MarketplaceOrderInput,
 ): Promise<MarketplaceOrderResult> {
   const normalized = normalizeMarketplaceOrderInput(input);
-  const sourceKey = marketplaceOrderSourceKey(normalized.provider, normalized.shop_id, normalized.external_order_id);
-  const channelId = marketplaceChannelId(normalized.provider, normalized.connection_id, normalized.shop_id);
+  const sourceKey = await marketplaceOrderSourceKey(normalized.provider, normalized.shop_id, normalized.external_order_id);
+  const channelId = await marketplaceChannelId(normalized.provider, normalized.connection_id, normalized.shop_id);
 
   // Reuse the already hardened social -> canonical Sales Order bridge. The
   // synthetic cart/page identifiers are deterministic marketplace lineage,
@@ -138,14 +138,28 @@ export function normalizeMarketplaceOrderInput(input: MarketplaceOrderInput): Ma
   return normalized;
 }
 
-export function marketplaceOrderSourceKey(provider: MarketplaceProvider, shopId: string, externalOrderId: string): string {
+export async function marketplaceOrderSourceKey(
+  provider: MarketplaceProvider,
+  shopId: string,
+  externalOrderId: string,
+): Promise<string> {
   if (!MARKETPLACE_PROVIDERS.includes(provider)) throw errors.validation("Unsupported marketplace provider");
-  return `${provider}:${keySegment(shopId, "shop_id", 120)}:${keySegment(externalOrderId, "external_order_id", 160)}`;
+  const shop = requiredText(shopId, "shop_id", 200);
+  const order = requiredText(externalOrderId, "external_order_id", 240);
+  const digest = await sha256Hex(JSON.stringify([provider, shop, order]));
+  return `${provider}-${digest.slice(0, 40)}`;
 }
 
-export function marketplaceChannelId(provider: MarketplaceProvider, connectionId: string, shopId: string): string {
+export async function marketplaceChannelId(
+  provider: MarketplaceProvider,
+  connectionId: string,
+  shopId: string,
+): Promise<string> {
   if (!MARKETPLACE_PROVIDERS.includes(provider)) throw errors.validation("Unsupported marketplace provider");
-  return `marketplace:${provider}:${keySegment(connectionId, "connection_id", 100)}:${keySegment(shopId, "shop_id", 120)}`;
+  const connection = requiredText(connectionId, "connection_id", 160);
+  const shop = requiredText(shopId, "shop_id", 200);
+  const digest = await sha256Hex(JSON.stringify([provider, connection, shop]));
+  return `marketplace:${provider}:${digest.slice(0, 40)}`;
 }
 
 function normalizeItems(items: MarketplaceOrderItemInput[]): MarketplaceOrderItemInput[] {
@@ -190,12 +204,6 @@ function requiredText(value: string, field: string, max: number): string {
   return normalized;
 }
 
-function keySegment(value: string, field: string, max: number): string {
-  const normalized = requiredText(value, field, max).replace(/[^A-Za-z0-9_.-]/g, "-");
-  if (!normalized || normalized.length > max) throw errors.validation(`${field} cannot produce a stable source key`);
-  return normalized;
-}
-
 function isoDate(value: string, field: string): string {
   const normalized = requiredText(value, field, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized) || Number.isNaN(Date.parse(`${normalized}T00:00:00.000Z`))) {
@@ -208,4 +216,9 @@ function isoDateTime(value: string, field: string): string {
   const normalized = requiredText(value, field, 64);
   if (Number.isNaN(Date.parse(normalized))) throw errors.validation(`${field} must be an ISO date-time`);
   return new Date(normalized).toISOString();
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
