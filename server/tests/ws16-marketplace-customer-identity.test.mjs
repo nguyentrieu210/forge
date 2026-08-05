@@ -71,7 +71,7 @@ test("link command persists only hashes and canonical references, never raw mark
         external_identity: "buyer-private-456",
         scope_label: "Shopee Mall",
         linked_customer: "CUST-001",
-        status: "Active",
+        identity_status: "Active",
         source: "marketplace:SHOP-1",
       },
     }),
@@ -85,7 +85,7 @@ test("link command persists only hashes and canonical references, never raw mark
   assert.equal(plan.document.data.identity_key, identityKey);
   assert.match(plan.document.data.scope_key, /^[a-f0-9]{64}$/);
   assert.equal(plan.document.data.linked_customer, "CUST-001");
-  assert.equal(plan.document.data.status, "Active");
+  assert.equal(plan.document.data.identity_status, "Active");
   assert.equal("external_scope_id" in plan.document.data, false);
   assert.equal("external_identity" in plan.document.data, false);
   const encoded = JSON.stringify(plan.document.data);
@@ -108,7 +108,7 @@ test("only CRM managers may create or alter external customer identities", async
           external_scope_id: "shop-1",
           external_identity: "buyer-1",
           linked_customer: "CUST-001",
-          status: "Active",
+          identity_status: "Active",
           source: "marketplace:SHOP-1",
         },
       }),
@@ -148,7 +148,7 @@ test("CRM Contact link must already point to the same canonical Customer", async
           external_identity: "buyer-1",
           linked_customer: "CUST-001",
           crm_contact: "CONTACT-1",
-          status: "Active",
+          identity_status: "Active",
           source: "marketplace:SHOP-1",
         },
       }),
@@ -174,7 +174,7 @@ test("reassignment, revocation and reactivation require an explicit audit reason
         external_scope_id: "shop-1",
         external_identity: "buyer-1",
         linked_customer: "CUST-001",
-        status: "Active",
+        identity_status: "Active",
         source: "marketplace:SHOP-1",
       },
     }),
@@ -215,14 +215,14 @@ test("reassignment, revocation and reactivation require an explicit audit reason
       name,
       action: "save",
       expectedVersion: 2,
-      document: { ...reassigned.document.data, status: "Revoked", change_reason: "Marketplace account transferred" },
+      document: { ...reassigned.document.data, identity_status: "Revoked", change_reason: "Marketplace account transferred" },
     }),
     existing: reassigned.document,
     now: "2026-08-05T03:32:00.000Z",
     nextVersion: 3,
     reader: reader({ customer: "CUST-002" }),
   });
-  assert.equal(revoked.document.data.status, "Revoked");
+  assert.equal(revoked.document.data.identity_status, "Revoked");
   assert.equal(revoked.events[0].event_type, "crm.customer_external_identity.revoked");
   assert.equal(revoked.document.data.revocation_reason, "Marketplace account transferred");
 });
@@ -240,7 +240,17 @@ test("Customer 360 surfaces active exact channel identities through canonical CR
   const source = await readFile(new URL("../packages/clouderp-selling/src/crm-customer-360-external-identity-controller.ts", import.meta.url), "utf8");
   assert.match(source, /listDocumentsByDoctype<CrmCustomerExternalIdentityData>/);
   assert.match(source, /document\.data\.linked_customer === data\.customer/);
-  assert.match(source, /document\.data\.status === "Active"/);
+  assert.match(source, /document\.data\.identity_status === "Active"/);
   assert.match(source, /data\.external_identity_count = rows\.length/);
   assert.match(source, /child_doctype: "CRM Customer 360 External Identity"/);
+});
+
+test("marketplace customer identity API derives provider identity from canonical order and never accepts raw buyer id", async () => {
+  const source = await readFile(new URL("../packages/social-commerce/src/api.ts", import.meta.url), "utf8");
+  assert.match(source, /\/marketplace\\\/orders\\\/\(\[\^\/\]\+\)\\\/customer-identity/);
+  assert.match(source, /linkMarketplaceOrderCustomerIdentity\(db, tenantId, actor/);
+  assert.match(source, /revokeMarketplaceOrderCustomerIdentity\(db, tenantId, actor/);
+  assert.match(source, /CUSTOMER_IDENTITY_ROLES = new Set\(\["System Manager", "Sales Manager"\]\)/);
+  const linkRoute = source.slice(source.indexOf("const identityLink"), source.indexOf("const identityRevoke"));
+  assert.doesNotMatch(linkRoute, /external_buyer_id|external_identity|provider|shop_id/);
 });
