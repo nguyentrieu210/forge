@@ -1,3 +1,4 @@
+import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { decryptCredentialEnvelope, encryptCredentialEnvelope } from "./credential-envelope.js";
 import {
   createLazadaSignedRequestExecutor,
@@ -68,10 +69,12 @@ export class D1MarketplaceCredentialVault implements MarketplaceCredentialResolv
 
     const result = await this.db.prepare(`
       INSERT INTO marketplace_credential_vault(
-        tenant_id,secret_ref,connection_id,provider,envelope_json,vault_status,created_by,created_at,modified_at
-      ) VALUES(?1,?2,?3,?4,?5,'active',?6,?7,?7)
+        tenant_id,secret_ref,connection_id,provider,envelope_json,vault_status,
+        created_by,modified_by,created_at,modified_at
+      ) VALUES(?1,?2,?3,?4,?5,'active',?6,?6,?7,?7)
       ON CONFLICT(tenant_id,secret_ref) DO UPDATE SET
-        envelope_json=excluded.envelope_json,vault_status='active',modified_at=excluded.modified_at
+        envelope_json=excluded.envelope_json,vault_status='active',
+        modified_by=excluded.modified_by,modified_at=excluded.modified_at
       WHERE marketplace_credential_vault.connection_id=excluded.connection_id
         AND marketplace_credential_vault.provider=excluded.provider
     `).bind(
@@ -127,16 +130,18 @@ export class D1MarketplaceCredentialVault implements MarketplaceCredentialResolv
     tenant_id: string;
     connection_id: string;
     secret_ref: string;
+    actor_id: string;
     now?: Date;
   }): Promise<boolean> {
     const tenantId = token(input.tenant_id, "tenant_id", 128);
     const connectionId = token(input.connection_id, "connection_id", 160);
     const secretRef = secretReference(input.secret_ref);
+    const actorId = token(input.actor_id, "actor_id", 320);
     const result = await this.db.prepare(`
       UPDATE marketplace_credential_vault
-      SET vault_status='revoked',modified_at=?1
-      WHERE tenant_id=?2 AND secret_ref=?3 AND connection_id=?4 AND vault_status='active'
-    `).bind((input.now ?? new Date()).toISOString(), tenantId, secretRef, connectionId).run();
+      SET vault_status='revoked',modified_by=?1,modified_at=?2
+      WHERE tenant_id=?3 AND secret_ref=?4 AND connection_id=?5 AND vault_status='active'
+    `).bind(actorId, (input.now ?? new Date()).toISOString(), tenantId, secretRef, connectionId).run();
     return (result.meta?.changes ?? 0) === 1;
   }
 
@@ -152,6 +157,41 @@ export class D1MarketplaceCredentialVault implements MarketplaceCredentialResolv
     ).first<{ found: number }>();
     return row?.found === 1;
   }
+}
+
+/**
+ * Build signer credential material from a canonical connection scope plus a write-only
+ * credential payload. Provider and shop scope are not accepted from the caller.
+ */
+export function buildMarketplaceCredentialMaterial(
+  providerInput: string,
+  connectionConfig: JsonObject,
+  input: JsonObject,
+): MarketplaceCredentialMaterial {
+  const provider = marketplaceProvider(providerInput);
+  if (provider === "shopee") {
+    return validateMaterial({
+      provider,
+      partner_id: scalarText(input.partner_id, "Shopee partner_id", 80),
+      partner_key: secretText(input.partner_key, "Shopee partner_key"),
+      access_token: secretText(input.access_token, "Shopee access_token"),
+      shop_id: scalarText(connectionConfig.shop_id, "Shopee config shop_id", 80),
+    });
+  }
+  if (provider === "lazada") {
+    return validateMaterial({
+      provider,
+      app_key: scalarText(input.app_key, "Lazada app_key", 240),
+      app_secret: secretText(input.app_secret, "Lazada app_secret"),
+      access_token: secretText(input.access_token, "Lazada access_token"),
+    });
+  }
+  return validateMaterial({
+    provider,
+    app_key: scalarText(input.app_key, "TikTok Shop app_key", 240),
+    app_secret: secretText(input.app_secret, "TikTok Shop app_secret"),
+    access_token: secretText(input.access_token, "TikTok Shop access_token"),
+  });
 }
 
 function validateMaterial(value: unknown): MarketplaceCredentialMaterial {
@@ -192,6 +232,18 @@ function secretReference(value: string): string {
     throw new Error("Marketplace secret_ref is invalid");
   }
   return normalized;
+}
+
+function scalarText(value: JsonValue | undefined, field: string, max: number): string {
+  if (typeof value !== "string" && typeof value !== "number") throw new Error(`${field} is required`);
+  const normalized = String(value).normalize("NFC").trim();
+  if (!normalized || normalized.length > max || /[\r\n\0]/.test(normalized)) throw new Error(`${field} is invalid`);
+  return normalized;
+}
+
+function secretText(value: JsonValue | undefined, field: string): string {
+  if (typeof value !== "string" || value.length < 4 || value.length > 8_192 || /[\r\n\0]/.test(value)) throw new Error(`${field} is invalid`);
+  return value;
 }
 
 function token(value: string, field: string, max: number): string {
