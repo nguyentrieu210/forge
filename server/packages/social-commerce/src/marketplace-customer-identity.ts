@@ -1,13 +1,11 @@
 import type { Actor, JsonObject } from "../../contracts/src/index.js";
 import { asCloudForgeError, errors } from "../../core/src/index.js";
 import {
-  CrmCustomerExternalIdentityController,
   crmCustomerExternalIdentityDocumentName,
   crmCustomerExternalIdentityKey,
   crmCustomerExternalScopeKey,
   createO2CControllerRegistry,
   type CrmCustomerExternalIdentityData,
-  type CrmExternalIdentityProvider,
 } from "../../clouderp-selling/src/index.js";
 import { registerErpCoreControllers } from "../../clouderp-core/src/index.js";
 import { registerStockControllers } from "../../clouderp-stock/src/index.js";
@@ -78,7 +76,7 @@ export async function resolveMarketplaceCustomerIdentity(
   if (existingOrder) {
     const customer = requiredPayloadText(existingOrder, "customer", 160, "Existing marketplace Sales Order customer");
     const mapping = await readIdentityDocument(db, tenantId, identityKey);
-    const current = mapping && mapping.status === "Active" && mapping.linked_customer === customer;
+    const current = mapping && mapping.identity_status === "Active" && mapping.linked_customer === customer;
     return {
       resolved: withCustomer(resolved, customer),
       identity: {
@@ -91,7 +89,7 @@ export async function resolveMarketplaceCustomerIdentity(
   }
 
   const mapping = await readIdentityDocument(db, tenantId, identityKey);
-  if (!mapping || mapping.status !== "Active") {
+  if (!mapping || mapping.identity_status !== "Active") {
     return {
       resolved,
       identity: { status: "unmapped", customer: resolved.order.customer, identity_key: identityKey, crm_contact: null },
@@ -148,7 +146,7 @@ export async function linkMarketplaceOrderCustomerIdentity(
 
   if (existing) {
     const current = parseIdentity(existing);
-    if (current.status === "Active" && current.linked_customer === customer && (current.crm_contact ?? null) === (crmContact ?? null)) {
+    if (current.identity_status === "Active" && current.linked_customer === customer && (current.crm_contact ?? null) === (crmContact ?? null)) {
       return {
         status: "linked",
         customer,
@@ -172,7 +170,7 @@ export async function linkMarketplaceOrderCustomerIdentity(
     scope_label: profile.channel_profile,
     linked_customer: customer,
     ...(crmContact ? { crm_contact: crmContact } : {}),
-    status: "Active",
+    identity_status: "Active",
     source: `marketplace:${profile.channel_profile}`,
     ...(reason ? { change_reason: reason } : {}),
   } : {
@@ -183,7 +181,7 @@ export async function linkMarketplaceOrderCustomerIdentity(
     scope_label: profile.channel_profile,
     linked_customer: customer,
     ...(crmContact ? { crm_contact: crmContact } : {}),
-    status: "Active",
+    identity_status: "Active",
     source: `marketplace:${profile.channel_profile}`,
   };
   const command = await buildCommand({
@@ -201,7 +199,7 @@ export async function linkMarketplaceOrderCustomerIdentity(
   } catch (error) {
     if (!existing && asCloudForgeError(error).code === "DOCUMENT_ALREADY_EXISTS") {
       const raced = await readIdentityDocument(db, tenantId, identityKey);
-      if (raced?.status === "Active" && raced.linked_customer === customer && (raced.crm_contact ?? null) === (crmContact ?? null)) {
+      if (raced?.identity_status === "Active" && raced.linked_customer === customer && (raced.crm_contact ?? null) === (crmContact ?? null)) {
         return {
           status: "linked",
           customer,
@@ -240,7 +238,7 @@ export async function revokeMarketplaceOrderCustomerIdentity(
   const existing = await readDocument(db, tenantId, "CRM Customer External Identity", context.identity_name);
   if (!existing) throw errors.notFound("Marketplace customer identity is not linked");
   const current = parseIdentity(existing);
-  if (current.status === "Revoked") {
+  if (current.identity_status === "Revoked") {
     return {
       status: "unmapped",
       customer: current.linked_customer,
@@ -263,7 +261,7 @@ export async function revokeMarketplaceOrderCustomerIdentity(
     expectedVersion: await currentVersion(store, tenantId, context.identity_name),
     document: {
       ...current,
-      status: "Revoked",
+      identity_status: "Revoked",
       change_reason: reason,
     },
   });
@@ -336,7 +334,7 @@ function parseIdentity(row: DocumentRow): CrmCustomerExternalIdentityData {
   if (typeof payload.identity_key !== "string" || !/^[a-f0-9]{64}$/.test(payload.identity_key)) throw errors.reference("CRM external identity key is invalid");
   if (typeof payload.scope_key !== "string" || !/^[a-f0-9]{64}$/.test(payload.scope_key)) throw errors.reference("CRM external identity scope is invalid");
   if (typeof payload.linked_customer !== "string" || !payload.linked_customer) throw errors.reference("CRM external identity Customer is invalid");
-  if (payload.status !== "Active" && payload.status !== "Revoked") throw errors.reference("CRM external identity status is invalid");
+  if (payload.identity_status !== "Active" && payload.identity_status !== "Revoked") throw errors.reference("CRM external identity status is invalid");
   return payload;
 }
 
@@ -403,8 +401,6 @@ function identityKernelBundle(db: D1Database): {
   const registry = registerErpNextCoreControllers(
     registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry())),
   ).setFallback(new GenericMetadataController(metadata));
-  // Defensive assertion that the registry path really owns this DocType.
-  void CrmCustomerExternalIdentityController;
   const store = new D1RolloutPurchaseAllocationDomainStore(db);
   return {
     store,
