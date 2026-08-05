@@ -44,7 +44,8 @@ Current candidate covers Shopee, Lazada and TikTok Shop, while reusing the exist
 - TikTok update-time high-watermark + overlap replay protection;
 - read-only connection sync health with attempts/checkpoint/retry/error visibility;
 - monotonic provider-order external-status watermark with stale/duplicate/conflict counters;
-- provider event state remains evidence-only and cannot drive canonical lifecycle.
+- provider event state remains evidence-only and cannot drive canonical lifecycle;
+- migration `0123_marketplace_sla_context.sql` binds provider-order evidence to immutable `channel_profile` policy scope; historical rows remain unscoped until safe provider replay rather than guessed backfill.
 
 ### Mapping exception evidence
 
@@ -67,6 +68,18 @@ Current candidate covers Shopee, Lazada and TikTok Shop, while reusing the exist
 - optional canonical Sales Invoice + Payment Entry evidence verification;
 - no marketplace GL, Payment Ledger or Finance source of truth.
 
+### SLA policy authority
+
+- canonical metadata DocType `Marketplace SLA Policy`, one policy per `Commerce Channel Profile`;
+- first metric: `order_to_fulfillment`;
+- explicit `target_minutes` and `warning_minutes`, with **no default business threshold**;
+- controller requires `target_minutes > 0`, `warning_minutes < target_minutes`, and immutable channel/metric identity;
+- SLA clock starts at immutable `social_orders.created_at` when Forge accepts the marketplace order;
+- SLA clock stops at the first `social_shipments.created_at`, which exists only after canonical Delivery Note evidence is accepted;
+- provider external status and mutable order `modified_at` are excluded from SLA timing;
+- cancelled/returned orders are not applicable; missing/disabled policy makes no SLA assertion; malformed policy is surfaced as invalid evidence;
+- SLA observation is read-only and cannot mutate order, fulfillment, stock or finance lifecycle.
+
 ### MetaForge operator surfaces
 
 - Marketplace Connection credential + sync health cards;
@@ -75,10 +88,11 @@ Current candidate covers Shopee, Lazada and TikTok Shop, while reusing the exist
 - mapping inbox links to canonical `Marketplace SKU Mapping` and has no auto-map/write route;
 - marketplace order search by provider order ID, Sales Order or Customer;
 - local provider/status filters and a missing-canonical-link filter;
+- policy-driven SLA queue for `Cần chú ý`, `Vi phạm`, `Chưa cấu hình` and `Tất cả`;
+- SLA UI consumes server-derived state/due/fulfillment timestamps and never calculates thresholds in the browser;
 - marketplace order identity + fulfillment/return actions;
 - provider external-event health shown in fulfillment panel as evidence only;
-- settlement exception workspace in `Đối soát`;
-- no hard-coded SLA age/overdue threshold without an explicit business policy authority.
+- settlement exception workspace in `Đối soát`.
 
 ## Authority guard
 
@@ -95,7 +109,7 @@ No parallel authority was introduced for:
 - sync scheduler/lease;
 - tenant routing.
 
-Marketplace remains orchestration and operational evidence around canonical Forge authorities. Provider/browser input cannot choose ERP master data, stock truth, finance truth, tenant identity, actor identity, credential scope or canonical lifecycle state.
+Marketplace remains orchestration and operational evidence around canonical Forge authorities. Provider/browser input cannot choose ERP master data, stock truth, finance truth, tenant identity, actor identity, credential scope or canonical lifecycle state. SLA thresholds are explicit metadata policy; SLA observations are projections only and cannot create fulfillment truth.
 
 ## Dependency status
 
@@ -136,7 +150,6 @@ External readiness:
 
 Product polish/future scope:
 
-- policy-driven SLA/overdue metadata and cockpit behavior;
 - outbound listing/price/promotion management;
 - provider-specific refund/label flows;
 - dedicated BI profitability/SLA report pack.
