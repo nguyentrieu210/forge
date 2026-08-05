@@ -29,7 +29,10 @@ export interface AppActionInputTableSummary {
 }
 
 /** A repeatable AppAction input-table column, rendered through the existing field registry. */
-export interface AppActionInputColumn extends AppActionField {}
+export interface AppActionInputColumn extends AppActionField {
+  /** Optional canonical Frappe-style Link filters supplied by action metadata. */
+  link_filters?: string;
+}
 
 /** First-class repeatable input transported by AppAction manifests. */
 export interface AppActionInputTable {
