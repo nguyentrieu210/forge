@@ -49,6 +49,7 @@ export class MarketplaceConnectionController implements DocumentController<Marke
     try {
       const adapter = marketplaceAdapter(candidate.connector_key, candidate.connector_version);
       validateConnectorConnection(candidate, adapter.manifest);
+      adapter.validateConfig(candidate.config);
       if (existing) {
         assertConnectionConfigUpdateAllowed(
           asConnection(context.command.tenant_id, context.command.aggregate.name, existing.data),
