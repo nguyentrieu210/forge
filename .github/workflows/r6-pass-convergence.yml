@@ -34,6 +34,7 @@ jobs:
           tests/alumdoor-purchase-direct-receipt.test.mjs
           tests/purchase-receipt-optional-order.test.mjs
           tests/alumdoor-procurement-navigation-contract.test.mjs
+          tests/purchase-supplier-dashboard-company-scope.test.mjs
           tests/tien-dat-purchase-bulk-fifo.test.mjs
           tests/alumdoor-sales-navigation-contract.test.mjs
           tests/sales-wizard-context.test.mjs
