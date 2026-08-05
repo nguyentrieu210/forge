@@ -1,6 +1,6 @@
 {
   "version": "2.3.0",
-  "//": "Operational presentation sidecar. Company và Warehouse là context chung cho Mua/Bán thay vì mỗi màn tự đoán lại.",
+  "//": "Operational presentation sidecar. Company và Warehouse là context chung; Giao hàng dùng dispatch board chọn rõ từng Sales Order.",
   "dimensions": ["company", "warehouse"],
   "doctypes": {
     "Purchase Order": {
@@ -63,6 +63,9 @@
       "menu": false
     },
     "giao-hang-theo-ngay": {
+      "menu": false
+    },
+    "giao-hang-dispatch": {
       "label": "Giao hàng",
       "menu": true,
       "icon": "calendar-check",
@@ -82,8 +85,8 @@
   "items": [
     "alumdoor-operations:workbench",
     "Sales Order",
+    "action:giao-hang-dispatch",
     "Delivery Note",
-    "action:giao-hang-theo-ngay",
     "report:Đơn hàng theo khách",
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
