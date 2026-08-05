@@ -10,6 +10,20 @@ def replace(path: str, old: str, new: str, count: int = 1) -> None:
     target.write_text(text.replace(old, new, count), encoding="utf-8")
 
 
+# BaseController passes normalized document data into event selection. Existing one-argument
+# implementations remain valid; Purchase Receipt uses the data to avoid publishing fake PO
+# progress for a direct supplier receipt that has no Purchase Order link.
+replace(
+    "server/packages/clouderp-core/src/controllers.ts",
+    "  abstract eventTypes(context: ControllerContext<T>): string[];\n",
+    "  abstract eventTypes(context: ControllerContext<T>, data?: T): string[];\n",
+)
+replace(
+    "server/packages/clouderp-core/src/controllers.ts",
+    "      events: this.eventTypes(context).map((type) => domainEvent({ type, tenantId: context.command.tenant_id, aggregate: context.command.aggregate, aggregateVersion: context.nextVersion, actor: context.command.actor.user_id, commandId: context.command.command_id, occurredAt: context.now, payload: { action: context.command.action, status } })),\n",
+    "      events: this.eventTypes(context, data).map((type) => domainEvent({ type, tenantId: context.command.tenant_id, aggregate: context.command.aggregate, aggregateVersion: context.nextVersion, actor: context.command.actor.user_id, commandId: context.command.command_id, occurredAt: context.now, payload: { action: context.command.action, status } })),\n",
+)
+
 # Canonical Purchase Receipt: Purchase Order is optional. If present, keep every existing
 # commercial-context and remaining-quantity guard. Unlinked rows simply do not write the
 # procurement-allocation projection and do not emit purchase_order.progressed.
@@ -31,7 +45,7 @@ replace(
 replace(
     "server/packages/clouderp-core/src/controllers.ts",
     '  eventTypes(context:ControllerContext<PurchaseReceiptData>):string[]{return context.command.action==="submit"?["stock.posted","purchase_receipt.submitted","purchase_order.progressed"]:context.command.action==="cancel"?["stock.reversed","purchase_receipt.cancelled","purchase_order.progressed"]:["purchase_receipt.updated"]}\n',
-    '  eventTypes(context:ControllerContext<PurchaseReceiptData>,data:PurchaseReceiptData):string[]{const progressed=Boolean(data.against_purchase_order||data.items.some(item=>item.purchase_order));return context.command.action==="submit"?["stock.posted","purchase_receipt.submitted",...(progressed?["purchase_order.progressed"]:[])]:context.command.action==="cancel"?["stock.reversed","purchase_receipt.cancelled",...(progressed?["purchase_order.progressed"]:[])]:["purchase_receipt.updated"]}\n',
+    '  eventTypes(context:ControllerContext<PurchaseReceiptData>,data?:PurchaseReceiptData):string[]{const progressed=Boolean(data?.against_purchase_order||data?.items?.some(item=>item.purchase_order));return context.command.action==="submit"?["stock.posted","purchase_receipt.submitted",...(progressed?["purchase_order.progressed"]:[])]:context.command.action==="cancel"?["stock.reversed","purchase_receipt.cancelled",...(progressed?["purchase_order.progressed"]:[])]:["purchase_receipt.updated"]}\n',
 )
 
 # Visible Alumdoor Nhập hàng becomes a direct receipt composer. Old FIFO methods remain
