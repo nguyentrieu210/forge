@@ -59,8 +59,13 @@ export async function ingestMarketplaceProviderRecord(
 
   // Persist external lifecycle evidence only after canonical acceptance. If this
   // write fails, provider retry replays the canonical order idempotently and can
-  // repair the watermark without skipping ERP document creation.
-  const providerEventState = await observeMarketplaceProviderOrderEvent(db, tenantId, resolved.order);
+  // repair the watermark without skipping ERP document creation. Channel profile
+  // lineage is persisted with the evidence so policy projections cannot be rebound
+  // to another shop on replay.
+  const providerEventState = await observeMarketplaceProviderOrderEvent(db, tenantId, {
+    ...resolved.order,
+    channel_profile: resolved.channel_profile,
+  });
   return {
     channel_profile: resolved.channel_profile,
     warehouse: resolved.warehouse,
