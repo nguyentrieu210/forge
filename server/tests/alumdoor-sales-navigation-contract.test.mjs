@@ -10,7 +10,10 @@ import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const briefPath = path.resolve(here, "../briefs/alumdoor-v2.json");
 const composerPath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorSalesComposer.tsx");
+const orderQueuePath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorSalesOrderQueue.tsx");
 const selectionBatchPath = path.resolve(here, "../../client/packages/views/src/action/SelectionBatchActionScreen.tsx");
+const operationalReportPath = path.resolve(here, "../../client/packages/views/src/action/OperationalReportActionScreen.tsx");
+const documentHistoryPath = path.resolve(here, "../../client/packages/views/src/action/DocumentHistoryActionScreen.tsx");
 const OPERATIONAL_REPORT_PREFIX = "OperationalReport:";
 const DOCUMENT_HISTORY_PREFIX = "DocumentHistory:";
 
@@ -185,4 +188,27 @@ test("SelectionBatch requires explicit choice, respects confirmation and has no 
   assert.match(source, /window\.confirm\(action\.commit\.confirm\)/);
   assert.match(source, /config\.openDoctype \|\| inferredDoctype\(config\.rowKey\)/);
   assert.doesNotMatch(source, /onOpen\("Sales Order"/, "generic batch renderer must not hardcode Sales Order");
+});
+
+test("Operational sales views fail closed without Company and work queue does not silently truncate", async () => {
+  const [queue, report, history] = await Promise.all([
+    readFile(orderQueuePath, "utf8"),
+    readFile(operationalReportPath, "utf8"),
+    readFile(documentHistoryPath, "utf8"),
+  ]);
+
+  assert.match(queue, /const MAX_ORDERS = 10_000/);
+  assert.match(queue, /for \(let start = 0; start < MAX_ORDERS; start \+= PAGE_SIZE\)/);
+  assert.match(queue, /limitStart: start/);
+  assert.match(queue, /\["company", "=", company\]/);
+  assert.match(queue, /if \(!company\) \{/);
+  assert.match(queue, /Cần chọn Công ty trên thanh ngữ cảnh trước khi xem Đơn hàng/);
+  assert.doesNotMatch(queue, /pageLength:\s*100/);
+
+  assert.match(report, /if \(config\.companyField && !company\) \{/);
+  assert.match(report, /Cần chọn Công ty trên thanh ngữ cảnh trước khi xem báo cáo/);
+
+  assert.match(history, /config\.sources\.some\(\(source\) => source\.companyField\) && !company/);
+  assert.match(history, /Cần chọn Công ty trên thanh ngữ cảnh trước khi xem lịch sử/);
+  assert.match(history, /Promise\.allSettled/, "history must keep partial-permission behavior after Company is resolved");
 });
