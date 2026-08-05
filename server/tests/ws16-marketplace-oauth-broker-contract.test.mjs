@@ -6,6 +6,7 @@ const broker = await readFile(new URL("../apps/social-ingress-worker/src/marketp
 const ingress = await readFile(new URL("../apps/social-ingress-worker/src/index.ts", import.meta.url), "utf8");
 const descriptor = await readFile(new URL("../apps/tenant-worker/src/marketplace-oauth-internal.ts", import.meta.url), "utf8");
 const startBridge = await readFile(new URL("../apps/tenant-worker/src/marketplace-oauth-start.ts", import.meta.url), "utf8");
+const socialCommerce = await readFile(new URL("../../client/apps/runtime/src/experiences/SocialCommerce.tsx", import.meta.url), "utf8");
 const migration = await readFile(new URL("../migrations/control/0004_marketplace_oauth.sql", import.meta.url), "utf8");
 
 test("marketplace OAuth reuses the control-plane transaction authority without storing seller secrets", () => {
@@ -80,6 +81,17 @@ test("manager connection list exposes canonical credential and non-secret sync h
   assert.doesNotMatch(startBridge, /SELECT[^`]*\bcursor\b/s);
   assert.doesNotMatch(startBridge, /SELECT[^`]*\brun_id\b/s);
   assert.doesNotMatch(startBridge, /credential\.material|access_token|refresh_token|partner_key|app_secret/);
+});
+
+test("marketplace connection UI renders sync health without exposing sync authority", () => {
+  assert.match(socialCommerce, /sync_health\?:/);
+  assert.match(socialCommerce, /connection\.sync_health/);
+  assert.match(socialCommerce, /sync\.last_error_code/);
+  assert.match(socialCommerce, /sync\.next_attempt_at/);
+  assert.match(socialCommerce, /sync\.checkpoint/);
+  assert.match(socialCommerce, /Đồng bộ OK/);
+  assert.match(socialCommerce, /Chờ thử lại/);
+  assert.doesNotMatch(socialCommerce, /sync_health\.(?:cursor|run_id)|body\.(?:cursor|run_id)/);
 });
 
 test("social ingress mounts marketplace OAuth before existing Facebook webhook routing", () => {
