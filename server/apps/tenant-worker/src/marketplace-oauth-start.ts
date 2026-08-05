@@ -12,6 +12,16 @@ interface WhoAmI {
 }
 
 interface ConnectionNameRow { name: string }
+interface MarketplaceSyncHealthRow {
+  connection_id: string;
+  state: string;
+  attempts: number;
+  checkpoint: number;
+  completed_at: string | null;
+  next_attempt_at: string | null;
+  last_error_code: string | null;
+  updated_at: string;
+}
 
 /**
  * Browser-facing marketplace connection/OAuth bridge.
@@ -64,11 +74,20 @@ export async function routeMarketplaceOAuthStart(
 }
 
 async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Promise<Response> {
-  const rows = await env.DB.prepare(`
-    SELECT name FROM documents
-    WHERE tenant_id=?1 AND doctype='Marketplace Connection' AND docstatus<>2
-    ORDER BY name ASC LIMIT 100
-  `).bind(tenantId).all<ConnectionNameRow>();
+  const [rows, syncRows] = await Promise.all([
+    env.DB.prepare(`
+      SELECT name FROM documents
+      WHERE tenant_id=?1 AND doctype='Marketplace Connection' AND docstatus<>2
+      ORDER BY name ASC LIMIT 100
+    `).bind(tenantId).all<ConnectionNameRow>(),
+    env.DB.prepare(`
+      SELECT connection_id,state,attempts,checkpoint,completed_at,next_attempt_at,last_error_code,updated_at
+      FROM marketplace_sync_state
+      WHERE tenant_id=?1 AND stream='orders'
+      ORDER BY connection_id ASC LIMIT 200
+    `).bind(tenantId).all<MarketplaceSyncHealthRow>(),
+  ]);
+  const syncByConnection = new Map((syncRows.results ?? []).map((row) => [row.connection_id, row] as const));
   const vault = env.MARKETPLACE_CREDENTIAL_KEK
     ? new D1MarketplaceCredentialVault(env.DB, env.MARKETPLACE_CREDENTIAL_KEK)
     : null;
@@ -85,6 +104,7 @@ async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Pro
           provider: resolved.provider,
         })
         : null;
+      const sync = syncByConnection.get(resolved.connection.connection_id);
       connections.push({
         connection_id: resolved.connection.connection_id,
         provider: resolved.provider,
@@ -97,6 +117,15 @@ async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Pro
         refresh_managed: status?.refresh_managed ?? false,
         access_expires_at: status?.access_expires_at,
         refresh_expires_at: status?.refresh_expires_at,
+        sync_health: sync ? {
+          state: sync.state,
+          attempts: Number(sync.attempts),
+          checkpoint: Number(sync.checkpoint),
+          completed_at: sync.completed_at,
+          next_attempt_at: sync.next_attempt_at,
+          last_error_code: sync.last_error_code,
+          updated_at: sync.updated_at,
+        } : null,
       });
     } catch {
       connections.push({
@@ -105,6 +134,7 @@ async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Pro
         connection_status: "invalid",
         credential_status: "unavailable",
         refresh_managed: false,
+        sync_health: null,
       });
     }
   }
