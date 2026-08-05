@@ -14,6 +14,25 @@ test("maps explicit variant aliases to canonical master identities", () => {
   assert.equal(resolveJournalItemIdentity("NVL-TOLE1.2x190-CORON").quantity_axis_requires_reconciliation, true);
 });
 
+test("supersedes unsafe global alias with a context split for Đài Loan tôn", () => {
+  const unresolved = resolveJournalItemIdentity("NVL-TON-DL7.2Dx124-XNXLC");
+  assert.equal(unresolved.disposition, "context_split_required");
+  assert.equal(unresolved.stock_item_code, "NVL-TON-DL7.2Dx124-XNXLC");
+  assert.equal(unresolved.stock_uom, "Kg");
+  assert.equal(unresolved.commercial_item_code, "TP-TOLEKEM124_6D");
+  assert.equal(unresolved.commercial_uom, "m2");
+
+  const stock = resolveJournalItemIdentity("NVL-TON-DL7.2Dx124-XNXLC", { business_context: "opening_stock" });
+  assert.equal(stock.disposition, "context_stock_identity");
+  assert.equal(stock.item_code, "NVL-TON-DL7.2Dx124-XNXLC");
+  assert.equal(stock.stock_uom, "Kg");
+
+  const sales = resolveJournalItemIdentity("NVL-TON-DL7.2Dx124-XNXLC", { business_context: "sales" });
+  assert.equal(sales.disposition, "context_commercial_alias");
+  assert.equal(sales.item_code, "TP-TOLEKEM124_6D");
+  assert.equal(sales.commercial_uom, "m2");
+});
+
 test("keeps source-only identities explicit and fails unknown identities", () => {
   const row = resolveJournalItemIdentity("CPVC");
   assert.equal(row.disposition, "supplemental_source_identity");
