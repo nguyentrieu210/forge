@@ -37,6 +37,7 @@ jobs:
           tests/purchase-supplier-dashboard-company-scope.test.mjs
           tests/tien-dat-purchase-bulk-fifo.test.mjs
           tests/alumdoor-sales-navigation-contract.test.mjs
+          tests/delivery-batch-company-scope.test.mjs
           tests/sales-wizard-context.test.mjs
       - name: Verify app report canonical aggregate fields
         working-directory: server
