@@ -71,10 +71,14 @@ Current candidate covers Shopee, Lazada and TikTok Shop, while reusing the exist
 
 - Marketplace Connection credential + sync health cards;
 - seller OAuth/re-auth entry points;
+- dedicated manager-only `Lỗi SKU` inbox sourced from read-only mapping exception evidence;
+- mapping inbox links to canonical `Marketplace SKU Mapping` and has no auto-map/write route;
+- marketplace order search by provider order ID, Sales Order or Customer;
+- local provider/status filters and a missing-canonical-link filter;
 - marketplace order identity + fulfillment/return actions;
 - provider external-event health shown in fulfillment panel as evidence only;
 - settlement exception workspace in `Đối soát`;
-- mapping exception data exposed read-only through the authenticated connection projection; dedicated mapping inbox UI remains polish.
+- no hard-coded SLA age/overdue threshold without an explicit business policy authority.
 
 ## Authority guard
 
@@ -102,7 +106,7 @@ Marketplace remains orchestration and operational evidence around canonical Forg
 
 ## Validation policy
 
-Commerce validation is owned by `.github/workflows/commerce-ci.yml` and now watches WS16 source, UI, migrations, tests and the two commerce governance documents.
+Commerce validation is owned by `.github/workflows/commerce-ci.yml` and watches WS16 source, UI, migrations, tests and the two commerce governance documents.
 
 Required exact-head evidence before merge/promotion:
 
@@ -132,8 +136,7 @@ External readiness:
 
 Product polish/future scope:
 
-- dedicated mapping-exception inbox UI;
-- richer order search/SLA cockpit;
+- policy-driven SLA/overdue metadata and cockpit behavior;
 - outbound listing/price/promotion management;
 - provider-specific refund/label flows;
 - dedicated BI profitability/SLA report pack.
