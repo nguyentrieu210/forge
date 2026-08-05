@@ -208,6 +208,7 @@ export function AlumdoorOperationsCenter() {
   const [saving, setSaving] = useState<"" | "draft" | "submit">("");
   const [globalError, setGlobalError] = useState("");
   const [createdOrder, setCreatedOrder] = useState<Doc | null>(null);
+  const [createdOrderFingerprint, setCreatedOrderFingerprint] = useState("");
   const [reservationRecovery, setReservationRecovery] = useState<string[]>([]);
   const previewGeneration = useRef(0);
 
@@ -269,7 +270,12 @@ export function AlumdoorOperationsCenter() {
     })),
   }), [company, currency, warehouse, deliveryDate, customer.name, customer.group, customer.priceList, lines]);
 
-  useEffect(() => { setCreatedOrder(null); }, [inputFingerprint]);
+  useEffect(() => {
+    if (createdOrder && Number(createdOrder.docstatus ?? 0) === 1 && createdOrderFingerprint && createdOrderFingerprint !== inputFingerprint) {
+      setCreatedOrder(null);
+      setCreatedOrderFingerprint("");
+    }
+  }, [createdOrder, createdOrderFingerprint, inputFingerprint]);
 
   useEffect(() => {
     const generation = ++previewGeneration.current;
@@ -349,7 +355,6 @@ export function AlumdoorOperationsCenter() {
   }, [inputFingerprint, adapter]);
 
   const updateLine = (index: number, patch: Partial<DoorLine>) => {
-    setCreatedOrder(null);
     setLines((current) => current.map((line, i) => i === index ? { ...line, ...patch, formula: patch.formula ?? null, price: patch.price ?? null, stock: patch.stock ?? null, error: "" } : line));
   };
 
@@ -377,12 +382,12 @@ export function AlumdoorOperationsCenter() {
     return out;
   });
   const estimatedTotal = lines.reduce((sum, line) => sum + Number(line.formula?.billable_area_sqm ?? 0) * Number(line.price?.rate ?? 0), 0);
-  const submittedOrder = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 1);
+  const submittedOrder = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 1 && createdOrderFingerprint === inputFingerprint);
 
   const submitOrder = async (draftOnly: boolean) => {
     setGlobalError("");
     if (reservationRecovery.length) return setGlobalError(`Còn ${reservationRecovery.length} phiếu giữ chỗ chưa nhả được. Cần xử lý các phiếu này trước khi thử xác nhận lại.`), undefined;
-    if (createdOrder && Number(createdOrder.docstatus ?? 0) === 1) return setGlobalError(`Đơn ${createdOrder.name} đã xác nhận. Thay đổi cấu hình nếu muốn lập một đơn mới.`), undefined;
+    if (submittedOrder) return setGlobalError(`Đơn ${createdOrder?.name} đã xác nhận. Thay đổi cấu hình nếu muốn lập một đơn mới.`), undefined;
     if (!company) return setGlobalError("Cần chọn Công ty."), undefined;
     if (!currency) return setGlobalError(`Công ty ${company} chưa có tiền tệ mặc định.`), undefined;
     if (!customer.name) return setGlobalError("Cần chọn Khách hàng."), undefined;
@@ -449,21 +454,25 @@ export function AlumdoorOperationsCenter() {
       });
 
       const existingDraft = createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? createdOrder : null;
-      created = existingDraft ?? await adapter.createDoc("Sales Order", {
+      const orderDraft = {
         customer: customer.name,
         company,
         currency,
-        transaction_date: today(),
+        transaction_date: String(existingDraft?.transaction_date ?? today()),
         delivery_date: deliveryDate,
         selling_price_list: customer.priceList,
         customer_group: customer.group,
         install_address: customer.address || undefined,
         items,
-      });
+      };
+      created = existingDraft
+        ? await adapter.updateDoc("Sales Order", String(existingDraft.name), orderDraft, String(existingDraft.modified ?? ""))
+        : await adapter.createDoc("Sales Order", orderDraft);
+      setCreatedOrder(created);
+      setCreatedOrderFingerprint(inputFingerprint);
 
       if (draftOnly) {
-        setCreatedOrder(created);
-        toast.success(`Đã lưu nháp ${created.name}.`);
+        toast.success(existingDraft ? `Đã cập nhật nháp ${created.name}.` : `Đã lưu nháp ${created.name}.`);
         return;
       }
 
@@ -487,6 +496,7 @@ export function AlumdoorOperationsCenter() {
 
       const finalDoc = await adapter.submit(created);
       setCreatedOrder(finalDoc);
+      setCreatedOrderFingerprint(inputFingerprint);
       setReservationRecovery([]);
       toast.success(`Đã xác nhận đơn ${finalDoc.name} và giữ ${reservations.length} nhu cầu nhôm.`);
     } catch (error) {
@@ -502,7 +512,10 @@ export function AlumdoorOperationsCenter() {
         }
       }
       setReservationRecovery(failedReleases);
-      if (created && Number(created.docstatus ?? 0) === 0) setCreatedOrder(created);
+      if (created && Number(created.docstatus ?? 0) === 0) {
+        setCreatedOrder(created);
+        setCreatedOrderFingerprint(inputFingerprint);
+      }
       const mapped = adapter.mapError(error).message;
       setGlobalError(`${mapped}${created ? ` Đơn nháp ${created.name} vẫn được giữ để kiểm tra.` : ""}${failedReleases.length ? ` Không nhả tự động được: ${failedReleases.join(", ")}. Không thử xác nhận lại trước khi xử lý các giữ chỗ này.` : ""}`);
     } finally {
@@ -617,17 +630,17 @@ export function AlumdoorOperationsCenter() {
 
       <div className="sticky bottom-2 z-20 flex flex-wrap items-center gap-3 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur">
         <div className="min-w-0 flex-1">
-          <div className="text-xs text-muted-foreground">{lines.length} cấu hình · {submittedOrder ? `đơn ${createdOrder?.name} đã xác nhận` : reservationRecovery.length ? `${reservationRecovery.length} giữ chỗ cần xử lý` : blockers.length ? `${blockers.length} điểm chưa sẵn sàng` : "sẵn sàng xác nhận"}</div>
+          <div className="text-xs text-muted-foreground">{lines.length} cấu hình · {submittedOrder ? `đơn ${createdOrder?.name} đã xác nhận` : createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? `đang sửa nháp ${createdOrder.name}` : reservationRecovery.length ? `${reservationRecovery.length} giữ chỗ cần xử lý` : blockers.length ? `${blockers.length} điểm chưa sẵn sàng` : "sẵn sàng xác nhận"}</div>
           <div className="text-lg font-bold tabular-nums">Dự kiến {money(estimatedTotal, currency || "VND")}</div>
-          <div className="text-[11px] text-muted-foreground">Xác nhận đơn sẽ tạo giữ chỗ canonical theo đúng nhôm/BOM; tồn thực chỉ thay đổi khi cắt/xuất.</div>
+          <div className="text-[11px] text-muted-foreground">Lưu lại sẽ cập nhật đúng đơn nháp hiện hữu; xác nhận mới tạo giữ chỗ canonical theo nhôm/BOM.</div>
         </div>
-        <Button type="button" variant="outline" disabled={Boolean(saving) || submittedOrder || reservationRecovery.length > 0} onClick={() => void submitOrder(true)}>{saving === "draft" ? <Loader2 className="size-4 animate-spin" /> : null} Lưu nháp</Button>
+        <Button type="button" variant="outline" disabled={Boolean(saving) || submittedOrder || reservationRecovery.length > 0} onClick={() => void submitOrder(true)}>{saving === "draft" ? <Loader2 className="size-4 animate-spin" /> : null} {createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? "Cập nhật nháp" : "Lưu nháp"}</Button>
         <Button type="button" disabled={Boolean(saving) || blockers.length > 0 || submittedOrder || reservationRecovery.length > 0} onClick={() => void submitOrder(false)}>{saving === "submit" ? <Loader2 className="size-4 animate-spin" /> : null} {submittedOrder ? "Đã xác nhận" : "Xác nhận & giữ chỗ"}</Button>
       </div>
 
       {reservationRecovery.length ? <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/35 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-300"><TriangleAlert className="size-4 shrink-0" /><span className="flex-1">Có giữ chỗ chưa nhả được: {reservationRecovery.join(", ")}. Không xác nhận lại đơn cho tới khi xử lý.</span><Button size="sm" variant="outline" onClick={() => navigate(`/app/${encodeURIComponent("Stock Reservation")}`)}>Mở giữ chỗ</Button></div> : null}
       {globalError ? <div className="rounded-lg border border-destructive/35 bg-destructive/5 px-3 py-2 text-sm text-destructive">{globalError}</div> : null}
-      {createdOrder ? <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm"><strong>{createdOrder.name}</strong> · {Number(createdOrder.docstatus ?? 0) === 1 ? "Đã xác nhận" : "Nháp"}</div> : null}
+      {createdOrder && (Number(createdOrder.docstatus ?? 0) === 0 || submittedOrder) ? <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm"><strong>{createdOrder.name}</strong> · {Number(createdOrder.docstatus ?? 0) === 1 ? "Đã xác nhận" : "Nháp đang làm việc"}</div> : null}
     </div>
   </div>;
 }
