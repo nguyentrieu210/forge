@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CalendarDays, FileClock, RefreshCw, Search } from "lucide-react";
 import type { AppAction, Doc } from "@metaforge/core";
 import { Button, Input } from "@metaforge/ui";
@@ -174,6 +174,6 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
   </section>;
 }
 
-function Metric({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
+function Metric({ label, value, icon }: { label: string; value: string | number; icon: ReactNode }) {
   return <div className="rounded-xl border bg-card p-4"><div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div><div className="mt-1 text-2xl font-bold tabular-nums">{typeof value === "number" ? value.toLocaleString("vi-VN") : value}</div></div>;
 }
