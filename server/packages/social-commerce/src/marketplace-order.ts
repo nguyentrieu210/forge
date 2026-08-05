@@ -30,7 +30,7 @@ export interface MarketplaceOrderInput {
   /**
    * Optional normalized merchandise total from the provider. This is NOT used
    * to price the Sales Order. When supplied it is a reconciliation assertion
-   * against the server-authoritative commercial total.
+   * against the server-authoritative commercial total before submit.
    */
   provider_merchandise_total_minor?: number;
 }
@@ -81,20 +81,14 @@ export async function ensureCanonicalMarketplaceSalesOrder(
     transaction_date: normalized.transaction_date,
     items: normalized.items.map((item) => ({ item_code: item.item_code, quantity: item.quantity })),
     taxes: normalized.taxes ?? [],
+    ...(normalized.provider_merchandise_total_minor === undefined
+      ? {}
+      : { expected_grand_total_minor: normalized.provider_merchandise_total_minor }),
   });
 
-  let reconciledProviderTotal: boolean | null = null;
-  if (normalized.provider_merchandise_total_minor !== undefined) {
-    reconciledProviderTotal = canonical.grand_total_minor === normalized.provider_merchandise_total_minor;
-    if (!reconciledProviderTotal) {
-      throw errors.reference("Marketplace merchandise total does not match canonical Sales Order total", {
-        provider: normalized.provider,
-        external_order_id: normalized.external_order_id,
-        provider_merchandise_total_minor: normalized.provider_merchandise_total_minor,
-        canonical_grand_total_minor: canonical.grand_total_minor,
-      });
-    }
-  }
+  // If an expected provider total was supplied, reaching this point proves the
+  // canonical pre-submit reconciliation succeeded. A mismatch never submits.
+  const reconciledProviderTotal = normalized.provider_merchandise_total_minor === undefined ? null : true;
 
   return {
     provider: normalized.provider,
