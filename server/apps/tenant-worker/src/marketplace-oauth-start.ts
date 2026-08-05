@@ -76,11 +76,12 @@ async function listMarketplaceConnections(env: TenantEnv, tenantId: string): Pro
   for (const row of rows.results ?? []) {
     try {
       const resolved = await resolveMarketplaceConnection(env.DB, tenantId, row.name);
-      const status = vault
+      const secretRef = resolved.connection.secret_ref;
+      const status = vault && secretRef
         ? await vault.status({
           tenant_id: tenantId,
           connection_id: resolved.connection.connection_id,
-          secret_ref: resolved.connection.secret_ref,
+          secret_ref: secretRef,
           provider: resolved.provider,
         })
         : null;
