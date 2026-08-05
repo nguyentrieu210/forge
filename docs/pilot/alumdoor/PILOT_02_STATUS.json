@@ -1,0 +1,28 @@
+{
+  "format": "forge-alumdoor-pilot-02-status/v1",
+  "real_pilot_02": {
+    "status": "NOT_STARTED_REAL_DATA_GATED",
+    "gate": "real Pilot-01 must reach READY with source-authoritative openings and named pilot accounts",
+    "production_write_authorized": false
+  },
+  "synthetic_pilot_02": {
+    "status": "SYNTHETIC_DRY_RUN_PASS",
+    "contract": "docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json",
+    "workflow": ".github/workflows/pilot-02-synthetic-dry-run.yml",
+    "pilot_01_fixture": "docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json",
+    "pilot_01_handoff": "PREVIEW_PASS",
+    "initial_pass_run_id": 30968821466,
+    "latest_verified_pass_run_id": 30969301875,
+    "segment_count": 9,
+    "segments_passed": 9,
+    "segments_failed": 0,
+    "unexplained_reconciliation_variance": 0,
+    "contains_real_customer_data": false,
+    "uses_production_environment": false,
+    "production_write_authorized": false,
+    "production_data_mutated": false
+  },
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "next_synthetic_step": "Pilot-03 synthetic parallel-run and daily reconciliation harness",
+  "claim_boundary": "Synthetic Pilot-02 PASS validates executable transaction paths only. It does not advance real Pilot-01/Pilot-02 or authorize production mutation."
+}
