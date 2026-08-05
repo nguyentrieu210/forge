@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "client/**"
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       scope:
@@ -27,9 +29,10 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
-  group: ${{ (github.event_name == 'push' || inputs.scope == 'ui') && 'production-alu-ui' || 'production-alu-full' }}
+  group: ${{ github.event_name == 'issue_comment' && 'production-security-v2-bootstrap' || ((github.event_name == 'push' || inputs.scope == 'ui') && 'production-alu-ui' || 'production-alu-full') }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
@@ -281,14 +284,233 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  security-v2-bootstrap:
+    name: Bootstrap Security Generation V2
+    if: >-
+      github.event_name == 'issue_comment' &&
+      !github.event.issue.pull_request &&
+      github.event.comment.user.login == github.repository_owner &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/forge-security-v2-bootstrap')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    outputs:
+      target_sha: ${{ steps.command.outputs.target_sha }}
+
+    steps:
+      - name: Checkout trusted default-branch security command parser
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Parse and authorize Security V2 owner command
+        id: command
+        env:
+          FORGE_SECURITY_V2_COMMAND_BODY: ${{ github.event.comment.body }}
+          FORGE_SECURITY_V2_COMMAND_ISSUE: ${{ github.event.issue.number }}
+          FORGE_SECURITY_V2_COMMAND_AUTHOR: ${{ github.event.comment.user.login }}
+          FORGE_SECURITY_V2_COMMAND_ASSOCIATION: ${{ github.event.comment.author_association }}
+          FORGE_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: node server/scripts/parse-security-v2-command.mjs
+
+      - name: Checkout exact authorized Security V2 revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.command.outputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require Security V2 target to be merged into main
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git cat-file -e "$TARGET_SHA^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
+            echo "Refusing Security V2 production bootstrap: $TARGET_SHA is not merged into main."
+            exit 1
+          }
+
+      - name: Require production provider credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+
+      - name: Set up pnpm for Security V2
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js for Security V2
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked Security V2 dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build Security V2 release candidate and exact Gateway client bundle
+        env:
+          VITE_FORGE_RELEASE_SHA: ${{ steps.command.outputs.target_sha }}
+        run: |
+          pnpm --filter cloudforge run build
+          pnpm --filter runtime... run build
+          pnpm --dir client/apps/kho exec tsc -p ../warehouse-mobile/tsconfig.json
+          pnpm --dir client/apps/kho exec vite build --config vite.mobile.config.ts
+          node server/scripts/stage-client-bundle.mjs
+
+      - name: Guard Security V2 generated worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              client/apps/kho/dist-mobile/*|server/apps/gateway-worker/public/*) ;;
+              *)
+                echo "Refusing Security V2 release: unexpected worktree change after exact build: $file"
+                exit 1
+                ;;
+            esac
+          done
+
+      - name: Verify Security V2 source contracts
+        run: |
+          node --test \
+            server/tests/security-generation-v2.test.mjs \
+            server/tests/control-security-v2.test.mjs \
+            server/tests/security-v2-command.test.mjs
+          python3 server/scripts/test-security-v2-migration.py
+          node --check server/scripts/bootstrap-security-v2.mjs
+          node --check server/scripts/provision-tenant-v2.mjs
+
+      - name: Resolve canonical Cloudflare account
+        id: security-account
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          import { resolveCloudflareAccountId } from './server/scripts/lib/demo-provider-credentials.mjs';
+          const token = process.env.CLOUDFLARE_API_TOKEN?.trim();
+          if (!token) throw new Error('CLOUDFLARE_API_TOKEN is required');
+          const resolved = await resolveCloudflareAccountId({ token, accountHint: '' });
+          appendFileSync(process.env.GITHUB_OUTPUT, `account_id=${resolved.accountId}\n`, 'utf8');
+          console.log(`provider account selected by ${resolved.selection}`);
+          NODE
+
+      - name: Backup Control D1 before Security V2 migration
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          backup="$RUNNER_TEMP/control-pre-security-v2.sql"
+          pnpm --dir server exec wrangler d1 export cloudforge-control \
+            --config apps/control-plane-worker/wrangler.jsonc \
+            --remote \
+            --skip-confirmation \
+            --output "$backup"
+          test -s "$backup"
+          digest="$(sha256sum "$backup" | awk '{print $1}')"
+          bytes="$(wc -c < "$backup" | tr -d ' ')"
+          printf '{"format":"forge-security-v2-control-backup-evidence/v1","source_sha":"%s","sha256":"%s","bytes":%s}\n' \
+            "$TARGET_SHA" "$digest" "$bytes" > "$RUNNER_TEMP/security-v2-backup-evidence.json"
+
+      - name: Apply append-only Control Security V2 migration
+        working-directory: server
+        run: node scripts/d1-migrate-remote.mjs --config apps/control-plane-worker/wrangler.jsonc
+
+      - name: Coordinate V2 platform masters before first V2 tenant
+        working-directory: server
+        env:
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
+          ACCOUNT_ID: ${{ steps.security-account.outputs.account_id }}
+        run: >-
+          node scripts/bootstrap-security-v2.mjs
+          --phase prepare
+          --account "$ACCOUNT_ID"
+          --source-sha "$TARGET_SHA"
+
+      - name: Deploy Control Plane V2 wrapper
+        working-directory: server
+        run: pnpm exec wrangler deploy --config apps/control-plane-worker/wrangler.jsonc
+
+      - name: Deploy Jobs V2 wrapper
+        working-directory: server
+        run: pnpm exec wrangler deploy --config apps/jobs-worker/wrangler.jsonc
+
+      - name: Deploy Gateway V2 wrapper
+        run: pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+
+      - name: Finalize immutable Security V2 provider account authority
+        working-directory: server
+        env:
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
+          ACCOUNT_ID: ${{ steps.security-account.outputs.account_id }}
+        run: >-
+          node scripts/bootstrap-security-v2.mjs
+          --phase finalize
+          --account "$ACCOUNT_ID"
+          --source-sha "$TARGET_SHA"
+
+      - name: Upload Security V2 backup fingerprint evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-v2-bootstrap-${{ github.run_id }}
+          path: ${{ runner.temp }}/security-v2-backup-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish Security V2 result back to command issue
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          JOB_STATUS: ${{ job.status }}
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const ok = process.env.JOB_STATUS === 'success';
+            const lines = [
+              `## Forge Security V2 Bootstrap ${ok ? 'SUCCESS' : 'FAILED'}`,
+              '',
+              `- Target SHA: ${process.env.TARGET_SHA || '(parse failed)'}`,
+              `- Run: ${runUrl}`,
+              `- Legacy ALU verification: ${ok ? 'delegated to canonical verify-production' : 'see run'}`,
+            ];
+            if (!ok) lines.push('', 'No automatic rollback or destructive cleanup was attempted.');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: lines.join('\n'),
+            });
+
   verify-production:
     name: Verify exact production convergence
-    needs: [ui-deploy, build-deploy]
-    if: ${{ always() && (needs.ui-deploy.result == 'success' || needs.build-deploy.result == 'success') }}
+    needs: [ui-deploy, build-deploy, security-v2-bootstrap]
+    if: ${{ always() && (needs.ui-deploy.result == 'success' || needs.build-deploy.result == 'success' || needs.security-v2-bootstrap.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      TARGET_SHA: ${{ needs.ui-deploy.outputs.target_sha || needs.build-deploy.outputs.target_sha }}
+      TARGET_SHA: ${{ needs.ui-deploy.outputs.target_sha || needs.build-deploy.outputs.target_sha || needs.security-v2-bootstrap.outputs.target_sha }}
 
     steps:
       - name: Checkout current SRE control plane
