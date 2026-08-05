@@ -32,10 +32,9 @@
       "group": "Báo cáo"
     },
     "Đơn hàng theo khách": {
-      "label": "Báo cáo đơn hàng cũ",
-      "menu": false,
+      "label": "Đơn hàng theo khách",
       "icon": "bar-chart-3",
-      "group": "Bán hàng"
+      "group": "Báo cáo"
     }
   },
   "actions": {
