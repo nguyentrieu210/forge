@@ -3,6 +3,7 @@ import { CrmChannelPartnerController, CrmFieldCheckInController, CrmSalesRouteCo
 import { CrmActivityController } from "./crm-controllers.js";
 import { CrmCustomer360Controller } from "./crm-customer-360-controller.js";
 import { CrmContactController, CrmOrganizationController } from "./crm-directory-controllers.js";
+import { CrmCustomerExternalIdentityController } from "./crm-external-identity-controller.js";
 import { CrmConsentAwareMarketingListMemberController } from "./crm-marketing-consent-controller.js";
 import { CrmCampaignAttributionController, CrmCampaignController, CrmMarketingListController, CrmSegmentController } from "./crm-marketing-controllers.js";
 import { CrmCommissionAccrualController, CrmCommissionRuleController, CrmSalesTargetController } from "./crm-performance-controllers.js";
@@ -23,6 +24,7 @@ export function createO2CControllerRegistry(): ControllerRegistry {
     .register(new CrmCustomer360Controller())
     .register(new CrmOrganizationController())
     .register(new CrmContactController())
+    .register(new CrmCustomerExternalIdentityController())
     .register(new CrmSalesTeamController())
     .register(new CrmSalesTeamMemberController())
     .register(new CrmLeadScoreRuleController())
