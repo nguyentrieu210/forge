@@ -87,9 +87,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          expected_version="$(node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const brief = await readBriefSource('briefs/alumdoor-v2.json'); if (brief.id !== 'alumdoor' || typeof brief.version !== 'string' || !brief.version) process.exit(2); process.stdout.write(brief.version);")"
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run | tee /tmp/r6-alumdoor-package.log
-          grep -q 'app=alumdoor@2.2.3' /tmp/r6-alumdoor-package.log
-          grep -q 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log
+          grep -Fq "app=alumdoor@${expected_version}" /tmp/r6-alumdoor-package.log
+          grep -Fq 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log
       - name: Diff hygiene
         run: git diff --check
   observe-pilot:
