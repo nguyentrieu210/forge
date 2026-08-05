@@ -250,16 +250,16 @@ async function normalizeLine(call: PlatformCall, raw: unknown, index: number): P
 
 async function resolveCompanyAndCurrency(call: PlatformCall, args: Json): Promise<{ company: string; currency: string }> {
   let company = text(args.company);
-  let companyDoc: CompanyDoc | undefined;
+  let discoveredCompany: CompanyDoc | undefined;
   if (!company) {
     const companies = await readList<CompanyDoc>(call, "Company", ["name", "default_currency"], [], 2);
     if (companies.length !== 1 || !text(companies[0]?.name)) {
       throw new Error("Không xác định được Công ty từ ngữ cảnh. Hãy cấu hình business context cho màn Mua hàng.");
     }
-    companyDoc = companies[0];
-    company = text(companyDoc.name);
+    discoveredCompany = companies[0]!;
+    company = text(discoveredCompany.name);
   }
-  if (!companyDoc) companyDoc = await readDoc<CompanyDoc>(call, "Company", company);
+  const companyDoc = discoveredCompany ?? await readDoc<CompanyDoc>(call, "Company", company);
   const currency = text(args.currency) || text(companyDoc.default_currency);
   if (!currency) throw new Error(`Công ty ${company} chưa có tiền tệ mặc định.`);
   return { company, currency };
