@@ -5,15 +5,17 @@ import { readFile } from "node:fs/promises";
 const marketplacePath = new URL("../packages/social-commerce/src/marketplace-order.ts", import.meta.url);
 const resolverPath = new URL("../packages/social-commerce/src/marketplace-profile.ts", import.meta.url);
 const canonicalPath = new URL("../packages/social-commerce/src/canonical-order.ts", import.meta.url);
+const apiPath = new URL("../packages/social-commerce/src/api.ts", import.meta.url);
 const appPath = new URL("../apps-src/social-commerce/app.json", import.meta.url);
 const profilePath = new URL("../apps-src/social-commerce/doctypes/commerce-channel-profile.json", import.meta.url);
 const mappingPath = new URL("../apps-src/social-commerce/doctypes/marketplace-sku-mapping.json", import.meta.url);
 
 async function sources() {
-  const [marketplace, resolver, canonical, appRaw, profileRaw, mappingRaw] = await Promise.all([
+  const [marketplace, resolver, canonical, api, appRaw, profileRaw, mappingRaw] = await Promise.all([
     readFile(marketplacePath, "utf8"),
     readFile(resolverPath, "utf8"),
     readFile(canonicalPath, "utf8"),
+    readFile(apiPath, "utf8"),
     readFile(appPath, "utf8"),
     readFile(profilePath, "utf8"),
     readFile(mappingPath, "utf8"),
@@ -22,6 +24,7 @@ async function sources() {
     marketplace,
     resolver,
     canonical,
+    api,
     app: JSON.parse(appRaw),
     profile: JSON.parse(profileRaw),
     mapping: JSON.parse(mappingRaw),
@@ -40,6 +43,15 @@ test("marketplace order ingestion is provider-neutral and idempotently maps into
   assert.match(canonical, /doctype: "Sales Order"/);
   assert.doesNotMatch(marketplace, /INSERT INTO\s+(?:stock|gl|payment)/i);
   assert.doesNotMatch(marketplace, /UPDATE\s+(?:stock|gl|payment)/i);
+});
+
+test("authenticated marketplace ingest resolves metadata before canonical conversion", async () => {
+  const { api } = await sources();
+  assert.match(api, /\/api\/v1\/social\/marketplace\/orders\/ingest/);
+  assert.match(api, /requireWriter\(actor\)/);
+  assert.match(api, /resolveMarketplaceOrderFromMetadata\(\s*db,\s*tenantId/);
+  assert.match(api, /ensureCanonicalMarketplaceSalesOrder\(db, tenantId, actor, resolved\.order\)/);
+  assert.match(api, /stock_reservation: "pending_ws04_generic_reservation"/);
 });
 
 test("marketplace commercial total is reconciled before submit and never trusted as pricing input", async () => {
