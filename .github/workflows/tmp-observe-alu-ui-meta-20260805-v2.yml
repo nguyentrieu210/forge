@@ -126,13 +126,21 @@ jobs:
           await call('login', { usr: user, pwd: password });
           const manifest = await call('metaforge.api.get_app_manifest', { app: 'alumdoor' });
           const nav = Array.isArray(manifest.nav) ? manifest.nav : [];
-          const receipt = nav.find((entry) => entry?.key === 'action:nhap-nhom-hang-loat');
-          if (!receipt) throw new Error('missing action:nhap-nhom-hang-loat');
-          if (receipt.label !== 'Nhập hàng') throw new Error(`unexpected receipt label: ${receipt.label}`);
-          for (const key of ['Purchase Order', 'Purchase Receipt']) {
-            if (!nav.some((entry) => entry?.key === key)) throw new Error(`missing procurement declaration: ${key}`);
+          const expected = [
+            ['action:tao-don-mua', 'Mua hàng'],
+            ['action:nhap-nhom-fifo', 'Nhập hàng'],
+            ['report:Mua hàng theo nhà cung cấp', 'Báo cáo'],
+            ['Purchase Order', 'Lịch sử mua hàng'],
+          ];
+          for (const [key, label] of expected) {
+            const entry = nav.find((candidate) => candidate?.key === key);
+            if (!entry) throw new Error(`missing procurement declaration: ${key}`);
+            if (entry.label !== label) throw new Error(`unexpected label for ${key}: ${entry.label}`);
           }
-          console.log(`PROCUREMENT_DECLARATION_PASS nav=${nav.length} receipt=${receipt.label}`);
+          for (const hidden of ['Purchase Receipt', 'action:nhap-nhom-hang-loat', 'action:doi-soat-giao-hang-ncc']) {
+            if (nav.some((entry) => entry?.key === hidden)) throw new Error(`hidden procurement entry unexpectedly visible: ${hidden}`);
+          }
+          console.log(`PROCUREMENT_DECLARATION_PASS nav=${nav.length} receipt=Nhập hàng`);
           NODE
 
       - name: Publish observation summary
