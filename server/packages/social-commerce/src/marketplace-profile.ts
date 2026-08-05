@@ -70,16 +70,35 @@ export async function resolveMarketplaceOrderFromMetadata(
   const items = sourceItems.map((item, index) => {
     const row = mappingResults[index]?.results?.[0] as DocumentRow | undefined;
     if (!row || row.docstatus === 2) {
-      throw errors.reference(`No active Marketplace SKU Mapping for ${item.external_sku}/${item.external_variant_key}`);
+      throw errors.reference(
+        `No active Marketplace SKU Mapping for ${item.external_sku}/${item.external_variant_key}`,
+        mappingFailureDetails(provider, channelProfile, item, "missing"),
+      );
     }
     const mapping = parsePayload(row.payload_json, "Marketplace SKU Mapping");
     if (truthyCheck(mapping.disabled)) {
-      throw errors.lifecycle(`Marketplace SKU Mapping is disabled for ${item.external_sku}/${item.external_variant_key}`);
+      throw errors.lifecycle(
+        `Marketplace SKU Mapping is disabled for ${item.external_sku}/${item.external_variant_key}`,
+        mappingFailureDetails(provider, channelProfile, item, "disabled"),
+      );
     }
-    if (jsonText(mapping.channel_profile, "channel_profile", 240) !== channelProfile) throw errors.reference("Marketplace SKU Mapping channel mismatch");
-    if (jsonText(mapping.external_sku, "external_sku", 200) !== item.external_sku) throw errors.reference("Marketplace SKU Mapping SKU mismatch");
+    if (jsonText(mapping.channel_profile, "channel_profile", 240) !== channelProfile) {
+      throw errors.reference(
+        "Marketplace SKU Mapping channel mismatch",
+        mappingFailureDetails(provider, channelProfile, item, "channel_mismatch"),
+      );
+    }
+    if (jsonText(mapping.external_sku, "external_sku", 200) !== item.external_sku) {
+      throw errors.reference(
+        "Marketplace SKU Mapping SKU mismatch",
+        mappingFailureDetails(provider, channelProfile, item, "sku_mismatch"),
+      );
+    }
     if (jsonText(mapping.external_variant_key, "external_variant_key", 200) !== item.external_variant_key) {
-      throw errors.reference("Marketplace SKU Mapping variant mismatch");
+      throw errors.reference(
+        "Marketplace SKU Mapping variant mismatch",
+        mappingFailureDetails(provider, channelProfile, item, "variant_mismatch"),
+      );
     }
     return {
       external_sku: item.external_sku,
@@ -164,6 +183,21 @@ function providerValue(value: unknown): MarketplaceProvider {
 function jsonText(value: unknown, field: string, max: number): string {
   if (typeof value !== "string") throw errors.reference(`Commerce metadata ${field} is invalid`);
   return requiredText(value, field, max);
+}
+
+function mappingFailureDetails(
+  provider: MarketplaceProvider,
+  channelProfile: string,
+  item: { external_sku: string; external_variant_key: string },
+  reason: "missing" | "disabled" | "channel_mismatch" | "sku_mismatch" | "variant_mismatch",
+): JsonObject {
+  return {
+    marketplace_mapping_reason: reason,
+    provider,
+    channel_profile: channelProfile,
+    external_sku: item.external_sku,
+    external_variant_key: item.external_variant_key,
+  };
 }
 
 function requiredText(value: string, field: string, max: number): string {
