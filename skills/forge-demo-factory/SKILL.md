@@ -39,6 +39,7 @@ customer brief
  -> normalize/reserve slug
  -> compile + validate app brief (no mutation)
  -> validate matching synthetic seed manifest when present (no mutation)
+ -> resolve provider account + shared credential availability (read-only)
  -> create/reuse isolated D1
  -> canonical tenant provision
  -> route registration through Control Plane
@@ -70,6 +71,23 @@ Derive a Vietnamese customer name deterministically to an ASCII slug when the us
 one. Collision/resource ownership must fail closed or reuse only an exact same tenant resource;
 never overwrite another tenant merely because the requested slug is similar.
 
+## Provider identity and shared-secret boundary
+
+`CLOUDFLARE_ACCOUNT_ID` is an optional hint, not a required operator input. When absent, Demo Factory
+must enumerate only accounts visible to `CLOUDFLARE_API_TOKEN` and select the unique account in which
+`cloudforge-gateway` is readable. Zero or multiple matches are failures; never pick the first account.
+
+The three platform credentials `FORGE_INTERNAL_AUTH_SECRET`, `FORGE_INTERNAL_SERVICE_TOKEN` and
+`FORGE_CONTROL_TOKEN` must match the already-running platform. Prefer values supplied by the secure
+execution environment. If they are absent, the orchestrator may perform a read-only provider probe
+against the existing bindings, but it may use a provider value only when the provider actually returns
+non-empty secret text. Most Cloudflare secret reads intentionally return metadata only; that condition
+must fail **before D1 creation or any other provider mutation**.
+
+Never generate replacement shared secrets for one new tenant. A mismatched tenant cannot authenticate
+against the gateway/jobs/control plane. Re-keying the platform is a separate, explicit shared-runtime
+operation with its own release evidence and authorization.
+
 ## Synthetic seed contract
 
 `server/scripts/seed-demo-data.mjs` is the shared seed runner. A seed manifest is ordered and
@@ -100,6 +118,7 @@ A run is `READY` only when:
 
 - brief compiles and validates before provider mutation;
 - matching seed manifest, when present, validates before provider mutation;
+- provider account and required shared-credential availability resolve before provider mutation;
 - tenant D1 exists exactly once;
 - migrations and tenant Worker provisioning pass;
 - Control Plane route maps the full hostname to the intended tenant Worker;
@@ -156,10 +175,10 @@ authorization to mutate production provider state.
 ## Required runtime credentials
 
 - `CLOUDFLARE_API_TOKEN` with the narrow provider permissions needed by tenant provisioning;
-- `CLOUDFLARE_ACCOUNT_ID` as a non-secret repository variable or secret;
-- `FORGE_INTERNAL_AUTH_SECRET`;
-- `FORGE_INTERNAL_SERVICE_TOKEN`;
-- `FORGE_CONTROL_TOKEN`;
+- optional `CLOUDFLARE_ACCOUNT_ID` hint; otherwise auto-discover the unique account containing the gateway;
+- existing platform `FORGE_INTERNAL_AUTH_SECRET`;
+- existing platform `FORGE_INTERNAL_SERVICE_TOKEN`;
+- existing platform `FORGE_CONTROL_TOKEN`;
 - `FORGE_DEMO_ADMIN_PASSWORD` or the existing production demo-admin password secret.
 
 Do not rotate shared platform secrets just to create a demo tenant.
