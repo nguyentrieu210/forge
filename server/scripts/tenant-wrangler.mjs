@@ -48,11 +48,14 @@ export function writeTenantConfig({
     vars: {
       TENANT_ID: tenant,
       AUTH_MODE: "production",
-      // Generation V2 tenants hold only their own derived identity key. The V2 master
-      // stays on the Gateway/Control Plane and is never written into this config or a
-      // tenant binding. Presence of the key id tells tenant auth to treat
-      // INTERNAL_AUTH_SECRET as the already-derived verification key.
-      ...(securityGeneration === 2 ? { INTERNAL_AUTH_KEY_ID: "k2" } : {}),
+      /**
+       * Security Generation V2 intentionally does NOT set INTERNAL_AUTH_KEY_ID here.
+       * Its INTERNAL_AUTH_SECRET binding is a tenant-scoped auth root, not a global
+       * platform master. Leaving key id absent keeps the existing tenant verifier in
+       * master/root mode so it derives the k2 trusted-identity key exactly as Gateway
+       * does, while app-call derivation also uses the same tenant-scoped root.
+       */
+      ...(securityGeneration === 2 ? { SECURITY_GENERATION: "2" } : {}),
       /**
        * Where an app Worker calls BACK into the platform.
        *
