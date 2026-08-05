@@ -1,0 +1,44 @@
+{
+  "format": "forge-alumdoor-pilot-01-money-rounding/v1",
+  "status": "LOCKED_PREVIEW_ONLY",
+  "tenant": "alu",
+  "currency": "VND",
+  "source": {
+    "file": "MS LIÊN BS.xlsx",
+    "sha256": "64820a840aa22d763875930d13095076a2a3f33d9fa7027e3263d8a7d4ee2e41",
+    "sheet": "chi tiết nhập hàng ngày",
+    "field": "X / Tổng thanh toán"
+  },
+  "source_display_semantics": {
+    "number_format_id": 166,
+    "number_format": "#,##0 [$đ-42A]",
+    "observed_cell_styles": [189, 205],
+    "display_decimal_places": 0,
+    "currency_symbol": "đ"
+  },
+  "observed_fractional_rows": {
+    "count": 45,
+    "all_positive": true,
+    "raw_sum_vnd": "469262369.969",
+    "rounded_per_row_sum_vnd": "469262376",
+    "aggregate_rounding_delta_vnd": "6.031"
+  },
+  "rounding_policy": {
+    "name": "EXCEL_ROUND_TO_INTEGER_VND",
+    "rule": "round each monetary document value to nearest integer VND; exact half is rounded away from zero",
+    "apply_at": "normalized monetary row/document boundary before integer-minor-unit storage",
+    "do_not_apply_at": "aggregate-only total after summing fractional source rows",
+    "preserve_raw_source_value": true,
+    "preserve_rounding_delta": true,
+    "integer_minor_unit_scale": 0
+  },
+  "source_behavior_examples": [
+    {"row": 34, "source_total_payment_vnd": "4349068.5", "displayed_integer_vnd": "4349069"},
+    {"row": 78, "source_total_payment_vnd": "4680787.5", "displayed_integer_vnd": "4680788"},
+    {"row": 99, "source_total_payment_vnd": "12141907.5", "displayed_integer_vnd": "12141908"},
+    {"row": 114, "source_total_payment_vnd": "13582478.5", "displayed_integer_vnd": "13582479"}
+  ],
+  "reconciliation_rule": "source reconciliation for imported monetary rows compares canonical integer VND against per-row rounded source amounts while retaining raw fractional provenance; zero unexplained variance is required after the declared rounding delta is accounted for",
+  "production_write_authorized": false,
+  "production_data_mutated": false
+}
