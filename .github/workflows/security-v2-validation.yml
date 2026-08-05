@@ -109,6 +109,7 @@ jobs:
           grep -Fq "github.event.comment.author_association == 'OWNER'" "$workflow"
           grep -Fq "startsWith(github.event.comment.body, '/forge-security-v2-bootstrap')" "$workflow"
           grep -Fq 'parse-security-v2-command.mjs' "$workflow"
+          grep -Fq 'Reconcile Security V2 frozen-install worktree' "$workflow"
           grep -Fq 'Backup Control D1 before Security V2 migration' "$workflow"
           grep -Fq 'Deploy Control Plane V2 wrapper' "$workflow"
           grep -Fq 'Deploy Jobs V2 wrapper' "$workflow"
@@ -122,6 +123,26 @@ jobs:
           test "$secret_line" -lt "$route_line"
           grep -Fq 'SECURITY_GENERATION: "2"' server/scripts/tenant-wrangler.mjs
           ! grep -q 'INTERNAL_AUTH_KEY_ID: "k2"' server/scripts/tenant-wrangler.mjs
+
+          install_line=$(grep -n 'Install locked Security V2 dependencies' "$workflow" | head -1 | cut -d: -f1)
+          reconcile_line=$(grep -n 'Reconcile Security V2 frozen-install worktree' "$workflow" | head -1 | cut -d: -f1)
+          build_line=$(grep -n 'Build Security V2 release candidate and exact Gateway client bundle' "$workflow" | head -1 | cut -d: -f1)
+          generated_guard_line=$(grep -n 'Guard Security V2 generated worktree' "$workflow" | head -1 | cut -d: -f1)
+          backup_line=$(grep -n 'Backup Control D1 before Security V2 migration' "$workflow" | head -1 | cut -d: -f1)
+          test "$install_line" -lt "$reconcile_line"
+          test "$reconcile_line" -lt "$build_line"
+          test "$build_line" -lt "$generated_guard_line"
+          test "$generated_guard_line" -lt "$backup_line"
+
+          v2_reconcile=$(mktemp)
+          sed -n "${reconcile_line},${build_line}p" "$workflow" > "$v2_reconcile"
+          grep -Fq 'pnpm-lock.yaml)' "$v2_reconcile"
+          grep -Fq 'git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml' "$v2_reconcile"
+          grep -Fq 'test -z "$(git status --porcelain --untracked-files=all)"' "$v2_reconcile"
+          ! grep -Fq 'git reset --hard' "$v2_reconcile"
+          ! grep -Fq 'git clean -fd' "$v2_reconcile"
+          ! grep -Fq 'client/*)' "$v2_reconcile"
+          ! grep -Fq 'server/*)' "$v2_reconcile"
 
       - name: Release safety accepts and locks canonical V2 lane
         working-directory: server
