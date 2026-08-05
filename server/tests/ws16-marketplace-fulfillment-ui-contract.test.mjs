@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 const projection = await readFile(new URL("../apps/tenant-worker/src/marketplace-fulfillment-read.ts", import.meta.url), "utf8");
 const core = await readFile(new URL("../apps/tenant-worker/src/index-core.ts", import.meta.url), "utf8");
 const api = await readFile(new URL("../packages/social-commerce/src/api.ts", import.meta.url), "utf8");
+const fulfillmentUi = await readFile(new URL("../../client/apps/runtime/src/experiences/MarketplaceFulfillmentPanel.tsx", import.meta.url), "utf8");
 
 test("marketplace fulfillment projection delegates authentication to canonical social order read", () => {
   assert.match(projection, /\/api\/v1\/social\/marketplace\/orders\?limit=1/);
@@ -26,6 +27,17 @@ test("fulfillment projection exposes provider event watermark as observational h
   assert.match(projection, /duplicate_event_count: Number\(providerEvent\.duplicate_event_count\)/);
   assert.match(projection, /conflict_event_count: Number\(providerEvent\.conflict_event_count\)/);
   assert.doesNotMatch(projection, /provider_event[\s\S]{0,500}(?:INSERT|UPDATE|DELETE)/i);
+});
+
+test("fulfillment UI shows provider event health without turning provider state into a lifecycle control", () => {
+  assert.match(fulfillmentUi, /provider_event: ProviderEventState \| null/);
+  assert.match(fulfillmentUi, /Tín hiệu trạng thái từ sàn/);
+  assert.match(fulfillmentUi, /current\.provider_event\.latest_external_status/);
+  assert.match(fulfillmentUi, /current\.provider_event\.stale_event_count/);
+  assert.match(fulfillmentUi, /current\.provider_event\.duplicate_event_count/);
+  assert.match(fulfillmentUi, /current\.provider_event\.conflict_event_count/);
+  assert.match(fulfillmentUi, /chỉ là evidence từ provider, không điều khiển trạng thái Sales Order \/ Delivery Note \/ Stock Return/);
+  assert.doesNotMatch(fulfillmentUi, /body: JSON\.stringify\(\{\s*(?:external_status|provider_event)/);
 });
 
 test("tenant wrapper mounts fulfillment read before base social routing", () => {
