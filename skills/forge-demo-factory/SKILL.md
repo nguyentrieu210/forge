@@ -122,12 +122,36 @@ explicitly authorized operation.
 
 ## GitHub workflow
 
-`.github/workflows/demo-provision.yml` is the operator entry point. It requires an exact merged-main
-SHA and `confirm=demo`, runs in the `production` environment, validates/compiles before mutation,
-then provisions and reports the live URL. Secrets stay in GitHub Actions/Cloudflare runtime state.
-Before dispatching a live run, record the user's explicit production authorization together with the
-exact merged-main SHA, customer slug and brief id in the execution evidence; a dry-run PASS alone is
-not authorization to mutate production provider state.
+`.github/workflows/demo-provision.yml` is the manual operator entry point. It requires an exact
+merged-main SHA and `confirm=demo`, runs in the `production` environment, validates/compiles before
+mutation, then provisions and reports the live URL. Secrets stay in GitHub Actions/Cloudflare runtime
+state.
+
+When the connected automation surface cannot invoke `workflow_dispatch`, use the governed issue
+command lane instead of weakening the manual workflow or adding a push-trigger bypass:
+
+```text
+/forge-demo-provision
+{"customer_name":"Thúy","slug":"thuy","brief":"marketplace-demo","admin_user":"admin","plan":"pro","provision_standard":false,"target_sha":"<40-char merged main SHA>","confirm":"demo"}
+```
+
+`.github/workflows/demo-provision-issue-command.yml` may act on that command only when all of these
+are true:
+
+- it is a normal issue comment, not a pull-request comment;
+- comment author is the repository owner and GitHub reports `author_association=OWNER`;
+- the first line is exactly `/forge-demo-provision` and the following JSON passes the strict parser;
+- `confirm` is exactly `demo`;
+- `target_sha` is an exact 40-character commit SHA already merged into `main`;
+- the job still runs under the `production` environment and uses the same Demo Factory orchestrator.
+
+The issue-command workflow must comment the run result back to the source issue, including the Actions
+run URL and LIVE URL on success. Do not accept free-form shell arguments, comments from collaborators,
+PR comments, mutable branch names as target authority or secrets in the issue body.
+
+Before dispatching any live run, record the user's explicit production authorization together with the
+exact merged-main SHA, customer slug and brief id in execution evidence; a dry-run PASS alone is not
+authorization to mutate production provider state.
 
 ## Required runtime credentials
 
