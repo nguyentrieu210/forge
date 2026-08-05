@@ -64,17 +64,25 @@ jobs:
           PR_NUMBER="${{ github.event.pull_request.number || github.run_number }}"
           PREVIEW_ALIAS="pr-${PR_NUMBER}"
 
+          SUBDOMAIN_JSON="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")"
+          WORKERS_SUBDOMAIN="$(printf '%s' "$SUBDOMAIN_JSON" | node -e '
+            let body="";
+            process.stdin.on("data", chunk => body += chunk);
+            process.stdin.on("end", () => {
+              const data = JSON.parse(body);
+              if (!data.success || !data.result?.subdomain) process.exit(2);
+              process.stdout.write(data.result.subdomain);
+            });
+          ')"
+
           pnpm --dir server exec wrangler versions upload \
             --config apps/gateway-worker/wrangler.jsonc \
             --preview-alias "$PREVIEW_ALIAS" \
             --keep-vars 2>&1 | tee /tmp/commerce-preview.log
 
-          PREVIEW_URL="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' /tmp/commerce-preview.log | tail -n 1)"
-          if [ -z "$PREVIEW_URL" ]; then
-            echo "Preview version uploaded but Wrangler returned no preview URL." >&2
-            exit 1
-          fi
-
+          PREVIEW_URL="https://${PREVIEW_ALIAS}-cloudforge-gateway.${WORKERS_SUBDOMAIN}.workers.dev"
           echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
           echo "Preview URL: $PREVIEW_URL"
 
