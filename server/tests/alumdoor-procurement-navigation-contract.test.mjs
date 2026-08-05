@@ -84,6 +84,8 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   assert.equal(config.detailCollection, "purchase_order_lines");
   assert.equal(config.detailRemainingField, "remaining_bars");
   assert.equal(config.openDoctype, "Purchase Order");
+  assert.equal(config.chartTop, 8);
+  assert.equal(config.valueFormat, "currency");
 
   const navByKey = new Map(pkg.nav.map((entry) => [entry.key, entry]));
   assert.equal(navByKey.has("Purchase Receipt"), false);
