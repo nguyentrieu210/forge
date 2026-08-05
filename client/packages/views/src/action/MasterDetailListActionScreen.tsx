@@ -206,13 +206,14 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
       const open = rows.filter((row) => matchesPredicate(row, config.exceptionPredicate));
       const late = open.some((row) => isOverdue(row[config.dueDateField]));
       const progress = rows.length ? rows.reduce((sum, row) => sum + Math.max(0, Math.min(100, number(row[config.progressField]))), 0) / rows.length : 100;
+      const state: State = !open.length ? "complete" : late ? "overdue" : "short";
       return {
         key,
         count: rows.length,
         value: rows.reduce((sum, row) => sum + number(row[config.valueField]), 0),
         exceptionCount: open.length,
         progress,
-        state: !open.length ? "complete" : late ? "overdue" : "short",
+        state,
       };
     })
       .filter((row) => !keyQuery || row.key.toLocaleLowerCase("vi").includes(keyQuery.toLocaleLowerCase("vi")))
