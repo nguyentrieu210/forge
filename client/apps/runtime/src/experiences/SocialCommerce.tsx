@@ -38,6 +38,15 @@ interface MarketplaceSettlement {
   status: "reconciled" | "variance";
   cash_evidence_verified: boolean;
 }
+interface MarketplaceConnection {
+  connection_id: string;
+  provider: "shopee" | "lazada" | "tiktok_shop" | null;
+  connection_status: string;
+  credential_status: "active" | "unavailable" | "reauthorization_required";
+  refresh_managed: boolean;
+  access_expires_at?: string;
+  refresh_expires_at?: string;
+}
 
 export interface SocialCommerceProps {
   canManageConnections: boolean;
@@ -52,9 +61,11 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [orders, setOrders] = useState<MarketplaceOrder[]>([]);
   const [settlements, setSettlements] = useState<MarketplaceSettlement[]>([]);
+  const [connections, setConnections] = useState<MarketplaceConnection[]>([]);
   const [settlementRestricted, setSettlementRestricted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [marketplaceConnecting, setMarketplaceConnecting] = useState<string>();
   const [error, setError] = useState<string>();
 
   const handleError = useCallback((caught: unknown, fallback: string) => {
@@ -69,18 +80,23 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
     setLoading(true);
     setError(undefined);
     try {
-      const [nextSummary, nextPages, nextEvents, nextCarts, nextOrders] = await Promise.all([
+      const connectionRequest = canManageConnections
+        ? api<{ connections: MarketplaceConnection[] }>("/api/v1/social/marketplace/connections")
+        : Promise.resolve({ connections: [] as MarketplaceConnection[] });
+      const [nextSummary, nextPages, nextEvents, nextCarts, nextOrders, nextConnections] = await Promise.all([
         api<Summary>("/api/v1/social/summary"),
         api<{ pages: Page[] }>("/api/v1/social/pages"),
         api<{ events: Event[] }>("/api/v1/social/events"),
         api<{ carts: Cart[] }>("/api/v1/social/carts"),
         api<{ orders: MarketplaceOrder[] }>("/api/v1/social/marketplace/orders?limit=200"),
+        connectionRequest,
       ]);
       setSummary(nextSummary);
       setPages(nextPages.pages);
       setEvents(nextEvents.events);
       setCarts(nextCarts.carts);
       setOrders(nextOrders.orders);
+      setConnections(nextConnections.connections);
       try {
         const nextSettlements = await api<{ settlements: MarketplaceSettlement[] }>("/api/v1/social/marketplace/settlements?limit=200");
         setSettlements(nextSettlements.settlements);
@@ -98,19 +114,34 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
     } finally {
       setLoading(false);
     }
-  }, [handleError]);
+  }, [canManageConnections, handleError]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     const url = new URL(window.location.href);
-    const result = url.searchParams.get("facebook");
-    if (!result) return;
-    if (result === "connected") toast.success("Đã kết nối Facebook Page");
-    else if (result === "no_pages") toast.warning("Tài khoản Facebook chưa có Page phù hợp để kết nối");
-    else toast.error("Kết nối Facebook chưa hoàn tất");
+    const facebookResult = url.searchParams.get("facebook");
+    const marketplaceResult = url.searchParams.get("marketplace_oauth");
+    const marketplaceProvider = url.searchParams.get("marketplace_provider");
+    if (facebookResult) {
+      if (facebookResult === "connected") toast.success("Đã kết nối Facebook Page");
+      else if (facebookResult === "no_pages") toast.warning("Tài khoản Facebook chưa có Page phù hợp để kết nối");
+      else toast.error("Kết nối Facebook chưa hoàn tất");
+    }
+    if (marketplaceResult) {
+      const label = providerLabel(marketplaceProvider);
+      if (marketplaceResult === "connected") toast.success(`Đã kết nối ${label}`);
+      else if (marketplaceResult === "denied") toast.warning(`Ủy quyền ${label} đã bị hủy`);
+      else if (marketplaceResult === "scope_changed") toast.warning(`Cấu hình ${label} đã thay đổi, cần bắt đầu ủy quyền lại`);
+      else if (marketplaceResult === "vault_error") toast.error(`Đã nhận token ${label} nhưng chưa lưu được credential`);
+      else toast.error(`Kết nối ${label} chưa hoàn tất`);
+    }
+    if (!facebookResult && !marketplaceResult) return;
     url.searchParams.delete("facebook");
+    url.searchParams.delete("marketplace_oauth");
+    url.searchParams.delete("marketplace_provider");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-  }, []);
+    void load();
+  }, [load]);
 
   async function connectFacebook() {
     if (!canManageConnections || connecting) return;
@@ -122,6 +153,22 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
     } catch (caught) {
       handleError(caught, "Không bắt đầu được kết nối Facebook");
       setConnecting(false);
+    }
+  }
+
+  async function connectMarketplace(connectionId: string) {
+    if (!canManageConnections || marketplaceConnecting) return;
+    setMarketplaceConnecting(connectionId);
+    setError(undefined);
+    try {
+      const result = await api<{ authorization_url: string }>("/api/v1/social/marketplace/oauth/start", {
+        method: "POST",
+        body: JSON.stringify({ connection_id: connectionId }),
+      });
+      window.location.assign(result.authorization_url);
+    } catch (caught) {
+      handleError(caught, "Không bắt đầu được ủy quyền sàn TMĐT");
+      setMarketplaceConnecting(undefined);
     }
   }
 
@@ -146,6 +193,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Button variant="outline" size="sm" onClick={() => window.location.assign("/app/Commerce%20Channel%20Profile")}>Gian hàng TMĐT</Button>
+          {canManageConnections ? <Button variant="outline" size="sm" onClick={() => window.location.assign("/app/Marketplace%20Connection")}><Link2 className="size-4" /> Kết nối sàn</Button> : null}
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} aria-label="Làm mới">
             <RefreshCw className={loading ? "size-4 animate-spin" : "size-4"} /> Làm mới
           </Button>
@@ -170,7 +218,18 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
         </TabsList>
 
         <TabsContent value="overview">
-          {loading ? <OverviewSkeleton /> : <Overview summary={summary} pages={pages} providerCounts={providerCounts} orders={orders} settlements={settlements} canManageConnections={canManageConnections} onConnect={() => void connectFacebook()} />}
+          {loading ? <OverviewSkeleton /> : <Overview
+            summary={summary}
+            pages={pages}
+            providerCounts={providerCounts}
+            orders={orders}
+            settlements={settlements}
+            connections={connections}
+            canManageConnections={canManageConnections}
+            marketplaceConnecting={marketplaceConnecting}
+            onConnect={() => void connectFacebook()}
+            onConnectMarketplace={(connectionId) => void connectMarketplace(connectionId)}
+          />}
         </TabsContent>
         <TabsContent value="orders">{loading ? <ListSkeleton /> : <MarketplaceOrderList orders={orders} onReload={load} />}</TabsContent>
         <TabsContent value="settlements">{loading ? <ListSkeleton /> : <SettlementList settlements={settlements} restricted={settlementRestricted} />}</TabsContent>
@@ -181,14 +240,17 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
   );
 }
 
-function Overview({ summary, pages, providerCounts, orders, settlements, canManageConnections, onConnect }: {
+function Overview({ summary, pages, providerCounts, orders, settlements, connections, canManageConnections, marketplaceConnecting, onConnect, onConnectMarketplace }: {
   summary?: Summary;
   pages: Page[];
   providerCounts: Record<string, number>;
   orders: MarketplaceOrder[];
   settlements: MarketplaceSettlement[];
+  connections: MarketplaceConnection[];
   canManageConnections: boolean;
+  marketplaceConnecting?: string;
   onConnect: () => void;
+  onConnectMarketplace: (connectionId: string) => void;
 }) {
   const varianceCount = settlements.filter((row) => row.status === "variance").length;
   const cards = [
@@ -215,6 +277,35 @@ function Overview({ summary, pages, providerCounts, orders, settlements, canMana
           <ChannelCard label="Facebook" count={pages.filter((page) => page.status === "active").length} />
         </div>
       </section>
+      {canManageConnections ? (
+        <section className="rounded-lg border bg-card shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:p-4">
+            <div><h2 className="text-sm font-semibold">Kết nối sàn TMĐT</h2><p className="text-xs text-muted-foreground">Credential được mã hóa trong tenant vault; trình duyệt chỉ khởi tạo OAuth theo Connection canonical.</p></div>
+            <Button variant="outline" size="sm" onClick={() => window.location.assign("/app/Marketplace%20Connection")}><Link2 className="size-4" /> Cấu hình Connection</Button>
+          </div>
+          <Separator />
+          {connections.length ? (
+            <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-3 md:p-4">
+              {connections.map((connection) => (
+                <MarketplaceConnectionCard
+                  key={connection.connection_id}
+                  connection={connection}
+                  busy={marketplaceConnecting === connection.connection_id}
+                  anyBusy={Boolean(marketplaceConnecting)}
+                  onConnect={() => onConnectMarketplace(connection.connection_id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Unplug />}
+              title="Chưa có Marketplace Connection"
+              detail="Tạo Connection cho Shopee, Lazada hoặc TikTok Shop rồi quay lại đây để ủy quyền seller account."
+              action={<Button onClick={() => window.location.assign("/app/Marketplace%20Connection")}><Link2 className="size-4" /> Tạo Connection</Button>}
+            />
+          )}
+        </section>
+      ) : null}
       <section className="rounded-lg border bg-card shadow-sm">
         <div className="flex flex-wrap items-center gap-3 p-3 md:p-4">
           <div className="flex size-9 items-center justify-center rounded-lg bg-info/10 text-info-text"><Facebook className="size-4.5" /></div>
@@ -381,7 +472,13 @@ function MetricCard({ label, value, icon, tone }: { label: string; value: string
   return <article className="rounded-lg border bg-card p-3 shadow-sm"><div className="flex items-center justify-between gap-2"><p className="truncate text-xs text-muted-foreground">{label}</p><span className={`grid size-7 shrink-0 place-items-center rounded-md [&>svg]:size-4 ${toneClass}`}>{icon}</span></div><p className="mt-2 text-xl font-semibold tabular-nums">{value}</p></article>;
 }
 function ChannelCard({ label, count }: { label: string; count: number }) { return <article className="rounded-lg border bg-background p-3"><div className="flex items-center justify-between gap-2"><p className="text-sm font-medium">{label}</p><StatusBadge tone={count ? "success" : "muted"}>{count ? "Có dữ liệu" : "Chưa có đơn"}</StatusBadge></div><p className="mt-2 text-2xl font-semibold tabular-nums">{count}</p><p className="text-xs text-muted-foreground">đơn đã đồng bộ</p></article>; }
-function ProviderBadge({ provider }: { provider: string }) { return <Badge variant="outline">{provider === "tiktok_shop" ? "TikTok Shop" : provider === "shopee" ? "Shopee" : provider === "lazada" ? "Lazada" : provider}</Badge>; }
+function MarketplaceConnectionCard({ connection, busy, anyBusy, onConnect }: { connection: MarketplaceConnection; busy: boolean; anyBusy: boolean; onConnect: () => void }) {
+  const runnable = connection.connection_status !== "disabled" && connection.connection_status !== "invalid" && connection.provider !== null;
+  const credentialTone = connection.credential_status === "active" ? "success" : connection.credential_status === "reauthorization_required" ? "warning" : "muted";
+  const credentialLabel = connection.credential_status === "active" ? "Đã ủy quyền" : connection.credential_status === "reauthorization_required" ? "Cần ủy quyền lại" : "Chưa có credential";
+  return <article className="rounded-lg border bg-background p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-medium">{connection.provider ? providerLabel(connection.provider) : "Connection không hợp lệ"}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{connection.connection_id}</p></div><StatusBadge tone={credentialTone}>{credentialLabel}</StatusBadge></div><div className="mt-3 flex flex-wrap items-center gap-2"><Badge variant="outline">{connection.connection_status}</Badge>{connection.refresh_managed ? <Badge variant="secondary">Auto refresh</Badge> : null}</div>{connection.access_expires_at ? <p className="mt-2 text-xs text-muted-foreground">Access token hết hạn: {dateTime(connection.access_expires_at)}</p> : null}<Button className="mt-3 w-full" variant={connection.credential_status === "active" ? "outline" : "default"} size="sm" disabled={!runnable || anyBusy} onClick={onConnect}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}{connection.credential_status === "active" ? "Ủy quyền lại" : "Kết nối seller"}</Button></article>;
+}
+function ProviderBadge({ provider }: { provider: string }) { return <Badge variant="outline">{providerLabel(provider)}</Badge>; }
 function ErrorNotice({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm" role="alert"><AlertTriangle className="size-4 shrink-0 text-destructive" /><div className="min-w-0 flex-1"><p className="font-medium text-destructive">Không tải được Trung tâm bán hàng</p><p className="mt-0.5 text-xs text-muted-foreground">{message}</p></div><Button variant="outline" size="sm" onClick={onRetry}><RefreshCw className="size-4" /> Thử lại</Button></div>; }
 function EmptyState({ icon, title, detail, action }: { icon: ReactNode; title: string; detail: string; action?: ReactNode }) { return <div className="grid min-h-52 place-items-center p-6 text-center"><div><span className="mx-auto grid size-11 place-items-center rounded-xl bg-muted text-muted-foreground [&>svg]:size-5">{icon}</span><p className="mt-3 text-sm font-medium">{title}</p><p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{detail}</p>{action ? <div className="mt-4">{action}</div> : null}</div></div>; }
 function OverviewSkeleton() { return <div className="space-y-4" aria-label="Đang tải tổng quan"><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-24" />)}</div><Skeleton className="h-72" /></div>; }
@@ -393,11 +490,18 @@ async function api<T = unknown>(url: string, init?: RequestInit): Promise<T> {
   const body = await response.json().catch(() => ({})) as T & { error?: { message?: string; code?: string } };
   if (!response.ok) {
     const code = body.error?.code;
-    const message = code === "FACEBOOK_NOT_CONFIGURED" ? "Kết nối Facebook chưa được cấu hình trên máy chủ." : code === "PERMISSION_DENIED" ? "Tài khoản không có quyền thực hiện thao tác này." : body.error?.message ?? code ?? `HTTP ${response.status}`;
+    const message = code === "FACEBOOK_NOT_CONFIGURED" ? "Kết nối Facebook chưa được cấu hình trên máy chủ."
+      : code === "MARKETPLACE_OAUTH_NOT_CONFIGURED" ? "OAuth marketplace chưa được cấu hình trên máy chủ."
+      : code === "MARKETPLACE_PROVIDER_NOT_CONFIGURED" ? "Developer app của sàn chưa được cấu hình."
+      : code === "MARKETPLACE_CONNECTION_UNAVAILABLE" ? "Marketplace Connection chưa sẵn sàng để ủy quyền."
+      : code === "MARKETPLACE_CONNECTION_DISABLED" ? "Marketplace Connection đang bị vô hiệu hóa."
+      : code === "PERMISSION_DENIED" ? "Tài khoản không có quyền thực hiện thao tác này."
+      : body.error?.message ?? code ?? `HTTP ${response.status}`;
     throw new SocialApiError(message, response.status, code);
   }
   return body;
 }
+function providerLabel(value: string | null) { if (value === "tiktok_shop") return "TikTok Shop"; if (value === "shopee") return "Shopee"; if (value === "lazada") return "Lazada"; return value || "Marketplace"; }
 function eventKind(value: string) { if (value.includes("message")) return "Tin nhắn"; if (value.includes("comment")) return "Bình luận"; return value; }
 function cartStatus(value: string) { if (value === "open") return "Đang mở"; if (value === "confirmed") return "Đã xác nhận"; if (value === "converted") return "Đã tạo đơn"; if (value === "abandoned") return "Đã bỏ"; return value; }
 function orderStatus(value: string) { if (value === "confirmed") return "Đã xác nhận"; if (value === "packing") return "Đóng gói"; if (value === "shipped") return "Đang giao"; if (value === "completed") return "Hoàn tất"; if (value === "cancelled") return "Đã hủy"; if (value === "returned") return "Đã trả"; return value; }
