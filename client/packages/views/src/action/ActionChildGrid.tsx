@@ -34,8 +34,9 @@ export interface ActionChildGridProps {
   readOnly?: boolean;
 }
 
-function layoutField(field: DocField): boolean {
-  return ["Section Break", "Column Break", "Tab Break", "Fold", "Heading", "HTML", "Button", "Table", "Table MultiSelect"].includes(field.fieldtype);
+function layoutField(field: DocField | string): boolean {
+  const fieldtype = typeof field === "string" ? field : field.fieldtype;
+  return ["Section Break", "Column Break", "Tab Break", "Fold", "Heading", "HTML", "Button", "Table", "Table MultiSelect"].includes(fieldtype);
 }
 
 function rowKey(row: Doc, index: number): string {
