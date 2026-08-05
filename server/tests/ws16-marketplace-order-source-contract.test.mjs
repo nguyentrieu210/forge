@@ -42,11 +42,12 @@ test("marketplace order ingestion is provider-neutral and idempotently maps into
   assert.doesNotMatch(marketplace, /UPDATE\s+(?:stock|gl|payment)/i);
 });
 
-test("marketplace commercial total is an assertion, never a trusted pricing input", async () => {
-  const { marketplace } = await sources();
-  assert.match(marketplace, /provider_merchandise_total_minor/);
-  assert.match(marketplace, /canonical\.grand_total_minor === normalized\.provider_merchandise_total_minor/);
-  assert.match(marketplace, /Marketplace merchandise total does not match canonical Sales Order total/);
+test("marketplace commercial total is reconciled before submit and never trusted as pricing input", async () => {
+  const { marketplace, canonical } = await sources();
+  assert.match(marketplace, /expected_grand_total_minor: normalized\.provider_merchandise_total_minor/);
+  assert.match(marketplace, /reconciledProviderTotal = normalized\.provider_merchandise_total_minor === undefined \? null : true/);
+  assert.match(canonical, /assertExpectedCommercialTotal\(name, draft\.data, input\.expected_grand_total_minor\);\n  const submit/);
+  assert.match(canonical, /External commercial total does not match canonical Sales Order total/);
   assert.match(marketplace, /selling_price_list: normalized\.selling_price_list/);
   assert.doesNotMatch(marketplace, /rate:\s*item\./);
   assert.doesNotMatch(marketplace, /unit_price/);
