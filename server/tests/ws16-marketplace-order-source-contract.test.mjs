@@ -9,10 +9,11 @@ const canonicalPath = new URL("../packages/social-commerce/src/canonical-order.t
 const apiPath = new URL("../packages/social-commerce/src/api.ts", import.meta.url);
 const appPath = new URL("../apps-src/social-commerce/app.json", import.meta.url);
 const profilePath = new URL("../apps-src/social-commerce/doctypes/commerce-channel-profile.json", import.meta.url);
+const connectionPath = new URL("../apps-src/social-commerce/doctypes/marketplace-connection.json", import.meta.url);
 const mappingPath = new URL("../apps-src/social-commerce/doctypes/marketplace-sku-mapping.json", import.meta.url);
 
 async function sources() {
-  const [marketplace, resolver, operations, canonical, api, appRaw, profileRaw, mappingRaw] = await Promise.all([
+  const [marketplace, resolver, operations, canonical, api, appRaw, profileRaw, connectionRaw, mappingRaw] = await Promise.all([
     readFile(marketplacePath, "utf8"),
     readFile(resolverPath, "utf8"),
     readFile(operationsPath, "utf8"),
@@ -20,6 +21,7 @@ async function sources() {
     readFile(apiPath, "utf8"),
     readFile(appPath, "utf8"),
     readFile(profilePath, "utf8"),
+    readFile(connectionPath, "utf8"),
     readFile(mappingPath, "utf8"),
   ]);
   return {
@@ -30,6 +32,7 @@ async function sources() {
     api,
     app: JSON.parse(appRaw),
     profile: JSON.parse(profileRaw),
+    connection: JSON.parse(connectionRaw),
     mapping: JSON.parse(mappingRaw),
   };
 }
@@ -94,18 +97,20 @@ test("provider input cannot choose ERP master data or canonical Item codes", asy
   assert.doesNotMatch(providerInterface, /item_code|company|customer|currency|selling_price_list|warehouse/);
 });
 
-test("marketplace profile and SKU mapping are metadata-first, unique and secret-free", async () => {
-  const { app, profile, mapping } = await sources();
+test("marketplace profile, connection and SKU mapping are metadata-first, unique and secret-free", async () => {
+  const { app, profile, connection, mapping } = await sources();
   assert.equal(app.id, "social-commerce");
   assert.equal(app.version, "0.4.0");
   assert.ok(app.nav.some((entry) => entry.key === "Commerce Channel Profile"));
+  assert.ok(app.nav.some((entry) => entry.key === "Marketplace Connection"));
   assert.ok(app.nav.some((entry) => entry.key === "Marketplace SKU Mapping"));
-  assert.ok(app.requires.some((entry) => entry.id === "integration-hub" && entry.version === "0.1.0"));
-  for (const name of ["Item", "Warehouse", "Sales Order", "Delivery Note", "Stock Return", "Sales Invoice", "Payment Entry", "Marketplace Connection"]) {
+  for (const name of ["Item", "Warehouse", "Sales Order", "Delivery Note", "Stock Return", "Sales Invoice", "Payment Entry"]) {
     assert.ok(app.externalDocTypes.some((entry) => entry.name === name), `missing ${name} dependency`);
   }
+  assert.equal(app.externalDocTypes.some((entry) => entry.name === "Marketplace Connection"), false, "owned connection must not be declared external");
 
   assert.equal(profile.name, "Commerce Channel Profile");
+  assert.equal(connection.name, "Marketplace Connection");
   assert.equal(mapping.name, "Marketplace SKU Mapping");
   assert.equal(mapping.autoname, "format:{channel_profile}:{external_sku}:{external_variant_key}");
   const profileFields = new Map(profile.fields.map((field) => [field.fieldname, field]));
@@ -114,6 +119,9 @@ test("marketplace profile and SKU mapping are metadata-first, unique and secret-
   assert.equal(profileFields.get("selling_price_list")?.options, "Price List");
   assert.equal(profileFields.get("connection_id")?.fieldtype, "Link");
   assert.equal(profileFields.get("connection_id")?.options, "Marketplace Connection");
+  const connectionFields = new Map(connection.fields.map((field) => [field.fieldname, field]));
+  assert.equal(connectionFields.has("status"), false);
+  assert.equal(connectionFields.get("connection_status")?.fieldtype, "Select");
 
   const mappingFields = new Map(mapping.fields.map((field) => [field.fieldname, field]));
   assert.equal(mappingFields.get("channel_profile")?.options, "Commerce Channel Profile");
@@ -123,6 +131,10 @@ test("marketplace profile and SKU mapping are metadata-first, unique and secret-
 
   for (const doc of [profile, mapping]) {
     for (const field of doc.fields) assert.doesNotMatch(field.fieldname, /(secret|password|access_token|refresh_token|api_key|private_key)/i);
+  }
+  for (const field of connection.fields) {
+    if (field.fieldname === "secret_ref") continue;
+    assert.doesNotMatch(field.fieldname, /(password|access_token|refresh_token|app_secret|api_key|private_key)/i);
   }
 });
 
