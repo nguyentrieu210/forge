@@ -23,9 +23,8 @@ customer-specific runtime fork.
 4. Customer customization should be brief/app metadata, domain rules, terminology, synthetic seed
    manifests and integrations. Do not fork the shared React/runtime or create
    `customer-X-api`/`customer-X-ui` merely for a demo.
-5. Shared DNS/Worker routes are production provider state. They are bootstrapped separately under
-   Cloudflare governance and explicit production authorization. Per-demo provisioning must not
-   silently repair or replace shared DNS.
+5. Shared DNS/Worker routes and security-generation bootstrap are production provider state. They
+   are changed only through source-controlled, explicitly authorized production workflows.
 6. Never put customer production/master/opening data into a sales demo unless the user explicitly
    opens the real-data migration/cutover boundary. Default to synthetic data.
 7. App `fixtures` are for installation/setup master records. Do not use a fixture and a canonical
@@ -39,11 +38,12 @@ customer brief
  -> normalize/reserve slug
  -> compile + validate app brief (no mutation)
  -> validate matching synthetic seed manifest when present (no mutation)
- -> resolve provider account + shared credential availability (read-only)
+ -> resolve the unique Cloudflare account containing cloudforge-gateway
  -> create/reuse isolated D1
- -> canonical tenant provision
- -> route registration through Control Plane
+ -> migrate + deploy isolated tenant Worker
+ -> Control Plane derives and installs tenant-scoped Security Generation V2 credentials
  -> create demo administrator
+ -> publish active route LAST
  -> wait for tenant origin
  -> install app through forge-app browser credential path
  -> verify client manifest/context
@@ -52,10 +52,11 @@ customer brief
  -> return LIVE https://<slug>.kairo.vn
 ```
 
-Use `server/scripts/create-demo-tenant.mjs` as the orchestrator. It composes existing authorities;
-it must not duplicate migration, route governance, App Factory installation or document-write logic.
-If `server/demo-seeds/<brief-id>.json` exists, the orchestrator automatically requires that seed to
-PASS before it prints `LIVE`.
+Use `server/scripts/create-demo-tenant.mjs` as the orchestrator and
+`server/scripts/provision-tenant-v2.mjs` as the new-demo provisioning authority. They compose
+existing migration, route governance, App Factory installation and canonical document-write paths;
+they must not duplicate those authorities. If `server/demo-seeds/<brief-id>.json` exists, the
+orchestrator automatically requires that seed to PASS before it prints `LIVE`.
 
 ## Inputs
 
@@ -65,28 +66,57 @@ Minimum:
 - optional explicit slug;
 - existing source-controlled app brief/package;
 - administrator identity;
-- tenant plan.
+- tenant plan;
+- exact merged-main source SHA for a live run.
 
 Derive a Vietnamese customer name deterministically to an ASCII slug when the user does not name
 one. Collision/resource ownership must fail closed or reuse only an exact same tenant resource;
 never overwrite another tenant merely because the requested slug is similar.
 
-## Provider identity and shared-secret boundary
+## Provider identity and Security Generation V2
 
 `CLOUDFLARE_ACCOUNT_ID` is an optional hint, not a required operator input. When absent, Demo Factory
 must enumerate only accounts visible to `CLOUDFLARE_API_TOKEN` and select the unique account in which
 `cloudforge-gateway` is readable. Zero or multiple matches are failures; never pick the first account.
 
-The three platform credentials `FORGE_INTERNAL_AUTH_SECRET`, `FORGE_INTERNAL_SERVICE_TOKEN` and
-`FORGE_CONTROL_TOKEN` must match the already-running platform. Prefer values supplied by the secure
-execution environment. If they are absent, the orchestrator may perform a read-only provider probe
-against the existing bindings, but it may use a provider value only when the provider actually returns
-non-empty secret text. Most Cloudflare secret reads intentionally return metadata only; that condition
-must fail **before D1 creation or any other provider mutation**.
+Legacy production credentials `INTERNAL_AUTH_SECRET`, `INTERNAL_SERVICE_TOKEN` and `CONTROL_TOKEN`
+are write-only provider state and may be unavailable to new automation. Do **not** generate a
+replacement for one legacy tenant and do not require those plaintext values for new demos.
 
-Never generate replacement shared secrets for one new tenant. A mismatched tenant cannot authenticate
-against the gateway/jobs/control plane. Re-keying the platform is a separate, explicit shared-runtime
-operation with its own release evidence and authorization.
+Security Generation V2 is the authority for newly provisioned demo tenants:
+
+- `INTERNAL_AUTH_SECRET_V2` is a platform master held only by Gateway + Control Plane;
+- `INTERNAL_SERVICE_TOKEN_V2` is a platform master held only by Jobs + Control Plane;
+- Control Plane derives a tenant-scoped auth root and tenant-scoped service token;
+- the tenant receives only its own derived values plus a fresh `SESSION_SECRET`;
+- Gateway derives the same tenant auth root before delegating to the existing trusted-identity and
+  app-call machinery;
+- Jobs derives the tenant service token before dispatching internal maintenance/event requests;
+- a tenant with no `__security__:<tenant>` projection remains Security Generation 1 and follows the
+  existing certified legacy path unchanged;
+- V2 profile authority lives in Control D1 (`tenant_security_profiles`) and is projected to ROUTES
+  KV only after the tenant credentials were installed successfully.
+
+The Cloudflare API token is transported transiently from the production execution environment to the
+Control Plane provider broker. It is never persisted in D1/KV/Worker secrets, emitted to logs or
+returned to callers. The broker accepts only the account initialized by the owner-authorized V2
+bootstrap and re-verifies the provider token against the canonical gateway.
+
+### V2 bootstrap
+
+`.github/workflows/security-v2-bootstrap.yml` is the only standard bootstrap/deploy lane. It must:
+
+1. require repository-owner issue command + `environment: production`;
+2. require an exact merged-main SHA and `confirm=security-v2`;
+3. backup Control D1 before the append-only migration;
+4. apply the Control security migration;
+5. coordinate both copies of each V2 master only while zero V2 tenant profiles exist;
+6. deploy Control Plane, Jobs and Gateway wrappers;
+7. initialize the immutable Cloudflare account authority through the Control provider broker;
+8. prove an existing Generation-1 tenant such as `alu.kairo.vn` still passes production health.
+
+Once any V2 tenant exists, bootstrap must never rotate a V2 master automatically. Missing V2 master
+bindings after that point are a fail-closed incident requiring an explicit security recovery plan.
 
 ## Synthetic seed contract
 
@@ -118,33 +148,39 @@ A run is `READY` only when:
 
 - brief compiles and validates before provider mutation;
 - matching seed manifest, when present, validates before provider mutation;
-- provider account and required shared-credential availability resolve before provider mutation;
+- provider account resolves unambiguously;
 - tenant D1 exists exactly once;
 - migrations and tenant Worker provisioning pass;
-- Control Plane route maps the full hostname to the intended tenant Worker;
+- V2 tenant-scoped auth/service/session bindings exist before route publication;
+- Control D1 security profile and ROUTES projection agree on generation/key/worker;
+- Control Plane route maps the full hostname to the intended tenant Worker and was published last;
 - browser-path `/login` resolves on the customer hostname;
 - App Factory install passes using the same session/CSRF path as the real client;
 - client manifest/context verification passes;
 - synthetic seed PASSes through canonical readback when configured;
-- URL, source SHA, tenant slug, app/brief and administrator identity are recorded as evidence;
-- no secret/password is written to Git, artifacts or job summary.
+- URL, source SHA, tenant slug, app/brief, security generation and administrator identity are recorded as evidence;
+- no secret/password/provider token is written to Git, artifacts or job summary.
 
 For a richer customer demo, add a deterministic seed profile and one Golden Flow; do not weaken this
 infrastructure DoD or fake dashboard values outside canonical documents.
 
 ## Failure and retry
 
-Fail closed. Do not automatically delete D1/Worker/route after a partial failure because that destroys
-forensic evidence and can turn a recoverable retry into an ambiguous state. Keep the resource,
-record the failed stage, fix the cause and rerun idempotently. Destructive cleanup is a separate
-explicitly authorized operation.
+Fail closed. Route publication is the final provisioning mutation. Before a route is active, partial
+D1/Worker/secret state remains unreachable and may be retried idempotently. Do not automatically
+delete D1/Worker/profile after a partial failure because that destroys forensic evidence and can turn
+a recoverable retry into an ambiguous state. Destructive cleanup is a separate explicitly authorized
+operation.
 
-## GitHub workflow
+If a V2 security profile already exists and all required tenant secret bindings are present, retry must
+reuse them; it must not rotate the tenant session secret. If an active V2 tenant is missing a required
+binding, fail instead of silently re-keying it.
+
+## GitHub workflows
 
 `.github/workflows/demo-provision.yml` is the manual operator entry point. It requires an exact
 merged-main SHA and `confirm=demo`, runs in the `production` environment, validates/compiles before
-mutation, then provisions and reports the live URL. Secrets stay in GitHub Actions/Cloudflare runtime
-state.
+mutation, then provisions through Security Generation V2 and reports the live URL.
 
 When the connected automation surface cannot invoke `workflow_dispatch`, use the governed issue
 command lane instead of weakening the manual workflow or adding a push-trigger bypass:
@@ -164,21 +200,30 @@ are true:
 - `target_sha` is an exact 40-character commit SHA already merged into `main`;
 - the job still runs under the `production` environment and uses the same Demo Factory orchestrator.
 
-The issue-command workflow must comment the run result back to the source issue, including the Actions
-run URL and LIVE URL on success. Do not accept free-form shell arguments, comments from collaborators,
-PR comments, mutable branch names as target authority or secrets in the issue body.
+Security V2 bootstrap uses the analogous owner-only command:
+
+```text
+/forge-security-v2-bootstrap
+{"target_sha":"<40-char merged main SHA>","confirm":"security-v2"}
+```
+
+Both issue-command workflows must comment the run result back to the source issue. Do not accept
+free-form shell arguments, comments from collaborators, PR comments, mutable branch names as target
+authority or secrets in the issue body.
 
 Before dispatching any live run, record the user's explicit production authorization together with the
-exact merged-main SHA, customer slug and brief id in execution evidence; a dry-run PASS alone is not
+exact merged-main SHA and intended mutation in execution evidence; a dry-run PASS alone is not
 authorization to mutate production provider state.
 
 ## Required runtime credentials
 
-- `CLOUDFLARE_API_TOKEN` with the narrow provider permissions needed by tenant provisioning;
+New-demo automation requires only:
+
+- `CLOUDFLARE_API_TOKEN` with the narrow Workers Scripts + D1 permissions already required by
+  provisioning;
 - optional `CLOUDFLARE_ACCOUNT_ID` hint; otherwise auto-discover the unique account containing the gateway;
-- existing platform `FORGE_INTERNAL_AUTH_SECRET`;
-- existing platform `FORGE_INTERNAL_SERVICE_TOKEN`;
-- existing platform `FORGE_CONTROL_TOKEN`;
 - `FORGE_DEMO_ADMIN_PASSWORD` or the existing production demo-admin password secret.
 
-Do not rotate shared platform secrets just to create a demo tenant.
+Security Generation V2 masters are generated and stored directly as Cloudflare Worker secrets by the
+owner-authorized bootstrap. They are not GitHub secrets and are never printed. Legacy shared platform
+secrets remain untouched for Generation-1 tenants.
