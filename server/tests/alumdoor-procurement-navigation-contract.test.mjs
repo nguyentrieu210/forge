@@ -11,7 +11,7 @@ const briefPath = path.resolve(here, "../briefs/alumdoor-v2.json");
 
 const PROCUREMENT_KEYS = [
   "action:tao-don-mua",
-  "action:nhap-nhom-fifo",
+  "action:nhap-nhom-hang-loat",
   "report:Mua hàng theo nhà cung cấp",
   "Purchase Order",
 ];
@@ -21,7 +21,7 @@ const PROCUREMENT_LABELS = ["Mua hàng", "Nhập hàng", "Báo cáo", "Lịch s�
 test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình tab", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.2.6");
+  assert.equal(brief.version, "2.2.8");
   assert.deepEqual(brief.navigation.items.slice(0, 4), PROCUREMENT_KEYS);
 
   const purchaseOrder = brief.doctypes.find((entry) => entry.name === "Purchase Order");
@@ -40,10 +40,16 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   assert.equal(createOrder?.group, "Mua hàng");
   assert.match(createOrder?.commit ?? "", /^alumdoor\.purchase\.create_order\s*\|/);
   assert.ok(createOrder?.fields.some((field) => typeof field === "string" && field.startsWith("items:Text(BulkTransaction:")));
-  assert.equal(fifo?.label, "Nhập hàng");
-  assert.equal(fifo?.menu, true);
-  assert.equal(fifo?.group, "Mua hàng");
-  assert.equal(bulk?.menu, false);
+
+  assert.equal(fifo?.menu, false);
+
+  assert.equal(bulk?.label, "Nhập hàng");
+  assert.equal(bulk?.menu, true);
+  assert.equal(bulk?.group, "Mua hàng");
+  assert.match(bulk?.preview ?? "", /^alumdoor\.purchase\.preview_bulk_fifo_receipt\s*\|/);
+  assert.match(bulk?.commit ?? "", /^alumdoor\.purchase\.bulk_fifo_receipt\s*\|/);
+  assert.ok(bulk?.fields.some((field) => typeof field === "string" && field.startsWith("lines:Text(BulkTransaction:")));
+
   assert.equal(settlement?.menu, false);
 
   const purchaseReport = brief.reports.find((entry) => entry.name === "Mua hàng theo nhà cung cấp");
@@ -51,14 +57,14 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   assert.equal(purchaseReport?.group, "Mua hàng");
 
   const pkg = compileBrief(brief);
-  assert.equal(pkg.version, "2.2.6");
+  assert.equal(pkg.version, "2.2.8");
   const procurement = pkg.nav.filter((entry) => entry.group === "Mua hàng");
   assert.deepEqual(procurement.map((entry) => entry.key), PROCUREMENT_KEYS);
   assert.deepEqual(procurement.map((entry) => entry.label), PROCUREMENT_LABELS);
 
   const navByKey = new Map(pkg.nav.map((entry) => [entry.key, entry]));
   assert.equal(navByKey.has("Purchase Receipt"), false);
-  assert.equal(navByKey.has("action:nhap-nhom-hang-loat"), false);
+  assert.equal(navByKey.has("action:nhap-nhom-fifo"), false);
   assert.equal(navByKey.has("action:doi-soat-giao-hang-ncc"), false);
 
   // Navigation remains presentation only: canonical authorities stay installed/callable.
