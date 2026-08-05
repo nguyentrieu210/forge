@@ -22,7 +22,12 @@ import {
   MetadataPermissionService,
 } from "../../frappe-model/src/index.js";
 import { D1OrganizationSecurityGuard } from "../../organization-security/src/index.js";
-import { marketplaceChannelId, marketplaceOrderSourceKey, type MarketplaceProvider } from "./marketplace-order.js";
+import {
+  marketplaceChannelId,
+  marketplaceCustomerIdentityKeyFromLineage,
+  marketplaceOrderSourceKey,
+  type MarketplaceProvider,
+} from "./marketplace-order.js";
 import type { ResolvedMarketplaceOrder } from "./marketplace-profile.js";
 
 export type MarketplaceCustomerIdentityStatus = "anonymous" | "unmapped" | "linked" | "historical";
@@ -109,7 +114,8 @@ export async function resolveMarketplaceCustomerIdentity(
 
 /**
  * Link the external buyer behind an existing marketplace order to ERP Customer.
- * The client never sends provider buyer id: it is read from the canonical Sales Order.
+ * The client never sends provider buyer id. New Sales Orders contain only an opaque
+ * CRM identity fingerprint; legacy raw lineages are accepted only for compatibility.
  */
 export async function linkMarketplaceOrderCustomerIdentity(
   db: D1Database,
@@ -136,11 +142,12 @@ export async function linkMarketplaceOrderCustomerIdentity(
   const salesOrder = await readDocument(db, tenantId, "Sales Order", operational.sales_order_name);
   if (!salesOrder || salesOrder.docstatus === 2) throw errors.reference(`Active Sales Order ${operational.sales_order_name} is required`);
   const salesPayload = parsePayload(salesOrder.payload_json, "Sales Order");
-  const buyer = requiredText(salesPayload.social_external_actor_id, "Marketplace buyer identity", 320);
-  if (buyer.startsWith("marketplace:") && buyer.endsWith(":guest")) throw errors.validation("Anonymous marketplace order cannot be linked to a customer identity");
+  const actorLineage = requiredText(salesPayload.social_external_actor_id, "Marketplace buyer identity", 320);
+  if (isGuestLineage(actorLineage)) throw errors.validation("Anonymous marketplace order cannot be linked to a customer identity");
   const channelId = requiredText(salesPayload.social_page_id, "Marketplace channel id", 240);
   const profile = await resolveProfileFromChannelId(db, tenantId, channelId);
-  const identityKey = await crmCustomerExternalIdentityKey(profile.provider, profile.shop_id, buyer);
+  const identityKey = await identityKeyFromActorLineage(actorLineage, profile);
+  const scopeKey = await crmCustomerExternalScopeKey(profile.provider, profile.shop_id);
   const identityName = crmCustomerExternalIdentityDocumentName(identityKey);
   const existing = await readDocument(db, tenantId, "CRM Customer External Identity", identityName);
 
@@ -162,27 +169,17 @@ export async function linkMarketplaceOrderCustomerIdentity(
   }
 
   const { store, kernel, organizationSecurity } = identityKernelBundle(db);
-  const document: JsonObject = existing ? {
+  const document: JsonObject = {
     company: profile.company,
     provider: profile.provider,
-    scope_key: await crmCustomerExternalScopeKey(profile.provider, profile.shop_id),
+    scope_key: scopeKey,
     identity_key: identityKey,
     scope_label: profile.channel_profile,
     linked_customer: customer,
     ...(crmContact ? { crm_contact: crmContact } : {}),
     identity_status: "Active",
     source: `marketplace:${profile.channel_profile}`,
-    ...(reason ? { change_reason: reason } : {}),
-  } : {
-    company: profile.company,
-    provider: profile.provider,
-    external_scope_id: profile.shop_id,
-    external_identity: buyer,
-    scope_label: profile.channel_profile,
-    linked_customer: customer,
-    ...(crmContact ? { crm_contact: crmContact } : {}),
-    identity_status: "Active",
-    source: `marketplace:${profile.channel_profile}`,
+    ...(existing && reason ? { change_reason: reason } : {}),
   };
   const command = await buildCommand({
     tenantId,
@@ -293,11 +290,26 @@ async function identityContextForOrder(db: D1Database, tenantId: string, orderId
   const salesOrder = await readDocument(db, tenantId, "Sales Order", operational.sales_order_name);
   if (!salesOrder) throw errors.notFound(`Sales Order ${operational.sales_order_name} not found`);
   const payload = parsePayload(salesOrder.payload_json, "Sales Order");
-  const buyer = requiredText(payload.social_external_actor_id, "Marketplace buyer identity", 320);
+  const actorLineage = requiredText(payload.social_external_actor_id, "Marketplace buyer identity", 320);
+  if (isGuestLineage(actorLineage)) throw errors.validation("Anonymous marketplace order has no customer identity mapping");
   const channelId = requiredText(payload.social_page_id, "Marketplace channel id", 240);
   const profile = await resolveProfileFromChannelId(db, tenantId, channelId);
-  const key = await crmCustomerExternalIdentityKey(profile.provider, profile.shop_id, buyer);
+  const key = await identityKeyFromActorLineage(actorLineage, profile);
   return { identity_name: crmCustomerExternalIdentityDocumentName(key), profile };
+}
+
+async function identityKeyFromActorLineage(
+  actorLineage: string,
+  profile: MarketplaceProfileContext,
+): Promise<string> {
+  const opaque = marketplaceCustomerIdentityKeyFromLineage(actorLineage);
+  if (opaque) return opaque;
+  // Backward compatibility for marketplace Sales Orders created before opaque lineage.
+  return crmCustomerExternalIdentityKey(profile.provider, profile.shop_id, actorLineage);
+}
+
+function isGuestLineage(value: string): boolean {
+  return /^marketplace:(shopee|lazada|tiktok_shop):guest$/.test(value);
 }
 
 async function readExistingMarketplaceSalesOrder(
