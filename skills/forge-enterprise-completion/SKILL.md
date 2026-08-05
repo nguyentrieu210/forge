@@ -324,6 +324,95 @@ Ghi rõ:
 
 Không nhét business rule vào React component nếu backend/domain nên sở hữu nó.
 
+### Bước 4A — UI Change Resolver (declaration-first, bắt buộc cho mọi UI task)
+
+Đối với mọi yêu cầu thay đổi UI, **không được mặc định bắt đầu từ React component**. Trước implementation phải truy ngược surface đang nhìn thấy về declaration và contract thật sự sở hữu nó.
+
+#### Thứ tự resolver bắt buộc
+
+1. **App / DocType declaration — ưu tiên đầu tiên**
+   - Kiểm tra DocType metadata, app manifest, screen/view declaration, navigation, tab/section, field presentation, `viewPolicy` và metadata instance liên quan.
+   - Nếu UI mong muốn đã nằm trong vocabulary metadata hiện có, sửa declaration ở app/domain sở hữu nó.
+   - Không sửa shared renderer chỉ để thay presentation/composition của một app.
+
+2. **Canonical metadata contract — chỉ khi declaration hiện tại không diễn đạt được**
+   - Chỉ sửa `@metaforge/core` metadata types, server parser/compiler/validator hoặc App Factory grammar khi yêu cầu UI hợp lệ nhưng vocabulary metadata hiện hành thực sự không thể biểu diễn nó.
+   - Đây là shared-contract change; không được gắn nhãn presentation-only chỉ vì kết quả cuối cùng nhìn thấy trên UI.
+   - Giữ backward compatibility và validation fail-closed.
+
+3. **Shared renderer/runtime — chỉ khi metadata đã đúng nhưng runtime chưa render đúng**
+   - Chỉ sửa Form/List/Matrix/shared renderer khi metadata đã mô tả được intent nhưng runtime chưa hỗ trợ hoặc render sai intent đó.
+   - Renderer phải business-neutral.
+   - Cấm `if (doctype === "...")`, app-name/vertical-name routing hoặc business semantics trong generic renderer.
+
+4. **App-specific React — ngoại lệ cuối cùng**
+   - Chỉ dùng khi surface thực sự bespoke và không hợp lý để biểu diễn bằng metadata/shared primitive.
+   - Phải chứng minh đây không phải pattern có khả năng tái sử dụng.
+   - Không tạo renderer thứ hai cho Form/List/Matrix chỉ để giải quyết một app.
+
+#### Declaration-first rule
+
+Nếu yêu cầu thuộc loại:
+
+- thêm/bớt một màn trong module;
+- chuyển màn sang tab khác;
+- đổi tên/tab/section;
+- ẩn hoặc bỏ hero/banner/card;
+- đổi thứ tự section;
+- chọn List/Form/Matrix/Bulk surface;
+- thay composition đã được metadata hỗ trợ;
+
+thì mặc định đi theo:
+
+`App/DocType declaration -> verify runtime -> browser evidence`
+
+**Không bắt đầu bằng việc sửa component.**
+
+#### Contract-vs-instance rule
+
+Phải phân biệt rõ:
+
+- **metadata instance/declaration change**: thay cấu hình của một app/DocType bằng vocabulary đã tồn tại;
+- **metadata contract change**: thêm/thay vocabulary chung, types, parser, compiler hoặc transport.
+
+Hai loại có blast radius khác nhau. Một app declaration presentation-only thường có thể là `FAST + NEW_CANDIDATE`; thay canonical metadata contract là shared-contract change và phải audit dependency/evidence tương ứng.
+
+#### Behavior guard
+
+Không được gắn nhãn UI-only dựa trên file extension hoặc việc thay đổi nằm trong metadata.
+
+Nếu metadata thay đổi làm đổi:
+
+- workflow/action availability;
+- validation;
+- write target;
+- field authority;
+- lifecycle/status;
+- business mutation;
+- permission semantics;
+- API/action binding;
+
+thì classify theo behavior thật. UI visibility/disablement không thay thế server-side permission enforcement.
+
+#### Required UI audit output
+
+Trước implementation UI task phải xác định được tối thiểu:
+
+```text
+UI Surface: <surface>
+Owning App/DocType: <owner>
+Current declaration source: <exact file/path/manifest/meta>
+Canonical metadata contract: <contract/type/parser nếu material>
+Renderer: <generic renderer path>
+Requested change: <outcome>
+Chosen layer: <declaration/contract/runtime/app-specific>
+Why higher-priority layer is/is not sufficient: <evidence>
+Engineering risk: <FAST/STANDARD/CRITICAL>
+Release impact: <NONE/NEW_CANDIDATE/PILOT_RELOCK/PRODUCTION_MUTATION>
+```
+
+Nếu chưa xác định được `Current declaration source`, chưa được phép nhảy thẳng vào shared renderer.
+
 ### Bước 5 — Contract before implementation
 
 Nếu behavior thay đổi, khóa tối thiểu:
