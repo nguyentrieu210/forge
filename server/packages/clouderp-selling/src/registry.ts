@@ -1,7 +1,7 @@
 import { ControllerRegistry } from "../../document-kernel/src/index.js";
 import { CrmChannelPartnerController, CrmFieldCheckInController, CrmSalesRouteController, CrmSalesRouteStopController, CrmSellOutReportController } from "./crm-channel-controllers.js";
 import { CrmActivityController } from "./crm-controllers.js";
-import { CrmCustomer360Controller } from "./crm-customer-360-controller.js";
+import { CrmCustomer360ExternalIdentityController } from "./crm-customer-360-external-identity-controller.js";
 import { CrmContactController, CrmOrganizationController } from "./crm-directory-controllers.js";
 import { CrmCustomerExternalIdentityController } from "./crm-external-identity-controller.js";
 import { CrmConsentAwareMarketingListMemberController } from "./crm-marketing-consent-controller.js";
@@ -21,7 +21,7 @@ export function createO2CControllerRegistry(): ControllerRegistry {
     .register(new CrmTeamAwareLeadController())
     .register(new CrmTeamAwareDealController())
     .register(new CrmActivityController())
-    .register(new CrmCustomer360Controller())
+    .register(new CrmCustomer360ExternalIdentityController())
     .register(new CrmOrganizationController())
     .register(new CrmContactController())
     .register(new CrmCustomerExternalIdentityController())
