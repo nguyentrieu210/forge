@@ -1,14 +1,12 @@
 import type { MutationPlan } from "../../contracts/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { activePurchaseAllocationReader } from "../../document-kernel/src/index.js";
+import { PurchaseReceiptController } from "./controllers.js";
+import { AllocatingPurchaseReceiptController } from "./purchase-allocation-controllers.js";
 import {
-  PurchaseOrderController,
-  PurchaseReceiptController,
-} from "./controllers.js";
-import {
-  AllocatingPurchaseOrderController,
-  AllocatingPurchaseReceiptController,
-} from "./purchase-allocation-controllers.js";
+  CommercialAllocatingPurchaseOrderController,
+  CommercialPurchaseOrderController,
+} from "./purchase-order-commercial-controller.js";
 import type { PurchaseOrderData, PurchaseReceiptData } from "./types.js";
 
 /**
@@ -18,8 +16,8 @@ import type { PurchaseOrderData, PurchaseReceiptData } from "./types.js";
  */
 export class RolloutPurchaseOrderController implements DocumentController<PurchaseOrderData> {
   readonly doctype = "Purchase Order";
-  private readonly legacy = new PurchaseOrderController();
-  private readonly allocating = new AllocatingPurchaseOrderController();
+  private readonly legacy = new CommercialPurchaseOrderController();
+  private readonly allocating = new CommercialAllocatingPurchaseOrderController();
 
   async buildPlan(context: ControllerContext<PurchaseOrderData>): Promise<MutationPlan<PurchaseOrderData>> {
     const active = await activePurchaseAllocationReader(
