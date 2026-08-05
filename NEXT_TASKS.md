@@ -2,7 +2,7 @@
 
 Ngày cập nhật: **2026-08-05**.
 
-Đây là active queue của Forge. Real pilot state và synthetic validation state phải được giữ tách biệt.
+Real pilot state và synthetic validation state phải được giữ tách biệt.
 
 ## 0. Current state
 
@@ -14,25 +14,16 @@ Ngày cập nhật: **2026-08-05**.
 - Real Pilot-01: **SOURCE INGESTED / PREVIEW-BLOCKED / EXTERNAL SOURCE DEPENDENCY**.
 - Synthetic Pilot-01: **PREVIEW_PASS / TEST ONLY**.
 - Synthetic Pilot-02: **DRY-RUN PASS / 9 of 9 representative segments**.
-- Latest verified synthetic Pilot-02 run: `30969301875`.
-- Latest accompanying R6/source-safety run: `30969301881` — **SUCCESS**.
-- Real Pilot-02: **NOT STARTED** until real Pilot-01 becomes READY.
-- Active synthetic next step: **Pilot-03 synthetic parallel-run + daily reconciliation harness**.
+- Synthetic Pilot-03: **PARALLEL RECONCILIATION PASS / 3 of 3 business days / tolerance 0**.
+- Pilot-03 executable run `30970432986`: **SUCCESS**.
+- Real Pilot-02 and Real Pilot-03: **NOT STARTED**, gated by real Pilot-01 READY.
+- Active synthetic next step: **Pilot-04 synthetic cutover-decision rehearsal**.
 
-Synthetic PASS results validate tooling and executable business paths only. They do not authorize real pilot transition or production mutation.
+Synthetic PASS results validate tooling and executable business paths only. They do not authorize real pilot transition, production write or cutover.
 
 ## 1. Real Pilot-01 — externally blocked
 
-Current accepted Alumdoor files have already been pushed as far as the evidence safely permits:
-
-- duplicate Customer references collapse to one retained canonical Customer;
-- exact duplicate Item codes, if encountered, use lowest free `01`, `02`, `03`... suffix with source lineage;
-- 60/60 historical journal identities are dispositioned;
-- supplier role gaps are closed `4 -> 0` without fuzzy merge;
-- UOM/quantity review is `19/21` resolved/classified with two fail-closed identities;
-- per-row integer-VND rounding is locked;
-- two future-dated `VIPST700` rows are quarantined rather than silently redated;
-- `30/06/2026` was evaluated and rejected as an unproven common cutoff.
+Current accepted Alumdoor files have already been pushed as far as source evidence safely permits. Closed work includes duplicate policies, 60/60 journal identities, Supplier gaps `4 -> 0`, UOM `19/21`, deterministic VND rounding, quarantine of two future-dated `VIPST700` rows and rejection of `30/06/2026` as an unproven common cutoff.
 
 ### Required real source-owner inputs
 
@@ -40,72 +31,56 @@ Current accepted Alumdoor files have already been pushed as far as the evidence 
 2. full-supplier AP opening at the same cutoff;
 3. canonical Stock quantity + value at that cutoff with actual aluminum Kg/value and complete scope;
 4. matching cash/bank balances if in scope, or explicit scope exclusion;
-5. physical UOM/conversion evidence for `NVL-AL595-GS`;
-6. physical UOM/conversion evidence for `NVL-BO1VIS AL71`;
+5. UOM/conversion evidence for `NVL-AL595-GS`;
+6. UOM/conversion evidence for `NVL-BO1VIS AL71`;
 7. corrected dates for the two quarantined `VIPST700` rows;
 8. named pilot-account allowlist with exactly one active named `Giám đốc` account.
 
 These values may not be synthesized for the real pilot.
 
-## 2. Synthetic Pilot-01 — DONE
+## 2. Synthetic Pilot-01 — DONE / PASS
 
-Authority: `docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json`.
-
-The deterministic synthetic batch contains all 12 required Mapping-V1 datasets and reaches `PREVIEW_PASS` with zero unexplained variance. It contains no real customer data and does not satisfy the real Pilot-01 dependencies.
+`docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json` covers all 12 Mapping-V1 datasets and reaches `PREVIEW_PASS` with zero unexplained variance.
 
 ## 3. Synthetic Pilot-02 — DONE / PASS
 
+`docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json` records nine passing representative segments: Sales/O2C, Procurement/P2P, Stock, Manufacturing, Finance, correction/return, warranty/service and idempotency, with no production mutation.
+
+## 4. Synthetic Pilot-03 — DONE / PASS
+
 Authorities:
 
-- `docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json`;
-- `docs/pilot/alumdoor/PILOT_02_STATUS.json`;
-- `.github/workflows/pilot-02-synthetic-dry-run.yml`.
+- `docs/pilot/alumdoor/PILOT_03_SYNTHETIC_PARALLEL_V1.json`;
+- `docs/pilot/alumdoor/PILOT_03_STATUS.json`;
+- `.github/workflows/pilot-03-synthetic-parallel.yml`;
+- `server/apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts`.
 
-Latest verified executable run `30969301875` passed all nine representative segments:
+Run `30970432986` reconciled **3 cumulative business days** in one local workerd/D1 state. Every daily checkpoint had exact zero variance across Stock quantity/value, AR/AP, Bank, revenue/COGS, Manufacturing progress and WIP, GL balance, document count/status and Payment Entry retry idempotency.
 
-1. synthetic Pilot-01 handoff;
-2. Sales/O2C;
-3. Procurement/P2P;
-4. Stock/fulfilment;
-5. Manufacturing;
-6. Finance settlement + cross-ledger reconciliation;
-7. correction/return negative paths;
-8. warranty/service/replacement/return lineage;
-9. idempotency/retry safety.
+Independent cross-ledger, AR and AP auditors also passed. Artifact ID `8916292176`; artifact zip SHA-256 `6728e53db65f663915211249a8cc5987e2c1fa6736e08d4834d53179172b132a`.
 
-The lane runs on GitHub-hosted CI using local workerd/in-memory/synthetic fixtures. It does not load production secrets, call `alu.kairo.vn`, deploy, migrate or write remote D1.
+## 5. Active synthetic next step — Pilot-04 decision rehearsal
 
-## 4. Active synthetic next step — Pilot-03
+Build a **decision-gate rehearsal only**, never a real cutover. Required scenarios:
 
-Build a bounded synthetic parallel-run/reconciliation harness that replays repeated business days and compares canonical authority surfaces after each day.
+1. all synthetic evidence present, zero variance, exact identity, named Giám đốc approval -> synthetic `GO`;
+2. any unresolved P0/P1 -> `NO-GO`;
+3. any reconciliation variance > 0 -> `NO-GO`;
+4. missing/duplicate Giám đốc approval -> `NO-GO`;
+5. release/profile/package drift -> `NO-GO`;
+6. stale or missing recovery evidence -> `NO-GO`.
 
-Required Pilot-03 synthetic evidence:
+The output must explicitly keep `production_write_authorized=false`, `cutover_authorized=false`, and `real_pilot_transition_allowed=false` even when the synthetic verdict is `GO`.
 
-- Stock quantity/value reconciliation;
-- AR/AP reconciliation;
-- scoped cash/bank reconciliation when included;
-- revenue/COGS reconciliation;
-- Manufacturing/WIP reconciliation;
-- GL debit/credit/balance equality;
-- document count/status equality;
-- deterministic retries/idempotency across repeated daily runs;
-- explicit discrepancy register with default tolerance `0`;
-- no production environment or customer data.
+Target verdict: **`PILOT-04-SYNTHETIC-DECISION-REHEARSAL-PASS`**.
 
-Target verdict: **`PILOT-03-SYNTHETIC-PASS`**. This remains test evidence only and does not advance the real pilot.
+## 6. Real transition rule
 
-## 5. Real transition rule
+Real Pilot-01 stays PREVIEW-BLOCKED until external source inputs are supplied and one common cutoff is source-proven. Only then may the real batch reach `PREVIEW_PASS`, named accounts be frozen, real Pilot-02 begin, and later real Pilot-03/Pilot-04 proceed under explicit business approval.
 
-Real Pilot-01 stays PREVIEW-BLOCKED until external source inputs are supplied and one common cutoff is source-proven. Then bind extracts by SHA-256/provenance, normalize under Mapping V1, generate the private real batch, require zero unexplained variance and real `PREVIEW_PASS`, freeze named accounts, and only then start real Pilot-02.
-
-`PREVIEW_PASS` still does not authorize production write/import.
-
-## 6. Standing boundaries
+## 7. Standing boundaries
 
 - Controlled pilot is not GA.
 - Synthetic values are never substituted for missing real openings.
-- Raw real customer/master/opening files remain outside Git.
 - Missing opening values are never assumed zero.
-- Rate-like `KG/M` / `KG/M2` labels are never silently promoted to stock quantities.
-- Future-dated source rows are never silently rewritten.
-- Real production data write/import, cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
+- Real production data write/import, real cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
