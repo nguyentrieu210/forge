@@ -12,9 +12,10 @@ Pilot target: tenant `alu` at `https://alu.kairo.vn`
 - duplicate identity policy: **LOCKED**.
 - 60 journal item identities: **60/60 DISPOSITIONED**.
 - supplier purchase-party role gaps: **4 -> 0**.
+- UOM/quantity review: **21 reviewed / 19 resolved-or-classified / 2 fail-closed**.
 - evaluated cutoff `30/06/2026`: **NOT PROVEN / NOT FROZEN**.
 - Pilot-01 verdict: `PILOT-01-SOURCE-INGESTED-PREVIEW-BLOCKED`.
-- Active work: **source-authoritative opening evidence + quantity/UOM reconciliation**.
+- Active work: **source-authoritative opening evidence + residual data/UOM blockers**.
 
 Do not advance to Pilot-02 until one common cutoff is source-proven and the normalized Mapping-V1 batch reaches zero-variance `PREVIEW_PASS`.
 
@@ -25,14 +26,14 @@ Do not advance to Pilot-02 until one common cutoff is source-proven and the norm
 3. `PILOT_DATA_MAPPING_V1.json`
 4. `PILOT_01_IDENTITY_DISPOSITION_V1.json`
 5. `PILOT_01_ALIAS_SUPPLIER_RECONCILIATION_V1.json`
-6. `PILOT_01_CUTOFF_FEASIBILITY_20260805.md`
-7. `PILOT_01_CUTOFF_FEASIBILITY_20260805.json`
-8. `PILOT_01_SOURCE_INGEST_20260805.md`
+6. `PILOT_01_UOM_RECONCILIATION_V1.json`
+7. `PILOT_01_CUTOFF_FEASIBILITY_20260805.md`
+8. `PILOT_01_CUTOFF_FEASIBILITY_20260805.json`
 9. `PILOT_01_SOURCE_INGEST_20260805.json`
 10. `PILOT_01_STATUS.json`
-11. `PILOT_01_READINESS.md`
-12. `tools/normalize-pilot-identities.mjs`
-13. `tools/normalize-pilot-aliases-suppliers.mjs`
+11. `tools/normalize-pilot-identities.mjs`
+12. `tools/normalize-pilot-aliases-suppliers.mjs`
+13. `tools/reconcile-pilot-uom.mjs`
 14. `tools/validate-pilot-batch.mjs`
 15. `../../../NEXT_TASKS.md`
 
@@ -44,8 +45,9 @@ R6 PILOT-GO
   -> Pilot-01 source ingest DONE
   -> duplicate identity LOCKED
   -> item identity 60/60 + supplier roles DONE
+  -> UOM/quantity 19/21 locked, 2 fail-closed
   -> 30/06 cutoff evaluated: NOT PROVEN
-  -> opening evidence + UOM reconciliation [ACTIVE]
+  -> source-authoritative opening evidence [ACTIVE]
   -> real PREVIEW_PASS
   -> Pilot-02 Dry Run
   -> Pilot-03 Parallel Run
@@ -53,27 +55,35 @@ R6 PILOT-GO
   -> Pilot-05 Hypercare/Exit
 ```
 
-## Identity truth
+## Identity and UOM truth
 
-- duplicate Customer: keep first canonical row and remap references;
-- exact duplicate Item code: later collisions get lowest free `01`, `02`, `03`... suffix with lineage preserved;
-- uploaded master is 277/277 unique, so the suffix rule is currently a guard;
-- 60 historical journal identities are closed as 41 canonical aliases, 18 supplemental source identities, and one composite explosion;
-- no fuzzy item or party matching is used;
-- supplier purchase-party role gaps are closed 4 -> 0.
+Duplicate and journal identity rules remain deterministic: no fuzzy matching and no fabricated suffix codes.
 
-Identity resolution does **not** automatically authorize a stock/accounting UOM conversion. The 18 supplemental identities and three axis-sensitive aliases still require canonical quantity/UOM semantics.
+UOM reconciliation now adds a critical context-split rule for `NVL-TON-DL7.2Dx124-XNXLC`:
+
+- raw inventory/opening/purchase context -> keep the source identity in `Kg`; source snapshot is 552 Kg on 27/03/2026;
+- sales context -> commercial finished identity `TP-TOLEKEM124_6D` in `m2`;
+- no business context -> fail closed.
+
+Other source-backed rules include ray/trục quantity from structured length × piece count, consumables in Kg/Cái, service identities with no stock UOM, and legacy derived commercial lines in m2.
+
+Two stock-UOM identities remain blocked rather than guessed:
+
+- `NVL-AL595-GS`: source snapshot `504 KG/M` conflicts with commercial m2 use; `KG/M` is rate-like, not a safe stock quantity axis.
+- `NVL-BO1VIS AL71`: source purchase `159 KG` conflicts with canonical BỌ-family Stock `Con`; no conversion evidence exists.
+
+See `PILOT_01_UOM_RECONCILIATION_V1.json` for exact source rows and row-level blockers.
 
 ## Cutoff truth
 
 `30/06/2026` is not a frozen pilot cutoff.
 
 - Cash activity reaches 30/06.
-- AR has receipts from 08/04 before observed credit sales begin 01/06; observed receipts exceed observed sales, proving carry-in AR. The AR `ĐẦU KỲ` column has 0 populated customer rows.
-- AP `ĐẦU KỲ` has 0 populated supplier rows.
-- Aluminum stock has physical history but 0 populated actual-Kg cells, no source-authoritative opening valuation, incomplete scope versus the process specification, and two future-dated source rows.
+- AR receipts precede observed credit sales and exceed them, proving carry-in AR; AR opening column has 0 populated customer rows.
+- AP opening column has 0 populated supplier rows.
+- Aluminum stock has physical history but 0 populated actual-Kg cells, no authoritative opening valuation, incomplete scope and two future-dated rows.
 
-Missing financial openings are never treated as zero. See `PILOT_01_CUTOFF_FEASIBILITY_20260805.json` for exact counts.
+Missing financial openings are never treated as zero.
 
 ## Real-source handling
 
@@ -89,6 +99,6 @@ The private normalized batch must have one source-proven common cutoff, SHA-256-
 
 - certified product identity remains exact-SHA bound;
 - no direct D1 edits or shadow Stock/Finance ledgers;
-- theoretical kg/m is not silently relabelled as measured opening Kg;
+- rate-like source labels such as `KG/M` and `KG/M2` are not silently promoted to stock quantities;
 - missing AR/AP openings are not assumed zero;
 - real production import/write, cutover, provider mutation and destructive recovery remain explicit authorization boundaries.
