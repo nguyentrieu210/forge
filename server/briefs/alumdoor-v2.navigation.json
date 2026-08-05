@@ -1,6 +1,6 @@
 {
   "version": "2.2.9",
-  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; Mua hàng và Nhập hàng giữ child-grid hiện tại; Báo cáo là MasterDetailList inline; report tổng cũ vẫn ở nhóm Báo cáo chung.",
+  "//": "Mua hàng dùng đúng 5 tab toàn cục: Quy trình do shell cung cấp; Nhập hàng là direct Purchase Receipt không bắt buộc Đơn NCC; Báo cáo là MasterDetailList inline; report tổng cũ vẫn ở nhóm Báo cáo chung.",
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",
