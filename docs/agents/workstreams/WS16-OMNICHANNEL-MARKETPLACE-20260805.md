@@ -7,9 +7,7 @@ Base target: `main`
 
 ## Outcome
 
-WS16 extends Forge as a consumer/orchestrator of existing ERP authorities rather than introducing a second ERP runtime or marketplace-specific business ledger.
-
-Current candidate covers Shopee, Lazada and TikTok Shop, while reusing the existing Facebook/Social Commerce surface.
+WS16 extends Forge as a consumer/orchestrator of existing ERP authorities. The candidate covers Shopee, Lazada and TikTok Shop while reusing the existing Facebook/Social Commerce surface.
 
 ## Implemented engineering scope
 
@@ -17,7 +15,7 @@ Current candidate covers Shopee, Lazada and TikTok Shop, while reusing the exist
 - provider adapters, OAuth, encrypted credentials, token refresh and sync health;
 - canonical Sales Order ingestion with shared ATP/reservation;
 - exact CRM marketplace-customer identity;
-- monotonic provider event evidence and read-only SKU mapping exception inbox;
+- monotonic provider-event evidence and read-only SKU mapping exception inbox;
 - canonical Delivery Note/Stock Return fulfillment and COD evidence;
 - settlement evidence with canonical Invoice/Payment verification;
 - operator search/filter, mapping inbox, provider diagnostics and settlement workspace;
