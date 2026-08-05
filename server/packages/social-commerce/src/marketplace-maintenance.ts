@@ -14,6 +14,7 @@ export interface MarketplaceMaintenanceFailure {
     | "duplicate_connection_profile"
     | "connection_invalid"
     | "credential_unavailable"
+    | "reauthorization_required"
     | "provider_auth"
     | "provider_rate_limit"
     | "mapping_blocked"
@@ -150,6 +151,7 @@ function profileConnectionId(raw: string): string | null {
 
 function failureCode(error: unknown): MarketplaceMaintenanceFailure["code"] {
   const text = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  if (text.includes("requires reauthorization") || text.includes("reauthorization")) return "reauthorization_required";
   if (text.includes("credential") || text.includes("secret_ref") || text.includes("kek")) return "credential_unavailable";
   if (text.includes("http 401") || text.includes("http 403") || text.includes("oauth") || text.includes("authorization")) return "provider_auth";
   if (text.includes("http 429") || text.includes("rate limit")) return "provider_rate_limit";
