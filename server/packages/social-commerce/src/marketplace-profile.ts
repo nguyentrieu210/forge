@@ -83,7 +83,7 @@ export async function resolveMarketplaceOrderFromMetadata(
     }
     return {
       external_sku: item.external_sku,
-      external_variant_id: item.external_variant_key === "BASE" ? undefined : item.external_variant_key,
+      ...(item.external_variant_key === "BASE" ? {} : { external_variant_id: item.external_variant_key }),
       item_code: jsonText(mapping.item_code, "item_code", 200),
       quantity: item.quantity,
     };
