@@ -1,0 +1,160 @@
+name: Pilot-02 Synthetic Dry Run
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json"
+      - "docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json"
+      - "docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.mjs"
+      - "docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.test.mjs"
+      - "docs/pilot/alumdoor/tools/verify-pilot-02-synthetic-contract.mjs"
+      - "server/apps/tenant-worker/test/r6-golden-flow.integration.test.mts"
+      - "server/tests/transaction-closure-sales-o2c.test.mjs"
+      - "server/tests/o2c.test.mjs"
+      - "server/tests/procurement-p2p-closure.test.mjs"
+      - "server/tests/procurement-p2p-correction-boundary.test.mjs"
+      - "server/tests/manufacturing-transaction-closure.test.mjs"
+      - "server/tests/alumdoor-manufacturing-lifecycle.test.mjs"
+      - "server/tests/rc4-kernel-gl-aggregate.test.mjs"
+      - "server/scripts/rc4-cross-ledger-reconciliation.py"
+      - "server/tests/maintenance-field-service.test.mjs"
+      - "server/tests/transaction-closure-warranty-service.test.mjs"
+      - "server/tests/transaction-closure-warranty-linkage.test.mjs"
+      - "server/tests/alumdoor-golden-order-readonly.test.mjs"
+      - ".github/workflows/pilot-02-synthetic-dry-run.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-02-synthetic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dry-run:
+    name: Execute representative synthetic transactions
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify synthetic Pilot-02 contract
+        run: |
+          node --check docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.mjs
+          node --check docs/pilot/alumdoor/tools/verify-pilot-02-synthetic-contract.mjs
+          node docs/pilot/alumdoor/tools/verify-pilot-02-synthetic-contract.mjs
+
+      - name: Generate Pilot-01 synthetic PREVIEW_PASS handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/alu-pilot-01-synthetic"
+          node docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.mjs "$out"
+          node - "$out/preview.json" <<'NODE'
+          const fs = require('node:fs');
+          const preview = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (preview.status !== 'PREVIEW_PASS') throw new Error(`expected PREVIEW_PASS, got ${preview.status}`);
+          if (preview.acceptance?.unexplained_reconciliation_variance !== 0) throw new Error('synthetic opening variance is not zero');
+          if (preview.acceptance?.production_write_authorized !== false) throw new Error('synthetic preview unexpectedly authorizes production write');
+          console.log('PILOT_01_SYNTHETIC_HANDOFF_PASS');
+          NODE
+
+      - name: Emit exact-head server artifacts
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/pilot-02-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/document-kernel/src/index.js
+          test -f dist/packages/clouderp-core/src/index.js
+          test -f dist/packages/clouderp-selling/src/index.js
+          test -f dist/packages/clouderp-stock/src/index.js
+          test -f dist/packages/clouderp-erpnext/src/index.js
+          test -f dist/apps-src/ws07-worker/src/entry.js
+          echo "repository_tsc_status=$status"
+
+      - name: Synthetic workerd Golden Flow and idempotency
+        working-directory: server
+        run: >-
+          pnpm exec vitest run apps/tenant-worker/test/r6-golden-flow.integration.test.mts
+          --config apps/tenant-worker/vitest.config.mts
+          --reporter=verbose
+
+      - name: Sales O2C and procurement correction dry run
+        working-directory: server
+        run: |
+          node --test \
+            tests/transaction-closure-sales-o2c.test.mjs \
+            tests/o2c.test.mjs \
+            tests/procurement-p2p-closure.test.mjs \
+            tests/procurement-p2p-correction-boundary.test.mjs
+
+      - name: Manufacturing dry run
+        working-directory: server
+        run: |
+          node --test \
+            tests/manufacturing-transaction-closure.test.mjs \
+            tests/alumdoor-manufacturing-lifecycle.test.mjs
+
+      - name: Finance and cross-ledger reconciliation dry run
+        working-directory: server
+        run: |
+          node --test tests/rc4-kernel-gl-aggregate.test.mjs
+          python3 -m py_compile scripts/rc4-cross-ledger-reconciliation.py
+          python3 scripts/rc4-cross-ledger-reconciliation.py --self-test
+
+      - name: Warranty service correction replacement and return dry run
+        working-directory: server
+        run: |
+          node --test \
+            tests/maintenance-field-service.test.mjs \
+            tests/transaction-closure-warranty-service.test.mjs \
+            tests/transaction-closure-warranty-linkage.test.mjs \
+            tests/alumdoor-golden-order-readonly.test.mjs
+
+      - name: Assert synthetic-only no-production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow=.github/workflows/pilot-02-synthetic-dry-run.yml
+          ! grep -nE 'environment:[[:space:]]*production|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|wrangler[[:space:]]+deploy|alu\.kairo\.vn|deploy-tenant\.mjs|migrate-tenant\.mjs|--remote' "$workflow"
+          grep -q '"synthetic": true' docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json
+          grep -q '"production_write_authorized": false' docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json
+          grep -q '"real_pilot_transition_allowed": false' docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json
+          git diff --check
+
+      - name: Publish synthetic dry-run summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Pilot-02 synthetic dry run'
+            echo '- Synthetic/test data only.'
+            echo '- No production environment, secrets, deployment or remote database mutation is used.'
+            echo '- A green run proves executable transaction paths only; it does not make real Pilot-01/Pilot-02 ready.'
+          } >> "$GITHUB_STEP_SUMMARY"
