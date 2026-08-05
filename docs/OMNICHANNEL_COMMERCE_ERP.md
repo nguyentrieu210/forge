@@ -102,7 +102,7 @@ Rules:
 
 The fulfillment UI surfaces this evidence so operators can diagnose out-of-order/replay behavior without creating a second lifecycle control.
 
-### 3.8 SKU mapping exception evidence
+### 3.8 SKU mapping exception evidence and inbox
 
 Mapping failures remain fail-closed. Structured reasons are limited to:
 
@@ -114,7 +114,9 @@ Mapping failures remain fail-closed. Structured reasons are limited to:
 
 `marketplace_mapping_exceptions` stores tenant/channel/provider/SKU/variant, first/last seen, occurrence count and resolution time only. It does not store buyer/order payload or credentials and cannot create/edit a mapping.
 
-A failed resolution opens/reopens the exact exception. When the same exact SKU/variant later resolves through authoritative metadata, that exception is marked resolved. The existing authenticated Marketplace Connection projection exposes open exceptions read-only.
+A failed resolution opens/reopens the exact exception. When the same exact SKU/variant later resolves through authoritative metadata, that exception is marked resolved. The authenticated Marketplace Connection projection exposes open exceptions read-only.
+
+MetaForge mounts a manager-only `Lỗi SKU` tab that shows provider, channel profile, external SKU/variant, bounded reason, occurrence count and latest observation. The UI has no mutation call for the exception projection and only links operators to the canonical `Marketplace SKU Mapping` DocType. The inbox therefore cannot auto-map or choose ERP Item codes.
 
 ### 3.9 Customer identity
 
@@ -145,14 +147,26 @@ before cash evidence can be marked verified.
 
 Live provider settlement statement certification/import remains external integration work.
 
+### 3.12 Operator order cockpit
+
+The `Đơn sàn` candidate UI adds local operator controls over the bounded order page already loaded from the existing read endpoint:
+
+- search by marketplace order ID, canonical Sales Order or Customer;
+- filter by provider;
+- filter by observed operational status;
+- highlight/filter orders missing canonical Sales Order or Customer links;
+- retain the existing canonical identity and fulfillment actions.
+
+These controls are observational/client-side only and introduce no lifecycle mutation route. No hard-coded SLA age threshold is inferred from timestamps; SLA/overdue behavior requires an explicit business policy/metadata authority before it can be added safely.
+
 ## 4. Sellable ERP module status
 
 | Module | Candidate status |
 |---|---|
 | Channel Center | Implemented: connection metadata, OAuth/re-auth, credential health, sync health. Live seller authorization/certification pending. |
-| Catalog & SKU | Implemented: deterministic mapping + fail-closed mapping exception evidence. Rich listing/publish management is future scope. |
+| Catalog & SKU | Implemented: deterministic mapping + fail-closed mapping exception evidence + dedicated manager inbox UI. Rich listing/publish management is future scope. |
 | Price & Promotion | Canonical price-list authority and amount reconciliation implemented; full outbound listing/promotion management is future scope. |
-| Order Cockpit | Canonical order list, identity, fulfillment/return and provider-event diagnostics implemented; richer search/SLA UX remains polish. |
+| Order Cockpit | Canonical order list, search/provider/status filters, missing-link filter, identity, fulfillment/return and provider-event diagnostics implemented. Policy-driven SLA aging remains future scope. |
 | Omnichannel ATP | Generic reservation/ATP lifecycle implemented for marketplace candidate. |
 | Fulfillment | Canonical Delivery Note/tracking/return integration implemented. Provider label/certification-specific behavior remains external/provider work. |
 | Returns/Refunds | Canonical Stock Return boundary implemented; provider-specific refund APIs remain external integration. |
@@ -198,7 +212,7 @@ Live provider settlement statement certification/import remains external integra
 
 ### Slice E — Operator UX and BI
 
-**Partially implemented.** Connection/sync health, order fulfillment/return, provider-event diagnostics and settlement workspace are live in MetaForge candidate UI. Mapping exception data is exposed read-only; dedicated mapping-inbox UI and richer BI/SLA cockpit remain polish/future work.
+**Operator UX substantially implemented.** Connection/sync health, dedicated SKU mapping exception inbox, order search/provider/status/missing-link filters, fulfillment/return, provider-event diagnostics and settlement workspace are live in MetaForge candidate UI. Policy-driven SLA aging and richer profitability/SLA BI remain future product work.
 
 ## 7. Acceptance invariants
 
@@ -213,6 +227,8 @@ Engineering tests on this candidate enforce:
 - settlement/COD cannot manufacture Finance truth;
 - retries/out-of-order provider events cannot regress canonical lifecycle because provider status is evidence-only and external watermark is monotonic;
 - mapping incidents retain exact bounded SKU/variant evidence without gaining mapping authority;
+- mapping inbox remains read-only and cannot create/edit canonical mappings;
+- order cockpit search/filters are observational and cannot create new lifecycle mutations or invent SLA policy;
 - provider-to-ERP transitions retain deterministic correlation/audit evidence.
 
 Production/business-complete status still additionally requires real provider credentials, seller authorization, certification/live webhook evidence and controlled deployment proof.
