@@ -1,0 +1,54 @@
+name: Marketplace Demo Brief Validation
+
+on:
+  pull_request:
+    paths:
+      - "server/briefs/marketplace-demo.json"
+      - "server/briefs/brief.schema.json"
+      - "server/scripts/forge-app.mjs"
+      - "server/scripts/lib/compile-brief*.mjs"
+      - "server/scripts/lib/validate-brief-schema.mjs"
+      - ".github/workflows/marketplace-demo-brief.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "server/briefs/marketplace-demo.json"
+      - "server/briefs/brief.schema.json"
+      - "server/scripts/forge-app.mjs"
+      - "server/scripts/lib/compile-brief*.mjs"
+      - "server/scripts/lib/validate-brief-schema.mjs"
+      - ".github/workflows/marketplace-demo-brief.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Compile marketplace brief through canonical parser
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build canonical server parser
+        run: pnpm --filter cloudforge run build
+
+      - name: Compile and validate marketplace demo
+        run: node server/scripts/forge-app.mjs server/briefs/marketplace-demo.json --dry-run
