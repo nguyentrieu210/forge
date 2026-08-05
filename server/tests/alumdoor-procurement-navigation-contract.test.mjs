@@ -79,6 +79,7 @@ test("Alumdoor procurement exposes operational create, receive, dashboard and ca
   const reportField = reportAction?.fields.find((field) => typeof field === "string" && field.startsWith("view_config:Text(MasterDetailList:"));
   assert.ok(reportField);
   assert.match(reportField, /\"companyField\":\"company\"/, "purchase dashboard must be scoped by Business Context company");
+  assert.match(reportField, /\"currencyField\":\"currency\"/, "purchase dashboard must preserve document currency instead of aggregating unlike currencies");
 
   assert.equal(historyAction?.label, "Lịch sử mua hàng");
   assert.equal(historyAction?.menu, true);
@@ -111,6 +112,7 @@ test("Alumdoor procurement exposes operational create, receive, dashboard and ca
   assert.equal(config.sourceDoctype, "Purchase Order");
   assert.equal(config.submittedOnly, true);
   assert.equal(config.companyField, "company");
+  assert.equal(config.currencyField, "currency");
   assert.deepEqual(config.exceptionPredicate, { field: "received_percentage", operator: "<", value: 100 });
   assert.equal(config.detailCollection, "purchase_order_lines");
   assert.equal(config.detailRemainingField, "remaining_bars");
