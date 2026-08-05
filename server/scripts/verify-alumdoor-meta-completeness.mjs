@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { compileBrief } from "./lib/compile-brief.mjs";
+import { compileBrief } from "./lib/compile-brief-app-factory.mjs";
 import { readBriefSource } from "./lib/read-brief-source.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
