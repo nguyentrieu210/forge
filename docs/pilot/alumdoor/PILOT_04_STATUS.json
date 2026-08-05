@@ -1,0 +1,34 @@
+{
+  "format": "forge-alumdoor-pilot-04-status/v1",
+  "real_pilot_04": {
+    "status": "NOT_STARTED_REAL_DATA_GATED",
+    "gate": "real Pilot-01 READY -> real Pilot-02 accepted -> real Pilot-03 accepted -> explicit Giám đốc cutover decision",
+    "production_write_authorized": false,
+    "cutover_authorized": false
+  },
+  "synthetic_pilot_04": {
+    "status": "SYNTHETIC_DECISION_REHEARSAL_PASS",
+    "contract": "docs/pilot/alumdoor/PILOT_04_SYNTHETIC_DECISION_V1.json",
+    "decision_engine": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.mjs",
+    "test": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.test.mjs",
+    "workflow": ".github/workflows/pilot-04-synthetic-decision.yml",
+    "initial_pass_run_id": 30972065238,
+    "initial_pass_head_sha": "7b4fc303176642efde4e366afa970084b6c89f3f",
+    "baseline_go_scenarios": 1,
+    "go_gate_count": 11,
+    "go_gates_passed": 11,
+    "no_go_scenario_classes": 7,
+    "no_go_scenario_classes_passed": 7,
+    "artifact_id": 8916878582,
+    "artifact_zip_sha256": "315dc49d345c0cbead7a6b1c6f02034e455c51df32bd6fcdc7e3521bd798d072",
+    "contains_real_customer_data": false,
+    "uses_production_environment": false,
+    "production_write_authorized": false,
+    "cutover_authorized": false,
+    "real_pilot_transition_allowed": false,
+    "production_data_mutated": false
+  },
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "next_synthetic_step": "Pilot-05 synthetic hypercare and exit-gate rehearsal",
+  "claim_boundary": "Synthetic decision rehearsal may produce a synthetic GO only as test evidence; it never authorizes a real cutover or production mutation."
+}
