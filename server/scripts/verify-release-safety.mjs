@@ -28,6 +28,20 @@ const required = [
   "node server/scripts/sre-health-snapshot.mjs",
   "--expected-release-sha \"$TARGET_SHA\"",
   "--confirm-host alu.kairo.vn",
+  "issue_comment:\n    types: [created]",
+  "security-v2-bootstrap:",
+  "github.event_name == 'issue_comment'",
+  "github.event.comment.user.login == github.repository_owner",
+  "github.event.comment.author_association == 'OWNER'",
+  "startsWith(github.event.comment.body, '/forge-security-v2-bootstrap')",
+  "node server/scripts/parse-security-v2-command.mjs",
+  "name: Backup Control D1 before Security V2 migration",
+  "name: Apply append-only Control Security V2 migration",
+  "name: Coordinate V2 platform masters before first V2 tenant",
+  "name: Deploy Control Plane V2 wrapper",
+  "name: Deploy Jobs V2 wrapper",
+  "name: Deploy Gateway V2 wrapper",
+  "name: Finalize immutable Security V2 provider account authority",
 ];
 for (const invariant of required) {
   if (!workflow.includes(invariant)) throw new Error(`release safety invariant missing: ${invariant}`);
@@ -81,11 +95,45 @@ if (!migrationLine.includes("--allow-dirty") || !tenantDeployLine.includes("--al
   throw new Error("full release mutation may bypass the generic dirty guard only after both exact-source reconciliation guards");
 }
 
+const securityBootstrapIndex = workflow.indexOf("security-v2-bootstrap:");
+const securityParserIndex = workflow.indexOf("parse-security-v2-command.mjs", securityBootstrapIndex);
+const securityMergedMainIndex = workflow.indexOf("Require Security V2 target to be merged into main", securityBootstrapIndex);
+const securityBackupIndex = workflow.indexOf("Backup Control D1 before Security V2 migration", securityBootstrapIndex);
+const securityMigrationIndex = workflow.indexOf("Apply append-only Control Security V2 migration", securityBootstrapIndex);
+const securityPrepareIndex = workflow.indexOf("Coordinate V2 platform masters before first V2 tenant", securityBootstrapIndex);
+const securityControlDeployIndex = workflow.indexOf("Deploy Control Plane V2 wrapper", securityBootstrapIndex);
+const securityJobsDeployIndex = workflow.indexOf("Deploy Jobs V2 wrapper", securityBootstrapIndex);
+const securityGatewayDeployIndex = workflow.indexOf("Deploy Gateway V2 wrapper", securityBootstrapIndex);
+const securityFinalizeIndex = workflow.indexOf("Finalize immutable Security V2 provider account authority", securityBootstrapIndex);
+if (!(
+  securityBootstrapIndex >= 0
+  && securityParserIndex > securityBootstrapIndex
+  && securityMergedMainIndex > securityParserIndex
+  && securityBackupIndex > securityMergedMainIndex
+  && securityMigrationIndex > securityBackupIndex
+  && securityPrepareIndex > securityMigrationIndex
+  && securityControlDeployIndex > securityPrepareIndex
+  && securityJobsDeployIndex > securityControlDeployIndex
+  && securityGatewayDeployIndex > securityJobsDeployIndex
+  && securityFinalizeIndex > securityGatewayDeployIndex
+)) {
+  throw new Error("Security V2 release order must remain owner auth -> merged-main check -> control backup -> migration -> coordinated masters -> control -> jobs -> gateway -> finalize");
+}
+const securityBlock = workflow.slice(securityBootstrapIndex, workflow.indexOf("verify-production:", securityBootstrapIndex));
+if (!securityBlock.includes("environment: production")) throw new Error("Security V2 bootstrap must remain under production environment governance");
+if (!securityBlock.includes("control-pre-security-v2.sql")) throw new Error("Security V2 bootstrap must retain pre-migration Control D1 backup evidence");
+if (/FORGE_INTERNAL_AUTH_SECRET|FORGE_INTERNAL_SERVICE_TOKEN|FORGE_CONTROL_TOKEN/.test(securityBlock)) {
+  throw new Error("Security V2 bootstrap must not depend on recovered legacy plaintext platform secrets");
+}
+
 const verifyJobIndex = workflow.indexOf("verify-production:");
 const currentMainCheckout = workflow.indexOf("ref: main", verifyJobIndex);
 const healthProbeIndex = workflow.indexOf("node server/scripts/sre-health-snapshot.mjs", verifyJobIndex);
 if (!(verifyJobIndex >= 0 && currentMainCheckout > verifyJobIndex && healthProbeIndex > currentMainCheckout)) {
   throw new Error("production convergence must run from current main SRE control-plane code");
+}
+if (!workflow.includes("needs: [ui-deploy, build-deploy, security-v2-bootstrap]")) {
+  throw new Error("canonical production convergence must include Security V2 bootstrap releases");
 }
 
 const uploadBlocks = [...workflow.matchAll(/uses: actions\/upload-artifact@v4[\s\S]*?(?=\n\s{2,}- name:|\n\S|$)/g)]
@@ -136,7 +184,7 @@ for (const name of workflowFiles) {
 }
 
 console.log(
-  `RELEASE_SAFETY_PASS merged-main-target frozen-install-reconciled deterministic-generated-roots backup-before-migration current-main-verifier no-sql-artifact topology=${workflowFiles.join(",")}`,
+  `RELEASE_SAFETY_PASS merged-main-target frozen-install-reconciled deterministic-generated-roots backup-before-migration current-main-verifier security-v2-canonical-owner-gate no-sql-artifact topology=${workflowFiles.join(",")}`,
 );
 
 function hasTopLevelWorkflowEvent(source, event) {
