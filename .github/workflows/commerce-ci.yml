@@ -51,6 +51,10 @@ jobs:
       - name: Build CloudForge
         run: pnpm --filter cloudforge run build
 
+      - name: Validate social-commerce package
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/social-commerce --check
+
       - name: Run omnichannel commerce contract tests
         working-directory: server
         run: node --test tests/ws16-marketplace-order-source-contract.test.mjs tests/ws16-omnichannel-closure-contract.test.mjs tests/ws16-marketplace-signing.test.mjs tests/ws16-marketplace-runtime.test.mjs
