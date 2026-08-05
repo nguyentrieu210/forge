@@ -24,8 +24,8 @@ import {
  * New package authors may declare `input_tables` plus an optional first-class `batch`
  * contract. Before the existing manifest parser/installer sees the package we lower each
  * table to the exact legacy Text shape the current generic ActionScreen already renders.
- * Batch metadata is embedded as an extra JSON property on the bound BulkTransaction spec;
- * old clients ignore it, while new server/tooling can reconstruct the canonical contract.
+ * Rich presentation/summary metadata rides beside the legacy columns; old clients ignore it,
+ * while new clients reconstruct the canonical contract without losing behavior.
  *
  * This bridge is intentionally isolated and deletable. It contains no business rule and no
  * tenant data write of its own; the canonical AppInstaller remains the authority for install,
@@ -83,6 +83,8 @@ function legacyOptions(table: AppActionInputTable, batch?: AppActionBatchContrac
     minRows: table.min_rows,
     maxRows: table.max_rows,
     allowPaste: table.allow_paste,
+    ...(table.presentation ? { presentation: table.presentation } : {}),
+    ...(table.summary ? { summary: table.summary } : {}),
     ...(batch ? { batch } : {}),
   })}`;
 }
