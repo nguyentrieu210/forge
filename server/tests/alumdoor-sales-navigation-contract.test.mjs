@@ -10,7 +10,9 @@ import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const briefPath = path.resolve(here, "../briefs/alumdoor-v2.json");
 const composerPath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorSalesComposer.tsx");
+const selectionBatchPath = path.resolve(here, "../../client/packages/views/src/action/SelectionBatchActionScreen.tsx");
 const OPERATIONAL_REPORT_PREFIX = "OperationalReport:";
+const DOCUMENT_HISTORY_PREFIX = "DocumentHistory:";
 
 const SALES_KEYS = [
   "alumdoor-operations:workbench",
@@ -18,10 +20,11 @@ const SALES_KEYS = [
   "Delivery Note",
   "action:giao-hang-dispatch",
   "action:bao-cao-ban-hang",
+  "action:lich-su-ban-hang",
 ];
-const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Phiếu xuất kho", "Giao hàng", "Báo cáo"];
+const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Phiếu xuất kho", "Giao hàng", "Báo cáo", "Lịch sử bán hàng"];
 
-test("Alumdoor sales exposes composer, canonical order/output, dispatch and in-tab dashboard in 2.3.0", async () => {
+test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and canonical history in 2.3.0", async () => {
   const brief = await readBriefSource(briefPath);
 
   assert.equal(brief.version, "2.3.0");
@@ -45,6 +48,7 @@ test("Alumdoor sales exposes composer, canonical order/output, dispatch and in-t
   const legacyDelivery = brief.actions.find((entry) => entry.name === "giao-hang-theo-ngay");
   const dispatch = brief.actions.find((entry) => entry.name === "giao-hang-dispatch");
   const dashboard = brief.actions.find((entry) => entry.name === "bao-cao-ban-hang");
+  const history = brief.actions.find((entry) => entry.name === "lich-su-ban-hang");
   const calculator = brief.actions.find((entry) => entry.name === "tinh-cong-thuc-cua");
   assert.equal(legacyDelivery?.menu, false);
   assert.equal(dispatch?.label, "Giao hàng");
@@ -64,6 +68,16 @@ test("Alumdoor sales exposes composer, canonical order/output, dispatch and in-t
   assert.match(dashboardField, /\"keyField\":\"customer\"/);
   assert.match(dashboardField, /\"progressField\":\"per_delivered\"/);
   assert.match(dashboardField, /\"companyField\":\"company\"/);
+
+  assert.equal(history?.label, "Lịch sử bán hàng");
+  assert.equal(history?.menu, true);
+  assert.equal(history?.group, "Bán hàng");
+  assert.equal(history?.permissionAction, "read");
+  const historyField = history?.fields.find((field) => typeof field === "string" && field.startsWith("history_config:Text(DocumentHistory:"));
+  assert.ok(historyField);
+  assert.match(historyField, /\"doctype\":\"Sales Order\"/);
+  assert.match(historyField, /\"doctype\":\"Delivery Note\"/);
+  assert.match(historyField, /\"doctype\":\"Sales Invoice\"/);
   assert.equal(calculator?.menu, false);
 
   const legacyReport = brief.reports.find((entry) => entry.name === "Đơn hàng theo khách");
@@ -91,21 +105,32 @@ test("Alumdoor sales exposes composer, canonical order/output, dispatch and in-t
   assert.equal(config.companyField, "company");
   assert.equal(config.openDoctype, "Sales Order");
 
+  const compiledHistory = pkg.actions.find((entry) => entry.name === "lich-su-ban-hang");
+  assert.equal(compiledHistory?.permission_action, "read");
+  const compiledHistoryField = compiledHistory?.fields.find((field) => field.fieldname === "history_config");
+  assert.ok(compiledHistoryField?.options?.startsWith(DOCUMENT_HISTORY_PREFIX));
+  const historyConfig = JSON.parse(compiledHistoryField.options.slice(DOCUMENT_HISTORY_PREFIX.length));
+  assert.deepEqual(historyConfig.sources.map((source) => source.doctype), ["Sales Order", "Delivery Note", "Sales Invoice"]);
+  assert.ok(historyConfig.sources.every((source) => source.companyField === "company"));
+
   const navByKey = new Map(pkg.nav.map((entry) => [entry.key, entry]));
   assert.equal(navByKey.has("action:tinh-cong-thuc-cua"), false);
   assert.equal(navByKey.has("action:giao-hang-theo-ngay"), false);
   assert.equal(navByKey.get("report:Đơn hàng theo khách")?.group, "Báo cáo");
   assert.equal(navByKey.get("action:giao-hang-dispatch")?.kind, "experience");
   assert.equal(navByKey.get("action:bao-cao-ban-hang")?.kind, "experience");
+  assert.equal(navByKey.get("action:lich-su-ban-hang")?.kind, "experience");
   assert.equal(navByKey.get("alumdoor-operations:workbench")?.kind, "experience");
 
   assert.ok(pkg.actions.some((entry) => entry.name === "giao-hang-theo-ngay"));
   assert.ok(pkg.actions.some((entry) => entry.name === "giao-hang-dispatch"));
   assert.ok(pkg.actions.some((entry) => entry.name === "bao-cao-ban-hang"));
+  assert.ok(pkg.actions.some((entry) => entry.name === "lich-su-ban-hang"));
   assert.ok(pkg.actions.some((entry) => entry.name === "tinh-cong-thuc-cua"));
   assert.ok(pkg.reports.some((entry) => entry.name === "Đơn hàng theo khách"), "legacy report stays installed/callable");
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Sales Order"));
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Delivery Note"));
+  assert.ok(pkg.doctypes.some((entry) => entry.name === "Sales Invoice"));
 });
 
 test("Sales composer takes technical choices from Cutting Policy and reserves stock before submit", async () => {
@@ -129,4 +154,14 @@ test("Sales composer takes technical choices from Cutting Policy and reserves st
   assert.match(source, /min_length_m:\s*Number\(formula\.cut_width_m\)/);
   assert.match(source, /qty_reserved:\s*Number\(formula\.total_leaf_count\)/);
   assert.match(source, /Xác nhận & giữ chỗ/);
+});
+
+test("SelectionBatch preview never opts delivery documents in implicitly", async () => {
+  const source = await readFile(selectionBatchPath, "utf8");
+  const previewStart = source.indexOf("const runPreview = async () =>");
+  const previewEnd = source.indexOf("useEffect(() =>", previewStart);
+  assert.ok(previewStart >= 0 && previewEnd > previewStart);
+  const previewSource = source.slice(previewStart, previewEnd);
+  assert.match(previewSource, /setSelected\(\[\]\)/);
+  assert.doesNotMatch(previewSource, /setSelected\(available\.filter/, "preview must not auto-select every eligible Sales Order");
 });
