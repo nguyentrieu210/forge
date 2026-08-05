@@ -37,7 +37,7 @@ Required contract:
 
 Until this exists, the workspace renders VAT as `—`. The UI must not derive tax authority from typed percentages or from receipt values.
 
-## DR-POW-02 — metadata-owned operating-workspace binding
+## DR-POW-02 — metadata-owned operating-workspace binding and navigation
 
 **Owner:** App Registry / App Factory shared metadata contract.
 
@@ -48,11 +48,12 @@ Target contract should let an app declare, as metadata:
 - `workspace_kind: procurement` (or equivalent typed operating-workspace id);
 - read-only `context_method`;
 - optional canonical document roles (`purchase_order_doctype`, `payment_doctype`);
-- presentation labels only.
+- presentation labels only;
+- one navigation entry for the operating workspace plus optional deep-link tab intent.
 
-The server must validate this declaration and deliver it in the filtered manifest. Do not move these literals to another shared React file as a cosmetic cleanup.
+The server must validate this declaration and deliver it in the filtered manifest. Do not move these literals to another shared React or shell file as a cosmetic cleanup.
 
-This dependency does **not** block the current UI slice or its QA; it blocks declaring the temporary consumer binding fully metadata-owned.
+This dependency does **not** block the current UI slice or its QA. It blocks removing the legacy Alumdoor Purchase Order / Purchase Receipt / FIFO / bulk-action menu entries without changing the certified app/package manifest contract. Until that package-level change is accepted, the new workspace is reached through the existing receipt action entry and then keeps all six operator surfaces on one route.
 
 ## DR-POW-03 — supplier-prefilled canonical create
 
@@ -73,11 +74,28 @@ with these rules:
 
 Until this is added, the create form stays inline but the user may need to select the supplier again inside the canonical form.
 
+## DR-POW-04 — authoritative Purchase 360 timeline
+
+**Owner:** Procurement + Finance shared read-model contracts.
+
+The current Alumdoor supplier dashboard returns detailed Purchase Orders, Purchase Receipts, price history and aggregate Purchase Invoice/AP information. It does not yet return one authoritative invoice/payment event stream suitable for a complete Purchase 360 timeline.
+
+Required read-only contract:
+
+- submitted Purchase Invoice identity, posting/invoice dates, totals, VAT reconciliation status and outstanding amount;
+- Payment Entry / Payment Ledger allocation events linked to supplier invoices where authoritative lineage exists;
+- cancellation/reversal state;
+- stable source document identifiers for inspector drill-down;
+- no frontend inference that a payment belongs to an invoice merely because supplier/date/value look similar.
+
+Until this exists, the History workspace intentionally renders PO + Receipt events and AP aggregates rather than fabricating invoice/payment history. The embedded Payment Entry create path is available, but a created payment is not called part of Purchase 360 history until the read model proves lineage.
+
 ## Release classification
 
 - Current client implementation: `FAST/STANDARD UI composition`, `NEW_CANDIDATE` only.
 - DR-POW-01 VAT read contract: `STANDARD/CRITICAL-adjacent` Finance read semantics; no tax posting change is requested.
-- DR-POW-02 metadata contract: `STANDARD` shared contract.
+- DR-POW-02 metadata/navigation contract: `STANDARD` shared package contract and potential pilot relock if the Alumdoor manifest/package changes.
 - DR-POW-03 create prefill contract: `STANDARD` shared form contract.
+- DR-POW-04 Purchase 360 read model: `STANDARD` read composition over Procurement/Finance authorities; payment/VAT semantics remain owned by their canonical domains.
 
 Do not merge/deploy this branch as pilot authority until exact-head frontend gates pass and release impact is reviewed against the current controlled-pilot identity.
