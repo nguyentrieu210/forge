@@ -1,26 +1,26 @@
 {
-  "version": "2.2.4",
-  "//": "Primary procurement navigation is one operating workspace. Canonical DocTypes/actions remain installed and directly addressable; only daily menu presentation is consolidated here.",
+  "version": "2.2.5",
+  "//": "Procurement presentation follows canonical DocType/AppAction declarations. No bespoke operating-workspace consolidation or hidden daily procurement entries.",
   "doctypes": {
     "Purchase Order": {
-      "menu": false
+      "menu": true
     },
     "Purchase Receipt": {
-      "menu": false
+      "menu": true
     }
   },
   "actions": {
     "nhap-nhom-fifo": {
-      "label": "Mua hàng",
+      "label": "Nhập nhôm FIFO theo đơn cũ",
       "menu": true,
-      "icon": "shopping-cart",
+      "icon": "truck",
       "group": "Mua hàng"
     },
     "nhap-nhom-hang-loat": {
-      "menu": false
+      "menu": true
     },
     "doi-soat-giao-hang-ncc": {
-      "menu": false
+      "menu": true
     }
   }
 }
