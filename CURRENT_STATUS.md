@@ -23,6 +23,21 @@ GitHub là nguồn sự thật cho exact `main`, branch, PR, workflow run, merge
 
 Documentation/test evidence does not change the exact deployed R6 product identity.
 
+### R6 package relock — Alumdoor 2.2.4 (2026-08-05): PASS
+
+- Historical R6 certification above remains historical evidence and is not rewritten by this package relock.
+- Current observed Worker/UI release marker: `3999c2929053f11d4f1c5b59ccc2f0934446b750`.
+- Current observed UI bundle hash: `05c918e048271583`.
+- Alumdoor package metadata: `2.2.4`.
+- Alumdoor package content hash: `e6a5a1d55b4aa8b7cbe62173e9532a08298eac13472dd79ff2c9fb7e949a284d`.
+- Active capability profile: `alumdoor-pilot` v1, hash `3e3124018aa3c7d233f0af8b81f751cd3e4a8329b94a2c9295956bc58ac8f7f8`, `valid=true`, zero blocked capabilities.
+- Protected production metadata install run `30969702876`, job `92191164491`: **SUCCESS**.
+- R6 package relock run `30970665494`, job `92194053937`: **SUCCESS / E18 PASS / zero blockers**.
+- Relock source authority: `1f7ca95760998c4ab30bdf6c9870647f5ee2938f`; this is source authority for the relock, not a claim that current `main` is the deployed Worker/UI release.
+- No Worker/client deploy occurred during the metadata upgrade or package relock. Business data was not written by the relock.
+- Durable evidence: `deploy-evidence/r6-alumdoor-package-relock-20260805.json`.
+- Controlled pilot remains **not GA**. Real Pilot-01/Pilot-02 authorization and data-readiness boundaries are unchanged.
+
 ## 2. Capability truth
 
 Canonical distribution remains **H0 / RC66 / Wired406 / Foundation327 / Missing157 = 956** until a newer convergence record explicitly changes it.
