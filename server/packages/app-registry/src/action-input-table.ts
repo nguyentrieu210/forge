@@ -17,14 +17,31 @@ export interface AppActionInputColumn {
   required?: boolean;
   default?: string;
   description?: string;
+  link_filters?: string;
+}
+
+export type AppActionInputTableMode = "bulk" | "child-grid-inline";
+
+export interface AppActionInputTablePresentation {
+  mode?: AppActionInputTableMode;
+  row_doctype?: string;
+  fit_viewport?: boolean;
+  emphasize_editable?: boolean;
+  print_format?: string;
+}
+
+export interface AppActionInputTableSummary {
+  subtotal_field: string;
+  discount_percentage_field?: string;
+  vat_percentage_field?: string;
 }
 
 /**
  * First-class repeatable input for an AppAction.
  *
  * `fieldname` is the key posted to the app method. Its value is an array of row objects.
- * This replaces the temporary `Text` + `BulkTransaction:<json>` compatibility transport
- * without teaching the platform any vertical-specific business rule.
+ * Presentation metadata is generic: `row_doctype` points to canonical child metadata so an
+ * app does not have to duplicate depends_on/read_only/Link rules in its action declaration.
  */
 export interface AppActionInputTable {
   fieldname: string;
@@ -34,6 +51,8 @@ export interface AppActionInputTable {
   min_rows: number;
   max_rows: number;
   allow_paste: boolean;
+  presentation?: AppActionInputTablePresentation;
+  summary?: AppActionInputTableSummary;
 }
 
 export interface LegacyBulkTransactionField {
@@ -77,11 +96,76 @@ function text(value: unknown, where: string, max: number): string {
   return value.trim();
 }
 
+function optionalText(value: unknown, where: string, max: number): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  return text(value, where, max);
+}
+
 function integer(value: unknown, where: string, min: number, max: number): number {
   if (!Number.isInteger(value) || Number(value) < min || Number(value) > max) {
     throw errors.validation(`${where} must be an integer from ${min} to ${max}`);
   }
   return Number(value);
+}
+
+function optionalBoolean(value: unknown, where: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw errors.validation(`${where} must be boolean`);
+  return value;
+}
+
+function parsePresentation(value: unknown, where: string): AppActionInputTablePresentation | undefined {
+  if (value === undefined) return undefined;
+  const input = asObject(value, where);
+  const modeRaw = optionalText(input.mode, `${where}.mode`, 40);
+  if (modeRaw && modeRaw !== "bulk" && modeRaw !== "child-grid-inline") {
+    throw errors.validation(`${where}.mode must be bulk or child-grid-inline`);
+  }
+  const mode = modeRaw as AppActionInputTableMode | undefined;
+  const rowDoctype = optionalText(input.row_doctype ?? input.rowDoctype, `${where}.row_doctype`, 160);
+  const fitViewport = optionalBoolean(input.fit_viewport ?? input.fitViewport, `${where}.fit_viewport`);
+  const emphasizeEditable = optionalBoolean(input.emphasize_editable ?? input.emphasizeEditable, `${where}.emphasize_editable`);
+  const printFormat = optionalText(input.print_format ?? input.printFormat, `${where}.print_format`, 160);
+  if (mode === "child-grid-inline" && !rowDoctype) {
+    throw errors.validation(`${where}.row_doctype is required for child-grid-inline`);
+  }
+  return {
+    ...(mode ? { mode } : {}),
+    ...(rowDoctype ? { row_doctype: rowDoctype } : {}),
+    ...(fitViewport === undefined ? {} : { fit_viewport: fitViewport }),
+    ...(emphasizeEditable === undefined ? {} : { emphasize_editable: emphasizeEditable }),
+    ...(printFormat ? { print_format: printFormat } : {}),
+  };
+}
+
+function parseSummary(value: unknown, where: string, columnNames: ReadonlySet<string>): AppActionInputTableSummary | undefined {
+  if (value === undefined) return undefined;
+  const input = asObject(value, where);
+  const subtotalField = text(input.subtotal_field ?? input.subtotalField, `${where}.subtotal_field`, 120);
+  if (!columnNames.has(subtotalField)) {
+    throw errors.validation(`${where}.subtotal_field must name a declared input-table column`);
+  }
+  const discount = optionalText(input.discount_percentage_field ?? input.discountPercentageField, `${where}.discount_percentage_field`, 120);
+  const vat = optionalText(input.vat_percentage_field ?? input.vatPercentageField, `${where}.vat_percentage_field`, 120);
+  for (const [label, fieldname] of [["discount_percentage_field", discount], ["vat_percentage_field", vat]] as const) {
+    if (fieldname && !ACTION_INPUT_NAME.test(fieldname)) {
+      throw errors.validation(`${where}.${label} must use lowercase letters, digits and underscore`);
+    }
+  }
+  return {
+    subtotal_field: subtotalField,
+    ...(discount ? { discount_percentage_field: discount } : {}),
+    ...(vat ? { vat_percentage_field: vat } : {}),
+  };
+}
+
+function parseLinkFilters(value: unknown, where: string): string | undefined {
+  const source = optionalText(value, where, 4000);
+  if (!source) return undefined;
+  let parsed: unknown;
+  try { parsed = JSON.parse(source); } catch { throw errors.validation(`${where} must be valid JSON`); }
+  if (!Array.isArray(parsed)) throw errors.validation(`${where} must encode an array of filters`);
+  return source;
 }
 
 function parseColumn(
@@ -107,6 +191,10 @@ function parseColumn(
   if (fieldtype === "Link" && linkTargets && !linkTargets.has(options!)) {
     throw errors.validation(`${where} links to ${options}, which is not declared by this app or its external DocTypes`);
   }
+  const linkFilters = parseLinkFilters(input.link_filters ?? input.linkFilters, `${where}.link_filters`);
+  if (linkFilters && fieldtype !== "Link" && fieldtype !== "Dynamic Link") {
+    throw errors.validation(`${where}.link_filters is only valid on Link or Dynamic Link columns`);
+  }
 
   return {
     fieldname,
@@ -116,6 +204,7 @@ function parseColumn(
     ...(input.required === true ? { required: true } : {}),
     ...(input.default === undefined ? {} : { default: text(input.default, `${where}.default`, 160) }),
     ...(input.description === undefined ? {} : { description: text(input.description, `${where}.description`, 320) }),
+    ...(linkFilters ? { link_filters: linkFilters } : {}),
   };
 }
 
@@ -150,6 +239,12 @@ export function parseAppActionInputTable(
     throw errors.validation(`${where}.allow_paste must be boolean`);
   }
 
+  const presentation = parsePresentation(input.presentation, `${where}.presentation`);
+  const summary = parseSummary(input.summary, `${where}.summary`, names);
+  if (presentation?.row_doctype && linkTargets && !linkTargets.has(presentation.row_doctype)) {
+    throw errors.validation(`${where}.presentation.row_doctype ${presentation.row_doctype} is not declared by this app or its external DocTypes`);
+  }
+
   return {
     fieldname,
     label: text(input.label, `${where}.label`, 160),
@@ -158,15 +253,15 @@ export function parseAppActionInputTable(
     min_rows: minRows,
     max_rows: maxRows,
     allow_paste: input.allow_paste !== false,
+    ...(presentation ? { presentation } : {}),
+    ...(summary ? { summary } : {}),
   };
 }
 
 /**
  * Decode the Bulk Transaction v1 compatibility field into the first-class shape.
- *
- * This is intentionally exported for migration/compatibility tests. New manifests should
- * declare `input_tables`; this decoder exists so an installer/compiler upgrade can preserve
- * old packages instead of forcing a flag day across already-installed apps.
+ * Unknown presentation keys were historically ignored; the rolling bridge now preserves
+ * the generic rich-table contract so installed packages do not lose it during decoration.
  */
 export function parseLegacyBulkTransactionField(
   field: LegacyBulkTransactionField,
@@ -190,6 +285,8 @@ export function parseLegacyBulkTransactionField(
     min_rows: legacy.minRows ?? 1,
     max_rows: legacy.maxRows ?? 100,
     allow_paste: legacy.allowPaste ?? true,
+    ...(legacy.presentation === undefined ? {} : { presentation: legacy.presentation }),
+    ...(legacy.summary === undefined ? {} : { summary: legacy.summary }),
   }, 0, linkTargets);
 }
 

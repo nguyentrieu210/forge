@@ -32,6 +32,8 @@ function normalizedTable(table: AppActionInputTable): AppActionInputTable | unde
     min_rows: minRows,
     max_rows: maxRows,
     allow_paste: table.allow_paste !== false,
+    ...(table.presentation ? { presentation: table.presentation } : {}),
+    ...(table.summary ? { summary: table.summary } : {}),
   };
 }
 
@@ -45,6 +47,8 @@ function compatibilityField(table: AppActionInputTable): AppActionField {
       minRows: table.min_rows,
       maxRows: table.max_rows,
       allowPaste: table.allow_paste,
+      ...(table.presentation ? { presentation: table.presentation } : {}),
+      ...(table.summary ? { summary: table.summary } : {}),
     })}`,
     required: table.min_rows > 0,
     ...(table.description ? { description: table.description } : {}),

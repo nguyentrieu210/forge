@@ -1,6 +1,6 @@
 {
-  "version": "2.2.6",
-  "//": "Màn Mua hàng và Bulk Transaction đều khai bằng metadata; worker chỉ compose chứng từ canonical, không sở hữu UI hay ledger.",
+  "version": "2.2.7",
+  "//": "Màn Mua hàng dùng metadata của Purchase Order Item để render bảng lớn inline; worker chỉ compose chứng từ canonical, không sở hữu UI hay ledger.",
   "actions": [
     {
       "name": "tao-don-mua",
@@ -8,19 +8,17 @@
       "menu": true,
       "icon": "shopping-bag",
       "group": "Mua hàng",
-      "description": "Lập đơn mua ngay tại đây, không qua danh sách hay modal. Dòng hàng được nhập trực tiếp; hệ thống tự lấy metadata Item/Quy cách để tính các trường dẫn xuất trước khi tạo Purchase Order nháp.",
+      "description": "Lập đơn mua trực tiếp: chọn nhà cung cấp, ngày đặt/ngày giao và nhập các mặt hàng trên bảng lớn theo metadata Purchase Order Item.",
       "permission": "Purchase Order",
       "fields": [
-        "supplier:Link(Supplier)! Nhà cung cấp",
-        "priority:Select(Thường,Cần gấp)=(Thường) Mức độ",
-        "transaction_date:Date Ngày đặt hàng (để trống = hôm nay)",
-        "schedule_date:Date Ngày giao dự kiến",
-        "company:Link(Company)!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)!=(VND) Tiền tệ",
-        "supplier_quotation:Link(Supplier Quotation) Theo báo giá NCC",
-        "items:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã sản phẩm\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\"},{\"fieldname\":\"length_m\",\"label\":\"Kích thước / dài (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"width_m\",\"label\":\"Rộng (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"height_m\",\"label\":\"Cao (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"set_count\",\"label\":\"Số bộ\",\"fieldtype\":\"Int\",\"default\":\"1\"},{\"fieldname\":\"qty_bundle\",\"label\":\"SL bó\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bar\",\"label\":\"Số cây/lá\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty\",\"label\":\"Số lượng\",\"fieldtype\":\"Float\"},{\"fieldname\":\"rate\",\"label\":\"Đơn giá\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"default\":\"Không\"},{\"fieldname\":\"so_no\",\"label\":\"Số SO NCC\",\"fieldtype\":\"Data\"},{\"fieldname\":\"warehouse\",\"label\":\"Kho nhận\",\"fieldtype\":\"Link\",\"options\":\"Warehouse\"},{\"fieldname\":\"note\",\"label\":\"Ghi chú\",\"fieldtype\":\"Data\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true})! Dòng hàng"
+        "supplier:Link(Supplier)! NCC",
+        "transaction_date:Date=(Today) Ngày đặt",
+        "schedule_date:Date Ngày giao",
+        "additional_discount_percentage:Percent=(0) Chiết khấu (%)",
+        "vat_percentage:Percent=(0) VAT (%)",
+        "items:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã SP\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true,\"link_filters\":\"[[\\\"Item\\\",\\\"disabled\\\",\\\"=\\\",0],[\\\"Item\\\",\\\"is_purchase_item\\\",\\\"=\\\",1]]\"},{\"fieldname\":\"length_m\",\"label\":\"Dài\",\"fieldtype\":\"Float\"},{\"fieldname\":\"width_m\",\"label\":\"Rộng\",\"fieldtype\":\"Float\"},{\"fieldname\":\"height_m\",\"label\":\"Cao\",\"fieldtype\":\"Float\"},{\"fieldname\":\"set_count\",\"label\":\"Bộ\",\"fieldtype\":\"Int\",\"default\":\"1\"},{\"fieldname\":\"theoretical_kg_per_m\",\"label\":\"Kg/m\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bundle\",\"label\":\"Bó\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bar\",\"label\":\"Cây\",\"fieldtype\":\"Float\"},{\"fieldname\":\"theoretical_kg\",\"label\":\"Kg BR\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty\",\"label\":\"SL\",\"fieldtype\":\"Float\"},{\"fieldname\":\"uom\",\"label\":\"ĐVT\",\"fieldtype\":\"Link\",\"options\":\"UOM\"},{\"fieldname\":\"rate\",\"label\":\"Đ.Giá\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"amount\",\"label\":\"T.Tiền\",\"fieldtype\":\"Currency\"},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\"},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"default\":\"Không\"},{\"fieldname\":\"so_no\",\"label\":\"SO NCC\",\"fieldtype\":\"Data\"},{\"fieldname\":\"warehouse\",\"label\":\"Kho\",\"fieldtype\":\"Link\",\"options\":\"Warehouse\"},{\"fieldname\":\"note\",\"label\":\"G.Chú\",\"fieldtype\":\"Data\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true,\"presentation\":{\"mode\":\"child-grid-inline\",\"row_doctype\":\"Purchase Order Item\",\"fit_viewport\":true,\"emphasize_editable\":true,\"print_format\":\"Đơn mua hàng ALUMDOOR\"},\"summary\":{\"subtotal_field\":\"amount\",\"discount_percentage_field\":\"additional_discount_percentage\",\"vat_percentage_field\":\"vat_percentage\"}})! Mặt hàng"
       ],
-      "commit": "alumdoor.purchase.create_order | Tạo đơn mua | Tạo Purchase Order nháp từ các dòng đã nhập?"
+      "commit": "alumdoor.purchase.create_order | Lưu | Lưu Purchase Order nháp từ các dòng đã nhập?"
     },
     {
       "name": "nhap-nhom-hang-loat",

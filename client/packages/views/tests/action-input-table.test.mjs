@@ -23,12 +23,27 @@ function baseAction() {
       label: "Chi tiết kiểm kê",
       description: "Nhập số lượng thực tế",
       columns: [
-        { fieldname: "item_code", label: "Mã hàng", fieldtype: "Link", options: "Item", required: true },
+        {
+          fieldname: "item_code", label: "Mã hàng", fieldtype: "Link", options: "Item", required: true,
+          link_filters: '[["Item","disabled","=",0]]',
+        },
         { fieldname: "qty", label: "Số lượng", fieldtype: "Float", required: true },
       ],
       min_rows: 2,
       max_rows: 500,
       allow_paste: true,
+      presentation: {
+        mode: "child-grid-inline",
+        row_doctype: "Stock Reconciliation Item",
+        fit_viewport: true,
+        emphasize_editable: true,
+        print_format: "Stock Reconciliation",
+      },
+      summary: {
+        subtotal_field: "qty",
+        discount_percentage_field: "discount_pct",
+        vat_percentage_field: "vat_pct",
+      },
     }],
     commit: { method: "stock.reconcile", label: "Ghi nhận" },
     permission_doctype: "Stock Reconciliation",
@@ -53,6 +68,11 @@ test("first-class input_tables win over matching legacy fallback without mutatin
   assert.equal(spec.maxRows, 500);
   assert.equal(spec.allowPaste, true);
   assert.deepEqual(spec.columns.map((column) => column.fieldname), ["item_code", "qty"]);
+  assert.equal(spec.columns[0].link_filters, '[["Item","disabled","=",0]]');
+  assert.deepEqual(spec.presentation, source.input_tables[0].presentation);
+  assert.deepEqual(spec.summary, source.input_tables[0].summary);
+  assert.deepEqual(normalized.input_tables[0].presentation, source.input_tables[0].presentation);
+  assert.deepEqual(normalized.input_tables[0].summary, source.input_tables[0].summary);
 });
 
 test("legacy-only actions remain object-identical at the boundary", () => {
