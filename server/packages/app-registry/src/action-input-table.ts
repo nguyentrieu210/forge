@@ -17,6 +17,7 @@ export interface AppActionInputColumn {
   required?: boolean;
   default?: string;
   description?: string;
+  link_filters?: string;
 }
 
 export type AppActionInputTableMode = "bulk" | "child-grid-inline";
@@ -158,6 +159,15 @@ function parseSummary(value: unknown, where: string, columnNames: ReadonlySet<st
   };
 }
 
+function parseLinkFilters(value: unknown, where: string): string | undefined {
+  const source = optionalText(value, where, 4000);
+  if (!source) return undefined;
+  let parsed: unknown;
+  try { parsed = JSON.parse(source); } catch { throw errors.validation(`${where} must be valid JSON`); }
+  if (!Array.isArray(parsed)) throw errors.validation(`${where} must encode an array of filters`);
+  return source;
+}
+
 function parseColumn(
   value: JsonValue,
   where: string,
@@ -181,6 +191,10 @@ function parseColumn(
   if (fieldtype === "Link" && linkTargets && !linkTargets.has(options!)) {
     throw errors.validation(`${where} links to ${options}, which is not declared by this app or its external DocTypes`);
   }
+  const linkFilters = parseLinkFilters(input.link_filters ?? input.linkFilters, `${where}.link_filters`);
+  if (linkFilters && fieldtype !== "Link" && fieldtype !== "Dynamic Link") {
+    throw errors.validation(`${where}.link_filters is only valid on Link or Dynamic Link columns`);
+  }
 
   return {
     fieldname,
@@ -190,6 +204,7 @@ function parseColumn(
     ...(input.required === true ? { required: true } : {}),
     ...(input.default === undefined ? {} : { default: text(input.default, `${where}.default`, 160) }),
     ...(input.description === undefined ? {} : { description: text(input.description, `${where}.description`, 320) }),
+    ...(linkFilters ? { link_filters: linkFilters } : {}),
   };
 }
 
