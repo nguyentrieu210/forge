@@ -9,6 +9,7 @@ import {
   Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@metaforge/ui";
+import { resolveChildGridColumns } from "../form/ChildGrid.js";
 
 interface GridLayout {
   weights: Record<string, number>;
@@ -59,21 +60,31 @@ function numeric(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function text(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function roundTo(value: number, precision: number | undefined): number {
+  if (precision === undefined) return value;
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
+}
+
 function parsePasted(field: DocField, raw: string): unknown {
-  const text = raw.trim();
-  if (!text) return undefined;
+  const valueText = raw.trim();
+  if (!valueText) return undefined;
   if (field.fieldtype === "Check") {
-    const value = text.toLocaleLowerCase("vi");
+    const value = valueText.toLocaleLowerCase("vi");
     if (["1", "true", "yes", "y", "x", "có", "co"].includes(value)) return 1;
     if (["0", "false", "no", "n", "không", "khong"].includes(value)) return 0;
     return undefined;
   }
   if (["Currency", "Float", "Int", "Percent"].includes(field.fieldtype)) {
-    const normalized = text.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
+    const normalized = valueText.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
     const value = Number(normalized);
     return Number.isFinite(value) ? value : undefined;
   }
-  return text;
+  return valueText;
 }
 
 function computed(row: Doc, meta: DocTypeMeta): Doc {
@@ -108,7 +119,7 @@ function computed(row: Doc, meta: DocTypeMeta): Doc {
 
 function shortLabel(field: DocField): string {
   const labels: Record<string, string> = {
-    item_code: "Mã SP", length_m: "Dài", theoretical_kg_per_m: "Kg/m", qty_bundle: "Bó",
+    item_code: "Mã SP", length_m: "Kích thước", theoretical_kg_per_m: "Kg/m", qty_bundle: "Bó",
     qty_bar: "Cây", theoretical_kg: "Kg BR", qty: "SL", uom: "ĐVT", rate: "Đ.Giá",
     amount: "T.Tiền", color: "Màu", colour: "Màu", is_stamped: "Dập", so_no: "SO NCC",
     warehouse: "Kho", note: "G.Chú", width_m: "Rộng", height_m: "Cao", set_count: "Bộ",
@@ -118,7 +129,7 @@ function shortLabel(field: DocField): string {
 
 function defaultWeight(field: DocField): number {
   const fixed: Record<string, number> = {
-    item_code: 12, length_m: 4.5, theoretical_kg_per_m: 5, qty_bundle: 4, qty_bar: 4.5,
+    item_code: 12, length_m: 6.5, theoretical_kg_per_m: 5, qty_bundle: 4, qty_bar: 4.5,
     theoretical_kg: 5.5, qty: 4.5, uom: 5, rate: 7, amount: 8, color: 6, colour: 6,
     is_stamped: 4.5, so_no: 6, warehouse: 7, note: 8, width_m: 5, height_m: 5, set_count: 4.5,
   };
@@ -144,21 +155,24 @@ export function ActionChildGrid(props: ActionChildGridProps) {
   const latestRows = useRef(rows);
   useEffect(() => { latestRows.current = rows; }, [rows]);
 
-  const declared = useMemo(() => table.columns.map((column) => column.fieldname), [table.columns]);
-  const baseCols = useMemo(() => declared.map((fieldname) => {
-    const metaField = (childMeta.fields ?? []).find((field) => field.fieldname === fieldname);
-    const declaredField = table.columns.find((column) => column.fieldname === fieldname)!;
-    return metaField
-      ? {
-          ...metaField,
-          label: declaredField.label || metaField.label,
-          ...(declaredField.link_filters ? { link_filters: declaredField.link_filters } : {}),
-          in_list_view: 1 as const,
-        }
-      : ({ ...declaredField, reqd: declaredField.required ? 1 : 0, in_list_view: 1 } as DocField);
-  }), [childMeta, declared, table.columns]);
+  const declaredByName = useMemo(() => new Map(table.columns.map((column) => [column.fieldname, column])), [table.columns]);
+  const canonicalCols = resolveChildGridColumns(childMeta, rows, parentDoc, roles);
+  const moneyPrecision = table.presentation?.money_precision;
+  const baseCols = useMemo(() => canonicalCols.map((metaField) => {
+    const declared = declaredByName.get(metaField.fieldname);
+    return {
+      ...metaField,
+      ...(declared?.link_filters ? { link_filters: declared.link_filters } : {}),
+      ...(declared?.required ? { reqd: 1 as const } : {}),
+      ...(declared?.default != null ? { default: declared.default } : {}),
+      ...(metaField.fieldtype === "Currency" && moneyPrecision !== undefined ? { precision: String(moneyPrecision) } : {}),
+      in_list_view: 1 as const,
+    } as DocField;
+  }), [canonicalCols, declaredByName, moneyPrecision]);
 
-  const storageKey = `mf-action-grid-layout:${actionName}:${table.fieldname}:${table.presentation?.row_doctype ?? childMeta.name}:v1`;
+  // v2 intentionally drops the first inline-grid layout because that version exposed a
+  // different column set. Default now mirrors the canonical expanded ChildGrid exactly.
+  const storageKey = `mf-action-grid-layout:${actionName}:${table.fieldname}:${table.presentation?.row_doctype ?? childMeta.name}:v2`;
   const [layout, setLayout] = useState<GridLayout>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -183,76 +197,113 @@ export function ActionChildGrid(props: ActionChildGridProps) {
 
   const saveRows = (next: Doc[]) => { latestRows.current = next; onChange(next); };
   const selectedSet = new Set(selectedRows);
+  const normalizeValue = (fieldname: string, value: unknown): unknown => {
+    const field = baseCols.find((entry) => entry.fieldname === fieldname);
+    if (field?.fieldtype !== "Currency" || moneyPrecision === undefined || value == null || value === "") return value;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? roundTo(parsed, moneyPrecision) : value;
+  };
+  const computeRow = (row: Doc): Doc => {
+    const next = computed(row, childMeta);
+    if (moneyPrecision !== undefined && numeric(next.amount) !== undefined) next.amount = roundTo(Number(next.amount), moneyPrecision);
+    return next;
+  };
 
   const dynamicField = (field: DocField, row: Doc): DocField => {
     const item = String(row.item_code ?? "").trim();
+    let next = field;
+    if (field.fieldtype === "Currency" && moneyPrecision !== undefined) next = { ...next, precision: String(moneyPrecision) };
     if ((field.fieldname === "color" || field.fieldname === "colour") && item && Object.hasOwn(allowedColors, item)) {
       const values = allowedColors[item] ?? [];
-      return { ...field, link_filters: JSON.stringify([["Item Color", "name", "in", values.length ? values : ["__NO_ALLOWED_COLOR__"]]]) };
+      next = { ...next, link_filters: JSON.stringify([["Item Color", "name", "in", values.length ? values : ["__NO_ALLOWED_COLOR__"]]]) };
     }
     if (field.fieldname === "uom" && item && Object.hasOwn(allowedUoms, item)) {
       const values = allowedUoms[item] ?? [];
-      return { ...field, link_filters: JSON.stringify([["UOM", "name", "in", values.length ? values : ["__NO_ALLOWED_UOM__"]]]) };
+      next = { ...next, link_filters: JSON.stringify([["UOM", "name", "in", values.length ? values : ["__NO_ALLOWED_UOM__"]]]) };
     }
-    return field;
+    return next;
   };
 
   const enrichItem = async (rowIndex: number, itemCode: string, snapshot: Doc[]) => {
-    if (!services?.fetchDocument) return;
-    const item = await services.fetchDocument("Item", itemCode).catch(() => undefined);
-    if (!item) return;
+    if (!services?.fetchDocument && !services?.fetchValue) return;
+    const item = services.fetchDocument
+      ? await services.fetchDocument("Item", itemCode).catch(() => undefined)
+      : undefined;
+    const readItemValue = async (fieldname: string): Promise<unknown> => {
+      const fromDocument = item?.[fieldname];
+      if (fromDocument !== undefined && fromDocument !== null && fromDocument !== "") return fromDocument;
+      return services?.fetchValue?.("Item", itemCode, fieldname).catch(() => undefined);
+    };
     const has = (name: string) => (childMeta.fields ?? []).some((field) => field.fieldname === name);
     const target = snapshot[rowIndex];
     if (!target || String(target.item_code ?? "") !== itemCode) return;
     const next = { ...target } as Doc;
-    const map: Array<[string, string]> = [
+
+    const plan: Array<[string, string]> = [
       ["stock_uom", "stock_uom"], ["inventory_mode", "inventory_mode"], ["measurement_profile", "measurement_profile"],
       ["material_specification", "material_specification"], ["item_name", "item_name"], ["description", "description"],
       ["min_area_sqm", "min_area_sqm"], ["default_color", "color"], ["default_warehouse", "warehouse"],
     ];
-    for (const [source, destination] of map) {
-      if (!has(destination) || (next[destination] != null && next[destination] !== "")) continue;
-      const value = item[source];
+    await Promise.all(plan.map(async ([source, destination]) => {
+      if (!has(destination) || (next[destination] != null && next[destination] !== "")) return;
+      const value = await readItemValue(source);
       if (value != null && value !== "") next[destination] = value;
-    }
-    const purchaseUom = String(item.default_purchase_uom ?? item.purchase_uom ?? item.stock_uom ?? "").trim();
+    }));
+
+    const purchaseUom = text(await readItemValue("default_purchase_uom"))
+      || text(await readItemValue("purchase_uom"))
+      || text(await readItemValue("stock_uom"));
     if (has("uom") && !next.uom && purchaseUom) next.uom = purchaseUom;
-    const uoms = Array.isArray(item.uoms)
-      ? item.uoms.map((entry) => entry && typeof entry === "object" ? String((entry as Record<string, unknown>).uom ?? "").trim() : "").filter(Boolean)
-      : [];
-    const allowedUomValues = [...new Set([purchaseUom, String(item.stock_uom ?? "").trim(), ...uoms].filter(Boolean))];
+
+    const rawConversions = await readItemValue("uom_conversions");
+    const rawUoms = Array.isArray(item?.uoms) ? item.uoms : [];
+    const conversions = Array.isArray(rawConversions) ? rawConversions : [];
+    const convertedUoms = [...conversions, ...rawUoms]
+      .map((entry) => entry && typeof entry === "object" ? text((entry as Record<string, unknown>).uom) : "")
+      .filter(Boolean);
+    const stockUom = text(await readItemValue("stock_uom"));
+    const allowedUomValues = [...new Set([purchaseUom, stockUom, ...convertedUoms].filter(Boolean))];
     setAllowedUoms((current) => ({ ...current, [itemCode]: allowedUomValues }));
-    const colors = Array.isArray(item.allowed_colors)
-      ? item.allowed_colors.map((entry) => entry && typeof entry === "object" ? String((entry as Record<string, unknown>).color ?? "").trim() : "").filter(Boolean)
+
+    const rawColors = await readItemValue("allowed_colors");
+    const colors = Array.isArray(rawColors)
+      ? rawColors.map((entry) => entry && typeof entry === "object" ? text((entry as Record<string, unknown>).color) : "").filter(Boolean)
       : [];
     setAllowedColors((current) => ({ ...current, [itemCode]: colors }));
     if (next.color && !colors.includes(String(next.color))) next.color = undefined;
     if (next.colour && !colors.includes(String(next.colour))) next.colour = undefined;
-    const specification = String(next.material_specification ?? "").trim();
+
+    const specification = text(next.material_specification || await readItemValue("material_specification"));
+    if (specification && has("material_specification") && !next.material_specification) next.material_specification = specification;
     if (specification && has("theoretical_kg_per_m")) {
-      const spec = await services.fetchDocument("Material Specification", specification).catch(() => undefined);
-      const kgPerM = numeric(spec?.theoretical_kg_per_m);
+      const spec = services?.fetchDocument
+        ? await services.fetchDocument("Material Specification", specification).catch(() => undefined)
+        : undefined;
+      const fetched = spec?.theoretical_kg_per_m ?? await services?.fetchValue?.("Material Specification", specification, "theoretical_kg_per_m").catch(() => undefined);
+      const kgPerM = numeric(fetched);
       if (kgPerM && kgPerM > 0) next.theoretical_kg_per_m = kgPerM;
     }
+
     const current = latestRows.current;
     if (!current[rowIndex] || String(current[rowIndex]!.item_code ?? "") !== itemCode) return;
-    saveRows(current.map((row, index) => index === rowIndex ? computed({ ...row, ...next }, childMeta) : row));
+    saveRows(current.map((row, index) => index === rowIndex ? computeRow({ ...row, ...next }) : row));
   };
 
   const setCell = (rowIndex: number, fieldname: string, value: unknown) => {
     const current = latestRows.current;
+    const normalized = normalizeValue(fieldname, value);
     const next = current.map((row, index) => {
       if (index !== rowIndex) return row;
-      const changingItem = fieldname === "item_code" && value !== row.item_code;
+      const changingItem = fieldname === "item_code" && normalized !== row.item_code;
       const cleared = changingItem ? {
         color: undefined, colour: undefined, uom: undefined, stock_uom: undefined, inventory_mode: undefined,
         measurement_profile: undefined, material_specification: undefined, theoretical_kg_per_m: undefined,
         theoretical_kg: undefined, amount: undefined,
       } : {};
-      return computed({ ...row, ...cleared, [fieldname]: value } as Doc, childMeta);
+      return computeRow({ ...row, ...cleared, [fieldname]: normalized } as Doc);
     });
     saveRows(next);
-    if (fieldname === "item_code" && value) void enrichItem(rowIndex, String(value), next);
+    if (fieldname === "item_code" && normalized) void enrichItem(rowIndex, String(normalized), next);
   };
 
   const addRows = (count: number) => {
@@ -313,7 +364,7 @@ export function ActionChildGrid(props: ActionChildGridProps) {
         const value = source[field.fieldname];
         if (value != null && value !== "" && (next[field.fieldname] == null || next[field.fieldname] === "")) next[field.fieldname] = value;
       }
-      return computed(next, childMeta);
+      return computeRow(next);
     }));
   };
 
@@ -342,10 +393,10 @@ export function ActionChildGrid(props: ActionChildGridProps) {
   };
   const onPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     if (readOnly || !table.allow_paste) return;
-    const text = event.clipboardData.getData("text/plain");
-    if (!/[\t\n]/.test(text)) return;
+    const clipboard = event.clipboardData.getData("text/plain");
+    if (!/[\t\n]/.test(clipboard)) return;
     event.preventDefault();
-    const matrix = text.replace(/\r/g, "").replace(/\n$/, "").split("\n").map((line) => line.split("\t"));
+    const matrix = clipboard.replace(/\r/g, "").replace(/\n$/, "").split("\n").map((line) => line.split("\t"));
     const startRow = pickedRow ?? 0;
     const startColumn = Math.min(pickedColumn, Math.max(0, cols.length - 1));
     const next = [...rows];
@@ -358,9 +409,10 @@ export function ActionChildGrid(props: ActionChildGridProps) {
       const before = String(row.item_code ?? "");
       cells.forEach((raw, columnOffset) => {
         const field = cols[startColumn + columnOffset]; if (!field) return;
-        const value = parsePasted(field, raw); if (value !== undefined) row[field.fieldname] = value;
+        const value = parsePasted(field, raw);
+        if (value !== undefined) row[field.fieldname] = normalizeValue(field.fieldname, value);
       });
-      next[rowIndex] = computed(row, childMeta);
+      next[rowIndex] = computeRow(row);
       const item = String(row.item_code ?? "");
       if (item && item !== before) enrich.push({ index: rowIndex, item });
     });
@@ -432,6 +484,10 @@ export function ActionChildGrid(props: ActionChildGridProps) {
     if (values.length) totals.set(field.fieldname, values.reduce((sum, value) => sum + value, 0));
   }
   const strongEditable = table.presentation?.emphasize_editable !== false;
+  const formatTotal = (field: DocField, value: number): string => {
+    const precision = field.fieldtype === "Currency" ? moneyPrecision : undefined;
+    return services?.fmt?.number ? services.fmt.number(value, precision) : value.toLocaleString("vi-VN", precision === undefined ? undefined : { minimumFractionDigits: precision, maximumFractionDigits: precision });
+  };
 
   return (
     <div className="space-y-2" data-action-child-grid={table.fieldname}>
@@ -492,7 +548,7 @@ export function ActionChildGrid(props: ActionChildGridProps) {
             </TableRow>)}
             {rows.length > 0 && totals.size > 0 ? <TableRow className="h-8 border-t-2 bg-muted/40 font-bold hover:bg-muted/40">
               {!readOnly ? <TableCell className="sticky left-0 z-20 bg-muted/40" /> : null}<TableCell className={`sticky z-20 bg-muted/40 px-1 text-right ${readOnly ? "left-0" : "left-10"}`}>Σ</TableCell>
-              {cols.map((field) => <TableCell key={field.fieldname} className="truncate px-1 text-right tabular-nums">{totals.has(field.fieldname) ? (services?.fmt?.number ? services.fmt.number(totals.get(field.fieldname)!) : totals.get(field.fieldname)!.toLocaleString("vi-VN")) : null}</TableCell>)}
+              {cols.map((field) => <TableCell key={field.fieldname} className="truncate px-1 text-right tabular-nums">{totals.has(field.fieldname) ? formatTotal(field, totals.get(field.fieldname)!) : null}</TableCell>)}
               {!readOnly ? <TableCell /> : null}
             </TableRow> : null}
           </TableBody>

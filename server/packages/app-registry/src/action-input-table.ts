@@ -27,6 +27,7 @@ export interface AppActionInputTablePresentation {
   row_doctype?: string;
   fit_viewport?: boolean;
   emphasize_editable?: boolean;
+  money_precision?: number;
   print_format?: string;
 }
 
@@ -108,6 +109,11 @@ function integer(value: unknown, where: string, min: number, max: number): numbe
   return Number(value);
 }
 
+function optionalInteger(value: unknown, where: string, min: number, max: number): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  return integer(value, where, min, max);
+}
+
 function optionalBoolean(value: unknown, where: string): boolean | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "boolean") throw errors.validation(`${where} must be boolean`);
@@ -125,6 +131,7 @@ function parsePresentation(value: unknown, where: string): AppActionInputTablePr
   const rowDoctype = optionalText(input.row_doctype ?? input.rowDoctype, `${where}.row_doctype`, 160);
   const fitViewport = optionalBoolean(input.fit_viewport ?? input.fitViewport, `${where}.fit_viewport`);
   const emphasizeEditable = optionalBoolean(input.emphasize_editable ?? input.emphasizeEditable, `${where}.emphasize_editable`);
+  const moneyPrecision = optionalInteger(input.money_precision ?? input.moneyPrecision, `${where}.money_precision`, 0, 6);
   const printFormat = optionalText(input.print_format ?? input.printFormat, `${where}.print_format`, 160);
   if (mode === "child-grid-inline" && !rowDoctype) {
     throw errors.validation(`${where}.row_doctype is required for child-grid-inline`);
@@ -134,6 +141,7 @@ function parsePresentation(value: unknown, where: string): AppActionInputTablePr
     ...(rowDoctype ? { row_doctype: rowDoctype } : {}),
     ...(fitViewport === undefined ? {} : { fit_viewport: fitViewport }),
     ...(emphasizeEditable === undefined ? {} : { emphasize_editable: emphasizeEditable }),
+    ...(moneyPrecision === undefined ? {} : { money_precision: moneyPrecision }),
     ...(printFormat ? { print_format: printFormat } : {}),
   };
 }

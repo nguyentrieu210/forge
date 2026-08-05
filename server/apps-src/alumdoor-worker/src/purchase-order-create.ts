@@ -27,6 +27,7 @@ interface CompanyDoc extends Json {
 }
 
 const MAX_LINES = 100;
+const DEFAULT_COMPANY = "ALUMDOOR";
 
 function text(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
@@ -252,9 +253,20 @@ async function resolveCompanyAndCurrency(call: PlatformCall, args: Json): Promis
   let company = text(args.company);
   let discoveredCompany: CompanyDoc | undefined;
   if (!company) {
+    try {
+      const preferred = await readDoc<CompanyDoc>(call, "Company", DEFAULT_COMPANY);
+      if (text(preferred.name)) {
+        discoveredCompany = preferred;
+        company = text(preferred.name);
+      }
+    } catch {
+      // Tenant cũ có thể không dùng tên chuẩn ALUMDOOR; khi đó mới thử suy ra nếu chỉ có một Công ty.
+    }
+  }
+  if (!company) {
     const companies = await readList<CompanyDoc>(call, "Company", ["name", "default_currency"], [], 2);
     if (companies.length !== 1 || !text(companies[0]?.name)) {
-      throw new Error("Không xác định được Công ty từ ngữ cảnh. Hãy cấu hình business context cho màn Mua hàng.");
+      throw new Error(`Không xác định được Công ty. Mặc định là ${DEFAULT_COMPANY}; tenant hiện không có Công ty đó và cũng không chỉ có duy nhất một Công ty.`);
     }
     discoveredCompany = companies[0]!;
     company = text(discoveredCompany.name);

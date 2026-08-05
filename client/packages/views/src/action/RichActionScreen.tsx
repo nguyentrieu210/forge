@@ -164,6 +164,8 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
   const { adapter, registry, services, fmt, roles, businessContext } = useMetaForge();
   const table = (action.input_tables ?? []).find((candidate) => candidate.presentation?.mode === "child-grid-inline" && candidate.presentation.row_doctype)!;
   const rowDoctype = table.presentation!.row_doctype!;
+  const moneyPrecision = table.presentation?.money_precision;
+  const money = (value: number) => fmt.number(value, moneyPrecision);
   const [meta, setMeta] = useState<DocTypeMeta>();
   const [metaError, setMetaError] = useState<string>();
   const [values, setValues] = useState<Values>(() => initialValues(action, table));
@@ -287,12 +289,12 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
       </section>
 
       {table.summary ? <div className="ml-auto grid w-full max-w-[430px] grid-cols-[minmax(0,1fr)_150px] items-center gap-x-3 gap-y-1.5 border-t pt-3 text-sm tabular-nums">
-        <span className="text-muted-foreground">Tạm tính</span><strong className="text-right">{fmt.number(subtotal)}</strong>
+        <span className="text-muted-foreground">Tạm tính</span><strong className="text-right">{money(subtotal)}</strong>
         {table.summary.discount_percentage_field ? <><Label htmlFor={`summary-${table.summary.discount_percentage_field}`}>Chiết khấu (%)</Label><Input id={`summary-${table.summary.discount_percentage_field}`} className="h-8 text-right font-semibold" inputMode="decimal" value={String(values[table.summary.discount_percentage_field] ?? "")} onChange={(event) => changeValue(table.summary!.discount_percentage_field!, event.target.value)} /></> : null}
-        {table.summary.discount_percentage_field ? <><span className="text-muted-foreground">Tổng chiết khấu</span><strong className="text-right">-{fmt.number(discountAmount)}</strong></> : null}
+        {table.summary.discount_percentage_field ? <><span className="text-muted-foreground">Tổng chiết khấu</span><strong className="text-right">-{money(discountAmount)}</strong></> : null}
         {table.summary.vat_percentage_field ? <><Label htmlFor={`summary-${table.summary.vat_percentage_field}`}>VAT (%)</Label><Input id={`summary-${table.summary.vat_percentage_field}`} className="h-8 text-right font-semibold" inputMode="decimal" value={String(values[table.summary.vat_percentage_field] ?? "")} onChange={(event) => changeValue(table.summary!.vat_percentage_field!, event.target.value)} /></> : null}
-        {table.summary.vat_percentage_field ? <><span className="text-muted-foreground">Tiền VAT</span><strong className="text-right">{fmt.number(vatAmount)}</strong></> : null}
-        <span className="border-t pt-2 text-base font-extrabold">TỔNG</span><strong className="border-t pt-2 text-right text-base font-extrabold">{fmt.number(grandTotal)}</strong>
+        {table.summary.vat_percentage_field ? <><span className="text-muted-foreground">Tiền VAT</span><strong className="text-right">{money(vatAmount)}</strong></> : null}
+        <span className="border-t pt-2 text-base font-extrabold">TỔNG</span><strong className="border-t pt-2 text-right text-base font-extrabold">{money(grandTotal)}</strong>
       </div> : null}
 
       <div className="sticky bottom-2 z-10 flex flex-wrap items-center justify-end gap-2 border bg-card/95 p-3 shadow-lg backdrop-blur">
@@ -307,7 +309,7 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
       </div>
 
       {error ? <div className="border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">{error}</div> : null}
-      {shown !== undefined ? <RichActionResult value={shown} committed={result !== undefined} format={(value) => fmt.number(value)} onOpen={onOpen} /> : null}
+      {shown !== undefined ? <RichActionResult value={shown} committed={result !== undefined} format={(value) => fmt.number(value, moneyPrecision)} onOpen={onOpen} /> : null}
     </div>
   );
 }
