@@ -12,17 +12,18 @@ Real pilot state và synthetic validation state phải được giữ tách bi�
 - Exact certified/deployed R6 SHA: `49315112a21182d2ce077b08a1fb9e26db07fd36`.
 - Pilot-00: **DONE / PILOT-00-LOCKED**.
 - Real Pilot-01: **SOURCE INGESTED / PREVIEW-BLOCKED / EXTERNAL SOURCE DEPENDENCY**.
-- Synthetic Pilot-01: **PREVIEW_PASS / TEST ONLY**.
-- Synthetic Pilot-02: **DRY-RUN PASS / 9 of 9 representative segments**.
-- Synthetic Pilot-03: **PARALLEL RECONCILIATION PASS / 3 of 3 days / tolerance 0**.
-- Synthetic Pilot-04: **DECISION REHEARSAL PASS / baseline GO 11/11 / all 7 NO-GO classes PASS**.
-- Pilot-04 run `30972065238`: **SUCCESS**; artifact `8916878582`, SHA-256 `315dc49d345c0cbead7a6b1c6f02034e455c51df32bd6fcdc7e3521bd798d072`.
-- Real Pilot-02/03/04: **NOT STARTED**, gated by real Pilot-01 READY.
-- Active synthetic next step: **Pilot-05 synthetic hypercare + exit-gate rehearsal**.
+- Real Pilot-02/03/04/05: **NOT STARTED**, gated by real Pilot-01 READY and later explicit real cutover approval.
+- Synthetic Pilot-01: **PREVIEW_PASS**.
+- Synthetic Pilot-02: **DRY-RUN PASS / 9 of 9**.
+- Synthetic Pilot-03: **PARALLEL PASS / 3 of 3 days / variance 0**.
+- Synthetic Pilot-04: **DECISION REHEARSAL PASS / GO 11 of 11 + all 7 NO-GO classes**.
+- Synthetic Pilot-05: **EXIT REHEARSAL PASS / EXIT 12 of 12 + all 9 NO-EXIT classes**.
+- Pilot-05 run `30972650497`: **SUCCESS**; artifact `8917093954`, SHA-256 `c2e1b5e2b1c3bd08913285a0988b6638715ea0a87de7fa6ffe2d5306d53834b8`.
+- **Synthetic validation lane: COMPLETE / TEST ONLY**.
 
-Synthetic PASS validates tooling/governance only. It never authorizes real pilot transition, production write or cutover.
+Synthetic PASS/GO/EXIT never authorizes production write, real cutover, Accepted Production Reference or GA.
 
-## 1. Real Pilot-01 — externally blocked
+## 1. Real Pilot-01 — active dependency
 
 Required source-owner inputs remain:
 
@@ -37,11 +38,11 @@ Required source-owner inputs remain:
 
 These values may not be synthesized for the real pilot.
 
-## 2. Synthetic Pilot-01..04 — DONE / PASS
+## 2. Synthetic lane — DONE
 
 ### Pilot-01
 
-All 12 Mapping-V1 datasets; `PREVIEW_PASS`; zero unexplained variance.
+All 12 Mapping-V1 datasets reach `PREVIEW_PASS` with zero unexplained variance.
 
 ### Pilot-02
 
@@ -53,47 +54,44 @@ Three cumulative business days reconcile at tolerance `0` across Stock qty/value
 
 ### Pilot-04
 
-Authority: `docs/pilot/alumdoor/PILOT_04_SYNTHETIC_DECISION_V1.json`.
+Baseline synthetic evidence returns `GO` only when all 11 gates pass. P0/P1, variance, approval defects, identity drift, stale recovery, invalid cutoff or non-synthetic invocation return `NO-GO`. Cutover authority remains false.
 
-Run `30972065238` proves:
+### Pilot-05
 
-- baseline synthetic evidence -> `GO` with **11/11** gates;
-- unresolved P0/P1 -> `NO-GO`;
-- non-zero reconciliation variance -> `NO-GO`;
-- missing/duplicate `Giám đốc` approval -> `NO-GO`;
-- release/package/profile drift -> `NO-GO`;
-- stale/failed recovery -> `NO-GO`;
-- invalid cutoff/delta -> `NO-GO`;
-- non-synthetic invocation -> `NO-GO`.
+Run `30972650497` passed:
 
-Even the synthetic `GO` has `production_write_authorized=false`, `cutover_authorized=false`, `real_pilot_transition_allowed=false`.
+- baseline three-day synthetic hypercare -> `EXIT` with **12/12** gates;
+- runtime/transaction health rerun;
+- Pilot-03 transaction/reconciliation continuity rerun;
+- local backup/recovery safety rerun;
+- Pilot-04 GO/NO-GO governance rerun;
+- 9 negative scenario classes -> deterministic `NO-EXIT`.
 
-## 3. Active synthetic next step — Pilot-05
+Even synthetic `EXIT` retains:
 
-Build a **synthetic hypercare + exit-gate rehearsal**, not GA and not a real production exit.
+- `production_write_authorized=false`;
+- `cutover_authorized=false`;
+- `ga_authorized=false`;
+- `accepted_production_reference_authorized=false`;
+- `real_pilot_transition_allowed=false`.
 
-Required evidence:
+## 3. Next real milestone
 
-- bounded multi-day health/transaction/reconciliation snapshots;
-- no unresolved P0/P1 at exit;
-- zero unexplained Stock/AR/AP/Finance variance;
-- stable idempotency/correction behavior;
-- recovery evidence continuity/freshness;
-- all synthetic incidents either absent or closed with recheck evidence;
-- deterministic `EXIT` for clean evidence;
-- deterministic `NO-EXIT` for runtime-health failure, open P0/P1, non-zero variance, unresolved incident or stale recovery.
+There is no further synthetic pilot phase required. The next meaningful step is to satisfy the **real Pilot-01 external source dependencies**, then:
 
-Any synthetic `EXIT` must still retain `production_write_authorized=false`, `ga_authorized=false`, `real_pilot_transition_allowed=false`.
+1. bind actual source extracts by SHA-256/provenance;
+2. freeze one source-proven common cutoff;
+3. create the private real Mapping-V1 batch;
+4. obtain real zero-variance `PREVIEW_PASS`;
+5. freeze named pilot accounts;
+6. start real Pilot-02 only after those conditions are met.
 
-Target verdict: **`PILOT-05-SYNTHETIC-EXIT-REHEARSAL-PASS`**.
+Real production import/write remains a separate explicit authorization boundary even after a real `PREVIEW_PASS`.
 
-## 4. Real transition rule
-
-Real Pilot-01 stays PREVIEW-BLOCKED until source-owner evidence supplies a source-proven common cutoff. Only then can real `PREVIEW_PASS`, named account freeze and real Pilot-02/03/04 proceed. Real cutover requires explicit `Giám đốc` approval under Pilot-00; real Pilot-05 comes only after an authorized real cutover.
-
-## 5. Standing boundaries
+## 4. Standing boundaries
 
 - Controlled pilot is not GA.
 - Synthetic values are never substituted for real openings.
-- Synthetic GO/EXIT never authorizes production write, cutover or GA.
+- Missing opening values are never assumed zero.
+- Synthetic PASS/GO/EXIT is test evidence only.
 - Real production data import/write, cutover, DNS/routes/secrets/provider mutation, destructive restore/PITR and destructive state operations remain explicit authorization boundaries.
