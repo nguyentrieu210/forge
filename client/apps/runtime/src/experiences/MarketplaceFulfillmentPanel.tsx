@@ -49,6 +49,7 @@ export function MarketplaceFulfillmentPanel({
   const [tracking, setTracking] = useState("");
   const [returnDeliveryNote, setReturnDeliveryNote] = useState("");
   const [stockReturn, setStockReturn] = useState("");
+  const [codValues, setCodValues] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +59,15 @@ export function MarketplaceFulfillmentPanel({
       );
       setProjection(next);
       if (!returnDeliveryNote && next.shipments[0]?.delivery_note_name) setReturnDeliveryNote(next.shipments[0].delivery_note_name);
+      setCodValues((current) => {
+        const values = { ...current };
+        for (const shipment of next.shipments) {
+          if (!shipment.cod_reconciled_at && values[shipment.shipment_id] === undefined) {
+            values[shipment.shipment_id] = minorToMajorText(shipment.cod_expected_minor, next.currency);
+          }
+        }
+        return values;
+      });
     } catch (error) {
       if (error instanceof FulfillmentApiError && error.status === 401) onAuthenticationRequired();
       else toast.error(error instanceof Error ? error.message : "Không tải được vận hành đơn hàng");
@@ -122,6 +132,22 @@ export function MarketplaceFulfillmentPanel({
         body: JSON.stringify({ status }),
       }),
       `Đã cập nhật vận chuyển: ${shipmentStatusLabel(status)}`,
+    );
+  }
+
+  async function reconcileCod(shipment: Shipment, currency: string) {
+    const collectedMinor = majorTextToMinor(codValues[shipment.shipment_id] ?? "", currency);
+    if (collectedMinor === null) {
+      toast.warning("Số COD đã thu không hợp lệ");
+      return;
+    }
+    await run(
+      `cod:${shipment.shipment_id}`,
+      () => request(`/api/v1/social/shipments/${encodeURIComponent(shipment.shipment_id)}/cod-reconcile`, {
+        method: "POST",
+        body: JSON.stringify({ cod_collected_minor: collectedMinor }),
+      }),
+      "Đã đối chiếu COD với Delivery Note canonical; Finance vẫn chưa tự động post GL",
     );
   }
 
@@ -193,7 +219,23 @@ export function MarketplaceFulfillmentPanel({
                     </Button>
                   ))}
                 </div>
-                {shipment.cod_reconciled_at ? <p className="mt-2 text-xs text-muted-foreground">COD đã đối chiếu: {dateTime(shipment.cod_reconciled_at)}</p> : null}
+                <div className="mt-3 rounded-md bg-muted/30 p-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-muted-foreground">COD theo Delivery Note</span>
+                    <Badge variant="outline">{money(shipment.cod_expected_minor, current.currency)}</Badge>
+                  </div>
+                  {shipment.cod_reconciled_at ? (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>Đã thu: {money(shipment.cod_collected_minor ?? 0, current.currency)}</p>
+                      <p>Đối chiếu lúc {dateTime(shipment.cod_reconciled_at)} · chưa tự động post GL/Payment Entry.</p>
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap items-end gap-2">
+                      <label className="grid min-w-40 flex-1 gap-1 text-xs font-medium">COD thực thu ({current.currency})<input className="h-9 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring" inputMode="decimal" value={codValues[shipment.shipment_id] ?? ""} onChange={(event) => setCodValues((values) => ({ ...values, [shipment.shipment_id]: event.target.value }))} placeholder={minorToMajorText(shipment.cod_expected_minor, current.currency)} /></label>
+                      <Button variant="outline" size="sm" disabled={Boolean(busy)} onClick={() => void reconcileCod(shipment, current.currency)}>{busy === `cod:${shipment.shipment_id}` ? <Loader2 className="size-4 animate-spin" /> : null}Đối chiếu COD</Button>
+                    </div>
+                  )}
+                </div>
               </div>
             )) : <p className="text-sm text-muted-foreground">Chưa có Delivery Note được đăng ký cho đơn này.</p>}
           </div>
@@ -216,6 +258,7 @@ export function MarketplaceFulfillmentPanel({
           </div>
           <div className="mt-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
             <p>Hủy đơn sau khi COD đã reconcile sẽ bị backend chặn cho tới khi Finance canonical được đảo.</p>
+            <p className="mt-1">COD mismatch cũng bị chặn: số thực thu phải bằng đúng giá trị Delivery Note trước khi đánh dấu đã đối chiếu.</p>
             <p className="mt-1">Trạng thái giao/return không được nhập tự do; server kiểm transition và quan hệ chứng từ.</p>
           </div>
         </section>
@@ -268,6 +311,33 @@ function orderTone(status: string): "success" | "warning" | "info" | "muted" {
   if (status === "cancelled" || status === "returned") return "warning";
   if (status === "packing" || status === "shipped") return "info";
   return "muted";
+}
+
+function currencyDigits(currency: string): number {
+  try { return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 0; }
+  catch { return currency === "VND" ? 0 : 2; }
+}
+
+function minorToMajorText(minor: number, currency: string): string {
+  const scale = 10 ** currencyDigits(currency);
+  const digits = currencyDigits(currency);
+  return (minor / scale).toFixed(digits);
+}
+
+function majorTextToMinor(value: string, currency: string): number | null {
+  const normalized = value.trim().replace(",", ".");
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+  const numeric = Number(normalized);
+  const scale = 10 ** currencyDigits(currency);
+  const minor = Math.round(numeric * scale);
+  return Number.isSafeInteger(minor) && minor >= 0 ? minor : null;
+}
+
+function money(minor: number, currency: string): string {
+  const code = /^[A-Z]{3}$/.test(currency) ? currency : "VND";
+  const digits = currencyDigits(code);
+  try { return new Intl.NumberFormat("vi-VN", { style: "currency", currency: code }).format(minor / (10 ** digits)); }
+  catch { return `${minor} ${code}`; }
 }
 
 class FulfillmentApiError extends Error {
