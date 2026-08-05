@@ -29,6 +29,7 @@ import baseWorker, {
 } from "./index-core-base.js";
 import type { TenantEnv } from "./env.js";
 import { routeMarketplaceOAuthDescriptor } from "./marketplace-oauth-internal.js";
+import { routeMarketplaceOAuthStart } from "./marketplace-oauth-start.js";
 
 export { AggregateCoordinator, runAlumdoorMaintenance } from "./index-core-base.js";
 
@@ -273,6 +274,9 @@ export default {
     const url = new URL(request.url);
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? "r5-maintenance";
     try {
+      const marketplaceOAuthStartResponse = await routeMarketplaceOAuthStart(request, url, env);
+      if (marketplaceOAuthStartResponse) return marketplaceOAuthStartResponse;
+
       const marketplaceOAuthDescriptorResponse = await routeMarketplaceOAuthDescriptor(request, url, env);
       if (marketplaceOAuthDescriptorResponse) return marketplaceOAuthDescriptorResponse;
 
