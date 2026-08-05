@@ -4,19 +4,27 @@ on:
   pull_request:
     paths:
       - ".github/workflows/demo-provision-issue-command.yml"
+      - ".github/workflows/demo-provision.yml"
       - ".github/workflows/demo-issue-command-validation.yml"
+      - "server/scripts/create-demo-tenant.mjs"
       - "server/scripts/parse-demo-command.mjs"
       - "server/scripts/lib/demo-command.mjs"
+      - "server/scripts/lib/demo-provider-credentials.mjs"
       - "server/tests/demo-command.test.mjs"
+      - "server/tests/demo-provider-credentials.test.mjs"
       - "skills/forge-demo-factory/SKILL.md"
   push:
     branches: [main]
     paths:
       - ".github/workflows/demo-provision-issue-command.yml"
+      - ".github/workflows/demo-provision.yml"
       - ".github/workflows/demo-issue-command-validation.yml"
+      - "server/scripts/create-demo-tenant.mjs"
       - "server/scripts/parse-demo-command.mjs"
       - "server/scripts/lib/demo-command.mjs"
+      - "server/scripts/lib/demo-provider-credentials.mjs"
       - "server/tests/demo-command.test.mjs"
+      - "server/tests/demo-provider-credentials.test.mjs"
       - "skills/forge-demo-factory/SKILL.md"
 
 permissions:
@@ -30,12 +38,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Syntax-check command tooling
+      - name: Syntax-check command and provider tooling
         run: |
           node --check server/scripts/lib/demo-command.mjs
+          node --check server/scripts/lib/demo-provider-credentials.mjs
           node --check server/scripts/parse-demo-command.mjs
-      - name: Run command parser tests
-        run: node --test server/tests/demo-command.test.mjs
+          node --check server/scripts/create-demo-tenant.mjs
+      - name: Run command and provider discovery tests
+        run: node --test server/tests/demo-command.test.mjs server/tests/demo-provider-credentials.test.mjs server/tests/demo-provisioning.test.mjs
       - name: Lock production command workflow invariants
         shell: bash
         run: |

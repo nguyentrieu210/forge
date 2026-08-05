@@ -71,7 +71,7 @@ jobs:
             exit 1
           }
 
-      - name: Validate brief and required production credentials
+      - name: Validate brief and base production credentials
         id: input
         shell: bash
         env:
@@ -82,10 +82,6 @@ jobs:
           test -n "$CUSTOMER_NAME"
           test -f "server/briefs/${BRIEF_NAME}.json" || { echo "Unknown brief server/briefs/${BRIEF_NAME}.json"; exit 1; }
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID repository variable/secret"; exit 1; }
-          test -n "$FORGE_INTERNAL_AUTH_SECRET" || { echo "Missing FORGE_INTERNAL_AUTH_SECRET"; exit 1; }
-          test -n "$FORGE_INTERNAL_SERVICE_TOKEN" || { echo "Missing FORGE_INTERNAL_SERVICE_TOKEN"; exit 1; }
-          test -n "$FORGE_CONTROL_TOKEN" || { echo "Missing FORGE_CONTROL_TOKEN"; exit 1; }
           test -n "$FORGE_ADMIN_PASSWORD" || { echo "Missing FORGE_DEMO_ADMIN_PASSWORD/FORGE_ADMIN_PASSWORD"; exit 1; }
           echo "brief=server/briefs/${BRIEF_NAME}.json" >> "$GITHUB_OUTPUT"
 
@@ -109,7 +105,7 @@ jobs:
         run: pnpm --filter cloudforge run build
 
       - name: Verify command and Demo Factory helpers
-        run: node --test server/tests/demo-command.test.mjs server/tests/demo-provisioning.test.mjs
+        run: node --test server/tests/demo-command.test.mjs server/tests/demo-provisioning.test.mjs server/tests/demo-provider-credentials.test.mjs
 
       - name: Compile app and seed before provider mutation
         shell: bash
