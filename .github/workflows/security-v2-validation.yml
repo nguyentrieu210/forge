@@ -98,6 +98,7 @@ jobs:
           grep -Fq '"main": "src/index-v2.ts"' server/apps/gateway-worker/wrangler.jsonc
           grep -Fq '"main": "src/index-v2.ts"' server/apps/jobs-worker/wrangler.jsonc
           grep -Fq '"main": "src/index-v2b.ts"' server/apps/control-plane-worker/wrangler.jsonc
+          grep -Fq '"pattern": "*.kairo.vn/*", "zone_name": "kairo.vn"' server/apps/gateway-worker/wrangler.jsonc
           grep -Fq 'environment: production' .github/workflows/security-v2-bootstrap.yml
           grep -Fq "github.event.comment.user.login == github.repository_owner" .github/workflows/security-v2-bootstrap.yml
           grep -Fq "github.event.comment.author_association == 'OWNER'" .github/workflows/security-v2-bootstrap.yml
