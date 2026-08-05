@@ -133,7 +133,7 @@ test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and can
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Sales Invoice"));
 });
 
-test("Sales composer takes technical choices from Cutting Policy, reserves stock safely and blocks duplicate confirmation", async () => {
+test("Sales composer takes technical choices from Cutting Policy, keeps one working draft, reserves stock safely and blocks duplicate confirmation", async () => {
   const source = await readFile(composerPath, "utf8");
 
   assert.match(source, /adapter\.getList\("Cutting Policy"/);
@@ -153,11 +153,23 @@ test("Sales composer takes technical choices from Cutting Policy, reserves stock
   assert.match(source, /source_name:\s*created\.name/);
   assert.match(source, /min_length_m:\s*Number\(formula\.cut_width_m\)/);
   assert.match(source, /qty_reserved:\s*Number\(formula\.total_leaf_count\)/);
+
+  assert.match(source, /const \[createdOrderFingerprint, setCreatedOrderFingerprint\] = useState\(""\)/);
+  assert.match(source, /const existingDraft = createdOrder && Number\(createdOrder\.docstatus \?\? 0\) === 0 \? createdOrder : null/);
+  assert.match(source, /adapter\.updateDoc\("Sales Order", String\(existingDraft\.name\), orderDraft, String\(existingDraft\.modified \?\? ""\)\)/);
+  assert.doesNotMatch(source, /useEffect\(\(\) => \{ setCreatedOrder\(null\); \}, \[inputFingerprint\]\)/, "input edits must not discard the working draft identity");
+  const updateLineStart = source.indexOf("const updateLine =");
+  const updateLineEnd = source.indexOf("const rayOptionsFor", updateLineStart);
+  assert.ok(updateLineStart >= 0 && updateLineEnd > updateLineStart);
+  assert.doesNotMatch(source.slice(updateLineStart, updateLineEnd), /setCreatedOrder\(null\)/, "editing a line must keep the draft for updateDoc");
+
   assert.match(source, /const submittedOrder = Boolean\(createdOrder && Number\(createdOrder\.docstatus/);
-  assert.match(source, /if \(createdOrder && Number\(createdOrder\.docstatus \?\? 0\) === 1\)/);
+  assert.match(source, /createdOrderFingerprint === inputFingerprint/);
+  assert.match(source, /if \(submittedOrder\)/);
   assert.match(source, /reservationRecovery\.length/);
   assert.match(source, /setReservationRecovery\(failedReleases\)/);
   assert.match(source, /Không thử xác nhận lại trước khi xử lý các giữ chỗ này/);
+  assert.match(source, /Cập nhật nháp/);
   assert.match(source, /Xác nhận & giữ chỗ/);
 });
 
