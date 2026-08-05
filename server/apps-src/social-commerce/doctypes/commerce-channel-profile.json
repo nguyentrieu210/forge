@@ -10,7 +10,7 @@
     { "fieldname": "channel_key", "label": "Mã kênh", "fieldtype": "Data", "required": true, "unique": true, "in_list_view": true, "in_standard_filter": true, "set_only_once": true },
     { "fieldname": "channel_name", "label": "Tên gian hàng", "fieldtype": "Data", "required": true, "in_list_view": true },
     { "fieldname": "provider", "label": "Sàn", "fieldtype": "Select", "options": "shopee\nlazada\ntiktok_shop", "required": true, "in_list_view": true, "in_standard_filter": true, "set_only_once": true },
-    { "fieldname": "connection_id", "label": "Kết nối Integration Hub", "fieldtype": "Link", "options": "Marketplace Connection", "required": true, "set_only_once": true, "description": "Link tới authority Integration Hub. Secret/token không được lưu trong DocType này." },
+    { "fieldname": "connection_id", "label": "Kết nối Integration Hub", "fieldtype": "Link", "options": "Marketplace Connection", "required": true, "unique": true, "set_only_once": true, "description": "Mỗi connection chỉ thuộc một gian hàng. Secret/token không được lưu trong DocType này." },
     { "fieldname": "external_shop_id", "label": "Mã gian hàng trên sàn", "fieldtype": "Data", "required": true, "set_only_once": true },
     { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "in_list_view": true },
     { "fieldname": "warehouse", "label": "Kho mặc định", "fieldtype": "Link", "options": "Warehouse", "required": true, "in_list_view": true },
