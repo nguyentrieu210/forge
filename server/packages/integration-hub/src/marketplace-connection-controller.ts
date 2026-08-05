@@ -16,7 +16,7 @@ interface MarketplaceConnectionData extends JsonObject {
   auth_kind: ConnectorAuthKind;
   secret_ref: string;
   config: JsonObject;
-  status: IntegrationStatus;
+  connection_status: IntegrationStatus;
   status_reason?: string;
 }
 
@@ -29,11 +29,12 @@ const STATUS_TRANSITIONS: Readonly<Record<IntegrationStatus, ReadonlySet<Integra
 };
 
 /**
- * Canonical tenant-owned reference to one marketplace provider connection.
+ * Runtime controller for the Marketplace Connection DocType shipped by social-commerce.
  *
- * Credential material never enters this document: only secret_ref crosses into WS11.
- * Connector config is non-secret and immutable while active, so a running sync cannot
- * silently switch shops, provider hosts or cursor semantics underneath the scheduler.
+ * Integration Hub owns connector validation/signing semantics; social-commerce owns the
+ * installable DocType that references those semantics. Credential material never enters
+ * this document: only secret_ref crosses into WS11. Config is immutable while active so
+ * a running sync cannot silently switch shop/provider scope underneath its cursor.
  */
 export class MarketplaceConnectionController implements DocumentController<MarketplaceConnectionData> {
   readonly doctype = "Marketplace Connection";
@@ -60,11 +61,11 @@ export class MarketplaceConnectionController implements DocumentController<Marke
       throw errors.validation(error instanceof Error ? error.message : "Invalid marketplace connection");
     }
 
-    const statusChanged = existing !== null && existing.data.status !== data.status;
+    const statusChanged = existing !== null && existing.data.connection_status !== data.connection_status;
     if (statusChanged) {
       if (!data.status_reason) throw errors.validation("status_reason is required for Marketplace Connection status changes");
-      if (!STATUS_TRANSITIONS[existing.data.status].has(data.status)) {
-        throw errors.validation(`Marketplace Connection cannot transition ${existing.data.status} -> ${data.status}`);
+      if (!STATUS_TRANSITIONS[existing.data.connection_status].has(data.connection_status)) {
+        throw errors.validation(`Marketplace Connection cannot transition ${existing.data.connection_status} -> ${data.connection_status}`);
       }
     }
 
@@ -74,7 +75,7 @@ export class MarketplaceConnectionController implements DocumentController<Marke
       name: context.command.aggregate.name,
       owner: existing?.owner ?? context.command.actor.user_id,
       docstatus: 0,
-      status: data.status,
+      status: data.connection_status,
       version: context.nextVersion,
       created_at: existing?.created_at ?? context.now,
       modified_at: context.now,
@@ -84,7 +85,7 @@ export class MarketplaceConnectionController implements DocumentController<Marke
     const eventType = context.command.action === "create"
       ? "marketplace_connection.created"
       : statusChanged
-        ? `marketplace_connection.${data.status}`
+        ? `marketplace_connection.${data.connection_status}`
         : "marketplace_connection.updated";
     return {
       command: context.command,
@@ -104,7 +105,7 @@ export class MarketplaceConnectionController implements DocumentController<Marke
         payload: {
           connector_key: data.connector_key,
           connector_version: data.connector_version,
-          status: data.status,
+          status: data.connection_status,
           ...(statusChanged && data.status_reason ? { reason: data.status_reason } : {}),
         },
       })],
@@ -114,7 +115,7 @@ export class MarketplaceConnectionController implements DocumentController<Marke
         version: document.version,
         connector_key: data.connector_key,
         connector_version: data.connector_version,
-        status: data.status,
+        status: data.connection_status,
       },
     };
   }
@@ -125,8 +126,8 @@ function normalizeConnectionData(
   input: MarketplaceConnectionData,
 ): MarketplaceConnectionData {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw errors.validation("Marketplace Connection document is invalid");
-  const status = normalizeStatus(input.status ?? existing?.data.status ?? "draft");
-  if (!existing && status !== "draft") throw errors.validation("Marketplace Connection must be created as draft");
+  const connectionStatus = normalizeStatus(input.connection_status ?? existing?.data.connection_status ?? "draft");
+  if (!existing && connectionStatus !== "draft") throw errors.validation("Marketplace Connection must be created as draft");
   const reason = optionalText(input.status_reason, "status_reason", 1_000);
   return {
     connector_key: requireText(input.connector_key ?? existing?.data.connector_key, "connector_key", 80),
@@ -134,7 +135,7 @@ function normalizeConnectionData(
     auth_kind: normalizeAuth(input.auth_kind ?? existing?.data.auth_kind ?? "oauth2"),
     secret_ref: requireText(input.secret_ref ?? existing?.data.secret_ref, "secret_ref", 320),
     config: normalizeConfig(input.config ?? existing?.data.config),
-    status,
+    connection_status: connectionStatus,
     ...(reason ? { status_reason: reason } : existing?.data.status_reason ? { status_reason: existing.data.status_reason } : {}),
   };
 }
@@ -148,7 +149,7 @@ function asConnection(tenantId: string, connectionId: string, data: MarketplaceC
     connector_version: data.connector_version,
     auth_kind: data.auth_kind,
     secret_ref: data.secret_ref,
-    status: data.status,
+    status: data.connection_status,
     config: structuredClone(data.config),
   };
 }
