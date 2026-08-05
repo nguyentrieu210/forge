@@ -108,6 +108,12 @@ function ConfiguredDocumentHistory({ action, onOpen, config }: ActionScreenProps
     setLoading(true);
     setError(undefined);
     setWarnings([]);
+    if (config.sources.some((source) => source.companyField) && !company) {
+      setRows([]);
+      setError("Cần chọn Công ty trên thanh ngữ cảnh trước khi xem lịch sử.");
+      setLoading(false);
+      return;
+    }
     Promise.allSettled(config.sources.map(async (source) => ({
       source,
       docs: await loadSource(adapter, source, company),
