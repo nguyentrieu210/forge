@@ -163,6 +163,12 @@ function ConfiguredOperationalReport({ action, onOpen, config }: ActionScreenPro
   const reload = useCallback(() => {
     setLoading(true);
     setError(undefined);
+    if (config.companyField && !company) {
+      setRows([]);
+      setError("Cần chọn Công ty trên thanh ngữ cảnh trước khi xem báo cáo.");
+      setLoading(false);
+      return;
+    }
     loadRows(adapter, config, company)
       .then(setRows)
       .catch((caught) => { setRows([]); setError(adapter.mapError(caught).message); })
