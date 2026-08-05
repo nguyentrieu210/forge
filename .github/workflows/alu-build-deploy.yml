@@ -360,6 +360,29 @@ jobs:
       - name: Install locked Security V2 dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Reconcile Security V2 frozen-install worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              pnpm-lock.yaml)
+                echo "Restoring exact candidate lockfile after successful frozen install."
+                git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml
+                ;;
+              *)
+                echo "Refusing Security V2 release: dependency install changed unexpected source path: $file"
+                exit 1
+                ;;
+            esac
+          done
+          test -z "$(git status --porcelain --untracked-files=all)"
+
       - name: Build Security V2 release candidate and exact Gateway client bundle
         env:
           VITE_FORGE_RELEASE_SHA: ${{ steps.command.outputs.target_sha }}
