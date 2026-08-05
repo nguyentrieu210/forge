@@ -1,6 +1,7 @@
 {
   "version": "2.3.0",
-  "//": "Bán hàng và Mua hàng dùng chung sidecar presentation. 2.3.0 chuyển các màn nhập chính sang operational UX: Sales live composer full-width và Purchase/Receipt grid rút gọn.",
+  "//": "Operational presentation sidecar. Company và Warehouse là context chung cho Mua/Bán thay vì mỗi màn tự đoán lại.",
+  "dimensions": ["company", "warehouse"],
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",
