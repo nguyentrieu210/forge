@@ -10,7 +10,6 @@ import type { ActionScreenProps } from "./ActionScreen.js";
 const CONFIG_PREFIX = "OperationalReport:";
 const PAGE_SIZE = 250;
 const MAX_RECORDS = 10_000;
-type Json = Record<string, unknown>;
 type FilterMode = "all" | "open" | "overdue";
 
 export interface OperationalReportConfig {
@@ -33,6 +32,7 @@ interface GroupRow {
   key: string;
   documents: number;
   value: number;
+  valueByCurrency: Record<string, number>;
   open: number;
   overdue: number;
   progress: number;
@@ -62,6 +62,34 @@ function dateInRange(value: unknown, from: string, to: string): boolean {
   const raw = day(value);
   if (!raw) return true;
   return (!from || raw >= from) && (!to || raw <= to);
+}
+function currencyOf(row: Doc, config: OperationalReportConfig): string {
+  return config.currencyField ? text(row[config.currencyField]) || "?" : "";
+}
+function totalsByCurrency(rows: Doc[], config: OperationalReportConfig): Record<string, number> {
+  const totals: Record<string, number> = {};
+  for (const row of rows) {
+    const currency = currencyOf(row, config);
+    totals[currency] = (totals[currency] ?? 0) + number(row[config.valueField]);
+  }
+  return totals;
+}
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value);
+}
+function formatMoney(value: number, currency: string): string {
+  if (!currency) return formatNumber(value);
+  if (currency === "?") return `${formatNumber(value)} · chưa rõ tiền tệ`;
+  try {
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+  } catch {
+    return `${formatNumber(value)} ${currency}`;
+  }
+}
+function formatTotals(totals: Record<string, number>): string {
+  const entries = Object.entries(totals);
+  if (!entries.length) return "0";
+  return entries.sort(([left], [right]) => left.localeCompare(right, "vi")).map(([currency, value]) => formatMoney(value, currency)).join(" · ");
 }
 
 function configField(action: AppAction) {
@@ -153,6 +181,10 @@ function ConfiguredOperationalReport({ action, onOpen, config }: ActionScreenPro
       .some((value) => text(value).toLocaleLowerCase("vi").includes(needle));
   }), [config, filter, fromDate, query, rows, toDate]);
 
+  const totalValues = useMemo(() => totalsByCurrency(filteredRows, config), [config, filteredRows]);
+  const currencies = useMemo(() => Object.keys(totalValues).filter(Boolean), [totalValues]);
+  const mixedCurrency = config.currencyField ? currencies.length > 1 || Object.hasOwn(totalValues, "?") : false;
+
   const groups = useMemo<GroupRow[]>(() => {
     const grouped = new Map<string, Doc[]>();
     for (const row of filteredRows) {
@@ -163,28 +195,28 @@ function ConfiguredOperationalReport({ action, onOpen, config }: ActionScreenPro
       key,
       documents: source.length,
       value: source.reduce((sum, row) => sum + number(row[config.valueField]), 0),
+      valueByCurrency: totalsByCurrency(source, config),
       open: source.filter((row) => isOpen(row, config)).length,
       overdue: source.filter((row) => isOverdue(row, config)).length,
       progress: config.progressField && source.length
         ? source.reduce((sum, row) => sum + Math.max(0, Math.min(100, number(row[config.progressField!]))), 0) / source.length
         : 0,
-    })).sort((left, right) => right.value - left.value || left.key.localeCompare(right.key, "vi"));
-  }, [config, filteredRows]);
+    })).sort((left, right) => mixedCurrency
+      ? right.documents - left.documents || left.key.localeCompare(right.key, "vi")
+      : right.value - left.value || left.key.localeCompare(right.key, "vi"));
+  }, [config, filteredRows, mixedCurrency]);
 
   const stats = useMemo(() => ({
     documents: filteredRows.length,
-    value: filteredRows.reduce((sum, row) => sum + number(row[config.valueField]), 0),
     open: filteredRows.filter((row) => isOpen(row, config)).length,
     overdue: filteredRows.filter((row) => isOverdue(row, config)).length,
   }), [config, filteredRows]);
 
-  const currencies = useMemo(() => config.currencyField
-    ? [...new Set(filteredRows.map((row) => text(row[config.currencyField!])).filter(Boolean))]
-    : [], [config.currencyField, filteredRows]);
-  const singleCurrency = currencies.length === 1 ? currencies[0] : undefined;
-  const formatValue = (value: number) => singleCurrency
-    ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: singleCurrency, maximumFractionDigits: 0 }).format(value)
-    : new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(value) + (currencies.length > 1 ? " · đa tiền tệ" : "");
+  const formatValue = (value: number) => {
+    if (!config.currencyField) return formatNumber(value);
+    const only = Object.entries(totalValues);
+    return only.length === 1 ? formatMoney(value, only[0]![0]) : formatNumber(value);
+  };
   const topGroups = groups.slice(0, config.chartTop ?? 8);
   const detailRows = selectedKey ? filteredRows.filter((row) => (text(row[config.keyField]) || "Chưa xác định") === selectedKey) : [];
 
@@ -200,17 +232,26 @@ function ConfiguredOperationalReport({ action, onOpen, config }: ActionScreenPro
     </div>
 
     {error ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div> : null}
+    {mixedCurrency ? <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">Có nhiều tiền tệ trong tập dữ liệu. Hệ thống tách giá trị theo từng tiền tệ và không cộng chéo thành một tổng giả.</div> : null}
 
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard label={labels.documents} value={stats.documents.toLocaleString("vi-VN")} icon={<ClipboardList className="size-4" />} />
-      <StatCard label={labels.value} value={formatValue(stats.value)} icon={<TrendingUp className="size-4" />} />
+      <StatCard label={labels.value} value={formatTotals(totalValues)} icon={<TrendingUp className="size-4" />} />
       <StatCard label={labels.open} value={stats.open.toLocaleString("vi-VN")} icon={<ClipboardList className="size-4" />} />
       <StatCard label={labels.overdue} value={stats.overdue.toLocaleString("vi-VN")} icon={<AlertTriangle className="size-4" />} danger={stats.overdue > 0} />
     </div>
 
     {!loading && !error && topGroups.length ? <div className={`grid min-w-0 grid-cols-1 gap-4 ${config.progressField ? "xl:grid-cols-2" : ""}`}>
-      <ForgeDashboardPanel title={`${labels.value} theo ${labels.key.toLocaleLowerCase("vi")}`}>
-        <ForgeBarChart title={`${labels.value} theo ${labels.key}`} labels={topGroups.map((row) => row.key)} series={[{ name: labels.value, values: topGroups.map((row) => row.value) }]} height={270} valueFormatter={formatValue} onActivate={({ label }: { label: string }) => setSelectedKey(label)} ariaLabel={`${labels.value} theo ${labels.key}`} />
+      <ForgeDashboardPanel title={`${mixedCurrency ? labels.documents : labels.value} theo ${labels.key.toLocaleLowerCase("vi")}`}>
+        <ForgeBarChart
+          title={`${mixedCurrency ? labels.documents : labels.value} theo ${labels.key}`}
+          labels={topGroups.map((row) => row.key)}
+          series={[{ name: mixedCurrency ? labels.documents : labels.value, values: topGroups.map((row) => mixedCurrency ? row.documents : row.value) }]}
+          height={270}
+          valueFormatter={mixedCurrency ? (value) => value.toLocaleString("vi-VN", { maximumFractionDigits: 0 }) : formatValue}
+          onActivate={({ label }: { label: string }) => setSelectedKey(label)}
+          ariaLabel={`${mixedCurrency ? labels.documents : labels.value} theo ${labels.key}`}
+        />
       </ForgeDashboardPanel>
       {config.progressField ? <ForgeDashboardPanel title={`${labels.progress} theo ${labels.key.toLocaleLowerCase("vi")}`}>
         <ForgeBarChart title={`${labels.progress} theo ${labels.key}`} labels={topGroups.map((row) => row.key)} series={[{ name: labels.progress, values: topGroups.map((row) => row.progress) }]} height={270} valueFormatter={(value) => `${value.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`} onActivate={({ label }: { label: string }) => setSelectedKey(label)} ariaLabel={`${labels.progress} theo ${labels.key}`} />
@@ -219,13 +260,13 @@ function ConfiguredOperationalReport({ action, onOpen, config }: ActionScreenPro
 
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="border-b px-3 py-2 text-sm font-semibold">Tổng hợp theo {labels.key.toLocaleLowerCase("vi")}</div>
-      <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="bg-muted/35 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">{labels.key}</th><th className="px-3 py-2 text-right">{labels.documents}</th><th className="px-3 py-2 text-right">{labels.value}</th><th className="px-3 py-2 text-right">{labels.open}</th><th className="px-3 py-2 text-right">{labels.overdue}</th>{config.progressField ? <th className="px-3 py-2 text-right">{labels.progress}</th> : null}</tr></thead><tbody className="divide-y">{groups.map((row) => <tr key={row.key} className="cursor-pointer hover:bg-muted/20" onClick={() => setSelectedKey(row.key)}><td className="px-3 py-2 font-medium">{row.key}</td><td className="px-3 py-2 text-right tabular-nums">{row.documents}</td><td className="px-3 py-2 text-right font-semibold tabular-nums">{formatValue(row.value)}</td><td className="px-3 py-2 text-right tabular-nums">{row.open}</td><td className="px-3 py-2 text-right tabular-nums">{row.overdue}</td>{config.progressField ? <td className="px-3 py-2 text-right tabular-nums">{row.progress.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%</td> : null}</tr>)}</tbody></table></div>
+      <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="bg-muted/35 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">{labels.key}</th><th className="px-3 py-2 text-right">{labels.documents}</th><th className="px-3 py-2 text-right">{labels.value}</th><th className="px-3 py-2 text-right">{labels.open}</th><th className="px-3 py-2 text-right">{labels.overdue}</th>{config.progressField ? <th className="px-3 py-2 text-right">{labels.progress}</th> : null}</tr></thead><tbody className="divide-y">{groups.map((row) => <tr key={row.key} className="cursor-pointer hover:bg-muted/20" onClick={() => setSelectedKey(row.key)}><td className="px-3 py-2 font-medium">{row.key}</td><td className="px-3 py-2 text-right tabular-nums">{row.documents}</td><td className="px-3 py-2 text-right font-semibold tabular-nums">{formatTotals(row.valueByCurrency)}</td><td className="px-3 py-2 text-right tabular-nums">{row.open}</td><td className="px-3 py-2 text-right tabular-nums">{row.overdue}</td>{config.progressField ? <td className="px-3 py-2 text-right tabular-nums">{row.progress.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%</td> : null}</tr>)}</tbody></table></div>
       {!loading && groups.length === 0 ? <div className="p-8 text-center text-sm text-muted-foreground">Không có dữ liệu phù hợp bộ lọc.</div> : null}
     </div>
 
     {selectedKey ? <div className="overflow-hidden rounded-xl border bg-card">
       <div className="flex items-center justify-between border-b px-3 py-2"><div className="text-sm font-semibold">{labels.detail} · {selectedKey}</div><Button size="sm" variant="ghost" onClick={() => setSelectedKey(undefined)}>Đóng</Button></div>
-      <div className="overflow-x-auto"><table className="w-full min-w-[860px] text-sm"><thead className="bg-muted/35 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Chứng từ</th><th className="px-3 py-2">Ngày</th><th className="px-3 py-2">Trạng thái</th>{config.dueDateField ? <th className="px-3 py-2">Hạn</th> : null}<th className="px-3 py-2 text-right">{labels.value}</th>{config.progressField ? <th className="px-3 py-2 text-right">{labels.progress}</th> : null}</tr></thead><tbody className="divide-y">{detailRows.map((row) => <tr key={text(row.name)} className="hover:bg-muted/20"><td className="px-3 py-2"><button className="font-semibold text-primary hover:underline" onClick={() => onOpen?.(config.openDoctype, text(row.name))}>{text(row.name)}</button></td><td className="px-3 py-2">{day(row[config.dateField]) || "—"}</td><td className="px-3 py-2">{config.statusField ? text(row[config.statusField]) || "—" : "—"}</td>{config.dueDateField ? <td className="px-3 py-2">{day(row[config.dueDateField]) || "—"}</td> : null}<td className="px-3 py-2 text-right font-medium tabular-nums">{formatValue(number(row[config.valueField]))}</td>{config.progressField ? <td className="px-3 py-2 text-right tabular-nums">{number(row[config.progressField]).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%</td> : null}</tr>)}</tbody></table></div>
+      <div className="overflow-x-auto"><table className="w-full min-w-[860px] text-sm"><thead className="bg-muted/35 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Chứng từ</th><th className="px-3 py-2">Ngày</th><th className="px-3 py-2">Trạng thái</th>{config.dueDateField ? <th className="px-3 py-2">Hạn</th> : null}<th className="px-3 py-2 text-right">{labels.value}</th>{config.progressField ? <th className="px-3 py-2 text-right">{labels.progress}</th> : null}</tr></thead><tbody className="divide-y">{detailRows.map((row) => <tr key={text(row.name)} className="hover:bg-muted/20"><td className="px-3 py-2"><button className="font-semibold text-primary hover:underline" onClick={() => onOpen?.(config.openDoctype, text(row.name))}>{text(row.name)}</button></td><td className="px-3 py-2">{day(row[config.dateField]) || "—"}</td><td className="px-3 py-2">{config.statusField ? text(row[config.statusField]) || "—" : "—"}</td>{config.dueDateField ? <td className="px-3 py-2">{day(row[config.dueDateField]) || "—"}</td> : null}<td className="px-3 py-2 text-right font-medium tabular-nums">{formatMoney(number(row[config.valueField]), currencyOf(row, config))}</td>{config.progressField ? <td className="px-3 py-2 text-right tabular-nums">{number(row[config.progressField]).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%</td> : null}</tr>)}</tbody></table></div>
     </div> : null}
   </section>;
 }
