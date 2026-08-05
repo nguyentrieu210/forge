@@ -12,6 +12,7 @@
     { "fieldname": "as_of", "label": "Dữ liệu tại thời điểm", "fieldtype": "Datetime", "read_only": true, "in_list_view": true },
     { "fieldname": "organization_count", "label": "Tổ chức", "fieldtype": "Int", "read_only": true },
     { "fieldname": "contact_count", "label": "Liên hệ", "fieldtype": "Int", "read_only": true },
+    { "fieldname": "external_identity_count", "label": "Danh tính kênh đã liên kết", "fieldtype": "Int", "read_only": true, "in_list_view": true },
     { "fieldname": "open_deal_count", "label": "Deal đang mở", "fieldtype": "Int", "read_only": true, "in_list_view": true },
     { "fieldname": "won_deal_count", "label": "Deal thắng", "fieldtype": "Int", "read_only": true },
     { "fieldname": "lost_deal_count", "label": "Deal thua", "fieldtype": "Int", "read_only": true },
@@ -24,6 +25,7 @@
     { "fieldname": "sales_invoice_count", "label": "Hóa đơn bán đã submit", "fieldtype": "Int", "read_only": true },
     { "fieldname": "payment_count", "label": "Phiếu thu đã submit", "fieldtype": "Int", "read_only": true },
     { "fieldname": "currency_summary", "label": "Tổng hợp theo tiền tệ", "fieldtype": "Table", "options": "CRM Customer 360 Currency", "read_only": true },
+    { "fieldname": "external_identities", "label": "Danh tính bán hàng đa kênh", "fieldtype": "Table", "options": "CRM Customer 360 External Identity", "read_only": true },
     { "fieldname": "recent_activities", "label": "Dòng thời gian hoạt động gần nhất", "fieldtype": "Table", "options": "CRM Customer 360 Activity", "read_only": true }
   ],
   "permissions": [
@@ -31,5 +33,5 @@
     { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
