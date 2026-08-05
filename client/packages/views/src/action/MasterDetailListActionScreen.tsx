@@ -24,6 +24,7 @@ export interface MasterDetailListConfig {
   valueField: string;
   progressField: string;
   dueDateField: string;
+  companyField?: string;
   exceptionPredicate: { field: string; operator: PredicateOperator; value: string | number | boolean };
   detailCollection: string;
   detailCodeField: string;
@@ -127,6 +128,7 @@ export function masterDetailListConfig(action: AppAction): MasterDetailListConfi
     ];
     if (!required.every((key) => parsed[key] !== undefined && parsed[key] !== null && parsed[key] !== "")) return undefined;
     if (!parsed.exceptionPredicate.field || !["<", "<=", "=", "!=", ">", ">="].includes(parsed.exceptionPredicate.operator)) return undefined;
+    if (parsed.companyField !== undefined && (!parsed.companyField || typeof parsed.companyField !== "string")) return undefined;
     if (parsed.chartTop !== undefined && (!Number.isInteger(parsed.chartTop) || parsed.chartTop < 1 || parsed.chartTop > 20)) return undefined;
     if (parsed.valueFormat !== undefined && !["number", "currency"].includes(parsed.valueFormat)) return undefined;
     return parsed;
@@ -135,13 +137,23 @@ export function masterDetailListConfig(action: AppAction): MasterDetailListConfi
   }
 }
 
-async function loadSourceRows(adapter: ReturnType<typeof useMetaForge>["adapter"], config: MasterDetailListConfig): Promise<Doc[]> {
-  const fields = [...new Set(["name", "docstatus", config.keyField, config.valueField, config.progressField, config.dueDateField, config.exceptionPredicate.field])];
+async function loadSourceRows(
+  adapter: ReturnType<typeof useMetaForge>["adapter"],
+  config: MasterDetailListConfig,
+  company: string,
+): Promise<Doc[]> {
+  const fields = [...new Set([
+    "name", "docstatus", config.keyField, config.valueField, config.progressField,
+    config.dueDateField, config.exceptionPredicate.field, config.companyField,
+  ].filter((field): field is string => Boolean(field)))];
   const rows: Doc[] = [];
   for (let start = 0; start < MAX_RECORDS; start += PAGE_SIZE) {
+    const filters: [string, "=", unknown][] = [];
+    if (config.submittedOnly) filters.push(["docstatus", "=", 1]);
+    if (config.companyField && company) filters.push([config.companyField, "=", company]);
     const page = await adapter.getList(config.sourceDoctype, {
       fields,
-      ...(config.submittedOnly ? { filters: [["docstatus", "=", 1]] as [string, "=", unknown][] } : {}),
+      ...(filters.length ? { filters } : {}),
       orderBy: `${config.keyField} asc`,
       limitStart: start,
       pageLength: PAGE_SIZE,
@@ -159,7 +171,8 @@ export function MasterDetailListActionScreen(props: ActionScreenProps) {
 }
 
 function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProps & { config: MasterDetailListConfig }) {
-  const { adapter } = useMetaForge();
+  const { adapter, businessContext } = useMetaForge();
+  const company = text(businessContext.company);
   const fmt = useLocaleFormat();
   const [sourceRows, setSourceRows] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,25 +200,39 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
   const reloadSummary = useCallback(() => {
     setLoading(true);
     setError(undefined);
-    loadSourceRows(adapter, config)
+    if (config.companyField && !company) {
+      setSourceRows([]);
+      setError("Cần chọn Công ty trên thanh ngữ cảnh trước khi xem báo cáo.");
+      setLoading(false);
+      return;
+    }
+    loadSourceRows(adapter, config, company)
       .then(setSourceRows)
-      .catch((caught) => setError(adapter.mapError(caught).message))
+      .catch((caught) => { setSourceRows([]); setError(adapter.mapError(caught).message); })
       .finally(() => setLoading(false));
-  }, [adapter, config]);
+  }, [adapter, company, config]);
 
   useEffect(() => { reloadSummary(); }, [reloadSummary]);
 
   useEffect(() => {
     if (!selectedKey) { setDetail(undefined); setDetailError(undefined); return; }
+    if (config.companyField && !company) {
+      setDetail(undefined);
+      setDetailError("Cần chọn Công ty trên thanh ngữ cảnh trước khi xem chi tiết.");
+      return;
+    }
     let active = true;
     setDetailLoading(true);
     setDetailError(undefined);
-    adapter.callPost<Json>(action.commit.method, { [config.keyField]: selectedKey })
+    adapter.callPost<Json>(action.commit.method, {
+      [config.keyField]: selectedKey,
+      ...(config.companyField && company ? { company } : {}),
+    })
       .then((answer) => { if (active) setDetail(answer); })
       .catch((caught) => { if (active) { setDetail(undefined); setDetailError(adapter.mapError(caught).message); } })
       .finally(() => { if (active) setDetailLoading(false); });
     return () => { active = false; };
-  }, [adapter, action.commit.method, config.keyField, selectedKey]);
+  }, [adapter, action.commit.method, company, config.companyField, config.keyField, selectedKey]);
 
   const summaryRows = useMemo<SummaryRow[]>(() => {
     const inRange = sourceRows.filter((row) => dateInRange(row[config.dueDateField], fromDate, toDate));
