@@ -1,6 +1,6 @@
 {
-  "version": "2.2.9",
-  "//": "Màn Mua hàng và Nhập hàng dùng metadata child doctype để render bảng lớn inline; Purchase Receipt canonical giữ authoritative validation và ledger, còn Đơn NCC là tùy chọn.",
+  "version": "2.2.10",
+  "//": "Mua hàng và Nhập hàng dùng metadata child-grid; Nhập hàng tạo Purchase Receipt trực tiếp không bắt buộc Đơn NCC; Báo cáo dùng MasterDetailList trên Purchase Order submitted và drill-down read model giao hàng authoritative.",
   "actions": [
     {
       "name": "tao-don-mua",
@@ -38,6 +38,20 @@
       "preview": "alumdoor.purchase.preview_bulk_direct_receipt | Kiểm tra phiếu nhập",
       "commit": "alumdoor.purchase.bulk_direct_receipt | Tạo phiếu nhập | Tạo một Purchase Receipt nháp trực tiếp từ các dòng đã nhập?",
       "resultTable": "items"
+    },
+    {
+      "name": "bao-cao-giao-hang-ncc",
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "bar-chart-3",
+      "group": "Mua hàng",
+      "description": "Tổng hợp theo nhà cung cấp từ Purchase Order đã submit; chọn NCC để xem từng mặt hàng, PO, số đã đặt, đã nhận, còn thiếu và quá hạn theo allocation authoritative.",
+      "permission": "Purchase Order",
+      "permissionAction": "read",
+      "fields": [
+        "view_config:Text(MasterDetailList:{\"sourceDoctype\":\"Purchase Order\",\"submittedOnly\":true,\"keyField\":\"supplier\",\"valueField\":\"grand_total\",\"progressField\":\"received_percentage\",\"dueDateField\":\"schedule_date\",\"exceptionPredicate\":{\"field\":\"received_percentage\",\"operator\":\"<\",\"value\":100},\"detailCollection\":\"purchase_order_lines\",\"detailCodeField\":\"item_code\",\"detailTitleField\":\"material\",\"detailParentField\":\"purchase_order\",\"detailOrderDateField\":\"transaction_date\",\"detailDueDateField\":\"schedule_date\",\"detailOrderedField\":\"ordered_bars\",\"detailReceivedField\":\"received_bars\",\"detailRemainingField\":\"remaining_bars\",\"detailStatusField\":\"status\",\"openDoctype\":\"Purchase Order\",\"summaryOpenField\":\"open_purchase_order_count\",\"summaryOverdueField\":\"overdue_purchase_order_count\",\"summaryRemainingField\":\"remaining_bars\",\"remainingUnit\":\"cây\",\"chartTop\":8,\"valueFormat\":\"currency\",\"labels\":{\"key\":\"Nhà cung cấp\",\"searchKey\":\"Tìm nhà cung cấp\",\"count\":\"Số đơn\",\"value\":\"Tổng mua\",\"exceptionCount\":\"PO còn thiếu\",\"progress\":\"Tiến độ nhận\",\"complete\":\"Đủ\",\"short\":\"Còn thiếu\",\"overdue\":\"Quá hạn\",\"shortKeys\":\"NCC còn thiếu\",\"overdueKeys\":\"NCC quá hạn\",\"detail\":\"Chi tiết mặt hàng thiếu\",\"detailOpen\":\"PO đang thiếu\",\"detailRemaining\":\"Còn phải giao\",\"code\":\"Mặt hàng\",\"parent\":\"PO\",\"orderDate\":\"Ngày đặt\",\"dueDate\":\"Hẹn giao\",\"ordered\":\"Đã đặt\",\"received\":\"Đã nhận\",\"remaining\":\"Còn thiếu\"}}) Cấu hình báo cáo"
+      ],
+      "commit": "alumdoor.purchase.supplier_delivery_dashboard | Làm mới"
     },
     {
       "name": "doi-soat-giao-hang-ncc",
