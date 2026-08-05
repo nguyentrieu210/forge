@@ -54,8 +54,7 @@
         "operation:Select(Đối soát,Đảo đối soát)! Thao tác",
         "reason:Small Text! Lý do"
       ],
-      "commit": "alumdoor.purchase.supplier_delivery_settlement | Ghi đối soát | Xác nhận ghi đối soát cho kỳ giao hàng này?",
-      "resultTable": "items"
+      "commit": "alumdoor.purchase.supplier_delivery_settlement | Ghi đối soát | Xác nhận ghi đối soát cho kỳ giao hàng này?"
     }
   ]
 }
