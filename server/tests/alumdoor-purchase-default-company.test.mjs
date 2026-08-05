@@ -26,23 +26,38 @@ function request(args) {
   });
 }
 
-test("Mua hàng defaults hidden company to ALUMDOOR even when tenant has multiple companies", async () => {
-  let companyListReads = 0;
+test("Mua hàng fails closed when Company is missing", async () => {
+  let companyReads = 0;
+  const env = {
+    PLATFORM: {
+      async fetch(req) {
+        const path = decodeURIComponent(new URL(req.url).pathname);
+        if (path.startsWith("/api/resource/Company")) companyReads += 1;
+        return response({}, 404);
+      },
+    },
+  };
+
+  const result = await handlePurchaseOrderCreate(request({
+    supplier: "NCC-01",
+    items: [{ item_code: "PK-01", qty: 2, rate: 10000 }],
+  }), env);
+
+  assert.equal(result.status, 422);
+  assert.equal(companyReads, 0, "worker must not guess or enumerate Company when context is missing");
+  const body = await result.json();
+  assert.match(String(body.message), /chọn Công ty/i);
+});
+
+test("Mua hàng uses the explicit Business Context Company and derives its currency", async () => {
   let created;
   const env = {
     PLATFORM: {
       async fetch(req) {
         const url = new URL(req.url);
         const path = decodeURIComponent(url.pathname);
-        if (req.method === "GET" && path === "/api/resource/Company/ALUMDOOR") {
-          return response({ name: "ALUMDOOR", default_currency: "VND" });
-        }
-        if (req.method === "GET" && path === "/api/resource/Company") {
-          companyListReads += 1;
-          return response([
-            { name: "ALUMDOOR", default_currency: "VND" },
-            { name: "CÔNG TY KHÁC", default_currency: "VND" },
-          ]);
+        if (req.method === "GET" && path === "/api/resource/Company/CÔNG TY B") {
+          return response({ name: "CÔNG TY B", default_currency: "USD" });
         }
         if (req.method === "GET" && path === "/api/resource/Item/PK-01") {
           return response({
@@ -57,7 +72,7 @@ test("Mua hàng defaults hidden company to ALUMDOOR even when tenant has multipl
         }
         if (req.method === "POST" && path === "/api/resource/Purchase Order") {
           created = await req.json();
-          return response({ name: "DMH-2026-DEFAULT-COMPANY", grand_total: created.items[0].amount });
+          return response({ name: "DMH-2026-CONTEXT", grand_total: created.items[0].amount });
         }
         return response({}, 404);
       },
@@ -65,12 +80,12 @@ test("Mua hàng defaults hidden company to ALUMDOOR even when tenant has multipl
   };
 
   const result = await handlePurchaseOrderCreate(request({
+    company: "CÔNG TY B",
     supplier: "NCC-01",
     items: [{ item_code: "PK-01", qty: 2, rate: 10000 }],
   }), env);
 
   assert.equal(result.status, 200);
-  assert.equal(companyListReads, 0, "must not become ambiguous just because another Company exists");
-  assert.equal(created.company, "ALUMDOOR");
-  assert.equal(created.currency, "VND");
+  assert.equal(created.company, "CÔNG TY B");
+  assert.equal(created.currency, "USD");
 });
