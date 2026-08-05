@@ -8,6 +8,7 @@ on:
       - "server/scripts/parse-demo-command.mjs"
       - "server/scripts/lib/demo-command.mjs"
       - "server/tests/demo-command.test.mjs"
+      - "skills/forge-demo-factory/SKILL.md"
   push:
     branches: [main]
     paths:
@@ -16,6 +17,7 @@ on:
       - "server/scripts/parse-demo-command.mjs"
       - "server/scripts/lib/demo-command.mjs"
       - "server/tests/demo-command.test.mjs"
+      - "skills/forge-demo-factory/SKILL.md"
 
 permissions:
   contents: read
@@ -34,6 +36,16 @@ jobs:
           node --check server/scripts/parse-demo-command.mjs
       - name: Run command parser tests
         run: node --test server/tests/demo-command.test.mjs
+      - name: Lock production command workflow invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow=.github/workflows/demo-provision-issue-command.yml
+          grep -Fq 'issue_comment:' "$workflow"
+          grep -Fq "github.event.comment.user.login == github.repository_owner" "$workflow"
+          grep -Fq "github.event.comment.author_association == 'OWNER'" "$workflow"
+          grep -Fq 'environment: production' "$workflow"
+          grep -Fq "startsWith(github.event.comment.body, '/forge-demo-provision')" "$workflow"
       - name: Exercise CLI authorization and GitHub outputs
         shell: bash
         env:
