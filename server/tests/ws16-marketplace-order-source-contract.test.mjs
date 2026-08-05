@@ -100,7 +100,8 @@ test("marketplace profile and SKU mapping are metadata-first, unique and secret-
   assert.equal(app.version, "0.4.0");
   assert.ok(app.nav.some((entry) => entry.key === "Commerce Channel Profile"));
   assert.ok(app.nav.some((entry) => entry.key === "Marketplace SKU Mapping"));
-  for (const name of ["Item", "Warehouse", "Sales Order", "Delivery Note", "Stock Return", "Sales Invoice", "Payment Entry"]) {
+  assert.ok(app.requires.some((entry) => entry.id === "integration-hub" && entry.version === "0.1.0"));
+  for (const name of ["Item", "Warehouse", "Sales Order", "Delivery Note", "Stock Return", "Sales Invoice", "Payment Entry", "Marketplace Connection"]) {
     assert.ok(app.externalDocTypes.some((entry) => entry.name === name), `missing ${name} dependency`);
   }
 
@@ -111,7 +112,8 @@ test("marketplace profile and SKU mapping are metadata-first, unique and secret-
   assert.equal(profileFields.get("company")?.options, "Company");
   assert.equal(profileFields.get("warehouse")?.options, "Warehouse");
   assert.equal(profileFields.get("selling_price_list")?.options, "Price List");
-  assert.equal(profileFields.get("connection_id")?.fieldtype, "Data");
+  assert.equal(profileFields.get("connection_id")?.fieldtype, "Link");
+  assert.equal(profileFields.get("connection_id")?.options, "Marketplace Connection");
 
   const mappingFields = new Map(mapping.fields.map((field) => [field.fieldname, field]));
   assert.equal(mappingFields.get("channel_profile")?.options, "Commerce Channel Profile");
