@@ -1,0 +1,179 @@
+name: Forge Demo Provision Command
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-demo-command-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Provision demo from owner issue command
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.comment.user.login == github.repository_owner &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/forge-demo-provision')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FORGE_INTERNAL_AUTH_SECRET: ${{ secrets.FORGE_INTERNAL_AUTH_SECRET || secrets.INTERNAL_AUTH_SECRET }}
+      FORGE_INTERNAL_SERVICE_TOKEN: ${{ secrets.FORGE_INTERNAL_SERVICE_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+      FORGE_CONTROL_TOKEN: ${{ secrets.FORGE_CONTROL_TOKEN || secrets.CONTROL_TOKEN }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_DEMO_ADMIN_PASSWORD || secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+      FORGE_DEMO_BASE_DOMAIN: kairo.vn
+      FORGE_DISPATCH_NAMESPACE: cloudforge-production
+
+    steps:
+      - name: Checkout trusted default-branch command parser
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Parse and authorize owner command
+        id: command
+        env:
+          FORGE_DEMO_COMMAND_BODY: ${{ github.event.comment.body }}
+          FORGE_DEMO_COMMAND_ISSUE: ${{ github.event.issue.number }}
+          FORGE_DEMO_COMMAND_AUTHOR: ${{ github.event.comment.user.login }}
+          FORGE_DEMO_COMMAND_ASSOCIATION: ${{ github.event.comment.author_association }}
+          FORGE_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: node server/scripts/parse-demo-command.mjs
+
+      - name: Checkout exact authorized source revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.command.outputs.target_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require target to be merged into main
+        shell: bash
+        env:
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git cat-file -e "$TARGET_SHA^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
+            echo "Refusing production demo provisioning: $TARGET_SHA is not merged into main."
+            exit 1
+          }
+
+      - name: Validate brief and required production credentials
+        id: input
+        shell: bash
+        env:
+          BRIEF_NAME: ${{ steps.command.outputs.brief }}
+          CUSTOMER_NAME: ${{ steps.command.outputs.customer_name }}
+        run: |
+          set -euo pipefail
+          test -n "$CUSTOMER_NAME"
+          test -f "server/briefs/${BRIEF_NAME}.json" || { echo "Unknown brief server/briefs/${BRIEF_NAME}.json"; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID repository variable/secret"; exit 1; }
+          test -n "$FORGE_INTERNAL_AUTH_SECRET" || { echo "Missing FORGE_INTERNAL_AUTH_SECRET"; exit 1; }
+          test -n "$FORGE_INTERNAL_SERVICE_TOKEN" || { echo "Missing FORGE_INTERNAL_SERVICE_TOKEN"; exit 1; }
+          test -n "$FORGE_CONTROL_TOKEN" || { echo "Missing FORGE_CONTROL_TOKEN"; exit 1; }
+          test -n "$FORGE_ADMIN_PASSWORD" || { echo "Missing FORGE_DEMO_ADMIN_PASSWORD/FORGE_ADMIN_PASSWORD"; exit 1; }
+          echo "brief=server/briefs/${BRIEF_NAME}.json" >> "$GITHUB_OUTPUT"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build server tooling
+        run: pnpm --filter cloudforge run build
+
+      - name: Verify command and Demo Factory helpers
+        run: node --test server/tests/demo-command.test.mjs server/tests/demo-provisioning.test.mjs
+
+      - name: Compile app and seed before provider mutation
+        shell: bash
+        env:
+          BRIEF: ${{ steps.input.outputs.brief }}
+          CUSTOMER_NAME: ${{ steps.command.outputs.customer_name }}
+          SLUG: ${{ steps.command.outputs.slug }}
+          ADMIN_USER: ${{ steps.command.outputs.admin_user }}
+          PLAN: ${{ steps.command.outputs.plan }}
+        run: |
+          set -euo pipefail
+          node server/scripts/create-demo-tenant.mjs "$BRIEF" \
+            --customer "$CUSTOMER_NAME" \
+            --slug "$SLUG" \
+            --admin "$ADMIN_USER" \
+            --plan "$PLAN" \
+            --dry-run
+
+      - name: Provision tenant, install app, seed and verify live URL
+        id: provision
+        shell: bash
+        env:
+          BRIEF: ${{ steps.input.outputs.brief }}
+          CUSTOMER_NAME: ${{ steps.command.outputs.customer_name }}
+          SLUG: ${{ steps.command.outputs.slug }}
+          ADMIN_USER: ${{ steps.command.outputs.admin_user }}
+          PLAN: ${{ steps.command.outputs.plan }}
+          PROVISION_STANDARD: ${{ steps.command.outputs.provision_standard }}
+        run: |
+          set -euo pipefail
+          args=("$BRIEF" --customer "$CUSTOMER_NAME" --slug "$SLUG" --admin "$ADMIN_USER" --plan "$PLAN")
+          if [ "$PROVISION_STANDARD" = "true" ]; then args+=(--provision-standard); fi
+          output=$(node server/scripts/create-demo-tenant.mjs "${args[@]}")
+          printf '%s\n' "$output"
+          live=$(printf '%s\n' "$output" | awk '/^LIVE https:\/\// {print $2}' | tail -1)
+          test -n "$live" || { echo "Provisioning completed without a LIVE URL"; exit 1; }
+          echo "url=$live" >> "$GITHUB_OUTPUT"
+
+      - name: Publish result back to command issue
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          JOB_STATUS: ${{ job.status }}
+          LIVE_URL: ${{ steps.provision.outputs.url }}
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
+          CUSTOMER_NAME: ${{ steps.command.outputs.customer_name }}
+          SLUG: ${{ steps.command.outputs.slug }}
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const ok = process.env.JOB_STATUS === 'success';
+            const lines = [
+              `## Forge Demo Factory ${ok ? 'SUCCESS' : 'FAILED'}`,
+              '',
+              `- Customer: ${process.env.CUSTOMER_NAME || '(parse failed)'}`,
+              `- Slug: ${process.env.SLUG || '(parse failed)'}`,
+              `- Target SHA: ${process.env.TARGET_SHA || '(parse failed)'}`,
+              `- Run: ${runUrl}`,
+            ];
+            if (process.env.LIVE_URL) lines.push(`- LIVE: ${process.env.LIVE_URL}`);
+            if (!ok) lines.push('', 'Inspect the run above; no automatic destructive cleanup was attempted.');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: lines.join('\n'),
+            });
