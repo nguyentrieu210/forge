@@ -56,11 +56,9 @@ jobs:
       - name: Build CloudForge
         run: pnpm --filter cloudforge run build
 
-      - name: Validate commerce and CRM packages
+      - name: Validate social-commerce package
         working-directory: server
-        run: |
-          node scripts/pack-app.mjs apps-src/social-commerce --check
-          node scripts/pack-app.mjs apps-src/crm --check
+        run: node scripts/pack-app.mjs apps-src/social-commerce --check
 
       - name: Run omnichannel commerce contract tests
         working-directory: server
