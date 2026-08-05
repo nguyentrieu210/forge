@@ -18,9 +18,13 @@ interface SelectionBatchConfig {
   selectableValue?: string;
   columns: ColumnConfig[];
   emptyText?: string;
+  openDoctype?: string;
 }
 
 function text(value: unknown): string { return String(value ?? "").trim(); }
+function inferredDoctype(field: string): string {
+  return field.split("_").filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
 function toDocField(field: AppActionField): DocField {
   return {
     fieldname: field.fieldname, label: field.label, fieldtype: field.fieldtype as Fieldtype,
@@ -38,6 +42,7 @@ export function selectionBatchConfig(action: AppAction): SelectionBatchConfig | 
     const parsed = JSON.parse(raw) as SelectionBatchConfig;
     if (!parsed.rowsKey || !parsed.rowKey || !parsed.selectedArg || !Array.isArray(parsed.columns) || !parsed.columns.length) return undefined;
     if (!parsed.columns.every((column) => column?.field && column?.label)) return undefined;
+    if (parsed.openDoctype !== undefined && (!parsed.openDoctype || typeof parsed.openDoctype !== "string")) return undefined;
     return parsed;
   } catch { return undefined; }
 }
@@ -55,6 +60,7 @@ export function SelectionBatchActionScreen({ action, onOpen }: ActionScreenProps
   const effective = useMemo(() => ({ ...businessContext, ...values }), [businessContext, values]);
   const rows = Array.isArray(preview?.[config.rowsKey]) ? preview![config.rowsKey] as Json[] : [];
   const selectable = rows.filter((row) => !config.statusField || !config.selectableValue || text(row[config.statusField]) === config.selectableValue);
+  const openDoctype = config.openDoctype || inferredDoctype(config.rowKey);
 
   const missing = visibleFields.filter((field) => field.required && !text(values[field.fieldname])).map((field) => field.label);
   const contextMissing = [
@@ -85,6 +91,7 @@ export function SelectionBatchActionScreen({ action, onOpen }: ActionScreenProps
 
   const commit = async () => {
     if (!selected.length) { setError("Chưa chọn chứng từ nào để xử lý."); return; }
+    if (action.commit.confirm && !window.confirm(action.commit.confirm)) return;
     setBusy("commit"); setError("");
     try {
       const result = await adapter.callPost<Json>(action.commit.method, { ...effective, [config.selectedArg]: selected });
@@ -123,8 +130,8 @@ export function SelectionBatchActionScreen({ action, onOpen }: ActionScreenProps
             const canSelect = !config.statusField || !config.selectableValue || text(row[config.statusField]) === config.selectableValue;
             return <tr key={`${key}:${index}`} className="border-t"><td className="px-3 py-2"><Checkbox disabled={!canSelect} checked={selected.includes(key)} onCheckedChange={() => canSelect && setSelected((current) => current.includes(key) ? current.filter((value) => value !== key) : [...current, key])} /></td>{config.columns.map((column) => {
               const value = row[column.field];
-              const clickable = column.field === config.rowKey && onOpen && key;
-              return <td key={column.field} className={`whitespace-nowrap px-3 py-2 ${column.align === "right" ? "text-right tabular-nums" : ""}`}>{clickable ? <Button variant="link" className="h-auto p-0" onClick={() => onOpen("Sales Order", key)}>{text(value) || key}</Button> : text(value) || "—"}</td>;
+              const clickable = column.field === config.rowKey && onOpen && key && openDoctype;
+              return <td key={column.field} className={`whitespace-nowrap px-3 py-2 ${column.align === "right" ? "text-right tabular-nums" : ""}`}>{clickable ? <Button variant="link" className="h-auto p-0" onClick={() => onOpen(openDoctype, key)}>{text(value) || key}</Button> : text(value) || "—"}</td>;
             })}</tr>;
           })}{!rows.length && busy !== "preview" ? <tr><td colSpan={config.columns.length + 1} className="px-4 py-10 text-center text-sm text-muted-foreground">{config.emptyText ?? "Không có chứng từ phù hợp."}</td></tr> : null}</tbody></table>
       </div>
