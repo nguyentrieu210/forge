@@ -99,3 +99,7 @@ Until this exists, the History workspace intentionally renders PO + Receipt even
 - DR-POW-04 Purchase 360 read model: `STANDARD` read composition over Procurement/Finance authorities; payment/VAT semantics remain owned by their canonical domains.
 
 Do not merge/deploy this branch as pilot authority until exact-head frontend gates pass and release impact is reviewed against the current controlled-pilot identity.
+
+## 2026-08-05 UI deploy retrigger
+
+A client-only documentation commit was added on `main` to deliberately retrigger the existing `ALU Build and Deploy` push trigger after the procurement workspace merge produced no verifiable live deployment run. This changes no runtime behavior, backend contract, data, permission, ledger or tax authority; its sole release purpose is to exercise the existing `push -> main -> client/**` UI deployment path again.
