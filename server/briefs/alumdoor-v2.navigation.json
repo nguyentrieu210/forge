@@ -1,6 +1,6 @@
 {
-  "version": "2.2.9",
-  "//": "Mua hàng giữ sidecar order-style hiện hành. Bán hàng có đúng sáu tab toàn cục: Quy trình do shell cung cấp; Bán hàng là native experience; Đơn hàng, Phiếu xuất kho, Giao hàng và Báo cáo do metadata này sở hữu. Tính công thức cửa vẫn installed/callable nhưng không còn là tab vì wizard đã dùng authority công thức phía server.",
+  "version": "2.2.10",
+  "//": "Bán hàng và Mua hàng dùng chung một sidecar presentation nhưng giữ group/tab độc lập. Nhập hàng tạo Purchase Receipt trực tiếp không bắt buộc Đơn NCC; Báo cáo Mua hàng dùng MasterDetailList inline; calculator/FIFO/đối soát legacy vẫn installed/callable nhưng ẩn khỏi daily tabs.",
   "doctypes": {
     "Purchase Order": {
       "label": "Lịch sử mua hàng",
@@ -26,9 +26,9 @@
   },
   "reports": {
     "Mua hàng theo nhà cung cấp": {
-      "label": "Báo cáo",
+      "label": "Mua theo nhà cung cấp",
       "icon": "bar-chart-3",
-      "group": "Mua hàng"
+      "group": "Báo cáo"
     },
     "Đơn hàng theo khách": {
       "label": "Báo cáo",
@@ -50,6 +50,12 @@
       "label": "Nhập hàng",
       "menu": true,
       "icon": "package-check",
+      "group": "Mua hàng"
+    },
+    "bao-cao-giao-hang-ncc": {
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "bar-chart-3",
       "group": "Mua hàng"
     },
     "doi-soat-giao-hang-ncc": {
@@ -80,7 +86,7 @@
     "report:Đơn hàng theo khách",
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
-    "report:Mua hàng theo nhà cung cấp",
+    "action:bao-cao-giao-hang-ncc",
     "Purchase Order"
   ]
 }
