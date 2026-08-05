@@ -76,7 +76,9 @@ test("Alumdoor procurement exposes operational create, receive, dashboard and ca
   assert.equal(reportAction?.group, "Mua hàng");
   assert.equal(reportAction?.permissionAction, "read");
   assert.match(reportAction?.commit ?? "", /^alumdoor\.purchase\.supplier_delivery_dashboard\s*\|/);
-  assert.ok(reportAction?.fields.some((field) => typeof field === "string" && field.startsWith("view_config:Text(MasterDetailList:")));
+  const reportField = reportAction?.fields.find((field) => typeof field === "string" && field.startsWith("view_config:Text(MasterDetailList:"));
+  assert.ok(reportField);
+  assert.match(reportField, /\"companyField\":\"company\"/, "purchase dashboard must be scoped by Business Context company");
 
   assert.equal(historyAction?.label, "Lịch sử mua hàng");
   assert.equal(historyAction?.menu, true);
@@ -108,6 +110,7 @@ test("Alumdoor procurement exposes operational create, receive, dashboard and ca
   const config = JSON.parse(configField.options.slice(MASTER_DETAIL_PREFIX.length));
   assert.equal(config.sourceDoctype, "Purchase Order");
   assert.equal(config.submittedOnly, true);
+  assert.equal(config.companyField, "company");
   assert.deepEqual(config.exceptionPredicate, { field: "received_percentage", operator: "<", value: 100 });
   assert.equal(config.detailCollection, "purchase_order_lines");
   assert.equal(config.detailRemainingField, "remaining_bars");
