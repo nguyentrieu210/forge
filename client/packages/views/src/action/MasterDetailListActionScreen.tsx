@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ForgeBarChart, ForgeDashboardPanel } from "@metaforge/charts";
 import { AlertTriangle, CheckCircle2, PackageCheck, RefreshCw, Search } from "lucide-react";
 import type { AppAction, Doc } from "@metaforge/core";
 import { Button, Input } from "@metaforge/ui";
@@ -14,6 +15,7 @@ type State = "complete" | "short" | "overdue";
 type StatusFilter = "all" | State;
 type LineStatusFilter = "missing" | "all" | "complete" | "overdue";
 type PredicateOperator = "<" | "<=" | "=" | "!=" | ">" | ">=";
+type ValueFormat = "number" | "currency";
 
 export interface MasterDetailListConfig {
   sourceDoctype: string;
@@ -38,6 +40,8 @@ export interface MasterDetailListConfig {
   summaryOverdueField?: string;
   summaryRemainingField?: string;
   remainingUnit?: string;
+  chartTop?: number;
+  valueFormat?: ValueFormat;
   labels?: Partial<Record<
     "key" | "searchKey" | "count" | "value" | "exceptionCount" | "progress" | "complete" | "short" | "overdue" |
     "shortKeys" | "overdueKeys" | "detail" | "detailOpen" | "detailRemaining" | "code" | "parent" | "orderDate" |
@@ -85,9 +89,18 @@ function matchesPredicate(row: Json, predicate: MasterDetailListConfig["exceptio
   const right = predicate.value;
   const leftNumber = Number(left);
   const rightNumber = Number(right);
-  const numeric = Number.isFinite(leftNumber) && Number.isFinite(rightNumber);
-  const a = numeric ? leftNumber : text(left);
-  const b = numeric ? rightNumber : text(right);
+  if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+    switch (predicate.operator) {
+      case "<": return leftNumber < rightNumber;
+      case "<=": return leftNumber <= rightNumber;
+      case "=": return leftNumber === rightNumber;
+      case "!=": return leftNumber !== rightNumber;
+      case ">": return leftNumber > rightNumber;
+      case ">=": return leftNumber >= rightNumber;
+    }
+  }
+  const a = text(left);
+  const b = text(right);
   switch (predicate.operator) {
     case "<": return a < b;
     case "<=": return a <= b;
@@ -114,6 +127,8 @@ export function masterDetailListConfig(action: AppAction): MasterDetailListConfi
     ];
     if (!required.every((key) => parsed[key] !== undefined && parsed[key] !== null && parsed[key] !== "")) return undefined;
     if (!parsed.exceptionPredicate.field || !["<", "<=", "=", "!=", ">", ">="].includes(parsed.exceptionPredicate.operator)) return undefined;
+    if (parsed.chartTop !== undefined && (!Number.isInteger(parsed.chartTop) || parsed.chartTop < 1 || parsed.chartTop > 20)) return undefined;
+    if (parsed.valueFormat !== undefined && !["number", "currency"].includes(parsed.valueFormat)) return undefined;
     return parsed;
   } catch {
     return undefined;
@@ -227,6 +242,11 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
     overdueKeys: summaryRows.filter((row) => row.state === "overdue").length,
   }), [summaryRows]);
 
+  const chartRows = useMemo(
+    () => [...summaryRows].sort((left, right) => right.value - left.value).slice(0, config.chartTop ?? 8),
+    [summaryRows, config.chartTop],
+  );
+
   const detailRows = useMemo(() => {
     const rows = Array.isArray(detail?.[config.detailCollection]) ? detail[config.detailCollection] as Json[] : [];
     const itemNeedle = itemQuery.toLocaleLowerCase("vi");
@@ -247,6 +267,9 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
 
   const detailSummary = detail?.summary && typeof detail.summary === "object" && !Array.isArray(detail.summary) ? detail.summary as Json : {};
   const detailOverdue = config.summaryOverdueField ? number(detailSummary[config.summaryOverdueField]) : detailRows.filter((row) => number(row[config.detailRemainingField]) > 0 && isOverdue(row[config.detailDueDateField])).length;
+  const valueFormatter = (value: number) => config.valueFormat === "currency" ? fmt.currency(value, 0) : fmt.number(value, 2);
+  const progressFormatter = (value: number) => `${fmt.number(value, 1)}%`;
+  const keyNoun = labels.key.toLocaleLowerCase("vi");
 
   return <section className="space-y-4" aria-label={action.label}>
     <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
@@ -259,9 +282,36 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
 
     <div className="grid gap-3 sm:grid-cols-3"><StatCard label={labels.shortKeys} value={stats.shortKeys} icon={<PackageCheck className="size-4" />} /><StatCard label={labels.exceptionCount} value={stats.exceptions} icon={<AlertTriangle className="size-4" />} /><StatCard label={labels.overdueKeys} value={stats.overdueKeys} icon={<AlertTriangle className="size-4" />} danger={stats.overdueKeys > 0} /></div>
 
+    {!loading && !error && chartRows.length > 0 ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+      <ForgeDashboardPanel title={`${labels.value} theo ${keyNoun}`}>
+        <ForgeBarChart
+          title={`${labels.value} theo ${keyNoun}`}
+          labels={chartRows.map((row) => row.key)}
+          series={[{ name: labels.value, values: chartRows.map((row) => row.value) }]}
+          height={260}
+          valueFormatter={valueFormatter}
+          compactValueFormatter={valueFormatter}
+          onActivate={({ label }: { label: string }) => setSelectedKey(label)}
+          ariaLabel={`${labels.value} theo ${keyNoun}`}
+        />
+      </ForgeDashboardPanel>
+      <ForgeDashboardPanel title={`${labels.progress} theo ${keyNoun}`}>
+        <ForgeBarChart
+          title={`${labels.progress} theo ${keyNoun}`}
+          labels={chartRows.map((row) => row.key)}
+          series={[{ name: labels.progress, values: chartRows.map((row) => row.progress) }]}
+          height={260}
+          valueFormatter={progressFormatter}
+          compactValueFormatter={progressFormatter}
+          onActivate={({ label }: { label: string }) => setSelectedKey(label)}
+          ariaLabel={`${labels.progress} theo ${keyNoun}`}
+        />
+      </ForgeDashboardPanel>
+    </div> : null}
+
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="border-b px-4 py-3 text-sm font-semibold">{labels.key}</div>
-      {loading ? <p className="p-4 text-sm text-muted-foreground">Đang tổng hợp số liệu…</p> : error ? <p className="p-4 text-sm text-destructive">{error}</p> : summaryRows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Không có dữ liệu phù hợp bộ lọc.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="bg-muted/45 text-left text-xs text-muted-foreground"><tr><th className="px-4 py-2 font-medium">{labels.key}</th><th className="px-3 py-2 text-right font-medium">{labels.count}</th><th className="px-3 py-2 text-right font-medium">{labels.value}</th><th className="px-3 py-2 text-right font-medium">{labels.exceptionCount}</th><th className="px-3 py-2 text-right font-medium">{labels.progress}</th><th className="px-4 py-2 font-medium">Trạng thái</th></tr></thead><tbody>{summaryRows.map((row) => <tr key={row.key} className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${selectedKey === row.key ? "bg-primary/5" : ""}`} onClick={() => setSelectedKey(row.key)}><td className="px-4 py-2.5 font-semibold">{row.key}</td><td className="px-3 py-2.5 text-right tabular-nums">{fmt.number(row.count, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{fmt.currency(row.value, 0)}</td><td className="px-3 py-2.5 text-right font-semibold tabular-nums">{fmt.number(row.exceptionCount, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{fmt.number(row.progress, 1)}%</td><td className="px-4 py-2.5"><StatusText state={row.state} labels={labels} /></td></tr>)}</tbody></table></div>}
+      {loading ? <p className="p-4 text-sm text-muted-foreground">Đang tổng hợp số liệu…</p> : error ? <p className="p-4 text-sm text-destructive">{error}</p> : summaryRows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Không có dữ liệu phù hợp bộ lọc.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="bg-muted/45 text-left text-xs text-muted-foreground"><tr><th className="px-4 py-2 font-medium">{labels.key}</th><th className="px-3 py-2 text-right font-medium">{labels.count}</th><th className="px-3 py-2 text-right font-medium">{labels.value}</th><th className="px-3 py-2 text-right font-medium">{labels.exceptionCount}</th><th className="px-3 py-2 text-right font-medium">{labels.progress}</th><th className="px-4 py-2 font-medium">Trạng thái</th></tr></thead><tbody>{summaryRows.map((row) => <tr key={row.key} className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${selectedKey === row.key ? "bg-primary/5" : ""}`} onClick={() => setSelectedKey(row.key)}><td className="px-4 py-2.5 font-semibold">{row.key}</td><td className="px-3 py-2.5 text-right tabular-nums">{fmt.number(row.count, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{valueFormatter(row.value)}</td><td className="px-3 py-2.5 text-right font-semibold tabular-nums">{fmt.number(row.exceptionCount, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{progressFormatter(row.progress)}</td><td className="px-4 py-2.5"><StatusText state={row.state} labels={labels} /></td></tr>)}</tbody></table></div>}
     </div>
 
     {selectedKey ? <div className="space-y-3 rounded-xl border bg-card p-4">
