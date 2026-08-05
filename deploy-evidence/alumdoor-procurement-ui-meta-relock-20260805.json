@@ -1,0 +1,62 @@
+{
+  "format": "forge-alumdoor-procurement-ui-meta-relock/v1",
+  "recorded_at": "2026-08-05T03:52:00Z",
+  "scope": "procurement presentation only: remove app-specific React interception and restore canonical DocType/AppAction navigation metadata",
+  "historical_r6": {
+    "certified_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+    "verdict": "PILOT-GO",
+    "preserved": true
+  },
+  "ui": {
+    "source_pr": 704,
+    "source_sha": "818818b27379450dae5e6e16991ea01438bd5fc0",
+    "change": "removed ProcurementOperatingWorkspace and method-based Alumdoor purchase action interception; generic NativeActionScreen is authoritative again",
+    "production_observation_run": 30973431872,
+    "production_observation_job": 92202452867,
+    "observed_at": "2026-08-05T03:51:14.750Z",
+    "health_status": 200,
+    "guest_boot_status": 403,
+    "release_status": 200,
+    "release_sha": "818818b27379450dae5e6e16991ea01438bd5fc0",
+    "bundle_hash": "05030fa9308b7ca5",
+    "failures": [],
+    "observation_artifact_id": 8917365777
+  },
+  "metadata": {
+    "source_pr": 706,
+    "source_sha": "95dc7548259f1662ab6f696a1235e2552d35acb6",
+    "package": "alumdoor",
+    "version": "2.2.5",
+    "validation_run": 30972713085,
+    "production_install_run": 30972964743,
+    "production_install_job": 92201047629,
+    "required_navigation_entries": [
+      "Purchase Order",
+      "Purchase Receipt",
+      "action:nhap-nhom-fifo",
+      "action:nhap-nhom-hang-loat",
+      "action:doi-soat-giao-hang-ncc"
+    ],
+    "fifo_label": "Nhập nhôm FIFO theo đơn cũ",
+    "authenticated_navigation_assertion": "PASS",
+    "health_auth_smoke": "PASS",
+    "fresh_backup_sha256": "b8d900b4f67b8070caaafc5b0883c55948319fe2ab1a1362b2c7f126ca864931",
+    "backup_artifact_id": 8917235200,
+    "dual_restore_drill": "PASS",
+    "restore_drill_table_count_each": 97,
+    "evidence_artifact_id": 8917288137,
+    "temporary_release_pr": 707,
+    "temporary_release_pr_merged": false
+  },
+  "classification": {
+    "ui_engineering_risk": "FAST",
+    "ui_release_impact": "PILOT_RELOCK",
+    "metadata_change": "app declaration instance only",
+    "canonical_metadata_contract_changed": false,
+    "shared_renderer_contract_changed": false,
+    "backend_business_authority_changed": false,
+    "schema_or_migration_changed": false,
+    "ledger_or_permission_semantics_changed": false
+  },
+  "verdict": "PASS"
+}
