@@ -25,6 +25,26 @@ export interface MarketplaceSettlementInput {
   payment_entry_name?: string;
 }
 
+interface NormalizedMarketplaceSettlementInput {
+  order_id: string;
+  provider: MarketplaceProvider;
+  external_settlement_id: string;
+  currency: string;
+  gross_minor: number;
+  commission_minor: number;
+  service_fee_minor: number;
+  seller_shipping_fee_minor: number;
+  seller_voucher_minor: number;
+  refund_minor: number;
+  other_deductions_minor: number;
+  platform_subsidy_minor: number;
+  other_credits_minor: number;
+  payout_minor: number;
+  occurred_at: string;
+  sales_invoice_name?: string;
+  payment_entry_name?: string;
+}
+
 export interface MarketplaceSettlementResult {
   settlement_id: string;
   order_id: string;
@@ -54,20 +74,30 @@ interface SettlementRow {
   provider: MarketplaceProvider;
   external_settlement_id: string;
   currency: string;
+  gross_minor: number;
+  commission_minor: number;
+  service_fee_minor: number;
+  seller_shipping_fee_minor: number;
+  seller_voucher_minor: number;
+  refund_minor: number;
+  other_deductions_minor: number;
+  platform_subsidy_minor: number;
+  other_credits_minor: number;
   expected_payout_minor: number;
   payout_minor: number;
   variance_minor: number;
-  status: "reconciled" | "variance";
+  sales_invoice_name: string | null;
+  payment_entry_name: string | null;
   cash_evidence_verified: number;
+  status: "reconciled" | "variance";
 }
 
 const ACCOUNTING_DEPENDENCY = "Marketplace fee/voucher/refund accounting remains canonical Finance authority; this record is provider settlement evidence, not a GL or Payment Ledger posting.";
 
 /**
- * Reconciles a provider settlement without inventing a marketplace sub-ledger.
- * Gross/fee/voucher/subsidy components are immutable evidence. Optional canonical
- * Sales Invoice + Payment Entry references prove the cash receipt belongs to this
- * order, but fee accounting still belongs to Finance.
+ * Reconciles provider payout evidence without inventing a marketplace finance ledger.
+ * Optional Sales Invoice + Payment Entry references prove that the observed cash receipt
+ * belongs to this order. Marketplace fee/voucher/refund postings remain Finance-owned.
  */
 export async function reconcileMarketplaceSettlement(
   db: D1Database,
@@ -80,13 +110,13 @@ export async function reconcileMarketplaceSettlement(
   const settlementId = await settlementIdentity(input.provider, input.external_settlement_id);
   const expectedPayout = calculateExpectedMarketplacePayout(input);
   const variance = input.payout_minor - expectedPayout;
-  if (!Number.isSafeInteger(expectedPayout) || !Number.isSafeInteger(variance)) throw errors.validation("Settlement calculation exceeds safe integer range");
+  if (!Number.isSafeInteger(variance)) throw errors.validation("Settlement calculation exceeds safe integer range");
 
   const cashEvidenceVerified = input.sales_invoice_name || input.payment_entry_name
     ? await verifyCanonicalCashEvidence(db, tenantId, actor, order, input)
     : false;
-
   const status: "reconciled" | "variance" = variance === 0 ? "reconciled" : "variance";
+
   const existing = await readSettlement(db, tenantId, settlementId);
   if (existing) {
     assertReplay(existing, input, expectedPayout, variance, status, cashEvidenceVerified);
@@ -150,16 +180,10 @@ export async function listMarketplaceSettlements(
   db: D1Database,
   tenantId: string,
   limit = 100,
-): Promise<Array<SettlementRow & { cash_evidence_verified: boolean }>> {
+): Promise<Array<Omit<SettlementRow, "cash_evidence_verified"> & { cash_evidence_verified: boolean }>> {
   const bounded = Number.isSafeInteger(limit) ? Math.min(Math.max(limit, 1), 500) : 100;
-  const result = await db.prepare(`
-    SELECT settlement_id,order_id,provider,external_settlement_id,currency,
-      expected_payout_minor,payout_minor,variance_minor,status,cash_evidence_verified
-    FROM marketplace_settlement_evidence
-    WHERE tenant_id=?1
-    ORDER BY occurred_at DESC
-    LIMIT ?2
-  `).bind(tenantId, bounded).all<SettlementRow>();
+  const result = await db.prepare(`${settlementSelect()} WHERE tenant_id=?1 ORDER BY occurred_at DESC LIMIT ?2`)
+    .bind(tenantId, bounded).all<SettlementRow>();
   return (result.results ?? []).map((row) => ({ ...row, cash_evidence_verified: Number(row.cash_evidence_verified) === 1 }));
 }
 
@@ -176,7 +200,7 @@ export function calculateExpectedMarketplacePayout(input: Pick<MarketplaceSettle
     input.other_deductions_minor ?? 0,
   ], "settlement deductions");
   const credits = safeSum([input.platform_subsidy_minor ?? 0, input.other_credits_minor ?? 0], "settlement credits");
-  const expected = input.gross_minor - deductions + credits;
+  const expected = safeAdd(input.gross_minor, credits) - deductions;
   if (!Number.isSafeInteger(expected)) throw errors.validation("Expected marketplace payout exceeds safe integer range");
   return expected;
 }
@@ -204,7 +228,7 @@ async function verifyCanonicalCashEvidence(
   tenantId: string,
   actor: Actor,
   order: OperationalOrder,
-  input: Required<Pick<MarketplaceSettlementInput, "sales_invoice_name" | "payment_entry_name">> & MarketplaceSettlementInput,
+  input: NormalizedMarketplaceSettlementInput,
 ): Promise<boolean> {
   if (!input.sales_invoice_name || !input.payment_entry_name) {
     throw errors.validation("sales_invoice_name and payment_entry_name must be supplied together");
@@ -240,9 +264,9 @@ async function verifyCanonicalCashEvidence(
   return true;
 }
 
-function normalizeSettlementInput(input: MarketplaceSettlementInput): Required<Omit<MarketplaceSettlementInput, "sales_invoice_name" | "payment_entry_name">> & Pick<MarketplaceSettlementInput, "sales_invoice_name" | "payment_entry_name"> {
+function normalizeSettlementInput(input: MarketplaceSettlementInput): NormalizedMarketplaceSettlementInput {
   if (!MARKETPLACE_PROVIDERS.includes(input.provider)) throw errors.validation("Unsupported marketplace provider");
-  const normalized = {
+  const normalized: NormalizedMarketplaceSettlementInput = {
     order_id: requiredText(input.order_id, "order_id", 240),
     provider: input.provider,
     external_settlement_id: requiredText(input.external_settlement_id, "external_settlement_id", 240),
@@ -258,9 +282,9 @@ function normalizeSettlementInput(input: MarketplaceSettlementInput): Required<O
     other_credits_minor: nonNegativeMinor(input.other_credits_minor ?? 0, "other_credits_minor"),
     payout_minor: nonNegativeMinor(input.payout_minor, "payout_minor"),
     occurred_at: isoDateTime(input.occurred_at, "occurred_at"),
-    ...(input.sales_invoice_name ? { sales_invoice_name: requiredText(input.sales_invoice_name, "sales_invoice_name", 200) } : {}),
-    ...(input.payment_entry_name ? { payment_entry_name: requiredText(input.payment_entry_name, "payment_entry_name", 200) } : {}),
   };
+  if (input.sales_invoice_name) normalized.sales_invoice_name = requiredText(input.sales_invoice_name, "sales_invoice_name", 200);
+  if (input.payment_entry_name) normalized.payment_entry_name = requiredText(input.payment_entry_name, "payment_entry_name", 200);
   if (Boolean(normalized.sales_invoice_name) !== Boolean(normalized.payment_entry_name)) {
     throw errors.validation("sales_invoice_name and payment_entry_name must be supplied together");
   }
@@ -274,30 +298,44 @@ async function settlementIdentity(provider: MarketplaceProvider, externalSettlem
 }
 
 async function readSettlement(db: D1Database, tenantId: string, settlementId: string): Promise<SettlementRow | null> {
-  return db.prepare(`
-    SELECT settlement_id,order_id,provider,external_settlement_id,currency,
-      expected_payout_minor,payout_minor,variance_minor,status,cash_evidence_verified
-    FROM marketplace_settlement_evidence
-    WHERE tenant_id=?1 AND settlement_id=?2 LIMIT 1
-  `).bind(tenantId, settlementId).first<SettlementRow>();
+  return db.prepare(`${settlementSelect()} WHERE tenant_id=?1 AND settlement_id=?2 LIMIT 1`)
+    .bind(tenantId, settlementId).first<SettlementRow>();
+}
+
+function settlementSelect(): string {
+  return `SELECT settlement_id,order_id,provider,external_settlement_id,currency,
+    gross_minor,commission_minor,service_fee_minor,seller_shipping_fee_minor,seller_voucher_minor,
+    refund_minor,other_deductions_minor,platform_subsidy_minor,other_credits_minor,
+    expected_payout_minor,payout_minor,variance_minor,sales_invoice_name,payment_entry_name,
+    cash_evidence_verified,status FROM marketplace_settlement_evidence`;
 }
 
 function assertReplay(
   row: SettlementRow,
-  input: ReturnType<typeof normalizeSettlementInput> extends Promise<infer _> ? never : never,
+  input: NormalizedMarketplaceSettlementInput,
   expectedPayout: number,
   variance: number,
   status: "reconciled" | "variance",
   cashVerified: boolean,
 ): void {
-  const value = input as unknown as MarketplaceSettlementInput;
-  if (row.order_id !== value.order_id
-    || row.provider !== value.provider
-    || row.external_settlement_id !== value.external_settlement_id
-    || row.currency !== value.currency
+  if (row.order_id !== input.order_id
+    || row.provider !== input.provider
+    || row.external_settlement_id !== input.external_settlement_id
+    || row.currency !== input.currency
+    || Number(row.gross_minor) !== input.gross_minor
+    || Number(row.commission_minor) !== input.commission_minor
+    || Number(row.service_fee_minor) !== input.service_fee_minor
+    || Number(row.seller_shipping_fee_minor) !== input.seller_shipping_fee_minor
+    || Number(row.seller_voucher_minor) !== input.seller_voucher_minor
+    || Number(row.refund_minor) !== input.refund_minor
+    || Number(row.other_deductions_minor) !== input.other_deductions_minor
+    || Number(row.platform_subsidy_minor) !== input.platform_subsidy_minor
+    || Number(row.other_credits_minor) !== input.other_credits_minor
     || Number(row.expected_payout_minor) !== expectedPayout
-    || Number(row.payout_minor) !== value.payout_minor
+    || Number(row.payout_minor) !== input.payout_minor
     || Number(row.variance_minor) !== variance
+    || (row.sales_invoice_name ?? undefined) !== input.sales_invoice_name
+    || (row.payment_entry_name ?? undefined) !== input.payment_entry_name
     || row.status !== status
     || Number(row.cash_evidence_verified) !== (cashVerified ? 1 : 0)) throw errors.idempotency();
 }
