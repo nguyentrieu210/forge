@@ -28,7 +28,7 @@ test("settlement backend verifies canonical invoice and payment allocation witho
 });
 
 test("COD reconciliation remains Delivery Note evidence and does not post Finance", () => {
-  assert.match(socialApi, /\/api\/v1\/social\/shipments\/\(\[\^\/\]\+\)\\\/cod-reconcile/);
+  assert.ok(socialApi.includes('const reconcile = url.pathname.match(/^\\/api\\/v1\\/social\\/shipments\\/([^/]+)\\/cod-reconcile$/);'));
   assert.match(socialApi, /collected !== shipmentRow\.cod_expected_minor/);
   assert.match(socialApi, /resolveCanonicalDeliveryShipment/);
   assert.match(socialApi, /accounting_posted: false/);
