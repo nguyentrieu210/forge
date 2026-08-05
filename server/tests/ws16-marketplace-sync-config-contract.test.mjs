@@ -12,10 +12,11 @@ test("marketplace sync trigger resolves connection scope from canonical document
   assert.match(source, /config: jsonObject\(connectionData\.config/);
   assert.match(source, /validateConnectorConnection\(connection, adapter\.manifest\)/);
   assert.match(source, /adapter\.validateConfig\(connection\.config\)/);
+  assert.match(source, /const provider = marketplaceProvider\(adapter\.manifest\.provider\)/);
 });
 
-test("channel provider must match connector provider and Shopee shop scope", () => {
-  assert.match(source, /adapter\.manifest\.provider !== provider/);
+test("channel provider must match canonical connector provider and Shopee shop scope", () => {
+  assert.match(source, /resolved\.provider !== provider/);
   assert.match(source, /provider === "shopee"/);
   assert.match(source, /scopedShop !== externalShopId/);
 });
@@ -27,4 +28,14 @@ test("configured sync resolver accepts only channel profile as external selector
   );
   assert.match(signature, /channelProfile: string/);
   assert.doesNotMatch(signature, /secret_ref|connector_key|provider:|config:/);
+});
+
+test("credential administration resolves provider from Marketplace Connection rather than request input", () => {
+  const signature = source.slice(
+    source.indexOf("export async function resolveMarketplaceConnection"),
+    source.indexOf("): Promise<ResolvedMarketplaceConnection>") + "): Promise<ResolvedMarketplaceConnection>".length,
+  );
+  assert.match(signature, /connectionIdInput: string/);
+  assert.doesNotMatch(signature, /provider:|secret_ref|config:/);
+  assert.match(source, /marketplaceProvider\(adapter\.manifest\.provider\)/);
 });
