@@ -1,0 +1,65 @@
+{
+  "format": "forge-alumdoor-pilot-04-synthetic-decision-contract/v1",
+  "status": "SYNTHETIC_DECISION_REHEARSAL_CANDIDATE",
+  "tenant_profile": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "synthetic": true,
+  "contains_real_customer_data": false,
+  "production_write_authorized": false,
+  "cutover_authorized": false,
+  "real_pilot_transition_allowed": false,
+  "production_data_mutated": false,
+  "authorities": {
+    "pilot_00_lock": "docs/pilot/alumdoor/PILOT_00_LOCK.json",
+    "pilot_00_contract": "docs/pilot/alumdoor/PILOT_00_CONTRACT.md",
+    "r6_certification": "deploy-evidence/r6-final-production-certification-49315112a211.json",
+    "pilot_01_synthetic": "docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json",
+    "pilot_02_status": "docs/pilot/alumdoor/PILOT_02_STATUS.json",
+    "pilot_03_status": "docs/pilot/alumdoor/PILOT_03_STATUS.json"
+  },
+  "decision_engine": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.mjs",
+  "test": "docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.test.mjs",
+  "workflow": ".github/workflows/pilot-04-synthetic-decision.yml",
+  "required_go_gates": [
+    "SYNTHETIC_ONLY",
+    "LOCKED_RELEASE_IDENTITY",
+    "R6_BASELINE_CERTIFIED",
+    "PILOT_01_ACCEPTED_FOR_REHEARSAL",
+    "PILOT_02_ACCEPTED_FOR_REHEARSAL",
+    "PILOT_03_ACCEPTED_FOR_REHEARSAL",
+    "NO_P0_P1",
+    "ZERO_UNEXPLAINED_VARIANCE",
+    "RECOVERY_FRESH",
+    "CUTOFF_DETERMINISTIC",
+    "SINGLE_NAMED_DIRECTOR_APPROVAL"
+  ],
+  "required_scenarios": [
+    {"id":"P04-SYN-GO-BASELINE","expected":"GO","description":"all synthetic gates complete"},
+    {"id":"P04-SYN-NOGO-P0-P1","expected":"NO-GO","description":"any unresolved P0/P1"},
+    {"id":"P04-SYN-NOGO-VARIANCE","expected":"NO-GO","description":"any unexplained variance above zero"},
+    {"id":"P04-SYN-NOGO-DIRECTOR","expected":"NO-GO","description":"missing or duplicate named Giám đốc approval"},
+    {"id":"P04-SYN-NOGO-IDENTITY-DRIFT","expected":"NO-GO","description":"release, bundle, package or profile drift"},
+    {"id":"P04-SYN-NOGO-RECOVERY","expected":"NO-GO","description":"stale, future or failed recovery evidence"},
+    {"id":"P04-SYN-NOGO-CUTOFF","expected":"NO-GO","description":"cutoff/delta is not deterministic and source-bound"}
+  ],
+  "recovery_freshness_policy": {
+    "max_age_hours": 24,
+    "planned_synthetic_cutover_at": "2026-08-05T12:00:00Z",
+    "requires_verified_restore": true,
+    "requires_verified_pitr_plan": true
+  },
+  "approval_policy": {
+    "persona": "Giám đốc",
+    "exact_active_approved_named_accounts": 1,
+    "synthetic_account_domain": "example.invalid"
+  },
+  "acceptance": {
+    "baseline_go": true,
+    "all_negative_scenarios_no_go": true,
+    "gate_count": 11,
+    "production_write_authorized": false,
+    "cutover_authorized": false,
+    "real_pilot_transition_allowed": false
+  },
+  "transition_rule": "Passing Pilot-04 synthetic decision rehearsal proves only deterministic GO/NO-GO governance. Even synthetic GO never authorizes real import, route/DNS/provider mutation, cutover or production writes."
+}
