@@ -14,6 +14,7 @@
   "stock_anomaly_disposition": "docs/pilot/alumdoor/PILOT_01_STOCK_ANOMALY_DISPOSITION_V1.json",
   "cutoff_feasibility": "docs/pilot/alumdoor/PILOT_01_CUTOFF_FEASIBILITY_20260805.json",
   "external_source_dependencies": "docs/pilot/alumdoor/PILOT_01_EXTERNAL_SOURCE_DEPENDENCIES_20260805.json",
+  "synthetic_fixture": "docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json",
   "tooling": {
     "validator": "docs/pilot/alumdoor/tools/validate-pilot-batch.mjs",
     "identity_normalizer": "docs/pilot/alumdoor/tools/normalize-pilot-identities.mjs",
@@ -22,9 +23,26 @@
     "money_normalizer": "docs/pilot/alumdoor/tools/normalize-pilot-money.mjs",
     "stock_anomaly_verifier": "docs/pilot/alumdoor/tools/verify-pilot-01-stock-anomalies.mjs",
     "external_dependency_verifier": "docs/pilot/alumdoor/tools/verify-pilot-01-external-dependencies.mjs",
+    "synthetic_batch_generator": "docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.mjs",
+    "synthetic_batch_test": "docs/pilot/alumdoor/tools/generate-pilot-01-synthetic-batch.test.mjs",
     "ci": ".github/workflows/pilot-01-data-readiness.yml",
     "preview_only": true,
     "production_mutation_path": false
+  },
+  "synthetic_testing": {
+    "available": true,
+    "pilot_batch_id": "ALU-SYNTHETIC-PILOT-01-V1",
+    "required_dataset_count": 12,
+    "expected_preview_status": "PREVIEW_PASS",
+    "all_six_personas_covered": true,
+    "exactly_one_active_giam_doc": true,
+    "opening_stock_qty_total": "5468",
+    "opening_stock_value_total_vnd": "89500000",
+    "opening_ar_total_vnd": "22750000",
+    "opening_ap_total_vnd": "13000000",
+    "contains_real_customer_data": false,
+    "satisfies_real_pilot_01_readiness": false,
+    "production_write_authorized": false
   },
   "source_batch": {
     "real_uploaded_source_set_observed": true,
@@ -118,6 +136,7 @@
     "integer_vnd_rounding_locked": true,
     "future_stock_dates_dispositioned": true,
     "source_search_exhausted_external_dependencies_recorded": true,
+    "synthetic_preview_pass_available_for_tooling_test": true,
     "references_resolved": false,
     "canonical_opening_stock_quantity_and_value_ready": false,
     "opening_ar_ap_proven": false,
