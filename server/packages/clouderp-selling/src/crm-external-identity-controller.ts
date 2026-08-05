@@ -1,4 +1,4 @@
-import type { CanonicalDocument, JsonObject, MutationPlan } from "../../contracts/src/index.js";
+import type { CanonicalDocument, MutationPlan } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { domainEvent } from "../../outbox/src/index.js";
@@ -85,10 +85,17 @@ async function normalizeCreate(
 ): Promise<CrmCustomerExternalIdentityData> {
   const company = requiredText(command.company, "Company", 160);
   const provider = providerValue(command.provider);
-  const externalScopeId = requiredText(command.external_scope_id, "External identity scope", 240);
-  const externalIdentity = requiredText(command.external_identity, "External identity", 320);
-  const identityKey = await crmCustomerExternalIdentityKey(provider, externalScopeId, externalIdentity);
-  const scopeKey = await crmCustomerExternalScopeKey(provider, externalScopeId);
+  const rawScope = optionalText(command.external_scope_id, 240);
+  const rawIdentity = optionalText(command.external_identity, 320);
+  if (Boolean(rawScope) !== Boolean(rawIdentity)) {
+    throw errors.validation("External identity scope and identity must be supplied together");
+  }
+  const identityKey = rawScope && rawIdentity
+    ? await crmCustomerExternalIdentityKey(provider, rawScope, rawIdentity)
+    : requiredHash(command.identity_key, "identity_key");
+  const scopeKey = rawScope
+    ? await crmCustomerExternalScopeKey(provider, rawScope)
+    : requiredHash(command.scope_key, "scope_key");
   const expectedName = crmCustomerExternalIdentityDocumentName(identityKey);
   if (context.command.aggregate.name !== expectedName) {
     throw errors.validation(`CRM Customer External Identity name must be ${expectedName}`);
