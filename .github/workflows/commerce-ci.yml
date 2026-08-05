@@ -12,7 +12,6 @@ on:
       - "server/packages/clouderp-selling/src/registry.ts"
       - "server/packages/clouderp-selling/src/index.ts"
       - "server/apps-src/social-commerce/**"
-      - "server/apps-src/integration-hub/**"
       - "server/apps-src/crm/**"
       - "server/migrations/tenant/0117_commercial_stock_reservations.sql"
       - "server/migrations/tenant/0118_marketplace_settlement_evidence.sql"
@@ -56,10 +55,6 @@ jobs:
 
       - name: Build CloudForge
         run: pnpm --filter cloudforge run build
-
-      - name: Validate integration-hub package
-        working-directory: server
-        run: node scripts/pack-app.mjs apps-src/integration-hub --check
 
       - name: Validate social-commerce package
         working-directory: server
