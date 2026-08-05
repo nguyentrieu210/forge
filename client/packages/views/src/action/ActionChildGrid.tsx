@@ -165,7 +165,7 @@ export function ActionChildGrid(props: ActionChildGridProps) {
       ...(declared?.link_filters ? { link_filters: declared.link_filters } : {}),
       ...(declared?.required ? { reqd: 1 as const } : {}),
       ...(declared?.default != null ? { default: declared.default } : {}),
-      ...(metaField.fieldtype === "Currency" && moneyPrecision !== undefined ? { precision: moneyPrecision } : {}),
+      ...(metaField.fieldtype === "Currency" && moneyPrecision !== undefined ? { precision: String(moneyPrecision) } : {}),
       in_list_view: 1 as const,
     } as DocField;
   }), [canonicalCols, declaredByName, moneyPrecision]);
@@ -212,7 +212,7 @@ export function ActionChildGrid(props: ActionChildGridProps) {
   const dynamicField = (field: DocField, row: Doc): DocField => {
     const item = String(row.item_code ?? "").trim();
     let next = field;
-    if (field.fieldtype === "Currency" && moneyPrecision !== undefined) next = { ...next, precision: moneyPrecision };
+    if (field.fieldtype === "Currency" && moneyPrecision !== undefined) next = { ...next, precision: String(moneyPrecision) };
     if ((field.fieldname === "color" || field.fieldname === "colour") && item && Object.hasOwn(allowedColors, item)) {
       const values = allowedColors[item] ?? [];
       next = { ...next, link_filters: JSON.stringify([["Item Color", "name", "in", values.length ? values : ["__NO_ALLOWED_COLOR__"]]]) };
