@@ -17,7 +17,7 @@ jobs:
   preview:
     if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feature/omnichannel-commerce-erp')
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     environment: production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN }}
@@ -50,20 +50,11 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build MetaForge workspace
-        run: pnpm run client:build
-
-      - name: Stage runtime assets
-        run: node server/scripts/stage-client-bundle.mjs
-
-      - name: Upload non-production gateway preview
+      - name: Deploy isolated visual preview
         id: preview
         shell: bash
         run: |
           set -euo pipefail
-          PR_NUMBER="${{ github.event.pull_request.number || github.run_number }}"
-          PREVIEW_ALIAS="pr-${PR_NUMBER}"
-
           SUBDOMAIN_JSON="$(curl --fail --silent --show-error \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")"
@@ -77,12 +68,10 @@ jobs:
             });
           ')"
 
-          pnpm --dir server exec wrangler versions upload \
-            --config apps/gateway-worker/wrangler.jsonc \
-            --preview-alias "$PREVIEW_ALIAS" \
-            --keep-vars 2>&1 | tee /tmp/commerce-preview.log
+          pnpm --dir server exec wrangler deploy \
+            --config apps/commerce-preview-worker/wrangler.jsonc 2>&1 | tee /tmp/commerce-preview.log
 
-          PREVIEW_URL="https://${PREVIEW_ALIAS}-cloudforge-gateway.${WORKERS_SUBDOMAIN}.workers.dev"
+          PREVIEW_URL="https://forge-commerce-preview.${WORKERS_SUBDOMAIN}.workers.dev"
           echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
           echo "Preview URL: $PREVIEW_URL"
 
@@ -90,7 +79,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --retry 4 --retry-all-errors "${{ steps.preview.outputs.url }}/" >/dev/null
+          curl --fail --silent --show-error --retry 4 --retry-all-errors "${{ steps.preview.outputs.url }}/health" | grep -q '"ok":true'
+          curl --fail --silent --show-error --retry 4 --retry-all-errors "${{ steps.preview.outputs.url }}/" | grep -q 'Omnichannel Commerce'
 
       - name: Comment preview URL
         if: github.event_name == 'pull_request'
@@ -100,7 +90,7 @@ jobs:
         with:
           script: |
             const marker = '<!-- commerce-preview -->';
-            const body = `${marker}\n## Omnichannel Commerce preview\n\nPreview: ${process.env.PREVIEW_URL}\n\nThis is a Cloudflare version preview only. It does not promote traffic or deploy a production version.`;
+            const body = `${marker}\n## Omnichannel Commerce preview\n\nPreview: ${process.env.PREVIEW_URL}\n\nVisual preview only: isolated Workers.dev service, sample data, no production routes or production writes.`;
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
