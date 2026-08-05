@@ -1,0 +1,75 @@
+{
+  "format": "forge-alumdoor-pilot-03-synthetic-parallel/v1",
+  "status": "SYNTHETIC_PARALLEL_PASS",
+  "tenant_profile": "alu",
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "synthetic": true,
+  "contains_real_customer_data": false,
+  "satisfies_real_pilot_01_readiness": false,
+  "satisfies_real_pilot_03_acceptance": false,
+  "production_write_authorized": false,
+  "production_data_mutated": false,
+  "precondition": {
+    "pilot_01_synthetic_preview": "PREVIEW_PASS",
+    "pilot_02_synthetic_status": "SYNTHETIC_DRY_RUN_PASS",
+    "pilot_02_segments_passed": 9
+  },
+  "execution_surface": {
+    "workflow": ".github/workflows/pilot-03-synthetic-parallel.yml",
+    "integration_test": "server/apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts",
+    "environment": "github-hosted-ci-local-workerd-d1",
+    "production_environment_used": false,
+    "production_origin_called": false,
+    "cloudflare_production_secrets_used": false,
+    "remote_database_used": false,
+    "deploy_or_migration": false
+  },
+  "execution_evidence": {
+    "initial_pass_run_id": 30970432986,
+    "initial_pass_head_sha": "77d380738a555d38b74a68e1c0cebae0e3ee4322",
+    "workflow_conclusion": "success",
+    "days_reconciled": 3,
+    "all_axis_variances_zero": true,
+    "default_tolerance": 0,
+    "independent_cross_ledger_pass": true,
+    "independent_ar_pass": true,
+    "independent_ap_pass": true,
+    "artifact_id": 8916292176,
+    "artifact_zip_sha256": "6728e53db65f663915211249a8cc5987e2c1fa6736e08d4834d53179172b132a",
+    "production_write_authorized": false
+  },
+  "parallel_window": {
+    "business_days": 3,
+    "start_date": "2026-08-01",
+    "end_date": "2026-08-03",
+    "currency": "VND",
+    "currency_scale": 0,
+    "default_tolerance": 0,
+    "cash_bank_in_scope": true,
+    "wip_policy": "same-day direct manufacture; WIP closing quantity must be zero at every daily checkpoint"
+  },
+  "daily_source_model": [
+    {"day":1,"date":"2026-08-01","purchase_raw_qty":8,"manufacture_fg_qty":3,"delivery_qty":2,"sale_rate_vnd":500000,"customer_receipt_vnd":600000},
+    {"day":2,"date":"2026-08-02","purchase_raw_qty":6,"manufacture_fg_qty":2,"delivery_qty":2,"sale_rate_vnd":520000,"customer_receipt_vnd":1040000},
+    {"day":3,"date":"2026-08-03","purchase_raw_qty":4,"manufacture_fg_qty":1,"delivery_qty":2,"sale_rate_vnd":550000,"customer_receipt_vnd":900000}
+  ],
+  "expected_daily_closing": [
+    {"day":1,"raw_qty":2,"fg_qty":1,"stock_value_vnd":350000,"ar_vnd":400000,"ap_vnd":680000,"bank_vnd":600000,"revenue_vnd":1000000,"cogs_vnd":360000,"manufactured_qty":3,"consumed_raw_qty":6,"submitted_documents":10},
+    {"day":2,"raw_qty":4,"fg_qty":1,"stock_value_vnd":520000,"ar_vnd":400000,"ap_vnd":1190000,"bank_vnd":1640000,"revenue_vnd":2040000,"cogs_vnd":720000,"manufactured_qty":5,"consumed_raw_qty":10,"submitted_documents":19},
+    {"day":3,"raw_qty":6,"fg_qty":0,"stock_value_vnd":510000,"ar_vnd":600000,"ap_vnd":1530000,"bank_vnd":2540000,"revenue_vnd":3140000,"cogs_vnd":1080000,"manufactured_qty":6,"consumed_raw_qty":12,"submitted_documents":28}
+  ],
+  "reconciliation_axes": ["stock_quantity","stock_value","ar","ap","cash_bank","revenue","cogs","manufacturing_progress","wip_closing_quantity","gl_debit_credit_balance","document_count_status","idempotent_payment_retry"],
+  "acceptance": {
+    "all_three_daily_checkpoints_reconciled": true,
+    "all_axis_variances_zero": true,
+    "gl_balanced_each_day": true,
+    "wip_residual_zero_each_day": true,
+    "document_state_exact_each_day": true,
+    "retry_does_not_duplicate_gl": true,
+    "canonical_authority_only": true,
+    "no_shadow_stock_or_finance": true,
+    "no_production_mutation": true,
+    "real_pilot_transition_allowed": false
+  },
+  "transition_rule": "Synthetic Pilot-03 PASS validates bounded parallel reconciliation only. It does not advance the real pilot, satisfy missing real openings, or authorize production write/cutover."
+}
