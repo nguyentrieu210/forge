@@ -4,14 +4,13 @@
   "version": "0.1.0",
   "requires": [],
   "nav": [
-    { "key": "Marketplace Connection", "label": "Kết nối sàn TMĐT", "kind": "doctype", "icon": "plug-zap", "group": "Tích hợp", "required_roles": ["Integration Admin", "System Manager"] },
     { "key": "Integration Subscription", "label": "Đăng ký sự kiện", "kind": "doctype", "icon": "webhook", "group": "Tích hợp", "required_roles": ["Integration Admin", "System Manager"] }
   ],
   "hooks": [],
   "client": {
     "brand": "neutral",
     "domain": "platform",
-    "home": { "route": "/app/Marketplace%20Connection", "doctype": "Marketplace Connection" },
+    "home": { "route": "/app/Integration%20Subscription", "doctype": "Integration Subscription" },
     "catalog_mode": "native"
   }
 }
