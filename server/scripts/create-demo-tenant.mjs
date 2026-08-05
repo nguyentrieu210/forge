@@ -26,6 +26,10 @@ import {
   resolveWorkersDevOrigin,
   waitForTenantShell,
 } from "./lib/demo-provisioning.mjs";
+import {
+  resolveCloudflareAccountId,
+  resolveDemoPlatformSecrets,
+} from "./lib/demo-provider-credentials.mjs";
 
 const args = process.argv.slice(2);
 const argOf = (name, fallback) => {
@@ -50,8 +54,9 @@ const domain = argOf("domain", process.env.FORGE_DEMO_BASE_DOMAIN ?? "kairo.vn")
 const hostname = demoHostname(slug, domain);
 const origin = `https://${hostname}`;
 const databaseName = demoDatabaseName(slug);
-const accountId = argOf("account", process.env.CLOUDFLARE_ACCOUNT_ID);
+const accountHint = argOf("account", process.env.CLOUDFLARE_ACCOUNT_ID ?? "");
 const namespace = argOf("namespace", process.env.FORGE_DISPATCH_NAMESPACE ?? "cloudforge-production");
+const referenceTenantScript = argOf("reference-tenant-script", process.env.FORGE_REFERENCE_TENANT_SCRIPT ?? "cloudforge-tenant-alu");
 const adminUser = argOf("admin", process.env.FORGE_ADMIN_USER ?? "admin");
 const plan = argOf("plan", "pro");
 const explicitControlUrl = (argOf("control-url", process.env.FORGE_CONTROL_URL) ?? "").replace(/\/$/, "");
@@ -59,21 +64,24 @@ const dryRun = args.includes("--dry-run");
 const provisionStandard = args.includes("--provision-standard");
 
 if (!customer && !argOf("slug")) fail("--customer <name> or --slug <slug> is required");
-if (!accountId && !dryRun) fail("CLOUDFLARE_ACCOUNT_ID (or --account) is required");
 if (!/^(free|pro|enterprise)$/.test(plan)) fail("--plan must be free, pro or enterprise");
 
-const secrets = [
+const sensitiveValues = [];
+function addSensitive(value) {
+  const text = String(value ?? "");
+  if (text && !sensitiveValues.includes(text)) sensitiveValues.push(text);
+}
+for (const name of [
   "CLOUDFLARE_API_TOKEN",
   "FORGE_INTERNAL_AUTH_SECRET",
+  "INTERNAL_AUTH_SECRET",
   "FORGE_INTERNAL_SERVICE_TOKEN",
+  "INTERNAL_SERVICE_TOKEN",
   "FORGE_CONTROL_TOKEN",
+  "CONTROL_TOKEN",
   "FORGE_ADMIN_PASSWORD",
-];
-if (!dryRun) {
-  for (const name of secrets) if (!process.env[name]) fail(`${name} is required`);
-}
+]) addSensitive(process.env[name]);
 
-const sensitiveValues = secrets.map((name) => process.env[name]).filter(Boolean);
 function redact(value) {
   let out = String(value ?? "");
   for (const secret of sensitiveValues) out = out.split(secret).join("***");
@@ -107,7 +115,37 @@ if (dryRun) {
   process.exit(0);
 }
 
-const token = process.env.CLOUDFLARE_API_TOKEN;
+const token = String(process.env.CLOUDFLARE_API_TOKEN ?? "").trim();
+if (!token) fail("CLOUDFLARE_API_TOKEN is required");
+if (!process.env.FORGE_ADMIN_PASSWORD) fail("FORGE_ADMIN_PASSWORD is required");
+
+// Provider identity + shared credential resolution happen BEFORE the first D1/provider
+// mutation. The account can be selected from the token-visible account containing the
+// canonical gateway. Existing shared secret values are reused only when supplied by the
+// environment or actually returned by the provider; metadata-only secret reads fail closed.
+let accountResolution;
+let platformSecrets;
+try {
+  accountResolution = await resolveCloudflareAccountId({ token, accountHint });
+  platformSecrets = await resolveDemoPlatformSecrets({
+    token,
+    accountId: accountResolution.accountId,
+    namespace,
+    referenceTenantScript,
+    env: process.env,
+  });
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
+const accountId = accountResolution.accountId;
+const providerEnv = {
+  CLOUDFLARE_ACCOUNT_ID: accountId,
+  ...platformSecrets.values,
+};
+for (const value of Object.values(platformSecrets.values)) addSensitive(value);
+console.log(`0 provider  ${accountResolution.selection}`);
+console.log(`  secrets   ${Object.entries(platformSecrets.source).map(([name, source]) => `${name}:${source}`).join(", ")}`);
+
 const database = await ensureDemoDatabase({ accountId, token, databaseName });
 console.log(`1 database  ${database.name} (${database.id}) ${database.created ? "created" : "reused"}`);
 
@@ -129,7 +167,7 @@ const provisionArgs = [
   "--plan", plan,
 ];
 console.log("3 provision tenant lifecycle");
-runNode("provision-tenant.mjs", provisionArgs);
+runNode("provision-tenant.mjs", provisionArgs, providerEnv);
 
 process.stdout.write("4 readiness tenant shell … ");
 const ready = await waitForTenantShell(origin);
