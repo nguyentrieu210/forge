@@ -6,17 +6,23 @@
     "production_write_authorized": false
   },
   "synthetic_pilot_02": {
-    "status": "SYNTHETIC_DRY_RUN_CANDIDATE",
+    "status": "SYNTHETIC_DRY_RUN_PASS",
     "contract": "docs/pilot/alumdoor/PILOT_02_SYNTHETIC_DRY_RUN_V1.json",
     "workflow": ".github/workflows/pilot-02-synthetic-dry-run.yml",
     "pilot_01_fixture": "docs/pilot/alumdoor/PILOT_01_SYNTHETIC_FIXTURE_V1.json",
-    "expected_pilot_01_handoff": "PREVIEW_PASS",
+    "pilot_01_handoff": "PREVIEW_PASS",
+    "initial_pass_run_id": 30968821466,
+    "initial_pass_head_sha": "677af4e1db3135e6368d819415b697e080932203",
     "segment_count": 9,
+    "segments_passed": 9,
+    "segments_failed": 0,
+    "unexplained_reconciliation_variance": 0,
     "contains_real_customer_data": false,
     "uses_production_environment": false,
     "production_write_authorized": false,
     "production_data_mutated": false
   },
   "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
-  "claim_boundary": "Synthetic Pilot-02 validation may proceed while real Pilot-01 is externally blocked, but a synthetic PASS never advances the real pilot state or authorizes production mutation."
+  "next_synthetic_step": "Pilot-03 synthetic parallel-run and daily reconciliation harness",
+  "claim_boundary": "Synthetic Pilot-02 PASS validates executable transaction paths only. It does not advance real Pilot-01/Pilot-02 or authorize production mutation."
 }
