@@ -1,0 +1,103 @@
+name: Pilot-03 Synthetic Parallel Reconciliation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/pilot/alumdoor/PILOT_03_SYNTHETIC_PARALLEL_V1.json"
+      - "docs/pilot/alumdoor/PILOT_03_STATUS.json"
+      - "docs/pilot/alumdoor/tools/verify-pilot-03-synthetic-contract.mjs"
+      - "server/apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts"
+      - ".github/workflows/pilot-03-synthetic-parallel.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-03-synthetic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reconcile:
+    name: Reconcile three synthetic business days
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Pilot-03 synthetic contract
+        run: |
+          node --check docs/pilot/alumdoor/tools/verify-pilot-03-synthetic-contract.mjs
+          node docs/pilot/alumdoor/tools/verify-pilot-03-synthetic-contract.mjs
+
+      - name: Run cumulative three-day workerd reconciliation
+        working-directory: server
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec vitest run apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts \
+            --config apps/tenant-worker/vitest.config.mts \
+            --reporter=verbose 2>&1 | tee /tmp/pilot-03-synthetic.log
+          grep -q 'PILOT_03_SYNTHETIC_PASS days=3 tolerance=0 production_write_authorized=false' /tmp/pilot-03-synthetic.log
+          test "$(grep -c '"status":"RECONCILED"' /tmp/pilot-03-synthetic.log)" -eq 3
+
+      - name: Re-run independent finance and cross-ledger auditors
+        working-directory: server
+        run: |
+          python3 -m py_compile scripts/rc4-cross-ledger-reconciliation.py
+          python3 scripts/rc4-cross-ledger-reconciliation.py --self-test
+          python3 scripts/test-finance-ar-reconciliation.py
+          python3 scripts/test-finance-ap-reconciliation.py
+
+      - name: Assert zero-tolerance and no-production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          contract=docs/pilot/alumdoor/PILOT_03_SYNTHETIC_PARALLEL_V1.json
+          workflow=.github/workflows/pilot-03-synthetic-parallel.yml
+          grep -q '"default_tolerance": 0' "$contract"
+          grep -q '"production_write_authorized": false' "$contract"
+          grep -q '"real_pilot_transition_allowed": false' "$contract"
+          ! grep -nE 'environment:[[:space:]]*production|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|wrangler[[:space:]]+deploy|alu\.kairo\.vn|deploy-tenant\.mjs|migrate-tenant\.mjs|--remote' "$workflow"
+          git diff --check
+
+      - name: Upload daily reconciliation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-03-synthetic-${{ github.run_id }}
+          path: /tmp/pilot-03-synthetic.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Pilot-03 synthetic parallel reconciliation'
+            echo '- Three cumulative business days in one local workerd/D1 state.'
+            echo '- Daily tolerance: 0.'
+            echo '- Axes: Stock qty/value, AR/AP, Bank, revenue/COGS, manufacturing/WIP, GL, document state, idempotency.'
+            echo '- Synthetic test evidence only; no production mutation or real pilot transition.'
+          } >> "$GITHUB_STEP_SUMMARY"
