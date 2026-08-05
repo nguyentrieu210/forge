@@ -1,0 +1,134 @@
+name: Pilot-05 Synthetic Hypercare Exit Rehearsal
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/pilot/alumdoor/PILOT_05_SYNTHETIC_EXIT_V1.json"
+      - "docs/pilot/alumdoor/PILOT_05_STATUS.json"
+      - "docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.mjs"
+      - "docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.test.mjs"
+      - ".github/workflows/pilot-05-synthetic-exit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-05-synthetic-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exit-rehearsal:
+    name: Rehearse synthetic hypercare and exit gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Pilot-05 authority boundary
+        run: |
+          node --check docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.mjs
+          node --check docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.test.mjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p01 = JSON.parse(fs.readFileSync('docs/pilot/alumdoor/PILOT_01_STATUS.json', 'utf8'));
+          const p03 = JSON.parse(fs.readFileSync('docs/pilot/alumdoor/PILOT_03_STATUS.json', 'utf8'));
+          const p04 = JSON.parse(fs.readFileSync('docs/pilot/alumdoor/PILOT_04_STATUS.json', 'utf8'));
+          if (p01.blocking_mode !== 'EXTERNAL_SOURCE_DEPENDENCY') throw new Error('real Pilot-01 boundary unexpectedly changed');
+          if (p03.synthetic_pilot_03?.status !== 'SYNTHETIC_PARALLEL_PASS') throw new Error('Pilot-03 synthetic PASS missing');
+          if (p04.synthetic_pilot_04?.status !== 'SYNTHETIC_DECISION_REHEARSAL_PASS') throw new Error('Pilot-04 synthetic PASS missing');
+          if (p04.synthetic_pilot_04?.cutover_authorized !== false) throw new Error('synthetic Pilot-04 must not authorize cutover');
+          NODE
+
+      - name: Run EXIT and NO-EXIT decision tests
+        run: node --test docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.test.mjs
+
+      - name: Verify baseline synthetic EXIT is authorization-safe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.mjs > /tmp/pilot-05-exit.json
+          node - /tmp/pilot-05-exit.json <<'NODE'
+          const fs = require('node:fs');
+          const result = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (result.synthetic_exit_verdict !== 'EXIT') throw new Error(`expected synthetic EXIT, got ${result.synthetic_exit_verdict}`);
+          if (result.blockers.length !== 0 || result.passed_gate_count !== result.gate_count) throw new Error('baseline synthetic EXIT gate mismatch');
+          for (const field of ['production_write_authorized','cutover_authorized','ga_authorized','accepted_production_reference_authorized','real_pilot_transition_allowed']) {
+            if (result[field] !== false) throw new Error(`${field} must remain false`);
+          }
+          NODE
+
+      - name: Re-run local runtime health
+        working-directory: server
+        run: >-
+          pnpm exec vitest run apps/tenant-worker/test/health.integration.test.mts
+          --config apps/tenant-worker/vitest.config.mts
+          --reporter=verbose
+
+      - name: Re-run synthetic parallel transaction and reconciliation continuity
+        working-directory: server
+        run: >-
+          pnpm exec vitest run apps/tenant-worker/test/pilot-03-synthetic-parallel.integration.test.mts
+          --config apps/tenant-worker/vitest.config.mts
+          --reporter=verbose
+
+      - name: Re-run recovery safety evidence locally
+        working-directory: server
+        run: node --test tests/d1-backup-import.test.mjs tests/sre-destructive-guards.test.mjs
+
+      - name: Re-run Pilot-04 decision governance
+        run: node --test docs/pilot/alumdoor/tools/evaluate-pilot-04-synthetic.test.mjs
+
+      - name: Assert no production, cutover or GA mutation path
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow=.github/workflows/pilot-05-synthetic-exit.yml
+          contract=docs/pilot/alumdoor/PILOT_05_SYNTHETIC_EXIT_V1.json
+          ! grep -nE 'environment:[[:space:]]*production|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|wrangler[[:space:]]+deploy|alu\.kairo\.vn|deploy-tenant\.mjs|migrate-tenant\.mjs|--remote' "$workflow"
+          grep -q '"production_write_authorized": false' "$contract"
+          grep -q '"cutover_authorized": false' "$contract"
+          grep -q '"ga_authorized": false' "$contract"
+          grep -q '"accepted_production_reference_authorized": false' "$contract"
+          grep -q '"real_pilot_transition_allowed": false' "$contract"
+          git diff --check
+
+      - name: Upload synthetic exit decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-05-synthetic-exit-${{ github.run_id }}
+          path: /tmp/pilot-05-exit.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Pilot-05 synthetic hypercare/exit rehearsal'
+            echo '- Three synthetic hypercare checkpoints with tolerance 0.'
+            echo '- Runtime, transaction/reconciliation, recovery and Pilot-04 governance are rerun locally.'
+            echo '- Synthetic EXIT never authorizes GA, Accepted Production Reference, real cutover or production mutation.'
+          } >> "$GITHUB_STEP_SUMMARY"
