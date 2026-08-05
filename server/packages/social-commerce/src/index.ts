@@ -73,5 +73,6 @@ export * from "./marketplace-sync.js";
 export * from "./marketplace-sync-config.js";
 export * from "./marketplace-sync-runner.js";
 export * from "./marketplace-maintenance.js";
+export * from "./marketplace-sla.js";
 export * from "./marketplace-sla-policy-controller.js";
 export * from "./registry.js";
