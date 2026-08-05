@@ -1,12 +1,12 @@
 {
   "version": "2.3.0",
-  "//": "Operational presentation sidecar. Company và Warehouse là context chung; Giao hàng dùng dispatch board chọn rõ từng Sales Order.",
+  "//": "Operational presentation sidecar. Company và Warehouse là context chung; daily tabs dùng composer/dispatch/dashboard/history thay vì ép người dùng quay về CRUD/report generic.",
   "dimensions": ["company", "warehouse"],
   "doctypes": {
     "Purchase Order": {
-      "label": "Lịch sử mua hàng",
-      "menu": true,
-      "icon": "history",
+      "label": "Đơn mua",
+      "menu": false,
+      "icon": "shopping-bag",
       "group": "Mua hàng"
     },
     "Purchase Receipt": {
@@ -32,7 +32,8 @@
       "group": "Báo cáo"
     },
     "Đơn hàng theo khách": {
-      "label": "Báo cáo",
+      "label": "Báo cáo đơn hàng cũ",
+      "menu": false,
       "icon": "bar-chart-3",
       "group": "Bán hàng"
     }
@@ -59,6 +60,12 @@
       "icon": "bar-chart-3",
       "group": "Mua hàng"
     },
+    "lich-su-mua-hang": {
+      "label": "Lịch sử mua hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Mua hàng"
+    },
     "doi-soat-giao-hang-ncc": {
       "menu": false
     },
@@ -69,6 +76,12 @@
       "label": "Giao hàng",
       "menu": true,
       "icon": "calendar-check",
+      "group": "Bán hàng"
+    },
+    "bao-cao-ban-hang": {
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "chart-no-axes-combined",
       "group": "Bán hàng"
     },
     "tinh-cong-thuc-cua": {
@@ -85,12 +98,12 @@
   "items": [
     "alumdoor-operations:workbench",
     "Sales Order",
-    "action:giao-hang-dispatch",
     "Delivery Note",
-    "report:Đơn hàng theo khách",
+    "action:giao-hang-dispatch",
+    "action:bao-cao-ban-hang",
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
     "action:bao-cao-giao-hang-ncc",
-    "Purchase Order"
+    "action:lich-su-mua-hang"
   ]
 }
