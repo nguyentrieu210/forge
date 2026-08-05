@@ -416,14 +416,21 @@ jobs:
 
       - name: Backup Control D1 before Security V2 migration
         shell: bash
+        env:
+          TARGET_SHA: ${{ steps.command.outputs.target_sha }}
         run: |
           set -euo pipefail
+          backup="$RUNNER_TEMP/control-pre-security-v2.sql"
           pnpm --dir server exec wrangler d1 export cloudforge-control \
             --config apps/control-plane-worker/wrangler.jsonc \
             --remote \
             --skip-confirmation \
-            --output "$RUNNER_TEMP/control-pre-security-v2.sql"
-          test -s "$RUNNER_TEMP/control-pre-security-v2.sql"
+            --output "$backup"
+          test -s "$backup"
+          digest="$(sha256sum "$backup" | awk '{print $1}')"
+          bytes="$(wc -c < "$backup" | tr -d ' ')"
+          printf '{"format":"forge-security-v2-control-backup-evidence/v1","source_sha":"%s","sha256":"%s","bytes":%s}\n' \
+            "$TARGET_SHA" "$digest" "$bytes" > "$RUNNER_TEMP/security-v2-backup-evidence.json"
 
       - name: Apply append-only Control Security V2 migration
         working-directory: server
@@ -462,12 +469,12 @@ jobs:
           --account "$ACCOUNT_ID"
           --source-sha "$TARGET_SHA"
 
-      - name: Upload Security V2 backup evidence
+      - name: Upload Security V2 backup fingerprint evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-v2-bootstrap-${{ github.run_id }}
-          path: ${{ runner.temp }}/control-pre-security-v2.sql
+          path: ${{ runner.temp }}/security-v2-backup-evidence.json
           if-no-files-found: warn
           retention-days: 30
 
