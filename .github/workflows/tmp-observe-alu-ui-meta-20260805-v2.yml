@@ -1,0 +1,148 @@
+name: TMP Observe Alumdoor UI + Metadata Production 2026-08-05 v2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-observe-alu-ui-meta-20260805-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    name: Read-only exact production observation
+    if: github.head_ref == 'ops/observe-alu-ui-meta-20260805-v2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      ORIGIN: https://alu.kairo.vn
+      EXPECTED_SHA: b168dce8858b57c3ed68db45fafb97964f979f57
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+
+    steps:
+      - name: Verify health and exact release marker with cache bust
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_SHA"
+
+          health_code="$(curl --silent --show-error --max-time 15 -o /tmp/health.json -w '%{http_code}' \
+            -H 'Cache-Control: no-cache' \
+            "$ORIGIN/health?release=$EXPECTED_SHA&run=$GITHUB_RUN_ID")"
+          test "$health_code" = "200"
+
+          release_ok=false
+          for attempt in $(seq 1 20); do
+            url="$ORIGIN/release.json?sha=$EXPECTED_SHA&run=$GITHUB_RUN_ID&attempt=$attempt"
+            code="$(curl --silent --show-error --max-time 15 -o /tmp/release.json -w '%{http_code}' \
+              -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' "$url" || true)"
+            if [ "$code" = "200" ] && node - /tmp/release.json "$EXPECTED_SHA" <<'NODE'
+          const fs = require('node:fs');
+          const [path, expected] = process.argv.slice(2);
+          const release = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (release.releaseSha !== expected || !release.bundleHash) process.exit(2);
+          console.log(`EXACT_RELEASE_PASS sha=${release.releaseSha} bundle=${release.bundleHash}`);
+          NODE
+            then
+              release_ok=true
+              break
+            fi
+            echo "attempt=$attempt code=$code marker=$(cat /tmp/release.json 2>/dev/null || true)"
+            sleep 2
+          done
+          [ "$release_ok" = true ] || {
+            echo "Exact production release marker did not converge."
+            cat /tmp/release.json 2>/dev/null || true
+            exit 1
+          }
+
+      - name: Verify deployed rich action asset is publicly served
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --max-time 15 -o /tmp/native-action.js -w '%{http_code}' \
+            -H 'Cache-Control: no-cache' \
+            "$ORIGIN/assets/NativeActionScreen-PWhKUY_A.js?sha=$EXPECTED_SHA&run=$GITHUB_RUN_ID")"
+          test "$code" = "200"
+          test -s /tmp/native-action.js
+          bytes="$(wc -c < /tmp/native-action.js | tr -d ' ')"
+          test "$bytes" -gt 1000
+          sha="$(sha256sum /tmp/native-action.js | awk '{print $1}')"
+          echo "RICH_ACTION_ASSET_PASS bytes=$bytes sha256=$sha"
+
+      - name: Verify guest boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --max-time 15 -o /tmp/guest.json -w '%{http_code}' \
+            -H 'content-type: application/json' \
+            -H 'Cache-Control: no-cache' \
+            -X POST "$ORIGIN/api/method/frappe.desk.desktop.get_bootinfo?run=$GITHUB_RUN_ID" \
+            --data '{}')"
+          test "$code" = "403"
+          echo "GUEST_BOUNDARY_PASS status=$code"
+
+      - name: Verify installed procurement declaration as authenticated admin
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${FORGE_ADMIN_USER:-}"
+          test -n "${FORGE_ADMIN_PASSWORD:-}"
+          node --input-type=module <<'NODE'
+          const origin = process.env.ORIGIN.replace(/\/$/, '');
+          const user = process.env.FORGE_ADMIN_USER;
+          const password = process.env.FORGE_ADMIN_PASSWORD;
+          const jar = new Map();
+          let csrf = '';
+          function store(response) {
+            for (const value of response.headers.getSetCookie?.() ?? []) {
+              const pair = value.split(';')[0];
+              const i = pair.indexOf('=');
+              if (i > 0) jar.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
+            }
+          }
+          async function call(method, body = {}) {
+            const response = await fetch(`${origin}/api/method/${method}`, {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                'cache-control': 'no-cache',
+                ...(jar.size ? { cookie: [...jar].map(([k,v]) => `${k}=${v}`).join('; ') } : {}),
+                ...(csrf ? { 'x-frappe-csrf-token': csrf } : {}),
+              },
+              body: JSON.stringify(body),
+            });
+            store(response);
+            csrf = response.headers.get('x-frappe-csrf-token') ?? csrf;
+            const text = await response.text();
+            let parsed;
+            try { parsed = JSON.parse(text); } catch { throw new Error(`${method} invalid JSON: ${text.slice(0,200)}`); }
+            if (!response.ok) throw new Error(`${method} HTTP ${response.status}: ${parsed.message ?? text.slice(0,200)}`);
+            return parsed.message ?? parsed;
+          }
+          await call('login', { usr: user, pwd: password });
+          const manifest = await call('metaforge.api.get_app_manifest', { app: 'alumdoor' });
+          const nav = Array.isArray(manifest.nav) ? manifest.nav : [];
+          const receipt = nav.find((entry) => entry?.key === 'action:nhap-nhom-hang-loat');
+          if (!receipt) throw new Error('missing action:nhap-nhom-hang-loat');
+          if (receipt.label !== 'Nhập hàng') throw new Error(`unexpected receipt label: ${receipt.label}`);
+          for (const key of ['Purchase Order', 'Purchase Receipt']) {
+            if (!nav.some((entry) => entry?.key === key)) throw new Error(`missing procurement declaration: ${key}`);
+          }
+          console.log(`PROCUREMENT_DECLARATION_PASS nav=${nav.length} receipt=${receipt.label}`);
+          NODE
+
+      - name: Publish observation summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Read-only Alumdoor production observation'
+            echo
+            echo "Expected release: \`$EXPECTED_SHA\`"
+            echo "Production origin: \`$ORIGIN\`"
+            echo 'No deployment, D1 mutation, DNS, secret or route change is performed by this observer.'
+          } >> "$GITHUB_STEP_SUMMARY"
