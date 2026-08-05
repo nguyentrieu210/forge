@@ -8,6 +8,10 @@ import {
   type AvailableToPromiseResult,
   type CommercialReservationResult,
 } from "../../clouderp-stock/src/index.js";
+import {
+  resolveMarketplaceCustomerIdentity,
+  type MarketplaceCustomerIdentityStatus,
+} from "./marketplace-customer-identity.js";
 import { ensureCanonicalMarketplaceSalesOrder, marketplaceOrderSourceKey, type MarketplaceOrderResult } from "./marketplace-order.js";
 import type { ResolvedMarketplaceOrder } from "./marketplace-profile.js";
 
@@ -15,6 +19,10 @@ export interface MarketplaceOperationalOrderResult extends MarketplaceOrderResul
   order_id: string;
   operational_status: string;
   reservation: CommercialReservationResult;
+  customer: string;
+  customer_identity_status: MarketplaceCustomerIdentityStatus;
+  customer_identity_key: string | null;
+  crm_contact: string | null;
 }
 
 export interface MarketplaceOperationalOrderRow {
@@ -32,8 +40,8 @@ export interface MarketplaceOperationalOrderRow {
 /**
  * Full marketplace order acceptance owned by commerce orchestration while stock ATP
  * remains owned by clouderp-stock and the commercial document remains a canonical
- * Sales Order. Reservation happens before Sales Order submit. If canonical pricing or
- * submit fails, only the reservation is released; no shadow order authority is created.
+ * Sales Order. Exact Customer identity is resolved before reservation/submit; provider
+ * input can never select the ERP Customer. Reservation happens before Sales Order submit.
  */
 export async function ingestResolvedMarketplaceOrder(
   db: D1Database,
@@ -41,24 +49,26 @@ export async function ingestResolvedMarketplaceOrder(
   actor: Actor,
   resolved: ResolvedMarketplaceOrder,
 ): Promise<MarketplaceOperationalOrderResult> {
+  const customerResolution = await resolveMarketplaceCustomerIdentity(db, tenantId, resolved);
+  const effective = customerResolution.resolved;
   const sourceKey = await marketplaceOrderSourceKey(
-    resolved.order.provider,
-    resolved.order.shop_id,
-    resolved.order.external_order_id,
+    effective.order.provider,
+    effective.order.shop_id,
+    effective.order.external_order_id,
   );
   const reservation = await reserveCommercialStock(db, tenantId, {
     source_doctype: "Marketplace Order",
     source_name: sourceKey,
-    lines: resolved.order.items.map((item) => ({
+    lines: effective.order.items.map((item) => ({
       item_code: item.item_code,
-      warehouse: resolved.warehouse,
+      warehouse: effective.warehouse,
       qty_micros: item.quantity * 1_000_000,
     })),
   });
 
   let canonical: MarketplaceOrderResult;
   try {
-    canonical = await ensureCanonicalMarketplaceSalesOrder(db, tenantId, actor, resolved.order);
+    canonical = await ensureCanonicalMarketplaceSalesOrder(db, tenantId, actor, effective.order);
   } catch (error) {
     await releaseCommercialStockReservations(
       db,
@@ -110,6 +120,10 @@ export async function ingestResolvedMarketplaceOrder(
     order_id: orderId,
     operational_status: operational.status,
     reservation,
+    customer: customerResolution.identity.customer,
+    customer_identity_status: customerResolution.identity.status,
+    customer_identity_key: customerResolution.identity.identity_key,
+    crm_contact: customerResolution.identity.crm_contact,
   };
 }
 
