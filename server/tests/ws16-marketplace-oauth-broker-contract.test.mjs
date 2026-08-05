@@ -64,6 +64,8 @@ test("manager connection list exposes only canonical connection and non-secret c
   assert.match(startBridge, /doctype='Marketplace Connection'/);
   assert.match(startBridge, /resolveMarketplaceConnection\(env\.DB, tenantId, row\.name\)/);
   assert.match(startBridge, /new D1MarketplaceCredentialVault\(env\.DB, env\.MARKETPLACE_CREDENTIAL_KEK\)/);
+  assert.match(startBridge, /const secretRef = resolved\.connection\.secret_ref/);
+  assert.match(startBridge, /vault && secretRef/);
   assert.match(startBridge, /reauthorization_required/);
   assert.match(startBridge, /access_expires_at/);
   assert.match(startBridge, /refresh_expires_at/);
