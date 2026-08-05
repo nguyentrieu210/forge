@@ -19,7 +19,7 @@ test("marketplace OAuth reuses the control-plane transaction authority without s
 
 test("broker binds single-use state to canonical tenant worker and connection", () => {
   assert.match(broker, /\/internal\/oauth\/marketplace\/start/);
-  assert.match(broker, /\/oauth\\\/marketplace\\\/(shopee\|lazada\|tiktok_shop)\\\/callback/);
+  assert.ok(broker.includes('const callback = url.pathname.match(/^\\/oauth\\/marketplace\\/(shopee|lazada|tiktok_shop)\\/callback$/);'));
   assert.match(broker, /stateHash = await sha256\(state\)/);
   assert.match(broker, /connection_id\n\s*\) VALUES/);
   assert.match(broker, /consumed_at IS NULL/);
