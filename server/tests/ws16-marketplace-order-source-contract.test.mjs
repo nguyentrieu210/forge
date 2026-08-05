@@ -28,7 +28,8 @@ async function sources() {
 test("marketplace order ingestion is provider-neutral and idempotently maps into canonical Sales Order", async () => {
   const { marketplace, canonical } = await sources();
   assert.match(marketplace, /MARKETPLACE_PROVIDERS = \["shopee", "lazada", "tiktok_shop"\]/);
-  assert.match(marketplace, /marketplaceOrderSourceKey\(normalized\.provider, normalized\.shop_id, normalized\.external_order_id\)/);
+  assert.match(marketplace, /await marketplaceOrderSourceKey\(normalized\.provider, normalized\.shop_id, normalized\.external_order_id\)/);
+  assert.match(marketplace, /sha256Hex\(JSON\.stringify\(\[provider, shop, order\]\)\)/);
   assert.match(marketplace, /ensureCanonicalSocialSalesOrder\(db, tenantId, actor/);
   assert.match(marketplace, /cart_id: `marketplace:\$\{sourceKey\}`/);
   assert.match(marketplace, /page_id: channelId/);
@@ -48,7 +49,7 @@ test("marketplace commercial total is an assertion, never a trusted pricing inpu
   assert.doesNotMatch(marketplace, /unit_price/);
 });
 
-test("marketplace profile and SKU mapping are metadata-first and secret-free", async () => {
+test("marketplace profile and SKU mapping are metadata-first, unique and secret-free", async () => {
   const { app, profile, mapping } = await sources();
   assert.equal(app.id, "social-commerce");
   assert.equal(app.version, "0.3.0");
@@ -59,6 +60,7 @@ test("marketplace profile and SKU mapping are metadata-first and secret-free", a
 
   assert.equal(profile.name, "Commerce Channel Profile");
   assert.equal(mapping.name, "Marketplace SKU Mapping");
+  assert.equal(mapping.autoname, "format:{channel_profile}:{external_sku}:{external_variant_key}");
   const profileFields = new Map(profile.fields.map((field) => [field.fieldname, field]));
   assert.equal(profileFields.get("company")?.options, "Company");
   assert.equal(profileFields.get("warehouse")?.options, "Warehouse");
@@ -68,6 +70,8 @@ test("marketplace profile and SKU mapping are metadata-first and secret-free", a
   const mappingFields = new Map(mapping.fields.map((field) => [field.fieldname, field]));
   assert.equal(mappingFields.get("channel_profile")?.options, "Commerce Channel Profile");
   assert.equal(mappingFields.get("item_code")?.options, "Item");
+  assert.equal(mappingFields.get("external_variant_key")?.required, true);
+  assert.equal(mappingFields.get("external_variant_key")?.default, "BASE");
 
   for (const doc of [profile, mapping]) {
     for (const field of doc.fields) {
