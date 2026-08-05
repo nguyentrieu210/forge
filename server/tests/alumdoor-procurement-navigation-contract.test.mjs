@@ -12,16 +12,17 @@ const briefPath = path.resolve(here, "../briefs/alumdoor-v2.json");
 const PROCUREMENT_KEYS = [
   "action:tao-don-mua",
   "action:nhap-nhom-hang-loat",
-  "report:Mua hàng theo nhà cung cấp",
+  "action:bao-cao-giao-hang-ncc",
   "Purchase Order",
 ];
 
 const PROCUREMENT_LABELS = ["Mua hàng", "Nhập hàng", "Báo cáo", "Lịch sử mua hàng"];
+const MASTER_DETAIL_PREFIX = "MasterDetailList:";
 
 test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình tab", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.2.9");
+  assert.equal(brief.version, "2.2.10");
   const procurementStart = brief.navigation.items.indexOf(PROCUREMENT_KEYS[0]);
   assert.notEqual(procurementStart, -1);
   assert.deepEqual(brief.navigation.items.slice(procurementStart, procurementStart + PROCUREMENT_KEYS.length), PROCUREMENT_KEYS);
@@ -36,7 +37,9 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   const createOrder = brief.actions.find((entry) => entry.name === "tao-don-mua");
   const fifo = brief.actions.find((entry) => entry.name === "nhap-nhom-fifo");
   const bulk = brief.actions.find((entry) => entry.name === "nhap-nhom-hang-loat");
+  const reportAction = brief.actions.find((entry) => entry.name === "bao-cao-giao-hang-ncc");
   const settlement = brief.actions.find((entry) => entry.name === "doi-soat-giao-hang-ncc");
+
   assert.equal(createOrder?.label, "Mua hàng");
   assert.equal(createOrder?.menu, true);
   assert.equal(createOrder?.group, "Mua hàng");
@@ -48,26 +51,50 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   assert.equal(bulk?.label, "Nhập hàng");
   assert.equal(bulk?.menu, true);
   assert.equal(bulk?.group, "Mua hàng");
-  assert.match(bulk?.preview ?? "", /^alumdoor\.purchase\.preview_bulk_fifo_receipt\s*\|/);
-  assert.match(bulk?.commit ?? "", /^alumdoor\.purchase\.bulk_fifo_receipt\s*\|/);
+  assert.match(bulk?.preview ?? "", /^alumdoor\.purchase\.preview_bulk_direct_receipt\s*\|/);
+  assert.match(bulk?.commit ?? "", /^alumdoor\.purchase\.bulk_direct_receipt\s*\|/);
   assert.ok(bulk?.fields.some((field) => typeof field === "string" && field.startsWith("lines:Text(BulkTransaction:")));
+  assert.equal(bulk?.fields.some((field) => typeof field === "string" && /purchase_order|Đơn NCC/.test(field)), false);
+
+  assert.equal(reportAction?.label, "Báo cáo");
+  assert.equal(reportAction?.menu, true);
+  assert.equal(reportAction?.group, "Mua hàng");
+  assert.equal(reportAction?.permissionAction, "read");
+  assert.match(reportAction?.commit ?? "", /^alumdoor\.purchase\.supplier_delivery_dashboard\s*\|/);
+  assert.ok(reportAction?.fields.some((field) => typeof field === "string" && field.startsWith("view_config:Text(MasterDetailList:")));
 
   assert.equal(settlement?.menu, false);
 
   const purchaseReport = brief.reports.find((entry) => entry.name === "Mua hàng theo nhà cung cấp");
-  assert.equal(purchaseReport?.label, "Báo cáo");
-  assert.equal(purchaseReport?.group, "Mua hàng");
+  assert.equal(purchaseReport?.label, "Mua theo nhà cung cấp");
+  assert.equal(purchaseReport?.group, "Báo cáo");
 
   const pkg = compileBrief(brief);
-  assert.equal(pkg.version, "2.2.9");
+  assert.equal(pkg.version, "2.2.10");
   const procurement = pkg.nav.filter((entry) => entry.group === "Mua hàng");
   assert.deepEqual(procurement.map((entry) => entry.key), PROCUREMENT_KEYS);
   assert.deepEqual(procurement.map((entry) => entry.label), PROCUREMENT_LABELS);
+
+  const report = pkg.actions.find((entry) => entry.name === "bao-cao-giao-hang-ncc");
+  assert.equal(report?.permission_action, "read");
+  assert.equal(report?.commit.method, "alumdoor.purchase.supplier_delivery_dashboard");
+  const configField = report?.fields.find((field) => field.fieldname === "view_config");
+  assert.ok(configField?.options?.startsWith(MASTER_DETAIL_PREFIX));
+  const config = JSON.parse(configField.options.slice(MASTER_DETAIL_PREFIX.length));
+  assert.equal(config.sourceDoctype, "Purchase Order");
+  assert.equal(config.submittedOnly, true);
+  assert.deepEqual(config.exceptionPredicate, { field: "received_percentage", operator: "<", value: 100 });
+  assert.equal(config.detailCollection, "purchase_order_lines");
+  assert.equal(config.detailRemainingField, "remaining_bars");
+  assert.equal(config.openDoctype, "Purchase Order");
+  assert.equal(config.chartTop, 8);
+  assert.equal(config.valueFormat, "currency");
 
   const navByKey = new Map(pkg.nav.map((entry) => [entry.key, entry]));
   assert.equal(navByKey.has("Purchase Receipt"), false);
   assert.equal(navByKey.has("action:nhap-nhom-fifo"), false);
   assert.equal(navByKey.has("action:doi-soat-giao-hang-ncc"), false);
+  assert.equal(navByKey.get("report:Mua hàng theo nhà cung cấp")?.group, "Báo cáo");
 
   // Navigation remains presentation only: canonical authorities stay installed/callable.
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Purchase Order"));
@@ -75,5 +102,6 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   assert.ok(pkg.actions.some((entry) => entry.name === "tao-don-mua"));
   assert.ok(pkg.actions.some((entry) => entry.name === "nhap-nhom-fifo"));
   assert.ok(pkg.actions.some((entry) => entry.name === "nhap-nhom-hang-loat"));
+  assert.ok(pkg.actions.some((entry) => entry.name === "bao-cao-giao-hang-ncc"));
   assert.ok(pkg.actions.some((entry) => entry.name === "doi-soat-giao-hang-ncc"));
 });
