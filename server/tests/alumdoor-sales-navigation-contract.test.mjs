@@ -12,13 +12,13 @@ const briefPath = path.resolve(here, "../briefs/alumdoor-v2.json");
 const SALES_KEYS = [
   "alumdoor-operations:workbench",
   "Sales Order",
+  "action:giao-hang-dispatch",
   "Delivery Note",
-  "action:giao-hang-theo-ngay",
   "report:Đơn hàng theo khách",
 ];
-const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Phiếu xuất kho", "Giao hàng", "Báo cáo"];
+const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Giao hàng", "Phiếu xuất kho", "Báo cáo"];
 
-test("Alumdoor sales exposes five operational tabs and shared business context in 2.3.0", async () => {
+test("Alumdoor sales exposes five operational tabs, dispatch selection and shared context in 2.3.0", async () => {
   const brief = await readBriefSource(briefPath);
 
   assert.equal(brief.version, "2.3.0");
@@ -39,11 +39,16 @@ test("Alumdoor sales exposes five operational tabs and shared business context i
   assert.equal(deliveryNote?.menu, true);
   assert.equal(deliveryNote?.group, "Bán hàng");
 
-  const delivery = brief.actions.find((entry) => entry.name === "giao-hang-theo-ngay");
+  const legacyDelivery = brief.actions.find((entry) => entry.name === "giao-hang-theo-ngay");
+  const dispatch = brief.actions.find((entry) => entry.name === "giao-hang-dispatch");
   const calculator = brief.actions.find((entry) => entry.name === "tinh-cong-thuc-cua");
-  assert.equal(delivery?.label, "Giao hàng");
-  assert.equal(delivery?.menu, true);
-  assert.equal(delivery?.group, "Bán hàng");
+  assert.equal(legacyDelivery?.menu, false);
+  assert.equal(dispatch?.label, "Giao hàng");
+  assert.equal(dispatch?.menu, true);
+  assert.equal(dispatch?.group, "Bán hàng");
+  assert.match(dispatch?.preview ?? "", /^alumdoor\.delivery_batch\.preview\s*\|/);
+  assert.match(dispatch?.commit ?? "", /^alumdoor\.delivery_batch\.create\s*\|/);
+  assert.ok(dispatch?.fields.some((field) => typeof field === "string" && field.includes("SelectionBatch:")));
   assert.equal(calculator?.menu, false);
 
   const salesReport = brief.reports.find((entry) => entry.name === "Đơn hàng theo khách");
@@ -59,8 +64,12 @@ test("Alumdoor sales exposes five operational tabs and shared business context i
 
   const navByKey = new Map(pkg.nav.map((entry) => [entry.key, entry]));
   assert.equal(navByKey.has("action:tinh-cong-thuc-cua"), false);
+  assert.equal(navByKey.has("action:giao-hang-theo-ngay"), false);
+  assert.equal(navByKey.get("action:giao-hang-dispatch")?.kind, "experience");
   assert.equal(navByKey.get("alumdoor-operations:workbench")?.kind, "experience");
 
+  assert.ok(pkg.actions.some((entry) => entry.name === "giao-hang-theo-ngay"));
+  assert.ok(pkg.actions.some((entry) => entry.name === "giao-hang-dispatch"));
   assert.ok(pkg.actions.some((entry) => entry.name === "tinh-cong-thuc-cua"));
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Sales Order"));
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Delivery Note"));
