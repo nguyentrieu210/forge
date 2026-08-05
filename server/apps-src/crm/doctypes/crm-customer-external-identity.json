@@ -1,0 +1,32 @@
+{
+  "name": "CRM Customer External Identity",
+  "module": "CRM",
+  "autoname": "prompt",
+  "title_field": "linked_customer",
+  "search_fields": ["linked_customer", "provider", "scope_label"],
+  "track_seen": true,
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "provider", "label": "Kênh", "fieldtype": "Select", "options": "shopee\nlazada\ntiktok_shop\nfacebook", "required": true, "set_only_once": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "scope_label", "label": "Gian hàng / phạm vi", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "scope_key", "label": "Scope fingerprint", "fieldtype": "Data", "read_only": true, "set_only_once": true, "hidden": true },
+    { "fieldname": "identity_key", "label": "Identity fingerprint", "fieldtype": "Data", "read_only": true, "set_only_once": true, "hidden": true },
+    { "fieldname": "linked_customer", "label": "Khách hàng ERP", "fieldtype": "Link", "options": "Customer", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "crm_contact", "label": "Liên hệ CRM", "fieldtype": "Link", "options": "CRM Contact", "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "Active\nRevoked", "default": "Active", "required": true, "in_list_view": true, "in_standard_filter": true },
+    { "fieldname": "source", "label": "Nguồn liên kết", "fieldtype": "Data", "required": true, "set_only_once": true },
+    { "fieldname": "linked_at", "label": "Liên kết lúc", "fieldtype": "Datetime", "read_only": true, "in_list_view": true },
+    { "fieldname": "linked_by", "label": "Người liên kết", "fieldtype": "Link", "options": "User", "read_only": true },
+    { "fieldname": "revoked_at", "label": "Thu hồi lúc", "fieldtype": "Datetime", "read_only": true, "depends_on": "eval:doc.status=='Revoked'" },
+    { "fieldname": "revoked_by", "label": "Người thu hồi", "fieldtype": "Link", "options": "User", "read_only": true, "depends_on": "eval:doc.status=='Revoked'" },
+    { "fieldname": "revocation_reason", "label": "Lý do thu hồi", "fieldtype": "Small Text", "read_only": true, "depends_on": "eval:doc.status=='Revoked'" },
+    { "fieldname": "last_change_reason", "label": "Lý do thay đổi gần nhất", "fieldtype": "Small Text", "read_only": true }
+  ],
+  "permissions": [
+    { "role": "Sales User", "read": true, "report": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "report": true, "export": true, "share": true }
+  ],
+  "revision": 1
+}
