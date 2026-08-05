@@ -88,7 +88,7 @@ test("preview nhôm nhập trực tiếp dùng kg thực và không sinh purchas
   assert.equal(body.line_count, 1);
   assert.equal(body.items[0].qty, 27.5);
   assert.equal(body.items[0].actual_weight_kg, 27.5);
-  assert.equal(body.items[0].theoretical_kg, 28.008);
+  assert.ok(Math.abs(body.items[0].theoretical_kg - 28.008) < 1e-9);
   assert.equal(body.items[0].purchase_order, undefined);
   assert.equal(body.items[0].warehouse, "KHO-1");
   assert.equal(state.creates, 0);
