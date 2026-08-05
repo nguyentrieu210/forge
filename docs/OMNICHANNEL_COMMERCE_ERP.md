@@ -75,190 +75,65 @@ Live developer app registration, real seller authorization, provider certificati
 
 ### 3.6 Sync runner and operational health
 
-Order polling uses D1 checkpoint state with:
-
-- compare-and-swap lease/cursor updates;
-- bounded page loops;
-- retry/backoff;
-- cursor advance only after canonical ingest;
-- fair least-recently-synced tenant maintenance;
-- per-shop failure isolation;
-- TikTok update-time high-watermark + overlap replay protection.
-
-Connection UI exposes read-only state, attempts, checkpoint, completion/retry time and bounded error code. Provider cursor and lease/run IDs stay server-side; UI cannot mutate scheduler state.
+Order polling uses D1 checkpoint state with compare-and-swap lease/cursor updates, bounded page loops, retry/backoff, cursor advance only after canonical ingest, fair least-recently-synced tenant maintenance, per-shop failure isolation and TikTok update-time high-watermark + overlap replay protection.
 
 ### 3.7 Provider event watermark
 
-`marketplace_provider_order_state` keeps external lifecycle **evidence**, not ERP lifecycle authority.
+Provider external lifecycle remains evidence only. Newer timestamps advance the external watermark; stale/duplicate/conflicting events are counted without mutating canonical Sales Order, Delivery Note, Stock Return or Finance state.
 
-For each canonical provider/shop/order source identity it records latest provider status/time plus event, stale, duplicate and equal-time conflict counters.
+### 3.8 SKU mapping exception inbox
 
-Rules:
-
-- only a newer provider timestamp may advance the external watermark;
-- stale retries cannot overwrite the latest external status;
-- same-time duplicates are counted;
-- same-time conflicting statuses are counted and the accepted value is preserved;
-- provider status never mutates Sales Order, Delivery Note, Stock Return or Finance state.
-
-The fulfillment UI surfaces this evidence so operators can diagnose out-of-order/replay behavior without creating a second lifecycle control.
-
-### 3.8 SKU mapping exception evidence and inbox
-
-Mapping failures remain fail-closed. Structured reasons are limited to:
-
-- `missing`;
-- `disabled`;
-- `channel_mismatch`;
-- `sku_mismatch`;
-- `variant_mismatch`.
-
-`marketplace_mapping_exceptions` stores tenant/channel/provider/SKU/variant, first/last seen, occurrence count and resolution time only. It does not store buyer/order payload or credentials and cannot create/edit a mapping.
-
-A failed resolution opens/reopens the exact exception. When the same exact SKU/variant later resolves through authoritative metadata, that exception is marked resolved. The authenticated Marketplace Connection projection exposes open exceptions read-only.
-
-MetaForge mounts a manager-only `Lỗi SKU` tab that shows provider, channel profile, external SKU/variant, bounded reason, occurrence count and latest observation. The UI has no mutation call for the exception projection and only links operators to the canonical `Marketplace SKU Mapping` DocType. The inbox therefore cannot auto-map or choose ERP Item codes.
+Mapping failures remain fail-closed. `marketplace_mapping_exceptions` records bounded channel/provider/SKU/variant evidence only. MetaForge exposes a manager-only read-only `Lỗi SKU` tab linking back to canonical `Marketplace SKU Mapping`.
 
 ### 3.9 Customer identity
 
-Marketplace buyer identity is reduced to provider/shop-scoped opaque fingerprints and linked through CRM external identity authority. Raw marketplace buyer IDs are not persisted in canonical customer lineage. Reassignment/revocation follows CRM audit policy and submitted Sales Orders keep their historical Customer.
+Marketplace buyer identity is reduced to provider/shop-scoped opaque fingerprints and linked through CRM external identity authority. Raw marketplace buyer IDs are not persisted in canonical customer lineage.
 
 ### 3.10 Fulfillment, return and COD
 
-Marketplace fulfillment UI reuses canonical operations:
-
-- cancel through Sales Order lifecycle;
-- shipment registration only from an existing Delivery Note belonging to the canonical Sales Order;
-- server-validated shipment transitions;
-- return only from an existing canonical Stock Return;
-- marketplace reservation commit/release follows canonical fulfillment paths.
-
-COD reconciliation is constrained by canonical Delivery Note amount and records evidence only. It does not auto-post GL or create Payment Entry.
+Marketplace fulfillment UI reuses canonical Sales Order, Delivery Note and Stock Return operations. COD reconciliation is constrained by canonical Delivery Note amount and records evidence only.
 
 ### 3.11 Settlement / Finance evidence
 
-Settlement evidence decomposes provider payout, fee, voucher, refund and subsidy components without creating a marketplace GL/payment ledger.
-
-The settlement exception workspace is mounted in Social Commerce `Đối soát`. Optional Finance verification requires:
-
-- canonical Sales Invoice billing the canonical Sales Order; and
-- canonical Payment Entry allocation equal to the provider payout
-
-before cash evidence can be marked verified.
-
-Live provider settlement statement certification/import remains external integration work.
+Settlement evidence decomposes provider payout, fees, vouchers, refunds and subsidies without creating a marketplace GL/payment ledger. Optional verification requires canonical Sales Invoice and Payment Entry evidence.
 
 ### 3.12 Operator order cockpit
 
-The `Đơn sàn` candidate UI adds local operator controls over the bounded order page already loaded from the existing read endpoint:
-
-- search by marketplace order ID, canonical Sales Order or Customer;
-- filter by provider;
-- filter by observed operational status;
-- highlight/filter orders missing canonical Sales Order or Customer links;
-- retain the existing canonical identity and fulfillment actions;
-- show a policy-driven SLA queue for `Cần chú ý`, `Vi phạm`, `Chưa cấu hình` and `Tất cả`.
-
-These controls are observational/client-side only and introduce no lifecycle mutation route. SLA state, due time and fulfillment time are calculated server-side from explicit policy metadata and canonical timestamps; browser code does not calculate thresholds.
+The `Đơn sàn` UI supports search by marketplace order ID/Sales Order/Customer, provider/status/missing-link filters, canonical identity/fulfillment operations and a policy-driven SLA queue.
 
 ### 3.13 Marketplace SLA policy
 
-`Marketplace SLA Policy` is one metadata document per `Commerce Channel Profile`. The first supported metric is `order_to_fulfillment`.
+`Marketplace SLA Policy` is one metadata document per `Commerce Channel Profile`. The first metric is `order_to_fulfillment` with explicit `target_minutes` and `warning_minutes` and no default business threshold.
 
-Policy fields are explicit:
-
-- `target_minutes` — breach threshold;
-- `warning_minutes` — warning window before target;
-- `disabled` — no SLA assertion while disabled.
-
-There is deliberately **no default business threshold**. The controller requires positive target minutes and `warning_minutes < target_minutes`, and keeps channel profile/metric immutable after creation.
-
-SLA observation uses:
-
-- start: immutable `social_orders.created_at`, when Forge accepted the marketplace order;
-- stop: first `social_shipments.created_at`, which is only created through the canonical Delivery Note fulfillment path;
-- cancelled/returned orders: `not_applicable`;
-- no policy/disabled policy: no SLA assertion;
-- malformed policy: `policy_invalid` evidence.
-
-Provider external status and `social_orders.modified_at` are intentionally excluded from the SLA clock. Migration `0123_marketplace_sla_context.sql` binds provider order evidence to its channel profile for policy scope. Existing pre-migration evidence may have a null channel profile until that provider order is replayed; Forge does not guess or reverse a one-way source hash to backfill policy scope.
+SLA starts at immutable `social_orders.created_at` and stops at the first `social_shipments.created_at` backed by canonical Delivery Note evidence. Provider status and `social_orders.modified_at` are excluded. Migration `0123_marketplace_sla_context.sql` binds provider-order evidence to channel policy scope.
 
 ## 4. Sellable ERP module status
 
 | Module | Candidate status |
 |---|---|
-| Channel Center | Implemented: connection metadata, OAuth/re-auth, credential health, sync health. Live seller authorization/certification pending. |
-| Catalog & SKU | Implemented: deterministic mapping + fail-closed mapping exception evidence + dedicated manager inbox UI. Rich listing/publish management is future scope. |
-| Price & Promotion | Canonical price-list authority and amount reconciliation implemented; full outbound listing/promotion management is future scope. |
-| Order Cockpit | Canonical order list, search/provider/status/missing-link filters, identity, fulfillment/return, provider-event diagnostics and metadata-driven SLA queue implemented. |
-| Omnichannel ATP | Generic reservation/ATP lifecycle implemented for marketplace candidate. |
-| Fulfillment | Canonical Delivery Note/tracking/return integration implemented. Provider label/certification-specific behavior remains external/provider work. |
-| Returns/Refunds | Canonical Stock Return boundary implemented; provider-specific refund APIs remain external integration. |
-| Settlement | Evidence, variance UX and canonical Finance verification implemented; real provider statement certification pending. |
+| Channel Center | Implemented; live seller authorization/certification pending. |
+| Catalog & SKU | Deterministic mapping + fail-closed exception inbox implemented. |
+| Price & Promotion | Canonical price-list/amount authority present; outbound management remains future scope. |
+| Order Cockpit | Search/filter, canonical operations, provider diagnostics and metadata-driven SLA queue implemented. |
+| Omnichannel ATP | Generic reservation/ATP implemented. |
+| Fulfillment | Canonical Delivery Note/tracking/return boundary implemented. |
+| Returns/Refunds | Canonical Stock Return boundary implemented; provider-specific refund APIs remain external. |
+| Settlement | Evidence/variance + canonical Finance verification implemented. |
 | Customer 360 | Exact CRM identity authority implemented. |
-| BI | Core operational/SLA data is available; dedicated profitability/SLA report pack remains future product work. |
+| BI | Core operational/SLA data exists; dedicated profitability/SLA pack remains future scope. |
 
 ## 5. Dependency request status
 
-### DR-COMMERCE-01 -> WS04: generic stock reservation / ATP
+- DR-COMMERCE-01 / WS04: engineering satisfied.
+- DR-COMMERCE-02 / WS01: authority boundary satisfied; live statement certification remains external.
+- DR-COMMERCE-03 / WS10+WS11+WS12: production-shaped code seams implemented; live apps/certification/webhooks remain external.
+- DR-COMMERCE-04 / WS02: engineering satisfied.
 
-**Engineering status: satisfied on this branch.** Shared commercial reservation is used; no marketplace-specific stock ledger was introduced.
+## 6. Acceptance invariants
 
-### DR-COMMERCE-02 -> WS01: marketplace financial settlement
+Tests enforce replay idempotency, tenant/auth isolation, fail-closed SKU mapping/amount reconciliation, reservation ordering, canonical fulfillment/return/finance evidence, monotonic provider event evidence, read-only mapping/SLA surfaces and explicit metadata-driven SLA clocks.
 
-**Engineering authority boundary: satisfied.** Settlement/COD evidence and canonical Invoice/Payment verification are implemented without parallel Finance authority. Live provider statement certification remains external integration.
-
-### DR-COMMERCE-03 -> WS10/WS11/WS12: production provider adapters
-
-**Production-shaped code seams: implemented. External readiness: pending.** Adapters, signatures, OAuth exchange, encrypted credential lifecycle, polling, retry and health exist. Remaining work requires real developer apps, seller accounts, redirect URLs, provider certification/live webhooks and provider-specific operational/DLQ requirements.
-
-### DR-COMMERCE-04 -> WS02: customer identity linking
-
-**Engineering status: satisfied.** Exact, privacy-safe CRM external identity authority is reused; no fuzzy marketplace customer merge was introduced.
-
-## 6. Execution status
-
-### Slice A — Channel + order authority
-
-**Implemented and CI-evidenced.**
-
-### Slice B — Production-shaped ingestion
-
-**Engineering implementation complete for polling/OAuth/credential/sync seams.** Live provider app registration, seller authorization, certification and webhook verification are pending external work.
-
-### Slice C — Stock/fulfillment
-
-**Implemented and CI-evidenced** through shared reservation + canonical Delivery Note/Stock Return boundaries.
-
-### Slice D — Finance settlement
-
-**Implemented at evidence/reconciliation authority boundary.** Live provider settlement statement certification remains pending.
-
-### Slice E — Operator UX and BI
-
-**Operator UX substantially implemented.** Connection/sync health, dedicated SKU mapping exception inbox, order search/provider/status/missing-link filters, metadata-driven order-to-fulfillment SLA queue, fulfillment/return, provider-event diagnostics and settlement workspace are live in MetaForge candidate UI. Dedicated profitability/SLA BI remains future product work.
-
-## 7. Acceptance invariants
-
-Engineering tests on this candidate enforce:
-
-- same provider order replay produces one canonical Sales Order;
-- cross-tenant/auth boundaries fail closed;
-- unmapped/invalid SKU cannot silently create an order line;
-- external amount mismatch fails closed against canonical price;
-- reservation precedes canonical conversion and cancel/failure releases appropriately;
-- fulfillment traces to canonical Delivery Note and return to canonical Stock Return;
-- settlement/COD cannot manufacture Finance truth;
-- retries/out-of-order provider events cannot regress canonical lifecycle because provider status is evidence-only and external watermark is monotonic;
-- mapping incidents retain exact bounded SKU/variant evidence without gaining mapping authority;
-- mapping inbox remains read-only and cannot create/edit canonical mappings;
-- order cockpit search/filters are observational and cannot create lifecycle mutations;
-- SLA thresholds come only from `Marketplace SLA Policy`, while SLA clocks use order acceptance and canonical shipment evidence rather than provider status or mutable order timestamps;
-- provider-to-ERP transitions retain deterministic correlation/audit evidence.
-
-Production/business-complete status still additionally requires real provider credentials, seller authorization, certification/live webhook evidence and controlled deployment proof.
-
-## 8. Release boundary
+## 7. Release boundary
 
 This work is a **new product candidate**, not a change to the frozen Alumdoor pilot identity. No production provider credential, customer data, migration, deploy or pilot relock is authorized by this branch.
 
