@@ -7,7 +7,9 @@ import { ActionChildGrid } from "./ActionChildGrid.js";
 import type { ActionScreenProps } from "./ActionScreen.js";
 
 type Values = Record<string, unknown>;
+type ResultRecord = Record<string, unknown>;
 type CommitResult = { doctype?: string; name?: string; message?: string; [key: string]: unknown };
+type BusyPhase = "preview" | "commit" | "print";
 
 function resolveActionDefault(field: AppActionField): unknown {
   if (field.default === "Today" && field.fieldtype === "Date") return new Date().toISOString().slice(0, 10);
@@ -58,13 +60,105 @@ function asResult(value: unknown): CommitResult {
   return value && typeof value === "object" && !Array.isArray(value) ? value as CommitResult : {};
 }
 
+function record(value: unknown): ResultRecord | undefined {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as ResultRecord : undefined;
+}
+
+function scalar(value: unknown, format: (value: number) => string): string {
+  if (value == null || value === "") return "—";
+  if (typeof value === "number") return format(value);
+  if (typeof value === "boolean") return value ? "Có" : "Không";
+  if (Array.isArray(value)) return `${value.length} dòng`;
+  if (typeof value === "object") return "—";
+  return String(value);
+}
+
+function label(key: string): string {
+  const fixed: Record<string, string> = {
+    line_count: "Số dòng",
+    total_qty_bar: "Tổng cây",
+    total_actual_weight_kg: "Kg thực",
+    total_barem_weight_kg: "Kg barem",
+    purchase_order: "Đơn mua",
+    purchase_receipt: "Phiếu nhập",
+    item_code: "Mã hàng",
+    input_row: "Dòng nhập",
+    allocated_bars: "Trừ FIFO",
+    nominal_remaining_bars: "Còn phải giao",
+    message: "Diễn giải",
+  };
+  return fixed[key] ?? key.replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
+}
+
+function ResultTable({ rows, format, onOpen }: { rows: unknown[]; format: (value: number) => string; onOpen?: ActionScreenProps["onOpen"] }) {
+  const records = rows.map(record).filter((value): value is ResultRecord => Boolean(value));
+  if (!records.length) return <div className="px-3 py-4 text-sm text-muted-foreground">Không có dòng dữ liệu.</div>;
+  const keys = [...new Set(records.flatMap((row) => Object.keys(row)))].filter((key) => !key.startsWith("_")).slice(0, 18);
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-max text-sm">
+        <thead className="border-b bg-muted/35 text-left text-xs text-muted-foreground">
+          <tr>{keys.map((key) => <th key={key} className="whitespace-nowrap px-3 py-2 font-medium">{label(key)}</th>)}</tr>
+        </thead>
+        <tbody>
+          {records.map((row, index) => (
+            <tr key={index} className="border-b last:border-b-0">
+              {keys.map((key) => {
+                const value = row[key];
+                const doctype = key === "purchase_order" ? "Purchase Order" : key === "purchase_receipt" ? "Purchase Receipt" : undefined;
+                return (
+                  <td key={key} className="whitespace-nowrap px-3 py-2 align-top tabular-nums">
+                    {doctype && onOpen && typeof value === "string" && value
+                      ? <Button type="button" variant="link" className="h-auto p-0" onClick={() => onOpen(doctype, value)}>{value}</Button>
+                      : scalar(value, format)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RichActionResult({ value, committed, format, onOpen }: {
+  value: unknown;
+  committed: boolean;
+  format: (value: number) => string;
+  onOpen?: ActionScreenProps["onOpen"];
+}) {
+  const data = record(value);
+  if (!data) return <div className="border bg-card px-3 py-3 text-sm">{String(value ?? "")}</div>;
+  const arrays = Object.entries(data).filter(([, entry]) => Array.isArray(entry)) as Array<[string, unknown[]]>;
+  const scalars = Object.entries(data).filter(([key, entry]) => key !== "message" && !Array.isArray(entry) && !record(entry) && !["doctype", "name"].includes(key));
+  const objects = Object.entries(data).filter(([, entry]) => Boolean(record(entry))) as Array<[string, ResultRecord]>;
+  const doctype = typeof data.doctype === "string" ? data.doctype : typeof data.purchase_receipt === "string" ? "Purchase Receipt" : undefined;
+  const name = typeof data.name === "string" ? data.name : typeof data.purchase_receipt === "string" ? data.purchase_receipt : undefined;
+  return (
+    <div className="flex flex-col gap-3" data-rich-action-result>
+      <section className="border bg-card">
+        <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5">
+          <span className={`size-2 rounded-full ${committed ? "bg-emerald-500" : "bg-amber-500"}`} />
+          <strong className="text-sm">{committed ? "Đã tạo chứng từ" : "Xem trước — chưa ghi gì"}</strong>
+          {committed && doctype && name && onOpen ? <Button type="button" size="sm" className="ml-auto" onClick={() => onOpen(doctype, name)}>Mở {name}</Button> : null}
+        </div>
+        {typeof data.message === "string" && data.message ? <div className="border-b bg-muted/15 px-3 py-2 text-sm">{data.message}</div> : null}
+        {scalars.length ? <dl className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{scalars.map(([key, entry]) => <div key={key} className="border bg-background px-3 py-2"><dt className="text-xs text-muted-foreground">{label(key)}</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{scalar(entry, format)}</dd></div>)}</dl> : null}
+      </section>
+      {objects.map(([key, entry]) => <section key={key} className="border bg-card"><div className="border-b px-3 py-2 text-sm font-semibold">{label(key)}</div><dl className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(entry).map(([field, fieldValue]) => <div key={field} className="border bg-background px-3 py-2"><dt className="text-xs text-muted-foreground">{label(field)}</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{scalar(fieldValue, format)}</dd></div>)}</dl></section>)}
+      {arrays.map(([key, rows]) => <section key={key} className="overflow-hidden border bg-card"><div className="flex items-center justify-between border-b px-3 py-2"><strong className="text-sm">{label(key)}</strong><span className="text-xs text-muted-foreground">{rows.length} dòng</span></div><ResultTable rows={rows} format={format} onOpen={onOpen} /></section>)}
+    </div>
+  );
+}
+
 export function isRichAction(action: AppAction): boolean {
   return (action.input_tables ?? []).some((table) => table.presentation?.mode === "child-grid-inline" && Boolean(table.presentation?.row_doctype));
 }
 
 /**
  * Generic rich AppAction renderer. Business rules stay in metadata/worker/controller:
- * this screen only composes scalar controls, canonical child metadata and a computed preview.
+ * this screen only composes scalar controls, canonical child metadata, preview and commit UX.
  */
 export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
   const { adapter, registry, services, fmt, roles, businessContext } = useMetaForge();
@@ -73,9 +167,10 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
   const [meta, setMeta] = useState<DocTypeMeta>();
   const [metaError, setMetaError] = useState<string>();
   const [values, setValues] = useState<Values>(() => initialValues(action, table));
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<BusyPhase>();
   const [error, setError] = useState<string>();
-  const [result, setResult] = useState<CommitResult>();
+  const [preview, setPreview] = useState<unknown>();
+  const [result, setResult] = useState<unknown>();
 
   useEffect(() => {
     let active = true;
@@ -127,23 +222,31 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
 
   const changeValue = (fieldname: string, value: unknown) => {
     setValues((current) => ({ ...current, [fieldname]: value }));
-    setError(undefined); setResult(undefined);
+    setError(undefined); setPreview(undefined); setResult(undefined);
   };
 
-  const commit = async (printAfter: boolean) => {
+  const run = async (phase: "preview" | "commit", printAfter = false) => {
+    const call = phase === "preview" ? action.preview : action.commit;
+    if (!call) return;
     if (missing.length) {
       setError(`Còn thiếu hoặc chưa hợp lệ: ${missing.slice(0, 8).join(", ")}${missing.length > 8 ? ` và ${missing.length - 8} mục khác` : ""}.`);
       return;
     }
+    if (phase === "commit" && call.confirm && !window.confirm(call.confirm)) return;
     const printWindow = printAfter ? window.open("about:blank", "_blank") : null;
-    setBusy(true); setError(undefined); setResult(undefined);
+    setBusy(printAfter ? "print" : phase); setError(undefined);
     try {
       const args = { ...businessContext, ...values } as Record<string, unknown>;
-      const answer = asResult(await adapter.callPost<unknown>(action.commit.method, args));
-      setResult(answer);
-      const doctype = String(answer.doctype ?? "").trim();
-      const name = String(answer.name ?? "").trim();
+      const answer = await adapter.callPost<unknown>(call.method, args);
+      if (phase === "preview") {
+        setPreview(answer); setResult(undefined);
+      } else {
+        setResult(answer); setPreview(undefined);
+      }
       if (printAfter) {
+        const committed = asResult(answer);
+        const doctype = String(committed.doctype ?? "").trim();
+        const name = String(committed.name ?? "").trim();
         if (!doctype || !name) throw new Error("Đã lưu nhưng kết quả không trả về chứng từ để in.");
         const blob = await adapter.downloadPdf(doctype, name, table.presentation?.print_format);
         const url = URL.createObjectURL(blob);
@@ -154,14 +257,16 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
     } catch (caught) {
       printWindow?.close();
       setError(adapter.mapError(caught).message);
+      if (phase === "preview") setPreview(undefined); else setResult(undefined);
     } finally {
-      setBusy(false);
+      setBusy(undefined);
     }
   };
 
   if (metaError) return <div className="w-full border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">{metaError}</div>;
   if (!meta) return <div className="w-full p-4 text-sm text-muted-foreground">Đang tải metadata dòng hàng…</div>;
 
+  const shown = result ?? preview;
   return (
     <div className="flex w-full max-w-none flex-col gap-3" data-rich-action={action.name}>
       {action.description ? <p className="text-xs text-muted-foreground">{action.description}</p> : null}
@@ -190,14 +295,19 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
         <span className="border-t pt-2 text-base font-extrabold">TỔNG</span><strong className="border-t pt-2 text-right text-base font-extrabold">{fmt.number(grandTotal)}</strong>
       </div> : null}
 
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3">
-        {missing.length ? <span className="mr-auto text-xs text-muted-foreground">Còn {missing.length} mục bắt buộc/chưa hợp lệ</span> : null}
-        <Button type="button" variant="outline" disabled={busy} onClick={() => void commit(false)}>{busy ? "Đang lưu…" : "Lưu"}</Button>
-        <Button type="button" disabled={busy} onClick={() => void commit(true)}>{busy ? "Đang lưu…" : "Lưu & In PDF"}</Button>
+      <div className="sticky bottom-2 z-10 flex flex-wrap items-center justify-end gap-2 border bg-card/95 p-3 shadow-lg backdrop-blur">
+        {missing.length ? <span className="mr-auto text-xs text-muted-foreground">Còn {missing.length} mục bắt buộc/chưa hợp lệ</span> : <span className="mr-auto text-xs text-muted-foreground">{action.preview ? "Xem trước chưa ghi dữ liệu." : "Sẵn sàng lưu chứng từ."}</span>}
+        {action.preview ? <>
+          <Button type="button" variant="outline" disabled={Boolean(busy)} onClick={() => void run("preview")}>{busy === "preview" ? "Đang kiểm tra…" : action.preview.label}</Button>
+          {preview !== undefined ? <Button type="button" disabled={Boolean(busy)} onClick={() => void run("commit")}>{busy === "commit" ? "Đang tạo…" : action.commit.label}</Button> : null}
+        </> : <>
+          <Button type="button" variant="outline" disabled={Boolean(busy)} onClick={() => void run("commit")}>{busy === "commit" ? "Đang lưu…" : "Lưu"}</Button>
+          <Button type="button" disabled={Boolean(busy)} onClick={() => void run("commit", true)}>{busy === "print" ? "Đang lưu…" : "Lưu & In PDF"}</Button>
+        </>}
       </div>
 
       {error ? <div className="border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">{error}</div> : null}
-      {result ? <div className="flex items-center gap-2 border bg-muted/20 px-3 py-2 text-sm"><span>{String(result.message ?? "Đã lưu chứng từ.")}</span>{onOpen && result.doctype && result.name ? <Button type="button" variant="link" className="ml-auto h-auto p-0" onClick={() => onOpen(String(result.doctype), String(result.name))}>Mở {String(result.name)}</Button> : null}</div> : null}
+      {shown !== undefined ? <RichActionResult value={shown} committed={result !== undefined} format={(value) => fmt.number(value)} onOpen={onOpen} /> : null}
     </div>
   );
 }
