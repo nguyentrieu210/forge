@@ -1,7 +1,7 @@
 import {
   buildSalesProductionLines,
   calculateLeafPlan,
-  calculateSalesProductionLine,
+  calculateSalesProductionLine as calculateSalesProductionLineCore,
   createSalesProduction as createSalesProductionCore,
   previewSalesProduction,
   validateProductionRequest,
@@ -9,11 +9,11 @@ import {
   type ProductionPlatformCall,
   type SalesProductionLine,
 } from "./sales-production-core.js";
+import { calculateSalesWizardLineContext } from "./sales-wizard-context.js";
 
 export {
   buildSalesProductionLines,
   calculateLeafPlan,
-  calculateSalesProductionLine,
   previewSalesProduction,
   validateProductionRequest,
 };
@@ -54,6 +54,21 @@ function refuse(message: string): Response {
     status: 422,
     headers: { "content-type": "application/json" },
   });
+}
+
+/**
+ * Backward-compatible entry point. Existing callers keep the old production-line contract.
+ * The sales wizard opts into the richer customer-measurement vocabulary explicitly, so its
+ * RLL/CLL -> policy dimensions stay server-owned instead of leaking constants into React.
+ */
+export async function calculateSalesProductionLine(
+  call: ProductionPlatformCall,
+  args: Json,
+): Promise<Response> {
+  if (text(args.width_input_basis) || text(args.height_input_basis) || text(args.ray_type)) {
+    return calculateSalesWizardLineContext(call, args);
+  }
+  return calculateSalesProductionLineCore(call, args);
 }
 
 function duplicateListDoctype(path: string): string | null {

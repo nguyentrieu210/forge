@@ -256,8 +256,27 @@ function parsedPolicies(raw: RawPolicy[]): Array<{ parsed: DoorFormulaPolicy; ra
   return raw.map((row) => ({ parsed: parseDoorPolicy(row), raw: row }));
 }
 
-function choosePolicy(rawPolicies: RawPolicy[], doorType: DoorType, itemGroup: string): { parsed: DoorFormulaPolicy; raw: RawPolicy } {
+function choosePolicy(
+  rawPolicies: RawPolicy[],
+  doorType: DoorType,
+  itemGroup: string,
+  requestedPolicy?: unknown,
+): { parsed: DoorFormulaPolicy; raw: RawPolicy } {
   const pairs = parsedPolicies(rawPolicies);
+  const requested = text(requestedPolicy);
+  if (requested) {
+    const pair = pairs.find((entry) => entry.parsed.policy_name === requested || text(entry.raw.name) === requested);
+    if (!pair) throw new Error(`Không còn Chính sách công thức ${requested} đã chụp trên đơn hàng.`);
+    const declaredDoorType = text(pair.raw.door_type);
+    if (declaredDoorType && declaredDoorType !== doorType) {
+      throw new Error(`Chính sách ${requested} thuộc ${declaredDoorType}, không khớp ${doorType} trên mặt hàng.`);
+    }
+    const declaredItemGroup = text(pair.raw.item_group);
+    if (declaredItemGroup && declaredItemGroup !== itemGroup) {
+      throw new Error(`Chính sách ${requested} thuộc nhóm ${declaredItemGroup}, không khớp ${itemGroup} trên mặt hàng.`);
+    }
+    return pair;
+  }
   const parsed = selectDoorPolicy(pairs.map((entry) => entry.parsed), doorType, itemGroup);
   const pair = pairs.find((entry) => entry.parsed.policy_name === parsed.policy_name);
   if (!pair) throw new Error(`Không đọc được chi tiết chính sách ${parsed.policy_name}.`);
@@ -442,7 +461,7 @@ export function buildSalesProductionLines(input: BuildInputs): SalesProductionLi
     const sets = positiveInteger(row.set_count ?? 1, `Dòng ${index + 1}: Số bộ`);
     const salesMode = (text(row.sales_mode) || "Trọn bộ") as SalesMode;
     if (salesMode !== "Trọn bộ" && salesMode !== "Tách món") throw new Error(`Dòng ${index + 1}: Cách bán không hợp lệ.`);
-    const chosen = choosePolicy(input.policies, doorType, itemGroup);
+    const chosen = choosePolicy(input.policies, doorType, itemGroup, row.formula_policy);
     const formula = calculateDoorFormula(chosen.parsed, {
       door_type: doorType,
       item_group: itemGroup,
@@ -613,7 +632,7 @@ export async function calculateSalesProductionLine(
         "effective_from", "effective_to", "disabled",
       ]).catch(() => []),
     ]);
-    const chosen = choosePolicy(policies, doorType, text(item.item_group));
+    const chosen = choosePolicy(policies, doorType, text(item.item_group), args.formula_policy);
     const sets = positiveInteger(args.set_count ?? 1, "Số bộ");
     const formula = calculateDoorFormula(chosen.parsed, {
       door_type: doorType,
@@ -684,7 +703,7 @@ export async function previewSalesProduction(call: ProductionPlatformCall, args:
       lines: items.length,
       work_orders: items.length,
       estimated_minutes: round(items.reduce((sum, line) => sum + line.estimated_minutes, 0), 2),
-      estimated_weight_kg: round(items.reduce((sum, line) => sum + Number(line.estimated_weight_kg ?? 0), 0), 3),
+      estimated_weight_kg: round(items.reduce((sum, line) => sum + Number(line.estimated_weight_kg ?? 0), 0, 0), 3),
       warnings,
       items,
     });
