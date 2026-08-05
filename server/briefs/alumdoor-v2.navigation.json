@@ -1,0 +1,26 @@
+{
+  "version": "2.2.4",
+  "//": "Primary procurement navigation is one operating workspace. Canonical DocTypes/actions remain installed and directly addressable; only daily menu presentation is consolidated here.",
+  "doctypes": {
+    "Purchase Order": {
+      "menu": false
+    },
+    "Purchase Receipt": {
+      "menu": false
+    }
+  },
+  "actions": {
+    "nhap-nhom-fifo": {
+      "label": "Mua hàng",
+      "menu": true,
+      "icon": "shopping-cart",
+      "group": "Mua hàng"
+    },
+    "nhap-nhom-hang-loat": {
+      "menu": false
+    },
+    "doi-soat-giao-hang-ncc": {
+      "menu": false
+    }
+  }
+}

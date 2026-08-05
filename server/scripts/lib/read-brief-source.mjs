@@ -195,6 +195,60 @@ function applyActionSidecar(brief, extension, source, briefSource) {
   return { ...brief, ...(extension.version ? { version: extension.version } : {}), actions: [...(brief.actions ?? []), ...extension.actions] };
 }
 
+/**
+ * Navigation is presentation metadata, not business authority. A navigation sidecar can
+ * hide an installed DocType/action from the daily menu or rename/regroup it without copying
+ * its schema/action definition. Direct links, permissions and canonical controllers stay
+ * untouched. Applied after action/integration sidecars so it may target appended actions.
+ */
+const NAVIGATION_OVERRIDE_KEYS = new Set(["menu", "label", "icon", "group"]);
+
+function applyNavigationOverrides(items, overrides, source, section) {
+  if (overrides === undefined) return items;
+  if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) throw new Error(`${source}: ${section} phải là object theo name.`);
+  if (!Array.isArray(items)) throw new Error(`${source}: brief không có mảng ${section} để override navigation.`);
+
+  const requested = new Map();
+  for (const [name, override] of Object.entries(overrides)) {
+    if (!override || typeof override !== "object" || Array.isArray(override)) throw new Error(`${source}: ${section}.${name} phải là object.`);
+    const unsupported = Object.keys(override).filter((key) => !NAVIGATION_OVERRIDE_KEYS.has(key) && !key.startsWith("//"));
+    if (unsupported.length) throw new Error(`${source}: ${section}.${name} chỉ nhận menu, label, icon, group; không nhận ${unsupported.join(", ")}.`);
+    if (override.menu !== undefined && typeof override.menu !== "boolean") throw new Error(`${source}: ${section}.${name}.menu phải là boolean.`);
+    for (const key of ["label", "icon", "group"]) {
+      if (override[key] !== undefined && (typeof override[key] !== "string" || !override[key].trim())) throw new Error(`${source}: ${section}.${name}.${key} phải là chuỗi không rỗng.`);
+    }
+    requested.set(name, override);
+  }
+  if (!requested.size) throw new Error(`${source}: ${section} phải có ít nhất một override.`);
+
+  const seen = new Set();
+  const next = items.map((item) => {
+    const name = typeof item?.name === "string" ? item.name : "";
+    const override = requested.get(name);
+    if (!override) return item;
+    seen.add(name);
+    const clean = Object.fromEntries(Object.entries(override).filter(([key]) => !key.startsWith("//")));
+    return { ...item, ...clean };
+  });
+  const missing = [...requested.keys()].filter((name) => !seen.has(name));
+  if (missing.length) throw new Error(`${source}: ${section} không tồn tại trong brief sau khi ghép sidecar: ${missing.join(", ")}.`);
+  return next;
+}
+
+function applyNavigationSidecar(brief, extension, source) {
+  assertSidecarObject(extension, source);
+  const unsupported = Object.keys(extension).filter((key) => !["version", "doctypes", "actions"].includes(key) && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: chỉ nhận version, doctypes, actions và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  if (extension.doctypes === undefined && extension.actions === undefined) throw new Error(`${source}: phải khai doctypes hoặc actions.`);
+
+  return {
+    ...brief,
+    ...(extension.version ? { version: extension.version } : {}),
+    doctypes: applyNavigationOverrides(brief.doctypes, extension.doctypes, source, "doctypes"),
+    actions: applyNavigationOverrides(brief.actions ?? [], extension.actions, source, "actions"),
+  };
+}
+
 export async function readBriefSource(source) {
   const sourcePath = sourcePathOf(source);
   let brief = parseJson(await readFile(sourcePath, "utf8"), sourcePath);
@@ -216,10 +270,15 @@ export async function readBriefSource(source) {
   const actions = await readOptionalJson(actionsSource);
   if (actions) brief = applyActionSidecar(brief, actions, actionsSource, sourcePath);
 
-  // Integration sidecar is applied last so its version represents the complete source package.
   const integrationsSource = path.join(parsed.dir, `${parsed.name}.integrations.json`);
   const integrations = await readOptionalJson(integrationsSource);
   if (integrations) brief = applyIntegrationSidecar(brief, integrations, integrationsSource, sourcePath);
+
+  // Presentation overrides are applied last so they can target actions appended above and
+  // their version represents the complete source package.
+  const navigationSource = path.join(parsed.dir, `${parsed.name}.navigation.json`);
+  const navigation = await readOptionalJson(navigationSource);
+  if (navigation) brief = applyNavigationSidecar(brief, navigation, navigationSource);
 
   return brief;
 }
