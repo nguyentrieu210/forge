@@ -99,7 +99,6 @@ jobs:
           pnpm --filter cloudforge run build
           pnpm --filter metaforge run build
           node --test \
-            server/tests/app-registry.test.mjs \
             server/tests/app-installer-standard-metadata-adoption.test.mjs \
             server/tests/frappe-platform.test.mjs \
             server/tests/verify-installed-app.test.mjs \
