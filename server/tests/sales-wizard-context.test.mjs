@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { calculateSalesWizardLineContext } from "../dist/apps-src/alumdoor-worker/src/sales-wizard-context.js";
+import { handleSalesOrderOperationalSummary } from "../dist/apps-src/alumdoor-worker/src/sales-order-operational-summary.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const operationalQueuePath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorSalesOrderOperationalQueue.tsx");
+const operationsRouterPath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorOperationsCenter.ts");
 
 const policy = {
   name: "POL-DUC-U75",
@@ -171,4 +179,98 @@ test("BOM nhiều nhôm cây/lá mà không khai dòng Theo số lá không đư
   const result = await body(response);
   assert.equal(result.stock_profile_item, null);
   assert.match(result.stock_profile_error, /nhiều vật tư Nhôm cây\/lá/);
+});
+
+function summaryRequest(args) {
+  return new Request("https://app.local/api/method/alumdoor.sales.order_operational_summary", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-cloudforge-callback": "https://gateway.local/api",
+      "x-cloudforge-tenant": "alu",
+    },
+    body: JSON.stringify({ args }),
+  });
+}
+
+function hasFilter(url, field, operator, value) {
+  const filters = JSON.parse(url.searchParams.get("filters") ?? "[]");
+  return filters.some((entry) => Array.isArray(entry) && entry[0] === field && entry[1] === operator && entry[2] === value);
+}
+
+test("work queue summary ghép giữ hàng, sản xuất và cắt chỉ cho Sales Order đúng Company", async () => {
+  const env = {
+    PLATFORM: {
+      async fetch(outbound) {
+        const url = new URL(outbound.url);
+        const resource = decodeURIComponent(url.pathname).replace(/^\/api\/resource\//, "");
+        if (resource === "Sales Order") {
+          assert.ok(hasFilter(url, "docstatus", "=", 1));
+          assert.ok(hasFilter(url, "company", "=", "ALUMDOOR"));
+          return json({ data: [
+            { name: "SO-A", company: "ALUMDOOR", docstatus: 1, status: "To Deliver", modified: "2026-08-06T10:00:00Z" },
+            { name: "SO-B", company: "ALUMDOOR", docstatus: 1, status: "To Deliver", modified: "2026-08-06T09:00:00Z" },
+          ] });
+        }
+        if (resource === "Stock Reservation") {
+          assert.ok(hasFilter(url, "source_doctype", "=", "Sales Order"));
+          return json({ data: [
+            { name: "RES-A1", source_name: "SO-A", state: "Đang giữ", modified: "2026-08-06T10:02:00Z" },
+            { name: "RES-OTHER", source_name: "SO-OTHER-COMPANY", state: "Đang giữ", modified: "2026-08-06T10:03:00Z" },
+          ] });
+        }
+        if (resource === "Production Request") {
+          return json({ data: [
+            { name: "PR-A", sales_order: "SO-A", request_state: "Đã phát hành", modified: "2026-08-06T11:00:00Z" },
+            { name: "PR-OTHER", sales_order: "SO-OTHER-COMPANY", request_state: "Đã phát hành", modified: "2026-08-06T11:01:00Z" },
+          ] });
+        }
+        if (resource === "Cut Order") {
+          assert.ok(hasFilter(url, "company", "=", "ALUMDOOR"));
+          return json({ data: [{ name: "CUT-A", so_reference: "SO-A", cut_state: "Nháp", company: "ALUMDOOR", modified: "2026-08-06T12:00:00Z" }] });
+        }
+        throw new Error(`unexpected callback ${url.pathname}`);
+      },
+    },
+  };
+
+  const response = await handleSalesOrderOperationalSummary(summaryRequest({ company: "ALUMDOOR" }), env);
+  const result = await body(response);
+  assert.equal(response.status, 200, result.message);
+  assert.equal(result.rows.length, 2);
+  const a = result.rows.find((row) => row.sales_order === "SO-A");
+  const b = result.rows.find((row) => row.sales_order === "SO-B");
+  assert.equal(a.reservation_state, "Đang giữ");
+  assert.equal(a.production_request, "PR-A");
+  assert.equal(a.production_state, "Đã phát hành");
+  assert.equal(a.cut_order, "CUT-A");
+  assert.equal(a.cut_state, "Nháp");
+  assert.equal(b.reservation_state, "Chưa giữ");
+  assert.equal(result.rows.some((row) => row.sales_order === "SO-OTHER-COMPANY"), false);
+});
+
+test("work queue summary fail-closed trước callback nếu thiếu Company", async () => {
+  let calls = 0;
+  const response = await handleSalesOrderOperationalSummary(summaryRequest({}), {
+    PLATFORM: { async fetch() { calls += 1; return json({ data: [] }); } },
+  });
+  assert.equal(response.status, 422);
+  assert.match((await body(response)).message, /Công ty/);
+  assert.equal(calls, 0);
+});
+
+test("tab Đơn hàng route sang operational queue và UI dùng canonical summary như lớp bổ sung", async () => {
+  const [queue, router] = await Promise.all([
+    readFile(operationalQueuePath, "utf8"),
+    readFile(operationsRouterPath, "utf8"),
+  ]);
+  assert.match(router, /AlumdoorSalesOrderOperationalQueue/);
+  assert.match(router, /alumdoor-operations:orders/);
+  assert.match(queue, /alumdoor\.sales\.order_operational_summary/);
+  assert.match(queue, /reservation_state/);
+  assert.match(queue, /production_request/);
+  assert.match(queue, /cut_order/);
+  assert.match(queue, /setRows\(all\.filter/);
+  assert.match(queue, /void loadOperational\(company\)/, "planning summary must be supplemental after primary SO rows load");
+  assert.match(queue, /Đơn hàng vẫn dùng được/, "planning summary failure must not block the canonical Sales Order queue");
 });
