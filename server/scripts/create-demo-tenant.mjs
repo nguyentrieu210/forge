@@ -5,13 +5,15 @@
  * This is an orchestrator, not a second provisioning implementation. It reuses:
  * - Cloudflare D1 as the tenant database authority;
  * - provision-tenant.mjs for migrations/Worker/secrets/route/admin;
- * - forge-app.mjs for metadata install + browser-path verification.
+ * - forge-app.mjs for metadata install + browser-path verification;
+ * - seed-demo-data.mjs for optional synthetic canonical demo documents.
  *
  * It deliberately does NOT create or rewrite DNS/Worker routes. The platform wildcard
  * (*.kairo.vn -> cloudforge-gateway) is shared production infrastructure and must be
  * bootstrapped separately under provider governance. A missing wildcard therefore fails
  * during the readiness probe instead of being silently repaired here.
  */
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
@@ -31,7 +33,17 @@ const argOf = (name, fallback) => {
   return index >= 0 ? args[index + 1] : fallback;
 };
 
-const briefPath = args[0] && !args[0].startsWith("--") ? args[0] : null;
+const briefArg = args[0] && !args[0].startsWith("--") ? args[0] : null;
+if (!briefArg) fail("usage: node scripts/create-demo-tenant.mjs <brief.json> --customer <name> [--slug thuy] [--admin admin] [--plan pro] [--seed seed.json] [--dry-run]");
+// Child scripts run with cwd=serverRoot. Resolve the caller's path NOW so both
+// `server/briefs/x.json` (repo-root workflow) and `briefs/x.json` (server cwd) work.
+const briefPath = path.resolve(process.cwd(), briefArg);
+if (!existsSync(briefPath)) fail(`brief not found: ${briefPath}`);
+const explicitSeed = argOf("seed");
+const autoSeed = path.join(serverRoot, "demo-seeds", `${path.basename(briefPath, path.extname(briefPath))}.json`);
+const seedPath = explicitSeed ? path.resolve(process.cwd(), explicitSeed) : (existsSync(autoSeed) ? autoSeed : null);
+if (explicitSeed && !existsSync(seedPath)) fail(`seed manifest not found: ${seedPath}`);
+
 const customer = argOf("customer", "");
 const slug = normalizeDemoSlug(argOf("slug", customer));
 const domain = argOf("domain", process.env.FORGE_DEMO_BASE_DOMAIN ?? "kairo.vn");
@@ -46,7 +58,6 @@ const explicitControlUrl = (argOf("control-url", process.env.FORGE_CONTROL_URL) 
 const dryRun = args.includes("--dry-run");
 const provisionStandard = args.includes("--provision-standard");
 
-if (!briefPath) fail("usage: node scripts/create-demo-tenant.mjs <brief.json> --customer <name> [--slug thuy] [--admin admin] [--plan pro] [--dry-run]");
 if (!customer && !argOf("slug")) fail("--customer <name> or --slug <slug> is required");
 if (!accountId && !dryRun) fail("CLOUDFLARE_ACCOUNT_ID (or --account) is required");
 if (!/^(free|pro|enterprise)$/.test(plan)) fail("--plan must be free, pro or enterprise");
@@ -86,10 +97,12 @@ console.log(`customer ${customer || "(slug-only)"}`);
 console.log(`tenant   ${slug}`);
 console.log(`origin   ${origin}`);
 console.log(`brief    ${briefPath}`);
+console.log(`seed     ${seedPath ?? "(none)"}`);
 console.log(`plan     ${plan}\n`);
 
 if (dryRun) {
   runNode("forge-app.mjs", [briefPath, "--dry-run"]);
+  if (seedPath) runNode("seed-demo-data.mjs", [seedPath, "--dry-run"]);
   console.log(`\nDEMO_PLAN_PASS ${origin}`);
   process.exit(0);
 }
@@ -130,6 +143,12 @@ runNode("forge-app.mjs", [
   ...(provisionStandard ? ["--provision-standard"] : []),
 ]);
 
+if (seedPath) {
+  console.log("6 seed      synthetic canonical demo data");
+  runNode("seed-demo-data.mjs", [seedPath, "--origin", origin, "--admin", adminUser]);
+}
+
 console.log(`\nLIVE ${origin}`);
 console.log(`tenant=${slug} database=${database.name} admin=${adminUser}`);
+console.log(`seed=${seedPath ? path.basename(seedPath) : "none"}`);
 console.log("No DNS/resource cleanup was attempted. Failed runs retain evidence for diagnosis and safe retry.");
