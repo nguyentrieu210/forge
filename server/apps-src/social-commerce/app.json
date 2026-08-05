@@ -25,6 +25,7 @@
     { "key": "Commerce Channel Profile", "label": "Gian hàng TMĐT", "kind": "doctype", "icon": "store", "group": "Bán hàng đa kênh" },
     { "key": "Marketplace Connection", "label": "Kết nối sàn TMĐT", "kind": "doctype", "icon": "plug-zap", "group": "Bán hàng đa kênh", "required_roles": ["Social Commerce Manager", "System Manager"] },
     { "key": "Marketplace SKU Mapping", "label": "Ánh xạ SKU sàn", "kind": "doctype", "icon": "replace", "group": "Bán hàng đa kênh" },
+    { "key": "Marketplace SLA Policy", "label": "Chính sách SLA sàn", "kind": "doctype", "icon": "timer", "group": "Bán hàng đa kênh", "required_roles": ["Social Commerce Manager", "Sales Manager", "System Manager"] },
     { "key": "Social Commerce Profile", "label": "Cấu hình kênh xã hội", "kind": "doctype", "icon": "settings-2", "group": "Thiết lập bán hàng" }
   ],
   "hooks": []
