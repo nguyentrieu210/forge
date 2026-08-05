@@ -61,6 +61,7 @@ export async function deriveFacebookEventId(rawBody: string): Promise<string> {
 }
 
 export * from "./credentials.js";
+export * from "./marketplace-customer-identity.js";
 export * from "./marketplace-order.js";
 export * from "./marketplace-profile.js";
 export * from "./marketplace-operations.js";
