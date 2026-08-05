@@ -93,6 +93,37 @@ test("khách lẻ nhập RLL/CLL được đổi server-side sang phủ bì, r�
   assert.equal(result.stock_profile_item, "AL71N-RAW");
   assert.equal(result.stock_profile_error, null);
   assert.ok(result.leaf_count > 0);
+  assert.equal(result.total_leaf_count, result.leaf_count);
+});
+
+test("ATP demand nhân đúng số bộ thay vì chỉ kiểm tồn cho một bộ", async () => {
+  const one = await body(await calculateSalesWizardLineContext(platform(), {
+    item_code: "CUA-DUC",
+    customer_group: "Lẻ",
+    sales_mode: "Trọn bộ",
+    ray_type: "U75",
+    width_input_basis: "Rộng lọt lòng",
+    height_input_basis: "Cao lọt lòng",
+    width_m: 4,
+    height_m: 2.3,
+    set_count: 1,
+    color: "TRANG",
+  }));
+  const three = await body(await calculateSalesWizardLineContext(platform(), {
+    item_code: "CUA-DUC",
+    customer_group: "Lẻ",
+    sales_mode: "Trọn bộ",
+    ray_type: "U75",
+    width_input_basis: "Rộng lọt lòng",
+    height_input_basis: "Cao lọt lòng",
+    width_m: 4,
+    height_m: 2.3,
+    set_count: 3,
+    color: "TRANG",
+  }));
+  assert.equal(three.leaf_count, one.leaf_count);
+  assert.equal(three.total_leaf_count, one.leaf_count * 3);
+  assert.equal(three.billable_area_sqm, one.billable_area_sqm * 3);
 });
 
 test("ray được chọn fail-closed nếu tenant chưa có Cutting Policy tương ứng", async () => {
