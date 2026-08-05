@@ -54,7 +54,7 @@ export const TIKTOK_SHOP_MARKETPLACE_MANIFEST: ConnectorManifest = {
   config_schema_version: 1,
   event_patterns: ["tiktok_shop.*"],
   description: "TikTok Shop order synchronization with Partner Center signing kept behind WS11.",
-  docs_url: "https://partner.tiktokshop.com/docv2/page/tts-developer-guide",
+  docs_url: "https://partner.tiktokshop.com/docv2/page/get-order-list-202309",
 };
 
 export const SHOPEE_MARKETPLACE_ADAPTER: ConnectorProviderAdapter = {
@@ -83,8 +83,13 @@ export const MARKETPLACE_PROVIDER_ADAPTERS = Object.freeze([
 
 interface ShopeeConfig extends JsonObject { api_base: string; shop_id: string; lookback_seconds?: number }
 interface LazadaConfig extends JsonObject { api_base: string; lookback_seconds?: number }
-interface TikTokShopConfig extends JsonObject { api_base: string; shop_cipher: string; lookback_seconds?: number }
+interface TikTokShopConfig extends JsonObject { api_base: string; shop_cipher: string; lookback_seconds?: number; overlap_seconds?: number }
 interface TimeCursor { from: number; to: number; provider_cursor: string | null }
+interface TikTokOrderWindow { from: number; to: number; provider_cursor: string | null }
+
+const TIKTOK_CURSOR_SCHEMA = "tiktok-orders/v1";
+const TIKTOK_DEFAULT_LOOKBACK_SECONDS = 86_400;
+const TIKTOK_DEFAULT_OVERLAP_SECONDS = 300;
 
 /** Shopee list records do not carry complete SKU lines, so detail hydration is mandatory. */
 async function fetchShopeeOrders(context: ProviderSyncContext): Promise<ExternalSyncPage<JsonObject>> {
@@ -168,23 +173,32 @@ async function fetchLazadaOrders(context: ProviderSyncContext): Promise<External
   return validateSyncPage({ records, next_cursor: next, has_more: hasMore }, pageSize);
 }
 
-/** TikTok Shop v202309 Get Order List includes line_items on the Order resource. */
+/**
+ * TikTok Shop v202309 order sync is update-time incremental, not an opaque page-token loop.
+ * The active page cursor freezes one [from,to) window until all provider pages are
+ * accepted. The final page emits a stable high-watermark cursor; the next run replays a
+ * small overlap so late/out-of-order provider updates are harmless under order idempotency.
+ */
 async function fetchTikTokShopOrders(context: ProviderSyncContext): Promise<ExternalSyncPage<JsonObject>> {
   assertOrdersStream(context);
   const config = asTikTokShopConfig(context.config);
   const execute = requireSignedProviderRequest(context);
   const pageSize = boundedLimit(context.limit, 50);
-  const cursor = parseOpaqueCursor(context.cursor);
+  const lookbackSeconds = config.lookback_seconds ?? TIKTOK_DEFAULT_LOOKBACK_SECONDS;
+  const overlapSeconds = config.overlap_seconds ?? Math.min(TIKTOK_DEFAULT_OVERLAP_SECONDS, lookbackSeconds);
+  const cursor = parseTikTokOrderWindow(context.cursor, lookbackSeconds, overlapSeconds);
   const url = new URL("order/202309/orders/search", config.api_base);
   url.searchParams.set("shop_cipher", config.shop_cipher);
   url.searchParams.set("page_size", String(pageSize));
-  if (cursor) url.searchParams.set("page_token", cursor);
+  url.searchParams.set("sort_field", "update_time");
+  url.searchParams.set("sort_order", "ASC");
+  if (cursor.provider_cursor) url.searchParams.set("page_token", cursor.provider_cursor);
   const body = successfulJson(await execute(validateProviderSignedRequest({
     operation: "tiktok_shop.order.list",
     method: "POST",
     url: url.href,
     headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sort_field: "update_time", sort_order: "ASC" }),
+    body: JSON.stringify({ update_time_ge: cursor.from, update_time_lt: cursor.to }),
   })), "TikTok Shop order list");
   const data = objectAt(body, "data");
   const records = objectArray(data.orders, "TikTok Shop data.orders", pageSize);
@@ -193,7 +207,10 @@ async function fetchTikTokShopOrders(context: ProviderSyncContext): Promise<Exte
   }
   const nextToken = optionalScalarText(data.next_page_token, "TikTok Shop next_page_token", 4_096);
   const hasMore = Boolean(nextToken);
-  return validateSyncPage({ records, next_cursor: hasMore ? nextToken! : null, has_more: hasMore }, pageSize);
+  const nextCursor = hasMore
+    ? encodeTikTokPageCursor(cursor.from, cursor.to, nextToken!)
+    : encodeTikTokWatermark(cursor.to);
+  return validateSyncPage({ records, next_cursor: nextCursor, has_more: hasMore }, pageSize);
 }
 
 async function normalizeShopeeInbound(rawBody: string, context: ProviderInboundContext): Promise<readonly NormalizedProviderEvent[]> {
@@ -253,7 +270,15 @@ function asLazadaConfig(config: JsonObject | undefined): LazadaConfig {
 function asTikTokShopConfig(config: JsonObject | undefined): TikTokShopConfig {
   const value = requireConfig(config);
   const apiBase = providerBase(value.api_base ?? "https://open-api.tiktokglobalshop.com/", "TikTok Shop", (host) => host === "open-api.tiktokglobalshop.com");
-  return { api_base: apiBase, shop_cipher: requiredText(value.shop_cipher, "TikTok Shop shop_cipher", 300), ...lookback(value.lookback_seconds) };
+  const lookbackConfig = lookback(value.lookback_seconds);
+  const lookbackSeconds = lookbackConfig.lookback_seconds ?? TIKTOK_DEFAULT_LOOKBACK_SECONDS;
+  const overlapConfig = overlap(value.overlap_seconds, lookbackSeconds);
+  return {
+    api_base: apiBase,
+    shop_cipher: requiredText(value.shop_cipher, "TikTok Shop shop_cipher", 300),
+    ...lookbackConfig,
+    ...overlapConfig,
+  };
 }
 function requireConfig(config: JsonObject | undefined): JsonObject {
   if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("Marketplace connector config is required");
@@ -263,6 +288,12 @@ function lookback(value: JsonValue | undefined): { lookback_seconds?: number } {
   if (value === undefined) return {};
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 60 || value > 2_592_000) throw new Error("Marketplace lookback_seconds is invalid");
   return { lookback_seconds: value };
+}
+function overlap(value: JsonValue | undefined, lookbackSeconds: number): { overlap_seconds?: number } {
+  if (value === undefined) return {};
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > 21_600) throw new Error("TikTok Shop overlap_seconds is invalid");
+  if (value > lookbackSeconds) throw new Error("TikTok Shop overlap_seconds cannot exceed lookback_seconds");
+  return { overlap_seconds: value };
 }
 function providerBase(value: JsonValue | undefined, provider: string, allowedHost: (host: string) => boolean): string {
   if (typeof value !== "string") throw new Error(`${provider} api_base is required`);
@@ -295,7 +326,33 @@ function parseOffsetCursor(raw: string | null, lookbackSeconds: number): { from:
   return { from, offset };
 }
 function encodeOffsetCursor(value: { from: number; offset: number }): string { return JSON.stringify(value); }
-function parseOpaqueCursor(raw: string | null): string | null { return raw === null ? null : requiredText(raw, "provider cursor", 4_096); }
+function parseTikTokOrderWindow(raw: string | null, lookbackSeconds: number, overlapSeconds: number): TikTokOrderWindow {
+  const now = Math.floor(Date.now() / 1_000);
+  if (!Number.isSafeInteger(now) || now <= 0) throw new Error("TikTok Shop sync clock is invalid");
+  if (!raw) return { from: Math.max(1, now - lookbackSeconds), to: now, provider_cursor: null };
+  const value = parseCursorObject(raw);
+  if (value.schema !== TIKTOK_CURSOR_SCHEMA) throw new Error("TikTok Shop sync cursor schema is invalid");
+
+  if (value.watermark !== undefined) {
+    const watermark = safeUnix(value.watermark, "TikTok Shop cursor.watermark");
+    if (value.provider_cursor !== undefined || value.from !== undefined || value.to !== undefined) throw new Error("TikTok Shop stable cursor is invalid");
+    if (now < watermark) throw new Error("TikTok Shop sync clock moved behind the stored watermark");
+    return { from: Math.max(1, watermark - overlapSeconds), to: now, provider_cursor: null };
+  }
+
+  const from = safeUnix(value.from, "TikTok Shop cursor.from");
+  const to = safeUnix(value.to, "TikTok Shop cursor.to");
+  if (from > to) throw new Error("TikTok Shop active cursor window is invalid");
+  const providerCursor = requiredText(value.provider_cursor, "TikTok Shop cursor.provider_cursor", 4_096);
+  return { from, to, provider_cursor: providerCursor };
+}
+function encodeTikTokPageCursor(from: number, to: number, providerCursor: string): string {
+  return JSON.stringify({ schema: TIKTOK_CURSOR_SCHEMA, from, to, provider_cursor: requiredText(providerCursor, "TikTok Shop next_page_token", 4_096) });
+}
+function encodeTikTokWatermark(watermark: number): string {
+  if (!Number.isSafeInteger(watermark) || watermark <= 0) throw new Error("TikTok Shop watermark is invalid");
+  return JSON.stringify({ schema: TIKTOK_CURSOR_SCHEMA, watermark });
+}
 function parseCursorObject(raw: string): JsonObject {
   if (raw.length > 4_096) throw new Error("Marketplace cursor is too large");
   let parsed: unknown; try { parsed = JSON.parse(raw); } catch { throw new Error("Marketplace cursor is invalid JSON"); }
