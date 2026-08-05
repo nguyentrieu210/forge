@@ -17,6 +17,7 @@ import {
 import { D1MetadataStore } from "../../../packages/frappe-model/src/index.js";
 import {
   buildMarketplaceCredentialMaterial,
+  buildMarketplaceCredentialRefreshState,
   D1MarketplaceCredentialVault,
 } from "../../../packages/integration-hub/src/marketplace-credential-vault.js";
 import {
@@ -174,12 +175,24 @@ async function routeMarketplaceCredentialAdmin(
   const vault = new D1MarketplaceCredentialVault(env.DB, env.MARKETPLACE_CREDENTIAL_KEK);
 
   if (request.method === "GET") {
-    const active = await vault.hasActive({ tenant_id: tenantId, connection_id: connectionId, secret_ref: secretRef });
+    const status = await vault.status({
+      tenant_id: tenantId,
+      connection_id: connectionId,
+      secret_ref: secretRef,
+      provider: resolved.provider,
+    });
     return jsonResponse({
       connection_id: connectionId,
       provider: resolved.provider,
       secret_ref: secretRef,
-      credential_status: active ? "active" : "unavailable",
+      credential_status: !status.active
+        ? "unavailable"
+        : status.reauthorization_required
+          ? "reauthorization_required"
+          : "active",
+      refresh_managed: status.refresh_managed,
+      access_expires_at: status.access_expires_at,
+      refresh_expires_at: status.refresh_expires_at,
     });
   }
 
@@ -201,17 +214,22 @@ async function routeMarketplaceCredentialAdmin(
     });
   }
 
+  const credentials = objectField(body.credentials, "credentials");
+  const now = new Date();
   const material = buildMarketplaceCredentialMaterial(
     resolved.provider,
     resolved.connection.config,
-    objectField(body.credentials, "credentials"),
+    credentials,
   );
+  const refresh = buildMarketplaceCredentialRefreshState(resolved.provider, credentials, now);
   const result = await vault.put({
     tenant_id: tenantId,
     connection_id: connectionId,
     secret_ref: secretRef,
     material,
+    ...(refresh ? { refresh } : {}),
     actor_id: actorId,
+    now,
   });
   return jsonResponse({
     committed: true,
@@ -219,6 +237,7 @@ async function routeMarketplaceCredentialAdmin(
     provider: result.provider,
     secret_ref: result.secret_ref,
     credential_status: "active",
+    refresh_managed: result.refresh_managed,
     rotated: result.rotated,
   }, result.rotated ? 200 : 201);
 }
