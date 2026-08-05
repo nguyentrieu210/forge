@@ -23,16 +23,16 @@ const money = (value: unknown, currency = "VND") => new Intl.NumberFormat("vi-VN
   maximumFractionDigits: 0,
 }).format(Number(value) || 0);
 
-function dueBucket(row: Doc, today: string): QueueFilter {
+function dueBucket(row: Doc, today: string, sevenDays: string): QueueFilter {
   const due = dayKey(row.delivery_date);
-  if (!due) return "upcoming";
-  if (due < today) return "overdue";
+  if (due && due < today) return "overdue";
   if (due === today) return "today";
-  return "upcoming";
+  if (due && due > today && due <= sevenDays) return "upcoming";
+  return "all";
 }
 
-function statusTone(row: Doc, today: string) {
-  const bucket = dueBucket(row, today);
+function statusTone(row: Doc, today: string, sevenDays: string) {
+  const bucket = dueBucket(row, today, sevenDays);
   if (bucket === "overdue") return "border-destructive/30 bg-destructive/5 text-destructive";
   if (bucket === "today") return "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300";
   return "border-border bg-muted/30 text-foreground";
@@ -53,7 +53,7 @@ export function AlumdoorSalesOrderQueue() {
     setError("");
     setRows(null);
     try {
-      const filters: unknown[][] = [["docstatus", "=", 1]];
+      const filters: [string, "=", unknown][] = [["docstatus", "=", 1]];
       if (company) filters.push(["company", "=", company]);
       const result = await adapter.getList("Sales Order", {
         fields: ["name", "customer", "transaction_date", "delivery_date", "status", "grand_total", "currency", "per_delivered", "modified", "company"],
@@ -76,10 +76,10 @@ export function AlumdoorSalesOrderQueue() {
     let todayCount = 0;
     let upcoming = 0;
     for (const row of source) {
-      const due = dayKey(row.delivery_date);
-      if (due && due < today) overdue += 1;
-      else if (due === today) todayCount += 1;
-      else if (due && due > today && due <= sevenDays) upcoming += 1;
+      const bucket = dueBucket(row, today, sevenDays);
+      if (bucket === "overdue") overdue += 1;
+      else if (bucket === "today") todayCount += 1;
+      else if (bucket === "upcoming") upcoming += 1;
     }
     return { open: source.length, overdue, today: todayCount, upcoming };
   }, [rows, sevenDays, today]);
@@ -87,13 +87,13 @@ export function AlumdoorSalesOrderQueue() {
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("vi");
     return (rows ?? []).filter((row) => {
-      const bucket = dueBucket(row, today);
+      const bucket = dueBucket(row, today, sevenDays);
       if (filter !== "all" && bucket !== filter) return false;
       if (!needle) return true;
       return [row.name, row.customer, row.status, row.delivery_date]
         .some((value) => String(value ?? "").toLocaleLowerCase("vi").includes(needle));
     });
-  }, [filter, query, rows, today]);
+  }, [filter, query, rows, sevenDays, today]);
 
   const filters: Array<{ key: QueueFilter; label: string; count: number }> = [
     { key: "all", label: "Tất cả", count: summary.open },
@@ -148,7 +148,7 @@ export function AlumdoorSalesOrderQueue() {
                 return <tr key={String(row.name)} className="group hover:bg-muted/20">
                   <td className="px-3 py-3"><button className="font-semibold text-primary hover:underline" onClick={() => navigate(`/app/${encodeURIComponent("Sales Order")}/${encodeURIComponent(String(row.name))}`)}>{String(row.name)}</button><div className="mt-0.5 text-xs text-muted-foreground">Đặt {dayKey(row.transaction_date) || "—"}</div></td>
                   <td className="px-3 py-3 font-medium">{String(row.customer ?? "—")}</td>
-                  <td className="px-3 py-3"><span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium ${statusTone(row, today)}`}>{due || "Chưa hẹn"}</span></td>
+                  <td className="px-3 py-3"><span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium ${statusTone(row, today, sevenDays)}`}>{due || "Chưa hẹn"}</span></td>
                   <td className="px-3 py-3">{String(row.status ?? "—")}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{Number(row.per_delivered ?? 0).toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%</td>
                   <td className="px-3 py-3 text-right font-semibold tabular-nums">{money(row.grand_total, String(row.currency ?? "VND"))}</td>
