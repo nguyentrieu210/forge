@@ -337,6 +337,7 @@ export async function calculateSalesWizardLineContext(
       leaf_divisor_m: leaf?.divisor_m ?? args.leaf_divisor_m ?? item.leaf_divisor_m ?? pair.raw.leaf_divisor_const ?? null,
       leaf_rounding: text(pair.raw.leaf_rounding),
       leaf_count: leaf?.leaf_count ?? null,
+      total_leaf_count: leaf ? round(leaf.leaf_count * setCount) : null,
       single_layer_leaf_count: leaf?.single_layer_leaf_count ?? null,
       double_layer_leaf_count: leaf?.double_layer_leaf_count ?? null,
       leaf_error: leafError,
