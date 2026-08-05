@@ -86,6 +86,20 @@
       "commit": "alumdoor.delivery_batch.preview | Làm mới"
     },
     {
+      "name": "lich-su-ban-hang",
+      "label": "Lịch sử bán hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Bán hàng",
+      "description": "Dòng thời gian bán hàng hợp nhất Sales Order, Delivery Note và Sales Invoice canonical. Mỗi dòng mở đúng chứng từ gốc; không tạo sổ lịch sử riêng.",
+      "permission": "Sales Order",
+      "permissionAction": "read",
+      "fields": [
+        "history_config:Text(DocumentHistory:{\"sources\":[{\"doctype\":\"Sales Order\",\"label\":\"Đơn hàng\",\"dateField\":\"transaction_date\",\"partyField\":\"customer\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"statusField\":\"status\",\"companyField\":\"company\"},{\"doctype\":\"Delivery Note\",\"label\":\"Phiếu xuất\",\"dateField\":\"posting_date\",\"partyField\":\"customer\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"statusField\":\"status\",\"companyField\":\"company\"},{\"doctype\":\"Sales Invoice\",\"label\":\"Hóa đơn bán\",\"dateField\":\"posting_date\",\"partyField\":\"customer\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"statusField\":\"status\",\"companyField\":\"company\"}],\"labels\":{\"party\":\"Khách hàng\",\"reference\":\"Tham chiếu\",\"value\":\"Giá trị\",\"date\":\"Ngày\",\"type\":\"Nghiệp vụ\",\"search\":\"Tìm khách hàng, mã đơn, phiếu xuất, hóa đơn…\"}}) Cấu hình lịch sử"
+      ],
+      "commit": "alumdoor.delivery_batch.preview | Làm mới"
+    },
+    {
       "name": "lich-su-mua-hang",
       "label": "Lịch sử mua hàng",
       "menu": true,
