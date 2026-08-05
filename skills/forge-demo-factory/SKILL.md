@@ -104,16 +104,21 @@ bootstrap and re-verifies the provider token against the canonical gateway.
 
 ### V2 bootstrap
 
-`.github/workflows/security-v2-bootstrap.yml` is the only standard bootstrap/deploy lane. It must:
+The `security-v2-bootstrap` job inside canonical `.github/workflows/alu-build-deploy.yml` is the only
+standard shared-worker bootstrap/deploy lane. Gateway production deploy must remain owned by that
+canonical release workflow; do not create a second production workflow that deploys the Gateway.
+The job must:
 
 1. require repository-owner issue command + `environment: production`;
 2. require an exact merged-main SHA and `confirm=security-v2`;
-3. backup Control D1 before the append-only migration;
-4. apply the Control security migration;
-5. coordinate both copies of each V2 master only while zero V2 tenant profiles exist;
-6. deploy Control Plane, Jobs and Gateway wrappers;
-7. initialize the immutable Cloudflare account authority through the Control provider broker;
-8. prove an existing Generation-1 tenant such as `alu.kairo.vn` still passes production health.
+3. backup Control D1 before the append-only migration, keeping plaintext SQL only inside the runner;
+4. upload only non-sensitive backup fingerprint evidence such as SHA-256, byte count and source SHA;
+5. apply the Control security migration;
+6. coordinate both copies of each V2 master only while zero V2 tenant profiles exist;
+7. deploy Control Plane, Jobs and Gateway wrappers in that order;
+8. initialize the immutable Cloudflare account authority through the Control provider broker;
+9. hand off to the canonical `verify-production` job and prove an existing Generation-1 tenant such
+   as `alu.kairo.vn` still passes production health and exact UI release identity.
 
 Once any V2 tenant exists, bootstrap must never rotate a V2 master automatically. Missing V2 master
 bindings after that point are a fail-closed incident requiring an explicit security recovery plan.
@@ -200,14 +205,15 @@ are true:
 - `target_sha` is an exact 40-character commit SHA already merged into `main`;
 - the job still runs under the `production` environment and uses the same Demo Factory orchestrator.
 
-Security V2 bootstrap uses the analogous owner-only command:
+Security V2 bootstrap uses the analogous owner-only command, handled by the canonical ALU release
+workflow rather than a second Gateway-deploy workflow:
 
 ```text
 /forge-security-v2-bootstrap
 {"target_sha":"<40-char merged main SHA>","confirm":"security-v2"}
 ```
 
-Both issue-command workflows must comment the run result back to the source issue. Do not accept
+Both issue-command lanes must comment the run result back to the source issue. Do not accept
 free-form shell arguments, comments from collaborators, PR comments, mutable branch names as target
 authority or secrets in the issue body.
 
