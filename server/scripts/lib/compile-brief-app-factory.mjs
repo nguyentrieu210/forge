@@ -14,6 +14,29 @@ import { attachBriefUiViewPolicies } from "./brief-ui-view-policy.mjs";
 export { BriefError };
 
 /**
+ * `menu:false` means the source remains installed/direct-addressable but no longer belongs
+ * to daily navigation. An older explicit `navigation.items` order may still name that key.
+ * Remove only those now-hidden keys before the strict base compiler validates navigation;
+ * every other unknown key must continue to fail closed as a genuine authoring error.
+ */
+function normalizeHiddenNavigationItems(brief) {
+  if (!Array.isArray(brief?.navigation?.items) || !brief.navigation.items.length) return brief;
+
+  const hidden = new Set();
+  for (const doctype of brief.doctypes ?? []) {
+    if (doctype?.menu === false && typeof doctype.name === "string" && doctype.name) hidden.add(doctype.name);
+  }
+  for (const action of brief.actions ?? []) {
+    if (action?.menu === false && typeof action.name === "string" && action.name) hidden.add(`action:${action.name}`);
+  }
+  if (!hidden.size || !brief.navigation.items.some((key) => hidden.has(key))) return brief;
+
+  const source = structuredClone(brief);
+  source.navigation.items = source.navigation.items.filter((key) => !hidden.has(key));
+  return source;
+}
+
+/**
  * WS09 App Factory compiler adapter.
  *
  * The established compiler still owns every existing brief rule. This layer adds repeatable
@@ -23,13 +46,13 @@ export { BriefError };
 export function compileBrief(brief) {
   assertBriefContextDimensions(brief, BriefError);
 
-  let source = brief;
+  let source = normalizeHiddenNavigationItems(brief);
   const tableOnlyActions = new Set();
 
   // The legacy compiler requires one scalar field. First-class input tables make that
   // requirement obsolete, so inject a private compiler-only field for table-only actions.
   if (Array.isArray(brief?.actions) && brief.actions.some((action) => action?.inputTables !== undefined && (!Array.isArray(action.fields) || !action.fields.length))) {
-    source = structuredClone(brief);
+    if (source === brief) source = structuredClone(brief);
     source.actions.forEach((action, actionIndex) => {
       if (action?.inputTables === undefined || (Array.isArray(action.fields) && action.fields.length)) return;
       action.fields = [INPUT_TABLE_BRIEF_STUB_FIELD];
