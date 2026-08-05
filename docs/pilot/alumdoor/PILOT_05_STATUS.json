@@ -1,0 +1,29 @@
+{
+  "format": "forge-alumdoor-pilot-05-status/v1",
+  "real_pilot_05": {
+    "status": "NOT_STARTED_REAL_DATA_GATED",
+    "gate": "authorized real cutover -> real hypercare -> real exit gate",
+    "production_write_authorized": false,
+    "ga_authorized": false
+  },
+  "synthetic_pilot_05": {
+    "status": "SYNTHETIC_EXIT_REHEARSAL_CANDIDATE",
+    "contract": "docs/pilot/alumdoor/PILOT_05_SYNTHETIC_EXIT_V1.json",
+    "engine": "docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.mjs",
+    "test": "docs/pilot/alumdoor/tools/evaluate-pilot-05-synthetic.test.mjs",
+    "workflow": ".github/workflows/pilot-05-synthetic-exit.yml",
+    "hypercare_days": 3,
+    "expected_exit_scenarios": 1,
+    "expected_no_exit_scenario_classes": 9,
+    "contains_real_customer_data": false,
+    "uses_production_environment": false,
+    "production_write_authorized": false,
+    "cutover_authorized": false,
+    "ga_authorized": false,
+    "accepted_production_reference_authorized": false,
+    "real_pilot_transition_allowed": false,
+    "production_data_mutated": false
+  },
+  "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
+  "claim_boundary": "Synthetic EXIT is test-only and cannot mark the real pilot accepted, authorize GA, create a production reference or authorize production mutation."
+}
