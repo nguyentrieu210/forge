@@ -1,6 +1,6 @@
 {
   "version": "2.3.0",
-  "//": "Operational UX: chỉ hiện dữ liệu người dùng thực sự cần nhập. UOM, định mức, barem, amount và các field kỹ thuật do master/server authority tự suy ra; grid không ép vừa viewport.",
+  "//": "Operational UX: Company/Kho lấy từ Business Context; UOM, định mức, barem, amount và field kỹ thuật do master/server authority tự suy ra.",
   "actions": [
     {
       "name": "tao-don-mua",
@@ -9,9 +9,8 @@
       "icon": "shopping-bag",
       "group": "Mua hàng",
       "permission": "Purchase Order",
-      "description": "Lập đơn mua theo mặt hàng. ĐVT, quy cách, kg/m, barem và thành tiền được suy ra từ Item/Material Specification và server; người dùng không phải nhập lại.",
+      "description": "Lập đơn mua trong Công ty đang chọn. ĐVT, quy cách, kg/m, barem và thành tiền được suy ra từ Item/Material Specification và server; người dùng không phải nhập lại.",
       "fields": [
-        "company:Link(Company)! Công ty",
         "supplier:Link(Supplier)! NCC",
         "transaction_date:Date=(Today) Ngày đặt",
         "schedule_date:Date Ngày giao",
@@ -27,12 +26,10 @@
       "menu": true,
       "icon": "package-check",
       "group": "Mua hàng",
-      "description": "Nhận hàng trực tiếp từ NCC. Chỉ nhập số đếm/cân thực tế; ĐVT, quy cách, kg/m, barem và các tỷ lệ thực được hệ thống tự suy ra. Không bắt buộc Purchase Order.",
+      "description": "Nhận hàng trực tiếp vào Kho đang chọn. Chỉ nhập số đếm/cân thực tế; ĐVT, quy cách, kg/m, barem và các tỷ lệ thực được hệ thống tự suy ra. Không bắt buộc Purchase Order.",
       "permission": "Purchase Receipt",
       "fields": [
-        "company:Link(Company)! Công ty",
         "supplier:Link(Supplier)! Nhà cung cấp",
-        "warehouse:Link(Warehouse)! Kho nhập",
         "posting_at:Datetime Ngày/giờ nhận",
         "supplier_invoice_no:Data! Số phiếu giao NCC",
         "driver:Data Tài xế / người giao",
