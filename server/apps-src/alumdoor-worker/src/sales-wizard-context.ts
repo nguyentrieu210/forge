@@ -10,6 +10,7 @@ import {
 import { calculateLeafPlan, type ProductionPlatformCall } from "./sales-production-core.js";
 
 type Json = Record<string, unknown>;
+type LeafRounding = "Ngưỡng trừ-một-lá" | "Nấc 0-0.3-0.7-1" | "Làm tròn xuống";
 
 type ItemDoc = Json & {
   item_group?: string;
@@ -30,10 +31,37 @@ type RawPolicy = Json & {
   leaf_height_deduction_m?: unknown;
   leaf_divisor_const?: unknown;
   leaf_divisor_source?: string;
-  leaf_rounding?: string;
+  leaf_rounding?: LeafRounding;
   leaf_round_threshold?: unknown;
   leaf_formula?: string;
   leaf_variants?: Array<{ variant_label?: string; addend?: unknown }>;
+};
+
+type BomSummary = Json & {
+  name?: string;
+  item?: string;
+  color?: string;
+  docstatus?: number;
+  is_active?: unknown;
+  bom_status?: string;
+  effective_from?: string;
+  effective_to?: string;
+  revision?: number;
+};
+
+type BomRow = Json & {
+  item_code?: string;
+  qty_basis?: string;
+};
+
+type BomDoc = BomSummary & {
+  items?: BomRow[];
+};
+
+type StockProfileResolution = {
+  bom_no: string | null;
+  stock_profile_item: string | null;
+  stock_profile_error: string | null;
 };
 
 const answer = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
@@ -73,10 +101,38 @@ function round(value: number, digits = 6): number {
   return Math.round((value + Number.EPSILON) * scale) / scale;
 }
 
+function dateOnly(value: unknown): string {
+  const raw = text(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
+}
+
+function activeOn(row: { effective_from?: string; effective_to?: string }, on: string): boolean {
+  const from = dateOnly(row.effective_from);
+  const to = dateOnly(row.effective_to);
+  return (!from || from <= on) && (!to || to >= on);
+}
+
 async function readDoc<T extends Json>(call: ProductionPlatformCall, doctype: string, name: string): Promise<T> {
   const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
   if (!response.ok) throw new Error(`Không đọc được ${doctype} ${name} (HTTP ${response.status}).`);
   return (((await response.json()) as { data?: T }).data ?? {}) as T;
+}
+
+async function listDocs<T extends Json>(
+  call: ProductionPlatformCall,
+  doctype: string,
+  fields: string[],
+  filters: unknown[] = [],
+  limit = 500,
+): Promise<T[]> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(fields),
+    filters: JSON.stringify(filters),
+    limit_page_length: String(limit),
+  });
+  const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
+  if (!response.ok) throw new Error(`Không đọc được danh sách ${doctype} (HTTP ${response.status}).`);
+  return (((await response.json()) as { data?: T[] }).data ?? []);
 }
 
 async function listPolicies(call: ProductionPlatformCall): Promise<RawPolicy[]> {
@@ -88,10 +144,7 @@ async function listPolicies(call: ProductionPlatformCall): Promise<RawPolicy[]> 
     "priority", "disabled", "note", "leaf_formula", "leaf_height_deduction_m", "leaf_divisor_source",
     "leaf_divisor_const", "leaf_rounding", "leaf_round_threshold", "leaf_variants",
   ];
-  const query = new URLSearchParams({ fields: JSON.stringify(fields), limit_page_length: "500" });
-  const response = await call(`resource/${encodeURIComponent("Cutting Policy")}?${query}`);
-  if (!response.ok) throw new Error(`Không đọc được danh sách Cutting Policy (HTTP ${response.status}).`);
-  return ((await response.json()) as { data?: RawPolicy[] }).data ?? [];
+  return listDocs<RawPolicy>(call, "Cutting Policy", fields, [], 500);
 }
 
 function policyVersion(policy: RawPolicy): string {
@@ -110,11 +163,84 @@ function policyVersion(policy: RawPolicy): string {
 }
 
 /**
+ * Resolve the physical aluminium profile from the exact BOM that would be used for the
+ * finished door. The strongest signal is a BOM row with qty_basis="Theo số lá"; old BOMs
+ * without qty_basis fall back only when exactly one row is an Item managed as Nhôm cây/lá.
+ * Ambiguity is returned as an explicit error and the wizard must not claim ATP.
+ */
+async function resolveStockProfile(
+  call: ProductionPlatformCall,
+  itemCode: string,
+  color: string,
+  on: string,
+): Promise<StockProfileResolution> {
+  try {
+    const boms = await listDocs<BomSummary>(call, "Bill of Materials", [
+      "name", "item", "color", "docstatus", "is_active", "bom_status", "effective_from", "effective_to", "revision",
+    ], [["item", "=", itemCode]], 100);
+    const candidates = boms
+      .filter((row) => row.item === itemCode && Number(row.docstatus ?? 0) === 1)
+      .filter((row) => !text(row.color) || !color || text(row.color) === color)
+      .filter((row) => row.bom_status ? text(row.bom_status) === "Active" : checked(row.is_active))
+      .filter((row) => activeOn(row, on))
+      .sort((left, right) => Number(right.revision ?? 0) - Number(left.revision ?? 0));
+    if (!candidates.length) {
+      return { bom_no: null, stock_profile_item: null, stock_profile_error: `${itemCode}: chưa có BOM đang hiệu lực${color ? ` cho màu ${color}` : ""}.` };
+    }
+    if (candidates.length > 1 && Number(candidates[0]!.revision ?? 0) === Number(candidates[1]!.revision ?? 0)) {
+      return { bom_no: null, stock_profile_item: null, stock_profile_error: `${itemCode}: có nhiều BOM cùng revision đang hiệu lực.` };
+    }
+    const bomNo = text(candidates[0]!.name);
+    if (!bomNo) return { bom_no: null, stock_profile_item: null, stock_profile_error: `${itemCode}: BOM hiệu lực không có định danh.` };
+    const bom = await readDoc<BomDoc>(call, "Bill of Materials", bomNo);
+    const rows = (bom.items ?? []).filter((row) => text(row.item_code));
+    if (!rows.length) return { bom_no: bomNo, stock_profile_item: null, stock_profile_error: `${bomNo}: BOM chưa có dòng nguyên vật liệu.` };
+
+    const byLeaf = rows.filter((row) => text(row.qty_basis) === "Theo số lá");
+    if (byLeaf.length > 1) {
+      return { bom_no: bomNo, stock_profile_item: null, stock_profile_error: `${bomNo}: có nhiều dòng vật tư "Theo số lá"; chưa thể xác định mã nhôm lá duy nhất.` };
+    }
+    if (byLeaf.length === 1) {
+      const code = text(byLeaf[0]!.item_code);
+      const material = await readDoc<ItemDoc>(call, "Item", code);
+      if (text(material.inventory_mode) !== "Nhôm cây/lá") {
+        return { bom_no: bomNo, stock_profile_item: null, stock_profile_error: `${bomNo}: dòng "Theo số lá" ${code} không phải Item Nhôm cây/lá.` };
+      }
+      return { bom_no: bomNo, stock_profile_item: code, stock_profile_error: null };
+    }
+
+    const rawProfiles: string[] = [];
+    for (const row of rows) {
+      const code = text(row.item_code);
+      const material = await readDoc<ItemDoc>(call, "Item", code);
+      if (text(material.inventory_mode) === "Nhôm cây/lá") rawProfiles.push(code);
+    }
+    const unique = [...new Set(rawProfiles)];
+    if (unique.length === 1) return { bom_no: bomNo, stock_profile_item: unique[0]!, stock_profile_error: null };
+    if (!unique.length) {
+      return { bom_no: bomNo, stock_profile_item: null, stock_profile_error: `${bomNo}: không có vật tư Nhôm cây/lá để kiểm tra lô.` };
+    }
+    return {
+      bom_no: bomNo,
+      stock_profile_item: null,
+      stock_profile_error: `${bomNo}: có nhiều vật tư Nhôm cây/lá (${unique.join(", ")}); cần khai đúng một dòng "Theo số lá".`,
+    };
+  } catch (error) {
+    return {
+      bom_no: null,
+      stock_profile_item: null,
+      stock_profile_error: error instanceof Error ? error.message : "Không xác định được mã nhôm nguyên liệu từ BOM.",
+    };
+  }
+}
+
+/**
  * Read-only configurator context used by the one-page sales wizard.
  *
  * Client sends the measurement vocabulary the customer actually used. Conversion to the
  * policy measurement basis stays here, next to Cutting Policy, so React never owns U75/U100
- * deductions or CLL -> CPB offsets.
+ * deductions or CLL -> CPB offsets. The same response also resolves the effective BOM and
+ * physical aluminium profile for ATP; it never guesses a raw SKU from the finished Item name.
  */
 export async function calculateSalesWizardLineContext(
   call: ProductionPlatformCall,
@@ -188,6 +314,9 @@ export async function calculateSalesWizardLineContext(
       leafError = error instanceof Error ? error.message : "Không tính được số lá.";
     }
 
+    const on = dateOnly(args.delivery_date) || new Date().toISOString().slice(0, 10);
+    const stockProfile = await resolveStockProfile(call, itemCode, text(args.color), on);
+
     return answer({
       ...formula,
       item_code: itemCode,
@@ -213,6 +342,7 @@ export async function calculateSalesWizardLineContext(
       leaf_error: leafError,
       estimated_weight_kg: formula.purchase_kg == null ? null : round(Number(formula.purchase_kg), 3),
       formula_explanation: `${formula.explanation}${leaf ? ` ${leaf.explanation}` : ""}`.trim(),
+      ...stockProfile,
     });
   } catch (error) {
     return answer({ message: error instanceof Error ? error.message : "Không tính được cấu hình bán hàng." }, 422);
