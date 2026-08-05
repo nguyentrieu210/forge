@@ -1,4 +1,5 @@
 import type { JsonObject } from "../../contracts/src/index.js";
+import type { CrmCustomer360ExternalIdentityData } from "./crm-external-identity-types.js";
 
 export interface CrmCustomer360CurrencyData extends JsonObject {
   row_id: string;
@@ -33,6 +34,7 @@ export interface CrmCustomer360Data extends JsonObject {
   status: "Current";
   organization_count: number;
   contact_count: number;
+  external_identity_count: number;
   open_deal_count: number;
   won_deal_count: number;
   lost_deal_count: number;
@@ -45,5 +47,6 @@ export interface CrmCustomer360Data extends JsonObject {
   payment_count: number;
   last_activity_at?: string;
   currency_summary: CrmCustomer360CurrencyData[];
+  external_identities: CrmCustomer360ExternalIdentityData[];
   recent_activities: CrmCustomer360ActivityData[];
 }
