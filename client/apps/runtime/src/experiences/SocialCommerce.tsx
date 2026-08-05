@@ -8,6 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
   Tabs, TabsContent, TabsList, TabsTrigger, toast,
 } from "@metaforge/ui";
+import { MarketplaceFulfillmentPanel } from "./MarketplaceFulfillmentPanel";
 
 type Tab = "overview" | "orders" | "settlements" | "inbox" | "carts";
 interface Summary { active_pages: number; events_today: number; open_carts: number; active_orders: number; cod_pending_minor: number }
@@ -231,7 +232,7 @@ export function SocialCommerce({ canManageConnections, onAuthenticationRequired 
             onConnectMarketplace={(connectionId) => void connectMarketplace(connectionId)}
           />}
         </TabsContent>
-        <TabsContent value="orders">{loading ? <ListSkeleton /> : <MarketplaceOrderList orders={orders} onReload={load} />}</TabsContent>
+        <TabsContent value="orders">{loading ? <ListSkeleton /> : <MarketplaceOrderList orders={orders} onReload={load} onAuthenticationRequired={onAuthenticationRequired} />}</TabsContent>
         <TabsContent value="settlements">{loading ? <ListSkeleton /> : <SettlementList settlements={settlements} restricted={settlementRestricted} />}</TabsContent>
         <TabsContent value="inbox">{loading ? <ListSkeleton /> : <InboxList events={events} />}</TabsContent>
         <TabsContent value="carts">{loading ? <ListSkeleton /> : <CartList carts={carts} />}</TabsContent>
@@ -324,16 +325,23 @@ function Overview({ summary, pages, providerCounts, orders, settlements, connect
   );
 }
 
-function MarketplaceOrderList({ orders, onReload }: { orders: MarketplaceOrder[]; onReload: () => Promise<void> }) {
+function MarketplaceOrderList({ orders, onReload, onAuthenticationRequired }: { orders: MarketplaceOrder[]; onReload: () => Promise<void>; onAuthenticationRequired: () => void }) {
   const [selected, setSelected] = useState<MarketplaceOrder>();
+  const [fulfillmentOrder, setFulfillmentOrder] = useState<MarketplaceOrder>();
   const [customer, setCustomer] = useState("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState<"link" | "revoke">();
 
   function openIdentity(order: MarketplaceOrder) {
+    setFulfillmentOrder(undefined);
     setSelected(order);
     setCustomer(order.customer ?? "");
     setReason("");
+  }
+
+  function openFulfillment(order: MarketplaceOrder) {
+    setSelected(undefined);
+    setFulfillmentOrder(order);
   }
 
   async function saveIdentity() {
@@ -379,7 +387,7 @@ function MarketplaceOrderList({ orders, onReload }: { orders: MarketplaceOrder[]
   return (
     <section className="overflow-hidden rounded-lg border bg-card shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 md:p-4">
-        <div><h2 className="text-sm font-semibold">Đơn hàng marketplace</h2><p className="text-xs text-muted-foreground">Mỗi dòng liên kết về Sales Order và Customer canonical của ERP.</p></div>
+        <div><h2 className="text-sm font-semibold">Đơn hàng marketplace</h2><p className="text-xs text-muted-foreground">Mỗi dòng liên kết về Sales Order, Delivery Note, Stock Return và Customer canonical của ERP.</p></div>
         <Button variant="outline" size="sm" onClick={() => window.location.assign("/app/CRM%20Customer%20External%20Identity")}><Link2 className="size-4" /> Danh tính kênh</Button>
       </div>
       {selected ? (
@@ -420,7 +428,15 @@ function MarketplaceOrderList({ orders, onReload }: { orders: MarketplaceOrder[]
           </p>
         </div>
       ) : null}
-      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kênh</TableHead><TableHead>Mã đơn</TableHead><TableHead>Customer</TableHead><TableHead>Sales Order</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Giá trị</TableHead><TableHead className="text-right">Danh tính</TableHead><TableHead className="text-right">Cập nhật</TableHead></TableRow></TableHeader><TableBody>
+      {fulfillmentOrder ? (
+        <MarketplaceFulfillmentPanel
+          order={fulfillmentOrder}
+          onClose={() => setFulfillmentOrder(undefined)}
+          onReloadOrders={onReload}
+          onAuthenticationRequired={onAuthenticationRequired}
+        />
+      ) : null}
+      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kênh</TableHead><TableHead>Mã đơn</TableHead><TableHead>Customer</TableHead><TableHead>Sales Order</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Giá trị</TableHead><TableHead className="text-right">Thao tác</TableHead><TableHead className="text-right">Cập nhật</TableHead></TableRow></TableHeader><TableBody>
         {orders.map((order) => <TableRow key={order.order_id}>
           <TableCell><ProviderBadge provider={order.provider} /></TableCell>
           <TableCell className="max-w-56 truncate font-medium">{order.order_id}</TableCell>
@@ -428,7 +444,7 @@ function MarketplaceOrderList({ orders, onReload }: { orders: MarketplaceOrder[]
           <TableCell>{order.sales_order_name ?? "—"}</TableCell>
           <TableCell><StatusBadge tone={orderTone(order.status)}>{orderStatus(order.status)}</StatusBadge></TableCell>
           <TableCell className="text-right tabular-nums">{money(order.amount_minor, order.currency)}</TableCell>
-          <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => openIdentity(order)}><Link2 className="size-4" /> Link</Button></TableCell>
+          <TableCell className="text-right"><div className="flex justify-end gap-1"><Button variant="ghost" size="sm" onClick={() => openIdentity(order)}><Link2 className="size-4" /> Danh tính</Button><Button variant="ghost" size="sm" onClick={() => openFulfillment(order)}><Truck className="size-4" /> Vận hành</Button></div></TableCell>
           <TableCell className="whitespace-nowrap text-right text-xs text-muted-foreground">{dateTime(order.modified_at)}</TableCell>
         </TableRow>)}
       </TableBody></Table></div>
