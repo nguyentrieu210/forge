@@ -18,7 +18,7 @@ abstract class BaseController<T extends JsonObject> implements DocumentControlle
   abstract readonly doctype: string;
   abstract normalize(context: ControllerContext<T>): Promise<T> | T;
   abstract ledger(context: ControllerContext<T>, data: T): Promise<LedgerResult> | LedgerResult;
-  abstract eventTypes(context: ControllerContext<T>): string[];
+  abstract eventTypes(context: ControllerContext<T>, data?: T): string[];
   status(context: ControllerContext<T>, _data: T): string {
     const ds = nextDocStatus(context.command.action); return ds === 0 ? "Draft" : ds === 1 ? "Submitted" : "Cancelled";
   }
@@ -29,7 +29,7 @@ abstract class BaseController<T extends JsonObject> implements DocumentControlle
       owner: context.existing?.owner ?? context.command.actor.user_id, docstatus, status, version: context.nextVersion,
       created_at: context.existing?.created_at ?? context.now, modified_at: context.now, data, children: extractChildren(this.doctype, data) };
     return { command: context.command, document, gl_entries: ledger.gl ?? [], stock_entries: ledger.stock ?? [], payment_entries: ledger.payment ?? [], fulfillment_entries: [], procurement_entries: ledger.procurement ?? [], stock_bundle_usages: ledger.stockBundleUsages ?? [], manufacturing_entries: ledger.manufacturing ?? [],
-      events: this.eventTypes(context).map((type) => domainEvent({ type, tenantId: context.command.tenant_id, aggregate: context.command.aggregate, aggregateVersion: context.nextVersion, actor: context.command.actor.user_id, commandId: context.command.command_id, occurredAt: context.now, payload: { action: context.command.action, status } })),
+      events: this.eventTypes(context, data).map((type) => domainEvent({ type, tenantId: context.command.tenant_id, aggregate: context.command.aggregate, aggregateVersion: context.nextVersion, actor: context.command.actor.user_id, commandId: context.command.command_id, occurredAt: context.now, payload: { action: context.command.action, status } })),
       result: { doctype: this.doctype, name: document.name, version: document.version, docstatus, status } };
   }
 }
@@ -189,23 +189,17 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
     const input=context.command.document; if(!input.supplier||!input.company||!input.currency||!input.posting_at) throw errors.validation("Supplier, company, currency and posting_at are required");
     const currency=await resolveCurrency(context,input.company,input.currency,input.posting_at,context.command.action==="submit"); const items=await applyUomConversion(context,normalizePurchaseStockItems(input.items,currency.transactionScale),{transactionKind:"purchase"});
     /**
-     * Đơn mua lấy theo TỪNG DÒNG, đầu phiếu chỉ là mặc định.
+     * Đơn mua lấy theo TỪNG DÒNG khi có khai. Đầu phiếu chỉ là mặc định.
      *
-     * Đây là chỗ giải bài toán N–N của mua hàng: một đơn giao làm nhiều đợt (đã chạy được từ
-     * trước nhờ `assertPurchaseRemaining`), VÀ một chuyến giao gộp nhiều đơn — cái sau trước
-     * đây không làm được, vì cả phiếu chỉ trỏ được về một đơn. Thủ kho phải tách một chuyến
-     * xe, một biên bản giao nhận của NCC, thành hai phiếu nhập.
-     *
-     * Hạn mức "không nhận quá số đặt" vẫn giữ nguyên, nhưng phải kiểm THEO TỪNG ĐƠN: gom dòng
-     * theo đơn rồi kiểm riêng. Kiểm gộp cả phiếu vào một đơn sẽ vừa từ chối nhầm, vừa cho lọt
-     * phần vượt của đơn kia.
+     * Purchase Order KHÔNG phải điều kiện để hàng được nhận vào kho: NCC có thể giao trực tiếp,
+     * thủ kho ghi phiếu nhận rồi kế toán mới xử lý phần thương mại. Nếu có PO thì các guard
+     * supplier/company/currency, remaining và tolerance vẫn chạy nguyên vẹn theo từng đơn.
      */
     const orderOf=(item:PurchaseItem):string|undefined=>item.purchase_order??input.against_purchase_order;
-    for(const [index,item] of items.entries()) if(!orderOf(item)) throw errors.validation(`Purchase Order is required at row ${index+1} (on the line or on the receipt)`);
     const allowNegative=Boolean(input.allow_negative_stock && (context.command.actor.roles.includes("Stock Manager")||context.command.actor.roles.includes("System Manager")));
     if(context.command.action==="submit") { await assertUnlocked(context,input.company,input.posting_at); await assertMasters(context,[["Supplier",input.supplier],["Company",input.company],["Currency",input.currency],...items.map((i):[string,string]=>["Item",i.item_code]),...items.map((i):[string,string]=>["Warehouse",i.warehouse!])]);
       const byOrder=new Map<string,PurchaseItem[]>();
-      for(const item of items){const name=orderOf(item)!;const list=byOrder.get(name);if(list)list.push(item);else byOrder.set(name,[item]);}
+      for(const item of items){const name=orderOf(item);if(!name)continue;const list=byOrder.get(name);if(list)list.push(item);else byOrder.set(name,[item]);}
       for(const [name,lines] of byOrder){const po=await requireSubmitted<PurchaseOrderData>(context,"Purchase Order",name); assertPurchaseContext(input,po.data,"Purchase Receipt"); await assertPurchaseRemaining(context,po,lines,"Receipt");} }
     return {...input,currency_scale:currency.transactionScale,items,allow_negative_stock:allowNegative};
   }
@@ -236,7 +230,8 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
        * là ghi giá một ký vào chỗ dành cho giá một cây, và lỗi sáu lần quay lại ở đầu kia.
        */
       const ratePerStockUnit=ratePerUnitMinor(value,stockQty);const tracked=await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>,{itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:stockQty,direction:"Inward",postingAt:data.posting_at,currency:data.currency,currencyScale:scale,valuationRateMinor:ratePerStockUnit,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.actual_weight_micros!==undefined?{weightMicros:item.actual_weight_micros}:{}),...(item.serial_and_batch_bundle?{bundleName:item.serial_and_batch_bundle}:{})});stock.push(...tracked.stock);usages.push(...tracked.usages);}
-    const procurement=data.items.map((item,index):ProcurementEntry=>({line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:(item.purchase_order??data.against_purchase_order)!,kind:"Receipt",item_code:item.item_code,qty_micros:stockQtyMicros(item),posting_at:data.posting_at}));
+    // Procurement progress is a projection of a real Purchase Order relationship, not of receipt existence itself.
+    const procurement=data.items.flatMap((item,index):ProcurementEntry[]=>{const purchaseOrder=item.purchase_order??data.against_purchase_order;return purchaseOrder?[{line_key:`RECEIPT-${item.row_id||index+1}`,purchase_order:purchaseOrder,kind:"Receipt",item_code:item.item_code,qty_micros:stockQtyMicros(item),posting_at:data.posting_at}]:[]});
     /**
      * Hàng về thì GHI SỔ CÁI, không chỉ ghi sổ kho.
      *
@@ -261,7 +256,7 @@ export class PurchaseReceiptController extends BaseController<PurchaseReceiptDat
       }
     }
     return context.command.action==="cancel"?{gl:reverseGl(gl),stock:reverseStock(stock),procurement:procurement.map(x=>({...x,line_key:`REV-${x.line_key}`,qty_micros:-x.qty_micros})),stockBundleUsages:usages.map(line=>({...line,line_key:`REV-${line.line_key}`,usage_delta:-1 as const}))}:{gl,stock,procurement,stockBundleUsages:usages}; }
-  eventTypes(context:ControllerContext<PurchaseReceiptData>):string[]{return context.command.action==="submit"?["stock.posted","purchase_receipt.submitted","purchase_order.progressed"]:context.command.action==="cancel"?["stock.reversed","purchase_receipt.cancelled","purchase_order.progressed"]:["purchase_receipt.updated"]}
+  eventTypes(context:ControllerContext<PurchaseReceiptData>,data?:PurchaseReceiptData):string[]{const progressed=Boolean(data?.against_purchase_order||data?.items?.some(item=>item.purchase_order));return context.command.action==="submit"?["stock.posted","purchase_receipt.submitted",...(progressed?["purchase_order.progressed"]:[])]:context.command.action==="cancel"?["stock.reversed","purchase_receipt.cancelled",...(progressed?["purchase_order.progressed"]:[])]:["purchase_receipt.updated"]}
 }
 
 export class PurchaseInvoiceController extends BaseController<PurchaseInvoiceData> {
