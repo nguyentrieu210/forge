@@ -25,7 +25,6 @@ jobs:
       TENANT: alu
       APP_ID: alumdoor
       EXPECTED_VERSION: 2.2.4
-      TARGET_SHA: 3647f8c67094b3aa1d0fbbe80e94cc24fec73713
       AUTH_FILE: ops/releases/alu-alumdoor-2.2.4-r2-authorization.txt
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
@@ -55,26 +54,32 @@ jobs:
           grep -Fxq 'TENANT=alu' "$AUTH_FILE"
           grep -Fxq 'APP=alumdoor' "$AUTH_FILE"
           grep -Fxq 'VERSION=2.2.4' "$AUTH_FILE"
-          grep -Fxq "TARGET_SHA=$TARGET_SHA" "$AUTH_FILE"
           grep -Fxq 'APPROVAL=EXPLICIT_USER_APPROVAL_2026-08-05' "$AUTH_FILE"
+          target_sha="$(sed -n 's/^TARGET_SHA=//p' "$AUTH_FILE")"
+          [[ "$target_sha" =~ ^[0-9a-f]{40}$ ]]
+          test "$(grep -c '^TARGET_SHA=' "$AUTH_FILE")" -eq 1
           git fetch --no-tags origin main
-          test "$TARGET_SHA" = "$(git rev-parse origin/main)" || {
-            echo "Refusing production install: main moved after authorization target was frozen."
+          current_main="$(git rev-parse origin/main)"
+          test "$target_sha" = "$current_main" || {
+            echo "Refusing production install: authorized target $target_sha is not current main $current_main."
             exit 1
           }
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           test -n "${FORGE_ADMIN_USER:-}"
           test -n "${FORGE_ADMIN_PASSWORD:-}"
+          printf 'TARGET_SHA=%s\n' "$target_sha" >> "$GITHUB_ENV"
           printf 'run_id=%s\ntarget_sha=%s\ntenant=%s\napp=%s\nexpected_version=%s\nstarted_at=%s\nwrite_scope=metadata_only\nsmoke_scope=read_only\n' \
-            "$GITHUB_RUN_ID" "$TARGET_SHA" "$TENANT" "$APP_ID" "$EXPECTED_VERSION" \
+            "$GITHUB_RUN_ID" "$target_sha" "$TENANT" "$APP_ID" "$EXPECTED_VERSION" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/state.txt"
 
-      - name: Checkout exact merged production source
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TARGET_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
+      - name: Checkout exact authorized merged production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$TARGET_SHA"
+          git checkout --force --detach "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git clean -fdx
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
