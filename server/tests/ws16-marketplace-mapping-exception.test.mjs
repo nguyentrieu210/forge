@@ -7,6 +7,7 @@ const ingest = await readFile(new URL("../packages/social-commerce/src/provider-
 const exceptions = await readFile(new URL("../packages/social-commerce/src/marketplace-mapping-exception.ts", import.meta.url), "utf8");
 const bridge = await readFile(new URL("../apps/tenant-worker/src/marketplace-oauth-start.ts", import.meta.url), "utf8");
 const migration = await readFile(new URL("../migrations/tenant/0122_marketplace_mapping_exceptions.sql", import.meta.url), "utf8");
+const socialCommerce = await readFile(new URL("../../client/apps/runtime/src/experiences/SocialCommerce.tsx", import.meta.url), "utf8");
 
 test("mapping exception evidence is tenant-scoped, bounded and contains no buyer/order payload or secrets", () => {
   assert.match(migration, /CREATE TABLE IF NOT EXISTS marketplace_mapping_exceptions/);
@@ -52,4 +53,24 @@ test("manager connection projection exposes open mapping exceptions read-only th
   assert.match(bridge, /jsonResponse\(\{ connections, mapping_exceptions: mappingExceptions \}/);
   assert.doesNotMatch(bridge, /mapping_exceptions[\s\S]{0,200}(?:POST|PUT|DELETE)/);
   assert.doesNotMatch(bridge, /body\.(?:external_sku|external_variant_key|reason_code|resolved_at)/);
+});
+
+test("manager UI mounts a dedicated read-only SKU exception inbox from the existing connection projection", () => {
+  assert.match(socialCommerce, /type Tab = "overview" \| "orders" \| "mapping"/);
+  assert.match(socialCommerce, /interface MarketplaceMappingException/);
+  assert.match(socialCommerce, /mapping_exceptions: MarketplaceMappingException\[\]/);
+  assert.match(socialCommerce, /setMappingExceptions\(nextConnections\.mapping_exceptions\)/);
+  assert.match(socialCommerce, /canManageConnections \? <TabsTrigger value="mapping"/);
+  assert.match(socialCommerce, /Lỗi SKU/);
+  assert.match(socialCommerce, /MarketplaceMappingExceptionList exceptions=\{mappingExceptions\}/);
+  assert.match(socialCommerce, /\/app\/Marketplace%20SKU%20Mapping/);
+  assert.match(socialCommerce, /Read-only evidence từ metadata resolver/);
+
+  const start = socialCommerce.indexOf("function MarketplaceMappingExceptionList");
+  const end = socialCommerce.indexOf("function MarketplaceOrderList");
+  assert.ok(start >= 0 && end > start);
+  const inboxUi = socialCommerce.slice(start, end);
+  assert.doesNotMatch(inboxUi, /\bapi\s*[<(]/);
+  assert.doesNotMatch(inboxUi, /method:\s*["'](?:POST|PUT|PATCH|DELETE)["']/);
+  assert.doesNotMatch(inboxUi, /fetch\s*\(/);
 });
