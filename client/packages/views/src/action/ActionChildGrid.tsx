@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDown, ArrowDownToLine, ArrowUp, Columns3, Copy, Pin, PinOff, Plus, RotateCcw, Trash2, Undo2, X,
 } from "lucide-react";
@@ -148,7 +148,12 @@ export function ActionChildGrid(props: ActionChildGridProps) {
     const metaField = (childMeta.fields ?? []).find((field) => field.fieldname === fieldname);
     const declaredField = table.columns.find((column) => column.fieldname === fieldname)!;
     return metaField
-      ? { ...metaField, label: declaredField.label || metaField.label, in_list_view: 1 as const }
+      ? {
+          ...metaField,
+          label: declaredField.label || metaField.label,
+          ...(declaredField.link_filters ? { link_filters: declaredField.link_filters } : {}),
+          in_list_view: 1 as const,
+        }
       : ({ ...declaredField, reqd: declaredField.required ? 1 : 0, in_list_view: 1 } as DocField);
   }), [childMeta, declared, table.columns]);
 
@@ -169,7 +174,9 @@ export function ActionChildGrid(props: ActionChildGridProps) {
         ...baseCols.filter((field) => !layout.order.includes(field.fieldname)),
       ]
     : baseCols;
-  const identity = ordered.find((field) => ["Link", "Dynamic Link"].includes(field.fieldtype))?.fieldname ?? ordered[0]?.fieldname;
+  const identity = baseCols.find((field) => field.fieldname === "item_code")?.fieldname
+    ?? baseCols.find((field) => ["Link", "Dynamic Link"].includes(field.fieldtype))?.fieldname
+    ?? baseCols[0]?.fieldname;
   const cols = ordered.filter((field) => field.fieldname === identity || !layout.hidden.includes(field.fieldname));
   const weights = normalizeWeights(cols, layout.weights);
 
@@ -423,6 +430,7 @@ export function ActionChildGrid(props: ActionChildGridProps) {
     const values = rows.map((row) => numeric(row[field.fieldname])).filter((value): value is number => value !== undefined);
     if (values.length) totals.set(field.fieldname, values.reduce((sum, value) => sum + value, 0));
   }
+  const strongEditable = table.presentation?.emphasize_editable !== false;
 
   return (
     <div className="space-y-2" data-action-child-grid={table.fieldname}>
@@ -472,7 +480,10 @@ export function ActionChildGrid(props: ActionChildGridProps) {
                 const cellReadOnly = Boolean(readOnly || resolved.readOnly || !resolved.visible);
                 if (!resolved.visible) return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-editable="false" className={`h-9 !bg-muted/80 px-1 text-center font-semibold text-muted-foreground ${pin.className}`} style={pin.style}>—</TableCell>;
                 const Control = registry.resolve(effective.fieldtype) ?? FallbackControl;
-                return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-editable={cellReadOnly ? "false" : "true"} className={`${cellReadOnly ? "!bg-muted/70 text-muted-foreground" : "!bg-primary/[0.14] font-semibold ring-2 ring-inset ring-primary/45 focus-within:!bg-primary/[0.22] focus-within:ring-primary"} h-9 px-1 py-0.5 ${pin.className}`} style={pin.style} onFocusCapture={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }} onClick={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }}>
+                const editableClass = strongEditable
+                  ? "!bg-primary/[0.16] font-bold ring-2 ring-inset ring-primary/55 focus-within:!bg-primary/[0.24] focus-within:ring-[3px] focus-within:ring-primary"
+                  : "!bg-primary/[0.07] ring-1 ring-inset ring-primary/25 focus-within:ring-2";
+                return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-editable={cellReadOnly ? "false" : "true"} className={`${cellReadOnly ? "!bg-muted/70 text-muted-foreground" : editableClass} h-9 px-1 py-0.5 ${pin.className}`} style={pin.style} onFocusCapture={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }} onClick={() => { setPickedRow(rowIndex); setPickedColumn(columnIndex); }}>
                   <Control field={effective} value={row[field.fieldname]} onChange={(value: unknown) => setCell(rowIndex, field.fieldname, value)} readOnly={cellReadOnly} masked={resolved.masked} services={services} docname={String(row.name ?? "")} linkTarget={effective.fieldtype === "Link" ? effective.options : undefined} parentDoctype={childMeta.name} docValues={row} roles={roles} compact />
                 </TableCell>;
               })}
