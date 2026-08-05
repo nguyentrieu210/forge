@@ -21,8 +21,10 @@ const PROCUREMENT_LABELS = ["Mua hàng", "Nhập hàng", "Báo cáo", "Lịch s�
 test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình tab", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.2.8");
-  assert.deepEqual(brief.navigation.items.slice(0, 4), PROCUREMENT_KEYS);
+  assert.equal(brief.version, "2.2.9");
+  const procurementStart = brief.navigation.items.indexOf(PROCUREMENT_KEYS[0]);
+  assert.notEqual(procurementStart, -1);
+  assert.deepEqual(brief.navigation.items.slice(procurementStart, procurementStart + PROCUREMENT_KEYS.length), PROCUREMENT_KEYS);
 
   const purchaseOrder = brief.doctypes.find((entry) => entry.name === "Purchase Order");
   const purchaseReceipt = brief.doctypes.find((entry) => entry.name === "Purchase Receipt");
@@ -57,7 +59,7 @@ test("Alumdoor procurement exposes four metadata tabs after the shell Quy trình
   assert.equal(purchaseReport?.group, "Mua hàng");
 
   const pkg = compileBrief(brief);
-  assert.equal(pkg.version, "2.2.8");
+  assert.equal(pkg.version, "2.2.9");
   const procurement = pkg.nav.filter((entry) => entry.group === "Mua hàng");
   assert.deepEqual(procurement.map((entry) => entry.key), PROCUREMENT_KEYS);
   assert.deepEqual(procurement.map((entry) => entry.label), PROCUREMENT_LABELS);
