@@ -7,7 +7,7 @@ const boundary = readFileSync(new URL("../src/action/NativeActionScreen.tsx", im
 
 test("procurement workspace keeps the six operator surfaces on one route", () => {
   for (const label of ["Quy trình", "Mua hàng", "Nhập hàng", "Thanh toán", "Lịch sử", "Báo cáo"]) {
-    assert.match(workspace, new RegExp(`label: \\"${label}\\"`));
+    assert.equal(workspace.includes(`label: "${label}"`), true, `missing workspace surface: ${label}`);
   }
   assert.match(workspace, /NewFormContainer/);
   assert.match(workspace, /BaseActionScreen/);
@@ -18,12 +18,12 @@ test("procurement workspace reuses shared chart primitives and supports drilldow
   assert.match(workspace, /ForgeLineChart/);
   assert.match(workspace, /ForgeBarChart/);
   assert.match(workspace, /onActivate/);
-  assert.match(workspace, /onOpen\(\"Purchase Order\"/);
+  assert.match(workspace, /onOpen\("Purchase Order"/);
 });
 
 test("workspace does not fabricate VAT when canonical read model is absent", () => {
   assert.match(workspace, /canonical VAT read-model/);
-  assert.match(workspace, /input_vat == null \? \"—\"/);
+  assert.match(workspace, /input_vat == null \? "—"/);
 });
 
 test("shared procurement workspace contains no supplier-specific business literal", () => {
