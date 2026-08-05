@@ -13,12 +13,13 @@ const PROCUREMENT_KEYS = [
   "action:tao-don-mua",
   "action:nhap-nhom-hang-loat",
   "action:bao-cao-giao-hang-ncc",
-  "Purchase Order",
+  "action:lich-su-mua-hang",
 ];
 const PROCUREMENT_LABELS = ["Mua hàng", "Nhập hàng", "Báo cáo", "Lịch sử mua hàng"];
 const MASTER_DETAIL_PREFIX = "MasterDetailList:";
+const HISTORY_PREFIX = "DocumentHistory:";
 
-test("Alumdoor procurement exposes four operational tabs bound to shared context in 2.3.0", async () => {
+test("Alumdoor procurement exposes operational create, receive, dashboard and canonical history in 2.3.0", async () => {
   const brief = await readBriefSource(briefPath);
 
   assert.equal(brief.version, "2.3.0");
@@ -29,8 +30,8 @@ test("Alumdoor procurement exposes four operational tabs bound to shared context
 
   const purchaseOrder = brief.doctypes.find((entry) => entry.name === "Purchase Order");
   const purchaseReceipt = brief.doctypes.find((entry) => entry.name === "Purchase Receipt");
-  assert.equal(purchaseOrder?.label, "Lịch sử mua hàng");
-  assert.equal(purchaseOrder?.menu, true);
+  assert.equal(purchaseOrder?.label, "Đơn mua");
+  assert.equal(purchaseOrder?.menu, false, "canonical Purchase Order stays installed but leaves the daily strip");
   assert.equal(purchaseOrder?.group, "Mua hàng");
   assert.equal(purchaseReceipt?.menu, false);
 
@@ -38,6 +39,7 @@ test("Alumdoor procurement exposes four operational tabs bound to shared context
   const fifo = brief.actions.find((entry) => entry.name === "nhap-nhom-fifo");
   const bulk = brief.actions.find((entry) => entry.name === "nhap-nhom-hang-loat");
   const reportAction = brief.actions.find((entry) => entry.name === "bao-cao-giao-hang-ncc");
+  const historyAction = brief.actions.find((entry) => entry.name === "lich-su-mua-hang");
   const settlement = brief.actions.find((entry) => entry.name === "doi-soat-giao-hang-ncc");
 
   assert.equal(createOrder?.label, "Mua hàng");
@@ -75,6 +77,16 @@ test("Alumdoor procurement exposes four operational tabs bound to shared context
   assert.equal(reportAction?.permissionAction, "read");
   assert.match(reportAction?.commit ?? "", /^alumdoor\.purchase\.supplier_delivery_dashboard\s*\|/);
   assert.ok(reportAction?.fields.some((field) => typeof field === "string" && field.startsWith("view_config:Text(MasterDetailList:")));
+
+  assert.equal(historyAction?.label, "Lịch sử mua hàng");
+  assert.equal(historyAction?.menu, true);
+  assert.equal(historyAction?.permissionAction, "read");
+  const historyField = historyAction?.fields.find((field) => typeof field === "string" && field.startsWith("history_config:Text(DocumentHistory:"));
+  assert.ok(historyField);
+  assert.match(historyField, /\"doctype\":\"Purchase Order\"/);
+  assert.match(historyField, /\"doctype\":\"Purchase Receipt\"/);
+  assert.match(historyField, /\"dateField\":\"posting_at\"/);
+  assert.match(historyField, /\"referenceField\":\"supplier_invoice_no\"/);
   assert.equal(settlement?.menu, false);
 
   const purchaseReport = brief.reports.find((entry) => entry.name === "Mua hàng theo nhà cung cấp");
@@ -103,10 +115,24 @@ test("Alumdoor procurement exposes four operational tabs bound to shared context
   assert.equal(config.chartTop, 8);
   assert.equal(config.valueFormat, "currency");
 
+  const history = pkg.actions.find((entry) => entry.name === "lich-su-mua-hang");
+  assert.equal(history?.permission_action, "read");
+  const compiledHistoryField = history?.fields.find((field) => field.fieldname === "history_config");
+  assert.ok(compiledHistoryField?.options?.startsWith(HISTORY_PREFIX));
+  const historyConfig = JSON.parse(compiledHistoryField.options.slice(HISTORY_PREFIX.length));
+  assert.deepEqual(historyConfig.sources.map((source) => source.doctype), ["Purchase Order", "Purchase Receipt"]);
+  assert.equal(historyConfig.sources[0].dateField, "transaction_date");
+  assert.equal(historyConfig.sources[1].dateField, "posting_at");
+  assert.equal(historyConfig.sources[1].referenceField, "supplier_invoice_no");
+  assert.equal(historyConfig.sources[0].companyField, "company");
+  assert.equal(historyConfig.sources[1].companyField, "company");
+
   const navByKey = new Map(pkg.nav.map((entry) => [entry.key, entry]));
+  assert.equal(navByKey.has("Purchase Order"), false);
   assert.equal(navByKey.has("Purchase Receipt"), false);
   assert.equal(navByKey.has("action:nhap-nhom-fifo"), false);
   assert.equal(navByKey.has("action:doi-soat-giao-hang-ncc"), false);
+  assert.equal(navByKey.get("action:lich-su-mua-hang")?.kind, "experience");
   assert.equal(navByKey.get("report:Mua hàng theo nhà cung cấp")?.group, "Báo cáo");
 
   assert.ok(pkg.doctypes.some((entry) => entry.name === "Purchase Order"));
@@ -115,5 +141,6 @@ test("Alumdoor procurement exposes four operational tabs bound to shared context
   assert.ok(pkg.actions.some((entry) => entry.name === "nhap-nhom-fifo"));
   assert.ok(pkg.actions.some((entry) => entry.name === "nhap-nhom-hang-loat"));
   assert.ok(pkg.actions.some((entry) => entry.name === "bao-cao-giao-hang-ncc"));
+  assert.ok(pkg.actions.some((entry) => entry.name === "lich-su-mua-hang"));
   assert.ok(pkg.actions.some((entry) => entry.name === "doi-soat-giao-hang-ncc"));
 });
