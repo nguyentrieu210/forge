@@ -24,7 +24,14 @@ export function tenantScriptName(tenant) {
  * own cron, so a schedule here is a schedule that silently never fires. The jobs Worker
  * drives every tenant's maintenance instead.
  */
-export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudforge-${tenant}`, publicOrigin }) {
+export function writeTenantConfig({
+  tenant,
+  databaseId,
+  databaseName = `cloudforge-${tenant}`,
+  publicOrigin,
+  securityGeneration = 1,
+}) {
+  if (![1, 2].includes(securityGeneration)) throw new Error("securityGeneration must be 1 or 2");
   const configPath = path.join(serverRoot, "apps", "tenant-worker", `wrangler.${tenant}.generated.jsonc`);
   writeFileSync(configPath, `${JSON.stringify({
     $schema: "node_modules/wrangler/config-schema.json",
@@ -41,6 +48,11 @@ export function writeTenantConfig({ tenant, databaseId, databaseName = `cloudfor
     vars: {
       TENANT_ID: tenant,
       AUTH_MODE: "production",
+      // Generation V2 tenants hold only their own derived identity key. The V2 master
+      // stays on the Gateway/Control Plane and is never written into this config or a
+      // tenant binding. Presence of the key id tells tenant auth to treat
+      // INTERNAL_AUTH_SECRET as the already-derived verification key.
+      ...(securityGeneration === 2 ? { INTERNAL_AUTH_KEY_ID: "k2" } : {}),
       /**
        * Where an app Worker calls BACK into the platform.
        *
