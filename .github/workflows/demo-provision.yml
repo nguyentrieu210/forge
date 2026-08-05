@@ -1,0 +1,185 @@
+name: Forge Customer Demo Provision
+
+on:
+  workflow_dispatch:
+    inputs:
+      customer_name:
+        description: Customer/display name, e.g. Thúy
+        required: true
+        type: string
+      slug:
+        description: Optional hostname slug; blank derives from customer name
+        required: false
+        type: string
+      brief:
+        description: Existing server/briefs/<name>.json to install
+        required: true
+        default: phanbon
+        type: string
+      admin_user:
+        description: Demo administrator login
+        required: true
+        default: admin
+        type: string
+      plan:
+        description: Tenant plan
+        required: true
+        default: pro
+        type: choice
+        options:
+          - free
+          - pro
+          - enterprise
+      provision_standard:
+        description: Provision standard ERP metadata before app install
+        required: true
+        default: false
+        type: boolean
+      target_sha:
+        description: Exact merged main SHA; defaults to selected ref SHA
+        required: false
+        type: string
+      confirm:
+        description: Type demo to authorize production tenant/provider mutation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-demo-${{ inputs.slug || inputs.customer_name }}
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Provision isolated customer demo
+    if: inputs.confirm == 'demo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FORGE_INTERNAL_AUTH_SECRET: ${{ secrets.FORGE_INTERNAL_AUTH_SECRET || secrets.INTERNAL_AUTH_SECRET }}
+      FORGE_INTERNAL_SERVICE_TOKEN: ${{ secrets.FORGE_INTERNAL_SERVICE_TOKEN || secrets.INTERNAL_SERVICE_TOKEN }}
+      FORGE_CONTROL_TOKEN: ${{ secrets.FORGE_CONTROL_TOKEN || secrets.CONTROL_TOKEN }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_DEMO_ADMIN_PASSWORD || secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+      FORGE_DEMO_BASE_DOMAIN: kairo.vn
+      FORGE_DISPATCH_NAMESPACE: cloudforge-production
+
+    steps:
+      - name: Checkout exact merged revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require target to be merged into main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git cat-file -e "$TARGET_SHA^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
+            echo "Refusing production demo provisioning: $TARGET_SHA is not merged into main."
+            exit 1
+          }
+
+      - name: Validate inputs and required secrets
+        id: input
+        shell: bash
+        env:
+          RAW_BRIEF: ${{ inputs.brief }}
+          CUSTOMER_NAME: ${{ inputs.customer_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RAW_BRIEF" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo "brief must be a simple server/briefs name"; exit 1; }
+          test -f "server/briefs/${RAW_BRIEF}.json" || { echo "Unknown brief server/briefs/${RAW_BRIEF}.json"; exit 1; }
+          test -n "$CUSTOMER_NAME" || { echo "customer_name is required"; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID repository variable/secret"; exit 1; }
+          test -n "$FORGE_INTERNAL_AUTH_SECRET" || { echo "Missing FORGE_INTERNAL_AUTH_SECRET"; exit 1; }
+          test -n "$FORGE_INTERNAL_SERVICE_TOKEN" || { echo "Missing FORGE_INTERNAL_SERVICE_TOKEN"; exit 1; }
+          test -n "$FORGE_CONTROL_TOKEN" || { echo "Missing FORGE_CONTROL_TOKEN"; exit 1; }
+          test -n "$FORGE_ADMIN_PASSWORD" || { echo "Missing FORGE_DEMO_ADMIN_PASSWORD/FORGE_ADMIN_PASSWORD"; exit 1; }
+          echo "brief=server/briefs/${RAW_BRIEF}.json" >> "$GITHUB_OUTPUT"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build server tooling
+        run: pnpm --filter cloudforge run build
+
+      - name: Verify Demo Factory helper
+        run: node --test server/tests/demo-provisioning.test.mjs
+
+      - name: Compile and validate app before provider mutation
+        shell: bash
+        env:
+          BRIEF: ${{ steps.input.outputs.brief }}
+          CUSTOMER_NAME: ${{ inputs.customer_name }}
+          SLUG: ${{ inputs.slug }}
+          ADMIN_USER: ${{ inputs.admin_user }}
+          PLAN: ${{ inputs.plan }}
+        run: |
+          set -euo pipefail
+          args=("$BRIEF" --customer "$CUSTOMER_NAME" --admin "$ADMIN_USER" --plan "$PLAN" --dry-run)
+          if [ -n "$SLUG" ]; then args+=(--slug "$SLUG"); fi
+          node server/scripts/create-demo-tenant.mjs "${args[@]}"
+
+      - name: Provision tenant, install app and verify live URL
+        id: provision
+        shell: bash
+        env:
+          BRIEF: ${{ steps.input.outputs.brief }}
+          CUSTOMER_NAME: ${{ inputs.customer_name }}
+          SLUG: ${{ inputs.slug }}
+          ADMIN_USER: ${{ inputs.admin_user }}
+          PLAN: ${{ inputs.plan }}
+          PROVISION_STANDARD: ${{ inputs.provision_standard }}
+        run: |
+          set -euo pipefail
+          args=("$BRIEF" --customer "$CUSTOMER_NAME" --admin "$ADMIN_USER" --plan "$PLAN")
+          if [ -n "$SLUG" ]; then args+=(--slug "$SLUG"); fi
+          if [ "$PROVISION_STANDARD" = "true" ]; then args+=(--provision-standard); fi
+          output=$(node server/scripts/create-demo-tenant.mjs "${args[@]}")
+          printf '%s\n' "$output"
+          live=$(printf '%s\n' "$output" | awk '/^LIVE https:\/\// {print $2}' | tail -1)
+          test -n "$live" || { echo "Provisioning completed without a LIVE URL"; exit 1; }
+          echo "url=$live" >> "$GITHUB_OUTPUT"
+
+      - name: Publish demo summary
+        shell: bash
+        env:
+          LIVE_URL: ${{ steps.provision.outputs.url }}
+          CUSTOMER_NAME: ${{ inputs.customer_name }}
+          BRIEF_NAME: ${{ inputs.brief }}
+          ADMIN_USER: ${{ inputs.admin_user }}
+        run: |
+          {
+            echo "## Demo ready"
+            echo
+            echo "- Customer: $CUSTOMER_NAME"
+            echo "- App brief: $BRIEF_NAME"
+            echo "- URL: $LIVE_URL"
+            echo "- Admin: $ADMIN_USER"
+            echo "- Source SHA: $TARGET_SHA"
+            echo
+            echo "Password remains in GitHub Secrets and is never written to the job summary."
+          } >> "$GITHUB_STEP_SUMMARY"
