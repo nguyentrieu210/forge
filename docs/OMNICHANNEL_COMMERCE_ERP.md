@@ -25,6 +25,7 @@ Các sàn là **external channels**. Chúng không phải source of truth cho St
 | Commercial order | canonical `Sales Order` / Document Kernel | Marketplace creates/replays one deterministic canonical order. |
 | Available stock/reservation | WS04 shared Stock authority | Cross-channel reserve/commit/release; no marketplace stock ledger. |
 | Fulfillment | canonical Delivery Note + Stock Return | Marketplace tracking/return UI is a projection around canonical evidence. |
+| SLA policy | `Marketplace SLA Policy` metadata | Per-channel business threshold for order-to-fulfillment observation; UI never invents a default threshold. |
 | Invoice/payment/fees/settlement | WS01 Finance authority | Marketplace stores reconciliation evidence only; GL/Payment truth stays canonical. |
 | Customer | WS02 CRM/Customer authority | Exact provider/shop-scoped identity fingerprints link to canonical Customer under CRM policy. |
 | Provider event state | marketplace operational evidence | Monotonic external-status watermark for audit only; never drives ERP lifecycle. |
@@ -155,9 +156,32 @@ The `Đơn sàn` candidate UI adds local operator controls over the bounded orde
 - filter by provider;
 - filter by observed operational status;
 - highlight/filter orders missing canonical Sales Order or Customer links;
-- retain the existing canonical identity and fulfillment actions.
+- retain the existing canonical identity and fulfillment actions;
+- show a policy-driven SLA queue for `Cần chú ý`, `Vi phạm`, `Chưa cấu hình` and `Tất cả`.
 
-These controls are observational/client-side only and introduce no lifecycle mutation route. No hard-coded SLA age threshold is inferred from timestamps; SLA/overdue behavior requires an explicit business policy/metadata authority before it can be added safely.
+These controls are observational/client-side only and introduce no lifecycle mutation route. SLA state, due time and fulfillment time are calculated server-side from explicit policy metadata and canonical timestamps; browser code does not calculate thresholds.
+
+### 3.13 Marketplace SLA policy
+
+`Marketplace SLA Policy` is one metadata document per `Commerce Channel Profile`. The first supported metric is `order_to_fulfillment`.
+
+Policy fields are explicit:
+
+- `target_minutes` — breach threshold;
+- `warning_minutes` — warning window before target;
+- `disabled` — no SLA assertion while disabled.
+
+There is deliberately **no default business threshold**. The controller requires positive target minutes and `warning_minutes < target_minutes`, and keeps channel profile/metric immutable after creation.
+
+SLA observation uses:
+
+- start: immutable `social_orders.created_at`, when Forge accepted the marketplace order;
+- stop: first `social_shipments.created_at`, which is only created through the canonical Delivery Note fulfillment path;
+- cancelled/returned orders: `not_applicable`;
+- no policy/disabled policy: no SLA assertion;
+- malformed policy: `policy_invalid` evidence.
+
+Provider external status and `social_orders.modified_at` are intentionally excluded from the SLA clock. Migration `0123_marketplace_sla_context.sql` binds provider order evidence to its channel profile for policy scope. Existing pre-migration evidence may have a null channel profile until that provider order is replayed; Forge does not guess or reverse a one-way source hash to backfill policy scope.
 
 ## 4. Sellable ERP module status
 
@@ -166,13 +190,13 @@ These controls are observational/client-side only and introduce no lifecycle mut
 | Channel Center | Implemented: connection metadata, OAuth/re-auth, credential health, sync health. Live seller authorization/certification pending. |
 | Catalog & SKU | Implemented: deterministic mapping + fail-closed mapping exception evidence + dedicated manager inbox UI. Rich listing/publish management is future scope. |
 | Price & Promotion | Canonical price-list authority and amount reconciliation implemented; full outbound listing/promotion management is future scope. |
-| Order Cockpit | Canonical order list, search/provider/status filters, missing-link filter, identity, fulfillment/return and provider-event diagnostics implemented. Policy-driven SLA aging remains future scope. |
+| Order Cockpit | Canonical order list, search/provider/status/missing-link filters, identity, fulfillment/return, provider-event diagnostics and metadata-driven SLA queue implemented. |
 | Omnichannel ATP | Generic reservation/ATP lifecycle implemented for marketplace candidate. |
 | Fulfillment | Canonical Delivery Note/tracking/return integration implemented. Provider label/certification-specific behavior remains external/provider work. |
 | Returns/Refunds | Canonical Stock Return boundary implemented; provider-specific refund APIs remain external integration. |
 | Settlement | Evidence, variance UX and canonical Finance verification implemented; real provider statement certification pending. |
 | Customer 360 | Exact CRM identity authority implemented. |
-| BI | Core operational data is available; dedicated profitability/SLA report pack remains future product work. |
+| BI | Core operational/SLA data is available; dedicated profitability/SLA report pack remains future product work. |
 
 ## 5. Dependency request status
 
@@ -212,7 +236,7 @@ These controls are observational/client-side only and introduce no lifecycle mut
 
 ### Slice E — Operator UX and BI
 
-**Operator UX substantially implemented.** Connection/sync health, dedicated SKU mapping exception inbox, order search/provider/status/missing-link filters, fulfillment/return, provider-event diagnostics and settlement workspace are live in MetaForge candidate UI. Policy-driven SLA aging and richer profitability/SLA BI remain future product work.
+**Operator UX substantially implemented.** Connection/sync health, dedicated SKU mapping exception inbox, order search/provider/status/missing-link filters, metadata-driven order-to-fulfillment SLA queue, fulfillment/return, provider-event diagnostics and settlement workspace are live in MetaForge candidate UI. Dedicated profitability/SLA BI remains future product work.
 
 ## 7. Acceptance invariants
 
@@ -228,7 +252,8 @@ Engineering tests on this candidate enforce:
 - retries/out-of-order provider events cannot regress canonical lifecycle because provider status is evidence-only and external watermark is monotonic;
 - mapping incidents retain exact bounded SKU/variant evidence without gaining mapping authority;
 - mapping inbox remains read-only and cannot create/edit canonical mappings;
-- order cockpit search/filters are observational and cannot create new lifecycle mutations or invent SLA policy;
+- order cockpit search/filters are observational and cannot create lifecycle mutations;
+- SLA thresholds come only from `Marketplace SLA Policy`, while SLA clocks use order acceptance and canonical shipment evidence rather than provider status or mutable order timestamps;
 - provider-to-ERP transitions retain deterministic correlation/audit evidence.
 
 Production/business-complete status still additionally requires real provider credentials, seller authorization, certification/live webhook evidence and controlled deployment proof.
