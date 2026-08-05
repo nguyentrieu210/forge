@@ -1,6 +1,6 @@
 {
   "format": "forge-alumdoor-pilot-02-synthetic-dry-run/v1",
-  "status": "SYNTHETIC_DRY_RUN_CANDIDATE",
+  "status": "SYNTHETIC_DRY_RUN_PASS",
   "tenant_profile": "alu",
   "target_release_sha": "49315112a21182d2ce077b08a1fb9e26db07fd36",
   "synthetic": true,
@@ -24,6 +24,16 @@
     "production_origin_called": false,
     "direct_d1_write": false,
     "deploy_or_migration": false
+  },
+  "execution_evidence": {
+    "initial_pass_run_id": 30968821466,
+    "initial_pass_head_sha": "677af4e1db3135e6368d819415b697e080932203",
+    "workflow_conclusion": "success",
+    "representative_segments_passed": 9,
+    "failed_segments": 0,
+    "synthetic_handoff_preview_status": "PREVIEW_PASS",
+    "unexplained_reconciliation_variance": 0,
+    "production_write_authorized": false
   },
   "representative_segments": [
     {
