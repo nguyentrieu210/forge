@@ -1,11 +1,12 @@
 {
-  "version": "2.2.10",
-  "//": "Bán hàng và Mua hàng dùng chung một sidecar presentation nhưng giữ group/tab độc lập. Nhập hàng tạo Purchase Receipt trực tiếp không bắt buộc Đơn NCC; Báo cáo Mua hàng dùng MasterDetailList inline; calculator/FIFO/đối soát legacy vẫn installed/callable nhưng ẩn khỏi daily tabs.",
+  "version": "2.3.0",
+  "//": "Operational presentation sidecar. Company và Warehouse là context chung; daily tabs dùng composer/dispatch/dashboard/history thay vì ép người dùng quay về CRUD/report generic.",
+  "dimensions": ["company", "warehouse"],
   "doctypes": {
     "Purchase Order": {
-      "label": "Lịch sử mua hàng",
-      "menu": true,
-      "icon": "history",
+      "label": "Đơn mua",
+      "menu": false,
+      "icon": "shopping-bag",
       "group": "Mua hàng"
     },
     "Purchase Receipt": {
@@ -31,9 +32,9 @@
       "group": "Báo cáo"
     },
     "Đơn hàng theo khách": {
-      "label": "Báo cáo",
+      "label": "Đơn hàng theo khách",
       "icon": "bar-chart-3",
-      "group": "Bán hàng"
+      "group": "Báo cáo"
     }
   },
   "actions": {
@@ -58,13 +59,34 @@
       "icon": "bar-chart-3",
       "group": "Mua hàng"
     },
+    "lich-su-mua-hang": {
+      "label": "Lịch sử mua hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Mua hàng"
+    },
     "doi-soat-giao-hang-ncc": {
       "menu": false
     },
     "giao-hang-theo-ngay": {
+      "menu": false
+    },
+    "giao-hang-dispatch": {
       "label": "Giao hàng",
       "menu": true,
       "icon": "calendar-check",
+      "group": "Bán hàng"
+    },
+    "bao-cao-ban-hang": {
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "chart-no-axes-combined",
+      "group": "Bán hàng"
+    },
+    "lich-su-ban-hang": {
+      "label": "Lịch sử bán hàng",
+      "menu": true,
+      "icon": "history",
       "group": "Bán hàng"
     },
     "tinh-cong-thuc-cua": {
@@ -82,11 +104,12 @@
     "alumdoor-operations:workbench",
     "Sales Order",
     "Delivery Note",
-    "action:giao-hang-theo-ngay",
-    "report:Đơn hàng theo khách",
+    "action:giao-hang-dispatch",
+    "action:bao-cao-ban-hang",
+    "action:lich-su-ban-hang",
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
     "action:bao-cao-giao-hang-ncc",
-    "Purchase Order"
+    "action:lich-su-mua-hang"
   ]
 }

@@ -35,7 +35,6 @@ interface ReceiptDoc extends Json {
 }
 
 const MAX_LINES = 100;
-const DEFAULT_COMPANY = "ALUMDOOR";
 
 function text(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
@@ -101,14 +100,6 @@ async function readDoc<T extends Json>(call: PlatformCall, doctype: string, name
   const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
   if (!response.ok) throw new Error(`Không đọc được ${doctype} ${name} (HTTP ${response.status}).`);
   return (((await response.json()) as { data?: T }).data ?? {}) as T;
-}
-
-async function readList<T extends Json>(call: PlatformCall, doctype: string, fields: string[], filters: unknown[] = [], limit = 3): Promise<T[]> {
-  const query = new URLSearchParams({ fields: JSON.stringify(fields), filters: JSON.stringify(filters), limit_page_length: String(limit) });
-  const response = await call(`resource/${encodeURIComponent(doctype)}?${query.toString()}`);
-  if (!response.ok) throw new Error(`Không đọc được danh sách ${doctype} (HTTP ${response.status}).`);
-  const body = await response.json() as { data?: T[] };
-  return Array.isArray(body.data) ? body.data : [];
 }
 
 function assertPurchaseItem(item: ItemDoc, itemCode: string, line: string): void {
@@ -235,21 +226,9 @@ async function normalizeLine(call: PlatformCall, raw: unknown, index: number, wa
 }
 
 async function resolveCompanyAndCurrency(call: PlatformCall, args: Json): Promise<{ company: string; currency: string }> {
-  let company = text(args.company);
-  let companyDoc: CompanyDoc | undefined;
-  if (!company) {
-    try {
-      const preferred = await readDoc<CompanyDoc>(call, "Company", DEFAULT_COMPANY);
-      if (text(preferred.name)) { company = text(preferred.name); companyDoc = preferred; }
-    } catch { /* fallback below */ }
-  }
-  if (!company) {
-    const companies = await readList<CompanyDoc>(call, "Company", ["name", "default_currency"], [], 2);
-    if (companies.length !== 1 || !text(companies[0]?.name)) throw new Error(`Không xác định được Công ty. Mặc định là ${DEFAULT_COMPANY}.`);
-    companyDoc = companies[0]!;
-    company = text(companyDoc.name);
-  }
-  companyDoc ??= await readDoc<CompanyDoc>(call, "Company", company);
+  const company = text(args.company);
+  if (!company) throw new Error("Cần chọn Công ty trong ngữ cảnh làm việc trước khi nhập hàng.");
+  const companyDoc = await readDoc<CompanyDoc>(call, "Company", company);
   const currency = text(args.currency) || text(companyDoc.default_currency);
   if (!currency) throw new Error(`Công ty ${company} chưa có tiền tệ mặc định.`);
   return { company, currency };

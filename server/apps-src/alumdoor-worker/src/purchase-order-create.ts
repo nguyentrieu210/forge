@@ -27,7 +27,6 @@ interface CompanyDoc extends Json {
 }
 
 const MAX_LINES = 100;
-const DEFAULT_COMPANY = "ALUMDOOR";
 
 function text(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
@@ -250,28 +249,11 @@ async function normalizeLine(call: PlatformCall, raw: unknown, index: number): P
 }
 
 async function resolveCompanyAndCurrency(call: PlatformCall, args: Json): Promise<{ company: string; currency: string }> {
-  let company = text(args.company);
-  let discoveredCompany: CompanyDoc | undefined;
+  const company = text(args.company);
   if (!company) {
-    try {
-      const preferred = await readDoc<CompanyDoc>(call, "Company", DEFAULT_COMPANY);
-      if (text(preferred.name)) {
-        discoveredCompany = preferred;
-        company = text(preferred.name);
-      }
-    } catch {
-      // Tenant cũ có thể không dùng tên chuẩn ALUMDOOR; khi đó mới thử suy ra nếu chỉ có một Công ty.
-    }
+    throw new Error("Cần chọn Công ty trong ngữ cảnh làm việc trước khi tạo đơn mua.");
   }
-  if (!company) {
-    const companies = await readList<CompanyDoc>(call, "Company", ["name", "default_currency"], [], 2);
-    if (companies.length !== 1 || !text(companies[0]?.name)) {
-      throw new Error(`Không xác định được Công ty. Mặc định là ${DEFAULT_COMPANY}; tenant hiện không có Công ty đó và cũng không chỉ có duy nhất một Công ty.`);
-    }
-    discoveredCompany = companies[0]!;
-    company = text(discoveredCompany.name);
-  }
-  const companyDoc = discoveredCompany ?? await readDoc<CompanyDoc>(call, "Company", company);
+  const companyDoc = await readDoc<CompanyDoc>(call, "Company", company);
   const currency = text(args.currency) || text(companyDoc.default_currency);
   if (!currency) throw new Error(`Công ty ${company} chưa có tiền tệ mặc định.`);
   return { company, currency };

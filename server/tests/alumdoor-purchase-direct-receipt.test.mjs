@@ -34,6 +34,7 @@ function createPlatform() {
       const url = new URL(outbound.url);
       const path = callbackResourcePath(url.pathname);
       if (path === "/resource/Company/ALUMDOOR") return response({ name: "ALUMDOOR", default_currency: "VND" });
+      if (path === "/resource/Company/CÔNG TY B") return response({ name: "CÔNG TY B", default_currency: "USD" });
       if (path === "/resource/Item/AL71") return response(items.get("AL71"));
       if (path === "/resource/Item/PK-01") return response(items.get("PK-01"));
       if (path === "/resource/Material Specification/MS-AL71") return response({ name: "MS-AL71", theoretical_kg_per_m: 0.389 });
@@ -70,7 +71,7 @@ function request(lines, overrides = {}) {
       authorization: "Bearer qa", "x-cloudforge-app": "alumdoor", "x-cloudforge-identity": "qa-user", "x-cloudforge-identity-signature": "signed",
     },
     body: JSON.stringify({ args: {
-      supplier: "Tiến Đạt", warehouse: "KHO-1", supplier_invoice_no: "GIAO-001", driver: "Anh A", posting_at: POSTING_AT,
+      company: "ALUMDOOR", supplier: "Tiến Đạt", warehouse: "KHO-1", supplier_invoice_no: "GIAO-001", driver: "Anh A", posting_at: POSTING_AT,
       lines, ...overrides,
     } }),
   });
@@ -85,6 +86,8 @@ test("preview nhôm nhập trực tiếp dùng kg thực và không sinh purchas
   const result = await handleBulkPurchaseDirectReceipt(request([aluminium()]), { PLATFORM: state.platform }, false);
   const body = await result.json();
   assert.equal(result.status, 200, body.message);
+  assert.equal(body.company, "ALUMDOOR");
+  assert.equal(body.currency, "VND");
   assert.equal(body.line_count, 1);
   assert.equal(body.items[0].qty, 27.5);
   assert.equal(body.items[0].actual_weight_kg, 27.5);
@@ -105,6 +108,24 @@ test("mặt hàng thường nhập trực tiếp bằng số lượng người d
   assert.equal(body.items[0].purchase_order, undefined);
 });
 
+test("direct receipt dùng Công ty explicit và suy ra tiền tệ từ Công ty", async () => {
+  const state = createPlatform();
+  const result = await handleBulkPurchaseDirectReceipt(request([{ item_code: "PK-01", qty: 1, uom: "Cái", rate: 10 }], { company: "CÔNG TY B" }), { PLATFORM: state.platform }, false);
+  const body = await result.json();
+  assert.equal(result.status, 200, body.message);
+  assert.equal(body.company, "CÔNG TY B");
+  assert.equal(body.currency, "USD");
+});
+
+test("direct receipt fail closed khi chưa có Công ty", async () => {
+  const state = createPlatform();
+  const result = await handleBulkPurchaseDirectReceipt(request([aluminium()], { company: "" }), { PLATFORM: state.platform }, false);
+  const body = await result.json();
+  assert.equal(result.status, 422);
+  assert.match(body.message, /chọn Công ty/i);
+  assert.equal(state.creates, 0);
+});
+
 test("commit tạo đúng một Purchase Receipt nháp không theo đơn NCC và retry idempotent", async () => {
   const state = createPlatform();
   const first = await handleBulkPurchaseDirectReceipt(request([aluminium()]), { PLATFORM: state.platform }, true);
@@ -115,6 +136,8 @@ test("commit tạo đúng một Purchase Receipt nháp không theo đơn NCC và
   assert.equal(firstBody.replayed, false);
   assert.equal(state.creates, 1);
   const stored = state.drafts.get("PR-DIRECT-1");
+  assert.equal(stored.company, "ALUMDOOR");
+  assert.equal(stored.currency, "VND");
   assert.equal(stored.against_purchase_order, undefined);
   assert.equal(stored.items[0].purchase_order, undefined);
   assert.match(stored.note, /^\[direct-receipt:[0-9a-f]{64}\]/);
@@ -147,7 +170,7 @@ test("direct receipt bắt tenant, NCC, kho, phiếu giao và tối đa 100 dòn
   assert.match((await tooMany.json()).message, /tối đa 100 dòng/);
   const denied = await handleBulkPurchaseDirectReceipt(new Request("https://app.local/api/method/alumdoor.purchase.preview_bulk_direct_receipt", {
     method: "POST", headers: { "content-type": "application/json", "x-cloudforge-callback": "https://gateway.local/api" },
-    body: JSON.stringify({ args: { supplier: "Tiến Đạt", warehouse: "KHO-1", supplier_invoice_no: "X", lines: [aluminium()] } }),
+    body: JSON.stringify({ args: { company: "ALUMDOOR", supplier: "Tiến Đạt", warehouse: "KHO-1", supplier_invoice_no: "X", lines: [aluminium()] } }),
   }), { PLATFORM: state.platform }, false);
   assert.equal(denied.status, 403);
 });

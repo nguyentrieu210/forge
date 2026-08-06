@@ -1,6 +1,6 @@
 {
-  "version": "2.2.10",
-  "//": "Mua hàng và Nhập hàng dùng metadata child-grid; Nhập hàng tạo Purchase Receipt trực tiếp không bắt buộc Đơn NCC; Báo cáo dùng MasterDetailList trên Purchase Order submitted và drill-down read model giao hàng authoritative.",
+  "version": "2.3.0",
+  "//": "Operational UX: Company/Kho lấy từ Business Context; UOM, định mức, barem, amount và field kỹ thuật do master/server authority tự suy ra.",
   "actions": [
     {
       "name": "tao-don-mua",
@@ -9,13 +9,14 @@
       "icon": "shopping-bag",
       "group": "Mua hàng",
       "permission": "Purchase Order",
+      "description": "Lập đơn mua trong Công ty đang chọn. ĐVT, quy cách, kg/m, barem và thành tiền được suy ra từ Item/Material Specification và server; người dùng không phải nhập lại.",
       "fields": [
         "supplier:Link(Supplier)! NCC",
         "transaction_date:Date=(Today) Ngày đặt",
         "schedule_date:Date Ngày giao",
         "additional_discount_percentage:Percent=(0) Chiết khấu (%)",
         "vat_percentage:Percent=(0) VAT (%)",
-        "items:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã SP\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true,\"link_filters\":\"[[\\\"Item\\\",\\\"disabled\\\",\\\"=\\\",0],[\\\"Item\\\",\\\"is_purchase_item\\\",\\\"=\\\",1]]\"},{\"fieldname\":\"length_m\",\"label\":\"Kích thước\",\"fieldtype\":\"Float\"},{\"fieldname\":\"width_m\",\"label\":\"Rộng\",\"fieldtype\":\"Float\"},{\"fieldname\":\"height_m\",\"label\":\"Cao\",\"fieldtype\":\"Float\"},{\"fieldname\":\"set_count\",\"label\":\"Bộ\",\"fieldtype\":\"Int\",\"default\":\"1\"},{\"fieldname\":\"theoretical_kg_per_m\",\"label\":\"Kg/m\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bundle\",\"label\":\"Bó\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bar\",\"label\":\"Cây\",\"fieldtype\":\"Float\"},{\"fieldname\":\"theoretical_kg\",\"label\":\"Kg BR\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty\",\"label\":\"SL\",\"fieldtype\":\"Float\"},{\"fieldname\":\"uom\",\"label\":\"ĐVT\",\"fieldtype\":\"Link\",\"options\":\"UOM\"},{\"fieldname\":\"rate\",\"label\":\"Đ.Giá\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"amount\",\"label\":\"T.Tiền\",\"fieldtype\":\"Currency\"},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\"},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"default\":\"Không\"},{\"fieldname\":\"so_no\",\"label\":\"SO NCC\",\"fieldtype\":\"Data\"},{\"fieldname\":\"warehouse\",\"label\":\"Kho\",\"fieldtype\":\"Link\",\"options\":\"Warehouse\"},{\"fieldname\":\"note\",\"label\":\"G.Chú\",\"fieldtype\":\"Data\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true,\"presentation\":{\"mode\":\"child-grid-inline\",\"row_doctype\":\"Purchase Order Item\",\"fit_viewport\":true,\"emphasize_editable\":true,\"money_precision\":0,\"print_format\":\"Đơn mua hàng ALUMDOOR\"},\"summary\":{\"subtotal_field\":\"amount\",\"discount_percentage_field\":\"additional_discount_percentage\",\"vat_percentage_field\":\"vat_percentage\"}})! Mặt hàng"
+        "items:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã SP\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true,\"link_filters\":\"[[\\\"Item\\\",\\\"disabled\\\",\\\"=\\\",0],[\\\"Item\\\",\\\"is_purchase_item\\\",\\\"=\\\",1]]\"},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\"},{\"fieldname\":\"length_m\",\"label\":\"Dài (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bar\",\"label\":\"Cây/Lá\",\"fieldtype\":\"Float\"},{\"fieldname\":\"width_m\",\"label\":\"Rộng (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"height_m\",\"label\":\"Cao (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"set_count\",\"label\":\"Bộ/Cái\",\"fieldtype\":\"Int\",\"default\":\"1\"},{\"fieldname\":\"qty\",\"label\":\"SL\",\"fieldtype\":\"Float\"},{\"fieldname\":\"rate\",\"label\":\"Đơn giá\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"default\":\"Không\"},{\"fieldname\":\"so_no\",\"label\":\"SO NCC\",\"fieldtype\":\"Data\"},{\"fieldname\":\"note\",\"label\":\"Ghi chú\",\"fieldtype\":\"Data\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true,\"presentation\":{\"mode\":\"child-grid-inline\",\"row_doctype\":\"Purchase Order Item\",\"fit_viewport\":false,\"emphasize_editable\":false,\"money_precision\":0,\"print_format\":\"Đơn mua hàng ALUMDOOR\"}})! Mặt hàng"
       ],
       "commit": "alumdoor.purchase.create_order | Lưu | Lưu Purchase Order nháp từ các dòng đã nhập?"
     },
@@ -25,15 +26,14 @@
       "menu": true,
       "icon": "package-check",
       "group": "Mua hàng",
-      "description": "Nhập trực tiếp từ nhà cung cấp cho mọi mặt hàng. Không cần chọn Đơn NCC; bảng tự áp metadata Purchase Receipt Item và tạo một Purchase Receipt nháp canonical.",
+      "description": "Nhận hàng trực tiếp vào Kho đang chọn. Chỉ nhập số đếm/cân thực tế; ĐVT, quy cách, kg/m, barem và các tỷ lệ thực được hệ thống tự suy ra. Không bắt buộc Purchase Order.",
       "permission": "Purchase Receipt",
       "fields": [
         "supplier:Link(Supplier)! Nhà cung cấp",
-        "warehouse:Link(Warehouse)! Kho nhập",
         "posting_at:Datetime Ngày/giờ nhận",
         "supplier_invoice_no:Data! Số phiếu giao NCC",
         "driver:Data Tài xế / người giao",
-        "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã SP\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true,\"link_filters\":\"[[\\\"Item\\\",\\\"disabled\\\",\\\"=\\\",0],[\\\"Item\\\",\\\"is_purchase_item\\\",\\\"=\\\",1]]\"},{\"fieldname\":\"length_m\",\"label\":\"Dài\",\"fieldtype\":\"Float\"},{\"fieldname\":\"width_m\",\"label\":\"Rộng\",\"fieldtype\":\"Float\"},{\"fieldname\":\"height_m\",\"label\":\"Cao\",\"fieldtype\":\"Float\"},{\"fieldname\":\"set_count\",\"label\":\"Bộ/Cái\",\"fieldtype\":\"Int\",\"default\":\"1\"},{\"fieldname\":\"theoretical_kg_per_m\",\"label\":\"Kg/m\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bundle\",\"label\":\"Bó\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bar\",\"label\":\"Cây\",\"fieldtype\":\"Float\"},{\"fieldname\":\"theoretical_kg\",\"label\":\"Kg BR\",\"fieldtype\":\"Float\"},{\"fieldname\":\"actual_weight_kg\",\"label\":\"Kg thực\",\"fieldtype\":\"Float\"},{\"fieldname\":\"actual_kg_per_m\",\"label\":\"Kg/m thực\",\"fieldtype\":\"Float\"},{\"fieldname\":\"actual_kg_per_sqm\",\"label\":\"Kg/m² thực\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty\",\"label\":\"SL\",\"fieldtype\":\"Float\"},{\"fieldname\":\"uom\",\"label\":\"ĐVT\",\"fieldtype\":\"Link\",\"options\":\"UOM\"},{\"fieldname\":\"rate\",\"label\":\"Đ.Giá\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"amount\",\"label\":\"T.Tiền\",\"fieldtype\":\"Currency\"},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\"},{\"fieldname\":\"condition\",\"label\":\"Tình trạng\",\"fieldtype\":\"Select\",\"options\":\"Thô\\nĐã sơn\\nLỗi\"},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"default\":\"Không\"},{\"fieldname\":\"so_no\",\"label\":\"SO NCC\",\"fieldtype\":\"Data\"},{\"fieldname\":\"note\",\"label\":\"G.Chú\",\"fieldtype\":\"Data\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true,\"presentation\":{\"mode\":\"child-grid-inline\",\"row_doctype\":\"Purchase Receipt Item\",\"fit_viewport\":true,\"emphasize_editable\":true}})! Danh sách mặt hàng"
+        "lines:Text(BulkTransaction:{\"columns\":[{\"fieldname\":\"item_code\",\"label\":\"Mã SP\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"required\":true,\"link_filters\":\"[[\\\"Item\\\",\\\"disabled\\\",\\\"=\\\",0],[\\\"Item\\\",\\\"is_purchase_item\\\",\\\"=\\\",1]]\"},{\"fieldname\":\"color\",\"label\":\"Màu\",\"fieldtype\":\"Link\",\"options\":\"Item Color\"},{\"fieldname\":\"length_m\",\"label\":\"Dài (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"qty_bar\",\"label\":\"Cây/Lá\",\"fieldtype\":\"Float\"},{\"fieldname\":\"actual_weight_kg\",\"label\":\"Kg cân\",\"fieldtype\":\"Float\"},{\"fieldname\":\"width_m\",\"label\":\"Rộng (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"height_m\",\"label\":\"Cao (m)\",\"fieldtype\":\"Float\"},{\"fieldname\":\"set_count\",\"label\":\"Bộ/Cái\",\"fieldtype\":\"Int\",\"default\":\"1\"},{\"fieldname\":\"qty\",\"label\":\"SL\",\"fieldtype\":\"Float\"},{\"fieldname\":\"rate\",\"label\":\"Đơn giá\",\"fieldtype\":\"Currency\",\"required\":true},{\"fieldname\":\"condition\",\"label\":\"Tình trạng\",\"fieldtype\":\"Select\",\"options\":\"Thô\\nĐã sơn\\nLỗi\"},{\"fieldname\":\"is_stamped\",\"label\":\"Dập\",\"fieldtype\":\"Select\",\"options\":\"Có\\nKhông\",\"default\":\"Không\"},{\"fieldname\":\"so_no\",\"label\":\"SO NCC\",\"fieldtype\":\"Data\"},{\"fieldname\":\"note\",\"label\":\"Ghi chú\",\"fieldtype\":\"Data\"}],\"minRows\":1,\"maxRows\":100,\"allowPaste\":true,\"presentation\":{\"mode\":\"child-grid-inline\",\"row_doctype\":\"Purchase Receipt Item\",\"fit_viewport\":false,\"emphasize_editable\":false,\"money_precision\":0}})! Danh sách mặt hàng"
       ],
       "preview": "alumdoor.purchase.preview_bulk_direct_receipt | Kiểm tra phiếu nhập",
       "commit": "alumdoor.purchase.bulk_direct_receipt | Tạo phiếu nhập | Tạo một Purchase Receipt nháp trực tiếp từ các dòng đã nhập?",
@@ -45,11 +45,71 @@
       "menu": true,
       "icon": "bar-chart-3",
       "group": "Mua hàng",
-      "description": "Tổng hợp theo nhà cung cấp từ Purchase Order đã submit; chọn NCC để xem từng mặt hàng, PO, số đã đặt, đã nhận, còn thiếu và quá hạn theo allocation authoritative.",
+      "description": "Tổng hợp theo nhà cung cấp từ Purchase Order đã submit trong đúng Công ty đang chọn; chọn NCC để xem từng mặt hàng, PO, số đã đặt, đã nhận, còn thiếu và quá hạn theo allocation authoritative.",
       "permission": "Purchase Order",
       "permissionAction": "read",
       "fields": [
-        "view_config:Text(MasterDetailList:{\"sourceDoctype\":\"Purchase Order\",\"submittedOnly\":true,\"keyField\":\"supplier\",\"valueField\":\"grand_total\",\"progressField\":\"received_percentage\",\"dueDateField\":\"schedule_date\",\"exceptionPredicate\":{\"field\":\"received_percentage\",\"operator\":\"<\",\"value\":100},\"detailCollection\":\"purchase_order_lines\",\"detailCodeField\":\"item_code\",\"detailTitleField\":\"material\",\"detailParentField\":\"purchase_order\",\"detailOrderDateField\":\"transaction_date\",\"detailDueDateField\":\"schedule_date\",\"detailOrderedField\":\"ordered_bars\",\"detailReceivedField\":\"received_bars\",\"detailRemainingField\":\"remaining_bars\",\"detailStatusField\":\"status\",\"openDoctype\":\"Purchase Order\",\"summaryOpenField\":\"open_purchase_order_count\",\"summaryOverdueField\":\"overdue_purchase_order_count\",\"summaryRemainingField\":\"remaining_bars\",\"remainingUnit\":\"cây\",\"chartTop\":8,\"valueFormat\":\"currency\",\"labels\":{\"key\":\"Nhà cung cấp\",\"searchKey\":\"Tìm nhà cung cấp\",\"count\":\"Số đơn\",\"value\":\"Tổng mua\",\"exceptionCount\":\"PO còn thiếu\",\"progress\":\"Tiến độ nhận\",\"complete\":\"Đủ\",\"short\":\"Còn thiếu\",\"overdue\":\"Quá hạn\",\"shortKeys\":\"NCC còn thiếu\",\"overdueKeys\":\"NCC quá hạn\",\"detail\":\"Chi tiết mặt hàng thiếu\",\"detailOpen\":\"PO đang thiếu\",\"detailRemaining\":\"Còn phải giao\",\"code\":\"Mặt hàng\",\"parent\":\"PO\",\"orderDate\":\"Ngày đặt\",\"dueDate\":\"Hẹn giao\",\"ordered\":\"Đã đặt\",\"received\":\"Đã nhận\",\"remaining\":\"Còn thiếu\"}}) Cấu hình báo cáo"
+        "view_config:Text(MasterDetailList:{\"sourceDoctype\":\"Purchase Order\",\"submittedOnly\":true,\"keyField\":\"supplier\",\"valueField\":\"grand_total\",\"progressField\":\"received_percentage\",\"dueDateField\":\"schedule_date\",\"companyField\":\"company\",\"currencyField\":\"currency\",\"exceptionPredicate\":{\"field\":\"received_percentage\",\"operator\":\"<\",\"value\":100},\"detailCollection\":\"purchase_order_lines\",\"detailCodeField\":\"item_code\",\"detailTitleField\":\"material\",\"detailParentField\":\"purchase_order\",\"detailOrderDateField\":\"transaction_date\",\"detailDueDateField\":\"schedule_date\",\"detailOrderedField\":\"ordered_bars\",\"detailReceivedField\":\"received_bars\",\"detailRemainingField\":\"remaining_bars\",\"detailStatusField\":\"status\",\"openDoctype\":\"Purchase Order\",\"summaryOpenField\":\"open_purchase_order_count\",\"summaryOverdueField\":\"overdue_purchase_order_count\",\"summaryRemainingField\":\"remaining_bars\",\"remainingUnit\":\"cây\",\"chartTop\":8,\"valueFormat\":\"currency\",\"labels\":{\"key\":\"Nhà cung cấp\",\"searchKey\":\"Tìm nhà cung cấp\",\"count\":\"Số đơn\",\"value\":\"Tổng mua\",\"exceptionCount\":\"PO còn thiếu\",\"progress\":\"Tiến độ nhận\",\"complete\":\"Đủ\",\"short\":\"Còn thiếu\",\"overdue\":\"Quá hạn\",\"shortKeys\":\"NCC còn thiếu\",\"overdueKeys\":\"NCC quá hạn\",\"detail\":\"Chi tiết mặt hàng thiếu\",\"detailOpen\":\"PO đang thiếu\",\"detailRemaining\":\"Còn phải giao\",\"code\":\"Mặt hàng\",\"parent\":\"PO\",\"orderDate\":\"Ngày đặt\",\"dueDate\":\"Hẹn giao\",\"ordered\":\"Đã đặt\",\"received\":\"Đã nhận\",\"remaining\":\"Còn thiếu\"}}) Cấu hình báo cáo"
+      ],
+      "commit": "alumdoor.purchase.supplier_delivery_dashboard | Làm mới"
+    },
+    {
+      "name": "giao-hang-dispatch",
+      "label": "Giao hàng",
+      "menu": true,
+      "icon": "calendar-check",
+      "group": "Bán hàng",
+      "permission": "Delivery Note",
+      "description": "Tự tải các đơn đến hạn, cho chọn rõ từng đơn rồi mới tạo Phiếu xuất nháp. Không còn thao tác ngầm trên toàn bộ danh sách.",
+      "fields": [
+        "delivery_date:Date!=(Today) Ngày giao",
+        "driver:Data Người giao / lái xe",
+        "vehicle:Data Biển số",
+        "selection_config:Text(SelectionBatch:{\"rowsKey\":\"rows\",\"rowKey\":\"sales_order\",\"selectedArg\":\"sales_orders\",\"statusField\":\"status\",\"selectableValue\":\"Sẵn sàng\",\"columns\":[{\"field\":\"sales_order\",\"label\":\"Đơn hàng\"},{\"field\":\"customer\",\"label\":\"Khách hàng\"},{\"field\":\"status\",\"label\":\"Trạng thái\"},{\"field\":\"existing_delivery_note\",\"label\":\"Phiếu đã có\"}],\"emptyText\":\"Không có đơn đến hạn cần tạo phiếu giao.\"}) Cấu hình chọn đơn"
+      ],
+      "preview": "alumdoor.delivery_batch.preview | Tải đơn đến hạn",
+      "commit": "alumdoor.delivery_batch.create | Tạo phiếu cho đơn đã chọn | Chỉ tạo Phiếu xuất nháp cho đúng các đơn đang được chọn?",
+      "resultTable": "results"
+    },
+    {
+      "name": "bao-cao-ban-hang",
+      "label": "Báo cáo",
+      "menu": true,
+      "icon": "chart-no-axes-combined",
+      "group": "Bán hàng",
+      "description": "Dashboard vận hành đọc trực tiếp Sales Order canonical: doanh số đơn, số đơn đang mở, quá hạn giao, top khách và tiến độ giao.",
+      "permission": "Sales Order",
+      "permissionAction": "read",
+      "fields": [
+        "report_config:Text(OperationalReport:{\"sourceDoctype\":\"Sales Order\",\"submittedOnly\":true,\"dateField\":\"transaction_date\",\"keyField\":\"customer\",\"valueField\":\"grand_total\",\"statusField\":\"status\",\"progressField\":\"per_delivered\",\"dueDateField\":\"delivery_date\",\"currencyField\":\"currency\",\"companyField\":\"company\",\"openDoctype\":\"Sales Order\",\"chartTop\":8,\"labels\":{\"key\":\"Khách hàng\",\"value\":\"Doanh số đơn\",\"documents\":\"Số đơn\",\"open\":\"Chưa giao đủ\",\"overdue\":\"Quá hạn giao\",\"progress\":\"Tiến độ giao\",\"search\":\"Tìm khách hàng, mã đơn…\",\"detail\":\"Đơn hàng của khách\"}}) Cấu hình dashboard"
+      ],
+      "commit": "alumdoor.delivery_batch.preview | Làm mới"
+    },
+    {
+      "name": "lich-su-ban-hang",
+      "label": "Lịch sử bán hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Bán hàng",
+      "description": "Dòng thời gian bán hàng hợp nhất Sales Order, Delivery Note và Sales Invoice canonical. Mỗi dòng mở đúng chứng từ gốc; không tạo sổ lịch sử riêng.",
+      "permission": "Sales Order",
+      "permissionAction": "read",
+      "fields": [
+        "history_config:Text(DocumentHistory:{\"sources\":[{\"doctype\":\"Sales Order\",\"label\":\"Đơn hàng\",\"dateField\":\"transaction_date\",\"partyField\":\"customer\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"statusField\":\"status\",\"companyField\":\"company\"},{\"doctype\":\"Delivery Note\",\"label\":\"Phiếu xuất\",\"dateField\":\"posting_date\",\"partyField\":\"customer\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"statusField\":\"status\",\"companyField\":\"company\"},{\"doctype\":\"Sales Invoice\",\"label\":\"Hóa đơn bán\",\"dateField\":\"posting_date\",\"partyField\":\"customer\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"statusField\":\"status\",\"companyField\":\"company\"}],\"labels\":{\"party\":\"Khách hàng\",\"reference\":\"Tham chiếu\",\"value\":\"Giá trị\",\"date\":\"Ngày\",\"type\":\"Nghiệp vụ\",\"search\":\"Tìm khách hàng, mã đơn, phiếu xuất, hóa đơn…\"}}) Cấu hình lịch sử"
+      ],
+      "commit": "alumdoor.delivery_batch.preview | Làm mới"
+    },
+    {
+      "name": "lich-su-mua-hang",
+      "label": "Lịch sử mua hàng",
+      "menu": true,
+      "icon": "history",
+      "group": "Mua hàng",
+      "description": "Dòng thời gian hợp nhất Purchase Order và Purchase Receipt canonical. Chỉ là read model; mỗi dòng mở lại đúng chứng từ gốc, không tạo sổ lịch sử riêng.",
+      "permission": "Purchase Order",
+      "permissionAction": "read",
+      "fields": [
+        "history_config:Text(DocumentHistory:{\"sources\":[{\"doctype\":\"Purchase Order\",\"label\":\"Đơn mua\",\"dateField\":\"transaction_date\",\"partyField\":\"supplier\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"companyField\":\"company\"},{\"doctype\":\"Purchase Receipt\",\"label\":\"Phiếu nhập\",\"dateField\":\"posting_at\",\"partyField\":\"supplier\",\"valueField\":\"grand_total\",\"currencyField\":\"currency\",\"referenceField\":\"supplier_invoice_no\",\"companyField\":\"company\"}],\"labels\":{\"party\":\"Nhà cung cấp\",\"reference\":\"Phiếu giao NCC\",\"value\":\"Giá trị\",\"date\":\"Ngày\",\"type\":\"Nghiệp vụ\"}}) Cấu hình lịch sử"
       ],
       "commit": "alumdoor.purchase.supplier_delivery_dashboard | Làm mới"
     },

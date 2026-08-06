@@ -197,13 +197,12 @@ function applyActionSidecar(brief, extension, source, briefSource) {
 
 /**
  * Navigation is presentation metadata, not business authority. A navigation sidecar can
- * hide an installed DocType/action/report, rename/regroup it, rename/regroup a native
- * experience, and declare the tab order without copying the owned definitions. Direct
- * links, permissions and canonical controllers stay untouched. Applied last so appended
- * actions can be targeted.
+ * hide/rename/regroup installed entries, order operational tabs and declare the context
+ * dimensions required by those tabs without copying the business DocTypes/actions.
  */
 const NAVIGATION_OVERRIDE_KEYS = new Set(["menu", "label", "icon", "group"]);
 const EXPERIENCE_NAVIGATION_OVERRIDE_KEYS = new Set(["label", "icon", "group"]);
+const CONTEXT_DIMENSIONS = new Set(["company", "fiscal_year", "warehouse", "branch", "cost_center", "project", "territory", "selling_price_list", "buying_price_list"]);
 
 function applyNavigationOverrides(items, overrides, source, section, identityField = "name", allowedKeys = NAVIGATION_OVERRIDE_KEYS) {
   if (overrides === undefined) return items;
@@ -255,16 +254,27 @@ function applyNavigationItemOrder(navigation, items, source) {
 
 function applyNavigationSidecar(brief, extension, source) {
   assertSidecarObject(extension, source);
-  const supported = ["version", "doctypes", "reports", "actions", "experiences", "items"];
+  const supported = ["version", "dimensions", "doctypes", "reports", "actions", "experiences", "items"];
   const unsupported = Object.keys(extension).filter((key) => !supported.includes(key) && !key.startsWith("//"));
   if (unsupported.length) throw new Error(`${source}: chỉ nhận ${supported.join(", ")} và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
-  if (extension.doctypes === undefined && extension.reports === undefined && extension.actions === undefined && extension.experiences === undefined && extension.items === undefined) {
-    throw new Error(`${source}: phải khai doctypes, reports, actions, experiences hoặc items.`);
+  if (extension.dimensions === undefined && extension.doctypes === undefined && extension.reports === undefined && extension.actions === undefined && extension.experiences === undefined && extension.items === undefined) {
+    throw new Error(`${source}: phải khai dimensions, doctypes, reports, actions, experiences hoặc items.`);
+  }
+  let dimensions;
+  if (extension.dimensions !== undefined) {
+    if (!Array.isArray(extension.dimensions) || !extension.dimensions.length || !extension.dimensions.every((value) => typeof value === "string" && value.trim())) {
+      throw new Error(`${source}: dimensions phải là mảng dimension không rỗng.`);
+    }
+    dimensions = extension.dimensions.map((value) => value.trim());
+    const invalid = dimensions.filter((value) => !CONTEXT_DIMENSIONS.has(value));
+    if (invalid.length) throw new Error(`${source}: dimension không được server hỗ trợ: ${invalid.join(", ")}.`);
+    if (new Set(dimensions).size !== dimensions.length) throw new Error(`${source}: dimensions không được trùng.`);
   }
 
   return {
     ...brief,
     ...(extension.version ? { version: extension.version } : {}),
+    ...(dimensions ? { dimensions } : {}),
     doctypes: applyNavigationOverrides(brief.doctypes, extension.doctypes, source, "doctypes"),
     reports: applyNavigationOverrides(brief.reports ?? [], extension.reports, source, "reports"),
     actions: applyNavigationOverrides(brief.actions ?? [], extension.actions, source, "actions"),
@@ -298,8 +308,6 @@ export async function readBriefSource(source) {
   const integrations = await readOptionalJson(integrationsSource);
   if (integrations) brief = applyIntegrationSidecar(brief, integrations, integrationsSource, sourcePath);
 
-  // Presentation overrides are applied last so they can target actions appended above and
-  // their version represents the complete source package.
   const navigationSource = path.join(parsed.dir, `${parsed.name}.navigation.json`);
   const navigation = await readOptionalJson(navigationSource);
   if (navigation) brief = applyNavigationSidecar(brief, navigation, navigationSource);

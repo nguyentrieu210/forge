@@ -24,6 +24,8 @@ export interface MasterDetailListConfig {
   valueField: string;
   progressField: string;
   dueDateField: string;
+  companyField?: string;
+  currencyField?: string;
   exceptionPredicate: { field: string; operator: PredicateOperator; value: string | number | boolean };
   detailCollection: string;
   detailCodeField: string;
@@ -54,6 +56,7 @@ interface SummaryRow {
   key: string;
   count: number;
   value: number;
+  valueByCurrency: Record<string, number>;
   exceptionCount: number;
   progress: number;
   state: State;
@@ -127,6 +130,8 @@ export function masterDetailListConfig(action: AppAction): MasterDetailListConfi
     ];
     if (!required.every((key) => parsed[key] !== undefined && parsed[key] !== null && parsed[key] !== "")) return undefined;
     if (!parsed.exceptionPredicate.field || !["<", "<=", "=", "!=", ">", ">="].includes(parsed.exceptionPredicate.operator)) return undefined;
+    if (parsed.companyField !== undefined && (!parsed.companyField || typeof parsed.companyField !== "string")) return undefined;
+    if (parsed.currencyField !== undefined && (!parsed.currencyField || typeof parsed.currencyField !== "string")) return undefined;
     if (parsed.chartTop !== undefined && (!Number.isInteger(parsed.chartTop) || parsed.chartTop < 1 || parsed.chartTop > 20)) return undefined;
     if (parsed.valueFormat !== undefined && !["number", "currency"].includes(parsed.valueFormat)) return undefined;
     return parsed;
@@ -135,13 +140,23 @@ export function masterDetailListConfig(action: AppAction): MasterDetailListConfi
   }
 }
 
-async function loadSourceRows(adapter: ReturnType<typeof useMetaForge>["adapter"], config: MasterDetailListConfig): Promise<Doc[]> {
-  const fields = [...new Set(["name", "docstatus", config.keyField, config.valueField, config.progressField, config.dueDateField, config.exceptionPredicate.field])];
+async function loadSourceRows(
+  adapter: ReturnType<typeof useMetaForge>["adapter"],
+  config: MasterDetailListConfig,
+  company: string,
+): Promise<Doc[]> {
+  const fields = [...new Set([
+    "name", "docstatus", config.keyField, config.valueField, config.progressField,
+    config.dueDateField, config.exceptionPredicate.field, config.companyField, config.currencyField,
+  ].filter((field): field is string => Boolean(field)))];
   const rows: Doc[] = [];
   for (let start = 0; start < MAX_RECORDS; start += PAGE_SIZE) {
+    const filters: [string, "=", unknown][] = [];
+    if (config.submittedOnly) filters.push(["docstatus", "=", 1]);
+    if (config.companyField && company) filters.push([config.companyField, "=", company]);
     const page = await adapter.getList(config.sourceDoctype, {
       fields,
-      ...(config.submittedOnly ? { filters: [["docstatus", "=", 1]] as [string, "=", unknown][] } : {}),
+      ...(filters.length ? { filters } : {}),
       orderBy: `${config.keyField} asc`,
       limitStart: start,
       pageLength: PAGE_SIZE,
@@ -152,6 +167,15 @@ async function loadSourceRows(adapter: ReturnType<typeof useMetaForge>["adapter"
   throw new Error(`${config.sourceDoctype} vượt ${MAX_RECORDS} bản ghi; từ chối cắt cụt số liệu.`);
 }
 
+function currencyTotals(rows: Doc[], config: MasterDetailListConfig): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const row of rows) {
+    const currency = config.currencyField ? text(row[config.currencyField]) || "?" : "";
+    result[currency] = (result[currency] ?? 0) + number(row[config.valueField]);
+  }
+  return result;
+}
+
 export function MasterDetailListActionScreen(props: ActionScreenProps) {
   const config = useMemo(() => masterDetailListConfig(props.action), [props.action]);
   if (!config) return <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">Metadata MasterDetailList không hợp lệ.</div>;
@@ -159,7 +183,8 @@ export function MasterDetailListActionScreen(props: ActionScreenProps) {
 }
 
 function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProps & { config: MasterDetailListConfig }) {
-  const { adapter } = useMetaForge();
+  const { adapter, businessContext } = useMetaForge();
+  const company = text(businessContext.company);
   const fmt = useLocaleFormat();
   const [sourceRows, setSourceRows] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,25 +212,39 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
   const reloadSummary = useCallback(() => {
     setLoading(true);
     setError(undefined);
-    loadSourceRows(adapter, config)
+    if (config.companyField && !company) {
+      setSourceRows([]);
+      setError("Cần chọn Công ty trên thanh ngữ cảnh trước khi xem báo cáo.");
+      setLoading(false);
+      return;
+    }
+    loadSourceRows(adapter, config, company)
       .then(setSourceRows)
-      .catch((caught) => setError(adapter.mapError(caught).message))
+      .catch((caught) => { setSourceRows([]); setError(adapter.mapError(caught).message); })
       .finally(() => setLoading(false));
-  }, [adapter, config]);
+  }, [adapter, company, config]);
 
   useEffect(() => { reloadSummary(); }, [reloadSummary]);
 
   useEffect(() => {
     if (!selectedKey) { setDetail(undefined); setDetailError(undefined); return; }
+    if (config.companyField && !company) {
+      setDetail(undefined);
+      setDetailError("Cần chọn Công ty trên thanh ngữ cảnh trước khi xem chi tiết.");
+      return;
+    }
     let active = true;
     setDetailLoading(true);
     setDetailError(undefined);
-    adapter.callPost<Json>(action.commit.method, { [config.keyField]: selectedKey })
+    adapter.callPost<Json>(action.commit.method, {
+      [config.keyField]: selectedKey,
+      ...(config.companyField && company ? { company } : {}),
+    })
       .then((answer) => { if (active) setDetail(answer); })
       .catch((caught) => { if (active) { setDetail(undefined); setDetailError(adapter.mapError(caught).message); } })
       .finally(() => { if (active) setDetailLoading(false); });
     return () => { active = false; };
-  }, [adapter, action.commit.method, config.keyField, selectedKey]);
+  }, [adapter, action.commit.method, company, config.companyField, config.keyField, selectedKey]);
 
   const summaryRows = useMemo<SummaryRow[]>(() => {
     const inRange = sourceRows.filter((row) => dateInRange(row[config.dueDateField], fromDate, toDate));
@@ -226,6 +265,7 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
         key,
         count: rows.length,
         value: rows.reduce((sum, row) => sum + number(row[config.valueField]), 0),
+        valueByCurrency: currencyTotals(rows, config),
         exceptionCount: open.length,
         progress,
         state,
@@ -236,6 +276,13 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
       .sort((left, right) => Number(right.state === "overdue") - Number(left.state === "overdue") || right.exceptionCount - left.exceptionCount || left.key.localeCompare(right.key, "vi"));
   }, [sourceRows, config, keyQuery, statusFilter, fromDate, toDate]);
 
+  const currencies = useMemo(() => [...new Set(summaryRows.flatMap((row) => Object.keys(row.valueByCurrency)).filter(Boolean))], [summaryRows]);
+  const mixedCurrency = config.valueFormat === "currency" && config.currencyField ? currencies.length > 1 || currencies.includes("?") : false;
+  const formatCurrencyBuckets = (values: Record<string, number>) => Object.entries(values)
+    .sort(([left], [right]) => left.localeCompare(right, "vi"))
+    .map(([currency, value]) => currency ? `${fmt.number(value, 0)} ${currency === "?" ? "(chưa rõ tiền tệ)" : currency}` : fmt.number(value, 2))
+    .join(" · ") || "0";
+
   const stats = useMemo(() => ({
     shortKeys: summaryRows.filter((row) => row.state !== "complete").length,
     exceptions: summaryRows.reduce((sum, row) => sum + row.exceptionCount, 0),
@@ -243,8 +290,8 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
   }), [summaryRows]);
 
   const chartRows = useMemo(
-    () => [...summaryRows].sort((left, right) => right.value - left.value).slice(0, config.chartTop ?? 8),
-    [summaryRows, config.chartTop],
+    () => [...summaryRows].sort((left, right) => mixedCurrency ? right.count - left.count : right.value - left.value).slice(0, config.chartTop ?? 8),
+    [summaryRows, config.chartTop, mixedCurrency],
   );
 
   const detailRows = useMemo(() => {
@@ -268,6 +315,7 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
   const detailSummary = detail?.summary && typeof detail.summary === "object" && !Array.isArray(detail.summary) ? detail.summary as Json : {};
   const detailOverdue = config.summaryOverdueField ? number(detailSummary[config.summaryOverdueField]) : detailRows.filter((row) => number(row[config.detailRemainingField]) > 0 && isOverdue(row[config.detailDueDateField])).length;
   const valueFormatter = (value: number) => config.valueFormat === "currency" ? fmt.currency(value, 0) : fmt.number(value, 2);
+  const chartValueFormatter = (value: number) => mixedCurrency ? fmt.number(value, 0) : valueFormatter(value);
   const progressFormatter = (value: number) => `${fmt.number(value, 1)}%`;
   const keyNoun = labels.key.toLocaleLowerCase("vi");
 
@@ -280,19 +328,21 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
       <Button variant="outline" size="sm" onClick={reloadSummary} disabled={loading}><RefreshCw className="mr-1.5 size-3.5" />Làm mới</Button>
     </div>
 
+    {mixedCurrency ? <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">Có nhiều tiền tệ trong các PO phù hợp bộ lọc. Giá trị được tách theo từng mã tiền tệ; biểu đồ chuyển sang số chứng từ để không cộng chéo USD/VND.</div> : null}
+
     <div className="grid gap-3 sm:grid-cols-3"><StatCard label={labels.shortKeys} value={stats.shortKeys} icon={<PackageCheck className="size-4" />} /><StatCard label={labels.exceptionCount} value={stats.exceptions} icon={<AlertTriangle className="size-4" />} /><StatCard label={labels.overdueKeys} value={stats.overdueKeys} icon={<AlertTriangle className="size-4" />} danger={stats.overdueKeys > 0} /></div>
 
     {!loading && !error && chartRows.length > 0 ? <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
-      <ForgeDashboardPanel title={`${labels.value} theo ${keyNoun}`}>
+      <ForgeDashboardPanel title={`${mixedCurrency ? labels.count : labels.value} theo ${keyNoun}`}>
         <ForgeBarChart
-          title={`${labels.value} theo ${keyNoun}`}
+          title={`${mixedCurrency ? labels.count : labels.value} theo ${keyNoun}`}
           labels={chartRows.map((row) => row.key)}
-          series={[{ name: labels.value, values: chartRows.map((row) => row.value) }]}
+          series={[{ name: mixedCurrency ? labels.count : labels.value, values: chartRows.map((row) => mixedCurrency ? row.count : row.value) }]}
           height={260}
-          valueFormatter={valueFormatter}
-          compactValueFormatter={valueFormatter}
+          valueFormatter={chartValueFormatter}
+          compactValueFormatter={chartValueFormatter}
           onActivate={({ label }: { label: string }) => setSelectedKey(label)}
-          ariaLabel={`${labels.value} theo ${keyNoun}`}
+          ariaLabel={`${mixedCurrency ? labels.count : labels.value} theo ${keyNoun}`}
         />
       </ForgeDashboardPanel>
       <ForgeDashboardPanel title={`${labels.progress} theo ${keyNoun}`}>
@@ -311,7 +361,7 @@ function ConfiguredMasterDetailList({ action, onOpen, config }: ActionScreenProp
 
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="border-b px-4 py-3 text-sm font-semibold">{labels.key}</div>
-      {loading ? <p className="p-4 text-sm text-muted-foreground">Đang tổng hợp số liệu…</p> : error ? <p className="p-4 text-sm text-destructive">{error}</p> : summaryRows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Không có dữ liệu phù hợp bộ lọc.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="bg-muted/45 text-left text-xs text-muted-foreground"><tr><th className="px-4 py-2 font-medium">{labels.key}</th><th className="px-3 py-2 text-right font-medium">{labels.count}</th><th className="px-3 py-2 text-right font-medium">{labels.value}</th><th className="px-3 py-2 text-right font-medium">{labels.exceptionCount}</th><th className="px-3 py-2 text-right font-medium">{labels.progress}</th><th className="px-4 py-2 font-medium">Trạng thái</th></tr></thead><tbody>{summaryRows.map((row) => <tr key={row.key} className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${selectedKey === row.key ? "bg-primary/5" : ""}`} onClick={() => setSelectedKey(row.key)}><td className="px-4 py-2.5 font-semibold">{row.key}</td><td className="px-3 py-2.5 text-right tabular-nums">{fmt.number(row.count, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{valueFormatter(row.value)}</td><td className="px-3 py-2.5 text-right font-semibold tabular-nums">{fmt.number(row.exceptionCount, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{progressFormatter(row.progress)}</td><td className="px-4 py-2.5"><StatusText state={row.state} labels={labels} /></td></tr>)}</tbody></table></div>}
+      {loading ? <p className="p-4 text-sm text-muted-foreground">Đang tổng hợp số liệu…</p> : error ? <p className="p-4 text-sm text-destructive">{error}</p> : summaryRows.length === 0 ? <p className="p-4 text-sm text-muted-foreground">Không có dữ liệu phù hợp bộ lọc.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="bg-muted/45 text-left text-xs text-muted-foreground"><tr><th className="px-4 py-2 font-medium">{labels.key}</th><th className="px-3 py-2 text-right font-medium">{labels.count}</th><th className="px-3 py-2 text-right font-medium">{labels.value}</th><th className="px-3 py-2 text-right font-medium">{labels.exceptionCount}</th><th className="px-3 py-2 text-right font-medium">{labels.progress}</th><th className="px-4 py-2 font-medium">Trạng thái</th></tr></thead><tbody>{summaryRows.map((row) => <tr key={row.key} className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${selectedKey === row.key ? "bg-primary/5" : ""}`} onClick={() => setSelectedKey(row.key)}><td className="px-4 py-2.5 font-semibold">{row.key}</td><td className="px-3 py-2.5 text-right tabular-nums">{fmt.number(row.count, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{config.valueFormat === "currency" && config.currencyField ? formatCurrencyBuckets(row.valueByCurrency) : valueFormatter(row.value)}</td><td className="px-3 py-2.5 text-right font-semibold tabular-nums">{fmt.number(row.exceptionCount, 0)}</td><td className="px-3 py-2.5 text-right tabular-nums">{progressFormatter(row.progress)}</td><td className="px-4 py-2.5"><StatusText state={row.state} labels={labels} /></td></tr>)}</tbody></table></div>}
     </div>
 
     {selectedKey ? <div className="space-y-3 rounded-xl border bg-card p-4">
