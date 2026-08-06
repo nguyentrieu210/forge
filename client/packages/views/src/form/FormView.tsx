@@ -38,7 +38,7 @@ export interface FormViewProps {
   forceReadOnly?: boolean;
   conflict?: boolean;
   onReload?: () => void;
-  onSave?: (changed: Record<string, unknown>, all: Record<string, unknown>) => void;
+  onSave?: (changed: Record<string, unknown>, all: Record<string, unknown>) => boolean | void | Promise<boolean | void>;
   saving?: boolean;
   fieldErrors?: Record<string, string>;
   headerActions?: ReactNode;
@@ -235,7 +235,7 @@ export function FormView(props: FormViewProps) {
     props.onWorkflowAction?.(a);
   };
 
-  const onValid = (vals: FieldValues) => {
+  const onValid = async (vals: FieldValues) => {
     if (props.conflict) return;
     const result = buildSchema(resolved, t).safeParse(vals);
     if (!result.success) {
@@ -253,7 +253,14 @@ export function FormView(props: FormViewProps) {
     const dirty = form.formState.dirtyFields;
     const changed: Record<string, unknown> = {};
     for (const k of Object.keys(dirty)) changed[k] = vals[k];
-    props.onSave?.(changed, { ...vals, name: doc.name, modified: doc.modified });
+    if (!props.onSave) return;
+    const saved = await props.onSave(changed, { ...vals, name: doc.name, modified: doc.modified });
+    if (saved === true) {
+      // The accepted values become the new RHF baseline immediately. Do not wait for a server
+      // `modified` timestamp/refetch to clear dirty state; otherwise Save stays enabled and the
+      // close guard can incorrectly ask about unsaved changes after a successful save.
+      form.reset({ ...vals, name: doc.name, modified: doc.modified });
+    }
   };
   onValidRef.current = onValid;
 

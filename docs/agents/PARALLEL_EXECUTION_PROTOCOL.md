@@ -1,6 +1,6 @@
 # FORGE MULTI-AGENT EXECUTION PROTOCOL
 
-Ngày cập nhật: **2026-08-04**.
+Ngày cập nhật: **2026-08-07**.
 
 Protocol này áp dụng khi một Forge task được phân loại `PROGRAM`. Exact GitHub state và `skills/forge-enterprise-completion/SKILL.md` là authority cao hơn mọi board/handoff snapshot.
 
@@ -139,6 +139,43 @@ Coordinator phải integrate theo dependency/authority order, không theo worker
 Final candidate phải được verify trên **một exact combined head**. Worker-level green evidence không tự động chứng minh combined candidate.
 
 Khi main drift đáng kể, re-audit/rebase/reconcile trước final validation.
+
+### 10.1 Branch freshness trước merge — bắt buộc
+
+Nhiều worker/tab có thể bắt đầu từ cùng hoặc khác snapshot của `main`; điều đó được phép trong lúc phát triển. Nhưng **branch merge sau không được merge dựa trên baseline stale**.
+
+Trước mỗi merge của branch/PR khi `main` có thể đã thay đổi:
+
+1. `git fetch origin` và xác định exact latest `origin/main`.
+2. So sánh worker baseline/head với latest `origin/main`.
+3. Nếu `origin/main` đã advance kể từ baseline hoặc lần sync cuối, phải `rebase origin/main` hoặc `merge origin/main` theo strategy của workstream **trước final verification**.
+4. Sau sync, audit `git diff origin/main...HEAD` hoặc compare tương đương để chứng minh branch chỉ còn mang intent của chính workstream.
+5. Nếu branch đã merge trước chạm cùng file, metadata declaration, renderer, shared contract hoặc hotspot liên quan, phải review **semantic composition**, không chỉ dựa vào việc Git không báo textual conflict.
+6. Sau conflict resolution/sync, rerun targeted typecheck/build/test/browser evidence theo blast radius.
+7. Ngay trước merge, kiểm tra lại latest `origin/main`; nếu `main` lại advance, lặp lại freshness check.
+
+Merge readiness tối thiểu:
+
+```text
+latest origin/main fetched: yes
+branch reconciled with latest main: yes
+behind latest main for required convergence: 0
+final diff audited against latest main: yes
+semantic overlap with earlier merged workers: reviewed/none
+targeted verification after reconciliation: pass
+```
+
+### 10.2 Anti-overwrite rule
+
+Khi resolve conflict hoặc reconcile branch stale:
+
+- phải giữ intent hợp lệ của **cả thay đổi đã có trên latest `main` và thay đổi của worker hiện tại**;
+- cấm mặc định dùng whole-file `ours/theirs`, `checkout origin/main -- <path>`, reset hoặc thay nguyên file chỉ để làm conflict biến mất;
+- chỉ được chọn một phía hoặc thay nguyên file khi diff/authority evidence chứng minh phía còn lại thực sự phải bị loại bỏ;
+- UI-only fast path **không được miễn** branch-freshness và anti-overwrite rule;
+- nếu reconciliation lộ ra shared-contract conflict thuộc owner/workstream khác, ghi `Dependency Request`, tiếp tục phần độc lập và không tự overwrite authority đó.
+
+Mục tiêu: hai tab/worker có thể lấy `main` ở thời điểm khác nhau, nhưng **tab/worker merge sau luôn phải hội tụ trên latest main và chứng minh không làm mất thay đổi đã merge trước**.
 
 ## 11. Merge/deploy discipline
 
