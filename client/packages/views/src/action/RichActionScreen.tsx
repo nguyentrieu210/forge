@@ -1,6 +1,16 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useState } from "react";
-import type { AppAction, AppActionField, AppActionInputTable, Doc, DocField, DocTypeMeta, Fieldtype } from "@metaforge/core";
+import {
+  bindActionField,
+  buildActionTableRow,
+  resolveFieldDefault,
+  type AppAction,
+  type AppActionField,
+  type AppActionInputTable,
+  type Doc,
+  type DocField,
+  type DocTypeMeta,
+} from "@metaforge/core";
 import { Button, Input, Label } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 import { ActionChildGrid } from "./ActionChildGrid.js";
@@ -11,40 +21,24 @@ type ResultRecord = Record<string, unknown>;
 type CommitResult = { doctype?: string; name?: string; message?: string; [key: string]: unknown };
 type BusyPhase = "preview" | "commit" | "print";
 
-function resolveActionDefault(field: AppActionField): unknown {
-  if (field.default === "Today" && field.fieldtype === "Date") return new Date().toISOString().slice(0, 10);
-  return field.default;
+function toDocField(field: AppActionField): DocField {
+  return bindActionField(field);
 }
 
 function initialValues(action: AppAction, table: AppActionInputTable): Values {
   const values: Values = {};
   for (const field of action.fields) {
     if (field.fieldname === table.fieldname) continue;
-    const value = resolveActionDefault(field);
+    const value = resolveFieldDefault(toDocField(field));
     if (value != null) values[field.fieldname] = value;
   }
   values[table.fieldname] = [];
   return values;
 }
 
-function toDocField(field: AppActionField): DocField {
-  return {
-    fieldname: field.fieldname,
-    label: field.label,
-    fieldtype: field.fieldtype as Fieldtype,
-    ...(field.options ? { options: field.options } : {}),
-    ...(field.required ? { reqd: 1 as const } : {}),
-    ...(field.default == null ? {} : { default: field.default }),
-  };
-}
-
 function blankRows(table: AppActionInputTable, meta: DocTypeMeta): Doc[] {
-  return Array.from({ length: table.min_rows }, (_, index) => {
-    const row: Doc = { name: `new-${Date.now()}-${index}`, doctype: meta.name } as Doc;
-    for (const field of meta.fields ?? []) if (field.default != null && field.default !== "") row[field.fieldname] = field.default;
-    for (const column of table.columns) if (column.default != null && (row[column.fieldname] == null || row[column.fieldname] === "")) row[column.fieldname] = column.default;
-    return row;
-  });
+  return Array.from({ length: table.min_rows }, (_, index) =>
+    buildActionTableRow(meta, table, `new-${Date.now()}-${index}`));
 }
 
 function empty(value: unknown): boolean {
@@ -147,7 +141,7 @@ function RichActionResult({ value, committed, format, onOpen }: {
         {scalars.length ? <dl className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{scalars.map(([key, entry]) => <div key={key} className="border bg-background px-3 py-2"><dt className="text-xs text-muted-foreground">{label(key)}</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{scalar(entry, format)}</dd></div>)}</dl> : null}
       </section>
       {objects.map(([key, entry]) => <section key={key} className="border bg-card"><div className="border-b px-3 py-2 text-sm font-semibold">{label(key)}</div><dl className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(entry).map(([field, fieldValue]) => <div key={field} className="border bg-background px-3 py-2"><dt className="text-xs text-muted-foreground">{label(field)}</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{scalar(fieldValue, format)}</dd></div>)}</dl></section>)}
-      {arrays.map(([key, rows]) => <section key={key} className="overflow-hidden border bg-card"><div className="flex items-center justify-between border-b px-3 py-2"><strong className="text-sm">{label(key)}</strong><span className="text-xs text-muted-foreground">{rows.length} dòng</span></div><ResultTable rows={rows} format={format} onOpen={onOpen} /></section>)}
+      {arrays.map(([key, resultRows]) => <section key={key} className="overflow-hidden border bg-card"><div className="flex items-center justify-between border-b px-3 py-2"><strong className="text-sm">{label(key)}</strong><span className="text-xs text-muted-foreground">{resultRows.length} dòng</span></div><ResultTable rows={resultRows} format={format} onOpen={onOpen} /></section>)}
     </div>
   );
 }
@@ -181,8 +175,8 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
       if (!active) return;
       setMeta(loaded);
       setValues((current) => {
-        const rows = Array.isArray(current[table.fieldname]) ? current[table.fieldname] as Doc[] : [];
-        return rows.length ? current : { ...current, [table.fieldname]: blankRows(table, loaded) };
+        const currentRows = Array.isArray(current[table.fieldname]) ? current[table.fieldname] as Doc[] : [];
+        return currentRows.length ? current : { ...current, [table.fieldname]: blankRows(table, loaded) };
       });
     }).catch((caught) => {
       if (active) setMetaError(adapter.mapError(caught).message);
@@ -203,14 +197,16 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
     for (const field of headerFields) if (field.required && empty(values[field.fieldname])) list.push(field.label);
     if (rows.length < table.min_rows) list.push(`${table.label}: cần ít nhất ${table.min_rows} dòng`);
     rows.forEach((row, rowIndex) => table.columns.forEach((column) => {
-      if (column.required && empty(row[column.fieldname])) list.push(`Dòng ${rowIndex + 1} · ${column.label}`);
+      const canonical = meta?.fields.find((field) => field.fieldname === column.fieldname);
+      const required = canonical?.reqd === 1 || (!canonical && column.required);
+      if (required && empty(row[column.fieldname])) list.push(`Dòng ${rowIndex + 1} · ${canonical?.label ?? column.label}`);
     }));
     for (const fieldname of summaryFields) {
       const value = number(values[fieldname]);
       if (value < 0 || value > 100) list.push(`${fieldname}: phải từ 0 đến 100`);
     }
     return list;
-  }, [headerFields, rows, summaryFields, table, values]);
+  }, [headerFields, rows, summaryFields, table, values, meta]);
 
   const subtotal = table.summary
     ? rows.reduce((sum, row) => sum + number(row[table.summary!.subtotal_field]), 0)
