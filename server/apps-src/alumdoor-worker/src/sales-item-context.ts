@@ -70,19 +70,27 @@ interface ItemPriceLookup {
  * Metadata authoritative hiện tạo Item Price theo `<bảng giá>:<mã hàng>`. Một số dữ liệu mới
  * có thể dùng thêm ĐVT. Luôn thử tên authoritative trước. So khớp nghiệp vụ được chuẩn hóa NFC
  * để dữ liệu import có dấu tổ hợp không bị nhìn giống nhau trên UI nhưng khác byte trong code.
- * Probe exact có ĐVT và callback list chỉ là fallback, không được phép chặn legacy hợp lệ.
+ *
+ * Legacy catalogue rows có thể chưa có `uom`. Chỉ coi một legacy row thiếu UOM là hợp lệ khi
+ * người bán đang dùng đúng `default_sales_uom` của Item. Nếu sale đổi sang ĐVT khác thì phải có
+ * Item Price đúng ĐVT đó; tuyệt đối không tái sử dụng giá legacy mặc định cho ĐVT khác.
  */
 async function resolveItemPriceRecord(
   call: SalesPlatformCall,
   priceList: string,
   itemCode: string,
   selectedUom: string,
+  defaultSalesUom: string,
 ): Promise<ItemPriceLookup> {
   const exactName = `${priceList}:${itemCode}:${selectedUom}`;
   const legacyName = `${priceList}:${itemCode}`;
 
   const legacy = await readResource(call, "Item Price", legacyName);
-  const compatibleLegacy = legacy && sameText(legacy.uom, selectedUom) ? legacy : null;
+  const legacyUom = normalizedText(legacy?.uom);
+  const compatibleLegacy = legacy && (
+    sameText(legacyUom, selectedUom)
+    || (!legacyUom && sameText(selectedUom, defaultSalesUom))
+  ) ? legacy : null;
   if (compatibleLegacy && !truthy(compatibleLegacy.disabled)) {
     return { price: compatibleLegacy, name: legacyName };
   }
@@ -206,7 +214,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   if (priceList) {
     const expectedName = `${priceList}:${itemCode}:${selectedUom}`;
     try {
-      const lookup = await resolveItemPriceRecord(call, priceList, itemCode, selectedUom);
+      const lookup = await resolveItemPriceRecord(call, priceList, itemCode, selectedUom, defaultSalesUom);
       const price = lookup.price;
       itemPrice = lookup.name;
       if (price && !truthy(price.disabled)) {
