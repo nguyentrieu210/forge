@@ -1,0 +1,99 @@
+name: Gateway Route Verification
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: gateway-route-verify-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify kairo.vn Gateway routes
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.comment.user.login == github.repository_owner &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.comment.body == '/forge-verify-gateway-routes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Require provider credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+
+      - name: Read live kairo.vn Worker routes
+        id: route-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
+          zones=$(curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=kairo.vn")
+          test "$(jq -r '.success' <<<"$zones")" = "true"
+          test "$(jq '.result | length' <<<"$zones")" -eq 1
+          zone_id=$(jq -r '.result[0].id' <<<"$zones")
+
+          routes=$(curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/${zone_id}/workers/routes")
+          test "$(jq -r '.success' <<<"$routes")" = "true"
+
+          wildcard_count=$(jq '[.result[] | select(.pattern == "*.kairo.vn/*")] | length' <<<"$routes")
+          patterns=$(jq -r '[.result[].pattern] | sort | join(", ")' <<<"$routes")
+          echo "wildcard_count=$wildcard_count" >> "$GITHUB_OUTPUT"
+          {
+            echo 'patterns<<EOF'
+            echo "$patterns"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Assert wildcard Worker Route is absent
+        shell: bash
+        env:
+          WILDCARD_COUNT: ${{ steps.route-state.outputs.wildcard_count }}
+        run: |
+          set -euo pipefail
+          test "$WILDCARD_COUNT" = "0" || {
+            echo "Wildcard Worker Route *.kairo.vn/* is still live."
+            exit 1
+          }
+
+      - name: Publish verification result
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          JOB_STATUS: ${{ job.status }}
+          WILDCARD_COUNT: ${{ steps.route-state.outputs.wildcard_count }}
+          ROUTE_PATTERNS: ${{ steps.route-state.outputs.patterns }}
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const ok = process.env.JOB_STATUS === 'success';
+            const count = process.env.WILDCARD_COUNT || '(query failed)';
+            const patterns = process.env.ROUTE_PATTERNS || '(none or query failed)';
+            const body = [
+              `## Gateway Route Verification ${ok ? 'SUCCESS' : 'FAILED'}`,
+              '',
+              `- Wildcard \`*.kairo.vn/*\` count: ${count}`,
+              `- Live Worker route patterns: ${patterns}`,
+              `- Run: ${runUrl}`,
+              '',
+              ok
+                ? 'No wildcard Worker Route is active for kairo.vn.'
+                : 'Wildcard route may still be active or the provider query failed; inspect the run before any further mutation.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
