@@ -51,6 +51,10 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Typecheck operator harness
+        working-directory: client
+        run: pnpm exec tsc -p e2e-forge/tsconfig.operator.json --noEmit
+
       - name: Resolve source Alumdoor package version
         working-directory: server
         shell: bash
