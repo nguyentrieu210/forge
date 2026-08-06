@@ -1,5 +1,5 @@
 {
-  "version": "2.3.1",
+  "version": "2.3.2",
   "//": "Operational presentation sidecar. Daily work is task-first: Sales/Purchase remain the reference pattern; Stock/Manufacturing/Debt/Warranty expose operator actions while reports stay contextual/global and correction/setup stays installed outside the daily tab strip.",
   "dimensions": ["company", "warehouse"],
   "doctypes": {
@@ -13,7 +13,7 @@
       "menu": false
     },
     "Sales Order": {
-      "label": "Đơn hàng",
+      "label": "Danh sách đơn hàng",
       "menu": true,
       "icon": "shopping-cart",
       "group": "Bán hàng"
@@ -197,7 +197,7 @@
   },
   "experiences": {
     "alumdoor-operations:workbench": {
-      "label": "Bán hàng",
+      "label": "Tạo đơn",
       "icon": "shopping-cart",
       "group": "Bán hàng"
     }

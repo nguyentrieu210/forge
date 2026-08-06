@@ -25,23 +25,23 @@ const SALES_KEYS = [
   "action:bao-cao-ban-hang",
   "action:lich-su-ban-hang",
 ];
-const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Phiếu xuất kho", "Giao hàng", "Báo cáo", "Lịch sử bán hàng"];
+const SALES_LABELS = ["Tạo đơn", "Danh sách đơn hàng", "Phiếu xuất kho", "Giao hàng", "Báo cáo", "Lịch sử bán hàng"];
 
-test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and canonical history in 2.3.1", async () => {
+test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and canonical history in 2.3.2", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.3.1");
+  assert.equal(brief.version, "2.3.2");
   assert.deepEqual(brief.dimensions, ["company", "warehouse"]);
   assert.deepEqual(brief.navigation.items.slice(0, SALES_KEYS.length), SALES_KEYS);
 
   const experience = brief.experiences.find((entry) => entry.key === "alumdoor-operations:workbench");
-  assert.equal(experience?.label, "Bán hàng");
+  assert.equal(experience?.label, "Tạo đơn");
   assert.equal(experience?.group, "Bán hàng");
   assert.equal(experience?.permission, "Sales Order");
 
   const salesOrder = brief.doctypes.find((entry) => entry.name === "Sales Order");
   const deliveryNote = brief.doctypes.find((entry) => entry.name === "Delivery Note");
-  assert.equal(salesOrder?.label, "Đơn hàng");
+  assert.equal(salesOrder?.label, "Danh sách đơn hàng");
   assert.equal(salesOrder?.menu, true);
   assert.equal(salesOrder?.group, "Bán hàng");
   assert.equal(deliveryNote?.label, "Phiếu xuất kho");
@@ -88,7 +88,7 @@ test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and can
   assert.equal(legacyReport?.group, "Báo cáo", "legacy tabular report stays available outside the daily Sales strip");
 
   const pkg = compileBrief(brief);
-  assert.equal(pkg.version, "2.3.1");
+  assert.equal(pkg.version, "2.3.2");
   assert.deepEqual(pkg.client?.dimensions, ["company", "warehouse"]);
   const sales = pkg.nav.filter((entry) => entry.group === "Bán hàng");
   assert.deepEqual(sales.map((entry) => entry.key), SALES_KEYS);
