@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import {
   buildMetadataDefaults,
   collectMetadataReactiveFields,
+  deriveContextLinkCapabilityFilters,
   mergeAutomaticFieldPatch,
   resolveField,
   resolveFieldContract,
@@ -89,6 +90,14 @@ check("set_once and immutable_after_submit are effective in resolver", () => {
   const immutable = meta.fields.find((field) => field.fieldname === "approved_note")!;
   assert.equal(resolveField(immutable, meta, { doc: { docstatus: 0 }, roles: ["Operator"] }).readOnly, false);
   assert.equal(resolveField(immutable, meta, { doc: { docstatus: 1 }, roles: ["Operator"] }).readOnly, true);
+});
+
+check("price-list capability filters derive from context + target schema, not target name", () => {
+  const target = { fields: [{ fieldname: "selling" }, { fieldname: "buying" }] };
+  assert.deepEqual(deriveContextLinkCapabilityFilters({ supported: ["selling_price_list"] }, target), { selling: 1 });
+  assert.deepEqual(deriveContextLinkCapabilityFilters({ supported: ["buying_price_list"] }, target), { buying: 1 });
+  assert.deepEqual(deriveContextLinkCapabilityFilters({ supported: ["selling_price_list", "buying_price_list"] }, target), {});
+  assert.deepEqual(deriveContextLinkCapabilityFilters({ supported: ["selling_price_list"] }, { fields: [{ fieldname: "other" }] }), {});
 });
 
 console.log(`metadata intelligence selfcheck: ${passed} checks passed`);
