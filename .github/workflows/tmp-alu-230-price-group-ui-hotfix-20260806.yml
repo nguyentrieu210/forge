@@ -1,0 +1,266 @@
+name: TMP ALU 2.3.0 Price Group UI Hotfix 2026-08-06
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-alu-230-price-group-ui-hotfix-20260806.yml"
+      - "ops/releases/alu-230-price-group-ui-hotfix-20260806.txt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-alu-tenant-production
+  cancel-in-progress: false
+
+jobs:
+  hotfix:
+    name: Verify selective 2.3.0 UI hotfix, deploy Gateway, smoke production
+    if: github.head_ref == 'release/alu-230-price-group-ui-hotfix-20260806'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      TENANT: alu
+      PROD_BASE_SHA: ede10e8cbedf4ad238834b0e9d9afe0c640080a9
+      TARGET_SHA: fa48608d607865ef293c2321aa761354cf70fc23
+      CANONICAL_MAIN_SHA: 65b6f80bda813f151ef39dc59ee03aadfb330b29
+      CANONICAL_FIX_BLOB: 7588b3c9b55a62ab6fdd2af8973b5432d599647d
+      HOTFIX_PATH: client/apps/runtime/src/experiences/AlumdoorSalesComposer.tsx
+      AUTH_FILE: ops/releases/alu-230-price-group-ui-hotfix-20260806.txt
+      FORGE_ORIGIN: https://alu.kairo.vn
+      EXPECTED_APP_VERSION: 2.3.0
+      VITE_FORGE_RELEASE_SHA: fa48608d607865ef293c2321aa761354cf70fc23
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+      EVIDENCE_DIR: /tmp/alu-230-price-group-ui-hotfix-evidence
+
+    steps:
+      - name: Checkout temporary hotfix authorization branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify authorization and selective-hotfix provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          test -f "$AUTH_FILE"
+          grep -Fxq 'ACTION=HOTFIX_ALU_230_PRICE_GROUP_UI' "$AUTH_FILE"
+          grep -Fxq 'TENANT=alu' "$AUTH_FILE"
+          grep -Fxq 'PROD_BASE_SHA=ede10e8cbedf4ad238834b0e9d9afe0c640080a9' "$AUTH_FILE"
+          grep -Fxq 'TARGET_SHA=fa48608d607865ef293c2321aa761354cf70fc23' "$AUTH_FILE"
+          grep -Fxq 'CANONICAL_MAIN_SHA=65b6f80bda813f151ef39dc59ee03aadfb330b29' "$AUTH_FILE"
+          grep -Fxq 'CANONICAL_FIX_BLOB=7588b3c9b55a62ab6fdd2af8973b5432d599647d' "$AUTH_FILE"
+          grep -Fxq 'SOURCE_PR=737' "$AUTH_FILE"
+          grep -Fxq 'SOURCE_R6_RUN=31072180112' "$AUTH_FILE"
+          grep -Fxq 'EXPECTED_PACKAGE=2.3.0' "$AUTH_FILE"
+          grep -Fxq 'SCOPE=GATEWAY_UI_ONLY_NO_METADATA_NO_WORKERS_NO_DATA' "$AUTH_FILE"
+          grep -Fxq 'AUTHORIZATION=PRODUCTION_BLOCKER_CONTINUATION_2026-08-06' "$AUTH_FILE"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${FORGE_ADMIN_USER:-}"
+          test -n "${FORGE_ADMIN_PASSWORD:-}"
+
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$CANONICAL_MAIN_SHA" || {
+            echo "Refusing hotfix: canonical main moved from $CANONICAL_MAIN_SHA to $current_main."
+            exit 1
+          }
+
+          mapfile -t bridge_changed < <(git diff --name-only "$CANONICAL_MAIN_SHA"...HEAD | sort -u)
+          test "${#bridge_changed[@]}" -eq 2
+          printf '%s\n' "${bridge_changed[@]}" | grep -Fxq '.github/workflows/tmp-alu-230-price-group-ui-hotfix-20260806.yml'
+          printf '%s\n' "${bridge_changed[@]}" | grep -Fxq 'ops/releases/alu-230-price-group-ui-hotfix-20260806.txt'
+
+          git cat-file -e "$PROD_BASE_SHA^{commit}"
+          git cat-file -e "$TARGET_SHA^{commit}"
+          test "$(git rev-parse "$TARGET_SHA^")" = "$PROD_BASE_SHA"
+          mapfile -t hotfix_changed < <(git diff --name-only "$PROD_BASE_SHA" "$TARGET_SHA")
+          test "${#hotfix_changed[@]}" -eq 1
+          test "${hotfix_changed[0]}" = "$HOTFIX_PATH"
+          target_blob="$(git rev-parse "$TARGET_SHA:$HOTFIX_PATH")"
+          main_blob="$(git rev-parse "$CANONICAL_MAIN_SHA:$HOTFIX_PATH")"
+          test "$target_blob" = "$CANONICAL_FIX_BLOB"
+          test "$main_blob" = "$CANONICAL_FIX_BLOB"
+          git diff --check "$PROD_BASE_SHA" "$TARGET_SHA"
+
+          printf 'target_sha=%s\nproduction_base=%s\ncanonical_main=%s\ncanonical_blob=%s\nsource_r6=31072180112\nselective_diff=pass:1-ui-file\nauthorization=production-blocker-continuation\nstarted_at=%s\n' \
+            "$TARGET_SHA" "$PROD_BASE_SHA" "$CANONICAL_MAIN_SHA" "$CANONICAL_FIX_BLOB" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/state.txt"
+
+      - name: Checkout exact selective production candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Reconcile frozen-install worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({ git diff --name-only; git diff --cached --name-only; git ls-files --others --exclude-standard; } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              pnpm-lock.yaml) git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml ;;
+              *) echo "Refusing hotfix: dependency install changed unexpected source path: $file"; exit 1 ;;
+            esac
+          done
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+      - name: Build exact UI hotfix and prove selector contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '<Label>Nhóm giá *</Label>' "$HOTFIX_PATH"
+          grep -Fq '<option value="Đại lý">Đại lý</option>' "$HOTFIX_PATH"
+          grep -Fq '<option value="Lẻ">Lẻ</option>' "$HOTFIX_PATH"
+          grep -Fq 'Cần chọn Nhóm giá Đại lý/Lẻ.' "$HOTFIX_PATH"
+          ! grep -Fq '<Input value={customer.group} readOnly' "$HOTFIX_PATH"
+          grep -Fq 'customer_group: customer.group' "$HOTFIX_PATH"
+
+          pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/metaforge-build.log"
+          pnpm --filter metaforge run typecheck 2>&1 | tee "$EVIDENCE_DIR/metaforge-typecheck.log"
+          node --test \
+            server/tests/alumdoor-sales-navigation-contract.test.mjs \
+            server/tests/alumdoor-procurement-navigation-contract.test.mjs \
+            server/tests/sales-wizard-context.test.mjs \
+            2>&1 | tee "$EVIDENCE_DIR/focused-contracts.log"
+          grep -R -Fq 'Chọn Đại lý / Lẻ' client/apps/runtime/dist
+          node server/scripts/stage-client-bundle.mjs 2>&1 | tee "$EVIDENCE_DIR/stage-client.log"
+          grep -Fq "release=$TARGET_SHA" "$EVIDENCE_DIR/stage-client.log"
+          node server/scripts/stage-client-bundle.mjs --check 2>&1 | tee "$EVIDENCE_DIR/stage-check.log"
+          printf 'ui_build=pass\ntypecheck=pass\nselector_source_contract=pass\nselector_bundle_contract=pass\nfocused_contracts=pass\nclient_stage=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify production is still 2.3.0 before Gateway mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' | tee "$EVIDENCE_DIR/predeploy-live-metadata.log"
+          const origin = process.env.FORGE_ORIGIN.replace(/\/$/, '');
+          const user = process.env.FORGE_ADMIN_USER;
+          const password = process.env.FORGE_ADMIN_PASSWORD;
+          const jar = new Map(); let csrf = '';
+          function store(response) { for (const value of response.headers.getSetCookie?.() ?? []) { const pair=value.split(';')[0]; const i=pair.indexOf('='); if(i>0) jar.set(pair.slice(0,i).trim(), pair.slice(i+1).trim()); } }
+          async function call(method, body={}) { const response=await fetch(`${origin}/api/method/${method}`,{method:'POST',headers:{'content-type':'application/json','cache-control':'no-cache',...(jar.size?{cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}:{}),...(csrf?{'x-frappe-csrf-token':csrf}:{})},body:JSON.stringify(body)}); store(response); csrf=response.headers.get('x-frappe-csrf-token')??csrf; const text=await response.text(); let parsed; try { parsed=JSON.parse(text); } catch { throw new Error(`${method} invalid JSON HTTP ${response.status}: ${text.slice(0,200)}`); } if(!response.ok) throw new Error(`${method} HTTP ${response.status}: ${parsed.message??text.slice(0,200)}`); return parsed.message??parsed; }
+          await call('login',{usr:user,pwd:password});
+          const manifest=await call('metaforge.api.get_app_manifest',{app:'alumdoor'});
+          const nav=Array.isArray(manifest.nav)?manifest.nav:[];
+          const sales=nav.filter((entry)=>entry?.group==='Bán hàng');
+          const purchase=nav.filter((entry)=>entry?.group==='Mua hàng');
+          const salesKeys=['alumdoor-operations:workbench','Sales Order','Delivery Note','action:giao-hang-dispatch','action:bao-cao-ban-hang','action:lich-su-ban-hang'];
+          const purchaseKeys=['action:tao-don-mua','action:nhap-nhom-hang-loat','action:bao-cao-giao-hang-ncc','action:lich-su-mua-hang'];
+          if(JSON.stringify(sales.map((e)=>e.key))!==JSON.stringify(salesKeys)) throw new Error(`live Sales metadata changed: ${JSON.stringify(sales)}`);
+          if(JSON.stringify(purchase.map((e)=>e.key))!==JSON.stringify(purchaseKeys)) throw new Error(`live Purchase metadata changed: ${JSON.stringify(purchase)}`);
+          if(nav.length!==79) throw new Error(`expected 79 live 2.3.0 nav entries, got ${nav.length}`);
+          console.log(`LIVE_230_PREHOTFIX_PASS nav=${nav.length}`);
+          NODE
+          printf 'live_metadata_230=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Recheck provenance immediately before Gateway mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$CANONICAL_MAIN_SHA" || {
+            echo "Refusing Gateway hotfix: main moved from canonical $CANONICAL_MAIN_SHA to $current_main."
+            exit 1
+          }
+          test "$(git rev-parse "$TARGET_SHA^")" = "$PROD_BASE_SHA"
+          mapfile -t changed < <(git diff --name-only "$PROD_BASE_SHA" "$TARGET_SHA")
+          test "${#changed[@]}" -eq 1
+          test "${changed[0]}" = "$HOTFIX_PATH"
+          test "$(git rev-parse "$TARGET_SHA:$HOTFIX_PATH")" = "$CANONICAL_FIX_BLOB"
+          test "$(git rev-parse "$CANONICAL_MAIN_SHA:$HOTFIX_PATH")" = "$CANONICAL_FIX_BLOB"
+          printf 'pre_gateway_provenance_guard=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Deploy exact Gateway and UI hotfix only
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc 2>&1 | tee "$EVIDENCE_DIR/gateway-deploy.log"
+          printf 'gateway_ui_hotfix=deployed\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify production hotfix and unchanged 2.3.0 metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/sre-health-snapshot.mjs \
+            --base "$FORGE_ORIGIN" \
+            --allow-remote \
+            --confirm-host alu.kairo.vn \
+            --expected-release-sha "$TARGET_SHA" \
+            --attempts 12 \
+            --delay-ms 5000 \
+            --output "$EVIDENCE_DIR/health.json" \
+            2>&1 | tee "$EVIDENCE_DIR/health.log"
+
+          guest_code="$(curl --silent --show-error --max-time 15 -o /tmp/guest.json -w '%{http_code}' \
+            -H 'content-type: application/json' -H 'Cache-Control: no-cache' \
+            -X POST "$FORGE_ORIGIN/api/method/frappe.desk.desktop.get_bootinfo?sha=$TARGET_SHA&run=$GITHUB_RUN_ID" --data '{}')"
+          test "$guest_code" = "403"
+
+          node --input-type=module <<'NODE' | tee "$EVIDENCE_DIR/production-nav.log"
+          const origin = process.env.FORGE_ORIGIN.replace(/\/$/, '');
+          const user = process.env.FORGE_ADMIN_USER;
+          const password = process.env.FORGE_ADMIN_PASSWORD;
+          const jar = new Map(); let csrf = '';
+          function store(response) { for (const value of response.headers.getSetCookie?.() ?? []) { const pair=value.split(';')[0]; const i=pair.indexOf('='); if(i>0) jar.set(pair.slice(0,i).trim(), pair.slice(i+1).trim()); } }
+          async function call(method, body={}) { const response=await fetch(`${origin}/api/method/${method}`,{method:'POST',headers:{'content-type':'application/json','cache-control':'no-cache',...(jar.size?{cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}:{}),...(csrf?{'x-frappe-csrf-token':csrf}:{})},body:JSON.stringify(body)}); store(response); csrf=response.headers.get('x-frappe-csrf-token')??csrf; const text=await response.text(); const parsed=JSON.parse(text); if(!response.ok) throw new Error(`${method} HTTP ${response.status}: ${parsed.message??text.slice(0,200)}`); return parsed.message??parsed; }
+          await call('login',{usr:user,pwd:password});
+          const manifest=await call('metaforge.api.get_app_manifest',{app:'alumdoor'});
+          const nav=Array.isArray(manifest.nav)?manifest.nav:[];
+          const sales=nav.filter((entry)=>entry?.group==='Bán hàng');
+          const purchase=nav.filter((entry)=>entry?.group==='Mua hàng');
+          const salesKeys=['alumdoor-operations:workbench','Sales Order','Delivery Note','action:giao-hang-dispatch','action:bao-cao-ban-hang','action:lich-su-ban-hang'];
+          const purchaseKeys=['action:tao-don-mua','action:nhap-nhom-hang-loat','action:bao-cao-giao-hang-ncc','action:lich-su-mua-hang'];
+          if(JSON.stringify(sales.map((e)=>e.key))!==JSON.stringify(salesKeys)) throw new Error(`sales keys mismatch ${JSON.stringify(sales)}`);
+          if(JSON.stringify(purchase.map((e)=>e.key))!==JSON.stringify(purchaseKeys)) throw new Error(`purchase keys mismatch ${JSON.stringify(purchase)}`);
+          if(nav.length!==79) throw new Error(`2.3.0 nav count changed: ${nav.length}`);
+          console.log(`ALUMDOOR_230_PRICE_GROUP_HOTFIX_PASS nav=${nav.length}`);
+          NODE
+          printf 'production_health=pass\nguest_boundary=pass\nmetadata_230_unchanged=pass\nhotfix_completed_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Publish hotfix summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '# Alumdoor 2.3.0 price-group UI hotfix'
+            echo
+            echo '```text'
+            cat "$EVIDENCE_DIR/state.txt" 2>/dev/null || echo 'state.txt missing'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload hotfix evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-230-price-group-ui-hotfix-${{ github.run_id }}
+          path: /tmp/alu-230-price-group-ui-hotfix-evidence/
+          if-no-files-found: warn
+          retention-days: 30
