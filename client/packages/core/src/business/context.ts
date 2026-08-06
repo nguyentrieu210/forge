@@ -1,6 +1,7 @@
 /** Global business context — company/fiscal year/warehouse/branch/... resolved by server. */
 export type BusinessContextKey =
   | "company"
+  | "currency"
   | "fiscal_year"
   | "warehouse"
   | "branch"
@@ -80,6 +81,13 @@ export function normalizeContextSelection(
     if (!value && d.options.length === 1 && !d.options[0]!.disabled) value = d.options[0]!.value;
     if (value) next[d.key] = value;
   }
+  // These are non-selector defaults. They travel with the context so generic forms and
+  // app experiences can consume the same effective currency/price authority without
+  // adding a visible global selector for them.
+  for (const key of ["currency", "selling_price_list", "buying_price_list"] as const) {
+    const value = merged[key];
+    if (value) next[key] = value;
+  }
   if (state.selection.date_from) next.date_from = state.selection.date_from;
   if (state.selection.date_to) next.date_to = state.selection.date_to;
   return next;
@@ -98,10 +106,14 @@ export function applyContextPolicy(
   selection: BusinessContextSelection,
   policies?: Record<string, BusinessContextPolicy>,
 ): { filters: Array<[string, "=" | ">=" | "<=", string]>; defaults: Record<string, string> } {
-  const policy = policies?.[doctype];
-  if (!policy) return { filters: [], defaults: {} };
   const filters: Array<[string, "=" | ">=" | "<=", string]> = [];
   const defaults: Record<string, string> = {};
+  // Currency is a global create default, not a list-scope filter. `blankDoc` applies this
+  // only when the target schema actually has a `currency` field and metadata did not
+  // already provide a stronger default.
+  if (selection.currency) defaults.currency = selection.currency;
+  const policy = policies?.[doctype];
+  if (!policy) return { filters, defaults };
   for (const key of policy.supported) {
     const value = selection[key];
     if (!value) continue;
