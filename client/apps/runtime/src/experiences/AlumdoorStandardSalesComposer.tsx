@@ -10,7 +10,6 @@ type CustomerState = {
   group: string;
   phone: string;
   address: string;
-  priceList: string;
 };
 
 type ItemCandidate = {
@@ -46,6 +45,8 @@ type SaleLine = {
   stockError: string;
   busy: boolean;
 };
+
+const STANDARD_PRICE_LIST = "Giá niêm yết";
 
 const today = () => {
   const value = new Date();
@@ -102,12 +103,14 @@ export function AlumdoorStandardSalesComposer() {
   const contextWarehouse = String(businessContext.warehouse ?? "").trim();
   const [company, setCompany] = useState(contextCompany);
   const [warehouse, setWarehouse] = useState(contextWarehouse);
+  const [companyCurrency, setCompanyCurrency] = useState("");
+  const [priceListCurrency, setPriceListCurrency] = useState("");
   const [currency, setCurrency] = useState("");
+  const [priceList, setPriceList] = useState("");
+  const [priceListError, setPriceListError] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(today());
-  const [customer, setCustomer] = useState<CustomerState>({ name: "", group: "", phone: "", address: "", priceList: "" });
+  const [customer, setCustomer] = useState<CustomerState>({ name: "", group: "", phone: "", address: "" });
   const [doorItemGroups, setDoorItemGroups] = useState<Set<string>>(new Set());
-  const [doorFilterReady, setDoorFilterReady] = useState(false);
-  const [doorFilterError, setDoorFilterError] = useState("");
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ItemCandidate[]>([]);
   const [searchBusy, setSearchBusy] = useState(false);
@@ -127,24 +130,24 @@ export function AlumdoorStandardSalesComposer() {
 
   useEffect(() => { if (contextCompany) setCompany(contextCompany); }, [contextCompany]);
   useEffect(() => { if (contextWarehouse) setWarehouse(contextWarehouse); }, [contextWarehouse]);
+  useEffect(() => { setCurrency(priceListCurrency || companyCurrency); }, [companyCurrency, priceListCurrency]);
 
   useEffect(() => {
-    if (!company) { setCurrency(""); return; }
+    if (!company) { setCompanyCurrency(""); return; }
     let active = true;
     void adapter.getDoc("Company", company).then(({ doc }) => {
-      if (active) setCurrency(String(doc.default_currency ?? "").trim());
-    }).catch((error) => {
-      if (active) setGlobalError(adapter.mapError(error).message);
+      if (!active) return;
+      setCompanyCurrency(String(doc.default_currency ?? doc.currency ?? "").trim());
+    }).catch(() => {
+      if (active) setCompanyCurrency("");
     });
     return () => { active = false; };
   }, [adapter, company]);
 
   useEffect(() => {
     let active = true;
-    setDoorFilterReady(false);
-    setDoorFilterError("");
     void adapter.getList("Cutting Policy", {
-      fields: ["item_group", "door_type", "disabled"],
+      fields: ["item_group", "disabled"],
       filters: [["disabled", "=", 0]],
       pageLength: 500,
     }).then((rows) => {
@@ -153,12 +156,8 @@ export function AlumdoorStandardSalesComposer() {
         .filter((row) => !checked(row.disabled))
         .map((row) => String(row.item_group ?? "").trim())
         .filter(Boolean)));
-      setDoorFilterReady(true);
-    }).catch((error) => {
-      if (!active) return;
-      setDoorItemGroups(new Set());
-      setDoorFilterError(`Không tải được phân loại cửa để lọc hàng bán thường: ${adapter.mapError(error).message}`);
-      setDoorFilterReady(false);
+    }).catch(() => {
+      if (active) setDoorItemGroups(new Set());
     });
     return () => { active = false; };
   }, [adapter]);
@@ -166,23 +165,72 @@ export function AlumdoorStandardSalesComposer() {
   useEffect(() => {
     const name = customer.name.trim();
     if (!name) {
-      setCustomer({ name: "", group: "", phone: "", address: "", priceList: "" });
+      setCustomer({ name: "", group: "", phone: "", address: "" });
+      setPriceList("");
+      setPriceListCurrency("");
+      setPriceListError("");
       return;
     }
     let active = true;
-    void adapter.getDoc("Customer", name).then(({ doc }) => {
-      if (!active) return;
-      setCustomer((current) => ({
-        ...current,
-        group: String(doc.price_group ?? doc.customer_group ?? "").trim(),
-        phone: String(doc.phone ?? doc.mobile_no ?? "").trim(),
-        address: String(doc.install_address ?? doc.address ?? "").trim(),
-        priceList: String(doc.default_price_list ?? "").trim(),
-      }));
-      setGlobalError("");
-    }).catch((error) => {
-      if (active) setGlobalError(adapter.mapError(error).message);
-    });
+    void (async () => {
+      try {
+        const { doc } = await adapter.getDoc("Customer", name);
+        const preferredPriceList = String(doc.default_price_list ?? "").trim();
+        const candidates = [...new Set([preferredPriceList, STANDARD_PRICE_LIST].filter(Boolean))];
+        let resolved: { name: string; currency: string } | null = null;
+
+        for (const candidate of candidates) {
+          try {
+            const { doc: list } = await adapter.getDoc("Price List", candidate);
+            if (!checked(list.disabled)) {
+              resolved = { name: candidate, currency: String(list.currency ?? "").trim() };
+              break;
+            }
+          } catch {
+            // Continue to the canonical Alumdoor fallback below.
+          }
+        }
+
+        if (!resolved) {
+          const activeLists = await adapter.getList("Price List", {
+            fields: ["name", "currency", "disabled"],
+            filters: [["disabled", "=", 0]],
+            orderBy: "name asc",
+            pageLength: 50,
+          });
+          if (activeLists.length === 1) {
+            resolved = {
+              name: String(activeLists[0]?.name ?? "").trim(),
+              currency: String(activeLists[0]?.currency ?? "").trim(),
+            };
+          }
+        }
+
+        if (!active) return;
+        setCustomer((current) => ({
+          ...current,
+          group: String(doc.price_group ?? doc.customer_group ?? "").trim(),
+          phone: String(doc.phone ?? doc.mobile_no ?? "").trim(),
+          address: String(doc.install_address ?? doc.address ?? "").trim(),
+        }));
+        if (resolved?.name) {
+          setPriceList(resolved.name);
+          setPriceListCurrency(resolved.currency);
+          setPriceListError("");
+        } else {
+          setPriceList("");
+          setPriceListCurrency("");
+          setPriceListError(`Không tìm thấy bảng giá bán thường đang hoạt động. Cần có ${STANDARD_PRICE_LIST} hoặc một Price List duy nhất.`);
+        }
+        setGlobalError("");
+      } catch (error) {
+        if (!active) return;
+        setPriceList("");
+        setPriceListCurrency("");
+        setPriceListError("");
+        setGlobalError(adapter.mapError(error).message);
+      }
+    })();
     return () => { active = false; };
   }, [adapter, customer.name]);
 
@@ -207,8 +255,8 @@ export function AlumdoorStandardSalesComposer() {
       } else {
         setTaxAccount("");
         setTaxAccountError(rows.length === 0
-          ? "Chưa cấu hình tài khoản thuế đầu ra (Account loại Tax / Liability) cho Công ty."
-          : "Có nhiều tài khoản Tax / Liability; cần cấu hình một tài khoản thuế đầu ra duy nhất cho luồng bán nhanh.");
+          ? "Chưa cấu hình tài khoản thuế đầu ra cho Công ty."
+          : "Có nhiều tài khoản thuế đầu ra; cần cấu hình một tài khoản mặc định cho luồng bán nhanh.");
       }
     }).catch((error) => {
       if (!active) return;
@@ -220,7 +268,7 @@ export function AlumdoorStandardSalesComposer() {
 
   useEffect(() => {
     const text = query.trim();
-    if (!text || !customer.name || !doorFilterReady || submitted) {
+    if (!text || !customer.name || submitted) {
       setSuggestions([]);
       setSearchBusy(false);
       setSearchError("");
@@ -241,7 +289,11 @@ export function AlumdoorStandardSalesComposer() {
             const { doc } = await adapter.getDoc("Item", result.value);
             const doorType = String(doc.door_type ?? "").trim();
             const itemGroup = String(doc.item_group ?? "").trim();
-            const isDoorConfiguratorItem = Boolean(doorType) || Boolean(itemGroup && doorItemGroups.has(itemGroup));
+            const inventoryMode = String(doc.inventory_mode ?? "").trim();
+            const isDoorConfiguratorItem = Boolean(doorType)
+              || inventoryMode === "Thành phẩm theo m2"
+              || Boolean(itemGroup && doorItemGroups.has(itemGroup))
+              || itemGroup.toLocaleLowerCase("vi").startsWith("cửa");
             if (isDoorConfiguratorItem || checked(doc.disabled) || doc.is_sales_item === 0 || doc.is_sales_item === false) return null;
             return {
               code: result.value,
@@ -266,12 +318,12 @@ export function AlumdoorStandardSalesComposer() {
       });
     }, 250);
     return () => { controller.abort(); window.clearTimeout(timer); };
-  }, [adapter, customer.name, doorFilterReady, doorItemGroups, query, submitted]);
+  }, [adapter, customer.name, doorItemGroups, query, submitted]);
 
   const lineKey = useMemo(() => lines.map((line) => `${line.id}:${line.itemCode}`).join("|"), [lines]);
 
   useEffect(() => {
-    if (!lineKey || !customer.priceList || !currency) return;
+    if (!lineKey) return;
     const generation = ++refreshGeneration.current;
     const snapshot = lines.map((line) => ({ id: line.id, itemCode: line.itemCode }));
     setLines((current) => current.map((line) => ({ ...line, busy: true, priceError: "", stockError: "" })));
@@ -279,8 +331,8 @@ export function AlumdoorStandardSalesComposer() {
       try {
         const context = await adapter.callPost<ItemContext>("alumdoor.sales.item_context", {
           item_code: line.itemCode,
-          price_list: customer.priceList,
-          currency,
+          ...(priceList ? { price_list: priceList } : {}),
+          ...(currency ? { currency } : {}),
           ...(warehouse ? { warehouse } : {}),
         });
         return { id: line.id, context, error: "" };
@@ -295,23 +347,24 @@ export function AlumdoorStandardSalesComposer() {
         if (!result) return line;
         if (!result.context) return { ...line, busy: false, rate: null, stockQty: null, priceError: result.error };
         const context = result.context;
+        const pricingBlocked = !priceList || !currency;
         return {
           ...line,
           itemGroup: String(context.item_group ?? line.itemGroup),
           uom: String(context.selected_uom ?? "").trim(),
-          rate: context.price_missing || context.rate == null ? null : Number(context.rate),
+          rate: pricingBlocked || context.price_missing || context.rate == null ? null : Number(context.rate),
           currency: String(context.currency ?? currency).trim() || currency,
           managedStock: context.managed_stock !== false,
           stockQty: context.available_qty == null ? null : Number(context.available_qty),
-          priceError: context.price_missing || context.rate == null ? String(context.price_error ?? "Chưa có đơn giá bán.") : "",
+          priceError: pricingBlocked
+            ? (priceListError || (!priceList ? "Chưa xác định bảng giá bán." : "Chưa xác định tiền tệ bán."))
+            : (context.price_missing || context.rate == null ? String(context.price_error ?? "Chưa có đơn giá bán.") : ""),
           stockError: String(context.stock_read_error ?? ""),
           busy: false,
         };
       }));
     });
-    // lineKey deliberately tracks row identity/item only; quantity edits must not re-read price/stock.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adapter, customer.priceList, currency, lineKey, warehouse]);
+  }, [adapter, currency, lineKey, priceList, priceListError, warehouse]);
 
   const gross = useMemo(() => lines.reduce((sum, line) => sum + (Number(line.qty) || 0) * Number(line.rate ?? 0), 0), [lines]);
   const discountRate = percentValid(discountPct) ? Number(discountPct) : 0;
@@ -323,7 +376,6 @@ export function AlumdoorStandardSalesComposer() {
 
   const addCandidate = (candidate: ItemCandidate) => {
     if (!customer.name) { setGlobalError("Cần chọn Khách hàng trước khi thêm hàng."); return; }
-    if (!customer.priceList) { setGlobalError("Khách hàng chưa có Bảng giá mặc định; hãy cấu hình trong hồ sơ Khách hàng trước khi bán."); return; }
     setGlobalError("");
     setLines((current) => {
       const existing = current.findIndex((line) => line.itemCode === candidate.code);
@@ -352,13 +404,12 @@ export function AlumdoorStandardSalesComposer() {
   const draftBlockers = useMemo(() => {
     const out: string[] = [];
     if (!company) out.push("Cần chọn Công ty.");
-    if (!currency) out.push("Công ty chưa có tiền tệ mặc định.");
     if (!customer.name) out.push("Cần chọn Khách hàng.");
-    if (customer.name && !customer.priceList) out.push("Khách hàng chưa có Bảng giá mặc định.");
+    if (!priceList) out.push(priceListError || "Chưa xác định bảng giá bán.");
+    if (!currency) out.push("Bảng giá hoặc Công ty chưa xác định tiền tệ bán.");
     if (!warehouse) out.push("Cần chọn Kho bán.");
     if (!deliveryDate) out.push("Cần ngày giao dự kiến.");
     if (deliveryDate && deliveryDate < today()) out.push("Ngày giao không được ở quá khứ.");
-    if (!doorFilterReady) out.push(doorFilterError || "Đang tải phân loại mặt hàng cửa.");
     if (!lines.length) out.push("Cần ít nhất một mặt hàng.");
     if (!percentValid(discountPct)) out.push("Chiết khấu phải từ 0 đến 100%.");
     if (!percentValid(taxPct)) out.push("Thuế phải từ 0 đến 100%.");
@@ -370,7 +421,7 @@ export function AlumdoorStandardSalesComposer() {
       if (!line.uom) out.push(`Dòng ${index + 1}: chưa xác định ĐVT bán.`);
     }
     return out;
-  }, [company, currency, customer.name, customer.priceList, deliveryDate, discountPct, doorFilterError, doorFilterReady, lines, taxAccount, taxAccountError, taxPct, taxRate, warehouse]);
+  }, [company, currency, customer.name, deliveryDate, discountPct, lines, priceList, priceListError, taxAccount, taxAccountError, taxPct, taxRate, warehouse]);
 
   const submitBlockers = useMemo(() => {
     const out = [...draftBlockers];
@@ -390,7 +441,7 @@ export function AlumdoorStandardSalesComposer() {
     currency,
     transaction_date: String(existingDraft?.transaction_date ?? today()),
     delivery_date: deliveryDate,
-    selling_price_list: customer.priceList,
+    selling_price_list: priceList,
     ...(customer.group ? { customer_group: customer.group } : {}),
     ...(customer.address ? { install_address: customer.address } : {}),
     additional_discount_percentage: discountRate,
@@ -462,7 +513,10 @@ export function AlumdoorStandardSalesComposer() {
 
   const startNew = () => {
     setCreatedOrder(null);
-    setCustomer({ name: "", group: "", phone: "", address: "", priceList: "" });
+    setCustomer({ name: "", group: "", phone: "", address: "" });
+    setPriceList("");
+    setPriceListCurrency("");
+    setPriceListError("");
     setLines([]);
     setDiscountPct("0");
     setTaxPct("0");
@@ -476,21 +530,22 @@ export function AlumdoorStandardSalesComposer() {
 
   return <div className="h-full w-full overflow-auto bg-muted/20 p-3 md:p-4 xl:p-5">
     <div className="w-full space-y-3">
-      <section className="grid gap-3 rounded-xl border bg-card p-3 md:grid-cols-2 xl:grid-cols-4">
-        {!contextCompany ? <CanonicalLink label="Công ty" doctype="Company" value={company} onChange={setCompany} required readOnly={submitted} /> : null}
-        <div className={contextCompany ? "md:col-span-1 xl:col-span-2" : ""}>
-          <CanonicalLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => setCustomer({ name, group: "", phone: "", address: "", priceList: "" })} required readOnly={submitted} />
-          {customer.name ? <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {customer.group ? <span className="rounded-full border bg-muted/30 px-2 py-0.5 font-medium text-foreground">{customer.group}</span> : <span className="text-amber-700 dark:text-amber-300">Chưa phân loại khách</span>}
-            {customer.phone ? <span>{customer.phone}</span> : null}
-            {customer.priceList ? <span>Giá: {customer.priceList}</span> : <span className="text-destructive">Chưa có bảng giá</span>}
-          </div> : null}
-        </div>
-        {contextWarehouse ? <div className="grid gap-1.5"><Label>Kho bán</Label><Input value={warehouse} readOnly /></div> : <CanonicalLink label="Kho bán" doctype="Warehouse" value={warehouse} onChange={setWarehouse} required readOnly={submitted} />}
-        <div className="grid gap-1.5"><Label>Ngày giao *</Label><Input type="date" min={today()} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
+      <section className="grid gap-3 rounded-xl border bg-card p-3 md:grid-cols-3">
+        {!contextCompany ? <div className="md:col-span-3"><CanonicalLink label="Công ty" doctype="Company" value={company} onChange={setCompany} required readOnly={submitted} /></div> : null}
+        <CanonicalLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => {
+          setCustomer({ name, group: "", phone: "", address: "" });
+          setPriceList("");
+          setPriceListCurrency("");
+          setPriceListError("");
+        }} required readOnly={submitted} />
+        {contextWarehouse ? <div className="grid min-w-0 gap-1.5"><Label>Kho bán</Label><Input value={warehouse} readOnly /></div> : <CanonicalLink label="Kho bán" doctype="Warehouse" value={warehouse} onChange={setWarehouse} required readOnly={submitted} />}
+        <div className="grid min-w-0 gap-1.5"><Label>Ngày giao *</Label><Input type="date" min={today()} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
+        {customer.name ? <div className="flex min-h-5 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground md:col-span-3">
+          {customer.group ? <span className="rounded-full border bg-muted/30 px-2 py-0.5 font-medium text-foreground">{customer.group}</span> : <span>Chưa phân nhóm khách</span>}
+          {customer.phone ? <span>{customer.phone}</span> : null}
+          {priceList ? <span>Giá: <strong className="font-medium text-foreground">{priceList}</strong>{currency ? ` · ${currency}` : ""}</span> : <span className="text-amber-700 dark:text-amber-300">{priceListError || "Đang xác định bảng giá…"}</span>}
+        </div> : null}
       </section>
-
-      {doorFilterError ? <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"><TriangleAlert className="mt-0.5 size-4 shrink-0" />{doorFilterError}</div> : null}
 
       <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_330px]">
         <section className="min-w-0 overflow-visible rounded-xl border bg-card">
@@ -503,9 +558,9 @@ export function AlumdoorStandardSalesComposer() {
                 ref={searchInputRef}
                 className="pl-9 pr-10"
                 value={query}
-                disabled={submitted || !customer.name || !doorFilterReady}
+                disabled={submitted || !customer.name}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={!doorFilterReady ? "Đang tải phân loại mặt hàng…" : customer.name ? "Tìm mã hoặc tên hàng…" : "Chọn khách hàng trước khi thêm hàng"}
+                placeholder={customer.name ? "Tìm mã hoặc tên hàng…" : "Chọn khách hàng trước khi thêm hàng"}
                 autoComplete="off"
               />
               {searchBusy ? <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" /> : null}
@@ -527,7 +582,7 @@ export function AlumdoorStandardSalesComposer() {
           </div>
 
           {!lines.length ? <div className="grid min-h-64 place-items-center p-6 text-center text-sm text-muted-foreground">
-            Chưa có mặt hàng. Chọn khách rồi tìm hàng phía trên; chọn xong hệ thống tự thêm dòng và tự lấy ĐVT, giá, tồn kho.
+            Chưa có mặt hàng. Tìm mã hoặc tên hàng phía trên; chọn xong hệ thống tự thêm dòng và tự lấy ĐVT, giá, tồn kho.
           </div> : <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-muted/35 text-left text-xs text-muted-foreground">
