@@ -260,7 +260,7 @@ function parseColumn(
   };
 }
 
-/** Parse one first-class AppAction input-table declaration. */
+/** Parse one first-class repeatable AppAction input-table declaration. */
 export function parseAppActionInputTable(
   value: unknown,
   index = 0,
@@ -295,6 +295,9 @@ export function parseAppActionInputTable(
   const summary = parseSummary(input.summary, `${where}.summary`, names);
   if (presentation?.row_doctype && linkTargets && !linkTargets.has(presentation.row_doctype)) {
     throw errors.validation(`${where}.presentation.row_doctype ${presentation.row_doctype} is not declared by this app or its external DocTypes`);
+  }
+  if (presentation?.row_reference && !names.has(presentation.row_reference.row_field)) {
+    throw errors.validation(`${where}.presentation.row_reference.row_field must name a declared input-table column`);
   }
 
   return {
