@@ -19,10 +19,10 @@ const PROCUREMENT_LABELS = ["Mua hàng", "Nhập hàng", "Báo cáo", "Lịch s�
 const MASTER_DETAIL_PREFIX = "MasterDetailList:";
 const HISTORY_PREFIX = "DocumentHistory:";
 
-test("Alumdoor procurement exposes operational create, receive, dashboard and canonical history in 2.3.1", async () => {
+test("Alumdoor procurement exposes operational create, receive, dashboard and canonical history in 2.3.2", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.3.1");
+  assert.equal(brief.version, "2.3.2");
   assert.deepEqual(brief.dimensions, ["company", "warehouse"]);
   const procurementStart = brief.navigation.items.indexOf(PROCUREMENT_KEYS[0]);
   assert.notEqual(procurementStart, -1);
@@ -97,7 +97,7 @@ test("Alumdoor procurement exposes operational create, receive, dashboard and ca
   assert.equal(purchaseReport?.group, "Báo cáo");
 
   const pkg = compileBrief(brief);
-  assert.equal(pkg.version, "2.3.1");
+  assert.equal(pkg.version, "2.3.2");
   assert.deepEqual(pkg.client?.dimensions, ["company", "warehouse"]);
   const procurement = pkg.nav.filter((entry) => entry.group === "Mua hàng");
   assert.deepEqual(procurement.map((entry) => entry.key), PROCUREMENT_KEYS);
