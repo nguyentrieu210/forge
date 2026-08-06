@@ -61,11 +61,11 @@ test("E2E-02 buyer creates Purchase Order from the declared Mua hàng screen @co
   await expect(save).toBeEnabled();
   await save.click();
   await confirmIfDialog(page, "Lưu");
-  await expect(page.locator("body")).toContainText(/Purchase Order|Đơn mua|PO-/i, { timeout: 20_000 });
+  await expect(page.locator("body")).toContainText(/Purchase Order|Đơn mua|DMH-|PO-/i, { timeout: 20_000 });
 
   // Authoritative readback: the action result must expose a canonical document name that can be reopened.
   const text = await page.locator("body").innerText();
-  const match = text.match(/\b(?:PO|PUR-ORD)[A-Z0-9._/-]*\d[A-Z0-9._/-]*\b/i);
+  const match = text.match(/\b(?:DMH|PO|PUR-ORD)[A-Z0-9._/-]*\d[A-Z0-9._/-]*\b/i);
   test.skip(!match, "BLOCKED_CONFIG action completed but no canonical Purchase Order identifier was exposed for readback");
   const po = match![0];
   const readback = await browserRequest(page, `/api/resource/${encodeURIComponent("Purchase Order")}/${encodeURIComponent(po)}`);
