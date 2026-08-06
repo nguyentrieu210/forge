@@ -1,5 +1,8 @@
 import { strict as assert } from "node:assert";
 import {
+  bindActionField,
+  bindActionTableColumns,
+  buildActionTableRow,
   buildMetadataDefaults,
   collectMetadataReactiveFields,
   deriveContextLinkCapabilityFilters,
@@ -7,6 +10,7 @@ import {
   resolveField,
   resolveFieldContract,
   shouldApplyAutomaticValue,
+  type AppActionInputTable,
   type DocField,
   type DocTypeMeta,
 } from "@metaforge/core";
@@ -98,6 +102,65 @@ check("price-list capability filters derive from context + target schema, not ta
   assert.deepEqual(deriveContextLinkCapabilityFilters({ supported: ["buying_price_list"] }, target), { buying: 1 });
   assert.deepEqual(deriveContextLinkCapabilityFilters({ supported: ["selling_price_list", "buying_price_list"] }, target), {});
   assert.deepEqual(deriveContextLinkCapabilityFilters({ supported: ["selling_price_list"] }, { fields: [{ fieldname: "other" }] }), {});
+});
+
+check("bound AppAction fields inherit canonical semantics instead of copied schema", () => {
+  const declared = { fieldname: "reference", label: "Pick reference", fieldtype: "Data", required: false, default: "WRONG" };
+  const bound = bindActionField(declared, meta);
+  assert.equal(bound.fieldtype, "Link");
+  assert.equal(bound.options, "Reference Master");
+  assert.equal(bound.reqd, 1);
+  assert.equal(bound.default, undefined);
+  assert.equal(bound.label, "Pick reference");
+  const synthetic = bindActionField({ fieldname: "reason", label: "Reason", fieldtype: "Data", required: true }, meta);
+  assert.equal(synthetic.fieldtype, "Data");
+  assert.equal(synthetic.reqd, 1);
+});
+
+check("action input tables keep declared order but canonical field contracts", () => {
+  const table: AppActionInputTable = {
+    fieldname: "rows",
+    label: "Rows",
+    min_rows: 1,
+    max_rows: 20,
+    allow_paste: true,
+    presentation: { mode: "child-grid-inline", row_doctype: meta.name },
+    columns: [
+      { fieldname: "reference_label", label: "Action label", fieldtype: "Data", required: true },
+      { fieldname: "reference", label: "Reference", fieldtype: "Data" },
+    ],
+  };
+  const columns = bindActionTableColumns(table, meta);
+  assert.deepEqual(columns.map((field) => field.fieldname), ["reference_label", "reference"]);
+  assert.equal(columns[0]!.fetch_from, "reference.title");
+  assert.equal(columns[0]!.dirtyGuard, "preserve_user_value");
+  assert.equal(columns[1]!.fieldtype, "Link");
+  assert.equal(columns[1]!.reqd, 1);
+});
+
+check("new action rows use canonical defaults before legacy action defaults", () => {
+  const rowMeta: DocTypeMeta = {
+    ...meta,
+    fields: [
+      ...meta.fields,
+      { fieldname: "mode", label: "Mode", fieldtype: "Data", default: "canonical" },
+    ],
+  };
+  const table: AppActionInputTable = {
+    fieldname: "rows",
+    label: "Rows",
+    min_rows: 1,
+    max_rows: 20,
+    allow_paste: true,
+    columns: [
+      { fieldname: "posting_date", label: "Date", fieldtype: "Date" },
+      { fieldname: "mode", label: "Mode", fieldtype: "Data", default: "legacy" },
+    ],
+  };
+  const row = buildActionTableRow(rowMeta, table, "new-1");
+  assert.equal(row.mode, "canonical");
+  assert.equal(typeof row.posting_date, "string");
+  assert.equal(String(row.posting_date).length, 10);
 });
 
 console.log(`metadata intelligence selfcheck: ${passed} checks passed`);
