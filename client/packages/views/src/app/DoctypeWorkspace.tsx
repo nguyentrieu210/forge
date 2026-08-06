@@ -18,7 +18,6 @@ import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
 import { TreeContainer } from "../tree/TreeContainer.js";
-import { ItemDetailWorkspace } from "../item/ItemDetailWorkspace.js";
 import type { UrlStateBridge } from "../list/useListState.js";
 import { buildPrintPath } from "../print/printRoute.js";
 import {
@@ -149,10 +148,6 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
     </div>
   ) : null;
 
-  const printPath = (targetDoctype: string, targetName: string) => printBase === "/print"
-    ? buildPrintPath(targetDoctype, targetName)
-    : `${printBase}/${encodeURIComponent(targetDoctype)}/${encodeURIComponent(targetName)}`;
-
   return (
     <>
       <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
@@ -185,30 +180,19 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
                 />
               )}
               detail={decoded ? (
-                doctype === "Item" ? (
-                  <ItemDetailWorkspace
-                    key={`Item/${decoded}`}
-                    name={decoded}
-                    onSaved={() => {}}
-                    onDeleted={() => onNavigate(listPath)}
-                    onDuplicate={() => onNavigate(`${listPath}/new`)}
-                    onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-                    onPrint={() => onNavigate(printPath(doctype, decoded))}
-                    onClose={() => onNavigate(listPath)}
-                  />
-                ) : (
-                  <FormContainer
-                    key={`${doctype}/${decoded}`}
-                    doctype={doctype}
-                    name={decoded}
-                    onSaved={() => {}}
-                    onDeleted={() => onNavigate(listPath)}
-                    onDuplicate={() => onNavigate(`${listPath}/new`)}
-                    onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-                    onPrint={() => onNavigate(printPath(doctype, decoded))}
-                    onClose={() => onNavigate(listPath)}
-                  />
-                )
+                <FormContainer
+                  key={`${doctype}/${decoded}`}
+                  doctype={doctype}
+                  name={decoded}
+                  onSaved={() => {}}
+                  onDeleted={() => onNavigate(listPath)}
+                  onDuplicate={() => onNavigate(`${listPath}/new`)}
+                  onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+                  onPrint={() => onNavigate(printBase === "/print"
+                    ? buildPrintPath(doctype, decoded)
+                    : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
+                  onClose={() => onNavigate(listPath)}
+                />
               ) : isTree ? (
                 <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">
                   {t("common.choose_prefix")} {displayTitle.toLocaleLowerCase("vi")}
