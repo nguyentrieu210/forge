@@ -54,12 +54,7 @@ type ItemContext = {
   stock_read_error?: string | null;
 };
 
-type CustomerState = {
-  name: string;
-  group: CustomerGroup;
-  phone: string;
-  address: string;
-};
+type CustomerState = { name: string; group: CustomerGroup; phone: string; address: string };
 
 type SaleLine = {
   id: string;
@@ -287,7 +282,6 @@ export function AlumdoorSalesSheetV2() {
   const formulaGroup = formulaCustomerGroup(canonicalGroup);
 
   const visibleColumns = useMemo(() => COLUMNS.filter((column) => CORE_COLUMNS.has(column.key) || lines.some((line) => columnApplies(line, column.key))), [lines]);
-
   const patchLine = (index: number, patch: Partial<SaleLine>) => setLines((current) => current.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line));
 
   const refreshContext = async (index: number, itemCode: string, requestedUom = "") => {
@@ -309,9 +303,6 @@ export function AlumdoorSalesSheetV2() {
         ...(contextWarehouse ? { warehouse: contextWarehouse } : {}),
       });
       const rate = context.rate == null ? null : Number(context.rate);
-      const error = context.price_missing || rate == null
-        ? `Chưa có giá ${canonicalGroup || priceList} cho mặt hàng ${itemCode}.`
-        : String(context.stock_read_error ?? "");
       patchLine(index, {
         itemGroup: String(context.item_group ?? ""),
         uom: String(context.selected_uom ?? requestedUom ?? ""),
@@ -319,13 +310,11 @@ export function AlumdoorSalesSheetV2() {
         warehouse: String(context.warehouse ?? contextWarehouse ?? ""),
         managedStock: context.managed_stock !== false,
         stockQty: context.available_qty == null ? null : Number(context.available_qty),
-        rate: Number.isFinite(rate) ? rate : null,
+        rate: rate != null && Number.isFinite(rate) ? rate : null,
         currency: String(context.currency ?? currency),
-        error,
+        error: context.price_missing || rate == null ? `Chưa có giá ${canonicalGroup || priceList} cho mặt hàng ${itemCode}.` : String(context.stock_read_error ?? ""),
       });
-    } catch (cause) {
-      patchLine(index, { rate: null, error: adapter.mapError(cause).message });
-    }
+    } catch (cause) { patchLine(index, { rate: null, error: adapter.mapError(cause).message }); }
   };
 
   const refreshMeasurementBasis = async (index: number, itemCode: string, requestedRay = "") => {
@@ -347,7 +336,6 @@ export function AlumdoorSalesSheetV2() {
         const widthChanged = Boolean(line.widthBasis && nextWidth && !sameBasis(line.widthBasis, nextWidth));
         const heightChanged = Boolean(line.heightBasis && nextHeight && !sameBasis(line.heightBasis, nextHeight));
         const rawDefault = Number(context.default_discount_pct ?? 0);
-        const defaultDiscount = Number.isFinite(rawDefault) && rawDefault > 0 ? String(rawDefault) : "";
         return {
           ...line,
           doorType: String(context.door_type ?? line.doorType),
@@ -357,20 +345,18 @@ export function AlumdoorSalesSheetV2() {
           heightBasis: nextHeight,
           width: widthChanged ? "" : line.width,
           height: heightChanged ? "" : line.height,
-          discountPct: line.discountTouched ? line.discountPct : defaultDiscount,
+          discountPct: line.discountTouched ? line.discountPct : (Number.isFinite(rawDefault) && rawDefault > 0 ? String(rawDefault) : ""),
           formula: null,
           stockShort: null,
           stockMessage: "",
         };
       }));
-    } catch (cause) {
-      patchLine(index, { error: adapter.mapError(cause).message });
-    }
+    } catch (cause) { patchLine(index, { error: adapter.mapError(cause).message }); }
   };
 
   const chooseItem = async (index: number, value: string) => {
     const itemCode = value.trim();
-    if (!itemCode) { patchLine(index, newLine()); return; }
+    if (!itemCode) { setLines((current) => current.map((line, lineIndex) => lineIndex === index ? newLine() : line)); return; }
     patchLine(index, {
       itemCode, itemName: "", itemGroup: "", doorType: "", mode: "QUANTITY", rayType: "", rayOptions: [],
       color: "", requireColor: false, thickness: "", fixedThickness: false, height: "", heightBasis: "", width: "", widthBasis: "",
@@ -389,19 +375,15 @@ export function AlumdoorSalesSheetV2() {
           requireColor = mode !== "QUANTITY" && checked(profile.require_color);
           const fixed = Number(profile.default_thickness_mm ?? profile.thickness_mm);
           if (Number.isFinite(fixed) && fixed > 0) { thickness = String(fixed).replace(".", ","); fixedThickness = true; }
-        } catch { /* profile is advisory for the sheet; worker remains authoritative */ }
+        } catch { /* measurement profile is advisory; worker stays authoritative */ }
       }
       patchLine(index, {
-        itemName: String(doc.item_name ?? doc.name ?? itemCode),
-        itemGroup: String(doc.item_group ?? ""),
-        doorType: String(doc.door_type ?? ""),
+        itemName: String(doc.item_name ?? doc.name ?? itemCode), itemGroup: String(doc.item_group ?? ""), doorType: String(doc.door_type ?? ""),
         mode, requireColor, thickness, fixedThickness, busy: false,
       });
       if (mode === "AREA") await refreshMeasurementBasis(index, itemCode);
       await refreshContext(index, itemCode);
-    } catch (cause) {
-      patchLine(index, { busy: false, error: adapter.mapError(cause).message });
-    }
+    } catch (cause) { patchLine(index, { busy: false, error: adapter.mapError(cause).message }); }
   };
 
   const changeUom = async (index: number, uom: string) => {
@@ -423,20 +405,18 @@ export function AlumdoorSalesSheetV2() {
   useEffect(() => {
     if (!company) { setCurrency(""); return; }
     let active = true;
-    void adapter.getDoc("Company", company).then(({ doc }) => {
-      if (active) setCurrency(String(doc.default_currency ?? doc.currency ?? "").trim());
-    }).catch((cause) => { if (active) setGlobalError(adapter.mapError(cause).message); });
+    void adapter.getDoc("Company", company).then(({ doc }) => { if (active) setCurrency(String(doc.default_currency ?? doc.currency ?? "").trim()); })
+      .catch((cause) => { if (active) setGlobalError(adapter.mapError(cause).message); });
     return () => { active = false; };
   }, [adapter, company]);
 
   useEffect(() => {
     let active = true;
-    void adapter.getList("Material Specification", {
-      fields: ["thickness_mm", "disabled"], filters: [["disabled", "=", 0]], pageLength: 1000,
-    }).then((rows) => {
-      if (!active) return;
-      setThicknessOptions([...new Set(rows.map((row) => Number(row.thickness_mm)).filter((value) => Number.isFinite(value) && value > 0).map((value) => String(value).replace(".", ",")))].sort((left, right) => decimal(left) - decimal(right)));
-    }).catch(() => { if (active) setThicknessOptions([]); });
+    void adapter.getList("Material Specification", { fields: ["thickness_mm", "disabled"], filters: [["disabled", "=", 0]], pageLength: 1000 })
+      .then((rows) => {
+        if (!active) return;
+        setThicknessOptions([...new Set(rows.map((row) => Number(row.thickness_mm)).filter((value) => Number.isFinite(value) && value > 0).map((value) => String(value).replace(".", ",")))].sort((left, right) => decimal(left) - decimal(right)));
+      }).catch(() => { if (active) setThicknessOptions([]); });
     return () => { active = false; };
   }, [adapter]);
 
@@ -460,9 +440,7 @@ export function AlumdoorSalesSheetV2() {
     if (!customer.name || !canonicalGroup) { setPriceList(""); setPriceListError(""); return; }
     let active = true;
     void (async () => {
-      const rows = await adapter.getList("Price List", {
-        fields: ["name", "price_list_name", "disabled"], filters: [["disabled", "=", 0]], orderBy: "name asc", pageLength: 200,
-      }).catch(() => [] as Doc[]);
+      const rows = await adapter.getList("Price List", { fields: ["name", "price_list_name", "disabled"], filters: [["disabled", "=", 0]], orderBy: "name asc", pageLength: 200 }).catch(() => [] as Doc[]);
       const names = rows.map((row) => String(row.name ?? row.price_list_name ?? "").trim()).filter(Boolean);
       const matching = names.filter((name) => priceListMatchesGroup(name, canonicalGroup));
       let preferred = "";
@@ -481,14 +459,12 @@ export function AlumdoorSalesSheetV2() {
   useEffect(() => {
     if (!formulaGroup) return;
     lines.forEach((line, index) => { if (line.itemCode && line.mode === "AREA") void refreshMeasurementBasis(index, line.itemCode, line.rayType); });
-    // basis is domain-owned; recalculate whenever the commercial customer type changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formulaGroup]);
 
   useEffect(() => {
     if (!priceList) return;
     lines.forEach((line, index) => { if (line.itemCode) void refreshContext(index, line.itemCode, line.uom); });
-    // price-list changes invalidate every displayed rate.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceList, currency]);
 
@@ -505,9 +481,7 @@ export function AlumdoorSalesSheetV2() {
         patchLine(index, { busy: true });
         try {
           const formula = await adapter.callPost<FormulaResult>("alumdoor.sales.production_line_context", {
-            item_code: line.itemCode,
-            customer_group: formulaGroup,
-            sales_mode: "Trọn bộ",
+            item_code: line.itemCode, customer_group: formulaGroup, sales_mode: "Trọn bộ",
             ...(line.rayType ? { ray_type: line.rayType } : {}),
             ...(line.widthBasis ? { width_input_basis: line.widthBasis } : {}),
             ...(line.heightBasis ? { height_input_basis: line.heightBasis } : {}),
@@ -566,7 +540,6 @@ export function AlumdoorSalesSheetV2() {
       if (line.mode === "AREA" && !positive(line.width)) out.push(`${prefix}: cần ${line.widthBasis || "chiều rộng"}.`);
       if (line.mode === "AREA" && line.rayOptions.length > 1 && !line.rayType) out.push(`${prefix}: cần Loại ray.`);
       if (line.mode === "AREA" && positive(line.height) && positive(line.width) && !line.formula) out.push(`${prefix}: chưa tính xong công thức cửa.`);
-      if (line.stockShort != null && line.stockShort > 0) out.push(`${prefix}: thiếu tồn ${number(line.stockShort)}.`);
       if (line.error) out.push(`${prefix}: ${line.error}`);
     });
     if (vatPct.trim() && (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100)) out.push("VAT phải từ 0 đến 100%.");
@@ -575,16 +548,16 @@ export function AlumdoorSalesSheetV2() {
 
   const buildItems = () => lines.filter((line) => line.itemCode).map((line, index) => {
     const discount = discountRate(line);
-    const netRate = Number(line.rate ?? 0) * (1 - discount / 100);
     return {
-      row_id: `ROW-${index + 1}`,
+      row_id: `SALES-SHEET-${index + 1}`,
       item_code: line.itemCode,
       item_name: line.itemName,
       qty: billableQty(line, false),
-      rate: netRate,
+      set_count: decimal(line.qty),
+      rate: Number(line.rate ?? 0),
       uom: line.uom,
-      ...(line.warehouse ? { warehouse: line.warehouse } : {}),
       ...(discount > 0 ? { discount_percentage: discount } : {}),
+      ...(line.warehouse ? { warehouse: line.warehouse } : {}),
       ...(line.color ? { color: line.color } : {}),
       ...(line.thickness ? { thickness_mm: decimal(line.thickness) } : {}),
       ...((line.mode === "HEIGHT" || line.mode === "AREA") && positive(line.height) ? { height_m: decimal(line.height) } : {}),
@@ -605,48 +578,60 @@ export function AlumdoorSalesSheetV2() {
     ? [{ charge_type: "On Net Total", description: `VAT ${number(vatRate, 2)}%`, rate: vatRate, included_in_print_rate: 0 }]
     : [];
 
-  const orderPayload = () => ({
-    company, customer: customer.name, customer_group: canonicalGroup, currency,
-    selling_price_list: priceList, transaction_date: transactionDate, delivery_date: deliveryDate,
-    note, address: customer.address, items: buildItems(), taxes: buildTaxes(),
+  const buildOrderPayload = (): Partial<Doc> => ({
+    customer: customer.name,
+    company,
+    currency,
+    transaction_date: transactionDate,
+    delivery_date: deliveryDate,
+    selling_price_list: priceList,
+    customer_group: canonicalGroup,
+    ...(customer.address ? { install_address: customer.address } : {}),
+    ...(note.trim() ? { remarks: note.trim() } : {}),
+    additional_discount_percentage: 0,
+    items: buildItems(),
+    taxes: buildTaxes(),
   });
 
   const persistDraft = async (): Promise<Doc> => {
-    const payload = orderPayload();
-    const doc = createdOrder?.name
-      ? await adapter.updateDoc("Sales Order", String(createdOrder.name), payload)
+    const existingDraft = createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? createdOrder : null;
+    const payload = buildOrderPayload();
+    const saved = existingDraft
+      ? await adapter.updateDoc("Sales Order", String(existingDraft.name), payload, String(existingDraft.modified ?? ""))
       : await adapter.createDoc("Sales Order", payload);
-    setCreatedOrder(doc);
-    return doc;
+    setCreatedOrder(saved);
+    return saved;
   };
 
-  const saveOrder = async (draft: boolean) => {
+  const saveOrder = async (draftOnly: boolean) => {
     setGlobalError("");
-    if (blockers.length) { setGlobalError(blockers.join(" · ")); return; }
-    setSaving(draft ? "draft" : "submit");
+    if (blockers.length) { setGlobalError(blockers[0]!); return; }
+    if (submitted) { setGlobalError(`Đơn ${createdOrder?.name} đã xác nhận. Hãy tạo đơn mới.`); return; }
+    setSaving(draftOnly ? "draft" : "submit");
     const reservations: string[] = [];
     try {
-      const draftDoc = await persistDraft();
-      if (draft) { toast.success(`Đã lưu ${draftDoc.name}.`); return; }
-      for (const line of lines) {
-        if (line.mode !== "AREA" || !line.itemCode || !line.warehouse || !line.formula?.stock_profile_item || Number(line.formula.total_leaf_count ?? 0) <= 0) continue;
-        const reserved = await adapter.callPost<Json>("alumdoor.cut.reserve", {
-          item_code: String(line.formula.stock_profile_item),
+      const saved = await persistDraft();
+      if (draftOnly) { toast.success(`Đã lưu nháp ${saved.name}.`); return; }
+      for (const line of lines.filter((entry) => entry.itemCode && entry.mode === "AREA" && entry.formula?.stock_profile_item && entry.warehouse)) {
+        const result = await adapter.callPost<{ reservation?: string }>("alumdoor.reserve.create", {
+          item_code: String(line.formula?.stock_profile_item),
           warehouse: line.warehouse,
-          required_length_m: decimal(line.height),
-          quantity: Number(line.formula.total_leaf_count),
-          color: line.color,
-          sales_order: String(draftDoc.name),
+          ...(line.color ? { color: line.color } : {}),
+          min_length_m: Number(line.formula?.cut_width_m),
+          qty_reserved: Number(line.formula?.total_leaf_count),
+          source_doctype: "Sales Order",
+          source_name: saved.name,
+          expires_at: new Date(`${deliveryDate}T23:59:59.999`).toISOString(),
         });
-        const name = String(reserved.reservation ?? reserved.name ?? "").trim();
-        if (name) reservations.push(name);
+        const reservation = String(result.reservation ?? "").trim();
+        if (reservation) reservations.push(reservation);
       }
-      const submittedDoc = await adapter.submit("Sales Order", String(draftDoc.name));
-      setCreatedOrder(submittedDoc);
-      toast.success(`Đã xác nhận ${submittedDoc.name}.`);
+      const finalDoc = await adapter.submit(saved);
+      setCreatedOrder(finalDoc);
+      toast.success(`Đã xác nhận đơn ${finalDoc.name}.`);
     } catch (cause) {
       for (const reservation of reservations.reverse()) {
-        try { await adapter.callPost("alumdoor.cut.release", { reservation }); } catch { /* best effort compensation */ }
+        try { await adapter.callPost("alumdoor.reserve.release", { reservation, released_reason: "Hoàn tác tự động vì xác nhận Sales Order không hoàn tất." }); } catch { /* best effort */ }
       }
       setGlobalError(adapter.mapError(cause).message);
     } finally { setSaving(""); }
@@ -655,13 +640,12 @@ export function AlumdoorSalesSheetV2() {
   const startNew = () => {
     setCreatedOrder(null);
     setCustomer({ name: "", group: "", phone: "", address: "" });
-    setPriceList(""); setPriceListError(""); setTransactionDate(today()); setDeliveryDate(today()); setNote(""); setVatPct("");
-    setLines([newLine()]); setGlobalError("");
+    setPriceList(""); setPriceListError(""); setTransactionDate(today()); setDeliveryDate(today()); setNote(""); setVatPct(""); setLines([newLine()]); setGlobalError("");
   };
 
   const exportCsv = () => {
     const headers = ["STT", ...visibleColumns.map((column) => `${column.label}${column.unit ? ` (${column.unit})` : ""}`)];
-    const values = (line: SaleLine, key: ColumnKey): string => {
+    const value = (line: SaleLine, key: ColumnKey): string => {
       if (key === "item") return line.itemName || line.itemCode;
       if (key === "color") return line.color;
       if (key === "ray") return line.rayType;
@@ -684,7 +668,7 @@ export function AlumdoorSalesSheetV2() {
       if (key === "amount") return String(netAmount(line));
       return "";
     };
-    const rows = [headers, ...lines.filter((line) => line.itemCode).map((line, index) => [String(index + 1), ...visibleColumns.map((column) => values(line, column.key))])];
+    const rows = [headers, ...lines.filter((line) => line.itemCode).map((line, index) => [String(index + 1), ...visibleColumns.map((column) => value(line, column.key))])];
     const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -725,11 +709,11 @@ export function AlumdoorSalesSheetV2() {
     if (key === "color") return line.requireColor ? <SheetLink doctype="Item Color" value={line.color} onChange={(color) => patchLine(index, { color, formula: null })} readOnly={submitted} required fieldname={`sales_color_${index}`} /> : null;
     if (key === "ray") {
       const options = [...new Set([line.rayType, ...line.rayOptions].filter(Boolean))];
-      return options.length ? <select className="h-8 w-full border-0 bg-transparent px-1 text-center text-xs" value={line.rayType} disabled={submitted} onChange={(event) => void changeRay(index, event.target.value)}><option value=""></option>{options.map((value) => <option key={value} value={value}>{value}</option>)}</select> : null;
+      return options.length ? <select className="h-8 w-full border-0 bg-transparent px-1 text-center text-xs" value={line.rayType} disabled={submitted} onChange={(event) => void changeRay(index, event.target.value)}><option value=""></option>{options.map((entry) => <option key={entry} value={entry}>{entry}</option>)}</select> : null;
     }
     if (key === "thickness") {
       if (line.fixedThickness) return <div className="px-1 text-center text-xs font-semibold">{line.thickness}</div>;
-      return <select className="h-8 w-full border-0 bg-transparent px-1 text-center text-xs" value={line.thickness} disabled={submitted} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{thicknessOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>;
+      return <select className="h-8 w-full border-0 bg-transparent px-1 text-center text-xs" value={line.thickness} disabled={submitted} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{thicknessOptions.map((entry) => <option key={entry} value={entry}>{entry}</option>)}</select>;
     }
     if (key === "rayLength") return line.mode === "HEIGHT" ? numericInput(line.height, (value) => patchLine(index, { height: value, formula: null }), submitted) : null;
     if (key === "shaftLength") return line.mode === "WIDTH" ? numericInput(line.width, (value) => patchLine(index, { width: value, formula: null }), submitted) : null;

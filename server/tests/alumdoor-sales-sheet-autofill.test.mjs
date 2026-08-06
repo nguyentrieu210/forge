@@ -42,12 +42,14 @@ test("door measurement authority stays in the worker", () => {
   assert.match(worker, /default_discount_pct: defaultDiscountPct/);
 });
 
-test("operator sheet retains save, submit, stock reservation, print and export workflows", () => {
+test("operator sheet retains canonical save, submit, stock reservation, print and export workflows", () => {
   assert.match(sheet, /adapter\.createDoc\("Sales Order"/);
   assert.match(sheet, /adapter\.updateDoc\("Sales Order"/);
-  assert.match(sheet, /adapter\.submit\("Sales Order"/);
-  assert.match(sheet, /alumdoor\.cut\.reserve/);
-  assert.match(sheet, /alumdoor\.cut\.release/);
+  assert.match(sheet, /adapter\.submit\(saved\)/);
+  assert.match(sheet, /alumdoor\.reserve\.create/);
+  assert.match(sheet, /alumdoor\.reserve\.release/);
+  assert.match(sheet, /min_length_m: Number\(line\.formula\?\.cut_width_m\)/);
+  assert.match(sheet, /set_count: decimal\(line\.qty\)/);
   assert.match(sheet, /printRoute/);
   assert.match(sheet, /exportCsv/);
 });
