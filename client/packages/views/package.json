@@ -69,6 +69,10 @@
     "./matrix": {
       "types": "./dist/matrix/index.d.ts",
       "import": "./dist/matrix/index.js"
+    },
+    "./item-price-matrix": {
+      "types": "./dist/item-price-matrix.d.ts",
+      "import": "./dist/item-price-matrix.js"
     }
   },
   "scripts": {
