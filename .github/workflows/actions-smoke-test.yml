@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Confirm runner started
         run: |
-          echo "RUNNER_OK"
+          echo "RUNNER_OK_SECOND_TRIGGER"
           uname -a
       - name: Mark smoke status success
         env:
