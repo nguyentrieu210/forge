@@ -1,6 +1,7 @@
 /** Global business context — company/fiscal year/warehouse/branch/... resolved by server. */
 export type BusinessContextKey =
   | "company"
+  | "currency"
   | "fiscal_year"
   | "warehouse"
   | "branch"
@@ -80,6 +81,10 @@ export function normalizeContextSelection(
     if (!value && d.options.length === 1 && !d.options[0]!.disabled) value = d.options[0]!.value;
     if (value) next[d.key] = value;
   }
+  // Currency is an effective site/transaction default supplied by boot/System Settings,
+  // not a selector dimension. Preserve it alongside the server-resolved selectors so
+  // generic forms and custom experiences consume one context instead of re-reading setup.
+  if (merged.currency) next.currency = merged.currency;
   if (state.selection.date_from) next.date_from = state.selection.date_from;
   if (state.selection.date_to) next.date_to = state.selection.date_to;
   return next;
@@ -98,10 +103,18 @@ export function applyContextPolicy(
   selection: BusinessContextSelection,
   policies?: Record<string, BusinessContextPolicy>,
 ): { filters: Array<[string, "=" | ">=" | "<=", string]>; defaults: Record<string, string> } {
-  const policy = policies?.[doctype];
-  if (!policy) return { filters: [], defaults: {} };
   const filters: Array<[string, "=" | ">=" | "<=", string]> = [];
   const defaults: Record<string, string> = {};
+
+  // Company and currency are universal CREATE defaults. `blankDoc` only applies keys
+  // that actually exist in the target schema, so this does not invent fields or turn
+  // global context into a list filter. A doctype-specific policy may still override the
+  // target field name below (for example a non-standard company field).
+  if (selection.company) defaults.company = selection.company;
+  if (selection.currency) defaults.currency = selection.currency;
+
+  const policy = policies?.[doctype];
+  if (!policy) return { filters, defaults };
   for (const key of policy.supported) {
     const value = selection[key];
     if (!value) continue;
