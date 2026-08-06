@@ -1,0 +1,199 @@
+name: Operator E2E Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "client/**"
+      - "server/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/operator-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operator-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  operator-e2e:
+    name: Local browser operator flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      FORGE_OPERATOR_BACKEND: http://127.0.0.1:8801
+      FORGE_E2E_MODE: local
+      FORGE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck operator harness
+        working-directory: client
+        run: pnpm exec tsc -p e2e-forge/tsconfig.operator.json --noEmit
+
+      - name: Resolve source Alumdoor package version
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const brief = await readBriefSource('briefs/alumdoor-v2.json'); process.stdout.write(String(brief.version || 'unknown'));")"
+          echo "FORGE_ALUMDOOR_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Build CloudForge and MetaForge candidate
+        run: |
+          set -euo pipefail
+          pnpm --filter cloudforge run build
+          pnpm --filter metaforge run build
+
+      - name: Generate isolated local credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_user="operator-e2e-${GITHUB_RUN_ID}@example.test"
+          auth_password="$(openssl rand -hex 24)"
+          auth_session_secret="$(openssl rand -hex 32)"
+          internal_auth_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$auth_password"
+          echo "::add-mask::$auth_session_secret"
+          echo "::add-mask::$internal_auth_secret"
+          {
+            echo "FORGE_AUTH_USER=$auth_user"
+            echo "FORGE_AUTH_PASSWORD=$auth_password"
+            echo "FORGE_ADMIN_USER=$auth_user"
+            echo "FORGE_ADMIN_PASSWORD=$auth_password"
+            echo "FORGE_AUTH_SESSION_SECRET=$auth_session_secret"
+            echo "FORGE_INTERNAL_AUTH_SECRET=$internal_auth_secret"
+            echo "FORGE_ORIGIN=http://127.0.0.1:8801"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare local tenant database
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.purchase-qa.jsonc
+          node scripts/seed-local.mjs --auth-only --user "$FORGE_AUTH_USER" --password "$FORGE_AUTH_PASSWORD"
+
+      - name: Start local tenant, callback and Alumdoor workers
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup pnpm exec wrangler dev \
+            --config apps/tenant-worker/wrangler.purchase-qa.jsonc \
+            --port 8801 --inspector-port 9231 --local \
+            --var "SESSION_SECRET:$FORGE_AUTH_SESSION_SECRET" \
+            --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
+            > "$RUNNER_TEMP/operator-tenant.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/operator-tenant.pid"
+
+          nohup pnpm exec wrangler dev \
+            --config apps/purchase-qa-callback/wrangler.jsonc \
+            --port 8802 --inspector-port 9232 --local \
+            --var "INTERNAL_AUTH_SECRET:$FORGE_INTERNAL_AUTH_SECRET" \
+            > "$RUNNER_TEMP/operator-callback.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/operator-callback.pid"
+
+          nohup pnpm exec wrangler dev \
+            --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc \
+            --port 8803 --inspector-port 9233 --local \
+            > "$RUNNER_TEMP/operator-alumdoor.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/operator-alumdoor.pid"
+
+          tenant_ready=0; callback_ready=0; app_ready=0
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error http://127.0.0.1:8801/health >/dev/null; then tenant_ready=1; fi
+            if curl --fail --silent --show-error http://127.0.0.1:8802/health >/dev/null; then callback_ready=1; fi
+            if curl --silent --show-error --output /dev/null http://127.0.0.1:8803/health; then app_ready=1; fi
+            if [ "$tenant_ready" = 1 ] && [ "$callback_ready" = 1 ] && [ "$app_ready" = 1 ]; then break; fi
+            sleep 2
+          done
+          if [ "$tenant_ready" != 1 ] || [ "$callback_ready" != 1 ] || [ "$app_ready" != 1 ]; then
+            echo "tenant_ready=$tenant_ready callback_ready=$callback_ready app_ready=$app_ready"
+            cat "$RUNNER_TEMP/operator-tenant.log" || true
+            cat "$RUNNER_TEMP/operator-callback.log" || true
+            cat "$RUNNER_TEMP/operator-alumdoor.log" || true
+            exit 1
+          fi
+          sleep 2
+
+      - name: Install authoritative Alumdoor package
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json \
+            --origin "$FORGE_ORIGIN" --admin "$FORGE_ADMIN_USER" \
+            2>&1 | tee "$RUNNER_TEMP/operator-app-install.log"
+
+      - name: Seed local operator prerequisites through public API
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/seed-purchase-qa-local.mjs 2>&1 | tee "$RUNNER_TEMP/operator-purchase-seed.log"
+          node scripts/seed-operator-e2e-local.mjs 2>&1 | tee "$RUNNER_TEMP/operator-e2e-seed.log"
+
+      - name: Install Chromium
+        working-directory: client/apps/demo
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser operator acceptance
+        working-directory: client
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --filter @metaforge/demo exec playwright test \
+            --config ../../e2e-forge/playwright.operator.config.ts \
+            --project desktop-operator \
+            2>&1 | tee "$RUNNER_TEMP/operator-e2e.log"
+
+      - name: Upload operator E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: operator-e2e-${{ github.run_id }}
+          path: |
+            client/e2e-forge/test-results/operator-e2e/
+            client/e2e-forge/playwright-report/operator-e2e/
+            ${{ runner.temp }}/operator-e2e.log
+            ${{ runner.temp }}/operator-tenant.log
+            ${{ runner.temp }}/operator-callback.log
+            ${{ runner.temp }}/operator-alumdoor.log
+            ${{ runner.temp }}/operator-app-install.log
+            ${{ runner.temp }}/operator-purchase-seed.log
+            ${{ runner.temp }}/operator-e2e-seed.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop local operator workers
+        if: always()
+        shell: bash
+        run: |
+          for pid_file in "$RUNNER_TEMP/operator-tenant.pid" "$RUNNER_TEMP/operator-callback.pid" "$RUNNER_TEMP/operator-alumdoor.pid"; do
+            if [ -f "$pid_file" ]; then kill "$(cat "$pid_file")" 2>/dev/null || true; fi
+          done
