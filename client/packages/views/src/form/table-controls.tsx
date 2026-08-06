@@ -1,10 +1,10 @@
-import { linkDisplay } from "@metaforge/core";
+import { applyContextPolicy, buildLinkFilters, linkDisplay } from "@metaforge/core";
 /** @jsxImportSource react */
 /**
  * Table / Table MultiSelect controls — sống ở @metaforge/views (tránh cycle controls→views).
  * Đăng ký qua registerTableControls(registry). Cần services.getMeta để nạp child DocType meta.
  */
-import { type ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type { DocTypeMeta, Doc } from "@metaforge/core";
 import { ControlRegistry, type FieldControlProps } from "@metaforge/controls";
@@ -34,15 +34,17 @@ function TableField(p: FieldControlProps & WithRegistry) {
   const t = useT();
   const childMeta = useChildMeta(p.field.options, p.services);
   const rows = Array.isArray(p.value) ? (p.value as Doc[]) : [];
+  const context = useMetaForgeOptional();
   /**
-   * Bối cảnh đang chọn (vd KHO hiện tại) chảy xuống dòng mới của bảng con.
-   *
-   * `blankDoc` chỉ gieo bối cảnh cho chứng từ CHA. Nhưng ở phân hệ mua, kho nằm trên TỪNG
-   * DÒNG — nên thủ kho đang đứng ở "Kho mua" vẫn phải chọn lại đúng cái kho đó cho từng
-   * dòng, mỗi lần lập phiếu. `useMetaForgeOptional` để control vẫn dựng được ngoài provider
-   * (test, storybook) thay vì ném lỗi.
+   * Child-row defaults are declaration-driven just like parent create defaults. Passing the raw
+   * context object by field-name coincidence made every new business dimension an implicit schema
+   * contract. `applyContextPolicy` is now the only mapping authority.
    */
-  const rowDefaults = useMetaForgeOptional()?.businessContext;
+  const rowDefaults = useMemo(() => {
+    if (!childMeta || !context) return undefined;
+    const defaults = applyContextPolicy(childMeta.name, context.businessContext, context.contextPolicies).defaults;
+    return Object.keys(defaults).length ? defaults : undefined;
+  }, [childMeta, context]);
   if (p.masked) return <span className="mf-masked">••••••</span>;
   if (!childMeta) return <div className="mf-grid-loading">{t("grid.loading_table_prefix")} {p.field.options}…</div>;
   return (
@@ -74,15 +76,19 @@ function TableMultiSelectField(p: FieldControlProps) {
   useEffect(() => {
     let alive = true;
     const search = p.services?.searchLink;
-    if (!search || !target || txt.length < 1) {
+    if (!search || !target || !linkField || txt.length < 1) {
       setOpts([]);
       return;
     }
-    void search(target, txt).then((r) => alive && setOpts(r));
+    const filters = buildLinkFilters(linkField, p.docValues);
+    void search(target, txt, {
+      ...(filters ? { filters } : {}),
+      ...(p.parentDoctype ? { referenceDoctype: p.parentDoctype } : {}),
+    }).then((r) => alive && setOpts(r));
     return () => {
       alive = false;
     };
-  }, [txt, target, p.services]);
+  }, [txt, target, linkField, p.services, p.docValues, p.parentDoctype]);
 
   useEffect(() => {
     const resolve = p.services?.resolveDisplay;
