@@ -224,9 +224,6 @@ function calculationMode(item: Json): CalculationMode {
   const inventory = normalize(item.inventory_mode);
   const salesUom = normalize(item.default_sales_uom ?? item.stock_uom).replaceAll(" ", "");
 
-  // Dimension semantics follow the catalogue convention, not a broad parent-group label.
-  // A PIN/MOTO/PK can legitimately sit under a group whose name starts with "Cửa" and is
-  // still sold by count; treating every such group as AREA exposed bogus height/width inputs.
   if (code.startsWith("RAY-") || group.includes("ray")) return "HEIGHT";
   if (code.startsWith("TRUC-") || group.includes("trục") || group.includes("truc")) return "WIDTH";
   if (
@@ -270,9 +267,7 @@ function previewBillableQty(line: SaleLine): number {
   return Number.isFinite(sets) && sets > 0 && geometric != null && geometric > 0 ? geometric * sets : 0;
 }
 
-function grossAmount(line: SaleLine): number {
-  return billableQty(line) * Number(line.rate ?? 0);
-}
+function grossAmount(line: SaleLine): number { return billableQty(line) * Number(line.rate ?? 0); }
 function lineDiscountAmount(line: SaleLine): number { return grossAmount(line) * discountRate(line) / 100; }
 function netAmount(line: SaleLine): number { return grossAmount(line) - lineDiscountAmount(line); }
 function previewGrossAmount(line: SaleLine): number { return previewBillableQty(line) * Number(line.rate ?? 0); }
@@ -326,6 +321,10 @@ export function AlumdoorSalesSheetV2() {
   const [transactionDate, setTransactionDate] = useState(today());
   const [deliveryDate, setDeliveryDate] = useState(today());
   const [note, setNote] = useState("");
+  const [vatPct, setVatPct] = useState("");
+  const [vatAccount, setVatAccount] = useState("");
+  const [surcharge, setSurcharge] = useState("");
+  const [surchargeAccount, setSurchargeAccount] = useState("");
   const [lines, setLines] = useState<SaleLine[]>([newLine()]);
   const [thicknessOptions, setThicknessOptions] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -574,14 +573,12 @@ export function AlumdoorSalesSheetV2() {
 
   useEffect(() => {
     lines.forEach((line, index) => { if (line.itemCode) void refreshContext(index, line.itemCode, line.uom); });
-    // pricing/context refresh is driven only by authority inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceList, currency, contextWarehouse]);
 
   useEffect(() => {
     if (!["Đại lý", "Lẻ"].includes(canonicalGroup)) return;
     lines.forEach((line, index) => { if (line.itemCode && line.mode === "AREA") void refreshMeasurementBasis(index, line.itemCode); });
-    // basis refresh is driven by canonical customer group; semantic basis changes invalidate stale dimensions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canonicalGroup]);
 
@@ -661,9 +658,12 @@ export function AlumdoorSalesSheetV2() {
 
   const grossTotal = useMemo(() => lines.reduce((sum, line) => sum + previewGrossAmount(line), 0), [lines]);
   const totalDiscount = useMemo(() => lines.reduce((sum, line) => sum + previewLineDiscountAmount(line), 0), [lines]);
-  const totalVat = 0;
-  const totalSurcharge = 0;
-  const total = grossTotal - totalDiscount + totalVat + totalSurcharge;
+  const taxableTotal = Math.max(0, grossTotal - totalDiscount);
+  const vatRate = vatPct.trim() ? decimal(vatPct) : 0;
+  const surchargeValue = surcharge.trim() ? decimal(surcharge) : 0;
+  const totalVat = Number.isFinite(vatRate) && vatRate > 0 ? taxableTotal * vatRate / 100 : 0;
+  const totalSurcharge = Number.isFinite(surchargeValue) && surchargeValue > 0 ? surchargeValue : 0;
+  const total = taxableTotal + totalVat + totalSurcharge;
 
   const blockers = useMemo(() => {
     const out: string[] = [];
@@ -674,6 +674,10 @@ export function AlumdoorSalesSheetV2() {
     if (!transactionDate) out.push("Cần ngày đặt hàng.");
     if (!deliveryDate) out.push("Cần ngày giao hàng.");
     if (deliveryDate && transactionDate && deliveryDate < transactionDate) out.push("Ngày giao phải bằng hoặc sau ngày đặt hàng.");
+    if (vatPct.trim() && (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100)) out.push("VAT phải từ 0 đến 100%.");
+    if (Number.isFinite(vatRate) && vatRate > 0 && !vatAccount) out.push("Cần chọn Tài khoản VAT để ghi đúng Sales Taxes and Charges.");
+    if (surcharge.trim() && (!Number.isFinite(surchargeValue) || surchargeValue < 0)) out.push("Phụ thu phải lớn hơn hoặc bằng 0.");
+    if (Number.isFinite(surchargeValue) && surchargeValue > 0 && !surchargeAccount) out.push("Cần chọn Tài khoản phụ thu để ghi đúng Sales Taxes and Charges.");
     if (!lines.some((line) => line.itemCode)) out.push("Cần ít nhất một mặt hàng.");
     for (const [index, line] of lines.entries()) {
       if (!line.itemCode) continue;
@@ -696,7 +700,7 @@ export function AlumdoorSalesSheetV2() {
       if (line.mode !== "AREA" && line.managedStock && line.stockQty != null && billableQty(line) > line.stockQty) out.push(`Dòng ${index + 1}: tồn kho không đủ.`);
     }
     return out;
-  }, [canonicalGroup, company, currency, customer.name, deliveryDate, lines, transactionDate]);
+  }, [canonicalGroup, company, currency, customer.name, deliveryDate, lines, surcharge, surchargeAccount, surchargeValue, transactionDate, vatAccount, vatPct, vatRate]);
 
   const buildItems = () => lines.filter((line) => line.itemCode).map((line, index) => {
     const discount = discountRate(line);
@@ -726,6 +730,25 @@ export function AlumdoorSalesSheetV2() {
     return common;
   });
 
+  const buildTaxes = (): Record<string, unknown>[] => {
+    const taxes: Record<string, unknown>[] = [];
+    if (Number.isFinite(vatRate) && vatRate > 0 && vatAccount) taxes.push({
+      charge_type: "On Net Total",
+      account_head: vatAccount,
+      description: `VAT ${number(vatRate, 2)}%`,
+      rate: vatRate,
+      included_in_print_rate: 0,
+    });
+    if (Number.isFinite(surchargeValue) && surchargeValue > 0 && surchargeAccount) taxes.push({
+      charge_type: "Actual",
+      account_head: surchargeAccount,
+      description: "Phụ thu",
+      tax_amount: surchargeValue,
+      included_in_print_rate: 0,
+    });
+    return taxes;
+  };
+
   const buildOrderPayload = (): Partial<Doc> => ({
     customer: customer.name,
     company,
@@ -738,6 +761,7 @@ export function AlumdoorSalesSheetV2() {
     ...(note.trim() ? { remarks: note.trim() } : {}),
     additional_discount_percentage: 0,
     items: buildItems(),
+    taxes: buildTaxes(),
   });
 
   const persistDraft = async (): Promise<Doc> => {
@@ -902,24 +926,17 @@ export function AlumdoorSalesSheetV2() {
     setCreatedOrder(null);
     setCustomer({ name: "", group: "", phone: "", address: "" });
     setPriceList(""); setPriceListError(""); setTransactionDate(today()); setDeliveryDate(today()); setNote("");
+    setVatPct(""); setVatAccount(""); setSurcharge(""); setSurchargeAccount("");
     setLines([newLine()]); setSelected([]); setGlobalError("");
   };
 
   const exportExcel = () => {
     const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", `${heightColumnLabel} (m)`, `${widthColumnLabel} (m)`, "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
     lines.filter((line) => line.itemCode).forEach((line, index) => rows.push([
-      String(index + 1),
-      line.itemName || line.itemCode,
-      line.color,
-      line.thickness,
+      String(index + 1), line.itemName || line.itemCode, line.color, line.thickness,
       line.mode === "HEIGHT" || line.mode === "AREA" ? line.height : "",
       line.mode === "WIDTH" || line.mode === "AREA" ? line.width : "",
-      areaPerSet(line) == null ? "" : String(areaPerSet(line)),
-      line.qty,
-      String(line.rate ?? ""),
-      line.discountPct,
-      line.uom,
-      String(netAmount(line)),
+      areaPerSet(line) == null ? "" : String(areaPerSet(line)), line.qty, String(line.rate ?? ""), line.discountPct, line.uom, String(netAmount(line)),
     ]));
     const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -1037,23 +1054,11 @@ export function AlumdoorSalesSheetV2() {
         <tr>
           {!submitted ? <th className="sticky left-0 z-40 w-9 min-w-9 border border-orange-600 bg-orange-500 p-1"><Checkbox checked={lines.length > 0 && selected.length === lines.length} onCheckedChange={() => setSelected(selected.length === lines.length ? [] : lines.map((line) => line.id))} /></th> : null}
           <th className={`${submitted ? "sticky left-0" : "sticky left-9"} z-40 w-10 min-w-10 border border-orange-600 bg-orange-500 px-1 text-center text-[10px] font-bold`}>STT</th>
-          {visibleColumns.map((column) => <th
-            key={column.key}
-            draggable
-            onDragStart={() => setDraggingColumn(column.key)}
-            onDragEnd={() => setDraggingColumn(null)}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={() => { if (draggingColumn) moveColumn(draggingColumn, column.key); setDraggingColumn(null); }}
-            className={`relative border border-orange-600 px-1 py-1 text-center text-[10px] font-bold whitespace-normal ${draggingColumn === column.key ? "bg-orange-600" : "bg-orange-500"}`}
-            style={{ width: `${columnWidth(column)}rem`, minWidth: `${columnWidth(column)}rem` }}
-            title="Kéo tiêu đề để đổi vị trí · kéo mép phải để đổi độ rộng · nhấp đúp mép phải để tự khít cột"
-          ><span className="block cursor-grab leading-tight">{columnLabel(column)}</span>{column.unit ? <span className="block text-[9px] font-extrabold leading-tight text-orange-50">({column.unit})</span> : null}<div className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-orange-200/70" onPointerDown={(event) => beginResize(event, column)} onDoubleClick={(event) => { event.stopPropagation(); setColumnWidths((current) => ({ ...current, [column.key]: autoFitWidth(column) })); }} /></th>)}
+          {visibleColumns.map((column) => <th key={column.key} draggable onDragStart={() => setDraggingColumn(column.key)} onDragEnd={() => setDraggingColumn(null)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (draggingColumn) moveColumn(draggingColumn, column.key); setDraggingColumn(null); }} className={`relative border border-orange-600 px-1 py-1 text-center text-[10px] font-bold whitespace-normal ${draggingColumn === column.key ? "bg-orange-600" : "bg-orange-500"}`} style={{ width: `${columnWidth(column)}rem`, minWidth: `${columnWidth(column)}rem` }} title="Kéo tiêu đề để đổi vị trí · kéo mép phải để đổi độ rộng · nhấp đúp mép phải để tự khít cột"><span className="block cursor-grab leading-tight">{columnLabel(column)}</span>{column.unit ? <span className="block text-[9px] font-extrabold leading-tight text-orange-50">({column.unit})</span> : null}<div className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-orange-200/70" onPointerDown={(event) => beginResize(event, column)} onDoubleClick={(event) => { event.stopPropagation(); setColumnWidths((current) => ({ ...current, [column.key]: autoFitWidth(column) })); }} /></th>)}
           {!submitted ? <th className="w-14 min-w-14 border border-orange-600 bg-orange-500"></th> : null}
         </tr>
       </thead>
-      <tbody>
-        {lines.map((line, lineIndex) => <FragmentRowsV2 key={line.id} line={line} lineIndex={lineIndex} submitted={submitted} selected={selected.includes(line.id)} visibleColumns={visibleColumns} columnWidth={columnWidth} onSelect={() => setSelected((current) => current.includes(line.id) ? current.filter((id) => id !== line.id) : [...current, line.id])} renderCell={renderCell} renderDiscountCell={renderDiscountCell} requiredCell={requiredCell} missingRequired={missingRequired} setPicked={setPicked} onDetail={() => setDetailIndex(lineIndex)} onDelete={() => deleteIndexes([lineIndex])} />)}
-      </tbody>
+      <tbody>{lines.map((line, lineIndex) => <FragmentRowsV2 key={line.id} line={line} lineIndex={lineIndex} submitted={submitted} selected={selected.includes(line.id)} visibleColumns={visibleColumns} columnWidth={columnWidth} onSelect={() => setSelected((current) => current.includes(line.id) ? current.filter((id) => id !== line.id) : [...current, line.id])} renderCell={renderCell} renderDiscountCell={renderDiscountCell} requiredCell={requiredCell} missingRequired={missingRequired} setPicked={setPicked} onDetail={() => setDetailIndex(lineIndex)} onDelete={() => deleteIndexes([lineIndex])} />)}</tbody>
     </table>
   </div>;
 
@@ -1081,10 +1086,17 @@ export function AlumdoorSalesSheetV2() {
             <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày đặt <span className="text-red-600">*</span></Label><Input className={`h-8 min-w-0 rounded-none px-2 ${!transactionDate ? "border-red-500" : ""}`} type="date" value={transactionDate} disabled={submitted} onChange={(event) => setTransactionDate(event.target.value)} /></div>
             <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày giao <span className="text-red-600">*</span></Label><Input className={`h-8 min-w-0 rounded-none px-2 ${!deliveryDate ? "border-red-500" : ""}`} type="date" min={transactionDate} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">VAT %</Label><Input className="h-8 rounded-none text-right" inputMode="decimal" placeholder="0" value={vatPct} disabled={submitted} onChange={(event) => setVatPct(event.target.value.replace("%", ""))} /></div>
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Phụ thu</Label><Input className="h-8 rounded-none text-right" inputMode="decimal" placeholder="0" value={surcharge} disabled={submitted} onChange={(event) => setSurcharge(event.target.value)} /></div>
+          </div>
+          {Number.isFinite(vatRate) && vatRate > 0 ? <HeaderLink label="Tài khoản VAT" doctype="Account" value={vatAccount} onChange={setVatAccount} required readOnly={submitted} /> : null}
+          {Number.isFinite(surchargeValue) && surchargeValue > 0 ? <HeaderLink label="Tài khoản phụ thu" doctype="Account" value={surchargeAccount} onChange={setSurchargeAccount} required readOnly={submitted} /> : null}
           <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ghi chú</Label><Input className="h-8 rounded-none" value={note} disabled={submitted} onChange={(event) => setNote(event.target.value)} /></div>
           <div className="flex min-h-5 flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
             {canonicalGroup ? <span>Công thức theo: {canonicalGroup}</span> : null}
             {currency ? <span>{currency}</span> : null}
+            {vatRate > 0 || surchargeValue > 0 ? <span>Thuế/phí ghi vào Sales Taxes and Charges</span> : null}
             {createdOrder?.name ? <span className="font-semibold text-slate-800">{String(createdOrder.name)}</span> : null}
             {submitted ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Đã xác nhận</span> : null}
           </div>
@@ -1109,7 +1121,7 @@ export function AlumdoorSalesSheetV2() {
         <div className="border-b border-slate-300 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-slate-600">Tổng tiền</div>
         <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng cộng</div><div className="p-2 text-right text-sm font-medium tabular-nums">{money(grossTotal)}</div></div>
         <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng chiết khấu</div><div className="p-2 text-right text-sm font-medium tabular-nums text-emerald-700">-{money(totalDiscount)}</div></div>
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng VAT</div><div className="p-2 text-right text-sm tabular-nums">{money(totalVat)}</div></div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng VAT{Number.isFinite(vatRate) && vatRate > 0 ? ` (${number(vatRate, 2)}%)` : ""}</div><div className="p-2 text-right text-sm tabular-nums">{money(totalVat)}</div></div>
         <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng phụ thu</div><div className="p-2 text-right text-sm tabular-nums">{money(totalSurcharge)}</div></div>
         <div className="grid grid-cols-2"><div className="p-2 text-sm font-bold">THÀNH TIỀN</div><div className="p-2 text-right text-sm font-bold tabular-nums">{money(total)}</div></div>
       </section>
