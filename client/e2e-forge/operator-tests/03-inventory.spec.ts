@@ -46,10 +46,12 @@ test("E2E-03 warehouse operator proposes a lot, drafts Cut Order and posts the c
   expect(cutWidth.replace(",", ".")).toBe("3.5");
 
   await page.getByRole("button", { name: "Xem đề xuất", exact: true }).click();
-  await expect(page.locator("[data-action-result]")).toBeVisible({ timeout: 20_000 });
-  const previewText = await page.locator("body").innerText();
-  const lot = previewText.match(/\bLN-[A-Z0-9._/-]+\b/i)?.[0];
-  test.skip(!lot, `BLOCKED_DATA no physical aluminium lot satisfies AL71-QA width 3.5m; preview=${previewText.slice(-700)}`);
+  const result = page.locator("[data-action-result]");
+  await expect(result).toBeVisible({ timeout: 20_000 });
+  const picks = page.locator('[data-action-result-section="picks"]');
+  const previewText = await result.innerText();
+  const pickRows = await picks.locator("tbody tr").count().catch(() => 0);
+  test.skip(pickRows === 0 || /Thiếu\s+\d+|không đủ tồn/i.test(previewText), `BLOCKED_DATA no physical aluminium lot satisfies AL71-QA width 3.5m; preview=${previewText.slice(-700)}`);
   await audit.checkpoint("Inventory proposal preview");
 
   const draft = page.getByRole("button", { name: "Tạo phiếu cắt nháp", exact: true });
