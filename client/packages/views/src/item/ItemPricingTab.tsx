@@ -49,7 +49,8 @@ export function ItemPricingTab({ itemCode }: { itemCode: string }) {
     ...conversionRows.map((row) => text(row.uom)),
   ].filter(Boolean))], [conversionRows, item?.default_purchase_uom, item?.default_sales_uom, stockUom]);
   const priceLists = useMemo(() => (priceListsQ.data ?? []).filter((row) => !Number(row.disabled)), [priceListsQ.data]);
-  const company = text((businessContext as Record<string, unknown>).company);
+  const context = businessContext as Record<string, unknown> | undefined;
+  const company = text(context?.company);
   const businessContextKey = JSON.stringify(businessContext);
 
   useEffect(() => {
@@ -126,7 +127,7 @@ export function ItemPricingTab({ itemCode }: { itemCode: string }) {
             item_code: itemCode,
             price_list: priceList,
             uom,
-            currency: draft.currency || text((businessContext as Record<string, unknown>).currency) || "VND",
+            currency: draft.currency || text(context?.currency) || "VND",
             ...payload,
           });
         }
