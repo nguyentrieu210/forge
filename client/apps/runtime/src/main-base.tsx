@@ -13,6 +13,7 @@ import {
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
+import { isRegisteredRuntimeExperience, resolveRuntimeAppChrome, resolveRuntimeExperience } from "./experience-registry.js";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
 import "./styles.css";
@@ -24,14 +25,9 @@ const PermissionCenter = lazy(() => import("@metaforge/views/permissions").then(
 const ProcessContainer = lazy(() => import("@metaforge/views/process").then((module) => ({ default: module.ProcessContainer })));
 const ReportContainer = lazy(() => import("@metaforge/views/report").then((module) => ({ default: module.ReportContainer })));
 const WorkspaceContainer = lazy(() => import("@metaforge/views/workspace").then((module) => ({ default: module.WorkspaceContainer })));
-const CalendarContainer = lazy(() => import("@metaforge/views/calendar").then((module) => ({ default: module.CalendarContainer })));
 const ImportContent = lazy(() => import("@metaforge/views/import").then((module) => ({ default: module.ImportContent })));
 const ActionScreen = lazy(() => import("@metaforge/views/action").then((module) => ({ default: module.ActionScreen })));
 const ScreenView = lazy(() => import("@metaforge/views/screen").then((module) => ({ default: module.ScreenView })));
-const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
-const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
-const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
-const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
 
 /**
  * The GENERIC runtime — one bundle that serves every app on the platform.
@@ -81,58 +77,9 @@ function isRenderableExperience(item: AppManifest["nav"][number], manifest: AppM
   if (separator < 1 || separator === item.key.length - 1) return false;
   const kind = item.key.slice(0, separator);
   const argument = item.key.slice(separator + 1);
-  if (kind === "approval" || kind === "calendar" || kind === "social-commerce" || kind === "alumdoor-operations") return true;
   if (kind === "action") return (manifest.actions ?? []).some((action) => action.name === argument);
   if (kind === "screen") return (manifest.screens ?? []).some((screen) => screen.name === argument);
-  return false;
-}
-
-/**
- * Experiences — App-mode screens, resolved by PREFIX rather than by exact key.
- *
- * A hand-written screen cannot come from data, so a purely generic runtime would have
- * none at all and every app would be reduced to Desk CRUD. Prefixing lets the parameter
- * live in the nav key: an app declares `{"kind":"experience","key":"approval:Leave
- * Application"}` and gets a working operational screen with no code anywhere.
- */
-function renderExperience(key: string, manifest: AppManifest, navigate: NavigateFunction): ReactNode {
-  const separator = key.indexOf(":");
-  const kind = separator < 0 ? key : key.slice(0, separator);
-  const argument = separator < 0 ? "" : key.slice(separator + 1);
-  if (kind === "approval" && argument) {
-    // The label the app declared, not the raw DocType name. A screen titled "Asset
-    // Request" in an otherwise Vietnamese app reads as a leaked internal identifier.
-    const title = manifest.nav.find((item) => item.key === key)?.label ?? argument;
-    // Back leaves App-mode for the Desk list of the same DocType, so the two are one
-    // app seen two ways rather than two apps.
-    return <ApprovalInbox doctype={argument} title={title} onExit={() => navigate(`/app/${encodeURIComponent(argument)}`)} />;
-  }
-  if (kind === "calendar" && argument) {
-    /**
-     * `calendar:<DocType>` — lịch tuần/tháng cho bất kỳ doctype nào có field ngày.
-     *
-     * Field ngày và field giờ do CalendarContainer suy từ metadata (field Date/Time đầu
-     * tiên), nên app chỉ cần khai một dòng nav. Mở ở chế độ TUẦN: lịch dạy được đọc theo
-     * tuần, còn lưới tháng cắt mất buổi khi một ngày có nhiều ca.
-     */
-    const label = manifest.nav.find((item) => item.key === key)?.label ?? argument;
-    return (
-      <div className="min-h-[100dvh] bg-background p-3 md:p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/app/${encodeURIComponent(argument)}`)}>← Danh sách</Button>
-          <h1 className="font-semibold">{label}</h1>
-        </div>
-        <CalendarContainer
-          doctype={argument}
-          initialMode="week"
-          onEventClick={(row) => navigate(`/app/${encodeURIComponent(argument)}/${encodeURIComponent(String(row.name))}`)}
-        />
-      </div>
-    );
-  }
-  // Manifest cũ có thể còn giữ Experience viết tay không tồn tại trong generic runtime.
-  // Không đưa người dùng vào màn chết; menu mới đã lọc mục này và URL cũ quay về Tổng quan.
-  return <Navigate to={`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`} replace />;
+  return isRegisteredRuntimeExperience(item.key);
 }
 
 function useBridge(): UrlStateBridge {
@@ -440,6 +387,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
     },
   }), [nav, navigate, paletteOpen]);
 
+  const appChrome = resolveRuntimeAppChrome(manifest.id);
   return (
     <>
       <AppShell
@@ -460,7 +408,7 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
         onOpenPalette={() => setPaletteOpen(true)}
         onOpenAI={() => setAssistantOpen(true)}
         aiConfigured
-        mobileAppHref={manifest.id === "alumdoor" ? "/mobile/warehouse/?tab=account" : undefined}
+        mobileAppHref={appChrome.mobileAppHref}
         onLogout={logout}
         businessContext={<BusinessContextBar compact />}
       >
@@ -505,9 +453,6 @@ function RuntimeRoutes({ manifest, boot, logout, nav, catalogError }: ScreenProp
       <Route path="/branches/:name" element={<OrganizationEntityScreen {...screen} doctype="Branch" />} />
       <Route path="/departments/:name" element={<OrganizationEntityScreen {...screen} doctype="Department" />} />
       <Route path="/workspace/:workspace" element={<WorkspaceScreen {...screen} />} />
-      {/* Touch-first experiences may still own the viewport. Social Commerce is a
-          desktop operations center, so ExperienceScreen mounts that one inside the
-          shared Forge shell instead of growing a second navigation system. */}
       <Route path="/x/:key" element={<ExperienceScreen {...screen} />} />
       <Route path="/app/:doctype" element={<DoctypeScreen {...screen} />} />
       <Route path="/app/:doctype/:name" element={<DoctypeScreen {...screen} />} />
@@ -570,11 +515,6 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
         <div className="h-full overflow-auto p-4">
           {action
             ? <ActionScreen action={action} onOpen={(doctype, docname) => navigate(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(docname)}`)} />
-            /**
-             * Manifest đã lọc action theo QUYỀN trước khi gửi xuống, nên "không tìm thấy"
-             * ở đây gần như luôn là không đủ quyền, không phải app khai thiếu. Nói đúng
-             * điều đó thay vì "không tìm thấy màn" — người dùng cần biết phải hỏi ai.
-             */
             : <div className="grid h-full place-items-center"><div className="max-w-md rounded-xl border bg-card p-6 text-center">
                 <h1 className="font-semibold">Không mở được thao tác "{name}"</h1>
                 <p className="mt-2 text-sm text-muted-foreground">Tài khoản này không có quyền chạy, hoặc app chưa khai thao tác đó.</p>
@@ -583,46 +523,22 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
       </Shell>
     );
   }
-  if (kind === "social-commerce") {
-    const active = manifest.nav.find((item) => item.key.startsWith("social-commerce:"))?.key ?? experienceKey;
-    const canManageConnections = boot.user === "Administrator"
-      || boot.roles.includes("Administrator")
-      || boot.roles.includes("System Manager");
+  const registered = resolveRuntimeExperience({ key: experienceKey, manifest, boot, navigate });
+  if (registered) {
     return (
       <Shell
         manifest={manifest}
         boot={boot}
         logout={logout}
         nav={nav}
-        active={active}
-        breadcrumbs={[{ label: "Trung tâm bán hàng" }]}
+        active={registered.activeKey}
+        breadcrumbs={registered.breadcrumbs}
       >
-        <SocialCommerce
-          canManageConnections={canManageConnections}
-          onAuthenticationRequired={redirectToLogin}
-        />
+        {registered.content}
       </Shell>
     );
   }
-  if (kind === "daily-ledger") {
-    return (
-      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Sổ chi tiết hằng ngày" }]}>
-        <DailyDetailedLedger />
-      </Shell>
-    );
-  }
-  if (kind === "alumdoor-operations") {
-    return (
-      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: "Bán hàng" }]}>
-        <AlumdoorOperationsCenter />
-      </Shell>
-    );
-  }
-  return <>{renderExperience(experienceKey, manifest, navigate)}</>;
-}
-
-function redirectToLogin() {
-  window.location.assign("/login");
+  return <Navigate to={`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`} replace />;
 }
 
 function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
