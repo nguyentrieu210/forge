@@ -8,6 +8,7 @@ DISPATCH_NAMESPACE="${DISPATCH_NAMESPACE:-cloudforge-production}"
 TARGET_SHA="${WORKERS_CI_COMMIT_SHA:-$(git rev-parse HEAD)}"
 BRANCH="${WORKERS_CI_BRANCH:-}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+SKIP_MARKER="/tmp/forge-cloudflare-docs-only-skip"
 
 fail() {
   echo "ERROR: $*" >&2
@@ -19,7 +20,7 @@ require_release_identity() {
   [ -n "$TARGET_SHA" ] || fail "Missing release SHA."
 
   cd "$REPO_ROOT"
-  git fetch origin main --quiet
+  git fetch origin main --quiet --depth=2
   git cat-file -e "$TARGET_SHA^{commit}" || fail "Release SHA $TARGET_SHA is not a commit."
   git merge-base --is-ancestor "$TARGET_SHA" origin/main \
     || fail "Refusing full ALU release: $TARGET_SHA is not merged into main."
@@ -39,6 +40,29 @@ require_release_identity() {
 
   export VITE_FORGE_RELEASE_SHA="$TARGET_SHA"
   export PATH="$REPO_ROOT/client/node_modules/.bin:$REPO_ROOT/server/node_modules/.bin:$PATH"
+}
+
+is_docs_only_change() {
+  cd "$REPO_ROOT"
+
+  local parent
+  parent="$(git rev-parse "${TARGET_SHA}^1" 2>/dev/null || true)"
+  [ -n "$parent" ] || return 1
+
+  mapfile -t changed < <(git diff --name-only "$parent" "$TARGET_SHA")
+  [ "${#changed[@]}" -gt 0 ] || return 1
+
+  local file
+  for file in "${changed[@]}"; do
+    case "$file" in
+      docs/*|*.md) ;;
+      *) return 1 ;;
+    esac
+  done
+
+  printf 'Docs-only change detected; skipping production build/deploy. Changed files:\n'
+  printf '  %s\n' "${changed[@]}"
+  return 0
 }
 
 reconcile_frozen_install() {
@@ -85,6 +109,14 @@ guard_generated_release_files() {
 
 build_release() {
   require_release_identity
+  rm -f "$SKIP_MARKER"
+
+  if is_docs_only_change; then
+    touch "$SKIP_MARKER"
+    echo "Cloudflare production build skipped: docs/** and/or *.md only."
+    return 0
+  fi
+
   reconcile_frozen_install
   cd "$REPO_ROOT"
 
@@ -98,6 +130,12 @@ build_release() {
 
 deploy_release() {
   require_release_identity
+
+  if [ -f "$SKIP_MARKER" ]; then
+    echo "Cloudflare production deploy skipped: docs/** and/or *.md only."
+    return 0
+  fi
+
   guard_generated_release_files
   cd "$REPO_ROOT"
 
