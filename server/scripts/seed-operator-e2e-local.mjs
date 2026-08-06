@@ -2,7 +2,7 @@
 /**
  * Local/disposable operator-E2E prerequisites.
  *
- * This script deliberately writes ONLY through the public Frappe facade with a real
+ * This script deliberately writes ONLY through the public Frappe/app facade with a real
  * cookie + CSRF session. It refuses non-loopback targets so a CI/test command cannot
  * silently become a production data loader.
  */
@@ -57,6 +57,13 @@ async function json(method, path, body, accepted = [200, 201]) {
   return parsed;
 }
 
+function unwrap(value) {
+  if (!value || typeof value !== "object") return value;
+  if ("data" in value) return value.data;
+  if ("message" in value) return value.message;
+  return value;
+}
+
 const login = await raw("POST", "/api/method/login", { usr: USER, pwd: PASSWORD });
 if (!login.ok) throw new Error(`operator E2E login failed: HTTP ${login.status}`);
 const boot = await json("GET", "/api/method/metaforge.api.get_boot");
@@ -75,7 +82,7 @@ async function ensureResource(doctype, name, document) {
   const existing = await getResource(doctype, name);
   if (existing) return { state: "existing", doc: existing };
   const created = await json("POST", `/api/resource/${encodeURIComponent(doctype)}`, { doctype, name, ...document });
-  return { state: "created", doc: created?.data ?? created?.message ?? created };
+  return { state: "created", doc: unwrap(created) };
 }
 
 async function findOne(doctype, filters) {
@@ -92,7 +99,12 @@ async function ensureByFilter(doctype, filters, document) {
   const name = await findOne(doctype, filters);
   if (name) return { state: "existing", name };
   const created = await json("POST", `/api/resource/${encodeURIComponent(doctype)}`, { doctype, ...document });
-  return { state: "created", name: created?.data?.name ?? created?.message?.name ?? null };
+  return { state: "created", name: unwrap(created)?.name ?? null };
+}
+
+async function submitDocument(doc) {
+  const submitted = await json("POST", "/api/method/frappe.client.submit", { doc: JSON.stringify(doc) });
+  return unwrap(submitted);
 }
 
 const seeded = [];
@@ -109,7 +121,7 @@ await record("Warehouse:K36", ensureResource("Warehouse", "K36", { warehouse_nam
 await record("Supplier:QA-SUPPLIER", ensureResource("Supplier", "QA-SUPPLIER", { supplier_name: "QA Supplier", supplier_group: "Nhà cung cấp", disabled: 0 }));
 await record("Item Group:QA Purchase Items", ensureResource("Item Group", "QA Purchase Items", { item_group_name: "QA Purchase Items", is_group: 0 }));
 await record("Item Group:Cửa CN Đức", ensureResource("Item Group", "Cửa CN Đức", { item_group_name: "Cửa CN Đức", is_group: 0 }));
-await record("Item Color:TRANG", ensureResource("Item Color", "TRANG", { color_name: "TRANG", raw_color: "#FFFFFF", disabled: 0 }));
+await record("Item Color:TRANG", ensureResource("Item Color", "TRANG", { color_code: "TRANG", color_name: "TRANG", finish: "Sơn tĩnh điện", disabled: 0 }));
 await record("Price List:QA-SELLING", ensureResource("Price List", "QA-SELLING", { price_list_name: "QA-SELLING", selling: 1, buying: 0, currency: "VND", enabled: 1 }));
 await record("Customer:QA-CUSTOMER", ensureResource("Customer", "QA-CUSTOMER", {
   customer_name: "QA Customer",
@@ -133,14 +145,7 @@ await record("Item:CUA-DUC", ensureResource("Item", "CUA-DUC", {
   door_type: "Cửa Đức", item_nature: "Hàng tồn kho", material_stage: "Thành phẩm", supply_type: "Sản xuất",
   is_stock_item: 1, is_purchase_item: 0, is_sales_item: 1, include_item_in_manufacturing: 1,
   stock_uom: "m2", default_sales_uom: "m2", inventory_mode: "Thành phẩm theo m2",
-  default_color: "TRANG", disabled: 0,
-}));
-await record("Item:AL71N-RAW", ensureResource("Item", "AL71N-RAW", {
-  item_code: "AL71N-RAW", item_name: "Nhôm AL71N Operator E2E", item_group: "QA Purchase Items",
-  item_nature: "Hàng tồn kho", material_stage: "Nguyên vật liệu", supply_type: "Mua ngoài",
-  is_stock_item: 1, is_purchase_item: 1, is_sales_item: 0, include_item_in_manufacturing: 1,
-  stock_uom: "Cái", default_purchase_uom: "Cái", default_warehouse: "K36",
-  inventory_mode: "Nhôm cây/lá", measurement_profile: "Nhôm cây", valuation_method: "FIFO", disabled: 0,
+  measurement_profile: "Thành phẩm theo m2", default_color: "TRANG", disabled: 0,
 }));
 
 await record("Item Price:CUA-DUC@QA-SELLING", ensureByFilter("Item Price", [
@@ -150,9 +155,8 @@ await record("Item Price:CUA-DUC@QA-SELLING", ensureByFilter("Item Price", [
   rate: 1500000, currency: "VND", selling: 1, uom: "m2", enabled: 1,
 }));
 
-// Formula/BOM fixtures are attempted through their canonical DocTypes. If the package version
-// has evolved and rejects this shape, the browser preflight reports CONFIG/TEST_DATA instead
-// of hiding it with a direct database insert.
+// The source package already owns the canonical Cửa Đức policy. Add a deterministic alias only
+// when the current contract accepts it; a rejection is reported and never bypassed with D1 SQL.
 try {
   await record("Cutting Policy:POL-DUC-U75", ensureResource("Cutting Policy", "POL-DUC-U75", {
     policy_name: "POL-DUC-U75", door_type: "Cửa Đức", item_group: "Cửa CN Đức", ray_type: "U75",
@@ -165,6 +169,74 @@ try {
   }));
 } catch (error) {
   seeded.push({ label: "Cutting Policy:POL-DUC-U75", state: "blocked", error: String(error) });
+}
+
+// Canonical physical-stock starting fixture for E2E-03. Setup may use authoritative APIs; the
+// audited inventory mutation itself still has to happen through the visible browser actions.
+try {
+  const supplierInvoiceNo = "OP-E2E-AL-STOCK";
+  const existingReceipt = await findOne("Purchase Receipt", [["supplier_invoice_no", "=", supplierInvoiceNo], ["docstatus", "=", 1]]);
+  if (existingReceipt) {
+    seeded.push({ label: "Physical aluminium stock", state: "existing", name: existingReceipt });
+  } else {
+    const lengthM = 4;
+    const bars = 12;
+    const kgPerM = 0.389;
+    const weight = lengthM * bars * kgPerM;
+    const orderCreated = unwrap(await json("POST", `/api/resource/${encodeURIComponent("Purchase Order")}`, {
+      doctype: "Purchase Order",
+      supplier: "QA-SUPPLIER",
+      priority: "Thường",
+      transaction_date: new Date().toISOString().slice(0, 10),
+      schedule_date: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+      company: "ALUMDOOR",
+      currency: "VND",
+      note: "Operator E2E physical aluminium stock fixture",
+      items: [{
+        doctype: "Purchase Order Item",
+        item_code: "AL71-QA",
+        item_name: "Nhôm AL71 QA",
+        inventory_mode: "Nhôm cây/lá",
+        measurement_profile: "Nhôm cây/lá",
+        stock_uom: "Kg",
+        uom: "Kg",
+        qty: weight,
+        conversion_factor: 1,
+        stock_qty: weight,
+        rate: 100000,
+        amount: weight * 100000,
+        warehouse: "K36",
+        theoretical_kg_per_m: kgPerM,
+        theoretical_kg: weight,
+        length_m: lengthM,
+        qty_bar: bars,
+        total_length_m: lengthM * bars,
+        color: "THÔ",
+        is_stamped: "Không",
+      }],
+    }));
+    const order = await submitDocument(orderCreated);
+    const fifo = unwrap(await json("POST", "/api/method/alumdoor.purchase.fifo_receipt", {
+      supplier: "QA-SUPPLIER",
+      item_code: "AL71-QA",
+      length_m: lengthM,
+      qty_bar: bars,
+      actual_weight_kg: weight,
+      rate: 100000,
+      color: "THÔ",
+      is_stamped: "Không",
+      warehouse: "K36",
+      supplier_invoice_no: supplierInvoiceNo,
+      driver: "Operator E2E fixture",
+    }));
+    const receiptName = fifo?.purchase_receipt;
+    if (!receiptName) throw new Error(`fifo_receipt returned no purchase_receipt for ${order?.name ?? "unknown order"}`);
+    const receipt = await getResource("Purchase Receipt", receiptName);
+    const submittedReceipt = receipt?.docstatus === 1 ? receipt : await submitDocument(receipt);
+    seeded.push({ label: "Physical aluminium stock", state: "created", name: submittedReceipt.name });
+  }
+} catch (error) {
+  seeded.push({ label: "Physical aluminium stock", state: "blocked", error: String(error) });
 }
 
 console.log(JSON.stringify({ status: "OPERATOR_E2E_SEED_PASS", origin: ORIGIN, seeded }, null, 2));
