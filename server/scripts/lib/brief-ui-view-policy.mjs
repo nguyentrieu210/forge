@@ -1,6 +1,6 @@
 import { BriefError } from "./compile-brief.mjs";
 
-const UI_POLICY_KEYS = ["bulk", "matrix"];
+const UI_POLICY_KEYS = ["bulk", "matrix", "operational"];
 
 /**
  * Keep the legacy brief schema strict for every pre-existing property while allowing
@@ -42,9 +42,9 @@ export function validateBriefUiViewPolicies(brief) {
 }
 
 /**
- * Add UI01-owned policies after the mature base compiler has derived the rest of a package.
- * This avoids duplicating list/form/workflow compilation while still making Matrix/Bulk
- * first-class package data. parseAppManifest immediately validates the result in forge-app.
+ * Add UI-owned policies after the mature base compiler has derived the rest of a package.
+ * This avoids duplicating list/form/workflow compilation while still making Matrix/Bulk/
+ * Operational first-class package data. parseAppManifest immediately validates the result.
  */
 export function attachBriefUiViewPolicies(brief, pkg) {
   if (!brief || typeof brief !== "object" || !Array.isArray(brief.doctypes)) return pkg;
@@ -69,7 +69,7 @@ export function attachBriefUiViewPolicies(brief, pkg) {
       if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
         throw new BriefError(`${compiled.name}: ${key} must be an object`);
       }
-      next[key] = { enabled: true, ...policy };
+      next[key] = key === "operational" ? { ...policy } : { enabled: true, ...policy };
     }
     if (Object.keys(next).length) compiled.viewPolicy = { ...(compiled.viewPolicy ?? {}), ...next };
   }
