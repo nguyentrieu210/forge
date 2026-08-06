@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { calculateSalesProductionLine } from "../dist/apps-src/alumdoor-worker/src/sales-production.js";
 import { calculateSalesWizardLineContext } from "../dist/apps-src/alumdoor-worker/src/sales-wizard-context.js";
 import { handleSalesOrderOperationalSummary } from "../dist/apps-src/alumdoor-worker/src/sales-order-operational-summary.js";
 
@@ -77,25 +78,25 @@ async function body(response) {
   return JSON.parse(await response.text());
 }
 
-test("basis-only trả đúng loại rộng Cửa Đức trước khi nhập kích thước", async () => {
-  const dealer = await body(await calculateSalesWizardLineContext(platform(), {
+test("public basis-only route trả đúng loại rộng/cao và CK mặc định Cửa Đức theo loại khách", async () => {
+  const dealer = await body(await calculateSalesProductionLine(platform(), {
     item_code: "CUA-DUC",
     customer_group: "Đại lý",
     sales_mode: "Trọn bộ",
-    ray_type: "U75",
     basis_only: true,
   }));
-  const retail = await body(await calculateSalesWizardLineContext(platform(), {
+  const retail = await body(await calculateSalesProductionLine(platform(), {
     item_code: "CUA-DUC",
     customer_group: "Lẻ",
     sales_mode: "Trọn bộ",
-    ray_type: "U75",
     basis_only: true,
   }));
   assert.equal(dealer.width_basis, "Phủ bì nhựa");
   assert.equal(retail.width_basis, "Phủ bì ray");
   assert.equal(dealer.input_height_basis, "Cao phủ bì");
-  assert.equal(retail.input_height_basis, "Cao phủ bì");
+  assert.equal(retail.input_height_basis, "Cao lọt lòng");
+  assert.equal(dealer.default_discount_pct, 15);
+  assert.equal(retail.default_discount_pct, 15);
   assert.equal(dealer.input_width_m, undefined);
   assert.equal(retail.billable_area_sqm, undefined);
 });
@@ -120,6 +121,7 @@ test("khách lẻ nhập RLL/CLL được đổi server-side sang phủ bì, r�
   assert.equal(result.cut_width_m, 4);
   assert.equal(result.cover_height_m, 2.8);
   assert.equal(result.billable_area_sqm, 11.424);
+  assert.equal(result.default_discount_pct, 15);
   assert.equal(result.bom_no, "BOM-DUC-1");
   assert.equal(result.stock_profile_item, "AL71N-RAW");
   assert.equal(result.stock_profile_error, null);
