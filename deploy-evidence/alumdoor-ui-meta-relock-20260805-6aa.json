@@ -1,0 +1,72 @@
+{
+  "observed_at_utc": "2026-08-05T13:51:22Z",
+  "tenant": "alu",
+  "origin": "https://alu.kairo.vn",
+  "classification": "POST_R6_FAST_PILOT_RELOCK",
+  "status": "PASS",
+  "product_source_sha": "6aa19e26433f9f574094f256f63a6f18b9d1c4ad",
+  "alumdoor_package": "2.2.8",
+  "production_release": {
+    "release_sha": "6aa19e26433f9f574094f256f63a6f18b9d1c4ad",
+    "bundle_hash": "36f4c29ff2b65a89",
+    "gateway_worker_version_id": "bd158469-24e0-44ef-8fd9-e7ef07b60c1c",
+    "health_200": true,
+    "guest_boot_status": 403
+  },
+  "procurement_navigation": {
+    "manifest_nav_count": 77,
+    "visible_metadata_tabs_after_shell_process_tab": [
+      {"key": "action:tao-don-mua", "label": "Mua hàng"},
+      {"key": "action:nhap-nhom-hang-loat", "label": "Nhập hàng"},
+      {"key": "report:Mua hàng theo nhà cung cấp", "label": "Báo cáo"},
+      {"key": "Purchase Order", "label": "Lịch sử mua hàng"}
+    ],
+    "hidden_but_installed_or_canonical": [
+      "Purchase Receipt",
+      "action:nhap-nhom-fifo",
+      "action:doi-soat-giao-hang-ncc"
+    ]
+  },
+  "pre_deploy_backup": {
+    "database": "cloudforge-alu",
+    "database_id": "6781cbc1-8635-4b6e-af46-09297c120cff",
+    "sql_file": "alu-2026-08-05T13-47-37-313Z.sql",
+    "bytes": 17956559,
+    "sha256": "1c641bf80a94e0e73c8932559f9444ee91e19bab93a0097e6503d8ddc1168319",
+    "artifact_id": 8932802988,
+    "artifact_name": "alu-main-6aa-pre-deploy-backup-31011747635",
+    "retention_days": 30
+  },
+  "restore_drill": {
+    "count": 2,
+    "same_source_sha256": "1c641bf80a94e0e73c8932559f9444ee91e19bab93a0097e6503d8ddc1168319",
+    "application_tables_each": 97,
+    "migrations_each": 80,
+    "routes_changed": false,
+    "cleanup": "PASS"
+  },
+  "validation": {
+    "source_build": "PASS",
+    "client_build": "PASS",
+    "typecheck": "PASS",
+    "targeted_tests": "7/7 PASS",
+    "meta_completeness": "PASS",
+    "metadata_install": "PASS",
+    "installed_identity": "alumdoor@2.2.8",
+    "release_identity": "PASS",
+    "procurement_navigation": "PASS",
+    "guest_boundary": "PASS"
+  },
+  "github_actions": {
+    "run_id": 31011747635,
+    "job_id": 92325423247,
+    "release_evidence_artifact_id": 8932930477,
+    "release_evidence_artifact_name": "alu-main-production-release-31011747635"
+  },
+  "scope_notes": [
+    "This relock deploys the approved metadata-driven procurement UI plus the exact current-main child-grid/UOM/default-company fixes present in the same source SHA.",
+    "The visible Nhập hàng tab now resolves to action:nhap-nhom-hang-loat and therefore uses the order-style Purchase Receipt Item child-grid surface.",
+    "The current bulk FIFO backend remains aluminum-specific; this relock does not claim generic FIFO allocation for non-aluminum item modes.",
+    "No DNS or secret change was performed and no real pilot business-data import/cutover was performed."
+  ]
+}
