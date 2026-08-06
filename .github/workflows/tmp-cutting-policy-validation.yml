@@ -1,9 +1,9 @@
 name: Temporary Cutting Policy UI Validation
 
 on:
-  push:
+  pull_request:
     branches:
-      - fix/alumdoor-cutting-policy-ux
+      - main
 
 permissions:
   contents: read
