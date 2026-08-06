@@ -1,0 +1,121 @@
+name: ALU Cutting Policy Sync One-Shot
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/alu-cutting-policy-sync.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-alu-cutting-policy-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Backup and sync Alumdoor Cutting Policy fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      BACKUP_DIR: ${{ runner.temp }}/alu-cutting-policy-backup
+      REPORT_PATH: ${{ runner.temp }}/alu-cutting-policy-sync.json
+
+    steps:
+      - name: Checkout exact main revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Validate formula engine and sync script
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check server/scripts/sync-alumdoor-cutting-policies.mjs
+          node --test server/tests/door-formulas.test.mjs
+
+      - name: Backup production tenant before master-data write
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/backup-tenant.mjs --tenant alu --execute --output-dir "$BACKUP_DIR"
+
+      - name: Sync canonical Cutting Policy fixtures
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/sync-alumdoor-cutting-policies.mjs \
+            --tenant alu \
+            --execute \
+            --output "$REPORT_PATH"
+          test "$(jq -r '.pass' "$REPORT_PATH")" = "true"
+          test "$(jq '[.verification[] | select(.logical_disabled == false and .pass == true)] | length' "$REPORT_PATH")" -eq 5
+          test "$(jq '[.verification[] | select(.logical_disabled == true and .pass == true)] | length' "$REPORT_PATH")" -eq 2
+
+      - name: Upload backup and sync evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-cutting-policy-sync-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            ${{ env.BACKUP_DIR }}
+            ${{ env.REPORT_PATH }}
+
+      - name: Record result on PR 757
+        if: always()
+        shell: bash
+        env:
+          JOB_STATUS: ${{ job.status }}
+          SOURCE_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          backup_manifest="$(find "$BACKUP_DIR" -maxdepth 1 -name '*.sql.json' -print -quit 2>/dev/null || true)"
+          backup_sha="n/a"
+          if [ -n "$backup_manifest" ] && [ -f "$backup_manifest" ]; then
+            backup_sha="$(jq -r '.sha256 // "n/a"' "$backup_manifest")"
+          fi
+          active="n/a"
+          legacy="n/a"
+          if [ -f "$REPORT_PATH" ]; then
+            active="$(jq '[.verification[] | select(.logical_disabled == false and .pass == true)] | length' "$REPORT_PATH")/5"
+            legacy="$(jq '[.verification[] | select(.logical_disabled == true and .pass == true)] | length' "$REPORT_PATH")/2"
+          fi
+          body=$(cat <<EOF
+          Alumdoor Cutting Policy production sync: **${JOB_STATUS}**
+
+          - Source SHA: \`${SOURCE_SHA}\`
+          - Backup SHA-256: \`${backup_sha}\`
+          - Active standard policies verified: **${active}**
+          - Legacy disabled policies verified: **${legacy}**
+          - Scope: only \`master_records(tenant_id='alu', record_type='Cutting Policy')\` for canonical fixtures from \`server/briefs/alumdoor-v2.json\`.
+          EOF
+          )
+          gh api "repos/${REPOSITORY}/issues/757/comments" -f body="$body"
