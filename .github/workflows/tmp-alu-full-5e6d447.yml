@@ -1,0 +1,243 @@
+name: TMP ALU Metadata Finalize 5e6d447
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-alu-full-5e6d447.yml"
+      - "ops/releases/alu-full-5e6d447-authorization.txt"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-alu-tenant-production-finalize
+  cancel-in-progress: false
+
+jobs:
+  finalize-metadata:
+    name: Install purchase metadata and verify production
+    if: github.head_ref == 'release/alu-full-5e6d447-20260805'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      TARGET_SHA: 5e6d4478576339e3d3b6ae9c88cc3f606a10aa31
+      SOURCE_HEAD_SHA: 22f5ed507af6ae472dcaa1254a982be6bf8f9ec8
+      AUTH_FILE: ops/releases/alu-full-5e6d447-authorization.txt
+      R6_RUN: '30984925591'
+      CANONICAL_RUN: '30985667526'
+      FORGE_ORIGIN: https://alu.kairo.vn
+      SOURCE_ACTION_VERSION: 2.2.7
+      EXPECTED_APP_VERSION: 2.2.6
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+      EVIDENCE_DIR: /tmp/alu-metadata-finalize
+
+    steps:
+      - name: Checkout temporary authorization branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify authorization, exact main and two-file bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          test -f "$AUTH_FILE"
+          grep -Fxq 'ACTION=FULL_ALU_PRODUCTION_RELEASE' "$AUTH_FILE"
+          grep -Fxq 'TENANT=alu' "$AUTH_FILE"
+          grep -Fxq "TARGET_SHA=$TARGET_SHA" "$AUTH_FILE"
+          grep -Fxq 'SOURCE_PR=714' "$AUTH_FILE"
+          grep -Fxq "SOURCE_HEAD_SHA=$SOURCE_HEAD_SHA" "$AUTH_FILE"
+          grep -Fxq "R6_RUN=$R6_RUN" "$AUTH_FILE"
+          grep -Fxq "APP_VERSION=$SOURCE_ACTION_VERSION" "$AUTH_FILE"
+          grep -Fxq 'APPROVAL=EXPLICIT_USER_APPROVAL_2026-08-05' "$AUTH_FILE"
+          test -n "${FORGE_ADMIN_USER:-}"
+          test -n "${FORGE_ADMIN_PASSWORD:-}"
+
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$TARGET_SHA" || {
+            echo "Refusing metadata finalize: authorized target $TARGET_SHA is not current main $current_main."
+            exit 1
+          }
+          mapfile -t changed < <(git diff --name-only "$TARGET_SHA"...HEAD | sort -u)
+          test "${#changed[@]}" -eq 2
+          printf '%s\n' "${changed[@]}" | grep -Fxq '.github/workflows/tmp-alu-full-5e6d447.yml'
+          printf '%s\n' "${changed[@]}" | grep -Fxq 'ops/releases/alu-full-5e6d447-authorization.txt'
+
+      - name: Verify prior R6 and canonical full release succeeded
+        shell: bash
+        run: |
+          set -euo pipefail
+          r6="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$R6_RUN")"
+          test "$(jq -r '.name' <<<"$r6")" = 'R6 Pass Convergence'
+          test "$(jq -r '.head_sha' <<<"$r6")" = "$SOURCE_HEAD_SHA"
+          test "$(jq -r '.conclusion' <<<"$r6")" = 'success'
+
+          release="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$CANONICAL_RUN")"
+          test "$(jq -r '.name' <<<"$release")" = 'ALU Build and Deploy'
+          test "$(jq -r '.event' <<<"$release")" = 'workflow_dispatch'
+          test "$(jq -r '.head_sha' <<<"$release")" = "$TARGET_SHA"
+          test "$(jq -r '.conclusion' <<<"$release")" = 'success'
+          printf 'canonical_run=%s\ncanonical_release=pass\n' "$CANONICAL_RUN" > "$EVIDENCE_DIR/state.txt"
+
+      - name: Checkout exact released source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build CloudForge metadata tooling
+        run: pnpm --filter cloudforge run build
+
+      - name: Verify source package version authority
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' | tee "$EVIDENCE_DIR/source-version.txt"
+          import { readFile } from 'node:fs/promises';
+          import { readBriefSource } from './scripts/lib/read-brief-source.mjs';
+          const action = JSON.parse(await readFile('./briefs/alumdoor-v2.actions.json', 'utf8'));
+          const nav = JSON.parse(await readFile('./briefs/alumdoor-v2.navigation.json', 'utf8'));
+          const merged = await readBriefSource('./briefs/alumdoor-v2.json');
+          if (action.version !== process.env.SOURCE_ACTION_VERSION) throw new Error(`action sidecar ${action.version}`);
+          if (merged.version !== process.env.EXPECTED_APP_VERSION) throw new Error(`final package ${merged.version}`);
+          console.log(`action_sidecar=${action.version}`);
+          console.log(`navigation_sidecar=${nav.version}`);
+          console.log(`final_package=${merged.version}`);
+          NODE
+          printf 'source_action_version=%s\nsource_package_version=%s\n' "$SOURCE_ACTION_VERSION" "$EXPECTED_APP_VERSION" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Install Alumdoor metadata through canonical browser path
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json \
+            --origin "$FORGE_ORIGIN" \
+            --admin "$FORGE_ADMIN_USER" \
+            2>&1 | tee "$EVIDENCE_DIR/app-install.log"
+          grep -q "app=alumdoor@$EXPECTED_APP_VERSION" "$EVIDENCE_DIR/app-install.log"
+          grep -q '^LIVE  https://alu.kairo.vn' "$EVIDENCE_DIR/app-install.log"
+          printf 'alumdoor_metadata=installed:%s\n' "$EXPECTED_APP_VERSION" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify production purchase action metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE' > "$EVIDENCE_DIR/purchase-action.json"
+          const origin = process.env.FORGE_ORIGIN.replace(/\/$/, '');
+          const user = process.env.FORGE_ADMIN_USER;
+          const password = process.env.FORGE_ADMIN_PASSWORD;
+          const jar = new Map();
+          let csrf = '';
+          function store(response) {
+            for (const value of response.headers.getSetCookie?.() ?? []) {
+              const pair = value.split(';')[0];
+              const i = pair.indexOf('=');
+              if (i > 0) jar.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
+            }
+          }
+          async function call(method, body = {}) {
+            const response = await fetch(`${origin}/api/method/${method}`, {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                ...(jar.size ? { cookie: [...jar].map(([k,v]) => `${k}=${v}`).join('; ') } : {}),
+                ...(csrf ? { 'x-frappe-csrf-token': csrf } : {}),
+              },
+              body: JSON.stringify(body),
+            });
+            store(response);
+            csrf = response.headers.get('x-frappe-csrf-token') ?? csrf;
+            const text = await response.text();
+            const parsed = JSON.parse(text);
+            if (!response.ok) throw new Error(`${method} HTTP ${response.status}: ${parsed.message ?? text.slice(0, 200)}`);
+            return parsed.message ?? parsed;
+          }
+          await call('login', { usr: user, pwd: password });
+          const manifest = await call('metaforge.api.get_app_manifest', { app: 'alumdoor' });
+          const encoded = JSON.stringify(manifest);
+          const requiredTokens = [
+            'tao-don-mua', 'child-grid-inline', 'Purchase Order Item',
+            'additional_discount_percentage', 'vat_percentage', 'Đơn mua hàng ALUMDOOR',
+          ];
+          for (const token of requiredTokens) {
+            if (!encoded.includes(token)) throw new Error(`production manifest missing ${token}`);
+          }
+          const nav = manifest.nav ?? [];
+          const purchase = nav.find((entry) => entry.key === 'action:tao-don-mua');
+          if (!purchase || purchase.label !== 'Mua hàng') throw new Error('Mua hàng navigation missing after metadata install');
+          process.stdout.write(JSON.stringify({
+            app: 'alumdoor',
+            package_version: process.env.EXPECTED_APP_VERSION,
+            action_sidecar_version: process.env.SOURCE_ACTION_VERSION,
+            purchase_action: 'tao-don-mua',
+            child_grid_inline: true,
+            discount_percentage: true,
+            vat_percentage: true,
+            print_format: 'Đơn mua hàng ALUMDOOR',
+          }, null, 2));
+          NODE
+          printf 'purchase_action_metadata=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify exact production health marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/sre-health-snapshot.mjs \
+            --base "$FORGE_ORIGIN" \
+            --allow-remote \
+            --confirm-host alu.kairo.vn \
+            --expected-release-sha "$TARGET_SHA" \
+            --attempts 12 \
+            --delay-ms 5000 \
+            --output "$EVIDENCE_DIR/health.json" \
+            2>&1 | tee "$EVIDENCE_DIR/health.log"
+          printf 'production_health=pass\ntarget_sha=%s\ncompleted_at=%s\n' "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Upload metadata finalization evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-metadata-finalize-${{ github.run_id }}
+          path: /tmp/alu-metadata-finalize/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish finalization summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '# ALU metadata finalization'
+            echo
+            echo '```text'
+            cat "$EVIDENCE_DIR/state.txt" 2>/dev/null || echo 'state.txt missing'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
