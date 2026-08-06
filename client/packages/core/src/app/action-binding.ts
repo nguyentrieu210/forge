@@ -1,7 +1,8 @@
 import type { AppActionField } from "./manifest.js";
 import type { AppActionInputTable } from "./action-input-table.js";
 import { buildMetadataDefaults } from "../meta/intelligence.js";
-import type { Doc, DocField, DocTypeMeta } from "../types/meta.js";
+import type { DocField, DocTypeMeta } from "../types/meta.js";
+import type { Doc } from "../types/doc.js";
 import type { Fieldtype } from "../types/fieldtype.js";
 
 function isLayout(fieldtype: string): boolean {
@@ -40,8 +41,6 @@ export function bindActionField(declared: AppActionField, meta?: DocTypeMeta): D
 export function bindActionTableColumns(table: AppActionInputTable, meta?: DocTypeMeta): DocField[] {
   return table.columns.map((column) => {
     const bound = bindActionField(column, meta);
-    // Legacy packages may have link_filters only on the action column. Preserve them only when
-    // canonical metadata has not declared its own rule; new packages should declare on DocField.
     const legacyFilters = typeof column.link_filters === "string" && !bound.link_filters
       ? { link_filters: column.link_filters }
       : {};
