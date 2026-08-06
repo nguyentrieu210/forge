@@ -38,6 +38,9 @@ type FormulaResult = Json & {
   door_type?: string;
   width_basis?: string;
   sales_width_basis?: string;
+  input_width_basis?: string;
+  input_height_basis?: string;
+  default_discount_pct?: number;
   area_per_set_sqm?: number;
   billable_area_sqm?: number;
   cut_width_m?: number;
@@ -80,6 +83,7 @@ type SaleLine = {
   thickness: string;
   fixedThickness: boolean;
   height: string;
+  heightBasis: string;
   width: string;
   widthBasis: string;
   qty: string;
@@ -106,8 +110,8 @@ const COLUMNS: ColumnDef[] = [
   { key: "itemCode", label: "SẢN PHẨM", width: 13 },
   { key: "color", label: "MÀU", width: 6.5 },
   { key: "thickness", label: "DÀY", width: 5, unit: "mm" },
-  { key: "height", label: "CAO", width: 5, numeric: true, unit: "m" },
-  { key: "width", label: "RỘNG", width: 5.5, numeric: true, unit: "m" },
+  { key: "height", label: "CAO", width: 6.5, numeric: true, unit: "m" },
+  { key: "width", label: "RỘNG", width: 7, numeric: true, unit: "m" },
   { key: "area", label: "DT", width: 5, numeric: true, unit: "m²" },
   { key: "qty", label: "SL", width: 3.8, numeric: true },
   { key: "rate", label: "Đ.GIÁ", width: 6.5, numeric: true },
@@ -172,7 +176,17 @@ function widthBasisTitle(value: unknown): string {
   if (normalized === "phủ bì nhựa") return "RỘNG PB NHỰA";
   if (normalized === "phủ bì ray") return "RỘNG PB RAY";
   if (normalized === "rộng cắt lá") return "RỘNG CẮT LÁ";
+  if (normalized === "rộng lọt lòng") return "RỘNG LỌT LÒNG";
   return basis ? `RỘNG ${basis.toLocaleUpperCase("vi")}` : "RỘNG";
+}
+
+function heightBasisTitle(value: unknown): string {
+  const basis = String(value ?? "").trim();
+  const normalized = normalize(basis);
+  if (normalized === "cao lọt lòng") return "CAO LỌT LÒNG";
+  if (normalized === "cao phủ bì") return "CAO PB";
+  if (normalized === "cao lưới") return "CAO LƯỚI";
+  return basis ? basis.toLocaleUpperCase("vi") : "CAO";
 }
 
 function newLine(): SaleLine {
@@ -188,6 +202,7 @@ function newLine(): SaleLine {
     thickness: "",
     fixedThickness: false,
     height: "",
+    heightBasis: "",
     width: "",
     widthBasis: "",
     qty: "",
@@ -242,11 +257,22 @@ function billableQty(line: SaleLine): number {
   return sets;
 }
 
+function previewBillableQty(line: SaleLine): number {
+  const authoritative = billableQty(line);
+  if (line.mode !== "AREA" || authoritative > 0) return authoritative;
+  const sets = decimal(line.qty);
+  const geometric = areaPerSet(line);
+  return Number.isFinite(sets) && sets > 0 && geometric != null && geometric > 0 ? geometric * sets : 0;
+}
+
 function grossAmount(line: SaleLine): number {
   return billableQty(line) * Number(line.rate ?? 0);
 }
 function lineDiscountAmount(line: SaleLine): number { return grossAmount(line) * discountRate(line) / 100; }
 function netAmount(line: SaleLine): number { return grossAmount(line) - lineDiscountAmount(line); }
+function previewGrossAmount(line: SaleLine): number { return previewBillableQty(line) * Number(line.rate ?? 0); }
+function previewLineDiscountAmount(line: SaleLine): number { return previewGrossAmount(line) * discountRate(line) / 100; }
+function previewNetAmount(line: SaleLine): number { return previewGrossAmount(line) - previewLineDiscountAmount(line); }
 
 function SheetLink({ doctype, value, onChange, readOnly, required, fieldname }: {
   doctype: string;
@@ -318,9 +344,11 @@ export function AlumdoorSalesSheetV2() {
   const orderedColumns = useMemo(() => columnOrder.map((key) => COLUMNS.find((column) => column.key === key)).filter((column): column is ColumnDef => Boolean(column)), [columnOrder]);
   const visibleColumns = useMemo(() => orderedColumns.filter((column) => !hiddenColumns.includes(column.key)), [hiddenColumns, orderedColumns]);
   const canonicalGroup = canonicalCustomerGroup(customer.group);
+  const activeHeightBases = useMemo(() => [...new Set(lines.filter((line) => line.itemCode && line.mode === "AREA").map((line) => line.heightBasis).filter(Boolean))], [lines]);
   const activeWidthBases = useMemo(() => [...new Set(lines.filter((line) => line.itemCode && line.mode === "AREA").map((line) => line.widthBasis).filter(Boolean))], [lines]);
+  const heightColumnLabel = activeHeightBases.length === 1 ? heightBasisTitle(activeHeightBases[0]) : "CAO";
   const widthColumnLabel = activeWidthBases.length === 1 ? widthBasisTitle(activeWidthBases[0]) : "RỘNG";
-  const columnLabel = (column: ColumnDef) => column.key === "width" ? widthColumnLabel : column.label;
+  const columnLabel = (column: ColumnDef) => column.key === "height" ? heightColumnLabel : column.key === "width" ? widthColumnLabel : column.label;
   const columnWidth = (column: ColumnDef) => columnWidths[column.key] ?? column.width;
 
   useEffect(() => { try { localStorage.setItem(ORDER_KEY, JSON.stringify(columnOrder)); } catch { /* presentation only */ } }, [columnOrder]);
@@ -412,15 +440,24 @@ export function AlumdoorSalesSheetV2() {
         sales_mode: "Trọn bộ",
         basis_only: true,
       });
-      const nextBasis = String(context.width_basis ?? "").trim();
-      if (!nextBasis) return;
+      const nextWidthBasis = String(context.input_width_basis ?? context.width_basis ?? "").trim();
+      const nextHeightBasis = String(context.input_height_basis ?? "").trim();
+      const rawDefaultDiscount = Number(context.default_discount_pct ?? 0);
+      const defaultDiscount = Number.isFinite(rawDefaultDiscount) && rawDefaultDiscount > 0 ? String(rawDefaultDiscount) : "";
+      if (!nextWidthBasis || !nextHeightBasis) return;
       setLines((current) => current.map((entry, lineIndex) => {
         if (lineIndex !== index || entry.itemCode !== itemCode) return entry;
-        const basisChanged = Boolean(entry.widthBasis && entry.widthBasis !== nextBasis);
+        const widthBasisChanged = Boolean(entry.widthBasis && entry.widthBasis !== nextWidthBasis);
+        const heightBasisChanged = Boolean(entry.heightBasis && entry.heightBasis !== nextHeightBasis);
+        const measurementChanged = widthBasisChanged || heightBasisChanged;
         return {
           ...entry,
-          widthBasis: nextBasis,
-          ...(basisChanged ? { width: "", formula: null, stockShort: null, stockMessage: "" } : {}),
+          widthBasis: nextWidthBasis,
+          heightBasis: nextHeightBasis,
+          discountPct: entry.discountTouched ? entry.discountPct : defaultDiscount,
+          ...(widthBasisChanged ? { width: "" } : {}),
+          ...(heightBasisChanged ? { height: "" } : {}),
+          ...(measurementChanged ? { formula: null, stockShort: null, stockMessage: "" } : {}),
         };
       }));
     } catch (error) {
@@ -472,7 +509,7 @@ export function AlumdoorSalesSheetV2() {
     patchLine(index, {
       itemCode, itemName: "", itemGroup: "", doorType: "", mode: "QUANTITY",
       color: "", requireColor: false, thickness: "", fixedThickness: false,
-      height: "", width: "", widthBasis: "", qty: previous?.qty || "1", rate: null, uom: "", allowedUoms: [], currency: "", warehouse: "",
+      height: "", heightBasis: "", width: "", widthBasis: "", qty: previous?.qty || "1", rate: null, uom: "", allowedUoms: [], currency: "", warehouse: "",
       formula: null, stockQty: null, stockShort: null, stockMessage: "", busy: true, error: "",
       discountPct: previous?.discountTouched ? previous.discountPct : "",
     });
@@ -511,6 +548,7 @@ export function AlumdoorSalesSheetV2() {
         thickness,
         fixedThickness,
         height: "",
+        heightBasis: "",
         width: "",
         widthBasis: "",
         qty: previous?.qty || "1",
@@ -537,14 +575,14 @@ export function AlumdoorSalesSheetV2() {
   useEffect(() => {
     if (!["Đại lý", "Lẻ"].includes(canonicalGroup)) return;
     lines.forEach((line, index) => { if (line.itemCode && line.mode === "AREA") void refreshMeasurementBasis(index, line.itemCode); });
-    // basis refresh is driven by canonical customer group; basis changes invalidate entered width.
+    // basis refresh is driven by canonical customer group; semantic basis changes invalidate stale dimensions.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canonicalGroup]);
 
   const calculationFingerprint = useMemo(() => JSON.stringify({
     customerGroup: canonicalGroup,
     deliveryDate,
-    lines: lines.map((line) => ({ itemCode: line.itemCode, mode: line.mode, color: line.color, height: line.height, width: line.width, widthBasis: line.widthBasis, qty: line.qty, warehouse: line.warehouse })),
+    lines: lines.map((line) => ({ itemCode: line.itemCode, mode: line.mode, color: line.color, height: line.height, heightBasis: line.heightBasis, width: line.width, widthBasis: line.widthBasis, qty: line.qty, warehouse: line.warehouse })),
   }), [canonicalGroup, deliveryDate, lines]);
 
   useEffect(() => {
@@ -562,7 +600,7 @@ export function AlumdoorSalesSheetV2() {
             customer_group: canonicalGroup,
             sales_mode: "Trọn bộ",
             ...(line.widthBasis ? { width_input_basis: line.widthBasis } : {}),
-            height_input_basis: "Cao phủ bì",
+            ...(line.heightBasis ? { height_input_basis: line.heightBasis } : {}),
             width_m: decimal(line.width),
             height_m: decimal(line.height),
             set_count: decimal(line.qty),
@@ -588,16 +626,23 @@ export function AlumdoorSalesSheetV2() {
             }
           }
           if (generation !== previewGeneration.current) return;
-          setLines((current) => current.map((entry, lineIndex) => lineIndex === index ? {
-            ...entry,
-            formula,
-            widthBasis: String(formula.width_basis ?? entry.widthBasis ?? "").trim(),
-            doorType: String(formula.door_type ?? entry.doorType ?? ""),
-            stockShort,
-            stockMessage,
-            busy: false,
-            error: String(formula.leaf_error ?? formula.stock_profile_error ?? entry.error ?? ""),
-          } : entry));
+          setLines((current) => current.map((entry, lineIndex) => {
+            if (lineIndex !== index) return entry;
+            const rawDefaultDiscount = Number(formula.default_discount_pct ?? 0);
+            const defaultDiscount = Number.isFinite(rawDefaultDiscount) && rawDefaultDiscount > 0 ? String(rawDefaultDiscount) : "";
+            return {
+              ...entry,
+              formula,
+              widthBasis: String(formula.input_width_basis ?? formula.width_basis ?? entry.widthBasis ?? "").trim(),
+              heightBasis: String(formula.input_height_basis ?? entry.heightBasis ?? "").trim(),
+              doorType: String(formula.door_type ?? entry.doorType ?? ""),
+              discountPct: entry.discountTouched ? entry.discountPct : defaultDiscount,
+              stockShort,
+              stockMessage,
+              busy: false,
+              error: String(formula.leaf_error ?? formula.stock_profile_error ?? entry.error ?? ""),
+            };
+          }));
         } catch (error) {
           if (generation !== previewGeneration.current) return;
           patchLine(index, { formula: null, busy: false, stockShort: null, stockMessage: "", error: adapter.mapError(error).message });
@@ -608,8 +653,8 @@ export function AlumdoorSalesSheetV2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculationFingerprint, adapter]);
 
-  const grossTotal = useMemo(() => lines.reduce((sum, line) => sum + grossAmount(line), 0), [lines]);
-  const totalDiscount = useMemo(() => lines.reduce((sum, line) => sum + lineDiscountAmount(line), 0), [lines]);
+  const grossTotal = useMemo(() => lines.reduce((sum, line) => sum + previewGrossAmount(line), 0), [lines]);
+  const totalDiscount = useMemo(() => lines.reduce((sum, line) => sum + previewLineDiscountAmount(line), 0), [lines]);
   const totalVat = 0;
   const totalSurcharge = 0;
   const total = grossTotal - totalDiscount + totalVat + totalSurcharge;
@@ -618,6 +663,7 @@ export function AlumdoorSalesSheetV2() {
     const out: string[] = [];
     if (!company) out.push("Cần Công ty mặc định trong thiết lập hệ thống.");
     if (!customer.name) out.push("Cần chọn Khách hàng.");
+    if (!["Đại lý", "Lẻ"].includes(canonicalGroup)) out.push("Cần chọn Loại khách Đại lý/Khách lẻ.");
     if (!currency) out.push("Chưa xác định tiền tệ bán.");
     if (!transactionDate) out.push("Cần ngày đặt hàng.");
     if (!deliveryDate) out.push("Cần ngày giao hàng.");
@@ -629,8 +675,9 @@ export function AlumdoorSalesSheetV2() {
       if (line.requireColor && !line.color) out.push(`Dòng ${index + 1}: cần Màu sắc.`);
       if (line.mode === "HEIGHT" && !positive(line.height)) out.push(`Dòng ${index + 1}: cần Chiều cao.`);
       if (line.mode === "WIDTH" && !positive(line.width)) out.push(`Dòng ${index + 1}: cần Chiều rộng.`);
+      if (line.mode === "AREA" && !line.heightBasis) out.push(`Dòng ${index + 1}: chưa xác định loại chiều cao từ chính sách.`);
       if (line.mode === "AREA" && !line.widthBasis) out.push(`Dòng ${index + 1}: chưa xác định loại chiều rộng từ chính sách.`);
-      if (line.mode === "AREA" && (!positive(line.height) || !positive(line.width))) out.push(`Dòng ${index + 1}: cần Chiều cao và ${widthBasisTitle(line.widthBasis)}.`);
+      if (line.mode === "AREA" && (!positive(line.height) || !positive(line.width))) out.push(`Dòng ${index + 1}: cần ${heightBasisTitle(line.heightBasis)} và ${widthBasisTitle(line.widthBasis)}.`);
       if (line.mode === "AREA" && !line.formula?.billable_area_sqm) out.push(`Dòng ${index + 1}: chưa tính xong diện tích cửa.`);
       if (line.rate == null) out.push(`Dòng ${index + 1}: chưa có đơn giá bán cho ${line.uom || "ĐVT đã chọn"}.`);
       if (!line.uom) out.push(`Dòng ${index + 1}: chưa xác định ĐVT bán.`);
@@ -643,7 +690,7 @@ export function AlumdoorSalesSheetV2() {
       if (line.mode !== "AREA" && line.managedStock && line.stockQty != null && billableQty(line) > line.stockQty) out.push(`Dòng ${index + 1}: tồn kho không đủ.`);
     }
     return out;
-  }, [company, currency, customer.name, deliveryDate, lines, transactionDate]);
+  }, [canonicalGroup, company, currency, customer.name, deliveryDate, lines, transactionDate]);
 
   const buildItems = () => lines.filter((line) => line.itemCode).map((line, index) => {
     const discount = discountRate(line);
@@ -660,7 +707,7 @@ export function AlumdoorSalesSheetV2() {
       ...(positive(line.height) ? { height_m: decimal(line.height) } : {}),
       ...(positive(line.width) ? { width_m: decimal(line.width) } : {}),
       ...(line.widthBasis ? { width_basis: line.widthBasis } : {}),
-      note: `Giá ${line.uom || ""} ${money(listRate)}${discount ? ` · Chiết khấu ${number(discount, 2)}%` : ""}${line.thickness ? ` · Độ dày ${line.thickness} mm` : ""}`,
+      note: `Giá ${line.uom || ""} ${money(listRate)}${discount ? ` · Chiết khấu ${number(discount, 2)}%` : ""}${line.thickness ? ` · Độ dày ${line.thickness} mm` : ""}${line.heightBasis ? ` · ${line.heightBasis}` : ""}`,
     };
     if (line.mode === "AREA" && line.formula) Object.assign(common, {
       door_type: line.formula.door_type,
@@ -781,14 +828,14 @@ export function AlumdoorSalesSheetV2() {
       if (column.key === "itemCode") return [line.itemName || line.itemCode];
       if (column.key === "color") return [line.color];
       if (column.key === "thickness") return [line.thickness];
-      if (column.key === "height") return [line.height];
+      if (column.key === "height") return [line.height, line.heightBasis];
       if (column.key === "width") return [line.width, line.widthBasis];
       if (column.key === "area") return [areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)];
       if (column.key === "qty") return [line.qty];
       if (column.key === "rate") return [line.rate == null ? "" : money(line.rate)];
       if (column.key === "discount") return [line.discountPct ? `${line.discountPct}%` : ""];
       if (column.key === "uom") return [line.uom, ...line.allowedUoms];
-      return [line.rate == null ? "" : money(grossAmount(line))];
+      return [line.rate == null ? "" : money(previewGrossAmount(line))];
     }).filter(Boolean);
     const maxChars = Math.max(header.length, ...values.map((value) => String(value).length));
     const min = column.key === "itemCode" ? 8 : 3.5;
@@ -826,18 +873,19 @@ export function AlumdoorSalesSheetV2() {
   const printHtml = () => {
     if (!createdOrder?.name) { setGlobalError("Cần lưu hoặc xác nhận đơn trước khi in."); return; }
     const bodyRows = lines.filter((line) => line.itemCode).map((line, index) => {
+      const heightNote = line.mode === "AREA" ? line.heightBasis : "";
       const widthNote = line.mode === "AREA" ? String(line.widthBasis || line.formula?.sales_width_basis || line.formula?.width_basis || "") : "";
-      const product = `<tr><td class="c">${index + 1}</td><td>${escapeHtml(line.itemName || line.itemCode)}</td><td>${escapeHtml(line.color)}</td><td class="c">${escapeHtml(line.thickness)}</td><td class="r">${escapeHtml(line.height)}</td><td class="r">${escapeHtml(line.width)}${widthNote ? `<div class="sub">${escapeHtml(widthNote)}</div>` : ""}</td><td class="r">${areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)}</td><td class="r">${escapeHtml(line.qty)}</td><td class="r">${money(line.rate)}</td><td class="r">${escapeHtml(line.discountPct)}</td><td class="c">${escapeHtml(line.uom)}</td><td class="r b">${money(netAmount(line))}</td></tr>`;
+      const product = `<tr><td class="c">${index + 1}</td><td>${escapeHtml(line.itemName || line.itemCode)}</td><td>${escapeHtml(line.color)}</td><td class="c">${escapeHtml(line.thickness)}</td><td class="r">${escapeHtml(line.height)}${heightNote ? `<div class="sub">${escapeHtml(heightNote)}</div>` : ""}</td><td class="r">${escapeHtml(line.width)}${widthNote ? `<div class="sub">${escapeHtml(widthNote)}</div>` : ""}</td><td class="r">${areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)}</td><td class="r">${escapeHtml(line.qty)}</td><td class="r">${money(line.rate)}</td><td class="r">${escapeHtml(line.discountPct)}</td><td class="c">${escapeHtml(line.uom)}</td><td class="r b">${money(netAmount(line))}</td></tr>`;
       return product;
     }).join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Bảng giá:</b> ${escapeHtml(priceList)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr><tr><td colspan="2"><b>Địa chỉ nhận:</b> ${escapeHtml(customer.address)}</td><td colspan="2"><b>Điện thoại:</b> ${escapeHtml(customer.phone)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY</th><th>CAO</th><th>${escapeHtml(widthColumnLabel)}</th><th>DT</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng cộng</td><td class="r">${money(grossTotal)}</td></tr><tr><td>Tổng chiết khấu</td><td class="r">-${money(totalDiscount)}</td></tr><tr><td>Tổng VAT</td><td class="r">${money(totalVat)}</td></tr><tr><td>Tổng phụ thu</td><td class="r">${money(totalSurcharge)}</td></tr><tr class="grand"><td>THÀNH TIỀN</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Loại khách:</b> ${escapeHtml(canonicalGroup)}</td><td><b>Bảng giá:</b> ${escapeHtml(priceList)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr><tr><td colspan="3"><b>Địa chỉ nhận:</b> ${escapeHtml(customer.address)}</td><td colspan="2"><b>Điện thoại:</b> ${escapeHtml(customer.phone)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY</th><th>${escapeHtml(heightColumnLabel)}</th><th>${escapeHtml(widthColumnLabel)}</th><th>DT</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng cộng</td><td class="r">${money(grossTotal)}</td></tr><tr><td>Tổng chiết khấu</td><td class="r">-${money(totalDiscount)}</td></tr><tr><td>Tổng VAT</td><td class="r">${money(totalVat)}</td></tr><tr><td>Tổng phụ thu</td><td class="r">${money(totalSurcharge)}</td></tr><tr class="grand"><td>THÀNH TIỀN</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
     const popup = window.open("", "_blank");
     if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ in."); return; }
     popup.document.open(); popup.document.write(html); popup.document.close();
   };
 
   const exportExcel = () => {
-    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", "CAO (m)", `${widthColumnLabel} (m)`, "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
+    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", `${heightColumnLabel} (m)`, `${widthColumnLabel} (m)`, "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
     lines.filter((line) => line.itemCode).forEach((line, index) => rows.push([String(index + 1), line.itemName || line.itemCode, line.color, line.thickness, line.height, line.width, areaPerSet(line) == null ? "" : String(areaPerSet(line)), line.qty, String(line.rate ?? ""), line.discountPct, line.uom, String(netAmount(line))]));
     const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -928,7 +976,7 @@ export function AlumdoorSalesSheetV2() {
       if (line.fixedThickness) return <div className="px-1.5 text-center text-xs font-semibold">{line.thickness}</div>;
       return <select className={base} value={line.thickness} disabled={submitted} onChange={(event) => patchLine(lineIndex, { thickness: event.target.value })}><option value=""></option>{thicknessOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>;
     }
-    if (column.key === "height") return line.itemCode && (line.mode === "HEIGHT" || line.mode === "AREA") ? <input className={base} inputMode="decimal" value={line.height} disabled={submitted} onChange={(event) => patchLine(lineIndex, { height: event.target.value, formula: null })} /> : null;
+    if (column.key === "height") return line.itemCode && (line.mode === "HEIGHT" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.height} disabled={submitted} onChange={(event) => patchLine(lineIndex, { height: event.target.value, formula: null })} />{line.mode === "AREA" && line.heightBasis ? <div className="text-center text-[9px] font-semibold leading-none text-slate-500">{line.heightBasis}</div> : null}</div> : null;
     if (column.key === "width") return line.itemCode && (line.mode === "WIDTH" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.width} disabled={submitted} onChange={(event) => patchLine(lineIndex, { width: event.target.value, formula: null })} />{line.mode === "AREA" && line.widthBasis ? <div className="text-center text-[9px] font-semibold leading-none text-slate-500">{line.widthBasis}</div> : null}</div> : null;
     if (column.key === "area") return areaPerSet(line) == null ? null : <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{number(areaPerSet(line), 3)}</div>;
     if (column.key === "qty") return line.itemCode ? <input className={base} inputMode="numeric" value={line.qty} disabled={submitted} onChange={(event) => patchLine(lineIndex, { qty: event.target.value, formula: null })} /> : null;
@@ -939,13 +987,13 @@ export function AlumdoorSalesSheetV2() {
       const options = [...new Set([line.uom, ...line.allowedUoms].filter(Boolean))];
       return <select className={`${base} cursor-pointer font-semibold text-sky-800`} value={line.uom} disabled={submitted || options.length === 0} onChange={(event) => void changeUom(lineIndex, event.target.value)}>{options.map((uom) => <option key={uom} value={uom}>{uom}</option>)}</select>;
     }
-    if (column.key === "amount") return line.itemCode && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{money(grossAmount(line))}</div> : null;
+    if (column.key === "amount") return line.itemCode && line.rate != null && previewBillableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{money(previewGrossAmount(line))}</div> : null;
     return null;
   };
   const renderDiscountCell = (line: SaleLine, lineIndex: number, column: ColumnDef) => {
     if (column.key === "itemCode") return <span className="px-1.5 text-xs font-semibold text-emerald-700">Chiết khấu</span>;
     if (column.key === "discount") return <input className="min-h-8 w-full border-0 bg-emerald-50 px-1.5 text-center text-xs font-bold text-emerald-900 outline-none focus:bg-emerald-100" inputMode="decimal" placeholder="0" value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(lineIndex, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} />;
-    if (column.key === "amount") return line.discountPct.trim() && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums text-emerald-800">-{money(lineDiscountAmount(line))}</div> : null;
+    if (column.key === "amount") return line.discountPct.trim() && line.rate != null && previewBillableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums text-emerald-800">-{money(previewLineDiscountAmount(line))}</div> : null;
     return null;
   };
 
@@ -984,8 +1032,9 @@ export function AlumdoorSalesSheetV2() {
             <HeaderLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => { setCustomer({ name, group: "", phone: "", address: "" }); setPriceList(""); }} required readOnly={submitted} />
             <Button type="button" variant="outline" size="sm" className="h-8 self-end rounded-none px-3" disabled={submitted} onClick={() => setQuickMaster("Customer")}>+ Tạo mới</Button>
           </div>
-          <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)]">
+          <div className="grid gap-2 sm:grid-cols-[180px_180px_minmax(0,1fr)]">
             <div className="grid gap-1"><Label className="text-[11px] font-semibold">Điện thoại</Label><Input className="h-8 rounded-none" value={customer.phone} readOnly /></div>
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Loại khách *</Label><select className={`h-8 rounded-none border bg-white px-2 text-sm font-semibold ${customer.name && !["Đại lý", "Lẻ"].includes(canonicalGroup) ? "border-red-500" : "border-slate-300"}`} value={["Đại lý", "Lẻ"].includes(canonicalGroup) ? canonicalGroup : ""} disabled={submitted || !customer.name} onChange={(event) => setCustomer((current) => ({ ...current, group: event.target.value }))}><option value="">Chọn loại khách</option><option value="Lẻ">Khách lẻ</option><option value="Đại lý">Đại lý</option></select></div>
             <div className="grid gap-1"><Label className="text-[11px] font-semibold">Địa chỉ nhận</Label><Input className="h-8 rounded-none" value={customer.address} disabled={submitted} onChange={(event) => setCustomer((current) => ({ ...current, address: event.target.value }))} /></div>
           </div>
         </div>
@@ -1000,7 +1049,7 @@ export function AlumdoorSalesSheetV2() {
           </div>
           <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ghi chú</Label><Input className="h-8 rounded-none" value={note} disabled={submitted} onChange={(event) => setNote(event.target.value)} /></div>
           <div className="flex min-h-5 flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
-            {canonicalGroup ? <span>Nhóm công thức: {canonicalGroup}</span> : null}
+            {canonicalGroup ? <span>Công thức theo: {canonicalGroup}</span> : null}
             {currency ? <span>{currency}</span> : null}
             {createdOrder?.name ? <span className="font-semibold text-slate-800">{String(createdOrder.name)}</span> : null}
             {submitted ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Đã xác nhận</span> : null}
@@ -1089,13 +1138,14 @@ function LineDetailV2({ line, index, submitted, thicknessOptions, patchLine, cho
     <div className="grid gap-1.5"><Label>Sản phẩm *</Label><SheetLink doctype="Item" value={line.itemCode} onChange={(value) => void chooseItem(index, value)} readOnly={submitted} required fieldname={`detail_item_${index}`} /></div>
     <div className="grid gap-1.5"><Label>Màu sắc{line.requireColor ? " *" : ""}</Label>{line.itemCode && line.requireColor ? <SheetLink doctype="Item Color" value={line.color} onChange={(color) => patchLine(index, { color, formula: null })} readOnly={submitted} required fieldname={`detail_color_${index}`} /> : <Input value="" readOnly />}</div>
     <div className="grid gap-1.5"><Label>Độ dày</Label><select className="h-9 border bg-white px-2 text-sm" value={line.thickness} disabled={submitted || line.fixedThickness || line.mode !== "WIDTH"} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{line.thickness && !thicknessOptions.includes(line.thickness) ? <option value={line.thickness}>{line.thickness} mm</option> : null}{thicknessOptions.map((value) => <option key={value} value={value}>{value} mm</option>)}</select></div>
-    <div className="grid gap-1.5"><Label>Cao (m)</Label><Input value={line.height} disabled={submitted || !(line.mode === "HEIGHT" || line.mode === "AREA")} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div>
+    <div className="grid gap-1.5"><Label>{heightBasisTitle(line.heightBasis)} (m)</Label><Input value={line.height} disabled={submitted || !(line.mode === "HEIGHT" || line.mode === "AREA")} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>{widthBasisTitle(line.widthBasis)} (m)</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>DT (m²)</Label><Input value={areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)} readOnly /></div>
     <div className="grid gap-1.5"><Label>SL *</Label><Input value={line.qty} disabled={submitted} onChange={(event) => patchLine(index, { qty: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>Đơn giá</Label><Input value={line.rate == null ? "" : money(line.rate)} readOnly /></div>
     <div className="grid gap-1.5"><Label>ĐVT</Label><select className="h-9 border bg-white px-2 text-sm font-semibold text-sky-800" value={line.uom} disabled={submitted || !uoms.length} onChange={(event) => void changeUom(index, event.target.value)}>{uoms.map((uom) => <option key={uom} value={uom}>{uom}</option>)}</select></div>
     <div className="grid gap-1.5"><Label className="text-emerald-700">Chiết khấu %</Label><Input className="border-emerald-300 bg-emerald-50 font-semibold text-emerald-900" value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(index, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} /></div>
+    <div className="grid gap-1.5"><Label>Thành tiền tạm tính</Label><Input value={line.rate == null || previewBillableQty(line) <= 0 ? "" : money(previewNetAmount(line))} readOnly /></div>
     {line.error ? <div className="sm:col-span-2 xl:col-span-3 border border-red-300 bg-red-50 p-2 text-sm text-red-700">{line.error}</div> : null}
   </div>;
 }
