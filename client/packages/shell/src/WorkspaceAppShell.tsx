@@ -5,4 +5,5 @@ export type {
   Breadcrumb,
   NotificationItem,
   WorkspaceTab,
+  WorkspaceNavigationPolicy,
 } from "./AppShell.js";

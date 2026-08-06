@@ -6,9 +6,10 @@ import {
   AppShell as BaseAppShell,
   type AppShellProps,
   type NavItem,
+  type WorkspaceNavigationPolicy,
 } from "./AppShell.js";
 import { ChangePasswordDialog } from "./auth/ChangePasswordDialog.js";
-import { ForgeBrandLogo, isAlumdoorSurface } from "./BrandLogo.js";
+import { ForgeBrandLogo } from "./BrandLogo.js";
 import { ThemeWelcomeDialog } from "./ThemeWelcomeDialog.js";
 import {
   buildWorkspaceModules,
@@ -17,7 +18,7 @@ import {
   type WorkspaceModule,
 } from "./workspace-navigation.js";
 
-export type { AppShellProps, NavItem, Breadcrumb, NotificationItem } from "./AppShell.js";
+export type { AppShellProps, NavItem, Breadcrumb, NotificationItem, WorkspaceNavigationPolicy } from "./AppShell.js";
 
 const STORAGE_KEY = "mf-workspace-module";
 const accountAdapter = new FrappeAdapterImpl({});
@@ -26,91 +27,32 @@ function normalizedGroup(label: string | undefined): string {
   return (label ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
 }
 
-const ALUMDOOR_SIDEBAR_GROUPS = new Set([
-  "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
-  "bao cao", "danh muc", "he thong", "quy kho",
-]);
-
-const ALUMDOOR_HR_WORKSPACE = "Nhân sự & Tiền lương";
-const ALUMDOOR_HR_GROUPS = new Set([
-  "nhan su", "vong doi nhan su", "nghi phep", "cham cong & ca", "luong & phuc loi", "chi phi nhan vien",
-]);
-const ALUMDOOR_HR_KEYS = new Set([
-  "Employee",
-  "Employment Contract",
-  "Leave Application",
-  "Attendance",
-  "Employee Advance",
-  "Additional Salary",
-  "payroll-entry",
-  "salary-slip",
-  "Salary Bank Batch",
-]);
-
-const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {
-  "report:Đơn hàng theo khách": ["Bán hàng"],
-  "report:Báo giá theo khách": ["Bán hàng"],
-  "report:Lắp đặt theo đội": ["Bán hàng"],
-  "report:Mua hàng theo nhà cung cấp": ["Mua hàng"],
-  "report:Đơn mua chưa nhận đủ": ["Mua hàng"],
-  "report:Stock Balance": ["Kho"],
-  "report:Stock Ledger": ["Kho"],
-  "report:Lệnh sản xuất theo mặt hàng": ["Sản xuất"],
-  "report:Work Order Progress": ["Sản xuất"],
-  "report:Công nợ theo khách hàng": ["Công nợ"],
-  "report:Accounts Receivable": ["Công nợ"],
-  "report:Accounts Payable": ["Công nợ"],
-  "report:hr-headcount-by-department": [ALUMDOOR_HR_WORKSPACE],
-  "report:hr-personnel-document-expiry": [ALUMDOOR_HR_WORKSPACE],
-  "report:hr-salary-bank-batch-register": [ALUMDOOR_HR_WORKSPACE],
-};
-
-const ALUMDOOR_MASTER_WORKSPACES: Record<string, string[]> = {
-  Item: ["Bán hàng", "Kho", "Mua hàng", "Sản xuất", "Bảo hành"],
-  "Item Group": ["Kho", "Sản xuất"],
-  UOM: ["Kho", "Mua hàng", "Sản xuất"],
-  Warehouse: ["Kho", "Mua hàng", "Sản xuất"],
-  Customer: ["Bán hàng", "Công nợ", "Bảo hành"],
-  Supplier: ["Mua hàng", "Công nợ", "Bảo hành"],
-  "Price List": ["Bán hàng"],
-  "Item Price": ["Bán hàng"],
-  "Pricing Rule": ["Bán hàng"],
-  "Cutting Policy": ["Sản xuất"],
-  "Measurement Profile": ["Kho", "Sản xuất"],
-  "Item Color": ["Kho", "Sản xuất"],
-  "Material Grade": ["Kho", "Sản xuất"],
-  "Material Specification": ["Kho", "Sản xuất"],
-  "Item Attribute": ["Kho", "Sản xuất"],
-  "Supplier Item": ["Mua hàng"],
-  Brand: ["Bán hàng", "Mua hàng"],
-  Manufacturer: ["Mua hàng"],
-  "Lý do huỷ": ["Kho"],
-  "Nguyên nhân chênh lệch": ["Kho"],
-};
-
 function isCatalogNavigation(item: NavItem): boolean {
   return item.key === "__catalog" || normalizedGroup(item.group).startsWith("ung dung · ");
 }
 
-function isAlumdoorHrNavigation(item: NavItem): boolean {
-  return ALUMDOOR_HR_GROUPS.has(normalizedGroup(item.group)) && ALUMDOOR_HR_KEYS.has(item.key);
+/**
+ * Apply one data-only presentation policy to already-authorized navigation.
+ *
+ * The shared shell intentionally knows no app/vertical names. A product composition may
+ * hide or regroup entries, but it cannot create permission, routes or business state here.
+ */
+function projectWorkspaceNavigation(items: NavItem[], policy?: WorkspaceNavigationPolicy): NavItem[] {
+  const hidden = new Set(policy?.hiddenKeys ?? []);
+  const allowedGroups = policy?.allowedGroups?.length
+    ? new Set(policy.allowedGroups.map(normalizedGroup))
+    : undefined;
+  return items
+    .filter((item) => !isCatalogNavigation(item) && !hidden.has(item.key))
+    .map((item) => {
+      const group = policy?.groupByKey?.[item.key];
+      return group ? { ...item, group } : item;
+    })
+    .filter((item) => !allowedGroups || allowedGroups.has(normalizedGroup(item.group)));
 }
 
-function isVisibleProductNavigation(item: NavItem): boolean {
-  if (!isAlumdoorSurface()) return !isCatalogNavigation(item);
-  if (item.key === "catalog") return false;
-  const group = normalizedGroup(item.group);
-  if (ALUMDOOR_HR_GROUPS.has(group)) return ALUMDOOR_HR_KEYS.has(item.key);
-  return !isCatalogNavigation(item) && ALUMDOOR_SIDEBAR_GROUPS.has(group);
-}
-
-function projectProductNavigation(item: NavItem): NavItem {
-  if (!isAlumdoorSurface() || !isAlumdoorHrNavigation(item)) return item;
-  return { ...item, group: ALUMDOOR_HR_WORKSPACE };
-}
-
-function scopedWorkspaceMeta(items: NavItem[], module: WorkspaceModule, affinity: Record<string, string[]>): NavItem[] {
-  if (!isAlumdoorSurface()) return items;
+function scopedWorkspaceMeta(items: NavItem[], module: WorkspaceModule, affinity?: Record<string, string[]>): NavItem[] {
+  if (!affinity) return items;
   const target = normalizedGroup(module.label);
   return items.filter((item) => (affinity[item.key] ?? []).some((workspace) => normalizedGroup(workspace) === target));
 }
@@ -320,12 +262,10 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
  * Khi menu không khai `group`, component rơi về AppShell cũ để không phá app đơn giản.
  */
 export function AppShell(props: AppShellProps) {
-  /**
-   * Alumdoor nhận các nhóm nghiệp vụ của vertical, Quỹ kho từ Kế toán Việt Nam và một
-   * projection HCM/payroll tối giản. Các app cài kèm vẫn giữ route/dữ liệu nhưng không
-   * được tự biến toàn bộ suite của chúng thành sidebar sản phẩm.
-   */
-  const sidebarNav = useMemo(() => props.nav.filter(isVisibleProductNavigation).map(projectProductNavigation), [props.nav]);
+  const sidebarNav = useMemo(
+    () => projectWorkspaceNavigation(props.nav, props.workspaceNavigationPolicy),
+    [props.nav, props.workspaceNavigationPolicy],
+  );
   const modules = useMemo(() => buildWorkspaceModules(sidebarNav), [sidebarNav]);
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
@@ -357,8 +297,8 @@ export function AppShell(props: AppShellProps) {
   const shellProps: AppShellProps = {
     ...props,
     nav: sidebarNav,
-    brandMark: props.brandMark ?? <ForgeBrandLogo size={isAlumdoorSurface() ? 44 : 28} />,
-    brandLogoOnly: props.brandLogoOnly ?? isAlumdoorSurface(),
+    brandMark: props.brandMark ?? <ForgeBrandLogo size={props.brandMarkSize ?? 28} />,
+    brandLogoOnly: props.brandLogoOnly ?? false,
     onChangePassword: props.onChangePassword ?? (() => setPasswordOpen(true)),
     onLogoutOtherSessions: logoutOtherSessions,
   };
@@ -410,8 +350,8 @@ export function AppShell(props: AppShellProps) {
     const activeSidebarKey = indexHubKey(sidebarNav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
     const allReportItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
     const allMasterItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
-    const reportItems = scopedWorkspaceMeta(allReportItems, selectedModule, ALUMDOOR_REPORT_WORKSPACES);
-    const masterItems = scopedWorkspaceMeta(allMasterItems, selectedModule, ALUMDOOR_MASTER_WORKSPACES);
+    const reportItems = scopedWorkspaceMeta(allReportItems, selectedModule, props.workspaceNavigationPolicy?.reportAffinities);
+    const masterItems = scopedWorkspaceMeta(allMasterItems, selectedModule, props.workspaceNavigationPolicy?.masterAffinities);
 
     shell = (
       <BaseAppShell

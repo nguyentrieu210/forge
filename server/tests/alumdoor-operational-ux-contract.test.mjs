@@ -10,6 +10,7 @@ import { readBriefSource } from "../scripts/lib/read-brief-source.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const briefPath = path.resolve(here, "../briefs/alumdoor-v2.json");
 const shellPath = path.resolve(here, "../../client/packages/shell/src/WorkspaceAppShellV2.tsx");
+const runtimeProfilePath = path.resolve(here, "../../client/apps/runtime/src/experience-registry.tsx");
 const hrmPath = path.resolve(here, "../apps-src/hrm/app.json");
 
 const STOCK_KEYS = [
@@ -80,8 +81,11 @@ test("Alumdoor 2.3.1 exposes action-first operational strips beyond Sales and Pu
   }
 });
 
-test("Operational reports stay contextual instead of being re-owned by the Alumdoor sidecar", async () => {
-  const shell = await readFile(shellPath, "utf8");
+test("Operational report affinity is app-composition data, not shared-shell business knowledge", async () => {
+  const [shell, profile] = await Promise.all([
+    readFile(shellPath, "utf8"),
+    readFile(runtimeProfilePath, "utf8"),
+  ]);
   for (const [key, workspace] of [
     ["report:Stock Balance", "Kho"],
     ["report:Stock Ledger", "Kho"],
@@ -91,29 +95,33 @@ test("Operational reports stay contextual instead of being re-owned by the Alumd
     ["report:Accounts Receivable", "Công nợ"],
     ["report:Accounts Payable", "Công nợ"],
   ]) {
-    assert.ok(shell.includes(`"${key}": ["${workspace}"]`), `${key} must stay near ${workspace} in ProcessPanel without changing report ownership`);
+    assert.ok(profile.includes(`"${key}": ["${workspace}"]`), `${key} must stay near ${workspace} in the app composition policy`);
+    assert.equal(shell.includes(key), false, `${key} must not leak into the shared shell`);
   }
+  assert.match(shell, /workspaceNavigationPolicy\?\.reportAffinities/);
 });
 
-test("Alumdoor projects core HR and payroll into one operator workspace without shrinking shared HRM", async () => {
-  const [shell, hrmRaw] = await Promise.all([
+test("Alumdoor projects core HR and payroll through app policy without shrinking shared HRM", async () => {
+  const [shell, profile, hrmRaw] = await Promise.all([
     readFile(shellPath, "utf8"),
+    readFile(runtimeProfilePath, "utf8"),
     readFile(hrmPath, "utf8"),
   ]);
   const hrm = JSON.parse(hrmRaw);
   const installedKeys = new Set(hrm.nav.map((entry) => entry.key));
 
   for (const key of HR_KEYS) assert.ok(installedKeys.has(key), `${key} must come from canonical HRM navigation`);
-  assert.match(shell, /const ALUMDOOR_HR_WORKSPACE = "Nhân sự & Tiền lương"/);
-  assert.match(shell, /"nghi phep"/);
-  assert.match(shell, /"luong & phuc loi"/);
-  assert.match(shell, /"chi phi nhan vien"/);
-  for (const key of HR_KEYS) assert.ok(shell.includes(`"${key}"`), `${key} must be whitelisted for Alumdoor`);
-  assert.match(shell, /return \{ \.\.\.item, group: ALUMDOOR_HR_WORKSPACE \}/);
+  assert.match(profile, /const ALUMDOOR_HR_WORKSPACE = "Nhân sự & Tiền lương"/);
+  for (const key of HR_KEYS) {
+    const encoded = /^[A-Za-z]+$/.test(key) ? `${key}: ALUMDOOR_HR_WORKSPACE` : `"${key}": ALUMDOOR_HR_WORKSPACE`;
+    assert.ok(profile.includes(encoded), `${key} must be projected into the Alumdoor HR/payroll workspace`);
+  }
+  assert.equal(shell.includes("ALUMDOOR_HR_WORKSPACE"), false, "shared shell must not own the Alumdoor HR workspace");
+  assert.equal(shell.includes("Nhân sự & Tiền lương"), false, "shared shell must stay vertical-neutral");
 
+  const hrProjectionBlock = profile.slice(profile.indexOf("const ALUMDOOR_HR_GROUP_BY_KEY"), profile.indexOf("const ALUMDOOR_REPORT_WORKSPACES"));
   for (const excluded of ["Job Applicant", "Interview", "Appraisal", "Training Event", "Talent Pool"]) {
     assert.ok(installedKeys.has(excluded), `${excluded} remains installed in shared HRM`);
-    const hrKeyBlock = shell.slice(shell.indexOf("const ALUMDOOR_HR_KEYS"), shell.indexOf("const ALUMDOOR_REPORT_WORKSPACES"));
-    assert.equal(hrKeyBlock.includes(`"${excluded}"`), false, `${excluded} must not enter Alumdoor daily HR/payroll sidebar`);
+    assert.equal(hrProjectionBlock.includes(`"${excluded}"`), false, `${excluded} must not enter Alumdoor daily HR/payroll sidebar`);
   }
 });

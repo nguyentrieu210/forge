@@ -21,6 +21,7 @@ export {
   type Breadcrumb,
   type NotificationItem,
   type WorkspaceTab,
+  type WorkspaceNavigationPolicy,
 } from "./WorkspaceAppShell.js";
 export { ForgeBrandLogo, type ForgeBrandLogoProps } from "./BrandLogo.js";
 export { I18nProvider, useI18n, useT, useLocale, type Locale } from "./i18n/index.js";

@@ -14,6 +14,28 @@ export interface NavItem {
   keywords?: string[];
 }
 
+/**
+ * Pure presentation policy for the shared two-level workspace shell.
+ *
+ * Business apps may curate dependency navigation without teaching the shared shell any
+ * vertical names. This is deliberately data-only: no render callbacks, no permission
+ * authority and no business computation. The server still owns permission and the nav
+ * entries themselves; this policy only projects which already-authorized entries belong
+ * in the daily workspace and which reports/masters sit beside each module.
+ */
+export interface WorkspaceNavigationPolicy {
+  /** After optional group projection, keep only these sidebar groups. Omit for all groups. */
+  allowedGroups?: string[];
+  /** Hide specific already-authorized nav keys from the product workspace. */
+  hiddenKeys?: string[];
+  /** Presentation-only regrouping for dependency-owned nav entries. */
+  groupByKey?: Record<string, string>;
+  /** Report nav key -> workspace labels where the report is contextual. */
+  reportAffinities?: Record<string, string[]>;
+  /** Master-data nav key -> workspace labels where the master is contextual. */
+  masterAffinities?: Record<string, string[]>;
+}
+
 export interface Breadcrumb {
   label: string;
   onClick?: () => void;
@@ -46,10 +68,12 @@ export interface AppShellProps {
   brand?: string;
   brandMode?: BrandMode;
   brandMark?: ReactNode;
+  brandMarkSize?: number;
   brandLogoOnly?: boolean;
   nav: NavItem[];
   activeKey: string;
   onNavigate: (key: string) => void;
+  workspaceNavigationPolicy?: WorkspaceNavigationPolicy;
 
   /** Retained only for source compatibility with V3-era callers. V2 ignores App Rail. */
   railNav?: NavItem[];
