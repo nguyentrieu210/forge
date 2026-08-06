@@ -2,6 +2,7 @@ import { useLayoutEffect } from "react";
 import { useMetaForge } from "@metaforge/views/provider";
 import { installAlumdoorSalesCompanyContextBridge } from "./AlumdoorSalesCompanyContextBridge.js";
 import { AlumdoorSalesSheetV2 } from "./AlumdoorSalesSheetV2.js";
+import "./AlumdoorSalesSheetCompact.css";
 
 /**
  * One operational sales surface for Alumdoor.
@@ -22,5 +23,5 @@ export function AlumdoorSalesModeWorkspace() {
     [adapter, company, currency],
   );
 
-  return <AlumdoorSalesSheetV2 />;
+  return <div className="alumdoor-sales-sheet-compact h-full min-w-0 w-full"><AlumdoorSalesSheetV2 /></div>;
 }
