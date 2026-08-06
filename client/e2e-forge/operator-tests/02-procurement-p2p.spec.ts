@@ -1,6 +1,13 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { annotate, browserRequest, chooseLink, login, openModule, OperatorAudit, readiness, requireLocalMutation, unwrap } from "./harness.js";
 
+async function listPurchaseOrders(page: Page): Promise<string[]> {
+  const params = new URLSearchParams({ fields: JSON.stringify(["name"]), order_by: "creation desc", limit_page_length: "100" });
+  const response = await browserRequest(page, `/api/resource/${encodeURIComponent("Purchase Order")}?${params}`);
+  if (response.status !== 200) return [];
+  return (unwrap(response.body) as Array<{ name?: string }>).map((row) => row.name ?? "").filter(Boolean);
+}
+
 async function chooseCellLink(page: Page, cell: Locator, value: string) {
   const trigger = cell.getByRole("button").first();
   await expect(trigger).toBeVisible();
@@ -37,6 +44,7 @@ test("E2E-02 buyer creates Purchase Order from the declared Mua hàng screen @co
   await login(page, audit);
   const ready = await readiness(page, [["Supplier", "QA-SUPPLIER"], ["Item", "QA-PURCHASE-ITEM"], ["Warehouse", "K36"]]);
   test.skip(!ready.ready, `BLOCKED_DATA missing ${ready.missing.join(", ")}`);
+  const before = new Set(await listPurchaseOrders(page));
 
   await openModule(page, "Mua hàng");
   const tabs = page.getByRole("navigation", { name: "Nghiệp vụ Mua hàng" });
@@ -51,31 +59,27 @@ test("E2E-02 buyer creates Purchase Order from the declared Mua hàng screen @co
   }
 
   await chooseCellLink(page, await cellFor(page, "items", 0, "item_code"), "QA-PURCHASE-ITEM");
-  const qty = await cellFor(page, "items", 0, "qty");
-  await qty.locator("input").fill("2");
-  const rate = await cellFor(page, "items", 0, "rate");
-  await rate.locator("input").fill("100000");
+  await (await cellFor(page, "items", 0, "qty")).locator("input").fill("2");
+  await (await cellFor(page, "items", 0, "rate")).locator("input").fill("100000");
   await audit.checkpoint("Purchase order input ready");
 
   const save = page.getByRole("button", { name: "Lưu", exact: true }).last();
   await expect(save).toBeEnabled();
   await save.click();
   await confirmIfDialog(page, "Lưu");
-  await expect(page.locator("body")).toContainText(/Purchase Order|Đơn mua|DMH-|PO-/i, { timeout: 20_000 });
+  await expect(page.locator("[data-action-result]")).toBeVisible({ timeout: 20_000 });
 
-  // Authoritative readback: the action result must expose a canonical document name that can be reopened.
-  const text = await page.locator("body").innerText();
-  const match = text.match(/\b(?:DMH|PO|PUR-ORD)[A-Z0-9._/-]*\d[A-Z0-9._/-]*\b/i);
-  test.skip(!match, "BLOCKED_CONFIG action completed but no canonical Purchase Order identifier was exposed for readback");
-  const po = match![0];
-  const readback = await browserRequest(page, `/api/resource/${encodeURIComponent("Purchase Order")}/${encodeURIComponent(po)}`);
+  const after = await listPurchaseOrders(page);
+  const po = after.find((name) => !before.has(name));
+  expect(po, "Mua hàng UI commit must create exactly one discoverable canonical Purchase Order").toBeTruthy();
+  const readback = await browserRequest(page, `/api/resource/${encodeURIComponent("Purchase Order")}/${encodeURIComponent(po!)}`);
   expect(readback.status, readback.text).toBe(200);
   expect(String((unwrap(readback.body) as Record<string, unknown>).supplier)).toBe("QA-SUPPLIER");
 
   const history = tabs.getByRole("button", { name: "Lịch sử mua hàng", exact: true });
   if (await history.count()) {
     await history.click();
-    await expect(page.locator("body")).toContainText(po);
+    await expect(page.locator("body")).toContainText(po!);
   }
   await audit.checkpoint("Procurement readback/history");
   await audit.finish(testInfo);
