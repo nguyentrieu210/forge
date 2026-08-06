@@ -14,6 +14,7 @@ import {
   type DocField,
   type DocTypeMeta,
 } from "@metaforge/core";
+import { defaultChildGridHiddenColumns, resolveChildGridColumns } from "@metaforge/views";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -161,6 +162,44 @@ check("new action rows use canonical defaults before legacy action defaults", ()
   assert.equal(row.mode, "canonical");
   assert.equal(typeof row.posting_date, "string");
   assert.equal(String(row.posting_date).length, 10);
+});
+
+check("ChildGrid columns are declaration-driven and independent of DocType business name", () => {
+  const child: DocTypeMeta = {
+    name: "Reference Child",
+    fields: [
+      { fieldname: "reference", label: "Reference", fieldtype: "Link", options: "Reference Master", in_list_view: 1 },
+      { fieldname: "qty", label: "Quantity", fieldtype: "Float", in_list_view: 1 },
+      { fieldname: "amount", label: "Amount", fieldtype: "Currency", read_only: 1, in_list_view: 1 },
+      { fieldname: "note", label: "Note", fieldtype: "Small Text" },
+    ],
+    viewPolicy: {
+      list: { enabled: true, columns: ["reference", "qty", "amount"] },
+      form: { enabled: true },
+      quickEntry: { enabled: true, fields: ["reference", "qty"] },
+    },
+    permissions: [],
+  };
+  const expected = ["reference", "qty", "amount"];
+  const neutral = resolveChildGridColumns(child, []).map((field) => field.fieldname);
+  const businessNamed = resolveChildGridColumns({ ...child, name: "Sales Order Item" }, []).map((field) => field.fieldname);
+  assert.deepEqual(neutral, expected);
+  assert.deepEqual(businessNamed, expected);
+  assert.deepEqual(defaultChildGridHiddenColumns(child, resolveChildGridColumns(child, []), false), ["amount"]);
+  assert.deepEqual(defaultChildGridHiddenColumns(child, resolveChildGridColumns(child, []), true), []);
+});
+
+check("ChildGrid falls back to in_list_view without adding undeclared business columns", () => {
+  const child: DocTypeMeta = {
+    name: "Purchase Order Item",
+    fields: [
+      { fieldname: "alpha", label: "Alpha", fieldtype: "Data", in_list_view: 1 },
+      { fieldname: "beta", label: "Beta", fieldtype: "Float", in_list_view: 1 },
+      { fieldname: "gamma", label: "Gamma", fieldtype: "Data" },
+    ],
+    permissions: [],
+  };
+  assert.deepEqual(resolveChildGridColumns(child, []).map((field) => field.fieldname), ["alpha", "beta"]);
 });
 
 console.log(`metadata intelligence selfcheck: ${passed} checks passed`);
