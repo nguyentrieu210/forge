@@ -54,6 +54,7 @@ export function NewFormContainer(props: NewFormContainerProps) {
   );
   const capsQ = useCapabilities(doctype);
   const caps = capsQ.data ?? NO_CAPS;
+  const isSingle = metaQ.data?.issingle === 1;
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string> | undefined>();
   const [dirty, setDirty] = useState(false);
@@ -120,11 +121,11 @@ export function NewFormContainer(props: NewFormContainerProps) {
         queryClient.invalidateQueries({ queryKey: [scopeKey, "count", doctype], refetchType: "active" }),
         queryClient.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),
       ]).catch(() => undefined);
-      if (saveIntentRef.current === "continue") {
+      if (!isSingle && saveIntentRef.current === "continue") {
         toast.success(`${t("form.created")} ${created.name} — ${t("form.continue_new_record")}`);
         setResetSeq((s) => s + 1);
       } else {
-        toast.success(t("form.created"));
+        toast.success(isSingle ? "Đã lưu cài đặt" : t("form.created"));
         props.onCreated?.(String(created.name));
       }
     } catch (e) {
@@ -155,9 +156,9 @@ export function NewFormContainer(props: NewFormContainerProps) {
         hideDefaultActions
         hideHeader={props.presentation !== "page"}
         footerActions={<>
-          <Button type="button" variant="outline" disabled={saving} onClick={requestCancel}>{t("common.cancel")}</Button>
-          <Button type="submit" variant="outline" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "continue"; }}>{t("form.save_and_new")}</Button>
-          <Button type="submit" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "close"; }}>{saving ? t("form.saving") : t("form.save_and_open")}</Button>
+          {!isSingle && props.onCancel ? <Button type="button" variant="outline" disabled={saving} onClick={requestCancel}>{t("common.cancel")}</Button> : null}
+          {!isSingle ? <Button type="submit" variant="outline" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "continue"; }}>{t("form.save_and_new")}</Button> : null}
+          <Button type="submit" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "close"; }}>{saving ? t("form.saving") : isSingle ? "Lưu" : t("form.save_and_open")}</Button>
         </>}
       />
       <ConfirmDialog
