@@ -1,0 +1,83 @@
+name: Omnichannel Commerce CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "server/packages/social-commerce/**"
+      - "server/packages/clouderp-stock/**"
+      - "server/packages/integration-hub/**"
+      - "server/packages/clouderp-selling/src/crm-external-identity*"
+      - "server/packages/clouderp-selling/src/crm-customer-360*"
+      - "server/packages/clouderp-selling/src/registry.ts"
+      - "server/packages/clouderp-selling/src/index.ts"
+      - "server/apps-src/social-commerce/**"
+      - "server/apps-src/crm/**"
+      - "server/apps/tenant-worker/src/aggregate-do.ts"
+      - "server/apps/tenant-worker/src/index-core.ts"
+      - "server/apps/tenant-worker/src/env.ts"
+      - "server/apps/tenant-worker/src/marketplace-oauth-*.ts"
+      - "server/apps/tenant-worker/src/marketplace-fulfillment-read.ts"
+      - "server/apps/social-ingress-worker/**"
+      - "server/migrations/control/0004_marketplace_oauth.sql"
+      - "server/migrations/tenant/0117_commercial_stock_reservations.sql"
+      - "server/migrations/tenant/0118_marketplace_settlement_evidence.sql"
+      - "server/migrations/tenant/0119_marketplace_sync_state.sql"
+      - "server/migrations/tenant/0120_marketplace_credential_vault.sql"
+      - "server/migrations/tenant/0121_marketplace_provider_order_state.sql"
+      - "server/migrations/tenant/0122_marketplace_mapping_exceptions.sql"
+      - "server/migrations/tenant/0123_marketplace_sla_context.sql"
+      - "server/tests/ws16-*.test.mjs"
+      - "client/apps/runtime/src/experiences/SocialCommerce.tsx"
+      - "client/apps/runtime/src/experiences/Marketplace*.tsx"
+      - "docs/OMNICHANNEL_COMMERCE_ERP.md"
+      - "docs/agents/workstreams/WS16-OMNICHANNEL-MARKETPLACE-20260805.md"
+      - ".github/workflows/commerce-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: omnichannel-commerce-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feature/omnichannel-commerce-erp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build CloudForge
+        run: pnpm --filter cloudforge run build
+
+      - name: Validate social-commerce package
+        working-directory: server
+        run: node scripts/pack-app.mjs apps-src/social-commerce --check
+
+      - name: Run omnichannel commerce contract tests
+        working-directory: server
+        run: node --test tests/ws16-marketplace-order-source-contract.test.mjs tests/ws16-omnichannel-closure-contract.test.mjs tests/ws16-marketplace-signing.test.mjs tests/ws16-marketplace-runtime.test.mjs tests/ws16-marketplace-authorization.test.mjs tests/ws16-marketplace-customer-identity.test.mjs tests/ws16-customer-identity-metadata.test.mjs tests/ws16-customer-identity-opaque.test.mjs tests/ws16-marketplace-tiktok-watermark.test.mjs tests/ws16-marketplace-connection-authority.test.mjs tests/ws16-marketplace-sync-runner-contract.test.mjs tests/ws16-marketplace-credential-vault.test.mjs tests/ws16-marketplace-sync-config-contract.test.mjs tests/ws16-marketplace-maintenance-contract.test.mjs tests/ws16-marketplace-oauth-broker-contract.test.mjs tests/ws16-marketplace-fulfillment-ui-contract.test.mjs tests/ws16-marketplace-settlement-ui-contract.test.mjs tests/ws16-marketplace-provider-order-watermark.test.mjs tests/ws16-marketplace-mapping-exception.test.mjs tests/ws16-marketplace-order-cockpit-ui.test.mjs tests/ws16-marketplace-sla-policy.test.mjs tests/ws16-marketplace-sla-ui.test.mjs tests/ws16-marketplace-bi-report.test.mjs
+
+      - name: Build MetaForge runtime
+        run: pnpm --filter metaforge run build

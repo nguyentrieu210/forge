@@ -1,0 +1,14 @@
+{
+  "name": "CRM Customer 360 External Identity",
+  "module": "CRM",
+  "istable": true,
+  "fields": [
+    { "fieldname": "identity", "label": "Identity", "fieldtype": "Link", "options": "CRM Customer External Identity", "required": true, "in_list_view": true },
+    { "fieldname": "provider", "label": "Kênh", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "scope_label", "label": "Gian hàng / phạm vi", "fieldtype": "Data", "in_list_view": true },
+    { "fieldname": "identity_status", "label": "Trạng thái", "fieldtype": "Data", "required": true, "in_list_view": true },
+    { "fieldname": "linked_at", "label": "Liên kết lúc", "fieldtype": "Datetime", "required": true, "in_list_view": true }
+  ],
+  "permissions": [],
+  "revision": 1
+}

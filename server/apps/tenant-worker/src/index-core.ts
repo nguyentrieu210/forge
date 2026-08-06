@@ -1,4 +1,4 @@
-import { D1UserStore } from "../../../packages/auth/src/index.js";
+import { assertInternalService, D1UserStore } from "../../../packages/auth/src/index.js";
 import {
   AppHookDispatcher,
   AppInstaller,
@@ -9,16 +9,28 @@ import {
   type HookTarget,
 } from "../../../packages/app-registry/src/index.js";
 import type { DomainEvent, JsonObject, JsonValue } from "../../../packages/contracts/src/index.js";
-import { errorResponse, jsonResponse } from "../../../packages/core/src/index.js";
+import { errorResponse, errors, jsonResponse, readJson } from "../../../packages/core/src/index.js";
 import {
   runWorkplaceScheduledNotifications,
   type WorkplaceMaintenanceResult,
 } from "../../../packages/frappe-api/src/index.js";
 import { D1MetadataStore } from "../../../packages/frappe-model/src/index.js";
+import {
+  buildMarketplaceCredentialMaterial,
+  buildMarketplaceCredentialRefreshState,
+  D1MarketplaceCredentialVault,
+} from "../../../packages/integration-hub/src/marketplace-credential-vault.js";
+import {
+  resolveMarketplaceConnection,
+  runMarketplaceMaintenance,
+} from "../../../packages/social-commerce/src/index.js";
 import baseWorker, {
   runMaintenance as runBaseMaintenance,
 } from "./index-core-base.js";
 import type { TenantEnv } from "./env.js";
+import { routeMarketplaceFulfillmentRead } from "./marketplace-fulfillment-read.js";
+import { routeMarketplaceOAuthDescriptor } from "./marketplace-oauth-internal.js";
+import { routeMarketplaceOAuthStart } from "./marketplace-oauth-start.js";
 
 export { AggregateCoordinator, runAlumdoorMaintenance } from "./index-core-base.js";
 
@@ -88,11 +100,36 @@ async function recordExtensionFailure(db: D1Database, tenantId: string, error: u
   ).bind(tenantId, "tenant-maintenance", message.slice(0, 1000)).run().catch(() => undefined);
 }
 
+function marketplaceDisabled() {
+  return {
+    enabled: false as const,
+    reason: "credential_key_unconfigured" as const,
+    selected: 0,
+    succeeded: 0,
+    skipped: 0,
+    failed: 0,
+    pages: 0,
+    records: 0,
+    idempotent_replays: 0,
+    failures: [],
+  };
+}
+
+async function runMarketplaceMaintenanceExtension(env: TenantEnv, tenantId: string) {
+  if (!env.MARKETPLACE_CREDENTIAL_KEK) return marketplaceDisabled();
+  return runMarketplaceMaintenance(
+    env.DB,
+    tenantId,
+    new D1MarketplaceCredentialVault(env.DB, env.MARKETPLACE_CREDENTIAL_KEK),
+  );
+}
+
 export async function runMaintenance(
   env: TenantEnv,
   tenantId: string,
 ): Promise<Awaited<ReturnType<typeof runBaseMaintenance>> & {
   workplace: WorkplaceMaintenanceResult;
+  marketplace: Awaited<ReturnType<typeof runMarketplaceMaintenanceExtension>>;
 }> {
   const base = await runBaseMaintenance(withoutDispatcher(env), tenantId);
   try {
@@ -101,7 +138,8 @@ export async function runMaintenance(
       ? (await dispatcherFor(env).sweep(tenantId, now)).length
       : 0;
     const workplace = await runWorkplaceScheduledNotifications(env.DB, tenantId, now);
-    return { ...base, hooks, workplace };
+    const marketplace = await runMarketplaceMaintenanceExtension(env, tenantId);
+    return { ...base, hooks, workplace, marketplace };
   } catch (error) {
     await recordExtensionFailure(env.DB, tenantId, error);
     throw error;
@@ -123,11 +161,132 @@ function jsonResponseFrom(base: Response, body: JsonObject): Response {
   });
 }
 
+async function routeMarketplaceCredentialAdmin(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+): Promise<Response | null> {
+  const match = url.pathname.match(/^\/internal\/marketplace\/connections\/([^/]+)\/credential$/);
+  if (!match || !["GET", "PUT", "DELETE"].includes(request.method)) return null;
+  assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+  if (!env.MARKETPLACE_CREDENTIAL_KEK) throw errors.misconfigured("Marketplace credential vault is not configured");
+  const tenantId = internalTenant(request, env);
+  const connectionId = decodedId(match[1]!, "connection_id", 160);
+  const resolved = await resolveMarketplaceConnection(env.DB, tenantId, connectionId);
+  const secretRef = resolved.connection.secret_ref;
+  if (!secretRef) throw errors.misconfigured("Marketplace Connection has no secret_ref");
+  const vault = new D1MarketplaceCredentialVault(env.DB, env.MARKETPLACE_CREDENTIAL_KEK);
+
+  if (request.method === "GET") {
+    const status = await vault.status({
+      tenant_id: tenantId,
+      connection_id: connectionId,
+      secret_ref: secretRef,
+      provider: resolved.provider,
+    });
+    return jsonResponse({
+      connection_id: connectionId,
+      provider: resolved.provider,
+      secret_ref: secretRef,
+      credential_status: !status.active
+        ? "unavailable"
+        : status.reauthorization_required
+          ? "reauthorization_required"
+          : "active",
+      refresh_managed: status.refresh_managed,
+      access_expires_at: status.access_expires_at,
+      refresh_expires_at: status.refresh_expires_at,
+    });
+  }
+
+  const body = await readJson<JsonObject>(request, 64_000);
+  const actorId = shortText(body.actor_id, "actor_id", 320);
+  if (request.method === "DELETE") {
+    const revoked = await vault.revoke({
+      tenant_id: tenantId,
+      connection_id: connectionId,
+      secret_ref: secretRef,
+      actor_id: actorId,
+    });
+    return jsonResponse({
+      committed: true,
+      connection_id: connectionId,
+      provider: resolved.provider,
+      secret_ref: secretRef,
+      credential_status: revoked ? "revoked" : "already_inactive",
+    });
+  }
+
+  const credentials = objectField(body.credentials, "credentials");
+  const now = new Date();
+  const material = buildMarketplaceCredentialMaterial(
+    resolved.provider,
+    resolved.connection.config,
+    credentials,
+  );
+  const refresh = buildMarketplaceCredentialRefreshState(resolved.provider, credentials, now);
+  const result = await vault.put({
+    tenant_id: tenantId,
+    connection_id: connectionId,
+    secret_ref: secretRef,
+    material,
+    ...(refresh ? { refresh } : {}),
+    actor_id: actorId,
+    now,
+  });
+  return jsonResponse({
+    committed: true,
+    connection_id: connectionId,
+    provider: result.provider,
+    secret_ref: result.secret_ref,
+    credential_status: "active",
+    refresh_managed: result.refresh_managed,
+    rotated: result.rotated,
+  }, result.rotated ? 200 : 201);
+}
+
+function internalTenant(request: Request, env: TenantEnv): string {
+  const routed = request.headers.get("x-cloudforge-tenant")?.trim() || null;
+  if (env.TENANT_ID && routed && routed !== env.TENANT_ID) throw errors.misconfigured("Tenant binding mismatch");
+  return shortText(env.TENANT_ID ?? routed, "tenant_id", 128);
+}
+
+function decodedId(value: string, field: string, max: number): string {
+  let decoded: string;
+  try { decoded = decodeURIComponent(value); }
+  catch { throw errors.validation(`${field} is invalid`); }
+  return shortText(decoded, field, max);
+}
+
+function shortText(value: unknown, field: string, max: number): string {
+  if (typeof value !== "string") throw errors.validation(`${field} is required`);
+  const normalized = value.normalize("NFC").trim();
+  if (!normalized || normalized.length > max || /[\r\n\0]/.test(normalized)) throw errors.validation(`${field} is invalid`);
+  return normalized;
+}
+
+function objectField(value: JsonValue | undefined, field: string): JsonObject {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`${field} must be a JSON object`);
+  return value as JsonObject;
+}
+
 export default {
   async fetch(request: Request, env: TenantEnv): Promise<Response> {
     const url = new URL(request.url);
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? "r5-maintenance";
     try {
+      const marketplaceFulfillmentResponse = await routeMarketplaceFulfillmentRead(request, url, env);
+      if (marketplaceFulfillmentResponse) return marketplaceFulfillmentResponse;
+
+      const marketplaceOAuthStartResponse = await routeMarketplaceOAuthStart(request, url, env);
+      if (marketplaceOAuthStartResponse) return marketplaceOAuthStartResponse;
+
+      const marketplaceOAuthDescriptorResponse = await routeMarketplaceOAuthDescriptor(request, url, env);
+      if (marketplaceOAuthDescriptorResponse) return marketplaceOAuthDescriptorResponse;
+
+      const marketplaceCredentialResponse = await routeMarketplaceCredentialAdmin(request, url, env);
+      if (marketplaceCredentialResponse) return marketplaceCredentialResponse;
+
       if (request.method === "POST" && url.pathname === "/internal/events") {
         const eventRequest = request.clone();
         // The unchanged core remains the authority for internal authentication,
@@ -143,7 +302,7 @@ export default {
 
       if (request.method === "POST" && url.pathname === "/internal/maintenance") {
         // Core validates the internal-service credential and performs every existing
-        // maintenance family with hook dispatch disabled. R5 then adds the two shared
+        // maintenance family with hook dispatch disabled. R5 then adds the shared
         // runtime families that must obey effective capability state.
         const response = await baseWorker.fetch(request, withoutDispatcher(env));
         if (!response.ok) return response;
@@ -155,7 +314,13 @@ export default {
           ? (await dispatcherFor(env).sweep(tenantId, now)).length
           : 0;
         const workplace = await runWorkplaceScheduledNotifications(env.DB, tenantId, now);
-        return jsonResponseFrom(response, { ...body, hooks, workplace: jsonSafe(workplace) });
+        const marketplace = await runMarketplaceMaintenanceExtension(env, tenantId);
+        return jsonResponseFrom(response, {
+          ...body,
+          hooks,
+          workplace: jsonSafe(workplace),
+          marketplace: jsonSafe(marketplace),
+        });
       }
 
       return baseWorker.fetch(request, env);

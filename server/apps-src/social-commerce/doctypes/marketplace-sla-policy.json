@@ -1,0 +1,23 @@
+{
+  "name": "Marketplace SLA Policy",
+  "label": "Chính sách SLA sàn",
+  "module": "Social Commerce",
+  "kind": "master",
+  "autoname": "field:channel_profile",
+  "title_field": "channel_profile",
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "channel_profile", "label": "Gian hàng", "fieldtype": "Link", "options": "Commerce Channel Profile", "required": true, "unique": true, "in_list_view": true, "in_standard_filter": true, "set_only_once": true },
+    { "fieldname": "metric", "label": "Chỉ tiêu SLA", "fieldtype": "Select", "options": "order_to_fulfillment", "required": true, "default": "order_to_fulfillment", "in_list_view": true, "set_only_once": true, "description": "Đo từ lúc Forge nhận đơn đến lúc có shipment/Delivery Note canonical đầu tiên." },
+    { "fieldname": "target_minutes", "label": "Mục tiêu (phút)", "fieldtype": "Int", "required": true, "in_list_view": true, "description": "Ngưỡng vi phạm SLA. Không có giá trị mặc định để tránh hard-code chính sách kinh doanh." },
+    { "fieldname": "warning_minutes", "label": "Cảnh báo trước (phút)", "fieldtype": "Int", "required": true, "in_list_view": true, "description": "Khoảng thời gian trước hạn để chuyển sang trạng thái Cần chú ý; phải nhỏ hơn mục tiêu." },
+    { "fieldname": "disabled", "label": "Ngừng áp dụng", "fieldtype": "Check", "default": 0, "in_list_view": true },
+    { "fieldname": "policy_note", "label": "Ghi chú chính sách", "fieldtype": "Text" }
+  ],
+  "permissions": [
+    { "role": "Social Commerce Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true },
+    { "role": "Sales Manager", "read": true, "write": true, "create": true, "print": true, "report": true },
+    { "role": "System Manager", "read": true, "write": true, "create": true, "print": true, "report": true, "export": true }
+  ],
+  "revision": 1
+}

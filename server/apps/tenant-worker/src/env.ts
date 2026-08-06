@@ -53,7 +53,14 @@ export interface TenantEnv {
    */
   DISPATCHER?: DispatchNamespace;
   SOCIAL_INGRESS?: Fetcher;
+  /** Facebook/social credential envelope key. Kept for the existing social ingress authority. */
   SOCIAL_CREDENTIAL_KEK?: string;
+  /**
+   * Marketplace credential envelope key for Shopee/Lazada/TikTok Shop.
+   * Deliberately separate from SOCIAL_CREDENTIAL_KEK so compromise/rotation of one
+   * integration family does not expose or invalidate the other.
+   */
+  MARKETPLACE_CREDENTIAL_KEK?: string;
   /**
    * Workers AI binding. Calls should pass through @cloudforge/ai-policy so model fallback,
    * privacy, cache and AI Gateway semantics remain centralized rather than app-specific.

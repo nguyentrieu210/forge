@@ -1,0 +1,83 @@
+name: Commerce Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: commerce-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN || secrets.CLOUDFLARE_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: d4d5a24d4e56f28f27fe58b64ef149a5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify preview credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Deploy isolated visual preview
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          SUBDOMAIN_JSON="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain")"
+          WORKERS_SUBDOMAIN="$(printf '%s' "$SUBDOMAIN_JSON" | node -e '
+            let body="";
+            process.stdin.on("data", chunk => body += chunk);
+            process.stdin.on("end", () => {
+              const data = JSON.parse(body);
+              if (!data.success || !data.result?.subdomain) process.exit(2);
+              process.stdout.write(data.result.subdomain);
+            });
+          ')"
+
+          pnpm --dir server exec wrangler deploy \
+            --config apps/commerce-preview-worker/wrangler.jsonc 2>&1 | tee /tmp/commerce-preview.log
+
+          PREVIEW_URL="https://forge-commerce-preview.${WORKERS_SUBDOMAIN}.workers.dev"
+          echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $PREVIEW_URL"
+
+      - name: Smoke preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 4 --retry-all-errors "${{ steps.preview.outputs.url }}/health" | grep -q '"ok":true'
+          curl --fail --silent --show-error --retry 4 --retry-all-errors "${{ steps.preview.outputs.url }}/" | grep -q 'Omnichannel Commerce'
+
+      - name: Publish preview URL
+        shell: bash
+        run: echo "### Omnichannel Commerce preview" >> "$GITHUB_STEP_SUMMARY" && echo "${{ steps.preview.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"

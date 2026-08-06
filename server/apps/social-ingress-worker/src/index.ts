@@ -2,19 +2,16 @@ import {
   deriveFacebookEventId, extractFacebookPageIds, hmacHex, verifyMetaSignature,
   type SocialQueueMessage,
 } from "../../../packages/social-commerce/src/index.js";
+import { routeMarketplaceOAuth, type MarketplaceOAuthEnv } from "./marketplace-oauth.js";
 
-interface Env {
-  CONTROL_DB: D1Database;
+interface Env extends MarketplaceOAuthEnv {
   ROUTES: KVNamespace;
   SOCIAL_EVENTS: Queue<SocialQueueMessage>;
-  DISPATCHER: DispatchNamespace;
   META_APP_SECRET: string;
   META_APP_ID: string;
   META_VERIFY_TOKEN: string;
   META_GRAPH_VERSION?: string;
-  PUBLIC_ORIGIN: string;
   PAGE_DIRECTORY_HMAC_SECRET: string;
-  INTERNAL_SERVICE_TOKEN: string;
 }
 
 interface SocialRoute { tenant_id: string; worker_name: string; status: string }
@@ -22,6 +19,9 @@ interface SocialRoute { tenant_id: string; worker_name: string; status: string }
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const marketplaceOAuthResponse = await routeMarketplaceOAuth(request, url, env);
+    if (marketplaceOAuthResponse) return marketplaceOAuthResponse;
+
     if (request.method === "POST" && url.pathname === "/internal/oauth/facebook/start") {
       if (!constantTimeEqual(request.headers.get("authorization") ?? "", `Bearer ${env.INTERNAL_SERVICE_TOKEN}`)) {
         return json({ error: { code: "INTERNAL_AUTH_REQUIRED" } }, 401);
