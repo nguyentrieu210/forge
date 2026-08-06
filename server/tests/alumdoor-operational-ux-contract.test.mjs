@@ -13,30 +13,21 @@ const shellPath = path.resolve(here, "../../client/packages/shell/src/WorkspaceA
 const hrmPath = path.resolve(here, "../apps-src/hrm/app.json");
 
 const STOCK_KEYS = [
-  "report:Tồn nhôm theo khổ",
   "Stock Entry",
   "action:de-xuat-lo-cat",
   "action:cat-nhom",
   "action:chot-so-so-kiem-ke",
   "Stock Reconciliation",
   "action:duyet-kiem-ke",
-  "report:Stock Ledger",
 ];
 
 const MANUFACTURING_KEYS = [
   "action:don-hang-thanh-san-xuat",
   "Work Order",
   "action:lap-tai-san-xuat",
-  "report:Work Order Progress",
-  "report:Lệnh sản xuất theo mặt hàng",
 ];
 
-const DEBT_KEYS = [
-  "Payment Entry",
-  "report:Công nợ theo khách hàng",
-  "report:Accounts Receivable",
-  "report:Accounts Payable",
-];
+const DEBT_KEYS = ["Payment Entry"];
 
 const WARRANTY_KEYS = [
   "action:mo-ho-so-bao-hanh",
@@ -56,7 +47,7 @@ const HR_KEYS = [
   "Salary Bank Batch",
 ];
 
-test("Alumdoor 2.3.1 exposes task-first operational strips beyond Sales and Purchase", async () => {
+test("Alumdoor 2.3.1 exposes action-first operational strips beyond Sales and Purchase", async () => {
   const brief = await readBriefSource(briefPath);
   const pkg = compileBrief(brief);
 
@@ -86,6 +77,21 @@ test("Alumdoor 2.3.1 exposes task-first operational strips beyond Sales and Purc
   }
   for (const installed of ["Cut Order", "Stock Reservation", "Bill of Materials", "Production Standard"]) {
     assert.ok(pkg.doctypes.some((entry) => entry.name === installed), `${installed} remains installed`);
+  }
+});
+
+test("Operational reports stay contextual instead of being re-owned by the Alumdoor sidecar", async () => {
+  const shell = await readFile(shellPath, "utf8");
+  for (const [key, workspace] of [
+    ["report:Stock Balance", "Kho"],
+    ["report:Stock Ledger", "Kho"],
+    ["report:Lệnh sản xuất theo mặt hàng", "Sản xuất"],
+    ["report:Work Order Progress", "Sản xuất"],
+    ["report:Công nợ theo khách hàng", "Công nợ"],
+    ["report:Accounts Receivable", "Công nợ"],
+    ["report:Accounts Payable", "Công nợ"],
+  ]) {
+    assert.ok(shell.includes(`"${key}": ["${workspace}"]`), `${key} must stay near ${workspace} in ProcessPanel without changing report ownership`);
   }
 });
 
