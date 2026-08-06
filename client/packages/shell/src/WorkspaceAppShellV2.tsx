@@ -31,8 +31,21 @@ const ALUMDOOR_SIDEBAR_GROUPS = new Set([
   "bao cao", "danh muc", "he thong", "quy kho",
 ]);
 
-const ALUMDOOR_HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong & ca"]);
-const ALUMDOOR_HR_KEYS = new Set(["Employee", "Attendance"]);
+const ALUMDOOR_HR_WORKSPACE = "Nhân sự & Tiền lương";
+const ALUMDOOR_HR_GROUPS = new Set([
+  "nhan su", "vong doi nhan su", "nghi phep", "cham cong & ca", "luong & phuc loi", "chi phi nhan vien",
+]);
+const ALUMDOOR_HR_KEYS = new Set([
+  "Employee",
+  "Employment Contract",
+  "Leave Application",
+  "Attendance",
+  "Employee Advance",
+  "Additional Salary",
+  "payroll-entry",
+  "salary-slip",
+  "Salary Bank Batch",
+]);
 
 const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {
   "report:Đơn hàng theo khách": ["Bán hàng"],
@@ -47,6 +60,9 @@ const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {
   "report:Công nợ theo khách hàng": ["Công nợ"],
   "report:Accounts Receivable": ["Công nợ"],
   "report:Accounts Payable": ["Công nợ"],
+  "report:hr-headcount-by-department": [ALUMDOOR_HR_WORKSPACE],
+  "report:hr-personnel-document-expiry": [ALUMDOOR_HR_WORKSPACE],
+  "report:hr-salary-bank-batch-register": [ALUMDOOR_HR_WORKSPACE],
 };
 
 const ALUMDOOR_MASTER_WORKSPACES: Record<string, string[]> = {
@@ -76,12 +92,21 @@ function isCatalogNavigation(item: NavItem): boolean {
   return item.key === "__catalog" || normalizedGroup(item.group).startsWith("ung dung · ");
 }
 
+function isAlumdoorHrNavigation(item: NavItem): boolean {
+  return ALUMDOOR_HR_GROUPS.has(normalizedGroup(item.group)) && ALUMDOOR_HR_KEYS.has(item.key);
+}
+
 function isVisibleProductNavigation(item: NavItem): boolean {
   if (!isAlumdoorSurface()) return !isCatalogNavigation(item);
   if (item.key === "catalog") return false;
   const group = normalizedGroup(item.group);
   if (ALUMDOOR_HR_GROUPS.has(group)) return ALUMDOOR_HR_KEYS.has(item.key);
   return !isCatalogNavigation(item) && ALUMDOOR_SIDEBAR_GROUPS.has(group);
+}
+
+function projectProductNavigation(item: NavItem): NavItem {
+  if (!isAlumdoorSurface() || !isAlumdoorHrNavigation(item)) return item;
+  return { ...item, group: ALUMDOOR_HR_WORKSPACE };
 }
 
 function scopedWorkspaceMeta(items: NavItem[], module: WorkspaceModule, affinity: Record<string, string[]>): NavItem[] {
@@ -296,10 +321,11 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
  */
 export function AppShell(props: AppShellProps) {
   /**
-   * Alumdoor chỉ nhận các nhóm đã khai trong brief gốc cộng Quỹ kho. Các app cài kèm vẫn
-   * giữ route/dữ liệu của chúng, nhưng không được tự biến thành sidebar của sản phẩm này.
+   * Alumdoor nhận các nhóm nghiệp vụ của vertical, Quỹ kho từ Kế toán Việt Nam và một
+   * projection HCM/payroll tối giản. Các app cài kèm vẫn giữ route/dữ liệu nhưng không
+   * được tự biến toàn bộ suite của chúng thành sidebar sản phẩm.
    */
-  const sidebarNav = useMemo(() => props.nav.filter(isVisibleProductNavigation), [props.nav]);
+  const sidebarNav = useMemo(() => props.nav.filter(isVisibleProductNavigation).map(projectProductNavigation), [props.nav]);
   const modules = useMemo(() => buildWorkspaceModules(sidebarNav), [sidebarNav]);
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
