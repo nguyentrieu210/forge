@@ -65,7 +65,11 @@ export async function calculateSalesProductionLine(
   call: ProductionPlatformCall,
   args: Json,
 ): Promise<Response> {
-  if (text(args.width_input_basis) || text(args.height_input_basis) || text(args.ray_type)) {
+  const basisOnly = args.basis_only === true
+    || args.basis_only === 1
+    || text(args.basis_only) === "1"
+    || normalized(args.basis_only) === "true";
+  if (basisOnly || text(args.width_input_basis) || text(args.height_input_basis) || text(args.ray_type)) {
     return calculateSalesWizardLineContext(call, args);
   }
   return calculateSalesProductionLineCore(call, args);
