@@ -50,6 +50,7 @@ type FormulaResult = Json & {
 type ItemContext = {
   item_group?: string;
   selected_uom?: string;
+  allowed_uoms?: string[];
   warehouse?: string | null;
   managed_stock?: boolean;
   available_qty?: number | null;
@@ -80,9 +81,11 @@ type SaleLine = {
   fixedThickness: boolean;
   height: string;
   width: string;
+  widthBasis: string;
   qty: string;
   rate: number | null;
   uom: string;
+  allowedUoms: string[];
   currency: string;
   warehouse: string;
   discountPct: string;
@@ -100,21 +103,24 @@ type ColumnKey = "itemCode" | "color" | "thickness" | "height" | "width" | "area
 type ColumnDef = { key: ColumnKey; label: string; width: number; numeric?: boolean; unit?: string };
 
 const COLUMNS: ColumnDef[] = [
-  { key: "itemCode", label: "SẢN PHẨM", width: 14 },
-  { key: "color", label: "MÀU", width: 7 },
-  { key: "thickness", label: "DÀY", width: 5.5, unit: "mm" },
-  { key: "height", label: "CAO", width: 5.5, numeric: true, unit: "m" },
+  { key: "itemCode", label: "SẢN PHẨM", width: 13 },
+  { key: "color", label: "MÀU", width: 6.5 },
+  { key: "thickness", label: "DÀY", width: 5, unit: "mm" },
+  { key: "height", label: "CAO", width: 5, numeric: true, unit: "m" },
   { key: "width", label: "RỘNG", width: 5.5, numeric: true, unit: "m" },
-  { key: "area", label: "DT", width: 5.5, numeric: true, unit: "m²" },
-  { key: "qty", label: "SL", width: 4, numeric: true },
-  { key: "rate", label: "Đ.GIÁ", width: 7, numeric: true },
-  { key: "discount", label: "CK %", width: 5, numeric: true },
+  { key: "area", label: "DT", width: 5, numeric: true, unit: "m²" },
+  { key: "qty", label: "SL", width: 3.8, numeric: true },
+  { key: "rate", label: "Đ.GIÁ", width: 6.5, numeric: true },
+  { key: "discount", label: "CK %", width: 4.5, numeric: true },
   { key: "uom", label: "ĐVT", width: 4.5 },
-  { key: "amount", label: "TT", width: 8, numeric: true },
+  { key: "amount", label: "TT", width: 7.5, numeric: true },
 ];
 
 const STANDARD_PRICE_LIST = "Giá niêm yết";
 const LAYOUT_KEY = "alumdoor-sales-sheet-columns-v2";
+const ORDER_KEY = `${LAYOUT_KEY}-order`;
+const WIDTH_KEY = `${LAYOUT_KEY}-widths`;
+const DEFAULT_ORDER = COLUMNS.map((column) => column.key);
 
 const today = () => {
   const value = new Date();
@@ -134,6 +140,22 @@ const escapeHtml = (value: unknown) => String(value ?? "")
   .replaceAll(">", "&gt;")
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&#039;");
+const clampWidth = (value: number, min = 3.5, max = 28) => Math.max(min, Math.min(max, Math.round(value * 2) / 2));
+
+function loadOrder(): ColumnKey[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ORDER_KEY) ?? "[]") as ColumnKey[];
+    const valid = parsed.filter((key) => DEFAULT_ORDER.includes(key));
+    return [...valid, ...DEFAULT_ORDER.filter((key) => !valid.includes(key))];
+  } catch { return DEFAULT_ORDER; }
+}
+
+function loadWidths(): Partial<Record<ColumnKey, number>> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(WIDTH_KEY) ?? "{}") as Partial<Record<ColumnKey, number>>;
+    return Object.fromEntries(Object.entries(parsed).filter(([, width]) => Number.isFinite(Number(width)))) as Partial<Record<ColumnKey, number>>;
+  } catch { return {}; }
+}
 
 function canonicalCustomerGroup(value: unknown): string {
   const raw = String(value ?? "").trim();
@@ -142,6 +164,15 @@ function canonicalCustomerGroup(value: unknown): string {
   if (normalized.includes("đại lý") || normalized.includes("dai ly") || normalized.includes("dealer")) return "Đại lý";
   if (normalized === "lẻ" || normalized.includes("khách lẻ") || normalized.includes("khach le") || normalized.includes("bán lẻ") || normalized.includes("ban le") || normalized.includes("retail") || normalized.includes("công trình") || normalized.includes("cong trinh") || normalized.includes("nhà thầu") || normalized.includes("nha thau")) return "Lẻ";
   return raw;
+}
+
+function widthBasisTitle(value: unknown): string {
+  const basis = String(value ?? "").trim();
+  const normalized = normalize(basis);
+  if (normalized === "phủ bì nhựa") return "RỘNG PB NHỰA";
+  if (normalized === "phủ bì ray") return "RỘNG PB RAY";
+  if (normalized === "rộng cắt lá") return "RỘNG CẮT LÁ";
+  return basis ? `RỘNG ${basis.toLocaleUpperCase("vi")}` : "RỘNG";
 }
 
 function newLine(): SaleLine {
@@ -158,9 +189,11 @@ function newLine(): SaleLine {
     fixedThickness: false,
     height: "",
     width: "",
+    widthBasis: "",
     qty: "",
     rate: null,
     uom: "",
+    allowedUoms: [],
     currency: "",
     warehouse: "",
     discountPct: "",
@@ -183,10 +216,6 @@ function calculationMode(item: Json): CalculationMode {
   if (code.startsWith("RAY-") || group.includes("ray")) return "HEIGHT";
   if (code.startsWith("TRUC-") || group.includes("trục")) return "WIDTH";
   return "QUANTITY";
-}
-
-function isGermanDoor(doorType: string, itemGroup: string): boolean {
-  return normalize(doorType).includes("đức") || normalize(itemGroup).includes("đức");
 }
 
 function discountRate(line: SaleLine): number {
@@ -216,14 +245,8 @@ function billableQty(line: SaleLine): number {
 function grossAmount(line: SaleLine): number {
   return billableQty(line) * Number(line.rate ?? 0);
 }
-
-function lineDiscountAmount(line: SaleLine): number {
-  return grossAmount(line) * discountRate(line) / 100;
-}
-
-function netAmount(line: SaleLine): number {
-  return grossAmount(line) - lineDiscountAmount(line);
-}
+function lineDiscountAmount(line: SaleLine): number { return grossAmount(line) * discountRate(line) / 100; }
+function netAmount(line: SaleLine): number { return grossAmount(line) - lineDiscountAmount(line); }
 
 function SheetLink({ doctype, value, onChange, readOnly, required, fieldname }: {
   doctype: string;
@@ -283,15 +306,25 @@ export function AlumdoorSalesSheetV2() {
   const [hiddenColumns, setHiddenColumns] = useState<ColumnKey[]>(() => {
     try { return JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "[]") as ColumnKey[]; } catch { return []; }
   });
+  const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(loadOrder);
+  const [columnWidths, setColumnWidths] = useState<Partial<Record<ColumnKey, number>>>(loadWidths);
+  const [draggingColumn, setDraggingColumn] = useState<ColumnKey | null>(null);
   const [picked, setPicked] = useState({ line: 0, column: 0 });
   const [saving, setSaving] = useState<"" | "draft" | "submit">("");
   const [createdOrder, setCreatedOrder] = useState<Doc | null>(null);
   const [globalError, setGlobalError] = useState("");
   const submitted = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 1);
 
-  const visibleColumns = useMemo(() => COLUMNS.filter((column) => !hiddenColumns.includes(column.key)), [hiddenColumns]);
+  const orderedColumns = useMemo(() => columnOrder.map((key) => COLUMNS.find((column) => column.key === key)).filter((column): column is ColumnDef => Boolean(column)), [columnOrder]);
+  const visibleColumns = useMemo(() => orderedColumns.filter((column) => !hiddenColumns.includes(column.key)), [hiddenColumns, orderedColumns]);
   const canonicalGroup = canonicalCustomerGroup(customer.group);
+  const activeWidthBases = useMemo(() => [...new Set(lines.filter((line) => line.itemCode && line.mode === "AREA").map((line) => line.widthBasis).filter(Boolean))], [lines]);
+  const widthColumnLabel = activeWidthBases.length === 1 ? widthBasisTitle(activeWidthBases[0]) : "RỘNG";
+  const columnLabel = (column: ColumnDef) => column.key === "width" ? widthColumnLabel : column.label;
+  const columnWidth = (column: ColumnDef) => columnWidths[column.key] ?? column.width;
 
+  useEffect(() => { try { localStorage.setItem(ORDER_KEY, JSON.stringify(columnOrder)); } catch { /* presentation only */ } }, [columnOrder]);
+  useEffect(() => { try { localStorage.setItem(WIDTH_KEY, JSON.stringify(columnWidths)); } catch { /* presentation only */ } }, [columnWidths]);
   useEffect(() => { if (contextCompany) setCompany(contextCompany); }, [contextCompany]);
 
   useEffect(() => {
@@ -345,7 +378,7 @@ export function AlumdoorSalesSheetV2() {
           try {
             const { doc: list } = await adapter.getDoc("Price List", candidate);
             if (!checked(list.disabled)) { resolved = candidate; break; }
-          } catch { /* next candidate */ }
+          } catch { /* compatibility bridge may supply active projection */ }
         }
         if (!active) return;
         setCustomer((current) => ({
@@ -370,27 +403,64 @@ export function AlumdoorSalesSheetV2() {
     setLines((current) => current.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line));
   };
 
-  const refreshContext = async (index: number, itemCode: string) => {
+  const refreshMeasurementBasis = async (index: number, itemCode: string) => {
+    if (!itemCode || !["Đại lý", "Lẻ"].includes(canonicalGroup)) return;
+    try {
+      const context = await adapter.callPost<FormulaResult>("alumdoor.sales.production_line_context", {
+        item_code: itemCode,
+        customer_group: canonicalGroup,
+        sales_mode: "Trọn bộ",
+        basis_only: true,
+      });
+      const nextBasis = String(context.width_basis ?? "").trim();
+      if (!nextBasis) return;
+      setLines((current) => current.map((entry, lineIndex) => {
+        if (lineIndex !== index || entry.itemCode !== itemCode) return entry;
+        const basisChanged = Boolean(entry.widthBasis && entry.widthBasis !== nextBasis);
+        return {
+          ...entry,
+          widthBasis: nextBasis,
+          ...(basisChanged ? { width: "", formula: null, stockShort: null, stockMessage: "" } : {}),
+        };
+      }));
+    } catch (error) {
+      patchLine(index, { error: adapter.mapError(error).message });
+    }
+  };
+
+  const refreshContext = async (index: number, itemCode: string, requestedUom = "") => {
     if (!itemCode) return;
     try {
       const context = await adapter.callPost<ItemContext>("alumdoor.sales.item_context", {
         item_code: itemCode,
+        ...(requestedUom ? { uom: requestedUom } : {}),
         ...(priceList ? { price_list: priceList } : {}),
         ...(currency ? { currency } : {}),
         ...(contextWarehouse ? { warehouse: contextWarehouse } : {}),
       });
+      const allowedUoms = [...new Set((context.allowed_uoms ?? []).map((value) => String(value ?? "").trim()).filter(Boolean))];
+      const selectedUom = String(context.selected_uom ?? requestedUom ?? "").trim();
+      if (selectedUom && !allowedUoms.includes(selectedUom)) allowedUoms.unshift(selectedUom);
       patchLine(index, {
         rate: context.price_missing || context.rate == null ? null : Number(context.rate),
-        uom: String(context.selected_uom ?? "").trim(),
+        uom: selectedUom,
+        allowedUoms,
         currency: String(context.currency ?? currency).trim() || currency,
         warehouse: String(context.warehouse ?? contextWarehouse ?? "").trim(),
         managedStock: context.managed_stock !== false,
         stockQty: context.available_qty == null ? null : Number(context.available_qty),
-        error: context.price_missing || context.rate == null ? String(context.price_error ?? "Chưa có đơn giá bán.") : "",
+        error: context.price_missing || context.rate == null ? String(context.price_error ?? "Chưa có đơn giá bán theo ĐVT đã chọn.") : String(context.stock_read_error ?? ""),
       });
     } catch (error) {
-      patchLine(index, { rate: null, uom: "", error: adapter.mapError(error).message });
+      patchLine(index, { rate: null, error: adapter.mapError(error).message });
     }
+  };
+
+  const changeUom = async (index: number, uom: string) => {
+    const line = lines[index];
+    if (!line?.itemCode) return;
+    patchLine(index, { uom, rate: null, stockQty: null, error: "" });
+    await refreshContext(index, line.itemCode, uom);
   };
 
   const chooseItem = async (index: number, itemCode: string) => {
@@ -402,7 +472,7 @@ export function AlumdoorSalesSheetV2() {
     patchLine(index, {
       itemCode, itemName: "", itemGroup: "", doorType: "", mode: "QUANTITY",
       color: "", requireColor: false, thickness: "", fixedThickness: false,
-      height: "", width: "", qty: previous?.qty || "1", rate: null, uom: "", currency: "", warehouse: "",
+      height: "", width: "", widthBasis: "", qty: previous?.qty || "1", rate: null, uom: "", allowedUoms: [], currency: "", warehouse: "",
       formula: null, stockQty: null, stockShort: null, stockMessage: "", busy: true, error: "",
       discountPct: previous?.discountTouched ? previous.discountPct : "",
     });
@@ -430,14 +500,11 @@ export function AlumdoorSalesSheetV2() {
           }
         } catch { /* presentation enhancement only */ }
       }
-      const itemGroup = String(doc.item_group ?? "").trim();
-      const doorType = String(doc.door_type ?? "").trim();
-      const shouldDefaultDiscount = isGermanDoor(doorType, itemGroup) && !previous?.discountTouched;
       patchLine(index, {
         itemCode,
         itemName: String(doc.item_name ?? itemCode).trim() || itemCode,
-        itemGroup,
-        doorType,
+        itemGroup: String(doc.item_group ?? "").trim(),
+        doorType: String(doc.door_type ?? "").trim(),
         mode,
         requireColor,
         color: requireColor ? String(doc.default_color ?? "").trim() : "",
@@ -445,28 +512,39 @@ export function AlumdoorSalesSheetV2() {
         fixedThickness,
         height: "",
         width: "",
+        widthBasis: "",
         qty: previous?.qty || "1",
-        discountPct: shouldDefaultDiscount ? "15" : (previous?.discountTouched ? previous.discountPct : ""),
+        discountPct: previous?.discountTouched ? previous.discountPct : "",
         formula: null,
         busy: false,
         error: "",
       });
-      await refreshContext(index, itemCode);
+      await Promise.all([
+        refreshContext(index, itemCode),
+        mode === "AREA" ? refreshMeasurementBasis(index, itemCode) : Promise.resolve(),
+      ]);
     } catch (error) {
       patchLine(index, { busy: false, error: adapter.mapError(error).message });
     }
   };
 
   useEffect(() => {
-    lines.forEach((line, index) => { if (line.itemCode) void refreshContext(index, line.itemCode); });
+    lines.forEach((line, index) => { if (line.itemCode) void refreshContext(index, line.itemCode, line.uom); });
     // pricing/context refresh is driven only by authority inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceList, currency, contextWarehouse]);
 
+  useEffect(() => {
+    if (!["Đại lý", "Lẻ"].includes(canonicalGroup)) return;
+    lines.forEach((line, index) => { if (line.itemCode && line.mode === "AREA") void refreshMeasurementBasis(index, line.itemCode); });
+    // basis refresh is driven by canonical customer group; basis changes invalidate entered width.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canonicalGroup]);
+
   const calculationFingerprint = useMemo(() => JSON.stringify({
     customerGroup: canonicalGroup,
     deliveryDate,
-    lines: lines.map((line) => ({ itemCode: line.itemCode, mode: line.mode, color: line.color, height: line.height, width: line.width, qty: line.qty, warehouse: line.warehouse })),
+    lines: lines.map((line) => ({ itemCode: line.itemCode, mode: line.mode, color: line.color, height: line.height, width: line.width, widthBasis: line.widthBasis, qty: line.qty, warehouse: line.warehouse })),
   }), [canonicalGroup, deliveryDate, lines]);
 
   useEffect(() => {
@@ -477,13 +555,13 @@ export function AlumdoorSalesSheetV2() {
           if (line.mode === "AREA") patchLine(index, { formula: null, stockShort: null, stockMessage: "" });
           return;
         }
-        patchLine(index, { busy: true, error: "" });
+        patchLine(index, { busy: true });
         try {
           const formula = await adapter.callPost<FormulaResult>("alumdoor.sales.production_line_context", {
             item_code: line.itemCode,
             customer_group: canonicalGroup,
             sales_mode: "Trọn bộ",
-            width_input_basis: "Rộng phủ bì",
+            ...(line.widthBasis ? { width_input_basis: line.widthBasis } : {}),
             height_input_basis: "Cao phủ bì",
             width_m: decimal(line.width),
             height_m: decimal(line.height),
@@ -513,12 +591,12 @@ export function AlumdoorSalesSheetV2() {
           setLines((current) => current.map((entry, lineIndex) => lineIndex === index ? {
             ...entry,
             formula,
+            widthBasis: String(formula.width_basis ?? entry.widthBasis ?? "").trim(),
             doorType: String(formula.door_type ?? entry.doorType ?? ""),
-            discountPct: isGermanDoor(String(formula.door_type ?? ""), entry.itemGroup) && !entry.discountTouched ? "15" : entry.discountPct,
             stockShort,
             stockMessage,
             busy: false,
-            error: String(formula.leaf_error ?? formula.stock_profile_error ?? ""),
+            error: String(formula.leaf_error ?? formula.stock_profile_error ?? entry.error ?? ""),
           } : entry));
         } catch (error) {
           if (generation !== previewGeneration.current) return;
@@ -530,7 +608,11 @@ export function AlumdoorSalesSheetV2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculationFingerprint, adapter]);
 
-  const total = useMemo(() => lines.reduce((sum, line) => sum + netAmount(line), 0), [lines]);
+  const grossTotal = useMemo(() => lines.reduce((sum, line) => sum + grossAmount(line), 0), [lines]);
+  const totalDiscount = useMemo(() => lines.reduce((sum, line) => sum + lineDiscountAmount(line), 0), [lines]);
+  const totalVat = 0;
+  const totalSurcharge = 0;
+  const total = grossTotal - totalDiscount + totalVat + totalSurcharge;
 
   const blockers = useMemo(() => {
     const out: string[] = [];
@@ -547,9 +629,10 @@ export function AlumdoorSalesSheetV2() {
       if (line.requireColor && !line.color) out.push(`Dòng ${index + 1}: cần Màu sắc.`);
       if (line.mode === "HEIGHT" && !positive(line.height)) out.push(`Dòng ${index + 1}: cần Chiều cao.`);
       if (line.mode === "WIDTH" && !positive(line.width)) out.push(`Dòng ${index + 1}: cần Chiều rộng.`);
-      if (line.mode === "AREA" && (!positive(line.height) || !positive(line.width))) out.push(`Dòng ${index + 1}: cần Chiều cao và Chiều rộng.`);
+      if (line.mode === "AREA" && !line.widthBasis) out.push(`Dòng ${index + 1}: chưa xác định loại chiều rộng từ chính sách.`);
+      if (line.mode === "AREA" && (!positive(line.height) || !positive(line.width))) out.push(`Dòng ${index + 1}: cần Chiều cao và ${widthBasisTitle(line.widthBasis)}.`);
       if (line.mode === "AREA" && !line.formula?.billable_area_sqm) out.push(`Dòng ${index + 1}: chưa tính xong diện tích cửa.`);
-      if (line.rate == null) out.push(`Dòng ${index + 1}: chưa có đơn giá bán.`);
+      if (line.rate == null) out.push(`Dòng ${index + 1}: chưa có đơn giá bán cho ${line.uom || "ĐVT đã chọn"}.`);
       if (!line.uom) out.push(`Dòng ${index + 1}: chưa xác định ĐVT bán.`);
       if (line.discountPct.trim()) {
         const discount = decimal(line.discountPct);
@@ -576,7 +659,8 @@ export function AlumdoorSalesSheetV2() {
       ...(line.color ? { color: line.color } : {}),
       ...(positive(line.height) ? { height_m: decimal(line.height) } : {}),
       ...(positive(line.width) ? { width_m: decimal(line.width) } : {}),
-      note: `Giá niêm yết ${money(listRate)}${discount ? ` · Chiết khấu ${number(discount, 2)}%` : ""}${line.thickness ? ` · Độ dày ${line.thickness} mm` : ""}`,
+      ...(line.widthBasis ? { width_basis: line.widthBasis } : {}),
+      note: `Giá ${line.uom || ""} ${money(listRate)}${discount ? ` · Chiết khấu ${number(discount, 2)}%` : ""}${line.thickness ? ` · Độ dày ${line.thickness} mm` : ""}`,
     };
     if (line.mode === "AREA" && line.formula) Object.assign(common, {
       door_type: line.formula.door_type,
@@ -640,9 +724,7 @@ export function AlumdoorSalesSheetV2() {
         try { await adapter.callPost("alumdoor.reserve.release", { reservation, released_reason: "Hoàn tác tự động vì xác nhận Sales Order không hoàn tất." }); } catch { /* server audit remains authoritative */ }
       }
       setGlobalError(adapter.mapError(error).message);
-    } finally {
-      setSaving("");
-    }
+    } finally { setSaving(""); }
   };
 
   const addLines = (count: number) => setLines((current) => [...current, ...Array.from({ length: count }, () => newLine())]);
@@ -673,41 +755,90 @@ export function AlumdoorSalesSheetV2() {
     setHiddenColumns(next);
     try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(next)); } catch { /* presentation only */ }
   };
+  const moveColumn = (source: ColumnKey, target: ColumnKey) => {
+    if (source === target) return;
+    setColumnOrder((current) => {
+      const next = current.filter((key) => key !== source);
+      const targetIndex = next.indexOf(target);
+      next.splice(targetIndex < 0 ? next.length : targetIndex, 0, source);
+      return next;
+    });
+  };
+  const moveColumnBy = (key: ColumnKey, delta: number) => {
+    setColumnOrder((current) => {
+      const index = current.indexOf(key);
+      const target = Math.max(0, Math.min(current.length - 1, index + delta));
+      if (index < 0 || target === index) return current;
+      const next = [...current];
+      next.splice(index, 1);
+      next.splice(target, 0, key);
+      return next;
+    });
+  };
+  const autoFitWidth = (column: ColumnDef) => {
+    const header = `${columnLabel(column)}${column.unit ? ` (${column.unit})` : ""}`;
+    const values = lines.flatMap((line) => {
+      if (column.key === "itemCode") return [line.itemName || line.itemCode];
+      if (column.key === "color") return [line.color];
+      if (column.key === "thickness") return [line.thickness];
+      if (column.key === "height") return [line.height];
+      if (column.key === "width") return [line.width, line.widthBasis];
+      if (column.key === "area") return [areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)];
+      if (column.key === "qty") return [line.qty];
+      if (column.key === "rate") return [line.rate == null ? "" : money(line.rate)];
+      if (column.key === "discount") return [line.discountPct ? `${line.discountPct}%` : ""];
+      if (column.key === "uom") return [line.uom, ...line.allowedUoms];
+      return [line.rate == null ? "" : money(grossAmount(line))];
+    }).filter(Boolean);
+    const maxChars = Math.max(header.length, ...values.map((value) => String(value).length));
+    const min = column.key === "itemCode" ? 8 : 3.5;
+    const max = column.key === "itemCode" ? 24 : 14;
+    return clampWidth(maxChars * 0.56 + 1.8, min, max);
+  };
+  const autoFitAll = () => setColumnWidths(Object.fromEntries(COLUMNS.map((column) => [column.key, autoFitWidth(column)])) as Partial<Record<ColumnKey, number>>);
+  const resetColumnLayout = () => {
+    setColumnOrder(DEFAULT_ORDER);
+    setColumnWidths({});
+    saveHiddenColumns([]);
+  };
+  const beginResize = (event: React.PointerEvent<HTMLDivElement>, column: ColumnDef) => {
+    event.preventDefault(); event.stopPropagation();
+    const startX = event.clientX;
+    const startWidth = columnWidth(column);
+    const move = (pointer: PointerEvent) => {
+      const width = clampWidth(startWidth + (pointer.clientX - startX) / 16, column.key === "itemCode" ? 8 : 3.5, column.key === "itemCode" ? 28 : 18);
+      setColumnWidths((current) => ({ ...current, [column.key]: width }));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   const startNew = () => {
     setCreatedOrder(null);
     setCustomer({ name: "", group: "", phone: "", address: "" });
-    setPriceList("");
-    setPriceListError("");
-    setTransactionDate(today());
-    setDeliveryDate(today());
-    setNote("");
-    setLines([newLine()]);
-    setSelected([]);
-    setGlobalError("");
+    setPriceList(""); setPriceListError(""); setTransactionDate(today()); setDeliveryDate(today()); setNote("");
+    setLines([newLine()]); setSelected([]); setGlobalError("");
   };
 
   const printHtml = () => {
     if (!createdOrder?.name) { setGlobalError("Cần lưu hoặc xác nhận đơn trước khi in."); return; }
     const bodyRows = lines.filter((line) => line.itemCode).map((line, index) => {
-      const widthNote = line.mode === "AREA" ? String(line.formula?.sales_width_basis ?? line.formula?.width_basis ?? "") : "";
-      const product = `<tr><td class="c">${index + 1}</td><td>${escapeHtml(line.itemName || line.itemCode)}</td><td>${escapeHtml(line.color)}</td><td class="c">${escapeHtml(line.thickness)}</td><td class="r">${escapeHtml(line.height)}</td><td class="r">${escapeHtml(line.width)}${widthNote ? `<div class="sub">${escapeHtml(widthNote)}</div>` : ""}</td><td class="r">${areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)}</td><td class="r">${escapeHtml(line.qty)}</td><td class="r">${money(line.rate)}</td><td></td><td class="c">${escapeHtml(line.uom)}</td><td class="r b">${money(grossAmount(line))}</td></tr>`;
-      const discount = line.discountPct.trim()
-        ? `<tr class="discount"><td></td><td class="b">Chiết khấu</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r b">${number(discountRate(line), 2)}%</td><td></td><td class="r b">-${money(lineDiscountAmount(line))}</td></tr>`
-        : `<tr class="discount"><td></td><td>Chiết khấu</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
-      return product + discount;
+      const widthNote = line.mode === "AREA" ? String(line.widthBasis || line.formula?.sales_width_basis || line.formula?.width_basis || "") : "";
+      const product = `<tr><td class="c">${index + 1}</td><td>${escapeHtml(line.itemName || line.itemCode)}</td><td>${escapeHtml(line.color)}</td><td class="c">${escapeHtml(line.thickness)}</td><td class="r">${escapeHtml(line.height)}</td><td class="r">${escapeHtml(line.width)}${widthNote ? `<div class="sub">${escapeHtml(widthNote)}</div>` : ""}</td><td class="r">${areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)}</td><td class="r">${escapeHtml(line.qty)}</td><td class="r">${money(line.rate)}</td><td class="r">${escapeHtml(line.discountPct)}</td><td class="c">${escapeHtml(line.uom)}</td><td class="r b">${money(netAmount(line))}</td></tr>`;
+      return product;
     }).join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.sheet .discount td{height:24px}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Loại khách:</b> ${escapeHtml(canonicalGroup)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY (mm)</th><th>CAO (m)</th><th>RỘNG (m)</th><th>DT (m²)</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng tiền hàng</td><td class="r">${money(total)}</td></tr><tr><td>Giao nhận</td><td></td></tr><tr><td>Thuế</td><td></td></tr><tr><td>Đã thu</td><td></td></tr><tr class="grand"><td>CÒN PHẢI THU</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Bảng giá:</b> ${escapeHtml(priceList)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr><tr><td colspan="2"><b>Địa chỉ nhận:</b> ${escapeHtml(customer.address)}</td><td colspan="2"><b>Điện thoại:</b> ${escapeHtml(customer.phone)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY</th><th>CAO</th><th>${escapeHtml(widthColumnLabel)}</th><th>DT</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng cộng</td><td class="r">${money(grossTotal)}</td></tr><tr><td>Tổng chiết khấu</td><td class="r">-${money(totalDiscount)}</td></tr><tr><td>Tổng VAT</td><td class="r">${money(totalVat)}</td></tr><tr><td>Tổng phụ thu</td><td class="r">${money(totalSurcharge)}</td></tr><tr class="grand"><td>THÀNH TIỀN</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
     const popup = window.open("", "_blank");
     if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ in."); return; }
     popup.document.open(); popup.document.write(html); popup.document.close();
   };
 
   const exportExcel = () => {
-    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", "CAO (m)", "RỘNG (m)", "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
-    lines.filter((line) => line.itemCode).forEach((line, index) => {
-      rows.push([String(index + 1), line.itemName || line.itemCode, line.color, line.thickness, line.height, line.width, areaPerSet(line) == null ? "" : String(areaPerSet(line)), line.qty, String(line.rate ?? ""), "", line.uom, String(grossAmount(line))]);
-      rows.push(["", "Chiết khấu", "", "", "", "", "", "", "", line.discountPct, "", line.discountPct.trim() ? String(-lineDiscountAmount(line)) : ""]);
-    });
+    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", "CAO (m)", `${widthColumnLabel} (m)`, "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
+    lines.filter((line) => line.itemCode).forEach((line, index) => rows.push([String(index + 1), line.itemName || line.itemCode, line.color, line.thickness, line.height, line.width, areaPerSet(line) == null ? "" : String(areaPerSet(line)), line.qty, String(line.rate ?? ""), line.discountPct, line.uom, String(netAmount(line))]));
     const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -798,19 +929,23 @@ export function AlumdoorSalesSheetV2() {
       return <select className={base} value={line.thickness} disabled={submitted} onChange={(event) => patchLine(lineIndex, { thickness: event.target.value })}><option value=""></option>{thicknessOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>;
     }
     if (column.key === "height") return line.itemCode && (line.mode === "HEIGHT" || line.mode === "AREA") ? <input className={base} inputMode="decimal" value={line.height} disabled={submitted} onChange={(event) => patchLine(lineIndex, { height: event.target.value, formula: null })} /> : null;
-    if (column.key === "width") return line.itemCode && (line.mode === "WIDTH" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.width} disabled={submitted} onChange={(event) => patchLine(lineIndex, { width: event.target.value, formula: null })} />{line.mode === "AREA" && line.formula?.sales_width_basis ? <div className="text-center text-[9px] leading-none text-slate-500">{String(line.formula.sales_width_basis)}</div> : null}</div> : null;
+    if (column.key === "width") return line.itemCode && (line.mode === "WIDTH" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.width} disabled={submitted} onChange={(event) => patchLine(lineIndex, { width: event.target.value, formula: null })} />{line.mode === "AREA" && line.widthBasis ? <div className="text-center text-[9px] font-semibold leading-none text-slate-500">{line.widthBasis}</div> : null}</div> : null;
     if (column.key === "area") return areaPerSet(line) == null ? null : <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{number(areaPerSet(line), 3)}</div>;
     if (column.key === "qty") return line.itemCode ? <input className={base} inputMode="numeric" value={line.qty} disabled={submitted} onChange={(event) => patchLine(lineIndex, { qty: event.target.value, formula: null })} /> : null;
     if (column.key === "rate") return line.itemCode && line.rate != null ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{money(line.rate)}</div> : null;
     if (column.key === "discount") return null;
-    if (column.key === "uom") return line.uom ? <div className="px-1.5 text-center text-xs font-medium">{line.uom}</div> : null;
+    if (column.key === "uom") {
+      if (!line.itemCode) return null;
+      const options = [...new Set([line.uom, ...line.allowedUoms].filter(Boolean))];
+      return <select className={`${base} cursor-pointer font-semibold text-sky-800`} value={line.uom} disabled={submitted || options.length === 0} onChange={(event) => void changeUom(lineIndex, event.target.value)}>{options.map((uom) => <option key={uom} value={uom}>{uom}</option>)}</select>;
+    }
     if (column.key === "amount") return line.itemCode && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{money(grossAmount(line))}</div> : null;
     return null;
   };
   const renderDiscountCell = (line: SaleLine, lineIndex: number, column: ColumnDef) => {
-    if (column.key === "itemCode") return <span className="px-1.5 text-xs font-medium text-slate-500">Chiết khấu</span>;
-    if (column.key === "discount") return <input className="min-h-8 w-full border-0 bg-transparent px-1.5 text-center text-xs font-semibold outline-none" inputMode="decimal" value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(lineIndex, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} />;
-    if (column.key === "amount") return line.discountPct.trim() && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">-{money(lineDiscountAmount(line))}</div> : null;
+    if (column.key === "itemCode") return <span className="px-1.5 text-xs font-semibold text-emerald-700">Chiết khấu</span>;
+    if (column.key === "discount") return <input className="min-h-8 w-full border-0 bg-emerald-50 px-1.5 text-center text-xs font-bold text-emerald-900 outline-none focus:bg-emerald-100" inputMode="decimal" placeholder="0" value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(lineIndex, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} />;
+    if (column.key === "amount") return line.discountPct.trim() && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums text-emerald-800">-{money(lineDiscountAmount(line))}</div> : null;
     return null;
   };
 
@@ -820,36 +955,57 @@ export function AlumdoorSalesSheetV2() {
         <tr>
           {!submitted ? <th className="sticky left-0 z-40 w-9 min-w-9 border border-orange-600 bg-orange-500 p-1"><Checkbox checked={lines.length > 0 && selected.length === lines.length} onCheckedChange={() => setSelected(selected.length === lines.length ? [] : lines.map((line) => line.id))} /></th> : null}
           <th className={`${submitted ? "sticky left-0" : "sticky left-9"} z-40 w-10 min-w-10 border border-orange-600 bg-orange-500 px-1 text-center text-[10px] font-bold`}>STT</th>
-          {visibleColumns.map((column) => <th key={column.key} className="border border-orange-600 bg-orange-500 px-1 py-1 text-center text-[10px] font-bold whitespace-normal" style={{ width: `${column.width}rem`, minWidth: `${column.width}rem` }}><span className="block leading-tight">{column.label}</span>{column.unit ? <span className="block text-[9px] font-extrabold leading-tight text-orange-50">({column.unit})</span> : null}</th>)}
+          {visibleColumns.map((column) => <th
+            key={column.key}
+            draggable
+            onDragStart={() => setDraggingColumn(column.key)}
+            onDragEnd={() => setDraggingColumn(null)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={() => { if (draggingColumn) moveColumn(draggingColumn, column.key); setDraggingColumn(null); }}
+            className={`relative border border-orange-600 px-1 py-1 text-center text-[10px] font-bold whitespace-normal ${draggingColumn === column.key ? "bg-orange-600" : "bg-orange-500"}`}
+            style={{ width: `${columnWidth(column)}rem`, minWidth: `${columnWidth(column)}rem` }}
+            title="Kéo tiêu đề để đổi vị trí · kéo mép phải để đổi độ rộng · nhấp đúp mép phải để tự khít cột"
+          ><span className="block cursor-grab leading-tight">{columnLabel(column)}</span>{column.unit ? <span className="block text-[9px] font-extrabold leading-tight text-orange-50">({column.unit})</span> : null}<div className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-orange-200/70" onPointerDown={(event) => beginResize(event, column)} onDoubleClick={(event) => { event.stopPropagation(); setColumnWidths((current) => ({ ...current, [column.key]: autoFitWidth(column) })); }} /></th>)}
           {!submitted ? <th className="w-14 min-w-14 border border-orange-600 bg-orange-500"></th> : null}
         </tr>
       </thead>
       <tbody>
-        {lines.map((line, lineIndex) => <FragmentRowsV2 key={line.id} line={line} lineIndex={lineIndex} submitted={submitted} selected={selected.includes(line.id)} visibleColumns={visibleColumns} onSelect={() => setSelected((current) => current.includes(line.id) ? current.filter((id) => id !== line.id) : [...current, line.id])} renderCell={renderCell} renderDiscountCell={renderDiscountCell} requiredCell={requiredCell} missingRequired={missingRequired} setPicked={setPicked} onDetail={() => setDetailIndex(lineIndex)} onDelete={() => deleteIndexes([lineIndex])} />)}
+        {lines.map((line, lineIndex) => <FragmentRowsV2 key={line.id} line={line} lineIndex={lineIndex} submitted={submitted} selected={selected.includes(line.id)} visibleColumns={visibleColumns} columnWidth={columnWidth} onSelect={() => setSelected((current) => current.includes(line.id) ? current.filter((id) => id !== line.id) : [...current, line.id])} renderCell={renderCell} renderDiscountCell={renderDiscountCell} requiredCell={requiredCell} missingRequired={missingRequired} setPicked={setPicked} onDetail={() => setDetailIndex(lineIndex)} onDelete={() => deleteIndexes([lineIndex])} />)}
       </tbody>
     </table>
   </div>;
 
   return <div className="h-full w-full overflow-auto bg-white p-2 md:p-3">
     <div className="mx-auto w-full max-w-[1900px] space-y-2">
-      <section className="grid gap-2 border border-slate-300 bg-white p-2 md:grid-cols-4">
-        {!contextCompany ? <HeaderLink label="Công ty" doctype="Company" value={company} onChange={setCompany} required readOnly={submitted} /> : null}
-        <div className="md:col-span-2"><HeaderLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => { setCustomer({ name, group: "", phone: "", address: "" }); setPriceList(""); }} required readOnly={submitted} /></div>
-        <div className="flex items-end gap-1.5">
-          <Button type="button" variant="outline" size="sm" disabled={submitted} onClick={() => setQuickMaster("Customer")}>+ Khách hàng</Button>
-          <Button type="button" variant="outline" size="sm" disabled={submitted} onClick={() => setQuickMaster("Supplier")}>+ NCC</Button>
+      <section className="grid gap-3 border border-slate-300 bg-white p-2 lg:grid-cols-[minmax(0,1fr)_minmax(310px,360px)]">
+        <div className="grid min-w-0 content-start gap-2">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-600">Thông tin khách hàng</div>
+          <div className="grid min-w-0 gap-1.5 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <HeaderLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => { setCustomer({ name, group: "", phone: "", address: "" }); setPriceList(""); }} required readOnly={submitted} />
+            <Button type="button" variant="outline" size="sm" className="h-8 self-end rounded-none px-3" disabled={submitted} onClick={() => setQuickMaster("Customer")}>+ Tạo mới</Button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)]">
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Điện thoại</Label><Input className="h-8 rounded-none" value={customer.phone} readOnly /></div>
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Địa chỉ nhận</Label><Input className="h-8 rounded-none" value={customer.address} disabled={submitted} onChange={(event) => setCustomer((current) => ({ ...current, address: event.target.value }))} /></div>
+          </div>
         </div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Loại khách</Label><Input className="h-8 rounded-none" value={canonicalGroup} readOnly /></div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày đặt hàng <span className="text-red-600">*</span></Label><Input className={`h-8 rounded-none ${!transactionDate ? "border-red-500" : ""}`} type="date" value={transactionDate} disabled={submitted} onChange={(event) => setTransactionDate(event.target.value)} /></div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày giao hàng <span className="text-red-600">*</span></Label><Input className={`h-8 rounded-none ${!deliveryDate ? "border-red-500" : ""}`} type="date" min={transactionDate} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ghi chú</Label><Input className="h-8 rounded-none" value={note} disabled={submitted} onChange={(event) => setNote(event.target.value)} /></div>
-        {customer.name ? <div className="md:col-span-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-200 pt-1.5 text-[11px] text-slate-600">
-          {customer.phone ? <span>{customer.phone}</span> : null}
-          {priceList ? <span>Bảng giá: <strong className="font-semibold text-slate-900">{priceList}</strong></span> : <span className="text-amber-700">{priceListError}</span>}
-          {currency ? <span>{currency}</span> : null}
-          {createdOrder?.name ? <span className="font-semibold text-slate-900">{String(createdOrder.name)}</span> : null}
-          {submitted ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Đã xác nhận</span> : null}
-        </div> : null}
+
+        <div className="grid content-start gap-2 lg:border-l lg:border-slate-200 lg:pl-3">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-600">Thông tin đơn hàng</div>
+          {!contextCompany ? <HeaderLink label="Công ty" doctype="Company" value={company} onChange={setCompany} required readOnly={submitted} /> : null}
+          <div className="grid gap-1"><Label className="text-[11px] font-semibold">Loại bảng giá</Label><Input className={`h-8 rounded-none ${customer.name && !priceList ? "border-amber-400" : ""}`} value={priceList} readOnly placeholder={priceListError || "Tự xác định theo khách hàng"} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày đặt <span className="text-red-600">*</span></Label><Input className={`h-8 min-w-0 rounded-none px-2 ${!transactionDate ? "border-red-500" : ""}`} type="date" value={transactionDate} disabled={submitted} onChange={(event) => setTransactionDate(event.target.value)} /></div>
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày giao <span className="text-red-600">*</span></Label><Input className={`h-8 min-w-0 rounded-none px-2 ${!deliveryDate ? "border-red-500" : ""}`} type="date" min={transactionDate} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
+          </div>
+          <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ghi chú</Label><Input className="h-8 rounded-none" value={note} disabled={submitted} onChange={(event) => setNote(event.target.value)} /></div>
+          <div className="flex min-h-5 flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+            {canonicalGroup ? <span>Nhóm công thức: {canonicalGroup}</span> : null}
+            {currency ? <span>{currency}</span> : null}
+            {createdOrder?.name ? <span className="font-semibold text-slate-800">{String(createdOrder.name)}</span> : null}
+            {submitted ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Đã xác nhận</span> : null}
+          </div>
+        </div>
       </section>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -859,18 +1015,20 @@ export function AlumdoorSalesSheetV2() {
         {!submitted && selected.length ? <Button type="button" variant="ghost" size="sm" className="text-red-600" onClick={() => deleteIndexes(lines.map((line, index) => selected.includes(line.id) ? index : -1).filter((index) => index >= 0))}><Trash2 /> Xóa {selected.length}</Button> : null}
         {!submitted && lastDeleted?.length ? <Button type="button" variant="ghost" size="sm" onClick={undoDelete}><Undo2 /> Hoàn tác</Button> : null}
         <Button type="button" variant="ghost" size="sm" onClick={() => setColumnDialog(true)}><Columns3 /> Cột</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={autoFitAll}>Tự khít cột</Button>
         <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}><Maximize2 /> Bảng lớn</Button>
-        <span className="ml-auto text-[11px] text-slate-500">Ô vàng = cần nhập · viền đỏ = còn thiếu · ô trắng = tự tính/không áp dụng</span>
+        <span className="ml-auto text-[11px] text-slate-500">Vàng = bắt buộc nhập · đỏ = còn thiếu · xanh = được nhập tùy chọn · ĐVT đổi được và tự tra lại giá</span>
       </div>
 
       {renderGrid(false)}
 
       <section className="ml-auto w-full max-w-md border border-slate-300 bg-white">
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng tiền hàng</div><div className="p-2 text-right text-sm font-medium tabular-nums">{money(total)}</div></div>
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Giao nhận</div><div></div></div>
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Thuế</div><div></div></div>
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Đã thu</div><div></div></div>
-        <div className="grid grid-cols-2"><div className="p-2 text-sm font-bold">CÒN PHẢI THU</div><div className="p-2 text-right text-sm font-bold tabular-nums">{money(total)}</div></div>
+        <div className="border-b border-slate-300 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-slate-600">Tổng tiền</div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng cộng</div><div className="p-2 text-right text-sm font-medium tabular-nums">{money(grossTotal)}</div></div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng chiết khấu</div><div className="p-2 text-right text-sm font-medium tabular-nums text-emerald-700">-{money(totalDiscount)}</div></div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng VAT</div><div className="p-2 text-right text-sm tabular-nums">{money(totalVat)}</div></div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng phụ thu</div><div className="p-2 text-right text-sm tabular-nums">{money(totalSurcharge)}</div></div>
+        <div className="grid grid-cols-2"><div className="p-2 text-sm font-bold">THÀNH TIỀN</div><div className="p-2 text-right text-sm font-bold tabular-nums">{money(total)}</div></div>
       </section>
 
       {globalError ? <div className="flex items-start gap-2 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{globalError}</div> : null}
@@ -884,30 +1042,24 @@ export function AlumdoorSalesSheetV2() {
       </div>
     </div>
 
-    <MasterQuickCreate open={quickMaster != null} kind={quickMaster ?? "Customer"} onClose={() => setQuickMaster(null)} onCreated={(kind, doc) => {
-      setQuickMaster(null);
-      if (kind === "Customer") {
-        const name = String(doc.name ?? doc.customer_name ?? "").trim();
-        if (name) setCustomer({ name, group: "", phone: "", address: "" });
-      }
-    }} />
+    <MasterQuickCreate open={quickMaster != null} kind={quickMaster ?? "Customer"} onClose={() => setQuickMaster(null)} onCreated={(kind, doc) => { setQuickMaster(null); if (kind === "Customer") { const name = String(doc.name ?? doc.customer_name ?? "").trim(); if (name) setCustomer({ name, group: "", phone: "", address: "" }); } }} />
 
     <Dialog open={columnDialog} onOpenChange={setColumnDialog}>
-      <DialogContent className="w-[min(92vw,620px)] max-w-none"><DialogHeader><DialogTitle>Cột bảng bán hàng</DialogTitle><DialogDescription>Mặc định hiển thị đầy đủ. Tùy chỉnh chỉ lưu trên thiết bị hiện tại.</DialogDescription></DialogHeader><div className="grid gap-2 sm:grid-cols-2">{COLUMNS.map((column) => <label key={column.key} className="flex items-center gap-2 border p-2 text-sm"><Checkbox checked={!hiddenColumns.includes(column.key)} onCheckedChange={(checkedValue) => saveHiddenColumns(checkedValue ? hiddenColumns.filter((key) => key !== column.key) : [...new Set([...hiddenColumns, column.key])])} />{column.label}{column.unit ? ` (${column.unit})` : ""}</label>)}</div><div className="flex justify-end"><Button type="button" variant="outline" onClick={() => saveHiddenColumns([])}><RotateCcw /> Hiện tất cả</Button></div></DialogContent>
+      <DialogContent className="w-[min(92vw,720px)] max-w-none"><DialogHeader><DialogTitle>Cột bảng bán hàng</DialogTitle><DialogDescription>Bật/tắt cột; dùng ← → để đổi vị trí. Ngoài bảng có thể kéo trực tiếp tiêu đề, kéo mép để đổi rộng hoặc nhấp đúp mép để tự khít.</DialogDescription></DialogHeader><div className="grid gap-2 sm:grid-cols-2">{orderedColumns.map((column) => <div key={column.key} className="flex items-center gap-2 border p-2 text-sm"><Checkbox checked={!hiddenColumns.includes(column.key)} onCheckedChange={(checkedValue) => saveHiddenColumns(checkedValue ? hiddenColumns.filter((key) => key !== column.key) : [...new Set([...hiddenColumns, column.key])])} /><span className="min-w-0 flex-1">{columnLabel(column)}{column.unit ? ` (${column.unit})` : ""}</span><Button type="button" variant="ghost" size="icon-sm" onClick={() => moveColumnBy(column.key, -1)}>←</Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => moveColumnBy(column.key, 1)}>→</Button></div>)}</div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={autoFitAll}>Tự khít toàn bộ</Button><Button type="button" variant="outline" onClick={resetColumnLayout}><RotateCcw /> Mặc định</Button></div></DialogContent>
     </Dialog>
 
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <DialogContent className="flex h-[94vh] w-[97vw] max-w-none flex-col overflow-hidden p-3"><DialogHeader className="shrink-0"><div className="flex items-center"><div><DialogTitle>Bảng bán hàng mở rộng</DialogTitle><DialogDescription>{lines.length} mặt hàng · cùng cột/cách nhập với bảng chính</DialogDescription></div><Button type="button" variant="ghost" size="icon-sm" className="ml-auto" onClick={() => setExpanded(false)}><X /></Button></div></DialogHeader><div className="min-h-0 flex-1">{renderGrid(true)}</div></DialogContent>
+      <DialogContent className="flex h-[94vh] w-[97vw] max-w-none flex-col overflow-hidden p-3"><DialogHeader className="shrink-0"><div className="flex items-center"><div><DialogTitle>Bảng bán hàng mở rộng</DialogTitle><DialogDescription>{lines.length} mặt hàng · dùng chung vị trí, độ rộng, ĐVT và cách nhập với bảng chính</DialogDescription></div><Button type="button" variant="ghost" size="icon-sm" className="ml-auto" onClick={() => setExpanded(false)}><X /></Button></div></DialogHeader><div className="min-h-0 flex-1">{renderGrid(true)}</div></DialogContent>
     </Dialog>
 
     <Dialog open={detailIndex != null} onOpenChange={(open) => { if (!open) setDetailIndex(null); }}>
-      <DialogContent className="max-h-[90vh] w-[min(94vw,900px)] max-w-none overflow-auto"><DialogHeader><DialogTitle>Chi tiết mặt hàng {detailIndex == null ? "" : detailIndex + 1}</DialogTitle><DialogDescription>Cùng dữ liệu với bảng; thay đổi phản ánh ngay.</DialogDescription></DialogHeader>{detailIndex != null && lines[detailIndex] ? <LineDetailV2 line={lines[detailIndex]!} index={detailIndex} submitted={submitted} thicknessOptions={thicknessOptions} patchLine={patchLine} chooseItem={chooseItem} /> : null}</DialogContent>
+      <DialogContent className="max-h-[90vh] w-[min(94vw,900px)] max-w-none overflow-auto"><DialogHeader><DialogTitle>Chi tiết mặt hàng {detailIndex == null ? "" : detailIndex + 1}</DialogTitle><DialogDescription>Cùng dữ liệu với bảng; thay đổi phản ánh ngay.</DialogDescription></DialogHeader>{detailIndex != null && lines[detailIndex] ? <LineDetailV2 line={lines[detailIndex]!} index={detailIndex} submitted={submitted} thicknessOptions={thicknessOptions} patchLine={patchLine} chooseItem={chooseItem} changeUom={changeUom} /> : null}</DialogContent>
     </Dialog>
   </div>;
 }
 
-function FragmentRowsV2({ line, lineIndex, submitted, selected, visibleColumns, onSelect, renderCell, renderDiscountCell, requiredCell, missingRequired, setPicked, onDetail, onDelete }: {
-  line: SaleLine; lineIndex: number; submitted: boolean; selected: boolean; visibleColumns: ColumnDef[]; onSelect: () => void;
+function FragmentRowsV2({ line, lineIndex, submitted, selected, visibleColumns, columnWidth, onSelect, renderCell, renderDiscountCell, requiredCell, missingRequired, setPicked, onDetail, onDelete }: {
+  line: SaleLine; lineIndex: number; submitted: boolean; selected: boolean; visibleColumns: ColumnDef[]; columnWidth: (column: ColumnDef) => number; onSelect: () => void;
   renderCell: (line: SaleLine, lineIndex: number, column: ColumnDef) => React.ReactNode;
   renderDiscountCell: (line: SaleLine, lineIndex: number, column: ColumnDef) => React.ReactNode;
   requiredCell: (line: SaleLine, key: ColumnKey) => boolean;
@@ -921,28 +1073,29 @@ function FragmentRowsV2({ line, lineIndex, submitted, selected, visibleColumns, 
       {visibleColumns.map((column, columnIndex) => {
         const required = requiredCell(line, column.key);
         const missing = missingRequired(line, column.key);
-        return <td key={column.key} data-cell={`${lineIndex}:${columnIndex}`} className={`h-9 border p-0 text-center align-middle ${missing ? "border-red-500 bg-red-50 ring-1 ring-inset ring-red-500" : required ? "border-amber-400 bg-amber-50/80" : "border-slate-300 bg-white"}`} style={{ width: `${column.width}rem`, minWidth: `${column.width}rem` } as CSSProperties} onFocusCapture={() => setPicked({ line: lineIndex, column: columnIndex })} onClick={() => setPicked({ line: lineIndex, column: columnIndex })}>{renderCell(line, lineIndex, column)}</td>;
+        return <td key={column.key} data-cell={`${lineIndex}:${columnIndex}`} className={`h-9 border p-0 text-center align-middle ${missing ? "border-red-500 bg-red-50 ring-1 ring-inset ring-red-500" : required ? "border-amber-400 bg-amber-50/80" : "border-slate-300 bg-white"}`} style={{ width: `${columnWidth(column)}rem`, minWidth: `${columnWidth(column)}rem` } as CSSProperties} onFocusCapture={() => setPicked({ line: lineIndex, column: columnIndex })} onClick={() => setPicked({ line: lineIndex, column: columnIndex })}>{renderCell(line, lineIndex, column)}</td>;
       })}
       {!submitted ? <td rowSpan={2} className="border border-slate-300 bg-white p-1 align-middle"><div className="flex"><Button type="button" variant="ghost" size="icon-sm" onClick={onDetail}><Maximize2 /></Button><Button type="button" variant="ghost" size="icon-sm" className="text-slate-500 hover:text-red-600" onClick={onDelete}><Trash2 /></Button></div></td> : null}
     </tr>
-    <tr>{visibleColumns.map((column) => <td key={column.key} className="h-8 border border-slate-300 bg-white p-0 text-center align-middle">{renderDiscountCell(line, lineIndex, column)}</td>)}</tr>
+    <tr>{visibleColumns.map((column) => <td key={column.key} className={`h-8 border p-0 text-center align-middle ${column.key === "discount" ? "border-emerald-300 bg-emerald-50" : "border-slate-300 bg-white"}`}>{renderDiscountCell(line, lineIndex, column)}</td>)}</tr>
   </>;
 }
 
-function LineDetailV2({ line, index, submitted, thicknessOptions, patchLine, chooseItem }: {
-  line: SaleLine; index: number; submitted: boolean; thicknessOptions: string[]; patchLine: (index: number, patch: Partial<SaleLine>) => void; chooseItem: (index: number, value: string) => Promise<void>;
+function LineDetailV2({ line, index, submitted, thicknessOptions, patchLine, chooseItem, changeUom }: {
+  line: SaleLine; index: number; submitted: boolean; thicknessOptions: string[]; patchLine: (index: number, patch: Partial<SaleLine>) => void; chooseItem: (index: number, value: string) => Promise<void>; changeUom: (index: number, value: string) => Promise<void>;
 }) {
+  const uoms = [...new Set([line.uom, ...line.allowedUoms].filter(Boolean))];
   return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
     <div className="grid gap-1.5"><Label>Sản phẩm *</Label><SheetLink doctype="Item" value={line.itemCode} onChange={(value) => void chooseItem(index, value)} readOnly={submitted} required fieldname={`detail_item_${index}`} /></div>
     <div className="grid gap-1.5"><Label>Màu sắc{line.requireColor ? " *" : ""}</Label>{line.itemCode && line.requireColor ? <SheetLink doctype="Item Color" value={line.color} onChange={(color) => patchLine(index, { color, formula: null })} readOnly={submitted} required fieldname={`detail_color_${index}`} /> : <Input value="" readOnly />}</div>
     <div className="grid gap-1.5"><Label>Độ dày</Label><select className="h-9 border bg-white px-2 text-sm" value={line.thickness} disabled={submitted || line.fixedThickness || line.mode !== "WIDTH"} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{line.thickness && !thicknessOptions.includes(line.thickness) ? <option value={line.thickness}>{line.thickness} mm</option> : null}{thicknessOptions.map((value) => <option key={value} value={value}>{value} mm</option>)}</select></div>
     <div className="grid gap-1.5"><Label>Cao (m)</Label><Input value={line.height} disabled={submitted || !(line.mode === "HEIGHT" || line.mode === "AREA")} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div>
-    <div className="grid gap-1.5"><Label>Rộng (m)</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
+    <div className="grid gap-1.5"><Label>{widthBasisTitle(line.widthBasis)} (m)</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>DT (m²)</Label><Input value={areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)} readOnly /></div>
     <div className="grid gap-1.5"><Label>SL *</Label><Input value={line.qty} disabled={submitted} onChange={(event) => patchLine(index, { qty: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>Đơn giá</Label><Input value={line.rate == null ? "" : money(line.rate)} readOnly /></div>
-    <div className="grid gap-1.5"><Label>ĐVT</Label><Input value={line.uom} readOnly /></div>
-    <div className="grid gap-1.5"><Label>Chiết khấu %</Label><Input value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(index, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} /></div>
+    <div className="grid gap-1.5"><Label>ĐVT</Label><select className="h-9 border bg-white px-2 text-sm font-semibold text-sky-800" value={line.uom} disabled={submitted || !uoms.length} onChange={(event) => void changeUom(index, event.target.value)}>{uoms.map((uom) => <option key={uom} value={uom}>{uom}</option>)}</select></div>
+    <div className="grid gap-1.5"><Label className="text-emerald-700">Chiết khấu %</Label><Input className="border-emerald-300 bg-emerald-50 font-semibold text-emerald-900" value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(index, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} /></div>
     {line.error ? <div className="sm:col-span-2 xl:col-span-3 border border-red-300 bg-red-50 p-2 text-sm text-red-700">{line.error}</div> : null}
   </div>;
 }
@@ -971,9 +1124,8 @@ function MasterQuickCreate({ open, kind, onClose, onCreated }: { open: boolean; 
       const doc = await adapter.createDoc(kind, payload);
       toast.success(`Đã tạo ${kind === "Customer" ? "khách hàng" : "NCC"} ${doc.name}.`);
       onCreated(kind, doc);
-    } catch (cause) {
-      setError(adapter.mapError(cause).message);
-    } finally { setBusy(false); }
+    } catch (cause) { setError(adapter.mapError(cause).message); }
+    finally { setBusy(false); }
   };
 
   return <Dialog open={open} onOpenChange={(next) => { if (!next && !busy) onClose(); }}>

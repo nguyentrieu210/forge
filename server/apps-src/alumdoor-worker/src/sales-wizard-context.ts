@@ -276,10 +276,31 @@ export async function calculateSalesWizardLineContext(
     const leafVariantOptions = [...new Set((pair.raw.leaf_variants ?? [])
       .map((row) => text(row.variant_label))
       .filter(Boolean))];
+    const measurementWidthBasis = customerGroup === "Đại lý"
+      ? pair.parsed.dealer_width_basis
+      : pair.parsed.retail_width_basis;
+
+    // UI cần biết loại bề rộng phải nhập trước khi người dùng gõ số. Chế độ này chỉ resolve
+    // chính sách hiện hành; không chạy hình học, BOM hay ATP và không yêu cầu width/height.
+    if (checked(args.basis_only)) {
+      return answer({
+        item_code: itemCode,
+        item_group: itemGroup,
+        door_type: doorType,
+        policy_name: selected.policy_name,
+        formula_version: policyVersion(pair.raw),
+        ray_type: requestedRay || text(pair.raw.ray_type) || null,
+        ray_options: rayOptions,
+        leaf_variant_options: leafVariantOptions,
+        width_basis: measurementWidthBasis,
+        input_width_basis: measurementWidthBasis,
+        input_height_basis: "Cao phủ bì",
+      });
+    }
 
     const inputWidth = positive(args.width_m, "Rộng");
     const inputHeight = positive(args.height_m, "Cao");
-    const widthInputBasis = text(args.width_input_basis) || "Rộng phủ bì";
+    const widthInputBasis = text(args.width_input_basis) || measurementWidthBasis;
     const heightInputBasis = text(args.height_input_basis) || "Cao phủ bì";
     const setCount = integer(args.set_count ?? 1, "Số bộ");
 
