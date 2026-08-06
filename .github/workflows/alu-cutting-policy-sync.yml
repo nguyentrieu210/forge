@@ -8,7 +8,7 @@ on:
       - ".github/workflows/alu-cutting-policy-sync.yml"
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 concurrency:
@@ -76,6 +76,31 @@ jobs:
           test "$(jq -r '.pass' "$REPORT_PATH")" = "true"
           test "$(jq '[.verification[] | select(.logical_disabled == false and .pass == true)] | length' "$REPORT_PATH")" -eq 5
           test "$(jq '[.verification[] | select(.logical_disabled == true and .pass == true)] | length' "$REPORT_PATH")" -eq 2
+
+      - name: Persist production evidence in repository
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          backup_manifest="$(find "$BACKUP_DIR" -maxdepth 1 -name '*.sql.json' -print -quit)"
+          test -n "$backup_manifest"
+          backup_sha="$(jq -r '.sha256' "$backup_manifest")"
+          evidence="$RUNNER_TEMP/alumdoor-cutting-policy-durable-evidence.json"
+          jq \
+            --arg source_sha "$SOURCE_SHA" \
+            --arg backup_sha256 "$backup_sha" \
+            --arg workflow "ALU Cutting Policy Sync One-Shot" \
+            '. + {source_sha:$source_sha, backup_sha256:$backup_sha256, workflow:$workflow, production_write_authorized:true}' \
+            "$REPORT_PATH" > "$evidence"
+          short_sha="${SOURCE_SHA:0:12}"
+          target="deploy-evidence/alumdoor-cutting-policy-sync-${short_sha}.json"
+          encoded="$(base64 -w0 "$evidence")"
+          gh api --method PUT "repos/${REPOSITORY}/contents/${target}" \
+            -f message="evidence(alumdoor): record Cutting Policy production sync" \
+            -f content="$encoded" \
+            -f branch=main
 
       - name: Upload backup and sync evidence
         if: always()
