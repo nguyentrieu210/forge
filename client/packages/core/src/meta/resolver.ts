@@ -3,12 +3,16 @@
  * Mirror hành vi Frappe Desk form renderer (KHÔNG hardcode nghiệp vụ):
  *   depends_on · mandatory_depends_on · read_only_depends_on · permlevel · docstatus · masked_fields.
  *
+ * MetaForge-native ownership keys (`editMode`, `valueSource`, `surface`, `dirtyGuard`) are
+ * normalized through resolveFieldContract so every renderer sees the same precedence.
+ *
  * Ranh giới bảo mật là SERVER (masked value + perm). Resolver chỉ mirror để UX đúng;
  * masked_fields (từ FormMeta) là nguồn AUTHORITATIVE cho việc che giá trị.
  */
 import type { DocTypeMeta, DocField, DocPerm } from "../types/meta.js";
 import { NO_VALUE_FIELDTYPES } from "../types/fieldtype.js";
 import { evalDependsOn } from "./eval.js";
+import { resolveFieldContract, setOnceIsLocked } from "./intelligence.js";
 
 /** Trạng thái tương tác hiệu lực của 1 field. */
 export type FieldState = "hidden" | "masked" | "locked" | "editable";
@@ -21,7 +25,7 @@ export interface ResolvedField {
   visible: boolean;
   /** giá trị bị che (permlevel không đọc được / trong masked_fields). */
   masked: boolean;
-  /** không sửa được (read_only / read_only_depends_on / thiếu quyền ghi / docstatus khoá). */
+  /** không sửa được (contract/read_only/depends_on/quyền/docstatus). */
   readOnly: boolean;
   /** bắt buộc (reqd / mandatory_depends_on) — chỉ tính khi visible & !readOnly. */
   required: boolean;
@@ -81,12 +85,13 @@ export function resolveField(field: DocField, meta: DocTypeMeta, ctx: ResolveCon
   const permlevel = field.permlevel ?? 0;
   const perms = permLevelsFor(meta.permissions ?? [], roles);
   const docstatus = Number(doc.docstatus ?? 0);
+  const contract = resolveFieldContract(field);
 
-  // visible: !hidden + depends_on
-  // `list_only`: cột của BẢNG, không phải ô của FORM. Không dùng `hidden` cho việc này —
-  // `hidden` nghĩa là giấu ở mọi màn, kể cả danh sách, và trộn hai ý đó lại thì một field
-  // đánh dấu giấu vì lý do riêng tư sẽ rò ra bảng ngay khi ai đó khai nó làm cột.
-  const visible = field.hidden || field.list_only ? false : evalDependsOn(field.depends_on, doc, ctx.parent);
+  // visible: canonical hidden/editMode first, then Frappe depends_on.
+  // `list_only`: cột của BẢNG, không phải ô của FORM. `surface=internal` KHÔNG tự động ẩn:
+  // required internal fields may still need to be rendered by a full/quick form policy.
+  const hiddenByContract = contract.editMode === "hidden" || field.hidden === 1;
+  const visible = hiddenByContract || field.list_only ? false : evalDependsOn(field.depends_on, doc, ctx.parent);
 
   // masked: server masked_fields ưu tiên; nếu không có, suy từ permlevel không đọc được.
   // level 0 = đọc được nếu đã mở được doc; level>0 cần read perm ĐÚNG level đó.
@@ -95,13 +100,19 @@ export function resolveField(field: DocField, meta: DocTypeMeta, ctx: ResolveCon
   const permReadable = ctx.assumeWritable ? true : permlevel === 0 ? true : perms.read.has(permlevel);
   const masked = !layout && (serverMasked || !permReadable);
 
-  // read-only: field.read_only | read_only_depends_on | thiếu quyền ghi ở permlevel | docstatus | forceReadOnly
-  // PHẢI có write perm ĐÚNG permlevel — KHÔNG fallback theo size:
-  // {read:1,write:0} nghĩa là "có metadata quyền nhưng KHÔNG được ghi" ⇒ read-only (không phải editable).
-  // assumeWritable (child grid): quyền ghi kế thừa cha (grid đã gate bằng readOnly field cha).
+  // Canonical edit contract participates in the same lock decision as legacy Frappe flags.
+  // It never grants permission: `editable` only means "not intrinsically locked"; permission,
+  // docstatus and server policy still apply below.
+  const intrinsicallyLocked =
+    contract.editMode === "readonly" ||
+    contract.editMode === "hidden" ||
+    (contract.editMode === "set_once" && setOnceIsLocked(field, doc[field.fieldname])) ||
+    (contract.editMode === "immutable_after_submit" && docstatus >= 1);
+
   const permWritable = ctx.assumeWritable ? true : perms.write.has(permlevel);
   const roReasons =
     ctx.forceReadOnly === true ||
+    intrinsicallyLocked ||
     field.read_only === 1 ||
     evalDependsOnRO(field.read_only_depends_on, doc, ctx.parent) ||
     docstatusLocks(field, docstatus) ||
