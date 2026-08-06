@@ -22,6 +22,14 @@ function empty(value: unknown): boolean {
   return value === undefined || value === null || value === "";
 }
 
+const pad = (value: number): string => String(value).padStart(2, "0");
+function localDate(now: Date): string {
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+function localDatetime(now: Date): string {
+  return `${localDate(now)} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
 /**
  * Canonical client interpretation of one DocField's ownership/presentation contract.
  *
@@ -79,8 +87,11 @@ export function resolveFieldContract(field: DocField, workflowField = "workflow_
 /** Resolve Frappe-compatible defaults once, through one reusable path. */
 export function resolveFieldDefault(field: Pick<DocField, "fieldtype" | "default">, now = new Date()): unknown {
   if (field.default === undefined || field.default === null) return undefined;
-  if (field.default === "Today" && field.fieldtype === "Date") return now.toISOString().slice(0, 10);
-  if (field.default === "Now" && field.fieldtype === "Datetime") return now.toISOString();
+  // Desk resolves these pseudo-defaults in the browser's local timezone before sending them.
+  // Preserve Frappe/MySQL wire shape instead of emitting UTC ISO (`T...Z`), which can shift dates
+  // for +07 users and is not the canonical Datetime string used by the existing create path.
+  if (field.default === "Today" && field.fieldtype === "Date") return localDate(now);
+  if (field.default === "Now" && field.fieldtype === "Datetime") return localDatetime(now);
   return field.default;
 }
 
