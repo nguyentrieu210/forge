@@ -1,9 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { annotate, browserRequest, chooseLink, login, openModule, OperatorAudit, readiness, requireLocalMutation, unwrap } from "./harness.js";
 
 const tomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); };
-const inputUnder = (page: Parameters<typeof test>[0] extends never ? never : any, label: string) => page.locator("label").filter({ hasText: label }).first().locator("..").locator("input").first();
-const selectUnder = (page: any, label: string) => page.locator("label").filter({ hasText: label }).first().locator("..").locator("select").first();
+const inputUnder = (page: Page, label: string) => page.locator("label").filter({ hasText: label }).first().locator("..").locator("input").first();
+const selectUnder = (page: Page, label: string) => page.locator("label").filter({ hasText: label }).first().locator("..").locator("select").first();
 
 test("E2E-01 Sales creates and confirms one real door order through UI @core", async ({ page }, testInfo) => {
   annotate(testInfo, "E2E-01", "Kinh doanh");
