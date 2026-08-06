@@ -1,6 +1,9 @@
 import { BriefError } from "./compile-brief.mjs";
 
 const UI_POLICY_KEYS = ["bulk", "matrix", "operational"];
+const OPERATIONAL_CELL_ROLES = new Set([
+  "operator_input", "optional_input", "auto", "formula", "readonly", "warning", "result", "money",
+]);
 
 /**
  * Keep the legacy brief schema strict for every pre-existing property while allowing
@@ -36,6 +39,18 @@ export function validateBriefUiViewPolicies(brief) {
       if (doctype[key].enabled !== undefined && typeof doctype[key].enabled !== "boolean") {
         errors.push(`/doctypes/${index}/${key}/enabled must be boolean`);
       }
+      if (key === "operational" && doctype[key].fieldRoles !== undefined) {
+        const roles = doctype[key].fieldRoles;
+        if (!roles || typeof roles !== "object" || Array.isArray(roles)) {
+          errors.push(`/doctypes/${index}/operational/fieldRoles must be an object`);
+        } else {
+          for (const [fieldname, role] of Object.entries(roles)) {
+            if (!fieldname || typeof role !== "string" || !OPERATIONAL_CELL_ROLES.has(role)) {
+              errors.push(`/doctypes/${index}/operational/fieldRoles/${fieldname || "?"} has invalid cell role`);
+            }
+          }
+        }
+      }
     }
   });
   return errors;
@@ -69,7 +84,27 @@ export function attachBriefUiViewPolicies(brief, pkg) {
       if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
         throw new BriefError(`${compiled.name}: ${key} must be an object`);
       }
-      next[key] = key === "operational" ? { ...policy } : { enabled: true, ...policy };
+      if (key !== "operational") {
+        next[key] = { enabled: true, ...policy };
+        continue;
+      }
+
+      const { fieldRoles, ...operational } = policy;
+      next.operational = operational;
+      if (fieldRoles !== undefined) {
+        if (!fieldRoles || typeof fieldRoles !== "object" || Array.isArray(fieldRoles)) {
+          throw new BriefError(`${compiled.name}: operational.fieldRoles must be an object`);
+        }
+        const fields = new Map((compiled.fields ?? []).map((field) => [field.fieldname, field]));
+        for (const [fieldname, role] of Object.entries(fieldRoles)) {
+          const field = fields.get(fieldname);
+          if (!field) throw new BriefError(`${compiled.name}: operational.fieldRoles names unknown field ${fieldname}`);
+          if (typeof role !== "string" || !OPERATIONAL_CELL_ROLES.has(role)) {
+            throw new BriefError(`${compiled.name}: operational.fieldRoles.${fieldname} is not recognised: ${String(role)}`);
+          }
+          field.cellRole = role;
+        }
+      }
     }
     if (Object.keys(next).length) compiled.viewPolicy = { ...(compiled.viewPolicy ?? {}), ...next };
   }
