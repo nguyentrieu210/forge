@@ -7,6 +7,7 @@ const bridge = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSale
 const workspace = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesModeWorkspace.tsx", "utf8");
 const compactCss = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesSheetCompact.css", "utf8");
 const itemContext = fs.readFileSync("server/apps-src/alumdoor-worker/src/sales-item-context.ts", "utf8");
+const salesWizard = fs.readFileSync("server/apps-src/alumdoor-worker/src/sales-wizard-context.ts", "utf8");
 
 test("AREA display reacts immediately to entered height and width without replacing billable authority", () => {
   assert.match(sheet, /const authoritative = line\.formula\?\.area_per_set_sqm/);
@@ -75,4 +76,37 @@ test("shared grid persists column order and width, supports drag, manual resize 
   assert.match(sheet, /Tự khít cột/);
   assert.match(sheet, /renderGrid\(true\)/);
   assert.doesNotMatch(compactCss, /nth-child\(/);
+});
+
+test("sales header is compact and customer-centric", () => {
+  assert.match(sheet, /Thông tin khách hàng/);
+  assert.match(sheet, /Thông tin đơn hàng/);
+  assert.match(sheet, />\+ Tạo mới<\/Button>/);
+  assert.doesNotMatch(sheet, />\+ NCC<\/Button>/);
+  assert.match(sheet, /Loại bảng giá/);
+  assert.match(sheet, /Địa chỉ nhận/);
+  assert.match(sheet, /sm:grid-cols-\[180px_minmax\(0,1fr\)\]/);
+  assert.match(sheet, /grid grid-cols-2 gap-2/);
+});
+
+test("summary panel uses sales-order totals instead of collection-state placeholders", () => {
+  assert.match(sheet, /Tổng cộng/);
+  assert.match(sheet, /Tổng chiết khấu/);
+  assert.match(sheet, /Tổng VAT/);
+  assert.match(sheet, /Tổng phụ thu/);
+  assert.match(sheet, /THÀNH TIỀN/);
+  assert.doesNotMatch(sheet, />Đã thu</);
+  assert.doesNotMatch(sheet, />CÒN PHẢI THU</);
+});
+
+test("door width input basis is resolved by the domain before dimensions are entered", () => {
+  assert.match(salesWizard, /checked\(args\.basis_only\)/);
+  assert.match(salesWizard, /measurementWidthBasis/);
+  assert.match(salesWizard, /width_basis: measurementWidthBasis/);
+  assert.match(sheet, /const refreshMeasurementBasis = async/);
+  assert.match(sheet, /basis_only: true/);
+  assert.match(sheet, /basisChanged \? \{ width: "", formula: null/);
+  assert.match(sheet, /width_input_basis: line\.widthBasis/);
+  assert.match(sheet, /RỘNG PB NHỰA/);
+  assert.match(sheet, /RỘNG PB RAY/);
 });
