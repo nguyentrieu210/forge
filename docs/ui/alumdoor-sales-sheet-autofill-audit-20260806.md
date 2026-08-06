@@ -13,53 +13,94 @@ Scope: `client/apps/runtime/src/experiences/AlumdoorSalesSheetV2.tsx` and the re
 7. Authoritative billable quantity x rate -> line amount; discounts -> net order total.
 8. Warehouse + item/formula -> stock availability/shortage.
 
+## Field-by-field truth
+
+| Field/result | Expected source | Audit state |
+| --- | --- | --- |
+| Company | Business Context | Existing server-resolved context bridge; no client default synthesis. |
+| Currency | Company/Business Context | Existing context fallback prevents false Company 404 from blanking currency. |
+| Customer Group / phone / address | Customer | Automatic after Customer selection. |
+| Selling Price List | Customer preference -> active Price List fallback | **Fixed on this branch**: active-list projection can satisfy a candidate even when repeated generic single-record CRUD is unavailable. |
+| Item calculation mode | Item | Automatic from authoritative Item attributes/group. |
+| UOM | Item `default_sales_uom` / conversion contract | Automatic through `alumdoor.sales.item_context`. |
+| Default/fixed thickness | Material Specification | Automatic when Item references a specification. |
+| Required/default color | Measurement Profile + Item | Automatic when the Item/profile requires color. |
+| Quantity | Sales Sheet entry | Defaults to 1 when an Item is selected if the row has no quantity. |
+| Area display | Height x Width, then server formula | **Fixed on this branch**: immediate geometric display; authoritative formula replaces it when available. |
+| Billable area | `alumdoor.sales.production_line_context` | Remains server-authoritative; local geometric display is never used as persisted billable quantity. |
+| Unit rate | Item Price / canonical pricing | **Fixed request chain on this branch**: active price-list resolution + ordered item-context requests prevent stale `rate=null` from overwriting a later priced result. No numeric fallback is invented. |
+| Gross amount | authoritative billable qty x authoritative rate | Automatic once both authoritative inputs exist. |
+| Discount | Pricing Rule / approved sales policy | **Business dependency**: repo has no generalized rule proving the existing client-side 15% assumption. Do not invent a new rule. |
+| Net total | gross amount - explicit/authoritative discount | Automatic. |
+| Stock availability | Stock Balance / cutting proposal | Automatic read-only preview; authoritative posting guards remain server-side. |
+
 ## Findings
 
-### A1 — Area display is unnecessarily gated by server preview
+### A1 — Area display was unnecessarily gated by server preview — FIXED
 
-`areaPerSet()` returns only `formula.area_per_set_sqm`. The preview itself is not called until Customer Group is canonicalized to `Đại lý` or `Lẻ`. Therefore a valid AREA row can have Height and Width entered while the Area cell remains blank.
+Previously `areaPerSet()` returned only `formula.area_per_set_sqm`. The preview itself does not run until Customer Group is canonicalized to `Đại lý` or `Lẻ`, so a valid AREA row could have Height and Width while Area stayed blank.
 
-Fix direction: show `height * width` immediately as a presentation preview, then replace it with authoritative `formula.area_per_set_sqm` once returned. Persisted/billable quantity remains server-authoritative.
+Branch behavior: show `height * width` immediately as a presentation preview, then prefer authoritative `formula.area_per_set_sqm` when returned. Persisted/billable quantity remains server-authoritative `billable_area_sqm`.
 
-### A2 — Selling price-list resolution is fragile and repeats generic CRUD reads
+### A2 — Selling price-list resolution repeated fragile generic CRUD reads — FIXED
 
-Customer hydration builds guessed candidates, lists active Price Lists, then calls `getDoc(Price List, candidate)` again to validate each candidate. A list result already proved the candidate active, while a generic single-record route can be unavailable or differently materialized. This can leave `priceList` empty even though an applicable active list is visible.
+Customer hydration builds candidates and already lists active Price Lists, but then re-read each candidate through generic `getDoc(Price List, candidate)`. An active list visible in the list projection could therefore be missed if the generic single-record route was unavailable or differently materialized.
 
-Fix direction: cache active Price Lists once, resolve preferred -> customer-group match -> standard -> sole active list directly from the active list projection, and refresh item pricing when the selected list changes.
+Branch behavior: reuse the caller-visible active Price List projection as a scoped compatibility read. Resolution remains preferred list -> matching active named list -> standard `Giá niêm yết` -> sole active list. No price amount is synthesized.
 
-### A3 — Item-context requests can race and stale responses can overwrite a newer rate
+### A3 — Item-context requests could race and stale responses could overwrite a newer rate — FIXED
 
-`refreshContext()` has no per-line generation token. Item selection, currency resolution, customer price-list resolution and warehouse changes can launch overlapping requests. An older response (including a `rate=null` response before price-list resolution) may arrive after a newer priced response and overwrite it.
+Item selection, currency hydration, customer price-list hydration and warehouse changes can launch overlapping `alumdoor.sales.item_context` reads. An older response issued before Price List resolution could contain `rate=null` and arrive after a newer priced response.
 
-Fix direction: key request generations by stable line id and ignore stale responses.
+Branch behavior: item-context reads are ordered per item/warehouse so the newest request finishes after prior requests and wins the legacy row state. Canonical rate calculation itself remains server-owned.
 
-### A4 — Pricing errors and production-formula errors share one `line.error`
+### A4 — Pricing and production-formula diagnostics share one legacy `line.error` — OPEN HARDENING
 
-The pricing request can set `line.error` to `price_error`; the AREA preview immediately clears `error` and later replaces it with leaf/stock-profile errors. Result: rate may remain blank while the visible pricing explanation disappears.
+The pricing request can set a price error while the AREA formula preview also writes the same display error slot. This is not a second pricing authority, but it can hide the reason a rate is blank.
 
-Fix direction: separate pricing and formula error channels and aggregate only for display/blocking.
+Target hardening: split diagnostics by concern (`price`, `formula`, `stock`) or project them through one typed diagnostic model. This is presentation/error-model work and must not change rate/formula authority.
 
-### A5 — Stock read diagnostics are returned but not projected
+### A5 — Stock read diagnostics are returned but not projected distinctly — OPEN HARDENING
 
-`sales.item_context` returns `stock_read_error`, but Sales Sheet does not surface it. The operator can therefore see no stock answer without knowing whether that means zero stock, unmanaged stock or a read failure.
+`sales.item_context` returns `stock_read_error`, while the legacy sheet mainly projects quantities/shortage. Operator feedback should distinguish zero stock, unmanaged stock and a failed stock read.
 
-Fix direction: keep the existing authoritative stock fields and surface the read diagnostic without inventing stock.
+Target hardening: surface the existing server diagnostic; never infer stock from absence of a response.
 
-### A6 — Required visual state is tied mostly to missing values
+### A6 — Required visual state was tied mostly to missing values — FIXED
 
-Required cells lose the strong visual cue after they are filled, although the operator still needs to distinguish operator-entered fields from computed/read-only cells during fast keyboard entry.
+Required operator-input cells now stay visually identifiable after entry; missing required input remains stronger/red. Calculated/read-only cells remain neutral.
 
-Fix direction: persistent required-input treatment + stronger missing state.
+### A7 — Width authority was duplicated between component and stylesheet — FIXED
 
-### A7 — Main and expanded grid already share the same renderer, but column widths are static
+The CSS added by the prior compact-layout PR repeated column widths through `nth-child` selectors with `!important`, overriding component widths and becoming incorrect when columns were hidden.
 
-Both modes call `renderGrid()`, so one width model can cover both. Current widths are constants only.
+Branch behavior: `COLUMNS` is the sole default-width authority. The old nth-child width overrides are removed. The shared renderer is used by both normal and expanded grids, and business headers expose horizontal resize behavior.
 
-Fix direction: compact two-line headers, shorter labels, persisted per-column widths and pointer resize handles in the shared renderer.
+### A8 — Automatic 15% German-door discount lacks generalized policy evidence — BUSINESS DEPENDENCY
+
+Repository source proves imported Item Price lists (`Giá niêm yết`, `Giá có ray`) and historical quotation evidence, but Pricing Rule is intentionally not populated from insufficient source evidence. One quotation with 15% discount does not establish a universal German-door rule.
+
+Dependency Request: `docs/dependencies/alumdoor-sales-pricing-policy-request-20260806.md`.
+
+Until source-owner evidence defines scope/effective dates/stacking, do not create a new automatic discount rule or guess when `Giá có ray` applies.
+
+## Imported price evidence
+
+The canonical import creates:
+
+- `Giá niêm yết:<item_code>` Item Price with the Item's `default_sales_uom`, rate and VND;
+- `Giá có ray:<item_code>` only when the source rail price is positive, also with `default_sales_uom`, rate and VND.
+
+Therefore a blank Unit Rate for a priced Item is a context/lookup/diagnostic problem to expose and fix; it is not a reason to calculate a price in the client.
 
 ## Authority boundary
 
 - Geometric `height * width` is display-only fallback.
 - `billable_area_sqm`, cutting/leaf calculation, price authority, stock and persisted Sales Order values remain server-owned.
-- No manual fallback price is synthesized.
-- Missing authoritative price must remain fail-closed and visibly explain why.
+- No manual numeric price fallback is synthesized.
+- Missing authoritative price remains fail-closed and must visibly explain why.
+- Automatic discount/Price List switching beyond existing authoritative data requires source-owner policy evidence.
+
+## Validation status
+
+PR build/convergence evidence reached and passed CloudForge build, Alumdoor sales/procurement contract verification, MetaForge build, migration/recovery safety and R6 Golden Flow assertions before stopping at the repository-wide `Verify release safety authority` gate. The branch does not modify the canonical release workflow or release-safety verifier; that gate is tracked as an external convergence blocker rather than being bypassed in this Sales Sheet change.
