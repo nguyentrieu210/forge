@@ -27,10 +27,10 @@ const SALES_KEYS = [
 ];
 const SALES_LABELS = ["Bán hàng", "Đơn hàng", "Phiếu xuất kho", "Giao hàng", "Báo cáo", "Lịch sử bán hàng"];
 
-test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and canonical history in 2.3.0", async () => {
+test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and canonical history in 2.3.1", async () => {
   const brief = await readBriefSource(briefPath);
 
-  assert.equal(brief.version, "2.3.0");
+  assert.equal(brief.version, "2.3.1");
   assert.deepEqual(brief.dimensions, ["company", "warehouse"]);
   assert.deepEqual(brief.navigation.items.slice(0, SALES_KEYS.length), SALES_KEYS);
 
@@ -88,7 +88,7 @@ test("Alumdoor sales exposes composer, order/output, dispatch, dashboard and can
   assert.equal(legacyReport?.group, "Báo cáo", "legacy tabular report stays available outside the daily Sales strip");
 
   const pkg = compileBrief(brief);
-  assert.equal(pkg.version, "2.3.0");
+  assert.equal(pkg.version, "2.3.1");
   assert.deepEqual(pkg.client?.dimensions, ["company", "warehouse"]);
   const sales = pkg.nav.filter((entry) => entry.group === "Bán hàng");
   assert.deepEqual(sales.map((entry) => entry.key), SALES_KEYS);
