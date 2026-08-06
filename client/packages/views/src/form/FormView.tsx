@@ -4,13 +4,21 @@
  *   resolveMeta(theo VALUES watch → depends_on phản ứng) → groupLayout → render control.
  * State layer = **React Hook Form**; validate required = **Zod** (schema dựng từ ResolvedField).
  * Tôn trọng 6 trạng thái field (hidden/masked/locked/editable). 417 conflict → banner (KHÔNG ghi đè).
- * UI qua @metaforge/ui (header/tabs sticky, card sections). Logic KHÔNG đổi so với bản gốc.
+ * UI qua @metaforge/ui (header/tabs sticky, card sections).
  */
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm, useWatch, Controller, type FieldValues } from "react-hook-form";
 import { z } from "zod";
 import { AlertTriangle, X } from "lucide-react";
-import { resolveMeta, collectFetchFrom, type DocTypeMeta, type Doc, type ResolvedField } from "@metaforge/core";
+import {
+  collectFetchFrom,
+  collectMetadataReactiveFields,
+  resolveMeta,
+  shouldApplyAutomaticValue,
+  type Doc,
+  type DocTypeMeta,
+  type ResolvedField,
+} from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
 import { Button, Badge, toast, cn, useT } from "@metaforge/ui";
@@ -32,51 +40,21 @@ export interface FormViewProps {
   onReload?: () => void;
   onSave?: (changed: Record<string, unknown>, all: Record<string, unknown>) => void;
   saving?: boolean;
-  /** lỗi field-level từ server (mapError.fieldErrors) → gắn vào đúng control. */
   fieldErrors?: Record<string, string>;
-  /** slot header phải bổ sung. */
   headerActions?: ReactNode;
-  /**
-   * Đóng form, quay về danh sách.
-   *
-   * Nút đặt TRONG header của form chứ không thả nổi tuyệt đối bên ngoài: header này `sticky z-20`
-   * kèm nền mờ, nên mọi nút thả nổi ở góc phải trên đều bị nó ĐÈ LÊN — nút vẫn tồn tại trong DOM
-   * nhưng không ai bấm được, và cũng không ai nhìn thấy để biết là có.
-   */
   onClose?: () => void;
-  /** Ẩn action mặc định khi shell cha cung cấp footer riêng (vd modal tạo mới). */
   hideDefaultActions?: boolean;
-  /** Footer sticky nằm trong thẻ form; dùng cho Create modal ngang. */
   footerActions?: ReactNode;
-  /** bản ghi mới (chưa lưu) → ẩn Submit/Delete… */
   isNew?: boolean;
-  /** ẩn header tiêu đề/tab của FormView — dùng khi shell cha (vd modal Create) đã tự hiện tiêu đề riêng. */
   hideHeader?: boolean;
-  /** báo cho cha biết form có đang dirty không (vd để quyết định có cần hỏi xác nhận trước khi đóng). */
   onDirtyChange?: (dirty: boolean) => void;
-  /** quyền hiệu lực (docinfo.permissions ở Live). Mặc định mock = full. */
   perms?: FormPerms;
-  /** transitions từ server get_transitions (nguồn sự thật nút workflow). */
   transitions?: WorkflowTransition[];
-  /** ép có workflow (ẩn Submit/Cancel thủ công) kể cả khi transitions rỗng lúc load. */
   hasWorkflow?: boolean;
   onAction?: (kind: FormActionKind) => void;
   onWorkflowAction?: (action: string) => void;
 }
 
-/**
- * BỀ RỘNG CỦA MỘT Ô THUỘC VỀ CHÍNH FIELD ĐÓ — và chỉ được quyết ở đây.
- *
- * Bản trước có BA tầng cùng quyết một bề rộng: lưới cấp một khe tối thiểu 15rem, vỏ field
- * chặn `max-w` lần hai, rồi bản thân control chặn lần thứ ba bằng một con số khác. Kết quả
- * là ô 11rem nằm giữa khe 15rem, hở đều hai bên, và form trông vừa rộng vừa rời rạc —
- * không phải vì một con số nào sai, mà vì ba con số đúng-riêng-lẻ cãi nhau.
- *
- * Giờ dùng flex-wrap: mỗi field là một mục có `basis` theo KIỂU của nó, tự chảy và tự
- * xuống dòng. Không còn khe rỗng, vì không còn khe — chỉ có ô và khoảng cách giữa chúng.
- * Bốn ô đầu phiếu mua (NCC 17rem + ba ô ngắn 10rem) cộng lại vừa một hàng ở khung 1120px.
- */
-/** Zod schema từ field required đang hiển thị (dynamic theo depends_on). */
 function buildSchema(resolved: ResolvedField[], t: (k: string, f?: string) => string): z.ZodTypeAny {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const rf of resolved) {
@@ -97,20 +75,21 @@ export function FormView(props: FormViewProps) {
   const formId = useId().replace(/:/g, "");
   const [activeTab, setActiveTab] = useState(0);
   const fetchRules = useMemo(() => collectFetchFrom(meta), [meta]);
-  const prevLinks = useRef<Record<string, unknown>>({}); // giá trị link lần trước → phát hiện user đổi
-  const fetchDocKey = useRef<string>(""); // doc đang đồng bộ → bỏ vòng fetch của lần (re)load (L1)
+  const fieldByName = useMemo(() => new Map((meta.fields ?? []).map((field) => [field.fieldname, field])), [meta]);
+  const prevLinks = useRef<Record<string, unknown>>({});
+  const fetchDocKey = useRef<string>("");
+  /** Last value written automatically for a target. Difference from current value means user override. */
+  const lastAutoValues = useRef<Record<string, unknown>>({});
 
-  // reset khi đổi document (name) hoặc tải lại (modified) — RHF tự lo dirty/back-to-initial.
   useEffect(() => {
     form.reset({ ...doc });
-    // seed link đã-load ⇒ fetch_from KHÔNG kích hoạt lúc tải (chỉ user đổi link mới fetch).
     const seed: Record<string, unknown> = {};
     for (const r of fetchRules) seed[r.linkField] = doc[r.linkField];
     prevLinks.current = seed;
+    lastAutoValues.current = {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc.name, doc.modified]);
 
-  // Lỗi field-level từ server (post-valid, sau khi client-zod đã qua) → gắn đúng control.
   useEffect(() => {
     if (!props.fieldErrors) return;
     for (const [fieldname, message] of Object.entries(props.fieldErrors)) {
@@ -120,7 +99,6 @@ export function FormView(props: FormViewProps) {
   }, [props.fieldErrors]);
 
   const isDirty = form.formState.isDirty;
-  // Chống mất dữ liệu: cảnh báo khi rời trang (đóng tab/refresh/điều hướng ngoài) lúc form dirty.
   useEffect(() => {
     if (!isDirty || typeof window === "undefined") return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
@@ -132,34 +110,8 @@ export function FormView(props: FormViewProps) {
   onDirtyChangeRef.current = props.onDirtyChange;
   useEffect(() => { onDirtyChangeRef.current?.(isDirty); }, [isDirty]);
 
-  /**
-   * Chỉ đăng ký render lại FormView cho các field thật sự điều khiển metadata/link.
-   *
-   * Controller của từng ô đã tự theo dõi giá trị của chính nó. `form.watch()` không đối số ở
-   * đây trước kia khiến GÕ MỘT KÝ TỰ dựng lại toàn bộ form và mọi ChildGrid. Với chứng từ
-   * nhiều dòng, đây là nguyên nhân chính của độ trễ mà ERPNext/Frappe tránh bằng refresh cục bộ.
-   */
-  const reactiveFields = useMemo(() => {
-    const names = new Set<string>(fetchRules.map((rule) => rule.linkField));
-    const addExpression = (expression?: string) => {
-      if (!expression) return;
-      if (expression.startsWith("eval:")) {
-        for (const match of expression.matchAll(/\bdoc\.([a-zA-Z_][a-zA-Z0-9_]*)/g)) names.add(match[1]!);
-      } else if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(expression.trim())) {
-        names.add(expression.trim());
-      }
-    };
-    for (const field of meta.fields ?? []) {
-      addExpression(field.depends_on);
-      addExpression(field.mandatory_depends_on);
-      addExpression(field.read_only_depends_on);
-      if (field.fieldtype === "Dynamic Link" && field.options) names.add(field.options);
-      if (typeof field.link_filters === "string") {
-        for (const match of field.link_filters.matchAll(/\bdoc\.([a-zA-Z_][a-zA-Z0-9_]*)/g)) names.add(match[1]!);
-      }
-    }
-    return [...names];
-  }, [meta, fetchRules]);
+  /** One canonical reactive dependency collector for Form/Child/Action consumers. */
+  const reactiveFields = useMemo(() => collectMetadataReactiveFields(meta), [meta]);
   const reactiveValues = useWatch({ control: form.control, name: reactiveFields });
   const values = useMemo(() => {
     const current = { ...form.getValues() };
@@ -169,8 +121,6 @@ export function FormView(props: FormViewProps) {
     return current;
   }, [form, reactiveFields, reactiveValues]);
 
-  // Ctrl/Cmd+S = Lưu (chặn hộp thoại lưu trang mặc định của trình duyệt). Đọc isDirty/onValid MỚI
-  // NHẤT qua ref — đăng ký listener 1 lần, không tái đăng ký mỗi phím gõ.
   const onValidRef = useRef<(vals: FieldValues) => void>(() => {});
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -183,12 +133,28 @@ export function FormView(props: FormViewProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [form]);
 
-  // P1-09 fetch_from: khi user đổi Link nguồn → nạp source_field của doc đích, điền field đích.
-  // Link xoá → xoá field đích. Seed ở reset ⇒ KHÔNG chạy lúc tải. Bỏ kết quả nếu link đổi tiếp.
+  const setAutomaticTarget = (target: string, value: unknown) => {
+    const field = fieldByName.get(target);
+    if (!field) return;
+    const current = form.getValues(target);
+    const ownsAuto = Object.prototype.hasOwnProperty.call(lastAutoValues.current, target);
+    const stillMatchesAuto = ownsAuto && Object.is(current, lastAutoValues.current[target]);
+    const provenance = stillMatchesAuto
+      ? "auto"
+      : (ownsAuto || form.getFieldState(target).isDirty ? "user" : "initial");
+    if (!shouldApplyAutomaticValue(field, current, provenance)) {
+      if (provenance === "user") delete lastAutoValues.current[target];
+      return;
+    }
+    form.setValue(target, (value ?? "") as never, { shouldDirty: true });
+    lastAutoValues.current[target] = value ?? "";
+  };
+
+  // P1-09 fetch_from: user changes Link source -> one source read -> declared target assignments.
+  // A target remains auto-refreshable while it still equals the last automatic value. Once the
+  // operator changes it, canonical dirtyGuard/provenance prevents later source changes overwriting it.
   useEffect(() => {
     if (!fetchRules.length) return;
-    // L1: doc vừa (re)load → prevLinks đã seed ở reset effect; bỏ vòng này để KHÔNG fetch giả +
-    // KHÔNG đánh dirty form vừa reset (values còn là bản cũ ở render đổi-doc).
     const docKey = `${doc.name ?? ""}|${doc.modified ?? ""}`;
     if (fetchDocKey.current !== docKey) { fetchDocKey.current = docKey; return; }
     const linkFields = new Set(fetchRules.map((r) => r.linkField));
@@ -198,43 +164,33 @@ export function FormView(props: FormViewProps) {
       prevLinks.current[lf] = cur;
       const rules = fetchRules.filter((r) => r.linkField === lf);
       if (cur == null || cur === "") {
-        for (const r of rules) form.setValue(r.target, "", { shouldDirty: true });
+        for (const r of rules) setAutomaticTarget(r.target, "");
         continue;
       }
       const sourceDoctype = rules.find((r) => r.sourceDoctype)?.sourceDoctype;
       if (!sourceDoctype) continue;
-      // Một Link thường điền 3–5 ô đầu phiếu. Đọc trọn document MỘT lần thay vì gọi
-      // get_value cho từng ô: nhanh hơn rõ rệt trên đường app → gateway → tenant.
       if (services?.fetchDocument) {
         void services.fetchDocument(sourceDoctype, String(cur))
           .then((source) => {
             if (prevLinks.current[lf] !== cur) return;
-            for (const r of rules) form.setValue(r.target, (source[r.sourceField] ?? "") as never, { shouldDirty: true });
+            for (const r of rules) setAutomaticTarget(r.target, source[r.sourceField] ?? "");
           })
-          .catch(() => { /* fetch lỗi → giữ nguyên (không phá form) */ });
+          .catch(() => { /* keep current values */ });
         continue;
       }
       if (!services?.fetchValue) continue;
       void Promise.all(rules.map(async (r) => ({ r, value: await services.fetchValue!(sourceDoctype, String(cur), r.sourceField) })))
         .then((resolvedRules) => {
           if (prevLinks.current[lf] !== cur) return;
-          for (const { r, value } of resolvedRules) form.setValue(r.target, (value ?? "") as never, { shouldDirty: true });
+          for (const { r, value } of resolvedRules) setAutomaticTarget(r.target, value ?? "");
         })
-        .catch(() => { /* fetch lỗi → giữ nguyên (không phá form) */ });
+        .catch(() => { /* keep current values */ });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, fetchRules, services, doc.name, doc.modified]);
+  }, [values, fetchRules, services, doc.name, doc.modified, fieldByName]);
 
   /**
-   * Tổng chứng từ cộng lại NGAY khi gõ, không đợi lưu.
-   *
-   * ChildGrid đã tính `amount` từng dòng từ lâu, nhưng tổng ở đầu phiếu thì chỉ server mới
-   * điền — nghĩa là suốt lúc nhập, ô "Tổng tiền hàng" đứng im ở con số của lần lưu trước
-   * (hoặc trống với phiếu mới). Người nhập không có cách nào đối chiếu với phiếu giấy của
-   * nhà cung cấp cho tới khi bấm lưu, mà lúc đó sai thì đã ghi sổ.
-   *
-   * Chỉ cộng, không diễn giải: thuế, chiết khấu, phí vẫn để server quyết. Đây là con số để
-   * NHÌN; `calculateSalesTotals` phía server vẫn là con số để TIN.
+   * Lightweight preview totals only. Authoritative totals remain server-side.
    */
   const totalFields = useMemo(() => {
     const has = (name: string) => meta.fields.some((f) => f.fieldname === name);
@@ -315,12 +271,8 @@ export function FormView(props: FormViewProps) {
   useEffect(() => {
     const first = Object.keys(props.fieldErrors ?? {})[0];
     if (first) focusField(first);
-    // Chỉ phản ứng khi server trả một bộ lỗi mới; focusField phụ thuộc layout hiện tại.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.fieldErrors]);
-  // Hướng dẫn nhập do APP cấp qua provider (giống formProfiles) — engine không tự bịa nội dung
-  // nghiệp vụ, vì cùng một DocType ở ngành khác lại cần lời dặn khác.
-  // Không có provider (test / nhúng lẻ view) ⇒ chỉ là không có hướng dẫn, form vẫn dựng bình thường.
   const formGuides = useMetaForgeOptional()?.formGuides;
 
   const title = String((meta.title_field && doc[meta.title_field]) || doc.name || t("form.new"));
@@ -336,10 +288,7 @@ export function FormView(props: FormViewProps) {
     perms: props.perms ?? { create: true, write: true, submit: true, cancel: true, delete: true, amend: true },
   };
 
-  // P0-04: chốt chặn thứ 2 (ngoài disable UI) — thao tác đổi trạng thái KHÔNG chạy khi form dirty.
   const guardedAction = (k: FormActionKind) => {
-    // In/nhân bản/xoá đều làm việc trên bản đã lưu ở server, không đổi trạng thái
-    // của dữ liệu đang gõ dở. Chỉ các thao tác nghiệp vụ mới phải bị chặn.
     const allowedWhileDirty = k === "save" || k === "delete" || k === "print" || k === "duplicate";
     if (!allowedWhileDirty && form.formState.isDirty) { toast.error(t("form.dirty_guard", DIRTY_GUARD_REASON)); return; }
     props.onAction?.(k);
@@ -350,7 +299,7 @@ export function FormView(props: FormViewProps) {
   };
 
   const onValid = (vals: FieldValues) => {
-    if (props.conflict) return; // conflict → chặn ghi
+    if (props.conflict) return;
     const result = buildSchema(resolved, t).safeParse(vals);
     if (!result.success) {
       let firstField = "";
@@ -373,7 +322,6 @@ export function FormView(props: FormViewProps) {
 
   return (
     <form className={cn("mf-form-view flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card", props.isNew && "mf-form-create")} onSubmit={form.handleSubmit(onValid)}>
-      {/* HEADER + TABS sticky — bỏ qua khi shell cha (vd modal Create) đã tự hiện tiêu đề riêng. */}
       {!props.hideHeader ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
           <div className="flex min-h-14 flex-wrap items-center gap-3 px-5 py-2">
@@ -395,14 +343,7 @@ export function FormView(props: FormViewProps) {
               ) : null}
               {!props.hideDefaultActions ? <FormActionBar ctx={actionCtx} onAction={guardedAction} /> : null}
               {props.onClose ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={props.onClose}
-                  aria-label={t("split.list")}
-                  title={t("split.list")}
-                >
+                <Button type="button" variant="ghost" size="icon-sm" onClick={props.onClose} aria-label={t("split.list")} title={t("split.list")}>
                   <X className="size-4" />
                 </Button>
               ) : null}
@@ -411,26 +352,6 @@ export function FormView(props: FormViewProps) {
 
           {tabs.length > 1 ? (
             <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none border-t bg-transparent px-3">
-                {tabs.map((tb, i) => (
-                  <Button
-                    type="button"
-                    key={i}
-                    variant="ghost"
-                    role="tab"
-                    aria-selected={activeIdx === i}
-                    onClick={() => setActiveTab(i)}
-                    className={cn("h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm", activeIdx === i && "border-primary text-foreground")}
-                  >
-                    <span>{tb.label || t("form.tab_general")}</span>
-                    {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
-                  </Button>
-                ))}
-            </div>
-          ) : null}
-        </div>
-      ) : tabs.length > 1 ? (
-        <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
-          <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none bg-transparent px-3">
               {tabs.map((tb, i) => (
                 <Button
                   type="button"
@@ -445,11 +366,30 @@ export function FormView(props: FormViewProps) {
                   {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
                 </Button>
               ))}
+            </div>
+          ) : null}
+        </div>
+      ) : tabs.length > 1 ? (
+        <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
+          <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none bg-transparent px-3">
+            {tabs.map((tb, i) => (
+              <Button
+                type="button"
+                key={i}
+                variant="ghost"
+                role="tab"
+                aria-selected={activeIdx === i}
+                onClick={() => setActiveTab(i)}
+                className={cn("h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm", activeIdx === i && "border-primary text-foreground")}
+              >
+                <span>{tb.label || t("form.tab_general")}</span>
+                {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
+              </Button>
+            ))}
           </div>
         </div>
       ) : null}
 
-      {/* BODY scroll */}
       <div className="mf-form-body min-h-0 flex-1 overflow-auto">
         {errorEntries.length ? (
           <div className="m-3 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm" role="alert" aria-label={t("form.validation_summary", "Các mục cần kiểm tra")}>
@@ -463,21 +403,14 @@ export function FormView(props: FormViewProps) {
           <div className="mf-conflict m-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <div>
-              {t("form.conflict_message")}{" "}
+              {t("form.conflict_message")} {" "}
               <Button variant="link" className="h-auto p-0 text-destructive underline" onClick={props.onReload} type="button">{t("form.conflict_reload")}</Button>{" "}
               {t("form.conflict_hint")}
             </div>
           </div>
         ) : null}
 
-        {/* Form LẤP ĐẦY khung chứa — bề ngang do khung quyết định (modal 920px, cột giữa của split
-            view ~580px), KHÔNG tự chặn thêm rồi canh giữa: làm vậy sinh hai dải trống hai bên trong
-            modal. max-w chỉ còn là chặn an toàn cho màn siêu rộng (>1152px), bình thường không chạm. */}
-        {/* 96rem chứ không phải 72rem: khung chứa đã rộng 1400px cho vừa bảng dòng hàng, mà
-            trần cũ 1152px thì form dừng lại giữa chừng và chừa một mảng trắng bên phải —
-            trần an toàn cho màn siêu rộng biến thành trần cho màn làm việc bình thường. */}
         <div className="mx-auto w-full max-w-[72rem] px-4 pb-6">
-          {/* Hướng dẫn nhập cho chứng từ này — chỉ hiện ở TAB ĐẦU để không lặp lại ở mọi tab. */}
           {activeIdx === 0 ? <FormGuide doctype={meta.name} guide={formGuides?.[meta.name]} className="mb-1" /> : null}
           {tab?.sections.map((section, si) => {
             if (section.hidden) return null;
@@ -485,19 +418,9 @@ export function FormView(props: FormViewProps) {
             return (
               <section key={si} className="mf-form-section py-3">
                 <div className="mf-section-heading mb-3 flex items-center gap-3">
-                  <h3 className="shrink-0 text-[13px] font-semibold text-foreground">
-                    {section.label || t("form.section_general", "Thông tin chung")}
-                  </h3>
+                  <h3 className="shrink-0 text-[13px] font-semibold text-foreground">{section.label || t("form.section_general", "Thông tin chung")}</h3>
                   <span className="h-px min-w-8 flex-1 bg-border/40" aria-hidden="true" />
                 </div>
-                {/* gap-y-2.5 thay vì 4, gap-x-5 thay vì 6 — mật độ dày kiểu ERP, đọc được cả form
-                    trong 1 màn thay vì phải cuộn. */}
-                {/* MỘT lưới duy nhất cho cả section (không phải 2 khối dọc lồng nhau) — nhờ vậy
-                    field bảng con/ô soạn thảo mới span được cả 2 cột, và hai cột tự canh hàng ngang
-                    với nhau thay vì trôi lệch. */}
-                {/* Flex-wrap, KHÔNG phải lưới: field tự chảy theo bề rộng của chính nó và tự
-                    xuống dòng khi hết chỗ. Lưới cấp khe đều nhau nên ô ngắn nằm giữa khe rộng,
-                    hở hai bên — đó là gốc của cảm giác "form quá rộng, kích cỡ không hợp lý". */}
                 <div className="mf-form-grid grid items-start gap-x-3 gap-y-3">
                   {groupCheckFields(sectionFields).map((entry, groupIndex) =>
                     Array.isArray(entry) ? (
@@ -545,7 +468,6 @@ export function FormView(props: FormViewProps) {
   );
 }
 
-/** Gom các checkbox LIỀN NHAU vào một hàng riêng để chúng không chen vào phần trống của hàng input. */
 function groupCheckFields(fields: ResolvedField[]): Array<ResolvedField | ResolvedField[]> {
   const grouped: Array<ResolvedField | ResolvedField[]> = [];
   let checks: ResolvedField[] = [];
@@ -580,9 +502,6 @@ interface FieldProps {
 
 function Field({ id, rf, width, form, registry, services, docName, parentDoctype, roles, values }: FieldProps) {
   const { field } = rf;
-  // Bảng con có thể dùng `parent.foo` ở metadata của CHÍNH DocType con, điều mà FormView cha
-  // không biết để đưa vào danh sách watch chọn lọc. Chỉ Field Table theo dõi toàn doc; các field
-  // thường vẫn render cục bộ qua Controller nên không kéo cả form render lại mỗi phím gõ.
   const tableValues = useWatch({
     control: form.control,
     disabled: field.fieldtype !== "Table" && field.fieldtype !== "Table MultiSelect",
@@ -602,9 +521,6 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
       name={field.fieldname}
       control={form.control}
       render={({ field: f, fieldState }) => {
-        // Check = ô tick: nhãn phải nằm NGAY BÊN PHẢI ô tick trên cùng một dòng (như ERPNext Desk).
-        // Bố cục dọc dùng chung cho mọi field khiến ô tick 16px rơi xuống dưới nhãn + mô tả, trông
-        // như một field bị lỗi và chiếm gấp 3 chiều cao cần thiết.
         const isCheck = field.fieldtype === "Check";
         const control = (
           <Control
@@ -632,19 +548,11 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
             {rf.required ? <span className="mf-required ml-0.5 text-destructive" aria-hidden="true">*</span> : null}
           </>
         );
-        {/* field.description (Frappe help text) — ERPNext Desk luôn hiện dòng chú thích này. */}
         const description = typeof field.description === "string" && field.description
           ? <p id={`${id}-desc`} className="text-[11px] leading-snug text-muted-foreground">{field.description}</p>
           : null;
         const wrapper = cn(
           "mf-field",
-          /**
-           * `min-w-0` để ô co lại được trên màn hẹp — KHÔNG `grow`.
-           *
-           * `grow` cạnh `basis` là tự huỷ: basis thành sàn chứ không còn là bề rộng, mọi ô
-           * giãn ra lấp đầy hàng, và ô "Mức độ" chứa hai chữ "Cần gấp" kéo dài bằng ô nhà
-           * cung cấp. Đó đúng là "kích cỡ không hợp lý" và "dư khoảng trắng".
-           */
           "min-w-0",
           isCheck && "mf-field-check",
           `mf-field-width-${width}`,
