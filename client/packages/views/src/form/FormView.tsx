@@ -2,9 +2,9 @@
 /**
  * FormView — trung tâm runtime. Data-driven 100% từ meta:
  *   resolveMeta(theo VALUES watch → depends_on phản ứng) → groupLayout → render control.
- * State layer = **React Hook Form**; validate required = **Zod** (schema dựng từ ResolvedField).
- * Tôn trọng 6 trạng thái field (hidden/masked/locked/editable). 417 conflict → banner (KHÔNG ghi đè).
- * UI qua @metaforge/ui (header/tabs sticky, card sections).
+ * State layer = React Hook Form; validate required = Zod (schema dựng từ ResolvedField).
+ * Generic Form never computes stock/money/domain totals; authoritative business effects remain
+ * server/app-owned.
  */
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm, useWatch, Controller, type FieldValues } from "react-hook-form";
@@ -78,7 +78,6 @@ export function FormView(props: FormViewProps) {
   const fieldByName = useMemo(() => new Map((meta.fields ?? []).map((field) => [field.fieldname, field])), [meta]);
   const prevLinks = useRef<Record<string, unknown>>({});
   const fetchDocKey = useRef<string>("");
-  /** Last value written automatically for a target. Difference from current value means user override. */
   const lastAutoValues = useRef<Record<string, unknown>>({});
 
   useEffect(() => {
@@ -110,7 +109,6 @@ export function FormView(props: FormViewProps) {
   onDirtyChangeRef.current = props.onDirtyChange;
   useEffect(() => { onDirtyChangeRef.current?.(isDirty); }, [isDirty]);
 
-  /** One canonical reactive dependency collector for Form/Child/Action consumers. */
   const reactiveFields = useMemo(() => collectMetadataReactiveFields(meta), [meta]);
   const reactiveValues = useWatch({ control: form.control, name: reactiveFields });
   const values = useMemo(() => {
@@ -150,9 +148,6 @@ export function FormView(props: FormViewProps) {
     lastAutoValues.current[target] = value ?? "";
   };
 
-  // P1-09 fetch_from: user changes Link source -> one source read -> declared target assignments.
-  // A target remains auto-refreshable while it still equals the last automatic value. Once the
-  // operator changes it, canonical dirtyGuard/provenance prevents later source changes overwriting it.
   useEffect(() => {
     if (!fetchRules.length) return;
     const docKey = `${doc.name ?? ""}|${doc.modified ?? ""}`;
@@ -188,64 +183,6 @@ export function FormView(props: FormViewProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, fetchRules, services, doc.name, doc.modified, fieldByName]);
-
-  /**
-   * Lightweight preview totals only. Authoritative totals remain server-side.
-   */
-  const totalFields = useMemo(() => {
-    const has = (name: string) => meta.fields.some((f) => f.fieldname === name);
-    const table = meta.fields.find((f) => f.fieldtype === "Table" && f.fieldname === "items");
-    if (!table) return null;
-    return {
-      table: table.fieldname,
-      sumAmount: has("grand_total"),
-      sumQty: has("total_qty"),
-      orderDiscount: meta.name === "Sales Order" && has("additional_discount_percentage"),
-      discountAmount: has("discount_amount"),
-    };
-  }, [meta]);
-  useEffect(() => {
-    if (!totalFields) return;
-    const updateTotals = (current: FieldValues) => {
-      const rows = current[totalFields.table];
-      if (!Array.isArray(rows)) return;
-      const round = (n: number) => Math.round(n * 1e6) / 1e6;
-      if (totalFields.sumAmount) {
-        const subtotal = round(rows.reduce((sum, rawRow) => {
-          const row = rawRow as Doc;
-          const amount = Number(row.amount);
-          if (Number.isFinite(amount)) return sum + amount;
-          const qty = Number(row.qty);
-          const rate = Number(row.rate);
-          return sum + (Number.isFinite(qty) && Number.isFinite(rate) ? qty * rate : 0);
-        }, 0));
-        const rawPercentage = totalFields.orderDiscount ? Number(current.additional_discount_percentage ?? 0) : 0;
-        const percentage = Number.isFinite(rawPercentage) ? Math.min(100, Math.max(0, rawPercentage)) : 0;
-        const discount = round(subtotal * percentage / 100);
-        const grandTotal = round(subtotal - discount);
-        if (totalFields.discountAmount && Number(current.discount_amount ?? 0) !== discount) {
-          form.setValue("discount_amount", discount as never, { shouldDirty: false });
-        }
-        if (Number(current.grand_total ?? 0) !== grandTotal) {
-          form.setValue("grand_total", grandTotal as never, { shouldDirty: false });
-        }
-      }
-      if (totalFields.sumQty) {
-        const sum = round(rows.reduce((s, r) => s + (Number((r as Doc)?.qty) || 0), 0));
-        if (Number(current.total_qty ?? 0) !== sum) form.setValue("total_qty", sum as never, { shouldDirty: false });
-      }
-    };
-    updateTotals(form.getValues());
-    const subscription = form.watch((next, info) => {
-      if (!info.name
-        || info.name === totalFields.table
-        || info.name.startsWith(`${totalFields.table}.`)
-        || (totalFields.orderDiscount && info.name === "additional_discount_percentage")) {
-        updateTotals(next as FieldValues);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, totalFields]);
 
   const resolved: ResolvedField[] = useMemo(
     () => resolveMeta(meta, { doc: values, roles, maskedFields, forceReadOnly }),

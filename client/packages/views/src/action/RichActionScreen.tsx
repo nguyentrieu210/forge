@@ -68,23 +68,10 @@ function scalar(value: unknown, format: (value: number) => string): string {
 }
 
 function label(key: string): string {
-  const fixed: Record<string, string> = {
-    line_count: "Số dòng",
-    total_qty_bar: "Tổng cây",
-    total_actual_weight_kg: "Kg thực",
-    total_barem_weight_kg: "Kg barem",
-    purchase_order: "Đơn mua",
-    purchase_receipt: "Phiếu nhập",
-    item_code: "Mã hàng",
-    input_row: "Dòng nhập",
-    allocated_bars: "Trừ FIFO",
-    nominal_remaining_bars: "Còn phải giao",
-    message: "Diễn giải",
-  };
-  return fixed[key] ?? key.replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
+  return key.replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
 }
 
-function ResultTable({ rows, format, onOpen }: { rows: unknown[]; format: (value: number) => string; onOpen?: ActionScreenProps["onOpen"] }) {
+function ResultTable({ rows, format }: { rows: unknown[]; format: (value: number) => string }) {
   const records = rows.map(record).filter((value): value is ResultRecord => Boolean(value));
   if (!records.length) return <div className="px-3 py-4 text-sm text-muted-foreground">Không có dòng dữ liệu.</div>;
   const keys = [...new Set(records.flatMap((row) => Object.keys(row)))].filter((key) => !key.startsWith("_")).slice(0, 18);
@@ -97,17 +84,9 @@ function ResultTable({ rows, format, onOpen }: { rows: unknown[]; format: (value
         <tbody>
           {records.map((row, index) => (
             <tr key={index} className="border-b last:border-b-0">
-              {keys.map((key) => {
-                const value = row[key];
-                const doctype = key === "purchase_order" ? "Purchase Order" : key === "purchase_receipt" ? "Purchase Receipt" : undefined;
-                return (
-                  <td key={key} className="whitespace-nowrap px-3 py-2 align-top tabular-nums">
-                    {doctype && onOpen && typeof value === "string" && value
-                      ? <Button type="button" variant="link" className="h-auto p-0" onClick={() => onOpen(doctype, value)}>{value}</Button>
-                      : scalar(value, format)}
-                  </td>
-                );
-              })}
+              {keys.map((key) => (
+                <td key={key} className="whitespace-nowrap px-3 py-2 align-top tabular-nums">{scalar(row[key], format)}</td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -127,8 +106,9 @@ function RichActionResult({ value, committed, format, onOpen }: {
   const arrays = Object.entries(data).filter(([, entry]) => Array.isArray(entry)) as Array<[string, unknown[]]>;
   const scalars = Object.entries(data).filter(([key, entry]) => key !== "message" && !Array.isArray(entry) && !record(entry) && !["doctype", "name"].includes(key));
   const objects = Object.entries(data).filter(([, entry]) => Boolean(record(entry))) as Array<[string, ResultRecord]>;
-  const doctype = typeof data.doctype === "string" ? data.doctype : typeof data.purchase_receipt === "string" ? "Purchase Receipt" : undefined;
-  const name = typeof data.name === "string" ? data.name : typeof data.purchase_receipt === "string" ? data.purchase_receipt : undefined;
+  // Generic navigation is explicit: only a canonical worker result {doctype, name} can open a doc.
+  const doctype = typeof data.doctype === "string" ? data.doctype : undefined;
+  const name = typeof data.name === "string" ? data.name : undefined;
   return (
     <div className="flex flex-col gap-3" data-rich-action-result>
       <section className="border bg-card">
@@ -141,7 +121,7 @@ function RichActionResult({ value, committed, format, onOpen }: {
         {scalars.length ? <dl className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{scalars.map(([key, entry]) => <div key={key} className="border bg-background px-3 py-2"><dt className="text-xs text-muted-foreground">{label(key)}</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{scalar(entry, format)}</dd></div>)}</dl> : null}
       </section>
       {objects.map(([key, entry]) => <section key={key} className="border bg-card"><div className="border-b px-3 py-2 text-sm font-semibold">{label(key)}</div><dl className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(entry).map(([field, fieldValue]) => <div key={field} className="border bg-background px-3 py-2"><dt className="text-xs text-muted-foreground">{label(field)}</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{scalar(fieldValue, format)}</dd></div>)}</dl></section>)}
-      {arrays.map(([key, resultRows]) => <section key={key} className="overflow-hidden border bg-card"><div className="flex items-center justify-between border-b px-3 py-2"><strong className="text-sm">{label(key)}</strong><span className="text-xs text-muted-foreground">{resultRows.length} dòng</span></div><ResultTable rows={resultRows} format={format} onOpen={onOpen} /></section>)}
+      {arrays.map(([key, resultRows]) => <section key={key} className="overflow-hidden border bg-card"><div className="flex items-center justify-between border-b px-3 py-2"><strong className="text-sm">{label(key)}</strong><span className="text-xs text-muted-foreground">{resultRows.length} dòng</span></div><ResultTable rows={resultRows} format={format} /></section>)}
     </div>
   );
 }
@@ -150,10 +130,7 @@ export function isRichAction(action: AppAction): boolean {
   return (action.input_tables ?? []).some((table) => table.presentation?.mode === "child-grid-inline" && Boolean(table.presentation?.row_doctype));
 }
 
-/**
- * Generic rich AppAction renderer. Business rules stay in metadata/worker/controller:
- * this screen only composes scalar controls, canonical child metadata, preview and commit UX.
- */
+/** Generic rich AppAction renderer. Business rules stay in metadata/worker/controller. */
 export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
   const { adapter, registry, services, fmt, roles, businessContext } = useMetaForge();
   const table = (action.input_tables ?? []).find((candidate) => candidate.presentation?.mode === "child-grid-inline" && candidate.presentation.row_doctype)!;
@@ -208,6 +185,8 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
     return list;
   }, [headerFields, rows, summaryFields, table, values, meta]);
 
+  // Summary arithmetic is explicitly declared by AppActionInputTable.summary; this is generic
+  // presentation math, not inferred DocType business behavior.
   const subtotal = table.summary
     ? rows.reduce((sum, row) => sum + number(row[table.summary!.subtotal_field]), 0)
     : 0;
