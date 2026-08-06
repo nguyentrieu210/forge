@@ -17,6 +17,7 @@ test("Cloudflare full ALU release preserves build, migration and deploy sequence
     "pnpm --filter metaforge run build",
     "node server/scripts/stage-client-bundle.mjs",
     "unset WRANGLER_CI_OVERRIDE_NAME",
+    "unset WRANGLER_CI_MATCH_TAG",
     "node scripts/migrate-tenant.mjs --tenant \"$TENANT\"",
     "node scripts/migrate-tenant.mjs \\",
     "node scripts/deploy-tenant.mjs \\",
@@ -43,13 +44,19 @@ test("Cloudflare full ALU release requires main plus explicit production secret"
   assert.doesNotMatch(script, /FORGE_CLOUDFLARE_FULL_RELEASE:-alu/);
 });
 
-test("Cloudflare connected-build Worker name cannot override nested Worker deploys", () => {
-  const unsetAt = script.indexOf("unset WRANGLER_CI_OVERRIDE_NAME");
+test("Cloudflare connected-build identity cannot override or reject nested Worker deploys", () => {
+  const overrideUnsetAt = script.indexOf("unset WRANGLER_CI_OVERRIDE_NAME");
+  const matchTagUnsetAt = script.indexOf("unset WRANGLER_CI_MATCH_TAG");
+  const tenantDeployAt = script.indexOf("Deploying tenant Worker");
   const appDeployAt = script.indexOf("Deploying Alumdoor app Worker");
   const gatewayDeployAt = script.indexOf("Deploying Gateway");
-  assert.ok(unsetAt >= 0, "must clear Workers Builds name override");
-  assert.ok(unsetAt < appDeployAt, "must clear override before Alumdoor deploy");
-  assert.ok(unsetAt < gatewayDeployAt, "must clear override before Gateway deploy");
+
+  assert.ok(overrideUnsetAt >= 0, "must clear Workers Builds name override");
+  assert.ok(matchTagUnsetAt >= 0, "must clear Workers Builds match tag");
+  for (const deployAt of [tenantDeployAt, appDeployAt, gatewayDeployAt]) {
+    assert.ok(overrideUnsetAt < deployAt, "must clear name override before every nested deploy");
+    assert.ok(matchTagUnsetAt < deployAt, "must clear match tag before every nested deploy");
+  }
 });
 
 test("docs and markdown-only commits cannot reach production mutation", () => {
