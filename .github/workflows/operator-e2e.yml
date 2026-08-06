@@ -63,11 +63,11 @@ jobs:
           version="$(node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const brief = await readBriefSource('briefs/alumdoor-v2.json'); process.stdout.write(String(brief.version || 'unknown'));")"
           echo "FORGE_ALUMDOOR_VERSION=$version" >> "$GITHUB_ENV"
 
-      - name: Build CloudForge and runtime candidate
+      - name: Build CloudForge and MetaForge candidate
         run: |
           set -euo pipefail
           pnpm --filter cloudforge run build
-          pnpm --filter runtime run build
+          pnpm --filter metaforge run build
 
       - name: Generate isolated local credentials
         shell: bash
