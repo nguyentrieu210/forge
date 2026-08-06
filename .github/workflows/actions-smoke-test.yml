@@ -1,29 +1,32 @@
 name: Actions Smoke Test
 
 on:
-  push:
-    paths:
-      - ".github/workflows/actions-smoke-test.yml"
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
-  statuses: write
+  issues: write
 
 jobs:
   smoke:
     name: GitHub-hosted runner smoke test
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.comment.body == '/actions-smoke-test'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Confirm runner started
         run: |
-          echo "RUNNER_OK_SECOND_TRIGGER"
+          echo "RUNNER_OK"
           uname -a
-      - name: Mark smoke status success
+      - name: Report success back to PR
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           curl --fail --silent --show-error \
@@ -31,5 +34,5 @@ jobs:
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPO/statuses/$SHA" \
-            -d '{"state":"success","context":"actions-smoke-test","description":"GitHub-hosted runner executed successfully"}' >/dev/null
+            "https://api.github.com/repos/$REPO/issues/$ISSUE/comments" \
+            -d "{\"body\":\"ACTIONS_SMOKE_RUNNER_OK run=$RUN_ID\"}" >/dev/null
