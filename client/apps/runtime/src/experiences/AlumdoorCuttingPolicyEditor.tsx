@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   buildMetadataDefaults,
   serializeCreateDocument,
   type Doc,
   type DocField,
-  type DocTypeMeta,
 } from "@metaforge/core";
 import {
   useDoc,
@@ -56,9 +55,12 @@ const BASIC_FIELDS = [
 type BasicField = typeof BASIC_FIELDS[number];
 type Draft = Record<string, unknown>;
 type Capabilities = { create?: boolean; write?: boolean };
-
 type DoorPreset = Partial<Record<BasicField, unknown>>;
 
+/**
+ * Operator presets only cover the measurement / purchase / sales facts confirmed by the shop.
+ * Leaf-count policy stays metadata-driven because it has its own verified rules and exceptions.
+ */
 const DOOR_PRESETS: Record<string, DoorPreset> = {
   "Cửa Đức": {
     dealer_width_basis: "Phủ bì nhựa",
@@ -166,7 +168,7 @@ function compactFormula(draft: Draft): string[] {
   ].filter(Boolean);
 }
 
-function Card({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
     <section className="rounded-xl border bg-card shadow-sm">
       <div className="border-b px-4 py-3">
@@ -178,7 +180,7 @@ function Card({ title, description, children }: { title: string; description: st
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs font-medium">{label}</Label>
@@ -202,9 +204,10 @@ function NativeSelect({ value, choices, disabled, onChange }: { value: unknown; 
   );
 }
 
-export function AlumdoorCuttingPolicyEditor({ name, onBack, onOpenRaw }: {
+export function AlumdoorCuttingPolicyEditor({ name, onBack, onCreated, onOpenRaw }: {
   name: string;
   onBack: () => void;
+  onCreated: (name: string) => void;
   onOpenRaw: (name: string) => void;
 }) {
   const isNew = name === "new";
@@ -267,7 +270,7 @@ export function AlumdoorCuttingPolicyEditor({ name, onBack, onOpenRaw }: {
           queryClient.invalidateQueries({ queryKey: [scopeKey, "list", DOCTYPE] }),
           queryClient.invalidateQueries({ queryKey: [scopeKey, "count", DOCTYPE] }),
         ]);
-        onOpenRaw(String(created.name));
+        onCreated(String(created.name));
         return;
       }
       const changed = Object.fromEntries(BASIC_FIELDS
