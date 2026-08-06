@@ -6,10 +6,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const appDist = path.join(here, "..", "apps", "runtime", "dist");
 const port = process.env.FORGE_OPERATOR_QA_PORT ?? "4194";
 const backend = process.env.FORGE_OPERATOR_BACKEND ?? "http://127.0.0.1:8801";
+const resultsDir = path.join(here, "test-results", "operator-e2e");
+const reportDir = path.join(here, "playwright-report", "operator-e2e");
 
 export default defineConfig({
   testDir: "./operator-tests",
-  outputDir: "./test-results/operator-e2e",
+  outputDir: resultsDir,
   timeout: 120_000,
   expect: { timeout: 15_000 },
   workers: 1,
@@ -18,8 +20,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [
     ["list"],
-    ["json", { outputFile: "test-results/operator-e2e/playwright-results.json" }],
-    ["html", { outputFolder: "playwright-report/operator-e2e", open: "never" }],
+    ["json", { outputFile: path.join(resultsDir, "playwright-results.json") }],
+    ["html", { outputFolder: reportDir, open: "never" }],
     ["./operator-tests/operator-reporter.ts"],
   ],
   use: {
