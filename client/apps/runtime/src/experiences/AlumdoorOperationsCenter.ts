@@ -1,6 +1,6 @@
 import { createElement, useLayoutEffect } from "react";
 import { useMetaForge } from "@metaforge/views/provider";
-import { AlumdoorOperationsCenter as AlumdoorSalesComposer } from "./AlumdoorSalesComposer.js";
+import { AlumdoorSalesModeWorkspace } from "./AlumdoorSalesModeWorkspace.js";
 import { AlumdoorSalesOrderOperationalQueue } from "./AlumdoorSalesOrderOperationalQueue.js";
 import { installAlumdoorSalesPolicyBridge } from "./AlumdoorSalesPolicyBridge.js";
 
@@ -16,6 +16,6 @@ export function AlumdoorOperationsCenter() {
 
   const Component = ordersRoute
     ? AlumdoorSalesOrderOperationalQueue
-    : AlumdoorSalesComposer;
+    : AlumdoorSalesModeWorkspace;
   return createElement(Component);
 }
