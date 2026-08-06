@@ -10,6 +10,7 @@ const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
 const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
 const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
+const AlumdoorCuttingPolicyEditor = lazy(() => import("./experiences/AlumdoorCuttingPolicyEditor.js").then((module) => ({ default: module.AlumdoorCuttingPolicyEditor })));
 
 export interface RuntimeExperienceContext {
   key: string;
@@ -25,6 +26,22 @@ export interface RuntimeExperienceResolution {
 }
 
 type RuntimeExperienceFactory = (context: RuntimeExperienceContext, argument: string) => RuntimeExperienceResolution | null;
+
+export interface RuntimeDoctypeExperienceContext {
+  manifest: AppManifest;
+  boot: MetaForgeBootDTO;
+  navigate: NavigateFunction;
+  doctype: string;
+  name?: string;
+}
+
+export interface RuntimeDoctypeExperienceResolution {
+  activeKey: string;
+  breadcrumbs: Array<{ label: string }>;
+  content: ReactNode;
+}
+
+type RuntimeDoctypeExperienceFactory = (context: RuntimeDoctypeExperienceContext) => RuntimeDoctypeExperienceResolution | null;
 
 function declaredLabel(manifest: AppManifest, key: string, fallback: string): string {
   return manifest.nav.find((item) => item.key === key)?.label ?? fallback;
@@ -85,6 +102,26 @@ const runtimeExperienceFactories = new Map<string, RuntimeExperienceFactory>([
   })],
 ]);
 
+const runtimeDoctypeExperienceFactories = new Map<string, RuntimeDoctypeExperienceFactory>([
+  ["alumdoor", ({ manifest, navigate, doctype, name }) => {
+    if (doctype !== "Cutting Policy" || !name) return null;
+    if (new URLSearchParams(window.location.search).get("raw") === "1") return null;
+    const label = declaredLabel(manifest, doctype, "Công thức cửa");
+    return {
+      activeKey: doctype,
+      breadcrumbs: [{ label }, { label: name === "new" ? "Tạo mới" : name }],
+      content: (
+        <AlumdoorCuttingPolicyEditor
+          name={name}
+          onBack={() => navigate(`/app/${encodeURIComponent(doctype)}`)}
+          onCreated={(createdName) => navigate(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(createdName)}`)}
+          onOpenRaw={(documentName) => navigate(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(documentName)}?raw=1`)}
+        />
+      ),
+    };
+  }],
+]);
+
 export function runtimeExperienceKind(key: string): string {
   const separator = key.indexOf(":");
   return separator < 0 ? key : key.slice(0, separator);
@@ -102,6 +139,14 @@ export function resolveRuntimeExperience(context: RuntimeExperienceContext): Run
   const kind = context.key.slice(0, separator);
   const argument = context.key.slice(separator + 1);
   return runtimeExperienceFactories.get(kind)?.(context, argument) ?? null;
+}
+
+/**
+ * App-owned detail/new presentation for a DocType. The generic runtime only calls this resolver;
+ * business names and UX decisions stay in this composition registry, never in shared Form/CRUD.
+ */
+export function resolveRuntimeDoctypeExperience(context: RuntimeDoctypeExperienceContext): RuntimeDoctypeExperienceResolution | null {
+  return runtimeDoctypeExperienceFactories.get(context.manifest.id)?.(context) ?? null;
 }
 
 const ALUMDOOR_HR_WORKSPACE = "Nhân sự & Tiền lương";
