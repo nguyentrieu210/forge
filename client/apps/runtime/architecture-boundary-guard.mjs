@@ -30,6 +30,7 @@ for (const required of [
   "isRegisteredRuntimeExperience",
   "resolveRuntimeExperience",
   "resolveRuntimeAppChrome",
+  "workspaceNavigationPolicy={appChrome.workspaceNavigationPolicy}",
 ]) {
   assert.equal(runtime.includes(required), true, `main-base.tsx is missing runtime boundary ${JSON.stringify(required)}`);
 }
