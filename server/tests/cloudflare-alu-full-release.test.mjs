@@ -11,7 +11,7 @@ const script = readFileSync(path.join(serverRoot, "scripts", "cloudflare-alu-ful
 test("Cloudflare full ALU release preserves build, migration and deploy sequence", () => {
   const required = [
     "git merge-base --is-ancestor \"$TARGET_SHA\" origin/main",
-    "release/alu-full",
+    "expected main",
     "FORGE_CLOUDFLARE_FULL_RELEASE:-",
     "pnpm --filter cloudforge run build",
     "pnpm --filter metaforge run build",
@@ -35,9 +35,9 @@ test("Cloudflare full ALU release intentionally performs no backup in this lane"
   assert.match(script, /without backup \(explicit operator choice\)/);
 });
 
-test("Cloudflare full ALU release does not silently turn ordinary pushes into full production mutation", () => {
+test("Cloudflare full ALU release requires main plus explicit production secret", () => {
   assert.match(script, /FORGE_CLOUDFLARE_FULL_RELEASE=alu/);
   assert.match(script, /Refusing full ALU release/);
-  assert.match(script, /expected release\/alu-full/);
+  assert.match(script, /expected main/);
   assert.doesNotMatch(script, /FORGE_CLOUDFLARE_FULL_RELEASE:-alu/);
 });
