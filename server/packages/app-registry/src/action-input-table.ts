@@ -21,6 +21,18 @@ export interface AppActionInputColumn {
 }
 
 export type AppActionInputTableMode = "bulk" | "child-grid-inline";
+export type AppActionRowReferenceFormat = "currency" | "number" | "text";
+
+export interface AppActionRowReference {
+  method: string;
+  parent_field: string;
+  row_field: string;
+  response_object_field?: string;
+  value_field: string;
+  label: string;
+  empty_text?: string;
+  format?: AppActionRowReferenceFormat;
+}
 
 export interface AppActionInputTablePresentation {
   mode?: AppActionInputTableMode;
@@ -29,6 +41,7 @@ export interface AppActionInputTablePresentation {
   emphasize_editable?: boolean;
   money_precision?: number;
   print_format?: string;
+  row_reference?: AppActionRowReference;
 }
 
 export interface AppActionInputTableSummary {
@@ -120,6 +133,35 @@ function optionalBoolean(value: unknown, where: string): boolean | undefined {
   return value;
 }
 
+function inputName(value: unknown, where: string): string {
+  const name = text(value, where, 120);
+  if (!ACTION_INPUT_NAME.test(name)) throw errors.validation(`${where} must use lowercase letters, digits and underscore`);
+  return name;
+}
+
+function parseRowReference(value: unknown, where: string): AppActionRowReference | undefined {
+  if (value === undefined) return undefined;
+  const input = asObject(value, where);
+  const formatRaw = optionalText(input.format, `${where}.format`, 20);
+  if (formatRaw && !["currency", "number", "text"].includes(formatRaw)) {
+    throw errors.validation(`${where}.format must be currency, number or text`);
+  }
+  return {
+    method: text(input.method, `${where}.method`, 220),
+    parent_field: inputName(input.parent_field ?? input.parentField, `${where}.parent_field`),
+    row_field: inputName(input.row_field ?? input.rowField, `${where}.row_field`),
+    ...(input.response_object_field === undefined && input.responseObjectField === undefined
+      ? {}
+      : { response_object_field: inputName(input.response_object_field ?? input.responseObjectField, `${where}.response_object_field`) }),
+    value_field: inputName(input.value_field ?? input.valueField, `${where}.value_field`),
+    label: text(input.label, `${where}.label`, 160),
+    ...(input.empty_text === undefined && input.emptyText === undefined
+      ? {}
+      : { empty_text: text(input.empty_text ?? input.emptyText, `${where}.empty_text`, 320) }),
+    ...(formatRaw ? { format: formatRaw as AppActionRowReferenceFormat } : {}),
+  };
+}
+
 function parsePresentation(value: unknown, where: string): AppActionInputTablePresentation | undefined {
   if (value === undefined) return undefined;
   const input = asObject(value, where);
@@ -133,6 +175,7 @@ function parsePresentation(value: unknown, where: string): AppActionInputTablePr
   const emphasizeEditable = optionalBoolean(input.emphasize_editable ?? input.emphasizeEditable, `${where}.emphasize_editable`);
   const moneyPrecision = optionalInteger(input.money_precision ?? input.moneyPrecision, `${where}.money_precision`, 0, 6);
   const printFormat = optionalText(input.print_format ?? input.printFormat, `${where}.print_format`, 160);
+  const rowReference = parseRowReference(input.row_reference ?? input.rowReference, `${where}.row_reference`);
   if (mode === "child-grid-inline" && !rowDoctype) {
     throw errors.validation(`${where}.row_doctype is required for child-grid-inline`);
   }
@@ -143,6 +186,7 @@ function parsePresentation(value: unknown, where: string): AppActionInputTablePr
     ...(emphasizeEditable === undefined ? {} : { emphasize_editable: emphasizeEditable }),
     ...(moneyPrecision === undefined ? {} : { money_precision: moneyPrecision }),
     ...(printFormat ? { print_format: printFormat } : {}),
+    ...(rowReference ? { row_reference: rowReference } : {}),
   };
 }
 
