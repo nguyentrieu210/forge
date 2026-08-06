@@ -41,6 +41,29 @@ export interface BusinessContextProviderProps {
   children: ReactNode;
 }
 
+type CoreDefaults = {
+  default_company?: unknown;
+  default_currency?: unknown;
+  default_warehouse?: unknown;
+  default_fiscal_year?: unknown;
+  default_cost_center?: unknown;
+  default_selling_price_list?: unknown;
+  default_buying_price_list?: unknown;
+};
+
+const DEFAULT_SELECTION_FIELDS: Array<[keyof CoreDefaults, BusinessContextKey]> = [
+  ["default_company", "company"],
+  ["default_warehouse", "warehouse"],
+  ["default_fiscal_year", "fiscal_year"],
+  ["default_cost_center", "cost_center"],
+  ["default_selling_price_list", "selling_price_list"],
+  ["default_buying_price_list", "buying_price_list"],
+];
+
+function text(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
 function readStored(key?: string): BusinessContextSelection {
   if (!key || typeof localStorage === "undefined") return {};
   try { return JSON.parse(localStorage.getItem(`mf-context:${key}`) ?? "{}"); } catch { return {}; }
@@ -51,6 +74,25 @@ function writeStored(key: string | undefined, value: BusinessContextSelection) {
     const { date_from: _dateFrom, date_to: _dateTo, ...selectors } = value;
     localStorage.setItem(`mf-context:${key}`, JSON.stringify(selectors));
   } catch { /* private mode */ }
+}
+
+function defaultsSelection(defaults: CoreDefaults): BusinessContextSelection {
+  const selection: BusinessContextSelection = {};
+  for (const [field, key] of DEFAULT_SELECTION_FIELDS) {
+    const value = text(defaults[field]);
+    if (value) selection[key] = value;
+  }
+  return selection;
+}
+
+async function readCoreDefaults(adapter: FrappeAdapter): Promise<CoreDefaults> {
+  try {
+    const result = await adapter.getDoc("Global Defaults", "Global Defaults");
+    return result.doc as CoreDefaults;
+  } catch {
+    // Backward compatible while an older tenant has not received the core Single DocType yet.
+    return {};
+  }
 }
 
 export function BusinessContextProvider(props: BusinessContextProviderProps) {
@@ -64,9 +106,45 @@ export function BusinessContextProvider(props: BusinessContextProviderProps) {
     const id = ++seq.current;
     setLoading(true); setError(undefined);
     try {
-      const response = await props.adapter.getBusinessContext(props.appId, props.dimensions, requested ?? selectionRef.current);
+      const coreDefaults = await readCoreDefaults(props.adapter);
+      const remembered = requested ?? selectionRef.current;
+      // Site defaults are bootstrap defaults, not a lock. Once the user has any remembered
+      // selector we preserve that context instead of re-applying an optional warehouse they
+      // deliberately cleared to "Tất cả".
+      const hasRememberedSelector = Object.entries(remembered).some(([key, value]) => key !== "date_from" && key !== "date_to" && Boolean(value));
+      const bootstrapSelection = requested === undefined && !hasRememberedSelector
+        ? { ...defaultsSelection(coreDefaults), ...remembered }
+        : remembered;
+      const response = await props.adapter.getBusinessContext(props.appId, props.dimensions, bootstrapSelection);
       if (id !== seq.current) return;
       const selection = normalizeContextSelection(response, response.selection);
+
+      // Transaction currency follows the selected Company first. Global Defaults is only a
+      // fallback for legacy Company records that predate required default_currency.
+      let effectiveCurrency = text(coreDefaults.default_currency);
+      if (selection.company) {
+        try {
+          const company = await props.adapter.getDoc("Company", selection.company);
+          effectiveCurrency = text(company.doc.default_currency) || effectiveCurrency;
+        } catch {
+          // Permission/server validation still runs on every real transaction. Context loading
+          // must not blank the whole app because an optional currency enrichment read failed.
+        }
+      }
+      if (effectiveCurrency) selection.currency = effectiveCurrency;
+
+      // Price lists are non-selector defaults unless an app explicitly exposes them as context
+      // dimensions. Keeping them in the same selection lets generic create policies consume the
+      // site authority without each screen querying Global Defaults again.
+      if (!selection.selling_price_list) {
+        const value = text(coreDefaults.default_selling_price_list);
+        if (value) selection.selling_price_list = value;
+      }
+      if (!selection.buying_price_list) {
+        const value = text(coreDefaults.default_buying_price_list);
+        if (value) selection.buying_price_list = value;
+      }
+
       selectionRef.current = selection;
       writeStored(props.storageKey, selection);
       setState({ ...response, selection });
@@ -86,6 +164,7 @@ export function BusinessContextProvider(props: BusinessContextProviderProps) {
     if (value) next[key] = value; else delete next[key];
     // Company đổi: server phải resolve lại dependent dimensions, không giữ kho/chi nhánh cũ.
     if (key === "company") {
+      delete next.currency;
       delete next.fiscal_year;
       delete next.date_from;
       delete next.date_to;
