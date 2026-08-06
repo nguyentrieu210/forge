@@ -51,3 +51,19 @@ test("Cloudflare connected-build Worker name cannot override nested Worker deplo
   assert.ok(unsetAt < appDeployAt, "must clear override before Alumdoor deploy");
   assert.ok(unsetAt < gatewayDeployAt, "must clear override before Gateway deploy");
 });
+
+test("docs and markdown-only commits cannot reach production mutation", () => {
+  assert.match(script, /docs\/\*\|\*\.md/);
+  assert.match(script, /is_docs_only_change/);
+  assert.match(script, /SKIP_MARKER/);
+  assert.match(script, /production build skipped: docs\/\*\* and\/or \*\.md only/);
+  assert.match(script, /production deploy skipped: docs\/\*\* and\/or \*\.md only/);
+
+  const buildSkipAt = script.indexOf("if is_docs_only_change");
+  const buildAt = script.indexOf("pnpm --filter cloudforge run build");
+  const deploySkipAt = script.indexOf('if [ -f "$SKIP_MARKER" ]');
+  const migrateAt = script.indexOf("Migrating tenant $TENANT without backup");
+
+  assert.ok(buildSkipAt >= 0 && buildSkipAt < buildAt, "docs-only gate must run before build");
+  assert.ok(deploySkipAt >= 0 && deploySkipAt < migrateAt, "docs-only gate must run before migration/deploy");
+});
