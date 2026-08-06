@@ -206,7 +206,7 @@ function Screen() {
                 transitions={mockTransitions}
                 onWorkflowAction={(a) => toast.success("Workflow (mock): " + a)}
                 onAction={(k) => toast.success("Hành động (mock): " + k)}
-                onSave={(c) => toast.success("Đã lưu (mock): " + JSON.stringify(c))}
+                onSave={(c) => { toast.success("Đã lưu (mock): " + JSON.stringify(c)); return true; }}
               />
             ) : null}
             context={openDoc ? (
@@ -230,7 +230,7 @@ function Screen() {
         </div>
       ) : (
         <div className="p-4">
-          {active === "form" && <FormView meta={taskMeta} doc={rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => toast.success(`Đã lưu ${Object.keys(c).length} thay đổi (mock)`)} />}
+          {active === "form" && <FormView meta={taskMeta} doc={rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => { toast.success(`Đã lưu ${Object.keys(c).length} thay đổi (mock)`); return true; }} />}
           {active === "kanban" && <KanbanView meta={taskMeta} fieldName="status" columns={["Open", "Working", "Closed"]} rows={rows} />}
           {active === "tree" && <TreeView roots={treeRoots} childrenOf={(v) => treeKids[v]} expanded={new Set(["Products"])} onToggle={() => {}} />}
           {active === "calendar" && <CalendarView year={2026} month={7} dateField="exp_date" titleField="subject" events={rows} />}
