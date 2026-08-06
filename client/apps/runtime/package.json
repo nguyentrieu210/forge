@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev:matrix-harness": "vite --config vite.matrix-e2e.config.ts",
-    "typecheck": "pnpm --workspace-root --filter \"runtime^...\" run build && tsc -b",
-    "build": "tsc -b && vite build",
+    "arch:guard": "node architecture-boundary-guard.mjs",
+    "typecheck": "pnpm --workspace-root --filter \"runtime^...\" run build && tsc -b && node architecture-boundary-guard.mjs",
+    "build": "tsc -b && node architecture-boundary-guard.mjs && vite build",
     "build:matrix-harness": "vite build --config vite.matrix-e2e.config.ts"
   },
   "dependencies": {
