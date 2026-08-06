@@ -81,6 +81,7 @@ type SaleLine = {
   fixedThickness: boolean;
   height: string;
   width: string;
+  widthBasis: string;
   qty: string;
   rate: number | null;
   uom: string;
@@ -106,7 +107,7 @@ const COLUMNS: ColumnDef[] = [
   { key: "color", label: "MÀU", width: 6.5 },
   { key: "thickness", label: "DÀY", width: 5, unit: "mm" },
   { key: "height", label: "CAO", width: 5, numeric: true, unit: "m" },
-  { key: "width", label: "RỘNG", width: 5, numeric: true, unit: "m" },
+  { key: "width", label: "RỘNG", width: 5.5, numeric: true, unit: "m" },
   { key: "area", label: "DT", width: 5, numeric: true, unit: "m²" },
   { key: "qty", label: "SL", width: 3.8, numeric: true },
   { key: "rate", label: "Đ.GIÁ", width: 6.5, numeric: true },
@@ -165,6 +166,15 @@ function canonicalCustomerGroup(value: unknown): string {
   return raw;
 }
 
+function widthBasisTitle(value: unknown): string {
+  const basis = String(value ?? "").trim();
+  const normalized = normalize(basis);
+  if (normalized === "phủ bì nhựa") return "RỘNG PB NHỰA";
+  if (normalized === "phủ bì ray") return "RỘNG PB RAY";
+  if (normalized === "rộng cắt lá") return "RỘNG CẮT LÁ";
+  return basis ? `RỘNG ${basis.toLocaleUpperCase("vi")}` : "RỘNG";
+}
+
 function newLine(): SaleLine {
   return {
     id: `sale-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -179,6 +189,7 @@ function newLine(): SaleLine {
     fixedThickness: false,
     height: "",
     width: "",
+    widthBasis: "",
     qty: "",
     rate: null,
     uom: "",
@@ -307,6 +318,9 @@ export function AlumdoorSalesSheetV2() {
   const orderedColumns = useMemo(() => columnOrder.map((key) => COLUMNS.find((column) => column.key === key)).filter((column): column is ColumnDef => Boolean(column)), [columnOrder]);
   const visibleColumns = useMemo(() => orderedColumns.filter((column) => !hiddenColumns.includes(column.key)), [hiddenColumns, orderedColumns]);
   const canonicalGroup = canonicalCustomerGroup(customer.group);
+  const activeWidthBases = useMemo(() => [...new Set(lines.filter((line) => line.itemCode && line.mode === "AREA").map((line) => line.widthBasis).filter(Boolean))], [lines]);
+  const widthColumnLabel = activeWidthBases.length === 1 ? widthBasisTitle(activeWidthBases[0]) : "RỘNG";
+  const columnLabel = (column: ColumnDef) => column.key === "width" ? widthColumnLabel : column.label;
   const columnWidth = (column: ColumnDef) => columnWidths[column.key] ?? column.width;
 
   useEffect(() => { try { localStorage.setItem(ORDER_KEY, JSON.stringify(columnOrder)); } catch { /* presentation only */ } }, [columnOrder]);
@@ -389,6 +403,31 @@ export function AlumdoorSalesSheetV2() {
     setLines((current) => current.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line));
   };
 
+  const refreshMeasurementBasis = async (index: number, itemCode: string) => {
+    if (!itemCode || !["Đại lý", "Lẻ"].includes(canonicalGroup)) return;
+    try {
+      const context = await adapter.callPost<FormulaResult>("alumdoor.sales.production_line_context", {
+        item_code: itemCode,
+        customer_group: canonicalGroup,
+        sales_mode: "Trọn bộ",
+        basis_only: true,
+      });
+      const nextBasis = String(context.width_basis ?? "").trim();
+      if (!nextBasis) return;
+      setLines((current) => current.map((entry, lineIndex) => {
+        if (lineIndex !== index || entry.itemCode !== itemCode) return entry;
+        const basisChanged = Boolean(entry.widthBasis && entry.widthBasis !== nextBasis);
+        return {
+          ...entry,
+          widthBasis: nextBasis,
+          ...(basisChanged ? { width: "", formula: null, stockShort: null, stockMessage: "" } : {}),
+        };
+      }));
+    } catch (error) {
+      patchLine(index, { error: adapter.mapError(error).message });
+    }
+  };
+
   const refreshContext = async (index: number, itemCode: string, requestedUom = "") => {
     if (!itemCode) return;
     try {
@@ -433,7 +472,7 @@ export function AlumdoorSalesSheetV2() {
     patchLine(index, {
       itemCode, itemName: "", itemGroup: "", doorType: "", mode: "QUANTITY",
       color: "", requireColor: false, thickness: "", fixedThickness: false,
-      height: "", width: "", qty: previous?.qty || "1", rate: null, uom: "", allowedUoms: [], currency: "", warehouse: "",
+      height: "", width: "", widthBasis: "", qty: previous?.qty || "1", rate: null, uom: "", allowedUoms: [], currency: "", warehouse: "",
       formula: null, stockQty: null, stockShort: null, stockMessage: "", busy: true, error: "",
       discountPct: previous?.discountTouched ? previous.discountPct : "",
     });
@@ -473,13 +512,17 @@ export function AlumdoorSalesSheetV2() {
         fixedThickness,
         height: "",
         width: "",
+        widthBasis: "",
         qty: previous?.qty || "1",
         discountPct: previous?.discountTouched ? previous.discountPct : "",
         formula: null,
         busy: false,
         error: "",
       });
-      await refreshContext(index, itemCode);
+      await Promise.all([
+        refreshContext(index, itemCode),
+        mode === "AREA" ? refreshMeasurementBasis(index, itemCode) : Promise.resolve(),
+      ]);
     } catch (error) {
       patchLine(index, { busy: false, error: adapter.mapError(error).message });
     }
@@ -491,10 +534,17 @@ export function AlumdoorSalesSheetV2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceList, currency, contextWarehouse]);
 
+  useEffect(() => {
+    if (!["Đại lý", "Lẻ"].includes(canonicalGroup)) return;
+    lines.forEach((line, index) => { if (line.itemCode && line.mode === "AREA") void refreshMeasurementBasis(index, line.itemCode); });
+    // basis refresh is driven by canonical customer group; basis changes invalidate entered width.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canonicalGroup]);
+
   const calculationFingerprint = useMemo(() => JSON.stringify({
     customerGroup: canonicalGroup,
     deliveryDate,
-    lines: lines.map((line) => ({ itemCode: line.itemCode, mode: line.mode, color: line.color, height: line.height, width: line.width, qty: line.qty, warehouse: line.warehouse })),
+    lines: lines.map((line) => ({ itemCode: line.itemCode, mode: line.mode, color: line.color, height: line.height, width: line.width, widthBasis: line.widthBasis, qty: line.qty, warehouse: line.warehouse })),
   }), [canonicalGroup, deliveryDate, lines]);
 
   useEffect(() => {
@@ -511,7 +561,7 @@ export function AlumdoorSalesSheetV2() {
             item_code: line.itemCode,
             customer_group: canonicalGroup,
             sales_mode: "Trọn bộ",
-            width_input_basis: "Rộng phủ bì",
+            ...(line.widthBasis ? { width_input_basis: line.widthBasis } : {}),
             height_input_basis: "Cao phủ bì",
             width_m: decimal(line.width),
             height_m: decimal(line.height),
@@ -541,6 +591,7 @@ export function AlumdoorSalesSheetV2() {
           setLines((current) => current.map((entry, lineIndex) => lineIndex === index ? {
             ...entry,
             formula,
+            widthBasis: String(formula.width_basis ?? entry.widthBasis ?? "").trim(),
             doorType: String(formula.door_type ?? entry.doorType ?? ""),
             stockShort,
             stockMessage,
@@ -557,7 +608,11 @@ export function AlumdoorSalesSheetV2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculationFingerprint, adapter]);
 
-  const total = useMemo(() => lines.reduce((sum, line) => sum + netAmount(line), 0), [lines]);
+  const grossTotal = useMemo(() => lines.reduce((sum, line) => sum + grossAmount(line), 0), [lines]);
+  const totalDiscount = useMemo(() => lines.reduce((sum, line) => sum + lineDiscountAmount(line), 0), [lines]);
+  const totalVat = 0;
+  const totalSurcharge = 0;
+  const total = grossTotal - totalDiscount + totalVat + totalSurcharge;
 
   const blockers = useMemo(() => {
     const out: string[] = [];
@@ -574,7 +629,8 @@ export function AlumdoorSalesSheetV2() {
       if (line.requireColor && !line.color) out.push(`Dòng ${index + 1}: cần Màu sắc.`);
       if (line.mode === "HEIGHT" && !positive(line.height)) out.push(`Dòng ${index + 1}: cần Chiều cao.`);
       if (line.mode === "WIDTH" && !positive(line.width)) out.push(`Dòng ${index + 1}: cần Chiều rộng.`);
-      if (line.mode === "AREA" && (!positive(line.height) || !positive(line.width))) out.push(`Dòng ${index + 1}: cần Chiều cao và Chiều rộng.`);
+      if (line.mode === "AREA" && !line.widthBasis) out.push(`Dòng ${index + 1}: chưa xác định loại chiều rộng từ chính sách.`);
+      if (line.mode === "AREA" && (!positive(line.height) || !positive(line.width))) out.push(`Dòng ${index + 1}: cần Chiều cao và ${widthBasisTitle(line.widthBasis)}.`);
       if (line.mode === "AREA" && !line.formula?.billable_area_sqm) out.push(`Dòng ${index + 1}: chưa tính xong diện tích cửa.`);
       if (line.rate == null) out.push(`Dòng ${index + 1}: chưa có đơn giá bán cho ${line.uom || "ĐVT đã chọn"}.`);
       if (!line.uom) out.push(`Dòng ${index + 1}: chưa xác định ĐVT bán.`);
@@ -603,6 +659,7 @@ export function AlumdoorSalesSheetV2() {
       ...(line.color ? { color: line.color } : {}),
       ...(positive(line.height) ? { height_m: decimal(line.height) } : {}),
       ...(positive(line.width) ? { width_m: decimal(line.width) } : {}),
+      ...(line.widthBasis ? { width_basis: line.widthBasis } : {}),
       note: `Giá ${line.uom || ""} ${money(listRate)}${discount ? ` · Chiết khấu ${number(discount, 2)}%` : ""}${line.thickness ? ` · Độ dày ${line.thickness} mm` : ""}`,
     };
     if (line.mode === "AREA" && line.formula) Object.assign(common, {
@@ -719,13 +776,13 @@ export function AlumdoorSalesSheetV2() {
     });
   };
   const autoFitWidth = (column: ColumnDef) => {
-    const header = `${column.label}${column.unit ? ` (${column.unit})` : ""}`;
+    const header = `${columnLabel(column)}${column.unit ? ` (${column.unit})` : ""}`;
     const values = lines.flatMap((line) => {
       if (column.key === "itemCode") return [line.itemName || line.itemCode];
       if (column.key === "color") return [line.color];
       if (column.key === "thickness") return [line.thickness];
       if (column.key === "height") return [line.height];
-      if (column.key === "width") return [line.width];
+      if (column.key === "width") return [line.width, line.widthBasis];
       if (column.key === "area") return [areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)];
       if (column.key === "qty") return [line.qty];
       if (column.key === "rate") return [line.rate == null ? "" : money(line.rate)];
@@ -769,18 +826,18 @@ export function AlumdoorSalesSheetV2() {
   const printHtml = () => {
     if (!createdOrder?.name) { setGlobalError("Cần lưu hoặc xác nhận đơn trước khi in."); return; }
     const bodyRows = lines.filter((line) => line.itemCode).map((line, index) => {
-      const widthNote = line.mode === "AREA" ? String(line.formula?.sales_width_basis ?? line.formula?.width_basis ?? "") : "";
+      const widthNote = line.mode === "AREA" ? String(line.widthBasis || line.formula?.sales_width_basis || line.formula?.width_basis || "") : "";
       const product = `<tr><td class="c">${index + 1}</td><td>${escapeHtml(line.itemName || line.itemCode)}</td><td>${escapeHtml(line.color)}</td><td class="c">${escapeHtml(line.thickness)}</td><td class="r">${escapeHtml(line.height)}</td><td class="r">${escapeHtml(line.width)}${widthNote ? `<div class="sub">${escapeHtml(widthNote)}</div>` : ""}</td><td class="r">${areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)}</td><td class="r">${escapeHtml(line.qty)}</td><td class="r">${money(line.rate)}</td><td class="r">${escapeHtml(line.discountPct)}</td><td class="c">${escapeHtml(line.uom)}</td><td class="r b">${money(netAmount(line))}</td></tr>`;
       return product;
     }).join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Loại khách:</b> ${escapeHtml(canonicalGroup)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY</th><th>CAO</th><th>RỘNG</th><th>DT</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr class="grand"><td>CÒN PHẢI THU</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Bảng giá:</b> ${escapeHtml(priceList)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr><tr><td colspan="2"><b>Địa chỉ nhận:</b> ${escapeHtml(customer.address)}</td><td colspan="2"><b>Điện thoại:</b> ${escapeHtml(customer.phone)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY</th><th>CAO</th><th>${escapeHtml(widthColumnLabel)}</th><th>DT</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng cộng</td><td class="r">${money(grossTotal)}</td></tr><tr><td>Tổng chiết khấu</td><td class="r">-${money(totalDiscount)}</td></tr><tr><td>Tổng VAT</td><td class="r">${money(totalVat)}</td></tr><tr><td>Tổng phụ thu</td><td class="r">${money(totalSurcharge)}</td></tr><tr class="grand"><td>THÀNH TIỀN</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
     const popup = window.open("", "_blank");
     if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ in."); return; }
     popup.document.open(); popup.document.write(html); popup.document.close();
   };
 
   const exportExcel = () => {
-    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", "CAO (m)", "RỘNG (m)", "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
+    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", "CAO (m)", `${widthColumnLabel} (m)`, "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
     lines.filter((line) => line.itemCode).forEach((line, index) => rows.push([String(index + 1), line.itemName || line.itemCode, line.color, line.thickness, line.height, line.width, areaPerSet(line) == null ? "" : String(areaPerSet(line)), line.qty, String(line.rate ?? ""), line.discountPct, line.uom, String(netAmount(line))]));
     const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -872,7 +929,7 @@ export function AlumdoorSalesSheetV2() {
       return <select className={base} value={line.thickness} disabled={submitted} onChange={(event) => patchLine(lineIndex, { thickness: event.target.value })}><option value=""></option>{thicknessOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>;
     }
     if (column.key === "height") return line.itemCode && (line.mode === "HEIGHT" || line.mode === "AREA") ? <input className={base} inputMode="decimal" value={line.height} disabled={submitted} onChange={(event) => patchLine(lineIndex, { height: event.target.value, formula: null })} /> : null;
-    if (column.key === "width") return line.itemCode && (line.mode === "WIDTH" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.width} disabled={submitted} onChange={(event) => patchLine(lineIndex, { width: event.target.value, formula: null })} />{line.mode === "AREA" && line.formula?.sales_width_basis ? <div className="text-center text-[9px] leading-none text-slate-500">{String(line.formula.sales_width_basis)}</div> : null}</div> : null;
+    if (column.key === "width") return line.itemCode && (line.mode === "WIDTH" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.width} disabled={submitted} onChange={(event) => patchLine(lineIndex, { width: event.target.value, formula: null })} />{line.mode === "AREA" && line.widthBasis ? <div className="text-center text-[9px] font-semibold leading-none text-slate-500">{line.widthBasis}</div> : null}</div> : null;
     if (column.key === "area") return areaPerSet(line) == null ? null : <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{number(areaPerSet(line), 3)}</div>;
     if (column.key === "qty") return line.itemCode ? <input className={base} inputMode="numeric" value={line.qty} disabled={submitted} onChange={(event) => patchLine(lineIndex, { qty: event.target.value, formula: null })} /> : null;
     if (column.key === "rate") return line.itemCode && line.rate != null ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{money(line.rate)}</div> : null;
@@ -908,7 +965,7 @@ export function AlumdoorSalesSheetV2() {
             className={`relative border border-orange-600 px-1 py-1 text-center text-[10px] font-bold whitespace-normal ${draggingColumn === column.key ? "bg-orange-600" : "bg-orange-500"}`}
             style={{ width: `${columnWidth(column)}rem`, minWidth: `${columnWidth(column)}rem` }}
             title="Kéo tiêu đề để đổi vị trí · kéo mép phải để đổi độ rộng · nhấp đúp mép phải để tự khít cột"
-          ><span className="block cursor-grab leading-tight">{column.label}</span>{column.unit ? <span className="block text-[9px] font-extrabold leading-tight text-orange-50">({column.unit})</span> : null}<div className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-orange-200/70" onPointerDown={(event) => beginResize(event, column)} onDoubleClick={(event) => { event.stopPropagation(); setColumnWidths((current) => ({ ...current, [column.key]: autoFitWidth(column) })); }} /></th>)}
+          ><span className="block cursor-grab leading-tight">{columnLabel(column)}</span>{column.unit ? <span className="block text-[9px] font-extrabold leading-tight text-orange-50">({column.unit})</span> : null}<div className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none hover:bg-orange-200/70" onPointerDown={(event) => beginResize(event, column)} onDoubleClick={(event) => { event.stopPropagation(); setColumnWidths((current) => ({ ...current, [column.key]: autoFitWidth(column) })); }} /></th>)}
           {!submitted ? <th className="w-14 min-w-14 border border-orange-600 bg-orange-500"></th> : null}
         </tr>
       </thead>
@@ -920,15 +977,35 @@ export function AlumdoorSalesSheetV2() {
 
   return <div className="h-full w-full overflow-auto bg-white p-2 md:p-3">
     <div className="mx-auto w-full max-w-[1900px] space-y-2">
-      <section className="grid gap-2 border border-slate-300 bg-white p-2 md:grid-cols-4">
-        {!contextCompany ? <HeaderLink label="Công ty" doctype="Company" value={company} onChange={setCompany} required readOnly={submitted} /> : null}
-        <div className="md:col-span-2"><HeaderLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => { setCustomer({ name, group: "", phone: "", address: "" }); setPriceList(""); }} required readOnly={submitted} /></div>
-        <div className="flex items-end gap-1.5"><Button type="button" variant="outline" size="sm" disabled={submitted} onClick={() => setQuickMaster("Customer")}>+ Khách hàng</Button><Button type="button" variant="outline" size="sm" disabled={submitted} onClick={() => setQuickMaster("Supplier")}>+ NCC</Button></div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Loại khách</Label><Input className="h-8 rounded-none" value={canonicalGroup} readOnly /></div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày đặt hàng <span className="text-red-600">*</span></Label><Input className={`h-8 rounded-none ${!transactionDate ? "border-red-500" : ""}`} type="date" value={transactionDate} disabled={submitted} onChange={(event) => setTransactionDate(event.target.value)} /></div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày giao hàng <span className="text-red-600">*</span></Label><Input className={`h-8 rounded-none ${!deliveryDate ? "border-red-500" : ""}`} type="date" min={transactionDate} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
-        <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ghi chú</Label><Input className="h-8 rounded-none" value={note} disabled={submitted} onChange={(event) => setNote(event.target.value)} /></div>
-        {customer.name ? <div className="md:col-span-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-200 pt-1.5 text-[11px] text-slate-600">{customer.phone ? <span>{customer.phone}</span> : null}{priceList ? <span>Bảng giá: <strong className="font-semibold text-slate-900">{priceList}</strong></span> : <span className="text-amber-700">{priceListError}</span>}{currency ? <span>{currency}</span> : null}{createdOrder?.name ? <span className="font-semibold text-slate-900">{String(createdOrder.name)}</span> : null}{submitted ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Đã xác nhận</span> : null}</div> : null}
+      <section className="grid gap-3 border border-slate-300 bg-white p-2 lg:grid-cols-[minmax(0,1fr)_minmax(310px,360px)]">
+        <div className="grid min-w-0 content-start gap-2">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-600">Thông tin khách hàng</div>
+          <div className="grid min-w-0 gap-1.5 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <HeaderLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => { setCustomer({ name, group: "", phone: "", address: "" }); setPriceList(""); }} required readOnly={submitted} />
+            <Button type="button" variant="outline" size="sm" className="h-8 self-end rounded-none px-3" disabled={submitted} onClick={() => setQuickMaster("Customer")}>+ Tạo mới</Button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)]">
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Điện thoại</Label><Input className="h-8 rounded-none" value={customer.phone} readOnly /></div>
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Địa chỉ nhận</Label><Input className="h-8 rounded-none" value={customer.address} disabled={submitted} onChange={(event) => setCustomer((current) => ({ ...current, address: event.target.value }))} /></div>
+          </div>
+        </div>
+
+        <div className="grid content-start gap-2 lg:border-l lg:border-slate-200 lg:pl-3">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-600">Thông tin đơn hàng</div>
+          {!contextCompany ? <HeaderLink label="Công ty" doctype="Company" value={company} onChange={setCompany} required readOnly={submitted} /> : null}
+          <div className="grid gap-1"><Label className="text-[11px] font-semibold">Loại bảng giá</Label><Input className={`h-8 rounded-none ${customer.name && !priceList ? "border-amber-400" : ""}`} value={priceList} readOnly placeholder={priceListError || "Tự xác định theo khách hàng"} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày đặt <span className="text-red-600">*</span></Label><Input className={`h-8 min-w-0 rounded-none px-2 ${!transactionDate ? "border-red-500" : ""}`} type="date" value={transactionDate} disabled={submitted} onChange={(event) => setTransactionDate(event.target.value)} /></div>
+            <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ngày giao <span className="text-red-600">*</span></Label><Input className={`h-8 min-w-0 rounded-none px-2 ${!deliveryDate ? "border-red-500" : ""}`} type="date" min={transactionDate} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
+          </div>
+          <div className="grid gap-1"><Label className="text-[11px] font-semibold">Ghi chú</Label><Input className="h-8 rounded-none" value={note} disabled={submitted} onChange={(event) => setNote(event.target.value)} /></div>
+          <div className="flex min-h-5 flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+            {canonicalGroup ? <span>Nhóm công thức: {canonicalGroup}</span> : null}
+            {currency ? <span>{currency}</span> : null}
+            {createdOrder?.name ? <span className="font-semibold text-slate-800">{String(createdOrder.name)}</span> : null}
+            {submitted ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Đã xác nhận</span> : null}
+          </div>
+        </div>
       </section>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -946,11 +1023,12 @@ export function AlumdoorSalesSheetV2() {
       {renderGrid(false)}
 
       <section className="ml-auto w-full max-w-md border border-slate-300 bg-white">
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng tiền hàng</div><div className="p-2 text-right text-sm font-medium tabular-nums">{money(total)}</div></div>
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Giao nhận</div><div></div></div>
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Thuế</div><div></div></div>
-        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Đã thu</div><div></div></div>
-        <div className="grid grid-cols-2"><div className="p-2 text-sm font-bold">CÒN PHẢI THU</div><div className="p-2 text-right text-sm font-bold tabular-nums">{money(total)}</div></div>
+        <div className="border-b border-slate-300 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-slate-600">Tổng tiền</div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng cộng</div><div className="p-2 text-right text-sm font-medium tabular-nums">{money(grossTotal)}</div></div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng chiết khấu</div><div className="p-2 text-right text-sm font-medium tabular-nums text-emerald-700">-{money(totalDiscount)}</div></div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng VAT</div><div className="p-2 text-right text-sm tabular-nums">{money(totalVat)}</div></div>
+        <div className="grid grid-cols-2 border-b border-slate-300"><div className="p-2 text-sm">Tổng phụ thu</div><div className="p-2 text-right text-sm tabular-nums">{money(totalSurcharge)}</div></div>
+        <div className="grid grid-cols-2"><div className="p-2 text-sm font-bold">THÀNH TIỀN</div><div className="p-2 text-right text-sm font-bold tabular-nums">{money(total)}</div></div>
       </section>
 
       {globalError ? <div className="flex items-start gap-2 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{globalError}</div> : null}
@@ -967,7 +1045,7 @@ export function AlumdoorSalesSheetV2() {
     <MasterQuickCreate open={quickMaster != null} kind={quickMaster ?? "Customer"} onClose={() => setQuickMaster(null)} onCreated={(kind, doc) => { setQuickMaster(null); if (kind === "Customer") { const name = String(doc.name ?? doc.customer_name ?? "").trim(); if (name) setCustomer({ name, group: "", phone: "", address: "" }); } }} />
 
     <Dialog open={columnDialog} onOpenChange={setColumnDialog}>
-      <DialogContent className="w-[min(92vw,720px)] max-w-none"><DialogHeader><DialogTitle>Cột bảng bán hàng</DialogTitle><DialogDescription>Bật/tắt cột; dùng ← → để đổi vị trí. Ngoài bảng có thể kéo trực tiếp tiêu đề, kéo mép để đổi rộng hoặc nhấp đúp mép để tự khít.</DialogDescription></DialogHeader><div className="grid gap-2 sm:grid-cols-2">{orderedColumns.map((column) => <div key={column.key} className="flex items-center gap-2 border p-2 text-sm"><Checkbox checked={!hiddenColumns.includes(column.key)} onCheckedChange={(checkedValue) => saveHiddenColumns(checkedValue ? hiddenColumns.filter((key) => key !== column.key) : [...new Set([...hiddenColumns, column.key])])} /><span className="min-w-0 flex-1">{column.label}{column.unit ? ` (${column.unit})` : ""}</span><Button type="button" variant="ghost" size="icon-sm" onClick={() => moveColumnBy(column.key, -1)}>←</Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => moveColumnBy(column.key, 1)}>→</Button></div>)}</div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={autoFitAll}>Tự khít toàn bộ</Button><Button type="button" variant="outline" onClick={resetColumnLayout}><RotateCcw /> Mặc định</Button></div></DialogContent>
+      <DialogContent className="w-[min(92vw,720px)] max-w-none"><DialogHeader><DialogTitle>Cột bảng bán hàng</DialogTitle><DialogDescription>Bật/tắt cột; dùng ← → để đổi vị trí. Ngoài bảng có thể kéo trực tiếp tiêu đề, kéo mép để đổi rộng hoặc nhấp đúp mép để tự khít.</DialogDescription></DialogHeader><div className="grid gap-2 sm:grid-cols-2">{orderedColumns.map((column) => <div key={column.key} className="flex items-center gap-2 border p-2 text-sm"><Checkbox checked={!hiddenColumns.includes(column.key)} onCheckedChange={(checkedValue) => saveHiddenColumns(checkedValue ? hiddenColumns.filter((key) => key !== column.key) : [...new Set([...hiddenColumns, column.key])])} /><span className="min-w-0 flex-1">{columnLabel(column)}{column.unit ? ` (${column.unit})` : ""}</span><Button type="button" variant="ghost" size="icon-sm" onClick={() => moveColumnBy(column.key, -1)}>←</Button><Button type="button" variant="ghost" size="icon-sm" onClick={() => moveColumnBy(column.key, 1)}>→</Button></div>)}</div><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={autoFitAll}>Tự khít toàn bộ</Button><Button type="button" variant="outline" onClick={resetColumnLayout}><RotateCcw /> Mặc định</Button></div></DialogContent>
     </Dialog>
 
     <Dialog open={expanded} onOpenChange={setExpanded}>
@@ -1012,7 +1090,7 @@ function LineDetailV2({ line, index, submitted, thicknessOptions, patchLine, cho
     <div className="grid gap-1.5"><Label>Màu sắc{line.requireColor ? " *" : ""}</Label>{line.itemCode && line.requireColor ? <SheetLink doctype="Item Color" value={line.color} onChange={(color) => patchLine(index, { color, formula: null })} readOnly={submitted} required fieldname={`detail_color_${index}`} /> : <Input value="" readOnly />}</div>
     <div className="grid gap-1.5"><Label>Độ dày</Label><select className="h-9 border bg-white px-2 text-sm" value={line.thickness} disabled={submitted || line.fixedThickness || line.mode !== "WIDTH"} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{line.thickness && !thicknessOptions.includes(line.thickness) ? <option value={line.thickness}>{line.thickness} mm</option> : null}{thicknessOptions.map((value) => <option key={value} value={value}>{value} mm</option>)}</select></div>
     <div className="grid gap-1.5"><Label>Cao (m)</Label><Input value={line.height} disabled={submitted || !(line.mode === "HEIGHT" || line.mode === "AREA")} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div>
-    <div className="grid gap-1.5"><Label>Rộng (m)</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
+    <div className="grid gap-1.5"><Label>{widthBasisTitle(line.widthBasis)} (m)</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>DT (m²)</Label><Input value={areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)} readOnly /></div>
     <div className="grid gap-1.5"><Label>SL *</Label><Input value={line.qty} disabled={submitted} onChange={(event) => patchLine(index, { qty: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>Đơn giá</Label><Input value={line.rate == null ? "" : money(line.rate)} readOnly /></div>
