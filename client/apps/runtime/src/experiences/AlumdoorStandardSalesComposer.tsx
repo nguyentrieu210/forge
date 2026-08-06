@@ -5,20 +5,12 @@ import type { Doc, DocField, LinkResult } from "@metaforge/core";
 import { useMetaForge } from "@metaforge/views/provider";
 import { Button, Input, Label, toast } from "@metaforge/ui";
 
-type Json = Record<string, unknown>;
-
 type CustomerState = {
   name: string;
   group: string;
   phone: string;
   address: string;
   priceList: string;
-};
-
-type DoorPolicyRow = {
-  item_group?: unknown;
-  door_type?: unknown;
-  disabled?: unknown;
 };
 
 type ItemCandidate = {
@@ -28,9 +20,7 @@ type ItemCandidate = {
 };
 
 type ItemContext = {
-  item_code?: string;
   item_group?: string;
-  door_type?: string | null;
   selected_uom?: string;
   managed_stock?: boolean;
   available_qty?: number | null;
@@ -61,7 +51,6 @@ const today = () => {
   const value = new Date();
   return new Date(value.valueOf() - value.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 };
-
 const checked = (value: unknown) => value === true || value === 1 || value === "1" || String(value ?? "").trim().toLocaleLowerCase("vi") === "true";
 const positive = (value: unknown) => Number.isFinite(Number(value)) && Number(value) > 0;
 const percentValid = (value: string) => Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100;
@@ -70,7 +59,7 @@ const money = (value: unknown, currency = "VND") => new Intl.NumberFormat("vi-VN
   currency: currency || "VND",
   maximumFractionDigits: 0,
 }).format(Number(value) || 0);
-const number = (value: unknown, digits = 3) => {
+const fmt = (value: unknown, digits = 3) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toLocaleString("vi-VN", { maximumFractionDigits: digits }) : "—";
 };
@@ -103,7 +92,7 @@ function CanonicalLink({ label, doctype, value, onChange, required, readOnly }: 
 function stockLabel(line: SaleLine) {
   if (!line.managedStock) return "Không QL";
   if (line.stockError) return "Lỗi đọc tồn";
-  return line.stockQty == null ? "—" : number(line.stockQty);
+  return line.stockQty == null ? "—" : fmt(line.stockQty);
 }
 
 export function AlumdoorStandardSalesComposer() {
@@ -117,6 +106,8 @@ export function AlumdoorStandardSalesComposer() {
   const [deliveryDate, setDeliveryDate] = useState(today());
   const [customer, setCustomer] = useState<CustomerState>({ name: "", group: "", phone: "", address: "", priceList: "" });
   const [doorItemGroups, setDoorItemGroups] = useState<Set<string>>(new Set());
+  const [doorFilterReady, setDoorFilterReady] = useState(false);
+  const [doorFilterError, setDoorFilterError] = useState("");
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<ItemCandidate[]>([]);
   const [searchBusy, setSearchBusy] = useState(false);
@@ -132,7 +123,6 @@ export function AlumdoorStandardSalesComposer() {
   const [createdOrder, setCreatedOrder] = useState<Doc | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const refreshGeneration = useRef(0);
-
   const submitted = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 1);
 
   useEffect(() => { if (contextCompany) setCompany(contextCompany); }, [contextCompany]);
@@ -151,6 +141,8 @@ export function AlumdoorStandardSalesComposer() {
 
   useEffect(() => {
     let active = true;
+    setDoorFilterReady(false);
+    setDoorFilterError("");
     void adapter.getList("Cutting Policy", {
       fields: ["item_group", "door_type", "disabled"],
       filters: [["disabled", "=", 0]],
@@ -161,8 +153,12 @@ export function AlumdoorStandardSalesComposer() {
         .filter((row) => !checked(row.disabled))
         .map((row) => String(row.item_group ?? "").trim())
         .filter(Boolean)));
-    }).catch(() => {
-      if (active) setDoorItemGroups(new Set());
+      setDoorFilterReady(true);
+    }).catch((error) => {
+      if (!active) return;
+      setDoorItemGroups(new Set());
+      setDoorFilterError(`Không tải được phân loại cửa để lọc hàng bán thường: ${adapter.mapError(error).message}`);
+      setDoorFilterReady(false);
     });
     return () => { active = false; };
   }, [adapter]);
@@ -212,7 +208,7 @@ export function AlumdoorStandardSalesComposer() {
         setTaxAccount("");
         setTaxAccountError(rows.length === 0
           ? "Chưa cấu hình tài khoản thuế đầu ra (Account loại Tax / Liability) cho Công ty."
-          : "Có nhiều tài khoản Tax / Liability; cần cấu hình còn một tài khoản thuế đầu ra duy nhất cho luồng bán nhanh.");
+          : "Có nhiều tài khoản Tax / Liability; cần cấu hình một tài khoản thuế đầu ra duy nhất cho luồng bán nhanh.");
       }
     }).catch((error) => {
       if (!active) return;
@@ -224,7 +220,7 @@ export function AlumdoorStandardSalesComposer() {
 
   useEffect(() => {
     const text = query.trim();
-    if (!text || !customer.name || submitted) {
+    if (!text || !customer.name || !doorFilterReady || submitted) {
       setSuggestions([]);
       setSearchBusy(false);
       setSearchError("");
@@ -245,7 +241,7 @@ export function AlumdoorStandardSalesComposer() {
             const { doc } = await adapter.getDoc("Item", result.value);
             const doorType = String(doc.door_type ?? "").trim();
             const itemGroup = String(doc.item_group ?? "").trim();
-            const isDoorConfiguratorItem = Boolean(doorType) || (itemGroup ? doorItemGroups.has(itemGroup) : false);
+            const isDoorConfiguratorItem = Boolean(doorType) || Boolean(itemGroup && doorItemGroups.has(itemGroup));
             if (isDoorConfiguratorItem || checked(doc.disabled) || doc.is_sales_item === 0 || doc.is_sales_item === false) return null;
             return {
               code: result.value,
@@ -259,7 +255,7 @@ export function AlumdoorStandardSalesComposer() {
         if (controller.signal.aborted) return;
         const visible = hydrated.filter((entry): entry is ItemCandidate => Boolean(entry));
         setSuggestions(visible);
-        setSearchError(visible.length ? "" : "Không có hàng hóa / phụ kiện phù hợp. Mặt hàng cửa phải bán ở chế độ Cửa nhôm theo kích thước.");
+        setSearchError(visible.length ? "" : "Không có hàng hóa / phụ kiện phù hợp. Mặt hàng cửa được bán ở chế độ Cửa nhôm theo kích thước.");
       }).catch((error) => {
         if (!controller.signal.aborted) {
           setSuggestions([]);
@@ -270,7 +266,7 @@ export function AlumdoorStandardSalesComposer() {
       });
     }, 250);
     return () => { controller.abort(); window.clearTimeout(timer); };
-  }, [adapter, customer.name, doorItemGroups, query, submitted]);
+  }, [adapter, customer.name, doorFilterReady, doorItemGroups, query, submitted]);
 
   const lineKey = useMemo(() => lines.map((line) => `${line.id}:${line.itemCode}`).join("|"), [lines]);
 
@@ -362,6 +358,7 @@ export function AlumdoorStandardSalesComposer() {
     if (!warehouse) out.push("Cần chọn Kho bán.");
     if (!deliveryDate) out.push("Cần ngày giao dự kiến.");
     if (deliveryDate && deliveryDate < today()) out.push("Ngày giao không được ở quá khứ.");
+    if (!doorFilterReady) out.push(doorFilterError || "Đang tải phân loại mặt hàng cửa.");
     if (!lines.length) out.push("Cần ít nhất một mặt hàng.");
     if (!percentValid(discountPct)) out.push("Chiết khấu phải từ 0 đến 100%.");
     if (!percentValid(taxPct)) out.push("Thuế phải từ 0 đến 100%.");
@@ -373,7 +370,7 @@ export function AlumdoorStandardSalesComposer() {
       if (!line.uom) out.push(`Dòng ${index + 1}: chưa xác định ĐVT bán.`);
     }
     return out;
-  }, [company, currency, customer.name, customer.priceList, deliveryDate, discountPct, lines, taxAccount, taxAccountError, taxPct, taxRate, warehouse]);
+  }, [company, currency, customer.name, customer.priceList, deliveryDate, discountPct, doorFilterError, doorFilterReady, lines, taxAccount, taxAccountError, taxPct, taxRate, warehouse]);
 
   const submitBlockers = useMemo(() => {
     const out = [...draftBlockers];
@@ -381,7 +378,7 @@ export function AlumdoorStandardSalesComposer() {
       if (line.managedStock && line.stockError) out.push(`Dòng ${index + 1}: ${line.stockError}`);
       if (line.managedStock && line.stockQty == null) out.push(`Dòng ${index + 1}: chưa đọc được tồn kho.`);
       if (line.managedStock && line.stockQty != null && Number(line.qty) > line.stockQty) {
-        out.push(`Dòng ${index + 1}: tồn kho ${number(line.stockQty)} ${line.uom}, không đủ bán ${number(line.qty)} ${line.uom}.`);
+        out.push(`Dòng ${index + 1}: tồn kho ${fmt(line.stockQty)} ${line.uom}, không đủ bán ${fmt(line.qty)} ${line.uom}.`);
       }
     }
     return out;
@@ -473,8 +470,9 @@ export function AlumdoorStandardSalesComposer() {
     setQuery("");
     setSuggestions([]);
     setGlobalError("");
-    window.setTimeout(() => searchInputRef.current?.focus(), 0);
   };
+
+  const printCurrency = String(createdOrder?.currency ?? currency).trim() || "VND";
 
   return <div className="h-full w-full overflow-auto bg-muted/20 p-3 md:p-4 xl:p-5">
     <div className="w-full space-y-3">
@@ -492,8 +490,10 @@ export function AlumdoorStandardSalesComposer() {
         <div className="grid gap-1.5"><Label>Ngày giao *</Label><Input type="date" min={today()} value={deliveryDate} disabled={submitted} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
       </section>
 
+      {doorFilterError ? <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"><TriangleAlert className="mt-0.5 size-4 shrink-0" />{doorFilterError}</div> : null}
+
       <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_330px]">
-        <section className="min-w-0 overflow-hidden rounded-xl border bg-card">
+        <section className="min-w-0 overflow-visible rounded-xl border bg-card">
           <div className="border-b p-3">
             <Label htmlFor="standard-item-search">Thêm hàng hóa / phụ kiện</Label>
             <div className="relative mt-1.5">
@@ -503,9 +503,9 @@ export function AlumdoorStandardSalesComposer() {
                 ref={searchInputRef}
                 className="pl-9 pr-10"
                 value={query}
-                disabled={submitted || !customer.name}
+                disabled={submitted || !customer.name || !doorFilterReady}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={customer.name ? "Tìm mã hoặc tên hàng…" : "Chọn khách hàng trước khi thêm hàng"}
+                placeholder={!doorFilterReady ? "Đang tải phân loại mặt hàng…" : customer.name ? "Tìm mã hoặc tên hàng…" : "Chọn khách hàng trước khi thêm hàng"}
                 autoComplete="off"
               />
               {searchBusy ? <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" /> : null}
@@ -527,19 +527,11 @@ export function AlumdoorStandardSalesComposer() {
           </div>
 
           {!lines.length ? <div className="grid min-h-64 place-items-center p-6 text-center text-sm text-muted-foreground">
-            Chưa có mặt hàng. Chọn khách rồi tìm hàng ở ô phía trên; chọn xong hệ thống tự thêm dòng và tự lấy ĐVT, giá, tồn kho.
+            Chưa có mặt hàng. Chọn khách rồi tìm hàng phía trên; chọn xong hệ thống tự thêm dòng và tự lấy ĐVT, giá, tồn kho.
           </div> : <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-muted/35 text-left text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Hàng hóa</th>
-                  <th className="px-3 py-2 font-medium">ĐVT</th>
-                  <th className="px-3 py-2 text-right font-medium">Tồn kho</th>
-                  <th className="w-28 px-3 py-2 text-right font-medium">SL</th>
-                  <th className="px-3 py-2 text-right font-medium">Đơn giá</th>
-                  <th className="px-3 py-2 text-right font-medium">Thành tiền</th>
-                  <th className="w-12 px-2 py-2" />
-                </tr>
+                <tr><th className="px-3 py-2 font-medium">Hàng hóa</th><th className="px-3 py-2 font-medium">ĐVT</th><th className="px-3 py-2 text-right font-medium">Tồn kho</th><th className="w-28 px-3 py-2 text-right font-medium">SL</th><th className="px-3 py-2 text-right font-medium">Đơn giá</th><th className="px-3 py-2 text-right font-medium">Thành tiền</th><th className="w-12 px-2 py-2" /></tr>
               </thead>
               <tbody className="divide-y">
                 {lines.map((line, index) => {
@@ -547,28 +539,10 @@ export function AlumdoorStandardSalesComposer() {
                   const amount = qty * Number(line.rate ?? 0);
                   const short = line.managedStock && line.stockQty != null && qty > line.stockQty;
                   return <tr key={line.id} className="align-top hover:bg-muted/15">
-                    <td className="px-3 py-3">
-                      <div className="font-medium">{line.label || line.itemCode}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{line.itemCode}{line.itemGroup ? ` · ${line.itemGroup}` : ""}</div>
-                      {line.priceError ? <div className="mt-1 text-xs text-destructive">{line.priceError}</div> : null}
-                      {line.stockError ? <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">{line.stockError}</div> : null}
-                    </td>
+                    <td className="px-3 py-3"><div className="font-medium">{line.label || line.itemCode}</div><div className="mt-0.5 text-xs text-muted-foreground">{line.itemCode}{line.itemGroup ? ` · ${line.itemGroup}` : ""}</div>{line.priceError ? <div className="mt-1 text-xs text-destructive">{line.priceError}</div> : null}{line.stockError ? <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">{line.stockError}</div> : null}</td>
                     <td className="px-3 py-3">{line.busy && !line.uom ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : line.uom || "—"}</td>
-                    <td className={`px-3 py-3 text-right font-medium tabular-nums ${short ? "text-destructive" : ""}`}>
-                      {line.busy && line.stockQty == null ? <span className="text-muted-foreground">…</span> : stockLabel(line)}
-                      {short ? <div className="text-[11px] font-normal">Thiếu {number(qty - Number(line.stockQty ?? 0))}</div> : null}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        className="h-9 text-right tabular-nums"
-                        type="number"
-                        min="0.000001"
-                        step="any"
-                        value={line.qty}
-                        disabled={submitted}
-                        onChange={(event) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, qty: event.target.value } : entry))}
-                      />
-                    </td>
+                    <td className={`px-3 py-3 text-right font-medium tabular-nums ${short ? "text-destructive" : ""}`}>{line.busy && line.stockQty == null ? <span className="text-muted-foreground">…</span> : stockLabel(line)}{short ? <div className="text-[11px] font-normal">Thiếu {fmt(qty - Number(line.stockQty ?? 0))}</div> : null}</td>
+                    <td className="px-3 py-2"><Input className="h-9 text-right tabular-nums" type="number" min="0.000001" step="any" value={line.qty} disabled={submitted} onChange={(event) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, qty: event.target.value } : entry))} /></td>
                     <td className="px-3 py-3 text-right tabular-nums">{line.busy && line.rate == null ? "…" : line.rate == null ? "—" : money(line.rate, line.currency || currency)}</td>
                     <td className="px-3 py-3 text-right font-semibold tabular-nums">{money(amount, line.currency || currency)}</td>
                     <td className="px-2 py-2 text-right"><Button type="button" variant="ghost" size="icon-sm" disabled={submitted} className="text-muted-foreground hover:text-destructive" aria-label={`Xóa ${line.itemCode}`} onClick={() => setLines((current) => current.filter((_, i) => i !== index))}><Trash2 /></Button></td>
@@ -589,9 +563,9 @@ export function AlumdoorStandardSalesComposer() {
 
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Tiền hàng</span><strong className="tabular-nums">{money(gross, currency || "VND")}</strong></div>
-            <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Chiết khấu {discountRate ? `${number(discountRate)}%` : ""}</span><span className="tabular-nums">-{money(discountAmount, currency || "VND")}</span></div>
+            <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Chiết khấu {discountRate ? `${fmt(discountRate)}%` : ""}</span><span className="tabular-nums">-{money(discountAmount, currency || "VND")}</span></div>
             <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Sau chiết khấu</span><span className="tabular-nums">{money(afterDiscount, currency || "VND")}</span></div>
-            <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Thuế {taxRate ? `${number(taxRate)}%` : ""}</span><span className="tabular-nums">{money(taxAmount, currency || "VND")}</span></div>
+            <div className="flex items-center justify-between gap-3"><span className="text-muted-foreground">Thuế {taxRate ? `${fmt(taxRate)}%` : ""}</span><span className="tabular-nums">{money(taxAmount, currency || "VND")}</span></div>
             <div className="border-t pt-2"><div className="flex items-end justify-between gap-3"><span className="font-semibold">Tổng thanh toán</span><span className="text-xl font-bold tabular-nums">{money(grandTotal, currency || "VND")}</span></div></div>
           </div>
 
@@ -604,13 +578,12 @@ export function AlumdoorStandardSalesComposer() {
               <Button type="button" variant="outline" disabled={Boolean(saving) || draftBlockers.length > 0} onClick={() => void saveOrder(true)}>{saving === "draft" ? <Loader2 className="size-4 animate-spin" /> : null}{createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? "Cập nhật nháp" : "Lưu nháp"}</Button>
               <Button type="button" disabled={Boolean(saving) || submitBlockers.length > 0} onClick={() => void saveOrder(false)}>{saving === "submit" ? <Loader2 className="size-4 animate-spin" /> : null}Xác nhận đơn</Button>
             </> : <>
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-800 dark:text-emerald-200"><strong>{createdOrder?.name}</strong><div className="mt-0.5 text-xs">Đã xác nhận · {money(createdOrder?.grand_total ?? grandTotal, String(createdOrder?.currency ?? currency || "VND"))}</div></div>
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-800 dark:text-emerald-200"><strong>{createdOrder?.name}</strong><div className="mt-0.5 text-xs">Đã xác nhận · {money(createdOrder?.grand_total ?? grandTotal, printCurrency)}</div></div>
               <Button type="button" variant="outline" disabled={printing} onClick={() => void printPdf()}>{printing ? <Loader2 className="size-4 animate-spin" /> : <Printer />}In PDF</Button>
               <Button type="button" variant="outline" onClick={() => navigate(`/app/${encodeURIComponent("Sales Order")}/${encodeURIComponent(String(createdOrder?.name ?? ""))}`)}>Mở đơn</Button>
               <Button type="button" onClick={startNew}>Tạo đơn mới</Button>
             </>}
           </div>
-
           {createdOrder && !submitted ? <div className="mt-2 text-center text-[11px] text-muted-foreground">Đang làm việc trên nháp {createdOrder.name}; lưu lại sẽ cập nhật đúng nháp này.</div> : null}
         </aside>
       </div>
