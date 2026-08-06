@@ -38,9 +38,10 @@ test("item detail only renders measurement controls that apply to the selected i
   assert.match(sheet, /line\.mode === "WIDTH" \|\| line\.thickness \? <div className="grid gap-1\.5"><Label>Độ dày<\/Label>/);
 });
 
-test("print and export suppress stale dimensions on quantity-only lines", () => {
-  assert.match(sheet, /const printHeight = line\.mode === "HEIGHT" \|\| line\.mode === "AREA" \? line\.height : ""/);
-  assert.match(sheet, /const printWidth = line\.mode === "WIDTH" \|\| line\.mode === "AREA" \? line\.width : ""/);
+test("export suppresses stale dimensions while canonical print reads the persisted Sales Order", () => {
   assert.match(sheet, /line\.mode === "HEIGHT" \|\| line\.mode === "AREA" \? line\.height : ""/);
   assert.match(sheet, /line\.mode === "WIDTH" \|\| line\.mode === "AREA" \? line\.width : ""/);
+  assert.match(sheet, /const printRoute = \(name: unknown\) => `\/print\/\$\{encodeURIComponent\("Sales Order"\)\}/);
+  assert.doesNotMatch(sheet, /const printHeight =/);
+  assert.doesNotMatch(sheet, /const printWidth =/);
 });
