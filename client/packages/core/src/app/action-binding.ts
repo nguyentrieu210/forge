@@ -1,4 +1,5 @@
-import type { AppActionField, AppActionInputTable } from "./manifest.js";
+import type { AppActionField } from "./manifest.js";
+import type { AppActionInputTable } from "./action-input-table.js";
 import { buildMetadataDefaults } from "../meta/intelligence.js";
 import type { Doc, DocField, DocTypeMeta } from "../types/meta.js";
 import type { Fieldtype } from "../types/fieldtype.js";
