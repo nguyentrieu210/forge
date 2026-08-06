@@ -10,6 +10,7 @@ export const BUILDER_CANVAS: Record<string, CanvasKind> = {
 export { History, useBuilder, type Builder } from "./kernel.js";
 
 export { DocTypeBuilder, type DocTypeBuilderProps } from "./doctype/DocTypeBuilder.js";
+export { MetadataIntelligenceEditor, type MetadataIntelligenceEditorProps } from "./doctype/MetadataIntelligenceEditor.js";
 export { blankDocType, newField, addField, removeField, moveField, updateField, indexOfField } from "./doctype/meta-build.js";
 export { diffMeta, metaEqual, hasChanges, diffPermissions, permRuleKey, type MetaDiff, type FieldChange, type ReorderMove, type PropChange, type PermDiff, type PermRuleChange } from "./doctype/diff.js";
 export { validateDraft, openDraft, reloadDraft, draftStatus, type ValidationResult, type ValidationIssue, type ValidationSeverity, type DraftSession, type DraftStatus } from "./doctype/validate.js";
