@@ -90,11 +90,25 @@ function dynamicSetStockQtyMicros(
   if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
     throw errors.validation(`Hàng tính m² phải có rộng và cao lớn hơn 0 (dòng ${index + 1})`);
   }
+
+  // Generic m² goods keep the old width × height invariant. A vertical calculator may instead
+  // snapshot an authoritative billable area (for example a customer-specific measurement basis).
+  // The vertical validator is responsible for proving that snapshot; core only makes the UOM
+  // conversion consume the same commercial quantity instead of re-inventing the formula here.
+  const declaredBillable = Number((line as JsonObject).billable_area_sqm);
+  const hasDeclaredBillable = Number.isFinite(declaredBillable) && declaredBillable > 0;
   const minimumArea = Math.max(0, Number(master?.min_area_sqm) || 0);
   const setCount = Number(fromScaledInt(setsMicros, 6));
-  const expectedQty = toScaledInt(Math.max(width * height, minimumArea) * setCount, 6, `items[${index}].qty`);
+  const expectedCommercialQty = hasDeclaredBillable
+    ? declaredBillable
+    : Math.max(width * height, minimumArea) * setCount;
+  const expectedQty = toScaledInt(expectedCommercialQty, 6, `items[${index}].qty`);
   if (Math.abs(expectedQty - qtyMicros) > 1) {
-    throw errors.validation(`Số lượng m² không khớp kích thước, số bộ và diện tích tối thiểu của Item (dòng ${index + 1})`);
+    throw errors.validation(
+      hasDeclaredBillable
+        ? `Số lượng m² không khớp diện tích tính tiền đã chụp (dòng ${index + 1})`
+        : `Số lượng m² không khớp kích thước, số bộ và diện tích tối thiểu của Item (dòng ${index + 1})`,
+    );
   }
   return setsMicros;
 }
