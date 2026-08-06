@@ -35,21 +35,15 @@ export interface BusinessContextDimension {
 }
 
 export type BusinessContextSelection = Partial<Record<BusinessContextKey, string>> & {
-  /** Khoảng ngày suy ra từ Fiscal Year; không phải selector độc lập. */
   date_from?: string;
   date_to?: string;
 };
 
 export interface BusinessContextPolicy {
-  /** Dimension được phép tác động lên DocType/màn nào. */
   supported: BusinessContextKey[];
-  /** Field list/filter tương ứng. */
   listFilters?: Partial<Record<BusinessContextKey, string>>;
-  /** Field được seed khi tạo mới. */
   createDefaults?: Partial<Record<BusinessContextKey, string>>;
-  /** Field ngày để áp khoảng ngày suy ra từ Fiscal Year. */
   dateField?: string;
-  /** Link field cần nhận context filter. */
   linkFilters?: Record<string, Partial<Record<BusinessContextKey, string>>>;
 }
 
@@ -63,7 +57,6 @@ export interface BusinessContextState {
 export interface BusinessContextRequirement {
   mode?: "server-resolved";
   dimensions?: BusinessContextKey[];
-  /** App có thể khai báo chính sách bổ sung; server vẫn là nguồn quyền cuối. */
   policies?: Record<string, BusinessContextPolicy>;
 }
 
@@ -87,7 +80,6 @@ export function normalizeContextSelection(
     if (!value && d.options.length === 1 && !d.options[0]!.disabled) value = d.options[0]!.value;
     if (value) next[d.key] = value;
   }
-  // Derived values chỉ tin response server hiện tại; localStorage/request không thể tự cấp scope.
   if (state.selection.date_from) next.date_from = state.selection.date_from;
   if (state.selection.date_to) next.date_to = state.selection.date_to;
   return next;
@@ -123,8 +115,28 @@ export function applyContextPolicy(
   return { filters, defaults };
 }
 
-/** Common ERPNext report filters derived from the server-resolved business context.
- * Extra filters are safe for query/script reports and are ignored when a report does not use them. */
+/**
+ * Link-target capability filters derived from canonical context dimensions and the target schema.
+ *
+ * This replaces renderer/service branches on ordinary business DocType names. Price-list context is
+ * a platform dimension; if the target schema exposes the corresponding capability flag (`selling`
+ * or `buying`) the filter can be derived without knowing that the target happens to be `Price List`.
+ * When a parent supports both modes we deliberately do not narrow either one, matching the previous
+ * behaviour. Server permissions still decide which rows are actually readable.
+ */
+export function deriveContextLinkCapabilityFilters(
+  policy: BusinessContextPolicy | undefined,
+  targetMeta: { fields?: Array<{ fieldname?: string }> } | undefined,
+): Record<string, unknown> {
+  if (!policy || !targetMeta?.fields) return {};
+  const targetFields = new Set(targetMeta.fields.map((field) => field.fieldname).filter((value): value is string => Boolean(value)));
+  const selling = policy.supported.includes("selling_price_list");
+  const buying = policy.supported.includes("buying_price_list");
+  if (selling && !buying && targetFields.has("selling")) return { selling: 1 };
+  if (buying && !selling && targetFields.has("buying")) return { buying: 1 };
+  return {};
+}
+
 export function contextToReportFilters(selection: BusinessContextSelection): Record<string, unknown> {
   const filters: Record<string, unknown> = {};
   if (selection.company) filters.company = selection.company;
