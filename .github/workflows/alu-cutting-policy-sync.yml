@@ -1,11 +1,8 @@
 name: ALU Cutting Policy Sync One-Shot
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/alu-cutting-policy-sync.yml"
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -18,6 +15,7 @@ concurrency:
 jobs:
   sync:
     name: Backup and sync Alumdoor Cutting Policy fixtures
+    if: github.event.issue.number == 757 && github.event.comment.body == '/sync-cutting-policy'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
@@ -28,12 +26,17 @@ jobs:
       REPORT_PATH: ${{ runner.temp }}/alu-cutting-policy-sync.json
 
     steps:
-      - name: Checkout exact main revision
+      - name: Checkout current main
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: main
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Record exact source SHA
+        id: source
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -65,7 +68,6 @@ jobs:
           node server/scripts/backup-tenant.mjs --tenant alu --execute --output-dir "$BACKUP_DIR"
 
       - name: Sync canonical Cutting Policy fixtures
-        id: sync
         shell: bash
         run: |
           set -euo pipefail
@@ -80,7 +82,7 @@ jobs:
       - name: Persist production evidence in repository
         shell: bash
         env:
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -106,7 +108,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: alu-cutting-policy-sync-${{ github.sha }}
+          name: alu-cutting-policy-sync-${{ steps.source.outputs.sha }}
           if-no-files-found: warn
           retention-days: 30
           path: |
@@ -118,7 +120,7 @@ jobs:
         shell: bash
         env:
           JOB_STATUS: ${{ job.status }}
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
