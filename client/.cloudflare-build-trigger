@@ -1,0 +1,2 @@
+Cloudflare Workers Builds trigger marker.
+Safe no-op file for verifying main-branch build/deploy integration.
