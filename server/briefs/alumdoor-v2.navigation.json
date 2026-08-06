@@ -1,5 +1,5 @@
 {
-  "version": "2.3.1",
+  "version": "2.3.2",
   "//": "Operational presentation sidecar. Daily work is task-first: Sales/Purchase remain the reference pattern; Stock/Manufacturing/Debt/Warranty expose operator actions while reports stay contextual/global and correction/setup stays installed outside the daily tab strip.",
   "dimensions": ["company", "warehouse"],
   "doctypes": {
@@ -65,6 +65,12 @@
       "menu": true,
       "icon": "shield-check",
       "group": "Bảo hành"
+    },
+    "Global Defaults": {
+      "label": "Cài đặt",
+      "menu": true,
+      "icon": "settings",
+      "group": "Hệ thống"
     }
   },
   "reports": {
@@ -225,6 +231,7 @@
     "Payment Entry",
     "action:mo-ho-so-bao-hanh",
     "Warranty Claim",
-    "action:xac-nhan-bu-tru-bao-hanh"
+    "action:xac-nhan-bu-tru-bao-hanh",
+    "Global Defaults"
   ]
 }
