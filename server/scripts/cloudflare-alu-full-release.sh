@@ -7,6 +7,7 @@ APP_WORKER="${APP_WORKER:-cloudforge-app-alumdoor}"
 DISPATCH_NAMESPACE="${DISPATCH_NAMESPACE:-cloudforge-production}"
 TARGET_SHA="${WORKERS_CI_COMMIT_SHA:-$(git rev-parse HEAD)}"
 BRANCH="${WORKERS_CI_BRANCH:-}"
+FULL_RELEASE_BRANCH="${FORGE_CLOUDFLARE_FULL_RELEASE_BRANCH:-release/alu-full}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 fail() {
@@ -17,6 +18,8 @@ fail() {
 require_release_identity() {
   [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || fail "Missing CLOUDFLARE_API_TOKEN/build token."
   [ -n "$TARGET_SHA" ] || fail "Missing release SHA."
+  [ "$BRANCH" = "$FULL_RELEASE_BRANCH" ] \
+    || fail "Refusing full ALU release from branch '${BRANCH:-<unknown>}'; expected '$FULL_RELEASE_BRANCH'."
 
   cd "$REPO_ROOT"
   git fetch origin main --quiet
