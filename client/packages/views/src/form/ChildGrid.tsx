@@ -12,7 +12,7 @@
  * need multi-source pricing/ATP/formulas belong to their app Worker/Experience, not this renderer.
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ArrowDown, ArrowUp, Columns3, Copy, Maximize2, Plus, RotateCcw, Trash2, Undo2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Copy, Maximize2, Plus, RotateCcw, Trash2, Undo2 } from "lucide-react";
 import {
   buildMetadataDefaults,
   collectFetchFrom,
@@ -26,7 +26,7 @@ import {
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import {
   Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input,
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell, useT,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@metaforge/ui";
 
 export interface ChildGridProps {
@@ -235,7 +235,6 @@ function detailSpan(field: DocField): string {
 type RowProvenance = Record<string, FieldValueProvenance>;
 
 export function ChildGrid(props: ChildGridProps) {
-  const t = useT();
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
   const [expanded, setExpanded] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -528,18 +527,22 @@ export function ChildGrid(props: ChildGridProps) {
 
   const effectMessages = Object.entries(effectErrors).filter(([index]) => Number(index) < rows.length);
 
+  const gridToolbar = (allowExpand: boolean) => (
+    <div className="flex flex-wrap items-center gap-2">
+      {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}><Plus /> Thêm dòng</Button> : null}
+      {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(10)}>+10 dòng</Button> : null}
+      {!readOnly && selected.length ? <Button type="button" variant="outline" size="sm" onClick={duplicateSelected}><Copy /> Nhân bản {selected.length}</Button> : null}
+      {!readOnly && selected.length ? <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRows(rows.map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1).filter((index) => index >= 0))}><Trash2 /> Xóa {selected.length}</Button> : null}
+      {!readOnly && lastDeleted?.length ? <Button type="button" variant="ghost" size="sm" onClick={undoDelete}><Undo2 /> Hoàn tác</Button> : null}
+      <Button type="button" variant="ghost" size="sm" onClick={() => setColumnSettingsOpen(true)}><Columns3 /> Cột</Button>
+      {allowExpand ? <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}><Maximize2 /> Bảng lớn</Button> : null}
+      <span className="ml-auto text-xs text-muted-foreground">{rows.length} dòng · {columns.length}/{canonicalColumns.length} cột</span>
+    </div>
+  );
+
   return (
     <div className="min-w-0 space-y-2" data-child-grid={childMeta.name} data-columns={columns.map((field) => field.fieldname).join(",")}>
-      <div className="flex flex-wrap items-center gap-2">
-        {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}><Plus /> Dòng</Button> : null}
-        {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(10)}>+10 dòng</Button> : null}
-        {!readOnly && selected.length ? <Button type="button" variant="outline" size="sm" onClick={duplicateSelected}><Copy /> Nhân bản {selected.length}</Button> : null}
-        {!readOnly && selected.length ? <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRows(rows.map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1).filter((index) => index >= 0))}><Trash2 /> Xóa {selected.length}</Button> : null}
-        {!readOnly && lastDeleted?.length ? <Button type="button" variant="ghost" size="sm" onClick={undoDelete}><Undo2 /> Hoàn tác</Button> : null}
-        <Button type="button" variant="ghost" size="sm" onClick={() => setColumnSettingsOpen(true)}><Columns3 /> Cột</Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}><Maximize2 /> Bảng lớn</Button>
-        <span className="ml-auto text-xs text-muted-foreground">{rows.length} dòng · {columns.length}/{canonicalColumns.length} cột</span>
-      </div>
+      {gridToolbar(true)}
 
       <div className="space-y-2 md:hidden">
         {rows.length ? rows.map((row, rowIndex) => (
@@ -575,7 +578,11 @@ export function ChildGrid(props: ChildGridProps) {
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
         <DialogContent className="flex h-[94vh] w-[96vw] max-w-none flex-col overflow-hidden p-3">
-          <DialogHeader className="shrink-0"><div className="flex items-center gap-3"><div><DialogTitle>{childMeta.label ?? childMeta.name}</DialogTitle><DialogDescription>{rows.length} dòng · bảng đầy đủ theo metadata</DialogDescription></div><Button type="button" variant="ghost" size="icon-sm" className="ml-auto" onClick={() => setExpanded(false)} aria-label={t("common.close")}><X /></Button></div></DialogHeader>
+          <DialogHeader className="shrink-0 pr-10">
+            <DialogTitle>{childMeta.label ?? childMeta.name}</DialogTitle>
+            <DialogDescription>{rows.length} dòng · bảng đầy đủ theo metadata</DialogDescription>
+          </DialogHeader>
+          <div className="shrink-0 border-y py-2">{gridToolbar(false)}</div>
           <div className="min-h-0 flex-1">{gridSurface(true)}</div>
         </DialogContent>
       </Dialog>
