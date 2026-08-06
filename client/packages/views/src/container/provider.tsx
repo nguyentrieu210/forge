@@ -105,6 +105,12 @@ export function MetaForgeProvider(props: MetaForgeProviderProps) {
   );
   // locale key ổn định để memo fmt — đổi user/site/lang ⇒ locale prop đổi ⇒ fmt dựng lại (không stale).
   const localeKey = JSON.stringify(props.locale ?? null);
+  const effectiveBusinessContext = useMemo<BusinessContextSelection>(() => ({
+    ...(props.businessContext ?? {}),
+    // System Settings already feeds boot.sysdefaults.currency. Treat it as the shared
+    // fallback only when the server-resolved business context has no stronger currency.
+    ...(props.businessContext?.currency || !props.locale?.currency ? {} : { currency: props.locale.currency }),
+  }), [props.businessContext, props.locale?.currency]);
 
   // Quick-create (Link combobox "+ Tạo mới …", giống ERPNext) — 1 điểm duy nhất cho TOÀN app, tái
   // dùng NewFormContainer thật (validate/permission/default đầy đủ, KHÔNG tự bịa field). Dùng STACK
@@ -131,17 +137,17 @@ export function MetaForgeProvider(props: MetaForgeProviderProps) {
     () => ({
       adapter: props.adapter,
       registry: props.registry,
-      services: { ...adapterServices(props.adapter, props.businessContext, props.contextPolicies), quickCreate, fmt: makeLocaleFormat(props.locale ?? {}) },
+      services: { ...adapterServices(props.adapter, effectiveBusinessContext, props.contextPolicies), quickCreate, fmt: makeLocaleFormat(props.locale ?? {}) },
       roles: props.roles ?? [],
       scopeKey: props.scopeKey ?? "mock",
       fmt: makeLocaleFormat(props.locale ?? {}),
-      businessContext: props.businessContext ?? {},
+      businessContext: effectiveBusinessContext,
       contextPolicies: props.contextPolicies,
       formProfiles: props.formProfiles,
       formGuides: props.formGuides,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props.adapter, props.registry, props.roles, props.scopeKey, localeKey, JSON.stringify(props.businessContext ?? {}), props.contextPolicies, props.formProfiles, props.formGuides, quickCreate],
+    [props.adapter, props.registry, props.roles, props.scopeKey, localeKey, JSON.stringify(effectiveBusinessContext), props.contextPolicies, props.formProfiles, props.formGuides, quickCreate],
   );
   return (
     <QueryClientProvider client={qc}>
