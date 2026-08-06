@@ -3,7 +3,6 @@ name: WS09 Client Input Table Validation
 on:
   pull_request:
     branches:
-      - main
       - program/ws09-batch-productization-20260804
     paths:
       - "client/packages/core/src/app/action-input-table.ts"
@@ -15,24 +14,25 @@ on:
       - "client/packages/views/tests/action-input-table.test.mjs"
       - "client/apps/runtime/**"
       - ".github/workflows/ws09-client-input-table-validation.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ws09-client-${{ github.event.pull_request.number }}
+  group: ws09-client-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    if: startsWith(github.head_ref, 'platform/ws09-input-table-native-r2')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'platform/ws09-input-table-native-r2')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
