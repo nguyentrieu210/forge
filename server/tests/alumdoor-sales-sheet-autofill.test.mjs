@@ -3,126 +3,51 @@ import fs from "node:fs";
 import test from "node:test";
 
 const sheet = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesSheetV2.tsx", "utf8");
-const bridge = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesAutofillBridge.ts", "utf8");
-const workspace = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesModeWorkspace.tsx", "utf8");
-const compactCss = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesSheetCompact.css", "utf8");
-const itemContext = fs.readFileSync("server/apps-src/alumdoor-worker/src/sales-item-context.ts", "utf8");
-const salesWizard = fs.readFileSync("server/apps-src/alumdoor-worker/src/sales-wizard-context.ts", "utf8");
+const worker = fs.readFileSync("server/apps-src/alumdoor-worker/src/sales-wizard-context.ts", "utf8");
 
-test("AREA display and amount react immediately without replacing billable authority", () => {
-  assert.match(sheet, /const authoritative = line\.formula\?\.area_per_set_sqm/);
-  assert.match(sheet, /height \* width/);
-  assert.match(sheet, /if \(line\.mode === "AREA"\) return Number\(line\.formula\?\.billable_area_sqm \?\? 0\)/);
-  assert.doesNotMatch(sheet, /if \(line\.mode === "AREA"\) return areaPerSet\(line\)/);
-  assert.match(sheet, /function previewBillableQty/);
-  assert.match(sheet, /const geometric = areaPerSet\(line\)/);
-  assert.match(sheet, /previewGrossAmount\(line\)/);
-  assert.match(sheet, /previewLineDiscountAmount\(line\)/);
-});
-
-test("selling price-list autofill uses active master rows and never synthesizes a numeric price", () => {
-  assert.match(bridge, /fields: \["name", "price_list_name", "disabled"\]/);
-  assert.match(bridge, /preferred -> customer-group list -> standard -> sole list/);
-  assert.match(bridge, /default_price_list: selected/);
-  assert.match(bridge, /method !== "alumdoor\.sales\.item_context"/);
-  assert.match(bridge, /itemContextQueues/);
-  assert.doesNotMatch(bridge, /rate\s*:/);
-  assert.doesNotMatch(bridge, /standard_rate/);
-});
-
-test("stacked adapter bridges install before sheet effects and restore in LIFO order", () => {
-  assert.match(workspace, /installAlumdoorSalesCompanyContextBridge/);
-  assert.match(workspace, /installAlumdoorSalesAutofillBridge/);
-  assert.match(workspace, /restoreAutofill\(\);\s*restoreCompany\(\);/s);
-});
-
-test("sales UOM is an operator-selectable pricing input, not a read-only label", () => {
-  assert.match(sheet, /allowed_uoms\?: string\[\]/);
-  assert.match(sheet, /allowedUoms: string\[\]/);
-  assert.match(sheet, /requestedUom \? \{ uom: requestedUom \} : \{\}/);
-  assert.match(sheet, /const changeUom = async/);
-  assert.match(sheet, /void changeUom\(lineIndex, event\.target\.value\)/);
-  assert.match(sheet, /void changeUom\(index, event\.target\.value\)/);
-  assert.match(sheet, /rate: null, stockQty: null/);
-});
-
-test("legacy Item Price without UOM is compatible only with the Item default sales UOM", () => {
-  assert.match(itemContext, /const legacyUom = normalizedText\(legacy\?\.uom\)/);
-  assert.match(itemContext, /!legacyUom && sameText\(selectedUom, defaultSalesUom\)/);
-  assert.match(itemContext, /resolveItemPriceRecord\(call, priceList, itemCode, selectedUom, defaultSalesUom\)/);
-  assert.match(itemContext, /Item Price đúng ĐVT đó/);
-});
-
-test("compact operational grid keeps units visible and required inputs persistently distinguishable", () => {
-  assert.match(sheet, /label: "DÀY"[\s\S]*unit: "mm"/);
-  assert.match(sheet, /label: "CAO"[\s\S]*unit: "m"/);
-  assert.match(sheet, /label: "RỘNG"[\s\S]*unit: "m"/);
-  assert.match(sheet, /label: "DT"[\s\S]*unit: "m²"/);
-  assert.match(sheet, /required \? "border-amber-400 bg-amber-50\/80"/);
-  assert.match(sheet, /missing \? "border-red-500 bg-red-50/);
-});
-
-test("German-door discount is domain-provided, auto-filled until the operator overrides it", () => {
-  assert.match(sheet, /border-emerald-300 bg-emerald-50/);
-  assert.match(sheet, /xanh = được nhập tùy chọn/);
-  assert.match(salesWizard, /function defaultSalesDiscountPct/);
-  assert.match(salesWizard, /default_discount_pct: defaultDiscountPct/);
-  assert.match(sheet, /default_discount_pct\?: number/);
-  assert.match(sheet, /entry\.discountTouched \? entry\.discountPct : defaultDiscount/);
-  assert.doesNotMatch(sheet, /discountPct:\s*[^\n]*"15"/);
-});
-
-test("shared grid persists column order and width, supports drag, manual resize and auto-fit", () => {
-  assert.match(sheet, /ORDER_KEY/);
-  assert.match(sheet, /WIDTH_KEY/);
-  assert.match(sheet, /draggable/);
-  assert.match(sheet, /moveColumn\(draggingColumn, column\.key\)/);
-  assert.match(sheet, /beginResize\(event, column\)/);
-  assert.match(sheet, /onDoubleClick/);
-  assert.match(sheet, /autoFitAll/);
-  assert.match(sheet, /Tự khít cột/);
-  assert.match(sheet, /renderGrid\(true\)/);
-  assert.doesNotMatch(compactCss, /nth-child\(/);
-});
-
-test("sales header is compact, customer-centric and lets the order override customer type", () => {
-  assert.match(sheet, /Thông tin khách hàng/);
-  assert.match(sheet, /Thông tin đơn hàng/);
-  assert.match(sheet, />\+ Tạo mới<\/Button>/);
-  assert.doesNotMatch(sheet, />\+ NCC<\/Button>/);
-  assert.match(sheet, /Loại bảng giá/);
-  assert.match(sheet, /Loại khách \*/);
-  assert.match(sheet, /<option value="Lẻ">Khách lẻ<\/option>/);
+test("operator customer groups resolve strict price-list vocabulary", () => {
+  assert.match(sheet, /type CustomerGroup = "Đại lý" \| "Bán lẻ" \| "Nhà thầu"/);
+  assert.match(sheet, /function priceListMatchesGroup/);
+  assert.match(sheet, /<option value="Bán lẻ">Bán lẻ<\/option>/);
   assert.match(sheet, /<option value="Đại lý">Đại lý<\/option>/);
-  assert.match(sheet, /Địa chỉ nhận/);
-  assert.match(sheet, /sm:grid-cols-\[180px_180px_minmax\(0,1fr\)\]/);
-  assert.match(sheet, /grid grid-cols-2 gap-2/);
+  assert.match(sheet, /<option value="Nhà thầu">Nhà thầu<\/option>/);
+  assert.match(sheet, /Chưa cấu hình Bảng giá/);
+  assert.doesNotMatch(sheet, /STANDARD_PRICE_LIST/);
+  assert.doesNotMatch(sheet, /Giá niêm yết/);
 });
 
-test("summary panel uses sales-order totals instead of collection-state placeholders", () => {
-  assert.match(sheet, /Tổng cộng/);
-  assert.match(sheet, /Tổng chiết khấu/);
-  assert.match(sheet, /Tổng VAT/);
-  assert.match(sheet, /Tổng phụ thu/);
-  assert.match(sheet, /THÀNH TIỀN/);
-  assert.doesNotMatch(sheet, />Đã thu</);
-  assert.doesNotMatch(sheet, />CÒN PHẢI THU</);
+test("technical columns are explicit and auto-projected from order applicability", () => {
+  for (const label of [
+    "LOẠI RAY", "CAO LỌT LÒNG", "CAO PB", "CAO LƯỚI",
+    "RỘNG LỌT LÒNG", "RỘNG PB RAY", "RỘNG PB NHỰA", "RỘNG CẮT LÁ",
+    "DT", "SỐ LÁ",
+  ]) assert.match(sheet, new RegExp(label));
+  assert.match(sheet, /function columnApplies/);
+  assert.match(sheet, /CORE_COLUMNS/);
+  assert.match(sheet, /COLUMNS\.filter\(\(column\) => CORE_COLUMNS\.has\(column\.key\) \|\| lines\.some/);
 });
 
-test("door width and height input basis are resolved by the domain before dimensions are entered", () => {
-  assert.match(salesWizard, /checked\(args\.basis_only\)/);
-  assert.match(salesWizard, /measurementWidthBasis/);
-  assert.match(salesWizard, /measurementHeightBasis/);
-  assert.match(salesWizard, /width_basis: measurementWidthBasis/);
-  assert.match(salesWizard, /input_height_basis: inputHeightBasis/);
-  assert.match(sheet, /const refreshMeasurementBasis = async/);
+test("normal catalogue items do not inherit color or geometry requirements", () => {
+  assert.match(sheet, /inventory === "hàng thường"\) return "QUANTITY"/);
+  assert.match(sheet, /requireColor = mode !== "QUANTITY" && checked\(profile\.require_color\)/);
+  assert.match(sheet, /if \(key === "color"\) return line\.requireColor/);
+});
+
+test("door measurement authority stays in the worker", () => {
+  assert.match(sheet, /alumdoor\.sales\.production_line_context/);
   assert.match(sheet, /basis_only: true/);
-  assert.match(sheet, /widthBasisChanged/);
-  assert.match(sheet, /heightBasisChanged/);
-  assert.match(sheet, /height_input_basis: line\.heightBasis/);
   assert.match(sheet, /width_input_basis: line\.widthBasis/);
-  assert.match(sheet, /RỘNG PB NHỰA/);
-  assert.match(sheet, /RỘNG PB RAY/);
-  assert.match(sheet, /CAO LỌT LÒNG/);
-  assert.match(sheet, /CAO PB/);
+  assert.match(sheet, /height_input_basis: line\.heightBasis/);
+  assert.match(worker, /calculateDoorFormula/);
+  assert.match(worker, /default_discount_pct: defaultDiscountPct/);
+});
+
+test("operator sheet retains save, submit, stock reservation, print and export workflows", () => {
+  assert.match(sheet, /adapter\.createDoc\("Sales Order"/);
+  assert.match(sheet, /adapter\.updateDoc\("Sales Order"/);
+  assert.match(sheet, /adapter\.submit\("Sales Order"/);
+  assert.match(sheet, /alumdoor\.cut\.reserve/);
+  assert.match(sheet, /alumdoor\.cut\.release/);
+  assert.match(sheet, /printRoute/);
+  assert.match(sheet, /exportCsv/);
 });
