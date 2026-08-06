@@ -36,17 +36,14 @@
     "binding": "ASSETS",
     "not_found_handling": "none"
   },
-  // Existing named Custom Domains stay explicit for production continuity. The wildcard
-  // Worker Route is the source-controlled authority for zero-touch customer subdomains
-  // such as thuy.kairo.vn; it mirrors the wildcard route already bootstrapped manually
-  // in Cloudflare so a later Wrangler deploy cannot silently drift it away.
+  // Keep only explicitly named production Custom Domains. Do not declare a wildcard
+  // Worker Route for *.kairo.vn; customer hostnames must be provisioned explicitly.
   "routes": [
     { "pattern": "edu.kairo.vn", "custom_domain": true },
     { "pattern": "hrm.kairo.vn", "custom_domain": true },
     { "pattern": "chotdon.kairo.vn", "custom_domain": true },
     { "pattern": "alu.kairo.vn", "custom_domain": true },
-    { "pattern": "phanbon.kairo.vn", "custom_domain": true },
-    { "pattern": "*.kairo.vn/*", "zone_name": "kairo.vn" }
+    { "pattern": "phanbon.kairo.vn", "custom_domain": true }
   ],
   "kv_namespaces": [
     { "binding": "ROUTES", "id": "b4607d01c54042dcbc3d6cb3e1ad2da4" }
