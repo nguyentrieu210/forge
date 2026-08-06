@@ -12,6 +12,7 @@ test("Cloudflare full ALU release preserves the canonical production sequence", 
   const required = [
     "git merge-base --is-ancestor \"$TARGET_SHA\" origin/main",
     "FORGE_CLOUDFLARE_FULL_RELEASE:-",
+    "release/alu-full",
     "pnpm --filter cloudforge run build",
     "pnpm --filter metaforge run build",
     "node server/scripts/stage-client-bundle.mjs",
@@ -32,6 +33,7 @@ test("Cloudflare full ALU release preserves the canonical production sequence", 
 
 test("Cloudflare full ALU release does not silently turn ordinary pushes into full production mutation", () => {
   assert.match(script, /FORGE_CLOUDFLARE_FULL_RELEASE=alu/);
+  assert.match(script, /release\/alu-full/);
   assert.match(script, /Refusing full ALU release/);
   assert.doesNotMatch(script, /FORGE_CLOUDFLARE_FULL_RELEASE:-alu/);
 });
