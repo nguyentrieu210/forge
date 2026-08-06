@@ -9,11 +9,15 @@ const compactCss = fs.readFileSync("client/apps/runtime/src/experiences/Alumdoor
 const itemContext = fs.readFileSync("server/apps-src/alumdoor-worker/src/sales-item-context.ts", "utf8");
 const salesWizard = fs.readFileSync("server/apps-src/alumdoor-worker/src/sales-wizard-context.ts", "utf8");
 
-test("AREA display reacts immediately to entered height and width without replacing billable authority", () => {
+test("AREA display and amount react immediately without replacing billable authority", () => {
   assert.match(sheet, /const authoritative = line\.formula\?\.area_per_set_sqm/);
   assert.match(sheet, /height \* width/);
   assert.match(sheet, /if \(line\.mode === "AREA"\) return Number\(line\.formula\?\.billable_area_sqm \?\? 0\)/);
   assert.doesNotMatch(sheet, /if \(line\.mode === "AREA"\) return areaPerSet\(line\)/);
+  assert.match(sheet, /function previewBillableQty/);
+  assert.match(sheet, /const geometric = areaPerSet\(line\)/);
+  assert.match(sheet, /previewGrossAmount\(line\)/);
+  assert.match(sheet, /previewLineDiscountAmount\(line\)/);
 });
 
 test("selling price-list autofill uses active master rows and never synthesizes a numeric price", () => {
@@ -58,10 +62,13 @@ test("compact operational grid keeps units visible and required inputs persisten
   assert.match(sheet, /missing \? "border-red-500 bg-red-50/);
 });
 
-test("discount is visibly editable and no unsupported German-door 15 percent default remains", () => {
+test("German-door discount is domain-provided, auto-filled until the operator overrides it", () => {
   assert.match(sheet, /border-emerald-300 bg-emerald-50/);
   assert.match(sheet, /xanh = được nhập tùy chọn/);
-  assert.doesNotMatch(sheet, /shouldDefaultDiscount/);
+  assert.match(salesWizard, /function defaultSalesDiscountPct/);
+  assert.match(salesWizard, /default_discount_pct: defaultDiscountPct/);
+  assert.match(sheet, /default_discount_pct\?: number/);
+  assert.match(sheet, /entry\.discountTouched \? entry\.discountPct : defaultDiscount/);
   assert.doesNotMatch(sheet, /discountPct:\s*[^\n]*"15"/);
 });
 
@@ -78,14 +85,17 @@ test("shared grid persists column order and width, supports drag, manual resize 
   assert.doesNotMatch(compactCss, /nth-child\(/);
 });
 
-test("sales header is compact and customer-centric", () => {
+test("sales header is compact, customer-centric and lets the order override customer type", () => {
   assert.match(sheet, /Thông tin khách hàng/);
   assert.match(sheet, /Thông tin đơn hàng/);
   assert.match(sheet, />\+ Tạo mới<\/Button>/);
   assert.doesNotMatch(sheet, />\+ NCC<\/Button>/);
   assert.match(sheet, /Loại bảng giá/);
+  assert.match(sheet, /Loại khách \*/);
+  assert.match(sheet, /<option value="Lẻ">Khách lẻ<\/option>/);
+  assert.match(sheet, /<option value="Đại lý">Đại lý<\/option>/);
   assert.match(sheet, /Địa chỉ nhận/);
-  assert.match(sheet, /sm:grid-cols-\[180px_minmax\(0,1fr\)\]/);
+  assert.match(sheet, /sm:grid-cols-\[180px_180px_minmax\(0,1fr\)\]/);
   assert.match(sheet, /grid grid-cols-2 gap-2/);
 });
 
@@ -99,14 +109,20 @@ test("summary panel uses sales-order totals instead of collection-state placehol
   assert.doesNotMatch(sheet, />CÒN PHẢI THU</);
 });
 
-test("door width input basis is resolved by the domain before dimensions are entered", () => {
+test("door width and height input basis are resolved by the domain before dimensions are entered", () => {
   assert.match(salesWizard, /checked\(args\.basis_only\)/);
   assert.match(salesWizard, /measurementWidthBasis/);
+  assert.match(salesWizard, /measurementHeightBasis/);
   assert.match(salesWizard, /width_basis: measurementWidthBasis/);
+  assert.match(salesWizard, /input_height_basis: inputHeightBasis/);
   assert.match(sheet, /const refreshMeasurementBasis = async/);
   assert.match(sheet, /basis_only: true/);
-  assert.match(sheet, /basisChanged \? \{ width: "", formula: null/);
+  assert.match(sheet, /widthBasisChanged/);
+  assert.match(sheet, /heightBasisChanged/);
+  assert.match(sheet, /height_input_basis: line\.heightBasis/);
   assert.match(sheet, /width_input_basis: line\.widthBasis/);
   assert.match(sheet, /RỘNG PB NHỰA/);
   assert.match(sheet, /RỘNG PB RAY/);
+  assert.match(sheet, /CAO LỌT LÒNG/);
+  assert.match(sheet, /CAO PB/);
 });
