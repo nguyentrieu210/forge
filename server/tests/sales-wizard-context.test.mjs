@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { calculateSalesProductionLine } from "../dist/apps-src/alumdoor-worker/src/sales-production.js";
 import { calculateSalesWizardLineContext } from "../dist/apps-src/alumdoor-worker/src/sales-wizard-context.js";
 import { handleSalesOrderOperationalSummary } from "../dist/apps-src/alumdoor-worker/src/sales-order-operational-summary.js";
 
@@ -77,19 +78,17 @@ async function body(response) {
   return JSON.parse(await response.text());
 }
 
-test("basis-only trả đúng loại rộng/cao và CK mặc định Cửa Đức theo loại khách", async () => {
-  const dealer = await body(await calculateSalesWizardLineContext(platform(), {
+test("public basis-only route trả đúng loại rộng/cao và CK mặc định Cửa Đức theo loại khách", async () => {
+  const dealer = await body(await calculateSalesProductionLine(platform(), {
     item_code: "CUA-DUC",
     customer_group: "Đại lý",
     sales_mode: "Trọn bộ",
-    ray_type: "U75",
     basis_only: true,
   }));
-  const retail = await body(await calculateSalesWizardLineContext(platform(), {
+  const retail = await body(await calculateSalesProductionLine(platform(), {
     item_code: "CUA-DUC",
     customer_group: "Lẻ",
     sales_mode: "Trọn bộ",
-    ray_type: "U75",
     basis_only: true,
   }));
   assert.equal(dealer.width_basis, "Phủ bì nhựa");
