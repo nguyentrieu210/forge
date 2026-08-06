@@ -29,12 +29,12 @@ require_release_identity() {
   [ "$head_sha" = "$TARGET_SHA" ] \
     || fail "Build checkout drift: HEAD=$head_sha WORKERS_CI_COMMIT_SHA=$TARGET_SHA."
 
-  if [ -n "$BRANCH" ] && [ "$BRANCH" != "release/alu-full" ]; then
-    fail "Refusing full ALU release from branch $BRANCH; expected release/alu-full."
+  if [ -n "$BRANCH" ] && [ "$BRANCH" != "main" ]; then
+    fail "Refusing full ALU release from branch $BRANCH; expected main."
   fi
 
   if [ "${FORGE_CLOUDFLARE_FULL_RELEASE:-}" != "alu" ]; then
-    fail "Refusing full ALU release: set build secret FORGE_CLOUDFLARE_FULL_RELEASE=alu only on the dedicated full-release Workers Build project."
+    fail "Refusing full ALU release: set build secret FORGE_CLOUDFLARE_FULL_RELEASE=alu on the production Workers Build project."
   fi
 
   export VITE_FORGE_RELEASE_SHA="$TARGET_SHA"
@@ -126,7 +126,9 @@ deploy_release() {
     --strict)
 
   echo "Deploying Gateway"
-  pnpm --dir server exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc
+  (cd server && pnpm exec wrangler deploy \
+    --config apps/gateway-worker/wrangler.jsonc \
+    --strict)
 
   echo "Full ALU release complete: $TARGET_SHA"
 }
