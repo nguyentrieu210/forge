@@ -140,6 +140,7 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
   }
   if (roles.includes("System Manager") || roles.includes("Administrator")) {
     items.push({ key: "__permissions", label: "Trung tâm phân quyền", group: "Hệ thống", icon: resolveIcon("shield-check"), route: "/permissions" });
+    items.push({ key: "__settings", label: "Cài đặt", group: "Hệ thống", icon: resolveIcon("settings"), route: `/app/${encodeURIComponent("System Settings")}`, doctype: "System Settings" });
     // Nhập dữ liệu ghi vào BẤT KỲ doctype nào người dùng chọn, nên nó đi cùng quyền quản
     // trị chứ không mở cho mọi vai trò. Server vẫn kiểm quyền trên từng lệnh ghi; đây chỉ
     // là chuyện không mời người không dùng được vào một màn sẽ từ chối họ.
