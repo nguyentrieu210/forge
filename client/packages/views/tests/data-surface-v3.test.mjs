@@ -51,6 +51,14 @@ test("DoctypeWorkspace activates V3 without replacing canonical renderers", () =
   assert.match(workspace, /<BulkGridContainer/);
 });
 
+test("DoctypeWorkspace uses quick entry only when metadata explicitly opts in", () => {
+  assert.match(workspace, /viewPolicy\?\.quickEntry\?\.enabled === true/);
+  assert.match(workspace, /if \(isNew && !quickEntryEnabled\)/);
+  assert.match(workspace, /presentation="page"/);
+  assert.match(workspace, /open=\{isNew && quickEntryEnabled\}/);
+  assert.match(workspace, /presentation="dialog"/);
+});
+
 test("V3 quick entry preserves dirty-close guard and reduced-motion behavior", () => {
   assert.match(workspace, /onInteractOutside=\{\(event\) => \{ event\.preventDefault\(\); setCloseRequest/);
   assert.match(workspace, /onEscapeKeyDown=\{\(event\) => \{ event\.preventDefault\(\); setCloseRequest/);

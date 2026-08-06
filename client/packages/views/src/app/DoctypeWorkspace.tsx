@@ -1,8 +1,9 @@
 /** @jsxImportSource react */
 /**
  * Generic DocType workspace: desktop dùng List | Form | Context,
- * mobile dùng một pane; tạo mới mở modal lớn. DocType có canonical Bulk policy
- * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
+ * mobile dùng một pane; tạo mới chỉ dùng quick-entry dialog khi metadata opt-in,
+ * còn lại mở form đầy đủ theo page. DocType có canonical Bulk policy được thêm tab
+ * Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
 import { useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
@@ -54,6 +55,9 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
   const isTree = titleMeta.data?.is_tree === 1;
   const isSingle = titleMeta.data?.issingle === 1;
+  // Quick entry is declaration-first and opt-in. Missing/disabled quickEntry means the
+  // canonical expanded form owns creation; this keeps transaction work out of cramped modals.
+  const quickEntryEnabled = titleMeta.data?.viewPolicy?.quickEntry?.enabled === true;
   // Single DocType is one settings document, not a list/detail workspace. Probe the
   // canonical singleton name only after meta confirms `issingle`; a 404 means it has
   // never been saved and must open as a create-form instead of showing "not found".
@@ -97,6 +101,21 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
               onSaved={() => { void singleDocQ.refetch(); }}
             />
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (isNew && !quickEntryEnabled) {
+    return (
+      <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
+        <div className="min-h-0 flex-1 overflow-auto">
+          <NewFormContainer
+            doctype={doctype}
+            presentation="page"
+            onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+            onCancel={() => onNavigate(listPath)}
+          />
         </div>
       </div>
     );
@@ -228,7 +247,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
+      <Dialog open={isNew && quickEntryEnabled} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
           className={V3_QUICK_ENTRY_DIALOG_CLASS}
           data-ui-version="v3"
@@ -242,6 +261,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
             <NewFormContainer
               doctype={doctype}
+              presentation="dialog"
               closeRequest={closeRequest}
               onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
               onCancel={() => onNavigate(listPath)}
