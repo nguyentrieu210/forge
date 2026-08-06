@@ -1,6 +1,7 @@
 import baseWorker from "./index.js";
 import { validateItemCatalogInvariants } from "./item-catalog-invariants.js";
 import { handlePurchaseOrderCreate } from "./purchase-order-create.js";
+import { handlePurchaseItemPriceHistory } from "./purchase-item-price-history.js";
 import { handlePurchaseFifoRequest } from "./purchase-fifo-receipt.js";
 import { handleBulkPurchaseFifoRequest } from "./bulk-purchase-fifo-receipt.js";
 import { handleBulkPurchaseDirectReceipt } from "./bulk-purchase-direct-receipt.js";
@@ -17,10 +18,12 @@ type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
  *
  * Item đi qua cả validator lịch sử và các invariant catalog mới. Tạo đơn mua, nhập trực tiếp,
  * nhập nhôm FIFO và Bulk Transaction đều chỉ compose chứng từ chuẩn rồi gọi ngược platform
- * dưới đúng danh tính người dùng. Dashboard giao hàng NCC và batch giao hàng đều bắt buộc
- * scope theo Company của Business Context; read model Đơn hàng chỉ tổng hợp canonical planning
- * docs sau khi đã chứng minh Sales Order thuộc đúng Company. Đối soát chỉ compose Purchase
- * Settlement canonical, không tạo ledger cạnh tranh. Mọi route khác delegate nguyên vẹn.
+ * dưới đúng danh tính người dùng. Lịch sử giá mua là read model từ Purchase Order đã submit
+ * cộng Purchase Receipt trực tiếp, không tạo nguồn giá mua cạnh tranh. Dashboard giao hàng NCC
+ * và batch giao hàng đều bắt buộc scope theo Company của Business Context; read model Đơn hàng
+ * chỉ tổng hợp canonical planning docs sau khi đã chứng minh Sales Order thuộc đúng Company.
+ * Đối soát chỉ compose Purchase Settlement canonical, không tạo ledger cạnh tranh. Mọi route
+ * khác delegate nguyên vẹn.
  */
 export default {
   async fetch(request: Request, env: WorkerEnv, ctx: WorkerContext): Promise<Response> {
@@ -29,6 +32,9 @@ export default {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
       if (method === "alumdoor.purchase.create_order") {
         return handlePurchaseOrderCreate(request, env);
+      }
+      if (method === "alumdoor.purchase.item_price_history") {
+        return handlePurchaseItemPriceHistory(request, env);
       }
       if (method === "alumdoor.purchase.supplier_delivery_dashboard") {
         return handleCompanyScopedPurchaseSupplierDashboard(request, env);

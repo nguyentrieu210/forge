@@ -1,6 +1,23 @@
 import type { AppAction, AppActionField } from "./manifest.js";
 
 export type AppActionInputTableMode = "bulk" | "child-grid-inline";
+export type AppActionRowReferenceFormat = "currency" | "number" | "text";
+
+/**
+ * Read-only reference shown beside a repeatable action table. It never writes into the row.
+ * The app method owns lookup semantics; the runtime only binds declared parent/row fields and
+ * formats the returned value. This keeps historical/reference data separate from operator input.
+ */
+export interface AppActionRowReference {
+  method: string;
+  parent_field: string;
+  row_field: string;
+  response_object_field?: string;
+  value_field: string;
+  label: string;
+  empty_text?: string;
+  format?: AppActionRowReferenceFormat;
+}
 
 /**
  * Generic presentation contract for a repeatable AppAction input.
@@ -18,6 +35,8 @@ export interface AppActionInputTablePresentation {
   money_precision?: number;
   /** Existing Print Format to use after a successful commit when save + print is chosen. */
   print_format?: string;
+  /** Optional read-only lookup rendered for each distinct row key. */
+  row_reference?: AppActionRowReference;
 }
 
 /** Summary controls rendered below the rows rather than among ordinary header fields. */
