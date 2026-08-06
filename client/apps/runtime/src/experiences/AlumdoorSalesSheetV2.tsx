@@ -130,6 +130,7 @@ const today = () => {
   const value = new Date();
   return new Date(value.valueOf() - value.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 };
+const printRoute = (name: unknown) => `/print/${encodeURIComponent("Sales Order")}/${encodeURIComponent(String(name))}`;
 
 const checked = (value: unknown) => value === true || value === 1 || value === "1" || ["true", "yes", "có", "co"].includes(String(value ?? "").trim().toLocaleLowerCase("vi"));
 const decimal = (value: unknown) => Number(String(value ?? "").trim().replace(",", "."));
@@ -138,12 +139,6 @@ const integerPositive = (value: unknown) => Number.isInteger(decimal(value)) && 
 const normalize = (value: unknown) => String(value ?? "").normalize("NFC").trim().toLocaleLowerCase("vi");
 const money = (value: unknown) => Number.isFinite(Number(value)) ? Number(value).toLocaleString("vi-VN", { maximumFractionDigits: 0 }) : "";
 const number = (value: unknown, digits = 3) => Number.isFinite(Number(value)) ? Number(value).toLocaleString("vi-VN", { maximumFractionDigits: digits }) : "";
-const escapeHtml = (value: unknown) => String(value ?? "")
-  .replaceAll("&", "&amp;")
-  .replaceAll("<", "&lt;")
-  .replaceAll(">", "&gt;")
-  .replaceAll('"', "&quot;")
-  .replaceAll("'", "&#039;");
 const clampWidth = (value: number, min = 3.5, max = 28) => Math.max(min, Math.min(max, Math.round(value * 2) / 2));
 
 function loadOrder(): ColumnKey[] {
@@ -347,6 +342,7 @@ export function AlumdoorSalesSheetV2() {
   const [draggingColumn, setDraggingColumn] = useState<ColumnKey | null>(null);
   const [picked, setPicked] = useState({ line: 0, column: 0 });
   const [saving, setSaving] = useState<"" | "draft" | "submit">("");
+  const [previewing, setPreviewing] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Doc | null>(null);
   const [globalError, setGlobalError] = useState("");
   const submitted = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 1);
@@ -730,6 +726,30 @@ export function AlumdoorSalesSheetV2() {
     return common;
   });
 
+  const buildOrderPayload = (): Partial<Doc> => ({
+    customer: customer.name,
+    company,
+    currency,
+    transaction_date: transactionDate,
+    delivery_date: deliveryDate,
+    ...(priceList ? { selling_price_list: priceList } : {}),
+    ...(canonicalGroup ? { customer_group: canonicalGroup } : {}),
+    ...(customer.address ? { install_address: customer.address } : {}),
+    ...(note.trim() ? { remarks: note.trim() } : {}),
+    additional_discount_percentage: 0,
+    items: buildItems(),
+  });
+
+  const persistDraft = async (): Promise<Doc> => {
+    const existingDraft = createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? createdOrder : null;
+    const payload = buildOrderPayload();
+    const saved = existingDraft
+      ? await adapter.updateDoc("Sales Order", String(existingDraft.name), payload, String(existingDraft.modified ?? ""))
+      : await adapter.createDoc("Sales Order", payload);
+    setCreatedOrder(saved);
+    return saved;
+  };
+
   const saveOrder = async (draftOnly: boolean) => {
     setGlobalError("");
     if (blockers.length) { setGlobalError(blockers[0]!); return; }
@@ -737,26 +757,10 @@ export function AlumdoorSalesSheetV2() {
     setSaving(draftOnly ? "draft" : "submit");
     const reservations: string[] = [];
     try {
-      const existingDraft = createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? createdOrder : null;
-      const payload: Partial<Doc> = {
-        customer: customer.name,
-        company,
-        currency,
-        transaction_date: transactionDate,
-        delivery_date: deliveryDate,
-        ...(priceList ? { selling_price_list: priceList } : {}),
-        ...(canonicalGroup ? { customer_group: canonicalGroup } : {}),
-        ...(customer.address ? { install_address: customer.address } : {}),
-        ...(note.trim() ? { remarks: note.trim() } : {}),
-        additional_discount_percentage: 0,
-        items: buildItems(),
-      };
-      const saved = existingDraft
-        ? await adapter.updateDoc("Sales Order", String(existingDraft.name), payload, String(existingDraft.modified ?? ""))
-        : await adapter.createDoc("Sales Order", payload);
-      setCreatedOrder(saved);
+      const wasExistingDraft = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 0);
+      const saved = await persistDraft();
       if (draftOnly) {
-        toast.success(existingDraft ? `Đã cập nhật nháp ${saved.name}.` : `Đã lưu nháp ${saved.name}.`);
+        toast.success(wasExistingDraft ? `Đã cập nhật nháp ${saved.name}.` : `Đã lưu nháp ${saved.name}.`);
         return;
       }
       for (const line of lines.filter((entry) => entry.itemCode && entry.mode === "AREA" && entry.formula?.stock_profile_item && entry.warehouse)) {
@@ -782,6 +786,27 @@ export function AlumdoorSalesSheetV2() {
       }
       setGlobalError(adapter.mapError(error).message);
     } finally { setSaving(""); }
+  };
+
+  const previewPrint = async () => {
+    setGlobalError("");
+    if (submitted && createdOrder?.name) {
+      window.open(printRoute(createdOrder.name), "_blank");
+      return;
+    }
+    if (blockers.length) { setGlobalError(blockers[0]!); return; }
+    const popup = window.open("", "_blank");
+    if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ xem trước bản in."); return; }
+    setPreviewing(true);
+    try {
+      const wasExistingDraft = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 0);
+      const saved = await persistDraft();
+      popup.location.href = printRoute(saved.name);
+      toast.success(wasExistingDraft ? `Đã cập nhật nháp ${saved.name} để xem trước bản in.` : `Đã lưu nháp ${saved.name} để xem trước bản in.`);
+    } catch (error) {
+      popup.close();
+      setGlobalError(adapter.mapError(error).message);
+    } finally { setPreviewing(false); }
   };
 
   const addLines = (count: number) => setLines((current) => [...current, ...Array.from({ length: count }, () => newLine())]);
@@ -878,22 +903,6 @@ export function AlumdoorSalesSheetV2() {
     setCustomer({ name: "", group: "", phone: "", address: "" });
     setPriceList(""); setPriceListError(""); setTransactionDate(today()); setDeliveryDate(today()); setNote("");
     setLines([newLine()]); setSelected([]); setGlobalError("");
-  };
-
-  const printHtml = () => {
-    if (!createdOrder?.name) { setGlobalError("Cần lưu hoặc xác nhận đơn trước khi in."); return; }
-    const bodyRows = lines.filter((line) => line.itemCode).map((line, index) => {
-      const heightNote = line.mode === "AREA" ? line.heightBasis : "";
-      const widthNote = line.mode === "AREA" ? String(line.widthBasis || line.formula?.sales_width_basis || line.formula?.width_basis || "") : "";
-      const printHeight = line.mode === "HEIGHT" || line.mode === "AREA" ? line.height : "";
-      const printWidth = line.mode === "WIDTH" || line.mode === "AREA" ? line.width : "";
-      const product = `<tr><td class="c">${index + 1}</td><td>${escapeHtml(line.itemName || line.itemCode)}</td><td>${escapeHtml(line.color)}</td><td class="c">${escapeHtml(line.thickness)}</td><td class="r">${escapeHtml(printHeight)}${heightNote ? `<div class="sub">${escapeHtml(heightNote)}</div>` : ""}</td><td class="r">${escapeHtml(printWidth)}${widthNote ? `<div class="sub">${escapeHtml(widthNote)}</div>` : ""}</td><td class="r">${areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)}</td><td class="r">${escapeHtml(line.qty)}</td><td class="r">${money(line.rate)}</td><td class="r">${escapeHtml(line.discountPct)}</td><td class="c">${escapeHtml(line.uom)}</td><td class="r b">${money(netAmount(line))}</td></tr>`;
-      return product;
-    }).join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Loại khách:</b> ${escapeHtml(canonicalGroup)}</td><td><b>Bảng giá:</b> ${escapeHtml(priceList)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr><tr><td colspan="3"><b>Địa chỉ nhận:</b> ${escapeHtml(customer.address)}</td><td colspan="2"><b>Điện thoại:</b> ${escapeHtml(customer.phone)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY</th><th>${escapeHtml(heightColumnLabel)}</th><th>${escapeHtml(widthColumnLabel)}</th><th>DT</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng cộng</td><td class="r">${money(grossTotal)}</td></tr><tr><td>Tổng chiết khấu</td><td class="r">-${money(totalDiscount)}</td></tr><tr><td>Tổng VAT</td><td class="r">${money(totalVat)}</td></tr><tr><td>Tổng phụ thu</td><td class="r">${money(totalSurcharge)}</td></tr><tr class="grand"><td>THÀNH TIỀN</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
-    const popup = window.open("", "_blank");
-    if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ in."); return; }
-    popup.document.open(); popup.document.write(html); popup.document.close();
   };
 
   const exportExcel = () => {
@@ -1108,9 +1117,10 @@ export function AlumdoorSalesSheetV2() {
       {globalError ? <div className="flex items-start gap-2 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{globalError}</div> : null}
 
       <div className="flex flex-wrap justify-end gap-2 border-t border-slate-300 pt-2">
-        {!submitted ? <Button type="button" variant="outline" disabled={Boolean(saving)} onClick={() => void saveOrder(true)}>{saving === "draft" ? "Đang lưu…" : "Lưu nháp"}</Button> : null}
-        {!submitted ? <Button type="button" disabled={Boolean(saving)} onClick={() => void saveOrder(false)}>{saving === "submit" ? "Đang xác nhận…" : "Xác nhận đơn"}</Button> : null}
-        {createdOrder?.name ? <Button type="button" variant="outline" onClick={printHtml}><Printer /> In / PDF</Button> : null}
+        {!submitted ? <Button type="button" variant="outline" disabled={Boolean(saving) || previewing} onClick={() => void saveOrder(true)}>{saving === "draft" ? "Đang lưu…" : "Lưu nháp"}</Button> : null}
+        {!submitted ? <Button type="button" variant="outline" disabled={Boolean(saving) || previewing} onClick={() => void previewPrint()}><Printer /> {previewing ? "Đang chuẩn bị…" : "Xem trước bản in"}</Button> : null}
+        {!submitted ? <Button type="button" disabled={Boolean(saving) || previewing} onClick={() => void saveOrder(false)}>{saving === "submit" ? "Đang xác nhận…" : "Xác nhận đơn"}</Button> : null}
+        {submitted && createdOrder?.name ? <Button type="button" variant="outline" onClick={() => window.open(printRoute(createdOrder.name), "_blank")}><Printer /> In / PDF</Button> : null}
         {createdOrder?.name ? <Button type="button" variant="outline" onClick={exportExcel}><FileSpreadsheet /> Excel</Button> : null}
         {submitted ? <Button type="button" onClick={startNew}>Tạo đơn mới</Button> : null}
       </div>
