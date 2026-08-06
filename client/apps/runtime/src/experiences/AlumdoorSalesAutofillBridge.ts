@@ -8,8 +8,8 @@ const text = (value: unknown) => String(value ?? "").normalize("NFC").trim();
 /**
  * Alumdoor Sales compatibility is deliberately transport-only.
  * Pricing, customer type and measurement rules stay in the Sales Sheet / worker authorities.
- * This bridge only serializes racing item-context reads and adapts the sheet's compact calls to
- * the canonical adapter / reservation endpoints.
+ * This bridge serializes racing item-context reads and adapts compact operator calls to the
+ * canonical Frappe adapter / reservation endpoints.
  */
 export function installAlumdoorSalesAutofillBridge(adapter: FrappeAdapter): () => void {
   const existing = installed.get(adapter);
@@ -26,6 +26,7 @@ export function installAlumdoorSalesAutofillBridge(adapter: FrappeAdapter): () =
   const originalSubmit = adapter.submit.bind(adapter);
   const originalCallPost = adapter.callPost.bind(adapter);
   const itemContextQueues = new Map<string, Promise<unknown>>();
+  const reservationCursor = new Map<string, number>();
 
   const mutable = adapter as FrappeAdapter & {
     updateDoc: (dt: string, name: string, doc: Partial<Doc>, modified?: string) => Promise<Doc>;
@@ -47,14 +48,32 @@ export function installAlumdoorSalesAutofillBridge(adapter: FrappeAdapter): () =
 
   adapter.callPost = async function <T = unknown>(method: string, args?: Record<string, unknown>): Promise<T> {
     if (method === "alumdoor.cut.reserve") {
+      const sourceName = text(args?.sales_order);
+      let cutWidth = Number(args?.required_length_m ?? 0);
+      let expiresAt: string | undefined;
+      if (sourceName) {
+        try {
+          const { doc } = await originalGetDoc("Sales Order", sourceName);
+          const candidates = Array.isArray(doc.items)
+            ? (doc.items as Array<Record<string, unknown>>).filter((item) => Number(item.cut_width_m ?? 0) > 0)
+            : [];
+          const cursor = reservationCursor.get(sourceName) ?? 0;
+          const snapshot = candidates[cursor];
+          reservationCursor.set(sourceName, cursor + 1);
+          if (snapshot && Number(snapshot.cut_width_m) > 0) cutWidth = Number(snapshot.cut_width_m);
+          const deliveryDate = text(doc.delivery_date);
+          if (deliveryDate) expiresAt = new Date(`${deliveryDate}T23:59:59.999`).toISOString();
+        } catch { /* fallback keeps the caller value if draft read fails */ }
+      }
       return originalCallPost<T>("alumdoor.reserve.create", {
         item_code: text(args?.item_code),
         warehouse: text(args?.warehouse),
         ...(text(args?.color) ? { color: text(args?.color) } : {}),
-        min_length_m: Number(args?.required_length_m ?? 0),
+        min_length_m: cutWidth,
         qty_reserved: Number(args?.quantity ?? 0),
         source_doctype: "Sales Order",
-        source_name: text(args?.sales_order),
+        source_name: sourceName,
+        ...(expiresAt ? { expires_at: expiresAt } : {}),
       });
     }
     if (method === "alumdoor.cut.release") {
@@ -79,6 +98,7 @@ export function installAlumdoorSalesAutofillBridge(adapter: FrappeAdapter): () =
       mutable.updateDoc = originalUpdateDoc as typeof mutable.updateDoc;
       mutable.submit = originalSubmit as typeof mutable.submit;
       adapter.callPost = originalCallPost;
+      reservationCursor.clear();
     },
   };
   installed.set(adapter, bridge);
