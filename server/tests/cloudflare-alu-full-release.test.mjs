@@ -16,6 +16,7 @@ test("Cloudflare full ALU release preserves build, migration and deploy sequence
     "pnpm --filter cloudforge run build",
     "pnpm --filter metaforge run build",
     "node server/scripts/stage-client-bundle.mjs",
+    "unset WRANGLER_CI_OVERRIDE_NAME",
     "node scripts/migrate-tenant.mjs --tenant \"$TENANT\"",
     "node scripts/migrate-tenant.mjs \\",
     "node scripts/deploy-tenant.mjs \\",
@@ -40,4 +41,13 @@ test("Cloudflare full ALU release requires main plus explicit production secret"
   assert.match(script, /Refusing full ALU release/);
   assert.match(script, /expected main/);
   assert.doesNotMatch(script, /FORGE_CLOUDFLARE_FULL_RELEASE:-alu/);
+});
+
+test("Cloudflare connected-build Worker name cannot override nested Worker deploys", () => {
+  const unsetAt = script.indexOf("unset WRANGLER_CI_OVERRIDE_NAME");
+  const appDeployAt = script.indexOf("Deploying Alumdoor app Worker");
+  const gatewayDeployAt = script.indexOf("Deploying Gateway");
+  assert.ok(unsetAt >= 0, "must clear Workers Builds name override");
+  assert.ok(unsetAt < appDeployAt, "must clear override before Alumdoor deploy");
+  assert.ok(unsetAt < gatewayDeployAt, "must clear override before Gateway deploy");
 });
