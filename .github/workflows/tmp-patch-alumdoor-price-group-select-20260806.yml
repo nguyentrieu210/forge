@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - fix/alumdoor-sales-price-group-select-20260806
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
 
 permissions:
   contents: write
