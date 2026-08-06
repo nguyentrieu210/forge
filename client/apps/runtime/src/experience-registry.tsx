@@ -11,6 +11,7 @@ const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then
 const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
 const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
 const AlumdoorCuttingPolicyEditor = lazy(() => import("./experiences/AlumdoorCuttingPolicyEditor.js").then((module) => ({ default: module.AlumdoorCuttingPolicyEditor })));
+const AlumdoorItemDetailWorkspace = lazy(() => import("./experiences/AlumdoorItemDetailWorkspace.js").then((module) => ({ default: module.AlumdoorItemDetailWorkspace })));
 
 export interface RuntimeExperienceContext {
   key: string;
@@ -104,6 +105,24 @@ const runtimeExperienceFactories = new Map<string, RuntimeExperienceFactory>([
 
 const runtimeDoctypeExperienceFactories = new Map<string, RuntimeDoctypeExperienceFactory>([
   ["alumdoor", ({ manifest, navigate, doctype, name }) => {
+    if (doctype === "Item" && name && name !== "new") {
+      const label = declaredLabel(manifest, doctype, "Mặt hàng");
+      return {
+        activeKey: doctype,
+        breadcrumbs: [{ label }, { label: name }],
+        content: (
+          <AlumdoorItemDetailWorkspace
+            name={name}
+            onSaved={() => undefined}
+            onDeleted={() => navigate(`/app/${encodeURIComponent(doctype)}`)}
+            onDuplicate={() => navigate(`/app/${encodeURIComponent(doctype)}/new`)}
+            onRenamed={(newName) => navigate(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)}
+            onPrint={() => navigate(`/print/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`)}
+            onClose={() => navigate(`/app/${encodeURIComponent(doctype)}`)}
+          />
+        ),
+      };
+    }
     if (doctype !== "Cutting Policy" || !name) return null;
     if (new URLSearchParams(window.location.search).get("raw") === "1") return null;
     const label = declaredLabel(manifest, doctype, "Công thức cửa");

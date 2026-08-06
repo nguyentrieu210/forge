@@ -1,56 +1,55 @@
-# Dependency Request — Alumdoor Item pricing detail tab
+# Dependency Resolution — Alumdoor Item pricing detail tab
 
-Date: 2026-08-07
-Requester: Alumdoor procurement / pricing UX candidate
-PR: #784
-Risk: STANDARD + NEW_CANDIDATE
+Date opened: **2026-08-07**  
+Date resolved: **2026-08-07**  
+Original PR: **#784**  
+Resolution branch: `feat/alumdoor-item-price-tab-20260807`  
+Risk: **STANDARD + NEW_CANDIDATE**
 
-## Owner
+## Original need
 
-UI01 / META + UI02 / RUNTIME convergence owner.
+Provide an app-scoped Item detail extension so Alumdoor can expose:
 
-## Need
+`Mặt hàng -> Thông tin | Giá`
 
-Provide a generic, app-scoped detail-tab/view extension for an existing external DocType so an installed app can attach a named business view to `Item` without adding `if (doctype === "Item")` or an Alumdoor method literal to shared React routing.
+without adding `if (doctype === "Item")` to shared `DoctypeWorkspace` or forking generic Form/CRUD behavior.
 
-The extension needs to support, at minimum:
+The `Giá` surface must reuse an existing price authority/UI path rather than create another competing Item Price source, and should include read-only purchase-price history.
 
-- a stable tab key + translated label;
-- explicit permission boundary;
-- binding to the current document identity;
-- a generic named projection/action or other already-approved runtime surface;
-- deterministic mobile behavior;
-- fail-closed behavior when the app/view provider is unavailable.
+## Resolved seam
 
-For the pricing side, prefer the existing pricing authority / Matrix convergence path instead of creating another client-owned Item Price mutation implementation.
+The repository already has the required app-owned extension seam:
 
-## Why
+`client/apps/runtime/src/experience-registry.tsx -> resolveRuntimeDoctypeExperience()`.
 
-Forge North Star requires App Factory / vertical apps to add behavior without forking runtime. UI02 explicitly forbids business-name routing in shared runtime, and UI03 records the current direct React Item Price mutation flow as debt to be moved behind pricing-domain projection/actions.
+That resolver is intentionally documented as the place where app-owned DocType detail/new presentation lives while shared Form/CRUD remains generic. The Alumdoor registry can therefore recognize `Item` without leaking that business name into `client/packages/views/src/app/DoctypeWorkspace.tsx`.
 
-The current PR prototype proves the requested Item UX, but wiring it through `DoctypeWorkspace` with an `Item` special case is not acceptable as the final shared-runtime contract.
+Resolution:
 
-## Blocked scope
+- existing Item records under the Alumdoor app resolve to `AlumdoorItemDetailWorkspace`;
+- new Item creation remains on the generic `NewFormContainer` path;
+- the `Thông tin` tab embeds the canonical `FormContainer` and remains mounted while switching tabs so unsaved form state is not discarded;
+- the `Giá` tab reuses the existing `ItemPriceMatrixPanel`, locked to the Item currently open;
+- no second Item Price CRUD implementation is added by the Alumdoor experience;
+- purchase history uses `alumdoor.purchase.item_price_history`, already merged through PR #784;
+- shared `DoctypeWorkspace` receives no Item/Alumdoor conditional.
 
-Only the final merge-ready implementation of:
+## Pricing authority boundary
 
-`Mặt hàng -> tab Giá -> existing sales-price manager + purchase-price history`
+This resolves the Item-tab composition dependency without claiming the broader Matrix transport debt is finished.
 
-The requested purchase-history read model itself is independent and already implemented without a new ledger/schema.
+`ItemPriceMatrixPanel` is the repository's current compatibility price manager and still carries the known UI03 debt of direct multi-document Item/UOM/Item Price mutation. This change **reuses that one existing compatibility path** rather than cloning it. When the generic Matrix named-source/action bridge becomes authoritative, the tab can swap its inner price surface without changing the app-owned detail routing contract.
 
-## Can continue independently
+## Purchase history behavior
 
-Yes.
+The tab shows read-only:
 
-Independent work completed in PR #784:
+`Ngày mua | Nhà cung cấp | Đơn giá`
 
-- company-scoped canonical purchase-price history read model;
-- exact `supplier + item_code` latest-price lookup;
-- generic read-only `row_reference` contract for rich action tables;
-- `Mua hàng` metadata wiring that shows `Giá mua gần nhất` without writing into `rate`;
-- regression tests for supplier/company scope and PO/receipt de-duplication;
-- parser regression tests for the row-reference contract.
+from submitted Purchase Orders plus direct Purchase Receipts that have no Purchase Order link. It does not write a purchase-price master table and does not overwrite current buying or selling rates.
 
 ## Merge / deploy
 
-Do not merge or deploy the Item detail-tab prototype until the shared extension boundary is resolved or an existing canonical app-scoped detail-view mechanism is identified and used.
+Dependency is **RESOLVED FOR SOURCE MERGE** through the existing app-owned runtime detail resolver.
+
+This is a new UI/runtime candidate. Source merge is approved by the owner in the task that requested the tab restoration. Production deployment/relock remains a separate release action under the controlled-pilot change doctrine.
