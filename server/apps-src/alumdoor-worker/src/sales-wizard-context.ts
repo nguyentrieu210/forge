@@ -27,6 +27,7 @@ type RawPolicy = Json & {
   door_type?: string;
   item_group?: string;
   ray_type?: string;
+  disabled?: unknown;
   height_pb_offset_m?: unknown;
   leaf_height_deduction_m?: unknown;
   leaf_divisor_const?: unknown;
@@ -253,6 +254,7 @@ export async function calculateSalesWizardLineContext(
     if (text(item.inventory_mode) !== "Thành phẩm theo m2") throw new Error(`${itemCode} không phải thành phẩm tính theo m2.`);
     const doorType = inferDoorType(item.door_type, item.item_group);
     if (!doorType) throw new Error(`${itemCode} chưa khai Loại cửa.`);
+    const itemGroup = text(item.item_group);
     const customerGroup = text(args.customer_group) as CustomerGroup;
     if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") throw new Error("Cần Nhóm giá Đại lý/Lẻ để chọn đúng công thức.");
     const salesMode = (text(args.sales_mode) || "Trọn bộ") as SalesMode;
@@ -260,12 +262,20 @@ export async function calculateSalesWizardLineContext(
 
     const requestedRay = text(args.ray_type);
     const policies = await listPolicies(call);
+    const matchingPolicies = policies
+      .filter((row) => !checked(row.disabled))
+      .filter((row) => text(row.door_type) === doorType)
+      .filter((row) => !text(row.item_group) || text(row.item_group) === itemGroup);
+    const rayOptions = [...new Set(matchingPolicies.map((row) => text(row.ray_type)).filter(Boolean))];
     const exactRay = requestedRay ? policies.filter((row) => text(row.ray_type) === requestedRay) : policies;
     if (requestedRay && !exactRay.length) throw new Error(`Chưa có Chính sách công thức cho ray ${requestedRay}.`);
     const parsed = exactRay.map((row) => ({ raw: row, parsed: parseDoorPolicy(row) }));
-    const selected = selectDoorPolicy(parsed.map((entry) => entry.parsed), doorType, text(item.item_group));
+    const selected = selectDoorPolicy(parsed.map((entry) => entry.parsed), doorType, itemGroup);
     const pair = parsed.find((entry) => entry.parsed.policy_name === selected.policy_name);
     if (!pair) throw new Error(`Không đọc được chính sách ${selected.policy_name}.`);
+    const leafVariantOptions = [...new Set((pair.raw.leaf_variants ?? [])
+      .map((row) => text(row.variant_label))
+      .filter(Boolean))];
 
     const inputWidth = positive(args.width_m, "Rộng");
     const inputHeight = positive(args.height_m, "Cao");
@@ -288,7 +298,7 @@ export async function calculateSalesWizardLineContext(
 
     const formula = calculateDoorFormula(pair.parsed, {
       door_type: doorType,
-      item_group: text(item.item_group),
+      item_group: itemGroup,
       customer_group: customerGroup,
       sales_mode: salesMode,
       has_butterfly_bracket: checked(args.has_butterfly_bracket),
@@ -320,11 +330,13 @@ export async function calculateSalesWizardLineContext(
     return answer({
       ...formula,
       item_code: itemCode,
-      item_group: text(item.item_group),
+      item_group: itemGroup,
       door_type: doorType,
       policy_name: selected.policy_name,
       formula_version: policyVersion(pair.raw),
       ray_type: requestedRay || text(pair.raw.ray_type) || null,
+      ray_options: rayOptions,
+      leaf_variant_options: leafVariantOptions,
       input_width_basis: widthInputBasis,
       input_width_m: round(inputWidth),
       cover_width_m: round(measuredWidth),
