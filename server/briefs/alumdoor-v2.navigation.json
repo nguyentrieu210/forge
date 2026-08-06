@@ -1,6 +1,6 @@
 {
-  "version": "2.3.0",
-  "//": "Operational presentation sidecar. Company và Warehouse là context chung; daily tabs dùng composer/dispatch/dashboard/history thay vì ép người dùng quay về CRUD/report generic.",
+  "version": "2.3.1",
+  "//": "Operational presentation sidecar. Daily work is task-first: Sales/Purchase remain the reference pattern; Stock/Manufacturing/Debt/Warranty expose only operator flows while correction/setup stays installed but outside the daily tab strip.",
   "dimensions": ["company", "warehouse"],
   "doctypes": {
     "Purchase Order": {
@@ -23,6 +23,48 @@
       "menu": true,
       "icon": "package-minus",
       "group": "Bán hàng"
+    },
+    "Stock Entry": {
+      "label": "Nhập / xuất / chuyển",
+      "menu": true,
+      "icon": "arrow-left-right",
+      "group": "Kho"
+    },
+    "Cut Order": {
+      "menu": false
+    },
+    "Stock Reservation": {
+      "menu": false
+    },
+    "Stock Reconciliation": {
+      "label": "Phiếu kiểm kê",
+      "menu": true,
+      "icon": "clipboard-check",
+      "group": "Kho"
+    },
+    "Work Order": {
+      "label": "Lệnh sản xuất",
+      "menu": true,
+      "icon": "factory",
+      "group": "Sản xuất"
+    },
+    "Bill of Materials": {
+      "menu": false
+    },
+    "Production Standard": {
+      "menu": false
+    },
+    "Payment Entry": {
+      "label": "Thu / chi công nợ",
+      "menu": true,
+      "icon": "hand-coins",
+      "group": "Công nợ"
+    },
+    "Warranty Claim": {
+      "label": "Hồ sơ bảo hành",
+      "menu": true,
+      "icon": "shield-check",
+      "group": "Bảo hành"
     }
   },
   "reports": {
@@ -35,6 +77,41 @@
       "label": "Đơn hàng theo khách",
       "icon": "bar-chart-3",
       "group": "Báo cáo"
+    },
+    "Tồn nhôm theo khổ": {
+      "label": "Tồn kho",
+      "icon": "boxes",
+      "group": "Kho"
+    },
+    "Stock Ledger": {
+      "label": "Lịch sử kho",
+      "icon": "history",
+      "group": "Kho"
+    },
+    "Lệnh sản xuất theo mặt hàng": {
+      "label": "Lịch sử sản xuất",
+      "icon": "history",
+      "group": "Sản xuất"
+    },
+    "Work Order Progress": {
+      "label": "Báo cáo",
+      "icon": "chart-no-axes-combined",
+      "group": "Sản xuất"
+    },
+    "Công nợ theo khách hàng": {
+      "label": "Công nợ khách",
+      "icon": "users-round",
+      "group": "Công nợ"
+    },
+    "Accounts Receivable": {
+      "label": "Phải thu",
+      "icon": "arrow-down-to-line",
+      "group": "Công nợ"
+    },
+    "Accounts Payable": {
+      "label": "Phải trả",
+      "icon": "arrow-up-from-line",
+      "group": "Công nợ"
     }
   },
   "actions": {
@@ -91,6 +168,66 @@
     },
     "tinh-cong-thuc-cua": {
       "menu": false
+    },
+    "de-xuat-lo-cat": {
+      "label": "Chọn lô cắt",
+      "menu": true,
+      "icon": "list-checks",
+      "group": "Kho"
+    },
+    "cat-nhom": {
+      "label": "Cắt nhôm",
+      "menu": true,
+      "icon": "scissors",
+      "group": "Kho"
+    },
+    "hoan-cat": {
+      "menu": false
+    },
+    "tra-hang": {
+      "menu": false
+    },
+    "giu-cho": {
+      "menu": false
+    },
+    "nha-giu-cho": {
+      "menu": false
+    },
+    "chot-so-so-kiem-ke": {
+      "label": "Chốt sổ kiểm kê",
+      "menu": true,
+      "icon": "camera",
+      "group": "Kho"
+    },
+    "duyet-kiem-ke": {
+      "label": "Duyệt kiểm kê",
+      "menu": true,
+      "icon": "check-check",
+      "group": "Kho"
+    },
+    "don-hang-thanh-san-xuat": {
+      "label": "Lập sản xuất",
+      "menu": true,
+      "icon": "factory",
+      "group": "Sản xuất"
+    },
+    "lap-tai-san-xuat": {
+      "label": "Năng lực & tăng ca",
+      "menu": true,
+      "icon": "gauge",
+      "group": "Sản xuất"
+    },
+    "mo-ho-so-bao-hanh": {
+      "label": "Tiếp nhận bảo hành",
+      "menu": true,
+      "icon": "shield-plus",
+      "group": "Bảo hành"
+    },
+    "xac-nhan-bu-tru-bao-hanh": {
+      "label": "Xử lý / bù trừ",
+      "menu": true,
+      "icon": "badge-check",
+      "group": "Bảo hành"
     }
   },
   "experiences": {
@@ -110,6 +247,26 @@
     "action:tao-don-mua",
     "action:nhap-nhom-hang-loat",
     "action:bao-cao-giao-hang-ncc",
-    "action:lich-su-mua-hang"
+    "action:lich-su-mua-hang",
+    "report:Tồn nhôm theo khổ",
+    "Stock Entry",
+    "action:de-xuat-lo-cat",
+    "action:cat-nhom",
+    "action:chot-so-so-kiem-ke",
+    "Stock Reconciliation",
+    "action:duyet-kiem-ke",
+    "report:Stock Ledger",
+    "action:don-hang-thanh-san-xuat",
+    "Work Order",
+    "action:lap-tai-san-xuat",
+    "report:Work Order Progress",
+    "report:Lệnh sản xuất theo mặt hàng",
+    "Payment Entry",
+    "report:Công nợ theo khách hàng",
+    "report:Accounts Receivable",
+    "report:Accounts Payable",
+    "action:mo-ho-so-bao-hanh",
+    "Warranty Claim",
+    "action:xac-nhan-bu-tru-bao-hanh"
   ]
 }
