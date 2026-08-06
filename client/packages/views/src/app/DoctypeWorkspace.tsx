@@ -8,7 +8,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
 import { resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
-import { useMeta } from "../container/hooks.js";
+import { useDoc, useMeta } from "../container/hooks.js";
+import { useMetaForge } from "../container/provider.js";
 import { SplitView } from "../detail/SplitView.js";
 import { ListContainer } from "../container/ListContainer.js";
 import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
@@ -39,6 +40,7 @@ export interface DoctypeWorkspaceProps {
 
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
+  const { adapter } = useMetaForge();
   const [closeRequest, setCloseRequest] = useState(0);
   const [bulkDirty, setBulkDirty] = useState(false);
   const [confirmBulkExit, setConfirmBulkExit] = useState(false);
@@ -51,10 +53,54 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const isNew = name === "new";
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
   const isTree = titleMeta.data?.is_tree === 1;
+  const isSingle = titleMeta.data?.issingle === 1;
+  // Single DocType is one settings document, not a list/detail workspace. Probe the
+  // canonical singleton name only after meta confirms `issingle`; a 404 means it has
+  // never been saved and must open as a create-form instead of showing "not found".
+  const singleDocQ = useDoc(doctype, isSingle ? doctype : "");
+  const singleError = singleDocQ.error ? adapter.mapError(singleDocQ.error) : null;
+  const singleMissing = singleError?.kind === "not_found";
   const bulkPolicy = useMemo(() => titleMeta.data ? resolveBulkRenderPolicy(titleMeta.data) : undefined, [titleMeta.data]);
-  const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree);
+  const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree && !isSingle);
   const isPriceListManager = doctype === "Item Price";
   const bulkActive = !decoded && !isNew && (isPriceListManager || (bulkEnabled && bridge.get("view") === "bulk"));
+
+  if (isSingle) {
+    if (singleDocQ.isLoading) {
+      return (
+        <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
+          <div className="grid min-h-40 flex-1 place-items-center text-sm text-muted-foreground">{t("common.loading")}</div>
+        </div>
+      );
+    }
+    if (singleError && !singleMissing) {
+      return (
+        <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
+          <div className="p-4 text-sm text-destructive" role="alert">{singleError.message}</div>
+        </div>
+      );
+    }
+    return (
+      <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
+        <div className="min-h-0 flex-1 overflow-auto">
+          {singleMissing ? (
+            <NewFormContainer
+              doctype={doctype}
+              presentation="page"
+              onCreated={() => { void singleDocQ.refetch(); }}
+            />
+          ) : (
+            <FormContainer
+              key={`${doctype}/${doctype}`}
+              doctype={doctype}
+              name={doctype}
+              onSaved={() => { void singleDocQ.refetch(); }}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const modeTabs = bulkEnabled && !decoded && !isNew && !isPriceListManager ? (
     <div className={V3_VIEW_SWITCHER_CLASS} role="navigation" aria-label={t("common.view", "Chế độ xem")}>
@@ -112,7 +158,6 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
                   activeRow={decoded}
                   onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)}
                   onCreate={() => onNavigate(`${listPath}/new`)}
-                  onSingle={() => { if (!decoded) onNavigate(`${listPath}/${encodeURIComponent(doctype)}`); }}
                 />
               )}
               detail={decoded ? (
