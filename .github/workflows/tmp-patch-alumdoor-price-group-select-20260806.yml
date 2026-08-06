@@ -1,0 +1,73 @@
+name: TMP Patch Alumdoor Price Group Select 2026-08-06
+
+on:
+  push:
+    branches:
+      - fix/alumdoor-sales-price-group-select-20260806
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/alumdoor-sales-price-group-select-20260806
+          fetch-depth: 0
+
+      - name: Patch price group selector and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('client/apps/runtime/src/experiences/AlumdoorSalesComposer.tsx')
+          text = path.read_text()
+
+          old = '''      if (!active) return;
+      setCustomer((current) => ({
+        ...current,
+        group: String(doc.price_group ?? doc.customer_group ?? "").trim(),'''
+          new = '''      if (!active) return;
+      const defaultPriceGroup = String(doc.price_group || doc.customer_group || "").trim();
+      setCustomer((current) => ({
+        ...current,
+        group: ["Đại lý", "Lẻ"].includes(defaultPriceGroup) ? defaultPriceGroup : "",'''
+          if old not in text:
+              raise SystemExit('customer default price-group block not found')
+          text = text.replace(old, new, 1)
+
+          old = '    if (!["Đại lý", "Lẻ"].includes(customer.group)) return setGlobalError("Khách hàng chưa có Nhóm giá Đại lý/Lẻ."), undefined;'
+          new = '    if (!["Đại lý", "Lẻ"].includes(customer.group)) return setGlobalError("Cần chọn Nhóm giá Đại lý/Lẻ."), undefined;'
+          if old not in text:
+              raise SystemExit('price-group validation block not found')
+          text = text.replace(old, new, 1)
+
+          old = '        <div className="grid gap-1.5"><Label>Nhóm giá</Label><Input value={customer.group} readOnly placeholder="Tự lấy từ khách" /></div>'
+          new = '''        <div className="grid gap-1.5">
+          <Label>Nhóm giá *</Label>
+          <select className="h-10 rounded-md border bg-background px-2 text-sm" value={customer.group} onChange={(event) => setCustomer((current) => ({ ...current, group: event.target.value }))}>
+            <option value="">Chọn Đại lý / Lẻ</option>
+            <option value="Đại lý">Đại lý</option>
+            <option value="Lẻ">Lẻ</option>
+          </select>
+          <span className="text-[11px] text-muted-foreground">Tự lấy từ khách nếu đã khai; có thể đổi cho riêng đơn này.</span>
+        </div>'''
+          if old not in text:
+              raise SystemExit('read-only price-group UI block not found')
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+
+          git rm .github/workflows/tmp-patch-alumdoor-price-group-select-20260806.yml
+          git diff --check
+          test "$(git diff --name-only | sort | paste -sd, -)" = "client/apps/runtime/src/experiences/AlumdoorSalesComposer.tsx"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add client/apps/runtime/src/experiences/AlumdoorSalesComposer.tsx
+          git commit -m "fix(alumdoor): allow sales price group override"
+          git push origin HEAD:fix/alumdoor-sales-price-group-select-20260806
