@@ -249,9 +249,10 @@ export function AlumdoorOperationsCenter() {
     let active = true;
     void adapter.getDoc("Customer", name).then(({ doc }) => {
       if (!active) return;
+      const defaultPriceGroup = String(doc.price_group || doc.customer_group || "").trim();
       setCustomer((current) => ({
         ...current,
-        group: String(doc.price_group ?? doc.customer_group ?? "").trim(),
+        group: ["Đại lý", "Lẻ"].includes(defaultPriceGroup) ? defaultPriceGroup : "",
         phone: String(doc.phone ?? doc.mobile_no ?? "").trim(),
         address: String(doc.install_address ?? doc.address ?? "").trim(),
         priceList: String(doc.default_price_list ?? current.priceList ?? "").trim(),
@@ -391,7 +392,7 @@ export function AlumdoorOperationsCenter() {
     if (!company) return setGlobalError("Cần chọn Công ty."), undefined;
     if (!currency) return setGlobalError(`Công ty ${company} chưa có tiền tệ mặc định.`), undefined;
     if (!customer.name) return setGlobalError("Cần chọn Khách hàng."), undefined;
-    if (!["Đại lý", "Lẻ"].includes(customer.group)) return setGlobalError("Khách hàng chưa có Nhóm giá Đại lý/Lẻ."), undefined;
+    if (!["Đại lý", "Lẻ"].includes(customer.group)) return setGlobalError("Cần chọn Nhóm giá Đại lý/Lẻ."), undefined;
     if (!customer.priceList) return setGlobalError("Khách hàng chưa có Bảng giá mặc định; hãy chọn Bảng giá."), undefined;
     if (!deliveryDate) return setGlobalError("Cần ngày giao dự kiến."), undefined;
     if (deliveryDate < today()) return setGlobalError("Ngày giao không được ở quá khứ."), undefined;
@@ -536,7 +537,15 @@ export function AlumdoorOperationsCenter() {
       <section className="grid gap-3 rounded-xl border bg-card p-3 md:grid-cols-2 xl:grid-cols-6">
         {contextCompany ? <div className="grid gap-1.5"><Label>Công ty</Label><Input value={company} readOnly /></div> : <CanonicalLink label="Công ty" doctype="Company" value={company} onChange={setCompany} required />}
         <CanonicalLink label="Khách hàng" doctype="Customer" value={customer.name} onChange={(name) => setCustomer({ name, group: "", phone: "", address: "", priceList: "" })} required />
-        <div className="grid gap-1.5"><Label>Nhóm giá</Label><Input value={customer.group} readOnly placeholder="Tự lấy từ khách" /></div>
+        <div className="grid gap-1.5">
+          <Label>Nhóm giá *</Label>
+          <select className="h-10 rounded-md border bg-background px-2 text-sm" value={customer.group} onChange={(event) => setCustomer((current) => ({ ...current, group: event.target.value }))}>
+            <option value="">Chọn Đại lý / Lẻ</option>
+            <option value="Đại lý">Đại lý</option>
+            <option value="Lẻ">Lẻ</option>
+          </select>
+          <span className="text-[11px] text-muted-foreground">Tự lấy từ khách nếu đã khai; có thể đổi cho riêng đơn này.</span>
+        </div>
         <CanonicalLink label="Bảng giá" doctype="Price List" value={customer.priceList} onChange={(priceList) => setCustomer((current) => ({ ...current, priceList }))} required />
         {contextWarehouse ? <div className="grid gap-1.5"><Label>Kho ATP</Label><Input value={warehouse} readOnly /></div> : <CanonicalLink label="Kho ATP" doctype="Warehouse" value={warehouse} onChange={setWarehouse} required />}
         <div className="grid gap-1.5"><Label>Ngày giao *</Label><Input type="date" min={today()} value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} /></div>
