@@ -15,6 +15,7 @@ export * from "./meta/normalize.js";
 export * from "./meta/serialize.js";
 export * from "./meta/link-query.js";
 export * from "./meta/fetch-from.js";
+export * from "./meta/intelligence.js";
 export * from "./meta/resolver.js";
 export * from "./security/sanitize.js";
 export * from "./security/url.js";
