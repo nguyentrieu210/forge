@@ -77,6 +77,29 @@ async function body(response) {
   return JSON.parse(await response.text());
 }
 
+test("basis-only trả đúng loại rộng Cửa Đức trước khi nhập kích thước", async () => {
+  const dealer = await body(await calculateSalesWizardLineContext(platform(), {
+    item_code: "CUA-DUC",
+    customer_group: "Đại lý",
+    sales_mode: "Trọn bộ",
+    ray_type: "U75",
+    basis_only: true,
+  }));
+  const retail = await body(await calculateSalesWizardLineContext(platform(), {
+    item_code: "CUA-DUC",
+    customer_group: "Lẻ",
+    sales_mode: "Trọn bộ",
+    ray_type: "U75",
+    basis_only: true,
+  }));
+  assert.equal(dealer.width_basis, "Phủ bì nhựa");
+  assert.equal(retail.width_basis, "Phủ bì ray");
+  assert.equal(dealer.input_height_basis, "Cao phủ bì");
+  assert.equal(retail.input_height_basis, "Cao phủ bì");
+  assert.equal(dealer.input_width_m, undefined);
+  assert.equal(retail.billable_area_sqm, undefined);
+});
+
 test("khách lẻ nhập RLL/CLL được đổi server-side sang phủ bì, rộng cắt và mã nhôm BOM", async () => {
   const response = await calculateSalesWizardLineContext(platform(), {
     item_code: "CUA-DUC",
