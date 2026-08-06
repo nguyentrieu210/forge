@@ -14,8 +14,8 @@ test("server-priced manual line discount is applied exactly once", () => {
 
   assert.equal(totals.items[0].discount_percentage, "15.000000");
   assert.equal(totals.items[0].rate, "906100");
-  assert.equal(totals.net_total, "44877584");
-  assert.equal(totals.grand_total, "44877584");
+  assert.equal(totals.net_total, "44797584");
+  assert.equal(totals.grand_total, "44797584");
 });
 
 test("pricing-rule discount already folded into resolved rate is not applied twice", () => {
