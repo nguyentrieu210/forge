@@ -6,7 +6,7 @@
  * nhãn Link đi chung một snapshot để màn hình không tạo waterfall HTTP.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { displayValueKey, type Doc, type DocTypeMeta, type ListOpts } from "@metaforge/core";
 import { ConfirmDialog, Skeleton, toast, useT } from "@metaforge/ui";
 import { ListView } from "../list/ListView.js";
@@ -14,6 +14,7 @@ import { formatValue } from "../list/cells.js";
 import { buildCsv, downloadCsv, downloadXlsx, printTablePdf, stampedName, type ExportFormat } from "../report/export.js";
 import { deriveColumns, imageField } from "../list/columns.js";
 import { buildServerQuery } from "../list/filters.js";
+import { activeTreeLinkCandidates, applyTreeLinkExpansions, resolveTreeLinkFilters } from "../list/tree-link-filters.js";
 import { useListUrlState, type UrlStateBridge } from "../list/useListState.js";
 import { stableColumnPreferenceScope } from "../list/column-preferences.js";
 import { useMetaForge } from "./provider.js";
@@ -54,10 +55,44 @@ export function ListContainer(props: ListContainerProps) {
   const [state, patch] = useListUrlState(bridge, meta);
 
   const columns = useMemo(() => deriveColumns(meta, { roles }), [meta, roles]);
+
+  /**
+   * Standard Link filter mặc định là equality. Với Link trỏ tới Tree DocType, equality làm node nhóm
+   * (vd "Tất cả mặt hàng") trả 0 vì document thật nằm ở các node con. Resolve target meta + tree
+   * children trước, rồi thay riêng equality filter đó bằng `in [node, ...descendants]`.
+   *
+   * Dùng cùng cache key `meta`/`tree` với các container khác để không tạo waterfall/cache song song.
+   */
+  const treeLinkCandidates = useMemo(
+    () => activeTreeLinkCandidates(meta, state.filters),
+    [meta, state.filters],
+  );
+  const treeFiltersQ = useQuery({
+    queryKey: [scopeKey, "list-tree-link-filters", doctype, JSON.stringify(treeLinkCandidates)],
+    queryFn: () => resolveTreeLinkFilters(treeLinkCandidates, {
+      getMeta: (target) => queryClient.fetchQuery({
+        queryKey: [scopeKey, "meta", target],
+        queryFn: () => adapter.getMeta(target),
+        staleTime: Infinity,
+      }),
+      getChildren: (target, parent) => queryClient.fetchQuery({
+        queryKey: [scopeKey, "tree", target, parent, true],
+        queryFn: () => adapter.treeChildren(target, parent, true),
+        staleTime: 2 * 60_000,
+      }),
+    }),
+    enabled: Boolean(metaQ.data) && treeLinkCandidates.length > 0,
+    staleTime: 2 * 60_000,
+  });
+
   // Global context is enforced by adapter.getContextualList/getContextualCount on the server,
   // including warehouse fields in child tables. Do not duplicate it as a parent-only filter here.
-  const listOpts = useMemo<ListOpts>(() => buildServerQuery(meta, state, columns), [meta, state, columns]);
-  const ready = Boolean(metaQ.data) && !isSingle;
+  const listOpts = useMemo<ListOpts>(() => applyTreeLinkExpansions(
+    buildServerQuery(meta, state, columns),
+    treeFiltersQ.data ?? {},
+  ), [meta, state, columns, treeFiltersQ.data]);
+  const treeFiltersReady = treeLinkCandidates.length === 0 || treeFiltersQ.isSuccess;
+  const ready = Boolean(metaQ.data) && !isSingle && treeFiltersReady;
   const viewQ = useListView(doctype, listOpts, ready);
   const rows = viewQ.data?.rows ?? [];
   const caps = viewQ.data?.capabilities ?? NO_CAPS;
@@ -183,6 +218,12 @@ export function ListContainer(props: ListContainerProps) {
   // Single doctype: onSingle (effect ở trên) đã điều hướng sang form — không render list (server
   // list/count trên Single doctype không phải luồng thật, gây "Không tải được dữ liệu" nếu cứ gọi).
   if (isSingle) return <ListSkeleton />;
+  // Không bắn equality query tạm thời khi đang mở rộng Tree Link — frame 0 dòng đó chính là lỗi
+  // người dùng đang gặp và còn có thể bị cache như một snapshot hợp lệ.
+  if (treeLinkCandidates.length > 0 && treeFiltersQ.isPending) return <ListSkeleton />;
+  if (treeFiltersQ.error) {
+    return <ListView meta={meta} rows={[]} state={state} onStateChange={patch} error={adapter.mapError(treeFiltersQ.error).message} />;
+  }
 
   return (
     <>
