@@ -1,10 +1,20 @@
-import { createElement } from "react";
+import { createElement, useLayoutEffect } from "react";
+import { useMetaForge } from "@metaforge/views/provider";
 import { AlumdoorOperationsCenter as AlumdoorSalesComposer } from "./AlumdoorSalesComposer.js";
 import { AlumdoorSalesOrderOperationalQueue } from "./AlumdoorSalesOrderOperationalQueue.js";
+import { installAlumdoorSalesPolicyBridge } from "./AlumdoorSalesPolicyBridge.js";
 
 export function AlumdoorOperationsCenter() {
+  const { adapter } = useMetaForge();
   const path = decodeURIComponent(window.location.pathname);
-  const Component = path.endsWith("/x/alumdoor-operations:orders")
+  const ordersRoute = path.endsWith("/x/alumdoor-operations:orders");
+
+  useLayoutEffect(() => {
+    if (ordersRoute) return undefined;
+    return installAlumdoorSalesPolicyBridge(adapter);
+  }, [adapter, ordersRoute]);
+
+  const Component = ordersRoute
     ? AlumdoorSalesOrderOperationalQueue
     : AlumdoorSalesComposer;
   return createElement(Component);
