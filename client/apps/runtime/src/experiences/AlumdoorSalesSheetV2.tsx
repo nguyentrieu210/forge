@@ -130,6 +130,7 @@ const today = () => {
   const value = new Date();
   return new Date(value.valueOf() - value.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 };
+const printRoute = (name: unknown) => `/print/${encodeURIComponent("Sales Order")}/${encodeURIComponent(String(name))}`;
 
 const checked = (value: unknown) => value === true || value === 1 || value === "1" || ["true", "yes", "có", "co"].includes(String(value ?? "").trim().toLocaleLowerCase("vi"));
 const decimal = (value: unknown) => Number(String(value ?? "").trim().replace(",", "."));
@@ -138,12 +139,6 @@ const integerPositive = (value: unknown) => Number.isInteger(decimal(value)) && 
 const normalize = (value: unknown) => String(value ?? "").normalize("NFC").trim().toLocaleLowerCase("vi");
 const money = (value: unknown) => Number.isFinite(Number(value)) ? Number(value).toLocaleString("vi-VN", { maximumFractionDigits: 0 }) : "";
 const number = (value: unknown, digits = 3) => Number.isFinite(Number(value)) ? Number(value).toLocaleString("vi-VN", { maximumFractionDigits: digits }) : "";
-const escapeHtml = (value: unknown) => String(value ?? "")
-  .replaceAll("&", "&amp;")
-  .replaceAll("<", "&lt;")
-  .replaceAll(">", "&gt;")
-  .replaceAll('"', "&quot;")
-  .replaceAll("'", "&#039;");
 const clampWidth = (value: number, min = 3.5, max = 28) => Math.max(min, Math.min(max, Math.round(value * 2) / 2));
 
 function loadOrder(): ColumnKey[] {
@@ -226,10 +221,20 @@ function newLine(): SaleLine {
 function calculationMode(item: Json): CalculationMode {
   const code = String(item.item_code ?? item.name ?? "").trim().toLocaleUpperCase("vi");
   const group = normalize(item.item_group);
-  const inventory = String(item.inventory_mode ?? "").trim();
-  if (inventory === "Thành phẩm theo m2" || String(item.door_type ?? "").trim() || group.startsWith("cửa")) return "AREA";
+  const inventory = normalize(item.inventory_mode);
+  const salesUom = normalize(item.default_sales_uom ?? item.stock_uom).replaceAll(" ", "");
+
+  // Dimension semantics follow the catalogue convention, not a broad parent-group label.
+  // A PIN/MOTO/PK can legitimately sit under a group whose name starts with "Cửa" and is
+  // still sold by count; treating every such group as AREA exposed bogus height/width inputs.
   if (code.startsWith("RAY-") || group.includes("ray")) return "HEIGHT";
-  if (code.startsWith("TRUC-") || group.includes("trục")) return "WIDTH";
+  if (code.startsWith("TRUC-") || group.includes("trục") || group.includes("truc")) return "WIDTH";
+  if (
+    code.startsWith("CUA-")
+    || inventory === "thành phẩm theo m2"
+    || String(item.door_type ?? "").trim()
+    || ["m2", "m²", "m^2", "métvuông", "metvuong"].includes(salesUom)
+  ) return "AREA";
   return "QUANTITY";
 }
 
@@ -337,6 +342,7 @@ export function AlumdoorSalesSheetV2() {
   const [draggingColumn, setDraggingColumn] = useState<ColumnKey | null>(null);
   const [picked, setPicked] = useState({ line: 0, column: 0 });
   const [saving, setSaving] = useState<"" | "draft" | "submit">("");
+  const [previewing, setPreviewing] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Doc | null>(null);
   const [globalError, setGlobalError] = useState("");
   const submitted = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 1);
@@ -704,9 +710,9 @@ export function AlumdoorSalesSheetV2() {
       ...(line.warehouse ? { warehouse: line.warehouse } : {}),
       set_count: decimal(line.qty),
       ...(line.color ? { color: line.color } : {}),
-      ...(positive(line.height) ? { height_m: decimal(line.height) } : {}),
-      ...(positive(line.width) ? { width_m: decimal(line.width) } : {}),
-      ...(line.widthBasis ? { width_basis: line.widthBasis } : {}),
+      ...((line.mode === "HEIGHT" || line.mode === "AREA") && positive(line.height) ? { height_m: decimal(line.height) } : {}),
+      ...((line.mode === "WIDTH" || line.mode === "AREA") && positive(line.width) ? { width_m: decimal(line.width) } : {}),
+      ...(line.mode === "AREA" && line.widthBasis ? { width_basis: line.widthBasis } : {}),
       note: `Giá ${line.uom || ""} ${money(listRate)}${discount ? ` · Chiết khấu ${number(discount, 2)}%` : ""}${line.thickness ? ` · Độ dày ${line.thickness} mm` : ""}${line.heightBasis ? ` · ${line.heightBasis}` : ""}`,
     };
     if (line.mode === "AREA" && line.formula) Object.assign(common, {
@@ -720,6 +726,30 @@ export function AlumdoorSalesSheetV2() {
     return common;
   });
 
+  const buildOrderPayload = (): Partial<Doc> => ({
+    customer: customer.name,
+    company,
+    currency,
+    transaction_date: transactionDate,
+    delivery_date: deliveryDate,
+    ...(priceList ? { selling_price_list: priceList } : {}),
+    ...(canonicalGroup ? { customer_group: canonicalGroup } : {}),
+    ...(customer.address ? { install_address: customer.address } : {}),
+    ...(note.trim() ? { remarks: note.trim() } : {}),
+    additional_discount_percentage: 0,
+    items: buildItems(),
+  });
+
+  const persistDraft = async (): Promise<Doc> => {
+    const existingDraft = createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? createdOrder : null;
+    const payload = buildOrderPayload();
+    const saved = existingDraft
+      ? await adapter.updateDoc("Sales Order", String(existingDraft.name), payload, String(existingDraft.modified ?? ""))
+      : await adapter.createDoc("Sales Order", payload);
+    setCreatedOrder(saved);
+    return saved;
+  };
+
   const saveOrder = async (draftOnly: boolean) => {
     setGlobalError("");
     if (blockers.length) { setGlobalError(blockers[0]!); return; }
@@ -727,26 +757,10 @@ export function AlumdoorSalesSheetV2() {
     setSaving(draftOnly ? "draft" : "submit");
     const reservations: string[] = [];
     try {
-      const existingDraft = createdOrder && Number(createdOrder.docstatus ?? 0) === 0 ? createdOrder : null;
-      const payload: Partial<Doc> = {
-        customer: customer.name,
-        company,
-        currency,
-        transaction_date: transactionDate,
-        delivery_date: deliveryDate,
-        ...(priceList ? { selling_price_list: priceList } : {}),
-        ...(canonicalGroup ? { customer_group: canonicalGroup } : {}),
-        ...(customer.address ? { install_address: customer.address } : {}),
-        ...(note.trim() ? { remarks: note.trim() } : {}),
-        additional_discount_percentage: 0,
-        items: buildItems(),
-      };
-      const saved = existingDraft
-        ? await adapter.updateDoc("Sales Order", String(existingDraft.name), payload, String(existingDraft.modified ?? ""))
-        : await adapter.createDoc("Sales Order", payload);
-      setCreatedOrder(saved);
+      const wasExistingDraft = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 0);
+      const saved = await persistDraft();
       if (draftOnly) {
-        toast.success(existingDraft ? `Đã cập nhật nháp ${saved.name}.` : `Đã lưu nháp ${saved.name}.`);
+        toast.success(wasExistingDraft ? `Đã cập nhật nháp ${saved.name}.` : `Đã lưu nháp ${saved.name}.`);
         return;
       }
       for (const line of lines.filter((entry) => entry.itemCode && entry.mode === "AREA" && entry.formula?.stock_profile_item && entry.warehouse)) {
@@ -772,6 +786,27 @@ export function AlumdoorSalesSheetV2() {
       }
       setGlobalError(adapter.mapError(error).message);
     } finally { setSaving(""); }
+  };
+
+  const previewPrint = async () => {
+    setGlobalError("");
+    if (submitted && createdOrder?.name) {
+      window.open(printRoute(createdOrder.name), "_blank");
+      return;
+    }
+    if (blockers.length) { setGlobalError(blockers[0]!); return; }
+    const popup = window.open("", "_blank");
+    if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ xem trước bản in."); return; }
+    setPreviewing(true);
+    try {
+      const wasExistingDraft = Boolean(createdOrder && Number(createdOrder.docstatus ?? 0) === 0);
+      const saved = await persistDraft();
+      popup.location.href = printRoute(saved.name);
+      toast.success(wasExistingDraft ? `Đã cập nhật nháp ${saved.name} để xem trước bản in.` : `Đã lưu nháp ${saved.name} để xem trước bản in.`);
+    } catch (error) {
+      popup.close();
+      setGlobalError(adapter.mapError(error).message);
+    } finally { setPreviewing(false); }
   };
 
   const addLines = (count: number) => setLines((current) => [...current, ...Array.from({ length: count }, () => newLine())]);
@@ -870,23 +905,22 @@ export function AlumdoorSalesSheetV2() {
     setLines([newLine()]); setSelected([]); setGlobalError("");
   };
 
-  const printHtml = () => {
-    if (!createdOrder?.name) { setGlobalError("Cần lưu hoặc xác nhận đơn trước khi in."); return; }
-    const bodyRows = lines.filter((line) => line.itemCode).map((line, index) => {
-      const heightNote = line.mode === "AREA" ? line.heightBasis : "";
-      const widthNote = line.mode === "AREA" ? String(line.widthBasis || line.formula?.sales_width_basis || line.formula?.width_basis || "") : "";
-      const product = `<tr><td class="c">${index + 1}</td><td>${escapeHtml(line.itemName || line.itemCode)}</td><td>${escapeHtml(line.color)}</td><td class="c">${escapeHtml(line.thickness)}</td><td class="r">${escapeHtml(line.height)}${heightNote ? `<div class="sub">${escapeHtml(heightNote)}</div>` : ""}</td><td class="r">${escapeHtml(line.width)}${widthNote ? `<div class="sub">${escapeHtml(widthNote)}</div>` : ""}</td><td class="r">${areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)}</td><td class="r">${escapeHtml(line.qty)}</td><td class="r">${money(line.rate)}</td><td class="r">${escapeHtml(line.discountPct)}</td><td class="c">${escapeHtml(line.uom)}</td><td class="r b">${money(netAmount(line))}</td></tr>`;
-      return product;
-    }).join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Loại khách:</b> ${escapeHtml(canonicalGroup)}</td><td><b>Bảng giá:</b> ${escapeHtml(priceList)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr><tr><td colspan="3"><b>Địa chỉ nhận:</b> ${escapeHtml(customer.address)}</td><td colspan="2"><b>Điện thoại:</b> ${escapeHtml(customer.phone)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY</th><th>${escapeHtml(heightColumnLabel)}</th><th>${escapeHtml(widthColumnLabel)}</th><th>DT</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng cộng</td><td class="r">${money(grossTotal)}</td></tr><tr><td>Tổng chiết khấu</td><td class="r">-${money(totalDiscount)}</td></tr><tr><td>Tổng VAT</td><td class="r">${money(totalVat)}</td></tr><tr><td>Tổng phụ thu</td><td class="r">${money(totalSurcharge)}</td></tr><tr class="grand"><td>THÀNH TIỀN</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
-    const popup = window.open("", "_blank");
-    if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ in."); return; }
-    popup.document.open(); popup.document.write(html); popup.document.close();
-  };
-
   const exportExcel = () => {
     const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", `${heightColumnLabel} (m)`, `${widthColumnLabel} (m)`, "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
-    lines.filter((line) => line.itemCode).forEach((line, index) => rows.push([String(index + 1), line.itemName || line.itemCode, line.color, line.thickness, line.height, line.width, areaPerSet(line) == null ? "" : String(areaPerSet(line)), line.qty, String(line.rate ?? ""), line.discountPct, line.uom, String(netAmount(line))]));
+    lines.filter((line) => line.itemCode).forEach((line, index) => rows.push([
+      String(index + 1),
+      line.itemName || line.itemCode,
+      line.color,
+      line.thickness,
+      line.mode === "HEIGHT" || line.mode === "AREA" ? line.height : "",
+      line.mode === "WIDTH" || line.mode === "AREA" ? line.width : "",
+      areaPerSet(line) == null ? "" : String(areaPerSet(line)),
+      line.qty,
+      String(line.rate ?? ""),
+      line.discountPct,
+      line.uom,
+      String(netAmount(line)),
+    ]));
     const csv = `\uFEFF${rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1083,9 +1117,10 @@ export function AlumdoorSalesSheetV2() {
       {globalError ? <div className="flex items-start gap-2 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"><TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />{globalError}</div> : null}
 
       <div className="flex flex-wrap justify-end gap-2 border-t border-slate-300 pt-2">
-        {!submitted ? <Button type="button" variant="outline" disabled={Boolean(saving)} onClick={() => void saveOrder(true)}>{saving === "draft" ? "Đang lưu…" : "Lưu nháp"}</Button> : null}
-        {!submitted ? <Button type="button" disabled={Boolean(saving)} onClick={() => void saveOrder(false)}>{saving === "submit" ? "Đang xác nhận…" : "Xác nhận đơn"}</Button> : null}
-        {createdOrder?.name ? <Button type="button" variant="outline" onClick={printHtml}><Printer /> In / PDF</Button> : null}
+        {!submitted ? <Button type="button" variant="outline" disabled={Boolean(saving) || previewing} onClick={() => void saveOrder(true)}>{saving === "draft" ? "Đang lưu…" : "Lưu nháp"}</Button> : null}
+        {!submitted ? <Button type="button" variant="outline" disabled={Boolean(saving) || previewing} onClick={() => void previewPrint()}><Printer /> {previewing ? "Đang chuẩn bị…" : "Xem trước bản in"}</Button> : null}
+        {!submitted ? <Button type="button" disabled={Boolean(saving) || previewing} onClick={() => void saveOrder(false)}>{saving === "submit" ? "Đang xác nhận…" : "Xác nhận đơn"}</Button> : null}
+        {submitted && createdOrder?.name ? <Button type="button" variant="outline" onClick={() => window.open(printRoute(createdOrder.name), "_blank")}><Printer /> In / PDF</Button> : null}
         {createdOrder?.name ? <Button type="button" variant="outline" onClick={exportExcel}><FileSpreadsheet /> Excel</Button> : null}
         {submitted ? <Button type="button" onClick={startNew}>Tạo đơn mới</Button> : null}
       </div>
@@ -1137,10 +1172,10 @@ function LineDetailV2({ line, index, submitted, thicknessOptions, patchLine, cho
   return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
     <div className="grid gap-1.5"><Label>Sản phẩm *</Label><SheetLink doctype="Item" value={line.itemCode} onChange={(value) => void chooseItem(index, value)} readOnly={submitted} required fieldname={`detail_item_${index}`} /></div>
     <div className="grid gap-1.5"><Label>Màu sắc{line.requireColor ? " *" : ""}</Label>{line.itemCode && line.requireColor ? <SheetLink doctype="Item Color" value={line.color} onChange={(color) => patchLine(index, { color, formula: null })} readOnly={submitted} required fieldname={`detail_color_${index}`} /> : <Input value="" readOnly />}</div>
-    <div className="grid gap-1.5"><Label>Độ dày</Label><select className="h-9 border bg-white px-2 text-sm" value={line.thickness} disabled={submitted || line.fixedThickness || line.mode !== "WIDTH"} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{line.thickness && !thicknessOptions.includes(line.thickness) ? <option value={line.thickness}>{line.thickness} mm</option> : null}{thicknessOptions.map((value) => <option key={value} value={value}>{value} mm</option>)}</select></div>
-    <div className="grid gap-1.5"><Label>{heightBasisTitle(line.heightBasis)} (m)</Label><Input value={line.height} disabled={submitted || !(line.mode === "HEIGHT" || line.mode === "AREA")} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div>
-    <div className="grid gap-1.5"><Label>{widthBasisTitle(line.widthBasis)} (m)</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
-    <div className="grid gap-1.5"><Label>DT (m²)</Label><Input value={areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)} readOnly /></div>
+    {line.mode === "WIDTH" || line.thickness ? <div className="grid gap-1.5"><Label>Độ dày</Label><select className="h-9 border bg-white px-2 text-sm" value={line.thickness} disabled={submitted || line.fixedThickness || line.mode !== "WIDTH"} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{line.thickness && !thicknessOptions.includes(line.thickness) ? <option value={line.thickness}>{line.thickness} mm</option> : null}{thicknessOptions.map((value) => <option key={value} value={value}>{value} mm</option>)}</select></div> : null}
+    {line.mode === "HEIGHT" || line.mode === "AREA" ? <div className="grid gap-1.5"><Label>{heightBasisTitle(line.heightBasis)} (m)</Label><Input value={line.height} disabled={submitted} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div> : null}
+    {line.mode === "WIDTH" || line.mode === "AREA" ? <div className="grid gap-1.5"><Label>{widthBasisTitle(line.widthBasis)} (m)</Label><Input value={line.width} disabled={submitted} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div> : null}
+    {line.mode === "AREA" ? <div className="grid gap-1.5"><Label>DT (m²)</Label><Input value={areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)} readOnly /></div> : null}
     <div className="grid gap-1.5"><Label>SL *</Label><Input value={line.qty} disabled={submitted} onChange={(event) => patchLine(index, { qty: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>Đơn giá</Label><Input value={line.rate == null ? "" : money(line.rate)} readOnly /></div>
     <div className="grid gap-1.5"><Label>ĐVT</Label><select className="h-9 border bg-white px-2 text-sm font-semibold text-sky-800" value={line.uom} disabled={submitted || !uoms.length} onChange={(event) => void changeUom(index, event.target.value)}>{uoms.map((uom) => <option key={uom} value={uom}>{uom}</option>)}</select></div>
