@@ -1,0 +1,24 @@
+name: Cancel stuck ALU run
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-alu-full
+  cancel-in-progress: true
+
+jobs:
+  cancel-lock:
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.comment.user.login == github.repository_owner &&
+      github.event.comment.body == '/cancel-alu-stuck'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Acquire cancellation lock
+        run: echo "Acquired production-alu-full lock to cancel stale run."
