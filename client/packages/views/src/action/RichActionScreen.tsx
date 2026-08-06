@@ -7,6 +7,7 @@ import {
   type AppAction,
   type AppActionField,
   type AppActionInputTable,
+  type AppActionRowReference,
   type Doc,
   type DocField,
   type DocTypeMeta,
@@ -20,6 +21,7 @@ type Values = Record<string, unknown>;
 type ResultRecord = Record<string, unknown>;
 type CommitResult = { doctype?: string; name?: string; message?: string; [key: string]: unknown };
 type BusyPhase = "preview" | "commit" | "print";
+type RowReferenceState = { loading?: boolean; value?: unknown; error?: string };
 
 function toDocField(field: AppActionField): DocField {
   return bindActionField(field);
@@ -69,6 +71,13 @@ function scalar(value: unknown, format: (value: number) => string): string {
 
 function label(key: string): string {
   return key.replaceAll("_", " ").replace(/^./, (character) => character.toUpperCase());
+}
+
+function referenceValue(answer: unknown, config: AppActionRowReference): unknown {
+  const root = record(answer);
+  if (!root) return undefined;
+  const source = config.response_object_field ? record(root[config.response_object_field]) : root;
+  return source?.[config.value_field];
 }
 
 function ResultTable({ rows, format }: { rows: unknown[]; format: (value: number) => string }) {
@@ -144,6 +153,7 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
   const [error, setError] = useState<string>();
   const [preview, setPreview] = useState<unknown>();
   const [result, setResult] = useState<unknown>();
+  const [rowReferences, setRowReferences] = useState<Record<string, RowReferenceState>>({});
 
   useEffect(() => {
     let active = true;
@@ -168,6 +178,40 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
   ].filter((value): value is string => Boolean(value))), [table.summary]);
   const headerFields = action.fields.filter((field) => !tableNames.has(field.fieldname) && !summaryFields.has(field.fieldname));
   const rows = Array.isArray(values[table.fieldname]) ? values[table.fieldname] as Doc[] : [];
+  const rowReference = table.presentation?.row_reference;
+  const referenceParent = rowReference ? String(values[rowReference.parent_field] ?? "").trim() : "";
+  const referenceRowValues = useMemo(() => rowReference
+    ? [...new Set(rows.map((row) => String(row[rowReference.row_field] ?? "").trim()).filter(Boolean))]
+    : [], [rowReference, rows]);
+  const referenceRowsKey = referenceRowValues.join("\u001f");
+  const businessContextKey = JSON.stringify(businessContext);
+
+  useEffect(() => {
+    if (!rowReference || !referenceParent || !referenceRowValues.length) {
+      setRowReferences({});
+      return;
+    }
+    let active = true;
+    setRowReferences(Object.fromEntries(referenceRowValues.map((key) => [key, { loading: true }])));
+    void Promise.all(referenceRowValues.map(async (rowValue) => {
+      try {
+        const answer = await adapter.callPost<unknown>(rowReference.method, {
+          ...businessContext,
+          [rowReference.parent_field]: referenceParent,
+          [rowReference.row_field]: rowValue,
+          limit: 1,
+        });
+        return [rowValue, { value: referenceValue(answer, rowReference) } satisfies RowReferenceState] as const;
+      } catch (caught) {
+        return [rowValue, { error: adapter.mapError(caught).message } satisfies RowReferenceState] as const;
+      }
+    })).then((entries) => {
+      if (active) setRowReferences(Object.fromEntries(entries));
+    });
+    return () => { active = false; };
+    // Keys deliberately collapse object/row identity to the declared lookup inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adapter, rowReference, referenceParent, referenceRowsKey, businessContextKey]);
 
   const missing = useMemo(() => {
     const list: string[] = [];
@@ -260,6 +304,29 @@ export function RichActionScreen({ action, onOpen }: ActionScreenProps) {
 
       <section className="min-w-0">
         <div className="mb-2 flex items-center justify-between"><div><h2 className="text-sm font-bold">{table.label}</h2>{table.description ? <p className="text-xs text-muted-foreground">{table.description}</p> : null}</div></div>
+        {rowReference && referenceParent && referenceRowValues.length ? (
+          <div className="mb-2 flex flex-wrap gap-2" data-action-row-reference>
+            {referenceRowValues.map((rowValue) => {
+              const state = rowReferences[rowValue] ?? { loading: true };
+              let shownValue = rowReference.empty_text ?? "Chưa có dữ liệu tham khảo";
+              if (state.loading) shownValue = "Đang tra cứu…";
+              else if (state.error) shownValue = state.error;
+              else if (state.value !== undefined && state.value !== null && state.value !== "") {
+                if (rowReference.format === "currency") shownValue = money(number(state.value));
+                else if (rowReference.format === "number") shownValue = fmt.number(number(state.value));
+                else shownValue = String(state.value);
+              }
+              return (
+                <div key={rowValue} className="min-w-52 rounded-md border bg-muted/20 px-3 py-2 text-xs">
+                  <span className="font-medium">{rowValue}</span>
+                  <span className="mx-1.5 text-muted-foreground">·</span>
+                  <span className="text-muted-foreground">{rowReference.label}:</span>{" "}
+                  <strong className="tabular-nums text-foreground">{shownValue}</strong>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
         <ActionChildGrid actionName={action.name} table={table} childMeta={meta} rows={rows} onChange={(next) => changeValue(table.fieldname, next)} registry={registry} services={services} roles={roles} parentDoc={{ ...businessContext, ...values }} />
       </section>
 
