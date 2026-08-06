@@ -5,6 +5,7 @@ import test from "node:test";
 const sheet = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesSheetV2.tsx", "utf8");
 const bridge = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesAutofillBridge.ts", "utf8");
 const workspace = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesModeWorkspace.tsx", "utf8");
+const compactCss = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSalesSheetCompact.css", "utf8");
 
 test("AREA display reacts immediately to entered height and width without replacing billable authority", () => {
   assert.match(sheet, /const authoritative = line\.formula\?\.area_per_set_sqm/);
@@ -36,4 +37,12 @@ test("compact operational grid keeps units visible and required inputs persisten
   assert.match(sheet, /label: "DT"[\s\S]*unit: "m²"/);
   assert.match(sheet, /required \? "border-amber-400 bg-amber-50\/80"/);
   assert.match(sheet, /missing \? "border-red-500 bg-red-50/);
+});
+
+test("column width has one component authority and the shared grid allows horizontal resize", () => {
+  assert.match(compactCss, /thead th\[style\*="width"\]/);
+  assert.match(compactCss, /resize:\s*horizontal/);
+  assert.match(compactCss, /tbody td\[data-cell\][\s\S]*width:\s*auto\s*!important/);
+  assert.doesNotMatch(compactCss, /nth-child\(/);
+  assert.doesNotMatch(compactCss, /data-cell\$=/);
 });
