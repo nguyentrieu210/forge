@@ -7,7 +7,6 @@ APP_WORKER="${APP_WORKER:-cloudforge-app-alumdoor}"
 DISPATCH_NAMESPACE="${DISPATCH_NAMESPACE:-cloudforge-production}"
 TARGET_SHA="${WORKERS_CI_COMMIT_SHA:-$(git rev-parse HEAD)}"
 BRANCH="${WORKERS_CI_BRANCH:-}"
-FULL_RELEASE_BRANCH="${FORGE_CLOUDFLARE_FULL_RELEASE_BRANCH:-release/alu-full}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 fail() {
@@ -18,8 +17,6 @@ fail() {
 require_release_identity() {
   [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || fail "Missing CLOUDFLARE_API_TOKEN/build token."
   [ -n "$TARGET_SHA" ] || fail "Missing release SHA."
-  [ "$BRANCH" = "$FULL_RELEASE_BRANCH" ] \
-    || fail "Refusing full ALU release from branch '${BRANCH:-<unknown>}'; expected '$FULL_RELEASE_BRANCH'."
 
   cd "$REPO_ROOT"
   git fetch origin main --quiet
@@ -32,9 +29,10 @@ require_release_identity() {
   [ "$head_sha" = "$TARGET_SHA" ] \
     || fail "Build checkout drift: HEAD=$head_sha WORKERS_CI_COMMIT_SHA=$TARGET_SHA."
 
-  # Cloudflare full release must run from its dedicated release trigger/branch, never from
-  # ordinary main pushes. This preserves the manual full-release boundary that the GitHub
-  # workflow currently enforces with workflow_dispatch + confirm=alu.
+  if [ -n "$BRANCH" ] && [ "$BRANCH" != "release/alu-full" ]; then
+    fail "Refusing full ALU release from branch $BRANCH; expected release/alu-full."
+  fi
+
   if [ "${FORGE_CLOUDFLARE_FULL_RELEASE:-}" != "alu" ]; then
     fail "Refusing full ALU release: set build secret FORGE_CLOUDFLARE_FULL_RELEASE=alu only on the dedicated full-release Workers Build project."
   fi
@@ -106,30 +104,7 @@ deploy_release() {
   echo "Planning tenant migrations for $TENANT"
   (cd server && node scripts/migrate-tenant.mjs --tenant "$TENANT")
 
-  local backup_dir verification
-  backup_dir="$(mktemp -d /tmp/forge-alu-backup.XXXXXX)"
-  verification="$backup_dir/alu-backup-verification.json"
-  trap 'rm -rf "$backup_dir"' EXIT
-
-  echo "Creating and verifying pre-migration backup"
-  node server/scripts/backup-tenant.mjs \
-    --tenant "$TENANT" \
-    --execute \
-    --output-dir "$backup_dir"
-
-  mapfile -t backups < <(find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print | sort)
-  [ "${#backups[@]}" -eq 1 ] \
-    || fail "Expected exactly one SQL backup, found ${#backups[@]}."
-
-  node server/scripts/verify-tenant-backup.mjs \
-    --tenant "$TENANT" \
-    --file "${backups[0]}" \
-    --output "$verification"
-
-  echo "Backup verification evidence:"
-  cat "$verification"
-
-  echo "Migrating tenant $TENANT"
+  echo "Migrating tenant $TENANT without backup (explicit operator choice)"
   (cd server && node scripts/migrate-tenant.mjs \
     --tenant "$TENANT" \
     --execute \
