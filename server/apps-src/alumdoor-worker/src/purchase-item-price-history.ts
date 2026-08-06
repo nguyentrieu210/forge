@@ -29,7 +29,8 @@ export interface PurchasePriceHistoryRow {
   rate: number;
 }
 
-const MAX_LINE_SCAN = 500;
+const PAGE_SIZE = 200;
+const MAX_LINE_SCAN = 2_000;
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
 
@@ -72,17 +73,32 @@ function platformCaller(request: Request, env: PurchaseItemPriceHistoryEnv): Pla
   };
 }
 
-async function listItemLines(call: PlatformCall, doctype: string, itemCode: string): Promise<PurchaseLine[]> {
-  const query = new URLSearchParams({
-    fields: JSON.stringify(["name", "parent", "item_code", "rate", "purchase_order", "modified"]),
-    filters: JSON.stringify([["item_code", "=", itemCode]]),
-    order_by: "modified desc",
-    limit_page_length: String(MAX_LINE_SCAN),
-  });
-  const response = await call(`resource/${encodeURIComponent(doctype)}?${query.toString()}`);
-  if (!response.ok) throw new Error(`Không đọc được lịch sử ${doctype} (HTTP ${response.status}).`);
-  const body = await response.json() as { data?: PurchaseLine[] };
-  return Array.isArray(body.data) ? body.data : [];
+async function listItemLines(
+  call: PlatformCall,
+  doctype: "Purchase Order Item" | "Purchase Receipt Item",
+  itemCode: string,
+): Promise<PurchaseLine[]> {
+  const output: PurchaseLine[] = [];
+  const fields = doctype === "Purchase Receipt Item"
+    ? ["name", "parent", "item_code", "rate", "purchase_order", "modified"]
+    : ["name", "parent", "item_code", "rate", "modified"];
+
+  for (let start = 0; start < MAX_LINE_SCAN; start += PAGE_SIZE) {
+    const query = new URLSearchParams({
+      fields: JSON.stringify(fields),
+      filters: JSON.stringify([["item_code", "=", itemCode]]),
+      order_by: "modified desc",
+      limit_start: String(start),
+      limit_page_length: String(PAGE_SIZE),
+    });
+    const response = await call(`resource/${encodeURIComponent(doctype)}?${query.toString()}`);
+    if (!response.ok) throw new Error(`Không đọc được lịch sử ${doctype} (HTTP ${response.status}).`);
+    const body = await response.json() as { data?: PurchaseLine[] };
+    const page = Array.isArray(body.data) ? body.data : [];
+    output.push(...page);
+    if (page.length < PAGE_SIZE) return output;
+  }
+  throw new Error(`${doctype}: lịch sử của ${itemCode} vượt ${MAX_LINE_SCAN} dòng; từ chối cắt cụt dữ liệu.`);
 }
 
 async function readParent(call: PlatformCall, doctype: string, name: string): Promise<PurchaseParent | null> {
