@@ -4,7 +4,7 @@
  * hiện tại thành lựa chọn duy nhất vì các chứng từ chuyển kho cần chọn kho đích khác.
  */
 import type { FrappeAdapter } from "@metaforge/adapter-frappe";
-import type { BusinessContextPolicy, BusinessContextSelection } from "@metaforge/core";
+import { deriveContextLinkCapabilityFilters, type BusinessContextPolicy, type BusinessContextSelection } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
 
 export function adapterServices(
@@ -15,35 +15,21 @@ export function adapterServices(
   return {
     searchLink: async (doctype, txt, opts) => {
       const contextFilters: Record<string, unknown> = {};
+      const parentPolicy = opts?.referenceDoctype ? policies?.[opts.referenceDoctype] : undefined;
       /**
-       * Áp lọc `company` khi DocType đích THỰC SỰ có field đó — hỏi metadata, không đoán
-       * theo TÊN.
-       *
-       * Trước đây đây là một danh sách tên cứng (`Warehouse`, `Branch`, `Employee`…), tức
-       * là giả định mọi thứ tên `Branch` đều là Branch của ERPNext. Một app tự khai DocType
-       * `Branch` không có `company` — chuyện hoàn toàn bình thường khi app là dữ liệu — sẽ
-       * bị client gắn thêm `filters={"company":…}`, server từ chối đúng luật
-       * (`Filter field is not allowed: company`), và ô Link đó **không bao giờ trả về kết
-       * quả nào**. Hệ quả: mọi form có trường Link bắt buộc đều không lưu nổi, mà thông báo
-       * duy nhất người dùng thấy là "Bắt buộc".
-       *
-       * `getMeta` có cache ở adapter nên chi phí là một lần cho mỗi DocType.
+       * Ask target metadata once, then derive only capabilities the target actually exposes.
+       * This prevents schema-name guesses (`Warehouse`, `Price List`, ...) in a generic service.
        */
-      if (context.company) {
+      if (context.company || parentPolicy) {
         try {
           const target = await adapter.getMeta(doctype);
-          if (target.fields?.some((field) => field.fieldname === "company")) contextFilters.company = context.company;
+          if (context.company && target.fields?.some((field) => field.fieldname === "company")) {
+            contextFilters.company = context.company;
+          }
+          Object.assign(contextFilters, deriveContextLinkCapabilityFilters(parentPolicy, target));
         } catch {
-          // Không đọc được metadata thì KHÔNG lọc: một ô Link trả về rộng hơn cần thiết vẫn
-          // dùng được, còn lọc nhầm thì nó rỗng vĩnh viễn.
+          // Metadata unavailable => fail open on filtering, never make a required Link permanently empty.
         }
-      }
-      if (doctype === "Price List") {
-        const parentPolicy = opts?.referenceDoctype ? policies?.[opts.referenceDoctype] : undefined;
-        const supportsSelling = parentPolicy?.supported.includes("selling_price_list");
-        const supportsBuying = parentPolicy?.supported.includes("buying_price_list");
-        if (supportsSelling && !supportsBuying) contextFilters.selling = 1;
-        if (supportsBuying && !supportsSelling) contextFilters.buying = 1;
       }
       const existing = opts?.filters;
       const filters = existing && !Array.isArray(existing)

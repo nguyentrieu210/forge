@@ -1,10 +1,6 @@
-import { linkDisplay } from "@metaforge/core";
+import { applyContextPolicy, buildLinkFilters, linkDisplay } from "@metaforge/core";
 /** @jsxImportSource react */
-/**
- * Table / Table MultiSelect controls — sống ở @metaforge/views (tránh cycle controls→views).
- * Đăng ký qua registerTableControls(registry). Cần services.getMeta để nạp child DocType meta.
- */
-import { type ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type { DocTypeMeta, Doc } from "@metaforge/core";
 import { ControlRegistry, type FieldControlProps } from "@metaforge/controls";
@@ -22,27 +18,21 @@ function useChildMeta(doctype: string | undefined, services: FieldControlProps["
     let alive = true;
     if (!doctype || !services?.getMeta) return;
     void services.getMeta(doctype).then((m) => alive && setMeta(m as DocTypeMeta));
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [doctype, services]);
   return meta;
 }
 
-/** Table — bảng con (ChildGrid). */
 function TableField(p: FieldControlProps & WithRegistry) {
   const t = useT();
   const childMeta = useChildMeta(p.field.options, p.services);
   const rows = Array.isArray(p.value) ? (p.value as Doc[]) : [];
-  /**
-   * Bối cảnh đang chọn (vd KHO hiện tại) chảy xuống dòng mới của bảng con.
-   *
-   * `blankDoc` chỉ gieo bối cảnh cho chứng từ CHA. Nhưng ở phân hệ mua, kho nằm trên TỪNG
-   * DÒNG — nên thủ kho đang đứng ở "Kho mua" vẫn phải chọn lại đúng cái kho đó cho từng
-   * dòng, mỗi lần lập phiếu. `useMetaForgeOptional` để control vẫn dựng được ngoài provider
-   * (test, storybook) thay vì ném lỗi.
-   */
-  const rowDefaults = useMetaForgeOptional()?.businessContext;
+  const context = useMetaForgeOptional();
+  const rowDefaults = useMemo(() => {
+    if (!childMeta || !context) return undefined;
+    const defaults = applyContextPolicy(childMeta.name, context.businessContext, context.contextPolicies).defaults;
+    return Object.keys(defaults).length ? defaults : undefined;
+  }, [childMeta, context]);
   if (p.masked) return <span className="mf-masked">••••••</span>;
   if (!childMeta) return <div className="mf-grid-loading">{t("grid.loading_table_prefix")} {p.field.options}…</div>;
   return (
@@ -60,7 +50,6 @@ function TableField(p: FieldControlProps & WithRegistry) {
   );
 }
 
-/** Table MultiSelect — chip các Link (child có 1 field Link). */
 function TableMultiSelectField(p: FieldControlProps) {
   const t = useT();
   const childMeta = useChildMeta(p.field.options, p.services);
@@ -74,15 +63,17 @@ function TableMultiSelectField(p: FieldControlProps) {
   useEffect(() => {
     let alive = true;
     const search = p.services?.searchLink;
-    if (!search || !target || txt.length < 1) {
+    if (!search || !target || !linkField || txt.length < 1) {
       setOpts([]);
       return;
     }
-    void search(target, txt).then((r) => alive && setOpts(r));
-    return () => {
-      alive = false;
-    };
-  }, [txt, target, p.services]);
+    const filters = buildLinkFilters(linkField, p.docValues);
+    void search(target, txt, {
+      ...(filters ? { filters } : {}),
+      ...(p.parentDoctype ? { referenceDoctype: p.parentDoctype } : {}),
+    }).then((r) => alive && setOpts(r));
+    return () => { alive = false; };
+  }, [txt, target, linkField, p.services, p.docValues, p.parentDoctype]);
 
   useEffect(() => {
     const resolve = p.services?.resolveDisplay;
@@ -115,9 +106,7 @@ function TableMultiSelectField(p: FieldControlProps) {
             <Badge key={String(r.name ?? i)} variant="secondary" className="gap-1 pr-1 font-normal">
               {labels[String(r[fn] ?? "")] ?? String(r[fn] ?? "")}
               {!p.readOnly ? (
-                <Button type="button" variant="ghost" onClick={() => remove(i)} aria-label={t("common.remove_prefix")} className="size-4 rounded-sm p-0 hover:bg-background/60 [&_svg]:size-3">
-                  <X />
-                </Button>
+                <Button type="button" variant="ghost" onClick={() => remove(i)} aria-label={t("common.remove_prefix")} className="size-4 rounded-sm p-0 hover:bg-background/60 [&_svg]:size-3"><X /></Button>
               ) : null}
             </Badge>
           ))}
@@ -154,7 +143,6 @@ function TableMultiSelectField(p: FieldControlProps) {
   );
 }
 
-/** Đăng ký Table + Table MultiSelect vào registry (registry dùng để render cell). */
 export function registerTableControls(registry: ControlRegistry): ControlRegistry {
   registry.register("Table", (p) => <TableField {...p} registry={registry} />);
   registry.register("Table MultiSelect", (p) => <TableMultiSelectField {...p} />);
