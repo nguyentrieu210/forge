@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   buildMetadataDefaults,
   serializeCreateDocument,
@@ -58,8 +57,8 @@ type Capabilities = { create?: boolean; write?: boolean };
 type DoorPreset = Partial<Record<BasicField, unknown>>;
 
 /**
- * Operator presets only cover the measurement / purchase / sales facts confirmed by the shop.
- * Leaf-count policy stays metadata-driven because it has its own verified rules and exceptions.
+ * Preset vận hành chỉ điền các sự thật rộng / mua / bán đã được chủ xưởng xác nhận.
+ * Luật chia lá giữ nguyên theo metadata vì có bộ ngoại lệ riêng và sai một lá là cắt hỏng vật tư.
  */
 const DOOR_PRESETS: Record<string, DoorPreset> = {
   "Cửa Đức": {
@@ -211,8 +210,7 @@ export function AlumdoorCuttingPolicyEditor({ name, onBack, onCreated, onOpenRaw
   onOpenRaw: (name: string) => void;
 }) {
   const isNew = name === "new";
-  const { adapter, scopeKey } = useMetaForge();
-  const queryClient = useQueryClient();
+  const { adapter } = useMetaForge();
   const metaQ = useMeta(DOCTYPE);
   const docQ = useDoc(DOCTYPE, isNew ? "" : name);
   const meta = metaQ.data;
@@ -265,11 +263,6 @@ export function AlumdoorCuttingPolicyEditor({ name, onBack, onCreated, onOpenRaw
         const full = serializeCreateDocument(meta, draft);
         const created = await adapter.createDoc(DOCTYPE, full);
         toast.success("Đã tạo công thức cửa.");
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: [scopeKey, "list-view", DOCTYPE] }),
-          queryClient.invalidateQueries({ queryKey: [scopeKey, "list", DOCTYPE] }),
-          queryClient.invalidateQueries({ queryKey: [scopeKey, "count", DOCTYPE] }),
-        ]);
         onCreated(String(created.name));
         return;
       }
@@ -282,11 +275,6 @@ export function AlumdoorCuttingPolicyEditor({ name, onBack, onCreated, onOpenRaw
       setDraft(next);
       setBaseline(next);
       toast.success("Đã lưu công thức cửa.");
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: [scopeKey, "doc", DOCTYPE, name] }),
-        queryClient.invalidateQueries({ queryKey: [scopeKey, "list-view", DOCTYPE] }),
-        queryClient.invalidateQueries({ queryKey: [scopeKey, "list", DOCTYPE] }),
-      ]);
     } catch (error) {
       toast.error(adapter.mapError(error).message);
     } finally {
