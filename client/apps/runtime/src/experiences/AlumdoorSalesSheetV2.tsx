@@ -97,20 +97,20 @@ type SaleLine = {
 };
 
 type ColumnKey = "itemCode" | "color" | "thickness" | "height" | "width" | "area" | "qty" | "rate" | "discount" | "uom" | "amount";
-type ColumnDef = { key: ColumnKey; label: string; width: number; numeric?: boolean };
+type ColumnDef = { key: ColumnKey; label: string; width: number; numeric?: boolean; unit?: string };
 
 const COLUMNS: ColumnDef[] = [
-  { key: "itemCode", label: "SẢN PHẨM", width: 18 },
-  { key: "color", label: "MÀU SẮC", width: 10 },
-  { key: "thickness", label: "ĐỘ DÀY", width: 8 },
-  { key: "height", label: "CHIỀU CAO", width: 8, numeric: true },
-  { key: "width", label: "CHIỀU RỘNG", width: 9, numeric: true },
-  { key: "area", label: "DIỆN TÍCH", width: 8, numeric: true },
-  { key: "qty", label: "SL", width: 5, numeric: true },
-  { key: "rate", label: "ĐƠN GIÁ", width: 9, numeric: true },
-  { key: "discount", label: "CK %", width: 6, numeric: true },
-  { key: "uom", label: "ĐVT", width: 6 },
-  { key: "amount", label: "THÀNH TIỀN", width: 11, numeric: true },
+  { key: "itemCode", label: "SẢN PHẨM", width: 14 },
+  { key: "color", label: "MÀU", width: 7 },
+  { key: "thickness", label: "DÀY", width: 5.5, unit: "mm" },
+  { key: "height", label: "CAO", width: 5.5, numeric: true, unit: "m" },
+  { key: "width", label: "RỘNG", width: 5.5, numeric: true, unit: "m" },
+  { key: "area", label: "DT", width: 5.5, numeric: true, unit: "m²" },
+  { key: "qty", label: "SL", width: 4, numeric: true },
+  { key: "rate", label: "Đ.GIÁ", width: 7, numeric: true },
+  { key: "discount", label: "CK %", width: 5, numeric: true },
+  { key: "uom", label: "ĐVT", width: 4.5 },
+  { key: "amount", label: "TT", width: 8, numeric: true },
 ];
 
 const STANDARD_PRICE_LIST = "Giá niêm yết";
@@ -196,7 +196,12 @@ function discountRate(line: SaleLine): number {
 }
 
 function areaPerSet(line: SaleLine): number | null {
-  return line.mode === "AREA" && line.formula?.area_per_set_sqm != null ? Number(line.formula.area_per_set_sqm) : null;
+  if (line.mode !== "AREA") return null;
+  const authoritative = line.formula?.area_per_set_sqm;
+  if (authoritative != null && Number.isFinite(Number(authoritative))) return Number(authoritative);
+  const height = decimal(line.height);
+  const width = decimal(line.width);
+  return Number.isFinite(height) && height > 0 && Number.isFinite(width) && width > 0 ? height * width : null;
 }
 
 function billableQty(line: SaleLine): number {
@@ -691,14 +696,14 @@ export function AlumdoorSalesSheetV2() {
         : `<tr class="discount"><td></td><td>Chiết khấu</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
       return product + discount;
     }).join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.sheet .discount td{height:24px}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Loại khách:</b> ${escapeHtml(canonicalGroup)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU SẮC</th><th>ĐỘ DÀY</th><th>CHIỀU CAO</th><th>CHIỀU RỘNG</th><th>DIỆN TÍCH</th><th>SL</th><th>ĐƠN GIÁ</th><th>CK %</th><th>ĐVT</th><th>THÀNH TIỀN</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng tiền hàng</td><td class="r">${money(total)}</td></tr><tr><td>Giao nhận</td><td></td></tr><tr><td>Thuế</td><td></td></tr><tr><td>Đã thu</td><td></td></tr><tr class="grand"><td>CÒN PHẢI THU</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(String(createdOrder.name))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#171717;font-size:11px;margin:0}h1{font-size:20px;margin:0 0 10px}.top{display:flex;justify-content:space-between;margin-bottom:10px}.meta,.sheet,.totals{border-collapse:collapse}.meta{width:100%;margin-bottom:10px}.meta td,.sheet th,.sheet td,.totals td{border:1px solid #bdbdbd;padding:5px}.sheet{width:100%;table-layout:fixed}.sheet th{background:#f97316;color:white;font-size:9px;white-space:nowrap}.sheet .discount td{height:24px}.r{text-align:right}.c{text-align:center}.b{font-weight:700}.sub{font-size:8px;color:#666}.totals{margin-left:auto;margin-top:10px;width:310px}.grand td{font-weight:700;font-size:13px}.note{margin-top:10px;white-space:pre-wrap}</style></head><body><div class="top"><div><h1>ĐƠN BÁN HÀNG</h1><div>${escapeHtml(String(createdOrder.name))}</div></div><b>${submitted ? "ĐÃ XÁC NHẬN" : "BẢN NHÁP"}</b></div><table class="meta"><tr><td><b>Khách hàng:</b> ${escapeHtml(customer.name)}</td><td><b>Loại khách:</b> ${escapeHtml(canonicalGroup)}</td><td><b>Ngày đặt:</b> ${escapeHtml(transactionDate)}</td><td><b>Ngày giao:</b> ${escapeHtml(deliveryDate)}</td></tr></table><table class="sheet"><thead><tr><th>STT</th><th>SẢN PHẨM</th><th>MÀU</th><th>DÀY (mm)</th><th>CAO (m)</th><th>RỘNG (m)</th><th>DT (m²)</th><th>SL</th><th>Đ.GIÁ</th><th>CK %</th><th>ĐVT</th><th>TT</th></tr></thead><tbody>${bodyRows}</tbody></table><table class="totals"><tr><td>Tổng tiền hàng</td><td class="r">${money(total)}</td></tr><tr><td>Giao nhận</td><td></td></tr><tr><td>Thuế</td><td></td></tr><tr><td>Đã thu</td><td></td></tr><tr class="grand"><td>CÒN PHẢI THU</td><td class="r">${money(total)}</td></tr></table>${note.trim() ? `<div class="note"><b>Ghi chú:</b> ${escapeHtml(note)}</div>` : ""}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),150));<\/script></body></html>`;
     const popup = window.open("", "_blank");
     if (!popup) { setGlobalError("Trình duyệt đang chặn cửa sổ in."); return; }
     popup.document.open(); popup.document.write(html); popup.document.close();
   };
 
   const exportExcel = () => {
-    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU SẮC", "ĐỘ DÀY", "CHIỀU CAO", "CHIỀU RỘNG", "DIỆN TÍCH", "SL", "ĐƠN GIÁ", "CK %", "ĐVT", "THÀNH TIỀN"]];
+    const rows: string[][] = [["STT", "SẢN PHẨM", "MÀU", "DÀY (mm)", "CAO (m)", "RỘNG (m)", "DT (m²)", "SL", "Đ.GIÁ", "CK %", "ĐVT", "TT"]];
     lines.filter((line) => line.itemCode).forEach((line, index) => {
       rows.push([String(index + 1), line.itemName || line.itemCode, line.color, line.thickness, line.height, line.width, areaPerSet(line) == null ? "" : String(areaPerSet(line)), line.qty, String(line.rate ?? ""), "", line.uom, String(grossAmount(line))]);
       rows.push(["", "Chiết khấu", "", "", "", "", "", "", "", line.discountPct, "", line.discountPct.trim() ? String(-lineDiscountAmount(line)) : ""]);
@@ -784,28 +789,28 @@ export function AlumdoorSalesSheetV2() {
 
   const renderCell = (line: SaleLine, lineIndex: number, column: ColumnDef) => {
     const required = requiredCell(line, column.key);
-    const base = `min-h-8 w-full border-0 bg-transparent px-1.5 py-1 text-xs outline-none focus:ring-0 ${required ? "font-semibold" : ""}`;
+    const base = `min-h-8 w-full border-0 bg-transparent px-1.5 py-1 text-center text-xs outline-none focus:ring-0 ${required ? "font-bold text-slate-950" : ""}`;
     if (column.key === "itemCode") return <SheetLink doctype="Item" value={line.itemCode} onChange={(value) => void chooseItem(lineIndex, value)} readOnly={submitted} required fieldname={`sales_item_${lineIndex}`} />;
     if (column.key === "color") return line.itemCode && line.requireColor ? <SheetLink doctype="Item Color" value={line.color} onChange={(color) => patchLine(lineIndex, { color, formula: null })} readOnly={submitted} required fieldname={`sales_color_${lineIndex}`} /> : null;
     if (column.key === "thickness") {
       if (!line.itemCode || (line.mode !== "WIDTH" && !line.thickness)) return null;
-      if (line.fixedThickness) return <div className="px-1.5 text-right text-xs font-semibold">{line.thickness} ly</div>;
-      return <select className={base} value={line.thickness} disabled={submitted} onChange={(event) => patchLine(lineIndex, { thickness: event.target.value })}><option value=""></option>{thicknessOptions.map((value) => <option key={value} value={value}>{value} ly</option>)}</select>;
+      if (line.fixedThickness) return <div className="px-1.5 text-center text-xs font-semibold">{line.thickness}</div>;
+      return <select className={base} value={line.thickness} disabled={submitted} onChange={(event) => patchLine(lineIndex, { thickness: event.target.value })}><option value=""></option>{thicknessOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>;
     }
     if (column.key === "height") return line.itemCode && (line.mode === "HEIGHT" || line.mode === "AREA") ? <input className={base} inputMode="decimal" value={line.height} disabled={submitted} onChange={(event) => patchLine(lineIndex, { height: event.target.value, formula: null })} /> : null;
-    if (column.key === "width") return line.itemCode && (line.mode === "WIDTH" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.width} disabled={submitted} onChange={(event) => patchLine(lineIndex, { width: event.target.value, formula: null })} />{line.mode === "AREA" && line.formula?.sales_width_basis ? <div className="text-[9px] leading-none text-slate-500">{String(line.formula.sales_width_basis)}</div> : null}</div> : null;
-    if (column.key === "area") return areaPerSet(line) == null ? null : <div className="px-1.5 text-right text-xs font-medium tabular-nums">{number(areaPerSet(line), 3)}</div>;
-    if (column.key === "qty") return line.itemCode ? <input className={`${base} text-right`} inputMode="numeric" value={line.qty} disabled={submitted} onChange={(event) => patchLine(lineIndex, { qty: event.target.value, formula: null })} /> : null;
-    if (column.key === "rate") return line.itemCode && line.rate != null ? <div className="px-1.5 text-right text-xs font-medium tabular-nums">{money(line.rate)}</div> : null;
+    if (column.key === "width") return line.itemCode && (line.mode === "WIDTH" || line.mode === "AREA") ? <div className="px-1.5 py-0.5"><input className={`${base} px-0`} inputMode="decimal" value={line.width} disabled={submitted} onChange={(event) => patchLine(lineIndex, { width: event.target.value, formula: null })} />{line.mode === "AREA" && line.formula?.sales_width_basis ? <div className="text-center text-[9px] leading-none text-slate-500">{String(line.formula.sales_width_basis)}</div> : null}</div> : null;
+    if (column.key === "area") return areaPerSet(line) == null ? null : <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{number(areaPerSet(line), 3)}</div>;
+    if (column.key === "qty") return line.itemCode ? <input className={base} inputMode="numeric" value={line.qty} disabled={submitted} onChange={(event) => patchLine(lineIndex, { qty: event.target.value, formula: null })} /> : null;
+    if (column.key === "rate") return line.itemCode && line.rate != null ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{money(line.rate)}</div> : null;
     if (column.key === "discount") return null;
     if (column.key === "uom") return line.uom ? <div className="px-1.5 text-center text-xs font-medium">{line.uom}</div> : null;
-    if (column.key === "amount") return line.itemCode && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-right text-xs font-semibold tabular-nums">{money(grossAmount(line))}</div> : null;
+    if (column.key === "amount") return line.itemCode && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">{money(grossAmount(line))}</div> : null;
     return null;
   };
   const renderDiscountCell = (line: SaleLine, lineIndex: number, column: ColumnDef) => {
     if (column.key === "itemCode") return <span className="px-1.5 text-xs font-medium text-slate-500">Chiết khấu</span>;
-    if (column.key === "discount") return <input className="min-h-8 w-full border-0 bg-transparent px-1.5 text-right text-xs font-semibold outline-none" inputMode="decimal" value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(lineIndex, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} />;
-    if (column.key === "amount") return line.discountPct.trim() && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-right text-xs font-semibold tabular-nums">-{money(lineDiscountAmount(line))}</div> : null;
+    if (column.key === "discount") return <input className="min-h-8 w-full border-0 bg-transparent px-1.5 text-center text-xs font-semibold outline-none" inputMode="decimal" value={line.discountPct} disabled={submitted} onChange={(event) => patchLine(lineIndex, { discountPct: event.target.value.replace("%", ""), discountTouched: true })} />;
+    if (column.key === "amount") return line.discountPct.trim() && line.rate != null && billableQty(line) > 0 ? <div className="px-1.5 text-center text-xs font-semibold tabular-nums">-{money(lineDiscountAmount(line))}</div> : null;
     return null;
   };
 
@@ -815,12 +820,12 @@ export function AlumdoorSalesSheetV2() {
         <tr>
           {!submitted ? <th className="sticky left-0 z-40 w-9 min-w-9 border border-orange-600 bg-orange-500 p-1"><Checkbox checked={lines.length > 0 && selected.length === lines.length} onCheckedChange={() => setSelected(selected.length === lines.length ? [] : lines.map((line) => line.id))} /></th> : null}
           <th className={`${submitted ? "sticky left-0" : "sticky left-9"} z-40 w-10 min-w-10 border border-orange-600 bg-orange-500 px-1 text-center text-[10px] font-bold`}>STT</th>
-          {visibleColumns.map((column) => <th key={column.key} className="border border-orange-600 bg-orange-500 px-2 py-2 text-center text-[10px] font-bold whitespace-nowrap" style={{ width: `${column.width}rem`, minWidth: `${column.width}rem` }}>{column.label}</th>)}
+          {visibleColumns.map((column) => <th key={column.key} className="border border-orange-600 bg-orange-500 px-1 py-1 text-center text-[10px] font-bold whitespace-normal" style={{ width: `${column.width}rem`, minWidth: `${column.width}rem` }}><span className="block leading-tight">{column.label}</span>{column.unit ? <span className="block text-[9px] font-extrabold leading-tight text-orange-50">({column.unit})</span> : null}</th>)}
           {!submitted ? <th className="w-14 min-w-14 border border-orange-600 bg-orange-500"></th> : null}
         </tr>
       </thead>
       <tbody>
-        {lines.map((line, lineIndex) => <FragmentRowsV2 key={line.id} line={line} lineIndex={lineIndex} submitted={submitted} selected={selected.includes(line.id)} visibleColumns={visibleColumns} onSelect={() => setSelected((current) => current.includes(line.id) ? current.filter((id) => id !== line.id) : [...current, line.id])} renderCell={renderCell} renderDiscountCell={renderDiscountCell} missingRequired={missingRequired} setPicked={setPicked} onDetail={() => setDetailIndex(lineIndex)} onDelete={() => deleteIndexes([lineIndex])} />)}
+        {lines.map((line, lineIndex) => <FragmentRowsV2 key={line.id} line={line} lineIndex={lineIndex} submitted={submitted} selected={selected.includes(line.id)} visibleColumns={visibleColumns} onSelect={() => setSelected((current) => current.includes(line.id) ? current.filter((id) => id !== line.id) : [...current, line.id])} renderCell={renderCell} renderDiscountCell={renderDiscountCell} requiredCell={requiredCell} missingRequired={missingRequired} setPicked={setPicked} onDetail={() => setDetailIndex(lineIndex)} onDelete={() => deleteIndexes([lineIndex])} />)}
       </tbody>
     </table>
   </div>;
@@ -855,7 +860,7 @@ export function AlumdoorSalesSheetV2() {
         {!submitted && lastDeleted?.length ? <Button type="button" variant="ghost" size="sm" onClick={undoDelete}><Undo2 /> Hoàn tác</Button> : null}
         <Button type="button" variant="ghost" size="sm" onClick={() => setColumnDialog(true)}><Columns3 /> Cột</Button>
         <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}><Maximize2 /> Bảng lớn</Button>
-        <span className="ml-auto text-[11px] text-slate-500">Ô viền đỏ = cần nhập · ô trắng trống = không áp dụng</span>
+        <span className="ml-auto text-[11px] text-slate-500">Ô vàng = cần nhập · viền đỏ = còn thiếu · ô trắng = tự tính/không áp dụng</span>
       </div>
 
       {renderGrid(false)}
@@ -888,11 +893,11 @@ export function AlumdoorSalesSheetV2() {
     }} />
 
     <Dialog open={columnDialog} onOpenChange={setColumnDialog}>
-      <DialogContent className="w-[min(92vw,620px)] max-w-none"><DialogHeader><DialogTitle>Cột bảng bán hàng</DialogTitle><DialogDescription>Mặc định hiển thị đầy đủ. Tùy chỉnh chỉ lưu trên thiết bị hiện tại.</DialogDescription></DialogHeader><div className="grid gap-2 sm:grid-cols-2">{COLUMNS.map((column) => <label key={column.key} className="flex items-center gap-2 border p-2 text-sm"><Checkbox checked={!hiddenColumns.includes(column.key)} onCheckedChange={(checkedValue) => saveHiddenColumns(checkedValue ? hiddenColumns.filter((key) => key !== column.key) : [...new Set([...hiddenColumns, column.key])])} />{column.label}</label>)}</div><div className="flex justify-end"><Button type="button" variant="outline" onClick={() => saveHiddenColumns([])}><RotateCcw /> Hiện tất cả</Button></div></DialogContent>
+      <DialogContent className="w-[min(92vw,620px)] max-w-none"><DialogHeader><DialogTitle>Cột bảng bán hàng</DialogTitle><DialogDescription>Mặc định hiển thị đầy đủ. Tùy chỉnh chỉ lưu trên thiết bị hiện tại.</DialogDescription></DialogHeader><div className="grid gap-2 sm:grid-cols-2">{COLUMNS.map((column) => <label key={column.key} className="flex items-center gap-2 border p-2 text-sm"><Checkbox checked={!hiddenColumns.includes(column.key)} onCheckedChange={(checkedValue) => saveHiddenColumns(checkedValue ? hiddenColumns.filter((key) => key !== column.key) : [...new Set([...hiddenColumns, column.key])])} />{column.label}{column.unit ? ` (${column.unit})` : ""}</label>)}</div><div className="flex justify-end"><Button type="button" variant="outline" onClick={() => saveHiddenColumns([])}><RotateCcw /> Hiện tất cả</Button></div></DialogContent>
     </Dialog>
 
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <DialogContent className="flex h-[94vh] w-[97vw] max-w-none flex-col overflow-hidden p-3"><DialogHeader className="shrink-0"><div className="flex items-center"><div><DialogTitle>Bảng bán hàng mở rộng</DialogTitle><DialogDescription>{lines.length} mặt hàng · nhập bằng bàn phím hoặc paste từ Excel</DialogDescription></div><Button type="button" variant="ghost" size="icon-sm" className="ml-auto" onClick={() => setExpanded(false)}><X /></Button></div></DialogHeader><div className="min-h-0 flex-1">{renderGrid(true)}</div></DialogContent>
+      <DialogContent className="flex h-[94vh] w-[97vw] max-w-none flex-col overflow-hidden p-3"><DialogHeader className="shrink-0"><div className="flex items-center"><div><DialogTitle>Bảng bán hàng mở rộng</DialogTitle><DialogDescription>{lines.length} mặt hàng · cùng cột/cách nhập với bảng chính</DialogDescription></div><Button type="button" variant="ghost" size="icon-sm" className="ml-auto" onClick={() => setExpanded(false)}><X /></Button></div></DialogHeader><div className="min-h-0 flex-1">{renderGrid(true)}</div></DialogContent>
     </Dialog>
 
     <Dialog open={detailIndex != null} onOpenChange={(open) => { if (!open) setDetailIndex(null); }}>
@@ -901,10 +906,11 @@ export function AlumdoorSalesSheetV2() {
   </div>;
 }
 
-function FragmentRowsV2({ line, lineIndex, submitted, selected, visibleColumns, onSelect, renderCell, renderDiscountCell, missingRequired, setPicked, onDetail, onDelete }: {
+function FragmentRowsV2({ line, lineIndex, submitted, selected, visibleColumns, onSelect, renderCell, renderDiscountCell, requiredCell, missingRequired, setPicked, onDetail, onDelete }: {
   line: SaleLine; lineIndex: number; submitted: boolean; selected: boolean; visibleColumns: ColumnDef[]; onSelect: () => void;
   renderCell: (line: SaleLine, lineIndex: number, column: ColumnDef) => React.ReactNode;
   renderDiscountCell: (line: SaleLine, lineIndex: number, column: ColumnDef) => React.ReactNode;
+  requiredCell: (line: SaleLine, key: ColumnKey) => boolean;
   missingRequired: (line: SaleLine, key: ColumnKey) => boolean;
   setPicked: (value: { line: number; column: number }) => void; onDetail: () => void; onDelete: () => void;
 }) {
@@ -912,10 +918,14 @@ function FragmentRowsV2({ line, lineIndex, submitted, selected, visibleColumns, 
     <tr>
       {!submitted ? <td rowSpan={2} className="sticky left-0 z-20 border border-slate-300 bg-white p-1 text-center align-middle"><Checkbox checked={selected} onCheckedChange={onSelect} /></td> : null}
       <td rowSpan={2} className={`${submitted ? "sticky left-0" : "sticky left-9"} z-20 border border-slate-300 bg-white px-1 text-center align-middle text-[10px] text-slate-500`}>{lineIndex + 1}</td>
-      {visibleColumns.map((column, columnIndex) => <td key={column.key} data-cell={`${lineIndex}:${columnIndex}`} className={`${column.numeric ? "text-right" : ""} h-9 border bg-white p-0 align-middle ${missingRequired(line, column.key) ? "border-red-500 ring-1 ring-inset ring-red-500" : "border-slate-300"}`} style={{ width: `${column.width}rem`, minWidth: `${column.width}rem` } as CSSProperties} onFocusCapture={() => setPicked({ line: lineIndex, column: columnIndex })} onClick={() => setPicked({ line: lineIndex, column: columnIndex })}>{renderCell(line, lineIndex, column)}</td>)}
+      {visibleColumns.map((column, columnIndex) => {
+        const required = requiredCell(line, column.key);
+        const missing = missingRequired(line, column.key);
+        return <td key={column.key} data-cell={`${lineIndex}:${columnIndex}`} className={`h-9 border p-0 text-center align-middle ${missing ? "border-red-500 bg-red-50 ring-1 ring-inset ring-red-500" : required ? "border-amber-400 bg-amber-50/80" : "border-slate-300 bg-white"}`} style={{ width: `${column.width}rem`, minWidth: `${column.width}rem` } as CSSProperties} onFocusCapture={() => setPicked({ line: lineIndex, column: columnIndex })} onClick={() => setPicked({ line: lineIndex, column: columnIndex })}>{renderCell(line, lineIndex, column)}</td>;
+      })}
       {!submitted ? <td rowSpan={2} className="border border-slate-300 bg-white p-1 align-middle"><div className="flex"><Button type="button" variant="ghost" size="icon-sm" onClick={onDetail}><Maximize2 /></Button><Button type="button" variant="ghost" size="icon-sm" className="text-slate-500 hover:text-red-600" onClick={onDelete}><Trash2 /></Button></div></td> : null}
     </tr>
-    <tr>{visibleColumns.map((column) => <td key={column.key} className={`${column.numeric ? "text-right" : ""} h-8 border border-slate-300 bg-white p-0 align-middle`}>{renderDiscountCell(line, lineIndex, column)}</td>)}</tr>
+    <tr>{visibleColumns.map((column) => <td key={column.key} className="h-8 border border-slate-300 bg-white p-0 text-center align-middle">{renderDiscountCell(line, lineIndex, column)}</td>)}</tr>
   </>;
 }
 
@@ -925,10 +935,10 @@ function LineDetailV2({ line, index, submitted, thicknessOptions, patchLine, cho
   return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
     <div className="grid gap-1.5"><Label>Sản phẩm *</Label><SheetLink doctype="Item" value={line.itemCode} onChange={(value) => void chooseItem(index, value)} readOnly={submitted} required fieldname={`detail_item_${index}`} /></div>
     <div className="grid gap-1.5"><Label>Màu sắc{line.requireColor ? " *" : ""}</Label>{line.itemCode && line.requireColor ? <SheetLink doctype="Item Color" value={line.color} onChange={(color) => patchLine(index, { color, formula: null })} readOnly={submitted} required fieldname={`detail_color_${index}`} /> : <Input value="" readOnly />}</div>
-    <div className="grid gap-1.5"><Label>Độ dày</Label><select className="h-9 border bg-white px-2 text-sm" value={line.thickness} disabled={submitted || line.fixedThickness || line.mode !== "WIDTH"} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{line.thickness && !thicknessOptions.includes(line.thickness) ? <option value={line.thickness}>{line.thickness} ly</option> : null}{thicknessOptions.map((value) => <option key={value} value={value}>{value} ly</option>)}</select></div>
-    <div className="grid gap-1.5"><Label>Chiều cao</Label><Input value={line.height} disabled={submitted || !(line.mode === "HEIGHT" || line.mode === "AREA")} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div>
-    <div className="grid gap-1.5"><Label>Chiều rộng</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
-    <div className="grid gap-1.5"><Label>Diện tích</Label><Input value={areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)} readOnly /></div>
+    <div className="grid gap-1.5"><Label>Độ dày</Label><select className="h-9 border bg-white px-2 text-sm" value={line.thickness} disabled={submitted || line.fixedThickness || line.mode !== "WIDTH"} onChange={(event) => patchLine(index, { thickness: event.target.value })}><option value=""></option>{line.thickness && !thicknessOptions.includes(line.thickness) ? <option value={line.thickness}>{line.thickness} mm</option> : null}{thicknessOptions.map((value) => <option key={value} value={value}>{value} mm</option>)}</select></div>
+    <div className="grid gap-1.5"><Label>Cao (m)</Label><Input value={line.height} disabled={submitted || !(line.mode === "HEIGHT" || line.mode === "AREA")} onChange={(event) => patchLine(index, { height: event.target.value, formula: null })} /></div>
+    <div className="grid gap-1.5"><Label>Rộng (m)</Label><Input value={line.width} disabled={submitted || !(line.mode === "WIDTH" || line.mode === "AREA")} onChange={(event) => patchLine(index, { width: event.target.value, formula: null })} /></div>
+    <div className="grid gap-1.5"><Label>DT (m²)</Label><Input value={areaPerSet(line) == null ? "" : number(areaPerSet(line), 3)} readOnly /></div>
     <div className="grid gap-1.5"><Label>SL *</Label><Input value={line.qty} disabled={submitted} onChange={(event) => patchLine(index, { qty: event.target.value, formula: null })} /></div>
     <div className="grid gap-1.5"><Label>Đơn giá</Label><Input value={line.rate == null ? "" : money(line.rate)} readOnly /></div>
     <div className="grid gap-1.5"><Label>ĐVT</Label><Input value={line.uom} readOnly /></div>
