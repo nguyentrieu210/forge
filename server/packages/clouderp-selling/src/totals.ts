@@ -140,19 +140,47 @@ function normalizeItem(item: SalesItem, index: number, currencyScale: number): S
   if (!item.item_code) throw errors.validation(`Item code is required at row ${index + 1}`);
   const qtyMicros = toScaledInt(item.qty, 6, `items[${index}].qty`);
   if (qtyMicros <= 0) throw errors.validation(`Quantity must be greater than zero at row ${index + 1}`);
-  // ERPNext rounds the rate at currency precision before multiplying quantity.
-  const rateMinor = toScaledInt(item.rate, currencyScale, `items[${index}].rate`);
-  if (rateMinor < 0) throw errors.validation(`Rate cannot be negative at row ${index + 1}`);
-  const roundedRate = fromScaledInt(rateMinor, currencyScale);
+
+  // `applySellingPricing` resolves Item Price before totals, so `item_price` proves that this
+  // rate came from server master data rather than an arbitrary client rate. In that case an
+  // explicit line discount is a real commercial input and must be applied exactly once.
+  // A Pricing Rule percentage has already been folded into `rate` by resolveServerPrice and
+  // carries `pricing_rule`, so it is intentionally not applied a second time here.
+  const serverRateMinor = toScaledInt(item.rate, currencyScale, `items[${index}].rate`);
+  if (serverRateMinor < 0) throw errors.validation(`Rate cannot be negative at row ${index + 1}`);
+  let effectiveRateMinor = serverRateMinor;
+  let normalizedLineDiscount: string | undefined;
+  const hasManualServerPricedDiscount = Boolean(item.item_price)
+    && !item.pricing_rule
+    && item.discount_percentage !== undefined
+    && item.discount_percentage !== null
+    && String(item.discount_percentage).trim() !== "";
+  if (hasManualServerPricedDiscount) {
+    const pctMicros = toScaledInt(item.discount_percentage!, 6, `items[${index}].discount_percentage`);
+    if (pctMicros < 0 || pctMicros > 100_000_000) {
+      throw errors.validation(`Discount percentage must be from 0 to 100 at row ${index + 1}`);
+    }
+    const discountRateMinor = percentOfMinor(
+      serverRateMinor,
+      fromScaledInt(pctMicros, 6),
+      6,
+      `items[${index}].discount_percentage`,
+    );
+    effectiveRateMinor = Math.max(0, serverRateMinor - discountRateMinor);
+    normalizedLineDiscount = fromScaledInt(pctMicros, 6);
+  }
+
+  const roundedRate = fromScaledInt(effectiveRateMinor, currencyScale);
   const amountMinor = multiplyScaled(item.qty, 6, roundedRate, currencyScale, currencyScale, `items[${index}].amount`);
   return {
     ...item,
     qty: fromScaledInt(qtyMicros, 6),
     rate: roundedRate,
     qty_micros: qtyMicros,
-    rate_minor: rateMinor,
+    rate_minor: effectiveRateMinor,
     amount_minor: amountMinor,
     amount: fromScaledInt(amountMinor, currencyScale),
+    ...(normalizedLineDiscount ? { discount_percentage: normalizedLineDiscount } : {}),
   };
 }
 
