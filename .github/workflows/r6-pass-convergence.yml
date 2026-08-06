@@ -2,6 +2,8 @@ name: R6 Pass Convergence
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "client/**"
   workflow_dispatch:
 permissions:
   contents: read
