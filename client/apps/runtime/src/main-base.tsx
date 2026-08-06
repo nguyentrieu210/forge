@@ -13,7 +13,7 @@ import {
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
-import { isRegisteredRuntimeExperience, resolveRuntimeAppChrome, resolveRuntimeExperience } from "./experience-registry.js";
+import { isRegisteredRuntimeExperience, resolveRuntimeAppChrome, resolveRuntimeDoctypeExperience, resolveRuntimeExperience } from "./experience-registry.js";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
 import "./styles.css";
@@ -516,6 +516,10 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
   useEffect(() => {
     setAssistantContext({ man_hinh: title, doctype, ban_ghi: name ?? null });
   }, [title, doctype, name]);
+  const appOwned = resolveRuntimeDoctypeExperience({ manifest, boot, navigate, doctype, name });
+  if (appOwned) {
+    return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={appOwned.activeKey} breadcrumbs={appOwned.breadcrumbs}>{appOwned.content}</Shell>;
+  }
   return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label: title }]}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigateKeepingListState} /></div></Shell>;
 }
 function PrintScreen(props: ScreenProps) {
