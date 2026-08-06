@@ -113,6 +113,15 @@ function activeOn(row: { effective_from?: string; effective_to?: string }, on: s
   return (!from || from <= on) && (!to || to >= on);
 }
 
+function defaultSalesDiscountPct(doorType: string): number {
+  return text(doorType) === "Cửa Đức" ? 15 : 0;
+}
+
+function measurementHeightBasis(customerGroup: CustomerGroup, policy: RawPolicy): "Cao lọt lòng" | "Cao phủ bì" {
+  const hasCoverOffset = policy.height_pb_offset_m != null && policy.height_pb_offset_m !== "";
+  return customerGroup === "Lẻ" && hasCoverOffset ? "Cao lọt lòng" : "Cao phủ bì";
+}
+
 async function readDoc<T extends Json>(call: ProductionPlatformCall, doctype: string, name: string): Promise<T> {
   const response = await call(`resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
   if (!response.ok) throw new Error(`Không đọc được ${doctype} ${name} (HTTP ${response.status}).`);
@@ -279,9 +288,11 @@ export async function calculateSalesWizardLineContext(
     const measurementWidthBasis = customerGroup === "Đại lý"
       ? pair.parsed.dealer_width_basis
       : pair.parsed.retail_width_basis;
+    const inputHeightBasis = measurementHeightBasis(customerGroup, pair.raw);
+    const defaultDiscountPct = defaultSalesDiscountPct(doorType);
 
-    // UI cần biết loại bề rộng phải nhập trước khi người dùng gõ số. Chế độ này chỉ resolve
-    // chính sách hiện hành; không chạy hình học, BOM hay ATP và không yêu cầu width/height.
+    // UI cần biết đúng ngôn ngữ đo và chiết khấu mặc định trước khi người dùng gõ số.
+    // Chế độ này chỉ resolve chính sách hiện hành; không chạy hình học, BOM hay ATP.
     if (checked(args.basis_only)) {
       return answer({
         item_code: itemCode,
@@ -294,14 +305,15 @@ export async function calculateSalesWizardLineContext(
         leaf_variant_options: leafVariantOptions,
         width_basis: measurementWidthBasis,
         input_width_basis: measurementWidthBasis,
-        input_height_basis: "Cao phủ bì",
+        input_height_basis: inputHeightBasis,
+        default_discount_pct: defaultDiscountPct,
       });
     }
 
     const inputWidth = positive(args.width_m, "Rộng");
     const inputHeight = positive(args.height_m, "Cao");
     const widthInputBasis = text(args.width_input_basis) || measurementWidthBasis;
-    const heightInputBasis = text(args.height_input_basis) || "Cao phủ bì";
+    const heightInputBasis = text(args.height_input_basis) || inputHeightBasis;
     const setCount = integer(args.set_count ?? 1, "Số bộ");
 
     const deduction = checked(args.has_butterfly_bracket) && pair.parsed.butterfly_cut_deduction_m != null
@@ -358,6 +370,7 @@ export async function calculateSalesWizardLineContext(
       ray_type: requestedRay || text(pair.raw.ray_type) || null,
       ray_options: rayOptions,
       leaf_variant_options: leafVariantOptions,
+      default_discount_pct: defaultDiscountPct,
       input_width_basis: widthInputBasis,
       input_width_m: round(inputWidth),
       cover_width_m: round(measuredWidth),
