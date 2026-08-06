@@ -15,7 +15,7 @@ concurrency:
 jobs:
   sync:
     name: Backup and sync Alumdoor Cutting Policy fixtures
-    if: github.event.issue.number == 757 && github.event.comment.body == '/sync-cutting-policy'
+    if: github.event.issue.number == 757 && github.event.comment.body == '/sync-cutting-policy' && github.event.comment.user.login == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
