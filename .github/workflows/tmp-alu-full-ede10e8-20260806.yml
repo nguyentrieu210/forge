@@ -1,0 +1,365 @@
+name: TMP ALU Full Production Release ede10e8 2026-08-06
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tmp-alu-full-ede10e8-20260806.yml"
+      - "ops/releases/alu-full-ede10e8-20260806-authorization.txt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-alu-tenant-production
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Validate, backup, restore twice, migrate, deploy full ALU 2.3.0, verify
+    if: github.head_ref == 'release/alu-full-ede10e8-20260806'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: production
+    env:
+      TENANT: alu
+      TARGET_SHA: ede10e8cbedf4ad238834b0e9d9afe0c640080a9
+      AUTH_FILE: ops/releases/alu-full-ede10e8-20260806-authorization.txt
+      APP_WORKER: cloudforge-app-alumdoor
+      DISPATCH_NAMESPACE: cloudforge-production
+      FORGE_ORIGIN: https://alu.kairo.vn
+      EXPECTED_APP_VERSION: 2.3.0
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+      VITE_FORGE_RELEASE_SHA: ede10e8cbedf4ad238834b0e9d9afe0c640080a9
+      BACKUP_DIR: /tmp/alu-230-backup
+      EVIDENCE_DIR: /tmp/alu-230-release-evidence
+
+    steps:
+      - name: Checkout temporary release authorization branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify explicit authorization and immutable main target
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$BACKUP_DIR" "$EVIDENCE_DIR"
+          test -f "$AUTH_FILE"
+          grep -Fxq 'ACTION=FULL_ALU_PRODUCTION_RELEASE' "$AUTH_FILE"
+          grep -Fxq 'TENANT=alu' "$AUTH_FILE"
+          grep -Fxq 'TARGET_SHA=ede10e8cbedf4ad238834b0e9d9afe0c640080a9' "$AUTH_FILE"
+          grep -Fxq 'SOURCE_PR=732' "$AUTH_FILE"
+          grep -Fxq 'R6_RUN=31046753403' "$AUTH_FILE"
+          grep -Fxq 'APP=alumdoor' "$AUTH_FILE"
+          grep -Fxq 'APP_WORKER=cloudforge-app-alumdoor' "$AUTH_FILE"
+          grep -Fxq 'EXPECTED_PACKAGE=2.3.0' "$AUTH_FILE"
+          grep -Fxq 'APPROVAL=EXPLICIT_USER_APPROVAL_2026-08-06' "$AUTH_FILE"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${FORGE_ADMIN_USER:-}"
+          test -n "${FORGE_ADMIN_PASSWORD:-}"
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$TARGET_SHA" || {
+            echo "Refusing production release: authorized target $TARGET_SHA is not current main $current_main."
+            exit 1
+          }
+          mapfile -t changed < <(git diff --name-only "$TARGET_SHA"...HEAD | sort -u)
+          test "${#changed[@]}" -eq 2
+          printf '%s\n' "${changed[@]}" | grep -Fxq '.github/workflows/tmp-alu-full-ede10e8-20260806.yml'
+          printf '%s\n' "${changed[@]}" | grep -Fxq 'ops/releases/alu-full-ede10e8-20260806-authorization.txt'
+          printf 'run_id=%s\ntarget_sha=%s\ntenant=%s\nsource_pr=732\nr6_run=31046753403\nauthorization=explicit\nstarted_at=%s\n' \
+            "$GITHUB_RUN_ID" "$TARGET_SHA" "$TENANT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$EVIDENCE_DIR/state.txt"
+
+      - name: Checkout exact authorized merged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Reconcile frozen-install worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              pnpm-lock.yaml) git restore --source=HEAD --staged --worktree -- pnpm-lock.yaml ;;
+              *) echo "Refusing full release: dependency install changed unexpected source path: $file"; exit 1 ;;
+            esac
+          done
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+      - name: Build and validate exact production candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter cloudforge run build 2>&1 | tee "$EVIDENCE_DIR/cloudforge-build.log"
+          pnpm --filter metaforge run build 2>&1 | tee "$EVIDENCE_DIR/metaforge-build.log"
+          pnpm --filter metaforge run typecheck 2>&1 | tee "$EVIDENCE_DIR/metaforge-typecheck.log"
+          node --test \
+            server/tests/alumdoor-sales-navigation-contract.test.mjs \
+            server/tests/alumdoor-procurement-navigation-contract.test.mjs \
+            server/tests/alumdoor-purchase-default-company.test.mjs \
+            server/tests/alumdoor-purchase-direct-receipt.test.mjs \
+            server/tests/sales-wizard-context.test.mjs \
+            2>&1 | tee "$EVIDENCE_DIR/alumdoor-contracts.log"
+          node server/scripts/verify-alumdoor-meta-completeness.mjs 2>&1 | tee "$EVIDENCE_DIR/meta-completeness.log"
+          node server/scripts/forge-app.mjs server/briefs/alumdoor-v2.json --dry-run 2>&1 | tee "$EVIDENCE_DIR/package-dry-run.log"
+          grep -Fq 'DRY_RUN_PASS alumdoor' "$EVIDENCE_DIR/package-dry-run.log"
+          grep -Fq 'app=alumdoor@2.3.0' "$EVIDENCE_DIR/package-dry-run.log"
+          node server/scripts/stage-client-bundle.mjs 2>&1 | tee "$EVIDENCE_DIR/stage-client.log"
+          grep -Fq "release=$TARGET_SHA" "$EVIDENCE_DIR/stage-client.log"
+          node server/scripts/stage-client-bundle.mjs --check 2>&1 | tee "$EVIDENCE_DIR/stage-check.log"
+          printf 'build=pass\ntypecheck=pass\ncontracts=pass\npackage_identity=alumdoor@2.3.0\nclient_stage=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify canonical release safety before mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix server run verify:release-safety 2>&1 | tee "$EVIDENCE_DIR/release-safety.log"
+          printf 'r6_candidate=pass:31046753403\nrelease_safety=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Guard generated release worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t dirty < <({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)
+          for file in "${dirty[@]}"; do
+            case "$file" in
+              client/apps/kho/dist-mobile/*|server/apps/gateway-worker/public/*) ;;
+              *) echo "Refusing full release: unexpected worktree change after exact build: $file"; exit 1 ;;
+            esac
+          done
+
+      - name: Resolve source-authoritative Alumdoor package version
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const brief = await readBriefSource('briefs/alumdoor-v2.json'); process.stdout.write(brief.version);")"
+          test "$version" = "$EXPECTED_APP_VERSION" || { echo "Expected Alumdoor $EXPECTED_APP_VERSION, source resolves $version"; exit 1; }
+          printf 'alumdoor_source_version=%s\n' "$version" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Plan tenant migrations
+        working-directory: server
+        run: node scripts/migrate-tenant.mjs --tenant "$TENANT"
+
+      - name: Create and verify fresh production backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" 2>&1 | tee "$EVIDENCE_DIR/backup-plan.log"
+          node server/scripts/backup-tenant.mjs --tenant "$TENANT" --execute --output-dir "$BACKUP_DIR" 2>&1 | tee "$EVIDENCE_DIR/backup-live.log"
+          mapfile -t backups < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name '*.sql' -print | sort)
+          test "${#backups[@]}" -eq 1
+          backup_sql="${backups[0]}"
+          node server/scripts/verify-tenant-backup.mjs --tenant "$TENANT" --file "$backup_sql" --output "$EVIDENCE_DIR/backup-verification.json"
+          backup_sha="$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(j.sha256||j.source_sha256||'')" "$EVIDENCE_DIR/backup-verification.json")"
+          test -n "$backup_sha"
+          printf 'BACKUP_SQL=%s\nBACKUP_SHA=%s\n' "$backup_sql" "$backup_sha" >> "$GITHUB_ENV"
+          printf 'backup=pass\nbackup_sha256=%s\n' "$backup_sha" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Copy fresh backup to protected artifact storage
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-230-pre-deploy-backup-${{ github.run_id }}
+          path: /tmp/alu-230-backup/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create two isolated restore-drill databases
+        shell: bash
+        run: |
+          set -euo pipefail
+          drill_a="cloudforge-drill-alu-230-${GITHUB_RUN_ID}-a"
+          drill_b="cloudforge-drill-alu-230-${GITHUB_RUN_ID}-b"
+          printf 'DRILL_A=%s\nDRILL_B=%s\n' "$drill_a" "$drill_b" >> "$GITHUB_ENV"
+          pnpm --dir server exec wrangler d1 create "$drill_a" --location apac 2>&1 | tee "$EVIDENCE_DIR/drill-a-create.log"
+          touch /tmp/alu-230-drill-a-created
+          pnpm --dir server exec wrangler d1 create "$drill_b" --location apac 2>&1 | tee "$EVIDENCE_DIR/drill-b-create.log"
+          touch /tmp/alu-230-drill-b-created
+
+      - name: Restore and verify the same backup twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/restore-tenant-drill.mjs --tenant "$TENANT" --target "$DRILL_A" --file "$BACKUP_SQL" 2>&1 | tee "$EVIDENCE_DIR/drill-a-plan.log"
+          node server/scripts/restore-tenant-drill.mjs --tenant "$TENANT" --target "$DRILL_A" --file "$BACKUP_SQL" --execute --confirm "$DRILL_A" 2>&1 | tee "$EVIDENCE_DIR/drill-a-live.log"
+          node server/scripts/restore-tenant-drill.mjs --tenant "$TENANT" --target "$DRILL_B" --file "$BACKUP_SQL" 2>&1 | tee "$EVIDENCE_DIR/drill-b-plan.log"
+          node server/scripts/restore-tenant-drill.mjs --tenant "$TENANT" --target "$DRILL_B" --file "$BACKUP_SQL" --execute --confirm "$DRILL_B" 2>&1 | tee "$EVIDENCE_DIR/drill-b-live.log"
+          node - "$BACKUP_SQL.$DRILL_A.restore.json" "$BACKUP_SQL.$DRILL_B.restore.json" "$BACKUP_SHA" <<'NODE'
+          const fs = require('fs');
+          const [aPath, bPath, expected] = process.argv.slice(2);
+          const a = JSON.parse(fs.readFileSync(aPath, 'utf8'));
+          const b = JSON.parse(fs.readFileSync(bPath, 'utf8'));
+          if (a.source_sha256 !== expected || b.source_sha256 !== expected) throw new Error('restore drill checksum mismatch');
+          if (a.target_database_id === b.target_database_id) throw new Error('restore drills reused one database');
+          if (a.routes_changed !== false || b.routes_changed !== false) throw new Error('restore drill changed routes');
+          const ok = (row) => JSON.stringify(row.integrity).toLowerCase().includes('ok');
+          if (!ok(a) || !ok(b)) throw new Error('restore drill quick_check failed');
+          if (a.table_count !== b.table_count || a.table_count < 1) throw new Error('restore drill table count mismatch');
+          console.log(`RESTORE_DRILL_PASS tables=${a.table_count}`);
+          NODE
+          printf 'restore_drill_a=pass\nrestore_drill_b=pass\nrestore_drill_sha256=%s\n' "$BACKUP_SHA" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Recheck exact main immediately before production mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          current_main="$(git rev-parse origin/main)"
+          test "$current_main" = "$TARGET_SHA" || {
+            echo "Refusing mutation: main moved from authorized $TARGET_SHA to $current_main."
+            exit 1
+          }
+          printf 'pre_mutation_main_guard=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Migrate tenant
+        working-directory: server
+        run: node scripts/migrate-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+
+      - name: Deploy tenant Worker
+        working-directory: server
+        run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+
+      - name: Deploy Alumdoor app Worker
+        working-directory: server
+        run: |
+          pnpm exec wrangler deploy \
+            --config apps-src/alumdoor-worker/wrangler.jsonc \
+            --name "$APP_WORKER" \
+            --dispatch-namespace "$DISPATCH_NAMESPACE" \
+            --strict
+
+      - name: Install exact Alumdoor metadata package
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --origin "$FORGE_ORIGIN" --admin "$FORGE_ADMIN_USER" 2>&1 | tee "$EVIDENCE_DIR/app-install.log"
+          grep -Fq "app=alumdoor@$EXPECTED_APP_VERSION" "$EVIDENCE_DIR/app-install.log"
+          grep -Fq '^LIVE  https://alu.kairo.vn' "$EVIDENCE_DIR/app-install.log"
+          printf 'alumdoor_metadata=installed:%s\n' "$EXPECTED_APP_VERSION" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Deploy Gateway and exact UI bundle
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler deploy --config apps/gateway-worker/wrangler.jsonc 2>&1 | tee "$EVIDENCE_DIR/gateway-deploy.log"
+          printf 'gateway=deployed\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Verify exact production release and Alumdoor operational navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node server/scripts/sre-health-snapshot.mjs \
+            --base "$FORGE_ORIGIN" \
+            --allow-remote \
+            --confirm-host alu.kairo.vn \
+            --expected-release-sha "$TARGET_SHA" \
+            --attempts 12 \
+            --delay-ms 5000 \
+            --output "$EVIDENCE_DIR/health.json" \
+            2>&1 | tee "$EVIDENCE_DIR/health.log"
+
+          guest_code="$(curl --silent --show-error --max-time 15 -o /tmp/guest.json -w '%{http_code}' \
+            -H 'content-type: application/json' -H 'Cache-Control: no-cache' \
+            -X POST "$FORGE_ORIGIN/api/method/frappe.desk.desktop.get_bootinfo?sha=$TARGET_SHA&run=$GITHUB_RUN_ID" --data '{}')"
+          test "$guest_code" = "403"
+
+          node --input-type=module <<'NODE' | tee "$EVIDENCE_DIR/production-nav.log"
+          const origin = process.env.FORGE_ORIGIN.replace(/\/$/, '');
+          const user = process.env.FORGE_ADMIN_USER;
+          const password = process.env.FORGE_ADMIN_PASSWORD;
+          const jar = new Map(); let csrf = '';
+          function store(response) { for (const value of response.headers.getSetCookie?.() ?? []) { const pair=value.split(';')[0]; const i=pair.indexOf('='); if(i>0) jar.set(pair.slice(0,i).trim(), pair.slice(i+1).trim()); } }
+          async function call(method, body={}) { const response=await fetch(`${origin}/api/method/${method}`,{method:'POST',headers:{'content-type':'application/json','cache-control':'no-cache',...(jar.size?{cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}:{}),...(csrf?{'x-frappe-csrf-token':csrf}:{})},body:JSON.stringify(body)}); store(response); csrf=response.headers.get('x-frappe-csrf-token')??csrf; const text=await response.text(); const parsed=JSON.parse(text); if(!response.ok) throw new Error(`${method} HTTP ${response.status}: ${parsed.message??text.slice(0,200)}`); return parsed.message??parsed; }
+          await call('login',{usr:user,pwd:password});
+          const manifest=await call('metaforge.api.get_app_manifest',{app:'alumdoor'});
+          const nav=Array.isArray(manifest.nav)?manifest.nav:[];
+          const sales=nav.filter((entry)=>entry?.group==='Bán hàng');
+          const purchase=nav.filter((entry)=>entry?.group==='Mua hàng');
+          const salesKeys=['alumdoor-operations:workbench','Sales Order','Delivery Note','action:giao-hang-dispatch','action:bao-cao-ban-hang','action:lich-su-ban-hang'];
+          const salesLabels=['Bán hàng','Đơn hàng','Phiếu xuất kho','Giao hàng','Báo cáo','Lịch sử bán hàng'];
+          const purchaseKeys=['action:tao-don-mua','action:nhap-nhom-hang-loat','action:bao-cao-giao-hang-ncc','action:lich-su-mua-hang'];
+          const purchaseLabels=['Mua hàng','Nhập hàng','Báo cáo','Lịch sử mua hàng'];
+          if(JSON.stringify(sales.map((e)=>e.key))!==JSON.stringify(salesKeys)) throw new Error(`sales keys mismatch ${JSON.stringify(sales)}`);
+          if(JSON.stringify(sales.map((e)=>e.label))!==JSON.stringify(salesLabels)) throw new Error(`sales labels mismatch ${JSON.stringify(sales)}`);
+          if(JSON.stringify(purchase.map((e)=>e.key))!==JSON.stringify(purchaseKeys)) throw new Error(`purchase keys mismatch ${JSON.stringify(purchase)}`);
+          if(JSON.stringify(purchase.map((e)=>e.label))!==JSON.stringify(purchaseLabels)) throw new Error(`purchase labels mismatch ${JSON.stringify(purchase)}`);
+          for(const hidden of ['Purchase Order','Purchase Receipt','action:nhap-nhom-fifo','action:doi-soat-giao-hang-ncc','action:giao-hang-theo-ngay','action:tinh-cong-thuc-cua']) if(nav.some((entry)=>entry?.key===hidden)) throw new Error(`hidden entry visible: ${hidden}`);
+          console.log(`ALUMDOOR_230_NAV_PASS nav=${nav.length} sales=${sales.length} purchase=${purchase.length}`);
+          NODE
+          printf 'migration=pass\ntenant_worker=deployed\nalumdoor_worker=deployed\nproduction_health=pass\nguest_boundary=pass\noperational_navigation=pass\ncompleted_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Remove temporary restore-drill databases
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          cleanup() {
+            local name="$1" marker="$2" expected="$3"
+            if [ ! -f "$marker" ]; then return 0; fi
+            test "$name" = "$expected"
+            case "$name" in
+              cloudforge-drill-alu-230-${GITHUB_RUN_ID}-a|cloudforge-drill-alu-230-${GITHUB_RUN_ID}-b) ;;
+              *) echo "Refusing unexpected D1 cleanup target: $name" >&2; exit 1 ;;
+            esac
+            pnpm --dir server exec wrangler d1 delete "$name" --skip-confirmation
+          }
+          cleanup "${DRILL_A:-}" /tmp/alu-230-drill-a-created "cloudforge-drill-alu-230-${GITHUB_RUN_ID}-a"
+          cleanup "${DRILL_B:-}" /tmp/alu-230-drill-b-created "cloudforge-drill-alu-230-${GITHUB_RUN_ID}-b"
+          printf 'drill_cleanup=pass\n' >> "$EVIDENCE_DIR/state.txt"
+
+      - name: Publish release summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '# Alumdoor 2.3.0 exact-main production release'
+            echo
+            echo '```text'
+            cat "$EVIDENCE_DIR/state.txt" 2>/dev/null || echo 'state.txt missing'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alu-230-full-release-${{ github.run_id }}
+          path: /tmp/alu-230-release-evidence/
+          if-no-files-found: warn
+          retention-days: 30
