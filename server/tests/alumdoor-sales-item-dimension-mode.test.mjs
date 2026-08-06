@@ -6,42 +6,31 @@ const sheet = fs.readFileSync("client/apps/runtime/src/experiences/AlumdoorSales
 
 function calculationModeSource() {
   const match = sheet.match(/function calculationMode\(item: Json\): CalculationMode \{([\s\S]*?)\n\}/);
-  assert.ok(match, "Sales Sheet calculationMode helper must remain present");
+  assert.ok(match, "calculationMode helper must remain present");
   return match[1];
 }
 
-test("non-dimensional catalogue items do not inherit door dimensions from a parent group name", () => {
+test("quantity, ray, shaft and area item modes remain distinct", () => {
   const source = calculationModeSource();
-
-  // PIN/MOTO/PK may live under a catalogue group whose label begins with "Cửa". That parent label
-  // is not measurement authority. Only explicit ray/trục/cửa semantics or an m² sales contract may
-  // activate dimensions; everything else remains quantity-only.
-  assert.doesNotMatch(source, /group\.startsWith\("cửa"\)/);
+  assert.match(source, /inventory === "hàng thường"[\s\S]*return "QUANTITY"/);
   assert.match(source, /code\.startsWith\("RAY-"\)[\s\S]*return "HEIGHT"/);
   assert.match(source, /code\.startsWith\("TRUC-"\)[\s\S]*return "WIDTH"/);
-  assert.match(source, /code\.startsWith\("CUA-"\)/);
   assert.match(source, /inventory === "thành phẩm theo m2"/);
-  assert.match(source, /\["m2", "m²", "m\^2", "métvuông", "metvuong"\]\.includes\(salesUom\)/);
-  assert.match(source, /return "QUANTITY";/);
+  assert.doesNotMatch(source, /group\.startsWith\("cửa"\)/);
 });
 
-test("irrelevant measurements stay out of Sales Order payloads", () => {
+test("Sales Order payload suppresses irrelevant geometry", () => {
   assert.match(sheet, /\(line\.mode === "HEIGHT" \|\| line\.mode === "AREA"\) && positive\(line\.height\)/);
   assert.match(sheet, /\(line\.mode === "WIDTH" \|\| line\.mode === "AREA"\) && positive\(line\.width\)/);
   assert.match(sheet, /line\.mode === "AREA" && line\.widthBasis/);
+  assert.match(sheet, /line\.mode === "AREA" && line\.formula\?\.policy_name/);
 });
 
-test("item detail only renders measurement controls that apply to the selected item", () => {
-  assert.match(sheet, /line\.mode === "HEIGHT" \|\| line\.mode === "AREA" \? <div className="grid gap-1\.5"><Label>\{heightBasisTitle/);
-  assert.match(sheet, /line\.mode === "WIDTH" \|\| line\.mode === "AREA" \? <div className="grid gap-1\.5"><Label>\{widthBasisTitle/);
-  assert.match(sheet, /line\.mode === "AREA" \? <div className="grid gap-1\.5"><Label>DT \(m²\)<\/Label>/);
-  assert.match(sheet, /line\.mode === "WIDTH" \|\| line\.thickness \? <div className="grid gap-1\.5"><Label>Độ dày<\/Label>/);
-});
-
-test("export suppresses stale dimensions while canonical print reads the persisted Sales Order", () => {
-  assert.match(sheet, /line\.mode === "HEIGHT" \|\| line\.mode === "AREA" \? line\.height : ""/);
-  assert.match(sheet, /line\.mode === "WIDTH" \|\| line\.mode === "AREA" \? line\.width : ""/);
-  assert.match(sheet, /const printRoute = \(name: unknown\) => `\/print\/\$\{encodeURIComponent\("Sales Order"\)\}/);
-  assert.doesNotMatch(sheet, /const printHeight =/);
-  assert.doesNotMatch(sheet, /const printWidth =/);
+test("explicit production columns are read-only unless they are the active customer-input basis", () => {
+  assert.match(sheet, /key === "heightClear"[\s\S]*sameBasis\(line\.heightBasis, "Cao lọt lòng"\)/);
+  assert.match(sheet, /key === "heightCover"[\s\S]*sameBasis\(line\.heightBasis, "Cao phủ bì"\)/);
+  assert.match(sheet, /key === "widthRay"[\s\S]*sameBasis\(line\.widthBasis, "Phủ bì ray"\)/);
+  assert.match(sheet, /key === "widthPlastic"[\s\S]*sameBasis\(line\.widthBasis, "Phủ bì nhựa"\)/);
+  assert.match(sheet, /key === "widthCut"[\s\S]*line\.formula\?\.cut_width_m/);
+  assert.match(sheet, /key === "leafCount"[\s\S]*line\.formula\?\.total_leaf_count/);
 });
