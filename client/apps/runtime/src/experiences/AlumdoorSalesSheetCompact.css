@@ -27,85 +27,26 @@
   justify-content: center !important;
 }
 
-/* Product */
-.alumdoor-sales-sheet-compact table thead th:nth-child(3),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":0"] {
-  width: 14rem !important;
-  min-width: 14rem !important;
+/*
+ * Width authority lives in AlumdoorSalesSheetV2.COLUMNS. The old stylesheet repeated widths with
+ * nth-child + !important, which both defeated component changes and became incorrect when a user
+ * hid columns. Business headers expose the browser's horizontal resize handle; table layout then
+ * carries the resized header width through the body in both normal and expanded grids.
+ */
+.alumdoor-sales-sheet-compact table thead th[style*="width"] {
+  min-width: 3.5rem !important;
+  max-width: 40rem;
+  overflow: hidden;
+  resize: horizontal;
 }
 
-/* Color */
-.alumdoor-sales-sheet-compact table thead th:nth-child(4),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":1"] {
-  width: 8rem !important;
-  min-width: 8rem !important;
-}
-
-/* Thickness */
-.alumdoor-sales-sheet-compact table thead th:nth-child(5),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":2"] {
-  width: 6rem !important;
-  min-width: 6rem !important;
-}
-
-/* Height */
-.alumdoor-sales-sheet-compact table thead th:nth-child(6),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":3"] {
-  width: 7rem !important;
-  min-width: 7rem !important;
-}
-
-/* Width */
-.alumdoor-sales-sheet-compact table thead th:nth-child(7),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":4"] {
-  width: 7rem !important;
-  min-width: 7rem !important;
-}
-
-/* Area */
-.alumdoor-sales-sheet-compact table thead th:nth-child(8),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":5"] {
-  width: 6.5rem !important;
-  min-width: 6.5rem !important;
-}
-
-/* Quantity */
-.alumdoor-sales-sheet-compact table thead th:nth-child(9),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":6"] {
-  width: 4.5rem !important;
-  min-width: 4.5rem !important;
-}
-
-/* Rate */
-.alumdoor-sales-sheet-compact table thead th:nth-child(10),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":7"] {
-  width: 7.5rem !important;
-  min-width: 7.5rem !important;
-}
-
-/* Discount */
-.alumdoor-sales-sheet-compact table thead th:nth-child(11),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":8"] {
-  width: 5rem !important;
-  min-width: 5rem !important;
-}
-
-/* UOM */
-.alumdoor-sales-sheet-compact table thead th:nth-child(12),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":9"] {
-  width: 5rem !important;
-  min-width: 5rem !important;
-}
-
-/* Amount */
-.alumdoor-sales-sheet-compact table thead th:nth-child(13),
-.alumdoor-sales-sheet-compact table tbody td[data-cell$=":10"] {
-  width: 8rem !important;
-  min-width: 8rem !important;
+.alumdoor-sales-sheet-compact table tbody td[data-cell] {
+  width: auto !important;
+  min-width: 3.5rem !important;
 }
 
 .alumdoor-sales-sheet-compact table input,
 .alumdoor-sales-sheet-compact table select {
-  padding-left: 0.35rem !important;
-  padding-right: 0.35rem !important;
+  padding-left: 0.3rem !important;
+  padding-right: 0.3rem !important;
 }
