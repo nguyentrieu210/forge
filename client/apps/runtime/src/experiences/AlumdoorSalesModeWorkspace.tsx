@@ -1,4 +1,4 @@
-import { AlumdoorSalesSheet } from "./AlumdoorSalesSheet.js";
+import { AlumdoorSalesSheetV2 } from "./AlumdoorSalesSheetV2.js";
 
 /**
  * One operational sales surface for Alumdoor.
@@ -7,5 +7,5 @@ import { AlumdoorSalesSheet } from "./AlumdoorSalesSheet.js";
  * pricing/cutting rules stay behind the Alumdoor worker; this workspace only owns presentation.
  */
 export function AlumdoorSalesModeWorkspace() {
-  return <AlumdoorSalesSheet />;
+  return <AlumdoorSalesSheetV2 />;
 }
