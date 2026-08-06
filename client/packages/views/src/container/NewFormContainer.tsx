@@ -5,32 +5,13 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { applyContextPolicy, resolveFormRenderPolicy, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
+import { applyContextPolicy, buildMetadataDefaults, resolveFormRenderPolicy, serializeCreateDocument, type Doc, type DocTypeMeta } from "@metaforge/core";
 import { Button, ConfirmDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
 import { useMetaForge } from "./provider.js";
 import { useFormMeta, useCapabilities, NO_CAPS } from "./hooks.js";
 import { consumeDuplicate } from "./duplicate.js";
 import { editableCodeField, suggestEditableCode } from "./editable-code.js";
-
-const pad = (n: number): string => String(n).padStart(2, "0");
-
-/** `f.default` có thể là biểu thức "ma thuật" của Frappe (Desk resolve bằng đồng hồ máy TRƯỚC khi
- * gửi) chứ không phải giá trị literal — gửi NGUYÊN CHUỖI "Today"/"Now" cho field Date/Datetime khiến
- * MySQL parse lỗi (1292 Incorrect date value), phát hiện LIVE qua create ToDo (`date` default="Today").
- * Resolve như Desk làm, KHÔNG gửi literal. */
-function resolveDefault(f: DocField): string | undefined {
-  if (f.default == null || f.default === "") return undefined;
-  if (f.default === "Today" && f.fieldtype === "Date") {
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
-  if (f.default === "Now" && f.fieldtype === "Datetime") {
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-  return f.default;
-}
 
 export interface NewFormContainerProps {
   doctype: string;
@@ -49,11 +30,14 @@ function blankDoc(meta: DocTypeMeta, contextDefaults: Record<string, string> = {
   // `read_only_depends_on: "eval: !doc.__islocal"` nghĩa là "chỉ sửa được lúc tạo mới" — vd
   // Warehouse.company. Không đặt cờ này thì `!undefined` = true ⇒ field bị KHOÁ ngay trên form tạo
   // mới, người dùng không chọn được gì và cũng không lưu nổi vì field đó lại bắt buộc.
-  const doc: Doc = { name: "new", doctype: meta.name, docstatus: 0, __islocal: 1, __unsaved: 1 };
-  for (const f of meta.fields ?? []) {
-    const v = resolveDefault(f);
-    if (v !== undefined) doc[f.fieldname] = v;
-  }
+  const doc: Doc = {
+    name: "new",
+    doctype: meta.name,
+    docstatus: 0,
+    __islocal: 1,
+    __unsaved: 1,
+    ...buildMetadataDefaults(meta),
+  };
   for (const [fieldname, value] of Object.entries(contextDefaults)) {
     if (meta.fields.some((f) => f.fieldname === fieldname) && (doc[fieldname] == null || doc[fieldname] === "")) doc[fieldname] = value;
   }
