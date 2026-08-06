@@ -16,6 +16,8 @@ The owner instruction for the Sales Sheet now establishes these operator-facing 
 4. Customer type must immediately re-resolve the measurement vocabulary from the vertical domain authority. For the current Cửa Đức policy this means `Đại lý -> Phủ bì nhựa`, `Lẻ -> Phủ bì ray`; height input likewise comes from the policy context rather than a React constant.
 5. Changing a semantic measurement basis invalidates the old entered dimension so the same number is never silently reinterpreted.
 
+This decision supersedes the older sentence in `docs/ALUMDOOR-BAN-HANG-WIZARD.md` §5.2 that prohibited manual `customer_group` selection. The Customer record remains the default source, but the current order may override the `Đại lý / Khách lẻ` snapshot without mutating the master.
+
 The runtime therefore may auto-fill the German-door 15% default from `alumdoor.sales.production_line_context`. React remains a projection and does not own the numeric rule.
 
 ## Why this dependency existed
