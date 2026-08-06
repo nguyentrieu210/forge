@@ -60,6 +60,7 @@ export function MetadataIntelligenceEditor({ meta, onChange }: MetadataIntellige
     field.serverEnforced ? "server-enforced" : null,
     field.dirtyGuard ? `dirty:${field.dirtyGuard}` : null,
   ].filter(Boolean) as string[];
+  const linkFiltersText = typeof field.link_filters === "string" ? field.link_filters : "";
 
   return (
     <section className="overflow-hidden rounded-2xl border bg-card shadow-sm" aria-label="Metadata intelligence">
@@ -108,7 +109,7 @@ export function MetadataIntelligenceEditor({ meta, onChange }: MetadataIntellige
               <Input className="font-mono text-xs" value={field.fetch_from ?? ""} onChange={(event) => apply({ fetch_from: event.target.value || undefined })} placeholder="customer.customer_name" />
             </FieldLabel>
             <FieldLabel label="link_filters">
-              <Textarea className="font-mono text-xs" value={field.link_filters ?? ""} onChange={(event) => apply({ link_filters: event.target.value || undefined })} rows={3} placeholder={'[["Item","disabled","=",0]]'} />
+              <Textarea className="font-mono text-xs" value={linkFiltersText} onChange={(event) => apply({ link_filters: event.target.value || undefined })} rows={3} placeholder={'[["Item","disabled","=",0]]'} />
             </FieldLabel>
             <FieldLabel label="dirtyGuard">
               <Select value={field.dirtyGuard ?? "auto"} onValueChange={(value) => apply({ dirtyGuard: value === "auto" ? undefined : "preserve_user_value" })}>
