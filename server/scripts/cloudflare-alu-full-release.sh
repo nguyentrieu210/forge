@@ -101,6 +101,12 @@ deploy_release() {
   guard_generated_release_files
   cd "$REPO_ROOT"
 
+  # Workers Builds sets WRANGLER_CI_OVERRIDE_NAME to the Worker connected in the
+  # dashboard (cloudforge-gateway). If it remains set, every nested wrangler deploy
+  # is renamed to that Worker, including cloudforge-app-alumdoor. Each deploy below
+  # already has an authoritative config/name, so disable the CI-level name override.
+  unset WRANGLER_CI_OVERRIDE_NAME
+
   echo "Planning tenant migrations for $TENANT"
   (cd server && node scripts/migrate-tenant.mjs --tenant "$TENANT")
 
