@@ -313,7 +313,7 @@ export async function calculateSalesWizardLineContext(
     const inputWidth = positive(args.width_m, "Rộng");
     const inputHeight = positive(args.height_m, "Cao");
     const widthInputBasis = text(args.width_input_basis) || measurementWidthBasis;
-    const heightInputBasis = text(args.height_input_basis) || inputHeightBasis;
+    const heightInputBasis = text(args.height_input_basis) || "Cao phủ bì";
     const setCount = integer(args.set_count ?? 1, "Số bộ");
 
     const deduction = checked(args.has_butterfly_bracket) && pair.parsed.butterfly_cut_deduction_m != null
