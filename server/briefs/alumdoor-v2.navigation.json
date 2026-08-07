@@ -1,209 +1,53 @@
 {
   "version": "2.3.2",
-  "//": "Operational presentation sidecar. Daily work is task-first: Sales/Purchase remain the reference pattern; Stock/Manufacturing/Debt/Warranty expose operator actions while reports stay contextual/global and correction/setup stays installed outside the daily tab strip.",
+  "//": "Operational presentation sidecar. Daily work is declaration-driven: canonical DocTypes and generic actions/reports remain; bespoke React workbench routes are intentionally absent.",
   "dimensions": ["company", "warehouse"],
   "doctypes": {
-    "Purchase Order": {
-      "label": "Đơn mua",
-      "menu": false,
-      "icon": "shopping-bag",
-      "group": "Mua hàng"
-    },
-    "Purchase Receipt": {
-      "menu": false
-    },
-    "Sales Order": {
-      "label": "Danh sách đơn hàng",
-      "menu": true,
-      "icon": "shopping-cart",
-      "group": "Bán hàng"
-    },
-    "Delivery Note": {
-      "label": "Phiếu xuất kho",
-      "menu": true,
-      "icon": "package-minus",
-      "group": "Bán hàng"
-    },
-    "Stock Entry": {
-      "label": "Nhập / xuất / chuyển",
-      "menu": true,
-      "icon": "arrow-left-right",
-      "group": "Kho"
-    },
-    "Cut Order": {
-      "menu": false
-    },
-    "Stock Reservation": {
-      "menu": false
-    },
-    "Stock Reconciliation": {
-      "label": "Phiếu kiểm kê",
-      "menu": true,
-      "icon": "clipboard-check",
-      "group": "Kho"
-    },
-    "Work Order": {
-      "label": "Lệnh sản xuất",
-      "menu": true,
-      "icon": "factory",
-      "group": "Sản xuất"
-    },
-    "Bill of Materials": {
-      "menu": false
-    },
-    "Production Standard": {
-      "menu": false
-    },
-    "Payment Entry": {
-      "label": "Thu / chi công nợ",
-      "menu": true,
-      "icon": "hand-coins",
-      "group": "Công nợ"
-    },
-    "Warranty Claim": {
-      "label": "Hồ sơ bảo hành",
-      "menu": true,
-      "icon": "shield-check",
-      "group": "Bảo hành"
-    }
+    "Purchase Order": { "label": "Đơn mua", "menu": false, "icon": "shopping-bag", "group": "Mua hàng" },
+    "Purchase Receipt": { "menu": false },
+    "Sales Order": { "label": "Đơn bán hàng", "menu": true, "icon": "shopping-cart", "group": "Bán hàng" },
+    "Delivery Note": { "label": "Phiếu xuất kho", "menu": true, "icon": "package-minus", "group": "Bán hàng" },
+    "Stock Entry": { "label": "Nhập / xuất / chuyển", "menu": true, "icon": "arrow-left-right", "group": "Kho" },
+    "Cut Order": { "menu": false },
+    "Stock Reservation": { "menu": false },
+    "Stock Reconciliation": { "label": "Phiếu kiểm kê", "menu": true, "icon": "clipboard-check", "group": "Kho" },
+    "Work Order": { "label": "Lệnh sản xuất", "menu": true, "icon": "factory", "group": "Sản xuất" },
+    "Bill of Materials": { "menu": false },
+    "Production Standard": { "menu": false },
+    "Payment Entry": { "label": "Thu / chi công nợ", "menu": true, "icon": "hand-coins", "group": "Công nợ" },
+    "Warranty Claim": { "label": "Hồ sơ bảo hành", "menu": true, "icon": "shield-check", "group": "Bảo hành" }
   },
   "reports": {
-    "Mua hàng theo nhà cung cấp": {
-      "label": "Mua theo nhà cung cấp",
-      "icon": "bar-chart-3",
-      "group": "Báo cáo"
-    },
-    "Đơn hàng theo khách": {
-      "label": "Đơn hàng theo khách",
-      "icon": "bar-chart-3",
-      "group": "Báo cáo"
-    }
+    "Mua hàng theo nhà cung cấp": { "label": "Mua theo nhà cung cấp", "icon": "bar-chart-3", "group": "Báo cáo" },
+    "Đơn hàng theo khách": { "label": "Đơn hàng theo khách", "icon": "bar-chart-3", "group": "Báo cáo" }
   },
   "actions": {
-    "tao-don-mua": {
-      "label": "Mua hàng",
-      "menu": true,
-      "icon": "shopping-bag",
-      "group": "Mua hàng"
-    },
-    "nhap-nhom-fifo": {
-      "menu": false
-    },
-    "nhap-nhom-hang-loat": {
-      "label": "Nhập hàng",
-      "menu": true,
-      "icon": "package-check",
-      "group": "Mua hàng"
-    },
-    "bao-cao-giao-hang-ncc": {
-      "label": "Báo cáo",
-      "menu": true,
-      "icon": "bar-chart-3",
-      "group": "Mua hàng"
-    },
-    "lich-su-mua-hang": {
-      "label": "Lịch sử mua hàng",
-      "menu": true,
-      "icon": "history",
-      "group": "Mua hàng"
-    },
-    "doi-soat-giao-hang-ncc": {
-      "menu": false
-    },
-    "giao-hang-theo-ngay": {
-      "menu": false
-    },
-    "giao-hang-dispatch": {
-      "label": "Giao hàng",
-      "menu": true,
-      "icon": "calendar-check",
-      "group": "Bán hàng"
-    },
-    "bao-cao-ban-hang": {
-      "label": "Báo cáo",
-      "menu": true,
-      "icon": "chart-no-axes-combined",
-      "group": "Bán hàng"
-    },
-    "lich-su-ban-hang": {
-      "label": "Lịch sử bán hàng",
-      "menu": true,
-      "icon": "history",
-      "group": "Bán hàng"
-    },
-    "tinh-cong-thuc-cua": {
-      "menu": false
-    },
-    "de-xuat-lo-cat": {
-      "label": "Chọn lô cắt",
-      "menu": true,
-      "icon": "list-checks",
-      "group": "Kho"
-    },
-    "cat-nhom": {
-      "label": "Cắt nhôm",
-      "menu": true,
-      "icon": "scissors",
-      "group": "Kho"
-    },
-    "hoan-cat": {
-      "menu": false
-    },
-    "tra-hang": {
-      "menu": false
-    },
-    "giu-cho": {
-      "menu": false
-    },
-    "nha-giu-cho": {
-      "menu": false
-    },
-    "chot-so-so-kiem-ke": {
-      "label": "Chốt sổ kiểm kê",
-      "menu": true,
-      "icon": "camera",
-      "group": "Kho"
-    },
-    "duyet-kiem-ke": {
-      "label": "Duyệt kiểm kê",
-      "menu": true,
-      "icon": "check-check",
-      "group": "Kho"
-    },
-    "don-hang-thanh-san-xuat": {
-      "label": "Lập sản xuất",
-      "menu": true,
-      "icon": "factory",
-      "group": "Sản xuất"
-    },
-    "lap-tai-san-xuat": {
-      "label": "Năng lực & tăng ca",
-      "menu": true,
-      "icon": "gauge",
-      "group": "Sản xuất"
-    },
-    "mo-ho-so-bao-hanh": {
-      "label": "Tiếp nhận bảo hành",
-      "menu": true,
-      "icon": "shield-plus",
-      "group": "Bảo hành"
-    },
-    "xac-nhan-bu-tru-bao-hanh": {
-      "label": "Xử lý / bù trừ",
-      "menu": true,
-      "icon": "badge-check",
-      "group": "Bảo hành"
-    }
+    "tao-don-mua": { "label": "Mua hàng", "menu": true, "icon": "shopping-bag", "group": "Mua hàng" },
+    "nhap-nhom-fifo": { "menu": false },
+    "nhap-nhom-hang-loat": { "label": "Nhập hàng", "menu": true, "icon": "package-check", "group": "Mua hàng" },
+    "bao-cao-giao-hang-ncc": { "label": "Báo cáo", "menu": true, "icon": "bar-chart-3", "group": "Mua hàng" },
+    "lich-su-mua-hang": { "label": "Lịch sử mua hàng", "menu": true, "icon": "history", "group": "Mua hàng" },
+    "doi-soat-giao-hang-ncc": { "menu": false },
+    "giao-hang-theo-ngay": { "menu": false },
+    "giao-hang-dispatch": { "label": "Giao hàng", "menu": true, "icon": "calendar-check", "group": "Bán hàng" },
+    "bao-cao-ban-hang": { "label": "Báo cáo", "menu": true, "icon": "chart-no-axes-combined", "group": "Bán hàng" },
+    "lich-su-ban-hang": { "label": "Lịch sử bán hàng", "menu": true, "icon": "history", "group": "Bán hàng" },
+    "tinh-cong-thuc-cua": { "menu": false },
+    "de-xuat-lo-cat": { "label": "Chọn lô cắt", "menu": true, "icon": "list-checks", "group": "Kho" },
+    "cat-nhom": { "label": "Cắt nhôm", "menu": true, "icon": "scissors", "group": "Kho" },
+    "hoan-cat": { "menu": false },
+    "tra-hang": { "menu": false },
+    "giu-cho": { "menu": false },
+    "nha-giu-cho": { "menu": false },
+    "chot-so-so-kiem-ke": { "label": "Chốt sổ kiểm kê", "menu": true, "icon": "camera", "group": "Kho" },
+    "duyet-kiem-ke": { "label": "Duyệt kiểm kê", "menu": true, "icon": "check-check", "group": "Kho" },
+    "don-hang-thanh-san-xuat": { "label": "Lập sản xuất", "menu": true, "icon": "factory", "group": "Sản xuất" },
+    "lap-tai-san-xuat": { "label": "Năng lực & tăng ca", "menu": true, "icon": "gauge", "group": "Sản xuất" },
+    "mo-ho-so-bao-hanh": { "label": "Tiếp nhận bảo hành", "menu": true, "icon": "shield-plus", "group": "Bảo hành" },
+    "xac-nhan-bu-tru-bao-hanh": { "label": "Xử lý / bù trừ", "menu": true, "icon": "badge-check", "group": "Bảo hành" }
   },
-  "experiences": {
-    "alumdoor-operations:workbench": {
-      "label": "Tạo đơn",
-      "icon": "shopping-cart",
-      "group": "Bán hàng"
-    }
-  },
+  "experiences": {},
   "items": [
-    "alumdoor-operations:workbench",
     "Sales Order",
     "Delivery Note",
     "action:giao-hang-dispatch",
