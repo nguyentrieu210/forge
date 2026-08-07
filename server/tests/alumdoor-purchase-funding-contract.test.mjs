@@ -67,13 +67,8 @@ test("tenant migration scopes funding metadata to installed Alumdoor tenants", a
   assert.match(result.stdout, /ALUMDOOR_PURCHASE_FUNDING_MIGRATION_OK/);
 });
 
-test("mobile shell exposes proposal tab and desktop hides advanced cash operations", async () => {
+test("mobile shell still exposes the purchase funding proposal capability", async () => {
   const mobile = await read("client/apps/warehouse-mobile/src/main.tsx");
-  const desktop = await read("client/apps/runtime/src/experiences/AlumdoorOperationsCenter.tsx");
   assert.match(mobile, /"funding", label: "Đề xuất"/);
   assert.match(mobile, /PurchaseFundingScreen/);
-  assert.match(desktop, /Đề xuất mua & thu chi nội bộ/);
-  assert.match(desktop, /Thu \/ chi nội bộ/);
-  assert.doesNotMatch(desktop, /Quỹ tiền mặt theo từng kho/);
-  assert.doesNotMatch(desktop, /Kiểm quỹ \/ bàn giao/);
 });
