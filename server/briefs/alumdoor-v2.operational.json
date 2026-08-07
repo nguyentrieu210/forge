@@ -1,6 +1,6 @@
 {
-  "//purpose": "MetaForm 4.0 operational profile. Presentation only: canonical DocTypes and server business authority stay unchanged.",
-  "version": "2.3.0",
+  "//purpose": "MetaForm 4.1 operational profile. Presentation only: canonical DocTypes and server business authority stay unchanged.",
+  "version": "2.4.0",
   "doctypes": {
     "Sales Order": {
       "form": {
@@ -10,6 +10,37 @@
         "header": {
           "tone": "brand",
           "keyFields": ["customer", "customer_group", "transaction_date", "delivery_date", "selling_price_list", "responsible_person"]
+        },
+        "composition": {
+          "columns": 12,
+          "blocks": [
+            {
+              "key": "sales_context",
+              "type": "fields",
+              "span": 8,
+              "title": "Thông tin đơn bán",
+              "description": "Khách hàng, ngày đặt/giao và điều kiện thương mại trong một vùng thao tác.",
+              "fields": ["customer", "customer_group", "transaction_date", "delivery_date", "selling_price_list", "responsible_person"],
+              "fieldSpans": {
+                "customer": 8,
+                "customer_group": 4,
+                "transaction_date": 4,
+                "delivery_date": 4,
+                "selling_price_list": 4,
+                "responsible_person": 12
+              }
+            },
+            {
+              "key": "sales_value",
+              "type": "stats",
+              "span": 4,
+              "title": "Giá trị đơn",
+              "tone": "brand",
+              "items": [
+                { "field": "grand_total", "label": "Tổng cộng", "format": "currency", "emphasis": "grand" }
+              ]
+            }
+          ]
         },
         "summary": {
           "enabled": true,
@@ -58,6 +89,35 @@
         "header": {
           "tone": "brand",
           "keyFields": ["supplier", "priority", "transaction_date", "schedule_date"]
+        },
+        "composition": {
+          "columns": 12,
+          "blocks": [
+            {
+              "key": "purchase_context",
+              "type": "fields",
+              "span": 8,
+              "title": "Thông tin đơn mua",
+              "description": "Nhà cung cấp, mức ưu tiên và lịch đặt/giao được gom thành một vùng thao tác.",
+              "fields": ["supplier", "priority", "transaction_date", "schedule_date"],
+              "fieldSpans": {
+                "supplier": 12,
+                "priority": 4,
+                "transaction_date": 4,
+                "schedule_date": 4
+              }
+            },
+            {
+              "key": "purchase_value",
+              "type": "stats",
+              "span": 4,
+              "title": "Giá trị đơn",
+              "tone": "brand",
+              "items": [
+                { "field": "grand_total", "label": "Tổng đơn mua", "format": "currency", "emphasis": "grand" }
+              ]
+            }
+          ]
         },
         "summary": {
           "enabled": true,

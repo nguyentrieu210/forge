@@ -5,6 +5,7 @@ on:
     paths:
       - "client/packages/core/src/meta/**"
       - "client/packages/core/src/types/meta.ts"
+      - "client/packages/core/src/app/operational-policy.ts"
       - "client/packages/views/src/form/**"
       - "client/packages/views/src/action/**"
       - "client/packages/views/src/detail/**"
@@ -15,6 +16,7 @@ on:
       - "server/packages/frappe-api/src/meta-shape.ts"
       - "server/packages/frappe-model/src/types.ts"
       - "server/packages/frappe-model/src/validate.ts"
+      - "server/packages/frappe-model/src/operational-*.ts"
       - "server/tests/metaform-*.test.mjs"
       - ".github/workflows/metaform-contract.yml"
   workflow_dispatch:
@@ -25,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   validate:
-    name: MetaForm presentation and spreadsheet contracts
+    name: MetaForm composition, presentation and spreadsheet contracts
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -47,16 +49,18 @@ jobs:
         run: pnpm --filter cloudforge run build
       - name: Verify server MetaForm contracts
         working-directory: server
-        run: node --test tests/metaform-operational-policy.test.mjs tests/metaform-operational-precedence.test.mjs tests/metaform-autofill-contract.test.mjs
+        run: node --test tests/metaform-operational-policy.test.mjs tests/metaform-composition-contract.test.mjs tests/metaform-operational-precedence.test.mjs tests/metaform-autofill-contract.test.mjs
       - name: Build MetaForge
         run: pnpm --filter metaforge run build
-      - name: Verify presentation autofill spreadsheet and Builder contracts
+      - name: Verify composition presentation autofill spreadsheet and Builder contracts
         working-directory: client
         run: >-
           pnpm --filter @metaforge/demo exec tsx
           ../../packages/core/src/meta/fetch-from-selfcheck.ts
           && pnpm --filter @metaforge/demo exec tsx
           ../../packages/views/src/form/spreadsheet-selfcheck.ts
+          && pnpm --filter @metaforge/demo exec tsx
+          ../../packages/views/src/form/form-composition-selfcheck.ts
           && pnpm --filter @metaforge/demo exec tsx
           ../../packages/views/src/detail/document-presentation-selfcheck.ts
           && pnpm --filter @metaforge/demo exec tsx
