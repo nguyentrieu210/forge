@@ -13,8 +13,8 @@ function operationalDefinition() {
     module: "Test",
     kind: "child_table",
     fields: [
-      { fieldname: "item_code", label: "Item", fieldtype: "Data", required: true },
-      { fieldname: "qty", label: "Qty", fieldtype: "Float", required: true },
+      { fieldname: "item_code", label: "Item", fieldtype: "Data", required: true, length: 32, set_only_once: true, not_nullable: true },
+      { fieldname: "qty", label: "Qty", fieldtype: "Float", required: true, non_negative: true },
       { fieldname: "amount", label: "Amount", fieldtype: "Currency", read_only: true },
     ],
     viewPolicy: {
@@ -62,6 +62,12 @@ test("MetaForm 4 operational policy survives canonical parse and getdoctype tran
   const frappe = toFrappeDocType(parsed, null);
   assert.equal(frappe.viewPolicy.operational.grid.headerTone, "brand");
   assert.equal(frappe.fields.find((field) => field.fieldname === "amount").cellRole, "money");
+  const item = frappe.fields.find((field) => field.fieldname === "item_code");
+  const qty = frappe.fields.find((field) => field.fieldname === "qty");
+  assert.equal(item.length, 32, "length must reach the form runtime");
+  assert.equal(item.set_only_once, 1, "set-only-once must reach the form runtime");
+  assert.equal(item.not_nullable, 1, "not-null must reach the form runtime");
+  assert.equal(qty.non_negative, 1, "non-negative must reach the form runtime");
 });
 
 test("MetaForm 4 refuses unknown field roles and unsafe projection bindings", () => {
@@ -74,7 +80,7 @@ test("MetaForm 4 refuses unknown field roles and unsafe projection bindings", ()
   assert.throws(() => parseDocTypeMeta(badBinding), /inputs\.qty.*unknown field/);
 });
 
-test("operational sidecar only overlays presentation and sheet columns", async () => {
+test("operational sidecar only overlays presentation and sheet columns without changing package identity", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "metaform4-"));
   try {
     const briefPath = path.join(dir, "app.json");
@@ -100,7 +106,7 @@ test("operational sidecar only overlays presentation and sheet columns", async (
 
     const brief = JSON.parse(await (await import("node:fs/promises")).readFile(briefPath, "utf8"));
     const merged = await applyOperationalProfileSidecar(brief, briefPath);
-    assert.equal(merged.version, "1.1.0");
+    assert.equal(merged.version, "1.0.0", "presentation profile version must not replace canonical package version");
     assert.deepEqual(merged.doctypes.find((entry) => entry.name === "Order Item").list, ["item_code", "qty"]);
     assert.equal(merged.doctypes.find((entry) => entry.name === "Order").operational.form.presentation, "workspace");
     assert.equal(merged.doctypes.find((entry) => entry.name === "Order Item").operational.fieldRoles.item_code, "operator_input");
