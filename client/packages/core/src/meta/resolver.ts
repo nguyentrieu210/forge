@@ -12,6 +12,7 @@
 import type { DocTypeMeta, DocField, DocPerm } from "../types/meta.js";
 import { NO_VALUE_FIELDTYPES } from "../types/fieldtype.js";
 import { evalDependsOn } from "./eval.js";
+import { parseFetchFrom } from "./fetch-from.js";
 import { resolveFieldContract, setOnceIsLocked } from "./intelligence.js";
 
 /** Trạng thái tương tác hiệu lực của 1 field. */
@@ -25,7 +26,7 @@ export interface ResolvedField {
   visible: boolean;
   /** giá trị bị che (permlevel không đọc được / trong masked_fields). */
   masked: boolean;
-  /** không sửa được (contract/read_only/depends_on/quyền/docstatus). */
+  /** không sửa được (contract/read_only/depends_on/quyền/docstatus/fetch_from). */
   readOnly: boolean;
   /** bắt buộc (reqd / mandatory_depends_on) — chỉ tính khi visible & !readOnly. */
   required: boolean;
@@ -77,6 +78,13 @@ function docstatusLocks(field: DocField, docstatus: number): boolean {
   return false; // draft
 }
 
+/** Frappe Desk locks ordinary fetch_from targets while their source Link has a value. */
+function fetchFromLocks(field: DocField, doc: Record<string, unknown>): boolean {
+  if (!field.fetch_from || field.fetch_if_empty === 1) return false;
+  const source = parseFetchFrom(field.fetch_from)?.linkField;
+  return Boolean(source && doc[source]);
+}
+
 /** Resolve 1 field. */
 export function resolveField(field: DocField, meta: DocTypeMeta, ctx: ResolveContext = {}): ResolvedField {
   const doc = ctx.doc ?? {};
@@ -114,6 +122,7 @@ export function resolveField(field: DocField, meta: DocTypeMeta, ctx: ResolveCon
     ctx.forceReadOnly === true ||
     intrinsicallyLocked ||
     field.read_only === 1 ||
+    fetchFromLocks(field, doc) ||
     evalDependsOnRO(field.read_only_depends_on, doc, ctx.parent) ||
     docstatusLocks(field, docstatus) ||
     !permWritable;

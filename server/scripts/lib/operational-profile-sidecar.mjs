@@ -4,6 +4,8 @@ import path from "node:path";
 const CELL_ROLES = new Set([
   "operator_input", "optional_input", "auto", "formula", "readonly", "warning", "result", "money",
 ]);
+const PARENT_SYSTEM_FIELDS = new Set(["name", "owner", "creation", "modified", "modified_by", "docstatus", "doctype", "status"]);
+const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 async function readOptionalJson(source) {
   try { return JSON.parse(await readFile(source, "utf8")); }
@@ -25,6 +27,87 @@ function stringList(value, label) {
   const normalized = value.map((entry) => entry.trim());
   if (new Set(normalized).size !== normalized.length) throw new Error(`${label} must not contain duplicates`);
   return normalized;
+}
+
+function briefFieldName(field) {
+  if (typeof field === "string") {
+    const colon = field.indexOf(":");
+    const name = (colon >= 0 ? field.slice(0, colon) : field).trim();
+    return IDENT.test(name) ? name : undefined;
+  }
+  if (field && typeof field === "object" && !Array.isArray(field) && typeof field.fieldname === "string" && IDENT.test(field.fieldname)) {
+    return field.fieldname;
+  }
+  return undefined;
+}
+
+function briefTableTarget(field) {
+  if (typeof field === "string") {
+    const match = /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*Table(?:\s*MultiSelect)?\(([^)]+)\)/.exec(field.trim());
+    return match?.[1]?.trim();
+  }
+  if (field && typeof field === "object" && !Array.isArray(field)
+    && (field.fieldtype === "Table" || field.fieldtype === "Table MultiSelect")
+    && typeof field.options === "string" && field.options.trim()) {
+    return field.options.trim();
+  }
+  return undefined;
+}
+
+function parentBindings(grid) {
+  const names = new Set();
+  if (!grid || typeof grid !== "object" || Array.isArray(grid) || !Array.isArray(grid.projections)) return names;
+  const add = (binding) => {
+    if (typeof binding !== "string" || !binding.startsWith("parent.")) return;
+    const field = binding.slice("parent.".length);
+    if (IDENT.test(field)) names.add(field);
+  };
+  for (const projection of grid.projections) {
+    if (!projection || typeof projection !== "object" || Array.isArray(projection)) continue;
+    if (Array.isArray(projection.watch)) for (const binding of projection.watch) add(binding);
+    if (projection.inputs && typeof projection.inputs === "object" && !Array.isArray(projection.inputs)) {
+      for (const binding of Object.values(projection.inputs)) add(binding);
+    }
+  }
+  return names;
+}
+
+/**
+ * A `parent.<field>` binding is only meaningful when every parent DocType that can host this child
+ * actually owns that field. Validate this while the brief still contains both sides of the table
+ * relation; the child-level metadata parser cannot prove it in isolation.
+ */
+function validateParentProjectionBindings(brief, requested, profileSource) {
+  const parentsByChild = new Map();
+  for (const parent of brief.doctypes ?? []) {
+    if (!parent || typeof parent !== "object") continue;
+    const parentName = typeof parent.name === "string" ? parent.name : "?";
+    const fields = Array.isArray(parent.fields) ? parent.fields : [];
+    const known = new Set(fields.map(briefFieldName).filter(Boolean));
+    for (const field of fields) {
+      const target = briefTableTarget(field);
+      if (!target) continue;
+      const parents = parentsByChild.get(target) ?? [];
+      parents.push({ name: parentName, fields: known });
+      parentsByChild.set(target, parents);
+    }
+  }
+
+  for (const [doctype, declaration] of requested) {
+    const bindings = parentBindings(declaration.grid);
+    if (!bindings.size) continue;
+    const parents = parentsByChild.get(doctype) ?? [];
+    if (!parents.length) {
+      throw new Error(`${profileSource}: doctypes.${doctype}.grid uses parent.* projection bindings but no parent Table field targets ${doctype}`);
+    }
+    for (const field of bindings) {
+      if (PARENT_SYSTEM_FIELDS.has(field)) continue;
+      const missing = parents.filter((parent) => !parent.fields.has(field)).map((parent) => parent.name);
+      if (missing.length) {
+        throw new Error(`${profileSource}: doctypes.${doctype}.grid references parent.${field}, missing from parent DocType(s): ${missing.join(", ")}`);
+      }
+    }
+  }
 }
 
 /**
@@ -77,6 +160,7 @@ export async function applyOperationalProfileSidecar(brief, briefSource) {
     requested.set(doctype, { ...declaration, ...(listColumns ? { listColumns } : {}) });
   }
   if (!requested.size) throw new Error(`${profileSource}: doctypes must not be empty`);
+  validateParentProjectionBindings(brief, requested, profileSource);
 
   const seen = new Set();
   const doctypes = brief.doctypes.map((doctype) => {

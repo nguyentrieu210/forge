@@ -1,0 +1,59 @@
+name: MetaForm Contract
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "client/packages/core/src/meta/**"
+      - "client/packages/core/src/types/meta.ts"
+      - "client/packages/views/src/form/**"
+      - "client/packages/views/src/action/**"
+      - "client/packages/builder/src/doctype/**"
+      - "server/packages/frappe-api/src/meta-shape.ts"
+      - "server/packages/frappe-model/src/types.ts"
+      - "server/packages/frappe-model/src/validate.ts"
+      - "server/tests/metaform-*.test.mjs"
+      - ".github/workflows/metaform-contract.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: metaform-contract-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    name: Autofill and spreadsheet contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build server contract packages
+        run: pnpm --filter cloudforge run build
+      - name: Verify server MetaForm contracts
+        working-directory: server
+        run: node --test tests/metaform-operational-policy.test.mjs tests/metaform-operational-precedence.test.mjs tests/metaform-autofill-contract.test.mjs
+      - name: Build MetaForge
+        run: pnpm --filter metaforge run build
+      - name: Verify autofill spreadsheet and Builder contracts
+        working-directory: client
+        run: >-
+          pnpm --filter @metaforge/demo exec tsx
+          ../../packages/core/src/meta/fetch-from-selfcheck.ts
+          && pnpm --filter @metaforge/demo exec tsx
+          ../../packages/views/src/form/spreadsheet-selfcheck.ts
+          && pnpm --filter @metaforge/demo exec tsx
+          ../../packages/builder/src/doctype/autofill-selfcheck.ts
+      - name: Diff hygiene
+        run: git diff --check

@@ -8,7 +8,7 @@
  *    (fieldname hợp lệ/không trùng/không đụng field hệ thống · options bắt buộc · title_field hợp lệ).
  * KHÔNG apply nếu còn error (fail-closed). warning không chặn.
  */
-import { normalizeMeta, MetaValidationError, SYSTEM_FIELDS, type DocTypeMeta } from "@metaforge/core";
+import { normalizeMeta, MetaValidationError, parseFetchFrom, SYSTEM_FIELDS, type DocTypeMeta } from "@metaforge/core";
 import { diffMeta, hasChanges, type MetaDiff } from "./diff.js";
 
 export type ValidationSeverity = "error" | "warning";
@@ -47,6 +47,7 @@ export function validateDraft(meta: DocTypeMeta): ValidationResult {
 
   // 2) từng field
   const seen = new Set<string>();
+  const byName = new Map((meta.fields ?? []).map((field) => [field.fieldname, field]));
   for (const f of meta.fields ?? []) {
     const fn = f.fieldname;
     if (!fn) { err("fieldname_empty", "Có field thiếu fieldname"); continue; }
@@ -56,6 +57,19 @@ export function validateDraft(meta: DocTypeMeta): ValidationResult {
     if (SYSTEM_FIELDS.has(fn)) err("fieldname_reserved", `fieldname trùng field hệ thống: "${fn}"`, fn);
     if (OPTIONS_REQUIRED.has(f.fieldtype) && !String(f.options ?? "").trim()) err("options_required", `${f.fieldtype} "${fn}" cần options (doctype đích)`, fn);
     if (f.fieldtype === "Select" && !String(f.options ?? "").trim()) warn("select_empty", `Select "${fn}" chưa có lựa chọn`, fn);
+
+    if (f.fetch_if_empty === 1 && !f.fetch_from) err("fetch_if_empty_without_source", `fetch_if_empty của "${fn}" cần fetch_from`, fn);
+    if (f.fetch_from) {
+      const parsed = parseFetchFrom(f.fetch_from);
+      if (!parsed) err("fetch_from_invalid", `fetch_from của "${fn}" phải có dạng link_field.source_field`, fn);
+      else {
+        const source = byName.get(parsed.linkField);
+        if (!source) err("fetch_from_source_missing", `fetch_from của "${fn}" trỏ tới field không tồn tại: ${parsed.linkField}`, fn);
+        else if (source.fieldtype !== "Link" && source.fieldtype !== "Dynamic Link") {
+          err("fetch_from_source_type", `fetch_from của "${fn}" phải bắt đầu từ Link/Dynamic Link, không phải ${source.fieldtype}`, fn);
+        }
+      }
+    }
   }
 
   // 3) title_field phải trỏ tới field có value đang tồn tại

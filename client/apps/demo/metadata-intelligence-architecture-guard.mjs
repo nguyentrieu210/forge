@@ -8,6 +8,7 @@ const guarded = new Map([
   ["packages/views/src/form/ChildGrid.tsx", [
     "Sales Order Item", "Purchase Order Item", "Purchase Receipt Item", "Quotation Item",
     "Material Specification", "Item Color", "alumdoor.",
+    "derivePurchaseOrderBarem", "deriveAverageWeight", "theoretical_kg_per_m", "actual_weight_kg", "inventory_mode",
   ]],
   ["packages/views/src/form/ChildGridWithExtensions.tsx", [
     "Sales Order Item", "Purchase Order Item", "Purchase Receipt Item", "Quotation Item",

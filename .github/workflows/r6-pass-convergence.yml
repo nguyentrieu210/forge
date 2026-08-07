@@ -41,11 +41,21 @@ jobs:
           tests/alumdoor-sales-navigation-contract.test.mjs
           tests/delivery-batch-company-scope.test.mjs
           tests/sales-wizard-context.test.mjs
+          tests/metaform-autofill-contract.test.mjs
       - name: Verify app report canonical aggregate fields
         working-directory: server
         run: node --test tests/query.test.mjs
       - name: Build MetaForge exactly as full production release
         run: pnpm --filter metaforge run build
+      - name: Verify MetaForm autofill and spreadsheet contracts
+        working-directory: client
+        run: >-
+          pnpm --filter @metaforge/demo exec tsx
+          ../../packages/core/src/meta/fetch-from-selfcheck.ts
+          && pnpm --filter @metaforge/demo exec tsx
+          ../../packages/views/src/form/spreadsheet-selfcheck.ts
+          && pnpm --filter @metaforge/demo exec tsx
+          ../../packages/builder/src/doctype/autofill-selfcheck.ts
       - name: Verify migration, restore import and PITR safety
         working-directory: server
         run: node --test tests/d1-migrate-remote-safety.test.mjs tests/d1-backup-import.test.mjs tests/sre-destructive-guards.test.mjs

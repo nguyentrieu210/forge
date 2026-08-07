@@ -38,7 +38,9 @@ function valueSourcePatch(source: DocField["valueSource"] | undefined, field: Do
   if (!source) return { valueSource: undefined };
   const patch: Partial<DocField> = { valueSource: source };
   if (["system", "workflow", "formula"].includes(source)) patch.serverEnforced = true;
-  if (source === "link" && field.editMode === "editable" && !field.dirtyGuard) patch.dirtyGuard = "preserve_user_value";
+  if (source === "link" && field.fetch_if_empty === 1 && field.editMode === "editable" && !field.dirtyGuard) {
+    patch.dirtyGuard = "preserve_user_value";
+  }
   return patch;
 }
 
@@ -57,6 +59,8 @@ export function MetadataIntelligenceEditor({ meta, onChange }: MetadataIntellige
     field.valueSource ? `source:${field.valueSource}` : "source:auto",
     field.editMode ? `edit:${field.editMode}` : "edit:auto",
     field.surface ? `surface:${field.surface}` : "surface:auto",
+    field.fetch_from ? `fetch:${field.fetch_from}` : null,
+    field.fetch_if_empty === 1 ? "fetch:empty-only" : null,
     field.serverEnforced ? "server-enforced" : null,
     field.dirtyGuard ? `dirty:${field.dirtyGuard}` : null,
   ].filter(Boolean) as string[];
@@ -106,8 +110,22 @@ export function MetadataIntelligenceEditor({ meta, onChange }: MetadataIntellige
               </Select>
             </FieldLabel>
             <FieldLabel label="fetch_from">
-              <Input className="font-mono text-xs" value={field.fetch_from ?? ""} onChange={(event) => apply({ fetch_from: event.target.value || undefined })} placeholder="customer.customer_name" />
+              <Input className="font-mono text-xs" value={field.fetch_from ?? ""} onChange={(event) => apply({ fetch_from: event.target.value || undefined, ...(!event.target.value ? { fetch_if_empty: 0, dirtyGuard: undefined } : {}) })} placeholder="customer.customer_name" />
             </FieldLabel>
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-xs">
+              <Checkbox
+                checked={field.fetch_if_empty === 1}
+                disabled={!field.fetch_from}
+                onCheckedChange={(value) => apply({
+                  fetch_if_empty: value ? 1 : 0,
+                  dirtyGuard: value ? "preserve_user_value" : undefined,
+                })}
+              />
+              <span>
+                <strong className="block">fetch_if_empty</strong>
+                <span className="mt-0.5 block text-muted-foreground">Chỉ tự điền khi ô đích đang trống. Khi bật, operator vẫn có thể nhập/sửa giá trị; khi tắt, Link nguồn sở hữu ô đích trong lúc đã chọn nguồn.</span>
+              </span>
+            </label>
             <FieldLabel label="link_filters">
               <Textarea className="font-mono text-xs" value={linkFiltersText} onChange={(event) => apply({ link_filters: event.target.value || undefined })} rows={3} placeholder={'[["Item","disabled","=",0]]'} />
             </FieldLabel>

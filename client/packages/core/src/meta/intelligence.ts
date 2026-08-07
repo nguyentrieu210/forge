@@ -14,12 +14,46 @@ export interface EffectiveFieldContract {
   dirtyGuard?: "preserve_user_value";
 }
 
+export type FieldValidationCode =
+  | "required"
+  | "not_nullable"
+  | "too_long"
+  | "invalid_select"
+  | "integer"
+  | "duration"
+  | "rating"
+  | "phone"
+  | "color"
+  | "geolocation"
+  | "numeric"
+  | "check"
+  | "date"
+  | "datetime"
+  | "time"
+  | "json"
+  | "table"
+  | "table_limit"
+  | "table_row"
+  | "negative";
+
+export interface FieldValidationIssue {
+  code: FieldValidationCode;
+  limit?: number;
+  row?: number;
+}
+
 function flag(value: unknown): boolean {
   return value === true || value === 1 || value === "1";
 }
 
+/** Legacy ownership/default semantics: only scalar missing values count as empty. */
 function empty(value: unknown): boolean {
   return value === undefined || value === null || value === "";
+}
+
+/** Required validation also treats an empty child/multiselect collection as missing. */
+function requiredEmpty(value: unknown): boolean {
+  return empty(value) || (Array.isArray(value) && value.length === 0);
 }
 
 const pad = (value: number): string => String(value).padStart(2, "0");
@@ -72,8 +106,15 @@ export function resolveFieldContract(field: DocField, workflowField = "workflow_
     || editMode === "readonly"
     || editMode === "hidden";
 
+  // Frappe has two different fetch_from ownership modes. Ordinary fetch_from is source-owned:
+  // once the source Link is chosen it may replace the target and the target becomes locked.
+  // fetch_if_empty=1 is the operator-owned variant: auto-fill is only a convenience while blank,
+  // so a user value must survive subsequent source refreshes. Preserve-user is still available
+  // explicitly for non-Frappe/custom automatic sources.
   const dirtyGuard = field.dirtyGuard
-    ?? (valueSource === "link" && editMode === "editable" ? "preserve_user_value" : undefined);
+    ?? (valueSource === "link" && editMode === "editable" && field.fetch_if_empty === 1
+      ? "preserve_user_value"
+      : undefined);
 
   return {
     valueSource,
@@ -96,10 +137,102 @@ export function resolveFieldDefault(field: Pick<DocField, "fieldtype" | "default
 }
 
 /**
+ * Mirror the generic server controller's domain-neutral value checks for immediate form feedback.
+ * The server remains authoritative; this helper deliberately validates only canonical DocField
+ * semantics already enforced by the server and never introduces app/business formulas.
+ */
+export function validateFieldValue(field: DocField, value: unknown, required = field.reqd === 1): FieldValidationIssue | undefined {
+  if (required && requiredEmpty(value)) return { code: "required" };
+  if (flag(field.not_nullable) && value === null) return { code: "not_nullable" };
+  if (value === undefined || value === null || value === "") return undefined;
+
+  const maxLength = typeof field.length === "number" && Number.isFinite(field.length) && field.length > 0
+    ? Math.floor(field.length)
+    : undefined;
+  const negative = (candidate: unknown) => {
+    if (typeof candidate === "number") return Number.isFinite(candidate) && candidate < 0;
+    if (typeof candidate === "string" && /^-?\d+(\.\d+)?$/.test(candidate)) return Number(candidate) < 0;
+    return false;
+  };
+  const stringTypes = new Set([
+    "Data", "Small Text", "Text", "Long Text", "Code", "Select", "Link", "Dynamic Link",
+    "Attach", "Attach Image", "Text Editor", "Markdown Editor", "HTML Editor", "Password",
+    "Autocomplete", "Read Only", "Barcode", "Icon", "Image", "Signature",
+  ]);
+
+  if (stringTypes.has(field.fieldtype)) {
+    if (typeof value !== "string") return { code: field.fieldtype === "Select" ? "invalid_select" : "too_long", ...(maxLength ? { limit: maxLength } : {}) };
+    if (maxLength && value.length > maxLength) return { code: "too_long", limit: maxLength };
+    if (field.fieldtype === "Select" && field.options) {
+      const options = field.options.split("\n").map((entry) => entry.trim()).filter(Boolean);
+      if (value && !options.includes(value)) return { code: "invalid_select" };
+    }
+  } else {
+    switch (field.fieldtype) {
+      case "Int":
+      case "Long Int":
+        if (typeof value !== "number" || !Number.isSafeInteger(value)) return { code: "integer" };
+        break;
+      case "Duration":
+        if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return { code: "duration" };
+        break;
+      case "Rating":
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) return { code: "rating" };
+        break;
+      case "Phone":
+        if (typeof value !== "string" || (value && !/^[+()\-.\s\d]{3,32}$/.test(value))) return { code: "phone" };
+        break;
+      case "Color":
+        if (typeof value !== "string" || (value && !/^#[0-9a-fA-F]{6}$/.test(value))) return { code: "color" };
+        break;
+      case "Geolocation":
+        if (!value || typeof value !== "object" || Array.isArray(value)) return { code: "geolocation" };
+        break;
+      case "Float":
+      case "Currency":
+      case "Percent":
+        if ((typeof value !== "number" || !Number.isFinite(value)) && (typeof value !== "string" || !/^-?\d+(\.\d+)?$/.test(value))) return { code: "numeric" };
+        break;
+      case "Check":
+        if (typeof value !== "boolean" && value !== 0 && value !== 1) return { code: "check" };
+        break;
+      case "Date":
+        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return { code: "date" };
+        break;
+      case "Datetime":
+        if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return { code: "datetime" };
+        break;
+      case "Time":
+        if (typeof value !== "string" || !/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return { code: "time" };
+        break;
+      case "JSON":
+        if (!value || typeof value !== "object") return { code: "json" };
+        break;
+      case "Table":
+      case "Table MultiSelect":
+        if (!Array.isArray(value)) return { code: "table" };
+        if (value.length > 1000) return { code: "table_limit", limit: 1000 };
+        for (let index = 0; index < value.length; index += 1) {
+          const row = value[index];
+          if (!row || typeof row !== "object" || Array.isArray(row)) return { code: "table_row", row: index + 1 };
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (flag(field.non_negative) && negative(value)) return { code: "negative" };
+  return undefined;
+}
+
+/**
  * Whether an automatic/default/link/projection value may be assigned locally.
  *
  * `dirtyGuard=preserve_user_value` means a user-owned value wins after the operator edits it.
- * Empty cells remain fillable; server reloads are handled by the caller as a new baseline.
+ * Ordinary Frappe `fetch_from` WITHOUT fetch_if_empty is different: it is source-owned and may
+ * replace a prior local value. Default/projection/autofill paths otherwise never overwrite a
+ * provenance=user value unless their field contract explicitly says the source owns it.
  */
 export function shouldApplyAutomaticValue(
   field: DocField,
@@ -107,6 +240,8 @@ export function shouldApplyAutomaticValue(
   provenance: FieldValueProvenance | undefined,
 ): boolean {
   const contract = resolveFieldContract(field);
+  const sourceOwnedFetch = Boolean(field.fetch_from && field.fetch_if_empty !== 1 && !field.dirtyGuard);
+  if (sourceOwnedFetch) return true;
   if (empty(currentValue)) return true;
   if (contract.dirtyGuard === "preserve_user_value" && provenance === "user") return false;
   return provenance !== "user";

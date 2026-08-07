@@ -11,12 +11,17 @@ import { AlertTriangle, X } from "lucide-react";
 import {
   collectFetchFrom,
   collectMetadataReactiveFields,
+  fetchRuleAllowsCurrentValue,
   operationalViewPolicy,
+  resolveFetchSourceDoctype,
   resolveMeta,
   shouldApplyAutomaticValue,
+  validateFieldValue,
   type Doc,
   type DocField,
   type DocTypeMeta,
+  type FetchFromRule,
+  type FieldValidationIssue,
   type OperationalFormPolicy,
   type ResolvedField,
 } from "@metaforge/core";
@@ -56,15 +61,43 @@ export interface FormViewProps {
   onWorkflowAction?: (action: string) => void;
 }
 
+function validationMessage(issue: FieldValidationIssue, t: (k: string, f?: string) => string): string {
+  switch (issue.code) {
+    case "required": return t("form.required");
+    case "not_nullable": return t("form.not_nullable", "Không được để trống");
+    case "too_long": return issue.limit
+      ? t("form.max_length", `Tối đa ${issue.limit} ký tự`)
+      : t("form.invalid_string", "Phải là chuỗi ký tự");
+    case "invalid_select": return t("form.invalid_select", "Giá trị không nằm trong danh sách cho phép");
+    case "integer": return t("form.invalid_integer", "Phải là số nguyên");
+    case "duration": return t("form.invalid_duration", "Phải là số giây nguyên không âm");
+    case "rating": return t("form.invalid_rating", "Phải là số từ 0 đến 1");
+    case "phone": return t("form.invalid_phone", "Số điện thoại không hợp lệ");
+    case "color": return t("form.invalid_color", "Màu phải có dạng #rrggbb");
+    case "geolocation": return t("form.invalid_geolocation", "Vị trí phải là dữ liệu GeoJSON hợp lệ");
+    case "numeric": return t("form.invalid_number", "Phải là số");
+    case "check": return t("form.invalid_check", "Phải là giá trị Có/Không");
+    case "date": return t("form.invalid_date", "Ngày phải có dạng YYYY-MM-DD");
+    case "datetime": return t("form.invalid_datetime", "Ngày giờ không hợp lệ");
+    case "time": return t("form.invalid_time", "Giờ phải có dạng HH:MM hoặc HH:MM:SS");
+    case "json": return t("form.invalid_json", "Phải là dữ liệu JSON hợp lệ");
+    case "table": return t("form.invalid_table", "Phải là một bảng dữ liệu");
+    case "table_limit": return t("form.table_limit", `Tối đa ${issue.limit ?? 1000} dòng`);
+    case "table_row": return t("form.invalid_table_row", `Dòng ${issue.row ?? "?"} không hợp lệ`);
+    case "negative": return t("form.non_negative", "Không được là số âm");
+    default: return t("form.invalid_value", "Giá trị không hợp lệ");
+  }
+}
+
 function buildSchema(resolved: ResolvedField[], t: (k: string, f?: string) => string): z.ZodTypeAny {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const rf of resolved) {
     if (rf.layout || !rf.visible) continue;
-    if (rf.required) {
-      shape[rf.field.fieldname] = z
-        .any()
-        .refine((v) => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0), { message: t("form.required") });
-    }
+    shape[rf.field.fieldname] = z.any().superRefine((value, ctx) => {
+      const issue = validateFieldValue(rf.field, value, rf.required);
+      if (!issue) return;
+      ctx.addIssue({ code: "custom", message: validationMessage(issue, t) });
+    });
   }
   return z.object(shape).passthrough();
 }
@@ -92,6 +125,10 @@ function formatOperationalValue(field: DocField | undefined, value: unknown): st
   return String(value);
 }
 
+function fetchIdentity(rule: FetchFromRule, doc: Record<string, unknown>, value: unknown): string {
+  return `${resolveFetchSourceDoctype(rule, doc) ?? ""}\u0000${String(value ?? "")}`;
+}
+
 export function FormView(props: FormViewProps) {
   const t = useT();
   const { meta, doc, registry, services, roles, maskedFields, forceReadOnly } = props;
@@ -105,18 +142,21 @@ export function FormView(props: FormViewProps) {
   const brandHeader = isWorkspace && formPolicy?.header?.tone === "brand";
   const fetchRules = useMemo(() => collectFetchFrom(meta), [meta]);
   const fieldByName = useMemo(() => new Map((meta.fields ?? []).map((field) => [field.fieldname, field])), [meta]);
-  const prevLinks = useRef<Record<string, unknown>>({});
+  const prevLinks = useRef<Record<string, string>>({});
   const fetchDocKey = useRef<string>("");
   const lastAutoValues = useRef<Record<string, unknown>>({});
+  const isNewDocument = props.isNew ?? (!doc.name || doc.name === "new");
 
   useEffect(() => {
     form.reset({ ...doc });
-    const seed: Record<string, unknown> = {};
-    for (const r of fetchRules) seed[r.linkField] = doc[r.linkField];
+    const seed: Record<string, string> = {};
+    if (!isNewDocument) {
+      for (const rule of fetchRules) seed[rule.linkField] = fetchIdentity(rule, doc, doc[rule.linkField]);
+    }
     prevLinks.current = seed;
     lastAutoValues.current = {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.name, doc.modified]);
+  }, [doc.name, doc.modified, isNewDocument]);
 
   useEffect(() => {
     if (!props.fieldErrors) return;
@@ -163,58 +203,66 @@ export function FormView(props: FormViewProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [form]);
 
-  const setAutomaticTarget = (target: string, value: unknown) => {
-    const field = fieldByName.get(target);
+  const setAutomaticTarget = (rule: FetchFromRule, value: unknown) => {
+    const field = fieldByName.get(rule.target);
     if (!field) return;
-    const current = form.getValues(target);
-    const ownsAuto = Object.prototype.hasOwnProperty.call(lastAutoValues.current, target);
-    const stillMatchesAuto = ownsAuto && Object.is(current, lastAutoValues.current[target]);
+    const current = form.getValues(rule.target);
+    const ownsAuto = Object.prototype.hasOwnProperty.call(lastAutoValues.current, rule.target);
+    const stillMatchesAuto = ownsAuto && Object.is(current, lastAutoValues.current[rule.target]);
     const provenance = stillMatchesAuto
       ? "auto"
-      : (ownsAuto || form.getFieldState(target).isDirty ? "user" : "initial");
+      : (ownsAuto || form.getFieldState(rule.target).isDirty ? "user" : "initial");
+    if (!fetchRuleAllowsCurrentValue(rule, current) && !stillMatchesAuto) return;
     if (!shouldApplyAutomaticValue(field, current, provenance)) {
-      if (provenance === "user") delete lastAutoValues.current[target];
+      if (provenance === "user") delete lastAutoValues.current[rule.target];
       return;
     }
-    form.setValue(target, (value ?? "") as never, { shouldDirty: true });
-    lastAutoValues.current[target] = value ?? "";
+    form.setValue(rule.target, (value ?? "") as never, { shouldDirty: true });
+    lastAutoValues.current[rule.target] = value ?? "";
   };
 
   useEffect(() => {
     if (!fetchRules.length) return;
     const docKey = `${doc.name ?? ""}|${doc.modified ?? ""}`;
-    if (fetchDocKey.current !== docKey) { fetchDocKey.current = docKey; return; }
-    const linkFields = new Set(fetchRules.map((r) => r.linkField));
-    for (const lf of linkFields) {
-      const cur = values[lf];
-      if (prevLinks.current[lf] === cur) continue;
-      prevLinks.current[lf] = cur;
-      const rules = fetchRules.filter((r) => r.linkField === lf);
-      if (cur == null || cur === "") {
-        for (const r of rules) setAutomaticTarget(r.target, "");
-        continue;
-      }
-      const sourceDoctype = rules.find((r) => r.sourceDoctype)?.sourceDoctype;
+    if (fetchDocKey.current !== docKey) {
+      fetchDocKey.current = docKey;
+      if (!isNewDocument) return;
+    }
+    const linkFields = new Set(fetchRules.map((rule) => rule.linkField));
+    for (const linkField of linkFields) {
+      const currentLink = values[linkField];
+      const rules = fetchRules.filter((rule) => rule.linkField === linkField);
+      const identity = fetchIdentity(rules[0]!, values, currentLink);
+      if (prevLinks.current[linkField] === identity) continue;
+      prevLinks.current[linkField] = identity;
+
+      // Ordinary fetch_from targets are source-owned. Clear old auto/initial content before the
+      // next request so a failed/slower lookup never leaves visibly stale data from the old Link.
+      // fetch_if_empty targets are operator-owned once non-empty, so they are never auto-cleared.
+      for (const rule of rules) if (!rule.fetchIfEmpty) setAutomaticTarget(rule, "");
+      if (currentLink == null || currentLink === "") continue;
+
+      const sourceDoctype = resolveFetchSourceDoctype(rules[0]!, values);
       if (!sourceDoctype) continue;
       if (services?.fetchDocument) {
-        void services.fetchDocument(sourceDoctype, String(cur))
+        void services.fetchDocument(sourceDoctype, String(currentLink))
           .then((source) => {
-            if (prevLinks.current[lf] !== cur) return;
-            for (const r of rules) setAutomaticTarget(r.target, source[r.sourceField] ?? "");
+            if (prevLinks.current[linkField] !== identity) return;
+            for (const rule of rules) setAutomaticTarget(rule, source[rule.sourceField] ?? "");
           })
-          .catch(() => { /* keep current values */ });
+          .catch(() => { /* source-owned targets stay blank rather than showing stale data */ });
         continue;
       }
       if (!services?.fetchValue) continue;
-      void Promise.all(rules.map(async (r) => ({ r, value: await services.fetchValue!(sourceDoctype, String(cur), r.sourceField) })))
+      void Promise.all(rules.map(async (rule) => ({ rule, value: await services.fetchValue!(sourceDoctype, String(currentLink), rule.sourceField) })))
         .then((resolvedRules) => {
-          if (prevLinks.current[lf] !== cur) return;
-          for (const { r, value } of resolvedRules) setAutomaticTarget(r.target, value ?? "");
+          if (prevLinks.current[linkField] !== identity) return;
+          for (const { rule, value } of resolvedRules) setAutomaticTarget(rule, value ?? "");
         })
-        .catch(() => { /* keep current values */ });
+        .catch(() => { /* source-owned targets stay blank rather than showing stale data */ });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, fetchRules, services, doc.name, doc.modified, fieldByName]);
+  }, [values, fetchRules, services, doc.name, doc.modified, fieldByName, isNewDocument]);
 
   const resolved: ResolvedField[] = useMemo(
     () => resolveMeta(meta, { doc: values, roles, maskedFields, forceReadOnly }),
@@ -255,7 +303,7 @@ export function FormView(props: FormViewProps) {
   const actionCtx: FormActionCtx = {
     docstatus: ((doc.docstatus ?? 0) as 0 | 1 | 2),
     isSubmittable: meta.is_submittable === 1,
-    isNew: props.isNew ?? (!doc.name || doc.name === "new"),
+    isNew: isNewDocument,
     dirty: form.formState.isDirty,
     hasWorkflow: (props.transitions?.length ?? 0) > 0 || props.hasWorkflow === true,
     saving: props.saving,
@@ -357,7 +405,7 @@ export function FormView(props: FormViewProps) {
           </div>
 
           {isWorkspace && keyFields.length ? (
-            <div className={cn("flex min-h-10 flex-wrap items-center gap-x-5 gap-y-1 border-t px-4 py-2 md:px-5", brandHeader ? "border-white/20 bg-black/5" : "bg-muted/20")}>
+            <div className={cn("flex min-h-10 flex-wrap items-center gap-x-5 gap-y-1 border-t px-4 py-2 md:px-5", brandHeader ? "border-white/20 bg-black/5" : "bg-muted/20") }>
               {keyFields.map((field) => (
                 <div key={field.fieldname} className="flex min-w-0 items-baseline gap-1.5 text-xs">
                   <span className={cn("font-medium", brandHeader ? "text-white/70" : "text-muted-foreground")}>{field.label ?? field.fieldname}:</span>

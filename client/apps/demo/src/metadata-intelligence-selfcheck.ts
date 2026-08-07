@@ -10,6 +10,7 @@ import {
   resolveField,
   resolveFieldContract,
   shouldApplyAutomaticValue,
+  validateFieldValue,
   type AppActionInputTable,
   type DocField,
   type DocTypeMeta,
@@ -58,12 +59,15 @@ check("explicit field contract wins over inferred legacy flags", () => {
   assert.equal(resolveFieldContract(hidden).serverEnforced, true);
 });
 
-check("legacy metadata derives the same safe ownership defaults", () => {
-  const legacy: DocField = { fieldname: "customer_name", fieldtype: "Data", fetch_from: "customer.customer_name" };
-  const contract = resolveFieldContract(legacy);
-  assert.equal(contract.valueSource, "link");
-  assert.equal(contract.editMode, "editable");
-  assert.equal(contract.dirtyGuard, "preserve_user_value");
+check("legacy fetch_from ownership distinguishes ordinary source-owned from fetch_if_empty", () => {
+  const ordinary: DocField = { fieldname: "customer_name", fieldtype: "Data", fetch_from: "customer.customer_name" };
+  const ordinaryContract = resolveFieldContract(ordinary);
+  assert.equal(ordinaryContract.valueSource, "link");
+  assert.equal(ordinaryContract.editMode, "editable");
+  assert.equal(ordinaryContract.dirtyGuard, undefined, "ordinary fetch_from is source-owned");
+
+  const emptyOnly: DocField = { ...ordinary, fetch_if_empty: 1 };
+  assert.equal(resolveFieldContract(emptyOnly).dirtyGuard, "preserve_user_value", "fetch_if_empty keeps an operator override");
 });
 
 check("Today default is resolved by one metadata primitive", () => {
@@ -83,6 +87,8 @@ check("dirty guard protects an operator override from automatic refresh", () => 
   const field = meta.fields.find((entry) => entry.fieldname === "reference_label")!;
   assert.equal(shouldApplyAutomaticValue(field, "manual", "user"), false);
   assert.equal(shouldApplyAutomaticValue(field, "", "user"), true);
+  const tableField: DocField = { fieldname: "rows", fieldtype: "Table", options: "Reference Child", valueSource: "link", editMode: "editable", dirtyGuard: "preserve_user_value" };
+  assert.equal(shouldApplyAutomaticValue(tableField, [], "user"), false, "empty array is still an explicit user-owned collection, not a scalar empty value");
   const merged = mergeAutomaticFieldPatch(meta, { reference_label: "manual" }, { reference_label: "automatic", unknown: 1 }, { reference_label: "user" });
   assert.equal(merged.reference_label, "manual");
   assert.equal("unknown" in merged, false);
@@ -200,6 +206,38 @@ check("ChildGrid falls back to in_list_view without adding undeclared business c
     permissions: [],
   };
   assert.deepEqual(resolveChildGridColumns(child, []).map((field) => field.fieldname), ["alpha", "beta"]);
+});
+
+check("form value validation mirrors canonical server constraints", () => {
+  const qty: DocField = { fieldname: "qty", label: "Qty", fieldtype: "Float", non_negative: 1 };
+  assert.equal(validateFieldValue(qty, -1)?.code, "negative");
+  assert.equal(validateFieldValue(qty, "12.5"), undefined);
+  assert.equal(validateFieldValue(qty, "not-a-number")?.code, "numeric");
+
+  const code: DocField = { fieldname: "code", label: "Code", fieldtype: "Data", length: 3, not_nullable: 1 };
+  assert.equal(validateFieldValue(code, "ABCD")?.code, "too_long");
+  assert.equal(validateFieldValue(code, null)?.code, "not_nullable");
+  assert.equal(validateFieldValue(code, "ABC"), undefined);
+
+  const state: DocField = { fieldname: "state", label: "State", fieldtype: "Select", options: "Open\nClosed" };
+  assert.equal(validateFieldValue(state, "Other")?.code, "invalid_select");
+  assert.equal(validateFieldValue(state, "Open"), undefined);
+
+  const date: DocField = { fieldname: "date", label: "Date", fieldtype: "Date" };
+  assert.equal(validateFieldValue(date, "07/08/2026")?.code, "date");
+  assert.equal(validateFieldValue(date, "2026-08-07"), undefined);
+
+  const rating: DocField = { fieldname: "rating", label: "Rating", fieldtype: "Rating" };
+  assert.equal(validateFieldValue(rating, 1.1)?.code, "rating");
+  assert.equal(validateFieldValue(rating, 0.8), undefined);
+
+  const required: DocField = { fieldname: "required", label: "Required", fieldtype: "Data", reqd: 1 };
+  assert.equal(validateFieldValue(required, "")?.code, "required");
+
+  const table: DocField = { fieldname: "rows", label: "Rows", fieldtype: "Table", options: "Reference Child" };
+  assert.equal(validateFieldValue({ ...table, reqd: 1 }, [])?.code, "required", "required collection rejects an empty array without changing dirty-guard semantics");
+  assert.equal(validateFieldValue(table, Array.from({ length: 1001 }, () => ({})))?.code, "table_limit");
+  assert.equal(validateFieldValue(table, [{}]), undefined);
 });
 
 console.log(`metadata intelligence selfcheck: ${passed} checks passed`);

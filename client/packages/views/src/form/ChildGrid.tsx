@@ -11,9 +11,11 @@ import {
   buildMetadataDefaults,
   collectFetchFrom,
   evalDependsOn,
+  fetchRuleAllowsCurrentValue,
   operationalViewPolicy,
   readProjectionBinding,
   readProjectionOutput,
+  resolveFetchSourceDoctype,
   resolveField,
   shouldApplyAutomaticValue,
   smartGridCellRole,
@@ -30,6 +32,13 @@ import {
   Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, cn,
 } from "@metaforge/ui";
+import {
+  parseSpreadsheetCell,
+  parseSpreadsheetClipboard,
+  planSpreadsheetColumns,
+  spreadsheetCellEmpty,
+  spreadsheetIssueMessage,
+} from "./spreadsheet.js";
 
 export interface ChildGridProps {
   childMeta: DocTypeMeta;
@@ -113,54 +122,6 @@ export function defaultChildGridHiddenColumns(meta: DocTypeMeta, columns: DocFie
   return columns.filter((field) => !keep.has(field.fieldname)).map((field) => field.fieldname);
 }
 
-export interface AverageWeightResult {
-  totalLengthM?: number;
-  totalAreaSqm?: number;
-  averageWeight?: number;
-  basis?: "kg/m" | "kg/m²" | "kg/cây" | "kg/ĐVT";
-}
-
-/** Compatibility algebra only. Generic ChildGrid never invokes this business formula. */
-export function derivePurchaseOrderBarem(row: Doc): number | undefined {
-  const length = Number(row.length_m);
-  const bars = Number(row.qty_bar);
-  const kgPerM = Number(row.theoretical_kg_per_m);
-  if (!Number.isFinite(length) || length <= 0 || !Number.isFinite(bars) || bars <= 0 || !Number.isFinite(kgPerM) || kgPerM <= 0) return undefined;
-  return length * bars * kgPerM;
-}
-
-/** Compatibility algebra only. Generic ChildGrid never invokes this business formula. */
-export function deriveAverageWeight(row: Doc): AverageWeightResult {
-  const positive = (value: unknown) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-  };
-  const uom = String(row.uom ?? "").trim().toLocaleLowerCase("vi");
-  const isKg = ["kg", "kilogram", "ki-lô-gam"].includes(uom);
-  const totalKg = isKg ? positive(row.qty) : positive(row.actual_weight_kg);
-  const bars = positive(row.qty_bar);
-  const length = positive(row.length_m);
-  const quantity = positive(row.qty);
-  const width = positive(row.width_m);
-  const height = positive(row.height_m);
-  const pieces = positive(row.set_count);
-  const inventoryMode = String(row.inventory_mode ?? "").trim();
-  const isAreaItem = inventoryMode === "Tấm/Kính" || inventoryMode === "Thành phẩm theo m2";
-  const totalAreaSqm = isAreaItem && width > 0 && height > 0 && pieces > 0 ? width * height * pieces : undefined;
-  const totalLengthM = bars > 0 && length > 0 ? bars * length : length || undefined;
-  let divisor = 0;
-  let basis: AverageWeightResult["basis"];
-  if (totalAreaSqm) { divisor = totalAreaSqm; basis = "kg/m²"; }
-  else if (totalLengthM) { divisor = totalLengthM; basis = "kg/m"; }
-  else if (bars > 0) { divisor = bars; basis = "kg/cây"; }
-  else if (!isKg && quantity > 0) { divisor = quantity; basis = "kg/ĐVT"; }
-  return {
-    ...(totalAreaSqm ? { totalAreaSqm } : {}),
-    ...(totalLengthM ? { totalLengthM } : {}),
-    ...(totalKg > 0 && divisor > 0 ? { averageWeight: totalKg / divisor, basis } : {}),
-  };
-}
-
 function rowKey(row: Doc, index: number): string {
   return String(row.name ?? `row-${index}`);
 }
@@ -191,23 +152,6 @@ function columnWidth(field: DocField): number {
   if (field.fieldtype === "Link" || field.fieldtype === "Dynamic Link") return Math.max(10, Math.min(16, 8 + labelLength * 0.45));
   if (["Small Text", "Text", "Long Text", "Text Editor", "Markdown Editor", "Code"].includes(field.fieldtype)) return 14;
   return Math.max(8, Math.min(14, 7 + labelLength * 0.4));
-}
-
-function parsePasted(field: DocField, raw: string): unknown {
-  const value = raw.trim();
-  if (!value) return undefined;
-  if (field.fieldtype === "Check") {
-    const normalized = value.toLocaleLowerCase("vi");
-    if (["1", "true", "yes", "y", "x", "có", "co"].includes(normalized)) return 1;
-    if (["0", "false", "no", "n", "không", "khong"].includes(normalized)) return 0;
-    return undefined;
-  }
-  if (NUMERIC_TYPES.has(field.fieldtype)) {
-    const normalized = value.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return value;
 }
 
 function readLayout(key: string, fallbackHidden: string[]): GridLayout {
@@ -286,6 +230,7 @@ export function ChildGrid(props: ChildGridProps) {
   const [detailRow, setDetailRow] = useState<number | null>(null);
   const [picked, setPicked] = useState({ row: 0, column: 0 });
   const [effectErrors, setEffectErrors] = useState<Record<number, string>>({});
+  const [cellErrors, setCellErrors] = useState<Record<string, string>>({});
   const latestRows = useRef(rows);
   const fetchVersion = useRef(new Map<string, number>());
   const projectionVersion = useRef(new Map<string, number>());
@@ -330,11 +275,6 @@ export function ChildGrid(props: ChildGridProps) {
   const fetchRules = useMemo(() => collectFetchFrom(childMeta), [childMeta]);
   const metaByName = useMemo(() => new Map((childMeta.fields ?? []).map((field) => [field.fieldname, field])), [childMeta]);
   const groupRuns = useMemo(() => buildGroupRuns(columns, gridPolicy?.columnGroups ?? []), [columns, gridPolicy?.columnGroups]);
-  const groupedFields = useMemo(() => {
-    const set = new Set<string>();
-    for (const group of gridPolicy?.columnGroups ?? []) for (const field of group.fields) set.add(field);
-    return set;
-  }, [gridPolicy?.columnGroups]);
   const groupEndFields = useMemo(() => {
     const ends = new Set<string>();
     let previousKey = "";
@@ -448,6 +388,9 @@ export function ChildGrid(props: ChildGridProps) {
     const version = (fetchVersion.current.get(key) ?? 0) + 1;
     fetchVersion.current.set(key, version);
     const queue = [...new Set(initialSources)];
+    for (const rule of fetchRules) {
+      if (rule.sourceDoctypeField && initialSources.includes(rule.sourceDoctypeField)) queue.push(rule.linkField);
+    }
     const visited = new Set<string>();
     const working = { ...current } as Doc;
     const patch: Record<string, unknown> = {};
@@ -462,6 +405,7 @@ export function ChildGrid(props: ChildGridProps) {
         const sourceName = String(working[sourceField] ?? "").trim();
         if (!sourceName) {
           for (const rule of rules) {
+            if (rule.fetchIfEmpty) continue;
             const target = metaByName.get(rule.target);
             if (!target || !shouldApplyAutomaticValue(target, working[rule.target], prov[rule.target])) continue;
             working[rule.target] = "";
@@ -471,13 +415,20 @@ export function ChildGrid(props: ChildGridProps) {
           }
           continue;
         }
-        const sourceDoctype = rules.find((rule) => rule.sourceDoctype)?.sourceDoctype;
-        if (!sourceDoctype) continue;
-        const sourceDoc = services.fetchDocument ? await services.fetchDocument(sourceDoctype, sourceName) : undefined;
-        if (fetchVersion.current.get(key) !== version) return;
         for (const rule of rules) {
           const target = metaByName.get(rule.target);
-          if (!target || !shouldApplyAutomaticValue(target, working[rule.target], prov[rule.target])) continue;
+          if (!target) continue;
+          if (!fetchRuleAllowsCurrentValue(rule, working[rule.target])) continue;
+          if (!shouldApplyAutomaticValue(target, working[rule.target], prov[rule.target])) continue;
+          const sourceDoctype = resolveFetchSourceDoctype(rule, working);
+          if (!sourceDoctype) continue;
+          if (!rule.fetchIfEmpty) {
+            working[rule.target] = "";
+            patch[rule.target] = "";
+            prov[rule.target] = "auto";
+          }
+          const sourceDoc = services.fetchDocument ? await services.fetchDocument(sourceDoctype, sourceName) : undefined;
+          if (fetchVersion.current.get(key) !== version) return;
           const value = sourceDoc
             ? sourceDoc[rule.sourceField]
             : await services.fetchValue?.(sourceDoctype, sourceName, rule.sourceField);
@@ -506,11 +457,19 @@ export function ChildGrid(props: ChildGridProps) {
     rowProvenance(key)[fieldname] = "user";
     fetchVersion.current.set(key, (fetchVersion.current.get(key) ?? 0) + 1);
     projectionVersion.current.set(key, (projectionVersion.current.get(key) ?? 0) + 1);
+    setCellErrors((current) => { const next = { ...current }; delete next[`${rowIndex}:${fieldname}`]; return next; });
     emitRows(currentRows.map((entry, index) => index === rowIndex ? { ...entry, [fieldname]: value } as Doc : entry));
     void runFetchEffects(rowIndex, [fieldname]);
   };
 
-  const addRows = (count: number) => {
+  const focusCell = (row: number, column: number) => {
+    const holder = gridRef.current?.querySelector<HTMLElement>(`[data-cell="${row}:${column}"]`);
+    const target = holder?.querySelector<HTMLElement>("input,button,textarea,select,[tabindex]") ?? holder;
+    target?.focus();
+    if (target instanceof HTMLInputElement) target.select();
+  };
+
+  const addRows = (count: number, focusFirst = false) => {
     const start = latestRows.current.length;
     const added = Array.from({ length: count }, (_, index) => blankRow(`new-${Date.now()}-${start + index}`));
     emitRows([...latestRows.current, ...added]);
@@ -520,6 +479,7 @@ export function ChildGrid(props: ChildGridProps) {
       if (sources.length) void runFetchEffects(rowIndex, sources);
       else scheduleProjectionEffects(rowIndex, []);
     });
+    if (focusFirst) window.requestAnimationFrame(() => focusCell(start, 0));
   };
 
   const deleteRows = (indexes: number[]) => {
@@ -530,6 +490,7 @@ export function ChildGrid(props: ChildGridProps) {
     emitRows(latestRows.current.filter((_, index) => !removing.has(index)));
     setSelected([]);
     setDetailRow(null);
+    setCellErrors({});
   };
 
   const undoDelete = () => {
@@ -549,6 +510,35 @@ export function ChildGrid(props: ChildGridProps) {
     setSelected([]);
   };
 
+  const fillDownSelected = () => {
+    if (selected.length < 2) return;
+    const field = columns[picked.column];
+    if (!field) return;
+    const indexes = latestRows.current
+      .map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1)
+      .filter((index) => index >= 0)
+      .sort((a, b) => a - b);
+    const sourceIndex = indexes[0];
+    if (sourceIndex == null) return;
+    const sourceValue = latestRows.current[sourceIndex]?.[field.fieldname];
+    if (spreadsheetCellEmpty(sourceValue)) return;
+    const next = [...latestRows.current];
+    const changed: number[] = [];
+    for (const rowIndex of indexes.slice(1)) {
+      const row = next[rowIndex];
+      if (!row || !spreadsheetCellEmpty(row[field.fieldname])) continue;
+      const resolved = resolveField(field.list_only ? { ...field, list_only: 0 } : field, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
+      if (!resolved.visible || resolved.readOnly || resolved.masked) continue;
+      const copy = { ...row, [field.fieldname]: sourceValue } as Doc;
+      next[rowIndex] = copy;
+      rowProvenance(rowKey(copy, rowIndex))[field.fieldname] = "user";
+      changed.push(rowIndex);
+    }
+    if (!changed.length) return;
+    emitRows(next);
+    changed.forEach((rowIndex) => void runFetchEffects(rowIndex, [field.fieldname]));
+  };
+
   const moveColumn = (fieldname: string, direction: -1 | 1) => {
     const order = orderedColumns.map((field) => field.fieldname);
     const index = order.indexOf(fieldname);
@@ -564,58 +554,84 @@ export function ChildGrid(props: ChildGridProps) {
     return prior ? `calc(${base}px + ${prior}rem)` : base;
   };
 
-  const focusCell = (row: number, column: number) => {
-    const holder = gridRef.current?.querySelector<HTMLElement>(`[data-cell="${row}:${column}"]`);
-    const target = holder?.querySelector<HTMLElement>("input,button,textarea,select,[tabindex]") ?? holder;
-    target?.focus();
-    if (target instanceof HTMLInputElement) target.select();
-  };
-
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (readOnly) return;
-    const holder = (event.target as HTMLElement).closest<HTMLElement>("[data-cell]");
+    const targetElement = event.target as HTMLElement;
+    const holder = targetElement.closest<HTMLElement>("[data-cell]");
     if (!holder || holder.querySelector('[aria-expanded="true"]')) return;
+    if (targetElement.tagName === "TEXTAREA" && ["Enter", "ArrowUp", "ArrowDown"].includes(event.key)) return;
     const [row, column] = holder.dataset.cell!.split(":").map(Number) as [number, number];
-    const go = (dr: number, dc: number) => {
-      const nextRow = Math.max(0, Math.min(latestRows.current.length - 1, row + dr));
-      const nextColumn = Math.max(0, Math.min(columns.length - 1, column + dc));
-      if (nextRow === row && nextColumn === column) return;
+    const lastRow = latestRows.current.length - 1;
+    const lastColumn = columns.length - 1;
+    const focus = (nextRow: number, nextColumn: number) => {
       event.preventDefault();
-      focusCell(nextRow, nextColumn);
+      window.requestAnimationFrame(() => focusCell(nextRow, nextColumn));
     };
-    if (event.key === "ArrowDown" || (event.key === "Enter" && !event.shiftKey)) go(1, 0);
-    else if (event.key === "ArrowUp" || (event.key === "Enter" && event.shiftKey)) go(-1, 0);
-    else if (event.key === "Tab" && !event.shiftKey && column < columns.length - 1) go(0, 1);
-    else if (event.key === "Tab" && event.shiftKey && column > 0) go(0, -1);
+    if (event.key === "Enter" && !event.shiftKey && row === lastRow && column === lastColumn) {
+      event.preventDefault();
+      const nextRow = latestRows.current.length;
+      addRows(1);
+      window.requestAnimationFrame(() => focusCell(nextRow, 0));
+    } else if (event.key === "Enter" && !event.shiftKey) focus(Math.min(lastRow, row + 1), column);
+    else if (event.key === "Enter" && event.shiftKey) focus(Math.max(0, row - 1), column);
+    else if (event.key === "ArrowDown") focus(Math.min(lastRow, row + 1), column);
+    else if (event.key === "ArrowUp") focus(Math.max(0, row - 1), column);
+    else if (event.key === "Tab" && !event.shiftKey) {
+      if (column < lastColumn) focus(row, column + 1);
+      else if (row < lastRow) focus(row + 1, 0);
+      else {
+        event.preventDefault();
+        const nextRow = latestRows.current.length;
+        addRows(1);
+        window.requestAnimationFrame(() => focusCell(nextRow, 0));
+      }
+    } else if (event.key === "Tab" && event.shiftKey) {
+      if (column > 0) focus(row, column - 1);
+      else if (row > 0) focus(row - 1, lastColumn);
+    }
   };
 
   const onPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     if (readOnly) return;
     const raw = event.clipboardData.getData("text/plain");
-    if (!/[\t\n]/.test(raw)) return;
+    if (!/[\t\n\r]/.test(raw)) return;
     event.preventDefault();
-    const matrix = raw.replace(/\r/g, "").replace(/\n$/, "").split("\n").map((line) => line.split("\t"));
+    const matrix = parseSpreadsheetClipboard(raw);
+    const plan = planSpreadsheetColumns(columns, matrix[0], picked.column);
+    const data = matrix.slice(plan.dataStart);
     const next = [...latestRows.current];
     const changed = new Map<number, string[]>();
-    matrix.forEach((cells, rowOffset) => {
-      const rowIndex = picked.row + rowOffset;
-      if (!next[rowIndex]) next[rowIndex] = blankRow(`new-${Date.now()}-${rowIndex}`);
-      const row = { ...next[rowIndex]! } as Doc;
+    const errors: Record<string, string> = {};
+    const numberFormat = services?.fmt?.config.numberFormat;
+    data.forEach((cells, rowOffset) => {
+      const requested = picked.row + rowOffset;
+      const rowIndex = Math.min(requested, next.length);
+      const existing = next[rowIndex];
+      const row = { ...(existing ?? blankRow(`new-${Date.now()}-${rowIndex}`)) } as Doc;
       const key = rowKey(row, rowIndex);
       const prov = rowProvenance(key);
       const fields: string[] = [];
       cells.forEach((cell, columnOffset) => {
-        const field = columns[picked.column + columnOffset];
+        const field = plan.fields[columnOffset];
         if (!field) return;
-        const parsed = parsePasted(field, cell);
-        if (parsed === undefined) return;
-        row[field.fieldname] = parsed;
+        const errorKey = `${rowIndex}:${field.fieldname}`;
+        const resolved = resolveField(field.list_only ? { ...field, list_only: 0 } : field, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
+        if (!resolved.visible || resolved.readOnly || resolved.masked) { errors[errorKey] = "Ô này không cho phép nhập"; return; }
+        if (!spreadsheetCellEmpty(row[field.fieldname])) return; // BRD: paste Excel giữ nguyên ô đã có.
+        const parsed = parseSpreadsheetCell(field, cell, numberFormat);
+        if (parsed.empty) return;
+        if (!parsed.ok) { errors[errorKey] = spreadsheetIssueMessage(parsed); return; }
+        row[field.fieldname] = parsed.value;
         prov[field.fieldname] = "user";
         fields.push(field.fieldname);
       });
-      next[rowIndex] = row;
-      if (fields.length) changed.set(rowIndex, fields);
+      if (fields.length) {
+        if (rowIndex === next.length) next.push(row); else next[rowIndex] = row;
+        changed.set(rowIndex, fields);
+      }
     });
+    setCellErrors(errors);
+    if (!changed.size) return;
     emitRows(next);
     for (const [rowIndex, fields] of changed) void runFetchEffects(rowIndex, fields);
   };
@@ -724,10 +740,12 @@ export function ChildGrid(props: ChildGridProps) {
                     const sticky = columnIndex < freezeCount;
                     const role = cellRole(row, field);
                     const movedToSecondary = secondaryFields.has(field.fieldname);
-                    return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-cell-role={role} className={cn(
+                    const pasteError = cellErrors[`${rowIndex}:${field.fieldname}`];
+                    return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-cell-role={role} title={pasteError} className={cn(
                       compact ? "h-8 p-0.5" : "h-9 p-1",
                       "align-middle transition-colors",
                       roleClass(role),
+                      pasteError && "ring-2 ring-inset ring-destructive/70",
                       sticky && "sticky z-10 shadow-[inset_-1px_0_0_var(--border)]",
                       gridPolicy?.autoBorders && "border-r border-border/50",
                       gridPolicy?.autoBorders && groupEndFields.has(field.fieldname) && "border-r-2 border-r-orange-500/30",
@@ -767,16 +785,19 @@ export function ChildGrid(props: ChildGridProps) {
   );
 
   const effectMessages = Object.entries(effectErrors).filter(([index]) => Number(index) < rows.length);
+  const pasteErrorCount = Object.keys(cellErrors).length;
 
   const gridToolbar = (allowExpand: boolean) => (
     <div className={cn("flex flex-wrap items-center gap-2", isOperational && "rounded-md border bg-card px-2 py-1.5 shadow-sm")}>
-      {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}><Plus /> Thêm dòng</Button> : null}
+      {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(1, true)}><Plus /> Thêm dòng</Button> : null}
       {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(10)}>+10 dòng</Button> : null}
+      {!readOnly && selected.length >= 2 ? <Button type="button" variant="outline" size="sm" onClick={fillDownSelected}><ArrowDown /> Điền xuống</Button> : null}
       {!readOnly && selected.length ? <Button type="button" variant="outline" size="sm" onClick={duplicateSelected}><Copy /> Nhân bản {selected.length}</Button> : null}
       {!readOnly && selected.length ? <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRows(rows.map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1).filter((index) => index >= 0))}><Trash2 /> Xóa {selected.length}</Button> : null}
       {!readOnly && lastDeleted?.length ? <Button type="button" variant="ghost" size="sm" onClick={undoDelete}><Undo2 /> Hoàn tác</Button> : null}
       <Button type="button" variant="ghost" size="sm" onClick={() => setColumnSettingsOpen(true)}><Columns3 /> Cột</Button>
       {allowExpand && !isOperational ? <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}><Maximize2 /> Bảng lớn</Button> : null}
+      {pasteErrorCount ? <span className="text-xs font-medium text-destructive">{pasteErrorCount} ô paste cần kiểm tra</span> : null}
       <span className="ml-auto text-xs text-muted-foreground">{rows.length} dòng · {columns.length}/{canonicalColumns.length} cột</span>
     </div>
   );

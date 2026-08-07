@@ -60,6 +60,15 @@ export {
   type ChildGridProps,
   type AverageWeightResult,
 } from "./form/ChildGridWithExtensions.js";
+export {
+  parseSpreadsheetClipboard,
+  planSpreadsheetColumns,
+  parseSpreadsheetCell,
+  spreadsheetIssueMessage,
+  spreadsheetCellEmpty,
+  type SpreadsheetCellResult,
+  type SpreadsheetColumnPlan,
+} from "./form/spreadsheet.js";
 export { registerTableControls } from "./form/table-controls.js";
 export { KanbanView, type KanbanViewProps } from "./kanban/KanbanView.js";
 export { KanbanContainer, type KanbanContainerProps } from "./kanban/KanbanContainer.js";
