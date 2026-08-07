@@ -28,6 +28,8 @@ export interface DocField {
   mandatory_depends_on?: string;
   read_only_depends_on?: string;
   fetch_from?: string;
+  /** Frappe: chỉ fetch_from khi target đang rỗng; nếu tắt, source Link sở hữu target. */
+  fetch_if_empty?: 0 | 1;
   in_list_view?: 0 | 1;
   in_standard_filter?: 0 | 1;
   permlevel?: number;
