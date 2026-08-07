@@ -44,6 +44,10 @@ function creditLimitFromCustomer(doc: Doc, company: string): number | null {
  * Alumdoor sales is a true operational Experience over canonical Sales Order authority.
  * It deliberately occupies the whole viewport: operators spend their time in the sheet,
  * so sidebar/top-shell chrome must not consume working area or split keyboard focus.
+ *
+ * IMPORTANT: this surface stays BELOW shared portal controls (Popover/Dialog/Select use z-50).
+ * Raising the fullscreen host above those portals makes Link dropdowns open behind the sheet,
+ * which looks exactly like a dead picker even though the search request succeeded.
  */
 export function AlumdoorSalesModeWorkspace() {
   const navigate = useNavigate();
@@ -146,7 +150,7 @@ export function AlumdoorSalesModeWorkspace() {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex min-h-0 flex-col overflow-hidden bg-white text-slate-900"
+      className="fixed inset-0 z-40 flex min-h-0 flex-col overflow-hidden bg-white text-slate-900"
       data-alumdoor-sales-focus="true"
       data-column-preset={columnPreset}
     >
