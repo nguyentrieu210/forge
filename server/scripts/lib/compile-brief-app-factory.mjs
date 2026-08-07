@@ -14,6 +14,30 @@ import { attachBriefUiViewPolicies } from "./brief-ui-view-policy.mjs";
 export { BriefError };
 
 /**
+ * Legacy `brief.experiences` represented app-owned React workbenches selected by a prefix.
+ * The generic runtime no longer has such a registry, so emitting those keys would create
+ * dead routes in an otherwise installable package. Strip the obsolete declarations at the
+ * App Factory boundary while preserving metadata-native `action:*` and `screen:*` surfaces,
+ * which are compiled independently by the base compiler.
+ *
+ * Raw historical briefs may still contain the old objects until their large source files are
+ * rewritten. They are inert input debt, not package/runtime authority.
+ */
+function removeLegacyRuntimeExperiences(brief) {
+  const experiences = Array.isArray(brief?.experiences) ? brief.experiences : [];
+  const keys = new Set(experiences.map((entry) => entry?.key).filter((key) => typeof key === "string" && key));
+  if (!keys.size) return brief;
+
+  const source = structuredClone(brief);
+  source.experiences = [];
+  if (Array.isArray(source.navigation?.items)) {
+    source.navigation.items = source.navigation.items.filter((key) => !keys.has(key));
+  }
+  if (typeof source.home === "string" && keys.has(source.home)) delete source.home;
+  return source;
+}
+
+/**
  * `menu:false` means the source remains installed/direct-addressable but no longer belongs
  * to daily navigation. An older explicit `navigation.items` order may still name that key.
  * Remove only those now-hidden keys before the strict base compiler validates navigation;
@@ -46,12 +70,13 @@ function normalizeHiddenNavigationItems(brief) {
 export function compileBrief(brief) {
   assertBriefContextDimensions(brief, BriefError);
 
-  let source = normalizeHiddenNavigationItems(brief);
+  let source = removeLegacyRuntimeExperiences(brief);
+  source = normalizeHiddenNavigationItems(source);
   const tableOnlyActions = new Set();
 
   // The legacy compiler requires one scalar field. First-class input tables make that
   // requirement obsolete, so inject a private compiler-only field for table-only actions.
-  if (Array.isArray(brief?.actions) && brief.actions.some((action) => action?.inputTables !== undefined && (!Array.isArray(action.fields) || !action.fields.length))) {
+  if (Array.isArray(source?.actions) && source.actions.some((action) => action?.inputTables !== undefined && (!Array.isArray(action.fields) || !action.fields.length))) {
     if (source === brief) source = structuredClone(brief);
     source.actions.forEach((action, actionIndex) => {
       if (action?.inputTables === undefined || (Array.isArray(action.fields) && action.fields.length)) return;
@@ -62,9 +87,9 @@ export function compileBrief(brief) {
 
   const pkg = compileBaseBrief(source);
 
-  if (Array.isArray(brief?.actions) && brief.actions.length) {
+  if (Array.isArray(source?.actions) && source.actions.length) {
     pkg.actions = pkg.actions.map((action, actionIndex) => {
-      const sourceAction = brief.actions[actionIndex];
+      const sourceAction = source.actions[actionIndex];
       let nextAction = action;
       const rawTables = sourceAction?.inputTables;
       if (rawTables !== undefined) {
@@ -92,5 +117,5 @@ export function compileBrief(brief) {
     });
   }
 
-  return attachBriefUiViewPolicies(brief, pkg);
+  return attachBriefUiViewPolicies(source, pkg);
 }

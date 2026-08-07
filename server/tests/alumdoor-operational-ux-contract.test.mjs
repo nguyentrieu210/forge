@@ -48,12 +48,12 @@ const HR_KEYS = [
   "Salary Bank Batch",
 ];
 
-test("Alumdoor 2.3.1 exposes action-first operational strips beyond Sales and Purchase", async () => {
+test("Alumdoor 2.3.2 keeps canonical operational capabilities after UI reset", async () => {
   const brief = await readBriefSource(briefPath);
   const pkg = compileBrief(brief);
 
-  assert.equal(brief.version, "2.3.1");
-  assert.equal(pkg.version, "2.3.1");
+  assert.equal(brief.version, "2.3.2");
+  assert.equal(pkg.version, "2.3.2");
 
   const keysFor = (group) => pkg.nav.filter((entry) => entry.group === group).map((entry) => entry.key);
   assert.deepEqual(keysFor("Kho"), STOCK_KEYS);
@@ -81,47 +81,45 @@ test("Alumdoor 2.3.1 exposes action-first operational strips beyond Sales and Pu
   }
 });
 
-test("Operational report affinity is app-composition data, not shared-shell business knowledge", async () => {
-  const [shell, profile] = await Promise.all([
+test("shared runtime has no Alumdoor report or workspace composition policy", async () => {
+  const [shell, registry] = await Promise.all([
     readFile(shellPath, "utf8"),
     readFile(runtimeProfilePath, "utf8"),
   ]);
-  for (const [key, workspace] of [
-    ["report:Stock Balance", "Kho"],
-    ["report:Stock Ledger", "Kho"],
-    ["report:Lệnh sản xuất theo mặt hàng", "Sản xuất"],
-    ["report:Work Order Progress", "Sản xuất"],
-    ["report:Công nợ theo khách hàng", "Công nợ"],
-    ["report:Accounts Receivable", "Công nợ"],
-    ["report:Accounts Payable", "Công nợ"],
+
+  for (const literal of [
+    "report:Stock Balance",
+    "report:Stock Ledger",
+    "report:Lệnh sản xuất theo mặt hàng",
+    "report:Work Order Progress",
+    "report:Công nợ theo khách hàng",
+    "report:Accounts Receivable",
+    "report:Accounts Payable",
+    "ALUMDOOR_HR_WORKSPACE",
+    "Nhân sự & Tiền lương",
   ]) {
-    assert.ok(profile.includes(`"${key}": ["${workspace}"]`), `${key} must stay near ${workspace} in the app composition policy`);
-    assert.equal(shell.includes(key), false, `${key} must not leak into the shared shell`);
+    assert.equal(registry.includes(literal), false, `${literal} must not be hard-coded in runtime registry`);
   }
-  assert.match(shell, /workspaceNavigationPolicy\?\.reportAffinities/);
+
+  for (const literal of ["ALUMDOOR_HR_WORKSPACE", "Nhân sự & Tiền lương", "report:Stock Ledger"]) {
+    assert.equal(shell.includes(literal), false, `${literal} must not leak into shared shell`);
+  }
 });
 
-test("Alumdoor projects core HR and payroll through app policy without shrinking shared HRM", async () => {
-  const [shell, profile, hrmRaw] = await Promise.all([
-    readFile(shellPath, "utf8"),
+test("shared HRM remains complete without Alumdoor-specific runtime projection", async () => {
+  const [registry, hrmRaw] = await Promise.all([
     readFile(runtimeProfilePath, "utf8"),
     readFile(hrmPath, "utf8"),
   ]);
   const hrm = JSON.parse(hrmRaw);
   const installedKeys = new Set(hrm.nav.map((entry) => entry.key));
 
-  for (const key of HR_KEYS) assert.ok(installedKeys.has(key), `${key} must come from canonical HRM navigation`);
-  assert.match(profile, /const ALUMDOOR_HR_WORKSPACE = "Nhân sự & Tiền lương"/);
-  for (const key of HR_KEYS) {
-    const encoded = /^[A-Za-z]+$/.test(key) ? `${key}: ALUMDOOR_HR_WORKSPACE` : `"${key}": ALUMDOOR_HR_WORKSPACE`;
-    assert.ok(profile.includes(encoded), `${key} must be projected into the Alumdoor HR/payroll workspace`);
+  for (const key of HR_KEYS) assert.ok(installedKeys.has(key), `${key} must remain installed in canonical HRM`);
+  for (const key of ["Job Applicant", "Interview", "Appraisal", "Training Event", "Talent Pool"]) {
+    assert.ok(installedKeys.has(key), `${key} remains installed in shared HRM`);
   }
-  assert.equal(shell.includes("ALUMDOOR_HR_WORKSPACE"), false, "shared shell must not own the Alumdoor HR workspace");
-  assert.equal(shell.includes("Nhân sự & Tiền lương"), false, "shared shell must stay vertical-neutral");
 
-  const hrProjectionBlock = profile.slice(profile.indexOf("const ALUMDOOR_HR_GROUP_BY_KEY"), profile.indexOf("const ALUMDOOR_REPORT_WORKSPACES"));
-  for (const excluded of ["Job Applicant", "Interview", "Appraisal", "Training Event", "Talent Pool"]) {
-    assert.ok(installedKeys.has(excluded), `${excluded} remains installed in shared HRM`);
-    assert.equal(hrProjectionBlock.includes(`"${excluded}"`), false, `${excluded} must not enter Alumdoor daily HR/payroll sidebar`);
-  }
+  assert.equal(registry.includes("ALUMDOOR_HR_GROUP_BY_KEY"), false);
+  assert.equal(registry.includes("ALUMDOOR_REPORT_WORKSPACES"), false);
+  assert.equal(registry.includes("workspaceNavigationPolicy"), false);
 });

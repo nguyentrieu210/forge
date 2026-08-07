@@ -1,52 +1,57 @@
-# UI Runtime Boundary — 2026-08-06
+# UI Runtime Boundary — superseded 2026-08-08
 
-Status: implementation boundary for `arch/ui-runtime-boundary-20260806`.
-
-Exact base: `main@b8f0851d2833d1ecb4a07ded30ede08685d2e728`.
+Status: **GENERIC RUNTIME ONLY**. This document supersedes the hybrid workbench decision made on 2026-08-06.
 
 ## Decision
 
-Forge UI uses a hybrid boundary rather than attempting to describe every operational screen through metadata.
+Forge UI no longer permits app/vertical-specific React workbenches to be registered inside the shared runtime.
 
 ```text
-App manifest / metadata
-  -> navigation, route, label, icon, visibility, generic CRUD composition
+App manifest / DocType / screen / action metadata
+  -> navigation, labels, visibility, composition and declared operator surfaces
 
 Generic runtime
-  -> shell, routing, CRUD, generic screen/action/report/dashboard primitives
-
-Experience registry
-  -> maps a declared experience capability/prefix to an app-owned React workbench
-
-App/vertical React workbench
-  -> operator interaction and orchestration for complex business jobs
+  -> shell, routing, list/tree, document CRUD, context, screen/action/report/dashboard primitives
 
 Named server/domain capabilities
-  -> authoritative calculation, permission, lifecycle and compound writes
+  -> authoritative calculation, permission, lifecycle, workflow and compound writes
 ```
+
+There is no app-owned React experience registry in the operating architecture.
 
 ## Rules
 
-1. Ordinary CRUD remains metadata-driven through canonical DocType metadata and `DoctypeWorkspace`.
-2. Small declared commands may use generic `ActionScreen`; composable read/operate surfaces may use generic `ScreenView`.
-3. A complex operator workbench may be React code. Metadata only needs to declare that the route exists and which registered experience it resolves to.
-4. `main-base.tsx` must not directly import vertical/application experience implementations or branch on vertical experience names.
-5. App-specific experience composition belongs in `experience-registry.tsx` for this phase. A later package/plugin split may move registrations out of the runtime bundle without changing the resolver contract.
-6. Business formulas, stock valuation, finance posting, payroll/statutory logic and compound mutations remain server/domain authority.
-7. Navigation authority convergence is a separate slice: this change does not remove existing shell/system navigation entries because doing that is user-visible behavior and should be proven independently.
+1. **Declaration first.** App and vertical UI is expressed through installed manifest, DocType metadata, screen/action declarations and bounded presentation contracts.
+2. **Generic document CRUD remains.** The form renderer is an internal generic document primitive used by create/edit/detail flows. It is not a standalone app view and must not contain vertical business knowledge.
+3. **No standalone Grid/Bulk mode.** A DocType workspace has one canonical list/tree -> document -> context path. Spreadsheet/child-table interaction may exist as a bounded generic control inside a declared operation; it is not a competing global view mode.
+4. **No runtime app dispatch.** Shared runtime code must not import or branch to `Alumdoor*`, Approval Inbox, Social Commerce, Daily Ledger or another app-specific React workbench.
+5. **Generic screen/action primitives are allowed.** `screen:*` and `action:*` remain metadata-native because their structure and server binding are declared in the app package and rendered by shared components.
+6. **No UI business authority.** Pricing formulas, stock reservation/valuation, accounting posting, payroll/statutory logic, approvals and compound writes remain named server/domain capabilities with server-side permission enforcement.
+7. **No hidden fallback.** Removing a bespoke workbench means deleting its route/registration/entrypoint instead of retaining a silent fallback that can be re-enabled accidentally.
+8. **App chrome is declarative.** Branding/navigation differences come from manifest/design metadata, not `if (appId === ...)` branches in shared TypeScript.
+9. **Shared metadata vocabulary stays bounded.** Add shared contract only when a valid reusable UI requirement cannot be expressed with the current grammar. Do not turn metadata into an arbitrary business-logic DSL.
+10. **Release discipline still applies.** A shared runtime or metadata contract change creates a new candidate and must receive the evidence required by the active phase before deployment/relock.
 
-## Concurrency boundary
+## Removed legacy pattern
 
-Open PR `#743` currently owns:
+The following pattern is no longer architectural authority:
 
-- `client/apps/runtime/src/experiences/AlumdoorOperationsCenter.ts`
-- `client/apps/runtime/src/experiences/AlumdoorSalesPolicyBridge.ts`
-- `server/apps-src/alumdoor-worker/src/sales-wizard-context.ts`
+```text
+manifest experience key
+  -> experience-registry.tsx
+  -> app-specific React workbench
+```
 
-This branch does not modify those paths. The registry references the existing `AlumdoorOperationsCenter` public module only, so #743 can merge/rebase independently.
+Legacy source references that cannot yet be physically removed must be inert, excluded from navigation/compilation, and tracked as cleanup debt. They never justify restoring runtime dispatch.
 
-Open PR `#749` is an operator E2E harness and changes only test/workflow/seeding paths. It has no direct source-file collision with this slice; after either branch changes visible routing/labels, exact-head operator evidence must be rerun.
+## Guardrail
 
-## Follow-up dependency request
+Architecture tests must fail when shared runtime reintroduces:
 
-After #743 is resolved, rebase this branch (or its successor) on exact `main` and evaluate whether the temporary sales policy bridge is still required. Do not silently rewrite #743-owned logic from this architecture slice.
+- direct `./experiences/*` imports;
+- vertical/application names in runtime dispatch;
+- a standalone Bulk/Grid DocType mode;
+- app-specific DocType override routing;
+- app-id-specific chrome branches.
+
+This boundary aligns Forge with the North Star: app creation should primarily be metadata + domain rules + integrations, without forking the runtime.

@@ -1,13 +1,14 @@
 /**
- * @metaforge/views — List/Report/Kanban/Calendar/Gantt/Tree/Dashboard/Form/Bulk/Print.
- * Scaffold: khai báo catalog view + ViewEngine contract. Renderer thật ở PHA 5
- * (P0 thứ tự: List → Form trước).
+ * @metaforge/views — generic metadata-driven runtime surfaces.
+ *
+ * Standalone Bulk/Grid view has been removed from the public catalog. Document editing remains
+ * a canonical record surface used by CRUD containers; it is not exposed as a competing app view.
  */
 import type { FrappeAdapter } from "@metaforge/adapter-frappe";
 import type { DocTypeMeta } from "@metaforge/core";
 
 export type ViewKind =
-  | "list" | "form" | "bulk" | "report" | "kanban"
+  | "list" | "form" | "report" | "kanban"
   | "calendar" | "gantt" | "tree" | "dashboard" | "print";
 
 export interface ViewContext {
@@ -16,7 +17,6 @@ export interface ViewContext {
   meta: DocTypeMeta;
 }
 
-// P0 renderers
 export { ListView, type ListViewProps } from "./list/ListView.js";
 export { deriveColumns, imageField, isStatusField, type ListColumn, type CellAlign } from "./list/columns.js";
 export { renderCell, formatValue, statusVariant, statusTone, StatusBadge } from "./list/cells.js";
@@ -43,8 +43,6 @@ export {
   type ListDensity,
 } from "./list/column-preferences.js";
 export { FormView, type FormViewProps } from "./form/FormView.js";
-export { BulkGridView, type BulkGridViewProps } from "./bulk/BulkGridView.js";
-export { BulkGridContainer, type BulkGridContainerProps } from "./bulk/BulkGridContainer.js";
 export { SplitView, useBreakpoint, type SplitViewProps, type Breakpoint } from "./detail/SplitView.js";
 export { ContextPanel, type ContextPanelProps, type TimelineItem, type TimelineKind, type ContextAttachment, type UserOption, type ContextShare, type ContextConnection } from "./detail/ContextPanel.js";
 export { WorkflowActionBar, FormActionBar, resolveWorkflowActions, type WorkflowAction } from "./detail/WorkflowActionBar.js";
@@ -104,8 +102,8 @@ export { WorkspaceView, type WorkspaceViewProps, type WsItem, type WsPage, type 
 export { createFullRegistry } from "./registry.js";
 
 export const P0_VIEW_ORDER: ViewKind[] = ["list", "form"];
-export const ALL_VIEWS: ViewKind[] = ["list", "form", "bulk", "report", "kanban", "calendar", "gantt", "tree", "dashboard", "print"];
-export const VIEWS_VERSION = "0.2.0";
+export const ALL_VIEWS: ViewKind[] = ["list", "form", "report", "kanban", "calendar", "gantt", "tree", "dashboard", "print"];
+export const VIEWS_VERSION = "0.3.0";
 export { ApplicationCatalogView, type ApplicationCatalogViewProps } from "./catalog/ApplicationCatalogView.js";
 export { ApplicationCatalogContainer } from "./catalog/ApplicationCatalogContainer.js";
 export { OverviewView, type OverviewViewProps } from "./overview/OverviewView.js";

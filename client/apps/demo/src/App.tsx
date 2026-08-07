@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  FileText, List as ListIcon, LayoutGrid, FolderTree, Calendar as CalIcon, BarChart3,
-  LayoutDashboard, ScrollText, Printer, Wrench, Workflow, Receipt, Plus,
+  List as ListIcon, LayoutGrid, FolderTree, Calendar as CalIcon, BarChart3,
+  LayoutDashboard, ScrollText, Printer, Wrench, Workflow, Receipt,
 } from "lucide-react";
 import { type DocTypeMeta, type Doc } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
@@ -95,7 +95,6 @@ const treeRoots: TreeNodeItem[] = [
 const treeKids: Record<string, TreeNodeItem[]> = { Products: [{ value: "Laptop", title: "Laptop" }, { value: "Phone", title: "Điện thoại" }] };
 
 const NAV: NavItem[] = [
-  { key: "form", label: "Form", icon: <FileText />, group: "Xem" },
   { key: "list", label: "List", icon: <ListIcon />, group: "Xem" },
   { key: "kanban", label: "Kanban", icon: <LayoutGrid />, group: "Xem" },
   { key: "tree", label: "Tree", icon: <FolderTree />, group: "Xem" },
@@ -139,7 +138,6 @@ function Screen() {
   const awesomebar = useMemo(
     () => ({
       actions: [
-        { id: "new-task", label: "Tạo mới Task", icon: <Plus />, hint: "Task", run: () => navigate("/view/form") },
         ...WORKSPACE_META.modules.flatMap((module) => module.tabs.map((tab) => ({
           id: `workspace-${module.key}-${tab.key}`,
           label: `${module.label}: ${tab.label}`,
@@ -157,7 +155,7 @@ function Screen() {
       ],
       recent: rows.slice(0, 3).map((r) => ({ doctype: "Task", name: String(r.name), title: String(r.subject) })) as AwesomeRecord[],
       searchRecords: async (q: string) => rows.filter((r) => String(r.subject).toLowerCase().includes(q.toLowerCase())).map((r) => ({ doctype: "Task", name: String(r.name), title: String(r.subject) })),
-      onSelectRecord: () => navigate("/view/form"),
+      onSelectRecord: (record: AwesomeRecord) => navigate(`/view/list?open=${encodeURIComponent(record.name)}`),
       onSelectDoctype: (doctype: string) => {
         const target = WORKSPACE_META.modules.flatMap((module) => module.tabs).find((tab) => tab.doctype === doctype)?.targetKey;
         navigate(`/view/${target ?? "list"}`);
@@ -195,7 +193,7 @@ function Screen() {
             hasDetail={Boolean(openDoc)}
             contextTitle={openName ?? undefined}
             onCloseDetail={() => setOpen(null)}
-            list={<MockList meta={taskMeta} allRows={rows} activeRow={openName ?? undefined} onRowClick={(r) => setOpen(String(r.name))} onCreate={() => navigate("/view/form")} />}
+            list={<MockList meta={taskMeta} allRows={rows} activeRow={openName ?? undefined} onRowClick={(r) => setOpen(String(r.name))} />}
             detail={openDoc ? (
               <FormView
                 meta={taskMeta}
@@ -230,7 +228,6 @@ function Screen() {
         </div>
       ) : (
         <div className="p-4">
-          {active === "form" && <FormView meta={taskMeta} doc={rows[0]!} registry={registry} services={services} roles={["All"]} onSave={(c) => { toast.success(`Đã lưu ${Object.keys(c).length} thay đổi (mock)`); return true; }} />}
           {active === "kanban" && <KanbanView meta={taskMeta} fieldName="status" columns={["Open", "Working", "Closed"]} rows={rows} />}
           {active === "tree" && <TreeView roots={treeRoots} childrenOf={(v) => treeKids[v]} expanded={new Set(["Products"])} onToggle={() => {}} />}
           {active === "calendar" && <CalendarView year={2026} month={7} dateField="exp_date" titleField="subject" events={rows} />}
