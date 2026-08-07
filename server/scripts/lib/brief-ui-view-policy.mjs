@@ -56,6 +56,12 @@ export function validateBriefUiViewPolicies(brief) {
   return errors;
 }
 
+function operationalOwnsSurface(operational) {
+  if (!operational || typeof operational !== "object" || Array.isArray(operational)) return false;
+  const presentation = operational.form?.presentation;
+  return presentation === "workspace" || presentation === "full" || Boolean(operational.grid);
+}
+
 /**
  * Add UI-owned policies after the mature base compiler has derived the rest of a package.
  * This avoids duplicating list/form/workflow compilation while still making Matrix/Bulk/
@@ -86,7 +92,14 @@ export function attachBriefUiViewPolicies(brief, pkg) {
       }
       next[key] = key === "operational" ? { ...policy } : { enabled: true, ...policy };
     }
-    if (Object.keys(next).length) compiled.viewPolicy = { ...(compiled.viewPolicy ?? {}), ...next };
+    if (Object.keys(next).length) {
+      const inherited = { ...(compiled.viewPolicy ?? {}) };
+      // Operational full/workspace and SmartGrid are deliberate full work surfaces. They must
+      // not inherit a quick-entry contract derived from required fields, otherwise create routes
+      // fall back into modal shells and child grids collapse to the old quick-field subset.
+      if (operationalOwnsSurface(next.operational)) delete inherited.quickEntry;
+      compiled.viewPolicy = { ...inherited, ...next };
+    }
   }
   return pkg;
 }
