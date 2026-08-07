@@ -8,13 +8,12 @@ const workspacePath = fileURLToPath(new URL("../src/app/DoctypeWorkspace.tsx", i
 const surface = readFileSync(surfacePath, "utf8");
 const workspace = readFileSync(workspacePath, "utf8");
 
-test("V3 data surface covers the canonical everyday business surfaces", () => {
+test("V3 data surface covers canonical list document and context surfaces", () => {
   for (const marker of [
     "mf-list-view",
     "mf-list-toolbar",
     "mf-list-scroll",
     "mf-list-mobile",
-    "mf-bulk-bar",
     "mf-form-view",
     "mf-form-header",
     "mf-form-section",
@@ -41,14 +40,16 @@ test("V3 data surface stays generic and presentation-only", () => {
   }
 });
 
-test("DoctypeWorkspace activates V3 without replacing canonical renderers", () => {
+test("DoctypeWorkspace has one canonical list-document-context path", () => {
   assert.match(workspace, /className=\{V3_DATA_SURFACE_CLASS\}/);
   assert.match(workspace, /data-ui-version="v3"/);
   assert.match(workspace, /<ListContainer/);
   assert.match(workspace, /<FormContainer/);
   assert.match(workspace, /<ContextContainer/);
   assert.match(workspace, /<NewFormContainer/);
-  assert.match(workspace, /<BulkGridContainer/);
+  assert.equal(workspace.includes("BulkGridContainer"), false);
+  assert.equal(workspace.includes('view: "bulk"'), false);
+  assert.equal(workspace.includes("Nhập hàng loạt"), false);
 });
 
 test("DoctypeWorkspace uses quick entry only when metadata explicitly opts in", () => {
