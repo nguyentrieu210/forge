@@ -28,7 +28,7 @@ export function SocialCommerceLanding({ adapter }: { page?: PublicSocialPage; ad
         <p className="mb-5 text-sm text-muted-foreground">
           Trang giới thiệu hard-code đã được gỡ khỏi runtime. Giao diện công khai phải được khai báo hoặc triển khai độc lập.
         </p>
-        <LoginForm adapter={adapter} />
+        <LoginForm adapter={adapter} onSuccess={() => window.location.assign("/")} embedded />
       </section>
     </main>
   );
