@@ -32,6 +32,13 @@ export interface DocField {
   in_standard_filter?: 0 | 1;
   permlevel?: number;
   precision?: string;
+  /** Canonical value constraints transported from the server metadata model. */
+  length?: number;
+  set_only_once?: 0 | 1;
+  allow_on_submit?: 0 | 1;
+  non_negative?: 0 | 1;
+  not_nullable?: 0 | 1;
+  description?: string;
   /**
    * Độ rộng field trên form, tính trên lưới 3 ô.
    * - full: 1 field / hàng
