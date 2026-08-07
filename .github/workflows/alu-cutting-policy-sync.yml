@@ -1,8 +1,12 @@
 name: ALU Cutting Policy Sync One-Shot
 
 on:
-  issue_comment:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type sync-cutting-policy to confirm the production master-data sync
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,7 +19,7 @@ concurrency:
 jobs:
   sync:
     name: Backup and sync Alumdoor Cutting Policy fixtures
-    if: github.event.issue.number == 757 && github.event.comment.body == '/sync-cutting-policy' && github.event.comment.user.login == github.repository_owner
+    if: inputs.confirm == 'sync-cutting-policy'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
