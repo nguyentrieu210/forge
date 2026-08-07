@@ -7,7 +7,11 @@ on:
       - "client/packages/core/src/types/meta.ts"
       - "client/packages/views/src/form/**"
       - "client/packages/views/src/action/**"
+      - "client/packages/views/src/detail/**"
+      - "client/packages/views/src/container/FormContainer.tsx"
+      - "client/packages/views/src/container/NewFormContainer.tsx"
       - "client/packages/builder/src/doctype/**"
+      - "client/package.json"
       - "server/packages/frappe-api/src/meta-shape.ts"
       - "server/packages/frappe-model/src/types.ts"
       - "server/packages/frappe-model/src/validate.ts"
@@ -21,7 +25,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   validate:
-    name: Autofill and spreadsheet contracts
+    name: MetaForm presentation and spreadsheet contracts
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -46,13 +50,15 @@ jobs:
         run: node --test tests/metaform-operational-policy.test.mjs tests/metaform-operational-precedence.test.mjs tests/metaform-autofill-contract.test.mjs
       - name: Build MetaForge
         run: pnpm --filter metaforge run build
-      - name: Verify autofill spreadsheet and Builder contracts
+      - name: Verify presentation autofill spreadsheet and Builder contracts
         working-directory: client
         run: >-
           pnpm --filter @metaforge/demo exec tsx
           ../../packages/core/src/meta/fetch-from-selfcheck.ts
           && pnpm --filter @metaforge/demo exec tsx
           ../../packages/views/src/form/spreadsheet-selfcheck.ts
+          && pnpm --filter @metaforge/demo exec tsx
+          ../../packages/views/src/detail/document-presentation-selfcheck.ts
           && pnpm --filter @metaforge/demo exec tsx
           ../../packages/builder/src/doctype/autofill-selfcheck.ts
       - name: Diff hygiene
