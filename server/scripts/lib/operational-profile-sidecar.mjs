@@ -18,12 +18,22 @@ function assertObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
 }
 
+function stringList(value, label) {
+  if (!Array.isArray(value) || !value.length || !value.every((entry) => typeof entry === "string" && entry.trim())) {
+    throw new Error(`${label} must be a non-empty string array`);
+  }
+  const normalized = value.map((entry) => entry.trim());
+  if (new Set(normalized).size !== normalized.length) throw new Error(`${label} must not contain duplicates`);
+  return normalized;
+}
+
 /**
  * Merge an optional `<brief>.operational.json` presentation profile into brief DocTypes.
  *
  * This is deliberately a sidecar rather than a second business schema. The profile can only add
- * `operational` presentation metadata and field visual roles; the normal brief compiler and the
- * canonical server DocType parser still validate every field reference and server projection.
+ * operational presentation metadata, visual field roles and a presentation column list. The normal
+ * brief compiler and canonical server DocType parser still validate every field reference and
+ * named server projection.
  */
 export async function applyOperationalProfileSidecar(brief, briefSource) {
   if (!briefSource || typeof briefSource !== "string") return brief;
@@ -41,13 +51,16 @@ export async function applyOperationalProfileSidecar(brief, briefSource) {
   const requested = new Map();
   for (const [doctype, declaration] of Object.entries(profile.doctypes)) {
     assertObject(declaration, `${profileSource}: doctypes.${doctype}`);
-    const keys = Object.keys(declaration).filter((key) => !["form", "grid", "fieldRoles"].includes(key) && !key.startsWith("//"));
+    const keys = Object.keys(declaration).filter((key) => !["form", "grid", "fieldRoles", "listColumns"].includes(key) && !key.startsWith("//"));
     if (keys.length) throw new Error(`${profileSource}: doctypes.${doctype} does not support ${keys.join(", ")}`);
-    if (declaration.form === undefined && declaration.grid === undefined && declaration.fieldRoles === undefined) {
-      throw new Error(`${profileSource}: doctypes.${doctype} must declare form, grid, or fieldRoles`);
+    if (declaration.form === undefined && declaration.grid === undefined && declaration.fieldRoles === undefined && declaration.listColumns === undefined) {
+      throw new Error(`${profileSource}: doctypes.${doctype} must declare form, grid, fieldRoles, or listColumns`);
     }
     if (declaration.form !== undefined) assertObject(declaration.form, `${profileSource}: doctypes.${doctype}.form`);
     if (declaration.grid !== undefined) assertObject(declaration.grid, `${profileSource}: doctypes.${doctype}.grid`);
+    const listColumns = declaration.listColumns === undefined
+      ? undefined
+      : stringList(declaration.listColumns, `${profileSource}: doctypes.${doctype}.listColumns`);
     if (declaration.fieldRoles !== undefined) {
       assertObject(declaration.fieldRoles, `${profileSource}: doctypes.${doctype}.fieldRoles`);
       for (const [fieldname, role] of Object.entries(declaration.fieldRoles)) {
@@ -56,7 +69,7 @@ export async function applyOperationalProfileSidecar(brief, briefSource) {
         }
       }
     }
-    requested.set(doctype, declaration);
+    requested.set(doctype, { ...declaration, ...(listColumns ? { listColumns } : {}) });
   }
   if (!requested.size) throw new Error(`${profileSource}: doctypes must not be empty`);
 
@@ -68,6 +81,7 @@ export async function applyOperationalProfileSidecar(brief, briefSource) {
     seen.add(name);
     return {
       ...doctype,
+      ...(declaration.listColumns ? { list: declaration.listColumns } : {}),
       operational: {
         ...(declaration.form ? { form: declaration.form } : {}),
         ...(declaration.grid ? { grid: declaration.grid } : {}),
