@@ -14,9 +14,11 @@ import {
   operationalViewPolicy,
   resolveMeta,
   shouldApplyAutomaticValue,
+  validateFieldValue,
   type Doc,
   type DocField,
   type DocTypeMeta,
+  type FieldValidationIssue,
   type OperationalFormPolicy,
   type ResolvedField,
 } from "@metaforge/core";
@@ -56,15 +58,43 @@ export interface FormViewProps {
   onWorkflowAction?: (action: string) => void;
 }
 
+function validationMessage(issue: FieldValidationIssue, t: (k: string, f?: string) => string): string {
+  switch (issue.code) {
+    case "required": return t("form.required");
+    case "not_nullable": return t("form.not_nullable", "Không được để trống");
+    case "too_long": return issue.limit
+      ? t("form.max_length", `Tối đa ${issue.limit} ký tự`)
+      : t("form.invalid_string", "Phải là chuỗi ký tự");
+    case "invalid_select": return t("form.invalid_select", "Giá trị không nằm trong danh sách cho phép");
+    case "integer": return t("form.invalid_integer", "Phải là số nguyên");
+    case "duration": return t("form.invalid_duration", "Phải là số giây nguyên không âm");
+    case "rating": return t("form.invalid_rating", "Phải là số từ 0 đến 1");
+    case "phone": return t("form.invalid_phone", "Số điện thoại không hợp lệ");
+    case "color": return t("form.invalid_color", "Màu phải có dạng #rrggbb");
+    case "geolocation": return t("form.invalid_geolocation", "Vị trí phải là dữ liệu GeoJSON hợp lệ");
+    case "numeric": return t("form.invalid_number", "Phải là số");
+    case "check": return t("form.invalid_check", "Phải là giá trị Có/Không");
+    case "date": return t("form.invalid_date", "Ngày phải có dạng YYYY-MM-DD");
+    case "datetime": return t("form.invalid_datetime", "Ngày giờ không hợp lệ");
+    case "time": return t("form.invalid_time", "Giờ phải có dạng HH:MM hoặc HH:MM:SS");
+    case "json": return t("form.invalid_json", "Phải là dữ liệu JSON hợp lệ");
+    case "table": return t("form.invalid_table", "Phải là một bảng dữ liệu");
+    case "table_limit": return t("form.table_limit", `Tối đa ${issue.limit ?? 1000} dòng`);
+    case "table_row": return t("form.invalid_table_row", `Dòng ${issue.row ?? "?"} không hợp lệ`);
+    case "negative": return t("form.non_negative", "Không được là số âm");
+    default: return t("form.invalid_value", "Giá trị không hợp lệ");
+  }
+}
+
 function buildSchema(resolved: ResolvedField[], t: (k: string, f?: string) => string): z.ZodTypeAny {
   const shape: Record<string, z.ZodTypeAny> = {};
   for (const rf of resolved) {
     if (rf.layout || !rf.visible) continue;
-    if (rf.required) {
-      shape[rf.field.fieldname] = z
-        .any()
-        .refine((v) => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0), { message: t("form.required") });
-    }
+    shape[rf.field.fieldname] = z.any().superRefine((value, ctx) => {
+      const issue = validateFieldValue(rf.field, value, rf.required);
+      if (!issue) return;
+      ctx.addIssue({ code: "custom", message: validationMessage(issue, t) });
+    });
   }
   return z.object(shape).passthrough();
 }
@@ -357,7 +387,7 @@ export function FormView(props: FormViewProps) {
           </div>
 
           {isWorkspace && keyFields.length ? (
-            <div className={cn("flex min-h-10 flex-wrap items-center gap-x-5 gap-y-1 border-t px-4 py-2 md:px-5", brandHeader ? "border-white/20 bg-black/5" : "bg-muted/20")}>
+            <div className={cn("flex min-h-10 flex-wrap items-center gap-x-5 gap-y-1 border-t px-4 py-2 md:px-5", brandHeader ? "border-white/20 bg-black/5" : "bg-muted/20") }>
               {keyFields.map((field) => (
                 <div key={field.fieldname} className="flex min-w-0 items-baseline gap-1.5 text-xs">
                   <span className={cn("font-medium", brandHeader ? "text-white/70" : "text-muted-foreground")}>{field.label ?? field.fieldname}:</span>
