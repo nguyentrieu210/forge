@@ -1,32 +1,34 @@
 /** @jsxImportSource react */
 /**
- * ChildGrid — one generic child-table renderer for every DocType.
- *
- * Authority and presentation rules come from canonical metadata:
- *   viewPolicy.list.columns → in_list_view → safe field fallback
- *   resolveField() → visibility/read-only/required/permission mirror
- *   buildMetadataDefaults() → new-row defaults
- *   collectFetchFrom() → generic link-derived effects
- *
- * There are deliberately no Sales/Purchase/industry DocType branches here. Domain workflows that
- * need multi-source pricing/ATP/formulas belong to their app Worker/Experience, not this renderer.
+ * ChildGrid — generic Excel-style child-table renderer for every DocType.
+ * Operational presentation comes entirely from `viewPolicy.operational.grid`; no business DocType
+ * names live here. Named projections may enrich a row, while authoritative calculation/validation
+ * remains behind the server capability named by metadata.
  */
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ArrowDown, ArrowUp, Columns3, Copy, Maximize2, Plus, RotateCcw, Trash2, Undo2 } from "lucide-react";
 import {
   buildMetadataDefaults,
   collectFetchFrom,
+  evalDependsOn,
+  operationalViewPolicy,
+  readProjectionBinding,
+  readProjectionOutput,
   resolveField,
   shouldApplyAutomaticValue,
+  smartGridCellRole,
   type Doc,
   type DocField,
   type DocTypeMeta,
   type FieldValueProvenance,
+  type SmartGridCellRole,
+  type SmartGridColumnGroup,
+  type SmartGridProjectionPolicy,
 } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
 import {
   Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input,
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell, cn,
 } from "@metaforge/ui";
 
 export interface ChildGridProps {
@@ -47,6 +49,13 @@ interface GridLayout {
   order: string[];
   hidden: string[];
   labels: Record<string, string>;
+}
+
+interface GroupRun {
+  key: string;
+  label: string;
+  tone: SmartGridColumnGroup["tone"];
+  count: number;
 }
 
 const EMPTY_LAYOUT: GridLayout = { w: {}, order: [], hidden: [], labels: {} };
@@ -76,8 +85,6 @@ function visibleColumns(
   parentDoc?: Record<string, unknown>,
   roles?: string[],
 ): DocField[] {
-  // With no rows there is no row state to evaluate. Keep declared columns so a depends_on field
-  // does not disappear before the operator creates the first row.
   if (!rows.length) return columns;
   const visible = columns.filter((column) => rows.some((row) => resolveField(
     column.list_only ? { ...column, list_only: 0 } : column,
@@ -97,12 +104,6 @@ export function resolveChildGridColumns(
   return visibleColumns(declaredColumns(meta), meta, rows, parentDoc, roles);
 }
 
-/**
- * Compact hiding is explicit only. Automatic `surface=quick` inference is intentionally not used
- * as a hiding rule because compiler defaults often mark only required fields quick; silently
- * hiding totals/status fields would be a presentation regression. Apps that want a compact child
- * surface declare `viewPolicy.quickEntry.fields`.
- */
 export function defaultChildGridHiddenColumns(meta: DocTypeMeta, columns: DocField[], expanded: boolean): string[] {
   if (expanded) return [];
   const quick = meta.viewPolicy?.quickEntry?.fields ?? [];
@@ -232,10 +233,52 @@ function detailSpan(field: DocField): string {
     : "";
 }
 
+function roleClass(role: SmartGridCellRole | undefined): string {
+  if (role === "operator_input") return "bg-rose-500/[0.07] dark:bg-rose-400/[0.09]";
+  if (role === "optional_input") return "bg-background/70";
+  if (role === "auto") return "bg-sky-500/[0.07] dark:bg-sky-400/[0.08]";
+  if (role === "formula") return "bg-violet-500/[0.07] dark:bg-violet-400/[0.09]";
+  if (role === "readonly") return "bg-muted/35";
+  if (role === "warning") return "bg-amber-500/[0.10]";
+  if (role === "result") return "bg-emerald-500/[0.08] dark:bg-emerald-400/[0.09]";
+  if (role === "money") return "bg-orange-500/[0.06] dark:bg-orange-400/[0.08]";
+  return "";
+}
+
+function groupToneClass(tone: SmartGridColumnGroup["tone"]): string {
+  if (tone === "input") return "bg-rose-600 text-white";
+  if (tone === "commercial") return "bg-amber-600 text-white";
+  if (tone === "result") return "bg-emerald-700 text-white";
+  if (tone === "brand") return "bg-orange-600 text-white";
+  return "bg-orange-500 text-white";
+}
+
+function buildGroupRuns(columns: DocField[], groups: SmartGridColumnGroup[]): GroupRun[] {
+  if (!groups.length) return [];
+  const byField = new Map<string, SmartGridColumnGroup>();
+  for (const group of groups) for (const field of group.fields) byField.set(field, group);
+  const runs: GroupRun[] = [];
+  columns.forEach((field, index) => {
+    const group = byField.get(field.fieldname);
+    const key = group?.key ?? `__ungrouped_${index}`;
+    const previous = runs[runs.length - 1];
+    if (previous && previous.key === key) previous.count += 1;
+    else runs.push({ key, label: group?.label ?? "", tone: group?.tone, count: 1 });
+  });
+  return runs;
+}
+
 type RowProvenance = Record<string, FieldValueProvenance>;
 
 export function ChildGrid(props: ChildGridProps) {
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
+  const operational = useMemo(() => operationalViewPolicy(childMeta), [childMeta]);
+  const gridPolicy = operational?.grid;
+  const isOperational = Boolean(gridPolicy);
+  const compact = gridPolicy?.density === "compact";
+  const brandHeader = gridPolicy?.headerTone === "brand";
+  const projections = gridPolicy?.projections ?? [];
+  const secondaryPolicy = gridPolicy?.secondaryRow;
   const [expanded, setExpanded] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [lastDeleted, setLastDeleted] = useState<Array<{ row: Doc; index: number }> | null>(null);
@@ -244,11 +287,17 @@ export function ChildGrid(props: ChildGridProps) {
   const [picked, setPicked] = useState({ row: 0, column: 0 });
   const [effectErrors, setEffectErrors] = useState<Record<number, string>>({});
   const latestRows = useRef(rows);
-  const effectVersion = useRef(new Map<string, number>());
+  const fetchVersion = useRef(new Map<string, number>());
+  const projectionVersion = useRef(new Map<string, number>());
+  const projectionTimers = useRef(new Map<string, number>());
   const provenance = useRef(new Map<string, RowProvenance>());
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { latestRows.current = rows; }, [rows]);
+  useEffect(() => () => {
+    for (const timer of projectionTimers.current.values()) window.clearTimeout(timer);
+    projectionTimers.current.clear();
+  }, []);
 
   const canonicalColumns = useMemo(
     () => resolveChildGridColumns(childMeta, rows, parentDoc, roles),
@@ -280,6 +329,25 @@ export function ChildGrid(props: ChildGridProps) {
   const selectedSet = new Set(selected);
   const fetchRules = useMemo(() => collectFetchFrom(childMeta), [childMeta]);
   const metaByName = useMemo(() => new Map((childMeta.fields ?? []).map((field) => [field.fieldname, field])), [childMeta]);
+  const groupRuns = useMemo(() => buildGroupRuns(columns, gridPolicy?.columnGroups ?? []), [columns, gridPolicy?.columnGroups]);
+  const groupedFields = useMemo(() => {
+    const set = new Set<string>();
+    for (const group of gridPolicy?.columnGroups ?? []) for (const field of group.fields) set.add(field);
+    return set;
+  }, [gridPolicy?.columnGroups]);
+  const groupEndFields = useMemo(() => {
+    const ends = new Set<string>();
+    let previousKey = "";
+    columns.forEach((field, index) => {
+      const key = (gridPolicy?.columnGroups ?? []).find((group) => group.fields.includes(field.fieldname))?.key ?? `__${field.fieldname}`;
+      if (index > 0 && key !== previousKey) ends.add(columns[index - 1]!.fieldname);
+      previousKey = key;
+    });
+    if (columns.length) ends.add(columns[columns.length - 1]!.fieldname);
+    return ends;
+  }, [columns, gridPolicy?.columnGroups]);
+  const identityIndex = columns.findIndex((field) => field.fieldname === identity);
+  const freezeCount = Math.max(gridPolicy?.frozenColumns ?? 0, identityIndex >= 0 ? identityIndex + 1 : 0);
 
   const emitRows = (next: Doc[]) => {
     latestRows.current = next;
@@ -301,16 +369,88 @@ export function ChildGrid(props: ChildGridProps) {
     return row;
   };
 
+  const projectionsForChanges = (changed: string[]): SmartGridProjectionPolicy[] => {
+    if (!changed.length) return projections;
+    return projections.filter((projection) => projection.watch.some((watch) => {
+      if (watch.startsWith("parent.")) return changed.includes(watch);
+      return changed.includes(watch);
+    }));
+  };
+
+  const runProjectionEffects = async (rowIndex: number, changed: string[]) => {
+    if (!services?.callPost || !projections.length) return;
+    const current = latestRows.current[rowIndex];
+    if (!current) return;
+    const applicable = projectionsForChanges(changed);
+    if (!applicable.length) return;
+    const key = rowKey(current, rowIndex);
+    const version = (projectionVersion.current.get(key) ?? 0) + 1;
+    projectionVersion.current.set(key, version);
+    try {
+      for (const projection of applicable.slice(0, 8)) {
+        const liveBefore = latestRows.current[rowIndex];
+        if (!liveBefore || rowKey(liveBefore, rowIndex) !== key || projectionVersion.current.get(key) !== version) return;
+        const args: Record<string, unknown> = { ...(projection.constants ?? {}) };
+        for (const [argument, binding] of Object.entries(projection.inputs)) {
+          args[argument] = readProjectionBinding(binding, liveBefore, parentDoc);
+        }
+        const result = await services.callPost<Record<string, unknown>>(projection.method, args);
+        if (projectionVersion.current.get(key) !== version) return;
+        const live = latestRows.current[rowIndex];
+        if (!live || rowKey(live, rowIndex) !== key) return;
+        const patch: Record<string, unknown> = {};
+        const prov = rowProvenance(key);
+        for (const [sourcePath, target] of Object.entries(projection.outputs)) {
+          const targetField = metaByName.get(target);
+          if (!targetField) continue;
+          const nextValue = readProjectionOutput(result, sourcePath);
+          if (nextValue === undefined) continue;
+          if (!shouldApplyAutomaticValue(targetField, live[target], prov[target])) continue;
+          patch[target] = nextValue;
+          prov[target] = "auto";
+        }
+        if (Object.keys(patch).length) {
+          const all = latestRows.current;
+          emitRows(all.map((row, index) => index === rowIndex ? { ...row, ...patch } as Doc : row));
+        }
+      }
+      setEffectErrors((currentErrors) => { const next = { ...currentErrors }; delete next[rowIndex]; return next; });
+    } catch (error) {
+      setEffectErrors((currentErrors) => ({ ...currentErrors, [rowIndex]: error instanceof Error ? error.message : "Không chạy được projection của dòng." }));
+    }
+  };
+
+  const scheduleProjectionEffects = (rowIndex: number, changed: string[]) => {
+    if (!services?.callPost || !projections.length) return;
+    const row = latestRows.current[rowIndex];
+    if (!row) return;
+    const applicable = projectionsForChanges(changed);
+    if (!applicable.length) return;
+    const key = `${rowKey(row, rowIndex)}:${applicable.map((projection) => projection.key ?? projection.method).join("|")}`;
+    const old = projectionTimers.current.get(key);
+    if (old != null) window.clearTimeout(old);
+    const delay = Math.max(0, ...applicable.map((projection) => projection.debounceMs ?? 120));
+    const timer = window.setTimeout(() => {
+      projectionTimers.current.delete(key);
+      void runProjectionEffects(rowIndex, changed);
+    }, delay);
+    projectionTimers.current.set(key, timer);
+  };
+
   const runFetchEffects = async (rowIndex: number, initialSources: string[]) => {
-    if (!services?.fetchDocument && !services?.fetchValue) return;
+    if (!services?.fetchDocument && !services?.fetchValue) {
+      scheduleProjectionEffects(rowIndex, initialSources);
+      return;
+    }
     const current = latestRows.current[rowIndex];
     if (!current) return;
     const key = rowKey(current, rowIndex);
-    const version = (effectVersion.current.get(key) ?? 0) + 1;
-    effectVersion.current.set(key, version);
+    const version = (fetchVersion.current.get(key) ?? 0) + 1;
+    fetchVersion.current.set(key, version);
     const queue = [...new Set(initialSources)];
     const visited = new Set<string>();
     const working = { ...current } as Doc;
+    const patch: Record<string, unknown> = {};
     const prov = rowProvenance(key);
     try {
       while (queue.length) {
@@ -325,6 +465,7 @@ export function ChildGrid(props: ChildGridProps) {
             const target = metaByName.get(rule.target);
             if (!target || !shouldApplyAutomaticValue(target, working[rule.target], prov[rule.target])) continue;
             working[rule.target] = "";
+            patch[rule.target] = "";
             prov[rule.target] = "auto";
             queue.push(rule.target);
           }
@@ -333,23 +474,25 @@ export function ChildGrid(props: ChildGridProps) {
         const sourceDoctype = rules.find((rule) => rule.sourceDoctype)?.sourceDoctype;
         if (!sourceDoctype) continue;
         const sourceDoc = services.fetchDocument ? await services.fetchDocument(sourceDoctype, sourceName) : undefined;
-        if (effectVersion.current.get(key) !== version) return;
+        if (fetchVersion.current.get(key) !== version) return;
         for (const rule of rules) {
           const target = metaByName.get(rule.target);
           if (!target || !shouldApplyAutomaticValue(target, working[rule.target], prov[rule.target])) continue;
           const value = sourceDoc
             ? sourceDoc[rule.sourceField]
             : await services.fetchValue?.(sourceDoctype, sourceName, rule.sourceField);
-          if (effectVersion.current.get(key) !== version) return;
+          if (fetchVersion.current.get(key) !== version) return;
           working[rule.target] = value ?? "";
+          patch[rule.target] = value ?? "";
           prov[rule.target] = "auto";
           queue.push(rule.target);
         }
       }
       const live = latestRows.current;
-      if (effectVersion.current.get(key) !== version || !live[rowIndex] || rowKey(live[rowIndex]!, rowIndex) !== key) return;
-      emitRows(live.map((row, index) => index === rowIndex ? { ...row, ...working } : row));
+      if (fetchVersion.current.get(key) !== version || !live[rowIndex] || rowKey(live[rowIndex]!, rowIndex) !== key) return;
+      if (Object.keys(patch).length) emitRows(live.map((row, index) => index === rowIndex ? { ...row, ...patch } as Doc : row));
       setEffectErrors((currentErrors) => { const next = { ...currentErrors }; delete next[rowIndex]; return next; });
+      scheduleProjectionEffects(rowIndex, initialSources);
     } catch (error) {
       setEffectErrors((currentErrors) => ({ ...currentErrors, [rowIndex]: error instanceof Error ? error.message : "Không tự điền được metadata của dòng." }));
     }
@@ -361,7 +504,8 @@ export function ChildGrid(props: ChildGridProps) {
     if (!row) return;
     const key = rowKey(row, rowIndex);
     rowProvenance(key)[fieldname] = "user";
-    effectVersion.current.set(key, (effectVersion.current.get(key) ?? 0) + 1);
+    fetchVersion.current.set(key, (fetchVersion.current.get(key) ?? 0) + 1);
+    projectionVersion.current.set(key, (projectionVersion.current.get(key) ?? 0) + 1);
     emitRows(currentRows.map((entry, index) => index === rowIndex ? { ...entry, [fieldname]: value } as Doc : entry));
     void runFetchEffects(rowIndex, [fieldname]);
   };
@@ -371,7 +515,11 @@ export function ChildGrid(props: ChildGridProps) {
     const added = Array.from({ length: count }, (_, index) => blankRow(`new-${Date.now()}-${start + index}`));
     emitRows([...latestRows.current, ...added]);
     const sources = [...new Set(fetchRules.map((rule) => rule.linkField))];
-    if (sources.length) added.forEach((_, index) => void runFetchEffects(start + index, sources));
+    added.forEach((_, index) => {
+      const rowIndex = start + index;
+      if (sources.length) void runFetchEffects(rowIndex, sources);
+      else scheduleProjectionEffects(rowIndex, []);
+    });
   };
 
   const deleteRows = (indexes: number[]) => {
@@ -408,6 +556,12 @@ export function ChildGrid(props: ChildGridProps) {
     if (index < 0 || target < 0 || target >= order.length) return;
     [order[index], order[target]] = [order[target]!, order[index]!];
     saveLayout({ ...layout, order });
+  };
+
+  const stickyLeft = (columnIndex: number): CSSProperties["left"] => {
+    const base = readOnly ? 44 : 84;
+    const prior = columns.slice(0, columnIndex).reduce((sum, field) => sum + (layout.w[field.fieldname] ?? columnWidth(field)), 0);
+    return prior ? `calc(${base}px + ${prior}rem)` : base;
   };
 
   const focusCell = (row: number, column: number) => {
@@ -466,7 +620,25 @@ export function ChildGrid(props: ChildGridProps) {
     for (const [rowIndex, fields] of changed) void runFetchEffects(rowIndex, fields);
   };
 
-  const fieldControl = (row: Doc, rowIndex: number, field: DocField, compact = true) => {
+  const resolvedCell = (row: Doc, field: DocField) => resolveField(
+    field.list_only ? { ...field, list_only: 0 } : field,
+    childMeta,
+    { doc: row, parent: parentDoc, roles, assumeWritable: true },
+  );
+
+  const cellRole = (row: Doc, field: DocField): SmartGridCellRole | undefined => {
+    const explicit = smartGridCellRole(field);
+    if (explicit) return explicit;
+    const resolved = resolvedCell(row, field);
+    if (resolved.readOnly || readOnly) {
+      if (field.valueSource === "formula") return "formula";
+      if (["link", "default", "system"].includes(field.valueSource ?? "")) return "auto";
+      return "readonly";
+    }
+    return resolved.required ? "operator_input" : "optional_input";
+  };
+
+  const fieldControl = (row: Doc, rowIndex: number, field: DocField, compactControl = true) => {
     const editableField = field.list_only ? { ...field, list_only: 0 as const } : field;
     const resolved = resolveField(editableField, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true });
     if (!resolved.visible) return <span className="text-xs text-muted-foreground">—</span>;
@@ -485,41 +657,110 @@ export function ChildGrid(props: ChildGridProps) {
         parentDoctype={childMeta.name}
         docValues={row}
         roles={roles}
-        compact={compact}
+        compact={compactControl}
       />
     );
   };
 
+  const rowStripeClass = (rowIndex: number) => gridPolicy?.stripe === "alternating"
+    ? (rowIndex % 2 === 0 ? "bg-background" : "bg-muted/25")
+    : "bg-background";
+
+  const secondaryVisible = (row: Doc) => Boolean(secondaryPolicy && evalDependsOn(secondaryPolicy.when, row, parentDoc));
+
   const gridSurface = (full: boolean) => (
-    <div ref={gridRef} className={full ? "min-h-0 flex-1 overflow-auto border" : "overflow-x-auto rounded-md border"} onPaste={onPaste} onKeyDown={onKeyDown}>
-      <Table unwrapped className="w-max min-w-full text-xs">
-        <TableHeader className="sticky top-0 z-30 bg-muted/80 backdrop-blur">
-          <TableRow className="h-9 hover:bg-transparent">
-            {!readOnly ? <TableHead className="sticky left-0 z-40 w-10 min-w-10 bg-card p-1 text-center"><Checkbox checked={rows.length > 0 && selected.length === rows.length} onCheckedChange={() => setSelected(selected.length === rows.length ? [] : rows.map(rowKey))} /></TableHead> : null}
-            <TableHead className={`sticky z-40 w-11 min-w-11 bg-card px-1 text-right ${readOnly ? "left-0" : "left-10"}`}>#</TableHead>
-            {columns.map((field) => {
+    <div
+      ref={gridRef}
+      className={cn(
+        full ? "min-h-0 flex-1 overflow-auto border" : "overflow-x-auto rounded-md border",
+        isOperational && "rounded-lg shadow-sm",
+      )}
+      onPaste={onPaste}
+      onKeyDown={onKeyDown}
+    >
+      <Table unwrapped className={cn("w-max min-w-full", compact ? "text-[11px]" : "text-xs")}>
+        <TableHeader className={cn("sticky top-0 z-30 backdrop-blur", brandHeader ? "bg-orange-500 text-white" : "bg-muted/90")}>
+          {groupRuns.length ? (
+            <TableRow className="h-7 hover:bg-transparent">
+              {!readOnly ? <TableHead rowSpan={2} className={cn("sticky left-0 z-50 w-10 min-w-10 p-1 text-center", brandHeader ? "bg-orange-600 text-white" : "bg-card")}><Checkbox checked={rows.length > 0 && selected.length === rows.length} onCheckedChange={() => setSelected(selected.length === rows.length ? [] : rows.map(rowKey))} /></TableHead> : null}
+              <TableHead rowSpan={2} className={cn("sticky z-50 w-11 min-w-11 px-1 text-right", brandHeader ? "bg-orange-600 text-white" : "bg-card", readOnly ? "left-0" : "left-10")}>#</TableHead>
+              {groupRuns.map((run, index) => (
+                <TableHead key={`${run.key}-${index}`} colSpan={run.count} className={cn("h-7 border-b border-r border-white/20 px-2 text-center text-[10px] font-extrabold uppercase tracking-[0.08em]", groupToneClass(run.tone))}>{run.label}</TableHead>
+              ))}
+              {!readOnly ? <TableHead rowSpan={2} className={cn("w-20 min-w-20", brandHeader ? "bg-orange-600" : "bg-muted/90")} /> : null}
+            </TableRow>
+          ) : null}
+          <TableRow className={cn("hover:bg-transparent", compact ? "h-8" : "h-9")}>
+            {!groupRuns.length && !readOnly ? <TableHead className={cn("sticky left-0 z-40 w-10 min-w-10 p-1 text-center", brandHeader ? "bg-orange-600 text-white" : "bg-card")}><Checkbox checked={rows.length > 0 && selected.length === rows.length} onCheckedChange={() => setSelected(selected.length === rows.length ? [] : rows.map(rowKey))} /></TableHead> : null}
+            {!groupRuns.length ? <TableHead className={cn("sticky z-40 w-11 min-w-11 px-1 text-right", brandHeader ? "bg-orange-600 text-white" : "bg-card", readOnly ? "left-0" : "left-10")}>#</TableHead> : null}
+            {columns.map((field, columnIndex) => {
               const custom = layout.w[field.fieldname];
               const width = custom ?? columnWidth(field);
-              const sticky = field.fieldname === identity;
-              return <TableHead key={field.fieldname} className={`${sticky ? "sticky z-30 bg-card shadow-[inset_-1px_0_0_var(--border)]" : ""} whitespace-nowrap px-2 text-[11px] font-bold`} style={{ width: `${width}rem`, minWidth: `${width}rem`, ...(sticky ? { left: readOnly ? 44 : 84 } : {}) }}>{layout.labels[field.fieldname] || field.label || field.fieldname}{field.reqd ? <span className="text-destructive">*</span> : null}</TableHead>;
+              const sticky = columnIndex < freezeCount;
+              return <TableHead key={field.fieldname} className={cn(
+                "whitespace-nowrap px-2 text-[11px] font-bold",
+                brandHeader && "bg-orange-500 text-white",
+                sticky && "sticky z-40 shadow-[inset_-1px_0_0_rgba(255,255,255,.24)]",
+                gridPolicy?.autoBorders && groupEndFields.has(field.fieldname) && "border-r-2 border-r-orange-700/30",
+              )} style={{ width: `${width}rem`, minWidth: `${width}rem`, ...(sticky ? { left: stickyLeft(columnIndex) } : {}) }}>{layout.labels[field.fieldname] || field.label || field.fieldname}{field.reqd ? <span className={brandHeader ? "text-white" : "text-destructive"}>*</span> : null}</TableHead>;
             })}
-            {!readOnly ? <TableHead className="w-20 min-w-20" /> : null}
+            {!groupRuns.length && !readOnly ? <TableHead className={cn("w-20 min-w-20", brandHeader && "bg-orange-600")} /> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length ? rows.map((row, rowIndex) => (
-            <TableRow key={rowKey(row, rowIndex)} className={selectedSet.has(rowKey(row, rowIndex)) ? "bg-primary/[0.04]" : ""}>
-              {!readOnly ? <TableCell className="sticky left-0 z-20 w-10 min-w-10 bg-card p-1 text-center"><Checkbox checked={selectedSet.has(rowKey(row, rowIndex))} onCheckedChange={() => setSelected((current) => current.includes(rowKey(row, rowIndex)) ? current.filter((value) => value !== rowKey(row, rowIndex)) : [...current, rowKey(row, rowIndex)])} /></TableCell> : null}
-              <TableCell className={`sticky z-20 w-11 min-w-11 bg-card px-1 text-right text-[11px] text-muted-foreground ${readOnly ? "left-0" : "left-10"}`}>{rowIndex + 1}</TableCell>
-              {columns.map((field, columnIndex) => {
-                const custom = layout.w[field.fieldname];
-                const width = custom ?? columnWidth(field);
-                const sticky = field.fieldname === identity;
-                return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} className={`${sticky ? "sticky z-10 bg-card shadow-[inset_-1px_0_0_var(--border)]" : ""} h-9 p-1 align-middle`} style={{ width: `${width}rem`, minWidth: `${width}rem`, ...(sticky ? { left: readOnly ? 44 : 84 } : {}) } as CSSProperties} onFocusCapture={() => setPicked({ row: rowIndex, column: columnIndex })} onClick={() => setPicked({ row: rowIndex, column: columnIndex })}>{fieldControl(row, rowIndex, field, true)}</TableCell>;
-              })}
-              {!readOnly ? <TableCell className="w-20 min-w-20 p-1"><div className="flex justify-end"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setDetailRow(rowIndex)} aria-label="Chi tiết dòng"><Maximize2 /></Button><Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" onClick={() => deleteRows([rowIndex])} aria-label="Xóa dòng"><Trash2 /></Button></div></TableCell> : null}
-            </TableRow>
-          )) : <TableRow><TableCell colSpan={columns.length + (readOnly ? 1 : 3)} className="h-24 text-center text-sm text-muted-foreground">Chưa có dòng dữ liệu.</TableCell></TableRow>}
+          {rows.length ? rows.map((row, rowIndex) => {
+            const secondary = secondaryVisible(row);
+            const secondaryFields = new Set(secondary ? secondaryPolicy?.fields ?? [] : []);
+            const selectedRow = selectedSet.has(rowKey(row, rowIndex));
+            const stripe = rowStripeClass(rowIndex);
+            return (
+              <Fragment key={rowKey(row, rowIndex)}>
+                <TableRow className={cn(stripe, selectedRow && "bg-primary/[0.06]")} data-record-index={rowIndex}>
+                  {!readOnly ? <TableCell className={cn("sticky left-0 z-20 w-10 min-w-10 p-1 text-center", stripe, selectedRow && "bg-primary/[0.06]")}><Checkbox checked={selectedRow} onCheckedChange={() => setSelected((current) => current.includes(rowKey(row, rowIndex)) ? current.filter((value) => value !== rowKey(row, rowIndex)) : [...current, rowKey(row, rowIndex)])} /></TableCell> : null}
+                  <TableCell className={cn("sticky z-20 w-11 min-w-11 px-1 text-right text-[11px] text-muted-foreground", stripe, selectedRow && "bg-primary/[0.06]", readOnly ? "left-0" : "left-10")}>{rowIndex + 1}</TableCell>
+                  {columns.map((field, columnIndex) => {
+                    const custom = layout.w[field.fieldname];
+                    const width = custom ?? columnWidth(field);
+                    const sticky = columnIndex < freezeCount;
+                    const role = cellRole(row, field);
+                    const movedToSecondary = secondaryFields.has(field.fieldname);
+                    return <TableCell key={field.fieldname} data-cell={`${rowIndex}:${columnIndex}`} data-cell-role={role} className={cn(
+                      compact ? "h-8 p-0.5" : "h-9 p-1",
+                      "align-middle transition-colors",
+                      roleClass(role),
+                      sticky && "sticky z-10 shadow-[inset_-1px_0_0_var(--border)]",
+                      gridPolicy?.autoBorders && "border-r border-border/50",
+                      gridPolicy?.autoBorders && groupEndFields.has(field.fieldname) && "border-r-2 border-r-orange-500/30",
+                      selectedRow && "ring-1 ring-inset ring-primary/10",
+                    )} style={{ width: `${width}rem`, minWidth: `${width}rem`, ...(sticky ? { left: stickyLeft(columnIndex) } : {}) } as CSSProperties} onFocusCapture={() => setPicked({ row: rowIndex, column: columnIndex })} onClick={() => setPicked({ row: rowIndex, column: columnIndex })}>{movedToSecondary ? null : fieldControl(row, rowIndex, field, true)}</TableCell>;
+                  })}
+                  {!readOnly ? <TableCell className={cn("w-20 min-w-20 p-1", stripe, selectedRow && "bg-primary/[0.06]")}><div className="flex justify-end"><Button type="button" variant="ghost" size="icon-sm" onClick={() => setDetailRow(rowIndex)} aria-label="Chi tiết dòng"><Maximize2 /></Button><Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" onClick={() => deleteRows([rowIndex])} aria-label="Xóa dòng"><Trash2 /></Button></div></TableCell> : null}
+                </TableRow>
+                {secondary ? (
+                  <TableRow className={cn(stripe, "border-b-2 border-b-border", selectedRow && "bg-primary/[0.06]")} data-record-index={rowIndex} data-record-secondary="true">
+                    {!readOnly ? <TableCell className={cn("sticky left-0 z-20 w-10 min-w-10 p-1", stripe, selectedRow && "bg-primary/[0.06]")} /> : null}
+                    <TableCell className={cn("sticky z-20 w-11 min-w-11 px-1 text-right text-[10px] text-muted-foreground", stripe, selectedRow && "bg-primary/[0.06]", readOnly ? "left-0" : "left-10")}>↳</TableCell>
+                    {columns.map((field, columnIndex) => {
+                      const custom = layout.w[field.fieldname];
+                      const width = custom ?? columnWidth(field);
+                      const sticky = columnIndex < freezeCount;
+                      const isLabel = secondaryPolicy?.labelColumn === field.fieldname;
+                      const showField = secondaryFields.has(field.fieldname);
+                      const role = cellRole(row, field);
+                      return <TableCell key={`secondary-${field.fieldname}`} data-cell={`${rowIndex}:${columnIndex}`} className={cn(
+                        "h-7 p-1 align-middle text-[11px]",
+                        showField && roleClass(role),
+                        sticky && "sticky z-10 shadow-[inset_-1px_0_0_var(--border)]",
+                        gridPolicy?.autoBorders && "border-r border-border/50",
+                        gridPolicy?.autoBorders && groupEndFields.has(field.fieldname) && "border-r-2 border-r-orange-500/30",
+                      )} style={{ width: `${width}rem`, minWidth: `${width}rem`, ...(sticky ? { left: stickyLeft(columnIndex) } : {}) } as CSSProperties}>{isLabel ? <span className="font-semibold text-muted-foreground">{secondaryPolicy?.label ?? "Chi tiết"}</span> : showField ? fieldControl(row, rowIndex, field, true) : null}</TableCell>;
+                    })}
+                    {!readOnly ? <TableCell className={cn("w-20 min-w-20", stripe)} /> : null}
+                  </TableRow>
+                ) : null}
+              </Fragment>
+            );
+          }) : <TableRow><TableCell colSpan={columns.length + (readOnly ? 1 : 3)} className="h-24 text-center text-sm text-muted-foreground">Chưa có dòng dữ liệu.</TableCell></TableRow>}
         </TableBody>
       </Table>
     </div>
@@ -528,28 +769,41 @@ export function ChildGrid(props: ChildGridProps) {
   const effectMessages = Object.entries(effectErrors).filter(([index]) => Number(index) < rows.length);
 
   const gridToolbar = (allowExpand: boolean) => (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={cn("flex flex-wrap items-center gap-2", isOperational && "rounded-md border bg-card px-2 py-1.5 shadow-sm")}>
       {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(1)}><Plus /> Thêm dòng</Button> : null}
       {!readOnly ? <Button type="button" variant="outline" size="sm" onClick={() => addRows(10)}>+10 dòng</Button> : null}
       {!readOnly && selected.length ? <Button type="button" variant="outline" size="sm" onClick={duplicateSelected}><Copy /> Nhân bản {selected.length}</Button> : null}
       {!readOnly && selected.length ? <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRows(rows.map((row, index) => selectedSet.has(rowKey(row, index)) ? index : -1).filter((index) => index >= 0))}><Trash2 /> Xóa {selected.length}</Button> : null}
       {!readOnly && lastDeleted?.length ? <Button type="button" variant="ghost" size="sm" onClick={undoDelete}><Undo2 /> Hoàn tác</Button> : null}
       <Button type="button" variant="ghost" size="sm" onClick={() => setColumnSettingsOpen(true)}><Columns3 /> Cột</Button>
-      {allowExpand ? <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}><Maximize2 /> Bảng lớn</Button> : null}
+      {allowExpand && !isOperational ? <Button type="button" variant="ghost" size="sm" onClick={() => setExpanded(true)}><Maximize2 /> Bảng lớn</Button> : null}
       <span className="ml-auto text-xs text-muted-foreground">{rows.length} dòng · {columns.length}/{canonicalColumns.length} cột</span>
     </div>
   );
 
+  const parentProjectionFingerprint = useMemo(() => {
+    const watched = projections.flatMap((projection) => projection.watch.filter((watch) => watch.startsWith("parent.")));
+    return JSON.stringify([...new Set(watched)].map((watch) => [watch, parentDoc?.[watch.slice("parent.".length)]]));
+  }, [parentDoc, projections]);
+  const previousParentFingerprint = useRef(parentProjectionFingerprint);
+  useEffect(() => {
+    if (previousParentFingerprint.current === parentProjectionFingerprint) return;
+    previousParentFingerprint.current = parentProjectionFingerprint;
+    const changed = projections.flatMap((projection) => projection.watch.filter((watch) => watch.startsWith("parent.")));
+    latestRows.current.forEach((_, rowIndex) => scheduleProjectionEffects(rowIndex, changed));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentProjectionFingerprint]);
+
   return (
-    <div className="min-w-0 space-y-2" data-child-grid={childMeta.name} data-columns={columns.map((field) => field.fieldname).join(",")}>
+    <div className={cn("min-w-0 space-y-2", isOperational && "mf-smart-grid")} data-child-grid={childMeta.name} data-columns={columns.map((field) => field.fieldname).join(",")} data-operational-grid={isOperational ? "true" : undefined}>
       {gridToolbar(true)}
 
       <div className="space-y-2 md:hidden">
         {rows.length ? rows.map((row, rowIndex) => (
-          <section key={rowKey(row, rowIndex)} className="rounded-lg border bg-card p-3 shadow-sm">
+          <section key={rowKey(row, rowIndex)} className={cn("rounded-lg border p-3 shadow-sm", rowStripeClass(rowIndex))}>
             <div className="mb-3 flex items-center justify-between gap-2 border-b pb-2"><strong className="text-xs">Dòng {rowIndex + 1}</strong><div className="flex">{!readOnly ? <Button type="button" variant="ghost" size="icon-sm" onClick={() => deleteRows([rowIndex])}><Trash2 /></Button> : null}</div></div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {columns.map((field) => <div key={field.fieldname} className={`min-w-0 space-y-1 ${detailSpan(field)}`}><div className="text-[11px] font-medium text-muted-foreground">{layout.labels[field.fieldname] || field.label || field.fieldname}</div>{fieldControl(row, rowIndex, field, false)}</div>)}
+              {columns.map((field) => <div key={field.fieldname} className={cn("min-w-0 space-y-1 rounded-md p-1", detailSpan(field), roleClass(cellRole(row, field)))}><div className="text-[11px] font-medium text-muted-foreground">{layout.labels[field.fieldname] || field.label || field.fieldname}</div>{fieldControl(row, rowIndex, field, false)}</div>)}
             </div>
           </section>
         )) : <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Chưa có dòng dữ liệu.</div>}
@@ -593,7 +847,7 @@ export function ChildGrid(props: ChildGridProps) {
           {detailRow != null && rows[detailRow] ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(childMeta.fields ?? []).filter((field) => !isLayout(field.fieldtype)).map((field) => {
             const resolved = resolveField(field.list_only ? { ...field, list_only: 0 } : field, childMeta, { doc: rows[detailRow]!, parent: parentDoc, roles, assumeWritable: true });
             if (!resolved.visible) return null;
-            return <div key={field.fieldname} className={`min-w-0 space-y-1 ${detailSpan(field)}`}><div className="text-xs font-medium text-muted-foreground">{field.label || field.fieldname}{resolved.required ? <span className="text-destructive">*</span> : null}</div>{fieldControl(rows[detailRow]!, detailRow, field, false)}</div>;
+            return <div key={field.fieldname} className={cn("min-w-0 space-y-1 rounded-md p-1", detailSpan(field), roleClass(cellRole(rows[detailRow]!, field)))}><div className="text-xs font-medium text-muted-foreground">{field.label || field.fieldname}{resolved.required ? <span className="text-destructive">*</span> : null}</div>{fieldControl(rows[detailRow]!, detailRow, field, false)}</div>;
           })}</div> : null}
         </DialogContent>
       </Dialog>

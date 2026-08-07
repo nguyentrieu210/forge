@@ -4,6 +4,7 @@ import type { DocFieldMeta, DocPermissionMeta, DocTypeKind, DocTypeMeta, DocType
 import { assertFieldConditionSupported } from "./field-condition.js";
 import { parseBulkViewPolicy } from "./bulk-validate.js";
 import { parseMatrixViewPolicy } from "./matrix-validate.js";
+import { parseOperationalViewPolicy } from "./operational-validate.js";
 
 /**
  * Every fieldtype this platform will accept in a DocType.
@@ -119,6 +120,9 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
         isSubmittable,
         fields,
       });
+    }
+    if (rawViewPolicy.operational !== undefined) {
+      viewPolicy.operational = parseOperationalViewPolicy(rawViewPolicy.operational, fields);
     }
   }
 
@@ -309,7 +313,7 @@ const PRESENTATION_FLAGS = [
 const PRESENTATION_TEXT: Array<[key: string, max: number]> = [
   ["collapsible_depends_on", 500], ["placeholder", 240], ["documentation_url", 500],
   ["mask", 64], ["button_color", 32], ["alignment", 16], ["link_filters", 2000],
-  ["fetch_if_empty", 8], ["oldfieldname", 140], ["oldfieldtype", 64],
+  ["fetch_if_empty", 8], ["oldfieldname", 140], ["oldfieldtype", 64], ["cellRole", 32],
 ];
 
 const PRESENTATION_INT: Array<[key: string, min: number, max: number]> = [
