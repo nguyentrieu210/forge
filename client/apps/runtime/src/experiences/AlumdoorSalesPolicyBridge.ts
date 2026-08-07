@@ -8,6 +8,7 @@ type FormulaPolicyContext = Record<string, unknown> & {
   ray_type?: string | null;
   ray_options?: string[];
   leaf_variant_options?: string[];
+  default_discount_pct?: number;
 };
 
 type InstalledBridge = {
@@ -15,21 +16,46 @@ type InstalledBridge = {
   restore: () => void;
 };
 
-const installed = new WeakMap<FrappeAdapter, InstalledBridge>();
+type CalculationMode = "QUANTITY" | "HEIGHT" | "WIDTH" | "AREA";
 
+const installed = new WeakMap<FrappeAdapter, InstalledBridge>();
 const text = (value: unknown) => String(value ?? "").normalize("NFC").trim();
+const key = (value: unknown) => text(value).toLocaleLowerCase("vi");
+const number = (value: unknown): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
 /**
- * Compatibility bridge for the Alumdoor sales composer.
+ * Exact display rule imported from the former sales sheet.
+ * Prefix is authoritative for ray/shaft; door metadata is authoritative for area goods.
+ * Everything else stays quantity-based rather than guessing from a broad Item Group name.
+ */
+function calculationMode(context: Record<string, unknown>): { mode: CalculationMode; error: string | null } {
+  const code = text(context.item_code).toLocaleUpperCase("vi");
+  if (text(context.inventory_mode) === "Thành phẩm theo m2" || text(context.door_type)) return { mode: "AREA", error: null };
+  if (code.startsWith("TRUC-")) return { mode: "WIDTH", error: null };
+  if (code.startsWith("RAY-")) return { mode: "HEIGHT", error: null };
+  const group = key(context.item_group);
+  const hasRay = group.includes("ray");
+  const hasShaft = group.includes("trục") || group.includes("truc");
+  if (hasShaft && !hasRay) return { mode: "WIDTH", error: null };
+  if (hasRay && !hasShaft) return { mode: "HEIGHT", error: null };
+  if (hasRay && hasShaft) return {
+    mode: "QUANTITY",
+    error: `${code || "Mặt hàng"}: nhóm có cả Ray và Trục nhưng mã chưa theo chuẩn RAY-/TRUC-; hệ thống không tự đoán công thức.`,
+  };
+  return { mode: "QUANTITY", error: null };
+}
+
+/**
+ * Compatibility bridge for the Alumdoor sales Experience.
  *
- * The composer used to read Cutting Policy directly through generic document CRUD. That makes
- * the sales screen depend on the operator's permission to list/read a technical master and is
- * what produced the HTTP 417 blocker. The domain method already owns policy resolution, so this
- * bridge keeps those legacy composer reads inside the domain boundary until the composer source
- * itself is fully migrated.
- *
- * Only Cutting Policy is intercepted. Every other adapter call is delegated unchanged, and the
- * original methods are restored when the sales route unmounts.
+ * It never invents a price list or a price. `alumdoor.sales.item_context` remains the price/stock
+ * authority. This bridge only adapts its current response to the richer spreadsheet vocabulary:
+ * calculation mode, billable preview and the domain-provided door discount/basis. Final document
+ * totals are still recalculated by the selling controller on save/submit.
  */
 export function installAlumdoorSalesPolicyBridge(adapter: FrappeAdapter): () => void {
   const existing = installed.get(adapter);
@@ -72,33 +98,94 @@ export function installAlumdoorSalesPolicyBridge(adapter: FrappeAdapter): () => 
 
   adapter.callPost = async function <T = unknown>(method: string, args?: Record<string, unknown>): Promise<T> {
     const result = await originalCallPost<T>(method, args);
-    if (method !== "alumdoor.sales.production_line_context" || !result || typeof result !== "object") return result;
+    if (!result || typeof result !== "object") return result;
 
-    const context = result as FormulaPolicyContext;
-    const doorType = text(context.door_type);
-    const itemGroup = text(context.item_group);
-    const policyName = text(context.policy_name);
-    const rays = Array.isArray(context.ray_options)
-      ? [...new Set(context.ray_options.map(text).filter(Boolean))]
-      : [];
-    const variants = Array.isArray(context.leaf_variant_options)
-      ? [...new Set(context.leaf_variant_options.map(text).filter(Boolean))]
-      : [];
+    if (method === "alumdoor.sales.production_line_context") {
+      const context = result as FormulaPolicyContext;
+      const doorType = text(context.door_type);
+      const itemGroup = text(context.item_group);
+      const policyName = text(context.policy_name);
+      const rays = Array.isArray(context.ray_options)
+        ? [...new Set(context.ray_options.map(text).filter(Boolean))]
+        : [];
+      const variants = Array.isArray(context.leaf_variant_options)
+        ? [...new Set(context.leaf_variant_options.map(text).filter(Boolean))]
+        : [];
 
-    for (const rayType of rays) {
-      if (policyRows.some((row) => text(row.door_type) === doorType && text(row.item_group) === itemGroup && text(row.ray_type) === rayType)) continue;
-      policyRows.push({
-        doctype: "Cutting Policy",
-        name: `${policyName || doorType || "policy"}::${rayType}`,
-        policy_name: policyName,
-        door_type: doorType,
-        item_group: itemGroup,
-        ray_type: rayType,
-        disabled: 0,
-      } as Doc);
+      for (const rayType of rays) {
+        if (policyRows.some((row) => text(row.door_type) === doorType && text(row.item_group) === itemGroup && text(row.ray_type) === rayType)) continue;
+        policyRows.push({
+          doctype: "Cutting Policy",
+          name: `${policyName || doorType || "policy"}::${rayType}`,
+          policy_name: policyName,
+          door_type: doorType,
+          item_group: itemGroup,
+          ray_type: rayType,
+          disabled: 0,
+        } as Doc);
+      }
+      if (policyName) variantsByPolicy.set(policyName, variants);
+      return result;
     }
-    if (policyName) variantsByPolicy.set(policyName, variants);
-    return result;
+
+    if (method !== "alumdoor.sales.item_context") return result;
+
+    const context = result as Record<string, unknown>;
+    const modeResolution = calculationMode({ ...context, item_code: args?.item_code });
+    const quantity = number(args?.quantity ?? args?.qty ?? args?.set_count);
+    const height = number(args?.height_m);
+    const width = number(args?.width_m);
+    const area = number(args?.billable_area_sqm);
+    const billableQty = quantity == null ? null
+      : modeResolution.mode === "HEIGHT" ? (height == null ? null : height * quantity)
+      : modeResolution.mode === "WIDTH" ? (width == null ? null : width * quantity)
+      : modeResolution.mode === "AREA" ? area
+      : quantity;
+
+    let domainDiscount: number | null = null;
+    const explicitDiscount = args?.discount_percentage == null || args.discount_percentage === ""
+      ? null : Number(args.discount_percentage);
+    if (Number.isFinite(explicitDiscount) && explicitDiscount! >= 0 && explicitDiscount! <= 100) {
+      domainDiscount = explicitDiscount;
+    } else if (modeResolution.mode === "AREA" && text(args?.customer_group)) {
+      try {
+        const basis = await originalCallPost<FormulaPolicyContext>("alumdoor.sales.production_line_context", {
+          item_code: args?.item_code,
+          customer_group: args?.customer_group,
+          sales_mode: "Trọn bộ",
+          basis_only: true,
+        });
+        const resolved = Number(basis?.default_discount_pct);
+        if (Number.isFinite(resolved) && resolved >= 0 && resolved <= 100) domainDiscount = resolved;
+      } catch {
+        // A missing formula policy is surfaced by the normal production-line call once dimensions
+        // are entered. Never replace that failure with a client-side guess.
+      }
+    }
+
+    const rate = Number(context.rate);
+    const grossAmount = Number.isFinite(rate) && rate >= 0 && billableQty != null
+      ? roundMoney(rate * billableQty)
+      : null;
+    const discountAmount = grossAmount != null && domainDiscount != null
+      ? roundMoney(grossAmount * domainDiscount / 100)
+      : null;
+    const netAmount = grossAmount == null ? null : roundMoney(grossAmount - (discountAmount ?? 0));
+
+    return {
+      ...context,
+      item_name: text(context.item_name) || text(args?.item_code),
+      calculation_mode: modeResolution.mode,
+      calculation_error: modeResolution.error,
+      require_color: Boolean(context.default_color),
+      customer_group: text(args?.customer_group) || null,
+      price_list: text(args?.price_list) || null,
+      discount_percentage: domainDiscount,
+      billable_qty: billableQty,
+      gross_amount: grossAmount,
+      discount_amount: discountAmount,
+      net_amount: netAmount,
+    } as T;
   };
 
   const bridge: InstalledBridge = {
