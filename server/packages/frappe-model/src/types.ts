@@ -86,6 +86,8 @@ export interface DocFieldMeta extends JsonObject {
   in_standard_filter?: boolean;
   search_index?: boolean;
   fetch_from?: string;
+  /** Frappe compatibility: fetch only while target is empty instead of owning/locking it. */
+  fetch_if_empty?: boolean;
   depends_on?: string;
   mandatory_depends_on?: string;
   read_only_depends_on?: string;
