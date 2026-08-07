@@ -1,0 +1,107 @@
+{
+  "//purpose": "MetaForm 4.0 operational profile. Presentation only: canonical DocTypes and server business authority stay unchanged.",
+  "version": "2.3.0",
+  "doctypes": {
+    "Sales Order": {
+      "form": {
+        "presentation": "workspace",
+        "density": "compact",
+        "fullWidth": true,
+        "header": {
+          "tone": "brand",
+          "keyFields": ["customer", "customer_group", "transaction_date", "delivery_date", "selling_price_list", "responsible_person"]
+        },
+        "summary": {
+          "enabled": true,
+          "position": "bottom-right",
+          "items": [
+            { "field": "grand_total", "label": "TỔNG CỘNG", "emphasis": "grand" }
+          ]
+        }
+      }
+    },
+    "Sales Order Item": {
+      "listColumns": ["item_code", "color", "width_m", "height_m", "set_count", "billable_area_sqm", "qty", "uom", "available_qty", "availability_status", "rate", "amount"],
+      "grid": {
+        "density": "compact",
+        "headerTone": "brand",
+        "autoBorders": true,
+        "stripe": "alternating",
+        "stripeScope": "record",
+        "frozenColumns": 1,
+        "columnGroups": [
+          { "key": "product", "label": "SẢN PHẨM", "tone": "brand", "fields": ["item_code", "color"] },
+          { "key": "dimensions", "label": "KÍCH THƯỚC", "tone": "input", "fields": ["width_m", "height_m", "set_count"] },
+          { "key": "formula", "label": "TÍNH TOÁN", "tone": "result", "fields": ["billable_area_sqm", "qty", "uom"] },
+          { "key": "stock", "label": "TỒN KHẢ DỤNG", "tone": "result", "fields": ["available_qty", "availability_status"] },
+          { "key": "commercial", "label": "THƯƠNG MẠI", "tone": "commercial", "fields": ["rate", "amount"] }
+        ],
+        "secondaryRow": {
+          "fields": ["billable_area_sqm", "available_qty", "availability_status"]
+        }
+      },
+      "fieldRoles": {
+        "item_code": "operator_input",
+        "color": "optional_input",
+        "width_m": "operator_input",
+        "height_m": "operator_input",
+        "set_count": "operator_input",
+        "billable_area_sqm": "formula",
+        "available_qty": "result",
+        "availability_status": "warning",
+        "rate": "money",
+        "amount": "money"
+      }
+    },
+    "Purchase Order": {
+      "form": {
+        "presentation": "workspace",
+        "density": "compact",
+        "fullWidth": true,
+        "header": {
+          "tone": "brand",
+          "keyFields": ["supplier", "priority", "transaction_date", "schedule_date"]
+        },
+        "summary": {
+          "enabled": true,
+          "position": "bottom-right",
+          "items": [
+            { "field": "grand_total", "label": "TỔNG ĐƠN MUA", "emphasis": "grand" }
+          ]
+        }
+      }
+    },
+    "Purchase Order Item": {
+      "listColumns": ["item_code", "color", "length_m", "qty_bar", "theoretical_kg", "qty", "uom", "rate", "amount", "warehouse"],
+      "grid": {
+        "density": "compact",
+        "headerTone": "brand",
+        "autoBorders": true,
+        "stripe": "alternating",
+        "stripeScope": "record",
+        "frozenColumns": 1,
+        "columnGroups": [
+          { "key": "product", "label": "MẶT HÀNG", "tone": "brand", "fields": ["item_code", "color"] },
+          { "key": "dimensions", "label": "QUY CÁCH", "tone": "input", "fields": ["length_m", "qty_bar", "theoretical_kg"] },
+          { "key": "quantity", "label": "SỐ LƯỢNG", "tone": "result", "fields": ["qty", "uom"] },
+          { "key": "commercial", "label": "GIÁ MUA", "tone": "commercial", "fields": ["rate", "amount"] },
+          { "key": "warehouse", "label": "NHẬP KHO", "tone": "neutral", "fields": ["warehouse"] }
+        ],
+        "secondaryRow": {
+          "fields": ["length_m", "qty_bar", "theoretical_kg", "warehouse"]
+        }
+      },
+      "fieldRoles": {
+        "item_code": "operator_input",
+        "color": "optional_input",
+        "length_m": "operator_input",
+        "qty_bar": "operator_input",
+        "theoretical_kg": "formula",
+        "qty": "operator_input",
+        "rate": "money",
+        "amount": "money",
+        "warehouse": "optional_input"
+      }
+    }
+  }
+}
