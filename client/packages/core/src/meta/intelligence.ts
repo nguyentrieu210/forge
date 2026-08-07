@@ -230,7 +230,9 @@ export function validateFieldValue(field: DocField, value: unknown, required = f
  * Whether an automatic/default/link/projection value may be assigned locally.
  *
  * `dirtyGuard=preserve_user_value` means a user-owned value wins after the operator edits it.
- * Empty cells remain fillable; server reloads are handled by the caller as a new baseline.
+ * Ordinary Frappe `fetch_from` WITHOUT fetch_if_empty is different: it is source-owned and may
+ * replace a prior local value. Default/projection/autofill paths otherwise never overwrite a
+ * provenance=user value unless their field contract explicitly says the source owns it.
  */
 export function shouldApplyAutomaticValue(
   field: DocField,
@@ -238,6 +240,8 @@ export function shouldApplyAutomaticValue(
   provenance: FieldValueProvenance | undefined,
 ): boolean {
   const contract = resolveFieldContract(field);
+  const sourceOwnedFetch = Boolean(field.fetch_from && field.fetch_if_empty !== 1 && !field.dirtyGuard);
+  if (sourceOwnedFetch) return true;
   if (empty(currentValue)) return true;
   if (contract.dirtyGuard === "preserve_user_value" && provenance === "user") return false;
   return provenance !== "user";
