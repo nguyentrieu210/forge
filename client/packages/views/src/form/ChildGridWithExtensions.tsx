@@ -1,10 +1,14 @@
 // Compatibility barrel only. There is exactly one child-table renderer: ./ChildGrid.tsx.
-// Keeping this module temporarily avoids breaking package imports while MDI-07 migrates callers.
+// Legacy purchase/weight math lives outside generic grid runtime under ../compat and remains
+// exported temporarily so old callers/tests do not force business algebra back into ChildGrid.
 export {
   ChildGrid,
   resolveChildGridColumns,
   defaultChildGridHiddenColumns,
+} from "./ChildGrid.js";
+export type { ChildGridProps } from "./ChildGrid.js";
+export {
   deriveAverageWeight,
   derivePurchaseOrderBarem,
-} from "./ChildGrid.js";
-export type { ChildGridProps, AverageWeightResult } from "./ChildGrid.js";
+} from "../compat/purchase-weight.js";
+export type { AverageWeightResult } from "../compat/purchase-weight.js";
