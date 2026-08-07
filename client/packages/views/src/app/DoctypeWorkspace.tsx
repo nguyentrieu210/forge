@@ -1,19 +1,18 @@
 /** @jsxImportSource react */
 /**
- * Generic DocType workspace: desktop dùng List | Form | Context,
- * mobile dùng một pane; tạo mới chỉ dùng quick-entry dialog khi metadata opt-in,
- * còn lại mở form đầy đủ theo page. DocType có canonical Bulk policy được thêm tab
- * Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
+ * Generic DocType workspace.
+ *
+ * The workspace now has one canonical operating surface: list/tree -> document form -> context.
+ * There is no alternate Grid/Bulk view. Create uses quick-entry only when metadata explicitly
+ * opts in; otherwise it opens the full document form.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { List, Rows3 } from "lucide-react";
-import { operationalViewPolicy, resolveBulkRenderPolicy } from "@metaforge/core";
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
+import { operationalViewPolicy } from "@metaforge/core";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useDoc, useMeta } from "../container/hooks.js";
 import { useMetaForge } from "../container/provider.js";
 import { SplitView } from "../detail/SplitView.js";
 import { ListContainer } from "../container/ListContainer.js";
-import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
 import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
@@ -21,10 +20,8 @@ import { TreeContainer } from "../tree/TreeContainer.js";
 import type { UrlStateBridge } from "../list/useListState.js";
 import { buildPrintPath } from "../print/printRoute.js";
 import {
-  V3_CONFIRM_DIALOG_CLASS,
   V3_DATA_SURFACE_CLASS,
   V3_QUICK_ENTRY_DIALOG_CLASS,
-  V3_VIEW_SWITCHER_CLASS,
 } from "../data-surface/v3.js";
 
 export interface DoctypeWorkspaceProps {
@@ -43,8 +40,6 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
   const { adapter } = useMetaForge();
   const [closeRequest, setCloseRequest] = useState(0);
-  const [bulkDirty, setBulkDirty] = useState(false);
-  const [confirmBulkExit, setConfirmBulkExit] = useState(false);
   const titleMeta = useMeta(props.doctype);
   const { doctype, name, onNavigate, bridge } = props;
   const base = props.base ?? "/app";
@@ -59,22 +54,13 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
     () => titleMeta.data ? operationalViewPolicy(titleMeta.data)?.form?.presentation : undefined,
     [titleMeta.data],
   );
-  // Presentation authority is explicit: operational full/workspace forms must own the page.
-  // A legacy quickEntry opt-in may still coexist in canonical metadata, but it cannot demote an
-  // operational transaction workspace back into a modal. Only non-operational/quick surfaces use it.
   const quickEntryEnabled = titleMeta.data?.viewPolicy?.quickEntry?.enabled === true
     && operationalPresentation !== "workspace"
     && operationalPresentation !== "full";
-  // Single DocType is one settings document, not a list/detail workspace. Probe the
-  // canonical singleton name only after meta confirms `issingle`; a 404 means it has
-  // never been saved and must open as a create-form instead of showing "not found".
+
   const singleDocQ = useDoc(doctype, isSingle ? doctype : "");
   const singleError = singleDocQ.error ? adapter.mapError(singleDocQ.error) : null;
   const singleMissing = singleError?.kind === "not_found";
-  const bulkPolicy = useMemo(() => titleMeta.data ? resolveBulkRenderPolicy(titleMeta.data) : undefined, [titleMeta.data]);
-  const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree && !isSingle);
-  const isPriceListManager = doctype === "Item Price";
-  const bulkActive = !decoded && !isNew && (isPriceListManager || (bulkEnabled && bridge.get("view") === "bulk"));
 
   if (isSingle) {
     if (singleDocQ.isLoading) {
@@ -128,131 +114,73 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
     );
   }
 
-  const modeTabs = bulkEnabled && !decoded && !isNew && !isPriceListManager ? (
-    <div className={V3_VIEW_SWITCHER_CLASS} role="navigation" aria-label={t("common.view", "Chế độ xem")}>
-      <Button
-        variant={bulkActive ? "ghost" : "secondary"}
-        size="sm"
-        className="h-8 rounded-md"
-        onClick={() => {
-          if (bulkActive && bulkDirty) {
-            setConfirmBulkExit(true);
-            return;
-          }
-          bridge.set({ view: null });
-        }}
-      >
-        <List /> Danh sách
-      </Button>
-      <Button
-        variant={bulkActive ? "secondary" : "ghost"}
-        size="sm"
-        className="h-8 rounded-md"
-        onClick={() => bridge.set({ view: "bulk" })}
-      >
-        <Rows3 /> Nhập hàng loạt
-      </Button>
-    </div>
-  ) : null;
-
   return (
     <>
       <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
-        {modeTabs}
         <div className="min-h-0 flex-1">
-          {bulkActive ? (
-            <BulkGridContainer doctype={doctype} bridge={bridge} title={displayTitle} onDirtyChange={setBulkDirty} />
-          ) : (
-            <SplitView
-              autoSaveId={`mf-split-v3-${doctype}`}
-              hasDetail={isTree || Boolean(decoded)}
-              contextTitle={decoded}
-              onCloseDetail={() => onNavigate(listPath)}
-              list={isTree ? (
-                <TreeContainer
-                  doctype={doctype}
-                  title={displayTitle}
-                  selected={decoded}
-                  editable
-                  renameField={titleMeta.data?.title_field}
-                  onSelect={(nodeName) => onNavigate(`${listPath}/${encodeURIComponent(nodeName)}`)}
-                />
-              ) : (
-                <ListContainer
-                  doctype={doctype}
-                  bridge={bridge}
-                  activeRow={decoded}
-                  onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)}
-                  onCreate={() => onNavigate(`${listPath}/new`)}
-                />
-              )}
-              detail={decoded ? (
-                <FormContainer
-                  key={`${doctype}/${decoded}`}
-                  doctype={doctype}
-                  name={decoded}
-                  onSaved={() => {}}
-                  onDeleted={() => onNavigate(listPath)}
-                  onDuplicate={() => onNavigate(`${listPath}/new`)}
-                  onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-                  onPrint={() => onNavigate(printBase === "/print"
-                    ? buildPrintPath(doctype, decoded)
-                    : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
-                  onClose={() => onNavigate(listPath)}
-                />
-              ) : isTree ? (
-                <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">
-                  {t("common.choose_prefix")} {displayTitle.toLocaleLowerCase("vi")}
-                </div>
-              ) : null}
-              context={decoded ? (
-                <ContextContainer
-                  key={`ctx-${doctype}/${decoded}`}
-                  doctype={doctype}
-                  name={decoded}
-                  aiSlot={props.contextAiSlot}
-                  onOpenConnection={(connection) => {
-                    const filter = connection.fieldname && connection.value
-                      ? `?f_${encodeURIComponent(connection.fieldname)}=${encodeURIComponent(connection.value)}`
-                      : "";
-                    onNavigate(`${base}/${encodeURIComponent(connection.doctype)}${filter}`);
-                  }}
-                />
-              ) : isTree ? (
-                <div className="grid h-full place-items-center px-4 text-center text-xs text-muted-foreground">
-                  {t("common.empty")}
-                </div>
-              ) : null}
-            />
-          )}
+          <SplitView
+            autoSaveId={`mf-split-v3-${doctype}`}
+            hasDetail={isTree || Boolean(decoded)}
+            contextTitle={decoded}
+            onCloseDetail={() => onNavigate(listPath)}
+            list={isTree ? (
+              <TreeContainer
+                doctype={doctype}
+                title={displayTitle}
+                selected={decoded}
+                editable
+                renameField={titleMeta.data?.title_field}
+                onSelect={(nodeName) => onNavigate(`${listPath}/${encodeURIComponent(nodeName)}`)}
+              />
+            ) : (
+              <ListContainer
+                doctype={doctype}
+                bridge={bridge}
+                activeRow={decoded}
+                onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)}
+                onCreate={() => onNavigate(`${listPath}/new`)}
+              />
+            )}
+            detail={decoded ? (
+              <FormContainer
+                key={`${doctype}/${decoded}`}
+                doctype={doctype}
+                name={decoded}
+                onSaved={() => {}}
+                onDeleted={() => onNavigate(listPath)}
+                onDuplicate={() => onNavigate(`${listPath}/new`)}
+                onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+                onPrint={() => onNavigate(printBase === "/print"
+                  ? buildPrintPath(doctype, decoded)
+                  : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
+                onClose={() => onNavigate(listPath)}
+              />
+            ) : isTree ? (
+              <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">
+                {t("common.choose_prefix")} {displayTitle.toLocaleLowerCase("vi")}
+              </div>
+            ) : null}
+            context={decoded ? (
+              <ContextContainer
+                key={`ctx-${doctype}/${decoded}`}
+                doctype={doctype}
+                name={decoded}
+                aiSlot={props.contextAiSlot}
+                onOpenConnection={(connection) => {
+                  const filter = connection.fieldname && connection.value
+                    ? `?f_${encodeURIComponent(connection.fieldname)}=${encodeURIComponent(connection.value)}`
+                    : "";
+                  onNavigate(`${base}/${encodeURIComponent(connection.doctype)}${filter}`);
+                }}
+              />
+            ) : isTree ? (
+              <div className="grid h-full place-items-center px-4 text-center text-xs text-muted-foreground">
+                {t("common.empty")}
+              </div>
+            ) : null}
+          />
         </div>
       </div>
-
-      <Dialog open={confirmBulkExit} onOpenChange={setConfirmBulkExit}>
-        <DialogContent className={V3_CONFIRM_DIALOG_CLASS}>
-          <DialogHeader className="border-b border-border/70 bg-muted/30 px-5 py-4">
-            <DialogTitle className="text-[15px] font-semibold tracking-tight">Bỏ thay đổi chưa lưu?</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 px-5 py-4">
-            <p className="text-sm leading-6 text-muted-foreground">
-              Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này.
-            </p>
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="outline" onClick={() => setConfirmBulkExit(false)}>Tiếp tục chỉnh</Button>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  setConfirmBulkExit(false);
-                  setBulkDirty(false);
-                  bridge.set({ view: null });
-                }}
-              >
-                Bỏ thay đổi
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isNew && quickEntryEnabled} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
