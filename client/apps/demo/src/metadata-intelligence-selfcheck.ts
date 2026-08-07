@@ -59,12 +59,15 @@ check("explicit field contract wins over inferred legacy flags", () => {
   assert.equal(resolveFieldContract(hidden).serverEnforced, true);
 });
 
-check("legacy metadata derives the same safe ownership defaults", () => {
-  const legacy: DocField = { fieldname: "customer_name", fieldtype: "Data", fetch_from: "customer.customer_name" };
-  const contract = resolveFieldContract(legacy);
-  assert.equal(contract.valueSource, "link");
-  assert.equal(contract.editMode, "editable");
-  assert.equal(contract.dirtyGuard, "preserve_user_value");
+check("legacy fetch_from ownership distinguishes ordinary source-owned from fetch_if_empty", () => {
+  const ordinary: DocField = { fieldname: "customer_name", fieldtype: "Data", fetch_from: "customer.customer_name" };
+  const ordinaryContract = resolveFieldContract(ordinary);
+  assert.equal(ordinaryContract.valueSource, "link");
+  assert.equal(ordinaryContract.editMode, "editable");
+  assert.equal(ordinaryContract.dirtyGuard, undefined, "ordinary fetch_from is source-owned");
+
+  const emptyOnly: DocField = { ...ordinary, fetch_if_empty: 1 };
+  assert.equal(resolveFieldContract(emptyOnly).dirtyGuard, "preserve_user_value", "fetch_if_empty keeps an operator override");
 });
 
 check("Today default is resolved by one metadata primitive", () => {
