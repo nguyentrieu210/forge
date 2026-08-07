@@ -10,6 +10,7 @@ import {
   resolveField,
   resolveFieldContract,
   shouldApplyAutomaticValue,
+  validateFieldValue,
   type AppActionInputTable,
   type DocField,
   type DocTypeMeta,
@@ -200,6 +201,37 @@ check("ChildGrid falls back to in_list_view without adding undeclared business c
     permissions: [],
   };
   assert.deepEqual(resolveChildGridColumns(child, []).map((field) => field.fieldname), ["alpha", "beta"]);
+});
+
+check("form value validation mirrors canonical server constraints", () => {
+  const qty: DocField = { fieldname: "qty", label: "Qty", fieldtype: "Float", non_negative: 1 };
+  assert.equal(validateFieldValue(qty, -1)?.code, "negative");
+  assert.equal(validateFieldValue(qty, "12.5"), undefined);
+  assert.equal(validateFieldValue(qty, "not-a-number")?.code, "numeric");
+
+  const code: DocField = { fieldname: "code", label: "Code", fieldtype: "Data", length: 3, not_nullable: 1 };
+  assert.equal(validateFieldValue(code, "ABCD")?.code, "too_long");
+  assert.equal(validateFieldValue(code, null)?.code, "not_nullable");
+  assert.equal(validateFieldValue(code, "ABC"), undefined);
+
+  const state: DocField = { fieldname: "state", label: "State", fieldtype: "Select", options: "Open\nClosed" };
+  assert.equal(validateFieldValue(state, "Other")?.code, "invalid_select");
+  assert.equal(validateFieldValue(state, "Open"), undefined);
+
+  const date: DocField = { fieldname: "date", label: "Date", fieldtype: "Date" };
+  assert.equal(validateFieldValue(date, "07/08/2026")?.code, "date");
+  assert.equal(validateFieldValue(date, "2026-08-07"), undefined);
+
+  const rating: DocField = { fieldname: "rating", label: "Rating", fieldtype: "Rating" };
+  assert.equal(validateFieldValue(rating, 1.1)?.code, "rating");
+  assert.equal(validateFieldValue(rating, 0.8), undefined);
+
+  const required: DocField = { fieldname: "required", label: "Required", fieldtype: "Data", reqd: 1 };
+  assert.equal(validateFieldValue(required, "")?.code, "required");
+
+  const table: DocField = { fieldname: "rows", label: "Rows", fieldtype: "Table", options: "Reference Child" };
+  assert.equal(validateFieldValue(table, Array.from({ length: 1001 }, () => ({})))?.code, "table_limit");
+  assert.equal(validateFieldValue(table, [{}]), undefined);
 });
 
 console.log(`metadata intelligence selfcheck: ${passed} checks passed`);
