@@ -52,6 +52,8 @@ jobs:
           ../../packages/core/src/meta/fetch-from-selfcheck.ts
           && pnpm --filter @metaforge/demo exec tsx
           ../../packages/views/src/form/spreadsheet-selfcheck.ts
+          && pnpm --filter @metaforge/demo exec tsx
+          ../../packages/builder/src/doctype/autofill-selfcheck.ts
       - name: Verify migration, restore import and PITR safety
         working-directory: server
         run: node --test tests/d1-migrate-remote-safety.test.mjs tests/d1-backup-import.test.mjs tests/sre-destructive-guards.test.mjs
