@@ -106,8 +106,15 @@ export function resolveFieldContract(field: DocField, workflowField = "workflow_
     || editMode === "readonly"
     || editMode === "hidden";
 
+  // Frappe has two different fetch_from ownership modes. Ordinary fetch_from is source-owned:
+  // once the source Link is chosen it may replace the target and the target becomes locked.
+  // fetch_if_empty=1 is the operator-owned variant: auto-fill is only a convenience while blank,
+  // so a user value must survive subsequent source refreshes. Preserve-user is still available
+  // explicitly for non-Frappe/custom automatic sources.
   const dirtyGuard = field.dirtyGuard
-    ?? (valueSource === "link" && editMode === "editable" ? "preserve_user_value" : undefined);
+    ?? (valueSource === "link" && editMode === "editable" && field.fetch_if_empty === 1
+      ? "preserve_user_value"
+      : undefined);
 
   return {
     valueSource,
