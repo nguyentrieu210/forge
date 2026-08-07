@@ -1,31 +1,14 @@
-import { useLayoutEffect } from "react";
-import { useMetaForge } from "@metaforge/views/provider";
-import { installAlumdoorSalesAutofillBridge } from "./AlumdoorSalesAutofillBridge.js";
-import { installAlumdoorSalesCompanyContextBridge } from "./AlumdoorSalesCompanyContextBridge.js";
-import { AlumdoorSalesSheetV2 } from "./AlumdoorSalesSheetV2.js";
-import "./AlumdoorSalesSheetCompact.css";
+import { Navigate } from "react-router-dom";
+
+const SALES_ORDER_NEW_ROUTE = `/app/${encodeURIComponent("Sales Order")}/new`;
 
 /**
- * One operational sales surface for Alumdoor.
+ * Alumdoor sales now enters the canonical metadata-driven Sales Order workspace.
  *
- * Door, ray, shaft and normal goods share the same spreadsheet-style composer. Domain-specific
- * pricing/cutting rules stay behind the Alumdoor worker; this workspace only owns presentation.
+ * SalesSheetV2 remains in source temporarily as rollback/reference evidence, but it is no longer
+ * the production navigation authority. Business behavior must come from canonical Sales Order /
+ * Sales Order Item metadata plus named server projections, not app-specific client hard-coding.
  */
 export function AlumdoorSalesModeWorkspace() {
-  const { adapter, businessContext } = useMetaForge();
-  const company = String(businessContext.company ?? "").trim();
-  const currency = String(businessContext.currency ?? "").trim();
-
-  // Install legacy compatibility bridges before SalesSheetV2 passive effects run. Cleanup is
-  // deliberately LIFO because both bridges wrap adapter methods.
-  useLayoutEffect(() => {
-    const restoreCompany = installAlumdoorSalesCompanyContextBridge(adapter, company, currency);
-    const restoreAutofill = installAlumdoorSalesAutofillBridge(adapter);
-    return () => {
-      restoreAutofill();
-      restoreCompany();
-    };
-  }, [adapter, company, currency]);
-
-  return <div className="alumdoor-sales-sheet-compact h-full min-w-0 w-full"><AlumdoorSalesSheetV2 /></div>;
+  return <Navigate to={SALES_ORDER_NEW_ROUTE} replace />;
 }
