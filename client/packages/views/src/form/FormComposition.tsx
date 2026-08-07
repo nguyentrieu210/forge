@@ -254,9 +254,9 @@ export interface FormCompositionProps {
 
 export function FormComposition({ policy, resolved, values, services, renderField }: FormCompositionProps) {
   const byName = useMemo(() => new Map(resolved.map((entry) => [entry.field.fieldname, entry])), [resolved]);
-  const placed = new Set(policy.blocks.flatMap((block) => block.type === "fields" ? block.fields : []));
-  const unplaced = resolved.filter((entry) => entry.visible && !entry.layout && !placed.has(entry.field.fieldname));
   const visibleBlocks = policy.blocks.filter((block) => evalDependsOn(block.when, values));
+  const placed = new Set(visibleBlocks.flatMap((block) => block.type === "fields" ? block.fields : []));
+  const unplaced = resolved.filter((entry) => entry.visible && !entry.layout && !placed.has(entry.field.fieldname));
   return <div className="mf-form-composition grid grid-cols-1 gap-3 lg:grid-cols-12" data-composition-columns="12">
     {visibleBlocks.map((block) => (
       <section key={block.key} className={cn("min-w-0 rounded-xl border p-3 shadow-sm", SPAN_CLASS[block.span] ?? SPAN_CLASS[12], toneClass(block.tone))} data-composition-block={block.type}>
