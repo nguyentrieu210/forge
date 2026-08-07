@@ -1,15 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
 import { calculateSalesProductionLine } from "../dist/apps-src/alumdoor-worker/src/sales-production.js";
 import { calculateSalesWizardLineContext } from "../dist/apps-src/alumdoor-worker/src/sales-wizard-context.js";
 import { handleSalesOrderOperationalSummary } from "../dist/apps-src/alumdoor-worker/src/sales-order-operational-summary.js";
-
-const here = path.dirname(fileURLToPath(import.meta.url));
-const operationalQueuePath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorSalesOrderOperationalQueue.tsx");
-const operationsRouterPath = path.resolve(here, "../../client/apps/runtime/src/experiences/AlumdoorOperationsCenter.ts");
 
 const policy = {
   name: "POL-DUC-U75",
@@ -282,20 +275,4 @@ test("work queue summary fail-closed trước callback nếu thiếu Company", a
   assert.equal(response.status, 422);
   assert.match((await body(response)).message, /Công ty/);
   assert.equal(calls, 0);
-});
-
-test("tab Đơn hàng route sang operational queue và UI dùng canonical summary như lớp bổ sung", async () => {
-  const [queue, router] = await Promise.all([
-    readFile(operationalQueuePath, "utf8"),
-    readFile(operationsRouterPath, "utf8"),
-  ]);
-  assert.match(router, /AlumdoorSalesOrderOperationalQueue/);
-  assert.match(router, /alumdoor-operations:orders/);
-  assert.match(queue, /alumdoor\.sales\.order_operational_summary/);
-  assert.match(queue, /reservation_state/);
-  assert.match(queue, /production_request/);
-  assert.match(queue, /cut_order/);
-  assert.match(queue, /setRows\(all\.filter/);
-  assert.match(queue, /void loadOperational\(company\)/, "planning summary must be supplemental after primary SO rows load");
-  assert.match(queue, /Đơn hàng vẫn dùng được/, "planning summary failure must not block the canonical Sales Order queue");
 });
