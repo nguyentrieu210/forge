@@ -24,6 +24,7 @@ import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { compileBrief, BriefError } from "./lib/compile-brief-app-factory.mjs";
+import { applyOperationalProfileSidecar } from "./lib/operational-profile-sidecar.mjs";
 import { readAppSource } from "./lib/read-app-source.mjs";
 import { readBriefSource } from "./lib/read-brief-source.mjs";
 import { validateBriefSchema } from "./lib/validate-brief-schema.mjs";
@@ -73,6 +74,7 @@ if (isDirectory) {
   let brief;
   try {
     brief = await readBriefSource(source);
+    brief = await applyOperationalProfileSidecar(brief, source);
   } catch (error) {
     fail(`${briefPath}: ${error.message}`);
   }

@@ -1,10 +1,8 @@
 /** @jsxImportSource react */
 /**
- * FormView — trung tâm runtime. Data-driven 100% từ meta:
- *   resolveMeta(theo VALUES watch → depends_on phản ứng) → groupLayout → render control.
- * State layer = React Hook Form; validate required = Zod (schema dựng từ ResolvedField).
- * Generic Form never computes stock/money/domain totals; authoritative business effects remain
- * server/app-owned.
+ * FormView — central runtime form renderer. Ordinary forms stay compact; an explicit
+ * `viewPolicy.operational.form` upgrades the same renderer into a full operational workspace.
+ * Business calculations are still server/app-owned — this file only renders declared semantics.
  */
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm, useWatch, Controller, type FieldValues } from "react-hook-form";
@@ -13,10 +11,13 @@ import { AlertTriangle, X } from "lucide-react";
 import {
   collectFetchFrom,
   collectMetadataReactiveFields,
+  operationalViewPolicy,
   resolveMeta,
   shouldApplyAutomaticValue,
   type Doc,
+  type DocField,
   type DocTypeMeta,
+  type OperationalFormPolicy,
   type ResolvedField,
 } from "@metaforge/core";
 import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge/controls";
@@ -68,12 +69,40 @@ function buildSchema(resolved: ResolvedField[], t: (k: string, f?: string) => st
   return z.object(shape).passthrough();
 }
 
+function operationalWatchFields(policy: OperationalFormPolicy | undefined): string[] {
+  if (!policy) return [];
+  return [...new Set([
+    ...(policy.header?.keyFields ?? []),
+    ...(policy.header?.statusField ? [policy.header.statusField] : []),
+    ...(policy.summary?.items ?? []).map((item) => item.field),
+  ])];
+}
+
+function formatOperationalValue(field: DocField | undefined, value: unknown): string {
+  if (value == null || value === "") return "—";
+  if (field?.fieldtype === "Check") return value === true || value === 1 || value === "1" ? "Có" : "Không";
+  if (["Currency", "Float", "Int", "Percent"].includes(field?.fieldtype ?? "")) {
+    const number = Number(value);
+    if (Number.isFinite(number)) {
+      const formatted = number.toLocaleString("vi-VN", { maximumFractionDigits: field?.fieldtype === "Currency" ? 0 : 3 });
+      return field?.fieldtype === "Percent" ? `${formatted}%` : formatted;
+    }
+  }
+  if (Array.isArray(value)) return `${value.length} dòng`;
+  return String(value);
+}
+
 export function FormView(props: FormViewProps) {
   const t = useT();
   const { meta, doc, registry, services, roles, maskedFields, forceReadOnly } = props;
   const form = useForm<FieldValues>({ defaultValues: { ...doc } });
   const formId = useId().replace(/:/g, "");
   const [activeTab, setActiveTab] = useState(0);
+  const operational = useMemo(() => operationalViewPolicy(meta), [meta]);
+  const formPolicy = operational?.form;
+  const isWorkspace = formPolicy?.presentation === "workspace";
+  const compactWorkspace = isWorkspace && formPolicy?.density === "compact";
+  const brandHeader = isWorkspace && formPolicy?.header?.tone === "brand";
   const fetchRules = useMemo(() => collectFetchFrom(meta), [meta]);
   const fieldByName = useMemo(() => new Map((meta.fields ?? []).map((field) => [field.fieldname, field])), [meta]);
   const prevLinks = useRef<Record<string, unknown>>({});
@@ -109,7 +138,10 @@ export function FormView(props: FormViewProps) {
   onDirtyChangeRef.current = props.onDirtyChange;
   useEffect(() => { onDirtyChangeRef.current?.(isDirty); }, [isDirty]);
 
-  const reactiveFields = useMemo(() => collectMetadataReactiveFields(meta), [meta]);
+  const reactiveFields = useMemo(() => [...new Set([
+    ...collectMetadataReactiveFields(meta),
+    ...operationalWatchFields(formPolicy),
+  ])], [meta, formPolicy]);
   const reactiveValues = useWatch({ control: form.control, name: reactiveFields });
   const values = useMemo(() => {
     const current = { ...form.getValues() };
@@ -212,7 +244,13 @@ export function FormView(props: FormViewProps) {
   }, [props.fieldErrors]);
   const formGuides = useMetaForgeOptional()?.formGuides;
 
-  const title = String((meta.title_field && doc[meta.title_field]) || doc.name || t("form.new"));
+  const title = String((meta.title_field && values[meta.title_field]) || doc.name || t("form.new"));
+  const statusField = formPolicy?.header?.statusField;
+  const statusValue = statusField ? values[statusField] : undefined;
+  const keyFields = (formPolicy?.header?.keyFields ?? [])
+    .map((name) => fieldByName.get(name))
+    .filter((field): field is DocField => Boolean(field));
+  const summaryItems = formPolicy?.summary?.enabled === false ? [] : (formPolicy?.summary?.items ?? []);
 
   const actionCtx: FormActionCtx = {
     docstatus: ((doc.docstatus ?? 0) as 0 | 1 | 2),
@@ -256,29 +294,53 @@ export function FormView(props: FormViewProps) {
     if (!props.onSave) return;
     const saved = await props.onSave(changed, { ...vals, name: doc.name, modified: doc.modified });
     if (saved === true) {
-      // The accepted values become the new RHF baseline immediately. Do not wait for a server
-      // `modified` timestamp/refetch to clear dirty state; otherwise Save stays enabled and the
-      // close guard can incorrectly ask about unsaved changes after a successful save.
       form.reset({ ...vals, name: doc.name, modified: doc.modified });
     }
   };
   onValidRef.current = onValid;
 
+  const headerClass = cn(
+    "mf-form-header sticky top-0 z-20 shrink-0 border-b backdrop-blur",
+    brandHeader
+      ? "border-orange-600/60 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white shadow-sm"
+      : "bg-card/95",
+  );
+  const tabButtonClass = (selected: boolean) => cn(
+    "h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm",
+    selected && (brandHeader ? "border-white text-white" : "border-primary text-foreground"),
+    brandHeader && !selected && "text-white/80 hover:bg-white/10 hover:text-white",
+  );
+
   return (
-    <form className={cn("mf-form-view flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card", props.isNew && "mf-form-create")} onSubmit={form.handleSubmit(onValid)}>
+    <form
+      className={cn(
+        "mf-form-view flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card",
+        props.isNew && "mf-form-create",
+        isWorkspace && "mf-form-workspace bg-background",
+        compactWorkspace && "mf-form-workspace-compact",
+      )}
+      data-form-presentation={formPolicy?.presentation ?? "default"}
+      onSubmit={form.handleSubmit(onValid)}
+    >
       {!props.hideHeader ? (
-        <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
-          <div className="flex min-h-14 flex-wrap items-center gap-3 px-5 py-2">
+        <div className={headerClass}>
+          <div className={cn("flex flex-wrap items-center gap-3", isWorkspace ? "min-h-16 px-4 py-2.5 md:px-5" : "min-h-14 px-5 py-2")}>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-lg font-semibold">{title}</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={cn("truncate font-semibold", isWorkspace ? "text-xl" : "text-lg")}>{title}</span>
+                {statusValue != null && statusValue !== "" ? (
+                  <Badge className={cn(brandHeader && "border-white/30 bg-white/15 text-white hover:bg-white/20")}>{String(statusValue)}</Badge>
+                ) : null}
                 {actionCtx.dirty ? (
-                  <span className="mf-dirty inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400" title={t("form.dirty_guard", DIRTY_GUARD_REASON)}>
-                    <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />{t("form.unsaved")}
+                  <span className={cn(
+                    "mf-dirty inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    brandHeader ? "bg-white/15 text-white" : "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                  )} title={t("form.dirty_guard", DIRTY_GUARD_REASON)}>
+                    <span className={cn("size-1.5 rounded-full", brandHeader ? "bg-white" : "bg-amber-500")} aria-hidden="true" />{t("form.unsaved")}
                   </span>
                 ) : null}
               </div>
-              <div className="truncate text-xs text-muted-foreground">{meta.label ?? meta.name}</div>
+              <div className={cn("truncate text-xs", brandHeader ? "text-white/75" : "text-muted-foreground")}>{meta.label ?? meta.name}</div>
             </div>
             <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 max-sm:w-full">
               {props.headerActions}
@@ -287,25 +349,28 @@ export function FormView(props: FormViewProps) {
               ) : null}
               {!props.hideDefaultActions ? <FormActionBar ctx={actionCtx} onAction={guardedAction} /> : null}
               {props.onClose ? (
-                <Button type="button" variant="ghost" size="icon-sm" onClick={props.onClose} aria-label={t("split.list")} title={t("split.list")}>
+                <Button type="button" variant="ghost" size="icon-sm" className={cn(brandHeader && "text-white hover:bg-white/15 hover:text-white")} onClick={props.onClose} aria-label={t("split.list")} title={t("split.list")}>
                   <X className="size-4" />
                 </Button>
               ) : null}
             </div>
           </div>
 
+          {isWorkspace && keyFields.length ? (
+            <div className={cn("flex min-h-10 flex-wrap items-center gap-x-5 gap-y-1 border-t px-4 py-2 md:px-5", brandHeader ? "border-white/20 bg-black/5" : "bg-muted/20")}>
+              {keyFields.map((field) => (
+                <div key={field.fieldname} className="flex min-w-0 items-baseline gap-1.5 text-xs">
+                  <span className={cn("font-medium", brandHeader ? "text-white/70" : "text-muted-foreground")}>{field.label ?? field.fieldname}:</span>
+                  <span className={cn("max-w-64 truncate font-semibold", brandHeader ? "text-white" : "text-foreground")}>{formatOperationalValue(field, values[field.fieldname])}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {tabs.length > 1 ? (
-            <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none border-t bg-transparent px-3">
+            <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className={cn("flex h-10 w-full justify-start overflow-x-auto rounded-none border-t bg-transparent px-3", brandHeader && "border-white/20")}>
               {tabs.map((tb, i) => (
-                <Button
-                  type="button"
-                  key={i}
-                  variant="ghost"
-                  role="tab"
-                  aria-selected={activeIdx === i}
-                  onClick={() => setActiveTab(i)}
-                  className={cn("h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm", activeIdx === i && "border-primary text-foreground")}
-                >
+                <Button type="button" key={i} variant="ghost" role="tab" aria-selected={activeIdx === i} onClick={() => setActiveTab(i)} className={tabButtonClass(activeIdx === i)}>
                   <span>{tb.label || t("form.tab_general")}</span>
                   {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
                 </Button>
@@ -317,15 +382,7 @@ export function FormView(props: FormViewProps) {
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
           <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none bg-transparent px-3">
             {tabs.map((tb, i) => (
-              <Button
-                type="button"
-                key={i}
-                variant="ghost"
-                role="tab"
-                aria-selected={activeIdx === i}
-                onClick={() => setActiveTab(i)}
-                className={cn("h-10 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm", activeIdx === i && "border-primary text-foreground")}
-              >
+              <Button type="button" key={i} variant="ghost" role="tab" aria-selected={activeIdx === i} onClick={() => setActiveTab(i)} className={tabButtonClass(activeIdx === i)}>
                 <span>{tb.label || t("form.tab_general")}</span>
                 {tabErrorCount(tb) ? <Badge variant="destructive" className="ml-1 h-4 min-w-4 justify-center px-1 text-[10px]">{tabErrorCount(tb)}</Badge> : null}
               </Button>
@@ -354,60 +411,60 @@ export function FormView(props: FormViewProps) {
           </div>
         ) : null}
 
-        <div className="mx-auto w-full max-w-[72rem] px-4 pb-6">
+        <div className={cn(
+          "w-full pb-6",
+          isWorkspace || formPolicy?.fullWidth ? "max-w-none px-2 md:px-3" : "mx-auto max-w-[72rem] px-4",
+        )}>
           {activeIdx === 0 ? <FormGuide doctype={meta.name} guide={formGuides?.[meta.name]} className="mb-1" /> : null}
           {tab?.sections.map((section, si) => {
             if (section.hidden) return null;
             const sectionFields = section.columns.flatMap((col) => col.fields);
             return (
-              <section key={si} className="mf-form-section py-3">
-                <div className="mf-section-heading mb-3 flex items-center gap-3">
+              <section key={si} className={cn("mf-form-section", compactWorkspace ? "py-2" : "py-3")}>
+                <div className={cn("mf-section-heading flex items-center gap-3", compactWorkspace ? "mb-2" : "mb-3")}>
                   <h3 className="shrink-0 text-[13px] font-semibold text-foreground">{section.label || t("form.section_general", "Thông tin chung")}</h3>
-                  <span className="h-px min-w-8 flex-1 bg-border/40" aria-hidden="true" />
+                  <span className="h-px min-w-8 flex-1 bg-border/50" aria-hidden="true" />
                 </div>
-                <div className="mf-form-grid grid items-start gap-x-3 gap-y-3">
+                <div className={cn("mf-form-grid grid items-start", compactWorkspace ? "gap-x-2 gap-y-2" : "gap-x-3 gap-y-3")}>
                   {groupCheckFields(sectionFields).map((entry, groupIndex) =>
                     Array.isArray(entry) ? (
                       <div key={`checks-${groupIndex}`} className="mf-check-group">
                         {entry.map((rf) => (
-                          <Field
-                            key={rf.field.fieldname}
-                            id={fieldDomId(rf.field.fieldname)}
-                            rf={rf}
-                            width="third"
-                            form={form}
-                            registry={registry}
-                            services={services}
-                            docName={String(doc.name)}
-                            parentDoctype={meta.name}
-                            roles={roles}
-                            values={values}
-                          />
+                          <Field key={rf.field.fieldname} id={fieldDomId(rf.field.fieldname)} rf={rf} width="third" form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
                         ))}
                       </div>
                     ) : (
-                      <Field
-                        key={entry.field.fieldname}
-                        id={fieldDomId(entry.field.fieldname)}
-                        rf={entry}
-                        width={resolveFormFieldWidth(entry.field, meta.title_field)}
-                        form={form}
-                        registry={registry}
-                        services={services}
-                        docName={String(doc.name)}
-                        parentDoctype={meta.name}
-                        roles={roles}
-                        values={values}
-                      />
+                      <Field key={entry.field.fieldname} id={fieldDomId(entry.field.fieldname)} rf={entry} width={resolveFormFieldWidth(entry.field, meta.title_field)} form={form} registry={registry} services={services} docName={String(doc.name)} parentDoctype={meta.name} roles={roles} values={values} />
                     ),
                   )}
                 </div>
               </section>
             );
           })}
+
+          {isWorkspace && summaryItems.length ? (
+            <div className="flex justify-end border-t py-3">
+              <div className="w-full max-w-md overflow-hidden rounded-lg border bg-card shadow-sm" data-operational-summary>
+                {summaryItems.map((item, index) => {
+                  const field = fieldByName.get(item.field);
+                  const grand = item.emphasis === "grand";
+                  return (
+                    <div key={`${item.field}-${index}`} className={cn(
+                      "flex items-center justify-between gap-4 border-b px-4 py-2 last:border-b-0",
+                      item.emphasis === "strong" && "font-semibold",
+                      grand && "bg-orange-500/10 py-3 text-base font-bold",
+                    )}>
+                      <span className={cn("text-sm", grand ? "text-foreground" : "text-muted-foreground")}>{item.label ?? field?.label ?? item.field}</span>
+                      <span className="tabular-nums">{formatOperationalValue(field, values[item.field])}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
-      {props.footerActions ? <div className="mf-form-footer sticky bottom-0 z-20 flex shrink-0 items-center justify-end gap-2 border-t bg-card/95 px-4 py-3 backdrop-blur">{props.footerActions}</div> : null}
+      {props.footerActions ? <div className={cn("mf-form-footer sticky bottom-0 z-20 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-3 backdrop-blur", isWorkspace ? "bg-background/95 shadow-[0_-8px_24px_-18px_rgba(0,0,0,.45)]" : "bg-card/95")}>{props.footerActions}</div> : null}
     </form>
   );
 }
