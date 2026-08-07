@@ -206,6 +206,7 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     in_standard_filter: bool(input.in_standard_filter, false),
     search_index: bool(input.search_index, false),
     ...(input.fetch_from === undefined ? {} : { fetch_from: text(input.fetch_from, `fields[${index}].fetch_from`, 240) }),
+    fetch_if_empty: bool(input.fetch_if_empty, false),
     ...(input.depends_on === undefined ? {} : { depends_on: text(input.depends_on, `fields[${index}].depends_on`, 500) }),
     ...(input.mandatory_depends_on === undefined ? {} : { mandatory_depends_on: text(input.mandatory_depends_on, `fields[${index}].mandatory_depends_on`, 500) }),
     ...(input.read_only_depends_on === undefined ? {} : { read_only_depends_on: text(input.read_only_depends_on, `fields[${index}].read_only_depends_on`, 500) }),
@@ -313,7 +314,7 @@ const PRESENTATION_FLAGS = [
 const PRESENTATION_TEXT: Array<[key: string, max: number]> = [
   ["collapsible_depends_on", 500], ["placeholder", 240], ["documentation_url", 500],
   ["mask", 64], ["button_color", 32], ["alignment", 16], ["link_filters", 2000],
-  ["fetch_if_empty", 8], ["oldfieldname", 140], ["oldfieldtype", 64], ["cellRole", 32],
+  ["oldfieldname", 140], ["oldfieldtype", 64], ["cellRole", 32],
 ];
 
 const PRESENTATION_INT: Array<[key: string, min: number, max: number]> = [
