@@ -7,7 +7,7 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
-import { resolveBulkRenderPolicy } from "@metaforge/core";
+import { operationalViewPolicy, resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useDoc, useMeta } from "../container/hooks.js";
 import { useMetaForge } from "../container/provider.js";
@@ -55,9 +55,16 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
   const isTree = titleMeta.data?.is_tree === 1;
   const isSingle = titleMeta.data?.issingle === 1;
-  // Quick entry is declaration-first and opt-in. Missing/disabled quickEntry means the
-  // canonical expanded form owns creation; this keeps transaction work out of cramped modals.
-  const quickEntryEnabled = titleMeta.data?.viewPolicy?.quickEntry?.enabled === true;
+  const operationalPresentation = useMemo(
+    () => titleMeta.data ? operationalViewPolicy(titleMeta.data)?.form?.presentation : undefined,
+    [titleMeta.data],
+  );
+  // Presentation authority is explicit: operational full/workspace forms must own the page.
+  // A legacy quickEntry opt-in may still coexist in canonical metadata, but it cannot demote an
+  // operational transaction workspace back into a modal. Only non-operational/quick surfaces use it.
+  const quickEntryEnabled = titleMeta.data?.viewPolicy?.quickEntry?.enabled === true
+    && operationalPresentation !== "workspace"
+    && operationalPresentation !== "full";
   // Single DocType is one settings document, not a list/detail workspace. Probe the
   // canonical singleton name only after meta confirms `issingle`; a 404 means it has
   // never been saved and must open as a create-form instead of showing "not found".
