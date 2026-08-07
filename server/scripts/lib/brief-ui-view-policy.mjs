@@ -84,27 +84,7 @@ export function attachBriefUiViewPolicies(brief, pkg) {
       if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
         throw new BriefError(`${compiled.name}: ${key} must be an object`);
       }
-      if (key !== "operational") {
-        next[key] = { enabled: true, ...policy };
-        continue;
-      }
-
-      const { fieldRoles, ...operational } = policy;
-      next.operational = operational;
-      if (fieldRoles !== undefined) {
-        if (!fieldRoles || typeof fieldRoles !== "object" || Array.isArray(fieldRoles)) {
-          throw new BriefError(`${compiled.name}: operational.fieldRoles must be an object`);
-        }
-        const fields = new Map((compiled.fields ?? []).map((field) => [field.fieldname, field]));
-        for (const [fieldname, role] of Object.entries(fieldRoles)) {
-          const field = fields.get(fieldname);
-          if (!field) throw new BriefError(`${compiled.name}: operational.fieldRoles names unknown field ${fieldname}`);
-          if (typeof role !== "string" || !OPERATIONAL_CELL_ROLES.has(role)) {
-            throw new BriefError(`${compiled.name}: operational.fieldRoles.${fieldname} is not recognised: ${String(role)}`);
-          }
-          field.cellRole = role;
-        }
-      }
+      next[key] = key === "operational" ? { ...policy } : { enabled: true, ...policy };
     }
     if (Object.keys(next).length) compiled.viewPolicy = { ...(compiled.viewPolicy ?? {}), ...next };
   }
