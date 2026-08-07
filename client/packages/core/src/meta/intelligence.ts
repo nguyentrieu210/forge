@@ -46,8 +46,14 @@ function flag(value: unknown): boolean {
   return value === true || value === 1 || value === "1";
 }
 
+/** Legacy ownership/default semantics: only scalar missing values count as empty. */
 function empty(value: unknown): boolean {
-  return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+  return value === undefined || value === null || value === "";
+}
+
+/** Required validation also treats an empty child/multiselect collection as missing. */
+function requiredEmpty(value: unknown): boolean {
+  return empty(value) || (Array.isArray(value) && value.length === 0);
 }
 
 const pad = (value: number): string => String(value).padStart(2, "0");
@@ -129,7 +135,7 @@ export function resolveFieldDefault(field: Pick<DocField, "fieldtype" | "default
  * semantics already enforced by the server and never introduces app/business formulas.
  */
 export function validateFieldValue(field: DocField, value: unknown, required = field.reqd === 1): FieldValidationIssue | undefined {
-  if (required && empty(value)) return { code: "required" };
+  if (required && requiredEmpty(value)) return { code: "required" };
   if (flag(field.not_nullable) && value === null) return { code: "not_nullable" };
   if (value === undefined || value === null || value === "") return undefined;
 
