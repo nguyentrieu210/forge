@@ -14,12 +14,40 @@ export interface EffectiveFieldContract {
   dirtyGuard?: "preserve_user_value";
 }
 
+export type FieldValidationCode =
+  | "required"
+  | "not_nullable"
+  | "too_long"
+  | "invalid_select"
+  | "integer"
+  | "duration"
+  | "rating"
+  | "phone"
+  | "color"
+  | "geolocation"
+  | "numeric"
+  | "check"
+  | "date"
+  | "datetime"
+  | "time"
+  | "json"
+  | "table"
+  | "table_limit"
+  | "table_row"
+  | "negative";
+
+export interface FieldValidationIssue {
+  code: FieldValidationCode;
+  limit?: number;
+  row?: number;
+}
+
 function flag(value: unknown): boolean {
   return value === true || value === 1 || value === "1";
 }
 
 function empty(value: unknown): boolean {
-  return value === undefined || value === null || value === "";
+  return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 }
 
 const pad = (value: number): string => String(value).padStart(2, "0");
@@ -93,6 +121,96 @@ export function resolveFieldDefault(field: Pick<DocField, "fieldtype" | "default
   if (field.default === "Today" && field.fieldtype === "Date") return localDate(now);
   if (field.default === "Now" && field.fieldtype === "Datetime") return localDatetime(now);
   return field.default;
+}
+
+/**
+ * Mirror the generic server controller's domain-neutral value checks for immediate form feedback.
+ * The server remains authoritative; this helper deliberately validates only canonical DocField
+ * semantics already enforced by the server and never introduces app/business formulas.
+ */
+export function validateFieldValue(field: DocField, value: unknown, required = field.reqd === 1): FieldValidationIssue | undefined {
+  if (required && empty(value)) return { code: "required" };
+  if (flag(field.not_nullable) && value === null) return { code: "not_nullable" };
+  if (value === undefined || value === null || value === "") return undefined;
+
+  const maxLength = typeof field.length === "number" && Number.isFinite(field.length) && field.length > 0
+    ? Math.floor(field.length)
+    : undefined;
+  const negative = (candidate: unknown) => {
+    if (typeof candidate === "number") return Number.isFinite(candidate) && candidate < 0;
+    if (typeof candidate === "string" && /^-?\d+(\.\d+)?$/.test(candidate)) return Number(candidate) < 0;
+    return false;
+  };
+  const stringTypes = new Set([
+    "Data", "Small Text", "Text", "Long Text", "Code", "Select", "Link", "Dynamic Link",
+    "Attach", "Attach Image", "Text Editor", "Markdown Editor", "HTML Editor", "Password",
+    "Autocomplete", "Read Only", "Barcode", "Icon", "Image", "Signature",
+  ]);
+
+  if (stringTypes.has(field.fieldtype)) {
+    if (typeof value !== "string") return { code: field.fieldtype === "Select" ? "invalid_select" : "too_long", ...(maxLength ? { limit: maxLength } : {}) };
+    if (maxLength && value.length > maxLength) return { code: "too_long", limit: maxLength };
+    if (field.fieldtype === "Select" && field.options) {
+      const options = field.options.split("\n").map((entry) => entry.trim()).filter(Boolean);
+      if (value && !options.includes(value)) return { code: "invalid_select" };
+    }
+  } else {
+    switch (field.fieldtype) {
+      case "Int":
+      case "Long Int":
+        if (typeof value !== "number" || !Number.isSafeInteger(value)) return { code: "integer" };
+        break;
+      case "Duration":
+        if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return { code: "duration" };
+        break;
+      case "Rating":
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) return { code: "rating" };
+        break;
+      case "Phone":
+        if (typeof value !== "string" || (value && !/^[+()\-.\s\d]{3,32}$/.test(value))) return { code: "phone" };
+        break;
+      case "Color":
+        if (typeof value !== "string" || (value && !/^#[0-9a-fA-F]{6}$/.test(value))) return { code: "color" };
+        break;
+      case "Geolocation":
+        if (!value || typeof value !== "object" || Array.isArray(value)) return { code: "geolocation" };
+        break;
+      case "Float":
+      case "Currency":
+      case "Percent":
+        if ((typeof value !== "number" || !Number.isFinite(value)) && (typeof value !== "string" || !/^-?\d+(\.\d+)?$/.test(value))) return { code: "numeric" };
+        break;
+      case "Check":
+        if (typeof value !== "boolean" && value !== 0 && value !== 1) return { code: "check" };
+        break;
+      case "Date":
+        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return { code: "date" };
+        break;
+      case "Datetime":
+        if (typeof value !== "string" || Number.isNaN(Date.parse(value))) return { code: "datetime" };
+        break;
+      case "Time":
+        if (typeof value !== "string" || !/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return { code: "time" };
+        break;
+      case "JSON":
+        if (!value || typeof value !== "object") return { code: "json" };
+        break;
+      case "Table":
+      case "Table MultiSelect":
+        if (!Array.isArray(value)) return { code: "table" };
+        if (value.length > 1000) return { code: "table_limit", limit: 1000 };
+        for (let index = 0; index < value.length; index += 1) {
+          const row = value[index];
+          if (!row || typeof row !== "object" || Array.isArray(row)) return { code: "table_row", row: index + 1 };
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (flag(field.non_negative) && negative(value)) return { code: "negative" };
+  return undefined;
 }
 
 /**
