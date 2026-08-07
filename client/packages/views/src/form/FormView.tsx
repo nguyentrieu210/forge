@@ -11,13 +11,16 @@ import { AlertTriangle, X } from "lucide-react";
 import {
   collectFetchFrom,
   collectMetadataReactiveFields,
+  fetchRuleAllowsCurrentValue,
   operationalViewPolicy,
+  resolveFetchSourceDoctype,
   resolveMeta,
   shouldApplyAutomaticValue,
   validateFieldValue,
   type Doc,
   type DocField,
   type DocTypeMeta,
+  type FetchFromRule,
   type FieldValidationIssue,
   type OperationalFormPolicy,
   type ResolvedField,
@@ -122,6 +125,10 @@ function formatOperationalValue(field: DocField | undefined, value: unknown): st
   return String(value);
 }
 
+function fetchIdentity(rule: FetchFromRule, doc: Record<string, unknown>, value: unknown): string {
+  return `${resolveFetchSourceDoctype(rule, doc) ?? ""}\u0000${String(value ?? "")}`;
+}
+
 export function FormView(props: FormViewProps) {
   const t = useT();
   const { meta, doc, registry, services, roles, maskedFields, forceReadOnly } = props;
@@ -135,18 +142,21 @@ export function FormView(props: FormViewProps) {
   const brandHeader = isWorkspace && formPolicy?.header?.tone === "brand";
   const fetchRules = useMemo(() => collectFetchFrom(meta), [meta]);
   const fieldByName = useMemo(() => new Map((meta.fields ?? []).map((field) => [field.fieldname, field])), [meta]);
-  const prevLinks = useRef<Record<string, unknown>>({});
+  const prevLinks = useRef<Record<string, string>>({});
   const fetchDocKey = useRef<string>("");
   const lastAutoValues = useRef<Record<string, unknown>>({});
+  const isNewDocument = props.isNew ?? (!doc.name || doc.name === "new");
 
   useEffect(() => {
     form.reset({ ...doc });
-    const seed: Record<string, unknown> = {};
-    for (const r of fetchRules) seed[r.linkField] = doc[r.linkField];
+    const seed: Record<string, string> = {};
+    if (!isNewDocument) {
+      for (const rule of fetchRules) seed[rule.linkField] = fetchIdentity(rule, doc, doc[rule.linkField]);
+    }
     prevLinks.current = seed;
     lastAutoValues.current = {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.name, doc.modified]);
+  }, [doc.name, doc.modified, isNewDocument]);
 
   useEffect(() => {
     if (!props.fieldErrors) return;
@@ -193,58 +203,66 @@ export function FormView(props: FormViewProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [form]);
 
-  const setAutomaticTarget = (target: string, value: unknown) => {
-    const field = fieldByName.get(target);
+  const setAutomaticTarget = (rule: FetchFromRule, value: unknown) => {
+    const field = fieldByName.get(rule.target);
     if (!field) return;
-    const current = form.getValues(target);
-    const ownsAuto = Object.prototype.hasOwnProperty.call(lastAutoValues.current, target);
-    const stillMatchesAuto = ownsAuto && Object.is(current, lastAutoValues.current[target]);
+    const current = form.getValues(rule.target);
+    const ownsAuto = Object.prototype.hasOwnProperty.call(lastAutoValues.current, rule.target);
+    const stillMatchesAuto = ownsAuto && Object.is(current, lastAutoValues.current[rule.target]);
     const provenance = stillMatchesAuto
       ? "auto"
-      : (ownsAuto || form.getFieldState(target).isDirty ? "user" : "initial");
+      : (ownsAuto || form.getFieldState(rule.target).isDirty ? "user" : "initial");
+    if (!fetchRuleAllowsCurrentValue(rule, current) && !stillMatchesAuto) return;
     if (!shouldApplyAutomaticValue(field, current, provenance)) {
-      if (provenance === "user") delete lastAutoValues.current[target];
+      if (provenance === "user") delete lastAutoValues.current[rule.target];
       return;
     }
-    form.setValue(target, (value ?? "") as never, { shouldDirty: true });
-    lastAutoValues.current[target] = value ?? "";
+    form.setValue(rule.target, (value ?? "") as never, { shouldDirty: true });
+    lastAutoValues.current[rule.target] = value ?? "";
   };
 
   useEffect(() => {
     if (!fetchRules.length) return;
     const docKey = `${doc.name ?? ""}|${doc.modified ?? ""}`;
-    if (fetchDocKey.current !== docKey) { fetchDocKey.current = docKey; return; }
-    const linkFields = new Set(fetchRules.map((r) => r.linkField));
-    for (const lf of linkFields) {
-      const cur = values[lf];
-      if (prevLinks.current[lf] === cur) continue;
-      prevLinks.current[lf] = cur;
-      const rules = fetchRules.filter((r) => r.linkField === lf);
-      if (cur == null || cur === "") {
-        for (const r of rules) setAutomaticTarget(r.target, "");
-        continue;
-      }
-      const sourceDoctype = rules.find((r) => r.sourceDoctype)?.sourceDoctype;
+    if (fetchDocKey.current !== docKey) {
+      fetchDocKey.current = docKey;
+      if (!isNewDocument) return;
+    }
+    const linkFields = new Set(fetchRules.map((rule) => rule.linkField));
+    for (const linkField of linkFields) {
+      const currentLink = values[linkField];
+      const rules = fetchRules.filter((rule) => rule.linkField === linkField);
+      const identity = fetchIdentity(rules[0]!, values, currentLink);
+      if (prevLinks.current[linkField] === identity) continue;
+      prevLinks.current[linkField] = identity;
+
+      // Ordinary fetch_from targets are source-owned. Clear old auto/initial content before the
+      // next request so a failed/slower lookup never leaves visibly stale data from the old Link.
+      // fetch_if_empty targets are operator-owned once non-empty, so they are never auto-cleared.
+      for (const rule of rules) if (!rule.fetchIfEmpty) setAutomaticTarget(rule, "");
+      if (currentLink == null || currentLink === "") continue;
+
+      const sourceDoctype = resolveFetchSourceDoctype(rules[0]!, values);
       if (!sourceDoctype) continue;
       if (services?.fetchDocument) {
-        void services.fetchDocument(sourceDoctype, String(cur))
+        void services.fetchDocument(sourceDoctype, String(currentLink))
           .then((source) => {
-            if (prevLinks.current[lf] !== cur) return;
-            for (const r of rules) setAutomaticTarget(r.target, source[r.sourceField] ?? "");
+            if (prevLinks.current[linkField] !== identity) return;
+            for (const rule of rules) setAutomaticTarget(rule, source[rule.sourceField] ?? "");
           })
-          .catch(() => { /* keep current values */ });
+          .catch(() => { /* source-owned targets stay blank rather than showing stale data */ });
         continue;
       }
       if (!services?.fetchValue) continue;
-      void Promise.all(rules.map(async (r) => ({ r, value: await services.fetchValue!(sourceDoctype, String(cur), r.sourceField) })))
+      void Promise.all(rules.map(async (rule) => ({ rule, value: await services.fetchValue!(sourceDoctype, String(currentLink), rule.sourceField) })))
         .then((resolvedRules) => {
-          if (prevLinks.current[lf] !== cur) return;
-          for (const { r, value } of resolvedRules) setAutomaticTarget(r.target, value ?? "");
+          if (prevLinks.current[linkField] !== identity) return;
+          for (const { rule, value } of resolvedRules) setAutomaticTarget(rule, value ?? "");
         })
-        .catch(() => { /* keep current values */ });
+        .catch(() => { /* source-owned targets stay blank rather than showing stale data */ });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, fetchRules, services, doc.name, doc.modified, fieldByName]);
+  }, [values, fetchRules, services, doc.name, doc.modified, fieldByName, isNewDocument]);
 
   const resolved: ResolvedField[] = useMemo(
     () => resolveMeta(meta, { doc: values, roles, maskedFields, forceReadOnly }),
@@ -285,7 +303,7 @@ export function FormView(props: FormViewProps) {
   const actionCtx: FormActionCtx = {
     docstatus: ((doc.docstatus ?? 0) as 0 | 1 | 2),
     isSubmittable: meta.is_submittable === 1,
-    isNew: props.isNew ?? (!doc.name || doc.name === "new"),
+    isNew: isNewDocument,
     dirty: form.formState.isDirty,
     hasWorkflow: (props.transitions?.length ?? 0) > 0 || props.hasWorkflow === true,
     saving: props.saving,
