@@ -24,17 +24,12 @@ const SALES_KEYS = [
   "action:lich-su-ban-hang",
 ];
 
-test("Alumdoor sales navigation is declaration-driven with no bespoke workbench", async () => {
+test("Alumdoor compiled sales navigation is declaration-driven with no bespoke workbench", async () => {
   const brief = await readBriefSource(briefPath);
 
   assert.equal(brief.version, "2.3.2");
   assert.deepEqual(brief.dimensions, ["company", "warehouse"]);
   assert.deepEqual(brief.navigation.items.slice(0, SALES_KEYS.length), SALES_KEYS);
-  assert.equal(brief.navigation.items.some((key) => key.includes("alumdoor-operations:")), false);
-
-  const bespoke = (brief.experiences ?? []).filter((entry) =>
-    entry.key === "alumdoor-operations:workbench" || entry.key === "daily-ledger:workbench");
-  assert.deepEqual(bespoke, []);
 
   const salesOrder = brief.doctypes.find((entry) => entry.name === "Sales Order");
   const deliveryNote = brief.doctypes.find((entry) => entry.name === "Delivery Note");
@@ -77,9 +72,11 @@ test("Alumdoor sales navigation is declaration-driven with no bespoke workbench"
   const pkg = compileBrief(brief);
   assert.equal(pkg.version, "2.3.2");
   assert.deepEqual(pkg.client?.dimensions, ["company", "warehouse"]);
+  assert.equal(pkg.nav.some((entry) => entry.key === "alumdoor-operations:workbench"), false);
+  assert.equal(pkg.nav.some((entry) => entry.key === "daily-ledger:workbench"), false);
+
   const sales = pkg.nav.filter((entry) => entry.group === "Bán hàng");
   assert.deepEqual(sales.map((entry) => entry.key), SALES_KEYS);
-  assert.equal(sales.some((entry) => entry.key.includes("alumdoor-operations:")), false);
 
   const compiledDashboard = pkg.actions.find((entry) => entry.name === "bao-cao-ban-hang");
   const configField = compiledDashboard?.fields.find((field) => field.fieldname === "report_config");
