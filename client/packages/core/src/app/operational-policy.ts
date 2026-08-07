@@ -1,7 +1,7 @@
 import type { DocField, DocTypeMeta } from "../types/meta.js";
 
 /**
- * MetaForm 4.0 presentation contract.
+ * MetaForm 4.x presentation contract.
  *
  * This contract is deliberately bounded: metadata declares layout, visual semantics and bindings
  * to named server projections. It never carries arbitrary executable business code. Money, stock,
@@ -47,6 +47,12 @@ export interface OperationalFormPolicy {
   fullWidth?: boolean;
   header?: OperationalHeaderPolicy;
   summary?: OperationalSummaryPolicy;
+  /**
+   * MetaForm 4.1 bounded visual composition. The concrete shape lives with the form renderer so
+   * core stays independent from React. Canonical server parsing validates blocks, field references,
+   * spans and named read-only projections before this value reaches the client.
+   */
+  composition?: unknown;
 }
 
 export interface SmartGridColumnGroup {
