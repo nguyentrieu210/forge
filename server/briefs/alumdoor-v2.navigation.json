@@ -46,7 +46,6 @@
     "mo-ho-so-bao-hanh": { "label": "Tiếp nhận bảo hành", "menu": true, "icon": "shield-plus", "group": "Bảo hành" },
     "xac-nhan-bu-tru-bao-hanh": { "label": "Xử lý / bù trừ", "menu": true, "icon": "badge-check", "group": "Bảo hành" }
   },
-  "experiences": {},
   "items": [
     "Sales Order",
     "Delivery Note",
