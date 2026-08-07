@@ -66,6 +66,8 @@ export function toFrappeDocField(field: DocFieldMeta): JsonObject {
   if (field.surface !== undefined) row.surface = field.surface;
   if (field.serverEnforced !== undefined) row.serverEnforced = field.serverEnforced;
   if (field.dirtyGuard !== undefined) row.dirtyGuard = field.dirtyGuard;
+  // MetaForm 4.0 visual semantics only. This never changes server editability or authority.
+  if (field.cellRole !== undefined) row.cellRole = field.cellRole;
   /**
    * `link_filters` cùng loại với `depends_on` ở trên: kernel LƯU nhưng không tự dùng, client
    * mới là nơi đọc nó (`buildLinkFilters`) để thu hẹp danh sách của ô Link. Không gửi ra thì
