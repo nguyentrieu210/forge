@@ -29,6 +29,7 @@ import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
 import { Button, Badge, toast, cn, useT } from "@metaforge/ui";
 import { FormGuide } from "./FormGuide.js";
+import { FormComposition, resolveFormComposition } from "./FormComposition.js";
 import { useMetaForgeOptional } from "../container/provider.js";
 import { groupLayout, resolveFormFieldWidth, type FormFieldWidth, type FormTab } from "./layout.js";
 import { WorkflowActionBar, FormActionBar } from "../detail/WorkflowActionBar.js";
@@ -137,7 +138,9 @@ export function FormView(props: FormViewProps) {
   const [activeTab, setActiveTab] = useState(0);
   const operational = useMemo(() => operationalViewPolicy(meta), [meta]);
   const formPolicy = operational?.form;
+  const composition = useMemo(() => resolveFormComposition(formPolicy?.composition, meta), [formPolicy?.composition, meta]);
   const isWorkspace = formPolicy?.presentation === "workspace";
+  const compositionActive = isWorkspace && Boolean(composition);
   const compactWorkspace = isWorkspace && formPolicy?.density === "compact";
   const brandHeader = isWorkspace && formPolicy?.header?.tone === "brand";
   const fetchRules = useMemo(() => collectFetchFrom(meta), [meta]);
@@ -181,7 +184,8 @@ export function FormView(props: FormViewProps) {
   const reactiveFields = useMemo(() => [...new Set([
     ...collectMetadataReactiveFields(meta),
     ...operationalWatchFields(formPolicy),
-  ])], [meta, formPolicy]);
+    ...(compositionActive ? (meta.fields ?? []).filter((field) => !["Section Break", "Column Break", "Tab Break", "Heading", "HTML", "Fold", "Button"].includes(field.fieldtype)).map((field) => field.fieldname) : []),
+  ])], [meta, formPolicy, compositionActive]);
   const reactiveValues = useWatch({ control: form.control, name: reactiveFields });
   const values = useMemo(() => {
     const current = { ...form.getValues() };
@@ -236,9 +240,6 @@ export function FormView(props: FormViewProps) {
       if (prevLinks.current[linkField] === identity) continue;
       prevLinks.current[linkField] = identity;
 
-      // Ordinary fetch_from targets are source-owned. Clear old auto/initial content before the
-      // next request so a failed/slower lookup never leaves visibly stale data from the old Link.
-      // fetch_if_empty targets are operator-owned once non-empty, so they are never auto-cleared.
       for (const rule of rules) if (!rule.fetchIfEmpty) setAutomaticTarget(rule, "");
       if (currentLink == null || currentLink === "") continue;
 
@@ -250,7 +251,7 @@ export function FormView(props: FormViewProps) {
             if (prevLinks.current[linkField] !== identity) return;
             for (const rule of rules) setAutomaticTarget(rule, source[rule.sourceField] ?? "");
           })
-          .catch(() => { /* source-owned targets stay blank rather than showing stale data */ });
+          .catch(() => {});
         continue;
       }
       if (!services?.fetchValue) continue;
@@ -259,7 +260,7 @@ export function FormView(props: FormViewProps) {
           if (prevLinks.current[linkField] !== identity) return;
           for (const { rule, value } of resolvedRules) setAutomaticTarget(rule, value ?? "");
         })
-        .catch(() => { /* source-owned targets stay blank rather than showing stale data */ });
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values, fetchRules, services, doc.name, doc.modified, fieldByName, isNewDocument]);
@@ -274,8 +275,10 @@ export function FormView(props: FormViewProps) {
   const fieldDomId = (fieldname: string) => `mf-${formId}-${fieldname}`;
   const tabForField = (fieldname: string) => tabs.findIndex((candidate) => candidate.sections.some((section) => section.columns.some((column) => column.fields.some((item) => item.field.fieldname === fieldname))));
   const focusField = (fieldname: string) => {
-    const nextTab = tabForField(fieldname);
-    if (nextTab >= 0) setActiveTab(nextTab);
+    if (!compositionActive) {
+      const nextTab = tabForField(fieldname);
+      if (nextTab >= 0) setActiveTab(nextTab);
+    }
     window.requestAnimationFrame(() => window.requestAnimationFrame(() => document.getElementById(fieldDomId(fieldname))?.focus()));
   };
   const errorEntries = Object.entries(form.formState.errors).flatMap(([fieldname, error]) => {
@@ -366,8 +369,10 @@ export function FormView(props: FormViewProps) {
         props.isNew && "mf-form-create",
         isWorkspace && "mf-form-workspace bg-background",
         compactWorkspace && "mf-form-workspace-compact",
+        compositionActive && "mf-form-composed",
       )}
       data-form-presentation={formPolicy?.presentation ?? "default"}
+      data-form-composition={compositionActive ? "v1" : undefined}
       onSubmit={form.handleSubmit(onValid)}
     >
       {!props.hideHeader ? (
@@ -415,7 +420,7 @@ export function FormView(props: FormViewProps) {
             </div>
           ) : null}
 
-          {tabs.length > 1 ? (
+          {!compositionActive && tabs.length > 1 ? (
             <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className={cn("flex h-10 w-full justify-start overflow-x-auto rounded-none border-t bg-transparent px-3", brandHeader && "border-white/20")}>
               {tabs.map((tb, i) => (
                 <Button type="button" key={i} variant="ghost" role="tab" aria-selected={activeIdx === i} onClick={() => setActiveTab(i)} className={tabButtonClass(activeIdx === i)}>
@@ -426,7 +431,7 @@ export function FormView(props: FormViewProps) {
             </div>
           ) : null}
         </div>
-      ) : tabs.length > 1 ? (
+      ) : !compositionActive && tabs.length > 1 ? (
         <div className="mf-form-header sticky top-0 z-20 shrink-0 border-b bg-card/95 backdrop-blur">
           <div role="tablist" aria-label={t("form.sections", "Các phần của biểu mẫu")} className="flex h-10 w-full justify-start overflow-x-auto rounded-none bg-transparent px-3">
             {tabs.map((tb, i) => (
@@ -464,7 +469,29 @@ export function FormView(props: FormViewProps) {
           isWorkspace || formPolicy?.fullWidth ? "max-w-none px-2 md:px-3" : "mx-auto max-w-[72rem] px-4",
         )}>
           {activeIdx === 0 ? <FormGuide doctype={meta.name} guide={formGuides?.[meta.name]} className="mb-1" /> : null}
-          {tab?.sections.map((section, si) => {
+          {compositionActive && composition ? (
+            <FormComposition
+              policy={composition}
+              resolved={resolved}
+              values={values}
+              services={services}
+              renderField={(entry) => (
+                <Field
+                  key={entry.field.fieldname}
+                  id={fieldDomId(entry.field.fieldname)}
+                  rf={entry}
+                  width="full"
+                  form={form}
+                  registry={registry}
+                  services={services}
+                  docName={String(doc.name)}
+                  parentDoctype={meta.name}
+                  roles={roles}
+                  values={values}
+                />
+              )}
+            />
+          ) : tab?.sections.map((section, si) => {
             if (section.hidden) return null;
             const sectionFields = section.columns.flatMap((col) => col.fields);
             return (
