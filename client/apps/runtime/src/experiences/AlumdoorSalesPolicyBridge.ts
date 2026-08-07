@@ -18,6 +18,8 @@ type InstalledBridge = {
 
 type CalculationMode = "QUANTITY" | "HEIGHT" | "WIDTH" | "AREA";
 
+export const ALUMDOOR_SALES_CUSTOMER_EVENT = "alumdoor:sales-customer-context";
+
 const installed = new WeakMap<FrappeAdapter, InstalledBridge>();
 const text = (value: unknown) => String(value ?? "").normalize("NFC").trim();
 const key = (value: unknown) => text(value).toLocaleLowerCase("vi");
@@ -82,18 +84,27 @@ export function installAlumdoorSalesPolicyBridge(adapter: FrappeAdapter): () => 
   };
 
   adapter.getDoc = async (doctype, name) => {
-    if (doctype !== "Cutting Policy") return originalGetDoc(doctype, name);
-    const variants = variantsByPolicy.get(name);
-    if (!variants) return originalGetDoc(doctype, name);
-    return {
-      doc: {
-        doctype: "Cutting Policy",
-        name,
-        policy_name: name,
-        leaf_variants: variants.map((variant_label) => ({ variant_label })),
-      } as Doc,
-      docinfo: {} as DocInfo,
-    };
+    if (doctype === "Cutting Policy") {
+      const variants = variantsByPolicy.get(name);
+      if (!variants) return originalGetDoc(doctype, name);
+      return {
+        doc: {
+          doctype: "Cutting Policy",
+          name,
+          policy_name: name,
+          leaf_variants: variants.map((variant_label) => ({ variant_label })),
+        } as Doc,
+        docinfo: {} as DocInfo,
+      };
+    }
+
+    const result = await originalGetDoc(doctype, name);
+    if (doctype === "Customer" && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(ALUMDOOR_SALES_CUSTOMER_EVENT, {
+        detail: { name, doc: result.doc },
+      }));
+    }
+    return result;
   };
 
   adapter.callPost = async function <T = unknown>(method: string, args?: Record<string, unknown>): Promise<T> {
