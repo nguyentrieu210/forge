@@ -71,11 +71,27 @@ function parseBinding(value: unknown, known: Set<string>, path: string): string 
 /**
  * Validate MetaForm 4.0 operational presentation without turning metadata into executable code.
  * The result is JSON-only and may be safely persisted with DocType metadata.
+ *
+ * `fieldRoles` is authoring sugar. The parser applies each validated role onto the already-parsed
+ * DocField so every renderer sees one canonical field contract; it is not a second business rule.
  */
 export function parseOperationalViewPolicy(value: unknown, fields: DocFieldMeta[]): JsonObject {
   const input = obj(value, "viewPolicy.operational");
+  const unsupported = Object.keys(input).filter((key) => !["form", "grid", "fieldRoles"].includes(key));
+  if (unsupported.length) throw errors.validation(`viewPolicy.operational contains unsupported keys: ${unsupported.join(", ")}`);
   const known = new Set(fields.map((field) => field.fieldname));
+  const fieldByName = new Map(fields.map((field) => [field.fieldname, field]));
   const out: JsonObject = {};
+
+  if (input.fieldRoles !== undefined) {
+    const roles = obj(input.fieldRoles, "viewPolicy.operational.fieldRoles");
+    for (const [fieldname, rawRole] of Object.entries(roles)) {
+      assertField(fieldname, known, `viewPolicy.operational.fieldRoles.${fieldname}`);
+      const role = enumText(rawRole, `viewPolicy.operational.fieldRoles.${fieldname}`, CELL_ROLES);
+      if (!role) continue;
+      fieldByName.get(fieldname)!.cellRole = role;
+    }
+  }
 
   if (input.form !== undefined) {
     const form = obj(input.form, "viewPolicy.operational.form");
@@ -223,8 +239,6 @@ export function parseOperationalViewPolicy(value: unknown, fields: DocFieldMeta[
     out.grid = gridOut;
   }
 
-  // Field-level visual semantics are carried on DocField because the same field can appear in
-  // compact/expanded/table renderers. Validate them here while the full field list is available.
   fields.forEach((field, index) => {
     const role = field.cellRole;
     if (role !== undefined && (typeof role !== "string" || !CELL_ROLES.has(role))) {
