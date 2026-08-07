@@ -23,10 +23,8 @@ const flag = (value: unknown): Flag => (value ? 1 : 0);
 /**
  * One DocField row.
  *
- * `depends_on`, `fetch_from`, `mandatory_depends_on` and `read_only_depends_on`
- * are passed through verbatim and deliberately: the kernel stores them but never
- * evaluates them, while the client DOES (safe-eval allowlist for `depends_on`, a
- * resolver for `fetch_from`). Serving them is what makes them live.
+ * `depends_on`, `fetch_from`, `fetch_if_empty`, `mandatory_depends_on` and `read_only_depends_on`
+ * are passed through deliberately. Serving these semantics is what makes canonical metadata live.
  */
 export function toFrappeDocField(field: DocFieldMeta): JsonObject {
   const row: JsonObject = {
@@ -42,6 +40,7 @@ export function toFrappeDocField(field: DocFieldMeta): JsonObject {
     set_only_once: flag(field.set_only_once),
     non_negative: flag(field.non_negative),
     not_nullable: flag(field.not_nullable),
+    fetch_if_empty: flag(field.fetch_if_empty),
     no_copy: flag(field.no_copy),
     unique: flag(field.unique),
     in_list_view: flag(field.in_list_view),
