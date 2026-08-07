@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { DocFieldMeta } from "./types.js";
 import { assertFieldConditionSupported } from "./field-condition.js";
+import { parseOperationalFormComposition } from "./operational-composition-validate.js";
 
 const FORM_PRESENTATIONS = new Set(["full", "workspace"]);
 const DENSITIES = new Set(["comfortable", "compact"]);
@@ -69,7 +70,7 @@ function parseBinding(value: unknown, known: Set<string>, path: string): string 
 }
 
 /**
- * Validate MetaForm 4.0 operational presentation without turning metadata into executable code.
+ * Validate MetaForm 4.x operational presentation without turning metadata into executable code.
  * The result is JSON-only and may be safely persisted with DocType metadata.
  *
  * `fieldRoles` is authoring sugar. The parser applies each validated role onto the already-parsed
@@ -138,6 +139,7 @@ export function parseOperationalViewPolicy(value: unknown, fields: DocFieldMeta[
       });
       formOut.summary = summaryOut;
     }
+    if (form.composition !== undefined) formOut.composition = parseOperationalFormComposition(form.composition, known);
     out.form = formOut;
   }
 
