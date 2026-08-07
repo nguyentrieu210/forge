@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { applyContextPolicy, buildMetadataDefaults, resolveFormRenderPolicy, serializeCreateDocument, type Doc, type DocTypeMeta } from "@metaforge/core";
 import { Button, ConfirmDialog, toast, useT } from "@metaforge/ui";
+import { DocumentExperience } from "../detail/DocumentExperience.js";
 import { FormView } from "../form/FormView.js";
 import { useMetaForge } from "./provider.js";
 import { useFormMeta, useCapabilities, NO_CAPS } from "./hooks.js";
@@ -137,30 +138,38 @@ export function NewFormContainer(props: NewFormContainerProps) {
     }
   };
 
+  const form = (
+    <FormView
+      key={resetSeq}
+      meta={renderPolicy?.meta ?? metaQ.data}
+      doc={doc}
+      registry={registry}
+      services={services}
+      roles={roles}
+      isNew
+      perms={caps}
+      forceReadOnly={!caps.create}
+      onSave={onSave}
+      onDirtyChange={setDirty}
+      saving={saving}
+      fieldErrors={fieldErrors}
+      hideDefaultActions
+      hideHeader={props.presentation !== "page"}
+      footerActions={<>
+        {!isSingle && props.onCancel ? <Button type="button" variant="outline" disabled={saving} onClick={requestCancel}>{t("common.cancel")}</Button> : null}
+        {!isSingle ? <Button type="submit" variant="outline" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "continue"; }}>{t("form.save_and_new")}</Button> : null}
+        <Button type="submit" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "close"; }}>{saving ? t("form.saving") : isSingle ? "Lưu" : t("form.save_and_open")}</Button>
+      </>}
+    />
+  );
+
   return (
     <>
-      <FormView
-        key={resetSeq}
-        meta={renderPolicy?.meta ?? metaQ.data}
-        doc={doc}
-        registry={registry}
-        services={services}
-        roles={roles}
-        isNew
-        perms={caps}
-        forceReadOnly={!caps.create}
-        onSave={onSave}
-        onDirtyChange={setDirty}
-        saving={saving}
-        fieldErrors={fieldErrors}
-        hideDefaultActions
-        hideHeader={props.presentation !== "page"}
-        footerActions={<>
-          {!isSingle && props.onCancel ? <Button type="button" variant="outline" disabled={saving} onClick={requestCancel}>{t("common.cancel")}</Button> : null}
-          {!isSingle ? <Button type="submit" variant="outline" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "continue"; }}>{t("form.save_and_new")}</Button> : null}
-          <Button type="submit" disabled={!caps.create || saving} onClick={() => { saveIntentRef.current = "close"; }}>{saving ? t("form.saving") : isSingle ? "Lưu" : t("form.save_and_open")}</Button>
-        </>}
-      />
+      {props.presentation === "page" ? (
+        <DocumentExperience meta={renderPolicy?.meta ?? metaQ.data} doc={doc}>
+          <div className="h-full min-h-0">{form}</div>
+        </DocumentExperience>
+      ) : form}
       <ConfirmDialog
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
