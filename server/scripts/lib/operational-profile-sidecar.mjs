@@ -34,6 +34,11 @@ function stringList(value, label) {
  * operational presentation metadata, visual field roles and a presentation column list. The normal
  * brief compiler and canonical server DocType parser still validate every field reference and
  * named server projection.
+ *
+ * `version` in the sidecar is a profile revision marker only. It MUST NOT replace the effective
+ * app/package version already resolved from the canonical brief and its business sidecars. Keeping
+ * package version authority outside this presentation overlay prevents a stale UI profile from
+ * silently downgrading an otherwise newer install candidate.
  */
 export async function applyOperationalProfileSidecar(brief, briefSource) {
   if (!briefSource || typeof briefSource !== "string") return brief;
@@ -94,7 +99,8 @@ export async function applyOperationalProfileSidecar(brief, briefSource) {
 
   return {
     ...brief,
-    ...(profile.version ? { version: profile.version } : {}),
+    // Deliberately preserve brief.version. The operational sidecar is presentation-only and
+    // cannot become app/package release authority.
     doctypes,
   };
 }

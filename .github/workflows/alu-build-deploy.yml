@@ -141,6 +141,8 @@ jobs:
       DISPATCH_NAMESPACE: cloudforge-production
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       VITE_FORGE_RELEASE_SHA: ${{ inputs.target_sha || github.sha }}
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
     outputs:
       target_sha: ${{ steps.release-target.outputs.target_sha }}
 
@@ -262,6 +264,21 @@ jobs:
       - name: Deploy tenant Worker
         working-directory: server
         run: node scripts/deploy-tenant.mjs --tenant "$TENANT" --execute --confirm "$TENANT" --allow-dirty
+
+      - name: Require Alumdoor metadata install credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FORGE_ADMIN_USER" || { echo "Missing FORGE_ADMIN_USER/ALU_META_ADMIN_USER"; exit 1; }
+          test -n "$FORGE_ADMIN_PASSWORD" || { echo "Missing FORGE_ADMIN_PASSWORD/ALU_META_ADMIN_PASSWORD"; exit 1; }
+
+      - name: Install and verify Alumdoor operational metadata
+        shell: bash
+        run: >-
+          node server/scripts/forge-app.mjs
+          server/briefs/alumdoor-v2.json
+          --origin https://alu.kairo.vn
+          --admin "$FORGE_ADMIN_USER"
 
       - name: Deploy Alumdoor app Worker
         working-directory: server

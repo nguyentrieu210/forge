@@ -21,7 +21,7 @@
       }
     },
     "Sales Order Item": {
-      "listColumns": ["item_code", "color", "width_m", "height_m", "set_count", "billable_area_sqm", "qty", "uom", "available_qty", "availability_status", "rate", "amount"],
+      "listColumns": ["item_code", "color", "width_m", "height_m", "set_count", "billable_area_sqm", "qty", "uom", "rate", "amount"],
       "grid": {
         "density": "compact",
         "headerTone": "brand",
@@ -33,11 +33,10 @@
           { "key": "product", "label": "SẢN PHẨM", "tone": "brand", "fields": ["item_code", "color"] },
           { "key": "dimensions", "label": "KÍCH THƯỚC", "tone": "input", "fields": ["width_m", "height_m", "set_count"] },
           { "key": "formula", "label": "TÍNH TOÁN", "tone": "result", "fields": ["billable_area_sqm", "qty", "uom"] },
-          { "key": "stock", "label": "TỒN KHẢ DỤNG", "tone": "result", "fields": ["available_qty", "availability_status"] },
           { "key": "commercial", "label": "THƯƠNG MẠI", "tone": "commercial", "fields": ["rate", "amount"] }
         ],
         "secondaryRow": {
-          "fields": ["billable_area_sqm", "available_qty", "availability_status"]
+          "fields": ["billable_area_sqm"]
         }
       },
       "fieldRoles": {
@@ -47,8 +46,6 @@
         "height_m": "operator_input",
         "set_count": "operator_input",
         "billable_area_sqm": "formula",
-        "available_qty": "result",
-        "availability_status": "warning",
         "rate": "money",
         "amount": "money"
       }
