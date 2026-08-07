@@ -84,6 +84,8 @@ check("dirty guard protects an operator override from automatic refresh", () => 
   const field = meta.fields.find((entry) => entry.fieldname === "reference_label")!;
   assert.equal(shouldApplyAutomaticValue(field, "manual", "user"), false);
   assert.equal(shouldApplyAutomaticValue(field, "", "user"), true);
+  const tableField: DocField = { fieldname: "rows", fieldtype: "Table", options: "Reference Child", valueSource: "link", editMode: "editable", dirtyGuard: "preserve_user_value" };
+  assert.equal(shouldApplyAutomaticValue(tableField, [], "user"), false, "empty array is still an explicit user-owned collection, not a scalar empty value");
   const merged = mergeAutomaticFieldPatch(meta, { reference_label: "manual" }, { reference_label: "automatic", unknown: 1 }, { reference_label: "user" });
   assert.equal(merged.reference_label, "manual");
   assert.equal("unknown" in merged, false);
@@ -230,6 +232,7 @@ check("form value validation mirrors canonical server constraints", () => {
   assert.equal(validateFieldValue(required, "")?.code, "required");
 
   const table: DocField = { fieldname: "rows", label: "Rows", fieldtype: "Table", options: "Reference Child" };
+  assert.equal(validateFieldValue({ ...table, reqd: 1 }, [])?.code, "required", "required collection rejects an empty array without changing dirty-guard semantics");
   assert.equal(validateFieldValue(table, Array.from({ length: 1001 }, () => ({})))?.code, "table_limit");
   assert.equal(validateFieldValue(table, [{}]), undefined);
 });
