@@ -115,3 +115,44 @@ test("operational sidecar only overlays presentation and sheet columns without c
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("operational sidecar validates parent projection bindings against the owning parent DocType", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "metaform4-parent-"));
+  try {
+    const briefPath = path.join(dir, "app.json");
+    const profilePath = path.join(dir, "app.operational.json");
+    const brief = {
+      id: "test-parent",
+      version: "1.0.0",
+      doctypes: [
+        { name: "Order", fields: ["customer:Data! Customer", "items:Table(Order Item)! Items"] },
+        { name: "Order Item", child: true, list: ["qty", "amount"], fields: ["qty:Float! Qty", "amount:Currency~ Amount"] },
+      ],
+    };
+    await writeFile(briefPath, JSON.stringify(brief));
+    const profile = {
+      version: "1.0.1",
+      doctypes: {
+        "Order Item": {
+          grid: {
+            projections: [{
+              method: "test.line.preview",
+              watch: ["qty", "parent.customer"],
+              inputs: { qty: "row.qty", customer: "parent.customer" },
+              outputs: { amount: "amount" },
+            }],
+          },
+        },
+      },
+    };
+    await writeFile(profilePath, JSON.stringify(profile));
+    const merged = await applyOperationalProfileSidecar(brief, briefPath);
+    assert.equal(merged.doctypes.find((entry) => entry.name === "Order Item").operational.grid.projections[0].inputs.customer, "parent.customer");
+
+    profile.doctypes["Order Item"].grid.projections[0].inputs.customer = "parent.custmoer";
+    await writeFile(profilePath, JSON.stringify(profile));
+    await assert.rejects(() => applyOperationalProfileSidecar(brief, briefPath), /parent\.custmoer.*missing from parent DocType\(s\): Order/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
