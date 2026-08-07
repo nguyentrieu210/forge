@@ -5,7 +5,9 @@ import { strict as assert } from "node:assert";
 const root = resolve(process.cwd(), "src");
 const runtime = readFileSync(resolve(root, "main-base.tsx"), "utf8");
 const registry = readFileSync(resolve(root, "experience-registry.tsx"), "utf8");
+const salesWorkspace = readFileSync(resolve(root, "experiences/AlumdoorSalesModeWorkspace.tsx"), "utf8");
 const sharedShell = readFileSync(resolve(process.cwd(), "../../packages/shell/src/WorkspaceAppShellV2.tsx"), "utf8");
+const sharedPopover = readFileSync(resolve(process.cwd(), "../../packages/ui/src/components/ui/popover.tsx"), "utf8");
 
 const forbiddenRuntimeLiterals = [
   "./experiences/",
@@ -47,5 +49,13 @@ for (const forbidden of ["ALUMDOOR_", "isAlumdoorSurface", "Nhân sự & Tiền 
   );
 }
 assert.equal(sharedShell.includes("workspaceNavigationPolicy"), true, "shared workspace shell must consume the generic workspace navigation policy contract");
+
+// Portal layering is a functional contract, not decoration. Link/Select/Dialog content is
+// rendered outside the Sales Experience DOM. If the fullscreen host sits above z-50, the
+// dropdown opens successfully but is painted behind the sheet and the operator cannot choose
+// Customer/Item/Color at all.
+assert.equal(sharedPopover.includes('"z-50 '), true, "shared Popover portal layer changed; re-evaluate fullscreen experience stacking");
+assert.equal(salesWorkspace.includes('className="fixed inset-0 z-40 '), true, "Sales fullscreen must stay below shared portal controls");
+assert.equal(salesWorkspace.includes("z-[200]"), false, "Sales fullscreen must never cover Link/Select/Dialog portals");
 
 console.log("runtime architecture boundary guard: PASS");
