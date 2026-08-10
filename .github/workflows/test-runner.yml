@@ -14,80 +14,31 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 5
     steps:
-      - name: Verify exact Alumdoor pricing rules in local working tree
+      - name: Switch dirty local worktree to pricing experiment branch
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
+          $target = 'exp/alumdoor-pricing-policy'
 
-          Write-Host '=== LOCAL HEAD / STATUS ==='
-          git rev-parse --short HEAD
+          Write-Host '=== BEFORE ==='
+          git rev-parse HEAD
+          git branch --show-current
           git status --short --branch
 
-          @'
-          from pathlib import Path
-
-          paths = [
-              Path('client/packages/views/src/form/sales-line-policy.ts'),
-              Path('client/packages/views/src/form/ChildGrid.tsx'),
-              Path('client/packages/views/src/form/FormView.tsx'),
-              Path('server/packages/clouderp-selling/src/controllers.ts'),
-              Path('server/packages/clouderp-selling/src/types.ts'),
-              Path('server/apps-src/alumdoor-worker/src/sales-item-context.ts'),
-              Path('server/briefs/alumdoor-v2.json'),
-              Path('server/briefs/alumdoor-v2.prints.json'),
-              Path('server/tests/alumdoor-discount-policy.test.mjs'),
-              Path('server/tests/alumdoor-sales-order-totals.test.mjs'),
-          ]
-          paths = [p for p in paths if p.exists()]
-
-          groups = {
-              'WOOD_GRAIN_DOOR_465K': ['465000', '465.000', '465k', 'v\u00e2n g\u1ed7', 'wood grain'],
-              'WOOD_GRAIN_RAIL_55K': ['55000', '55.000', '55k'],
-              'OTHER_RAIL_COLOR_15K': ['15000', '15.000', '15k'],
-              'FIXED_300K': ['300000', '300.000'],
-              'V4_V5': ['v4', 'v5'],
-              'RAIL_TARGETS': ['ray h\u1ed9p td', 'ray \u0111\u01a1n td', 'ray s\u1eaft kh\u00f4ng ron'],
-              'DISCOUNT_BASIS': ['discount_basis', 'discount basis'],
-              'GIFT_RAIL': ['t\u1eb7ng ray', 'tang ray', 'kh\u00f4ng t\u1eb7ng ray', 'khong tang ray'],
-              'SURCHARGE': ['surcharge_amount', 'micro_surcharge'],
-              'DISCOUNT_FIELDS': ['discount_percentage', 'discount_amount'],
+          $exists = git branch --list $target
+          if ([string]::IsNullOrWhiteSpace(($exists -join ''))) {
+            git switch -c $target
+          } else {
+            git switch $target
           }
 
-          texts = {}
-          for path in paths:
-              try:
-                  texts[path] = path.read_text(encoding='utf-8')
-              except Exception as exc:
-                  print(f'READ_ERROR {path}: {exc}')
+          Write-Host '=== AFTER ==='
+          $head = git rev-parse HEAD
+          $branch = git branch --show-current
+          Write-Host "HEAD=$head"
+          Write-Host "BRANCH=$branch"
+          git status --short --branch
 
-          print('=== EXACT RULE PRESENCE ===')
-          for group, patterns in groups.items():
-              hits = []
-              for path, text in texts.items():
-                  low = text.lower()
-                  for pattern in patterns:
-                      if pattern.lower() in low:
-                          hits.append((str(path), pattern))
-              print(f'{group}={"YES" if hits else "NO"}')
-              for path, pattern in hits[:12]:
-                  print('  ', path, '::', pattern.encode('unicode_escape').decode('ascii'))
-
-          print('=== RELEVANT SOURCE LINES ===')
-          needles = [
-              'surcharge_amount', 'micro_surcharge', 'discount_percentage', 'discount_amount',
-              'discount_basis', 'defaultAlumdoorDiscountPercent', 'applyAlumdoorDiscountPolicy',
-              'priced_qty', '465000', '55000', '15000', '300000'
-          ]
-          for path, text in texts.items():
-              for idx, line in enumerate(text.splitlines(), 1):
-                  low = line.lower()
-                  if any(n.lower() in low for n in needles):
-                      safe = line.encode('unicode_escape').decode('ascii')
-                      print(f'{path}:{idx}: {safe[:500]}')
-          '@ | python -
-
-          Write-Host '=== TARGETED EXISTING TESTS ==='
-          node --test server/tests/alumdoor-discount-policy.test.mjs server/tests/alumdoor-sales-order-totals.test.mjs
-
-          Write-Host 'EXACT_RULE_VERIFICATION_DONE'
+          if ($branch -ne $target) { throw "Local branch switch failed: $branch" }
+          Write-Host 'LOCAL_EXPERIMENT_BRANCH_READY'
