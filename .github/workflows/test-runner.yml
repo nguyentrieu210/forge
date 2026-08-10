@@ -11,57 +11,24 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
-      - name: Repair ChildGrid encoding and run selfcheck
+      - name: Run final full local verification gate
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $script = "$env:TEMP\forge-mojibake-repair.py"
-          $py = @(
-            'from pathlib import Path',
-            'p = Path(r"C:\alumdoor\client\packages\views\src\form\ChildGrid.tsx")',
-            'backup = Path(r"C:\alumdoor\.tmp-ChildGrid-before-encoding-repair.tsx")',
-            'raw = p.read_bytes()',
-            's = raw.decode("utf-8")',
-            'special = {}',
-            'for b in range(0x80, 0xA0):',
-            '    try:',
-            '        ch = bytes([b]).decode("cp1252")',
-            '    except UnicodeDecodeError:',
-            '        continue',
-            '    special[ord(ch)] = b',
-            'out = bytearray()',
-            'bad = []',
-            'for i, ch in enumerate(s):',
-            '    o = ord(ch)',
-            '    if o <= 0xFF:',
-            '        out.append(o)',
-            '    elif o in special:',
-            '        out.append(special[o])',
-            '    else:',
-            '        bad.append((i, o))',
-            'if bad:',
-            '    raise SystemExit(f"Refusing repair: {len(bad)} non-reversible chars; sample={bad[:20]}")',
-            'fixed_raw = bytes(out)',
-            'fixed = fixed_raw.decode("utf-8")',
-            'if "const resolvedDiscount = discountField" not in fixed or "resolvedDiscount?.visible" not in fixed:',
-            '    raise SystemExit("Refusing repair: intended discount patch missing after decode")',
-            'if ("kg/" + chr(0x110) + "VT") not in fixed or ("kg/m" + chr(0xB2)) not in fixed:',
-            '    raise SystemExit("Refusing repair: expected Vietnamese/metric text not restored")',
-            'backup.write_bytes(raw)',
-            'p.write_bytes(fixed_raw)',
-            'print("ENCODING_REPAIR_OK", len(raw), len(fixed_raw), "backup", backup)',
-            'print("DISCOUNT_PATCH_PRESERVED")'
-          )
-          [IO.File]::WriteAllLines($script, $py, [Text.Encoding]::ASCII)
-          python $script
+
+          Write-Host "=== FINAL LOCAL STATUS ==="
+          git status --short --branch
+          git diff --stat
+
+          Write-Host "`n=== FULL LOCAL VERIFY ==="
+          node server/scripts/verify-local-source.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          Write-Host "`n=== FOCUSED DIFF AROUND DISCOUNT ==="
-          git diff --unified=12 -- client/packages/views/src/form/ChildGrid.tsx | Select-String -Pattern 'discountField|resolvedDiscount|DiscountControl|^@@' -Context 12,12
+          Write-Host "`n=== VERIFY ARTIFACT TAIL ==="
+          if (Test-Path server\VERIFY.json) { Get-Content server\VERIFY.json -Tail 80 -Encoding UTF8 }
+          if (Test-Path server\BUILD_REPORT.md) { Get-Content server\BUILD_REPORT.md -Tail 80 -Encoding UTF8 }
 
-          Write-Host "`n=== DEMO SELFCHECK ==="
-          pnpm --dir client --filter @metaforge/demo selfcheck
-          exit $LASTEXITCODE
+          Write-Host "`nFULL_LOCAL_GATE_PASS"
