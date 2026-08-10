@@ -14,7 +14,7 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 10
     steps:
-      - name: Snapshot and inspect real local pricing data
+      - name: Back up actual tenant D1 and inspect commercial schema
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -23,25 +23,26 @@ jobs:
           $branch = git branch --show-current
           if ($branch -ne $target) { throw "Unexpected local branch: $branch" }
 
-          Write-Host '=== WORKTREE ==='
-          git status --short --branch
-
+          $state = 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state'
+          if (!(Test-Path $state)) { throw "Actual tenant Wrangler state not found: $state" }
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
           $backup = "C:\alumdoor\.pricing-policy-backups\$stamp"
           New-Item -ItemType Directory -Force -Path $backup | Out-Null
-          if (Test-Path 'C:\alumdoor\server\.wrangler\state') {
-            Copy-Item 'C:\alumdoor\server\.wrangler\state' "$backup\wrangler-state" -Recurse -Force
+          Copy-Item $state "$backup\tenant-worker-wrangler-state" -Recurse -Force
+          $sourceFiles = Get-ChildItem $state -Recurse -File
+          $backupFiles = Get-ChildItem "$backup\tenant-worker-wrangler-state" -Recurse -File
+          if ($sourceFiles.Count -eq 0 -or $sourceFiles.Count -ne $backupFiles.Count) {
+            throw "D1 backup verification failed: source=$($sourceFiles.Count) backup=$($backupFiles.Count)"
           }
-          Write-Host "BACKUP=$backup"
-
-          Write-Host '=== LOCAL D1 FILES ==='
-          Get-ChildItem 'C:\alumdoor\server\.wrangler' -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Extension -in @('.sqlite', '.db', '.sqlite3') } |
-            Select-Object FullName, Length, LastWriteTime | Format-Table -AutoSize
+          Write-Host "VERIFIED_BACKUP=$backup files=$($backupFiles.Count)"
 
           Set-Location C:\alumdoor\server
-          Write-Host '=== D1 TABLES ==='
-          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
-          if ($LASTEXITCODE -ne 0) { throw "wrangler d1 table inspection failed" }
+          Write-Host '=== MASTER_RECORDS SCHEMA ==='
+          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "PRAGMA table_info(master_records);"
+          Write-Host '=== DOCUMENTS SCHEMA ==='
+          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "PRAGMA table_info(documents);"
+          Write-Host '=== CHILDREN SCHEMA ==='
+          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "PRAGMA table_info(document_children);"
+          if ($LASTEXITCODE -ne 0) { throw "D1 schema inspection failed" }
 
-          Write-Host 'REAL_DATA_SNAPSHOT_OK'
+          Write-Host 'REAL_D1_BACKUP_AND_SCHEMA_OK'
