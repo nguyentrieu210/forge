@@ -13,12 +13,11 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 15
     steps:
-      - name: Inspect four remaining local failures
+      - name: Inspect owner contracts for remaining failures
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-
           function Show-Range($path, $from, $to) {
             Write-Host "`n--- $path [$from..$to] ---"
             $lines = Get-Content $path
@@ -27,27 +26,15 @@ jobs:
             }
           }
 
-          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 590 630
-          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 770 805
-          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 1040 1085
-          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 1690 1745
+          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 1 180
+          Show-Range 'server/packages/frappe-api/src/router.ts' 1015 1055
+          Show-Range 'server/packages/frappe-model/src/services.ts' 145 240
+          Show-Range 'server/packages/frappe-api/src/router.ts' 2920 2995
+          Show-Range 'server/packages/frappe-api/src/notification-runner.ts' 88 130
+          Show-Range 'server/packages/frappe-model/src/services.ts' 80 115
+          Show-Range 'server/packages/app-registry/src/installer.ts' 500 545
 
-          Write-Host "`n=== SHARE IMPLEMENTATION MATCHES ==="
-          Get-ChildItem server\packages,server\apps -Recurse -File -Include *.ts,*.mts,*.mjs |
-            Select-String -Pattern 'frappe\.share\.add|share\.add|Storage operation failed|document_shares' |
-            Select-Object -First 100 Path,LineNumber,Line | Format-Table -Wrap
-
-          Write-Host "`n=== REPORT VALIDATION MATCHES ==="
-          Get-ChildItem server\packages -Recurse -File -Include *.ts,*.mts |
-            Select-String -Pattern 'Filter .*not allowed|filter.*whitelist|report_name|run_report' |
-            Select-Object -First 120 Path,LineNumber,Line | Format-Table -Wrap
-
-          Write-Host "`n=== NOTIFICATION AUTH MATCHES ==="
-          Get-ChildItem server\packages,server\apps -Recurse -File -Include *.ts,*.mts,*.mjs |
-            Select-String -Pattern 'NOTIFICATION_RECIPIENT_NOT_AUTHORIZED|notifications\.delivered|notification rule|recipient' |
-            Select-Object -First 120 Path,LineNumber,Line | Format-Table -Wrap
-
-          Write-Host "`n=== PACKAGE/APP OBJECT MATCHES ==="
-          Get-ChildItem server\packages,server\apps -Recurse -File -Include *.ts,*.mts,*.mjs |
-            Select-String -Pattern 'app_objects|fixture|objects\.length|doctypes\.length' |
-            Select-Object -First 120 Path,LineNumber,Line | Format-Table -Wrap
+          Write-Host "`n=== document_shares schema ==="
+          Get-ChildItem server\migrations -Recurse -File -Include *.sql |
+            Select-String -Pattern 'CREATE TABLE.*document_shares|document_shares\(' -Context 2,8 |
+            Select-Object -First 80 | ForEach-Object { $_.ToString() }
