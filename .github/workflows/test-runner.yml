@@ -1,0 +1,20 @@
+name: Test local runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: [self-hosted, Windows, alumdoor]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check local runner
+        shell: pwsh
+        run: |
+          Write-Host "Runner đang chạy trên máy này"
+          hostname
+          whoami
+          node --version
+          Write-Host "Runner name: $env:RUNNER_NAME"
+          Write-Host "Runner OS: $env:RUNNER_OS"
+          Write-Host "Workspace: $env:GITHUB_WORKSPACE"
