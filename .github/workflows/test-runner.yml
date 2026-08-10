@@ -13,7 +13,7 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 30
     steps:
-      - name: Fix row-scoped discount depends_on and selfcheck
+      - name: Apply row-scoped discount fix and run selfcheck
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -40,26 +40,38 @@ jobs:
                 : undefined;
               const rateNeedsApproval = childMeta.name === "Sales Order Item" && row.rate_requires_approval === true;
 '@
-          if (-not $text.Contains($anchor)) { throw 'discount resolver anchor not found; local file diverged' }
-          $text = $text.Replace($anchor, $replacement)
+          if ($text.Contains($anchor)) {
+            $text = $text.Replace($anchor, $replacement)
+          } elseif (-not $text.Contains('const resolvedDiscount = discountField')) {
+            throw 'discount resolver anchor not found; local file diverged'
+          }
 
           $oldCondition = '              {discountColumn && discountAmountColumn && DiscountControl && DiscountAmountControl ? ('
           $newCondition = '              {discountColumn && discountAmountColumn && DiscountControl && DiscountAmountControl && resolvedDiscount?.visible ? ('
-          if (-not $text.Contains($oldCondition)) { throw 'discount row condition anchor not found' }
-          $text = $text.Replace($oldCondition, $newCondition)
+          if ($text.Contains($oldCondition)) {
+            $text = $text.Replace($oldCondition, $newCondition)
+          } elseif (-not $text.Contains($newCondition)) {
+            throw 'discount row condition anchor not found'
+          }
 
           $oldField = '                      field={fieldForRow(discountColumn.list_only ? { ...discountColumn, list_only: 0 } : discountColumn, row)}'
           $newField = '                      field={discountField!}'
-          if (-not $text.Contains($oldField)) { throw 'discount field anchor not found' }
-          $text = $text.Replace($oldField, $newField)
+          if ($text.Contains($oldField)) {
+            $text = $text.Replace($oldField, $newField)
+          } elseif (-not $text.Contains($newField)) {
+            throw 'discount field anchor not found'
+          }
 
-          $oldReadOnly = '                      readOnly={readOnly}'
-          $newReadOnly = "                      readOnly={readOnly || Boolean(resolvedDiscount?.readOnly)}`r`n                      masked={resolvedDiscount?.masked}"
           $discountAt = $text.IndexOf('                    <DiscountControl')
           if ($discountAt -lt 0) { throw 'DiscountControl block not found' }
+          $oldReadOnly = '                      readOnly={readOnly}'
+          $newReadOnly = "                      readOnly={readOnly || Boolean(resolvedDiscount?.readOnly)}`r`n                      masked={resolvedDiscount?.masked}"
           $readOnlyAt = $text.IndexOf($oldReadOnly, $discountAt)
-          if ($readOnlyAt -lt 0) { throw 'DiscountControl readOnly anchor not found' }
-          $text = $text.Remove($readOnlyAt, $oldReadOnly.Length).Insert($readOnlyAt, $newReadOnly)
+          if ($readOnlyAt -ge 0) {
+            $text = $text.Remove($readOnlyAt, $oldReadOnly.Length).Insert($readOnlyAt, $newReadOnly)
+          } elseif (-not $text.Contains('readOnly={readOnly || Boolean(resolvedDiscount?.readOnly)}')) {
+            throw 'DiscountControl readOnly anchor not found'
+          }
 
           [IO.File]::WriteAllText($full, $text, [Text.UTF8Encoding]::new($false))
 
