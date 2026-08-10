@@ -14,31 +14,24 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 5
     steps:
-      - name: Switch dirty local worktree to pricing experiment branch
+      - name: Verify local pricing experiment branch tracks remote
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
           $target = 'exp/alumdoor-pricing-policy'
 
-          Write-Host '=== BEFORE ==='
-          git rev-parse HEAD
-          git branch --show-current
-          git status --short --branch
-
-          $exists = git branch --list $target
-          if ([string]::IsNullOrWhiteSpace(($exists -join ''))) {
-            git switch -c $target
-          } else {
-            git switch $target
-          }
-
-          Write-Host '=== AFTER ==='
-          $head = git rev-parse HEAD
           $branch = git branch --show-current
-          Write-Host "HEAD=$head"
-          Write-Host "BRANCH=$branch"
-          git status --short --branch
+          if ($branch -ne $target) { throw "Unexpected local branch: $branch" }
 
-          if ($branch -ne $target) { throw "Local branch switch failed: $branch" }
-          Write-Host 'LOCAL_EXPERIMENT_BRANCH_READY'
+          git fetch origin $target
+          $local = git rev-parse HEAD
+          $remote = git rev-parse "origin/$target"
+          Write-Host "LOCAL_HEAD=$local"
+          Write-Host "REMOTE_HEAD=$remote"
+
+          if ($local -ne $remote) { throw "Local and remote experiment branches differ; refusing to reset or rewrite" }
+
+          git branch --set-upstream-to="origin/$target" $target
+          git status --short --branch
+          Write-Host 'EXPERIMENT_BRANCH_TRACKING_OK'
