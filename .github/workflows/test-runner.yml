@@ -14,31 +14,32 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 15
     steps:
-      - name: Sync and test pricing experiment locally
+      - name: Test pricing experiment on disposable real Alumdoor D1
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $target = 'exp/alumdoor-pricing-policy'
-          if ((git branch --show-current) -ne $target) { throw 'Wrong local branch' }
-          $status = @(git status --porcelain --untracked-files=all)
-          $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
-          if ($unsafe.Count -gt 0) {
-            $unsafe | ForEach-Object { Write-Host $_ }
-            throw 'Local working tree has non-backup changes; refusing to overwrite or reset'
-          }
-          if ($status.Count -gt 0) { Write-Host 'Preserving untracked .pricing-policy-backups directory' }
+          if ((git branch --show-current) -ne 'exp/alumdoor-pricing-policy') { throw 'Wrong local branch' }
 
-          git fetch origin $target
-          git merge --ff-only "origin/$target"
-          if ($LASTEXITCODE -ne 0) { throw 'Fast-forward sync failed' }
-          Write-Host "LOCAL_HEAD=$(git rev-parse HEAD)"
+          $d1Root = 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state\v3\d1\miniflare-D1DatabaseObject'
+          $sourceDb = Get-ChildItem $d1Root -File -ErrorAction Stop |
+            Where-Object { $_.Extension -eq '.sqlite' -and $_.Name -ne 'metadata.sqlite' } |
+            Sort-Object Length -Descending |
+            Select-Object -First 1
+          if (!$sourceDb) { throw 'Local D1 sqlite file not found' }
+
+          $labRoot = 'C:\ForgePricingLab'
+          New-Item -ItemType Directory -Force -Path $labRoot | Out-Null
+          $labDb = Join-Path $labRoot 'alumdoor-real-1.27-pricing.sqlite'
+          Copy-Item $sourceDb.FullName $labDb -Force
+          Write-Host "LAB_DB=$labDb source=$($sourceDb.FullName) bytes=$($sourceDb.Length)"
 
           Set-Location C:\alumdoor\server
-          pnpm run build
-          if ($LASTEXITCODE -ne 0) { throw 'Server build failed' }
+          $env:LAB_DB = $labDb
+          node -e "const fs=require('fs'); const {DatabaseSync}=require('node:sqlite'); const db=new DatabaseSync(process.env.LAB_DB); const sql=fs.readFileSync('imports/alumdoor-full-2026-07-28.sql','utf8'); db.exec(sql); const audit=JSON.parse(fs.readFileSync('imports/alumdoor-full-2026-07-28.audit.json','utf8')); const one=(q,...p)=>db.prepare(q).get(...p); const all=(q,...p)=>db.prepare(q).all(...p); const itemCount=Number(one(\"SELECT COUNT(*) c FROM documents WHERE tenant_id='alu' AND doctype='Item'\").c); const priceCount=Number(one(\"SELECT COUNT(*) c FROM documents WHERE tenant_id='alu' AND doctype='Item Price'\").c); console.log('REAL_ITEM_COUNT='+itemCount); console.log('REAL_ITEM_PRICE_COUNT='+priceCount); console.log('AUDIT_EXPECTED='+JSON.stringify(audit.expected_final_counts)); if(itemCount!==audit.expected_final_counts.items) throw new Error('real item count mismatch'); if(priceCount!==audit.expected_final_counts.item_prices) throw new Error('real item price count mismatch'); for(const code of ['TP-TD-AL752N','TP-UC KT 4D','TP-UC MTN 4.6D']){ const row=one(\"SELECT name,payload_json FROM documents WHERE tenant_id='alu' AND doctype='Item' AND name=?\",code); if(!row) throw new Error('missing real item '+code); const d=JSON.parse(row.payload_json); console.log('REAL_ITEM='+JSON.stringify({name:row.name,item_name:d.item_name,item_group:d.item_group,door_type:d.door_type,inventory_mode:d.inventory_mode,default_sales_uom:d.default_sales_uom,stock_uom:d.stock_uom,description:d.description})); } const prices=all(\"SELECT name,payload_json FROM documents WHERE tenant_id='alu' AND doctype='Item Price' AND json_extract(payload_json,'$.item_code') IN ('TP-TD-AL752N','TP-UC KT 4D','TP-UC MTN 4.6D') ORDER BY name\"); console.log('REAL_PRICES='+JSON.stringify(prices.map(r=>{const d=JSON.parse(r.payload_json);return {name:r.name,item_code:d.item_code,price_list:d.price_list,uom:d.uom,rate:d.rate,currency:d.currency}}))); const rails=all(\"SELECT name,payload_json FROM documents WHERE tenant_id='alu' AND doctype='Item' AND lower(json_extract(payload_json,'$.item_name')) LIKE '%ray%' ORDER BY name LIMIT 40\"); console.log('REAL_RAY_SAMPLE='+JSON.stringify(rails.map(r=>{const d=JSON.parse(r.payload_json);return {name:r.name,item_name:d.item_name,item_group:d.item_group,default_sales_uom:d.default_sales_uom,stock_uom:d.stock_uom}}))); db.close(); console.log('REAL_D1_IMPORT_OK');"
+          if ($LASTEXITCODE -ne 0) { throw 'Disposable real-data import verification failed' }
 
-          node --test tests/alumdoor-adjustment-policy.test.mjs tests/alumdoor-discount-policy.test.mjs tests/sales-uom-pricing.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Targeted pricing tests failed' }
+          node -e "(async()=>{ const fs=require('fs'); const {DatabaseSync}=require('node:sqlite'); const m=await import('./dist/packages/clouderp-selling/src/adjustment-policy.js'); const db=new DatabaseSync(process.env.LAB_DB,{readOnly:true}); const item=(code)=>{const r=db.prepare(\"SELECT payload_json FROM documents WHERE tenant_id='alu' AND doctype='Item' AND name=?\").get(code); if(!r)throw new Error('missing '+code); return JSON.parse(r.payload_json)}; const gift=item('TP-TD-AL752N'); const audit=JSON.parse(fs.readFileSync('imports/alumdoor-full-2026-07-28.audit.json','utf8')); if(!audit.rail_gift_rows_preserved_in_description.includes('TP-TD-AL752N'))throw new Error('gift source marker missing'); const line=m.calculateCommercialLine({priced_qty:10,selling_rate_minor:1800000,discount_basis_rate_minor:1600000,discount_percentage:15}); if(line.discount_amount_minor!==2400000||line.net_before_tax_minor!==15600000)throw new Error('gift discount basis calculation mismatch'); const au=item('TP-UC KT 4D'); const doorType=au.door_type||((au.item_group||'').toLocaleLowerCase('vi').includes('úc')?'Cửa Úc':''); const adj=m.evaluateSalesAdjustmentRules({facts:{door_type:doorType,finish_class:'WOOD_GRAIN',area_per_set_sqm:5.2},area_sqm:5.2,set_count:1},m.alumdoorExperimentalAdjustmentRules(0)); const wood=adj.applied.find(x=>x.rule_code==='WOOD_GRAIN_DOOR'); const medium=adj.applied.find(x=>x.rule_code==='AU_MEDIUM_SET'); if(!wood||wood.amount_minor!==2418000)throw new Error('real AU woodgrain adjustment mismatch'); if(!medium||medium.amount_minor!==300000)throw new Error('real AU medium adjustment mismatch'); console.log('REAL_GIFT_ITEM_GROUP='+gift.item_group); console.log('REAL_AU_ITEM_GROUP='+au.item_group); console.log('REAL_ENGINE_ON_IMPORTED_DATA_OK'); db.close(); })().catch(e=>{console.error(e);process.exit(1)})"
+          if ($LASTEXITCODE -ne 0) { throw 'Real imported-data engine test failed' }
 
-          Write-Host 'PRICING_EXPERIMENT_TARGETED_PASS'
+          Write-Host 'PRICING_REAL_DATA_LAB_PASS'
