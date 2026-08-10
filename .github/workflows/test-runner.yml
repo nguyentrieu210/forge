@@ -2,50 +2,50 @@ name: Test local runner
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/test-runner.yml"
 
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - name: Inspect local runner activity
+      - name: Inspect unfinished local verification
         shell: powershell
         run: |
-          Write-Host "=== MACHINE ==="
-          hostname
-          whoami
-          Write-Host "Runner: $env:RUNNER_NAME / $env:RUNNER_OS"
-          Write-Host "Workspace: $env:GITHUB_WORKSPACE"
-          Write-Host "Time: $(Get-Date -Format o)"
+          $ErrorActionPreference = 'Continue'
+          Set-Location C:\alumdoor
 
-          Write-Host "`n=== FORGE-RELATED PROCESSES ==="
-          Get-CimInstance Win32_Process |
-            Where-Object { $_.Name -match 'node|wrangler|workerd|vite|pnpm|cmd|powershell' -or $_.CommandLine -match 'forge|alumdoor|wrangler|vite|pnpm|run-local' } |
-            Select-Object ProcessId, ParentProcessId, Name, CreationDate, CommandLine |
-            Format-List
-
-          Write-Host "`n=== LISTENING PORTS ==="
-          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-            Where-Object { $_.LocalPort -in 5173,8799,8787,3000,4173,8080,80,443 } |
-            Select-Object LocalAddress,LocalPort,OwningProcess,State |
-            Sort-Object LocalPort |
-            Format-Table -AutoSize
-
-          Write-Host "`n=== RUNNER SERVICES ==="
-          Get-Service -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -match 'actions|runner|forge|alumdoor' -or $_.DisplayName -match 'Actions Runner|Forge|Alumdoor' } |
-            Select-Object Status,Name,DisplayName |
-            Format-Table -AutoSize
-
-          Write-Host "`n=== GIT WORKSPACE ==="
+          Write-Host "=== LOCAL HEAD / STATUS ==="
           git status --short --branch
           git log -1 --oneline
 
-          Write-Host "`n=== LOCAL FORGE PATH ==="
-          if (Test-Path 'C:\alumdoor') {
-            Write-Host 'C:\alumdoor exists'
-            git -C C:\alumdoor status --short --branch 2>$null
-            git -C C:\alumdoor log -1 --oneline 2>$null
-          } else {
-            Write-Host 'C:\alumdoor not found'
-          }
+          Write-Host "`n=== DIFF STAT ==="
+          git diff --stat
+
+          Write-Host "`n=== KEY DIFF: integration-hub ==="
+          git diff -- server/apps-src/integration-hub/app.json
+
+          Write-Host "`n=== KEY DIFF: verifier ==="
+          git diff -- server/scripts/verify-alumdoor-meta-completeness.mjs server/scripts/verify-local-source.mjs
+
+          Write-Host "`n=== KEY DIFF: facade test/router ==="
+          git diff -- server/apps/tenant-worker/test/frappe-facade.integration.test.mts server/packages/frappe-api/src/router.ts
+
+          Write-Host "`n=== MIGRATION DIFF MATCHES ==="
+          git diff --name-only | Select-String '0008_erpnext_breadth.sql'
+          $migration = git diff --name-only | Where-Object { $_ -like '*0008_erpnext_breadth.sql' } | Select-Object -First 1
+          if ($migration) { git diff -- $migration }
+
+          Write-Host "`n=== LAST VERIFY ARTIFACTS ==="
+          if (Test-Path server\VERIFY.json) { Get-Content server\VERIFY.json -Tail 120 }
+          if (Test-Path server\BUILD_REPORT.md) { Get-Content server\BUILD_REPORT.md -Tail 120 }
+
+          Write-Host "`n=== TARGETED FACADE TEST ==="
+          pnpm --dir server exec vitest run --config apps/tenant-worker/vitest.config.mts apps/tenant-worker/test/frappe-facade.integration.test.mts --reporter=verbose
+          $code = $LASTEXITCODE
+          Write-Host "TARGETED_TEST_EXIT=$code"
+          exit $code
