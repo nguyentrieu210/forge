@@ -14,66 +14,27 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 5
     steps:
-      - name: Diagnose and recover Forge local proxy
+      - name: Inspect local discount and surcharge implementation
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $env:RUNNER_TRACKING_ID = 'forge-local-persistent'
 
-          Write-Host '=== CURRENT LISTENERS ==='
-          Get-NetTCPConnection -State Listen -LocalPort 8799,5173 -ErrorAction SilentlyContinue |
-            Select-Object LocalAddress,LocalPort,OwningProcess |
-            Format-Table -AutoSize
+          Write-Host '=== LOCAL STATUS ==='
+          git status --short --branch
 
-          Write-Host '=== LOCAL VITE CONFIG ==='
-          Get-Content C:\alumdoor\client\apps\runtime\vite.config.ts -Encoding UTF8
+          Write-Host '=== DISCOUNT / SURCHARGE REFERENCES ==='
+          git grep -n -I -i -E 'discount_percentage|discount|surcharge|phu.?thu|chi.?t.?kh.?u' -- client server briefs 2>$null | Select-Object -First 500
 
-          Write-Host '=== WORKER LOG TAIL ==='
-          if (Test-Path C:\alumdoor\worker-local.log) { Get-Content C:\alumdoor\worker-local.log -Tail 100 -Encoding UTF8 }
-          Write-Host '=== DESK LOG TAIL ==='
-          if (Test-Path C:\alumdoor\desk-local.log) { Get-Content C:\alumdoor\desk-local.log -Tail 100 -Encoding UTF8 }
+          Write-Host '=== CHANGED RELEVANT FILES ==='
+          git diff --name-only | Select-String -Pattern 'ChildGrid|alumdoor|sales|pricing|discount|surcharge|metadata' -CaseSensitive:$false
 
-          Write-Host '=== DIRECT BACKEND ==='
-          curl.exe --max-time 5 -sS -o NUL -w "backend_status=%{http_code}`n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot
+          Write-Host '=== CHILDGRID DIFF ==='
+          git diff -- client/packages/ui/src/components/ChildGrid.tsx
 
-          Write-Host '=== RESTART DESK ONLY ==='
-          $deskPids = Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue |
-            Select-Object -ExpandProperty OwningProcess -Unique
-          foreach ($processId in $deskPids) {
-            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
-          }
-          Start-Sleep -Seconds 1
-          Remove-Item C:\alumdoor\desk-local.log -ErrorAction SilentlyContinue
-
-          Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -ArgumentList @(
-            '/c',
-            'cd /d C:\alumdoor\client\apps\runtime && set "VITE_FORGE_BACKEND=http://127.0.0.1:8799" && pnpm exec vite --host 127.0.0.1 --port 5173 >> C:\alumdoor\desk-local.log 2>&1'
-          )
-
-          $ready = $false
-          for ($i = 0; $i -lt 30; $i++) {
-            if (Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue) {
-              $ready = $true
-              break
-            }
-            Start-Sleep -Seconds 1
-          }
-          if (-not $ready) {
-            Write-Host '=== DESK START FAILURE LOG ==='
-            if (Test-Path C:\alumdoor\desk-local.log) { Get-Content C:\alumdoor\desk-local.log -Tail 160 -Encoding UTF8 }
-            throw 'Desk failed to listen on 5173'
+          Write-Host '=== ALUMDOOR BRIEF MATCHES ==='
+          if (Test-Path briefs\alumdoor-v2.json) {
+            Select-String -Path briefs\alumdoor-v2.json -Pattern 'discount_percentage|discount|surcharge|phu|chiết|khấu' -CaseSensitive:$false -Encoding UTF8 | Select-Object -First 200
           }
 
-          Write-Host '=== PROBES AFTER RESTART ==='
-          $deskCode = curl.exe --max-time 5 -sS -o NUL -w "%{http_code}" http://127.0.0.1:5173/
-          $proxyCode = curl.exe --max-time 5 -sS -o NUL -w "%{http_code}" http://127.0.0.1:5173/api/method/metaforge.api.get_boot
-          Write-Host "desk_status=$deskCode"
-          Write-Host "proxy_status=$proxyCode"
-
-          Write-Host '=== DESK LOG AFTER PROBE ==='
-          if (Test-Path C:\alumdoor\desk-local.log) { Get-Content C:\alumdoor\desk-local.log -Tail 160 -Encoding UTF8 }
-
-          if ($deskCode -ne '200') { throw "Desk status $deskCode" }
-          if ($proxyCode -ne '403') { throw "Proxy status $proxyCode" }
-          Write-Host 'LOCAL_SERVER_RUNNING'
+          Write-Host 'DISCOUNT_SURCHARGE_INSPECTION_DONE'
