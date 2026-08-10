@@ -12,26 +12,36 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Verify local pricing experiment branch tracks remote
+      - name: Snapshot and inspect real local pricing data
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
           $target = 'exp/alumdoor-pricing-policy'
-
           $branch = git branch --show-current
           if ($branch -ne $target) { throw "Unexpected local branch: $branch" }
 
-          git fetch origin $target
-          $local = git rev-parse HEAD
-          $remote = git rev-parse "origin/$target"
-          Write-Host "LOCAL_HEAD=$local"
-          Write-Host "REMOTE_HEAD=$remote"
-
-          if ($local -ne $remote) { throw "Local and remote experiment branches differ; refusing to reset or rewrite" }
-
-          git branch --set-upstream-to="origin/$target" $target
+          Write-Host '=== WORKTREE ==='
           git status --short --branch
-          Write-Host 'EXPERIMENT_BRANCH_TRACKING_OK'
+
+          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $backup = "C:\alumdoor\.pricing-policy-backups\$stamp"
+          New-Item -ItemType Directory -Force -Path $backup | Out-Null
+          if (Test-Path 'C:\alumdoor\server\.wrangler\state') {
+            Copy-Item 'C:\alumdoor\server\.wrangler\state' "$backup\wrangler-state" -Recurse -Force
+          }
+          Write-Host "BACKUP=$backup"
+
+          Write-Host '=== LOCAL D1 FILES ==='
+          Get-ChildItem 'C:\alumdoor\server\.wrangler' -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension -in @('.sqlite', '.db', '.sqlite3') } |
+            Select-Object FullName, Length, LastWriteTime | Format-Table -AutoSize
+
+          Set-Location C:\alumdoor\server
+          Write-Host '=== D1 TABLES ==='
+          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
+          if ($LASTEXITCODE -ne 0) { throw "wrangler d1 table inspection failed" }
+
+          Write-Host 'REAL_DATA_SNAPSHOT_OK'
