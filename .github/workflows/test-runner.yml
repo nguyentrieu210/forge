@@ -2,19 +2,55 @@ name: Test local runner
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ci/test-self-hosted-runner
+    paths:
+      - ".github/workflows/test-runner.yml"
 
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
     steps:
       - uses: actions/checkout@v4
-      - name: Check local runner
+      - name: Inspect local runner activity
         shell: powershell
         run: |
-          Write-Host "Runner dang chay tren may nay"
+          Write-Host "=== MACHINE ==="
           hostname
           whoami
-          node --version
-          Write-Host "Runner name: $env:RUNNER_NAME"
-          Write-Host "Runner OS: $env:RUNNER_OS"
+          Write-Host "Runner: $env:RUNNER_NAME / $env:RUNNER_OS"
           Write-Host "Workspace: $env:GITHUB_WORKSPACE"
+          Write-Host "Time: $(Get-Date -Format o)"
+
+          Write-Host "`n=== FORGE-RELATED PROCESSES ==="
+          Get-CimInstance Win32_Process |
+            Where-Object { $_.Name -match 'node|wrangler|workerd|vite|pnpm|cmd|powershell' -or $_.CommandLine -match 'forge|alumdoor|wrangler|vite|pnpm|run-local' } |
+            Select-Object ProcessId, ParentProcessId, Name, CreationDate, CommandLine |
+            Format-List
+
+          Write-Host "`n=== LISTENING PORTS ==="
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalPort -in 5173,8799,8787,3000,4173,8080,80,443 } |
+            Select-Object LocalAddress,LocalPort,OwningProcess,State |
+            Sort-Object LocalPort |
+            Format-Table -AutoSize
+
+          Write-Host "`n=== RUNNER SERVICES ==="
+          Get-Service -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match 'actions|runner|forge|alumdoor' -or $_.DisplayName -match 'Actions Runner|Forge|Alumdoor' } |
+            Select-Object Status,Name,DisplayName |
+            Format-Table -AutoSize
+
+          Write-Host "`n=== GIT WORKSPACE ==="
+          git status --short --branch
+          git log -1 --oneline
+
+          Write-Host "`n=== LOCAL FORGE PATH ==="
+          if (Test-Path 'C:\alumdoor') {
+            Write-Host 'C:\alumdoor exists'
+            git -C C:\alumdoor status --short --branch 2>$null
+            git -C C:\alumdoor log -1 --oneline 2>$null
+          } else {
+            Write-Host 'C:\alumdoor not found'
+          }
