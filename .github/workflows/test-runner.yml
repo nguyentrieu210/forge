@@ -13,28 +13,22 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 15
     steps:
-      - name: Inspect owner contracts for remaining failures
+      - name: Trace share and notification paths
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          function Show-Range($path, $from, $to) {
-            Write-Host "`n--- $path [$from..$to] ---"
-            $lines = Get-Content $path
-            for ($i=$from; $i -le $to -and $i -le $lines.Length; $i++) {
-              Write-Host ("{0,5}: {1}" -f $i, $lines[$i-1])
-            }
-          }
 
-          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 1 180
-          Show-Range 'server/packages/frappe-api/src/router.ts' 1015 1055
-          Show-Range 'server/packages/frappe-model/src/services.ts' 145 240
-          Show-Range 'server/packages/frappe-api/src/router.ts' 2920 2995
-          Show-Range 'server/packages/frappe-api/src/notification-runner.ts' 88 130
-          Show-Range 'server/packages/frappe-model/src/services.ts' 80 115
-          Show-Range 'server/packages/app-registry/src/installer.ts' 500 545
+          Write-Host "=== addShare definition ==="
+          Select-String -Path server\packages\frappe-api\src\router.ts -Pattern '^async function addShare' -Context 0,35 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
 
-          Write-Host "`n=== document_shares schema ==="
-          Get-ChildItem server\migrations -Recurse -File -Include *.sql |
-            Select-String -Pattern 'CREATE TABLE.*document_shares|document_shares\(' -Context 2,8 |
-            Select-Object -First 80 | ForEach-Object { $_.ToString() }
+          Write-Host "`n=== d1DeliveryAuthorizer definition ==="
+          Select-String -Path server\packages\frappe-api\src\notification-runner.ts -Pattern 'function d1DeliveryAuthorizer|async function d1DeliveryAuthorizer' -Context 0,65 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
+
+          Write-Host "`n=== test document creation names ==="
+          Select-String -Path server\apps\tenant-worker\test\frappe-facade.integration.test.mts -Pattern 'createdName|FV-NOTIFY|System Manager' -Context 1,2 | Select-Object -First 100 | ForEach-Object { $_.ToString() }
+
+          Write-Host "`n=== direct local D1 document_shares SQL probe ==="
+          Push-Location server
+          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "INSERT OR REPLACE INTO document_shares(tenant_id,doctype,name,user,can_read,can_write,can_share,submitted_by,created_at) VALUES('demo','Field Visit','SQL-PROBE','colleague@example.com',1,0,0,'sales@example.com','2026-08-10T00:00:00.000Z'); SELECT user,can_read FROM document_shares WHERE tenant_id='demo' AND name='SQL-PROBE'; DELETE FROM document_shares WHERE tenant_id='demo' AND name='SQL-PROBE';"
+          Pop-Location
