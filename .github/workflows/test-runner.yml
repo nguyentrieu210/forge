@@ -14,35 +14,41 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 10
     steps:
-      - name: Back up actual tenant D1 and inspect commercial schema
+      - name: Inspect real Alumdoor commercial data
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $target = 'exp/alumdoor-pricing-policy'
-          $branch = git branch --show-current
-          if ($branch -ne $target) { throw "Unexpected local branch: $branch" }
-
-          $state = 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state'
-          if (!(Test-Path $state)) { throw "Actual tenant Wrangler state not found: $state" }
-          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-          $backup = "C:\alumdoor\.pricing-policy-backups\$stamp"
-          New-Item -ItemType Directory -Force -Path $backup | Out-Null
-          Copy-Item $state "$backup\tenant-worker-wrangler-state" -Recurse -Force
-          $sourceFiles = Get-ChildItem $state -Recurse -File
-          $backupFiles = Get-ChildItem "$backup\tenant-worker-wrangler-state" -Recurse -File
-          if ($sourceFiles.Count -eq 0 -or $sourceFiles.Count -ne $backupFiles.Count) {
-            throw "D1 backup verification failed: source=$($sourceFiles.Count) backup=$($backupFiles.Count)"
-          }
-          Write-Host "VERIFIED_BACKUP=$backup files=$($backupFiles.Count)"
+          if ((git branch --show-current) -ne 'exp/alumdoor-pricing-policy') { throw 'Wrong local branch' }
 
           Set-Location C:\alumdoor\server
-          Write-Host '=== MASTER_RECORDS SCHEMA ==='
-          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "PRAGMA table_info(master_records);"
-          Write-Host '=== DOCUMENTS SCHEMA ==='
-          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "PRAGMA table_info(documents);"
-          Write-Host '=== CHILDREN SCHEMA ==='
-          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "PRAGMA table_info(document_children);"
-          if ($LASTEXITCODE -ne 0) { throw "D1 schema inspection failed" }
+          $cfg = 'apps/tenant-worker/wrangler.jsonc'
+          function D1([string]$sql) {
+            npx wrangler d1 execute cloudforge-demo --local --config $cfg --command $sql
+            if ($LASTEXITCODE -ne 0) { throw "D1 query failed: $sql" }
+          }
 
-          Write-Host 'REAL_D1_BACKUP_AND_SCHEMA_OK'
+          Write-Host '=== MASTER TYPE COUNTS ==='
+          D1 "SELECT record_type, COUNT(*) AS count FROM master_records GROUP BY record_type ORDER BY count DESC, record_type;"
+
+          Write-Host '=== DOOR ITEMS ==='
+          D1 "SELECT name, json_extract(data_json,'$.item_name') AS item_name, json_extract(data_json,'$.item_group') AS item_group, json_extract(data_json,'$.door_type') AS door_type, json_extract(data_json,'$.inventory_mode') AS inventory_mode, json_extract(data_json,'$.default_sales_uom') AS sales_uom, json_extract(data_json,'$.stock_uom') AS stock_uom, json_extract(data_json,'$.default_color') AS default_color FROM master_records WHERE record_type='Item' AND json_extract(data_json,'$.door_type') IS NOT NULL ORDER BY name LIMIT 100;"
+
+          Write-Host '=== RAY ITEMS ==='
+          D1 "SELECT name, json_extract(data_json,'$.item_name') AS item_name, json_extract(data_json,'$.item_group') AS item_group, json_extract(data_json,'$.inventory_mode') AS inventory_mode, json_extract(data_json,'$.default_sales_uom') AS sales_uom, json_extract(data_json,'$.stock_uom') AS stock_uom, json_extract(data_json,'$.default_color') AS default_color FROM master_records WHERE record_type='Item' AND (lower(json_extract(data_json,'$.item_name')) LIKE 'ray%' OR lower(name) LIKE '%ray%') ORDER BY name LIMIT 100;"
+
+          Write-Host '=== ITEM PRICE COUNT AND SAMPLE ==='
+          D1 "SELECT COUNT(*) AS count FROM master_records WHERE record_type='Item Price';"
+          D1 "SELECT name, json_extract(data_json,'$.price_list') AS price_list, json_extract(data_json,'$.item_code') AS item_code, json_extract(data_json,'$.uom') AS uom, json_extract(data_json,'$.rate') AS rate, json_extract(data_json,'$.currency') AS currency, disabled FROM master_records WHERE record_type='Item Price' ORDER BY name LIMIT 80;"
+
+          Write-Host '=== PRICING RULES ==='
+          D1 "SELECT name, data_json FROM master_records WHERE record_type='Pricing Rule' ORDER BY name LIMIT 100;"
+
+          Write-Host '=== CUTTING POLICIES ==='
+          D1 "SELECT name, data_json FROM master_records WHERE record_type='Cutting Policy' ORDER BY name LIMIT 100;"
+
+          Write-Host '=== SALES ORDERS ==='
+          D1 "SELECT COUNT(*) AS count FROM documents WHERE doctype='Sales Order';"
+          D1 "SELECT name, docstatus, status, modified_at, payload_json FROM documents WHERE doctype='Sales Order' ORDER BY modified_at DESC LIMIT 20;"
+
+          Write-Host 'REAL_COMMERCIAL_DATA_INSPECTION_OK'
