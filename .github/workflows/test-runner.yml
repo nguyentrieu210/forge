@@ -20,60 +20,58 @@ jobs:
           Set-Location C:\alumdoor
           $path = 'client/packages/views/src/form/ChildGrid.tsx'
           $full = (Resolve-Path $path)
-          $text = [IO.File]::ReadAllText($full)
+          $lines = [System.Collections.Generic.List[string]]::new()
+          Get-Content $full | ForEach-Object { [void]$lines.Add($_) }
 
-          $anchor = @'
-              const DiscountControl = discountColumn ? registry.resolve(discountColumn.fieldtype) ?? FallbackControl : null;
-              const DiscountAmountControl = discountAmountColumn ? registry.resolve(discountAmountColumn.fieldtype) ?? FallbackControl : null;
-              const rateNeedsApproval = childMeta.name === "Sales Order Item" && row.rate_requires_approval === true;
-'@
-          $replacement = @'
-              const DiscountControl = discountColumn ? registry.resolve(discountColumn.fieldtype) ?? FallbackControl : null;
-              const DiscountAmountControl = discountAmountColumn ? registry.resolve(discountAmountColumn.fieldtype) ?? FallbackControl : null;
-              // The sales grid renders discount on a dedicated row, but it must still obey
-              // the same row-scoped metadata contract as every ordinary child-grid cell.
-              const discountField = discountColumn
-                ? fieldForRow(discountColumn.list_only ? { ...discountColumn, list_only: 0 } : discountColumn, row)
-                : undefined;
-              const resolvedDiscount = discountField
-                ? resolveField(discountField, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true })
-                : undefined;
-              const rateNeedsApproval = childMeta.name === "Sales Order Item" && row.rate_requires_approval === true;
-'@
-          if ($text.Contains($anchor)) {
-            $text = $text.Replace($anchor, $replacement)
-          } elseif (-not $text.Contains('const resolvedDiscount = discountField')) {
-            throw 'discount resolver anchor not found; local file diverged'
+          if (-not ($lines -match 'const resolvedDiscount = discountField')) {
+            $anchor = -1
+            for ($i = 0; $i -lt $lines.Count; $i++) {
+              if ($lines[$i] -like '*const DiscountAmountControl = discountAmountColumn*') { $anchor = $i; break }
+            }
+            if ($anchor -lt 0) { throw 'discount resolver anchor not found; local file diverged' }
+            $insert = [string[]]@(
+              '              // The dedicated discount row obeys the same row-scoped metadata contract as ordinary cells.',
+              '              const discountField = discountColumn',
+              '                ? fieldForRow(discountColumn.list_only ? { ...discountColumn, list_only: 0 } : discountColumn, row)',
+              '                : undefined;',
+              '              const resolvedDiscount = discountField',
+              '                ? resolveField(discountField, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true })',
+              '                : undefined;'
+            )
+            for ($j = $insert.Length - 1; $j -ge 0; $j--) { $lines.Insert($anchor + 1, $insert[$j]) }
           }
 
-          $oldCondition = '              {discountColumn && discountAmountColumn && DiscountControl && DiscountAmountControl ? ('
-          $newCondition = '              {discountColumn && discountAmountColumn && DiscountControl && DiscountAmountControl && resolvedDiscount?.visible ? ('
-          if ($text.Contains($oldCondition)) {
-            $text = $text.Replace($oldCondition, $newCondition)
-          } elseif (-not $text.Contains($newCondition)) {
-            throw 'discount row condition anchor not found'
+          $conditionFound = $false
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -like '*discountColumn && discountAmountColumn && DiscountControl && DiscountAmountControl ? (*') {
+              $lines[$i] = $lines[$i].Replace('DiscountAmountControl ? (', 'DiscountAmountControl && resolvedDiscount?.visible ? (')
+              $conditionFound = $true
+              break
+            }
+            if ($lines[$i] -like '*DiscountAmountControl && resolvedDiscount?.visible ? (*') { $conditionFound = $true; break }
+          }
+          if (-not $conditionFound) { throw 'discount row condition anchor not found' }
+
+          $discountBlock = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -like '*<DiscountControl*') { $discountBlock = $i; break }
+          }
+          if ($discountBlock -lt 0) { throw 'DiscountControl block not found' }
+
+          for ($i = $discountBlock; $i -lt [Math]::Min($discountBlock + 25, $lines.Count); $i++) {
+            if ($lines[$i] -like '*field={fieldForRow(discountColumn.list_only*') {
+              $lines[$i] = '                      field={discountField!}'
+            }
+            if ($lines[$i].Trim() -eq 'readOnly={readOnly}') {
+              $lines[$i] = '                      readOnly={readOnly || Boolean(resolvedDiscount?.readOnly)}'
+              if ($i + 1 -ge $lines.Count -or $lines[$i + 1].Trim() -ne 'masked={resolvedDiscount?.masked}') {
+                $lines.Insert($i + 1, '                      masked={resolvedDiscount?.masked}')
+              }
+              break
+            }
           }
 
-          $oldField = '                      field={fieldForRow(discountColumn.list_only ? { ...discountColumn, list_only: 0 } : discountColumn, row)}'
-          $newField = '                      field={discountField!}'
-          if ($text.Contains($oldField)) {
-            $text = $text.Replace($oldField, $newField)
-          } elseif (-not $text.Contains($newField)) {
-            throw 'discount field anchor not found'
-          }
-
-          $discountAt = $text.IndexOf('                    <DiscountControl')
-          if ($discountAt -lt 0) { throw 'DiscountControl block not found' }
-          $oldReadOnly = '                      readOnly={readOnly}'
-          $newReadOnly = "                      readOnly={readOnly || Boolean(resolvedDiscount?.readOnly)}`r`n                      masked={resolvedDiscount?.masked}"
-          $readOnlyAt = $text.IndexOf($oldReadOnly, $discountAt)
-          if ($readOnlyAt -ge 0) {
-            $text = $text.Remove($readOnlyAt, $oldReadOnly.Length).Insert($readOnlyAt, $newReadOnly)
-          } elseif (-not $text.Contains('readOnly={readOnly || Boolean(resolvedDiscount?.readOnly)}')) {
-            throw 'DiscountControl readOnly anchor not found'
-          }
-
-          [IO.File]::WriteAllText($full, $text, [Text.UTF8Encoding]::new($false))
+          [IO.File]::WriteAllLines($full, $lines, [Text.UTF8Encoding]::new($false))
 
           Write-Host '=== PATCH DIFF ==='
           git diff -- $path
