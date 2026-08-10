@@ -11,41 +11,43 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Inspect unfinished local verification
+      - name: Inspect four remaining local failures
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Continue'
+          $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
 
-          Write-Host "=== LOCAL HEAD / STATUS ==="
-          git status --short --branch
-          git log -1 --oneline
+          function Show-Range($path, $from, $to) {
+            Write-Host "`n--- $path [$from..$to] ---"
+            $lines = Get-Content $path
+            for ($i=$from; $i -le $to -and $i -le $lines.Length; $i++) {
+              Write-Host ("{0,5}: {1}" -f $i, $lines[$i-1])
+            }
+          }
 
-          Write-Host "`n=== DIFF STAT ==="
-          git diff --stat
+          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 590 630
+          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 770 805
+          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 1040 1085
+          Show-Range 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts' 1690 1745
 
-          Write-Host "`n=== KEY DIFF: integration-hub ==="
-          git diff -- server/apps-src/integration-hub/app.json
+          Write-Host "`n=== SHARE IMPLEMENTATION MATCHES ==="
+          Get-ChildItem server\packages,server\apps -Recurse -File -Include *.ts,*.mts,*.mjs |
+            Select-String -Pattern 'frappe\.share\.add|share\.add|Storage operation failed|document_shares' |
+            Select-Object -First 100 Path,LineNumber,Line | Format-Table -Wrap
 
-          Write-Host "`n=== KEY DIFF: verifier ==="
-          git diff -- server/scripts/verify-alumdoor-meta-completeness.mjs server/scripts/verify-local-source.mjs
+          Write-Host "`n=== REPORT VALIDATION MATCHES ==="
+          Get-ChildItem server\packages -Recurse -File -Include *.ts,*.mts |
+            Select-String -Pattern 'Filter .*not allowed|filter.*whitelist|report_name|run_report' |
+            Select-Object -First 120 Path,LineNumber,Line | Format-Table -Wrap
 
-          Write-Host "`n=== KEY DIFF: facade test/router ==="
-          git diff -- server/apps/tenant-worker/test/frappe-facade.integration.test.mts server/packages/frappe-api/src/router.ts
+          Write-Host "`n=== NOTIFICATION AUTH MATCHES ==="
+          Get-ChildItem server\packages,server\apps -Recurse -File -Include *.ts,*.mts,*.mjs |
+            Select-String -Pattern 'NOTIFICATION_RECIPIENT_NOT_AUTHORIZED|notifications\.delivered|notification rule|recipient' |
+            Select-Object -First 120 Path,LineNumber,Line | Format-Table -Wrap
 
-          Write-Host "`n=== MIGRATION DIFF MATCHES ==="
-          git diff --name-only | Select-String '0008_erpnext_breadth.sql'
-          $migration = git diff --name-only | Where-Object { $_ -like '*0008_erpnext_breadth.sql' } | Select-Object -First 1
-          if ($migration) { git diff -- $migration }
-
-          Write-Host "`n=== LAST VERIFY ARTIFACTS ==="
-          if (Test-Path server\VERIFY.json) { Get-Content server\VERIFY.json -Tail 120 }
-          if (Test-Path server\BUILD_REPORT.md) { Get-Content server\BUILD_REPORT.md -Tail 120 }
-
-          Write-Host "`n=== TARGETED FACADE TEST ==="
-          pnpm --dir server exec vitest run --config apps/tenant-worker/vitest.config.mts apps/tenant-worker/test/frappe-facade.integration.test.mts --reporter=verbose
-          $code = $LASTEXITCODE
-          Write-Host "TARGETED_TEST_EXIT=$code"
-          exit $code
+          Write-Host "`n=== PACKAGE/APP OBJECT MATCHES ==="
+          Get-ChildItem server\packages,server\apps -Recurse -File -Include *.ts,*.mts,*.mjs |
+            Select-String -Pattern 'app_objects|fixture|objects\.length|doctypes\.length' |
+            Select-Object -First 120 Path,LineNumber,Line | Format-Table -Wrap
