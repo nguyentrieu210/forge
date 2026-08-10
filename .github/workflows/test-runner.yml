@@ -11,18 +11,20 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
-      - name: Diagnose reversible ChildGrid mojibake
+      - name: Repair ChildGrid encoding and run selfcheck
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $script = "$env:TEMP\forge-mojibake-check.py"
+          $script = "$env:TEMP\forge-mojibake-repair.py"
           $py = @(
             'from pathlib import Path',
             'p = Path(r"C:\alumdoor\client\packages\views\src\form\ChildGrid.tsx")',
-            's = p.read_text(encoding="utf-8")',
+            'backup = Path(r"C:\alumdoor\.tmp-ChildGrid-before-encoding-repair.tsx")',
+            'raw = p.read_bytes()',
+            's = raw.decode("utf-8")',
             'special = {}',
             'for b in range(0x80, 0xA0):',
             '    try:',
@@ -39,21 +41,27 @@ jobs:
             '    elif o in special:',
             '        out.append(special[o])',
             '    else:',
-            '        bad.append((i, o, ch.encode("unicode_escape").decode("ascii")))',
-            'print("SOURCE_LEN", len(s))',
-            'print("NONREVERSIBLE_COUNT", len(bad))',
-            'print("NONREVERSIBLE_SAMPLE", bad[:20])',
+            '        bad.append((i, o))',
             'if bad:',
-            '    raise SystemExit(2)',
-            'fixed = bytes(out).decode("utf-8")',
-            'sus = ("\\u00c3", "\\u00c2", "\\u00c4", "\\u00e2")',
-            'print("SUSPECT_BEFORE", {x: s.count(x) for x in sus})',
-            'print("SUSPECT_AFTER", {x: fixed.count(x) for x in sus})',
-            'for needle in ("basis =", "discountField =", "resolvedDiscount =", "resolvedDiscount?.visible"):',
-            '    hits = [line for line in fixed.splitlines() if needle in line]',
-            '    print("SAMPLE", needle, [h.encode("unicode_escape").decode("ascii") for h in hits[:6]])',
-            'print("REPAIR_PREVIEW_OK")'
+            '    raise SystemExit(f"Refusing repair: {len(bad)} non-reversible chars; sample={bad[:20]}")',
+            'fixed_raw = bytes(out)',
+            'fixed = fixed_raw.decode("utf-8")',
+            'if "const resolvedDiscount = discountField" not in fixed or "resolvedDiscount?.visible" not in fixed:',
+            '    raise SystemExit("Refusing repair: intended discount patch missing after decode")',
+            'if "kg/\\u0110VT" not in fixed or "kg/m\\u00b2" not in fixed:',
+            '    raise SystemExit("Refusing repair: expected Vietnamese/metric text not restored")',
+            'backup.write_bytes(raw)',
+            'p.write_bytes(fixed_raw)',
+            'print("ENCODING_REPAIR_OK", len(raw), len(fixed_raw), "backup", backup)',
+            'print("DISCOUNT_PATCH_PRESERVED")'
           )
           [IO.File]::WriteAllLines($script, $py, [Text.Encoding]::ASCII)
           python $script
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          Write-Host "`n=== FOCUSED DIFF AROUND DISCOUNT ==="
+          git diff --unified=12 -- client/packages/views/src/form/ChildGrid.tsx | Select-String -Pattern 'discountField|resolvedDiscount|DiscountControl|^@@' -Context 12,12
+
+          Write-Host "`n=== DEMO SELFCHECK ==="
+          pnpm --dir client --filter @metaforge/demo selfcheck
           exit $LASTEXITCODE
