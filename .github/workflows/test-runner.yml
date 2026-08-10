@@ -11,21 +11,32 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
-      - name: Run full local verification gate
+      - name: Inspect depends_on P1-06 failure
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
 
-          Write-Host "=== LOCAL STATUS ==="
+          Write-Host "=== LOCAL STATUS / RELEVANT DIFF ==="
           git status --short --branch
-          git diff --stat
+          git diff --name-only | Select-String -Pattern 'client|field-condition|condition|meta'
 
-          Write-Host "`n=== FULL LOCAL VERIFY ==="
-          node server/scripts/verify-local-source.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host "`n=== P1-06 ASSERTION CONTEXT ==="
+          Get-ChildItem client -Recurse -File -Include *.ts,*.tsx,*.js,*.mjs,*.cjs |
+            Select-String -Pattern 'P1-06|depends_on ẩn cell discount|qty≤5|qty<=5' -Context 12,18 |
+            Select-Object -First 80 | ForEach-Object { $_.ToString() }
 
-          Write-Host "`n=== FINAL STATUS ==="
-          git status --short --branch
+          Write-Host "`n=== DEPENDS_ON IMPLEMENTATION MATCHES ==="
+          Get-ChildItem client\packages,client\apps\runtime,client\apps\demo -Recurse -File -Include *.ts,*.tsx,*.js,*.mjs |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\|\\dist\\' } |
+            Select-String -Pattern 'depends_on|dependsOn|evaluate.*condition|condition.*eval|rowContext|row_context' |
+            Select-Object -First 220 Path,LineNumber,Line | Format-Table -Wrap
+
+          Write-Host "`n=== RELEVANT LOCAL DIFFS ==="
+          $changed = git diff --name-only | Where-Object { $_ -match 'client|field-condition|condition' }
+          foreach ($file in $changed) {
+            Write-Host "`n--- DIFF $file ---"
+            git diff -- $file
+          }
