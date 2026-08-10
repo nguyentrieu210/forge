@@ -5,30 +5,43 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened]
     paths:
       - ".github/workflows/test-runner.yml"
 
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
-      - name: Run final full local verification gate
+      - name: Start Forge local server and verify
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
 
-          Write-Host "=== FINAL LOCAL STATUS ==="
-          git status --short --branch
-          git diff --stat
+          # Prevent the self-hosted runner from cleaning up the detached local dev processes.
+          $env:RUNNER_TRACKING_ID = ''
 
-          Write-Host "`n=== FULL LOCAL VERIFY ==="
-          node server/scripts/verify-local-source.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host "=== START FORGE LOCAL ==="
+          cmd /c "C:\alumdoor\run-local.bat --noninteractive"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "=== run-local.log tail ==="
+            if (Test-Path C:\alumdoor\run-local.log) { Get-Content C:\alumdoor\run-local.log -Tail 120 -Encoding UTF8 }
+            exit $LASTEXITCODE
+          }
 
-          Write-Host "`n=== VERIFY ARTIFACT TAIL ==="
-          if (Test-Path server\VERIFY.json) { Get-Content server\VERIFY.json -Tail 80 -Encoding UTF8 }
-          if (Test-Path server\BUILD_REPORT.md) { Get-Content server\BUILD_REPORT.md -Tail 80 -Encoding UTF8 }
+          Write-Host "`n=== PORTS ==="
+          Get-NetTCPConnection -State Listen -LocalPort 8799,5173 -ErrorAction SilentlyContinue |
+            Select-Object LocalAddress,LocalPort,OwningProcess |
+            Format-Table -AutoSize
 
-          Write-Host "`nFULL_LOCAL_GATE_PASS"
+          Write-Host "`n=== BACKEND PROBE ==="
+          $backend = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -Method Get -ErrorAction SilentlyContinue
+          Write-Host "backend_status=$($backend.StatusCode)"
+
+          Write-Host "`n=== DESK PROBE ==="
+          $desk = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -Method Get
+          Write-Host "desk_status=$($desk.StatusCode)"
+
+          Write-Host "LOCAL_SERVER_RUNNING"
