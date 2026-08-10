@@ -14,41 +14,35 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 10
     steps:
-      - name: Inspect real Alumdoor commercial data
+      - name: Locate authoritative Alumdoor dataset
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
           if ((git branch --show-current) -ne 'exp/alumdoor-pricing-policy') { throw 'Wrong local branch' }
 
+          Write-Host '=== WRANGLER STATE ROOTS ==='
+          Get-ChildItem C:\alumdoor -Directory -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq '.wrangler' } |
+            Select-Object -ExpandProperty FullName
+
+          Write-Host '=== SQLITE FILES ==='
+          Get-ChildItem C:\alumdoor -File -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension -in @('.sqlite', '.sqlite3', '.db') } |
+            Sort-Object Length -Descending |
+            Select-Object FullName, Length, LastWriteTime | Format-Table -AutoSize
+
+          Write-Host '=== ALUMDOOR IMPORT FILES ==='
+          Get-ChildItem C:\alumdoor\server\imports -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'alumdoor*' } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
+
+          Write-Host '=== AUTHORITATIVE IMPORT REFERENCES ==='
           Set-Location C:\alumdoor\server
-          $cfg = 'apps/tenant-worker/wrangler.jsonc'
-          function D1([string]$sql) {
-            npx wrangler d1 execute cloudforge-demo --local --config $cfg --command $sql
-            if ($LASTEXITCODE -ne 0) { throw "D1 query failed: $sql" }
-          }
+          rg -l --glob 'imports/**' --glob 'scripts/**' 'alumdoor-full-2026-07-28|alumdoor-release-1.26.2|build-alumdoor-master-data|Item Price' | Select-Object -First 100
 
-          Write-Host '=== MASTER TYPE COUNTS ==='
-          D1 "SELECT record_type, COUNT(*) AS count FROM master_records GROUP BY record_type ORDER BY count DESC, record_type;"
+          Write-Host '=== AUDIT SUMMARY ==='
+          node -e "const fs=require('fs'); const p='imports/alumdoor-full-2026-07-28.audit.json'; if(!fs.existsSync(p)){console.log('AUDIT_NOT_FOUND'); process.exit(0)}; const x=JSON.parse(fs.readFileSync(p,'utf8')); console.log('keys='+Object.keys(x).join(',')); for(const [k,v] of Object.entries(x)){ if(Array.isArray(v)) console.log(k+'_count='+v.length); else if(v&&typeof v==='object') console.log(k+'_keys='+Object.keys(v).slice(0,30).join(',')); else console.log(k+'='+String(v).slice(0,200)); }"
 
-          Write-Host '=== DOOR ITEMS ==='
-          D1 "SELECT name, json_extract(data_json,'$.item_name') AS item_name, json_extract(data_json,'$.item_group') AS item_group, json_extract(data_json,'$.door_type') AS door_type, json_extract(data_json,'$.inventory_mode') AS inventory_mode, json_extract(data_json,'$.default_sales_uom') AS sales_uom, json_extract(data_json,'$.stock_uom') AS stock_uom, json_extract(data_json,'$.default_color') AS default_color FROM master_records WHERE record_type='Item' AND json_extract(data_json,'$.door_type') IS NOT NULL ORDER BY name LIMIT 100;"
-
-          Write-Host '=== RAY ITEMS ==='
-          D1 "SELECT name, json_extract(data_json,'$.item_name') AS item_name, json_extract(data_json,'$.item_group') AS item_group, json_extract(data_json,'$.inventory_mode') AS inventory_mode, json_extract(data_json,'$.default_sales_uom') AS sales_uom, json_extract(data_json,'$.stock_uom') AS stock_uom, json_extract(data_json,'$.default_color') AS default_color FROM master_records WHERE record_type='Item' AND (lower(json_extract(data_json,'$.item_name')) LIKE 'ray%' OR lower(name) LIKE '%ray%') ORDER BY name LIMIT 100;"
-
-          Write-Host '=== ITEM PRICE COUNT AND SAMPLE ==='
-          D1 "SELECT COUNT(*) AS count FROM master_records WHERE record_type='Item Price';"
-          D1 "SELECT name, json_extract(data_json,'$.price_list') AS price_list, json_extract(data_json,'$.item_code') AS item_code, json_extract(data_json,'$.uom') AS uom, json_extract(data_json,'$.rate') AS rate, json_extract(data_json,'$.currency') AS currency, disabled FROM master_records WHERE record_type='Item Price' ORDER BY name LIMIT 80;"
-
-          Write-Host '=== PRICING RULES ==='
-          D1 "SELECT name, data_json FROM master_records WHERE record_type='Pricing Rule' ORDER BY name LIMIT 100;"
-
-          Write-Host '=== CUTTING POLICIES ==='
-          D1 "SELECT name, data_json FROM master_records WHERE record_type='Cutting Policy' ORDER BY name LIMIT 100;"
-
-          Write-Host '=== SALES ORDERS ==='
-          D1 "SELECT COUNT(*) AS count FROM documents WHERE doctype='Sales Order';"
-          D1 "SELECT name, docstatus, status, modified_at, payload_json FROM documents WHERE doctype='Sales Order' ORDER BY modified_at DESC LIMIT 20;"
-
-          Write-Host 'REAL_COMMERCIAL_DATA_INSPECTION_OK'
+          Write-Host 'AUTHORITATIVE_DATASET_LOCATION_SCAN_OK'
