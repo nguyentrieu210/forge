@@ -48,7 +48,7 @@ jobs:
             'fixed = fixed_raw.decode("utf-8")',
             'if "const resolvedDiscount = discountField" not in fixed or "resolvedDiscount?.visible" not in fixed:',
             '    raise SystemExit("Refusing repair: intended discount patch missing after decode")',
-            'if "kg/\\u0110VT" not in fixed or "kg/m\\u00b2" not in fixed:',
+            'if ("kg/" + chr(0x110) + "VT") not in fixed or ("kg/m" + chr(0xB2)) not in fixed:',
             '    raise SystemExit("Refusing repair: expected Vietnamese/metric text not restored")',
             'backup.write_bytes(raw)',
             'p.write_bytes(fixed_raw)',
