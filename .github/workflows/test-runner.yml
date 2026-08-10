@@ -12,36 +12,98 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - name: Start Forge local server and verify
+      - name: Start persistent Forge local servers
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
 
-          # Prevent the self-hosted runner from cleaning up the detached local dev processes.
-          $env:RUNNER_TRACKING_ID = ''
+          Write-Host "=== STOP STALE LOCAL SERVERS ==="
+          foreach ($port in @(8799, 5173)) {
+            $processIds = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue |
+              Select-Object -ExpandProperty OwningProcess -Unique
+            foreach ($processId in $processIds) {
+              Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+            }
+          }
+          Start-Sleep -Seconds 1
 
-          Write-Host "=== START FORGE LOCAL ==="
-          cmd /c "C:\alumdoor\run-local.bat --noninteractive"
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "=== run-local.log tail ==="
-            if (Test-Path C:\alumdoor\run-local.log) { Get-Content C:\alumdoor\run-local.log -Tail 120 -Encoding UTF8 }
-            exit $LASTEXITCODE
+          # A different tracking value keeps these detached dev processes outside
+          # the Actions orphan-process cleanup for this job.
+          $env:RUNNER_TRACKING_ID = 'forge-local-persistent'
+
+          Remove-Item C:\alumdoor\worker-local.log -ErrorAction SilentlyContinue
+          Remove-Item C:\alumdoor\desk-local.log -ErrorAction SilentlyContinue
+
+          Write-Host "=== START WORKER :8799 ==="
+          Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -ArgumentList @(
+            '/c',
+            'cd /d C:\alumdoor\server && pnpm run dev:alumdoor-local >> C:\alumdoor\worker-local.log 2>&1'
+          )
+
+          $workerReady = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            if (Get-NetTCPConnection -State Listen -LocalPort 8799 -ErrorAction SilentlyContinue) {
+              $workerReady = $true
+              break
+            }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $workerReady) {
+            Write-Host '=== worker-local.log ==='
+            if (Test-Path C:\alumdoor\worker-local.log) { Get-Content C:\alumdoor\worker-local.log -Tail 120 -Encoding UTF8 }
+            throw 'Backend did not listen on port 8799'
           }
 
-          Write-Host "`n=== PORTS ==="
-          Get-NetTCPConnection -State Listen -LocalPort 8799,5173 -ErrorAction SilentlyContinue |
+          Write-Host "=== START DESK :5173 ==="
+          $env:VITE_FORGE_BACKEND = 'http://127.0.0.1:8799'
+          Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -ArgumentList @(
+            '/c',
+            'cd /d C:\alumdoor\client\apps\runtime && pnpm run dev >> C:\alumdoor\desk-local.log 2>&1'
+          )
+
+          $deskReady = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            if (Get-NetTCPConnection -State Listen -LocalPort 5173 -ErrorAction SilentlyContinue) {
+              $deskReady = $true
+              break
+            }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $deskReady) {
+            Write-Host '=== desk-local.log ==='
+            if (Test-Path C:\alumdoor\desk-local.log) { Get-Content C:\alumdoor\desk-local.log -Tail 120 -Encoding UTF8 }
+            throw 'Desk did not listen on port 5173'
+          }
+
+          function Get-HttpStatus([string]$Url) {
+            try {
+              $response = Invoke-WebRequest -UseBasicParsing -Uri $Url -Method Get
+              return [int]$response.StatusCode
+            } catch {
+              if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+                return [int]$_.Exception.Response.StatusCode
+              }
+              throw
+            }
+          }
+
+          $backendStatus = Get-HttpStatus 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot'
+          $deskStatus = Get-HttpStatus 'http://127.0.0.1:5173/'
+          $proxyStatus = Get-HttpStatus 'http://127.0.0.1:5173/api/method/metaforge.api.get_boot'
+
+          Write-Host "backend_status=$backendStatus"
+          Write-Host "desk_status=$deskStatus"
+          Write-Host "desk_proxy_status=$proxyStatus"
+
+          if ($backendStatus -ne 403) { throw "Unexpected backend status $backendStatus" }
+          if ($deskStatus -ne 200) { throw "Unexpected desk status $deskStatus" }
+          if ($proxyStatus -ne 403) { throw "Unexpected desk proxy status $proxyStatus" }
+
+          Get-NetTCPConnection -State Listen -LocalPort 8799,5173 |
             Select-Object LocalAddress,LocalPort,OwningProcess |
             Format-Table -AutoSize
 
-          Write-Host "`n=== BACKEND PROBE ==="
-          $backend = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -Method Get -ErrorAction SilentlyContinue
-          Write-Host "backend_status=$($backend.StatusCode)"
-
-          Write-Host "`n=== DESK PROBE ==="
-          $desk = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -Method Get
-          Write-Host "desk_status=$($desk.StatusCode)"
-
-          Write-Host "LOCAL_SERVER_RUNNING"
+          Write-Host 'LOCAL_SERVER_RUNNING'
