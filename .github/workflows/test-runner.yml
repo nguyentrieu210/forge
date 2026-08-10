@@ -14,35 +14,18 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 10
     steps:
-      - name: Locate authoritative Alumdoor dataset
+      - name: Extract real pricing adjustment source rows
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
           if ((git branch --show-current) -ne 'exp/alumdoor-pricing-policy') { throw 'Wrong local branch' }
-
-          Write-Host '=== WRANGLER STATE ROOTS ==='
-          Get-ChildItem C:\alumdoor -Directory -Recurse -Force -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -eq '.wrangler' } |
-            Select-Object -ExpandProperty FullName
-
-          Write-Host '=== SQLITE FILES ==='
-          Get-ChildItem C:\alumdoor -File -Recurse -Force -ErrorAction SilentlyContinue |
-            Where-Object { $_.Extension -in @('.sqlite', '.sqlite3', '.db') } |
-            Sort-Object Length -Descending |
-            Select-Object FullName, Length, LastWriteTime | Format-Table -AutoSize
-
-          Write-Host '=== ALUMDOOR IMPORT FILES ==='
-          Get-ChildItem C:\alumdoor\server\imports -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -like 'alumdoor*' } |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
-
-          Write-Host '=== AUTHORITATIVE IMPORT REFERENCES ==='
           Set-Location C:\alumdoor\server
-          rg -l --glob 'imports/**' --glob 'scripts/**' 'alumdoor-full-2026-07-28|alumdoor-release-1.26.2|build-alumdoor-master-data|Item Price' | Select-Object -First 100
 
-          Write-Host '=== AUDIT SUMMARY ==='
-          node -e "const fs=require('fs'); const p='imports/alumdoor-full-2026-07-28.audit.json'; if(!fs.existsSync(p)){console.log('AUDIT_NOT_FOUND'); process.exit(0)}; const x=JSON.parse(fs.readFileSync(p,'utf8')); console.log('keys='+Object.keys(x).join(',')); for(const [k,v] of Object.entries(x)){ if(Array.isArray(v)) console.log(k+'_count='+v.length); else if(v&&typeof v==='object') console.log(k+'_keys='+Object.keys(v).slice(0,30).join(',')); else console.log(k+'='+String(v).slice(0,200)); }"
+          node -e "const fs=require('fs'); const a=JSON.parse(fs.readFileSync('imports/alumdoor-full-2026-07-28.audit.json','utf8')); for(const k of ['micro_surcharge_rows_preserved_in_description','rail_gift_rows_preserved_in_description','excluded_price_adjustments','missing_list_price_items']){ console.log('=== '+k+' ==='); console.log(JSON.stringify(a[k]??null,null,2)); }"
 
-          Write-Host 'AUTHORITATIVE_DATASET_LOCATION_SCAN_OK'
+          node -e "const fs=require('fs'); const p='imports/alumdoor-1.27.0.manifest.json'; const m=JSON.parse(fs.readFileSync(p,'utf8')); console.log('=== MANIFEST KEYS ==='); console.log(Object.keys(m)); for(const [k,v] of Object.entries(m)){ if(Array.isArray(v)) console.log(k+'_count='+v.length); else if(v&&typeof v==='object') console.log(k+'_keys='+Object.keys(v).slice(0,40).join(',')); }"
+
+          node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('imports/alumdoor-1.27.0.manifest.json','utf8')); const out=[]; const seen=new Set(); function walk(v){ if(!v||typeof v!=='object')return; if(Array.isArray(v)){for(const x of v)walk(x);return;} const s=JSON.stringify(v); const n=String(v.item_name??v.name??'').toLowerCase(); if((v.door_type!=null || n.startsWith('ray') || n.includes(' ray ') || String(v.item_code??'').toLowerCase().includes('ray')) && !seen.has(s)){seen.add(s);out.push(v);} for(const x of Object.values(v))walk(x);} walk(m); console.log('=== REAL DOOR/RAY OBJECTS SAMPLE ==='); console.log(JSON.stringify(out.slice(0,120),null,2)); console.log('matched='+out.length);"
+
+          Write-Host 'REAL_SOURCE_ROWS_EXTRACTED_OK'
