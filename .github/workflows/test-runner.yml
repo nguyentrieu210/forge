@@ -12,43 +12,22 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Run reviewable real-data pricing lab
+      - name: Run full server unit regression for pricing experiment
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $target = 'exp/alumdoor-pricing-policy'
-          if ((git branch --show-current) -ne $target) { throw 'Wrong local branch' }
+          if ((git branch --show-current) -ne 'exp/alumdoor-pricing-policy') { throw 'Wrong local branch' }
           $status = @(git status --porcelain --untracked-files=all)
           $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
           if ($unsafe.Count -gt 0) {
             $unsafe | ForEach-Object { Write-Host $_ }
-            throw 'Local working tree has non-backup changes; refusing to sync'
+            throw 'Local working tree has non-backup changes; refusing to continue'
           }
-          git fetch origin $target
-          git merge --ff-only "origin/$target"
-          if ($LASTEXITCODE -ne 0) { throw 'Fast-forward sync failed' }
-
-          $d1Root = 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state\v3\d1\miniflare-D1DatabaseObject'
-          $sourceDb = Get-ChildItem $d1Root -File -ErrorAction Stop |
-            Where-Object { $_.Extension -eq '.sqlite' -and $_.Name -ne 'metadata.sqlite' } |
-            Sort-Object Length -Descending |
-            Select-Object -First 1
-          if (!$sourceDb) { throw 'Local D1 sqlite file not found' }
-
-          $labRoot = 'C:\ForgePricingLab'
-          New-Item -ItemType Directory -Force -Path $labRoot | Out-Null
-          $labDb = Join-Path $labRoot 'alumdoor-real-pricing.sqlite'
-          Copy-Item $sourceDb.FullName $labDb -Force
-          Write-Host "LAB_DB=$labDb source=$($sourceDb.FullName) bytes=$($sourceDb.Length)"
 
           Set-Location C:\alumdoor\server
-          pnpm run build
-          if ($LASTEXITCODE -ne 0) { throw 'Server build failed' }
-          $env:LAB_DB = $labDb
-          node scripts/test-alumdoor-pricing-real-data.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Real-data pricing lab failed' }
-
-          Write-Host 'REAL_DATA_PRICING_LAB_VERIFIED'
+          pnpm run test:unit
+          if ($LASTEXITCODE -ne 0) { throw 'Full server unit regression failed' }
+          Write-Host 'PRICING_EXPERIMENT_FULL_SERVER_UNIT_PASS'
