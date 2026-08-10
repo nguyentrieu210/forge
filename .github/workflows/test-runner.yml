@@ -21,11 +21,14 @@ jobs:
           Set-Location C:\alumdoor
           $target = 'exp/alumdoor-pricing-policy'
           if ((git branch --show-current) -ne $target) { throw 'Wrong local branch' }
-          $dirty = git status --porcelain
-          if ($dirty) {
-            Write-Host $dirty
-            throw 'Local working tree is dirty; refusing to overwrite or reset'
+          $status = @(git status --porcelain --untracked-files=all)
+          $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
+          if ($unsafe.Count -gt 0) {
+            $unsafe | ForEach-Object { Write-Host $_ }
+            throw 'Local working tree has non-backup changes; refusing to overwrite or reset'
           }
+          if ($status.Count -gt 0) { Write-Host 'Preserving untracked .pricing-policy-backups directory' }
+
           git fetch origin $target
           git merge --ff-only "origin/$target"
           if ($LASTEXITCODE -ne 0) { throw 'Fast-forward sync failed' }
