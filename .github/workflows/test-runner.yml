@@ -19,9 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check local runner
-        shell: pwsh
+        shell: powershell
         run: |
-          Write-Host "Runner đang chạy trên máy này"
+          Write-Host "Runner dang chay tren may nay"
           hostname
           whoami
           node --version
