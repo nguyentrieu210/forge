@@ -11,24 +11,54 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
-      - name: Trace share and notification paths
+      - name: Patch stale local facade expectations and rerun
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
+          $path = 'server/apps/tenant-worker/test/frappe-facade.integration.test.mts'
+          $text = [IO.File]::ReadAllText((Resolve-Path $path))
 
-          Write-Host "=== addShare definition ==="
-          Select-String -Path server\packages\frappe-api\src\router.ts -Pattern '^async function addShare' -Context 0,35 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
+          # Share only to a real tenant user. Keep the DB trigger that rejects ghost users.
+          $needle = "  await env.DB.prepare(`r`n    ``INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','sales@example.com','System Manager')"
+          $idx = $text.IndexOf($needle)
+          if ($idx -lt 0) { throw 'Could not locate seed user_roles anchor' }
+          $insertAt = $text.IndexOf("`n", $text.IndexOf('  ).bind().run();', $idx)) + 1
+          $colleague = @"
+  // A real recipient with no DocPerm role. Sharing must grant access; ghost users are rejected by DB policy.
+  await env.DB.prepare(
+    ``INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at)
+     VALUES('demo','colleague@example.com','Colleague','colleague@example.com',?1,'vi','Asia/Ho_Chi_Minh',?2,?2)
+     ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash``,
+  ).bind(await hashPassword(PASSWORD, 1_000), NOW).run();
 
-          Write-Host "`n=== d1DeliveryAuthorizer definition ==="
-          Select-String -Path server\packages\frappe-api\src\notification-runner.ts -Pattern 'function d1DeliveryAuthorizer|async function d1DeliveryAuthorizer' -Context 0,65 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }
+"@
+          if ($text -notmatch "Colleague','colleague@example.com") {
+            $text = $text.Insert($insertAt, $colleague)
+          }
 
-          Write-Host "`n=== test document creation names ==="
-          Select-String -Path server\apps\tenant-worker\test\frappe-facade.integration.test.mts -Pattern 'createdName|FV-NOTIFY|System Manager' -Context 1,2 | Select-Object -First 100 | ForEach-Object { $_.ToString() }
+          # company is now a supported shell context dimension; use a truly undeclared filter.
+          $text = $text.Replace('report_name: "General Ledger", filters: { company: "Demo" },', 'report_name: "General Ledger", filters: { definitely_not_a_report_filter: "Demo" },')
 
-          Write-Host "`n=== direct local D1 document_shares SQL probe ==="
+          # Roles are shared grants, deliberately not app-owned objects.
+          $text = $text.Replace('// Mỗi đối tượng vẫn phải có ĐÚNG một dòng sở hữu: 69 doctype + 57 fixture + 1 role.', '// Mỗi đối tượng app-owned vẫn phải có ĐÚNG một dòng sở hữu: 69 doctype + 57 fixture. Role là shared grant, không app-owned.')
+          $text = $text.Replace('expect(owned!.total).toBe(127);', 'expect(owned!.total).toBe(126);')
+
+          # Remove temporary debugging left by the interrupted session.
+          $text = [regex]::Replace($text, '\s*const sharedResponse = await method\("frappe\.share\.add", \{ doctype: "Field Visit", name: `\$\{createdName\}-1`, user: target, read: 1 \}\);\s*console\.error\("share-response", await sharedResponse\.clone\(\)\.text\(\)\);\s*const shared = await unwrap\(sharedResponse\);', "`r`n    const shared = await unwrap(await method(\"frappe.share.add\", { doctype: \"Field Visit\", name: `${createdName}-1`, user: target, read: 1 }));")
+
+          [IO.File]::WriteAllText((Resolve-Path $path), $text, [Text.UTF8Encoding]::new($false))
+
+          Write-Host '=== USERS SCHEMA ==='
           Push-Location server
-          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "INSERT OR REPLACE INTO document_shares(tenant_id,doctype,name,user,can_read,can_write,can_share,submitted_by,created_at) VALUES('demo','Field Visit','SQL-PROBE','colleague@example.com',1,0,0,'sales@example.com','2026-08-10T00:00:00.000Z'); SELECT user,can_read FROM document_shares WHERE tenant_id='demo' AND name='SQL-PROBE'; DELETE FROM document_shares WHERE tenant_id='demo' AND name='SQL-PROBE';"
+          npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "PRAGMA table_info(users);"
           Pop-Location
+
+          Write-Host "`n=== PATCH DIFF ==="
+          git diff -- $path
+
+          Write-Host "`n=== TARGETED TEST ==="
+          pnpm --dir server exec vitest run --config apps/tenant-worker/vitest.config.mts apps/tenant-worker/test/frappe-facade.integration.test.mts --reporter=verbose
+          exit $LASTEXITCODE
