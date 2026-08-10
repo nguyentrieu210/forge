@@ -14,27 +14,52 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 5
     steps:
-      - name: Inspect local discount and surcharge implementation
+      - name: Verify exact Alumdoor pricing rules in local working tree
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
 
-          Write-Host '=== LOCAL STATUS ==='
+          Write-Host '=== LOCAL HEAD / STATUS ==='
+          git rev-parse --short HEAD
           git status --short --branch
 
-          Write-Host '=== DISCOUNT / SURCHARGE REFERENCES ==='
-          git grep -n -I -i -E 'discount_percentage|discount|surcharge|phu.?thu|chi.?t.?kh.?u' -- client server briefs 2>$null | Select-Object -First 500
+          $paths = @(
+            'client/packages/views/src/form/sales-line-policy.ts',
+            'client/packages/views/src/form/ChildGrid.tsx',
+            'client/packages/views/src/form/FormView.tsx',
+            'server/packages/clouderp-selling/src/controllers.ts',
+            'server/packages/clouderp-selling/src/types.ts',
+            'server/apps-src/alumdoor-worker/src/sales-item-context.ts',
+            'server/briefs/alumdoor-v2.json',
+            'server/briefs/alumdoor-v2.prints.json',
+            'server/tests/alumdoor-discount-policy.test.mjs',
+            'server/tests/alumdoor-sales-order-totals.test.mjs'
+          ) | Where-Object { Test-Path $_ }
 
-          Write-Host '=== CHANGED RELEVANT FILES ==='
-          git diff --name-only | Select-String -Pattern 'ChildGrid|alumdoor|sales|pricing|discount|surcharge|metadata' -CaseSensitive:$false
-
-          Write-Host '=== CHILDGRID DIFF ==='
-          git diff -- client/packages/ui/src/components/ChildGrid.tsx
-
-          Write-Host '=== ALUMDOOR BRIEF MATCHES ==='
-          if (Test-Path briefs\alumdoor-v2.json) {
-            Select-String -Path briefs\alumdoor-v2.json -Pattern 'discount_percentage|discount|surcharge|phu|chiết|khấu' -CaseSensitive:$false -Encoding UTF8 | Select-Object -First 200
+          Write-Host '=== EXACT BUSINESS RULE SEARCH ==='
+          $patterns = @(
+            '465000','465.000','465k','vân gỗ','van go','wood grain',
+            '55000','55.000','55k','15000','15.000','15k',
+            '300000','300.000','V4','V5','ray hộp TD','ray đơn TD','ray sắt không ron',
+            'discount_basis','tặng ray','tang ray','không tặng ray','khong tang ray',
+            'surcharge_amount','micro_surcharge','discount_percentage','discount_amount'
+          )
+          foreach ($pattern in $patterns) {
+            Write-Host "--- PATTERN: $pattern ---"
+            Select-String -Path $paths -Pattern $pattern -SimpleMatch -CaseSensitive:$false -Encoding UTF8 -ErrorAction SilentlyContinue |
+              Select-Object -First 40 Path,LineNumber,Line |
+              Format-Table -Wrap -AutoSize
           }
 
-          Write-Host 'DISCOUNT_SURCHARGE_INSPECTION_DONE'
+          Write-Host '=== SERVER SALES CONTROLLER RELEVANT BLOCKS ==='
+          Select-String -Path 'server/packages/clouderp-selling/src/controllers.ts' -Pattern 'surcharge|discount|priced_qty|defaultAlumdoorDiscountPercent|applyAlumdoorDiscountPolicy' -CaseSensitive:$false -Encoding UTF8 -Context 2,3 |
+            Select-Object -First 120
+
+          Write-Host '=== CLIENT SALES POLICY ==='
+          Get-Content 'client/packages/views/src/form/sales-line-policy.ts' -Encoding UTF8
+
+          Write-Host '=== TARGETED EXISTING TESTS ==='
+          node --test server/tests/alumdoor-discount-policy.test.mjs server/tests/alumdoor-sales-order-totals.test.mjs
+
+          Write-Host 'EXACT_RULE_VERIFICATION_DONE'
