@@ -11,71 +11,49 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Apply row-scoped discount fix and run selfcheck
+      - name: Diagnose reversible ChildGrid mojibake
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $path = 'client/packages/views/src/form/ChildGrid.tsx'
-          $full = (Resolve-Path $path)
-          $lines = [System.Collections.Generic.List[string]]::new()
-          Get-Content $full | ForEach-Object { [void]$lines.Add($_) }
-
-          if (-not ($lines -match 'const resolvedDiscount = discountField')) {
-            $anchor = -1
-            for ($i = 0; $i -lt $lines.Count; $i++) {
-              if ($lines[$i] -like '*const DiscountAmountControl = discountAmountColumn*') { $anchor = $i; break }
-            }
-            if ($anchor -lt 0) { throw 'discount resolver anchor not found; local file diverged' }
-            $insert = [string[]]@(
-              '              // The dedicated discount row obeys the same row-scoped metadata contract as ordinary cells.',
-              '              const discountField = discountColumn',
-              '                ? fieldForRow(discountColumn.list_only ? { ...discountColumn, list_only: 0 } : discountColumn, row)',
-              '                : undefined;',
-              '              const resolvedDiscount = discountField',
-              '                ? resolveField(discountField, childMeta, { doc: row, parent: parentDoc, roles, assumeWritable: true })',
-              '                : undefined;'
-            )
-            for ($j = $insert.Length - 1; $j -ge 0; $j--) { $lines.Insert($anchor + 1, $insert[$j]) }
-          }
-
-          $conditionFound = $false
-          for ($i = 0; $i -lt $lines.Count; $i++) {
-            if ($lines[$i] -like '*discountColumn && discountAmountColumn && DiscountControl && DiscountAmountControl ? (*') {
-              $lines[$i] = $lines[$i].Replace('DiscountAmountControl ? (', 'DiscountAmountControl && resolvedDiscount?.visible ? (')
-              $conditionFound = $true
-              break
-            }
-            if ($lines[$i] -like '*DiscountAmountControl && resolvedDiscount?.visible ? (*') { $conditionFound = $true; break }
-          }
-          if (-not $conditionFound) { throw 'discount row condition anchor not found' }
-
-          $discountBlock = -1
-          for ($i = 0; $i -lt $lines.Count; $i++) {
-            if ($lines[$i] -like '*<DiscountControl*') { $discountBlock = $i; break }
-          }
-          if ($discountBlock -lt 0) { throw 'DiscountControl block not found' }
-
-          for ($i = $discountBlock; $i -lt [Math]::Min($discountBlock + 25, $lines.Count); $i++) {
-            if ($lines[$i] -like '*field={fieldForRow(discountColumn.list_only*') {
-              $lines[$i] = '                      field={discountField!}'
-            }
-            if ($lines[$i].Trim() -eq 'readOnly={readOnly}') {
-              $lines[$i] = '                      readOnly={readOnly || Boolean(resolvedDiscount?.readOnly)}'
-              if ($i + 1 -ge $lines.Count -or $lines[$i + 1].Trim() -ne 'masked={resolvedDiscount?.masked}') {
-                $lines.Insert($i + 1, '                      masked={resolvedDiscount?.masked}')
-              }
-              break
-            }
-          }
-
-          [IO.File]::WriteAllLines($full, $lines, [Text.UTF8Encoding]::new($false))
-
-          Write-Host '=== PATCH DIFF ==='
-          git diff -- $path
-
-          Write-Host "`n=== DEMO SELFCHECK ==="
-          pnpm --dir client --filter @metaforge/demo selfcheck
+          $script = "$env:TEMP\forge-mojibake-check.py"
+          $py = @(
+            'from pathlib import Path',
+            'p = Path(r"C:\alumdoor\client\packages\views\src\form\ChildGrid.tsx")',
+            's = p.read_text(encoding="utf-8")',
+            'special = {}',
+            'for b in range(0x80, 0xA0):',
+            '    try:',
+            '        ch = bytes([b]).decode("cp1252")',
+            '    except UnicodeDecodeError:',
+            '        continue',
+            '    special[ord(ch)] = b',
+            'out = bytearray()',
+            'bad = []',
+            'for i, ch in enumerate(s):',
+            '    o = ord(ch)',
+            '    if o <= 0xFF:',
+            '        out.append(o)',
+            '    elif o in special:',
+            '        out.append(special[o])',
+            '    else:',
+            '        bad.append((i, o, ch.encode("unicode_escape").decode("ascii")))',
+            'print("SOURCE_LEN", len(s))',
+            'print("NONREVERSIBLE_COUNT", len(bad))',
+            'print("NONREVERSIBLE_SAMPLE", bad[:20])',
+            'if bad:',
+            '    raise SystemExit(2)',
+            'fixed = bytes(out).decode("utf-8")',
+            'sus = ("\\u00c3", "\\u00c2", "\\u00c4", "\\u00e2")',
+            'print("SUSPECT_BEFORE", {x: s.count(x) for x in sus})',
+            'print("SUSPECT_AFTER", {x: fixed.count(x) for x in sus})',
+            'for needle in ("basis =", "discountField =", "resolvedDiscount =", "resolvedDiscount?.visible"):',
+            '    hits = [line for line in fixed.splitlines() if needle in line]',
+            '    print("SAMPLE", needle, [h.encode("unicode_escape").decode("ascii") for h in hits[:6]])',
+            'print("REPAIR_PREVIEW_OK")'
+          )
+          [IO.File]::WriteAllLines($script, $py, [Text.Encoding]::ASCII)
+          python $script
           exit $LASTEXITCODE
