@@ -33,6 +33,7 @@ import {
 } from "./door-formulas.js";
 import { salesItemContext } from "./sales-item-context.js";
 import { previewChildRow } from "./ui-child-preview.js";
+import { previewDocument } from "./ui-document-preview.js";
 import {
   confirmSupplierOffset,
   planCapacity,
@@ -3157,6 +3158,7 @@ export default {
         if (method === "alumdoor.attendance.scan") return await attendanceScan({ request, call, env, args });
         if (method === "alumdoor.sales.item_context") return await salesItemContext(call, args);
     if (method === "alumdoor.ui.preview_child_row") return await previewChildRow(call, args);
+        if (method === "alumdoor.ui.preview_document") return await previewDocument(call, args);
         if (method === "alumdoor.sales.production_line_context") return await calculateSalesProductionLine(call, args);
         if (method === "alumdoor.sales.preview_production") return await previewSalesProduction(call, args);
         if (method === "alumdoor.sales.create_production") return await createSalesProduction(call, args);

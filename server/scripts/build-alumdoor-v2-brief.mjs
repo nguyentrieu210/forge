@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";
+import { parseField } from "./lib/compile-brief.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(here, "../briefs/alumdoor.json");
@@ -139,6 +140,25 @@ addAfter(operationalSalesOrder, "delivery_date",
   "manual_note:Small Text Ghi chú vận hành",
   "operational_change_reason:Small Text- Lý do đổi vận hành",
 );
+const salesFormHidden = new Set(["product_group", "against_quotation", "note"]);
+operationalSalesOrder.fields = operationalSalesOrder.fields.map((raw, index) => {
+  const field = parseField(raw, index);
+  if (["transaction_date", "delivery_date", "payment_method"].includes(field.fieldname)) field.form_region = "aside";
+  if (["customer", "responsible_person", "manual_note", "operational_change_reason", "selling_price_list", "customer_group", "install_address"].includes(field.fieldname)) field.form_region = "main";
+  if (field.fieldname === "install_address") field.form_width = "full";
+  if (field.fieldname === "customer_group") field.label = "Nhóm khách hàng";
+  if (field.fieldname === "payment_method") { field.default = "Ghi công nợ"; field.form_control_style = "choice_list"; }
+  return field;
+});
+const salesSummaryIndex = operationalSalesOrder.fields.findIndex((field) => nameOf(field) === "total_amount");
+if (salesSummaryIndex >= 0 && !operationalSalesOrder.fields.some((field) => nameOf(field) === "sales_summary_section")) {
+  operationalSalesOrder.fields.splice(salesSummaryIndex, 0, { fieldname: "sales_summary_section", fieldtype: "Section Break", label: "Tổng kết", form_section_style: "summary" });
+}
+operationalSalesOrder.form = {
+  fields: operationalSalesOrder.fields.map(nameOf).filter((name) => name !== "sales_summary_section" && !salesFormHidden.has(name)),
+  previewMethod: "alumdoor.ui.preview_document",
+  previewParentFields: ["customer", "transaction_date", "items", "vat_rate", "surcharge_amount", "additional_discount_percentage"],
+};
 const warrantyDebitNote = doctype("Debit Note");
 warrantyDebitNote.permissions = {
   ...warrantyDebitNote.permissions,

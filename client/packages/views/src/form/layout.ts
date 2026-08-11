@@ -11,6 +11,7 @@ export interface FormColumn {
 }
 export interface FormSection {
   label?: string;
+  style?: "summary";
   columns: FormColumn[];
   /** ẩn nếu Section Break bị depends_on ẩn, hoặc không field con nào hiển thị. */
   hidden: boolean;
@@ -93,9 +94,9 @@ function buildSections(items: ResolvedField[]): FormSection[] {
   let currentCol: FormColumn | null = null;
   let started = false;
 
-  const startSection = (label: string | undefined, breakHidden: boolean) => {
+  const startSection = (label: string | undefined, breakHidden: boolean, style?: "summary") => {
     const col: FormColumn = { fields: [] };
-    const section: FormSection = { label, columns: [col], hidden: true };
+    const section: FormSection = { label, ...(style ? { style } : {}), columns: [col], hidden: true };
     acc.push({ section, breakHidden });
     currentCol = col;
     started = true;
@@ -104,7 +105,7 @@ function buildSections(items: ResolvedField[]): FormSection[] {
   for (const rf of items) {
     const ft = rf.field.fieldtype;
     if (ft === "Section Break") {
-      startSection(rf.field.label, !rf.visible); // Section Break ẩn ⇒ section ẩn
+      startSection(rf.field.label, !rf.visible, rf.field.form_section_style === "summary" ? "summary" : undefined); // Section Break ẩn ⇒ section ẩn
     } else if (ft === "Column Break") {
       if (!started) startSection(undefined, false);
       currentCol = { fields: [] };

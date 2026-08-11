@@ -70,7 +70,7 @@ export function attachBriefUiViewPolicies(brief, pkg) {
       if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
         throw new BriefError(`${compiled.name}: ${key} must be an object`);
       }
-      next[key] = { enabled: true, ...policy };
+      next[key] = { ...(compiled.viewPolicy?.[key] ?? {}), enabled: true, ...policy };
     }
     if (Object.keys(next).length) compiled.viewPolicy = { ...(compiled.viewPolicy ?? {}), ...next };
   }

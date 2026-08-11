@@ -3713,41 +3713,130 @@
     "customer"
    ],
    "fields": [
-    "customer:Link(Customer)! Khách hàng",
-    "company:Link(Company)-!=(ALUMDOOR) Công ty",
-    "currency:Link(Currency)-!=(VND) Tiền tệ",
-    "transaction_date:Date!=(Today) Ngày đặt",
-    "delivery_date:Date Ngày giao dự kiến",
     {
+     "fieldname": "customer",
+     "label": "Khách hàng",
+     "fieldtype": "Link",
+     "options": "Customer",
+     "required": true,
+     "form_region": "main"
+    },
+    {
+     "fieldname": "company",
+     "label": "Công ty",
+     "fieldtype": "Link",
+     "options": "Company",
+     "required": true,
+     "hidden": true,
+     "default": "ALUMDOOR"
+    },
+    {
+     "fieldname": "currency",
+     "label": "Tiền tệ",
+     "fieldtype": "Link",
+     "options": "Currency",
+     "required": true,
+     "hidden": true,
+     "default": "VND"
+    },
+    {
+     "fieldname": "transaction_date",
+     "label": "Ngày đặt",
+     "fieldtype": "Date",
+     "required": true,
+     "default": "Today",
+     "form_region": "aside"
+    },
+    {
+     "fieldname": "delivery_date",
+     "label": "Ngày giao dự kiến",
+     "fieldtype": "Date",
+     "form_region": "aside"
+    },
+    {
+     "label": "Người phụ trách",
      "fieldname": "responsible_person",
      "fieldtype": "Data",
-     "label": "Người phụ trách",
-     "fetch_from": "customer.account_manager"
+     "fetch_from": "customer.account_manager",
+     "form_region": "main"
     },
-    "manual_note:Small Text Ghi chú vận hành",
-    "operational_change_reason:Small Text- Lý do đổi vận hành",
-    "selling_price_list:Link(Price List) Bảng giá áp dụng",
-    "payment_method:Select(Tiền mặt,Chuyển khoản,Ghi công nợ)=(Ghi công nợ) Hình thức thanh toán",
     {
+     "fieldname": "manual_note",
+     "label": "Ghi chú vận hành",
+     "fieldtype": "Small Text",
+     "form_region": "main"
+    },
+    {
+     "fieldname": "operational_change_reason",
+     "label": "Lý do đổi vận hành",
+     "fieldtype": "Small Text",
+     "hidden": true,
+     "form_region": "main"
+    },
+    {
+     "fieldname": "selling_price_list",
+     "label": "Bảng giá áp dụng",
+     "fieldtype": "Link",
+     "options": "Price List",
+     "form_region": "main"
+    },
+    {
+     "fieldname": "payment_method",
+     "label": "Hình thức thanh toán",
+     "fieldtype": "Select",
+     "options": "Tiền mặt\nChuyển khoản\nGhi công nợ",
+     "default": "Ghi công nợ",
+     "form_region": "aside",
+     "form_control_style": "choice_list"
+    },
+    {
+     "label": "Nhóm khách hàng",
      "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
      "fieldname": "customer_group",
      "fieldtype": "Select",
      "options": "Đại lý\nLẻ",
-     "label": "Nhóm khách hàng",
      "read_only": true,
-     "fetch_from": "customer.price_group"
+     "fetch_from": "customer.price_group",
+     "form_region": "main"
     },
     {
+     "label": "Địa chỉ giao / lắp đặt",
      "fieldname": "install_address",
      "fieldtype": "Small Text",
-     "label": "Địa chỉ giao / lắp đặt",
-     "fetch_from": "customer.address"
+     "fetch_from": "customer.address",
+     "form_region": "main",
+     "form_width": "full"
     },
-    "items:Table(Sales Order Item)! Dòng hàng",
-    "grand_total:Currency~ Tổng tiền",
-    "delivered_percentage:Percent~ Đã giao (%)",
-    "billed_percentage:Percent~ Đã xuất hoá đơn (%)",
-    "note:Small Text Ghi chú"
+    {
+     "fieldname": "items",
+     "label": "Dòng hàng",
+     "fieldtype": "Table",
+     "options": "Sales Order Item",
+     "required": true
+    },
+    {
+     "fieldname": "grand_total",
+     "label": "Tổng tiền",
+     "fieldtype": "Currency",
+     "read_only": true
+    },
+    {
+     "fieldname": "delivered_percentage",
+     "label": "Đã giao (%)",
+     "fieldtype": "Percent",
+     "read_only": true
+    },
+    {
+     "fieldname": "billed_percentage",
+     "label": "Đã xuất hoá đơn (%)",
+     "fieldtype": "Percent",
+     "read_only": true
+    },
+    {
+     "fieldname": "note",
+     "label": "Ghi chú",
+     "fieldtype": "Small Text"
+    }
    ],
    "permissions": {
     "Chủ xưởng": "rwc",
@@ -3755,6 +3844,35 @@
     "Thủ kho": "r",
     "Kế toán": "r",
     "Sản xuất": "r"
+   },
+   "form": {
+    "fields": [
+     "customer",
+     "company",
+     "currency",
+     "transaction_date",
+     "delivery_date",
+     "responsible_person",
+     "manual_note",
+     "operational_change_reason",
+     "selling_price_list",
+     "payment_method",
+     "customer_group",
+     "install_address",
+     "items",
+     "grand_total",
+     "delivered_percentage",
+     "billed_percentage"
+    ],
+    "previewMethod": "alumdoor.ui.preview_document",
+    "previewParentFields": [
+     "customer",
+     "transaction_date",
+     "items",
+     "vat_rate",
+     "surcharge_amount",
+     "additional_discount_percentage"
+    ]
    }
   },
   {

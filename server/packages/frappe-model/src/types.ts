@@ -95,6 +95,8 @@ export interface DocFieldMeta extends JsonObject {
   form_width?: "full" | "two_thirds" | "half" | "third";
   form_region?: "main" | "aside" | "full";
   form_control_width?: "compact";
+  form_control_style?: "choice_list";
+  form_section_style?: "summary";
   /** Immutable after the first save — enforced by the generic controller. */
   set_only_once?: boolean;
   /** Refuses a negative value. */
