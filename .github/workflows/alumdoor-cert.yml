@@ -1,0 +1,118 @@
+name: Alumdoor isolated certification
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/alumdoor-cert.yml"
+  workflow_dispatch:
+
+jobs:
+  live-cert:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 45
+    steps:
+      - name: Clone experiment without touching local worktree
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $probe = Join-Path $env:RUNNER_TEMP 'forge-alumdoor-isolated-cert'
+          if (Test-Path $probe) { cmd /c "rmdir /s /q `"$probe`"" | Out-Null }
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
+          if ($LASTEXITCODE -ne 0) { throw 'experiment clone failed' }
+          Set-Location $probe
+          Write-Host "CERT_COMMIT=$(git rev-parse HEAD)"
+          "CERT_ROOT=$probe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Bootstrap isolated server and copied secrets
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $probe = $env:CERT_ROOT
+          $sourceVars = 'C:\alumdoor\server\.dev.vars'
+          if (!(Test-Path $sourceVars)) { throw 'Local .dev.vars is unavailable for isolated certification' }
+          Copy-Item -Force $sourceVars (Join-Path $probe 'server\.dev.vars')
+          Set-Location (Join-Path $probe 'server')
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'server dependency install failed' }
+          pnpm run build
+          if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
+          pnpm run brief:check
+          if ($LASTEXITCODE -ne 0) { throw 'brief check failed' }
+
+      - name: Clone local D1 state and certify real Alumdoor catalogue
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceState = 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state'
+          if (!(Test-Path $sourceState)) { throw 'Local Wrangler state is unavailable' }
+          $persist = Join-Path $env:RUNNER_TEMP 'alumdoor-live-cert-state'
+          if (Test-Path $persist) { cmd /c "rmdir /s /q `"$persist`"" | Out-Null }
+          New-Item -ItemType Directory -Force -Path $persist | Out-Null
+          Copy-Item -Path (Join-Path $sourceState '*') -Destination $persist -Recurse -Force
+          "CERT_PERSIST=$persist" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          Set-Location (Join-Path $env:CERT_ROOT 'server')
+          $db = Get-ChildItem $persist -Recurse -File -Filter *.sqlite | Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $db) { throw 'No D1 sqlite file found in cloned persistence state' }
+          Write-Host "CERT_D1_BYTES=$($db.Length)"
+          $env:LAB_DB = $db.FullName
+          node scripts/test-alumdoor-pricing-real-data.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'real Alumdoor catalogue pricing certification failed' }
+          Write-Host 'ALUMDOOR_REAL_CATALOGUE_CERT_PASS'
+
+      - name: Run live HTTP Sales Purchase Stock Finance certification on cloned D1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $server = Join-Path $env:CERT_ROOT 'server'
+          Set-Location $server
+
+          $passwordLine = Get-Content .dev.vars | Where-Object { $_ -match '^FORGE_ADMIN_PASSWORD=' } | Select-Object -First 1
+          if (-not $passwordLine) { throw 'FORGE_ADMIN_PASSWORD missing from isolated .dev.vars' }
+          $env:FORGE_ADMIN_PASSWORD = $passwordLine.Substring('FORGE_ADMIN_PASSWORD='.Length).Trim().Trim('"')
+          if (-not $env:FORGE_ADMIN_PASSWORD) { throw 'FORGE_ADMIN_PASSWORD resolved empty' }
+
+          $stdout = Join-Path $env:RUNNER_TEMP 'alumdoor-live-worker.out.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'alumdoor-live-worker.err.log'
+          $args = "/c pnpm run dev:alumdoor-local -- --persist-to `"$($env:CERT_PERSIST)`""
+          $worker = Start-Process -FilePath 'cmd.exe' -ArgumentList $args -WorkingDirectory $server -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 60; $i++) {
+              Start-Sleep -Seconds 1
+              if ($worker.HasExited) { break }
+              try {
+                $client = New-Object System.Net.Sockets.TcpClient
+                $connect = $client.BeginConnect('127.0.0.1', 8799, $null, $null)
+                if ($connect.AsyncWaitHandle.WaitOne(500) -and $client.Connected) { $ready = $true; $client.Close(); break }
+                $client.Close()
+              } catch {}
+            }
+            if (-not $ready) {
+              Write-Host '=== WORKER STDOUT TAIL ==='
+              if (Test-Path $stdout) { Get-Content $stdout -Tail 100 | ForEach-Object { Write-Host $_ } }
+              Write-Host '=== WORKER STDERR TAIL ==='
+              if (Test-Path $stderr) { Get-Content $stderr -Tail 100 | ForEach-Object { Write-Host $_ } }
+              throw 'isolated Alumdoor worker did not become ready'
+            }
+
+            node scripts/verify-alumdoor.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'live Sales/Stock/AR certification failed' }
+            Write-Host 'ALUMDOOR_LIVE_SALES_STOCK_AR_PASS'
+
+            node scripts/verify-alumdoor-mua.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'live Purchase/Stock/AP/GL certification failed' }
+            Write-Host 'ALUMDOOR_LIVE_PURCHASE_STOCK_AP_GL_PASS'
+          } finally {
+            if ($worker -and !$worker.HasExited) { cmd /c "taskkill /PID $($worker.Id) /T /F" | Out-Null }
+          }
+
+      - name: Reconcile isolated live state remains separate
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:CERT_PERSIST -like 'C:\alumdoor*') { throw 'Certification persistence unexpectedly points at working state' }
+          Write-Host "ISOLATED_PERSISTENCE=$($env:CERT_PERSIST)"
+          Write-Host 'ALUMDOOR_ISOLATED_LIVE_CERT_COMPLETE'
