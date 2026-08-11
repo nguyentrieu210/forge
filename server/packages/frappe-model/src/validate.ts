@@ -176,6 +176,10 @@ function parseField(value: unknown, index: number): DocFieldMeta {
   if (formControlStyle !== undefined && formControlStyle !== "choice_list") throw errors.validation(`fields[${index}].form_control_style must be choice_list`);
   const formSectionStyle = input.form_section_style === undefined ? undefined : text(input.form_section_style, `fields[${index}].form_section_style`, 24);
   if (formSectionStyle !== undefined && formSectionStyle !== "summary") throw errors.validation(`fields[${index}].form_section_style must be summary`);
+  const formControlStyle = input.form_control_style === undefined ? undefined : text(input.form_control_style, `fields[${index}].form_control_style`, 24);
+  if (formControlStyle !== undefined && formControlStyle !== "choice_list") throw errors.validation(`fields[${index}].form_control_style must be choice_list`);
+  const formSectionStyle = input.form_section_style === undefined ? undefined : text(input.form_section_style, `fields[${index}].form_section_style`, 24);
+  if (formSectionStyle !== undefined && formSectionStyle !== "summary") throw errors.validation(`fields[${index}].form_section_style must be summary`);
   const valueSource = input.valueSource === undefined ? undefined : text(input.valueSource, `fields[${index}].valueSource`, 24);
   const editMode = input.editMode === undefined ? undefined : text(input.editMode, `fields[${index}].editMode`, 32);
   const surface = input.surface === undefined ? undefined : text(input.surface, `fields[${index}].surface`, 24);
@@ -222,6 +226,8 @@ function parseField(value: unknown, index: number): DocFieldMeta {
     ...(formWidth === undefined ? {} : { form_width: formWidth as "full" | "two_thirds" | "half" | "third" }),
     ...(formRegion === undefined ? {} : { form_region: formRegion as "main" | "aside" | "full" }),
     ...(formControlWidth === undefined ? {} : { form_control_width: "compact" as const }),
+    ...(formControlStyle === undefined ? {} : { form_control_style: "choice_list" as const }),
+    ...(formSectionStyle === undefined ? {} : { form_section_style: "summary" as const }),
     ...(formControlStyle === undefined ? {} : { form_control_style: "choice_list" as const }),
     ...(formSectionStyle === undefined ? {} : { form_section_style: "summary" as const }),
     ...(valueSource ? { valueSource: valueSource as NonNullable<DocFieldMeta["valueSource"]> } : {}),

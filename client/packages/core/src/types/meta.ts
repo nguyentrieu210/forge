@@ -45,6 +45,10 @@ export interface DocField {
   form_region?: "main" | "aside" | "full";
   /** Giới hạn riêng bề ngang control, vẫn giữ vùng bố cục của field. */
   form_control_width?: "compact";
+  /** Generic Select presentation; options still come from field.options. */
+  form_control_style?: "choice_list";
+  /** Generic section presentation marker carried on Section Break fields. */
+  form_section_style?: "summary";
   form_control_style?: "choice_list";
   form_section_style?: "summary";
   valueSource?: "user" | "default" | "link" | "formula" | "system" | "workflow";

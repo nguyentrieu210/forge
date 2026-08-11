@@ -95,6 +95,10 @@ export interface DocFieldMeta extends JsonObject {
   form_width?: "full" | "two_thirds" | "half" | "third";
   form_region?: "main" | "aside" | "full";
   form_control_width?: "compact";
+  /** Render a Select as an inline choice list instead of a dropdown. */
+  form_control_style?: "choice_list";
+  /** Section-break presentation only; does not change document semantics. */
+  form_section_style?: "summary";
   form_control_style?: "choice_list";
   form_section_style?: "summary";
   /** Immutable after the first save — enforced by the generic controller. */
