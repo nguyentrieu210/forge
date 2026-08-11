@@ -1,0 +1,145 @@
+name: Alumdoor isolated certification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/alumdoor-cert.yml"
+
+jobs:
+  live-cert:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 45
+    steps:
+      - name: Clone experiment without touching local worktree
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $probe = Join-Path $env:RUNNER_TEMP 'forge-alumdoor-isolated-cert'
+          if (Test-Path $probe) { cmd /c "rmdir /s /q `"$probe`"" | Out-Null }
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
+          if ($LASTEXITCODE -ne 0) { throw 'experiment clone failed' }
+          Set-Location $probe
+          Write-Host "CERT_COMMIT=$(git rev-parse HEAD)"
+          "CERT_ROOT=$probe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Bootstrap isolated server
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceVars = 'C:\alumdoor\server\.dev.vars'
+          if (!(Test-Path $sourceVars)) { throw 'Local .dev.vars is unavailable for isolated certification' }
+          Copy-Item -Force $sourceVars (Join-Path $env:CERT_ROOT 'server\.dev.vars')
+          Set-Location (Join-Path $env:CERT_ROOT 'server')
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'server dependency install failed' }
+          pnpm run build
+          if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
+          pnpm run brief:check
+          if ($LASTEXITCODE -ne 0) { throw 'brief check failed' }
+
+      - name: Clone D1 and certify real Alumdoor catalogue
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceState = 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state'
+          if (!(Test-Path $sourceState)) { throw 'Local Wrangler state is unavailable' }
+          $sourceDb = Get-ChildItem $sourceState -Recurse -File -Filter *.sqlite | Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $sourceDb) { throw 'No source D1 sqlite found' }
+          $sourceHash = (Get-FileHash $sourceDb.FullName -Algorithm SHA256).Hash
+          "SOURCE_DB=$($sourceDb.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SOURCE_DB_HASH=$sourceHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $persist = Join-Path $env:RUNNER_TEMP 'alumdoor-live-cert-state'
+          if (Test-Path $persist) { cmd /c "rmdir /s /q `"$persist`"" | Out-Null }
+          New-Item -ItemType Directory -Force -Path $persist | Out-Null
+          Copy-Item -Path (Join-Path $sourceState '*') -Destination $persist -Recurse -Force
+          "CERT_PERSIST=$persist" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $db = Get-ChildItem $persist -Recurse -File -Filter *.sqlite | Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $db) { throw 'No cloned D1 sqlite found' }
+          "CERT_DB=$($db.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "CERT_D1_BYTES=$($db.Length)"
+          Set-Location (Join-Path $env:CERT_ROOT 'server')
+          $env:LAB_DB = $db.FullName
+          node scripts/test-alumdoor-pricing-real-data.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'real Alumdoor catalogue pricing certification failed' }
+          Write-Host 'ALUMDOOR_REAL_CATALOGUE_CERT_PASS'
+
+      - name: Run live HTTP Sales Purchase Stock Finance certification on cloned D1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location (Join-Path $env:CERT_ROOT 'server')
+          $qaUser = 'qa-alumdoor@example.test'
+          $qaPassword = 'Qa!' + ([guid]::NewGuid().ToString('N')) + '9x'
+          Write-Output "::add-mask::$qaPassword"
+          $env:CERT_QA_USER = $qaUser
+          $env:CERT_QA_PASSWORD = $qaPassword
+
+          @'
+          import { DatabaseSync } from "node:sqlite";
+          import { hashPassword } from "./dist/packages/frappe-api/src/index.js";
+          const db = new DatabaseSync(process.env.CERT_DB);
+          const tenant = "demo";
+          const user = process.env.CERT_QA_USER;
+          const now = new Date().toISOString();
+          const hash = await hashPassword(process.env.CERT_QA_PASSWORD, 1_000);
+          db.exec("BEGIN IMMEDIATE");
+          try {
+            db.prepare("INSERT INTO roles(tenant_id,role,modified_at) VALUES(?,?,?) ON CONFLICT(tenant_id,role) DO NOTHING").run(tenant, "System Manager", now);
+            db.prepare(`INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at)
+              VALUES(?,?,?,?,?,'vi','Asia/Ho_Chi_Minh',?,?)
+              ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash,enabled=1,modified_at=excluded.modified_at`).run(tenant, user, "Alumdoor QA", user, hash, now, now);
+            db.prepare("INSERT INTO user_roles(tenant_id,user_id,role) VALUES(?,?,?) ON CONFLICT DO NOTHING").run(tenant, user, "System Manager");
+            db.exec("COMMIT");
+          } catch (error) { db.exec("ROLLBACK"); throw error; }
+          const roles = db.prepare("SELECT role FROM user_roles WHERE tenant_id=? AND user_id=? ORDER BY role").all(tenant, user);
+          if (!roles.some((row) => row.role === "System Manager")) throw new Error("QA System Manager role seed failed");
+          console.log(`CLONED_QA_IDENTITY_READY tenant=${tenant} roles=${roles.length}`);
+          db.close();
+          '@ | node --input-type=module
+          if ($LASTEXITCODE -ne 0) { throw 'temporary QA identity seed failed' }
+
+          $workerLog = Join-Path $env:RUNNER_TEMP 'alumdoor-cert-worker.log'
+          $cmd = "pnpm exec wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8799 --local --persist-to `"$env:CERT_PERSIST`" > `"$workerLog`" 2>&1"
+          $worker = Start-Process -FilePath 'cmd.exe' -ArgumentList '/d','/s','/c',$cmd -PassThru -WindowStyle Hidden
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 60; $i++) {
+              Start-Sleep -Milliseconds 500
+              try {
+                $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -TimeoutSec 2 -ErrorAction Stop
+                if ($r.StatusCode -ge 200) { $ready = $true; break }
+              } catch {
+                if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -in @(401,403)) { $ready = $true; break }
+              }
+              if ($worker.HasExited) { break }
+            }
+            if (-not $ready) {
+              if (Test-Path $workerLog) { Get-Content $workerLog -Tail 120 }
+              throw 'isolated Worker did not become ready'
+            }
+
+            $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
+            $env:FORGE_ADMIN_USER = $qaUser
+            $env:FORGE_ADMIN_PASSWORD = $qaPassword
+            node scripts/verify-alumdoor.mjs --origin $env:FORGE_ORIGIN --admin $qaUser
+            if ($LASTEXITCODE -ne 0) { throw 'Sales/Stock/AR live certification failed' }
+            node scripts/verify-alumdoor-mua.mjs --origin $env:FORGE_ORIGIN --admin $qaUser
+            if ($LASTEXITCODE -ne 0) { throw 'Purchase/Stock/AP/GL live certification failed' }
+            Write-Host 'ALUMDOOR_LIVE_HTTP_CERT_PASS'
+          } finally {
+            if ($worker -and -not $worker.HasExited) { Stop-Process -Id $worker.Id -Force -ErrorAction SilentlyContinue }
+          }
+
+      - name: Prove source D1 stayed untouched
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (!(Test-Path $env:SOURCE_DB)) { throw 'source D1 disappeared during certification' }
+          $after = (Get-FileHash $env:SOURCE_DB -Algorithm SHA256).Hash
+          if ($after -ne $env:SOURCE_DB_HASH) { throw 'source D1 changed during isolated certification' }
+          Write-Host 'SOURCE_D1_UNCHANGED_PASS'
