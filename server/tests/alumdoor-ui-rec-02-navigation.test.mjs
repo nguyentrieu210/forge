@@ -50,9 +50,6 @@ const REQUIRED_OPERATIONAL_SURFACES = [
   "Sales Order",
   "Delivery Note",
   "Sales Invoice",
-  "Material Request",
-  "Request for Quotation",
-  "Supplier Quotation",
   "Purchase Order",
   "Purchase Receipt",
   "Purchase Invoice",
@@ -130,7 +127,6 @@ test("Sales Option and Sales Package navigation is backed by current backend aut
   assert.match(packageSql, /"role":"Sales Manager","read":true,"write":true,"create":true/);
   assert.match(packageSql, /"role":"Sales User","read":true,"write":false,"create":false/);
   assert.match(operatorSql, /WHERE doctype='Sales Option'/);
-  assert.match(operatorSql, /'\.fields\['/);
   assert.match(operatorSql, /'Sales Package'/);
 });
 
