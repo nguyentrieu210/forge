@@ -22,7 +22,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=10'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=11'
           git -C C:\alumdoor fetch origin main --prune
 
           $mainPath = 'C:\forge-attendance-payroll\client\apps\runtime\src\main-base.tsx'
@@ -64,7 +64,6 @@ jobs:
             [IO.File]::WriteAllText($mainPath, $mainText.Substring(0, $start) + $newBlock + "`n" + $mainText.Substring($end), [Text.UTF8Encoding]::new($false))
           }
 
-          $controlScript = Join-Path $env:RUNNER_TEMP 'local-attendance-e2e.ps1'
           $raw = (git -C C:\alumdoor show origin/main:.github/scripts/local-attendance-e2e.ps1) -join "`n"
           $raw = $raw.Replace("  Assert-Exit 'attendance app package check'`nfinally { Pop-Location }", "  Assert-Exit 'attendance app package check'`n} finally { Pop-Location }")
           $raw = $raw.Replace("  Assert-Exit 'install attendance payroll app locally'`nfinally { Pop-Location }", "  Assert-Exit 'install attendance payroll app locally'`n} finally { Pop-Location }")
@@ -93,9 +92,9 @@ jobs:
           $newHelper = ($newHelper -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
           if (-not $raw.Contains($oldHelper)) { throw 'control script helper anchor missing' }
           $raw = $raw.Replace($oldHelper, $newHelper)
-          Set-Content -Path $controlScript -Value $raw -Encoding UTF8
 
           pnpm --dir C:\forge-attendance-payroll\client --filter "runtime^..." run build
           if ($LASTEXITCODE -ne 0) { throw "runtime dependency build failed with exit code $LASTEXITCODE" }
 
-          powershell -NoProfile -ExecutionPolicy Bypass -File $controlScript
+          $scriptBlock = [ScriptBlock]::Create($raw)
+          & $scriptBlock
