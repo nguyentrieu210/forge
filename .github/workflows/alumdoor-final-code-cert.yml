@@ -1,0 +1,140 @@
+name: Alumdoor final code certification
+
+on:
+  push:
+    branches: [exp/alumdoor-pricing-policy]
+    paths:
+      - ".github/workflows/alumdoor-final-code-cert.yml"
+      - "client/**"
+      - "server/**"
+      - "docs/audits/**"
+  workflow_dispatch:
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Server build and canonical metadata
+        shell: bash
+        working-directory: server
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm run build
+          pnpm run brief:check
+
+      - name: Audit canonical aluminium stock navigation
+        shell: bash
+        working-directory: server
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const brief = JSON.parse(readFileSync("briefs/alumdoor-v2.json", "utf8"));
+          const rx = /(tồn.*nhôm|nhôm.*tồn|aluminium\s+lot|stock.*length|length.*stock)/iu;
+          const nav = brief.navigation?.items ?? [];
+          const navMatches = nav.filter((entry) => rx.test(typeof entry === "string" ? entry : JSON.stringify(entry)));
+          const appReports = (brief.reports ?? []).filter((entry) => rx.test(JSON.stringify(entry)));
+          const links = (brief.links ?? []).filter((entry) => rx.test(JSON.stringify(entry)));
+          console.log(`ALUMINIUM_STOCK_NAV_MATCHES=${navMatches.length}`);
+          console.log(`ALUMINIUM_STOCK_NAV=${JSON.stringify(navMatches)}`);
+          console.log(`ALUMINIUM_STOCK_APP_REPORT_DUPLICATES=${appReports.length}`);
+          console.log(`ALUMINIUM_STOCK_LINKS=${JSON.stringify(links)}`);
+          if (appReports.length !== 0) throw new Error("Tồn nhôm canonical must not be duplicated as an app-owned report");
+          const generator = readFileSync("scripts/build-alumdoor-v2-brief.mjs", "utf8");
+          if (!generator.includes('Báo cáo "Tồn nhôm theo khổ" đọc Batch + sổ kho')) throw new Error("Canonical Stock Ledger/Batch ownership note missing");
+          console.log("ALUMINIUM_STOCK_CANONICAL_SOURCE_PASS");
+          NODE
+
+      - name: Focused manufacturing closure
+        shell: bash
+        working-directory: server
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei '(manufactur|production|work-order|cut-order|bom|job-card)' | sort)
+          printf 'MANUFACTURING_TEST_FILES=%s\n' "${#tests[@]}"
+          printf '%s\n' "${tests[@]}"
+          test "${#tests[@]}" -gt 0
+          node --test "${tests[@]}"
+          echo MANUFACTURING_CLOSURE_SLICE_PASS
+
+      - name: Focused print contract
+        shell: bash
+        working-directory: server
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei '(print|pdf|a4)' | sort)
+          printf 'PRINT_TEST_FILES=%s\n' "${#tests[@]}"
+          printf '%s\n' "${tests[@]}"
+          test "${#tests[@]}" -gt 0
+          node --test "${tests[@]}"
+          echo PRINT_CONTRACT_SLICE_PASS
+
+      - name: Focused accounting and transaction closure
+        shell: bash
+        working-directory: server
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei '(transaction.*closure|reconcil|receivable|payable|payment|general-ledger|accounting|stock-ledger)' | sort)
+          printf 'ACCOUNTING_CLOSURE_TEST_FILES=%s\n' "${#tests[@]}"
+          printf '%s\n' "${tests[@]}"
+          test "${#tests[@]}" -gt 0
+          node --test "${tests[@]}"
+          echo ACCOUNTING_TRANSACTION_CLOSURE_SLICE_PASS
+
+      - name: Full server regression
+        shell: bash
+        working-directory: server
+        run: |
+          set -euo pipefail
+          pnpm test:unit
+          echo FULL_SERVER_REGRESSION_PASS
+
+      - name: Client build lint and selfchecks
+        shell: bash
+        working-directory: client
+        run: |
+          set -euo pipefail
+          pnpm --filter @metaforge/views... run build
+          pnpm run lint
+          pnpm run test
+          pnpm run product:check
+          node --test packages/views/tests/form-view-metadata-purity.test.mjs packages/views/tests/metadata-child-grid-runtime.test.mjs packages/views/tests/child-grid-presentation.test.mjs
+          echo CLIENT_RUNTIME_CONTRACT_PASS
+
+      - name: Browser UX and responsive visual smoke
+        shell: bash
+        working-directory: client
+        run: |
+          set -euo pipefail
+          pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
+          pnpm --filter @metaforge/demo run e2e
+          echo PLAYWRIGHT_RESPONSIVE_UX_PASS
+
+      - name: Report bundle footprint
+        shell: bash
+        working-directory: client
+        run: |
+          set -euo pipefail
+          pnpm --filter @metaforge/demo run build
+          echo BUNDLE_ASSETS_BEGIN
+          find apps/demo/dist -type f \( -name '*.js' -o -name '*.css' \) -printf '%s %p\n' | sort -nr | head -30
+          echo BUNDLE_ASSETS_END
+          largest=$(find apps/demo/dist -type f -name '*.js' -printf '%s\n' | sort -nr | head -1)
+          test -n "$largest"
+          echo "LARGEST_DEMO_JS_BYTES=$largest"
+          # 2 MiB is a deliberately loose regression ceiling; product:check carries stricter product rules.
+          test "$largest" -le 2097152
+          echo CLIENT_BUNDLE_BUDGET_PASS
