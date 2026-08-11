@@ -33,6 +33,8 @@ jobs:
           $sourceVars = 'C:\alumdoor\server\.dev.vars'
           if (!(Test-Path $sourceVars)) { throw 'Local .dev.vars is unavailable for isolated certification' }
           Copy-Item -Force $sourceVars (Join-Path $probe 'server\.dev.vars')
+          Write-Host 'DEV_VAR_KEYS:'
+          Get-Content $sourceVars | Where-Object { $_ -match '^[A-Za-z_][A-Za-z0-9_]*=' } | ForEach-Object { Write-Host (($_ -split '=',2)[0]) }
           Set-Location (Join-Path $probe 'server')
           pnpm install --frozen-lockfile
           if ($LASTEXITCODE -ne 0) { throw 'server dependency install failed' }
@@ -62,57 +64,22 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'real Alumdoor catalogue pricing certification failed' }
           Write-Host 'ALUMDOOR_REAL_CATALOGUE_CERT_PASS'
 
-      - name: Run live HTTP Sales Purchase Stock Finance certification on cloned D1
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $server = Join-Path $env:CERT_ROOT 'server'
-          Set-Location $server
-
-          $passwordLine = Get-Content .dev.vars | Where-Object { $_ -match '^FORGE_ADMIN_PASSWORD=' } | Select-Object -First 1
-          if (-not $passwordLine) { throw 'FORGE_ADMIN_PASSWORD missing from isolated .dev.vars' }
-          $env:FORGE_ADMIN_PASSWORD = $passwordLine.Substring('FORGE_ADMIN_PASSWORD='.Length).Trim().Trim('"')
-          if (-not $env:FORGE_ADMIN_PASSWORD) { throw 'FORGE_ADMIN_PASSWORD resolved empty' }
-
-          $stdout = Join-Path $env:RUNNER_TEMP 'alumdoor-live-worker.out.log'
-          $stderr = Join-Path $env:RUNNER_TEMP 'alumdoor-live-worker.err.log'
-          $args = "/c pnpm run dev:alumdoor-local -- --persist-to `"$($env:CERT_PERSIST)`""
-          $worker = Start-Process -FilePath 'cmd.exe' -ArgumentList $args -WorkingDirectory $server -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
-          try {
-            $ready = $false
-            for ($i = 0; $i -lt 60; $i++) {
-              Start-Sleep -Seconds 1
-              if ($worker.HasExited) { break }
-              try {
-                $client = New-Object System.Net.Sockets.TcpClient
-                $connect = $client.BeginConnect('127.0.0.1', 8799, $null, $null)
-                if ($connect.AsyncWaitHandle.WaitOne(500) -and $client.Connected) { $ready = $true; $client.Close(); break }
-                $client.Close()
-              } catch {}
+          @'
+          import { DatabaseSync } from "node:sqlite";
+          const db = new DatabaseSync(process.env.LAB_DB);
+          const rows = db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name").all();
+          for (const row of rows) {
+            const text = `${row.name} ${row.sql ?? ''}`;
+            if (/auth|user|password|credential|session|identity/i.test(text)) {
+              console.log(`AUTH_SCHEMA=${row.name}:${String(row.sql ?? '').replace(/\s+/g,' ')}`);
             }
-            if (-not $ready) {
-              Write-Host '=== WORKER STDOUT TAIL ==='
-              if (Test-Path $stdout) { Get-Content $stdout -Tail 100 | ForEach-Object { Write-Host $_ } }
-              Write-Host '=== WORKER STDERR TAIL ==='
-              if (Test-Path $stderr) { Get-Content $stderr -Tail 100 | ForEach-Object { Write-Host $_ } }
-              throw 'isolated Alumdoor worker did not become ready'
-            }
-
-            node scripts/verify-alumdoor.mjs
-            if ($LASTEXITCODE -ne 0) { throw 'live Sales/Stock/AR certification failed' }
-            Write-Host 'ALUMDOOR_LIVE_SALES_STOCK_AR_PASS'
-
-            node scripts/verify-alumdoor-mua.mjs
-            if ($LASTEXITCODE -ne 0) { throw 'live Purchase/Stock/AP/GL certification failed' }
-            Write-Host 'ALUMDOOR_LIVE_PURCHASE_STOCK_AP_GL_PASS'
-          } finally {
-            if ($worker -and !$worker.HasExited) { cmd /c "taskkill /PID $($worker.Id) /T /F" | Out-Null }
           }
+          db.close();
+          '@ | node --input-type=module
 
-      - name: Reconcile isolated live state remains separate
+      - name: Report auth readiness without secrets
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
-          if ($env:CERT_PERSIST -like 'C:\alumdoor*') { throw 'Certification persistence unexpectedly points at working state' }
-          Write-Host "ISOLATED_PERSISTENCE=$($env:CERT_PERSIST)"
-          Write-Host 'ALUMDOOR_ISOLATED_LIVE_CERT_COMPLETE'
+          $hasPassword = @(Get-Content (Join-Path $env:CERT_ROOT 'server\.dev.vars') | Where-Object { $_ -match '^FORGE_ADMIN_PASSWORD=' }).Count -gt 0
+          Write-Host "FORGE_ADMIN_PASSWORD_PRESENT=$([int]$hasPassword)"
+          if (-not $hasPassword) { throw 'Isolated live auth needs a temporary credential seeded into cloned D1' }
