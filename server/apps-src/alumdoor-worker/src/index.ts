@@ -1473,10 +1473,10 @@ async function applyCutV2(call: PlatformCall, args: Record<string, unknown>): Pr
   return answer({
     cut_order: name,
     submitted: true,
-    idempotent: cut.cut_state === "???? c???t",
+    idempotent: cut.cut_state === "Đã cắt",
     reservation_consumption: "derived-from-cut-order-stock-ledger",
     paint,
-    message: `???? c???t v?? tr??? t???n theo phi???u ${name}; l?????ng gi??? ch??? ???? d??ng ???????c suy t??? Stock Ledger c???a phi???u c???t.`,
+    message: `Đã cắt và trừ tồn theo phiếu ${name}; lượng giữ chỗ đã dùng được suy từ Stock Ledger của phiếu cắt.`,
   });
 }
 
