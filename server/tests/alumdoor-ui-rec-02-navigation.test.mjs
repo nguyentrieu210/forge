@@ -50,6 +50,7 @@ const REQUIRED_OPERATIONAL_SURFACES = [
   "Sales Order",
   "Delivery Note",
   "Sales Invoice",
+  "Material Request",
   "Purchase Order",
   "Purchase Receipt",
   "Purchase Invoice",
@@ -83,7 +84,7 @@ test("UI-REC-02 sidebar is deterministic, domain-oriented and free of superseded
   const second = await buildAlumdoorUiRec02Sidebar();
   assert.deepEqual(second, first, "navigation overlay must be reproducible");
   assert.equal(first.id, "alumdoor");
-  assert.equal(first.version, "2.0.37");
+  assert.equal(first.version, "2.2.4");
 
   const groups = [...new Set(first.nav.map((item) => item.group))];
   assert.deepEqual(groups, TARGET_GROUPS);
