@@ -78,8 +78,8 @@ jobs:
           Set-Content -Path $backendCmd -Value $backendLines -Encoding ASCII
           Set-Content -Path $frontendCmd -Value $frontLines -Encoding ASCII
 
-          schtasks.exe /Delete /TN $backendTask /F 2>$null | Out-Null
-          schtasks.exe /Delete /TN $frontendTask /F 2>$null | Out-Null
+          cmd.exe /d /c "schtasks /Delete /TN $backendTask /F >nul 2>&1"
+          cmd.exe /d /c "schtasks /Delete /TN $frontendTask /F >nul 2>&1"
 
           schtasks.exe /Create /TN $backendTask /TR $backendCmd /SC ONCE /ST 23:59 /F /IT
           Assert-Exit 'create backend scheduled task'
@@ -110,7 +110,6 @@ jobs:
             Write-Host "ROUTE_OK=$route"
           }
 
-          # Deleting a scheduled task does not interrupt its already-running program.
           schtasks.exe /Delete /TN $backendTask /F | Out-Null
           Assert-Exit 'delete backend scheduled task registration'
           schtasks.exe /Delete /TN $frontendTask /F | Out-Null
