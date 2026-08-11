@@ -3,18 +3,16 @@ name: Test local runner
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
+    branches: [main]
     types: [opened, synchronize, reopened]
-    paths:
-      - ".github/workflows/test-runner.yml"
+    paths: [".github/workflows/test-runner.yml"]
 
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
-      - name: Verify experiment checkout is untouched
+      - name: Verify local experiment checkout is safe
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -24,43 +22,99 @@ jobs:
           $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
           if ($unsafe.Count -gt 0) { $unsafe | ForEach-Object { Write-Host $_ }; throw 'Unsafe local changes' }
 
-      - name: Regenerate and push metadata from disposable clone
+      - name: Patch preview contract in disposable clone
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $probe = Join-Path $env:RUNNER_TEMP 'forge-alumdoor-presentation-fix'
-          if (Test-Path $probe) { Remove-Item -Recurse -Force $probe }
+          $probe = Join-Path $env:RUNNER_TEMP 'forge-row-preview-wire'
+          if (Test-Path $probe) { cmd /c "rmdir /s /q `"$probe`"" }
           git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
           if ($LASTEXITCODE -ne 0) { throw 'clone failed' }
           Set-Location $probe
-          git config user.name "Alumdoor Migration Runner"
-          git config user.email "alumdoor-migration@local.invalid"
+          git config user.name "Alumdoor Preview Runner"
+          git config user.email "alumdoor-preview@local.invalid"
+
+          @'
+          import fs from "node:fs";
+          function edit(path, transform) {
+            const before = fs.readFileSync(path, "utf8");
+            const after = transform(before);
+            if (after === before) throw new Error(`no patch applied to ${path}`);
+            fs.writeFileSync(path, after);
+          }
+
+          edit("server/packages/frappe-model/src/types.ts", (s) => s.replace(
+            "  reasonRequiredOn?: string[];\n}",
+            "  reasonRequiredOn?: string[];\n  /** Optional app method that derives a child-row UX preview; save/submit remain authoritative. */\n  previewMethod?: string;\n  /** Parent fields whose changes invalidate the row preview. */\n  previewParentFields?: string[];\n}",
+          ));
+
+          edit("client/packages/core/src/types/meta.ts", (s) => s.replace(
+            "  reasonRequiredOn?: string[];\n  [k: string]: unknown;",
+            "  reasonRequiredOn?: string[];\n  /** Dotted app method used for server-owned child-row preview. */\n  previewMethod?: string;\n  /** Parent fields whose changes trigger row preview refresh. */\n  previewParentFields?: string[];\n  [k: string]: unknown;",
+          ));
+
+          edit("server/packages/frappe-model/src/validate.ts", (s) => {
+            const anchor = `    const reasonRequiredOn = entry.reasonRequiredOn === undefined\n      ? undefined\n      : array(entry.reasonRequiredOn, \`viewPolicy.\${key}.reasonRequiredOn\`).map((item, index) =>\n          text(item, \`viewPolicy.\${key}.reasonRequiredOn[\${index}]\`, 80));\n`;
+            const added = anchor + `    const previewMethod = entry.previewMethod === undefined\n      ? undefined\n      : text(entry.previewMethod, \`viewPolicy.\${key}.previewMethod\`, 240);\n    const previewParentFields = entry.previewParentFields === undefined\n      ? undefined\n      : array(entry.previewParentFields, \`viewPolicy.\${key}.previewParentFields\`).map((item, index) =>\n          text(item, \`viewPolicy.\${key}.previewParentFields[\${index}]\`, 160));\n`;
+            if (!s.includes(anchor)) throw new Error("validate preview anchor missing");
+            s = s.replace(anchor, added);
+            const returnAnchor = "      ...(reasonRequiredOn ? { reasonRequiredOn } : {}),\n";
+            if (!s.includes(returnAnchor)) throw new Error("validate return anchor missing");
+            return s.replace(returnAnchor, returnAnchor
+              + "      ...(previewMethod ? { previewMethod } : {}),\n"
+              + "      ...(previewParentFields ? { previewParentFields } : {}),\n");
+          });
+
+          edit("server/apps-src/alumdoor-worker/src/index.ts", (s) => {
+            const importAnchor = 'import { salesItemContext } from "./sales-item-context.js";\n';
+            if (!s.includes(importAnchor)) throw new Error("worker import anchor missing");
+            s = s.replace(importAnchor, importAnchor + 'import { previewChildRow } from "./ui-child-preview.js";\n');
+            const dispatchAnchor = '    if (method === "alumdoor.sales.item_context") return await salesItemContext(call, args);\n';
+            if (!s.includes(dispatchAnchor)) throw new Error("worker dispatch anchor missing");
+            return s.replace(dispatchAnchor, dispatchAnchor + '    if (method === "alumdoor.ui.preview_child_row") return await previewChildRow(call, args);\n');
+          });
+          '@ | node --input-type=module
+
           Set-Location server
           pnpm install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { throw 'server dependency bootstrap failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'server install failed' }
           node scripts/build-alumdoor-v2-brief.mjs
           if ($LASTEXITCODE -ne 0) { throw 'brief regeneration failed' }
-          node --test tests/alumdoor-child-presentation.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'presentation tests failed' }
           pnpm run build
           if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
+          node --test tests/alumdoor-child-presentation.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'presentation contract failed' }
           pnpm run brief:check
           if ($LASTEXITCODE -ne 0) { throw 'brief check failed' }
-          Set-Location ..
+          pnpm exec vitest run apps-src/alumdoor-worker/src/ui-child-preview.test.ts --environment node
+          if ($LASTEXITCODE -ne 0) { throw 'worker preview tests failed' }
+          $bundle = Join-Path $env:RUNNER_TEMP 'alumdoor-worker-preview-bundle'
+          if (Test-Path $bundle) { cmd /c "rmdir /s /q `"$bundle`"" }
+          pnpm exec wrangler deploy --dry-run --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc --outdir $bundle
+          if ($LASTEXITCODE -ne 0) { throw 'worker dry-run bundle failed' }
+
+          Set-Location ..\client
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'client install failed' }
+          pnpm --filter @metaforge/views run build
+          if ($LASTEXITCODE -ne 0) { throw 'views build failed' }
+          Set-Location packages\views
+          node --test tests/child-grid-presentation.test.mjs tests/metadata-child-grid-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'metadata grid tests failed' }
+
+          Set-Location $probe
           git diff --check
           if ($LASTEXITCODE -ne 0) { throw 'diff check failed' }
-          git add server/briefs/alumdoor-v2.json
+          git add server/packages/frappe-model/src/types.ts client/packages/core/src/types/meta.ts server/packages/frappe-model/src/validate.ts server/apps-src/alumdoor-worker/src/index.ts server/briefs/alumdoor-v2.json
           git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host 'No generated metadata change required'
-          } else {
-            git commit -m "fix(meta): preserve required fields in quick child grids"
-            if ($LASTEXITCODE -ne 0) { throw 'commit failed' }
-            git push origin HEAD:exp/alumdoor-pricing-policy
-            if ($LASTEXITCODE -ne 0) { throw 'push failed' }
-            Write-Host "REGENERATED_COMMIT=$(git rev-parse HEAD)"
-          }
+          if ($LASTEXITCODE -eq 0) { throw 'expected preview wiring changes are missing' }
+          git commit -m "feat(meta): wire server-owned child row preview"
+          if ($LASTEXITCODE -ne 0) { throw 'commit failed' }
+          git push origin HEAD:exp/alumdoor-pricing-policy
+          if ($LASTEXITCODE -ne 0) { throw 'push failed' }
+          Write-Host "PREVIEW_WIRING_COMMIT=$(git rev-parse HEAD)"
+          Write-Host 'ALUMDOOR_CHILD_ROW_PREVIEW_WIRING_PASS'
           Set-Location $env:RUNNER_TEMP
-          Remove-Item -Recurse -Force $probe
+          cmd /c "rmdir /s /q `"$probe`"" >nul 2>nul
 
-# regenerate-required-quick-v2
+# child-row-preview-wire
