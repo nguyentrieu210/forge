@@ -17,8 +17,28 @@ function context({ itemPrices, adjustmentRules = [] }) {
       async listMasterRecordData(_tenant, doctype) {
         if (doctype === "Item Price") return itemPrices;
         if (doctype === "Pricing Rule") return [];
-        if (doctype === "Sales Adjustment Rule") return adjustmentRules;
+        if (doctype === "Sales Adjustment Rule") {
+          return adjustmentRules.map(({ name, data }) => ({ name, data }));
+        }
         return [];
+      },
+      async getDocument(_tenant, doctype, name) {
+        if (doctype !== "Sales Adjustment Rule") return null;
+        const row = adjustmentRules.find((candidate) => candidate.name === name);
+        if (!row) return null;
+        return {
+          tenant_id: "tenant-a",
+          doctype,
+          name,
+          owner: "Administrator",
+          docstatus: 0,
+          status: "Draft",
+          version: row.version,
+          created_at: "2026-08-11T00:00:00.000Z",
+          modified_at: "2026-08-11T00:00:00.000Z",
+          data: row.data,
+          children: [],
+        };
       },
     },
   };
