@@ -82,4 +82,4 @@ jobs:
           Get-Content $log -Tail 30 | ForEach-Object { Write-Host $_ }
           Write-Host 'ALUMDOOR_INVENTORY_FULL_SERVER_UNIT_PASS'
 
-# source-lifecycle-outbound-head
+# lifecycle-aware-head-08f5
