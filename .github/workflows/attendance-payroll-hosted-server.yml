@@ -1,0 +1,200 @@
+name: Attendance payroll hosted server integration
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-hosted-server.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/attendance-payroll
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Patch server integration
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import json, re
+
+          root = Path('.')
+          def r(path): return (root/path).read_text(encoding='utf-8')
+          def w(path, text): (root/path).write_text(text, encoding='utf-8', newline='\n')
+
+          # ----- metadata -------------------------------------------------
+          app_path = root/'server/apps-src/alumdoor-attendance/app.json'
+          app = json.loads(app_path.read_text(encoding='utf-8'))
+          fields = app['custom_fields']
+          if not any(x['dt']=='Attendance Request' and x['fieldname']=='alu_state' for x in fields):
+              i = next(i for i,x in enumerate(fields) if x['dt']=='Attendance Request' and x['fieldname']=='alu_request_code')
+              fields.insert(i, {
+                'name':'Attendance Request-alu_state','dt':'Attendance Request','fieldname':'alu_state',
+                'field':{'label':'Trạng thái xử lý AlumDoor','fieldtype':'Select','options':'pending\napplied\nrejected\ncancelled','default':'pending','read_only':True},
+                'insert_after':'workflow_state'
+              })
+          if not any(x['dt']=='Salary Slip' and x['fieldname']=='alu_standard_work_days_bp' for x in fields):
+              i = next(i for i,x in enumerate(fields) if x['dt']=='Salary Slip' and x['fieldname']=='alu_pay_profile')
+              fields.insert(i+1, {
+                'name':'Salary Slip-alu_standard_work_days_bp','dt':'Salary Slip','fieldname':'alu_standard_work_days_bp',
+                'field':{'label':'Ngày công chuẩn (bp)','fieldtype':'Int','default':260000},
+                'insert_after':'alu_pay_profile'
+              })
+          writable = {
+            ('Payroll Entry','branch'),('Payroll Entry','alu_standard_work_days_bp'),('Payroll Entry','alu_state'),
+            ('Salary Slip','alu_payroll_entry'),('Salary Slip','alu_pay_profile'),('Salary Slip','alu_standard_work_days_bp'),
+            ('Salary Slip','alu_manual_deduction_vnd'),('Salary Slip','alu_adjustment_reason'),('Salary Slip','alu_state'),
+            ('Salary Slip','alu_calculation_version')
+          }
+          for x in fields:
+              if (x['dt'],x['fieldname']) in writable:
+                  x['field'].pop('read_only',None); x['field'].pop('serverEnforced',None)
+          if not any(x.get('key')=='alumdoor-attendance:mobile' for x in app['nav']):
+              app['nav'].insert(1, {'key':'alumdoor-attendance:mobile','label':'Quét QR','kind':'experience','icon':'scan-line','group':'Chấm công & ca'})
+          app_path.write_text(json.dumps(app,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          day_path = root/'server/apps-src/alumdoor-attendance/doctypes/alumdoor-attendance-day.json'
+          day = json.loads(day_path.read_text(encoding='utf-8'))
+          if not any(p.get('role')=='Employee' and p.get('if_owner') for p in day['permissions']):
+              day['permissions'].append({'role':'Employee','read':True,'if_owner':True})
+          day_path.write_text(json.dumps(day,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          # ----- correction state ----------------------------------------
+          p='server/apps/tenant-worker/src/attendance-correction-coordinator.ts'; t=r(p)
+          t=t.replace('    alu_request_code: requestName,\n    alu_segment_code: segmentCode,','    alu_request_code: requestName,\n    alu_state: "pending",\n    alu_segment_code: segmentCode,')
+          t=t.replace('document: { ...request.data, alu_review_note: note, alu_reviewed_by: input.actor.user_id, alu_reviewed_at: now },','document: { ...request.data, alu_state: "rejected", alu_review_note: note, alu_reviewed_by: input.actor.user_id, alu_reviewed_at: now },')
+          t=t.replace('document: { ...request.data, alu_before_json: JSON.stringify(before), alu_preview_json: JSON.stringify(preview), alu_review_note: note, alu_reviewed_by: input.actor.user_id, alu_reviewed_at: now, alu_applied_at: now },','document: { ...request.data, alu_state: "applied", alu_before_json: JSON.stringify(before), alu_preview_json: JSON.stringify(preview), alu_review_note: note, alu_reviewed_by: input.actor.user_id, alu_reviewed_at: now, alu_applied_at: now },')
+          w(p,t)
+
+          # ----- period denominator freeze -------------------------------
+          p='server/packages/clouderp-erpnext/src/alumdoor-payroll-entry.ts'; t=r(p)
+          marker='    const standardWorkDaysBp = integer(input.alu_standard_work_days_bp, "standard work days", 1, 310_000);\n'
+          if 'standard work days are frozen after calculation' not in t:
+              assert t.count(marker)==1
+              t=t.replace(marker, marker + '''    // Payroll standard work days are frozen after calculation. Changing the\n    // denominator requires an explicit invalidation/recalculation, never a silent save.\n    const previousStandard = context.existing?.data.alu_standard_work_days_bp;\n    if (["calculated", "pending_approval"].includes(existingState)\n      && previousStandard !== undefined\n      && integer(previousStandard, "existing standard work days", 1, 310_000) !== standardWorkDaysBp) {\n      throw errors.lifecycle("Payroll standard work days are frozen after calculation; invalidate and recalculate the period");\n    }\n''',1)
+          w(p,t)
+
+          # ----- operational route helpers -------------------------------
+          p='server/apps-src/alumdoor-worker/src/attendance-operational-routes.ts'; t=r(p)
+          if 'export async function attendanceCorrectionRequests' not in t:
+              t += '''\n\nexport async function attendanceCorrectionRequests(input: { call: AttendanceOperationalCall; args: Json }): Promise<Response> {\n  try {\n    const rows = await method(input.call, "frappe.client.get_list", {\n      doctype: "Attendance Request",\n      fields: ["name", "employee", "from_date", "to_date", "alu_state", "alu_segment_code", "alu_requested_in", "alu_requested_out", "reason", "alu_reviewed_at", "modified"],\n      filters: { request_type: "Sửa chấm công" },\n      order_by: "modified desc",\n      limit_page_length: 1000,\n    });\n    return json((Array.isArray(rows) ? rows : []).filter((row) => row && typeof row === "object" && !Array.isArray(row) && !text((row as Json).alu_reviewed_at)));\n  } catch (error) {\n    return fail("ATTENDANCE_CORRECTION_LIST_FAILED", error instanceof Error ? error.message : "Không đọc được phiếu sửa công.");\n  }\n}\n'''
+          w(p,t)
+
+          p='server/apps-src/alumdoor-worker/src/payroll-routes.ts'; t=r(p)
+          t=t.replace('export async function payrollMySlips(input: { call: PayrollPlatformCall; args: Json }): Promise<Response> {\n  try { return json(await listDocs(input.call, "Salary Slip", { ...(text(input.args.period) ? { alu_payroll_entry: text(input.args.period) } : {}) })); }\n  catch (error) { return fail("PAYROLL_SLIP_LIST_FAILED", error instanceof Error ? error.message : "Không đọc được phiếu lương."); }\n}', '''export async function payrollPeriodSlips(input: { call: PayrollPlatformCall; args: Json }): Promise<Response> {\n  try {\n    const period = requiredText(input.args.period, "Kỳ lương");\n    return json(await listDocs(input.call, "Salary Slip", { alu_payroll_entry: period }));\n  } catch (error) { return fail("PAYROLL_SLIP_LIST_FAILED", error instanceof Error ? error.message : "Không đọc được phiếu lương kỳ."); }\n}\n\nexport async function payrollMySlips(input: { call: PayrollPlatformCall; args: Json }): Promise<Response> {\n  try { return json(await method(input.call, "metaforge.api.get_alumdoor_my_salary_slips", { ...(text(input.args.period) ? { period: text(input.args.period) } : {}) })); }\n  catch (error) { return fail("PAYROLL_SLIP_LIST_FAILED", error instanceof Error ? error.message : "Không đọc được phiếu lương."); }\n}''')
+          w(p,t)
+
+          # ----- app Worker dispatch -------------------------------------
+          p='server/apps-src/alumdoor-worker/src/index.ts'; t=r(p)
+          anchor='import { attendanceChallenge, attendanceScan } from "./attendance-routes.js";\n'
+          if 'attendance-operational-routes.js' not in t:
+              assert t.count(anchor)==1
+              t=t.replace(anchor, anchor + '''import {\n  attendanceCorrectionRequests, attendanceExceptions, attendanceMonth, attendanceReviewCorrection,\n  attendanceSubmitCorrection, attendanceToday,\n} from "./attendance-operational-routes.js";\nimport {\n  payrollApprovePeriod, payrollCalculatePeriod, payrollCreatePeriod, payrollMarkPaid, payrollMySlips,\n  payrollPeriodList, payrollPeriodSlips, payrollSubmitPeriod,\n} from "./payroll-routes.js";\n''',1)
+          if 'method === "alumdoor.attendance.today"' not in t:
+              m=re.search(r'(?m)^(\s*)if \(method === "alumdoor\.attendance\.scan"\)[^\n]*\n',t)
+              assert m, 'attendance scan dispatch anchor missing'
+              indent=m.group(1)
+              extra=''.join(indent+x+'\n' for x in [
+                'if (method === "alumdoor.attendance.today") return await attendanceToday({ call, args });',
+                'if (method === "alumdoor.attendance.month") return await attendanceMonth({ call, args });',
+                'if (method === "alumdoor.attendance.exceptions") return await attendanceExceptions({ call, args });',
+                'if (method === "alumdoor.attendance.correction_requests") return await attendanceCorrectionRequests({ call, args });',
+                'if (method === "alumdoor.attendance.submit_correction") return await attendanceSubmitCorrection({ call, args });',
+                'if (method === "alumdoor.attendance.review_correction") return await attendanceReviewCorrection({ call, args });',
+                'if (method === "alumdoor.payroll.period_list") return await payrollPeriodList({ call, args });',
+                'if (method === "alumdoor.payroll.create_period") return await payrollCreatePeriod({ call, args });',
+                'if (method === "alumdoor.payroll.calculate_period") return await payrollCalculatePeriod({ call, args });',
+                'if (method === "alumdoor.payroll.submit_period") return await payrollSubmitPeriod({ call, args });',
+                'if (method === "alumdoor.payroll.approve_period") return await payrollApprovePeriod({ call, args });',
+                'if (method === "alumdoor.payroll.mark_paid") return await payrollMarkPaid({ call, args });',
+                'if (method === "alumdoor.payroll.period_slips") return await payrollPeriodSlips({ call, args });',
+                'if (method === "alumdoor.payroll.my_slips") return await payrollMySlips({ call, args });',
+              ])
+              t=t[:m.end()]+extra+t[m.end():]
+          w(p,t)
+
+          # ----- Frappe bounded callbacks --------------------------------
+          p='server/packages/frappe-api/src/router.ts'; t=r(p)
+          sig='''  commitAlumdoorAttendanceScan?: (input: {\n    station: string;\n    nonceHash: string;\n    deviceFingerprintHash?: string;\n  }) => Promise<JsonObject>;\n'''
+          if 'submitAlumdoorAttendanceCorrection?:' not in t:
+              assert t.count(sig)==1
+              t=t.replace(sig,sig+'''  /** AlumDoor-only native attendance/payroll seams. */\n  submitAlumdoorAttendanceCorrection?: (input: { workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string; reason: string; attachment?: string }) => Promise<JsonObject>;\n  reviewAlumdoorAttendanceCorrection?: (input: { request: string; action: "approve" | "reject"; note?: string }) => Promise<JsonObject>;\n  approveAlumdoorPayroll?: (input: { payrollEntry: string }) => Promise<JsonObject>;\n''',1)
+          if 'case "metaforge.api.submit_alumdoor_attendance_correction"' not in t:
+              anchor='    case "metaforge.api.get_business_context":\n'
+              assert t.count(anchor)==1
+              cases='''    case "metaforge.api.submit_alumdoor_attendance_correction":\n      return methodResponse(await submitAlumdoorAttendanceCorrection(args, context));\n\n    case "metaforge.api.review_alumdoor_attendance_correction":\n      return methodResponse(await reviewAlumdoorAttendanceCorrection(args, context));\n\n    case "metaforge.api.approve_alumdoor_payroll":\n      return methodResponse(await approveAlumdoorPayroll(args, context));\n\n    case "metaforge.api.get_alumdoor_my_salary_slips":\n      return methodResponse(await alumdoorMySalarySlips(args, context));\n\n'''
+              t=t.replace(anchor,cases+anchor,1)
+          if 'async function submitAlumdoorAttendanceCorrection(' not in t:
+              t += '''\n\nasync function submitAlumdoorAttendanceCorrection(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {\n  assertAlumdoorAppCallback(context, "attendance correction submit");\n  if (!context.submitAlumdoorAttendanceCorrection) throw errors.misconfigured("AlumDoor attendance correction callback is not configured");\n  const requestedIn = args.text("requested_in")?.trim();\n  const requestedOut = args.text("requested_out")?.trim();\n  const attachment = args.text("attachment")?.trim();\n  return context.submitAlumdoorAttendanceCorrection({ workDate: args.requireText("work_date", 10), segmentCode: args.requireText("segment_code", 16), ...(requestedIn ? { requestedIn } : {}), ...(requestedOut ? { requestedOut } : {}), reason: args.requireText("reason", 1000), ...(attachment ? { attachment } : {}) });\n}\n\nasync function reviewAlumdoorAttendanceCorrection(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {\n  assertAlumdoorAppCallback(context, "attendance correction review");\n  if (!context.reviewAlumdoorAttendanceCorrection) throw errors.misconfigured("AlumDoor attendance correction review callback is not configured");\n  const action = args.requireText("action", 16);\n  if (action !== "approve" && action !== "reject") throw errors.validation("Attendance correction action must be approve or reject");\n  const note = args.text("note")?.trim();\n  return context.reviewAlumdoorAttendanceCorrection({ request: args.requireText("request", 320), action, ...(note ? { note } : {}) });\n}\n\nasync function approveAlumdoorPayroll(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {\n  assertAlumdoorAppCallback(context, "payroll approval");\n  if (!context.approveAlumdoorPayroll) throw errors.misconfigured("AlumDoor payroll approval callback is not configured");\n  return context.approveAlumdoorPayroll({ payrollEntry: args.requireText("payroll_entry", 320) });\n}\n\nasync function alumdoorMySalarySlips(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {\n  assertAlumdoorAppCallback(context, "salary slip self read");\n  const employees = await context.documents.listDocumentsByDoctype<JsonObject>(context.tenantId, "Employee");\n  const mine = employees.filter((row) => row.docstatus !== 2 && String(row.data.user_id ?? "").trim().toLowerCase() === context.actor.user_id.toLowerCase());\n  if (mine.length !== 1) throw errors.permission("Tài khoản phải được gắn duy nhất một Employee để xem phiếu lương.");\n  const period = args.text("period")?.trim();\n  const slips = await context.documents.listDocumentsByDoctype<JsonObject>(context.tenantId, "Salary Slip");\n  return slips.filter((row) => row.docstatus !== 2 && String(row.data.employee ?? "").trim() === mine[0]!.name && Boolean(String(row.data.alu_payroll_entry ?? "").trim()) && (!period || String(row.data.alu_payroll_entry ?? "").trim() === period)).map((row) => ({ name: row.name, docstatus: row.docstatus, modified: row.modified_at, ...row.data }));\n}\n\nfunction assertAlumdoorAppCallback(context: FrappeRouterContext, operation: string): void {\n  if (context.appCallbackAppId !== "alumdoor") throw errors.permission(`Only the verified AlumDoor app callback may invoke native ${operation}`);\n}\n'''
+          w(p,t)
+
+          # ----- tenant worker wiring ------------------------------------
+          p='server/apps/tenant-worker/src/index-core-base.ts'; t=r(p)
+          stub='''  commitAlumDoorAttendanceScan(input: {\n    tenantId: string;\n    actor: Actor;\n    station: string;\n    nonceHash: string;\n    deviceFingerprintHash?: string;\n  }): Promise<JsonObject>;\n'''
+          if 'submitAlumDoorAttendanceCorrection(input:' not in t:
+              assert t.count(stub)==1
+              t=t.replace(stub,stub+'''  submitAlumDoorAttendanceCorrection(input: { tenantId: string; actor: Actor; workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string; reason: string; attachment?: string }): Promise<JsonObject>;\n  reviewAlumDoorAttendanceCorrection(input: { tenantId: string; actor: Actor; request: string; action: "approve" | "reject"; note?: string }): Promise<JsonObject>;\n  approveAlumDoorPayroll(input: { tenantId: string; actor: Actor; payrollEntry: string }): Promise<JsonObject>;\n''',1)
+          if 'async submitAlumdoorAttendanceCorrection(input:' not in t:
+              start=t.index('    async commitAlumdoorAttendanceScan(input:')
+              brace=t.index('{',start)
+              depth=0; end=None
+              for i in range(brace,len(t)):
+                  if t[i]=='{': depth+=1
+                  elif t[i]=='}':
+                      depth-=1
+                      if depth==0:
+                          semi=t.find(',',i)
+                          end=semi+1; break
+              assert end
+              extra='''\n    async submitAlumdoorAttendanceCorrection(input: { workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string; reason: string; attachment?: string }): Promise<JsonObject> {\n      const stub = env.AGGREGATES.getByName(`attendance-correction:${tenantId}:${encodeURIComponent(actor.user_id)}`) as AggregateStub;\n      return stub.submitAlumDoorAttendanceCorrection({ tenantId, actor, ...input });\n    },\n    async reviewAlumdoorAttendanceCorrection(input: { request: string; action: "approve" | "reject"; note?: string }): Promise<JsonObject> {\n      const stub = env.AGGREGATES.getByName(`attendance-correction:${tenantId}:${encodeURIComponent(input.request)}`) as AggregateStub;\n      return stub.reviewAlumDoorAttendanceCorrection({ tenantId, actor, ...input });\n    },\n    async approveAlumdoorPayroll(input: { payrollEntry: string }): Promise<JsonObject> {\n      const stub = env.AGGREGATES.getByName(`payroll:${tenantId}:${encodeURIComponent(input.payrollEntry)}`) as AggregateStub;\n      return stub.approveAlumDoorPayroll({ tenantId, actor, payrollEntry: input.payrollEntry });\n    },'''
+              t=t[:end]+extra+t[end:]
+          w(p,t)
+
+          # ----- metadata regression expectations ------------------------
+          p='server/tests/alumdoor-attendance-metadata.test.mjs'; t=r(p)
+          if '"AlumDoor Attendance System"' not in t:
+              t=t.replace('      "AlumDoor Attendance Manager",\n      "AlumDoor Attendance Viewer",','      "AlumDoor Attendance Manager",\n      "AlumDoor Attendance System",\n      "AlumDoor Attendance Viewer",',1)
+          if 'permission(day, "Employee")' not in t:
+              t=t.replace('  const qrSystem = permission(day, "AlumDoor QR System");','  assert.equal(permission(day, "Employee")?.read, true);\n  assert.equal(permission(day, "Employee")?.if_owner, true);\n\n  const qrSystem = permission(day, "AlumDoor QR System");',1)
+          if 'const attendanceSystem = permission(day, "AlumDoor Attendance System")' not in t:
+              t=t.replace('  const payrollSystem = permission(day, "AlumDoor Payroll System");','  const attendanceSystem = permission(day, "AlumDoor Attendance System");\n  assert.equal(attendanceSystem?.write, true);\n  assert.notEqual(attendanceSystem?.create, true);\n  const payrollSystem = permission(day, "AlumDoor Payroll System");',1)
+          w(p,t)
+
+          p='server/tests/alumdoor-attendance-day-controller.test.mjs'; t=r(p)
+          t=re.sub(r'/chỉ được cập nhật từ giao dịch QR[^/]+/i','/chỉ được cập nhật từ giao dịch QR, phiếu sửa công đã duyệt hoặc điều phối lương nội bộ/i',t,count=1)
+          w(p,t)
+          PY
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Verify server
+        run: |
+          pnpm run build:server
+          cd server
+          node scripts/pack-app.mjs apps-src/alumdoor-attendance --check
+          node --test tests/alumdoor-attendance*.test.mjs tests/alumdoor-payroll*.test.mjs
+      - name: Commit feature integration
+        shell: bash
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No integration changes to commit"
+            exit 0
+          fi
+          git config user.name "forge-attendance-payroll-bot"
+          git config user.email "forge-attendance-payroll-bot@users.noreply.github.com"
+          git add server client
+          git commit -m "feat(alumdoor): wire attendance payroll operating APIs"
+          git push origin HEAD:feature/attendance-payroll
+          echo "FEATURE_HEAD=$(git rev-parse HEAD)"
