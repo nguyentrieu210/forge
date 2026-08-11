@@ -6,6 +6,10 @@ on:
     types: [opened, synchronize, reopened]
     paths: [".github/workflows/attendance-payroll-local-sync.yml"]
 
+concurrency:
+  group: attendance-payroll-local-dev-5173
+  cancel-in-progress: true
+
 jobs:
   launch:
     runs-on: [self-hosted, Windows, alumdoor]
@@ -16,7 +20,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           function Assert-LastExit([string]$label) { if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" } }
-
           $repo = 'C:\alumdoor'
           $worktree = 'C:\forge-attendance-payroll'
           $target = 'feature/attendance-payroll'
@@ -24,18 +27,15 @@ jobs:
           $devDir = 'C:\forge-attendance-payroll-dev'
           $stdout = Join-Path $devDir '5173.out.log'
           $stderr = Join-Path $devDir '5173.err.log'
-
           if (-not (Test-Path $worktree)) { throw 'attendance payroll worktree missing' }
           $branch = (git -C $worktree branch --show-current).Trim()
           if ($branch -ne $target) { throw "attendance worktree is on $branch instead of $target" }
-
           git -C $repo fetch origin $target --prune
           Assert-LastExit 'fetch attendance payroll feature'
           $dirty = git -C $worktree status --porcelain --untracked-files=all
           if ($dirty) { throw "attendance payroll worktree must be clean before local dev launch:`n$dirty" }
           git -C $worktree merge --ff-only "origin/$target"
           Assert-LastExit 'fast-forward attendance payroll worktree'
-
           $existing = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($existing) {
             $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($existing.OwningProcess)" -ErrorAction SilentlyContinue
@@ -43,7 +43,6 @@ jobs:
             Write-Host "PORT_5173_ALREADY_LISTENING_PID=$($existing.OwningProcess)"
             Write-Host "PORT_5173_COMMAND=$cmdline"
             if ($cmdline -match 'forge-attendance-payroll' -and $cmdline -match 'vite') {
-              Write-Host 'Existing attendance/payroll Vite process is already serving 5173; keeping it.'
               $response = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -TimeoutSec 10
               if ($response.StatusCode -ne 200) { throw "existing dev server returned HTTP $($response.StatusCode)" }
               Write-Host 'ATTENDANCE_PAYROLL_5173_READY'
@@ -51,46 +50,33 @@ jobs:
             }
             throw "Port 5173 is already occupied by an unrelated process (PID $($existing.OwningProcess)); refusing to kill it"
           }
-
           $clientNodeModules = Join-Path $worktree 'client\node_modules'
           $cachedClientNodeModules = Join-Path $repo 'client\node_modules'
           if (-not (Test-Path (Join-Path $clientNodeModules '.bin\vite.cmd'))) {
-            if (-not (Test-Path (Join-Path $cachedClientNodeModules '.bin\vite.cmd'))) {
-              throw 'client dependency cache is missing; expected C:\alumdoor\client\node_modules\.bin\vite.cmd'
-            }
+            if (-not (Test-Path (Join-Path $cachedClientNodeModules '.bin\vite.cmd'))) { throw 'client dependency cache is missing' }
             if (Test-Path $clientNodeModules) { Remove-Item $clientNodeModules -Force -Recurse }
             cmd /c "mklink /J `"$clientNodeModules`" `"$cachedClientNodeModules`""
             Assert-LastExit 'client node_modules junction'
           }
-
           New-Item -ItemType Directory -Force -Path $devDir | Out-Null
           Remove-Item $stdout,$stderr -Force -ErrorAction SilentlyContinue
-
-          # GitHub Runner kills descendants tagged with RUNNER_TRACKING_ID at job cleanup.
-          # Clear it in this shell before Start-Process so the Vite dev server survives the job.
           [Environment]::SetEnvironmentVariable('RUNNER_TRACKING_ID', '', 'Process')
           $args = '/d /s /c "cd /d C:\forge-attendance-payroll && pnpm --dir client --filter runtime dev -- --host 0.0.0.0 --port 5173 --strictPort"'
           $process = Start-Process -FilePath 'cmd.exe' -ArgumentList $args -WorkingDirectory $worktree -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
           Write-Host "DEV_LAUNCHER_PID=$($process.Id)"
-
           $ready = $false
           for ($i = 0; $i -lt 20; $i++) {
             Start-Sleep -Seconds 1
             try {
               $response = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -TimeoutSec 3
               if ($response.StatusCode -eq 200) { $ready = $true; break }
-            } catch {
-              if ($process.HasExited) { break }
-            }
+            } catch { if ($process.HasExited) { break } }
           }
           if (-not $ready) {
-            Write-Host '--- stdout ---'
             if (Test-Path $stdout) { Get-Content $stdout -Tail 120 }
-            Write-Host '--- stderr ---'
             if (Test-Path $stderr) { Get-Content $stderr -Tail 120 }
             throw 'attendance payroll Vite server did not become ready on 5173'
           }
-
           $listener = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction Stop | Select-Object -First 1
           Write-Host "ATTENDANCE_BRANCH=$branch"
           Write-Host "ATTENDANCE_HEAD=$((git -C $worktree rev-parse HEAD).Trim())"
