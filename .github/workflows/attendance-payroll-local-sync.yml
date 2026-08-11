@@ -6,10 +6,6 @@ on:
     types: [opened, synchronize, reopened]
     paths: [".github/workflows/attendance-payroll-local-sync.yml"]
 
-concurrency:
-  group: attendance-payroll-local-dev-5173
-  cancel-in-progress: true
-
 jobs:
   launch:
     runs-on: [self-hosted, Windows]
