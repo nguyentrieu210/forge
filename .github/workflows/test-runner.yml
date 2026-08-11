@@ -10,32 +10,40 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
-      - name: Sync and verify attendance payroll branch
+      - name: Switch and verify manufacturing branch
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $target = 'feature/attendance-payroll'
-          $branch = (git branch --show-current).Trim()
-          if ($branch -ne $target) { throw "Expected $target but found $branch" }
+          $target = 'local/manufacturing-20260811'
+
           $tracked = git status --porcelain --untracked-files=no
-          if ($tracked) { throw "Tracked local changes exist; refusing to overwrite:`n$tracked" }
+          if ($tracked) {
+            Write-Host $tracked
+            throw 'Tracked local changes exist; refusing to switch branch'
+          }
 
           git fetch origin $target --prune
+          if ($LASTEXITCODE -ne 0) { throw 'git fetch failed' }
+
+          $branch = (git branch --show-current).Trim()
+          if ($branch -ne $target) {
+            $localExists = (git branch --list $target).Trim()
+            if ([string]::IsNullOrWhiteSpace($localExists)) {
+              git switch --track -c $target "origin/$target"
+            } else {
+              git switch $target
+            }
+            if ($LASTEXITCODE -ne 0) { throw 'git switch failed' }
+          }
+
           git merge --ff-only "origin/$target"
+          if ($LASTEXITCODE -ne 0) { throw 'local manufacturing branch is not fast-forwardable; refusing destructive reset' }
+
+          Write-Host "LOCAL_BRANCH=$((git branch --show-current).Trim())"
           Write-Host "LOCAL_HEAD=$((git rev-parse HEAD).Trim())"
           Write-Host "REMOTE_HEAD=$((git rev-parse origin/$target).Trim())"
-
-          Push-Location server
-          npm run build
-          node scripts/pack-app.mjs apps-src/alumdoor-attendance --check
-          $tests = Get-ChildItem tests -File | Where-Object { $_.Name -like 'alumdoor-attendance*.test.mjs' -or $_.Name -like 'alumdoor-payroll*.test.mjs' } | ForEach-Object { $_.FullName }
-          node --test $tests
-          Pop-Location
-
-          Write-Host "STATUS_BEGIN"
           git status --short --untracked-files=all
-          Write-Host "STATUS_END"
-          Write-Host 'ATTENDANCE_PAYROLL_BACKEND_VERIFY_OK'
+          Write-Host 'MANUFACTURING_LOCAL_WORKER_READY'
