@@ -25,11 +25,25 @@
     { "fieldname": "effective_to", "label": "Hiệu lực đến", "fieldtype": "Date", "in_standard_filter": true },
     { "fieldname": "policy_status", "label": "Trạng thái", "fieldtype": "Select", "options": "draft\napproved\nretired", "required": true, "default": "draft", "in_list_view": true, "in_standard_filter": true }
   ],
+  "viewPolicy": {
+    "list": {
+      "enabled": true,
+      "columns": ["policy_name", "company", "timezone", "effective_from", "effective_to", "policy_status"]
+    },
+    "form": {
+      "enabled": true,
+      "fields": ["policy_name", "company", "timezone", "shift1_start_minute", "shift1_end_minute", "shift2_start_minute", "shift2_end_minute", "shift3_start_minute", "shift3_latest_out_minute", "regular_daily_cap_minutes", "qr_ttl_seconds", "effective_from", "effective_to", "policy_status"]
+    },
+    "quickEntry": {
+      "enabled": false,
+      "fields": []
+    }
+  },
   "permissions": [
     { "role": "AlumDoor QR System", "read": true },
     { "role": "AlumDoor Attendance Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "report": true, "export": true },
     { "role": "HR Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "report": true, "export": true, "share": true }
   ],
-  "revision": 1
+  "revision": 2
 }
