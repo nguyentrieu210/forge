@@ -1,0 +1,43 @@
+name: Manufacturing local worker
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/manufacturing-local-worker.yml"]
+
+jobs:
+  prepare:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 10
+    steps:
+      - name: Switch local Forge worktree to manufacturing branch
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor
+
+          $status = @(git status --porcelain --untracked-files=all)
+          if ($status.Count -gt 0) {
+            $status | ForEach-Object { Write-Host $_ }
+            throw 'Unsafe local changes: refusing to switch branch'
+          }
+
+          git fetch origin local/manufacturing-20260811
+          if ($LASTEXITCODE -ne 0) { throw 'git fetch failed' }
+
+          $localExists = git branch --list local/manufacturing-20260811
+          if ([string]::IsNullOrWhiteSpace($localExists)) {
+            git switch --track -c local/manufacturing-20260811 origin/local/manufacturing-20260811
+          } else {
+            git switch local/manufacturing-20260811
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'git switch failed' }
+
+          git merge --ff-only origin/local/manufacturing-20260811
+          if ($LASTEXITCODE -ne 0) { throw 'local branch is not fast-forwardable to origin; refusing destructive reset' }
+
+          Write-Host "LOCAL_BRANCH=$(git branch --show-current)"
+          Write-Host "LOCAL_COMMIT=$(git rev-parse HEAD)"
+          Write-Host 'MANUFACTURING_LOCAL_WORKER_READY'
