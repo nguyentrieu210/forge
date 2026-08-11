@@ -1,0 +1,67 @@
+name: Attendance payroll local verification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-local.yml"]
+
+jobs:
+  verify:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 30
+    steps:
+      - name: Verify attendance payroll in isolated worktree
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Assert-LastExit([string]$label) {
+            if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" }
+          }
+
+          $repo = 'C:\alumdoor'
+          $worktree = 'C:\forge-attendance-payroll'
+          $target = 'feature/attendance-payroll'
+          Set-Location $repo
+
+          git fetch origin $target --prune
+          Assert-LastExit 'git fetch feature branch'
+
+          if (Test-Path $worktree) {
+            $top = (git -C $worktree rev-parse --show-toplevel 2>$null)
+            if ($LASTEXITCODE -ne 0 -or $top.Trim() -ne $worktree) {
+              throw "$worktree exists but is not the attendance payroll git worktree"
+            }
+            $tracked = git -C $worktree status --porcelain --untracked-files=no
+            if ($tracked) { throw "Tracked changes exist in attendance payroll worktree:`n$tracked" }
+          } else {
+            git show-ref --verify --quiet "refs/heads/$target"
+            if ($LASTEXITCODE -eq 0) {
+              git worktree add $worktree $target
+            } else {
+              git worktree add -b $target $worktree "origin/$target"
+            }
+            Assert-LastExit 'git worktree add'
+          }
+
+          git -C $worktree merge --ff-only "origin/$target"
+          Assert-LastExit 'attendance payroll worktree fast-forward'
+          Write-Host "ROOT_BRANCH=$((git -C $repo branch --show-current).Trim())"
+          Write-Host "ATTENDANCE_BRANCH=$((git -C $worktree branch --show-current).Trim())"
+          Write-Host "ATTENDANCE_HEAD=$((git -C $worktree rev-parse HEAD).Trim())"
+          Write-Host "REMOTE_HEAD=$((git -C $worktree rev-parse origin/$target).Trim())"
+
+          Push-Location "$worktree\server"
+          npm run build
+          Assert-LastExit 'server build'
+          node scripts/pack-app.mjs apps-src/alumdoor-attendance --check
+          Assert-LastExit 'AlumDoor attendance app pack'
+          $tests = Get-ChildItem tests -File | Where-Object { $_.Name -like 'alumdoor-attendance*.test.mjs' -or $_.Name -like 'alumdoor-payroll*.test.mjs' } | ForEach-Object { $_.FullName }
+          node --test $tests
+          Assert-LastExit 'attendance/payroll tests'
+          Pop-Location
+
+          $trackedAfter = git -C $worktree status --porcelain --untracked-files=no
+          if ($trackedAfter) { throw "Verification modified tracked files:`n$trackedAfter" }
+          Write-Host 'ATTENDANCE_PAYROLL_ISOLATED_VERIFY_OK'
