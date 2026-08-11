@@ -27,8 +27,6 @@ jobs:
             throw 'Local working tree has non-backup changes; refusing to continue'
           }
 
-          # The control PR never resets or cleans local work. It may only fast-forward
-          # the already-selected experiment branch to the exact remote commit under test.
           git fetch origin exp/alumdoor-pricing-policy
           if ($LASTEXITCODE -ne 0) { throw 'Failed to fetch pricing experiment' }
           git merge --ff-only origin/exp/alumdoor-pricing-policy
@@ -40,4 +38,4 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Full server unit regression failed' }
           Write-Host 'PRICING_EXPERIMENT_FULL_SERVER_UNIT_PASS'
 
-# trigger coordinated-inventory 5839a041
+# trigger reservation-lifecycle-and-receipt-exact f495f0d0
