@@ -8,7 +8,7 @@ Status vocabulary: `BOOTSTRAPPED | RUNNING | BLOCKED | READY | CONVERGING | DONE
 
 | Agent | Branch | PR | Mission | Status | Depends / blocker |
 |---|---|---:|---|---|---|
-| GRID-01 PARITY | `agent/grid-01-parity-20260811` | — | Audit mature vs current grid; lock feature + per-DocType parity contract | BOOTSTRAPPED | — |
+| GRID-01 PARITY | `agent/grid-01-parity-20260811` | #827 | Audit mature vs current grid; lock feature + per-DocType parity contract | READY | Reference locked in `SMART_GRID_PARITY_MATRIX.md`; GRID-02/03/04 may consume |
 | GRID-02 RUNTIME | `agent/grid-02-runtime-20260811` | — | Restore SmartGrid interactions in metadata-owned generic runtime | BOOTSTRAPPED | Program contract; consume GRID-01 refinements |
 | GRID-03 ALUM META | `agent/grid-03-alumdoor-meta-20260811` | — | Reconcile AlumDoor quick/full/internal columns against current backend | BOOTSTRAPPED | Current Sales/Procurement backend contracts |
 | GRID-04 QA | `agent/grid-04-qa-20260811` | — | Build parity/E2E/convergence evidence | BOOTSTRAPPED | Final GRID-02 + GRID-03 candidate heads |
