@@ -13,12 +13,15 @@ const SALES_FULL_FIELDS = [
 
 const PURCHASE_COMPACT_FIELDS = ["item_code", "qty", "uom", "rate", "amount"];
 const PURCHASE_ORDER_FULL_FIELDS = [
-  "item_code", "length_m", "theoretical_kg_per_m", "qty_bundle", "qty_bar", "theoretical_kg",
-  "qty", "uom", "rate", "amount", "color", "is_stamped", "so_no", "warehouse", "note",
+  "item_code", "color", "height_m", "width_m", "set_count",
+  "length_m", "theoretical_kg_per_m", "qty_bundle", "qty_bar", "theoretical_kg",
+  "qty", "uom", "rate", "amount", "is_stamped", "so_no", "warehouse", "note",
 ];
 const PURCHASE_RECEIPT_FULL_FIELDS = [
-  "item_code", "length_m", "qty_bundle", "qty_bar", "qty", "uom", "rate", "amount",
-  "theoretical_kg", "actual_weight_kg", "color", "is_stamped", "so_no", "warehouse", "purchase_order", "note",
+  "item_code", "color", "height_m", "width_m", "set_count",
+  "length_m", "qty_bundle", "qty_bar", "qty", "uom", "rate", "rate_uom", "amount",
+  "theoretical_kg", "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm", "weight_variance_pct",
+  "condition", "is_stamped", "so_no", "warehouse", "purchase_order", "note",
 ];
 
 const EXACT = new Map([
@@ -79,6 +82,10 @@ function isInternalField(doctypeName, field) {
     || (SALES_PREVIEW.has(doctypeName) && SALES_INTERNAL_FIELDS.has(field.fieldname));
 }
 
+function isAuthoredQuick(field, listed) {
+  return listed.has(field.fieldname) || field.in_list_view === true || field.in_list_view === 1 || field.surface === "quick";
+}
+
 function requiredEditableNames(doctypeName, fields, full) {
   const allowed = new Set(full);
   return fields
@@ -121,7 +128,7 @@ function exactSurface(doctypeName, field, policy) {
 
 function defaultSurface(doctypeName, field, listed) {
   if (isInternalField(doctypeName, field)) return "internal";
-  if ((field.required && !hasConditionalApplicability(field)) || listed.has(field.fieldname)) return "quick";
+  if ((field.required && !hasConditionalApplicability(field)) || isAuthoredQuick(field, listed)) return "quick";
   return "expanded";
 }
 
@@ -131,7 +138,7 @@ function genericPolicy(doctypeName, fields, listed) {
     .map((field) => field.fieldname);
   let quick = fields
     .filter((field) => !isInternalField(doctypeName, field)
-      && ((field.required && !hasConditionalApplicability(field)) || listed.has(field.fieldname)))
+      && ((field.required && !hasConditionalApplicability(field)) || isAuthoredQuick(field, listed)))
     .map((field) => field.fieldname);
   if (!quick.length && full.length) quick = [full[0]];
   return { full, quick };
@@ -141,9 +148,10 @@ function genericPolicy(doctypeName, fields, listed) {
  * Materialise AlumDoor child-grid presentation into the canonical brief source.
  *
  * Exact transaction children have an operator-curated full/compact contract. Other children keep
- * their authored list order, but internal Selling snapshots stay out of business surfaces. A
- * conditional required field remains reachable in the full/detail surface without being forced
- * into every compact row. Runtime applicability is evaluated per row by the generic grid.
+ * their authored list/field-level quick intent, while internal Selling snapshots stay out of
+ * business surfaces. A conditional required field remains reachable in full/detail without being
+ * blanket-promoted into every compact row. Runtime applicability is evaluated per row by the
+ * generic grid.
  */
 export function applyAlumdoorChildPresentation(brief) {
   let migrated = 0;
