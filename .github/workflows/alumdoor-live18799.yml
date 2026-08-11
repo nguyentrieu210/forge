@@ -1,0 +1,45 @@
+name: Alumdoor live 18799
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/alumdoor-live18799.yml"]
+jobs:
+  live:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 30
+    steps:
+      - name: Run isolated HTTP certification
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $p=Join-Path $env:RUNNER_TEMP 'forge-alu-live18799'; $state=Join-Path $env:RUNNER_TEMP 'forge-alu-live18799-state'
+          if(Test-Path $p){cmd /c "rmdir /s /q `"$p`""|Out-Null}; if(Test-Path $state){cmd /c "rmdir /s /q `"$state`""|Out-Null}
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $p
+          Copy-Item -Force 'C:\alumdoor\server\.dev.vars' "$p\server\.dev.vars"
+          New-Item -ItemType Directory -Force -Path $state|Out-Null
+          Copy-Item -Path 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state\*' -Destination $state -Recurse -Force
+          Set-Location "$p\server"
+          pnpm install --frozen-lockfile; pnpm run build; pnpm run brief:check
+          $u='qa-alumdoor@example.test'; $pw='Qa!'+([guid]::NewGuid().ToString('N'))+'9x'; Write-Output "::add-mask::$pw"
+          $env:U=$u; $env:PW=$pw; $env:SQL=(Join-Path $env:RUNNER_TEMP 'alu-auth.sql')
+          @'
+          import{writeFileSync}from'node:fs';import{hashPassword}from'./dist/packages/frappe-api/src/index.js';
+          const q=v=>String(v).replaceAll("'","''"),n=new Date().toISOString(),h=await hashPassword(process.env.PW,1000),u=process.env.U;
+          writeFileSync(process.env.SQL,[`INSERT INTO roles(tenant_id,role,modified_at) VALUES('demo','System Manager','${q(n)}') ON CONFLICT DO NOTHING;`,`INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at) VALUES('demo','${q(u)}','Alumdoor QA','${q(u)}','${q(h)}','vi','Asia/Ho_Chi_Minh','${q(n)}','${q(n)}') ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash,enabled=1,modified_at=excluded.modified_at;`,`INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','${q(u)}','System Manager') ON CONFLICT DO NOTHING;`].join('\n'),'utf8');
+          '@|node --input-type=module
+          pnpm exec wrangler d1 execute cloudforge-demo --config apps/tenant-worker/wrangler.jsonc --local --persist-to "$state" --file "$env:SQL"
+          Remove-Item -Force $env:SQL
+          $log=Join-Path $env:RUNNER_TEMP 'alu-live18799.log'; $cmd="pnpm exec wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 18799 --local --persist-to `"$state`" > `"$log`" 2>&1"
+          $w=Start-Process cmd.exe -ArgumentList '/d','/s','/c',$cmd -PassThru -WindowStyle Hidden
+          try{
+            $ok=$false; for($i=0;$i-lt 80;$i++){Start-Sleep -Milliseconds 500; try{$r=Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:18799/api/method/metaforge.api.get_boot' -TimeoutSec 2 -ErrorAction Stop;if($r.StatusCode-ge 200){$ok=$true;break}}catch{if($_.Exception.Response-and[int]$_.Exception.Response.StatusCode-in@(401,403)){$ok=$true;break}};if($w.HasExited){break}}
+            if(-not $ok){Get-Content $log -Tail 160;throw 'isolated worker not ready'}
+            $env:FORGE_ADMIN_PASSWORD=$pw
+            node scripts/verify-alumdoor.mjs --origin http://127.0.0.1:18799 --admin $u
+            if($LASTEXITCODE-ne 0){Get-Content $log -Tail 180;throw 'sales live cert failed'}
+            node scripts/verify-alumdoor-mua.mjs --origin http://127.0.0.1:18799 --admin $u
+            if($LASTEXITCODE-ne 0){Get-Content $log -Tail 180;throw 'purchase live cert failed'}
+            Write-Host 'ALUMDOOR_LIVE_18799_PASS'
+          }finally{if($w-and-not $w.HasExited){Stop-Process -Id $w.Id -Force -ErrorAction SilentlyContinue}}
