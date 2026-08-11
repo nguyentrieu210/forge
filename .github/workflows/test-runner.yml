@@ -71,3 +71,5 @@ jobs:
           node --test tests/*.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Full server unit regression failed' }
           Write-Host 'ALUMDOOR_INVENTORY_FULL_SERVER_UNIT_PASS'
+
+# trigger terminal-reservation 89bfc0b5
