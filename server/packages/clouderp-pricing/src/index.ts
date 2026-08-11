@@ -125,7 +125,7 @@ export async function resolveServerPrice(
 
   // A selling-UOM price is optional. When it is absent, resolve from the Item's base
   // sales UOM and convert through the Item UOM factors. The requested variant is preserved:
-  // WITH_RAIL never silently falls back to STANDARD just because its exact UOM is absent.
+  // a non-standard variant never silently falls back to STANDARD just because its exact UOM is absent.
   if (!itemPrice && lineUom) {
     item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", itemCode);
     const baseUom = normalizedText(item?.default_sales_uom) || normalizedText(item?.stock_uom);
@@ -190,25 +190,28 @@ export async function resolveServerPrice(
     rate = multiplyDivideRounded(rate, targetFactor, sourceFactor);
   }
 
-  const rules = await context.reader.listMasterRecordData(context.command.tenant_id, "Pricing Rule");
-  const matches = rules
-    .filter(({ data }) => matchesRule(data, input))
-    .sort((a, b) => ruleScore(b.data) - ruleScore(a.data) || a.name.localeCompare(b.name));
-  const selected = matches[0];
+  let selected: { name: string; data: JsonObject } | undefined;
   let discount: string | undefined;
-  if (selected) {
-    const data = selected.data;
-    if (data.rate !== undefined) {
-      rate = toScaledInt(decimal(data.rate, "pricing rule rate"), scale, "pricing rule rate");
-    } else if (data.discount_percentage !== undefined) {
-      const pct = toScaledInt(decimal(data.discount_percentage, "discount percentage"), 6, "discount percentage");
-      if (pct < 0 || pct > 100_000_000) throw errors.validation("Discount percentage must be between 0 and 100");
-      const discountMinor = divideRounded(
-        multiplyScaled(fromScaledInt(rate, scale), scale, fromScaledInt(pct, 6), 6, scale),
-        100,
-      );
-      rate = Math.max(0, rate - discountMinor);
-      discount = fromScaledInt(pct, 6);
+  if (input.applyPricingRules !== false) {
+    const rules = await context.reader.listMasterRecordData(context.command.tenant_id, "Pricing Rule");
+    const matches = rules
+      .filter(({ data }) => matchesRule(data, input))
+      .sort((a, b) => ruleScore(b.data) - ruleScore(a.data) || a.name.localeCompare(b.name));
+    selected = matches[0];
+    if (selected) {
+      const data = selected.data;
+      if (data.rate !== undefined) {
+        rate = toScaledInt(decimal(data.rate, "pricing rule rate"), scale, "pricing rule rate");
+      } else if (data.discount_percentage !== undefined) {
+        const pct = toScaledInt(decimal(data.discount_percentage, "discount percentage"), 6, "discount percentage");
+        if (pct < 0 || pct > 100_000_000) throw errors.validation("Discount percentage must be between 0 and 100");
+        const discountMinor = divideRounded(
+          multiplyScaled(fromScaledInt(rate, scale), scale, fromScaledInt(pct, 6), 6, scale),
+          100,
+        );
+        rate = Math.max(0, rate - discountMinor);
+        discount = fromScaledInt(pct, 6);
+      }
     }
   }
   if (rate < 0) throw errors.validation("Resolved price cannot be negative");
