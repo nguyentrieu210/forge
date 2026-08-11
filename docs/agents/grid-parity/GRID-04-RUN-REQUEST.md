@@ -2,14 +2,19 @@
 
 Candidate composition:
 
-- GRID-02 implementation candidate: `c9d6995c8210195ff8116faf0deb28c2cefa0ead` (PR #826 later handoff-only head does not change product source).
+- GRID-02 product runtime: exact implementation `c9d6995c8210195ff8116faf0deb28c2cefa0ead`; later PR #826 head changes handoff only.
 - GRID-03 product blobs: materialized on this QA head without worker coordination history.
-- GRID-04 QA workflow: server, canonical build, grid/selfcheck and browser lanes run independently so one blocker cannot hide later evidence.
+- GRID-04 QA layer: convergence contracts, browser harness/workflow, plus two narrow test-infrastructure corrections discovered by exact-candidate execution. No runtime/business metadata implementation was changed.
 
-Observed exact-candidate evidence so far:
+Observed evidence before this rerun:
 
-- run `31475251792`: AlumDoor child-presentation contracts PASS; exposed GRID-02 selfcheck TypeScript errors and a QA build-invocation issue;
-- run `31475440211`: AlumDoor contracts PASS 6/6; GRID-04 cross-layer convergence tests PASS; diff hygiene PASS; canonical build/selfcheck still blocked by GRID-02 selfcheck typing; existing GRID-02 hook-order source test is a false-positive because its broad regex sees helper-local returns before a later hook, while the wrapper routing itself has no hook and no conditional hook execution;
-- browser artifacts from `31475440211` prove the UI assertions did not execute: Vite could not resolve built workspace package entries. GRID-04 therefore changed only QA infrastructure to run the harness against explicit workspace source aliases.
+- `31475251792`: AlumDoor contract PASS; exposed strict-null selfcheck errors and initial QA build invocation issue.
+- `31475440211`: AlumDoor 6/6 PASS; GRID-04 cross-layer tests PASS; diff hygiene PASS; source-contract false-positive identified; browser assertions did not execute because workspace dist entries were unavailable.
+- `31476662376`: confirms the same product evidence on merge-ref `987e8a1acf0bc615f9e5f4ab5a8f1f898ac6c971`; browser lane was isolated to workspace sources.
 
-This marker requests the next exact PR merge-ref run with the corrected source-isolated browser lane. It changes no runtime, business metadata, business rule, schema, tenant state or production state.
+GRID-04 corrected only QA/test infrastructure:
+
+1. `metadata-child-grid-smart-selfcheck.ts`: explicit non-null fixture bindings so strict TypeScript can typecheck deterministic test data.
+2. `metadata-child-grid-runtime.test.mjs`: hook-boundary regression now checks the actual architectural invariant — hook-free router wrapper + no legacy fallback inside the hook-owning smart component — instead of a broad regex that misclassified helper-local returns.
+
+This marker requests a fresh exact PR merge-ref run containing those QA corrections. No runtime, business metadata, controller, schema, migration, tenant, production or deploy state is changed.
