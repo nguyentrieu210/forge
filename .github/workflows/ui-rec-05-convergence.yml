@@ -2,7 +2,9 @@ name: UI REC 05 Convergence
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - program/backend-ui-reconciliation-20260811
 
 permissions:
   contents: read
