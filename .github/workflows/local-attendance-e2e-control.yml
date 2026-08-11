@@ -22,10 +22,9 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=5'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=6'
           git -C C:\alumdoor fetch origin main --prune
 
-          # Repair the partially patched runtime deterministically before the full control script.
           $mainPath = 'C:\forge-attendance-payroll\client\apps\runtime\src\main-base.tsx'
           $mainText = [IO.File]::ReadAllText($mainPath).Replace("`r`n", "`n")
           if (-not $mainText.Contains('const operationsMode = mode === "today"')) {
@@ -33,35 +32,35 @@ jobs:
             $end = if ($start -ge 0) { $mainText.IndexOf('  return <>{renderExperience', $start) } else { -1 }
             if ($start -lt 0 -or $end -lt 0) { throw 'Cannot locate AlumDoor attendance runtime block' }
             $newBlock = @'
-  if (kind === "alumdoor-attendance") {
-    const mode = experienceKey.slice("alumdoor-attendance:".length);
-    const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Chấm công & lương";
-    if (mode === "kiosk" || mode === "mobile") {
-      return (
-        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
-          <AlumdoorAttendanceKiosk />
-        </Shell>
-      );
-    }
-    const operationsMode = mode === "today" ? "today"
-      : mode === "month" ? "month"
-      : mode === "exceptions" ? "exceptions"
-      : mode === "payroll-run" ? "payroll-run"
-      : mode === "payroll-my-slips" ? "payroll-my-slips"
-      : null;
-    if (operationsMode) {
-      return (
-        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
-          <AlumdoorAttendanceOperations
-            mode={operationsMode}
-            onExit={() => navigate(`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`)}
-          />
-        </Shell>
-      );
-    }
-  }
-'@
-            $newBlock = $newBlock.Replace("`r`n", "`n")
+            if (kind === "alumdoor-attendance") {
+              const mode = experienceKey.slice("alumdoor-attendance:".length);
+              const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Chấm công & lương";
+              if (mode === "kiosk" || mode === "mobile") {
+                return (
+                  <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
+                    <AlumdoorAttendanceKiosk />
+                  </Shell>
+                );
+              }
+              const operationsMode = mode === "today" ? "today"
+                : mode === "month" ? "month"
+                : mode === "exceptions" ? "exceptions"
+                : mode === "payroll-run" ? "payroll-run"
+                : mode === "payroll-my-slips" ? "payroll-my-slips"
+                : null;
+              if (operationsMode) {
+                return (
+                  <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
+                    <AlumdoorAttendanceOperations
+                      mode={operationsMode}
+                      onExit={() => navigate(`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`)}
+                    />
+                  </Shell>
+                );
+              }
+            }
+          '@
+            $newBlock = ($newBlock -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
             [IO.File]::WriteAllText($mainPath, $mainText.Substring(0, $start) + $newBlock + "`n" + $mainText.Substring($end), [Text.UTF8Encoding]::new($false))
           }
 
@@ -70,27 +69,27 @@ jobs:
           $raw = $raw.Replace("  Assert-Exit 'attendance app package check'`nfinally { Pop-Location }", "  Assert-Exit 'attendance app package check'`n} finally { Pop-Location }")
           $raw = $raw.Replace("  Assert-Exit 'install attendance payroll app locally'`nfinally { Pop-Location }", "  Assert-Exit 'install attendance payroll app locally'`n} finally { Pop-Location }")
           $oldHelper = @'
-function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
-  $text = [IO.File]::ReadAllText($path)
-  if ($text.Contains($new)) { Write-Host "$label already applied"; return }
-  if (-not $text.Contains($old)) { throw "$label anchor not found in $path" }
-  Write-Utf8 $path ($text.Replace($old, $new))
-  Write-Host "$label applied"
-}
-'@
+          function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
+            $text = [IO.File]::ReadAllText($path)
+            if ($text.Contains($new)) { Write-Host "$label already applied"; return }
+            if (-not $text.Contains($old)) { throw "$label anchor not found in $path" }
+            Write-Utf8 $path ($text.Replace($old, $new))
+            Write-Host "$label applied"
+          }
+          '@
           $newHelper = @'
-function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
-  $text = [IO.File]::ReadAllText($path).Replace("`r`n", "`n")
-  $old = $old.Replace("`r`n", "`n")
-  $new = $new.Replace("`r`n", "`n")
-  if ($text.Contains($new)) { Write-Host "$label already applied"; return }
-  if (-not $text.Contains($old)) { throw "$label anchor not found in $path" }
-  Write-Utf8 $path ($text.Replace($old, $new))
-  Write-Host "$label applied"
-}
-'@
-          $oldHelper = $oldHelper.Replace("`r`n", "`n")
-          $newHelper = $newHelper.Replace("`r`n", "`n")
+          function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
+            $text = [IO.File]::ReadAllText($path).Replace("`r`n", "`n")
+            $old = $old.Replace("`r`n", "`n")
+            $new = $new.Replace("`r`n", "`n")
+            if ($text.Contains($new)) { Write-Host "$label already applied"; return }
+            if (-not $text.Contains($old)) { throw "$label anchor not found in $path" }
+            Write-Utf8 $path ($text.Replace($old, $new))
+            Write-Host "$label applied"
+          }
+          '@
+          $oldHelper = ($oldHelper -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
+          $newHelper = ($newHelper -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
           if (-not $raw.Contains($oldHelper)) { throw 'control script helper anchor missing' }
           $raw = $raw.Replace($oldHelper, $newHelper)
           [IO.File]::WriteAllText($controlScript, $raw + "`n", [Text.UTF8Encoding]::new($false))
