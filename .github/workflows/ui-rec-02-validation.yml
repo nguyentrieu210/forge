@@ -1,0 +1,65 @@
+name: UI REC 02 Sidebar Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/briefs/alumdoor-ui-rec-02-navigation.plan.json"
+      - "server/briefs/alumdoor-v2.json"
+      - "server/apps-src/alumdoor-attendance/app.json"
+      - "server/migrations/tenant/0118_sales_price_variants_options.sql"
+      - "server/migrations/tenant/0119_sales_package_line_fulfillment.sql"
+      - "server/migrations/tenant/0120_sales_operator_metadata.sql"
+      - "server/scripts/build-alumdoor-ui-rec-02-sidebar.mjs"
+      - "server/scripts/build-sidebar-release.mjs"
+      - "server/tests/alumdoor-ui-rec-02-navigation.test.mjs"
+      - ".github/workflows/ui-rec-02-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-rec-02-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ui-rec-02:
+    if: startsWith(github.head_ref, 'agent/ui-rec-02-sidebar-master-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run focused navigation contract tests
+        working-directory: server
+        run: node --test tests/alumdoor-ui-rec-02-navigation.test.mjs
+
+      - name: Generate bounded reconciled sidebar manifest
+        working-directory: server
+        run: node scripts/build-alumdoor-ui-rec-02-sidebar.mjs /tmp/alumdoor-ui-rec-02-sidebar.json
+
+      - name: Validate bounded release generation
+        working-directory: server
+        run: node scripts/build-sidebar-release.mjs /tmp/alumdoor-ui-rec-02-sidebar.json /tmp/alumdoor-ui-rec-02-sidebar.sql alu 2.0.36
+
+      - name: Assert release remains navigation-only
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const manifest = JSON.parse(fs.readFileSync('/tmp/alumdoor-ui-rec-02-sidebar.json', 'utf8'));
+          const sql = fs.readFileSync('/tmp/alumdoor-ui-rec-02-sidebar.sql', 'utf8');
+          if (manifest.id !== 'alumdoor' || manifest.version !== '2.0.37') throw new Error('unexpected sidebar manifest identity/version');
+          const keys = new Set(manifest.nav.map((item) => item.key));
+          for (const key of ['Sales Option', 'Sales Package']) if (!keys.has(key)) throw new Error(`missing P0 master: ${key}`);
+          for (const key of ['Aluminium Lot', 'Aluminium Cut', 'Sales Package Item']) if (keys.has(key)) throw new Error(`dead/internal key leaked: ${key}`);
+          if (!sql.includes("'$.nav'")) throw new Error('release does not update manifest nav');
+          if (/doctype_definitions|document_values|ledger_entries/i.test(sql)) throw new Error('bounded sidebar release touches business/schema tables');
+          NODE
