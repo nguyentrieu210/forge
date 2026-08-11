@@ -23,6 +23,7 @@ jobs:
             return [System.IO.Path]::GetFullPath($value.Replace('/', '\')).TrimEnd('\').ToLowerInvariant()
           }
 
+          # Attendance/payroll worktree is intentionally isolated from the shared manufacturing checkout.
           $repo = 'C:\alumdoor'
           $worktree = 'C:\forge-attendance-payroll'
           $target = 'feature/attendance-payroll'
