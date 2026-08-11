@@ -10,127 +10,46 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 50
+    timeout-minutes: 10
     steps:
-      - name: Verify local experiment checkout is safe
+      - name: Switch C:\alumdoor to attendance payroll branch
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          if ((git branch --show-current) -ne 'exp/alumdoor-pricing-policy') { throw 'Wrong local branch' }
+
+          $target = 'feature/attendance-payroll'
+          $current = git branch --show-current
           $status = @(git status --porcelain --untracked-files=all)
           $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
-          if ($unsafe.Count -gt 0) { $unsafe | ForEach-Object { Write-Host $_ }; throw 'Unsafe local changes' }
-          Write-Host "LOCAL_COMMIT=$(git rev-parse HEAD)"
-
-      - name: Patch and certify in disposable clone
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $probe = Join-Path $env:RUNNER_TEMP 'forge-print-reservation-fix'
-          if (Test-Path $probe) { cmd /c "rmdir /s /q `"$probe`"" | Out-Null }
-          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
-          if ($LASTEXITCODE -ne 0) { throw 'clone failed' }
-          Set-Location $probe
-          git config user.name "Alumdoor Certification Runner"
-          git config user.email "alumdoor-cert@local.invalid"
-
-          @'
-          import fs from "node:fs";
-          function edit(path, transform) {
-            const before = fs.readFileSync(path, "utf8");
-            const after = transform(before);
-            if (after === before) throw new Error(`no patch applied to ${path}`);
-            fs.writeFileSync(path, after);
+          if ($unsafe.Count -gt 0) {
+            Write-Host "Refusing branch switch because C:\alumdoor has tracked or unexpected local changes:"
+            $unsafe | ForEach-Object { Write-Host $_ }
+            throw 'Unsafe local changes'
           }
 
-          edit("server/scripts/build-alumdoor-v2-brief.mjs", (source) => {
-            const page = '    "@page{size:A4 portrait;margin:0}",';
-            const body = '    "*{box-sizing:border-box}html,body{margin:0;width:210mm;min-height:297mm}body{font-family:Arial,\'Liberation Sans\',sans-serif;font-size:9px;color:#111;padding:23.7mm 8mm 8mm;font-kerning:none;letter-spacing:0;word-spacing:0}",';
-            if (!source.includes(page) || !source.includes(body)) throw new Error("Purchase Order print CSS anchors missing");
-            return source
-              .replace(page, '    "@page{size:A4 portrait;margin:12mm 8mm 8mm}",\n    "@page :first{margin-top:23.7mm}",')
-              .replace(body, '    "*{box-sizing:border-box}html,body{margin:0}body{font-family:Arial,\'Liberation Sans\',sans-serif;font-size:9px;color:#111;font-kerning:none;letter-spacing:0;word-spacing:0}",\n    "@media screen{html{width:210mm}body{width:210mm;min-height:297mm;padding:23.7mm 8mm 8mm}}",');
-          });
+          git fetch origin main --prune
+          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main failed' }
+          $mainSha = (git rev-parse origin/main).Trim()
 
-          edit("server/apps-src/alumdoor-worker/src/index.ts", (source) => {
-            const applyStart = source.indexOf("async function applyCutV2(");
-            const consumeStart = source.indexOf("async function consumeReservationsForCut(", applyStart);
-            const reverseStart = source.indexOf("async function reverseCutV2(", consumeStart);
-            if (applyStart < 0 || consumeStart < 0 || reverseStart < 0) throw new Error("Cut reservation function bounds missing");
-            let apply = source.slice(applyStart, consumeStart);
-            const block = /  const reservations = await consumeReservationsForCut\(call, name, cut\.so_reference\);\r?\n  const paint = await syncPaintJobsFromCut\(call, name, 1\);\r?\n  return answer\(\{[\s\S]*?\r?\n  \}\);\r?\n\}\r?\n\r?\n$/;
-            if (!block.test(apply)) throw new Error("applyCutV2 reservation block missing");
-            apply = apply.replace(block, `  const paint = await syncPaintJobsFromCut(call, name, 1);\n  return answer({\n    cut_order: name,\n    submitted: true,\n    idempotent: cut.cut_state === "Đã cắt",\n    reservation_consumption: "derived-from-cut-order-stock-ledger",\n    paint,\n    message: \`Đã cắt và trừ tồn theo phiếu \${name}; lượng giữ chỗ đã dùng được suy từ Stock Ledger của phiếu cắt.\`,\n  });\n}\n\n`);
-            return source.slice(0, applyStart) + apply + source.slice(reverseStart);
-          });
-
-          fs.writeFileSync("server/tests/alumdoor-worker-reservation-authority.test.mjs", `import test from "node:test";\nimport assert from "node:assert/strict";\nimport fs from "node:fs";\n\nconst source = fs.readFileSync(new URL("../apps-src/alumdoor-worker/src/index.ts", import.meta.url), "utf8");\n\ntest("app worker does not directly consume Stock Reservation records", () => {\n  assert.equal(source.includes("consumeReservationsForCut"), false);\n  assert.equal(source.includes('reservation_consumption: "derived-from-cut-order-stock-ledger"'), true);\n});\n`);
-          '@ | node --input-type=module
-          if ($LASTEXITCODE -ne 0) { throw 'source patch failed' }
-
-          Set-Location server
-          pnpm install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { throw 'server install failed' }
-          node scripts/build-alumdoor-v2-brief.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'brief regeneration failed' }
-          pnpm run build
-          if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
-          pnpm run brief:check
-          if ($LASTEXITCODE -ne 0) { throw 'brief check failed' }
-          pnpm exec vitest run apps-src/alumdoor-worker/tests/ui-child-preview.test.ts --environment node
-          if ($LASTEXITCODE -ne 0) { throw 'worker preview tests failed' }
-          node --test tests/alumdoor-worker-reservation-authority.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'reservation authority test failed' }
-          pnpm exec wrangler deploy --dry-run --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc --outdir "$env:RUNNER_TEMP\alumdoor-worker-print-reservation"
-          if ($LASTEXITCODE -ne 0) { throw 'worker dry-run failed' }
-          Write-Host 'ALUMDOOR_WORKER_AUTHORITY_PASS'
-
-          Set-Location ..\client
-          pnpm install --no-frozen-lockfile --lockfile=false
-          if ($LASTEXITCODE -ne 0) { throw 'client install failed' }
-          pnpm --filter @metaforge/views... run build
-          if ($LASTEXITCODE -ne 0) { throw 'MetaForge dependency build failed' }
-          Set-Location packages\views
-          node --test tests/child-grid-presentation.test.mjs tests/metadata-child-grid-runtime.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'metadata UI tests failed' }
-          Write-Host 'ALUMDOOR_METADATA_UI_PASS'
-
-          Set-Location $probe\server
-          node --test tests/alumdoor-sales-order-print.test.mjs tests/alumdoor-purchase-order-print.test.mjs tests/alumdoor-delivery-note-print.test.mjs tests/alumdoor-cut-order-print.test.mjs tests/alumdoor-production-request-print.test.mjs tests/alumdoor-stock-reconciliation-print.test.mjs tests/alumdoor-handover-acceptance-print.test.mjs tests/alumdoor-print-brand-consistency.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'print certification failed' }
-          Write-Host 'ALUMDOOR_PRINT_CERT_PASS'
-
-          node --test tests/stock-reservation-integrity.test.mjs tests/reservation-source-lifecycle.test.mjs tests/outbound-reservation-guard.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'inventory certification failed' }
-          Write-Host 'ALUMDOOR_INVENTORY_CERT_PASS'
-
-          node --test tests/transaction-closure-sales-o2c.test.mjs tests/procurement-p2p-closure.test.mjs tests/manufacturing-transaction-closure.test.mjs tests/finance-payment-allocation.test.mjs tests/finance-stock-control-policy.test.mjs tests/finance-stock-control-query.test.mjs tests/sales-production-flow.test.mjs tests/alumdoor-manufacturing-lifecycle.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'transaction closure failed' }
-          Write-Host 'ALUMDOOR_TRANSACTION_CLOSURE_CERT_PASS'
-
-          $full = Join-Path $env:RUNNER_TEMP 'alumdoor-full-fix.log'
-          cmd /c "node --test tests/*.test.mjs > `"$full`" 2>&1"
-          $fullExit = $LASTEXITCODE
-          if ($fullExit -ne 0) {
-            Select-String -Path $full -Pattern '^not ok ','AssertionError','ERR_','error:','expected:','actual:' -Context 2,5 | Select-Object -First 180 | ForEach-Object { Write-Host $_.ToString() }
-            Get-Content $full -Tail 180 | ForEach-Object { Write-Host $_ }
-            throw "full server regression failed with exit $fullExit"
+          $localTarget = git show-ref --verify --quiet "refs/heads/$target"
+          if ($LASTEXITCODE -eq 0) {
+            git switch $target
+            if ($LASTEXITCODE -ne 0) { throw 'switch to existing attendance payroll branch failed' }
+          } else {
+            git switch -c $target origin/main
+            if ($LASTEXITCODE -ne 0) { throw 'create attendance payroll branch from origin/main failed' }
           }
-          Get-Content $full -Tail 35 | ForEach-Object { Write-Host $_ }
-          Write-Host 'ALUMDOOR_FULL_SERVER_UNIT_PASS'
 
-          Set-Location $probe
-          git diff --check
-          if ($LASTEXITCODE -ne 0) { throw 'diff check failed' }
-          git add server/scripts/build-alumdoor-v2-brief.mjs server/briefs/alumdoor-v2.json server/apps-src/alumdoor-worker/src/index.ts server/tests/alumdoor-worker-reservation-authority.test.mjs
-          git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { throw 'expected fixes missing' }
-          git commit -m "fix(alumdoor): align print margins and reservation authority"
-          if ($LASTEXITCODE -ne 0) { throw 'commit failed' }
-          git push origin HEAD:exp/alumdoor-pricing-policy
-          if ($LASTEXITCODE -ne 0) { throw 'push failed' }
-          Write-Host "FIX_COMMIT=$(git rev-parse HEAD)"
-          Write-Host 'ALUMDOOR_PRINT_RESERVATION_FIX_PASS'
+          $after = (git branch --show-current).Trim()
+          if ($after -ne $target) { throw "Wrong local branch after switch: $after" }
 
-# print-reservation-cert-v4
+          $head = (git rev-parse HEAD).Trim()
+          Write-Host "PREVIOUS_BRANCH=$current"
+          Write-Host "LOCAL_BRANCH=$after"
+          Write-Host "LOCAL_HEAD=$head"
+          Write-Host "ORIGIN_MAIN=$mainSha"
+
+          $aheadBehind = (git rev-list --left-right --count "$target...origin/main").Trim()
+          Write-Host "TARGET_VS_ORIGIN_MAIN=$aheadBehind"
+          Write-Host 'ATTENDANCE_PAYROLL_LOCAL_BRANCH_READY'
