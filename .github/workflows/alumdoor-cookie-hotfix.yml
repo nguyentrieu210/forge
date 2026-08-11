@@ -1,0 +1,36 @@
+name: Alumdoor cookie harness hotfix
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/alumdoor-cookie-hotfix.yml"]
+jobs:
+  patch:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 10
+    steps:
+      - name: Patch verify cookie fallback and push
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop';$p=Join-Path $env:RUNNER_TEMP 'forge-alu-cookie'
+          if(Test-Path $p){cmd /c "rmdir /s /q `"$p`""|Out-Null}
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $p
+          Set-Location $p;$base=(git rev-parse HEAD).Trim();$env:P=$p
+          @'
+          from pathlib import Path
+          import os
+          r=Path(os.environ['P']); old='  for (const line of response.headers.getSetCookie?.() ?? []) {'
+          new='  const setCookieLines = response.headers.getSetCookie?.() ?? [];\n  const fallbackSetCookie = response.headers.get("set-cookie");\n  if (!setCookieLines.length && fallbackSetCookie) setCookieLines.push(fallbackSetCookie);\n  for (const line of setCookieLines) {'
+          for rel in ['server/scripts/verify-alumdoor.mjs','server/scripts/verify-alumdoor-mua.mjs']:
+              f=r/rel;s=f.read_text(encoding='utf-8');assert old in s,rel;f.write_text(s.replace(old,new,1),encoding='utf-8',newline='\n')
+          '@|python -
+          node --check server/scripts/verify-alumdoor.mjs;if($LASTEXITCODE-ne 0){throw 'sales verify syntax failed'}
+          node --check server/scripts/verify-alumdoor-mua.mjs;if($LASTEXITCODE-ne 0){throw 'purchase verify syntax failed'}
+          git diff --check;if($LASTEXITCODE-ne 0){throw 'diff check failed'}
+          git fetch origin exp/alumdoor-pricing-policy --quiet;if((git rev-parse origin/exp/alumdoor-pricing-policy).Trim() -ne $base){throw 'experiment advanced during cookie patch'}
+          git config user.name 'Alumdoor Certification Runner';git config user.email 'alumdoor-cert@local.invalid'
+          git add server/scripts/verify-alumdoor.mjs server/scripts/verify-alumdoor-mua.mjs
+          git commit -m 'test(alumdoor): preserve session cookie in live verification';if($LASTEXITCODE-ne 0){throw 'commit failed'}
+          git push origin HEAD:exp/alumdoor-pricing-policy;if($LASTEXITCODE-ne 0){throw 'push failed'}
+          Write-Host "COOKIE_HARNESS_PUSHED=$(git rev-parse HEAD)"
