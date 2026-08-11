@@ -1,0 +1,62 @@
+name: Run attendance payroll on 5173
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/test-runner.yml"]
+
+jobs:
+  launch:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 10
+    steps:
+      - name: Launch attendance payroll Vite on 5173
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $worktree = 'C:\forge-attendance-payroll'
+          $port = 5173
+          if (-not (Test-Path $worktree)) { throw 'C:\forge-attendance-payroll is missing' }
+          $branch = (git -C $worktree branch --show-current).Trim()
+          if ($branch -ne 'feature/attendance-payroll') { throw "unexpected branch: $branch" }
+          $dirty = git -C $worktree status --porcelain --untracked-files=all
+          if ($dirty) { throw "attendance worktree is dirty:`n$dirty" }
+
+          $existing = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $existing) {
+            $clientNodeModules = Join-Path $worktree 'client\node_modules'
+            if (-not (Test-Path (Join-Path $clientNodeModules '.bin\vite.cmd'))) {
+              $cache = 'C:\alumdoor\client\node_modules'
+              if (-not (Test-Path (Join-Path $cache '.bin\vite.cmd'))) { throw 'client node_modules cache is missing' }
+              if (Test-Path $clientNodeModules) { Remove-Item $clientNodeModules -Force -Recurse }
+              cmd /c "mklink /J `"$clientNodeModules`" `"$cache`""
+              if ($LASTEXITCODE -ne 0) { throw 'node_modules junction failed' }
+            }
+            New-Item -ItemType Directory -Force -Path 'C:\forge-attendance-payroll-dev' | Out-Null
+            $out = 'C:\forge-attendance-payroll-dev\5173.out.log'
+            $err = 'C:\forge-attendance-payroll-dev\5173.err.log'
+            Remove-Item $out,$err -Force -ErrorAction SilentlyContinue
+            [Environment]::SetEnvironmentVariable('RUNNER_TRACKING_ID', '', 'Process')
+            $args = '/d /s /c "cd /d C:\forge-attendance-payroll && pnpm --dir client --filter runtime dev -- --host 0.0.0.0 --port 5173 --strictPort"'
+            $p = Start-Process -FilePath 'cmd.exe' -ArgumentList $args -WorkingDirectory $worktree -RedirectStandardOutput $out -RedirectStandardError $err -WindowStyle Hidden -PassThru
+            Write-Host "DEV_LAUNCHER_PID=$($p.Id)"
+          }
+
+          $ok = $false
+          for ($i = 0; $i -lt 25; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -TimeoutSec 3
+              if ($r.StatusCode -eq 200) { $ok = $true; break }
+            } catch {}
+          }
+          if (-not $ok) {
+            if (Test-Path 'C:\forge-attendance-payroll-dev\5173.out.log') { Get-Content 'C:\forge-attendance-payroll-dev\5173.out.log' -Tail 100 }
+            if (Test-Path 'C:\forge-attendance-payroll-dev\5173.err.log') { Get-Content 'C:\forge-attendance-payroll-dev\5173.err.log' -Tail 100 }
+            throw '5173 did not return HTTP 200'
+          }
+          $listener = Get-NetTCPConnection -LocalPort 5173 -State Listen | Select-Object -First 1
+          Write-Host "PORT_5173_PID=$($listener.OwningProcess)"
+          Write-Host 'LOCAL_URL=http://127.0.0.1:5173/'
+          Write-Host 'ATTENDANCE_PAYROLL_5173_READY'
