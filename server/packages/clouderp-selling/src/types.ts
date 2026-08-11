@@ -43,6 +43,9 @@ export interface SalesItem extends UomLine {
   rate_requires_approval?: boolean;
   pricing_rule?: string;
   discount_percentage?: string;
+  /** Exact Item Price record/variant used as the server-owned discount basis. */
+  discount_basis_item_price?: string;
+  discount_basis_variant?: string;
   /** Server-owned basis retained even when the UI only displays discount money. */
   discount_basis_rate?: DecimalInput;
   discount_basis_rate_minor?: number;
