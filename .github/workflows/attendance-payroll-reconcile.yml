@@ -1,0 +1,68 @@
+name: Attendance payroll reconcile worktree
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-reconcile.yml"]
+
+jobs:
+  reconcile:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 30
+    steps:
+      - name: Verify and preserve attendance payroll worktree changes
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Assert-LastExit([string]$label) { if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" } }
+          $repo = 'C:\alumdoor'
+          $worktree = 'C:\forge-attendance-payroll'
+          $target = 'feature/attendance-payroll'
+          if (-not (Test-Path $worktree)) { throw 'attendance payroll worktree missing' }
+          git -C $repo fetch origin $target --prune
+          Assert-LastExit 'fetch feature'
+          Write-Host 'STATUS_BEFORE_BEGIN'
+          git -C $worktree status --short --untracked-files=all
+          Write-Host 'STATUS_BEFORE_END'
+          Write-Host 'DIFFSTAT_BEGIN'
+          git -C $worktree diff --stat
+          Write-Host 'DIFFSTAT_END'
+
+          $allowed = @(
+            'server/apps-src/alumdoor-attendance/app.json',
+            'server/apps-src/alumdoor-attendance/doctypes/alumdoor-attendance-day.json',
+            'server/packages/clouderp-erpnext/src/alumdoor-payroll-entry.ts',
+            'server/tests/alumdoor-attendance-metadata.test.mjs',
+            'server/tests/alumdoor-attendance-day-controller.test.mjs'
+          )
+          $changed = @(git -C $worktree diff --name-only) + @(git -C $worktree ls-files --others --exclude-standard)
+          $unexpected = @($changed | Where-Object { $_ -and ($allowed -notcontains $_) })
+          if ($unexpected.Count -gt 0) { throw "Unexpected worktree changes:`n$($unexpected -join "`n")" }
+
+          $cachedNodeModules = "$repo\server\node_modules"
+          $worktreeNodeModules = "$worktree\server\node_modules"
+          if (-not (Test-Path "$worktreeNodeModules\.bin\tsc.cmd")) {
+            if (Test-Path $worktreeNodeModules) { throw 'attendance node_modules exists but is incomplete' }
+            cmd /c "mklink /J `"$worktreeNodeModules`" `"$cachedNodeModules`""
+            Assert-LastExit 'node_modules junction'
+          }
+          Push-Location "$worktree\server"
+          npm run build
+          Assert-LastExit 'server build'
+          node scripts/pack-app.mjs apps-src/alumdoor-attendance --check
+          Assert-LastExit 'attendance app pack'
+          $tests = Get-ChildItem tests -File | Where-Object { $_.Name -like 'alumdoor-attendance*.test.mjs' -or $_.Name -like 'alumdoor-payroll*.test.mjs' } | ForEach-Object { $_.FullName }
+          node --test $tests
+          Assert-LastExit 'focused tests'
+          Pop-Location
+
+          if ($changed.Count -gt 0) {
+            git -C $worktree add -- $allowed
+            git -C $worktree commit -m "fix(alumdoor): harden attendance payroll metadata contracts"
+            Assert-LastExit 'commit reconciled changes'
+            git -C $worktree push origin "HEAD:$target"
+            Assert-LastExit 'push reconciled changes'
+          }
+          Write-Host "FEATURE_HEAD=$((git -C $worktree rev-parse HEAD).Trim())"
+          Write-Host 'ATTENDANCE_PAYROLL_RECONCILE_OK'
