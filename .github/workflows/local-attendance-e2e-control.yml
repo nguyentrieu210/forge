@@ -22,8 +22,11 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=2'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=3'
           git -C C:\alumdoor fetch origin main --prune
           $controlScript = Join-Path $env:RUNNER_TEMP 'local-attendance-e2e.ps1'
-          git -C C:\alumdoor show origin/main:.github/scripts/local-attendance-e2e.ps1 | Set-Content -Path $controlScript -Encoding UTF8
+          $raw = (git -C C:\alumdoor show origin/main:.github/scripts/local-attendance-e2e.ps1) -join "`n"
+          $raw = $raw.Replace("  Assert-Exit 'attendance app package check'`nfinally { Pop-Location }", "  Assert-Exit 'attendance app package check'`n} finally { Pop-Location }")
+          $raw = $raw.Replace("  Assert-Exit 'install attendance payroll app locally'`nfinally { Pop-Location }", "  Assert-Exit 'install attendance payroll app locally'`n} finally { Pop-Location }")
+          [IO.File]::WriteAllText($controlScript, $raw + "`n", [Text.UTF8Encoding]::new($false))
           powershell -NoProfile -ExecutionPolicy Bypass -File $controlScript
