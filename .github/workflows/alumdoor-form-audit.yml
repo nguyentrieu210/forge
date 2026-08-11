@@ -1,0 +1,31 @@
+name: Alumdoor form purity audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/alumdoor-form-audit.yml"
+
+jobs:
+  audit:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 10
+    steps:
+      - name: Audit experiment form seams
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $probe = Join-Path $env:RUNNER_TEMP 'forge-alumdoor-form-audit'
+          if (Test-Path $probe) { cmd /c "rmdir /s /q `"$probe`"" | Out-Null }
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
+          Set-Location $probe
+          Write-Host "HEAD=$(git rev-parse HEAD)"
+          Write-Host '=== FORMVIEW SALES REFERENCES ==='
+          git grep -n -I -E 'Sales Order|salesOrder|salesSummary|salesVat|salesSurcharge|defaultSalesDiscountPercent|formatSalesVnd|autoPriceList|payment_method|discount_requires_approval' -- client/packages/views/src/form/FormView.tsx
+          Write-Host '=== FIELD SERVICES API ==='
+          git grep -n -I -E 'interface FieldServices|type FieldServices|callMethod|runMethod|invoke|preview' -- client/packages/controls client/packages/views | Select-Object -First 200
+          Write-Host '=== VIEW POLICY EXTENSIONS ==='
+          git grep -n -I -E 'previewMethod|previewParentFields|viewPolicy' -- client/packages/core server/packages/frappe-model server/scripts/lib | Select-Object -First 200
+          Write-Host 'FORM_PURITY_AUDIT_PASS'
