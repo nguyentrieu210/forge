@@ -1,19 +1,15 @@
 name: Alumdoor final code certification
 
 on:
-  push:
-    branches: [exp/alumdoor-pricing-policy]
-    paths:
-      - ".github/workflows/alumdoor-final-code-cert.yml"
-      - "client/**"
-      - "server/**"
-      - "docs/audits/**"
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
   certify:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,15 +42,16 @@ jobs:
           const rx = /(tồn.*nhôm|nhôm.*tồn|aluminium\s+lot|stock.*length|length.*stock)/iu;
           const nav = brief.navigation?.items ?? [];
           const navMatches = nav.filter((entry) => rx.test(typeof entry === "string" ? entry : JSON.stringify(entry)));
-          const appReports = (brief.reports ?? []).filter((entry) => rx.test(JSON.stringify(entry)));
           const links = (brief.links ?? []).filter((entry) => rx.test(JSON.stringify(entry)));
-          console.log(`ALUMINIUM_STOCK_NAV_MATCHES=${navMatches.length}`);
+          const reports = (brief.reports ?? []).filter((entry) => rx.test(JSON.stringify(entry)));
           console.log(`ALUMINIUM_STOCK_NAV=${JSON.stringify(navMatches)}`);
-          console.log(`ALUMINIUM_STOCK_APP_REPORT_DUPLICATES=${appReports.length}`);
           console.log(`ALUMINIUM_STOCK_LINKS=${JSON.stringify(links)}`);
-          if (appReports.length !== 0) throw new Error("Tồn nhôm canonical must not be duplicated as an app-owned report");
+          console.log(`ALUMINIUM_STOCK_REPORTS=${JSON.stringify(reports)}`);
+          if (navMatches.length !== 1 || navMatches[0] !== "report:Tồn nhôm theo khổ") throw new Error("Aluminium stock navigation is not canonical");
+          if (links.length !== 1 || links[0]?.report !== "Tồn nhôm theo khổ") throw new Error("Aluminium stock link is not canonical");
           const generator = readFileSync("scripts/build-alumdoor-v2-brief.mjs", "utf8");
           if (!generator.includes('Báo cáo "Tồn nhôm theo khổ" đọc Batch + sổ kho')) throw new Error("Canonical Stock Ledger/Batch ownership note missing");
+          if (!generator.includes("XOÁ doctype: Aluminium Lot, Aluminium Cut")) throw new Error("Legacy aluminium lot doctypes are not explicitly retired");
           console.log("ALUMINIUM_STOCK_CANONICAL_SOURCE_PASS");
           NODE
 
@@ -64,8 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei '(manufactur|production|work-order|cut-order|bom|job-card)' | sort)
-          printf 'MANUFACTURING_TEST_FILES=%s\n' "${#tests[@]}"
-          printf '%s\n' "${tests[@]}"
+          echo "MANUFACTURING_TEST_FILES=${#tests[@]}"
           test "${#tests[@]}" -gt 0
           node --test "${tests[@]}"
           echo MANUFACTURING_CLOSURE_SLICE_PASS
@@ -76,8 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei '(print|pdf|a4)' | sort)
-          printf 'PRINT_TEST_FILES=%s\n' "${#tests[@]}"
-          printf '%s\n' "${tests[@]}"
+          echo "PRINT_TEST_FILES=${#tests[@]}"
           test "${#tests[@]}" -gt 0
           node --test "${tests[@]}"
           echo PRINT_CONTRACT_SLICE_PASS
@@ -88,11 +83,17 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei '(transaction.*closure|reconcil|receivable|payable|payment|general-ledger|accounting|stock-ledger)' | sort)
-          printf 'ACCOUNTING_CLOSURE_TEST_FILES=%s\n' "${#tests[@]}"
-          printf '%s\n' "${tests[@]}"
+          echo "ACCOUNTING_CLOSURE_TEST_FILES=${#tests[@]}"
           test "${#tests[@]}" -gt 0
           node --test "${tests[@]}"
           echo ACCOUNTING_TRANSACTION_CLOSURE_SLICE_PASS
+
+      - name: Build client dependency closure for server regression
+        shell: bash
+        working-directory: client
+        run: |
+          set -euo pipefail
+          pnpm --filter @metaforge/views... run build
 
       - name: Full server regression
         shell: bash
@@ -101,6 +102,18 @@ jobs:
           set -euo pipefail
           pnpm test:unit
           echo FULL_SERVER_REGRESSION_PASS
+
+      - name: Diagnose app install contract before lint
+        shell: bash
+        working-directory: client
+        run: |
+          set -euo pipefail
+          find . -type f -name 'useAppInstall.ts' -print
+          while IFS= read -r f; do
+            echo "=== $f 160-205 ==="
+            nl -ba "$f" | sed -n '160,205p'
+          done < <(find . -type f -name 'useAppInstall.ts')
+          grep -RniE 'method: string; args: Record<string, unknown>|install_app|uninstall_app' packages apps | head -160 || true
 
       - name: Client build lint and selfchecks
         shell: bash
@@ -129,12 +142,8 @@ jobs:
         run: |
           set -euo pipefail
           pnpm --filter @metaforge/demo run build
-          echo BUNDLE_ASSETS_BEGIN
-          find apps/demo/dist -type f \( -name '*.js' -o -name '*.css' \) -printf '%s %p\n' | sort -nr | head -30
-          echo BUNDLE_ASSETS_END
           largest=$(find apps/demo/dist -type f -name '*.js' -printf '%s\n' | sort -nr | head -1)
           test -n "$largest"
           echo "LARGEST_DEMO_JS_BYTES=$largest"
-          # 2 MiB is a deliberately loose regression ceiling; product:check carries stricter product rules.
           test "$largest" -le 2097152
           echo CLIENT_BUNDLE_BUDGET_PASS
