@@ -44,14 +44,17 @@ jobs:
           const navMatches = nav.filter((entry) => rx.test(typeof entry === "string" ? entry : JSON.stringify(entry)));
           const links = (brief.links ?? []).filter((entry) => rx.test(JSON.stringify(entry)));
           const reports = (brief.reports ?? []).filter((entry) => rx.test(JSON.stringify(entry)));
+          const doctypeNames = new Set((brief.doctypes ?? []).map((entry) => entry?.name).filter(Boolean));
           console.log(`ALUMINIUM_STOCK_NAV=${JSON.stringify(navMatches)}`);
           console.log(`ALUMINIUM_STOCK_LINKS=${JSON.stringify(links)}`);
           console.log(`ALUMINIUM_STOCK_REPORTS=${JSON.stringify(reports)}`);
+          console.log(`LEGACY_ALUMINIUM_LOT_PRESENT=${doctypeNames.has("Aluminium Lot")}`);
+          console.log(`LEGACY_ALUMINIUM_CUT_PRESENT=${doctypeNames.has("Aluminium Cut")}`);
           if (navMatches.length !== 1 || navMatches[0] !== "report:Tồn nhôm theo khổ") throw new Error("Aluminium stock navigation is not canonical");
           if (links.length !== 1 || links[0]?.report !== "Tồn nhôm theo khổ") throw new Error("Aluminium stock link is not canonical");
+          if (doctypeNames.has("Aluminium Lot") || doctypeNames.has("Aluminium Cut")) throw new Error("Legacy aluminium lot doctypes still exist in compiled brief");
           const generator = readFileSync("scripts/build-alumdoor-v2-brief.mjs", "utf8");
           if (!generator.includes('Báo cáo "Tồn nhôm theo khổ" đọc Batch + sổ kho')) throw new Error("Canonical Stock Ledger/Batch ownership note missing");
-          if (!generator.includes("XOÁ doctype: Aluminium Lot, Aluminium Cut")) throw new Error("Legacy aluminium lot doctypes are not explicitly retired");
           console.log("ALUMINIUM_STOCK_CANONICAL_SOURCE_PASS");
           NODE
 
