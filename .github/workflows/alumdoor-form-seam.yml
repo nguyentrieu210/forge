@@ -1,0 +1,61 @@
+name: Alumdoor form presentation seam
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/alumdoor-form-seam.yml"]
+jobs:
+  patch:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 25
+    steps:
+      - name: Patch generic metadata seam and verify
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'; $p=Join-Path $env:RUNNER_TEMP 'forge-alu-form-seam'
+          if(Test-Path $p){cmd /c "rmdir /s /q `"$p`""|Out-Null}
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $p
+          Set-Location $p; $base=(git rev-parse HEAD).Trim(); $env:P=$p
+          @'
+          from pathlib import Path
+          import os
+          r=Path(os.environ['P'])
+          def rep(path,a,b):
+              f=r/path; s=f.read_text(encoding='utf-8'); assert a in s,(path,a); f.write_text(s.replace(a,b,1),encoding='utf-8',newline='\n')
+          rep(Path('server/packages/frappe-model/src/types.ts'),
+              '  form_control_width?: "compact";\n',
+              '  form_control_width?: "compact";\n  /** Render a Select as an inline choice list instead of a dropdown. */\n  form_control_style?: "choice_list";\n  /** Section-break presentation only; does not change document semantics. */\n  form_section_style?: "summary";\n')
+          rep(Path('client/packages/core/src/types/meta.ts'),
+              '  form_control_width?: "compact";\n',
+              '  form_control_width?: "compact";\n  /** Generic Select presentation; options still come from field.options. */\n  form_control_style?: "choice_list";\n  /** Generic section presentation marker carried on Section Break fields. */\n  form_section_style?: "summary";\n')
+          rep(Path('server/packages/frappe-model/src/validate.ts'),
+              '  if (formControlWidth !== undefined && formControlWidth !== "compact") {\n    throw errors.validation(`fields[${index}].form_control_width must be compact`);\n  }\n',
+              '  if (formControlWidth !== undefined && formControlWidth !== "compact") {\n    throw errors.validation(`fields[${index}].form_control_width must be compact`);\n  }\n  const formControlStyle = input.form_control_style === undefined ? undefined : text(input.form_control_style, `fields[${index}].form_control_style`, 24);\n  if (formControlStyle !== undefined && formControlStyle !== "choice_list") throw errors.validation(`fields[${index}].form_control_style must be choice_list`);\n  const formSectionStyle = input.form_section_style === undefined ? undefined : text(input.form_section_style, `fields[${index}].form_section_style`, 24);\n  if (formSectionStyle !== undefined && formSectionStyle !== "summary") throw errors.validation(`fields[${index}].form_section_style must be summary`);\n')
+          rep(Path('server/packages/frappe-model/src/validate.ts'),
+              '    ...(formControlWidth === undefined ? {} : { form_control_width: "compact" as const }),\n',
+              '    ...(formControlWidth === undefined ? {} : { form_control_width: "compact" as const }),\n    ...(formControlStyle === undefined ? {} : { form_control_style: "choice_list" as const }),\n    ...(formSectionStyle === undefined ? {} : { form_section_style: "summary" as const }),\n')
+          rep(Path('client/packages/views/src/form/layout.ts'),
+              'export interface FormSection {\n  label?: string;\n  columns: FormColumn[];\n',
+              'export interface FormSection {\n  label?: string;\n  /** Presentation-only style declared by the Section Break metadata. */\n  style?: "summary";\n  columns: FormColumn[];\n')
+          rep(Path('client/packages/views/src/form/layout.ts'),
+              '  const startSection = (label: string | undefined, breakHidden: boolean) => {\n    const col: FormColumn = { fields: [] };\n    const section: FormSection = { label, columns: [col], hidden: true };\n',
+              '  const startSection = (label: string | undefined, breakHidden: boolean, style?: "summary") => {\n    const col: FormColumn = { fields: [] };\n    const section: FormSection = { label, ...(style ? { style } : {}), columns: [col], hidden: true };\n')
+          rep(Path('client/packages/views/src/form/layout.ts'),
+              '      startSection(rf.field.label, !rf.visible); // Section Break ẩn ⇒ section ẩn\n',
+              '      startSection(rf.field.label, !rf.visible, rf.field.form_section_style === "summary" ? "summary" : undefined); // Section Break ẩn ⇒ section ẩn\n')
+          '@|python -
+          Set-Location "$p\server"; pnpm install --frozen-lockfile; pnpm run build
+          @'
+          import { parseDocTypeMeta } from './dist/packages/frappe-model/src/index.js';
+          const m=parseDocTypeMeta({name:'Presentation Probe',module:'Test',fields:[{fieldname:'mode',label:'Mode',fieldtype:'Select',options:'A\nB',form_control_style:'choice_list'},{fieldname:'summary',label:'Summary',fieldtype:'Section Break',form_section_style:'summary'}],permissions:[]});
+          if(m.fields[0].form_control_style!=='choice_list'||m.fields[1].form_section_style!=='summary') throw new Error('presentation seam lost by parser');
+          console.log('FORM_PRESENTATION_SEAM_PASS');
+          '@|node --input-type=module
+          Set-Location "$p\client"; pnpm --filter @metaforge/views... run build
+          Set-Location $p; git diff --check; git fetch origin exp/alumdoor-pricing-policy --quiet
+          if((git rev-parse origin/exp/alumdoor-pricing-policy).Trim() -ne $base){throw 'experiment advanced during form seam patch'}
+          git config user.name 'Alumdoor Certification Runner';git config user.email 'alumdoor-cert@local.invalid'
+          git add server/packages/frappe-model/src/types.ts server/packages/frappe-model/src/validate.ts client/packages/core/src/types/meta.ts client/packages/views/src/form/layout.ts
+          git commit -m 'refactor(metaform): add generic form presentation seams'; git push origin HEAD:exp/alumdoor-pricing-policy
+          Write-Host "FORM_SEAM_PUSHED=$(git rev-parse HEAD)"
