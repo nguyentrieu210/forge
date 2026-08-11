@@ -449,10 +449,77 @@ addAfter(pri, "warehouse",
 );
 
 // ────────────────── SALES CHILD GRID ──────────────────
-// Trục tính tiền do metadata của Item/ĐVT quyết định, không theo tên mã hàng:
-// cửa → m² Worker chốt; ray/trục → dài × số cây; phụ kiện → qty trực tiếp theo ĐVT.
+// GRID-03 · current Selling authority projection.
+// Pricing Rule + Sales Option + Sales Package are server authorities. This generator only
+// materialises the operator-visible fields that the AlumDoor metadata-owned grid must expose;
+// no commercial formula or percentage policy is evaluated here.
+const ensureSalesLineField = (line, anchor, field) => {
+  const existingIndex = line.fields.findIndex((candidate) => nameOf(candidate) === field.fieldname);
+  if (existingIndex >= 0) {
+    const current = parseField(line.fields[existingIndex], existingIndex, line.name);
+    line.fields[existingIndex] = { ...current, ...field };
+    return;
+  }
+  addAfter(line, anchor, field);
+};
+
+const salesOptionField = {
+  fieldname: "sales_option",
+  fieldtype: "Link",
+  options: "Sales Option",
+  label: "Phương án bán",
+  in_list_view: true,
+  surface: "quick",
+};
+
+// 0118 makes Sales Option an operator choice on quotation/order/invoice lines. Keep the same
+// projection in the generated package so authored quickEntry columns do not hide a field added
+// later by tenant migration.
+for (const childName of ["Quotation Item", "Sales Order Item", "Sales Invoice Item"]) {
+  ensureSalesLineField(doctype(childName), "item_code", salesOptionField);
+}
+
+// 0120 makes these monetary projections server-owned on Quotation/Sales Order. They are display
+// outputs only; discount_percentage remains an audit/compatibility field and is never editable.
 for (const childName of ["Quotation Item", "Sales Order Item"]) {
   const line = doctype(childName);
+  ensureSalesLineField(line, "rate", {
+    fieldname: "discount_amount",
+    fieldtype: "Currency",
+    label: "Tiền CK",
+    read_only: true,
+    in_list_view: true,
+    description: "Server-authoritative monetary discount for this line.",
+  });
+  ensureSalesLineField(line, "discount_amount", {
+    fieldname: "adjustment_amount",
+    fieldtype: "Currency",
+    label: "Phụ thu",
+    read_only: true,
+    in_list_view: true,
+    description: "Server-authoritative Pricing Rule adjustments for this line.",
+  });
+  ensureSalesLineField(line, "adjustment_amount", {
+    fieldname: "net_amount",
+    fieldtype: "Currency",
+    label: "Thành tiền",
+    read_only: true,
+    in_list_view: true,
+    description: "Gross minus policy discount plus adjustments.",
+  });
+
+  const discountIndex = line.fields.findIndex((field) => nameOf(field) === "discount_percentage");
+  if (discountIndex >= 0) {
+    const discount = parseField(line.fields[discountIndex], discountIndex, line.name);
+    line.fields[discountIndex] = {
+      ...discount,
+      hidden: true,
+      read_only: true,
+      in_list_view: false,
+      surface: "internal",
+    };
+  }
+
   replaceField(line, "length_m", {
     fieldname: "length_m",
     fieldtype: "Float",
@@ -478,8 +545,8 @@ for (const childName of ["Quotation Item", "Sales Order Item"]) {
     description: "Ô máy tính theo quy cách của dòng: cửa = m² đã chốt × số bộ; ray/trục = dài × số cây; phụ kiện = số lượng theo ĐVT bán.",
   });
   line.list = [
-    "item_code", "color", "width_m", "height_m", "set_count", "sales_mode", "has_butterfly_bracket",
-    "length_m", "qty_bar", "uom", "availability_status", "qty", "rate", "amount",
+    "item_code", "sales_option", "color", "width_m", "height_m", "set_count", "has_butterfly_bracket",
+    "length_m", "qty_bar", "uom", "qty", "rate", "discount_amount", "adjustment_amount", "net_amount",
   ];
 }
 
