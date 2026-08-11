@@ -68,6 +68,7 @@ jobs:
       - name: Run full server unit regression
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor\server
           $log = Join-Path $env:RUNNER_TEMP 'alumdoor-full-test.log'
           cmd /c "node --test tests/*.test.mjs > `"$log`" 2>&1"
@@ -82,4 +83,42 @@ jobs:
           Get-Content $log -Tail 30 | ForEach-Object { Write-Host $_ }
           Write-Host 'ALUMDOOR_INVENTORY_FULL_SERVER_UNIT_PASS'
 
-# consumption-projection-composition-wrapper
+      - name: Discover certification harnesses
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          Write-Host '=== ALUMDOOR TRANSACTION / PRINT / ACCOUNTING TEST FILES ==='
+          Get-ChildItem .\tests -File -Filter *.test.mjs |
+            Where-Object { $_.Name -match 'alumdoor|sales|purchase|manufactur|stock|payment|invoice|delivery|print|account|ledger|o2c|p2p|production' } |
+            Sort-Object Name |
+            Select-Object -ExpandProperty Name |
+            ForEach-Object { Write-Host $_ }
+          Write-Host '=== ALUMDOOR REAL-DATA / VERIFY SCRIPTS ==='
+          Get-ChildItem .\scripts -File |
+            Where-Object { $_.Name -match 'alumdoor|real|verify|smoke' } |
+            Sort-Object Name |
+            Select-Object -ExpandProperty Name |
+            ForEach-Object { Write-Host $_ }
+
+      - name: Re-run real Alumdoor pricing catalogue lab
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          $source = Get-ChildItem .\apps\tenant-worker\.wrangler\state -Recurse -File -Filter *.sqlite |
+            Sort-Object Length -Descending |
+            Select-Object -First 1
+          if (-not $source) { throw 'No local Wrangler D1 sqlite found for disposable real-data lab' }
+          $labDir = Join-Path $env:RUNNER_TEMP 'alumdoor-real-data-cert'
+          New-Item -ItemType Directory -Force -Path $labDir | Out-Null
+          $lab = Join-Path $labDir 'alumdoor-real-pricing.sqlite'
+          Copy-Item -Force $source.FullName $lab
+          Write-Host "REAL_DATA_SOURCE_DB=$($source.FullName)"
+          Write-Host "REAL_DATA_LAB_DB=$lab"
+          $env:LAB_DB = $lab
+          node scripts/test-alumdoor-pricing-real-data.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Real Alumdoor pricing catalogue lab failed' }
+          Write-Host 'ALUMDOOR_REAL_DATA_PRICING_CERT_PASS'
+
+# certification-discovery-real-data
