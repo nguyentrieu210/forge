@@ -12,7 +12,7 @@ jobs:
     runs-on: [self-hosted, Windows, alumdoor]
     timeout-minutes: 40
     steps:
-      - name: Verify local experiment checkout is safe
+      - name: Sync experiment safely
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -21,57 +21,19 @@ jobs:
           $status = @(git status --porcelain --untracked-files=all)
           $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
           if ($unsafe.Count -gt 0) { $unsafe | ForEach-Object { Write-Host $_ }; throw 'Unsafe local changes' }
+          git fetch origin exp/alumdoor-pricing-policy
+          if ($LASTEXITCODE -ne 0) { throw 'fetch failed' }
+          git merge --ff-only origin/exp/alumdoor-pricing-policy
+          if ($LASTEXITCODE -ne 0) { throw 'fast-forward failed' }
+          Write-Host "TESTING_COMMIT=$(git rev-parse HEAD)"
 
-      - name: Patch preview contract in disposable clone
+      - name: Build server and validate Alumdoor metadata
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $probe = Join-Path $env:RUNNER_TEMP 'forge-row-preview-wire'
-          if (Test-Path $probe) { cmd /c "rmdir /s /q `"$probe`"" }
-          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
-          if ($LASTEXITCODE -ne 0) { throw 'clone failed' }
-          Set-Location $probe
-          git config user.name "Alumdoor Preview Runner"
-          git config user.email "alumdoor-preview@local.invalid"
-
-          @'
-          import fs from "node:fs";
-          function edit(path, transform) {
-            const before = fs.readFileSync(path, "utf8");
-            const after = transform(before);
-            if (after === before) throw new Error(`no patch applied to ${path}`);
-            fs.writeFileSync(path, after);
-          }
-          edit("server/packages/frappe-model/src/types.ts", (s) => s.replace(
-            "  reasonRequiredOn?: string[];\n}",
-            "  reasonRequiredOn?: string[];\n  /** Optional app method that derives a child-row UX preview; save/submit remain authoritative. */\n  previewMethod?: string;\n  /** Parent fields whose changes invalidate the row preview. */\n  previewParentFields?: string[];\n}",
-          ));
-          edit("client/packages/core/src/types/meta.ts", (s) => s.replace(
-            "  reasonRequiredOn?: string[];\n  [k: string]: unknown;",
-            "  reasonRequiredOn?: string[];\n  /** Dotted app method used for server-owned child-row preview. */\n  previewMethod?: string;\n  /** Parent fields whose changes trigger row preview refresh. */\n  previewParentFields?: string[];\n  [k: string]: unknown;",
-          ));
-          edit("server/packages/frappe-model/src/validate.ts", (s) => {
-            const anchor = `    const reasonRequiredOn = entry.reasonRequiredOn === undefined\n      ? undefined\n      : array(entry.reasonRequiredOn, \`viewPolicy.\${key}.reasonRequiredOn\`).map((item, index) =>\n          text(item, \`viewPolicy.\${key}.reasonRequiredOn[\${index}]\`, 80));\n`;
-            if (!s.includes(anchor)) throw new Error("validate preview anchor missing");
-            s = s.replace(anchor, anchor + `    const previewMethod = entry.previewMethod === undefined\n      ? undefined\n      : text(entry.previewMethod, \`viewPolicy.\${key}.previewMethod\`, 240);\n    const previewParentFields = entry.previewParentFields === undefined\n      ? undefined\n      : array(entry.previewParentFields, \`viewPolicy.\${key}.previewParentFields\`).map((item, index) =>\n          text(item, \`viewPolicy.\${key}.previewParentFields[\${index}]\`, 160));\n`);
-            const ret = "      ...(reasonRequiredOn ? { reasonRequiredOn } : {}),\n";
-            if (!s.includes(ret)) throw new Error("validate return anchor missing");
-            return s.replace(ret, ret + "      ...(previewMethod ? { previewMethod } : {}),\n      ...(previewParentFields ? { previewParentFields } : {}),\n");
-          });
-          edit("server/apps-src/alumdoor-worker/src/index.ts", (s) => {
-            const importAnchor = 'import { salesItemContext } from "./sales-item-context.js";\n';
-            const dispatchAnchor = '    if (method === "alumdoor.sales.item_context") return await salesItemContext(call, args);\n';
-            if (!s.includes(importAnchor) || !s.includes(dispatchAnchor)) throw new Error("worker anchors missing");
-            s = s.replace(importAnchor, importAnchor + 'import { previewChildRow } from "./ui-child-preview.js";\n');
-            return s.replace(dispatchAnchor, dispatchAnchor + '    if (method === "alumdoor.ui.preview_child_row") return await previewChildRow(call, args);\n');
-          });
-          '@ | node --input-type=module
-
-          Set-Location server
-          pnpm install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { throw 'server install failed' }
-          node scripts/build-alumdoor-v2-brief.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'brief regeneration failed' }
+          Set-Location C:\alumdoor\server
+          pnpm run clean
+          if ($LASTEXITCODE -ne 0) { throw 'clean failed' }
           pnpm run build
           if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
           node --test tests/alumdoor-child-presentation.test.mjs
@@ -80,33 +42,94 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'brief check failed' }
           pnpm exec vitest run apps-src/alumdoor-worker/src/ui-child-preview.test.ts --environment node
           if ($LASTEXITCODE -ne 0) { throw 'worker preview tests failed' }
-          $bundle = Join-Path $env:RUNNER_TEMP 'alumdoor-worker-preview-bundle'
-          if (Test-Path $bundle) { cmd /c "rmdir /s /q `"$bundle`"" }
-          pnpm exec wrangler deploy --dry-run --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc --outdir $bundle
-          if ($LASTEXITCODE -ne 0) { throw 'worker dry-run bundle failed' }
+          pnpm exec wrangler deploy --dry-run --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc --outdir "$env:RUNNER_TEMP\alumdoor-worker-cert"
+          if ($LASTEXITCODE -ne 0) { throw 'worker dry-run failed' }
+          Write-Host 'ALUMDOOR_META_PREVIEW_SERVER_PASS'
 
-          Set-Location ..\client
-          pnpm install --no-frozen-lockfile --lockfile=false
-          if ($LASTEXITCODE -ne 0) { throw 'client dependency bootstrap failed' }
+      - name: Build MetaForge dependency closure and runtime tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\client
+          if (!(Test-Path .\node_modules\.bin\tsc.cmd)) {
+            pnpm install --no-frozen-lockfile --lockfile=false
+            if ($LASTEXITCODE -ne 0) { throw 'client bootstrap failed' }
+          }
           pnpm --filter @metaforge/views... run build
-          if ($LASTEXITCODE -ne 0) { throw 'views dependency-closure build failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'MetaForge closure build failed' }
           Set-Location packages\views
           node --test tests/child-grid-presentation.test.mjs tests/metadata-child-grid-runtime.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'metadata grid tests failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'metadata grid runtime tests failed' }
+          Write-Host 'ALUMDOOR_METADATA_GRID_CLIENT_PASS'
 
-          Set-Location $probe
-          git diff --check
-          if ($LASTEXITCODE -ne 0) { throw 'diff check failed' }
-          git add server/packages/frappe-model/src/types.ts client/packages/core/src/types/meta.ts server/packages/frappe-model/src/validate.ts server/apps-src/alumdoor-worker/src/index.ts server/briefs/alumdoor-v2.json
-          git diff --cached --quiet
-          if ($LASTEXITCODE -eq 0) { throw 'expected preview wiring changes are missing' }
-          git commit -m "feat(meta): wire server-owned child row preview"
-          if ($LASTEXITCODE -ne 0) { throw 'commit failed' }
-          git push origin HEAD:exp/alumdoor-pricing-policy
-          if ($LASTEXITCODE -ne 0) { throw 'push failed' }
-          Write-Host "PREVIEW_WIRING_COMMIT=$(git rev-parse HEAD)"
-          Write-Host 'ALUMDOOR_CHILD_ROW_PREVIEW_WIRING_PASS'
-          Set-Location $env:RUNNER_TEMP
-          cmd /c "rmdir /s /q `"$probe`"" >nul 2>nul
+      - name: Scan app worker for legacy reservation mutation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor
+          $hits = @(git grep -n -I -E 'consumeReservationsForCut|Stock Reservation|qty_reserved|Đã dùng' -- server/apps-src/alumdoor-worker/src)
+          if ($hits.Count -eq 0) {
+            Write-Host 'ALUMDOOR_WORKER_RESERVATION_MUTATION_SCAN=NONE'
+          } else {
+            Write-Host '=== RESERVATION REFERENCES ==='
+            $hits | ForEach-Object { Write-Host $_ }
+          }
 
-# child-row-preview-wire-v3
+      - name: Run inventory integrity slice
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          node --test tests/stock-reservation-integrity.test.mjs tests/reservation-source-lifecycle.test.mjs tests/outbound-reservation-guard.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'inventory integrity failed' }
+          Write-Host 'ALUMDOOR_INVENTORY_CERT_PASS'
+
+      - name: Run transaction closure certification slice
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          node --test tests/transaction-closure-sales-o2c.test.mjs tests/procurement-p2p-closure.test.mjs tests/manufacturing-transaction-closure.test.mjs tests/finance-payment-allocation.test.mjs tests/finance-stock-control-policy.test.mjs tests/finance-stock-control-query.test.mjs tests/sales-production-flow.test.mjs tests/alumdoor-manufacturing-lifecycle.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'transaction closure failed' }
+          Write-Host 'ALUMDOOR_TRANSACTION_CLOSURE_CERT_PASS'
+
+      - name: Run Alumdoor print certification slice
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          node --test tests/alumdoor-sales-order-print.test.mjs tests/alumdoor-purchase-order-print.test.mjs tests/alumdoor-delivery-note-print.test.mjs tests/alumdoor-cut-order-print.test.mjs tests/alumdoor-production-request-print.test.mjs tests/alumdoor-stock-reconciliation-print.test.mjs tests/alumdoor-handover-acceptance-print.test.mjs tests/alumdoor-print-brand-consistency.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'print certification failed' }
+          Write-Host 'ALUMDOOR_PRINT_CERT_PASS'
+
+      - name: Run full server regression
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-full-test.log'
+          cmd /c "node --test tests/*.test.mjs > `"$log`" 2>&1"
+          $exit = $LASTEXITCODE
+          if ($exit -ne 0) {
+            Select-String -Path $log -Pattern '^not ok ','AssertionError','ERR_','error:','expected:','actual:' -Context 2,5 | Select-Object -First 160 | ForEach-Object { Write-Host $_.ToString() }
+            Get-Content $log -Tail 160 | ForEach-Object { Write-Host $_ }
+            throw "full server regression failed with exit $exit"
+          }
+          Get-Content $log -Tail 35 | ForEach-Object { Write-Host $_ }
+          Write-Host 'ALUMDOOR_FULL_SERVER_UNIT_PASS'
+
+      - name: Re-run real Alumdoor pricing catalogue lab
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          $source = Get-ChildItem .\apps\tenant-worker\.wrangler\state -Recurse -File -Filter *.sqlite | Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $source) { throw 'No local Wrangler D1 sqlite found' }
+          $lab = Join-Path $env:RUNNER_TEMP 'alumdoor-real-pricing.sqlite'
+          Copy-Item -Force $source.FullName $lab
+          $env:LAB_DB = $lab
+          node scripts/test-alumdoor-pricing-real-data.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'real pricing lab failed' }
+          Write-Host 'ALUMDOOR_REAL_DATA_PRICING_CERT_PASS'
+
+# certify-preview-wiring
