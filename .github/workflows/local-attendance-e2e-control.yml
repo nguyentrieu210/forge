@@ -10,151 +10,76 @@ on:
 jobs:
   launch:
     runs-on: [self-hosted]
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - name: Launch feature backend 18899 and runtime 5173
+      - name: Launch persistent feature backend 18899 and runtime 5173
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Set-StrictMode -Version Latest
           $worktree = 'C:\forge-attendance-payroll'
           $shared = 'C:\alumdoor'
           $target = 'feature/attendance-payroll'
-          $backendPort = 18899
-          $frontendPort = 5173
           $devDir = 'C:\forge-attendance-payroll-dev'
+          New-Item -ItemType Directory -Force -Path $devDir | Out-Null
 
-          function Assert-Exit([string]$label) {
-            if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" }
-          }
-          function Stop-Port([int]$port) {
+          git -C $worktree fetch origin $target --prune
+          if ($LASTEXITCODE -ne 0) { throw 'Feature fetch failed' }
+          git -C $worktree merge --ff-only "origin/$target"
+          if ($LASTEXITCODE -ne 0) { throw 'Feature fast-forward failed' }
+
+          foreach ($port in @(8799,18899,5173)) {
             Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
-              Write-Host "Stopping listener port=$port pid=$($_.OwningProcess)"
               Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
             }
           }
-          function Wait-Http([string]$url, [int]$seconds = 60) {
-            for ($i = 0; $i -lt $seconds; $i++) {
-              try {
-                $response = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 3
-                if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) { return $response }
-              } catch {}
-              Start-Sleep -Seconds 1
-            }
-            throw "HTTP endpoint did not become ready: $url"
-          }
-
-          git -C $worktree fetch origin $target --prune
-          Assert-Exit 'fetch feature'
-          if ((git -C $worktree branch --show-current).Trim() -ne $target) { throw 'Attendance worktree is on the wrong branch' }
-          git -C $worktree merge --ff-only "origin/$target"
-          Assert-Exit 'fast-forward feature'
-
-          # Normalize the already-tested attendance routing block. Explicit strings keep
-          # source indentation deterministic on Windows PowerShell 5.1.
-          $mainPath = Join-Path $worktree 'client\apps\runtime\src\main-base.tsx'
-          $text = [IO.File]::ReadAllText($mainPath).Replace("`r`n", "`n")
-          $start = $text.IndexOf('if (kind === "alumdoor-attendance") {')
-          $end = if ($start -ge 0) { $text.IndexOf('  return <>{renderExperience', $start) } else { -1 }
-          if ($start -lt 0 -or $end -lt 0) { throw 'Cannot locate attendance routing block' }
-          while ($start -gt 0 -and $text[$start - 1] -eq ' ') { $start-- }
-          $lines = @(
-            '  if (kind === "alumdoor-attendance") {',
-            '    const mode = experienceKey.slice("alumdoor-attendance:".length);',
-            '    const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Attendance & Payroll";',
-            '    if (mode === "kiosk" || mode === "mobile") {',
-            '      return (',
-            '        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>',
-            '          <AlumdoorAttendanceKiosk />',
-            '        </Shell>',
-            '      );',
-            '    }',
-            '    const operationsMode = mode === "today" ? "today"',
-            '      : mode === "month" ? "month"',
-            '      : mode === "exceptions" ? "exceptions"',
-            '      : mode === "payroll-run" ? "payroll-run"',
-            '      : mode === "payroll-my-slips" ? "payroll-my-slips"',
-            '      : null;',
-            '    if (operationsMode) {',
-            '      return (',
-            '        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>',
-            '          <AlumdoorAttendanceOperations',
-            '            mode={operationsMode}',
-            '            onExit={() => navigate(`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`)}',
-            '          />',
-            '        </Shell>',
-            '      );',
-            '    }',
-            '  }'
-          )
-          $block = $lines -join "`n"
-          $text = $text.Substring(0, $start) + $block + "`n" + $text.Substring($end)
-          [IO.File]::WriteAllText($mainPath, $text, [Text.UTF8Encoding]::new($false))
-
-          pnpm --dir (Join-Path $worktree 'client') --filter runtime run build
-          Assert-Exit 'runtime build'
-          git -C $worktree add -- client/apps/runtime/src/main-base.tsx
-          if (git -C $worktree diff --cached --quiet) {
-            Write-Host 'Attendance routing source already normalized.'
-          } else {
-            git -C $worktree -c user.name='Forge Local Runner' -c user.email='local-runner@forge.invalid' commit -m 'style(attendance): normalize runtime route block'
-            Assert-Exit 'commit routing normalization'
-            git -C $worktree push origin $target
-            Assert-Exit 'push routing normalization'
-          }
-
-          New-Item -ItemType Directory -Force -Path $devDir | Out-Null
-          Copy-Item (Join-Path $shared 'server\apps\tenant-worker\.dev.vars') (Join-Path $worktree 'server\apps\tenant-worker\.dev.vars') -Force
-          $persist = Join-Path $shared 'server\apps\tenant-worker\.wrangler\state'
-          if (-not (Test-Path $persist)) { throw "Missing local Wrangler state: $persist" }
-
-          Stop-Port 8799
-          Stop-Port $backendPort
-          Stop-Port $frontendPort
           Start-Sleep -Seconds 1
 
+          Copy-Item (Join-Path $shared 'server\apps\tenant-worker\.dev.vars') (Join-Path $worktree 'server\apps\tenant-worker\.dev.vars') -Force
+          $persist = Join-Path $shared 'server\apps\tenant-worker\.wrangler\state'
           $backendOut = Join-Path $devDir 'backend-18899.out.log'
           $backendErr = Join-Path $devDir 'backend-18899.err.log'
           $frontOut = Join-Path $devDir 'frontend-5173.out.log'
           $frontErr = Join-Path $devDir 'frontend-5173.err.log'
           Remove-Item $backendOut,$backendErr,$frontOut,$frontErr -Force -ErrorAction SilentlyContinue
-          [Environment]::SetEnvironmentVariable('RUNNER_TRACKING_ID', '', 'Process')
 
-          $backendCommand = "cd /d $worktree\server && npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port $backendPort --local --persist-to `"$persist`""
-          $backend = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$backendCommand) -WorkingDirectory (Join-Path $worktree 'server') -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -WindowStyle Hidden -PassThru
-          Write-Host "FEATURE_BACKEND_LAUNCHER_PID=$($backend.Id)"
-          try { Wait-Http "http://127.0.0.1:$backendPort/health" 60 | Out-Null }
-          catch {
-            Get-Content $backendOut -Tail 160 -ErrorAction SilentlyContinue
-            Get-Content $backendErr -Tail 160 -ErrorAction SilentlyContinue
-            throw
+          # GitHub Actions runner uses this marker to find and terminate orphan processes.
+          # Clear it using the runner-maintainer documented PowerShell form before spawning.
+          $env:RUNNER_TRACKING_ID = ""
+
+          $backendCommand = "cd /d $worktree\server && npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 18899 --local --persist-to `"$persist`""
+          Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$backendCommand) -WorkingDirectory (Join-Path $worktree 'server') -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -WindowStyle Hidden | Out-Null
+
+          $ready = $false
+          for ($i=0; $i -lt 45; $i++) {
+            Start-Sleep -Seconds 1
+            try { if ((Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18899/health' -TimeoutSec 3).StatusCode -eq 200) { $ready = $true; break } } catch {}
+          }
+          if (-not $ready) {
+            Get-Content $backendOut -Tail 120 -ErrorAction SilentlyContinue
+            Get-Content $backendErr -Tail 120 -ErrorAction SilentlyContinue
+            throw 'Feature backend 18899 did not start'
           }
 
-          Push-Location (Join-Path $worktree 'server')
-          try {
-            $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
-            node scripts/forge-app.mjs apps-src/alumdoor-attendance --origin "http://127.0.0.1:$backendPort" --admin dev@example.com --provision-standard
-            Assert-Exit 'install local attendance app'
-          } finally { Pop-Location }
+          $frontCommand = "cd /d $worktree && set VITE_FORGE_BACKEND=http://127.0.0.1:18899&& pnpm --dir client --filter runtime dev -- --host 0.0.0.0 --port 5173 --strictPort"
+          Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$frontCommand) -WorkingDirectory $worktree -RedirectStandardOutput $frontOut -RedirectStandardError $frontErr -WindowStyle Hidden | Out-Null
 
-          $frontCommand = "cd /d $worktree && set VITE_FORGE_BACKEND=http://127.0.0.1:$backendPort&& pnpm --dir client --filter runtime dev -- --host 0.0.0.0 --port $frontendPort --strictPort"
-          $front = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$frontCommand) -WorkingDirectory $worktree -RedirectStandardOutput $frontOut -RedirectStandardError $frontErr -WindowStyle Hidden -PassThru
-          Write-Host "FEATURE_FRONTEND_LAUNCHER_PID=$($front.Id)"
-          try { Wait-Http "http://127.0.0.1:$frontendPort/?app=alumdoor-attendance" 45 | Out-Null }
-          catch {
-            Get-Content $frontOut -Tail 160 -ErrorAction SilentlyContinue
-            Get-Content $frontErr -Tail 160 -ErrorAction SilentlyContinue
-            throw
+          $ready = $false
+          for ($i=0; $i -lt 30; $i++) {
+            Start-Sleep -Seconds 1
+            try { if ((Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/?app=alumdoor-attendance' -TimeoutSec 3).StatusCode -eq 200) { $ready = $true; break } } catch {}
+          }
+          if (-not $ready) {
+            Get-Content $frontOut -Tail 120 -ErrorAction SilentlyContinue
+            Get-Content $frontErr -Tail 120 -ErrorAction SilentlyContinue
+            throw 'Feature runtime 5173 did not start'
           }
 
           foreach ($route in @('today','month','exceptions','payroll-run','payroll-my-slips')) {
             $encoded = [Uri]::EscapeDataString("alumdoor-attendance:$route")
-            $url = "http://127.0.0.1:$frontendPort/x/${encoded}?app=alumdoor-attendance"
-            $probe = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5
-            if ($probe.StatusCode -ne 200) { throw "Frontend route $route returned HTTP $($probe.StatusCode)" }
+            $url = "http://127.0.0.1:5173/x/${encoded}?app=alumdoor-attendance"
+            if ((Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5).StatusCode -ne 200) { throw "Route failed: $route" }
             Write-Host "ROUTE_OK=$route"
           }
-
           Write-Host 'ATTENDANCE_PAYROLL_LOCAL_LAUNCHED'
 
   persistence-check:
@@ -162,17 +87,15 @@ jobs:
     runs-on: [self-hosted]
     timeout-minutes: 5
     steps:
-      - name: Confirm servers survived runner cleanup
+      - name: Confirm processes survived launch-job cleanup
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Start-Sleep -Seconds 3
           $backend = Get-NetTCPConnection -LocalPort 18899 -State Listen -ErrorAction Stop | Select-Object -First 1
           $frontend = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction Stop | Select-Object -First 1
-          $frontProbe = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/?app=alumdoor-attendance' -TimeoutSec 5
-          if ($frontProbe.StatusCode -ne 200) { throw "5173 returned HTTP $($frontProbe.StatusCode)" }
-          $backendProbe = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18899/health' -TimeoutSec 5
-          if ($backendProbe.StatusCode -ne 200) { throw "18899 health returned HTTP $($backendProbe.StatusCode)" }
+          if ((Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18899/health' -TimeoutSec 5).StatusCode -ne 200) { throw '18899 health failed' }
+          if ((Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/?app=alumdoor-attendance' -TimeoutSec 5).StatusCode -ne 200) { throw '5173 probe failed' }
           Write-Host "FEATURE_BACKEND_PID=$($backend.OwningProcess)"
           Write-Host "FEATURE_FRONTEND_PID=$($frontend.OwningProcess)"
           Write-Host 'ATTENDANCE_URL=http://localhost:5173/?app=alumdoor-attendance'
