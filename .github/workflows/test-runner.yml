@@ -63,4 +63,4 @@ jobs:
           Set-Location $env:RUNNER_TEMP
           Remove-Item -Recurse -Force $probe
 
-# regenerate-required-quick
+# regenerate-required-quick-v2
