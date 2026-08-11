@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Verify experiment checkout is untouched
         shell: powershell
@@ -36,6 +36,8 @@ jobs:
           git config user.name "Alumdoor Migration Runner"
           git config user.email "alumdoor-migration@local.invalid"
           Set-Location server
+          pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'server dependency bootstrap failed' }
           node scripts/build-alumdoor-v2-brief.mjs
           if ($LASTEXITCODE -ne 0) { throw 'brief regeneration failed' }
           node --test tests/alumdoor-child-presentation.test.mjs
@@ -59,4 +61,4 @@ jobs:
           Set-Location $env:RUNNER_TEMP
           Remove-Item -Recurse -Force $probe
 
-# regenerate-surface-semantics-v2
+# regenerate-surface-semantics-v3
