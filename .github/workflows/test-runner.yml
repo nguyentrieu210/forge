@@ -10,18 +10,18 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Switch and verify manufacturing branch
+      - name: Switch manufacturing branch and start local Forge
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
           $target = 'local/manufacturing-20260811'
 
-          $tracked = git status --porcelain --untracked-files=no
-          if ($tracked) {
-            Write-Host $tracked
+          $tracked = @(git status --porcelain --untracked-files=no)
+          if ($tracked.Count -gt 0) {
+            $tracked | ForEach-Object { Write-Host $_ }
             throw 'Tracked local changes exist; refusing to switch branch'
           }
 
@@ -30,11 +30,12 @@ jobs:
 
           $branch = (git branch --show-current).Trim()
           if ($branch -ne $target) {
-            $localExists = (git branch --list $target).Trim()
-            if ([string]::IsNullOrWhiteSpace($localExists)) {
-              git switch --track -c $target "origin/$target"
-            } else {
+            git show-ref --verify --quiet "refs/heads/$target"
+            $localExists = ($LASTEXITCODE -eq 0)
+            if ($localExists) {
               git switch $target
+            } else {
+              git switch -c $target --track "origin/$target"
             }
             if ($LASTEXITCODE -ne 0) { throw 'git switch failed' }
           }
@@ -45,5 +46,43 @@ jobs:
           Write-Host "LOCAL_BRANCH=$((git branch --show-current).Trim())"
           Write-Host "LOCAL_HEAD=$((git rev-parse HEAD).Trim())"
           Write-Host "REMOTE_HEAD=$((git rev-parse origin/$target).Trim())"
-          git status --short --untracked-files=all
-          Write-Host 'MANUFACTURING_LOCAL_WORKER_READY'
+
+          # Child processes must survive GitHub Actions orphan cleanup.
+          Remove-Item Env:RUNNER_TRACKING_ID -ErrorAction SilentlyContinue
+
+          cmd /c C:\alumdoor\start-forge.bat
+          if ($LASTEXITCODE -ne 0) {
+            if (Test-Path C:\alumdoor\start-forge.log) { Get-Content C:\alumdoor\start-forge.log -Tail 120 }
+            throw 'start-forge.bat failed'
+          }
+
+          $workerOk = $false
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -TimeoutSec 2 -ErrorAction Stop
+              if ($r.StatusCode -eq 403) { $workerOk = $true; break }
+            } catch {
+              if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 403) { $workerOk = $true; break }
+            }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $workerOk) {
+            if (Test-Path C:\alumdoor\start-forge.log) { Get-Content C:\alumdoor\start-forge.log -Tail 120 }
+            throw 'Backend 8799 is not ready'
+          }
+
+          $deskOk = $false
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -TimeoutSec 2 -ErrorAction Stop
+              if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { $deskOk = $true; break }
+            } catch {}
+            Start-Sleep -Seconds 2
+          }
+          if (-not $deskOk) {
+            if (Test-Path C:\alumdoor\start-forge.log) { Get-Content C:\alumdoor\start-forge.log -Tail 120 }
+            throw 'Desk 5173 is not ready'
+          }
+
+          Get-Content C:\alumdoor\start-forge.log -Tail 80
+          Write-Host 'FORGE_LOCAL_SERVER_READY backend=http://127.0.0.1:8799 desk=http://127.0.0.1:5173'
