@@ -48,7 +48,7 @@ jobs:
 
       - name: Validate bounded release generation
         working-directory: server
-        run: node scripts/build-sidebar-release.mjs /tmp/alumdoor-ui-rec-02-sidebar.json /tmp/alumdoor-ui-rec-02-sidebar.sql alu 2.0.36
+        run: node scripts/build-sidebar-release.mjs /tmp/alumdoor-ui-rec-02-sidebar.json /tmp/alumdoor-ui-rec-02-sidebar.sql alu 2.2.3
 
       - name: Assert release remains navigation-only
         run: |
@@ -56,9 +56,9 @@ jobs:
           const fs = require('node:fs');
           const manifest = JSON.parse(fs.readFileSync('/tmp/alumdoor-ui-rec-02-sidebar.json', 'utf8'));
           const sql = fs.readFileSync('/tmp/alumdoor-ui-rec-02-sidebar.sql', 'utf8');
-          if (manifest.id !== 'alumdoor' || manifest.version !== '2.0.37') throw new Error('unexpected sidebar manifest identity/version');
+          if (manifest.id !== 'alumdoor' || manifest.version !== '2.2.4') throw new Error('unexpected sidebar manifest identity/version');
           const keys = new Set(manifest.nav.map((item) => item.key));
-          for (const key of ['Sales Option', 'Sales Package']) if (!keys.has(key)) throw new Error(`missing P0 master: ${key}`);
+          for (const key of ['Material Request', 'Sales Option', 'Sales Package']) if (!keys.has(key)) throw new Error(`missing operator surface: ${key}`);
           for (const key of ['Aluminium Lot', 'Aluminium Cut', 'Sales Package Item']) if (keys.has(key)) throw new Error(`dead/internal key leaked: ${key}`);
           if (!sql.includes("'$.nav'")) throw new Error('release does not update manifest nav');
           if (/doctype_definitions|document_values|ledger_entries/i.test(sql)) throw new Error('bounded sidebar release touches business/schema tables');
