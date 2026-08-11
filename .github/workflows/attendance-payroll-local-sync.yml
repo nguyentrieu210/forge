@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   launch:
-    runs-on: [self-hosted, Windows, alumdoor]
+    runs-on: [self-hosted, Windows]
     timeout-minutes: 15
     steps:
       - name: Launch verified attendance payroll runtime on 5173
