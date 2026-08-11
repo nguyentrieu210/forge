@@ -83,10 +83,7 @@ export function resolveSmartGridCell(
   };
 }
 
-/**
- * Only columns applicable to at least one current row are rendered. An empty grid uses a probe row
- * so parent-dependent fields can still become reachable before the first row exists.
- */
+/** Suppress columns that are inapplicable to every current row. */
 export function applicableSmartGridColumns(
   columns: readonly DocField[],
   meta: DocTypeMeta,
@@ -95,8 +92,8 @@ export function applicableSmartGridColumns(
   roles: string[] | undefined,
   overrides: SmartGridFieldOverrides,
 ): DocField[] {
-  const probes: Doc[] = rows.length
-    ? [...rows]
+  const probes: readonly Doc[] = rows.length
+    ? rows
     : [{ name: "__smart-grid-probe__", doctype: meta.name } as Doc];
   return columns.filter((field) => {
     if (field.surface === "internal" || field.editMode === "hidden" || LAYOUT_TYPES.has(field.fieldtype)) return false;
@@ -121,7 +118,7 @@ function hashString(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-/** Layout persistence is invalidated when the declared presentation/schema changes. */
+/** Layout persistence is invalidated when declared presentation/schema semantics change. */
 export function smartGridLayoutKey(meta: DocTypeMeta, mode: "compact" | "full", columns: readonly DocField[]): string {
   const view = mode === "full" ? meta.viewPolicy?.form : meta.viewPolicy?.quickEntry ?? meta.viewPolicy?.form;
   const explicitVersion = String(view?.version ?? view?.policyVersion ?? view?.schemaVersion ?? "");
@@ -140,22 +137,30 @@ export function smartGridLayoutKey(meta: DocTypeMeta, mode: "compact" | "full", 
   return `mf-metadata-grid:${meta.name}:${mode}:${hashString(signature)}`;
 }
 
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
 function sanitizeLayout(value: unknown): SmartGridLayout {
-  if (!value || typeof value !== "object") return { ...EMPTY_SMART_GRID_LAYOUT, widths: {}, order: [], hidden: [], pinned: [], labels: {} };
+  if (!value || typeof value !== "object") {
+    return { widths: {}, order: [], hidden: [], pinned: [], labels: {} };
+  }
   const input = value as Partial<SmartGridLayout>;
-  const widths = Object.fromEntries(Object.entries(input.widths ?? {})
-    .filter(([, width]) => Number.isFinite(Number(width)))
-    .map(([fieldname, width]) => [fieldname, Math.max(5, Math.min(48, Number(width)))])
-  );
-  const labels = Object.fromEntries(Object.entries(input.labels ?? {})
-    .filter(([, label]) => typeof label === "string" && label.trim())
-    .map(([fieldname, label]) => [fieldname, String(label).trim()]));
-  const strings = (items: unknown) => Array.isArray(items) ? items.map(String).filter(Boolean) : [];
+  const widths = Object.fromEntries(
+    Object.entries(input.widths ?? {})
+      .filter(([, width]) => Number.isFinite(Number(width)))
+      .map(([fieldname, width]) => [fieldname, Math.max(5, Math.min(48, Number(width)))])
+  ) as Record<string, number>;
+  const labels = Object.fromEntries(
+    Object.entries(input.labels ?? {})
+      .filter(([, customLabel]) => typeof customLabel === "string" && customLabel.trim())
+      .map(([fieldname, customLabel]) => [fieldname, String(customLabel).trim()])
+  ) as Record<string, string>;
   return {
     widths,
-    order: strings(input.order),
-    hidden: strings(input.hidden),
-    pinned: strings(input.pinned),
+    order: stringArray(input.order),
+    hidden: stringArray(input.hidden),
+    pinned: stringArray(input.pinned),
     labels,
   };
 }
@@ -179,7 +184,7 @@ export function saveSmartGridLayout(
     const target = storage ?? (typeof localStorage === "undefined" ? undefined : localStorage);
     target?.setItem(key, JSON.stringify(sanitizeLayout(layout)));
   } catch {
-    // Layout persistence is optional UX. Storage failures must never break document editing.
+    // Persistence is optional UX; storage failure must not break document editing.
   }
 }
 
@@ -193,7 +198,10 @@ export function orderedSmartGridColumns(
     ...layout.order.map((fieldname) => byName.get(fieldname)).filter((field): field is DocField => Boolean(field)),
     ...columns.filter((field) => !layout.order.includes(field.fieldname)),
   ];
-  return ordered.filter((field) => field.fieldname === identityFieldname || !layout.hidden.includes(field.fieldname));
+  const visible = ordered.filter((field) => field.fieldname === identityFieldname || !layout.hidden.includes(field.fieldname));
+  if (!identityFieldname) return visible;
+  const identity = visible.find((field) => field.fieldname === identityFieldname);
+  return identity ? [identity, ...visible.filter((field) => field.fieldname !== identityFieldname)] : visible;
 }
 
 export function reorderSmartGridField(
@@ -205,27 +213,39 @@ export function reorderSmartGridField(
   const index = next.indexOf(fieldname);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= next.length) return next;
-  [next[index], next[target]] = [next[target], next[index]];
+  const currentValue = next[index];
+  const targetValue = next[target];
+  if (currentValue === undefined || targetValue === undefined) return next;
+  next[index] = targetValue;
+  next[target] = currentValue;
   return next;
 }
 
-/** Move selected rows as a stable block without reordering selected rows relative to each other. */
+/** Move selected rows as a stable block, retaining selection identity while positions change. */
 export function moveSmartGridRows(rows: readonly Doc[], selected: ReadonlySet<string>, direction: -1 | 1): Doc[] {
-  const next = [...rows];
+  const records = rows.map((row, index) => ({ row, key: smartGridRowKey(row, index) }));
   if (direction < 0) {
-    for (let index = 1; index < next.length; index += 1) {
-      const key = smartGridRowKey(next[index], index);
-      const previousKey = smartGridRowKey(next[index - 1], index - 1);
-      if (selected.has(key) && !selected.has(previousKey)) [next[index - 1], next[index]] = [next[index], next[index - 1]];
+    for (let index = 1; index < records.length; index += 1) {
+      const current = records[index];
+      const previous = records[index - 1];
+      if (!current || !previous) continue;
+      if (selected.has(current.key) && !selected.has(previous.key)) {
+        records[index - 1] = current;
+        records[index] = previous;
+      }
     }
   } else {
-    for (let index = next.length - 2; index >= 0; index -= 1) {
-      const key = smartGridRowKey(next[index], index);
-      const nextKey = smartGridRowKey(next[index + 1], index + 1);
-      if (selected.has(key) && !selected.has(nextKey)) [next[index], next[index + 1]] = [next[index + 1], next[index]];
+    for (let index = records.length - 2; index >= 0; index -= 1) {
+      const current = records[index];
+      const following = records[index + 1];
+      if (!current || !following) continue;
+      if (selected.has(current.key) && !selected.has(following.key)) {
+        records[index] = following;
+        records[index + 1] = current;
+      }
     }
   }
-  return next;
+  return records.map((entry) => entry.row);
 }
 
 export function restoreSmartGridRows(rows: readonly Doc[], deleted: readonly SmartGridDeletedRow[]): Doc[] {
@@ -236,16 +256,16 @@ export function restoreSmartGridRows(rows: readonly Doc[], deleted: readonly Sma
   return next;
 }
 
-/** RFC4180-style quoting, but tab-separated to match Excel/Sheets clipboard output. */
+/** RFC4180-style quoting with tabs as separators, matching Excel/Sheets clipboard output. */
 export function parseSmartGridTsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
   let quoted = false;
   for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
+    const char = text.charAt(index);
     if (char === '"') {
-      if (quoted && text[index + 1] === '"') {
+      if (quoted && text.charAt(index + 1) === '"') {
         cell += '"';
         index += 1;
       } else {
@@ -259,7 +279,7 @@ export function parseSmartGridTsv(text: string): string[][] {
       continue;
     }
     if (!quoted && (char === "\n" || char === "\r")) {
-      if (char === "\r" && text[index + 1] === "\n") index += 1;
+      if (char === "\r" && text.charAt(index + 1) === "\n") index += 1;
       row.push(cell);
       rows.push(row);
       row = [];
@@ -292,9 +312,7 @@ export function planSmartGridPaste(text: string, columns: readonly DocField[], s
   const headerAware = nonBlankHeaders > 0 && recognized === nonBlankHeaders;
   return {
     matrix: headerAware ? matrix.slice(1) : matrix,
-    columnIndexes: headerAware
-      ? headerIndexes
-      : first.map((_, offset) => startColumn + offset),
+    columnIndexes: headerAware ? headerIndexes : first.map((_, offset) => startColumn + offset),
     headerAware,
   };
 }
