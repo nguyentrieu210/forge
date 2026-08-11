@@ -2,8 +2,24 @@
 
 Branch: `agent/ui-rec-04-project-coverage-20260811`
 Fork point: `program/backend-ui-reconciliation-20260811@c4209b8318ac36110ca84094d905ce724ffae3d5`
-Status: BOOTSTRAPPED
+Status: READY_FOR_ROUTING
 Risk: audit/docs by default; implementation risk follows the owner-correct fix if later assigned.
+
+## Result
+
+Substantive audit completed in `PROJECT_UI_COVERAGE_SUMMARY.md`.
+
+Key routed findings:
+
+- P0 Procurement Source-to-Pay operator navigation gap;
+- P1 first-party validation/pack coverage fragmentation;
+- P1 server/client Experience allowlist drift filtering `daily-ledger` and `alumdoor-operations` from navigation;
+- P1 Manufacturing/QMS execution reachability contract;
+- P1 HRM Salary Component reachability proof request;
+- P2 business-identity / vertical Experience leakage in the generic runtime;
+- Dependency Requests recorded for UI-REC-01, Procurement/domain UI, shared runtime, UI-REC-05, Manufacturing/QMS and Grid.
+
+No runtime, schema, migration, Grid, domain hotspot, merge or production mutation was performed by REC-04.
 
 ## Mission
 
