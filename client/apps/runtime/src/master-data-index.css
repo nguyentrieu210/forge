@@ -1,0 +1,143 @@
+/* Master data index — compact card layout for metadata-driven catalog screens.
+ *
+ * Scope is intentionally structural and presentation-only. The selector targets the
+ * unique master-data grid emitted by MetaIndexScreen; no route, permission, metadata,
+ * ordering or business behavior is changed.
+ */
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.border-b {
+  margin-bottom: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 7%, var(--card)) 0%, var(--card) 58%, color-mix(in srgb, var(--muted) 48%, var(--card)) 100%);
+  padding: 1rem 1.125rem;
+  box-shadow: 0 0.25rem 1rem -0.85rem color-mix(in srgb, var(--foreground) 28%, transparent);
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.border-b h1 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.02em;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.border-b p {
+  max-width: 56rem;
+  line-height: 1.35rem;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 {
+  display: block;
+  columns: 1;
+  column-gap: 0.875rem;
+  padding: 0;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section {
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 0.875rem;
+  break-inside: avoid;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, var(--foreground));
+  border-radius: 0.875rem;
+  background: var(--card);
+  box-shadow: 0 0.35rem 1.2rem -1rem color-mix(in srgb, var(--foreground) 30%, transparent);
+  vertical-align: top;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section > h2 {
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 46%, var(--card));
+  padding: 0.72rem 0.875rem;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2rem;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section > div {
+  padding: 0.35rem;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button {
+  position: relative;
+  min-height: 2.25rem;
+  width: 100%;
+  justify-content: flex-start;
+  border-radius: 0.55rem;
+  padding: 0.46rem 2rem 0.46rem 0.65rem;
+  color: var(--foreground) !important;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.15rem;
+  text-align: left;
+  text-decoration: none !important;
+  transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button::after {
+  content: "›";
+  position: absolute;
+  top: 50%;
+  right: 0.72rem;
+  color: var(--muted-foreground);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.65;
+  transform: translateY(-52%);
+  transition: transform 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button:hover {
+  background: color-mix(in srgb, var(--primary) 9%, var(--card));
+  color: var(--foreground) !important;
+  transform: translateX(2px);
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button:hover::after,
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button:focus-visible::after {
+  color: var(--primary);
+  opacity: 1;
+  transform: translate(2px, -52%);
+}
+
+.mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+}
+
+@media (min-width: 768px) {
+  .mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 {
+    columns: 2;
+  }
+}
+
+@media (min-width: 1180px) {
+  .mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 {
+    columns: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button,
+  .mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button::after {
+    transition: none;
+  }
+
+  .mf-shell section:has(> div.grid.gap-x-12.gap-y-8) > div.grid.gap-x-12.gap-y-8 > section button:hover {
+    transform: none;
+  }
+}
