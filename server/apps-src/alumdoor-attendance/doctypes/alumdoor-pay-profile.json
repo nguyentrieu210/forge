@@ -25,11 +25,25 @@
     { "fieldname": "approved_by", "label": "Người duyệt", "fieldtype": "Link", "options": "User", "read_only": true },
     { "fieldname": "approved_at", "label": "Duyệt lúc", "fieldtype": "Datetime", "read_only": true }
   ],
+  "viewPolicy": {
+    "list": {
+      "enabled": true,
+      "columns": ["profile_code", "employee", "branch", "pay_mode", "base_salary_vnd", "effective_from", "effective_to", "status"]
+    },
+    "form": {
+      "enabled": true,
+      "fields": ["profile_code", "employee", "company", "branch", "pay_mode", "base_salary_vnd", "overtime_multiplier_bp", "fixed_allowance_vnd", "effective_from", "effective_to", "status", "approved_by", "approved_at"]
+    },
+    "quickEntry": {
+      "enabled": false,
+      "fields": []
+    }
+  },
   "permissions": [
     { "role": "AlumDoor Payroll User", "read": true, "write": true, "create": true, "report": true, "export": true },
     { "role": "AlumDoor Payroll Approver", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "report": true, "export": true },
     { "role": "HR Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "write": true, "create": true, "submit": true, "cancel": true, "report": true, "export": true }
   ],
-  "revision": 1
+  "revision": 2
 }
