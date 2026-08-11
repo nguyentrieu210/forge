@@ -1,110 +1,95 @@
-name: Alumdoor FormView purity hosted
-permissions:
-  contents: write
+name: Alumdoor final hosted certification
+
 on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
     paths: [".github/workflows/alumdoor-form-purity-hosted.yml"]
+
 jobs:
-  purity:
+  certify:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Refactor FormView to metadata and server preview
+      - name: Clone experiment
         shell: bash
         run: |
           set -euo pipefail
-          p="$RUNNER_TEMP/forge-alu-form-purity"
+          p="$RUNNER_TEMP/forge-alumdoor-final-hosted"
           git clone --quiet --branch exp/alumdoor-pricing-policy "https://x-access-token:${GH_TOKEN}@github.com/nguyentrieu210/forge.git" "$p"
-          cd "$p"; base="$(git rev-parse HEAD)"; export P="$p"
-          python - <<'PY'
-          from pathlib import Path
-          import os
-          r=Path(os.environ['P']); f=r/'client/packages/views/src/form/FormView.tsx'; s=f.read_text(encoding='utf-8')
-          s=s.replace('import { defaultSalesDiscountPercent } from "./sales-line-policy.js";\n','')
-          a=s.index('const SALES_VND_FORMATTER =')
-          b=s.index('export interface FormViewProps')
-          s=s[:a]+'''interface DocumentPreviewResult {\n  patch?: Record<string, unknown>;\n  clear?: string[];\n}\n\n'''+s[b:]
-          old='''    return [...names];\n  }, [meta, fetchRules]);\n'''
-          new='''    for (const fieldname of meta.viewPolicy?.form?.previewParentFields ?? []) {\n      if (meta.fields.some((field) => field.fieldname === fieldname)) names.add(fieldname);\n    }\n    return [...names];\n  }, [meta, fetchRules]);\n'''
-          assert old in s; s=s.replace(old,new,1)
-          start=s.index('  const reactiveValues = useWatch')
-          end=s.index('  // Ctrl/Cmd+S',start)
-          replacement='''  const reactiveValues = useWatch({ control: form.control, name: reactiveFields });\n  const values = useMemo(() => {\n    const current = { ...form.getValues() };\n    reactiveFields.forEach((fieldname, index) => {\n      current[fieldname] = (reactiveValues as unknown[])[index];\n    });\n    return current;\n  }, [form, reactiveFields, reactiveValues]);\n\n  const formPreview = meta.viewPolicy?.form;\n  const previewMethod = typeof formPreview?.previewMethod === "string" ? formPreview.previewMethod.trim() : "";\n  const previewParentFields = useMemo(\n    () => (formPreview?.previewParentFields ?? []).filter((fieldname) => meta.fields.some((field) => field.fieldname === fieldname)),\n    [formPreview?.previewParentFields, meta.fields],\n  );\n  const previewSequence = useRef(0);\n  const previewDocKey = useRef("");\n  const previewPrevious = useRef<Record<string, unknown>>({});\n  useEffect(() => {\n    if (!previewMethod || !services?.callPost) return;\n    const key = `${doc.name ?? ""}|${doc.modified ?? ""}`;\n    const current = Object.fromEntries(previewParentFields.map((fieldname) => [fieldname, form.getValues(fieldname)]));\n    const firstForDocument = previewDocKey.current !== key;\n    let changedField = "";\n    if (firstForDocument) {\n      previewDocKey.current = key;\n      previewPrevious.current = current;\n      if (!props.isNew) return;\n    } else {\n      changedField = previewParentFields.find((fieldname) => !Object.is(previewPrevious.current[fieldname], current[fieldname])) ?? "";\n      previewPrevious.current = current;\n      if (!changedField) return;\n    }\n    const sequence = ++previewSequence.current;\n    const snapshot = { ...form.getValues(), name: doc.name, modified: doc.modified };\n    void services.callPost<DocumentPreviewResult>(previewMethod, {\n      doctype: meta.name,\n      doc: snapshot,\n      changed_field: changedField,\n    }).then((result) => {\n      if (previewSequence.current !== sequence) return;\n      const known = new Set(meta.fields.map((field) => field.fieldname));\n      const shouldDirty = !firstForDocument;\n      for (const fieldname of result.clear ?? []) {\n        if (!known.has(fieldname) || form.getValues(fieldname) === undefined) continue;\n        form.setValue(fieldname, undefined as never, { shouldDirty, shouldValidate: false });\n      }\n      for (const [fieldname, value] of Object.entries(result.patch ?? {})) {\n        if (!known.has(fieldname) || Object.is(form.getValues(fieldname), value)) continue;\n        form.setValue(fieldname, value as never, { shouldDirty, shouldValidate: false });\n      }\n    }).catch(() => { /* Preview is UX assistance; canonical save validation remains authoritative. */ });\n  }, [doc.modified, doc.name, form, meta.fields, meta.name, previewMethod, previewParentFields, props.isNew, services, reactiveValues]);\n\n'''
-          s=s[:start]+replacement+s[end:]
-          # Remove the app-specific customer-price-list effect and keep a generic aggregate only for documents without server preview.
-          start=s.index('  // Đơn bán:')
-          end=s.index('  const resolved: ResolvedField[]',start)
-          aggregate='''  /** Lightweight generic totals for documents without a server-owned form preview. */\n  const totalFields = useMemo(() => {\n    if (previewMethod) return null;\n    const has = (name: string) => meta.fields.some((field) => field.fieldname === name);\n    const table = meta.fields.find((field) => field.fieldtype === "Table" && field.fieldname === "items");\n    if (!table) return null;\n    const sumAmount = has("grand_total");\n    const sumQty = has("total_qty");\n    return {\n      table: table.fieldname,\n      sumAmount,\n      sumQty,\n      derived: [...(sumAmount ? ["grand_total"] : []), ...(sumQty ? ["total_qty"] : [])],\n    };\n  }, [meta, previewMethod]);\n  useEffect(() => {\n    if (!totalFields) return;\n    const updateTotals = (current: FieldValues) => {\n      const rows = current[totalFields.table];\n      if (!Array.isArray(rows)) return;\n      const round = (value: number) => Math.round(value * 1e6) / 1e6;\n      if (totalFields.sumAmount) {\n        const subtotal = round(rows.reduce((sum, rawRow) => {\n          const row = rawRow as Doc;\n          const amount = Number(row.amount);\n          if (Number.isFinite(amount)) return sum + amount;\n          const qty = Number(row.qty);\n          const rate = Number(row.rate);\n          return sum + (Number.isFinite(qty) && Number.isFinite(rate) ? qty * rate : 0);\n        }, 0));\n        if (Number(current.grand_total ?? 0) !== subtotal) form.setValue("grand_total", subtotal as never, { shouldDirty: false });\n      }\n      if (totalFields.sumQty) {\n        const totalQty = round(rows.reduce((sum, row) => sum + (Number((row as Doc)?.qty) || 0), 0));\n        if (Number(current.total_qty ?? 0) !== totalQty) form.setValue("total_qty", totalQty as never, { shouldDirty: false });\n      }\n    };\n    updateTotals(form.getValues());\n    const subscription = form.watch((next, info) => {\n      if (!info.name || info.name === totalFields.table || info.name.startsWith(`${totalFields.table}.`)) updateTotals(next as FieldValues);\n    });\n    return () => subscription.unsubscribe();\n  }, [form, totalFields]);\n\n'''
-          s=s[:start]+aggregate+s[end:]
-          # Remove resolved Sales-only summary handles.
-          sales_fields='''  const salesVatField = meta.name === "Sales Order"\n    ? resolved.find((field) => field.field.fieldname === "vat_rate")\n    : undefined;\n  const salesSurchargeField = meta.name === "Sales Order"\n    ? resolved.find((field) => field.field.fieldname === "surcharge_amount")\n    : undefined;\n'''
-          assert sales_fields in s; s=s.replace(sales_fields,'',1)
-          # Replace per-section Sales filtering/header decomposition with purely declarative regions.
-          start=s.index('            const sectionFields = section.columns.flatMap')
-          end=s.index('            const renderFields =',start)
-          s=s[:start]+'''            const sectionFields = section.columns.flatMap((column) => column.fields);\n            const mainFields = sectionFields.filter((field) => field.field.form_region !== "aside" && field.field.form_region !== "full");\n            const asideFields = sectionFields.filter((field) => field.field.form_region === "aside");\n            const fullFields = sectionFields.filter((field) => field.field.form_region === "full");\n'''+s[end:]
-          old='''                  // Khối thanh toán của đơn bán là phần để chốt với khách, đặt gọn ở giữa\n                  // thay vì kéo hết ngang form như các trường nhập liệu thông thường.\n                  meta.name === "Sales Order" && section.label === "Tổng kết"\n                    && "w-full rounded-lg border bg-muted/10 px-4 md:ml-auto md:max-w-[36rem] [&_.mf-form-grid]:justify-center [&_.mf-field]:text-center [&_.mf-field>label]:text-center [&_.mf-control]:justify-center [&_input]:text-center",\n'''
-          new='''                  section.style === "summary"\n                    && "w-full rounded-lg border bg-muted/10 px-4 md:ml-auto md:max-w-[36rem] [&_.mf-form-grid]:justify-center [&_.mf-field]:text-center [&_.mf-field>label]:text-center [&_.mf-control]:justify-center [&_input]:text-center",\n'''
-          assert old in s; s=s.replace(old,new,1)
-          # Delete the hardcoded commercial header branch; generic main/aside/full layout renders metadata regions.
-          start=s.index('                {isSalesOrderHeader ? (')
-          marker='                ) : asideFields.length ? ('
-          end=s.index(marker,start)
-          s=s[:start]+'                {asideFields.length ? ('+s[end+len(marker):]
-          # Delete custom commercial summary; summary is now a normal metadata Section Break.
-          start=s.index('          {salesSummary ? (')
-          end_marker='          ) : null}\n        </div>'
-          end=s.index(end_marker,start)
-          s=s[:start]+s[end+len('          ) : null}\n'):]
-          # Delete Sales-specific summary helper components.
-          start=s.index('function SalesSummaryValue(')
-          end=s.index('function groupCheckFields(',start)
-          s=s[:start]+s[end:]
-          # Metadata owns field labels.
-          old='''  const displayLabel = parentDoctype === "Sales Order" && field.fieldname === "customer_group"\n    ? "Nhóm khách hàng"\n    : field.label ?? field.fieldname;\n'''
-          assert old in s; s=s.replace(old,'  const displayLabel = field.label ?? field.fieldname;\n',1)
-          # Generic Select choice-list presentation; values/options remain metadata-driven.
-          start=s.index('        const isCheck = field.fieldtype === "Check";')
-          end=s.index('        const label = (',start)
-          control='''        const isCheck = field.fieldtype === "Check";\n        const choiceOptions = field.fieldtype === "Select" && field.form_control_style === "choice_list"\n          ? String(field.options ?? "").split("\\n").map((option) => option.trim()).filter(Boolean)\n          : [];\n        const control = choiceOptions.length ? (\n          <div className="mf-choice-list space-y-1" role="radiogroup" aria-label={displayLabel}>\n            {choiceOptions.map((option) => (\n              <label key={option} className="flex min-h-8 cursor-pointer items-center gap-2 text-sm">\n                <Checkbox\n                  checked={f.value === option}\n                  disabled={rf.readOnly}\n                  onCheckedChange={(checked) => {\n                    if (checked === true) { f.onChange(option); if (fieldState.error) form.clearErrors(field.fieldname); }\n                  }}\n                  aria-label={field.optionLabels?.[option] ?? option}\n                />\n                <span>{field.optionLabels?.[option] ?? option}</span>\n              </label>\n            ))}\n          </div>\n        ) : (\n          <Control\n            field={field}\n            id={id}\n            value={f.value}\n            onChange={(v) => { f.onChange(v); if (fieldState.error) form.clearErrors(field.fieldname); }}\n            readOnly={rf.readOnly}\n            masked={rf.masked}\n            error={fieldState.error?.message}\n            describedBy={fieldState.error ? `${id}-error` : undefined}\n            required={rf.required}\n            label={displayLabel}\n            services={services}\n            docname={docName}\n            linkTarget={linkTarget}\n            parentDoctype={parentDoctype}\n            docValues={controlValues}\n            roles={roles}\n          />\n        );\n'''
-          s=s[:start]+control+s[end:]
-          # Fail the patch if any known domain branches remain in the generic renderer.
-          forbidden=['"Sales Order"','defaultSalesDiscountPercent','salesSummary','salesOrder','SALES_VND_FORMATTER','formatSalesVnd','"Price List"','"Customer"','customer_group']
-          leftovers=[token for token in forbidden if token in s]
-          if leftovers: raise SystemExit(f'FormView still contains business-specific tokens: {leftovers}')
-          f.write_text(s,encoding='utf-8',newline='\n')
+          echo "CERT_ROOT=$p" >> "$GITHUB_ENV"
+          cd "$p" && echo "CERT_HEAD=$(git rev-parse HEAD)"
 
-          # Make the authored form region contract preserve the old golden header structure declaratively.
-          g=r/'server/scripts/build-alumdoor-v2-brief.mjs'; x=g.read_text(encoding='utf-8')
-          old='''operationalSalesOrder.fields = operationalSalesOrder.fields.map((raw, index) => {\n  const field = parseField(raw, index);\n  if (["transaction_date", "delivery_date", "payment_method"].includes(field.fieldname)) field.form_region = "aside";\n  if (["customer", "responsible_person", "manual_note", "operational_change_reason", "selling_price_list", "customer_group", "install_address"].includes(field.fieldname)) field.form_region = "main";\n  if (field.fieldname === "install_address") field.form_width = "full";\n  if (field.fieldname === "customer_group") field.label = "Nhóm khách hàng";\n  if (field.fieldname === "payment_method") { field.default = "Ghi công nợ"; field.form_control_style = "choice_list"; }\n  return field;\n});\n'''
-          new='''operationalSalesOrder.fields = operationalSalesOrder.fields.map((raw, index) => {\n  const field = parseField(raw, index);\n  if (!["Section Break", "Column Break", "Tab Break"].includes(field.fieldtype)) field.form_region = "full";\n  if (["transaction_date", "delivery_date", "payment_method"].includes(field.fieldname)) field.form_region = "aside";\n  if (["customer", "responsible_person", "manual_note", "operational_change_reason", "selling_price_list", "customer_group", "install_address"].includes(field.fieldname)) field.form_region = "main";\n  if (field.fieldname === "install_address") field.form_width = "full";\n  if (field.fieldname === "customer_group") field.label = "Nhóm khách hàng";\n  if (field.fieldname === "payment_method") { field.default = "Ghi công nợ"; field.form_control_style = "choice_list"; }\n  const summaryLabels = { total_amount: "Tổng cộng tiền hàng", discount_amount: "Tiền chiết khấu", surcharge_amount: "Phụ thu", vat_rate: "% VAT", vat_amount: "Số tiền VAT", grand_total: "Tiền phải thu" };\n  if (field.fieldname in summaryLabels) { field.label = summaryLabels[field.fieldname]; field.form_width = "full"; }\n  return field;\n});\n'''
-          assert old in x; g.write_text(x.replace(old,new,1),encoding='utf-8',newline='\n')
-
-          test=r/'client/packages/views/tests/form-view-metadata-purity.test.mjs'
-          test.write_text('''import test from "node:test";\nimport assert from "node:assert/strict";\nimport { readFileSync } from "node:fs";\nconst source = readFileSync(new URL("../src/form/FormView.tsx", import.meta.url), "utf8");\ntest("generic FormView contains no commercial doctype or pricing policy hardcode", () => {\n  for (const token of ["\\\"Sales Order\\\"", "defaultSalesDiscountPercent", "salesSummary", "salesOrder", "SALES_VND_FORMATTER", "formatSalesVnd", "\\\"Price List\\\"", "\\\"Customer\\\"", "customer_group"]) assert.equal(source.includes(token), false, token);\n  assert.equal(source.includes("previewMethod"), true);\n  assert.equal(source.includes("services.callPost<DocumentPreviewResult>"), true);\n  assert.equal(source.includes('field.form_control_style === "choice_list"'), true);\n  assert.equal(source.includes('section.style === "summary"'), true);\n});\n''',encoding='utf-8',newline='\n')
-          PY
-          cd server
+      - name: Build metadata and audit canonical stock view
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CERT_ROOT/server"
           corepack enable
+          corepack prepare pnpm@9.15.0 --activate
           pnpm install --frozen-lockfile
           pnpm run build
-          node scripts/build-alumdoor-v2-brief.mjs
           pnpm run brief:check
-          pnpm exec wrangler deploy --dry-run --config apps-src/alumdoor-worker/wrangler.jsonc
-          cd ../client
-          pnpm --filter @metaforge/views... run build
-          node --test packages/views/tests/form-view-metadata-purity.test.mjs packages/views/tests/metadata-child-grid-runtime.test.mjs packages/views/tests/child-grid-presentation.test.mjs
-          cd ../server
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const brief=JSON.parse(readFileSync("briefs/alumdoor-v2.json","utf8"));
+          const rx=/(tồn.*nhôm|nhôm.*tồn|aluminium\s+lot|stock.*length|length.*stock)/iu;
+          const nav=(brief.navigation?.items??[]).filter(x=>rx.test(typeof x==="string"?x:JSON.stringify(x)));
+          const reports=(brief.reports??[]).filter(x=>rx.test(JSON.stringify(x)));
+          const links=(brief.links??[]).filter(x=>rx.test(JSON.stringify(x)));
+          console.log(`ALUMINIUM_STOCK_NAV=${JSON.stringify(nav)}`);
+          console.log(`ALUMINIUM_STOCK_APP_REPORT_DUPLICATES=${reports.length}`);
+          console.log(`ALUMINIUM_STOCK_LINKS=${JSON.stringify(links)}`);
+          if(reports.length!==0) throw new Error("duplicate app-owned aluminium stock report");
+          const generator=readFileSync("scripts/build-alumdoor-v2-brief.mjs","utf8");
+          if(!generator.includes('Báo cáo "Tồn nhôm theo khổ" đọc Batch + sổ kho')) throw new Error("canonical Stock Ledger/Batch ownership note missing");
+          console.log("ALUMINIUM_STOCK_CANONICAL_SOURCE_PASS");
+          NODE
+          find migrations/tenant -maxdepth 1 -type f | grep '0025' || true
+          grep -RniE 'Tồn nhôm|Aluminium Lot|stock.*length|length.*stock' migrations/tenant 2>/dev/null | head -80 || true
+
+      - name: Focused domain closure slices
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CERT_ROOT/server"
+          run_slice(){ label="$1"; regex="$2"; mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei "$regex" | sort); echo "${label}_FILES=${#tests[@]}"; printf '%s\n' "${tests[@]}"; test "${#tests[@]}" -gt 0; node --test "${tests[@]}"; echo "${label}_PASS"; }
+          run_slice MANUFACTURING '(manufactur|production|work-order|cut-order|bom|job-card)'
+          run_slice PRINT '(print|pdf|a4)'
+          run_slice ACCOUNTING_CLOSURE '(transaction.*closure|reconcil|receivable|payable|payment|general-ledger|accounting|stock-ledger)'
+
+      - name: Full server regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CERT_ROOT/server"
           pnpm test:unit
-          cd ..
-          git diff --check
-          git fetch origin exp/alumdoor-pricing-policy --quiet
-          test "$(git rev-parse origin/exp/alumdoor-pricing-policy)" = "$base"
-          git config user.name 'Alumdoor Hosted Convergence'; git config user.email 'alumdoor-cert@local.invalid'
-          git add client server
-          git commit -m 'refactor(metaform): remove commercial logic from generic FormView'
-          git push origin HEAD:exp/alumdoor-pricing-policy
-          echo "FORM_PURITY_PUSHED=$(git rev-parse HEAD)"
+          echo FULL_SERVER_REGRESSION_PASS
+
+      - name: Client contract and product readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CERT_ROOT/client"
+          pnpm --filter @metaforge/views... run build
+          pnpm run lint
+          pnpm run test
+          pnpm run product:check
+          node --test packages/views/tests/form-view-metadata-purity.test.mjs packages/views/tests/metadata-child-grid-runtime.test.mjs packages/views/tests/child-grid-presentation.test.mjs
+          echo CLIENT_RUNTIME_CONTRACT_PASS
+
+      - name: Responsive browser smoke and bundle budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$CERT_ROOT/client"
+          pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
+          pnpm --filter @metaforge/demo run e2e
+          pnpm --filter @metaforge/demo run build
+          largest=$(find apps/demo/dist -type f -name '*.js' -printf '%s\n' | sort -nr | head -1)
+          echo "LARGEST_DEMO_JS_BYTES=$largest"
+          test -n "$largest" && test "$largest" -le 2097152
+          echo PLAYWRIGHT_RESPONSIVE_UX_PASS
+          echo CLIENT_BUNDLE_BUDGET_PASS
