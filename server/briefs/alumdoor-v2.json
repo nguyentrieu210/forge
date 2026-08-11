@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.0.35",
+  "version": "2.0.36",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -3841,14 +3841,6 @@
           "form_region": "full"
         },
         {
-          "fieldname": "grand_total",
-          "label": "Tiền phải thu",
-          "fieldtype": "Currency",
-          "read_only": true,
-          "form_region": "full",
-          "form_width": "full"
-        },
-        {
           "fieldname": "delivered_percentage",
           "label": "Đã giao (%)",
           "fieldtype": "Percent",
@@ -3867,6 +3859,60 @@
           "label": "Ghi chú",
           "fieldtype": "Small Text",
           "form_region": "full"
+        },
+        {
+          "label": "Tổng kết",
+          "fieldname": "sales_summary_section",
+          "fieldtype": "Section Break",
+          "form_section_style": "summary"
+        },
+        {
+          "label": "Tổng cộng tiền hàng",
+          "fieldname": "total_amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "form_region": "full",
+          "form_width": "full"
+        },
+        {
+          "label": "Tiền chiết khấu",
+          "fieldname": "discount_amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "form_region": "full",
+          "form_width": "full"
+        },
+        {
+          "label": "Phụ thu",
+          "fieldname": "surcharge_amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "form_region": "full",
+          "form_width": "full"
+        },
+        {
+          "label": "% VAT",
+          "fieldname": "vat_rate",
+          "fieldtype": "Percent",
+          "default": 0,
+          "form_region": "full",
+          "form_width": "full"
+        },
+        {
+          "label": "Số tiền VAT",
+          "fieldname": "vat_amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "form_region": "full",
+          "form_width": "full"
+        },
+        {
+          "label": "Tiền phải thu",
+          "fieldname": "grand_total",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "form_region": "full",
+          "form_width": "full"
         }
       ],
       "permissions": {
@@ -3891,9 +3937,14 @@
           "customer_group",
           "install_address",
           "items",
-          "grand_total",
           "delivered_percentage",
-          "billed_percentage"
+          "billed_percentage",
+          "total_amount",
+          "discount_amount",
+          "surcharge_amount",
+          "vat_rate",
+          "vat_amount",
+          "grand_total"
         ],
         "previewMethod": "alumdoor.ui.preview_document",
         "previewParentFields": [

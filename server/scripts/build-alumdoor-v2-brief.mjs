@@ -50,7 +50,7 @@ const replaceField = (dt, name, next) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.35";
+brief.version = "2.0.36";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -140,6 +140,23 @@ addAfter(operationalSalesOrder, "delivery_date",
   "manual_note:Small Text Ghi chú vận hành",
   "operational_change_reason:Small Text- Lý do đổi vận hành",
 );
+
+// Sales totals remain server-authoritative. Metadata only projects the canonical preview/save
+// fields back into a dedicated summary section; no pricing/tax formula lives in FormView.
+const existingGrandTotalIndex = operationalSalesOrder.fields.findIndex((field) => nameOf(field) === "grand_total");
+if (existingGrandTotalIndex < 0) throw new Error("Sales Order: không thấy grand_total để dựng Tổng kết");
+const [grandTotalSource] = operationalSalesOrder.fields.splice(existingGrandTotalIndex, 1);
+const grandTotalField = parseField(grandTotalSource, existingGrandTotalIndex);
+operationalSalesOrder.fields.push(
+  { fieldname: "sales_summary_section", fieldtype: "Section Break", label: "Tổng kết", form_section_style: "summary" },
+  { fieldname: "total_amount", fieldtype: "Currency", label: "Tổng cộng tiền hàng", read_only: true },
+  { fieldname: "discount_amount", fieldtype: "Currency", label: "Tiền chiết khấu", read_only: true },
+  { fieldname: "surcharge_amount", fieldtype: "Currency", label: "Phụ thu", read_only: true },
+  { fieldname: "vat_rate", fieldtype: "Percent", label: "% VAT", default: 0 },
+  { fieldname: "vat_amount", fieldtype: "Currency", label: "Số tiền VAT", read_only: true },
+  { ...grandTotalField, fieldname: "grand_total", label: "Tiền phải thu", fieldtype: "Currency", read_only: true },
+);
+
 const salesFormHidden = new Set(["product_group", "against_quotation", "note"]);
 operationalSalesOrder.fields = operationalSalesOrder.fields.map((raw, index) => {
   const field = parseField(raw, index);
