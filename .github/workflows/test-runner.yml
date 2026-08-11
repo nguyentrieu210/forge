@@ -54,6 +54,9 @@ jobs:
           }
           pnpm --filter @metaforge/views run build
           if ($LASTEXITCODE -ne 0) { throw 'MetaForge views build failed' }
+          Set-Location C:\alumdoor\client\packages\views
+          node --test tests/child-grid-presentation.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Metadata child-grid presentation contract failed' }
 
       - name: Run inventory integrity slice
         shell: powershell
@@ -80,4 +83,4 @@ jobs:
           Get-Content $log -Tail 30 | ForEach-Object { Write-Host $_ }
           Write-Host 'ALUMDOOR_INVENTORY_FULL_SERVER_UNIT_PASS'
 
-# diagnostic full-suite failures
+# metadata presentation + inventory + full regression
