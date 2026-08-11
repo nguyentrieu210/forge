@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Verify local experiment checkout is safe
         shell: powershell
@@ -88,8 +88,8 @@ jobs:
           Set-Location ..\client
           pnpm install --no-frozen-lockfile --lockfile=false
           if ($LASTEXITCODE -ne 0) { throw 'client dependency bootstrap failed' }
-          pnpm --filter @metaforge/views run build
-          if ($LASTEXITCODE -ne 0) { throw 'views build failed' }
+          pnpm --filter @metaforge/views... run build
+          if ($LASTEXITCODE -ne 0) { throw 'views dependency-closure build failed' }
           Set-Location packages\views
           node --test tests/child-grid-presentation.test.mjs tests/metadata-child-grid-runtime.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'metadata grid tests failed' }
@@ -109,4 +109,4 @@ jobs:
           Set-Location $env:RUNNER_TEMP
           cmd /c "rmdir /s /q `"$probe`"" >nul 2>nul
 
-# child-row-preview-wire-v2
+# child-row-preview-wire-v3
