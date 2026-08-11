@@ -1,0 +1,47 @@
+name: Attendance payroll local final sync
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-local-sync.yml"]
+
+jobs:
+  sync:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 15
+    steps:
+      - name: Preserve local residue and fast-forward verified worktree
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Assert-LastExit([string]$label) { if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" } }
+          $repo = 'C:\alumdoor'
+          $worktree = 'C:\forge-attendance-payroll'
+          $target = 'feature/attendance-payroll'
+          if (-not (Test-Path $worktree)) { throw 'attendance payroll worktree missing' }
+          $rootBranch = (git -C $repo branch --show-current).Trim()
+          Write-Host "SHARED_ROOT_BRANCH=$rootBranch"
+          $branch = (git -C $worktree branch --show-current).Trim()
+          if ($branch -ne $target) { throw "attendance worktree is on $branch instead of $target" }
+
+          git -C $repo fetch origin $target --prune
+          Assert-LastExit 'fetch verified feature'
+          $dirty = git -C $worktree status --porcelain --untracked-files=all
+          if ($dirty) {
+            Write-Host 'Preserving pre-final worktree residue in a named stash.'
+            git -C $worktree stash push -u -m 'attendance-payroll-pre-final-sync'
+            Assert-LastExit 'stash local residue'
+          }
+          git -C $worktree merge --ff-only "origin/$target"
+          Assert-LastExit 'fast-forward attendance payroll worktree'
+
+          $local = (git -C $worktree rev-parse HEAD).Trim()
+          $remote = (git -C $worktree rev-parse "origin/$target").Trim()
+          if ($local -ne $remote) { throw "local $local does not equal remote $remote" }
+          $after = git -C $worktree status --porcelain --untracked-files=all
+          if ($after) { throw "attendance payroll worktree is not clean after sync:`n$after" }
+          if (-not (Test-Path "$worktree\docs\agents\attendance-payroll\VERIFICATION.md")) { throw 'verification evidence is missing from synced feature' }
+          Write-Host "ATTENDANCE_BRANCH=$branch"
+          Write-Host "ATTENDANCE_HEAD=$local"
+          Write-Host 'ATTENDANCE_PAYROLL_LOCAL_FINAL_SYNC_OK'
