@@ -22,7 +22,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=9'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=10'
           git -C C:\alumdoor fetch origin main --prune
 
           $mainPath = 'C:\forge-attendance-payroll\client\apps\runtime\src\main-base.tsx'
@@ -94,4 +94,8 @@ jobs:
           if (-not $raw.Contains($oldHelper)) { throw 'control script helper anchor missing' }
           $raw = $raw.Replace($oldHelper, $newHelper)
           Set-Content -Path $controlScript -Value $raw -Encoding UTF8
+
+          pnpm --dir C:\forge-attendance-payroll\client --filter "runtime^..." run build
+          if ($LASTEXITCODE -ne 0) { throw "runtime dependency build failed with exit code $LASTEXITCODE" }
+
           powershell -NoProfile -ExecutionPolicy Bypass -File $controlScript
