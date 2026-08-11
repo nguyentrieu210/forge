@@ -3,7 +3,6 @@ import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt } from "../../money/src/index.js";
 import {
-  STANDARD_PRICE_VARIANT,
   normalizePriceVariant,
   resolveServerPrice,
   type ResolvedPrice,
@@ -33,6 +32,7 @@ export interface ResolveCommercialLineInput {
    */
   discountBasisVariant?: string;
   pricedQty: number;
+  /** Discount policy is supplied independently and applied exactly once in this resolver. */
   discountPercentage?: number;
   partyType?: "Customer" | "Supplier";
   party?: string;
@@ -65,6 +65,9 @@ function pricingRequest(input: ResolveCommercialLineInput, priceVariant: string)
     documentCurrency: input.documentCurrency,
     ...(input.uom ? { uom: input.uom } : {}),
     priceVariant,
+    // CommercialLine owns discount composition. Resolve raw Item Price variants here so
+    // a legacy Pricing Rule percentage cannot reduce the rate and then be applied again.
+    applyPricingRules: false,
     ...(input.partyType ? { partyType: input.partyType } : {}),
     ...(input.party ? { party: input.party } : {}),
     ...(input.customerGroup ? { customerGroup: input.customerGroup } : {}),
@@ -83,7 +86,7 @@ function toAdjustmentSnapshot(adjustment: ResolvedSalesAdjustment): SalesAdjustm
   return {
     rule_code: adjustment.rule_code,
     rule_name: adjustment.rule_name,
-    ...(adjustment.rule_version === undefined ? {} : { rule_version: adjustment.rule_version }),
+    rule_version: adjustment.rule_version,
     description: adjustment.description,
     basis: adjustment.basis,
     basis_qty: adjustment.basis_qty,
@@ -100,8 +103,8 @@ function toAdjustmentSnapshot(adjustment: ResolvedSalesAdjustment): SalesAdjustm
 /**
  * Resolves one commercial sales line from server authorities only:
  *
- *   selling Item Price variant
- * - discount calculated on an independently configured basis variant when requested
+ *   raw selling Item Price variant
+ * - discount calculated on an independently configured raw basis variant when requested
  * + persisted adjustment rules matched from trusted commercial facts
  * = net before tax
  *
@@ -150,7 +153,7 @@ export async function resolveCommercialLine(
   return {
     selling_price: sellingPrice,
     discount_basis_price: discountBasisPrice,
-    discount_basis_variant: discountBasisVariant || STANDARD_PRICE_VARIANT,
+    discount_basis_variant: discountBasisVariant,
     totals,
     discount_amount: fromScaledInt(totals.discount_amount_minor, scale),
     adjustment_amount: fromScaledInt(totals.surcharge_amount_minor, scale),
