@@ -26,29 +26,33 @@ jobs:
             $unsafe | ForEach-Object { Write-Host $_ }
             throw 'Local working tree has non-backup changes; refusing to continue'
           }
-          git fetch origin exp/alumdoor-pricing-policy
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to fetch pricing experiment' }
-          git merge --ff-only origin/exp/alumdoor-pricing-policy
-          if ($LASTEXITCODE -ne 0) { throw 'Local experiment branch cannot fast-forward safely' }
-          Write-Host "TESTING_COMMIT=$(git rev-parse HEAD)"
+          Write-Host "LOCAL_COMMIT=$(git rev-parse HEAD)"
 
-      - name: Probe push auth in disposable clone only
-        shell: cmd
+      - name: Inspect presentation metadata compiler contract in disposable clone
+        shell: powershell
         run: |
-          @echo off
-          set PROBE=%RUNNER_TEMP%\forge-push-probe
-          if exist "%PROBE%" rmdir /s /q "%PROBE%"
-          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git "%PROBE%" || exit /b 1
-          git -C "%PROBE%" config user.name "Alumdoor Runner Probe"
-          git -C "%PROBE%" config user.email "runner-probe@local.invalid"
-          git -C "%PROBE%" commit --allow-empty -m "ci: disposable push auth probe" >nul || exit /b 1
-          git -C "%PROBE%" push --dry-run origin HEAD:exp/alumdoor-pricing-policy
-          if errorlevel 1 (
-            echo RUNNER_PUSH_CAPABLE=0
-            rmdir /s /q "%PROBE%"
-            exit /b 0
-          )
-          echo RUNNER_PUSH_CAPABLE=1
-          rmdir /s /q "%PROBE%"
+          $ErrorActionPreference = 'Stop'
+          $probe = Join-Path $env:RUNNER_TEMP 'forge-view-policy-probe'
+          if (Test-Path $probe) { Remove-Item -Recurse -Force $probe }
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
+          if ($LASTEXITCODE -ne 0) { throw 'clone failed' }
+          Set-Location $probe
+          Write-Host '=== VIEW POLICY REFERENCES ==='
+          git grep -n -I -E 'viewPolicy|view_policy' -- server client | Select-Object -First 120 | ForEach-Object { Write-Host $_ }
+          Write-Host '=== BRIEF EXAMPLES ==='
+          @'
+          import fs from "node:fs";
+          import path from "node:path";
+          const dir = "server/briefs";
+          for (const name of fs.readdirSync(dir).filter((x) => x.endsWith(".json"))) {
+            const p = path.join(dir, name);
+            const value = JSON.parse(fs.readFileSync(p, "utf8"));
+            const dts = Array.isArray(value.doctypes) ? value.doctypes : Object.values(value.doctypes ?? {});
+            const hits = dts.filter((dt) => dt?.viewPolicy || dt?.view_policy);
+            if (hits.length) console.log(`${name}: ${hits.slice(0,8).map((dt) => dt.name).join("|")}`);
+          }
+          '@ | node --input-type=module
+          Set-Location $env:RUNNER_TEMP
+          Remove-Item -Recurse -Force $probe
 
-# disposable-push-probe
+# inspect-view-policy-contract
