@@ -48,7 +48,6 @@ jobs:
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor\client
           if (!(Test-Path .\node_modules\.bin\tsc.cmd)) {
-            Write-Host 'Client TypeScript binary missing; installing frozen client dependencies'
             pnpm install --frozen-lockfile
             if ($LASTEXITCODE -ne 0) { throw 'Client dependency bootstrap failed' }
           }
@@ -63,7 +62,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor\server
-          node --test tests/stock-reservation-integrity.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
+          node --test tests/stock-reservation-integrity.test.mjs tests/outbound-reservation-guard.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Inventory integrity slice failed' }
 
       - name: Run full server unit regression
@@ -83,4 +82,4 @@ jobs:
           Get-Content $log -Tail 30 | ForEach-Object { Write-Host $_ }
           Write-Host 'ALUMDOOR_INVENTORY_FULL_SERVER_UNIT_PASS'
 
-# audited-partial-release
+# outbound-reservation-source-lifecycle
