@@ -2,8 +2,33 @@
 
 Branch: `agent/ui-rec-03-form-list-workspace-20260811`
 Fork point: `program/backend-ui-reconciliation-20260811@c4209b8318ac36110ca84094d905ce724ffae3d5`
-Status: BOOTSTRAPPED
+Status: RUNNING
 Risk: STANDARD; shared runtime contract changes require convergence and explicit merge approval.
+PR: `#829` → `program/backend-ui-reconciliation-20260811` (draft; do not merge/deploy from worker).
+
+## Current progress — 2026-08-11
+
+Substantive implementation has started on the P0 Attendance/Payroll lane.
+
+- `AlumDoor Attendance Day`: explicit operator list + full/detail form; Quick Entry disabled because human roles are read/report-only while system roles own record creation/update.
+- `AlumDoor Attendance Policy`: explicit useful list + full workflow form; Quick Entry disabled because the policy is coupled, versioned and submittable.
+- `AlumDoor Pay Profile`: explicit useful list + full workflow form; hidden server-owned `profile_key` stays outside the operator form; Quick Entry disabled.
+- Focused regression coverage reads the real app source through `readAppSource`, so assertions run after canonical metadata derivation rather than against hand-parsed JSON only.
+- Sales Order canonical summary/preview projection already exists in the current AlumDoor V2 source and has focused regression coverage; do not duplicate its pricing logic in client code.
+
+No Grid runtime, sidebar/catalog, controller, schema, migration or business-formula changes are owned by this slice.
+
+## Dependency Request
+
+```text
+Dependency Request
+Owner: UI-REC-01 / GRID program
+Need: final backend↔metadata truth matrix and exact child-grid candidate
+Why: REC3 owns parent Form/List/Workspace projection, not truth inventory or Grid interaction runtime
+Blocked scope: final REC3 closure/certification only
+Can continue independently: yes
+Next independent work: Sales, Purchase/Receipt and Inventory parent projection audit; generator-owned drift is routed through source rather than hand-editing generated briefs
+```
 
 ## Mission
 
