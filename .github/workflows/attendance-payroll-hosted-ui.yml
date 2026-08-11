@@ -1,0 +1,74 @@
+name: Attendance payroll hosted UI integration
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-hosted-ui.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/attendance-payroll
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Wire attendance payroll experiences
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          root=Path('.')
+          def r(p): return (root/p).read_text(encoding='utf-8')
+          def w(p,t): (root/p).write_text(t,encoding='utf-8',newline='\n')
+
+          ops='client/apps/runtime/src/experiences/AlumdoorAttendanceOperations.tsx'
+          t=r(ops)
+          t=t.replace('  Banknote, CalendarDays, CheckCircle2, Clock3, Loader2, RefreshCw, ReceiptText,\n','  Banknote, CalendarDays, CheckCircle2, Loader2, RefreshCw, ReceiptText,\n')
+          w(ops,t)
+
+          p='client/apps/runtime/src/main-base.tsx'; t=r(p)
+          kiosk_import='import { AlumdoorAttendanceKiosk } from "./experiences/AlumdoorAttendanceKiosk";\n'
+          if 'AlumdoorAttendanceOperations' not in t:
+              assert kiosk_import in t, 'kiosk import missing'
+              t=t.replace(kiosk_import,kiosk_import+'import { AlumdoorAttendanceOperations, type AlumdoorAttendanceMode } from "./experiences/AlumdoorAttendanceOperations";\n',1)
+
+          # renderExperience already receives navItem/onExit. Insert AlumDoor handling before generic Navigate fallback.
+          if 'navItem.kind === "alumdoor-attendance"' not in t:
+              fallback='  return <Navigate to="/app" replace />;\n'
+              assert t.count(fallback)>=1, 'renderExperience fallback missing'
+              block='''  if (navItem.kind === "alumdoor-attendance") {\n    const key = navItem.key;\n    if (key === "alumdoor-attendance:kiosk") return <AlumdoorAttendanceKiosk mode="kiosk" onExit={onExit} />;\n    if (key === "alumdoor-attendance:mobile") return <AlumdoorAttendanceKiosk mode="mobile" onExit={onExit} />;\n    const modeByKey: Record<string, AlumdoorAttendanceMode> = {\n      "alumdoor-attendance:today": "today",\n      "alumdoor-attendance:month": "month",\n      "alumdoor-attendance:exceptions": "exceptions",\n      "alumdoor-attendance:payroll-run": "payroll-run",\n      "alumdoor-attendance:payroll-my-slips": "payroll-my-slips",\n    };\n    const mode = modeByKey[key];\n    if (mode) return <AlumdoorAttendanceOperations mode={mode} onExit={onExit} />;\n  }\n\n'''
+              # Replace the first fallback inside renderExperience. Verify function proximity.
+              idx=t.find('function renderExperience')
+              assert idx>=0, 'renderExperience missing'
+              fidx=t.find(fallback,idx)
+              assert fidx>=0, 'renderExperience fallback after function missing'
+              t=t[:fidx]+block+t[fidx:]
+          w(p,t)
+          PY
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Build client
+        run: pnpm run build:client
+      - name: Commit feature UI
+        shell: bash
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then echo "No UI changes to commit"; exit 0; fi
+          git config user.name "forge-attendance-payroll-bot"
+          git config user.email "forge-attendance-payroll-bot@users.noreply.github.com"
+          git add client
+          git commit -m "feat(alumdoor): wire attendance payroll operating UI"
+          git push origin HEAD:feature/attendance-payroll
+          echo "FEATURE_HEAD=$(git rev-parse HEAD)"
