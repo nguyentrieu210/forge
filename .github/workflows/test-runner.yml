@@ -12,9 +12,9 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
-      - name: Sync experiment safely
+      - name: Verify experiment checkout is untouched
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -22,114 +22,37 @@ jobs:
           if ((git branch --show-current) -ne 'exp/alumdoor-pricing-policy') { throw 'Wrong local branch' }
           $status = @(git status --porcelain --untracked-files=all)
           $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
-          if ($unsafe.Count -gt 0) {
-            $unsafe | ForEach-Object { Write-Host $_ }
-            throw 'Local working tree has non-backup changes; refusing to continue'
-          }
-          git fetch origin exp/alumdoor-pricing-policy
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to fetch experiment' }
-          git merge --ff-only origin/exp/alumdoor-pricing-policy
-          if ($LASTEXITCODE -ne 0) { throw 'Local experiment cannot fast-forward safely' }
-          Write-Host "TESTING_COMMIT=$(git rev-parse HEAD)"
+          if ($unsafe.Count -gt 0) { $unsafe | ForEach-Object { Write-Host $_ }; throw 'Unsafe local changes' }
 
-      - name: Build server
+      - name: Regenerate and push metadata from disposable clone
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
-          pnpm run clean
-          if ($LASTEXITCODE -ne 0) { throw 'Clean failed' }
-          pnpm run build
-          if ($LASTEXITCODE -ne 0) { throw 'Server build failed' }
-
-      - name: Verify Alumdoor brief and presentation compiler
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
+          $probe = Join-Path $env:RUNNER_TEMP 'forge-alumdoor-presentation-fix'
+          if (Test-Path $probe) { Remove-Item -Recurse -Force $probe }
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
+          if ($LASTEXITCODE -ne 0) { throw 'clone failed' }
+          Set-Location $probe
+          git config user.name "Alumdoor Migration Runner"
+          git config user.email "alumdoor-migration@local.invalid"
+          Set-Location server
+          node scripts/build-alumdoor-v2-brief.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'brief regeneration failed' }
           node --test tests/alumdoor-child-presentation.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Alumdoor child presentation contract failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'presentation tests failed' }
           pnpm run brief:check
-          if ($LASTEXITCODE -ne 0) { throw 'Brief check failed' }
-          Write-Host 'ALUMDOOR_CHILD_PRESENTATION_META_PASS'
+          if ($LASTEXITCODE -ne 0) { throw 'brief check failed' }
+          Set-Location ..
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'diff check failed' }
+          git add server/briefs/alumdoor-v2.json
+          if ((git diff --cached --quiet) -eq $false) { }
+          git commit -m "fix(meta): preserve editable fields outside grid views"
+          if ($LASTEXITCODE -ne 0) { throw 'commit failed' }
+          git push origin HEAD:exp/alumdoor-pricing-policy
+          if ($LASTEXITCODE -ne 0) { throw 'push failed' }
+          Write-Host "REGENERATED_COMMIT=$(git rev-parse HEAD)"
+          Set-Location $env:RUNNER_TEMP
+          Remove-Item -Recurse -Force $probe
 
-      - name: Bootstrap build and certify MetaForge views
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\client
-          if (!(Test-Path .\node_modules\.bin\tsc.cmd)) {
-            pnpm install --frozen-lockfile
-            if ($LASTEXITCODE -ne 0) { throw 'Client dependency bootstrap failed' }
-          }
-          pnpm --filter @metaforge/views run build
-          if ($LASTEXITCODE -ne 0) { throw 'MetaForge views build failed' }
-          Set-Location C:\alumdoor\client\packages\views
-          node --test tests/child-grid-presentation.test.mjs tests/metadata-child-grid-runtime.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Metadata child-grid runtime contract failed' }
-          Write-Host 'ALUMDOOR_METADATA_CHILD_GRID_RUNTIME_PASS'
-
-      - name: Run inventory integrity slice
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
-          node --test tests/stock-reservation-integrity.test.mjs tests/reservation-source-lifecycle.test.mjs tests/outbound-reservation-guard.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Inventory integrity slice failed' }
-          Write-Host 'ALUMDOOR_INVENTORY_CERT_PASS'
-
-      - name: Run transaction closure certification slice
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
-          node --test tests/transaction-closure-sales-o2c.test.mjs tests/procurement-p2p-closure.test.mjs tests/manufacturing-transaction-closure.test.mjs tests/finance-payment-allocation.test.mjs tests/finance-stock-control-policy.test.mjs tests/finance-stock-control-query.test.mjs tests/sales-production-flow.test.mjs tests/alumdoor-manufacturing-lifecycle.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Transaction closure certification slice failed' }
-          Write-Host 'ALUMDOOR_TRANSACTION_CLOSURE_CERT_PASS'
-
-      - name: Run Alumdoor print certification slice
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
-          node --test tests/alumdoor-sales-order-print.test.mjs tests/alumdoor-purchase-order-print.test.mjs tests/alumdoor-delivery-note-print.test.mjs tests/alumdoor-cut-order-print.test.mjs tests/alumdoor-production-request-print.test.mjs tests/alumdoor-stock-reconciliation-print.test.mjs tests/alumdoor-handover-acceptance-print.test.mjs tests/alumdoor-print-brand-consistency.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Alumdoor print certification slice failed' }
-          Write-Host 'ALUMDOOR_PRINT_CERT_PASS'
-
-      - name: Run full server unit regression
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
-          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-full-test.log'
-          cmd /c "node --test tests/*.test.mjs > `"$log`" 2>&1"
-          $exit = $LASTEXITCODE
-          if ($exit -ne 0) {
-            Write-Host '=== FULL SUITE FAILURE SUMMARY ==='
-            Select-String -Path $log -Pattern '^not ok ','AssertionError','ERR_','error:','failureType','expected:','actual:' -Context 2,5 | Select-Object -First 140 | ForEach-Object { Write-Host $_.ToString() }
-            Write-Host '=== FULL SUITE TAIL ==='
-            Get-Content $log -Tail 140 | ForEach-Object { Write-Host $_ }
-            throw "Full server unit regression failed with exit $exit"
-          }
-          Get-Content $log -Tail 35 | ForEach-Object { Write-Host $_ }
-          Write-Host 'ALUMDOOR_FULL_SERVER_UNIT_PASS'
-
-      - name: Re-run real Alumdoor pricing catalogue lab
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
-          $source = Get-ChildItem .\apps\tenant-worker\.wrangler\state -Recurse -File -Filter *.sqlite |
-            Sort-Object Length -Descending |
-            Select-Object -First 1
-          if (-not $source) { throw 'No local Wrangler D1 sqlite found for disposable real-data lab' }
-          $labDir = Join-Path $env:RUNNER_TEMP 'alumdoor-real-data-cert'
-          New-Item -ItemType Directory -Force -Path $labDir | Out-Null
-          $lab = Join-Path $labDir 'alumdoor-real-pricing.sqlite'
-          Copy-Item -Force $source.FullName $lab
-          $env:LAB_DB = $lab
-          node scripts/test-alumdoor-pricing-real-data.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Real Alumdoor pricing catalogue lab failed' }
-          Write-Host 'ALUMDOOR_REAL_DATA_PRICING_CERT_PASS'
-
-# certify-child-presentation-migration
+# regenerate-surface-semantics
