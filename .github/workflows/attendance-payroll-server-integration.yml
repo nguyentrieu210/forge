@@ -1,0 +1,187 @@
+name: Attendance payroll server integration
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-server-integration.yml"]
+
+jobs:
+  integrate:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 35
+    steps:
+      - name: Patch, verify and push attendance payroll server integration
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Assert-LastExit([string]$label) { if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" } }
+          $repo = 'C:\alumdoor'
+          $worktree = 'C:\forge-attendance-payroll'
+          $target = 'feature/attendance-payroll'
+          git -C $repo fetch origin $target --prune
+          Assert-LastExit 'fetch feature'
+          if (-not (Test-Path $worktree)) { throw 'attendance payroll worktree missing' }
+          $dirty = git -C $worktree status --porcelain --untracked-files=no
+          if ($dirty) { throw "attendance worktree has tracked changes:`n$dirty" }
+          git -C $worktree merge --ff-only "origin/$target"
+          Assert-LastExit 'fast-forward feature'
+
+          @'
+          from pathlib import Path
+          import json, re
+
+          root = Path(r"C:\forge-attendance-payroll")
+
+          def read(rel):
+              return (root / rel).read_text(encoding="utf-8")
+          def write(rel, value):
+              (root / rel).write_text(value, encoding="utf-8", newline="\n")
+          def replace_once(rel, old, new):
+              text = read(rel)
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{rel}: expected one occurrence, found {count}: {old[:100]!r}")
+              write(rel, text.replace(old, new, 1))
+
+          # ---- metadata -----------------------------------------------------
+          app_path = root / "server/apps-src/alumdoor-attendance/app.json"
+          app = json.loads(app_path.read_text(encoding="utf-8"))
+          custom = app["custom_fields"]
+          by_key = {(row["dt"], row["fieldname"]): row for row in custom}
+          salary_standard_key = ("Salary Slip", "alu_standard_work_days_bp")
+          if salary_standard_key not in by_key:
+              anchor = next(i for i, row in enumerate(custom) if row["dt"] == "Salary Slip" and row["fieldname"] == "alu_pay_profile")
+              custom.insert(anchor + 1, {
+                  "name": "Salary Slip-alu_standard_work_days_bp",
+                  "dt": "Salary Slip",
+                  "fieldname": "alu_standard_work_days_bp",
+                  "field": {"label": "Ngày công chuẩn (bp)", "fieldtype": "Int", "default": 260000},
+                  "insert_after": "alu_pay_profile",
+              })
+          # Control fields are writable through the app method; controllers remain authoritative.
+          writable = {
+              ("Payroll Entry", "branch"),
+              ("Payroll Entry", "alu_standard_work_days_bp"),
+              ("Payroll Entry", "alu_state"),
+              ("Salary Slip", "alu_payroll_entry"),
+              ("Salary Slip", "alu_pay_profile"),
+              ("Salary Slip", "alu_standard_work_days_bp"),
+              ("Salary Slip", "alu_manual_deduction_vnd"),
+              ("Salary Slip", "alu_adjustment_reason"),
+              ("Salary Slip", "alu_state"),
+              ("Salary Slip", "alu_calculation_version"),
+          }
+          for row in custom:
+              if (row["dt"], row["fieldname"]) in writable:
+                  row["field"].pop("read_only", None)
+                  row["field"].pop("serverEnforced", None)
+          app_path.write_text(json.dumps(app, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          day_path = root / "server/apps-src/alumdoor-attendance/doctypes/alumdoor-attendance-day.json"
+          day = json.loads(day_path.read_text(encoding="utf-8"))
+          if not any(p.get("role") == "Employee" and p.get("if_owner") for p in day["permissions"]):
+              day["permissions"].append({"role": "Employee", "read": True, "if_owner": True})
+          day_path.write_text(json.dumps(day, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          # ---- tests that track the tightened internal roles ----------------
+          meta_test = "server/tests/alumdoor-attendance-metadata.test.mjs"
+          t = read(meta_test)
+          if '"AlumDoor Attendance System"' not in t:
+              t = t.replace('      "AlumDoor Attendance Manager",\n      "AlumDoor Attendance Viewer",', '      "AlumDoor Attendance Manager",\n      "AlumDoor Attendance System",\n      "AlumDoor Attendance Viewer",', 1)
+          t = t.replace('const payrollSystem = permission(day, "AlumDoor Payroll System");', 'const attendanceSystem = permission(day, "AlumDoor Attendance System");\n  assert.equal(attendanceSystem?.write, true);\n  assert.notEqual(attendanceSystem?.create, true);\n  const payrollSystem = permission(day, "AlumDoor Payroll System");', 1)
+          t = t.replace('for (const role of ["AlumDoor Attendance Viewer", "AlumDoor Attendance Manager", "AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"]) {', 'for (const role of ["AlumDoor Attendance Viewer", "AlumDoor Attendance Manager", "AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"]) {', 1)
+          if 'permission(day, "Employee")' not in t:
+              t = t.replace('  const qrSystem = permission(day, "AlumDoor QR System");', '  assert.equal(permission(day, "Employee")?.read, true);\n  assert.equal(permission(day, "Employee")?.if_owner, true);\n\n  const qrSystem = permission(day, "AlumDoor QR System");', 1)
+          write(meta_test, t)
+
+          day_test = "server/tests/alumdoor-attendance-day-controller.test.mjs"
+          t = read(day_test)
+          t = re.sub(r'/chỉ được cập nhật từ giao dịch QR[^/]+/i', '/chỉ được cập nhật từ giao dịch QR, phiếu sửa công đã duyệt hoặc điều phối lương nội bộ/i', t, count=1)
+          write(day_test, t)
+
+          # ---- freeze period standard days after calculation ----------------
+          entry_rel = "server/packages/clouderp-erpnext/src/alumdoor-payroll-entry.ts"
+          entry = read(entry_rel)
+          needle = '    const standardWorkDaysBp = integer(input.alu_standard_work_days_bp, "standard work days", 1, 310_000);\n'
+          if 'standard work days are frozen after calculation' not in entry:
+              replacement = needle + '''    // Payroll arithmetic must be reproducible: once a period has been calculated,\n    // changing standard days invalidates every salary-slip trace. Force an explicit\n    // invalidation/recalculation instead of silently changing the denominator.\n    const previousStandard = context.existing?.data.alu_standard_work_days_bp;\n    if (["calculated", "pending_approval"].includes(existingState)\n      && previousStandard !== undefined\n      && integer(previousStandard, "existing standard work days", 1, 310_000) !== standardWorkDaysBp) {\n      throw errors.lifecycle("Payroll standard work days are frozen after calculation; invalidate and recalculate the period");\n    }\n'''
+              if entry.count(needle) != 1: raise RuntimeError('payroll entry standard-days anchor missing')
+              entry = entry.replace(needle, replacement, 1)
+              write(entry_rel, entry)
+
+          # ---- AlumDoor Worker app methods ----------------------------------
+          worker_rel = "server/apps-src/alumdoor-worker/src/index.ts"
+          worker = read(worker_rel)
+          import_anchor = 'import { attendanceChallenge, attendanceScan } from "./attendance-routes.js";\n'
+          if 'attendance-operational-routes.js' not in worker:
+              worker = worker.replace(import_anchor, import_anchor + '''import {\n  attendanceExceptions, attendanceMonth, attendanceReviewCorrection, attendanceSubmitCorrection, attendanceToday,\n} from "./attendance-operational-routes.js";\nimport {\n  payrollApprovePeriod, payrollCalculatePeriod, payrollCreatePeriod, payrollMarkPaid,\n  payrollMySlips, payrollPeriodList, payrollSubmitPeriod,\n} from "./payroll-routes.js";\n''', 1)
+          dispatch_anchor = '        if (method === "alumdoor.attendance.scan") return await attendanceScan({ request, call, env, args });\n'
+          if 'alumdoor.attendance.today' not in worker:
+              worker = worker.replace(dispatch_anchor, dispatch_anchor + '''        if (method === "alumdoor.attendance.today") return await attendanceToday({ call, args });\n        if (method === "alumdoor.attendance.month") return await attendanceMonth({ call, args });\n        if (method === "alumdoor.attendance.exceptions") return await attendanceExceptions({ call, args });\n        if (method === "alumdoor.attendance.submit_correction") return await attendanceSubmitCorrection({ call, args });\n        if (method === "alumdoor.attendance.review_correction") return await attendanceReviewCorrection({ call, args });\n        if (method === "alumdoor.payroll.period_list") return await payrollPeriodList({ call, args });\n        if (method === "alumdoor.payroll.create_period") return await payrollCreatePeriod({ call, args });\n        if (method === "alumdoor.payroll.calculate_period") return await payrollCalculatePeriod({ call, args });\n        if (method === "alumdoor.payroll.submit_period") return await payrollSubmitPeriod({ call, args });\n        if (method === "alumdoor.payroll.approve_period") return await payrollApprovePeriod({ call, args });\n        if (method === "alumdoor.payroll.mark_paid") return await payrollMarkPaid({ call, args });\n        if (method === "alumdoor.payroll.my_slips") return await payrollMySlips({ call, args });\n''', 1)
+          write(worker_rel, worker)
+
+          # ---- Frappe router bounded native callbacks -----------------------
+          router_rel = "server/packages/frappe-api/src/router.ts"
+          router = read(router_rel)
+          interface_anchor = '''  commitAlumdoorAttendanceScan?: (input: {\n    station: string;\n    nonceHash: string;\n    deviceFingerprintHash?: string;\n  }) => Promise<JsonObject>;\n'''
+          if 'submitAlumdoorAttendanceCorrection?:' not in router:
+              router = router.replace(interface_anchor, interface_anchor + '''  /** AlumDoor-only native attendance correction transactions. */\n  submitAlumdoorAttendanceCorrection?: (input: {\n    workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string; reason: string; attachment?: string;\n  }) => Promise<JsonObject>;\n  reviewAlumdoorAttendanceCorrection?: (input: { request: string; action: "approve" | "reject"; note?: string }) => Promise<JsonObject>;\n  /** AlumDoor-only atomic payroll approval transaction. */\n  approveAlumdoorPayroll?: (input: { payrollEntry: string }) => Promise<JsonObject>;\n''', 1)
+          case_anchor = '    case "metaforge.api.get_boot":\n      return methodResponse(await bootPayload(context));\n'
+          if 'metaforge.api.submit_alumdoor_attendance_correction' not in router:
+              native_cases = '''    case "metaforge.api.submit_alumdoor_attendance_correction":\n      return methodResponse(await submitAlumdoorAttendanceCorrection(args, context));\n\n    case "metaforge.api.review_alumdoor_attendance_correction":\n      return methodResponse(await reviewAlumdoorAttendanceCorrection(args, context));\n\n    case "metaforge.api.approve_alumdoor_payroll":\n      return methodResponse(await approveAlumdoorPayroll(args, context));\n\n'''
+              if router.count(case_anchor) != 1: raise RuntimeError('router get_boot anchor missing')
+              router = router.replace(case_anchor, native_cases + case_anchor, 1)
+          if 'async function submitAlumdoorAttendanceCorrection(' not in router:
+              router += '''\n\nasync function submitAlumdoorAttendanceCorrection(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {\n  assertAlumdoorNativeCallback(context, "attendance correction submit");\n  if (!context.submitAlumdoorAttendanceCorrection) throw errors.misconfigured("AlumDoor attendance correction callback is not configured");\n  const requestedIn = args.text("requested_in")?.trim();\n  const requestedOut = args.text("requested_out")?.trim();\n  const attachment = args.text("attachment")?.trim();\n  return context.submitAlumdoorAttendanceCorrection({\n    workDate: args.requireText("work_date", 10),\n    segmentCode: args.requireText("segment_code", 16),\n    ...(requestedIn ? { requestedIn } : {}),\n    ...(requestedOut ? { requestedOut } : {}),\n    reason: args.requireText("reason", 1000),\n    ...(attachment ? { attachment } : {}),\n  });\n}\n\nasync function reviewAlumdoorAttendanceCorrection(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {\n  assertAlumdoorNativeCallback(context, "attendance correction review");\n  if (!context.reviewAlumdoorAttendanceCorrection) throw errors.misconfigured("AlumDoor attendance correction review callback is not configured");\n  const action = args.requireText("action", 16);\n  if (action !== "approve" && action !== "reject") throw errors.validation("Attendance correction action must be approve or reject");\n  const note = args.text("note")?.trim();\n  return context.reviewAlumdoorAttendanceCorrection({\n    request: args.requireText("request", 320),\n    action,\n    ...(note ? { note } : {}),\n  });\n}\n\nasync function approveAlumdoorPayroll(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {\n  assertAlumdoorNativeCallback(context, "payroll approval");\n  if (!context.approveAlumdoorPayroll) throw errors.misconfigured("AlumDoor payroll approval callback is not configured");\n  return context.approveAlumdoorPayroll({ payrollEntry: args.requireText("payroll_entry", 320) });\n}\n\nfunction assertAlumdoorNativeCallback(context: FrappeRouterContext, operation: string): void {\n  if (context.appCallbackAppId !== "alumdoor") {\n    throw errors.permission(`Only the verified AlumDoor app callback may invoke native ${operation}`);\n  }\n}\n'''
+          write(router_rel, router)
+
+          # ---- tenant worker callback wiring --------------------------------
+          tenant_rel = "server/apps/tenant-worker/src/index-core-base.ts"
+          tenant = read(tenant_rel)
+          stub_anchor = '''  commitAlumDoorAttendanceScan(input: {\n    tenantId: string;\n    actor: Actor;\n    station: string;\n    nonceHash: string;\n    deviceFingerprintHash?: string;\n  }): Promise<JsonObject>;\n'''
+          if 'submitAlumDoorAttendanceCorrection(input:' not in tenant:
+              tenant = tenant.replace(stub_anchor, stub_anchor + '''  submitAlumDoorAttendanceCorrection(input: {\n    tenantId: string; actor: Actor; workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string; reason: string; attachment?: string;\n  }): Promise<JsonObject>;\n  reviewAlumDoorAttendanceCorrection(input: {\n    tenantId: string; actor: Actor; request: string; action: "approve" | "reject"; note?: string;\n  }): Promise<JsonObject>;\n  approveAlumDoorPayroll(input: { tenantId: string; actor: Actor; payrollEntry: string }): Promise<JsonObject>;\n''', 1)
+          callback_anchor = '''    async commitAlumdoorAttendanceScan(input: {\n      station: string;\n      nonceHash: string;\n      deviceFingerprintHash?: string;\n    }): Promise<JsonObject> {\n      // One user has one deterministic QR stream.  This is intentionally narrower\n      // than a tenant-wide coordinator, so two employees can scan at the same time\n      // while one employee cannot race their own IN/OUT toggle.\n      const stub = env.AGGREGATES.getByName(\n        `attendance:${tenantId}:${encodeURIComponent(actor.user_id)}`,\n      ) as AggregateStub;\n      return stub.commitAlumDoorAttendanceScan({\n        tenantId,\n        actor,\n        station: input.station,\n        nonceHash: input.nonceHash,\n        ...(input.deviceFingerprintHash ? { deviceFingerprintHash: input.deviceFingerprintHash } : {}),\n      });\n    },\n'''
+          if 'async submitAlumdoorAttendanceCorrection(input:' not in tenant:
+              callback_extra = '''    async submitAlumdoorAttendanceCorrection(input: {\n      workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string; reason: string; attachment?: string;\n    }): Promise<JsonObject> {\n      const stub = env.AGGREGATES.getByName(`attendance-correction:${tenantId}:${encodeURIComponent(actor.user_id)}`) as AggregateStub;\n      return stub.submitAlumDoorAttendanceCorrection({ tenantId, actor, ...input });\n    },\n    async reviewAlumdoorAttendanceCorrection(input: { request: string; action: "approve" | "reject"; note?: string }): Promise<JsonObject> {\n      const stub = env.AGGREGATES.getByName(`attendance-correction:${tenantId}:${encodeURIComponent(input.request)}`) as AggregateStub;\n      return stub.reviewAlumDoorAttendanceCorrection({ tenantId, actor, ...input });\n    },\n    async approveAlumdoorPayroll(input: { payrollEntry: string }): Promise<JsonObject> {\n      const stub = env.AGGREGATES.getByName(`payroll:${tenantId}:${encodeURIComponent(input.payrollEntry)}`) as AggregateStub;\n      return stub.approveAlumDoorPayroll({ tenantId, actor, payrollEntry: input.payrollEntry });\n    },\n'''
+              if tenant.count(callback_anchor) != 1: raise RuntimeError('tenant attendance callback anchor missing')
+              tenant = tenant.replace(callback_anchor, callback_anchor + callback_extra, 1)
+          write(tenant_rel, tenant)
+
+          # ---- extend router security regression ----------------------------
+          native_test = "server/tests/alumdoor-attendance-native-router.test.mjs"
+          nt = read(native_test)
+          if 'correctionSubmit:' not in nt:
+              nt = nt.replace('  config: "metaforge.api.get_alumdoor_attendance_qr_config",', '  config: "metaforge.api.get_alumdoor_attendance_qr_config",\n  correctionSubmit: "metaforge.api.submit_alumdoor_attendance_correction",\n  correctionReview: "metaforge.api.review_alumdoor_attendance_correction",\n  payrollApprove: "metaforge.api.approve_alumdoor_payroll",', 1)
+              nt += '''\n\ntest("attendance/payroll native mutation seams stay inaccessible to browser sessions", async () => {\n  const touched = [];\n  const routerContext = context({\n    async submitAlumdoorAttendanceCorrection(input) { touched.push(["submit", input]); return {}; },\n    async reviewAlumdoorAttendanceCorrection(input) { touched.push(["review", input]); return {}; },\n    async approveAlumdoorPayroll(input) { touched.push(["payroll", input]); return {}; },\n  });\n  for (const [method, body] of [\n    [METHODS.correctionSubmit, { work_date: "2026-08-10", segment_code: "SHIFT1", requested_out: "2026-08-10T11:30:00+07:00", reason: "Quên quét" }],\n    [METHODS.correctionReview, { request: "REQ-1", action: "approve" }],\n    [METHODS.payrollApprove, { payroll_entry: "PAY-1" }],\n  ]) {\n    const result = await invoke(method, body, routerContext);\n    assert.equal(result.response.status, 403);\n    assert.equal(result.body.exc_type, "PermissionError");\n  }\n  assert.deepEqual(touched, []);\n});\n\ntest("verified AlumDoor callback reaches only bounded correction/payroll coordinators", async () => {\n  const touched = [];\n  const routerContext = context({\n    appCallbackAppId: "alumdoor",\n    async submitAlumdoorAttendanceCorrection(input) { touched.push(["submit", input]); return { request: "REQ-1", state: "pending" }; },\n    async reviewAlumdoorAttendanceCorrection(input) { touched.push(["review", input]); return { request: input.request, state: "applied" }; },\n    async approveAlumdoorPayroll(input) { touched.push(["payroll", input]); return { payroll_entry: input.payrollEntry, state: "approved" }; },\n  });\n  let result = await invoke(METHODS.correctionSubmit, { work_date: "2026-08-10", segment_code: "SHIFT1", requested_out: "2026-08-10T11:30:00+07:00", reason: "Quên quét" }, routerContext);\n  assert.equal(result.response.status, 200);\n  result = await invoke(METHODS.correctionReview, { request: "REQ-1", action: "approve", note: "ok" }, routerContext);\n  assert.equal(result.response.status, 200);\n  result = await invoke(METHODS.payrollApprove, { payroll_entry: "PAY-1" }, routerContext);\n  assert.equal(result.response.status, 200);\n  assert.deepEqual(touched, [\n    ["submit", { workDate: "2026-08-10", segmentCode: "SHIFT1", requestedOut: "2026-08-10T11:30:00+07:00", reason: "Quên quét" }],\n    ["review", { request: "REQ-1", action: "approve", note: "ok" }],\n    ["payroll", { payrollEntry: "PAY-1" }],\n  ]);\n});\n'''
+          write(native_test, nt)
+          '@ | python -
+          Assert-LastExit 'patch source'
+
+          $cachedNodeModules = "$repo\server\node_modules"
+          $worktreeNodeModules = "$worktree\server\node_modules"
+          if (-not (Test-Path "$worktreeNodeModules\.bin\tsc.cmd")) {
+            if (Test-Path $worktreeNodeModules) { Remove-Item $worktreeNodeModules -Force }
+            cmd /c "mklink /J `"$worktreeNodeModules`" `"$cachedNodeModules`""
+            Assert-LastExit 'node_modules junction'
+          }
+
+          Push-Location "$worktree\server"
+          npm run build
+          Assert-LastExit 'server build'
+          node scripts/pack-app.mjs apps-src/alumdoor-attendance --check
+          Assert-LastExit 'attendance app pack'
+          $tests = Get-ChildItem tests -File | Where-Object { $_.Name -like 'alumdoor-attendance*.test.mjs' -or $_.Name -like 'alumdoor-payroll*.test.mjs' } | ForEach-Object { $_.FullName }
+          node --test $tests
+          Assert-LastExit 'attendance payroll focused tests'
+          Pop-Location
+
+          git -C $worktree status --short
+          git -C $worktree add server/apps-src/alumdoor-attendance server/apps-src/alumdoor-worker/src server/apps/tenant-worker/src server/packages/clouderp-erpnext/src server/packages/frappe-api/src server/tests
+          git -C $worktree commit -m "feat(alumdoor): wire attendance payroll operating flow"
+          Assert-LastExit 'feature commit'
+          git -C $worktree push origin "HEAD:$target"
+          Assert-LastExit 'feature push'
+          Write-Host "FEATURE_HEAD=$((git -C $worktree rev-parse HEAD).Trim())"
+          Write-Host 'ATTENDANCE_PAYROLL_SERVER_INTEGRATION_OK'
