@@ -7,6 +7,11 @@ export interface PricingContext {
   priceList: string;
   documentCurrency: string;
   uom?: string;
+  /**
+   * Optional commercial variant of an Item Price. Missing/blank means STANDARD so
+   * existing Price List + Item + UOM records remain backward-compatible.
+   */
+  priceVariant?: string;
   partyType?: "Customer" | "Supplier";
   party?: string;
   customerGroup?: string;
@@ -19,6 +24,8 @@ export interface ResolvedPrice extends JsonObject {
   currency: string;
   currency_scale: number;
   item_price: string;
+  /** Canonical variant selected by the server (STANDARD when legacy data has no field). */
+  price_variant: string;
   pricing_rule?: string;
   discount_percentage?: string;
 }
