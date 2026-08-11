@@ -1469,48 +1469,15 @@ async function applyCutV2(call: PlatformCall, args: Record<string, unknown>): Pr
   if (cut.cut_state !== "Đã cắt") {
     await submitV2Doc(call, "Cut Order", name, cut as V2CutOrder & Record<string, unknown>);
   }
-  const reservations = await consumeReservationsForCut(call, name, cut.so_reference);
   const paint = await syncPaintJobsFromCut(call, name, 1);
   return answer({
     cut_order: name,
     submitted: true,
-    idempotent: cut.cut_state === "Đã cắt",
-    reservations,
+    idempotent: cut.cut_state === "???? c???t",
+    reservation_consumption: "derived-from-cut-order-stock-ledger",
     paint,
-    message: `Đã cắt và trừ tồn theo phiếu ${name}; ${reservations.used} phiếu giữ chỗ đã chuyển sang Đã dùng.`
-      + (reservations.failed.length ? ` Cần kiểm tra lại: ${reservations.failed.join(", ")}.` : ""),
+    message: `???? c???t v?? tr??? t???n theo phi???u ${name}; l?????ng gi??? ch??? ???? d??ng ???????c suy t??? Stock Ledger c???a phi???u c???t.`,
   });
-}
-
-async function consumeReservationsForCut(
-  call: PlatformCall,
-  cutOrder: string,
-  sourceReference?: string,
-): Promise<{ used: number; failed: string[] }> {
-  const sourceNames = new Set([cutOrder, String(sourceReference ?? "").trim()].filter(Boolean));
-  const query = new URLSearchParams({
-    fields: JSON.stringify(["name", "source_name", "state", "modified"]),
-    filters: JSON.stringify([["state", "=", "Đang giữ"]]),
-    limit_page_length: "5000",
-  });
-  const response = await call(`resource/Stock%20Reservation?${query}`);
-  if (!response.ok) return { used: 0, failed: ["không đọc được danh sách giữ chỗ"] };
-  const rows = ((await response.json()) as {
-    data?: Array<{ name?: string; source_name?: string; state?: string; modified?: string }>;
-  }).data ?? [];
-  let used = 0;
-  const failed: string[] = [];
-  for (const row of rows) {
-    const reservation = String(row.name ?? "");
-    if (!reservation || !sourceNames.has(String(row.source_name ?? ""))) continue;
-    const saved = await call(`resource/Stock%20Reservation/${encodeURIComponent(reservation)}`, {
-      method: "PUT",
-      body: JSON.stringify({ state: "Đã dùng", modified: row.modified }),
-    });
-    if (saved.ok) used += 1;
-    else failed.push(reservation);
-  }
-  return { used, failed };
 }
 
 async function reverseCutV2(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {

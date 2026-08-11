@@ -1178,8 +1178,10 @@ brief.prints.push({
   doctype: "Purchase Order",
   default: true,
   css: [
-    "@page{size:A4 portrait;margin:0}",
-    "*{box-sizing:border-box}html,body{margin:0;width:210mm;min-height:297mm}body{font-family:Arial,'Liberation Sans',sans-serif;font-size:9px;color:#111;padding:23.7mm 8mm 8mm;font-kerning:none;letter-spacing:0;word-spacing:0}",
+    "@page{size:A4 portrait;margin:12mm 8mm 8mm}",
+    "@page :first{margin-top:23.7mm}",
+    "*{box-sizing:border-box}html,body{margin:0}body{font-family:Arial,'Liberation Sans',sans-serif;font-size:9px;color:#111;font-kerning:none;letter-spacing:0;word-spacing:0}",
+    "@media screen{html{width:210mm}body{width:210mm;min-height:297mm;padding:23.7mm 8mm 8mm}}",
     ".letterhead{position:relative;width:194mm;height:17mm;margin-left:0;overflow:hidden}",
     ".brand-logo{position:absolute;left:0;top:1.35mm;width:74mm;height:auto}",
     ".company-header-img{position:absolute;right:-13.5mm;top:0;width:114.3mm;height:auto;display:block}",
