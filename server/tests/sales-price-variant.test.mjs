@@ -19,7 +19,7 @@ function priceRow(name, overrides = {}) {
   };
 }
 
-function pricingContext(itemPrices) {
+function pricingContext(itemPrices, pricingRules = []) {
   return {
     command: { tenant_id: "demo" },
     reader: {
@@ -33,7 +33,7 @@ function pricingContext(itemPrices) {
       },
       async listMasterRecordData(_tenant, doctype) {
         if (doctype === "Item Price") return itemPrices;
-        if (doctype === "Pricing Rule") return [];
+        if (doctype === "Pricing Rule") return pricingRules;
         return [];
       },
     },
@@ -113,6 +113,31 @@ test("duplicate active records are rejected within the same exact variant only",
 
   const standard = await resolveServerPrice(pricingContext(duplicate), request());
   assert.equal(standard.item_price, "IP-STANDARD");
+});
+
+test("legacy callers still apply Pricing Rule while commercial composition can request raw Item Price", async () => {
+  const prices = listed(priceRow("IP-STANDARD"));
+  const rules = listed({
+    name: "RULE-15",
+    price_list: "BANG-GIA",
+    item_code: "ITEM-1",
+    discount_percentage: 15,
+    priority: 10,
+    disabled: 0,
+  });
+
+  const legacy = await resolveServerPrice(pricingContext(prices, rules), request());
+  const raw = await resolveServerPrice(
+    pricingContext(prices, rules),
+    request({ applyPricingRules: false }),
+  );
+
+  assert.equal(legacy.pricing_rule, "RULE-15");
+  assert.equal(legacy.discount_percentage, "15.000000");
+  assert.equal(legacy.rate_minor, 1382100);
+  assert.equal(raw.pricing_rule, undefined);
+  assert.equal(raw.discount_percentage, undefined);
+  assert.equal(raw.rate_minor, 1626000);
 });
 
 test("variant identifiers are canonical and reject translated/free-form labels", () => {
