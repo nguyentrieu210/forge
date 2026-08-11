@@ -40,11 +40,8 @@ jobs:
             if ($tracked) { throw "Tracked changes exist in attendance payroll worktree:`n$tracked" }
           } else {
             git show-ref --verify --quiet "refs/heads/$target"
-            if ($LASTEXITCODE -eq 0) {
-              git worktree add $worktree $target
-            } else {
-              git worktree add -b $target $worktree "origin/$target"
-            }
+            if ($LASTEXITCODE -eq 0) { git worktree add $worktree $target }
+            else { git worktree add -b $target $worktree "origin/$target" }
             Assert-LastExit 'git worktree add'
           }
 
@@ -57,9 +54,7 @@ jobs:
 
           $cachedNodeModules = "$repo\server\node_modules"
           $worktreeNodeModules = "$worktree\server\node_modules"
-          if (-not (Test-Path "$cachedNodeModules\.bin\tsc.cmd")) {
-            throw 'Shared server dependency cache is missing tsc.cmd'
-          }
+          if (-not (Test-Path "$cachedNodeModules\.bin\tsc.cmd")) { throw 'Shared server dependency cache is missing tsc.cmd' }
           if (-not (Test-Path "$worktreeNodeModules\.bin\tsc.cmd")) {
             if (Test-Path $worktreeNodeModules) { throw 'Attendance worktree node_modules exists but is incomplete' }
             cmd /c "mklink /J `"$worktreeNodeModules`" `"$cachedNodeModules`""
@@ -78,4 +73,6 @@ jobs:
 
           $trackedAfter = git -C $worktree status --porcelain --untracked-files=no
           if ($trackedAfter) { throw "Verification modified tracked files:`n$trackedAfter" }
+          git -C $worktree push --dry-run origin "HEAD:$target"
+          Assert-LastExit 'feature branch push dry-run'
           Write-Host 'ATTENDANCE_PAYROLL_ISOLATED_VERIFY_OK'
