@@ -64,22 +64,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'real Alumdoor catalogue pricing certification failed' }
           Write-Host 'ALUMDOOR_REAL_CATALOGUE_CERT_PASS'
 
-          @'
-          import { DatabaseSync } from "node:sqlite";
-          const db = new DatabaseSync(process.env.LAB_DB);
-          const rows = db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name").all();
-          for (const row of rows) {
-            const text = `${row.name} ${row.sql ?? ''}`;
-            if (/auth|user|password|credential|session|identity/i.test(text)) {
-              console.log(`AUTH_SCHEMA=${row.name}:${String(row.sql ?? '').replace(/\s+/g,' ')}`);
-            }
-          }
-          db.close();
-          '@ | node --input-type=module
-
-      - name: Report auth readiness without secrets
+      - name: Inspect auth implementation without exposing credentials
         shell: powershell
         run: |
-          $hasPassword = @(Get-Content (Join-Path $env:CERT_ROOT 'server\.dev.vars') | Where-Object { $_ -match '^FORGE_ADMIN_PASSWORD=' }).Count -gt 0
-          Write-Host "FORGE_ADMIN_PASSWORD_PRESENT=$([int]$hasPassword)"
-          if (-not $hasPassword) { throw 'Isolated live auth needs a temporary credential seeded into cloned D1' }
+          $ErrorActionPreference = 'Stop'
+          Set-Location $env:CERT_ROOT
+          Write-Host '=== PASSWORD HASH SOURCE REFERENCES ==='
+          $hits = @(git grep -n -I -E 'password_hash|verifyPassword|hashPassword|PBKDF2|scrypt|bcrypt|argon' -- server)
+          if ($hits.Count -eq 0) { throw 'No password hash implementation references found' }
+          $hits | Select-Object -First 160 | ForEach-Object { Write-Host $_ }
+          throw 'Diagnostic complete: seed temporary credential in next isolated run'
