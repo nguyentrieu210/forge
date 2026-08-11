@@ -22,11 +22,35 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=3'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=4'
           git -C C:\alumdoor fetch origin main --prune
           $controlScript = Join-Path $env:RUNNER_TEMP 'local-attendance-e2e.ps1'
           $raw = (git -C C:\alumdoor show origin/main:.github/scripts/local-attendance-e2e.ps1) -join "`n"
           $raw = $raw.Replace("  Assert-Exit 'attendance app package check'`nfinally { Pop-Location }", "  Assert-Exit 'attendance app package check'`n} finally { Pop-Location }")
           $raw = $raw.Replace("  Assert-Exit 'install attendance payroll app locally'`nfinally { Pop-Location }", "  Assert-Exit 'install attendance payroll app locally'`n} finally { Pop-Location }")
+          $oldHelper = @'
+          function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
+            $text = [IO.File]::ReadAllText($path)
+            if ($text.Contains($new)) { Write-Host "$label already applied"; return }
+            if (-not $text.Contains($old)) { throw "$label anchor not found in $path" }
+            Write-Utf8 $path ($text.Replace($old, $new))
+            Write-Host "$label applied"
+          }
+          '@
+          $newHelper = @'
+          function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
+            $text = [IO.File]::ReadAllText($path).Replace("`r`n", "`n")
+            $old = $old.Replace("`r`n", "`n")
+            $new = $new.Replace("`r`n", "`n")
+            if ($text.Contains($new)) { Write-Host "$label already applied"; return }
+            if (-not $text.Contains($old)) { throw "$label anchor not found in $path" }
+            Write-Utf8 $path ($text.Replace($old, $new))
+            Write-Host "$label applied"
+          }
+          '@
+          $oldHelper = ($oldHelper -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
+          $newHelper = ($newHelper -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
+          if (-not $raw.Contains($oldHelper)) { throw 'control script helper anchor missing' }
+          $raw = $raw.Replace($oldHelper, $newHelper)
           [IO.File]::WriteAllText($controlScript, $raw + "`n", [Text.UTF8Encoding]::new($false))
           powershell -NoProfile -ExecutionPolicy Bypass -File $controlScript
