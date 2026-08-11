@@ -73,8 +73,9 @@ jobs:
           @'
           import fs from "node:fs";
           import { compileBrief } from "./scripts/lib/compile-brief.mjs";
+          import { attachBriefUiViewPolicies } from "./scripts/lib/brief-ui-view-policy.mjs";
           const brief = JSON.parse(fs.readFileSync("briefs/alumdoor-v2.json", "utf8"));
-          const pkg = compileBrief(brief);
+          const pkg = attachBriefUiViewPolicies(brief, compileBrief(brief));
           const children = pkg.doctypes.filter((dt) => dt.is_child === true);
           console.log(`COMPILED_CHILD_DOCTYPES=${children.length}`);
           for (const name of ["Quotation Item","Sales Order Item","Purchase Order Item","Purchase Receipt Item","Delivery Note Item","Sales Invoice Item","Stock Entry Detail","Production Request Item","Work Order Item"]) {
@@ -98,4 +99,4 @@ jobs:
           Set-Location $env:RUNNER_TEMP
           Remove-Item -Recurse -Force $probe
 
-# migrate-child-presentation
+# migrate-child-presentation-v2
