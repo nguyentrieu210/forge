@@ -1,0 +1,73 @@
+name: Attendance payroll final gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-final-gate.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/attendance-payroll
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Server build and metadata pack
+        run: |
+          pnpm run build:server
+          cd server
+          node scripts/pack-app.mjs apps-src/alumdoor-attendance --check
+      - name: Attendance and payroll focused tests
+        working-directory: server
+        run: |
+          node --test tests/alumdoor-attendance*.test.mjs tests/alumdoor-payroll*.test.mjs
+      - name: HRM payroll regression tests
+        working-directory: server
+        run: |
+          node --test \
+            tests/hrm-payroll-rule.test.mjs \
+            tests/hrm-statutory-payroll-integration.test.mjs \
+            tests/hrm-workforce-finance.test.mjs \
+            tests/hrm-operational.test.mjs \
+            tests/hrm-geofence.test.mjs
+      - name: Client production build
+        run: pnpm run build:client
+      - name: Record verification evidence
+        shell: bash
+        run: |
+          mkdir -p docs/agents/attendance-payroll
+          cat > docs/agents/attendance-payroll/VERIFICATION.md <<EOF
+          # AlumDoor Attendance & Payroll Verification
+
+          - Feature branch: \`feature/attendance-payroll\`
+          - Verified commit before evidence: \`$(git rev-parse HEAD)\`
+          - Verification source: GitHub-hosted final gate
+          - Server TypeScript build: PASS
+          - AlumDoor attendance app metadata pack: PASS
+          - AlumDoor attendance/payroll focused tests: PASS
+          - HRM payroll/statutory/workforce/geofence regression set: PASS
+          - Client production build: PASS
+          - Tenant metadata apply: NOT RUN
+          - Merge/deploy: NOT RUN
+
+          This evidence certifies repository-level verification only. Payroll/backend/schema changes remain a CRITICAL production boundary and require explicit approval before merge, tenant apply, or deployment.
+          EOF
+          git config user.name "forge-attendance-payroll-bot"
+          git config user.email "forge-attendance-payroll-bot@users.noreply.github.com"
+          git add docs/agents/attendance-payroll/VERIFICATION.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "docs(alumdoor): record attendance payroll verification"
+          git push origin HEAD:feature/attendance-payroll
