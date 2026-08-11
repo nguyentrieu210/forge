@@ -75,7 +75,7 @@ jobs:
             return source.slice(0, applyStart) + applyChunk + source.slice(reverseStart);
           });
 
-          fs.writeFileSync("server/apps-src/alumdoor-worker/tests/reservation-authority.test.ts", `import { describe, expect, it } from "vitest";\nimport { readFileSync } from "node:fs";\n\nconst source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");\n\ndescribe("Cut Order reservation authority", () => {\n  it("does not mutate Stock Reservation to Đã dùng from the app worker", () => {\n    expect(source).not.toContain("consumeReservationsForCut");\n    expect(source).not.toMatch(/Stock%20Reservation[\\s\\S]{0,900}method:\\s*\\"PUT\\"[\\s\\S]{0,350}Đã dùng/u);\n  });\n\n  it("declares Cut Order Stock Ledger as the consumption projection source", () => {\n    expect(source).toContain('reservation_consumption: "derived-from-cut-order-stock-ledger"');\n    expect(source).toContain("suy từ Stock Ledger của phiếu cắt");\n  });\n});\n`);
+          fs.writeFileSync("server/apps-src/alumdoor-worker/tests/reservation-authority.test.ts", `import { describe, expect, it } from "vitest";\nimport { readFileSync } from "node:fs";\n\nconst source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");\n\ndescribe("Cut Order reservation authority", () => {\n  it("does not mutate Stock Reservation to Đã dùng from the app worker", () => {\n    expect(source).not.toContain("consumeReservationsForCut");\n    expect(source).not.toMatch(/Stock%20Reservation[\\s\\S]{0,900}method:\\s*"PUT"[\\s\\S]{0,350}Đã dùng/u);\n  });\n\n  it("declares Cut Order Stock Ledger as the consumption projection source", () => {\n    expect(source).toContain('reservation_consumption: "derived-from-cut-order-stock-ledger"');\n    expect(source).toContain("suy từ Stock Ledger của phiếu cắt");\n  });\n});\n`);
           '@ | node --input-type=module
           if ($LASTEXITCODE -ne 0) { throw 'source patch failed' }
 
@@ -145,4 +145,4 @@ jobs:
           Write-Host "FIX_COMMIT=$(git rev-parse HEAD)"
           Write-Host 'ALUMDOOR_PRINT_RESERVATION_FIX_PASS'
 
-# print-reservation-cert-v2
+# print-reservation-cert-v3
