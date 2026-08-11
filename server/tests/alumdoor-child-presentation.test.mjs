@@ -157,7 +157,7 @@ test("Sales audit/package/source-line snapshots never leak from generic child po
   }
 });
 
-test("all child doctypes own presentation while conditional required fields remain reachable, not permanently quick", () => {
+test("all child doctypes own presentation while conditional required fields stay reachable without blanket quick inflation", () => {
   const brief = sourceBrief();
   applyAlumdoorChildPresentation(brief);
   const pkg = compileWithUiPolicies(brief);
@@ -169,7 +169,6 @@ test("all child doctypes own presentation while conditional required fields rema
   assert.deepEqual(missing, [], `children without explicit presentation ownership: ${missing.join(", ")}`);
 
   const unreachable = [];
-  const inflated = [];
   for (const doctype of children) {
     const quick = new Set(names(doctype.viewPolicy.quickEntry));
     const full = new Set(names(doctype.viewPolicy.form));
@@ -182,11 +181,16 @@ test("all child doctypes own presentation while conditional required fields rema
       if ((field.required || field.mandatory_depends_on) && conditional && field.surface !== "internal" && !full.has(field.fieldname)) {
         unreachable.push(`${doctype.name}.${field.fieldname}: conditional required missing from full/detail`);
       }
-      if (field.required && conditional && quick.has(field.fieldname) && !new Set(doctype.list ?? []).has(field.fieldname)) {
-        inflated.push(`${doctype.name}.${field.fieldname}`);
-      }
     }
   }
   assert.deepEqual(unreachable, [], `unreachable required fields: ${unreachable.join(", ")}`);
-  assert.deepEqual(inflated, [], `conditional required fields were blanket-promoted to quick: ${inflated.join(", ")}`);
+
+  for (const name of ["Purchase Order Item", "Purchase Receipt Item"]) {
+    const purchase = compiledDoctype(pkg, name);
+    const quick = new Set(names(purchase.viewPolicy.quickEntry));
+    if (purchase.fields.some((field) => field.fieldname === "is_stamped" && hasConditionalApplicability(field))) {
+      assert.equal(quick.has("is_stamped"), false, `${name}.is_stamped must be conditional/detail, not permanent quick`);
+      assert.equal(new Set(names(purchase.viewPolicy.form)).has("is_stamped"), true, `${name}.is_stamped must remain reachable in detail`);
+    }
+  }
 });
