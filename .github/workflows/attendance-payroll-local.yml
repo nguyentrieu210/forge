@@ -19,6 +19,9 @@ jobs:
           function Assert-LastExit([string]$label) {
             if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" }
           }
+          function Canonical-Path([string]$value) {
+            return [System.IO.Path]::GetFullPath($value.Replace('/', '\')).TrimEnd('\').ToLowerInvariant()
+          }
 
           $repo = 'C:\alumdoor'
           $worktree = 'C:\forge-attendance-payroll'
@@ -30,7 +33,7 @@ jobs:
 
           if (Test-Path $worktree) {
             $top = (git -C $worktree rev-parse --show-toplevel 2>$null)
-            if ($LASTEXITCODE -ne 0 -or $top.Trim() -ne $worktree) {
+            if ($LASTEXITCODE -ne 0 -or (Canonical-Path $top.Trim()) -ne (Canonical-Path $worktree)) {
               throw "$worktree exists but is not the attendance payroll git worktree"
             }
             $tracked = git -C $worktree status --porcelain --untracked-files=no
