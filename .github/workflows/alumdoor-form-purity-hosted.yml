@@ -1,7 +1,4 @@
-name: Alumdoor stabilize and certify hosted
-
-permissions:
-  contents: write
+name: Alumdoor app install contract audit
 
 on:
   pull_request:
@@ -10,111 +7,26 @@ on:
     paths: [".github/workflows/alumdoor-form-purity-hosted.yml"]
 
 jobs:
-  certify:
+  audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Clone and stabilize experiment
+      - name: Locate app install source and method contract
         shell: bash
         run: |
           set -euo pipefail
-          p="$RUNNER_TEMP/forge-alumdoor-stabilize"
+          p="$RUNNER_TEMP/forge-alumdoor-appinstall-audit"
           git clone --quiet --branch exp/alumdoor-pricing-policy "https://x-access-token:${GH_TOKEN}@github.com/nguyentrieu210/forge.git" "$p"
-          echo "CERT_ROOT=$p" >> "$GITHUB_ENV"
           cd "$p"
-          base="$(git rev-parse HEAD)"
-          echo "CERT_BASE=$base" >> "$GITHUB_ENV"
-          export P="$p"
-          python - <<'PY'
-          from pathlib import Path
-          import os
-          r=Path(os.environ['P'])
-          f=r/'server/packages/frappe-model/src/types.ts'; s=f.read_text(encoding='utf-8')
-          a=s.index('  form_control_width?:'); b=s.index('  /** Immutable after',a)
-          s=s[:a]+'''  form_control_width?: ("compact");\n  /** Render a Select as an inline choice list instead of a dropdown. */\n  form_control_style?: "choice_list";\n  /** Section-break presentation only; does not change document semantics. */\n  form_section_style?: "summary";\n'''+s[b:]
-          f.write_text(s,encoding='utf-8',newline='\n')
-          f=r/'client/packages/core/src/types/meta.ts'; s=f.read_text(encoding='utf-8')
-          a=s.index('  form_control_width?:'); b=s.index('  valueSource?:',a)
-          s=s[:a]+'''  form_control_width?: ("compact");\n  /** Generic Select presentation; options still come from field.options. */\n  form_control_style?: "choice_list";\n  /** Generic section presentation marker carried on Section Break fields. */\n  form_section_style?: "summary";\n'''+s[b:]
-          f.write_text(s,encoding='utf-8',newline='\n')
-          f=r/'server/packages/frappe-model/src/validate.ts'; s=f.read_text(encoding='utf-8')
-          a=s.index('  const formControlStyle ='); b=s.index('  const valueSource =',a)
-          s=s[:a]+'''  const formControlStyle = input.form_control_style === undefined ? undefined : text(input.form_control_style, `fields[${index}].form_control_style`, 24);\n  if (formControlStyle !== undefined && formControlStyle !== "choice_list") throw errors.validation(`fields[${index}].form_control_style must be choice_list`);\n  const formSectionStyle = input.form_section_style === undefined ? undefined : text(input.form_section_style, `fields[${index}].form_section_style`, 24);\n  if (formSectionStyle !== undefined && formSectionStyle !== "summary") throw errors.validation(`fields[${index}].form_section_style must be summary`);\n'''+s[b:]
-          a=s.index('    ...(formControlWidth === undefined'); b=s.index('    ...(valueSource ?',a)
-          s=s[:a]+'''    ...(formControlWidth === undefined ? {} : { form_control_width: "compact" as const }),\n    ...(formControlStyle === undefined ? {} : { form_control_style: "choice_list" as const }),\n    ...(formSectionStyle === undefined ? {} : { form_section_style: "summary" as const }),\n'''+s[b:]
-          f.write_text(s,encoding='utf-8',newline='\n')
-          print('METADATA_SEAM_NORMALIZED')
-          PY
-          git diff --check
-
-      - name: Server build metadata and domain slices
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "$CERT_ROOT/server"
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
-          pnpm install --frozen-lockfile
-          pnpm run build
-          node scripts/build-alumdoor-v2-brief.mjs
-          pnpm run brief:check
-          node --input-type=module <<'NODE'
-          import { readFileSync } from 'node:fs';
-          const brief=JSON.parse(readFileSync('briefs/alumdoor-v2.json','utf8'));
-          const rx=/(tồn.*nhôm|nhôm.*tồn|aluminium\s+lot|stock.*length|length.*stock)/iu;
-          const nav=(brief.navigation?.items??[]).filter(x=>rx.test(typeof x==='string'?x:JSON.stringify(x)));
-          const reports=(brief.reports??[]).filter(x=>rx.test(JSON.stringify(x)));
-          const links=(brief.links??[]).filter(x=>rx.test(JSON.stringify(x)));
-          console.log(`ALUMINIUM_STOCK_NAV=${JSON.stringify(nav)}`);
-          console.log(`ALUMINIUM_STOCK_REPORTS=${JSON.stringify(reports)}`);
-          console.log(`ALUMINIUM_STOCK_LINKS=${JSON.stringify(links)}`);
-          if(nav.length!==1 || nav[0]!=="report:Tồn nhôm theo khổ") throw new Error('aluminium stock navigation is not canonical');
-          if(links.length!==1 || links[0]?.report!=="Tồn nhôm theo khổ") throw new Error('aluminium stock link is not canonical');
-          if(!readFileSync('scripts/build-alumdoor-v2-brief.mjs','utf8').includes('Báo cáo "Tồn nhôm theo khổ" đọc Batch + sổ kho')) throw new Error('canonical stock ownership note missing');
-          console.log('ALUMINIUM_STOCK_SINGLE_NAV_PASS');
-          NODE
-          run_slice(){ label="$1"; regex="$2"; mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei "$regex" | sort); echo "${label}_FILES=${#tests[@]}"; printf '%s\n' "${tests[@]}"; test "${#tests[@]}" -gt 0; node --test "${tests[@]}"; echo "${label}_PASS"; }
-          run_slice MANUFACTURING '(manufactur|production|work-order|cut-order|bom|job-card)'
-          run_slice PRINT '(print|pdf|a4)'
-          run_slice ACCOUNTING_CLOSURE '(transaction.*closure|reconcil|receivable|payable|payment|general-ledger|accounting|stock-ledger)'
-          cd "$CERT_ROOT/client"
-          pnpm --filter @metaforge/views... run build
-          cd "$CERT_ROOT/server"
-          pnpm test:unit
-          echo FULL_SERVER_REGRESSION_PASS
-
-      - name: Client contract responsive UX and performance
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "$CERT_ROOT/client"
-          pnpm --filter @metaforge/views... run build
-          pnpm run lint
-          pnpm run test
-          pnpm run product:check
-          node --test packages/views/tests/form-view-metadata-purity.test.mjs packages/views/tests/metadata-child-grid-runtime.test.mjs packages/views/tests/child-grid-presentation.test.mjs
-          pnpm --filter @metaforge/demo exec playwright install --with-deps chromium
-          pnpm --filter @metaforge/demo run e2e
-          pnpm --filter @metaforge/demo run build
-          largest=$(find apps/demo/dist -type f -name '*.js' -printf '%s\n' | sort -nr | head -1)
-          echo "LARGEST_DEMO_JS_BYTES=$largest"
-          test -n "$largest" && test "$largest" -le 2097152
-          echo CLIENT_RUNTIME_PLAYWRIGHT_BUNDLE_PASS
-
-      - name: Push stabilized experiment only after all gates pass
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "$CERT_ROOT"
-          git diff --check
-          git fetch origin exp/alumdoor-pricing-policy --quiet
-          remote="$(git rev-parse origin/exp/alumdoor-pricing-policy)"
-          test "$remote" = "$CERT_BASE"
-          git config user.name 'Alumdoor Hosted Certification'
-          git config user.email 'alumdoor-cert@local.invalid'
-          git add server/packages/frappe-model/src/types.ts server/packages/frappe-model/src/validate.ts client/packages/core/src/types/meta.ts server/briefs/alumdoor-v2.json
-          git commit -m 'fix(metaform): stabilize presentation metadata seam'
-          git push origin HEAD:exp/alumdoor-pricing-policy
-          echo "ALUMDOOR_STABILIZED_HEAD=$(git rev-parse HEAD)"
+          echo "AUDIT_HEAD=$(git rev-parse HEAD)"
+          echo '=== USE APP INSTALL FILES ==='
+          find client -type f -name 'useAppInstall.ts' -print
+          while IFS= read -r f; do
+            echo "=== $f 150-210 ==="
+            nl -ba "$f" | sed -n '150,210p'
+          done < <(find client -type f -name 'useAppInstall.ts')
+          echo '=== CALL CONTRACT REFERENCES ==='
+          grep -RniE 'method: string; args: Record<string, unknown>|callMethod|callPost|invokeMethod|install_app|uninstall_app' client/packages client/apps | head -240 || true
+          echo APP_INSTALL_CONTRACT_AUDIT_PASS
