@@ -31,18 +31,14 @@ jobs:
           from pathlib import Path
           import os
           r=Path(os.environ['P'])
-
-          # Normalize duplicate presentation declarations introduced by stale queued workflows.
           f=r/'server/packages/frappe-model/src/types.ts'; s=f.read_text(encoding='utf-8')
           a=s.index('  form_control_width?:'); b=s.index('  /** Immutable after',a)
           s=s[:a]+'''  form_control_width?: ("compact");\n  /** Render a Select as an inline choice list instead of a dropdown. */\n  form_control_style?: "choice_list";\n  /** Section-break presentation only; does not change document semantics. */\n  form_section_style?: "summary";\n'''+s[b:]
           f.write_text(s,encoding='utf-8',newline='\n')
-
           f=r/'client/packages/core/src/types/meta.ts'; s=f.read_text(encoding='utf-8')
           a=s.index('  form_control_width?:'); b=s.index('  valueSource?:',a)
           s=s[:a]+'''  form_control_width?: ("compact");\n  /** Generic Select presentation; options still come from field.options. */\n  form_control_style?: "choice_list";\n  /** Generic section presentation marker carried on Section Break fields. */\n  form_section_style?: "summary";\n'''+s[b:]
           f.write_text(s,encoding='utf-8',newline='\n')
-
           f=r/'server/packages/frappe-model/src/validate.ts'; s=f.read_text(encoding='utf-8')
           a=s.index('  const formControlStyle ='); b=s.index('  const valueSource =',a)
           s=s[:a]+'''  const formControlStyle = input.form_control_style === undefined ? undefined : text(input.form_control_style, `fields[${index}].form_control_style`, 24);\n  if (formControlStyle !== undefined && formControlStyle !== "choice_list") throw errors.validation(`fields[${index}].form_control_style must be choice_list`);\n  const formSectionStyle = input.form_section_style === undefined ? undefined : text(input.form_section_style, `fields[${index}].form_section_style`, 24);\n  if (formSectionStyle !== undefined && formSectionStyle !== "summary") throw errors.validation(`fields[${index}].form_section_style must be summary`);\n'''+s[b:]
@@ -72,11 +68,12 @@ jobs:
           const reports=(brief.reports??[]).filter(x=>rx.test(JSON.stringify(x)));
           const links=(brief.links??[]).filter(x=>rx.test(JSON.stringify(x)));
           console.log(`ALUMINIUM_STOCK_NAV=${JSON.stringify(nav)}`);
-          console.log(`ALUMINIUM_STOCK_APP_REPORT_DUPLICATES=${reports.length}`);
+          console.log(`ALUMINIUM_STOCK_REPORTS=${JSON.stringify(reports)}`);
           console.log(`ALUMINIUM_STOCK_LINKS=${JSON.stringify(links)}`);
-          if(reports.length!==0) throw new Error('duplicate app-owned aluminium stock report');
+          if(nav.length!==1 || nav[0]!=="report:Tồn nhôm theo khổ") throw new Error('aluminium stock navigation is not canonical');
+          if(links.length!==1 || links[0]?.report!=="Tồn nhôm theo khổ") throw new Error('aluminium stock link is not canonical');
           if(!readFileSync('scripts/build-alumdoor-v2-brief.mjs','utf8').includes('Báo cáo "Tồn nhôm theo khổ" đọc Batch + sổ kho')) throw new Error('canonical stock ownership note missing');
-          console.log('ALUMINIUM_STOCK_CANONICAL_SOURCE_PASS');
+          console.log('ALUMINIUM_STOCK_SINGLE_NAV_PASS');
           NODE
           run_slice(){ label="$1"; regex="$2"; mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.mjs' | grep -Ei "$regex" | sort); echo "${label}_FILES=${#tests[@]}"; printf '%s\n' "${tests[@]}"; test "${#tests[@]}" -gt 0; node --test "${tests[@]}"; echo "${label}_PASS"; }
           run_slice MANUFACTURING '(manufactur|production|work-order|cut-order|bom|job-card)'
