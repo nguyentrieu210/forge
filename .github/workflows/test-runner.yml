@@ -54,7 +54,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             Write-Host 'No generated metadata change required'
           } else {
-            git commit -m "fix(meta): preserve editable fields outside grid views"
+            git commit -m "fix(meta): preserve required fields in quick child grids"
             if ($LASTEXITCODE -ne 0) { throw 'commit failed' }
             git push origin HEAD:exp/alumdoor-pricing-policy
             if ($LASTEXITCODE -ne 0) { throw 'push failed' }
@@ -63,4 +63,4 @@ jobs:
           Set-Location $env:RUNNER_TEMP
           Remove-Item -Recurse -Force $probe
 
-# regenerate-surface-semantics-v4
+# regenerate-required-quick
