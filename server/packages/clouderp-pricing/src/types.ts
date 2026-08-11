@@ -12,6 +12,11 @@ export interface PricingContext {
    * existing Price List + Item + UOM records remain backward-compatible.
    */
   priceVariant?: string;
+  /**
+   * Existing callers default to true. New commercial composition may request the raw
+   * Item Price so discount/adjustment authorities are applied exactly once downstream.
+   */
+  applyPricingRules?: boolean;
   partyType?: "Customer" | "Supplier";
   party?: string;
   customerGroup?: string;
