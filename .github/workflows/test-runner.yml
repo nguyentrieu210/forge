@@ -32,6 +32,39 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Local experiment branch cannot fast-forward safely' }
           Write-Host "TESTING_COMMIT=$(git rev-parse HEAD)"
 
+      - name: Audit metadata presentation ownership
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          @'
+          import fs from "node:fs";
+          const brief = JSON.parse(fs.readFileSync("briefs/alumdoor-v2.json", "utf8"));
+          const doctypes = Array.isArray(brief.doctypes) ? brief.doctypes : Object.values(brief.doctypes ?? {});
+          const children = doctypes.filter((dt) => dt && (dt.child === true || dt.is_child === true));
+          const owned = children.filter((dt) => dt.viewPolicy || dt.view_policy || (dt.fields ?? []).some((field) => typeof field === "object" && field.surface));
+          console.log(`ALUMDOOR_CHILD_DOCTYPES=${children.length}`);
+          console.log(`ALUMDOOR_PRESENTATION_OWNED=${owned.length}`);
+          console.log(`PRESENTATION_OWNED_NAMES=${owned.map((dt) => dt.name).join("|")}`);
+          for (const name of ["Quotation Item","Sales Order Item","Delivery Note Item","Sales Invoice Item","Purchase Order Item","Purchase Receipt Item","Purchase Invoice Item","Stock Entry Detail","Production Request Item","Work Order Item"]) {
+            const dt = doctypes.find((value) => value?.name === name);
+            console.log(`PRESENTATION_${name.replaceAll(" ","_").toUpperCase()}=${dt && (dt.viewPolicy || dt.view_policy || (dt.fields ?? []).some((field) => typeof field === "object" && field.surface)) ? "OWNED" : "LEGACY"}`);
+          }
+          '@ | node --input-type=module
+
+      - name: Check runner push capability without changing remote
+        shell: powershell
+        run: |
+          Set-Location C:\alumdoor
+          $result = & git push --dry-run origin HEAD:exp/alumdoor-pricing-policy 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host 'RUNNER_PUSH_CAPABLE=1'
+          } else {
+            Write-Host 'RUNNER_PUSH_CAPABLE=0'
+            $result | ForEach-Object { Write-Host $_ }
+          }
+          $global:LASTEXITCODE = 0
+
       - name: Build server
         shell: powershell
         run: |
@@ -101,24 +134,6 @@ jobs:
           Get-Content $log -Tail 30 | ForEach-Object { Write-Host $_ }
           Write-Host 'ALUMDOOR_FULL_SERVER_UNIT_PASS'
 
-      - name: Discover certification harnesses
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
-          Write-Host '=== ALUMDOOR TRANSACTION / PRINT / ACCOUNTING TEST FILES ==='
-          Get-ChildItem .\tests -File -Filter *.test.mjs |
-            Where-Object { $_.Name -match 'alumdoor|sales|purchase|manufactur|stock|payment|invoice|delivery|print|account|ledger|o2c|p2p|production' } |
-            Sort-Object Name |
-            Select-Object -ExpandProperty Name |
-            ForEach-Object { Write-Host $_ }
-          Write-Host '=== ALUMDOOR REAL-DATA / VERIFY SCRIPTS ==='
-          Get-ChildItem .\scripts -File |
-            Where-Object { $_.Name -match 'alumdoor|real|verify|smoke' } |
-            Sort-Object Name |
-            Select-Object -ExpandProperty Name |
-            ForEach-Object { Write-Host $_ }
-
       - name: Re-run real Alumdoor pricing catalogue lab
         shell: powershell
         run: |
@@ -139,4 +154,4 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Real Alumdoor pricing catalogue lab failed' }
           Write-Host 'ALUMDOOR_REAL_DATA_PRICING_CERT_PASS'
 
-# closure-print-metadata-runtime-d8a1
+# metadata-audit-push-capability
