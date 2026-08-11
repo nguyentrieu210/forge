@@ -6,6 +6,7 @@ import {
   useState,
   type ClipboardEvent as ReactClipboardEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
 } from "react";
 import {
   ArrowDown,
@@ -90,19 +91,14 @@ function newRowName(): string {
 }
 
 function newRow(meta: DocTypeMeta, rowDefaults?: Record<string, unknown>): Doc {
-  const row: Doc = {
-    name: newRowName(),
-    doctype: meta.name,
-  } as Doc;
+  const row: Doc = { name: newRowName(), doctype: meta.name } as Doc;
   for (const field of meta.fields ?? []) {
-    if (field.default !== undefined && field.default !== null && field.default !== "") {
-      row[field.fieldname] = field.default;
-    }
+    if (field.default !== undefined && field.default !== null && field.default !== "") row[field.fieldname] = field.default;
   }
   if (rowDefaults) {
     const fieldNames = new Set((meta.fields ?? []).map((field) => field.fieldname));
     for (const [key, value] of Object.entries(rowDefaults)) {
-      if (fieldNames.has(key) && (row[key] === undefined || row[key] === null || row[key] === "")) row[key] = value;
+      if (fieldNames.has(key) && isBlank(row[key])) row[key] = value;
     }
   }
   return row;
@@ -145,16 +141,22 @@ function cloneLayout(layout: SmartGridLayout): SmartGridLayout {
   };
 }
 
+/** Route only explicitly metadata-owned child tables into the smart runtime. */
+export function MetadataChildGrid(props: ChildGridProps) {
+  return hasMetadataChildGridPresentation(props.childMeta)
+    ? <SmartMetadataChildGrid {...props} />
+    : <LegacyChildGrid {...props} />;
+}
+
 /**
- * Metadata-owned child-table renderer with mature grid interactions.
+ * Generic metadata-owned child-table renderer.
  *
- * Metadata decides candidate fields and server preview remains the only derivation authority.
+ * Metadata decides candidate fields and the named server preview remains derivation authority.
  * This component owns interaction mechanics only: layout, row operations, spreadsheet entry,
  * keyboard navigation, detail/full-screen surfaces and responsive presentation.
  */
-export function MetadataChildGrid(props: ChildGridProps) {
+function SmartMetadataChildGrid(props: ChildGridProps) {
   const { childMeta, rows, onChange, registry, services, readOnly, parentDoc, roles, rowDefaults } = props;
-  const ownsPresentation = hasMetadataChildGridPresentation(childMeta);
   const [expanded, setExpanded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [detailRow, setDetailRow] = useState<number | null>(null);
@@ -175,14 +177,8 @@ export function MetadataChildGrid(props: ChildGridProps) {
     latestRows.current = rows;
   }, [rows]);
 
-  const compact = useMemo(
-    () => ownsPresentation ? (metadataChildGridColumns(childMeta, false) ?? []) : [],
-    [childMeta, ownsPresentation],
-  );
-  const full = useMemo(
-    () => ownsPresentation ? (metadataChildGridColumns(childMeta, true) ?? compact) : [],
-    [childMeta, compact, ownsPresentation],
-  );
+  const compact = useMemo(() => metadataChildGridColumns(childMeta, false) ?? [], [childMeta]);
+  const full = useMemo(() => metadataChildGridColumns(childMeta, true) ?? compact, [childMeta, compact]);
   const activeView = expanded ? childMeta.viewPolicy?.form : childMeta.viewPolicy?.quickEntry ?? childMeta.viewPolicy?.form;
   const previewMethod = viewPreviewMethod(activeView);
   const previewParentFields = viewPreviewParentFields(activeView);
@@ -191,8 +187,6 @@ export function MetadataChildGrid(props: ChildGridProps) {
     [parentDoc, previewParentFields.join("\u0000")],
   );
   const childFields = useMemo(() => (childMeta.fields ?? []).map((field) => field.fieldname), [childMeta.fields]);
-
-  if (!ownsPresentation) return <LegacyChildGrid {...props} />;
 
   const emitRows = (next: Doc[]) => {
     latestRows.current = next;
@@ -224,8 +218,7 @@ export function MetadataChildGrid(props: ChildGridProps) {
       for (const [fieldname, value] of Object.entries(result.patch ?? {})) {
         if (childFields.includes(fieldname)) nextRow[fieldname] = value;
       }
-      const next = current.map((entry, index) => index === currentIndex ? nextRow : entry);
-      emitRows(next);
+      emitRows(current.map((entry, index) => index === currentIndex ? nextRow : entry));
       setFieldOverridesByRow((currentOverrides) => ({
         ...currentOverrides,
         [key]: result.field_overrides ?? {},
@@ -286,7 +279,6 @@ export function MetadataChildGrid(props: ChildGridProps) {
   const selectedSet = new Set(selectedRows);
   const allSelected = rows.length > 0 && rows.every((row, index) => selectedSet.has(smartGridRowKey(row, index)));
   const previewErrors = Object.values(previewErrorByRow).filter(Boolean);
-
   const columnWidth = (field: DocField) => layout.widths[field.fieldname]
     ?? defaultColumnWidth(field, field.fieldname === identityFieldname);
   const pinnedOffsets = new Map<string, number>();
@@ -306,6 +298,7 @@ export function MetadataChildGrid(props: ChildGridProps) {
     };
   };
 
+  /** Manual edit, paste and fill-down all pass through this permission + preview seam. */
   const commitEdits = (edits: readonly SmartGridCellEdit[]) => {
     if (readOnly || !edits.length) return;
     const current = latestRows.current;
@@ -315,15 +308,7 @@ export function MetadataChildGrid(props: ChildGridProps) {
       const row = next[edit.rowIndex];
       const field = (childMeta.fields ?? []).find((candidate) => candidate.fieldname === edit.fieldname);
       if (!row || !field) continue;
-      const resolved = resolveSmartGridCell(
-        field,
-        childMeta,
-        row,
-        edit.rowIndex,
-        parentDoc,
-        roles,
-        fieldOverridesByRow,
-      );
+      const resolved = resolveSmartGridCell(field, childMeta, row, edit.rowIndex, parentDoc, roles, fieldOverridesByRow);
       if (!resolved.visible || resolved.readOnly || resolved.masked) continue;
       row[edit.fieldname] = edit.value;
       previewTargets.set(edit.rowIndex, edit.fieldname);
@@ -343,18 +328,14 @@ export function MetadataChildGrid(props: ChildGridProps) {
   const addRow = () => emitRows([...latestRows.current, newRow(childMeta, rowDefaults)]);
   const addMany = () => {
     const count = Math.max(1, Math.min(50, Math.trunc(Number(addManyCount) || 1)));
-    emitRows([
-      ...latestRows.current,
-      ...Array.from({ length: count }, () => newRow(childMeta, rowDefaults)),
-    ]);
+    emitRows([...latestRows.current, ...Array.from({ length: count }, () => newRow(childMeta, rowDefaults))]);
     setAddManyOpen(false);
   };
 
   const deleteKeys = (keys: ReadonlySet<string>) => {
     if (readOnly || !keys.size) return;
-    const current = latestRows.current;
     const deleted: SmartGridDeletedRow[] = [];
-    const next = current.filter((row, index) => {
+    const next = latestRows.current.filter((row, index) => {
       if (!keys.has(smartGridRowKey(row, index))) return true;
       deleted.push({ row, index });
       return false;
@@ -379,11 +360,11 @@ export function MetadataChildGrid(props: ChildGridProps) {
   const duplicateSelection = (fallbackIndex?: number) => {
     if (readOnly) return;
     const current = latestRows.current;
-    const source = current.filter((row, index) => selectedSet.has(smartGridRowKey(row, index)));
-    if (!source.length && fallbackIndex !== undefined && current[fallbackIndex]) source.push(current[fallbackIndex]);
+    const source = fallbackIndex === undefined
+      ? current.filter((row, index) => selectedSet.has(smartGridRowKey(row, index)))
+      : current[fallbackIndex] ? [current[fallbackIndex]] : [];
     if (!source.length) return;
-    const copies = source.map((row) => ({ ...row, name: newRowName() } as Doc));
-    emitRows([...current, ...copies]);
+    emitRows([...current, ...source.map((row) => ({ ...row, name: newRowName() } as Doc))]);
   };
 
   const moveSelection = (direction: -1 | 1) => {
@@ -456,7 +437,7 @@ export function MetadataChildGrid(props: ChildGridProps) {
     plan.matrix.forEach((values, rowOffset) => {
       values.forEach((raw, valueIndex) => {
         const targetColumn = plan.columnIndexes[valueIndex];
-        const field = columns[targetColumn];
+        const field = targetColumn === undefined ? undefined : columns[targetColumn];
         if (!field) return;
         const value = parseSmartGridPastedValue(field, raw);
         if (value !== undefined) edits.push({ rowIndex: rowIndex + rowOffset, fieldname: field.fieldname, value });
@@ -470,11 +451,10 @@ export function MetadataChildGrid(props: ChildGridProps) {
     const source = latestRows.current[pickedCell.rowIndex];
     const field = columns[pickedCell.columnIndex];
     if (!source || !field) return;
-    const value = source[field.fieldname];
     const edits: SmartGridCellEdit[] = [];
     latestRows.current.forEach((row, rowIndex) => {
       if (!selectedSet.has(smartGridRowKey(row, rowIndex)) || rowIndex === pickedCell.rowIndex) return;
-      edits.push({ rowIndex, fieldname: field.fieldname, value });
+      edits.push({ rowIndex, fieldname: field.fieldname, value: source[field.fieldname] });
     });
     commitEdits(edits);
   };
@@ -511,7 +491,7 @@ export function MetadataChildGrid(props: ChildGridProps) {
     }
   };
 
-  const resizeColumn = (field: DocField, event: React.MouseEvent<HTMLElement>) => {
+  const resizeColumn = (field: DocField, event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault();
     const startX = event.clientX;
     const startWidth = columnWidth(field);
@@ -539,10 +519,7 @@ export function MetadataChildGrid(props: ChildGridProps) {
     : settingsCandidates.map((field) => field.fieldname);
 
   const moveColumnSetting = (fieldname: string, direction: -1 | 1) => {
-    updateLayout((current) => ({
-      ...current,
-      order: reorderSmartGridField(settingsOrder, fieldname, direction),
-    }));
+    updateLayout((current) => ({ ...current, order: reorderSmartGridField(settingsOrder, fieldname, direction) }));
   };
 
   const shellClass = fullscreen
@@ -592,10 +569,9 @@ export function MetadataChildGrid(props: ChildGridProps) {
           ) : null}
         </div>
       </div>
+
       {previewErrors.length ? (
-        <div className="border-b bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">
-          {previewErrors[0]}
-        </div>
+        <div className="border-b bg-destructive/5 px-3 py-2 text-xs text-destructive" role="alert">{previewErrors[0]}</div>
       ) : null}
 
       <div className={fullscreen ? "min-h-0 flex-1 space-y-3 overflow-auto p-3 md:hidden" : "space-y-3 p-3 md:hidden"}>
