@@ -52,6 +52,17 @@ jobs:
           Write-Host "ATTENDANCE_HEAD=$((git -C $worktree rev-parse HEAD).Trim())"
           Write-Host "REMOTE_HEAD=$((git -C $worktree rev-parse origin/$target).Trim())"
 
+          $cachedNodeModules = "$repo\server\node_modules"
+          $worktreeNodeModules = "$worktree\server\node_modules"
+          if (-not (Test-Path "$cachedNodeModules\.bin\tsc.cmd")) {
+            throw 'Shared server dependency cache is missing tsc.cmd'
+          }
+          if (-not (Test-Path "$worktreeNodeModules\.bin\tsc.cmd")) {
+            if (Test-Path $worktreeNodeModules) { throw 'Attendance worktree node_modules exists but is incomplete' }
+            cmd /c "mklink /J `"$worktreeNodeModules`" `"$cachedNodeModules`""
+            Assert-LastExit 'node_modules junction'
+          }
+
           Push-Location "$worktree\server"
           npm run build
           Assert-LastExit 'server build'
