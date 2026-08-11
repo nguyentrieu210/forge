@@ -22,7 +22,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=8'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=9'
           git -C C:\alumdoor fetch origin main --prune
 
           $mainPath = 'C:\forge-attendance-payroll\client\apps\runtime\src\main-base.tsx'
@@ -93,5 +93,5 @@ jobs:
           $newHelper = ($newHelper -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
           if (-not $raw.Contains($oldHelper)) { throw 'control script helper anchor missing' }
           $raw = $raw.Replace($oldHelper, $newHelper)
-          [IO.File]::WriteAllText($controlScript, $raw + "`n", [Text.UTF8Encoding]::new($false))
+          Set-Content -Path $controlScript -Value $raw -Encoding UTF8
           powershell -NoProfile -ExecutionPolicy Bypass -File $controlScript
