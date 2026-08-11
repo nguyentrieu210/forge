@@ -6,7 +6,7 @@ const SALES_COMPACT_FIELDS = [
 ];
 
 const SALES_FULL_FIELDS = [
-  "item_code", "sales_option", "color", "height_m", "width_m", "set_count",
+  "item_code", "sales_option", "color", "height_m", "width_m", "set_count", "has_butterfly_bracket",
   "leaf_variant", "single_layer_leaf_count", "double_layer_leaf_count", "cut_width_m", "billable_area_sqm",
   "length_m", "qty_bar", "uom", "qty", "rate", "discount_amount", "adjustment_amount", "net_amount", "note",
 ];
