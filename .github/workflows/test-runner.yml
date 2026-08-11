@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Verify experiment checkout is untouched
         shell: powershell
@@ -42,6 +42,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'brief regeneration failed' }
           node --test tests/alumdoor-child-presentation.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'presentation tests failed' }
+          pnpm run build
+          if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
           pnpm run brief:check
           if ($LASTEXITCODE -ne 0) { throw 'brief check failed' }
           Set-Location ..
@@ -61,4 +63,4 @@ jobs:
           Set-Location $env:RUNNER_TEMP
           Remove-Item -Recurse -Force $probe
 
-# regenerate-surface-semantics-v3
+# regenerate-surface-semantics-v4
