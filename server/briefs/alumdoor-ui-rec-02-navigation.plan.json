@@ -23,9 +23,6 @@
       "Sales Invoice"
     ],
     "Mua hàng": [
-      "Material Request",
-      "Request for Quotation",
-      "Supplier Quotation",
       "Purchase Order",
       "Purchase Receipt",
       "Purchase Invoice",
