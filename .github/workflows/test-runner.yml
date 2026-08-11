@@ -12,9 +12,9 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 15
+    timeout-minutes: 35
     steps:
-      - name: Verify experiment checkout is untouched
+      - name: Sync experiment safely
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -26,77 +26,110 @@ jobs:
             $unsafe | ForEach-Object { Write-Host $_ }
             throw 'Local working tree has non-backup changes; refusing to continue'
           }
-          Write-Host "LOCAL_COMMIT=$(git rev-parse HEAD)"
+          git fetch origin exp/alumdoor-pricing-policy
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to fetch experiment' }
+          git merge --ff-only origin/exp/alumdoor-pricing-policy
+          if ($LASTEXITCODE -ne 0) { throw 'Local experiment cannot fast-forward safely' }
+          Write-Host "TESTING_COMMIT=$(git rev-parse HEAD)"
 
-      - name: Patch generator and regenerate metadata in disposable clone
+      - name: Build server
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $probe = Join-Path $env:RUNNER_TEMP 'forge-alumdoor-presentation-migrate'
-          if (Test-Path $probe) { Remove-Item -Recurse -Force $probe }
-          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $probe
-          if ($LASTEXITCODE -ne 0) { throw 'clone failed' }
-          Set-Location $probe
-          git config user.name "Alumdoor Migration Runner"
-          git config user.email "alumdoor-migration@local.invalid"
+          Set-Location C:\alumdoor\server
+          pnpm run clean
+          if ($LASTEXITCODE -ne 0) { throw 'Clean failed' }
+          pnpm run build
+          if ($LASTEXITCODE -ne 0) { throw 'Server build failed' }
 
-          @'
-          import fs from "node:fs";
-          const path = "server/scripts/build-alumdoor-v2-brief.mjs";
-          let source = fs.readFileSync(path, "utf8");
-          const importLine = 'import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";';
-          if (!source.includes(importLine)) {
-            source = source.replace(
-              'import { dirname, resolve } from "node:path";\n',
-              'import { dirname, resolve } from "node:path";\n' + importLine + '\n',
-            );
-          }
-          const marker = 'const childPresentation = applyAlumdoorChildPresentation(brief);';
-          if (!source.includes(marker)) {
-            source = source.replace(
-              '\nwriteFileSync(OUT, JSON.stringify(brief, null, 1) + "\\n", "utf8");',
-              '\nconst childPresentation = applyAlumdoorChildPresentation(brief);\n'
-                + 'note(`UI · child-grid presentation metadata: ${childPresentation.migrated} child DocType`);\n\n'
-                + 'writeFileSync(OUT, JSON.stringify(brief, null, 1) + "\\n", "utf8");',
-            );
-          }
-          if (!source.includes(importLine) || !source.includes(marker)) throw new Error("builder patch did not apply");
-          fs.writeFileSync(path, source);
-          '@ | node --input-type=module
-
-          Set-Location server
-          node scripts/build-alumdoor-v2-brief.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Alumdoor V2 brief regeneration failed' }
+      - name: Verify Alumdoor brief and presentation compiler
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
           node --test tests/alumdoor-child-presentation.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Alumdoor child presentation contract failed' }
+          pnpm run brief:check
+          if ($LASTEXITCODE -ne 0) { throw 'Brief check failed' }
+          Write-Host 'ALUMDOOR_CHILD_PRESENTATION_META_PASS'
 
-          @'
-          import fs from "node:fs";
-          import { compileBrief } from "./scripts/lib/compile-brief.mjs";
-          import { attachBriefUiViewPolicies } from "./scripts/lib/brief-ui-view-policy.mjs";
-          const brief = JSON.parse(fs.readFileSync("briefs/alumdoor-v2.json", "utf8"));
-          const pkg = attachBriefUiViewPolicies(brief, compileBrief(brief));
-          const children = pkg.doctypes.filter((dt) => dt.is_child === true);
-          console.log(`COMPILED_CHILD_DOCTYPES=${children.length}`);
-          for (const name of ["Quotation Item","Sales Order Item","Purchase Order Item","Purchase Receipt Item","Delivery Note Item","Sales Invoice Item","Stock Entry Detail","Production Request Item","Work Order Item"]) {
-            const dt = children.find((value) => value.name === name);
-            if (!dt) throw new Error(`missing ${name}`);
-            console.log(`${name} QUICK=${(dt.viewPolicy?.quickEntry?.fields ?? []).join("|")}`);
-            console.log(`${name} FULL=${(dt.viewPolicy?.form?.fields ?? []).join("|")}`);
+      - name: Bootstrap build and certify MetaForge views
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\client
+          if (!(Test-Path .\node_modules\.bin\tsc.cmd)) {
+            pnpm install --frozen-lockfile
+            if ($LASTEXITCODE -ne 0) { throw 'Client dependency bootstrap failed' }
           }
-          '@ | node --input-type=module
+          pnpm --filter @metaforge/views run build
+          if ($LASTEXITCODE -ne 0) { throw 'MetaForge views build failed' }
+          Set-Location C:\alumdoor\client\packages\views
+          node --test tests/child-grid-presentation.test.mjs tests/metadata-child-grid-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Metadata child-grid runtime contract failed' }
+          Write-Host 'ALUMDOOR_METADATA_CHILD_GRID_RUNTIME_PASS'
 
-          Set-Location ..
-          git status --short
-          git diff --check
-          if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed' }
-          git add server/scripts/build-alumdoor-v2-brief.mjs server/briefs/alumdoor-v2.json
-          git commit -m "feat(meta): migrate Alumdoor child grids to presentation surfaces"
-          if ($LASTEXITCODE -ne 0) { throw 'migration commit failed' }
-          git push origin HEAD:exp/alumdoor-pricing-policy
-          if ($LASTEXITCODE -ne 0) { throw 'migration push failed' }
-          Write-Host "MIGRATION_COMMIT=$(git rev-parse HEAD)"
-          Set-Location $env:RUNNER_TEMP
-          Remove-Item -Recurse -Force $probe
+      - name: Run inventory integrity slice
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          node --test tests/stock-reservation-integrity.test.mjs tests/reservation-source-lifecycle.test.mjs tests/outbound-reservation-guard.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Inventory integrity slice failed' }
+          Write-Host 'ALUMDOOR_INVENTORY_CERT_PASS'
 
-# migrate-child-presentation-v3
+      - name: Run transaction closure certification slice
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          node --test tests/transaction-closure-sales-o2c.test.mjs tests/procurement-p2p-closure.test.mjs tests/manufacturing-transaction-closure.test.mjs tests/finance-payment-allocation.test.mjs tests/finance-stock-control-policy.test.mjs tests/finance-stock-control-query.test.mjs tests/sales-production-flow.test.mjs tests/alumdoor-manufacturing-lifecycle.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Transaction closure certification slice failed' }
+          Write-Host 'ALUMDOOR_TRANSACTION_CLOSURE_CERT_PASS'
+
+      - name: Run Alumdoor print certification slice
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          node --test tests/alumdoor-sales-order-print.test.mjs tests/alumdoor-purchase-order-print.test.mjs tests/alumdoor-delivery-note-print.test.mjs tests/alumdoor-cut-order-print.test.mjs tests/alumdoor-production-request-print.test.mjs tests/alumdoor-stock-reconciliation-print.test.mjs tests/alumdoor-handover-acceptance-print.test.mjs tests/alumdoor-print-brand-consistency.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Alumdoor print certification slice failed' }
+          Write-Host 'ALUMDOOR_PRINT_CERT_PASS'
+
+      - name: Run full server unit regression
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-full-test.log'
+          cmd /c "node --test tests/*.test.mjs > `"$log`" 2>&1"
+          $exit = $LASTEXITCODE
+          if ($exit -ne 0) {
+            Write-Host '=== FULL SUITE FAILURE SUMMARY ==='
+            Select-String -Path $log -Pattern '^not ok ','AssertionError','ERR_','error:','failureType','expected:','actual:' -Context 2,5 | Select-Object -First 140 | ForEach-Object { Write-Host $_.ToString() }
+            Write-Host '=== FULL SUITE TAIL ==='
+            Get-Content $log -Tail 140 | ForEach-Object { Write-Host $_ }
+            throw "Full server unit regression failed with exit $exit"
+          }
+          Get-Content $log -Tail 35 | ForEach-Object { Write-Host $_ }
+          Write-Host 'ALUMDOOR_FULL_SERVER_UNIT_PASS'
+
+      - name: Re-run real Alumdoor pricing catalogue lab
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location C:\alumdoor\server
+          $source = Get-ChildItem .\apps\tenant-worker\.wrangler\state -Recurse -File -Filter *.sqlite |
+            Sort-Object Length -Descending |
+            Select-Object -First 1
+          if (-not $source) { throw 'No local Wrangler D1 sqlite found for disposable real-data lab' }
+          $labDir = Join-Path $env:RUNNER_TEMP 'alumdoor-real-data-cert'
+          New-Item -ItemType Directory -Force -Path $labDir | Out-Null
+          $lab = Join-Path $labDir 'alumdoor-real-pricing.sqlite'
+          Copy-Item -Force $source.FullName $lab
+          $env:LAB_DB = $lab
+          node scripts/test-alumdoor-pricing-real-data.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Real Alumdoor pricing catalogue lab failed' }
+          Write-Host 'ALUMDOOR_REAL_DATA_PRICING_CERT_PASS'
+
+# certify-child-presentation-migration
