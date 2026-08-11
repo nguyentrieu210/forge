@@ -1,0 +1,23 @@
+name: Attendance payroll push check
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/attendance-payroll-push-check.yml"]
+jobs:
+  check:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 5
+    steps:
+      - shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $worktree = 'C:\forge-attendance-payroll'
+          if (-not (Test-Path $worktree)) { throw 'attendance payroll worktree missing' }
+          git -C $worktree fetch origin feature/attendance-payroll --prune
+          if ($LASTEXITCODE -ne 0) { throw 'fetch failed' }
+          git -C $worktree merge --ff-only origin/feature/attendance-payroll
+          if ($LASTEXITCODE -ne 0) { throw 'fast-forward failed' }
+          git -C $worktree push --dry-run origin HEAD:feature/attendance-payroll
+          if ($LASTEXITCODE -ne 0) { throw 'push dry-run failed' }
+          Write-Host 'ATTENDANCE_PAYROLL_PUSH_DRY_RUN_OK'
