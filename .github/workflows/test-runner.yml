@@ -42,35 +42,27 @@ jobs:
             if (after === before) throw new Error(`no patch applied to ${path}`);
             fs.writeFileSync(path, after);
           }
-
           edit("server/packages/frappe-model/src/types.ts", (s) => s.replace(
             "  reasonRequiredOn?: string[];\n}",
             "  reasonRequiredOn?: string[];\n  /** Optional app method that derives a child-row UX preview; save/submit remain authoritative. */\n  previewMethod?: string;\n  /** Parent fields whose changes invalidate the row preview. */\n  previewParentFields?: string[];\n}",
           ));
-
           edit("client/packages/core/src/types/meta.ts", (s) => s.replace(
             "  reasonRequiredOn?: string[];\n  [k: string]: unknown;",
             "  reasonRequiredOn?: string[];\n  /** Dotted app method used for server-owned child-row preview. */\n  previewMethod?: string;\n  /** Parent fields whose changes trigger row preview refresh. */\n  previewParentFields?: string[];\n  [k: string]: unknown;",
           ));
-
           edit("server/packages/frappe-model/src/validate.ts", (s) => {
             const anchor = `    const reasonRequiredOn = entry.reasonRequiredOn === undefined\n      ? undefined\n      : array(entry.reasonRequiredOn, \`viewPolicy.\${key}.reasonRequiredOn\`).map((item, index) =>\n          text(item, \`viewPolicy.\${key}.reasonRequiredOn[\${index}]\`, 80));\n`;
-            const added = anchor + `    const previewMethod = entry.previewMethod === undefined\n      ? undefined\n      : text(entry.previewMethod, \`viewPolicy.\${key}.previewMethod\`, 240);\n    const previewParentFields = entry.previewParentFields === undefined\n      ? undefined\n      : array(entry.previewParentFields, \`viewPolicy.\${key}.previewParentFields\`).map((item, index) =>\n          text(item, \`viewPolicy.\${key}.previewParentFields[\${index}]\`, 160));\n`;
             if (!s.includes(anchor)) throw new Error("validate preview anchor missing");
-            s = s.replace(anchor, added);
-            const returnAnchor = "      ...(reasonRequiredOn ? { reasonRequiredOn } : {}),\n";
-            if (!s.includes(returnAnchor)) throw new Error("validate return anchor missing");
-            return s.replace(returnAnchor, returnAnchor
-              + "      ...(previewMethod ? { previewMethod } : {}),\n"
-              + "      ...(previewParentFields ? { previewParentFields } : {}),\n");
+            s = s.replace(anchor, anchor + `    const previewMethod = entry.previewMethod === undefined\n      ? undefined\n      : text(entry.previewMethod, \`viewPolicy.\${key}.previewMethod\`, 240);\n    const previewParentFields = entry.previewParentFields === undefined\n      ? undefined\n      : array(entry.previewParentFields, \`viewPolicy.\${key}.previewParentFields\`).map((item, index) =>\n          text(item, \`viewPolicy.\${key}.previewParentFields[\${index}]\`, 160));\n`);
+            const ret = "      ...(reasonRequiredOn ? { reasonRequiredOn } : {}),\n";
+            if (!s.includes(ret)) throw new Error("validate return anchor missing");
+            return s.replace(ret, ret + "      ...(previewMethod ? { previewMethod } : {}),\n      ...(previewParentFields ? { previewParentFields } : {}),\n");
           });
-
           edit("server/apps-src/alumdoor-worker/src/index.ts", (s) => {
             const importAnchor = 'import { salesItemContext } from "./sales-item-context.js";\n';
-            if (!s.includes(importAnchor)) throw new Error("worker import anchor missing");
-            s = s.replace(importAnchor, importAnchor + 'import { previewChildRow } from "./ui-child-preview.js";\n');
             const dispatchAnchor = '    if (method === "alumdoor.sales.item_context") return await salesItemContext(call, args);\n';
-            if (!s.includes(dispatchAnchor)) throw new Error("worker dispatch anchor missing");
+            if (!s.includes(importAnchor) || !s.includes(dispatchAnchor)) throw new Error("worker anchors missing");
+            s = s.replace(importAnchor, importAnchor + 'import { previewChildRow } from "./ui-child-preview.js";\n');
             return s.replace(dispatchAnchor, dispatchAnchor + '    if (method === "alumdoor.ui.preview_child_row") return await previewChildRow(call, args);\n');
           });
           '@ | node --input-type=module
@@ -94,8 +86,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'worker dry-run bundle failed' }
 
           Set-Location ..\client
-          pnpm install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { throw 'client install failed' }
+          pnpm install --no-frozen-lockfile --lockfile=false
+          if ($LASTEXITCODE -ne 0) { throw 'client dependency bootstrap failed' }
           pnpm --filter @metaforge/views run build
           if ($LASTEXITCODE -ne 0) { throw 'views build failed' }
           Set-Location packages\views
@@ -117,4 +109,4 @@ jobs:
           Set-Location $env:RUNNER_TEMP
           cmd /c "rmdir /s /q `"$probe`"" >nul 2>nul
 
-# child-row-preview-wire
+# child-row-preview-wire-v2
