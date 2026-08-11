@@ -2,6 +2,19 @@ import type { JsonObject } from "../../contracts/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
 import type { UomLine } from "../../clouderp-core/src/types.js";
 
+export interface SalesAdjustmentSnapshot extends JsonObject {
+  rule_code: string;
+  rule_name: string;
+  rule_version?: number;
+  basis: string;
+  basis_qty: string;
+  rate_minor: number;
+  amount_minor: number;
+  scope: string;
+  taxable: boolean;
+  discountable: boolean;
+}
+
 export interface SalesItem extends UomLine {
   row_id: string;
   rate: DecimalInput;
@@ -22,12 +35,24 @@ export interface SalesItem extends UomLine {
   batch_no?: string;
   serial_nos?: string[];
   item_price?: string;
+  /** Canonical commercial Item Price variant selected for this line. */
+  price_variant?: string;
   /** Price-list baseline retained when a salesperson overrides the line rate. */
   standard_rate?: DecimalInput;
   /** Server-derived flag: submitted rate differs from the active price list. */
   rate_requires_approval?: boolean;
   pricing_rule?: string;
   discount_percentage?: string;
+  /** Server-owned basis retained even when the UI only displays discount money. */
+  discount_basis_rate?: DecimalInput;
+  discount_basis_rate_minor?: number;
+  discount_amount?: string;
+  discount_amount_minor?: number;
+  /** Sum of applied persisted commercial adjustment rules on this line. */
+  adjustment_amount?: string;
+  adjustment_amount_minor?: number;
+  /** Immutable commercial explanation snapshot for historical/audit reconstruction. */
+  applied_adjustments?: SalesAdjustmentSnapshot[];
   /** Source Quotation child row. Required when a Sales Order declares against_quotation. */
   quotation_item?: string;
 }
