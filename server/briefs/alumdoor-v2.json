@@ -4613,7 +4613,7 @@
           "fieldtype": "Link",
           "options": "Sales Option",
           "in_list_view": true,
-          "surface": "expanded"
+          "surface": "quick"
         },
         {
           "fieldname": "item_name",
@@ -4814,6 +4814,7 @@
       "quickEntry": {
         "fields": [
           "item_code",
+          "sales_option",
           "uom",
           "qty",
           "rate",
@@ -5726,14 +5727,14 @@
           "fieldname": "width_m",
           "fieldtype": "Float",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "Cao (m)",
           "fieldname": "height_m",
           "fieldtype": "Float",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "Số bộ",
@@ -5741,7 +5742,7 @@
           "fieldtype": "Int",
           "default": 1,
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "SL (bó)",
@@ -5868,6 +5869,10 @@
       "form": {
         "fields": [
           "item_code",
+          "color",
+          "height_m",
+          "width_m",
+          "set_count",
           "length_m",
           "theoretical_kg_per_m",
           "qty_bundle",
@@ -5877,7 +5882,6 @@
           "uom",
           "rate",
           "amount",
-          "color",
           "is_stamped",
           "so_no",
           "warehouse",
@@ -6078,14 +6082,14 @@
           "fieldname": "width_m",
           "fieldtype": "Float",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "Cao (m)",
           "fieldname": "height_m",
           "fieldtype": "Float",
           "depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "Số cái/bộ",
@@ -6096,7 +6100,7 @@
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2'",
           "non_negative": true,
           "description": "Số tấm hoặc số bộ cửa thực nhận. Dùng cùng Cao × Rộng để tính tổng diện tích thực.",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "SL (bó)",
@@ -6141,7 +6145,7 @@
           "read_only": true,
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "description": "Nhôm cây/lá: Tổng kg ÷ (chiều dài một cây × số cây/lá). Chỉ để đối chiếu, không nhập tay.",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "TL thực (kg/m²)",
@@ -6151,7 +6155,7 @@
           "read_only": true,
           "depends_on": "eval:(doc.inventory_mode == 'Tấm/Kính' || doc.inventory_mode == 'Thành phẩm theo m2') && doc.actual_weight_kg > 0",
           "description": "Tự tính = Tổng kg thực cân ÷ (Cao × Rộng × Số cái/bộ). Cao và Rộng nhập theo mét; kết quả chỉ để đối chiếu.",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "Số SO NCC",
@@ -6172,7 +6176,7 @@
           "label": "ĐVT của đơn giá — mặc định theo ĐVT khối lượng nếu hàng cân theo kiện",
           "fieldtype": "Link",
           "options": "UOM",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "fieldname": "amount",
@@ -6213,7 +6217,7 @@
           "fieldtype": "Select",
           "options": "Thô\nĐã sơn\nLỗi",
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "label": "Dập",
@@ -6243,7 +6247,7 @@
           "read_only": true,
           "depends_on": "eval:doc.inventory_mode == 'Nhôm cây/lá'",
           "description": "Vượt ngưỡng của bộ quy cách thì cảnh báo, KHÔNG chặn ghi sổ.",
-          "surface": "internal"
+          "surface": "expanded"
         },
         {
           "fieldname": "purchase_order",
@@ -6285,16 +6289,24 @@
       "form": {
         "fields": [
           "item_code",
+          "color",
+          "height_m",
+          "width_m",
+          "set_count",
           "length_m",
           "qty_bundle",
           "qty_bar",
           "qty",
           "uom",
           "rate",
+          "rate_uom",
           "amount",
           "theoretical_kg",
           "actual_weight_kg",
-          "color",
+          "actual_kg_per_m",
+          "actual_kg_per_sqm",
+          "weight_variance_pct",
+          "condition",
           "is_stamped",
           "so_no",
           "warehouse",
