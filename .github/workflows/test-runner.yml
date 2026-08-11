@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Sync experiment safely
         shell: powershell
@@ -42,11 +42,16 @@ jobs:
           pnpm run build
           if ($LASTEXITCODE -ne 0) { throw 'Server build failed' }
 
-      - name: Build MetaForge views
+      - name: Bootstrap and build MetaForge views
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Set-Location C:\alumdoor\server
+          Set-Location C:\alumdoor\client
+          if (!(Test-Path .\node_modules\.bin\tsc.cmd)) {
+            Write-Host 'Client TypeScript binary missing; installing frozen client dependencies'
+            pnpm install --frozen-lockfile
+            if ($LASTEXITCODE -ne 0) { throw 'Client dependency bootstrap failed' }
+          }
           pnpm --filter @metaforge/views run build
           if ($LASTEXITCODE -ne 0) { throw 'MetaForge views build failed' }
 
