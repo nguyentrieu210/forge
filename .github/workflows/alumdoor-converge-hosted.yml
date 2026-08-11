@@ -1,0 +1,82 @@
+name: Alumdoor converge hosted
+permissions:
+  contents: write
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/alumdoor-converge-hosted.yml"]
+jobs:
+  converge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Patch metadata preview seams and certify
+        shell: bash
+        run: |
+          set -euo pipefail
+          p="$RUNNER_TEMP/forge-alu-converge"
+          git clone --quiet --branch exp/alumdoor-pricing-policy "https://x-access-token:${GH_TOKEN}@github.com/nguyentrieu210/forge.git" "$p"
+          cd "$p"
+          base="$(git rev-parse HEAD)"
+          export P="$p"
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          r=Path(os.environ['P'])
+          def rep(rel,a,b):
+              f=r/rel; s=f.read_text(encoding='utf-8')
+              if a not in s: raise SystemExit(f'marker missing: {rel}: {a[:80]}')
+              f.write_text(s.replace(a,b,1),encoding='utf-8',newline='\n')
+          # Generic field presentation seams.
+          rep('server/packages/frappe-model/src/types.ts','  form_control_width?: "compact";\n','  form_control_width?: "compact";\n  form_control_style?: "choice_list";\n  form_section_style?: "summary";\n')
+          rep('client/packages/core/src/types/meta.ts','  form_control_width?: "compact";\n','  form_control_width?: "compact";\n  form_control_style?: "choice_list";\n  form_section_style?: "summary";\n')
+          rep('server/packages/frappe-model/src/validate.ts','  if (formControlWidth !== undefined && formControlWidth !== "compact") {\n    throw errors.validation(`fields[${index}].form_control_width must be compact`);\n  }\n','  if (formControlWidth !== undefined && formControlWidth !== "compact") {\n    throw errors.validation(`fields[${index}].form_control_width must be compact`);\n  }\n  const formControlStyle = input.form_control_style === undefined ? undefined : text(input.form_control_style, `fields[${index}].form_control_style`, 24);\n  if (formControlStyle !== undefined && formControlStyle !== "choice_list") throw errors.validation(`fields[${index}].form_control_style must be choice_list`);\n  const formSectionStyle = input.form_section_style === undefined ? undefined : text(input.form_section_style, `fields[${index}].form_section_style`, 24);\n  if (formSectionStyle !== undefined && formSectionStyle !== "summary") throw errors.validation(`fields[${index}].form_section_style must be summary`);\n')
+          rep('server/packages/frappe-model/src/validate.ts','    ...(formControlWidth === undefined ? {} : { form_control_width: "compact" as const }),\n','    ...(formControlWidth === undefined ? {} : { form_control_width: "compact" as const }),\n    ...(formControlStyle === undefined ? {} : { form_control_style: "choice_list" as const }),\n    ...(formSectionStyle === undefined ? {} : { form_section_style: "summary" as const }),\n')
+          rep('client/packages/views/src/form/layout.ts','export interface FormSection {\n  label?: string;\n  columns: FormColumn[];\n','export interface FormSection {\n  label?: string;\n  style?: "summary";\n  columns: FormColumn[];\n')
+          rep('client/packages/views/src/form/layout.ts','  const startSection = (label: string | undefined, breakHidden: boolean) => {\n    const col: FormColumn = { fields: [] };\n    const section: FormSection = { label, columns: [col], hidden: true };\n','  const startSection = (label: string | undefined, breakHidden: boolean, style?: "summary") => {\n    const col: FormColumn = { fields: [] };\n    const section: FormSection = { label, ...(style ? { style } : {}), columns: [col], hidden: true };\n')
+          rep('client/packages/views/src/form/layout.ts','      startSection(rf.field.label, !rf.visible); // Section Break ẩn ⇒ section ẩn\n','      startSection(rf.field.label, !rf.visible, rf.field.form_section_style === "summary" ? "summary" : undefined); // Section Break ẩn ⇒ section ẩn\n')
+          # Preserve compiler-derived fields when an authored form only adds preview metadata.
+          rep('server/scripts/lib/brief-ui-view-policy.mjs','      next[key] = { enabled: true, ...policy };','      next[key] = { ...(compiled.viewPolicy?.[key] ?? {}), enabled: true, ...policy };')
+          # Worker route for document preview.
+          rep('server/apps-src/alumdoor-worker/src/index.ts','import { previewChildRow } from "./ui-child-preview.js";','import { previewChildRow } from "./ui-child-preview.js";\nimport { previewDocument } from "./ui-document-preview.js";')
+          f=r/'server/apps-src/alumdoor-worker/src/index.ts'; s=f.read_text(encoding='utf-8')
+          marker='if (method === "alumdoor.ui.preview_child_row") return await previewChildRow(call, args);'
+          if marker not in s: raise SystemExit('preview child route missing')
+          s=s.replace(marker,marker+'\n        if (method === "alumdoor.ui.preview_document") return await previewDocument(call, args);',1)
+          f.write_text(s,encoding='utf-8',newline='\n')
+          # Sales Order authored presentation + server preview ownership.
+          f=r/'server/scripts/build-alumdoor-v2-brief.mjs'; s=f.read_text(encoding='utf-8')
+          s=s.replace('import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";','import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";\nimport { parseField } from "./lib/compile-brief.mjs";',1)
+          anchor='const warrantyDebitNote = doctype("Debit Note");'
+          if anchor not in s: raise SystemExit('sales presentation anchor missing')
+          block='''const salesFormHidden = new Set(["product_group", "against_quotation", "note"]);\noperationalSalesOrder.fields = operationalSalesOrder.fields.map((raw, index) => {\n  const field = parseField(raw, index);\n  if (["transaction_date", "delivery_date", "payment_method"].includes(field.fieldname)) field.form_region = "aside";\n  if (["customer", "responsible_person", "manual_note", "operational_change_reason", "selling_price_list", "customer_group", "install_address"].includes(field.fieldname)) field.form_region = "main";\n  if (field.fieldname === "install_address") field.form_width = "full";\n  if (field.fieldname === "customer_group") field.label = "Nhóm khách hàng";\n  if (field.fieldname === "payment_method") { field.default = "Ghi công nợ"; field.form_control_style = "choice_list"; }\n  return field;\n});\nconst salesSummaryIndex = operationalSalesOrder.fields.findIndex((field) => nameOf(field) === "total_amount");\nif (salesSummaryIndex >= 0 && !operationalSalesOrder.fields.some((field) => nameOf(field) === "sales_summary_section")) {\n  operationalSalesOrder.fields.splice(salesSummaryIndex, 0, { fieldname: "sales_summary_section", fieldtype: "Section Break", label: "Tổng kết", form_section_style: "summary" });\n}\noperationalSalesOrder.form = {\n  fields: operationalSalesOrder.fields.map(nameOf).filter((name) => name !== "sales_summary_section" && !salesFormHidden.has(name)),\n  previewMethod: "alumdoor.ui.preview_document",\n  previewParentFields: ["customer", "transaction_date", "items", "vat_rate", "surcharge_amount", "additional_discount_percentage"],\n};\n'''
+          s=s.replace(anchor,block+anchor,1); f.write_text(s,encoding='utf-8',newline='\n')
+          # Node fetch cookie portability for the live verification harness.
+          old='  for (const line of response.headers.getSetCookie?.() ?? []) {'
+          new='  const setCookieLines = response.headers.getSetCookie?.() ?? [];\n  const fallbackSetCookie = response.headers.get("set-cookie");\n  if (!setCookieLines.length && fallbackSetCookie) setCookieLines.push(fallbackSetCookie);\n  for (const line of setCookieLines) {'
+          for rel in ['server/scripts/verify-alumdoor.mjs','server/scripts/verify-alumdoor-mua.mjs']:
+              f=r/rel; x=f.read_text(encoding='utf-8')
+              if old in x: f.write_text(x.replace(old,new,1),encoding='utf-8',newline='\n')
+          PY
+          cd server
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
+          node scripts/build-alumdoor-v2-brief.mjs
+          pnpm run brief:check
+          pnpm exec wrangler deploy --dry-run --config apps-src/alumdoor-worker/wrangler.jsonc
+          cd ../client
+          pnpm --filter @metaforge/views... run build
+          cd ..
+          git diff --check
+          git fetch origin exp/alumdoor-pricing-policy --quiet
+          test "$(git rev-parse origin/exp/alumdoor-pricing-policy)" = "$base"
+          git config user.name 'Alumdoor Hosted Convergence'
+          git config user.email 'alumdoor-cert@local.invalid'
+          git add server client
+          git commit -m 'refactor(alumdoor): move document presentation toward metadata preview'
+          git push origin HEAD:exp/alumdoor-pricing-policy
+          echo "HOSTED_CONVERGENCE_PUSHED=$(git rev-parse HEAD)"
