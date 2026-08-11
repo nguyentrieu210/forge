@@ -8,7 +8,7 @@ on:
 
 jobs:
   launch:
-    runs-on: [self-hosted, Windows]
+    runs-on: [self-hosted]
     timeout-minutes: 15
     steps:
       - name: Launch verified attendance payroll runtime on 5173
