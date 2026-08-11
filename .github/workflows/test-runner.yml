@@ -66,10 +66,18 @@ jobs:
       - name: Run full server unit regression
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor\server
-          node --test tests/*.test.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Full server unit regression failed' }
+          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-full-test.log'
+          cmd /c "node --test tests/*.test.mjs > `"$log`" 2>&1"
+          $exit = $LASTEXITCODE
+          if ($exit -ne 0) {
+            Write-Host '=== FULL SUITE FAILURE SUMMARY ==='
+            Select-String -Path $log -Pattern '^not ok ','AssertionError','ERR_','error:','failureType','expected:','actual:' -Context 2,5 | Select-Object -First 120 | ForEach-Object { Write-Host $_.ToString() }
+            Write-Host '=== FULL SUITE TAIL ==='
+            Get-Content $log -Tail 120 | ForEach-Object { Write-Host $_ }
+            throw "Full server unit regression failed with exit $exit"
+          }
+          Get-Content $log -Tail 30 | ForEach-Object { Write-Host $_ }
           Write-Host 'ALUMDOOR_INVENTORY_FULL_SERVER_UNIT_PASS'
 
-# trigger terminal-reservation 89bfc0b5
+# diagnostic full-suite failures
