@@ -10,79 +10,31 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
-      - name: Switch manufacturing branch and start local Forge
+      - name: Verify persistent local Forge server
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-          $target = 'local/manufacturing-20260811'
-
-          $tracked = @(git status --porcelain --untracked-files=no)
-          if ($tracked.Count -gt 0) {
-            $tracked | ForEach-Object { Write-Host $_ }
-            throw 'Tracked local changes exist; refusing to switch branch'
-          }
-
-          git fetch origin $target --prune
-          if ($LASTEXITCODE -ne 0) { throw 'git fetch failed' }
-
+          $expected = 'local/manufacturing-20260811'
           $branch = (git branch --show-current).Trim()
-          if ($branch -ne $target) {
-            git show-ref --verify --quiet "refs/heads/$target"
-            $localExists = ($LASTEXITCODE -eq 0)
-            if ($localExists) {
-              git switch $target
-            } else {
-              git switch -c $target --track "origin/$target"
-            }
-            if ($LASTEXITCODE -ne 0) { throw 'git switch failed' }
-          }
-
-          git merge --ff-only "origin/$target"
-          if ($LASTEXITCODE -ne 0) { throw 'local manufacturing branch is not fast-forwardable; refusing destructive reset' }
-
-          Write-Host "LOCAL_BRANCH=$((git branch --show-current).Trim())"
-          Write-Host "LOCAL_HEAD=$((git rev-parse HEAD).Trim())"
-          Write-Host "REMOTE_HEAD=$((git rev-parse origin/$target).Trim())"
-
-          # Child processes must survive GitHub Actions orphan cleanup.
-          Remove-Item Env:RUNNER_TRACKING_ID -ErrorAction SilentlyContinue
-
-          cmd /c C:\alumdoor\start-forge.bat
-          if ($LASTEXITCODE -ne 0) {
-            if (Test-Path C:\alumdoor\start-forge.log) { Get-Content C:\alumdoor\start-forge.log -Tail 120 }
-            throw 'start-forge.bat failed'
-          }
+          if ($branch -ne $expected) { throw "Expected $expected but found $branch" }
 
           $workerOk = $false
-          for ($i = 0; $i -lt 30; $i++) {
-            try {
-              $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -TimeoutSec 2 -ErrorAction Stop
-              if ($r.StatusCode -eq 403) { $workerOk = $true; break }
-            } catch {
-              if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 403) { $workerOk = $true; break }
-            }
-            Start-Sleep -Seconds 2
+          try {
+            $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -TimeoutSec 3 -ErrorAction Stop
+            if ($r.StatusCode -eq 403) { $workerOk = $true }
+          } catch {
+            if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 403) { $workerOk = $true }
           }
-          if (-not $workerOk) {
-            if (Test-Path C:\alumdoor\start-forge.log) { Get-Content C:\alumdoor\start-forge.log -Tail 120 }
-            throw 'Backend 8799 is not ready'
-          }
+          if (-not $workerOk) { throw 'Backend 8799 is not alive after prior job cleanup' }
 
-          $deskOk = $false
-          for ($i = 0; $i -lt 30; $i++) {
-            try {
-              $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -TimeoutSec 2 -ErrorAction Stop
-              if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { $deskOk = $true; break }
-            } catch {}
-            Start-Sleep -Seconds 2
-          }
-          if (-not $deskOk) {
-            if (Test-Path C:\alumdoor\start-forge.log) { Get-Content C:\alumdoor\start-forge.log -Tail 120 }
-            throw 'Desk 5173 is not ready'
-          }
+          $desk = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -TimeoutSec 3 -ErrorAction Stop
+          if ($desk.StatusCode -lt 200 -or $desk.StatusCode -ge 500) { throw "Desk returned $($desk.StatusCode)" }
 
-          Get-Content C:\alumdoor\start-forge.log -Tail 80
-          Write-Host 'FORGE_LOCAL_SERVER_READY backend=http://127.0.0.1:8799 desk=http://127.0.0.1:5173'
+          Write-Host "LOCAL_BRANCH=$branch"
+          Write-Host "LOCAL_HEAD=$((git rev-parse HEAD).Trim())"
+          Write-Host "BACKEND_STATUS=403_READY"
+          Write-Host "DESK_STATUS=$($desk.StatusCode)"
+          Write-Host 'FORGE_LOCAL_SERVER_PERSISTENT_READY'
