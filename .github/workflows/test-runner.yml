@@ -38,4 +38,4 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Full server unit regression failed' }
           Write-Host 'PRICING_EXPERIMENT_FULL_SERVER_UNIT_PASS'
 
-# trigger reservation-lifecycle-and-receipt-exact f495f0d0
+# trigger reservation-type-fix 87de66de
