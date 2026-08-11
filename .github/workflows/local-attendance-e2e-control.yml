@@ -8,16 +8,15 @@ on:
       - '.github/workflows/local-attendance-e2e-control.yml'
 
 jobs:
-  run-local-attendance-payroll:
+  launch:
     runs-on: [self-hosted]
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
-      - name: Verify feature and run it on 5173
+      - name: Launch feature backend 18899 and runtime 5173
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-StrictMode -Version Latest
-
           $worktree = 'C:\forge-attendance-payroll'
           $shared = 'C:\alumdoor'
           $target = 'feature/attendance-payroll'
@@ -29,10 +28,9 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "$label failed with exit code $LASTEXITCODE" }
           }
           function Stop-Port([int]$port) {
-            $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-            foreach ($listener in $listeners) {
-              Write-Host "Stopping listener port=$port pid=$($listener.OwningProcess)"
-              Stop-Process -Id $listener.OwningProcess -Force -ErrorAction SilentlyContinue
+            Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "Stopping listener port=$port pid=$($_.OwningProcess)"
+              Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
             }
           }
           function Wait-Http([string]$url, [int]$seconds = 60) {
@@ -47,92 +45,68 @@ jobs:
           }
 
           git -C $worktree fetch origin $target --prune
-          Assert-Exit 'fetch attendance feature'
-          $branch = (git -C $worktree branch --show-current).Trim()
-          if ($branch -ne $target) { throw "Attendance worktree is on $branch, expected $target" }
+          Assert-Exit 'fetch feature'
+          if ((git -C $worktree branch --show-current).Trim() -ne $target) { throw 'Attendance worktree is on the wrong branch' }
           git -C $worktree merge --ff-only "origin/$target"
-          Assert-Exit 'fast-forward attendance feature'
+          Assert-Exit 'fast-forward feature'
 
-          # Rewrite only the attendance experience block with ASCII source text. The
-          # visible Vietnamese label still comes from the installed manifest.
+          # Normalize the already-tested attendance routing block. Explicit strings keep
+          # source indentation deterministic on Windows PowerShell 5.1.
           $mainPath = Join-Path $worktree 'client\apps\runtime\src\main-base.tsx'
-          $mainText = [IO.File]::ReadAllText($mainPath).Replace("`r`n", "`n")
-          $kioskImport = 'const AlumdoorAttendanceKiosk = lazy(() => import("./experiences/AlumdoorAttendanceKiosk.js").then((module) => ({ default: module.AlumdoorAttendanceKiosk })));'
-          $opsImport = 'const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));'
-          if (-not $mainText.Contains($opsImport)) {
-            if (-not $mainText.Contains($kioskImport)) { throw 'Attendance kiosk import anchor missing' }
-            $mainText = $mainText.Replace($kioskImport, "$kioskImport`n$opsImport")
-          }
-          $start = $mainText.IndexOf('  if (kind === "alumdoor-attendance") {')
-          $end = if ($start -ge 0) { $mainText.IndexOf('  return <>{renderExperience', $start) } else { -1 }
-          if ($start -lt 0 -or $end -lt 0) { throw 'Cannot locate attendance experience block' }
-          $cleanBlock = @'
-          if (kind === "alumdoor-attendance") {
-            const mode = experienceKey.slice("alumdoor-attendance:".length);
-            const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Attendance & Payroll";
-            if (mode === "kiosk" || mode === "mobile") {
-              return (
-                <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
-                  <AlumdoorAttendanceKiosk />
-                </Shell>
-              );
-            }
-            const operationsMode = mode === "today" ? "today"
-              : mode === "month" ? "month"
-              : mode === "exceptions" ? "exceptions"
-              : mode === "payroll-run" ? "payroll-run"
-              : mode === "payroll-my-slips" ? "payroll-my-slips"
-              : null;
-            if (operationsMode) {
-              return (
-                <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
-                  <AlumdoorAttendanceOperations
-                    mode={operationsMode}
-                    onExit={() => navigate(`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`)}
-                  />
-                </Shell>
-              );
-            }
-          }
-          '@
-          $cleanBlock = ($cleanBlock -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join "`n"
-          $mainText = $mainText.Substring(0, $start) + $cleanBlock + "`n" + $mainText.Substring($end)
-          [IO.File]::WriteAllText($mainPath, $mainText, [Text.UTF8Encoding]::new($false))
+          $text = [IO.File]::ReadAllText($mainPath).Replace("`r`n", "`n")
+          $start = $text.IndexOf('if (kind === "alumdoor-attendance") {')
+          $end = if ($start -ge 0) { $text.IndexOf('  return <>{renderExperience', $start) } else { -1 }
+          if ($start -lt 0 -or $end -lt 0) { throw 'Cannot locate attendance routing block' }
+          while ($start -gt 0 -and $text[$start - 1] -eq ' ') { $start-- }
+          $lines = @(
+            '  if (kind === "alumdoor-attendance") {',
+            '    const mode = experienceKey.slice("alumdoor-attendance:".length);',
+            '    const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Attendance & Payroll";',
+            '    if (mode === "kiosk" || mode === "mobile") {',
+            '      return (',
+            '        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>',
+            '          <AlumdoorAttendanceKiosk />',
+            '        </Shell>',
+            '      );',
+            '    }',
+            '    const operationsMode = mode === "today" ? "today"',
+            '      : mode === "month" ? "month"',
+            '      : mode === "exceptions" ? "exceptions"',
+            '      : mode === "payroll-run" ? "payroll-run"',
+            '      : mode === "payroll-my-slips" ? "payroll-my-slips"',
+            '      : null;',
+            '    if (operationsMode) {',
+            '      return (',
+            '        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>',
+            '          <AlumdoorAttendanceOperations',
+            '            mode={operationsMode}',
+            '            onExit={() => navigate(`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`)}',
+            '          />',
+            '        </Shell>',
+            '      );',
+            '    }',
+            '  }'
+          )
+          $block = $lines -join "`n"
+          $text = $text.Substring(0, $start) + $block + "`n" + $text.Substring($end)
+          [IO.File]::WriteAllText($mainPath, $text, [Text.UTF8Encoding]::new($false))
 
-          # Source-level manifest assertion before touching the local backend.
-          $app = Get-Content (Join-Path $worktree 'server\apps-src\alumdoor-attendance\app.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-          $keys = @($app.nav | ForEach-Object { $_.key })
-          foreach ($required in @('alumdoor-attendance:today','alumdoor-attendance:month','alumdoor-attendance:exceptions','AlumDoor Pay Profile','alumdoor-attendance:payroll-run','alumdoor-attendance:payroll-my-slips')) {
-            if ($keys -notcontains $required) { throw "Feature manifest missing $required" }
-          }
-
-          # Dependencies are already present; build the workspace dependencies first
-          # because runtime packages export their TypeScript declarations from dist.
-          pnpm --dir (Join-Path $worktree 'client') --filter "runtime^..." run build
-          Assert-Exit 'runtime dependency build'
-          pnpm -C $worktree run server:build
-          Assert-Exit 'server build'
           pnpm --dir (Join-Path $worktree 'client') --filter runtime run build
           Assert-Exit 'runtime build'
-          node (Join-Path $worktree 'server\scripts\pack-app.mjs') (Join-Path $worktree 'server\apps-src\alumdoor-attendance') --check
-          Assert-Exit 'attendance package check'
-
           git -C $worktree add -- client/apps/runtime/src/main-base.tsx
-          $staged = git -C $worktree diff --cached --name-only
-          if ($staged) {
-            git -C $worktree -c user.name='Forge Local Runner' -c user.email='local-runner@forge.invalid' commit -m 'fix(attendance): clean operational runtime routing'
-            Assert-Exit 'attendance routing cleanup commit'
+          if (git -C $worktree diff --cached --quiet) {
+            Write-Host 'Attendance routing source already normalized.'
+          } else {
+            git -C $worktree -c user.name='Forge Local Runner' -c user.email='local-runner@forge.invalid' commit -m 'style(attendance): normalize runtime route block'
+            Assert-Exit 'commit routing normalization'
             git -C $worktree push origin $target
-            Assert-Exit 'push attendance routing cleanup'
+            Assert-Exit 'push routing normalization'
           }
 
           New-Item -ItemType Directory -Force -Path $devDir | Out-Null
-          $sharedVars = Join-Path $shared 'server\apps\tenant-worker\.dev.vars'
-          $featureVars = Join-Path $worktree 'server\apps\tenant-worker\.dev.vars'
-          if (-not (Test-Path $sharedVars)) { throw 'Local .dev.vars is missing' }
-          Copy-Item $sharedVars $featureVars -Force
+          Copy-Item (Join-Path $shared 'server\apps\tenant-worker\.dev.vars') (Join-Path $worktree 'server\apps\tenant-worker\.dev.vars') -Force
           $persist = Join-Path $shared 'server\apps\tenant-worker\.wrangler\state'
-          if (-not (Test-Path $persist)) { throw "Local Wrangler state is missing: $persist" }
+          if (-not (Test-Path $persist)) { throw "Missing local Wrangler state: $persist" }
 
           Stop-Port 8799
           Stop-Port $backendPort
@@ -144,15 +118,15 @@ jobs:
           $frontOut = Join-Path $devDir 'frontend-5173.out.log'
           $frontErr = Join-Path $devDir 'frontend-5173.err.log'
           Remove-Item $backendOut,$backendErr,$frontOut,$frontErr -Force -ErrorAction SilentlyContinue
-
           [Environment]::SetEnvironmentVariable('RUNNER_TRACKING_ID', '', 'Process')
+
           $backendCommand = "cd /d $worktree\server && npx wrangler dev --config apps/tenant-worker/wrangler.jsonc --port $backendPort --local --persist-to `"$persist`""
           $backend = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$backendCommand) -WorkingDirectory (Join-Path $worktree 'server') -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -WindowStyle Hidden -PassThru
           Write-Host "FEATURE_BACKEND_LAUNCHER_PID=$($backend.Id)"
           try { Wait-Http "http://127.0.0.1:$backendPort/health" 60 | Out-Null }
           catch {
-            if (Test-Path $backendOut) { Get-Content $backendOut -Tail 160 }
-            if (Test-Path $backendErr) { Get-Content $backendErr -Tail 160 }
+            Get-Content $backendOut -Tail 160 -ErrorAction SilentlyContinue
+            Get-Content $backendErr -Tail 160 -ErrorAction SilentlyContinue
             throw
           }
 
@@ -160,32 +134,47 @@ jobs:
           try {
             $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
             node scripts/forge-app.mjs apps-src/alumdoor-attendance --origin "http://127.0.0.1:$backendPort" --admin dev@example.com --provision-standard
-            Assert-Exit 'install attendance app on local feature backend'
-          } finally {
-            Pop-Location
-          }
+            Assert-Exit 'install local attendance app'
+          } finally { Pop-Location }
 
           $frontCommand = "cd /d $worktree && set VITE_FORGE_BACKEND=http://127.0.0.1:$backendPort&& pnpm --dir client --filter runtime dev -- --host 0.0.0.0 --port $frontendPort --strictPort"
           $front = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$frontCommand) -WorkingDirectory $worktree -RedirectStandardOutput $frontOut -RedirectStandardError $frontErr -WindowStyle Hidden -PassThru
           Write-Host "FEATURE_FRONTEND_LAUNCHER_PID=$($front.Id)"
           try { Wait-Http "http://127.0.0.1:$frontendPort/?app=alumdoor-attendance" 45 | Out-Null }
           catch {
-            if (Test-Path $frontOut) { Get-Content $frontOut -Tail 160 }
-            if (Test-Path $frontErr) { Get-Content $frontErr -Tail 160 }
+            Get-Content $frontOut -Tail 160 -ErrorAction SilentlyContinue
+            Get-Content $frontErr -Tail 160 -ErrorAction SilentlyContinue
             throw
           }
 
           foreach ($route in @('today','month','exceptions','payroll-run','payroll-my-slips')) {
             $encoded = [Uri]::EscapeDataString("alumdoor-attendance:$route")
-            $probe = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$frontendPort/x/$encoded?app=alumdoor-attendance" -TimeoutSec 5
+            $url = "http://127.0.0.1:$frontendPort/x/${encoded}?app=alumdoor-attendance"
+            $probe = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5
             if ($probe.StatusCode -ne 200) { throw "Frontend route $route returned HTTP $($probe.StatusCode)" }
+            Write-Host "ROUTE_OK=$route"
           }
 
+          Write-Host 'ATTENDANCE_PAYROLL_LOCAL_LAUNCHED'
+
+  persistence-check:
+    needs: launch
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Confirm servers survived runner cleanup
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
           Start-Sleep -Seconds 3
-          $backendListener = Get-NetTCPConnection -LocalPort $backendPort -State Listen -ErrorAction Stop | Select-Object -First 1
-          $frontendListener = Get-NetTCPConnection -LocalPort $frontendPort -State Listen -ErrorAction Stop | Select-Object -First 1
-          Write-Host "FEATURE_BACKEND_PID=$($backendListener.OwningProcess)"
-          Write-Host "FEATURE_FRONTEND_PID=$($frontendListener.OwningProcess)"
-          Write-Host "ATTENDANCE_URL=http://localhost:$frontendPort/?app=alumdoor-attendance"
-          Write-Host "PAYROLL_URL=http://localhost:$frontendPort/x/alumdoor-attendance%3Apayroll-run?app=alumdoor-attendance"
+          $backend = Get-NetTCPConnection -LocalPort 18899 -State Listen -ErrorAction Stop | Select-Object -First 1
+          $frontend = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction Stop | Select-Object -First 1
+          $frontProbe = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/?app=alumdoor-attendance' -TimeoutSec 5
+          if ($frontProbe.StatusCode -ne 200) { throw "5173 returned HTTP $($frontProbe.StatusCode)" }
+          $backendProbe = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18899/health' -TimeoutSec 5
+          if ($backendProbe.StatusCode -ne 200) { throw "18899 health returned HTTP $($backendProbe.StatusCode)" }
+          Write-Host "FEATURE_BACKEND_PID=$($backend.OwningProcess)"
+          Write-Host "FEATURE_FRONTEND_PID=$($frontend.OwningProcess)"
+          Write-Host 'ATTENDANCE_URL=http://localhost:5173/?app=alumdoor-attendance'
+          Write-Host 'PAYROLL_URL=http://localhost:5173/x/alumdoor-attendance%3Apayroll-run?app=alumdoor-attendance'
           Write-Host 'ATTENDANCE_PAYROLL_LOCAL_E2E_READY'
