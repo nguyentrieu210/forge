@@ -22,7 +22,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=6'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=7'
           git -C C:\alumdoor fetch origin main --prune
 
           $mainPath = 'C:\forge-attendance-payroll\client\apps\runtime\src\main-base.tsx'
@@ -68,6 +68,7 @@ jobs:
           $raw = (git -C C:\alumdoor show origin/main:.github/scripts/local-attendance-e2e.ps1) -join "`n"
           $raw = $raw.Replace("  Assert-Exit 'attendance app package check'`nfinally { Pop-Location }", "  Assert-Exit 'attendance app package check'`n} finally { Pop-Location }")
           $raw = $raw.Replace("  Assert-Exit 'install attendance payroll app locally'`nfinally { Pop-Location }", "  Assert-Exit 'install attendance payroll app locally'`n} finally { Pop-Location }")
+          $raw = $raw -replace '(?m)^Replace-Exact \$main \$oldAttendanceBlock \$newAttendanceBlock ''runtime attendance route wiring''$', "Write-Host 'runtime attendance route wiring pre-applied'"
           $oldHelper = @'
           function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
             $text = [IO.File]::ReadAllText($path)
