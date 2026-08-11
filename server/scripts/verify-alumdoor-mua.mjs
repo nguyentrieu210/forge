@@ -36,7 +36,10 @@ async function raw(method, path, payload) {
     ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
   });
   const jar = new Map(cookie ? cookie.split("; ").map((p) => [p.slice(0, p.indexOf("=")), p.slice(p.indexOf("=") + 1)]) : []);
-  for (const line of response.headers.getSetCookie?.() ?? []) {
+  const setCookieLines = response.headers.getSetCookie?.() ?? [];
+  const fallbackSetCookie = response.headers.get("set-cookie");
+  if (!setCookieLines.length && fallbackSetCookie) setCookieLines.push(fallbackSetCookie);
+  for (const line of setCookieLines) {
     const [pair] = line.split(";");
     const at = pair.indexOf("=");
     if (at > 0) jar.set(pair.slice(0, at).trim(), pair.slice(at + 1).trim());
