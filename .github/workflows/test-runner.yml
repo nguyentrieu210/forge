@@ -10,46 +10,46 @@ on:
 jobs:
   test:
     runs-on: [self-hosted, Windows, alumdoor]
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Switch C:\alumdoor to attendance payroll branch
+      - name: Audit attendance payroll local branch
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor
-
           $target = 'feature/attendance-payroll'
-          $current = git branch --show-current
-          $status = @(git status --porcelain --untracked-files=all)
-          $unsafe = @($status | Where-Object { $_ -notmatch '^\?\? \.pricing-policy-backups/' })
-          if ($unsafe.Count -gt 0) {
-            Write-Host "Refusing branch switch because C:\alumdoor has tracked or unexpected local changes:"
-            $unsafe | ForEach-Object { Write-Host $_ }
-            throw 'Unsafe local changes'
+          $branch = (git branch --show-current).Trim()
+          if ($branch -ne $target) { throw "Expected $target but found $branch" }
+          Write-Host "LOCAL_BRANCH=$branch"
+          Write-Host "LOCAL_HEAD=$((git rev-parse HEAD).Trim())"
+          Write-Host "STATUS_BEGIN"
+          git status --short --untracked-files=all
+          Write-Host "STATUS_END"
+          Write-Host "DIFFSTAT_BEGIN"
+          git diff --stat origin/main...HEAD
+          Write-Host "DIFFSTAT_END"
+
+          $patterns = @(
+            'AlumDoor Attendance Policy',
+            'AlumDoor Attendance Day',
+            'AlumDoor Pay Profile',
+            'alumdoor.attendance.',
+            'alumdoor.payroll.',
+            'AlumDoor Salary Slip',
+            'attendance-scan-coordinator',
+            'commit_alumdoor_attendance_scan'
+          )
+          foreach ($pattern in $patterns) {
+            Write-Host "PATTERN=$pattern"
+            git grep -l -- "$pattern" -- ':!upstream/**' 2>$null | Select-Object -First 40
           }
 
-          git fetch origin main --prune
-          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main failed' }
-          $mainSha = (git rev-parse origin/main).Trim()
+          Write-Host "ATTENDANCE_FILES_BEGIN"
+          Get-ChildItem server\apps-src\alumdoor-worker\src -File | Where-Object { $_.Name -match 'attendance|payroll' } | ForEach-Object { $_.FullName.Replace((Get-Location).Path + '\\','') }
+          Get-ChildItem server\packages\clouderp-erpnext\src -File | Where-Object { $_.Name -match 'attendance|payroll|salary-slip' } | ForEach-Object { $_.FullName.Replace((Get-Location).Path + '\\','') }
+          Write-Host "ATTENDANCE_FILES_END"
 
-          $localTarget = git show-ref --verify --quiet "refs/heads/$target"
-          if ($LASTEXITCODE -eq 0) {
-            git switch $target
-            if ($LASTEXITCODE -ne 0) { throw 'switch to existing attendance payroll branch failed' }
-          } else {
-            git switch -c $target origin/main
-            if ($LASTEXITCODE -ne 0) { throw 'create attendance payroll branch from origin/main failed' }
-          }
-
-          $after = (git branch --show-current).Trim()
-          if ($after -ne $target) { throw "Wrong local branch after switch: $after" }
-
-          $head = (git rev-parse HEAD).Trim()
-          Write-Host "PREVIOUS_BRANCH=$current"
-          Write-Host "LOCAL_BRANCH=$after"
-          Write-Host "LOCAL_HEAD=$head"
-          Write-Host "ORIGIN_MAIN=$mainSha"
-
-          $aheadBehind = (git rev-list --left-right --count "$target...origin/main").Trim()
-          Write-Host "TARGET_VS_ORIGIN_MAIN=$aheadBehind"
-          Write-Host 'ATTENDANCE_PAYROLL_LOCAL_BRANCH_READY'
+          Write-Host "TEST_FILES_BEGIN"
+          Get-ChildItem server\tests -File | Where-Object { $_.Name -match 'alumdoor-attendance|hrm-payroll|salary|attendance' } | ForEach-Object { $_.Name }
+          Write-Host "TEST_FILES_END"
+          Write-Host 'ATTENDANCE_PAYROLL_AUDIT_OK'
