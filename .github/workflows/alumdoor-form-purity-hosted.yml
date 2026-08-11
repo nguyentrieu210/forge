@@ -79,6 +79,9 @@ jobs:
           run_slice MANUFACTURING '(manufactur|production|work-order|cut-order|bom|job-card)'
           run_slice PRINT '(print|pdf|a4)'
           run_slice ACCOUNTING_CLOSURE '(transaction.*closure|reconcil|receivable|payable|payment|general-ledger|accounting|stock-ledger)'
+          cd "$CERT_ROOT/client"
+          pnpm --filter @metaforge/views... run build
+          cd "$CERT_ROOT/server"
           pnpm test:unit
           echo FULL_SERVER_REGRESSION_PASS
 
