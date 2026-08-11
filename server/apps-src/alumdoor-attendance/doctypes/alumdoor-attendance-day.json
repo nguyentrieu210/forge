@@ -25,6 +25,20 @@
     { "fieldname": "calculated_at", "label": "Tính lúc", "fieldtype": "Datetime", "read_only": true, "in_list_view": true },
     { "fieldname": "segments", "label": "Đoạn ca", "fieldtype": "Table", "options": "AlumDoor Attendance Segment", "read_only": true }
   ],
+  "viewPolicy": {
+    "list": {
+      "enabled": true,
+      "columns": ["employee", "work_date", "branch", "state", "regular_minutes", "overtime_minutes", "payable_work_fraction_bp", "locked_by_payroll", "calculated_at"]
+    },
+    "form": {
+      "enabled": true,
+      "fields": ["employee", "company", "branch", "department", "work_date", "policy", "state", "locked_by_payroll", "locked_at", "regular_minutes", "overtime_minutes", "payable_work_fraction_bp", "calculated_at", "segments"]
+    },
+    "quickEntry": {
+      "enabled": false,
+      "fields": []
+    }
+  },
   "permissions": [
     { "role": "AlumDoor QR System", "read": true, "write": true, "create": true },
     { "role": "AlumDoor Attendance System", "read": true, "write": true },
@@ -36,5 +50,5 @@
     { "role": "HR Manager", "read": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "report": true, "export": true }
   ],
-  "revision": 3
+  "revision": 4
 }
