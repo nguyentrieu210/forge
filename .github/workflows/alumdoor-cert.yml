@@ -78,30 +78,34 @@ jobs:
           Write-Output "::add-mask::$qaPassword"
           $env:CERT_QA_USER = $qaUser
           $env:CERT_QA_PASSWORD = $qaPassword
+          $seedSql = Join-Path $env:RUNNER_TEMP 'alumdoor-cert-auth.sql'
+          $env:CERT_SEED_SQL = $seedSql
 
           @'
-          import { DatabaseSync } from "node:sqlite";
+          import { writeFileSync } from "node:fs";
           import { hashPassword } from "./dist/packages/frappe-api/src/index.js";
-          const db = new DatabaseSync(process.env.CERT_DB);
           const tenant = "demo";
           const user = process.env.CERT_QA_USER;
           const now = new Date().toISOString();
           const hash = await hashPassword(process.env.CERT_QA_PASSWORD, 1_000);
-          db.exec("BEGIN IMMEDIATE");
-          try {
-            db.prepare("INSERT INTO roles(tenant_id,role,modified_at) VALUES(?,?,?) ON CONFLICT(tenant_id,role) DO NOTHING").run(tenant, "System Manager", now);
-            db.prepare(`INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at)
-              VALUES(?,?,?,?,?,'vi','Asia/Ho_Chi_Minh',?,?)
-              ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash,enabled=1,modified_at=excluded.modified_at`).run(tenant, user, "Alumdoor QA", user, hash, now, now);
-            db.prepare("INSERT INTO user_roles(tenant_id,user_id,role) VALUES(?,?,?) ON CONFLICT DO NOTHING").run(tenant, user, "System Manager");
-            db.exec("COMMIT");
-          } catch (error) { db.exec("ROLLBACK"); throw error; }
-          const roles = db.prepare("SELECT role FROM user_roles WHERE tenant_id=? AND user_id=? ORDER BY role").all(tenant, user);
-          if (!roles.some((row) => row.role === "System Manager")) throw new Error("QA System Manager role seed failed");
-          console.log(`CLONED_QA_IDENTITY_READY tenant=${tenant} roles=${roles.length}`);
-          db.close();
+          const q = (value) => String(value).replaceAll("'", "''");
+          const sql = [
+            `INSERT INTO roles(tenant_id,role,modified_at) VALUES('${q(tenant)}','System Manager','${q(now)}') ON CONFLICT(tenant_id,role) DO NOTHING;`,
+            `INSERT INTO users(tenant_id,user_id,full_name,email,password_hash,language,time_zone,created_at,modified_at) VALUES('${q(tenant)}','${q(user)}','Alumdoor QA','${q(user)}','${q(hash)}','vi','Asia/Ho_Chi_Minh','${q(now)}','${q(now)}') ON CONFLICT(tenant_id,user_id) DO UPDATE SET password_hash=excluded.password_hash,enabled=1,modified_at=excluded.modified_at;`,
+            `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('${q(tenant)}','${q(user)}','System Manager') ON CONFLICT DO NOTHING;`,
+          ].join("\n");
+          writeFileSync(process.env.CERT_SEED_SQL, sql, "utf8");
+          console.log("QA_AUTH_SQL_READY");
           '@ | node --input-type=module
-          if ($LASTEXITCODE -ne 0) { throw 'temporary QA identity seed failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'temporary QA auth SQL generation failed' }
+
+          pnpm exec wrangler d1 execute cloudforge-demo --config apps/tenant-worker/wrangler.jsonc --local --persist-to "$env:CERT_PERSIST" --file "$seedSql"
+          if ($LASTEXITCODE -ne 0) { throw 'wrangler QA identity seed failed' }
+          Remove-Item -Force $seedSql -ErrorAction SilentlyContinue
+
+          $verify = pnpm exec wrangler d1 execute cloudforge-demo --config apps/tenant-worker/wrangler.jsonc --local --persist-to "$env:CERT_PERSIST" --command "SELECT COUNT(*) AS qa_users FROM users WHERE tenant_id='demo' AND user_id='qa-alumdoor@example.test'; SELECT COUNT(*) AS qa_roles FROM user_roles WHERE tenant_id='demo' AND user_id='qa-alumdoor@example.test' AND role='System Manager';" 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0) { throw 'wrangler QA identity verification failed' }
+          Write-Host $verify
 
           $workerLog = Join-Path $env:RUNNER_TEMP 'alumdoor-cert-worker.log'
           $cmd = "pnpm exec wrangler dev --config apps/tenant-worker/wrangler.jsonc --port 8799 --local --persist-to `"$env:CERT_PERSIST`" > `"$workerLog`" 2>&1"
@@ -127,15 +131,22 @@ jobs:
             $env:FORGE_ADMIN_USER = $qaUser
             $env:FORGE_ADMIN_PASSWORD = $qaPassword
             node scripts/verify-alumdoor.mjs --origin $env:FORGE_ORIGIN --admin $qaUser
-            if ($LASTEXITCODE -ne 0) { throw 'Sales/Stock/AR live certification failed' }
+            if ($LASTEXITCODE -ne 0) {
+              if (Test-Path $workerLog) { Get-Content $workerLog -Tail 160 }
+              throw 'Sales/Stock/AR live certification failed'
+            }
             node scripts/verify-alumdoor-mua.mjs --origin $env:FORGE_ORIGIN --admin $qaUser
-            if ($LASTEXITCODE -ne 0) { throw 'Purchase/Stock/AP/GL live certification failed' }
+            if ($LASTEXITCODE -ne 0) {
+              if (Test-Path $workerLog) { Get-Content $workerLog -Tail 160 }
+              throw 'Purchase/Stock/AP/GL live certification failed'
+            }
             Write-Host 'ALUMDOOR_LIVE_HTTP_CERT_PASS'
           } finally {
             if ($worker -and -not $worker.HasExited) { Stop-Process -Id $worker.Id -Force -ErrorAction SilentlyContinue }
           }
 
       - name: Prove source D1 stayed untouched
+        if: always()
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
