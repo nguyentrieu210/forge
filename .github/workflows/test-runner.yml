@@ -62,7 +62,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location C:\alumdoor\server
-          node --test tests/stock-reservation-integrity.test.mjs tests/outbound-reservation-guard.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
+          node --test tests/stock-reservation-integrity.test.mjs tests/reservation-source-lifecycle.test.mjs tests/outbound-reservation-guard.test.mjs tests/stock-return-integrity.test.mjs tests/stock-document-warehouse-integrity.test.mjs tests/inventory-coordinator.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Inventory integrity slice failed' }
 
       - name: Run full server unit regression
@@ -82,4 +82,4 @@ jobs:
           Get-Content $log -Tail 30 | ForEach-Object { Write-Host $_ }
           Write-Host 'ALUMDOOR_INVENTORY_FULL_SERVER_UNIT_PASS'
 
-# outbound-reservation-source-lifecycle
+# source-lifecycle-outbound-head
