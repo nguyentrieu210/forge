@@ -131,6 +131,12 @@ test("current Sales operator contract exposes option and server money, never leg
       assert.equal(fields.get(fieldname)?.surface, "internal", `${name}.${fieldname} must be internal`);
     }
   }
+
+  const invoice = compiledDoctype(pkg, "Sales Invoice Item");
+  const invoiceFields = new Map(invoice.fields.map((field) => [field.fieldname, field]));
+  assert.ok(invoiceFields.has("sales_option"), "Sales Invoice Item.sales_option missing from current Selling contract");
+  assert.ok(new Set(names(invoice.viewPolicy.quickEntry)).has("sales_option"), "Sales Invoice Item.sales_option missing from compact surface");
+  assert.equal(invoiceFields.get("sales_option")?.surface, "quick", "Sales Invoice Item.sales_option must stay operator-visible");
 });
 
 test("Sales audit/package/source-line snapshots never leak from generic child policies", () => {
@@ -178,7 +184,7 @@ test("all child doctypes own presentation while conditional required fields stay
       if (field.required && !conditional && !quick.has(field.fieldname)) {
         unreachable.push(`${doctype.name}.${field.fieldname}: unconditional required missing from quick`);
       }
-      if ((field.required || field.mandatory_depends_on) && conditional && field.surface !== "internal" && !full.has(field.fieldname)) {
+      if ((field.required || field.mandatory_depends_on) && conditional && !full.has(field.fieldname)) {
         unreachable.push(`${doctype.name}.${field.fieldname}: conditional required missing from full/detail`);
       }
     }
@@ -188,9 +194,27 @@ test("all child doctypes own presentation while conditional required fields stay
   for (const name of ["Purchase Order Item", "Purchase Receipt Item"]) {
     const purchase = compiledDoctype(pkg, name);
     const quick = new Set(names(purchase.viewPolicy.quickEntry));
+    const full = new Set(names(purchase.viewPolicy.form));
     if (purchase.fields.some((field) => field.fieldname === "is_stamped" && hasConditionalApplicability(field))) {
       assert.equal(quick.has("is_stamped"), false, `${name}.is_stamped must be conditional/detail, not permanent quick`);
-      assert.equal(new Set(names(purchase.viewPolicy.form)).has("is_stamped"), true, `${name}.is_stamped must remain reachable in detail`);
+      assert.equal(full.has("is_stamped"), true, `${name}.is_stamped must remain reachable in detail`);
     }
+  }
+
+  const receipt = compiledDoctype(pkg, "Purchase Receipt Item");
+  const receiptFields = new Map(receipt.fields.map((field) => [field.fieldname, field]));
+  const receiptQuick = new Set(names(receipt.viewPolicy.quickEntry));
+  const receiptFull = new Set(names(receipt.viewPolicy.form));
+  for (const fieldname of [
+    "width_m", "height_m", "set_count", "length_m", "qty_bar", "rate_uom",
+    "actual_weight_kg", "actual_kg_per_m", "actual_kg_per_sqm", "weight_variance_pct", "condition", "is_stamped",
+  ]) {
+    if (!receiptFields.has(fieldname)) continue;
+    assert.equal(receiptFull.has(fieldname), true, `Purchase Receipt Item.${fieldname} must remain reachable in full/detail`);
+  }
+  for (const fieldname of ["set_count", "is_stamped"]) {
+    if (!receiptFields.has(fieldname) || !hasConditionalApplicability(receiptFields.get(fieldname))) continue;
+    assert.equal(receiptQuick.has(fieldname), false, `Purchase Receipt Item.${fieldname} must not be permanently quick`);
+    assert.equal(receiptFields.get(fieldname)?.surface, "expanded", `Purchase Receipt Item.${fieldname} must be expanded/detail`);
   }
 });
