@@ -22,6 +22,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=1'
           git -C C:\alumdoor fetch origin main --prune
           git -C C:\alumdoor show origin/main:.github/scripts/local-attendance-e2e.ps1 | Set-Content -Path C:\actions-runner\_temp\local-attendance-e2e.ps1 -Encoding UTF8
           powershell -NoProfile -ExecutionPolicy Bypass -File C:\actions-runner\_temp\local-attendance-e2e.ps1
