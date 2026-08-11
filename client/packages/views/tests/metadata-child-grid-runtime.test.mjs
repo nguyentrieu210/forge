@@ -6,10 +6,19 @@ const grid = await readFile(new URL("../src/form/MetadataChildGrid.tsx", import.
 const smart = await readFile(new URL("../src/form/metadata-child-grid-smart.ts", import.meta.url), "utf8");
 const tableControls = await readFile(new URL("../src/form/table-controls.tsx", import.meta.url), "utf8");
 
-test("Table control routes metadata-owned doctypes through MetadataChildGrid", () => {
+test("Table control routes only metadata-owned doctypes through the smart renderer", () => {
   assert.match(tableControls, /MetadataChildGrid as ChildGrid/);
-  assert.match(grid, /hasMetadataChildGridPresentation/);
-  assert.match(grid, /if \(!ownsPresentation\) return <LegacyChildGrid/);
+  assert.match(grid, /hasMetadataChildGridPresentation\(props\.childMeta\)/);
+  assert.match(grid, /<SmartMetadataChildGrid \{\.\.\.props\} \/>/);
+  assert.match(grid, /<LegacyChildGrid \{\.\.\.props\} \/>/);
+});
+
+test("metadata routing does not put hooks after the legacy fallback", () => {
+  const wrapperStart = grid.indexOf("export function MetadataChildGrid");
+  const smartStart = grid.indexOf("function SmartMetadataChildGrid");
+  const wrapper = grid.slice(wrapperStart, smartStart);
+  assert.equal(/\buse(State|Effect|Memo|Ref)\s*\(/.test(wrapper), false);
+  assert.equal(/if\s*\([^)]*\)\s*return[\s\S]*\buse(State|Effect|Memo|Ref)\s*\(/.test(grid.slice(smartStart)), false);
 });
 
 test("metadata child grid contains no domain or doctype branches", () => {
