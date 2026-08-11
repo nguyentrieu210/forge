@@ -22,7 +22,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host 'ATTENDANCE_E2E_TRIGGER=7'
+          Write-Host 'ATTENDANCE_E2E_TRIGGER=8'
           git -C C:\alumdoor fetch origin main --prune
 
           $mainPath = 'C:\forge-attendance-payroll\client\apps\runtime\src\main-base.tsx'
@@ -81,8 +81,8 @@ jobs:
           $newHelper = @'
           function Replace-Exact([string]$path, [string]$old, [string]$new, [string]$label) {
             $text = [IO.File]::ReadAllText($path).Replace("`r`n", "`n")
-            $old = $old.Replace("`r`n", "`n")
-            $new = $new.Replace("`r`n", "`n")
+            $old = $old.Replace("`r`n", "`n").TrimEnd("`r", "`n")
+            $new = $new.Replace("`r`n", "`n").TrimEnd("`r", "`n")
             if ($text.Contains($new)) { Write-Host "$label already applied"; return }
             if (-not $text.Contains($old)) { throw "$label anchor not found in $path" }
             Write-Utf8 $path ($text.Replace($old, $new))
