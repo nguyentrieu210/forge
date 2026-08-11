@@ -143,11 +143,14 @@ addAfter(operationalSalesOrder, "delivery_date",
 const salesFormHidden = new Set(["product_group", "against_quotation", "note"]);
 operationalSalesOrder.fields = operationalSalesOrder.fields.map((raw, index) => {
   const field = parseField(raw, index);
+  if (!["Section Break", "Column Break", "Tab Break"].includes(field.fieldtype)) field.form_region = "full";
   if (["transaction_date", "delivery_date", "payment_method"].includes(field.fieldname)) field.form_region = "aside";
   if (["customer", "responsible_person", "manual_note", "operational_change_reason", "selling_price_list", "customer_group", "install_address"].includes(field.fieldname)) field.form_region = "main";
   if (field.fieldname === "install_address") field.form_width = "full";
   if (field.fieldname === "customer_group") field.label = "Nhóm khách hàng";
   if (field.fieldname === "payment_method") { field.default = "Ghi công nợ"; field.form_control_style = "choice_list"; }
+  const summaryLabels = { total_amount: "Tổng cộng tiền hàng", discount_amount: "Tiền chiết khấu", surcharge_amount: "Phụ thu", vat_rate: "% VAT", vat_amount: "Số tiền VAT", grand_total: "Tiền phải thu" };
+  if (field.fieldname in summaryLabels) { field.label = summaryLabels[field.fieldname]; field.form_width = "full"; }
   return field;
 });
 const salesSummaryIndex = operationalSalesOrder.fields.findIndex((field) => nameOf(field) === "total_amount");

@@ -49,16 +49,6 @@ export interface DocField {
   form_control_style?: "choice_list";
   /** Generic section presentation marker carried on Section Break fields. */
   form_section_style?: "summary";
-  /** Generic Select presentation; options still come from field.options. */
-  form_control_style?: "choice_list";
-  /** Generic section presentation marker carried on Section Break fields. */
-  form_section_style?: "summary";
-  /** Generic Select presentation; options still come from field.options. */
-  form_control_style?: "choice_list";
-  /** Generic section presentation marker carried on Section Break fields. */
-  form_section_style?: "summary";
-  form_control_style?: "choice_list";
-  form_section_style?: "summary";
   valueSource?: "user" | "default" | "link" | "formula" | "system" | "workflow";
   editMode?: "editable" | "readonly" | "set_once" | "immutable_after_submit" | "hidden";
   surface?: "quick" | "expanded" | "internal";

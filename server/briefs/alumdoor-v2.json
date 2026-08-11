@@ -3728,7 +3728,8 @@
      "options": "Company",
      "required": true,
      "hidden": true,
-     "default": "ALUMDOOR"
+     "default": "ALUMDOOR",
+     "form_region": "full"
     },
     {
      "fieldname": "currency",
@@ -3737,7 +3738,8 @@
      "options": "Currency",
      "required": true,
      "hidden": true,
-     "default": "VND"
+     "default": "VND",
+     "form_region": "full"
     },
     {
      "fieldname": "transaction_date",
@@ -3812,30 +3814,36 @@
      "label": "Dòng hàng",
      "fieldtype": "Table",
      "options": "Sales Order Item",
-     "required": true
+     "required": true,
+     "form_region": "full"
     },
     {
      "fieldname": "grand_total",
-     "label": "Tổng tiền",
+     "label": "Tiền phải thu",
      "fieldtype": "Currency",
-     "read_only": true
+     "read_only": true,
+     "form_region": "full",
+     "form_width": "full"
     },
     {
      "fieldname": "delivered_percentage",
      "label": "Đã giao (%)",
      "fieldtype": "Percent",
-     "read_only": true
+     "read_only": true,
+     "form_region": "full"
     },
     {
      "fieldname": "billed_percentage",
      "label": "Đã xuất hoá đơn (%)",
      "fieldtype": "Percent",
-     "read_only": true
+     "read_only": true,
+     "form_region": "full"
     },
     {
      "fieldname": "note",
      "label": "Ghi chú",
-     "fieldtype": "Small Text"
+     "fieldtype": "Small Text",
+     "form_region": "full"
     }
    ],
    "permissions": {
