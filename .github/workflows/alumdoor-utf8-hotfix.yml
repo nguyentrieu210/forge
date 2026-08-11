@@ -1,0 +1,52 @@
+name: Alumdoor UTF8 hotfix
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths: [".github/workflows/alumdoor-utf8-hotfix.yml"]
+jobs:
+  hotfix:
+    runs-on: [self-hosted, Windows, alumdoor]
+    timeout-minutes: 30
+    steps:
+      - name: Patch test and push
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $p=Join-Path $env:RUNNER_TEMP 'forge-alu-utf8'
+          if(Test-Path $p){cmd /c "rmdir /s /q `"$p`""|Out-Null}
+          git clone --quiet --branch exp/alumdoor-pricing-policy https://github.com/nguyentrieu210/forge.git $p
+          Set-Location $p
+          $base=(git rev-parse HEAD).Trim(); $env:P=$p
+          @'
+          from pathlib import Path
+          import os
+          r=Path(os.environ['P']); f=r/'server/apps-src/alumdoor-worker/src/index.ts'
+          s=f.read_text(encoding='utf-8')
+          a='idempotent: cut.cut_state === "???? c???t",'
+          b='idempotent: cut.cut_state === "\u0110\u00e3 c\u1eaft",'
+          c='message: `???? c???t v?? tr??? t???n theo phi???u ${name}; l?????ng gi??? ch??? ???? d??ng ???????c suy t??? Stock Ledger c???a phi???u c???t.`,'
+          d='message: `\u0110\u00e3 c\u1eaft v\u00e0 tr\u1eeb t\u1ed3n theo phi\u1ebfu ${name}; l\u01b0\u1ee3ng gi\u1eef ch\u1ed7 \u0111\u00e3 d\u00f9ng \u0111\u01b0\u1ee3c suy t\u1eeb Stock Ledger c\u1ee7a phi\u1ebfu c\u1eaft.`,'
+          assert a in s and c in s
+          f.write_text(s.replace(a,b,1).replace(c,d,1),encoding='utf-8',newline='\n')
+          t=r/'server/tests/alumdoor-worker-reservation-authority.test.mjs'; x=t.read_text(encoding='utf-8')
+          m='assert.equal(source.includes(\'reservation_consumption: "derived-from-cut-order-stock-ledger"\'), true);'
+          n=m+'\n  assert.equal(source.includes(\'idempotent: cut.cut_state === "\\u0110\\u00e3 c\\u1eaft"\'), true);\n  assert.equal(source.includes(\'cut.cut_state === "???? c???t"\'), false);'
+          assert m in x
+          t.write_text(x.replace(m,n,1),encoding='utf-8',newline='\n')
+          '@ | python -
+          Set-Location "$p\server"
+          pnpm install --frozen-lockfile
+          pnpm run build
+          node --test tests/alumdoor-worker-reservation-authority.test.mjs
+          pnpm test:unit
+          Set-Location $p
+          git diff --check
+          git fetch origin exp/alumdoor-pricing-policy --quiet
+          if((git rev-parse origin/exp/alumdoor-pricing-policy).Trim() -ne $base){throw 'experiment advanced during hotfix'}
+          git config user.name 'Alumdoor Certification Runner'; git config user.email 'alumdoor-cert@local.invalid'
+          git add server/apps-src/alumdoor-worker/src/index.ts server/tests/alumdoor-worker-reservation-authority.test.mjs
+          git commit -m 'fix(alumdoor): restore cut completion UTF-8 state'
+          git push origin HEAD:exp/alumdoor-pricing-policy
+          Write-Host "UTF8_HOTFIX_PUSHED=$(git rev-parse HEAD)"
