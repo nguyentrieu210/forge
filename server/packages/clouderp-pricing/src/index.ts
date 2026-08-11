@@ -6,6 +6,8 @@ import type { PricingContext, ResolvedPrice } from "./types.js";
 
 export type { PricingContext, ResolvedPrice } from "./types.js";
 
+export const STANDARD_PRICE_VARIANT = "STANDARD";
+
 function disabled(value: unknown): boolean {
   if (value === true || value === 1 || value === "1") return true;
   return ["true", "yes", "có", "co"].includes(String(value ?? "").trim().toLocaleLowerCase("vi"));
@@ -15,18 +17,43 @@ function normalizedText(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
 }
 
+/**
+ * Variant is an identifier, not a translated display label. Keeping it bounded and
+ * canonical makes it safe to use in deterministic Item Price names while field lookup
+ * remains the business source of truth for imported/non-canonical record names.
+ */
+export function normalizePriceVariant(value: unknown): string {
+  const variant = normalizedText(value).toUpperCase() || STANDARD_PRICE_VARIANT;
+  if (!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(variant)) {
+    throw errors.validation("Item Price variant must use 1-64 characters: A-Z, 0-9, _ or -");
+  }
+  return variant;
+}
+
+function itemPriceVariant(data: JsonObject): string {
+  return normalizePriceVariant(data.price_variant);
+}
+
 function fieldMatchedPrice(
   data: JsonObject,
   priceList: string,
   itemCode: string,
   lineUom: string,
+  priceVariant: string,
 ): boolean {
   const dataPriceList = normalizedText(data.price_list);
   const dataItemCode = normalizedText(data.item_code);
   const priceUom = normalizedText(data.uom);
   return dataPriceList === priceList
     && dataItemCode === itemCode
+    && itemPriceVariant(data) === priceVariant
     && (lineUom ? priceUom === lineUom : !priceUom);
+}
+
+function preferredPriceRecordName(priceList: string, itemCode: string, uom: string, variant: string): string {
+  const base = `${priceList}:${itemCode}`;
+  if (variant === STANDARD_PRICE_VARIANT) return uom ? `${base}:${uom}` : base;
+  return uom ? `${base}:${uom}:${variant}` : `${base}:${variant}`;
 }
 
 export async function resolveServerPrice(
@@ -37,25 +64,35 @@ export async function resolveServerPrice(
   const itemCode = normalizedText(input.itemCode);
   const lineUom = normalizedText(input.uom);
   const documentCurrency = normalizedText(input.documentCurrency);
+  const priceVariant = normalizePriceVariant(input.priceVariant);
   const legacyPriceName = `${priceList}:${itemCode}`;
-  const exactPriceName = lineUom ? `${legacyPriceName}:${lineUom}` : "";
+  const preferredPriceName = preferredPriceRecordName(priceList, itemCode, lineUom, priceVariant);
   const legacy = await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", legacyPriceName);
+  const preferred = preferredPriceName === legacyPriceName
+    ? legacy
+    : await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", preferredPriceName);
   const legacyUom = normalizedText(legacy?.uom);
-  const compatibleLegacy = legacy && (lineUom ? legacyUom === lineUom : !legacyUom) ? legacy : null;
-  const exact = lineUom
-    ? await context.reader.getMasterRecordData(context.command.tenant_id, "Item Price", exactPriceName)
+  const compatibleLegacy = priceVariant === STANDARD_PRICE_VARIANT
+    && legacy
+    && itemPriceVariant(legacy) === STANDARD_PRICE_VARIANT
+    && (lineUom ? legacyUom === lineUom : !legacyUom)
+    ? legacy
+    : null;
+  const compatiblePreferred = preferred
+    && fieldMatchedPrice(preferred, priceList, itemCode, lineUom, priceVariant)
+    ? preferred
     : null;
 
-  let priceName = lineUom ? exactPriceName : legacyPriceName;
+  let priceName = preferredPriceName;
   let itemPrice: JsonObject | null = null;
   let convertedFromUom = "";
   let item: JsonObject | null = null;
   let listedPrices: Array<{ name: string; data: JsonObject }> | null = null;
-  // Giá khai đúng ĐVT của dòng là override thương mại và luôn thắng record legacy.
-  // Legacy chỉ còn là đường tương thích cho dữ liệu cũ chưa có tên ba thành phần.
-  if (exact && !disabled(exact.disabled)) {
-    itemPrice = exact;
-    priceName = exactPriceName;
+  // Giá khai đúng ĐVT + biến thể của dòng là override thương mại và luôn thắng record legacy.
+  // Legacy chỉ còn là đường tương thích cho dữ liệu STANDARD cũ chưa có tên ba thành phần.
+  if (compatiblePreferred && !disabled(compatiblePreferred.disabled)) {
+    itemPrice = compatiblePreferred;
+    priceName = preferredPriceName;
   } else if (compatibleLegacy && !disabled(compatibleLegacy.disabled)) {
     itemPrice = compatibleLegacy;
     priceName = legacyPriceName;
@@ -65,18 +102,19 @@ export async function resolveServerPrice(
    * Record name is an optimization, not the only source of truth.
    *
    * Older app metadata named Item Price `<price_list>:<item_code>`, while the multi-UOM
-   * runtime uses `<price_list>:<item_code>:<uom>`. Imported or manually renamed data can also
-   * carry a different name. Business fields are normalized to NFC before comparison so a UOM
-   * that renders identically cannot miss merely because its Unicode bytes use another form.
+   * runtime uses `<price_list>:<item_code>:<uom>`. Variant-aware data may additionally use
+   * `<price_list>:<item_code>:<uom>:<variant>`. Imported or manually renamed data can carry
+   * a different name. Business fields are normalized before comparison, and a missing
+   * `price_variant` is exactly STANDARD for backward compatibility.
    */
   let fieldMatches: Array<{ name: string; data: JsonObject }> = [];
   if (!itemPrice) {
     listedPrices = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
-    fieldMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, lineUom));
+    fieldMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, lineUom, priceVariant));
     const active = fieldMatches.filter(({ data }) => !disabled(data.disabled));
     if (active.length > 1) {
       throw errors.validation(
-        `Multiple active Item Price records match ${priceList} / ${itemCode} / ${lineUom || "(no UOM)"}`,
+        `Multiple active Item Price records match ${priceList} / ${itemCode} / ${lineUom || "(no UOM)"} / ${priceVariant}`,
       );
     }
     if (active.length === 1) {
@@ -86,16 +124,17 @@ export async function resolveServerPrice(
   }
 
   // A selling-UOM price is optional. When it is absent, resolve from the Item's base
-  // sales UOM and convert through the Item UOM factors. An exact price always wins.
+  // sales UOM and convert through the Item UOM factors. The requested variant is preserved:
+  // WITH_RAIL never silently falls back to STANDARD just because its exact UOM is absent.
   if (!itemPrice && lineUom) {
     item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", itemCode);
     const baseUom = normalizedText(item?.default_sales_uom) || normalizedText(item?.stock_uom);
     if (item && baseUom && baseUom !== lineUom) {
       listedPrices ??= await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
-      const baseMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, baseUom));
+      const baseMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, baseUom, priceVariant));
       const activeBase = baseMatches.filter(({ data }) => !disabled(data.disabled));
       if (activeBase.length > 1) {
-        throw errors.validation(`Multiple active Item Price records match ${priceList} / ${itemCode} / ${baseUom}`);
+        throw errors.validation(`Multiple active Item Price records match ${priceList} / ${itemCode} / ${baseUom} / ${priceVariant}`);
       }
       if (activeBase.length === 1) {
         itemPrice = activeBase[0]!.data;
@@ -106,8 +145,8 @@ export async function resolveServerPrice(
   }
 
   if (!itemPrice) {
-    const disabledCandidate = exact
-      ? { name: exactPriceName, data: exact }
+    const disabledCandidate = compatiblePreferred
+      ? { name: preferredPriceName, data: compatiblePreferred }
       : compatibleLegacy
         ? { name: legacyPriceName, data: compatibleLegacy }
         : fieldMatches[0];
@@ -117,12 +156,18 @@ export async function resolveServerPrice(
     }
   }
 
-  if (!itemPrice && legacy && !lineUom && legacyUom) {
+  if (
+    !itemPrice
+    && priceVariant === STANDARD_PRICE_VARIANT
+    && legacy
+    && itemPriceVariant(legacy) === STANDARD_PRICE_VARIANT
+    && !lineUom
+    && legacyUom
+  ) {
     throw errors.validation(`Item Price ${legacyPriceName} declares UOM "${legacyUom}"; the document row must provide a matching selling UOM`);
   }
   if (!itemPrice) {
-    const missingName = lineUom ? exactPriceName : legacyPriceName;
-    throw errors.reference(`Item Price ${missingName} does not exist`);
+    throw errors.reference(`Item Price ${preferredPriceName} does not exist for variant ${priceVariant}`);
   }
   if (disabled(itemPrice.disabled)) throw errors.reference(`Item Price ${priceName} is disabled`);
 
@@ -173,6 +218,7 @@ export async function resolveServerPrice(
     currency,
     currency_scale: scale,
     item_price: priceName,
+    price_variant: priceVariant,
     ...((lineUom || priceUom) ? { uom: lineUom || priceUom } : {}),
     ...(convertedFromUom ? { source_uom: convertedFromUom } : {}),
     ...(selected ? { pricing_rule: selected.name } : {}),
