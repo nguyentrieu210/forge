@@ -38,6 +38,9 @@ test("generic smart-grid runtime exposes the locked operator interaction shell",
     "handleCellKey",
     "detailRow",
     "__hydrate__",
+    "metadataChildGridColumns(childMeta, false)",
+    "fullscreen ? full : compact",
+    "presentationMode = fullscreen ? \"full\" : \"compact\"",
   ]) {
     assert.equal(runtime.includes(evidence), true, `missing smart-grid evidence: ${evidence}`);
   }
@@ -68,6 +71,7 @@ test("generic smart-grid source contains no vertical or business-authority liter
     "Pricing Rule",
     "qty_bar",
     "billable_area_sqm",
+    "alumdoor.ui.preview_child_row",
   ]) {
     assert.equal(joined.includes(forbidden), false, `generic smart grid leaked business literal: ${forbidden}`);
   }
