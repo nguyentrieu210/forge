@@ -719,7 +719,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
   const metaField = (fieldname: string) => meta.fields.find((field) => field.fieldname === fieldname);
   const metaLabel = (fieldname: string, fallback: string) => text(metaField(fieldname)?.label) || fallback;
   const metaRequired = (fieldname: string) => Boolean(metaField(fieldname)?.reqd);
-  const phoneValue = salesPhoneField ? text(header[salesPhoneField]) : customerPhone;
+  const phoneValue = salesPhoneField ? text(header[salesPhoneField]) || customerPhone : customerPhone;
 
   const parentTotal = Number(header.grand_total);
   const displayedTotal = Number.isFinite(parentTotal) && parentTotal > 0
@@ -731,11 +731,8 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="mx-auto max-w-[1560px] space-y-4 p-4 lg:p-5">
           <section className="rounded-xl border bg-card px-4 py-3 shadow-sm" data-section="sales-customer-meta-header">
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3">
               <h2 className="text-base font-semibold">Thông tin khách hàng</h2>
-              {text(header.customer_group) ? (
-                <span className="text-[11px] text-muted-foreground">{text(header.customer_group)}</span>
-              ) : null}
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
               <div className="xl:col-span-4">
