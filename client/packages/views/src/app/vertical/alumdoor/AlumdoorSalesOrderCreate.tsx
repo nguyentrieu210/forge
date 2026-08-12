@@ -129,6 +129,11 @@ function money(value: unknown): string {
     : "—";
 }
 
+function openLinkedCreate(doctype: string) {
+  const route = `/list/${encodeURIComponent(doctype)}/new`;
+  window.open(route, "_blank", "noopener,noreferrer");
+}
+
 function newLine(index: number): SalesLine {
   return {
     _key: `sales-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
@@ -328,7 +333,8 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
   const [childMeta, setChildMeta] = useState<DocTypeMeta | null>(null);
   const [header, setHeader] = useState<Json>({});
   const [customerLabel, setCustomerLabel] = useState("");
-  const [priceListLabel, setPriceListLabel] = useState("");
+  const [employeeLabel, setEmployeeLabel] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [lines, setLines] = useState<SalesLine[]>([newLine(0)]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -342,6 +348,10 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
     [childMeta],
   );
   const childFieldSet = useMemo(() => new Set(childFields), [childFields]);
+  const salesPhoneField = useMemo(() => {
+    const candidates = ["customer_phone", "contact_phone", "contact_mobile", "mobile_no", "phone_no", "phone"];
+    return candidates.find((name) => meta?.fields.some((field) => field.fieldname === name));
+  }, [meta]);
   const salesModes = useMemo(
     () => optionList(childMeta, "sales_mode", ["Tách món", "Trọn bộ"]),
     [childMeta],
@@ -383,7 +393,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
         setChildMeta(itemMeta);
         setCanCreate(Boolean(caps.create));
         setHeader(defaults);
-        setPriceListLabel(text(defaults.selling_price_list));
+        setEmployeeLabel(text(defaults.responsible_person));
       } catch (error) {
         if (active) setFatal(mapError(error).message);
       } finally {
@@ -394,6 +404,38 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
       active = false;
     };
   }, [adapter, businessContext, contextPolicies]);
+
+  useEffect(() => {
+    const customerName = text(header.customer);
+    if (!customerName) {
+      setCustomerPhone("");
+      return;
+    }
+    let active = true;
+    void adapter.getDoc("Customer", customerName)
+      .then((result) => {
+        if (!active) return;
+        const customer = result.doc as Json;
+        const phone = [
+          customer.phone,
+          customer.mobile_no,
+          customer.mobile,
+          customer.phone_no,
+          customer.contact_phone,
+          customer.contact_mobile,
+        ].map(text).find(Boolean) ?? "";
+        setCustomerPhone(phone);
+        if (salesPhoneField && phone) {
+          setHeader((current) => ({ ...current, [salesPhoneField]: phone }));
+        }
+      })
+      .catch(() => {
+        if (active) setCustomerPhone("");
+      });
+    return () => {
+      active = false;
+    };
+  }, [adapter, header.customer, salesPhoneField]);
 
   const cleanLine = useCallback((line: SalesLine): Json => {
     const result: Json = {};
@@ -439,7 +481,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
       .then((resolved) => {
         setHeader(resolved);
         if (field === "customer") {
-          setPriceListLabel(text(resolved.selling_price_list));
+          setEmployeeLabel(text(resolved.responsible_person));
         }
       })
       .catch((error) => toast.error(mapError(error).message));
@@ -674,6 +716,11 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
     return <div className="p-6 text-sm text-muted-foreground">Không đọc được cấu trúc đơn hàng.</div>;
   }
 
+  const metaField = (fieldname: string) => meta.fields.find((field) => field.fieldname === fieldname);
+  const metaLabel = (fieldname: string, fallback: string) => text(metaField(fieldname)?.label) || fallback;
+  const metaRequired = (fieldname: string) => Boolean(metaField(fieldname)?.reqd);
+  const phoneValue = salesPhoneField ? text(header[salesPhoneField]) : customerPhone;
+
   const parentTotal = Number(header.grand_total);
   const displayedTotal = Number.isFinite(parentTotal) && parentTotal > 0
     ? parentTotal
@@ -683,97 +730,126 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
     <div className="flex h-full min-h-0 flex-col" data-surface="alumdoor-sales-order-create">
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="mx-auto max-w-[1560px] space-y-4 p-4 lg:p-5">
-          <section className="rounded-xl border bg-card p-4 shadow-sm">
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold">Thông tin đơn hàng</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Chọn khách; backend tự lấy nhóm giá, người phụ trách, địa chỉ lắp và bảng giá mặc định.
-                </p>
-              </div>
+          <section className="rounded-xl border bg-card px-4 py-3 shadow-sm" data-section="sales-customer-meta-header">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold">Thông tin khách hàng</h2>
               {text(header.customer_group) ? (
-                <span className="rounded-full border bg-muted px-2.5 py-1 text-xs font-medium">
-                  Nhóm giá: {text(header.customer_group)}
-                </span>
+                <span className="text-[11px] text-muted-foreground">{text(header.customer_group)}</span>
               ) : null}
             </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+              <div className="xl:col-span-4">
+                <Label required={metaRequired("customer")}>{metaLabel("customer", "Khách hàng")}</Label>
+                <div className="flex gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <LinkPicker
+                      doctype={text(metaField("customer")?.options) || "Customer"}
+                      value={text(header.customer)}
+                      label={customerLabel}
+                      referenceDoctype="Sales Order"
+                      placeholder="Tìm tên, mã hoặc SĐT khách hàng…"
+                      onChange={(value, shown) => {
+                        setCustomerLabel(shown);
+                        setHeaderField("customer", value || undefined, true);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-9 shrink-0"
+                    title="Thêm khách hàng"
+                    onClick={() => openLinkedCreate("Customer")}
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+              </div>
+
               <div className="xl:col-span-2">
-                <Label required>Khách hàng</Label>
-                <LinkPicker
-                  doctype="Customer"
-                  value={text(header.customer)}
-                  label={customerLabel}
-                  referenceDoctype="Sales Order"
-                  placeholder="Tìm tên hoặc mã khách hàng…"
-                  onChange={(value, shown) => {
-                    setCustomerLabel(shown);
-                    setHeaderField("customer", value || undefined, true);
+                <Label>SĐT</Label>
+                <Input
+                  value={phoneValue}
+                  placeholder="Số điện thoại"
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomerPhone(value);
+                    if (salesPhoneField) setHeaderField(salesPhoneField, value || undefined);
                   }}
+                  readOnly={!salesPhoneField}
+                  className={!salesPhoneField ? "bg-muted/20" : undefined}
                 />
               </div>
-              <div>
-                <Label>Bảng giá</Label>
-                <LinkPicker
-                  doctype="Price List"
-                  value={text(header.selling_price_list)}
-                  label={priceListLabel}
-                  filters={{ disabled: 0 }}
-                  referenceDoctype="Sales Order"
-                  placeholder="Bảng giá bán"
-                  onChange={(value, shown) => {
-                    setPriceListLabel(shown);
-                    setHeaderField("selling_price_list", value || undefined);
-                  }}
+
+              <div className="md:col-span-2 xl:col-span-6">
+                <Label required={metaRequired("install_address")}>{metaLabel("install_address", "Địa chỉ")}</Label>
+                <Input
+                  value={text(header.install_address)}
+                  placeholder="Địa chỉ giao / lắp đặt"
+                  onChange={(event) => setHeaderField("install_address", event.target.value || undefined)}
                 />
               </div>
-              <div>
-                <Label>Ngày đơn</Label>
+
+              <div className="xl:col-span-2">
+                <Label required={metaRequired("transaction_date")}>Ngày đặt hàng</Label>
                 <Input
                   type="date"
                   value={text(header.transaction_date)}
                   onChange={(event) => setHeaderField("transaction_date", event.target.value, true)}
                 />
               </div>
-              <div>
-                <Label>Ngày giao</Label>
+
+              <div className="xl:col-span-2">
+                <Label required={metaRequired("delivery_date")}>{metaLabel("delivery_date", "Ngày giao hàng")}</Label>
                 <Input
                   type="date"
                   value={text(header.delivery_date)}
                   onChange={(event) => setHeaderField("delivery_date", event.target.value)}
                 />
               </div>
-            </div>
-            <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-              {text(header.responsible_person) ? (
-                <div><span className="font-medium text-foreground">Phụ trách:</span> {text(header.responsible_person)}</div>
-              ) : null}
-              {text(header.install_address) ? (
-                <div className="sm:col-span-2">
-                  <span className="font-medium text-foreground">Lắp đặt:</span> {text(header.install_address)}
+
+              <div className="md:col-span-2 xl:col-span-4">
+                <Label required={metaRequired("responsible_person")}>Nhân viên bán hàng phụ trách</Label>
+                <div className="flex gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <LinkPicker
+                      doctype={text(metaField("responsible_person")?.options) || "Employee"}
+                      value={text(header.responsible_person)}
+                      label={employeeLabel || text(header.responsible_person)}
+                      referenceDoctype="Sales Order"
+                      placeholder="Chọn nhân viên bán hàng…"
+                      onChange={(value, shown) => {
+                        setEmployeeLabel(shown);
+                        setHeaderField("responsible_person", value || undefined);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-9 shrink-0"
+                    title="Thêm nhân viên"
+                    onClick={() => openLinkedCreate("Employee")}
+                  >
+                    <Plus className="size-4" />
+                  </Button>
                 </div>
-              ) : null}
-              {text(header.payment_method) ? (
-                <div><span className="font-medium text-foreground">Thanh toán:</span> {text(header.payment_method)}</div>
-              ) : null}
+              </div>
             </div>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-2" data-section="hardcoded-sales-lines">
             <div className="flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-base font-semibold">Hàng bán</h2>
-                <p className="text-xs text-muted-foreground">
-                  UI chỉ hỏi dữ liệu cần nhập; công thức, UOM, giá, chiết khấu và phụ thu vẫn do backend quyết định.
-                </p>
-              </div>
+              <h2 className="text-base font-semibold">Chi tiết bán hàng</h2>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setLines((current) => [...current, newLine(current.length)])}
               >
-                <Plus className="mr-1 size-4" /> Thêm dòng
+                <Plus className="mr-1 size-4" /> Thêm sản phẩm
               </Button>
             </div>
 
@@ -800,8 +876,8 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                 && (fieldRequired(line, "qty_bar") || line.qty_bar != null);
 
               return (
-                <article key={line._key} className="rounded-xl border bg-card shadow-sm">
-                  <div className="flex items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2.5">
+                <article key={line._key} className="overflow-hidden rounded-lg border bg-card">
+                  <div className="flex items-center justify-between gap-2 border-b bg-muted/15 px-3 py-2">
                     <div className="flex min-w-0 items-center gap-2">
                       <span className="grid size-7 shrink-0 place-items-center rounded-full bg-foreground text-xs font-semibold text-background">
                         {index + 1}
@@ -810,12 +886,11 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                         <div className="truncate text-sm font-semibold">
                           {line._itemLabel || text(line.item_code) || "Chọn mặt hàng"}
                         </div>
-                        <div className="truncate text-[11px] text-muted-foreground">
-                          {text(line._context?.item_group) || "Chưa xác định nhóm"}
-                          {text(line._context?.availability_status)
-                            ? ` · ${text(line._context?.availability_status)}`
-                            : ""}
-                        </div>
+                        {text(line._context?.availability_status) ? (
+                          <div className="truncate text-[11px] text-muted-foreground">
+                            {text(line._context?.availability_status)}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -847,7 +922,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                     </div>
                   </div>
 
-                  <div className="space-y-3 p-4">
+                  <div className="space-y-2.5 p-3">
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                       <div className="md:col-span-2 xl:col-span-2">
                         <Label required>Mặt hàng</Label>
@@ -932,7 +1007,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                     </div>
 
                     {text(line.item_code) ? (
-                      <div className="grid gap-3 rounded-lg border bg-muted/10 p-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+                      <div className="grid gap-2.5 rounded-md bg-muted/10 p-2.5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                         {showSalesMode ? (
                           <div>
                             <Label>Cách bán</Label>
@@ -1076,34 +1151,18 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                     ) : null}
 
                     {text(line.item_code) ? (
-                      <div className="grid gap-2 border-t pt-3 sm:grid-cols-2 lg:grid-cols-5">
-                        <div>
-                          <div className="text-[11px] text-muted-foreground">SL tính tiền</div>
-                          <div className="font-semibold">
-                            {Number.isFinite(Number(line.qty))
-                              ? Number(line.qty).toLocaleString("vi-VN", { maximumFractionDigits: 6 })
-                              : "—"} {text(line.uom)}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[11px] text-muted-foreground">Đơn giá bảng</div>
-                          <div className="font-semibold">{money(line.rate)} ₫</div>
-                        </div>
-                        <div>
-                          <div className="text-[11px] text-muted-foreground">Chiết khấu</div>
-                          <div className="font-semibold text-emerald-700 dark:text-emerald-400">
-                            -{money(line.discount_amount)} ₫
-                            {Number(line.discount_percentage) ? ` (${Number(line.discount_percentage)}%)` : ""}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[11px] text-muted-foreground">Phụ thu</div>
-                          <div className="font-semibold">+{money(line.adjustment_amount)} ₫</div>
-                        </div>
-                        <div>
-                          <div className="text-[11px] text-muted-foreground">Tạm tính dòng</div>
-                          <div className="text-base font-bold">{money(lineTotal(line))} ₫</div>
-                        </div>
+                      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t pt-2 text-xs tabular-nums">
+                        <span className="text-muted-foreground">
+                          {Number.isFinite(Number(line.qty)) ? Number(line.qty).toLocaleString("vi-VN", { maximumFractionDigits: 6 }) : "—"} {text(line.uom)}
+                        </span>
+                        <span>ĐG <strong>{money(line.rate)} ₫</strong></span>
+                        {Number(line.discount_amount) > 0 ? (
+                          <span className="text-emerald-700 dark:text-emerald-400">CK -{money(line.discount_amount)} ₫</span>
+                        ) : null}
+                        {Number(line.adjustment_amount) !== 0 ? (
+                          <span>Phụ thu +{money(line.adjustment_amount)} ₫</span>
+                        ) : null}
+                        <span className="text-sm font-semibold">Thành tiền <strong className="text-base">{money(lineTotal(line))} ₫</strong></span>
                       </div>
                     ) : null}
                   </div>
