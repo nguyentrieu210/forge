@@ -1,0 +1,42 @@
+name: TEMP ChildGrid Door Probe Hotfix
+on:
+  push:
+    branches: [fix/childgrid-door-probe-type]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/childgrid-door-probe-type
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: pnpm-lock.yaml }
+      - name: Patch narrow probe type
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('client/packages/views/src/form/ChildGrid.tsx')
+          text = path.read_text(encoding='utf-8')
+          old = 'function isAreaDoorSalesItem(row: Doc): boolean {'
+          new = 'function isAreaDoorSalesItem(row: { item_code?: unknown; inventory_mode?: unknown }): boolean {'
+          assert text.count(old) == 1, f'expected one signature, got {text.count(old)}'
+          path.write_text(text.replace(old, new), encoding='utf-8')
+      - name: Verify MetaForge build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter metaforge run build
+      - name: Commit hotfix and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/temp-childgrid-door-probe-hotfix.yml
+          git add client/packages/views/src/form/ChildGrid.tsx
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'fix(ui): widen area-door probe input type'
+          git push origin HEAD:fix/childgrid-door-probe-type
