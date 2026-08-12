@@ -31,6 +31,44 @@ function callWith(records: Record<string, unknown>) {
           amount: "1457100",
         } });
       }
+      if (option === "AU-FULL-SET") {
+        return response({ message: {
+          sales_option: option,
+          sales_option_code: "FULL_SET",
+          sales_option_label: "Trọn bộ",
+          sales_mode: "Trọn bộ",
+          sales_package: "PKG-AU-FULL-SET",
+          sales_package_snapshot: "snapshot-au-full-set",
+          price_variant: "STANDARD",
+          discount_basis_variant: "STANDARD",
+          rate: "2000000",
+          base_rate: "2000000",
+          discount_percentage: "0",
+          discount_amount: "0",
+          adjustment_amount: "125000",
+          net_amount: "2125000",
+          amount: "2125000",
+        } });
+      }
+      if (option === "AU-SPLIT") {
+        return response({ message: {
+          sales_option: option,
+          sales_option_code: "SPLIT",
+          sales_option_label: "Tách món",
+          sales_mode: "Tách món",
+          sales_package: null,
+          sales_package_snapshot: null,
+          price_variant: "STANDARD",
+          discount_basis_variant: "STANDARD",
+          rate: "2000000",
+          base_rate: "2000000",
+          discount_percentage: "0",
+          discount_amount: "0",
+          adjustment_amount: "0",
+          net_amount: "2000000",
+          amount: "2000000",
+        } });
+      }
       const qty = Number(line.qty ?? 0);
       const rate = String(line.item_code ?? "") === "MOTOR-01" ? 100000 : 1626000;
       const discount = String(line.item_code ?? "") === "DUC-01" ? 243900 : 0;
@@ -165,5 +203,60 @@ describe("alumdoor.ui.preview_child_row", () => {
     // 15% is calculated from the no-rail 1,626,000 basis, not from the 1,701,000 selling rate.
     expect(withRailBody.patch.discount_amount).toBe(243900);
     expect(withRailBody.patch.net_amount).toBe(1457100);
+  });
+
+  it("keeps Australian full-set/package and split-line semantics server-owned", async () => {
+    const call = callWith({
+      "resource/Item/AU-01": {
+        item_code: "AU-01", item_name: "Úc 01", item_group: "Cửa Úc", door_type: "Cửa Úc",
+        is_sales_item: 1, disabled: 0, inventory_mode: "Hàng thường", stock_uom: "Bộ",
+        default_sales_uom: "Bộ", uom_conversions: [],
+      },
+      "resource/Item Price/Bán lẻ:AU-01": {
+        name: "Bán lẻ:AU-01", price_list: "Bán lẻ", item_code: "AU-01", uom: "Bộ", rate: 2000000, currency: "VND", disabled: 0,
+      },
+      "resource/Sales Option": [
+        { name: "AU-FULL-SET", option_code: "FULL_SET", option_label: "Trọn bộ", item_code: "AU-01", item_group: "Cửa Úc", sales_mode: "Trọn bộ", sales_package: "PKG-AU-FULL-SET", is_default: 1, priority: 100, disabled: 0 },
+        { name: "AU-SPLIT", option_code: "SPLIT", option_label: "Tách món", item_code: "AU-01", item_group: "Cửa Úc", sales_mode: "Tách món", priority: 90, disabled: 0 },
+      ],
+    });
+    const fields = [
+      "item_code", "door_type", "inventory_mode", "stock_uom", "uom", "set_count", "qty",
+      "sales_option", "sales_option_code", "sales_option_label", "sales_mode", "sales_package", "sales_package_snapshot",
+      "price_variant", "discount_basis_variant", "rate", "standard_rate", "discount_percentage", "discount_amount",
+      "adjustment_amount", "net_amount", "amount",
+    ];
+    const baseArgs = {
+      child_doctype: "Sales Order Item",
+      child_fields: fields,
+      parent: { selling_price_list: "Bán lẻ", currency: "VND", customer_group: "Lẻ" },
+    };
+
+    const fullSet = await previewChildRow(call, {
+      ...baseArgs,
+      row: { item_code: "AU-01", set_count: 1, qty: 1 },
+      changed_field: "item_code",
+    });
+    expect(fullSet.status).toBe(200);
+    const fullSetBody = await fullSet.json() as { patch: Json; field_overrides: Record<string, Json> };
+    expect(fullSetBody.patch.sales_option).toBe("AU-FULL-SET");
+    expect(fullSetBody.patch.sales_mode).toBe("Trọn bộ");
+    expect(fullSetBody.patch.sales_package).toBe("PKG-AU-FULL-SET");
+    expect(fullSetBody.patch.adjustment_amount).toBe(125000);
+    expect(fullSetBody.patch.net_amount).toBe(2125000);
+    expect(fullSetBody.field_overrides.sales_option?.reqd).toBe(1);
+
+    const split = await previewChildRow(call, {
+      ...baseArgs,
+      row: { item_code: "AU-01", set_count: 1, qty: 1, sales_option: "AU-SPLIT" },
+      changed_field: "sales_option",
+    });
+    expect(split.status).toBe(200);
+    const splitBody = await split.json() as { patch: Json };
+    expect(splitBody.patch.sales_mode).toBe("Tách món");
+    expect(splitBody.patch.sales_package).toBeNull();
+    expect(splitBody.patch.sales_package_snapshot).toBeNull();
+    expect(splitBody.patch.adjustment_amount).toBe(0);
+    expect(splitBody.patch.net_amount).toBe(2000000);
   });
 });
