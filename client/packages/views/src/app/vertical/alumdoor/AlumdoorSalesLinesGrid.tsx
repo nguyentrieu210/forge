@@ -131,16 +131,22 @@ function GridForgeEditor(props: {
   );
 }
 
-function textCell(data: string, displayData = data, readonly = false, align: "left" | "right" | "center" = "left"): TextCell {
+function textCell(
+  data: string,
+  displayData = data,
+  readonly = false,
+  align: "left" | "right" | "center" = "left",
+  allowOverlay = !readonly,
+): TextCell {
   return {
     kind: GridCellKind.Text,
     data,
     displayData,
-    allowOverlay: !readonly,
+    allowOverlay,
     readonly,
     contentAlign: align,
     copyData: displayData,
-    activationBehaviorOverride: readonly ? undefined : "single-click",
+    activationBehaviorOverride: !readonly && allowOverlay ? "single-click" : undefined,
   };
 }
 
@@ -152,8 +158,12 @@ type GlideEditorProps = Parameters<ProvideEditorComponent<GridCell>>[0];
 
 export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
   const [columns, setColumns] = useState<readonly GridColumn[]>(INITIAL_COLUMNS);
+  const [itemEditorKey, setItemEditorKey] = useState<string | undefined>();
   const selectedIndex = Math.max(0, props.rows.findIndex((row) => row.key === props.selectedKey));
   const selected = props.rows[selectedIndex];
+  const itemEditorIndex = props.rows.findIndex((row) => row.key === itemEditorKey);
+  const itemEditorRow = itemEditorIndex >= 0 ? props.rows[itemEditorIndex] : undefined;
+  const ItemControl = props.registry.resolve("Link");
 
   const getCellContent = useCallback((cell: Item): GridCell => {
     const [columnIndex, rowIndex] = cell;
@@ -163,7 +173,10 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
 
     switch (column) {
       case "item":
-        return textCell(row.itemCode, `${row.itemLabel || row.itemCode || "Chọn mặt hàng…"}  ▾`, false);
+        // Forge LinkControl owns its own dropdown/popover. Do not mount it inside
+        // Glide's overlay editor because the two overlay lifecycles compete for
+        // outside-click events. A persistent Forge popup is opened by onCellClicked.
+        return textCell(row.itemCode, `${row.itemLabel || row.itemCode || "Chọn mặt hàng…"}  ▾`, false, "left", false);
       case "sales_option":
         return textCell(
           row.salesOption,
@@ -208,22 +221,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
     const [columnIndex, rowIndex] = location;
     const row = props.rows[rowIndex];
     const column = COLUMN_IDS[columnIndex];
-    if (!row || !column) return undefined;
-
-    if (column === "item") {
-      return (editorProps: GlideEditorProps) => (
-        <GridForgeEditor
-          {...editorProps}
-          value={editorProps.value as TextCell}
-          field={linkField("item_code", "Mặt hàng", "Item")}
-          registry={props.registry}
-          services={props.services}
-          roles={props.roles}
-          parentDoctype="Sales Order"
-          docValues={{ ...props.parentDocValues, ...row.docValues }}
-        />
-      );
-    }
+    if (!row || !column || column === "item") return undefined;
 
     const choices = column === "sales_option"
       ? row.salesOptionChoices
@@ -247,7 +245,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
         docValues={row.docValues}
       />
     );
-  }, [props.parentDocValues, props.registry, props.roles, props.rows, props.services]);
+  }, [props.registry, props.roles, props.rows, props.services]);
 
   const onCellEdited = useCallback((cell: Item, newValue: EditableGridCell) => {
     const [columnIndex, rowIndex] = cell;
@@ -261,8 +259,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
       return;
     }
     if (newValue.kind !== GridCellKind.Text) return;
-    if (column === "item") props.onChange(row.key, "item_code", newValue.data);
-    else if (column === "sales_option") props.onChange(row.key, "sales_option", newValue.data);
+    if (column === "sales_option") props.onChange(row.key, "sales_option", newValue.data);
     else if (column === "price") props.onChange(row.key, "item_price", newValue.data);
     else if (column === "uom") props.onChange(row.key, "uom", newValue.data);
   }, [props]);
@@ -271,7 +268,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
   const status = selected?.pricingError || selected?.error || selected?.availability || "";
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card" data-surface="alumdoor-sales-lines-glide-grid">
+    <div className="relative overflow-visible rounded-lg border bg-card" data-surface="alumdoor-sales-lines-glide-grid">
       <div className="flex min-h-10 items-center justify-between gap-2 border-b px-2.5 py-1.5">
         <div className="min-w-0">
           <div className="text-xs font-semibold">Bảng sản phẩm</div>
@@ -291,42 +288,71 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
         </div>
       </div>
 
-      <DataEditor
-        columns={columns}
-        rows={props.rows.length}
-        getCellContent={getCellContent}
-        onCellEdited={onCellEdited}
-        provideEditor={provideEditor}
-        onCellClicked={(cell: Item) => {
-          const row = props.rows[cell[1]];
-          if (row) props.onSelectedKeyChange(row.key);
-        }}
-        rowMarkers="clickable-number"
-        rowHeight={38}
-        headerHeight={34}
-        height={gridHeight}
-        width="100%"
-        freezeColumns={1}
-        rangeSelect="cell"
-        rowSelect="single"
-        columnSelect="none"
-        minColumnWidth={70}
-        maxColumnWidth={520}
-        overscrollX={80}
-        scaleToRem
-        theme={{
-          baseFontStyle: "0.75rem",
-          headerFontStyle: "600 0.72rem",
-          editorFontSize: "0.78rem",
-          cellHorizontalPadding: 8,
-          cellVerticalPadding: 4,
-        }}
-        onColumnResize={(column: GridColumn, newSize: number) => {
-          setColumns((current) => current.map((entry) => (
-            entry.id === column.id ? { ...entry, width: newSize } : entry
-          )));
-        }}
-      />
+      <div className="overflow-hidden rounded-b-lg">
+        <DataEditor
+          columns={columns}
+          rows={props.rows.length}
+          getCellContent={getCellContent}
+          onCellEdited={onCellEdited}
+          provideEditor={provideEditor}
+          onCellClicked={(cell: Item) => {
+            const row = props.rows[cell[1]];
+            if (!row) return;
+            props.onSelectedKeyChange(row.key);
+            const column = COLUMN_IDS[cell[0]];
+            setItemEditorKey(column === "item" ? row.key : undefined);
+          }}
+          rowMarkers="clickable-number"
+          rowHeight={38}
+          headerHeight={34}
+          height={gridHeight}
+          width="100%"
+          freezeColumns={1}
+          rangeSelect="cell"
+          rowSelect="single"
+          columnSelect="none"
+          minColumnWidth={70}
+          maxColumnWidth={520}
+          overscrollX={80}
+          scaleToRem
+          theme={{
+            baseFontStyle: "0.75rem",
+            headerFontStyle: "600 0.72rem",
+            editorFontSize: "0.78rem",
+            cellHorizontalPadding: 8,
+            cellVerticalPadding: 4,
+          }}
+          onColumnResize={(column: GridColumn, newSize: number) => {
+            setColumns((current) => current.map((entry) => (
+              entry.id === column.id ? { ...entry, width: newSize } : entry
+            )));
+          }}
+        />
+      </div>
+
+      {itemEditorRow && ItemControl ? (
+        <div
+          className="absolute z-[90] w-[360px] max-w-[calc(100%-3rem)] rounded-md border bg-card p-1 shadow-2xl"
+          style={{ left: 46, top: 74 + itemEditorIndex * 38 }}
+          data-surface="alumdoor-item-link-popup"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <ItemControl
+            field={linkField("item_code", "Mặt hàng", "Item")}
+            id={`sales-grid-item-${itemEditorRow.key}`}
+            value={itemEditorRow.itemCode}
+            onChange={(next) => {
+              props.onChange(itemEditorRow.key, "item_code", text(next));
+              setItemEditorKey(undefined);
+            }}
+            services={props.services}
+            parentDoctype="Sales Order"
+            docValues={{ ...props.parentDocValues, ...itemEditorRow.docValues }}
+            roles={props.roles}
+            compact
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
