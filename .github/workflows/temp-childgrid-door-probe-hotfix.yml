@@ -23,7 +23,7 @@ jobs:
           path = Path('client/packages/views/src/form/ChildGrid.tsx')
           text = path.read_text(encoding='utf-8')
           old = 'function isAreaDoorSalesItem(row: Doc): boolean {'
-          new = 'function isAreaDoorSalesItem(row: { item_code?: unknown; inventory_mode?: unknown }): boolean {'
+          new = 'function isAreaDoorSalesItem(row: Record<string, unknown>): boolean {'
           assert text.count(old) == 1, f'expected one signature, got {text.count(old)}'
           path.write_text(text.replace(old, new), encoding='utf-8')
       - name: Verify MetaForge build
