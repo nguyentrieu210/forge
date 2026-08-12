@@ -110,9 +110,6 @@ function label(field: DocField): string {
   return field.label || field.fieldname;
 }
 
-// Bảng bán hàng là màn thao tác nhanh, không phải bản in kỹ thuật. Các số liệu
-// chiết khấu/phụ thu vẫn được Worker tính và lưu trên dòng, nhưng chỉ mở trong
-// chi tiết để bảng chính không bị tràn cột.
 function viewPreviewMethod(view: DocTypeView | undefined): string {
   return typeof view?.previewMethod === "string" ? view.previewMethod.trim() : "";
 }
@@ -174,25 +171,17 @@ function SmartMetadataChildGrid(props: ChildGridProps) {
   }, [rows]);
 
   const full = useMemo(
-    () => {
-      const columns = metadataChildGridColumns(childMeta, true)
-        ?? metadataChildGridColumns(childMeta, false)
-        ?? [];
-      const hasSalesOption = rows.some((row) => String(row.sales_option ?? "").trim().length > 0);
-      return childMeta.name === "Sales Order Item" && !hasSalesOption
-        ? columns.filter((field) => field.fieldname !== "sales_option")
-        : columns;
-    },
-    [childMeta, rows],
+    () => metadataChildGridColumns(childMeta, true)
+      ?? metadataChildGridColumns(childMeta, false)
+      ?? [],
+    [childMeta],
+  );
+  const compact = useMemo(
+    () => metadataChildGridColumns(childMeta, false) ?? full,
+    [childMeta, full],
   );
   const activeView = childMeta.viewPolicy?.form;
-  // Các dòng bán Alumdoor luôn cần Worker chụp ĐVT, giá và quy cách khi chọn mã hàng.
-  // Metadata đời cũ không có `preview_method` nên lưới thông minh từng chỉ ghi mã hàng
-  // rồi dừng lại. Lấy endpoint chuẩn làm fallback; các bảng khác vẫn hoàn toàn theo metadata.
-  const previewMethod = viewPreviewMethod(activeView)
-    || (["Quotation Item", "Sales Order Item", "Delivery Note Item", "Sales Invoice Item"].includes(childMeta.name)
-      ? "alumdoor.ui.preview_child_row"
-      : undefined);
+  const previewMethod = viewPreviewMethod(activeView) || undefined;
   const previewParentFields = viewPreviewParentFields(activeView);
   const previewParentKey = useMemo(
     () => JSON.stringify(previewParentFields.map((fieldname) => [fieldname, parentDoc?.[fieldname]])),
@@ -280,7 +269,8 @@ function SmartMetadataChildGrid(props: ChildGridProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewMethod, previewParentKey]);
 
-  const presentationColumns = full;
+  const presentationMode = fullscreen ? "full" : "compact";
+  const presentationColumns = fullscreen ? full : compact;
   const applicableColumns = useMemo(() => applicableSmartGridColumns(
     presentationColumns,
     childMeta,
@@ -291,8 +281,8 @@ function SmartMetadataChildGrid(props: ChildGridProps) {
   ), [presentationColumns, childMeta, rows, parentDoc, roles, fieldOverridesByRow]);
   const identityFieldname = applicableColumns[0]?.fieldname ?? presentationColumns[0]?.fieldname;
   const layoutKey = useMemo(
-    () => smartGridLayoutKey(childMeta, "full", presentationColumns),
-    [childMeta, presentationColumns],
+    () => smartGridLayoutKey(childMeta, presentationMode, presentationColumns),
+    [childMeta, presentationMode, presentationColumns],
   );
 
   useEffect(() => {
