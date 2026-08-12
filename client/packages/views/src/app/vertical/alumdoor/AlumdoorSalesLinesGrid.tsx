@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
 import type { DocField } from "@metaforge/core";
 import type { ControlRegistry, FieldServices } from "@metaforge/controls";
@@ -12,8 +12,10 @@ import {
   type GridColumn,
   type Item,
   type ProvideEditorCallback,
+  type ProvideEditorComponent,
   type TextCell,
-} from "@glideapps/glide-data-grid";
+} from "../../../../../../vendor/glide-data-grid/forge-bundle/index.js";
+import "../../../../../../vendor/glide-data-grid/forge-bundle/index.css";
 
 type Json = Record<string, unknown>;
 
@@ -143,6 +145,8 @@ function textCell(data: string, displayData = data, readonly = false, align: "le
   };
 }
 
+type GlideEditorProps = Parameters<ProvideEditorComponent<GridCell>>[0];
+
 export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
   const [columns, setColumns] = useState<readonly GridColumn[]>(INITIAL_COLUMNS);
   const selectedIndex = Math.max(0, props.rows.findIndex((row) => row.key === props.selectedKey));
@@ -202,7 +206,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
     if (!row || !column) return undefined;
 
     if (column === "item") {
-      return (editorProps) => (
+      return (editorProps: GlideEditorProps) => (
         <GridForgeEditor
           {...editorProps}
           value={editorProps.value as TextCell}
@@ -226,7 +230,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
     if (!choices.length) return undefined;
     const fieldname = column === "sales_option" ? "sales_option" : column === "price" ? "item_price" : "uom";
     const label = column === "sales_option" ? "Cách bán" : column === "price" ? "Đơn giá" : "ĐVT";
-    return (editorProps) => (
+    return (editorProps: GlideEditorProps) => (
       <GridForgeEditor
         {...editorProps}
         value={editorProps.value as TextCell}
@@ -288,7 +292,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
         getCellContent={getCellContent}
         onCellEdited={onCellEdited}
         provideEditor={provideEditor}
-        onCellClicked={(cell) => {
+        onCellClicked={(cell: Item) => {
           const row = props.rows[cell[1]];
           if (row) props.onSelectedKeyChange(row.key);
         }}
@@ -312,7 +316,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
           cellHorizontalPadding: 8,
           cellVerticalPadding: 4,
         }}
-        onColumnResize={(column, newSize) => {
+        onColumnResize={(column: GridColumn, newSize: number) => {
           setColumns((current) => current.map((entry) => (
             entry.id === column.id ? { ...entry, width: newSize } : entry
           )));
