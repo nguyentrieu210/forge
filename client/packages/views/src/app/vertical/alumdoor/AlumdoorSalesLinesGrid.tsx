@@ -68,7 +68,6 @@ export interface AlumdoorSalesLinesGridProps {
 }
 
 const COLUMN_IDS = ["item", "sales_option", "price", "uom", "qty", "discount", "adjustment", "amount"] as const;
-type ColumnId = (typeof COLUMN_IDS)[number];
 
 const INITIAL_COLUMNS: GridColumn[] = [
   { id: "item", title: "Mặt hàng", width: 300, grow: 2 },
@@ -145,6 +144,10 @@ function textCell(data: string, displayData = data, readonly = false, align: "le
   };
 }
 
+function selectorDisplay(label: string, choices: readonly SalesGridChoice[]): string {
+  return choices.length ? `${label}  ▾` : label;
+}
+
 type GlideEditorProps = Parameters<ProvideEditorComponent<GridCell>>[0];
 
 export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
@@ -160,22 +163,24 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
 
     switch (column) {
       case "item":
-        return textCell(row.itemCode, row.itemLabel || row.itemCode || "Chọn mặt hàng…", false);
+        return textCell(row.itemCode, `${row.itemLabel || row.itemCode || "Chọn mặt hàng…"}  ▾`, false);
       case "sales_option":
         return textCell(
           row.salesOption,
-          row.salesOptionLabel || (row.salesOptionChoices.length ? "Chọn cách bán…" : "Tiêu chuẩn"),
+          selectorDisplay(row.salesOptionLabel || (row.salesOptionChoices.length ? "Chọn cách bán…" : "Tiêu chuẩn"), row.salesOptionChoices),
           row.salesOptionChoices.length === 0,
         );
       case "price":
         return textCell(
           row.priceId,
-          row.pricingError ? "Lỗi đơn giá" : row.priceLabel || (row.priceChoices.length ? "Chọn đơn giá…" : "—"),
+          row.pricingError
+            ? "Lỗi đơn giá"
+            : selectorDisplay(row.priceLabel || (row.priceChoices.length ? "Chọn đơn giá…" : "—"), row.priceChoices),
           row.priceChoices.length === 0,
           "right",
         );
       case "uom":
-        return textCell(row.uom, row.uom || "—", row.uomChoices.length <= 1, "center");
+        return textCell(row.uom, selectorDisplay(row.uom || "—", row.uomChoices.length > 1 ? row.uomChoices : []), row.uomChoices.length <= 1, "center");
       case "qty":
         return {
           kind: GridCellKind.Number,
@@ -269,8 +274,8 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
     <div className="overflow-hidden rounded-lg border bg-card" data-surface="alumdoor-sales-lines-glide-grid">
       <div className="flex min-h-10 items-center justify-between gap-2 border-b px-2.5 py-1.5">
         <div className="min-w-0">
-          <div className="text-xs font-semibold">Chi tiết bán hàng</div>
-          <div className="truncate text-[10px] text-muted-foreground">{status || "Chọn ô và nhập trực tiếp như bảng tính"}</div>
+          <div className="text-xs font-semibold">Bảng sản phẩm</div>
+          <div className="truncate text-[10px] text-muted-foreground">{status || "Bấm ô có ▾ để chọn; số lượng đơn giản có thể nhập trực tiếp"}</div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {selected?.loading ? <Loader2 className="mr-1 size-3.5 animate-spin text-muted-foreground" /> : null}
