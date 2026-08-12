@@ -1,0 +1,97 @@
+name: TEMP AlumDoor Sales Compact UI Patch
+on:
+  push:
+    branches: [ui/alumdoor-sales-header-compact]
+    paths: [.github/workflows/temp-alumdoor-sales-header-compact.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/alumdoor-sales-header-compact
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Apply bounded UI patch
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('client/packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx')
+          s = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str):
+              global s
+              if old not in s:
+                  raise SystemExit(f'PATCH_MARKER_NOT_FOUND: {old[:120]!r}')
+              s = s.replace(old, new, 1)
+
+          replace_once(
+              'function newLine(index: number): SalesLine {',
+              '''function openLinkedCreate(doctype: string) {\n  const route = `/list/${encodeURIComponent(doctype)}/new`;\n  window.open(route, "_blank", "noopener,noreferrer");\n}\n\nfunction newLine(index: number): SalesLine {''',
+          )
+
+          replace_once(
+              '''  const [customerLabel, setCustomerLabel] = useState("");\n  const [priceListLabel, setPriceListLabel] = useState("");''',
+              '''  const [customerLabel, setCustomerLabel] = useState("");\n  const [employeeLabel, setEmployeeLabel] = useState("");\n  const [customerPhone, setCustomerPhone] = useState("");''',
+          )
+
+          replace_once(
+              '''  const childFieldSet = useMemo(() => new Set(childFields), [childFields]);\n  const salesModes = useMemo(''',
+              '''  const childFieldSet = useMemo(() => new Set(childFields), [childFields]);\n  const salesPhoneField = useMemo(() => {\n    const candidates = ["customer_phone", "contact_phone", "contact_mobile", "mobile_no", "phone_no", "phone"];\n    return candidates.find((name) => meta?.fields.some((field) => field.fieldname === name));\n  }, [meta]);\n  const salesModes = useMemo(''',
+          )
+
+          replace_once(
+              '''        setCanCreate(Boolean(caps.create));\n        setHeader(defaults);\n        setPriceListLabel(text(defaults.selling_price_list));''',
+              '''        setCanCreate(Boolean(caps.create));\n        setHeader(defaults);\n        setEmployeeLabel(text(defaults.responsible_person));''',
+          )
+
+          contact_effect_marker = '''  const cleanLine = useCallback((line: SalesLine): Json => {'''
+          contact_effect = '''  useEffect(() => {\n    const customerName = text(header.customer);\n    if (!customerName) {\n      setCustomerPhone("");\n      return;\n    }\n    let active = true;\n    void adapter.getDoc("Customer", customerName)\n      .then((result) => {\n        if (!active) return;\n        const customer = result.doc as Json;\n        const phone = [\n          customer.phone,\n          customer.mobile_no,\n          customer.mobile,\n          customer.phone_no,\n          customer.contact_phone,\n          customer.contact_mobile,\n        ].map(text).find(Boolean) ?? "";\n        setCustomerPhone(phone);\n        if (salesPhoneField && phone) {\n          setHeader((current) => ({ ...current, [salesPhoneField]: phone }));\n        }\n      })\n      .catch(() => {\n        if (active) setCustomerPhone("");\n      });\n    return () => {\n      active = false;\n    };\n  }, [adapter, header.customer, salesPhoneField]);\n\n'''
+          replace_once(contact_effect_marker, contact_effect + contact_effect_marker)
+
+          replace_once(
+              '''        if (field === "customer") {\n          setPriceListLabel(text(resolved.selling_price_list));\n        }''',
+              '''        if (field === "customer") {\n          setEmployeeLabel(text(resolved.responsible_person));\n        }''',
+          )
+
+          null_guard = '''  const parentTotal = Number(header.grand_total);'''
+          meta_helpers = '''  const metaField = (fieldname: string) => meta.fields.find((field) => field.fieldname === fieldname);\n  const metaLabel = (fieldname: string, fallback: string) => text(metaField(fieldname)?.label) || fallback;\n  const metaRequired = (fieldname: string) => Boolean(metaField(fieldname)?.reqd);\n  const phoneValue = salesPhoneField ? text(header[salesPhoneField]) : customerPhone;\n\n'''
+          replace_once(null_guard, meta_helpers + null_guard)
+
+          header_start = s.index('          <section className="rounded-xl border bg-card p-4 shadow-sm">')
+          child_start = s.index('          <section className="space-y-3">', header_start)
+          header = '''          <section className="rounded-xl border bg-card px-4 py-3 shadow-sm" data-section="sales-customer-meta-header">\n            <div className="mb-3 flex items-center justify-between gap-3">\n              <h2 className="text-base font-semibold">Thông tin khách hàng</h2>\n              {text(header.customer_group) ? (\n                <span className="text-[11px] text-muted-foreground">{text(header.customer_group)}</span>\n              ) : null}\n            </div>\n            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">\n              <div className="xl:col-span-4">\n                <Label required={metaRequired("customer")}>{metaLabel("customer", "Khách hàng")}</Label>\n                <div className="flex gap-1.5">\n                  <div className="min-w-0 flex-1">\n                    <LinkPicker\n                      doctype={text(metaField("customer")?.options) || "Customer"}\n                      value={text(header.customer)}\n                      label={customerLabel}\n                      referenceDoctype="Sales Order"\n                      placeholder="Tìm tên, mã hoặc SĐT khách hàng…"\n                      onChange={(value, shown) => {\n                        setCustomerLabel(shown);\n                        setHeaderField("customer", value || undefined, true);\n                      }}\n                    />\n                  </div>\n                  <Button\n                    type="button"\n                    variant="outline"\n                    size="icon"\n                    className="size-9 shrink-0"\n                    title="Thêm khách hàng"\n                    onClick={() => openLinkedCreate("Customer")}\n                  >\n                    <Plus className="size-4" />\n                  </Button>\n                </div>\n              </div>\n\n              <div className="xl:col-span-2">\n                <Label>SĐT</Label>\n                <Input\n                  value={phoneValue}\n                  placeholder="Số điện thoại"\n                  onChange={(event) => {\n                    const value = event.target.value;\n                    setCustomerPhone(value);\n                    if (salesPhoneField) setHeaderField(salesPhoneField, value || undefined);\n                  }}\n                  readOnly={!salesPhoneField}\n                  className={!salesPhoneField ? "bg-muted/20" : undefined}\n                />\n              </div>\n\n              <div className="md:col-span-2 xl:col-span-6">\n                <Label required={metaRequired("install_address")}>{metaLabel("install_address", "Địa chỉ")}</Label>\n                <Input\n                  value={text(header.install_address)}\n                  placeholder="Địa chỉ giao / lắp đặt"\n                  onChange={(event) => setHeaderField("install_address", event.target.value || undefined)}\n                />\n              </div>\n\n              <div className="xl:col-span-2">\n                <Label required={metaRequired("transaction_date")}>Ngày đặt hàng</Label>\n                <Input\n                  type="date"\n                  value={text(header.transaction_date)}\n                  onChange={(event) => setHeaderField("transaction_date", event.target.value, true)}\n                />\n              </div>\n\n              <div className="xl:col-span-2">\n                <Label required={metaRequired("delivery_date")}>{metaLabel("delivery_date", "Ngày giao hàng")}</Label>\n                <Input\n                  type="date"\n                  value={text(header.delivery_date)}\n                  onChange={(event) => setHeaderField("delivery_date", event.target.value)}\n                />\n              </div>\n\n              <div className="md:col-span-2 xl:col-span-4">\n                <Label required={metaRequired("responsible_person")}>Nhân viên bán hàng phụ trách</Label>\n                <div className="flex gap-1.5">\n                  <div className="min-w-0 flex-1">\n                    <LinkPicker\n                      doctype={text(metaField("responsible_person")?.options) || "Employee"}\n                      value={text(header.responsible_person)}\n                      label={employeeLabel || text(header.responsible_person)}\n                      referenceDoctype="Sales Order"\n                      placeholder="Chọn nhân viên bán hàng…"\n                      onChange={(value, shown) => {\n                        setEmployeeLabel(shown);\n                        setHeaderField("responsible_person", value || undefined);\n                      }}\n                    />\n                  </div>\n                  <Button\n                    type="button"\n                    variant="outline"\n                    size="icon"\n                    className="size-9 shrink-0"\n                    title="Thêm nhân viên"\n                    onClick={() => openLinkedCreate("Employee")}\n                  >\n                    <Plus className="size-4" />\n                  </Button>\n                </div>\n              </div>\n            </div>\n          </section>\n\n'''
+          s = s[:header_start] + header + s[child_start:]
+
+          replace_once(
+              '''          <section className="space-y-3">\n            <div className="flex items-center justify-between gap-2">\n              <div>\n                <h2 className="text-base font-semibold">Hàng bán</h2>\n                <p className="text-xs text-muted-foreground">\n                  UI chỉ hỏi dữ liệu cần nhập; công thức, UOM, giá, chiết khấu và phụ thu vẫn do backend quyết định.\n                </p>\n              </div>''',
+              '''          <section className="space-y-2" data-section="hardcoded-sales-lines">\n            <div className="flex items-center justify-between gap-2">\n              <h2 className="text-base font-semibold">Chi tiết bán hàng</h2>''',
+          )
+          replace_once('<Plus className="mr-1 size-4" /> Thêm dòng', '<Plus className="mr-1 size-4" /> Thêm sản phẩm')
+          replace_once('className="rounded-xl border bg-card shadow-sm"', 'className="overflow-hidden rounded-lg border bg-card"')
+          replace_once('className="flex items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2.5"', 'className="flex items-center justify-between gap-2 border-b bg-muted/15 px-3 py-2"')
+          replace_once('className="space-y-3 p-4"', 'className="space-y-2.5 p-3"')
+          replace_once('className="grid gap-3 rounded-lg border bg-muted/10 p-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7"', 'className="grid gap-2.5 rounded-md bg-muted/10 p-2.5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7"')
+
+          subtitle = '''                        <div className="truncate text-[11px] text-muted-foreground">\n                          {text(line._context?.item_group) || "Chưa xác định nhóm"}\n                          {text(line._context?.availability_status)\n                            ? ` · ${text(line._context?.availability_status)}`\n                            : ""}\n                        </div>'''
+          replace_once(subtitle, '''                        {text(line._context?.availability_status) ? (\n                          <div className="truncate text-[11px] text-muted-foreground">\n                            {text(line._context?.availability_status)}\n                          </div>\n                        ) : null}''')
+
+          summary_start = s.index('                    {text(line.item_code) ? (\n                      <div className="grid gap-2 border-t pt-3 sm:grid-cols-2 lg:grid-cols-5">')
+          summary_end_marker = '                    ) : null}'
+          summary_end = s.index(summary_end_marker, summary_start) + len(summary_end_marker)
+          summary = '''                    {text(line.item_code) ? (\n                      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 border-t pt-2 text-xs tabular-nums">\n                        <span className="text-muted-foreground">\n                          {Number.isFinite(Number(line.qty)) ? Number(line.qty).toLocaleString("vi-VN", { maximumFractionDigits: 6 }) : "—"} {text(line.uom)}\n                        </span>\n                        <span>ĐG <strong>{money(line.rate)} ₫</strong></span>\n                        {Number(line.discount_amount) > 0 ? (\n                          <span className="text-emerald-700 dark:text-emerald-400">CK -{money(line.discount_amount)} ₫</span>\n                        ) : null}\n                        {Number(line.adjustment_amount) !== 0 ? (\n                          <span>Phụ thu +{money(line.adjustment_amount)} ₫</span>\n                        ) : null}\n                        <span className="text-sm font-semibold">Thành tiền <strong className="text-base">{money(lineTotal(line))} ₫</strong></span>\n                      </div>\n                    ) : null}'''
+          s = s[:summary_start] + summary + s[summary_end:]
+
+          path.write_text(s, encoding='utf-8')
+          PY
+          git diff --check
+          git config user.name "forge-ui-bot"
+          git config user.email "forge-ui-bot@users.noreply.github.com"
+          git add client/packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx
+          git commit -m "feat(ui): compact AlumDoor sales order workspace"
+          git push origin HEAD:ui/alumdoor-sales-header-compact
