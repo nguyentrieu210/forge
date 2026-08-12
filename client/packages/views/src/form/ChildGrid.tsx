@@ -102,7 +102,7 @@ function isSalesTransactionGrid(meta: DocTypeMeta): boolean {
  * đây chỉ là cầu nối hiển thị tạm thời, Item master vẫn là nguồn cuối cùng khi
  * server chụp công thức và tính tiền.
  */
-function isAreaDoorSalesItem(row: Doc): boolean {
+function isAreaDoorSalesItem(row: Record<string, unknown>): boolean {
   if (String(row.inventory_mode ?? "").normalize("NFC").trim() === "Thành phẩm theo m2") return true;
   return /^TP-(?:TD-|ALD-|ALVIP|AL70|AL75|UC)/i.test(String(row.item_code ?? "").trim());
 }
