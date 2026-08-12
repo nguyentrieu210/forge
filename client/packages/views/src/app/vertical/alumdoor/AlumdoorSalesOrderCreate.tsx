@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Eye, Loader2, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { ChevronDown, Copy, Eye, Loader2, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import {
   applyContextPolicy,
   linkDisplay,
@@ -12,7 +12,18 @@ import {
   type DocTypeMeta,
   type LinkResult,
 } from "@metaforge/core";
-import { Button, Input, toast } from "@metaforge/ui";
+import {
+  Button,
+  Command,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  toast,
+} from "@metaforge/ui";
 import { useMetaForge } from "../../../container/provider.js";
 
 interface AlumdoorSalesOrderCreateProps {
@@ -229,57 +240,67 @@ function LinkPicker(props: {
   }, [adapter, props.doctype, props.filters, props.referenceDoctype]);
 
   return (
-    <div className="relative">
-      <Input
-        value={query}
-        placeholder={props.placeholder}
-        onFocus={() => {
-          setOpen(true);
-          void search(query);
-        }}
-        onChange={(event) => {
-          const next = event.target.value;
-          setQuery(next);
-          if (props.value) props.onChange("", next);
-          setOpen(true);
-          void search(next);
-        }}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
-      />
-      {open ? (
-        <div className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover p-1 shadow-xl">
-          {loading ? (
-            <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" /> Đang tìm…
-            </div>
-          ) : null}
-          {!loading && !rows.length ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground">Không có kết quả</div>
-          ) : null}
-          {rows.map((row) => {
-            const display = linkDisplay(row);
-            return (
-              <button
-                key={row.value}
-                type="button"
-                className="flex w-full flex-col rounded px-3 py-2 text-left hover:bg-accent"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  setQuery(display.primary);
-                  props.onChange(row.value, display.primary);
-                  setOpen(false);
-                }}
-              >
-                <span className="text-sm font-medium">{display.primary}</span>
-                {display.secondary ? (
-                  <span className="text-[11px] text-muted-foreground">{display.secondary}</span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className="relative">
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-8 w-full justify-between px-[11px] font-normal"
+            onClick={() => {
+              if (!open) void search(query);
+            }}
+          >
+            <span className={query ? "truncate text-left" : "truncate text-left text-muted-foreground"}>
+              {query || props.placeholder}
+            </span>
+            <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] overflow-hidden p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder={props.placeholder}
+              value={query}
+              onValueChange={(next) => {
+                setQuery(next);
+                if (props.value) props.onChange("", next);
+                void search(next);
+              }}
+            />
+            <CommandList className="max-h-64">
+              {loading ? (
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-3 animate-spin" /> Đang tìm…
+                </div>
+              ) : null}
+              {!loading && !rows.length ? (
+                <div className="px-3 py-2 text-xs text-muted-foreground">Không có kết quả</div>
+              ) : null}
+              {rows.map((row) => {
+                const display = linkDisplay(row);
+                return (
+                  <CommandItem
+                    key={row.value}
+                    value={row.value}
+                    onSelect={() => {
+                      setQuery(display.primary);
+                      props.onChange(row.value, display.primary);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate text-sm font-medium">{display.primary}</span>
+                      {display.secondary ? <span className="truncate text-[11px] text-muted-foreground">{display.secondary}</span> : null}
+                    </span>
+                  </CommandItem>
+                );
+              })}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </div>
+    </Popover>
   );
 }
 
@@ -290,7 +311,7 @@ function SelectBox(props: {
 }) {
   return (
     <select
-      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+      className="h-8 w-full rounded-md border border-input bg-card px-3 text-[13px]"
       value={text(props.value)}
       onChange={(event) => props.onChange(event.target.value)}
     >
@@ -734,8 +755,9 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
             <div className="mb-3">
               <h2 className="text-base font-semibold">Thông tin khách hàng</h2>
             </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
-              <div className="xl:col-span-4">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 lg:col-span-2">
+              <div>
                 <Label required={metaRequired("customer")}>{metaLabel("customer", "Khách hàng")}</Label>
                 <div className="flex gap-1.5">
                   <div className="min-w-0 flex-1">
@@ -755,7 +777,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="size-9 shrink-0"
+                    className="size-8 shrink-0"
                     title="Thêm khách hàng"
                     onClick={() => openLinkedCreate("Customer")}
                   >
@@ -764,49 +786,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                 </div>
               </div>
 
-              <div className="xl:col-span-2">
-                <Label>SĐT</Label>
-                <Input
-                  value={phoneValue}
-                  placeholder="Số điện thoại"
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setCustomerPhone(value);
-                    if (salesPhoneField) setHeaderField(salesPhoneField, value || undefined);
-                  }}
-                  readOnly={!salesPhoneField}
-                  className={!salesPhoneField ? "bg-muted/20" : undefined}
-                />
-              </div>
-
-              <div className="md:col-span-2 xl:col-span-6">
-                <Label required={metaRequired("install_address")}>{metaLabel("install_address", "Địa chỉ")}</Label>
-                <Input
-                  value={text(header.install_address)}
-                  placeholder="Địa chỉ giao / lắp đặt"
-                  onChange={(event) => setHeaderField("install_address", event.target.value || undefined)}
-                />
-              </div>
-
-              <div className="xl:col-span-2">
-                <Label required={metaRequired("transaction_date")}>Ngày đặt hàng</Label>
-                <Input
-                  type="date"
-                  value={text(header.transaction_date)}
-                  onChange={(event) => setHeaderField("transaction_date", event.target.value, true)}
-                />
-              </div>
-
-              <div className="xl:col-span-2">
-                <Label required={metaRequired("delivery_date")}>{metaLabel("delivery_date", "Ngày giao hàng")}</Label>
-                <Input
-                  type="date"
-                  value={text(header.delivery_date)}
-                  onChange={(event) => setHeaderField("delivery_date", event.target.value)}
-                />
-              </div>
-
-              <div className="md:col-span-2 xl:col-span-4">
+              <div>
                 <Label required={metaRequired("responsible_person")}>Nhân viên bán hàng phụ trách</Label>
                 <div className="flex gap-1.5">
                   <div className="min-w-0 flex-1">
@@ -826,7 +806,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="size-9 shrink-0"
+                    className="size-8 shrink-0"
                     title="Thêm nhân viên"
                     onClick={() => openLinkedCreate("Employee")}
                   >
@@ -834,6 +814,53 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                   </Button>
                 </div>
               </div>
+
+              <div>
+                <Label>SĐT</Label>
+                <Input
+                  value={phoneValue}
+                  placeholder="Số điện thoại"
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomerPhone(value);
+                    if (salesPhoneField) setHeaderField(salesPhoneField, value || undefined);
+                  }}
+                  readOnly={!salesPhoneField}
+                  className={!salesPhoneField ? "bg-muted/20" : undefined}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label required={metaRequired("install_address")}>{metaLabel("install_address", "Địa chỉ")}</Label>
+                <Input
+                  value={text(header.install_address)}
+                  placeholder="Địa chỉ giao / lắp đặt"
+                  onChange={(event) => setHeaderField("install_address", event.target.value || undefined)}
+                />
+              </div>
+
+              </div>
+
+              <div className="grid content-start gap-3 rounded-lg border bg-muted/10 p-3">
+              <div>
+                <Label required={metaRequired("transaction_date")}>Ngày đặt hàng</Label>
+                <Input
+                  type="date"
+                  value={text(header.transaction_date)}
+                  onChange={(event) => setHeaderField("transaction_date", event.target.value, true)}
+                />
+              </div>
+
+              <div>
+                <Label required={metaRequired("delivery_date")}>{metaLabel("delivery_date", "Ngày giao hàng")}</Label>
+                <Input
+                  type="date"
+                  value={text(header.delivery_date)}
+                  onChange={(event) => setHeaderField("delivery_date", event.target.value)}
+                />
+              </div>
+
+            </div>
             </div>
           </section>
 
@@ -957,7 +984,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
                         <div className="xl:col-span-2">
                           <Label>Phương án bán</Label>
                           <select
-                            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            className="h-8 w-full rounded-md border border-input bg-card px-3 text-[13px]"
                             value={text(line.sales_option)}
                             onChange={(event) => commitLine(
                               line._key,

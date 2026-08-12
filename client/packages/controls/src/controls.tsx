@@ -5,7 +5,7 @@
  * xử lý thống nhất. Link dùng services.searchLink (combobox popover). Giữ MASK để selfcheck logic ổn.
  */
 import { type ChangeEvent, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
-import { Check, ChevronsUpDown, Loader2, MapPin, Plus, TriangleAlert } from "lucide-react";
+import { Check, ChevronDown, Loader2, MapPin, Plus, TriangleAlert } from "lucide-react";
 import { buildLinkFilters, formatDuration, getNumberFormatInfo, linkDisplay } from "@metaforge/core";
 import {
   cn, Input, Textarea, Checkbox,
@@ -1125,7 +1125,7 @@ export function LinkCombobox({
             {value && pickedDesc && pickedDesc !== value && !compact
               ? <span className="ml-1.5 text-xs text-muted-foreground">· {value}</span> : null}
           </span>
-          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          <ChevronDown className="ml-2 size-4 shrink-0 opacity-60" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
       {/*

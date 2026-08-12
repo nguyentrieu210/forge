@@ -1,6 +1,27 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+
+const viewsSource = fileURLToPath(new URL("../../packages/views/src", import.meta.url));
+const viewsDevAliases = [
+  ["@metaforge/views/provider", `${viewsSource}/container/provider.tsx`],
+  ["@metaforge/views/registry", `${viewsSource}/registry.ts`],
+  ["@metaforge/views/url-state", `${viewsSource}/list/useListState.ts`],
+  ["@metaforge/views/doctype-workspace", `${viewsSource}/app/DoctypeWorkspace.tsx`],
+  ["@metaforge/views/overview", `${viewsSource}/overview/OverviewContainer.tsx`],
+  ["@metaforge/views/process", `${viewsSource}/process/ProcessContainer.tsx`],
+  ["@metaforge/views/calendar", `${viewsSource}/calendar/CalendarContainer.tsx`],
+  ["@metaforge/views/catalog", `${viewsSource}/catalog/ApplicationCatalogContainer.tsx`],
+  ["@metaforge/views/permissions", `${viewsSource}/access/PermissionCenter.tsx`],
+  ["@metaforge/views/workspace", `${viewsSource}/container/WorkspaceContainer.tsx`],
+  ["@metaforge/views/report", `${viewsSource}/report/ReportContainer.tsx`],
+  ["@metaforge/views/import", `${viewsSource}/system/Import.tsx`],
+  ["@metaforge/views/action", `${viewsSource}/action/NativeActionScreen.tsx`],
+  ["@metaforge/views/screen", `${viewsSource}/screen/NativeScreenView.tsx`],
+  ["@metaforge/views/matrix", `${viewsSource}/matrix/index.ts`],
+  ["@metaforge/views", `${viewsSource}/index.ts`],
+].map(([find, replacement]) => ({ find, replacement }));
 
 /**
  * Desk chạy cục bộ.
@@ -22,6 +43,7 @@ export default defineConfig({
   // a bundle-size optimization.
   resolve: {
     dedupe: ["react", "react-dom"],
+    alias: viewsDevAliases,
   },
   server: {
     proxy: {
