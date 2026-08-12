@@ -56,7 +56,7 @@ jobs:
           - Vendored runtime source: packages/core/src (runtime-only subset)
           - Runtime dist: official npm artifact @glideapps/glide-data-grid@6.0.4-alpha24
 
-          Forge keeps the upstream runtime source and matching built distribution in-repo. `forge-bundle/` bundles Glide and its non-React runtime dependencies for the AlumDoor preview/runtime, so local Vite does not require an extra install step.
+          Forge keeps the upstream runtime source and matching built distribution in-repo. forge-bundle/ bundles Glide and its non-React runtime dependencies for the AlumDoor preview/runtime, so local Vite does not require an extra install step.
           EOF
           tarball=$(npm pack @glideapps/glide-data-grid@6.0.4-alpha24 --pack-destination /tmp --silent | tail -1)
           tar -xzf "/tmp/${tarball}" -C /tmp/glide-npm
@@ -87,7 +87,9 @@ jobs:
             --external:react-dom \
             --external:react/jsx-runtime \
             --outfile=vendor/glide-data-grid/forge-bundle/index.js
-          cp vendor/glide-data-grid/dist/index.css vendor/glide-data-grid/forge-bundle/index.css
+          pnpm dlx esbuild@0.25.12 vendor/glide-data-grid/dist/index.css \
+            --bundle \
+            --outfile=vendor/glide-data-grid/forge-bundle/index.css
           cat > vendor/glide-data-grid/forge-bundle/index.d.ts <<'EOF'
           export * from "../dist/dts/index";
           EOF
