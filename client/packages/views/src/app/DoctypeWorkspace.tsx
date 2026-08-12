@@ -4,11 +4,12 @@
  * mobile dùng một pane; tạo mới mở modal lớn. DocType có canonical Bulk policy
  * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
-import { useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
 import { resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
+import { useMetaForge } from "../container/provider.js";
 import { SplitView } from "../detail/SplitView.js";
 import { ListContainer } from "../container/ListContainer.js";
 import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
@@ -26,6 +27,8 @@ import {
   V3_VIEW_SWITCHER_CLASS,
 } from "../data-surface/v3.js";
 
+const AlumdoorSalesOrderCreate = lazy(() => import("./vertical/alumdoor/AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
+
 export interface DoctypeWorkspaceProps {
   doctype: string;
   /** Optional localized screen title when a route represents a richer business center. */
@@ -40,6 +43,7 @@ export interface DoctypeWorkspaceProps {
 
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
+  const { formProfiles } = useMetaForge();
   const [closeRequest, setCloseRequest] = useState(0);
   const [bulkDirty, setBulkDirty] = useState(false);
   const [confirmBulkExit, setConfirmBulkExit] = useState(false);
@@ -52,6 +56,13 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const isNew = name === "new";
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
   const isTree = titleMeta.data?.is_tree === 1;
+  /**
+   * AlumDoor được runtime đánh dấu bằng form profile riêng cho Item Group. Chỉ profile của
+   * vertical này giữ `default_measurement_profile`; nhờ vậy generic workspace không chiếm
+   * màn Sales Order của app khác. Màn chuyên biệt vẫn lazy-load, nên app khác không tải code cửa.
+   */
+  const isAlumdoorProfile = Boolean(formProfiles?.["Item Group"]?.keep?.includes("default_measurement_profile"));
+  const useAlumdoorSalesCreate = isNew && doctype === "Sales Order" && isAlumdoorProfile;
   /**
    * Kích cỡ màn tạo mới đi theo PHẠM VI của chứng từ, không phải theo khai báo riêng của từng app.
    *
@@ -202,7 +213,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         <DialogContent
           className={hasChildTable ? V3_FULL_CREATE_DIALOG_CLASS : V3_QUICK_ENTRY_DIALOG_CLASS}
           data-ui-version="v3"
-          data-surface={hasChildTable ? "full-create" : "quick-entry"}
+          data-surface={useAlumdoorSalesCreate ? "alumdoor-sales-create" : hasChildTable ? "full-create" : "quick-entry"}
           /**
            * Một lớp nổi CHỒNG LÊN không phải là "bấm ra ngoài".
            *
@@ -230,16 +241,29 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             <DialogTitle className="text-xl font-semibold tracking-tight">{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-            <NewFormContainer
-              doctype={doctype}
-              fullWidth={hasChildTable}
-              closeRequest={closeRequest}
-              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-              onPreviewCreated={(newName) => onNavigate(printBase === "/print"
-                ? buildPrintPath(doctype, newName)
-                : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)}
-              onCancel={() => onNavigate(listPath)}
-            />
+            {useAlumdoorSalesCreate ? (
+              <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở màn bán hàng AlumDoor…</div>}>
+                <AlumdoorSalesOrderCreate
+                  closeRequest={closeRequest}
+                  onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+                  onPreviewCreated={(newName) => onNavigate(printBase === "/print"
+                    ? buildPrintPath(doctype, newName)
+                    : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)}
+                  onCancel={() => onNavigate(listPath)}
+                />
+              </Suspense>
+            ) : (
+              <NewFormContainer
+                doctype={doctype}
+                fullWidth={hasChildTable}
+                closeRequest={closeRequest}
+                onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+                onPreviewCreated={(newName) => onNavigate(printBase === "/print"
+                  ? buildPrintPath(doctype, newName)
+                  : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)}
+                onCancel={() => onNavigate(listPath)}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
