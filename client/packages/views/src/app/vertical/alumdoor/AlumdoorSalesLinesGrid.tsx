@@ -51,6 +51,7 @@ export interface SalesGridRow {
 
 export interface AlumdoorSalesLinesGridProps {
   rows: SalesGridRow[];
+  itemField: DocField;
   selectedKey?: string;
   onSelectedKeyChange: (key: string) => void;
   onChange: (
@@ -93,10 +94,6 @@ function selectField(fieldname: string, label: string, choices: SalesGridChoice[
     options: ["", ...values].join("\n"),
     optionLabels: Object.fromEntries(choices.map((choice) => [choice.value, choice.label])),
   } as DocField;
-}
-
-function linkField(fieldname: string, label: string, doctype: string): DocField {
-  return { fieldname, label, fieldtype: "Link", options: doctype } as DocField;
 }
 
 function GridForgeEditor(props: {
@@ -173,9 +170,6 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
 
     switch (column) {
       case "item":
-        // Forge LinkControl owns its own dropdown/popover. Do not mount it inside
-        // Glide's overlay editor because the two overlay lifecycles compete for
-        // outside-click events. A persistent Forge popup is opened by onCellClicked.
         return textCell(row.itemCode, `${row.itemLabel || row.itemCode || "Chọn mặt hàng…"}  ▾`, false, "left", false);
       case "sales_option":
         return textCell(
@@ -268,7 +262,11 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
   const status = selected?.pricingError || selected?.error || selected?.availability || "";
 
   return (
-    <div className="relative overflow-visible rounded-lg border bg-card" data-surface="alumdoor-sales-lines-glide-grid">
+    <div
+      className="relative overflow-visible rounded-lg border bg-card"
+      data-surface="alumdoor-sales-lines-glide-grid"
+      data-row-count={props.rows.length}
+    >
       <div className="flex min-h-10 items-center justify-between gap-2 border-b px-2.5 py-1.5">
         <div className="min-w-0">
           <div className="text-xs font-semibold">Bảng sản phẩm</div>
@@ -288,7 +286,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-b-lg">
+      <div className="overflow-hidden rounded-b-lg" data-surface="alumdoor-sales-grid-canvas-host">
         <DataEditor
           columns={columns}
           rows={props.rows.length}
@@ -335,10 +333,11 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
           className="absolute z-[90] w-[360px] max-w-[calc(100%-3rem)] rounded-md border bg-card p-1 shadow-2xl"
           style={{ left: 46, top: 74 + itemEditorIndex * 38 }}
           data-surface="alumdoor-item-link-popup"
+          data-row-key={itemEditorRow.key}
           onPointerDown={(event) => event.stopPropagation()}
         >
           <ItemControl
-            field={linkField("item_code", "Mặt hàng", "Item")}
+            field={props.itemField}
             id={`sales-grid-item-${itemEditorRow.key}`}
             value={itemEditorRow.itemCode}
             onChange={(next) => {
@@ -346,7 +345,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
               setItemEditorKey(undefined);
             }}
             services={props.services}
-            parentDoctype="Sales Order"
+            parentDoctype="Sales Order Item"
             docValues={{ ...props.parentDocValues, ...itemEditorRow.docValues }}
             roles={props.roles}
             compact
