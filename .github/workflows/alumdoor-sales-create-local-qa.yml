@@ -1,75 +1,47 @@
-name: Recover Forge Local Dev
+name: Diagnose Forge Local Dev
 
 on:
   pull_request:
     branches: [main]
-    types: [reopened, synchronize]
+    types: [synchronize]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: recover-forge-local-dev
-  cancel-in-progress: false
-
 jobs:
-  recover-local-dev:
-    runs-on: [self-hosted]
-    timeout-minutes: 8
-    steps:
-      - name: Start canonical local Forge services detached from runner cleanup
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $script = 'C:\alumdoor\start-forge.bat'
-          if (-not (Test-Path $script)) { throw "Missing recovery script: $script" }
-
-          # GitHub Runner kills child processes that inherit its tracking id when a job ends.
-          # Clear the marker before start-forge spawns the long-lived local Worker/Desk.
-          $env:RUNNER_TRACKING_ID = ''
-          & cmd.exe /c $script
-          if ($LASTEXITCODE -ne 0) {
-            if (Test-Path 'C:\alumdoor\start-forge.log') { Get-Content 'C:\alumdoor\start-forge.log' -Tail 200 }
-            throw "start-forge.bat failed with exit code $LASTEXITCODE"
-          }
-
-      - name: Verify services before runner cleanup
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $backendReady = $false
-          $deskReady = $false
-          for ($i = 0; $i -lt 60; $i++) {
-            if (-not $backendReady) {
-              node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e.message);process.exit(1)})"
-              if ($LASTEXITCODE -eq 0) { $backendReady = $true }
-            }
-            if (-not $deskReady) {
-              node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('desk',r.status);process.exit(r.status<500?0:1)}).catch(e=>{console.error(e.message);process.exit(1)})"
-              if ($LASTEXITCODE -eq 0) { $deskReady = $true }
-            }
-            if ($backendReady -and $deskReady) { break }
-            Start-Sleep -Seconds 2
-          }
-          Write-Host "backend8799=$backendReady desk5173=$deskReady"
-          if (-not ($backendReady -and $deskReady)) {
-            if (Test-Path 'C:\alumdoor\start-forge.log') { Get-Content 'C:\alumdoor\start-forge.log' -Tail 200 }
-            Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 8799,5173 } | Format-Table -AutoSize
-            throw 'Forge local services did not become ready.'
-          }
-
-  verify-persisted-after-runner-cleanup:
-    needs: recover-local-dev
+  diagnose-local-dev:
     runs-on: [self-hosted]
     timeout-minutes: 3
     steps:
-      - name: Confirm backend and Desk survived prior job cleanup
+      - name: Inspect listeners, owners and HTTP surfaces without mutation
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
-          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('persisted backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 did not survive runner cleanup.' }
-          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('persisted desk',r.status);process.exit(r.status<500?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Desk 5173 did not survive runner cleanup.' }
-          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 8799,5173 } | Format-Table -AutoSize
+          $ErrorActionPreference = 'Continue'
+          foreach ($port in 8799,5173) {
+            Write-Host "=== PORT $port ==="
+            $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+            $listeners | Format-Table -AutoSize
+            foreach ($l in $listeners) {
+              $p = Get-CimInstance Win32_Process -Filter "ProcessId = $($l.OwningProcess)" -ErrorAction SilentlyContinue
+              if ($p) {
+                Write-Host "PID=$($p.ProcessId) NAME=$($p.Name)"
+                Write-Host "CMD=$($p.CommandLine)"
+                if ($p.ParentProcessId) {
+                  $parent = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.ParentProcessId)" -ErrorAction SilentlyContinue
+                  if ($parent) { Write-Host "PARENT PID=$($parent.ProcessId) NAME=$($parent.Name) CMD=$($parent.CommandLine)" }
+                }
+              }
+            }
+          }
+
+          foreach ($url in @(
+            'http://127.0.0.1:8799/api/method/metaforge.api.get_boot',
+            'http://localhost:8799/api/method/metaforge.api.get_boot',
+            'http://127.0.0.1:5173/',
+            'http://localhost:5173/',
+            'http://127.0.0.1:5173/index.html',
+            'http://localhost:5173/index.html'
+          )) {
+            node -e "fetch('$url',{signal:AbortSignal.timeout(5000)}).then(async r=>{console.log('$url',r.status,r.headers.get('content-type'),(await r.text()).slice(0,120).replace(/\\s+/g,' '))}).catch(e=>console.log('$url','ERROR',e.message))"
+          }
