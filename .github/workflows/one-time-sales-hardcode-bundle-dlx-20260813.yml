@@ -33,7 +33,7 @@ jobs:
         working-directory: client
         run: pnpm install --no-frozen-lockfile
 
-      - name: Bundle hardcoded Sales Order for browser
+      - name: Bundle hardcoded Sales Order source for browser
         working-directory: client
         run: |
           pnpm dlx esbuild@0.25.12 packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx \
@@ -41,6 +41,7 @@ jobs:
             --platform=browser \
             --format=esm \
             --target=es2022 \
+            '--external:@metaforge/*' \
             --outfile=/tmp/alumdoor-sales-order.js
           test -s /tmp/alumdoor-sales-order.js
 
