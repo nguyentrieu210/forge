@@ -1,4 +1,4 @@
-name: Recover Forge Local Runtime
+name: Recover Forge Local 5173 IPv6
 
 on:
   pull_request:
@@ -9,103 +9,77 @@ permissions:
   contents: read
 
 concurrency:
-  group: recover-forge-local-runtime
+  group: recover-forge-local-5173-ipv6
   cancel-in-progress: false
 
 jobs:
-  recover-runtime:
+  rescue-5173:
     runs-on: [self-hosted]
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
-      - name: Verify backend and inspect canonical runtime
+      - name: Verify backend and current 5173 surfaces
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
           if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 unhealthy.' }
+          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>console.log('ipv4-5173',r.status,r.headers.get('content-type'))).catch(e=>console.log('ipv4-5173 ERROR',e.message))"
+          node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>console.log('ipv6-before',r.status,r.headers.get('content-type'))).catch(e=>console.log('ipv6-before ERROR',e.message))"
+          node -e "require('node:dns').lookup('localhost',{all:true},(e,a)=>console.log('localhost-addresses',e||a))"
 
-          $root='C:\alumdoor'
-          $runtime=Join-Path $root 'client\apps\runtime'
-          Write-Host "ROOT_EXISTS=$(Test-Path $root) RUNTIME_EXISTS=$(Test-Path $runtime)"
-          foreach ($f in @('index.html','package.json','vite.config.ts','src\bootstrap.ts')) {
-            $p=Join-Path $runtime $f
-            if (Test-Path $p) {
-              $item=Get-Item $p
-              Write-Host "FILE $f size=$($item.Length) modified=$($item.LastWriteTime.ToString('o'))"
-            } else { Write-Host "MISSING $f" }
-          }
-          git -C $root rev-parse --abbrev-ref HEAD
-          git -C $root rev-parse HEAD
-          git -C $root status --short -- client/apps/runtime client/packages/views | Select-Object -First 200
-          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(async r=>console.log('desk5173',r.status,r.headers.get('content-type'),(await r.text()).slice(0,100))).catch(e=>console.log('desk5173 ERROR',e.message))"
-
-      - name: Restore only missing tracked runtime entry files
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $root='C:\alumdoor'
-          $missing=@()
-          foreach ($rel in @('client/apps/runtime/index.html','client/apps/runtime/package.json','client/apps/runtime/vite.config.ts','client/apps/runtime/src/bootstrap.ts')) {
-            if (-not (Test-Path (Join-Path $root ($rel -replace '/','\')))) { $missing += $rel }
-          }
-          if ($missing.Count -gt 0) {
-            Write-Host "Restoring missing tracked files only: $($missing -join ', ')"
-            foreach ($rel in $missing) { git -C $root restore --source=HEAD -- $rel }
-          } else {
-            Write-Host 'No tracked runtime entry files are missing; no source mutation performed.'
-          }
-
-      - name: Probe 5173 after safe restore
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Continue'
-          for ($i=0; $i -lt 10; $i++) {
-            node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('desk5173-after',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
-            if ($LASTEXITCODE -eq 0) { exit 0 }
-            Start-Sleep -Seconds 1
-          }
-          Write-Host '5173 remains stale; continuing to isolated fallback on 5174.'
-          exit 0
-
-      - name: Start healthy fallback Desk on 5174 detached from runner cleanup
+      - name: Start healthy Desk on IPv6 loopback port 5173
         shell: powershell
         env:
           RUNNER_TRACKING_ID: ""
         run: |
           $ErrorActionPreference = 'Stop'
-          $existing = Get-NetTCPConnection -LocalPort 5174 -State Listen -ErrorAction SilentlyContinue
-          if (-not $existing) {
+          $alreadyHealthy = $false
+          node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -eq 0) { $alreadyHealthy = $true }
+          if (-not $alreadyHealthy) {
             $env:VITE_FORGE_BACKEND='http://127.0.0.1:8799'
             $runtime='C:\alumdoor\client\apps\runtime'
-            $log='C:\alumdoor\desk-5174.log'
-            $cmd="pnpm run dev -- --host 127.0.0.1 --port 5174 > `"$log`" 2>&1"
+            $log='C:\alumdoor\desk-5173-ipv6.log'
+            $cmd="pnpm run dev -- --host ::1 --port 5173 > `"$log`" 2>&1"
             Start-Process -FilePath 'cmd.exe' -ArgumentList '/c',$cmd -WorkingDirectory $runtime -WindowStyle Hidden
           }
           $ok=$false
           for ($i=0; $i -lt 60; $i++) {
-            node -e "fetch('http://127.0.0.1:5174/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('desk5174',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+            node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('ipv6-5173',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
             if ($LASTEXITCODE -eq 0) { $ok=$true; break }
             Start-Sleep -Seconds 2
           }
           if (-not $ok) {
-            if (Test-Path 'C:\alumdoor\desk-5174.log') { Get-Content 'C:\alumdoor\desk-5174.log' -Tail 200 }
-            throw 'Fallback Desk 5174 failed.'
+            if (Test-Path 'C:\alumdoor\desk-5173-ipv6.log') { Get-Content 'C:\alumdoor\desk-5173-ipv6.log' -Tail 200 }
+            throw 'Could not bind healthy Desk to [::1]:5173.'
           }
 
+      - name: Verify localhost resolves to a healthy 5173 response
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          Write-Host '--- curl localhost ---'
+          & curl.exe -sS -D - -o NUL --max-time 5 http://localhost:5173/
+          Write-Host "curl_exit=$LASTEXITCODE"
+          Write-Host '--- node localhost ---'
+          node -e "fetch('http://localhost:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('localhost-node',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
+          Write-Host "node_exit=$LASTEXITCODE"
+          Write-Host '--- listeners ---'
+          Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          exit 0
+
   verify-persisted:
-    needs: recover-runtime
+    needs: rescue-5173
     runs-on: [self-hosted]
     timeout-minutes: 3
     steps:
-      - name: Confirm backend and at least one Desk survived runner cleanup
+      - name: Confirm IPv6 Desk survived runner cleanup
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend-final',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(()=>process.exit(1))"
           if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 down.' }
-          $ok=$false
-          foreach ($port in 5173,5174) {
-            node -e "fetch('http://127.0.0.1:$port/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('desk-final-$port',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
-            if ($LASTEXITCODE -eq 0) { $ok=$true }
-          }
-          if (-not $ok) { throw 'No healthy Desk survived cleanup.' }
+          node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('ipv6-final',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'IPv6 Desk 5173 did not survive cleanup.' }
+          & curl.exe -sS -D - -o NUL --max-time 5 http://localhost:5173/
+          Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize
