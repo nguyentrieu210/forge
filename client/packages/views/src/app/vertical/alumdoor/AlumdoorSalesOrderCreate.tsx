@@ -88,6 +88,10 @@ function normalized(value: unknown): string {
     .toLocaleLowerCase("vi");
 }
 
+function commercialNormalized(value: unknown): string {
+  return text(value).toLocaleLowerCase("vi");
+}
+
 function today(): string {
   const d = new Date();
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -226,15 +230,15 @@ function optionConditions(value: unknown): Json[] {
 
 function optionComparable(value: unknown): string | number | boolean | null {
   if (typeof value === "number" || typeof value === "boolean") return value;
-  if (typeof value === "string") return normalized(value);
-  return value == null ? null : normalized(value);
+  if (typeof value === "string") return commercialNormalized(value);
+  return value == null ? null : commercialNormalized(value);
 }
 
 function salesOptionApplicable(option: Doc, line: SalesLine): boolean {
   const itemCode = text(option.item_code);
   if (itemCode && itemCode !== text(line.item_code)) return false;
   const itemGroup = text(option.item_group);
-  if (itemGroup && normalized(itemGroup) !== normalized(line._context?.item_group)) return false;
+  if (itemGroup && commercialNormalized(itemGroup) !== commercialNormalized(line._context?.item_group)) return false;
   const facts: Json = {
     ...line,
     item_code: line.item_code,
@@ -349,6 +353,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
   const [fatal, setFatal] = useState("");
   const closeSeen = useRef(props.closeRequest ?? 0);
   const lineSeq = useRef(new Map<string, number>());
+  const headerSeq = useRef(0);
 
   const childFields = useMemo(
     () => childMeta?.fields.map((field) => field.fieldname).filter(Boolean) ?? [],
@@ -476,16 +481,21 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
   }, [adapter, cleanLine, lines]);
 
   const setHeaderField = useCallback((field: string, value: unknown, preview = false) => {
+    const seq = ++headerSeq.current;
     const next = { ...header, [field]: value };
     setHeader(next);
     if (!preview) return;
     void previewDocument(next, field)
-      .then((resolved) => setHeader(resolved))
-      .catch((error) => toast.error(mapError(error).message));
+      .then((resolved) => {
+        if (headerSeq.current === seq) setHeader(resolved);
+      })
+      .catch((error) => {
+        if (headerSeq.current === seq) toast.error(mapError(error).message);
+      });
   }, [header, previewDocument]);
 
   const loadSalesOptions = useCallback(async (itemCode: string, itemGroup: string): Promise<Doc[]> => {
-    if (!itemGroup) return [];
+    if (!itemCode) return [];
     try {
       const rows = await adapter.getList("Sales Option", {
         fields: [
@@ -503,11 +513,17 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
           "discount_basis_variant",
           "sales_package",
         ],
-        filters: { item_group: itemGroup, disabled: 0 },
-        pageLength: 100,
+        filters: { disabled: 0 },
+        pageLength: 1000,
       });
       return rows
-        .filter((row) => !text(row.item_code) || text(row.item_code) === itemCode)
+        .filter((row) => {
+          const scopedItem = text(row.item_code);
+          if (scopedItem && scopedItem !== itemCode) return false;
+          const scopedGroup = text(row.item_group);
+          if (scopedGroup && commercialNormalized(scopedGroup) !== commercialNormalized(itemGroup)) return false;
+          return true;
+        })
         .sort((left, right) => (Number(right.priority) || 0) - (Number(left.priority) || 0) || text(left.option_label).localeCompare(text(right.option_label), "vi"));
     } catch {
       return [];
@@ -728,6 +744,7 @@ _error: mapError(error).message,
       return;
     }
     if (field === "item_code") {
+      lineSeq.current.set(key, (lineSeq.current.get(key) ?? 0) + 1);
       const itemCode = text(value);
       const reset: Partial<SalesLine> = {
         item_code: itemCode || undefined,
