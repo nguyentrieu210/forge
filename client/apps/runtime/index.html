@@ -50,5 +50,8 @@
       if (fixture) import("/src/dialog-wheel-fixture-main.tsx");
       else import("/src/bootstrap.ts");
     </script>
+    <!-- Glide Data Grid mounts every editable-cell overlay here. Keep this as the
+         last body-level container so Link/Select/Number editors work in all grids. -->
+    <div id="portal"></div>
   </body>
 </html>

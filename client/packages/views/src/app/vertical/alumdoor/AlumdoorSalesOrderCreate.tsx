@@ -1039,7 +1039,7 @@ _error: mapError(error).message,
     <h2 className="text-sm font-semibold">{"Th\u00f4ng tin kh\u00e1ch h\u00e0ng"}</h2>
   </div>
 
-  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(320px,2.2fr)_minmax(150px,.8fr)_minmax(260px,1.5fr)_150px_150px]">
+  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(280px,2.2fr)_minmax(220px,1.25fr)_minmax(150px,.8fr)_minmax(240px,1.5fr)_150px_150px]">
     <StandardField
       id="sales-customer"
       field={headerField("customer", "Kh\u00e1ch h\u00e0ng", "Link", "Customer")}
@@ -1052,6 +1052,21 @@ _error: mapError(error).message,
       roles={roles}
       required={metaRequired("customer")}
       className="xl:order-1"
+    />
+
+    <StandardField
+      id="sales-price-list"
+      field={headerField("selling_price_list", "B\u1ea3ng gi\u00e1", "Link", "Price List")}
+      value={header.selling_price_list}
+      onChange={(value) => setHeaderField("selling_price_list", text(value) || undefined, true)}
+      registry={registry}
+      services={services}
+      parentDoctype="Sales Order"
+      docValues={header}
+      roles={roles}
+      required={metaRequired("selling_price_list")}
+      label="B\u1ea3ng gi\u00e1"
+      className="xl:order-2"
     />
 
     <StandardField
@@ -1069,7 +1084,7 @@ _error: mapError(error).message,
       docValues={header}
       roles={roles}
       readOnly={!salesPhoneField}
-      className="xl:order-2"
+      className="xl:order-3"
     />
 
     <StandardField
@@ -1084,7 +1099,7 @@ _error: mapError(error).message,
       roles={roles}
       required={metaRequired("install_address")}
       label="Địa chỉ giao / lắp đặt"
-      className="md:col-span-2 xl:order-6 xl:col-span-5"
+      className="md:col-span-2 xl:order-7 xl:col-span-6"
     />
 
     <StandardField
@@ -1099,7 +1114,7 @@ _error: mapError(error).message,
       roles={roles}
       required={metaRequired("transaction_date")}
       label="Ngày đặt hàng"
-      className="xl:order-4"
+      className="xl:order-5"
     />
 
     <StandardField
@@ -1114,7 +1129,7 @@ _error: mapError(error).message,
       roles={roles}
       required={metaRequired("delivery_date")}
       label="Ngày giao"
-      className="xl:order-5"
+      className="xl:order-6"
     />
 
     <StandardField
@@ -1129,7 +1144,7 @@ _error: mapError(error).message,
       roles={roles}
       required={metaRequired("responsible_person")}
       label="Nhân viên bán hàng"
-      className="md:col-span-2 xl:order-3 xl:col-span-1"
+      className="md:col-span-2 xl:order-4 xl:col-span-1"
     />
   </div>
 </section>
@@ -1157,6 +1172,9 @@ _error: mapError(error).message,
     services={services}
     roles={roles}
     parentDocValues={header}
+    childDoctype={childMeta.name}
+    itemField={childField("item_code")}
+    salesOptionField={childField("sales_option")}
   />
 
   {activeLine && text(activeLine.item_code) && activeDetailNeeded ? (
