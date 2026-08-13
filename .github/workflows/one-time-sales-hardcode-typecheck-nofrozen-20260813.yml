@@ -1,0 +1,52 @@
+name: One-time Sales hardcode typecheck no-frozen
+
+on:
+  push:
+    branches:
+      - fix/sales-hardcode-review-20260813
+    paths:
+      - ".github/workflows/one-time-sales-hardcode-typecheck-nofrozen-20260813.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/sales-hardcode-review-20260813
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install client workspace ignoring pre-existing stale lock
+        working-directory: client
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck views package
+        working-directory: client
+        run: pnpm --filter @metaforge/views typecheck
+
+      - name: Restore lockfile and verify diff
+        run: |
+          git restore client/pnpm-lock.yaml
+          git diff --check
+          test -z "$(git status --porcelain --untracked-files=no | grep -v '^ D .github/workflows/one-time-sales-hardcode-typecheck-nofrozen-20260813.yml$' || true)"
+
+      - name: Remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-time-sales-hardcode-typecheck-nofrozen-20260813.yml
+          git commit -m "chore(ui): record Sales hardcode typecheck"
+          git push origin HEAD:fix/sales-hardcode-review-20260813
