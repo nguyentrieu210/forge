@@ -105,7 +105,11 @@ export interface ProvideEditorProps<T extends GridCell> {
   readonly portalElementRef?: React.RefObject<HTMLElement>;
 }
 
-export type ProvideEditorComponent<T extends GridCell> = React.FunctionComponent<ProvideEditorProps<T>>;
+// Use a plain call signature rather than React.FunctionComponent here. Forge derives
+// the editor prop type with Parameters<ProvideEditorComponent<...>>; React 19's
+// FunctionComponent compatibility signature widens that derivation to unknown under
+// the repository's TS version, even though Glide invokes editors as normal functions.
+export type ProvideEditorComponent<T extends GridCell> = (props: ProvideEditorProps<T>) => React.ReactNode;
 export type ProvideEditorCallbackResult<T extends GridCell> =
   | (ProvideEditorComponent<T> & { disablePadding?: boolean; disableStyling?: boolean })
   | { editor: ProvideEditorComponent<T>; disablePadding?: boolean; disableStyling?: boolean }
