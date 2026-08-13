@@ -1,4 +1,4 @@
-name: Recover Forge Localhost 5173
+name: Recover Forge Local Runtime Final
 
 on:
   pull_request:
@@ -9,26 +9,71 @@ permissions:
   contents: read
 
 concurrency:
-  group: recover-forge-local-5173-ipv6
+  group: recover-forge-local-runtime-final
   cancel-in-progress: true
 
 jobs:
-  rescue-5173:
+  recover-runtime:
     runs-on: [self-hosted]
-    timeout-minutes: 5
+    timeout-minutes: 6
     steps:
-      - name: Require healthy backend and fallback Desk
+      - name: Start backend 8799 detached from runner cleanup
         shell: powershell
+        env:
+          RUNNER_TRACKING_ID: ""
         run: |
           $ErrorActionPreference = 'Stop'
-          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 unhealthy.' }
-          node -e "fetch('http://127.0.0.1:5174/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('fallback5174',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Healthy fallback Desk 5174 is unavailable.' }
-          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>console.log('stale-ipv4-5173',r.status,r.headers.get('content-type'))).catch(e=>console.log('stale-ipv4 ERROR',e.message))"
-          node -e "require('node:dns').lookup('localhost',{all:true},(e,a)=>console.log('localhost-addresses',e||a))"
+          $healthy=$false
+          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit((r.ok||r.status===401||r.status===403)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -eq 0) { $healthy=$true }
+          if (-not $healthy) {
+            $existing=Get-NetTCPConnection -LocalPort 8799 -State Listen -ErrorAction SilentlyContinue
+            if ($existing) { throw 'Port 8799 is occupied but backend health probe failed; refusing to kill an unknown listener.' }
+            $server='C:\alumdoor\server'
+            $log='C:\alumdoor\backend-8799-live.log'
+            $cmd="set RUNNER_TRACKING_ID=&& pnpm run dev:alumdoor-local > `"$log`" 2>&1"
+            Start-Process -FilePath 'cmd.exe' -ArgumentList '/c',$cmd -WorkingDirectory $server -WindowStyle Hidden
+          }
+          $ok=$false
+          for ($i=0; $i -lt 90; $i++) {
+            node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(2500)}).then(r=>{console.log('backend8799',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ok=$true; break }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $ok) {
+            if (Test-Path 'C:\alumdoor\backend-8799-live.log') { Get-Content 'C:\alumdoor\backend-8799-live.log' -Tail 250 }
+            throw 'Backend 8799 did not become healthy.'
+          }
 
-      - name: Start IPv6-only localhost proxy 5173 to healthy Desk 5174
+      - name: Start healthy Desk 5174 detached from runner cleanup
+        shell: powershell
+        env:
+          RUNNER_TRACKING_ID: ""
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $healthy=$false
+          node -e "fetch('http://127.0.0.1:5174/',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -eq 0) { $healthy=$true }
+          if (-not $healthy) {
+            $existing=Get-NetTCPConnection -LocalPort 5174 -State Listen -ErrorAction SilentlyContinue
+            if ($existing) { throw 'Port 5174 is occupied but not healthy; refusing unknown listener.' }
+            $runtime='C:\alumdoor\client\apps\runtime'
+            $log='C:\alumdoor\desk-5174-live.log'
+            $cmd="set RUNNER_TRACKING_ID=&& set VITE_FORGE_BACKEND=http://127.0.0.1:8799&& pnpm run dev -- --host 127.0.0.1 --port 5174 > `"$log`" 2>&1"
+            Start-Process -FilePath 'cmd.exe' -ArgumentList '/c',$cmd -WorkingDirectory $runtime -WindowStyle Hidden
+          }
+          $ok=$false
+          for ($i=0; $i -lt 60; $i++) {
+            node -e "fetch('http://127.0.0.1:5174/',{signal:AbortSignal.timeout(2500)}).then(r=>{console.log('desk5174',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ok=$true; break }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $ok) {
+            if (Test-Path 'C:\alumdoor\desk-5174-live.log') { Get-Content 'C:\alumdoor\desk-5174-live.log' -Tail 250 }
+            throw 'Desk 5174 did not become healthy.'
+          }
+
+      - name: Start IPv6-only proxy for localhost 5173
         shell: powershell
         env:
           RUNNER_TRACKING_ID: ""
@@ -39,21 +84,11 @@ jobs:
           $proxy=@'
           import http from "node:http";
           import net from "node:net";
-
           const targetHost = "127.0.0.1";
           const targetPort = 5174;
-          const listenHost = "::1";
-          const listenPort = 5173;
-
           const server = http.createServer((req, res) => {
             const headers = { ...req.headers, host: `${targetHost}:${targetPort}` };
-            const upstream = http.request({
-              hostname: targetHost,
-              port: targetPort,
-              path: req.url,
-              method: req.method,
-              headers,
-            }, (upstreamRes) => {
+            const upstream = http.request({ hostname: targetHost, port: targetPort, path: req.url, method: req.method, headers }, (upstreamRes) => {
               res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
               upstreamRes.pipe(res);
             });
@@ -63,7 +98,6 @@ jobs:
             });
             req.pipe(upstream);
           });
-
           server.on("upgrade", (req, socket, head) => {
             const upstream = net.connect(targetPort, targetHost, () => {
               const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
@@ -76,69 +110,69 @@ jobs:
               if (head?.length) upstream.write(head);
               socket.pipe(upstream).pipe(socket);
             });
-            const fail = () => { try { socket.destroy(); } catch {} };
-            upstream.on("error", fail);
+            upstream.on("error", () => { try { socket.destroy(); } catch {} });
             socket.on("error", () => { try { upstream.destroy(); } catch {} });
           });
-
-          server.on("error", (error) => {
-            console.error(error);
-            process.exit(1);
-          });
-
-          server.listen({ host: listenHost, port: listenPort, ipv6Only: true }, () => {
-            console.log(`FORGE_LOCALHOST_PROXY_READY http://[${listenHost}]:${listenPort} -> http://${targetHost}:${targetPort}`);
+          server.on("error", (error) => { console.error(error); process.exit(1); });
+          server.listen({ host: "::1", port: 5173, ipv6Only: true }, () => {
+            console.log("FORGE_LOCALHOST_PROXY_READY [::1]:5173 -> 127.0.0.1:5174");
           });
           '@
           Set-Content -Path $proxyPath -Value $proxy -Encoding utf8
 
+          $healthy=$false
           node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(1500)}).then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) {
-            $cmd="node `"$proxyPath`" > `"$proxyLog`" 2>&1"
+          if ($LASTEXITCODE -eq 0) { $healthy=$true }
+          if (-not $healthy) {
+            $ipv6Listener=Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalAddress -match ':' }
+            if ($ipv6Listener) { throw 'IPv6 5173 is occupied but not healthy; refusing unknown listener.' }
+            $cmd="set RUNNER_TRACKING_ID=&& node `"$proxyPath`" > `"$proxyLog`" 2>&1"
             Start-Process -FilePath 'cmd.exe' -ArgumentList '/c',$cmd -WorkingDirectory 'C:\alumdoor' -WindowStyle Hidden
           }
-
           $ok=$false
-          for ($i=0; $i -lt 20; $i++) {
-            node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(2000)}).then(r=>{console.log('ipv6-proxy',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+          for ($i=0; $i -lt 30; $i++) {
+            node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(2000)}).then(r=>{console.log('ipv6proxy5173',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
             if ($LASTEXITCODE -eq 0) { $ok=$true; break }
             Start-Sleep -Milliseconds 500
           }
           if (-not $ok) {
-            if (Test-Path $proxyLog) { Get-Content $proxyLog -Tail 200 }
+            if (Test-Path $proxyLog) { Get-Content $proxyLog -Tail 250 }
             Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize
-            throw 'IPv6-only localhost proxy could not start on [::1]:5173.'
+            throw 'IPv6 proxy [::1]:5173 did not become healthy.'
           }
 
-      - name: Prove localhost 5173 path selection
+      - name: Verify exact localhost URL surface
         shell: powershell
         run: |
           $ErrorActionPreference = 'Continue'
-          Write-Host '=== explicit IPv6 ==='
+          Write-Host '=== IPv4 stale surface ==='
+          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>console.log('ipv4-5173',r.status,r.headers.get('content-type'))).catch(e=>console.log('ipv4-5173 ERROR',e.message))"
+          Write-Host '=== IPv6 healthy surface ==='
+          node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>console.log('ipv6-5173',r.status,r.headers.get('content-type'))).catch(e=>console.log('ipv6-5173 ERROR',e.message))"
+          Write-Host '=== localhost resolution ==='
+          node -e "require('node:dns').lookup('localhost',{all:true},(e,a)=>console.log(e||a))"
           & curl.exe -6 -sS -D - -o NUL --max-time 5 http://localhost:5173/
           Write-Host "curl6_exit=$LASTEXITCODE"
-          Write-Host '=== normal localhost ==='
           & curl.exe -sS -D - -o NUL --max-time 5 http://localhost:5173/
           Write-Host "curl_default_exit=$LASTEXITCODE"
-          Write-Host '=== Node localhost ==='
-          node -e "fetch('http://localhost:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>console.log('node-localhost',r.status,r.headers.get('content-type'))).catch(e=>console.log('node-localhost ERROR',e.message))"
-          Write-Host '=== listeners ==='
-          Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          Get-NetTCPConnection -LocalPort 8799,5173,5174 -State Listen -ErrorAction SilentlyContinue | Sort-Object LocalPort,LocalAddress | Format-Table -AutoSize
           exit 0
 
   verify-persisted:
-    needs: rescue-5173
+    needs: recover-runtime
     runs-on: [self-hosted]
     timeout-minutes: 3
     steps:
-      - name: Confirm localhost proxy survived runner cleanup
+      - name: Confirm backend, Desk and localhost proxy survived cleanup
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend-final',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 down.' }
-          node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('ipv6-proxy-final',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 did not survive cleanup.' }
+          node -e "fetch('http://127.0.0.1:5174/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('desk5174-final',r.status);process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Desk 5174 did not survive cleanup.' }
+          node -e "fetch('http://[::1]:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('ipv6proxy-final',r.status);process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
           if ($LASTEXITCODE -ne 0) { throw 'IPv6 localhost proxy did not survive cleanup.' }
           & curl.exe -6 -sS -D - -o NUL --max-time 5 http://localhost:5173/
           if ($LASTEXITCODE -ne 0) { throw 'localhost:5173 is not healthy over IPv6.' }
-          Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          Get-NetTCPConnection -LocalPort 8799,5173,5174 -State Listen -ErrorAction SilentlyContinue | Sort-Object LocalPort,LocalAddress | Format-Table -AutoSize
