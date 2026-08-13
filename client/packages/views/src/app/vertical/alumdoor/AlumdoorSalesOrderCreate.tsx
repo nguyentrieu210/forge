@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Eye, Loader2, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, Loader2, RefreshCw, Save } from "lucide-react";
 import {
   applyContextPolicy,
   mapError,
@@ -31,6 +31,8 @@ type FieldOverride = {
 };
 type ItemContext = Json & {
   item_group?: string;
+  item_name?: string;
+  item_label?: string;
   door_type?: string | null;
   inventory_mode?: string;
   allowed_uoms?: string[];
@@ -55,7 +57,6 @@ interface SalesLine extends Json {
   item_code?: string;
   sales_option?: string;
   color?: string;
-  sales_mode?: string;
   leaf_variant?: string;
   uom?: string;
   qty?: number;
@@ -75,6 +76,23 @@ interface SalesLine extends Json {
 }
 
 const LAYOUT_TYPES = new Set(["Section Break", "Column Break", "Tab Break", "Heading", "HTML", "Button"]);
+const PRIMARY_HEADER_FIELDS = new Set([
+  "customer",
+  "customer_phone",
+  "contact_phone",
+  "contact_mobile",
+  "mobile_no",
+  "phone_no",
+  "phone",
+  "install_address",
+  "transaction_date",
+  "delivery_date",
+  "responsible_person",
+  "customer_group",
+  "selling_price_list",
+  "currency",
+  "payment_method",
+]);
 
 function text(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
@@ -125,6 +143,11 @@ function money(value: unknown): string {
   return Number.isFinite(parsed)
     ? parsed.toLocaleString("vi-VN", { maximumFractionDigits: 0 })
     : "—";
+}
+
+function numberValue(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function newLine(index: number): SalesLine {
@@ -204,20 +227,18 @@ function selectField(
   } as DocField;
 }
 
-
 function priceVariant(value: unknown): string {
   return text(value).toUpperCase() || "STANDARD";
-}
-
-function numberValue(value: unknown): number | undefined {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function optionConditions(value: unknown): Json[] {
   let rows = value;
   if (typeof rows === "string" && rows.trim()) {
-    try { rows = JSON.parse(rows); } catch { return []; }
+    try {
+      rows = JSON.parse(rows);
+    } catch {
+      return [];
+    }
   }
   return Array.isArray(rows)
     ? rows.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
@@ -282,13 +303,15 @@ function StandardField(props: {
   compact?: boolean;
   className?: string;
   onCommit?: () => void;
-  hideLabel?: boolean;
-  hideLabelOnDesktop?: boolean;
 }) {
   const Control = props.registry.resolve(props.field.fieldtype);
   const displayLabel = props.label || text(props.field.label) || props.field.fieldname;
   if (!Control) {
-    return <div className={props.className}><div className="text-xs text-destructive">Missing control for {props.field.fieldtype}</div></div>;
+    return (
+      <div className={props.className}>
+        <div className="text-xs text-destructive">Không có control cho {displayLabel} ({props.field.fieldtype})</div>
+      </div>
+    );
   }
   const control = (
     <Control
@@ -308,7 +331,7 @@ function StandardField(props: {
   );
   if (props.field.fieldtype === "Check") {
     return (
-      <div className={"min-w-0 " + (props.className ?? "")}>
+      <div className={`min-w-0 ${props.className ?? ""}`}>
         <div className="flex h-9 items-center gap-2">
           {control}
           <label htmlFor={props.id} className="cursor-pointer text-[13px] font-medium text-foreground">
@@ -320,15 +343,15 @@ function StandardField(props: {
   }
   return (
     <div
-      className={"min-w-0 " + (props.className ?? "")}
+      className={`min-w-0 ${props.className ?? ""}`}
       onBlurCapture={() => props.onCommit?.()}
-      onKeyDownCapture={(event) => { if (event.key === "Enter") props.onCommit?.(); }}
+      onKeyDownCapture={(event) => {
+        if (event.key === "Enter") props.onCommit?.();
+      }}
     >
-      {!props.hideLabel ? (
-        <label htmlFor={props.id} className={`${props.hideLabelOnDesktop ? "xl:hidden " : ""}mb-1 block text-[13px] font-medium leading-tight text-foreground`}>
-          {displayLabel}{props.required ? <span className="ml-0.5 text-destructive">*</span> : null}
-        </label>
-      ) : null}
+      <label htmlFor={props.id} className="mb-1 block text-[13px] font-medium leading-tight text-foreground">
+        {displayLabel}{props.required ? <span className="ml-0.5 text-destructive">*</span> : null}
+      </label>
       {control}
     </div>
   );
@@ -349,6 +372,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
   const [fatal, setFatal] = useState("");
   const closeSeen = useRef(props.closeRequest ?? 0);
   const lineSeq = useRef(new Map<string, number>());
+  const headerSeq = useRef(0);
 
   const childFields = useMemo(
     () => childMeta?.fields.map((field) => field.fieldname).filter(Boolean) ?? [],
@@ -375,9 +399,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
     void (async () => {
       try {
         const salesMeta = await adapter.getMeta("Sales Order");
-        const table = salesMeta.fields.find(
-          (field) => field.fieldname === "items" && field.fieldtype === "Table",
-        );
+        const table = salesMeta.fields.find((field) => field.fieldname === "items" && field.fieldtype === "Table");
         const childDoctype = text(table?.options) || "Sales Order Item";
         const [itemMeta, boot, caps] = await Promise.all([
           adapter.getMeta(childDoctype),
@@ -442,17 +464,13 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
   const cleanLine = useCallback((line: SalesLine): Json => {
     const result: Json = {};
     for (const [key, value] of Object.entries(line)) {
-      if (!key.startsWith("_") && childFieldSet.has(key) && value !== undefined) {
-        result[key] = value;
-      }
+      if (!key.startsWith("_") && childFieldSet.has(key) && value !== undefined) result[key] = value;
     }
     return result;
   }, [childFieldSet]);
 
   const patchLine = useCallback((key: string, patch: Partial<SalesLine>) => {
-    setLines((current) => current.map((line) => (
-      line._key === key ? { ...line, ...patch } : line
-    )));
+    setLines((current) => current.map((line) => (line._key === key ? { ...line, ...patch } : line)));
   }, []);
 
   const previewDocument = useCallback(async (
@@ -469,9 +487,7 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
       ? result.patch as Json
       : {};
     const merged = { ...next, ...patch };
-    for (const field of Array.isArray(result.clear) ? result.clear.map(text) : []) {
-      delete merged[field];
-    }
+    for (const field of Array.isArray(result.clear) ? result.clear.map(text) : []) delete merged[field];
     return merged;
   }, [adapter, cleanLine, lines]);
 
@@ -479,63 +495,50 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
     const next = { ...header, [field]: value };
     setHeader(next);
     if (!preview) return;
+    const seq = ++headerSeq.current;
     void previewDocument(next, field)
-      .then((resolved) => setHeader(resolved))
-      .catch((error) => toast.error(mapError(error).message));
+      .then((resolved) => {
+        if (headerSeq.current === seq) setHeader(resolved);
+      })
+      .catch((error) => {
+        if (headerSeq.current === seq) toast.error(mapError(error).message);
+      });
   }, [header, previewDocument]);
 
   const loadSalesOptions = useCallback(async (itemCode: string, itemGroup: string): Promise<Doc[]> => {
     if (!itemGroup) return [];
-    try {
-      const rows = await adapter.getList("Sales Option", {
-        fields: [
-          "name",
-          "option_label",
-          "item_group",
-          "item_code",
-          "is_default",
-          "disabled",
-          "option_code",
-          "conditions",
-          "priority",
-          "sales_mode",
-          "price_variant",
-          "discount_basis_variant",
-          "sales_package",
-        ],
-        filters: { item_group: itemGroup, disabled: 0 },
-        pageLength: 100,
-      });
-      return rows
-        .filter((row) => !text(row.item_code) || text(row.item_code) === itemCode)
-        .sort((left, right) => (Number(right.priority) || 0) - (Number(left.priority) || 0) || text(left.option_label).localeCompare(text(right.option_label), "vi"));
-    } catch {
-      return [];
-    }
+    const rows = await adapter.getList("Sales Option", {
+      fields: [
+        "name", "option_label", "item_group", "item_code", "is_default", "disabled",
+        "option_code", "conditions", "priority", "sales_mode", "price_variant",
+        "discount_basis_variant", "sales_package",
+      ],
+      filters: { item_group: itemGroup, disabled: 0 },
+      pageLength: 100,
+    });
+    return rows
+      .filter((row) => !text(row.item_code) || text(row.item_code) === itemCode)
+      .sort((left, right) =>
+        (Number(right.priority) || 0) - (Number(left.priority) || 0)
+        || text(left.option_label).localeCompare(text(right.option_label), "vi"));
   }, [adapter]);
-
 
   const loadItemPrices = useCallback(async (itemCode: string): Promise<Doc[]> => {
     const priceList = text(header.selling_price_list);
-    if (!itemCode || !priceList) return [];
-    try {
-      const rows = await adapter.getList("Item Price", {
-        fields: ["name", "price_list", "item_code", "uom", "price_variant", "currency", "rate", "disabled"],
-        filters: { item_code: itemCode, price_list: priceList, disabled: 0 },
-        pageLength: 200,
-      });
-      const currency = text(header.currency);
-      return rows
-        .filter((row) => !currency || !text(row.currency) || text(row.currency) === currency)
-        .sort((left, right) =>
-          priceVariant(left.price_variant).localeCompare(priceVariant(right.price_variant))
-          || text(left.uom).localeCompare(text(right.uom), "vi")
-          || (Number(left.rate) || 0) - (Number(right.rate) || 0)
-          || text(left.name).localeCompare(text(right.name), "vi"),
-        );
-    } catch {
-      return [];
-    }
+    if (!priceList) throw new Error("Khách hàng chưa có bảng giá bán. Hãy cấu hình nhóm/bảng giá trước khi chọn hàng.");
+    const rows = await adapter.getList("Item Price", {
+      fields: ["name", "price_list", "item_code", "uom", "price_variant", "currency", "rate", "disabled"],
+      filters: { item_code: itemCode, price_list: priceList, disabled: 0 },
+      pageLength: 200,
+    });
+    const currency = text(header.currency);
+    return rows
+      .filter((row) => !currency || !text(row.currency) || text(row.currency) === currency)
+      .sort((left, right) =>
+        priceVariant(left.price_variant).localeCompare(priceVariant(right.price_variant))
+        || text(left.uom).localeCompare(text(right.uom), "vi")
+        || (Number(left.rate) || 0) - (Number(right.rate) || 0)
+        || text(left.name).localeCompare(text(right.name), "vi"));
   }, [adapter, header.currency, header.selling_price_list]);
 
   const previewLine = useCallback(async (
@@ -551,30 +554,27 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
     patchLine(row._key, { ...patch, _loading: true, _error: "", _pricingError: "" });
     try {
       const parent = { ...header, items: undefined };
-      const colorsPromise: Promise<Json> = adapter
-        .callPost<Json>("alumdoor.catalog.allowed_colors", {
-item_code: row.item_code,
-usage_scope: "sales",
-        })
-        .catch((): Json => ({}));
       const [context, preview, colors] = await Promise.all([
         adapter.callPost<ItemContext>("alumdoor.sales.item_context", {
-item_code: row.item_code,
-uom: row.uom,
-warehouse: row.warehouse,
-price_list: header.selling_price_list,
-currency: header.currency || "VND",
-qty: row.qty,
-sales_option: row.sales_option,
+          item_code: row.item_code,
+          uom: row.uom,
+          warehouse: row.warehouse,
+          price_list: header.selling_price_list,
+          currency: header.currency || "VND",
+          qty: row.qty,
+          sales_option: row.sales_option,
         }),
         adapter.callPost<Json>("alumdoor.ui.preview_child_row", {
-child_doctype: childMeta.name,
-child_fields: childFields,
-row,
-parent,
-changed_field: changedField,
+          child_doctype: childMeta.name,
+          child_fields: childFields,
+          row,
+          parent,
+          changed_field: changedField,
         }),
-        colorsPromise,
+        adapter.callPost<Json>("alumdoor.catalog.allowed_colors", {
+          item_code: row.item_code,
+          usage_scope: "sales",
+        }),
       ]);
       if (lineSeq.current.get(row._key) !== seq) return;
 
@@ -586,22 +586,28 @@ changed_field: changedField,
         && !Array.isArray(preview.field_overrides)
         ? preview.field_overrides as Record<string, FieldOverride>
         : {};
-      const allowedColors = Array.isArray(colors.allowed_colors)
-        ? colors.allowed_colors.map(text).filter(Boolean)
-        : [];
+      const allowedColors = Array.isArray(colors.allowed_colors) ? colors.allowed_colors.map(text).filter(Boolean) : [];
       const next: Partial<SalesLine> = {
         ...patch,
         ...serverPatch,
         _context: context,
+        _itemLabel: text(context.item_name) || text(context.item_label) || text(row.item_code),
         _allowedColors: allowedColors,
         _overrides: overrides,
         _loading: false,
         _error: "",
-        _pricingError: "",
+        _pricingError: text(context.price_error),
         _commercial: undefined,
       };
       for (const field of Array.isArray(preview.clear) ? preview.clear.map(text) : []) {
         if (childFieldSet.has(field)) next[field] = undefined;
+      }
+
+      const allowedUoms = Array.isArray(context.allowed_uoms) ? context.allowed_uoms.map(text).filter(Boolean) : [];
+      let candidate = { ...row, ...next, _context: context } as SalesLine;
+      if (!text(candidate.uom) && allowedUoms.length === 1) {
+        next.uom = allowedUoms[0];
+        candidate = { ...candidate, uom: allowedUoms[0] } as SalesLine;
       }
 
       let options = source._salesOptions ?? [];
@@ -610,6 +616,23 @@ changed_field: changedField,
         if (lineSeq.current.get(row._key) !== seq) return;
       }
       next._salesOptions = options;
+      const applicableOptions = options.filter((option) => salesOptionApplicable(option, candidate));
+      if (options.length > 0 && applicableOptions.length === 0) {
+        next._pricingError = "Không có Cách bán hợp lệ cho cấu hình dòng hàng này.";
+      }
+      const selected = text(candidate.sales_option);
+      if (selected && !applicableOptions.some((option) => text(option.name) === selected)) {
+        next.sales_option = undefined;
+        candidate = { ...candidate, sales_option: undefined } as SalesLine;
+      }
+      if (!text(candidate.sales_option)) {
+        const defaultOption = applicableOptions.find((option) => option.is_default === true || option.is_default === 1)
+          ?? (applicableOptions.length === 1 ? applicableOptions[0] : undefined);
+        if (defaultOption?.name) {
+          next.sales_option = text(defaultOption.name);
+          candidate = { ...candidate, sales_option: text(defaultOption.name) } as SalesLine;
+        }
+      }
 
       let itemPrices = source._itemPrices ?? [];
       if (changedField === "item_code" || changedField === "parent_context" || itemPrices.length === 0) {
@@ -617,65 +640,49 @@ changed_field: changedField,
         if (lineSeq.current.get(row._key) !== seq) return;
       }
       next._itemPrices = itemPrices;
-
-      let candidate = { ...row, ...next, _context: context } as SalesLine;
-      const applicableOptions = options.filter((option) => salesOptionApplicable(option, candidate));
-      const selected = text(candidate.sales_option);
-      if (selected && !applicableOptions.some((option) => String(option.name) === selected)) {
-        next.sales_option = undefined;
-        candidate = { ...candidate, sales_option: undefined } as SalesLine;
+      if (itemPrices.length === 0) {
+        next._pricingError = `Mặt hàng ${text(row.item_code)} chưa có Item Price trong bảng giá ${text(header.selling_price_list)}.`;
       }
-      if (!text(candidate.sales_option)) {
-        const defaultOption = applicableOptions.find(
-(option) => option.is_default === true || option.is_default === 1,
-        );
-        if (defaultOption?.name) {
-next.sales_option = String(defaultOption.name);
-candidate = { ...candidate, sales_option: String(defaultOption.name) } as SalesLine;
-        }
+      if (context.price_missing === true && !next._pricingError) {
+        next._pricingError = `Mặt hàng ${text(row.item_code)} chưa có giá bán hợp lệ.`;
       }
 
+      candidate = { ...candidate, ...next, _context: context } as SalesLine;
       const pricedQty = numberValue(candidate.qty);
       const priceList = text(header.selling_price_list);
-      if (pricedQty && pricedQty > 0 && priceList && text(candidate.uom)) {
-        try {
-const commercial = await adapter.callPost<Json>("metaforge.api.preview_sales_commercial_line", {
-  line: cleanLine(candidate),
-  price_list: priceList,
-  currency: text(header.currency) || "VND",
-  posting_date: text(header.transaction_date) || today(),
-  customer: text(header.customer),
-  customer_group: text(header.customer_group),
-});
-if (lineSeq.current.get(row._key) !== seq) return;
-const sellingRate = numberValue(commercial.selling_rate ?? commercial.rate);
-const grossAmount = numberValue(commercial.gross_amount);
-const discountPercentage = numberValue(commercial.discount_percentage);
-const discountAmount = numberValue(commercial.discount_amount);
-const adjustmentAmount = numberValue(commercial.adjustment_amount);
-const netAmount = numberValue(commercial.net_before_tax ?? commercial.net_amount ?? commercial.amount);
-if (sellingRate !== undefined) next.rate = sellingRate;
-if (grossAmount !== undefined) next.amount = grossAmount;
-if (discountPercentage !== undefined) next.discount_percentage = discountPercentage;
-if (discountAmount !== undefined) next.discount_amount = discountAmount;
-if (adjustmentAmount !== undefined) next.adjustment_amount = adjustmentAmount;
-if (netAmount !== undefined) next.net_amount = netAmount;
-if (text(commercial.sales_option)) next.sales_option = text(commercial.sales_option);
-next._commercial = commercial;
-next._selectedItemPrice = text(commercial.item_price) || next._selectedItemPrice;
-next._pricingError = "";
-        } catch (error) {
-next._pricingError = mapError(error).message;
-        }
+      if (!next._pricingError && pricedQty && pricedQty > 0 && priceList && text(candidate.uom)) {
+        const commercial = await adapter.callPost<Json>("metaforge.api.preview_sales_commercial_line", {
+          line: cleanLine(candidate),
+          price_list: priceList,
+          currency: text(header.currency) || "VND",
+          posting_date: text(header.transaction_date) || today(),
+          customer: text(header.customer),
+          customer_group: text(header.customer_group),
+        });
+        if (lineSeq.current.get(row._key) !== seq) return;
+        const sellingRate = numberValue(commercial.selling_rate ?? commercial.rate);
+        const grossAmount = numberValue(commercial.gross_amount);
+        const discountPercentage = numberValue(commercial.discount_percentage);
+        const discountAmount = numberValue(commercial.discount_amount);
+        const adjustmentAmount = numberValue(commercial.adjustment_amount);
+        const netAmount = numberValue(commercial.net_before_tax ?? commercial.net_amount ?? commercial.amount);
+        if (sellingRate !== undefined) next.rate = sellingRate;
+        if (grossAmount !== undefined) next.amount = grossAmount;
+        if (discountPercentage !== undefined) next.discount_percentage = discountPercentage;
+        if (discountAmount !== undefined) next.discount_amount = discountAmount;
+        if (adjustmentAmount !== undefined) next.adjustment_amount = adjustmentAmount;
+        if (netAmount !== undefined) next.net_amount = netAmount;
+        if (text(commercial.sales_option)) next.sales_option = text(commercial.sales_option);
+        next._commercial = commercial;
+        next._selectedItemPrice = text(commercial.item_price) || next._selectedItemPrice;
       }
-
       patchLine(row._key, next);
     } catch (error) {
       if (lineSeq.current.get(row._key) === seq) {
         patchLine(row._key, {
-...patch,
-_loading: false,
-_error: mapError(error).message,
+          ...patch,
+          _loading: false,
+          _error: mapError(error).message,
         });
       }
     }
@@ -693,7 +700,6 @@ _error: mapError(error).message,
     if (!current) return;
     const price = (current._itemPrices ?? []).find((row) => text(row.name) === priceName);
     if (!price) return;
-
     const variant = priceVariant(price.price_variant);
     const applicableOptions = (current._salesOptions ?? []).filter((option) => salesOptionApplicable(option, current));
     const matchingOptions = applicableOptions.filter((option) => priceVariant(option.price_variant) === variant);
@@ -701,12 +707,10 @@ _error: mapError(error).message,
     const option = currentOption
       ?? matchingOptions.find((row) => row.is_default === true || row.is_default === 1)
       ?? matchingOptions[0];
-
     if ((current._salesOptions?.length ?? 0) > 0 && !option) {
-      toast.error(`Đơn giá ${priceName} thuộc biến thể ${variant} nhưng không có Cách bán hợp lệ cho mặt hàng này.`);
+      toast.error(`Đơn giá ${priceName} thuộc biến thể ${variant} nhưng không có Cách bán hợp lệ.`);
       return;
     }
-
     const patch: Partial<SalesLine> = {
       _selectedItemPrice: priceName,
       ...(text(price.uom) ? { uom: text(price.uom) } : {}),
@@ -796,25 +800,31 @@ _error: mapError(error).message,
       }
     }, 120);
     return () => window.clearTimeout(timer);
-    // Re-preview only when commercial parent context changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [header.customer, header.customer_group, header.selling_price_list, header.currency, header.transaction_date]);
 
   const validate = useCallback((): string | null => {
     if (!meta || !childMeta) return "Chưa tải xong cấu trúc Sales Order.";
+    if (!text(header.customer)) return "Cần chọn khách hàng.";
+    if (!text(header.customer_group)) return "Khách hàng chưa có nhóm giá. Cập nhật Customer trước khi lập đơn.";
+    if (!text(header.selling_price_list)) return "Khách hàng/nhóm giá chưa có bảng giá bán đang hiệu lực.";
     for (const field of meta.fields) {
       if (!field.reqd || LAYOUT_TYPES.has(field.fieldtype) || field.fieldtype === "Table") continue;
       if (header[field.fieldname] == null || header[field.fieldname] === "") {
-        return `Thiếu ${field.label || field.fieldname}.`;
+        const label = text(field.label) || field.fieldname;
+        if (field.read_only || field.hidden) {
+          return `Cấu hình Sales Order không hợp lệ: trường bắt buộc ${label} đang không thể nhập.`;
+        }
+        return `Thiếu ${label}.`;
       }
     }
-    if (!text(header.customer)) return "Cần chọn khách hàng.";
     if (!lines.length) return "Đơn hàng phải có ít nhất một dòng.";
     for (const [index, line] of lines.entries()) {
       if (!text(line.item_code)) return `Dòng ${index + 1}: cần chọn mặt hàng.`;
       if (line._loading) return `Dòng ${index + 1}: đang tính lại.`;
       if (line._error) return `Dòng ${index + 1}: ${line._error}`;
       if (line._pricingError) return `Dòng ${index + 1}: ${line._pricingError}`;
+      if ((line._itemPrices?.length ?? 0) === 0) return `Dòng ${index + 1}: chưa có giá bán hợp lệ.`;
       for (const [field, rule] of Object.entries(line._overrides ?? {})) {
         if (!(rule.reqd === 1 || rule.reqd === true)) continue;
         if (rule.hidden === 1 || rule.hidden === true) continue;
@@ -837,6 +847,7 @@ _error: mapError(error).message,
     }
     if (!meta) return;
     setSaving(true);
+    let createdName = "";
     try {
       const parentFields = new Set(meta.fields.map((field) => field.fieldname));
       const document: Json = {};
@@ -849,29 +860,38 @@ _error: mapError(error).message,
         "Sales Order",
         serializeCreateDocument(meta, finalPreview) as Partial<Doc>,
       );
+      createdName = text(created.name);
+      if (!createdName) throw new Error("Backend đã trả kết quả tạo đơn nhưng không có mã Sales Order.");
+
       void Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: [scopeKey, "list-view", "Sales Order"],
-          refetchType: "active",
-        }),
-        queryClient.invalidateQueries({
-          queryKey: [scopeKey, "list", "Sales Order"],
-          refetchType: "active",
-        }),
-        queryClient.invalidateQueries({
-          queryKey: [scopeKey, "count", "Sales Order"],
-          refetchType: "active",
-        }),
-        queryClient.invalidateQueries({
-          queryKey: [scopeKey, "overview"],
-          refetchType: "none",
-        }),
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "list-view", "Sales Order"], refetchType: "active" }),
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "list", "Sales Order"], refetchType: "active" }),
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "count", "Sales Order"], refetchType: "active" }),
+        queryClient.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),
       ]).catch(() => undefined);
-      toast.success(`Đã tạo đơn ${created.name}`);
-      if (previewAfterSave) props.onPreviewCreated(String(created.name));
-      else props.onCreated(String(created.name));
+
+      try {
+        const reread = await adapter.getDoc("Sales Order", createdName);
+        const saved = reread.doc as Json;
+        if (text(saved.name) !== createdName) throw new Error("Mã đọc lại không khớp.");
+        if (text(saved.customer) && text(saved.customer) !== text(header.customer)) throw new Error("Khách hàng đọc lại không khớp.");
+        if (Array.isArray(saved.items) && saved.items.length !== lines.length) throw new Error("Số dòng đọc lại không khớp.");
+        toast.success(`Đã tạo và xác minh đơn ${createdName}`);
+      } catch (readError) {
+        // The create already succeeded. Never present this as a save failure because
+        // retrying could create a duplicate order. Navigate to the created document.
+        toast.success(`Đã tạo đơn ${createdName}. Không đọc lại tự động được: ${mapError(readError).message}`);
+      }
+
+      if (previewAfterSave) props.onPreviewCreated(createdName);
+      else props.onCreated(createdName);
     } catch (cause) {
-      toast.error(mapError(cause).message);
+      if (createdName) {
+        toast.success(`Đơn ${createdName} đã được tạo; mở đơn để kiểm tra tiếp.`);
+        props.onCreated(createdName);
+      } else {
+        toast.error(mapError(cause).message);
+      }
     } finally {
       setSaving(false);
     }
@@ -887,9 +907,7 @@ _error: mapError(error).message,
     );
   }
   if (fatal) return <div className="p-6 text-sm text-destructive">{fatal}</div>;
-  if (!meta || !childMeta) {
-    return <div className="p-6 text-sm text-muted-foreground">Không đọc được cấu trúc đơn hàng.</div>;
-  }
+  if (!meta || !childMeta) return <div className="p-6 text-sm text-muted-foreground">Không đọc được cấu trúc đơn hàng.</div>;
 
   const metaField = (fieldname: string) => meta.fields.find((field) => field.fieldname === fieldname);
   const childField = (fieldname: string) => childMeta.fields.find((field) => field.fieldname === fieldname);
@@ -900,10 +918,24 @@ _error: mapError(error).message,
   const metaRequired = (fieldname: string) => Boolean(metaField(fieldname)?.reqd);
   const phoneValue = salesPhoneField ? text(header[salesPhoneField]) || customerPhone : customerPhone;
 
-  const displayedTotal = lines.reduce((sum, line) => sum + lineTotal(line), 0);
+  const missingRequiredFields = meta.fields.filter((field) =>
+    Boolean(field.reqd)
+    && !LAYOUT_TYPES.has(field.fieldtype)
+    && field.fieldtype !== "Table"
+    && !PRIMARY_HEADER_FIELDS.has(field.fieldname)
+    && (header[field.fieldname] == null || header[field.fieldname] === ""));
+  const impossibleRequiredFields = missingRequiredFields.filter((field) => Boolean(field.hidden || field.read_only));
+  const editableRequiredFields = missingRequiredFields.filter((field) => !field.hidden && !field.read_only);
 
+  const readinessProblems: string[] = [];
+  if (text(header.customer) && !text(header.customer_group)) readinessProblems.push("Khách hàng chưa có nhóm giá");
+  if (text(header.customer) && !text(header.selling_price_list)) readinessProblems.push("Chưa xác định được bảng giá bán");
+  for (const field of impossibleRequiredFields) {
+    readinessProblems.push(`Trường bắt buộc “${text(field.label) || field.fieldname}” đang bị ẩn/khóa`);
+  }
+
+  const displayedTotal = lines.reduce((sum, line) => sum + lineTotal(line), 0);
   const gridRows: SalesGridRow[] = lines.map((line) => {
-    const kind = family(line);
     const area = isAreaDoor(line);
     const showWidth = area || fieldVisible(line, "width_m");
     const showHeight = area || fieldVisible(line, "height_m");
@@ -934,7 +966,6 @@ _error: mapError(error).message,
     const salesOptionLabel = text(commercial.sales_option_label)
       || text(selectedOption?.option_label)
       || (text(line.sales_option) ? text(line.sales_option) : "Tiêu chuẩn");
-
     const allowedVariants = new Set(applicableOptions.map((option) => priceVariant(option.price_variant)));
     const rawPrices = line._itemPrices ?? [];
     const selectablePrices = rawPrices.filter((price) => {
@@ -953,11 +984,8 @@ _error: mapError(error).message,
       };
     });
     const resolvedPrice = text(commercial.item_price) || text(line._selectedItemPrice);
-    const priceLabel = sellingRate === undefined
-      ? ""
-      : `${money(sellingRate)} ₫${text(line.uom) ? ` / ${text(line.uom)}` : ""}`;
+    const priceLabel = sellingRate === undefined ? "" : `${money(sellingRate)} ₫${text(line.uom) ? ` / ${text(line.uom)}` : ""}`;
     const uoms = Array.isArray(line._context?.allowed_uoms) ? line._context.allowed_uoms.map(text).filter(Boolean) : [];
-
     return {
       key: line._key,
       itemCode: text(line.item_code),
@@ -1001,281 +1029,291 @@ _error: mapError(error).message,
   const activeDirectQty = Boolean(activeLine && !activeSimpleCount && !fieldReadonly(activeLine, "qty") && !activeShowWidth && !activeShowHeight && !activeShowSets && !activeShowLength && !activeShowBars);
   const activeQuantityField = activeSimpleCount ? "set_count" : activeDirectQty ? "qty" : undefined;
   const activeDetailNeeded = Boolean(activeLine && (
-    activeColors.length > 0 || activeShowWidth || activeShowHeight || (activeShowSets && activeQuantityField !== "set_count")
-    || activeShowLeafVariant || activeKind === "mesh" || fieldVisible(activeLine, "has_butterfly_bracket")
-    || activeShowLength || activeShowBars
+    activeColors.length > 0
+    || activeShowWidth
+    || activeShowHeight
+    || (activeShowSets && activeQuantityField !== "set_count")
+    || activeShowLeafVariant
+    || activeKind === "mesh"
+    || fieldVisible(activeLine, "has_butterfly_bracket")
+    || activeShowLength
+    || activeShowBars
   ));
   const activeCommercial = activeLine?._commercial ?? {};
+  const itemField = lineBaseField("item_code", "Mặt hàng", "Link", "Item");
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-sales-order-create">
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="mx-auto w-full max-w-[1760px] space-y-3 px-4 py-3">
           <section className="rounded-lg border bg-card p-3" data-section="sales-customer-meta-header">
-  <div className="mb-2 flex items-center justify-between gap-3">
-    <h2 className="text-sm font-semibold">{"Th\u00f4ng tin kh\u00e1ch h\u00e0ng"}</h2>
-  </div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold">Thông tin khách hàng</h2>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(320px,2.2fr)_minmax(150px,.8fr)_minmax(260px,1.5fr)_150px_150px]">
+              <StandardField
+                id="sales-customer"
+                field={headerField("customer", "Khách hàng", "Link", "Customer")}
+                value={header.customer}
+                onChange={(value) => setHeaderField("customer", text(value) || undefined, true)}
+                registry={registry} services={services} parentDoctype="Sales Order" docValues={header} roles={roles}
+                required={metaRequired("customer")}
+              />
+              <StandardField
+                id="sales-phone"
+                field={salesPhoneField ? headerField(salesPhoneField, "SĐT") : fallbackField("__customer_phone", "SĐT")}
+                value={phoneValue}
+                onChange={(value) => {
+                  const phone = text(value);
+                  setCustomerPhone(phone);
+                  if (salesPhoneField) setHeaderField(salesPhoneField, phone || undefined);
+                }}
+                registry={registry} services={services} parentDoctype="Sales Order" docValues={header} roles={roles}
+                readOnly={!salesPhoneField}
+              />
+              <StandardField
+                id="sales-address"
+                field={{ ...headerField("install_address", "Địa chỉ giao / lắp đặt"), fieldtype: "Data" } as DocField}
+                value={header.install_address}
+                onChange={(value) => setHeaderField("install_address", text(value) || undefined)}
+                registry={registry} services={services} parentDoctype="Sales Order" docValues={header} roles={roles}
+                required={metaRequired("install_address")}
+                className="md:col-span-2"
+              />
+              <StandardField
+                id="sales-order-date"
+                field={headerField("transaction_date", "Ngày đặt hàng", "Date")}
+                value={header.transaction_date}
+                onChange={(value) => setHeaderField("transaction_date", text(value), true)}
+                registry={registry} services={services} parentDoctype="Sales Order" docValues={header} roles={roles}
+                required={metaRequired("transaction_date")}
+              />
+              <StandardField
+                id="sales-delivery-date"
+                field={headerField("delivery_date", "Ngày giao", "Date")}
+                value={header.delivery_date}
+                onChange={(value) => setHeaderField("delivery_date", text(value))}
+                registry={registry} services={services} parentDoctype="Sales Order" docValues={header} roles={roles}
+                required={metaRequired("delivery_date")}
+              />
+              <StandardField
+                id="sales-responsible-person"
+                field={headerField("responsible_person", "Nhân viên bán hàng", "Link", "Employee")}
+                value={header.responsible_person}
+                onChange={(value) => setHeaderField("responsible_person", text(value) || undefined)}
+                registry={registry} services={services} parentDoctype="Sales Order" docValues={header} roles={roles}
+                required={metaRequired("responsible_person")}
+              />
+            </div>
 
-  <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(320px,2.2fr)_minmax(150px,.8fr)_minmax(260px,1.5fr)_150px_150px]">
-    <StandardField
-      id="sales-customer"
-      field={headerField("customer", "Kh\u00e1ch h\u00e0ng", "Link", "Customer")}
-      value={header.customer}
-      onChange={(value) => setHeaderField("customer", text(value) || undefined, true)}
-      registry={registry}
-      services={services}
-      parentDoctype="Sales Order"
-      docValues={header}
-      roles={roles}
-      required={metaRequired("customer")}
-      className="xl:order-1"
-    />
+            {text(header.customer) ? (
+              <div
+                className={`mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs ${
+                  readinessProblems.length ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-border bg-muted/30 text-foreground"
+                }`}
+                data-section="sales-commercial-readiness"
+              >
+                {readinessProblems.length ? <AlertTriangle className="mt-0.5 size-3.5 shrink-0" /> : <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />}
+                <div>
+                  {readinessProblems.length ? (
+                    <>
+                      <div className="font-semibold">Chưa sẵn sàng lập đơn</div>
+                      <div>{readinessProblems.join(" · ")}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-semibold">Sẵn sàng tính giá</div>
+                      <div>Nhóm giá: {text(header.customer_group)} · Bảng giá: {text(header.selling_price_list)} · Tiền tệ: {text(header.currency) || "VND"}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </section>
 
-    <StandardField
-      id="sales-phone"
-      field={salesPhoneField ? headerField(salesPhoneField, "S\u0110T") : fallbackField("__customer_phone", "S\u0110T")}
-      value={phoneValue}
-      onChange={(value) => {
-        const phone = text(value);
-        setCustomerPhone(phone);
-        if (salesPhoneField) setHeaderField(salesPhoneField, phone || undefined);
-      }}
-      registry={registry}
-      services={services}
-      parentDoctype="Sales Order"
-      docValues={header}
-      roles={roles}
-      readOnly={!salesPhoneField}
-      className="xl:order-2"
-    />
-
-    <StandardField
-      id="sales-address"
-      field={{ ...headerField("install_address", "\u0110\u1ecba ch\u1ec9 giao / l\u1eafp \u0111\u1eb7t"), fieldtype: "Data" } as DocField}
-      value={header.install_address}
-      onChange={(value) => setHeaderField("install_address", text(value) || undefined)}
-      registry={registry}
-      services={services}
-      parentDoctype="Sales Order"
-      docValues={header}
-      roles={roles}
-      required={metaRequired("install_address")}
-      label="Địa chỉ giao / lắp đặt"
-      className="md:col-span-2 xl:order-6 xl:col-span-5"
-    />
-
-    <StandardField
-      id="sales-order-date"
-      field={headerField("transaction_date", "Ng\u00e0y \u0111\u1eb7t h\u00e0ng", "Date")}
-      value={header.transaction_date}
-      onChange={(value) => setHeaderField("transaction_date", text(value), true)}
-      registry={registry}
-      services={services}
-      parentDoctype="Sales Order"
-      docValues={header}
-      roles={roles}
-      required={metaRequired("transaction_date")}
-      label="Ngày đặt hàng"
-      className="xl:order-4"
-    />
-
-    <StandardField
-      id="sales-delivery-date"
-      field={headerField("delivery_date", "Ng\u00e0y giao", "Date")}
-      value={header.delivery_date}
-      onChange={(value) => setHeaderField("delivery_date", text(value))}
-      registry={registry}
-      services={services}
-      parentDoctype="Sales Order"
-      docValues={header}
-      roles={roles}
-      required={metaRequired("delivery_date")}
-      label="Ngày giao"
-      className="xl:order-5"
-    />
-
-    <StandardField
-      id="sales-responsible-person"
-      field={headerField("responsible_person", "Nh\u00e2n vi\u00ean b\u00e1n h\u00e0ng", "Link", "Employee")}
-      value={header.responsible_person}
-      onChange={(value) => setHeaderField("responsible_person", text(value) || undefined)}
-      registry={registry}
-      services={services}
-      parentDoctype="Sales Order"
-      docValues={header}
-      roles={roles}
-      required={metaRequired("responsible_person")}
-      label="Nhân viên bán hàng"
-      className="md:col-span-2 xl:order-3 xl:col-span-1"
-    />
-  </div>
-</section>
-
-<section className="space-y-2" data-section="hardcoded-sales-lines">
-  <div className="flex min-h-8 items-center justify-between gap-3">
-    <div className="min-w-0">
-      <h2 className="text-sm font-semibold">Chi tiết bán hàng</h2>
-      <div className="truncate text-[11px] text-muted-foreground">
-        {text(header.customer_group) ? `Nhóm giá: ${text(header.customer_group)}` : "Chọn khách hàng để xác định nhóm giá"}
-        {text(header.selling_price_list) ? ` · Bảng giá: ${text(header.selling_price_list)}` : ""}
-      </div>
-    </div>
-  </div>
-
-  <AlumdoorSalesLinesGrid
-    rows={gridRows}
-    selectedKey={selectedLineKey}
-    onSelectedKeyChange={setSelectedLineKey}
-    onChange={handleGridChange}
-    onAdd={addSalesLine}
-    onDuplicate={duplicateSalesLine}
-    onDelete={deleteSalesLine}
-    registry={registry}
-    services={services}
-    roles={roles}
-    parentDocValues={header}
-  />
-
-  {activeLine && text(activeLine.item_code) && activeDetailNeeded ? (
-    <div className="rounded-lg border bg-card px-3 py-2" data-section="active-sales-line-detail">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold">Thông số dòng {activeLineIndex + 1} · {text(activeLine.item_code)}</div>
-          <div className="truncate text-[10px] text-muted-foreground">
-            {text(activeLine._context?.availability_status) || "Thông số làm thay đổi số lượng tính giá / chính sách bán"}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
-          {numberValue(activeLine.billable_area_sqm) !== undefined ? (
-            <span>Diện tích tính giá <strong className="text-foreground">{numberValue(activeLine.billable_area_sqm)?.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} m²</strong></span>
+          {editableRequiredFields.length ? (
+            <section className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3" data-section="sales-required-fallback">
+              <div className="mb-2 flex items-start gap-2 text-xs">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                <div>
+                  <div className="font-semibold">Thông tin bắt buộc bổ sung</div>
+                  <div className="text-muted-foreground">Metadata hiện yêu cầu các trường sau; form hiển thị chúng thay vì chặn lưu bằng một trường vô hình.</div>
+                </div>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                {editableRequiredFields.map((field) => (
+                  <StandardField
+                    key={field.fieldname}
+                    id={`sales-required-${field.fieldname}`}
+                    field={field}
+                    value={header[field.fieldname]}
+                    onChange={(value) => setHeaderField(field.fieldname, value)}
+                    registry={registry} services={services} parentDoctype="Sales Order" docValues={header} roles={roles}
+                    required
+                  />
+                ))}
+              </div>
+            </section>
           ) : null}
-          {text(activeCommercial.price_variant) ? <span>Biến thể <strong className="text-foreground">{text(activeCommercial.price_variant)}</strong></span> : null}
-          {text(activeCommercial.item_price) ? <span>Item Price <strong className="text-foreground">{text(activeCommercial.item_price)}</strong></span> : null}
-        </div>
-      </div>
 
-      <div className="grid items-end gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-        {activeColors.length ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-color`}
-            field={selectField(childField("color"), "color", "Màu", activeColors)}
-            value={activeLine.color}
-            onChange={(value) => commitLine(activeLine._key, "color", text(value) || undefined)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            label="Màu"
-          />
-        ) : null}
+          <section className="space-y-2" data-section="hardcoded-sales-lines">
+            <div className="flex min-h-8 items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold">Chi tiết bán hàng</h2>
+                <div className="truncate text-[11px] text-muted-foreground">
+                  {text(header.customer_group) ? `Nhóm giá: ${text(header.customer_group)}` : "Chọn khách hàng để xác định nhóm giá"}
+                  {text(header.selling_price_list) ? ` · Bảng giá: ${text(header.selling_price_list)}` : ""}
+                </div>
+              </div>
+            </div>
 
-        {activeShowWidth ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-width`}
-            field={lineBaseField("width_m", fieldLabel(activeLine, "width_m", "Rộng (m)"), "Float")}
-            value={activeLine.width_m}
-            onChange={(value) => patchLine(activeLine._key, { width_m: value == null || value === "" ? undefined : Number(value) })}
-            onCommit={() => commitLine(activeLine._key, "width_m", activeLine.width_m)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            required={activeArea || fieldRequired(activeLine, "width_m")} readOnly={fieldReadonly(activeLine, "width_m")}
-            label={fieldLabel(activeLine, "width_m", "Rộng (m)")}
-          />
-        ) : null}
+            <AlumdoorSalesLinesGrid
+              rows={gridRows}
+              itemField={itemField}
+              selectedKey={selectedLineKey}
+              onSelectedKeyChange={setSelectedLineKey}
+              onChange={handleGridChange}
+              onAdd={addSalesLine}
+              onDuplicate={duplicateSalesLine}
+              onDelete={deleteSalesLine}
+              registry={registry}
+              services={services}
+              roles={roles}
+              parentDocValues={header}
+            />
 
-        {activeShowHeight ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-height`}
-            field={lineBaseField("height_m", fieldLabel(activeLine, "height_m", "Cao (m)"), "Float")}
-            value={activeLine.height_m}
-            onChange={(value) => patchLine(activeLine._key, { height_m: value == null || value === "" ? undefined : Number(value) })}
-            onCommit={() => commitLine(activeLine._key, "height_m", activeLine.height_m)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            required={activeArea || fieldRequired(activeLine, "height_m")} readOnly={fieldReadonly(activeLine, "height_m")}
-            label={fieldLabel(activeLine, "height_m", "Cao (m)")}
-          />
-        ) : null}
+            {activeLine && text(activeLine.item_code) && activeDetailNeeded ? (
+              <div className="rounded-lg border bg-card px-3 py-2" data-section="active-sales-line-detail">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold">Thông số dòng {activeLineIndex + 1} · {text(activeLine._itemLabel) || text(activeLine.item_code)}</div>
+                    <div className="truncate text-[10px] text-muted-foreground">
+                      {text(activeLine._context?.availability_status) || "Thông số làm thay đổi số lượng tính giá / chính sách bán"}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+                    {numberValue(activeLine.billable_area_sqm) !== undefined ? (
+                      <span>Diện tích tính giá <strong className="text-foreground">{numberValue(activeLine.billable_area_sqm)?.toLocaleString("vi-VN", { maximumFractionDigits: 6 })} m²</strong></span>
+                    ) : null}
+                    {text(activeCommercial.price_variant) ? <span>Biến thể <strong className="text-foreground">{text(activeCommercial.price_variant)}</strong></span> : null}
+                    {text(activeCommercial.item_price) ? <span>Item Price <strong className="text-foreground">{text(activeCommercial.item_price)}</strong></span> : null}
+                  </div>
+                </div>
 
-        {activeShowSets && activeQuantityField !== "set_count" ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-sets`}
-            field={lineBaseField("set_count", fieldLabel(activeLine, "set_count", activeArea ? "Số bộ" : "Số lượng"), "Int")}
-            value={activeLine.set_count}
-            onChange={(value) => patchLine(activeLine._key, { set_count: value == null || value === "" ? undefined : Number(value) })}
-            onCommit={() => commitLine(activeLine._key, "set_count", activeLine.set_count)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            required={activeArea || fieldRequired(activeLine, "set_count")} readOnly={fieldReadonly(activeLine, "set_count")}
-            label={fieldLabel(activeLine, "set_count", activeArea ? "Số bộ" : "Số lượng")}
-          />
-        ) : null}
+                <div className="grid items-end gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+                  {activeColors.length ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-color`}
+                      field={selectField(childField("color"), "color", "Màu", activeColors)}
+                      value={activeLine.color}
+                      onChange={(value) => commitLine(activeLine._key, "color", text(value) || undefined)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      label="Màu" required={fieldRequired(activeLine, "color")}
+                    />
+                  ) : null}
+                  {activeShowWidth ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-width`}
+                      field={lineBaseField("width_m", fieldLabel(activeLine, "width_m", "Rộng (m)"), "Float")}
+                      value={activeLine.width_m}
+                      onChange={(value) => patchLine(activeLine._key, { width_m: value == null || value === "" ? undefined : Number(value) })}
+                      onCommit={() => commitLine(activeLine._key, "width_m", activeLine.width_m)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      required={activeArea || fieldRequired(activeLine, "width_m")} readOnly={fieldReadonly(activeLine, "width_m")}
+                      label={fieldLabel(activeLine, "width_m", "Rộng (m)")}
+                    />
+                  ) : null}
+                  {activeShowHeight ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-height`}
+                      field={lineBaseField("height_m", fieldLabel(activeLine, "height_m", "Cao (m)"), "Float")}
+                      value={activeLine.height_m}
+                      onChange={(value) => patchLine(activeLine._key, { height_m: value == null || value === "" ? undefined : Number(value) })}
+                      onCommit={() => commitLine(activeLine._key, "height_m", activeLine.height_m)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      required={activeArea || fieldRequired(activeLine, "height_m")} readOnly={fieldReadonly(activeLine, "height_m")}
+                      label={fieldLabel(activeLine, "height_m", "Cao (m)")}
+                    />
+                  ) : null}
+                  {activeShowSets && activeQuantityField !== "set_count" ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-sets`}
+                      field={lineBaseField("set_count", fieldLabel(activeLine, "set_count", activeArea ? "Số bộ" : "Số lượng"), "Int")}
+                      value={activeLine.set_count}
+                      onChange={(value) => patchLine(activeLine._key, { set_count: value == null || value === "" ? undefined : Number(value) })}
+                      onCommit={() => commitLine(activeLine._key, "set_count", activeLine.set_count)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      required={activeArea || fieldRequired(activeLine, "set_count")} readOnly={fieldReadonly(activeLine, "set_count")}
+                      label={fieldLabel(activeLine, "set_count", activeArea ? "Số bộ" : "Số lượng")}
+                    />
+                  ) : null}
+                  {activeShowLeafVariant ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-leaf-variant`}
+                      field={selectField(childField("leaf_variant"), "leaf_variant", "Kiểu lá / motor", leafVariants)}
+                      value={activeLine.leaf_variant}
+                      onChange={(value) => commitLine(activeLine._key, "leaf_variant", text(value) || undefined)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      required={fieldRequired(activeLine, "leaf_variant")}
+                      label="Kiểu lá / motor"
+                    />
+                  ) : null}
+                  {activeKind === "mesh" && fieldVisible(activeLine, "mesh_height_m", true) ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-mesh-height`}
+                      field={lineBaseField("mesh_height_m", fieldLabel(activeLine, "mesh_height_m", "Cao lưới (m)"), "Float")}
+                      value={activeLine.mesh_height_m}
+                      onChange={(value) => patchLine(activeLine._key, { mesh_height_m: value == null || value === "" ? undefined : Number(value) })}
+                      onCommit={() => commitLine(activeLine._key, "mesh_height_m", activeLine.mesh_height_m)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      required={fieldRequired(activeLine, "mesh_height_m")} readOnly={fieldReadonly(activeLine, "mesh_height_m")}
+                      label={fieldLabel(activeLine, "mesh_height_m", "Cao lưới (m)")}
+                    />
+                  ) : null}
+                  {fieldVisible(activeLine, "has_butterfly_bracket") ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-butterfly`}
+                      field={lineBaseField("has_butterfly_bracket", fieldLabel(activeLine, "has_butterfly_bracket", "Có bản bướm"), "Check")}
+                      value={activeLine.has_butterfly_bracket}
+                      onChange={(value) => commitLine(activeLine._key, "has_butterfly_bracket", value ? 1 : 0)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      label={fieldLabel(activeLine, "has_butterfly_bracket", "Có bản bướm")}
+                    />
+                  ) : null}
+                  {activeShowLength ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-length`}
+                      field={lineBaseField("length_m", fieldLabel(activeLine, "length_m", "Dài / cây (m)"), "Float")}
+                      value={activeLine.length_m}
+                      onChange={(value) => patchLine(activeLine._key, { length_m: value == null || value === "" ? undefined : Number(value) })}
+                      onCommit={() => commitLine(activeLine._key, "length_m", activeLine.length_m)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      required={fieldRequired(activeLine, "length_m")} readOnly={fieldReadonly(activeLine, "length_m")}
+                      label={fieldLabel(activeLine, "length_m", "Dài / cây (m)")}
+                    />
+                  ) : null}
+                  {activeShowBars ? (
+                    <StandardField
+                      id={`sales-line-${activeLineIndex}-bars`}
+                      field={lineBaseField("qty_bar", fieldLabel(activeLine, "qty_bar", "Số cây"), "Int")}
+                      value={activeLine.qty_bar}
+                      onChange={(value) => patchLine(activeLine._key, { qty_bar: value == null || value === "" ? undefined : Number(value) })}
+                      onCommit={() => commitLine(activeLine._key, "qty_bar", activeLine.qty_bar)}
+                      registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
+                      required={fieldRequired(activeLine, "qty_bar")} readOnly={fieldReadonly(activeLine, "qty_bar")}
+                      label={fieldLabel(activeLine, "qty_bar", "Số cây")}
+                    />
+                  ) : null}
+                </div>
 
-        {activeShowLeafVariant ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-leaf-variant`}
-            field={selectField(childField("leaf_variant"), "leaf_variant", "Kiểu lá / motor", leafVariants)}
-            value={activeLine.leaf_variant}
-            onChange={(value) => commitLine(activeLine._key, "leaf_variant", text(value) || undefined)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            required={fieldRequired(activeLine, "leaf_variant")}
-            label="Kiểu lá / motor"
-          />
-        ) : null}
-
-        {activeKind === "mesh" && fieldVisible(activeLine, "mesh_height_m", true) ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-mesh-height`}
-            field={lineBaseField("mesh_height_m", fieldLabel(activeLine, "mesh_height_m", "Cao lưới (m)"), "Float")}
-            value={activeLine.mesh_height_m}
-            onChange={(value) => patchLine(activeLine._key, { mesh_height_m: value == null || value === "" ? undefined : Number(value) })}
-            onCommit={() => commitLine(activeLine._key, "mesh_height_m", activeLine.mesh_height_m)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            required={fieldRequired(activeLine, "mesh_height_m")} readOnly={fieldReadonly(activeLine, "mesh_height_m")}
-            label={fieldLabel(activeLine, "mesh_height_m", "Cao lưới (m)")}
-          />
-        ) : null}
-
-        {fieldVisible(activeLine, "has_butterfly_bracket") ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-butterfly`}
-            field={lineBaseField("has_butterfly_bracket", fieldLabel(activeLine, "has_butterfly_bracket", "Có bản bướm"), "Check")}
-            value={activeLine.has_butterfly_bracket}
-            onChange={(value) => commitLine(activeLine._key, "has_butterfly_bracket", value ? 1 : 0)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            label={fieldLabel(activeLine, "has_butterfly_bracket", "Có bản bướm")}
-          />
-        ) : null}
-
-        {activeShowLength ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-length`}
-            field={lineBaseField("length_m", fieldLabel(activeLine, "length_m", "Dài / cây (m)"), "Float")}
-            value={activeLine.length_m}
-            onChange={(value) => patchLine(activeLine._key, { length_m: value == null || value === "" ? undefined : Number(value) })}
-            onCommit={() => commitLine(activeLine._key, "length_m", activeLine.length_m)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            required={fieldRequired(activeLine, "length_m")} readOnly={fieldReadonly(activeLine, "length_m")}
-            label={fieldLabel(activeLine, "length_m", "Dài / cây (m)")}
-          />
-        ) : null}
-
-        {activeShowBars ? (
-          <StandardField
-            id={`sales-line-${activeLineIndex}-bars`}
-            field={lineBaseField("qty_bar", fieldLabel(activeLine, "qty_bar", "Số cây"), "Int")}
-            value={activeLine.qty_bar}
-            onChange={(value) => patchLine(activeLine._key, { qty_bar: value == null || value === "" ? undefined : Number(value) })}
-            onCommit={() => commitLine(activeLine._key, "qty_bar", activeLine.qty_bar)}
-            registry={registry} services={services} parentDoctype="Sales Order Item" docValues={activeLine} roles={roles}
-            required={fieldRequired(activeLine, "qty_bar")} readOnly={fieldReadonly(activeLine, "qty_bar")}
-            label={fieldLabel(activeLine, "qty_bar", "Số cây")}
-          />
-        ) : null}
-      </div>
-
-      {activeLine._error || activeLine._pricingError ? (
-        <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
-          {activeLine._error || activeLine._pricingError}
-        </div>
-      ) : null}
-    </div>
-  ) : null}
-</section>
+                {activeLine._error || activeLine._pricingError ? (
+                  <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+                    {activeLine._error || activeLine._pricingError}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
         </div>
       </div>
 
@@ -1293,28 +1331,15 @@ _error: mapError(error).message,
               size="sm"
               disabled={saving}
               onClick={() => {
-                for (const line of lines) {
-                  if (text(line.item_code)) void previewLine(line, "manual_refresh");
-                }
+                for (const line of lines) if (text(line.item_code)) void previewLine(line, "manual_refresh");
               }}
             >
               <RefreshCw className="mr-1 size-3.5" /> Tính lại
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={saving || !canCreate}
-              onClick={() => void save(true)}
-            >
+            <Button type="button" variant="outline" size="sm" disabled={saving || !canCreate} onClick={() => void save(true)}>
               <Eye className="mr-1 size-3.5" /> Lưu & xem
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={saving || !canCreate}
-              onClick={() => void save(false)}
-            >
+            <Button type="button" size="sm" disabled={saving || !canCreate} onClick={() => void save(false)}>
               {saving ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : <Save className="mr-1 size-3.5" />}
               Lưu đơn hàng
             </Button>
