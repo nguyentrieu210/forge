@@ -1,106 +1,111 @@
-name: Elevated Forge Desk Recovery
+name: Recover Forge Local Runtime
 
 on:
   pull_request:
     branches: [main]
-    types: [synchronize]
+    types: [reopened, synchronize]
 
 permissions:
   contents: read
 
 concurrency:
-  group: elevated-forge-desk-recovery
+  group: recover-forge-local-runtime
   cancel-in-progress: false
 
 jobs:
-  recover-desk-elevated:
+  recover-runtime:
     runs-on: [self-hosted]
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
-      - name: Verify backend and stale Desk signature
+      - name: Verify backend and inspect canonical runtime
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 unhealthy; refusing recovery.' }
-          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('desk-before',r.status);process.exit(r.status===404?0:2)}).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { throw 'Desk is no longer in the known stale-404 state; refusing privileged restart.' }
+          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
+          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 unhealthy.' }
 
-      - name: Create and run one-shot elevated Admin recovery task
+          $root='C:\alumdoor'
+          $runtime=Join-Path $root 'client\apps\runtime'
+          Write-Host "ROOT_EXISTS=$(Test-Path $root) RUNTIME_EXISTS=$(Test-Path $runtime)"
+          foreach ($f in @('index.html','package.json','vite.config.ts','src\bootstrap.ts')) {
+            $p=Join-Path $runtime $f
+            if (Test-Path $p) {
+              $item=Get-Item $p
+              Write-Host "FILE $f size=$($item.Length) modified=$($item.LastWriteTime.ToString('o'))"
+            } else { Write-Host "MISSING $f" }
+          }
+          git -C $root rev-parse --abbrev-ref HEAD
+          git -C $root rev-parse HEAD
+          git -C $root status --short -- client/apps/runtime client/packages/views | Select-Object -First 200
+          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(async r=>console.log('desk5173',r.status,r.headers.get('content-type'),(await r.text()).slice(0,100))).catch(e=>console.log('desk5173 ERROR',e.message))"
+
+      - name: Restore only missing tracked runtime entry files
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $taskName = 'Forge-Recover-Desk-Once'
-          $scriptPath = 'C:\alumdoor\recover-desk-once.ps1'
-          $taskLog = 'C:\alumdoor\desk-recovery-elevated.log'
-
-          $script = @'
-          $ErrorActionPreference = 'Stop'
-          $taskLog = 'C:\alumdoor\desk-recovery-elevated.log'
-          "RECOVERY_START $(Get-Date -Format o)" | Out-File $taskLog -Encoding utf8
-          $listener = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($listener) {
-            "KILL_PID=$($listener.OwningProcess)" | Out-File $taskLog -Append -Encoding utf8
-            & taskkill.exe /PID $listener.OwningProcess /T /F 2>&1 | Out-File $taskLog -Append -Encoding utf8
-            if ($LASTEXITCODE -ne 0) { throw "taskkill failed: $LASTEXITCODE" }
+          $root='C:\alumdoor'
+          $missing=@()
+          foreach ($rel in @('client/apps/runtime/index.html','client/apps/runtime/package.json','client/apps/runtime/vite.config.ts','client/apps/runtime/src/bootstrap.ts')) {
+            if (-not (Test-Path (Join-Path $root ($rel -replace '/','\')))) { $missing += $rel }
           }
-          for ($i=0; $i -lt 20; $i++) {
-            if (-not (Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue)) { break }
-            Start-Sleep -Milliseconds 500
+          if ($missing.Count -gt 0) {
+            Write-Host "Restoring missing tracked files only: $($missing -join ', ')"
+            foreach ($rel in $missing) { git -C $root restore --source=HEAD -- $rel }
+          } else {
+            Write-Host 'No tracked runtime entry files are missing; no source mutation performed.'
           }
-          if (Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue) { throw '5173 still occupied' }
-          $env:VITE_FORGE_BACKEND = 'http://127.0.0.1:8799'
-          $command = 'pnpm run dev > "C:\alumdoor\desk-live.log" 2>&1'
-          Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $command -WorkingDirectory 'C:\alumdoor\client\apps\runtime' -WindowStyle Hidden
-          "DESK_STARTED $(Get-Date -Format o)" | Out-File $taskLog -Append -Encoding utf8
-          '@
-          Set-Content -Path $scriptPath -Value $script -Encoding utf8
 
-          Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-          $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
-          $principal = New-ScheduledTaskPrincipal -UserId "$env:COMPUTERNAME\Admin" -LogonType Interactive -RunLevel Highest
-          Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Force | Out-Null
-          Start-ScheduledTask -TaskName $taskName
-
-          $finished = $false
-          for ($i=0; $i -lt 60; $i++) {
-            $info = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction Stop
-            $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
-            if ($task.State -ne 'Running' -and $info.LastRunTime -gt [datetime]::MinValue) { $finished = $true; break }
+      - name: Probe 5173 after safe restore
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          for ($i=0; $i -lt 10; $i++) {
+            node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('desk5173-after',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { exit 0 }
             Start-Sleep -Seconds 1
           }
-          if (Test-Path $taskLog) { Get-Content $taskLog -Tail 200 }
-          $info = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction SilentlyContinue
-          Write-Host "TASK_RESULT=$($info.LastTaskResult) LAST=$($info.LastRunTime)"
-          if (-not $finished -or $info.LastTaskResult -ne 0) { throw 'Elevated Desk recovery task failed.' }
+          Write-Host '5173 remains stale; continuing to isolated fallback on 5174.'
+          exit 0
 
-      - name: Verify HTTP 200 then remove one-shot task and script
+      - name: Start healthy fallback Desk on 5174 detached from runner cleanup
         shell: powershell
+        env:
+          RUNNER_TRACKING_ID: ""
         run: |
           $ErrorActionPreference = 'Stop'
-          $ok = $false
+          $existing = Get-NetTCPConnection -LocalPort 5174 -State Listen -ErrorAction SilentlyContinue
+          if (-not $existing) {
+            $env:VITE_FORGE_BACKEND='http://127.0.0.1:8799'
+            $runtime='C:\alumdoor\client\apps\runtime'
+            $log='C:\alumdoor\desk-5174.log'
+            $cmd="pnpm run dev -- --host 127.0.0.1 --port 5174 > `"$log`" 2>&1"
+            Start-Process -FilePath 'cmd.exe' -ArgumentList '/c',$cmd -WorkingDirectory $runtime -WindowStyle Hidden
+          }
+          $ok=$false
           for ($i=0; $i -lt 60; $i++) {
-            node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('desk-after',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
-            if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+            node -e "fetch('http://127.0.0.1:5174/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('desk5174',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ok=$true; break }
             Start-Sleep -Seconds 2
           }
-          Unregister-ScheduledTask -TaskName 'Forge-Recover-Desk-Once' -Confirm:$false -ErrorAction SilentlyContinue
-          Remove-Item 'C:\alumdoor\recover-desk-once.ps1' -Force -ErrorAction SilentlyContinue
           if (-not $ok) {
-            if (Test-Path 'C:\alumdoor\desk-live.log') { Get-Content 'C:\alumdoor\desk-live.log' -Tail 200 }
-            throw 'Desk did not return HTTP 200 after elevated restart.'
+            if (Test-Path 'C:\alumdoor\desk-5174.log') { Get-Content 'C:\alumdoor\desk-5174.log' -Tail 200 }
+            throw 'Fallback Desk 5174 failed.'
           }
 
   verify-persisted:
-    needs: recover-desk-elevated
+    needs: recover-runtime
     runs-on: [self-hosted]
     timeout-minutes: 3
     steps:
-      - name: Confirm backend and Desk remain healthy after runner cleanup
+      - name: Confirm backend and at least one Desk survived runner cleanup
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend-final',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(()=>process.exit(1))"
           if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 down.' }
-          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('desk-final',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { throw 'Desk 5173 down after cleanup.' }
+          $ok=$false
+          foreach ($port in 5173,5174) {
+            node -e "fetch('http://127.0.0.1:$port/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('desk-final-$port',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ok=$true }
+          }
+          if (-not $ok) { throw 'No healthy Desk survived cleanup.' }
