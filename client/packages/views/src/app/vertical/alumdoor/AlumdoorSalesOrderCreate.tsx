@@ -33,6 +33,7 @@ type ItemContext = Json & {
   item_group?: string;
   door_type?: string | null;
   inventory_mode?: string;
+  selected_uom?: string;
   allowed_uoms?: string[];
   price_missing?: boolean;
   price_error?: string | null;
@@ -634,6 +635,11 @@ changed_field: changedField,
       }
       next._itemPrices = itemPrices;
 
+      // item_context already resolves the Item master default sales UOM. Feed that
+      // projection into the shared commercial resolver; do not calculate money here.
+      const selectedUom = text(context.selected_uom);
+      if (!text(row.uom) && !text(next.uom) && selectedUom) next.uom = selectedUom;
+
       let candidate = { ...row, ...next, _context: context } as SalesLine;
       const applicableOptions = options.filter((option) => salesOptionApplicable(option, candidate));
       const selected = text(candidate.sales_option);
@@ -950,7 +956,7 @@ _error: mapError(error).message,
     const selectedOption = allOptions.find((option) => text(option.name) === text(line.sales_option));
     const salesOptionLabel = text(commercial.sales_option_label)
       || text(selectedOption?.option_label)
-      || (text(line.sales_option) ? text(line.sales_option) : "Tiêu chuẩn");
+      || text(line.sales_option);
 
     const allowedVariants = new Set(applicableOptions.map((option) => priceVariant(option.price_variant)));
     const rawPrices = line._itemPrices ?? [];
