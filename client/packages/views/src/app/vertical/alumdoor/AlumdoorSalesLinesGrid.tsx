@@ -266,6 +266,11 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
       className="relative overflow-visible rounded-lg border bg-card"
       data-surface="alumdoor-sales-lines-glide-grid"
       data-row-count={props.rows.length}
+      data-selected-item={selected?.itemCode ?? ""}
+      data-selected-price={selected?.priceId ?? ""}
+      data-selected-uom={selected?.uom ?? ""}
+      data-selected-loading={selected?.loading ? "true" : "false"}
+      data-selected-error={selected?.pricingError || selected?.error || ""}
     >
       <div className="flex min-h-10 items-center justify-between gap-2 border-b px-2.5 py-1.5">
         <div className="min-w-0">
