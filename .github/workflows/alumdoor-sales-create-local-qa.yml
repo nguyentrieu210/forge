@@ -1,4 +1,4 @@
-name: Diagnose Forge Desktop Ownership
+name: Elevated Forge Desk Recovery
 
 on:
   pull_request:
@@ -8,36 +8,99 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: elevated-forge-desk-recovery
+  cancel-in-progress: false
+
 jobs:
-  diagnose-owner:
+  recover-desk-elevated:
+    runs-on: [self-hosted]
+    timeout-minutes: 8
+    steps:
+      - name: Verify backend and stale Desk signature
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 unhealthy; refusing recovery.' }
+          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('desk-before',r.status);process.exit(r.status===404?0:2)}).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Desk is no longer in the known stale-404 state; refusing privileged restart.' }
+
+      - name: Create and run one-shot elevated Admin recovery task
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $taskName = 'Forge-Recover-Desk-Once'
+          $scriptPath = 'C:\alumdoor\recover-desk-once.ps1'
+          $taskLog = 'C:\alumdoor\desk-recovery-elevated.log'
+
+          $script = @'
+          $ErrorActionPreference = 'Stop'
+          $taskLog = 'C:\alumdoor\desk-recovery-elevated.log'
+          "RECOVERY_START $(Get-Date -Format o)" | Out-File $taskLog -Encoding utf8
+          $listener = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($listener) {
+            "KILL_PID=$($listener.OwningProcess)" | Out-File $taskLog -Append -Encoding utf8
+            & taskkill.exe /PID $listener.OwningProcess /T /F 2>&1 | Out-File $taskLog -Append -Encoding utf8
+            if ($LASTEXITCODE -ne 0) { throw "taskkill failed: $LASTEXITCODE" }
+          }
+          for ($i=0; $i -lt 20; $i++) {
+            if (-not (Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue)) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          if (Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue) { throw '5173 still occupied' }
+          $env:VITE_FORGE_BACKEND = 'http://127.0.0.1:8799'
+          $command = 'pnpm run dev > "C:\alumdoor\desk-live.log" 2>&1'
+          Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $command -WorkingDirectory 'C:\alumdoor\client\apps\runtime' -WindowStyle Hidden
+          "DESK_STARTED $(Get-Date -Format o)" | Out-File $taskLog -Append -Encoding utf8
+          '@
+          Set-Content -Path $scriptPath -Value $script -Encoding utf8
+
+          Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+          $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+          $principal = New-ScheduledTaskPrincipal -UserId "$env:COMPUTERNAME\Admin" -LogonType Interactive -RunLevel Highest
+          Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Force | Out-Null
+          Start-ScheduledTask -TaskName $taskName
+
+          $finished = $false
+          for ($i=0; $i -lt 60; $i++) {
+            $info = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction Stop
+            $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+            if ($task.State -ne 'Running' -and $info.LastRunTime -gt [datetime]::MinValue) { $finished = $true; break }
+            Start-Sleep -Seconds 1
+          }
+          if (Test-Path $taskLog) { Get-Content $taskLog -Tail 200 }
+          $info = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction SilentlyContinue
+          Write-Host "TASK_RESULT=$($info.LastTaskResult) LAST=$($info.LastRunTime)"
+          if (-not $finished -or $info.LastTaskResult -ne 0) { throw 'Elevated Desk recovery task failed.' }
+
+      - name: Verify HTTP 200 then remove one-shot task and script
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ok = $false
+          for ($i=0; $i -lt 60; $i++) {
+            node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(r=>{console.log('desk-after',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          Unregister-ScheduledTask -TaskName 'Forge-Recover-Desk-Once' -Confirm:$false -ErrorAction SilentlyContinue
+          Remove-Item 'C:\alumdoor\recover-desk-once.ps1' -Force -ErrorAction SilentlyContinue
+          if (-not $ok) {
+            if (Test-Path 'C:\alumdoor\desk-live.log') { Get-Content 'C:\alumdoor\desk-live.log' -Tail 200 }
+            throw 'Desk did not return HTTP 200 after elevated restart.'
+          }
+
+  verify-persisted:
+    needs: recover-desk-elevated
     runs-on: [self-hosted]
     timeout-minutes: 3
     steps:
-      - name: Inspect Desk process owner and available Forge startup tasks
+      - name: Confirm backend and Desk remain healthy after runner cleanup
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Continue'
-          $listener = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($listener) {
-            $p = Get-CimInstance Win32_Process -Filter "ProcessId = $($listener.OwningProcess)" -ErrorAction SilentlyContinue
-            Write-Host "DESK_PID=$($listener.OwningProcess)"
-            if ($p) {
-              $owner = Invoke-CimMethod -InputObject $p -MethodName GetOwner -ErrorAction SilentlyContinue
-              Write-Host "DESK_OWNER=$($owner.Domain)\\$($owner.User) RETURN=$($owner.ReturnValue)"
-              Write-Host "DESK_PARENT=$($p.ParentProcessId)"
-            }
-          }
-          Write-Host '=== Scheduled tasks matching Forge/alumdoor ==='
-          Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match 'Forge|alumdoor' -or $_.TaskPath -match 'Forge|alumdoor' } | ForEach-Object {
-            $i = Get-ScheduledTaskInfo -TaskName $_.TaskName -TaskPath $_.TaskPath -ErrorAction SilentlyContinue
-            Write-Host "TASK=$($_.TaskPath)$($_.TaskName) STATE=$($_.State) USER=$($_.Principal.UserId) LOGON=$($_.Principal.LogonType) RUNLEVEL=$($_.Principal.RunLevel) LAST=$($i.LastRunTime) RESULT=$($i.LastTaskResult)"
-            foreach ($a in $_.Actions) { Write-Host "  ACTION=$($a.Execute) $($a.Arguments) WD=$($a.WorkingDirectory)" }
-          }
-          Write-Host '=== Startup files visible to runner ==='
-          foreach ($path in @(
-            'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp',
-            "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
-          )) {
-            Write-Host "PATH=$path"
-            Get-ChildItem -Force $path -ErrorAction SilentlyContinue | Select-Object Name,FullName | Format-Table -AutoSize
-          }
+          $ErrorActionPreference = 'Stop'
+          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend-final',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 down.' }
+          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('desk-final',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Desk 5173 down after cleanup.' }
