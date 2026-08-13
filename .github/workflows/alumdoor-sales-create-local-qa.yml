@@ -1,180 +1,64 @@
-name: AlumDoor Sales Create Local QA
+name: Recover Forge Local Dev
 
 on:
   pull_request:
     branches: [main]
+    types: [reopened, synchronize]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: alumdoor-sales-create-local-qa-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: recover-forge-local-dev
+  cancel-in-progress: false
 
 jobs:
-  canonical-client-build:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install exact workspace
-        run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Build exact Runtime dependency graph
-        run: pnpm --filter runtime... run build
-      - name: Typecheck full client graph from a clean build state
-        run: pnpm --dir client exec tsc -b --force
-
-  isolated-local-sales-create:
-    needs: canonical-client-build
+  recover-local-dev:
     runs-on: [self-hosted]
-    timeout-minutes: 15
-    env:
-      FORGE_QA_BACKEND_PORT: 18899
-      FORGE_QA_UI_PORT: 15273
-      FORGE_ALUMDOOR_E2E_ORIGIN: http://127.0.0.1:15273
-      FORGE_ALUMDOOR_E2E_USER: dev@example.com
-      FORGE_ALUMDOOR_E2E_PASSWORD: local-dev-password-1
+    timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-        with:
-          clean: true
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-          run_install: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install exact workspace
-        shell: powershell
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Require isolated QA ports to be unused
+      - name: Start canonical local Forge services without touching runner workspace
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($port in @($env:FORGE_QA_BACKEND_PORT, $env:FORGE_QA_UI_PORT)) {
-            $used = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-            if ($used) { throw "QA_PORT_IN_USE: $port. Refusing to stop an existing developer service." }
+          $script = 'C:\alumdoor\start-forge.bat'
+          if (-not (Test-Path $script)) { throw "Missing recovery script: $script" }
+          & cmd.exe /c $script
+          if ($LASTEXITCODE -ne 0) {
+            if (Test-Path 'C:\alumdoor\start-forge.log') { Get-Content 'C:\alumdoor\start-forge.log' -Tail 200 }
+            throw "start-forge.bat failed with exit code $LASTEXITCODE"
           }
 
-      - name: Build and seed isolated local D1
+      - name: Verify backend 8799 and Desk 5173
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          node server/scripts/ensure-dev-vars.mjs
-          node server/scripts/ensure-alumdoor-local-vars.mjs
-          Push-Location server
-          pnpm run build
-          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
-          pnpm run dev:seed
-          Pop-Location
-
-      - name: Start isolated local AlumDoor worker cluster
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $serverDir = Join-Path $env:GITHUB_WORKSPACE 'server'
-          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-backend.log'
-          $command = "pnpm exec wrangler dev --config apps/tenant-worker/wrangler.alumdoor-local.jsonc --config apps-src/alumdoor-worker/wrangler.purchase-qa.jsonc --config apps/purchase-qa-callback/wrangler.jsonc --port $env:FORGE_QA_BACKEND_PORT --local > `"$log`" 2>&1"
-          $proc = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $command -WorkingDirectory $serverDir -PassThru
-          "QA_BACKEND_PID=$($proc.Id)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $origin = "http://127.0.0.1:$env:FORGE_QA_BACKEND_PORT"
-          $ready = $false
-          for ($i = 0; $i -lt 90; $i++) {
-            node -e "fetch('$origin/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit((r.status===401||r.status===403||r.ok)?0:1)).catch(()=>process.exit(1))"
-            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
-            Start-Sleep -Seconds 2
-          }
-          if (-not $ready) {
-            if (Test-Path $log) { Get-Content $log -Tail 200 }
-            throw "Local AlumDoor worker did not become ready on $env:FORGE_QA_BACKEND_PORT."
-          }
-
-      - name: Install authoritative apps into isolated local tenant
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Push-Location server
-          $origin = "http://127.0.0.1:$env:FORGE_QA_BACKEND_PORT"
-          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
-          node scripts/forge-app.mjs apps-src/hrm --origin $origin --admin dev@example.com --provision-standard
-          node scripts/forge-app.mjs apps-src/alumdoor-attendance --origin $origin --admin dev@example.com
-          node scripts/forge-app.mjs apps-src/vn-accounting --origin $origin --admin dev@example.com
-          node scripts/forge-app.mjs briefs/alumdoor-v2.json --origin $origin --admin dev@example.com
-          $env:FORGE_ADMIN_PASSWORD = $null
-          Pop-Location
-
-      - name: Build exact client and start isolated local Desk
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          pnpm --dir client exec tsc -b --force
-          $runtimeDir = Join-Path $env:GITHUB_WORKSPACE 'client/apps/runtime'
-          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-vite.log'
-          $env:VITE_FORGE_BACKEND = "http://127.0.0.1:$env:FORGE_QA_BACKEND_PORT"
-          $command = "pnpm run dev -- --host 127.0.0.1 --port $env:FORGE_QA_UI_PORT > `"$log`" 2>&1"
-          $proc = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $command -WorkingDirectory $runtimeDir -PassThru
-          "QA_UI_PID=$($proc.Id)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $origin = "http://127.0.0.1:$env:FORGE_QA_UI_PORT"
-          $ready = $false
+          $backendReady = $false
+          $deskReady = $false
           for ($i = 0; $i -lt 60; $i++) {
-            node -e "fetch('$origin',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            if (-not $backendReady) {
+              try {
+                $r = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -TimeoutSec 3 -ErrorAction Stop
+                if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 500) { $backendReady = $true }
+              } catch {
+                if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -in 401,403) { $backendReady = $true }
+              }
+            }
+            if (-not $deskReady) {
+              try {
+                $u = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5173/' -TimeoutSec 3 -ErrorAction Stop
+                if ($u.StatusCode -eq 200) { $deskReady = $true }
+              } catch {}
+            }
+            if ($backendReady -and $deskReady) { break }
             Start-Sleep -Seconds 2
           }
-          if (-not $ready) {
-            if (Test-Path $log) { Get-Content $log -Tail 200 }
-            throw "Local MetaForge Desk did not become ready on $env:FORGE_QA_UI_PORT."
-          }
-
-      - name: Install Chromium for Playwright
-        shell: powershell
-        run: pnpm --dir client/apps/demo exec playwright install chromium
-
-      - name: Create and read back one Sales Order through the browser
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          pnpm --dir client/apps/demo exec playwright test e2e/alumdoor-sales-create.local.spec.ts --config playwright.alumdoor-sales-local.config.mjs --tsconfig=e2e/tsconfig.json
-
-      - name: Print local logs on failure
-        if: failure()
-        shell: powershell
-        run: |
-          foreach ($file in @(
-            (Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-backend.log'),
-            (Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-vite.log')
-          )) {
-            if (Test-Path $file) {
-              Write-Host "===== $file ====="
-              Get-Content $file -Tail 250
-            }
-          }
-
-      - name: Stop only QA-owned processes
-        if: always()
-        shell: powershell
-        run: |
-          foreach ($pidText in @($env:QA_UI_PID, $env:QA_BACKEND_PID)) {
-            if (-not $pidText) { continue }
-            $pidValue = [int]$pidText
-            try {
-              Stop-Process -Id $pidValue -Force -ErrorAction Stop
-              Write-Host "Stopped QA-owned process $pidValue"
-            } catch {
-              Write-Host "QA process $pidValue already stopped or delegated child cleanup: $($_.Exception.Message)"
-            }
+          Write-Host "backend8799=$backendReady desk5173=$deskReady"
+          if (-not ($backendReady -and $deskReady)) {
+            Write-Host '--- start-forge.log ---'
+            if (Test-Path 'C:\alumdoor\start-forge.log') { Get-Content 'C:\alumdoor\start-forge.log' -Tail 200 }
+            Write-Host '--- listeners ---'
+            Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 8799,5173 } | Format-Table -AutoSize
+            throw 'Forge local services did not recover.'
           }
