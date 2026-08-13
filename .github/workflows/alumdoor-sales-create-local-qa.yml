@@ -1,72 +1,43 @@
-name: Recover Forge Local Desk
+name: Diagnose Forge Desktop Ownership
 
 on:
   pull_request:
     branches: [main]
     types: [synchronize]
-  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: recover-forge-local-desk
-  cancel-in-progress: false
-
 jobs:
-  restart-desk:
-    runs-on: [self-hosted]
-    timeout-minutes: 8
-    steps:
-      - name: Confirm backend is healthy before touching Desk
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 is not healthy; refusing to touch Desk.' }
-
-      - name: Stop only the stale listener on Forge Desk port 5173
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          node C:\alumdoor\server\scripts\stop-local-dev.mjs --ports=5173
-          Start-Sleep -Seconds 2
-          $left = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue
-          if ($left) { $left | Format-Table -AutoSize; throw 'Port 5173 is still occupied after canonical stop-local-dev.' }
-
-      - name: Start Desk detached from GitHub runner cleanup
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $env:RUNNER_TRACKING_ID = ''
-          $env:VITE_FORGE_BACKEND = 'http://127.0.0.1:8799'
-          $runtime = 'C:\alumdoor\client\apps\runtime'
-          $log = 'C:\alumdoor\desk-live.log'
-          $command = "pnpm run dev > `"$log`" 2>&1"
-          Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $command -WorkingDirectory $runtime -WindowStyle Hidden
-
-          $ready = $false
-          for ($i = 0; $i -lt 60; $i++) {
-            node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(async r=>{console.log('desk',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
-            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
-            Start-Sleep -Seconds 2
-          }
-          if (-not $ready) {
-            if (Test-Path $log) { Get-Content $log -Tail 200 }
-            throw 'Forge Desk did not become HTTP 200 on port 5173.'
-          }
-
-  verify-desk-persisted:
-    needs: restart-desk
+  diagnose-owner:
     runs-on: [self-hosted]
     timeout-minutes: 3
     steps:
-      - name: Verify Desk and backend after previous runner job cleanup
+      - name: Inspect Desk process owner and available Forge startup tasks
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
-          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('persisted backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 is down.' }
-          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(async r=>{console.log('persisted desk',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Desk 5173 did not survive runner cleanup.' }
-          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 8799,5173 } | Format-Table -AutoSize
+          $ErrorActionPreference = 'Continue'
+          $listener = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($listener) {
+            $p = Get-CimInstance Win32_Process -Filter "ProcessId = $($listener.OwningProcess)" -ErrorAction SilentlyContinue
+            Write-Host "DESK_PID=$($listener.OwningProcess)"
+            if ($p) {
+              $owner = Invoke-CimMethod -InputObject $p -MethodName GetOwner -ErrorAction SilentlyContinue
+              Write-Host "DESK_OWNER=$($owner.Domain)\\$($owner.User) RETURN=$($owner.ReturnValue)"
+              Write-Host "DESK_PARENT=$($p.ParentProcessId)"
+            }
+          }
+          Write-Host '=== Scheduled tasks matching Forge/alumdoor ==='
+          Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match 'Forge|alumdoor' -or $_.TaskPath -match 'Forge|alumdoor' } | ForEach-Object {
+            $i = Get-ScheduledTaskInfo -TaskName $_.TaskName -TaskPath $_.TaskPath -ErrorAction SilentlyContinue
+            Write-Host "TASK=$($_.TaskPath)$($_.TaskName) STATE=$($_.State) USER=$($_.Principal.UserId) LOGON=$($_.Principal.LogonType) RUNLEVEL=$($_.Principal.RunLevel) LAST=$($i.LastRunTime) RESULT=$($i.LastTaskResult)"
+            foreach ($a in $_.Actions) { Write-Host "  ACTION=$($a.Execute) $($a.Arguments) WD=$($a.WorkingDirectory)" }
+          }
+          Write-Host '=== Startup files visible to runner ==='
+          foreach ($path in @(
+            'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp',
+            "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
+          )) {
+            Write-Host "PATH=$path"
+            Get-ChildItem -Force $path -ErrorAction SilentlyContinue | Select-Object Name,FullName | Format-Table -AutoSize
+          }
