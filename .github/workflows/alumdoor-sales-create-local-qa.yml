@@ -1,4 +1,4 @@
-name: Diagnose Forge Local Dev
+name: Recover Forge Local Desk
 
 on:
   pull_request:
@@ -9,39 +9,64 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: recover-forge-local-desk
+  cancel-in-progress: false
+
 jobs:
-  diagnose-local-dev:
+  restart-desk:
+    runs-on: [self-hosted]
+    timeout-minutes: 8
+    steps:
+      - name: Confirm backend is healthy before touching Desk
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
+          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 is not healthy; refusing to touch Desk.' }
+
+      - name: Stop only the stale listener on Forge Desk port 5173
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node C:\alumdoor\server\scripts\stop-local-dev.mjs --ports=5173
+          Start-Sleep -Seconds 2
+          $left = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue
+          if ($left) { $left | Format-Table -AutoSize; throw 'Port 5173 is still occupied after canonical stop-local-dev.' }
+
+      - name: Start Desk detached from GitHub runner cleanup
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:RUNNER_TRACKING_ID = ''
+          $env:VITE_FORGE_BACKEND = 'http://127.0.0.1:8799'
+          $runtime = 'C:\alumdoor\client\apps\runtime'
+          $log = 'C:\alumdoor\desk-live.log'
+          $command = "pnpm run dev > `"$log`" 2>&1"
+          Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $command -WorkingDirectory $runtime -WindowStyle Hidden
+
+          $ready = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(3000)}).then(async r=>{console.log('desk',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $ready) {
+            if (Test-Path $log) { Get-Content $log -Tail 200 }
+            throw 'Forge Desk did not become HTTP 200 on port 5173.'
+          }
+
+  verify-desk-persisted:
+    needs: restart-desk
     runs-on: [self-hosted]
     timeout-minutes: 3
     steps:
-      - name: Inspect listeners, owners and HTTP surfaces without mutation
+      - name: Verify Desk and backend after previous runner job cleanup
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Continue'
-          foreach ($port in 8799,5173) {
-            Write-Host "=== PORT $port ==="
-            $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-            $listeners | Format-Table -AutoSize
-            foreach ($l in $listeners) {
-              $p = Get-CimInstance Win32_Process -Filter "ProcessId = $($l.OwningProcess)" -ErrorAction SilentlyContinue
-              if ($p) {
-                Write-Host "PID=$($p.ProcessId) NAME=$($p.Name)"
-                Write-Host "CMD=$($p.CommandLine)"
-                if ($p.ParentProcessId) {
-                  $parent = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.ParentProcessId)" -ErrorAction SilentlyContinue
-                  if ($parent) { Write-Host "PARENT PID=$($parent.ProcessId) NAME=$($parent.Name) CMD=$($parent.CommandLine)" }
-                }
-              }
-            }
-          }
-
-          foreach ($url in @(
-            'http://127.0.0.1:8799/api/method/metaforge.api.get_boot',
-            'http://localhost:8799/api/method/metaforge.api.get_boot',
-            'http://127.0.0.1:5173/',
-            'http://localhost:5173/',
-            'http://127.0.0.1:5173/index.html',
-            'http://localhost:5173/index.html'
-          )) {
-            node -e "fetch('$url',{signal:AbortSignal.timeout(5000)}).then(async r=>{console.log('$url',r.status,r.headers.get('content-type'),(await r.text()).slice(0,120).replace(/\\s+/g,' '))}).catch(e=>console.log('$url','ERROR',e.message))"
-          }
+          $ErrorActionPreference = 'Stop'
+          node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{console.log('persisted backend',r.status);process.exit((r.ok||r.status===401||r.status===403)?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
+          if ($LASTEXITCODE -ne 0) { throw 'Backend 8799 is down.' }
+          node -e "fetch('http://127.0.0.1:5173/',{signal:AbortSignal.timeout(5000)}).then(async r=>{console.log('persisted desk',r.status,r.headers.get('content-type'));process.exit(r.status===200?0:1)}).catch(e=>{console.error(e);process.exit(1)})"
+          if ($LASTEXITCODE -ne 0) { throw 'Desk 5173 did not survive runner cleanup.' }
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 8799,5173 } | Format-Table -AutoSize
