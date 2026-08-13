@@ -42,6 +42,9 @@ jobs:
             --format=esm \
             --target=es2022 \
             '--external:@metaforge/*' \
+            --external:react \
+            --external:react-dom \
+            '--external:react/*' \
             --outfile=/tmp/alumdoor-sales-order.js
           test -s /tmp/alumdoor-sales-order.js
 
