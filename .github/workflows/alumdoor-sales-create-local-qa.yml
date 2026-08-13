@@ -1,0 +1,156 @@
+name: AlumDoor Sales Create Local QA
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-sales-create-local-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canonical-client-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact workspace
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build exact Runtime dependency graph
+        run: pnpm --filter runtime... run build
+      - name: Typecheck full client graph from a clean build state
+        run: pnpm --dir client exec tsc -b --force
+
+  isolated-local-sales-create:
+    needs: canonical-client-build
+    runs-on: [self-hosted]
+    timeout-minutes: 15
+    env:
+      FORGE_ALUMDOOR_E2E_ORIGIN: http://127.0.0.1:5173
+      FORGE_ALUMDOOR_E2E_USER: dev@example.com
+      FORGE_ALUMDOOR_E2E_PASSWORD: local-dev-password-1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install exact workspace
+        shell: powershell
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Reset only local QA ports
+        shell: powershell
+        run: node server/scripts/stop-local-dev.mjs --ports=8799,5173
+
+      - name: Build and seed isolated local D1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node server/scripts/ensure-dev-vars.mjs
+          node server/scripts/ensure-alumdoor-local-vars.mjs
+          Push-Location server
+          pnpm run build
+          pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
+          pnpm run dev:seed
+          Pop-Location
+
+      - name: Start local AlumDoor worker cluster
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $serverDir = Join-Path $env:GITHUB_WORKSPACE 'server'
+          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-backend.log'
+          Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', "pnpm run dev:alumdoor-local > `"$log`" 2>&1" -WorkingDirectory $serverDir | Out-Null
+          $ready = $false
+          for ($i = 0; $i -lt 90; $i++) {
+            node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit((r.status===401||r.status===403||r.ok)?0:1)).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $ready) {
+            if (Test-Path $log) { Get-Content $log -Tail 200 }
+            throw 'Local AlumDoor worker did not become ready on 8799.'
+          }
+
+      - name: Install authoritative apps into local tenant
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Push-Location server
+          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
+          node scripts/forge-app.mjs apps-src/hrm --origin http://127.0.0.1:8799 --admin dev@example.com --provision-standard
+          node scripts/forge-app.mjs apps-src/alumdoor-attendance --origin http://127.0.0.1:8799 --admin dev@example.com
+          node scripts/forge-app.mjs apps-src/vn-accounting --origin http://127.0.0.1:8799 --admin dev@example.com
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --origin http://127.0.0.1:8799 --admin dev@example.com
+          $env:FORGE_ADMIN_PASSWORD = $null
+          Pop-Location
+
+      - name: Build exact client and start local Desk
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pnpm --dir client exec tsc -b --force
+          $runtimeDir = Join-Path $env:GITHUB_WORKSPACE 'client/apps/runtime'
+          $log = Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-vite.log'
+          $env:VITE_FORGE_BACKEND = 'http://127.0.0.1:8799'
+          Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', "pnpm run dev -- --host 127.0.0.1 > `"$log`" 2>&1" -WorkingDirectory $runtimeDir | Out-Null
+          $ready = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            node -e "fetch('http://127.0.0.1:5173',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $ready) {
+            if (Test-Path $log) { Get-Content $log -Tail 200 }
+            throw 'Local MetaForge Desk did not become ready on 5173.'
+          }
+
+      - name: Install Chromium for Playwright
+        shell: powershell
+        run: pnpm --dir client/apps/demo exec playwright install chromium
+
+      - name: Create and read back one Sales Order through the browser
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pnpm --dir client/apps/demo exec playwright test e2e/alumdoor-sales-create.local.spec.ts --config playwright.alumdoor-sales-local.config.mjs --tsconfig=e2e/tsconfig.json
+
+      - name: Print local logs on failure
+        if: failure()
+        shell: powershell
+        run: |
+          foreach ($file in @(
+            (Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-backend.log'),
+            (Join-Path $env:RUNNER_TEMP 'alumdoor-sales-qa-vite.log')
+          )) {
+            if (Test-Path $file) {
+              Write-Host "===== $file ====="
+              Get-Content $file -Tail 250
+            }
+          }
+
+      - name: Stop isolated local QA services
+        if: always()
+        shell: powershell
+        run: node server/scripts/stop-local-dev.mjs --ports=8799,5173
