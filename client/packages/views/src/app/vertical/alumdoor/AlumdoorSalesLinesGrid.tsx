@@ -156,14 +156,25 @@ function selectorDisplay(label: string, choices: readonly SalesGridChoice[]): st
 
 type GlideEditorProps = Parameters<ProvideEditorComponent<GridCell>>[0];
 
+type ItemEditorAnchor = {
+  left: number;
+  top: number;
+};
+
 export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
   const [columns, setColumns] = useState<readonly GridColumn[]>(INITIAL_COLUMNS);
   const [itemEditorKey, setItemEditorKey] = useState<string | undefined>();
+  const [itemEditorAnchor, setItemEditorAnchor] = useState<ItemEditorAnchor | undefined>();
   const selectedIndex = Math.max(0, props.rows.findIndex((row) => row.key === props.selectedKey));
   const selected = props.rows[selectedIndex];
   const itemEditorIndex = props.rows.findIndex((row) => row.key === itemEditorKey);
   const itemEditorRow = itemEditorIndex >= 0 ? props.rows[itemEditorIndex] : undefined;
   const ItemControl = props.registry.resolve("Link");
+
+  const closeItemEditor = useCallback(() => {
+    setItemEditorKey(undefined);
+    setItemEditorAnchor(undefined);
+  }, []);
 
   const getCellContent = useCallback((cell: Item): GridCell => {
     const [columnIndex, rowIndex] = cell;
@@ -184,12 +195,12 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
           row.salesOptionChoices.length === 0,
         );
       case "price":
+        // Item Price is an authoritative server projection. The operator chooses
+        // Sales Option/UOM and the commercial resolver decides the exact price record.
         return textCell(
           row.priceId,
-          row.pricingError
-            ? "Lỗi đơn giá"
-            : selectorDisplay(row.priceLabel || (row.priceChoices.length ? "Chọn đơn giá…" : "—"), row.priceChoices),
-          row.priceChoices.length === 0,
+          row.pricingError ? "Lỗi đơn giá" : row.priceLabel || (row.loading ? "Đang tính…" : "—"),
+          true,
           "right",
         );
       case "uom":
@@ -221,18 +232,16 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
     const [columnIndex, rowIndex] = location;
     const row = props.rows[rowIndex];
     const column = COLUMN_IDS[columnIndex];
-    if (!row || !column || column === "item") return undefined;
+    if (!row || !column || column === "item" || column === "price") return undefined;
 
     const choices = column === "sales_option"
       ? row.salesOptionChoices
-      : column === "price"
-        ? row.priceChoices
-        : column === "uom"
-          ? row.uomChoices
-          : [];
+      : column === "uom"
+        ? row.uomChoices
+        : [];
     if (!choices.length) return undefined;
-    const fieldname = column === "sales_option" ? "sales_option" : column === "price" ? "item_price" : "uom";
-    const label = column === "sales_option" ? "Cách bán" : column === "price" ? "Đơn giá" : "ĐVT";
+    const fieldname = column === "sales_option" ? "sales_option" : "uom";
+    const label = column === "sales_option" ? "Cách bán" : "ĐVT";
     return (editorProps: GlideEditorProps) => (
       <GridForgeEditor
         {...editorProps}
@@ -260,7 +269,6 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
     }
     if (newValue.kind !== GridCellKind.Text) return;
     if (column === "sales_option") props.onChange(row.key, "sales_option", newValue.data);
-    else if (column === "price") props.onChange(row.key, "item_price", newValue.data);
     else if (column === "uom") props.onChange(row.key, "uom", newValue.data);
   }, [props]);
 
@@ -272,7 +280,9 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
       <div className="flex min-h-10 items-center justify-between gap-2 border-b px-2.5 py-1.5">
         <div className="min-w-0">
           <div className="text-xs font-semibold">Bảng sản phẩm</div>
-          <div className="truncate text-[10px] text-muted-foreground">{status || "Bấm ô có ▾ để chọn; số lượng đơn giản có thể nhập trực tiếp"}</div>
+          <div className="truncate text-[10px] text-muted-foreground">
+            {status || "Chọn mặt hàng / cách bán / ĐVT; đơn giá, CK, phụ thu và thành tiền do hệ thống tính"}
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {selected?.loading ? <Loader2 className="mr-1 size-3.5 animate-spin text-muted-foreground" /> : null}
@@ -288,20 +298,29 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-b-lg">
+      <div className="relative overflow-visible rounded-b-lg">
         <DataEditor
           columns={columns}
           rows={props.rows.length}
           getCellContent={getCellContent}
           onCellEdited={onCellEdited}
           provideEditor={provideEditor}
-          onCellClicked={(cell: Item) => {
+          onCellClicked={(cell, event) => {
             const row = props.rows[cell[1]];
             if (!row) return;
             props.onSelectedKeyChange(row.key);
             const column = COLUMN_IDS[cell[0]];
-            setItemEditorKey(column === "item" ? row.key : undefined);
+            if (column !== "item") {
+              closeItemEditor();
+              return;
+            }
+            setItemEditorKey(row.key);
+            setItemEditorAnchor({
+              left: Math.max(0, event.bounds.x),
+              top: Math.max(0, event.bounds.y + event.bounds.height),
+            });
           }}
+          onVisibleRegionChanged={closeItemEditor}
           rowMarkers="clickable-number"
           rowHeight={38}
           headerHeight={34}
@@ -323,36 +342,41 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
             cellVerticalPadding: 4,
           }}
           onColumnResize={(column: GridColumn, newSize: number) => {
+            closeItemEditor();
             setColumns((current) => current.map((entry) => (
               entry.id === column.id ? { ...entry, width: newSize } : entry
             )));
           }}
         />
-      </div>
 
-      {itemEditorRow && ItemControl ? (
-        <div
-          className="absolute z-[90] w-[360px] max-w-[calc(100%-3rem)] rounded-md border bg-card p-1 shadow-2xl"
-          style={{ left: 46, top: 74 + itemEditorIndex * 38 }}
-          data-surface="alumdoor-item-link-popup"
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <ItemControl
-            field={linkField("item_code", "Mặt hàng", "Item")}
-            id={`sales-grid-item-${itemEditorRow.key}`}
-            value={itemEditorRow.itemCode}
-            onChange={(next) => {
-              props.onChange(itemEditorRow.key, "item_code", text(next));
-              setItemEditorKey(undefined);
-            }}
-            services={props.services}
-            parentDoctype="Sales Order"
-            docValues={{ ...props.parentDocValues, ...itemEditorRow.docValues }}
-            roles={props.roles}
-            compact
-          />
-        </div>
-      ) : null}
+        {itemEditorRow && itemEditorAnchor && ItemControl ? (
+          <div
+            className="absolute z-[90] w-[360px] max-w-[calc(100%-3rem)] rounded-md border bg-card p-1 shadow-2xl"
+            style={{ left: itemEditorAnchor.left, top: itemEditorAnchor.top }}
+            data-surface="alumdoor-item-link-popup"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <ItemControl
+              field={linkField("item_code", "Mặt hàng", "Item")}
+              id={`sales-grid-item-${itemEditorRow.key}`}
+              value={itemEditorRow.itemCode}
+              onChange={(next) => {
+                const itemCode = text(next);
+                // Ignore transient empty values from the Link popover. A non-empty
+                // selection always starts a new authoritative row preview upstream.
+                if (!itemCode) return;
+                props.onChange(itemEditorRow.key, "item_code", itemCode);
+                closeItemEditor();
+              }}
+              services={props.services}
+              parentDoctype="Sales Order"
+              docValues={{ ...props.parentDocValues, ...itemEditorRow.docValues }}
+              roles={props.roles}
+              compact
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
