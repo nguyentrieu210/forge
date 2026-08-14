@@ -107,10 +107,21 @@ test("golden Sales and Purchase compact/full policies survive canonical UI-polic
   assert.deepEqual(names(receipt.viewPolicy.form), expectedFull(alumdoorGoldenChildGridPolicies.purchaseReceiptFull, receipt));
 });
 
-test("current Sales operator contract exposes option and server money, never legacy pricing authority", () => {
+test("current Sales operator contract sells plain Item Price money, never Sales Option/Package authority", () => {
+  // Cách bán/gói bán đã bị loại bỏ khỏi nền tảng: mọi mặt hàng bán theo giá STANDARD
+  // thẳng từ Item Price. `sales_option`/`sales_mode` không còn là field của bất kỳ
+  // doctype dòng bán nào — thấy lại chúng nghĩa là cơ chế cũ đã trôi dạt trở lại.
   const brief = sourceBrief();
   applyAlumdoorChildPresentation(brief);
   const pkg = compileWithUiPolicies(brief);
+
+  for (const name of ["Quotation Item", "Sales Order Item", "Delivery Note Item", "Sales Invoice Item"]) {
+    const sales = compiledDoctype(pkg, name);
+    const fields = new Map(sales.fields.map((field) => [field.fieldname, field]));
+    for (const fieldname of ["sales_option", "sales_mode"]) {
+      assert.equal(fields.has(fieldname), false, `${name}.${fieldname} phải xóa khỏi schema — cách bán đã bị loại bỏ`);
+    }
+  }
 
   for (const name of ["Quotation Item", "Sales Order Item"]) {
     const sales = compiledDoctype(pkg, name);
@@ -118,14 +129,12 @@ test("current Sales operator contract exposes option and server money, never leg
     const quick = new Set(names(sales.viewPolicy.quickEntry));
     const full = new Set(names(sales.viewPolicy.form));
 
-    for (const fieldname of ["sales_option", "discount_amount", "adjustment_amount", "net_amount"]) {
+    for (const fieldname of ["discount_amount", "adjustment_amount", "net_amount"]) {
       assert.ok(fields.has(fieldname), `${name}.${fieldname} missing from effective child schema`);
       assert.ok(quick.has(fieldname), `${name}.${fieldname} missing from compact operator surface`);
-    }
-    for (const fieldname of ["discount_amount", "adjustment_amount", "net_amount"]) {
       assert.equal(Boolean(fields.get(fieldname)?.read_only), true, `${name}.${fieldname} must remain server-owned/read-only`);
     }
-    for (const fieldname of ["sales_mode", "discount_percentage", "formula_policy", "formula_version"]) {
+    for (const fieldname of ["discount_percentage", "formula_policy", "formula_version"]) {
       if (!fields.has(fieldname)) continue;
       assert.equal(quick.has(fieldname), false, `${name}.${fieldname} leaked into compact business surface`);
       assert.equal(full.has(fieldname), false, `${name}.${fieldname} leaked into full business surface`);
@@ -133,11 +142,12 @@ test("current Sales operator contract exposes option and server money, never leg
     }
   }
 
-  const invoice = compiledDoctype(pkg, "Sales Invoice Item");
-  const invoiceFields = new Map(invoice.fields.map((field) => [field.fieldname, field]));
-  assert.ok(invoiceFields.has("sales_option"), "Sales Invoice Item.sales_option missing from current Selling contract");
-  assert.ok(new Set(names(invoice.viewPolicy.quickEntry)).has("sales_option"), "Sales Invoice Item.sales_option missing from compact surface");
-  assert.equal(invoiceFields.get("sales_option")?.surface, "quick", "Sales Invoice Item.sales_option must stay operator-visible");
+  const itemPrice = compiledDoctype(pkg, "Item Price");
+  const itemPriceFields = new Map(itemPrice.fields.map((field) => [field.fieldname, field]));
+  assert.equal(itemPriceFields.has("sales_option"), false, "Item Price.sales_option phải xóa — Sales Option không còn tồn tại");
+  const priceVariant = itemPriceFields.get("price_variant");
+  assert.ok(priceVariant, "Item Price.price_variant vẫn phải còn (mặc định STANDARD)");
+  assert.equal(priceVariant.fetch_from, undefined, "price_variant không còn fetch_from sales_option đã xóa");
 });
 
 test("Sales audit/package/source-line snapshots never leak from generic child policies", () => {

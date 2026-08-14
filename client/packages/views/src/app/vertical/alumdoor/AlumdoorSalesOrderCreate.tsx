@@ -962,50 +962,9 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
       });
   }, [header, previewDocument]);
 
-  const loadSalesOptions = useCallback(async (itemCode: string, itemGroup: string): Promise<Doc[]> => {
-    if (!itemCode) return [];
-    const rows: Doc[] = [];
-    const pageLength = 100;
-    for (let limitStart = 0; ; limitStart += pageLength) {
-      // The server caps generic list responses at 100 rows even when a larger
-      // limit is requested. Sales Option now exceeds that cap, so every page
-      // must be read before scoping the choices to the current Item.
-      const page = await adapter.getList("Sales Option", {
-        // Navigation-only fields such as target_item_rules are intentionally
-        // loaded from getDoc below because older metadata caches may reject
-        // them in list projections.
-        fields: [
-          "name",
-          "option_label",
-          "item_group",
-          "item_code",
-          "disabled",
-          "price_variant",
-          "sales_package",
-        ],
-        pageLength,
-        limitStart,
-      });
-      rows.push(...page);
-      if (page.length < pageLength) break;
-    }
-    const scopedRows = rows.filter((row) => {
-      if (row.disabled === true || row.disabled === 1 || text(row.disabled) === "1") return false;
-      const scopedItem = text(row.item_code);
-      if (scopedItem && scopedItem !== itemCode) return false;
-      const scopedGroup = text(row.item_group);
-      if (scopedGroup && commercialNormalized(scopedGroup) !== commercialNormalized(itemGroup)) return false;
-      return true;
-    });
-    const detailedRows = await Promise.all(scopedRows.map(async (row) => {
-      const name = text(row.name);
-      if (!name) return row;
-      const { doc } = await adapter.getDoc("Sales Option", name);
-      return { ...row, ...doc } as Doc;
-    }));
-    return detailedRows
-      .sort((left, right) => (Number(right.priority) || 0) - (Number(left.priority) || 0) || text(left.option_label).localeCompare(text(right.option_label), "vi"));
-  }, [adapter]);
+  // Cách bán/gói bán đã bị loại bỏ khỏi nền tảng: mọi mặt hàng bán theo giá STANDARD
+  // thẳng từ Item Price, không còn Sales Option nào để tra.
+  const loadSalesOptions = useCallback(async (_itemCode: string, _itemGroup: string): Promise<Doc[]> => [], []);
 
 
   const loadItemPrices = useCallback(async (itemCode: string): Promise<Doc[]> => {
@@ -2325,18 +2284,7 @@ _error: mapError(error).message,
               disabled: 0,
             }),
           };
-          const salesOptionChoices = row.salesOptionChoices;
-          const selectedSalesOption = (line._salesOptions ?? []).find(
-            (option) => text(option.name) === text(line.sales_option),
-          );
-          const syncedLeafVariant = salesOptionLeafVariant(selectedSalesOption);
-          const salesOptionField = selectField(
-            childField("sales_option"),
-            "sales_option",
-            "Cách bán",
-            salesOptionChoices.map((choice) => choice.value),
-            Object.fromEntries(salesOptionChoices.map((choice) => [choice.value, choice.label])),
-          );
+          const syncedLeafVariant = "";
           const uomField = selectField(
             childField("uom"),
             "uom",
@@ -2388,30 +2336,9 @@ _error: mapError(error).message,
                 />
               </TableCell>
               <TableCell className="align-top px-2 py-1.5">
-                {row.itemCode ? (
-                  <StandardField
-                    id={`sales-line-${rowIndex}-sales-option`}
-                    field={salesOptionField}
-                    value={line.sales_option || STANDARD_SALES_OPTION}
-                    onChange={(value) => handleGridChange(
-                      row.key,
-                      "sales_option",
-                      value === STANDARD_SALES_OPTION ? undefined : value,
-                    )}
-                    registry={registry}
-                    services={services}
-                    parentDoctype="Sales Order Item"
-                    docValues={line}
-                    roles={roles}
-                    compact
-                    hideLabel
-                    className="[&_.mf-control]:!min-h-8 [&_button]:!h-8"
-                  />
-                ) : (
-                  <div className="flex min-h-8 items-center justify-center px-2 text-center text-sm text-muted-foreground">
-                    {row.salesOptionLabel || "Tiêu chuẩn"}
-                  </div>
-                )}
+                <div className="flex min-h-8 items-center justify-center px-2 text-center text-sm text-muted-foreground">
+                  Tiêu chuẩn
+                </div>
               </TableCell>
               <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums">
                 <span className={row.pricingError ? "text-destructive" : undefined}>

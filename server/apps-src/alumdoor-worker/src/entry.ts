@@ -16,7 +16,6 @@ import {
 import { handlePurchaseSupplierDashboard } from "./purchase-supplier-dashboard.js";
 import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement.js";
 import { handleProductionRequestLifecycle } from "./production-request-lifecycle-route.js";
-import { guardSalesProductionPackageSemantics } from "./sales-production-package-guard.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -40,10 +39,6 @@ export default {
     if (url.pathname.startsWith("/api/method/")) {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
       if (method === "alumdoor.production_request.lifecycle") return handleProductionRequestLifecycle(request, env);
-      if (method === "alumdoor.sales.preview_production" || method === "alumdoor.sales.create_production") {
-        const blocked = await guardSalesProductionPackageSemantics(request, env);
-        if (blocked) return blocked;
-      }
       if (method === "alumdoor.purchase.supplier_delivery_dashboard") return handlePurchaseSupplierDashboard(request, env);
       if (method === "alumdoor.purchase.supplier_delivery_settlement") return handlePurchaseSupplierSettlement(request, env);
       if (method === "alumdoor.purchase.preview_fifo_receipt") return handleTrackedPurchaseFifoRequest(request, env, false, false);

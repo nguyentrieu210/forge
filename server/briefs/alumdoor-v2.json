@@ -2855,12 +2855,10 @@
         "price_list",
         "item_code",
         "uom",
-        "sales_option",
         "rate"
       ],
       "search": [
-        "item_code",
-        "sales_option"
+        "item_code"
       ],
       "fields": [
         "price_list:Link(Price List)! Bảng giá",
@@ -2885,24 +2883,13 @@
           "description": "Đơn giá chỉ áp dụng khi dòng bán dùng đúng đơn vị này."
         },
         {
-          "fieldname": "sales_option",
-          "fieldtype": "Link",
-          "options": "Sales Option",
-          "label": "Phương án bán",
-          "in_list_view": true,
-          "in_standard_filter": true,
-          "link_filters": "[[\"Sales Option\",\"disabled\",\"=\",0],[\"Sales Option\",\"item_group\",\"=\",\"eval:doc.item_group\"]]",
-          "description": "Để trống nếu mặt hàng chỉ có một giá bán."
-        },
-        {
           "fieldname": "price_variant",
           "fieldtype": "Data",
           "label": "Mã giá",
           "default": "STANDARD",
           "required": true,
           "read_only": true,
-          "depends_on": "eval:false",
-          "fetch_from": "sales_option.price_variant"
+          "depends_on": "eval:false"
         },
         "rate:Currency! Đơn giá",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
@@ -3098,7 +3085,6 @@
       "title": "item_code",
       "list": [
         "item_code",
-        "sales_option",
         "color",
         "width_m",
         "height_m",
@@ -3122,14 +3108,6 @@
           "options": "Item",
           "required": true,
           "link_filters": "{\"is_sales_item\":1,\"disabled\":0}",
-          "surface": "quick"
-        },
-        {
-          "label": "Phương án bán",
-          "fieldname": "sales_option",
-          "fieldtype": "Link",
-          "options": "Sales Option",
-          "in_list_view": true,
           "surface": "quick"
         },
         {
@@ -3213,18 +3191,6 @@
           "default": 1,
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
           "surface": "quick"
-        },
-        {
-          "label": "Cách bán",
-          "fieldname": "sales_mode",
-          "fieldtype": "Select",
-          "options": "Trọn bộ\nTách món",
-          "default": "Trọn bộ",
-          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal",
-          "hidden": true,
-          "editMode": "hidden",
-          "serverEnforced": true
         },
         {
           "label": "Có bản bướm",
@@ -3592,7 +3558,6 @@
       "form": {
         "fields": [
           "item_code",
-          "sales_option",
           "color",
           "height_m",
           "width_m",
@@ -3625,7 +3590,6 @@
       "quickEntry": {
         "fields": [
           "item_code",
-          "sales_option",
           "color",
           "height_m",
           "width_m",
@@ -3777,7 +3741,6 @@
       "title": "item_code",
       "list": [
         "item_code",
-        "sales_option",
         "color",
         "width_m",
         "height_m",
@@ -3802,14 +3765,6 @@
           "options": "Item",
           "required": true,
           "link_filters": "{\"is_sales_item\":1,\"disabled\":0}",
-          "surface": "quick"
-        },
-        {
-          "label": "Phương án bán",
-          "fieldname": "sales_option",
-          "fieldtype": "Link",
-          "options": "Sales Option",
-          "in_list_view": true,
           "surface": "quick"
         },
         {
@@ -3893,18 +3848,6 @@
           "default": 1,
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
           "surface": "quick"
-        },
-        {
-          "label": "Cách bán",
-          "fieldname": "sales_mode",
-          "fieldtype": "Select",
-          "options": "Trọn bộ\nTách món",
-          "default": "Trọn bộ",
-          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal",
-          "hidden": true,
-          "editMode": "hidden",
-          "serverEnforced": true
         },
         {
           "label": "Có bản bướm",
@@ -4306,7 +4249,6 @@
       "form": {
         "fields": [
           "item_code",
-          "sales_option",
           "color",
           "height_m",
           "width_m",
@@ -4339,7 +4281,6 @@
       "quickEntry": {
         "fields": [
           "item_code",
-          "sales_option",
           "color",
           "height_m",
           "width_m",
@@ -4770,18 +4711,6 @@
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
           "mandatory_depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
           "surface": "expanded"
-        },
-        {
-          "label": "Cách bán",
-          "fieldname": "sales_mode",
-          "fieldtype": "Select",
-          "options": "Trọn bộ\nTách món",
-          "default": "Trọn bộ",
-          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
-          "surface": "internal",
-          "hidden": true,
-          "editMode": "hidden",
-          "serverEnforced": true
         },
         {
           "label": "Có bản bướm",
@@ -5259,14 +5188,6 @@
           "surface": "quick"
         },
         {
-          "label": "Phương án bán",
-          "fieldname": "sales_option",
-          "fieldtype": "Link",
-          "options": "Sales Option",
-          "in_list_view": true,
-          "surface": "quick"
-        },
-        {
           "fieldname": "item_name",
           "label": "Tên hàng",
           "fieldtype": "Data",
@@ -5343,17 +5264,6 @@
           "fieldtype": "Int",
           "default": "1",
           "surface": "expanded"
-        },
-        {
-          "fieldname": "sales_mode",
-          "label": "Cách bán",
-          "fieldtype": "Select",
-          "options": "Trọn bộ\nTách món",
-          "default": "Trọn bộ",
-          "surface": "internal",
-          "hidden": true,
-          "editMode": "hidden",
-          "serverEnforced": true
         },
         {
           "fieldname": "has_butterfly_bracket",
@@ -5466,7 +5376,6 @@
       "form": {
         "fields": [
           "item_code",
-          "sales_option",
           "color",
           "width_m",
           "height_m",
@@ -5490,7 +5399,6 @@
       "quickEntry": {
         "fields": [
           "item_code",
-          "sales_option",
           "uom",
           "qty",
           "rate",
@@ -8509,14 +8417,6 @@
           "surface": "expanded"
         },
         {
-          "fieldname": "sales_mode",
-          "label": "Cách bán",
-          "fieldtype": "Select",
-          "options": "Trọn bộ\nTách món",
-          "required": true,
-          "surface": "quick"
-        },
-        {
           "fieldname": "formula_policy",
           "label": "Công thức",
           "fieldtype": "Link",
@@ -8687,7 +8587,6 @@
           "mesh_height_m",
           "color",
           "motor_model",
-          "sales_mode",
           "formula_policy",
           "formula_version",
           "width_basis",
@@ -8721,7 +8620,6 @@
           "set_count",
           "width_m",
           "height_m",
-          "sales_mode",
           "formula_policy",
           "formula_version",
           "width_basis",

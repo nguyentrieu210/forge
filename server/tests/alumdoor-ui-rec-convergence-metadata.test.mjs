@@ -15,18 +15,18 @@ function fieldOf(brief, doctypeName, fieldname) {
   return field;
 }
 
-test("Selling configuration targets are declared external platform authorities", async () => {
+test("cách bán/gói bán đã rời khỏi khai báo phụ thuộc và schema dòng bán", async () => {
+  // Sales Option/Sales Package bị loại bỏ 2026-08-14: Alumdoor không còn phụ thuộc
+  // "generic Selling authority" đó, và các doctype dòng bán không còn field trỏ tới nó.
   const manifest = compileBrief(await readBriefSource(briefUrl));
-  const external = new Map(manifest.externalDocTypes.map((entry) => [entry.name, entry]));
+  const external = new Map((manifest.externalDocTypes ?? []).map((entry) => [entry.name, entry]));
   for (const name of ["Sales Option", "Sales Package"]) {
-    assert.equal(external.get(name)?.app, "clouderp-selling", `${name} must remain owned by generic Selling`);
-    assert.equal(external.get(name)?.kind, "master", `${name} must remain a master dependency`);
+    assert.equal(external.has(name), false, `${name} không còn là phụ thuộc — cách bán/gói bán đã bị loại bỏ`);
   }
   for (const childName of ["Quotation Item", "Sales Order Item", "Sales Invoice Item"]) {
     const child = manifest.doctypes.find((entry) => entry.name === childName);
     const salesOption = child?.fields.find((entry) => entry.fieldname === "sales_option");
-    assert.equal(salesOption?.fieldtype, "Link", `${childName}.sales_option must remain a Link`);
-    assert.equal(salesOption?.options, "Sales Option", `${childName}.sales_option must target canonical Sales Option`);
+    assert.equal(salesOption, undefined, `${childName}.sales_option phải xóa khỏi schema`);
   }
 });
 

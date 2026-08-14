@@ -3,7 +3,6 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { pricedQtyMicros } from "../../clouderp-core/src/uom.js";
-import { packageComponent, parseSalesPackageSnapshot } from "./sales-package-resolver.js";
 import type { SalesItem, SalesOrderData } from "./types.js";
 
 export async function assertSalesOrderDeliveryLines(
@@ -17,33 +16,7 @@ export async function assertSalesOrderDeliveryLines(
     const rowKey = resolved.rowKey;
     const sourceLine = resolved.line;
     item.sales_order_row_id = rowKey;
-    const snapshot = parseSalesPackageSnapshot(sourceLine.sales_package_snapshot);
-    const componentKey = text(item.sales_package_component_key);
 
-    if (snapshot && snapshot.selection_mode === "ALL") {
-      if (!componentKey) throw errors.reference(`Delivery row ${index + 1} requires sales_package_component_key`);
-      const component = packageComponent(snapshot, componentKey);
-      if (!component) throw errors.reference(`Package component ${componentKey} does not belong to Sales Order row ${rowKey}`);
-      if (component.item_code !== item.item_code) throw errors.reference(`Delivery item ${item.item_code} does not match package component ${componentKey}`);
-      if (text(item.uom) !== component.uom) throw errors.validation(`Delivery package component ${componentKey} must use frozen UOM ${component.uom}`);
-      const requested = toScaledInt(item.qty, 6, `Delivery row ${index + 1}.qty`);
-      const prior = await context.reader.getFulfilledLineQuantityMicros(
-        context.command.tenant_id, salesOrder.name, "Delivery", rowKey, componentKey,
-      );
-      if (prior + requested > component.qty_micros) {
-        throw errors.reference(`Delivery quantity exceeds package component ${componentKey}`, {
-          sales_order: salesOrder.name,
-          sales_order_row_id: rowKey,
-          package_component_key: componentKey,
-          required_qty_micros: component.qty_micros,
-          already_delivered_qty_micros: prior,
-          requested_qty_micros: requested,
-        });
-      }
-      continue;
-    }
-
-    if (componentKey) throw errors.reference(`Direct Sales Order row ${rowKey} must not declare a package component`);
     if (sourceLine.item_code !== item.item_code) throw errors.reference(`Delivery item ${item.item_code} does not match Sales Order row ${rowKey}`);
     if (text(item.uom) !== text(sourceLine.uom)) throw errors.validation(`Delivery row ${index + 1} must preserve Sales Order UOM ${sourceLine.uom}`);
     const requested = toScaledInt(item.qty, 6, `Delivery row ${index + 1}.qty`);

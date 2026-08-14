@@ -1,9 +1,6 @@
 export * from "./adjustment-policy.js";
 export * from "./commercial-line-resolver.js";
 export * from "./commercial-sales-order-controller.js";
-export * from "./packaged-commercial-sales-order-controller.js";
-export * from "./sales-package-resolver.js";
-export * from "./sales-package-split-pricing.js";
 export * from "./controllers.js";
 export * from "./crm-channel-controllers.js";
 export * from "./crm-channel-evidence-controllers.js";
@@ -29,7 +26,6 @@ export * from "./crm-types.js";
 export * from "./finance-controllers.js";
 export * from "./quotation-controller.js";
 export * from "./quotation-types.js";
-export * from "./sales-option-resolver.js";
 export * from "./sales-order-closure-controller.js";
 export * from "./registry.js";
 export * from "./totals.js";
