@@ -191,7 +191,7 @@ async function normalizeAttendanceDay(context: ControllerContext<JsonObject>, pa
   H.assertEmployeeStateActive(employeeState, employeeName, workDate);
   const company = H.requiredText(employeeState.company, "Employee company");
   const branch = H.requiredText(employeeState.branch, "Employee branch");
-  const department = H.requiredText(employeeState.department, "Employee department");
+  const department = H.text(employeeState.department);
 
   const policyName = H.requiredText(input.policy, "Attendance policy");
   const policy = await H.requireRecord(context as H.HrmContext, "AlumDoor Attendance Policy", policyName);
@@ -253,7 +253,7 @@ async function normalizeAttendanceDay(context: ControllerContext<JsonObject>, pa
     employee: employeeName,
     company,
     branch,
-    department,
+    ...(department ? { department } : {}),
     work_date: workDate,
     policy: policyName,
     state: payrollLock ? "locked" : correction ? "approved" : calculated.state,

@@ -35,6 +35,7 @@ const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperat
 const AlumdoorAttendanceKiosk = lazy(() => import("./experiences/AlumdoorAttendanceKiosk.js").then((module) => ({ default: module.AlumdoorAttendanceKiosk })));
 const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));
 const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));
+const AlumdoorHrPayrollLite = lazy(() => import("./experiences/AlumdoorHrPayrollLite.js").then((module) => ({ default: module.AlumdoorHrPayrollLite })));
 const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));
 
 /**
@@ -676,6 +677,19 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   if (kind === "alumdoor-attendance") {
     const mode = experienceKey.slice("alumdoor-attendance:".length);
     const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Attendance & Payroll";
+    const liteMode = mode === "employees-lite" || mode === "payroll-lite" || mode === "my-slips-lite" || mode === "hr-payroll-settings-lite"
+      ? mode
+      : null;
+    if (liteMode) {
+      return (
+        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
+          <AlumdoorHrPayrollLite
+            mode={liteMode}
+            onExit={() => navigate(`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`)}
+          />
+        </Shell>
+      );
+    }
     if (mode === "scan") {
       return (
         <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>

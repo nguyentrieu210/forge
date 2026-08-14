@@ -1,0 +1,702 @@
+{
+  "id": "alumdoor",
+  "version": "2.2.4",
+  "nav": [
+    {
+      "key": "Quotation",
+      "label": "Báo giá",
+      "kind": "doctype",
+      "permission_doctype": "Quotation",
+      "group": "Bán hàng"
+    },
+    {
+      "key": "Sales Order",
+      "label": "Đơn hàng",
+      "kind": "doctype",
+      "icon": "shopping-cart",
+      "group": "Bán hàng",
+      "permission_doctype": "Sales Order"
+    },
+    {
+      "key": "Delivery Note",
+      "label": "Phiếu xuất kho",
+      "kind": "doctype",
+      "icon": "truck",
+      "group": "Bán hàng",
+      "permission_doctype": "Delivery Note"
+    },
+    {
+      "key": "action:giao-hang-theo-ngay",
+      "label": "Tạo phiếu giao theo ngày",
+      "kind": "experience",
+      "permission_doctype": "Delivery Note",
+      "icon": "calendar-check",
+      "group": "Bán hàng"
+    },
+    {
+      "key": "Sales Invoice",
+      "label": "Hoá đơn bán hàng",
+      "kind": "doctype",
+      "permission_doctype": "Sales Invoice",
+      "group": "Bán hàng"
+    },
+    {
+      "key": "Material Request",
+      "label": "Yêu cầu vật tư",
+      "kind": "doctype",
+      "permission_doctype": "Material Request",
+      "group": "Mua hàng"
+    },
+    {
+      "key": "Purchase Order",
+      "label": "Đơn mua hàng",
+      "kind": "doctype",
+      "icon": "shopping-bag",
+      "group": "Mua hàng",
+      "permission_doctype": "Purchase Order"
+    },
+    {
+      "key": "Purchase Receipt",
+      "label": "Phiếu nhập mua",
+      "kind": "doctype",
+      "icon": "package-plus",
+      "group": "Mua hàng",
+      "permission_doctype": "Purchase Receipt"
+    },
+    {
+      "key": "Purchase Invoice",
+      "label": "Hoá đơn mua",
+      "kind": "doctype",
+      "permission_doctype": "Purchase Invoice",
+      "group": "Mua hàng"
+    },
+    {
+      "key": "action:nhap-nhom-fifo",
+      "label": "Nhập nhôm FIFO theo đơn cũ",
+      "kind": "experience",
+      "permission_doctype": "Purchase Receipt",
+      "icon": "truck",
+      "group": "Mua hàng"
+    },
+    {
+      "key": "Stock Entry",
+      "label": "Phiếu kho (nhập / xuất vật tư)",
+      "kind": "doctype",
+      "icon": "package-open",
+      "group": "Kho",
+      "permission_doctype": "Stock Entry"
+    },
+    {
+      "key": "Cut Order",
+      "label": "Phiếu cắt nhôm",
+      "kind": "doctype",
+      "icon": "scissors",
+      "group": "Kho",
+      "permission_doctype": "Cut Order"
+    },
+    {
+      "key": "action:de-xuat-lo-cat",
+      "label": "Đề xuất lô cắt",
+      "kind": "experience",
+      "permission_doctype": "Cut Order",
+      "icon": "list-checks",
+      "group": "Kho"
+    },
+    {
+      "key": "action:cat-nhom",
+      "label": "Cắt nhôm",
+      "kind": "experience",
+      "permission_doctype": "Cut Order",
+      "icon": "scissors",
+      "group": "Kho"
+    },
+    {
+      "key": "Stock Reservation",
+      "label": "Giữ chỗ tồn",
+      "kind": "doctype",
+      "icon": "lock",
+      "group": "Kho",
+      "permission_doctype": "Stock Reservation"
+    },
+    {
+      "key": "action:giu-cho",
+      "label": "Giữ chỗ nhôm",
+      "kind": "experience",
+      "permission_doctype": "Stock Reservation",
+      "icon": "bookmark",
+      "group": "Kho"
+    },
+    {
+      "key": "action:nha-giu-cho",
+      "label": "Nhả giữ chỗ",
+      "kind": "experience",
+      "permission_doctype": "Stock Reservation",
+      "icon": "bookmark-x",
+      "group": "Kho"
+    },
+    {
+      "key": "Stock Reconciliation",
+      "label": "Kiểm kê kho",
+      "kind": "doctype",
+      "icon": "clipboard-check",
+      "group": "Kho",
+      "permission_doctype": "Stock Reconciliation"
+    },
+    {
+      "key": "action:chot-so-so-kiem-ke",
+      "label": "Chốt số sổ để kiểm kê",
+      "kind": "experience",
+      "permission_doctype": "Stock Reconciliation",
+      "icon": "camera",
+      "group": "Kho"
+    },
+    {
+      "key": "action:duyet-kiem-ke",
+      "label": "Duyệt kiểm kê",
+      "kind": "experience",
+      "permission_doctype": "Stock Reconciliation",
+      "icon": "check-check",
+      "group": "Kho"
+    },
+    {
+      "key": "action:hoan-cat",
+      "label": "Hoàn cắt (ghi nhầm)",
+      "kind": "experience",
+      "permission_doctype": "Cut Order",
+      "icon": "undo-2",
+      "group": "Kho"
+    },
+    {
+      "key": "action:tra-hang",
+      "label": "Trả hàng (đã cắt)",
+      "kind": "experience",
+      "permission_doctype": "Cut Order",
+      "icon": "package-open",
+      "group": "Kho"
+    },
+    {
+      "key": "Production Request",
+      "label": "Yêu cầu sản xuất",
+      "kind": "doctype",
+      "icon": "factory",
+      "group": "Sản xuất",
+      "permission_doctype": "Production Request"
+    },
+    {
+      "key": "Work Order",
+      "label": "Lệnh sản xuất",
+      "kind": "doctype",
+      "icon": "factory",
+      "group": "Sản xuất",
+      "permission_doctype": "Work Order"
+    },
+    {
+      "key": "Bill of Materials",
+      "label": "Định mức vật tư (BOM)",
+      "kind": "doctype",
+      "icon": "list-tree",
+      "group": "Sản xuất",
+      "permission_doctype": "Bill of Materials"
+    },
+    {
+      "key": "Production Standard",
+      "label": "Định mức công đoạn",
+      "kind": "doctype",
+      "icon": "timer",
+      "group": "Sản xuất",
+      "permission_doctype": "Production Standard"
+    },
+    {
+      "key": "action:lap-tai-san-xuat",
+      "label": "Tính năng lực và tăng ca",
+      "kind": "experience",
+      "permission_doctype": "Production Standard",
+      "icon": "gauge",
+      "group": "Sản xuất"
+    },
+    {
+      "key": "Paint Job",
+      "label": "Việc sơn",
+      "kind": "doctype",
+      "icon": "paintbrush",
+      "group": "Sản xuất",
+      "permission_doctype": "Paint Job"
+    },
+    {
+      "key": "alumdoor-attendance:kiosk",
+      "label": "In mã QR trạm",
+      "kind": "experience",
+      "icon": "qr-code",
+      "group": "Chấm công & ca",
+      "required_roles": [
+        "AlumDoor Attendance Manager",
+        "HR Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "alumdoor-attendance:today",
+      "label": "Công hôm nay",
+      "kind": "experience",
+      "icon": "clock-3",
+      "group": "Chấm công & ca"
+    },
+    {
+      "key": "alumdoor-attendance:month",
+      "label": "Bảng công",
+      "kind": "experience",
+      "icon": "calendar-range",
+      "group": "Chấm công & ca",
+      "required_roles": [
+        "AlumDoor Attendance Viewer",
+        "AlumDoor Attendance Manager",
+        "AlumDoor Payroll User",
+        "HR Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "alumdoor-attendance:exceptions",
+      "label": "Ngoại lệ chấm công",
+      "kind": "experience",
+      "icon": "triangle-alert",
+      "group": "Chấm công & ca",
+      "required_roles": [
+        "AlumDoor Attendance Manager",
+        "HR Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "AlumDoor QR Station",
+      "label": "Trạm QR",
+      "kind": "doctype",
+      "icon": "scan-line",
+      "group": "Chấm công & ca",
+      "required_roles": [
+        "AlumDoor Attendance Manager",
+        "HR Manager",
+        "System Manager"
+      ],
+      "permission_doctype": "AlumDoor QR Station"
+    },
+    {
+      "key": "AlumDoor Attendance Policy",
+      "label": "Chính sách ca",
+      "kind": "doctype",
+      "icon": "timer",
+      "group": "Chấm công & ca",
+      "required_roles": [
+        "AlumDoor Attendance Manager",
+        "HR Manager",
+        "System Manager"
+      ],
+      "permission_doctype": "AlumDoor Attendance Policy"
+    },
+    {
+      "key": "alumdoor-attendance:employees-lite",
+      "label": "Nhân viên",
+      "kind": "experience",
+      "icon": "users",
+      "group": "Nhân viên & Lương",
+      "required_roles": [
+        "AlumDoor Payroll Approver",
+        "HR Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "alumdoor-attendance:payroll-lite",
+      "label": "Tính lương",
+      "kind": "experience",
+      "icon": "calculator",
+      "group": "Nhân viên & Lương",
+      "required_roles": [
+        "AlumDoor Payroll User",
+        "AlumDoor Payroll Approver",
+        "HR Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "alumdoor-attendance:my-slips-lite",
+      "label": "Phiếu lương của tôi",
+      "kind": "experience",
+      "icon": "receipt-text",
+      "group": "Nhân viên & Lương"
+    },
+    {
+      "key": "alumdoor-attendance:hr-payroll-settings-lite",
+      "label": "Cài đặt lương",
+      "kind": "experience",
+      "icon": "settings",
+      "group": "Nhân viên & Lương",
+      "required_roles": [
+        "AlumDoor Payroll Approver",
+        "HR Manager",
+        "System Manager"
+      ]
+    },
+    {
+      "key": "Payment Entry",
+      "label": "Phiếu thu / chi",
+      "kind": "doctype",
+      "icon": "wallet",
+      "group": "Công nợ / Kế toán",
+      "permission_doctype": "Payment Entry"
+    },
+    {
+      "key": "Warranty Claim",
+      "label": "Bảo hành",
+      "kind": "doctype",
+      "icon": "shield-check",
+      "group": "Bảo hành / Dịch vụ",
+      "permission_doctype": "Warranty Claim"
+    },
+    {
+      "key": "action:mo-ho-so-bao-hanh",
+      "label": "Mở hồ sơ bảo hành/lỗi",
+      "kind": "experience",
+      "permission_doctype": "Warranty Claim",
+      "icon": "shield-plus",
+      "group": "Bảo hành / Dịch vụ"
+    },
+    {
+      "key": "action:xac-nhan-bu-tru-bao-hanh",
+      "label": "Kế toán xác nhận xử lý lỗi",
+      "kind": "experience",
+      "permission_doctype": "Debit Note",
+      "icon": "badge-check",
+      "group": "Bảo hành / Dịch vụ"
+    },
+    {
+      "key": "report:Tồn nhôm theo khổ",
+      "label": "Tồn nhôm theo khổ",
+      "kind": "route",
+      "route": "/report/T%E1%BB%93n%20nh%C3%B4m%20theo%20kh%E1%BB%95",
+      "permission_doctype": "Item",
+      "icon": "ruler",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Đơn hàng theo khách",
+      "label": "Đơn hàng theo khách",
+      "kind": "route",
+      "route": "/report/%C4%90%C6%A1n%20h%C3%A0ng%20theo%20kh%C3%A1ch",
+      "permission_doctype": "Sales Order",
+      "icon": "shopping-cart",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Báo giá theo khách",
+      "label": "Báo giá theo khách",
+      "kind": "route",
+      "route": "/report/B%C3%A1o%20gi%C3%A1%20theo%20kh%C3%A1ch",
+      "permission_doctype": "Quotation",
+      "icon": "file-text",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Mua hàng theo nhà cung cấp",
+      "label": "Mua hàng theo nhà cung cấp",
+      "kind": "route",
+      "route": "/report/Mua%20h%C3%A0ng%20theo%20nh%C3%A0%20cung%20c%E1%BA%A5p",
+      "permission_doctype": "Purchase Order",
+      "icon": "shopping-bag",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Đơn mua chưa nhận đủ",
+      "label": "Đơn mua chưa nhận đủ",
+      "kind": "route",
+      "route": "/report/%C4%90%C6%A1n%20mua%20ch%C6%B0a%20nh%E1%BA%ADn%20%C4%91%E1%BB%A7",
+      "permission_doctype": "Purchase Order",
+      "icon": "clock-alert",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Stock Balance",
+      "label": "Xuất nhập tồn",
+      "kind": "route",
+      "route": "/report/Stock%20Balance",
+      "permission_doctype": "Item",
+      "icon": "boxes",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Stock Ledger",
+      "label": "Sổ chi tiết kho",
+      "kind": "route",
+      "route": "/report/Stock%20Ledger",
+      "permission_doctype": "Item",
+      "icon": "scroll-text",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Lệnh sản xuất theo mặt hàng",
+      "label": "Lệnh sản xuất theo mặt hàng",
+      "kind": "route",
+      "route": "/report/L%E1%BB%87nh%20s%E1%BA%A3n%20xu%E1%BA%A5t%20theo%20m%E1%BA%B7t%20h%C3%A0ng",
+      "permission_doctype": "Work Order",
+      "icon": "factory",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Work Order Progress",
+      "label": "Tiến độ sản xuất",
+      "kind": "route",
+      "route": "/report/Work%20Order%20Progress",
+      "permission_doctype": "Work Order",
+      "icon": "factory",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Công nợ theo khách hàng",
+      "label": "Công nợ theo khách hàng",
+      "kind": "route",
+      "route": "/report/C%C3%B4ng%20n%E1%BB%A3%20theo%20kh%C3%A1ch%20h%C3%A0ng",
+      "permission_doctype": "Sales Invoice",
+      "icon": "wallet",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Accounts Receivable",
+      "label": "Công nợ phải thu",
+      "kind": "route",
+      "route": "/report/Accounts%20Receivable",
+      "permission_doctype": "Customer",
+      "icon": "wallet",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Accounts Payable",
+      "label": "Công nợ phải trả",
+      "kind": "route",
+      "route": "/report/Accounts%20Payable",
+      "permission_doctype": "Supplier",
+      "icon": "wallet",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:General Ledger",
+      "label": "Sổ cái",
+      "kind": "route",
+      "route": "/report/General%20Ledger",
+      "permission_doctype": "Sales Invoice",
+      "icon": "book-open",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Trial Balance",
+      "label": "Bảng cân đối phát sinh",
+      "kind": "route",
+      "route": "/report/Trial%20Balance",
+      "permission_doctype": "Sales Invoice",
+      "icon": "scale",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Profit and Loss",
+      "label": "Kết quả kinh doanh",
+      "kind": "route",
+      "route": "/report/Profit%20and%20Loss",
+      "permission_doctype": "Sales Invoice",
+      "icon": "trending-up",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Balance Sheet",
+      "label": "Bảng cân đối kế toán",
+      "kind": "route",
+      "route": "/report/Balance%20Sheet",
+      "permission_doctype": "Sales Invoice",
+      "icon": "landmark",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "report:Lắp đặt theo đội",
+      "label": "Lắp đặt theo đội",
+      "kind": "route",
+      "route": "/report/L%E1%BA%AFp%20%C4%91%E1%BA%B7t%20theo%20%C4%91%E1%BB%99i",
+      "permission_doctype": "Delivery Note",
+      "icon": "truck",
+      "group": "Báo cáo"
+    },
+    {
+      "key": "Item",
+      "label": "Hàng hoá / Vật tư",
+      "kind": "doctype",
+      "icon": "package",
+      "group": "Danh mục",
+      "permission_doctype": "Item"
+    },
+    {
+      "key": "Item Group",
+      "label": "Nhóm hàng",
+      "kind": "doctype",
+      "icon": "folder-tree",
+      "group": "Danh mục",
+      "permission_doctype": "Item Group"
+    },
+    {
+      "key": "UOM",
+      "label": "Đơn vị tính",
+      "kind": "doctype",
+      "icon": "scale",
+      "group": "Danh mục",
+      "permission_doctype": "UOM"
+    },
+    {
+      "key": "Warehouse",
+      "label": "Kho",
+      "kind": "doctype",
+      "icon": "warehouse",
+      "group": "Danh mục",
+      "permission_doctype": "Warehouse"
+    },
+    {
+      "key": "Customer",
+      "label": "Khách hàng",
+      "kind": "doctype",
+      "icon": "users",
+      "group": "Danh mục",
+      "permission_doctype": "Customer"
+    },
+    {
+      "key": "Supplier",
+      "label": "Nhà cung cấp",
+      "kind": "doctype",
+      "icon": "truck",
+      "group": "Danh mục",
+      "permission_doctype": "Supplier"
+    },
+    {
+      "key": "Sales Option",
+      "label": "Phương án bán",
+      "kind": "doctype",
+      "permission_doctype": "Sales Option",
+      "icon": "sliders-horizontal",
+      "group": "Danh mục"
+    },
+    {
+      "key": "Sales Package",
+      "label": "Gói bán hàng",
+      "kind": "doctype",
+      "permission_doctype": "Sales Package",
+      "icon": "package-check",
+      "group": "Danh mục"
+    },
+    {
+      "key": "Price List",
+      "label": "Bảng giá",
+      "kind": "doctype",
+      "icon": "tag",
+      "group": "Danh mục",
+      "permission_doctype": "Price List"
+    },
+    {
+      "key": "Item Price",
+      "label": "Đơn giá theo bảng giá",
+      "kind": "doctype",
+      "icon": "circle-dollar-sign",
+      "group": "Danh mục",
+      "permission_doctype": "Item Price"
+    },
+    {
+      "key": "Pricing Rule",
+      "label": "Chính sách giá",
+      "kind": "doctype",
+      "icon": "percent",
+      "group": "Danh mục",
+      "permission_doctype": "Pricing Rule"
+    },
+    {
+      "key": "Cutting Policy",
+      "label": "Công thức cửa",
+      "kind": "doctype",
+      "icon": "calculator",
+      "group": "Danh mục",
+      "permission_doctype": "Cutting Policy"
+    },
+    {
+      "key": "Measurement Profile",
+      "label": "Bộ theo dõi vật tư",
+      "kind": "doctype",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "permission_doctype": "Measurement Profile"
+    },
+    {
+      "key": "Item Color",
+      "label": "Màu vật tư",
+      "kind": "doctype",
+      "icon": "palette",
+      "group": "Danh mục",
+      "permission_doctype": "Item Color"
+    },
+    {
+      "key": "Material Grade",
+      "label": "Mác vật liệu",
+      "kind": "doctype",
+      "icon": "layers-3",
+      "group": "Danh mục",
+      "permission_doctype": "Material Grade"
+    },
+    {
+      "key": "Material Specification",
+      "label": "Quy cách kỹ thuật vật tư",
+      "kind": "doctype",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "permission_doctype": "Material Specification"
+    },
+    {
+      "key": "Item Attribute",
+      "label": "Thuộc tính mặt hàng",
+      "kind": "doctype",
+      "icon": "list-filter",
+      "group": "Danh mục",
+      "permission_doctype": "Item Attribute"
+    },
+    {
+      "key": "Supplier Item",
+      "label": "Mã hàng nhà cung cấp",
+      "kind": "doctype",
+      "icon": "handshake",
+      "group": "Danh mục",
+      "permission_doctype": "Supplier Item"
+    },
+    {
+      "key": "Brand",
+      "label": "Thương hiệu",
+      "kind": "doctype",
+      "icon": "badge-check",
+      "group": "Danh mục",
+      "permission_doctype": "Brand"
+    },
+    {
+      "key": "Manufacturer",
+      "label": "Nhà sản xuất",
+      "kind": "doctype",
+      "icon": "factory",
+      "group": "Danh mục",
+      "permission_doctype": "Manufacturer"
+    },
+    {
+      "key": "Lý do huỷ",
+      "label": "Lý do huỷ",
+      "kind": "doctype",
+      "icon": "circle-slash",
+      "group": "Danh mục",
+      "permission_doctype": "Lý do huỷ"
+    },
+    {
+      "key": "Nguyên nhân chênh lệch",
+      "label": "Nguyên nhân chênh lệch",
+      "kind": "doctype",
+      "icon": "scale",
+      "group": "Danh mục",
+      "permission_doctype": "Nguyên nhân chênh lệch"
+    }
+  ]
+}

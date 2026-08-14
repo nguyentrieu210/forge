@@ -28,15 +28,15 @@ function normalizedGroup(label: string | undefined): string {
 
 const ALUMDOOR_SIDEBAR_GROUPS = new Set([
   "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
-  "bao cao", "danh muc", "he thong", "quy kho", "luong",
+  "bao cao", "danh muc", "he thong", "quy kho", "luong", "nhan vien & luong",
 ]);
 
 const ALUMDOOR_HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong & ca", "cham cong qr"]);
 const ALUMDOOR_HR_KEYS = new Set([
-  "Employee",
   "AlumDoor Attendance Day", "AlumDoor QR Station", "AlumDoor Attendance Policy",
   "alumdoor-attendance:scan", "alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month",
-  "alumdoor-attendance:exceptions",
+  "alumdoor-attendance:exceptions", "alumdoor-attendance:employees-lite", "alumdoor-attendance:payroll-lite",
+  "alumdoor-attendance:my-slips-lite", "alumdoor-attendance:hr-payroll-settings-lite",
 ]);
 
 const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {

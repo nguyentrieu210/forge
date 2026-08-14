@@ -23,7 +23,8 @@
     { "fieldname": "profile_key", "label": "Khóa phiên bản", "fieldtype": "Data", "required": true, "read_only": true, "unique": true, "hidden": true, "serverEnforced": true },
     { "fieldname": "status", "label": "Trạng thái", "fieldtype": "Select", "options": "draft\napproved\nretired", "required": true, "default": "draft", "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "approved_by", "label": "Người duyệt", "fieldtype": "Link", "options": "User", "read_only": true },
-    { "fieldname": "approved_at", "label": "Duyệt lúc", "fieldtype": "Datetime", "read_only": true }
+    { "fieldname": "approved_at", "label": "Duyệt lúc", "fieldtype": "Datetime", "read_only": true },
+    { "fieldname": "alu_lite_idempotency_key", "label": "Khóa tạo HR Lite", "fieldtype": "Data", "read_only": true, "hidden": true, "unique": true }
   ],
   "viewPolicy": {
     "list": {

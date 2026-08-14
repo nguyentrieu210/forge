@@ -267,7 +267,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
   const linkEditorField = linkEditor?.column === "item" ? props.itemField : props.salesOptionField;
   const linkEditorLeft = 42 + columns
     .slice(0, Math.max(0, linkEditorColumnIndex))
-    .reduce((total, column) => total + column.width, 0);
+    .reduce((total, column) => total + (column.width ?? 0), 0);
 
   const getCellContent = useCallback((cell: Item): GridCell => {
     const [columnIndex, rowIndex] = cell;
@@ -400,7 +400,7 @@ export function AlumdoorSalesLinesGrid(props: AlumdoorSalesLinesGridProps) {
           getCellContent={getCellContent}
           onCellEdited={onCellEdited}
           provideEditor={provideEditor}
-          onCellClicked={(cell) => {
+          onCellClicked={(cell: Item) => {
             const row = props.rows[cell[1]];
             if (!row) return;
             props.onSelectedKeyChange(row.key);

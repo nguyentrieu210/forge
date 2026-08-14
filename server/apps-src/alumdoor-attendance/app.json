@@ -1,7 +1,7 @@
 {
   "id": "alumdoor-attendance",
   "name": "AlumDoor — Chấm công & tính lương",
-  "version": "0.4.0",
+  "version": "0.6.2",
   "metaContractVersion": 1,
   "requires": [
     { "id": "hrm", "version": "1.8.0" }
@@ -22,6 +22,8 @@
     { "name": "User", "kind": "system", "app": "core" }
   ],
   "custom_fields": [
+    { "name": "Employee-alu_lite_managed", "dt": "Employee", "fieldname": "alu_lite_managed", "field": { "label": "Quản lý bởi HR Lite", "fieldtype": "Check", "read_only": true, "hidden": true }, "insert_after": "salary_note" },
+    { "name": "Employee-alu_lite_idempotency_key", "dt": "Employee", "fieldname": "alu_lite_idempotency_key", "field": { "label": "Khóa tạo HR Lite", "fieldtype": "Data", "read_only": true, "hidden": true, "unique": true }, "insert_after": "alu_lite_managed" },
     { "name": "Employee Checkin-alu_station", "dt": "Employee Checkin", "fieldname": "alu_station", "field": { "label": "Trạm QR AlumDoor", "fieldtype": "Link", "options": "AlumDoor QR Station", "read_only": true }, "insert_after": "external_id" },
     { "name": "Employee Checkin-alu_work_date", "dt": "Employee Checkin", "fieldname": "alu_work_date", "field": { "label": "Ngày công AlumDoor", "fieldtype": "Date", "read_only": true }, "insert_after": "alu_station" },
     { "name": "Employee Checkin-alu_segment_code", "dt": "Employee Checkin", "fieldname": "alu_segment_code", "field": { "label": "Ca AlumDoor", "fieldtype": "Select", "options": "SHIFT1\nSHIFT2\nSHIFT3", "read_only": true }, "insert_after": "alu_work_date" },
@@ -67,6 +69,8 @@
     { "name": "Payroll Entry-alu_approved_at", "dt": "Payroll Entry", "fieldname": "alu_approved_at", "field": { "label": "Duyệt lúc", "fieldtype": "Datetime", "read_only": true }, "insert_after": "alu_approved_by" },
     { "name": "Payroll Entry-alu_paid_by", "dt": "Payroll Entry", "fieldname": "alu_paid_by", "field": { "label": "Người xác nhận trả", "fieldtype": "Link", "options": "User", "read_only": true }, "insert_after": "alu_approved_at" },
     { "name": "Payroll Entry-alu_paid_at", "dt": "Payroll Entry", "fieldname": "alu_paid_at", "field": { "label": "Đã trả lúc", "fieldtype": "Datetime", "read_only": true }, "insert_after": "alu_paid_by" },
+    { "name": "Payroll Entry-alu_overtime_rate_vnd_per_hour", "dt": "Payroll Entry", "fieldname": "alu_overtime_rate_vnd_per_hour", "field": { "label": "Mức tăng ca (VND/giờ)", "fieldtype": "Int", "default": 50000, "read_only": true }, "insert_after": "alu_paid_at" },
+    { "name": "Payroll Entry-alu_lite_version", "dt": "Payroll Entry", "fieldname": "alu_lite_version", "field": { "label": "Phiên bản HR & Lương Lite", "fieldtype": "Int", "read_only": true, "hidden": true }, "insert_after": "alu_overtime_rate_vnd_per_hour" },
 
     { "name": "Salary Slip-alu_payroll_entry", "dt": "Salary Slip", "fieldname": "alu_payroll_entry", "field": { "label": "Kỳ lương AlumDoor", "fieldtype": "Link", "options": "Payroll Entry", "read_only": true }, "insert_after": "end_date" },
     { "name": "Salary Slip-alu_pay_profile", "dt": "Salary Slip", "fieldname": "alu_pay_profile", "field": { "label": "Hồ sơ lương AlumDoor", "fieldtype": "Link", "options": "AlumDoor Pay Profile", "read_only": true }, "insert_after": "alu_payroll_entry" },
@@ -82,7 +86,10 @@
     { "name": "Salary Slip-alu_state", "dt": "Salary Slip", "fieldname": "alu_state", "field": { "label": "Trạng thái AlumDoor", "fieldtype": "Select", "options": "draft\npending_approval\napproved\npaid\ncancelled", "default": "draft", "read_only": true }, "insert_after": "alu_adjustment_reason" },
     { "name": "Salary Slip-alu_calculation_version", "dt": "Salary Slip", "fieldname": "alu_calculation_version", "field": { "label": "Phiên bản tính", "fieldtype": "Int", "default": 1, "read_only": true }, "insert_after": "alu_state" },
     { "name": "Salary Slip-alu_input_hash", "dt": "Salary Slip", "fieldname": "alu_input_hash", "field": { "label": "Dấu đầu vào", "fieldtype": "Data", "read_only": true, "hidden": true }, "insert_after": "alu_calculation_version" },
-    { "name": "Salary Slip-alu_formula_trace_json", "dt": "Salary Slip", "fieldname": "alu_formula_trace_json", "field": { "label": "Dấu vết công thức", "fieldtype": "Long Text", "read_only": true, "hidden": true }, "insert_after": "alu_input_hash" }
+    { "name": "Salary Slip-alu_formula_trace_json", "dt": "Salary Slip", "fieldname": "alu_formula_trace_json", "field": { "label": "Dấu vết công thức", "fieldtype": "Long Text", "read_only": true, "hidden": true }, "insert_after": "alu_input_hash" },
+    { "name": "Salary Slip-alu_overtime_rate_vnd_per_hour", "dt": "Salary Slip", "fieldname": "alu_overtime_rate_vnd_per_hour", "field": { "label": "Mức tăng ca (VND/giờ)", "fieldtype": "Int", "default": 50000, "read_only": true }, "insert_after": "alu_formula_trace_json" },
+    { "name": "Salary Slip-alu_overtime_legal_floor_vnd", "dt": "Salary Slip", "fieldname": "alu_overtime_legal_floor_vnd", "field": { "label": "Sàn tăng ca áp dụng", "fieldtype": "Int", "default": 0, "read_only": true, "hidden": true }, "insert_after": "alu_overtime_rate_vnd_per_hour" },
+    { "name": "Salary Slip-alu_lite_version", "dt": "Salary Slip", "fieldname": "alu_lite_version", "field": { "label": "Phiên bản HR & Lương Lite", "fieldtype": "Int", "read_only": true, "hidden": true }, "insert_after": "alu_overtime_legal_floor_vnd" }
   ],
   "nav": [
     { "key": "alumdoor-attendance:scan", "label": "Quét chấm công", "kind": "experience", "icon": "scan-line", "group": "Chấm công & ca" },
@@ -93,9 +100,10 @@
     { "key": "AlumDoor QR Station", "label": "Trạm QR", "kind": "doctype", "icon": "scan-line", "group": "Chấm công & ca", "required_roles": ["AlumDoor Attendance Manager", "HR Manager", "System Manager"] },
     { "key": "AlumDoor Attendance Device", "label": "Thiết bị đã đăng ký", "kind": "doctype", "icon": "smartphone", "group": "Chấm công & ca", "required_roles": ["AlumDoor Attendance Manager", "HR Manager", "System Manager"] },
     { "key": "AlumDoor Attendance Policy", "label": "Chính sách ca", "kind": "doctype", "icon": "timer", "group": "Chấm công & ca", "required_roles": ["AlumDoor Attendance Manager", "HR Manager", "System Manager"] },
-    { "key": "AlumDoor Pay Profile", "label": "Hồ sơ lương", "kind": "doctype", "icon": "badge-dollar-sign", "group": "Lương", "required_roles": ["AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
-    { "key": "alumdoor-attendance:payroll-run", "label": "Tính lương", "kind": "experience", "icon": "calculator", "group": "Lương", "required_roles": ["AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
-    { "key": "alumdoor-attendance:payroll-my-slips", "label": "Phiếu lương của tôi", "kind": "experience", "icon": "receipt-text", "group": "Lương" }
+    { "key": "alumdoor-attendance:employees-lite", "label": "Nhân viên", "kind": "experience", "icon": "users", "group": "Nhân viên & Lương", "required_roles": ["AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
+    { "key": "alumdoor-attendance:payroll-lite", "label": "Tính lương", "kind": "experience", "icon": "calculator", "group": "Nhân viên & Lương", "required_roles": ["AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
+    { "key": "alumdoor-attendance:my-slips-lite", "label": "Phiếu lương của tôi", "kind": "experience", "icon": "receipt-text", "group": "Nhân viên & Lương" },
+    { "key": "alumdoor-attendance:hr-payroll-settings-lite", "label": "Cài đặt lương", "kind": "experience", "icon": "settings", "group": "Nhân viên & Lương", "required_roles": ["AlumDoor Payroll Approver", "HR Manager", "System Manager"] }
   ],
   "hooks": []
 }

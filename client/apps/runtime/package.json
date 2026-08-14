@@ -11,6 +11,8 @@
     "build:matrix-harness": "vite build --config vite.matrix-e2e.config.ts"
   },
   "dependencies": {
+    "@cloudforge/alumdoor-hr-payroll-contract": "workspace:*",
+    "@hookform/resolvers": "^5.4.0",
     "@metaforge/adapter-frappe": "workspace:*",
     "@metaforge/controls": "workspace:*",
     "@metaforge/core": "workspace:*",
@@ -22,6 +24,7 @@
     "qrcode-generator": "2.0.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "react-hook-form": "^7.82.0",
     "react-router-dom": "7.18.0"
   },
   "devDependencies": {

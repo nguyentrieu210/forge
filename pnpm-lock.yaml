@@ -275,6 +275,12 @@ importers:
 
   client/apps/runtime:
     dependencies:
+      '@cloudforge/alumdoor-hr-payroll-contract':
+        specifier: workspace:*
+        version: link:../../../server/packages/alumdoor-hr-payroll-contract
+      '@hookform/resolvers':
+        specifier: ^5.4.0
+        version: 5.5.3(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.83.0(react@18.3.1))(zod@4.4.3)
       '@metaforge/adapter-frappe':
         specifier: workspace:*
         version: link:../../packages/adapter-frappe
@@ -308,6 +314,9 @@ importers:
       react-dom:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
+      react-hook-form:
+        specifier: ^7.82.0
+        version: 7.83.0(react@18.3.1)
       react-router-dom:
         specifier: 7.18.0
         version: 7.18.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -762,9 +771,15 @@ importers:
 
   server:
     dependencies:
+      '@cloudforge/alumdoor-hr-payroll-contract':
+        specifier: workspace:*
+        version: link:packages/alumdoor-hr-payroll-contract
       qrcode-generator:
         specifier: 2.0.4
         version: 2.0.4
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@cloudflare/vitest-pool-workers':
         specifier: 0.18.8
@@ -843,6 +858,12 @@ importers:
   server/apps/workflow-worker: {}
 
   server/packages/ai-policy: {}
+
+  server/packages/alumdoor-hr-payroll-contract:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
 
   server/packages/app-registry: {}
 

@@ -1,0 +1,25 @@
+{
+  "name": "AlumDoor HR Lite Settings",
+  "module": "AlumDoor",
+  "is_single": true,
+  "track_changes": true,
+  "fields": [
+    { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true },
+    { "fieldname": "workplace", "label": "Nơi làm việc", "fieldtype": "Link", "options": "Branch", "required": true },
+    { "fieldname": "pay_day_of_month", "label": "Ngày trả lương mặc định", "fieldtype": "Int", "required": true, "default": 5 },
+    { "fieldname": "owner_only_mode", "label": "Chủ tự tính và chốt", "fieldtype": "Check", "default": 1 },
+    { "fieldname": "overtime_rate_vnd_per_hour", "label": "Mức tăng ca (VND/giờ)", "fieldtype": "Int", "default": 50000 }
+  ],
+  "viewPolicy": {
+    "list": { "enabled": false, "columns": [] },
+    "form": { "enabled": false, "fields": [] },
+    "quickEntry": { "enabled": false, "fields": [] }
+  },
+  "permissions": [
+    { "role": "AlumDoor HR Lite System", "read": true, "write": true, "create": true },
+    { "role": "AlumDoor Payroll Approver", "read": true },
+    { "role": "HR Manager", "read": true },
+    { "role": "System Manager", "read": true }
+  ],
+  "revision": 1
+}

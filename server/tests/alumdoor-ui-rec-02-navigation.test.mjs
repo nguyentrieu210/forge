@@ -9,10 +9,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = path.resolve(here, "..");
 const read = (relative) => readFile(path.join(serverRoot, relative), "utf8");
 
-const TARGET_GROUPS = ["Bán hàng", "Mua hàng", "Kho", "Sản xuất", "Chấm công & ca", "Lương", "Công nợ / Kế toán", "Bảo hành / Dịch vụ", "Báo cáo", "Danh mục"];
+const TARGET_GROUPS = ["Bán hàng", "Mua hàng", "Kho", "Sản xuất", "Chấm công & ca", "Nhân viên & Lương", "Công nợ / Kế toán", "Bảo hành / Dịch vụ", "Báo cáo", "Danh mục"];
 const P0_MASTERS = ["Item", "Item Group", "UOM", "Warehouse", "Customer", "Supplier", "Sales Option", "Sales Package", "Price List", "Item Price", "Pricing Rule", "Cutting Policy", "Measurement Profile", "Item Color", "Material Grade", "Material Specification", "Item Attribute", "Supplier Item", "Brand", "Manufacturer"];
 const REQUIRED_OPERATIONAL_SURFACES = ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "Material Request", "Purchase Order", "Purchase Receipt", "Purchase Invoice", "Stock Entry", "Cut Order", "Stock Reservation", "Stock Reconciliation", "Production Request", "Work Order", "Bill of Materials", "Production Standard", "Paint Job", "Payment Entry", "Warranty Claim"];
-const ATTENDANCE_SURFACES = ["alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month", "alumdoor-attendance:exceptions", "AlumDoor QR Station", "AlumDoor Attendance Policy", "AlumDoor Pay Profile", "alumdoor-attendance:payroll-run", "alumdoor-attendance:payroll-my-slips"];
+const ATTENDANCE_SURFACES = ["alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month", "alumdoor-attendance:exceptions", "AlumDoor QR Station", "AlumDoor Attendance Policy", "alumdoor-attendance:employees-lite", "alumdoor-attendance:payroll-lite", "alumdoor-attendance:my-slips-lite", "alumdoor-attendance:hr-payroll-settings-lite"];
 
 test("UI-REC-02 sidebar is deterministic, domain-oriented and free of superseded routes", async () => {
   const first = await buildAlumdoorUiRec02Sidebar();
@@ -64,7 +64,8 @@ test("attendance/payroll IA is sourced from the installed AlumDoor attendance ap
   const attendance = JSON.parse(await read("apps-src/alumdoor-attendance/app.json"));
   const byKey = new Map(attendance.nav.map((item) => [item.key, item]));
   for (const key of ATTENDANCE_SURFACES) assert.ok(byKey.has(key), `${key} must remain declared by alumdoor-attendance`);
-  assert.deepEqual([...new Set(attendance.nav.map((item) => item.group))], ["Chấm công & ca", "Lương"]);
+  assert.deepEqual([...new Set(attendance.nav.map((item) => item.group))], ["Chấm công & ca", "Nhân viên & Lương"]);
   assert.deepEqual(byKey.get("AlumDoor QR Station")?.required_roles, ["AlumDoor Attendance Manager", "HR Manager", "System Manager"]);
-  assert.deepEqual(byKey.get("AlumDoor Pay Profile")?.required_roles, ["AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"]);
+  assert.equal(byKey.has("AlumDoor Pay Profile"), false, "generic pay-profile CRUD must stay out of Lite navigation");
+  assert.deepEqual(byKey.get("alumdoor-attendance:employees-lite")?.required_roles, ["AlumDoor Payroll Approver", "HR Manager", "System Manager"]);
 });

@@ -62,6 +62,19 @@ interface AggregateStub extends DurableObjectStub {
     tenantId: string; actor: Actor; request: string; action: "approve" | "reject"; note?: string;
   }): Promise<JsonObject>;
   approveAlumDoorPayroll(input: { tenantId: string; actor: Actor; payrollEntry: string }): Promise<JsonObject>;
+  commitAlumDoorEmployeeLite(input: {
+    tenantId: string; actor: Actor; employeeName: string; employeeFullName: string;
+    mobile: string; dateOfJoining: string; idempotencyKey: string;
+  }): Promise<JsonObject>;
+  commitAlumDoorHrLiteSettings(input: {
+    tenantId: string; actor: Actor; company: string; workplace: string;
+    payDayOfMonth: number; idempotencyKey: string;
+  }): Promise<JsonObject>;
+  commitAlumDoorPayProfileLite(input: {
+    tenantId: string; actor: Actor; profileName: string; employee: string;
+    payMode: "MONTHLY" | "DAILY"; baseSalaryVnd: number; fixedAllowanceVnd: number;
+    effectiveFrom: string; idempotencyKey: string;
+  }): Promise<JsonObject>;
 }
 
 const PUBLIC_ATTENDANCE_METHOD_PATHS = new Set([
@@ -1268,6 +1281,26 @@ async function serveFrappeApiInner(
     async approveAlumdoorPayroll(input: { payrollEntry: string }): Promise<JsonObject> {
       const stub = env.AGGREGATES.getByName(`payroll:${tenantId}:${encodeURIComponent(input.payrollEntry)}`) as AggregateStub;
       return stub.approveAlumDoorPayroll({ tenantId, actor, payrollEntry: input.payrollEntry });
+    },
+    async commitAlumdoorEmployeeLite(input: {
+      employeeName: string; employeeFullName: string; mobile: string;
+      dateOfJoining: string; idempotencyKey: string;
+    }): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite:${tenantId}:${encodeURIComponent(input.idempotencyKey)}`) as AggregateStub;
+      return stub.commitAlumDoorEmployeeLite({ tenantId, actor, ...input });
+    },
+    async commitAlumdoorHrLiteSettings(input: {
+      company: string; workplace: string; payDayOfMonth: number; idempotencyKey: string;
+    }): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite-settings:${tenantId}`) as AggregateStub;
+      return stub.commitAlumDoorHrLiteSettings({ tenantId, actor, ...input });
+    },
+    async commitAlumdoorPayProfileLite(input: {
+      profileName: string; employee: string; payMode: "MONTHLY" | "DAILY";
+      baseSalaryVnd: number; fixedAllowanceVnd: number; effectiveFrom: string; idempotencyKey: string;
+    }): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite-pay:${tenantId}:${encodeURIComponent(input.employee)}`) as AggregateStub;
+      return stub.commitAlumDoorPayProfileLite({ tenantId, actor, ...input });
     },
     now,
     csrfToken,

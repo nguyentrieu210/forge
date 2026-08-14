@@ -51,6 +51,15 @@ async function saveDoc(call: PayrollPlatformCall, doc: Json): Promise<Json> {
   return asObject(await method(call, "frappe.client.save", { doc }), "Bản ghi cập nhật");
 }
 
+/** Conservative minimum for overtime on a normal working day: 150% of normal hourly pay. */
+export function minimumRegularDayOvertimeRateVnd(input: { payMode: string; baseSalaryVnd: number; standardWorkDaysBp: number }): number {
+  const baseSalary = integer(input.baseSalaryVnd, "Mức lương", undefined, 1);
+  const workDaysBp = input.payMode === "DAILY" ? 10_000 : integer(input.standardWorkDaysBp, "Ngày công chuẩn", undefined, 1, 310_000);
+  const numerator = BigInt(baseSalary) * 15_000n;
+  const denominator = BigInt(workDaysBp) * 8n;
+  return Number((numerator + denominator - 1n) / denominator);
+}
+
 export async function payrollCreatePeriod(input: { call: PayrollPlatformCall; args: Json; now?: Date }): Promise<Response> {
   try {
     const startDate = date(input.args.start_date, "Ngày bắt đầu");
@@ -68,7 +77,7 @@ export async function payrollCreatePeriod(input: { call: PayrollPlatformCall; ar
   } catch (error) { return fail("PAYROLL_CREATE_FAILED", error instanceof Error ? error.message : "Không tạo được kỳ lương."); }
 }
 
-export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall; args: Json; now?: Date }): Promise<Response> {
+export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall; args: Json; now?: Date; calculationVersion?: 1 | 2 }): Promise<Response> {
   try {
     const periodName = requiredText(input.args.period, "Kỳ lương");
     const period = await getDoc(input.call, "Payroll Entry", periodName);
@@ -95,7 +104,16 @@ export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall;
         alu_pay_profile: requiredText(profile.name, "Hồ sơ lương"),
         alu_standard_work_days_bp: standardWorkDaysBp,
         alu_state: "draft",
-        alu_calculation_version: integer(existing?.alu_calculation_version, "Phiên bản tính", 0, 0, 1_000_000) + 1,
+        alu_calculation_version: input.calculationVersion === 2 ? 2 : integer(existing?.alu_calculation_version, "Phiên bản tính", 0, 0, 1_000_000) + 1,
+        ...(input.calculationVersion === 2 ? {
+          alu_overtime_rate_vnd_per_hour: 50_000,
+          alu_overtime_legal_floor_vnd: minimumRegularDayOvertimeRateVnd({
+            payMode: text(profile.pay_mode) || "MONTHLY",
+            baseSalaryVnd: integer(profile.base_salary_vnd, "Mức lương", undefined, 1),
+            standardWorkDaysBp,
+          }),
+          alu_lite_version: 2,
+        } : {}),
       };
       const saved = existing ? await saveDoc(input.call, base) : await insertDoc(input.call, base);
       slipRows.push({ row_id: `ALU-${employee}`, salary_slip: requiredText(saved.name, "Phiếu lương"), employee });
@@ -157,9 +175,10 @@ export async function payrollMySlips(input: { call: PayrollPlatformCall; args: J
     const employees = await listDocs(input.call, "Employee", { user_id: actorUser }, ["name", "user_id"]);
     if (employees.length !== 1) throw new Error("Tài khoản phải được gắn duy nhất một Employee để xem phiếu lương.");
     const employee = requiredText(employees[0]?.name, "Nhân viên");
-    return json(await listDocs(input.call, "Salary Slip", {
+    const slips = await listDocs(input.call, "Salary Slip", {
       employee,
       ...(text(input.args.period) ? { alu_payroll_entry: text(input.args.period) } : {}),
-    }));
+    });
+    return json(slips.filter((slip) => Number(slip.docstatus ?? 0) === 1 && ["approved", "paid"].includes(text(slip.alu_state))));
   } catch (error) { return fail("PAYROLL_SLIP_LIST_FAILED", error instanceof Error ? error.message : "Không đọc được phiếu lương."); }
 }

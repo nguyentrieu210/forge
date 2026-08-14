@@ -4,6 +4,7 @@
 
 ### Added
 
+- HR Lite có màn Cài đặt Nhân viên & Lương để chọn và lưu công ty, địa điểm làm việc và ngày trả lương; doanh nghiệp có nhiều công ty không còn bị chặn khi tạo nhân viên.
 - Nút `+` cạnh các trường liên kết có thể tạo mới, mở đúng biểu mẫu tạo nhanh và tự chọn bản ghi vừa lưu.
 
 ### Changed

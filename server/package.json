@@ -74,7 +74,9 @@
     "smoke:http": "node scripts/http-smoke.mjs"
   },
   "dependencies": {
-    "qrcode-generator": "2.0.4"
+    "@cloudforge/alumdoor-hr-payroll-contract": "workspace:*",
+    "qrcode-generator": "2.0.4",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.18.8",

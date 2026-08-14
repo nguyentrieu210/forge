@@ -17,7 +17,7 @@ function permission(meta, role) {
 test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent package", async () => {
   const manifest = parseAppManifest(await readAppSource(source));
   assert.equal(manifest.id, "alumdoor-attendance");
-  assert.equal(manifest.version, "0.4.0");
+  assert.equal(manifest.version, "0.6.2");
   assert.deepEqual(manifest.requires, [{ id: "hrm", version: "1.8.0" }]);
   assert.deepEqual(
     manifest.doctypes.map((meta) => meta.name).sort(),
@@ -26,6 +26,7 @@ test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent packa
       "AlumDoor Attendance Device",
       "AlumDoor Attendance Policy",
       "AlumDoor Attendance Segment",
+      "AlumDoor HR Lite Settings",
       "AlumDoor Pay Profile",
       "AlumDoor QR Station",
     ],
@@ -37,6 +38,7 @@ test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent packa
       "AlumDoor Attendance System",
       "AlumDoor Attendance Viewer",
       "AlumDoor Device System",
+      "AlumDoor HR Lite System",
       "AlumDoor Payroll Approver",
       "AlumDoor Payroll System",
       "AlumDoor Payroll User",
@@ -52,8 +54,10 @@ test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent packa
     "alumdoor-attendance:today",
     "alumdoor-attendance:month",
     "alumdoor-attendance:exceptions",
-    "alumdoor-attendance:payroll-run",
-    "alumdoor-attendance:payroll-my-slips",
+    "alumdoor-attendance:employees-lite",
+    "alumdoor-attendance:payroll-lite",
+    "alumdoor-attendance:my-slips-lite",
+    "alumdoor-attendance:hr-payroll-settings-lite",
   ]) {
     assert.ok(manifest.nav.some((entry) => entry.kind === "experience" && entry.key === key), `missing experience ${key}`);
   }
@@ -126,6 +130,7 @@ test("Attendance policy and pay profile use explicit approval workflows", async 
   assert.equal(profile?.is_submittable, true);
   assert.equal(field(profile, "base_salary_vnd")?.fieldtype, "Int");
   assert.equal(field(profile, "overtime_multiplier_bp")?.fieldtype, "Int");
+  assert.equal(field(profile, "alu_lite_idempotency_key")?.unique, true);
   assert.equal(profileWorkflow?.state_field, "status");
   assert.ok(profileWorkflow?.transitions.some((entry) => entry.state === "draft" && entry.next_state === "approved" && entry.allow_self_approval === false));
 });

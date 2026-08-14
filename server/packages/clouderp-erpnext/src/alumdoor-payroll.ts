@@ -6,8 +6,10 @@ import type { SalarySlipComponentRow, SalarySlipData } from "./enterprise-types.
 import * as H from "./hrm-shared.js";
 import {
   calculateAlumDoorPayroll,
+  calculateAlumDoorPayrollV2,
   type AlumDoorPayMode,
 } from "../../../apps-src/alumdoor-worker/src/payroll-core.js";
+import { ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR } from "../../alumdoor-hr-payroll-contract/src/index.js";
 
 type HrmContext = H.HrmContext;
 
@@ -17,9 +19,20 @@ type HrmContext = H.HrmContext;
  */
 export class AlumDoorPayProfileController extends SuiteController<JsonObject> {
   readonly doctype = "AlumDoor Pay Profile";
+  readonly allowSubmittedSave = true;
 
   async normalize(context: HrmContext): Promise<JsonObject> {
     const input = context.command.document;
+    if (context.command.action === "save" && context.existing?.docstatus === 1) {
+      if (!context.command.actor.roles.includes("AlumDoor Payroll System")) {
+        throw errors.permission("Submitted Pay Profile may only be closed by the trusted payroll coordinator");
+      }
+      const existing = context.existing.data;
+      const effectiveFrom = H.requiredDate(existing.effective_from, "Pay Profile effective_from");
+      const effectiveTo = H.requiredDate(input.effective_to, "Pay Profile effective_to");
+      if (effectiveTo < effectiveFrom) throw errors.validation("Pay Profile effective_to must not precede effective_from");
+      return { ...existing, effective_to: effectiveTo, status: "approved" };
+    }
     const employeeName = H.requiredText(input.employee, "Employee");
     const employee = await H.requireRecord(context, "Employee", employeeName);
     H.assertEmployeeActive(employee, employeeName);
@@ -82,6 +95,7 @@ export class AlumDoorPayProfileController extends SuiteController<JsonObject> {
   status(context: HrmContext): string {
     if (context.command.action === "submit") return "approved";
     if (context.command.action === "cancel") return "retired";
+    if (context.command.action === "save" && context.existing?.docstatus === 1) return "approved";
     return "draft";
   }
 }
@@ -102,6 +116,7 @@ export interface AlumDoorGeneratedSalaryInput {
   alu_work_fraction_bp: number;
   alu_base_pay_vnd: number;
   alu_overtime_pay_vnd: number;
+  alu_overtime_rate_vnd_per_hour: number;
   alu_allowance_vnd: number;
   alu_advance_vnd: number;
   alu_manual_deduction_vnd: number;
@@ -190,18 +205,52 @@ export async function buildAlumDoorSalarySlipInputs(
   if (manualDeduction > 0 && !H.text(input.alu_adjustment_reason)) {
     throw errors.validation("Salary Slip manual deduction requires alu_adjustment_reason");
   }
-  const calculated = calculateAlumDoorPayroll({
-    payMode: H.requiredText(profile.data.pay_mode, "Pay Profile pay_mode") as AlumDoorPayMode,
-    baseSalaryVnd: exactInteger(profile.data.base_salary_vnd, "Pay Profile base_salary_vnd", 0, 999_999_999_999),
-    standardWorkDaysBp,
-    workFractionBp,
-    regularMinutes,
-    overtimeMinutes,
-    overtimeMultiplierBp: exactInteger(profile.data.overtime_multiplier_bp, "Pay Profile overtime_multiplier_bp", 0, 100_000),
-    allowanceVnd: allowance,
-    advanceVnd: advance,
-    manualDeductionVnd: manualDeduction,
-  });
+  const calculationVersion = optionalInteger(input.alu_calculation_version, 1, 1, 1_000_000);
+  const payMode = H.requiredText(profile.data.pay_mode, "Pay Profile pay_mode") as AlumDoorPayMode;
+  const baseSalaryVnd = exactInteger(profile.data.base_salary_vnd, "Pay Profile base_salary_vnd", 0, 999_999_999_999);
+  const calculated = calculationVersion >= 2
+    ? (() => {
+        const v2 = calculateAlumDoorPayrollV2({
+          payMode,
+          baseSalaryVnd,
+          standardWorkDaysBp,
+          workFractionBp,
+          regularMinutes,
+          approvedOvertimeMinutes: overtimeMinutes,
+          overtimeRateVndPerHour: exactInteger(input.alu_overtime_rate_vnd_per_hour ?? ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR, "Mức tăng ca", ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR, ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR),
+          fixedAllowanceVnd: allowance,
+          advanceDeductionVnd: advance,
+          approvedLegalDeductionsVnd: manualDeduction,
+          legalOvertimeFloorVnd: optionalInteger(input.alu_overtime_legal_floor_vnd, 0),
+        });
+        return {
+          basePayVnd: v2.basePayVnd,
+          overtimePayVnd: v2.overtimePayVnd,
+          allowanceVnd: v2.fixedAllowanceVnd,
+          advanceVnd: v2.advanceDeductionVnd,
+          manualDeductionVnd: v2.approvedLegalDeductionsVnd,
+          grossPayVnd: v2.grossPayVnd,
+          totalDeductionVnd: v2.totalDeductionVnd,
+          netPayVnd: v2.netPayVnd,
+          dailyRate: v2.dailyRate,
+          v2Trace: v2.trace,
+        };
+      })()
+    : {
+        ...calculateAlumDoorPayroll({
+          payMode,
+          baseSalaryVnd,
+          standardWorkDaysBp,
+          workFractionBp,
+          regularMinutes,
+          overtimeMinutes,
+          overtimeMultiplierBp: exactInteger(profile.data.overtime_multiplier_bp, "Pay Profile overtime_multiplier_bp", 0, 100_000),
+          allowanceVnd: allowance,
+          advanceVnd: advance,
+          manualDeductionVnd: manualDeduction,
+        }),
+        v2Trace: undefined,
+      };
 
   const earnings: SalarySlipComponentRow[] = [
     salaryRow("ALU-BASE", earning, calculated.basePayVnd),
@@ -215,7 +264,6 @@ export async function buildAlumDoorSalarySlipInputs(
     if (calculated.manualDeductionVnd > 0) deductions.push(salaryRow("ALU-DEDUCTION", deduction, calculated.manualDeductionVnd));
   }
 
-  const calculationVersion = optionalInteger(input.alu_calculation_version, 1, 1, 1_000_000);
   const trace = {
     schema_version: 1,
     calculation_version: calculationVersion,
@@ -227,7 +275,14 @@ export async function buildAlumDoorSalarySlipInputs(
     salary_structure: { name: structure.name, version: structure.version },
     attendance: attendanceDocs.map((entry) => ({ name: entry.name, version: entry.version, work_date: entry.data.work_date, regular_minutes: entry.data.regular_minutes, overtime_minutes: entry.data.overtime_minutes, payable_work_fraction_bp: entry.data.payable_work_fraction_bp })),
     totals: { regular_minutes: regularMinutes, overtime_minutes: overtimeMinutes, work_fraction_bp: workFractionBp },
-    rational: { daily_rate: calculated.dailyRate, rounding: "half_up" },
+    rational: {
+      daily_rate: calculated.dailyRate,
+      rounding: "half_up",
+      ...(calculationVersion >= 2 ? {
+        overtime_rate_vnd_per_hour: ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR,
+        overtime: calculated.v2Trace?.overtimePay,
+      } : {}),
+    },
     outputs_vnd: {
       base_pay: calculated.basePayVnd,
       overtime_pay: calculated.overtimePayVnd,
@@ -259,6 +314,7 @@ export async function buildAlumDoorSalarySlipInputs(
     alu_work_fraction_bp: workFractionBp,
     alu_base_pay_vnd: calculated.basePayVnd,
     alu_overtime_pay_vnd: calculated.overtimePayVnd,
+    alu_overtime_rate_vnd_per_hour: calculationVersion >= 2 ? ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR : 0,
     alu_allowance_vnd: calculated.allowanceVnd,
     alu_advance_vnd: calculated.advanceVnd,
     alu_manual_deduction_vnd: calculated.manualDeductionVnd,

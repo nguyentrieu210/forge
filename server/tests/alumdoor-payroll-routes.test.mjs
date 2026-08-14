@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   payrollCalculatePeriod,
   payrollCreatePeriod,
+  minimumRegularDayOvertimeRateVnd,
   payrollSubmitPeriod,
   payrollApprovePeriod,
 } from "../dist/apps-src/alumdoor-worker/src/payroll-routes.js";
@@ -73,6 +74,18 @@ test("calculate period creates salary slip drafts from approved Pay Profiles and
   const period = fixture.docs.get("Payroll Entry:PAY-1");
   assert.equal(period.alu_state, "calculated");
   assert.equal(period.salary_slips[0].salary_slip, "SAL-EMP-1");
+});
+
+test("Lite V2 fixes overtime at 50,000 VND/hour and carries a legal floor", async () => {
+  assert.equal(minimumRegularDayOvertimeRateVnd({ payMode: "MONTHLY", baseSalaryVnd: 13_000_000, standardWorkDaysBp: 260_000 }), 93_750);
+  assert.equal(minimumRegularDayOvertimeRateVnd({ payMode: "DAILY", baseSalaryVnd: 400_000, standardWorkDaysBp: 260_000 }), 75_000);
+  const fixture = callFixture();
+  const response = await payrollCalculatePeriod({ call: fixture.call, args: { period: "PAY-1" }, calculationVersion: 2 });
+  assert.equal(response.status, 200, await response.text());
+  const slip = fixture.docs.get("Salary Slip:SAL-EMP-1");
+  assert.equal(slip.alu_overtime_rate_vnd_per_hour, 50_000);
+  assert.equal(slip.alu_overtime_legal_floor_vnd, 93_750);
+  assert.equal(slip.alu_lite_version, 2);
 });
 
 test("submit then approve uses the bounded native approval seam", async () => {

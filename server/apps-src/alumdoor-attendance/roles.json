@@ -6,5 +6,6 @@
   { "role": "AlumDoor Payroll Approver", "desk_access": true },
   { "role": "AlumDoor QR System", "desk_access": false },
   { "role": "AlumDoor Device System", "desk_access": false },
-  { "role": "AlumDoor Payroll System", "desk_access": false }
+  { "role": "AlumDoor Payroll System", "desk_access": false },
+  { "role": "AlumDoor HR Lite System", "desk_access": false }
 ]

@@ -253,7 +253,7 @@ export async function commitAlumDoorAttendanceScan(
     employee: employee.name,
     company,
     branch,
-    department: requiredText(employeeState.department, "Employee department"),
+    ...(text(employeeState.department) ? { department: text(employeeState.department) } : {}),
     work_date: currentSegment.workDate,
     policy: policyName,
     state: existingDay?.data.state ?? "open",

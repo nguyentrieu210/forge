@@ -33,6 +33,14 @@ import {
   approveAlumDoorPayroll,
   type AlumDoorPayrollApprovalInput,
 } from "./payroll-coordinator.js";
+import {
+  commitAlumDoorEmployeeLite,
+  commitAlumDoorHrLiteSettings,
+  commitAlumDoorPayProfileLite,
+  type AlumDoorEmployeeLiteInput,
+  type AlumDoorHrLiteSettingsInput,
+  type AlumDoorPayProfileLiteInput,
+} from "./employee-lite-coordinator.js";
 import { isInventoryCoordinatedCommand, resolveInventoryCoordinatorKey } from "./inventory-coordinator.js";
 import { PurchaseCommandSerialExecutor } from "./purchase-command-retry.js";
 
@@ -44,6 +52,9 @@ interface AggregateStub extends DurableObjectStub {
   submitAlumDoorAttendanceCorrection(input: AlumDoorAttendanceCorrectionSubmitInput): Promise<JsonObject>;
   reviewAlumDoorAttendanceCorrection(input: AlumDoorAttendanceCorrectionInput): Promise<JsonObject>;
   approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput): Promise<JsonObject>;
+  commitAlumDoorEmployeeLite(input: AlumDoorEmployeeLiteInput): Promise<JsonObject>;
+  commitAlumDoorHrLiteSettings(input: AlumDoorHrLiteSettingsInput): Promise<JsonObject>;
+  commitAlumDoorPayProfileLite(input: AlumDoorPayProfileLiteInput): Promise<JsonObject>;
 }
 
 const PURCHASE_ALLOCATION_DOCTYPES = new Set(["Purchase Order", "Purchase Receipt"]);
@@ -53,6 +64,7 @@ const APP_FACTORY_APPROVAL_EXECUTORS = new WeakMap<object, MutationSerialExecuto
 const ATTENDANCE_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 const ATTENDANCE_CORRECTION_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 const PAYROLL_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
+const HR_LITE_EXECUTORS = new WeakMap<object, MutationSerialExecutor>();
 
 /** One Durable Object class serves the keyed business coordinators in the existing AGGREGATES namespace. */
 export class AggregateCoordinator extends DurableObject<TenantEnv> {
@@ -145,6 +157,33 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     return executor.execute(() => {
       const { kernel, store } = this.commandServices();
       return approveAlumDoorPayroll(input, { kernel, store });
+    });
+  }
+
+  async commitAlumDoorEmployeeLite(input: AlumDoorEmployeeLiteInput): Promise<JsonObject> {
+    let executor = HR_LITE_EXECUTORS.get(this);
+    if (!executor) { executor = new MutationSerialExecutor(); HR_LITE_EXECUTORS.set(this, executor); }
+    return executor.execute(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorEmployeeLite(input, { kernel, store });
+    });
+  }
+
+  async commitAlumDoorHrLiteSettings(input: AlumDoorHrLiteSettingsInput): Promise<JsonObject> {
+    let executor = HR_LITE_EXECUTORS.get(this);
+    if (!executor) { executor = new MutationSerialExecutor(); HR_LITE_EXECUTORS.set(this, executor); }
+    return executor.execute(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorHrLiteSettings(input, { kernel, store });
+    });
+  }
+
+  async commitAlumDoorPayProfileLite(input: AlumDoorPayProfileLiteInput): Promise<JsonObject> {
+    let executor = HR_LITE_EXECUTORS.get(this);
+    if (!executor) { executor = new MutationSerialExecutor(); HR_LITE_EXECUTORS.set(this, executor); }
+    return executor.execute(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorPayProfileLite(input, { kernel, store });
     });
   }
 
