@@ -13,6 +13,7 @@ import {
 import type { ControlRegistry, FieldServices } from "@metaforge/controls";
 import { Button, Checkbox, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, toast } from "@metaforge/ui";
 import { useMetaForge } from "../../../container/provider.js";
+import { salesItemSearchTerms } from "./sales-item-search.js";
 
 interface AlumdoorSalesOrderCreateProps {
   /** Có name = mở/sửa đơn hiện có; không có name = tạo đơn mới. */
@@ -663,15 +664,21 @@ export function AlumdoorSalesOrderCreate(props: AlumdoorSalesOrderCreateProps) {
         return services.searchLink?.(doctype, query, options) ?? [];
       }
       const raw = text(query);
-      const words = raw.split(/\s+/).map((word) => word.trim()).filter((word) => word.length >= 2);
-      const searches = [...new Set([raw, normalized(raw), ...words, ...words.map(normalized)].filter(Boolean))].slice(0, 8);
-      const batches = await Promise.all(searches.map((searchText) => services.searchLink!(doctype, searchText, {
+      const searches = salesItemSearchTerms(raw);
+      const batches = await Promise.allSettled(searches.map((searchText) => services.searchLink!(doctype, searchText, {
         ...options,
         pageLength: 100,
-      }).catch(() => [])));
+      })));
+      const loaded = batches.filter((batch) => batch.status === "fulfilled");
+      if (!loaded.length) {
+        const failure = batches.find((batch) => batch.status === "rejected");
+        throw failure?.reason ?? new Error("Không tải được danh sách mặt hàng.");
+      }
       const merged = new Map<string, { value: string; description?: string }>();
-      for (const option of batches.flat()) {
-        if (!merged.has(option.value)) merged.set(option.value, option);
+      for (const batch of loaded) {
+        for (const option of batch.value) {
+          if (!merged.has(option.value)) merged.set(option.value, option);
+        }
       }
       return [...merged.values()]
         .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw)
@@ -2316,7 +2323,6 @@ _error: mapError(error).message,
             link_filters: JSON.stringify({
               is_sales_item: 1,
               disabled: 0,
-              is_sales_package_component: 0,
             }),
           };
           const salesOptionChoices = row.salesOptionChoices;
