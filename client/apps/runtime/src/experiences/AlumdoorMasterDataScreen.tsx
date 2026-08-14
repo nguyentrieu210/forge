@@ -83,8 +83,6 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
     id: "sales-configuration",
     title: "Bán hàng & sản xuất",
     entries: [
-      { key: "Sales Option", label: "Phương án bán" },
-      { key: "Sales Package", label: "Gói bán hàng" },
       { key: "Cutting Policy", label: "Công thức cửa" },
     ],
   },

@@ -242,18 +242,20 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     items.push({ key: nav.key, label: nav.label, group: nav.group ?? "Ứng dụng", icon: resolveIcon(nav.icon), route, doctype: (nav.kind ?? "doctype") === "doctype" ? nav.key : undefined });
   }
   /**
-   * Older Alumdoor manifests predate the canonical selling configuration navigation
-   * contract even though their metadata and routes are already installed. Use the presence
-   * of a server-filtered Selling/Pricing entry as the permission-aware compatibility signal,
-   * then expose the two missing masters until those tenants receive the newer manifest.
+   * Older Alumdoor manifests predate the canonical Pricing Scope navigation contract even
+   * though their metadata and routes are already installed. Use the presence of a
+   * server-filtered Selling/Pricing entry as the permission-aware compatibility signal, then
+   * expose the missing master until those tenants receive the newer manifest.
+   *
+   * Cách bán (Sales Option) và Gói bán hàng (Sales Package) đã bị loại bỏ khỏi Alumdoor
+   * 2026-08-14 — không còn chèn lại ở đây nữa; chèn lại sẽ dẫn tới `/app/Sales Option` mà
+   * brief hiện tại không còn khai, tức một mục menu dẫn tới màn báo lỗi.
    */
   const isAlumdoor = normalizeGroup(manifest.domain ?? manifest.id) === "alumdoor";
   const canReadSellingMasters = manifest.nav.some((nav) => ["Sales Order", "Price List", "Pricing Rule"].includes(nav.key));
   if (isAlumdoor && canReadSellingMasters) {
     for (const master of [
       { key: "Pricing Scope", label: "Phạm vi áp dụng chính sách", icon: "tags" },
-      { key: "Sales Option", label: "Phương án bán", icon: "settings" },
-      { key: "Sales Package", label: "Gói bán hàng", icon: "package-check" },
     ]) {
       const route = `/app/${encodeURIComponent(master.key)}`;
       if (routes.has(route)) continue;
