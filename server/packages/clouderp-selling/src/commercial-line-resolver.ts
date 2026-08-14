@@ -77,15 +77,23 @@ export async function resolveCommercialLine(
   input: ResolveCommercialLineInput,
 ): Promise<ResolvedCommercialLine> {
   const pricedQtyMicros = quantityMicros(input.pricedQty, "pricedQty");
+  const optionFacts: Record<string, unknown> = {
+    ...input.facts,
+    ...(input.areaSqm === undefined ? {} : {
+      billable_area_sqm: input.areaSqm,
+      area_sqm: input.areaSqm,
+      sqm2: input.areaSqm,
+    }),
+  };
   const resolvedOption = await resolveSalesOption(context, {
     itemCode: input.itemCode,
-    itemMaster: { item_group: input.facts.item_group },
-    facts: input.facts,
-    ...(text(input.facts.sales_option) ? { requestedOption: text(input.facts.sales_option) } : {}),
-    ...(text(input.facts.sales_mode) ? { legacySalesMode: text(input.facts.sales_mode) } : {}),
+    itemMaster: { item_group: optionFacts.item_group },
+    facts: optionFacts,
+    ...(text(optionFacts.sales_option) ? { requestedOption: text(optionFacts.sales_option) } : {}),
+    ...(text(optionFacts.sales_mode) ? { legacySalesMode: text(optionFacts.sales_mode) } : {}),
     // If this Item has no configured options the resolver itself returns STANDARD. If options
     // exist but selection is ambiguous it fails closed; this flag only protects legacy rows.
-    allowLegacyUnselected: Boolean(input.facts.legacy_unselected_sales_option),
+    allowLegacyUnselected: Boolean(optionFacts.legacy_unselected_sales_option),
   });
 
   const requestedVariant = normalizePriceVariant(input.priceVariant ?? resolvedOption.price_variant);
@@ -114,7 +122,7 @@ export async function resolveCommercialLine(
   }
 
   const facts = {
-    ...input.facts,
+    ...optionFacts,
     ...(resolvedOption.sales_option ? { sales_option: resolvedOption.sales_option } : {}),
     ...(resolvedOption.sales_option_code ? { sales_option_code: resolvedOption.sales_option_code } : {}),
     ...(resolvedOption.sales_mode ? { sales_mode: resolvedOption.sales_mode } : {}),

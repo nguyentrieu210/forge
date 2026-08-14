@@ -899,11 +899,13 @@ export function LinkControl(p: FieldControlProps) {
   }
 
   const filters = buildLinkFilters(p.field, p.docValues);
+  const fixedLinkTarget = target === "Tỉnh Thành" || target === "Phường Xã";
+  const allowCreate = !fixedLinkTarget && p.field.allow_create !== false && p.field.allow_create !== 0;
   // Nút cộng cạnh ô Link là lối vào rõ ràng cho thao tác tạo danh mục ngay khi
   // đang nhập form. Dùng chính quickCreate trung tâm (và form/permission thật)
   // thay vì tự dựng form nhỏ tại control, nên sau khi lưu vẫn trả về đúng name
   // để chọn lại ở form đang mở.
-  const canCreateFromField = Boolean(p.services?.quickCreate) && !p.readOnly && !p.compact;
+  const canCreateFromField = allowCreate && Boolean(p.services?.quickCreate) && !p.readOnly && !p.compact;
   const createFromField = async () => {
     if (!p.services?.quickCreate || creatingFromField) return;
     setCreatingFromField(true);
@@ -923,7 +925,7 @@ export function LinkControl(p: FieldControlProps) {
           target={target}
           search={search}
           resolveDisplay={p.services?.resolveDisplay}
-          quickCreate={p.services?.quickCreate}
+          quickCreate={allowCreate ? p.services?.quickCreate : undefined}
           getMeta={p.services?.getMeta}
           filters={filters}
           referenceDoctype={p.parentDoctype}
@@ -941,7 +943,7 @@ export function LinkControl(p: FieldControlProps) {
           type="button"
           variant="outline"
           size="icon"
-          className="size-11 shrink-0 md:size-9"
+          className="!size-[34px] shrink-0"
           aria-label={`${t("control.link_create_new")} ${p.label ?? target}`}
           title={`${t("control.link_create_new")} ${p.label ?? target}`}
           disabled={creatingFromField}

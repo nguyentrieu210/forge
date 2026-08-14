@@ -8,6 +8,7 @@
 - Không dùng gói để mô tả vật tư sản xuất; phần đó thuộc BOM/định mức.
 - `Phương án bán` chọn cách bán và có thể trỏ tới một gói giao hàng.
 - Đơn bán chụp phiên bản gói tại thời điểm chốt để sửa gói sau này không làm đổi nghĩa vụ giao của đơn cũ.
+- Gói `ALL` giao toàn bộ component theo một giá thương mại của dòng cha. Gói `SELECTABLE` cho phép `Tách món`: người dùng tích component, mỗi component lấy giá/chính sách hiện hành của chính Item và vẫn được lưu là child của dòng bộ.
 
 ## Form người dùng
 
@@ -27,8 +28,9 @@ Một gói không được áp dụng mơ hồ cho cả nhóm hàng. Luồng gia
 - ĐVT giao.
 - Tính số lượng theo: cố định, chiều cao, chiều rộng, rộng cắt lá, diện tích, số bộ hoặc số lá.
 - Hệ số / số lượng.
+- Với gói `SELECTABLE`: chọn sẵn/bắt buộc, có trừ khỏi giá bộ không, có trừ khỏi cơ sở chiết khấu của bộ không và Sales Option áp dụng cho món.
 
-`Mã dòng`, `Bắt buộc giao`, `Chọn sẵn` và vai trò kỹ thuật được máy quản lý, không đưa ra form thường. Mã dòng tự sinh `MON-001`, `MON-002`… và là định danh để theo dõi giao, đổi, trả.
+`Mã dòng` và vai trò kỹ thuật được máy quản lý. Mã dòng tự sinh `MON-001`, `MON-002`… và là định danh để theo dõi giao, đổi, trả. Các cờ chọn/trừ giá chỉ hiện trong màn quản trị gói, không nằm trên đơn hàng thường.
 
 ## Ví dụ diễn giải
 

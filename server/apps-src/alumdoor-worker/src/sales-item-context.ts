@@ -340,6 +340,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   return json({
     item_code: itemCode,
     item_group: normalizedText(item.item_group),
+    is_sales_package_component: truthy(item.is_sales_package_component),
     door_type: effectiveDoorType || null,
     inventory_mode: inventoryMode,
     measurement_profile: normalizedText(item.measurement_profile) || null,

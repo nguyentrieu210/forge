@@ -4526,6 +4526,16 @@ async function previewSalesCommercialLine(args: FrappeArgs, context: FrappeRoute
   const item = await loadReadable("Item", itemCode, context);
   const qty = Number(line.qty ?? line.priced_qty ?? 0);
   if (!Number.isFinite(qty) || qty <= 0) throw errors.validation("qty must be greater than zero");
+  const normalizedUom = String(line.uom ?? "").normalize("NFC").trim().toLocaleLowerCase("vi").replace(/\s+/g, "");
+  const explicitArea = Number(line.billable_area_sqm);
+  // For area-priced lines, qty is the latest canonical result produced by the
+  // vertical formula preview. Prefer it over a stale billable_area_sqm left on
+  // the row, then expose the common aliases used by configured conditions.
+  const effectiveArea = ["m2", "m²", "sqm"].includes(normalizedUom)
+    ? qty
+    : Number.isFinite(explicitArea) && explicitArea > 0
+      ? explicitArea
+      : undefined;
 
   const fakeCommand: MutationCommand<JsonObject> = {
     schema_version: 1,
@@ -4541,6 +4551,11 @@ async function previewSalesCommercialLine(args: FrappeArgs, context: FrappeRoute
   const facts: Record<string, unknown> = {
     ...line,
     item_group: item.data.item_group,
+    ...(effectiveArea === undefined ? {} : {
+      billable_area_sqm: effectiveArea,
+      area_sqm: effectiveArea,
+      sqm2: effectiveArea,
+    }),
   };
   const kernelContext = {
     command: fakeCommand,
@@ -4560,7 +4575,10 @@ async function previewSalesCommercialLine(args: FrappeArgs, context: FrappeRoute
     ...(args.text("customer") ? { party: args.text("customer")! } : {}),
     ...(args.text("customer_group") ? { customerGroup: args.text("customer_group")! } : {}),
     facts,
-    ...(Number.isFinite(Number(line.billable_area_sqm)) ? { areaSqm: Number(line.billable_area_sqm) } : {}),
+    ...(Number.isFinite(Number(line.discount_percentage))
+      ? { discountPercentageOverride: Number(line.discount_percentage) }
+      : {}),
+    ...(effectiveArea === undefined ? {} : { areaSqm: effectiveArea }),
     ...(Number.isFinite(Number(line.length_m)) ? { lengthM: Number(line.length_m) } : {}),
     ...(Number.isFinite(Number(line.set_count)) ? { setCount: Number(line.set_count) } : {}),
   });

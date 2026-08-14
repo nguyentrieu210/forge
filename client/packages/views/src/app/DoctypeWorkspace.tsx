@@ -62,7 +62,9 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
    * màn Sales Order của app khác. Màn chuyên biệt vẫn lazy-load, nên app khác không tải code cửa.
    */
   const isAlumdoorProfile = Boolean(formProfiles?.["Item Group"]?.keep?.includes("default_measurement_profile"));
-  const useAlumdoorSalesCreate = isNew && doctype === "Sales Order" && isAlumdoorProfile;
+  const useAlumdoorSalesForm = doctype === "Sales Order" && isAlumdoorProfile;
+  const useAlumdoorSalesCreate = isNew && useAlumdoorSalesForm;
+  const useAlumdoorSalesDetail = Boolean(decoded) && useAlumdoorSalesForm;
   /**
    * Kích cỡ màn tạo mới đi theo PHẠM VI của chứng từ, không phải theo khai báo riêng của từng app.
    *
@@ -142,19 +144,34 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
                 />
               )}
               detail={decoded ? (
-                <FormContainer
-                  key={`${doctype}/${decoded}`}
-                  doctype={doctype}
-                  name={decoded}
-                  onSaved={() => {}}
-                  onDeleted={() => onNavigate(listPath)}
-                  onDuplicate={() => onNavigate(`${listPath}/new`)}
-                  onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
-                  onPrint={() => onNavigate(printBase === "/print"
-                    ? buildPrintPath(doctype, decoded)
-                    : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
-                  onClose={() => onNavigate(listPath)}
-                />
+                useAlumdoorSalesDetail ? (
+                  <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở đơn hàng AlumDoor…</div>}>
+                    <AlumdoorSalesOrderCreate
+                      key={`${doctype}/${decoded}`}
+                      name={decoded}
+                      onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+                      onSaved={() => {}}
+                      onPreviewCreated={(currentName) => onNavigate(printBase === "/print"
+                        ? buildPrintPath(doctype, currentName)
+                        : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(currentName)}`)}
+                      onCancel={() => onNavigate(listPath)}
+                    />
+                  </Suspense>
+                ) : (
+                  <FormContainer
+                    key={`${doctype}/${decoded}`}
+                    doctype={doctype}
+                    name={decoded}
+                    onSaved={() => {}}
+                    onDeleted={() => onNavigate(listPath)}
+                    onDuplicate={() => onNavigate(`${listPath}/new`)}
+                    onRenamed={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+                    onPrint={() => onNavigate(printBase === "/print"
+                      ? buildPrintPath(doctype, decoded)
+                      : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(decoded)}`)}
+                    onClose={() => onNavigate(listPath)}
+                  />
+                )
               ) : isTree ? (
                 <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">
                   {t("common.choose_prefix")} {displayTitle.toLocaleLowerCase("vi")}

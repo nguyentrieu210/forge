@@ -39,6 +39,28 @@ function normalizedUom(value: unknown): string {
   return normalized(value);
 }
 
+function quantityLabelForUom(value: unknown): string {
+  const uom = normalizedUom(value).replace(/\s+/g, "");
+  if (["bộ", "bo", "set"].includes(uom)) return "Số bộ";
+  if (["cái", "cai", "chiếc", "chiec", "piece"].includes(uom)) return "Số cái";
+  if (["cặp", "cap", "pair"].includes(uom)) return "Số cặp";
+  if (["cây", "cay", "thanh", "đoạn", "doan", "lá", "la"].includes(uom)) return "Số cây/đoạn";
+  if (["cuộn", "cuon", "roll"].includes(uom)) return "Số cuộn";
+  if (["thùng", "thung", "box"].includes(uom)) return "Số thùng";
+  if (["kg", "kilogram"].includes(uom)) return "Khối lượng";
+  if (["m", "mét", "met", "meter", "metre"].includes(uom)) return "Số mét";
+  if (["m2", "m²", "sqm"].includes(uom)) return "Diện tích";
+  return "Số lượng";
+}
+
+const SALES_OPTION_LEAF_VARIANTS = ["Kéo tay", "Motor ngoài", "Motor trong"] as const;
+
+function leafVariantFromSalesOption(option: Json | null): string {
+  if (!option) return "";
+  const configured = normalized(option.option_label || option.sales_mode);
+  return SALES_OPTION_LEAF_VARIANTS.find((variant) => normalized(variant) === configured) ?? "";
+}
+
 function checked(value: unknown): boolean {
   if (value === true || value === 1 || value === "1") return true;
   return ["true", "yes", "có", "co"].includes(normalized(value));
@@ -68,6 +90,29 @@ async function readDoc(call: PlatformCall, doctype: string, name: string): Promi
   return ((await response.json()) as { data?: Json }).data ?? null;
 }
 
+/**
+ * Chọn lại ĐVT theo master Item trước khi gọi salesItemContext.
+ *
+ * Một dòng bán có thể còn giữ UOM của mặt hàng trước đó. Nếu gửi thẳng giá trị
+ * cũ lên context, context trả 422 và toàn bộ chuỗi autofill bị ngắt. UOM không
+ * còn hợp lệ phải rơi về default_sales_uom (hoặc stock_uom), không được giữ lại.
+ */
+function resolveConfiguredSalesUom(item: Json, requested: unknown): string | undefined {
+  const configured = [
+    item.default_sales_uom,
+    item.stock_uom,
+    ...(Array.isArray(item.uom_conversions)
+      ? item.uom_conversions.map((entry) => entry && typeof entry === "object" ? (entry as Json).uom : undefined)
+      : []),
+  ].map(text).filter(Boolean);
+  if (!configured.length) return undefined;
+  const requestedKey = normalized(requested);
+  return configured.find((uom) => requestedKey && normalized(uom) === requestedKey)
+    || text(item.default_sales_uom)
+    || text(item.stock_uom)
+    || configured[0];
+}
+
 function deriveLinearSalesBasis(item: Json): LinearSalesBasis | undefined {
   const itemName = normalized(item.item_name);
   const itemCode = normalized(item.item_code);
@@ -91,10 +136,6 @@ function isOrdinaryQuantitySalesItem(item: Json): boolean {
   return text(item.inventory_mode) === "Hàng thường"
     && !deriveLinearSalesBasis(item)
     && !isWidthQuantitySalesItem(item);
-}
-
-function isGermanDoor(item: Json): boolean {
-  return normalized(item.door_type) === "cửa đức" || normalized(item.item_group) === "cửa cn đức";
 }
 
 function fieldSet(args: Json): Set<string> {
@@ -207,7 +248,16 @@ function applyAverageWeight(patch: Json, clear: Set<string>, fields: Set<string>
 async function formulaPreview(call: PlatformCall, row: Json, parent: Json, item: Json): Promise<Json | null> {
   if (text(item.inventory_mode) !== "Thành phẩm theo m2") return null;
   if (!positive(row.width_m) || !positive(row.height_m)) return null;
-  const customerGroup = text(parent.customer_group);
+  let customerGroup = text(parent.customer_group);
+  // The Sales Order header normally receives this from Customer.price_group. During fast
+  // entry that fetch can finish after the line preview, while the selected Price List already
+  // carries the same authoritative Đại lý/Lẻ scope. Use that scope instead of silently
+  // clearing qty and leaving an apparently complete dimension row at "—".
+  if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+    const priceListName = text(parent.selling_price_list);
+    const priceList = priceListName ? await readDoc(call, "Price List", priceListName) : null;
+    customerGroup = text(priceList?.customer_group);
+  }
   if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") return null;
   const response = await calculateSalesProductionLine(call, {
     ...row,
@@ -233,9 +283,10 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   const overrides: Record<string, Json> = {};
   if (changed === "item_code") for (const name of ITEM_DERIVED_FIELDS) clearIfField(clear, fields, name);
 
+  const configuredUom = resolveConfiguredSalesUom(item, row.uom);
   const contextResponse = await salesItemContext(call, {
     item_code: itemCode,
-    uom: row.uom,
+    uom: configuredUom,
     warehouse: row.warehouse,
     price_list: parent.selling_price_list,
     currency: parent.currency,
@@ -243,6 +294,19 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     sales_option: row.sales_option,
   });
   const context = contextResponse.ok ? await contextResponse.json() as Json : {};
+
+  if (text(row.sales_option)) {
+    const option = await readDoc(call, "Sales Option", text(row.sales_option));
+    const salesMode = text(option?.sales_mode) || text(option?.option_label);
+    if (salesMode) setIfField(patch, fields, "sales_mode", salesMode);
+    if (fields.has("leaf_variant")) {
+      const syncedLeafVariant = leafVariantFromSalesOption(option);
+      if (syncedLeafVariant) {
+        patch.leaf_variant = syncedLeafVariant;
+        fieldOverride(overrides, fields, "leaf_variant", { read_only: 1 });
+      }
+    }
+  }
 
   const masterPlan: Array<[string, unknown]> = [
     ["stock_uom", item.stock_uom], ["inventory_mode", item.inventory_mode || "Hàng thường"],
@@ -273,7 +337,7 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     }
   }
 
-  const selectedUom = text(context.selected_uom) || text(row.uom) || text(item.default_sales_uom) || text(item.stock_uom);
+  const selectedUom = text(context.selected_uom) || configuredUom || text(item.default_sales_uom) || text(item.stock_uom);
   setIfField(patch, fields, "uom", selectedUom);
   setIfField(patch, fields, "conversion_factor", context.conversion_factor);
   setIfField(patch, fields, "available_qty", context.available_qty);
@@ -296,9 +360,10 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     patch.rate_requires_approval = manuallyChanged;
     if (changed === "item_code" || changed === "uom" || changed === "warehouse" || !manuallyChanged) patch.rate = baseline;
   }
+  // Changing Item must discard the previous line's percentage. The authoritative
+  // Pricing Rule then supplies 15% for Cửa CN Đức and 0% for groups without a rule.
   if (fields.has("discount_percentage") && changed === "item_code") {
-    // Commercial default only. The authoritative selling controller still recalculates/validates on save.
-    patch.discount_percentage = isGermanDoor({ ...item, door_type: context.door_type }) ? 15 : 0;
+    clearIfField(clear, fields, "discount_percentage");
   }
 
   const effectiveRow = { ...row, ...patch };
@@ -362,17 +427,33 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     mandatory_depends_on: null,
   });
   fieldOverride(overrides, fields, "uom", { label: "ĐVT" });
-  fieldOverride(overrides, fields, "qty", { label: "Khối lượng", read_only: quantity.derived ? 1 : 0 });
+  fieldOverride(overrides, fields, "qty", {
+    label: quantity.derived ? "SL tính giá" : quantityLabelForUom(selectedUom),
+    read_only: quantity.derived ? 1 : 0,
+  });
   fieldOverride(overrides, fields, "rate", { label: "Đơn giá (chiết khấu)\n(VNĐ)" });
   fieldOverride(overrides, fields, "discount_percentage", { label: "Chiết khấu\n(%)" });
   fieldOverride(overrides, fields, "amount", { label: "Thành tiền\n(VNĐ)" });
 
   const setsRequired = Boolean(linear || isWidthQuantitySalesItem(item) || isOrdinaryQuantitySalesItem(item)
     || text(item.inventory_mode) === "Thành phẩm theo m2");
-  if (setsRequired) fieldOverride(overrides, fields, "set_count", { hidden: 0, reqd: 1, label: "Khối lượng", depends_on: null, mandatory_depends_on: null });
+  if (setsRequired) {
+    const setCountLabel = text(item.inventory_mode) === "Thành phẩm theo m2"
+      ? "Số bộ"
+      : linear
+        ? "Số cây/đoạn"
+        : quantityLabelForUom(item.stock_uom || selectedUom);
+    fieldOverride(overrides, fields, "set_count", {
+      hidden: 0,
+      reqd: 1,
+      label: setCountLabel,
+      depends_on: null,
+      mandatory_depends_on: null,
+    });
+  }
   if (linear === "RAY") fieldOverride(overrides, fields, "height_m", { hidden: 0, reqd: 1, label: "Cao (m)", depends_on: null, mandatory_depends_on: null });
   if (linear === "TRUC" || isWidthQuantitySalesItem(item)) fieldOverride(overrides, fields, "width_m", { hidden: 0, reqd: 1, label: "Rộng (m)", depends_on: null, mandatory_depends_on: null });
-  if (isOrdinaryQuantitySalesItem(item)) fieldOverride(overrides, fields, "qty", { read_only: 1, label: "Khối lượng", read_only_depends_on: null });
+  if (isOrdinaryQuantitySalesItem(item)) fieldOverride(overrides, fields, "qty", { read_only: 1, label: "SL tính giá", read_only_depends_on: null });
   if (quantity.policy === "LENGTH_X_PIECES" || (text(item.inventory_mode) === "Nhôm cây/lá" && quantity.policy === "PIECES")) {
     fieldOverride(overrides, fields, "length_m", { reqd: quantity.policy === "LENGTH_X_PIECES" ? 1 : 0, label: "Dài một cây/đoạn (m)" });
     fieldOverride(overrides, fields, "qty_bar", { reqd: 1, label: "Số cây/đoạn" });

@@ -13,7 +13,9 @@ export interface PackageSnapshotDocument extends JsonObject {
 /**
  * Freeze fulfillment composition after pricing has resolved Sales Option -> Sales Package.
  * Existing valid snapshots win over mutable master data, which is required for quote/order
- * audit continuity. Package pricing is never derived from its components.
+ * audit continuity. An ALL package never derives commercial price from components. A
+ * SELECTABLE split package may allocate the already-resolved full-set price between its
+ * parent and selected priced children in the later split-pricing pass.
  */
 export async function applySalesPackageSnapshots<T extends PackageSnapshotDocument>(
   context: ControllerContext<JsonObject>,

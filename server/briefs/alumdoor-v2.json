@@ -1140,6 +1140,28 @@
     },
     {
       "type": "Cutting Policy",
+      "name": "Cửa tấm liền Úc — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa tấm liền Úc — công thức chuẩn",
+        "door_type": "Cửa tấm liền Úc",
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.03,
+        "retail_cut_deduction_m": 0.03,
+        "dealer_split_sales_basis": "Phủ bì ray",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Kg thực tế",
+        "note": "Bán theo Cao PB × PB ray. Chia lá tấm liền: (Cao PB − 0,13) ÷ 0,068.",
+        "leaf_height_deduction_m": 0.13,
+        "leaf_rounding": "Làm tròn xuống",
+        "leaf_formula": "Kiểu tấm liền Úc",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": 0.068
+      }
+    },
+    {
+      "type": "Cutting Policy",
       "name": "Cửa Lưới — công thức chuẩn",
       "data": {
         "policy_name": "Cửa Lưới — công thức chuẩn",
@@ -2402,7 +2424,7 @@
         }
       ],
       "permissions": {
-        "Chủ xưởng": "rwc",
+        "Chủ xưởng": "r",
         "Kinh doanh": "r",
         "Thủ kho": "rwc",
         "Kế toán": "r",
@@ -2507,6 +2529,102 @@
       }
     },
     {
+      "name": "Tỉnh Thành",
+      "label": "Tỉnh/Thành phố",
+      "icon": "map-pin",
+      "group": "Danh mục",
+      "naming": "field:province_code",
+      "title": "province_name",
+      "list": ["province_code", "province_name", "province_type"],
+      "search": ["province_code", "province_name"],
+      "fields": [
+        "province_code:Data*! Mã tỉnh/thành",
+        "province_name:Data*! Tỉnh/Thành phố",
+        "province_type:Select(Tỉnh,Thành phố) Loại đơn vị",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "r",
+        "Kinh doanh": "r",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "Phường Xã",
+      "label": "Phường/Xã",
+      "icon": "map",
+      "group": "Danh mục",
+      "naming": "field:ward_code",
+      "title": "ward_name",
+      "list": ["ward_code", "ward_name", "province", "ward_type"],
+      "search": ["ward_code", "ward_name", "province"],
+      "fields": [
+        "ward_code:Data*! Mã phường/xã",
+        "ward_name:Data*! Phường/Xã",
+        "province:Link(Tỉnh Thành)! Tỉnh/Thành phố",
+        "ward_type:Select(Xã,Phường,Đặc khu) Loại đơn vị",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "r",
+        "Kinh doanh": "r",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "Địa chỉ giao lắp",
+      "label": "Địa chỉ giao/lắp đặt",
+      "icon": "map-pinned",
+      "group": "Danh mục",
+      "naming": "DCL-.#####",
+      "title": "address_line1",
+      "list": ["customer", "address_line1", "ward", "province", "is_default"],
+      "search": ["customer", "address_line1", "ward", "province", "contact_person", "phone"],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        {
+          "fieldname": "province",
+          "fieldtype": "Link",
+          "options": "Tỉnh Thành",
+          "label": "Tỉnh/Thành phố",
+          "required": true,
+          "allow_create": false
+        },
+        {
+          "fieldname": "ward",
+          "fieldtype": "Link",
+          "options": "Phường Xã",
+          "label": "Phường/Xã",
+          "required": true,
+          "allow_create": false,
+          "link_filters": "{\"province\":\"eval:doc.province\"}"
+        },
+        {
+          "fieldname": "address_line1",
+          "fieldtype": "Data",
+          "label": "Số nhà, tên đường",
+          "required": true,
+          "form_width": "full"
+        },
+        "contact_person:Data Người liên hệ",
+        "phone:Data SĐT",
+        "is_default:Check Địa chỉ mặc định",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
       "name": "Customer",
       "label": "Khách hàng",
       "icon": "users",
@@ -2563,7 +2681,23 @@
         "contact_person:Data Người liên hệ",
         "phone:Data Điện thoại",
         "email:Data Email",
-        "address:Small Text Địa chỉ",
+        {
+          "fieldname": "install_province",
+          "fieldtype": "Link",
+          "options": "Tỉnh Thành",
+          "label": "Tỉnh/Thành phố",
+          "allow_create": false
+        },
+        {
+          "fieldname": "install_ward",
+          "fieldtype": "Link",
+          "options": "Phường Xã",
+          "label": "Xã/Phường",
+          "allow_create": false,
+          "link_filters": "{\"province\":\"eval:doc.install_province\"}"
+        },
+        "install_address_line1:Data Địa chỉ (số nhà, tên đường)",
+        "shipping_note:Small Text Ghi chú vận chuyển",
         "tax_id:Data Mã số thuế",
         "credit_limit:Currency Hạn mức công nợ",
         "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày)=(Trả ngay) Điều khoản thanh toán",
@@ -2575,6 +2709,29 @@
         "Kinh doanh": "rwc",
         "Kế toán": "r",
         "Thủ kho": "r"
+      }
+    },
+    {
+      "name": "Tài khoản ngân hàng",
+      "label": "Tài khoản ngân hàng",
+      "icon": "landmark",
+      "group": "Danh mục",
+      "naming": "field:account_number",
+      "title": "account_number",
+      "list": ["bank_name", "account_number", "account_holder", "is_default"],
+      "search": ["bank_name", "account_number", "account_holder"],
+      "fields": [
+        "bank_name:Data*! Ngân hàng",
+        "account_number:Data*! Số tài khoản",
+        "account_holder:Data*! Chủ tài khoản",
+        "branch:Data Chi nhánh",
+        "is_default:Check Tài khoản mặc định",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "rwc"
       }
     },
     {
@@ -2599,6 +2756,7 @@
       ],
       "fields": [
         "price_list_name:Data*! Tên bảng giá",
+        "customer_group:Select(Đại lý,Lẻ) Nhóm giá áp dụng",
         "effective_date:Date! Ngày áp dụng",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Small Text Áp dụng cho ai / khi nào",
@@ -3555,6 +3713,7 @@
         "uom",
         "qty",
         "rate",
+        "discount_percentage",
         "discount_amount",
         "adjustment_amount",
         "net_amount"
@@ -3968,6 +4127,15 @@
           "surface": "quick"
         },
         {
+          "label": "Chiết khấu (%)",
+          "fieldname": "discount_percentage",
+          "fieldtype": "Percent",
+          "default": 0,
+          "non_negative": true,
+          "description": "Phần trăm chiết khấu nhập trên từng dòng; server tính lại số tiền chiết khấu.",
+          "surface": "expanded"
+        },
+        {
           "label": "Tiền CK",
           "fieldname": "discount_amount",
           "fieldtype": "Currency",
@@ -4079,6 +4247,7 @@
           "uom",
           "qty",
           "rate",
+          "discount_percentage",
           "discount_amount",
           "adjustment_amount",
           "net_amount"
@@ -4106,6 +4275,7 @@
           "uom",
           "qty",
           "rate",
+          "discount_percentage",
           "discount_amount",
           "adjustment_amount",
           "net_amount"
@@ -4219,6 +4389,15 @@
           "form_control_style": "choice_list"
         },
         {
+          "fieldname": "bank_account",
+          "label": "Tài khoản ngân hàng",
+          "fieldtype": "Link",
+          "options": "Tài khoản ngân hàng",
+          "link_filters": "{\"disabled\":0}",
+          "depends_on": "eval:doc.payment_method == 'Chuyển khoản'",
+          "form_region": "aside"
+        },
+        {
           "label": "Nhóm khách hàng",
           "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
           "fieldname": "customer_group",
@@ -4229,10 +4408,45 @@
           "form_region": "main"
         },
         {
+          "fieldname": "contact_person",
+          "label": "Người liên hệ",
+          "fieldtype": "Data",
+          "form_region": "main"
+        },
+        {
+          "fieldname": "phone",
+          "label": "SĐT",
+          "fieldtype": "Data",
+          "form_region": "main"
+        },
+        {
+          "fieldname": "install_province",
+          "label": "Tỉnh/TP",
+          "fieldtype": "Link",
+          "options": "Tỉnh Thành",
+          "allow_create": false,
+          "form_region": "main"
+        },
+        {
+          "fieldname": "install_ward",
+          "label": "Xã/Phường",
+          "fieldtype": "Link",
+          "options": "Phường Xã",
+          "allow_create": false,
+          "link_filters": "{\"province\":\"eval:doc.install_province\"}",
+          "form_region": "main"
+        },
+        {
           "label": "Địa chỉ giao / lắp đặt",
           "fieldname": "install_address",
           "fieldtype": "Small Text",
-          "fetch_from": "customer.address",
+          "form_region": "main",
+          "form_width": "full"
+        },
+        {
+          "fieldname": "shipping_note",
+          "label": "Ghi chú giao hàng",
+          "fieldtype": "Small Text",
           "form_region": "main",
           "form_width": "full"
         },

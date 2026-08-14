@@ -38,6 +38,14 @@ export interface SalesItem extends UomLine {
   sales_order_row_id?: string;
   /** Exact component within a frozen package when the physical line fulfills a package parent. */
   sales_package_component_key?: string;
+  /** Stable commercial group key on a package parent row. */
+  sales_package_group_key?: string;
+  /** Parent sales_package_group_key when this is a selectable priced component. */
+  sales_package_parent_key?: string;
+  sales_package_full_set_amount?: DecimalInput;
+  sales_package_full_set_amount_minor?: number;
+  sales_package_component_deduction?: DecimalInput;
+  sales_package_component_deduction_minor?: number;
 
   item_price?: string | undefined;
   price_variant?: string;

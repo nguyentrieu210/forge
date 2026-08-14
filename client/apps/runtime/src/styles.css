@@ -5,6 +5,7 @@
 @source "../node_modules/@metaforge/views/dist";
 @source "../node_modules/@metaforge/shell/dist";
 @source "../node_modules/@metaforge/controls/dist";
+@source "../../../packages/controls/src";
 @source "../node_modules/@metaforge/builder/dist";
 
 /* Compact desktop navigation without hiding routes or changing permissions. */

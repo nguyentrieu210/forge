@@ -224,6 +224,17 @@ function buildPayload(entry) {
   const inventoryMode = kgTarget
     ? "Nhôm cây/lá"
     : oldInventoryMode || (isDoor ? "Thành phẩm theo m2" : "Hàng thường");
+  const doorType = new Map([
+    ["Cửa CN Đức", "Cửa Đức"],
+    ["Cửa Lưới", "Cửa Lưới"],
+    ["Cửa kéo Đài Loan", "Cửa Đài Loan"],
+    ["Cửa Đài Loan", "Cửa Đài Loan"],
+    ["Cửa Đài Loan Inox", "Cửa Đài Loan"],
+    ["Cửa siêu trường", "Cửa Siêu Trường"],
+    ["Cửa tấm liền Úc", "Cửa tấm liền Úc"],
+  ]).get(group);
+  const leafWidthMatch = row["Thông số"].match(/Bản lá\s+([\d.,]+)/i);
+  const leafDivisorM = leafWidthMatch ? Number(leafWidthMatch[1].replace(",", ".")) / 1000 : 0;
   const stockUom = kgTarget
     ? "Kg"
     : old?.["Đơn vị TỒN KHO"]
@@ -261,6 +272,8 @@ function buildPayload(entry) {
     is_sales_item: true,
     include_item_in_manufacturing: Boolean(kgTarget),
     inventory_mode: inventoryMode,
+    ...(doorType ? { door_type: doorType } : {}),
+    ...(leafDivisorM > 0 ? { leaf_divisor_m: leafDivisorM } : {}),
     ...(virtualSaleItem ? {} : {
       measurement_profile: kgTarget?.measurementProfile ?? inventoryMode,
       stock_uom: stockUom,

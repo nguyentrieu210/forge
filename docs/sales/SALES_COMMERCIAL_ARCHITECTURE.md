@@ -201,11 +201,17 @@ uom
 qty_basis
 factor
 required
+default_selected
+deduct_from_parent
+deduct_from_discount_basis
+sales_option (optional, for a separately priced selectable child)
 role
 warehouse/fulfillment hints when legitimate
 ```
 
 A Sales Package is versioned/effective-dated and must be snapshotted on an accepted/order commercial line so later package edits do not mutate historical fulfillment obligations.
+
+`selection_mode = ALL` represents one priced commercial parent with all physical obligations. `selection_mode = SELECTABLE` represents split-item selling: selected components are priced through their own Item Price/Pricing Rule, retain parent/component provenance, and their configured gross value is allocated out of the full-set parent so revenue is not counted twice. Sales Package still never stores price.
 
 Sales Package does **not** describe manufacturing consumption.
 

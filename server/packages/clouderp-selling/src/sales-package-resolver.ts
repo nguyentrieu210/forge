@@ -17,6 +17,13 @@ export interface SalesPackageComponentSnapshot extends JsonObject {
   qty_micros: number;
   required: boolean;
   default_selected: boolean;
+  deduct_from_parent: boolean;
+  deduct_from_discount_basis: boolean;
+  inherit_color: boolean;
+  inherit_dimensions: boolean;
+  inherit_set_count: boolean;
+  display_label?: string;
+  sales_option?: string;
   role?: string;
 }
 
@@ -74,7 +81,8 @@ export async function resolveSalesPackage(
     const componentKey = text(row.component_key) || `COMP-${String(index + 1).padStart(3, "0")}`;
     if (componentKeys.has(componentKey)) throw errors.validation(`Sales Package ${packageName} has duplicate component_key ${componentKey}`);
     componentKeys.add(componentKey);
-    const itemCode = text(row.item_code);
+    const configuredItemCode = text(row.item_code);
+    const itemCode = configuredItemCode === "$SOURCE_ITEM" ? input.itemCode : configuredItemCode;
     const uom = text(row.uom);
     if (!itemCode) throw errors.validation(`Sales Package ${packageName} component ${componentKey} requires item_code`);
     if (!uom) throw errors.validation(`Sales Package ${packageName} component ${componentKey} requires uom`);
@@ -94,6 +102,13 @@ export async function resolveSalesPackage(
       qty_micros: qtyMicros,
       required: row.required !== false && row.required !== 0,
       default_selected: row.default_selected !== false && row.default_selected !== 0,
+      deduct_from_parent: row.deduct_from_parent !== false && row.deduct_from_parent !== 0,
+      deduct_from_discount_basis: row.deduct_from_discount_basis === true || row.deduct_from_discount_basis === 1,
+      inherit_color: row.inherit_color === true || row.inherit_color === 1,
+      inherit_dimensions: row.inherit_dimensions === true || row.inherit_dimensions === 1,
+      inherit_set_count: row.inherit_set_count === true || row.inherit_set_count === 1,
+      ...(text(row.display_label) ? { display_label: text(row.display_label) } : {}),
+      ...(text(row.sales_option) ? { sales_option: text(row.sales_option) } : {}),
       ...(text(row.role) ? { role: text(row.role) } : {}),
     } satisfies SalesPackageComponentSnapshot;
   });
@@ -125,7 +140,8 @@ export function parseSalesPackageSnapshot(value: unknown): ResolvedSalesPackage 
   if (!packageName || !checksum || rows.length === 0) throw errors.validation("sales_package_snapshot is incomplete");
   const components = rows.map((row) => parseComponent(row));
   const expected = packageChecksum(packageName, selectionMode, components);
-  if (expected !== checksum) throw errors.validation(`Sales Package snapshot checksum mismatch for ${packageName}`);
+  const legacyExpected = legacyPackageChecksum(packageName, selectionMode, components);
+  if (expected !== checksum && legacyExpected !== checksum) throw errors.validation(`Sales Package snapshot checksum mismatch for ${packageName}`);
   return {
     sales_package: packageName,
     ...(integer(data.sales_package_version) ? { sales_package_version: integer(data.sales_package_version) } : {}),
@@ -161,6 +177,13 @@ function parseComponent(row: JsonObject): SalesPackageComponentSnapshot {
     qty_micros: qtyMicros,
     required: row.required !== false && row.required !== 0,
     default_selected: row.default_selected !== false && row.default_selected !== 0,
+    deduct_from_parent: row.deduct_from_parent !== false && row.deduct_from_parent !== 0,
+    deduct_from_discount_basis: row.deduct_from_discount_basis === true || row.deduct_from_discount_basis === 1,
+    inherit_color: row.inherit_color === true || row.inherit_color === 1,
+    inherit_dimensions: row.inherit_dimensions === true || row.inherit_dimensions === 1,
+    inherit_set_count: row.inherit_set_count === true || row.inherit_set_count === 1,
+    ...(text(row.display_label) ? { display_label: text(row.display_label) } : {}),
+    ...(text(row.sales_option) ? { sales_option: text(row.sales_option) } : {}),
     ...(text(row.role) ? { role: text(row.role) } : {}),
   };
 }
@@ -227,6 +250,38 @@ function multiplyMicros(left: number, right: number, field: string): number {
 }
 
 function packageChecksum(packageName: string, selectionMode: string, components: SalesPackageComponentSnapshot[]): string {
+  const canonical = JSON.stringify({
+    package: packageName,
+    selection_mode: selectionMode,
+    components: components.map((row) => ({
+      component_key: row.component_key,
+      item_code: row.item_code,
+      uom: row.uom,
+      qty_basis: row.qty_basis,
+      factor_micros: row.factor_micros,
+      qty_micros: row.qty_micros,
+      required: row.required,
+      default_selected: row.default_selected,
+      deduct_from_parent: row.deduct_from_parent,
+      deduct_from_discount_basis: row.deduct_from_discount_basis,
+      inherit_color: row.inherit_color,
+      inherit_dimensions: row.inherit_dimensions,
+      inherit_set_count: row.inherit_set_count,
+      display_label: row.display_label ?? "",
+      sales_option: row.sales_option ?? "",
+      role: row.role ?? "",
+    })),
+  });
+  let hash = 2166136261;
+  for (let index = 0; index < canonical.length; index += 1) {
+    hash ^= canonical.charCodeAt(index);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return `fnv1a32:${hash.toString(16).padStart(8, "0")}`;
+}
+
+/** Checksum shape used before selectable component pricing fields were introduced. */
+function legacyPackageChecksum(packageName: string, selectionMode: string, components: SalesPackageComponentSnapshot[]): string {
   const canonical = JSON.stringify({
     package: packageName,
     selection_mode: selectionMode,

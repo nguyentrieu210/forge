@@ -321,7 +321,10 @@ export function calculateLeafPlan(policy: RawPolicy, line: Json): LeafPlan {
   if (formula === "Kiểu Úc") {
     leafVariant = text(line.leaf_variant);
     if (!leafVariant) throw new Error("Cửa Úc cần chọn Biến thể chia lá theo loại motor.");
-    const variant = (policy.leaf_variants ?? []).find((entry) => text(entry.variant_label) === leafVariant);
+    const normalizedLeafVariant = normalized(leafVariant);
+    const variant = (policy.leaf_variants ?? []).find(
+      (entry) => normalized(entry.variant_label) === normalizedLeafVariant,
+    );
     if (!variant) throw new Error(`${text(policy.policy_name ?? policy.name)}: chưa khai biến thể ${leafVariant}.`);
     addend = finiteNonNegative(variant.addend, `Cộng thêm ${leafVariant}`);
     raw += addend;

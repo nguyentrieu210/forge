@@ -11,6 +11,8 @@ function callWith(records: Record<string, Json>) {
   return Object.assign(async (path: string): Promise<Response> => {
     const key = decodeURIComponent(path.split("?")[0] ?? path);
     if (key in records) return response({ data: records[key] });
+    if (key === "resource/Item Color") return response({ data: [] });
+    if (key.startsWith("resource/Item Group/")) return response({ data: {} });
     return response({}, 404);
   }, { via: "test" });
 }
@@ -63,19 +65,44 @@ describe("alumdoor.ui.preview_child_row", () => {
       changed_field: "item_code",
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as { patch: Json; field_overrides: Record<string, Json> };
+    const body = await res.json() as { patch: Json; clear: string[]; field_overrides: Record<string, Json> };
     expect(body.patch.uom).toBe("Cái");
     expect(body.patch.qty).toBe(2);
     expect(body.patch.rate).toBe(100000);
     expect(body.patch.standard_rate).toBe(100000);
-    expect(body.patch.discount_percentage).toBe(0);
+    expect(body.patch.discount_percentage).toBeUndefined();
+    expect(body.clear).toContain("discount_percentage");
     expect(body.patch.amount).toBe(200000);
     expect(body.patch.stock_qty).toBe(2);
     expect(body.field_overrides.set_count?.reqd).toBe(1);
+    expect(body.field_overrides.set_count?.label).toBe("Số cái");
     expect(body.field_overrides.qty?.read_only).toBe(1);
+    expect(body.field_overrides.qty?.label).toBe("SL tính giá");
   });
 
-  it("defaults only German doors to 15 percent without requiring dimensions for the item preview", async () => {
+  it("replaces a stale sales UOM with the Item default before autofill", async () => {
+    const call = callWith({
+      "resource/Item/TP-TD327": {
+        item_code: "TP-TD327", item_name: "LÁ YẾM", item_group: "Nan/lá cửa", is_sales_item: 1, disabled: 0,
+        inventory_mode: "Nhôm cây/lá", stock_uom: "Kg", default_sales_uom: "Mét",
+        uom_conversions: [{ uom: "Mét", conversion_factor: 0.153 }],
+      },
+    });
+    const res = await previewChildRow(call, {
+      child_doctype: "Sales Order Item",
+      child_fields: ["item_code", "inventory_mode", "stock_uom", "uom", "conversion_factor"],
+      // "Cái" belongs to the previous row/item and is not configured on TP-TD327.
+      row: { item_code: "TP-TD327", uom: "Cái" },
+      parent: { currency: "VND" },
+      changed_field: "item_code",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { patch: Json };
+    expect(body.patch.uom).toBe("Mét");
+    expect(body.patch.conversion_factor).toBe(0.153);
+  });
+
+  it("keeps German discount authoritative while exposing the physical set quantity", async () => {
     const call = callWith({
       "resource/Item/DUC-01": {
         item_code: "DUC-01", item_name: "Đức 01", item_group: "Cửa CN Đức", door_type: "Cửa Đức",
@@ -88,15 +115,18 @@ describe("alumdoor.ui.preview_child_row", () => {
     });
     const res = await previewChildRow(call, {
       child_doctype: "Sales Order Item",
-      child_fields: ["item_code", "door_type", "inventory_mode", "stock_uom", "uom", "rate", "standard_rate", "discount_percentage", "qty", "amount"],
+      child_fields: ["item_code", "door_type", "inventory_mode", "stock_uom", "uom", "rate", "standard_rate", "discount_percentage", "set_count", "qty", "amount"],
       row: { item_code: "DUC-01", set_count: 1 },
       parent: { selling_price_list: "Bán lẻ", currency: "VND", customer_group: "Lẻ" },
       changed_field: "item_code",
     });
     expect(res.status).toBe(200);
-    const body = await res.json() as { patch: Json };
+    const body = await res.json() as { patch: Json; clear: string[]; field_overrides: Record<string, Json> };
     expect(body.patch.door_type).toBe("Cửa Đức");
-    expect(body.patch.discount_percentage).toBe(15);
+    expect(body.patch.discount_percentage).toBeUndefined();
+    expect(body.clear).toContain("discount_percentage");
     expect(body.patch.rate).toBe(1626000);
+    expect(body.field_overrides.set_count?.label).toBe("Số bộ");
+    expect(body.field_overrides.qty?.label).toBe("SL tính giá");
   });
 });

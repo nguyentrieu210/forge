@@ -6,8 +6,12 @@ import tailwindcss from "@tailwindcss/vite";
 const viewSource = (relativePath: string) => fileURLToPath(
   new URL(`../../packages/views/src/${relativePath}`, import.meta.url),
 );
+const controlsSource = fileURLToPath(
+  new URL("../../packages/controls/src/index.ts", import.meta.url),
+);
 
 const viewSourceAliases = [
+  { find: /^@metaforge\/controls$/, replacement: controlsSource },
   { find: /^@metaforge\/views$/, replacement: viewSource("index.ts") },
   { find: /^@metaforge\/views\/provider$/, replacement: viewSource("container/provider") },
   { find: /^@metaforge\/views\/registry$/, replacement: viewSource("registry") },

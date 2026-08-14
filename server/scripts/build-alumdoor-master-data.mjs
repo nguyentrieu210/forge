@@ -154,6 +154,7 @@ for (const row of catalogRows) {
   specifications.push({
     itemCode: row["Mã SP"],
     name: specCode,
+    leafDivisorM: Number(match[3].replace(",", ".")) / 1000,
     payload: {
       spec_code: specCode,
       spec_name: `Quy cách ${row["TÊN SP"]}`,
@@ -347,9 +348,15 @@ WHERE tenant_id='alu' AND doctype='Item' AND name IN (${inList(group.map((row) =
 
 for (const group of chunks(specifications, 30)) {
   sql.push(`UPDATE documents
-SET payload_json=json_set(payload_json,'$.material_specification',CASE name
-${group.map(({ itemCode, name }) => `  WHEN ${quote(itemCode)} THEN ${quote(name)}`).join("\n")}
-END),
+SET payload_json=json_set(
+      payload_json,
+      '$.material_specification',CASE name
+${group.map(({ itemCode, name }) => `        WHEN ${quote(itemCode)} THEN ${quote(name)}`).join("\n")}
+      END,
+      '$.leaf_divisor_m',CASE name
+${group.map(({ itemCode, leafDivisorM }) => `        WHEN ${quote(itemCode)} THEN ${leafDivisorM}`).join("\n")}
+      END
+    ),
     modified_at=${quote(importedAt)},
     modified_by='admin',
     version=version+1
