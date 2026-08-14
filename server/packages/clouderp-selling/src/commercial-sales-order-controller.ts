@@ -6,7 +6,6 @@ import { applyUomConversion, pricedQtyMicros } from "../../clouderp-core/src/uom
 import { SalesOrderController, alumdoorOrderTotals } from "./controllers.js";
 import { resolveCommercialLine } from "./commercial-line-resolver.js";
 import { calculateSalesTotals } from "./totals.js";
-import { applySelectablePackageChildPricing } from "./sales-package-split-pricing.js";
 import type { SalesItem, SalesOrderData } from "./types.js";
 import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
 
@@ -102,12 +101,6 @@ export class CommercialSalesOrderController extends SalesOrderController {
 
       pricedItems.push({
         ...item,
-        ...(resolved.sales_option ? { sales_option: resolved.sales_option } : {}),
-        ...(resolved.sales_option_code ? { sales_option_code: resolved.sales_option_code } : {}),
-        ...(resolved.sales_option_label ? { sales_option_label: resolved.sales_option_label } : {}),
-        ...(resolved.sales_option_version ? { sales_option_version: resolved.sales_option_version } : {}),
-        ...(resolved.sales_mode ? { sales_mode: resolved.sales_mode } : {}),
-        ...(resolved.sales_package ? { sales_package: resolved.sales_package } : {}),
         price_variant: resolved.price_variant,
         rate: resolved.selling_rate,
         rate_minor: resolved.selling_rate_minor,
@@ -137,13 +130,6 @@ export class CommercialSalesOrderController extends SalesOrderController {
       });
     }
 
-    const packagePricedItems = await applySelectablePackageChildPricing(
-      context as unknown as ControllerContext<JsonObject>,
-      pricedItems,
-      input.transaction_date,
-      currency.transactionScale,
-    );
-
     const orderDiscount = input.additional_discount_percentage ?? 0;
     const orderDiscountMicros = toScaledInt(orderDiscount, 6, "additional_discount_percentage");
     if (orderDiscountMicros !== 0) requiresApproval = true;
@@ -151,7 +137,7 @@ export class CommercialSalesOrderController extends SalesOrderController {
       throw errors.permission("Đơn hàng có giá/chiết khấu/bảng giá khác chính sách; Sales Manager phải duyệt trước khi bán.");
     }
 
-    const totals = calculateSalesTotals(packagePricedItems, input.taxes ?? [], currency.transactionScale, {
+    const totals = calculateSalesTotals(pricedItems, input.taxes ?? [], currency.transactionScale, {
       use_priced_quantity: true,
       use_server_line_money: true,
       apply_discount_on: "Net Total",

@@ -1,5 +1,5 @@
 {
-  "//purpose": "Alumdoor consumes canonical Finance, HR and Selling contracts instead of duplicating their schemas. Warehouse Cash stays in vn-accounting; employee identity stays in HRM; Sales Option and Sales Package stay in the generic Selling authority.",
+  "//purpose": "Alumdoor consumes canonical Finance and HR contracts instead of duplicating their schemas. Warehouse Cash stays in vn-accounting; employee identity stays in HRM. Cách bán/gói bán (Sales Option/Sales Package) đã bị loại bỏ 2026-08-14 — mọi mặt hàng bán theo giá STANDARD thẳng từ Item Price.",
   "version": "2.2.3",
   "requires": [
     { "id": "vn-accounting", "version": "1.1.0" },
@@ -11,8 +11,6 @@
     { "name": "Warehouse Cash Transfer", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
     { "name": "Warehouse Cash Count", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
     { "name": "Employee", "kind": "master", "app": "hrm", "version": "1.5.0" },
-    { "name": "Sales Option", "kind": "master", "app": "clouderp-selling" },
-    { "name": "Sales Package", "kind": "master", "app": "clouderp-selling" },
     { "name": "Account", "kind": "tree", "app": "erpnext" },
     { "name": "Batch", "kind": "master", "app": "erpnext" },
     { "name": "Company", "kind": "master", "app": "erpnext" },

@@ -53,14 +53,6 @@ function quantityLabelForUom(value: unknown): string {
   return "Số lượng";
 }
 
-const SALES_OPTION_LEAF_VARIANTS = ["Kéo tay", "Motor ngoài", "Motor trong"] as const;
-
-function leafVariantFromSalesOption(option: Json | null): string {
-  if (!option) return "";
-  const configured = normalized(option.option_label || option.sales_mode);
-  return SALES_OPTION_LEAF_VARIANTS.find((variant) => normalized(variant) === configured) ?? "";
-}
-
 function checked(value: unknown): boolean {
   if (value === true || value === 1 || value === "1") return true;
   return ["true", "yes", "có", "co"].includes(normalized(value));
@@ -291,22 +283,8 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     price_list: parent.selling_price_list,
     currency: parent.currency,
     qty: row.qty,
-    sales_option: row.sales_option,
   });
   const context = contextResponse.ok ? await contextResponse.json() as Json : {};
-
-  if (text(row.sales_option)) {
-    const option = await readDoc(call, "Sales Option", text(row.sales_option));
-    const salesMode = text(option?.sales_mode) || text(option?.option_label);
-    if (salesMode) setIfField(patch, fields, "sales_mode", salesMode);
-    if (fields.has("leaf_variant")) {
-      const syncedLeafVariant = leafVariantFromSalesOption(option);
-      if (syncedLeafVariant) {
-        patch.leaf_variant = syncedLeafVariant;
-        fieldOverride(overrides, fields, "leaf_variant", { read_only: 1 });
-      }
-    }
-  }
 
   const masterPlan: Array<[string, unknown]> = [
     ["stock_uom", item.stock_uom], ["inventory_mode", item.inventory_mode || "Hàng thường"],

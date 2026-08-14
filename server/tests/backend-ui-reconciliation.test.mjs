@@ -27,11 +27,15 @@ test("UI-REC-01 tracks unresolved Sales authority drift while locking the conver
   assert.equal(salesPackage.projection.navigation_present, false);
   assert.ok(salesPackage.classification.includes("NAV_MISSING"));
 
+  // Sales Order Item không còn chiếu `sales_option` — cách bán/gói bán đã bị loại bỏ
+  // 2026-08-14, đúng ý định. Migration lịch sử 0118 vẫn khai báo field đó (bằng chứng
+  // provenance, không sửa lại), nên công cụ dò lệch ĐÚNG ĐẮN báo SCHEMA_DRIFT/GRID_INCOMPLETE
+  // ở đây — đây là lệch có chủ đích, không phải lỗi cần vá.
   const salesLine = byId(matrix, "alumdoor::Sales Order Item::child");
-  assert.deepEqual(salesLine.classification, ["OK"]);
+  assert.deepEqual(salesLine.classification, ["SCHEMA_DRIFT", "GRID_INCOMPLETE"]);
   assert.equal(salesLine.projection.metadata_present, true);
-  assert.equal(salesLine.projection.grid_present, true);
-  assert.ok(salesLine.schema.fields.some((field) => field?.fieldname === "sales_option" && field.fieldtype === "Link" && field.options === "Sales Option"));
+  // `grid_present` chỉ đúng khi brief hiện tại CÓ chiếu `sales_option` — không còn nữa.
+  assert.equal(salesLine.projection.grid_present, false, "AlumDoor V2 không còn chiếu sales_option");
 });
 
 test("UI-REC-01 keeps the repaired Sales Order server-preview summary projected", () => {
