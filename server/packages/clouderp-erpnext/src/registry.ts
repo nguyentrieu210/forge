@@ -85,6 +85,11 @@ import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
 import {
+  SalesLinkedProductionPlanController,
+  SalesLinkedWorkOrderController,
+} from "./manufacturing-sales-lineage.js";
+import { ManufacturingReleaseAuthorityWorkOrderController } from "./manufacturing-release-authority.js";
+import {
   CapaController, NonConformanceReportController,
   QualityPlanController, RootCauseAnalysisController,
 } from "./qms-controllers.js";
@@ -204,5 +209,10 @@ export function registerErpNextCoreControllers(registry: ControllerRegistry): Co
     .register(new AlumDoorAttendanceDeviceController())
     .register(new CutOrderReservationIntegrityController())
     .register(new StockReservationIntegrityController())
-    .register(new StockReconciliationIntegrityController());
+    .register(new StockReconciliationIntegrityController())
+    .register(new SalesLinkedProductionPlanController())
+    .register(new SalesLinkedWorkOrderController())
+    // Final selector preserves the established AlumDoor Production Request authority while
+    // using SalesLinkedWorkOrderController only for generic Production Plan releases.
+    .register(new ManufacturingReleaseAuthorityWorkOrderController());
 }

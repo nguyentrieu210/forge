@@ -87,6 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --test tests/alumdoor-sales-production-package-convergence.test.mjs
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run | tee /tmp/r6-alumdoor-package.log
           grep -q 'app=alumdoor@2.2.3' /tmp/r6-alumdoor-package.log
           grep -q 'DRY_RUN_PASS alumdoor' /tmp/r6-alumdoor-package.log

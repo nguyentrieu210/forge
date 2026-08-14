@@ -426,6 +426,15 @@ function selectBom(boms: BomDoc[], itemCode: string, color: string, on: string):
   return text(candidates[0]!.name);
 }
 
+/**
+ * A SELECTABLE Sales Package child is a commercial pricing/provenance row only.
+ * The package parent retains the canonical physical production obligation so selected
+ * children can never multiply manufacturing demand or Work Orders.
+ */
+export function isCanonicalProductionObligationRow(row: Json): boolean {
+  return !text(row.sales_package_parent_key);
+}
+
 export function buildSalesProductionLines(input: BuildInputs): SalesProductionLine[] {
   const sales = input.sales;
   const customerGroup = text(sales.customer_group) as CustomerGroup;
@@ -435,6 +444,7 @@ export function buildSalesProductionLines(input: BuildInputs): SalesProductionLi
   const on = dateOnly(sales.delivery_date) || new Date().toISOString().slice(0, 10);
   const lines: SalesProductionLine[] = [];
   for (const [index, row] of (sales.items ?? []).entries()) {
+    if (!isCanonicalProductionObligationRow(row)) continue;
     const itemCode = text(row.item_code);
     if (!itemCode) continue;
     const item = input.items.get(itemCode);

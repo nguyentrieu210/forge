@@ -2535,8 +2535,15 @@
       "group": "Danh mục",
       "naming": "field:province_code",
       "title": "province_name",
-      "list": ["province_code", "province_name", "province_type"],
-      "search": ["province_code", "province_name"],
+      "list": [
+        "province_code",
+        "province_name",
+        "province_type"
+      ],
+      "search": [
+        "province_code",
+        "province_name"
+      ],
       "fields": [
         "province_code:Data*! Mã tỉnh/thành",
         "province_name:Data*! Tỉnh/Thành phố",
@@ -2558,8 +2565,17 @@
       "group": "Danh mục",
       "naming": "field:ward_code",
       "title": "ward_name",
-      "list": ["ward_code", "ward_name", "province", "ward_type"],
-      "search": ["ward_code", "ward_name", "province"],
+      "list": [
+        "ward_code",
+        "ward_name",
+        "province",
+        "ward_type"
+      ],
+      "search": [
+        "ward_code",
+        "ward_name",
+        "province"
+      ],
       "fields": [
         "ward_code:Data*! Mã phường/xã",
         "ward_name:Data*! Phường/Xã",
@@ -2582,8 +2598,21 @@
       "group": "Danh mục",
       "naming": "DCL-.#####",
       "title": "address_line1",
-      "list": ["customer", "address_line1", "ward", "province", "is_default"],
-      "search": ["customer", "address_line1", "ward", "province", "contact_person", "phone"],
+      "list": [
+        "customer",
+        "address_line1",
+        "ward",
+        "province",
+        "is_default"
+      ],
+      "search": [
+        "customer",
+        "address_line1",
+        "ward",
+        "province",
+        "contact_person",
+        "phone"
+      ],
       "fields": [
         "customer:Link(Customer)! Khách hàng",
         {
@@ -2718,8 +2747,17 @@
       "group": "Danh mục",
       "naming": "field:account_number",
       "title": "account_number",
-      "list": ["bank_name", "account_number", "account_holder", "is_default"],
-      "search": ["bank_name", "account_number", "account_holder"],
+      "list": [
+        "bank_name",
+        "account_number",
+        "account_holder",
+        "is_default"
+      ],
+      "search": [
+        "bank_name",
+        "account_number",
+        "account_holder"
+      ],
       "fields": [
         "bank_name:Data*! Ngân hàng",
         "account_number:Data*! Số tài khoản",
@@ -10086,15 +10124,7 @@
       "is_stamped:Check Đã dập",
       "length_m:Float Khổ (m)",
       "intake_kg:Float Kg thực cân lúc nhập",
-      {
-        "field": {
-          "fieldname": "received_warehouse",
-          "label": "Kho nhập ban đầu",
-          "fieldtype": "Link",
-          "options": "Warehouse",
-          "link_filters": "{\"is_group\":0,\"disabled\":0}"
-        }
-      },
+      "received_warehouse:Link(Warehouse) Kho nhập ban đầu",
       "is_offcut:Check Là đầu thừa",
       "parent_batch:Link(Batch) Cắt ra từ lô",
       "cut_generation:Int Đời cắt",

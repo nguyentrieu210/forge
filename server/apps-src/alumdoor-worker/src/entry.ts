@@ -15,6 +15,8 @@ import {
 } from "./aluminum-supply-demand.js";
 import { handlePurchaseSupplierDashboard } from "./purchase-supplier-dashboard.js";
 import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement.js";
+import { handleProductionRequestLifecycle } from "./production-request-lifecycle-route.js";
+import { guardSalesProductionPackageSemantics } from "./sales-production-package-guard.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -37,6 +39,11 @@ export default {
 
     if (url.pathname.startsWith("/api/method/")) {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
+      if (method === "alumdoor.production_request.lifecycle") return handleProductionRequestLifecycle(request, env);
+      if (method === "alumdoor.sales.preview_production" || method === "alumdoor.sales.create_production") {
+        const blocked = await guardSalesProductionPackageSemantics(request, env);
+        if (blocked) return blocked;
+      }
       if (method === "alumdoor.purchase.supplier_delivery_dashboard") return handlePurchaseSupplierDashboard(request, env);
       if (method === "alumdoor.purchase.supplier_delivery_settlement") return handlePurchaseSupplierSettlement(request, env);
       if (method === "alumdoor.purchase.preview_fifo_receipt") return handleTrackedPurchaseFifoRequest(request, env, false, false);
@@ -66,25 +73,18 @@ export default {
 
     const body = await request.clone().json().catch(() => null) as { doctype?: string } | null;
     if (body?.doctype === "Item") {
-      // 1) Preserve business-facing catalog invariant priority from main.
       const invariantResponse = await validateItemCatalogInvariants(request.clone(), env);
       if (!invariantResponse.ok) return invariantResponse;
 
-      // 2) Preserve historical Item Group / Measurement Profile / color / UOM validation.
       const baseResponse = await baseWorker.fetch(request.clone(), env, ctx);
       if (!baseResponse.ok) {
         if (baseResponse.status !== 422) return baseResponse;
         const message = await responseMessage(baseResponse);
         if (!/chưa có hệ số quy đổi/i.test(message)) return baseResponse;
-
-        // 3) Only canonical aluminum is allowed to supersede the obsolete static Kg→piece
-        // conversion rule. Ordinary Items still receive the historical 422 unchanged.
         const strict = await validateCanonicalAluminumItem(request.clone(), env);
         return strict ?? baseResponse;
       }
 
-      // Base validation passed. A dimensional aluminum Item must still satisfy the stricter
-      // one-ledger/catch-weight contract and may not keep a static Kg↔piece conversion table.
       const strict = await validateCanonicalAluminumItem(request.clone(), env);
       return strict ?? invariantResponse;
     }
@@ -99,9 +99,6 @@ export default {
       const baseMessage = await responseMessage(baseResponse);
       if (!/chưa có hệ số quy đổi/i.test(baseMessage)) return baseResponse;
 
-      // The legacy validator stopped on the obsolete Kg→piece factor of an aluminum line.
-      // Validate canonical aluminum semantics, then re-run the old validator on every ordinary
-      // row left in the same mixed document so no later error is hidden by the override.
       const aluminum = await validateAluminumPurchaseHook(request.clone(), env);
       if (!aluminum || !aluminum.ok) return aluminum ?? baseResponse;
       const residualRequest = await buildResidualPurchaseValidationRequest(request.clone(), env);

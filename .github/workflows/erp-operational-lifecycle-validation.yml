@@ -1,0 +1,68 @@
+name: ERP Operational Lifecycle Validation Temp
+
+on:
+  push:
+    branches:
+      - feat/erp-operational-screens-backend-bridge-20260813
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-operational-lifecycle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit server dist and classify TypeScript debt
+        working-directory: server
+        run: |
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/lifecycle-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/packages/clouderp-erpnext/src/manufacturing-work-order-lifecycle.js
+          if [ "$status" -ne 0 ]; then
+            echo "Full server typecheck remains non-zero; emitted exact-head dist will be tested."
+            grep "error TS" /tmp/lifecycle-tsc.log || true
+          fi
+
+      - name: Lifecycle and manufacturing regressions
+        working-directory: server
+        run: |
+          node --test \
+            tests/manufacturing-release-authority.test.mjs \
+            tests/manufacturing-sales-lineage.test.mjs \
+            tests/manufacturing-work-order-lifecycle.test.mjs \
+            tests/alumdoor-manufacturing-lifecycle.test.mjs \
+            tests/manufacturing-issue-line-key.test.mjs \
+            tests/manufacturing-output-uom.test.mjs \
+            tests/manufacturing-transaction-closure.test.mjs
+
+      - name: AlumDoor Production Request lifecycle regression
+        working-directory: server
+        run: pnpm exec vitest run apps-src/alumdoor-worker/tests/production-request-lifecycle.test.ts
+
+      - name: Diff hygiene
+        run: git diff --check origin/main...HEAD
