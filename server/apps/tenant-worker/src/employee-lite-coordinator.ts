@@ -4,6 +4,8 @@ import type { DocumentKernel, MutationStore } from "../../../packages/document-k
 
 const EMPLOYEE = "Employee";
 const HR_LITE_SETTINGS = "AlumDoor HR Lite Settings";
+const ATTENDANCE_POLICY = "AlumDoor Attendance Policy";
+const QR_STATION = "AlumDoor QR Station";
 const INTERNAL_HR_LITE_ROLE = "AlumDoor HR Lite System";
 
 export interface AlumDoorEmployeeLiteInput {
@@ -33,7 +35,24 @@ export interface AlumDoorHrLiteSettingsInput {
   actor: Actor;
   company: string;
   workplace: string;
+  currency: string;
+  morningStart: string;
+  morningEnd: string;
+  afternoonStart: string;
+  afternoonEnd: string;
+  overtimeStart: string;
   payDayOfMonth: number;
+  idempotencyKey: string;
+}
+
+export interface AlumDoorAttendanceStationLiteInput {
+  tenantId: string;
+  actor: Actor;
+  stationCode: string;
+  stationName: string;
+  latitude: number;
+  longitude: number;
+  allowedRadiusM: number;
   idempotencyKey: string;
 }
 
@@ -139,37 +158,137 @@ export async function commitAlumDoorHrLiteSettings(
   assertOwner(input.actor);
   const company = requiredText(input.company, "Công ty", 160);
   const workplace = requiredText(input.workplace, "Nơi làm việc", 160);
+  const currency = requiredText(input.currency, "Tiền tệ", 3).toUpperCase();
+  if (!/^[A-Z]{3}$/u.test(currency)) throw errors.validation("Tiền tệ phải là mã 3 chữ cái.");
   const payDayOfMonth = requiredInteger(input.payDayOfMonth, "Ngày trả lương", 1, 28);
   const idempotencyKey = requiredText(input.idempotencyKey, "Idempotency key", 128);
+  const morningStart = timeToMinute(input.morningStart, "Giờ sáng bắt đầu");
+  const morningEnd = timeToMinute(input.morningEnd, "Giờ sáng kết thúc");
+  const afternoonStart = timeToMinute(input.afternoonStart, "Giờ chiều bắt đầu");
+  const afternoonEnd = timeToMinute(input.afternoonEnd, "Giờ chiều kết thúc");
+  const overtimeStart = timeToMinute(input.overtimeStart, "Giờ bắt đầu tăng ca");
+  if (!(morningStart < morningEnd && morningEnd < afternoonStart && afternoonStart < afternoonEnd && afternoonEnd <= overtimeStart)) {
+    throw errors.validation("Giờ làm việc phải theo thứ tự: sáng, nghỉ trưa, chiều, tăng ca.");
+  }
   const companies = (await services.store.listMasterRecordData(input.tenantId, "Company"))
     .filter((entry) => entry.data.disabled !== 1 && entry.data.enabled !== 0);
   if (!companies.some((entry) => entry.name === company)) throw errors.reference(`Công ty ${company} không tồn tại hoặc đã ngừng dùng.`);
   const workplaces = eligibleWorkplaces(await services.store.listMasterRecordData(input.tenantId, "Branch"), company);
   if (!workplaces.some((entry) => entry.name === workplace)) throw errors.reference(`Nơi làm việc ${workplace} không thuộc công ty ${company} hoặc đã ngừng dùng.`);
+  const currencies = (await services.store.listMasterRecordData(input.tenantId, "Currency"))
+    .filter((entry) => entry.data.disabled !== 1 && entry.data.enabled !== 0);
+  if (currencies.length > 0 && !currencies.some((entry) => entry.name === currency)) throw errors.reference(`Tiền tệ ${currency} không còn hoạt động.`);
+  if (currencies.length === 0 && currency !== "VND") throw errors.reference("Hệ thống hiện chỉ có tiền tệ mặc định VND.");
 
   const current = await services.store.getDocument<JsonObject>(input.tenantId, HR_LITE_SETTINGS, HR_LITE_SETTINGS);
+  const policies = await services.store.listDocumentsByDoctype<JsonObject>(input.tenantId, ATTENDANCE_POLICY);
+  const configuredPolicy = text(current?.data.attendance_policy);
+  const policy = policies.find((entry) => entry.docstatus !== 2 && entry.name === configuredPolicy && text(entry.data.company) === company)
+    ?? policies.find((entry) => entry.docstatus !== 2 && entry.name === litePolicyName(company) && text(entry.data.company) === company);
+  const policyName = policy?.name ?? litePolicyName(company);
   const now = services.now?.() ?? new Date().toISOString();
+  const policyDocument: JsonObject = {
+    ...(policy?.data ?? {}),
+    policy_name: "Giờ làm việc mặc định",
+    company,
+    timezone: "Asia/Ho_Chi_Minh",
+    shift1_start_minute: morningStart,
+    shift1_end_minute: morningEnd,
+    shift2_start_minute: afternoonStart,
+    shift2_end_minute: afternoonEnd,
+    shift3_start_minute: overtimeStart,
+    shift3_latest_out_minute: 1439,
+    regular_daily_cap_minutes: 480,
+    duplicate_scan_window_seconds: 60,
+    max_devices_per_employee: 2,
+    effective_from: text(policy?.data.effective_from) || dateInVietnam(now),
+    policy_status: "approved",
+  };
   const document: JsonObject = {
     company,
     workplace,
+    currency,
+    morning_start: minuteToTime(morningStart),
+    morning_end: minuteToTime(morningEnd),
+    afternoon_start: minuteToTime(afternoonStart),
+    afternoon_end: minuteToTime(afternoonEnd),
+    overtime_start: minuteToTime(overtimeStart),
+    attendance_policy: policyName,
     pay_day_of_month: payDayOfMonth,
+    owner_only_mode: 1,
+    overtime_rate_vnd_per_hour: 50_000,
   };
-  const systemActor: Actor = { ...input.actor, roles: [...new Set([...input.actor.roles, INTERNAL_HR_LITE_ROLE])] };
-  const command: MutationCommand = {
-    schema_version: 1,
-    command_id: `alu-hr-lite-settings:${idempotencyKey}`,
-    tenant_id: input.tenantId,
-    actor: systemActor,
-    aggregate: { doctype: HR_LITE_SETTINGS, name: HR_LITE_SETTINGS },
-    action: current ? "save" : "create",
-    expected_version: current?.version ?? null,
-    payload_hash: "",
-    document,
-    submitted_at: now,
+  const systemActor: Actor = {
+    ...input.actor,
+    roles: [...new Set([...input.actor.roles, INTERNAL_HR_LITE_ROLE, "AlumDoor Attendance Manager", "HR Manager"])],
   };
-  command.payload_hash = await commandPayloadHash(command as unknown as Record<string, unknown>);
-  await services.kernel.execute(command);
+  const commands: MutationCommand[] = [];
+  if (policy) {
+    commands.push(await genericCommand({
+      commandId: `alu-hr-lite-policy:${idempotencyKey}:save`, tenantId: input.tenantId, actor: systemActor,
+      doctype: ATTENDANCE_POLICY, name: policyName, action: "save", expectedVersion: policy.version,
+      document: policyDocument, submittedAt: now,
+    }));
+  } else {
+    commands.push(await genericCommand({
+      commandId: `alu-hr-lite-policy:${idempotencyKey}:create`, tenantId: input.tenantId, actor: systemActor,
+      doctype: ATTENDANCE_POLICY, name: policyName, action: "create", expectedVersion: null,
+      document: { ...policyDocument, policy_status: "draft" }, submittedAt: now,
+    }));
+    commands.push(await genericCommand({
+      commandId: `alu-hr-lite-policy:${idempotencyKey}:submit`, tenantId: input.tenantId, actor: systemActor,
+      doctype: ATTENDANCE_POLICY, name: policyName, action: "submit", expectedVersion: 1,
+      document: policyDocument, submittedAt: now,
+    }));
+  }
+  commands.push(await genericCommand({
+    commandId: `alu-hr-lite-settings:${idempotencyKey}`, tenantId: input.tenantId, actor: systemActor,
+    doctype: HR_LITE_SETTINGS, name: HR_LITE_SETTINGS, action: current ? "save" : "create",
+    expectedVersion: current?.version ?? null, document, submittedAt: now,
+  }));
+  await services.kernel.executeBundle({ commands });
   return { name: HR_LITE_SETTINGS, ...document, ready: true, replayed: false };
+}
+
+export async function commitAlumDoorAttendanceStationLite(
+  input: AlumDoorAttendanceStationLiteInput,
+  services: { kernel: DocumentKernel; store: MutationStore; now?: () => string },
+): Promise<JsonObject> {
+  assertAttendanceManager(input.actor);
+  const idempotencyKey = requiredText(input.idempotencyKey, "Idempotency key", 128);
+  const stationCode = requiredText(input.stationCode, "Mã trạm", 80);
+  const prior = (await services.store.listDocumentsByDoctype<JsonObject>(input.tenantId, QR_STATION))
+    .find((entry) => entry.docstatus !== 2 && entry.name === stationCode);
+  if (prior) return { name: prior.name, ...prior.data, replayed: true };
+  const settings = await services.store.getDocument<JsonObject>(input.tenantId, HR_LITE_SETTINGS, HR_LITE_SETTINGS);
+  if (!settings || settings.docstatus === 2) throw errors.validation("Hãy hoàn tất Cài đặt mặc định trước khi tạo trạm chấm công.");
+  const company = requiredText(settings.data.company, "Công ty", 160);
+  const branch = requiredText(settings.data.workplace, "Nơi làm việc", 160);
+  const policyName = requiredText(settings.data.attendance_policy, "Giờ làm việc", 160);
+  const policy = await services.store.getDocument<JsonObject>(input.tenantId, ATTENDANCE_POLICY, policyName);
+  if (!policy || policy.docstatus !== 1 || text(policy.data.policy_status) !== "approved") {
+    throw errors.reference("Giờ làm việc mặc định chưa sẵn sàng; hãy lưu lại Cài đặt mặc định.");
+  }
+  const document: JsonObject = {
+    station_code: stationCode,
+    station_name: requiredText(input.stationName, "Tên trạm", 120),
+    company,
+    branch,
+    policy: policyName,
+    latitude: requiredNumber(input.latitude, "Vĩ độ", -90, 90),
+    longitude: requiredNumber(input.longitude, "Kinh độ", -180, 180),
+    allowed_radius_m: requiredNumber(input.allowedRadiusM, "Bán kính", 10, 500),
+    max_gps_accuracy_m: 50,
+    secret_version: 1,
+    is_active: 1,
+  };
+  const actor: Actor = { ...input.actor, roles: [...new Set([...input.actor.roles, "AlumDoor QR System", "AlumDoor Attendance Manager", "HR Manager"])] };
+  await services.kernel.execute(await genericCommand({
+    commandId: `alu-hr-lite-station:${idempotencyKey}`, tenantId: input.tenantId, actor,
+    doctype: QR_STATION, name: stationCode, action: "create", expectedVersion: null,
+    document, submittedAt: services.now?.() ?? new Date().toISOString(),
+  }));
+  return { name: stationCode, ...document, replayed: false };
 }
 
 async function configuredOrganization(store: MutationStore, tenantId: string): Promise<{ company: string; workplace: string }> {
@@ -233,6 +352,19 @@ async function buildProfileCommand(input: { commandId: string; tenantId: string;
   return command;
 }
 
+async function genericCommand(input: {
+  commandId: string; tenantId: string; actor: Actor; doctype: string; name: string;
+  action: MutationCommand["action"]; expectedVersion: number | null; document: JsonObject; submittedAt: string;
+}): Promise<MutationCommand> {
+  const command: MutationCommand = {
+    schema_version: 1, command_id: input.commandId, tenant_id: input.tenantId, actor: input.actor,
+    aggregate: { doctype: input.doctype, name: input.name }, action: input.action,
+    expected_version: input.expectedVersion, payload_hash: "", document: input.document, submitted_at: input.submittedAt,
+  };
+  command.payload_hash = await commandPayloadHash(command as unknown as Record<string, unknown>);
+  return command;
+}
+
 function projection(name: string, data: JsonObject, replayed: boolean): JsonObject {
   return { name, employee_number: data.employee_number ?? name, employee_name: data.employee_name ?? "", mobile: data.mobile ?? "", date_of_joining: data.date_of_joining ?? "", employee_status: data.employee_status ?? "Đang làm việc", replayed };
 }
@@ -241,5 +373,11 @@ function requiredText(value: unknown, label: string, max: number): string { cons
 function requiredDate(value: unknown, label: string): string { const result = requiredText(value, label, 10); if (!/^\d{4}-\d{2}-\d{2}$/u.test(result) || Number.isNaN(Date.parse(`${result}T00:00:00Z`))) throw errors.validation(`${label} must use YYYY-MM-DD`); return result; }
 function normalizePhone(value: unknown): string { const raw = requiredText(value, "Số điện thoại", 40).replace(/[\s.()-]+/gu, ""); const phone = raw.startsWith("+84") ? `0${raw.slice(3)}` : raw; if (!/^0(?:3|5|7|8|9)\d{8}$/u.test(phone)) throw errors.validation("Số điện thoại Việt Nam chưa hợp lệ"); return phone; }
 function assertOwner(actor: Actor): void { const allowed = new Set(["Administrator", "System Manager", "HR Manager", "AlumDoor Payroll Approver"]); if (actor.user_id !== "Administrator" && !actor.roles.some((role) => allowed.has(role))) throw errors.permission("Chỉ chủ doanh nghiệp hoặc người quản lý lương được dùng HR Lite."); }
+function assertAttendanceManager(actor: Actor): void { const allowed = new Set(["Administrator", "System Manager", "HR Manager", "AlumDoor Attendance Manager", "AlumDoor Payroll Approver"]); if (actor.user_id !== "Administrator" && !actor.roles.some((role) => allowed.has(role))) throw errors.permission("Bạn không có quyền tạo trạm chấm công."); }
 function requiredInteger(value: unknown, label: string, min: number, max = 999_999_999_999): number { const number = typeof value === "number" ? value : Number(value); if (!Number.isSafeInteger(number) || number < min || number > max) throw errors.validation(`${label} không hợp lệ`); return number; }
+function requiredNumber(value: unknown, label: string, min: number, max: number): number { const number = typeof value === "number" ? value : Number(value); if (!Number.isFinite(number) || number < min || number > max) throw errors.validation(`${label} không hợp lệ`); return number; }
+function timeToMinute(value: unknown, label: string): number { const time = requiredText(value, label, 5); if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/u.test(time)) throw errors.validation(`${label} không hợp lệ`); return Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)); }
+function minuteToTime(value: number): string { return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`; }
+function litePolicyName(company: string): string { const suffix = company.normalize("NFD").replace(/[\u0300-\u036f]/gu, "").toUpperCase().replace(/[^A-Z0-9]+/gu, "-").replace(/^-|-$/gu, "").slice(0, 48) || "DEFAULT"; return `ATP-HR-LITE-${suffix}`; }
+function dateInVietnam(value: string): string { const date = new Date(value); const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date); const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? ""; return `${part("year")}-${part("month")}-${part("day")}`; }
 function previousIsoDate(value: string): string { const date = new Date(`${value}T00:00:00Z`); date.setUTCDate(date.getUTCDate() - 1); return date.toISOString().slice(0, 10); }

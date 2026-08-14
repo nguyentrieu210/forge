@@ -19,7 +19,7 @@
     "Mua hàng": ["Material Request", "Purchase Order", "Purchase Receipt", "Purchase Invoice", "action:nhap-nhom-fifo"],
     "Kho": ["Stock Entry", "Cut Order", "action:de-xuat-lo-cat", "action:cat-nhom", "Stock Reservation", "action:giu-cho", "action:nha-giu-cho", "Stock Reconciliation", "action:chot-so-so-kiem-ke", "action:duyet-kiem-ke", "action:hoan-cat", "action:tra-hang"],
     "Sản xuất": ["Production Request", "Work Order", "Bill of Materials", "Production Standard", "action:lap-tai-san-xuat", "Paint Job"],
-    "Chấm công & ca": ["alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month", "alumdoor-attendance:exceptions", "AlumDoor QR Station", "AlumDoor Attendance Policy"],
+    "Chấm công & ca": ["alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month", "alumdoor-attendance:exceptions"],
     "Nhân viên & Lương": ["alumdoor-attendance:employees-lite", "alumdoor-attendance:payroll-lite", "alumdoor-attendance:my-slips-lite", "alumdoor-attendance:hr-payroll-settings-lite"],
     "Công nợ / Kế toán": ["Payment Entry"],
     "Bảo hành / Dịch vụ": ["Warranty Claim", "action:mo-ho-so-bao-hanh", "action:xac-nhan-bu-tru-bao-hanh"],

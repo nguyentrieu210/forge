@@ -61,6 +61,7 @@ import {
   attendanceResolveStation,
   attendanceRotateStationQr,
   attendanceScan,
+  attendanceStationLiteCreate,
   attendanceStationQr,
 } from "./attendance-routes.js";
 import {
@@ -3181,6 +3182,7 @@ export default {
         const call = platformCaller(request, env);
         if (method === "alumdoor.attendance.challenge") return await attendanceChallenge();
         if (method === "alumdoor.attendance.station_qr") return await attendanceStationQr({ request, call, env, args });
+        if (method === "alumdoor.attendance.station_create_lite") return await attendanceStationLiteCreate({ request, call, args });
         if (method === "alumdoor.attendance.rotate_station_qr") return await attendanceRotateStationQr({ request, call, env, args });
         if (method === "alumdoor.attendance.resolve_station") return await attendanceResolveStation({ request, call, env, args });
         if (method === "alumdoor.attendance.scan") return await attendanceScan({ request, call, env, args });

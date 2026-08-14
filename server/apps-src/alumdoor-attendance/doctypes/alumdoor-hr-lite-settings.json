@@ -6,6 +6,13 @@
   "fields": [
     { "fieldname": "company", "label": "Công ty", "fieldtype": "Link", "options": "Company", "required": true },
     { "fieldname": "workplace", "label": "Nơi làm việc", "fieldtype": "Link", "options": "Branch", "required": true },
+    { "fieldname": "currency", "label": "Tiền tệ mặc định", "fieldtype": "Data", "required": true, "default": "VND" },
+    { "fieldname": "morning_start", "label": "Buổi sáng bắt đầu", "fieldtype": "Data", "required": true, "default": "07:00" },
+    { "fieldname": "morning_end", "label": "Buổi sáng kết thúc", "fieldtype": "Data", "required": true, "default": "11:30" },
+    { "fieldname": "afternoon_start", "label": "Buổi chiều bắt đầu", "fieldtype": "Data", "required": true, "default": "13:00" },
+    { "fieldname": "afternoon_end", "label": "Buổi chiều kết thúc", "fieldtype": "Data", "required": true, "default": "17:00" },
+    { "fieldname": "overtime_start", "label": "Tăng ca bắt đầu", "fieldtype": "Data", "required": true, "default": "17:30" },
+    { "fieldname": "attendance_policy", "label": "Cấu hình giờ làm nội bộ", "fieldtype": "Link", "options": "AlumDoor Attendance Policy" },
     { "fieldname": "pay_day_of_month", "label": "Ngày trả lương mặc định", "fieldtype": "Int", "required": true, "default": 5 },
     { "fieldname": "owner_only_mode", "label": "Chủ tự tính và chốt", "fieldtype": "Check", "default": 1 },
     { "fieldname": "overtime_rate_vnd_per_hour", "label": "Mức tăng ca (VND/giờ)", "fieldtype": "Int", "default": 50000 }
@@ -21,5 +28,5 @@
     { "role": "HR Manager", "read": true },
     { "role": "System Manager", "read": true }
   ],
-  "revision": 1
+  "revision": 2
 }

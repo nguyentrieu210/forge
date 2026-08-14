@@ -20,10 +20,12 @@ function callFixture() {
     }
     if (path === "method/metaforge.api.get_alumdoor_hr_lite_organization") {
       return Response.json({ message: {
-        company: "ALUMDOOR", workplace: "XUONG", ready: true, configured: true,
+        company: "ALUMDOOR", workplace: "XUONG", currency: "VND", ready: true, configured: true,
+        morning_start: "07:00", morning_end: "11:30", afternoon_start: "13:00", afternoon_end: "17:00", overtime_start: "17:30",
         pay_day_of_month: 5, owner_only_mode: true,
-        companies: [{ value: "ALUMDOOR", label: "AlumDoor" }],
+        companies: [{ value: "ALUMDOOR", label: "AlumDoor", currency: "VND" }],
         workplaces: [{ value: "XUONG", label: "Xưởng", company: "ALUMDOOR" }],
+        currencies: [{ value: "VND", label: "VND" }],
       } });
     }
     if (path === "method/metaforge.api.commit_alumdoor_hr_lite_settings") {
@@ -63,6 +65,8 @@ test("Lite settings expose one small-business organization and immutable overtim
   const body = await response.json();
   assert.equal(body.company, "ALUMDOOR");
   assert.equal(body.workplace, "XUONG");
+  assert.equal(body.currency, "VND");
+  assert.equal(body.morning_start, "07:00");
   assert.equal(body.overtime_rate_vnd_per_hour, 50_000);
   assert.equal(body.owner_only_mode, true);
   assert.equal(body.ready, true);
@@ -72,7 +76,9 @@ test("Lite settings expose one small-business organization and immutable overtim
 test("Lite settings save validates available choices then uses trusted callback", async () => {
   const fixture = callFixture();
   const response = await payrollLiteSettingsSave({ call: fixture.call, args: {
-    company: "ALUMDOOR", workplace: "XUONG", pay_day_of_month: 5, idempotency_key: "settings-route-key-01",
+    company: "ALUMDOOR", workplace: "XUONG", currency: "VND",
+    morning_start: "07:00", morning_end: "11:30", afternoon_start: "13:00", afternoon_end: "17:00", overtime_start: "17:30",
+    pay_day_of_month: 5, idempotency_key: "settings-route-key-01",
   } });
   assert.equal(response.status, 200, await response.text());
   assert.deepEqual(fixture.observed.map((entry) => entry.path), [

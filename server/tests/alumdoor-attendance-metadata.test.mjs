@@ -17,7 +17,7 @@ function permission(meta, role) {
 test("AlumDoor attendance payroll metadata stays an isolated HRM-dependent package", async () => {
   const manifest = parseAppManifest(await readAppSource(source));
   assert.equal(manifest.id, "alumdoor-attendance");
-  assert.equal(manifest.version, "0.6.2");
+  assert.equal(manifest.version, "0.7.0");
   assert.deepEqual(manifest.requires, [{ id: "hrm", version: "1.8.0" }]);
   assert.deepEqual(
     manifest.doctypes.map((meta) => meta.name).sort(),

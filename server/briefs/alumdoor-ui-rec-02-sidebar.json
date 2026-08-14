@@ -224,7 +224,7 @@
     },
     {
       "key": "alumdoor-attendance:kiosk",
-      "label": "In mã QR trạm",
+      "label": "Thiết lập trạm chấm công",
       "kind": "experience",
       "icon": "qr-code",
       "group": "Chấm công & ca",
@@ -268,32 +268,6 @@
       ]
     },
     {
-      "key": "AlumDoor QR Station",
-      "label": "Trạm QR",
-      "kind": "doctype",
-      "icon": "scan-line",
-      "group": "Chấm công & ca",
-      "required_roles": [
-        "AlumDoor Attendance Manager",
-        "HR Manager",
-        "System Manager"
-      ],
-      "permission_doctype": "AlumDoor QR Station"
-    },
-    {
-      "key": "AlumDoor Attendance Policy",
-      "label": "Chính sách ca",
-      "kind": "doctype",
-      "icon": "timer",
-      "group": "Chấm công & ca",
-      "required_roles": [
-        "AlumDoor Attendance Manager",
-        "HR Manager",
-        "System Manager"
-      ],
-      "permission_doctype": "AlumDoor Attendance Policy"
-    },
-    {
       "key": "alumdoor-attendance:employees-lite",
       "label": "Nhân viên",
       "kind": "experience",
@@ -327,7 +301,7 @@
     },
     {
       "key": "alumdoor-attendance:hr-payroll-settings-lite",
-      "label": "Cài đặt lương",
+      "label": "Cài đặt mặc định",
       "kind": "experience",
       "icon": "settings",
       "group": "Nhân viên & Lương",

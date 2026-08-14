@@ -76,3 +76,9 @@ Hai method chạy bằng actor `Guest`, nhưng Employee chỉ được resolve t
 ## 8. Rủi ro còn lại
 
 Web GPS không chống spoof tuyệt đối. Contract evidence đã có `verification_method` để bổ sung Wi-Fi/BLE/NFC/native attestation sau này mà không thay Attendance engine. Phase này không thêm map API, tracking liên tục hay fingerprint authentication.
+
+## 9. Luồng thiết lập Lite — 14/08/2026
+
+Quản lý không tạo Station bằng form metadata đầy đủ. Experience `Thiết lập trạm chấm công` chỉ hỏi tên trạm và bán kính (mặc định 50 m), sau đó lấy GPS hiện tại và gọi callback tin cậy. Backend tự sinh mã trạm, gán Công ty/Nơi làm việc/Policy từ `Cài đặt mặc định`, đặt accuracy 50 m, `secret_version=1` và kích hoạt trạm. Thành công thì UI chọn trạm mới và hiện ngay QR để in.
+
+Policy không còn là một bước thủ công. Lưu `Cài đặt mặc định` tạo/cập nhật Policy đã duyệt; Station không thể được tạo nếu cấu hình này chưa sẵn sàng. Idempotency của Station dựa trên mã trạm sinh tất định từ request key, không cần lưu khóa kỹ thuật do client cung cấp.

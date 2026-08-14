@@ -68,7 +68,12 @@ interface AggregateStub extends DurableObjectStub {
   }): Promise<JsonObject>;
   commitAlumDoorHrLiteSettings(input: {
     tenantId: string; actor: Actor; company: string; workplace: string;
+    currency: string; morningStart: string; morningEnd: string; afternoonStart: string; afternoonEnd: string; overtimeStart: string;
     payDayOfMonth: number; idempotencyKey: string;
+  }): Promise<JsonObject>;
+  commitAlumDoorAttendanceStationLite(input: {
+    tenantId: string; actor: Actor; stationCode: string; stationName: string;
+    latitude: number; longitude: number; allowedRadiusM: number; idempotencyKey: string;
   }): Promise<JsonObject>;
   commitAlumDoorPayProfileLite(input: {
     tenantId: string; actor: Actor; profileName: string; employee: string;
@@ -1290,10 +1295,19 @@ async function serveFrappeApiInner(
       return stub.commitAlumDoorEmployeeLite({ tenantId, actor, ...input });
     },
     async commitAlumdoorHrLiteSettings(input: {
-      company: string; workplace: string; payDayOfMonth: number; idempotencyKey: string;
+      company: string; workplace: string; currency: string;
+      morningStart: string; morningEnd: string; afternoonStart: string; afternoonEnd: string; overtimeStart: string;
+      payDayOfMonth: number; idempotencyKey: string;
     }): Promise<JsonObject> {
       const stub = env.AGGREGATES.getByName(`hr-lite-settings:${tenantId}`) as AggregateStub;
       return stub.commitAlumDoorHrLiteSettings({ tenantId, actor, ...input });
+    },
+    async commitAlumdoorAttendanceStationLite(input: {
+      stationCode: string; stationName: string; latitude: number; longitude: number;
+      allowedRadiusM: number; idempotencyKey: string;
+    }): Promise<JsonObject> {
+      const stub = env.AGGREGATES.getByName(`hr-lite-station:${tenantId}:${encodeURIComponent(input.idempotencyKey)}`) as AggregateStub;
+      return stub.commitAlumDoorAttendanceStationLite({ tenantId, actor, ...input });
     },
     async commitAlumdoorPayProfileLite(input: {
       profileName: string; employee: string; payMode: "MONTHLY" | "DAILY";

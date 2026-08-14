@@ -1,11 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import path from "node:path";
 import {
+  commitAlumDoorAttendanceStationLite,
   commitAlumDoorEmployeeLite,
   commitAlumDoorHrLiteSettings,
   commitAlumDoorPayProfileLite,
 } from "../dist/apps/tenant-worker/src/employee-lite-coordinator.js";
 import { AlumDoorAwareEmployeeController } from "../dist/packages/clouderp-erpnext/src/hrm-employee-lite.js";
+import { ControllerRegistry, DocumentKernel, InMemoryMutationStore } from "../dist/packages/document-kernel/src/index.js";
+import { GenericMetadataController, InMemoryMetadataStore, MetadataPermissionService } from "../dist/packages/frappe-model/src/index.js";
+import { parseAppManifest } from "../dist/packages/app-registry/src/index.js";
+import { readAppSource } from "../scripts/lib/read-app-source.mjs";
 
 const owner = { user_id: "owner@example.test", roles: ["AlumDoor Payroll Approver"] };
 
@@ -36,6 +42,7 @@ function storeFixture() {
     async listMasterRecordData(_tenant, type) {
       if (type === "Company") return [{ name: "ALUMDOOR", data: { disabled: 0 } }];
       if (type === "Branch") return [{ name: "XUONG", data: { company: "ALUMDOOR", disabled: 0 } }];
+      if (type === "Currency") return [{ name: "VND", data: { disabled: 0 } }];
       return [];
     },
   };
@@ -61,40 +68,49 @@ test("Employee Lite creates through the kernel with three user fields and truste
 });
 
 test("HR Lite settings select one company and workplace without deleting other masters", async () => {
-  let command;
+  let commands;
   const fixture = storeFixture();
   fixture.listMasterRecordData = async (_tenant, type) => type === "Company"
     ? [{ name: "ALUMDOOR", data: { disabled: 0 } }, { name: "OTHER", data: { disabled: 0 } }]
-    : [{ name: "XUONG", data: { company: "ALUMDOOR", disabled: 0 } }, { name: "OTHER-BR", data: { company: "OTHER", disabled: 0 } }];
+    : type === "Currency" ? [{ name: "VND", data: { disabled: 0 } }]
+      : [{ name: "XUONG", data: { company: "ALUMDOOR", disabled: 0 } }, { name: "OTHER-BR", data: { company: "OTHER", disabled: 0 } }];
   const result = await commitAlumDoorHrLiteSettings({
     tenantId: "alu", actor: owner, company: "ALUMDOOR", workplace: "XUONG",
+    currency: "VND", morningStart: "07:00", morningEnd: "11:30", afternoonStart: "13:00", afternoonEnd: "17:00", overtimeStart: "17:30",
     payDayOfMonth: 5, idempotencyKey: "settings-key-0001",
   }, {
     store: fixture,
-    kernel: { async execute(value) { command = value; return {}; } },
+    kernel: { async executeBundle(value) { commands = value.commands; return []; } },
     now: () => "2026-08-14T12:00:00.000Z",
   });
   assert.equal(result.ready, true);
+  const command = commands.at(-1);
   assert.equal(command.aggregate.doctype, "AlumDoor HR Lite Settings");
   assert.equal(command.document.company, "ALUMDOOR");
   assert.equal(command.document.workplace, "XUONG");
-  assert.equal(command.document.overtime_rate_vnd_per_hour, undefined);
+  assert.equal(command.document.currency, "VND");
+  assert.equal(command.document.overtime_rate_vnd_per_hour, 50_000);
+  assert.equal(command.document.attendance_policy, "ATP-HR-LITE-ALUMDOOR");
+  assert.deepEqual(commands.slice(0, 2).map((entry) => `${entry.aggregate.doctype}:${entry.action}`), ["AlumDoor Attendance Policy:create", "AlumDoor Attendance Policy:submit"]);
   assert.ok(command.actor.roles.includes("AlumDoor HR Lite System"));
 });
 
 test("HR Lite keeps a legacy sole workplace usable when it has no current Company mapping", async () => {
-  let command;
+  let commands;
   const fixture = storeFixture();
   fixture.listMasterRecordData = async (_tenant, type) => type === "Company"
     ? [{ name: "ALUMDOOR", data: { disabled: 0 } }, { name: "Demo", data: { disabled: 0 } }]
-    : [{ name: "HQ", data: { company: "Legacy Company", disabled: 0 } }];
+    : type === "Currency" ? [{ name: "VND", data: { disabled: 0 } }]
+      : [{ name: "HQ", data: { company: "Legacy Company", disabled: 0 } }];
   const result = await commitAlumDoorHrLiteSettings({
     tenantId: "alu", actor: owner, company: "ALUMDOOR", workplace: "HQ",
+    currency: "VND", morningStart: "07:00", morningEnd: "11:30", afternoonStart: "13:00", afternoonEnd: "17:00", overtimeStart: "17:30",
     payDayOfMonth: 5, idempotencyKey: "settings-key-legacy-0001",
   }, {
     store: fixture,
-    kernel: { async execute(value) { command = value; return {}; } },
+    kernel: { async executeBundle(value) { commands = value.commands; return []; } },
   });
+  const command = commands.at(-1);
   assert.equal(result.ready, true);
   assert.equal(command.document.company, "ALUMDOOR");
   assert.equal(command.document.workplace, "HQ");
@@ -138,6 +154,28 @@ test("changing Lite salary atomically closes the old profile then creates and su
   assert.ok(commands.every((command) => command.actor.roles.includes("AlumDoor Payroll System")));
 });
 
+test("Station Lite uses saved defaults and keeps technical fields server-managed", async () => {
+  let command;
+  const fixture = storeFixture();
+  const originalGet = fixture.getDocument;
+  fixture.getDocument = async (tenant, doctype, name) => {
+    if (doctype === "AlumDoor HR Lite Settings") return { name, docstatus: 0, version: 1, data: { company: "ALUMDOOR", workplace: "XUONG", attendance_policy: "ATP-HR-LITE-ALUMDOOR" } };
+    if (doctype === "AlumDoor Attendance Policy") return { name, docstatus: 1, version: 2, data: { company: "ALUMDOOR", policy_status: "approved" } };
+    return originalGet(tenant, doctype, name);
+  };
+  const result = await commitAlumDoorAttendanceStationLite({
+    tenantId: "alu", actor: { user_id: "attendance@example.test", roles: ["AlumDoor Attendance Manager"] }, stationCode: "ST-ABC123456789", stationName: "Cửa xưởng",
+    latitude: 10.7626, longitude: 106.6601, allowedRadiusM: 50, idempotencyKey: "station-key-0001",
+  }, { store: fixture, kernel: { async execute(value) { command = value; return {}; } } });
+  assert.equal(result.name, "ST-ABC123456789");
+  assert.equal(command.document.company, "ALUMDOOR");
+  assert.equal(command.document.branch, "XUONG");
+  assert.equal(command.document.policy, "ATP-HR-LITE-ALUMDOOR");
+  assert.equal(command.document.max_gps_accuracy_m, 50);
+  assert.equal(command.document.secret_version, 1);
+  assert.ok(command.actor.roles.includes("AlumDoor QR System"));
+});
+
 test("a normal employee cannot use the owner HR Lite coordinator", async () => {
   await assert.rejects(() => commitAlumDoorPayProfileLite({
     tenantId: "alu", actor: { user_id: "worker@example.test", roles: ["Employee"] }, profileName: "PP-X",
@@ -161,4 +199,33 @@ test("Employee may omit Department only on the trusted Lite command path", async
   assert.equal(normalized.department, undefined);
   await assert.rejects(() => controller.normalize(context(["HR Manager"])), /chỉ được ghi qua/i);
   await assert.rejects(() => controller.normalize(context(["HR Manager"], false)), /Phòng ban/i);
+});
+
+test("real metadata atomically provisions approved work hours then creates a ready QR station", async () => {
+  const tenantId = "hr-lite-real-metadata";
+  const manifest = parseAppManifest(await readAppSource(path.resolve(import.meta.dirname, "..", "apps-src", "alumdoor-attendance")));
+  const metadata = new InMemoryMetadataStore();
+  for (const meta of manifest.doctypes) await metadata.putDocType(tenantId, meta, "Administrator", "2026-08-14T02:00:00.000Z");
+  for (const workflow of manifest.workflows) await metadata.putWorkflow(tenantId, workflow, "Administrator", "2026-08-14T02:00:00.000Z");
+  const store = new InMemoryMutationStore();
+  store.seedMaster("Company", "ALUMDOOR", tenantId, { company_name: "AlumDoor", default_currency: "VND" });
+  store.seedMaster("Branch", "XUONG", tenantId, { branch_name: "Xưởng", company: "ALUMDOOR" });
+  store.seedMaster("Currency", "VND", tenantId, { enabled: 1 });
+  const kernel = new DocumentKernel(new ControllerRegistry().setFallback(new GenericMetadataController(metadata)), store, new MetadataPermissionService(metadata), () => "2026-08-14T02:00:00.000Z");
+  const configured = await commitAlumDoorHrLiteSettings({
+    tenantId, actor: owner, company: "ALUMDOOR", workplace: "XUONG", currency: "VND",
+    morningStart: "07:00", morningEnd: "11:30", afternoonStart: "13:00", afternoonEnd: "17:00", overtimeStart: "17:30",
+    payDayOfMonth: 5, idempotencyKey: "settings-real-metadata-01",
+  }, { store, kernel, now: () => "2026-08-14T02:00:00.000Z" });
+  const policy = await store.getDocument(tenantId, "AlumDoor Attendance Policy", configured.attendance_policy);
+  assert.equal(policy.docstatus, 1);
+  assert.equal(policy.data.policy_status, "approved");
+  assert.equal(policy.data.shift3_start_minute, 1050);
+  const station = await commitAlumDoorAttendanceStationLite({
+    tenantId, actor: { user_id: "attendance@example.test", roles: ["AlumDoor Attendance Manager"] },
+    stationCode: "ST-REALMETADATA", stationName: "Cửa xưởng", latitude: 10.7769, longitude: 106.7009,
+    allowedRadiusM: 50, idempotencyKey: "station-real-metadata-01",
+  }, { store, kernel, now: () => "2026-08-14T02:00:00.000Z" });
+  assert.equal(station.policy, policy.name);
+  assert.equal(station.is_active, 1);
 });

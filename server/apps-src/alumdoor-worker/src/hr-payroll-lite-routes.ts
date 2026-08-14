@@ -35,23 +35,30 @@ async function listDocs(call: PayrollPlatformCall, doctype: string, filters: Jso
   return asArray(await method(call, "frappe.client.get_list", { doctype, fields, filters, order_by: "modified desc", limit_page_length: 1000 }));
 }
 
-interface OrganizationOption { value: string; label: string; company?: string }
+interface OrganizationOption { value: string; label: string; company?: string; currency?: string }
 interface LiteOrganization {
-  company: string; workplace: string; ready: boolean; configured: boolean;
+  company: string; workplace: string; currency: string; ready: boolean; configured: boolean;
+  morningStart: string; morningEnd: string; afternoonStart: string; afternoonEnd: string; overtimeStart: string;
+  attendancePolicy: string;
   payDayOfMonth: number; ownerOnlyMode: boolean;
-  companies: OrganizationOption[]; workplaces: OrganizationOption[];
+  companies: OrganizationOption[]; workplaces: OrganizationOption[]; currencies: OrganizationOption[];
 }
 async function liteOrganization(call: PayrollPlatformCall): Promise<LiteOrganization> {
   const value = asObject(await method(call, "metaforge.api.get_alumdoor_hr_lite_organization", {}), "Cài đặt tổ chức HR Lite");
   const options = (input: unknown): OrganizationOption[] => asArray(input).map((row) => ({
-    value: text(row.value), label: text(row.label) || text(row.value), ...(text(row.company) ? { company: text(row.company) } : {}),
+    value: text(row.value), label: text(row.label) || text(row.value),
+    ...(text(row.company) ? { company: text(row.company) } : {}),
+    ...(text(row.currency) ? { currency: text(row.currency) } : {}),
   })).filter((row) => row.value);
   return {
-    company: text(value.company), workplace: text(value.workplace), ready: value.ready === true,
+    company: text(value.company), workplace: text(value.workplace), currency: text(value.currency) || "VND", ready: value.ready === true,
     configured: value.configured === true,
+    morningStart: text(value.morning_start) || "07:00", morningEnd: text(value.morning_end) || "11:30",
+    afternoonStart: text(value.afternoon_start) || "13:00", afternoonEnd: text(value.afternoon_end) || "17:00",
+    overtimeStart: text(value.overtime_start) || "17:30", attendancePolicy: text(value.attendance_policy),
     payDayOfMonth: typeof value.pay_day_of_month === "number" ? value.pay_day_of_month : 5,
     ownerOnlyMode: value.owner_only_mode !== false,
-    companies: options(value.companies), workplaces: options(value.workplaces),
+    companies: options(value.companies), workplaces: options(value.workplaces), currencies: options(value.currencies),
   };
 }
 
@@ -142,6 +149,13 @@ export async function payrollLiteSettingsGet(input: { call: PayrollPlatformCall 
     return json({
       company: organization.company || null,
       workplace: organization.workplace || null,
+      currency: organization.currency,
+      morning_start: organization.morningStart,
+      morning_end: organization.morningEnd,
+      afternoon_start: organization.afternoonStart,
+      afternoon_end: organization.afternoonEnd,
+      overtime_start: organization.overtimeStart,
+      attendance_policy: organization.attendancePolicy || null,
       overtime_rate_vnd_per_hour: ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR,
       pay_day_of_month: organization.payDayOfMonth,
       owner_only_mode: organization.ownerOnlyMode,
@@ -149,6 +163,7 @@ export async function payrollLiteSettingsGet(input: { call: PayrollPlatformCall 
       configured: organization.configured,
       companies: organization.companies,
       workplaces: organization.workplaces,
+      currencies: organization.currencies,
       need_legal_check: true,
     });
   } catch (error) { return fail("PAYROLL_LITE_SETTINGS_FAILED", error instanceof Error ? error.message : "Không đọc được cài đặt lương."); }
@@ -166,6 +181,7 @@ export async function payrollLiteSettingsSave(input: { call: PayrollPlatformCall
     if (!workplace || (mappedWorkplaces.length > 0 && workplace.company && workplace.company !== parsed.data.company)) {
       throw new Error("Nơi làm việc không thuộc công ty đã chọn hoặc đã ngừng dùng.");
     }
+    if (!available.currencies.some((entry) => entry.value === parsed.data.currency)) throw new Error("Tiền tệ đã chọn không còn hoạt động.");
     await method(input.call, "metaforge.api.commit_alumdoor_hr_lite_settings", parsed.data);
     return payrollLiteSettingsGet({ call: input.call });
   } catch (error) { return fail("PAYROLL_LITE_SETTINGS_SAVE_FAILED", error instanceof Error ? error.message : "Không lưu được Cài đặt Nhân viên & Lương."); }

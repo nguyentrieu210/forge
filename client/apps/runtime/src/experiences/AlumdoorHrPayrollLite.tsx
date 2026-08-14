@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -70,13 +70,20 @@ interface PayProfileLite {
 interface LiteSettings {
   company?: string | null;
   workplace?: string | null;
+  currency?: string | null;
+  morning_start?: string;
+  morning_end?: string;
+  afternoon_start?: string;
+  afternoon_end?: string;
+  overtime_start?: string;
   overtime_rate_vnd_per_hour?: number;
   pay_day_of_month?: number;
   owner_only_mode?: boolean;
   ready?: boolean;
   configured?: boolean;
-  companies?: Array<{ value: string; label: string }>;
+  companies?: Array<{ value: string; label: string; currency?: string }>;
   workplaces?: Array<{ value: string; label: string; company?: string }>;
+  currencies?: Array<{ value: string; label: string }>;
   need_legal_check?: boolean;
 }
 
@@ -232,12 +239,21 @@ function SettingsLiteScreen({ onExit }: { onExit: () => void }) {
   const [settings, setSettings] = useState<LiteSettings | null>(null);
   const [company, setCompany] = useState("");
   const [workplace, setWorkplace] = useState("");
+  const [currency, setCurrency] = useState("VND");
+  const [morningStart, setMorningStart] = useState("07:00");
+  const [morningEnd, setMorningEnd] = useState("11:30");
+  const [afternoonStart, setAfternoonStart] = useState("13:00");
+  const [afternoonEnd, setAfternoonEnd] = useState("17:00");
+  const [overtimeStart, setOvertimeStart] = useState("17:30");
   const [payDay, setPayDay] = useState(5);
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState("");
   const [saved, setSaved] = useState(false);
   const apply = useCallback((value: LiteSettings) => {
-    setSettings(value); setCompany(value.company ?? ""); setWorkplace(value.workplace ?? ""); setPayDay(value.pay_day_of_month ?? 5);
+    setSettings(value); setCompany(value.company ?? ""); setWorkplace(value.workplace ?? ""); setCurrency(value.currency ?? "VND");
+    setMorningStart(value.morning_start ?? "07:00"); setMorningEnd(value.morning_end ?? "11:30");
+    setAfternoonStart(value.afternoon_start ?? "13:00"); setAfternoonEnd(value.afternoon_end ?? "17:00");
+    setOvertimeStart(value.overtime_start ?? "17:30"); setPayDay(value.pay_day_of_month ?? 5);
   }, []);
   const load = useCallback(async () => {
     try { setFailure(""); apply(await adapter.callPost<LiteSettings>(ALUMDOOR_HR_PAYROLL_METHODS.settingsGet, {})); }
@@ -249,26 +265,52 @@ function SettingsLiteScreen({ onExit }: { onExit: () => void }) {
   const workplaces = company && companyWorkplaces.length === 0 ? allWorkplaces : companyWorkplaces;
   const selectCompany = (value: string) => {
     setCompany(value); setSaved(false);
+    const companyCurrency = settings?.companies?.find((entry) => entry.value === value)?.currency;
+    if (companyCurrency && settings?.currencies?.some((entry) => entry.value === companyCurrency)) setCurrency(companyCurrency);
     const valid = (settings?.workplaces ?? []).some((entry) => entry.value === workplace && (!entry.company || entry.company === value));
     if (!valid) setWorkplace("");
   };
   const save = async () => {
-    if (!company || !workplace) { setFailure("Chọn Công ty và Nơi làm việc."); return; }
+    if (!company || !workplace || !currency) { setFailure("Chọn Công ty, Nơi làm việc và Tiền tệ."); return; }
     setSaving(true); setSaved(false); setFailure("");
     try {
       const value = await adapter.callPost<LiteSettings>(ALUMDOOR_HR_PAYROLL_METHODS.settingsSave, {
-        company, workplace, pay_day_of_month: payDay, idempotency_key: idempotencyKey(),
+        company, workplace, currency, morning_start: morningStart, morning_end: morningEnd,
+        afternoon_start: afternoonStart, afternoon_end: afternoonEnd, overtime_start: overtimeStart,
+        pay_day_of_month: payDay, idempotency_key: idempotencyKey(),
       });
       apply(value); setSaved(true);
     } catch (error) { setFailure(errorText(adapter, error)); }
     finally { setSaving(false); }
   };
+  const requiredReady = Boolean(company && workplace && currency);
+  const changeTime = (setter: (value: string) => void) => (event: ChangeEvent<HTMLInputElement>) => { setter(event.target.value); setSaved(false); };
   return <Page>
-    <PageHeader icon={<Settings2 />} title="Cài đặt Nhân viên & Lương" subtitle="Chọn một lần để hệ thống tự điền khi thêm nhân viên và tính lương" onExit={onExit} action={<Button onClick={() => void save()} disabled={saving || !company || !workplace}>{saving ? "Đang lưu…" : "Lưu cài đặt"}</Button>} />
+    <PageHeader icon={<Settings2 />} title="Cài đặt mặc định" subtitle="Một nơi duy nhất cho công ty, giờ làm và tính lương" onExit={onExit} action={<Button onClick={() => void save()} disabled={saving || !requiredReady}>{saving ? "Đang lưu…" : "Lưu cài đặt"}</Button>} />
     {!settings ? <ListSkeleton /> : <div className="grid gap-4 lg:grid-cols-2">
-      <section className="rounded-xl border bg-card p-5"><div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Tổ chức sử dụng HR Lite</h2>{settings.ready ? <Badge variant="success">Sẵn sàng</Badge> : <Badge variant="warning">Cần cấu hình</Badge>}</div><p className="mt-1 text-sm text-muted-foreground">Không xóa hay thay đổi dữ liệu công ty khác. HR Lite chỉ dùng lựa chọn dưới đây.</p><div className="mt-5 space-y-4"><Field label="Công ty"><Select value={company} onValueChange={selectCompany}><SelectTrigger><SelectValue placeholder="Chọn công ty" /></SelectTrigger><SelectContent>{(settings.companies ?? []).map((entry) => <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>)}</SelectContent></Select></Field><Field label="Nơi làm việc"><Select value={workplace} onValueChange={(value) => { setWorkplace(value); setSaved(false); }} disabled={!company}><SelectTrigger><SelectValue placeholder={company ? "Chọn nơi làm việc" : "Chọn công ty trước"} /></SelectTrigger><SelectContent>{workplaces.map((entry) => <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>)}</SelectContent></Select></Field><Field label="Ngày trả lương mặc định"><Input type="number" inputMode="numeric" min={1} max={28} value={payDay} onChange={(event) => { setPayDay(Math.max(1, Math.min(28, Number(event.target.value) || 1))); setSaved(false); }} /></Field><Button className="w-full sm:w-auto" onClick={() => void save()} disabled={saving || !company || !workplace}>{saving ? "Đang lưu…" : "Lưu cài đặt"}</Button>{saved && <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="size-4" />Đã lưu. Có thể thêm nhân viên và thiết lập lương.</div>}{failure && <InlineError message={failure} />}</div></section>
-      <SettingsCard title="Tính lương"><SettingRow label="Tăng ca" value={`${money(settings.overtime_rate_vnd_per_hour)}/giờ`} /><SettingRow label="Ngày trả mặc định" value={`Ngày ${payDay} tháng sau`} /><SettingRow label="Quy trình" value={settings.owner_only_mode ? "Chủ tự tính và chốt" : "Có người chuẩn bị riêng"} /></SettingsCard>
-      {settings.need_legal_check && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100 lg:col-span-2"><div className="flex gap-3"><CircleAlert className="mt-0.5 size-5 shrink-0" /><div><div className="font-medium">Cần xác nhận bộ quy tắc pháp lý trước khi dùng production</div><p className="mt-1 text-sm opacity-80">Mức 50.000đ/giờ là chính sách doanh nghiệp. Hệ thống vẫn đối chiếu sàn áp dụng theo từng loại ngày/giờ trước khi chốt chính thức.</p></div></div></div>}
+      <section className="rounded-xl border bg-card p-5">
+        <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Công ty</h2>{settings.ready ? <Badge variant="success">Sẵn sàng</Badge> : <Badge variant="warning">Cần cấu hình</Badge>}</div>
+        <p className="mt-1 text-sm text-muted-foreground">Các màn Nhân viên, Chấm công và Lương sẽ tự dùng các giá trị này.</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Công ty"><Select value={company} onValueChange={selectCompany}><SelectTrigger><SelectValue placeholder="Chọn công ty" /></SelectTrigger><SelectContent>{(settings.companies ?? []).map((entry) => <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>)}</SelectContent></Select></Field>
+          <Field label="Tiền tệ"><Select value={currency} onValueChange={(value) => { setCurrency(value); setSaved(false); }}><SelectTrigger><SelectValue placeholder="Chọn tiền tệ" /></SelectTrigger><SelectContent>{(settings.currencies ?? [{ value: "VND", label: "VND" }]).map((entry) => <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>)}</SelectContent></Select></Field>
+          <Field label="Nơi làm việc"><Select value={workplace} onValueChange={(value) => { setWorkplace(value); setSaved(false); }} disabled={!company}><SelectTrigger><SelectValue placeholder={company ? "Chọn nơi làm việc" : "Chọn công ty trước"} /></SelectTrigger><SelectContent>{workplaces.map((entry) => <SelectItem key={entry.value} value={entry.value}>{entry.label}</SelectItem>)}</SelectContent></Select></Field>
+          <Field label="Ngày trả lương"><Input type="number" inputMode="numeric" min={1} max={28} value={payDay} onChange={(event) => { setPayDay(Math.max(1, Math.min(28, Number(event.target.value) || 1))); setSaved(false); }} /></Field>
+        </div>
+      </section>
+      <section className="rounded-xl border bg-card p-5">
+        <h2 className="font-semibold">Giờ làm việc</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Chỉ nhập giờ làm thực tế. Chính sách chấm công sẽ được hệ thống tự tạo và duyệt.</p>
+        <div className="mt-5 space-y-4">
+          <TimeRange label="Buổi sáng" start={morningStart} end={morningEnd} onStart={changeTime(setMorningStart)} onEnd={changeTime(setMorningEnd)} />
+          <TimeRange label="Buổi chiều" start={afternoonStart} end={afternoonEnd} onStart={changeTime(setAfternoonStart)} onEnd={changeTime(setAfternoonEnd)} />
+          <Field label="Tăng ca bắt đầu"><Input type="time" value={overtimeStart} onChange={changeTime(setOvertimeStart)} /></Field>
+        </div>
+      </section>
+      <SettingsCard title="Tính lương"><SettingRow label="Tiền tệ" value={currency} /><SettingRow label="Tăng ca cố định" value={`${money(settings.overtime_rate_vnd_per_hour)}/giờ`} /><SettingRow label="Ngày trả mặc định" value={`Ngày ${payDay} tháng sau`} /><SettingRow label="Quy trình" value="Chủ tự tính và chốt" /></SettingsCard>
+      <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">Tự động áp dụng</h2><div className="mt-4 space-y-3 text-sm text-muted-foreground"><p>• Nhân viên mới tự gán đúng công ty và nơi làm việc.</p><p>• Trạm QR tự gán giờ làm và vị trí hiện tại.</p><p>• Múi giờ Việt Nam, chống quét trùng và bảo mật thiết bị do hệ thống quản lý.</p></div></section>
+      <div className="flex flex-col gap-3 lg:col-span-2"><Button className="w-full sm:w-auto sm:self-start" onClick={() => void save()} disabled={saving || !requiredReady}>{saving ? "Đang lưu…" : "Lưu cài đặt"}</Button>{saved && <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="size-4" />Đã lưu và áp dụng cho Nhân viên, Chấm công, Lương.</div>}{failure && <InlineError message={failure} />}</div>
+      {settings.need_legal_check && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100 lg:col-span-2"><div className="flex gap-3"><CircleAlert className="mt-0.5 size-5 shrink-0" /><div><div className="font-medium">Cần xác nhận quy định tăng ca trước khi dùng chính thức</div><p className="mt-1 text-sm opacity-80">Mức 50.000đ/giờ là chính sách doanh nghiệp. Hệ thống vẫn đối chiếu mức tối thiểu theo loại ngày và khung giờ trước khi chốt lương.</p></div></div></div>}
     </div>}
   </Page>;
 }
@@ -285,6 +327,7 @@ function ListSkeleton() { return <div className="space-y-3 rounded-xl border p-4
 function StateBadge({ value }: { value?: string }) { const state = value || "draft"; if (["paid"].includes(state)) return <Badge variant="success">Đã trả</Badge>; if (["approved", "finalized"].includes(state)) return <Badge variant="info">Đã chốt</Badge>; if (["calculated", "ready", "pending_approval"].includes(state)) return <Badge variant="warning">Sẵn sàng</Badge>; return <Badge variant="secondary">Bản nháp</Badge>; }
 function SettingsCard({ title, children }: { title: string; children: ReactNode }) { return <section className="rounded-xl border bg-card p-5"><h2 className="font-semibold">{title}</h2><div className="mt-4 divide-y">{children}</div></section>; }
 function SettingRow({ label, value }: { label: string; value: ReactNode }) { return <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"><span className="text-sm text-muted-foreground">{label}</span><span className="text-right text-sm font-medium">{value}</span></div>; }
+function TimeRange({ label, start, end, onStart, onEnd }: { label: string; start: string; end: string; onStart: (event: ChangeEvent<HTMLInputElement>) => void; onEnd: (event: ChangeEvent<HTMLInputElement>) => void }) { return <div><Label>{label}</Label><div className="mt-1.5 grid grid-cols-[1fr_auto_1fr] items-center gap-2"><Input aria-label={`${label} bắt đầu`} type="time" value={start} onChange={onStart} /><span className="text-sm text-muted-foreground">đến</span><Input aria-label={`${label} kết thúc`} type="time" value={end} onChange={onEnd} /></div></div>; }
 
 function errorText(adapter: { mapError: (error: unknown) => { message: string } }, error: unknown): string { const direct = (error as { message?: unknown } | undefined)?.message; return typeof direct === "string" && direct.trim() ? direct.trim() : adapter.mapError(error).message; }
 function todayIso(): string { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`; }

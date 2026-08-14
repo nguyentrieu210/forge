@@ -4,6 +4,7 @@ import {
   attendanceChallenge,
   attendanceResolveStation,
   attendanceScan,
+  attendanceStationLiteCreate,
   attendanceStationQr,
 } from "../dist/apps-src/alumdoor-worker/src/attendance-routes.js";
 
@@ -66,6 +67,22 @@ test("dynamic challenge is removed and static printable QR is stable", async () 
   const first = await printedToken(); const second = await printedToken();
   assert.equal(first, second);
   assert.equal(first.includes(env.ALUMDOOR_ATTENDANCE_QR_SECRET), false);
+});
+
+test("manager creates a station with one simple payload through the trusted callback", async () => {
+  const observed = [];
+  const call = async (path, init = {}) => {
+    observed.push({ path, body: JSON.parse(String(init.body ?? "{}")) });
+    return Response.json({ message: { name: "ST-ABC123456789", station_code: "ST-ABC123456789", station_name: "Cửa xưởng" } });
+  };
+  const response = await attendanceStationLiteCreate({
+    request: request("alumdoor.attendance.station_create_lite", undefined, ["AlumDoor Attendance Manager"]), call,
+    args: { station_name: "Cửa xưởng", latitude: 10.7769, longitude: 106.7009, allowed_radius_m: 50, idempotency_key: "station-route-key-01" },
+  });
+  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal(observed[0].path, "method/metaforge.api.commit_alumdoor_attendance_station_lite");
+  assert.equal(observed[0].body.company, undefined);
+  assert.equal(observed[0].body.policy, undefined);
 });
 
 test("public resolve reveals station policy limits but never station coordinates", async () => {

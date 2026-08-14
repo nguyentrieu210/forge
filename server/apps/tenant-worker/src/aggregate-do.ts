@@ -34,9 +34,11 @@ import {
   type AlumDoorPayrollApprovalInput,
 } from "./payroll-coordinator.js";
 import {
+  commitAlumDoorAttendanceStationLite,
   commitAlumDoorEmployeeLite,
   commitAlumDoorHrLiteSettings,
   commitAlumDoorPayProfileLite,
+  type AlumDoorAttendanceStationLiteInput,
   type AlumDoorEmployeeLiteInput,
   type AlumDoorHrLiteSettingsInput,
   type AlumDoorPayProfileLiteInput,
@@ -54,6 +56,7 @@ interface AggregateStub extends DurableObjectStub {
   approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput): Promise<JsonObject>;
   commitAlumDoorEmployeeLite(input: AlumDoorEmployeeLiteInput): Promise<JsonObject>;
   commitAlumDoorHrLiteSettings(input: AlumDoorHrLiteSettingsInput): Promise<JsonObject>;
+  commitAlumDoorAttendanceStationLite(input: AlumDoorAttendanceStationLiteInput): Promise<JsonObject>;
   commitAlumDoorPayProfileLite(input: AlumDoorPayProfileLiteInput): Promise<JsonObject>;
 }
 
@@ -175,6 +178,15 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     return executor.execute(() => {
       const { kernel, store } = this.commandServices();
       return commitAlumDoorHrLiteSettings(input, { kernel, store });
+    });
+  }
+
+  async commitAlumDoorAttendanceStationLite(input: AlumDoorAttendanceStationLiteInput): Promise<JsonObject> {
+    let executor = HR_LITE_EXECUTORS.get(this);
+    if (!executor) { executor = new MutationSerialExecutor(); HR_LITE_EXECUTORS.set(this, executor); }
+    return executor.execute(() => {
+      const { kernel, store } = this.commandServices();
+      return commitAlumDoorAttendanceStationLite(input, { kernel, store });
     });
   }
 

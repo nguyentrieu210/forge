@@ -725,3 +725,11 @@ Mỗi slice phải xanh targeted tests trước khi chuyển slice tiếp theo. 
 - [x] Field Ledger đủ 9 cột được lập riêng.
 - [ ] Kế toán/pháp lý xác nhận Legal Bundle trước production; không chặn Cổng 3 nhưng chặn go-live.
 - [x] Người dùng duyệt Cổng 3 ngày 13/08/2026 để chuyển sang chuẩn bị nhánh/cổng kiểm tra.
+
+## 15. Cập nhật UX mặc định cho doanh nghiệp nhỏ — 14/08/2026
+
+- `Cài đặt mặc định` là nguồn duy nhất cho Công ty, Nơi làm việc, Tiền tệ, giờ sáng, giờ chiều, giờ bắt đầu tăng ca và ngày trả lương.
+- Khi lưu, coordinator tạo hoặc cập nhật `AlumDoor Attendance Policy` mặc định và duyệt trong cùng transaction. Các giới hạn kỹ thuật giữ cố định: `Asia/Ho_Chi_Minh`, công thường tối đa 480 phút, chống quét trùng 60 giây, tối đa 2 thiết bị, ca tăng ca kết thúc muộn nhất 23:59.
+- Mức tăng ca vẫn bất biến `50.000 VND/giờ`; UI không cho sửa rời khỏi bộ cấu hình đã duyệt.
+- `AlumDoor Attendance Policy` và `AlumDoor QR Station` không còn nằm trong navigation nghiệp vụ. Metadata vẫn được giữ cho kernel, audit và tương thích dữ liệu.
+- Bài kiểm thử metadata thật phải chứng minh bundle tạo Policy đã submit trước khi Station được phép tham chiếu.
