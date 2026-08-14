@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { readFile } from "node:fs/promises";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -9,8 +10,82 @@ const viewSource = (relativePath: string) => fileURLToPath(
 const controlsSource = fileURLToPath(
   new URL("../../packages/controls/src/index.ts", import.meta.url),
 );
+const runtimeDependency = (name: string) => fileURLToPath(
+  new URL(`./node_modules/${name}`, import.meta.url),
+);
+const attendanceIndex = fileURLToPath(new URL("../attendance-mobile/index.html", import.meta.url));
+const attendanceEntry = fileURLToPath(new URL("../attendance-mobile/src/main.tsx", import.meta.url));
+const attendancePublic = fileURLToPath(new URL("../attendance-mobile/public/", import.meta.url));
+
+/**
+ * The deployed Gateway mounts the standalone attendance PWA at
+ * `/mobile/attendance/`. The Desk dev server used to know only its own SPA, so
+ * that URL silently fell through to the Forge index and “Mở app” reopened Desk.
+ * Serve the real attendance entry and its public metadata on the same local
+ * origin; API calls continue through the existing `/api` proxy below.
+ */
+function attendanceMobileDev(): Plugin {
+  const publicFiles = new Map([
+    ["/mobile/attendance/manifest.webmanifest", ["manifest.webmanifest", "application/manifest+json"]],
+    ["/mobile/attendance/app-icon.svg", ["app-icon.svg", "image/svg+xml"]],
+  ] as const);
+  return {
+    name: "attendance-mobile-dev",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (request, response, next) => {
+        const pathname = new URL(request.url ?? "/", "http://local.test").pathname;
+        if (pathname === "/mobile/attendance") {
+          response.statusCode = 302;
+          response.setHeader("Location", `/mobile/attendance/${new URL(request.url ?? "/", "http://local.test").search}`);
+          response.end();
+          return;
+        }
+        if (pathname === "/mobile/attendance/") {
+          try {
+            const sourcePath = `/@fs/${attendanceEntry.replace(/\\/g, "/")}`;
+            const source = (await readFile(attendanceIndex, "utf8"))
+              .replace('src="/src/main.tsx"', `src="${sourcePath}"`);
+            const html = await server.transformIndexHtml(request.url ?? pathname, source);
+            response.statusCode = 200;
+            response.setHeader("Content-Type", "text/html; charset=utf-8");
+            response.setHeader("Cache-Control", "no-store");
+            response.end(html);
+          } catch (error) {
+            next(error as Error);
+          }
+          return;
+        }
+        const publicFile = publicFiles.get(pathname as keyof typeof publicFiles);
+        if (!publicFile) {
+          next();
+          return;
+        }
+        try {
+          response.statusCode = 200;
+          response.setHeader("Content-Type", publicFile[1]);
+          response.setHeader("Cache-Control", "no-store");
+          response.end(await readFile(new URL(publicFile[0], `file:///${attendancePublic.replace(/\\/g, "/")}/`)));
+        } catch (error) {
+          next(error as Error);
+        }
+      });
+    },
+  };
+}
 
 const viewSourceAliases = [
+  // The attendance entry lives beside Runtime rather than below its root. Pin
+  // bare imports to Runtime's dependency graph so Vite does not start resolving
+  // from apps/attendance-mobile (which intentionally has no node_modules).
+  { find: /^react$/, replacement: runtimeDependency("react") },
+  { find: /^react-dom$/, replacement: runtimeDependency("react-dom") },
+  { find: /^lucide-react$/, replacement: runtimeDependency("lucide-react") },
+  { find: /^jsqr$/, replacement: runtimeDependency("jsqr") },
+  { find: /^@metaforge\/adapter-frappe$/, replacement: runtimeDependency("@metaforge/adapter-frappe") },
+  { find: /^@metaforge\/core$/, replacement: runtimeDependency("@metaforge/core") },
+  { find: /^@metaforge\/shell$/, replacement: runtimeDependency("@metaforge/shell") },
+  { find: /^@metaforge\/ui$/, replacement: runtimeDependency("@metaforge/ui") },
   { find: /^@metaforge\/controls$/, replacement: controlsSource },
   { find: /^@metaforge\/views$/, replacement: viewSource("index.ts") },
   { find: /^@metaforge\/views\/provider$/, replacement: viewSource("container/provider") },
@@ -47,7 +122,7 @@ const viewSourceAliases = [
  * làm preview local phản ánh source ngay lập tức.
  */
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [attendanceMobileDev(), react(), tailwindcss()],
   // Runtime imports workspace packages through /@fs while its own entry is resolved
   // from this app. Without dedupe, a local nested pnpm install can hand ReactDOM one
   // React instance and @metaforge/ui another, producing an invalid-hook-call blank

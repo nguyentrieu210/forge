@@ -251,7 +251,10 @@ function Scanner() {
 
 function App() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
+    // The local Desk server mounts this source through Vite middleware. Do not
+    // install a development service worker: it would cache transformed modules
+    // and make HMR look stale. The production PWA build keeps the same scope.
+    if (import.meta.env.BASE_URL === "/" || !("serviceWorker" in navigator)) return;
     const register = () => void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}attendance-sw.js`, { scope: import.meta.env.BASE_URL });
     window.addEventListener("load", register); return () => window.removeEventListener("load", register);
   }, []);
