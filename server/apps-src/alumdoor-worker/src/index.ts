@@ -1963,9 +1963,21 @@ async function loadQuotation(call: PlatformCall, name: string): Promise<Quotatio
   return quote;
 }
 
-function orderLines(quote: QuotationDoc): Array<Record<string, unknown>> {
+/**
+ * Dòng đơn dựng từ dòng báo giá, có mang theo KHÓA DÒNG NGUỒN.
+ *
+ * `quotation_item` không phải thông tin trang trí: khi đơn trỏ về báo giá, nhân đối chiếu
+ * từng dòng đơn ngược lại đúng dòng báo giá để chặn sửa mã hàng, sửa hệ số quy đổi và chặn
+ * đặt nhiều hơn phần đã báo giá. Thiếu khóa này thì nhân TỪ CHỐI cả chứng từ — và vì thao
+ * tác "Báo giá → Đơn hàng" trước đây bị ẩn khỏi thanh bên nên không ai chạy tới chỗ hỏng.
+ */
+export function orderLines(quote: QuotationDoc): Array<Record<string, unknown>> {
   return (quote.items ?? []).map((line, index) => {
-    const copied: Record<string, unknown> = { row_id: `R${index + 1}` };
+    const sourceRow = String(line.row_id ?? "").trim();
+    const copied: Record<string, unknown> = {
+      row_id: `R${index + 1}`,
+      ...(sourceRow ? { quotation_item: sourceRow } : {}),
+    };
     for (const field of QUOTE_LINE_FIELDS) if (line[field] !== undefined && line[field] !== null && line[field] !== "") copied[field] = line[field];
     if (!copied.install_note && line.note) copied.install_note = line.note;
     return copied;
@@ -2665,6 +2677,210 @@ async function deliveryFromSalesOrder(call: PlatformCall, args: Record<string, u
   return answer({ delivery_note: delivery, sales_order: order, items, lines: items.length, draft: true });
 }
 
+/** Chiều trả hàng quyết định cả đối tác lẫn chứng từ gốc; ba field phải nói cùng một chuyện. */
+const STOCK_RETURN_DIRECTIONS = {
+  Purchase: { party_doctype: "Supplier", return_against_doctype: "Purchase Receipt", label: "trả hàng nhà cung cấp" },
+  Sales: { party_doctype: "Customer", return_against_doctype: "Delivery Note", label: "khách trả hàng" },
+} as const;
+
+/**
+ * Chốt cặp `return_type` ↔ đối tác ↔ chứng từ gốc.
+ *
+ * Dynamic Link bắt buộc đọc tên doctype từ một field khác, nên chiều trả hàng bị viết ở ba
+ * chỗ. Ba chỗ cùng nói một chuyện là ba chỗ sẽ trôi dạt: đặt `return_type = Sales` mà quên
+ * `party_doctype` thì nhân đọc "Sales" để ghi tồn TĂNG trong khi ô đối tác vẫn chọn nhà cung
+ * cấp — chứng từ ghi thành công và tồn kho sai lặng lẽ. Chốt ở đây để lệch bị chặn ngay lúc
+ * ghi chứ không lộ ra ở kỳ kiểm kê.
+ */
+export function stockReturnDirectionError(doc: Record<string, unknown>): string | null {
+  const returnType = String(doc.return_type ?? "").trim();
+  const expected = STOCK_RETURN_DIRECTIONS[returnType as keyof typeof STOCK_RETURN_DIRECTIONS];
+  if (!expected) return `Loại trả "${returnType || "(trống)"}" không hợp lệ — chỉ có Purchase hoặc Sales.`;
+
+  if (String(doc.party_doctype ?? "").trim() !== expected.party_doctype) {
+    return `Phiếu ${expected.label} phải chọn đối tác là ${expected.party_doctype === "Customer" ? "Khách hàng" : "Nhà cung cấp"}.`;
+  }
+  if (String(doc.return_against_doctype ?? "").trim() !== expected.return_against_doctype) {
+    return `Phiếu ${expected.label} phải trả theo ${expected.return_against_doctype === "Delivery Note" ? "Phiếu xuất kho" : "Phiếu nhập kho"}.`;
+  }
+  return null;
+}
+
+/**
+ * Số đã xuất hoá đơn, đọc theo KHÓA DÒNG của đơn bán.
+ *
+ * Cố ý không cộng theo mã hàng: một đơn có thể có hai dòng cùng mã khác quy cách (khác màu,
+ * khác khổ), và cộng theo mã thì dòng này "ăn" phần đã xuất hoá đơn của dòng kia — hoá đơn
+ * thứ hai lặng lẽ thiếu tiền. Nhân O2C cũng chốt tiến độ theo `sales_order_row_id`, nên đọc
+ * cùng một khóa là điều kiện để màn xem trước và máy chủ không nói hai con số khác nhau.
+ */
+async function billedByRow(call: PlatformCall, order: string): Promise<Map<string, number>> {
+  const billed = new Map<string, number>();
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["name"]),
+    filters: JSON.stringify([["against_sales_order", "=", order], ["docstatus", "=", 1]]),
+    limit_page_length: "50",
+  });
+  const listed = await call(`resource/Sales%20Invoice?${query}`);
+  if (!listed.ok) return billed;
+  const names = (((await listed.json()) as { data?: Array<{ name?: string }> }).data ?? [])
+    .map((row) => row.name).filter((value): value is string => Boolean(value));
+  const invoices = await Promise.all(names.map(async (name) => {
+    try { return await readDoc<SalesOrderDoc>(call, "Sales Invoice", name); } catch { return null; }
+  }));
+  for (const invoice of invoices) {
+    for (const line of invoice?.items ?? []) {
+      const rowId = String(line.sales_order_row_id ?? "").trim();
+      const code = String(line.item_code ?? "").trim();
+      const key = rowId ? `row:${rowId}` : code ? `item:${code}` : "";
+      const quantity = Number(line.qty ?? 0);
+      if (key && Number.isFinite(quantity)) billed.set(key, (billed.get(key) ?? 0) + quantity);
+    }
+  }
+  return billed;
+}
+
+/**
+ * Quy cách vật lý chép sang hoá đơn — MỌI thứ trừ tiền và số lượng.
+ *
+ * Tiền (`rate`, `amount`) cố ý bỏ ra: `freezeSalesOrderBillingLines` phía nhân đóng băng lại
+ * đơn giá, chiết khấu và phụ thu từ chính dòng đơn lúc ghi sổ, nên chép giá ở đây chỉ tạo ra
+ * một bản sao thứ hai để trôi khỏi bản gốc. Số lượng cũng bỏ ra vì hoá đơn chỉ lấy phần CHƯA
+ * xuất, không phải toàn bộ dòng đơn.
+ *
+ * Nhưng quy cách thì PHẢI đi theo: nhân kiểm dòng hoá đơn bằng cùng bộ luật đo của nhôm
+ * ("Trục cần nhập Rộng lớn hơn 0"), nên một dòng chỉ có mã hàng và số lượng sẽ bị từ chối.
+ */
+const SALES_BILLING_LINE_FIELDS = QUOTE_LINE_FIELDS.filter(
+  (field) => !["rate", "amount", "qty", "stock_qty"].includes(field),
+);
+
+/**
+ * Phần CHƯA xuất hoá đơn, tính thuần từ dòng đơn và số đã xuất — không đọc mạng.
+ *
+ * Tách ra khỏi phần đọc chứng từ để phép thử chạy được vào đúng chỗ dễ sai: trừ dồn theo khóa
+ * dòng, đường lùi theo mã hàng, và tỉ lệ tồn quy đổi khi hoá đơn chỉ lấy một phần đơn.
+ */
+export function outstandingBillingLines(
+  lines: Array<Record<string, unknown>>,
+  billed: Map<string, number>,
+): Array<Record<string, unknown>> {
+  const items: Array<Record<string, unknown>> = [];
+  for (const [index, line] of lines.entries()) {
+    const code = String(line.item_code ?? "");
+    if (!code) continue;
+    const orderedQty = Number(line.qty ?? 0);
+    if (!(orderedQty > 0)) continue;
+    /**
+     * Chỉ gửi `sales_order_row_id` khi dòng đơn THẬT SỰ có `row_id`.
+     *
+     * Nhân đối chiếu khóa dòng vào đúng bảng `row_id` của đơn; bịa một khóa từ `name` hay từ
+     * số thứ tự sẽ bị từ chối là "row không thuộc đơn này" — một lỗi khó đọc, che mất nguyên
+     * nhân thật là chứng từ cũ chưa có khóa dòng. Bỏ trống thì nhân tự suy theo mã hàng khi
+     * mã đó chỉ xuất hiện một lần, đúng đường lùi mà `resolveSourceLine` đã thiết kế sẵn.
+     */
+    const sourceRow = String(line.row_id ?? "").trim();
+    const rowKey = sourceRow ? `row:${sourceRow}` : "";
+    const legacyKey = `item:${code}`;
+    let consumed = 0;
+    if (rowKey) {
+      const rowPool = billed.get(rowKey) ?? 0;
+      const rowConsumed = Math.min(rowPool, orderedQty);
+      billed.set(rowKey, rowPool - rowConsumed);
+      consumed += rowConsumed;
+    }
+    const legacyPool = billed.get(legacyKey) ?? 0;
+    const legacyConsumed = Math.min(legacyPool, orderedQty - consumed);
+    billed.set(legacyKey, legacyPool - legacyConsumed);
+    consumed += legacyConsumed;
+    const outstanding = orderedQty - consumed;
+    if (outstanding <= 0) continue;
+    const copied: Record<string, unknown> = {
+      row_id: `R${index + 1}`,
+      ...(sourceRow ? { sales_order_row_id: sourceRow } : {}),
+    };
+    for (const field of SALES_BILLING_LINE_FIELDS) {
+      if (line[field] !== undefined && line[field] !== null && line[field] !== "") copied[field] = line[field];
+    }
+    copied.item_code = code;
+    copied.qty = Number(outstanding.toFixed(6));
+    // Tồn quy đổi đi theo tỉ lệ phần được xuất hoá đơn; giữ nguyên số của cả dòng sẽ
+    // khai sai khối lượng khi hoá đơn chỉ lấy một phần đơn.
+    const orderedStock = Number(line.stock_qty ?? 0);
+    if (orderedStock > 0) copied.stock_qty = Number((orderedStock * outstanding / orderedQty).toFixed(6));
+    items.push(copied);
+  }
+  return items;
+}
+
+/** Phần CHƯA xuất hoá đơn của một đơn bán đã ghi sổ, đọc kèm số đã giao để so sánh. */
+async function remainingBillingLines(
+  call: PlatformCall,
+  order: string,
+): Promise<{ sales: SalesOrderDoc; items: Array<Record<string, unknown>>; delivered: Map<string, number> }> {
+  const [sales, billed, delivered] = await Promise.all([
+    readDoc<SalesOrderDoc>(call, "Sales Order", order),
+    billedByRow(call, order),
+    deliveredByItem(call, order),
+  ]);
+  if (sales.docstatus !== 1) throw new Error(`Đơn hàng ${order} chưa ghi sổ.`);
+  return { sales, items: outstandingBillingLines(sales.items ?? [], billed), delivered };
+}
+
+/** Xem trước phần chưa xuất hoá đơn, kèm số đã giao để người lập tự thấy mình đang thu trước hay thu sau. */
+async function previewInvoice(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const order = String(args.sales_order ?? "");
+  if (!order) return refuse("Cần chọn đơn hàng.");
+  try {
+    const { sales, items, delivered } = await remainingBillingLines(call, order);
+    const rows = items.map((item) => {
+      const rowId = String(item.sales_order_row_id ?? "");
+      const deliveredQty = delivered.get(`row:${rowId}`) ?? delivered.get(`item:${String(item.item_code ?? "")}`) ?? 0;
+      return { ...item, delivered_qty: Number(deliveredQty.toFixed(6)) };
+    });
+    return answer({
+      sales_order: order, customer: sales.customer, items: rows, lines: rows.length,
+      ...(rows.length ? {} : { message: `Đơn hàng ${order} đã xuất hoá đơn đủ.` }),
+    });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "không đọc được đơn hàng");
+  }
+}
+
+/**
+ * Tạo hoá đơn bán NHÁP cho phần chưa xuất hoá đơn.
+ *
+ * Nháp chứ không ghi sổ thẳng: hoá đơn là nơi CÔNG NỢ phát sinh, nên kế toán phải là người
+ * bấm ghi sổ sau khi soát hạn thanh toán và tài khoản phải thu. Nhân vẫn chặn lần cuối nếu
+ * số lượng vượt phần còn lại của đơn.
+ */
+async function invoiceFromSalesOrder(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
+  const order = String(args.sales_order ?? "");
+  if (!order) return refuse("Cần chọn đơn hàng.");
+  let sales: SalesOrderDoc;
+  let items: Array<Record<string, unknown>>;
+  try { ({ sales, items } = await remainingBillingLines(call, order)); }
+  catch (error) { return refuse(error instanceof Error ? error.message : "không đọc được đơn hàng"); }
+  if (!items.length) return refuse(`Đơn hàng ${order} đã xuất hoá đơn đủ.`);
+  const billingLines = items.map(({ delivered_qty: _delivered, ...line }) => line);
+  const created = await call("resource/Sales%20Invoice", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: sales.customer,
+      ...(sales.customer_group ? { customer_group: sales.customer_group } : {}),
+      company: sales.company,
+      currency: sales.currency,
+      against_sales_order: order,
+      posting_at: new Date().toISOString(),
+      ...(args.due_date ? { due_date: String(args.due_date) } : {}),
+      items: billingLines,
+    }),
+  });
+  if (!created.ok) return refuse(`Không tạo được hoá đơn: ${(await created.text()).slice(0, 200)}`);
+  const invoice = ((await created.json()) as { data?: { name?: string } }).data?.name ?? "";
+  return answer({ sales_invoice: invoice, sales_order: order, items, lines: items.length, draft: true });
+}
+
 async function previewDailyDeliveryBatch(call: PlatformCall, args: Record<string, unknown>): Promise<Response> {
   const deliveryDate = String(args.delivery_date ?? new Date().toISOString().slice(0, 10));
   try {
@@ -3259,6 +3475,8 @@ export default {
         if (method === "alumdoor.purchase.fifo_receipt") return await fifoReceiptDraft(call, args, true);
         if (method === "alumdoor.sales.preview_delivery") return await previewDelivery(call, args);
         if (method === "alumdoor.sales.delivery_from_order") return await deliveryFromSalesOrder(call, args);
+        if (method === "alumdoor.sales.preview_invoice") return await previewInvoice(call, args);
+        if (method === "alumdoor.sales.invoice_from_order") return await invoiceFromSalesOrder(call, args);
         if (method === "alumdoor.delivery_batch.preview") return await previewDailyDeliveryBatch(call, args);
         if (method === "alumdoor.delivery_batch.create") return await createDailyDeliveryBatch(call, args);
         if (method === "alumdoor.capacity.preview") return await capacityPreview(args);
@@ -3316,6 +3534,12 @@ export default {
           const transaction = await validateTransactionLines(call, subject, "sales", doc);
           if (!transaction.ok) return transaction;
           return await validateDocumentColors(call, subject, doc);
+        }
+        if (subject.doctype === "Stock Return") {
+          const call = platformCaller(request, env);
+          const doc = await validationDocument(call, subject);
+          const problem = stockReturnDirectionError(doc);
+          return problem ? refuse(problem) : answer({ ok: true });
         }
         if (subject.doctype === "Production Request") {
           const call = platformCaller(request, env);
