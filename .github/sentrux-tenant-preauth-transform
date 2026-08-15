@@ -1,0 +1,29 @@
+from pathlib import Path
+import textwrap
+
+path = Path('server/apps/tenant-worker/src/index-core-base.ts')
+text = path.read_text()
+helper_name = 'async function routeTenantPreAuthRequest('
+if helper_name in text:
+    print('Tenant pre-auth route split already present')
+    raise SystemExit(0)
+
+fetch_marker = '  async fetch(request: Request, env: TenantEnv): Promise<Response> {'
+fetch_start = text.index(fetch_marker)
+block_start = text.index('      if (url.pathname === "/health") {', fetch_start)
+tenant_marker = '      const tenantId = resolveTenant(request, env);'
+block_end = text.index(tenant_marker, block_start)
+block = text[block_start:block_end].rstrip()
+body = textwrap.dedent(block)
+helper = '''async function routeTenantPreAuthRequest(\n  request: Request,\n  url: URL,\n  env: TenantEnv,\n  traceId: string,\n): Promise<Response | null> {\n''' + textwrap.indent(body, '  ') + '''\n  return null;\n}\n\n'''
+export_marker = 'export default {'
+export_pos = text.index(export_marker)
+text = text[:export_pos] + helper + text[export_pos:]
+replacement = '''      const preAuthResponse = await routeTenantPreAuthRequest(request, url, env, traceId);\n      if (preAuthResponse) return preAuthResponse;\n\n'''
+# Insertion shifted positions, so re-locate within fetch.
+fetch_start = text.index(fetch_marker)
+block_start = text.index('      if (url.pathname === "/health") {', fetch_start)
+block_end = text.index(tenant_marker, block_start)
+text = text[:block_start] + replacement + text[block_end:]
+path.write_text(text)
+print('Applied tenant pre-auth route extraction')
