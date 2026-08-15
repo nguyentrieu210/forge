@@ -1,0 +1,77 @@
+name: Sentrux depth 17 path probe
+
+on:
+  push:
+    branches:
+      - agent/sentrux-convergence-20260816
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Sentrux Linux build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev \
+            libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libvulkan-dev
+
+      - name: Build path-instrumented Sentrux v0.5.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet https://github.com/sentrux/sentrux.git /tmp/sentrux-src
+          cd /tmp/sentrux-src
+          git checkout --quiet 6f8ff3c14b0423e4b58f42d1813d4d5f7fdc1d11
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('sentrux-core/src/metrics/mod.rs')
+          s = p.read_text()
+          start = s.index('fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {')
+          end = s.index('\n// ── Pro metrics extension point', start)
+          lines = [
+              'fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {',
+              '    if edges.is_empty() { return 0; }',
+              '    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);',
+              '    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());',
+              '    let max_depth = seeds.iter().filter_map(|s| memo.get(s).copied()).max().unwrap_or(0);',
+              '    eprintln!("SENTRUX_DEPTH_MAX={}", max_depth);',
+              '    for seed in seeds.iter().filter(|s| memo.get(*s).copied() == Some(max_depth)) {',
+              '        eprintln!("SENTRUX_DEPTH_MAX_SEED {}", seed);',
+              '    }',
+              '    if let Some((mut node, mut depth)) = seeds.iter().filter_map(|s| memo.get(s).map(|d| (*s, *d))).max_by_key(|(_, d)| *d) {',
+              '        eprintln!("SENTRUX_DEPTH_PATH_BEGIN depth={}", depth);',
+              '        let mut i = 0u32;',
+              '        loop {',
+              '            eprintln!("SENTRUX_DEPTH_PATH {:02} {} remaining={}", i, node, depth);',
+              '            if depth == 0 { break; }',
+              '            let next = adj.get(node).and_then(|ns| ns.iter().filter_map(|n| memo.get(n).map(|d| (*n, *d))).filter(|(_, d)| d.saturating_add(1) == depth).max_by_key(|(_, d)| *d));',
+              '            match next { Some((n,d)) => { node=n; depth=d; i+=1; }, None => { eprintln!("SENTRUX_DEPTH_PATH_BROKEN"); break; } }',
+              '        }',
+              '        eprintln!("SENTRUX_DEPTH_PATH_END");',
+              '    }',
+              '    max_depth',
+              '}',
+          ]
+          p.write_text(s[:start] + '\n'.join(lines) + s[end:])
+          PY
+          cargo build --quiet --release -p sentrux --bin sentrux
+          cp target/release/sentrux /tmp/sentrux-trace
+
+      - name: Trace exact depth path
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/sentrux-trace gate --save "$GITHUB_WORKSPACE" 2>&1 | tee /tmp/depth-trace.txt
+          echo '=== DEPTH 17 TRACE ==='
+          grep 'SENTRUX_DEPTH_' /tmp/depth-trace.txt
+          grep -E '^Quality:' /tmp/depth-trace.txt || true
