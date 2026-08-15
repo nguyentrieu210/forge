@@ -89,7 +89,8 @@ interface ValidatorSubject {
   payload: Record<string, unknown>;
 }
 
-export type PlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via: string };
+import type { PlatformCall } from "./platform-call.js";
+export type { PlatformCall } from "./platform-call.js";
 
 function platformCaller(request: Request, env: Env): PlatformCall {
   const declared = request.headers.get("x-cloudforge-callback");
