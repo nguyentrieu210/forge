@@ -103,7 +103,7 @@ function resolveTenant(request: Request, env: TenantEnv): string | null {
   return env.TENANT_ID ?? routed;
 }
 
-async function routeInternalRequest(
+async function routeInternalMaintenanceRequest(
   request: Request,
   url: URL,
   env: TenantEnv,
@@ -141,7 +141,15 @@ async function routeInternalRequest(
     const report = await new D1CommercialReconciliationService(env.DB).run(tenant);
     return jsonResponse(report, report.ok ? 200 : 409, { "x-cloudforge-trace-id": traceId });
   }
+  return undefined;
+}
 
+async function routeInternalSocialRequest(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  traceId: string,
+): Promise<Response | undefined> {
   if (request.method === "POST" && url.pathname === "/internal/social/events") {
     assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
     const tenant = resolveTenant(request, env);
@@ -165,7 +173,15 @@ async function routeInternalRequest(
     const result = await storeFacebookOAuthPages(env.DB, tenant, body.actor_id, body.pages, env.SOCIAL_CREDENTIAL_KEK);
     return jsonResponse({ committed: true, ...result });
   }
+  return undefined;
+}
 
+async function routeInternalDomainEventRequest(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  traceId: string,
+): Promise<Response | undefined> {
   if (request.method === "POST" && url.pathname === "/internal/events") {
     assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
     const event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
@@ -221,6 +237,21 @@ async function routeInternalRequest(
     );
   }
   return undefined;
+}
+
+async function routeInternalRequest(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  traceId: string,
+): Promise<Response | undefined> {
+  const maintenanceResponse = await routeInternalMaintenanceRequest(request, url, env, traceId);
+  if (maintenanceResponse) return maintenanceResponse;
+
+  const socialResponse = await routeInternalSocialRequest(request, url, env, traceId);
+  if (socialResponse) return socialResponse;
+
+  return routeInternalDomainEventRequest(request, url, env, traceId);
 }
 
 export default {
