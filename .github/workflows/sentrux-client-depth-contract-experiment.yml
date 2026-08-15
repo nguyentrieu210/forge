@@ -1,0 +1,83 @@
+name: Sentrux client depth contract experiment
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Capture baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+          sentrux --mcp </dev/null >/dev/null 2>&1 || true
+
+      - name: Expose adapter contract subpath and bypass barrel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          package_path = Path('client/packages/adapter-frappe/package.json')
+          package = json.loads(package_path.read_text())
+          package['exports']['./adapter'] = {
+              'types': './dist/adapter.d.ts',
+              'import': './dist/adapter.js',
+          }
+          package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n')
+
+          meta_path = Path('client/packages/views/src/container/meta-context.tsx')
+          text = meta_path.read_text()
+          old = 'import type { FrappeAdapter } from "@metaforge/adapter-frappe";'
+          new = 'import type { FrappeAdapter } from "@metaforge/adapter-frappe/adapter";'
+          if old not in text:
+              raise SystemExit('adapter barrel import not found')
+          meta_path.write_text(text.replace(old, new, 1))
+          PY
+          git diff --check
+          git diff -- client/packages/adapter-frappe/package.json client/packages/views/src/container/meta-context.tsx
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Client typecheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run client:typecheck
+
+      - name: Measure candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after.txt
+          BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "ADAPTER_CONTRACT_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          test "$AFTER" -gt "$BEFORE"
