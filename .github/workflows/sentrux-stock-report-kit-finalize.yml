@@ -1,180 +1,65 @@
-name: Sentrux runtime experience registry apply
+name: Sentrux critical views barrel map
 
 on:
   push:
     branches: [agent/sentrux-convergence-20260816]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply:
+  map:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: agent/sentrux-convergence-20260816
 
-      - name: Detect completed migration
-        id: state
-        shell: bash
-        run: |
-          if [[ -f client/apps/runtime/src/experience-registry.tsx ]]; then
-            echo 'done=true' >> "$GITHUB_OUTPUT"
-            echo 'runtime experience registry already applied; no-op'
-          else
-            echo 'done=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Install Sentrux
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
-          chmod +x /tmp/sentrux
-          sudo mv /tmp/sentrux /usr/local/bin/sentrux
-
-      - name: Capture baseline
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sentrux gate --save . | tee /tmp/before.txt
-          BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
-          test -n "$BEFORE"
-          echo "BEFORE=$BEFORE" >> "$GITHUB_ENV"
-          echo "Baseline Quality=$BEFORE"
-
-      - name: Apply runtime experience registry candidate
-        if: steps.state.outputs.done != 'true'
+      - name: Map exact root views imports on depth-16 surfaces
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
+          import re
           from pathlib import Path
 
-          main_path = Path('client/apps/runtime/src/main-base.tsx')
-          registry_path = Path('client/apps/runtime/src/experience-registry.tsx')
-          source = main_path.read_text(encoding='utf-8')
-
-          registry_lines = [
-              'import { lazy } from "react";',
-              '',
-              '/** Lazy runtime experiences kept behind one narrow app-level boundary. */',
-              'export const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));',
-              'export const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));',
-              'export const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));',
-              'export const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));',
-              'export const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));',
-              'export const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));',
-              'export const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));',
-              '',
+          roots = [
+              Path('client/apps/demo/src'),
+              Path('client/apps/hrm/src'),
+              Path('client/apps/kho-vn/src'),
+              Path('client/apps/runtime/src'),
           ]
-          registry_path.write_text('\n'.join(registry_lines), encoding='utf-8')
-
-          import_anchor = 'import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";\n'
-          registry_import = '\n'.join([
-              'import {',
-              '  ApprovalInbox,',
-              '  SocialCommerce,',
-              '  DailyDetailedLedger,',
-              '  AlumdoorOperationsCenter,',
-              '  AlumdoorAttendanceScanner,',
-              '  AlumdoorAttendanceOperations,',
-              '  AlumdoorMasterDataScreen,',
-              '} from "./experience-registry.js";',
-              '',
-          ])
-          if import_anchor not in source:
-              raise SystemExit('runtime import anchor missing')
-          source = source.replace(import_anchor, import_anchor + registry_import, 1)
-
-          lazy_lines = [
-              'const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));',
-              'const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));',
-              'const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));',
-              'const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));',
-              'const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));',
-              'const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));',
-              'const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));',
-              '',
-          ]
-          lazy_block = '\n'.join(lazy_lines)
-          if lazy_block not in source:
-              raise SystemExit('runtime lazy experience block missing')
-          source = source.replace(lazy_block, '', 1)
-          main_path.write_text(source, encoding='utf-8')
-
-          direct_imports = [
-              './experiences/ApprovalInbox.js',
-              './experiences/SocialCommerce.js',
-              './experiences/DailyDetailedLedger.js',
-              './experiences/AlumdoorOperationsCenter.js',
-              './experiences/AlumdoorAttendanceScanner.js',
-              './experiences/AlumdoorAttendanceOperations.js',
-              './experiences/AlumdoorMasterDataScreen.js',
-          ]
-          leaked = [item for item in direct_imports if item in source]
-          if leaked:
-              raise SystemExit(f'direct experience imports remain in main-base: {leaked}')
-          print('created', registry_path)
-          print('main-base direct local experience fan-out reduced by 7 and replaced by 1 registry edge')
+          pattern = re.compile(r'import\s+(.*?)\s+from\s+["\']@metaforge/views["\'];', re.S)
+          rows = []
+          symbols = set()
+          for root in roots:
+              for path in sorted(root.rglob('*')):
+                  if path.suffix not in {'.ts', '.tsx'}:
+                      continue
+                  text = path.read_text(encoding='utf-8')
+                  for match in pattern.finditer(text):
+                      clause = ' '.join(match.group(1).split())
+                      rows.append((str(path), clause))
+                      body = match.group(1).replace('type ', '')
+                      if '{' in body and '}' in body:
+                          for raw in body[body.index('{')+1:body.rindex('}')].split(','):
+                              name = raw.strip().split(' as ')[0].strip()
+                              if name:
+                                  symbols.add(name)
+          print('=== EXACT ROOT @metaforge/views IMPORTS ===')
+          for path, clause in rows:
+              print(f'{path}: {clause}')
+          print(f'ROOT_IMPORT_FILE_COUNT={len({p for p, _ in rows})}')
+          print('=== SYMBOL -> ROOT INDEX EXPORT LINE ===')
+          index_lines = Path('client/packages/views/src/index.ts').read_text(encoding='utf-8').splitlines()
+          for symbol in sorted(symbols):
+              hits = [f'{i+1}:{line.strip()}' for i, line in enumerate(index_lines) if re.search(rf'\b{re.escape(symbol)}\b', line)]
+              print(symbol + ' => ' + (' | '.join(hits) if hits else 'NO_ROOT_EXPORT_LINE'))
+          print('=== CURRENT PACKAGE SUBPATH EXPORTS ===')
+          pkg = Path('client/packages/views/package.json').read_text(encoding='utf-8')
+          for line in pkg.splitlines():
+              if re.match(r'\s+"\./[^\"]+":', line):
+                  print(line.strip())
           PY
-          git add client/apps/runtime/src/main-base.tsx client/apps/runtime/src/experience-registry.tsx
-          git diff --cached --check
-          git diff --cached --stat
-          git ls-files --error-unmatch client/apps/runtime/src/experience-registry.tsx
-
-      - name: Install root workspace
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
-          pnpm install --no-frozen-lockfile
-
-      - name: Typecheck runtime
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --filter runtime typecheck
-
-      - name: Sentrux regression gate
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sentrux gate . | tee /tmp/after.txt
-          AFTER=$(sed -nE 's/^Quality:[[:space:]]*[0-9]+[[:space:]]*->[[:space:]]*([0-9]+).*/\1/p' /tmp/after.txt | tail -1)
-          if [[ -z "$AFTER" ]]; then
-            AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
-          fi
-          test -n "$AFTER"
-          echo "Candidate Quality=$AFTER (baseline=$BEFORE)"
-          if (( AFTER < BEFORE )); then
-            echo "Sentrux regression: $BEFORE -> $AFTER" >&2
-            exit 1
-          fi
-
-      - name: Restore validation-only lockfile changes
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git checkout -- pnpm-lock.yaml client/pnpm-lock.yaml 2>/dev/null || true
-
-      - name: Commit validated split
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git diff --cached --check
-          git commit -m 'refactor(runtime): isolate lazy experience registry'
-          git push origin HEAD:agent/sentrux-convergence-20260816
