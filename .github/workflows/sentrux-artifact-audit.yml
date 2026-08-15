@@ -42,12 +42,12 @@ jobs:
           echo '=== ARTIFACT_SHAPED_PATHS ==='
           git ls-files | grep -E '(^|/)(dist|build|vendor|generated|out|coverage|storybook-static|fixtures?|snapshots?|reference|references)(/|$)' | head -n 400 || true
           echo '=== ARTIFACT_SHAPED_DIRECTORY_COUNTS ==='
-          git ls-files | python3 - <<'PY'
-          import sys, re, collections
+          python3 - <<'PY'
+          import collections, subprocess
           names = {'dist','build','vendor','generated','out','coverage','storybook-static','fixture','fixtures','snapshot','snapshots','reference','references'}
           counts = collections.Counter()
-          for raw in sys.stdin:
-              p = raw.strip()
+          files = subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          for p in files:
               parts = p.split('/')
               for i, part in enumerate(parts[:-1]):
                   if part in names:
