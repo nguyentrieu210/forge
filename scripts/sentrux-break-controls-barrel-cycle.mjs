@@ -21,3 +21,5 @@ for (const path of implementationPaths) {
   source = source.replaceAll('from "./index.js"', 'from "./contract.js"');
   await writeFile(path, source, "utf8");
 }
+
+// Validation trigger only; removed with the codemod after a successful gate.
