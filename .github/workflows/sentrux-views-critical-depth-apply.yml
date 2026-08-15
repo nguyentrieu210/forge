@@ -1,0 +1,100 @@
+name: Sentrux views critical depth apply
+
+on:
+  push:
+    branches:
+      - agent/sentrux-convergence-20260816
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-apply:
+    if: ${{ !contains(github.event.head_commit.message, '[skip sentrux-views-depth]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-convergence-20260816
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+          sentrux --version
+
+      - name: Capture baseline
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/sentrux-before.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/sentrux-before.txt | tail -1 | grep -Eo '[0-9]+')
+          test -n "$QUALITY"
+          echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
+
+      - name: Collapse both views critical branches
+        run: node scripts/sentrux-collapse-views-critical-depth.mjs
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Validate views action migration
+        run: pnpm --filter @metaforge/views run test:action-input-table
+
+      - name: Build views package
+        run: pnpm --filter @metaforge/views run build
+
+      - name: Typecheck runtime closure
+        run: pnpm --filter runtime run typecheck
+
+      - name: Build runtime production bundle
+        run: pnpm --filter runtime run build
+
+      - name: Sentrux regression gate
+        run: sentrux gate .
+
+      - name: Require depth and quality improvement
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/sentrux-after.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/sentrux-after.txt | tail -1 | grep -Eo '[0-9]+')
+          test -n "$QUALITY"
+          BEFORE='${{ steps.before.outputs.quality }}'
+          BEFORE_DEPTH=$(grep -Eo 'depth=[0-9]+' /tmp/sentrux-before.txt | tail -1 | grep -Eo '[0-9]+' || true)
+          AFTER_DEPTH=$(grep -Eo 'depth=[0-9]+' /tmp/sentrux-after.txt | tail -1 | grep -Eo '[0-9]+' || true)
+          echo "Quality: $BEFORE -> $QUALITY"
+          echo "Depth: ${BEFORE_DEPTH:-unknown} -> ${AFTER_DEPTH:-unknown}"
+          if [ "$QUALITY" -le "$BEFORE" ]; then
+            echo "Sentrux score did not increase"
+            exit 1
+          fi
+          if [ -n "$BEFORE_DEPTH" ] && [ -n "$AFTER_DEPTH" ] && [ "$AFTER_DEPTH" -ge "$BEFORE_DEPTH" ]; then
+            echo "Max dependency depth did not decrease"
+            exit 1
+          fi
+
+      - name: Commit validated collapse
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .sentrux
+          git rm scripts/sentrux-collapse-views-critical-depth.mjs
+          git rm .github/workflows/sentrux-views-critical-depth-apply.yml
+          git config user.name "sentrux-refactor-bot"
+          git config user.email "sentrux-refactor-bot@users.noreply.github.com"
+          git add -A client/packages/views client/apps/runtime/vite.config.ts client/apps/runtime/purchase-harness/main.tsx
+          git commit -m "refactor(views): collapse critical dependency depth [skip sentrux-views-depth]"
+          git push origin HEAD:agent/sentrux-convergence-20260816
