@@ -1,15 +1,15 @@
-name: Sentrux stock report kit finalize
+name: Sentrux post-kit max-depth trace
 
 on:
   push:
     branches: [agent/sentrux-convergence-20260816]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  finalize:
-    runs-on: ubuntu-latest
+  trace:
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -17,117 +17,70 @@ jobs:
           fetch-depth: 0
           ref: agent/sentrux-convergence-20260816
 
-      - name: Detect completed migration
-        id: state
+      - name: Install build dependencies
         shell: bash
         run: |
           set -euo pipefail
-          if ! grep -R 'from "@metaforge/views";' \
-            client/packages/stock-vn/src/TongHopDoiTuongScreen.tsx \
-            client/packages/stock-vn/src/SoChiTietScreen.tsx \
-            client/packages/stock-vn/src/XuatNhapTonScreen.tsx; then
-            echo 'done=true' >> "$GITHUB_OUTPUT"
-            echo 'stock report consumers already migrated; no-op'
-          else
-            echo 'done=false' >> "$GITHUB_OUTPUT"
-          fi
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxkbcommon-dev \
+            libssl-dev \
+            libvulkan-dev
 
-      - name: Install Sentrux
-        if: steps.state.outputs.done != 'true'
+      - name: Build instrumented Sentrux
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
-          chmod +x /tmp/sentrux
-          sudo mv /tmp/sentrux /usr/local/bin/sentrux
-
-      - name: Capture baseline
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sentrux gate --save . | tee /tmp/before.txt
-          BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
-          echo "BEFORE=$BEFORE" >> "$GITHUB_ENV"
-          echo "Baseline Quality=$BEFORE"
-
-      - name: Migrate stock report consumers
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
+          git clone --quiet https://github.com/sentrux/sentrux.git /tmp/sentrux-src
+          cd /tmp/sentrux-src
+          git checkout --quiet 6f8ff3c14b0423e4b58f42d1813d4d5f7fdc1d11
           python3 <<'PY'
           from pathlib import Path
-          for name in ('TongHopDoiTuongScreen.tsx','SoChiTietScreen.tsx','XuatNhapTonScreen.tsx'):
-              path = Path('client/packages/stock-vn/src') / name
-              raw = path.read_bytes()
-              old = b'from "@metaforge/views";'
-              new = b'from "@metaforge/views/stock-report-kit";'
-              if new in raw:
-                  print('already migrated', path)
-                  continue
-              if old not in raw:
-                  raise SystemExit(f'expected root views import missing in {path}')
-              path.write_bytes(raw.replace(old, new, 1))
-              print('migrate', path)
+          p = Path('sentrux-core/src/metrics/mod.rs')
+          s = p.read_text()
+          start = s.index('fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {')
+          end = s.index('\n// ── Pro metrics extension point', start)
+          code = '''fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {
+    if edges.is_empty() { return 0; }
+    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);
+    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());
+    let max_depth = seeds.iter().filter_map(|s| memo.get(s).copied()).max().unwrap_or(0);
+    eprintln!("SENTRUX_DEPTH_MAX={}", max_depth);
+    for seed in seeds.iter().filter(|s| memo.get(*s).copied() == Some(max_depth)) {
+        eprintln!("SENTRUX_DEPTH_MAX_SEED {}", seed);
+    }
+    let mut rows: Vec<(&str,&str,u32)> = Vec::new();
+    for (from,nexts) in &adj {
+        let Some(&d)=memo.get(from) else { continue; };
+        if d == 0 { continue; }
+        for to in nexts {
+            if memo.get(to).copied().map(|nd| nd.saturating_add(1)==d).unwrap_or(false) {
+                rows.push((*from,*to,d));
+            }
+        }
+    }
+    rows.sort_by(|a,b| b.2.cmp(&a.2).then_with(|| a.0.cmp(b.0)).then_with(|| a.1.cmp(b.1)));
+    for (from,to,d) in rows {
+        if d >= 8 {
+            eprintln!("SENTRUX_DEPTH_DAG remaining={} {} -> {}", d, from, to);
+        }
+    }
+    max_depth
+}'''
+          p.write_text(s[:start] + code + s[end:])
           PY
-          git diff --stat
+          cargo build --quiet --release -p sentrux --bin sentrux
+          cp target/release/sentrux /tmp/sentrux-trace
 
-      - name: Install package-only workspace
-        if: steps.state.outputs.done != 'true'
+      - name: Trace stable branch head
         shell: bash
         run: |
           set -euo pipefail
-          cd client
-          printf 'packages:\n  - "packages/*"\n' > pnpm-workspace.yaml
-          corepack enable
-          corepack prepare pnpm@9.15.0 --activate
-          pnpm install --no-frozen-lockfile
-
-      - name: Build views and stock-vn
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd client
-          pnpm --filter @metaforge/views build
-          pnpm --filter @metaforge/stock-vn build
-
-      - name: Restore validation-only workspace files
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git checkout -- client/pnpm-workspace.yaml client/pnpm-lock.yaml
-
-      - name: Sentrux regression and quality gate
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sentrux gate . | tee /tmp/after.txt
-          AFTER=$(sed -nE 's/^Quality:[[:space:]]*[0-9]+[[:space:]]*->[[:space:]]*([0-9]+).*/\1/p' /tmp/after.txt | tail -1)
-          if [[ -z "$AFTER" ]]; then
-            echo 'Unable to parse candidate quality from Sentrux gate output' >&2
-            exit 1
-          fi
-          echo "Candidate Quality=$AFTER (baseline=$BEFORE)"
-          if (( AFTER < BEFORE )); then
-            echo "Quality regression: $BEFORE -> $AFTER" >&2
-            exit 1
-          fi
-
-      - name: Commit migrated consumers
-        if: steps.state.outputs.done != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'sentrux-agent'
-          git config user.email 'sentrux-agent@users.noreply.github.com'
-          git add \
-            client/packages/stock-vn/src/TongHopDoiTuongScreen.tsx \
-            client/packages/stock-vn/src/SoChiTietScreen.tsx \
-            client/packages/stock-vn/src/XuatNhapTonScreen.tsx
-          git diff --cached --stat
-          git commit -m 'refactor(stock-vn): use narrow report dependency kit'
-          git push origin HEAD:agent/sentrux-convergence-20260816
+          /tmp/sentrux-trace gate --save "$GITHUB_WORKSPACE" 2>&1 | tee /tmp/trace.txt
+          echo '=== POST-KIT MAX DEPTH DAG ==='
+          grep 'SENTRUX_DEPTH_' /tmp/trace.txt
+          grep -E '^Quality:' /tmp/trace.txt || true
