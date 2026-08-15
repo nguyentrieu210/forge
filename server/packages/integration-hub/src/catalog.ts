@@ -61,7 +61,7 @@ const CAPABILITIES = new Set<ConnectorCapability>([
   "health_check", "cursor_sync",
 ]);
 
-export function validateConnectorManifest(manifest: ConnectorManifest): ConnectorManifest {
+function validateManifestIdentity(manifest: ConnectorManifest): void {
   if (manifest.schema_version !== 1) throw new Error("Unsupported connector manifest schema_version");
   if (!KEY_RE.test(manifest.connector_key)) throw new Error("Invalid connector_key");
   if (!VERSION_RE.test(manifest.version)) throw new Error("Invalid connector version");
@@ -71,14 +71,20 @@ export function validateConnectorManifest(manifest: ConnectorManifest): Connecto
   if (!Number.isSafeInteger(manifest.config_schema_version) || manifest.config_schema_version <= 0 || manifest.config_schema_version > 1_000_000) {
     throw new Error("Invalid config_schema_version");
   }
+}
 
+function validateManifestCapabilities(manifest: ConnectorManifest): void {
   assertUniqueBounded(manifest.auth_kinds, "auth_kinds", 4);
   if (manifest.auth_kinds.length === 0) throw new Error("Connector must declare at least one auth kind");
-  for (const authKind of manifest.auth_kinds) if (!AUTH_KINDS.has(authKind)) throw new Error("Invalid connector auth kind");
+  for (const authKind of manifest.auth_kinds) {
+    if (!AUTH_KINDS.has(authKind)) throw new Error("Invalid connector auth kind");
+  }
 
   assertUniqueBounded(manifest.capabilities, "capabilities", 16);
   if (manifest.capabilities.length === 0) throw new Error("Connector must declare at least one capability");
-  for (const capability of manifest.capabilities) if (!CAPABILITIES.has(capability)) throw new Error("Invalid connector capability");
+  for (const capability of manifest.capabilities) {
+    if (!CAPABILITIES.has(capability)) throw new Error("Invalid connector capability");
+  }
 
   if (manifest.capabilities.includes("oauth_flow") && !manifest.auth_kinds.includes("oauth2")) {
     throw new Error("oauth_flow capability requires oauth2 auth kind");
@@ -88,19 +94,30 @@ export function validateConnectorManifest(manifest: ConnectorManifest): Connecto
     && !manifest.capabilities.includes("pull_records")) {
     throw new Error("cursor_sync requires poll or pull_records capability");
   }
+}
 
-  if ((manifest.event_patterns?.length ?? 0) > 64) throw new Error("Too many connector event patterns");
+function validateEventPatterns(eventPatterns: readonly string[] | undefined): void {
+  if ((eventPatterns?.length ?? 0) > 64) throw new Error("Too many connector event patterns");
   const patterns = new Set<string>();
-  for (const pattern of manifest.event_patterns ?? []) {
+  for (const pattern of eventPatterns ?? []) {
     if (!isValidEventPattern(pattern)) throw new Error(`Invalid connector event pattern: ${pattern}`);
     if (patterns.has(pattern)) throw new Error(`Duplicate connector event pattern: ${pattern}`);
     patterns.add(pattern);
   }
+}
 
+function validateManifestMetadata(manifest: ConnectorManifest): void {
   if (manifest.description !== undefined && (!manifest.description.trim() || manifest.description.length > 2_000)) {
     throw new Error("Invalid connector description");
   }
   if (manifest.docs_url !== undefined) validateDocsUrl(manifest.docs_url);
+}
+
+export function validateConnectorManifest(manifest: ConnectorManifest): ConnectorManifest {
+  validateManifestIdentity(manifest);
+  validateManifestCapabilities(manifest);
+  validateEventPatterns(manifest.event_patterns);
+  validateManifestMetadata(manifest);
   return manifest;
 }
 
