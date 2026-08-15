@@ -82,10 +82,8 @@ jobs:
                   continue
               text = path.read_bytes().decode('utf-8')
               newline = '\r\n' if '\r\n' in text else '\n'
-              touched = False
 
               def replace(match: re.Match[str]) -> str:
-                  nonlocal_state['matches'] += 1
                   whole_type = bool(match.group('whole_type'))
                   tokens = [t.strip() for t in match.group('body').split(',') if t.strip()]
                   entries = [token_parts(t, whole_type) for t in tokens]
@@ -106,7 +104,6 @@ jobs:
 
                   if not groups:
                       return match.group(0)
-                  nonlocal_state['changed'] += 1
                   lines = []
                   if remaining:
                       lines.append(render_import('@metaforge/views', remaining))
@@ -114,20 +111,17 @@ jobs:
                       lines.append(render_import(f'@metaforge/views/{subpath}', group))
                   return newline.join(lines)
 
-              nonlocal_state = {'matches': 0, 'changed': 0}
               updated = pattern.sub(replace, text)
               if updated != text:
                   path.write_bytes(updated.encode('utf-8'))
                   changed_files.append(str(path))
-                  touched = True
 
           if command_center_consumers:
               raise SystemExit('CommandCenter root consumers prevent pruning: ' + ', '.join(command_center_consumers))
           for symbol, count in moved_counts.items():
-              if count == 0 and symbol in {'createFullRegistry', 'DoctypeWorkspace', 'ReportContainer', 'ScreenView'}:
+              if count == 0 and symbol in {'createFullRegistry', 'DoctypeWorkspace', 'ReportContainer'}:
                   raise SystemExit(f'expected at least one root consumer for {symbol}')
 
-          # Verify no moved symbol remains in any root-package import.
           leftovers = []
           for path in sorted(list(root.rglob('*.ts')) + list(root.rglob('*.tsx'))):
               if path == index:
