@@ -1,6 +1,14 @@
 /**
  * groupLayout — dựng cấu trúc Tab → Section → Column từ danh sách field phẳng.
  * Mirror Frappe form: Tab Break / Section Break / Column Break là ranh giới bố cục.
+ *
+ * Khi DocType KHÔNG khai Tab Break, runtime tự tổ chức form đủ lớn thành 2 tầng dễ đọc:
+ *  - Thông tin chính: field bắt buộc, field có thể trở thành bắt buộc, `surface=quick`,
+ *    dependency cần để điều khiển các field chính, hoặc metadata ép `form_tab=primary`.
+ *  - Nâng cao: phần còn lại, trừ metadata ép `form_tab=advanced`.
+ *
+ * DocType đã khai Tab Break thì metadata thắng tuyệt đối — không tự xáo lại bố cục tác giả đã thiết kế.
+ * Form nhỏ vẫn giữ một màn; tách tab chỉ để giảm tải nhận thức, không phải để sinh điều hướng cho đủ.
  *  - KHÔNG sinh tab/section rỗng ở đầu (chỉ tạo default khi field hiển thị đầu KHÔNG phải Tab Break).
  *  - Tôn trọng depends_on của Tab Break & Section Break (break ẩn ⇒ tab/section ẩn).
  */
@@ -22,6 +30,11 @@ export interface FormTab {
 }
 
 const LAYOUT_HOLD = new Set(["Heading", "HTML"]); // layout mang nội dung, vẫn hiện
+const AUTO_PRIMARY_LABEL = "Thông tin chính";
+const AUTO_ADVANCED_LABEL = "Nâng cao";
+/** Tránh biến master 2–4 ô thành một form có tab vô ích. */
+const AUTO_TAB_MIN_DATA_FIELDS = 6;
+const AUTO_TAB_MIN_ADVANCED_FIELDS = 2;
 
 /** Tối đa 2 cột. Frappe cho tới 4 cột/section, nhưng trên màn ERP thực tế (sidebar + cột ngữ cảnh
  * bên phải) 3–4 cột làm mỗi ô hẹp lại còn ~150px — vừa khó đọc vừa cắt cụt giá trị. 2 cột là mức
@@ -63,7 +76,128 @@ interface RawTab {
   items: ResolvedField[];
 }
 
+/** Lấy field được tham chiếu trong expression kiểu `eval:doc.company` hoặc shorthand `company`. */
+function fieldsInExpression(expr: string | undefined): string[] {
+  if (!expr) return [];
+  if (expr.startsWith("eval:")) {
+    return [...expr.matchAll(/\bdoc\.([a-zA-Z_][a-zA-Z0-9_]*)/g)].map((match) => match[1]!);
+  }
+  const bare = expr.trim();
+  return bare && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(bare) ? [bare] : [];
+}
+
+/**
+ * Quyết định field thuộc tầng chính dựa trên SCHEMA tĩnh, không dùng `rf.required` động.
+ * Dùng required động sẽ làm field nhảy qua lại giữa hai tab khi mandatory_depends_on đổi giá trị.
+ */
+function isPrimaryField(field: DocField): boolean {
+  if (field.reqd === 1 || Boolean(field.mandatory_depends_on)) return true;
+  if (field.form_tab === "primary") return true;
+  if (field.form_tab === "advanced") return false;
+  return field.surface === "quick";
+}
+
+/**
+ * Field điều khiển một field chính cũng phải ở tab chính. Nếu không người dùng phải vào Nâng cao
+ * để bật một checkbox/select rồi quay lại tab đầu mới thấy field bắt buộc vừa xuất hiện.
+ */
+function collectPrimaryFieldNames(items: ResolvedField[]): Set<string> {
+  const data = items.filter((item) => !item.layout);
+  const byName = new Map(data.map((item) => [item.field.fieldname, item.field] as const));
+  const primary = new Set(data.filter((item) => isPrimaryField(item.field)).map((item) => item.field.fieldname));
+
+  for (let pass = 0; pass < 6; pass++) {
+    let changed = false;
+    for (const fieldname of [...primary]) {
+      const field = byName.get(fieldname);
+      if (!field) continue;
+      const dependencies = [
+        ...fieldsInExpression(field.depends_on),
+        ...fieldsInExpression(field.mandatory_depends_on),
+        ...fieldsInExpression(field.read_only_depends_on),
+      ];
+      if (field.fieldtype === "Dynamic Link" && typeof field.options === "string") dependencies.push(field.options);
+      if (typeof field.link_filters === "string") dependencies.push(...fieldsInExpression(field.link_filters));
+      for (const dependency of dependencies) {
+        if (byName.has(dependency) && !primary.has(dependency)) {
+          primary.add(dependency);
+          changed = true;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+  return primary;
+}
+
+/**
+ * Heading/HTML không có value nên không tự biết thuộc tab nào. Gắn nó theo field dữ liệu kế tiếp
+ * trong cùng section; nếu không có thì theo field trước. Nhờ vậy tiêu đề "Bảo hiểm" đi cùng nhóm
+ * BHXH thay vì bị bỏ hoặc nằm sai tab.
+ */
+function splitSectionFields(fields: ResolvedField[], primaryNames: Set<string>): { primary: ResolvedField[]; advanced: ResolvedField[] } {
+  const bucketOf = (index: number): "primary" | "advanced" => {
+    const current = fields[index]!;
+    if (!current.layout) return primaryNames.has(current.field.fieldname) ? "primary" : "advanced";
+    for (let next = index + 1; next < fields.length; next++) {
+      const candidate = fields[next]!;
+      if (!candidate.layout) return primaryNames.has(candidate.field.fieldname) ? "primary" : "advanced";
+    }
+    for (let prev = index - 1; prev >= 0; prev--) {
+      const candidate = fields[prev]!;
+      if (!candidate.layout) return primaryNames.has(candidate.field.fieldname) ? "primary" : "advanced";
+    }
+    return "advanced";
+  };
+
+  const primary: ResolvedField[] = [];
+  const advanced: ResolvedField[] = [];
+  fields.forEach((field, index) => (bucketOf(index) === "primary" ? primary : advanced).push(field));
+  return { primary, advanced };
+}
+
+function splitSections(sections: FormSection[], primaryNames: Set<string>): { primary: FormSection[]; advanced: FormSection[] } {
+  const primary: FormSection[] = [];
+  const advanced: FormSection[] = [];
+  for (const section of sections) {
+    if (section.hidden) continue;
+    const fields = section.columns.flatMap((column) => column.fields);
+    const split = splitSectionFields(fields, primaryNames);
+    if (split.primary.length) primary.push({ ...section, hidden: false, columns: layoutColumns([{ fields: split.primary }]) });
+    if (split.advanced.length) advanced.push({ ...section, hidden: false, columns: layoutColumns([{ fields: split.advanced }]) });
+  }
+  return { primary, advanced };
+}
+
+/**
+ * Auto-layout chỉ chạy khi schema KHÔNG có Tab Break. Nếu cả hai nhóm đều có đủ nội dung thì sinh
+ * đúng hai tab. Form nhỏ, toàn optional hoặc gần như toàn required giữ nguyên một tab để không tạo
+ * thêm thao tác chuyển tab mà không giảm được độ phức tạp.
+ */
+function autoOrganizeUntabbed(items: ResolvedField[]): FormTab[] | null {
+  const sections = buildSections(items);
+  const primaryNames = collectPrimaryFieldNames(items);
+  if (!primaryNames.size) return null;
+
+  const split = splitSections(sections, primaryNames);
+  const primaryCount = split.primary.reduce((count, section) => count + section.columns.reduce((sum, column) => sum + column.fields.filter((item) => !item.layout).length, 0), 0);
+  const advancedCount = split.advanced.reduce((count, section) => count + section.columns.reduce((sum, column) => sum + column.fields.filter((item) => !item.layout).length, 0), 0);
+  const dataCount = primaryCount + advancedCount;
+  if (!primaryCount || advancedCount < AUTO_TAB_MIN_ADVANCED_FIELDS || dataCount < AUTO_TAB_MIN_DATA_FIELDS) return null;
+
+  return [
+    { label: AUTO_PRIMARY_LABEL, sections: split.primary },
+    { label: AUTO_ADVANCED_LABEL, sections: split.advanced },
+  ];
+}
+
 export function groupLayout(resolved: ResolvedField[]): FormTab[] {
+  const hasExplicitTabs = resolved.some((rf) => rf.field.fieldtype === "Tab Break");
+  if (!hasExplicitTabs) {
+    const organized = autoOrganizeUntabbed(resolved);
+    if (organized) return organized;
+  }
+
   // 1) tách theo Tab Break — đoạn TRƯỚC Tab Break đầu = tab ngầm (chỉ giữ nếu có nội dung).
   const rawTabs: RawTab[] = [];
   let cur: RawTab = { label: "", visible: true, items: [] };
@@ -122,18 +256,6 @@ function buildSections(items: ResolvedField[]): FormSection[] {
   });
 }
 
-/**
- * Chuẩn hoá số cột của 1 section về tối đa `MAX_COLUMNS`.
- *
- * Hai việc:
- *  a) Gộp cột thừa: doctype khai 3–4 cột ⇒ dồn về 2, giữ nguyên thứ tự field.
- *  b) TỰ TÁCH 2 cột khi section chỉ có 1 cột mà nhiều field. Đây là trường hợp hay gặp nhất sau khi
- *     lọc field bằng Form Profile: Column Break nằm giữa các field bị ẩn sẽ bị dọn đi, section sụp
- *     còn 1 cột và form biến thành một dải dọc dài lê thê toàn ô kéo hết bề ngang.
- *
- * Field full-width (bảng con, ô soạn thảo) KHÔNG tính vào việc chia cột — chúng được render tràn
- * hàng ở FormView, nên nếu section chỉ toàn loại này thì giữ nguyên 1 cột.
- */
 /**
  * GỘP mọi cột của section thành MỘT danh sách phẳng.
  *
