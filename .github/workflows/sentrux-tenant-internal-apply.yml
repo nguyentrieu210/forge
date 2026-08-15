@@ -1,22 +1,19 @@
 name: Sentrux workspace vertical boundary apply
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   apply:
-    if: startsWith(github.head_ref, 'agent/sentrux-') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Detect workspace vertical boundary
         id: detect
@@ -29,78 +26,7 @@ jobs:
             echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install Sentrux
+      - name: Report disabled apply state
         if: steps.detect.outputs.needed == 'true'
         run: |
-          set -euo pipefail
-          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
-          chmod +x /tmp/sentrux
-          sudo mv /tmp/sentrux /usr/local/bin/sentrux
-
-      - name: Baseline score
-        if: steps.detect.outputs.needed == 'true'
-        id: before
-        run: |
-          set -euo pipefail
-          sentrux gate --save . | tee /tmp/before.txt
-          Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
-          echo "quality=$Q" >> "$GITHUB_OUTPUT"
-
-      - name: Extract vertical boundary
-        if: steps.detect.outputs.needed == 'true'
-        run: |
-          set -euo pipefail
-          python3 .github/sentrux-tenant-wrapper-transform
-          grep -q 'AlumdoorWorkspaceBoundary.js' client/packages/views/src/app/DoctypeWorkspace.tsx
-          test -f client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx
-          git diff --check
-          git diff --stat -- client/packages/views/src/app/DoctypeWorkspace.tsx client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx
-
-      - name: Install dependencies
-        if: steps.detect.outputs.needed == 'true'
-        run: |
-          set -euo pipefail
-          corepack enable
-          pnpm install --frozen-lockfile
-
-      - name: Client typecheck
-        if: steps.detect.outputs.needed == 'true'
-        run: pnpm run client:typecheck
-
-      - name: Require no Sentrux regression and remove workspace god-file
-        if: steps.detect.outputs.needed == 'true'
-        env:
-          BEFORE: ${{ steps.before.outputs.quality }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          sentrux gate --save . | tee /tmp/after.txt
-          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
-          mkdir -p .sentrux
-          cat > .sentrux/rules.toml <<'EOF'
-          [constraints]
-          max_cycles = 0
-          no_god_files = true
-          max_cc = 25
-          EOF
-          set +e
-          sentrux check . 2>&1 | tee /tmp/structure.txt
-          set -e
-          rm -rf .sentrux
-          echo "WORKSPACE_VERTICAL_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
-          test "$AFTER" -ge "$BEFORE"
-          if grep -q 'client/packages/views/src/app/DoctypeWorkspace.tsx (fan-out=' /tmp/structure.txt; then exit 1; fi
-          if grep -q 'client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx (fan-out=' /tmp/structure.txt; then exit 1; fi
-          if grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt; then exit 1; fi
-
-      - name: Commit validated source improvement
-        if: steps.detect.outputs.needed == 'true'
-        run: |
-          set -euo pipefail
-          git config user.name 'sentrux-refactor-bot'
-          git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
-          git add -- client/packages/views/src/app/DoctypeWorkspace.tsx client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx
-          git diff --cached --check
-          git diff --cached --stat
-          git commit --no-verify -m 'refactor(views): extract AlumDoor workspace boundary [skip sentrux]'
-          git push origin HEAD:${{ github.head_ref }}
+          echo 'Automatic workspace-boundary mutation is disabled. Use a reviewed source commit instead.'
