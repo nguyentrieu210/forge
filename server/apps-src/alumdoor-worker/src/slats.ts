@@ -12,8 +12,11 @@
  *    đều cộng ra 42 (1+41 · 38+4 · và ví dụ gốc 42). Chọn theo đặc tả vì nó nói hai lần có
  *    bóc tách chi tiết. Đọc theo cấu tạo cũng hợp: `−1` ở các mã khác là vì LÁ ĐẦU chiếm chỗ
  *    một lá ruột, còn AL70 đếm TỔNG số lá của bộ nên không có gì để trừ.
- * 2. AL71N chia 0,057 — theo cột CÔNG THỨC, không theo cột BẢN LÁ (0,055). Cột công thức là
- *    thứ kế toán thực sự tính, và 0,057 khớp AL501N cùng đời N.
+ * 2. AL71N chia 0,055 — theo cột BẢN LÁ. **ĐẢO LẠI quyết định cũ (0,057) ngày 2026-08-15.**
+ *    Lý do cũ là "cột công thức mới là thứ kế toán thực sự tính". Đem chính sổ kế toán ra tra
+ *    thì nó bác lại: dòng `TP LÁ RUỘT AL71N VK — AL71 9 LÁ RUỘT` ghi cao 0,495 m, tức
+ *    0,495 / 9 = 0,055. Sổ nhật ký là tiền đã thu, thắng mọi bảng tra.
+ *    Sai số không nhỏ: cửa CPB 3 m ra 50 lá với 0,057 và 52 lá với 0,055 — lệch 2 lá mỗi bộ.
  * 3. AL71 (cả hai đời) không trừ 1 — theo đúng PDF.
  * 4. Làm tròn: tính xong rồi làm tròn về số nguyên gần nhất. Suy ra từ chính ba ví dụ của
  *    xưởng: 52,18→51 · "52,6 thì là 52" · "<52,5 thì là 51". Trừ 1 trước rồi làm tròn thường
@@ -31,7 +34,7 @@ export interface SlatProfile {
 export const HEAD_ALLOWANCE_M = 0.13;
 
 export const SLAT_PROFILES: Record<string, SlatProfile> = {
-  "AL71N": { divisor: 0.057, subtractOne: false },
+  "AL71N": { divisor: 0.055, subtractOne: false },
   "AL71 (CŨ)": { divisor: 0.055, subtractOne: false },
   "AL70 (2 LỚP)": { divisor: 0.068, subtractOne: false },
   "AL70 (1 LỚP)": { divisor: 0.068, subtractOne: false },

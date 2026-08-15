@@ -1,0 +1,5230 @@
+{
+  "generated_at": "2026-08-15T07:08:02.401Z",
+  "migration_source": "alumdoor-bom-2026-08-15",
+  "tenant": "demo",
+  "company": "ALUMDOOR",
+  "nguon": {
+    "file": "apps/alumdoor/docs/nguon/ms-lien/ĐM.md",
+    "dong_doc": 2115
+  },
+  "imported_doctypes": [
+    "Item (bổ sung)",
+    "Bill of Materials"
+  ],
+  "item_group_bo_sung": {
+    "so_nhom": 3,
+    "danh_sach": [
+      "Phụ kiện chung",
+      "Linh kiện motor",
+      "Điều khiển & phụ kiện điện"
+    ],
+    "file": "server\\imports\\alumdoor-item-group-bosung-2026-08-15.sql",
+    "ghi_chu": "Lỗ hổng có sẵn: 90 Item của bản 11/08 đã trỏ tới các nhóm này mà chưa file nào tạo."
+  },
+  "item_bo_sung": {
+    "so_ma": 287,
+    "file": "server\\imports\\alumdoor-item-bosung-2026-08-15.sql",
+    "ghi_chu": "item_group / stock_uom / material_stage đều SUY RA từ tên + ĐVT của sheet ĐM. Nhập NHÁP, cần xưởng xác nhận.",
+    "theo_nhom": {
+      "Cửa CN Đức": 37,
+      "Phụ kiện CN Đức": 62,
+      "Ray và trục": 13,
+      "Phụ kiện chung": 92,
+      "Linh kiện motor": 21,
+      "Motor": 2,
+      "Điều khiển & phụ kiện điện": 4,
+      "Cửa Đài Loan": 3,
+      "Cửa tấm liền Úc": 32,
+      "Cửa Lưới": 21
+    },
+    "theo_stock_uom": {
+      "Cặp": 2,
+      "Cái": 68,
+      "Con": 4,
+      "Mét": 29,
+      "m2": 149,
+      "Kg": 23,
+      "Bộ": 12
+    },
+    "danh_sach": [
+      {
+        "ma": "TP-CON-LAN",
+        "ma_goc": "TP-CON LĂN",
+        "ten": "CON LĂN",
+        "nhom": "Cửa CN Đức",
+        "uom": "Cặp",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-CNHUA",
+        "ma_goc": "NVL-CNHUA",
+        "ten": "CỤC NHỰA",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BATFE",
+        "ma_goc": "NVL-BATFE",
+        "ten": "BÁT SẮT",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BULON12.12",
+        "ma_goc": "NVL-BULON12.12",
+        "ten": "BÙ LON 12x12",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Con",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-CONTAN12",
+        "ma_goc": "NVL-CONTAN12",
+        "ten": "CON TÁN 12",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Con",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BACDAN",
+        "ma_goc": "NVL-BACDAN",
+        "ten": "BẠC ĐẠN",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "PHUTHU_SONRAY_MSK",
+        "ma_goc": "PHUTHU_SONRAY_MSK",
+        "ten": "PHỤ THU SƠN RAY MSK",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TD-AL595-GS",
+        "ma_goc": "TD-AL595 GS",
+        "ten": "ĐỨC AL595 - GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-LD-3LD",
+        "ma_goc": "NVL-LD-3LD",
+        "ten": "Lá đầu (kg) + Bộ 03 lá đáy (kg)",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-AL595-GS",
+        "ma_goc": "NVL-AL595-GS",
+        "ten": "Lá ruột (kg) AL595 GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO1VIS-503N-71-595",
+        "ma_goc": "NVL-BO1VIS-503N-71-595",
+        "ten": "BỌ 1VIS 503N-71-595",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-VIS",
+        "ma_goc": "NVL-VIS",
+        "ten": "Vis",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-PHOTLONG4X5",
+        "ma_goc": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-PULY-DEN",
+        "ma_goc": "NVL-PULY-DEN",
+        "ten": "Puly đen cuộn cửa",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-BO3LADAY",
+        "ma_goc": "TP-BO3LADAY",
+        "ten": "BỘ BA LÁ ĐÁY",
+        "nhom": "Phụ kiện chung",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "RONNHUA_INOX",
+        "ma_goc": "RONNHUA_INOX",
+        "ten": "RON NHỰA + INOX",
+        "nhom": "Phụ kiện chung",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-PHOTLONG12-5X5X120M",
+        "ma_goc": "NVL-PHOTLONG12,5X5X120M",
+        "ten": "RON LÔNG CẠNH RAY",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-TD-AL595-VK",
+        "ma_goc": "TP-TD-AL595 VK",
+        "ten": "ĐỨC AL595 - VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-AL595-VK",
+        "ma_goc": "NVL-AL595-VK",
+        "ten": "Lá ruột (kg) AL595 VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL595-THO",
+        "ma_goc": "TP-TD-AL595 THÔ",
+        "ten": "ĐỨC AL595 - MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL_TDAL595THO",
+        "ma_goc": "NVL_TDAL595THO",
+        "ten": "Lá ruột (kg) AL595 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL70-THO",
+        "ma_goc": "TP-TD-AL70 THÔ",
+        "ten": "ĐỨC AL70 (2 LỚP) - MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-LD-3LD-MSK",
+        "ma_goc": "NVL-LD-3LD-MSK",
+        "ten": "Lá đầu (kg) + Bộ 03 lá đáy (kg)",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TDAL70THO",
+        "ma_goc": "NVL-TDAL70THO",
+        "ten": "Lá ruột (kg) AL70 (2 LỚP) MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO1VIS-AL70",
+        "ma_goc": "NVL-BO1VIS AL70",
+        "ten": "BỌ 1VIS AL70",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL70-GS",
+        "ma_goc": "TP-TD-AL70 GS",
+        "ten": "ĐỨC AL70 (2 LỚP) - GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TDAL70GS",
+        "ma_goc": "NVL-TDAL70GS",
+        "ten": "Lá ruột (kg) AL70 (2 LỚP) GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL70-VK",
+        "ma_goc": "TP-TD-AL70 VK",
+        "ten": "ĐỨC AL70 (2 LỚP) - VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TDAL70VK",
+        "ma_goc": "NVL-TDAL70VK",
+        "ten": "Lá ruột (kg) AL70 (1 LỚP) VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO1VIS-AL70_2LOP",
+        "ma_goc": "NVL-BO1VIS AL70_2LOP",
+        "ten": "BỌ 1VIS AL70_2LOP",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-AL70-1LOP-THO",
+        "ma_goc": "TP-AL70-1LOP THÔ",
+        "ten": "ĐỨC AL70 (1 LỚP) - MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-AL701LOPTHO",
+        "ma_goc": "NVL-AL701LOPTHO",
+        "ten": "Lá ruột (kg) AL70 (1 LỚP) MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO1VIS-AL70_1LOP",
+        "ma_goc": "NVL-BO1VIS AL70_1LOP",
+        "ten": "BỌ 1VIS AL70_1LOP",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL71N-THO",
+        "ma_goc": "TP-TD-AL71N THÔ",
+        "ten": "ĐỨC AL71N - MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL71NTHO",
+        "ma_goc": "NVL-TD-AL71NTHO",
+        "ten": "Lá ruột (kg) AL71N MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO1VIS-AL71",
+        "ma_goc": "NVL-BO1VIS AL71",
+        "ten": "BỌ 1VIS AL71",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL71N-GS",
+        "ma_goc": "TP-TD-AL71N GS",
+        "ten": "ĐỨC AL71N - GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL71N-GS",
+        "ma_goc": "NVL-TD-AL71N GS",
+        "ten": "Lá ruột (kg) AL71N GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL71N-VK",
+        "ma_goc": "TP-TD-AL71N VK",
+        "ten": "ĐỨC AL71N - VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL71N-VK",
+        "ma_goc": "NVL-TD-AL71N VK",
+        "ten": "Lá ruột (kg) AL71N VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL503N26-VK",
+        "ma_goc": "TP-TD-AL503N26 VK",
+        "ten": "ĐỨC AL503N - VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL503N26-VK",
+        "ma_goc": "NVL-TD-AL503N26 VK",
+        "ten": "Lá ruột (kg) AL503N VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL503N26-GS",
+        "ma_goc": "TP-TD-AL503N26 GS",
+        "ten": "ĐỨC AL503N - GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL503N26-GS",
+        "ma_goc": "NVL-TD-AL503N26 GS",
+        "ten": "Lá ruột (kg) AL503N GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL503N26-THO",
+        "ma_goc": "TP-TD-AL503N26 THO",
+        "ten": "ĐỨC AL503N - MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL503N26THO",
+        "ma_goc": "NVL-TD-AL503N26THO",
+        "ten": "Lá ruột (kg) AL503N MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALD-548N-GS",
+        "ma_goc": "TP-ALD-548N GS",
+        "ten": "ĐỨC AL548N - MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL548N-GS",
+        "ma_goc": "NVL-TD-AL548N GS",
+        "ten": "Lá ruột (kg) AL548N GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO2VIS-AL50-VIP50-AL548-ST500",
+        "ma_goc": "NVL-BO2VIS-AL50-VIP50-AL548-ST500",
+        "ten": "BỌ 2VIS AL50-VIP50-AL548-ST500",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TD-AL548NTHO",
+        "ma_goc": "NVL-TD-AL548NTHO",
+        "ten": "Lá ruột (kg) AL548N MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALD-548N-VK",
+        "ma_goc": "TP-ALD-548N VK",
+        "ten": "ĐỨC AL548N - VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL548N-VK",
+        "ma_goc": "NVL-TD-AL548N VK",
+        "ten": "Lá ruột (kg) AL548N VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL501N-VK",
+        "ma_goc": "TP-TD-AL501N VK",
+        "ten": "ĐỨC AL501N- VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL501N-VK",
+        "ma_goc": "NVL-TD-AL501N VK",
+        "ten": "Lá ruột (kg) AL501N VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO2VIS-501-552",
+        "ma_goc": "NVL-BO2VIS-501-552",
+        "ten": "BỌ 2VIS 501-552",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL501N-GS",
+        "ma_goc": "TP-TD-AL501N GS",
+        "ten": "ĐỨC AL501N- GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL501N-GS",
+        "ma_goc": "NVL-TD-AL501N GS",
+        "ten": "Lá ruột (kg) AL501N GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL501NTHO",
+        "ma_goc": "TP-TD-AL501NTHO",
+        "ten": "ĐỨC AL501N- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TD-AL501N-MSK",
+        "ma_goc": "NVL-TD-AL501N MSK",
+        "ten": "Lá ruột (kg) AL501N MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALD-DL552-VK",
+        "ma_goc": "TP-ALD-DL552 VK",
+        "ten": "ĐỨC AL552N- VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL552-VK",
+        "ma_goc": "NVL-ALD-DL552 VK",
+        "ten": "Lá ruột (kg) AL552 VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALD-DL552-THO",
+        "ma_goc": "TP-ALD-DL552 THO",
+        "ten": "ĐỨC AL552N- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL552THO",
+        "ma_goc": "NVL-ALD-DL552THO",
+        "ten": "Lá ruột (kg) AL552 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALD-DL552-GS",
+        "ma_goc": "TP-ALD-DL552 GS",
+        "ten": "ĐỨC AL552N- GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL552-GS",
+        "ma_goc": "NVL-ALD-DL552 GS",
+        "ten": "Lá ruột (kg) AL552 GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL752N-GS",
+        "ma_goc": "TP-TD-AL752N GS",
+        "ten": "ĐỨC AL752N- GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL752-GS",
+        "ma_goc": "NVL-ALD-DL752 GS",
+        "ten": "Lá ruột (kg) AL752 GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO2VIS-752-VIPST700",
+        "ma_goc": "NVL-BO2VIS-752-VIPST700",
+        "ten": "BỌ 2VIS 752-VIPST700",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL752N-VK",
+        "ma_goc": "TP-TD-AL752N VK",
+        "ten": "ĐỨC AL752N- VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL752-VK",
+        "ma_goc": "NVL-ALD-DL752 VK",
+        "ten": "Lá ruột (kg) AL752 VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL752N-THO",
+        "ma_goc": "TP-TD-AL752N THO",
+        "ten": "ĐỨC AL752N- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL752THO",
+        "ma_goc": "NVL-ALD-DL752THO",
+        "ten": "Lá ruột (kg) AL752 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL652N-THO",
+        "ma_goc": "TP-TD-AL652N THO",
+        "ten": "ĐỨC AL652- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL652THO",
+        "ma_goc": "NVL-ALD-DL652THO",
+        "ten": "Lá ruột (kg) AL652 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO2VIS-548C-501C-AL652",
+        "ma_goc": "NVL-BO2VIS-548C-501C-AL652",
+        "ten": "BỌ 2VIS 548C-501C-AL652",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-PHOTLONG5X6",
+        "ma_goc": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL652-GS",
+        "ma_goc": "TP-TD-AL652 GS",
+        "ten": "ĐỨC AL652- GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL652GS",
+        "ma_goc": "NVL-ALD-DL652GS",
+        "ten": "Lá ruột (kg) AL652 GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL652-VK",
+        "ma_goc": "TP-TD-AL652 VK",
+        "ten": "ĐỨC AL652- VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL652VK",
+        "ma_goc": "NVL-ALD-DL652VK",
+        "ten": "Lá ruột (kg) AL652 VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL50-THO",
+        "ma_goc": "TP-TD-AL50 THO",
+        "ten": "ĐỨC AL50- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL50THO",
+        "ma_goc": "NVL-ALD-DL50THO",
+        "ten": "Lá ruột (kg) AL50 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL50-GS",
+        "ma_goc": "TP-TD-AL50 GS",
+        "ten": "ĐỨC AL50- GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL50GS",
+        "ma_goc": "NVL-ALD-DL50GS",
+        "ten": "Lá ruột (kg) AL50 GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TD-AL50-VK",
+        "ma_goc": "TP-TD-AL50 VK",
+        "ten": "ĐỨC AL50- VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-ALD-DL50VK",
+        "ma_goc": "NVL-ALD-DL50VK",
+        "ten": "Lá ruột (kg) AL652 VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALVIP50-GS",
+        "ma_goc": "TP-ALVIP50 GS",
+        "ten": "ĐỨC AL-VIP50- GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-VIP50GS",
+        "ma_goc": "NVL-VIP50GS",
+        "ten": "Lá ruột (kg) ALVIP50 GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALVIP50-THO",
+        "ma_goc": "TP-ALVIP50 THO",
+        "ten": "ĐỨC AL-VIP50- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-VIP50THO",
+        "ma_goc": "NVL-VIP50THO",
+        "ten": "Lá ruột (kg) ALVIP50 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALVIPST500-THO",
+        "ma_goc": "TP-ALVIPST500 THO",
+        "ten": "ĐỨC AL-VIPST500- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-VIPST500THO",
+        "ma_goc": "NVL-VIPST500THO",
+        "ten": "Lá ruột (kg) ALVIPST500 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALVIPST700-THO",
+        "ma_goc": "TP-ALVIPST700 THO",
+        "ten": "ĐỨC AL-VIPST700- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-VIPST700THO",
+        "ma_goc": "NVL-VIPST700THO",
+        "ten": "Lá ruột (kg) ALVIPST700 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO1VIS-AL75",
+        "ma_goc": "NVL-BO1VIS AL75",
+        "ten": "BỌ 1VIS AL75",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BO1VIS-AL503C",
+        "ma_goc": "NVL-BO1VIS-AL503C",
+        "ten": "BỌ 1VIS-AL503C",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-AL75-THO",
+        "ma_goc": "TP-AL75 THO",
+        "ten": "ĐỨC AL75- MSK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-AL75THO",
+        "ma_goc": "NVL-AL75THO",
+        "ten": "Lá ruột (kg) AL75 MSK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-AL75-VK",
+        "ma_goc": "TP-AL75 VK",
+        "ten": "ĐỨC AL75- VK",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-AL75VK",
+        "ma_goc": "NVL-AL75VK",
+        "ten": "Lá ruột (kg) AL75 VK",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-AL75-GS",
+        "ma_goc": "TP-AL75 GS",
+        "ten": "ĐỨC AL75- GS",
+        "nhom": "Cửa CN Đức",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-AL75-GS",
+        "ma_goc": "NVL-AL75 GS",
+        "ten": "Lá ruột (kg) AL75 GS",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-TANKER-THAN400KG",
+        "ma_goc": "TP-Tanker-Than400kg",
+        "ten": "TANKER_Thân 400KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-TANKER_PATCD",
+        "ma_goc": "TP-TANKER_PATCD",
+        "ten": "TANKER_Phimamtuongcoday",
+        "nhom": "Linh kiện motor",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TRU-TP_KHONGLAC_TANKER-ALUMAX",
+        "ma_goc": "TRU-TP_KHONGLAC_TANKER-ALUMAX",
+        "ten": "TANKER_ALUMAX KHÔNG LẮC 33",
+        "nhom": "Linh kiện motor",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TRU-TP_KHONGBDK_TANKER-ALUMAX",
+        "ma_goc": "TRU-TP_KHONGBDK_TANKER-ALUMAX",
+        "ten": "TANKER_ALUMAX KHÔNG BỘ ĐIỀU KHIỂN",
+        "nhom": "Motor",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHLD-THAN300KG",
+        "ma_goc": "TP-YHLD-Than300kg",
+        "ten": "YHLD_Thân 300KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP_YHLD_PATCD",
+        "ma_goc": "TP_YHLD_PATCD",
+        "ten": "YHLD_Phimamtuongcoday",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHLD-THAN500KG",
+        "ma_goc": "TP-YHLD-Than500kg",
+        "ten": "YHLD_Thân 500KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TRU-TP_KHONGLAC_YHLD",
+        "ma_goc": "TRU-TP_KHONGLAC_YHLD",
+        "ten": "YHLD_KHÔNG LẮC",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TRU-TP_KHONGBDK_KHONGLAC_YHLD",
+        "ma_goc": "TRU-TP_KHONGBDK_KHONGLAC_YHLD",
+        "ten": "YHLD KHÔNG BỘ ĐIỀU KHIỂN,KHÔNG LẮC",
+        "nhom": "Linh kiện motor",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHLD-THAN800KG",
+        "ma_goc": "TP-YHLD-Than800kg",
+        "ten": "YHLD_Thân 800KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHLD-THAN1000KG",
+        "ma_goc": "TP-YHLD-Than1000kg",
+        "ten": "YHLD_Thân 1000KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-THAN300KG",
+        "ma_goc": "TP-JG-Than300kg",
+        "ten": "JG_Thân 300KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LACJG33",
+        "ma_goc": "TP-LacJG33",
+        "ten": "JG_LacJG33",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-HDK",
+        "ma_goc": "TP-JG-HDK",
+        "ten": "JG_HopDK",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP_JG_PATCD",
+        "ma_goc": "TP_JG_PATCD",
+        "ten": "JG_Phimamtuongcoday",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-THAN400KG",
+        "ma_goc": "TP-JG-Than400kg",
+        "ten": "JG_Thân 400KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LACJG400-500-600KG",
+        "ma_goc": "TP-LacJG400-500-600KG",
+        "ten": "JG_LacJG400-500-600KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-THAN500KG",
+        "ma_goc": "TP-JG-Than500kg",
+        "ten": "JG_Thân 500KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-THAN600KG",
+        "ma_goc": "TP-JG-Than600kg",
+        "ten": "JG_Thân 600KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-THAN800KG",
+        "ma_goc": "TP-JG-Than800kg",
+        "ten": "JG_Thân 800KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LACJG800KG",
+        "ma_goc": "TP-LacJG800KG",
+        "ten": "JG_LacJG800KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-THAN1000KG",
+        "ma_goc": "TP-JG-Than1000kg",
+        "ten": "JG_Thân 1000KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LACJG1000-1500KG",
+        "ma_goc": "TP-LacJG1000-1500KG",
+        "ten": "JG_LacJG1000-1500KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-BDN",
+        "ma_goc": "TP-JG-BDN",
+        "ten": "JG_Bacdannhao",
+        "nhom": "Motor",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-JG-THAN1500KG",
+        "ma_goc": "TP-JG-Than1500kg",
+        "ten": "JG_Thân 1500KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-TANKER-THAN600KG",
+        "ma_goc": "TP-Tanker-Than600kg",
+        "ten": "TANKER_Thân 600KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-TANKER-THAN800KG",
+        "ma_goc": "TP-Tanker-Than800kg",
+        "ten": "TANKER_Thân 800KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-TANKER-THAN1000KG",
+        "ma_goc": "TP-Tanker-Than1000kg",
+        "ten": "TANKER_Thân 1000KG",
+        "nhom": "Linh kiện motor",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-HDK_MULLER",
+        "ma_goc": "TP-HDK_MULLER",
+        "ten": "HỘP ĐIỀU KHIỂN MULLER",
+        "nhom": "Điều khiển & phụ kiện điện",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-BUOMSAT-DL",
+        "ma_goc": "TP-BUOMSAT-DL",
+        "ten": "BẮN BƯỚM SẮT ĐÀI LOAN",
+        "nhom": "Cửa Đài Loan",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-BUOMSAT-DL",
+        "ma_goc": "NVL-BUOMSAT-DL",
+        "ten": "BẮN BƯỚM SẮT ĐÀI LOAN",
+        "nhom": "Cửa Đài Loan",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BUOMSAT-ST",
+        "ma_goc": "NVL-BUOMSAT-ST",
+        "ten": "BẮN BƯỚM SẮT SIÊU TRƯỜNG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-BUOMINOX",
+        "ma_goc": "TP-BUOMINOX",
+        "ten": "BẮN BƯỚM INOX",
+        "nhom": "Cửa Đài Loan",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-RAYNHOMUC",
+        "ma_goc": "TP-RAYNHOMUC",
+        "ten": "RAY NHÔM ÚC",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-PULYUC34",
+        "ma_goc": "NVL-PULYUC34",
+        "ten": "PULY ÚC 34",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-PULYUC114",
+        "ma_goc": "NVL-PULYUC114",
+        "ten": "PULY ÚC 114",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP_PAT_KHONGDAY",
+        "ma_goc": "TP_PAT_KHONGDAY",
+        "ten": "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+        "nhom": "Phụ kiện chung",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL_DAYDIEN_PATCD",
+        "ma_goc": "NVL_Daydien_PATCD",
+        "ten": "Daydien_phimamtuongcoday",
+        "nhom": "Phụ kiện chung",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-ALUMAX-THAN400KG",
+        "ma_goc": "TP-Alumax-Than400kg",
+        "ten": "ALUMAX_Thân 400KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-ALUMAX_PATCD",
+        "ma_goc": "TP-ALUMAX_PATCD",
+        "ten": "ALUMAX_Phimamtuongcoday",
+        "nhom": "Phụ kiện chung",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-ALUMAX-THAN600KG",
+        "ma_goc": "TP-Alumax-Than600kg",
+        "ten": "ALUMAX_Thân 600KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TRU-TP_KHONGLAC_JG",
+        "ma_goc": "TRU-TP_KHONGLAC_JG",
+        "ten": "JG_KHÔNG LẮC",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TRU-TP_KHONGBDK_JG",
+        "ma_goc": "TRU-TP_KHONGBDK_JG",
+        "ten": "JG_KHÔNG BỘ ĐIỀU KHIỂN",
+        "nhom": "Điều khiển & phụ kiện điện",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TRU-TP_KHONGBDK_KHONGLAC_JG",
+        "ma_goc": "TRU-TP_KHONGBDK_KHONGLAC_JG",
+        "ten": "JG_KHÔNG BỘ ĐIỀU KHIỂN+KHÔNG LẮC",
+        "nhom": "Điều khiển & phụ kiện điện",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-MTT_BOSTEC-HOPDK",
+        "ma_goc": "TP-MTT_BOSTEC-HOPDK",
+        "ten": "BOSTEC_HỘP ĐK",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-MTT_CHTAIWAN-HOPDK",
+        "ma_goc": "TP-MTT_CHTAIWAN-HOPDK",
+        "ten": "CHTAIWAN_HỘP ĐK",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-MTT_BOSTEC-DOI_THAN-P",
+        "ma_goc": "TP-MTT_BOSTEC-DOI_THAN(P)",
+        "ten": "BOSTEC_THÂN ĐÔI_PHẢI",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-MTT_BOSTEC-DOI_THAN-T",
+        "ma_goc": "TP-MTT_BOSTEC-DOI_THAN(T)",
+        "ten": "BOSTEC_THÂN ĐÔI_TRÁI",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-MTT_BOSTEC-DON_THAN-P",
+        "ma_goc": "TP-MTT_BOSTEC-DON_THAN(P)",
+        "ten": "BOSTEC_THÂN ĐƠN_PHẢI",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-MTT_BOSTEC-DON_THAN-T",
+        "ma_goc": "TP-MTT_BOSTEC-DON_THAN(T)",
+        "ten": "BOSTEC_THÂN ĐƠN_TRÁI",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-THAN300KG",
+        "ma_goc": "TP-YHTaiwan-Than300KG",
+        "ten": "YHTAIWAN_Thân 300KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-LAYHTW300-400-500KG",
+        "ma_goc": "TP-YHTaiwan-LaYHTW300-400-500KG",
+        "ten": "YHTAIWAN_LacYHTW300-400-500KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-HDK",
+        "ma_goc": "TP-YHTaiwan-HDK",
+        "ten": "YHTAIWAN_HopDK",
+        "nhom": "Điều khiển & phụ kiện điện",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-PATCD",
+        "ma_goc": "TP-YHTaiwan-PATCD",
+        "ten": "YHTAIWAN_Phimamtuongcoday",
+        "nhom": "Phụ kiện chung",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-THAN500KG",
+        "ma_goc": "TP-YHTaiwan-Than500KG",
+        "ten": "YHTAIWAN_Thân 500KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-THAN400KG",
+        "ma_goc": "TP-YHTaiwan-Than400KG",
+        "ten": "YHTAIWAN_Thân 400KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-THAN600KG",
+        "ma_goc": "TP-YHTaiwan-Than600KG",
+        "ten": "YHTAIWAN_Thân 600KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-LAYHTW600-700-800KG",
+        "ma_goc": "TP-YHTaiwan-LaYHTW600-700-800KG",
+        "ten": "YHTAIWAN_LacYHTW600-700-800KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-THAN700KG",
+        "ma_goc": "TP-YHTaiwan-Than700KG",
+        "ten": "YHTAIWAN_Thân 700KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-THAN800KG",
+        "ma_goc": "TP-YHTaiwan-Than800KG",
+        "ten": "YHTAIWAN_Thân 800KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-THAN1000KG",
+        "ma_goc": "TP-YHTaiwan-Than1000KG",
+        "ten": "YHTAIWAN_Thân 1000KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-YHTAIWAN-LAYHTW1000-1200KG",
+        "ma_goc": "TP-YHTaiwan-LaYHTW1000-1200KG",
+        "ten": "YHTAIWAN_LacYHTW1000-1200KG",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-VDAY-TDU",
+        "ma_goc": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-KT-4D-XN-VK",
+        "ma_goc": "TP-UC KT 4D XN-VK",
+        "ten": "CỬA ÚC KT 4D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TON3.8D-XN-VK",
+        "ma_goc": "NVL-TON3.8D-XN-VK",
+        "ten": "LÁ TÔN 4D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-PULYGAI",
+        "ma_goc": "NVL-PULYGAI",
+        "ten": "PULY GAI",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-RONDAYUC",
+        "ma_goc": "NVL-RONDAYUC",
+        "ten": "RON ĐÁY ÚC",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-VAIHAMXO",
+        "ma_goc": "NVL-VAIHAMXO",
+        "ten": "VAI HÃM XO",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BKAN",
+        "ma_goc": "NVL-BKAN",
+        "ten": "BÁT KHÓA ÂM NỀN",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "Cặp",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-VISDD-BANLO",
+        "ma_goc": "NVL-VISDD-BANLO",
+        "ten": "VIS ĐẦU DÙ BẮN LÔ",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "Con",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-VIS-BANLO2P",
+        "ma_goc": "NVL-VIS-BANLO2P",
+        "ten": "VIS BẮN LÔ 2P",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "Con",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-MTN-4D-XN-VK",
+        "ma_goc": "TP-UC MTN 4D XN-VK",
+        "ten": "CỬA ÚC MTN 4D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TON3.8D-GU-KU",
+        "ma_goc": "NVL-TON3.8D-GU KU",
+        "ten": "LÁ TÔN 4D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TRUC114_1.8LY",
+        "ma_goc": "TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "TP-UC-KT-4.6D-XN-VK",
+        "ma_goc": "TP-UC KT 4.6D XN-VK",
+        "ten": "CỬA ÚC KT 4.6D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLE0.42X598-XN-VK",
+        "ma_goc": "NVL-TOLE0.42x598-XN-VK",
+        "ten": "LÁ TÔN 4.6D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-KT-4.6D-XR-CF",
+        "ma_goc": "TP-UC KT 4.6D XR-CF",
+        "ten": "CỬA ÚC KT 4.6D XR-CAFE",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLE0.42X598-XR-CF",
+        "ma_goc": "NVL-TOLE0.42x598-XR-CF",
+        "ten": "LÁ TÔN 4.6D XR-CF",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-KT-4.6D-TRANG-XLC",
+        "ma_goc": "TP-UC KT 4.6D TRẮNG-XLC",
+        "ten": "CỬA ÚC KT 4.6D TR-XLC",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLE0.42X598-TR-XLC",
+        "ma_goc": "NVL-TOLE0.42x598-TR-XLC",
+        "ten": "LÁ TÔN 4.6D TR-XLC",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-KT-4.6D-KU-GU",
+        "ma_goc": "TP-UC KT 4.6D KU-GU",
+        "ten": "CỬA ÚC KT 4.6D KU-GU",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLE0.42X598-KU-GU",
+        "ma_goc": "NVL-TOLE0.42x598-KU-GU",
+        "ten": "LÁ TÔN 4.6D KU-GU",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-KT-5.5D-KU-GU",
+        "ma_goc": "TP-UC KT 5.5D KU-GU",
+        "ten": "CỬA ÚC KT 5.5D KU-GU",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLE0.48X598-KU-GU",
+        "ma_goc": "NVL-TOLE0.48x598-KU-GU",
+        "ten": "LÁ TÔN 5.2D KU-GU",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-KT-5.5D-TR-XLC",
+        "ma_goc": "TP-UC KT 5.5D TR-XLC",
+        "ten": "CỬA ÚC KT 5.5D TR-XLC",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-KT-5.5D-XN-VK",
+        "ma_goc": "TP-UC KT 5.5D XN-VK",
+        "ten": "CỬA ÚC KT 5.5D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-KT-5.5D-XR-CF",
+        "ma_goc": "TP-UC KT 5.5D XR-CF",
+        "ten": "CỬA ÚC KT 5.5D XR-CF",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-MTN-4.6D-XN-VK",
+        "ma_goc": "TP-UC MTN 4.6D XN-VK",
+        "ten": "CỬA ÚC MTN 4.6D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TRUC114_1.8LY",
+        "ma_goc": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-UC-MTN-4.6D-XR-CF",
+        "ma_goc": "TP-UC MTN 4.6D XR-CF",
+        "ten": "CỬA ÚC MTN 4.6D XR-CF",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-MTN-4.6D-TR-XLC",
+        "ma_goc": "TP-UC MTN 4.6D TR-XLC",
+        "ten": "CỬA ÚC MTN 4.6D TR-XLC",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-MTN-4.6D-GU-KU",
+        "ma_goc": "TP-UC MTN 4.6D GU-KU",
+        "ten": "CỬA ÚC MTN 4.6D GU-KU",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-MTN-5.5D-XN-VK",
+        "ma_goc": "TP-UC MTN 5.5D XN-VK",
+        "ten": "CỬA ÚC MTN 5.5D XN-VK",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-MTN-5.5D-XR-CF",
+        "ma_goc": "TP-UC MTN 5.5D XR-CF",
+        "ten": "CỬA ÚC MTN 5.5D XR-CF",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-MTN-5.5D-TR-XLC",
+        "ma_goc": "TP-UC MTN 5.5D TR-XLC",
+        "ten": "CỬA ÚC MTN 5.5D TR-XLC",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-UC-MTN-5.5D-GU-KU",
+        "ma_goc": "TP-UC MTN 5.5D GU-KU",
+        "ten": "CỬA ÚC MTN 5.5D GU-KU",
+        "nhom": "Cửa tấm liền Úc",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-RON-DD",
+        "ma_goc": "NVL-RON-DD",
+        "ten": "Ron đáy đức (kg)",
+        "nhom": "Phụ kiện CN Đức",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-LUOIMV_STD",
+        "ma_goc": "NVL-LUOIMV_STD",
+        "ten": "LƯỚI MV STĐ",
+        "nhom": "Cửa Lưới",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BOMV",
+        "ma_goc": "NVL-BOMV",
+        "ten": "BỌ MẮT VÕNG VÕNG",
+        "nhom": "Cửa Lưới",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TOLEKEM124_6D",
+        "ma_goc": "NVL-TOLEKEM124_6D",
+        "ten": "LÁ ĐÀI LOAN STĐ 8D",
+        "nhom": "Cửa Lưới",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TOLEKEM124_8D",
+        "ma_goc": "NVL-TOLEKEM124_8D",
+        "ten": "LÁ ĐÀI LOAN STĐ 1LY",
+        "nhom": "Cửa Lưới",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TOLEKEM70_8D-YEMMV",
+        "ma_goc": "NVL-TOLEKEM70_8D-YEMMV",
+        "ten": "LÁ YẾM",
+        "nhom": "Cửa Lưới",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BATMV",
+        "ma_goc": "NVL-BATMV",
+        "ten": "BÁT (DÙNG BẮT VÀO LÁ YẾM)",
+        "nhom": "Cửa Lưới",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-DINHTANMV",
+        "ma_goc": "NVL-DINHTANMV",
+        "ten": "ĐINH TÁN",
+        "nhom": "Cửa Lưới",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-CONTANMV",
+        "ma_goc": "NVL-CONTANMV",
+        "ten": "CON TÁN",
+        "nhom": "Cửa Lưới",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "CPSTD_V4",
+        "ma_goc": "CPSTD_V4",
+        "ten": "Chi phí STD_V4",
+        "nhom": "Cửa Lưới",
+        "uom": "Mét",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "CPSTD_LUOI",
+        "ma_goc": "CPSTD_LUOI",
+        "ten": "Chi phí STD_LƯỚI",
+        "nhom": "Cửa Lưới",
+        "uom": "m2",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "CPSTD_LADL",
+        "ma_goc": "CPSTD_LADL",
+        "ten": "Chi phí STD_LÁ",
+        "nhom": "Cửa Lưới",
+        "uom": "m2",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "RONNHUAVANGCANHAY_RSU70",
+        "ma_goc": "RONNHUAVANGCANHAY_RSU70",
+        "ten": "RONNHUAVANGCANHAY_RSU70",
+        "nhom": "Cửa Lưới",
+        "uom": "Mét",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "NVL-TOLE1.2X190-CORON",
+        "ma_goc": "NVL-TOLE1.2x190-CORON",
+        "ten": "RAY SẮT (CÓ RON) U70",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TRUC114_2.4LY",
+        "ma_goc": "NVL-TRUC114_2.4LY",
+        "ten": "TRỤC140_2.4LY",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TRUC168_5LY",
+        "ma_goc": "NVL-TRUC168_5LY",
+        "ten": "TRỤC168_5LY",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "RONNHUAVANGCANHAY_RSU100",
+        "ma_goc": "RONNHUAVANGCẢNHAY_RSU100",
+        "ten": "RONNHUAVANGCANHAY_RSU100",
+        "nhom": "Phụ kiện chung",
+        "uom": "Mét",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "NVL-RNHUA-DR",
+        "ma_goc": "NVL-RNHUA-DR",
+        "ten": "Ron nhựa đáy ray",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-RNINOX-DR",
+        "ma_goc": "NVL-RNINOX-DR",
+        "ten": "Ron inox đáy ray",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-LUOISNPHI19_STD",
+        "ma_goc": "NVL-LUOISNPHI19_STD",
+        "ten": "LƯỚI SN TRÒN PHI 19 STĐ",
+        "nhom": "Cửa Lưới",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BOSNPHI19",
+        "ma_goc": "NVL-BOSNPHI19",
+        "ten": "BỌ LUỚI SN PHI 19",
+        "nhom": "Cửa Lưới",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-BATSNPHI19",
+        "ma_goc": "NVL-BATSNPHI19",
+        "ten": "BÁT SN PHI 19",
+        "nhom": "Cửa Lưới",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-MONGNGUASNPHI19",
+        "ma_goc": "NVL-MONGNGUASNPHI19",
+        "ten": "MÓNG NGỰA SN PHI 19",
+        "nhom": "Cửa Lưới",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-NHANSNPHI19",
+        "ma_goc": "NVL-NHANSNPHI19",
+        "ten": "NHẪN SN PHI 19",
+        "nhom": "Cửa Lưới",
+        "uom": "Cái",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TP-LUOISNPHI19_INOX",
+        "ma_goc": "TP-LUOISNPHI19_INOX",
+        "ten": "LƯỚI SN TRÒN PHI 19 INOX",
+        "nhom": "Cửa Lưới",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LUOISN13X26_STD",
+        "ma_goc": "TP-LUOISN13x26_STD",
+        "ten": "LƯỚI SN VUÔNG PHI 13X26 STĐ",
+        "nhom": "Cửa Lưới",
+        "uom": "Kg",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LUOISN13X26_INOX",
+        "ma_goc": "TP-LUOISN13x26_INOX",
+        "ten": "LƯỚI SN VUÔNG PHI 13X26 INOX",
+        "nhom": "Cửa Lưới",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-RAYINOX_8P_RON",
+        "ma_goc": "TP-RAYINOX_8P_RON",
+        "ten": "RAY INOX 8P_CÓ RON",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-RAYINOX_6P_RON",
+        "ma_goc": "TP-RAYINOX_6P_RON",
+        "ten": "RAY INOX 6P_CÓ RON",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LUOIMV_INOX",
+        "ma_goc": "TP-LUOIMV_INOX",
+        "ten": "LƯỚI MV INOX",
+        "nhom": "Cửa Lưới",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-DUC-8M",
+        "ma_goc": "PHUTHU-DUC<8m²",
+        "ten": "PHỤ THU_CỬA ĐỨC < 8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-DUC-PK-5TR",
+        "ma_goc": "PHUTHU-DUC-PK<5tr",
+        "ten": "PHỤ THU_PHỤ KIỆN ĐỨC < 5tr",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-UC-7M",
+        "ma_goc": "PHUTHU-UC<7m²",
+        "ten": "PHỤ THU_CỬA ÚC < 7m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "Bộ",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-UC-PK-5TR",
+        "ma_goc": "PHUTHU-UC-PK<5tr",
+        "ten": "PHỤ THU_PHỤ KIỆN ÚC < 5tr",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-DAILOAN-8M",
+        "ma_goc": "PHUTHU-DAILOAN<8m²",
+        "ten": "PHỤ THU_CỬA ĐÀI LOAN< 8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-DAILOAN-PK-3TR",
+        "ma_goc": "PHUTHU-DAILOAN-PK<3tr",
+        "ten": "PHỤ THU_PHỤ KIỆN ĐÀI LOAN< 8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-CUALUOI-8M",
+        "ma_goc": "PHUTHU-CUALUOI<8m²",
+        "ten": "PHỤ THU_CỬA LƯỚI< 8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-CUALUOI-3TR",
+        "ma_goc": "PHUTHU-CUALUOI<3tr",
+        "ten": "PHỤ THU_CỬA LƯỚI <3tr",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-SVG-LADUC",
+        "ma_goc": "PHUTHU-SVG-LADUC",
+        "ten": "PHỤ THU_SƠN VÂN GỖ_LÁ ĐỨC",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "PHUTHU-SVG-RAYHOP",
+        "ma_goc": "PHUTHU-SVG-RAYHOP",
+        "ten": "PHỤ THU_SƠN VÂN GỖ_RAYHOP",
+        "nhom": "Ray và trục",
+        "uom": "Mét",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TON-DL5.2DX124-XNXLC",
+        "ma_goc": "NVL-TON-DL5.2Dx124-XNXLC",
+        "ten": "TP LÁ ĐÀI LOAN 6D_XN-XLC",
+        "nhom": "Phụ kiện chung",
+        "uom": "Kg",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TON-DL6.2DX124-XNXLC",
+        "ma_goc": "NVL-TON-DL6.2Dx124-XNXLC",
+        "ten": "TP LÁ ĐÀI LOAN 7D_XN-XLC",
+        "nhom": "Phụ kiện chung",
+        "uom": "Kg",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TON-DL7.2DX124-XNXLC",
+        "ma_goc": "NVL-TON-DL7.2Dx124-XNXLC",
+        "ten": "TP LÁ ĐÀI LOAN 8D_XN-XLC",
+        "nhom": "Phụ kiện chung",
+        "uom": "Kg",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TON-DL9.2DX124-XNXLC",
+        "ma_goc": "NVL-TON-DL9.2Dx124-XNXLC",
+        "ten": "TP LÁ ĐÀI LOAN 1LY_XN-XLC",
+        "nhom": "Phụ kiện chung",
+        "uom": "Kg",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLEKEM124_1LY",
+        "ma_goc": "NVL-TOLEKEM124_1LY",
+        "ten": "LÁ ĐÀI LOAN STĐ 1.2LY",
+        "nhom": "Phụ kiện chung",
+        "uom": "Kg",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "PHUTHUCHUYENDOICUAKT",
+        "ma_goc": "PHUTHUCHUYENDOICUAKT",
+        "ten": "PHỤ THU CHUYỂN ĐỔI LÊN CỬA KÉO TAY",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "TP-CUADL6D-XN-XLC_TRONBO-10M",
+        "ma_goc": "TP-CUADL6D XN-XLC_TRONBO>10m²",
+        "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ >10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL6D-XN-VK_TRONBO_9-10M",
+        "ma_goc": "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+        "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_9-10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL6D-XN-VK_TRONBO_8-9M",
+        "ma_goc": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+        "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_8-9m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL6D-XN-XLC_TRONBO_7-8M",
+        "ma_goc": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+        "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_7-8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL6D-XN-VK_TRONBO_6-7M",
+        "ma_goc": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+        "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_6-7m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL6D-XN-VK_TRONBO_4-5M",
+        "ma_goc": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+        "ten": "CỬA ĐL6D XN-VK_TRỌN BỘ_4-5m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL6D-XN-XLC_TRONBO_3-4M",
+        "ma_goc": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+        "ten": "CỬA ĐL6D XN-XLC_TRỌN BỘ_3-4m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL7D-XN-XLC_TRONBO-10M",
+        "ma_goc": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+        "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ >10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL7D-XN-VK_TRONBO_9-10M",
+        "ma_goc": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+        "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_9-10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL7D-XN-VK_TRONBO_8-9M",
+        "ma_goc": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+        "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_8-9m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL7D-XN-XLC_TRONBO_7-8M",
+        "ma_goc": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+        "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_7-8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL7D-XN-VK_TRONBO_6-7M",
+        "ma_goc": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+        "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_6-7m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL7D-XN-VK_TRONBO_4-5M",
+        "ma_goc": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+        "ten": "CỬA ĐL7D XN-VK_TRỌN BỘ_4-5m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL7D-XN-XLC_TRONBO_3-4M",
+        "ma_goc": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+        "ten": "CỬA ĐL7D XN-XLC_TRỌN BỘ_3-4m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL8D-XN-XLC_TRONBO-10M",
+        "ma_goc": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+        "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ >10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL8D-XN-VK_TRONBO_9-10M",
+        "ma_goc": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+        "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_9-10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL8D-XN-VK_TRONBO_8-9M",
+        "ma_goc": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+        "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_8-9m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL8D-XN-XLC_TRONBO_7-8M",
+        "ma_goc": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+        "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_7-8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL8D-XN-XLC_TRONBO_6-7M",
+        "ma_goc": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+        "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_6-7m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL8D-XN-VK_TRONBO_4-5M",
+        "ma_goc": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+        "ten": "CỬA ĐL8D XN-VK_TRỌN BỘ_4-5m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL8D-XN-XLC_TRONBO_3-4M",
+        "ma_goc": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+        "ten": "CỬA ĐL8D XN-XLC_TRỌN BỘ_3-4m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL1LY-XN-XLC_TRONBO-10M",
+        "ma_goc": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+        "ten": "CỬA ĐL1LY XN-XLC_TRỌN BỘ >10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL1LY-XN-VK_TRONBO_9-10M",
+        "ma_goc": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+        "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_9-10m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL1LY-XN-VK_TRONBO_8-9M",
+        "ma_goc": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+        "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_8-9m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL1LY-XN-VK_TRONBO_7-8M",
+        "ma_goc": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+        "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_7-8m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL1LY-XN-VK_TRONBO_6-7M",
+        "ma_goc": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+        "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_6-7m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL1LY-XN-VK_TRONBO_4-5M",
+        "ma_goc": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+        "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-CUADL1LY-XN-VK_TRONBO_3-4M",
+        "ma_goc": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+        "ten": "CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLEKEM124_6D_MSK",
+        "ma_goc": "NVL-TOLEKEM124_6D_MSK",
+        "ten": "LÁ ĐÀI LOAN STĐ 8D_MSK",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TOLEKEM124_8D_MSK",
+        "ma_goc": "NVL-TOLEKEM124_8D_MSK",
+        "ten": "LÁ ĐÀI LOAN STĐ 1LY_MSK",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TOLEKEM124_1LY_MSK",
+        "ma_goc": "NVL-TOLEKEM124_1LY_MSK",
+        "ten": "LÁ ĐÀI LOAN STĐ 1.2LY_MSK",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "NVL-TOLEKEM175_1LY_MSK",
+        "ma_goc": "NVL-TOLEKEM175_1LY_MSK",
+        "ten": "LÁ SIÊU TRƯỜNG 175_XN-VK_9D",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Nguyên vật liệu"
+      },
+      {
+        "ma": "TIEN-CONG-LAP-DAT",
+        "ma_goc": "TIỀN CÔNG LẮP ĐẶT",
+        "ten": "TIỀN CÔNG LẮP ĐẶT",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "TIEN-CONG-CAT-LAI-CUA",
+        "ma_goc": "TIỀN CÔNG CẮT LẠI CỬA",
+        "ten": "TIỀN CÔNG CẮT LẠI CỬA",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "CPVC",
+        "ma_goc": "CPVC",
+        "ten": "CHI PHÍ VẬN CHUYỂN",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "MUI-MAI-HOP-KIM",
+        "ma_goc": "MŨI MÀI HỘP KIM",
+        "ten": "MŨI MÀI HỘP KIM",
+        "nhom": "Phụ kiện chung",
+        "uom": "Cái",
+        "giai_doan": "Vật tư tiêu hao"
+      },
+      {
+        "ma": "NVL-TON-DL9.2DX175-XNVK",
+        "ma_goc": "NVL-TON-DL9.2Dx175-XNVK",
+        "ten": "LÁ SIÊU TRƯỜNG 1LY_XN-VK",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TOLEKEM175_8D-9D_STD_MSK",
+        "ma_goc": "NVL-TOLEKEM175_8D-9D_STD_MSK",
+        "ten": "LÁ ĐÀI LOAN 1.1LY_MSK",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "NVL-TON-ST-1LYX175-_MSK",
+        "ma_goc": "NVL-TON-ST-1LYx175-_MSK",
+        "ten": "LÁ ĐÀI LOAN 1.2LY_MSK",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LA-RUOT-AL71N-VK",
+        "ma_goc": "TP LÁ RUỘT AL71N VK",
+        "ten": "TP LÁ RUỘT AL71N VK",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TP-LA-DUC-AL70-2-LOP-GS",
+        "ma_goc": "TP LÁ ĐỨC AL70 (2 lớp) - GS",
+        "ten": "TP LÁ ĐỨC AL70 (2 lớp) - GS",
+        "nhom": "Phụ kiện chung",
+        "uom": "m2",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "CROMATE-3",
+        "ma_goc": "CROMATE 3+",
+        "ten": "CROMATE 3+",
+        "nhom": "Phụ kiện chung",
+        "uom": "Kg",
+        "giai_doan": "Thành phẩm"
+      },
+      {
+        "ma": "TAY-NHOM",
+        "ma_goc": "TẨY NHÔM",
+        "ten": "TẨY NHÔM",
+        "nhom": "Phụ kiện chung",
+        "uom": "Kg",
+        "giai_doan": "Thành phẩm"
+      }
+    ]
+  },
+  "explicitly_not_imported": [
+    "Item",
+    "Item Group",
+    "UOM",
+    "Warehouse",
+    "Production Standard",
+    "Item Price",
+    "Material Specification"
+  ],
+  "ket_qua": {
+    "thanh_pham_trong_nguon": 351,
+    "dinh_muc_dung_duoc": 233,
+    "dong_vat_tu_dung_duoc": 948,
+    "docstatus": "0 (Nháp) — chờ xưởng xác nhận trước khi submit"
+  },
+  "bo_qua": {
+    "thanh_pham_khong_khop_item": 0,
+    "thanh_pham_khong_con_dong_dung_duoc": 118,
+    "dong_thieu_ma_vat_tu": 56,
+    "dong_vat_tu_khong_khop_item": 0,
+    "dong_dinh_muc_trong_hoac_0": 616,
+    "dong_mo_coi": 2
+  },
+  "qty_basis_phan_bo": {
+    "Cố định / chac_chan": 539,
+    "Theo chiều cao / suy_luan": 111,
+    "Cố định / chua_ro": 100,
+    "Theo diện tích / chac_chan": 120,
+    "Theo chiều cao / chac_chan": 2,
+    "Theo chiều rộng / suy_luan": 51,
+    "Theo chiều rộng / chac_chan": 25
+  },
+  "can_xuong_xac_nhan": {
+    "so_dong": 262,
+    "ghi_chu": "Mọi dòng suy_luan/chua_ro đều liệt kê đủ dưới đây — không dòng nào bị đoán lặng lẽ.",
+    "danh_sach": [
+      {
+        "line": 37,
+        "bom": "ĐỨC AL595 - GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 40,
+        "bom": "ĐỨC AL595 - GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 55,
+        "bom": "ĐỨC AL595 - GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 43,
+        "bom": "LÁ ĐẦU",
+        "vat_tu": "NVL-LD-3LD",
+        "ten": "Lá đầu (kg) + Bộ 03 lá đáy (kg)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 57,
+        "bom": "RON NHỰA + INOX",
+        "vat_tu": "RNHUA-DR",
+        "ten": "Ron nhựa đáy ray",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 58,
+        "bom": "RON NHỰA + INOX",
+        "vat_tu": "RNINOX-DR",
+        "ten": "Ron inox đáy ray",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 66,
+        "bom": "ĐỨC AL595 - VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 69,
+        "bom": "ĐỨC AL595 - VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 74,
+        "bom": "ĐỨC AL595 - MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 77,
+        "bom": "ĐỨC AL595 - MSK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 82,
+        "bom": "ĐỨC AL70 (2 LỚP) - MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 89,
+        "bom": "ĐỨC AL70 (2 LỚP) - GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 96,
+        "bom": "ĐỨC AL70 (2 LỚP) - VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 103,
+        "bom": "ĐỨC AL70 (1 LỚP) - MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 110,
+        "bom": "ĐỨC AL71N - MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 114,
+        "bom": "ĐỨC AL71N - MSK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 118,
+        "bom": "ĐỨC AL71N - GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 122,
+        "bom": "ĐỨC AL71N - GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 126,
+        "bom": "ĐỨC AL71N - VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 130,
+        "bom": "ĐỨC AL71N - VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 134,
+        "bom": "ĐỨC AL503N - VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 138,
+        "bom": "ĐỨC AL503N - VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 142,
+        "bom": "ĐỨC AL503N - GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 146,
+        "bom": "ĐỨC AL503N - GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 150,
+        "bom": "ĐỨC AL503N - MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 154,
+        "bom": "ĐỨC AL503N - MSK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 158,
+        "bom": "ĐỨC AL548N - MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 162,
+        "bom": "ĐỨC AL548N - MSK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 166,
+        "bom": "ĐỨC AL548N - MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 174,
+        "bom": "ĐỨC AL548N - VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 178,
+        "bom": "ĐỨC AL548N - VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 182,
+        "bom": "ĐỨC AL501N- VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 186,
+        "bom": "ĐỨC AL501N- VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 190,
+        "bom": "ĐỨC AL501N- GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 194,
+        "bom": "ĐỨC AL501N- GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 198,
+        "bom": "ĐỨC AL501N- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 202,
+        "bom": "ĐỨC AL501N- MSK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 206,
+        "bom": "ĐỨC AL552N- VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 210,
+        "bom": "ĐỨC AL552N- VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 214,
+        "bom": "ĐỨC AL552N- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 218,
+        "bom": "ĐỨC AL552N- MSK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 222,
+        "bom": "ĐỨC AL552N- GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 226,
+        "bom": "ĐỨC AL552N- GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 230,
+        "bom": "ĐỨC AL752N- GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 234,
+        "bom": "ĐỨC AL752N- GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 365,
+        "bom": "ĐỨC AL752N- GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 238,
+        "bom": "ĐỨC AL752N- VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 242,
+        "bom": "ĐỨC AL752N- VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 246,
+        "bom": "ĐỨC AL752N- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 250,
+        "bom": "ĐỨC AL752N- MSK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 254,
+        "bom": "ĐỨC AL652- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 258,
+        "bom": "ĐỨC AL652- MSK",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 262,
+        "bom": "ĐỨC AL652- GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 266,
+        "bom": "ĐỨC AL652- GS",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 270,
+        "bom": "ĐỨC AL652- VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 274,
+        "bom": "ĐỨC AL652- VK",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 278,
+        "bom": "ĐỨC AL50- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 282,
+        "bom": "ĐỨC AL50- MSK",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 286,
+        "bom": "ĐỨC AL50- GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 290,
+        "bom": "ĐỨC AL50- GS",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 294,
+        "bom": "ĐỨC AL50- VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 298,
+        "bom": "ĐỨC AL50- VK",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 302,
+        "bom": "ĐỨC AL-VIP50- GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 306,
+        "bom": "ĐỨC AL-VIP50- GS",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 310,
+        "bom": "ĐỨC AL-VIP50- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 314,
+        "bom": "ĐỨC AL-VIP50- MSK",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 318,
+        "bom": "ĐỨC AL-VIPST500- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 322,
+        "bom": "ĐỨC AL-VIPST500- MSK",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 326,
+        "bom": "ĐỨC AL-VIPST700- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 330,
+        "bom": "ĐỨC AL-VIPST700- MSK",
+        "vat_tu": "NVL-PHOTLONG5X6",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 361,
+        "bom": "ĐỨC AL75- MSK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 369,
+        "bom": "ĐỨC AL75- VK",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 373,
+        "bom": "ĐỨC AL75- VK",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 377,
+        "bom": "ĐỨC AL75- GS",
+        "vat_tu": "RON-DD",
+        "ten": "Ron đáy đức",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 381,
+        "bom": "ĐỨC AL75- GS",
+        "vat_tu": "NVL-PHOTLONG4X5",
+        "ten": "Lông nheo nhỏ",
+        "dvt": "M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 544,
+        "bom": "PHÍM ÂM TƯỜNG CÓ DÂY",
+        "vat_tu": "NVL_DAYDIEN_PATCD",
+        "ten": "Daydien_phimamtuongcoday",
+        "dvt": "m",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 679,
+        "bom": "TRỤC PHI 34",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 682,
+        "bom": "CÂY KÉO CỬA INOX",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 684,
+        "bom": "THANH ĐÁY ÚC_KTD",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 691,
+        "bom": "CỬA ÚC KT 4D XN-VK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 693,
+        "bom": "CỬA ÚC KT 4D XN-VK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 695,
+        "bom": "CỬA ÚC KT 4D XN-VK",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 708,
+        "bom": "CỬA ÚC KT 4D XN-VK",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "CÂY",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT lạ: CÂY"
+      },
+      {
+        "line": 715,
+        "bom": "CỬA ÚC MTN 4D XN-VK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 717,
+        "bom": "CỬA ÚC MTN 4D XN-VK",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 718,
+        "bom": "CỬA ÚC MTN 4D XN-VK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 720,
+        "bom": "CỬA ÚC MTN 4D XN-VK",
+        "vat_tu": "TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 727,
+        "bom": "KHÓA NGANG",
+        "vat_tu": "NVL-TIINOX",
+        "ten": "TI INOX",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 736,
+        "bom": "CỬA ÚC KT 4.6D XN-VK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 738,
+        "bom": "CỬA ÚC KT 4.6D XN-VK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 740,
+        "bom": "CỬA ÚC KT 4.6D XN-VK",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 752,
+        "bom": "CỬA ÚC KT 4.6D XN-VK",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 761,
+        "bom": "CỬA ÚC KT 4.6D XR-CAFE",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 763,
+        "bom": "CỬA ÚC KT 4.6D XR-CAFE",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 765,
+        "bom": "CỬA ÚC KT 4.6D XR-CAFE",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 777,
+        "bom": "CỬA ÚC KT 4.6D XR-CAFE",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 786,
+        "bom": "CỬA ÚC KT 4.6D TR-XLC",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 788,
+        "bom": "CỬA ÚC KT 4.6D TR-XLC",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 790,
+        "bom": "CỬA ÚC KT 4.6D TR-XLC",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 802,
+        "bom": "CỬA ÚC KT 4.6D TR-XLC",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 811,
+        "bom": "CỬA ÚC KT 4.6D KU-GU",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 813,
+        "bom": "CỬA ÚC KT 4.6D KU-GU",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 815,
+        "bom": "CỬA ÚC KT 4.6D KU-GU",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 827,
+        "bom": "CỬA ÚC KT 4.6D KU-GU",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 836,
+        "bom": "CỬA ÚC KT 5.5D KU-GU",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 838,
+        "bom": "CỬA ÚC KT 5.5D KU-GU",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 840,
+        "bom": "CỬA ÚC KT 5.5D KU-GU",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 852,
+        "bom": "CỬA ÚC KT 5.5D KU-GU",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 861,
+        "bom": "CỬA ÚC KT 5.5D TR-XLC",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 863,
+        "bom": "CỬA ÚC KT 5.5D TR-XLC",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 865,
+        "bom": "CỬA ÚC KT 5.5D TR-XLC",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 877,
+        "bom": "CỬA ÚC KT 5.5D TR-XLC",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 886,
+        "bom": "CỬA ÚC KT 5.5D XN-VK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 888,
+        "bom": "CỬA ÚC KT 5.5D XN-VK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 890,
+        "bom": "CỬA ÚC KT 5.5D XN-VK",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 902,
+        "bom": "CỬA ÚC KT 5.5D XN-VK",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 911,
+        "bom": "CỬA ÚC KT 5.5D XR-CF",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 913,
+        "bom": "CỬA ÚC KT 5.5D XR-CF",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 915,
+        "bom": "CỬA ÚC KT 5.5D XR-CF",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 927,
+        "bom": "CỬA ÚC KT 5.5D XR-CF",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 934,
+        "bom": "CỬA ÚC MTN 4.6D XN-VK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 936,
+        "bom": "CỬA ÚC MTN 4.6D XN-VK",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 937,
+        "bom": "CỬA ÚC MTN 4.6D XN-VK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 939,
+        "bom": "CỬA ÚC MTN 4.6D XN-VK",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 945,
+        "bom": "CỬA ÚC MTN 4.6D XR-CF",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 947,
+        "bom": "CỬA ÚC MTN 4.6D XR-CF",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 948,
+        "bom": "CỬA ÚC MTN 4.6D XR-CF",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 950,
+        "bom": "CỬA ÚC MTN 4.6D XR-CF",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 956,
+        "bom": "CỬA ÚC MTN 4.6D TR-XLC",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 958,
+        "bom": "CỬA ÚC MTN 4.6D TR-XLC",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 959,
+        "bom": "CỬA ÚC MTN 4.6D TR-XLC",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 961,
+        "bom": "CỬA ÚC MTN 4.6D TR-XLC",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 967,
+        "bom": "CỬA ÚC MTN 4.6D GU-KU",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 969,
+        "bom": "CỬA ÚC MTN 4.6D GU-KU",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 970,
+        "bom": "CỬA ÚC MTN 4.6D GU-KU",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 972,
+        "bom": "CỬA ÚC MTN 4.6D GU-KU",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 978,
+        "bom": "CỬA ÚC MTN 5.5D XN-VK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 980,
+        "bom": "CỬA ÚC MTN 5.5D XN-VK",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 981,
+        "bom": "CỬA ÚC MTN 5.5D XN-VK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 983,
+        "bom": "CỬA ÚC MTN 5.5D XN-VK",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 989,
+        "bom": "CỬA ÚC MTN 5.5D XR-CF",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 991,
+        "bom": "CỬA ÚC MTN 5.5D XR-CF",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 992,
+        "bom": "CỬA ÚC MTN 5.5D XR-CF",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 994,
+        "bom": "CỬA ÚC MTN 5.5D XR-CF",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1000,
+        "bom": "CỬA ÚC MTN 5.5D TR-XLC",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1002,
+        "bom": "CỬA ÚC MTN 5.5D TR-XLC",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1003,
+        "bom": "CỬA ÚC MTN 5.5D TR-XLC",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1005,
+        "bom": "CỬA ÚC MTN 5.5D TR-XLC",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1011,
+        "bom": "CỬA ÚC MTN 5.5D GU-KU",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1013,
+        "bom": "CỬA ÚC MTN 5.5D GU-KU",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1014,
+        "bom": "CỬA ÚC MTN 5.5D GU-KU",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1016,
+        "bom": "CỬA ÚC MTN 5.5D GU-KU",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1022,
+        "bom": "CỬA ÚC MTN STD 6D MSK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1024,
+        "bom": "CỬA ÚC MTN STD 6D MSK",
+        "vat_tu": "NVL-3X6M",
+        "ten": "SẮT VUÔNG 3X6M",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1025,
+        "bom": "CỬA ÚC MTN STD 6D MSK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1027,
+        "bom": "CỬA ÚC MTN STD 6D MSK",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1035,
+        "bom": "CỬA ÚC KT 6D STĐ MSK",
+        "vat_tu": "NVL-VDAY-TDU",
+        "ten": "V ĐÁY (THANH ĐÁY ÚC)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1037,
+        "bom": "CỬA ÚC KT 6D STĐ MSK",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1039,
+        "bom": "CỬA ÚC KT 6D STĐ MSK",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1051,
+        "bom": "CỬA ÚC KT 6D STĐ MSK",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1061,
+        "bom": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)",
+        "vat_tu": "NVL-RON-DD",
+        "ten": "Ron đáy đức (kg)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1065,
+        "bom": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1076,
+        "bom": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1086,
+        "bom": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+        "vat_tu": "NVL-RON-DD",
+        "ten": "Ron đáy đức (kg) - CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1090,
+        "bom": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+        "vat_tu": "NVL-TRUC34",
+        "ten": "TRỤC 34",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1101,
+        "bom": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+        "vat_tu": "NVL-INOX, NVL-NHUA, NVL-MOC",
+        "ten": "CÂY KÉO CỬA (INOX + NHỰA+MÓC) - CỬA ĐỨC KÉO TAY AL70 (1 LỚP)",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1107,
+        "bom": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ",
+        "vat_tu": "NVL-LUOIMV_STD",
+        "ten": "LƯỚI MV STĐ",
+        "dvt": "KG/M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1111,
+        "bom": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ",
+        "vat_tu": "NVL-TOLEKEM70_8D-YEMMV",
+        "ten": "LÁ YẾM",
+        "dvt": "m",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1112,
+        "bom": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ",
+        "vat_tu": "NVL-BATMV",
+        "ten": "BÁT (DÙNG BẮT VÀO LÁ YẾM)",
+        "dvt": "m",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1119,
+        "bom": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1122,
+        "bom": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ",
+        "vat_tu": "RONNHUAVANGCANHAY_RSU70",
+        "ten": "RONNHUAVANGCANHAY_RSU70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1123,
+        "bom": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ",
+        "vat_tu": "NVL-TOLE1.2X190-CORON",
+        "ten": "RAY SẮT (CÓ RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1125,
+        "bom": "TRỤC 140",
+        "vat_tu": "NVL-TRUC114_2.4LY",
+        "ten": "TRỤC140_2.4LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1127,
+        "bom": "TRỤC 168",
+        "vat_tu": "NVL-TRUC168_5LY",
+        "ten": "TRỤC168_5LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1129,
+        "bom": "RAY SẮT U70 (KHÔNG RON)",
+        "vat_tu": "NVL-TOLE1.2x190-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1131,
+        "bom": "RAY SẮT U100-1.2ly (KHÔNG RON)",
+        "vat_tu": "NVL-TOLE1.4x270x1.2ly-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) - 10P_1.2ly",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1133,
+        "bom": "RAY SẮT U100-1.2ly (CÓ RON)",
+        "vat_tu": "NVL-TOLE1.4x270x1.2ly-CRON",
+        "ten": "RAY SẮT (CÓ RON) - 10P_1.2ly",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1134,
+        "bom": "RAY SẮT U100-1.2ly (CÓ RON)",
+        "vat_tu": "RONNHUAVANGCANHAY_RSU100",
+        "ten": "RONNHUAVANGCANHAY_RSU100",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1136,
+        "bom": "RAY SẮT U100-1.4ly (KHÔNG RON)",
+        "vat_tu": "NVL-TOLE1.4x270x1.4ly-KRON",
+        "ten": "RAY SẮT (KHÔNG RON) - 10P_1.4ly",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1138,
+        "bom": "RAY SẮT U100-1.4ly (CÓ RON)",
+        "vat_tu": "NVL-TOLE1.4x270x1.4ly-CRON",
+        "ten": "RAY SẮT (CÓ RON) - 10P_1.4ly",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1139,
+        "bom": "RAY SẮT U100-1.4ly (CÓ RON)",
+        "vat_tu": "RONNHUAVANGCANHAY_RSU100",
+        "ten": "RONNHUAVANGCANHAY_RSU100",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1141,
+        "bom": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+        "vat_tu": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+        "ten": "RAY SẮT (CÓ RON+TỰ DỪNG) - 10P_1.4ly",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1142,
+        "bom": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+        "vat_tu": "RONNHUAVANGCANHAY_RSU100",
+        "ten": "RONNHUAVANGCẢNHAY_RSU100",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1143,
+        "bom": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+        "vat_tu": "NVL-RNHUA-DR",
+        "ten": "Ron nhựa đáy ray",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1144,
+        "bom": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)",
+        "vat_tu": "NVL-RNINOX-DR",
+        "ten": "Ron inox đáy ray",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1146,
+        "bom": "RAY SẮT U70 (CÓ RON)",
+        "vat_tu": "NVL-TOLE1.2X190-CORON",
+        "ten": "RAY SẮT (CÓ RON) U70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1147,
+        "bom": "RAY SẮT U70 (CÓ RON)",
+        "vat_tu": "RONNHUAVANGCANHAY_RSU70",
+        "ten": "RONNHUAVANGCANHAY_RSU70",
+        "dvt": "KG/M",
+        "basis": "Theo chiều cao",
+        "do_tin": "suy_luan",
+        "ly_do": "ron/ray chạy dọc cạnh cửa; khớp CAO_CONG_0.15_X_SL"
+      },
+      {
+        "line": 1150,
+        "bom": "CỬA LƯỚI MẮT VÕNG STĐ - TÁCH MÓN",
+        "vat_tu": "NVL-BOMV",
+        "ten": "BỌ MẮT VÕNG VÕNG",
+        "dvt": "bọ",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT lạ: BỌ"
+      },
+      {
+        "line": 1183,
+        "bom": "CỬA LƯỚI SN PHI 19 STD - TRỌN BỘ",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1735,
+        "bom": "CỬA LƯỚI SN PHI 19 STD - TRỌN BỘ",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1191,
+        "bom": "CỬA LƯỚI SN PHI 13x26 STĐ - TRỌN BỘ",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "KG/M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1202,
+        "bom": "LƯỚI SN PHI 13X26 INOX - TRỌN BỘ",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1220,
+        "bom": "CỬA LƯỚI MẮT VÕNG INOX - TRỌN BỘ",
+        "vat_tu": "NVL-TRUC114_1.8LY",
+        "ten": "TRỤC114_1.8LY",
+        "dvt": "M",
+        "basis": "Theo chiều rộng",
+        "do_tin": "suy_luan",
+        "ly_do": "trục/thanh nằm ngang; khớp M_X_ĐM"
+      },
+      {
+        "line": 1354,
+        "bom": "CỬA ĐL6D XN-XLC_TRỌN BỘ_3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1360,
+        "bom": "CỬA ĐL7D XN-VK_TRỌN BỘ >10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1366,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ >10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1372,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1378,
+        "bom": "CỬA ĐL7D XN-VK_TRỌN BỘ_9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1384,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_8-9m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1390,
+        "bom": "CỬA ĐL7D XN-VK_TRỌN BỘ_8-9m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1396,
+        "bom": "CỬA ĐL7D XN-VK_TRỌN BỘ_7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1402,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1408,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1414,
+        "bom": "CỬA ĐL7D XN-VK_TRỌN BỘ_6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1420,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1426,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1432,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_4-5m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1438,
+        "bom": "CỬA ĐL7D XN-VK_TRỌN BỘ_4-5m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1444,
+        "bom": "CỬA ĐL7D XN-VK_TRỌN BỘ_3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1450,
+        "bom": "CỬA ĐL7D XN-XLC_TRỌN BỘ_3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1456,
+        "bom": "CỬA ĐL8D XN-VK_TRỌN BỘ >10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1462,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ >10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1468,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1474,
+        "bom": "CỬA ĐL8D XN-VK_TRỌN BỘ_9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1480,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_8-9m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1486,
+        "bom": "CỬA ĐL8D XN-VK_TRỌN BỘ_8-9m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1492,
+        "bom": "CỬA ĐL8D XN-VK_TRỌN BỘ_7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1498,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1504,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1510,
+        "bom": "CỬA ĐL8D XN-VK_TRỌN BỘ_6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1516,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1522,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1528,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_4-5m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1534,
+        "bom": "CỬA ĐL8D XN-VK_TRỌN BỘ_4-5m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1540,
+        "bom": "CỬA ĐL8D XN-VK_TRỌN BỘ_3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1546,
+        "bom": "CỬA ĐL8D XN-XLC_TRỌN BỘ_3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1552,
+        "bom": "CỬA ĐL1LY XN-VK_TRỌN BỘ >10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1558,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ >10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1564,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1570,
+        "bom": "CỬA ĐL1LY XN-VK_TRỌN BỘ_9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1576,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_8-9m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1582,
+        "bom": "CỬA ĐL1LY XN-VK_TRỌN BỘ_8-9m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1588,
+        "bom": "CỬA ĐL1LY XN-VK_TRỌN BỘ_7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1594,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1600,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1606,
+        "bom": "CỬA ĐL1LY XN-VK_TRỌN BỘ_6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1612,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1618,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1624,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_4-5m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1630,
+        "bom": "CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1636,
+        "bom": "CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1642,
+        "bom": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1682,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1697,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1705,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1720,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1743,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1751,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 8-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1759,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1774,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1782,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1797,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1812,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1820,
+        "bom": "CỬA ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ >10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1828,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 9-10m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1836,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 8-9m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1844,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 7-8m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1859,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 6-7m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1867,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1882,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 5-6m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1890,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      },
+      {
+        "line": 1898,
+        "bom": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²",
+        "vat_tu": "NVL-V4_KEM_STD",
+        "ten": "V4_KẼM",
+        "dvt": "M",
+        "basis": "Cố định",
+        "do_tin": "chua_ro",
+        "ly_do": "ĐVT theo mét nhưng không rõ mét theo chiều nào"
+      }
+    ]
+  },
+  "chi_tiet_bo_qua": {
+    "thanh_pham_khong_khop_item": [],
+    "vat_tu_khong_khop_item": [],
+    "dong_dinh_muc_trong": {
+      "so_dong": 616,
+      "vat_tu_bi_anh_huong": 91,
+      "danh_sach_vat_tu": [
+        "RNHUA/LONG-CR",
+        "RNHUA-DR",
+        "RNINOX-DR",
+        "NVL-LD-3LD",
+        "NVL-AL595-GS",
+        "NVL-AL595-VK",
+        "NVL_TDAL595THO",
+        "NVL-LD-3LD-MSK",
+        "NVL-TDAL70THO",
+        "NVL-TDAL70GS",
+        "NVL-TDAL70VK",
+        "NVL-AL701LOPTHO",
+        "NVL-TD-AL71NTHO",
+        "NVL-TD-AL71N-GS",
+        "NVL-TD-AL71N-VK",
+        "NVL-TD-AL503N26-VK",
+        "NVL-TD-AL503N26-GS",
+        "NVL-TD-AL503N26THO",
+        "NVL-TD-AL548N-GS",
+        "NVL-TD-AL548NTHO",
+        "NVL-TD-AL548N-VK",
+        "NVL-TD-AL501N-VK",
+        "NVL-TD-AL501N-GS",
+        "NVL-TD-AL501N-MSK",
+        "NVL-ALD-DL552-VK",
+        "NVL-ALD-DL552THO",
+        "NVL-ALD-DL552-GS",
+        "NVL-ALD-DL752-GS",
+        "NVL-ALD-DL752-VK",
+        "NVL-ALD-DL752THO",
+        "NVL-ALD-DL652THO",
+        "NVL-ALD-DL652GS",
+        "NVL-ALD-DL652VK",
+        "NVL-ALD-DL50THO",
+        "NVL-ALD-DL50GS",
+        "NVL-ALD-DL50VK",
+        "NVL-VIP50GS",
+        "NVL-VIP50THO",
+        "NVL-VIPST500THO",
+        "NVL-VIPST700THO",
+        "NVL-AL75THO",
+        "NVL-AL75VK",
+        "NVL-AL75-GS",
+        "TP-Tanker-Alumax-Lac33",
+        "TP-Tanker-Alumax-Lac36",
+        "NVL-XOP-N45",
+        "NVL-PULYUC34",
+        "NVL-LX-5.5 X 70 X 46V",
+        "NVL-LX-5.5 x 70 x 50V",
+        "NVL-LV-6.0 x 70 x 53V",
+        "NVL-LV-6.5 x 80 x 68V",
+        "NVL-LV-7.0 x 90 x 65V",
+        "NVL-LV-7.0 x 90 x 73V",
+        "NVL-LV-7.0 x 90 x 83V",
+        "NVL-VAIHAMXO",
+        "NVL-PULYUC114",
+        "NVL-LV-6.5 x 80 x 63V",
+        "CPSTD_V4",
+        "CPSTD_LUOI",
+        "CPSTD_LADL",
+        "NVL-TOLEKEM70_8D-YEMMV",
+        "TP-LUOISNPHI19_INOX",
+        "NVL-TOLEKEM124_6D",
+        "NVL-TOLEKEM124_8D",
+        "TP-LUOISN13X26_INOX",
+        "TP-LADLINOX_8D",
+        "TP-V4_INOX",
+        "TP-RAYINOX_8P_RON",
+        "TP-RAYINOX_6P_RON",
+        "TP-LUOIMV_INOX",
+        "NVL-TOLE1.2X190-CORON",
+        "NVL-TRUC114_1.8LY",
+        "PHUTHUCHUYENDOICUAKT",
+        "NVL-TON-DL5.2Dx124-XNVK",
+        "NVL-V4_KEM_STD",
+        "NVL-V4-KEM_TOLE75_STD",
+        "NVL-TON-DL5.2DX124-XNXLC",
+        "NVL-TON-DL6.2Dx124-XNVK",
+        "NVL-TON-DL6.2DX124-XNXLC",
+        "NVL-TON-DL7.2Dx124-XNVK",
+        "NVL-TON-DL7.2DX124-XNXLC",
+        "NVL-TON-DL9.2Dx124-XNVK",
+        "NVL-TON-DL9.2DX124-XNXLC",
+        "NVL-TOLEKEM124_6D_MSK",
+        "NVL-TOLEKEM124_8D_MSK",
+        "NVL-TOLEKEM124_1LY_MSK",
+        "NVL-TOLEKEM175_1LY_MSK",
+        "TIEN-CONG-LAP-DAT",
+        "TIEN-CONG-CAT-LAI-CUA",
+        "CPVC",
+        "MUI-MAI-HOP-KIM"
+      ],
+      "thanh_pham_mat_trang": [
+        "PULY 114L",
+        "PULY 114N",
+        "PULY 140",
+        "PULY 168",
+        "CÒI",
+        "HỆ THỐNG TỰ DỪNG",
+        "TRỤC 114_1.8LY",
+        "TRỤC 114_2.1LY",
+        "RAY HỘP TD U76",
+        "RAY ĐƠN TD U76",
+        "RAY HỘP TD U100",
+        "PHỤ THU SƠN RAY MSK",
+        "LÁ YẾM",
+        "LÁ TRUNG GIAN",
+        "LÁ ĐÁY LỚN",
+        "BỘ BA LÁ ĐÁY",
+        "LÔNG NHEO 4X5",
+        "LÔNG NHEO 5X6",
+        "RON ĐÁY ĐỨC",
+        "RON NHỰA ĐÁY RAY",
+        "RON INOX ĐÁY RAY",
+        "RON NHỰA CẠNH RAY",
+        "RON LÔNG CẠNH RAY",
+        "LẮC TANKER_ALUMAX 33",
+        "LẮC TANKER_ALUMAX 36",
+        "LẮC TANKER_800-1000KG",
+        "LẮC YH 300_500KG",
+        "LẮC YH 800_1000KG",
+        "HỘP ĐIỀU KHIỂN YHLD",
+        "YHLD TAY ĐIỀU KHIỂN",
+        "NHÔNG MOTOR TANKER",
+        "LÔNG ĐỀN",
+        "HOA KHẾ (3 CHẤU)",
+        "CỐT",
+        "BẠC ĐẠN + NẮP CHỤP",
+        "TANKER_ALUMAX KHÔNG LẮC 33",
+        "YHLD_KHÔNG LẮC",
+        "LẮC PHỤ 33-1 LỔ",
+        "LẮC PHỤ 36-1 LỔ",
+        "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)",
+        "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)",
+        "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER",
+        "HH LÒ XO 46V",
+        "HH LÒ XO 50V",
+        "HH LÒ XO 53V",
+        "HH LÒ XO 63V",
+        "HH LÒ XO 68V",
+        "HH LÒ XO 65V",
+        "HH LÒ XO 73V",
+        "HH LÒ XO 83V",
+        "RAY NHÔM ÚC",
+        "PULY ÚC 34",
+        "PULY ÚC 114",
+        "SẮT VUÔNG 3X6M",
+        "HỘP ĐK TANKER_ALUMAX",
+        "TAY ĐIỀU KHIỂN TANKER",
+        "PHÍM ÂM TƯỜNG KHÔNG DÂY",
+        "Bình lưu điện Alumax E800i",
+        "Bình lưu điện Alumax E1000i",
+        "Bình lưu điện YH1000",
+        "Bình lưu điện YH2000",
+        "JG_TAY ĐIỀU KHIỂN",
+        "JG_KHÔNG LẮC",
+        "NẮP NHÌN",
+        "GỐI SẮT",
+        "GIÁ T",
+        "BOSTEC_PHÍM ÂM TƯỜNG",
+        "BOSTEC TAY ĐIỀU KHIỂN",
+        "CHTAIWAN-PHÍM ÂM TƯỜNG",
+        "CHTAIWAN-TAY ĐIỀU KHIỂN",
+        "YHTAIWAN_TAY ĐIỀU KHIỂN",
+        "XỐP NHỎ",
+        "XỐP LỚN",
+        "VÒNG NHỰA HÃM TRỤC",
+        "TRỤC PHI 90",
+        "Ổ KHÓA NGANG",
+        "TI KHÓA NGANG",
+        "CỬA LƯỚI SN PHI 13x26 INOX - TÁCH MÓN",
+        "CỬA LƯỚI MẮT VÕNG INOX - TÁCH MÓN",
+        "LÁ ĐL7.5 INOX 6D",
+        "LÁ ĐL7.5 INOX 7D",
+        "LÁ ĐL7.5 INOX 8D",
+        "LÁ ĐL7.5 INOX 1LY",
+        "V4_INOX_2ly",
+        "V4_3ly",
+        "RAY INOX 6P - CÓ RON",
+        "RAY INOX 8P - CÓ RON",
+        "RAY INOX 7P - KHÔNG RON",
+        "PHỤ THU_CỬA ĐỨC < 8m²",
+        "PHỤ THU_PHỤ KIỆN ĐỨC < 5tr",
+        "PHỤ THU_CỬA ÚC < 7m²",
+        "PHỤ THU_PHỤ KIỆN ÚC < 5tr",
+        "PHỤ THU_CỬA ĐÀI LOAN< 8m²",
+        "PHỤ THU_PHỤ KIỆN ĐÀI LOAN< 8m²",
+        "PHỤ THU_CỬA LƯỚI< 8m²",
+        "PHỤ THU_CỬA LƯỚI <3tr",
+        "PHỤ THU_SƠN VÂN GỖ_LÁ ĐỨC",
+        "PHỤ THU_SƠN VÂN GỖ_RAYHOP",
+        "V4_KẼM",
+        "V4_STĐ",
+        "TP LÁ ĐÀI LOAN 6D_XN-VK",
+        "TP LÁ ĐÀI LOAN 6D_XN-XLC",
+        "TP LÁ ĐÀI LOAN 7D_XN-VK",
+        "TP LÁ ĐÀI LOAN 7D_XN-XLC",
+        "TP LÁ ĐÀI LOAN 8D_XN-VK",
+        "TP LÁ ĐÀI LOAN 8D_XN-XLC",
+        "TP LÁ ĐÀI LOAN 1LY_XN-VK",
+        "TP LÁ ĐÀI LOAN 1LY_XN-XLC",
+        "LÁ MẪU ĐỨC",
+        "CHỐNG XỔ LÔ",
+        "CỬA KÉO ĐL",
+        "LÁ SIÊU TRƯỜNG 1LY_XN-VK",
+        "LÁ ĐÀI LOAN 1.1LY_MSK",
+        "LÁ ĐÀI LOAN 1.2LY_MSK",
+        "TP LÁ RUỘT AL71N VK",
+        "TP LÁ ĐỨC AL70 (2 lớp) - GS",
+        "CROMATE 3+",
+        "TẨY NHÔM"
+      ]
+    },
+    "dong_thieu_ma_vat_tu": [
+      "#REF!"
+    ]
+  }
+}

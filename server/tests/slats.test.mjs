@@ -45,6 +45,27 @@ test("AL70 KHÔNG trừ 1 — 42 lá, theo đặc tả chứ không theo bảng 
   assert.equal(slatCount("AL70 (1 LỚP)", "mới", 3).slats, 42);
 });
 
+test("AL71N chia 0,055 theo cột BẢN LÁ — sổ kế toán phân xử, không theo cột CÔNG THỨC", () => {
+  /**
+   * Đây là mã DUY NHẤT có cột BẢN LÁ (0,055) lệch cột CÔNG THỨC (0,057), và bản cũ từng chọn
+   * 0,057 với lý do "cột công thức mới là thứ kế toán thực sự tính".
+   *
+   * Đem chính sổ kế toán ra tra thì nó bác lại: dòng `TP LÁ RUỘT AL71N VK — AL71 9 LÁ RUỘT`
+   * ghi cao 0,495 m ⇒ 0,495 / 9 = 0,055. Sổ nhật ký ghi tiền đã thu nên thắng mọi bảng tra.
+   *
+   * Test này tồn tại để không ai lặng lẽ đưa 0,057 trở lại: chênh 2 lá trên mỗi bộ cửa 3 m.
+   */
+  assert.equal(SLAT_PROFILES["AL71N"].divisor, 0.055);
+  assert.equal(SLAT_PROFILES["AL71N"].subtractOne, false);
+
+  // Chính dòng sổ dùng để phân xử: 9 lá ruột đo được 0,495 m.
+  assert.equal(Number((0.495 / 9).toFixed(3)), 0.055);
+
+  // Hệ quả trên cửa thật, và khoảng cách với con số cũ.
+  assert.equal(slatCount("AL71", "mới", 3).slats, 52);
+  assert.equal(Math.round((3 - 0.13) / 0.057), 50);
+});
+
 test("mã không có công thức thì TỪ CHỐI, không đoán bản lá", () => {
   // AL70 1.5MM có trong kho nhưng không có trong bảng công thức. Đoán một bản lá gần đúng
   // sẽ ra một số lá trông hợp lý và cắt hỏng cả lô.
