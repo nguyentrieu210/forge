@@ -16,66 +16,18 @@ jobs:
         with:
           fetch-depth: 0
           ref: agent/sentrux-convergence-20260816
-
       - name: Install build dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            libxkbcommon-dev \
-            libssl-dev \
-            libvulkan-dev
-
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libvulkan-dev
       - name: Build instrumented Sentrux
         shell: bash
         run: |
           set -euo pipefail
           git clone --quiet https://github.com/sentrux/sentrux.git /tmp/sentrux-src
-          cd /tmp/sentrux-src
-          git checkout --quiet 6f8ff3c14b0423e4b58f42d1813d4d5f7fdc1d11
-          python3 <<'PY'
-          from pathlib import Path
-          p = Path('sentrux-core/src/metrics/mod.rs')
-          s = p.read_text()
-          start = s.index('fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {')
-          end = s.index('\n// ── Pro metrics extension point', start)
-          code = '''fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {
-    if edges.is_empty() { return 0; }
-    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);
-    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());
-    let max_depth = seeds.iter().filter_map(|s| memo.get(s).copied()).max().unwrap_or(0);
-    eprintln!("SENTRUX_DEPTH_MAX={}", max_depth);
-    for seed in seeds.iter().filter(|s| memo.get(*s).copied() == Some(max_depth)) {
-        eprintln!("SENTRUX_DEPTH_MAX_SEED {}", seed);
-    }
-    let mut rows: Vec<(&str,&str,u32)> = Vec::new();
-    for (from,nexts) in &adj {
-        let Some(&d)=memo.get(from) else { continue; };
-        if d == 0 { continue; }
-        for to in nexts {
-            if memo.get(to).copied().map(|nd| nd.saturating_add(1)==d).unwrap_or(false) {
-                rows.push((*from,*to,d));
-            }
-        }
-    }
-    rows.sort_by(|a,b| b.2.cmp(&a.2).then_with(|| a.0.cmp(b.0)).then_with(|| a.1.cmp(b.1)));
-    for (from,to,d) in rows {
-        if d >= 8 {
-            eprintln!("SENTRUX_DEPTH_DAG remaining={} {} -> {}", d, from, to);
-        }
-    }
-    max_depth
-}'''
-          p.write_text(s[:start] + code + s[end:])
-          PY
-          cargo build --quiet --release -p sentrux --bin sentrux
-          cp target/release/sentrux /tmp/sentrux-trace
-
+          git -C /tmp/sentrux-src checkout --quiet 6f8ff3c14b0423e4b58f42d1813d4d5f7fdc1d11
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnAgPSBQYXRoKCIvdG1wL3NlbnRydXgtc3JjL3NlbnRydXgtY29yZS9zcmMvbWV0cmljcy9tb2QucnMiKQpzID0gcC5yZWFkX3RleHQoKQpzdGFydCA9IHMuaW5kZXgoJ2ZuIGNvbXB1dGVfbWF4X2RlcHRoKGVkZ2VzOiAmW0ltcG9ydEVkZ2VdLCBlbnRyeV9wb2ludHM6ICZbRW50cnlQb2ludF0pIC0+IHUzMiB7JykKZW5kID0gcy5pbmRleCgnXG4vLyDilIDilIAgUHJvIG1ldHJpY3MgZXh0ZW5zaW9uIHBvaW50Jywgc3RhcnQpCmNvZGUgPSByJycnZm4gY29tcHV0ZV9tYXhfZGVwdGgoZWRnZXM6ICZbSW1wb3J0RWRnZV0sIGVudHJ5X3BvaW50czogJltFbnRyeVBvaW50XSkgLT4gdTMyIHsKICAgIGlmIGVkZ2VzLmlzX2VtcHR5KCkgeyByZXR1cm4gMDsgfQogICAgbGV0IChzZWVkcywgYWRqLCBhbGxfbm9kZXMpID0gZmluZF9kZXB0aF9zZWVkcyhlZGdlcywgZW50cnlfcG9pbnRzKTsKICAgIGxldCBtZW1vID0gbG9uZ2VzdF9wYXRoX2Rmcygmc2VlZHMsICZhZGosIGFsbF9ub2Rlcy5sZW4oKSk7CiAgICBsZXQgbWF4X2RlcHRoID0gc2VlZHMuaXRlcigpLmZpbHRlcl9tYXAofHN8IG1lbW8uZ2V0KHMpLmNvcGllZCgpKS5tYXgoKS51bndyYXBfb3IoMCk7CiAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfTUFYPXt9IiwgbWF4X2RlcHRoKTsKICAgIGZvciBzZWVkIGluIHNlZWRzLml0ZXIoKS5maWx0ZXIofHN8IG1lbW8uZ2V0KCpzKS5jb3BpZWQoKSA9PSBTb21lKG1heF9kZXB0aCkpIHsKICAgICAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfTUFYX1NFRUQge30iLCBzZWVkKTsKICAgIH0KICAgIGxldCBtdXQgcm93czogVmVjPCgmc3RyLCZzdHIsdTMyKT4gPSBWZWM6Om5ldygpOwogICAgZm9yIChmcm9tLG5leHRzKSBpbiAmYWRqIHsKICAgICAgICBsZXQgU29tZSgmZCk9bWVtby5nZXQoZnJvbSkgZWxzZSB7IGNvbnRpbnVlOyB9OwogICAgICAgIGlmIGQgPT0gMCB7IGNvbnRpbnVlOyB9CiAgICAgICAgZm9yIHRvIGluIG5leHRzIHsKICAgICAgICAgICAgaWYgbWVtby5nZXQodG8pLmNvcGllZCgpLm1hcCh8bmR8IG5kLnNhdHVyYXRpbmdfYWRkKDEpPT1kKS51bndyYXBfb3IoZmFsc2UpIHsKICAgICAgICAgICAgICAgIHJvd3MucHVzaCgoKmZyb20sKnRvLGQpKTsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KICAgIHJvd3Muc29ydF9ieSh8YSxifCBiLjIuY21wKCZhLjIpLnRoZW5fd2l0aCh8fCBhLjAuY21wKGIuMCkpLnRoZW5fd2l0aCh8fCBhLjEuY21wKGIuMSkpKTsKICAgIGZvciAoZnJvbSx0byxkKSBpbiByb3dzIHsKICAgICAgICBpZiBkID49IDggewogICAgICAgICAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfREFHIHJlbWFpbmluZz17fSB7fSAtPiB7fSIsIGQsIGZyb20sIHRvKTsKICAgICAgICB9CiAgICB9CiAgICBtYXhfZGVwdGgKfScnJwpwLndyaXRlX3RleHQoc1s6c3RhcnRdICsgY29kZSArIHNbZW5kOl0pCg==' | base64 -d > /tmp/patch-depth.py
+          python3 /tmp/patch-depth.py
+          cargo build --quiet --release -p sentrux --bin sentrux --manifest-path /tmp/sentrux-src/Cargo.toml
+          cp /tmp/sentrux-src/target/release/sentrux /tmp/sentrux-trace
       - name: Trace stable branch head
         shell: bash
         run: |
