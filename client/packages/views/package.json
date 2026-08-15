@@ -63,8 +63,8 @@
       "import": "./dist/action/NativeActionScreen.js"
     },
     "./screen": {
-      "types": "./dist/screen/NativeScreenView.d.ts",
-      "import": "./dist/screen/NativeScreenView.js"
+      "types": "./dist/screen/ScreenView.d.ts",
+      "import": "./dist/screen/ScreenView.js"
     },
     "./matrix": {
       "types": "./dist/matrix/index.d.ts",

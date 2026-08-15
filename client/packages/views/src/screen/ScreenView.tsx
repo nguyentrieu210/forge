@@ -14,6 +14,7 @@ import {
 } from "@metaforge/ui";
 import { ArrowRight, Gauge, List, PlayCircle } from "lucide-react";
 import { ActionScreen } from "../action/ActionScreen.js";
+import { preferFirstClassActionInputTables } from "../action/input-table.js";
 import { useCount, useList, useMeta } from "../container/hooks.js";
 import { useLocaleFormat } from "../container/provider.js";
 
@@ -35,9 +36,10 @@ const GRID_SPANS = {
 } as const;
 
 export function ScreenView({ screen, actions = [], onNavigate }: ScreenViewProps) {
+  const normalizedActions = actions.map(preferFirstClassActionInputTables);
   const screenActions = screen.app
-    ? actions.filter((action) => action.app === screen.app)
-    : actions;
+    ? normalizedActions.filter((action) => action.app === screen.app)
+    : normalizedActions;
   return (
     <section
       className="mf-screen-root min-h-full"

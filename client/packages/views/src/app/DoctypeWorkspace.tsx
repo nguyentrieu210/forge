@@ -4,18 +4,16 @@
  * mobile dùng một pane; tạo mới mở modal lớn. DocType có canonical Bulk policy
  * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
-import { Suspense, useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
-import { resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
-import {
-  AlumdoorManufacturingStockEntryCreate,
-  AlumdoorProductionRequestDetail,
-  AlumdoorSalesOrderCreate,
-  AlumdoorWorkOrderDetail,
-  useAlumdoorWorkspaceMode,
-} from "./vertical/alumdoor/AlumdoorWorkspaceBoundary.js";
+import { buildPrintPath, resolveBulkRenderPolicy, useAlumdoorWorkspaceMode, type UrlStateBridge } from "./doctype-workspace-support.js";
+
+const AlumdoorSalesOrderCreate = lazy(() => import("./vertical/alumdoor/AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
+const AlumdoorProductionRequestDetail = lazy(() => import("./vertical/alumdoor/AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
+const AlumdoorWorkOrderDetail = lazy(() => import("./vertical/alumdoor/AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
+const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./vertical/alumdoor/AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
 import { SplitView } from "../detail/SplitView.js";
 import { ListContainer } from "../container/ListContainer.js";
 import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
@@ -23,8 +21,6 @@ import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
 import { TreeContainer } from "../tree/TreeContainer.js";
-import type { UrlStateBridge } from "../list/useListState.js";
-import { buildPrintPath } from "../print/printRoute.js";
 import {
   V3_CONFIRM_DIALOG_CLASS,
   V3_DATA_SURFACE_CLASS,

@@ -356,6 +356,8 @@ export function FormContainer(props: FormContainerProps) {
         timeline={allocationTimeline}
         loading={allocationTimelineLoading}
         error={allocationTimelineError}
+        adapter={adapter}
+        scopeKey={scopeKey}
         onClose={() => setAllocationTimelineOpen(false)}
       />
     </>

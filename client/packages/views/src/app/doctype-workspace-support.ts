@@ -1,15 +1,13 @@
-import { lazy } from "react";
-import { useMetaForge } from "../../../container/provider.js";
-import type { UrlStateBridge } from "../../../list/useListState.js";
+import { useMetaForge } from "../container/provider.js";
+import type { UrlStateBridge } from "../list/useListState.js";
 
-export const AlumdoorSalesOrderCreate = lazy(() => import("./AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
-export const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
-export const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
-export const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
+export { resolveBulkRenderPolicy } from "@metaforge/core";
+export { buildPrintPath } from "../print/printRoute.js";
+export type { UrlStateBridge };
 
 type ManufacturingStockPurpose = "Material Transfer" | "Manufacture";
 
-interface AlumdoorWorkspaceModeInput {
+export interface AlumdoorWorkspaceModeInput {
   doctype: string;
   isNew: boolean;
   decoded?: string;
@@ -19,11 +17,6 @@ interface AlumdoorWorkspaceModeInput {
 export function useAlumdoorWorkspaceMode(input: AlumdoorWorkspaceModeInput) {
   const { formProfiles } = useMetaForge();
   const { doctype, isNew, decoded, bridge } = input;
-  /**
-   * AlumDoor được runtime đánh dấu bằng form profile riêng cho Item Group. Chỉ profile của
-   * vertical này giữ `default_measurement_profile`; nhờ vậy generic workspace không chiếm
-   * màn nghiệp vụ của app khác. Màn chuyên biệt vẫn lazy-load, nên app khác không tải code cửa.
-   */
   const isAlumdoorProfile = Boolean(formProfiles?.["Item Group"]?.keep?.includes("default_measurement_profile"));
   const useAlumdoorSalesForm = doctype === "Sales Order" && isAlumdoorProfile;
   const useAlumdoorSalesCreate = isNew && useAlumdoorSalesForm;

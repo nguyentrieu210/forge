@@ -101,7 +101,7 @@ const viewSourceAliases = [
   { find: /^@metaforge\/views\/calendar$/, replacement: viewSource("calendar/CalendarContainer") },
   { find: /^@metaforge\/views\/import$/, replacement: viewSource("system/Import") },
   { find: /^@metaforge\/views\/action$/, replacement: viewSource("action/NativeActionScreen") },
-  { find: /^@metaforge\/views\/screen$/, replacement: viewSource("screen/NativeScreenView") },
+  { find: /^@metaforge\/views\/screen$/, replacement: viewSource("screen/ScreenView") },
   { find: /^@metaforge\/views\/matrix$/, replacement: viewSource("matrix/index") },
 ];
 
