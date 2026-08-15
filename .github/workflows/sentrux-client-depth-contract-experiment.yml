@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           sentrux gate --save . | tee /tmp/before.txt
 
-      - name: Bypass views root barrel for FormView
+      - name: Bypass views root barrel in runtime shell
         shell: bash
         run: |
           set -euo pipefail
@@ -42,22 +42,26 @@ jobs:
 
           package_path = Path('client/packages/views/package.json')
           package = json.loads(package_path.read_text())
-          package['exports']['./form'] = {
-              'types': './dist/form/FormView.d.ts',
-              'import': './dist/form/FormView.js',
-          }
+          exports = package['exports']
+          exports['./assistant'] = {'types': './dist/assistant/AssistantBubble.d.ts', 'import': './dist/assistant/AssistantBubble.js'}
+          exports['./print-container'] = {'types': './dist/print/PrintContainer.d.ts', 'import': './dist/print/PrintContainer.js'}
+          exports['./print-route'] = {'types': './dist/print/printRoute.d.ts', 'import': './dist/print/printRoute.js'}
+          exports['./recent-docs'] = {'types': './dist/container/recent-docs.d.ts', 'import': './dist/container/recent-docs.js'}
           package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n')
 
-          route_path = Path('client/apps/demo/src/BuilderRoutes.tsx')
-          text = route_path.read_text()
-          old = 'import { FormView } from "@metaforge/views";'
-          new = 'import { FormView } from "@metaforge/views/form";'
+          runtime_path = Path('client/apps/runtime/src/main-base.tsx')
+          text = runtime_path.read_text()
+          old = 'import { AssistantBubble, buildPrintPath, loadRecentDocs, PrintContainer, setAssistantContext } from "@metaforge/views";'
+          new = '''import { AssistantBubble, setAssistantContext } from "@metaforge/views/assistant";
+import { PrintContainer } from "@metaforge/views/print-container";
+import { buildPrintPath } from "@metaforge/views/print-route";
+import { loadRecentDocs } from "@metaforge/views/recent-docs";'''
           if old not in text:
-              raise SystemExit('views root FormView import not found')
-          route_path.write_text(text.replace(old, new, 1))
+              raise SystemExit('runtime views root import not found')
+          runtime_path.write_text(text.replace(old, new, 1))
           PY
           git diff --check
-          git diff -- client/packages/views/package.json client/apps/demo/src/BuilderRoutes.tsx
+          git diff -- client/packages/views/package.json client/apps/runtime/src/main-base.tsx
 
       - name: Install dependencies
         shell: bash
@@ -76,7 +80,7 @@ jobs:
           sentrux gate --save . | tee /tmp/after.txt
           BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
           AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
-          echo "FORMVIEW_BOUNDARY_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          echo "RUNTIME_VIEWS_LEAF_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -gt "$BEFORE"
 
       - name: Commit validated candidate
@@ -93,6 +97,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add client/packages/views/package.json client/apps/demo/src/BuilderRoutes.tsx
-          git commit -m "refactor(sentrux): bypass views barrel for FormView"
+          git add client/packages/views/package.json client/apps/runtime/src/main-base.tsx
+          git commit -m "refactor(sentrux): bypass views barrel in runtime shell"
           git push origin "HEAD:$TARGET_BRANCH"
