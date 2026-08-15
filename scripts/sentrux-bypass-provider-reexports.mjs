@@ -11,6 +11,11 @@ const changes = [
     from: 'import { useLocaleFormat } from "../container/provider.js";',
     to: 'import { useLocaleFormat } from "../container/meta-context.js";',
   },
+  {
+    path: "client/packages/views/src/action/ActionScreen.tsx",
+    from: 'import { useMetaForge } from "../container/provider.js";',
+    to: 'import { useMetaForge } from "../container/meta-context.js";',
+  },
 ];
 
 for (const change of changes) {
