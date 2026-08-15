@@ -155,7 +155,6 @@ jobs:
           pattern = re.compile(r'import\s+(?P<whole_type>type\s+)?\{(?P<body>[^}]*)\}\s*from\s*"@metaforge/views";')
           changed = 0
           for path in critical:
-              # Byte I/O preserves existing CRLF/LF style; text helpers normalize newlines.
               text = path.read_bytes().decode('utf-8')
               matches = list(pattern.finditer(text))
               if len(matches) != 1:
@@ -202,8 +201,9 @@ jobs:
             client/apps/kho-vn/src/SetupWizard.tsx client/apps/kho-vn/src/TonKhoScreen.tsx \
             client/apps/kho-vn/src/experiences.tsx client/apps/kho-vn/src/form-guides.ts \
             client/apps/runtime/src/main-base.tsx
-          git diff --cached --check
+          git config core.whitespace cr-at-eol
           git diff --cached --stat
+          git diff --cached --check
 
       - name: Install workspace dependencies
         if: steps.detect.outputs.needed == 'true'
