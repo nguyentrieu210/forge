@@ -52,8 +52,8 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
-      - name: Typecheck views
-        run: pnpm --filter @metaforge/views run typecheck
+      - name: Typecheck client project graph
+        run: pnpm run client:typecheck
 
       - name: Typecheck server integration
         run: pnpm run server:typecheck
