@@ -69,6 +69,10 @@
     "./matrix": {
       "types": "./dist/matrix/index.d.ts",
       "import": "./dist/matrix/index.js"
+    },
+    "./form": {
+      "types": "./dist/form/FormView.d.ts",
+      "import": "./dist/form/FormView.js"
     }
   },
   "scripts": {

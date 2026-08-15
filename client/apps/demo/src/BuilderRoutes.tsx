@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Boxes, Eye, LayoutDashboard, Printer, Sparkles, Workflow } from "lucide-react";
 import type { DocTypeMeta } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
-import { FormView } from "@metaforge/views";
+import { FormView } from "@metaforge/views/form";
 import { toast } from "@metaforge/ui";
 import type { ControlRegistry } from "@metaforge/controls";
 import {
