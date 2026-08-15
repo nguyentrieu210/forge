@@ -1,4 +1,4 @@
-name: Sentrux post-kit max-depth trace
+name: Sentrux demo views boundary metric probe
 
 on:
   push:
@@ -8,31 +8,100 @@ permissions:
   contents: read
 
 jobs:
-  trace:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: agent/sentrux-convergence-20260816
-      - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libvulkan-dev
-      - name: Build instrumented Sentrux
+
+      - name: Install Sentrux
         shell: bash
         run: |
           set -euo pipefail
-          git clone --quiet https://github.com/sentrux/sentrux.git /tmp/sentrux-src
-          git -C /tmp/sentrux-src checkout --quiet 6f8ff3c14b0423e4b58f42d1813d4d5f7fdc1d11
-          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnAgPSBQYXRoKCIvdG1wL3NlbnRydXgtc3JjL3NlbnRydXgtY29yZS9zcmMvbWV0cmljcy9tb2QucnMiKQpzID0gcC5yZWFkX3RleHQoKQpzdGFydCA9IHMuaW5kZXgoJ2ZuIGNvbXB1dGVfbWF4X2RlcHRoKGVkZ2VzOiAmW0ltcG9ydEVkZ2VdLCBlbnRyeV9wb2ludHM6ICZbRW50cnlQb2ludF0pIC0+IHUzMiB7JykKZW5kID0gcy5pbmRleCgnXG4vLyDilIDilIAgUHJvIG1ldHJpY3MgZXh0ZW5zaW9uIHBvaW50Jywgc3RhcnQpCmNvZGUgPSByJycnZm4gY29tcHV0ZV9tYXhfZGVwdGgoZWRnZXM6ICZbSW1wb3J0RWRnZV0sIGVudHJ5X3BvaW50czogJltFbnRyeVBvaW50XSkgLT4gdTMyIHsKICAgIGlmIGVkZ2VzLmlzX2VtcHR5KCkgeyByZXR1cm4gMDsgfQogICAgbGV0IChzZWVkcywgYWRqLCBhbGxfbm9kZXMpID0gZmluZF9kZXB0aF9zZWVkcyhlZGdlcywgZW50cnlfcG9pbnRzKTsKICAgIGxldCBtZW1vID0gbG9uZ2VzdF9wYXRoX2Rmcygmc2VlZHMsICZhZGosIGFsbF9ub2Rlcy5sZW4oKSk7CiAgICBsZXQgbWF4X2RlcHRoID0gc2VlZHMuaXRlcigpLmZpbHRlcl9tYXAofHN8IG1lbW8uZ2V0KHMpLmNvcGllZCgpKS5tYXgoKS51bndyYXBfb3IoMCk7CiAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfTUFYPXt9IiwgbWF4X2RlcHRoKTsKICAgIGZvciBzZWVkIGluIHNlZWRzLml0ZXIoKS5maWx0ZXIofHN8IG1lbW8uZ2V0KCpzKS5jb3BpZWQoKSA9PSBTb21lKG1heF9kZXB0aCkpIHsKICAgICAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfTUFYX1NFRUQge30iLCBzZWVkKTsKICAgIH0KICAgIGxldCBtdXQgcm93czogVmVjPCgmc3RyLCZzdHIsdTMyKT4gPSBWZWM6Om5ldygpOwogICAgZm9yIChmcm9tLG5leHRzKSBpbiAmYWRqIHsKICAgICAgICBsZXQgU29tZSgmZCk9bWVtby5nZXQoZnJvbSkgZWxzZSB7IGNvbnRpbnVlOyB9OwogICAgICAgIGlmIGQgPT0gMCB7IGNvbnRpbnVlOyB9CiAgICAgICAgZm9yIHRvIGluIG5leHRzIHsKICAgICAgICAgICAgaWYgbWVtby5nZXQodG8pLmNvcGllZCgpLm1hcCh8bmR8IG5kLnNhdHVyYXRpbmdfYWRkKDEpPT1kKS51bndyYXBfb3IoZmFsc2UpIHsKICAgICAgICAgICAgICAgIHJvd3MucHVzaCgoKmZyb20sKnRvLGQpKTsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KICAgIHJvd3Muc29ydF9ieSh8YSxifCBiLjIuY21wKCZhLjIpLnRoZW5fd2l0aCh8fCBhLjAuY21wKGIuMCkpLnRoZW5fd2l0aCh8fCBhLjEuY21wKGIuMSkpKTsKICAgIGZvciAoZnJvbSx0byxkKSBpbiByb3dzIHsKICAgICAgICBpZiBkID49IDggewogICAgICAgICAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfREFHIHJlbWFpbmluZz17fSB7fSAtPiB7fSIsIGQsIGZyb20sIHRvKTsKICAgICAgICB9CiAgICB9CiAgICBtYXhfZGVwdGgKfScnJwpwLndyaXRlX3RleHQoc1s6c3RhcnRdICsgY29kZSArIHNbZW5kOl0pCg==' | base64 -d > /tmp/patch-depth.py
-          python3 /tmp/patch-depth.py
-          cargo build --quiet --release -p sentrux --bin sentrux --manifest-path /tmp/sentrux-src/Cargo.toml
-          cp /tmp/sentrux-src/target/release/sentrux /tmp/sentrux-trace
-      - name: Trace stable branch head
+          curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Measure candidate
         shell: bash
         run: |
           set -euo pipefail
-          /tmp/sentrux-trace gate --save "$GITHUB_WORKSPACE" 2>&1 | tee /tmp/trace.txt
-          echo '=== POST-KIT MAX DEPTH DAG ==='
-          grep 'SENTRUX_DEPTH_' /tmp/trace.txt
-          grep -E '^Quality:' /tmp/trace.txt || true
+          sentrux gate --save . | tee /tmp/before.txt
+          BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          runtime = Path('client/packages/views/src/list-runtime.ts')
+          runtime.write_text(
+              '/** Narrow list surface for app-level consumers. */\n'
+              'export { ListView, type ListViewProps } from "./list/ListView.js";\n'
+              'export { applyClientQuery } from "./list/filters.js";\n'
+              'export { useListUrlState, type UrlStateBridge } from "./list/useListState.js";\n',
+              encoding='utf-8',
+          )
+
+          pkg_path = Path('client/packages/views/package.json')
+          pkg = pkg_path.read_text(encoding='utf-8')
+          anchor = '    "./url-state": {\n      "types": "./dist/list/useListState.d.ts",\n      "import": "./dist/list/useListState.js"\n    },\n'
+          replacement = anchor + '    "./list-runtime": {\n      "types": "./dist/list-runtime.d.ts",\n      "import": "./dist/list-runtime.js"\n    },\n'
+          if anchor not in pkg:
+              raise SystemExit('views url-state export anchor missing')
+          pkg_path.write_text(pkg.replace(anchor, replacement, 1), encoding='utf-8')
+
+          replacements = {
+              Path('client/apps/demo/src/list-glue.tsx'): (b'from "@metaforge/views";', b'from "@metaforge/views/list-runtime";'),
+              Path('client/apps/demo/src/experiences/ReceiveExperience.tsx'): (b'from "@metaforge/views";', b'from "@metaforge/views/provider";'),
+              Path('client/apps/demo/src/system/PermissionManager.tsx'): (b'from "@metaforge/views";', b'from "@metaforge/views/permissions";'),
+              Path('client/apps/demo/src/system/Settings.tsx'): (b'from "@metaforge/views";', b'from "@metaforge/views/provider";'),
+          }
+          for path, (old, new) in replacements.items():
+              raw = path.read_bytes()
+              if old not in raw:
+                  raise SystemExit(f'expected root views import missing in {path}')
+              path.write_bytes(raw.replace(old, new, 1))
+              print('migrate', path)
+          PY
+
+          git add client/packages/views/src/list-runtime.ts
+          git diff --stat
+          sentrux gate --save . | tee /tmp/after.txt
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          export BEFORE AFTER
+
+          python3 <<'PY'
+          import json, os, select, subprocess, time
+          p=subprocess.Popen(["sentrux","--mcp"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
+          def send(x): p.stdin.write(json.dumps(x,separators=(",",":"))+"\n"); p.stdin.flush()
+          def recv(i,timeout=45):
+              end=time.time()+timeout
+              while time.time()<end:
+                  r,_,_=select.select([p.stdout],[],[],max(0,end-time.time()))
+                  if not r: break
+                  line=p.stdout.readline()
+                  if not line: break
+                  try: m=json.loads(line)
+                  except Exception: continue
+                  if m.get("id")==i: return m
+              raise RuntimeError(i)
+          def args(t):
+              pr=t.get("inputSchema",{}).get("properties",{}); rq=t.get("inputSchema",{}).get("required",[]); a={}
+              for k in ("path","root","project_path","directory"):
+                  if k in pr: a[k]="."; break
+              for k in rq:
+                  if k not in a:
+                      typ=pr.get(k,{}).get("type")
+                      a[k]="." if typ=="string" else False if typ=="boolean" else [] if typ=="array" else {}
+              return a
+          def text(m): return json.loads(next(x["text"] for x in m["result"]["content"] if x.get("type")=="text"))
+          send({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"demo-boundary-probe","version":"1"}}}); recv(1)
+          send({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})
+          send({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}); by={t["name"]:t for t in recv(2)["result"]["tools"]}
+          send({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"scan","arguments":args(by["scan"])}}); recv(3)
+          send({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"health","arguments":args(by["health"])}}); h=text(recv(4))
+          print("RESULT BEFORE=%s AFTER=%s DEPTH=%s CROSS=%s"%(os.environ['BEFORE'],os.environ['AFTER'],h['root_causes']['depth']['raw'],h.get('cross_module_edges')))
+          p.kill()
+          PY
