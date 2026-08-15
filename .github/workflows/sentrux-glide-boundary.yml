@@ -49,7 +49,7 @@ jobs:
           test -s client/vendor/glide-data-grid/forge-bundle/index.js
           test -s client/vendor/glide-data-grid/forge-bundle/index.d.ts
           test -s client/vendor/glide-data-grid/forge-bundle/index.css
-          if git grep -nE 'vendor/glide-data-grid/src|@glideapps/glide-data-grid' -- ':!client/vendor/glide-data-grid/**'; then
+          if git grep -nE 'vendor/glide-data-grid/src|@glideapps/glide-data-grid' -- ':!client/vendor/glide-data-grid/**' ':!.github/workflows/sentrux-glide-boundary.yml'; then
             echo 'Unexpected first-party reference to Glide vendored source/package' >&2
             exit 1
           fi
