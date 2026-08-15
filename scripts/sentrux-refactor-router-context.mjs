@@ -21,7 +21,7 @@ await writeFile(contextPath, `${contextImports}${interfaceBlock}\n`, "utf8");
 const exactReplacements = [
   [
     'import type { Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand, MutationReceipt } from "../../contracts/src/index.js";',
-    'import type { CanonicalDocument, JsonObject, JsonValue, MutationAction } from "../../contracts/src/index.js";',
+    'import type { Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand } from "../../contracts/src/index.js";',
   ],
   [
     'import type { D1MutationStore, DocumentListService, ListFilter } from "../../document-kernel/src/index.js";',
@@ -29,7 +29,7 @@ const exactReplacements = [
   ],
   [
     'import type {\n  D1CollaborationService, DocTypeMeta, DocumentAccessStore, ExtendedPermissionAction,\n  MetadataPermissionService, MetadataStore,\n} from "../../frappe-model/src/index.js";',
-    'import type { DocTypeMeta, ExtendedPermissionAction } from "../../frappe-model/src/index.js";',
+    'import type { DocTypeMeta, ExtendedPermissionAction, MetadataStore } from "../../frappe-model/src/index.js";',
   ],
   [
     'import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";',
@@ -59,9 +59,6 @@ if (importAnchor < 0) throw new Error("access-control import anchor not found");
 const insertAt = importAnchor + accessControlImportEnd.length;
 router = `${router.slice(0, insertAt)}\nimport type { FrappeRouterContext } from "./router-context.js";${router.slice(insertAt)}`;
 
-// Import rewrites above change the byte offsets before the interface, so locate the
-// block again before removing it. Reusing the original offsets can splice the export
-// into the middle of an import/comment and produce invalid TypeScript.
 const currentInterfaceStart = router.indexOf("export interface FrappeRouterContext {");
 const currentInterfaceEnd = router.indexOf(interfaceEndMarker, currentInterfaceStart);
 if (currentInterfaceStart < 0 || currentInterfaceEnd < 0) {
