@@ -52,10 +52,12 @@ jobs:
           runtime_path = Path('client/apps/runtime/src/main-base.tsx')
           text = runtime_path.read_text()
           old = 'import { AssistantBubble, buildPrintPath, loadRecentDocs, PrintContainer, setAssistantContext } from "@metaforge/views";'
-          new = '''import { AssistantBubble, setAssistantContext } from "@metaforge/views/assistant";
-import { PrintContainer } from "@metaforge/views/print-container";
-import { buildPrintPath } from "@metaforge/views/print-route";
-import { loadRecentDocs } from "@metaforge/views/recent-docs";'''
+          new = '\n'.join([
+              'import { AssistantBubble, setAssistantContext } from "@metaforge/views/assistant";',
+              'import { PrintContainer } from "@metaforge/views/print-container";',
+              'import { buildPrintPath } from "@metaforge/views/print-route";',
+              'import { loadRecentDocs } from "@metaforge/views/recent-docs";',
+          ])
           if old not in text:
               raise SystemExit('runtime views root import not found')
           runtime_path.write_text(text.replace(old, new, 1))
