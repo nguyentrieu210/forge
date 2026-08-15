@@ -2,7 +2,8 @@ name: Sentrux depth path probe
 
 on:
   push:
-    branches: [agent/sentrux-convergence-20260816]
+    branches:
+      - agent/sentrux-convergence-20260816
   workflow_dispatch:
 
 permissions:
@@ -24,47 +25,35 @@ jobs:
           git checkout --quiet 6f8ff3c14b0423e4b58f42d1813d4d5f7fdc1d11
           python3 <<'PY'
           from pathlib import Path
-          p=Path('sentrux-core/src/metrics/mod.rs')
-          s=p.read_text()
-          old='''fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {
-    if edges.is_empty() {
-        return 0;
-    }
-
-    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);
-    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());
-
-    // Only max from seed nodes (non-seed memos are for correctness only).
-    seeds.iter()
-        .filter_map(|s| memo.get(s))
-        .copied()
-        .max()
-        .unwrap_or(0)
-}'''
-          new='''fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {
-    if edges.is_empty() { return 0; }
-    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);
-    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());
-    let best = seeds.iter().filter_map(|s| memo.get(s).map(|d| (*s, *d))).max_by_key(|(_, d)| *d);
-    if std::env::var_os("SENTRUX_TRACE_DEPTH").is_some() {
-        eprintln!("SENTRUX_DEPTH_ENTRY_POINTS={}", entry_points.len());
-        eprintln!("SENTRUX_DEPTH_SEEDS={}", seeds.len());
-        if let Some((mut node, mut depth)) = best {
-            eprintln!("SENTRUX_DEPTH_PATH_BEGIN depth={}", depth);
-            let mut i = 0u32;
-            loop {
-                eprintln!("SENTRUX_DEPTH_PATH {:02} {} remaining={}", i, node, depth);
-                if depth == 0 { break; }
-                let next = adj.get(node).and_then(|ns| ns.iter().filter_map(|n| memo.get(n).map(|d| (*n, *d))).filter(|(_, d)| d.saturating_add(1) == depth).max_by_key(|(_, d)| *d));
-                match next { Some((n,d)) => { node=n; depth=d; i+=1; }, None => { eprintln!("SENTRUX_DEPTH_PATH_BROKEN"); break; } }
-            }
-            eprintln!("SENTRUX_DEPTH_PATH_END");
-        }
-    }
-    best.map(|(_, d)| d).unwrap_or(0)
-}'''
-          if old not in s: raise SystemExit('compute_max_depth block not found')
-          p.write_text(s.replace(old,new))
+          p = Path('sentrux-core/src/metrics/mod.rs')
+          s = p.read_text()
+          start = s.index('fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {')
+          end = s.index('\n// ── Pro metrics extension point', start)
+          lines = [
+              'fn compute_max_depth(edges: &[ImportEdge], entry_points: &[EntryPoint]) -> u32 {',
+              '    if edges.is_empty() { return 0; }',
+              '    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);',
+              '    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());',
+              '    let best = seeds.iter().filter_map(|s| memo.get(s).map(|d| (*s, *d))).max_by_key(|(_, d)| *d);',
+              '    if std::env::var_os("SENTRUX_TRACE_DEPTH").is_some() {',
+              '        eprintln!("SENTRUX_DEPTH_ENTRY_POINTS={}", entry_points.len());',
+              '        eprintln!("SENTRUX_DEPTH_SEEDS={}", seeds.len());',
+              '        if let Some((mut node, mut depth)) = best {',
+              '            eprintln!("SENTRUX_DEPTH_PATH_BEGIN depth={}", depth);',
+              '            let mut i = 0u32;',
+              '            loop {',
+              '                eprintln!("SENTRUX_DEPTH_PATH {:02} {} remaining={}", i, node, depth);',
+              '                if depth == 0 { break; }',
+              '                let next = adj.get(node).and_then(|ns| ns.iter().filter_map(|n| memo.get(n).map(|d| (*n, *d))).filter(|(_, d)| d.saturating_add(1) == depth).max_by_key(|(_, d)| *d));',
+              '                match next { Some((n,d)) => { node=n; depth=d; i+=1; }, None => { eprintln!("SENTRUX_DEPTH_PATH_BROKEN"); break; } }',
+              '            }',
+              '            eprintln!("SENTRUX_DEPTH_PATH_END");',
+              '        }',
+              '    }',
+              '    best.map(|(_, d)| d).unwrap_or(0)',
+              '}',
+          ]
+          p.write_text(s[:start] + '\n'.join(lines) + s[end:])
           PY
           cargo build --quiet --release -p sentrux --bin sentrux
           cp target/release/sentrux /tmp/sentrux-trace
@@ -72,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SENTRUX_TRACE_DEPTH=1 /tmp/sentrux-trace gate --save . 2>&1 | tee /tmp/depth-trace.txt
+          SENTRUX_TRACE_DEPTH=1 /tmp/sentrux-trace gate --save "$GITHUB_WORKSPACE" 2>&1 | tee /tmp/depth-trace.txt
           echo '=== OFFICIAL DEPTH TRACE ==='
           grep 'SENTRUX_DEPTH_' /tmp/depth-trace.txt
           grep -E '^Quality:' /tmp/depth-trace.txt || true
