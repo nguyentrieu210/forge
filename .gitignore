@@ -20,3 +20,6 @@ server/docs/spec/source-exact/generated/
 server/docs/spec/source-exact/oracle/fixtures/O2C-*.json
 server/docs/spec/source-exact/oracle/differential/O2C-*.json
 server/docs/spec/source-exact/runtime/
+
+# Reproducible source-exact checkouts; fetch with server source:fetch when needed
+/upstream/
