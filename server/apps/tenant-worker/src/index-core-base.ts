@@ -29,11 +29,9 @@ import { AggregateCoordinator } from "./aggregate-do.js";
 import { askAssistant, readReceiptImage } from "./ai-assistant.js";
 import { publishPendingOutbox } from "../../../packages/outbox/src/index.js";
 import { AppReportService, D1ReportService } from "../../../packages/query/src/index.js";
-import { ingestFacebookMessage, storeFacebookOAuthPages, type FacebookOAuthPage } from "../../../packages/social-commerce/src/tenant-handler.js";
-import type { SocialQueueMessage } from "../../../packages/social-commerce/src/index.js";
-import { routeSocialCommerceApi } from "../../../packages/social-commerce/src/api.js";
 import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
+import { routeAuthenticatedSocialRequest, routeInternalSocialRequest } from "./social-routes.js";
 
 export { AggregateCoordinator };
 
@@ -144,38 +142,6 @@ async function routeInternalMaintenanceRequest(
   return undefined;
 }
 
-async function routeInternalSocialRequest(
-  request: Request,
-  url: URL,
-  env: TenantEnv,
-  traceId: string,
-): Promise<Response | undefined> {
-  if (request.method === "POST" && url.pathname === "/internal/social/events") {
-    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-    const tenant = resolveTenant(request, env);
-    if (!tenant) throw new Error("Missing tenant context");
-    const message = await readJson<JsonObject>(request, 1_100_000) as unknown as SocialQueueMessage;
-    const idempotencyKey = request.headers.get("x-cloudforge-idempotency-key");
-    if (!idempotencyKey || idempotencyKey !== message.event_id) throw new Error("Social event idempotency key mismatch");
-    const result = await ingestFacebookMessage(env.DB, tenant, message);
-    return jsonResponse({ committed: true, event_id: message.event_id, ...result }, 200, {
-      "x-cloudforge-social-event-committed": message.event_id,
-      "x-cloudforge-trace-id": traceId,
-    });
-  }
-
-  if (request.method === "POST" && url.pathname === "/internal/social/oauth/facebook") {
-    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-    const tenant = resolveTenant(request, env);
-    if (!tenant) throw new Error("Missing tenant context");
-    if (!env.SOCIAL_CREDENTIAL_KEK) throw new Error("SOCIAL_CREDENTIAL_KEK is not configured");
-    const body = await readJson<JsonObject>(request, 1_000_000) as unknown as { actor_id: string; pages: FacebookOAuthPage[] };
-    const result = await storeFacebookOAuthPages(env.DB, tenant, body.actor_id, body.pages, env.SOCIAL_CREDENTIAL_KEK);
-    return jsonResponse({ committed: true, ...result });
-  }
-  return undefined;
-}
-
 async function routeInternalDomainEventRequest(
   request: Request,
   url: URL,
@@ -248,7 +214,7 @@ async function routeInternalRequest(
   const maintenanceResponse = await routeInternalMaintenanceRequest(request, url, env, traceId);
   if (maintenanceResponse) return maintenanceResponse;
 
-  const socialResponse = await routeInternalSocialRequest(request, url, env, traceId);
+  const socialResponse = await routeInternalSocialRequest(request, url, env, traceId, resolveTenant);
   if (socialResponse) return socialResponse;
 
   return routeInternalDomainEventRequest(request, url, env, traceId);
@@ -284,16 +250,9 @@ export default {
       const documentStore = new D1MutationStore(env.DB);
       const organizationSecurity = new D1OrganizationSecurityGuard(env.DB, metadata);
 
-      if (request.method === "POST" && url.pathname === "/api/v1/social/facebook/oauth/start") {
-        requireSystemManager(actor);
-        if (!env.SOCIAL_INGRESS || !env.PUBLIC_ORIGIN) throw errors.misconfigured("Facebook OAuth service is not configured");
-        const response = await env.SOCIAL_INGRESS.fetch("https://social-ingress.internal/internal/oauth/facebook/start", {
-          method: "POST", headers: { "content-type": "application/json", "authorization": `Bearer ${env.INTERNAL_SERVICE_TOKEN}` },
-          body: JSON.stringify({ tenant_id: tenantId, actor_id: actor.user_id, return_url: `${env.PUBLIC_ORIGIN}/x/social-commerce` }),
-        });
-        return new Response(response.body, { status: response.status, headers: response.headers });
-      }
-      const socialResponse = await routeSocialCommerceApi(request, url, env.DB, tenantId, actor);
+      const socialResponse = await routeAuthenticatedSocialRequest(
+        request, url, env, tenantId, actor, requireSystemManager,
+      );
       if (socialResponse) return socialResponse;
 
       if (request.method === "POST" && url.pathname === "/api/v1/commands") {
