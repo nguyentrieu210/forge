@@ -11,14 +11,17 @@
  * native routes.
  */
 
-import type { Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand, MutationReceipt } from "../../contracts/src/index.js";
-import { errors, sha256Hex } from "../../core/src/index.js";
-import { resolveCommercialLine } from "../../clouderp-selling/src/index.js";
-import type { D1MutationStore, DocumentListService, ListFilter } from "../../document-kernel/src/index.js";
-import type {
-  D1CollaborationService, DocTypeMeta, DocumentAccessStore, ExtendedPermissionAction,
-  MetadataPermissionService, MetadataStore,
-} from "../../frappe-model/src/index.js";
+import {
+  appMethodTarget, blocksSelfApproval, combinedNavigation, dispatchAppMethod, errors, mergeCustomizations,
+  navItemPath, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter, parseQueryRequest,
+  permissionAllows, renderPrintFormat, resolveAutoname, resolveCommercialLine, sha256Hex, validateWorkflow,
+  type Actor, type AppInstaller, type AppMethodEnv, type AppReportService, type AppReportSpec,
+  type CanonicalDocument, type CustomFieldRecord, type CustomizationStore, type D1CollaborationService,
+  type D1MutationStore, type D1ReportService, type D1SearchStore, type D1UserStore, type DocTypeMeta,
+  type DocumentAccessStore, type DocumentListService, type ExtendedPermissionAction, type JsonObject,
+  type JsonValue, type ListFilter, type MetadataPermissionService, type MetadataStore, type MutationAction,
+  type MutationCommand, type MutationReceipt, type PropertySetterRecord, type QueryFilter,
+} from "./router-platform.js";
 import { readFrappeArgs, type FrappeArgs } from "./args.js";
 import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./command.js";
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
@@ -33,18 +36,7 @@ import { toKernelField, toKernelFilters, toKernelSearch, toKernelSort } from "./
 import {
   childDocTypeNames, maskedFieldNames, tableFieldNames, toFrappeDocType, toFrappeMetaBundle, toFrappeWorkflow,
 } from "./meta-shape.js";
-import {
-  blocksSelfApproval, mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta,
-  parsePropertySetter, permissionAllows, renderPrintFormat, resolveAutoname, validateWorkflow,
-} from "../../frappe-model/src/index.js";
-import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";
-import type { D1UserStore } from "../../auth/src/index.js";
-import { parseQueryRequest, type AppReportService, type AppReportSpec, type D1ReportService, type QueryFilter } from "../../query/src/index.js";
 import { hashPassword, verifyPassword } from "./password.js";
-import {
-  appMethodTarget, combinedNavigation, dispatchAppMethod, navItemPath,
-  type AppInstaller, type AppMethodEnv,
-} from "../../app-registry/src/index.js";
 import type { D1TranslationStore } from "./translations.js";
 import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";
 import {
