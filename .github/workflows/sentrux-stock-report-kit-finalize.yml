@@ -155,7 +155,8 @@ jobs:
           pattern = re.compile(r'import\s+(?P<whole_type>type\s+)?\{(?P<body>[^}]*)\}\s*from\s*"@metaforge/views";')
           changed = 0
           for path in critical:
-              text = path.read_text(encoding='utf-8')
+              # Byte I/O preserves existing CRLF/LF style; text helpers normalize newlines.
+              text = path.read_bytes().decode('utf-8')
               matches = list(pattern.finditer(text))
               if len(matches) != 1:
                   raise SystemExit(f'{path}: expected exactly one root views import, found {len(matches)}')
@@ -173,6 +174,7 @@ jobs:
                   group = groups.setdefault(subpath, {'values': [], 'types': []})
                   group['types' if token_type else 'values'].append(raw)
               lines = []
+              newline = '\r\n' if '\r\n' in text else '\n'
               for subpath, group in groups.items():
                   values = group['values']
                   types = group['types']
@@ -181,14 +183,14 @@ jobs:
                       lines.append(f'import {{ {", ".join(names)} }} from "@metaforge/views/{subpath}";')
                   else:
                       lines.append(f'import type {{ {", ".join(types)} }} from "@metaforge/views/{subpath}";')
-              replacement = '\n'.join(lines)
+              replacement = newline.join(lines)
               text = text[:match.start()] + replacement + text[match.end():]
-              path.write_text(text, encoding='utf-8')
+              path.write_bytes(text.encode('utf-8'))
               changed += 1
           if changed != len(critical):
               raise SystemExit(f'changed {changed}, expected {len(critical)}')
           for path in critical:
-              if 'from "@metaforge/views";' in path.read_text(encoding='utf-8'):
+              if 'from "@metaforge/views";' in path.read_bytes().decode('utf-8'):
                   raise SystemExit(f'{path}: root barrel import remains')
           print(f'REWRITTEN_CRITICAL_FILES={changed}')
           PY
@@ -212,17 +214,19 @@ jobs:
           pnpm install --no-frozen-lockfile
           git restore --worktree -- pnpm-lock.yaml client/pnpm-lock.yaml 2>/dev/null || true
 
-      - name: Typecheck views and four critical apps
+      - name: Build dependency outputs and typecheck critical apps
         if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          pnpm exec tsc -b \
-            client/packages/views \
-            client/apps/demo \
-            client/apps/hrm \
-            client/apps/kho-vn \
-            client/apps/runtime
+          pnpm --filter "@metaforge/demo^..." run build
+          pnpm --filter "hrm^..." run build
+          pnpm --filter "kho-vn^..." run build
+          pnpm --filter "runtime^..." run build
+          pnpm --filter @metaforge/demo run typecheck
+          pnpm --filter hrm run typecheck
+          pnpm --filter kho-vn run typecheck
+          pnpm --filter runtime run typecheck
 
       - name: Strict Sentrux improvement gate
         if: steps.detect.outputs.needed == 'true'
