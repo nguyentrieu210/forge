@@ -51,6 +51,9 @@ jobs:
       - name: Build views package
         run: pnpm --filter @metaforge/views run build
 
+      - name: Build stock-vn dependency closure
+        run: pnpm --filter @metaforge/stock-vn... run build
+
       - name: Typecheck application packages
         run: pnpm --filter './client/apps/**' run typecheck
 
