@@ -1,4 +1,4 @@
-name: Sentrux tenant wrapper apply
+name: Sentrux tenant operational boundary apply
 
 on:
   pull_request:
@@ -18,14 +18,14 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Detect operational route facade
+      - name: Detect operational boundaries
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if grep -q 'from "./operational-routes.js"' server/apps/tenant-worker/src/index-base.ts; then
+          if grep -q 'from "./operational-stock-routes.js"' server/apps/tenant-worker/src/index-base.ts; then
             echo 'needed=false' >> "$GITHUB_OUTPUT"
-            echo 'Tenant operational route facade already present'
+            echo 'Tenant operational boundaries already present'
           else
             echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
@@ -48,15 +48,17 @@ jobs:
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
           echo "BEFORE=$Q"
 
-      - name: Collapse operational route imports
+      - name: Extract real operational boundaries
         if: steps.detect.outputs.needed == 'true'
         run: |
           set -euo pipefail
           python3 .github/sentrux-tenant-wrapper-transform
-          grep -q 'from "./operational-routes.js"' server/apps/tenant-worker/src/index-base.ts
-          test -f server/apps/tenant-worker/src/operational-routes.ts
+          grep -q 'from "./operational-stock-routes.js"' server/apps/tenant-worker/src/index-base.ts
+          grep -q 'from "./operational-manufacturing-routes.js"' server/apps/tenant-worker/src/index-base.ts
+          test -f server/apps/tenant-worker/src/operational-stock-routes.ts
+          test -f server/apps/tenant-worker/src/operational-manufacturing-routes.ts
           git diff --check
-          git diff --stat -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-routes.ts
+          git diff --stat -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-*-routes.ts
 
       - name: Install dependencies
         if: steps.detect.outputs.needed == 'true'
@@ -69,7 +71,7 @@ jobs:
         if: steps.detect.outputs.needed == 'true'
         run: pnpm run server:typecheck
 
-      - name: Require no Sentrux regression and remove wrapper god-file
+      - name: Require score, cycle, fan-out and complexity improvement
         if: steps.detect.outputs.needed == 'true'
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
@@ -89,9 +91,12 @@ jobs:
           sentrux check . 2>&1 | tee /tmp/structure.txt
           set -e
           rm -rf .sentrux
-          echo "TENANT_WRAPPER_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          echo "TENANT_OPERATIONAL_BOUNDARY_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -ge "$BEFORE"
           ! grep -q 'server/apps/tenant-worker/src/index-base.ts (fan-out=' /tmp/structure.txt
+          ! grep -q 'server/apps/tenant-worker/src/index-base.ts:fetch (cc=' /tmp/structure.txt
+          ! grep -Eq 'server/apps/tenant-worker/src/operational-(stock|manufacturing)-routes.ts \(fan-out=' /tmp/structure.txt
+          ! grep -Eq 'server/apps/tenant-worker/src/operational-(stock|manufacturing)-routes.ts:.* \(cc=' /tmp/structure.txt
           ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
 
       - name: Commit validated source improvement
@@ -100,8 +105,8 @@ jobs:
           set -euo pipefail
           git config user.name 'sentrux-refactor-bot'
           git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
-          git add -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-routes.ts
+          git add -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-stock-routes.ts server/apps/tenant-worker/src/operational-manufacturing-routes.ts
           git diff --cached --check
           git diff --cached --stat
-          git commit --no-verify -m 'refactor(tenant): collapse operational route imports [skip sentrux]'
+          git commit --no-verify -m 'refactor(tenant): extract operational route boundaries [skip sentrux]'
           git push origin HEAD:${{ github.head_ref }}
