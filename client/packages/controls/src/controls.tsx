@@ -14,7 +14,7 @@ import {
   Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup,
   Button, useT,
 } from "@metaforge/ui";
-import type { FieldControlProps, LinkSearchOpts } from "./index.js";
+import type { FieldControlProps, LinkSearchOpts } from "./contract.js";
 import { loadRecentLinks, recordRecentLink } from "./recent-links.js";
 
 /** Frappe search_link mặc định ~10 kết quả; nhiều hơn ⇒ gợi ý gõ thêm để thu hẹp. */

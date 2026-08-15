@@ -11,7 +11,7 @@ import { sanitizeUrl, sanitizeImageUrl, withAppBase } from "@metaforge/core";
 /** BASE của app (Vite thay lúc build) — xem chú thích ở withAppBase. */
 const APP_BASE: string = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
 import { cn, Button, Input, FileButton, useT } from "@metaforge/ui";
-import type { FieldControlProps } from "./index.js";
+import type { FieldControlProps } from "./contract.js";
 
 const MASK = "••••••";
 function Masked() {
