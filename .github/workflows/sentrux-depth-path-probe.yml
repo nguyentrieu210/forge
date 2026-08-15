@@ -1,9 +1,6 @@
 name: Sentrux depth path probe
 
 on:
-  push:
-    branches:
-      - agent/sentrux-convergence-20260816
   workflow_dispatch:
 
 permissions:
