@@ -1,6 +1,9 @@
 name: Sentrux depth path probe
 
 on:
+  push:
+    branches:
+      - agent/sentrux-convergence-20260816
   workflow_dispatch:
 
 permissions:
@@ -40,23 +43,32 @@ jobs:
               '    if edges.is_empty() { return 0; }',
               '    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);',
               '    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());',
-              '    let best = seeds.iter().filter_map(|s| memo.get(s).map(|d| (*s, *d))).max_by_key(|(_, d)| *d);',
+              '    let max_depth = seeds.iter().filter_map(|s| memo.get(s).copied()).max().unwrap_or(0);',
               '    if std::env::var_os("SENTRUX_TRACE_DEPTH").is_some() {',
               '        eprintln!("SENTRUX_DEPTH_ENTRY_POINTS={}", entry_points.len());',
               '        eprintln!("SENTRUX_DEPTH_SEEDS={}", seeds.len());',
-              '        if let Some((mut node, mut depth)) = best {',
-              '            eprintln!("SENTRUX_DEPTH_PATH_BEGIN depth={}", depth);',
-              '            let mut i = 0u32;',
-              '            loop {',
-              '                eprintln!("SENTRUX_DEPTH_PATH {:02} {} remaining={}", i, node, depth);',
-              '                if depth == 0 { break; }',
-              '                let next = adj.get(node).and_then(|ns| ns.iter().filter_map(|n| memo.get(n).map(|d| (*n, *d))).filter(|(_, d)| d.saturating_add(1) == depth).max_by_key(|(_, d)| *d));',
-              '                match next { Some((n,d)) => { node=n; depth=d; i+=1; }, None => { eprintln!("SENTRUX_DEPTH_PATH_BROKEN"); break; } }',
-              '            }',
-              '            eprintln!("SENTRUX_DEPTH_PATH_END");',
+              '        eprintln!("SENTRUX_DEPTH_MAX={}", max_depth);',
+              '        for seed in seeds.iter().filter(|s| memo.get(*s).copied() == Some(max_depth)) {',
+              '            eprintln!("SENTRUX_DEPTH_MAX_SEED {}", seed);',
               '        }',
+              '        eprintln!("SENTRUX_DEPTH_DAG_BEGIN");',
+              '        let mut rows: Vec<(&str, &str, u32)> = Vec::new();',
+              '        for (from, nexts) in &adj {',
+              '            let Some(&d) = memo.get(from) else { continue; };',
+              '            if d == 0 { continue; }',
+              '            for to in nexts {',
+              '                if memo.get(to).copied().map(|nd| nd.saturating_add(1) == d).unwrap_or(false) {',
+              '                    rows.push((*from, *to, d));',
+              '                }',
+              '            }',
+              '        }',
+              '        rows.sort_by(|a,b| b.2.cmp(&a.2).then_with(|| a.0.cmp(b.0)).then_with(|| a.1.cmp(b.1)));',
+              '        for (from, to, d) in rows {',
+              '            eprintln!("SENTRUX_DEPTH_DAG remaining={} {} -> {}", d, from, to);',
+              '        }',
+              '        eprintln!("SENTRUX_DEPTH_DAG_END");',
               '    }',
-              '    best.map(|(_, d)| d).unwrap_or(0)',
+              '    max_depth',
               '}',
           ]
           p.write_text(s[:start] + '\n'.join(lines) + s[end:])
@@ -64,7 +76,7 @@ jobs:
           cargo build --quiet --release -p sentrux --bin sentrux
           cp target/release/sentrux /tmp/sentrux-trace
 
-      - name: Trace exact Forge dependency depth
+      - name: Trace exact Forge dependency depth DAG
         shell: bash
         run: |
           set -euo pipefail
