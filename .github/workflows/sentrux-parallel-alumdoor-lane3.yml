@@ -54,12 +54,17 @@ jobs:
       - name: Assert exact head
         run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
 
-      - name: Measure candidate and require score gain
+      - name: Measure source-only candidate and require score gain
         shell: bash
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
         run: |
           set -euo pipefail
+          # This workflow exists only to measure the candidate. Remove it from the
+          # candidate scan so a CI file cannot manufacture a Sentrux score gain.
+          git rm -q --cached .github/workflows/sentrux-parallel-alumdoor-lane3.yml
+          rm -f .github/workflows/sentrux-parallel-alumdoor-lane3.yml
+
           sentrux gate --save . | tee /tmp/sentrux-after.txt
           after=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/sentrux-after.txt | tail -1 | grep -Eo '[0-9]+')
           echo "BEFORE_QUALITY=$BEFORE"
