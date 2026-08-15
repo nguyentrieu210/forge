@@ -22,6 +22,10 @@
       "types": "./dist/list/useListState.d.ts",
       "import": "./dist/list/useListState.js"
     },
+    "./list-runtime": {
+      "types": "./dist/list-runtime.d.ts",
+      "import": "./dist/list-runtime.js"
+    },
     "./doctype-workspace": {
       "types": "./dist/app/DoctypeWorkspace.d.ts",
       "import": "./dist/app/DoctypeWorkspace.js"

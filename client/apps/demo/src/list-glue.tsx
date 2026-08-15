@@ -4,7 +4,7 @@ import type { Doc, DocTypeMeta } from "@metaforge/core";
 import {
   ListView, applyClientQuery, useListUrlState,
   type UrlStateBridge,
-} from "@metaforge/views";
+} from "@metaforge/views/list-runtime";
 import { toast } from "@metaforge/ui";
 
 /** Cầu URL ↔ state cho List (dùng chung mock + Live). react-router chỉ ở tầng app. */
