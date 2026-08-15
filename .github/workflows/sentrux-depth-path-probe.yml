@@ -1,0 +1,126 @@
+name: Sentrux depth path probe
+
+on:
+  push:
+    branches:
+      - agent/sentrux-convergence-20260816
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct longest resolved relative import path
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from __future__ import annotations
+          from pathlib import Path, PurePosixPath
+          from collections import defaultdict
+          import re, subprocess
+
+          tracked = subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          code_exts = {'.ts','.tsx','.mts','.cts','.js','.jsx','.mjs','.cjs'}
+          files = {PurePosixPath(p).as_posix() for p in tracked if PurePosixPath(p).suffix.lower() in code_exts}
+
+          static_re = re.compile(r'''(?:import|export)\s+(?:type\s+)?(?:[^\"']*?\s+from\s+)?[\"']([^\"']+)[\"']''', re.S)
+          dynamic_re = re.compile(r'''import\s*\(\s*[\"']([^\"']+)[\"']\s*\)''')
+          require_re = re.compile(r'''require\s*\(\s*[\"']([^\"']+)[\"']\s*\)''')
+          suffixes = ['.ts','.tsx','.mts','.cts','.js','.jsx','.mjs','.cjs']
+
+          def resolve(src: str, spec: str):
+              if not spec.startswith('.'):
+                  return None
+              parent = PurePosixPath(src).parent
+              raw = (parent / spec).as_posix()
+              # normalize . and .. without requiring the path to exist on disk
+              parts=[]
+              for part in PurePosixPath(raw).parts:
+                  if part in ('','.'):
+                      continue
+                  if part == '..':
+                      if parts: parts.pop()
+                  else:
+                      parts.append(part)
+              base='/'.join(parts)
+              candidates=[]
+              ext=PurePosixPath(base).suffix.lower()
+              if ext:
+                  candidates.append(base)
+                  stem=base[:-len(ext)]
+                  # TS commonly imports source modules using emitted .js suffixes.
+                  if ext in {'.js','.jsx','.mjs','.cjs'}:
+                      candidates.extend(stem+s for s in suffixes)
+              else:
+                  candidates.extend(base+s for s in suffixes)
+              candidates.extend(base+'/index'+s for s in suffixes)
+              for candidate in candidates:
+                  if candidate in files:
+                      return candidate
+              return None
+
+          edges=set()
+          unresolved=[]
+          for src in sorted(files):
+              try:
+                  text=Path(src).read_text(encoding='utf-8', errors='ignore')
+              except OSError:
+                  continue
+              specs=[]
+              for rx in (static_re,dynamic_re,require_re):
+                  specs.extend(rx.findall(text))
+              for spec in specs:
+                  dst=resolve(src,spec)
+                  if dst and dst != src:
+                      edges.add((src,dst))
+                  elif spec.startswith('.'):
+                      unresolved.append((src,spec))
+
+          adj=defaultdict(list)
+          incoming=set()
+          nodes=set()
+          for a,b in edges:
+              adj[a].append(b); incoming.add(b); nodes.add(a); nodes.add(b)
+          for a in adj:
+              adj[a]=sorted(set(adj[a]))
+          roots=sorted(nodes-incoming)
+
+          memo={}
+          active=set()
+          def longest(node):
+              if node in memo: return memo[node]
+              if node in active: return [node]
+              active.add(node)
+              best=[node]
+              for nxt in adj.get(node,[]):
+                  candidate=[node]+longest(nxt)
+                  if len(candidate)>len(best): best=candidate
+              active.remove(node)
+              memo[node]=best
+              return best
+
+          paths=sorted((longest(r) for r in roots), key=lambda p:(len(p),p), reverse=True)
+          best=paths[0] if paths else []
+          depth=max(0,len(best)-1)
+          print(f'PROBE_FILES={len(files)}')
+          print(f'PROBE_RESOLVED_EDGES={len(edges)}')
+          print(f'PROBE_UNRESOLVED_RELATIVE={len(unresolved)}')
+          print(f'PROBE_ROOTS={len(roots)}')
+          print(f'PROBE_MAX_DEPTH={depth}')
+          print('PROBE_LONGEST_PATH')
+          for i,node in enumerate(best): print(f'{i:02d} {node}')
+          print('PROBE_TOP_PATHS')
+          for path in paths[:12]:
+              print(f'depth={len(path)-1} :: '+' -> '.join(path))
+          if depth != 20:
+              print('PROBE_NOT_VERIFIED: reconstructed depth differs from Sentrux raw depth 20')
+          else:
+              print('PROBE_VERIFIED_DEPTH_20')
+          PY
