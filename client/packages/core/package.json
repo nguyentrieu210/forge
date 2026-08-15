@@ -9,6 +9,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./types/doc": {
+      "types": "./dist/types/doc.d.ts",
+      "import": "./dist/types/doc.js"
+    },
+    "./business/display": {
+      "types": "./dist/business/display.d.ts",
+      "import": "./dist/business/display.js"
     }
   },
   "scripts": {

@@ -2,7 +2,8 @@
  * DTO cho FrappeAdapter — SHAPE đã verified trên live 16.29.0 (api-map.md).
  * Các sửa review#4 nằm ngay trong type để lệch contract = lỗi biên dịch.
  */
-import type { Doc, DisplayValueResult, LabelValue } from "@metaforge/core";
+import type { DisplayValueResult } from "@metaforge/core/business/display";
+import type { Doc, LabelValue } from "@metaforge/core/types/doc";
 
 /** §1 — BootDTO: orch metaforge.api.get_boot wrap frappe.boot.get_bootinfo. */
 export interface MetaForgeBootDTO {
