@@ -1,23 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import type { JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
-import { createO2CControllerRegistry } from "../../../packages/clouderp-selling/src/index.js";
-import { registerErpCoreControllers } from "../../../packages/clouderp-core/src/index.js";
-import { registerStockControllers } from "../../../packages/clouderp-stock/src/index.js";
-import { registerErpNextCoreControllers } from "../../../packages/clouderp-erpnext/src/index.js";
-import {
-  APP_FACTORY_APPROVAL_PROCESS_DOCTYPE,
-  AppFactoryApprovalRuntime,
-  registerAppFactoryControllers,
-} from "../../../packages/app-registry/src/index.js";
-import {
-  D1RolloutPurchaseAllocationDomainStore,
-  DocumentKernel,
-  MutationSerialExecutor,
-} from "../../../packages/document-kernel/src/index.js";
+import { APP_FACTORY_APPROVAL_PROCESS_DOCTYPE, type AppFactoryApprovalRuntime } from "../../../packages/app-registry/src/index.js";
+import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel, MutationSerialExecutor } from "../../../packages/document-kernel/src/index.js";
 import { errors } from "../../../packages/core/src/index.js";
-import { D1DocumentAccessStore, D1MetadataStore, GenericMetadataController, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
-import { registerIntegrationHubControllers } from "../../../packages/integration-hub/src/registry.js";
-import { D1OrganizationSecurityGuard } from "../../../packages/organization-security/src/index.js";
 import type { TenantEnv } from "./env.js";
 import {
   commitAlumDoorAttendanceScan,
@@ -35,6 +20,11 @@ import {
 } from "./payroll-coordinator.js";
 import { isInventoryCoordinatedCommand, resolveInventoryCoordinatorKey } from "./inventory-coordinator.js";
 import { PurchaseCommandSerialExecutor } from "./purchase-command-retry.js";
+import {
+  createAggregateAppFactoryApprovalRuntime,
+  createAggregateCommandServices,
+  type AggregateCommandServices,
+} from "./aggregate-services.js";
 
 interface AggregateStub extends DurableObjectStub {
   mutate<T extends JsonObject>(command: MutationCommand<T>): Promise<MutationReceipt>;
@@ -160,16 +150,12 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
     return executor.execute(operation);
   }
 
-  private commandServices(): { kernel: DocumentKernel; store: D1RolloutPurchaseAllocationDomainStore } {
-    const metadata = new D1MetadataStore(this.env.DB);
-    const registry = registerIntegrationHubControllers(registerAppFactoryControllers(registerErpNextCoreControllers(registerStockControllers(registerErpCoreControllers(createO2CControllerRegistry()))), metadata)).setFallback(new GenericMetadataController(metadata));
-    const store = new D1RolloutPurchaseAllocationDomainStore(this.env.DB);
-    return { store, kernel: new DocumentKernel(registry, store, new MetadataPermissionService(metadata, undefined, new D1DocumentAccessStore(this.env.DB))) };
+  private commandServices(): AggregateCommandServices {
+    return createAggregateCommandServices(this.env);
   }
 
   private appFactoryApprovalRuntime(): AppFactoryApprovalRuntime {
-    const metadata = new D1MetadataStore(this.env.DB); const access = new D1DocumentAccessStore(this.env.DB); const reader = new D1RolloutPurchaseAllocationDomainStore(this.env.DB);
-    return new AppFactoryApprovalRuntime(this.env.DB, reader, new MetadataPermissionService(metadata, undefined, access), new D1OrganizationSecurityGuard(this.env.DB, metadata));
+    return createAggregateAppFactoryApprovalRuntime(this.env);
   }
 }
 
