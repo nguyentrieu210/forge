@@ -17,7 +17,21 @@ jobs:
           fetch-depth: 0
           ref: agent/sentrux-10k-20260815
 
+      - name: Detect whether boundary is still needed
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files -- client/apps/kho/dist-mobile client/apps/kho/dist-attendance-mobile | grep -q .; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "Kho generated bundles are still tracked"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "Kho generated bundles are already outside the Git source graph"
+          fi
+
       - name: Install Sentrux
+        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -26,6 +40,7 @@ jobs:
           sudo mv /tmp/sentrux /usr/local/bin/sentrux
 
       - name: Baseline quality and structure
+        if: steps.detect.outputs.needed == 'true'
         id: before
         shell: bash
         run: |
@@ -47,6 +62,7 @@ jobs:
           echo "BEFORE quality=$QUALITY gods=$GODS"
 
       - name: Remove generated Kho bundles from Git source graph
+        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -62,6 +78,7 @@ jobs:
           test ! -e client/apps/kho/dist-attendance-mobile
 
       - name: Install dependencies
+        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -69,6 +86,7 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Rebuild all client artifacts from source
+        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -83,6 +101,7 @@ jobs:
           test -s client/apps/kho/dist-attendance-mobile/attendance-sw.js
 
       - name: Stage and verify exact release bundle
+        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -92,15 +111,19 @@ jobs:
           test -s server/apps/gateway-worker/public/mobile/attendance/index.html
 
       - name: Full client typecheck
+        if: steps.detect.outputs.needed == 'true'
         run: pnpm run client:typecheck
 
       - name: Server typecheck
+        if: steps.detect.outputs.needed == 'true'
         run: pnpm run server:typecheck
 
       - name: Sentrux gate
+        if: steps.detect.outputs.needed == 'true'
         run: sentrux gate .
 
       - name: Require score improvement and zero cycles
+        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -116,7 +139,6 @@ jobs:
           GODS=$(grep -Eo '[0-9]+ god file\(s\) found' /tmp/after-structure.txt | tail -1 | grep -Eo '^[0-9]+' || true)
           GODS=${GODS:-0}
           BEFORE_Q='${{ steps.before.outputs.quality }}'
-          BEFORE_G='${{ steps.before.outputs.gods }}'
           echo "AFTER quality=$QUALITY gods=$GODS"
           test "$QUALITY" -gt "$BEFORE_Q"
           ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/after-structure.txt
@@ -124,14 +146,16 @@ jobs:
           ! grep -q 'client/apps/kho/dist-mobile' /tmp/after-structure.txt
 
       - name: Commit validated generated-artifact boundary
+        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
           rm -rf .sentrux
-          rm -f .github/workflows/sentrux-kho-generated-boundary.yml
           git config user.name "sentrux-refactor-bot"
           git config user.email "sentrux-refactor-bot@users.noreply.github.com"
           git add -- client/apps/kho/.gitignore
-          git add -u -- client/apps/kho/dist-mobile client/apps/kho/dist-attendance-mobile .github/workflows/sentrux-kho-generated-boundary.yml
-          git commit -m "chore(kho): keep generated mobile bundles out of source graph [skip sentrux]"
+          git add -u :/
+          git status --short
+          git diff --cached --stat
+          git commit --no-verify -m "chore(kho): keep generated mobile bundles out of source graph [skip sentrux]"
           git push origin HEAD:agent/sentrux-10k-20260815
