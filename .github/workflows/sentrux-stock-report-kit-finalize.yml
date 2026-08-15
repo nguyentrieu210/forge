@@ -126,12 +126,11 @@ jobs:
           git diff --check
           git diff --stat
 
-      - name: Install client workspace
+      - name: Install root workspace
         if: steps.state.outputs.done != 'true'
         shell: bash
         run: |
           set -euo pipefail
-          cd client
           corepack enable
           corepack prepare pnpm@9.15.0 --activate
           pnpm install --no-frozen-lockfile
@@ -141,7 +140,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd client
           pnpm --filter runtime typecheck
 
       - name: Sentrux regression gate
@@ -160,6 +158,13 @@ jobs:
             echo "Sentrux regression: $BEFORE -> $AFTER" >&2
             exit 1
           fi
+
+      - name: Restore validation-only lockfile changes
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- pnpm-lock.yaml client/pnpm-lock.yaml 2>/dev/null || true
 
       - name: Commit validated split
         if: steps.state.outputs.done != 'true'
