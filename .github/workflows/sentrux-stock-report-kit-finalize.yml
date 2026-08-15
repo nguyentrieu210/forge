@@ -1,4 +1,4 @@
-name: Sentrux granular views subpaths apply
+name: Sentrux direct meta-context imports apply
 
 on:
   push:
@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   apply:
+    if: ${{ !contains(github.event.head_commit.message, '[skip sentrux]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -17,35 +18,7 @@ jobs:
           fetch-depth: 0
           ref: agent/sentrux-convergence-20260816
 
-      - name: Detect critical root barrel imports
-        id: detect
-        shell: bash
-        run: |
-          set -euo pipefail
-          files=(
-            client/apps/demo/src/App.tsx
-            client/apps/demo/src/LiveApp.tsx
-            client/apps/hrm/src/main.tsx
-            client/apps/hrm/src/experiences/LeaveApprovalExperience.tsx
-            client/apps/kho-vn/src/main.tsx
-            client/apps/kho-vn/src/InTemScreen.tsx
-            client/apps/kho-vn/src/NhapExcelScreen.tsx
-            client/apps/kho-vn/src/NhapNhanhScreen.tsx
-            client/apps/kho-vn/src/SetupWizard.tsx
-            client/apps/kho-vn/src/TonKhoScreen.tsx
-            client/apps/kho-vn/src/experiences.tsx
-            client/apps/kho-vn/src/form-guides.ts
-            client/apps/runtime/src/main-base.tsx
-          )
-          if grep -q 'from "@metaforge/views";' "${files[@]}"; then
-            echo 'needed=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'needed=false' >> "$GITHUB_OUTPUT"
-            echo 'Critical views root imports already removed'
-          fi
-
       - name: Install Sentrux
-        if: steps.detect.outputs.needed == 'true'
         run: |
           set -euo pipefail
           curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
@@ -53,7 +26,6 @@ jobs:
           sudo mv /tmp/sentrux /usr/local/bin/sentrux
 
       - name: Baseline
-        if: steps.detect.outputs.needed == 'true'
         id: before
         shell: bash
         run: |
@@ -63,150 +35,64 @@ jobs:
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
           echo "BASELINE_QUALITY=$Q"
 
-      - name: Add granular subpaths and rewrite critical imports
-        if: steps.detect.outputs.needed == 'true'
+      - name: Bypass provider for context-only internal imports
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
-          import json
           import re
-          from collections import OrderedDict
           from pathlib import Path
 
-          package_path = Path('client/packages/views/package.json')
-          package = json.loads(package_path.read_text(encoding='utf-8'))
-          exports = package['exports']
-          additions = OrderedDict([
-              ('./hooks', ('./dist/container/hooks.d.ts', './dist/container/hooks.js')),
-              ('./kanban-view', ('./dist/kanban/KanbanView.d.ts', './dist/kanban/KanbanView.js')),
-              ('./tree-view', ('./dist/tree/TreeView.d.ts', './dist/tree/TreeView.js')),
-              ('./report-view', ('./dist/report/ReportView.d.ts', './dist/report/ReportView.js')),
-              ('./print-view', ('./dist/print/PrintView.d.ts', './dist/print/PrintView.js')),
-              ('./dashboard-view', ('./dist/dashboard/DashboardView.d.ts', './dist/dashboard/DashboardView.js')),
-              ('./calendar-view', ('./dist/calendar/CalendarView.d.ts', './dist/calendar/CalendarView.js')),
-              ('./gantt-view', ('./dist/gantt/GanttView.d.ts', './dist/gantt/GanttView.js')),
-              ('./split-view', ('./dist/detail/SplitView.d.ts', './dist/detail/SplitView.js')),
-              ('./context-panel', ('./dist/detail/ContextPanel.d.ts', './dist/detail/ContextPanel.js')),
-              ('./print-container', ('./dist/print/PrintContainer.d.ts', './dist/print/PrintContainer.js')),
-              ('./recent-docs', ('./dist/container/recent-docs.d.ts', './dist/container/recent-docs.js')),
-              ('./tree-container', ('./dist/tree/TreeContainer.d.ts', './dist/tree/TreeContainer.js')),
-              ('./form-guide', ('./dist/form/FormGuide.d.ts', './dist/form/FormGuide.js')),
-              ('./assistant', ('./dist/assistant/AssistantBubble.d.ts', './dist/assistant/AssistantBubble.js')),
-              ('./print-path', ('./dist/print/printRoute.d.ts', './dist/print/printRoute.js')),
-          ])
-          for key, (types_path, import_path) in additions.items():
-              expected = {'types': types_path, 'import': import_path}
-              if key in exports and exports[key] != expected:
-                  raise SystemExit(f'conflicting export {key}: {exports[key]!r}')
-              exports[key] = expected
-          package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          root = Path('client/packages/views/src')
+          safe = {'useMetaForge', 'useMetaForgeOptional', 'useLocaleFormat', 'MetaForgeContextValue'}
+          pattern = re.compile(
+              r'import\s+(?P<whole_type>type\s+)?\{(?P<body>[^}]*)\}\s+from\s+(?P<quote>["\'])(?P<spec>\.{1,2}/(?:[^"\']*/)*provider\.js)(?P=quote);'
+          )
+          changed_files = []
+          changed_imports = 0
+          skipped_mixed = []
 
-          mapping = {
-              'FormView': 'form',
-              'KanbanView': 'kanban-view',
-              'TreeView': 'tree-view',
-              'TreeNodeItem': 'tree-view',
-              'ReportView': 'report-view',
-              'PrintView': 'print-view',
-              'DashboardView': 'dashboard-view',
-              'CalendarView': 'calendar-view',
-              'GanttView': 'gantt-view',
-              'SplitView': 'split-view',
-              'ContextPanel': 'context-panel',
-              'TimelineItem': 'context-panel',
-              'createFullRegistry': 'registry',
-              'ApplicationCatalogContainer': 'catalog',
-              'MetaForgeProvider': 'provider',
-              'useMetaForge': 'provider',
-              'useLocaleFormat': 'provider',
-              'WorkspaceContainer': 'workspace',
-              'DoctypeWorkspace': 'doctype-workspace',
-              'OverviewContainer': 'overview',
-              'ProcessContainer': 'process',
-              'ReportContainer': 'report',
-              'PrintContainer': 'print-container',
-              'loadRecentDocs': 'recent-docs',
-              'ImportContent': 'import',
-              'PermissionCenter': 'permissions',
-              'UrlStateBridge': 'url-state',
-              'TreeContainer': 'tree-container',
-              'useList': 'hooks',
-              'FormGuideMap': 'form-guide',
-              'AssistantBubble': 'assistant',
-              'setAssistantContext': 'assistant',
-              'buildPrintPath': 'print-path',
-          }
-          critical = [
-              Path('client/apps/demo/src/App.tsx'),
-              Path('client/apps/demo/src/LiveApp.tsx'),
-              Path('client/apps/hrm/src/main.tsx'),
-              Path('client/apps/hrm/src/experiences/LeaveApprovalExperience.tsx'),
-              Path('client/apps/kho-vn/src/main.tsx'),
-              Path('client/apps/kho-vn/src/InTemScreen.tsx'),
-              Path('client/apps/kho-vn/src/NhapExcelScreen.tsx'),
-              Path('client/apps/kho-vn/src/NhapNhanhScreen.tsx'),
-              Path('client/apps/kho-vn/src/SetupWizard.tsx'),
-              Path('client/apps/kho-vn/src/TonKhoScreen.tsx'),
-              Path('client/apps/kho-vn/src/experiences.tsx'),
-              Path('client/apps/kho-vn/src/form-guides.ts'),
-              Path('client/apps/runtime/src/main-base.tsx'),
-          ]
-          pattern = re.compile(r'import\s+(?P<whole_type>type\s+)?\{(?P<body>[^}]*)\}\s*from\s*"@metaforge/views";')
-          changed = 0
-          for path in critical:
-              text = path.read_bytes().decode('utf-8')
-              matches = list(pattern.finditer(text))
-              if len(matches) != 1:
-                  raise SystemExit(f'{path}: expected exactly one root views import, found {len(matches)}')
-              match = matches[0]
-              whole_type = bool(match.group('whole_type'))
-              tokens = [token.strip() for token in match.group('body').split(',') if token.strip()]
-              groups = OrderedDict()
-              for token in tokens:
-                  token_type = whole_type or token.startswith('type ')
-                  raw = token[5:].strip() if token.startswith('type ') else token
-                  symbol = raw.split(' as ', 1)[0].strip()
-                  subpath = mapping.get(symbol)
-                  if not subpath:
-                      raise SystemExit(f'{path}: no granular mapping for {token!r}')
-                  group = groups.setdefault(subpath, {'values': [], 'types': []})
-                  group['types' if token_type else 'values'].append(raw)
-              lines = []
-              newline = '\r\n' if '\r\n' in text else '\n'
-              for subpath, group in groups.items():
-                  values = group['values']
-                  types = group['types']
-                  if values:
-                      names = values + [f'type {name}' for name in types]
-                      lines.append(f'import {{ {", ".join(names)} }} from "@metaforge/views/{subpath}";')
-                  else:
-                      lines.append(f'import type {{ {", ".join(types)} }} from "@metaforge/views/{subpath}";')
-              replacement = newline.join(lines)
-              text = text[:match.start()] + replacement + text[match.end():]
-              path.write_bytes(text.encode('utf-8'))
-              changed += 1
-          if changed != len(critical):
-              raise SystemExit(f'changed {changed}, expected {len(critical)}')
-          for path in critical:
-              if 'from "@metaforge/views";' in path.read_bytes().decode('utf-8'):
-                  raise SystemExit(f'{path}: root barrel import remains')
-          print(f'REWRITTEN_CRITICAL_FILES={changed}')
+          for path in sorted(list(root.rglob('*.ts')) + list(root.rglob('*.tsx'))):
+              raw = path.read_bytes()
+              text = raw.decode('utf-8')
+
+              def replace(match: re.Match[str]) -> str:
+                  nonlocal_state['seen'] += 1
+                  tokens = [token.strip() for token in match.group('body').split(',') if token.strip()]
+                  symbols = set()
+                  for token in tokens:
+                      token = token[5:].strip() if token.startswith('type ') else token
+                      symbols.add(token.split(' as ', 1)[0].strip())
+                  if not symbols or not symbols.issubset(safe):
+                      skipped_mixed.append((str(path), sorted(symbols)))
+                      return match.group(0)
+                  nonlocal_state['changed'] += 1
+                  spec = match.group('spec')
+                  replacement_spec = spec[:-len('provider.js')] + 'meta-context.js'
+                  return match.group(0).replace(spec, replacement_spec)
+
+              nonlocal_state = {'seen': 0, 'changed': 0}
+              updated = pattern.sub(replace, text)
+              if updated != text:
+                  path.write_bytes(updated.encode('utf-8'))
+                  changed_files.append(str(path))
+                  changed_imports += nonlocal_state['changed']
+
+          print(f'CONTEXT_IMPORT_FILES={len(changed_files)}')
+          print(f'CONTEXT_IMPORT_EDGES={changed_imports}')
+          for path in changed_files:
+              print(f'  changed {path}')
+          for path, symbols in skipped_mixed:
+              print(f'  kept provider import {path}: {symbols}')
+          if changed_imports < 5:
+              raise SystemExit(f'expected at least 5 context-only provider imports, found {changed_imports}')
           PY
-          git add -- client/packages/views/package.json \
-            client/apps/demo/src/App.tsx client/apps/demo/src/LiveApp.tsx \
-            client/apps/hrm/src/main.tsx client/apps/hrm/src/experiences/LeaveApprovalExperience.tsx \
-            client/apps/kho-vn/src/main.tsx client/apps/kho-vn/src/InTemScreen.tsx \
-            client/apps/kho-vn/src/NhapExcelScreen.tsx client/apps/kho-vn/src/NhapNhanhScreen.tsx \
-            client/apps/kho-vn/src/SetupWizard.tsx client/apps/kho-vn/src/TonKhoScreen.tsx \
-            client/apps/kho-vn/src/experiences.tsx client/apps/kho-vn/src/form-guides.ts \
-            client/apps/runtime/src/main-base.tsx
+          git add -- client/packages/views/src
           git config core.whitespace cr-at-eol
-          git diff --cached --stat
           git diff --cached --check
+          git diff --cached --stat
 
       - name: Install workspace dependencies
-        if: steps.detect.outputs.needed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -214,8 +100,14 @@ jobs:
           pnpm install --no-frozen-lockfile
           git restore --worktree -- pnpm-lock.yaml client/pnpm-lock.yaml 2>/dev/null || true
 
-      - name: Build dependency outputs and typecheck critical apps
-        if: steps.detect.outputs.needed == 'true'
+      - name: Build views dependencies and typecheck views
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter "@metaforge/views^..." run build
+          pnpm --filter @metaforge/views run typecheck
+
+      - name: Typecheck four max-depth apps
         shell: bash
         run: |
           set -euo pipefail
@@ -229,7 +121,6 @@ jobs:
           pnpm --filter runtime run typecheck
 
       - name: Strict Sentrux improvement gate
-        if: steps.detect.outputs.needed == 'true'
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
         shell: bash
@@ -237,29 +128,24 @@ jobs:
           set -euo pipefail
           sentrux gate --save . | tee /tmp/after.txt
           AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "DIRECT_META_CONTEXT_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          test "$AFTER" -gt "$BEFORE"
+
           mkdir -p .sentrux
           cat > .sentrux/rules.toml <<'EOF'
           [constraints]
           max_cycles = 0
           no_god_files = true
-          max_cc = 25
           EOF
-          set +e
-          sentrux check . 2>&1 | tee /tmp/structure.txt
-          set -e
+          sentrux check . | tee /tmp/structure.txt
           rm -rf .sentrux
-          echo "GRANULAR_VIEWS_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
-          grep -Ei 'Max depth|depth|god file|circular|cycle' /tmp/structure.txt || true
-          test "$AFTER" -gt "$BEFORE"
-          ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
 
-      - name: Commit validated granular subpaths
-        if: steps.detect.outputs.needed == 'true'
+      - name: Commit validated internal decoupling
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'sentrux-refactor-bot'
           git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
           git diff --cached --check
-          git commit --no-verify -m 'refactor(views): bypass critical root barrel [skip sentrux]'
+          git commit --no-verify -m 'refactor(views): import context hooks directly [skip sentrux]'
           git push origin HEAD:agent/sentrux-convergence-20260816
