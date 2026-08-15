@@ -73,6 +73,8 @@ export const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProd
 export const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
 export const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
 
+type ManufacturingStockPurpose = "Material Transfer" | "Manufacture";
+
 interface AlumdoorWorkspaceModeInput {
   doctype: string;
   isNew: boolean;
@@ -96,7 +98,7 @@ export function useAlumdoorWorkspaceMode(input: AlumdoorWorkspaceModeInput) {
   const useAlumdoorWorkOrderDetail = Boolean(decoded) && doctype === "Work Order" && isAlumdoorProfile;
   const manufacturingWorkOrder = bridge.get("f_work_order")?.trim() ?? "";
   const requestedStockPurpose = bridge.get("f_purpose");
-  const manufacturingPurpose = requestedStockPurpose === "Material Transfer" || requestedStockPurpose === "Manufacture"
+  const manufacturingPurpose: ManufacturingStockPurpose | undefined = requestedStockPurpose === "Material Transfer" || requestedStockPurpose === "Manufacture"
     ? requestedStockPurpose
     : undefined;
   const useAlumdoorManufacturingStockEntryContext = !isNew && !decoded && doctype === "Stock Entry"
