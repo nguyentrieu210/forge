@@ -73,6 +73,10 @@
     "./form": {
       "types": "./dist/form/FormView.d.ts",
       "import": "./dist/form/FormView.js"
+    },
+    "./stock-report-kit": {
+      "types": "./dist/stock-report-kit.d.ts",
+      "import": "./dist/stock-report-kit.js"
     }
   },
   "scripts": {
