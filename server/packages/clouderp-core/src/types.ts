@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
-import type { TaxRow } from "../../clouderp-selling/src/types.js";
+import type { TaxRow } from "./tax-types.js";
 
 /**
  * Một dòng có ĐƠN VỊ GIAO DỊCH khác đơn vị tồn kho.

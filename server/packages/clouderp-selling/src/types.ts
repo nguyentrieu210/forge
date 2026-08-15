@@ -1,6 +1,8 @@
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { DecimalInput } from "../../money/src/index.js";
 import type { UomLine } from "../../clouderp-core/src/types.js";
+import type { TaxRow } from "../../clouderp-core/src/tax-types.js";
+export type { TaxAddDeduct, TaxChargeType, TaxRow } from "../../clouderp-core/src/tax-types.js";
 import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
 
 export interface SalesItem extends UomLine {
@@ -75,25 +77,6 @@ export interface SalesItem extends UomLine {
   pricing_rule_snapshots?: PricingRuleSnapshot[];
   /** Source Quotation child row. Required when a Sales Order declares against_quotation. */
   quotation_item?: string;
-}
-
-export type TaxChargeType = "On Net Total" | "On Previous Row Total" | "Actual" | "On Item Quantity";
-export type TaxAddDeduct = "Add" | "Deduct";
-
-export interface TaxRow extends JsonObject {
-  row_id: string;
-  account: string;
-  rate: DecimalInput;
-  charge_type?: TaxChargeType;
-  included_in_print_rate?: boolean;
-  add_deduct_tax?: TaxAddDeduct;
-  /** Positive input amount for Actual charge type. Kept separate from signed canonical tax_amount. */
-  actual_tax_amount?: DecimalInput;
-  /** Signed canonical tax amount after Add/Deduct normalization. */
-  tax_amount?: DecimalInput;
-  tax_amount_minor?: number;
-  total?: string;
-  total_minor?: number;
 }
 
 export type DiscountBasis = "Net Total" | "Grand Total";
