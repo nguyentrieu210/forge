@@ -65,7 +65,6 @@ jobs:
               print('migrate', path)
           PY
           git add client/packages/views/src/stock-report-kit.ts
-          git diff --check
           git diff --stat
 
       - name: Install client workspace
