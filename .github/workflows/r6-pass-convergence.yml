@@ -29,6 +29,9 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build CloudForge exactly as full production release
         run: pnpm --filter cloudforge run build
+      - name: Verify Vietnamese first-party metadata localisation
+        working-directory: server
+        run: node --test tests/vietnamese-enum-translations.test.mjs tests/vietnamese-first-party-metadata.test.mjs
       - name: Verify app report canonical aggregate fields
         working-directory: server
         run: node --test tests/query.test.mjs
