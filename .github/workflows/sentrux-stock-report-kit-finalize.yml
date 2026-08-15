@@ -152,7 +152,7 @@ jobs:
               Path('client/apps/kho-vn/src/form-guides.ts'),
               Path('client/apps/runtime/src/main-base.tsx'),
           ]
-          pattern = re.compile(r'import\s*\{(?P<body>[^}]*)\}\s*from\s*"@metaforge/views";')
+          pattern = re.compile(r'import\s+(?P<whole_type>type\s+)?\{(?P<body>[^}]*)\}\s*from\s*"@metaforge/views";')
           changed = 0
           for path in critical:
               text = path.read_text(encoding='utf-8')
@@ -160,19 +160,28 @@ jobs:
               if len(matches) != 1:
                   raise SystemExit(f'{path}: expected exactly one root views import, found {len(matches)}')
               match = matches[0]
+              whole_type = bool(match.group('whole_type'))
               tokens = [token.strip() for token in match.group('body').split(',') if token.strip()]
               groups = OrderedDict()
               for token in tokens:
+                  token_type = whole_type or token.startswith('type ')
                   raw = token[5:].strip() if token.startswith('type ') else token
                   symbol = raw.split(' as ', 1)[0].strip()
                   subpath = mapping.get(symbol)
                   if not subpath:
                       raise SystemExit(f'{path}: no granular mapping for {token!r}')
-                  groups.setdefault(subpath, []).append(token)
-              replacement = '\n'.join(
-                  f'import {{ {", ".join(items)} }} from "@metaforge/views/{subpath}";'
-                  for subpath, items in groups.items()
-              )
+                  group = groups.setdefault(subpath, {'values': [], 'types': []})
+                  group['types' if token_type else 'values'].append(raw)
+              lines = []
+              for subpath, group in groups.items():
+                  values = group['values']
+                  types = group['types']
+                  if values:
+                      names = values + [f'type {name}' for name in types]
+                      lines.append(f'import {{ {", ".join(names)} }} from "@metaforge/views/{subpath}";')
+                  else:
+                      lines.append(f'import type {{ {", ".join(types)} }} from "@metaforge/views/{subpath}";')
+              replacement = '\n'.join(lines)
               text = text[:match.start()] + replacement + text[match.end():]
               path.write_text(text, encoding='utf-8')
               changed += 1
