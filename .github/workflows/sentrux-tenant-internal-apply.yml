@@ -1,4 +1,4 @@
-name: Sentrux tenant internal route apply
+name: Sentrux tenant boundary apply
 
 on:
   pull_request:
@@ -18,14 +18,14 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Detect whether bounded internal split is already applied
+      - name: Detect social boundary
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if grep -q 'async function routeInternalDomainEventRequest(' server/apps/tenant-worker/src/index-core-base.ts; then
+          if grep -q 'from "./social-routes.js"' server/apps/tenant-worker/src/index-core-base.ts; then
             echo 'needed=false' >> "$GITHUB_OUTPUT"
-            echo 'Tenant internal route refinement already present'
+            echo 'Tenant social boundary already present'
           else
             echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
@@ -48,16 +48,15 @@ jobs:
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
           echo "BEFORE=$Q"
 
-      - name: Refine tenant internal route boundaries
+      - name: Extract social boundary
         if: steps.detect.outputs.needed == 'true'
         run: |
           set -euo pipefail
-          python3 .github/sentrux-tenant-internal-transform
-          grep -q 'async function routeInternalMaintenanceRequest(' server/apps/tenant-worker/src/index-core-base.ts
-          grep -q 'async function routeInternalSocialRequest(' server/apps/tenant-worker/src/index-core-base.ts
-          grep -q 'async function routeInternalDomainEventRequest(' server/apps/tenant-worker/src/index-core-base.ts
+          python3 .github/sentrux-social-boundary-transform
+          grep -q 'from "./social-routes.js"' server/apps/tenant-worker/src/index-core-base.ts
+          test -f server/apps/tenant-worker/src/social-routes.ts
           git diff --check
-          git diff --stat -- server/apps/tenant-worker/src/index-core-base.ts
+          git diff --stat -- server/apps/tenant-worker/src/index-core-base.ts server/apps/tenant-worker/src/social-routes.ts
 
       - name: Install dependencies
         if: steps.detect.outputs.needed == 'true'
@@ -70,7 +69,7 @@ jobs:
         if: steps.detect.outputs.needed == 'true'
         run: pnpm run server:typecheck
 
-      - name: Require no Sentrux regression and bounded helpers
+      - name: Require no Sentrux regression and remove core god-file
         if: steps.detect.outputs.needed == 'true'
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
@@ -83,15 +82,16 @@ jobs:
           cat > .sentrux/rules.toml <<'EOF'
           [constraints]
           max_cycles = 0
+          no_god_files = true
           max_cc = 25
           EOF
           set +e
           sentrux check . 2>&1 | tee /tmp/structure.txt
           set -e
           rm -rf .sentrux
-          echo "TENANT_INTERNAL_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          echo "TENANT_SOCIAL_BOUNDARY_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -ge "$BEFORE"
-          ! grep -Eq 'index-core-base\.ts:(routeInternalRequest|routeInternalMaintenanceRequest|routeInternalSocialRequest|routeInternalDomainEventRequest) \(cc=' /tmp/structure.txt
+          ! grep -q 'server/apps/tenant-worker/src/index-core-base.ts (fan-out=' /tmp/structure.txt
           ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
 
       - name: Commit validated source improvement
@@ -100,8 +100,8 @@ jobs:
           set -euo pipefail
           git config user.name 'sentrux-refactor-bot'
           git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
-          git add -- server/apps/tenant-worker/src/index-core-base.ts
+          git add -- server/apps/tenant-worker/src/index-core-base.ts server/apps/tenant-worker/src/social-routes.ts
           git diff --cached --check
           git diff --cached --stat
-          git commit --no-verify -m 'refactor(tenant): bound internal route helpers [skip sentrux]'
+          git commit --no-verify -m 'refactor(tenant): extract social route boundary [skip sentrux]'
           git push origin HEAD:${{ github.head_ref }}
