@@ -72,8 +72,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm --filter @metaforge/runtime run build
-          pnpm --filter kho run build
+          pnpm --filter 'runtime...' run build
+          pnpm --filter 'kho...' run build
+          test -s client/apps/runtime/dist/index.html
           test -s client/apps/kho/dist-mobile/index.html
           test -s client/apps/kho/dist-mobile/manifest.webmanifest
           test -s client/apps/kho/dist-mobile/warehouse-sw.js
