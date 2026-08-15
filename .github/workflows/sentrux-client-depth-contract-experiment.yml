@@ -72,7 +72,7 @@ jobs:
 
           dto_path = Path('client/packages/adapter-frappe/src/dto.ts')
           text = dto_path.read_text()
-          old = 'import type { DisplayValueResult, Doc, LabelValue } from "@metaforge/core";'
+          old = 'import type { Doc, DisplayValueResult, LabelValue } from "@metaforge/core";'
           new = 'import type { DisplayValueResult } from "@metaforge/core/business/display";\nimport type { Doc, LabelValue } from "@metaforge/core/types/doc";'
           if old not in text:
               raise SystemExit('core barrel dto import not found')
