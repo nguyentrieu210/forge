@@ -1,124 +1,45 @@
-name: Sentrux prune unused NewFormContainer export
+name: Sentrux depth-16 critical DAG retrace
 
 on:
   push:
     branches: [agent/sentrux-convergence-20260816]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply:
-    if: ${{ !contains(github.event.head_commit.message, '[skip sentrux]') }}
+  trace:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: agent/sentrux-convergence-20260816
 
-      - name: Install Sentrux
-        run: |
-          set -euo pipefail
-          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
-          chmod +x /tmp/sentrux
-          sudo mv /tmp/sentrux /usr/local/bin/sentrux
-
-      - name: Baseline
-        id: before
+      - name: Install native build dependencies
         shell: bash
         run: |
           set -euo pipefail
-          sentrux gate --save . | tee /tmp/before.txt
-          Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
-          echo "quality=$Q" >> "$GITHUB_OUTPUT"
-          echo "BASELINE_QUALITY=$Q"
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libvulkan-dev
 
-      - name: Prove root export unused and prune it
+      - name: Build instrumented Sentrux
         shell: bash
         run: |
           set -euo pipefail
-          python3 <<'PY'
-          import re
-          from pathlib import Path
+          git clone --quiet https://github.com/sentrux/sentrux.git /tmp/sentrux-src
+          git -C /tmp/sentrux-src checkout --quiet 6f8ff3c14b0423e4b58f42d1813d4d5f7fdc1d11
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnAgPSBQYXRoKCIvdG1wL3NlbnRydXgtc3JjL3NlbnRydXgtY29yZS9zcmMvbWV0cmljcy9tb2QucnMiKQpzID0gcC5yZWFkX3RleHQoKQpzdGFydCA9IHMuaW5kZXgoJ2ZuIGNvbXB1dGVfbWF4X2RlcHRoKGVkZ2VzOiAmW0ltcG9ydEVkZ2VdLCBlbnRyeV9wb2ludHM6ICZbRW50cnlQb2ludF0pIC0+IHUzMiB7JykKZW5kID0gcy5pbmRleCgnXG4vLyDilIDilIAgUHJvIG1ldHJpY3MgZXh0ZW5zaW9uIHBvaW50Jywgc3RhcnQpCmNvZGUgPSByJycnZm4gY29tcHV0ZV9tYXhfZGVwdGgoZWRnZXM6ICZbSW1wb3J0RWRnZV0sIGVudHJ5X3BvaW50czogJltFbnRyeVBvaW50XSkgLT4gdTMyIHsKICAgIGlmIGVkZ2VzLmlzX2VtcHR5KCkgeyByZXR1cm4gMDsgfQogICAgbGV0IChzZWVkcywgYWRqLCBhbGxfbm9kZXMpID0gZmluZF9kZXB0aF9zZWVkcyhlZGdlcywgZW50cnlfcG9pbnRzKTsKICAgIGxldCBtZW1vID0gbG9uZ2VzdF9wYXRoX2Rmcygmc2VlZHMsICZhZGosIGFsbF9ub2Rlcy5sZW4oKSk7CiAgICBsZXQgbWF4X2RlcHRoID0gc2VlZHMuaXRlcigpLmZpbHRlcl9tYXAofHN8IG1lbW8uZ2V0KHMpLmNvcGllZCgpKS5tYXgoKS51bndyYXBfb3IoMCk7CiAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfTUFYPXt9IiwgbWF4X2RlcHRoKTsKICAgIGZvciBzZWVkIGluIHNlZWRzLml0ZXIoKS5maWx0ZXIofHN8IG1lbW8uZ2V0KCpzKS5jb3BpZWQoKSA9PSBTb21lKG1heF9kZXB0aCkpIHsKICAgICAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfTUFYX1NFRUQge30iLCBzZWVkKTsKICAgIH0KICAgIGxldCBtdXQgcm93czogVmVjPCgmc3RyLCZzdHIsdTMyKT4gPSBWZWM6Om5ldygpOwogICAgZm9yIChmcm9tLG5leHRzKSBpbiAmYWRqIHsKICAgICAgICBsZXQgU29tZSgmZCk9bWVtby5nZXQoZnJvbSkgZWxzZSB7IGNvbnRpbnVlOyB9OwogICAgICAgIGlmIGQgPT0gMCB7IGNvbnRpbnVlOyB9CiAgICAgICAgZm9yIHRvIGluIG5leHRzIHsKICAgICAgICAgICAgaWYgbWVtby5nZXQodG8pLmNvcGllZCgpLm1hcCh8bmR8IG5kLnNhdHVyYXRpbmdfYWRkKDEpPT1kKS51bndyYXBfb3IoZmFsc2UpIHsKICAgICAgICAgICAgICAgIHJvd3MucHVzaCgoKmZyb20sKnRvLGQpKTsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KICAgIHJvd3Muc29ydF9ieSh8YSxifCBiLjIuY21wKCZhLjIpLnRoZW5fd2l0aCh8fCBhLjAuY21wKGIuMCkpLnRoZW5fd2l0aCh8fCBhLjEuY21wKGIuMSkpKTsKICAgIGZvciAoZnJvbSx0byxkKSBpbiByb3dzIHsKICAgICAgICBpZiBkID49IDcgewogICAgICAgICAgICBlcHJpbnRsbiEoIlNFTlRSVVhfREVQVEhfREFHIHJlbWFpbmluZz17fSB7fSAtPiB7fSIsIGQsIGZyb20sIHRvKTsKICAgICAgICB9CiAgICB9CiAgICBtYXhfZGVwdGgKfScnJwpwLndyaXRlX3RleHQoc1s6c3RhcnRdICsgY29kZSArIHNbZW5kOl0pCg==' | base64 -d > /tmp/patch-depth.py
+          python3 /tmp/patch-depth.py
+          cargo build --quiet --release -p sentrux --bin sentrux --manifest-path /tmp/sentrux-src/Cargo.toml
+          cp /tmp/sentrux-src/target/release/sentrux /tmp/sentrux-trace
 
-          root = Path('client')
-          external = []
-          pattern = re.compile(r'import\s+(?:type\s+)?\{(?P<body>[^}]*)\}\s+from\s+["\']@metaforge/views["\']')
-          for path in sorted(list(root.rglob('*.ts')) + list(root.rglob('*.tsx'))):
-              text = path.read_bytes().decode('utf-8')
-              for match in pattern.finditer(text):
-                  tokens = [t.strip() for t in match.group('body').split(',') if t.strip()]
-                  symbols = {(t[5:].strip() if t.startswith('type ') else t).split(' as ', 1)[0].strip() for t in tokens}
-                  if 'NewFormContainer' in symbols:
-                      external.append(str(path))
-          if external:
-              raise SystemExit('NewFormContainer still imported from root package: ' + ', '.join(external))
-
-          index = Path('client/packages/views/src/index.ts')
-          raw = index.read_bytes()
-          text = raw.decode('utf-8')
-          line = 'export { NewFormContainer, type NewFormContainerProps } from "./container/NewFormContainer.js";'
-          if text.count(line) != 1:
-              raise SystemExit(f'expected exactly one NewFormContainer root export, found {text.count(line)}')
-          newline = '\r\n' if '\r\n' in text else '\n'
-          text = text.replace(line + newline, '', 1)
-          if line in text:
-              raise SystemExit('NewFormContainer root export remains')
-          index.write_bytes(text.encode('utf-8'))
-          print('PRUNED_ROOT_EXPORT=NewFormContainer')
-          PY
-          git add -- client/packages/views/src/index.ts
-          git config core.whitespace cr-at-eol
-          git diff --cached --check
-          git diff --cached --stat
-          git diff --cached
-
-      - name: Install workspace dependencies
+      - name: Trace current branch
         shell: bash
         run: |
           set -euo pipefail
-          corepack enable
-          pnpm install --no-frozen-lockfile
-          git restore --worktree -- pnpm-lock.yaml client/pnpm-lock.yaml 2>/dev/null || true
-
-      - name: Build views deps and typecheck views
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --filter "@metaforge/views^..." run build
-          pnpm --filter @metaforge/views run typecheck
-
-      - name: Strict Sentrux improvement gate
-        env:
-          BEFORE: ${{ steps.before.outputs.quality }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          sentrux gate --save . | tee /tmp/after.txt
-          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
-          echo "PRUNE_NEW_FORM_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
-          mkdir -p .sentrux
-          cat > .sentrux/rules.toml <<'EOF'
-          [constraints]
-          max_cycles = 0
-          no_god_files = true
-          EOF
-          set +e
-          sentrux check . 2>&1 | tee /tmp/structure.txt
-          set -e
-          rm -rf .sentrux
-          grep -Ei 'Max depth|depth|god file|circular|cycle' /tmp/structure.txt || true
-          test "$AFTER" -gt "$BEFORE"
-          ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
-
-      - name: Commit validated export pruning
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'sentrux-refactor-bot'
-          git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
-          git diff --cached --check
-          git commit --no-verify -m 'refactor(views): prune unused NewFormContainer export [skip sentrux]'
-          git push origin HEAD:agent/sentrux-convergence-20260816
+          /tmp/sentrux-trace gate --save "$GITHUB_WORKSPACE" 2>&1 | tee /tmp/trace.txt
+          echo '=== CURRENT MAX SEEDS AND CRITICAL DAG ==='
+          grep 'SENTRUX_DEPTH_' /tmp/trace.txt
+          grep -E '^Quality:' /tmp/trace.txt || true
