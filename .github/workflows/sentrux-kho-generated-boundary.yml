@@ -131,6 +131,7 @@ jobs:
           rm -f .github/workflows/sentrux-kho-generated-boundary.yml
           git config user.name "sentrux-refactor-bot"
           git config user.email "sentrux-refactor-bot@users.noreply.github.com"
-          git add -A -- client/apps/kho/.gitignore client/apps/kho/dist-mobile client/apps/kho/dist-attendance-mobile .github/workflows/sentrux-kho-generated-boundary.yml
+          git add -- client/apps/kho/.gitignore
+          git add -u -- client/apps/kho/dist-mobile client/apps/kho/dist-attendance-mobile .github/workflows/sentrux-kho-generated-boundary.yml
           git commit -m "chore(kho): keep generated mobile bundles out of source graph [skip sentrux]"
           git push origin HEAD:agent/sentrux-10k-20260815
