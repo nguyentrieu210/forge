@@ -34,3 +34,5 @@ const taxTypes = `import type { JsonObject } from "../../contracts/src/index.js"
 await writeFile(coreTypesPath, coreTypes, "utf8");
 await writeFile(sellingTypesPath, sellingTypes, "utf8");
 await writeFile(taxTypesPath, taxTypes, "utf8");
+
+// Trigger commit: production changes are still created only after typecheck + Sentrux pass.
