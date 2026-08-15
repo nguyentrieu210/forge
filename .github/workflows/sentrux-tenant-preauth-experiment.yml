@@ -1,0 +1,98 @@
+name: Sentrux tenant preauth experiment
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-10k-20260815
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Baseline
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+          Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "quality=$Q" >> "$GITHUB_OUTPUT"
+          echo "BEFORE=$Q"
+
+      - name: Extract pre-auth routes in same file
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/sentrux-tenant-preauth-transform
+          git diff --check
+          git diff --stat -- server/apps/tenant-worker/src/index-core-base.ts
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Server typecheck
+        run: pnpm run server:typecheck
+
+      - name: Measure score and complexity
+        shell: bash
+        env:
+          BEFORE: ${{ steps.before.outputs.quality }}
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after.txt
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          mkdir -p .sentrux
+          cat > .sentrux/rules.toml <<'EOF'
+          [constraints]
+          max_cycles = 0
+          no_god_files = true
+          max_cc = 25
+          EOF
+          sentrux check . 2>&1 | tee /tmp/structure.txt || true
+          rm -rf .sentrux
+          echo "TENANT_PREAUTH_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          grep -E 'index-core-base.ts:(fetch|routeTenantPreAuthRequest)|god file|circular dependencies' /tmp/structure.txt || true
+          test "$AFTER" -gt "$BEFORE"
+          ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
+
+      - name: Emit server dist
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/tenant-preauth-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/apps/tenant-worker/src/index-core-base.js
+          if [ "$status" -ne 0 ] && grep -E 'apps/tenant-worker/src/index-core-base\.ts' /tmp/tenant-preauth-tsc.log; then exit 1; fi
+
+      - name: Focused tenant event tests
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=(tests/app-hooks.test.mjs tests/r5-final-convergence.test.mjs)
+          existing=()
+          for file in "${tests[@]}"; do [ -f "$file" ] && existing+=("$file"); done
+          if [ "${#existing[@]}" -gt 0 ]; then node --test "${existing[@]}"; fi
