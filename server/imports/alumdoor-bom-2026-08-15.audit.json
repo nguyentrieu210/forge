@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-15T07:03:23.984Z",
+  "generated_at": "2026-08-15T07:08:02.401Z",
   "migration_source": "alumdoor-bom-2026-08-15",
   "tenant": "demo",
   "company": "ALUMDOOR",
@@ -11,6 +11,16 @@
     "Item (bổ sung)",
     "Bill of Materials"
   ],
+  "item_group_bo_sung": {
+    "so_nhom": 3,
+    "danh_sach": [
+      "Phụ kiện chung",
+      "Linh kiện motor",
+      "Điều khiển & phụ kiện điện"
+    ],
+    "file": "server\\imports\\alumdoor-item-group-bosung-2026-08-15.sql",
+    "ghi_chu": "Lỗ hổng có sẵn: 90 Item của bản 11/08 đã trỏ tới các nhóm này mà chưa file nào tạo."
+  },
   "item_bo_sung": {
     "so_ma": 287,
     "file": "server\\imports\\alumdoor-item-bosung-2026-08-15.sql",

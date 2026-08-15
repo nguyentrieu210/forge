@@ -233,6 +233,50 @@ for (const [code, info] of referenced) {
   itemByNorm.set(code, code);
 }
 
+/**
+ * Ba nhóm hàng "Phụ kiện chung", "Linh kiện motor", "Điều khiển & phụ kiện điện" được 90 Item
+ * của bản import 11/08 trỏ tới, nhưng KHÔNG file nào tạo ra chúng — lỗ hổng có sẵn. Tạo ở đây
+ * để vá luôn cho cả item cũ lẫn item bổ sung, theo đúng khuôn của alumdoor-full-2026-07-28.
+ */
+const GROUP_SOURCED = new Set([
+  "Tất cả mặt hàng", "Thành phẩm", "Nguyên vật liệu", "Linh kiện & thiết bị", "Dịch vụ",
+  "Cửa cuốn", "Cửa nhôm kính", "Nan/lá cửa", "Mô tơ", "Ray và trục", "Phụ kiện",
+  "Remote và điều khiển", "Bộ lưu điện",
+  "Cửa CN Đức", "Phụ kiện CN Đức", "Motor", "Cửa Đài Loan", "Cửa tấm liền Úc", "Cửa Lưới",
+  "Cửa siêu trường", "Cửa Đài Loan Inox", "Cửa kéo Đài Loan", "Bình lưu điện",
+]);
+const GROUP_PARENT = {
+  "Phụ kiện chung": "Linh kiện & thiết bị",
+  "Linh kiện motor": "Linh kiện & thiết bị",
+  "Điều khiển & phụ kiện điện": "Linh kiện & thiết bị",
+};
+const missingGroups = [...new Set(newItems.map((it) => it.payload.item_group))]
+  .filter((g) => !GROUP_SOURCED.has(g));
+
+const OUT_GROUP_SQL = path.join(serverRoot, "imports", `alumdoor-item-group-bosung-${STAMP}.sql`);
+{
+  const o = [];
+  o.push(`-- Item Group BỔ SUNG — nhóm mà Item trỏ tới nhưng chưa file nào tạo.`);
+  o.push(`-- Lỗ hổng có sẵn: 90 Item của bản 11/08 đã trỏ tới 3 nhóm này rồi.`);
+  o.push("");
+  for (const g of missingGroups) {
+    o.push(`DELETE FROM document_search WHERE tenant_id=${q(tenant)} AND doctype='Item Group' AND name=${q(g)};`);
+    o.push(`DELETE FROM documents WHERE tenant_id=${q(tenant)} AND doctype='Item Group' AND name=${q(g)};`);
+  }
+  o.push("");
+  if (missingGroups.length) {
+    o.push("INSERT INTO documents");
+    o.push("  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)");
+    o.push("VALUES");
+    o.push(missingGroups.map((g) => {
+      const p = { item_group_name: g, parent_item_group: GROUP_PARENT[g] ?? "Tất cả mặt hàng", is_group: false, disabled: false, _migration_source: MIGRATION };
+      return `  (${q(tenant)},${q(`Item Group:${g}`)},'Item Group',${q(g)},'admin',0,'Draft',1,${q(NOW)},${q(NOW)},'admin',${q(JSON.stringify(p))})`;
+    }).join(",\n") + ";");
+  }
+  o.push("");
+  writeFileSync(OUT_GROUP_SQL, o.join("\n"), "utf8");
+}
+
 const OUT_ITEM_SQL = path.join(serverRoot, "imports", `alumdoor-item-bosung-${STAMP}.sql`);
 {
   const o = [];
@@ -332,6 +376,12 @@ const audit = {
   tenant, company,
   nguon: { file: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md", dong_doc: rows.length },
   imported_doctypes: ["Item (bổ sung)", "Bill of Materials"],
+  item_group_bo_sung: {
+    so_nhom: missingGroups.length,
+    danh_sach: missingGroups,
+    file: path.relative(repoRoot, OUT_GROUP_SQL),
+    ghi_chu: "Lỗ hổng có sẵn: 90 Item của bản 11/08 đã trỏ tới các nhóm này mà chưa file nào tạo.",
+  },
   item_bo_sung: {
     so_ma: newItems.length,
     file: path.relative(repoRoot, OUT_ITEM_SQL),
