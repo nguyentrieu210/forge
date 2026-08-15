@@ -13,7 +13,7 @@
  */
 
 import { errors } from "../../core/src/index.js";
-import { translateVietnameseSource } from "./vietnamese-translations.js";
+import { translateVietnameseUiSource } from "./vietnamese-enum-translations.js";
 
 const MAX_BATCH = 500;
 
@@ -40,7 +40,7 @@ export class D1TranslationStore {
     const vietnamese = isVietnameseLanguage(language);
     // Platform fallback first. Tenant rows below always overwrite it, so per-tenant terminology
     // remains authoritative. Unknown strings still degrade to the readable source text.
-    for (const source of unique) output[source] = vietnamese ? translateVietnameseSource(source) : source;
+    for (const source of unique) output[source] = vietnamese ? translateVietnameseUiSource(source) : source;
 
     // Chunked to stay inside D1's bound-parameter cap; the batch limit above alone
     // would not.
