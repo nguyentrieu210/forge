@@ -1,4 +1,4 @@
-name: Sentrux router modularity refactor
+name: Sentrux architecture improvement
 
 on:
   push:
@@ -43,19 +43,7 @@ jobs:
           test -n "$QUALITY"
           echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
 
-      - name: Diagnose cycles and god files
-        shell: bash
-        run: |
-          set -u
-          cat > .sentrux/rules.toml <<'EOF'
-          [constraints]
-          max_cycles = 0
-          no_god_files = true
-          EOF
-          sentrux check . 2>&1 | tee /tmp/sentrux-diagnostics.txt || true
-          rm -f .sentrux/rules.toml
-
-      - name: Extract router context boundary
+      - name: Break clouderp core-selling tax type cycle
         run: node scripts/sentrux-refactor-router-context.mjs
 
       - name: Install workspace dependencies
@@ -100,9 +88,10 @@ jobs:
           git config user.name "sentrux-refactor-bot"
           git config user.email "sentrux-refactor-bot@users.noreply.github.com"
           git add -A -- \
-            server/packages/frappe-api/src/router.ts \
-            server/packages/frappe-api/src/router-context.ts \
+            server/packages/clouderp-core/src/types.ts \
+            server/packages/clouderp-core/src/tax-types.ts \
+            server/packages/clouderp-selling/src/types.ts \
             scripts/sentrux-refactor-router-context.mjs \
             .github/workflows/sentrux-router-modularity.yml
-          git commit -m "refactor(frappe-api): extract router context [skip sentrux-refactor]"
+          git commit -m "refactor(clouderp): break core-selling type cycle [skip sentrux-refactor]"
           git push origin HEAD:agent/sentrux-router-modularity
