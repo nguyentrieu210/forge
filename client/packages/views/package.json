@@ -22,6 +22,10 @@
       "types": "./dist/list/useListState.d.ts",
       "import": "./dist/list/useListState.js"
     },
+    "./list-runtime": {
+      "types": "./dist/list-runtime.d.ts",
+      "import": "./dist/list-runtime.js"
+    },
     "./doctype-workspace": {
       "types": "./dist/app/DoctypeWorkspace.d.ts",
       "import": "./dist/app/DoctypeWorkspace.js"
@@ -63,12 +67,20 @@
       "import": "./dist/action/NativeActionScreen.js"
     },
     "./screen": {
-      "types": "./dist/screen/NativeScreenView.d.ts",
-      "import": "./dist/screen/NativeScreenView.js"
+      "types": "./dist/screen/ScreenView.d.ts",
+      "import": "./dist/screen/ScreenView.js"
     },
     "./matrix": {
       "types": "./dist/matrix/index.d.ts",
       "import": "./dist/matrix/index.js"
+    },
+    "./form": {
+      "types": "./dist/form/FormView.d.ts",
+      "import": "./dist/form/FormView.js"
+    },
+    "./stock-report-kit": {
+      "types": "./dist/stock-report-kit.d.ts",
+      "import": "./dist/stock-report-kit.js"
     }
   },
   "scripts": {

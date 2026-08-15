@@ -114,7 +114,7 @@ function App() {
         roles={["System Manager", "Stock Manager"]}
       >
         <main className="min-h-screen bg-background p-4">
-          <AllocationTimelineDialog open timeline={timeline} loading={false} error={null} onClose={() => undefined} />
+          <AllocationTimelineDialog open timeline={timeline} loading={false} error={null} adapter={adapter} scopeKey="purchase-harness" onClose={() => undefined} />
         </main>
         <Toaster />
       </MetaForgeProvider>

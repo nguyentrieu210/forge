@@ -21,7 +21,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Search } from "lucide-react";
-import { useList, useLocaleFormat, useMetaForge, resolveDateRange, PeriodPicker, exportFormXlsx, ymdToDmy } from "@metaforge/views";
+import { useList, useLocaleFormat, useMetaForge, resolveDateRange, PeriodPicker, exportFormXlsx, ymdToDmy } from "@metaforge/views/stock-report-kit";
 import {
   Button, Input, Badge, Skeleton, cn, toast,
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,

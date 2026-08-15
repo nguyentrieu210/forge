@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Doc } from "@metaforge/core";
-import { NO_CAPS, type Capabilities } from "@metaforge/adapter-frappe";
+import { NO_CAPS, type Capabilities, type FrappeAdapter } from "@metaforge/adapter-frappe";
 import {
   Button,
   Dialog,
@@ -16,7 +16,6 @@ import {
   TableRow,
   toast,
 } from "@metaforge/ui";
-import { useMetaForge } from "./provider.js";
 import {
   PurchaseAllocationActionDialog,
   type PurchaseAllocationActionRow,
@@ -64,12 +63,13 @@ export interface AllocationTimelineDialogProps {
   timeline: AllocationTimeline | null;
   loading: boolean;
   error: string | null;
+  adapter: FrappeAdapter;
+  scopeKey: string;
   onClose: () => void;
 }
 
 export function AllocationTimelineDialog(props: AllocationTimelineDialogProps) {
-  const { open, timeline, loading, error, onClose } = props;
-  const { adapter, scopeKey } = useMetaForge();
+  const { open, timeline, loading, error, adapter, scopeKey, onClose } = props;
   const queryClient = useQueryClient();
   const [displayTimeline, setDisplayTimeline] = useState<AllocationTimeline | null>(timeline);
   const [settlementCaps, setSettlementCaps] = useState<Capabilities>(NO_CAPS);

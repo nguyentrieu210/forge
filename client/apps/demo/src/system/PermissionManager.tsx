@@ -1,1 +1,1 @@
-export { PermissionCenter as PermissionManagerContent } from "@metaforge/views";
+export { PermissionCenter as PermissionManagerContent } from "@metaforge/views/permissions";

@@ -15,13 +15,108 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: agent/sentrux-10k-20260815
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Install Sentrux
         run: |
           set -euo pipefail
           curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
           chmod +x /tmp/sentrux
           sudo mv /tmp/sentrux /usr/local/bin/sentrux
+      - name: MCP root-cause diagnostics
+        shell: bash
+        run: |
+          set +e
+          timeout 45s python3 <<'PY'
+          import json
+          import select
+          import subprocess
+          import time
+
+          proc = subprocess.Popen(
+              ["sentrux", "--mcp"],
+              stdin=subprocess.PIPE,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE,
+              text=True,
+              bufsize=1,
+          )
+
+          def send(payload):
+              proc.stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
+              proc.stdin.flush()
+
+          def receive(request_id, timeout_seconds=20):
+              deadline = time.time() + timeout_seconds
+              while time.time() < deadline:
+                  ready, _, _ = select.select([proc.stdout], [], [], max(0.0, deadline - time.time()))
+                  if not ready:
+                      break
+                  line = proc.stdout.readline()
+                  if not line:
+                      break
+                  try:
+                      message = json.loads(line)
+                  except json.JSONDecodeError:
+                      print("MCP_STDOUT", line.rstrip())
+                      continue
+                  if message.get("id") == request_id:
+                      return message
+              raise TimeoutError(f"MCP response {request_id} timed out")
+
+          def tool_args(tool):
+              schema = tool.get("inputSchema", {})
+              properties = schema.get("properties", {})
+              required = schema.get("required", [])
+              args = {}
+              for candidate in ("path", "root", "project_path", "directory"):
+                  if candidate in properties:
+                      args[candidate] = "."
+                      break
+              for name in required:
+                  if name in args:
+                      continue
+                  spec = properties.get(name, {})
+                  if spec.get("type") == "string":
+                      args[name] = "."
+                  elif spec.get("type") == "boolean":
+                      args[name] = False
+                  elif spec.get("type") == "array":
+                      args[name] = []
+                  elif spec.get("type") == "object":
+                      args[name] = {}
+              return args
+
+          try:
+              send({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"forge-sentrux-ci","version":"1"}}})
+              print("MCP_INIT", json.dumps(receive(1), separators=(",", ":")))
+              send({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})
+              send({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})
+              listed = receive(2)
+              tools = listed.get("result", {}).get("tools", [])
+              print("MCP_TOOLS", json.dumps([{"name": t.get("name"), "inputSchema": t.get("inputSchema")} for t in tools], separators=(",", ":")))
+              by_name = {tool.get("name"): tool for tool in tools}
+              request_id = 3
+              for name in ("scan", "health"):
+                  tool = by_name.get(name)
+                  if not tool:
+                      continue
+                  send({"jsonrpc":"2.0","id":request_id,"method":"tools/call","params":{"name":name,"arguments":tool_args(tool)}})
+                  response = receive(request_id, 30)
+                  print(f"MCP_{name.upper()}", json.dumps(response, separators=(",", ":")))
+                  request_id += 1
+          except Exception as exc:
+              print("MCP_DIAGNOSTIC_ERROR", repr(exc))
+          finally:
+              proc.kill()
+              try:
+                  _, stderr = proc.communicate(timeout=3)
+                  if stderr:
+                      print("MCP_STDERR", stderr[-4000:])
+              except Exception:
+                  pass
+          PY
+          echo "MCP_PROBE_EXIT=$?"
+          exit 0
       - name: Architecture diagnostics
         shell: bash
         run: |

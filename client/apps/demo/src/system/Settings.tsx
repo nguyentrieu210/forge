@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Sun, Moon, Monitor, LogOut, User as UserIcon, Globe, Sparkles, Save, Bot, Eye, EyeOff, PlugZap, Loader2 } from "lucide-react";
 import type { MetaForgeBootDTO } from "@metaforge/adapter-frappe";
-import { useMetaForge } from "@metaforge/views";
+import { useMetaForge } from "@metaforge/views/provider";
 import { useTheme, useLocale, useBrand, BRANDS, createOpenAICompatProvider, type ThemeMode, type Locale } from "@metaforge/shell";
 import { cn, Button, Input, Label, Separator, Badge, toast } from "@metaforge/ui";
 import { loadAIConfig, saveAIConfig, clearAIConfig, type AIConfigState } from "./ai-config.js";

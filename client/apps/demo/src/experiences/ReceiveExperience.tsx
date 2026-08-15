@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, PackageCheck, Send, Loader2, ArrowRight, CheckCircle2, AlertTriangle, CloudOff, Warehouse } from "lucide-react";
 import type { Doc } from "@metaforge/core";
-import { useMetaForge } from "@metaforge/views";
+import { useMetaForge } from "@metaforge/views/provider";
 import { MobileShell, TouchCard, BigButton, QtyStepper, useOfflineQueue } from "@metaforge/shell";
 import { Badge, Button, toast, cn } from "@metaforge/ui";
 

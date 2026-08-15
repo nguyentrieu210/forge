@@ -1,0 +1,222 @@
+name: Sentrux critical views root cut-set apply
+
+on:
+  push:
+    branches: [agent/sentrux-convergence-20260816]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[skip sentrux]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-convergence-20260816
+
+      - name: Install Sentrux
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Baseline
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+          Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "quality=$Q" >> "$GITHUB_OUTPUT"
+          echo "BASELINE_QUALITY=$Q"
+
+      - name: Move critical root symbols to existing subpaths
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import re
+          from collections import OrderedDict
+          from pathlib import Path
+
+          root = Path('client')
+          index = Path('client/packages/views/src/index.ts')
+          mapping = {
+              'createFullRegistry': 'registry',
+              'DoctypeWorkspace': 'doctype-workspace',
+              'DoctypeWorkspaceProps': 'doctype-workspace',
+              'ReportContainer': 'report',
+              'ScreenView': 'screen',
+              'ScreenViewProps': 'screen',
+          }
+          command_center = {'CommandCenterView', 'CommandCenterViewProps', 'CommandCenterAlert'}
+          pattern = re.compile(
+              r'import\s+(?P<whole_type>type\s+)?\{(?P<body>[^}]*)\}\s+from\s+(?P<quote>["\'])@metaforge/views(?P=quote);'
+          )
+
+          changed_files = []
+          moved_counts = {name: 0 for name in mapping}
+          command_center_consumers = []
+
+          def token_parts(token: str, whole_type: bool):
+              token_type = whole_type or token.startswith('type ')
+              raw = token[5:].strip() if token.startswith('type ') else token
+              symbol = raw.split(' as ', 1)[0].strip()
+              return token_type, raw, symbol
+
+          def render_import(spec: str, entries):
+              values = [raw for is_type, raw, _ in entries if not is_type]
+              types = [raw for is_type, raw, _ in entries if is_type]
+              if values:
+                  names = values + [f'type {name}' for name in types]
+                  return f'import {{ {", ".join(names)} }} from "{spec}";'
+              return f'import type {{ {", ".join(types)} }} from "{spec}";'
+
+          for path in sorted(list(root.rglob('*.ts')) + list(root.rglob('*.tsx'))):
+              if path == index:
+                  continue
+              text = path.read_bytes().decode('utf-8')
+              newline = '\r\n' if '\r\n' in text else '\n'
+
+              def replace(match: re.Match[str]) -> str:
+                  whole_type = bool(match.group('whole_type'))
+                  tokens = [t.strip() for t in match.group('body').split(',') if t.strip()]
+                  entries = [token_parts(t, whole_type) for t in tokens]
+                  for _, _, symbol in entries:
+                      if symbol in command_center:
+                          command_center_consumers.append(f'{path}:{symbol}')
+
+                  remaining = []
+                  groups = OrderedDict()
+                  for entry in entries:
+                      _, _, symbol = entry
+                      subpath = mapping.get(symbol)
+                      if subpath:
+                          groups.setdefault(subpath, []).append(entry)
+                          moved_counts[symbol] += 1
+                      else:
+                          remaining.append(entry)
+
+                  if not groups:
+                      return match.group(0)
+                  lines = []
+                  if remaining:
+                      lines.append(render_import('@metaforge/views', remaining))
+                  for subpath, group in groups.items():
+                      lines.append(render_import(f'@metaforge/views/{subpath}', group))
+                  return newline.join(lines)
+
+              updated = pattern.sub(replace, text)
+              if updated != text:
+                  path.write_bytes(updated.encode('utf-8'))
+                  changed_files.append(str(path))
+
+          if command_center_consumers:
+              raise SystemExit('CommandCenter root consumers prevent pruning: ' + ', '.join(command_center_consumers))
+          for symbol, count in moved_counts.items():
+              if count == 0 and symbol in {'createFullRegistry', 'DoctypeWorkspace', 'ReportContainer'}:
+                  raise SystemExit(f'expected at least one root consumer for {symbol}')
+
+          leftovers = []
+          for path in sorted(list(root.rglob('*.ts')) + list(root.rglob('*.tsx'))):
+              if path == index:
+                  continue
+              text = path.read_bytes().decode('utf-8')
+              for match in pattern.finditer(text):
+                  whole_type = bool(match.group('whole_type'))
+                  for token in [t.strip() for t in match.group('body').split(',') if t.strip()]:
+                      _, _, symbol = token_parts(token, whole_type)
+                      if symbol in mapping or symbol in command_center:
+                          leftovers.append(f'{path}:{symbol}')
+          if leftovers:
+              raise SystemExit('critical root symbols remain: ' + ', '.join(leftovers))
+
+          text = index.read_bytes().decode('utf-8')
+          lines = [
+              'export { CommandCenterView, type CommandCenterViewProps, type CommandCenterAlert } from "./dashboard/CommandCenterView.js";',
+              'export { DoctypeWorkspace, type DoctypeWorkspaceProps } from "./app/DoctypeWorkspace.js";',
+              'export { ReportContainer } from "./report/ReportContainer.js";',
+              'export { createFullRegistry } from "./registry.js";',
+              'export { ScreenView, type ScreenViewProps } from "./screen/ScreenView.js";',
+          ]
+          newline = '\r\n' if '\r\n' in text else '\n'
+          for line in lines:
+              if text.count(line) != 1:
+                  raise SystemExit(f'expected one root export line, got {text.count(line)}: {line}')
+              text = text.replace(line + newline, '', 1)
+          index.write_bytes(text.encode('utf-8'))
+
+          print(f'CUTSET_CHANGED_FILES={len(changed_files)}')
+          for symbol, count in moved_counts.items():
+              print(f'CUTSET_MOVED {symbol}={count}')
+          for path in changed_files:
+              print(f'  changed {path}')
+          PY
+          git add -- client
+          git config core.whitespace cr-at-eol
+          git diff --cached --check
+          git diff --cached --stat
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --no-frozen-lockfile
+          git restore --worktree -- pnpm-lock.yaml client/pnpm-lock.yaml 2>/dev/null || true
+
+      - name: Validate views and max-depth apps
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter "@metaforge/views^..." run build
+          pnpm --filter @metaforge/views run typecheck
+          pnpm --filter "@metaforge/demo^..." run build
+          pnpm --filter "hrm^..." run build
+          pnpm --filter "kho-vn^..." run build
+          pnpm --filter "runtime^..." run build
+          pnpm --filter @metaforge/demo run typecheck
+          pnpm --filter hrm run typecheck
+          pnpm --filter kho-vn run typecheck
+          pnpm --filter runtime run typecheck
+
+      - name: Strict Sentrux improvement and structure gate
+        env:
+          BEFORE: ${{ steps.before.outputs.quality }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after.txt
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "CRITICAL_ROOT_CUTSET_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+
+          mkdir -p .sentrux
+          cat > .sentrux/rules.toml <<'EOF'
+          [constraints]
+          max_cycles = 0
+          no_god_files = true
+          max_cc = 25
+          EOF
+          set +e
+          sentrux check . 2>&1 | tee /tmp/structure.txt
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          rm -rf .sentrux
+          grep -Ei 'Max depth|depth|god file|circular|cycle' /tmp/structure.txt || true
+          test "$AFTER" -gt "$BEFORE"
+          test "$STATUS" -eq 0
+
+      - name: Commit validated critical cut-set
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'sentrux-refactor-bot'
+          git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
+          git diff --cached --check
+          git commit --no-verify -m 'refactor(views): cut deep root exports [skip sentrux]'
+          git push origin HEAD:agent/sentrux-convergence-20260816

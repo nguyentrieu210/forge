@@ -1,0 +1,135 @@
+name: Sentrux core json depth experiment
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Capture baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+          python3 - <<'PY'
+          import json, select, subprocess, time
+          p=subprocess.Popen(['sentrux','--mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,bufsize=1)
+          def send(x): p.stdin.write(json.dumps(x,separators=(',',':'))+'\n'); p.stdin.flush()
+          def recv(i):
+              end=time.time()+30
+              while time.time()<end:
+                  ready,_,_=select.select([p.stdout],[],[],end-time.time())
+                  if not ready: break
+                  msg=json.loads(p.stdout.readline())
+                  if msg.get('id')==i:return msg
+              raise SystemExit('mcp timeout')
+          send({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-06-18','capabilities':{},'clientInfo':{'name':'depth-edge','version':'1'}}});recv(1)
+          send({'jsonrpc':'2.0','method':'notifications/initialized','params':{}})
+          send({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'scan','arguments':{'path':'.'}}});recv(2)
+          send({'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'health','arguments':{}}})
+          print('BEFORE_HEALTH',json.dumps(recv(3),separators=(',',':')))
+          p.kill()
+          PY
+
+      - name: Remove type-only core to contracts edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > server/packages/core/src/json.ts <<'EOF'
+          type StableJsonPrimitive = string | number | boolean | null;
+          type StableJsonValue = StableJsonPrimitive | StableJsonObject | StableJsonValue[];
+          interface StableJsonObject { [key: string]: StableJsonValue | undefined }
+
+          export function stableStringify(value: unknown): string {
+            return JSON.stringify(sortValue(value));
+          }
+
+          function sortValue(value: unknown): StableJsonValue {
+            if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+              return value;
+            }
+            if (Array.isArray(value)) return value.map(sortValue);
+            if (typeof value === "object") {
+              const result: Record<string, StableJsonValue> = {};
+              for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+                const child = (value as Record<string, unknown>)[key];
+                if (child !== undefined) result[key] = sortValue(child);
+              }
+              return result;
+            }
+            return String(value);
+          }
+          EOF
+          git diff --check
+          git diff -- server/packages/core/src/json.ts
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Server typecheck candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          pnpm run server:typecheck 2>&1 | tee /tmp/typecheck.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          if grep -E 'packages/core/src/json\.ts' /tmp/typecheck.txt; then
+            echo 'candidate introduced a core/json TypeScript error'
+            exit 1
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo 'server typecheck remains red only outside the candidate; continuing structural measurement'
+          fi
+
+      - name: Measure candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after.txt
+          python3 - <<'PY'
+          import json, select, subprocess, time
+          p=subprocess.Popen(['sentrux','--mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,bufsize=1)
+          def send(x): p.stdin.write(json.dumps(x,separators=(',',':'))+'\n'); p.stdin.flush()
+          def recv(i):
+              end=time.time()+30
+              while time.time()<end:
+                  ready,_,_=select.select([p.stdout],[],[],end-time.time())
+                  if not ready: break
+                  msg=json.loads(p.stdout.readline())
+                  if msg.get('id')==i:return msg
+              raise SystemExit('mcp timeout')
+          send({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-06-18','capabilities':{},'clientInfo':{'name':'depth-edge','version':'1'}}});recv(1)
+          send({'jsonrpc':'2.0','method':'notifications/initialized','params':{}})
+          send({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'scan','arguments':{'path':'.'}}});recv(2)
+          send({'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'health','arguments':{}}})
+          print('AFTER_HEALTH',json.dumps(recv(3),separators=(',',':')))
+          p.kill()
+          PY
+          BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "CORE_JSON_EDGE_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          test "$AFTER" -gt "$BEFORE"

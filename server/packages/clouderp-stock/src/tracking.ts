@@ -41,28 +41,29 @@ export interface TrackedStockResult {
   stockValueMinor: number;
 }
 
+interface ValidatedBundle {
+  bundle: SerialBatchBundleData;
+  rows: SerialBatchBundleRow[];
+}
+
+interface RowValuation {
+  absoluteValue: number;
+  rowRateMinor: number;
+}
+
 export async function buildTrackedStockLines(
   context: ControllerContext<JsonObject>,
   request: TrackedStockRequest,
 ): Promise<TrackedStockResult> {
   const item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", request.itemCode);
-  const tracked = item?.has_serial_no === true || item?.has_serial_no === 1 || item?.has_batch_no === true || item?.has_batch_no === 1;
+  const tracked = isTrackedItem(item);
   if (!request.bundleName) {
     if (tracked && context.command.action === "submit") throw errors.reference(`Serial and Batch Bundle is required for tracked Item ${request.itemCode}`);
     return { stock: [baseLine(request)], usages: [], stockValueMinor: Math.abs(request.stockValueMinor) };
   }
-  if (context.command.action === "submit" && await context.reader.isStockBundleUsed(context.command.tenant_id, request.bundleName)) {
-    throw errors.reference(`Serial and Batch Bundle ${request.bundleName} is already used`);
-  }
-  const document = await context.reader.getDocument<SerialBatchBundleData>(context.command.tenant_id, "Serial and Batch Bundle", request.bundleName);
-  if (!document || document.docstatus !== 1) throw errors.reference(`Submitted Serial and Batch Bundle ${request.bundleName} is required`);
-  const bundle = document.data;
-  if (bundle.item_code !== request.itemCode || bundle.warehouse !== request.warehouse || bundle.type !== request.direction) {
-    throw errors.reference(`Serial and Batch Bundle ${request.bundleName} does not match item, warehouse or direction`);
-  }
-  const rows = normalizeBundleRows(bundle.entries);
-  const total = rows.reduce((sum,row) => sum + (row.qty_micros ?? 0),0);
-  if (total !== request.qtyMicros) throw errors.reference(`Serial and Batch Bundle ${request.bundleName} quantity does not match stock row`, { bundle_qty_micros: total, row_qty_micros: request.qtyMicros });
+
+  const bundleRequest = { ...request, bundleName: request.bundleName };
+  const { bundle, rows } = await loadValidatedBundle(context, bundleRequest);
   const stock: StockLedgerEntry[] = [];
   let allocatedValue = 0;
   // Cân chia theo cùng KIỂU với tiền — tỉ lệ theo qty, dòng CUỐI nhận phần dư — chứ không
@@ -74,70 +75,156 @@ export async function buildTrackedStockLines(
   // truyền `weight_micros` xuống từng dòng bundle — chưa cần cho nhánh nhập ở đợt này.
   const totalWeight = request.weightMicros == null ? null : Math.abs(request.weightMicros);
   let allocatedWeight = 0;
-  for (const [index,row] of rows.entries()) {
+
+  for (const [index, row] of rows.entries()) {
     const qty = row.qty_micros!;
-    if (request.direction === "Outward") {
-      if (row.batch_no) {
-        const batch = await context.reader.getMasterRecordData(context.command.tenant_id,"Batch",row.batch_no);
-        if (!batch) throw errors.reference(`Batch ${row.batch_no} does not exist`);
-        if (typeof batch.expiry_date === "string" && request.postingAt.slice(0,10) > batch.expiry_date.slice(0,10)) throw errors.reference(`Batch ${row.batch_no} is expired`);
-      }
-      const available = await context.reader.getTrackedStockBalanceMicros(context.command.tenant_id,request.itemCode,request.warehouse,row.batch_no,row.serial_no);
-      if (available < qty) throw errors.reference(`Insufficient tracked stock for ${request.itemCode}`, { batch_no: row.batch_no ?? null, serial_no: row.serial_no ?? null, available_qty_micros: available, requested_qty_micros: qty });
-    }
-    /**
-     * ĐỊNH GIÁ TỪNG LÔ, ngay tại chỗ đã nạp bundle.
-     *
-     * Người gọi tính giá cho CẢ DÒNG rồi mới đưa xuống đây, nên trước đó mọi lô trong một
-     * phiếu đều nhận chung một đơn giá. Với nhôm thì đó là sai thật sự: lúc cắt, xưởng CỐ Ý
-     * chọn lô khổ nhỏ nhất còn đủ dài để phế ít nhất — thường KHÔNG phải lô cũ nhất, và
-     * thường mua ở giá khác. Vật lý tiêu thụ lô này trong khi kế toán trừ giá lô kia.
-     *
-     * Đặt phép tính ở đây chứ không ở hai người gọi (Phiếu xuất, Phiếu kho) vì đây là chỗ DUY
-     * NHẤT đã nạp bundle và đã duyệt từng dòng lô. Sửa ở hai nơi thì nơi thứ ba sinh sau sẽ
-     * quên — đúng kiểu "luật viết hai lần rồi trôi dạt".
-     *
-     * Chỉ áp cho chiều XUẤT và dòng CÓ lô. Nhập thì giá đến từ chứng từ mua, không phát lại.
-     */
-    let absoluteValue: number;
-    let rowRateMinor = request.valuationRateMinor;
-    if (request.direction === "Outward" && row.batch_no) {
-      const perBatch = await deriveOutgoingValuation(context, {
-        itemCode: request.itemCode, warehouse: request.warehouse, qtyMicros: qty,
-        postingAt: request.postingAt, currencyScale: request.currencyScale, batchNo: row.batch_no,
-      });
-      absoluteValue = Math.abs(perBatch.stock_value_difference_minor);
-      rowRateMinor = perBatch.valuation_rate_minor;
-    } else {
-      absoluteValue = index === rows.length-1
-        ? Math.abs(request.stockValueMinor)-allocatedValue
-        : Math.round(Math.abs(request.stockValueMinor)*qty/request.qtyMicros);
-    }
-    allocatedValue += absoluteValue;
-    let absoluteWeight: number | null = null;
-    if (totalWeight != null) {
-      absoluteWeight = index === rows.length-1
-        ? totalWeight-allocatedWeight
-        : Math.round(totalWeight*qty/request.qtyMicros);
-      allocatedWeight += absoluteWeight;
-    }
-    stock.push({
-      line_key: `${request.lineKey}-${row.row_id || index+1}`,
-      item_code: request.itemCode, warehouse: request.warehouse,
-      actual_qty_micros: request.direction === "Inward" ? qty : -qty,
-      ...(absoluteWeight != null ? { actual_weight_micros: request.direction === "Inward" ? absoluteWeight : -absoluteWeight } : {}),
-      valuation_rate_minor: rowRateMinor,
-      stock_value_difference_minor: request.direction === "Inward" ? absoluteValue : -absoluteValue,
-      qty_scale: 6, currency_scale: request.currencyScale, currency: request.currency, posting_at: request.postingAt,
-      ...(row.batch_no ? { batch_no: row.batch_no } : {}), ...(row.serial_no ? { serial_no: row.serial_no } : {}),
-      allow_negative_stock: tracked ? false : Boolean(request.allowNegativeStock),
-    });
+    await assertOutgoingRowAvailable(context, request, row, qty);
+    const valuation = await resolveRowValuation(context, request, row, qty, index, rows.length, allocatedValue);
+    allocatedValue += valuation.absoluteValue;
+    const absoluteWeight = allocateRowWeight(totalWeight, allocatedWeight, qty, request.qtyMicros, index === rows.length - 1);
+    if (absoluteWeight != null) allocatedWeight += absoluteWeight;
+    stock.push(buildBundleStockLine(request, row, index, qty, tracked, valuation, absoluteWeight));
   }
+
   return {
     stock,
     stockValueMinor: allocatedValue,
     usages: [{ line_key: `BUNDLE-${request.lineKey}`, bundle_name: request.bundleName, item_code: request.itemCode, warehouse: request.warehouse, direction: request.direction, usage_delta: 1, posting_at: request.postingAt }],
     bundle,
+  };
+}
+
+function isTrackedItem(item: JsonObject | null | undefined): boolean {
+  return item?.has_serial_no === true || item?.has_serial_no === 1 || item?.has_batch_no === true || item?.has_batch_no === 1;
+}
+
+async function loadValidatedBundle(
+  context: ControllerContext<JsonObject>,
+  request: TrackedStockRequest & { bundleName: string },
+): Promise<ValidatedBundle> {
+  if (context.command.action === "submit" && await context.reader.isStockBundleUsed(context.command.tenant_id, request.bundleName)) {
+    throw errors.reference(`Serial and Batch Bundle ${request.bundleName} is already used`);
+  }
+  const document = await context.reader.getDocument<SerialBatchBundleData>(context.command.tenant_id, "Serial and Batch Bundle", request.bundleName);
+  if (!document || document.docstatus !== 1) throw errors.reference(`Submitted Serial and Batch Bundle ${request.bundleName} is required`);
+  const bundle = document.data;
+  if (bundle.item_code !== request.itemCode || bundle.warehouse !== request.warehouse || bundle.type !== request.direction) {
+    throw errors.reference(`Serial and Batch Bundle ${request.bundleName} does not match item, warehouse or direction`);
+  }
+  const rows = normalizeBundleRows(bundle.entries);
+  const total = rows.reduce((sum, row) => sum + (row.qty_micros ?? 0), 0);
+  if (total !== request.qtyMicros) {
+    throw errors.reference(`Serial and Batch Bundle ${request.bundleName} quantity does not match stock row`, {
+      bundle_qty_micros: total,
+      row_qty_micros: request.qtyMicros,
+    });
+  }
+  return { bundle, rows };
+}
+
+async function assertOutgoingRowAvailable(
+  context: ControllerContext<JsonObject>,
+  request: TrackedStockRequest,
+  row: SerialBatchBundleRow,
+  qty: number,
+): Promise<void> {
+  if (request.direction !== "Outward") return;
+  if (row.batch_no) {
+    const batch = await context.reader.getMasterRecordData(context.command.tenant_id, "Batch", row.batch_no);
+    if (!batch) throw errors.reference(`Batch ${row.batch_no} does not exist`);
+    if (typeof batch.expiry_date === "string" && request.postingAt.slice(0, 10) > batch.expiry_date.slice(0, 10)) {
+      throw errors.reference(`Batch ${row.batch_no} is expired`);
+    }
+  }
+  const available = await context.reader.getTrackedStockBalanceMicros(
+    context.command.tenant_id,
+    request.itemCode,
+    request.warehouse,
+    row.batch_no,
+    row.serial_no,
+  );
+  if (available < qty) {
+    throw errors.reference(`Insufficient tracked stock for ${request.itemCode}`, {
+      batch_no: row.batch_no ?? null,
+      serial_no: row.serial_no ?? null,
+      available_qty_micros: available,
+      requested_qty_micros: qty,
+    });
+  }
+}
+
+/**
+ * ĐỊNH GIÁ TỪNG LÔ ngay tại chỗ đã nạp bundle. Chỉ áp cho chiều XUẤT và dòng CÓ lô;
+ * nhập giữ giá từ chứng từ mua. Dòng cuối nhận phần dư để tổng luôn khớp giá trị cả dòng.
+ */
+async function resolveRowValuation(
+  context: ControllerContext<JsonObject>,
+  request: TrackedStockRequest,
+  row: SerialBatchBundleRow,
+  qty: number,
+  index: number,
+  rowCount: number,
+  allocatedValue: number,
+): Promise<RowValuation> {
+  if (request.direction === "Outward" && row.batch_no) {
+    const perBatch = await deriveOutgoingValuation(context, {
+      itemCode: request.itemCode,
+      warehouse: request.warehouse,
+      qtyMicros: qty,
+      postingAt: request.postingAt,
+      currencyScale: request.currencyScale,
+      batchNo: row.batch_no,
+    });
+    return {
+      absoluteValue: Math.abs(perBatch.stock_value_difference_minor),
+      rowRateMinor: perBatch.valuation_rate_minor,
+    };
+  }
+  return {
+    absoluteValue: index === rowCount - 1
+      ? Math.abs(request.stockValueMinor) - allocatedValue
+      : Math.round(Math.abs(request.stockValueMinor) * qty / request.qtyMicros),
+    rowRateMinor: request.valuationRateMinor,
+  };
+}
+
+function allocateRowWeight(
+  totalWeight: number | null,
+  allocatedWeight: number,
+  qty: number,
+  requestQtyMicros: number,
+  isLast: boolean,
+): number | null {
+  if (totalWeight == null) return null;
+  return isLast
+    ? totalWeight - allocatedWeight
+    : Math.round(totalWeight * qty / requestQtyMicros);
+}
+
+function buildBundleStockLine(
+  request: TrackedStockRequest,
+  row: SerialBatchBundleRow,
+  index: number,
+  qty: number,
+  tracked: boolean,
+  valuation: RowValuation,
+  absoluteWeight: number | null,
+): StockLedgerEntry {
+  return {
+    line_key: `${request.lineKey}-${row.row_id || index + 1}`,
+    item_code: request.itemCode,
+    warehouse: request.warehouse,
+    actual_qty_micros: request.direction === "Inward" ? qty : -qty,
+    ...(absoluteWeight != null ? { actual_weight_micros: request.direction === "Inward" ? absoluteWeight : -absoluteWeight } : {}),
+    valuation_rate_minor: valuation.rowRateMinor,
+    stock_value_difference_minor: request.direction === "Inward" ? valuation.absoluteValue : -valuation.absoluteValue,
+    qty_scale: 6,
+    currency_scale: request.currencyScale,
+    currency: request.currency,
+    posting_at: request.postingAt,
+    ...(row.batch_no ? { batch_no: row.batch_no } : {}),
+    ...(row.serial_no ? { serial_no: row.serial_no } : {}),
+    allow_negative_stock: tracked ? false : Boolean(request.allowNegativeStock),
   };
 }
 

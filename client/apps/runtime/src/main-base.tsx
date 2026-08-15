@@ -15,6 +15,15 @@ import {
 import { Button, Toaster } from "@metaforge/ui";
 import { SocialCommerceLanding, type PublicSocialPage } from "./landing/SocialCommerceLanding.js";
 import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";
+import {
+  ApprovalInbox,
+  SocialCommerce,
+  DailyDetailedLedger,
+  AlumdoorOperationsCenter,
+  AlumdoorAttendanceScanner,
+  AlumdoorAttendanceOperations,
+  AlumdoorMasterDataScreen,
+} from "./experience-registry.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
@@ -28,13 +37,6 @@ const CalendarContainer = lazy(() => import("@metaforge/views/calendar").then((m
 const ImportContent = lazy(() => import("@metaforge/views/import").then((module) => ({ default: module.ImportContent })));
 const ActionScreen = lazy(() => import("@metaforge/views/action").then((module) => ({ default: module.ActionScreen })));
 const ScreenView = lazy(() => import("@metaforge/views/screen").then((module) => ({ default: module.ScreenView })));
-const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
-const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
-const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
-const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
-const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));
-const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));
-const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));
 
 /**
  * The GENERIC runtime — one bundle that serves every app on the platform.

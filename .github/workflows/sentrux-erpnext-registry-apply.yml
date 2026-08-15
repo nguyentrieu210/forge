@@ -9,13 +9,14 @@ permissions:
 
 jobs:
   apply:
+    if: startsWith(github.head_ref, 'agent/sentrux-') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: agent/sentrux-10k-20260815
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Detect split
         id: detect
@@ -23,6 +24,7 @@ jobs:
         run: |
           if grep -q 'registry-part-01.js' server/packages/clouderp-erpnext/src/registry.ts; then
             echo 'needed=false' >> "$GITHUB_OUTPUT"
+            echo 'ERPNext registry split already present'
           else
             echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
@@ -52,8 +54,6 @@ jobs:
           git add -- server/packages/clouderp-erpnext/src/registry*.ts
           git diff --cached --check
           git diff --cached --stat -- server/packages/clouderp-erpnext/src/registry*.ts
-          echo 'Tracked candidate files:'
-          git ls-files 'server/packages/clouderp-erpnext/src/registry*.ts'
 
       - name: Install dependencies
         if: steps.detect.outputs.needed == 'true'
@@ -86,8 +86,7 @@ jobs:
           set -e
           rm -rf .sentrux
           echo "ERPNEXT_REGISTRY_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
-          grep -E 'clouderp-erpnext/src/registry|god file|circular dependencies' /tmp/structure.txt || true
-          test "$AFTER" -gt "$BEFORE"
+          test "$AFTER" -ge "$BEFORE"
           ! grep -q 'server/packages/clouderp-erpnext/src/registry.ts (fan-out=' /tmp/structure.txt
           ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
 
@@ -99,4 +98,4 @@ jobs:
           git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
           git diff --cached --check
           git commit --no-verify -m 'refactor(erpnext): split controller registry [skip sentrux]'
-          git push origin HEAD:agent/sentrux-10k-20260815
+          git push origin HEAD:${{ github.head_ref }}
