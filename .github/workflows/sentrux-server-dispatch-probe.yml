@@ -49,15 +49,15 @@ jobs:
           import re
 
           path = Path('server/packages/frappe-api/src/router.ts')
-          text = path.read_text()
+          original = path.read_text()
 
           route_old = '    const method = METHOD_PATH.exec(url.pathname);\n    if (method) return await dispatchMethod(method[1]!, request, args, context);\n'
-          if text.count(route_old) != 1:
-              raise SystemExit(f'expected one route dispatch call, found {text.count(route_old)}')
+          if original.count(route_old) != 1:
+              raise SystemExit(f'expected one route dispatch call, found {original.count(route_old)}')
 
-          fn_start = text.index('async function dispatchMethod(\n')
-          next_fn = text.index('\nasync function commitAlumdoorAttendanceScan', fn_start)
-          block = text[fn_start:next_fn]
+          fn_start = original.index('async function dispatchMethod(\n')
+          next_fn = original.index('\nasync function commitAlumdoorAttendanceScan', fn_start)
+          block = original[fn_start:next_fn]
           switch_marker = '  switch (methodName) {\n'
           switch_start = block.index(switch_marker) + len(switch_marker)
           default_start = block.index('    default: {', switch_start)
@@ -67,7 +67,9 @@ jobs:
           if not sections:
               raise SystemExit('no method sections found')
 
-          max_cases = 18
+          # Keep semantic sections intact. One existing section has 29 stacked/top-level
+          # cases, so allow up to 30 here rather than splitting a fall-through cluster.
+          max_cases = 30
           groups = []
           current = []
           current_cases = 0
@@ -128,10 +130,17 @@ jobs:
               '    }\n'
           )
 
+          # Replace the old dispatcher using offsets from the untouched source first.
+          # Replacing the earlier route call before this would shift fn_start/next_fn.
+          text = original[:fn_start] + ''.join(helpers) + original[next_fn:]
+          if text.count(route_old) != 1:
+              raise SystemExit(f'route call changed unexpectedly after dispatcher replacement: {text.count(route_old)}')
           text = text.replace(route_old, route_new)
-          text = text[:fn_start] + ''.join(helpers) + text[next_fn:]
           path.write_text(text)
           PY
+
+          git diff --check
+          git diff --stat
 
           after_line=$(sentrux gate . | tee /tmp/sentrux-after.txt | grep '^Quality:' | tail -1)
           after=$(printf '%s\n' "$after_line" | awk -F'->' '{v=$NF; gsub(/^[[:space:]]+|[[:space:]]+$/, "", v); print v}')
