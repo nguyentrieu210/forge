@@ -69,7 +69,7 @@ jobs:
           PY
           cargo build --quiet --release -p sentrux --bin sentrux
           cp target/release/sentrux /tmp/sentrux-trace
-      - name: Trace official Forge depth paths
+      - name: Trace official Forge depth paths after FormView boundary
         shell: bash
         run: |
           set -euo pipefail
