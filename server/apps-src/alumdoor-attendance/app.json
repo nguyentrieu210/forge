@@ -1,7 +1,7 @@
 {
   "id": "alumdoor-attendance",
   "name": "AlumDoor — Chấm công & tính lương",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "metaContractVersion": 1,
   "requires": [
     { "id": "hrm", "version": "1.8.0" }
@@ -99,6 +99,7 @@
     { "key": "alumdoor-attendance:scan", "label": "Quét chấm công", "kind": "experience", "icon": "scan-line", "group": "Nhân sự & Tiền lương" },
     { "key": "alumdoor-attendance:my-slips-lite", "label": "Phiếu lương của tôi", "kind": "experience", "icon": "receipt-text", "group": "Nhân sự & Tiền lương" },
     { "key": "Employee", "label": "Nhân viên", "kind": "doctype", "icon": "users", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
+    { "key": "AlumDoor Pay Profile", "label": "Lương cơ bản nhân viên", "kind": "doctype", "icon": "wallet", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
     { "key": "alumdoor-attendance:payroll-lite", "label": "Tính lương", "kind": "experience", "icon": "calculator", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Payroll User", "AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
     { "key": "alumdoor-attendance:kiosk", "label": "Thiết lập trạm chấm công", "kind": "experience", "icon": "qr-code", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Attendance Manager", "HR Manager", "System Manager"] },
     { "key": "AlumDoor Attendance Device", "label": "Thiết bị đã đăng ký", "kind": "doctype", "icon": "smartphone", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Attendance Manager", "HR Manager", "System Manager"] },

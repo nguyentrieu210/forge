@@ -32,13 +32,22 @@ const ALUMDOOR_SIDEBAR_GROUPS = new Set([
 ]);
 
 const ALUMDOOR_HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong qr", "nhan su & tien luong"]);
-const ALUMDOOR_HR_KEYS = new Set([
+/**
+ * Thứ tự khai báo ở đây LÀ thứ tự hiển thị trên tab "Nhân sự & Tiền lương" — xem
+ * `sortAlumdoorHrItems`. Nhân sự trước, Chấm công/lương sau.
+ */
+const ALUMDOOR_HR_KEY_ORDER = [
+  "Employee", "AlumDoor Pay Profile",
   "AlumDoor Attendance Day", "AlumDoor Attendance Device", "AlumDoor QR Station", "AlumDoor Attendance Policy",
-  "Employee",
   "alumdoor-attendance:scan", "alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month",
   "alumdoor-attendance:exceptions", "alumdoor-attendance:payroll-lite",
   "alumdoor-attendance:my-slips-lite", "alumdoor-attendance:hr-payroll-settings-lite",
-]);
+];
+const ALUMDOOR_HR_KEYS = new Set(ALUMDOOR_HR_KEY_ORDER);
+
+function sortAlumdoorHrItems(items: NavItem[]): NavItem[] {
+  return [...items].sort((a, b) => ALUMDOOR_HR_KEY_ORDER.indexOf(a.key) - ALUMDOOR_HR_KEY_ORDER.indexOf(b.key));
+}
 
 const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {
   "report:Đơn hàng theo khách": ["Bán hàng"],
@@ -306,7 +315,12 @@ export function AppShell(props: AppShellProps) {
    * Alumdoor chỉ nhận các nhóm đã khai trong brief gốc cộng Quỹ kho. Các app cài kèm vẫn
    * giữ route/dữ liệu của chúng, nhưng không được tự biến thành sidebar của sản phẩm này.
    */
-  const sidebarNav = useMemo(() => props.nav.filter(isVisibleProductNavigation), [props.nav]);
+  const sidebarNav = useMemo(() => {
+    const filtered = props.nav.filter(isVisibleProductNavigation);
+    const hrItems = sortAlumdoorHrItems(filtered.filter((item) => ALUMDOOR_HR_KEYS.has(item.key)));
+    let hrCursor = 0;
+    return filtered.map((item) => (ALUMDOOR_HR_KEYS.has(item.key) ? hrItems[hrCursor++]! : item));
+  }, [props.nav]);
   const modules = useMemo(() => buildWorkspaceModules(sidebarNav), [sidebarNav]);
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
