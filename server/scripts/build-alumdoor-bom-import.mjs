@@ -364,6 +364,14 @@ const audit = {
   chi_tiet_bo_qua: {
     thanh_pham_khong_khop_item: skipped.thanh_pham_khong_khop.slice(0, 60),
     vat_tu_khong_khop_item: dedupe(lineIssues.vat_tu_khong_khop.map((x) => x.ma)).slice(0, 120),
+    /** 616 dòng có mã vật tư hợp lệ nhưng ô ĐỊNH MỨC trống hoặc 0 — xưởng chưa từng điền. */
+    dong_dinh_muc_trong: {
+      so_dong: lineIssues.dinh_muc_trong.length,
+      vat_tu_bi_anh_huong: dedupe(lineIssues.dinh_muc_trong.map((x) => x.ma)).length,
+      danh_sach_vat_tu: dedupe(lineIssues.dinh_muc_trong.map((x) => x.ma)),
+      thanh_pham_mat_trang: skipped.khong_co_dong_dung_duoc.map((x) => x.ten),
+    },
+    dong_thieu_ma_vat_tu: lineIssues.thieu_ma_vat_tu.map((x) => x.ten).filter(Boolean),
   },
 };
 function dedupe(a) { return [...new Set(a)]; }
