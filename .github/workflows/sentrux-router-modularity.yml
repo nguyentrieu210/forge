@@ -43,6 +43,18 @@ jobs:
           test -n "$QUALITY"
           echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
 
+      - name: Diagnose cycles and god files
+        shell: bash
+        run: |
+          set -u
+          cat > .sentrux/rules.toml <<'EOF'
+          [constraints]
+          max_cycles = 0
+          no_god_files = true
+          EOF
+          sentrux check . 2>&1 | tee /tmp/sentrux-diagnostics.txt || true
+          rm -f .sentrux/rules.toml
+
       - name: Extract router context boundary
         run: node scripts/sentrux-refactor-router-context.mjs
 
