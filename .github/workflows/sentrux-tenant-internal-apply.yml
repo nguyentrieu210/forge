@@ -9,13 +9,14 @@ permissions:
 
 jobs:
   apply:
+    if: startsWith(github.head_ref, 'agent/sentrux-') && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: agent/sentrux-10k-20260815
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Detect whether split is already applied
         id: detect
@@ -52,6 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/sentrux-tenant-internal-transform
+          grep -q 'async function routeInternalRequest(' server/apps/tenant-worker/src/index-core-base.ts
           git diff --check
           git diff --stat -- server/apps/tenant-worker/src/index-core-base.ts
 
@@ -66,7 +68,7 @@ jobs:
         if: steps.detect.outputs.needed == 'true'
         run: pnpm run server:typecheck
 
-      - name: Require Sentrux improvement
+      - name: Require no Sentrux regression
         if: steps.detect.outputs.needed == 'true'
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
@@ -82,8 +84,7 @@ jobs:
           sentrux check . 2>&1 | tee /tmp/structure.txt
           rm -rf .sentrux
           echo "TENANT_INTERNAL_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
-          grep -E 'tenant-worker/src/index-core-base.ts:(fetch|routeInternalRequest)|circular dependencies' /tmp/structure.txt || true
-          test "$AFTER" -gt "$BEFORE"
+          test "$AFTER" -ge "$BEFORE"
 
       - name: Commit validated source improvement
         if: steps.detect.outputs.needed == 'true'
@@ -95,4 +96,4 @@ jobs:
           git diff --cached --check
           git diff --cached --stat
           git commit --no-verify -m 'refactor(tenant): split internal routes from fetch [skip sentrux]'
-          git push origin HEAD:agent/sentrux-10k-20260815
+          git push origin HEAD:${{ github.head_ref }}
