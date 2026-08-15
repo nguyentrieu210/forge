@@ -231,7 +231,23 @@ export async function routeFrappeApi(request: Request, url: URL, context: Frappe
     const args = await readFrappeArgs(request, url);
 
     const method = METHOD_PATH.exec(url.pathname);
-    if (method) return await dispatchMethod(method[1]!, request, args, context);
+    if (method) {
+      const methodName = method[1]!;
+      const group1 = await dispatchMethodGroup1(methodName, request, args, context);
+      if (group1) return group1;
+      const group2 = await dispatchMethodGroup2(methodName, request, args, context);
+      if (group2) return group2;
+      const group3 = await dispatchMethodGroup3(methodName, request, args, context);
+      if (group3) return group3;
+      const group4 = await dispatchMethodGroup4(methodName, request, args, context);
+      if (group4) return group4;
+      const group5 = await dispatchMethodGroup5(methodName, request, args, context);
+      if (group5) return group5;
+      // An app owns its own dotted namespace and is checked only after platform methods.
+      const fromApp = await callAppMethod(methodName, args, context);
+      if (fromApp) return fromApp;
+      throw errors.notFound(`Method is not implemented on this platform: ${methodName}`);
+    }
 
     const resource = RESOURCE_PATH.exec(url.pathname);
     if (resource) {
@@ -895,12 +911,12 @@ async function assertNoLinkedDocuments(doctype: string, name: string, context: F
 
 // ---- method dispatch --------------------------------------------------------
 
-async function dispatchMethod(
+async function dispatchMethodGroup1(
   methodName: string,
   request: Request,
   args: FrappeArgs,
   context: FrappeRouterContext,
-): Promise<Response> {
+): Promise<Response | null> {
   switch (methodName) {
     // ---- public web forms ---------------------------------------------------
     // Reachable without a session. Everything they may do comes from the form's own
@@ -913,6 +929,17 @@ async function dispatchMethod(
     case "frappe.website.doctype.web_form.web_form.accept":
       return methodResponse(await acceptWebForm(args, context));
 
+    default:
+      return null;
+  }
+}
+async function dispatchMethodGroup2(
+  methodName: string,
+  request: Request,
+  args: FrappeArgs,
+  context: FrappeRouterContext,
+): Promise<Response | null> {
+  switch (methodName) {
     // ---- public storefront --------------------------------------------------
     // Also reachable without a session, and bounded the same way: what a visitor may
     // read is an explicit field list in the installed manifest, and what an order may
@@ -1018,6 +1045,17 @@ async function dispatchMethod(
     case "metaforge.api.get_app_manifest":
       return methodResponse(await clientManifest(args, context));
 
+    default:
+      return null;
+  }
+}
+async function dispatchMethodGroup3(
+  methodName: string,
+  request: Request,
+  args: FrappeArgs,
+  context: FrappeRouterContext,
+): Promise<Response | null> {
+  switch (methodName) {
     // ---- app registry -------------------------------------------------------
     case "forge.apps.list":
       return methodResponse({ apps: await context.apps.list(context.tenantId) });
@@ -1092,6 +1130,17 @@ async function dispatchMethod(
     case "metaforge.api.get_access_profile":
       return methodResponse(await accessProfile(args, context));
 
+    default:
+      return null;
+  }
+}
+async function dispatchMethodGroup4(
+  methodName: string,
+  request: Request,
+  args: FrappeArgs,
+  context: FrappeRouterContext,
+): Promise<Response | null> {
+  switch (methodName) {
     // ---- permission manager -------------------------------------------------
     // The Desk's permission screen. Every one of these was missing, so the screen
     // rendered blank on a 404 — a menu entry that led to nothing.
@@ -1198,6 +1247,17 @@ async function dispatchMethod(
     case "metaforge.api.add_tree_node":
       return methodResponse(await addTreeNode(args, context));
 
+    default:
+      return null;
+  }
+}
+async function dispatchMethodGroup5(
+  methodName: string,
+  request: Request,
+  args: FrappeArgs,
+  context: FrappeRouterContext,
+): Promise<Response | null> {
+  switch (methodName) {
     // ---- query report ------------------------------------------------------
     case "frappe.desk.query_report.run":
       return methodResponse(await runQueryReport(args, context));
@@ -1265,17 +1325,8 @@ async function dispatchMethod(
     case "frappe.desk.form.utils.add_comment":
       return methodResponse(await addComment(args, context));
 
-    default: {
-      // An app owns its own dotted namespace: `hrm.api.something` goes to the `hrm`
-      // app's Worker. Checked only AFTER every platform method, so an app can never
-      // shadow one of ours by choosing a colliding id.
-      const fromApp = await callAppMethod(methodName, args, context);
-      if (fromApp) return fromApp;
-
-      // An unimplemented method must fail loudly. Returning an empty success
-      // would let a screen render as if it had data.
-      throw errors.notFound(`Method is not implemented on this platform: ${methodName}`);
-    }
+    default:
+      return null;
   }
 }
 
