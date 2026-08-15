@@ -180,12 +180,11 @@ async function resolveRowValuation(
       rowRateMinor: perBatch.valuation_rate_minor,
     };
   }
-  const absoluteValue = index === rowCount - 1
-    ? Math.max(0, Math.abs(request.stockValueMinor) - allocatedValue)
-    : Math.round(Math.abs(request.stockValueMinor) * qty / request.qtyMicros);
   return {
-    absoluteValue,
-    rowRateMinor: qty === 0 ? request.valuationRateMinor : Math.round(absoluteValue * request.currencyScale / qty),
+    absoluteValue: index === rowCount - 1
+      ? Math.abs(request.stockValueMinor) - allocatedValue
+      : Math.round(Math.abs(request.stockValueMinor) * qty / request.qtyMicros),
+    rowRateMinor: request.valuationRateMinor,
   };
 }
 
@@ -193,12 +192,13 @@ function allocateRowWeight(
   totalWeight: number | null,
   allocatedWeight: number,
   qty: number,
-  requestQty: number,
+  requestQtyMicros: number,
   isLast: boolean,
 ): number | null {
   if (totalWeight == null) return null;
-  if (isLast) return Math.max(0, totalWeight - allocatedWeight);
-  return Math.round(totalWeight * qty / requestQty);
+  return isLast
+    ? totalWeight - allocatedWeight
+    : Math.round(totalWeight * qty / requestQtyMicros);
 }
 
 function buildBundleStockLine(
@@ -210,51 +210,50 @@ function buildBundleStockLine(
   valuation: RowValuation,
   absoluteWeight: number | null,
 ): StockLedgerEntry {
-  const signedQty = request.direction === "Inward" ? qty : -qty;
-  const signedValue = request.direction === "Inward" ? valuation.absoluteValue : -valuation.absoluteValue;
-  const signedWeight = absoluteWeight == null ? undefined : request.direction === "Inward" ? absoluteWeight : -absoluteWeight;
   return {
-    line_key: `${request.lineKey}:${index + 1}`,
+    line_key: `${request.lineKey}-${row.row_id || index + 1}`,
     item_code: request.itemCode,
     warehouse: request.warehouse,
-    actual_qty_micros: signedQty,
-    ...(signedWeight == null ? {} : { actual_weight_micros: signedWeight }),
+    actual_qty_micros: request.direction === "Inward" ? qty : -qty,
+    ...(absoluteWeight != null ? { actual_weight_micros: request.direction === "Inward" ? absoluteWeight : -absoluteWeight } : {}),
     valuation_rate_minor: valuation.rowRateMinor,
-    stock_value_difference_minor: signedValue,
-    posting_at: request.postingAt,
+    stock_value_difference_minor: request.direction === "Inward" ? valuation.absoluteValue : -valuation.absoluteValue,
+    qty_scale: 6,
+    currency_scale: request.currencyScale,
     currency: request.currency,
-    has_serial_no: tracked && Boolean(row.serial_no),
-    has_batch_no: tracked && Boolean(row.batch_no),
-    ...(row.serial_no ? { serial_no: row.serial_no } : {}),
+    posting_at: request.postingAt,
     ...(row.batch_no ? { batch_no: row.batch_no } : {}),
+    ...(row.serial_no ? { serial_no: row.serial_no } : {}),
+    allow_negative_stock: tracked ? false : Boolean(request.allowNegativeStock),
   };
+}
+
+export function normalizeBundleRows(entries: SerialBatchBundleRow[]): SerialBatchBundleRow[] {
+  if (!Array.isArray(entries) || entries.length === 0) throw errors.validation("Serial and Batch Bundle requires entries");
+  const serials = new Set<string>();
+  return entries.map((entry,index) => {
+    const qty = toScaledInt(entry.qty,6,`entries[${index}].qty`);
+    if (qty <= 0) throw errors.validation(`Bundle quantity must be positive at row ${index+1}`);
+    if (!entry.serial_no && !entry.batch_no) throw errors.validation(`Serial or batch is required at row ${index+1}`);
+    if (entry.serial_no) {
+      if (qty !== 1_000_000) throw errors.validation(`Serial quantity must equal one at row ${index+1}`);
+      if (serials.has(entry.serial_no)) throw errors.validation(`Duplicate serial ${entry.serial_no}`);
+      serials.add(entry.serial_no);
+    }
+    return { ...entry, row_id: entry.row_id || `ROW-${index+1}`, qty: fromScaledInt(qty,6), qty_micros: qty };
+  });
 }
 
 function baseLine(request: TrackedStockRequest): StockLedgerEntry {
   return {
-    line_key: request.lineKey,
-    item_code: request.itemCode,
-    warehouse: request.warehouse,
+    line_key: request.lineKey, item_code: request.itemCode, warehouse: request.warehouse,
     actual_qty_micros: request.direction === "Inward" ? request.qtyMicros : -request.qtyMicros,
-    ...(request.weightMicros == null ? {} : { actual_weight_micros: request.direction === "Inward" ? Math.abs(request.weightMicros) : -Math.abs(request.weightMicros) }),
+    ...(request.weightMicros == null
+      ? {}
+      : { actual_weight_micros: request.direction === "Inward" ? Math.abs(request.weightMicros) : -Math.abs(request.weightMicros) }),
     valuation_rate_minor: request.valuationRateMinor,
     stock_value_difference_minor: request.direction === "Inward" ? Math.abs(request.stockValueMinor) : -Math.abs(request.stockValueMinor),
-    posting_at: request.postingAt,
-    currency: request.currency,
-    has_serial_no: false,
-    has_batch_no: false,
+    qty_scale: 6, currency_scale: request.currencyScale, currency: request.currency, posting_at: request.postingAt,
+    allow_negative_stock: Boolean(request.allowNegativeStock),
   };
-}
-
-function normalizeBundleRows(entries: unknown): SerialBatchBundleRow[] {
-  if (!Array.isArray(entries)) return [];
-  return entries.filter((entry): entry is SerialBatchBundleRow => Boolean(entry && typeof entry === "object"));
-}
-
-function moneyForQty(rateMinor: number, qtyMicros: number, currencyScale: number): number {
-  return fromScaledInt(toScaledInt(rateMinor, currencyScale) * qtyMicros, currencyScale);
-}
-
-function unusedMoneyCompatibility(rateMinor: number, qtyMicros: number, currencyScale: number): number {
-  return moneyForQty(rateMinor, qtyMicros, currencyScale);
 }
