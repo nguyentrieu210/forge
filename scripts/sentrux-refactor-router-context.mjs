@@ -59,6 +59,16 @@ if (importAnchor < 0) throw new Error("access-control import anchor not found");
 const insertAt = importAnchor + accessControlImportEnd.length;
 router = `${router.slice(0, insertAt)}\nimport type { FrappeRouterContext } from "./router-context.js";${router.slice(insertAt)}`;
 
-router = router.slice(0, interfaceStart) + 'export type { FrappeRouterContext } from "./router-context.js";' + router.slice(interfaceEnd + 2);
+// Import rewrites above change the byte offsets before the interface, so locate the
+// block again before removing it. Reusing the original offsets can splice the export
+// into the middle of an import/comment and produce invalid TypeScript.
+const currentInterfaceStart = router.indexOf("export interface FrappeRouterContext {");
+const currentInterfaceEnd = router.indexOf(interfaceEndMarker, currentInterfaceStart);
+if (currentInterfaceStart < 0 || currentInterfaceEnd < 0) {
+  throw new Error("FrappeRouterContext block moved unexpectedly after import rewrites");
+}
+router = router.slice(0, currentInterfaceStart)
+  + 'export type { FrappeRouterContext } from "./router-context.js";'
+  + router.slice(currentInterfaceEnd + 2);
 
 await writeFile(routerPath, router, "utf8");
