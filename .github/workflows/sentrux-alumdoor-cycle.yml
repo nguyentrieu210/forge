@@ -1,0 +1,99 @@
+name: Sentrux alumdoor cycle break
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-10k-20260815
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Baseline score and cycles
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before-score.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before-score.txt | tail -1 | grep -Eo '[0-9]+')
+          mkdir -p .sentrux
+          printf '[constraints]\nmax_cycles = 0\n' > .sentrux/rules.toml
+          sentrux check . 2>&1 | tee /tmp/before-cycles.txt || true
+          CYCLES=$(grep -Eo 'Found [0-9]+ circular dependencies' /tmp/before-cycles.txt | tail -1 | grep -Eo '[0-9]+' || true)
+          CYCLES=${CYCLES:-0}
+          rm -f .sentrux/rules.toml
+          echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
+          echo "cycles=$CYCLES" >> "$GITHUB_OUTPUT"
+          echo "BEFORE quality=$QUALITY cycles=$CYCLES"
+
+      - name: Apply contract extraction
+        run: node scripts/sentrux-break-alumdoor-platform-call-cycle.mjs
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Typecheck server
+        run: pnpm run server:typecheck
+
+      - name: Sentrux gate
+        run: sentrux gate .
+
+      - name: Require cycle and score improvement
+        id: after
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after-score.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after-score.txt | tail -1 | grep -Eo '[0-9]+')
+          mkdir -p .sentrux
+          printf '[constraints]\nmax_cycles = 0\n' > .sentrux/rules.toml
+          sentrux check . 2>&1 | tee /tmp/after-cycles.txt || true
+          CYCLES=$(grep -Eo 'Found [0-9]+ circular dependencies' /tmp/after-cycles.txt | tail -1 | grep -Eo '[0-9]+' || true)
+          CYCLES=${CYCLES:-0}
+          BEFORE_Q='${{ steps.before.outputs.quality }}'
+          BEFORE_C='${{ steps.before.outputs.cycles }}'
+          echo "AFTER quality=$QUALITY cycles=$CYCLES"
+          if [ "$QUALITY" -le "$BEFORE_Q" ]; then
+            echo "quality did not improve: $BEFORE_Q -> $QUALITY"; exit 1
+          fi
+          if [ "$CYCLES" -ge "$BEFORE_C" ]; then
+            echo "cycles did not decrease: $BEFORE_C -> $CYCLES"; exit 1
+          fi
+
+      - name: Commit validated production patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .sentrux
+          rm -f scripts/sentrux-break-alumdoor-platform-call-cycle.mjs
+          rm -f .github/workflows/sentrux-alumdoor-cycle.yml
+          git config user.name "sentrux-refactor-bot"
+          git config user.email "sentrux-refactor-bot@users.noreply.github.com"
+          git add -A -- \
+            server/apps-src/alumdoor-worker/src/index.ts \
+            server/apps-src/alumdoor-worker/src/lots-from-receipt.ts \
+            server/apps-src/alumdoor-worker/src/platform-call.ts \
+            scripts/sentrux-break-alumdoor-platform-call-cycle.mjs \
+            .github/workflows/sentrux-alumdoor-cycle.yml
+          git commit -m "refactor(alumdoor): break worker platform-call cycle [skip sentrux]"
+          git push origin HEAD:agent/sentrux-10k-20260815
