@@ -38,6 +38,16 @@ test("enum-style Vietnamese labels translate common case and underscore variants
     NOT_STARTED: "Chưa bắt đầu",
     ON_HOLD: "Tạm giữ",
     PARTLY_PAID: "Thanh toán một phần",
+    complete: "Hoàn tất",
+    exception: "Ngoại lệ",
+    locked: "Đã khóa",
+    Revoked: "Đã thu hồi",
+    missing_in: "Thiếu giờ vào",
+    missing_out: "Thiếu giờ ra",
+    corrected: "Đã hiệu chỉnh",
+    SHIFT1: "Ca 1",
+    SHIFT2: "Ca 2",
+    SHIFT3: "Ca 3",
   };
   for (const [source, translated] of Object.entries(expected)) {
     assert.equal(translateVietnameseUiSource(source), translated, source);
@@ -45,6 +55,22 @@ test("enum-style Vietnamese labels translate common case and underscore variants
 
   // Unknown technical enum/code stays untouched rather than receiving a guessed translation.
   assert.equal(translateVietnameseUiSource("ALU_PAY_MODE_V2"), "ALU_PAY_MODE_V2");
+});
+
+test("first-party AlumDoor technical DocType names have Vietnamese display titles", () => {
+  const expected = {
+    "AlumDoor Attendance Day": "Ngày công",
+    "AlumDoor Attendance Device": "Thiết bị chấm công",
+    "AlumDoor Attendance Policy": "Chính sách chấm công",
+    "AlumDoor Attendance Segment": "Đoạn ca chấm công",
+    "AlumDoor HR Lite Settings": "Cấu hình nhân sự và lương",
+    "AlumDoor Pay Profile": "Hồ sơ lương",
+    "AlumDoor QR Station": "Trạm chấm công QR",
+  };
+  for (const [source, translated] of Object.entries(expected)) {
+    assert.equal(translateVietnameseUiSource(source), translated, source);
+  }
+  assert.equal(`Tạo ${translateVietnameseUiSource("AlumDoor Pay Profile").toLocaleLowerCase("vi")}`, "Tạo hồ sơ lương");
 });
 
 test("AlumDoor Pay Profile keeps raw stored enum values while Vietnamese display labels are localised", async () => {
@@ -67,14 +93,19 @@ test("AlumDoor Pay Profile keeps raw stored enum values while Vietnamese display
   );
 });
 
-test("translation store exposes translated enum labels under their original raw keys", async () => {
+test("translation store exposes translated UI labels under their original raw keys", async () => {
   const store = new D1TranslationStore(fakeDb());
-  const translated = await store.translate("demo", "vi", ["MONTHLY", "DAILY", "draft", "approved", "retired"]);
+  const translated = await store.translate("demo", "vi", [
+    "AlumDoor Pay Profile", "MONTHLY", "DAILY", "draft", "approved", "retired", "SHIFT1", "missing_out",
+  ]);
   assert.deepEqual(translated, {
+    "AlumDoor Pay Profile": "Hồ sơ lương",
     MONTHLY: "Theo tháng",
     DAILY: "Theo ngày",
     draft: "Nháp",
     approved: "Đã duyệt",
     retired: "Ngừng áp dụng",
+    SHIFT1: "Ca 1",
+    missing_out: "Thiếu giờ ra",
   });
 });
