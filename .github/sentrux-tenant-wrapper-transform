@@ -1,0 +1,136 @@
+from pathlib import Path
+
+source_path = Path('server/apps/tenant-worker/src/index-base.ts')
+facade_path = Path('server/apps/tenant-worker/src/operational-routes.ts')
+text = source_path.read_text()
+
+facade_import = '''import {
+  isDailyLedgerApiPath,
+  isDailyLedgerFrappePath,
+  routeDailyLedgerApi,
+  isManufacturingBomBulkApiPath,
+  isManufacturingBomBulkFrappePath,
+  routeManufacturingBomBulkApi,
+  isManufacturingCapacityApiPath,
+  isManufacturingCapacityFrappePath,
+  routeManufacturingCapacityApi,
+  isManufacturingCostingApiPath,
+  isManufacturingCostingFrappePath,
+  routeManufacturingCostingApi,
+  isManufacturingGenealogyApiPath,
+  isManufacturingGenealogyFrappePath,
+  routeManufacturingGenealogyApi,
+  isManufacturingMrpApiPath,
+  isManufacturingMrpFrappePath,
+  routeManufacturingMrpApi,
+  isMigrationApiPath,
+  routeMigrationApi,
+  isPhysicalStockApiPath,
+  isPhysicalStockFrappePath,
+  routePhysicalStockApi,
+  isQmsApiPath,
+  isQmsFrappePath,
+  routeQmsApi,
+} from "./operational-routes.js";
+'''
+
+if facade_import in text and facade_path.exists():
+    print('tenant operational route facade already present')
+    raise SystemExit(0)
+
+old_imports = [
+'''import {
+  isDailyLedgerApiPath,
+  isDailyLedgerFrappePath,
+  routeDailyLedgerApi,
+} from "./daily-ledger-api.js";
+''',
+'''import {
+  isManufacturingBomBulkApiPath,
+  isManufacturingBomBulkFrappePath,
+  routeManufacturingBomBulkApi,
+} from "./manufacturing-bom-bulk-api.js";
+''',
+'''import {
+  isManufacturingCapacityApiPath,
+  isManufacturingCapacityFrappePath,
+  routeManufacturingCapacityApi,
+} from "./manufacturing-capacity-api.js";
+''',
+'''import {
+  isManufacturingCostingApiPath,
+  isManufacturingCostingFrappePath,
+  routeManufacturingCostingApi,
+} from "./manufacturing-costing-api.js";
+''',
+'''import {
+  isManufacturingGenealogyApiPath,
+  isManufacturingGenealogyFrappePath,
+  routeManufacturingGenealogyApi,
+} from "./manufacturing-genealogy-api.js";
+''',
+'''import {
+  isManufacturingMrpApiPath,
+  isManufacturingMrpFrappePath,
+  routeManufacturingMrpApi,
+} from "./manufacturing-mrp-api.js";
+''',
+'import { isMigrationApiPath, routeMigrationApi } from "./migration-api.js";\n',
+'''import {
+  isPhysicalStockApiPath,
+  isPhysicalStockFrappePath,
+  routePhysicalStockApi,
+} from "./physical-stock-api.js";
+''',
+'import { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";\n',
+]
+for old_import in old_imports:
+    if old_import not in text:
+        raise SystemExit(f'missing expected route import: {old_import.splitlines()[-1] if old_import.splitlines() else old_import}')
+    text = text.replace(old_import, '', 1)
+
+anchor = 'import coreWorker from "./index-core.js";\n'
+if anchor not in text:
+    raise SystemExit('missing core worker import anchor')
+text = text.replace(anchor, anchor + facade_import, 1)
+
+facade_path.write_text('''export {
+  isDailyLedgerApiPath,
+  isDailyLedgerFrappePath,
+  routeDailyLedgerApi,
+} from "./daily-ledger-api.js";
+export {
+  isManufacturingBomBulkApiPath,
+  isManufacturingBomBulkFrappePath,
+  routeManufacturingBomBulkApi,
+} from "./manufacturing-bom-bulk-api.js";
+export {
+  isManufacturingCapacityApiPath,
+  isManufacturingCapacityFrappePath,
+  routeManufacturingCapacityApi,
+} from "./manufacturing-capacity-api.js";
+export {
+  isManufacturingCostingApiPath,
+  isManufacturingCostingFrappePath,
+  routeManufacturingCostingApi,
+} from "./manufacturing-costing-api.js";
+export {
+  isManufacturingGenealogyApiPath,
+  isManufacturingGenealogyFrappePath,
+  routeManufacturingGenealogyApi,
+} from "./manufacturing-genealogy-api.js";
+export {
+  isManufacturingMrpApiPath,
+  isManufacturingMrpFrappePath,
+  routeManufacturingMrpApi,
+} from "./manufacturing-mrp-api.js";
+export { isMigrationApiPath, routeMigrationApi } from "./migration-api.js";
+export {
+  isPhysicalStockApiPath,
+  isPhysicalStockFrappePath,
+  routePhysicalStockApi,
+} from "./physical-stock-api.js";
+export { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";
+''')
+source_path.write_text(text)
+print('collapsed tenant operational route imports behind facade')
