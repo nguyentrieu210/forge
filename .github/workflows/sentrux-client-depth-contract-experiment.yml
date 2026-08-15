@@ -5,10 +5,11 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   experiment:
+    if: startsWith(github.head_ref, 'agent/sentrux-')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -30,25 +31,6 @@ jobs:
         run: |
           set -euo pipefail
           sentrux gate --save . | tee /tmp/before.txt
-          python3 - <<'PY'
-          import json, select, subprocess, time
-          p=subprocess.Popen(['sentrux','--mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,bufsize=1)
-          def send(x): p.stdin.write(json.dumps(x,separators=(',',':'))+'\n'); p.stdin.flush()
-          def recv(i):
-              end=time.time()+30
-              while time.time()<end:
-                  ready,_,_=select.select([p.stdout],[],[],end-time.time())
-                  if not ready: break
-                  msg=json.loads(p.stdout.readline())
-                  if msg.get('id')==i:return msg
-              raise SystemExit('mcp timeout')
-          send({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-06-18','capabilities':{},'clientInfo':{'name':'core-leaf','version':'1'}}});recv(1)
-          send({'jsonrpc':'2.0','method':'notifications/initialized','params':{}})
-          send({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'scan','arguments':{'path':'.'}}});recv(2)
-          send({'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'health','arguments':{}}})
-          print('BEFORE_HEALTH',json.dumps(recv(3),separators=(',',':')))
-          p.kill()
-          PY
 
       - name: Expose core leaf contracts and bypass root barrel
         shell: bash
@@ -89,36 +71,32 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Client typecheck
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm run client:typecheck
+        run: pnpm run client:typecheck
 
       - name: Measure candidate
         shell: bash
         run: |
           set -euo pipefail
           sentrux gate --save . | tee /tmp/after.txt
-          python3 - <<'PY'
-          import json, select, subprocess, time
-          p=subprocess.Popen(['sentrux','--mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,bufsize=1)
-          def send(x): p.stdin.write(json.dumps(x,separators=(',',':'))+'\n'); p.stdin.flush()
-          def recv(i):
-              end=time.time()+30
-              while time.time()<end:
-                  ready,_,_=select.select([p.stdout],[],[],end-time.time())
-                  if not ready: break
-                  msg=json.loads(p.stdout.readline())
-                  if msg.get('id')==i:return msg
-              raise SystemExit('mcp timeout')
-          send({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-06-18','capabilities':{},'clientInfo':{'name':'core-leaf','version':'1'}}});recv(1)
-          send({'jsonrpc':'2.0','method':'notifications/initialized','params':{}})
-          send({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'scan','arguments':{'path':'.'}}});recv(2)
-          send({'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'health','arguments':{}}})
-          print('AFTER_HEALTH',json.dumps(recv(3),separators=(',',':')))
-          p.kill()
-          PY
           BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
           AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
           echo "CORE_LEAF_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -gt "$BEFORE"
+
+      - name: Commit validated candidate
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          TARGET_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          REMOTE_HEAD=$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')
+          if [ "$REMOTE_HEAD" != "$EXPECTED_HEAD" ]; then
+            echo "branch moved during validation: expected=$EXPECTED_HEAD remote=$REMOTE_HEAD"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/packages/core/package.json client/packages/adapter-frappe/src/dto.ts
+          git commit -m "refactor(sentrux): bypass core barrel in adapter DTO"
+          git push origin "HEAD:$TARGET_BRANCH"
