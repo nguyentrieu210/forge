@@ -1,0 +1,61 @@
+name: Sentrux structural diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-10k-20260815
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+          sentrux --version
+
+      - name: CLI capabilities
+        shell: bash
+        run: |
+          set +e
+          echo '=== SENTRUX HELP ==='
+          sentrux --help
+          echo '=== CHECK HELP ==='
+          sentrux check --help
+          echo '=== GATE HELP ==='
+          sentrux gate --help
+
+      - name: Quality baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save .
+
+      - name: God files and complexity offenders
+        shell: bash
+        run: |
+          set +e
+          mkdir -p .sentrux
+          cat > .sentrux/rules.toml <<'EOF'
+          [constraints]
+          max_cycles = 0
+          no_god_files = true
+          max_cc = 25
+          EOF
+          echo '=== STRICT STRUCTURAL CHECK ==='
+          sentrux check .
+          rc=$?
+          echo "diagnostic_exit=$rc"
+          exit 0
