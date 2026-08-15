@@ -18,14 +18,14 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Detect whether split is already applied
+      - name: Detect whether bounded internal split is already applied
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if grep -q 'async function routeInternalRequest(' server/apps/tenant-worker/src/index-core-base.ts; then
+          if grep -q 'async function routeInternalDomainEventRequest(' server/apps/tenant-worker/src/index-core-base.ts; then
             echo 'needed=false' >> "$GITHUB_OUTPUT"
-            echo 'Tenant internal route split already present'
+            echo 'Tenant internal route refinement already present'
           else
             echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
@@ -48,12 +48,14 @@ jobs:
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
           echo "BEFORE=$Q"
 
-      - name: Split internal routes from tenant fetch
+      - name: Refine tenant internal route boundaries
         if: steps.detect.outputs.needed == 'true'
         run: |
           set -euo pipefail
           python3 .github/sentrux-tenant-internal-transform
-          grep -q 'async function routeInternalRequest(' server/apps/tenant-worker/src/index-core-base.ts
+          grep -q 'async function routeInternalMaintenanceRequest(' server/apps/tenant-worker/src/index-core-base.ts
+          grep -q 'async function routeInternalSocialRequest(' server/apps/tenant-worker/src/index-core-base.ts
+          grep -q 'async function routeInternalDomainEventRequest(' server/apps/tenant-worker/src/index-core-base.ts
           git diff --check
           git diff --stat -- server/apps/tenant-worker/src/index-core-base.ts
 
@@ -68,10 +70,11 @@ jobs:
         if: steps.detect.outputs.needed == 'true'
         run: pnpm run server:typecheck
 
-      - name: Require no Sentrux regression
+      - name: Require no Sentrux regression and bounded helpers
         if: steps.detect.outputs.needed == 'true'
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
+        shell: bash
         run: |
           set -euo pipefail
           sentrux gate --save . | tee /tmp/after.txt
@@ -80,11 +83,16 @@ jobs:
           cat > .sentrux/rules.toml <<'EOF'
           [constraints]
           max_cycles = 0
+          max_cc = 25
           EOF
+          set +e
           sentrux check . 2>&1 | tee /tmp/structure.txt
+          set -e
           rm -rf .sentrux
           echo "TENANT_INTERNAL_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -ge "$BEFORE"
+          ! grep -Eq 'index-core-base\.ts:(routeInternalRequest|routeInternalMaintenanceRequest|routeInternalSocialRequest|routeInternalDomainEventRequest) \(cc=' /tmp/structure.txt
+          ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
 
       - name: Commit validated source improvement
         if: steps.detect.outputs.needed == 'true'
@@ -95,5 +103,5 @@ jobs:
           git add -- server/apps/tenant-worker/src/index-core-base.ts
           git diff --cached --check
           git diff --cached --stat
-          git commit --no-verify -m 'refactor(tenant): split internal routes from fetch [skip sentrux]'
+          git commit --no-verify -m 'refactor(tenant): bound internal route helpers [skip sentrux]'
           git push origin HEAD:${{ github.head_ref }}

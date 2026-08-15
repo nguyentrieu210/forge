@@ -4,25 +4,62 @@ from textwrap import dedent, indent
 path = Path('server/apps/tenant-worker/src/index-core-base.ts')
 text = path.read_text()
 
-if 'async function routeInternalRequest(' in text:
-    print('tenant internal route split already present')
+# Phase 1: move the internal route block out of fetch when starting from an
+# unsplit baseline. Keep this fallback so the transform stays idempotent across
+# rebases and can still repair an older branch.
+if 'async function routeInternalRequest(' not in text:
+    start_marker = '      if (url.pathname === "/health") {'
+    end_marker = '      const tenantId = resolveTenant(request, env);'
+    start = text.index(start_marker)
+    end = text.index(end_marker, start)
+    segment = dedent(text[start:end]).rstrip()
+
+    helper = '''async function routeInternalRequest(\n  request: Request,\n  url: URL,\n  env: TenantEnv,\n  traceId: string,\n): Promise<Response | undefined> {\n''' + indent(segment, '  ') + '''\n  return undefined;\n}\n\n'''
+    replacement = '''      const internalResponse = await routeInternalRequest(request, url, env, traceId);\n      if (internalResponse) return internalResponse;\n\n'''
+
+    text = text[:start] + replacement + text[end:]
+    insert_at = text.index('export default {')
+    text = text[:insert_at] + helper + text[insert_at:]
+
+# Phase 2: the first extraction lowered fetch complexity substantially, but the
+# extracted helper still bundled three independent internal boundaries. Split
+# those boundaries without changing route order or response semantics.
+if 'async function routeInternalDomainEventRequest(' in text:
+    path.write_text(text)
+    print('tenant internal route refinement already present')
     raise SystemExit(0)
 
-start_marker = '      if (url.pathname === "/health") {'
-end_marker = '      const tenantId = resolveTenant(request, env);'
-start = text.index(start_marker)
-end = text.index(end_marker, start)
-segment = dedent(text[start:end]).rstrip()
+helper_start = text.index('async function routeInternalRequest(')
+helper_end = text.index('\nexport default {', helper_start)
+helper = text[helper_start:helper_end]
 
-helper = '''async function routeInternalRequest(\n  request: Request,\n  url: URL,\n  env: TenantEnv,\n  traceId: string,\n): Promise<Response | undefined> {\n''' + indent(segment, '  ') + '''\n  return undefined;\n}\n\n'''
-replacement = '''      const internalResponse = await routeInternalRequest(request, url, env, traceId);\n      if (internalResponse) return internalResponse;\n\n'''
+maintenance_start = helper.index('  if (url.pathname === "/health") {')
+social_start = helper.index('  if (request.method === "POST" && url.pathname === "/internal/social/events") {')
+domain_start = helper.index('  if (request.method === "POST" && url.pathname === "/internal/events") {')
+body_end = helper.rindex('\n  return undefined;\n}')
 
-# Replace the original fetch block first. Character offsets are only valid
-# against the original text; inserting the helper before this replacement
-# would shift them and corrupt the TypeScript source.
-text = text[:start] + replacement + text[end:]
-insert_at = text.index('export default {')
-text = text[:insert_at] + helper + text[insert_at:]
+maintenance_segment = helper[maintenance_start:social_start].rstrip()
+social_segment = helper[social_start:domain_start].rstrip()
+domain_segment = helper[domain_start:body_end].rstrip()
 
+signature = '''(\n  request: Request,\n  url: URL,\n  env: TenantEnv,\n  traceId: string,\n): Promise<Response | undefined>'''
+
+def route_helper(name: str, segment: str) -> str:
+    return f'''async function {name}{signature} {{\n{segment}\n  return undefined;\n}}\n\n'''
+
+refined = (
+    route_helper('routeInternalMaintenanceRequest', maintenance_segment)
+    + route_helper('routeInternalSocialRequest', social_segment)
+    + route_helper('routeInternalDomainEventRequest', domain_segment)
+    + f'''async function routeInternalRequest{signature} {{\n'''
+      '''  const maintenanceResponse = await routeInternalMaintenanceRequest(request, url, env, traceId);\n'''
+      '''  if (maintenanceResponse) return maintenanceResponse;\n\n'''
+      '''  const socialResponse = await routeInternalSocialRequest(request, url, env, traceId);\n'''
+      '''  if (socialResponse) return socialResponse;\n\n'''
+      '''  return routeInternalDomainEventRequest(request, url, env, traceId);\n'''
+      '''}\n'''
+)
+
+text = text[:helper_start] + refined + text[helper_end:]
 path.write_text(text)
-print('split tenant-worker internal routes from fetch')
+print('refined tenant-worker internal routes into bounded helpers')
