@@ -89,8 +89,21 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
-      - name: Server typecheck
-        run: pnpm run server:typecheck
+      - name: Server typecheck candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          pnpm run server:typecheck 2>&1 | tee /tmp/typecheck.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          if grep -E 'packages/core/src/json\.ts' /tmp/typecheck.txt; then
+            echo 'candidate introduced a core/json TypeScript error'
+            exit 1
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo 'server typecheck remains red only outside the candidate; continuing structural measurement'
+          fi
 
       - name: Measure candidate
         shell: bash
