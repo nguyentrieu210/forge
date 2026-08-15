@@ -1,71 +1,36 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const routerPath = "server/packages/frappe-api/src/router.ts";
-const contextPath = "server/packages/frappe-api/src/router-context.ts";
+const coreTypesPath = "server/packages/clouderp-core/src/types.ts";
+const sellingTypesPath = "server/packages/clouderp-selling/src/types.ts";
+const taxTypesPath = "server/packages/clouderp-core/src/tax-types.ts";
 
-let router = await readFile(routerPath, "utf8");
+let coreTypes = await readFile(coreTypesPath, "utf8");
+let sellingTypes = await readFile(sellingTypesPath, "utf8");
 
-const interfaceStart = router.indexOf("export interface FrappeRouterContext {");
-const interfaceEndMarker = "\n}\n\n/**\n * Doctypes that describe the platform rather than live in it.";
-const interfaceEnd = router.indexOf(interfaceEndMarker, interfaceStart);
-if (interfaceStart < 0 || interfaceEnd < 0) {
-  throw new Error("FrappeRouterContext block not found; refusing to modify router.ts");
+const coreCycleImport = 'import type { TaxRow } from "../../clouderp-selling/src/types.js";';
+if (!coreTypes.includes(coreCycleImport)) {
+  throw new Error("Expected clouderp-core -> clouderp-selling TaxRow import not found");
+}
+coreTypes = coreTypes.replace(coreCycleImport, 'import type { TaxRow } from "./tax-types.js";');
+
+const taxBlock = `export type TaxChargeType = "On Net Total" | "On Previous Row Total" | "Actual" | "On Item Quantity";\nexport type TaxAddDeduct = "Add" | "Deduct";\n\nexport interface TaxRow extends JsonObject {\n  row_id: string;\n  account: string;\n  rate: DecimalInput;\n  charge_type?: TaxChargeType;\n  included_in_print_rate?: boolean;\n  add_deduct_tax?: TaxAddDeduct;\n  /** Positive input amount for Actual charge type. Kept separate from signed canonical tax_amount. */\n  actual_tax_amount?: DecimalInput;\n  /** Signed canonical tax amount after Add/Deduct normalization. */\n  tax_amount?: DecimalInput;\n  tax_amount_minor?: number;\n  total?: string;\n  total_minor?: number;\n}\n\n`;
+
+if (!sellingTypes.includes(taxBlock)) {
+  throw new Error("Expected TaxRow block not found in clouderp-selling/types.ts");
 }
 
-const interfaceBlock = router.slice(interfaceStart, interfaceEnd + 2);
-
-const contextImports = `import type { Actor, JsonObject, MutationCommand, MutationReceipt } from "../../contracts/src/index.js";\nimport type { D1MutationStore, DocumentListService } from "../../document-kernel/src/index.js";\nimport type {\n  CustomizationStore, D1CollaborationService, D1SearchStore, DocumentAccessStore,\n  MetadataPermissionService, MetadataStore,\n} from "../../frappe-model/src/index.js";\nimport type { D1UserStore } from "../../auth/src/index.js";\nimport type { AppReportService, D1ReportService } from "../../query/src/index.js";\nimport type { AppInstaller, AppMethodEnv } from "../../app-registry/src/index.js";\nimport type { D1TranslationStore } from "./translations.js";\nimport type { D1DeskViewStore } from "./desk-views.js";\n\n`;
-
-await writeFile(contextPath, `${contextImports}${interfaceBlock}\n`, "utf8");
-
-const exactReplacements = [
-  [
-    'import type { Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand, MutationReceipt } from "../../contracts/src/index.js";',
-    'import type { Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand } from "../../contracts/src/index.js";',
-  ],
-  [
-    'import type { D1MutationStore, DocumentListService, ListFilter } from "../../document-kernel/src/index.js";',
-    'import type { ListFilter } from "../../document-kernel/src/index.js";',
-  ],
-  [
-    'import type {\n  D1CollaborationService, DocTypeMeta, DocumentAccessStore, ExtendedPermissionAction,\n  MetadataPermissionService, MetadataStore,\n} from "../../frappe-model/src/index.js";',
-    'import type { DocTypeMeta, ExtendedPermissionAction, MetadataStore } from "../../frappe-model/src/index.js";',
-  ],
-  [
-    'import type { CustomFieldRecord, CustomizationStore, D1SearchStore, PropertySetterRecord } from "../../frappe-model/src/index.js";',
-    'import type { CustomFieldRecord, PropertySetterRecord } from "../../frappe-model/src/index.js";',
-  ],
-  ['import type { D1UserStore } from "../../auth/src/index.js";\n', ''],
-  [
-    'import { parseQueryRequest, type AppReportService, type AppReportSpec, type D1ReportService, type QueryFilter } from "../../query/src/index.js";',
-    'import { parseQueryRequest, type AppReportSpec, type QueryFilter } from "../../query/src/index.js";',
-  ],
-  [
-    'import {\n  appMethodTarget, combinedNavigation, dispatchAppMethod, navItemPath,\n  type AppInstaller, type AppMethodEnv,\n} from "../../app-registry/src/index.js";',
-    'import { appMethodTarget, combinedNavigation, dispatchAppMethod, navItemPath } from "../../app-registry/src/index.js";',
-  ],
-  ['import type { D1TranslationStore } from "./translations.js";\n', ''],
-  ['import { assertKanbanField, type D1DeskViewStore } from "./desk-views.js";', 'import { assertKanbanField } from "./desk-views.js";'],
-];
-
-for (const [before, after] of exactReplacements) {
-  if (!router.includes(before)) throw new Error(`Expected router import not found: ${before}`);
-  router = router.replace(before, after);
+const sellingImportAnchor = 'import type { UomLine } from "../../clouderp-core/src/types.js";';
+if (!sellingTypes.includes(sellingImportAnchor)) {
+  throw new Error("Expected UomLine import not found in clouderp-selling/types.ts");
 }
+sellingTypes = sellingTypes.replace(
+  sellingImportAnchor,
+  `${sellingImportAnchor}\nimport type { TaxRow } from "../../clouderp-core/src/tax-types.js";\nexport type { TaxAddDeduct, TaxChargeType, TaxRow } from "../../clouderp-core/src/tax-types.js";`,
+);
+sellingTypes = sellingTypes.replace(taxBlock, "");
 
-const accessControlImportEnd = '} from "./access-control.js";';
-const importAnchor = router.indexOf(accessControlImportEnd);
-if (importAnchor < 0) throw new Error("access-control import anchor not found");
-const insertAt = importAnchor + accessControlImportEnd.length;
-router = `${router.slice(0, insertAt)}\nimport type { FrappeRouterContext } from "./router-context.js";${router.slice(insertAt)}`;
+const taxTypes = `import type { JsonObject } from "../../contracts/src/index.js";\nimport type { DecimalInput } from "../../money/src/index.js";\n\n${taxBlock}`;
 
-const currentInterfaceStart = router.indexOf("export interface FrappeRouterContext {");
-const currentInterfaceEnd = router.indexOf(interfaceEndMarker, currentInterfaceStart);
-if (currentInterfaceStart < 0 || currentInterfaceEnd < 0) {
-  throw new Error("FrappeRouterContext block moved unexpectedly after import rewrites");
-}
-router = router.slice(0, currentInterfaceStart)
-  + 'export type { FrappeRouterContext } from "./router-context.js";'
-  + router.slice(currentInterfaceEnd + 2);
-
-await writeFile(routerPath, router, "utf8");
+await writeFile(coreTypesPath, coreTypes, "utf8");
+await writeFile(sellingTypesPath, sellingTypes, "utf8");
+await writeFile(taxTypesPath, taxTypes, "utf8");
