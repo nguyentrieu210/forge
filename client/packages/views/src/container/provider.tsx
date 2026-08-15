@@ -3,14 +3,17 @@
  * MetaForgeProvider — cung cấp adapter + registry + services + roles cho container.
  * Bọc sẵn QueryClientProvider (cache §G). Bootstrap: gọi getBoot lấy roles.
  */
-import { createContext, lazy, Suspense, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { FormGuideMap } from "../form/FormGuide.js";
-import { makeLocaleFormat, type LocaleConfig, type BoundFormatters, type BusinessContextSelection, type BusinessContextPolicy, type FormProfileMap } from "@metaforge/core";
+import { makeLocaleFormat, type LocaleConfig, type BusinessContextSelection, type BusinessContextPolicy, type FormProfileMap } from "@metaforge/core";
 import type { FrappeAdapter } from "@metaforge/adapter-frappe";
-import { ControlRegistry, type FieldServices } from "@metaforge/controls";
+import { ControlRegistry } from "@metaforge/controls";
 import { chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { adapterServices } from "./services.js";
+import { MetaForgeContext, type MetaForgeContextValue } from "./meta-context.js";
+export { useMetaForge, useMetaForgeOptional, useLocaleFormat } from "./meta-context.js";
+export type { MetaForgeContextValue } from "./meta-context.js";
 import { useMeta } from "./hooks.js";
 import { V3_FULL_CREATE_DIALOG_CLASS } from "../data-surface/v3.js";
 
@@ -18,60 +21,6 @@ const LazyNewFormContainer = lazy(async () => {
   const module = await import("./NewFormContainer.js");
   return { default: module.NewFormContainer };
 });
-
-export interface MetaForgeContextValue {
-  adapter: FrappeAdapter;
-  registry: ControlRegistry;
-  services: FieldServices;
-  roles: string[];
-  /** Khoá phạm vi cache (site|user|lang|version) — mọi queryKey prefix bằng key này để
-   * KHÔNG rò meta/perm/translation giữa user/site/ngôn ngữ (P1-03). Đổi ⇒ cache tự tách. */
-  scopeKey: string;
-  /** Bộ formatter locale DUY NHẤT (từ boot sysdefaults) — Form/List/child/report/Builder dùng chung. */
-  fmt: BoundFormatters;
-  /** Context nghiệp vụ toàn cục áp trước mọi query/create/link. */
-  businessContext: BusinessContextSelection;
-  contextPolicies?: Record<string, BusinessContextPolicy>;
-  /** Lọc field hiển thị trên Form theo từng doctype — DocType chuẩn ERPNext quá rộng cho app
-   * chuyên biệt. Xem `applyFormProfile` (@metaforge/core) để biết các quy tắc an toàn. */
-  formProfiles?: FormProfileMap;
-  formGuides?: FormGuideMap;
-}
-
-const Ctx = createContext<MetaForgeContextValue | null>(null);
-
-export function useMetaForge(): MetaForgeContextValue {
-  const v = useContext(Ctx);
-  if (!v) throw new Error("useMetaForge phải nằm trong <MetaForgeProvider>");
-  return v;
-}
-
-/**
- * Bản KHÔNG ném lỗi — cho những thứ TÔ ĐIỂM, có thì tốt, không có vẫn dùng được (vd hướng dẫn
- * nhập trong form).
- *
- * `useMetaForge` cố tình ném lỗi vì thiếu adapter/registry là hỏng thật, phải phát hiện ngay.
- * Nhưng dùng nó chỉ để lấy một thứ tuỳ chọn thì biến provider thành BẮT BUỘC cho cả màn hình:
- * FormView vốn dựng được độc lập (test, Storybook, app nhúng chỉ mượn một view) đã sập vì lý do
- * đó. Thứ tuỳ chọn phải hỏng theo kiểu tuỳ chọn.
- */
-export function useMetaForgeOptional(): MetaForgeContextValue | null {
-  return useContext(Ctx);
-}
-
-/** Bộ formatter locale dùng chung (number/currency/date/duration) — 1 nguồn từ boot sysdefaults. */
-/**
- * Không có provider ⇒ định dạng theo mặc định của core thay vì sập màn hình.
- *
- * Cùng lý do với [[useMetaForgeOptional]]: định dạng số/ngày là chuyện TRÌNH BÀY. Bắt cả ReportView
- * phải nằm trong provider chỉ để lấy bộ định dạng là ràng buộc thừa — và đó chính là lỗi đã làm
- * selfcheck đỏ khi thêm định dạng số cho báo cáo.
- */
-const FALLBACK_FMT = makeLocaleFormat({});
-
-export function useLocaleFormat(): BoundFormatters {
-  return useMetaForgeOptional()?.fmt ?? FALLBACK_FMT;
-}
 
 export interface MetaForgeProviderProps {
   adapter: FrappeAdapter;
@@ -147,7 +96,7 @@ export function MetaForgeProvider(props: MetaForgeProviderProps) {
   );
   return (
     <QueryClientProvider client={qc}>
-      <Ctx.Provider value={value}>
+      <MetaForgeContext.Provider value={value}>
         {props.children}
         {/* Mỗi entry trong stack = 1 Dialog riêng, portal xếp chồng theo thứ tự mount (Radix hỗ trợ
             dialog lồng nhau natively) — đóng entry NÀO chỉ resolve/gỡ đúng entry đó, không đụng
@@ -159,7 +108,7 @@ export function MetaForgeProvider(props: MetaForgeProviderProps) {
             onDone={(name) => closeQuickCreate(entry.id, name)}
           />
         ))}
-      </Ctx.Provider>
+      </MetaForgeContext.Provider>
     </QueryClientProvider>
   );
 }

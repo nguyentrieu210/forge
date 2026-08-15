@@ -9,7 +9,7 @@ import { Eye } from "lucide-react";
 import { applyContextPolicy, resolveFormRenderPolicy, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import { Button, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
-import { useMetaForge } from "./provider.js";
+import { useMetaForge } from "./meta-context.js";
 import { useFormMeta, useCapabilities, NO_CAPS } from "./hooks.js";
 import { consumeDuplicate } from "./duplicate.js";
 import { editableCodeField, suggestEditableCode } from "./editable-code.js";

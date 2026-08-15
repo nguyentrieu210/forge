@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { applyFormProfile, type DocTypeMeta, type Doc, type DocInfo, type ListOpts, type Filters } from "@metaforge/core";
 import { type Capabilities, type ListViewSnapshot, type WorkflowTransitionsResult, NO_CAPS } from "@metaforge/adapter-frappe";
-import { useMetaForge } from "./provider.js";
+import { useMetaForge } from "./meta-context.js";
 
 export function useMeta(doctype: string): UseQueryResult<DocTypeMeta> {
   const { adapter, scopeKey } = useMetaForge();
