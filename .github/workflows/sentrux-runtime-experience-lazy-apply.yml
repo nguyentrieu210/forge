@@ -1,0 +1,89 @@
+name: Sentrux runtime experience lazy apply
+
+on:
+  push:
+    branches:
+      - agent/sentrux-convergence-20260816
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-apply:
+    if: ${{ !contains(github.event.head_commit.message, '[skip sentrux-runtime-experience]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-convergence-20260816
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+          sentrux --version
+
+      - name: Capture baseline
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/sentrux-before.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/sentrux-before.txt | tail -1 | grep -Eo '[0-9]+')
+          test -n "$QUALITY"
+          echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
+
+      - name: Apply runtime experience lazy boundary
+        run: node scripts/sentrux-refactor-runtime-experience-lazy.mjs
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Typecheck runtime and dependencies
+        run: pnpm --filter runtime run typecheck
+
+      - name: Build runtime
+        run: pnpm --filter runtime run build
+
+      - name: Sentrux regression gate
+        run: sentrux gate .
+
+      - name: Measure architecture improvement
+        id: after
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/sentrux-after.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/sentrux-after.txt | tail -1 | grep -Eo '[0-9]+')
+          test -n "$QUALITY"
+          BEFORE='${{ steps.before.outputs.quality }}'
+          echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
+          if [ "$QUALITY" -le "$BEFORE" ]; then
+            echo "Sentrux score did not increase: $BEFORE -> $QUALITY"
+            exit 1
+          fi
+          echo "Sentrux score increased: $BEFORE -> $QUALITY"
+
+      - name: Commit validated boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .sentrux
+          git rm scripts/sentrux-refactor-runtime-experience-lazy.mjs
+          git rm .github/workflows/sentrux-runtime-experience-lazy-apply.yml
+          git config user.name "sentrux-refactor-bot"
+          git config user.email "sentrux-refactor-bot@users.noreply.github.com"
+          git add client/apps/runtime/src/main-base.tsx client/apps/runtime/src/experiences/lazy.tsx
+          git commit -m "refactor(runtime): isolate lazy experience registry [skip sentrux-runtime-experience]"
+          git push origin HEAD:agent/sentrux-convergence-20260816
