@@ -1,4 +1,4 @@
-name: Sentrux runtime dead-edge apply
+name: Sentrux workspace vertical boundary apply
 
 on:
   pull_request:
@@ -18,15 +18,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Detect dead runtime edges
+      - name: Detect workspace vertical boundary
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if grep -q 'const DailyDetailedLedger = lazy' client/apps/runtime/src/main-base.tsx; then
-            echo 'needed=true' >> "$GITHUB_OUTPUT"
-          else
+          if grep -q 'AlumdoorWorkspaceBoundary.js' client/packages/views/src/app/DoctypeWorkspace.tsx; then
             echo 'needed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install Sentrux
@@ -45,21 +45,16 @@ jobs:
           sentrux gate --save . | tee /tmp/before.txt
           Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
-          echo "BEFORE=$Q"
 
-      - name: Remove unreachable lazy experiences
+      - name: Extract vertical boundary
         if: steps.detect.outputs.needed == 'true'
         run: |
           set -euo pipefail
           python3 .github/sentrux-tenant-wrapper-transform
-          for name in SocialCommerce DailyDetailedLedger AlumdoorOperationsCenter AlumdoorAttendanceScanner AlumdoorAttendanceOperations AlumdoorMasterDataScreen; do
-            if grep -q "const $name = lazy" client/apps/runtime/src/main-base.tsx; then
-              echo "dead lazy experience remains: $name" >&2
-              exit 1
-            fi
-          done
+          grep -q 'AlumdoorWorkspaceBoundary.js' client/packages/views/src/app/DoctypeWorkspace.tsx
+          test -f client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx
           git diff --check
-          git diff --stat -- client/apps/runtime/src/main-base.tsx
+          git diff --stat -- client/packages/views/src/app/DoctypeWorkspace.tsx client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx
 
       - name: Install dependencies
         if: steps.detect.outputs.needed == 'true'
@@ -72,7 +67,7 @@ jobs:
         if: steps.detect.outputs.needed == 'true'
         run: pnpm run client:typecheck
 
-      - name: Require no Sentrux regression and remove runtime god-file
+      - name: Require no Sentrux regression and remove workspace god-file
         if: steps.detect.outputs.needed == 'true'
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
@@ -92,9 +87,10 @@ jobs:
           sentrux check . 2>&1 | tee /tmp/structure.txt
           set -e
           rm -rf .sentrux
-          echo "RUNTIME_DEAD_EDGE_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          echo "WORKSPACE_VERTICAL_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -ge "$BEFORE"
-          if grep -q 'client/apps/runtime/src/main-base.tsx (fan-out=' /tmp/structure.txt; then exit 1; fi
+          if grep -q 'client/packages/views/src/app/DoctypeWorkspace.tsx (fan-out=' /tmp/structure.txt; then exit 1; fi
+          if grep -q 'client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx (fan-out=' /tmp/structure.txt; then exit 1; fi
           if grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt; then exit 1; fi
 
       - name: Commit validated source improvement
@@ -103,8 +99,8 @@ jobs:
           set -euo pipefail
           git config user.name 'sentrux-refactor-bot'
           git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
-          git add -- client/apps/runtime/src/main-base.tsx
+          git add -- client/packages/views/src/app/DoctypeWorkspace.tsx client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx
           git diff --cached --check
           git diff --cached --stat
-          git commit --no-verify -m 'refactor(runtime): remove unreachable lazy experiences [skip sentrux]'
+          git commit --no-verify -m 'refactor(views): extract AlumDoor workspace boundary [skip sentrux]'
           git push origin HEAD:${{ github.head_ref }}

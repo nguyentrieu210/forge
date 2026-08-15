@@ -1,27 +1,120 @@
 from pathlib import Path
 
-path = Path('client/apps/runtime/src/main-base.tsx')
+path = Path('client/packages/views/src/app/DoctypeWorkspace.tsx')
+boundary = Path('client/packages/views/src/app/vertical/alumdoor/AlumdoorWorkspaceBoundary.tsx')
 text = path.read_text()
 
-unused = [
-    'const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));\n',
-    'const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));\n',
-    'const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));\n',
-    'const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));\n',
-    'const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));\n',
-    'const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));\n',
-]
-
-present = [line for line in unused if line in text]
-if not present:
-    print('runtime dead experience imports already removed')
+boundary_import = '''import {
+  AlumdoorManufacturingStockEntryCreate,
+  AlumdoorProductionRequestDetail,
+  AlumdoorSalesOrderCreate,
+  AlumdoorWorkOrderDetail,
+  useAlumdoorWorkspaceMode,
+} from "./vertical/alumdoor/AlumdoorWorkspaceBoundary.js";
+'''
+if boundary_import in text and boundary.exists():
+    print('AlumDoor workspace boundary already present')
     raise SystemExit(0)
-if len(present) != len(unused):
-    missing = [line.strip() for line in unused if line not in text]
-    raise SystemExit(f'partial dead-experience state; refusing transform: {missing}')
 
-for line in unused:
+old_react = 'import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";\n'
+new_react = 'import { Suspense, useMemo, useState, type ReactNode } from "react";\n'
+if old_react not in text:
+    raise SystemExit('missing React lazy import anchor')
+text = text.replace(old_react, new_react, 1)
+
+provider_import = 'import { useMetaForge } from "../container/provider.js";\n'
+if provider_import not in text:
+    raise SystemExit('missing useMetaForge import')
+text = text.replace(provider_import, '', 1)
+
+lazy_lines = [
+    'const AlumdoorSalesOrderCreate = lazy(() => import("./vertical/alumdoor/AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));\n',
+    'const AlumdoorProductionRequestDetail = lazy(() => import("./vertical/alumdoor/AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));\n',
+    'const AlumdoorWorkOrderDetail = lazy(() => import("./vertical/alumdoor/AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));\n',
+    'const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./vertical/alumdoor/AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));\n',
+]
+for line in lazy_lines:
+    if line not in text:
+        raise SystemExit(f'missing lazy component anchor: {line.strip()}')
     text = text.replace(line, '', 1)
 
+meta_import = 'import { useMeta } from "../container/hooks.js";\n'
+if meta_import not in text:
+    raise SystemExit('missing useMeta import anchor')
+text = text.replace(meta_import, meta_import + boundary_import, 1)
+
+form_profiles = '  const { formProfiles } = useMetaForge();\n'
+if form_profiles not in text:
+    raise SystemExit('missing formProfiles line')
+text = text.replace(form_profiles, '', 1)
+
+start = text.index('  /**\n   * AlumDoor được runtime đánh dấu bằng form profile riêng cho Item Group.')
+end = text.index('  /**\n   * Kích cỡ màn tạo mới đi theo PHẠM VI của chứng từ', start)
+replacement = '''  const {
+    isAlumdoorProfile,
+    useAlumdoorSalesForm,
+    useAlumdoorSalesCreate,
+    useAlumdoorSalesDetail,
+    useAlumdoorProductionRequestDetail,
+    useAlumdoorWorkOrderDetail,
+    manufacturingWorkOrder,
+    manufacturingPurpose,
+    useAlumdoorManufacturingStockEntryContext,
+  } = useAlumdoorWorkspaceMode({ doctype, isNew, decoded, bridge });
+'''
+text = text[:start] + replacement + text[end:]
+
+boundary.write_text('''import { lazy } from "react";
+import { useMetaForge } from "../../../container/provider.js";
+import type { UrlStateBridge } from "../../../list/useListState.js";
+
+export const AlumdoorSalesOrderCreate = lazy(() => import("./AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
+export const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
+export const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
+export const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
+
+interface AlumdoorWorkspaceModeInput {
+  doctype: string;
+  isNew: boolean;
+  decoded?: string;
+  bridge: UrlStateBridge;
+}
+
+export function useAlumdoorWorkspaceMode(input: AlumdoorWorkspaceModeInput) {
+  const { formProfiles } = useMetaForge();
+  const { doctype, isNew, decoded, bridge } = input;
+  /**
+   * AlumDoor được runtime đánh dấu bằng form profile riêng cho Item Group. Chỉ profile của
+   * vertical này giữ `default_measurement_profile`; nhờ vậy generic workspace không chiếm
+   * màn nghiệp vụ của app khác. Màn chuyên biệt vẫn lazy-load, nên app khác không tải code cửa.
+   */
+  const isAlumdoorProfile = Boolean(formProfiles?.["Item Group"]?.keep?.includes("default_measurement_profile"));
+  const useAlumdoorSalesForm = doctype === "Sales Order" && isAlumdoorProfile;
+  const useAlumdoorSalesCreate = isNew && useAlumdoorSalesForm;
+  const useAlumdoorSalesDetail = Boolean(decoded) && useAlumdoorSalesForm;
+  const useAlumdoorProductionRequestDetail = Boolean(decoded) && doctype === "Production Request" && isAlumdoorProfile;
+  const useAlumdoorWorkOrderDetail = Boolean(decoded) && doctype === "Work Order" && isAlumdoorProfile;
+  const manufacturingWorkOrder = bridge.get("f_work_order")?.trim() ?? "";
+  const requestedStockPurpose = bridge.get("f_purpose");
+  const manufacturingPurpose = requestedStockPurpose === "Material Transfer" || requestedStockPurpose === "Manufacture"
+    ? requestedStockPurpose
+    : undefined;
+  const useAlumdoorManufacturingStockEntryContext = !isNew && !decoded && doctype === "Stock Entry"
+    && isAlumdoorProfile && Boolean(manufacturingWorkOrder && manufacturingPurpose);
+
+  return {
+    isAlumdoorProfile,
+    useAlumdoorSalesForm,
+    useAlumdoorSalesCreate,
+    useAlumdoorSalesDetail,
+    useAlumdoorProductionRequestDetail,
+    useAlumdoorWorkOrderDetail,
+    manufacturingWorkOrder,
+    manufacturingPurpose,
+    useAlumdoorManufacturingStockEntryContext,
+  };
+}
+''')
+
 path.write_text(text)
-print(f'removed {len(unused)} unused runtime lazy experiences')
+print('extracted AlumDoor workspace mode and lazy vertical boundary')
