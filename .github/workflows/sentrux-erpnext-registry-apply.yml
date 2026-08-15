@@ -1,0 +1,102 @@
+name: Sentrux ERPNext registry split apply
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-10k-20260815
+
+      - name: Detect split
+        id: detect
+        shell: bash
+        run: |
+          if grep -q 'registry-part-01.js' server/packages/clouderp-erpnext/src/registry.ts; then
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Sentrux
+        if: steps.detect.outputs.needed == 'true'
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Baseline
+        if: steps.detect.outputs.needed == 'true'
+        id: before
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+          Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "quality=$Q" >> "$GITHUB_OUTPUT"
+
+      - name: Split registry and stage complete candidate
+        if: steps.detect.outputs.needed == 'true'
+        run: |
+          set -euo pipefail
+          python3 .github/sentrux-erpnext-registry-split
+          git add -- server/packages/clouderp-erpnext/src/registry*.ts
+          git diff --cached --check
+          git diff --cached --stat -- server/packages/clouderp-erpnext/src/registry*.ts
+          echo 'Tracked candidate files:'
+          git ls-files 'server/packages/clouderp-erpnext/src/registry*.ts'
+
+      - name: Install dependencies
+        if: steps.detect.outputs.needed == 'true'
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Server typecheck
+        if: steps.detect.outputs.needed == 'true'
+        run: pnpm run server:typecheck
+
+      - name: Quality and architecture gate
+        if: steps.detect.outputs.needed == 'true'
+        env:
+          BEFORE: ${{ steps.before.outputs.quality }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after.txt
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          mkdir -p .sentrux
+          cat > .sentrux/rules.toml <<'EOF'
+          [constraints]
+          max_cycles = 0
+          no_god_files = true
+          max_cc = 25
+          EOF
+          set +e
+          sentrux check . 2>&1 | tee /tmp/structure.txt
+          set -e
+          rm -rf .sentrux
+          echo "ERPNEXT_REGISTRY_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          grep -E 'clouderp-erpnext/src/registry|god file|circular dependencies' /tmp/structure.txt || true
+          test "$AFTER" -gt "$BEFORE"
+          ! grep -q 'server/packages/clouderp-erpnext/src/registry.ts (fan-out=' /tmp/structure.txt
+          ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
+
+      - name: Commit validated registry split
+        if: steps.detect.outputs.needed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'sentrux-refactor-bot'
+          git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
+          git diff --cached --check
+          git commit --no-verify -m 'refactor(erpnext): split controller registry [skip sentrux]'
+          git push origin HEAD:agent/sentrux-10k-20260815

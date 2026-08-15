@@ -15,7 +15,7 @@ import { ControlRegistry, FallbackControl, type FieldServices } from "@metaforge
 import type { WorkflowTransition } from "@metaforge/adapter-frappe";
 import { Button, Badge, Checkbox, toast, cn, useT } from "@metaforge/ui";
 import { FormGuide } from "./FormGuide.js";
-import { useMetaForgeOptional } from "../container/provider.js";
+import { useMetaForgeOptional } from "../container/meta-context.js";
 import { groupLayout, resolveFormFieldWidth, type FormFieldWidth, type FormTab } from "./layout.js";
 import { WorkflowActionBar, FormActionBar } from "../detail/WorkflowActionBar.js";
 import { DIRTY_GUARD_REASON, type FormActionKind, type FormPerms, type FormActionCtx } from "../detail/formActions.js";

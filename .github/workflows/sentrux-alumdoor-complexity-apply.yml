@@ -1,0 +1,131 @@
+name: Sentrux Alumdoor complexity apply
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-10k-20260815
+
+      - name: Detect whether split is already applied
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q 'function validateAreaTransactionQuantity(' server/apps-src/alumdoor-worker/src/index.ts; then
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
+            echo 'Alumdoor transaction split already present'
+          else
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Sentrux
+        if: steps.detect.outputs.needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Baseline score
+        if: steps.detect.outputs.needed == 'true'
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+          Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "quality=$Q" >> "$GITHUB_OUTPUT"
+          echo "BEFORE=$Q"
+
+      - name: Apply validated same-file split
+        if: steps.detect.outputs.needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/sentrux-alumdoor-transform
+          git diff --check
+          git diff --stat -- server/apps-src/alumdoor-worker/src/index.ts
+
+      - name: Install dependencies
+        if: steps.detect.outputs.needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Server typecheck
+        if: steps.detect.outputs.needed == 'true'
+        run: pnpm run server:typecheck
+
+      - name: Require quality improvement and zero cycles
+        if: steps.detect.outputs.needed == 'true'
+        shell: bash
+        env:
+          BEFORE: ${{ steps.before.outputs.quality }}
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after.txt
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          mkdir -p .sentrux
+          cat > .sentrux/rules.toml <<'EOF'
+          [constraints]
+          max_cycles = 0
+          EOF
+          sentrux check . 2>&1 | tee /tmp/structure.txt
+          rm -rf .sentrux
+          echo "SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          test "$AFTER" -gt "$BEFORE"
+
+      - name: Emit server dist for validator tests
+        if: steps.detect.outputs.needed == 'true'
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/alumdoor-apply-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/apps-src/alumdoor-worker/src/entry.js
+          test -f dist/apps-src/alumdoor-worker/src/index.js
+          if [ "$status" -ne 0 ]; then
+            grep 'error TS' /tmp/alumdoor-apply-tsc.log > /tmp/alumdoor-apply-ts-errors.log || true
+            cat /tmp/alumdoor-apply-ts-errors.log
+            if grep -E 'apps-src/alumdoor-worker/src/index\.ts' /tmp/alumdoor-apply-ts-errors.log; then
+              exit 1
+            fi
+          fi
+
+      - name: Focused Alumdoor validator tests
+        if: steps.detect.outputs.needed == 'true'
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/alumdoor-item-validator.test.mjs tests/aluminum-item-validator-boundary.test.mjs
+
+      - name: Commit validated source improvement
+        if: steps.detect.outputs.needed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'sentrux-refactor-bot'
+          git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
+          git add -- server/apps-src/alumdoor-worker/src/index.ts
+          git diff --cached --check
+          git diff --cached --stat
+          git commit --no-verify -m 'refactor(alumdoor): split transaction quantity validation [skip sentrux]'
+          git push origin HEAD:agent/sentrux-10k-20260815

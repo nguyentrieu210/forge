@@ -1,0 +1,28 @@
+from pathlib import Path
+from textwrap import dedent, indent
+
+path = Path('server/apps/tenant-worker/src/index-core-base.ts')
+text = path.read_text()
+
+if 'async function routeInternalRequest(' in text:
+    print('tenant internal route split already present')
+    raise SystemExit(0)
+
+start_marker = '      if (url.pathname === "/health") {'
+end_marker = '      const tenantId = resolveTenant(request, env);'
+start = text.index(start_marker)
+end = text.index(end_marker, start)
+segment = dedent(text[start:end]).rstrip()
+
+helper = '''async function routeInternalRequest(\n  request: Request,\n  url: URL,\n  env: TenantEnv,\n  traceId: string,\n): Promise<Response | undefined> {\n''' + indent(segment, '  ') + '''\n  return undefined;\n}\n\n'''
+replacement = '''      const internalResponse = await routeInternalRequest(request, url, env, traceId);\n      if (internalResponse) return internalResponse;\n\n'''
+
+# Replace the original fetch block first. Character offsets are only valid
+# against the original text; inserting the helper before this replacement
+# would shift them and corrupt the TypeScript source.
+text = text[:start] + replacement + text[end:]
+insert_at = text.index('export default {')
+text = text[:insert_at] + helper + text[insert_at:]
+
+path.write_text(text)
+print('split tenant-worker internal routes from fetch')

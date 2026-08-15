@@ -16,7 +16,7 @@
  * phân biệt thật — phiếu Tiến Đạt ngày 22/7 có ba dòng cùng mã A282 màu THÔ nhưng dài 8,50 ·
  * 7,20 · 6,60 m, và ba dòng đó là ba lô khác nhau vì cắt được ra những cây khác nhau.
  */
-import type { PlatformCall } from "./index.js";
+import type { PlatformCall } from "./platform-call.js";
 
 export interface ReceiptLine {
   row_id?: string;

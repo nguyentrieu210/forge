@@ -4,7 +4,7 @@
 - Tag: v6.0.4-alpha24
 - Commit: f1a7c9bb97fb29898de74368e915e25e1117c49a
 - License: MIT
-- Vendored runtime source: packages/core/src (runtime-only subset)
-- Runtime dist: official npm artifact @glideapps/glide-data-grid@6.0.4-alpha24
+- Runtime bundle: `forge-bundle/` (pinned build used by Forge/Alumdoor)
+- Upstream source: `packages/core/src` at the pinned commit above; intentionally not tracked as first-party Forge source
 
-Forge keeps the upstream runtime source and matching built distribution in-repo. forge-bundle/ bundles Glide and its non-React runtime dependencies for the AlumDoor preview/runtime, so local Vite does not require an extra install step.
+Forge treats Glide as a third-party runtime dependency. The pinned runtime bundle and license remain in-repo; the reproducible upstream source snapshot is not part of the Forge source graph.

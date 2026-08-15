@@ -703,11 +703,77 @@ const DESIGN_WIDTHS = new Set(["contained", "wide", "fluid"]);
  * Refusing the package is the only point at which these are cheap to fix. Past that
  * they are a tenant with an app installed that nobody can open.
  */
+function parseClientHome(
+  input: JsonObject,
+  nav: AppNavItem[],
+  doctypeNames: ReadonlySet<string>,
+): NonNullable<AppClientManifest["home"]> | undefined {
+  if (input.home === undefined) return undefined;
+  if (!input.home || typeof input.home !== "object" || Array.isArray(input.home)) {
+    throw errors.validation("client.home must be an object");
+  }
+  const home = input.home as JsonObject;
+  const doctype = home.doctype === undefined ? undefined : text(home.doctype, "client.home.doctype", 160);
+  const route = home.route === undefined ? undefined : text(home.route, "client.home.route", 320);
+  if (!doctype && !route) throw errors.validation("client.home needs a doctype or a route");
+  if (doctype && !doctypeNames.has(doctype)) {
+    throw errors.validation(`client.home.doctype ${doctype} is not a doctype this app defines`);
+  }
+  if (route && !navReaches(route, nav)) {
+    throw errors.validation(`client.home.route ${route} is not reachable from this app's nav — the client would redirect to it forever`);
+  }
+  return { ...(doctype ? { doctype } : {}), ...(route ? { route } : {}) };
+}
+
+function parseClientDimensions(input: JsonObject): string[] | undefined {
+  if (input.dimensions === undefined) return undefined;
+  const dimensions = array(input.dimensions, "client.dimensions").map((entry, index) => {
+    const key = text(entry, `client.dimensions[${index}]`, 64);
+    if (!CLIENT_CONTEXT_DIMENSIONS.has(key)) {
+      throw errors.validation(`client.dimensions[${index}] is not a dimension the server can resolve: ${key}`);
+    }
+    return key;
+  });
+  assertUnique(dimensions, "client dimension");
+  return dimensions;
+}
+
+function parseClientLocale(input: JsonObject): NonNullable<AppClientManifest["locale"]> | undefined {
+  if (input.locale === undefined) return undefined;
+  if (!input.locale || typeof input.locale !== "object" || Array.isArray(input.locale)) {
+    throw errors.validation("client.locale must be an object");
+  }
+  const locale = input.locale as JsonObject;
+  const result: NonNullable<AppClientManifest["locale"]> = {};
+  if (locale.numberFormat !== undefined) result.numberFormat = text(locale.numberFormat, "client.locale.numberFormat", 32);
+  if (locale.currency !== undefined) result.currency = text(locale.currency, "client.locale.currency", 32);
+  if (locale.dateFormat !== undefined) result.dateFormat = text(locale.dateFormat, "client.locale.dateFormat", 32);
+  return result;
+}
+
+function parseClientDesign(input: JsonObject): AppDesignManifest | undefined {
+  if (input.design === undefined) return undefined;
+  if (!input.design || typeof input.design !== "object" || Array.isArray(input.design)) {
+    throw errors.validation("client.design must be an object");
+  }
+  const design = input.design as JsonObject;
+  const density = design.density === undefined ? undefined : text(design.density, "client.design.density", 16);
+  const radius = design.radius === undefined ? undefined : text(design.radius, "client.design.radius", 16);
+  const contentWidth = design.content_width === undefined ? undefined : text(design.content_width, "client.design.content_width", 16);
+  if (density && !DESIGN_DENSITIES.has(density)) throw errors.validation(`client.design.density is not recognised: ${density}`);
+  if (radius && !DESIGN_RADII.has(radius)) throw errors.validation(`client.design.radius is not recognised: ${radius}`);
+  if (contentWidth && !DESIGN_WIDTHS.has(contentWidth)) throw errors.validation(`client.design.content_width is not recognised: ${contentWidth}`);
+  return {
+    ...(density ? { density: density as NonNullable<AppDesignManifest["density"]> } : {}),
+    ...(radius ? { radius: radius as NonNullable<AppDesignManifest["radius"]> } : {}),
+    ...(contentWidth ? { content_width: contentWidth as NonNullable<AppDesignManifest["content_width"]> } : {}),
+  };
+}
+
 function parseClientManifest(value: JsonValue, nav: AppNavItem[], doctypeNames: ReadonlySet<string>): AppClientManifest {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation("client must be an object");
   const input = value as JsonObject;
   const result: AppClientManifest = {};
-
   if (input.brand !== undefined) {
     const brand = text(input.brand, "client.brand", 16);
     if (!BRANDS.has(brand)) throw errors.validation(`client.brand is not recognised: ${brand}`);
@@ -719,64 +785,14 @@ function parseClientManifest(value: JsonValue, nav: AppNavItem[], doctypeNames: 
     if (!CATALOG_MODES.has(mode)) throw errors.validation(`client.catalog_mode is not recognised: ${mode}`);
     result.catalog_mode = mode as NonNullable<AppClientManifest["catalog_mode"]>;
   }
-
-  if (input.dimensions !== undefined) {
-    const dimensions = array(input.dimensions, "client.dimensions").map((entry, index) => {
-      const key = text(entry, `client.dimensions[${index}]`, 64);
-      if (!CLIENT_CONTEXT_DIMENSIONS.has(key)) {
-        throw errors.validation(`client.dimensions[${index}] is not a dimension the server can resolve: ${key}`);
-      }
-      return key;
-    });
-    assertUnique(dimensions, "client dimension");
-    result.dimensions = dimensions;
-  }
-
-  if (input.home !== undefined) {
-    if (!input.home || typeof input.home !== "object" || Array.isArray(input.home)) {
-      throw errors.validation("client.home must be an object");
-    }
-    const home = input.home as JsonObject;
-    const doctype = home.doctype === undefined ? undefined : text(home.doctype, "client.home.doctype", 160);
-    const route = home.route === undefined ? undefined : text(home.route, "client.home.route", 320);
-    if (!doctype && !route) throw errors.validation("client.home needs a doctype or a route");
-    if (doctype && !doctypeNames.has(doctype)) {
-      throw errors.validation(`client.home.doctype ${doctype} is not a doctype this app defines`);
-    }
-    if (route && !navReaches(route, nav)) {
-      throw errors.validation(`client.home.route ${route} is not reachable from this app's nav — the client would redirect to it forever`);
-    }
-    result.home = { ...(doctype ? { doctype } : {}), ...(route ? { route } : {}) };
-  }
-
-  if (input.locale !== undefined) {
-    if (!input.locale || typeof input.locale !== "object" || Array.isArray(input.locale)) {
-      throw errors.validation("client.locale must be an object");
-    }
-    const locale = input.locale as JsonObject;
-    const pick = (field: "numberFormat" | "currency" | "dateFormat") =>
-      locale[field] === undefined ? {} : { [field]: text(locale[field], `client.locale.${field}`, 32) };
-    result.locale = { ...pick("numberFormat"), ...pick("currency"), ...pick("dateFormat") };
-  }
-
-  if (input.design !== undefined) {
-    if (!input.design || typeof input.design !== "object" || Array.isArray(input.design)) {
-      throw errors.validation("client.design must be an object");
-    }
-    const design = input.design as JsonObject;
-    const density = design.density === undefined ? undefined : text(design.density, "client.design.density", 16);
-    const radius = design.radius === undefined ? undefined : text(design.radius, "client.design.radius", 16);
-    const contentWidth = design.content_width === undefined ? undefined : text(design.content_width, "client.design.content_width", 16);
-    if (density && !DESIGN_DENSITIES.has(density)) throw errors.validation(`client.design.density is not recognised: ${density}`);
-    if (radius && !DESIGN_RADII.has(radius)) throw errors.validation(`client.design.radius is not recognised: ${radius}`);
-    if (contentWidth && !DESIGN_WIDTHS.has(contentWidth)) throw errors.validation(`client.design.content_width is not recognised: ${contentWidth}`);
-    result.design = {
-      ...(density ? { density: density as NonNullable<AppDesignManifest["density"]> } : {}),
-      ...(radius ? { radius: radius as NonNullable<AppDesignManifest["radius"]> } : {}),
-      ...(contentWidth ? { content_width: contentWidth as NonNullable<AppDesignManifest["content_width"]> } : {}),
-    };
-  }
-
+  const dimensions = parseClientDimensions(input);
+  if (dimensions) result.dimensions = dimensions;
+  const home = parseClientHome(input, nav, doctypeNames);
+  if (home) result.home = home;
+  const locale = parseClientLocale(input);
+  if (locale) result.locale = locale;
+  const design = parseClientDesign(input);
+  if (design) result.design = design;
   return result;
 }
 
@@ -837,91 +853,82 @@ const REPORT_FIELD = /^[a-z_][a-z0-9_]*$/;
  */
 export const REPORT_RECORD_COLUMNS = new Set(["name", "owner", "status", "docstatus", "created_at", "modified_at"]);
 
-function parseReport(value: JsonValue, index: number, doctypeNames: Set<string>): AppReport {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw errors.validation(`reports[${index}] must be an object`);
+function parseReportColumn(raw: JsonValue, where: string): AppReportColumn {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
+  const column = raw as JsonObject;
+  const field = text(column.field, `${where}.field`, 120);
+  if (!REPORT_FIELD.test(field)) throw errors.validation(`${where}.field is not a plain fieldname: ${field}`);
+  const aggregate = column.aggregate === undefined ? undefined : text(column.aggregate, `${where}.aggregate`, 16);
+  if (aggregate !== undefined && !REPORT_AGGREGATES.has(aggregate as AppReportAggregate)) {
+    throw errors.validation(`${where}.aggregate must be one of ${[...REPORT_AGGREGATES].join(", ")}`);
   }
+  const type = text(column.type ?? "Data", `${where}.type`, 32);
+  const options = column.options === undefined ? undefined : text(column.options, `${where}.options`, 160);
+  if (type === "Link" && !options) throw errors.validation(`${where} is a Link but names no target doctype`);
+  return {
+    field,
+    label: text(column.label, `${where}.label`, 160),
+    type,
+    ...(options ? { options } : {}),
+    ...(aggregate ? { aggregate: aggregate as AppReportAggregate } : {}),
+  };
+}
+
+function validateReportGrouping(columns: AppReportColumn[], groupBy: string | undefined, index: number, name: string): void {
+  const aggregated = columns.some((column) => column.aggregate);
+  if (aggregated && !groupBy) {
+    throw errors.validation(`reports[${index}] (${name}) aggregates but declares no group_by`);
+  }
+  if (!groupBy) return;
+  for (const column of columns) {
+    if (!column.aggregate && column.field !== groupBy) {
+      throw errors.validation(`reports[${index}] (${name}) groups by ${groupBy}, so column ${column.field} must be aggregated`);
+    }
+  }
+}
+
+function parseReportOrderBy(entry: JsonObject, index: number, columns: AppReportColumn[]): AppReport["order_by"] {
+  if (entry.order_by === undefined) return undefined;
+  if (!entry.order_by || typeof entry.order_by !== "object" || Array.isArray(entry.order_by)) {
+    throw errors.validation(`reports[${index}].order_by must be an object`);
+  }
+  const order = entry.order_by as JsonObject;
+  const column = text(order.column, `reports[${index}].order_by.column`, 120);
+  const direction = text(order.direction ?? "asc", `reports[${index}].order_by.direction`, 8);
+  if (direction !== "asc" && direction !== "desc") throw errors.validation(`reports[${index}].order_by.direction must be asc or desc`);
+  if (!columns.some((candidate) => candidate.field === column)) {
+    throw errors.validation(`reports[${index}].order_by.column is not one of the report's columns: ${column}`);
+  }
+  return { column, direction };
+}
+
+function parseReport(value: JsonValue, index: number, doctypeNames: Set<string>): AppReport {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw errors.validation(`reports[${index}] must be an object`);
   const entry = value as JsonObject;
   const name = text(entry.name, `reports[${index}].name`, 120);
   const doctype = text(entry.doctype, `reports[${index}].doctype`, 160);
-  // A report over a doctype the app does not ship would either read another app's data
-  // or read nothing; both are worse than being refused at install.
   if (!doctypeNames.has(doctype)) {
     throw errors.validation(`reports[${index}] (${name}) reads ${doctype}, which this app does not define`);
   }
-
-  const columns = array(entry.columns, `reports[${index}].columns`).map((raw, position) => {
-    const where = `reports[${index}].columns[${position}]`;
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw errors.validation(`${where} must be an object`);
-    const column = raw as JsonObject;
-    const field = text(column.field, `${where}.field`, 120);
-    if (!REPORT_FIELD.test(field)) throw errors.validation(`${where}.field is not a plain fieldname: ${field}`);
-    const aggregate = column.aggregate === undefined ? undefined : text(column.aggregate, `${where}.aggregate`, 16);
-    if (aggregate !== undefined && !REPORT_AGGREGATES.has(aggregate as AppReportAggregate)) {
-      throw errors.validation(`${where}.aggregate must be one of ${[...REPORT_AGGREGATES].join(", ")}`);
-    }
-    const type = text(column.type ?? "Data", `${where}.type`, 32);
-    const options = column.options === undefined ? undefined : text(column.options, `${where}.options`, 160);
-    // A Link with nowhere to point resolves to nothing, so the column shows raw ids.
-    if (type === "Link" && !options) throw errors.validation(`${where} is a Link but names no target doctype`);
-    return {
-      field,
-      label: text(column.label, `${where}.label`, 160),
-      type,
-      ...(options ? { options } : {}),
-      ...(aggregate ? { aggregate: aggregate as AppReportAggregate } : {}),
-    };
-  });
+  const columns = array(entry.columns, `reports[${index}].columns`).map((raw, position) =>
+    parseReportColumn(raw, `reports[${index}].columns[${position}]`));
   if (!columns.length) throw errors.validation(`reports[${index}] (${name}) has no columns`);
   assertUnique(columns.map((column) => `${column.aggregate ?? ""}:${column.field}`), `reports[${index}] column`);
-
   const groupBy = entry.group_by === undefined ? undefined : text(entry.group_by, `reports[${index}].group_by`, 120);
   if (groupBy !== undefined && !REPORT_FIELD.test(groupBy)) {
     throw errors.validation(`reports[${index}].group_by is not a plain fieldname: ${groupBy}`);
   }
-  const aggregated = columns.some((column) => column.aggregate);
-  if (aggregated && !groupBy) {
-    // SQLite would answer with one arbitrary row per bare column instead of erroring.
-    // A report that quietly reports the wrong number is worse than one that will not load.
-    throw errors.validation(`reports[${index}] (${name}) aggregates but declares no group_by`);
-  }
-  if (groupBy) {
-    const plain = columns.filter((column) => !column.aggregate);
-    for (const column of plain) {
-      if (column.field !== groupBy) {
-        throw errors.validation(`reports[${index}] (${name}) groups by ${groupBy}, so column ${column.field} must be aggregated`);
-      }
-    }
-  }
-
-  let orderBy: AppReport["order_by"];
-  if (entry.order_by !== undefined) {
-    if (!entry.order_by || typeof entry.order_by !== "object" || Array.isArray(entry.order_by)) {
-      throw errors.validation(`reports[${index}].order_by must be an object`);
-    }
-    const order = entry.order_by as JsonObject;
-    const column = text(order.column, `reports[${index}].order_by.column`, 120);
-    const direction = text(order.direction ?? "asc", `reports[${index}].order_by.direction`, 8);
-    if (direction !== "asc" && direction !== "desc") throw errors.validation(`reports[${index}].order_by.direction must be asc or desc`);
-    // Ordering by something the report does not select cannot be rendered, and under a
-    // GROUP BY it is not even meaningful.
-    if (!columns.some((candidate) => candidate.field === column)) {
-      throw errors.validation(`reports[${index}].order_by.column is not one of the report's columns: ${column}`);
-    }
-    orderBy = { column, direction };
-  }
-
+  validateReportGrouping(columns, groupBy, index, name);
+  const orderBy = parseReportOrderBy(entry, index, columns);
   const filters = array(entry.filters ?? [], `reports[${index}].filters`).map((raw, position) => {
     const field = text(raw, `reports[${index}].filters[${position}]`, 120);
     if (!REPORT_FIELD.test(field)) throw errors.validation(`reports[${index}].filters[${position}] is not a plain fieldname: ${field}`);
     return field;
   });
-
   const limit = entry.limit === undefined ? 500 : Number(entry.limit);
   if (!Number.isInteger(limit) || limit < 1 || limit > 5000) {
     throw errors.validation(`reports[${index}].limit must be an integer between 1 and 5000`);
   }
-
   return {
     name,
     label: text(entry.label ?? name, `reports[${index}].label`, 160),
@@ -1352,6 +1359,73 @@ function parseFixture(value: JsonValue, index: number): AppFixture {
   };
 }
 
+interface NavExperienceTargets {
+  action?: AppAction;
+  screen?: AppScreen;
+}
+
+function parseExperienceTargets(
+  kind: AppNavItem["kind"],
+  key: string,
+  index: number,
+  actions: ReadonlyMap<string, AppAction>,
+  screens: ReadonlyMap<string, AppScreen>,
+): NavExperienceTargets {
+  if (kind !== "experience") return {};
+  const separator = key.indexOf(":");
+  const experienceKind = separator < 0 ? key : key.slice(0, separator);
+  const argument = separator < 0 ? "" : key.slice(separator + 1);
+  if (!SUPPORTED_EXPERIENCE_KINDS.has(experienceKind) || !argument) {
+    throw errors.validation(`nav[${index}] requests unsupported experience ${key}; supported prefixes: ${[...SUPPORTED_EXPERIENCE_KINDS].join(", ")}`);
+  }
+  if (experienceKind === "action") {
+    const action = actions.get(argument);
+    if (!action) throw errors.validation(`nav[${index}] opens action "${argument}", which this app does not declare`);
+    return { action };
+  }
+  if (experienceKind === "screen") {
+    const screen = screens.get(argument);
+    if (!screen) throw errors.validation(`nav[${index}] opens screen "${argument}", which this app does not declare`);
+    return { screen };
+  }
+  return {};
+}
+
+function inferNavPermissionDoctype(
+  kind: AppNavItem["kind"],
+  key: string,
+  action: AppAction | undefined,
+  screen: AppScreen | undefined,
+): string | undefined {
+  if (kind === "doctype") return key;
+  if (action) return action.permission_doctype;
+  if (screen) return screen.permission_doctype;
+  if (kind === "experience" && (key.startsWith("approval:") || key.startsWith("calendar:"))) {
+    return key.slice(key.indexOf(":") + 1);
+  }
+  return undefined;
+}
+
+function validateNavTarget(
+  input: JsonObject,
+  kind: AppNavItem["kind"],
+  key: string,
+  index: number,
+  permissionDoctype: string | undefined,
+  doctypeNames: ReadonlySet<string>,
+): void {
+  if (kind === "doctype" && !doctypeNames.has(key)) {
+    throw errors.validation(`nav[${index}] points at doctype ${key}, which this app does not define`);
+  }
+  if (permissionDoctype && !doctypeNames.has(permissionDoctype)) {
+    throw errors.validation(`nav[${index}].permission_doctype points at ${permissionDoctype}, which this app does not define`);
+  }
+  if (kind === "route" && typeof input.route !== "string") throw errors.validation(`nav[${index}] of kind route requires a route`);
+  if (typeof input.route === "string" && !input.route.startsWith("/")) {
+    throw errors.validation(`nav[${index}].route must be absolute`);
+  }
+}
+
 function parseNav(
   value: JsonValue,
   index: number,
@@ -1366,38 +1440,8 @@ function parseNav(
     throw errors.validation(`nav[${index}].kind is not recognised: ${String(kind)}`);
   }
   const key = text(input.key, `nav[${index}].key`, 160);
-  let action: AppAction | undefined;
-  let screen: AppScreen | undefined;
-  if (kind === "experience") {
-    const separator = key.indexOf(":");
-    const experienceKind = separator < 0 ? key : key.slice(0, separator);
-    const argument = separator < 0 ? "" : key.slice(separator + 1);
-    if (!SUPPORTED_EXPERIENCE_KINDS.has(experienceKind) || !argument) {
-      throw errors.validation(`nav[${index}] requests unsupported experience ${key}; supported prefixes: ${[...SUPPORTED_EXPERIENCE_KINDS].join(", ")}`);
-    }
-    if (experienceKind === "action") {
-      action = actions.get(argument);
-      if (!action) throw errors.validation(`nav[${index}] opens action "${argument}", which this app does not declare`);
-    }
-    if (experienceKind === "screen") {
-      screen = screens.get(argument);
-      if (!screen) throw errors.validation(`nav[${index}] opens screen "${argument}", which this app does not declare`);
-    }
-  }
-  const inferredPermissionDoctype = kind === "doctype"
-    ? key
-    : action
-      // An action carries its own gate, so the menu entry and the screen agree by
-      // construction rather than by two places being kept in step by hand.
-      ? action.permission_doctype
-      : screen
-        ? screen.permission_doctype
-      : kind === "experience" && (key.startsWith("approval:") || key.startsWith("calendar:"))
-        // Both `approval:` and `calendar:` name the doctype after the colon, so the menu
-        // entry is gated on that doctype's read permission — a calendar of records the
-        // user cannot read must not appear at all.
-        ? key.slice(key.indexOf(":") + 1)
-        : undefined;
+  const { action, screen } = parseExperienceTargets(kind, key, index, actions, screens);
+  const inferredPermissionDoctype = inferNavPermissionDoctype(kind, key, action, screen);
   const permissionDoctype = typeof input.permission_doctype === "string"
     ? text(input.permission_doctype, `nav[${index}].permission_doctype`, 160)
     : inferredPermissionDoctype;
@@ -1405,21 +1449,7 @@ function parseNav(
     ? []
     : array(input.required_roles, `nav[${index}].required_roles`).map((role, roleIndex) =>
       text(role, `nav[${index}].required_roles[${roleIndex}]`, 160));
-  // A doctype nav item pointing at a doctype the app does not ship would render a
-  // menu entry that leads nowhere.
-  if (kind === "doctype" && !doctypeNames.has(key)) {
-    throw errors.validation(`nav[${index}] points at doctype ${key}, which this app does not define`);
-  }
-  // Experiences such as approval queues expose data just like a list view. Keeping
-  // the permission target in the package lets every consumer apply the same gate.
-  if (permissionDoctype && !doctypeNames.has(permissionDoctype)) {
-    throw errors.validation(`nav[${index}].permission_doctype points at ${permissionDoctype}, which this app does not define`);
-  }
-  if (kind === "route" && typeof input.route !== "string") throw errors.validation(`nav[${index}] of kind route requires a route`);
-  // A relative route resolves incorrectly in the client router.
-  if (typeof input.route === "string" && !input.route.startsWith("/")) {
-    throw errors.validation(`nav[${index}].route must be absolute`);
-  }
+  validateNavTarget(input, kind, key, index, permissionDoctype, doctypeNames);
   return {
     key,
     label: text(input.label, `nav[${index}].label`, 160),

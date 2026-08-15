@@ -5,7 +5,7 @@
  */
 import { createElement } from "react";
 import type { Fieldtype } from "@metaforge/core";
-import { ControlRegistry, type FieldControl, type FieldControlProps } from "./index.js";
+import { ControlRegistry, type FieldControl, type FieldControlProps } from "./contract.js";
 import {
   TextControl,
   TextAreaControl,

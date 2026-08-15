@@ -1,0 +1,80 @@
+from pathlib import Path
+import re
+
+root = Path('server/packages/clouderp-erpnext/src')
+path = root / 'registry.ts'
+text = path.read_text()
+
+if 'registry-part-01.js' in text:
+    print('ERPNext registry split already applied')
+    raise SystemExit(0)
+
+# Map every imported controller identifier to its local source module. The registry is
+# deliberately simple: named imports + a single .register(new Controller()) chain.
+import_re = re.compile(r'import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+"([^"]+)";', re.S)
+identifier_source = {}
+for names, source in import_re.findall(text):
+    if source == '../../document-kernel/src/index.js':
+        continue
+    for raw in names.split(','):
+        name = raw.strip().split(' as ')[-1].strip()
+        if name:
+            identifier_source[name] = source
+
+# Also capture single named imports (same regex covers them) and preserve exact controller
+# registration order. All registrations in this file instantiate zero-argument controllers.
+controllers = re.findall(r'\.register\(new\s+([A-Za-z0-9_]+)\(\)\)', text)
+if len(controllers) < 50:
+    raise RuntimeError(f'unexpected registry shape: only {len(controllers)} registrations')
+missing = [name for name in controllers if name not in identifier_source]
+if missing:
+    raise RuntimeError(f'unmapped controller imports: {missing}')
+
+# Greedily create contiguous chunks while keeping each generated registrar comfortably below
+# Sentrux's god-file fan-out threshold (>15). Contiguous chunks preserve precedence/order.
+chunks = []
+current = []
+sources = set()
+for controller in controllers:
+    source = identifier_source[controller]
+    proposed = sources | {source}
+    if current and len(proposed) > 12:
+        chunks.append(current)
+        current = []
+        sources = set()
+    current.append(controller)
+    sources.add(source)
+if current:
+    chunks.append(current)
+
+for index, chunk in enumerate(chunks, 1):
+    by_source = {}
+    for controller in chunk:
+        by_source.setdefault(identifier_source[controller], []).append(controller)
+    lines = ['import type { ControllerRegistry } from "../../document-kernel/src/index.js";']
+    for source, names in by_source.items():
+        lines.append(f'import {{ {", ".join(names)} }} from "{source}";')
+    lines.append('')
+    fn = f'registerErpNextControllersPart{index:02d}'
+    lines.append(f'export function {fn}(registry: ControllerRegistry): ControllerRegistry {{')
+    lines.append('  return registry')
+    for controller in chunk:
+        lines.append(f'    .register(new {controller}())')
+    lines[-1] += ';'
+    lines.append('}')
+    (root / f'registry-part-{index:02d}.ts').write_text('\n'.join(lines) + '\n')
+
+main = ['import type { ControllerRegistry } from "../../document-kernel/src/index.js";']
+for index in range(1, len(chunks) + 1):
+    fn = f'registerErpNextControllersPart{index:02d}'
+    main.append(f'import {{ {fn} }} from "./registry-part-{index:02d}.js";')
+main.append('')
+main.append('export function registerErpNextCoreControllers(registry: ControllerRegistry): ControllerRegistry {')
+main.append('  let current = registry;')
+for index in range(1, len(chunks) + 1):
+    fn = f'registerErpNextControllersPart{index:02d}'
+    main.append(f'  current = {fn}(current);')
+main.append('  return current;')
+main.append('}')
+path.write_text('\n'.join(main) + '\n')
+print(f'split {len(controllers)} registrations into {len(chunks)} contiguous registrar modules')
