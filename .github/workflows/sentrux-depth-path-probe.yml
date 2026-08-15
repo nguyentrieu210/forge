@@ -16,6 +16,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Install Sentrux Linux build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev \
+            libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libvulkan-dev
+
       - name: Build instrumented Sentrux v0.5.7
         shell: bash
         run: |
@@ -57,6 +66,7 @@ jobs:
           PY
           cargo build --quiet --release -p sentrux --bin sentrux
           cp target/release/sentrux /tmp/sentrux-trace
+
       - name: Trace exact Forge dependency depth
         shell: bash
         run: |
