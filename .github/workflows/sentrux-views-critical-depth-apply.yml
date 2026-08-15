@@ -62,8 +62,24 @@ jobs:
       - name: Build runtime production bundle
         run: pnpm --filter runtime run build
 
-      - name: Sentrux regression gate
-        run: sentrux gate .
+      - name: Diagnose Sentrux regression
+        shell: bash
+        run: |
+          set +e
+          sentrux gate . 2>&1 | tee /tmp/regression.txt
+          status=${PIPESTATUS[0]}
+          mkdir -p .sentrux
+          cat > .sentrux/rules.toml <<'EOF'
+          [constraints]
+          max_cycles = 0
+          no_god_files = true
+          max_cc = 25
+          EOF
+          sentrux check . 2>&1 | tee /tmp/check.txt
+          echo '=== GOD FILE / DEPTH DIAGNOSTICS ==='
+          grep -Ei 'god file|fan.?out|depth|coupling|cycle|complexity' /tmp/check.txt || true
+          echo "REGRESSION_STATUS=$status"
+          exit "$status"
 
       - name: Require depth and quality improvement
         shell: bash
