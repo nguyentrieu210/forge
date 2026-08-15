@@ -2,12 +2,13 @@
  * groupLayout — dựng cấu trúc Tab → Section → Column từ danh sách field phẳng.
  * Mirror Frappe form: Tab Break / Section Break / Column Break là ranh giới bố cục.
  *
- * Khi DocType KHÔNG khai Tab Break, runtime tự tổ chức form lớn thành 2 tầng dễ đọc:
+ * Khi DocType KHÔNG khai Tab Break, runtime tự tổ chức form đủ lớn thành 2 tầng dễ đọc:
  *  - Thông tin chính: field bắt buộc, field có thể trở thành bắt buộc, `surface=quick`,
  *    dependency cần để điều khiển các field chính, hoặc metadata ép `form_tab=primary`.
  *  - Nâng cao: phần còn lại, trừ metadata ép `form_tab=advanced`.
  *
  * DocType đã khai Tab Break thì metadata thắng tuyệt đối — không tự xáo lại bố cục tác giả đã thiết kế.
+ * Form nhỏ vẫn giữ một màn; tách tab chỉ để giảm tải nhận thức, không phải để sinh điều hướng cho đủ.
  *  - KHÔNG sinh tab/section rỗng ở đầu (chỉ tạo default khi field hiển thị đầu KHÔNG phải Tab Break).
  *  - Tôn trọng depends_on của Tab Break & Section Break (break ẩn ⇒ tab/section ẩn).
  */
@@ -31,6 +32,9 @@ export interface FormTab {
 const LAYOUT_HOLD = new Set(["Heading", "HTML"]); // layout mang nội dung, vẫn hiện
 const AUTO_PRIMARY_LABEL = "Thông tin chính";
 const AUTO_ADVANCED_LABEL = "Nâng cao";
+/** Tránh biến master 2–4 ô thành một form có tab vô ích. */
+const AUTO_TAB_MIN_DATA_FIELDS = 6;
+const AUTO_TAB_MIN_ADVANCED_FIELDS = 2;
 
 /** Tối đa 2 cột. Frappe cho tới 4 cột/section, nhưng trên màn ERP thực tế (sidebar + cột ngữ cảnh
  * bên phải) 3–4 cột làm mỗi ô hẹp lại còn ~150px — vừa khó đọc vừa cắt cụt giá trị. 2 cột là mức
@@ -166,9 +170,9 @@ function splitSections(sections: FormSection[], primaryNames: Set<string>): { pr
 }
 
 /**
- * Auto-layout chỉ chạy khi schema KHÔNG có Tab Break. Nếu cả hai nhóm đều có field hiển thị thì
- * sinh đúng hai tab. Nếu form quá nhỏ hoặc toàn optional/toàn required thì giữ nguyên một tab để
- * không tạo điều hướng vô ích.
+ * Auto-layout chỉ chạy khi schema KHÔNG có Tab Break. Nếu cả hai nhóm đều có đủ nội dung thì sinh
+ * đúng hai tab. Form nhỏ, toàn optional hoặc gần như toàn required giữ nguyên một tab để không tạo
+ * thêm thao tác chuyển tab mà không giảm được độ phức tạp.
  */
 function autoOrganizeUntabbed(items: ResolvedField[]): FormTab[] | null {
   const sections = buildSections(items);
@@ -178,7 +182,8 @@ function autoOrganizeUntabbed(items: ResolvedField[]): FormTab[] | null {
   const split = splitSections(sections, primaryNames);
   const primaryCount = split.primary.reduce((count, section) => count + section.columns.reduce((sum, column) => sum + column.fields.filter((item) => !item.layout).length, 0), 0);
   const advancedCount = split.advanced.reduce((count, section) => count + section.columns.reduce((sum, column) => sum + column.fields.filter((item) => !item.layout).length, 0), 0);
-  if (!primaryCount || !advancedCount) return null;
+  const dataCount = primaryCount + advancedCount;
+  if (!primaryCount || advancedCount < AUTO_TAB_MIN_ADVANCED_FIELDS || dataCount < AUTO_TAB_MIN_DATA_FIELDS) return null;
 
   return [
     { label: AUTO_PRIMARY_LABEL, sections: split.primary },
