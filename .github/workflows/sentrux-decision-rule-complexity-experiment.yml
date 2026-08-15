@@ -1,0 +1,133 @@
+name: Sentrux decision rule complexity experiment
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Capture baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+
+      - name: Split decision rule validation phases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('client/packages/builder/src/rule/decision-rule.ts')
+          text = path.read_text()
+          start = text.index('export function validateDecisionRuleSet(')
+          end = text.index('\nexport function serializeDecisionRuleSet(', start)
+          replacement = r'''type DecisionRuleIssueWriter = (code: string, path: string, message: string) => void;
+
+function validateDecisionRuleCondition(
+  condition: DecisionRuleConditionModel,
+  conditionPath: string,
+  knownFields: ReadonlySet<string> | undefined,
+  error: DecisionRuleIssueWriter,
+): void {
+  if (!FIELD.test(condition.field)) error("field", `${conditionPath}.field`, "Field không hợp lệ");
+  if (knownFields && condition.field && !knownFields.has(condition.field)) error("field_unknown", `${conditionPath}.field`, `Field không tồn tại: ${condition.field}`);
+  if (!VALUELESS.has(condition.operator) && !(condition.value ?? "").trim()) error("value", `${conditionPath}.value`, "Điều kiện cần giá trị");
+  if ((condition.operator === "in" || condition.operator === "not_in") && !(condition.value ?? "").split(",").some((entry) => entry.trim())) {
+    error("list_value", `${conditionPath}.value`, "in/not_in cần danh sách cách nhau bằng dấu phẩy");
+  }
+}
+
+function validateDecisionRuleOutcome(rule: DecisionRuleModel, path: string, error: DecisionRuleIssueWriter): void {
+  try {
+    const outcome = JSON.parse(rule.outcomeJson || "{}");
+    if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) error("outcome", `${path}.outcomeJson`, "Outcome phải là JSON object");
+  } catch {
+    error("outcome_json", `${path}.outcomeJson`, "Outcome JSON không hợp lệ");
+  }
+}
+
+function validateDecisionRule(
+  rule: DecisionRuleModel,
+  ruleIndex: number,
+  identities: Set<string>,
+  knownFields: ReadonlySet<string> | undefined,
+  error: DecisionRuleIssueWriter,
+  warning: DecisionRuleIssueWriter,
+): void {
+  const path = `rules[${ruleIndex}]`;
+  if (!KEY.test(rule.key)) error("key", `${path}.key`, "Rule key phải là kebab-case");
+  if (!Number.isInteger(rule.version) || rule.version < 1) error("version", `${path}.version`, "Version phải là số nguyên dương");
+  const identity = `${rule.key}@${rule.version}`;
+  if (identities.has(identity)) error("duplicate", path, `Rule trùng phiên bản: ${identity}`);
+  identities.add(identity);
+  if (!Number.isInteger(rule.priority)) error("priority", `${path}.priority`, "Priority phải là số nguyên");
+  if (rule.effectiveFrom && rule.effectiveTo && rule.effectiveTo < rule.effectiveFrom) error("effective", path, "Ngày hết hiệu lực không được trước ngày bắt đầu");
+  if (!rule.conditions.length) error("conditions", `${path}.conditions`, "Rule cần ít nhất một điều kiện");
+  rule.conditions.forEach((condition, conditionIndex) => {
+    validateDecisionRuleCondition(condition, `${path}.conditions[${conditionIndex}]`, knownFields, error);
+  });
+  validateDecisionRuleOutcome(rule, path, error);
+  if (!rule.active) warning("inactive", path, "Rule đang tắt và sẽ không được evaluator áp dụng");
+}
+
+export function validateDecisionRuleSet(model: DecisionRuleSetModel, knownFields?: ReadonlySet<string>): DecisionRuleBuilderValidation {
+  const issues: DecisionRuleBuilderIssue[] = [];
+  const error: DecisionRuleIssueWriter = (code, path, message) => issues.push({ severity: "error", code, path, message });
+  const warning: DecisionRuleIssueWriter = (code, path, message) => issues.push({ severity: "warning", code, path, message });
+  if (model.rules.length > 500) error("rules_max", "rules", "Tối đa 500 rule trong một rule set");
+  const identities = new Set<string>();
+  model.rules.forEach((rule, ruleIndex) => {
+    validateDecisionRule(rule, ruleIndex, identities, knownFields, error, warning);
+  });
+  return { ok: !issues.some((entry) => entry.severity === "error"), issues };
+}
+'''
+          path.write_text(text[:start] + replacement + text[end:])
+          PY
+          git diff --check
+          git diff -- client/packages/builder/src/rule/decision-rule.ts
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Client typecheck
+        run: pnpm run client:typecheck
+
+      - name: Measure candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after.txt
+          BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "DECISION_RULE_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          sentrux check | tee /tmp/check.txt || true
+          if grep -F 'decision-rule.ts:validateDecisionRuleSet' /tmp/check.txt; then
+            echo 'validateDecisionRuleSet remains above CC threshold'
+            exit 1
+          fi
+          test "$AFTER" -ge "$BEFORE"
