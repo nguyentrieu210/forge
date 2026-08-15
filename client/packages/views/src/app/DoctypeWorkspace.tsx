@@ -4,12 +4,18 @@
  * mobile dùng một pane; tạo mới mở modal lớn. DocType có canonical Bulk policy
  * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
-import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
 import { resolveBulkRenderPolicy } from "@metaforge/core";
 import { Button, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
-import { useMetaForge } from "../container/provider.js";
+import {
+  AlumdoorManufacturingStockEntryCreate,
+  AlumdoorProductionRequestDetail,
+  AlumdoorSalesOrderCreate,
+  AlumdoorWorkOrderDetail,
+  useAlumdoorWorkspaceMode,
+} from "./vertical/alumdoor/AlumdoorWorkspaceBoundary.js";
 import { SplitView } from "../detail/SplitView.js";
 import { ListContainer } from "../container/ListContainer.js";
 import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
@@ -27,10 +33,6 @@ import {
   V3_VIEW_SWITCHER_CLASS,
 } from "../data-surface/v3.js";
 
-const AlumdoorSalesOrderCreate = lazy(() => import("./vertical/alumdoor/AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
-const AlumdoorProductionRequestDetail = lazy(() => import("./vertical/alumdoor/AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
-const AlumdoorWorkOrderDetail = lazy(() => import("./vertical/alumdoor/AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
-const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./vertical/alumdoor/AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
 
 export interface DoctypeWorkspaceProps {
   doctype: string;
@@ -46,7 +48,6 @@ export interface DoctypeWorkspaceProps {
 
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const t = useT();
-  const { formProfiles } = useMetaForge();
   const [closeRequest, setCloseRequest] = useState(0);
   const [bulkDirty, setBulkDirty] = useState(false);
   const [confirmBulkExit, setConfirmBulkExit] = useState(false);
@@ -59,21 +60,17 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const isNew = name === "new";
   const decoded = name && !isNew ? decodeURIComponent(name) : undefined;
   const isTree = titleMeta.data?.is_tree === 1;
-  /**
-   * AlumDoor được runtime đánh dấu bằng form profile riêng cho Item Group. Chỉ profile của
-   * vertical này giữ `default_measurement_profile`; nhờ vậy generic workspace không chiếm
-   * màn nghiệp vụ của app khác. Màn chuyên biệt vẫn lazy-load, nên app khác không tải code cửa.
-   */
-  const isAlumdoorProfile = Boolean(formProfiles?.["Item Group"]?.keep?.includes("default_measurement_profile"));
-  const useAlumdoorSalesForm = doctype === "Sales Order" && isAlumdoorProfile;
-  const useAlumdoorSalesCreate = isNew && useAlumdoorSalesForm;
-  const useAlumdoorSalesDetail = Boolean(decoded) && useAlumdoorSalesForm;
-  const useAlumdoorProductionRequestDetail = Boolean(decoded) && doctype === "Production Request" && isAlumdoorProfile;
-  const useAlumdoorWorkOrderDetail = Boolean(decoded) && doctype === "Work Order" && isAlumdoorProfile;
-  const manufacturingWorkOrder = bridge.get("f_work_order")?.trim() ?? "";
-  const requestedStockPurpose = bridge.get("f_purpose");
-  const manufacturingPurpose = requestedStockPurpose === "Material Transfer" || requestedStockPurpose === "Manufacture" ? requestedStockPurpose : undefined;
-  const useAlumdoorManufacturingStockEntryContext = !isNew && !decoded && doctype === "Stock Entry" && isAlumdoorProfile && Boolean(manufacturingWorkOrder && manufacturingPurpose);
+  const {
+    isAlumdoorProfile,
+    useAlumdoorSalesForm,
+    useAlumdoorSalesCreate,
+    useAlumdoorSalesDetail,
+    useAlumdoorProductionRequestDetail,
+    useAlumdoorWorkOrderDetail,
+    manufacturingWorkOrder,
+    manufacturingPurpose,
+    useAlumdoorManufacturingStockEntryContext,
+  } = useAlumdoorWorkspaceMode({ doctype, isNew, decoded, bridge });
   /**
    * Kích cỡ màn tạo mới đi theo PHẠM VI của chứng từ, không phải theo khai báo riêng của từng app.
    *
