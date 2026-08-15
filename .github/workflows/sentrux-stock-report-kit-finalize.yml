@@ -60,47 +60,55 @@ jobs:
           registry_path = Path('client/apps/runtime/src/experience-registry.tsx')
           source = main_path.read_text(encoding='utf-8')
 
-          registry_path.write_text('''import { lazy } from "react";
-
-/** Lazy runtime experiences kept behind one narrow app-level boundary. */
-export const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
-export const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
-export const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
-export const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
-export const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));
-export const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));
-export const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));
-''', encoding='utf-8')
+          registry_lines = [
+              'import { lazy } from "react";',
+              '',
+              '/** Lazy runtime experiences kept behind one narrow app-level boundary. */',
+              'export const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));',
+              'export const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));',
+              'export const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));',
+              'export const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));',
+              'export const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));',
+              'export const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));',
+              'export const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));',
+              '',
+          ]
+          registry_path.write_text('\n'.join(registry_lines), encoding='utf-8')
 
           import_anchor = 'import { Storefront, type StorefrontPage } from "./storefront/Storefront.js";\n'
-          registry_import = '''import {
-  ApprovalInbox,
-  SocialCommerce,
-  DailyDetailedLedger,
-  AlumdoorOperationsCenter,
-  AlumdoorAttendanceScanner,
-  AlumdoorAttendanceOperations,
-  AlumdoorMasterDataScreen,
-} from "./experience-registry.js";
-'''
+          registry_import = '\n'.join([
+              'import {',
+              '  ApprovalInbox,',
+              '  SocialCommerce,',
+              '  DailyDetailedLedger,',
+              '  AlumdoorOperationsCenter,',
+              '  AlumdoorAttendanceScanner,',
+              '  AlumdoorAttendanceOperations,',
+              '  AlumdoorMasterDataScreen,',
+              '} from "./experience-registry.js";',
+              '',
+          ])
           if import_anchor not in source:
               raise SystemExit('runtime import anchor missing')
           source = source.replace(import_anchor, import_anchor + registry_import, 1)
 
-          lazy_block = '''const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));
-const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
-const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
-const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
-const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));
-const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));
-const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));
-'''
+          lazy_lines = [
+              'const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((module) => ({ default: module.ApprovalInbox })));',
+              'const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));',
+              'const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));',
+              'const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));',
+              'const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));',
+              'const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));',
+              'const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));',
+              '',
+          ]
+          lazy_block = '\n'.join(lazy_lines)
           if lazy_block not in source:
               raise SystemExit('runtime lazy experience block missing')
           source = source.replace(lazy_block, '', 1)
           main_path.write_text(source, encoding='utf-8')
 
-          remaining = [
+          direct_imports = [
               './experiences/ApprovalInbox.js',
               './experiences/SocialCommerce.js',
               './experiences/DailyDetailedLedger.js',
@@ -109,7 +117,7 @@ const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMaster
               './experiences/AlumdoorAttendanceOperations.js',
               './experiences/AlumdoorMasterDataScreen.js',
           ]
-          leaked = [item for item in remaining if item in source]
+          leaked = [item for item in direct_imports if item in source]
           if leaked:
               raise SystemExit(f'direct experience imports remain in main-base: {leaked}')
           print('created', registry_path)
