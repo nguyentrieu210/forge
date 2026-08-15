@@ -1,0 +1,123 @@
+name: Sentrux artifact audit
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-10k-20260815
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Baseline
+        id: baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/baseline.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/baseline.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
+          echo "AUDIT_BASELINE=$QUALITY"
+
+      - name: Inventory artifact-shaped tracked paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== ARTIFACT_SHAPED_PATHS ==='
+          git ls-files | grep -E '(^|/)(dist|build|vendor|generated|out|coverage|storybook-static|fixtures?|snapshots?|reference|references)(/|$)' | head -n 400 || true
+          echo '=== ARTIFACT_SHAPED_DIRECTORY_COUNTS ==='
+          git ls-files | python3 - <<'PY'
+          import sys, re, collections
+          names = {'dist','build','vendor','generated','out','coverage','storybook-static','fixture','fixtures','snapshot','snapshots','reference','references'}
+          counts = collections.Counter()
+          for raw in sys.stdin:
+              p = raw.strip()
+              parts = p.split('/')
+              for i, part in enumerate(parts[:-1]):
+                  if part in names:
+                      counts['/'.join(parts[:i+1])] += 1
+          for path, count in counts.most_common(100):
+              print(f'{count:5d} {path}')
+          PY
+
+      - name: Find generated code markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee /tmp/generated-code.txt
+          import os, re, subprocess
+          exts={'.js','.jsx','.mjs','.cjs','.ts','.tsx','.py'}
+          marker=re.compile(r'(generated|auto[- ]?generated|do not edit|do not modify|compiled from|built from)', re.I)
+          files=subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          rows=[]
+          for p in files:
+              if os.path.splitext(p)[1].lower() not in exts or not os.path.isfile(p):
+                  continue
+              try:
+                  with open(p,'r',encoding='utf-8',errors='ignore') as f:
+                      head=''.join(f.readline() for _ in range(20))
+              except OSError:
+                  continue
+              if marker.search(head):
+                  rows.append((os.path.getsize(p),p,head.splitlines()[0][:180] if head else ''))
+          rows.sort(reverse=True)
+          print('=== GENERATED_CODE_MARKERS ===')
+          for size,p,first in rows[:40]:
+              print(f'{size:10d}\t{p}\t{first}')
+          with open('/tmp/generated-candidates.txt','w') as out:
+              for _,p,_ in rows[:20]: out.write(p+'\n')
+          PY
+
+      - name: Measure generated-file score deltas
+        shell: bash
+        env:
+          BASE: ${{ steps.baseline.outputs.quality }}
+        run: |
+          set -euo pipefail
+          echo '=== GENERATED_FILE_SCORE_DELTAS ==='
+          if [ ! -s /tmp/generated-candidates.txt ]; then
+            echo 'no generated code candidates'
+            exit 0
+          fi
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            git rm -f --quiet -- "$f"
+            sentrux gate . > /tmp/candidate-score.txt 2>&1 || true
+            Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/candidate-score.txt | tail -1 | grep -Eo '[0-9]+' || true)
+            Q=${Q:-0}
+            DELTA=$((Q - BASE))
+            printf '%+6d  %5d -> %5d  %s\n' "$DELTA" "$BASE" "$Q" "$f"
+            git checkout -q HEAD -- "$f"
+          done < /tmp/generated-candidates.txt
+          git status --short
+
+      - name: Largest tracked code files
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== LARGEST_TRACKED_CODE_FILES ==='
+          python3 - <<'PY'
+          import os, subprocess
+          exts={'.js','.jsx','.mjs','.cjs','.ts','.tsx','.py'}
+          rows=[]
+          for p in subprocess.check_output(['git','ls-files'], text=True).splitlines():
+              if os.path.splitext(p)[1].lower() in exts and os.path.isfile(p):
+                  rows.append((os.path.getsize(p),p))
+          for size,p in sorted(rows,reverse=True)[:80]: print(f'{size:10d}\t{p}')
+          PY
