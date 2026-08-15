@@ -1,4 +1,4 @@
-name: Sentrux tenant wrapper refinement apply
+name: Sentrux runtime dead-edge apply
 
 on:
   pull_request:
@@ -18,15 +18,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Detect wrapper refinement
+      - name: Detect dead runtime edges
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if grep -q 'from "./operational-router.js"' server/apps/tenant-worker/src/index-base.ts; then
-            echo 'needed=false' >> "$GITHUB_OUTPUT"
-          else
+          if grep -q 'const DailyDetailedLedger = lazy' client/apps/runtime/src/main-base.tsx; then
             echo 'needed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install Sentrux
@@ -45,18 +45,21 @@ jobs:
           sentrux gate --save . | tee /tmp/before.txt
           Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
+          echo "BEFORE=$Q"
 
-      - name: Refine wrapper routing
+      - name: Remove unreachable lazy experiences
         if: steps.detect.outputs.needed == 'true'
         run: |
           set -euo pipefail
           python3 .github/sentrux-tenant-wrapper-transform
-          grep -q 'from "./operational-router.js"' server/apps/tenant-worker/src/index-base.ts
-          grep -q 'from "./account-security-routes.js"' server/apps/tenant-worker/src/index-base.ts
-          test -f server/apps/tenant-worker/src/operational-router.ts
-          test -f server/apps/tenant-worker/src/account-security-routes.ts
+          for name in SocialCommerce DailyDetailedLedger AlumdoorOperationsCenter AlumdoorAttendanceScanner AlumdoorAttendanceOperations AlumdoorMasterDataScreen; do
+            if grep -q "const $name = lazy" client/apps/runtime/src/main-base.tsx; then
+              echo "dead lazy experience remains: $name" >&2
+              exit 1
+            fi
+          done
           git diff --check
-          git diff --stat -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-router.ts server/apps/tenant-worker/src/account-security-routes.ts
+          git diff --stat -- client/apps/runtime/src/main-base.tsx
 
       - name: Install dependencies
         if: steps.detect.outputs.needed == 'true'
@@ -65,11 +68,11 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
-      - name: Server typecheck
+      - name: Client typecheck
         if: steps.detect.outputs.needed == 'true'
-        run: pnpm run server:typecheck
+        run: pnpm run client:typecheck
 
-      - name: Require score, cycle, fan-out and complexity improvement
+      - name: Require no Sentrux regression and remove runtime god-file
         if: steps.detect.outputs.needed == 'true'
         env:
           BEFORE: ${{ steps.before.outputs.quality }}
@@ -89,12 +92,9 @@ jobs:
           sentrux check . 2>&1 | tee /tmp/structure.txt
           set -e
           rm -rf .sentrux
-          echo "TENANT_WRAPPER_REFINEMENT_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          echo "RUNTIME_DEAD_EDGE_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -ge "$BEFORE"
-          if grep -q 'server/apps/tenant-worker/src/index-base.ts (fan-out=' /tmp/structure.txt; then exit 1; fi
-          if grep -q 'server/apps/tenant-worker/src/index-base.ts:fetch (cc=' /tmp/structure.txt; then exit 1; fi
-          if grep -Eq 'server/apps/tenant-worker/src/(operational-router|account-security-routes).ts \(fan-out=' /tmp/structure.txt; then exit 1; fi
-          if grep -Eq 'server/apps/tenant-worker/src/(operational-router|account-security-routes).ts:.* \(cc=' /tmp/structure.txt; then exit 1; fi
+          if grep -q 'client/apps/runtime/src/main-base.tsx (fan-out=' /tmp/structure.txt; then exit 1; fi
           if grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt; then exit 1; fi
 
       - name: Commit validated source improvement
@@ -103,8 +103,8 @@ jobs:
           set -euo pipefail
           git config user.name 'sentrux-refactor-bot'
           git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
-          git add -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-router.ts server/apps/tenant-worker/src/account-security-routes.ts
+          git add -- client/apps/runtime/src/main-base.tsx
           git diff --cached --check
           git diff --cached --stat
-          git commit --no-verify -m 'refactor(tenant): refine wrapper routing boundaries [skip sentrux]'
+          git commit --no-verify -m 'refactor(runtime): remove unreachable lazy experiences [skip sentrux]'
           git push origin HEAD:${{ github.head_ref }}
