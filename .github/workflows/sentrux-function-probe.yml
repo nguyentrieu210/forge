@@ -40,20 +40,26 @@ jobs:
               '    if edges.is_empty() { return 0; }',
               '    let (seeds, adj, all_nodes) = find_depth_seeds(edges, entry_points);',
               '    let memo = longest_path_dfs(&seeds, &adj, all_nodes.len());',
-              '    let best = seeds.iter().filter_map(|s| memo.get(s).map(|d| (*s, *d))).max_by_key(|(_, d)| *d);',
+              '    let mut ranked: Vec<(&str, u32)> = seeds.iter().filter_map(|s| memo.get(s).map(|d| (*s, *d))).collect();',
+              '    ranked.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(b.0)));',
+              '    let best = ranked.first().copied();',
               '    if std::env::var_os("SENTRUX_TRACE_DEPTH").is_some() {',
               '        eprintln!("SENTRUX_DEPTH_ENTRY_POINTS={}", entry_points.len());',
               '        eprintln!("SENTRUX_DEPTH_SEEDS={}", seeds.len());',
-              '        if let Some((mut node, mut depth)) = best {',
-              '            eprintln!("SENTRUX_DEPTH_PATH_BEGIN depth={}", depth);',
+              '        for (rank, &(start_node, start_depth)) in ranked.iter().take(20).enumerate() {',
+              '            eprintln!("SENTRUX_DEPTH_SEED rank={} depth={} file={}", rank + 1, start_depth, start_node);',
+              '            if start_depth < 14 { continue; }',
+              '            let mut node = start_node;',
+              '            let mut depth = start_depth;',
               '            let mut i = 0u32;',
+              '            eprintln!("SENTRUX_DEPTH_PATH_BEGIN rank={} depth={}", rank + 1, start_depth);',
               '            loop {',
-              '                eprintln!("SENTRUX_DEPTH_PATH {:02} {} remaining={}", i, node, depth);',
+              '                eprintln!("SENTRUX_DEPTH_PATH rank={} step={:02} {} remaining={}", rank + 1, i, node, depth);',
               '                if depth == 0 { break; }',
-              '                let next = adj.get(node).and_then(|ns| ns.iter().filter_map(|n| memo.get(n).map(|d| (*n, *d))).filter(|(_, d)| d.saturating_add(1) == depth).max_by_key(|(_, d)| *d));',
-              '                match next { Some((n,d)) => { node=n; depth=d; i+=1; }, None => { eprintln!("SENTRUX_DEPTH_PATH_BROKEN"); break; } }',
+              '                let next = adj.get(node).and_then(|ns| ns.iter().filter_map(|n| memo.get(n).map(|d| (*n, *d))).filter(|(_, d)| d.saturating_add(1) == depth).min_by(|a, b| a.0.cmp(b.0)));',
+              '                match next { Some((n,d)) => { node=n; depth=d; i+=1; }, None => { eprintln!("SENTRUX_DEPTH_PATH_BROKEN rank={}", rank + 1); break; } }',
               '            }',
-              '            eprintln!("SENTRUX_DEPTH_PATH_END");',
+              '            eprintln!("SENTRUX_DEPTH_PATH_END rank={}", rank + 1);',
               '        }',
               '    }',
               '    best.map(|(_, d)| d).unwrap_or(0)',
@@ -63,7 +69,7 @@ jobs:
           PY
           cargo build --quiet --release -p sentrux --bin sentrux
           cp target/release/sentrux /tmp/sentrux-trace
-      - name: Trace official Forge depth path
+      - name: Trace official Forge depth paths
         shell: bash
         run: |
           set -euo pipefail
