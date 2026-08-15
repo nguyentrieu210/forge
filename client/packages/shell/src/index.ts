@@ -14,13 +14,13 @@ export interface AppShellConfig {
   theme: ThemeMode;
 }
 
-export {
-  AppShell,
-  type AppShellProps,
-  type NavItem,
-  type Breadcrumb,
-  type NotificationItem,
-  type WorkspaceTab,
+export { AppShell } from "./PlatformAppShell.js";
+export type {
+  AppShellProps,
+  NavItem,
+  Breadcrumb,
+  NotificationItem,
+  WorkspaceTab,
 } from "./WorkspaceAppShell.js";
 export { ForgeBrandLogo, type ForgeBrandLogoProps } from "./BrandLogo.js";
 export { I18nProvider, useI18n, useT, useLocale, type Locale } from "./i18n/index.js";
