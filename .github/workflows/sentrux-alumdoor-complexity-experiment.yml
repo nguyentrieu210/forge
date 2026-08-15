@@ -248,23 +248,6 @@ jobs:
       - name: Server typecheck
         run: pnpm run server:typecheck
 
-      - name: Focused Alumdoor validator tests
-        working-directory: server
-        shell: bash
-        run: |
-          set -euo pipefail
-          tests=(
-            tests/alumdoor-item-validator.test.mjs
-            tests/aluminum-item-validator-boundary.test.mjs
-            tests/alumdoor-sales-door-formula.test.mjs
-            tests/alumdoor-sales-pricing-authority.test.mjs
-          )
-          existing=()
-          for file in "${tests[@]}"; do
-            if [ -f "$file" ]; then existing+=("$file"); fi
-          done
-          if [ "${#existing[@]}" -gt 0 ]; then node --test "${existing[@]}"; fi
-
       - name: Measure experiment
         shell: bash
         env:
@@ -285,3 +268,41 @@ jobs:
           grep -E 'validateTransactionLines|validateAreaTransactionQuantity|validateSalesTransactionQuantity|god file|circular dependencies' /tmp/after-structure.txt || true
           test "$AFTER" -gt "$BEFORE"
           ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/after-structure.txt
+          rm -rf .sentrux
+
+      - name: Emit server dist for validator tests
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/alumdoor-experiment-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/apps-src/alumdoor-worker/src/entry.js
+          test -f dist/apps-src/alumdoor-worker/src/index.js
+          if [ "$status" -ne 0 ]; then
+            grep "error TS" /tmp/alumdoor-experiment-tsc.log > /tmp/alumdoor-experiment-ts-errors.log || true
+            cat /tmp/alumdoor-experiment-ts-errors.log
+            if grep -E 'apps-src/alumdoor-worker/src/index\.ts' /tmp/alumdoor-experiment-ts-errors.log; then
+              echo "Refactored Alumdoor validator has emit-time TypeScript errors"
+              exit 1
+            fi
+          fi
+
+      - name: Focused Alumdoor validator tests
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=(
+            tests/alumdoor-item-validator.test.mjs
+            tests/aluminum-item-validator-boundary.test.mjs
+            tests/alumdoor-sales-door-formula.test.mjs
+            tests/alumdoor-sales-pricing-authority.test.mjs
+          )
+          existing=()
+          for file in "${tests[@]}"; do
+            if [ -f "$file" ]; then existing+=("$file"); fi
+          done
+          if [ "${#existing[@]}" -gt 0 ]; then node --test "${existing[@]}"; fi
