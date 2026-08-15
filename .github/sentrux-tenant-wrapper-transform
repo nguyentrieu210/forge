@@ -1,11 +1,57 @@
 from pathlib import Path
 
 source_path = Path('server/apps/tenant-worker/src/index-base.ts')
-stock_path = Path('server/apps/tenant-worker/src/operational-stock-routes.ts')
-manufacturing_path = Path('server/apps/tenant-worker/src/operational-manufacturing-routes.ts')
+operational_router_path = Path('server/apps/tenant-worker/src/operational-router.ts')
+account_path = Path('server/apps/tenant-worker/src/account-security-routes.ts')
 text = source_path.read_text()
 
-boundary_import = '''import {
+if 'from "./operational-router.js"' in text and account_path.exists() and operational_router_path.exists():
+    print('tenant wrapper routing refinement already present')
+    raise SystemExit(0)
+
+old_auth = '''import {
+  APP_CALLBACK_HEADER,
+  D1UserStore,
+  staticDevelopmentActor,
+  verifyTrustedIdentity,
+  type TrustedIdentityKey,
+} from "../../../packages/auth/src/index.js";
+'''
+new_auth = '''import {
+  APP_CALLBACK_HEADER,
+  staticDevelopmentActor,
+  verifyTrustedIdentity,
+  type TrustedIdentityKey,
+} from "../../../packages/auth/src/index.js";
+'''
+if old_auth not in text: raise SystemExit('missing auth import block')
+text = text.replace(old_auth, new_auth, 1)
+
+old_frappe = '''import {
+  assertSessionCsrf,
+  establishSession,
+  faultResponse,
+  isMfaRoutePath,
+  isPublicFrappePath,
+  isSessionManagementPath,
+  routeFrappeAuth,
+  routeMfaApi,
+  routeSessionManagementApi,
+  slideSession,
+  type AuthRouteContext,
+  type EstablishedSession,
+} from "../../../packages/frappe-api/src/index.js";
+'''
+new_frappe = '''import {
+  assertSessionCsrf,
+  establishSession,
+  faultResponse,
+} from "../../../packages/frappe-api/src/index.js";
+'''
+if old_frappe not in text: raise SystemExit('missing frappe import block')
+text = text.replace(old_frappe, new_frappe, 1)
+
+old_operational = '''import {
   isStockOperationalFrappePath,
   matchStockOperationalRoute,
   routeStockOperationalRequest,
@@ -16,365 +62,317 @@ import {
   routeManufacturingOperationalRequest,
 } from "./operational-manufacturing-routes.js";
 '''
+new_boundaries = '''import {
+  isTenantOperationalFrappePath,
+  matchTenantOperationalRoute,
+  routeTenantOperationalRequest,
+} from "./operational-router.js";
+import {
+  createAccountAuthContext,
+  isAccountSecurityCookieBoundPath,
+  isAccountSecurityFaultPath,
+  matchAccountSecurityRoute,
+  refreshAuthenticatedSession,
+  routeAuthenticatedAccountSecurityRequest,
+  routePublicAccountSecurityRequest,
+  type InterceptedRouteAuthentication,
+} from "./account-security-routes.js";
+'''
+if old_operational not in text: raise SystemExit('missing operational imports')
+text = text.replace(old_operational, new_boundaries, 1)
+text = text.replace('import { mfaKeyRingFromEnv } from "./mfa-config.js";\n', '', 1)
 
-if boundary_import in text and stock_path.exists() and manufacturing_path.exists():
-    print('tenant operational boundaries already present')
-    raise SystemExit(0)
+interface_start = text.index('interface InterceptedRouteAuthentication {')
+interface_end = text.index('\n\n/**', interface_start)
+text = text[:interface_start] + text[interface_end + 2:]
 
-for old_import in [
-    'import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";\n',
-    'import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";\n',
-    '''import type {
-  CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
-  NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
-  VersionedBomData, WorkOrderData, WorkstationCapacityCalendarData,
-} from "../../../packages/clouderp-erpnext/src/index.js";
-''',
-    '''import {
-  D1DocumentAccessStore,
-  D1MetadataStore,
-  MetadataPermissionService,
-} from "../../../packages/frappe-model/src/index.js";
-''',
-    '''import {
-  isDailyLedgerApiPath,
-  isDailyLedgerFrappePath,
-  routeDailyLedgerApi,
-} from "./daily-ledger-api.js";
-''',
-    '''import {
-  isManufacturingBomBulkApiPath,
-  isManufacturingBomBulkFrappePath,
-  routeManufacturingBomBulkApi,
-} from "./manufacturing-bom-bulk-api.js";
-''',
-    '''import {
-  isManufacturingCapacityApiPath,
-  isManufacturingCapacityFrappePath,
-  routeManufacturingCapacityApi,
-} from "./manufacturing-capacity-api.js";
-''',
-    '''import {
-  isManufacturingCostingApiPath,
-  isManufacturingCostingFrappePath,
-  routeManufacturingCostingApi,
-} from "./manufacturing-costing-api.js";
-''',
-    '''import {
-  isManufacturingGenealogyApiPath,
-  isManufacturingGenealogyFrappePath,
-  routeManufacturingGenealogyApi,
-} from "./manufacturing-genealogy-api.js";
-''',
-    '''import {
-  isManufacturingMrpApiPath,
-  isManufacturingMrpFrappePath,
-  routeManufacturingMrpApi,
-} from "./manufacturing-mrp-api.js";
-''',
-    'import { isMigrationApiPath, routeMigrationApi } from "./migration-api.js";\n',
-    '''import {
-  isPhysicalStockApiPath,
-  isPhysicalStockFrappePath,
-  routePhysicalStockApi,
-} from "./physical-stock-api.js";
-''',
-    'import { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";\n',
-]:
-    if old_import not in text:
-        raise SystemExit(f'missing expected operational import: {old_import.splitlines()[-1]}')
-    text = text.replace(old_import, '', 1)
-
-anchor = 'import coreWorker from "./index-core.js";\n'
-if anchor not in text:
-    raise SystemExit('missing core worker import anchor')
-text = text.replace(anchor, anchor + boundary_import, 1)
-
-start = text.index('    const physicalStock = isPhysicalStockApiPath(url.pathname);')
+start = text.index('    const stockOperationalRoute = matchStockOperationalRoute(url.pathname);')
 end = text.index('    const traceId = request.headers.get("x-cloudforge-trace-id")', start)
-text = text[:start] + '''    const stockOperationalRoute = matchStockOperationalRoute(url.pathname);
-    const manufacturingOperationalRoute = matchManufacturingOperationalRoute(url.pathname);
-    const sessionManagement = isSessionManagementPath(url.pathname);
-    const publicFrappeAuth = isPublicFrappePath(url.pathname);
-    const mfaManagement = isMfaRoutePath(url.pathname);
+text = text[:start] + '''    const operationalRoute = matchTenantOperationalRoute(url.pathname);
+    const accountSecurityRoute = matchAccountSecurityRoute(url.pathname);
     const nativeSecurity = requiresRecentNativeSecurityAuthentication(request.method, url.pathname);
-    if (!stockOperationalRoute && !manufacturingOperationalRoute
-      && !sessionManagement && !publicFrappeAuth && !mfaManagement && !nativeSecurity) {
+    if (!operationalRoute && !accountSecurityRoute && !nativeSecurity) {
       return coreWorker.fetch(request, env);
     }
 
 ''' + text[end:]
 
-old_native = '''        if (!physicalStock && !dailyLedger && !manufacturingBomBulk && !manufacturingMrp
-          && !manufacturingCapacity && !manufacturingCosting && !manufacturingGenealogy && !migration && !qms
+old_native = '''        if (!stockOperationalRoute && !manufacturingOperationalRoute
           && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
           return coreWorker.fetch(request, env);
         }
 '''
-new_native = '''        if (!stockOperationalRoute && !manufacturingOperationalRoute
-          && !sessionManagement && !publicFrappeAuth && !mfaManagement) {
+new_native = '''        if (!operationalRoute && !accountSecurityRoute) {
           return coreWorker.fetch(request, env);
         }
 '''
-if old_native not in text:
-    raise SystemExit('missing native-security fallthrough block')
+if old_native not in text: raise SystemExit('missing native fallthrough')
 text = text.replace(old_native, new_native, 1)
 
-request_db_line = '      const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;\n\n'
-if request_db_line not in text:
-    raise SystemExit('missing request DB line')
-text = text.replace(request_db_line, '', 1)
+public_start = text.index('      if (publicFrappeAuth) {')
+public_end = text.index('\n\n      const authentication = await authenticateInterceptedRoute', public_start)
+text = text[:public_start] + '''      if (accountSecurityRoute === "public-auth") {
+        const response = await routePublicAccountSecurityRequest(request, url, env, tenantId, traceId);
+        if (response) return response;
+        return coreWorker.fetch(request, env);
+      }
+''' + text[public_end:]
 
-operational_start = text.index('      } else if (migration) {')
-operational_end_marker = '''      }
-      if (!response) return coreWorker.fetch(request, env);
-'''
-operational_end = text.index(operational_end_marker, operational_start)
-replacement = '''      } else if (stockOperationalRoute) {
-        response = await routeStockOperationalRequest({
+response_start = text.index('      let response: Response | null;')
+response_end = text.index('      if (!response) return coreWorker.fetch(request, env);', response_start)
+text = text[:response_start] + '''      let response: Response | null;
+      if (accountSecurityRoute) {
+        response = await routeAuthenticatedAccountSecurityRequest({
           request,
           url,
           env,
           tenantId,
-          actor: authentication.actor,
           traceId,
-          route: stockOperationalRoute,
-          runCommand: (command) => executeCommandThroughCore(request, env, command),
+          route: accountSecurityRoute,
+          authentication,
         });
-      } else if (manufacturingOperationalRoute) {
-        response = await routeManufacturingOperationalRequest({
+      } else if (operationalRoute) {
+        response = await routeTenantOperationalRequest({
           request,
           url,
           env,
           tenantId,
           actor: authentication.actor,
           traceId,
-          route: manufacturingOperationalRoute,
+          route: operationalRoute,
+          runCommand: (command) => executeCommandThroughCore(request, env, command),
           createDocument: (doctype, document) => createDocumentThroughCore(request, env, doctype, document),
         });
       } else {
         return coreWorker.fetch(request, env);
-'''
-text = text[:operational_start] + replacement + text[operational_end:]
+      }
+''' + text[response_end:]
 
-catch_start = text.index('      return isPhysicalStockFrappePath(url.pathname)')
+refresh_old = '''      if (authentication.established && authentication.authContext) {
+        const refreshed = await slideSession(authentication.established, authentication.authContext);
+        if (refreshed) response.headers.append("set-cookie", refreshed);
+      }
+      return response;
+'''
+refresh_new = '''      await refreshAuthenticatedSession(response, authentication);
+      return response;
+'''
+if refresh_old not in text: raise SystemExit('missing refresh block')
+text = text.replace(refresh_old, refresh_new, 1)
+
+catch_start = text.index('      return isStockOperationalFrappePath(url.pathname)')
 catch_end = text.index('        : errorResponse(error, traceId);', catch_start) + len('        : errorResponse(error, traceId);')
-text = text[:catch_start] + '''      return isStockOperationalFrappePath(url.pathname)
-        || isManufacturingOperationalFrappePath(url.pathname)
-        || isSessionManagementPath(url.pathname)
-        || isPublicFrappePath(url.pathname)
-        || isMfaRoutePath(url.pathname)
+text = text[:catch_start] + '''      return isTenantOperationalFrappePath(url.pathname) || isAccountSecurityFaultPath(url.pathname)
         ? faultResponse(error, traceId)
         : errorResponse(error, traceId);''' + text[catch_end:]
 
-cookie_start = text.index('  const cookieBound = isPhysicalStockFrappePath(url.pathname)')
+auth_context_start = text.index('function createAuthContext(')
+authenticate_start = text.index('async function authenticateInterceptedRoute(', auth_context_start)
+text = text[:auth_context_start] + text[authenticate_start:]
+
+cookie_start = text.index('  const cookieBound = isStockOperationalFrappePath(url.pathname)')
 cookie_end = text.index('  if (!cookieBound) {', cookie_start)
-text = text[:cookie_start] + '''  const cookieBound = isStockOperationalFrappePath(url.pathname)
-    || isManufacturingOperationalFrappePath(url.pathname)
-    || isSessionManagementPath(url.pathname)
-    || isMfaRoutePath(url.pathname);
+text = text[:cookie_start] + '''  const accountCookieBound = isAccountSecurityCookieBoundPath(url.pathname);
+  const cookieBound = isTenantOperationalFrappePath(url.pathname) || accountCookieBound;
 ''' + text[cookie_end:]
+text = text.replace('  const authContext = createAuthContext(request, env, tenantId, traceId);', '  const authContext = createAccountAuthContext(request, env, tenantId, traceId);', 1)
+text = text.replace('  if (isSessionManagementPath(url.pathname) || isMfaRoutePath(url.pathname)) {', '  if (accountCookieBound) {', 1)
 
-stock_path.write_text('''import type { Actor, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
-import { D1DocumentAccessStore, D1MetadataStore, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
-import {
-  isDailyLedgerApiPath,
-  isDailyLedgerFrappePath,
-  routeDailyLedgerApi,
-} from "./daily-ledger-api.js";
-import { isMigrationApiPath, routeMigrationApi } from "./migration-api.js";
-import {
-  isPhysicalStockApiPath,
-  isPhysicalStockFrappePath,
-  routePhysicalStockApi,
-} from "./physical-stock-api.js";
+operational_router_path.write_text('''import type { Actor, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import type { TenantEnv } from "./env.js";
+import {
+  isStockOperationalFrappePath,
+  matchStockOperationalRoute,
+  routeStockOperationalRequest,
+  type StockOperationalRoute,
+} from "./operational-stock-routes.js";
+import {
+  isManufacturingOperationalFrappePath,
+  matchManufacturingOperationalRoute,
+  routeManufacturingOperationalRequest,
+  type ManufacturingOperationalRoute,
+} from "./operational-manufacturing-routes.js";
 
-export type StockOperationalRoute = "physical-stock" | "daily-ledger" | "migration";
+export type TenantOperationalRoute =
+  | { kind: "stock"; route: StockOperationalRoute }
+  | { kind: "manufacturing"; route: ManufacturingOperationalRoute };
 
-export function matchStockOperationalRoute(pathname: string): StockOperationalRoute | null {
-  if (isPhysicalStockApiPath(pathname)) return "physical-stock";
-  if (isDailyLedgerApiPath(pathname)) return "daily-ledger";
-  if (isMigrationApiPath(pathname)) return "migration";
-  return null;
+export function matchTenantOperationalRoute(pathname: string): TenantOperationalRoute | null {
+  const stock = matchStockOperationalRoute(pathname);
+  if (stock) return { kind: "stock", route: stock };
+  const manufacturing = matchManufacturingOperationalRoute(pathname);
+  return manufacturing ? { kind: "manufacturing", route: manufacturing } : null;
 }
 
-export function isStockOperationalFrappePath(pathname: string): boolean {
-  return isPhysicalStockFrappePath(pathname) || isDailyLedgerFrappePath(pathname);
+export function isTenantOperationalFrappePath(pathname: string): boolean {
+  return isStockOperationalFrappePath(pathname) || isManufacturingOperationalFrappePath(pathname);
 }
 
-interface StockOperationalRequest {
+interface TenantOperationalRequest {
   request: Request;
   url: URL;
   env: TenantEnv;
   tenantId: string;
   actor: Actor;
   traceId: string;
-  route: StockOperationalRoute;
+  route: TenantOperationalRoute;
   runCommand(command: MutationCommand): Promise<MutationReceipt>;
-}
-
-export async function routeStockOperationalRequest(input: StockOperationalRequest): Promise<Response | null> {
-  const { request, url, env, tenantId, actor, traceId, route } = input;
-  const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
-  if (route === "migration") {
-    return routeMigrationApi(request, url, {
-      db: requestDb,
-      tenantId,
-      actor,
-      traceId,
-      runCommand: input.runCommand,
-    });
-  }
-  if (route === "physical-stock") {
-    const metadata = new D1MetadataStore(requestDb);
-    const access = new D1DocumentAccessStore(requestDb);
-    const permissions = new MetadataPermissionService(metadata, undefined, access);
-    return routePhysicalStockApi(request, url, {
-      db: requestDb,
-      tenantId,
-      actor,
-      permissions,
-      traceId,
-    });
-  }
-  return routeDailyLedgerApi(request, url, { db: requestDb, tenantId, actor, traceId });
-}
-''')
-
-manufacturing_path.write_text('''import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
-import type { StockEntryData } from "../../../packages/clouderp-core/src/index.js";
-import { errors } from "../../../packages/core/src/index.js";
-import { D1MutationStore } from "../../../packages/document-kernel/src/index.js";
-import type {
-  CalibrationRecordData, CapaData, ManufacturingDowntimeData, ManufacturingRoutingData,
-  NonConformanceReportData, ProductionPlanData, QualityPlanData, RootCauseAnalysisData,
-  VersionedBomData, WorkOrderData, WorkstationCapacityCalendarData,
-} from "../../../packages/clouderp-erpnext/src/index.js";
-import { D1DocumentAccessStore, D1MetadataStore, MetadataPermissionService } from "../../../packages/frappe-model/src/index.js";
-import { isManufacturingBomBulkApiPath, isManufacturingBomBulkFrappePath, routeManufacturingBomBulkApi } from "./manufacturing-bom-bulk-api.js";
-import { isManufacturingCapacityApiPath, isManufacturingCapacityFrappePath, routeManufacturingCapacityApi } from "./manufacturing-capacity-api.js";
-import { isManufacturingCostingApiPath, isManufacturingCostingFrappePath, routeManufacturingCostingApi } from "./manufacturing-costing-api.js";
-import { isManufacturingGenealogyApiPath, isManufacturingGenealogyFrappePath, routeManufacturingGenealogyApi } from "./manufacturing-genealogy-api.js";
-import { isManufacturingMrpApiPath, isManufacturingMrpFrappePath, routeManufacturingMrpApi } from "./manufacturing-mrp-api.js";
-import { isQmsApiPath, isQmsFrappePath, routeQmsApi } from "./qms-api.js";
-import type { TenantEnv } from "./env.js";
-
-export type ManufacturingOperationalRoute = "bom-bulk" | "mrp" | "capacity" | "costing" | "genealogy" | "qms";
-
-export function matchManufacturingOperationalRoute(pathname: string): ManufacturingOperationalRoute | null {
-  if (isManufacturingBomBulkApiPath(pathname)) return "bom-bulk";
-  if (isManufacturingMrpApiPath(pathname)) return "mrp";
-  if (isManufacturingCapacityApiPath(pathname)) return "capacity";
-  if (isManufacturingCostingApiPath(pathname)) return "costing";
-  if (isManufacturingGenealogyApiPath(pathname)) return "genealogy";
-  if (isQmsApiPath(pathname)) return "qms";
-  return null;
-}
-
-export function isManufacturingOperationalFrappePath(pathname: string): boolean {
-  return isManufacturingBomBulkFrappePath(pathname)
-    || isManufacturingMrpFrappePath(pathname)
-    || isManufacturingCapacityFrappePath(pathname)
-    || isManufacturingCostingFrappePath(pathname)
-    || isManufacturingGenealogyFrappePath(pathname)
-    || isQmsFrappePath(pathname);
-}
-
-interface ManufacturingOperationalRequest {
-  request: Request;
-  url: URL;
-  env: TenantEnv;
-  tenantId: string;
-  actor: Actor;
-  traceId: string;
-  route: ManufacturingOperationalRoute;
   createDocument(doctype: string, document: JsonObject): Promise<Response>;
 }
 
-export async function routeManufacturingOperationalRequest(input: ManufacturingOperationalRequest): Promise<Response | null> {
-  const { request, url, env, tenantId, actor, traceId, route } = input;
-  const requestDb = (env.DB.withSession?.("first-primary") ?? env.DB) as D1Database;
-  const metadata = new D1MetadataStore(requestDb);
-  const access = new D1DocumentAccessStore(requestDb);
-  const permissions = new MetadataPermissionService(metadata, undefined, access);
-  const documents = new D1MutationStore(env.DB);
+export function routeTenantOperationalRequest(input: TenantOperationalRequest): Promise<Response | null> {
+  if (input.route.kind === "stock") {
+    return routeStockOperationalRequest({
+      request: input.request,
+      url: input.url,
+      env: input.env,
+      tenantId: input.tenantId,
+      actor: input.actor,
+      traceId: input.traceId,
+      route: input.route.route,
+      runCommand: input.runCommand,
+    });
+  }
+  return routeManufacturingOperationalRequest({
+    request: input.request,
+    url: input.url,
+    env: input.env,
+    tenantId: input.tenantId,
+    actor: input.actor,
+    traceId: input.traceId,
+    route: input.route.route,
+    createDocument: input.createDocument,
+  });
+}
+''')
 
-  if (route === "bom-bulk") {
-    return routeManufacturingBomBulkApi(request, url, {
-      tenantId, actor, permissions, traceId,
-      findCanonicalRevisions: async (document) => {
-        const company = text(document.company);
-        const item = text(document.item);
-        const revision = integer(document.revision);
-        const all = await documents.listDocumentsByDoctype<JsonObject>(tenantId, "Bill of Materials");
-        const matches = all.filter((candidate) => candidate.data.company === company
-          && candidate.data.item === item && integer(candidate.data.revision) === revision);
-        const readable = [];
-        for (const candidate of matches) {
-          if (await permissions.canReadDocument(actor, tenantId, candidate)) readable.push(candidate);
-        }
-        if (readable.length !== matches.length) throw errors.permission("A matching BOM revision is outside the current read scope");
-        return readable.map((candidate) => ({ name: candidate.name, docstatus: candidate.docstatus, status: candidate.status, ...candidate.data }));
+account_path.write_text('''import { D1UserStore } from "../../../packages/auth/src/index.js";
+import type { Actor } from "../../../packages/contracts/src/index.js";
+import { errors } from "../../../packages/core/src/index.js";
+import {
+  isMfaRoutePath,
+  isPublicFrappePath,
+  isSessionManagementPath,
+  routeFrappeAuth,
+  routeMfaApi,
+  routeSessionManagementApi,
+  slideSession,
+  type AuthRouteContext,
+  type EstablishedSession,
+} from "../../../packages/frappe-api/src/index.js";
+import type { TenantEnv } from "./env.js";
+import { mfaKeyRingFromEnv } from "./mfa-config.js";
+
+export type AccountSecurityRoute = "public-auth" | "mfa" | "sessions";
+
+export interface InterceptedRouteAuthentication {
+  actor: Actor;
+  established?: EstablishedSession;
+  authContext?: AuthRouteContext;
+}
+
+export function matchAccountSecurityRoute(pathname: string): AccountSecurityRoute | null {
+  if (isPublicFrappePath(pathname)) return "public-auth";
+  if (isMfaRoutePath(pathname)) return "mfa";
+  if (isSessionManagementPath(pathname)) return "sessions";
+  return null;
+}
+
+export function isAccountSecurityFaultPath(pathname: string): boolean {
+  return matchAccountSecurityRoute(pathname) !== null;
+}
+
+export function isAccountSecurityCookieBoundPath(pathname: string): boolean {
+  const route = matchAccountSecurityRoute(pathname);
+  return route === "mfa" || route === "sessions";
+}
+
+export function createAccountAuthContext(
+  request: Request,
+  env: TenantEnv,
+  tenantId: string,
+  traceId: string,
+): AuthRouteContext {
+  return {
+    tenantId,
+    users: new D1UserStore(env.DB, mfaKeyRingFromEnv(env)),
+    sessionSecret: env.SESSION_SECRET ?? "",
+    traceId,
+    now: () => new Date().toISOString(),
+    rateLimit: {
+      db: env.DB,
+      salt: env.INTERNAL_AUTH_SECRET,
+      clientAddress: request.headers.get("CF-Connecting-IP") ?? "unknown",
+    },
+  };
+}
+
+export function routePublicAccountSecurityRequest(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  tenantId: string,
+  traceId: string,
+): Promise<Response | null> {
+  return routeFrappeAuth(request, url, createAccountAuthContext(request, env, tenantId, traceId));
+}
+
+interface AuthenticatedAccountSecurityRequest {
+  request: Request;
+  url: URL;
+  env: TenantEnv;
+  tenantId: string;
+  traceId: string;
+  route: AccountSecurityRoute;
+  authentication: InterceptedRouteAuthentication;
+}
+
+export async function routeAuthenticatedAccountSecurityRequest(input: AuthenticatedAccountSecurityRequest): Promise<Response | null> {
+  const { request, url, tenantId, traceId, route, authentication } = input;
+  const established = authentication.established;
+  const authContext = authentication.authContext;
+  if (!established || !authContext) throw errors.permission("A browser session is required for account security management");
+
+  if (route === "mfa") {
+    return routeMfaApi(request, url, {
+      tenantId,
+      actor: established.actor,
+      traceId,
+      authenticatedAt: established.session.authenticatedAt,
+      now: authContext.now(),
+      mfa: authContext.users.mfa,
+    });
+  }
+  if (route !== "sessions") return null;
+  return routeSessionManagementApi(request, url, {
+    tenantId,
+    userId: established.actor.user_id,
+    traceId,
+    now: authContext.now(),
+    sessions: authContext.users.sessions,
+    ...(established.session.sessionId ? { currentSessionId: established.session.sessionId } : {}),
+    revokeAllSessions: () => authContext.users.administration.revokeSessions(
+      tenantId,
+      established.actor.user_id,
+      {
+        actorUserId: established.actor.user_id,
+        traceId,
+        source: "metaforge.api.logout_other_sessions",
       },
-      createCanonicalDraft: (document) => input.createDocument("Bill of Materials", document),
-    });
-  }
-  if (route === "mrp") {
-    return routeManufacturingMrpApi(request, url, {
-      tenantId, actor, permissions, traceId,
-      loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
-      listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
-      listMaterialRequests: () => documents.listDocumentsByDoctype<JsonObject>(tenantId, "Material Request"),
-      createCanonicalMaterialRequest: (document) => input.createDocument("Material Request", document),
-    });
-  }
-  if (route === "capacity") {
-    return routeManufacturingCapacityApi(request, url, {
-      tenantId, actor, permissions, traceId,
-      loadProductionPlan: (name) => documents.getDocument<ProductionPlanData>(tenantId, "Production Plan", name),
-      listBomDocuments: () => documents.listDocumentsByDoctype<VersionedBomData>(tenantId, "Bill of Materials"),
-      listRoutings: () => documents.listDocumentsByDoctype<ManufacturingRoutingData>(tenantId, "Manufacturing Routing"),
-      listCalendars: () => documents.listDocumentsByDoctype<WorkstationCapacityCalendarData>(tenantId, "Workstation Capacity Calendar"),
-      listDowntimes: () => documents.listDocumentsByDoctype<ManufacturingDowntimeData>(tenantId, "Manufacturing Downtime"),
-    });
-  }
-  if (route === "costing") {
-    return routeManufacturingCostingApi(request, url, {
-      tenantId, actor, permissions, traceId,
-      loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
-      loadBom: (name) => documents.getDocument<VersionedBomData>(tenantId, "Bill of Materials", name),
-      listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
-      getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
-    });
-  }
-  if (route === "genealogy") {
-    return routeManufacturingGenealogyApi(request, url, {
-      tenantId, actor, permissions, traceId,
-      loadWorkOrder: (name) => documents.getDocument<WorkOrderData>(tenantId, "Work Order", name),
-      listStockEntries: () => documents.listDocumentsByDoctype<StockEntryData>(tenantId, "Stock Entry"),
-      getVoucherStockEntries: (name, version) => documents.getVoucherStockEntries(tenantId, "Stock Entry", name, version),
-    });
-  }
-  return routeQmsApi(request, url, {
-    tenantId, actor, permissions, traceId, now: () => new Date().toISOString(),
-    loadQualityPlan: (name) => documents.getDocument<QualityPlanData>(tenantId, "Quality Plan", name),
-    listNcr: () => documents.listDocumentsByDoctype<NonConformanceReportData>(tenantId, "Non Conformance Report"),
-    listRca: () => documents.listDocumentsByDoctype<RootCauseAnalysisData>(tenantId, "Root Cause Analysis"),
-    listCapa: () => documents.listDocumentsByDoctype<CapaData>(tenantId, "CAPA"),
-    listCalibration: () => documents.listDocumentsByDoctype<CalibrationRecordData>(tenantId, "Calibration Record"),
+      authContext.now(),
+    ),
   });
 }
 
-function text(value: unknown): string {
-  return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
-}
-
-function integer(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isSafeInteger(parsed) ? parsed : 0;
+export async function refreshAuthenticatedSession(
+  response: Response,
+  authentication: InterceptedRouteAuthentication,
+): Promise<void> {
+  if (!authentication.established || !authentication.authContext) return;
+  const refreshed = await slideSession(authentication.established, authentication.authContext);
+  if (refreshed) response.headers.append("set-cookie", refreshed);
 }
 ''')
 
 source_path.write_text(text)
-print('extracted tenant stock/migration and manufacturing operational boundaries')
+print('refined tenant wrapper into operational and account-security routers')

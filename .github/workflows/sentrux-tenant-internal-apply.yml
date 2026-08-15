@@ -1,4 +1,4 @@
-name: Sentrux tenant operational boundary apply
+name: Sentrux tenant wrapper refinement apply
 
 on:
   pull_request:
@@ -18,14 +18,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Detect operational boundaries
+      - name: Detect wrapper refinement
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if grep -q 'from "./operational-stock-routes.js"' server/apps/tenant-worker/src/index-base.ts; then
+          if grep -q 'from "./operational-router.js"' server/apps/tenant-worker/src/index-base.ts; then
             echo 'needed=false' >> "$GITHUB_OUTPUT"
-            echo 'Tenant operational boundaries already present'
           else
             echo 'needed=true' >> "$GITHUB_OUTPUT"
           fi
@@ -46,19 +45,18 @@ jobs:
           sentrux gate --save . | tee /tmp/before.txt
           Q=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
-          echo "BEFORE=$Q"
 
-      - name: Extract real operational boundaries
+      - name: Refine wrapper routing
         if: steps.detect.outputs.needed == 'true'
         run: |
           set -euo pipefail
           python3 .github/sentrux-tenant-wrapper-transform
-          grep -q 'from "./operational-stock-routes.js"' server/apps/tenant-worker/src/index-base.ts
-          grep -q 'from "./operational-manufacturing-routes.js"' server/apps/tenant-worker/src/index-base.ts
-          test -f server/apps/tenant-worker/src/operational-stock-routes.ts
-          test -f server/apps/tenant-worker/src/operational-manufacturing-routes.ts
+          grep -q 'from "./operational-router.js"' server/apps/tenant-worker/src/index-base.ts
+          grep -q 'from "./account-security-routes.js"' server/apps/tenant-worker/src/index-base.ts
+          test -f server/apps/tenant-worker/src/operational-router.ts
+          test -f server/apps/tenant-worker/src/account-security-routes.ts
           git diff --check
-          git diff --stat -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-*-routes.ts
+          git diff --stat -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-router.ts server/apps/tenant-worker/src/account-security-routes.ts
 
       - name: Install dependencies
         if: steps.detect.outputs.needed == 'true'
@@ -91,13 +89,13 @@ jobs:
           sentrux check . 2>&1 | tee /tmp/structure.txt
           set -e
           rm -rf .sentrux
-          echo "TENANT_OPERATIONAL_BOUNDARY_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          echo "TENANT_WRAPPER_REFINEMENT_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -ge "$BEFORE"
-          ! grep -q 'server/apps/tenant-worker/src/index-base.ts (fan-out=' /tmp/structure.txt
-          ! grep -q 'server/apps/tenant-worker/src/index-base.ts:fetch (cc=' /tmp/structure.txt
-          ! grep -Eq 'server/apps/tenant-worker/src/operational-(stock|manufacturing)-routes.ts \(fan-out=' /tmp/structure.txt
-          ! grep -Eq 'server/apps/tenant-worker/src/operational-(stock|manufacturing)-routes.ts:.* \(cc=' /tmp/structure.txt
-          ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
+          if grep -q 'server/apps/tenant-worker/src/index-base.ts (fan-out=' /tmp/structure.txt; then exit 1; fi
+          if grep -q 'server/apps/tenant-worker/src/index-base.ts:fetch (cc=' /tmp/structure.txt; then exit 1; fi
+          if grep -Eq 'server/apps/tenant-worker/src/(operational-router|account-security-routes).ts \(fan-out=' /tmp/structure.txt; then exit 1; fi
+          if grep -Eq 'server/apps/tenant-worker/src/(operational-router|account-security-routes).ts:.* \(cc=' /tmp/structure.txt; then exit 1; fi
+          if grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt; then exit 1; fi
 
       - name: Commit validated source improvement
         if: steps.detect.outputs.needed == 'true'
@@ -105,8 +103,8 @@ jobs:
           set -euo pipefail
           git config user.name 'sentrux-refactor-bot'
           git config user.email 'sentrux-refactor-bot@users.noreply.github.com'
-          git add -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-stock-routes.ts server/apps/tenant-worker/src/operational-manufacturing-routes.ts
+          git add -- server/apps/tenant-worker/src/index-base.ts server/apps/tenant-worker/src/operational-router.ts server/apps/tenant-worker/src/account-security-routes.ts
           git diff --cached --check
           git diff --cached --stat
-          git commit --no-verify -m 'refactor(tenant): extract operational route boundaries [skip sentrux]'
+          git commit --no-verify -m 'refactor(tenant): refine wrapper routing boundaries [skip sentrux]'
           git push origin HEAD:${{ github.head_ref }}
