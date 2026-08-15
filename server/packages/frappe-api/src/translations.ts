@@ -1,17 +1,25 @@
 /**
  * Server-side translation catalogue.
  *
- * The client has a translator core but no source of strings, so every label has
- * been rendering as its English source text. For a Vietnamese deployment that is
- * not a missing nicety — it is the product being in the wrong language.
+ * Generic Form/List surfaces render canonical DocType metadata. Most canonical ERP metadata uses
+ * English source labels, while a tenant's D1 catalogue normally contains only local/custom terms.
+ * Vietnamese therefore needs a platform baseline instead of falling straight back to English.
  *
- * Lookup falls back to the source string rather than an empty value: a missing
- * translation must degrade to readable English, never to a blank label.
+ * Precedence is intentional:
+ *   tenant D1 translation > built-in Vietnamese ERP fallback > original source text.
+ *
+ * This keeps tenant wording authoritative while making newly installed/generic ERP metadata useful
+ * in Vietnamese without requiring every tenant to duplicate the same common dictionary.
  */
 
 import { errors } from "../../core/src/index.js";
+import { translateVietnameseSource } from "./vietnamese-translations.js";
 
 const MAX_BATCH = 500;
+
+function isVietnameseLanguage(language: string): boolean {
+  return String(language ?? "").trim().toLowerCase().split(/[-_]/)[0] === "vi";
+}
 
 export class D1TranslationStore {
   private readonly db: D1Database | D1DatabaseSession;
@@ -29,9 +37,10 @@ export class D1TranslationStore {
     if (unique.length > MAX_BATCH) throw errors.validation(`At most ${MAX_BATCH} strings may be translated at once`);
 
     const output: Record<string, string> = {};
-    // Fall back to the source first, then let any real translation overwrite it —
-    // so a partially translated catalogue still returns a full, readable map.
-    for (const source of unique) output[source] = source;
+    const vietnamese = isVietnameseLanguage(language);
+    // Platform fallback first. Tenant rows below always overwrite it, so per-tenant terminology
+    // remains authoritative. Unknown strings still degrade to the readable source text.
+    for (const source of unique) output[source] = vietnamese ? translateVietnameseSource(source) : source;
 
     // Chunked to stay inside D1's bound-parameter cap; the batch limit above alone
     // would not.
@@ -65,7 +74,7 @@ export class D1TranslationStore {
     return statements.length;
   }
 
-  /** Removes a translation, so a bad entry can fall back to source text again. */
+  /** Removes a translation, so a bad entry can fall back to the platform/source text again. */
   async remove(tenantId: string, language: string, source: string, context = ""): Promise<boolean> {
     const result = await this.db.prepare(
       `DELETE FROM translations WHERE tenant_id=?1 AND language=?2 AND context=?3 AND source_text=?4`,
