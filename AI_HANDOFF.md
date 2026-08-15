@@ -46,4 +46,5 @@ Production migration, restore/PITR, DNS/secret/provider mutation, customer-data 
 4. `PROJECT_CONTEXT.md`;
 5. `docs/README.md`;
 6. `skills/forge-enterprise-completion/SKILL.md`;
-7. North Star/capability map and scope-specific contracts/evidence.
+7. for sidebar/navigation/field visibility/form/list/grid/workspace/TSX/shell/UI removal tasks, load `skills/forge-ui-change-routing/SKILL.md` and its `references/SURFACE_ATLAS.md` before editing;
+8. North Star/capability map and scope-specific contracts/evidence.
