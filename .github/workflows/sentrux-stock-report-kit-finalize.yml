@@ -1,0 +1,133 @@
+name: Sentrux stock report kit finalize
+
+on:
+  push:
+    branches: [agent/sentrux-convergence-20260816]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-convergence-20260816
+
+      - name: Detect completed migration
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! grep -R 'from "@metaforge/views";' \
+            client/packages/stock-vn/src/TongHopDoiTuongScreen.tsx \
+            client/packages/stock-vn/src/SoChiTietScreen.tsx \
+            client/packages/stock-vn/src/XuatNhapTonScreen.tsx; then
+            echo 'done=true' >> "$GITHUB_OUTPUT"
+            echo 'stock report consumers already migrated; no-op'
+          else
+            echo 'done=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Sentrux
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Capture baseline
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before.txt
+          BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
+          echo "BEFORE=$BEFORE" >> "$GITHUB_ENV"
+          echo "Baseline Quality=$BEFORE"
+
+      - name: Migrate stock report consumers
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          for name in ('TongHopDoiTuongScreen.tsx','SoChiTietScreen.tsx','XuatNhapTonScreen.tsx'):
+              path = Path('client/packages/stock-vn/src') / name
+              raw = path.read_bytes()
+              old = b'from "@metaforge/views";'
+              new = b'from "@metaforge/views/stock-report-kit";'
+              if new in raw:
+                  print('already migrated', path)
+                  continue
+              if old not in raw:
+                  raise SystemExit(f'expected root views import missing in {path}')
+              path.write_bytes(raw.replace(old, new, 1))
+              print('migrate', path)
+          PY
+          git diff --stat
+
+      - name: Install package-only workspace
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd client
+          printf 'packages:\n  - "packages/*"\n' > pnpm-workspace.yaml
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+          pnpm install --no-frozen-lockfile
+
+      - name: Build views and stock-vn
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd client
+          pnpm --filter @metaforge/views build
+          pnpm --filter @metaforge/stock-vn build
+
+      - name: Restore validation-only workspace files
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- client/pnpm-workspace.yaml client/pnpm-lock.yaml
+
+      - name: Sentrux regression and quality gate
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate . | tee /tmp/after.txt
+          AFTER=$(sed -nE 's/^Quality:[[:space:]]*[0-9]+[[:space:]]*->[[:space:]]*([0-9]+).*/\1/p' /tmp/after.txt | tail -1)
+          if [[ -z "$AFTER" ]]; then
+            echo 'Unable to parse candidate quality from Sentrux gate output' >&2
+            exit 1
+          fi
+          echo "Candidate Quality=$AFTER (baseline=$BEFORE)"
+          if (( AFTER < BEFORE )); then
+            echo "Quality regression: $BEFORE -> $AFTER" >&2
+            exit 1
+          fi
+
+      - name: Commit migrated consumers
+        if: steps.state.outputs.done != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'sentrux-agent'
+          git config user.email 'sentrux-agent@users.noreply.github.com'
+          git add \
+            client/packages/stock-vn/src/TongHopDoiTuongScreen.tsx \
+            client/packages/stock-vn/src/SoChiTietScreen.tsx \
+            client/packages/stock-vn/src/XuatNhapTonScreen.tsx
+          git diff --cached --stat
+          git commit -m 'refactor(stock-vn): use narrow report dependency kit'
+          git push origin HEAD:agent/sentrux-convergence-20260816
