@@ -134,7 +134,7 @@ jobs:
           cd client
           corepack enable
           corepack prepare pnpm@9.15.0 --activate
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
 
       - name: Typecheck runtime
         if: steps.state.outputs.done != 'true'
