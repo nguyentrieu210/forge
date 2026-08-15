@@ -1,52 +1,8 @@
 import { ControllerRegistry } from "../../document-kernel/src/index.js";
-import { CrmChannelPartnerController, CrmFieldCheckInController, CrmSalesRouteController, CrmSalesRouteStopController, CrmSellOutReportController } from "./crm-channel-controllers.js";
-import { CrmGeoVerifiedPromotionExecutionController, CrmSubmittedSellInSnapshotController } from "./crm-channel-evidence-guards.js";
-import { CrmActivityController } from "./crm-controllers.js";
-import { CrmCustomer360Controller } from "./crm-customer-360-controller.js";
-import { CrmContactController, CrmOrganizationController } from "./crm-directory-controllers.js";
-import { CrmDeduplicatingLeadController } from "./crm-lead-dedupe-controller.js";
-import { CrmConsentAwareMarketingListMemberController } from "./crm-marketing-consent-controller.js";
-import { CrmCampaignAttributionController, CrmCampaignController, CrmMarketingListController, CrmSegmentController } from "./crm-marketing-controllers.js";
-import { CrmCommissionAccrualController, CrmCommissionRuleController, CrmSalesTargetController } from "./crm-performance-controllers.js";
-import { CrmLeadScoreRuleController, CrmLeadScoreSnapshotController } from "./crm-scoring-controllers.js";
-import { CrmSalesTeamController, CrmSalesTeamMemberController, CrmTeamAwareDealController } from "./crm-team-controllers.js";
-import { ArSalesInvoiceController } from "./ar-sales-invoice-controller.js";
-import { DeliveryNoteController } from "./controllers.js";
-import { PaymentAllocationController } from "./finance-controllers.js";
-import { R5FinanceHcmPaymentEntryController } from "./r5-finance-hcm-payment-entry.js";
-import { CompleteQuotationController, CompleteSalesOrderController } from "./sales-commercial-complete-controllers.js";
+import { registerCrmControllers } from "./registry-crm.js";
+import { registerO2CControllers } from "./registry-o2c.js";
 
 export function createO2CControllerRegistry(): ControllerRegistry {
-  return new ControllerRegistry()
-    .register(new CrmDeduplicatingLeadController())
-    .register(new CrmTeamAwareDealController())
-    .register(new CrmActivityController())
-    .register(new CrmCustomer360Controller())
-    .register(new CrmOrganizationController())
-    .register(new CrmContactController())
-    .register(new CrmSalesTeamController())
-    .register(new CrmSalesTeamMemberController())
-    .register(new CrmLeadScoreRuleController())
-    .register(new CrmLeadScoreSnapshotController())
-    .register(new CrmSalesTargetController())
-    .register(new CrmCommissionRuleController())
-    .register(new CrmCommissionAccrualController())
-    .register(new CrmSegmentController())
-    .register(new CrmMarketingListController())
-    .register(new CrmConsentAwareMarketingListMemberController())
-    .register(new CrmCampaignController())
-    .register(new CrmCampaignAttributionController())
-    .register(new CrmChannelPartnerController())
-    .register(new CrmSalesRouteController())
-    .register(new CrmSalesRouteStopController())
-    .register(new CrmFieldCheckInController())
-    .register(new CrmSellOutReportController())
-    .register(new CrmSubmittedSellInSnapshotController())
-    .register(new CrmGeoVerifiedPromotionExecutionController())
-    .register(new CompleteQuotationController())
-    .register(new CompleteSalesOrderController())
-    .register(new DeliveryNoteController())
-    .register(new ArSalesInvoiceController())
-    .register(new R5FinanceHcmPaymentEntryController())
-    .register(new PaymentAllocationController());
+  const registry = registerCrmControllers(new ControllerRegistry());
+  return registerO2CControllers(registry);
 }
