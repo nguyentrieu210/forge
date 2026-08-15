@@ -39,9 +39,8 @@ const ALUMDOOR_HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong qr
 const ALUMDOOR_HR_KEY_ORDER = [
   "Employee", "AlumDoor Pay Profile",
   "AlumDoor Attendance Day", "AlumDoor Attendance Device", "AlumDoor QR Station", "AlumDoor Attendance Policy",
-  "alumdoor-attendance:scan", "alumdoor-attendance:kiosk", "alumdoor-attendance:today", "alumdoor-attendance:month",
-  "alumdoor-attendance:exceptions", "alumdoor-attendance:payroll-lite",
-  "alumdoor-attendance:my-slips-lite", "alumdoor-attendance:hr-payroll-settings-lite",
+  "alumdoor-attendance:scan", "alumdoor-attendance:today", "alumdoor-attendance:month",
+  "alumdoor-attendance:exceptions",
 ];
 const ALUMDOOR_HR_KEYS = new Set(ALUMDOOR_HR_KEY_ORDER);
 

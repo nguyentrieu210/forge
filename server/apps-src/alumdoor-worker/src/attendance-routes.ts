@@ -1,5 +1,4 @@
 /** AlumDoor static-station QR, GPS and registered-device app methods. */
-import { attendanceStationLiteCreateSchema, formatZodMessage } from "@cloudforge/alumdoor-hr-payroll-contract";
 import {
   AttendanceQrError,
   inspectStaticAttendanceStationToken,
@@ -173,25 +172,6 @@ export async function attendanceStationQr(input: { request: Request; call: Atten
     const loaded = await loadStation({ call: input.call, station: stationCode, now: input.now ?? new Date() });
     const issued = await issueStaticAttendanceStationToken({ tenant, station: loaded.stationCode, tokenVersion: loaded.tokenVersion, secret: activeSecret(input.env) });
     return json({ station: loaded.stationCode, station_name: loaded.stationName, token: issued.token, token_version: loaded.tokenVersion });
-  } catch (error) { return attendanceError(error); }
-}
-
-export async function attendanceStationLiteCreate(input: { request: Request; call: AttendancePlatformCall; args: Json }): Promise<Response> {
-  try {
-    requireManager(input.request);
-    const parsed = attendanceStationLiteCreateSchema.safeParse(input.args);
-    if (!parsed.success) return fail("ATTENDANCE_STATION_INPUT_INVALID", formatZodMessage(parsed.error));
-    const response = await input.call("method/metaforge.api.commit_alumdoor_attendance_station_lite", {
-      method: "POST",
-      body: JSON.stringify(parsed.data),
-    });
-    const payload = await response.json().catch(() => ({})) as Json;
-    if (!response.ok) throw new AttendanceRouteError(
-      "ATTENDANCE_STATION_CREATE_FAILED",
-      typeof payload.message === "string" ? payload.message : "Không tạo được trạm chấm công.",
-      response.status,
-    );
-    return json(payload.message ?? payload.data ?? payload);
   } catch (error) { return attendanceError(error); }
 }
 

@@ -104,23 +104,6 @@ export interface FrappeRouterContext {
     request: string; action: "approve" | "reject"; note?: string;
   }) => Promise<JsonObject>;
   approveAlumdoorPayroll?: (input: { payrollEntry: string }) => Promise<JsonObject>;
-  commitAlumdoorEmployeeLite?: (input: {
-    employeeName: string; employeeFullName: string; mobile: string;
-    dateOfJoining: string; idempotencyKey: string;
-  }) => Promise<JsonObject>;
-  commitAlumdoorHrLiteSettings?: (input: {
-    company: string; workplace: string; currency: string;
-    morningStart: string; morningEnd: string; afternoonStart: string; afternoonEnd: string; overtimeStart: string;
-    payDayOfMonth: number; idempotencyKey: string;
-  }) => Promise<JsonObject>;
-  commitAlumdoorAttendanceStationLite?: (input: {
-    stationCode: string; stationName: string; latitude: number; longitude: number;
-    allowedRadiusM: number; idempotencyKey: string;
-  }) => Promise<JsonObject>;
-  commitAlumdoorPayProfileLite?: (input: {
-    profileName: string; employee: string; payMode: "MONTHLY" | "DAILY";
-    baseSalaryVnd: number; fixedAllowanceVnd: number; effectiveFrom: string; idempotencyKey: string;
-  }) => Promise<JsonObject>;
   now(): string;
   /** Overlay store for Custom Field / Property Setter. */
   customizations: CustomizationStore;
@@ -1021,21 +1004,6 @@ async function dispatchMethod(
     case "metaforge.api.approve_alumdoor_payroll":
       return methodResponse(await approveAlumdoorPayroll(args, context));
 
-    case "metaforge.api.commit_alumdoor_employee_lite":
-      return methodResponse(await commitAlumdoorEmployeeLite(args, context));
-
-    case "metaforge.api.commit_alumdoor_hr_lite_settings":
-      return methodResponse(await commitAlumdoorHrLiteSettings(args, context));
-
-    case "metaforge.api.commit_alumdoor_attendance_station_lite":
-      return methodResponse(await commitAlumdoorAttendanceStationLite(args, context));
-
-    case "metaforge.api.commit_alumdoor_pay_profile_lite":
-      return methodResponse(await commitAlumdoorPayProfileLite(args, context));
-
-    case "metaforge.api.get_alumdoor_hr_lite_organization":
-      return methodResponse(await getAlumdoorHrLiteOrganization(context));
-
     // The QR page needs a tiny, non-sensitive station/policy snapshot before it can
     // verify a short HMAC challenge.  Keep that read here rather than granting every
     // Employee the right to browse Attendance Policy or QR Station documents.
@@ -1382,137 +1350,6 @@ async function approveAlumdoorPayroll(args: FrappeArgs, context: FrappeRouterCon
     throw errors.permission("AlumDoor payroll approval accepts only the verified AlumDoor app callback.");
   }
   return context.approveAlumdoorPayroll({ payrollEntry: args.requireText("payroll_entry", 320) });
-}
-
-async function commitAlumdoorEmployeeLite(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
-  if (context.appCallbackAppId !== "alumdoor" || !context.commitAlumdoorEmployeeLite) {
-    throw errors.permission("AlumDoor Employee Lite accepts only the verified AlumDoor app callback.");
-  }
-  const employeeFullName = args.requireText("employee_name", 120);
-  const mobile = args.requireText("mobile", 40);
-  const dateOfJoining = args.requireText("date_of_joining", 10);
-  const idempotencyKey = args.requireText("idempotency_key", 128);
-  const meta = await requireMeta("Employee", context);
-  const employeeName = await context.metadata.nextName(
-    context.tenantId,
-    "Employee",
-    meta.autoname ?? "hash",
-    context.now(),
-    { employee_name: employeeFullName, mobile, date_of_joining: dateOfJoining },
-  );
-  return context.commitAlumdoorEmployeeLite({ employeeName, employeeFullName, mobile, dateOfJoining, idempotencyKey });
-}
-async function commitAlumdoorHrLiteSettings(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
-  if (context.appCallbackAppId !== "alumdoor" || !context.commitAlumdoorHrLiteSettings) {
-    throw errors.permission("AlumDoor HR Lite Settings accepts only the verified AlumDoor app callback.");
-  }
-  return context.commitAlumdoorHrLiteSettings({
-    company: args.requireText("company", 160),
-    workplace: args.requireText("workplace", 160),
-    currency: args.requireText("currency", 3),
-    morningStart: args.requireText("morning_start", 5),
-    morningEnd: args.requireText("morning_end", 5),
-    afternoonStart: args.requireText("afternoon_start", 5),
-    afternoonEnd: args.requireText("afternoon_end", 5),
-    overtimeStart: args.requireText("overtime_start", 5),
-    payDayOfMonth: args.int("pay_day_of_month", 5),
-    idempotencyKey: args.requireText("idempotency_key", 128),
-  });
-}
-async function commitAlumdoorAttendanceStationLite(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
-  if (context.appCallbackAppId !== "alumdoor" || !context.commitAlumdoorAttendanceStationLite) {
-    throw errors.permission("AlumDoor Attendance Station Lite accepts only the verified AlumDoor app callback.");
-  }
-  const idempotencyKey = args.requireText("idempotency_key", 128);
-  const compact = idempotencyKey.toUpperCase().replace(/[^A-Z0-9]+/gu, "").slice(0, 14);
-  if (compact.length < 10) throw errors.validation("Idempotency key is invalid");
-  return context.commitAlumdoorAttendanceStationLite({
-    stationCode: `ST-${compact}`,
-    stationName: args.requireText("station_name", 120),
-    latitude: Number(args.requireText("latitude", 32)),
-    longitude: Number(args.requireText("longitude", 32)),
-    allowedRadiusM: Number(args.requireText("allowed_radius_m", 16)),
-    idempotencyKey,
-  });
-}
-async function commitAlumdoorPayProfileLite(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
-  if (context.appCallbackAppId !== "alumdoor" || !context.commitAlumdoorPayProfileLite) {
-    throw errors.permission("AlumDoor Pay Profile Lite accepts only the verified AlumDoor app callback.");
-  }
-  const employee = args.requireText("employee", 160);
-  const payMode = args.requireText("pay_mode", 16);
-  if (payMode !== "MONTHLY" && payMode !== "DAILY") throw errors.validation("pay_mode must be MONTHLY or DAILY");
-  const baseSalaryVnd = args.int("base_salary_vnd", 0);
-  const fixedAllowanceVnd = args.int("fixed_allowance_vnd", 0);
-  const effectiveFrom = args.requireText("effective_from", 10);
-  const idempotencyKey = args.requireText("idempotency_key", 128);
-  const meta = await requireMeta("AlumDoor Pay Profile", context);
-  const profileName = await context.metadata.nextName(
-    context.tenantId, "AlumDoor Pay Profile", meta.autoname ?? "hash", context.now(),
-    { employee, pay_mode: payMode, effective_from: effectiveFrom },
-  );
-  return context.commitAlumdoorPayProfileLite({
-    profileName, employee, payMode, baseSalaryVnd, fixedAllowanceVnd, effectiveFrom, idempotencyKey,
-  });
-}
-async function getAlumdoorHrLiteOrganization(context: FrappeRouterContext): Promise<JsonObject> {
-  if (context.appCallbackAppId !== "alumdoor") {
-    throw errors.permission("AlumDoor HR Lite organization accepts only the verified AlumDoor app callback.");
-  }
-  const companies = (await context.documents.listMasterRecordData(context.tenantId, "Company"))
-    .filter((entry) => entry.data.disabled !== 1 && entry.data.enabled !== 0);
-  const allBranches = (await context.documents.listMasterRecordData(context.tenantId, "Branch"))
-    .filter((entry) => entry.data.disabled !== 1 && entry.data.enabled !== 0);
-  const activeCurrencies = (await context.documents.listMasterRecordData(context.tenantId, "Currency"))
-    .filter((entry) => entry.data.disabled !== 1 && entry.data.enabled !== 0);
-  const settings = await context.documents.getDocument<JsonObject>(context.tenantId, "AlumDoor HR Lite Settings", "AlumDoor HR Lite Settings");
-  const configuredCompany = typeof settings?.data.company === "string" ? settings.data.company.trim() : "";
-  const configuredWorkplace = typeof settings?.data.workplace === "string" ? settings.data.workplace.trim() : "";
-  const configuredCurrency = typeof settings?.data.currency === "string" ? settings.data.currency.trim().toUpperCase() : "";
-  const company = configuredCompany || (companies.length === 1 ? companies[0]?.name : "");
-  const companyBranches = company
-    ? allBranches.filter((entry) => !entry.data.company || entry.data.company === company)
-    : allBranches;
-  // Small-business tenants can predate Company-scoped Branch masters. If nothing is
-  // mapped yet, keep their existing workplace usable instead of forcing data cleanup
-  // before HR Lite can be configured.
-  const branches = company && companyBranches.length === 0 ? allBranches : companyBranches;
-  const workplace = configuredWorkplace || (company && branches.length === 1 ? branches[0]?.name : "");
-  const companyValid = Boolean(company && companies.some((entry) => entry.name === company));
-  const workplaceValid = Boolean(workplace && branches.some((entry) => entry.name === workplace));
-  const selectedCompany = companies.find((entry) => entry.name === company);
-  const companyCurrency = typeof selectedCompany?.data.default_currency === "string" ? selectedCompany.data.default_currency.trim().toUpperCase() : "";
-  const currencyRows = activeCurrencies.length > 0 ? activeCurrencies : [{ name: "VND", data: {} as JsonObject }];
-  const currency = configuredCurrency || companyCurrency || (currencyRows.some((entry) => entry.name === "VND") ? "VND" : currencyRows.length === 1 ? currencyRows[0]?.name : "");
-  const currencyValid = Boolean(currency && currencyRows.some((entry) => entry.name === currency));
-  return {
-    company: company || null,
-    workplace: workplace || null,
-    currency: currency || null,
-    ready: companyValid && workplaceValid && currencyValid,
-    configured: Boolean(configuredCompany && configuredWorkplace && configuredCurrency),
-    pay_day_of_month: typeof settings?.data.pay_day_of_month === "number" ? settings.data.pay_day_of_month : 5,
-    morning_start: typeof settings?.data.morning_start === "string" ? settings.data.morning_start : "07:00",
-    morning_end: typeof settings?.data.morning_end === "string" ? settings.data.morning_end : "11:30",
-    afternoon_start: typeof settings?.data.afternoon_start === "string" ? settings.data.afternoon_start : "13:00",
-    afternoon_end: typeof settings?.data.afternoon_end === "string" ? settings.data.afternoon_end : "17:00",
-    overtime_start: typeof settings?.data.overtime_start === "string" ? settings.data.overtime_start : "17:30",
-    attendance_policy: typeof settings?.data.attendance_policy === "string" ? settings.data.attendance_policy : "",
-    owner_only_mode: settings?.data.owner_only_mode !== 0,
-    companies: companies.map((entry) => ({
-      value: entry.name,
-      label: typeof entry.data.company_name === "string" && entry.data.company_name.trim() ? entry.data.company_name.trim() : entry.name,
-      currency: typeof entry.data.default_currency === "string" ? entry.data.default_currency.trim().toUpperCase() : "",
-    })),
-    workplaces: allBranches.map((entry) => ({
-      value: entry.name,
-      label: typeof entry.data.branch_name === "string" && entry.data.branch_name.trim() ? entry.data.branch_name.trim() : entry.name,
-      company: typeof entry.data.company === "string" ? entry.data.company : "",
-    })),
-    currencies: currencyRows.map((entry) => ({ value: entry.name, label: entry.name })),
-    company_count: companies.length,
-    workplace_count: branches.length,
-  };
 }
 async function alumdoorAttendanceQrConfig(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   if (context.appCallbackAppId !== "alumdoor") {

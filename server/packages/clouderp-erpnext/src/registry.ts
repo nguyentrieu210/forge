@@ -68,7 +68,6 @@ import {
 import { HrmSalarySlipController } from "./hrm-salary-slip.js";
 import { AlumDoorAttendanceDayController, AlumDoorAttendanceDeviceController } from "./alumdoor-attendance.js";
 import { AlumDoorPayProfileController } from "./alumdoor-payroll.js";
-import { AlumDoorAwareEmployeeController } from "./hrm-employee-lite.js";
 import { AlumDoorAwarePayrollEntryController } from "./alumdoor-payroll-entry.js";
 import { CutOrderReservationIntegrityController } from "./cut-order-reservation-integrity.js";
 import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
@@ -101,7 +100,6 @@ import {
 
 export function registerErpNextCoreControllers(registry: ControllerRegistry): ControllerRegistry {
   return registry
-    .register(new AlumDoorAwareEmployeeController())
     .register(new CreditNoteController())
     .register(new DebitNoteController())
     .register(new StockReturnIntegrityController())

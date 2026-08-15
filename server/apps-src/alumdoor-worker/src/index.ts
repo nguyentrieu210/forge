@@ -61,7 +61,6 @@ import {
   attendanceResolveStation,
   attendanceRotateStationQr,
   attendanceScan,
-  attendanceStationLiteCreate,
   attendanceStationQr,
 } from "./attendance-routes.js";
 import {
@@ -72,11 +71,6 @@ import {
   payrollApprovePeriod, payrollCalculatePeriod, payrollCreatePeriod, payrollMarkPaid,
   payrollMySlips, payrollPeriodList, payrollPeriodSlips, payrollSubmitPeriod,
 } from "./payroll-routes.js";
-import {
-  employeeLiteCreate, employeeLiteList, payProfileLiteGet, payProfileLiteSave,
-  payrollLiteFinalize, payrollLiteMarkPaid, payrollLiteMySlips, payrollLitePeriodList,
-  payrollLitePeriodSlips, payrollLitePreview, payrollLiteSettingsGet, payrollLiteSettingsSave,
-} from "./hr-payroll-lite-routes.js";
 
 interface Env {
   INTERNAL_AUTH_SECRET?: string;
@@ -127,7 +121,6 @@ const refuse = (message: string) => new Response(JSON.stringify({ message }), { 
 const accept = () => answer({ ok: true });
 const forbidden = (message: string) => new Response(JSON.stringify({ message }), { status: 403, headers: { "content-type": "application/json" } });
 
-const HR_LITE_OWNER_ROLES = new Set(["Administrator", "System Manager", "HR Manager", "AlumDoor Payroll Approver"]);
 
 function platformActorIdentity(request: Request): { user_id: string; roles: string[] } {
   const encoded = request.headers.get("x-cloudforge-identity") ?? "";
@@ -149,11 +142,6 @@ function platformActorIdentity(request: Request): { user_id: string; roles: stri
 
 function platformActorUser(request: Request): string {
   return platformActorIdentity(request).user_id;
-}
-
-function canManageHrPayrollLite(request: Request): boolean {
-  const actor = platformActorIdentity(request);
-  return actor.user_id === "Administrator" || actor.roles.some((role) => HR_LITE_OWNER_ROLES.has(role));
 }
 
 interface InventoryItem {
@@ -3398,7 +3386,6 @@ export default {
         const call = platformCaller(request, env);
         if (method === "alumdoor.attendance.challenge") return await attendanceChallenge();
         if (method === "alumdoor.attendance.station_qr") return await attendanceStationQr({ request, call, env, args });
-        if (method === "alumdoor.attendance.station_create_lite") return await attendanceStationLiteCreate({ request, call, args });
         if (method === "alumdoor.attendance.rotate_station_qr") return await attendanceRotateStationQr({ request, call, env, args });
         if (method === "alumdoor.attendance.resolve_station") return await attendanceResolveStation({ request, call, env, args });
         if (method === "alumdoor.attendance.scan") return await attendanceScan({ request, call, env, args });
@@ -3408,21 +3395,6 @@ export default {
         if (method === "alumdoor.attendance.correction_requests") return await attendanceCorrectionRequests({ call });
         if (method === "alumdoor.attendance.submit_correction") return await attendanceSubmitCorrection({ call, args });
         if (method === "alumdoor.attendance.review_correction") return await attendanceReviewCorrection({ call, args });
-        if ((method.startsWith("alumdoor.hr_lite.") || (method.startsWith("alumdoor.payroll_lite.") && method !== "alumdoor.payroll_lite.my_slips")) && !canManageHrPayrollLite(request)) {
-          return forbidden("Chỉ chủ doanh nghiệp hoặc người quản lý lương được dùng chức năng này.");
-        }
-        if (method === "alumdoor.hr_lite.employee_list") return await employeeLiteList({ call, args });
-        if (method === "alumdoor.hr_lite.employee_create") return await employeeLiteCreate({ call, args });
-        if (method === "alumdoor.hr_lite.pay_profile_get") return await payProfileLiteGet({ call, args });
-        if (method === "alumdoor.hr_lite.pay_profile_save") return await payProfileLiteSave({ call, args });
-        if (method === "alumdoor.payroll_lite.settings_get") return await payrollLiteSettingsGet({ call });
-        if (method === "alumdoor.payroll_lite.settings_save") return await payrollLiteSettingsSave({ call, args });
-        if (method === "alumdoor.payroll_lite.period_list") return await payrollLitePeriodList({ call, args });
-        if (method === "alumdoor.payroll_lite.period_preview") return await payrollLitePreview({ call, args });
-        if (method === "alumdoor.payroll_lite.period_finalize") return await payrollLiteFinalize({ call, args });
-        if (method === "alumdoor.payroll_lite.period_mark_paid") return await payrollLiteMarkPaid({ call, args });
-        if (method === "alumdoor.payroll_lite.period_slips") return await payrollLitePeriodSlips({ call, args });
-        if (method === "alumdoor.payroll_lite.my_slips") return await payrollLiteMySlips({ call, args, actorUser: platformActorUser(request) });
         if (method === "alumdoor.payroll.period_list") return await payrollPeriodList({ call, args });
         if (method === "alumdoor.payroll.create_period") return await payrollCreatePeriod({ call, args });
         if (method === "alumdoor.payroll.calculate_period") return await payrollCalculatePeriod({ call, args });

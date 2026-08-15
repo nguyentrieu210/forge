@@ -32,10 +32,8 @@ const ApprovalInbox = lazy(() => import("./experiences/ApprovalInbox.js").then((
 const SocialCommerce = lazy(() => import("./experiences/SocialCommerce.js").then((module) => ({ default: module.SocialCommerce })));
 const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetailedLedger.js").then((module) => ({ default: module.DailyDetailedLedger })));
 const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
-const AlumdoorAttendanceKiosk = lazy(() => import("./experiences/AlumdoorAttendanceKiosk.js").then((module) => ({ default: module.AlumdoorAttendanceKiosk })));
 const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));
 const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));
-const AlumdoorHrPayrollLite = lazy(() => import("./experiences/AlumdoorHrPayrollLite.js").then((module) => ({ default: module.AlumdoorHrPayrollLite })));
 const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));
 
 /**
@@ -679,30 +677,10 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   if (kind === "alumdoor-attendance") {
     const mode = experienceKey.slice("alumdoor-attendance:".length);
     const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Attendance & Payroll";
-    const liteMode = mode === "payroll-lite" || mode === "my-slips-lite" || mode === "hr-payroll-settings-lite"
-      ? mode
-      : null;
-    if (liteMode) {
-      return (
-        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
-          <AlumdoorHrPayrollLite
-            mode={liteMode}
-            onExit={() => navigate(`/overview/${encodeURIComponent(manifest.domain ?? manifest.id)}`)}
-          />
-        </Shell>
-      );
-    }
     if (mode === "scan") {
       return (
         <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
           <AlumdoorAttendanceScanner />
-        </Shell>
-      );
-    }
-    if (mode === "kiosk" || mode === "mobile") {
-      return (
-        <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label }]}>
-          <AlumdoorAttendanceKiosk />
         </Shell>
       );
     }
