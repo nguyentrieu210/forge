@@ -1,9 +1,12 @@
-name: Sentrux broad views root metric probe
+name: Sentrux stock report kit metric probe
+
 on:
   push:
     branches: [agent/sentrux-convergence-20260816]
+
 permissions:
   contents: read
+
 jobs:
   measure:
     runs-on: ubuntu-latest
@@ -13,21 +16,65 @@ jobs:
         with:
           fetch-depth: 0
           ref: agent/sentrux-convergence-20260816
+
       - name: Install Sentrux
+        shell: bash
         run: |
+          set -euo pipefail
           curl -fsSL -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
           chmod +x /tmp/sentrux
           sudo mv /tmp/sentrux /usr/local/bin/sentrux
-      - name: Measure broad boundary
+
+      - name: Measure stock report kit candidate
         shell: bash
         run: |
           set -euo pipefail
           sentrux gate --save . | tee /tmp/before.txt
           BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
-          node scripts/sentrux-lean-views-root.mjs
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          kit = Path('client/packages/views/src/stock-report-kit.ts')
+          kit.write_text('''/** Narrow dependency surface for stock/accounting reports. */
+export { useMetaForge, useLocaleFormat } from "./container/meta-context.js";
+export { useList } from "./container/hooks.js";
+export { resolveDateRange } from "./list/date-range.js";
+export { PeriodPicker, type PeriodPickerProps } from "./report/PeriodPicker.js";
+export { exportFormXlsx, ymdToDmy, type FormXlsxOptions, type HeaderMerge } from "./report/form-export.js";
+''', encoding='utf-8')
+
+          pkg_path = Path('client/packages/views/package.json')
+          pkg = pkg_path.read_text(encoding='utf-8')
+          anchor = '''    "./form": {\n      "types": "./dist/form/FormView.d.ts",\n      "import": "./dist/form/FormView.js"\n    }\n'''
+          replacement = '''    "./form": {\n      "types": "./dist/form/FormView.d.ts",\n      "import": "./dist/form/FormView.js"\n    },\n    "./stock-report-kit": {\n      "types": "./dist/stock-report-kit.d.ts",\n      "import": "./dist/stock-report-kit.js"\n    }\n'''
+          if anchor not in pkg:
+              raise SystemExit('views package export anchor missing')
+          pkg_path.write_text(pkg.replace(anchor, replacement, 1), encoding='utf-8')
+
+          screens = [
+              Path('client/packages/stock-vn/src/TongHopDoiTuongScreen.tsx'),
+              Path('client/packages/stock-vn/src/SoChiTietScreen.tsx'),
+              Path('client/packages/stock-vn/src/XuatNhapTonScreen.tsx'),
+          ]
+          for path in screens:
+              src = path.read_text(encoding='utf-8')
+              old = 'from "@metaforge/views";'
+              if old not in src:
+                  raise SystemExit(f'root views import missing in {path}')
+              next_src = src.replace(old, 'from "@metaforge/views/stock-report-kit";', 1)
+              path.write_text(next_src, encoding='utf-8')
+              print('migrate', path)
+          PY
+
+          # Sentrux enumerates git ls-files; stage only the new candidate file so it is included.
+          git add client/packages/views/src/stock-report-kit.ts
+          git diff --stat
+
           sentrux gate --save . | tee /tmp/after.txt
           AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
           export BEFORE AFTER
+
           python3 <<'PY'
           import json, os, select, subprocess, time
           p=subprocess.Popen(["sentrux","--mcp"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
@@ -40,7 +87,7 @@ jobs:
                   line=p.stdout.readline()
                   if not line: break
                   try: m=json.loads(line)
-                  except: continue
+                  except Exception: continue
                   if m.get("id")==i: return m
               raise RuntimeError(i)
           def args(t):
@@ -48,10 +95,12 @@ jobs:
               for k in ("path","root","project_path","directory"):
                   if k in pr: a[k]="."; break
               for k in rq:
-                  if k not in a: a[k]="." if pr.get(k,{}).get("type")=="string" else False
+                  if k not in a:
+                      typ=pr.get(k,{}).get("type")
+                      a[k]="." if typ=="string" else False if typ=="boolean" else [] if typ=="array" else {}
               return a
           def text(m): return json.loads(next(x["text"] for x in m["result"]["content"] if x.get("type")=="text"))
-          send({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"broad-root","version":"1"}}}); recv(1)
+          send({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"stock-report-kit","version":"1"}}}); recv(1)
           send({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})
           send({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}); by={t["name"]:t for t in recv(2)["result"]["tools"]}
           send({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"scan","arguments":args(by["scan"])}}); recv(3)
