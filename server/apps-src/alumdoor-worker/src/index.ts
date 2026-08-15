@@ -591,6 +591,158 @@ function nearlyEqual(left: number, right: number): boolean {
   return Math.abs(left - right) <= Math.max(0.000001, Math.abs(right) * 0.000001);
 }
 
+type TransactionQuantityState = [expectedFactor: number, expectedStockQuantity: number];
+
+function validateAreaTransactionQuantity(
+  row: Record<string, unknown>,
+  item: InventoryItem,
+  side: TransactionSide,
+  selected: string,
+  mode: string,
+  quantity: number,
+  customerGroup: string,
+  doorPolicies: DoorFormulaPolicy[],
+  dynamicSquareMetreToSet: boolean,
+  initialExpectedFactor: number,
+  initialExpectedStockQuantity: number,
+  line: string,
+): Response | TransactionQuantityState {
+  let expectedFactor = initialExpectedFactor;
+  let expectedStockQuantity = initialExpectedStockQuantity;
+  if (mode !== "Thành phẩm theo m2") return [expectedFactor, expectedStockQuantity];
+
+  const sets = Number(row.set_count ?? 1);
+  if (!Number.isFinite(sets) || sets <= 0) return refuse(`${line}: Số cái/bộ phải lớn hơn 0.`);
+  if (!SALES_AREA_UOMS.has(selected)) {
+    if (SALES_SET_UOMS.has(selected) && !nearlyEqual(quantity, sets)) {
+      return refuse(`${line}: bán theo Bộ thì số lượng tính tiền phải bằng số bộ.`);
+    }
+    return [expectedFactor, expectedStockQuantity];
+  }
+
+  const width = Number(row.width_m);
+  const height = Number(row.height_m);
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    return refuse(`${line}: hàng tính m2 phải có rộng và cao lớn hơn 0.`);
+  }
+  const doorType = side === "sales" ? inferDoorType(item.door_type, item.item_group) : null;
+  let billable: number;
+  if (doorType) {
+    if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+      return refuse(`${line}: khách hàng chưa có Nhóm giá Đại lý/Lẻ; không thể chọn đúng công thức đo và cắt.`);
+    }
+    const rawSalesMode = String(row.sales_mode ?? "Trọn bộ").trim();
+    if (rawSalesMode !== "Tách món" && rawSalesMode !== "Trọn bộ") {
+      return refuse(`${line}: Cách bán phải là Tách món hoặc Trọn bộ.`);
+    }
+    try {
+      const policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""));
+      const calculated = calculateDoorFormula(policy, {
+        door_type: doorType,
+        item_group: String(item.item_group ?? ""),
+        customer_group: customerGroup as CustomerGroup,
+        sales_mode: rawSalesMode as SalesMode,
+        has_butterfly_bracket: checked(row.has_butterfly_bracket),
+        is_manual_pull: checked(row.is_manual_pull) || isManualPullGroup(item.item_group),
+        measured_width_m: width,
+        cover_height_m: height,
+        set_count: sets,
+        min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
+        purpose: "sales",
+      });
+      billable = Number(calculated.billable_area_sqm);
+      if (row.formula_policy && String(row.formula_policy) !== calculated.policy_name) {
+        return refuse(`${line}: đang chụp chính sách ${row.formula_policy}, đúng phải là ${calculated.policy_name}.`);
+      }
+      if (row.width_basis && String(row.width_basis) !== calculated.width_basis) {
+        return refuse(`${line}: cơ sở rộng phải là ${calculated.width_basis} theo nhóm khách ${customerGroup}.`);
+      }
+      if (row.cut_width_m != null && row.cut_width_m !== ""
+        && !nearlyEqual(Number(row.cut_width_m), calculated.cut_width_m)) {
+        return refuse(`${line}: rộng cắt phải là ${calculated.cut_width_m.toFixed(4)} m theo ${calculated.policy_name}.`);
+      }
+      if (row.billable_area_sqm != null && row.billable_area_sqm !== ""
+        && !nearlyEqual(Number(row.billable_area_sqm), billable)) {
+        return refuse(`${line}: diện tích chụp trên dòng phải là ${billable.toFixed(6)} m2 theo ${calculated.policy_name}.`);
+      }
+    } catch (error) {
+      return refuse(`${line}: ${error instanceof Error ? error.message : "không tính được công thức cửa"}`);
+    }
+  } else {
+    billable = Math.max(width * height, Number(item.min_area_sqm ?? 0) || 0) * sets;
+  }
+  if (!nearlyEqual(quantity, billable)) {
+    return refuse(`${line}: SL tính tiền phải là ${billable.toFixed(6)} m2 theo kích thước và diện tích tối thiểu của Item.`);
+  }
+  if (dynamicSquareMetreToSet) {
+    expectedFactor = sets / quantity;
+    expectedStockQuantity = sets;
+  }
+  return [expectedFactor, expectedStockQuantity];
+}
+
+function validateSalesTransactionQuantity(
+  row: Record<string, unknown>,
+  side: TransactionSide,
+  mode: string,
+  selected: string,
+  uom: string,
+  quantity: number,
+  ordinaryQuantityItem: boolean,
+  widthQuantityItem: boolean,
+  linearBasis: LinearSalesBasis | undefined,
+  line: string,
+): Response | null {
+  if (side !== "sales") return null;
+  if (ordinaryQuantityItem) {
+    const enteredCount = Number(row.set_count ?? quantity);
+    if (!Number.isFinite(enteredCount) || enteredCount <= 0) return refuse(`${line}: Số lượng phải lớn hơn 0.`);
+    if (!nearlyEqual(quantity, enteredCount)) return refuse(`${line}: Khối lượng phải bằng Số lượng (${enteredCount}).`);
+    return null;
+  }
+  if (widthQuantityItem && SALES_METRE_UOMS.has(selected)) {
+    const width = Number(row.width_m);
+    const quantityUnits = Number(row.set_count ?? 1);
+    if (!Number.isFinite(width) || width <= 0) return refuse(`${line}: Bộ 3 lá đáy/Lá đầu cần nhập Rộng lớn hơn 0.`);
+    if (!Number.isFinite(quantityUnits) || quantityUnits <= 0) return refuse(`${line}: cần nhập Số lượng lớn hơn 0.`);
+    const billableLength = width * quantityUnits;
+    if (!nearlyEqual(quantity, billableLength)) {
+      return refuse(`${line}: SL tính tiền phải là ${billableLength.toFixed(6)} Mét = Rộng × Số lượng.`);
+    }
+    return null;
+  }
+  if (linearBasis && SALES_METRE_UOMS.has(selected)) {
+    const dimension = Number(linearBasis === "RAY" ? row.height_m : row.width_m);
+    const quantityUnits = Number(row.set_count);
+    if (!Number.isFinite(dimension) || dimension <= 0) {
+      return refuse(`${line}: ${linearBasis === "RAY" ? "Ray cần nhập Cao" : "Trục cần nhập Rộng"} lớn hơn 0.`);
+    }
+    if (!Number.isFinite(quantityUnits) || quantityUnits <= 0) return refuse(`${line}: cần nhập Số lượng lớn hơn 0.`);
+    const billableLength = dimension * quantityUnits;
+    if (!nearlyEqual(quantity, billableLength)) {
+      return refuse(`${line}: SL tính tiền phải là ${billableLength.toFixed(6)} Mét = ${linearBasis === "RAY" ? "Cao" : "Rộng"} × Số lượng.`);
+    }
+    return null;
+  }
+  if (mode === "Nhôm cây/lá" && SALES_METRE_UOMS.has(selected)) {
+    const length = Number(row.length_m);
+    const pieces = Number(row.qty_bar);
+    if (!Number.isFinite(length) || length <= 0) return refuse(`${line}: bán theo Mét phải nhập chiều dài một cây/đoạn lớn hơn 0.`);
+    if (!Number.isFinite(pieces) || pieces <= 0) return refuse(`${line}: bán theo Mét phải nhập số cây/đoạn lớn hơn 0.`);
+    const billableLength = length * pieces;
+    if (!nearlyEqual(quantity, billableLength)) {
+      return refuse(`${line}: SL tính tiền phải là ${billableLength.toFixed(6)} Mét = chiều dài × số cây/đoạn.`);
+    }
+    return null;
+  }
+  if (mode === "Nhôm cây/lá" && SALES_PIECE_UOMS.has(selected)) {
+    const pieces = Number(row.qty_bar);
+    if (!Number.isFinite(pieces) || pieces <= 0) return refuse(`${line}: bán theo ${uom} phải nhập số cây/lá/đoạn lớn hơn 0.`);
+    if (!nearlyEqual(quantity, pieces)) return refuse(`${line}: SL tính tiền theo ${uom} phải bằng số cây/lá/đoạn (${pieces}).`);
+  }
+  return null;
+}
+
 /**
  * One Item contract for the entire purchase/sales chain.
  *
@@ -692,126 +844,16 @@ async function validateTransactionLines(
     if (!Number.isFinite(quantity) || quantity <= 0) return refuse(`${line}: số lượng phải lớn hơn 0.`);
     let expectedFactor = uom ? factors.get(uom) ?? 1 : 1;
     let expectedStockQuantity = quantity * expectedFactor;
-    if (mode === "Thành phẩm theo m2") {
-      const sets = Number(row.set_count ?? 1);
-      if (!Number.isFinite(sets) || sets <= 0) return refuse(`${line}: Số cái/bộ phải lớn hơn 0.`);
-      if (SALES_AREA_UOMS.has(selected)) {
-        const width = Number(row.width_m);
-        const height = Number(row.height_m);
-        if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
-          return refuse(`${line}: hàng tính m2 phải có rộng và cao lớn hơn 0.`);
-        }
-        const doorType = side === "sales" ? inferDoorType(item.door_type, item.item_group) : null;
-        let billable: number;
-        if (doorType) {
-          if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
-            return refuse(`${line}: khách hàng chưa có Nhóm giá Đại lý/Lẻ; không thể chọn đúng công thức đo và cắt.`);
-          }
-          const rawSalesMode = String(row.sales_mode ?? "Trọn bộ").trim();
-          if (rawSalesMode !== "Tách món" && rawSalesMode !== "Trọn bộ") {
-            return refuse(`${line}: Cách bán phải là Tách món hoặc Trọn bộ.`);
-          }
-          try {
-            const policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""));
-            const calculated = calculateDoorFormula(policy, {
-              door_type: doorType,
-              item_group: String(item.item_group ?? ""),
-              customer_group: customerGroup as CustomerGroup,
-              sales_mode: rawSalesMode as SalesMode,
-              has_butterfly_bracket: checked(row.has_butterfly_bracket),
-              is_manual_pull: checked(row.is_manual_pull) || isManualPullGroup(item.item_group),
-              measured_width_m: width,
-              cover_height_m: height,
-              set_count: sets,
-              min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
-              purpose: "sales",
-            });
-            billable = Number(calculated.billable_area_sqm);
-            if (row.formula_policy && String(row.formula_policy) !== calculated.policy_name) {
-              return refuse(`${line}: đang chụp chính sách ${row.formula_policy}, đúng phải là ${calculated.policy_name}.`);
-            }
-            if (row.width_basis && String(row.width_basis) !== calculated.width_basis) {
-              return refuse(`${line}: cơ sở rộng phải là ${calculated.width_basis} theo nhóm khách ${customerGroup}.`);
-            }
-            if (row.cut_width_m != null && row.cut_width_m !== ""
-              && !nearlyEqual(Number(row.cut_width_m), calculated.cut_width_m)) {
-              return refuse(`${line}: rộng cắt phải là ${calculated.cut_width_m.toFixed(4)} m theo ${calculated.policy_name}.`);
-            }
-            if (row.billable_area_sqm != null && row.billable_area_sqm !== ""
-              && !nearlyEqual(Number(row.billable_area_sqm), billable)) {
-              return refuse(`${line}: diện tích chụp trên dòng phải là ${billable.toFixed(6)} m2 theo ${calculated.policy_name}.`);
-            }
-          } catch (error) {
-            return refuse(`${line}: ${error instanceof Error ? error.message : "không tính được công thức cửa"}`);
-          }
-        } else {
-          billable = Math.max(width * height, Number(item.min_area_sqm ?? 0) || 0) * sets;
-        }
-        if (!nearlyEqual(quantity, billable)) return refuse(`${line}: SL tính tiền phải là ${billable.toFixed(6)} m2 theo kích thước và diện tích tối thiểu của Item.`);
-        if (dynamicSquareMetreToSet) {
-          expectedFactor = sets / quantity;
-          expectedStockQuantity = sets;
-        }
-      } else if (SALES_SET_UOMS.has(selected) && !nearlyEqual(quantity, sets)) {
-        return refuse(`${line}: bán theo Bộ thì số lượng tính tiền phải bằng số bộ.`);
-      }
-    }
-    if (side === "sales" && ordinaryQuantityItem) {
-      const enteredCount = Number(row.set_count ?? quantity);
-      if (!Number.isFinite(enteredCount) || enteredCount <= 0) {
-        return refuse(`${line}: Số lượng phải lớn hơn 0.`);
-      }
-      if (!nearlyEqual(quantity, enteredCount)) {
-        return refuse(`${line}: Khối lượng phải bằng Số lượng (${enteredCount}).`);
-      }
-    } else if (side === "sales" && widthQuantityItem && SALES_METRE_UOMS.has(selected)) {
-      const width = Number(row.width_m);
-      const quantityUnits = Number(row.set_count ?? 1);
-      if (!Number.isFinite(width) || width <= 0) {
-        return refuse(`${line}: Bộ 3 lá đáy/Lá đầu cần nhập Rộng lớn hơn 0.`);
-      }
-      if (!Number.isFinite(quantityUnits) || quantityUnits <= 0) {
-        return refuse(`${line}: cần nhập Số lượng lớn hơn 0.`);
-      }
-      const billableLength = width * quantityUnits;
-      if (!nearlyEqual(quantity, billableLength)) {
-        return refuse(`${line}: SL tính tiền phải là ${billableLength.toFixed(6)} Mét = Rộng × Số lượng.`);
-      }
-    } else if (side === "sales" && linearBasis && SALES_METRE_UOMS.has(selected)) {
-      const dimension = Number(linearBasis === "RAY" ? row.height_m : row.width_m);
-      const quantityUnits = Number(row.set_count);
-      if (!Number.isFinite(dimension) || dimension <= 0) {
-        return refuse(`${line}: ${linearBasis === "RAY" ? "Ray cần nhập Cao" : "Trục cần nhập Rộng"} lớn hơn 0.`);
-      }
-      if (!Number.isFinite(quantityUnits) || quantityUnits <= 0) {
-        return refuse(`${line}: cần nhập Số lượng lớn hơn 0.`);
-      }
-      const billableLength = dimension * quantityUnits;
-      if (!nearlyEqual(quantity, billableLength)) {
-        return refuse(`${line}: SL tính tiền phải là ${billableLength.toFixed(6)} Mét = ${linearBasis === "RAY" ? "Cao" : "Rộng"} × Số lượng.`);
-      }
-    } else if (side === "sales" && mode === "Nhôm cây/lá" && SALES_METRE_UOMS.has(selected)) {
-      const length = Number(row.length_m);
-      const pieces = Number(row.qty_bar);
-      if (!Number.isFinite(length) || length <= 0) {
-        return refuse(`${line}: bán theo Mét phải nhập chiều dài một cây/đoạn lớn hơn 0.`);
-      }
-      if (!Number.isFinite(pieces) || pieces <= 0) {
-        return refuse(`${line}: bán theo Mét phải nhập số cây/đoạn lớn hơn 0.`);
-      }
-      const billableLength = length * pieces;
-      if (!nearlyEqual(quantity, billableLength)) {
-        return refuse(`${line}: SL tính tiền phải là ${billableLength.toFixed(6)} Mét = chiều dài × số cây/đoạn.`);
-      }
-    } else if (side === "sales" && mode === "Nhôm cây/lá" && SALES_PIECE_UOMS.has(selected)) {
-      const pieces = Number(row.qty_bar);
-      if (!Number.isFinite(pieces) || pieces <= 0) {
-        return refuse(`${line}: bán theo ${uom} phải nhập số cây/lá/đoạn lớn hơn 0.`);
-      }
-      if (!nearlyEqual(quantity, pieces)) {
-        return refuse(`${line}: SL tính tiền theo ${uom} phải bằng số cây/lá/đoạn (${pieces}).`);
-      }
-    }
+    const areaQuantity = validateAreaTransactionQuantity(
+      row, item, side, selected, mode, quantity, customerGroup, doorPolicies,
+      dynamicSquareMetreToSet, expectedFactor, expectedStockQuantity, line,
+    );
+    if (areaQuantity instanceof Response) return areaQuantity;
+    [expectedFactor, expectedStockQuantity] = areaQuantity;
+    const salesQuantityError = validateSalesTransactionQuantity(
+      row, side, mode, selected, uom, quantity, ordinaryQuantityItem, widthQuantityItem, linearBasis, line,
+    );
+    if (salesQuantityError) return salesQuantityError;
     /**
      * Nhôm mua theo Kg mà tồn theo CÂY: hệ số đến từ chính DÒNG, không từ hồ sơ mặt hàng.
      *
