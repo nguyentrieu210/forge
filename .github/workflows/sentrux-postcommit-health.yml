@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           sentrux gate --save . | tee /tmp/gate.txt
-      - name: MCP health snapshot
+      - name: MCP scan and health snapshot
         shell: bash
         run: |
           set -euo pipefail
@@ -49,23 +49,30 @@ jobs:
                   except Exception: continue
                   if m.get("id")==i: return m
               raise RuntimeError(f"timeout waiting for {i}")
+          def args_for(tool):
+              schema=tool.get("inputSchema",{})
+              props=schema.get("properties",{})
+              required=schema.get("required",[])
+              args={}
+              for k in ("path","root","project_path","directory"):
+                  if k in props: args[k]="."; break
+              for k in required:
+                  if k in args: continue
+                  typ=props.get(k,{}).get("type")
+                  args[k] = "." if typ=="string" else False if typ=="boolean" else [] if typ=="array" else {}
+              return args
           send({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"forge-post-collapse","version":"1"}}})
           recv(1)
           send({"jsonrpc":"2.0","method":"notifications/initialized","params":{}})
           send({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}})
           tools=recv(2).get("result",{}).get("tools",[])
-          health=next((t for t in tools if t.get("name")=="health"),None)
-          if not health: raise RuntimeError("health tool missing")
-          props=health.get("inputSchema",{}).get("properties",{})
-          required=health.get("inputSchema",{}).get("required",[])
-          args={}
-          for k in ("path","root","project_path","directory"):
-              if k in props: args[k]="."; break
-          for k in required:
-              if k in args: continue
-              typ=props.get(k,{}).get("type")
-              args[k] = "." if typ=="string" else False if typ=="boolean" else [] if typ=="array" else {}
-          send({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"health","arguments":args}})
-          print("MCP_HEALTH", json.dumps(recv(3), separators=(",", ":")))
+          by_name={t.get("name"):t for t in tools}
+          scan=by_name.get("scan")
+          health=by_name.get("health")
+          if not scan or not health: raise RuntimeError("scan/health tool missing")
+          send({"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"scan","arguments":args_for(scan)}})
+          print("MCP_SCAN", json.dumps(recv(3), separators=(",", ":")))
+          send({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"health","arguments":args_for(health)}})
+          print("MCP_HEALTH", json.dumps(recv(4), separators=(",", ":")))
           p.kill()
           PY
