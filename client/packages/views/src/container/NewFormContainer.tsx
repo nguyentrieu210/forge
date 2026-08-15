@@ -49,7 +49,7 @@ export interface NewFormContainerProps {
   fullWidth?: boolean;
 }
 
-function blankDoc(meta: DocTypeMeta, contextDefaults: Record<string, string> = {}): Doc {
+function blankDoc(meta: DocTypeMeta, contextDefaults: Record<string, string> = {}, singletonDefaults: Record<string, string> = {}): Doc {
   // `__islocal` là cờ CHUẨN của Frappe đánh dấu "bản ghi chưa lưu". Rất nhiều field ERPNext dùng
   // `read_only_depends_on: "eval: !doc.__islocal"` nghĩa là "chỉ sửa được lúc tạo mới" — vd
   // Warehouse.company. Không đặt cờ này thì `!undefined` = true ⇒ field bị KHOÁ ngay trên form tạo
@@ -60,6 +60,12 @@ function blankDoc(meta: DocTypeMeta, contextDefaults: Record<string, string> = {
     if (v !== undefined) doc[f.fieldname] = v;
   }
   for (const [fieldname, value] of Object.entries(contextDefaults)) {
+    if (meta.fields.some((f) => f.fieldname === fieldname) && (doc[fieldname] == null || doc[fieldname] === "")) doc[fieldname] = value;
+  }
+  // Ô Link không có gì để chọn ngoài một lựa chọn duy nhất không phải quyết định — tự điền để người
+  // dùng không phải mở dropdown chỉ để bấm đúng cái option duy nhất đang có. Áp SAU context defaults
+  // (context là chủ ý thật của người dùng/nghiệp vụ, vượt trên suy đoán "chỉ có 1 bản ghi").
+  for (const [fieldname, value] of Object.entries(singletonDefaults)) {
     if (meta.fields.some((f) => f.fieldname === fieldname) && (doc[fieldname] == null || doc[fieldname] === "")) doc[fieldname] = value;
   }
   // Mã định danh chính có sẵn ngay khi form mở nhưng vẫn là Data control thường — khách có thể sửa.
@@ -113,13 +119,47 @@ export function NewFormContainer(props: NewFormContainerProps) {
       ? { ...defaults, responsible_person: currentUser }
       : defaults;
   }, [doctype, businessContext, contextPolicies, currentUser]);
+  // Field Link đích chỉ có ĐÚNG 1 bản ghi ⇒ tự chọn, không bắt người dùng mở dropdown cho một lựa
+  // chọn không phải lựa chọn. Chỉ dò field thật sự sẽ hiển thị (renderPolicy.meta), field đã có
+  // default/context rồi thì bỏ qua — không tốn round-trip cho chỗ đã có giá trị.
+  //
+  // `ready` chặn FormView mount tới khi dò xong: RHF chỉ chụp defaultValues MỘT LẦN lúc mount
+  // (như ghi chú resetSeq/key bên dưới), nên nếu form mount trước rồi giá trị mới bay tới sau,
+  // set lại state không remount thì RHF không bao giờ thấy — hoặc phải remount và xoá sạch những
+  // gì người dùng vừa gõ trong lúc chờ. Gate trước khi mount tránh cả hai.
+  const [singletonState, setSingletonState] = useState<{ ready: boolean; defaults: Record<string, string> }>({ ready: false, defaults: {} });
+  useEffect(() => {
+    const fields = renderPolicy?.meta.fields;
+    const searchLink = services.searchLink;
+    if (!fields || !searchLink) { setSingletonState({ ready: true, defaults: {} }); return; }
+    const candidates = fields.filter((f) => (
+      f.fieldtype === "Link" && f.options && !f.read_only
+      && resolveDefault(f) === undefined && !contextDefaults[f.fieldname]
+    ));
+    if (!candidates.length) { setSingletonState({ ready: true, defaults: {} }); return; }
+    let cancelled = false;
+    setSingletonState({ ready: false, defaults: {} });
+    void Promise.all(candidates.map(async (f) => {
+      try {
+        const results = await searchLink(f.options as string, "", { pageLength: 2 });
+        return results.length === 1 ? [f.fieldname, results[0]!.value] as const : null;
+      } catch { return null; }
+    })).then((pairs) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      for (const pair of pairs) if (pair) next[pair[0]] = pair[1];
+      setSingletonState({ ready: true, defaults: next });
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renderPolicy?.meta, contextDefaults, services, resetSeq]);
   // Nhân bản (Duplicate) — form "new" mở từ FormContainer.onAction("duplicate") có thể mang theo
   // prefill qua sessionStorage. Tiêu thụ ĐÚNG 1 LẦN (ref, không phải mỗi lần useMemo chạy lại) —
   // "Lưu & Tạo tiếp" (resetSeq đổi) sau đó phải là blankDoc SẠCH, không lặp lại bản nhân bản cũ.
   const consumedDuplicateRef = useRef(false);
   const doc = useMemo(() => {
     if (!metaQ.data) return null;
-    const base = blankDoc(metaQ.data, contextDefaults);
+    const base = blankDoc(metaQ.data, contextDefaults, singletonState.defaults);
     if (!consumedDuplicateRef.current) {
       consumedDuplicateRef.current = true;
       const dup = consumeDuplicate(doctype);
@@ -135,7 +175,7 @@ export function NewFormContainer(props: NewFormContainerProps) {
     }
     return base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metaQ.data, contextDefaults, resetSeq, doctype]);
+  }, [metaQ.data, contextDefaults, singletonState.defaults, resetSeq, doctype]);
 
   // Chỉ hỏi xác nhận khi thật sự có dữ liệu chưa lưu (form dirty) — không hỏi vô cớ.
   /**
@@ -168,6 +208,7 @@ export function NewFormContainer(props: NewFormContainerProps) {
   if (metaQ.isLoading) return <div className="grid h-40 place-items-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   if (metaQ.error) return <div className="p-4 text-sm text-destructive" role="alert">{adapter.mapError(metaQ.error).message}</div>;
   if (doctype === "Sales Order" && currentUser === null) return <div className="grid h-40 place-items-center text-sm text-muted-foreground">{t("common.loading")}</div>;
+  if (!singletonState.ready) return <div className="grid h-40 place-items-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   if (!metaQ.data || !doc) return <div className="p-4 text-sm text-muted-foreground">{t("common.no_data")}</div>;
   if (renderPolicy && !renderPolicy.enabled) {
     return (

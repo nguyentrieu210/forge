@@ -1,37 +1,18 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import {
-  ALUMDOOR_HR_PAYROLL_METHODS,
-  ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR,
-  employeeLiteCreateSchema,
-  payProfileLiteSaveSchema,
-  type EmployeeLiteCreateInput,
-  type PayProfileLiteSaveFormInput,
-  type PayProfileLiteSaveInput,
-} from "@cloudforge/alumdoor-hr-payroll-contract";
+import { useCallback, useEffect, useState, type ChangeEvent, type ReactNode } from "react";
+import { ALUMDOOR_HR_PAYROLL_METHODS } from "@cloudforge/alumdoor-hr-payroll-contract";
 import { useMetaForge } from "@metaforge/views/provider";
 import {
-  Avatar, AvatarFallback, Badge, Button, Input, Label, Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue, Sheet, SheetContent, SheetHeader, SheetTitle, Skeleton,
+  Badge, Button, Input, Label, Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue, Skeleton,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@metaforge/ui";
 import {
-  ArrowLeft, Banknote, CalendarDays, CheckCircle2, ChevronRight, CircleAlert, Clock3,
-  Plus, RefreshCw, Search, Settings2, UserRoundPlus, Users,
+  ArrowLeft, Banknote, CalendarDays, CheckCircle2, CircleAlert, Clock3,
+  RefreshCw, Settings2,
 } from "lucide-react";
 
-export type AlumdoorHrPayrollLiteMode = "employees-lite" | "payroll-lite" | "my-slips-lite" | "hr-payroll-settings-lite";
+export type AlumdoorHrPayrollLiteMode = "payroll-lite" | "my-slips-lite" | "hr-payroll-settings-lite";
 
-interface EmployeeLite {
-  name: string;
-  employee_number?: string;
-  employee_name?: string;
-  mobile?: string;
-  date_of_joining?: string;
-  employee_status?: string;
-  has_pay_profile?: boolean;
-}
 interface PayrollPeriod {
   name: string;
   start_date?: string;
@@ -58,15 +39,6 @@ interface SalarySlip {
   alu_manual_deduction_vnd?: number;
   net_pay?: number | string;
 }
-interface PayProfileLite {
-  name: string;
-  pay_mode?: "MONTHLY" | "DAILY";
-  base_salary_vnd?: number;
-  fixed_allowance_vnd?: number;
-  effective_from?: string;
-  status?: string;
-  docstatus?: number;
-}
 interface LiteSettings {
   company?: string | null;
   workplace?: string | null;
@@ -88,91 +60,9 @@ interface LiteSettings {
 }
 
 export function AlumdoorHrPayrollLite({ mode, onExit }: { mode: AlumdoorHrPayrollLiteMode; onExit: () => void }) {
-  if (mode === "employees-lite") return <EmployeesLiteScreen onExit={onExit} />;
   if (mode === "payroll-lite") return <PayrollLiteScreen onExit={onExit} />;
   if (mode === "my-slips-lite") return <MySlipsLiteScreen onExit={onExit} />;
   return <SettingsLiteScreen onExit={onExit} />;
-}
-
-function EmployeesLiteScreen({ onExit }: { onExit: () => void }) {
-  const { adapter } = useMetaForge();
-  const [rows, setRows] = useState<EmployeeLite[]>([]);
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
-  const [salaryEmployee, setSalaryEmployee] = useState<EmployeeLite | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      setRows(await adapter.callPost<EmployeeLite[]>(ALUMDOOR_HR_PAYROLL_METHODS.employeeList, {}));
-      setFailure("");
-    } catch (error) { setFailure(errorText(adapter, error)); }
-    finally { setLoading(false); }
-  }, [adapter]);
-  useEffect(() => { void load(); }, [load]);
-
-  const filtered = useMemo(() => {
-    const needle = normalizeSearch(query);
-    if (!needle) return rows;
-    return rows.filter((row) => normalizeSearch(`${row.employee_name ?? ""} ${row.employee_number ?? ""} ${row.mobile ?? ""}`).includes(needle) || (row.mobile ?? "").endsWith(needle));
-  }, [query, rows]);
-
-  return <Page>
-    <PageHeader icon={<Users />} title="Nhân viên" subtitle={`${rows.filter((row) => row.employee_status !== "Nghỉ việc").length} người đang làm`} onExit={onExit} action={<Button onClick={() => setCreateOpen(true)}><Plus className="mr-2 size-4" />Thêm nhân viên</Button>} />
-    <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-center">
-      <div className="relative min-w-0 flex-1 sm:max-w-md"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tên, mã hoặc 4 số cuối SĐT" /></div>
-      <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}><RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />Làm mới</Button>
-    </div>
-    {failure ? <ErrorState message={failure} retry={load} /> : loading ? <ListSkeleton /> : !rows.length ? <EmptyState icon={<UserRoundPlus />} title="Chưa có nhân viên" description="Thêm người đầu tiên chỉ với họ tên, số điện thoại và ngày bắt đầu." action={<Button onClick={() => setCreateOpen(true)}>Thêm nhân viên</Button>} /> : !filtered.length ? <EmptyState title="Không có kết quả phù hợp" description="Thử tên, mã nhân viên hoặc bốn số cuối điện thoại." /> : <>
-      <div className="hidden overflow-hidden rounded-xl border md:block"><Table><TableHeader><TableRow><TableHead className="w-16">STT</TableHead><TableHead>Nhân viên</TableHead><TableHead>Điện thoại</TableHead><TableHead>Ngày bắt đầu</TableHead><TableHead>Tình trạng lương</TableHead><TableHead className="w-44">Thao tác</TableHead></TableRow></TableHeader><TableBody>{filtered.map((row, index) => <TableRow key={row.name}><TableCell>{index + 1}</TableCell><TableCell><EmployeeIdentity row={row} /></TableCell><TableCell><a href={`tel:${row.mobile ?? ""}`} className="text-primary hover:underline">{row.mobile || "—"}</a></TableCell><TableCell>{dateVi(row.date_of_joining)}</TableCell><TableCell>{row.has_pay_profile ? <Badge variant="success">Đã thiết lập</Badge> : <Badge variant="warning">Thiếu mức lương</Badge>}</TableCell><TableCell><Button size="sm" variant={row.has_pay_profile ? "outline" : "default"} onClick={() => setSalaryEmployee(row)}>{row.has_pay_profile ? "Đổi mức lương" : "Thiết lập lương"}</Button></TableCell></TableRow>)}</TableBody></Table></div>
-      <div className="grid gap-3 md:hidden">{filtered.map((row) => <article key={row.name} className="rounded-xl border bg-card p-4"><div className="flex items-start gap-3"><Avatar><AvatarFallback>{initials(row.employee_name)}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><div className="truncate font-semibold">{row.employee_name}</div><div className="text-xs text-muted-foreground">{row.employee_number}</div></div>{row.has_pay_profile ? <Badge variant="success">Đã có lương</Badge> : <Badge variant="warning">Thiếu lương</Badge>}</div><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><a href={`tel:${row.mobile ?? ""}`} className="text-primary">{row.mobile || "—"}</a><span className="text-right text-muted-foreground">Từ {dateVi(row.date_of_joining)}</span></div><Button className="mt-4 w-full" variant={row.has_pay_profile ? "outline" : "default"} onClick={() => setSalaryEmployee(row)}>{row.has_pay_profile ? "Đổi mức lương" : "Thiết lập lương"}<ChevronRight className="ml-2 size-4" /></Button></article>)}</div>
-    </>}
-    <EmployeeCreateSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={async (employee) => { setCreateOpen(false); await load(); setSalaryEmployee(employee); }} />
-    <PayProfileSheet employee={salaryEmployee} onOpenChange={(open) => { if (!open) setSalaryEmployee(null); }} onSaved={async () => { setSalaryEmployee(null); await load(); }} />
-  </Page>;
-}
-
-function EmployeeCreateSheet({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (open: boolean) => void; onCreated: (employee: EmployeeLite) => Promise<void> }) {
-  const { adapter } = useMetaForge();
-  const form = useForm<EmployeeLiteCreateInput>({ resolver: zodResolver(employeeLiteCreateSchema), defaultValues: { employee_name: "", mobile: "", date_of_joining: todayIso(), idempotency_key: idempotencyKey() } });
-  const [failure, setFailure] = useState("");
-  useEffect(() => { if (open) form.reset({ employee_name: "", mobile: "", date_of_joining: todayIso(), idempotency_key: idempotencyKey() }); }, [form, open]);
-  const submit = form.handleSubmit(async (values) => {
-    try { setFailure(""); await onCreated(await adapter.callPost<EmployeeLite>(ALUMDOOR_HR_PAYROLL_METHODS.employeeCreate, values)); }
-    catch (error) { setFailure(errorText(adapter, error)); }
-  });
-  return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent side="right" className="flex w-full flex-col sm:max-w-[680px]"><SheetHeader><SheetTitle>Thêm nhân viên</SheetTitle><p className="text-sm text-muted-foreground">Chỉ cần ba thông tin. Mã nhân viên và nơi làm việc được hệ thống tự điền.</p></SheetHeader><form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void submit(event)}><div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-5"><Field label="Họ và tên" error={form.formState.errors.employee_name?.message}><Input autoFocus {...form.register("employee_name")} placeholder="Nguyễn Văn A" /></Field><Field label="Số điện thoại" error={form.formState.errors.mobile?.message}><Input type="tel" inputMode="tel" {...form.register("mobile")} placeholder="09xx xxx xxx" /></Field><Field label="Ngày bắt đầu" error={form.formState.errors.date_of_joining?.message}><Input type="date" {...form.register("date_of_joining")} /></Field>{failure && <InlineError message={failure} />}</div><div className="flex justify-end gap-2 border-t py-4"><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button><Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Đang lưu…" : "Lưu & thiết lập lương"}</Button></div></form></SheetContent></Sheet>;
-}
-
-function PayProfileSheet({ employee, onOpenChange, onSaved }: { employee: EmployeeLite | null; onOpenChange: (open: boolean) => void; onSaved: () => Promise<void> }) {
-  const { adapter } = useMetaForge();
-  const form = useForm<PayProfileLiteSaveFormInput, unknown, PayProfileLiteSaveInput>({ resolver: zodResolver(payProfileLiteSaveSchema), defaultValues: { employee: "", pay_mode: "MONTHLY", base_salary_vnd: 0, fixed_allowance_vnd: 0, effective_from: todayIso(), idempotency_key: idempotencyKey() } });
-  const [failure, setFailure] = useState("");
-  useEffect(() => {
-    if (!employee) return;
-    let active = true;
-    const defaults: PayProfileLiteSaveInput = { employee: employee.name, pay_mode: "MONTHLY", base_salary_vnd: 0, fixed_allowance_vnd: 0, effective_from: employee.date_of_joining || todayIso(), idempotency_key: idempotencyKey() };
-    form.reset(defaults);
-    if (employee.has_pay_profile) void adapter.callPost<PayProfileLite[]>(ALUMDOOR_HR_PAYROLL_METHODS.payProfileGet, { employee: employee.name }).then((profiles) => {
-      if (!active) return;
-      const current = profiles.find((profile) => profile.status === "approved" || profile.docstatus === 1) ?? profiles[0];
-      if (!current) return;
-      const earliestChange = current.effective_from ? nextIsoDate(current.effective_from) : todayIso();
-      form.reset({
-        employee: employee.name,
-        pay_mode: current.pay_mode ?? "MONTHLY",
-        base_salary_vnd: current.base_salary_vnd ?? 0,
-        fixed_allowance_vnd: current.fixed_allowance_vnd ?? 0,
-        effective_from: earliestChange > todayIso() ? earliestChange : todayIso(),
-        idempotency_key: idempotencyKey(),
-      });
-    }).catch((error) => { if (active) setFailure(errorText(adapter, error)); });
-    return () => { active = false; };
-  }, [adapter, employee, form]);
-  const submit = form.handleSubmit(async (values) => { try { setFailure(""); await adapter.callPost(ALUMDOOR_HR_PAYROLL_METHODS.payProfileSave, values); await onSaved(); } catch (error) { setFailure(errorText(adapter, error)); } });
-  return <Sheet open={Boolean(employee)} onOpenChange={onOpenChange}><SheetContent side="right" className="flex w-full flex-col sm:max-w-[680px]"><SheetHeader><SheetTitle>{employee?.has_pay_profile ? "Thay đổi mức lương" : "Thiết lập mức lương"}</SheetTitle><p className="text-sm text-muted-foreground">{employee?.employee_name} · Tăng ca cố định {money(ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR)}/giờ</p></SheetHeader><form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void submit(event)}><div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-5"><Field label="Cách trả lương" error={form.formState.errors.pay_mode?.message}><Select value={form.watch("pay_mode")} onValueChange={(value) => form.setValue("pay_mode", value as "MONTHLY" | "DAILY", { shouldValidate: true })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MONTHLY">Lương tháng</SelectItem><SelectItem value="DAILY">Lương ngày</SelectItem></SelectContent></Select></Field><Field label="Mức lương" error={form.formState.errors.base_salary_vnd?.message}><Input type="number" min={1} step={1000} inputMode="numeric" {...form.register("base_salary_vnd")} /></Field><Field label="Hiệu lực từ" error={form.formState.errors.effective_from?.message}><Input type="date" {...form.register("effective_from")} /></Field><Field label="Phụ cấp cố định (không bắt buộc)" required={false} error={form.formState.errors.fixed_allowance_vnd?.message}><Input type="number" min={0} step={1000} inputMode="numeric" {...form.register("fixed_allowance_vnd")} /></Field><div className="rounded-lg border bg-muted/30 p-3"><div className="text-sm font-medium">Tăng ca</div><div className="mt-1 text-lg font-semibold tabular-nums">50.000 ₫/giờ</div><p className="mt-1 text-xs text-muted-foreground">Tính theo tổng phút tăng ca đã duyệt và làm tròn một lần.</p></div>{failure && <InlineError message={failure} />}</div><div className="flex justify-end gap-2 border-t py-4"><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button><Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Đang lưu…" : "Lưu mức lương"}</Button></div></form></SheetContent></Sheet>;
 }
 
 function PayrollLiteScreen({ onExit }: { onExit: () => void }) {
@@ -318,7 +208,6 @@ function SettingsLiteScreen({ onExit }: { onExit: () => void }) {
 function Page({ children }: { children: ReactNode }) { return <main className="min-h-full bg-background p-3 md:p-5"><div className="mx-auto flex max-w-[1600px] flex-col gap-4">{children}</div></main>; }
 function PageHeader({ icon, title, subtitle, onExit, action }: { icon: ReactNode; title: string; subtitle: string; onExit: () => void; action?: ReactNode }) { return <header className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><Button variant="ghost" size="icon" onClick={onExit} aria-label="Quay lại"><ArrowLeft className="size-4" /></Button><span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary [&_svg]:size-5">{icon}</span><div><h1 className="text-xl font-semibold">{title}</h1><p className="text-sm text-muted-foreground">{subtitle}</p></div></div>{action}</header>; }
 function Field({ label, error, required = true, children }: { label: string; error?: string; required?: boolean; children: ReactNode }) { return <div className="space-y-1.5"><Label>{label}{required ? <> <span className="text-destructive">*</span></> : null}</Label>{children}{error && <p className="text-sm text-destructive">{error}</p>}</div>; }
-function EmployeeIdentity({ row }: { row: EmployeeLite }) { return <div className="flex items-center gap-3"><Avatar><AvatarFallback>{initials(row.employee_name)}</AvatarFallback></Avatar><div><div className="font-medium">{row.employee_name}</div><div className="text-xs text-muted-foreground">{row.employee_number}</div></div></div>; }
 function Metric({ label, value }: { label: string; value: ReactNode }) { return <div className="rounded-xl border bg-card p-4"><div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-2 text-lg font-semibold tabular-nums">{value}</div></div>; }
 function EmptyState({ icon, title, description, action }: { icon?: ReactNode; title: string; description: string; action?: ReactNode }) { return <div className="grid min-h-64 place-items-center rounded-xl border border-dashed bg-muted/10 p-6 text-center"><div>{icon && <span className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-primary/10 text-primary [&_svg]:size-6">{icon}</span>}<h2 className="font-semibold">{title}</h2><p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>{action && <div className="mt-4">{action}</div>}</div></div>; }
 function ErrorState({ message, retry }: { message: string; retry: () => Promise<void> }) { return <EmptyState icon={<CircleAlert />} title="Chưa tải được dữ liệu" description={message} action={<Button variant="outline" onClick={() => void retry()}>Thử lại</Button>} />; }
@@ -331,11 +220,7 @@ function TimeRange({ label, start, end, onStart, onEnd }: { label: string; start
 
 function errorText(adapter: { mapError: (error: unknown) => { message: string } }, error: unknown): string { const direct = (error as { message?: unknown } | undefined)?.message; return typeof direct === "string" && direct.trim() ? direct.trim() : adapter.mapError(error).message; }
 function todayIso(): string { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`; }
-function nextIsoDate(value: string): string { const date = new Date(`${value}T00:00:00Z`); date.setUTCDate(date.getUTCDate() + 1); return date.toISOString().slice(0, 10); }
 function idempotencyKey(): string { return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `alu-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
-function normalizeSearch(value: string): string { return value.normalize("NFD").replace(/[\u0300-\u036f]/gu, "").toLocaleLowerCase("vi").trim(); }
-function initials(value?: string): string { return (value ?? "NV").split(/\s+/u).filter(Boolean).slice(-2).map((part) => part[0]?.toUpperCase()).join("") || "NV"; }
-function dateVi(value?: string): string { if (!value) return "—"; const [year, month, day] = value.split("-"); return year && month && day ? `${day}/${month}/${year}` : value; }
 function monthLabel(value?: string): string { if (!value) return "—"; const [year, month] = value.split("-"); return year && month ? `${month}/${year}` : value; }
 function money(value: unknown): string { return `${Math.round(Number(value) || 0).toLocaleString("vi-VN")} ₫`; }
 function duration(value: unknown): string { const minutes = Math.max(0, Math.round(Number(value) || 0)); return `${Math.floor(minutes / 60)}g${minutes % 60 ? ` ${minutes % 60}p` : ""}`; }

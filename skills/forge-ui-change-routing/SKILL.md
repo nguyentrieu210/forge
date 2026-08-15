@@ -72,6 +72,24 @@ Routing mặc định:
 
 Không tạo menu dẫn tới route/method không tồn tại.
 
+#### 4.1.1 Sidebar/nav của Alumdoor có 3 lớp thẩm quyền — phải khớp cả 3, không phải 1
+
+Bài học 2026-08-15 (xem thêm mục 8): sửa đúng canonical source vẫn có thể **không thấy gì đổi**, hoặc tệ hơn — **mất hẳn cả nhóm menu** — nếu bỏ sót 1 trong 3 lớp sau:
+
+1. **Canonical source** — ví dụ `server/apps-src/alumdoor-attendance/app.json` (field `nav[].group`, `nav[].label`). Đây là nơi SỬA, nhưng KHÔNG phải nơi server đang phục vụ.
+2. **D1 install snapshot** (`installed_apps.manifest_json` per tenant) — server đọc nav từ ĐÂY, một bản chụp lưu lúc app được "cài" cho tenant, KHÔNG tự đọc lại file nguồn mỗi request. Sửa (1) mà không release lại (2) thì client vẫn nhận y hệt dữ liệu cũ. Release bằng `node scripts/build-sidebar-release.mjs <app.json> <out.sql> <tenant> <from-version>` (bump `version` trong app.json trước, giá trị mới phải khác `from-version`) rồi áp bằng `wrangler d1 execute <db> --local --config <wrangler.jsonc> --file <out.sql>`, sau đó restart backend dev.
+3. **Client allow-list cứng** — `client/packages/shell/src/WorkspaceAppShellV2.tsx`: `ALUMDOOR_SIDEBAR_GROUPS`, `ALUMDOOR_HR_GROUPS`, `ALUMDOOR_HR_KEYS` lọc nav theo **tên group đã chuẩn hoá** (bỏ dấu, lowercase). Đây là logic ĐẶC THÙ Alumdoor nhưng sống trong package `shell` DÙNG CHUNG — không phải nơi lý tưởng, nhưng đang là nơi THẬT đang lọc. Đổi tên group ở (1)/(2) mà quên đổi ở đây -> item bị lọc rớt hoàn toàn khỏi sidebar, im lặng, không lỗi.
+
+**Quy trình bắt buộc khi đổi tên/gộp/tách group của Alumdoor:**
+
+1. Sửa `group` trong app.json nguồn (1).
+2. Bump `version` của app.json, release snapshot D1 (2) bằng `build-sidebar-release.mjs` + `wrangler d1 execute`.
+3. Grep tên group cũ trong `WorkspaceAppShellV2.tsx` (3) — cập nhật `ALUMDOOR_SIDEBAR_GROUPS`/`ALUMDOOR_HR_GROUPS`/`ALUMDOOR_HR_KEYS` cho khớp tên mới, rebuild package `shell` (`tsc -b`, vì Vite dev resolve `dist/` chứ không phải `src/`).
+4. Nếu có brief-generated mirror (`server/briefs/alumdoor-ui-rec-02-*.json` — chỉ dùng cho test/verify, KHÔNG phải nguồn server đọc) thì cũng cập nhật `alumdoor-ui-rec-02-navigation.plan.json` rồi chạy lại `node scripts/build-alumdoor-ui-rec-02-sidebar.mjs` để test không báo sai.
+5. Restart backend dev, hard refresh client, xác nhận bằng mắt — 3 lớp không có cơ chế tự báo lệch nhau.
+
+Không sửa (1) rồi dừng. Không sửa (3) trước khi chắc (2) đã release — cửa sổ giữa lúc chỉ sửa xong 1-2 lớp là lúc sidebar dễ mất trắng nhất.
+
 ### 4.2 Yêu cầu: “ẩn / hiện field”
 
 Nếu form đang dùng generic MetaForge:
@@ -245,6 +263,18 @@ Bài học:
 > Removal = **authority change + projection sweep**, không phải “xóa nơi đầu tiên tìm thấy”.
 
 Đồng thời các reference trong shared controls không bị xóa chỉ vì Alumdoor thôi dùng nữa; scope app và scope platform phải tách rõ.
+
+### 2026-08-15 — Gộp 2 group sidebar Alumdoor ("Chấm công & ca" + "Nhân viên & Lương" -> "Nhân sự & Tiền lương"), sửa đúng nguồn vẫn không thấy đổi, rồi mất trắng cả nhóm
+
+Sửa `group` trong `server/apps-src/alumdoor-attendance/app.json` (đúng canonical source theo mục 4.7/4.1) — refresh UI: **không đổi gì**. Nguyên nhân: server phục vụ nav từ `installed_apps.manifest_json` trong D1 (bản snapshot chụp lúc cài app cho tenant `demo`), không đọc lại file nguồn mỗi request. Sau đó sửa tiếp allow-list client (`WorkspaceAppShellV2.tsx`) sang tên group mới mà CHƯA release D1 — kết quả **cả nhóm biến mất khỏi sidebar**: D1 vẫn trả tên group cũ, client giờ chỉ nhận tên mới, không lớp nào khớp lớp nào -> bị lọc rớt toàn bộ, im lặng, không log lỗi.
+
+Khắc phục đúng thứ tự: bump version app.json -> `node scripts/build-sidebar-release.mjs apps-src/alumdoor-attendance/app.json out.sql demo <old-version>` -> `wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.alumdoor-local.jsonc --file out.sql` -> restart backend dev -> lúc này cả 3 lớp mới khớp nhau.
+
+Bài học:
+
+> Sidebar Alumdoor có 3 lớp thẩm quyền (nguồn, D1 snapshot, client allow-list — xem mục 4.1.1), không phải 1. "Sửa đúng file nguồn" là điều kiện CẦN, không phải ĐỦ — phải release D1 rồi mới đến việc đồng bộ allow-list client, không được đảo thứ tự.
+
+Cơ chế 3 lớp này tự nó là nợ kỹ thuật (không có gì tự báo lệch), nhưng đang hoạt động đúng và việc thay bằng flag tường minh trên manifest là việc lớn, đụng nhiều app khác — không refactor tùy tiện khi chưa có yêu cầu rõ ràng đủ lớn để đánh đổi rủi ro.
 
 ## 9. Verification matrix
 

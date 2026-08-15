@@ -39,17 +39,22 @@ async function createMetadataSafe(api: FrappeAdapter, doctype: string, raw: Reco
   return api.createDoc(doctype, Object.fromEntries(Object.entries(raw).filter(([k, v]) => allowed.has(k) && v !== undefined && v !== "")));
 }
 async function exists(api: FrappeAdapter, doctype: string, field: string, value: string, extra: Record<string, unknown> = {}) {
-  return (await api.getList(doctype, { fields: ["name"], filters: { [field]: value, ...extra }, pageLength: 1 })).length > 0;
+  // Server-side filters are whitelisted per doctype (`filterFields`); fields like Fiscal Year's
+  // `year` or Warehouse's `company` are not always on that list. Fetch broadly and match client-side
+  // instead of guessing which fields are filterable — these seed lists are always small.
+  const fields = [...new Set(["name", field, ...Object.keys(extra)])];
+  const rows = await api.getList(doctype, { fields, pageLength: 200 }) as Array<Record<string, unknown>>;
+  return rows.some(r => String(r[field] ?? "") === value && Object.entries(extra).every(([k, v]) => String(r[k] ?? "") === String(v)));
 }
 async function ensure(api: FrappeAdapter, result: ApplyResult, doctype: string, field: string, value: string, payload: Record<string, unknown>, extra: Record<string, unknown> = {}) {
   const key = `${doctype}: ${value}`; try { if (await exists(api, doctype, field, value, extra)) { result.existing.push(key); return; } await createMetadataSafe(api, doctype, payload); result.created.push(key); }
   catch (e) { result.failed.push(`${key} — ${api.mapError(e).message}`); }
 }
-async function seedTT99(api: FrappeAdapter, result: ApplyResult, company: string) {
+async function seedTT99(api: FrappeAdapter, result: ApplyResult, company: string, currency: string) {
   const rootNames = new Map<string, string>();
   for (const rootType of Object.keys(ROOTS) as Array<keyof typeof ROOTS>) {
     const rootName = `${ROOTS[rootType]} - ${company}`; rootNames.set(rootType, rootName);
-    await ensure(api, result, "Account", "account_name", rootName, { account_name: rootName, root_type: rootType, is_group: 1, company }, { company });
+    await ensure(api, result, "Account", "account_name", rootName, { account_name: rootName, root_type: rootType, is_group: 1, company, account_currency: currency }, { company });
   }
   const ordered = [...TT99_ACCOUNTS].sort((a, b) => a.code.length - b.code.length || a.code.localeCompare(b.code));
   const namesByCode = new Map<string, string>();
@@ -57,7 +62,7 @@ async function seedTT99(api: FrappeAdapter, result: ApplyResult, company: string
     const parentCode = [...namesByCode.keys()].filter(code => a.code.startsWith(code)).sort((x, y) => y.length - x.length)[0];
     const parent = parentCode ? namesByCode.get(parentCode) : rootNames.get(a.rootType);
     const accountName = `${a.code} - ${a.name}`; namesByCode.set(a.code, accountName);
-    await ensure(api, result, "Account", "account_name", accountName, { account_name: accountName, account_number: a.code, root_type: a.rootType, account_type: a.accountType, parent_account: parent, is_group: 0, company }, { company });
+    await ensure(api, result, "Account", "account_name", accountName, { account_name: accountName, account_number: a.code, root_type: a.rootType, account_type: a.accountType, parent_account: parent, is_group: 0, company, account_currency: currency }, { company });
   }
 }
 
@@ -78,12 +83,15 @@ function SetupCenter({ api, boot }: { api: FrappeAdapter; boot: MetaForgeBootDTO
       await ensure(api, r, "Fiscal Year", "year", fiscalYear, { year: fiscalYear, year_start_date: fiscalStart, year_end_date: fiscalEnd, disabled: 0 });
       await ensure(api, r, "Company", "company_name", company, { company_name: company, default_currency: currency, country: "Vietnam", tax_id: taxId, disabled: 0 });
       for (const uom of uomList) await ensure(api, r, "UOM", "uom_name", uom, { uom_name: uom, must_be_whole_number: ["Cái","Chiếc","Bộ","Cây","Thùng","Hộp"].includes(uom) ? 1 : 0 });
-      for (const name of warehouseList) await ensure(api, r, "Warehouse", "warehouse_name", name, { warehouse_name: name, company, is_group: 0, disabled: 0 }, { company });
-      await seedTT99(api, r, company);
-      for (const name of ["Tiền mặt", "Chuyển khoản", "Công nợ"]) await ensure(api, r, "Mode of Payment", "mode_of_payment", name, { mode_of_payment: name, enabled: 1 });
-      for (const name of ["Giá bán chuẩn", "Giá mua chuẩn"]) await ensure(api, r, "Price List", "price_list_name", name, { price_list_name: name, selling: name === "Giá bán chuẩn" ? 1 : 0, buying: name === "Giá mua chuẩn" ? 1 : 0 });
-      for (const name of ["Khách hàng doanh nghiệp", "Khách lẻ"]) await ensure(api, r, "Customer Group", "customer_group_name", name, { customer_group_name: name });
-      for (const name of ["Nguyên vật liệu", "Dịch vụ"]) await ensure(api, r, "Supplier Group", "supplier_group_name", name, { supplier_group_name: name });
+      // Alumdoor's Warehouse doctype (server/imports/alumdoor-warehouse-metadata-1.18.1.sql) has no
+      // company field — it is not scoped per company on this tenant.
+      for (const name of warehouseList) await ensure(api, r, "Warehouse", "warehouse_name", name, { warehouse_name: name, is_group: 0, disabled: 0 });
+      await seedTT99(api, r, company, currency);
+      // Mode of Payment, Customer Group and Supplier Group are not standalone doctypes on this
+      // tenant — Alumdoor represents them as inline Select fields (mode_of_payment, customer_group,
+      // supplier_group) on the documents that use them, per server/briefs/alumdoor-v2.json.
+      // Nothing to seed here.
+      for (const name of ["Giá bán chuẩn", "Giá mua chuẩn"]) await ensure(api, r, "Price List", "price_list_name", name, { price_list_name: name, effective_date: fiscalStart, currency });
       await ensure(api, r, "Cost Center", "cost_center_name", company, { cost_center_name: company, company, is_group: 1 }, { company });
       // Tax policy is intentionally captured but not posted into ledger templates here: the rate must be applied through the company's tax template/account mapping.
       void vatRate;
@@ -99,11 +107,15 @@ function SetupCenter({ api, boot }: { api: FrappeAdapter; boot: MetaForgeBootDTO
         {step === "uom" && <div className="grid gap-3 md:grid-cols-3">{DEFAULT_UOMS.map(u=><label key={u} className="flex items-center gap-3 rounded-lg border p-3"><Checkbox checked={selectedUoms.has(u)} onCheckedChange={v=>setSelectedUoms(prev=>{const n=new Set(prev);v?n.add(u):n.delete(u);return n})}/><span>{u}</span></label>)}</div>}
         {step === "warehouse" && <div><Label>Danh sách kho, mỗi dòng một kho</Label><textarea className="mt-2 min-h-48 w-full rounded-lg border bg-background p-3 text-sm" value={warehouses} onChange={e=>setWarehouses(e.target.value)}/><p className="mt-2 text-xs text-muted-foreground">Kho được tạo dưới Company hiện tại.</p></div>}
         {step === "tax" && <div className="grid gap-5 md:grid-cols-2"><div><Label>VAT mặc định</Label><Select value={vatRate} onValueChange={setVatRate}><SelectTrigger className="mt-2"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="0">0%</SelectItem><SelectItem value="5">5%</SelectItem><SelectItem value="8">8%</SelectItem><SelectItem value="10">10%</SelectItem></SelectContent></Select></div><div className="rounded-lg border bg-muted/30 p-4 text-sm"><b>Lưu ý</b><p className="mt-1 text-muted-foreground">Wizard lưu chính sách lựa chọn; tax template/GL mapping chỉ được kích hoạt khi Company đã có tài khoản thuế tương ứng. Không tự tạo bút toán.</p></div></div>}
-        {step === "defaults" && <div className="space-y-4"><div className="grid gap-4 md:grid-cols-2">{[["Thanh toán","Tiền mặt · Chuyển khoản · Công nợ"],["Bảng giá","Giá bán chuẩn · Giá mua chuẩn"],["Nhóm khách hàng","Khách hàng doanh nghiệp · Khách lẻ"],["Nhóm nhà cung cấp","Nguyên vật liệu · Dịch vụ"],["Cost Center","Một Cost Center gốc theo Company"],["ĐVT","11 ĐVT thông dụng"]].map(([a,b])=><div key={a} className="rounded-lg border p-4"><div className="font-medium">{a}</div><div className="mt-1 text-sm text-muted-foreground">{b}</div></div>)}</div></div>}
+        {step === "defaults" && <div className="space-y-4"><div className="grid gap-4 md:grid-cols-2">{[["Bảng giá","Giá bán chuẩn · Giá mua chuẩn"],["Cost Center","Một Cost Center gốc theo Company"],["ĐVT","11 ĐVT thông dụng"]].map(([a,b])=><div key={a} className="rounded-lg border p-4"><div className="font-medium">{a}</div><div className="mt-1 text-sm text-muted-foreground">{b}</div></div>)}</div></div>}
         {step === "review" && <div className="space-y-4"><div className="grid gap-3 md:grid-cols-2"><div className="rounded-lg border p-4"><Building2 className="size-5 text-primary"/><div className="mt-2 font-semibold">{companyName||"—"}</div><div className="text-sm text-muted-foreground">{currency} · MST {taxId||"—"}</div></div><div className="rounded-lg border p-4"><CalendarRange className="size-5 text-primary"/><div className="mt-2 font-semibold">TT99 · FY {fiscalYear}</div><div className="text-sm text-muted-foreground">{fiscalStart} → {fiscalEnd}</div></div><div className="rounded-lg border p-4"><PackageCheck className="size-5 text-primary"/><div className="mt-2 font-semibold">{uomList.length} ĐVT</div><div className="text-sm text-muted-foreground">{uomList.join(", ")}</div></div><div className="rounded-lg border p-4"><Warehouse className="size-5 text-primary"/><div className="mt-2 font-semibold">{warehouseList.length} kho</div><div className="text-sm text-muted-foreground">{warehouseList.join(", ")}</div></div></div><div className="rounded-lg border bg-muted/30 p-4 text-sm"><b>Hệ tài khoản TT99</b><p className="mt-1 text-muted-foreground">{TT99_ACCOUNTS.length} tài khoản + 5 root group và mapping tài khoản mặc định nền tảng.</p></div></div>}
         {result && <div className="mt-5 rounded-lg border bg-muted/30 p-4 text-sm"><b>Kết quả lần chạy gần nhất</b><div className="mt-2">Tạo mới: {result.created.length} · Đã có: {result.existing.length} · Lỗi: {result.failed.length}</div>{result.failed.length>0&&<ul className="mt-2 list-disc pl-5 text-destructive">{result.failed.slice(0,10).map(x=><li key={x}>{x}</li>)}</ul>}</div>}
         <div className="mt-8 flex justify-between"><Button variant="outline" disabled={idx===0} onClick={()=>setStep(STEPS[idx-1].key)}>Quay lại</Button>{step!=="review"?<Button onClick={()=>setStep(STEPS[idx+1].key)}>Tiếp tục</Button>:<Button disabled={applying} onClick={()=>void apply()}>{applying?<><Loader2 className="mr-2 size-4 animate-spin"/>Đang khởi tạo...</>:<>Tạo hệ thống</>}</Button>}</div>
       </section></main><Toaster/></div>;
 }
 
-export function ERPSetupStandalone() { return <AuthBoundary fallback={<LoginForm />}><I18nProvider><SetupCenter api={adapter} boot={adapter.getBootDTO()}/></I18nProvider></AuthBoundary>; }
+export function ERPSetupStandalone() {
+  return <AuthBoundary adapter={adapter} renderGuest={retry => <LoginForm adapter={adapter} onSuccess={retry} />}>
+    {boot => <I18nProvider><SetupCenter api={adapter} boot={boot} /></I18nProvider>}
+  </AuthBoundary>;
+}

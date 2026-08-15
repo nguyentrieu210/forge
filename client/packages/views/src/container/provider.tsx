@@ -202,6 +202,7 @@ function QuickCreateDialog({ doctype, onDone }: { doctype: string; onDone: (name
             <LazyNewFormContainer
               doctype={doctype}
               fullWidth={hasChildTable}
+              presentation={hasChildTable ? "page" : "dialog"}
               onCreated={(name) => onDone(name)}
               onCancel={() => onDone(undefined)}
             />

@@ -207,7 +207,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
                 <AlumdoorSalesOrderCreate closeRequest={closeRequest} onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onPreviewCreated={(newName) => onNavigate(printBase === "/print" ? buildPrintPath(doctype, newName) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
               </Suspense>
             ) : (
-              <NewFormContainer doctype={doctype} fullWidth={hasChildTable} closeRequest={closeRequest} onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onPreviewCreated={(newName) => onNavigate(printBase === "/print" ? buildPrintPath(doctype, newName) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
+              <NewFormContainer doctype={doctype} fullWidth={hasChildTable} presentation={hasChildTable ? "page" : "dialog"} closeRequest={closeRequest} onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onPreviewCreated={(newName) => onNavigate(printBase === "/print" ? buildPrintPath(doctype, newName) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
             )}
           </div>
         </DialogContent>

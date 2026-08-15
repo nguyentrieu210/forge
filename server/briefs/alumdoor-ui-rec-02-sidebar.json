@@ -1,13 +1,14 @@
 {
   "id": "alumdoor",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "nav": [
     {
       "key": "Quotation",
       "label": "Báo giá",
       "kind": "doctype",
-      "permission_doctype": "Quotation",
-      "group": "Bán hàng"
+      "icon": "file-text",
+      "group": "Bán hàng",
+      "permission_doctype": "Quotation"
     },
     {
       "key": "Sales Order",
@@ -37,8 +38,9 @@
       "key": "Sales Invoice",
       "label": "Hoá đơn bán hàng",
       "kind": "doctype",
-      "permission_doctype": "Sales Invoice",
-      "group": "Bán hàng"
+      "icon": "receipt",
+      "group": "Bán hàng",
+      "permission_doctype": "Sales Invoice"
     },
     {
       "key": "Material Request",
@@ -227,7 +229,7 @@
       "label": "Thiết lập trạm chấm công",
       "kind": "experience",
       "icon": "qr-code",
-      "group": "Chấm công & ca",
+      "group": "Nhân sự & Tiền lương",
       "required_roles": [
         "AlumDoor Attendance Manager",
         "HR Manager",
@@ -239,14 +241,14 @@
       "label": "Công hôm nay",
       "kind": "experience",
       "icon": "clock-3",
-      "group": "Chấm công & ca"
+      "group": "Nhân sự & Tiền lương"
     },
     {
       "key": "alumdoor-attendance:month",
       "label": "Bảng công",
       "kind": "experience",
       "icon": "calendar-range",
-      "group": "Chấm công & ca",
+      "group": "Nhân sự & Tiền lương",
       "required_roles": [
         "AlumDoor Attendance Viewer",
         "AlumDoor Attendance Manager",
@@ -260,7 +262,7 @@
       "label": "Ngoại lệ chấm công",
       "kind": "experience",
       "icon": "triangle-alert",
-      "group": "Chấm công & ca",
+      "group": "Nhân sự & Tiền lương",
       "required_roles": [
         "AlumDoor Attendance Manager",
         "HR Manager",
@@ -272,7 +274,7 @@
       "label": "Nhân viên",
       "kind": "experience",
       "icon": "users",
-      "group": "Nhân viên & Lương",
+      "group": "Nhân sự & Tiền lương",
       "required_roles": [
         "AlumDoor Payroll Approver",
         "HR Manager",
@@ -284,7 +286,7 @@
       "label": "Tính lương",
       "kind": "experience",
       "icon": "calculator",
-      "group": "Nhân viên & Lương",
+      "group": "Nhân sự & Tiền lương",
       "required_roles": [
         "AlumDoor Payroll User",
         "AlumDoor Payroll Approver",
@@ -297,14 +299,14 @@
       "label": "Phiếu lương của tôi",
       "kind": "experience",
       "icon": "receipt-text",
-      "group": "Nhân viên & Lương"
+      "group": "Nhân sự & Tiền lương"
     },
     {
       "key": "alumdoor-attendance:hr-payroll-settings-lite",
       "label": "Cài đặt mặc định",
       "kind": "experience",
       "icon": "settings",
-      "group": "Nhân viên & Lương",
+      "group": "Nhân sự & Tiền lương",
       "required_roles": [
         "AlumDoor Payroll Approver",
         "HR Manager",

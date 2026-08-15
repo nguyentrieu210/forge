@@ -679,7 +679,7 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
   if (kind === "alumdoor-attendance") {
     const mode = experienceKey.slice("alumdoor-attendance:".length);
     const label = manifest.nav.find((item) => item.key === experienceKey)?.label ?? "Attendance & Payroll";
-    const liteMode = mode === "employees-lite" || mode === "payroll-lite" || mode === "my-slips-lite" || mode === "hr-payroll-settings-lite"
+    const liteMode = mode === "payroll-lite" || mode === "my-slips-lite" || mode === "hr-payroll-settings-lite"
       ? mode
       : null;
     if (liteMode) {
