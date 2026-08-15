@@ -103,122 +103,133 @@ function resolveTenant(request: Request, env: TenantEnv): string | null {
   return env.TENANT_ID ?? routed;
 }
 
+async function routeInternalRequest(
+  request: Request,
+  url: URL,
+  env: TenantEnv,
+  traceId: string,
+): Promise<Response | undefined> {
+  if (url.pathname === "/health") {
+    const tenant = env.TENANT_ID ?? null;
+    return jsonResponse({
+      ok: true,
+      service: "tenant-worker",
+      tenant,
+      maintenance: tenant ? await maintenanceHealth(env.DB, tenant) : null,
+    });
+  }
+
+  if (request.method === "POST" && url.pathname === "/internal/outbox/flush") {
+    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+    if (!env.OUTBOX_QUEUE) throw new Error("OUTBOX_QUEUE binding is missing");
+    const tenant = resolveTenant(request, env);
+    if (!tenant) throw new Error("Missing tenant context");
+    return jsonResponse(await publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, tenant));
+  }
+  // Everything `scheduled()` would have done, for a caller whose crons do fire.
+  // Kept separate from /internal/outbox/flush, which drains the outbox only.
+  if (request.method === "POST" && url.pathname === "/internal/maintenance") {
+    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+    const tenant = resolveTenant(request, env);
+    if (!tenant) throw new Error("Missing tenant context");
+    return jsonResponse(await runMaintenance(env, tenant));
+  }
+  if (request.method === "GET" && url.pathname === "/internal/reconciliation") {
+    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+    const tenant = resolveTenant(request, env);
+    if (!tenant) throw new Error("Missing tenant context");
+    const report = await new D1CommercialReconciliationService(env.DB).run(tenant);
+    return jsonResponse(report, report.ok ? 200 : 409, { "x-cloudforge-trace-id": traceId });
+  }
+
+  if (request.method === "POST" && url.pathname === "/internal/social/events") {
+    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+    const tenant = resolveTenant(request, env);
+    if (!tenant) throw new Error("Missing tenant context");
+    const message = await readJson<JsonObject>(request, 1_100_000) as unknown as SocialQueueMessage;
+    const idempotencyKey = request.headers.get("x-cloudforge-idempotency-key");
+    if (!idempotencyKey || idempotencyKey !== message.event_id) throw new Error("Social event idempotency key mismatch");
+    const result = await ingestFacebookMessage(env.DB, tenant, message);
+    return jsonResponse({ committed: true, event_id: message.event_id, ...result }, 200, {
+      "x-cloudforge-social-event-committed": message.event_id,
+      "x-cloudforge-trace-id": traceId,
+    });
+  }
+
+  if (request.method === "POST" && url.pathname === "/internal/social/oauth/facebook") {
+    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+    const tenant = resolveTenant(request, env);
+    if (!tenant) throw new Error("Missing tenant context");
+    if (!env.SOCIAL_CREDENTIAL_KEK) throw new Error("SOCIAL_CREDENTIAL_KEK is not configured");
+    const body = await readJson<JsonObject>(request, 1_000_000) as unknown as { actor_id: string; pages: FacebookOAuthPage[] };
+    const result = await storeFacebookOAuthPages(env.DB, tenant, body.actor_id, body.pages, env.SOCIAL_CREDENTIAL_KEK);
+    return jsonResponse({ committed: true, ...result });
+  }
+
+  if (request.method === "POST" && url.pathname === "/internal/events") {
+    assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
+    const event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
+    const tenant = resolveTenant(request, env);
+    if (!tenant || event.tenant_id !== tenant) throw new Error("Inbound event tenant mismatch");
+    // Dedup and the committed-confirmation key off the trusted idempotency-key
+    // header (bound by the caller to this event), not the request body alone.
+    const idempotencyKey = request.headers.get("x-cloudforge-idempotency-key") ?? event.event_id;
+    if (!idempotencyKey || idempotencyKey !== event.event_id) throw new Error("Inbound event idempotency key mismatch");
+    const result = await env.DB.prepare(
+      `INSERT INTO inbound_events(tenant_id,event_id,event_type,payload_json,processed_at)
+       VALUES(?1,?2,?3,?4,?5) ON CONFLICT(tenant_id,event_id) DO NOTHING`,
+    ).bind(tenant, idempotencyKey, event.event_type, JSON.stringify(event), new Date().toISOString()).run();
+    // The confirmation reflects the actual write result — a fresh insert or an
+    // already-present row (both durably committed) — never a bare body echo.
+    const inserted = (result.meta?.changes ?? 0) === 1;
+
+    // Fan out to app Workers AFTER the event is durably recorded. Deliveries are
+    // tracked per app, so a failing app is retried by the scheduled sweep
+    // without holding up this confirmation — the queue must not redeliver the
+    // platform event just because one app's Worker is down.
+    // Notification rules run on the same committed event, for the same reason app
+    // hooks do: an alert is a reaction, and nothing about it can change whether the
+    // write should have happened. It never throws — the client has already been
+    // told the document exists, so a broken rule must not make a successful save
+    // look like a failure.
+    const notifications = await runNotificationRules(
+      env.DB, new D1DeskViewStore(env.DB), tenant, event, new Date().toISOString(),
+    ).catch((error) => {
+      console.error(JSON.stringify({
+        level: "error", trace_id: traceId, code: "NOTIFICATION_RULES_FAILED",
+        detail: error instanceof Error ? error.message : String(error),
+      }));
+      return { matched: 0, delivered: 0, skipped: 0 };
+    });
+
+    let hookOutcomes: HookDeliveryOutcome[] = [];
+    try {
+      hookOutcomes = await fanOutAppHooks(env, tenant, event);
+    } catch (error) {
+      // A fan-out failure is logged and left to the sweep. Failing the response
+      // here would make the queue redeliver an event the platform already
+      // committed.
+      console.error(JSON.stringify({
+        level: "error", trace_id: traceId, code: "APP_HOOK_FANOUT_FAILED",
+        detail: error instanceof Error ? error.message : String(error),
+      }));
+    }
+    return jsonResponse(
+      { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications },
+      200,
+      { "x-cloudforge-event-committed": idempotencyKey },
+    );
+  }
+  return undefined;
+}
+
 export default {
   async fetch(request: Request, env: TenantEnv): Promise<Response> {
     const traceId = request.headers.get("x-cloudforge-trace-id") ?? randomId("trace");
     try {
       const url = new URL(request.url);
-      if (url.pathname === "/health") {
-        const tenant = env.TENANT_ID ?? null;
-        return jsonResponse({
-          ok: true,
-          service: "tenant-worker",
-          tenant,
-          maintenance: tenant ? await maintenanceHealth(env.DB, tenant) : null,
-        });
-      }
-
-      if (request.method === "POST" && url.pathname === "/internal/outbox/flush") {
-        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        if (!env.OUTBOX_QUEUE) throw new Error("OUTBOX_QUEUE binding is missing");
-        const tenant = resolveTenant(request, env);
-        if (!tenant) throw new Error("Missing tenant context");
-        return jsonResponse(await publishPendingOutbox(env.DB, env.OUTBOX_QUEUE, tenant));
-      }
-      // Everything `scheduled()` would have done, for a caller whose crons do fire.
-      // Kept separate from /internal/outbox/flush, which drains the outbox only.
-      if (request.method === "POST" && url.pathname === "/internal/maintenance") {
-        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        const tenant = resolveTenant(request, env);
-        if (!tenant) throw new Error("Missing tenant context");
-        return jsonResponse(await runMaintenance(env, tenant));
-      }
-      if (request.method === "GET" && url.pathname === "/internal/reconciliation") {
-        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        const tenant = resolveTenant(request, env);
-        if (!tenant) throw new Error("Missing tenant context");
-        const report = await new D1CommercialReconciliationService(env.DB).run(tenant);
-        return jsonResponse(report, report.ok ? 200 : 409, { "x-cloudforge-trace-id": traceId });
-      }
-
-      if (request.method === "POST" && url.pathname === "/internal/social/events") {
-        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        const tenant = resolveTenant(request, env);
-        if (!tenant) throw new Error("Missing tenant context");
-        const message = await readJson<JsonObject>(request, 1_100_000) as unknown as SocialQueueMessage;
-        const idempotencyKey = request.headers.get("x-cloudforge-idempotency-key");
-        if (!idempotencyKey || idempotencyKey !== message.event_id) throw new Error("Social event idempotency key mismatch");
-        const result = await ingestFacebookMessage(env.DB, tenant, message);
-        return jsonResponse({ committed: true, event_id: message.event_id, ...result }, 200, {
-          "x-cloudforge-social-event-committed": message.event_id,
-          "x-cloudforge-trace-id": traceId,
-        });
-      }
-
-      if (request.method === "POST" && url.pathname === "/internal/social/oauth/facebook") {
-        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        const tenant = resolveTenant(request, env);
-        if (!tenant) throw new Error("Missing tenant context");
-        if (!env.SOCIAL_CREDENTIAL_KEK) throw new Error("SOCIAL_CREDENTIAL_KEK is not configured");
-        const body = await readJson<JsonObject>(request, 1_000_000) as unknown as { actor_id: string; pages: FacebookOAuthPage[] };
-        const result = await storeFacebookOAuthPages(env.DB, tenant, body.actor_id, body.pages, env.SOCIAL_CREDENTIAL_KEK);
-        return jsonResponse({ committed: true, ...result });
-      }
-
-      if (request.method === "POST" && url.pathname === "/internal/events") {
-        assertInternalService(request, env.INTERNAL_SERVICE_TOKEN);
-        const event = await readJson<JsonObject>(request, 512_000) as unknown as DomainEvent;
-        const tenant = resolveTenant(request, env);
-        if (!tenant || event.tenant_id !== tenant) throw new Error("Inbound event tenant mismatch");
-        // Dedup and the committed-confirmation key off the trusted idempotency-key
-        // header (bound by the caller to this event), not the request body alone.
-        const idempotencyKey = request.headers.get("x-cloudforge-idempotency-key") ?? event.event_id;
-        if (!idempotencyKey || idempotencyKey !== event.event_id) throw new Error("Inbound event idempotency key mismatch");
-        const result = await env.DB.prepare(
-          `INSERT INTO inbound_events(tenant_id,event_id,event_type,payload_json,processed_at)
-           VALUES(?1,?2,?3,?4,?5) ON CONFLICT(tenant_id,event_id) DO NOTHING`,
-        ).bind(tenant, idempotencyKey, event.event_type, JSON.stringify(event), new Date().toISOString()).run();
-        // The confirmation reflects the actual write result — a fresh insert or an
-        // already-present row (both durably committed) — never a bare body echo.
-        const inserted = (result.meta?.changes ?? 0) === 1;
-
-        // Fan out to app Workers AFTER the event is durably recorded. Deliveries are
-        // tracked per app, so a failing app is retried by the scheduled sweep
-        // without holding up this confirmation — the queue must not redeliver the
-        // platform event just because one app's Worker is down.
-        // Notification rules run on the same committed event, for the same reason app
-        // hooks do: an alert is a reaction, and nothing about it can change whether the
-        // write should have happened. It never throws — the client has already been
-        // told the document exists, so a broken rule must not make a successful save
-        // look like a failure.
-        const notifications = await runNotificationRules(
-          env.DB, new D1DeskViewStore(env.DB), tenant, event, new Date().toISOString(),
-        ).catch((error) => {
-          console.error(JSON.stringify({
-            level: "error", trace_id: traceId, code: "NOTIFICATION_RULES_FAILED",
-            detail: error instanceof Error ? error.message : String(error),
-          }));
-          return { matched: 0, delivered: 0, skipped: 0 };
-        });
-
-        let hookOutcomes: HookDeliveryOutcome[] = [];
-        try {
-          hookOutcomes = await fanOutAppHooks(env, tenant, event);
-        } catch (error) {
-          // A fan-out failure is logged and left to the sweep. Failing the response
-          // here would make the queue redeliver an event the platform already
-          // committed.
-          console.error(JSON.stringify({
-            level: "error", trace_id: traceId, code: "APP_HOOK_FANOUT_FAILED",
-            detail: error instanceof Error ? error.message : String(error),
-          }));
-        }
-        return jsonResponse(
-          { committed: true, event_id: idempotencyKey, inserted, hooks: hookOutcomes, notifications },
-          200,
-          { "x-cloudforge-event-committed": idempotencyKey },
-        );
-      }
+      const internalResponse = await routeInternalRequest(request, url, env, traceId);
+      if (internalResponse) return internalResponse;
 
       const tenantId = resolveTenant(request, env);
       if (!tenantId) throw new Error("Missing tenant context");
