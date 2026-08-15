@@ -123,8 +123,10 @@ jobs:
           print('created', registry_path)
           print('main-base direct local experience fan-out reduced by 7 and replaced by 1 registry edge')
           PY
-          git diff --check
-          git diff --stat
+          git add client/apps/runtime/src/main-base.tsx client/apps/runtime/src/experience-registry.tsx
+          git diff --cached --check
+          git diff --cached --stat
+          git ls-files --error-unmatch client/apps/runtime/src/experience-registry.tsx
 
       - name: Install root workspace
         if: steps.state.outputs.done != 'true'
@@ -173,7 +175,6 @@ jobs:
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add client/apps/runtime/src/main-base.tsx client/apps/runtime/src/experience-registry.tsx
           git diff --cached --check
           git commit -m 'refactor(runtime): isolate lazy experience registry'
           git push origin HEAD:agent/sentrux-convergence-20260816
