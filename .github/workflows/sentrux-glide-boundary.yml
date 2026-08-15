@@ -1,0 +1,125 @@
+name: Sentrux Glide vendor boundary
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  validate-glide-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/sentrux-10k-20260815
+
+      - name: Install Sentrux
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+
+      - name: Baseline score and cycles
+        id: before
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/before-score.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before-score.txt | tail -1 | grep -Eo '[0-9]+')
+          mkdir -p .sentrux
+          printf '[constraints]\nmax_cycles = 0\n' > .sentrux/rules.toml
+          sentrux check . 2>&1 | tee /tmp/before-cycles.txt || true
+          CYCLES=$(grep -Eo 'Found [0-9]+ circular dependencies' /tmp/before-cycles.txt | tail -1 | grep -Eo '[0-9]+' || true)
+          CYCLES=${CYCLES:-0}
+          rm -f .sentrux/rules.toml
+          echo "quality=$QUALITY" >> "$GITHUB_OUTPUT"
+          echo "cycles=$CYCLES" >> "$GITHUB_OUTPUT"
+          echo "BEFORE quality=$QUALITY cycles=$CYCLES"
+
+      - name: Prove source is outside first-party runtime graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s client/vendor/glide-data-grid/forge-bundle/index.js
+          test -s client/vendor/glide-data-grid/forge-bundle/index.d.ts
+          test -s client/vendor/glide-data-grid/forge-bundle/index.css
+          if git grep -nE 'vendor/glide-data-grid/src|@glideapps/glide-data-grid' -- ':!client/vendor/glide-data-grid/**'; then
+            echo 'Unexpected first-party reference to Glide vendored source/package' >&2
+            exit 1
+          fi
+          sha256sum client/vendor/glide-data-grid/forge-bundle/index.js > /tmp/glide-bundle.sha256
+
+      - name: Remove upstream source snapshot from first-party graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -r client/vendor/glide-data-grid/src
+          cat > client/vendor/glide-data-grid/UPSTREAM.md <<'EOF'
+          # Glide Data Grid upstream
+
+          - Repository: glideapps/glide-data-grid
+          - Tag: v6.0.4-alpha24
+          - Commit: f1a7c9bb97fb29898de74368e915e25e1117c49a
+          - License: MIT
+          - Runtime bundle: `forge-bundle/` (pinned build used by Forge/Alumdoor)
+          - Upstream source: `packages/core/src` at the pinned commit above; intentionally not tracked as first-party Forge source
+
+          Forge treats Glide as a third-party runtime dependency. The pinned runtime bundle and license remain in-repo; the reproducible upstream source snapshot is not part of the Forge source graph.
+          EOF
+          sha256sum -c /tmp/glide-bundle.sha256
+          test ! -e client/vendor/glide-data-grid/src
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Full client typecheck
+        run: pnpm run client:typecheck
+
+      - name: Runtime production build
+        run: pnpm --filter runtime run build
+
+      - name: Server typecheck
+        run: pnpm run server:typecheck
+
+      - name: Sentrux gate
+        run: sentrux gate .
+
+      - name: Require zero cycles and score improvement
+        shell: bash
+        run: |
+          set -euo pipefail
+          sentrux gate --save . | tee /tmp/after-score.txt
+          QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after-score.txt | tail -1 | grep -Eo '[0-9]+')
+          mkdir -p .sentrux
+          printf '[constraints]\nmax_cycles = 0\n' > .sentrux/rules.toml
+          sentrux check . 2>&1 | tee /tmp/after-cycles.txt
+          CYCLES=$(grep -Eo 'Found [0-9]+ circular dependencies' /tmp/after-cycles.txt | tail -1 | grep -Eo '[0-9]+' || true)
+          CYCLES=${CYCLES:-0}
+          BEFORE_Q='${{ steps.before.outputs.quality }}'
+          BEFORE_C='${{ steps.before.outputs.cycles }}'
+          echo "AFTER quality=$QUALITY cycles=$CYCLES"
+          test "$QUALITY" -gt "$BEFORE_Q"
+          test "$CYCLES" -eq 0
+          test "$CYCLES" -lt "$BEFORE_C"
+
+      - name: Commit validated vendor boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .sentrux
+          rm -f .github/workflows/sentrux-glide-boundary.yml
+          git config user.name "sentrux-refactor-bot"
+          git config user.email "sentrux-refactor-bot@users.noreply.github.com"
+          git add -A -- client/vendor/glide-data-grid .github/workflows/sentrux-glide-boundary.yml
+          git commit -m "refactor(vendor): keep Glide upstream source outside Forge graph [skip sentrux]"
+          git push origin HEAD:agent/sentrux-10k-20260815
