@@ -1,16 +1,15 @@
 name: Sentrux cycle cleanup
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/sentrux-cycle-cleanup-20260815
+      - main
 
 permissions:
   contents: write
 
 jobs:
   refactor:
-    if: ${{ !contains(github.event.head_commit.message, '[skip sentrux-cycle]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -19,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: agent/sentrux-cycle-cleanup-20260815
 
       - name: Install Sentrux
         shell: bash
