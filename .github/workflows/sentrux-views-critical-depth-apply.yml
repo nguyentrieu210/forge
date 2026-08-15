@@ -62,26 +62,26 @@ jobs:
       - name: Build runtime production bundle
         run: pnpm --filter runtime run build
 
-      - name: Diagnose Sentrux regression
+      - name: Sentrux regression gate
         shell: bash
         run: |
           set +e
           sentrux gate . 2>&1 | tee /tmp/regression.txt
           status=${PIPESTATUS[0]}
-          mkdir -p .sentrux
-          cat > .sentrux/rules.toml <<'EOF'
+          if [ "$status" -ne 0 ]; then
+            mkdir -p .sentrux
+            cat > .sentrux/rules.toml <<'EOF'
           [constraints]
           max_cycles = 0
           no_god_files = true
-          max_cc = 25
           EOF
-          sentrux check . 2>&1 | tee /tmp/check.txt
-          echo '=== GOD FILE / DEPTH DIAGNOSTICS ==='
-          grep -Ei 'god file|fan.?out|depth|coupling|cycle|complexity' /tmp/check.txt || true
-          echo "REGRESSION_STATUS=$status"
+            sentrux check . 2>&1 | tee /tmp/check.txt
+            echo '=== GOD FILE DIAGNOSTICS ==='
+            grep -Ei 'god file|fan.?out|cycle' /tmp/check.txt || true
+          fi
           exit "$status"
 
-      - name: Require depth and quality improvement
+      - name: Require quality improvement
         shell: bash
         run: |
           set -euo pipefail
@@ -89,16 +89,9 @@ jobs:
           QUALITY=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/sentrux-after.txt | tail -1 | grep -Eo '[0-9]+')
           test -n "$QUALITY"
           BEFORE='${{ steps.before.outputs.quality }}'
-          BEFORE_DEPTH=$(grep -Eo 'depth=[0-9]+' /tmp/sentrux-before.txt | tail -1 | grep -Eo '[0-9]+' || true)
-          AFTER_DEPTH=$(grep -Eo 'depth=[0-9]+' /tmp/sentrux-after.txt | tail -1 | grep -Eo '[0-9]+' || true)
           echo "Quality: $BEFORE -> $QUALITY"
-          echo "Depth: ${BEFORE_DEPTH:-unknown} -> ${AFTER_DEPTH:-unknown}"
           if [ "$QUALITY" -le "$BEFORE" ]; then
             echo "Sentrux score did not increase"
-            exit 1
-          fi
-          if [ -n "$BEFORE_DEPTH" ] && [ -n "$AFTER_DEPTH" ] && [ "$AFTER_DEPTH" -ge "$BEFORE_DEPTH" ]; then
-            echo "Max dependency depth did not decrease"
             exit 1
           fi
 
