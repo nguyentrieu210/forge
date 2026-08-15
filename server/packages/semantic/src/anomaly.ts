@@ -72,6 +72,66 @@ function number(value: unknown, field: string, exact: boolean): number {
   return value;
 }
 
+function validateRequest(tenantId: string, request: SemanticAnomalyRequest): void {
+  text(tenantId, "tenantId", 200);
+  if (!ID.test(request.model)) throw errors.validation("anomaly model is invalid");
+  if (!MEMBER.test(request.timeDimension) || !MEMBER.test(request.metric)) throw errors.validation("anomaly semantic members are invalid");
+  if (!Array.isArray(request.filters ?? []) || (request.filters?.length ?? 0) > 20) throw errors.validation("anomaly filters must contain at most 20 entries");
+  if (!Number.isSafeInteger(request.limit) || request.limit < 3 || request.limit > 2_000) throw errors.validation("anomaly limit must be 3..2000");
+  text(request.sourceVersion, "anomaly sourceVersion", 200);
+}
+
+function buildSeries(
+  rows: Array<Record<string, JsonValue>>,
+  request: SemanticAnomalyRequest,
+  exact: boolean,
+): AnomalySeriesPoint[] {
+  return rows.map((row, index) => {
+    const period = row[request.timeDimension];
+    if (typeof period !== "string" || !period.trim() || period.length > 80) {
+      throw errors.validation(`Anomaly source row ${index} has invalid period`);
+    }
+    return { period, value: number(row[request.metric], `Anomaly source row ${index} metric`, exact) };
+  });
+}
+
+function indexSeriesByPeriod(series: AnomalySeriesPoint[]): Map<string, number> {
+  const byPeriod = new Map<string, number>();
+  for (const point of series) {
+    if (byPeriod.has(point.period)) throw errors.validation(`Anomaly source contains duplicate period ${point.period}`);
+    byPeriod.set(point.period, point.value);
+  }
+  return byPeriod;
+}
+
+function buildFindings(
+  anomalies: SemanticAnomalyCandidate[],
+  byPeriod: ReadonlyMap<string, number>,
+): SemanticAnomalyFinding[] {
+  const seen = new Set<string>();
+  return anomalies.map((candidate, index): SemanticAnomalyFinding => {
+    text(candidate.period, `anomaly[${index}].period`, 80);
+    if (seen.has(candidate.period)) throw errors.validation(`anomaly provider repeated period ${candidate.period}`);
+    seen.add(candidate.period);
+    const observed = byPeriod.get(candidate.period);
+    if (observed === undefined) throw errors.validation(`anomaly provider returned period outside source series: ${candidate.period}`);
+    const score = number(candidate.score, `anomaly[${index}].score`, false);
+    if (candidate.direction !== undefined && !["high", "low", "other"].includes(candidate.direction)) {
+      throw errors.validation(`anomaly[${index}].direction is invalid`);
+    }
+    const explanation = candidate.explanation === undefined
+      ? undefined
+      : text(candidate.explanation, `anomaly[${index}].explanation`, 500);
+    return {
+      period: candidate.period,
+      score,
+      observed,
+      ...(candidate.direction ? { direction: candidate.direction } : {}),
+      ...(explanation ? { explanation } : {}),
+    };
+  });
+}
+
 /**
  * Advisory anomaly orchestration over permission-visible semantic data.
  * The provider never sees tenant/schema/raw documents and cannot invent the observed value:
@@ -86,12 +146,7 @@ export class SemanticAnomalyService {
   ) {}
 
   async run(tenantId: string, request: SemanticAnomalyRequest): Promise<SemanticAnomalyResult> {
-    text(tenantId, "tenantId", 200);
-    if (!ID.test(request.model)) throw errors.validation("anomaly model is invalid");
-    if (!MEMBER.test(request.timeDimension) || !MEMBER.test(request.metric)) throw errors.validation("anomaly semantic members are invalid");
-    if (!Array.isArray(request.filters ?? []) || (request.filters?.length ?? 0) > 20) throw errors.validation("anomaly filters must contain at most 20 entries");
-    if (!Number.isSafeInteger(request.limit) || request.limit < 3 || request.limit > 2_000) throw errors.validation("anomaly limit must be 3..2000");
-    text(request.sourceVersion, "anomaly sourceVersion", 200);
+    validateRequest(tenantId, request);
 
     const model = this.registry.get(request.model);
     const time = model.dimensions.find((dimension) => dimension.id === request.timeDimension);
@@ -109,41 +164,15 @@ export class SemanticAnomalyService {
       order_by: [{ id: request.timeDimension, direction: "asc" }],
       limit: request.limit,
     });
-    const exact = metric.value.exact === true;
-    const series: AnomalySeriesPoint[] = source.result.map((row, index) => {
-      const period = row[request.timeDimension];
-      if (typeof period !== "string" || !period.trim() || period.length > 80) throw errors.validation(`Anomaly source row ${index} has invalid period`);
-      return { period, value: number(row[request.metric], `Anomaly source row ${index} metric`, exact) };
-    });
+    const series = buildSeries(source.result, request, metric.value.exact === true);
     if (series.length < 3) throw errors.validation("Anomaly detection requires at least 3 permission-visible source points");
-    const byPeriod = new Map<string, number>();
-    for (const point of series) {
-      if (byPeriod.has(point.period)) throw errors.validation(`Anomaly source contains duplicate period ${point.period}`);
-      byPeriod.set(point.period, point.value);
-    }
+    const byPeriod = indexSeriesByPeriod(series);
 
     const detected = await this.provider.detect({ series, value: { ...metric.value } });
     text(detected.provider, "anomaly provider", 120);
     text(detected.modelVersion, "anomaly modelVersion", 200);
     if (!Array.isArray(detected.anomalies) || detected.anomalies.length > series.length) throw errors.validation("anomaly provider returned an invalid finding count");
-    const seen = new Set<string>();
-    const findings = detected.anomalies.map((candidate, index): SemanticAnomalyFinding => {
-      text(candidate.period, `anomaly[${index}].period`, 80);
-      if (seen.has(candidate.period)) throw errors.validation(`anomaly provider repeated period ${candidate.period}`);
-      seen.add(candidate.period);
-      const observed = byPeriod.get(candidate.period);
-      if (observed === undefined) throw errors.validation(`anomaly provider returned period outside source series: ${candidate.period}`);
-      const score = number(candidate.score, `anomaly[${index}].score`, false);
-      if (candidate.direction !== undefined && !["high", "low", "other"].includes(candidate.direction)) throw errors.validation(`anomaly[${index}].direction is invalid`);
-      const explanation = candidate.explanation === undefined ? undefined : text(candidate.explanation, `anomaly[${index}].explanation`, 500);
-      return {
-        period: candidate.period,
-        score,
-        observed,
-        ...(candidate.direction ? { direction: candidate.direction } : {}),
-        ...(explanation ? { explanation } : {}),
-      };
-    });
+    const findings = buildFindings(detected.anomalies, byPeriod);
 
     return {
       model: request.model,
