@@ -1,4 +1,4 @@
-name: Sentrux tenant preauth experiment
+name: Sentrux app registry parser experiment
 
 on:
   pull_request:
@@ -35,13 +35,13 @@ jobs:
           echo "quality=$Q" >> "$GITHUB_OUTPUT"
           echo "BEFORE=$Q"
 
-      - name: Extract pre-auth routes in same file
+      - name: Split app registry parser hotspots in same file
         shell: bash
         run: |
           set -euo pipefail
-          python3 .github/sentrux-tenant-preauth-transform
+          python3 .github/sentrux-app-registry-transform
           git diff --check
-          git diff --stat -- server/apps/tenant-worker/src/index-core-base.ts
+          git diff --stat -- server/packages/app-registry/src/manifest.ts
 
       - name: Install dependencies
         shell: bash
@@ -70,8 +70,8 @@ jobs:
           EOF
           sentrux check . 2>&1 | tee /tmp/structure.txt || true
           rm -rf .sentrux
-          echo "TENANT_PREAUTH_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
-          grep -E 'index-core-base.ts:(fetch|routeTenantPreAuthRequest)|god file|circular dependencies' /tmp/structure.txt || true
+          echo "APP_REGISTRY_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          grep -E 'app-registry/src/manifest.ts:(parseClientManifest|parseClientHome|parseClientDimensions|parseClientLocale|parseClientDesign|parseReport|parseReportColumn|validateReportGrouping|parseReportOrderBy|parseNav|parseExperienceTargets|inferNavPermissionDoctype|validateNavTarget)|god file|circular dependencies' /tmp/structure.txt || true
           test "$AFTER" -gt "$BEFORE"
           ! grep -q 'Found [1-9][0-9]* circular dependencies' /tmp/structure.txt
 
@@ -81,18 +81,24 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/tenant-preauth-tsc.log
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false --pretty false 2>&1 | tee /tmp/app-registry-tsc.log
           status=${PIPESTATUS[0]}
           set -e
-          test -f dist/apps/tenant-worker/src/index-core-base.js
-          if [ "$status" -ne 0 ] && grep -E 'apps/tenant-worker/src/index-core-base\.ts' /tmp/tenant-preauth-tsc.log; then exit 1; fi
+          test -f dist/packages/app-registry/src/manifest.js
+          if [ "$status" -ne 0 ] && grep -E 'packages/app-registry/src/manifest\.ts' /tmp/app-registry-tsc.log; then exit 1; fi
 
-      - name: Focused tenant event tests
+      - name: Focused app registry tests
         working-directory: server
         shell: bash
         run: |
           set -euo pipefail
-          tests=(tests/app-hooks.test.mjs tests/r5-final-convergence.test.mjs)
+          tests=(
+            tests/app-registry.test.mjs
+            tests/app-hooks.test.mjs
+            tests/app-validators.test.mjs
+            tests/app-factory-context-dimensions.test.mjs
+            tests/pack-app.test.mjs
+          )
           existing=()
           for file in "${tests[@]}"; do [ -f "$file" ] && existing+=("$file"); done
-          if [ "${#existing[@]}" -gt 0 ]; then node --test "${existing[@]}"; fi
+          node --test "${existing[@]}"
