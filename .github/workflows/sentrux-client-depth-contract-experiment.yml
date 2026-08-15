@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           sentrux gate --save . | tee /tmp/before.txt
 
-      - name: Expose core leaf contracts and bypass root barrel
+      - name: Bypass core root barrel across adapter package
         shell: bash
         run: |
           set -euo pipefail
@@ -42,26 +42,60 @@ jobs:
 
           package_path = Path('client/packages/core/package.json')
           package = json.loads(package_path.read_text())
-          package['exports']['./types/doc'] = {
-              'types': './dist/types/doc.d.ts',
-              'import': './dist/types/doc.js',
-          }
-          package['exports']['./business/display'] = {
-              'types': './dist/business/display.d.ts',
-              'import': './dist/business/display.js',
-          }
+          for subpath in [
+              'types/meta', 'types/error', 'business/context', 'business/catalog',
+              'app/manifest', 'business/overview', 'business/process', 'business/access',
+              'meta/normalize',
+          ]:
+              package['exports'][f'./{subpath}'] = {
+                  'types': f'./dist/{subpath}.d.ts',
+                  'import': f'./dist/{subpath}.js',
+              }
           package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n')
 
-          dto_path = Path('client/packages/adapter-frappe/src/dto.ts')
-          text = dto_path.read_text()
-          old = 'import type { Doc, DisplayValueResult, LabelValue } from "@metaforge/core";'
-          new = 'import type { DisplayValueResult } from "@metaforge/core/business/display";\nimport type { Doc, LabelValue } from "@metaforge/core/types/doc";'
+          adapter_path = Path('client/packages/adapter-frappe/src/adapter.ts')
+          text = adapter_path.read_text()
+          start = text.index('import type {')
+          marker = '} from "@metaforge/core";'
+          end = text.index(marker, start) + len(marker)
+          replacement = '''import type { Doc, DocInfo, ListOpts, Filters, LinkResult } from "@metaforge/core/types/doc";
+          import type { DocTypeMeta, RuntimeAssets } from "@metaforge/core/types/meta";
+          import type { AppError } from "@metaforge/core/types/error";
+          import type { BusinessContextState, BusinessContextSelection, BusinessContextKey } from "@metaforge/core/business/context";
+          import type { ApplicationCatalog } from "@metaforge/core/business/catalog";
+          import type { AppManifest } from "@metaforge/core/app/manifest";
+          import type { OverviewDashboard } from "@metaforge/core/business/overview";
+          import type { ProcessCatalog } from "@metaforge/core/business/process";
+          import type { AccessProfileSummary, ApprovalInboxResult, AuditEventResult, AuditEvidenceExport, SoDCheckResult, TenantUser, EffectivePermissionResult } from "@metaforge/core/business/access";
+          import type { DisplayValueRequest, DisplayValueResult } from "@metaforge/core/business/display";'''.replace('\n          ', '\n')
+          adapter_path.write_text(text[:start] + replacement + text[end:])
+
+          impl_path = Path('client/packages/adapter-frappe/src/frappe-adapter.ts')
+          text = impl_path.read_text()
+          start = text.index('import {\n  mapError as coreMapError,')
+          end = text.index(marker, start) + len(marker)
+          replacement = '''import { mapError as coreMapError, type AppError } from "@metaforge/core/types/error";
+          import { normalizeMeta } from "@metaforge/core/meta/normalize";
+          import type { Doc, DocInfo, ListOpts, Filters, LinkResult } from "@metaforge/core/types/doc";
+          import type { DocTypeMeta, RuntimeAssets } from "@metaforge/core/types/meta";
+          import type { BusinessContextState, BusinessContextSelection, BusinessContextKey } from "@metaforge/core/business/context";
+          import type { ApplicationCatalog } from "@metaforge/core/business/catalog";
+          import type { AppManifest } from "@metaforge/core/app/manifest";
+          import type { OverviewDashboard } from "@metaforge/core/business/overview";
+          import type { ProcessCatalog } from "@metaforge/core/business/process";
+          import type { AccessProfileSummary, ApprovalInboxResult, AuditEventResult, AuditEvidenceExport, SoDCheckResult, TenantUser, EffectivePermissionResult } from "@metaforge/core/business/access";
+          import type { DisplayValueRequest, DisplayValueResult } from "@metaforge/core/business/display";'''.replace('\n          ', '\n')
+          impl_path.write_text(text[:start] + replacement + text[end:])
+
+          stock_path = Path('client/packages/adapter-frappe/src/stock-compatible-adapter.ts')
+          text = stock_path.read_text()
+          old = 'import type { Doc } from "@metaforge/core";'
           if old not in text:
-              raise SystemExit('core barrel dto import not found')
-          dto_path.write_text(text.replace(old, new, 1))
+              raise SystemExit('stock adapter core barrel import not found')
+          stock_path.write_text(text.replace(old, 'import type { Doc } from "@metaforge/core/types/doc";', 1))
           PY
           git diff --check
-          git diff -- client/packages/core/package.json client/packages/adapter-frappe/src/dto.ts
+          git diff -- client/packages/core/package.json client/packages/adapter-frappe/src/adapter.ts client/packages/adapter-frappe/src/frappe-adapter.ts client/packages/adapter-frappe/src/stock-compatible-adapter.ts
 
       - name: Install dependencies
         shell: bash
@@ -80,7 +114,7 @@ jobs:
           sentrux gate --save . | tee /tmp/after.txt
           BEFORE=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/before.txt | tail -1 | grep -Eo '[0-9]+')
           AFTER=$(grep -Eo 'Quality:[[:space:]]*[0-9]+' /tmp/after.txt | tail -1 | grep -Eo '[0-9]+')
-          echo "CORE_LEAF_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
+          echo "ADAPTER_LEAF_SCORE $BEFORE -> $AFTER delta=$((AFTER-BEFORE))"
           test "$AFTER" -gt "$BEFORE"
 
       - name: Commit validated candidate
@@ -97,6 +131,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add client/packages/core/package.json client/packages/adapter-frappe/src/dto.ts
-          git commit -m "refactor(sentrux): bypass core barrel in adapter DTO"
+          git add client/packages/core/package.json client/packages/adapter-frappe/src/adapter.ts client/packages/adapter-frappe/src/frappe-adapter.ts client/packages/adapter-frappe/src/stock-compatible-adapter.ts
+          git commit -m "refactor(sentrux): use core leaf contracts in Frappe adapter"
           git push origin "HEAD:$TARGET_BRANCH"
