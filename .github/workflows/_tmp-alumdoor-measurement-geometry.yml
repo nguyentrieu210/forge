@@ -1,0 +1,57 @@
+name: TEMP Alumdoor Measurement Geometry Convergence
+
+on:
+  push:
+    branches:
+      - fix/alumdoor-master-layer-measurement-profile
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  converge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply canonical overlay
+        run: node server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs --write
+      - name: Test master contracts
+        run: |
+          node --test server/tests/alumdoor-measurement-geometry-master.test.mjs
+          node --test server/tests/alumdoor-item-standardization.test.mjs
+          node --test server/tests/alumdoor-material-specification-catalog.test.mjs
+          node server/scripts/seed-alumdoor-measurement-geometry-local.mjs demo "$RUNNER_TEMP/measurement-geometry.sql" >/dev/null
+          grep -q "Geometry Field" "$RUNNER_TEMP/measurement-geometry.sql"
+          grep -q "Measurement Profile" "$RUNNER_TEMP/measurement-geometry.sql"
+      - name: Build server and dry-run V2 metadata
+        working-directory: server
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+          node scripts/verify-alumdoor-meta-completeness.mjs
+      - name: Verify generated builder converges
+        run: |
+          cp server/briefs/alumdoor-v2.json "$RUNNER_TEMP/alumdoor-v2.before.json"
+          node server/scripts/build-alumdoor-v2-brief.mjs
+          cmp server/briefs/alumdoor-v2.json "$RUNNER_TEMP/alumdoor-v2.before.json"
+      - name: Commit product changes and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/_tmp-alumdoor-measurement-geometry.yml
+          git add server/briefs/alumdoor-v2.json \
+                  server/scripts/build-alumdoor-v2-brief.mjs \
+                  server/scripts/build-alumdoor-item-only-import.mjs
+          git diff --cached --stat
+          git commit -m "feat(alumdoor): materialize measurement and geometry masters"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
