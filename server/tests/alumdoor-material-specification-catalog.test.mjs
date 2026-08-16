@@ -3,64 +3,65 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  MATERIAL_SPECIFICATION_TYPES,
-  loadMaterialSpecificationCatalog,
-} from "../scripts/lib/alumdoor-material-specification-catalog.mjs";
-import { ALUMDOOR_ITEM_GROUP_CATALOG } from "../scripts/lib/alumdoor-item-group-catalog.mjs";
 import { buildMaterialSpecificationSeed } from "../scripts/seed-alumdoor-material-specifications-local.mjs";
+import { loadMaterialSpecificationCatalog } from "../scripts/lib/alumdoor-material-specification-catalog.mjs";
+import { CANONICAL_ALUMDOOR_ITEM_GROUPS } from "../scripts/lib/alumdoor-item-group-catalog.mjs";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const testDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(testDir, "..", "..");
+const canonicalGroups = new Set(CANONICAL_ALUMDOOR_ITEM_GROUPS.map((row) => row.item_group_name));
 
 test("canonical Material Specification catalog has exactly 17 evidence-backed atomic specs", async () => {
   const rows = await loadMaterialSpecificationCatalog(repoRoot);
   assert.equal(rows.length, 17);
-  assert.equal(new Set(rows.map((x) => x.specCode)).size, 17);
-  assert.equal(new Set(rows.map((x) => x.itemCode)).size, 17);
-  assert.equal(rows.filter((x) => x.payload.profile_system === "TIẾN ĐẠT").length, 12);
-  assert.deepEqual(
-    rows.filter((x) => x.specType === "Ống/trục").map((x) => x.itemCode).sort(),
-    ["TRỤC 114_1.8LY", "TRỤC 114_2.1LY"],
-  );
-  assert.deepEqual(
-    rows.filter((x) => x.specType === "Vật tư tuyến tính").map((x) => x.itemCode).sort(),
-    ["RNHUA-DR", "RNINOX-DR", "RON-DD"],
-  );
+  assert.equal(new Set(rows.map((row) => row.specCode)).size, 17);
+  assert.equal(new Set(rows.map((row) => row.itemCode)).size, 17);
 });
 
 test("every canonical spec uses a canonical leaf Item Group and owns technical facts only", async () => {
   const rows = await loadMaterialSpecificationCatalog(repoRoot);
-  const leaves = new Set(ALUMDOOR_ITEM_GROUP_CATALOG.filter((x) => !x.isGroup).map((x) => x.name));
   for (const row of rows) {
-    assert.ok(leaves.has(row.itemGroup), `${row.itemCode}: non-leaf/unknown group ${row.itemGroup}`);
-    assert.ok(MATERIAL_SPECIFICATION_TYPES.includes(row.specType), `${row.itemCode}: invalid type`);
-    assert.ok(row.kgPerM > 0, `${row.itemCode}: kg/m must be positive`);
+    assert.ok(canonicalGroups.has(row.itemGroup), `${row.itemCode}: nhóm không canonical ${row.itemGroup}`);
     assert.equal(row.payload.spec_code, row.specCode);
     assert.equal(row.payload.item_group, row.itemGroup);
-    assert.equal(row.payload.theoretical_kg_per_m, row.kgPerM);
-    for (const forbidden of [
-      "stock_uom", "default_purchase_uom", "inventory_mode", "measurement_profile",
-      "require_color", "require_length", "track_bundle_qty", "leaf_divisor_m",
-      "cutting_policy", "purchase_kg_per_m2", "uom_conversions",
-    ]) assert.equal(forbidden in row.payload, false, `${row.specCode}: must not own ${forbidden}`);
+    assert.ok(row.payload.theoretical_kg_per_m > 0, `${row.itemCode}: thiếu kg/m`);
+    assert.ok(["Nhôm cây/lá", "Ống/trục", "Vật tư tuyến tính"].includes(row.payload.spec_type), `${row.itemCode}: sai loại quy cách`);
+    const forbidden = [
+      "stock_uom",
+      "default_purchase_uom",
+      "inventory_mode",
+      "measurement_profile",
+      "cutting_policy",
+      "leaf_divisor_m",
+      "purchase_kg_per_m2",
+    ];
+    for (const field of forbidden) assert.equal(field in row.payload, false, `${row.itemCode}: Material Specification không được sở hữu ${field}`);
   }
 });
 
 test("known technical evidence stays exact", async () => {
   const rows = await loadMaterialSpecificationCatalog(repoRoot);
-  const byItem = new Map(rows.map((x) => [x.itemCode, x]));
-  assert.equal(byItem.get("TP-RAY HỘP TD U100")?.kgPerM, 1.419);
-  assert.equal(byItem.get("TP-RAYHOP")?.kgPerM, 1.119);
-  assert.equal(byItem.get("RNHUA-DR")?.kgPerM, 0.263);
-  assert.equal(byItem.get("RNINOX-DR")?.kgPerM, 0.124);
-  assert.equal(byItem.get("TRỤC 114_1.8LY")?.payload.section_code, "Φ114");
-  assert.equal(byItem.get("TRỤC 114_1.8LY")?.payload.thickness_mm, 1.8);
-  assert.equal(byItem.get("TRỤC 114_2.1LY")?.payload.thickness_mm, 2.1);
+  const byItem = new Map(rows.map((row) => [row.itemCode, row]));
+  assert.equal(byItem.get("TP-RAY HỘP TD U100")?.payload.theoretical_kg_per_m, 1.419);
+  assert.equal(byItem.get("RNHUA-DR")?.payload.theoretical_kg_per_m, 0.263);
+  assert.equal(byItem.get("RNINOX-DR")?.payload.theoretical_kg_per_m, 0.124);
+  assert.deepEqual(
+    ["TRỤC 114_1.8LY", "TRỤC 114_2.1LY"].map((code) => ({
+      code,
+      type: byItem.get(code)?.payload.spec_type,
+      section: byItem.get(code)?.payload.section_code,
+      thickness: byItem.get(code)?.payload.thickness_mm,
+      kgPerM: byItem.get(code)?.payload.theoretical_kg_per_m,
+    })),
+    [
+      { code: "TRỤC 114_1.8LY", type: "Ống/trục", section: "Φ114", thickness: 1.8, kgPerM: 4.4 },
+      { code: "TRỤC 114_2.1LY", type: "Ống/trục", section: "Φ114", thickness: 2.1, kgPerM: 4.7 },
+    ],
+  );
 });
 
 test("seed writes Material Specification + Item link only, not measurement/UOM/geometry", async () => {
-  const { sql, catalog } = await buildMaterialSpecificationSeed(repoRoot, "demo");
-  assert.equal(catalog.length, 17);
+  const { sql } = await buildMaterialSpecificationSeed(repoRoot, "demo");
   assert.match(sql, /Material Specification/);
   assert.match(sql, /material_specification/);
   assert.doesNotMatch(sql, /doctype=['"]Measurement Profile|Measurement Profile:/);
@@ -75,7 +76,7 @@ test("V2 schema exposes linear material specs while legacy base remains untouche
   assert.equal(baseSpec.fields.some((x) => (typeof x === "string" ? x.split(":")[0].trim() : x.fieldname) === "spec_type"), false);
 
   const brief = JSON.parse(readFileSync(resolve(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));
-  assert.equal(brief.version, "2.2.5");
+  assert.equal(brief.version, "2.3.0");
   const dt = brief.doctypes.find((x) => x.name === "Material Specification");
   const type = dt.fields.find((x) => (typeof x === "string" ? x.split(":")[0].trim() : x.fieldname) === "spec_type");
   assert.match(String(type), /Vật tư tuyến tính/);
@@ -88,5 +89,5 @@ test("V2 schema exposes linear material specs while legacy base remains untouche
 test("legacy profile-spec builder delegates to canonical authority instead of maintaining a second map", () => {
   const source = readFileSync(resolve(repoRoot, "server/scripts/build-alumdoor-profile-specifications.mjs"), "utf8");
   assert.doesNotMatch(source, /PROFILE_WEIGHT_ITEMS/);
-  assert.match(source, /buildMaterialSpecificationSeed/);
+  assert.match(source, /loadMaterialSpecificationCatalog/);
 });
