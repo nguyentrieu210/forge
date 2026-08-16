@@ -8,8 +8,12 @@ on:
       - 'server/tests/alumdoor-uom-catalog.test.mjs'
       - 'server/scripts/lib/alumdoor-color-catalog.mjs'
       - 'server/scripts/build-alumdoor-color-correction.mjs'
+      - 'server/apps-src/alumdoor-worker/src/color-scopes.ts'
+      - 'server/briefs/alumdoor.json'
+      - 'server/briefs/alumdoor-v2.json'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
+      - 'server/tests/alumdoor-color-scopes.test.mjs'
       - 'server/scripts/lib/alumdoor-item-group-catalog.mjs'
       - 'server/scripts/seed-alumdoor-item-groups-local.sql'
       - 'server/scripts/build-alumdoor-item-only-import.mjs'
@@ -24,8 +28,12 @@ on:
       - 'server/tests/alumdoor-uom-catalog.test.mjs'
       - 'server/scripts/lib/alumdoor-color-catalog.mjs'
       - 'server/scripts/build-alumdoor-color-correction.mjs'
+      - 'server/apps-src/alumdoor-worker/src/color-scopes.ts'
+      - 'server/briefs/alumdoor.json'
+      - 'server/briefs/alumdoor-v2.json'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
+      - 'server/tests/alumdoor-color-scopes.test.mjs'
       - 'server/scripts/lib/alumdoor-item-group-catalog.mjs'
       - 'server/scripts/seed-alumdoor-item-groups-local.sql'
       - 'server/scripts/build-alumdoor-item-only-import.mjs'
@@ -52,9 +60,9 @@ jobs:
         run: node --test server/tests/alumdoor-uom-catalog.test.mjs
 
   color:
-    name: Lock canonical Item Color catalog
+    name: Lock canonical Item Color and Surface Finish catalog
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -64,6 +72,15 @@ jobs:
         run: node --test server/tests/alumdoor-color-catalog.test.mjs
       - name: Test Alumdoor color seed authority
         run: node --test server/tests/alumdoor-color-seed-authority.test.mjs
+      - name: Build Surface Finish resolver
+        working-directory: server
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
+      - name: Test Surface Finish include/exclusion resolver
+        working-directory: server
+        run: node --test tests/alumdoor-color-scopes.test.mjs
 
   item_group:
     name: Lock canonical Item Group tree
