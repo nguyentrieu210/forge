@@ -106,7 +106,20 @@ jobs:
           NODE
       - name: Regenerate Alumdoor v2 brief
         working-directory: server
-        run: node scripts/build-alumdoor-v2-brief.mjs
+        shell: bash
+        run: |
+          set +e
+          node scripts/build-alumdoor-v2-brief.mjs > /tmp/bom-brief.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            clean=$(tail -c 30000 /tmp/bom-brief.log)
+            safe=${clean//'%'/'%25'}
+            safe=${safe//$'\r'/'%0D'}
+            safe=${safe//$'\n'/'%0A'}
+            echo "::error title=BOM brief regeneration::$safe"
+            exit "$status"
+          fi
+          cat /tmp/bom-brief.log
       - name: Install dependencies
         working-directory: server
         run: pnpm install --frozen-lockfile
