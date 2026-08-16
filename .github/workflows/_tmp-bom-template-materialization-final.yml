@@ -1,0 +1,179 @@
+name: Temporary BOM Template Materialization Final
+on:
+  push:
+    branches: ['agent/alumdoor-bom-template-resolver']
+    paths: ['.github/workflows/_tmp-bom-template-materialization-final.yml']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: pnpm/action-setup@v4
+        with: { run_install: false }
+      - name: Wire product changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const corePath = 'server/apps-src/alumdoor-worker/src/sales-production-core.ts';
+          let core = fs.readFileSync(corePath, 'utf8');
+          const importAnchor = '} from "./door-formulas.js";\n';
+          if (!core.includes('from "./bom-template-materializer.js"')) {
+            if (!core.includes(importAnchor)) throw new Error('sales core import anchor missing');
+            core = core.replace(importAnchor, `${importAnchor}import { resolveProductionLineBom } from "./bom-template-materializer.js";\n`);
+          }
+          const bomDocAnchor = '  revision?: number;\n}\n\nexport interface LeafPlan';
+          if (!core.includes('generated_by_configurator?: unknown;')) {
+            if (!core.includes(bomDocAnchor)) throw new Error('BomDoc anchor missing');
+            core = core.replace(bomDocAnchor, '  revision?: number;\n  generated_by_configurator?: unknown;\n}\n\nexport interface LeafPlan');
+          }
+          const lineAnchor = '  bom_no: string;\n  output_qty: number;';
+          if (!core.includes('bom_template_code?: string;')) {
+            if (!core.includes(lineAnchor)) throw new Error('SalesProductionLine BOM anchor missing');
+            core = core.replace(lineAnchor, '  bom_no: string;\n  bom_template?: string;\n  bom_template_code?: string;\n  bom_fingerprint?: string;\n  bom_materialization_required?: 0 | 1;\n  output_qty: number;');
+          }
+          core = core.replace(
+            'function selectBom(boms: BomDoc[], itemCode: string, color: string, on: string): string {',
+            'function selectBom(boms: BomDoc[], itemCode: string, color: string, on: string, allowMissing = false): string {'
+          );
+          const staticFilter = '    .filter((row) => row.item === itemCode && row.docstatus === 1)\n';
+          if (!core.includes('.filter((row) => !checked(row.generated_by_configurator))')) {
+            if (!core.includes(staticFilter)) throw new Error('static BOM filter anchor missing');
+            core = core.replace(staticFilter, `${staticFilter}    .filter((row) => !checked(row.generated_by_configurator))\n`);
+          }
+          core = core.replace(
+            '  if (!candidates.length) throw new Error(`${itemCode}: chưa có BOM đang hiệu lực${color ? ` cho màu ${color}` : ""}.`);',
+            '  if (!candidates.length) {\n    if (allowMissing) return "";\n    throw new Error(`${itemCode}: chưa có BOM đang hiệu lực${color ? ` cho màu ${color}` : ""}.`);\n  }'
+          );
+          core = core.replace(
+            'export function buildSalesProductionLines(input: BuildInputs): SalesProductionLine[] {',
+            'export function buildSalesProductionLines(input: BuildInputs, options: { allow_missing_bom?: boolean } = {}): SalesProductionLine[] {'
+          );
+          core = core.replace(
+            '    const bomNo = selectBom(input.boms, itemCode, color, on);',
+            '    const bomNo = selectBom(input.boms, itemCode, color, on, Boolean(options.allow_missing_bom));'
+          );
+          core = core.replace(
+            '      "name", "item", "color", "docstatus", "is_active", "bom_status", "effective_from", "effective_to", "revision",\n',
+            '      "name", "item", "color", "docstatus", "is_active", "bom_status", "effective_from", "effective_to", "revision", "generated_by_configurator",\n'
+          );
+          const previewAnchor = 'export async function previewSalesProduction(call: ProductionPlatformCall, args: Json): Promise<Response> {';
+          if (!core.includes('async function resolveMissingLineBoms(')) {
+            if (!core.includes(previewAnchor)) throw new Error('preview anchor missing');
+            const helper = `async function resolveMissingLineBoms(\n  call: ProductionPlatformCall,\n  input: BuildInputs,\n  lines: SalesProductionLine[],\n  materialize: boolean,\n): Promise<SalesProductionLine[]> {\n  const company = text(input.sales.company);\n  if (!company) throw new Error(\`Đơn hàng \${input.sales.name} thiếu Công ty để sinh BOM.\`);\n  const output: SalesProductionLine[] = [];\n  for (const line of lines) {\n    if (text(line.bom_no)) {\n      output.push(line);\n      continue;\n    }\n    const resolved = await resolveProductionLineBom(call, { line, company, materialize });\n    if (materialize && !resolved.bom_no) throw new Error(\`\${line.item_code}: resolver không trả về BOM đã ghi sổ.\`);\n    output.push({\n      ...line,\n      bom_no: resolved.bom_no,\n      bom_template: resolved.bom_template,\n      bom_template_code: resolved.bom_template_code,\n      bom_fingerprint: resolved.bom_fingerprint,\n      bom_materialization_required: resolved.bom_no ? 0 : 1,\n    });\n  }\n  return output;\n}\n\n`;
+            core = core.replace(previewAnchor, `${helper}${previewAnchor}`);
+          }
+          core = core.replace(
+            '    const items = buildSalesProductionLines(input);\n    const warnings =',
+            '    const draftItems = buildSalesProductionLines(input, { allow_missing_bom: true });\n    const items = await resolveMissingLineBoms(call, input, draftItems, false);\n    const warnings ='
+          );
+          core = core.replace(
+            '    const lines = buildSalesProductionLines(input);\n    const order = input.sales.name;',
+            '    const draftLines = buildSalesProductionLines(input, { allow_missing_bom: true });\n    const lines = await resolveMissingLineBoms(call, input, draftLines, true);\n    const order = input.sales.name;'
+          );
+          const validateAnchor = '      if (!text(row.formula_policy) || !text(row.formula_version) || !text(row.formula_snapshot)) {';
+          if (!core.includes('thiếu BOM đã ghi sổ')) {
+            if (!core.includes(validateAnchor)) throw new Error('Production Request validation anchor missing');
+            core = core.replace(validateAnchor, '      if (!text(row.bom_no)) return refuse(`Dòng ${index + 1}: thiếu BOM đã ghi sổ.`);\n      if (!text(row.formula_policy) || !text(row.formula_version) || !text(row.formula_snapshot)) {');
+          }
+          fs.writeFileSync(corePath, core, 'utf8');
+
+          const perms = { 'Chủ xưởng': 'rwc', 'Sản xuất': 'rwc', 'Kinh doanh': 'r' };
+          const componentRule = {
+            name: 'BOM Component Rule', child: true, label: 'Quy tắc thành phần BOM', group: 'Sản xuất', naming: 'autoincrement',
+            fields: [
+              'rule_code:Data*! Mã quy tắc', 'component_key:Data Khóa thành phần', 'item_code:Link(Item)! Vật tư',
+              'stock_uom:Link(UOM) Đơn vị tồn', 'conditions_json:Code Điều kiện JSON', 'priority:Int=(0) Ưu tiên',
+              'sequence:Int=(0) Thứ tự', 'quantity_formula_json:Code! Công thức số lượng JSON', 'note:Small Text Ghi chú',
+            ], permissions: perms,
+          };
+          const bomTemplate = {
+            name: 'BOM Template', label: 'Mẫu BOM', group: 'Sản xuất', naming: 'autoincrement',
+            fields: [
+              'template_code:Data*! Mã mẫu BOM', 'item_code:Link(Item)! Thành phẩm', 'conditions_json:Code Điều kiện áp dụng JSON',
+              'priority:Int=(0) Ưu tiên', 'disabled:Check=(0) Ngừng dùng',
+              'required_context_fields_json:Code Ngữ cảnh bắt buộc JSON',
+              'required_component_keys_json:Code Thành phần bắt buộc JSON',
+              'component_rules:Table(BOM Component Rule)! Quy tắc thành phần', 'note:Small Text Ghi chú',
+            ], permissions: perms,
+          };
+          const bomMetaFields = [
+            'bom_template:Link(BOM Template) Mẫu BOM nguồn', 'bom_template_code:Data Mã mẫu BOM',
+            'bom_fingerprint:Data Dấu vân tay cấu hình', 'generated_by_configurator:Check=(0) BOM sinh từ cấu hình',
+            'configuration_snapshot:Code Snapshot cấu hình',
+          ];
+          const fieldName = (entry) => typeof entry === 'string' ? entry.split(':')[0].trim() : entry.fieldname;
+          const briefPath = 'server/briefs/alumdoor-v2.json';
+          const brief = JSON.parse(fs.readFileSync(briefPath, 'utf8'));
+          if (!brief.doctypes.some((row) => row.name === componentRule.name)) brief.doctypes.push(componentRule);
+          if (!brief.doctypes.some((row) => row.name === bomTemplate.name)) brief.doctypes.push(bomTemplate);
+          const bom = brief.doctypes.find((row) => row.name === 'Bill of Materials');
+          if (!bom) throw new Error('Bill of Materials missing from alumdoor-v2 brief');
+          for (const spec of bomMetaFields) if (!bom.fields.some((entry) => fieldName(entry) === fieldName(spec))) bom.fields.push(spec);
+          fs.writeFileSync(briefPath, JSON.stringify(brief, null, 2) + '\n');
+
+          const builderPath = 'server/scripts/build-alumdoor-v2-brief.mjs';
+          let builder = fs.readFileSync(builderPath, 'utf8');
+          if (!builder.includes('name: "BOM Template"')) {
+            const anchor = 'note(`Cutting Policy: gắn Geometry Profile + ${CUTTING_POLICIES.reduce((sum, policy) => sum + policy.rules.length, 0)} geometry rules canonical`);';
+            if (!builder.includes(anchor)) throw new Error('builder Cutting Policy anchor missing');
+            const block = `${anchor}\n\n// ────────────────── BOM TEMPLATE — CẤU HÌNH → BOM INSTANCE ──────────────────\nbrief.doctypes.push(${JSON.stringify(componentRule, null, 2)});\nbrief.doctypes.push(${JSON.stringify(bomTemplate, null, 2)});\nconst bomDoctype = doctype("Bill of Materials");\nfor (const spec of ${JSON.stringify(bomMetaFields, null, 2)}) {\n  if (!bomDoctype.fields.some((entry) => nameOf(entry) === nameOf(spec))) bomDoctype.fields.push(spec);\n}\nnote("BOM Template: +doctype mẫu/quy tắc + metadata materialization trên Bill of Materials");`;
+            builder = builder.replace(anchor, block);
+          }
+          fs.writeFileSync(builderPath, builder, 'utf8');
+          NODE
+      - name: Install dependencies
+        working-directory: server
+        run: pnpm install --frozen-lockfile
+      - name: Build server
+        working-directory: server
+        run: pnpm run build
+      - name: Focused BOM and geometry tests
+        working-directory: server
+        run: |
+          node --test tests/alumdoor-bom-template-core.test.mjs
+          node --test tests/alumdoor-bom-template-materializer.test.mjs
+          node --test tests/alumdoor-cutting-policy-geometry.test.mjs
+      - name: Validate brief and dry-run
+        working-directory: server
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const b=JSON.parse(fs.readFileSync('briefs/alumdoor-v2.json','utf8'));
+          for(const name of ['BOM Template','BOM Component Rule','Bill of Materials']) if(!b.doctypes.some(x=>x.name===name)) throw new Error('Missing '+name);
+          NODE
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+      - name: Commit validated product changes and remove temporary workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/_tmp-bom-template-materialization.yml \
+            .github/workflows/_tmp-fix-alumdoor-v2-builder-fixture.yml \
+            .github/workflows/_tmp-bom-template-materialization-v2.yml \
+            .github/workflows/_tmp-bom-brief-dryrun-diagnostic.yml \
+            .github/workflows/_tmp-bom-brief-dryrun-diagnostic-v2.yml \
+            .github/workflows/_tmp-bom-template-materialization-final.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            server/apps-src/alumdoor-worker/src/sales-production-core.ts \
+            server/apps-src/alumdoor-worker/src/bom-template-materializer.ts \
+            server/tests/alumdoor-bom-template-materializer.test.mjs \
+            server/scripts/build-alumdoor-v2-brief.mjs \
+            server/briefs/alumdoor-v2.json \
+            .github/workflows/_tmp-bom-template-materialization.yml \
+            .github/workflows/_tmp-fix-alumdoor-v2-builder-fixture.yml \
+            .github/workflows/_tmp-bom-template-materialization-v2.yml \
+            .github/workflows/_tmp-bom-brief-dryrun-diagnostic.yml \
+            .github/workflows/_tmp-bom-brief-dryrun-diagnostic-v2.yml \
+            .github/workflows/_tmp-bom-template-materialization-final.yml
+          git commit -m 'feat(alumdoor): wire BOM template materialization'
+          git push origin HEAD:agent/alumdoor-bom-template-resolver
