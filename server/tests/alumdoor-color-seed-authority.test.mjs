@@ -117,10 +117,10 @@ test("Surface Finish schema exposes group and item exclusions in base and V2 bri
   }
 });
 
-test("Surface Finish exclusions require Alumdoor V2 metadata version 2.0.43 or newer", () => {
+test("Surface Finish exclusions require Alumdoor V2 metadata version 2.2.4 or newer", () => {
   const brief = JSON.parse(readFileSync(join(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));
   const version = String(brief.version).split(".").map(Number);
-  const minimum = [2, 0, 43];
+  const minimum = [2, 2, 4];
   assert.ok(version.every(Number.isInteger), `invalid Alumdoor V2 version ${brief.version}`);
   const current = version[0] * 1_000_000 + version[1] * 1_000 + version[2];
   const floor = minimum[0] * 1_000_000 + minimum[1] * 1_000 + minimum[2];
