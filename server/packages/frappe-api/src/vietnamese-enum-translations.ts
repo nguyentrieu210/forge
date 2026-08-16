@@ -86,6 +86,14 @@ const enumTranslations: Readonly<Record<string, string>> = Object.freeze({
   biweekly: "Hai tuần/lần",
   semimonthly: "Nửa tháng/lần",
 
+  // Geometry profile authoring. Canonical storage values stay English; only UI labels are Vietnamese.
+  input: "Nhập liệu",
+  calculated: "Tự tính",
+  info: "Thông tin",
+  width: "Chiều rộng",
+  height: "Chiều cao",
+  length: "Chiều dài",
+
   // Attendance codes shown in Select controls. Values remain SHIFT1/SHIFT2/SHIFT3 in storage.
   shift1: "Ca 1",
   shift2: "Ca 2",
