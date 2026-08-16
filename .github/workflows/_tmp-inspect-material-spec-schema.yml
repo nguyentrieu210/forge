@@ -1,0 +1,24 @@
+name: Temporary Inspect Material Spec Schema
+on:
+  push:
+    paths:
+      - '.github/workflows/_tmp-inspect-material-spec-schema.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/alumdoor-master-layer-material-specification
+      - run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const f of ['server/briefs/alumdoor.json','server/briefs/alumdoor-v2.json']){
+            const x=JSON.parse(fs.readFileSync(f,'utf8'));
+            const d=x.doctypes.find(r=>r.name==='Material Specification');
+            console.log('\nFILE',f,'version',x.version);
+            console.log(JSON.stringify(d?.fields,null,2));
+          }
+          NODE
