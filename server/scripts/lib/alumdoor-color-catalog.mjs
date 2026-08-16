@@ -26,9 +26,9 @@ export const ALUMDOOR_SURFACE_FINISH_CATALOG = Object.freeze([
     name: "THÔ",
     usageScope: "Mua hàng",
     requiresColor: false,
-    // OPEN: THÔ là trạng thái đầu vào của MỌI vật tư trước khi hoàn thiện — không có Item
-    // Group nào hợp lý để loại trừ. Đây là trường hợp duy nhất dùng cờ tường minh, không phải
-    // suy ngầm từ applies_to_groups rỗng (xem cảnh báo fail-closed ở đầu file).
+    // THÔ là trạng thái đầu vào của MỌI vật tư trước khi hoàn thiện — không có Item Group nào
+    // hợp lý để loại trừ. Đây là trường hợp duy nhất dùng cờ tường minh, không phải suy ngầm từ
+    // applies_to_groups rỗng (xem cảnh báo fail-closed ở đầu file).
     appliesToAllGroups: true,
     groups: [],
   },
@@ -38,9 +38,16 @@ export const ALUMDOOR_SURFACE_FINISH_CATALOG = Object.freeze([
     usageScope: "Mua & bán",
     requiresColor: true,
     // Nguồn: apps/alumdoor/docs/nguon/quy-cach/MS.md — "Cửa CN Đức, Úc, Siêu Trường, Đài
-    // Loan, Lưới, Phụ kiện cần sơn tĩnh điện". Phụ kiện KHÔNG đưa vào đây: chưa có nhóm lá nào
-    // khớp đúng nghĩa "phụ kiện cần sơn tĩnh điện" trong cây Item Group hiện tại — xem OPEN.
-    groups: ["Cửa CN Đức", "Cửa tấm liền Úc", "Cửa Siêu Trường", "Cửa Đài Loan", "Cửa Lưới"],
+    // Loan, Lưới, Phụ kiện cần sơn tĩnh điện". Cây Item Group canonical đã có đúng leaf
+    // "Phụ kiện cần sơn tĩnh điện", nên phạm vi Surface Finish phải chứa đủ 6 nhóm nguồn.
+    groups: [
+      "Cửa CN Đức",
+      "Cửa tấm liền Úc",
+      "Cửa Siêu Trường",
+      "Cửa Đài Loan",
+      "Cửa Lưới",
+      "Phụ kiện cần sơn tĩnh điện",
+    ],
   },
   {
     code: "MA_MAU",
@@ -65,7 +72,7 @@ const staticColor = (code, extra = {}) => ({
   code,
   name: code,
   finish: "SON_TINH_DIEN",
-  // Rỗng = không thu hẹp thêm so với phạm vi 5 nhóm đã khai trên chính Surface Finish
+  // Rỗng = không thu hẹp thêm so với phạm vi 6 nhóm đã khai trên chính Surface Finish
   // SON_TINH_DIEN — nguồn MS.md liệt kê CÙNG một phạm vi cho cả 18 màu STĐ, nên không có lý do
   // khai lại ở từng màu.
   groups: [],
@@ -135,8 +142,9 @@ export const ALUMDOOR_LEGACY_COLOR_MAP = Object.freeze(new Map([
 /**
  * Item Color.finish CŨ (trước 2026-08-16) là Select text tự do 6 giá trị: Thô/Sơn tĩnh
  * điện/Anode/Vân gỗ/Mạ/Khác. Bốn giá trị có canonical Surface Finish quy đổi RÕ theo mục 5 của
- * yêu cầu hội tụ; "Anode" và "Khác" KHÔNG có canonical tương ứng — cố tình không map, migration
- * phải audit/report riêng, không đoán.
+ * yêu cầu hội tụ; "Anode" và "Khác" KHÔNG có canonical tương ứng — cố tình không map. Audit
+ * local D1 ngày 2026-08-16 xác nhận không có documents/master_records nào tham chiếu hai giá trị
+ * này, nên không cần migration; nếu chúng xuất hiện về sau phải audit/report lại, không đoán.
  */
 export const ALUMDOOR_LEGACY_FINISH_MAP = Object.freeze(new Map([
   ["Thô", "THO"],
@@ -150,7 +158,10 @@ export function canonicalAlumdoorColor(value) {
   return ALUMDOOR_LEGACY_COLOR_MAP.get(normalized) ?? clean(value);
 }
 
-/** Trả về mã Surface Finish, hoặc `undefined` nếu giá trị cũ không nằm trong 4 mã đã chốt — gọi nơi dùng phải tự audit, không silently rơi về mặc định. */
+/**
+ * Trả về mã Surface Finish, hoặc `undefined` nếu giá trị cũ không nằm trong 4 mã đã chốt — gọi
+ * nơi dùng phải tự audit, không silently rơi về mặc định.
+ */
 export function canonicalAlumdoorFinish(value) {
   return ALUMDOOR_LEGACY_FINISH_MAP.get(clean(value));
 }
