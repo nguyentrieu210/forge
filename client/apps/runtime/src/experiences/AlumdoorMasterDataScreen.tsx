@@ -2,6 +2,10 @@ import { useMemo } from "react";
 import { ChevronRight, PackageSearch } from "lucide-react";
 import { Button } from "@metaforge/ui";
 
+/* Hallmark · macrostructure: Workbench · genre: modern-minimal
+ * pre-emit critique: P4 H5 E4 S4 R5 V4
+ */
+
 export interface AlumdoorMasterItem {
   key: string;
   label: string;
@@ -101,6 +105,15 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
   },
 ];
 
+const GROUP_LAYOUT: Record<string, string> = {
+  materials: "lg:col-span-7 lg:row-span-2 xl:col-span-8",
+  selling: "lg:col-span-5 xl:col-span-4",
+  "sales-configuration": "lg:col-span-5 xl:col-span-4",
+  warehouses: "lg:col-span-4",
+  purchasing: "lg:col-span-4",
+  operations: "lg:col-span-4",
+};
+
 function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
   const itemsByKey = new Map(items.map((item) => [normalize(item.key), item]));
   const itemsByLabel = new Map(items.map((item) => [normalize(item.label), item]));
@@ -115,26 +128,58 @@ function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
   })).filter((group) => group.items.length > 0);
 }
 
-function MasterGroupCard({ group, onNavigate, mobile = false }: {
-  group: ResolvedMasterGroup;
+function MasterLink({ item, onNavigate, prominent = false }: {
+  item: AlumdoorMasterItem & { displayLabel: string };
   onNavigate: (route: string) => void;
-  mobile?: boolean;
+  prominent?: boolean;
 }) {
   return (
-    <section className="mb-3 inline-block w-full break-inside-avoid overflow-hidden rounded-lg border bg-card align-top">
-      <h2 className="border-b bg-muted/30 px-3 py-2.5 text-sm font-semibold">{group.title}</h2>
-      <nav aria-label={group.title}>
+    <Button
+      type="button"
+      variant="ghost"
+      className={`group h-auto min-h-11 w-full justify-between gap-3 rounded-md px-2.5 py-2.5 text-left font-normal hover:bg-primary/5 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${prominent ? "text-[15px]" : "text-sm"}`}
+      onClick={() => onNavigate(item.route)}
+    >
+      <span className="min-w-0 whitespace-normal leading-5">{item.displayLabel}</span>
+      <ChevronRight
+        className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary group-focus-visible:translate-x-0.5 group-focus-visible:text-primary"
+        aria-hidden="true"
+      />
+    </Button>
+  );
+}
+
+function MasterGroupSection({ group, onNavigate }: {
+  group: ResolvedMasterGroup;
+  onNavigate: (route: string) => void;
+}) {
+  const isPrimary = group.id === "materials";
+
+  if (isPrimary) {
+    return (
+      <section className={`${GROUP_LAYOUT[group.id]} rounded-xl border bg-card p-3 shadow-sm sm:p-4`}>
+        <div className="mb-2 flex items-baseline justify-between gap-3 border-b pb-3">
+          <h2 className="text-base font-semibold tracking-tight">{group.title}</h2>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{group.items.length}</span>
+        </div>
+        <nav aria-label={group.title} className="grid min-w-0 gap-x-3 sm:grid-cols-2">
+          {group.items.map((item) => (
+            <MasterLink key={item.key} item={item} onNavigate={onNavigate} prominent />
+          ))}
+        </nav>
+      </section>
+    );
+  }
+
+  return (
+    <section className={`${GROUP_LAYOUT[group.id] ?? "lg:col-span-4"} min-w-0 border-t pt-3`}>
+      <div className="mb-1 flex items-baseline justify-between gap-3 px-2.5">
+        <h2 className="text-sm font-semibold tracking-tight">{group.title}</h2>
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{group.items.length}</span>
+      </div>
+      <nav aria-label={group.title} className="min-w-0">
         {group.items.map((item) => (
-          <Button
-            key={item.key}
-            type="button"
-            variant="ghost"
-            className={`group h-auto w-full justify-between gap-3 rounded-none border-b px-3 text-left text-sm font-normal last:border-b-0 hover:bg-primary/5 hover:text-primary ${mobile ? "min-h-11 py-2.5" : "min-h-10 py-2"}`}
-            onClick={() => onNavigate(item.route)}
-          >
-            <span className="min-w-0 whitespace-normal">{item.displayLabel}</span>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
-          </Button>
+          <MasterLink key={item.key} item={item} onNavigate={onNavigate} />
         ))}
       </nav>
     </section>
@@ -146,7 +191,7 @@ export function AlumdoorMasterDataScreen({ items, onNavigate }: AlumdoorMasterDa
 
   if (groups.length === 0) {
     return (
-      <section className="flex flex-col items-center rounded-lg border border-dashed bg-card px-5 py-10 text-center">
+      <section className="flex flex-col items-start rounded-lg border border-dashed bg-card px-5 py-10 text-left">
         <PackageSearch className="mb-3 size-8 text-muted-foreground" aria-hidden="true" />
         <h1 className="font-semibold">Chưa có danh mục khả dụng</h1>
         <p className="mt-1 text-sm text-muted-foreground">Tài khoản hiện tại chưa được cấp quyền xem dữ liệu danh mục.</p>
@@ -155,13 +200,11 @@ export function AlumdoorMasterDataScreen({ items, onNavigate }: AlumdoorMasterDa
   }
 
   return (
-    <section className="w-full">
-      <div className="hidden columns-2 gap-3 md:block xl:columns-3">
-        {groups.map((group) => <MasterGroupCard key={group.id} group={group} onNavigate={onNavigate} />)}
-      </div>
-
-      <div className="md:hidden">
-        {groups.map((group) => <MasterGroupCard key={group.id} group={group} onNavigate={onNavigate} mobile />)}
+    <section className="w-full min-w-0 overflow-x-clip">
+      <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-12 xl:gap-x-8 xl:gap-y-6">
+        {groups.map((group) => (
+          <MasterGroupSection key={group.id} group={group} onNavigate={onNavigate} />
+        ))}
       </div>
     </section>
   );
