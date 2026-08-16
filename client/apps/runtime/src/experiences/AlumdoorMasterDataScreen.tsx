@@ -105,6 +105,15 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
   },
 ];
 
+const DISPLAY_ORDER = [
+  "materials",
+  "selling",
+  "sales-configuration",
+  "warehouses",
+  "purchasing",
+  "operations",
+] as const;
+
 const GROUP_LAYOUT: Record<string, string> = {
   materials: "lg:col-span-7 lg:row-span-2 xl:col-span-8",
   selling: "lg:col-span-5 xl:col-span-4",
@@ -117,6 +126,7 @@ const GROUP_LAYOUT: Record<string, string> = {
 function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
   const itemsByKey = new Map(items.map((item) => [normalize(item.key), item]));
   const itemsByLabel = new Map(items.map((item) => [normalize(item.label), item]));
+  const rank = new Map(DISPLAY_ORDER.map((id, index) => [id, index]));
 
   return MASTER_GROUPS.map((group) => ({
     id: group.id,
@@ -125,7 +135,9 @@ function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
       const item = itemsByKey.get(normalize(entry.key)) ?? itemsByLabel.get(normalize(entry.label));
       return item ? [{ ...item, displayLabel: entry.label }] : [];
     }),
-  })).filter((group) => group.items.length > 0);
+  }))
+    .filter((group) => group.items.length > 0)
+    .sort((a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER));
 }
 
 function MasterLink({ item, onNavigate, prominent = false }: {
