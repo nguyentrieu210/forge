@@ -6,12 +6,22 @@ on:
       - 'server/scripts/lib/alumdoor-uom-catalog.mjs'
       - 'server/scripts/seed-alumdoor-uom-local.mjs'
       - 'server/tests/alumdoor-uom-catalog.test.mjs'
+      - 'server/scripts/lib/alumdoor-color-catalog.mjs'
+      - 'server/scripts/build-alumdoor-color-correction.mjs'
+      - 'server/scripts/build-alumdoor-master-data.mjs'
+      - 'server/tests/alumdoor-color-catalog.test.mjs'
+      - 'server/tests/alumdoor-color-seed-authority.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   pull_request:
     paths:
       - 'server/scripts/lib/alumdoor-uom-catalog.mjs'
       - 'server/scripts/seed-alumdoor-uom-local.mjs'
       - 'server/tests/alumdoor-uom-catalog.test.mjs'
+      - 'server/scripts/lib/alumdoor-color-catalog.mjs'
+      - 'server/scripts/build-alumdoor-color-correction.mjs'
+      - 'server/scripts/build-alumdoor-master-data.mjs'
+      - 'server/tests/alumdoor-color-catalog.test.mjs'
+      - 'server/tests/alumdoor-color-seed-authority.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   workflow_dispatch:
 
@@ -30,3 +40,17 @@ jobs:
           node-version: '22'
       - name: Test Alumdoor canonical UOM layer
         run: node --test server/tests/alumdoor-uom-catalog.test.mjs
+
+  color:
+    name: Lock canonical Item Color catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test Alumdoor canonical color catalogue
+        run: node --test server/tests/alumdoor-color-catalog.test.mjs
+      - name: Test Alumdoor color seed authority
+        run: node --test server/tests/alumdoor-color-seed-authority.test.mjs
