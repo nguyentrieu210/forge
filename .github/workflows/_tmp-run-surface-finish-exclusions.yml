@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 server/scripts/_tmp-surface-finish-exclusions.py
           python3 server/scripts/_tmp-surface-finish-exclusions-v2.py
+          python3 server/scripts/_tmp-surface-finish-exclusions-childfix.py
       - name: Install and build server
         working-directory: server
         run: |
