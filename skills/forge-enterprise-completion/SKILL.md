@@ -1,501 +1,282 @@
 ---
 name: forge-enterprise-completion
-description: Kim chỉ nam để đưa Forge từ ERP engine thành enterprise operating platform hoàn chỉnh, có độ phủ ERP/HCM/CRM/WMS/MRP/BPM/BI/compliance và lợi thế App Factory + Cloudflare SaaS + vertical apps.
+description: Kim chỉ nam để phát triển Forge như một enterprise operating platform metadata-driven, multi-tenant trên Cloudflare, với CloudForge + MetaForge + Frappe-compatible API + App Factory + shared domain authorities + vertical apps.
 ---
 
 # Forge Enterprise Completion Skill
 
 ## 1. Mục tiêu
 
-Skill này dùng khi đánh giá, thiết kế, triển khai hoặc review bất kỳ hạng mục nào nhằm **hoàn thiện Forge như một enterprise platform**, không chỉ vá một màn hình hay thêm một DocType.
+Skill này dùng khi đánh giá, thiết kế, triển khai hoặc review bất kỳ hạng mục nào của Forge ở cấp platform/domain/vertical.
 
 Đích sản phẩm:
 
-> **ERP core sâu + Vietnam compliance + low-code App Factory + AI/automation + Cloudflare SaaS + vertical apps.**
+> **ERP core sâu + Vietnam compliance + App Factory + AI/automation + Cloudflare SaaS + vertical apps.**
 
-Forge không được phát triển thành bản sao giao diện của MISA hoặc ERPNext. Hai hệ thống đó là benchmark về độ phủ và độ chín; Forge phải giữ lợi thế kiến trúc riêng: metadata-driven, multi-tenant Cloudflare, app packaging, generic runtime và verticalization nhanh.
+Forge không phải bản sao giao diện của ERPNext/MISA. Các hệ thống đó là benchmark về độ phủ và độ chín; Forge giữ lợi thế riêng: metadata-driven, multi-tenant Cloudflare, Frappe-compatible API, generic runtime, app packaging và verticalization nhanh.
 
 ## 2. Nguồn sự thật bắt buộc đọc trước khi làm
 
-Không bắt đầu từ lịch sử chat hoặc tài liệu snapshot cũ.
+Không bắt đầu từ lịch sử chat, branch name hoặc tài liệu snapshot cũ.
 
 Đọc theo thứ tự:
 
-1. Exact `main`, branch, PR và diff trên GitHub.
-2. `CURRENT_STATUS.md` — trạng thái đã xác minh gần nhất.
-3. `NEXT_TASKS.md` — hàng đợi active.
-4. `PROJECT_CONTEXT.md` — kiến trúc và ranh giới hiện hành.
-5. `AI_HANDOFF.md` nếu task tiếp nối công việc cũ.
-6. `docs/FORGE_ENTERPRISE_NORTH_STAR.md` — mục tiêu chiến lược.
-7. `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` — capability checklist đầy đủ.
-8. Tài liệu BRD/spec/test/source-lock liên quan trực tiếp đến capability đang làm.
-9. `docs/ROADMAP.md` chỉ để hiểu hướng dài hạn, **không dùng để suy live state**.
+1. Exact GitHub `main`, branch, PR, commit và diff liên quan.
+2. `SENTRUX_MAP.md` — topology, ownership, entrypoint và dependency boundary hiện hành.
+3. `.sentrux/rules.toml` — architecture guardrails đang được CI enforce.
+4. `CURRENT_STATUS.md` — checkpoint đã xác minh gần nhất.
+5. `NEXT_TASKS.md` — queue active.
+6. `PROJECT_CONTEXT.md` — authority/invariant ổn định.
+7. `AI_HANDOFF.md` nếu task tiếp nối công việc cũ.
+8. `docs/ARCHITECTURE.md` — kiến trúc canonical.
+9. `docs/FORGE_ENTERPRISE_NORTH_STAR.md` và `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` khi task liên quan roadmap/capability maturity.
+10. BRD/spec/source-lock/test/runbook/evidence liên quan trực tiếp đến capability đang làm.
 
-Nếu các nguồn mâu thuẫn: **code + migration + tests + exact GitHub state thắng tài liệu**.
+`docs/ROADMAP.md`, release notes, RC/R5/R6 records và docs/agents cũ chỉ là historical context, không dùng để suy live state.
 
-## 3. Luật kiến trúc không được phá
+Nếu mâu thuẫn: **exact code + migration + tests + current GitHub state thắng prose**. Với topology/ownership, exact tree/import graph thắng `SENTRUX_MAP.md`; nếu topology đổi, cập nhật map trong cùng PR.
 
-### 3.1 Authoritative backend
+## 3. Sentrux governance bắt buộc
 
-- CloudForge/document kernel là đường ghi chuẩn.
-- Không bypass Durable Object/document kernel để ghi document/ledger chỉ vì làm nhanh hơn.
-- D1 là authoritative store/query projection theo kiến trúc hiện hành; ledger/audit/outbox phải giữ invariant.
-- Idempotency, OCC/version, tenant boundary và audit không được hy sinh để hoàn thành UI.
+Sentrux là sensor kiến trúc, không phải mục tiêu điểm số độc lập.
 
-### 3.2 Metadata-first
+### 3.1 Trước khi sửa cấu trúc
 
-- Runtime chung không hard-code schema app nếu metadata/manifest có thể diễn đạt được.
-- Capability dùng lại giữa nhiều app phải hạ xuống platform/package chung.
-- Logic ngành dọc chỉ ở app/vertical layer khi thực sự đặc thù ngành.
-- Nếu một pattern lặp lại từ 2 app trở lên, xem xét nâng thành primitive của App Factory/runtime.
+- đọc `SENTRUX_MAP.md` để biết owner và dependency spine;
+- đọc `.sentrux/rules.toml` để biết blocker hiện hành;
+- với refactor/material cross-package change, lấy baseline bằng `sentrux gate --save .` hoặc exact CI equivalent;
+- không tự ghi đè `.sentrux/rules.toml` trong workflow/check tạm.
 
-### 3.3 Permission server-side
+### 3.2 Sau khi sửa
 
-- UI permission chỉ để UX.
-- Server phải enforce role/DocPerm/owner/share/user-permission/tenant scope.
+Chạy theo blast radius:
+
+```bash
+sentrux check .
+sentrux gate .
+```
+
+Nếu cần diagnostics sâu, có thể dùng rule strict tạm ở workspace/CI, nhưng strict diagnostics **không được thay thế committed rules** và không được biến known debt thành blocker giả.
+
+### 3.3 Luật tăng độ chặt
+
+- Chỉ nâng `min_quality`, `no_god_files`, cycle/depth/CC/layer/boundary rule khi exact current branch đã chứng minh pass.
+- Không hạ rule chỉ để merge một regression mới.
+- Known legacy debt phải ghi rõ và tách khỏi blocker hiện hành.
+- Điểm quality không được dùng để biện minh cho thay đổi làm sai behavior, permission, ledger, migration hoặc contract.
+- Một thay đổi topology/ownership material phải cập nhật `SENTRUX_MAP.md` cùng PR.
+
+## 4. Luật kiến trúc không được phá
+
+### 4.1 Authoritative backend
+
+- CloudForge/Document Kernel là đường ghi business-document chuẩn.
+- Không bypass document kernel/aggregate authority để ghi ledger hoặc document chỉ vì làm nhanh.
+- D1/DO/query projections phải tuân authority hiện hành; audit/outbox/idempotency/OCC/tenant boundary không được hy sinh.
+
+### 4.2 Metadata-first
+
+- Runtime chung không hard-code schema app nếu metadata/manifest có thể diễn đạt.
+- Capability dùng lại giữa nhiều app phải đi vào platform/domain package chung.
+- Vertical chỉ giữ logic thực sự đặc thù ngành.
+- Pattern lặp ở >=2 app phải được đánh giá để nâng thành primitive của App Factory/runtime.
+
+### 4.3 Permission server-side
+
+- Client visibility chỉ là UX.
+- Server enforce tenant, role, DocPerm, owner/share/user-permission và trusted identity context.
 - Không tin tenant/user/role do client tự khai khi đã có trusted context.
 
-### 3.4 Money, stock và legal rules
+### 4.4 Money, stock và legal rules
 
-- Tiền dùng fixed-point/scaled integer hoặc decimal semantics đã chuẩn hóa; không tùy tiện dùng binary float cho authoritative calculation.
-- Stock, GL, payment, payroll và các ledger khác phải có reversal/correction rõ ràng, không sửa lịch sử lặng lẽ.
-- Legal/statutory rule phải effective-dated, versioned, source-bound, auditable và có regression theo version.
+- Tiền dùng decimal/fixed-point semantics chuẩn hóa; không dùng binary float cho authoritative calculation.
+- Stock/GL/payment/payroll và ledger khác phải có correction/reversal traceable.
+- Statutory/legal rule phải effective-dated, versioned, source-bound, auditable và có regression theo version.
 
-### 3.5 Production boundary
+### 4.5 Dependency direction
 
-- **UI-only**: sau khi verify đúng blast radius, có thể merge và deploy theo fast-path của dự án.
-- **Non-UI/backend/schema/migration/business rule**: mở branch + PR, verify, **dừng trước merge/deploy cho tới khi user duyệt rõ**.
-- Không production migration, secret/DNS, customer-data mutation nếu chưa có yêu cầu rõ.
+- Shared server package không phụ thuộc client runtime.
+- Shared platform/domain package không phụ thuộc vertical implementation.
+- Frontend consume server behavior qua API/contracts; known legacy cross-boundary edge phải được coi là debt cần xử lý có chủ đích, không nhân rộng.
+- Không import root barrel nếu leaf/subpath đã tồn tại và root barrel làm tăng dependency depth/coupling.
 
-## 4. Benchmark đúng cách
+## 5. Benchmark đúng cách
 
-Mỗi capability cần đối chiếu ít nhất một benchmark phù hợp:
+Benchmark phù hợp theo capability:
 
-- **ERPNext/Frappe**: generic ERP depth, document lifecycle, stock/manufacturing/accounting long-tail, extensibility.
-- **MISA AMIS**: Vietnam compliance, digital office, HR/payroll/local operations, productization cho doanh nghiệp Việt Nam.
-- **Forge vertical hiện có**: Alumdoor/HRM/VN Accounting/Social Commerce/Website để tái sử dụng pattern tốt đã chứng minh.
+- **ERPNext/Frappe**: generic ERP depth, document lifecycle, stock/manufacturing/accounting, extensibility.
+- **MISA AMIS**: Vietnam compliance, HR/payroll/local operations, productization doanh nghiệp Việt Nam.
+- **Forge vertical hiện có**: tái sử dụng pattern đã chứng minh thay vì fork core.
 
-Không copy tên màn hình rồi gọi là parity. Parity phải xét:
+Parity phải xét happy path, correction/cancel/return, partial flow, backdate, permission/tenant, currency/UOM/rounding, audit, import/export/report, failure/retry/idempotency và mobile/large-data khi relevant.
 
-1. Happy path.
-2. Cancel/amend/return/correction.
-3. Partial fulfillment/payment/allocation.
-4. Backdated transaction.
-5. Permission/tenant boundary.
-6. Currency/UOM/rounding.
-7. Audit/history.
-8. Import/export/report.
-9. Mobile/large-data behavior nếu nghiệp vụ yêu cầu.
-10. Failure/retry/idempotency.
+## 6. Maturity model
 
-## 5. Maturity model chung
+Chỉ dùng:
 
-Mọi capability chỉ dùng các mức sau:
+- **Missing** — chưa có đường chạy thực tế.
+- **Foundation** — có schema/API seam/metadata nhưng chưa đủ flow.
+- **Wired** — end-to-end đã nối, evidence/hardening còn mỏng.
+- **RC** — flow chính + invariants + targeted regression đã có.
+- **Hardened** — production-grade trong scope công bố, có failure/correction/security/reconciliation/evidence.
 
-- **Missing**: chưa có đường chạy thực tế.
-- **Foundation**: có schema/API seam/metadata nhưng chưa đủ flow nghiệp vụ.
-- **Wired**: end-to-end đã nối nhưng validation/evidence còn mỏng.
-- **RC**: flow chính + invariants + targeted regression đã có; còn thiếu promotion/hardening/long-tail.
-- **Hardened**: production-grade trong scope công bố, có failure/correction/security/reconciliation/evidence.
+Không dùng số test hoặc số điểm Sentrux để tự phong `Hardened`.
 
-Không dùng số test để tự phong `Hardened`.
-
-## 6. Risk class trước khi code
+## 7. Risk class
 
 ### FAST
 
-UI presentation, copy, spacing, icon, metadata display không đổi authoritative behavior.
+Presentation-only: copy, spacing, icon, metadata display, UI composition không đổi authoritative behavior.
 
-Yêu cầu tối thiểu:
-- typecheck/build scope liên quan;
-- screenshot/visual check nếu UI;
-- không đổi schema/data/business invariant.
+Tối thiểu: targeted typecheck/build/test + browser/visual evidence khi material.
 
 ### STANDARD
 
-Feature nghiệp vụ không tác động legal/ledger/migration hoặc thay đổi behavior có giới hạn.
+Business feature có blast radius giới hạn, không chạm statutory/ledger/migration/tenant security.
 
-Yêu cầu:
-- unit/targeted integration;
-- permission path;
-- happy + failure path;
-- backward compatibility theo scope.
+Tối thiểu: contract/invariant, targeted unit/integration, permission, happy + failure path, compatibility.
 
 ### CRITICAL
 
-Accounting, payroll statutory, inventory valuation, migration, tenant isolation, auth/security, financial/legal rule, production data transformation.
+Accounting, payroll statutory, inventory valuation, migration, tenant isolation, auth/security, legal/financial rule, production data transformation.
 
-Yêu cầu:
-- explicit invariants;
-- migration replay nếu có schema;
-- authoritative regression;
-- correction/reversal path;
-- tenant/permission isolation;
-- source/legal evidence nếu statutory;
-- reconciliation trước/sau;
-- không merge/deploy khi chưa được duyệt.
+Bắt buộc: explicit invariants, migration replay nếu có, authoritative regression, correction/reversal, tenant/permission isolation, source/legal evidence khi statutory và reconciliation.
 
-## 7. Quy trình chuẩn cho mọi capability
+## 8. Quy trình chuẩn
 
 ### Bước 1 — Locate
 
-Xác định capability ID trong `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md`.
-
-Nếu chưa có ID phù hợp, bổ sung capability map trước khi triển khai để tránh feature mồ côi.
+- xác định owner bằng `SENTRUX_MAP.md` + exact tree/import graph;
+- xác định capability ID nếu thuộc capability map;
+- xác định canonical source/generator thay vì sửa generated output.
 
 ### Bước 2 — Audit exact state
 
-Tìm:
-- metadata/schema hiện có;
-- controller/service;
-- API;
-- UI renderer;
-- permission;
-- migrations;
-- tests;
-- app manifest/brief;
-- production evidence nếu liên quan.
-
-Phân loại maturity hiện tại.
+Tìm metadata/schema, controller/service, API, UI renderer, permissions, migrations, tests, manifest/brief, Sentrux boundary và production evidence nếu relevant.
 
 ### Bước 3 — Gap against target
 
-Viết ngắn:
-- user outcome;
-- authoritative data;
-- state machine;
-- invariants;
-- integrations;
-- reports;
-- exception/correction flows;
-- benchmark gap.
+Ghi ngắn: user outcome, authoritative data, state machine, invariants, integrations, reports, exception/correction flow, benchmark gap.
 
 ### Bước 4 — Decide layer
 
-Ưu tiên theo thứ tự:
+Ưu tiên:
 
-1. Platform primitive nếu dùng chung.
-2. ERP/domain package nếu là nghiệp vụ generic.
-3. App package nếu thuộc một bounded domain.
-4. Vertical-only logic nếu thực sự đặc thù ngành.
+1. platform primitive dùng chung;
+2. ERP/domain package generic;
+3. app package bounded domain;
+4. vertical-only logic thực sự đặc thù.
 
-Không nhét business rule vào React component nếu backend/domain có thể sở hữu nó.
+Không nhét business rule vào React component nếu server/domain có thể sở hữu.
 
 ### Bước 5 — Contract first
 
-Trước implementation, khóa:
-- data contract;
-- naming/state/status;
-- permission contract;
-- rounding/UOM/currency semantics;
-- idempotency/correction semantics;
-- API/manifest boundary;
-- acceptance evidence.
+Khóa data contract, naming/state/status, permission, rounding/UOM/currency, idempotency/correction, API/manifest boundary và acceptance evidence.
 
 ### Bước 6 — Implement thin vertical slice
 
-Một slice hoàn chỉnh tốt hơn năm màn hình rỗng.
+Ưu tiên một slice khép kín:
 
-Mỗi slice ưu tiên:
+`input -> validate -> submit/approve -> authoritative side effect -> query/report -> cancel/correction -> audit`
 
-`create/input -> validate -> approve/submit -> ledger/side effect -> report/query -> correction/cancel -> audit`
+### Bước 7 — Verify behavior + structure
 
-### Bước 7 — Verify
+Theo risk/blast radius:
 
-Theo blast radius:
 - compile/typecheck;
 - targeted tests;
 - migration replay;
-- invariant tests;
-- permission tests;
-- tenant isolation;
-- browser/E2E/screenshot cho UI;
-- production release marker khi thật sự deploy.
+- invariant/permission/tenant tests;
+- browser/E2E/screenshot nếu có UI;
+- `sentrux check .`;
+- `sentrux gate .` cho structural/refactor work.
 
-### Bước 8 — Update evidence
+Không accept một refactor chỉ vì Sentrux tăng điểm nếu behavior/tests/contracts regress.
 
-Sau khi merge:
-- cập nhật `CURRENT_STATUS.md` cho trạng thái đã xác minh;
+### Bước 8 — Update authority/evidence
+
+Sau khi thay đổi được accept:
+
+- cập nhật `CURRENT_STATUS.md` nếu live checkpoint thay đổi;
 - cập nhật `NEXT_TASKS.md` nếu queue thay đổi;
-- capability map chỉ đổi maturity khi có evidence;
+- cập nhật capability maturity chỉ khi có evidence;
+- cập nhật `SENTRUX_MAP.md` nếu topology/ownership đổi;
+- siết `.sentrux/rules.toml` chỉ khi exact branch pass rule mới;
 - không nhét SHA/branch tạm vào North Star.
 
-## 7A. Automatic multi-agent orchestration
+## 9. Automatic multi-agent orchestration
 
-Trước implementation, coordinator phải tự phân loại execution topology:
+Tự phân loại:
 
-- `SINGLE`: một owner là an toàn/nhanh nhất;
-- `PROGRAM`: cần nhiều worker agent có ownership tách được.
+- `SINGLE`: một hotspot/owner, tightly coupled slice.
+- `PROGRAM`: có >=2 ownership hotspot độc lập hoặc nhiều workstream có thể fan-out sạch.
 
-Không hỏi user xem "có cần agent không" nếu repo evidence đã đủ để quyết định.
+Khi `PROGRAM`:
 
-### Khi mặc định chọn PROGRAM
+1. exact baseline trước;
+2. control branch;
+3. dependency graph + acceptance gates;
+4. mỗi worker có owned hotspot + forbidden zone;
+5. không để hai worker cùng sửa một authority nếu chưa có coordinator contract;
+6. route Dependency Request thay vì duplicate primitive;
+7. convergence theo dependency order;
+8. báo rõ agent, branch, PR, status, blocker.
 
-Fan-out khi có ít nhất một strong trigger và các hotspot có thể tách sạch:
+Status chuẩn: `BOOTSTRAPPED`, `RUNNING`, `BLOCKED`, `READY`, `CONVERGING`, `DONE`, `SUPERSEDED/CLOSED`.
 
-1. từ hai ownership hotspot độc lập trở lên có thể chạy song song;
-2. task trải qua nhiều workstream/domain/package với authority khác nhau;
-3. có shared foundation/contract rồi nhiều consumer độc lập;
-4. có các lane audit/source-lock, implementation, integration, QA/convergence tách được;
-5. platform-wide rebuild/convergence/hardening wave có nhiều slice thực sự độc lập;
-6. các substream có risk/merge boundary khác nhau, ví dụ UI FAST song song backend STANDARD/CRITICAL.
+Không gọi `RUNNING` chỉ vì branch/PR tồn tại.
 
-Giữ `SINGLE` nếu phần lớn thay đổi nằm ở một hotspot, invariant cần chứng minh nguyên khối, hoặc coordination cost lớn hơn implementation.
+NO-STOP: chỉ dừng hỏi user khi cần quyết định nghiệp vụ không suy được, destructive/production operation, hoặc merge/deploy boundary yêu cầu explicit authorization.
 
-### Khi chọn PROGRAM, coordinator tự làm
+## 10. Definition of Done
 
-Không chờ user nhắc. Coordinator phải:
+Một capability chỉ DONE khi phù hợp scope và có:
 
-1. audit exact current `main`, branch/PR và source bắt buộc;
-2. tạo program/control branch từ exact current `main`;
-3. tạo technical/program spec, Agent Board, NO-STOP rule, dependency graph và acceptance gates;
-4. source-lock/parity matrix nếu benchmark/reference bên ngoài là material;
-5. định nghĩa từng worker: mission, owned hotspot, forbidden zone, risk, dependency, evidence, merge/deploy boundary;
-6. tạo worker branches từ exact program baseline;
-7. seed branch-local handoff + startup prompt cho từng worker;
-8. verify topology trước implementation: worker không được mang code/handoff của owner khác;
-9. cho worker chạy song song theo dependency graph;
-10. coordinator theo dõi exact heads/diffs, route Dependency Request, chống duplicate primitive và quyết định convergence/merge order.
+- business flow usable;
+- server-side permission;
+- validation/invariants;
+- audit/history;
+- error states;
+- cancel/reversal/correction khi cần;
+- import/export/migration path khi cần;
+- report/query kiểm soát kết quả;
+- tests theo risk;
+- UI phù hợp actor nếu có;
+- không duplicate source of truth;
+- docs/status đúng maturity;
+- Sentrux committed rules pass;
+- không structural regression so với baseline khi task là refactor/architecture work.
 
-Số agent dùng **ít nhất cần thiết để ownership sạch**. Hướng dẫn mặc định:
+Finance/stock/payroll thêm reconciliation, exact rounding/scaling, posting period guard, backdated/correction semantics và immutable/traceable ledger behavior.
 
-- 1: single hotspot/tightly coupled slice;
-- 2–4: cross-package feature hoặc domain hardening bình thường;
-- 5–8: platform rebuild/convergence/enterprise wave;
-- >8: chỉ khi capability graph thật sự có nhiều owner độc lập.
+## 11. Production boundary
 
-Agent count không phải KPI.
+Merge source không đồng nghĩa production deploy.
 
-### Báo cáo agent/branch bắt buộc
+- **UI-only FAST**: có thể đi fast-path sau verify đúng blast radius theo policy hiện hành.
+- **Backend/schema/migration/business rule/shared authoritative contract**: branch + PR + verify, dừng trước merge/deploy nếu chưa có explicit authorization.
+- Không production migration, restore/PITR, secrets/DNS/provider mutation, customer-data write/cutover hoặc destructive queue/state operation nếu chưa được yêu cầu rõ.
 
-Mỗi lần coordinator báo cáo **khởi tạo PROGRAM, tiến độ giữa chừng, blocker, convergence hoặc kết thúc**, báo cáo phải công khai topology thực tế tại thời điểm đó. Không được chỉ nói chung chung như “đã chia 5 agent” hoặc “các agent đang chạy”.
+## 12. Báo cáo tiến độ
 
-Báo cáo tối thiểu phải có:
-
-1. **Worker agent count**: tổng số worker agent đang được program quản lý. Coordinator/control plane ghi riêng, không nhập nhằng vào số worker.
-2. **Active branch count**: tổng số branch worker còn active, kèm tên exact branch.
-3. **Control branch**: tên program/control branch và exact baseline/head nếu đã thay đổi.
-4. **Danh sách từng agent** dưới dạng bảng hoặc cấu trúc tương đương, bắt buộc có:
-   - Agent ID/tên;
-   - branch exact;
-   - PR nếu có;
-   - mission/ownership ngắn;
-   - status thực tế;
-   - dependency/blocker nếu có.
-5. Nếu agent đã merge/close/supersede, vẫn ghi trạng thái đó trong báo cáo convergence/final thay vì làm biến mất khỏi lịch sử program.
-6. Khi branch/head đổi sau rebase/convergence, báo cáo phải dùng trạng thái GitHub mới nhất, không lặp SHA/branch snapshot cũ.
-
-Status nên dùng vocabulary nhất quán:
-
-- `BOOTSTRAPPED`: branch/handoff đã tạo nhưng chưa có substantive implementation commit;
-- `RUNNING`: đã có implementation/audit work thực sự trên branch;
-- `BLOCKED`: có Dependency Request hoặc external blocker cụ thể;
-- `READY`: worker đã hoàn tất scope và evidence của mình, chờ convergence/review;
-- `CONVERGING`: đang được A5/coordinator tích hợp/đối chiếu;
-- `DONE`: đã được accept/merge theo boundary cho phép;
-- `SUPERSEDED/CLOSED`: branch/PR không còn là candidate hiện hành.
-
-**Không gọi agent là `RUNNING` chỉ vì branch và draft PR đã tồn tại.** Bootstrap topology phải được phân biệt với execution thực tế.
-
-Mẫu báo cáo PROGRAM tối thiểu:
-
-```text
-Execution topology: PROGRAM
-Worker agents: <N>
-Active worker branches: <N>
-Control branch: <branch>@<sha>
-
-| Agent | Branch | PR | Mission | Status | Depends/blocker |
-|---|---|---|---|---|---|
-| A1 | <branch> | #123 | <scope> | RUNNING | — |
-| A2 | <branch> | #124 | <scope> | BLOCKED | A1 contract |
-```
-
-Với `SINGLE`, báo cáo vẫn phải ghi rõ:
-
-```text
-Execution topology: SINGLE
-Worker agents: 1
-Active branch: <branch>@<sha>
-Status: <BOOTSTRAPPED/RUNNING/READY/DONE/...>
-```
-
-Mục tiêu của rule này là để user nhìn một báo cáo là biết **có bao nhiêu agent thật, agent nào đang chạy, chạy trên nhánh nào, PR nào và đang kẹt ở đâu**.
-
-### NO-STOP mặc định
-
-Worker tự audit và quyết định kỹ thuật thông thường theo Skill/North Star/repo evidence.
-
-Worker chỉ dừng hỏi user khi:
-
-1. cần quyết định nghiệp vụ không thể suy ra từ repo/spec;
-2. cần đổi shared authoritative contract thuộc stream khác và không thể cô lập dependency;
-3. cần destructive/production operation;
-4. non-UI work đã sẵn sàng merge/deploy nhưng project policy yêu cầu user duyệt.
-
-Blocker cục bộ không phải lý do dừng. Ghi `Dependency Request`, mô tả phần bị block rồi tiếp tục mọi phần độc lập.
-
-UI-only vẫn theo fast path sau verify blast radius. Non-UI/shared contract/backend/schema/migration/business rule vẫn dừng trước merge/deploy theo production boundary.
-
-Canonical chi tiết: `docs/agents/AUTO_AGENT_ORCHESTRATION.md` và `docs/agents/PARALLEL_EXECUTION_PROTOCOL.md`.
-
-## 8. Definition of Done của một capability
-
-Một capability chỉ được coi là hoàn tất khi phù hợp scope và có đủ:
-
-- Business flow usable.
-- Permission server-side.
-- Validation/invariants.
-- Audit/history.
-- Error states rõ ràng.
-- Cancel/reversal/correction khi nghiệp vụ cần.
-- Import/export hoặc migration path nếu dữ liệu doanh nghiệp cần nhập.
-- Report/query tối thiểu để kiểm soát kết quả.
-- Tests theo risk class.
-- UI desktop/mobile phù hợp actor thực tế nếu có UI.
-- Không tạo duplicate source of truth.
-- Tài liệu/status phản ánh đúng mức maturity.
-
-Đối với finance/stock/payroll, thêm:
-- reconciliation;
-- exact rounding/scaling;
-- posting period guard;
-- backdated/correction semantics;
-- immutable or traceable ledger behavior.
-
-## 9. 12 trụ chiến lược bắt buộc
-
-Mọi roadmap dài hạn phải quay về 12 trụ sau:
-
-1. Full Finance + Vietnam Compliance Engine.
-2. CRM / Revenue 360.
-3. Procurement 360.
-4. Inventory + WMS.
-5. MRP II + QMS.
-6. Full HCM + statutory payroll VN.
-7. Project + Service + Field Service.
-8. BI Semantic Layer + Planning.
-9. BPM + Low-code App Factory.
-10. Integration Hub + ecosystem connectors.
-11. Enterprise Security + SaaS Control Plane + SRE.
-12. Migration + Implementation + Customer Success tooling.
-
-Vertical apps như Alumdoor phải xây trên 12 trụ này, đồng thời cung cấp feedback để nâng primitive chung.
-
-## 10. Trình tự ưu tiên mặc định
-
-Nếu user không chỉ định task cụ thể, ưu tiên theo dependency và giá trị tái sử dụng:
-
-### Wave A — ERP Core 90%
-
-- Finance/AR/AP/Cash/Bank.
-- VN statutory foundation.
-- CRM core.
-- Procurement full flow.
-- WMS core.
-- Manufacturing/MRP core.
-- HCM/payroll core.
-
-### Wave B — Enterprise Depth
-
-- Budget/Treasury/Consolidation.
-- QMS/CMMS/EAM.
-- Project/PSA.
-- Helpdesk/Field Service.
-- Logistics/distribution.
-- Contracts/DMS.
-
-### Wave C — Platform Moat
-
-- App Factory no-code path.
-- Workflow/Rule/Action/Report/Dashboard builders.
-- BI semantic layer.
-- AI assistant/agent with approval.
-- Integration SDK/event platform.
-
-### Wave D — Vietnam Ecosystem
-
-- E-invoice.
-- Bank feeds/payment.
-- Tax/BHXH.
-- E-sign.
-- Zalo/social/marketplaces/shipping/payment gateways.
-
-### Wave E — Industry Packs
-
-- Alumdoor/manufacturing.
-- Distribution.
-- Retail/F&B.
-- Construction.
-- Logistics.
-- Agriculture.
-- Professional services.
-- Các ngành khác chỉ mở khi có customer/market evidence.
-
-## 11. Capability selection heuristic
-
-Khi có nhiều việc ngang nhau, ưu tiên capability có:
-
-1. Chặn flow end-to-end hiện có.
-2. Tái sử dụng cho nhiều module/app.
-3. Giảm rủi ro tài chính/pháp lý/dữ liệu.
-4. Giúp migration/onboarding khách hàng dễ hơn.
-5. Tạo doanh thu hoặc lợi thế vertical rõ ràng.
-6. Có benchmark/evidence rõ để đóng scope.
-
-Tránh ưu tiên feature chỉ vì dễ demo nhưng không cải thiện business completeness.
-
-## 12. AI rules
-
-AI trong Forge có thể:
-- giải thích;
-- tìm kiếm;
-- phân tích;
-- đề xuất;
-- draft document/action;
-- dự báo/anomaly/recommendation khi có data contract rõ.
-
-AI không được:
-- tự ghi ledger hoặc statutory filing mà không có deterministic validation/approval;
-- vượt permission của user;
-- bịa số liệu doanh nghiệp khi semantic/context data không có;
-- biến prompt thành source of truth cho business rule.
-
-Mục tiêu cuối của AI là:
-
-`User intent -> semantic/context layer -> permission -> deterministic tool/action -> preview -> approval -> authoritative write`
-
-## 13. Báo cáo tiến độ chuẩn
-
-Khi review một domain, trả kết quả theo mẫu:
+Với domain/capability:
 
 ```text
 Domain: <ID + tên>
 Current maturity: Missing/Foundation/Wired/RC/Hardened
 Target maturity: <mức>
-Coverage: <x/y capability>
-Blocking gaps: <3-7 gap quan trọng>
-Dependencies: <domain IDs>
+Blocking gaps: <3-7 gap>
+Owner/topology: <SENTRUX_MAP path/package>
 Risk: FAST/STANDARD/CRITICAL
-Next slice: <một vertical slice có thể đóng>
+Sentrux: <baseline/current/blocking rule nếu relevant>
+Next slice: <vertical slice>
 Evidence required: <tests/migration/E2E/reconciliation>
 ```
 
-Nếu task đang chạy theo `SINGLE` hoặc `PROGRAM`, phải nối thêm block **agent/branch reporting** ở §7A. Báo cáo domain không thay thế báo cáo execution topology.
+Với `SINGLE`/`PROGRAM`, nối thêm execution topology thực tế: agent count, exact branch, PR, status và blocker.
 
-Không dùng phần trăm cảm tính nếu chưa xác định mẫu số capability.
+## 13. Nguyên tắc cuối
 
-## 14. Nguyên tắc cuối
+Forge hoàn thiện không phải khi sidebar có đủ module hoặc Sentrux đạt một con số đẹp.
 
-Forge hoàn thiện không phải khi sidebar có đủ tên module.
-
-Forge hoàn thiện khi:
-
-- doanh nghiệp chạy được quy trình xuyên phòng ban;
-- số liệu cuối flow đối soát được;
-- lỗi/cancel/backdate/correction không phá dữ liệu;
-- compliance có nguồn và version;
-- permission/tenant không thủng;
-- app mới được sinh từ primitive chung thay vì fork core;
-- triển khai/migrate/backup/restore có công cụ;
-- production evidence đủ để biết chính xác thứ gì đang chạy.
+Forge hoàn thiện khi doanh nghiệp chạy được flow xuyên phòng ban, số liệu đối soát được, correction không phá dữ liệu, compliance có nguồn/version, tenant/permission không thủng, app mới compose từ primitive chung, topology có governance và production evidence cho biết chính xác thứ gì đang chạy.

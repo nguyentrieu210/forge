@@ -1,104 +1,49 @@
 # NEXT TASKS
 
-Ngày cập nhật: **2026-08-11**.
+Ngày cập nhật: **2026-08-16**.
 
-Đây là **active queue** của Forge. Lịch sử đã hoàn thành nằm trong Git/PR/convergence evidence, không lặp lại thành live queue.
+Đây là active queue ngắn. Lịch sử implementation/convergence nằm trong Git/PR và retained evidence; không kéo các board/prompt/handoff cũ trở lại làm live plan.
 
-## 0. Current state
+## 1. Repository hygiene
 
-- 2026-08-11 Inventory + Attendance/Payroll + Sales source convergence: **DONE**.
-- Final convergence PR: `#822` — merged to `main@37880fc828bfcab5f9fca19341ee64e4caee3103`.
-- Exact pre-merge combined candidate: `dba25942311fd94064f95d7906b5c044347cc440`.
-- R6 Pass Convergence run `31465006532`: **SUCCESS** on that exact combined candidate.
-- Production promotion/cutover: **NOT PERFORMED by this wave**.
+Đợt hiện hành:
 
-Do not reopen the superseded Sales/UI/runner/control PR chain. New work starts from exact current `main`.
+- hợp nhất documentation authority;
+- xóa duplicate/stale coordination docs có final provenance thay thế;
+- xóa temporary Sentrux trigger/probe/experiment artifacts đã hoàn thành;
+- thêm `SENTRUX_MAP.md` để agent định vị ownership trước khi sửa;
+- thêm `.sentrux/rules.toml` để bắt đầu codify architecture constraints;
+- giữ release/audit/source-lock evidence khi chưa chứng minh được là disposable.
 
-## 1. Release/pilot lane — only when explicitly authorized
+Không xóa file chỉ vì tên cũ. Chỉ xóa khi vai trò của nó đã được current authority, final evidence hoặc Git/PR history thay thế rõ ràng.
 
-If the next goal is to promote the converged product to AlumDoor production/pilot:
+## 2. Sentrux convergence tiếp theo
 
-1. resolve exact current `main` and choose one immutable release SHA;
-2. lock package/app/profile identity and expected migration inventory for that SHA;
-3. rerun exact-SHA release evidence required by current release policy if the release SHA differs from the already validated `dba2594...` candidate;
-4. verify desired-vs-observed provider state read-only first;
-5. prepare production migration/deploy/cutover actions as separately gated operations;
-6. require explicit authorization before deploy/redeploy/rollback, production migration, restore/PITR, tenant apply, DNS/route/secret/provider mutation or customer-data write/cutover;
-7. after authorized promotion, reconcile Stock/AR/AP/payment/revenue/COGS/manufacturing/GL and record exact deployed release marker/bundle hash.
+Sau hygiene PR:
 
-Do not treat `main` merge as proof of production deployment.
+1. scan exact current `main`;
+2. lưu gate baseline;
+3. dùng `SENTRUX_MAP.md` để chọn đúng owner/hotspot;
+4. ưu tiên root cause còn tệ nhất thay vì tối ưu một metric cô lập;
+5. mỗi candidate phải không regression quality và phải pass compile/test của blast radius;
+6. chỉ siết `.sentrux/rules.toml` khi current `main` đã pass rule mới.
 
-## 2. Open PR rebaseline lane
+Không dùng workflow experiment một lần như permanent architecture. Candidate thất bại phải bị remove sau khi rút được evidence.
 
-Exactly three independent PRs remain open after convergence cleanup:
+## 3. Documentation maintenance
 
-### `#665` — Repository / North Star hygiene
+Khi topology/authority đổi:
 
-- Re-audit against exact current `main`.
-- Salvage only still-needed brand/docs/security-hygiene changes.
-- Do not merge the stale 40-commit history wholesale if current main already supersedes parts of it.
-- Any credential rotation/history rewrite remains a separate security/destructive decision.
+- cập nhật `SENTRUX_MAP.md` và `docs/ARCHITECTURE.md` trong cùng PR;
+- cập nhật `CURRENT_STATUS.md` chỉ khi checkpoint materially thay đổi;
+- giữ `NEXT_TASKS.md` ngắn, không biến thành changelog;
+- không tạo thêm architecture/status file song song ở root, `client/` hoặc `server/` nếu canonical doc đã tồn tại;
+- program prompts/open-order/handoffs phải bị xóa sau convergence trừ khi chúng là final audit evidence.
 
-### `#672` — Provisioning doctrine + Skill Matrix
+## 4. Product work
 
-- Reconcile the doctrine against current Skill/North Star/App Factory state.
-- Prefer a small docs-only replacement PR from current main if the content remains valid.
-- Do not inherit stale status statements from its old baseline.
+Mọi product/domain work mới phải bắt đầu từ exact current `main`, xác định authority trong `SENTRUX_MAP.md`, rồi đọc BRD/spec/evidence đúng scope. Không tái sử dụng stale branch baseline hoặc stale agent board.
 
-### `#675` — Omnichannel Marketplace ERP
+## 5. Production boundary
 
-- Treat as an independent product workstream, not part of AlumDoor convergence.
-- Rebase/reconcile from exact current main before claiming compatibility.
-- Re-run current Sales/ATP/Stock/Finance authority tests because main now contains newer Sales fulfillment and aluminum reservation contracts.
-- Real marketplace OAuth/secrets/webhooks/provider certification and production promotion remain explicit external/live boundaries.
-
-## 3. Post-convergence product audit
-
-Before opening another broad implementation wave:
-
-- audit current `main` rather than branch snapshots;
-- verify no duplicate Pricing/Stock/Payroll authority remains active;
-- verify Sales Package fulfillment consumes shared reservation/stock lifecycle;
-- verify aluminum purchase/stock metadata remains counted-stock + catch-weight canonical;
-- verify Attendance correction/payroll approval and locking remain canonical after future shared-runtime changes;
-- identify only evidence-backed residual P0/P1 gaps.
-
-If gaps span independent authority hotspots, open a new PROGRAM from exact current main. Do not reuse the closed 2026-08-11 control branches as live baselines.
-
-## 4. Capability maturity discipline
-
-- Canonical capability denominator remains 956 until a new evidence-backed audit materializes a new distribution.
-- Do not raise maturity from source presence or test count alone.
-- Promote capability maturity only with source + runtime + permission + correction/reconciliation/evidence appropriate to the risk class.
-- Do not implement all Missing capabilities merely to improve a score; prioritize customer/release-critical and shared-safety gaps.
-
-## 5. Source-fix rule after convergence
-
-If a new source defect is found:
-
-1. start from exact current main;
-2. record failed invariant/capability;
-3. make the smallest owner-correct fix;
-4. verify affected domain + shared authority boundaries;
-5. merge through normal risk boundary;
-6. issue a new release candidate SHA if the change affects a pending release;
-7. rerun affected exact-SHA evidence.
-
-Never reuse evidence from an older source SHA after a source-changing fix.
-
-## 6. Standing authorization boundaries
-
-The completed `#822` approval covered source convergence/merge. It did **not** authorize:
-
-- production deploy/redeploy/rollback;
-- production migration;
-- production restore/PITR;
-- tenant metadata/profile apply to live customers;
-- customer production data import/write/cutover;
-- DNS/route/secret/provider mutation;
-- destructive queue replay;
-- merge/deploy of future non-UI workstreams not included in `#822`.
-
-## 7. Documentation discipline
-
-Use `CURRENT_STATUS.md` for live verified state and this file for the active queue. Old R6/RC/agent boards, prompts and handoffs are provenance unless current GitHub state explicitly makes them active again. Keep final convergence/certification evidence; remove temporary coordination artifacts when they no longer carry audit value.
+Release/deploy/migration/provider/customer-data work chỉ thực hiện khi user authorize rõ. Source cleanup hoặc Sentrux improvement không tự mở quyền production mutation.
