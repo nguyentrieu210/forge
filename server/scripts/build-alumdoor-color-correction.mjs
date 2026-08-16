@@ -46,6 +46,7 @@ const sql = `-- Alumdoor canonical color catalogue correction — 2026-08-16: h�
 -- THÔ tách khỏi màu thương mại thành Surface Finish riêng; Item Color.surface_finish thay
 -- Item Color.finish (Link, không còn text tự do). +SƠN VÂN GỖ/VÂN GỖ theo bảng giá 31/07.
 -- Idempotent: upsert 4 Bề mặt + 25 màu chuẩn, normalize legacy lot links, remove obsolete aliases.
+-- Surface Finish là authority phạm vi rộng; Item Color.applies_to_groups chỉ thu hẹp thêm.
 
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
@@ -94,15 +95,6 @@ WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legac
 
 DELETE FROM documents
 WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legacyList});
-
--- OPEN 2026-08-16: bản cũ ở đây từng ghi Item.allowed_colors để chặn STĐ không lan ra
--- Cửa Úc/Đài Loan/Lưới/Phụ kiện ngoài Cửa CN Đức + Cửa Siêu Trường. Field \`allowed_colors\`
--- đã bị dropFields() khỏi form Alumdoor ở v2 (build-alumdoor-v2-brief.mjs) — ghi vào đó bây
--- giờ chỉ tạo key không ai đọc. Cơ chế whitelist theo Item thay thế nó CHƯA được thiết kế lại;
--- xem SKILL forge-ui-change-routing hoặc PROJECT_CONTEXT.md trước khi tự đoán field mới.
--- Hệ quả tạm thời: STĐ ở Item Color chỉ scope 2 nhóm (Cửa CN Đức, Cửa Siêu Trường); Cửa Úc/
--- Đài Loan/Lưới/phụ kiện có STĐ thật thì hiện KHÔNG có đường cấp màu STĐ cho tới khi whitelist
--- theo Item được dựng lại.
 `;
 
 await writeFile(path.resolve(output), sql, "utf8");
