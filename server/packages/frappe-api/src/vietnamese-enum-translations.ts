@@ -168,12 +168,16 @@ export function translateVietnameseUiSource(source: string): string {
   const uiExact = uiTranslations[text];
   if (uiExact) return uiExact;
 
+  // Exact enum labels are display contracts and must win over the broader ERP vocabulary fallback.
+  // Stored values remain raw; this only affects optionLabels exposed to the UI.
+  const exact = enumTranslations[canonicalEnumKey(text)];
+  if (exact && isEnumShaped(text)) return exact;
+
   const ordinary = translateVietnameseSource(raw);
   if (ordinary !== raw) return ordinary;
 
-  const exact = enumTranslations[canonicalEnumKey(text)];
-  if (exact) return exact;
   if (!isEnumShaped(text)) return raw;
+  if (exact) return exact;
 
   const tokens = canonicalEnumKey(text).split("_").filter(Boolean);
   if (!tokens.length || tokens.some((token) => !enumWords[token])) return raw;
