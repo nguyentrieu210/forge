@@ -104,7 +104,7 @@ set READY=
 for /l %%i in (1,1,90) do (
   if not defined READY (
     node -e "fetch('http://127.0.0.1:!PORT!/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit((r.status===401||r.status===403||r.ok)?0:1)).catch(()=>process.exit(1))" >nul 2>&1
-    if not errorlevel 1 (set READY=1) else (timeout /t 2 /nobreak >nul)
+    if not errorlevel 1 (set READY=1) else (C:\Windows\System32\timeout.exe /t 2 /nobreak >nul)
   )
 )
 if not defined READY (
