@@ -9403,7 +9403,12 @@
         "items:Table(BOM Item)! Vật tư tiêu hao",
         "operating_cost:Currency Chi phí gia công (nhân công, điện, sơn)",
         "is_active:Check=(1) Đang áp dụng",
-        "note:Small Text Ghi chú kỹ thuật"
+        "note:Small Text Ghi chú kỹ thuật",
+        "bom_template:Link(BOM Template) Mẫu BOM nguồn",
+        "bom_template_code:Data Mã mẫu BOM",
+        "bom_fingerprint:Data Dấu vân tay cấu hình",
+        "generated_by_configurator:Check=(0) BOM sinh từ cấu hình",
+        "configuration_snapshot:Code Snapshot cấu hình"
       ],
       "permissions": {
         "Chủ xưởng": "rwcsxa",
@@ -11495,6 +11500,51 @@
         "Chủ xưởng": "rwc",
         "Kinh doanh": "r",
         "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "BOM Component Rule",
+      "child": true,
+      "label": "Quy tắc thành phần BOM",
+      "group": "Sản xuất",
+      "naming": "autoincrement",
+      "fields": [
+        "rule_code:Data*! Mã quy tắc",
+        "component_key:Data Khóa thành phần",
+        "item_code:Link(Item)! Vật tư",
+        "stock_uom:Link(UOM) Đơn vị tồn",
+        "conditions_json:Code Điều kiện JSON",
+        "priority:Int=(0) Ưu tiên",
+        "sequence:Int=(0) Thứ tự",
+        "quantity_formula_json:Code! Công thức số lượng JSON",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "BOM Template",
+      "label": "Mẫu BOM",
+      "group": "Sản xuất",
+      "naming": "autoincrement",
+      "fields": [
+        "template_code:Data*! Mã mẫu BOM",
+        "item_code:Link(Item)! Thành phẩm",
+        "conditions_json:Code Điều kiện áp dụng JSON",
+        "priority:Int=(0) Ưu tiên",
+        "disabled:Check=(0) Ngừng dùng",
+        "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
+        "required_component_keys_json:Code Thành phần bắt buộc JSON",
+        "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",
+        "note:Small Text Ghi chú"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Sản xuất": "rwc",
+        "Kinh doanh": "r"
       }
     }
   ],

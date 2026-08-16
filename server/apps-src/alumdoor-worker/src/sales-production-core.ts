@@ -9,6 +9,7 @@ import {
   type DoorType,
   type SalesMode,
 } from "./door-formulas.js";
+import { resolveProductionLineBom } from "./bom-template-materializer.js";
 
 export type ProductionPlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
@@ -87,6 +88,7 @@ interface BomDoc extends Json {
   effective_from?: string;
   effective_to?: string;
   revision?: number;
+  generated_by_configurator?: unknown;
 }
 
 export interface LeafPlan {
@@ -131,6 +133,10 @@ export interface SalesProductionLine extends Json {
   source_warehouse: string;
   target_warehouse: string;
   bom_no: string;
+  bom_template?: string;
+  bom_template_code?: string;
+  bom_fingerprint?: string;
+  bom_materialization_required?: 0 | 1;
   output_qty: number;
   stock_uom: string;
   paint_required: 0 | 1;
@@ -412,21 +418,25 @@ function productionDepartment(doorType: DoorType): string {
   return doorType === "Cửa tấm liền Úc" ? "Cửa Úc" : doorType;
 }
 
-function selectBom(boms: BomDoc[], itemCode: string, color: string, on: string): string {
+function selectBom(boms: BomDoc[], itemCode: string, color: string, on: string, allowMissing = false): string {
   const candidates = boms
     .filter((row) => row.item === itemCode && row.docstatus === 1)
+    .filter((row) => !checked(row.generated_by_configurator))
     .filter((row) => !row.color || !color || row.color === color)
     .filter((row) => (row.bom_status ? row.bom_status === "Active" : checked(row.is_active)))
     .filter((row) => activeOn(row, on))
     .sort((left, right) => Number(right.revision ?? 0) - Number(left.revision ?? 0));
-  if (!candidates.length) throw new Error(`${itemCode}: chưa có BOM đang hiệu lực${color ? ` cho màu ${color}` : ""}.`);
+  if (!candidates.length) {
+    if (allowMissing) return "";
+    throw new Error(`${itemCode}: chưa có BOM đang hiệu lực${color ? ` cho màu ${color}` : ""}.`);
+  }
   if (candidates.length > 1 && Number(candidates[0]!.revision ?? 0) === Number(candidates[1]!.revision ?? 0)) {
     throw new Error(`${itemCode}: có nhiều BOM cùng revision đang hiệu lực.`);
   }
   return text(candidates[0]!.name);
 }
 
-export function buildSalesProductionLines(input: BuildInputs): SalesProductionLine[] {
+export function buildSalesProductionLines(input: BuildInputs, options: { allow_missing_bom?: boolean } = {}): SalesProductionLine[] {
   const sales = input.sales;
   const customerGroup = text(sales.customer_group) as CustomerGroup;
   if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
@@ -471,7 +481,7 @@ export function buildSalesProductionLines(input: BuildInputs): SalesProductionLi
     const standard = findStandard(input.standards, doorType, department, on, { area_sqm: billablePerSet, sets: 1 });
     const estimatedWeightPerSet = formula.purchase_kg == null ? undefined : round(Number(formula.purchase_kg) / sets);
     const color = text(row.color);
-    const bomNo = selectBom(input.boms, itemCode, color, on);
+    const bomNo = selectBom(input.boms, itemCode, color, on, Boolean(options.allow_missing_bom));
     const stockUom = text(item.stock_uom) || "Bộ";
     const outputQty = ["m2", "m²", "sqm"].includes(normalized(stockUom)) ? billablePerSet : 1;
     const formulaVersion = policyVersion(chosen.raw);
@@ -571,7 +581,7 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
       "effective_from", "effective_to", "disabled",
     ]).catch(() => []),
     listDocs<BomDoc>(call, "Bill of Materials", [
-      "name", "item", "color", "docstatus", "is_active", "bom_status", "effective_from", "effective_to", "revision",
+      "name", "item", "color", "docstatus", "is_active", "bom_status", "effective_from", "effective_to", "revision", "generated_by_configurator",
     ]),
   ]);
   return {
@@ -698,10 +708,39 @@ export async function calculateSalesProductionLine(
   }
 }
 
+async function resolveMissingLineBoms(
+  call: ProductionPlatformCall,
+  input: BuildInputs,
+  lines: SalesProductionLine[],
+  materialize: boolean,
+): Promise<SalesProductionLine[]> {
+  const company = text(input.sales.company);
+  if (!company) throw new Error(`Đơn hàng ${input.sales.name} thiếu Công ty để sinh BOM.`);
+  const output: SalesProductionLine[] = [];
+  for (const line of lines) {
+    if (text(line.bom_no)) {
+      output.push(line);
+      continue;
+    }
+    const resolved = await resolveProductionLineBom(call, { line, company, materialize });
+    if (materialize && !resolved.bom_no) throw new Error(`${line.item_code}: resolver không trả về BOM đã ghi sổ.`);
+    output.push({
+      ...line,
+      bom_no: resolved.bom_no,
+      bom_template: resolved.bom_template,
+      bom_template_code: resolved.bom_template_code,
+      bom_fingerprint: resolved.bom_fingerprint,
+      bom_materialization_required: resolved.bom_no ? 0 : 1,
+    });
+  }
+  return output;
+}
+
 export async function previewSalesProduction(call: ProductionPlatformCall, args: Json): Promise<Response> {
   try {
     const input = await loadBuildInputs(call, args);
-    const items = buildSalesProductionLines(input);
+    const draftItems = buildSalesProductionLines(input, { allow_missing_bom: true });
+    const items = await resolveMissingLineBoms(call, input, draftItems, false);
     const warnings = [...new Set(items.map((line) => line.schedule_warning).filter((value): value is string => Boolean(value)))];
     return answer({
       sales_order: input.sales.name,
@@ -745,7 +784,8 @@ async function existingWorkOrder(call: ProductionPlatformCall, request: string, 
 export async function createSalesProduction(call: ProductionPlatformCall, args: Json): Promise<Response> {
   try {
     const input = await loadBuildInputs(call, args);
-    const lines = buildSalesProductionLines(input);
+    const draftLines = buildSalesProductionLines(input, { allow_missing_bom: true });
+    const lines = await resolveMissingLineBoms(call, input, draftLines, true);
     const order = input.sales.name;
     let requestName = await findExistingRequest(call, order);
     let request: Json & { name?: string; modified?: string };
@@ -849,6 +889,7 @@ export async function validateProductionRequest(
       finitePositive(row.width_m, `Dòng ${index + 1}: rộng`);
       finitePositive(row.height_m, `Dòng ${index + 1}: cao`);
       finitePositive(row.leaf_count, `Dòng ${index + 1}: số lá`);
+      if (!text(row.bom_no)) return refuse(`Dòng ${index + 1}: thiếu BOM đã ghi sổ.`);
       if (!text(row.formula_policy) || !text(row.formula_version) || !text(row.formula_snapshot)) {
         return refuse(`Dòng ${index + 1}: thiếu snapshot công thức.`);
       }

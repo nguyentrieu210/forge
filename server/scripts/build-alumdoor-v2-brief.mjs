@@ -835,6 +835,64 @@ for (const legacyName of ["Cửa Đức — khách lẻ", "Cửa Đức — đ�
 }
 note(`Cutting Policy: gắn Geometry Profile + ${CUTTING_POLICIES.reduce((sum, policy) => sum + policy.rules.length, 0)} geometry rules canonical`);
 
+// ────────────────── BOM TEMPLATE — CẤU HÌNH → BOM INSTANCE ──────────────────
+brief.doctypes.push({
+  "name": "BOM Component Rule",
+  "child": true,
+  "label": "Quy tắc thành phần BOM",
+  "group": "Sản xuất",
+  "naming": "autoincrement",
+  "fields": [
+    "rule_code:Data*! Mã quy tắc",
+    "component_key:Data Khóa thành phần",
+    "item_code:Link(Item)! Vật tư",
+    "stock_uom:Link(UOM) Đơn vị tồn",
+    "conditions_json:Code Điều kiện JSON",
+    "priority:Int=(0) Ưu tiên",
+    "sequence:Int=(0) Thứ tự",
+    "quantity_formula_json:Code! Công thức số lượng JSON",
+    "note:Small Text Ghi chú"
+  ],
+  "permissions": {
+    "Chủ xưởng": "rwc",
+    "Sản xuất": "rwc",
+    "Kinh doanh": "r"
+  }
+});
+brief.doctypes.push({
+  "name": "BOM Template",
+  "label": "Mẫu BOM",
+  "group": "Sản xuất",
+  "naming": "autoincrement",
+  "fields": [
+    "template_code:Data*! Mã mẫu BOM",
+    "item_code:Link(Item)! Thành phẩm",
+    "conditions_json:Code Điều kiện áp dụng JSON",
+    "priority:Int=(0) Ưu tiên",
+    "disabled:Check=(0) Ngừng dùng",
+    "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
+    "required_component_keys_json:Code Thành phần bắt buộc JSON",
+    "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",
+    "note:Small Text Ghi chú"
+  ],
+  "permissions": {
+    "Chủ xưởng": "rwc",
+    "Sản xuất": "rwc",
+    "Kinh doanh": "r"
+  }
+});
+const bomDoctype = doctype("Bill of Materials");
+for (const spec of [
+  "bom_template:Link(BOM Template) Mẫu BOM nguồn",
+  "bom_template_code:Data Mã mẫu BOM",
+  "bom_fingerprint:Data Dấu vân tay cấu hình",
+  "generated_by_configurator:Check=(0) BOM sinh từ cấu hình",
+  "configuration_snapshot:Code Snapshot cấu hình"
+]) {
+  if (!bomDoctype.fields.some((entry) => nameOf(entry) === nameOf(spec))) bomDoctype.fields.push(spec);
+}
+note("BOM Template: +doctype mẫu/quy tắc + metadata materialization trên Bill of Materials");
+
 // ────────────────── D1: rate_uom — CHỐNG ĐƠN VỊ NGẦM ──────────────────
 // value = qty × rate ở controllers.ts:221. qty của nhôm là số CÂY, còn NCC báo giá đ/KG.
 // Nhập 200 cây / 1.200 kg / 100.000 đ/kg => ghi 20tr thay vì 120tr. Sai 6 lần, sổ vẫn cân.
