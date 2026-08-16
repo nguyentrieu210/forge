@@ -16,6 +16,7 @@ import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentatio
 import { parseField } from "./lib/compile-brief.mjs";
 import { GEOMETRY_FIELDS, GEOMETRY_PROFILES } from "./lib/alumdoor-geometry-catalog.mjs";
 import { CUTTING_POLICIES, cuttingPolicyFixtureData } from "./lib/alumdoor-cutting-policy-catalog.mjs";
+import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog.mjs";
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -851,6 +852,9 @@ brief.doctypes.push({
     "priority:Int=(0) Ưu tiên",
     "sequence:Int=(0) Thứ tự",
     "quantity_formula_json:Code! Công thức số lượng JSON",
+    "source_row:Int Dòng nguồn",
+    "source_uom:Data ĐVT nguồn",
+    "source_formula:Small Text Công thức nguồn",
     "note:Small Text Ghi chú"
   ],
   "permissions": {
@@ -870,6 +874,9 @@ brief.doctypes.push({
     "conditions_json:Code Điều kiện áp dụng JSON",
     "priority:Int=(0) Ưu tiên",
     "disabled:Check=(0) Ngừng dùng",
+    "source_status:Select(READY,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
+    "source_ref:Data Tham chiếu nguồn",
+    "deferred_components_json:Code Thành phần chờ chuẩn hóa JSON",
     "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
     "required_component_keys_json:Code Thành phần bắt buộc JSON",
     "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",
@@ -892,6 +899,12 @@ for (const spec of [
   if (!bomDoctype.fields.some((entry) => nameOf(entry) === nameOf(spec))) bomDoctype.fields.push(spec);
 }
 note("BOM Template: +doctype mẫu/quy tắc + metadata materialization trên Bill of Materials");
+for (const fixture of bomSourceFixtureRows()) {
+  const existing = brief.fixtures.find((row) => row.type === fixture.type && row.name === fixture.name);
+  if (existing) existing.data = fixture.data;
+  else brief.fixtures.push(fixture);
+}
+note(`BOM Template nguồn: ${bomSourceFixtureRows().length} fixture catalog`);
 
 // ────────────────── D1: rate_uom — CHỐNG ĐƠN VỊ NGẦM ──────────────────
 // value = qty × rate ở controllers.ts:221. qty của nhôm là số CÂY, còn NCC báo giá đ/KG.
