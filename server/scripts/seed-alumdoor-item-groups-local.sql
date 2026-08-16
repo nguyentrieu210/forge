@@ -134,7 +134,7 @@ SET disabled=1,
 WHERE tenant_id='demo' AND record_type='Item Group'
   AND name IN (
     'Bộ lưu điện','Cửa cuốn','Cửa nhôm kính','Dịch vụ','Linh kiện & thiết bị',
-    'Mô tơ','Nguyên vật liệu','Phụ kiện','Remote và điều khiển','Thành phẩm',
+    'Mô tơ','Motor & Bình điện','Nguyên vật liệu','Phụ kiện','Remote và điều khiển','Thành phẩm',
     'Cửa siêu trường'
   );
 
@@ -146,7 +146,7 @@ SET payload_json=json_set(payload_json,'$.disabled',json('true')),
 WHERE tenant_id='demo' AND doctype='Item Group'
   AND name IN (
     'Bộ lưu điện','Cửa cuốn','Cửa nhôm kính','Dịch vụ','Linh kiện & thiết bị',
-    'Mô tơ','Nguyên vật liệu','Phụ kiện','Remote và điều khiển','Thành phẩm',
+    'Mô tơ','Motor & Bình điện','Nguyên vật liệu','Phụ kiện','Remote và điều khiển','Thành phẩm',
     'Cửa siêu trường'
   );
 
