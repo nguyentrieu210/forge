@@ -1,0 +1,52 @@
+name: Temporary BOM Brief Dryrun Diagnostic V2
+on:
+  push:
+    branches: ['agent/alumdoor-bom-template-resolver']
+    paths: ['.github/workflows/_tmp-bom-brief-dryrun-diagnostic-v2.yml']
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: pnpm/action-setup@v4
+        with: { run_install: false }
+      - name: Install and build
+        working-directory: server
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+      - name: Patch BOM schema into current brief
+        working-directory: server
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const p='briefs/alumdoor-v2.json';
+          const b=JSON.parse(fs.readFileSync(p,'utf8'));
+          const component={name:'BOM Component Rule',child:true,label:'Quy tắc thành phần BOM',group:'Sản xuất',naming:'autoincrement',fields:['rule_code:Data*! Mã quy tắc','component_key:Data Khóa thành phần','item_code:Link(Item)! Vật tư','stock_uom:Link(UOM) Đơn vị tồn','conditions_json:Code Điều kiện JSON','priority:Int=(0) Ưu tiên','sequence:Int=(0) Thứ tự','quantity_formula_json:Code! Công thức số lượng JSON','note:Small Text Ghi chú'],permissions:{}};
+          const template={name:'BOM Template',label:'Mẫu BOM',group:'Sản xuất',naming:'autoincrement',fields:['template_code:Data*! Mã mẫu BOM','item_code:Link(Item)! Thành phẩm','conditions_json:Code Điều kiện áp dụng JSON','priority:Int=(0) Ưu tiên','disabled:Check=(0) Ngừng dùng','required_context_fields_json:Code Ngữ cảnh bắt buộc JSON','required_component_keys_json:Code Thành phần bắt buộc JSON','component_rules:Table(BOM Component Rule)! Quy tắc thành phần','note:Small Text Ghi chú'],permissions:{'Chủ xưởng':'rwc','Sản xuất':'rwc','Kinh doanh':'r'}};
+          if(!b.doctypes.some(x=>x.name===component.name))b.doctypes.push(component);
+          if(!b.doctypes.some(x=>x.name===template.name))b.doctypes.push(template);
+          const bom=b.doctypes.find(x=>x.name==='Bill of Materials');
+          const fields=['bom_template:Link(BOM Template) Mẫu BOM nguồn','bom_template_code:Data Mã mẫu BOM','bom_fingerprint:Data Dấu vân tay cấu hình','generated_by_configurator:Check=(0) BOM sinh từ cấu hình','configuration_snapshot:Code Snapshot cấu hình'];
+          const fn=x=>typeof x==='string'?x.split(':')[0].trim():x.fieldname;
+          for(const f of fields)if(!bom.fields.some(x=>fn(x)===fn(f)))bom.fields.push(f);
+          fs.writeFileSync(p,JSON.stringify(b,null,2)+'\n');
+          NODE
+      - name: Capture forge-app dry-run after build
+        working-directory: server
+        shell: bash
+        run: |
+          set +e
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run > /tmp/dryrun.log 2>&1
+          status=$?
+          clean=$(tail -c 50000 /tmp/dryrun.log)
+          safe=${clean//'%'/'%25'}
+          safe=${safe//$'\r'/'%0D'}
+          safe=${safe//$'\n'/'%0A'}
+          echo "::notice title=BOM brief built dry-run exit $status::$safe"
+          exit 0
