@@ -32,7 +32,7 @@ test("SƠN TĨNH ĐIỆN / MẠ MÀU / SƠN VÂN GỖ: requires_color=true", () 
   }
 });
 
-test("SƠN TĨNH ĐIỆN áp đủ 6 nhóm theo MS.md; SƠN VÂN GỖ chỉ Cửa CN Đức theo bảng giá 31/07", () => {
+test("SƠN TĨNH ĐIỆN áp đủ 6 nhóm; SƠN VÂN GỖ áp Đức + Úc + Siêu Trường + Đài Loan", () => {
   const std = alumdoorSurfaceFinishPayload(ALUMDOOR_SURFACE_FINISH_CATALOG.find((f) => f.code === "SON_TINH_DIEN"));
   assert.deepEqual(
     std.applies_to_groups.map((r) => r.item_group),
@@ -46,7 +46,11 @@ test("SƠN TĨNH ĐIỆN áp đủ 6 nhóm theo MS.md; SƠN VÂN GỖ chỉ Cử
     ],
   );
   const vanGo = alumdoorSurfaceFinishPayload(ALUMDOOR_SURFACE_FINISH_CATALOG.find((f) => f.code === "SON_VAN_GO"));
-  assert.deepEqual(vanGo.applies_to_groups.map((r) => r.item_group), ["Cửa CN Đức"]);
+  assert.deepEqual(
+    vanGo.applies_to_groups.map((r) => r.item_group),
+    ["Cửa CN Đức", "Cửa tấm liền Úc", "Cửa Siêu Trường", "Cửa Đài Loan"],
+  );
+  assert.equal(vanGo.applies_to_groups.some((r) => r.item_group === "Cửa Lưới"), false);
 });
 
 test("mọi Surface Finish scope đều trỏ tới Item Group canonical hiện có", () => {
