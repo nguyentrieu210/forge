@@ -1,93 +1,92 @@
-# Forge Documentation Index
+# Forge Documentation
 
-Ngày cập nhật: **2026-08-04**.
+Ngày cập nhật: **2026-08-16**.
 
-## Dữ liệu nguồn Alumdoor tra nhanh
+Tài liệu được tổ chức theo **authority và vòng đời**, không theo số lượng file. Exact GitHub state, code, migrations và tests luôn thắng prose stale.
 
-- `docs/source-data/README.md` — chỉ mục Markdown sinh từ Word/Excel gốc, kèm đường dẫn nguồn, ngày sửa và SHA-256.
-- Khi file gốc thay đổi, chạy `server/scripts/build-alumdoor-source-md.py` để cập nhật lại toàn bộ bản tra nhanh.
+## 1. Entrypoints bắt buộc
 
-Tài liệu trong repo được chia theo **authority**, không theo số lượng file. Exact GitHub state, code, migration và test luôn thắng prose stale.
+1. `../SENTRUX_MAP.md` — repo topology/ownership và agent navigation.
+2. `../CURRENT_STATUS.md` — verified checkpoint gần nhất.
+3. `../NEXT_TASKS.md` — active queue ngắn.
+4. `../PROJECT_CONTEXT.md` — stable authority/invariants.
+5. `ARCHITECTURE.md` — canonical system architecture.
+6. `../skills/forge-enterprise-completion/SKILL.md` — execution policy.
 
-## 1. Live authority — đọc trước
+Không tạo một architecture/status source song song nếu canonical file trên đã tồn tại.
 
-1. `README.md` — entrypoint dự án.
-2. `CURRENT_STATUS.md` — trạng thái đã xác minh gần nhất.
-3. `NEXT_TASKS.md` — hàng đợi active, không lưu lịch sử dài.
-4. `PROJECT_CONTEXT.md` — kiến trúc và source-of-truth hiện hành.
-5. `AI_HANDOFF.md` — handoff ngắn cho phiên tiếp theo.
-6. `docs/ops/SRE_RUNBOOK.md` — release/recovery/data-safety operator intent.
-7. `skills/forge-enterprise-completion/SKILL.md` — execution policy cho agent.
+## 2. Strategic/product authority
 
-Không dùng board/handoff của program cũ để suy live state.
+- `FORGE_ENTERPRISE_NORTH_STAR.md` — đích sản phẩm dài hạn.
+- `FORGE_ENTERPRISE_CAPABILITY_MAP.md` — capability denominator/checklist.
+- `FORGE_ENTERPRISE_CAPABILITY_STATUS.md` — materialized maturity snapshot có evidence.
+- `ROADMAP.md` — hướng dài hạn, không phải live status.
+- `APP_FACTORY.md` — app/package lifecycle contract.
+- `API_SURFACE.md` — API compatibility surface.
+- `VERSIONING.md` — versioning policy.
+- `VALIDATION_GATES.md` — validation/evidence contract.
 
-## 2. Active program — R6 Production Certification
+## 3. Domain và vertical docs
 
-R5 đã hoàn tất và merge qua PR `#638`, merge commit `7940331c589d4e5699cf00e2ec843c5a7b8c50ac`.
+Giữ BRD/spec/field-ledger/design khi chúng còn là một trong các loại sau:
 
-R6 là program hiện hành. Đọc:
+- business/product contract chưa được canonical implementation thay thế;
+- source/legal lock;
+- user-facing operating guide;
+- cross-package integration contract;
+- final audit/convergence evidence.
 
-1. `docs/agents/r6/README.md`
-2. `docs/agents/r6/R6_PRODUCTION_CERTIFICATION_PLAN.md`
-3. `docs/agents/r6/EVIDENCE_MATRIX.md`
-4. `docs/agents/r6/OPEN_ORDER.md`
-5. `docs/agents/r6/AGENT_PROMPTS.md`
+Alumdoor, HRM, Sales, Social Commerce và các domain khác có thể có nhiều tài liệu, nhưng mỗi topic phải chỉ rõ đâu là current contract và đâu là historical evidence.
 
-`OPEN_ORDER.md` và `AGENT_PROMPTS.md` là coordination artifacts tạm thời trong lúc R6 active. Sau final convergence, ưu tiên xóa chúng và giữ final certification/evidence record.
+## 4. Operations và evidence
 
-## 3. Strategic authority
+- `ops/` — SRE, release, provider, recovery và production governance.
+- `runbooks/` — durable operating procedures.
+- `audits/` — retained audit records.
+- `agents/` — chỉ giữ protocol dùng lại và final program evidence; không phải nơi lưu vô hạn prompt/board/handoff.
+- `source-data/` — generated lookup/source-lock material; không sửa tay nếu có generator.
 
-- `docs/FORGE_ENTERPRISE_NORTH_STAR.md` — đích sản phẩm dài hạn.
-- `docs/FORGE_ENTERPRISE_CAPABILITY_MAP.md` — mẫu số capability.
-- `docs/FORGE_ENTERPRISE_CAPABILITY_STATUS.md` — maturity materialized gần nhất.
-- `docs/ROADMAP.md` — hướng dài hạn, không phải live status.
+## 5. Retention policy
 
-## 4. Architecture / product contracts
+### Giữ
 
-- `docs/ARCHITECTURE.md`
-- `docs/API_SURFACE.md`
-- `docs/APP_FACTORY.md`
-- `docs/VERSIONING.md`
-- `docs/VALIDATION_GATES.md`
-- `docs/ALUMDOOR-REFERENCE-VERTICAL-CONTRACT.md`
-- `docs/ops/` — SRE/release/production governance.
-- Domain BRD/source-lock/spec được giữ khi còn là contract hoặc evidence.
-
-## 5. Canonical historical evidence
-
-History được giữ khi cần chứng minh vì sao current state tồn tại. Các checkpoint chính:
-
-- `docs/agents/rc4/RC4_POST_INTEGRATION_FINAL.md` — RC4 integrated closure.
-- PR `#638` / merge commit `7940331c...` — R5 integrated convergence and productization closure.
-- `docs/agents/rc/RC3_CONVERGENCE_20260804.md` — RC3 convergence history.
-- `docs/agents/cloudflare-cfmax/CFMAX_R2_CONVERGENCE_20260804.md` và `CFMAX_R2_POST_MERGE_20260804.md` — Cloudflare source convergence.
-- `docs/agents/transaction-closure/07-CONVERGENCE.md` — cross-domain transaction closure.
-
-Các worker evidence cụ thể có thể được giữ nếu chứa test/provenance/decision chưa được final record thay thế hoàn toàn.
-
-## 6. Files không nên sống lâu trên `main`
-
-Sau khi một program đã converge/merge, mặc định xóa khỏi `main` các tài liệu chỉ phục vụ điều phối tạm thời:
-
-- global/program `AGENT_BOARD.md` đã đóng;
-- copy-paste `AGENT_PROMPTS.md` của wave đã xong;
-- `OPEN_ORDER.md` của program đã đóng;
-- `NO_STOP_RULE.md` riêng khi Skill/Protocol đã bao phủ;
-- `*-HANDOFF.md` chỉ chứa branch/PR/snapshot đã superseded;
-- topology/bootstrap verification chỉ dùng để khởi tạo program;
-- legacy PR inbox đã được disposition xong.
-
-Git history và PR history là nơi tra provenance của các file đã xóa; không cần giữ bản stale trên `main`.
-
-## 7. Retention rule
-
-Giữ file nếu nó còn ít nhất một trong các vai trò sau:
+Giữ file nếu còn ít nhất một vai trò:
 
 - current authority;
 - architecture/business contract;
 - legal/source-lock evidence;
 - migration/release/recovery evidence;
 - final convergence/audit record;
-- user-facing operating documentation.
+- durable runbook/user documentation.
 
-Nếu file chỉ mô tả một branch/agent/wave đã đóng và final evidence đã thay thế, ưu tiên xóa thay vì gắn thêm nhãn `SUPERSEDED` rồi để tồn tại vô hạn.
+### Xóa sau convergence
+
+Mặc định xóa khỏi `main` khi program/wave đã đóng:
+
+- `AGENT_PROMPTS.md`;
+- `OPEN_ORDER.md`;
+- temporary Agent Board/NO-STOP/bootstrap topology;
+- branch/PR `*-HANDOFF.md` đã superseded;
+- one-off experiment/probe workflow;
+- trigger file chỉ dùng để ép CI rerun;
+- status snapshot đã được canonical checkpoint mới thay thế.
+
+Git/PR history là nơi tra provenance của artifact bị xóa.
+
+## 6. Naming và placement
+
+- Stable architecture/contract: tên không gắn ngày nếu không cần version lịch sử.
+- Historical evidence: có thể gắn ngày/RC/release identity và đặt dưới `audits/`, `agents/` hoặc scope evidence phù hợp.
+- Không để cùng một canonical document ở root và `docs/`.
+- Không đẩy project-wide architecture/status docs vào `client/` hoặc `server/`; local package docs chỉ mô tả scope local.
+
+## 7. Khi topology thay đổi
+
+Trong cùng PR phải xem xét cập nhật:
+
+- `../SENTRUX_MAP.md`;
+- `ARCHITECTURE.md`;
+- `.sentrux/rules.toml` nếu boundary mới cần codify;
+- docs index nếu thêm/bỏ canonical document.
+
+Không cập nhật score Sentrux vào docs như một hằng số kiến trúc; score là measurement của exact scan.
