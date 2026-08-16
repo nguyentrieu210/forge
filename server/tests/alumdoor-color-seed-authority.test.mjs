@@ -75,7 +75,7 @@ test("canonical color seed builder upserts canonical records and only migrates/d
   }
 });
 
-test("pricing surcharge seed does not own Item Color and uses canonical wood-grain groups", () => {
+test("pricing surcharge seed does not own Item Color and uses canonical wood-grain groups/id", () => {
   const dir = mkdtempSync(join(tmpdir(), "alumdoor-pricing-seed-"));
   const sqlPath = join(dir, "pricing.sql");
   try {
@@ -92,6 +92,7 @@ test("pricing surcharge seed does not own Item Color and uses canonical wood-gra
     assert.equal(sql.includes("Cửa siêu trường"), false);
     assert.ok(sql.includes("PHỤ THU SƠN VÂN GỖ CỬA"));
     assert.ok(sql.includes("465000"));
+    assert.ok(sql.includes('"field":"color","operator":"eq","value":"VAN_GO"'));
     assert.ok(sql.includes("PHỤ THU RAY VÂN GỖ"));
     assert.ok(sql.includes("55000"));
     assert.ok(sql.includes("PHỤ THU RAY MÀU KHÁC"));
