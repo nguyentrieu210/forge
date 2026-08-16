@@ -30,6 +30,9 @@ on:
       - 'server/scripts/seed-alumdoor-measurement-geometry-local.mjs'
       - 'server/scripts/build-alumdoor-v2-brief.mjs'
       - 'server/tests/alumdoor-measurement-geometry-master.test.mjs'
+      - 'server/scripts/lib/alumdoor-cutting-policy-catalog.mjs'
+      - 'server/apps-src/alumdoor-worker/src/geometry-policy.ts'
+      - 'server/tests/alumdoor-cutting-policy-geometry.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   pull_request:
     paths:
@@ -60,6 +63,9 @@ on:
       - 'server/scripts/seed-alumdoor-measurement-geometry-local.mjs'
       - 'server/scripts/build-alumdoor-v2-brief.mjs'
       - 'server/tests/alumdoor-measurement-geometry-master.test.mjs'
+      - 'server/scripts/lib/alumdoor-cutting-policy-catalog.mjs'
+      - 'server/apps-src/alumdoor-worker/src/geometry-policy.ts'
+      - 'server/tests/alumdoor-cutting-policy-geometry.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   workflow_dispatch:
 
@@ -149,7 +155,7 @@ jobs:
           grep -q "Geometry Profile" "$RUNNER_TEMP/measurement-geometry.sql"
       - name: Verify generated builder authority
         run: |
-          grep -q 'brief.version = "2.3.0"' server/scripts/build-alumdoor-v2-brief.mjs
+          grep -q 'brief.version = "2.4.0"' server/scripts/build-alumdoor-v2-brief.mjs
           grep -q 'alumdoor-geometry-catalog.mjs' server/scripts/build-alumdoor-v2-brief.mjs
           grep -q 'alumdoor-measurement-profile-catalog.mjs' server/scripts/build-alumdoor-v2-brief.mjs
       - name: Build and dry-run Alumdoor V2 metadata
@@ -160,3 +166,21 @@ jobs:
           pnpm run build
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
           node scripts/verify-alumdoor-meta-completeness.mjs
+
+  cutting_policy_geometry:
+    name: Lock Cutting Policy geometry rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build and test canonical Cutting Policy geometry
+        working-directory: server
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
+          node --test tests/alumdoor-cutting-policy-geometry.test.mjs
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
