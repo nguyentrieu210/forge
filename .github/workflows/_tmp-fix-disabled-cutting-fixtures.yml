@@ -1,0 +1,66 @@
+name: Temporary Fix Disabled Cutting Fixtures
+on:
+  push:
+    branches: ['fix/cutting-policy-disabled-fixture-profile']
+    paths: ['.github/workflows/_tmp-fix-disabled-cutting-fixtures.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Patch disabled fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const builder='server/scripts/build-alumdoor-v2-brief.mjs';
+          let text=fs.readFileSync(builder,'utf8');
+          const anchor='note(`Cutting Policy: gắn Geometry Profile + ${CUTTING_POLICIES.reduce((sum, policy) => sum + policy.rules.length, 0)} geometry rules canonical`);';
+          if (!text.includes(anchor)) throw new Error('builder anchor missing');
+          const patch=`for (const legacyName of ["Cửa Đức — khách lẻ", "Cửa Đức — đại lý"]) {\n  const fixture = brief.fixtures.find((entry) => entry.type === "Cutting Policy" && entry.name === legacyName);\n  if (!fixture) throw new Error(\`Cutting Policy legacy fixture missing: \${legacyName}\`);\n  fixture.data.geometry_profile = "GP-CUA-DUC";\n  fixture.data.geometry_rules = [];\n}\n${anchor}`;
+          text=text.replace(anchor,patch);
+          fs.writeFileSync(builder,text,'utf8');
+
+          const briefPath='server/briefs/alumdoor-v2.json';
+          const brief=JSON.parse(fs.readFileSync(briefPath,'utf8'));
+          for (const name of ['Cửa Đức — khách lẻ','Cửa Đức — đại lý']) {
+            const f=brief.fixtures.find((x)=>x.type==='Cutting Policy'&&x.name===name);
+            if(!f) throw new Error('static fixture missing '+name);
+            f.data.geometry_profile='GP-CUA-DUC';
+            f.data.geometry_rules=[];
+          }
+          fs.writeFileSync(briefPath,JSON.stringify(brief,null,2)+'\n','utf8');
+
+          const testPath='server/tests/alumdoor-cutting-policy-geometry.test.mjs';
+          let test=fs.readFileSync(testPath,'utf8');
+          if (!test.includes('import { readFileSync } from "node:fs";')) {
+            test=test.replace('import assert from "node:assert/strict";\n','import assert from "node:assert/strict";\nimport { readFileSync } from "node:fs";\n');
+          }
+          test += `\n\ntest("all Cutting Policy fixtures satisfy required Geometry Profile link", () => {\n  const brief = JSON.parse(readFileSync(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));\n  const fixtures = brief.fixtures.filter((row) => row.type === "Cutting Policy");\n  assert.equal(fixtures.length, 8);\n  for (const fixture of fixtures) assert.ok(fixture.data.geometry_profile, fixture.name);\n  for (const name of ["Cửa Đức — khách lẻ", "Cửa Đức — đại lý"]) {\n    const fixture = fixtures.find((row) => row.name === name);\n    assert.equal(fixture.data.disabled, true);\n    assert.equal(fixture.data.geometry_profile, "GP-CUA-DUC");\n    assert.deepEqual(fixture.data.geometry_rules, []);\n  }\n});\n`;
+          fs.writeFileSync(testPath,test,'utf8');
+          NODE
+      - name: Build and test
+        working-directory: server
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
+          node --test tests/alumdoor-cutting-policy-geometry.test.mjs
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+      - name: Commit product fix and remove temp workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/_tmp-fix-disabled-cutting-fixtures.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server/scripts/build-alumdoor-v2-brief.mjs server/briefs/alumdoor-v2.json server/tests/alumdoor-cutting-policy-geometry.test.mjs .github/workflows/_tmp-fix-disabled-cutting-fixtures.yml
+          git commit -m 'fix(alumdoor): keep disabled Cutting Policy fixtures schema-valid'
+          git push origin HEAD:fix/cutting-policy-disabled-fixture-profile
