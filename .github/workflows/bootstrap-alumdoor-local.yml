@@ -107,9 +107,13 @@ jobs:
           Write-Host 'Source sau sync:'
           git -C $target log -1 --oneline
 
-          & cmd.exe /d /c "C:\alumdoor\sync-local.bat --bootstrap"
+          # Runtime bootstrap remains strict on dependencies, build, migration,
+          # seed, HTTP smoke, app install and client build. Repo-wide translation
+          # and business-suite gates run in CI separately and must not prevent the
+          # local ERP stack from being initialized.
+          & cmd.exe /d /c "C:\alumdoor\sync-local.bat --bootstrap --skip-source-verify"
           if ($LASTEXITCODE -ne 0) {
-            throw "sync-local.bat --bootstrap that bai voi exit code $LASTEXITCODE"
+            throw "sync-local.bat runtime bootstrap that bai voi exit code $LASTEXITCODE"
           }
 
       - name: Verify local services remain healthy
