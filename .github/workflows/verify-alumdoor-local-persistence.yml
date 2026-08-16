@@ -1,0 +1,53 @@
+name: Verify Alumdoor Local Persistence
+
+on:
+  workflow_run:
+    workflows: ["Bootstrap Alumdoor Local C Drive"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-alumdoor-local-persistence
+  cancel-in-progress: true
+
+jobs:
+  post-cleanup-health:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Verify services after previous runner job cleanup
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+
+          if (-not (Test-Path (Join-Path $target '.git'))) {
+            throw 'C:\alumdoor is not an initialized Git workspace.'
+          }
+
+          function Assert-NodeHttp {
+            param(
+              [string]$Url,
+              [string]$Mode
+            )
+            if ($Mode -eq 'backend') {
+              & node -e "fetch('$Url',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+            } else {
+              & node -e "fetch('$Url',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            }
+            if ($LASTEXITCODE -ne 0) {
+              throw "Persistent local service is not healthy: $Url"
+            }
+          }
+
+          Assert-NodeHttp -Url 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -Mode 'backend'
+          Assert-NodeHttp -Url 'http://127.0.0.1:5173' -Mode 'ui'
+
+          Write-Host 'LOCAL_PERSISTENCE_PASS'
+          Write-Host 'Desk    : http://localhost:5173'
+          Write-Host 'Backend : http://localhost:8799'
+          git -C $target log -1 --oneline
