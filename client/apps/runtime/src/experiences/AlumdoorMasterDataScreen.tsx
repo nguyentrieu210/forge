@@ -52,6 +52,8 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
       { key: "Item Color", label: "Màu vật tư" },
       { key: "Material Specification", label: "Quy cách kỹ thuật vật tư" },
       { key: "Measurement Profile", label: "Bộ theo dõi vật tư" },
+      { key: "Geometry Field", label: "Trường quy cách hình học" },
+      { key: "Geometry Profile", label: "Bộ quy cách hình học" },
     ],
   },
   {
