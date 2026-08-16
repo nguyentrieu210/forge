@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Seed the canonical Alumdoor UOM catalog on a local Forge tenant. */
 import process from "node:process";
+import { ALUMDOOR_UOM_CATALOG } from "./lib/alumdoor-uom-catalog.mjs";
 
 const origin = (process.env.FORGE_ORIGIN ?? "http://127.0.0.1:8799").replace(/\/$/, "");
 const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ?? "";
@@ -16,27 +17,6 @@ if (!["127.0.0.1", "localhost", "::1"].includes(parsedOrigin.hostname)) {
   console.error(`refusing: UOM seed is local-only, got ${parsedOrigin.hostname}`);
   process.exit(2);
 }
-
-const uoms = [
-  ["Cái", true],
-  ["Bộ", true],
-  ["Kg", false],
-  ["Mét", false],
-  ["m2", false],
-  ["Cây", true],
-  ["Lá", true],
-  ["Thân", true],
-  ["Thanh", true],
-  ["Sợi", true],
-  ["Cuộn", true],
-  ["Tấm", true],
-  ["Túi", true],
-  ["Hộp", true],
-  ["Bình", true],
-  ["Lít", false],
-  ["Cặp", true],
-  ["Con", true],
-];
 
 const cookies = new Map();
 let csrfToken = "";
@@ -119,9 +99,9 @@ async function ensureUom(name, mustBeWholeNumber) {
 await login();
 const created = [];
 const existing = [];
-for (const [name, mustBeWholeNumber] of uoms) {
+for (const { name, mustBeWholeNumber } of ALUMDOOR_UOM_CATALOG) {
   (await ensureUom(name, mustBeWholeNumber) ? created : existing).push(name);
 }
 
-console.log(`ALUMDOOR_UOM_SEED_PASS created=${created.length} existing=${existing.length} total=${uoms.length}`);
-console.log(`UOM=${uoms.map(([name]) => name).join(", ")}`);
+console.log(`ALUMDOOR_UOM_SEED_PASS created=${created.length} existing=${existing.length} total=${ALUMDOOR_UOM_CATALOG.length}`);
+console.log(`UOM=${ALUMDOOR_UOM_CATALOG.map(({ name }) => name).join(", ")}`);
