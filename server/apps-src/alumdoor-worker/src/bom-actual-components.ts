@@ -47,18 +47,43 @@ export function normalizeBomActualComponents(input: unknown): BomActualComponent
   });
 }
 
+function normalizeAllowedItems(input: Record<string, string[]> | undefined): Map<string, Set<string>> {
+  const output = new Map<string, Set<string>>();
+  for (const [rawKey, rawItems] of Object.entries(input ?? {})) {
+    const key = text(rawKey);
+    if (!key) throw new Error("BOM Template có actual component key rỗng trong allowlist.");
+    if (!Array.isArray(rawItems)) throw new Error(`${key}: allowlist item actual phải là mảng.`);
+    const items = new Set(rawItems.map(text).filter(Boolean));
+    if (!items.size) throw new Error(`${key}: allowlist item actual không được rỗng.`);
+    output.set(key, items);
+  }
+  return output;
+}
+
 export function mergeBomActualComponents(input: {
   resolved: ResolvedBomTemplate;
   actual_components?: unknown;
   required_actual_component_keys?: string[];
+  allowed_item_codes_by_key?: Record<string, string[]>;
 }): ResolvedBomTemplate {
   const required = [...new Set((input.required_actual_component_keys ?? []).map(text).filter(Boolean))];
-  const allowed = new Set(required);
+  const allowedKeys = new Set(required);
+  const allowedItems = normalizeAllowedItems(input.allowed_item_codes_by_key);
   const actual = normalizeBomActualComponents(input.actual_components);
 
+  for (const key of allowedItems.keys()) {
+    if (!allowedKeys.has(key)) {
+      throw new Error(`${input.resolved.template_code}: allowlist khai báo slot ${key} nhưng slot này không nằm trong required actual keys.`);
+    }
+  }
+
   for (const row of actual) {
-    if (!allowed.has(row.component_key)) {
+    if (!allowedKeys.has(row.component_key)) {
       throw new Error(`${input.resolved.template_code}: actual component ${row.component_key} không được BOM Template khai báo; hệ thống không tự chèn vật tư.`);
+    }
+    const itemAllowlist = allowedItems.get(row.component_key);
+    if (itemAllowlist && !itemAllowlist.has(row.item_code)) {
+      throw new Error(`${input.resolved.template_code}: ${row.item_code} không được phép cho actual slot ${row.component_key}; hệ thống không thay vật tư nguồn.`);
     }
   }
 
