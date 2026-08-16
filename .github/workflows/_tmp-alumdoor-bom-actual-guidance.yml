@@ -32,14 +32,13 @@ jobs:
           if (!materializer.includes('export interface BomPreviewResult')) {
             const anchor = `export interface BomMaterializationResult {\n  bom_no: string;\n  bom_template: string;\n  bom_template_code: string;\n  bom_fingerprint: string;\n  materialized: boolean;\n  components: ResolvedBomTemplate["components"];\n}\n`;
             if (!materializer.includes(anchor)) throw new Error('materializer result interface anchor missing');
-            const extra = `${anchor}\nexport interface BomPreviewResult extends BomMaterializationResult {\n  actual_requirements: BomActualRequirement[];\n  missing_actual_component_keys: string[];\n  actual_complete: boolean;\n}\n`;
-            materializer = materializer.replace(anchor, extra);
+            materializer = materializer.replace(anchor, `${anchor}\nexport interface BomPreviewResult extends BomMaterializationResult {\n  actual_requirements: BomActualRequirement[];\n  missing_actual_component_keys: string[];\n  actual_complete: boolean;\n}\n`);
           }
           if (!materializer.includes('export async function previewProductionLineBom(')) {
             const anchor = 'export async function resolveProductionLineBom(\n';
             const index = materializer.indexOf(anchor);
             if (index < 0) throw new Error('resolveProductionLineBom anchor missing');
-            const fn = `export async function previewProductionLineBom(\n  call: BomMaterializerCall,\n  input: { line: BomProductionLineInput; company: string },\n): Promise<BomPreviewResult> {\n  const templates = await loadTemplates(call);\n  if (!templates.length) {\n    throw new Error(\`${'${input.line.item_code}'}: chưa có BOM tĩnh và chưa cấu hình BOM Template.\`);\n  }\n  const { context, values } = bomContextFromProductionLine(input.line);\n  const resolved = resolveBomTemplate({ templates, context, values });\n  if (resolved.item_code !== input.line.item_code) {\n    throw new Error(\`${'${resolved.template_code}'}: thành phẩm ${'${resolved.item_code}'} không khớp dòng bán ${'${input.line.item_code}'}.\`);\n  }\n  const source = templates.find((template) => template.template_code === resolved.template_code);\n  if (!source) throw new Error(\`${'${resolved.template_code}'}: không xác định được BOM Template nguồn.\`);\n  const inspection = inspectBomActualComponents({\n    template_code: resolved.template_code,\n    actual_components: input.line.bom_actual_components,\n    required_actual_component_keys: source.required_actual_component_keys,\n    allowed_item_codes_by_key: source.actual_component_allowed_items,\n  });\n  if (!inspection.complete) {\n    return {\n      bom_no: "",\n      bom_template: source.source_name,\n      bom_template_code: resolved.template_code,\n      bom_fingerprint: "",\n      materialized: false,\n      components: resolved.components,\n      actual_requirements: inspection.requirements,\n      missing_actual_component_keys: inspection.missing_component_keys,\n      actual_complete: false,\n    };\n  }\n  const resolvedWithActuals = mergeBomActualComponents({\n    resolved,\n    actual_components: inspection.actual_components,\n    required_actual_component_keys: source.required_actual_component_keys,\n    allowed_item_codes_by_key: source.actual_component_allowed_items,\n  });\n  const fingerprint = bomFingerprint({\n    company: input.company,\n    source_warehouse: input.line.source_warehouse,\n    output_qty: input.line.output_qty,\n    resolved: resolvedWithActuals,\n  });\n  const prior = await existingGeneratedBom(call, fingerprint);\n  return {\n    bom_no: prior,\n    bom_template: source.source_name,\n    bom_template_code: resolved.template_code,\n    bom_fingerprint: fingerprint,\n    materialized: false,\n    components: resolvedWithActuals.components,\n    actual_requirements: inspection.requirements,\n    missing_actual_component_keys: [],\n    actual_complete: true,\n  };\n}\n\n`;
+            const fn = `export async function previewProductionLineBom(\n  call: BomMaterializerCall,\n  input: { line: BomProductionLineInput; company: string },\n): Promise<BomPreviewResult> {\n  const templates = await loadTemplates(call);\n  if (!templates.length) {\n    throw new Error(\`${'${input.line.item_code}'}: chưa có BOM tĩnh và chưa cấu hình BOM Template.\`);\n  }\n  const { context, values } = bomContextFromProductionLine(input.line);\n  const resolved = resolveBomTemplate({ templates, context, values });\n  if (resolved.item_code !== input.line.item_code) {\n    throw new Error(\`${'${resolved.template_code}'}: thành phẩm ${'${resolved.item_code}'} không khớp dòng bán ${'${input.line.item_code}'}.\`);\n  }\n  const source = templates.find((template) => template.template_code === resolved.template_code);\n  if (!source) throw new Error(\`${'${resolved.template_code}'}: không xác định được BOM Template nguồn.\`);\n  const inspection = inspectBomActualComponents({\n    template_code: resolved.template_code,\n    ...(input.line.bom_actual_components === undefined ? {} : { actual_components: input.line.bom_actual_components }),\n    required_actual_component_keys: source.required_actual_component_keys,\n    allowed_item_codes_by_key: source.actual_component_allowed_items,\n  });\n  if (!inspection.complete) {\n    return {\n      bom_no: "",\n      bom_template: source.source_name,\n      bom_template_code: resolved.template_code,\n      bom_fingerprint: "",\n      materialized: false,\n      components: resolved.components,\n      actual_requirements: inspection.requirements,\n      missing_actual_component_keys: inspection.missing_component_keys,\n      actual_complete: false,\n    };\n  }\n  const resolvedWithActuals = mergeBomActualComponents({\n    resolved,\n    actual_components: inspection.actual_components,\n    required_actual_component_keys: source.required_actual_component_keys,\n    allowed_item_codes_by_key: source.actual_component_allowed_items,\n  });\n  const fingerprint = bomFingerprint({\n    company: input.company,\n    source_warehouse: input.line.source_warehouse,\n    output_qty: input.line.output_qty,\n    resolved: resolvedWithActuals,\n  });\n  const prior = await existingGeneratedBom(call, fingerprint);\n  return {\n    bom_no: prior,\n    bom_template: source.source_name,\n    bom_template_code: resolved.template_code,\n    bom_fingerprint: fingerprint,\n    materialized: false,\n    components: resolvedWithActuals.components,\n    actual_requirements: inspection.requirements,\n    missing_actual_component_keys: [],\n    actual_complete: true,\n  };\n}\n\n`;
             materializer = materializer.slice(0, index) + fn + materializer.slice(index);
           }
           fs.writeFileSync(materializerPath, materializer, 'utf8');
@@ -74,23 +73,30 @@ jobs:
             + '      bom_fingerprint: resolved.bom_fingerprint,\n'
             + '      bom_materialization_required: resolved.bom_no ? 0 : 1,\n'
             + '    });';
-          const newResolve = '    const resolved = materialize\n'
-            + '      ? await resolveProductionLineBom(call, { line, company, materialize: true })\n'
-            + '      : await previewProductionLineBom(call, { line, company });\n'
-            + '    if (materialize && !resolved.bom_no) throw new Error(`${line.item_code}: resolver không trả về BOM đã ghi sổ.`);\n'
-            + '    const preview = "actual_requirements" in resolved ? resolved : null;\n'
+          const newResolve = '    if (materialize) {\n'
+            + '      const resolved = await resolveProductionLineBom(call, { line, company, materialize: true });\n'
+            + '      if (!resolved.bom_no) throw new Error(`${line.item_code}: resolver không trả về BOM đã ghi sổ.`);\n'
+            + '      output.push({\n'
+            + '        ...line,\n'
+            + '        bom_no: resolved.bom_no,\n'
+            + '        bom_template: resolved.bom_template,\n'
+            + '        bom_template_code: resolved.bom_template_code,\n'
+            + '        bom_fingerprint: resolved.bom_fingerprint,\n'
+            + '        bom_materialization_required: 0,\n'
+            + '      });\n'
+            + '      continue;\n'
+            + '    }\n'
+            + '    const preview = await previewProductionLineBom(call, { line, company });\n'
             + '    output.push({\n'
             + '      ...line,\n'
-            + '      bom_no: resolved.bom_no,\n'
-            + '      bom_template: resolved.bom_template,\n'
-            + '      bom_template_code: resolved.bom_template_code,\n'
-            + '      bom_fingerprint: resolved.bom_fingerprint,\n'
-            + '      bom_materialization_required: resolved.bom_no ? 0 : 1,\n'
-            + '      ...(preview ? {\n'
-            + '        bom_actual_requirements: preview.actual_requirements,\n'
-            + '        missing_actual_component_keys: preview.missing_actual_component_keys,\n'
-            + '        bom_actual_complete: preview.actual_complete ? 1 : 0,\n'
-            + '      } : {}),\n'
+            + '      bom_no: preview.bom_no,\n'
+            + '      bom_template: preview.bom_template,\n'
+            + '      bom_template_code: preview.bom_template_code,\n'
+            + '      bom_fingerprint: preview.bom_fingerprint,\n'
+            + '      bom_materialization_required: preview.bom_no ? 0 : 1,\n'
+            + '      bom_actual_requirements: preview.actual_requirements,\n'
+            + '      missing_actual_component_keys: preview.missing_actual_component_keys,\n'
+            + '      bom_actual_complete: preview.actual_complete ? 1 : 0,\n'
             + '    });';
           if (!sales.includes(newResolve)) {
             if (!sales.includes(oldResolve)) throw new Error('resolveMissingLineBoms body anchor missing');
