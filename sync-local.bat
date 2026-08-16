@@ -28,7 +28,7 @@ if not "%SYNC_RESULT%"=="10" (
 
 echo.
 echo === 1. Dung server local truoc khi dong vao D1/R2 ===
-powershell -NoProfile -Command "$ports=8799,5173; foreach($port in $ports){Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction Stop }}"
+call node server\scripts\stop-local-dev.mjs --ports=8799,5173
 if errorlevel 1 (echo [LOI] Khong dung duoc server local & exit /b 1)
 
 echo.
