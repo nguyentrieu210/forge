@@ -11,6 +11,7 @@ on:
       - 'server/apps-src/alumdoor-worker/src/color-scopes.ts'
       - 'server/briefs/alumdoor.json'
       - 'server/briefs/alumdoor-v2.json'
+      - 'server/briefs/alumdoor-v2.integrations.json'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
       - 'server/tests/alumdoor-color-scopes.test.mjs'
@@ -33,6 +34,8 @@ on:
       - 'server/scripts/lib/alumdoor-cutting-policy-catalog.mjs'
       - 'server/apps-src/alumdoor-worker/src/geometry-policy.ts'
       - 'server/tests/alumdoor-cutting-policy-geometry.test.mjs'
+      - 'server/packages/frappe-api/src/vietnamese-enum-translations.ts'
+      - 'server/tests/vietnamese-enum-translations.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   pull_request:
     paths:
@@ -44,6 +47,7 @@ on:
       - 'server/apps-src/alumdoor-worker/src/color-scopes.ts'
       - 'server/briefs/alumdoor.json'
       - 'server/briefs/alumdoor-v2.json'
+      - 'server/briefs/alumdoor-v2.integrations.json'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
       - 'server/tests/alumdoor-color-scopes.test.mjs'
@@ -66,6 +70,8 @@ on:
       - 'server/scripts/lib/alumdoor-cutting-policy-catalog.mjs'
       - 'server/apps-src/alumdoor-worker/src/geometry-policy.ts'
       - 'server/tests/alumdoor-cutting-policy-geometry.test.mjs'
+      - 'server/packages/frappe-api/src/vietnamese-enum-translations.ts'
+      - 'server/tests/vietnamese-enum-translations.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   workflow_dispatch:
 
@@ -183,4 +189,6 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm run build
           node --test tests/alumdoor-cutting-policy-geometry.test.mjs
+          node --test tests/vietnamese-enum-translations.test.mjs
+          node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const b = await readBriefSource('./briefs/alumdoor-v2.json'); if (b.version !== '2.4.0') throw new Error('V2 version drift: ' + b.version); console.log('V2_VERSION_PASS', b.version);"
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
