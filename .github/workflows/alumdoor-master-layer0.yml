@@ -20,6 +20,10 @@ on:
       - 'server/scripts/lib/alumdoor-item-standardization.mjs'
       - 'server/imports/alumdoor-item-group-bosung-2026-08-15.sql'
       - 'server/tests/alumdoor-item-group-catalog.test.mjs'
+      - 'server/scripts/lib/alumdoor-material-specification-catalog.mjs'
+      - 'server/scripts/seed-alumdoor-material-specifications-local.mjs'
+      - 'server/scripts/build-alumdoor-profile-specifications.mjs'
+      - 'server/tests/alumdoor-material-specification-catalog.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   pull_request:
     paths:
@@ -40,6 +44,10 @@ on:
       - 'server/scripts/lib/alumdoor-item-standardization.mjs'
       - 'server/imports/alumdoor-item-group-bosung-2026-08-15.sql'
       - 'server/tests/alumdoor-item-group-catalog.test.mjs'
+      - 'server/scripts/lib/alumdoor-material-specification-catalog.mjs'
+      - 'server/scripts/seed-alumdoor-material-specifications-local.mjs'
+      - 'server/scripts/build-alumdoor-profile-specifications.mjs'
+      - 'server/tests/alumdoor-material-specification-catalog.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   workflow_dispatch:
 
@@ -93,3 +101,21 @@ jobs:
           node-version: '22'
       - name: Test Alumdoor canonical Item Group layer
         run: node --test server/tests/alumdoor-item-group-catalog.test.mjs
+
+  material_specification:
+    name: Lock canonical Material Specification catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test canonical Material Specification layer
+        run: node --test server/tests/alumdoor-material-specification-catalog.test.mjs
+      - name: Test Item standardization compatibility
+        run: node --test server/tests/alumdoor-item-standardization.test.mjs
+      - name: Generate canonical Material Specification seed
+        run: |
+          node server/scripts/seed-alumdoor-material-specifications-local.mjs demo "$RUNNER_TEMP/material-spec.sql" >/dev/null
+          grep -q "Material Specification" "$RUNNER_TEMP/material-spec.sql"
