@@ -20,10 +20,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Apply patch
-        run: python3 server/scripts/_tmp-surface-finish-exclusions.py
-      - name: Regenerate V2 brief
-        run: node server/scripts/build-alumdoor-v2-brief.mjs
+      - name: Apply base and V2 patches
+        run: |
+          python3 server/scripts/_tmp-surface-finish-exclusions.py
+          python3 server/scripts/_tmp-surface-finish-exclusions-v2.py
       - name: Validate metadata and catalog
         working-directory: server
         run: |
