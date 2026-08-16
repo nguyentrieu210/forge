@@ -281,6 +281,66 @@ Canonical source có thể khác installed tenant snapshot. Nếu client allow-l
 
 Bài học: source -> release projection -> client seam -> rebuild -> browser verify.
 
+### Fixture cài xong nhưng tree/list editor vẫn trống (master_records ≠ documents)
+
+`brief.fixtures` cài qua `forge-app.mjs`/`forge.apps.install` chỉ ghi vào bảng `master_records`
+(tenant_id, record_type, name, data_json) — đây là dữ liệu tham chiếu cho Link-field picker
+(`document-kernel/src/d1-store.ts` UNION `master_records` + `documents` khi resolve picker).
+Nó **không** tự động tạo ra document thật trong bảng `documents`.
+
+Một tree-editor thao tác thật (thêm mục con/đổi tên/xoá, vd màn "Nhóm hàng" cho Item Group) gọi
+`frappe.desk.treeview.get_children` -> `context.listService.list` -> đọc thẳng `documents`, không
+đọc `master_records`. Kết quả: cài brief xong, dry-run/verify đều PASS, nav đúng, nhưng màn tree
+vẫn trống trơn — vì record chỉ tồn tại ở tầng "khai báo mặc định cho picker", chưa phải "tài liệu
+tenant có thể sửa/xoá qua UI".
+
+Bài học:
+- Trước khi báo "đã lên UI", kiểm tra đúng bảng: fixture → `master_records`; tree/list/form thật
+  → `documents`. Query nhầm bảng (`documents` thay vì `master_records`, hoặc ngược lại) cho kết
+  luận sai.
+- Nếu surface là tree-editor/CRUD thật (không phải chỉ Link picker), phải seed thêm bằng document
+  API thật (`POST /api/resource/<DocType>`, login + CSRF như `scripts/seed-alumdoor-warehouse-local.mjs`),
+  tạo nút cha trước con. Không có generic "promote fixture -> document" job trên nền tảng này.
+- `master_records` không bị chặn bởi `app-upgrade-guard`; đừng lẫn hai vấn đề khi debug.
+
+### `app-upgrade-guard` chặn xoá fixture đã cài (không có reverse-migration)
+
+Xoá một entry khỏi `brief.fixtures` giữa hai lần cài (vd đổi cấu trúc Item Group) khiến
+`forge.apps.install` trả `HTTP 417 removes materialized app objects` — `assertAppUpgradeMaterializationCompatible`
+(`server/packages/app-registry/src/app-upgrade-guard.ts`) so khoá `{kind}:{record_type}:{name}` giữa
+manifest đang cài và manifest mới; **so theo tên khai báo, không theo nội dung `data`**. Nền tảng
+chưa có API rename/reverse-migration cho fixture (ghi rõ trong roadmap nội bộ, WS09 residual).
+
+Bài học:
+- Đổi tên/tái cấu trúc taxonomy fixture không thể làm "rename" qua brief — bất kỳ thay đổi `name`
+  key nào cũng bị coi là xoá + thêm, và xoá bị chặn cứng.
+- Đường an toàn: giữ nguyên mọi `name` fixture cũ trong brief (dù không dùng trong menu nữa), chỉ
+  thêm entry mới. Dọn thật thì xoá tay qua UI (xoá document CRUD thật không đi qua guard này —
+  guard chỉ chặn *khai báo brief*, không chặn thao tác trên `documents`).
+- Không cố lách guard bằng cách giữ `name` cũ nhưng đổi `data.item_group_name`/`parent_*` bên
+  trong — chưa kiểm chứng được document thật có theo đúng ngữ nghĩa "rename" hay không; rủi ro dữ
+  liệu mồ côi cao hơn lợi ích.
+
+### Document seed thiếu field khiến link_filters trả rỗng
+
+Khi seed document thật qua `POST /api/resource/<DocType>` (mẫu ở trên), CHỈ truyền field có giá
+trị "thật" (vd `item_group_name`, `parent_item_group`) mà bỏ qua field boolean có default (vd
+`is_group`, `disabled`) thì document lưu xuống **thiếu hẳn key đó** trong `payload_json` — không
+tự nhận default `0`/`false`. Bất kỳ nơi nào lọc bằng equality tường minh (`link_filters:
+{"is_group":0,"disabled":0}` trên Link field, hoặc filter picker khác) sẽ không khớp field bị
+thiếu (`missing == 0` là false), nên dropdown/picker cho user chọn lại RỖNG dù document đã tồn tại
+thật và tree/list vẫn hiện bình thường.
+
+Bài học:
+- Seed document thật thì truyền ĐỦ mọi field có `link_filters`/filter tường minh đang tham chiếu
+  tới nó ở nơi khác trong metadata (is_group, disabled, status, v.v.), không chỉ field "nội dung".
+  Tra field đó bằng cách grep `link_filters` trong brief cho đúng DocType trước khi seed.
+- Nếu đã seed thiếu, sửa bằng `PUT /api/resource/<DocType>/<name>` — nhớ GET trước để lấy
+  `modified` hiện tại rồi gửi kèm, không thì bị `417 TimestampMismatchError` (optimistic
+  concurrency, giống lỗi `409 conflict` ở tầng FormContainer).
+- Muốn xác minh nhanh filter đã đúng chưa: gọi thẳng
+  `GET /api/resource/<DocType>?filters=<json>` với đúng `link_filters` của field, không cần mở UI.
+
 ## 10. Verification matrix
 
 ### UI FAST

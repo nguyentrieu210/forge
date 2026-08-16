@@ -36,6 +36,7 @@ import {
   allowedColorNamesForGroup,
   colorScopeForItem,
   colorUsageForDoctype,
+  finishColorContextForItem,
   normalizeColorUsage,
 } from "./color-scopes.js";
 import { previewChildRow } from "./ui-child-preview.js";
@@ -3497,6 +3498,20 @@ export default {
             ));
           } catch (error) {
             return refuse(error instanceof Error ? error.message : "Không lấy được danh sách màu theo Nhóm hàng.");
+          }
+        }
+        // Luồng Item → Bề mặt hợp lệ → Màu hợp lệ (2 bước) — server vẫn là authority duy nhất,
+        // client không tự join. `finish` optional: bỏ trống chỉ để dựng combobox Bề mặt.
+        if (method === "alumdoor.catalog.finish_color_context") {
+          try {
+            return answer(await finishColorContextForItem(
+              call,
+              String(args.item_code ?? ""),
+              args.finish !== undefined ? String(args.finish) : undefined,
+              normalizeColorUsage(args.usage_scope),
+            ));
+          } catch (error) {
+            return refuse(error instanceof Error ? error.message : "Không lấy được Bề mặt/màu theo Nhóm hàng.");
           }
         }
     if (method === "alumdoor.ui.preview_child_row") return await previewChildRow(call, args);

@@ -1,32 +1,91 @@
 /**
- * Danh mục màu chuẩn do chủ xưởng cung cấp ngày 2026-07-30.
+ * Danh mục Bề mặt + Màu vật tư chuẩn do chủ xưởng cung cấp (màu: 2026-07-30; vân gỗ + phụ thu:
+ * BANG-GIA-CHINH-THUC-31-07-2026.md).
  *
- * Mã màu dùng chính tên đầy đủ. Các mã viết tắt chỉ tồn tại ở dữ liệu cũ và phải được
- * quy đổi trước khi ghi vào Link(Item Color), nếu không cùng một màu sẽ thành hai vị trí tồn.
+ * Kiến trúc hội tụ 2026-08-16 — MỘT nguồn luật, không còn hai authority song song:
+ *
+ *   Surface Finish (Bề mặt)          Item Color (Màu)
+ *   - applies_to_groups: RỘNG   ←──  - surface_finish: Link bắt buộc
+ *   - applies_to_all_groups           - applies_to_groups: hẹp thêm NẾU cần (rỗng = kế thừa
+ *     (chỉ THÔ dùng — khai tường          nguyên phạm vi của Bề mặt, KHÔNG phải wildcard)
+ *      minh, không suy ngầm từ rỗng)
+ *   - requires_color
+ *
+ * Fail-closed: một Bề mặt không applies_to_all_groups và applies_to_groups rỗng thì CHƯA dùng
+ * được cho nhóm nào — không phải "áp dụng mọi nơi". Chỉ THÔ có lý do nghiệp vụ thật để global
+ * (mọi Item đều có thể ở trạng thái thô trước khi hoàn thiện), nên nó khai tường minh
+ * applies_to_all_groups=true thay vì để mảng rỗng ngầm hiểu là wildcard.
+ *
+ * Mã màu dùng chính tên đầy đủ. Các mã viết tắt chỉ tồn tại ở dữ liệu cũ và phải được quy đổi
+ * trước khi ghi vào Link(Item Color), nếu không cùng một màu sẽ thành hai vị trí tồn.
  */
 
-const STATIC_GROUPS = [
-  "Cửa CN Đức",
-  "Cửa siêu trường",
-];
+export const ALUMDOOR_SURFACE_FINISH_CATALOG = Object.freeze([
+  {
+    code: "THO",
+    name: "THÔ",
+    usageScope: "Mua hàng",
+    requiresColor: false,
+    // OPEN: THÔ là trạng thái đầu vào của MỌI vật tư trước khi hoàn thiện — không có Item
+    // Group nào hợp lý để loại trừ. Đây là trường hợp duy nhất dùng cờ tường minh, không phải
+    // suy ngầm từ applies_to_groups rỗng (xem cảnh báo fail-closed ở đầu file).
+    appliesToAllGroups: true,
+    groups: [],
+  },
+  {
+    code: "SON_TINH_DIEN",
+    name: "SƠN TĨNH ĐIỆN",
+    usageScope: "Mua & bán",
+    requiresColor: true,
+    // Nguồn: apps/alumdoor/docs/nguon/quy-cach/MS.md — "Cửa CN Đức, Úc, Siêu Trường, Đài
+    // Loan, Lưới, Phụ kiện cần sơn tĩnh điện". Phụ kiện KHÔNG đưa vào đây: chưa có nhóm lá nào
+    // khớp đúng nghĩa "phụ kiện cần sơn tĩnh điện" trong cây Item Group hiện tại — xem OPEN.
+    groups: ["Cửa CN Đức", "Cửa tấm liền Úc", "Cửa Siêu Trường", "Cửa Đài Loan", "Cửa Lưới"],
+  },
+  {
+    code: "MA_MAU",
+    name: "MẠ MÀU",
+    usageScope: "Mua & bán",
+    requiresColor: true,
+    // Hợp của phạm vi 5 màu mạ trong MS.md (mỗi màu còn tự thu hẹp riêng ở Item Color).
+    groups: ["Cửa tấm liền Úc", "Cửa Đài Loan"],
+  },
+  {
+    code: "SON_VAN_GO",
+    name: "SƠN VÂN GỖ",
+    usageScope: "Mua & bán",
+    requiresColor: true,
+    // Nguồn: BANG-GIA-CHINH-THUC-31-07-2026.md dòng 242 "sơn màu vân gỗ (Đức)" — chỉ có bằng
+    // chứng cho Cửa CN Đức. Không suy rộng ra Úc/Đài Loan/Lưới khi chưa có nguồn.
+    groups: ["Cửa CN Đức"],
+  },
+]);
 
 const staticColor = (code, extra = {}) => ({
   code,
   name: code,
-  finish: "Sơn tĩnh điện",
-  groups: STATIC_GROUPS,
+  finish: "SON_TINH_DIEN",
+  // Rỗng = không thu hẹp thêm so với phạm vi 5 nhóm đã khai trên chính Surface Finish
+  // SON_TINH_DIEN — nguồn MS.md liệt kê CÙNG một phạm vi cho cả 18 màu STĐ, nên không có lý do
+  // khai lại ở từng màu.
+  groups: [],
   ...extra,
 });
 
 const platedColor = (code, groups) => ({
   code,
   name: code,
-  finish: "Mạ",
+  finish: "MA_MAU",
+  // Khác STĐ: mỗi màu mạ áp phạm vi RIÊNG (theo đúng cột "Nhóm SP áp dụng" của MS.md), nên
+  // Item Color phải thu hẹp thêm ở đây.
   groups,
 });
 
 export const ALUMDOOR_COLOR_CATALOG = Object.freeze([
-  { code: "THÔ", name: "THÔ", finish: "Thô", groups: [], usageScope: "Mua hàng" },
+  // THÔ không phải màu thương mại (Surface Finish.requires_color=false nên UI không hỏi màu
+  // cho THÔ), nhưng vẫn giữ record Item Color THÔ cho tương thích lịch sử — Aluminium Lot /
+  // Batch cũ còn Link tới đúng name "THÔ". Không xoá mù theo mục 8/9 của yêu cầu.
+  { code: "THÔ", name: "THÔ", finish: "THO", groups: [], usageScope: "Mua hàng" },
   staticColor("CAFÉ"),
   staticColor("XANH NGỌC"),
   staticColor("MIDNIGHT BLUE"),
@@ -50,6 +109,10 @@ export const ALUMDOOR_COLOR_CATALOG = Object.freeze([
   platedColor("GHI ÚC - KEM ÚC", ["Cửa tấm liền Úc"]),
   platedColor("XANH RÊU - CAFÉ", ["Cửa tấm liền Úc"]),
   platedColor("XÁM - XANH NGỌC", ["Cửa Đài Loan"]),
+  // Nghiệp vụ chốt: đúng MỘT màu cho SƠN VÂN GỖ. Không invent Óc chó/Sồi/Căm xe — chưa có
+  // nguồn. Rỗng groups = kế thừa nguyên phạm vi Cửa CN Đức đã khai trên Surface Finish
+  // SON_VAN_GO. Phụ thu 360.000đ/m² KHÔNG nằm ở đây — đi Pricing Rule (xem OPEN).
+  { code: "VAN_GO", name: "VÂN GỖ", finish: "SON_VAN_GO", groups: [], usageScope: "Mua & bán" },
 ]);
 
 const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
@@ -69,26 +132,56 @@ export const ALUMDOOR_LEGACY_COLOR_MAP = Object.freeze(new Map([
   ["XR-CF", "XANH RÊU - CAFÉ"],
 ]));
 
+/**
+ * Item Color.finish CŨ (trước 2026-08-16) là Select text tự do 6 giá trị: Thô/Sơn tĩnh
+ * điện/Anode/Vân gỗ/Mạ/Khác. Bốn giá trị có canonical Surface Finish quy đổi RÕ theo mục 5 của
+ * yêu cầu hội tụ; "Anode" và "Khác" KHÔNG có canonical tương ứng — cố tình không map, migration
+ * phải audit/report riêng, không đoán.
+ */
+export const ALUMDOOR_LEGACY_FINISH_MAP = Object.freeze(new Map([
+  ["Thô", "THO"],
+  ["Sơn tĩnh điện", "SON_TINH_DIEN"],
+  ["Mạ", "MA_MAU"],
+  ["Vân gỗ", "SON_VAN_GO"],
+]));
+
 export function canonicalAlumdoorColor(value) {
   const normalized = key(value);
   return ALUMDOOR_LEGACY_COLOR_MAP.get(normalized) ?? clean(value);
 }
 
+/** Trả về mã Surface Finish, hoặc `undefined` nếu giá trị cũ không nằm trong 4 mã đã chốt — gọi nơi dùng phải tự audit, không silently rơi về mặc định. */
+export function canonicalAlumdoorFinish(value) {
+  return ALUMDOOR_LEGACY_FINISH_MAP.get(clean(value));
+}
+
+export function alumdoorSurfaceFinishPayload(finish) {
+  return {
+    finish_code: finish.code,
+    finish_name: finish.name,
+    requires_color: Boolean(finish.requiresColor),
+    applies_to_groups: (finish.groups ?? []).map((itemGroup, index) => ({
+      row_id: `SCOPE-${String(index + 1).padStart(2, "0")}`,
+      item_group: itemGroup,
+    })),
+    applies_to_all_groups: Boolean(finish.appliesToAllGroups),
+    usage_scope: finish.usageScope ?? "Mua & bán",
+    disabled: false,
+  };
+}
+
+/** Chỉ phát field thật có khai trong schema Item Color — không phát field không tồn tại. */
 export function alumdoorColorPayload(color) {
   return {
     color_code: color.code,
     color_name: color.name,
-    finish: color.finish,
+    surface_finish: color.finish,
     usage_scope: color.usageScope ?? "Mua & bán",
     applies_to_groups: color.groups.map((itemGroup, index) => ({
       row_id: `SCOPE-${String(index + 1).padStart(2, "0")}`,
       item_group: itemGroup,
     })),
     ...(color.supplierColorCode ? { supplier_color_code: color.supplierColorCode } : {}),
-    note: color.finish === "Sơn tĩnh điện"
-      ? "Màu STĐ áp toàn nhóm Cửa CN Đức/Cửa siêu trường; Cửa Úc, Đài Loan, Lưới và phụ kiện chỉ áp cho từng Item có STĐ/STD."
-      : "Bảng màu chuẩn do chủ xưởng cung cấp ngày 2026-07-30.",
     disabled: false,
-    _migration_source: "alumdoor-color-catalog-2026-07-30",
   };
 }

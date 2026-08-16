@@ -232,27 +232,6 @@
   ],
   "actions": [
     {
-      "//": "Máy tính chỉ đọc Item + Công thức cửa, không ghi chứng từ. Dùng để đối chiếu trước khi công thức được chụp vào báo giá/đơn hàng.",
-      "name": "tinh-cong-thuc-cua",
-      "label": "Tính công thức cửa",
-      "icon": "calculator",
-      "group": "Bán hàng",
-      "description": "Tính diện tích bán và thành tiền theo đúng loại cửa và nhóm khách.",
-      "permission": "Quotation",
-      "fields": [
-        "item_code:Link(Item)! Mặt hàng cửa",
-        "customer_group:Select(Đại lý,Lẻ)! Nhóm giá",
-        "width_pb_ray_m:Float! Rộng PB ray (m)",
-        "width_pb_nhua_m:Float! Rộng PB nhựa (m)",
-        "height_m:Float Cao phủ bì (m)",
-        "set_count:Int!=(1) Số bộ",
-        "selling_rate:Currency Đơn giá bán / m2"
-      ],
-      "preview": "alumdoor.door.calculate | Tính tiền",
-      "commit": "alumdoor.door.calculate | Tính tiền",
-      "resultTable": "results"
-    },
-    {
       "name": "cat-nhom",
       "label": "Cắt nhôm",
       "icon": "scissors",
@@ -690,30 +669,6 @@
       "commit": "alumdoor.warranty.confirm_resolution | Xác nhận xử lý | Xác nhận kết luận lỗi và bù trừ nếu thuộc nhà cung cấp?"
     },
     {
-      "name": "giao-hang-theo-ngay",
-      "label": "Tạo phiếu giao theo ngày",
-      "icon": "calendar-check",
-      "group": "Bán hàng",
-      "permission": "Delivery Note",
-      "description": "Xem đơn đến hạn và tạo một Phiếu xuất nháp mỗi đơn; retry không tạo trùng.",
-      "fields": [
-        "delivery_date:Date!=(Today) Ngày giao",
-        {
-          "fieldname": "warehouse",
-          "label": "Kho xuất",
-          "fieldtype": "Link",
-          "options": "Warehouse",
-          "required": true,
-          "link_filters": "{\"is_group\":0,\"disabled\":0}"
-        },
-        "driver:Data Người giao / lái xe",
-        "vehicle:Data Biển số"
-      ],
-      "preview": "alumdoor.delivery_batch.preview | Xem đơn đến hạn",
-      "commit": "alumdoor.delivery_batch.create | Tạo phiếu nháp | Tạo phiếu xuất nháp cho các đơn sẵn sàng?",
-      "resultTable": "results"
-    },
-    {
       "name": "lap-tai-san-xuat",
       "label": "Tính năng lực và tăng ca",
       "icon": "gauge",
@@ -746,7 +701,6 @@
       "Sales Order",
       "action:don-ban-thanh-phieu-xuat",
       "Delivery Note",
-      "action:giao-hang-theo-ngay",
       "action:cat-nhom",
       "Stock Entry",
       "action:hoan-cat",
@@ -754,8 +708,6 @@
       "Purchase Order",
       "Purchase Receipt",
       "Work Order",
-      "Bill of Materials",
-      "Production Standard",
       "action:lap-tai-san-xuat",
       "action:don-ban-thanh-hoa-don",
       "Sales Invoice",
@@ -783,6 +735,8 @@
       "Item",
       "Item Group",
       "UOM",
+      "Bill of Materials",
+      "Production Standard",
       "Warehouse",
       "Customer",
       "Supplier",
@@ -1033,30 +987,6 @@
     },
     {
       "type": "Item Group",
-      "name": "Nan/lá cửa",
-      "data": {
-        "item_group_name": "Nan/lá cửa",
-        "parent_item_group": "Nguyên vật liệu"
-      }
-    },
-    {
-      "type": "Item Group",
-      "name": "Mô tơ",
-      "data": {
-        "item_group_name": "Mô tơ",
-        "parent_item_group": "Linh kiện & thiết bị"
-      }
-    },
-    {
-      "type": "Item Group",
-      "name": "Ray và trục",
-      "data": {
-        "item_group_name": "Ray và trục",
-        "parent_item_group": "Nguyên vật liệu"
-      }
-    },
-    {
-      "type": "Item Group",
       "name": "Phụ kiện",
       "data": {
         "item_group_name": "Phụ kiện",
@@ -1073,10 +1003,149 @@
     },
     {
       "type": "Item Group",
+      "name": "Cửa thành phẩm",
+      "data": {
+        "item_group_name": "Cửa thành phẩm",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Vật tư & phụ kiện",
+      "data": {
+        "item_group_name": "Vật tư & phụ kiện",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Motor & điện",
+      "data": {
+        "item_group_name": "Motor & điện",
+        "parent_item_group": "Tất cả mặt hàng",
+        "is_group": true
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa CN Đức",
+      "data": {
+        "item_group_name": "Cửa CN Đức",
+        "parent_item_group": "Cửa thành phẩm"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa tấm liền Úc",
+      "data": {
+        "item_group_name": "Cửa tấm liền Úc",
+        "parent_item_group": "Cửa thành phẩm"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa Đài Loan",
+      "data": {
+        "item_group_name": "Cửa Đài Loan",
+        "parent_item_group": "Cửa thành phẩm"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa Đài Loan Inox",
+      "data": {
+        "item_group_name": "Cửa Đài Loan Inox",
+        "parent_item_group": "Cửa thành phẩm"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa kéo Đài Loan",
+      "data": {
+        "item_group_name": "Cửa kéo Đài Loan",
+        "parent_item_group": "Cửa thành phẩm"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa Lưới",
+      "data": {
+        "item_group_name": "Cửa Lưới",
+        "parent_item_group": "Cửa thành phẩm"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Cửa Siêu Trường",
+      "data": {
+        "item_group_name": "Cửa Siêu Trường",
+        "parent_item_group": "Cửa thành phẩm"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Nan/lá cửa",
+      "data": {
+        "item_group_name": "Nan/lá cửa",
+        "parent_item_group": "Vật tư & phụ kiện"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Ray và trục",
+      "data": {
+        "item_group_name": "Ray và trục",
+        "parent_item_group": "Vật tư & phụ kiện"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Phụ kiện CN Đức",
+      "data": {
+        "item_group_name": "Phụ kiện CN Đức",
+        "parent_item_group": "Vật tư & phụ kiện"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Phụ kiện chung",
+      "data": {
+        "item_group_name": "Phụ kiện chung",
+        "parent_item_group": "Vật tư & phụ kiện"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Mô tơ",
+      "data": {
+        "item_group_name": "Mô tơ",
+        "parent_item_group": "Motor & điện"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Linh kiện motor",
+      "data": {
+        "item_group_name": "Linh kiện motor",
+        "parent_item_group": "Motor & điện"
+      }
+    },
+    {
+      "type": "Item Group",
+      "name": "Điều khiển & phụ kiện điện",
+      "data": {
+        "item_group_name": "Điều khiển & phụ kiện điện",
+        "parent_item_group": "Motor & điện"
+      }
+    },
+    {
+      "type": "Item Group",
       "name": "Bộ lưu điện",
       "data": {
         "item_group_name": "Bộ lưu điện",
-        "parent_item_group": "Linh kiện & thiết bị"
+        "parent_item_group": "Motor & điện"
       }
     },
     {
@@ -1495,6 +1564,688 @@
         "weight_tolerance_pct": 13,
         "note": "Mua và tồn theo Kg; bán theo Mét; số cây và số bó chỉ dùng để theo dõi giao nhận."
       }
+    },
+    {
+      "type": "Item Color",
+      "name": "CAFE",
+      "data": {
+        "color_code": "CAFE",
+        "color_name": "[DEPRECATED-CAFE]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH_NGOC",
+      "data": {
+        "color_code": "XANH_NGOC",
+        "color_name": "[DEPRECATED-XANH_NGOC]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "MIDNIGHT_BLUE",
+      "data": {
+        "color_code": "MIDNIGHT_BLUE",
+        "color_name": "[DEPRECATED-MIDNIGHT_BLUE]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "TRANG",
+      "data": {
+        "color_code": "TRANG",
+        "color_name": "[DEPRECATED-TRANG]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XAM_MO",
+      "data": {
+        "color_code": "XAM_MO",
+        "color_name": "[DEPRECATED-XAM_MO]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "VANG_KEM",
+      "data": {
+        "color_code": "VANG_KEM",
+        "color_name": "[DEPRECATED-VANG_KEM]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "GHI_SAN",
+      "data": {
+        "color_code": "GHI_SAN",
+        "color_name": "[DEPRECATED-GHI_SAN]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "NAU_XINGFA",
+      "data": {
+        "color_code": "NAU_XINGFA",
+        "color_name": "[DEPRECATED-NAU_XINGFA]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XAM_XINGFA",
+      "data": {
+        "color_code": "XAM_XINGFA",
+        "color_name": "[DEPRECATED-XAM_XINGFA]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "DEN_XINGFA",
+      "data": {
+        "color_code": "DEN_XINGFA",
+        "color_name": "[DEPRECATED-DEN_XINGFA]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "VANG_KEM_BONG",
+      "data": {
+        "color_code": "VANG_KEM_BONG",
+        "color_name": "[DEPRECATED-VANG_KEM_BONG]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH_NGOC_BONG",
+      "data": {
+        "color_code": "XANH_NGOC_BONG",
+        "color_name": "[DEPRECATED-XANH_NGOC_BONG]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH_LA_CAY",
+      "data": {
+        "color_code": "XANH_LA_CAY",
+        "color_name": "[DEPRECATED-XANH_LA_CAY]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XAM_LONG_CHUOT",
+      "data": {
+        "color_code": "XAM_LONG_CHUOT",
+        "color_name": "[DEPRECATED-XAM_LONG_CHUOT]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "DO_DO",
+      "data": {
+        "color_code": "DO_DO",
+        "color_name": "[DEPRECATED-DO_DO]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "KEM_SUA",
+      "data": {
+        "color_code": "KEM_SUA",
+        "color_name": "[DEPRECATED-KEM_SUA]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH_DUONG",
+      "data": {
+        "color_code": "XANH_DUONG",
+        "color_name": "[DEPRECATED-XANH_DUONG]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH_NGOC_VANG_KEM_MM",
+      "data": {
+        "color_code": "XANH_NGOC_VANG_KEM_MM",
+        "color_name": "[DEPRECATED-XANH_NGOC_VANG_KEM_MM]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XAM_TRANG_MM",
+      "data": {
+        "color_code": "XAM_TRANG_MM",
+        "color_name": "[DEPRECATED-XAM_TRANG_MM]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "GHI_UC_KEM_UC_MM",
+      "data": {
+        "color_code": "GHI_UC_KEM_UC_MM",
+        "color_name": "[DEPRECATED-GHI_UC_KEM_UC_MM]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH_REU_CAFE_MM",
+      "data": {
+        "color_code": "XANH_REU_CAFE_MM",
+        "color_name": "[DEPRECATED-XANH_REU_CAFE_MM]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XAM_XANH_NGOC_MM",
+      "data": {
+        "color_code": "XAM_XANH_NGOC_MM",
+        "color_name": "[DEPRECATED-XAM_XANH_NGOC_MM]",
+        "finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": true
+      }
+    },
+    {
+      "type": "Surface Finish",
+      "name": "THO",
+      "data": {
+        "finish_code": "THO",
+        "finish_name": "THÔ",
+        "requires_color": false,
+        "applies_to_groups": [],
+        "applies_to_all_groups": true,
+        "usage_scope": "Mua hàng",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Surface Finish",
+      "name": "SON_TINH_DIEN",
+      "data": {
+        "finish_code": "SON_TINH_DIEN",
+        "finish_name": "SƠN TĨNH ĐIỆN",
+        "requires_color": true,
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa CN Đức"
+          },
+          {
+            "row_id": "SCOPE-02",
+            "item_group": "Cửa tấm liền Úc"
+          },
+          {
+            "row_id": "SCOPE-03",
+            "item_group": "Cửa Siêu Trường"
+          },
+          {
+            "row_id": "SCOPE-04",
+            "item_group": "Cửa Đài Loan"
+          },
+          {
+            "row_id": "SCOPE-05",
+            "item_group": "Cửa Lưới"
+          }
+        ],
+        "applies_to_all_groups": false,
+        "usage_scope": "Mua & bán",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Surface Finish",
+      "name": "MA_MAU",
+      "data": {
+        "finish_code": "MA_MAU",
+        "finish_name": "MẠ MÀU",
+        "requires_color": true,
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          },
+          {
+            "row_id": "SCOPE-02",
+            "item_group": "Cửa Đài Loan"
+          }
+        ],
+        "applies_to_all_groups": false,
+        "usage_scope": "Mua & bán",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Surface Finish",
+      "name": "SON_VAN_GO",
+      "data": {
+        "finish_code": "SON_VAN_GO",
+        "finish_name": "SƠN VÂN GỖ",
+        "requires_color": true,
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa CN Đức"
+          }
+        ],
+        "applies_to_all_groups": false,
+        "usage_scope": "Mua & bán",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "THÔ",
+      "data": {
+        "color_code": "THÔ",
+        "color_name": "THÔ",
+        "surface_finish": "THO",
+        "usage_scope": "Mua hàng",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "CAFÉ",
+      "data": {
+        "color_code": "CAFÉ",
+        "color_name": "CAFÉ",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH NGỌC",
+      "data": {
+        "color_code": "XANH NGỌC",
+        "color_name": "XANH NGỌC",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "MIDNIGHT BLUE",
+      "data": {
+        "color_code": "MIDNIGHT BLUE",
+        "color_name": "MIDNIGHT BLUE",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "TRẮNG",
+      "data": {
+        "color_code": "TRẮNG",
+        "color_name": "TRẮNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "supplier_color_code": "9512",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XÁM MỜ",
+      "data": {
+        "color_code": "XÁM MỜ",
+        "color_name": "XÁM MỜ",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "VÀNG KEM",
+      "data": {
+        "color_code": "VÀNG KEM",
+        "color_name": "VÀNG KEM",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "GHI SẦN",
+      "data": {
+        "color_code": "GHI SẦN",
+        "color_name": "GHI SẦN",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "NÂU XINGFA",
+      "data": {
+        "color_code": "NÂU XINGFA",
+        "color_name": "NÂU XINGFA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XÁM XINGFA",
+      "data": {
+        "color_code": "XÁM XINGFA",
+        "color_name": "XÁM XINGFA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "ĐEN XINGFA",
+      "data": {
+        "color_code": "ĐEN XINGFA",
+        "color_name": "ĐEN XINGFA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "VÀNG KEM BÓNG",
+      "data": {
+        "color_code": "VÀNG KEM BÓNG",
+        "color_name": "VÀNG KEM BÓNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH NGỌC BÓNG",
+      "data": {
+        "color_code": "XANH NGỌC BÓNG",
+        "color_name": "XANH NGỌC BÓNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH LÁ CÂY",
+      "data": {
+        "color_code": "XANH LÁ CÂY",
+        "color_name": "XANH LÁ CÂY",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XÁM LÔNG CHUỘT",
+      "data": {
+        "color_code": "XÁM LÔNG CHUỘT",
+        "color_name": "XÁM LÔNG CHUỘT",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "CAM",
+      "data": {
+        "color_code": "CAM",
+        "color_name": "CAM",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "ĐỎ ĐÔ",
+      "data": {
+        "color_code": "ĐỎ ĐÔ",
+        "color_name": "ĐỎ ĐÔ",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "supplier_color_code": "4004",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "KEM SỮA",
+      "data": {
+        "color_code": "KEM SỮA",
+        "color_name": "KEM SỮA",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH DƯƠNG",
+      "data": {
+        "color_code": "XANH DƯƠNG",
+        "color_name": "XANH DƯƠNG",
+        "surface_finish": "SON_TINH_DIEN",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH NGỌC - VÀNG KEM",
+      "data": {
+        "color_code": "XANH NGỌC - VÀNG KEM",
+        "color_name": "XANH NGỌC - VÀNG KEM",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          },
+          {
+            "row_id": "SCOPE-02",
+            "item_group": "Cửa Đài Loan"
+          }
+        ],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XÁM - TRẮNG",
+      "data": {
+        "color_code": "XÁM - TRẮNG",
+        "color_name": "XÁM - TRẮNG",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          }
+        ],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "GHI ÚC - KEM ÚC",
+      "data": {
+        "color_code": "GHI ÚC - KEM ÚC",
+        "color_name": "GHI ÚC - KEM ÚC",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          }
+        ],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XANH RÊU - CAFÉ",
+      "data": {
+        "color_code": "XANH RÊU - CAFÉ",
+        "color_name": "XANH RÊU - CAFÉ",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa tấm liền Úc"
+          }
+        ],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "XÁM - XANH NGỌC",
+      "data": {
+        "color_code": "XÁM - XANH NGỌC",
+        "color_name": "XÁM - XANH NGỌC",
+        "surface_finish": "MA_MAU",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [
+          {
+            "row_id": "SCOPE-01",
+            "item_group": "Cửa Đài Loan"
+          }
+        ],
+        "disabled": false
+      }
+    },
+    {
+      "type": "Item Color",
+      "name": "VAN_GO",
+      "data": {
+        "color_code": "VAN_GO",
+        "color_name": "VÂN GỖ",
+        "surface_finish": "SON_VAN_GO",
+        "usage_scope": "Mua & bán",
+        "applies_to_groups": [],
+        "disabled": false
+      }
     }
   ],
   "doctypes": [
@@ -1625,6 +2376,87 @@
       }
     },
     {
+      "//": "Phương pháp/trạng thái hoàn thiện bề mặt — tách khỏi Màu vật tư vì một Bề mặt gồm nhiều màu, và THÔ không phải màu thương mại (không xổ như lựa chọn Sales). Bề mặt giữ phạm vi RỘNG (applies_to_groups); Màu chỉ thu hẹp thêm nếu cần.",
+      "name": "Surface Finish",
+      "label": "Bề mặt",
+      "icon": "layers",
+      "group": "Danh mục",
+      "naming": "field:finish_code",
+      "title": "finish_name",
+      "list": [
+        "finish_code",
+        "finish_name",
+        "requires_color",
+        "usage_scope",
+        "disabled"
+      ],
+      "search": [
+        "finish_code",
+        "finish_name"
+      ],
+      "fields": [
+        "finish_code:Data*! Mã bề mặt",
+        "finish_name:Data! Tên bề mặt",
+        "requires_color:Check Bắt buộc chọn màu",
+        {
+          "//": "Phạm vi RỘNG của cả loại bề mặt. Rỗng + applies_to_all_groups=0 = fail-closed: bề mặt này chưa dùng được cho nhóm nào, không phải wildcard toàn hệ thống.",
+          "fieldname": "applies_to_groups",
+          "fieldtype": "Table",
+          "options": "Surface Finish Scope",
+          "label": "Nhóm SP áp dụng"
+        },
+        "applies_to_all_groups:Check Áp dụng mọi Nhóm hàng (khai tường minh, không suy ngầm từ rỗng)",
+        "usage_scope:Select(Mua hàng,Bán hàng,Mua & bán)!=(Mua & bán) Phạm vi giao dịch",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Surface Finish Scope",
+      "child": true,
+      "label": "Nhóm SP áp dụng (Bề mặt)",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_group",
+      "list": [
+        "item_group"
+      ],
+      "fields": [
+        {
+          "fieldname": "item_group",
+          "label": "Nhóm hàng",
+          "fieldtype": "Link",
+          "options": "Item Group",
+          "required": true,
+          "link_filters": "{\"is_group\":0,\"disabled\":0}",
+          "surface": "quick"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "item_group"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "item_group"
+        ]
+      }
+    },
+    {
       "name": "Item Color",
       "label": "Màu vật tư",
       "icon": "palette",
@@ -1634,7 +2466,7 @@
       "list": [
         "color_code",
         "color_name",
-        "finish",
+        "surface_finish",
         "disabled"
       ],
       "search": [
@@ -1644,9 +2476,15 @@
       "fields": [
         "color_code:Data*! Mã màu",
         "color_name:Data! Tên màu",
-        "finish:Select(Thô,Sơn tĩnh điện,Anode,Vân gỗ,Mạ,Khác) Bề mặt",
+        "surface_finish:Link(Surface Finish)! Bề mặt",
         "usage_scope:Select(Mua hàng,Bán hàng,Mua & bán)!=(Mua & bán) Phạm vi giao dịch",
-        "applies_to_groups:Table(Item Color Scope) Nhóm SP áp dụng",
+        {
+          "//": "Thu hẹp thêm SO VỚI phạm vi của Bề mặt — không phải authority độc lập. Rỗng = không thu hẹp thêm (kế thừa nguyên phạm vi của surface_finish), KHÔNG phải wildcard toàn hệ thống.",
+          "fieldname": "applies_to_groups",
+          "fieldtype": "Table",
+          "options": "Item Color Scope",
+          "label": "Nhóm SP áp dụng (thu hẹp thêm)"
+        },
         "supplier_color_code:Data Mã màu nhà cung cấp",
         "disabled:Check Ngừng dùng"
       ],
@@ -4926,7 +5764,7 @@
         "báo cáo, sổ vẫn CÂN nên không có gì kêu. Đây chính là lỗi đã sống trên tenant."
       ],
       "name": "Delivery Note",
-      "label": "Phiếu xuất kho",
+      "label": "Phiếu giao hàng",
       "icon": "truck",
       "group": "Bán hàng",
       "naming": "PXK-.YYYY.-####",
@@ -7776,7 +8614,7 @@
       "name": "Bill of Materials",
       "label": "Định mức vật tư (BOM)",
       "icon": "list-tree",
-      "group": "Sản xuất",
+      "group": "Danh mục",
       "naming": "DM-.YYYY.-####",
       "title": "item",
       "submittable": true,
@@ -8249,7 +9087,7 @@
       "name": "Production Standard",
       "label": "Định mức công đoạn",
       "icon": "timer",
-      "group": "Sản xuất",
+      "group": "Danh mục",
       "naming": "field:department",
       "title": "department",
       "list": [

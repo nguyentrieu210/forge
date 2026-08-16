@@ -64,8 +64,8 @@ test("presentation helper migrates every Alumdoor child DocType without changing
   const brief = sourceBrief();
   const before = new Map(brief.doctypes.filter((dt) => dt.child === true).map((dt) => [dt.name, dt.fields.map((field) => typeof field === "string" ? field.split(":")[0].trim() : field.fieldname)]));
   const result = applyAlumdoorChildPresentation(brief);
-  // 29 kể từ khi thêm `Credit Note Item` — nửa TIỀN của việc khách trả hàng.
-  assert.equal(result.migrated, 29);
+  // 30 kể từ khi thêm `Surface Finish Scope` (2026-08-16, hội tụ kiến trúc Bề mặt+Màu).
+  assert.equal(result.migrated, 30);
   for (const dt of brief.doctypes.filter((value) => value.child === true)) {
     assert.deepEqual(dt.fields.map((field) => field.fieldname), before.get(dt.name), `${dt.name} field order changed`);
     assert.ok(dt.fields.every((field) => ["quick", "expanded", "internal"].includes(field.surface)), `${dt.name} has missing surface`);
@@ -179,8 +179,8 @@ test("all child doctypes own presentation while conditional required fields stay
   applyAlumdoorChildPresentation(brief);
   const pkg = compileWithUiPolicies(brief);
   const children = pkg.doctypes.filter((doctype) => doctype.is_child === true);
-  // 29 kể từ khi thêm `Credit Note Item` — nửa TIỀN của việc khách trả hàng.
-  assert.equal(children.length, 29);
+  // 30 kể từ khi thêm `Surface Finish Scope` (2026-08-16, hội tụ kiến trúc Bề mặt+Màu).
+  assert.equal(children.length, 30);
   const missing = children
     .filter((doctype) => !doctype.viewPolicy?.form?.enabled || !doctype.viewPolicy?.quickEntry?.enabled)
     .map((doctype) => doctype.name);

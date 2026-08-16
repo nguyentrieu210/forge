@@ -83,7 +83,7 @@ test("Alumdoor sidebar prioritises daily work and consolidates reports", () => {
   assert.equal(app.nav.filter((entry) => entry.key.startsWith("report:")).length, 16);
   assert.ok(app.nav.filter((entry) => entry.key.startsWith("report:")).every((entry) => entry.group === "Báo cáo"));
   assert.deepEqual(
-    app.nav.filter((entry) => entry.group === "Danh mục").slice(0, 5).map((entry) => entry.key),
-    ["Item", "Item Group", "UOM", "Warehouse", "Customer"],
+    app.nav.filter((entry) => entry.group === "Danh mục").slice(0, 7).map((entry) => entry.key),
+    ["Item", "Item Group", "UOM", "Bill of Materials", "Production Standard", "Warehouse", "Customer"],
   );
 });

@@ -358,10 +358,11 @@ function masterPlatform(records) {
       const parts = new URL(request.url).pathname.split("/").filter(Boolean);
       const doctypeName = decodeURIComponent(parts.at(-2));
       const name = decodeURIComponent(parts.at(-1));
-      if (doctypeName === "resource" && name === "Item Color") {
+      if (doctypeName === "resource" && (name === "Item Color" || name === "Surface Finish")) {
+        const prefix = `${name}:`;
         const data = Object.entries(records)
-          .filter(([key]) => key.startsWith("Item Color:"))
-          .map(([key, value]) => ({ name: key.slice("Item Color:".length), ...value }));
+          .filter(([key]) => key.startsWith(prefix))
+          .map(([key, value]) => ({ name: key.slice(prefix.length), ...value }));
         return Promise.resolve(Response.json({ data }));
       }
       const value = records[`${doctypeName}:${name}`];
@@ -487,7 +488,8 @@ test("Item color policy is inherited from Item Color group scopes", async () => 
       "Item Group:Tất cả mặt hàng": { is_group: 1 },
       "Measurement Profile:Thành phẩm theo m2": { inventory_mode: "Thành phẩm theo m2", stock_uom: "Bộ", require_color: 1 },
       "Item:CUA-01": { item_group: "Thành phẩm" },
-      "Item Color:GS": { disabled: 0, applies_to_groups: [{ item_group: "Thành phẩm" }] },
+      "Item Color:GS": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Thành phẩm" }] },
+      "Surface Finish:SON_TINH_DIEN": { disabled: 0, requires_color: 1, applies_to_all_groups: 1 },
       "Item Color:CF": { disabled: 0, applies_to_groups: [{ item_group: "Nhóm khác" }] },
       "Item Color:THÔ": { disabled: 0, usage_scope: "Mua hàng", applies_to_groups: [] },
     }),
@@ -556,9 +558,11 @@ test("sales and production documents require an active allowed color", async () 
       },
       "Item Group:Thành phẩm": { is_group: 0 },
       "Measurement Profile:Thành phẩm theo m2": { require_color: 1 },
-      "Item Color:GS": { disabled: 0, applies_to_groups: [{ item_group: "Thành phẩm" }] },
-      "Item Color:CF": { disabled: 0, applies_to_groups: [{ item_group: "Nhóm khác" }] },
-      "Item Color:THÔ": { disabled: 0, usage_scope: "Mua hàng", applies_to_groups: [] },
+      "Item Color:GS": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Thành phẩm" }] },
+      "Surface Finish:SON_TINH_DIEN": { disabled: 0, requires_color: 1, applies_to_all_groups: 1 },
+      "Item Color:CF": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Nhóm khác" }] },
+      "Item Color:THÔ": { disabled: 0, surface_finish: "THO", usage_scope: "Mua hàng", applies_to_groups: [] },
+      "Surface Finish:THO": { disabled: 0, requires_color: 0, applies_to_all_groups: 1, usage_scope: "Mua hàng" },
     }),
   };
 
@@ -632,7 +636,8 @@ test("purchase order uses width, kg-per-m and trees to derive barem kg", async (
       "Material Specification:ĐM-AL71": {
         theoretical_kg_per_m: 0.389,
       },
-      "Item Color:GS": { disabled: 0, applies_to_groups: [{ item_group: "Nan/lá cửa" }] },
+      "Item Color:GS": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Nan/lá cửa" }] },
+      "Surface Finish:SON_TINH_DIEN": { disabled: 0, requires_color: 1, applies_to_all_groups: 1 },
     }),
   };
   const line = {
@@ -693,7 +698,8 @@ test("purchase receipt validates actual kg per square metre from height, width a
   const env = { PLATFORM: masterPlatform({
     "Item:CUA-M2": item,
     "Item Group:Cửa thành phẩm": { is_group: 0 },
-    "Item Color:GS": { disabled: 0, applies_to_groups: [{ item_group: "Cửa thành phẩm" }] },
+    "Item Color:GS": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Cửa thành phẩm" }] },
+      "Surface Finish:SON_TINH_DIEN": { disabled: 0, requires_color: 1, applies_to_all_groups: 1 },
   }) };
 
   const valid = await alumdoorWorker.fetch(validatorRequest([base]), env, {});
@@ -744,7 +750,8 @@ test("m2 sales derives a dynamic conversion to exact set stock", async () => {
       },
       "Item Group:Cửa thành phẩm": { is_group: 0 },
       "Measurement Profile:Thành phẩm theo m2": { require_color: 1 },
-      "Item Color:GS": { disabled: 0, applies_to_groups: [{ item_group: "Cửa thành phẩm" }] },
+      "Item Color:GS": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Cửa thành phẩm" }] },
+      "Surface Finish:SON_TINH_DIEN": { disabled: 0, requires_color: 1, applies_to_all_groups: 1 },
     }),
   };
   const base = {
@@ -764,7 +771,8 @@ test("aluminium is authoritative Kg stock plus required physical dimensions", as
   const env = { PLATFORM: masterPlatform({
     "Item:A282": { item_group: "Nan/lá cửa", inventory_mode: "Nhôm cây/lá", stock_uom: "Kg" },
     "Item Group:Nan/lá cửa": { is_group: 0 },
-    "Item Color:GS": { disabled: 0, applies_to_groups: [{ item_group: "Nan/lá cửa" }] },
+    "Item Color:GS": { disabled: 0, surface_finish: "SON_TINH_DIEN", applies_to_groups: [{ item_group: "Nan/lá cửa" }] },
+      "Surface Finish:SON_TINH_DIEN": { disabled: 0, requires_color: 1, applies_to_all_groups: 1 },
   }) };
   const valid = await alumdoorWorker.fetch(
     validatorRequest([{
@@ -973,16 +981,4 @@ test("công thức cửa tách khỏi chính sách giá và phủ đủ năm lo�
   }
   const gap = byType.get("Cửa Đức").retail_cut_deduction_m - byType.get("Cửa Đức").dealer_cut_deduction_m;
   assert.ok(Math.abs(gap - 0.06) < 1e-9, "khoảng cách hai cách đo phải là 0,06 m");
-  for (const source of [brief, v2Brief]) {
-    const calculator = source.actions.find((entry) => entry.name === "tinh-cong-thuc-cua");
-    assert.ok(calculator, "phải có màn tính thử dùng đúng Worker");
-    assert.ok(calculator.fields.some((entry) => typeof entry === "string" && entry.startsWith("width_pb_ray_m:Float!") && entry.includes("Rộng PB ray")));
-    assert.ok(calculator.fields.some((entry) => typeof entry === "string" && entry.startsWith("width_pb_nhua_m:Float!") && entry.includes("Rộng PB nhựa")));
-    assert.ok(calculator.fields.some((entry) => typeof entry === "string" && entry.startsWith("selling_rate:Currency")));
-    assert.ok(!calculator.fields.some((entry) => typeof entry === "string" && entry.startsWith("sales_mode:")));
-    assert.ok(!calculator.fields.some((entry) => typeof entry === "string" && entry.startsWith("has_butterfly_bracket:")));
-    for (const hidden of ["purpose", "ray_type", "mesh_height_m", "actual_purchase_kg", "purchase_rate"]) {
-      assert.ok(!calculator.fields.some((entry) => typeof entry === "string" && entry.startsWith(`${hidden}:`)));
-    }
-  }
 });

@@ -48,6 +48,7 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
       { key: "Item", label: "Hàng hoá / Vật tư" },
       { key: "Item Group", label: "Nhóm hàng" },
       { key: "UOM", label: "Đơn vị tính" },
+      { key: "Surface Finish", label: "Bề mặt" },
       { key: "Item Color", label: "Màu vật tư" },
       { key: "Material Specification", label: "Quy cách kỹ thuật vật tư" },
       { key: "Measurement Profile", label: "Bộ theo dõi vật tư" },
@@ -84,6 +85,8 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
     title: "Bán hàng & sản xuất",
     entries: [
       { key: "Cutting Policy", label: "Công thức cửa" },
+      { key: "Bill of Materials", label: "Định mức / BOM" },
+      { key: "Production Standard", label: "Tiêu chuẩn sản xuất" },
     ],
   },
   {

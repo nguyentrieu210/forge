@@ -5,7 +5,9 @@ import process from "node:process";
 import {
   ALUMDOOR_COLOR_CATALOG,
   ALUMDOOR_LEGACY_COLOR_MAP,
+  ALUMDOOR_SURFACE_FINISH_CATALOG,
   alumdoorColorPayload,
+  alumdoorSurfaceFinishPayload,
 } from "./lib/alumdoor-color-catalog.mjs";
 
 const args = process.argv.slice(2);
@@ -20,6 +22,14 @@ if (!output) throw new Error("--sql is required");
 if (!/^[a-z][a-z0-9-]*$/.test(tenant)) throw new Error(`Invalid tenant id: ${tenant}`);
 
 const sqlText = (value) => `'${String(value).replaceAll("'", "''")}'`;
+const finishDocumentRows = ALUMDOOR_SURFACE_FINISH_CATALOG.map((finish) => {
+  const payload = JSON.stringify(alumdoorSurfaceFinishPayload(finish));
+  return `(${sqlText(tenant)},${sqlText(`Surface Finish:${finish.code}`)},'Surface Finish',${sqlText(finish.code)},'admin',0,'Draft',1,${sqlText(importedAt)},${sqlText(importedAt)},'admin',${sqlText(payload)})`;
+});
+const finishSearchRows = ALUMDOOR_SURFACE_FINISH_CATALOG.map((finish) => {
+  const content = [finish.code, finish.name].join(" ");
+  return `(${sqlText(tenant)},'Surface Finish',${sqlText(finish.code)},${sqlText(finish.name)},${sqlText(content)},${sqlText(importedAt)})`;
+});
 const documentRows = ALUMDOOR_COLOR_CATALOG.map((color) => {
   const payload = JSON.stringify(alumdoorColorPayload(color));
   return `(${sqlText(tenant)},${sqlText(`Item Color:${color.code}`)},'Item Color',${sqlText(color.code)},'admin',0,'Draft',1,${sqlText(importedAt)},${sqlText(importedAt)},'admin',${sqlText(payload)})`;
@@ -32,23 +42,24 @@ const aliases = [...ALUMDOOR_LEGACY_COLOR_MAP.entries()]
   .filter(([legacy]) => ["GS", "VK", "CF", "XF", "4004", "9512 ( TRẮNG )"].includes(legacy));
 const cases = aliases.map(([legacy, canonical]) => `WHEN ${sqlText(legacy)} THEN ${sqlText(canonical)}`).join(" ");
 const legacyList = aliases.map(([legacy]) => sqlText(legacy)).join(",");
-const colorRows = (colors) => colors.map((color, index) => ({
-  row_id: `COLOR-${String(index + 1).padStart(2, "0")}`,
-  color: color.code,
-}));
-const staticColors = ALUMDOOR_COLOR_CATALOG.filter((color) => color.finish === "Sơn tĩnh điện");
-const rawAluminiumColors = colorRows([
-  ALUMDOOR_COLOR_CATALOG.find((color) => color.code === "THÔ"),
-  ...staticColors,
-].filter(Boolean));
-const staticAllowed = colorRows(staticColors);
-const australiaPlated = colorRows(ALUMDOOR_COLOR_CATALOG.filter((color) =>
-  color.finish === "Mạ" && color.groups.includes("Cửa tấm liền Úc")));
-const taiwanPlated = colorRows(ALUMDOOR_COLOR_CATALOG.filter((color) =>
-  color.finish === "Mạ" && color.groups.includes("Cửa Đài Loan")));
+const sql = `-- Alumdoor canonical color catalogue correction — 2026-08-16: hội tụ Bề mặt+Màu.
+-- THÔ tách khỏi màu thương mại thành Surface Finish riêng; Item Color.surface_finish thay
+-- Item Color.finish (Link, không còn text tự do). +SƠN VÂN GỖ/VÂN GỖ theo bảng giá 31/07.
+-- Idempotent: upsert 4 Bề mặt + 25 màu chuẩn, normalize legacy lot links, remove obsolete aliases.
 
-const sql = `-- Alumdoor canonical color catalogue correction.
--- Idempotent: upsert 24 canonical colors, normalize legacy lot links, then remove obsolete aliases.
+INSERT INTO documents
+  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
+VALUES
+  ${finishDocumentRows.join(",\n  ")}
+ON CONFLICT(tenant_id,doc_key) DO UPDATE SET
+  payload_json=excluded.payload_json,modified_at=excluded.modified_at,modified_by=excluded.modified_by,
+  version=documents.version+1;
+
+INSERT INTO document_search(tenant_id,doctype,name,title,content,modified_at)
+VALUES
+  ${finishSearchRows.join(",\n  ")}
+ON CONFLICT(tenant_id,doctype,name) DO UPDATE SET
+  title=excluded.title,content=excluded.content,modified_at=excluded.modified_at;
 
 INSERT INTO documents
   (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)
@@ -84,36 +95,14 @@ WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legac
 DELETE FROM documents
 WHERE tenant_id=${sqlText(tenant)} AND doctype='Item Color' AND name IN (${legacyList});
 
--- Chiều chặn thật nằm trên Item.allowed_colors. Không dùng phạm vi nhóm rộng để cấp màu:
--- Cửa Úc/Đài Loan/Lưới/Phụ kiện chỉ được STĐ khi chính mã hàng ghi STĐ/STD.
-UPDATE documents
-SET payload_json=json_set(
-      payload_json,
-      '$.allowed_colors',
-      CASE
-        WHEN json_extract(payload_json,'$.inventory_mode')='Nhôm cây/lá'
-          THEN json(${sqlText(JSON.stringify(rawAluminiumColors))})
-        WHEN json_extract(payload_json,'$.item_group') IN ('Cửa CN Đức','Cửa siêu trường')
-          OR json_extract(payload_json,'$.item_name') LIKE '%STĐ%'
-          OR json_extract(payload_json,'$.item_name') LIKE '%STD%'
-          OR json_extract(payload_json,'$.description') LIKE '%STĐ%'
-          OR json_extract(payload_json,'$.description') LIKE '%STD%'
-          OR json_extract(payload_json,'$.item_name') LIKE '%Sơn tĩnh điện%'
-          OR json_extract(payload_json,'$.item_name') LIKE '%SƠN TĨNH ĐIỆN%'
-          THEN json(${sqlText(JSON.stringify(staticAllowed))})
-        WHEN json_extract(payload_json,'$.item_group')='Cửa tấm liền Úc'
-          THEN json(${sqlText(JSON.stringify(australiaPlated))})
-        WHEN json_extract(payload_json,'$.item_group')='Cửa Đài Loan'
-          THEN json(${sqlText(JSON.stringify(taiwanPlated))})
-        ELSE json('[]')
-      END
-    ),
-    modified_at=${sqlText(importedAt)},
-    modified_by='admin',
-    version=version+1
-WHERE tenant_id=${sqlText(tenant)}
-  AND doctype='Item'
-  AND COALESCE(json_extract(payload_json,'$.disabled'),0)=0;
+-- OPEN 2026-08-16: bản cũ ở đây từng ghi Item.allowed_colors để chặn STĐ không lan ra
+-- Cửa Úc/Đài Loan/Lưới/Phụ kiện ngoài Cửa CN Đức + Cửa Siêu Trường. Field \`allowed_colors\`
+-- đã bị dropFields() khỏi form Alumdoor ở v2 (build-alumdoor-v2-brief.mjs) — ghi vào đó bây
+-- giờ chỉ tạo key không ai đọc. Cơ chế whitelist theo Item thay thế nó CHƯA được thiết kế lại;
+-- xem SKILL forge-ui-change-routing hoặc PROJECT_CONTEXT.md trước khi tự đoán field mới.
+-- Hệ quả tạm thời: STĐ ở Item Color chỉ scope 2 nhóm (Cửa CN Đức, Cửa Siêu Trường); Cửa Úc/
+-- Đài Loan/Lưới/phụ kiện có STĐ thật thì hiện KHÔNG có đường cấp màu STĐ cho tới khi whitelist
+-- theo Item được dựng lại.
 `;
 
 await writeFile(path.resolve(output), sql, "utf8");

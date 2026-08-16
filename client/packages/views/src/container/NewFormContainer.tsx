@@ -282,8 +282,9 @@ export function NewFormContainer(props: NewFormContainerProps) {
         saving={saving}
         fieldErrors={fieldErrors}
         hideDefaultActions
-        // Modal cha (vd DoctypeWorkspace) đã tự hiện tiêu đề "Tạo {doctype}" — ẩn header trùng của FormView.
-        hideHeader={props.presentation !== "page"}
+        // Modal cha (vd DoctypeWorkspace) đã tự hiện tiêu đề "Tạo {doctype}" — luôn ẩn header trùng của FormView,
+        // kể cả presentation="page" (child-table case), vì Dialog cha vẫn bọc ngoài và có DialogHeader riêng.
+        hideHeader
         fullWidth={props.fullWidth}
         footerActions={<>
           <Button type="button" variant="outline" disabled={saving} onClick={requestCancel}>{t("common.cancel")}</Button>

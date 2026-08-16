@@ -846,29 +846,13 @@ brief.doctypes.push(
     ],
     permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
   },
-  {
-    "//": "Thay `applies_to` Small Text. Chuỗi tự do không so khớp với nhóm hàng được nên không ép được.",
-    name: "Item Color Scope",
-    child: true,
-    label: "Nhóm SP áp dụng",
-    group: "Danh mục",
-    naming: "autoincrement",
-    title: "item_group",
-    list: ["item_group"],
-    fields: ["item_group:Link(Item Group)! Nhóm hàng"],
-    permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
-  },
 );
 
-// Bảng màu chủ xưởng gửi ĐÃ CÓ cột "Nhóm SP áp dụng" ⇒ dữ liệu để ép tồn tại (BRD Q10).
-// Sơn tĩnh điện áp 6 nhóm; mạ màu CHỈ Cửa Úc và Đài Loan.
-const ic = doctype("Item Color");
-replaceField(ic, "applies_to", "applies_to_groups:Table(Item Color Scope) Nhóm SP áp dụng");
-addAfter(ic, "finish", "usage_scope:Select(Mua hàng,Bán hàng,Mua & bán)!=(Mua & bán) Phạm vi giao dịch");
-// `list` phải bỏ theo: Table không hiện được trên cột danh sách, và tên cũ đã biến mất.
-// Compiler bắt đúng chỗ này — cùng họ lỗi với `Item.list` trỏ `inventory_mode` đã xoá.
-ic.list = ic.list.filter((c) => c !== "applies_to");
-note("D6: +3 danh mục (Lý do huỷ, Nguyên nhân chênh lệch, Item Color Scope) · màu theo nhóm SP và phạm vi mua/bán");
+// Bề mặt/Màu vật tư (Surface Finish, Surface Finish Scope, Item Color Scope, Item Color với
+// field `surface_finish`) giờ khai THẲNG trong base alumdoor.json — 2026-08-16 hội tụ kiến
+// trúc Bề mặt+Màu, base và v2 dùng chung một schema, build script không còn cần mutate field
+// `finish`/`applies_to` ở đây nữa (base không còn hai field đó).
+note("D6: +2 danh mục (Lý do huỷ, Nguyên nhân chênh lệch)");
 
 // ══════════════ 3 CHỨNG TỪ MỚI ══════════════
 const perm = { "Chủ xưởng": "rwcsxa", "Thủ kho": "rwcsxa", "Sản xuất": "rwcsxa", "Kế toán": "r" };
@@ -1273,7 +1257,6 @@ brief.actions.push(
   },
 );
 for (const [anchor, entries] of [
-  ["Delivery Note", ["action:giao-hang-theo-ngay"]],
   ["Production Standard", ["action:lap-tai-san-xuat"]],
   ["Warranty Claim", ["action:mo-ho-so-bao-hanh", "action:xac-nhan-bu-tru-bao-hanh"]],
 ]) {
@@ -1301,13 +1284,6 @@ brief.actions.push(
     permission: "Debit Note", description: "Chỉ Kế toán tổng hợp/Kế toán trưởng; lỗi sản xuất được chốt sau kết luận, lỗi NCC tạo Giấy báo Nợ nháp chống trùng.",
     fields: ["warranty_claim:Link(Warranty Claim)! Hồ sơ lỗi NCC", "default_expense_account:Data Tài khoản ghi giảm"],
     commit: "alumdoor.warranty.confirm_resolution | Xác nhận xử lý | Xác nhận kết luận lỗi và bù trừ nếu thuộc nhà cung cấp?",
-  },
-  {
-    name: "giao-hang-theo-ngay", label: "Tạo phiếu giao theo ngày", icon: "calendar-check", group: "Bán hàng",
-    permission: "Delivery Note", description: "Xem đơn đến hạn và tạo một Phiếu xuất nháp mỗi đơn; retry không tạo trùng.",
-    fields: ["delivery_date:Date!=(Today) Ngày giao", "warehouse:Link(Warehouse)! Kho xuất", "driver:Data Người giao / lái xe", "vehicle:Data Biển số"],
-    preview: "alumdoor.delivery_batch.preview | Xem đơn đến hạn",
-    commit: "alumdoor.delivery_batch.create | Tạo phiếu nháp | Tạo phiếu xuất nháp cho các đơn sẵn sàng?", resultTable: "results",
   },
   {
     name: "lap-tai-san-xuat", label: "Tính năng lực và tăng ca", icon: "gauge", group: "Sản xuất",
