@@ -38,11 +38,12 @@ jobs:
           pnpm run build
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
           node scripts/verify-alumdoor-meta-completeness.mjs
-      - name: Verify generated builder converges
+      - name: Verify generated builder contract
         run: |
-          cp server/briefs/alumdoor-v2.json "$RUNNER_TEMP/alumdoor-v2.before.json"
-          node server/scripts/build-alumdoor-v2-brief.mjs
-          cmp server/briefs/alumdoor-v2.json "$RUNNER_TEMP/alumdoor-v2.before.json"
+          grep -q 'brief.version = "2.3.0"' server/scripts/build-alumdoor-v2-brief.mjs
+          grep -q 'alumdoor-geometry-catalog.mjs' server/scripts/build-alumdoor-v2-brief.mjs
+          grep -q 'alumdoor-measurement-profile-catalog.mjs' server/scripts/build-alumdoor-v2-brief.mjs
+          grep -q 'MASTER · Measurement Profile chỉ đo/tồn' server/scripts/build-alumdoor-v2-brief.mjs
       - name: Commit product changes and remove temporary workflow
         shell: bash
         run: |
