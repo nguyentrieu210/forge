@@ -2,8 +2,9 @@
 /**
  * Seed the locally approved Alumdoor surcharge catalogue.
  *
- * This intentionally excludes freight: freight is assessed per Sales Order,
- * whereas these records are line-item adjustments resolved by Pricing Rule.
+ * Surface Finish / Item Color are NOT owned here. Their only authority is
+ * lib/alumdoor-color-catalog.mjs + build-alumdoor-color-correction.mjs.
+ * Freight is assessed per Sales Order and is seeded separately.
  */
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -25,11 +26,11 @@ const scopes = [
       members: [
         { member_type: "Item Group", item_group: "Cửa CN Đức" },
         { member_type: "Item Group", item_group: "Cửa tấm liền Úc" },
-        { member_type: "Item Group", item_group: "Cửa siêu trường" },
+        { member_type: "Item Group", item_group: "Cửa Siêu Trường" },
         { member_type: "Item Group", item_group: "Cửa Đài Loan" },
       ],
       disabled: false,
-      _metadata_revision: 1,
+      _metadata_revision: 2,
     },
   },
   {
@@ -58,23 +59,18 @@ const scopes = [
       _metadata_revision: 1,
     },
   },
+  {
+    name: "CỬA ÚC",
+    data: {
+      scope_name: "CỬA ÚC",
+      members: [
+        { member_type: "Item Group", item_group: "Cửa tấm liền Úc" },
+      ],
+      disabled: false,
+      _metadata_revision: 1,
+    },
+  },
 ];
-
-const color = {
-  color_code: "VÂN GỖ",
-  color_name: "VÂN GỖ",
-  finish: "Sơn vân gỗ",
-  applies_to_groups: [
-    { row_id: "SCOPE-01", item_group: "Cửa CN Đức" },
-    { row_id: "SCOPE-02", item_group: "Cửa tấm liền Úc" },
-    { row_id: "SCOPE-03", item_group: "Cửa siêu trường" },
-    { row_id: "SCOPE-04", item_group: "Cửa Đài Loan" },
-  ],
-  note: "Màu/bề mặt dùng để tính phụ thu sơn vân gỗ.",
-  disabled: false,
-  usage_scope: "Mua & bán",
-  _metadata_revision: 2,
-};
 
 const priceList = "Bảng giá 31/07/2026";
 const rules = [
@@ -92,7 +88,7 @@ const rules = [
       taxable: true,
       discountable: false,
       disabled: false,
-      _metadata_revision: 28,
+      _metadata_revision: 29,
     },
   },
   {
@@ -110,7 +106,7 @@ const rules = [
       taxable: true,
       discountable: false,
       disabled: false,
-      _metadata_revision: 28,
+      _metadata_revision: 29,
     },
   },
   {
@@ -133,7 +129,7 @@ const rules = [
       taxable: true,
       discountable: false,
       disabled: false,
-      _metadata_revision: 28,
+      _metadata_revision: 29,
     },
   },
   {
@@ -149,7 +145,27 @@ const rules = [
       taxable: true,
       discountable: false,
       disabled: false,
-      _metadata_revision: 28,
+      _metadata_revision: 29,
+    },
+  },
+  {
+    name: "PHỤ THU CỬA ÚC 4-7M2",
+    data: {
+      title: "Phụ thu cửa Úc trên 4m² và dưới 7m² +300.000/bộ",
+      effect_type: "ADJUSTMENT",
+      price_list: priceList,
+      pricing_scope: "CỬA ÚC",
+      adjustment_basis: "SET_COUNT",
+      adjustment_rate: 300000,
+      priority: 100,
+      conditions: [
+        { field: "billable_area_sqm", operator: "gt", value: 4 },
+        { field: "billable_area_sqm", operator: "lt", value: 7 },
+      ],
+      taxable: true,
+      discountable: false,
+      disabled: false,
+      _metadata_revision: 1,
     },
   },
 ];
@@ -160,8 +176,7 @@ ON CONFLICT(tenant_id,doc_key) DO UPDATE SET payload_json=excluded.payload_json,
 
 const sql = ["-- Approved Alumdoor local pricing surcharge seed. Safe to rerun."];
 for (const scope of scopes) sql.push(upsertDocument("Pricing Scope", scope.name, scope.data));
-sql.push(upsertDocument("Item Color", "VÂN GỖ", color));
 for (const rule of rules) sql.push(upsertDocument("Pricing Rule", rule.name, rule.data));
 
 await writeFile(resolve(outputArg), `${sql.join("\n\n")}\n`, "utf8");
-console.log(JSON.stringify({ tenant: tenantArg, scopes: scopes.map(({ name }) => name), color: "VÂN GỖ", rules: rules.map(({ name }) => name), output: resolve(outputArg) }));
+console.log(JSON.stringify({ tenant: tenantArg, scopes: scopes.map(({ name }) => name), rules: rules.map(({ name }) => name), output: resolve(outputArg) }));
