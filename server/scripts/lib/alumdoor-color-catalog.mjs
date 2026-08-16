@@ -1,6 +1,6 @@
 /**
  * Danh mục Bề mặt + Màu vật tư chuẩn do chủ xưởng cung cấp (màu: 2026-07-30; vân gỗ + phụ thu:
- * BANG-GIA-CHINH-THUC-31-07-2026.md).
+ * BANG-GIA-CHINH-THUC-31-07-2026.md, chủ xưởng chốt lại 2026-08-16).
  *
  * Kiến trúc hội tụ 2026-08-16 — MỘT nguồn luật, không còn hai authority song song:
  *
@@ -62,9 +62,9 @@ export const ALUMDOOR_SURFACE_FINISH_CATALOG = Object.freeze([
     name: "SƠN VÂN GỖ",
     usageScope: "Mua & bán",
     requiresColor: true,
-    // Nguồn: BANG-GIA-CHINH-THUC-31-07-2026.md dòng 242 "sơn màu vân gỗ (Đức)" — chỉ có bằng
-    // chứng cho Cửa CN Đức. Không suy rộng ra Úc/Đài Loan/Lưới khi chưa có nguồn.
-    groups: ["Cửa CN Đức"],
+    // Chủ xưởng chốt 2026-08-16: sơn vân gỗ áp dụng cho Cửa Đức + Úc + Siêu Trường + Đài Loan.
+    // Cửa Lưới không nằm trong phạm vi này.
+    groups: ["Cửa CN Đức", "Cửa tấm liền Úc", "Cửa Siêu Trường", "Cửa Đài Loan"],
   },
 ]);
 
@@ -117,8 +117,8 @@ export const ALUMDOOR_COLOR_CATALOG = Object.freeze([
   platedColor("XANH RÊU - CAFÉ", ["Cửa tấm liền Úc"]),
   platedColor("XÁM - XANH NGỌC", ["Cửa Đài Loan"]),
   // Nghiệp vụ chốt: đúng MỘT màu cho SƠN VÂN GỖ. Không invent Óc chó/Sồi/Căm xe — chưa có
-  // nguồn. Rỗng groups = kế thừa nguyên phạm vi Cửa CN Đức đã khai trên Surface Finish
-  // SON_VAN_GO. Phụ thu 360.000đ/m² KHÔNG nằm ở đây — đi Pricing Rule (xem OPEN).
+  // nguồn. Rỗng groups = kế thừa nguyên phạm vi 4 nhóm đã khai trên Surface Finish SON_VAN_GO.
+  // Phụ thu 465.000đ/m² KHÔNG nằm ở đây — đi Pricing Rule.
   { code: "VAN_GO", name: "VÂN GỖ", finish: "SON_VAN_GO", groups: [], usageScope: "Mua & bán" },
 ]);
 
