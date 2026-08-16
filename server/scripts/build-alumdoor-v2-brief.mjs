@@ -897,6 +897,7 @@ brief.doctypes.push({
     "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
     "required_component_keys_json:Code Thành phần bắt buộc JSON",
     "required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON",
+    "actual_component_allowed_items_json:Code Allowlist vật tư actual theo slot JSON",
     "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",
     "note:Small Text Ghi chú"
   ],
