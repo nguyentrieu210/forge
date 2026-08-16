@@ -24,6 +24,12 @@ on:
       - 'server/scripts/seed-alumdoor-material-specifications-local.mjs'
       - 'server/scripts/build-alumdoor-profile-specifications.mjs'
       - 'server/tests/alumdoor-material-specification-catalog.test.mjs'
+      - 'server/scripts/lib/alumdoor-measurement-profile-catalog.mjs'
+      - 'server/scripts/lib/alumdoor-geometry-catalog.mjs'
+      - 'server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs'
+      - 'server/scripts/seed-alumdoor-measurement-geometry-local.mjs'
+      - 'server/scripts/build-alumdoor-v2-brief.mjs'
+      - 'server/tests/alumdoor-measurement-geometry-master.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   pull_request:
     paths:
@@ -48,6 +54,12 @@ on:
       - 'server/scripts/seed-alumdoor-material-specifications-local.mjs'
       - 'server/scripts/build-alumdoor-profile-specifications.mjs'
       - 'server/tests/alumdoor-material-specification-catalog.test.mjs'
+      - 'server/scripts/lib/alumdoor-measurement-profile-catalog.mjs'
+      - 'server/scripts/lib/alumdoor-geometry-catalog.mjs'
+      - 'server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs'
+      - 'server/scripts/seed-alumdoor-measurement-geometry-local.mjs'
+      - 'server/scripts/build-alumdoor-v2-brief.mjs'
+      - 'server/tests/alumdoor-measurement-geometry-master.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   workflow_dispatch:
 
@@ -119,3 +131,32 @@ jobs:
         run: |
           node server/scripts/seed-alumdoor-material-specifications-local.mjs demo "$RUNNER_TEMP/material-spec.sql" >/dev/null
           grep -q "Material Specification" "$RUNNER_TEMP/material-spec.sql"
+
+  measurement_geometry:
+    name: Lock Measurement Profile and Geometry masters
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test canonical Measurement and Geometry contracts
+        run: |
+          node --test server/tests/alumdoor-measurement-geometry-master.test.mjs
+          node server/scripts/seed-alumdoor-measurement-geometry-local.mjs demo "$RUNNER_TEMP/measurement-geometry.sql" >/dev/null
+          grep -q "Geometry Field" "$RUNNER_TEMP/measurement-geometry.sql"
+          grep -q "Geometry Profile" "$RUNNER_TEMP/measurement-geometry.sql"
+      - name: Verify generated builder authority
+        run: |
+          grep -q 'brief.version = "2.3.0"' server/scripts/build-alumdoor-v2-brief.mjs
+          grep -q 'alumdoor-geometry-catalog.mjs' server/scripts/build-alumdoor-v2-brief.mjs
+          grep -q 'alumdoor-measurement-profile-catalog.mjs' server/scripts/build-alumdoor-v2-brief.mjs
+      - name: Build and dry-run Alumdoor V2 metadata
+        working-directory: server
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+          node scripts/verify-alumdoor-meta-completeness.mjs
