@@ -48,7 +48,7 @@ jobs:
           replaceRequired(standardization,
             '    itemGroup: "Phụ kiện",\n',
             '    itemGroup: "Phụ kiện chung",\n',
-            2);
+            3);
           NODE
       - name: Commit normalized consumers
         shell: bash
