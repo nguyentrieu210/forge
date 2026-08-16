@@ -126,3 +126,5 @@ test("Surface Finish exclusions require Alumdoor V2 metadata version 2.2.4 or ne
   const floor = minimum[0] * 1_000_000 + minimum[1] * 1_000 + minimum[2];
   assert.ok(current >= floor, `Alumdoor V2 ${brief.version} is too old for Surface Finish exclusions`);
 });
+
+// Explicit connector push keeps the Master Layer gate attached to this convergence commit.
