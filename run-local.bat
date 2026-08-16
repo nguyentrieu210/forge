@@ -77,6 +77,12 @@ echo === 5. Chay worker ===
 REM Alumdoor validator can ba Worker noi nhau. Cau hinh nay co PUBLIC_ORIGIN co dinh 8799.
 set PORT=8799
 set REUSE=
+REM GitHub self-hosted runner tu dong don process con co RUNNER_TRACKING_ID sau khi job xong.
+REM Xoa bien nay CHI trong shell local nay de worker/Vite tiep tuc chay tren may C:\alumdoor.
+if defined GITHUB_ACTIONS (
+  echo   Runner mode: tach worker/Desk khoi process cleanup cua GitHub Actions.
+  set "RUNNER_TRACKING_ID="
+)
 REM Moi ket noi deu co timeout: Workerd treo phai bi thay the, khong duoc lam script dung vo han.
 node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit((r.status===401||r.status===403||r.ok)?0:1)).catch(()=>process.exit(1))" >nul 2>&1
 if not errorlevel 1 (
