@@ -54,7 +54,7 @@ jobs:
           );
           NODE
 
-      - name: Build server and test enum runtime translations
+      - name: Build server and test Geometry enum translations
         working-directory: server
         shell: bash
         run: |
@@ -62,7 +62,22 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
           pnpm run build
-          node --test tests/vietnamese-enum-translations.test.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { translateVietnameseUiSource } from './dist/packages/frappe-api/src/vietnamese-enum-translations.js';
+          const expected = {
+            INPUT: 'Nhập liệu',
+            CALCULATED: 'Tự tính',
+            INFO: 'Thông tin',
+            WIDTH: 'Chiều rộng',
+            HEIGHT: 'Chiều cao',
+            LENGTH: 'Chiều dài',
+          };
+          for (const [source, translated] of Object.entries(expected)) {
+            assert.equal(translateVietnameseUiSource(source), translated, source);
+          }
+          console.log('GEOMETRY_ENUM_VI_PASS');
+          NODE
           node --test tests/alumdoor-measurement-geometry-master.test.mjs
 
       - name: Commit fix and remove temporary workflow
