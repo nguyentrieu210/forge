@@ -10,6 +10,7 @@ import {
   type SalesMode,
 } from "./door-formulas.js";
 import { resolveProductionLineBom } from "./bom-template-materializer.js";
+import { normalizeBomActualComponents, type BomActualComponentInput } from "./bom-actual-components.js";
 
 export type ProductionPlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
@@ -137,6 +138,7 @@ export interface SalesProductionLine extends Json {
   bom_template_code?: string;
   bom_fingerprint?: string;
   bom_materialization_required?: 0 | 1;
+  bom_actual_components?: BomActualComponentInput[];
   output_qty: number;
   stock_uom: string;
   paint_required: 0 | 1;
@@ -486,6 +488,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
     const outputQty = ["m2", "m²", "sqm"].includes(normalized(stockUom)) ? billablePerSet : 1;
     const formulaVersion = policyVersion(chosen.raw);
     const paintRequired = checked(row.paint_required) ? 1 : 0;
+    const bomActualComponents = normalizeBomActualComponents(row.bom_actual_components);
 
     for (let setNo = 1; setNo <= sets; setNo += 1) {
       const lineKey = `${sourceRow}-SET-${setNo}`;
@@ -511,6 +514,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         leaf,
         estimated_weight_kg: estimatedWeightPerSet ?? null,
         estimated_minutes: standard.minutes,
+        bom_actual_components: bomActualComponents,
         ray_type: text(chosen.raw.ray_type) || null,
       };
       lines.push({
@@ -546,6 +550,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         stock_uom: stockUom,
         paint_required: paintRequired as 0 | 1,
         formula_snapshot: JSON.stringify(snapshot),
+        ...(bomActualComponents.length ? { bom_actual_components: bomActualComponents } : {}),
         ...(text(row.accessories) ? { accessories: text(row.accessories) } : {}),
         ...(text(row.install_note) ? { install_note: text(row.install_note) } : {}),
         ...(text(row.note) ? { note: text(row.note) } : {}),

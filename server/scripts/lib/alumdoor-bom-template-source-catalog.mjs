@@ -29,8 +29,8 @@ export const BOM_TEMPLATE_SOURCE_CATALOG = [
       item_code: "TP-UC KT 4D XN-VK",
       conditions_json: JSON.stringify({ item_code: "TP-UC KT 4D XN-VK" }),
       priority: 100,
-      disabled: true,
-      source_status: "DEFERRED",
+      disabled: false,
+      source_status: "READY_WITH_ACTUALS",
       source_ref: "MS LIÊN BS.xlsx / ĐM / rows 686-711",
       required_context_fields_json: "[]",
       required_component_keys_json: JSON.stringify([
@@ -44,6 +44,16 @@ export const BOM_TEMPLATE_SOURCE_CATALOG = [
         "STEEL_BEARING",
         "FLOOR_LOCK_BRACKET_WEIGHT",
       ]),
+      required_actual_component_keys_json: JSON.stringify([
+        "BOTTOM_SEAL",
+        "FOAM_45CM",
+        "PULLEY_34",
+        "SPRING",
+        "SPRING_STOP_ARM",
+        "PULL_ROD",
+        "SCREW_HEAD_PULLEY",
+        "SCREW_2P_PULLEY",
+      ]),
       deferred_components_json: JSON.stringify([
         { source_row: 691, key: "BOTTOM_SEAL", reason: "Nguồn ghi 'xem lại'; chưa được phép chốt công thức." },
         { source_row: 693, key: "FOAM_45CM", reason: "Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm." },
@@ -51,9 +61,10 @@ export const BOM_TEMPLATE_SOURCE_CATALOG = [
         { source_rows: [696, 697, 698, 699, 700, 701, 702, 703], key: "SPRING", reason: "SKU và số lượng lò xo chọn theo thực tế; chưa có input cấu trúc." },
         { source_row: 706, key: "SPRING_STOP_ARM", reason: "Phụ thuộc số lò xo thực tế." },
         { source_row: 707, key: "PULL_ROD", reason: "Một ô mã nguồn chứa 3 NVL; cần chốt dùng cụm TP hay bung 3 NVL." },
-        { source_rows: [710, 711], key: "PULLEY_SCREWS", reason: "Số vít phụ thuộc số puly thực tế." },
+        { source_row: 710, key: "SCREW_HEAD_PULLEY", reason: "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ." },
+        { source_row: 711, key: "SCREW_2P_PULLEY", reason: "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ." },
       ]),
-      note: "Pilot chuẩn hóa trực tiếp từ sheet ĐM. DISABLED cho đến khi các dòng deferred được cấu trúc hóa; không sinh BOM thiếu vật tư.",
+      note: "Pilot chuẩn hóa trực tiếp từ sheet ĐM. Các dòng không đủ công thức được bắt buộc nhập actual có cấu trúc theo một bộ; thiếu slot thì materializer chặn.",
       component_rules: [
         {
           rule_code: "SRC-687-LEAF",

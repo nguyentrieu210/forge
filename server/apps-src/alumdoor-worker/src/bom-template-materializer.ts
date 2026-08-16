@@ -6,6 +6,7 @@ import {
   type BomTemplateDefinition,
   type ResolvedBomTemplate,
 } from "./bom-template-core.js";
+import { mergeBomActualComponents, type BomActualComponentInput } from "./bom-actual-components.js";
 
 export type BomMaterializerCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
@@ -20,6 +21,7 @@ interface RawBomTemplate extends Json {
   disabled?: unknown;
   required_context_fields_json?: unknown;
   required_component_keys_json?: unknown;
+  required_actual_component_keys_json?: unknown;
   component_rules?: unknown;
 }
 
@@ -48,6 +50,7 @@ export interface BomProductionLineInput extends Json {
   item_code: string;
   output_qty: number;
   source_warehouse: string;
+  bom_actual_components?: BomActualComponentInput[];
   formula_snapshot?: string;
   width_m?: number;
   height_m?: number;
@@ -144,7 +147,7 @@ function parseComponentRule(raw: RawBomComponentRule, templateCode: string, inde
   };
 }
 
-export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string } {
+export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] } {
   const sourceName = text(raw.name);
   const templateCode = text(raw.template_code) || sourceName;
   const itemCode = text(raw.item_code);
@@ -163,6 +166,7 @@ export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefiniti
     disabled: checked(raw.disabled),
     required_context_fields: stringArray(raw.required_context_fields_json, `${templateCode}.required_context_fields_json`),
     required_component_keys: stringArray(raw.required_component_keys_json, `${templateCode}.required_component_keys_json`),
+    required_actual_component_keys: stringArray(raw.required_actual_component_keys_json, `${templateCode}.required_actual_component_keys_json`),
     component_rules: rows.map((row, index) => parseComponentRule(row, templateCode, index)),
   };
 }
@@ -209,7 +213,7 @@ async function submitDoc(call: BomMaterializerCall, doctype: string, name: strin
   if (!response.ok) throw new Error(`Không ghi sổ được ${doctype} ${name}: ${(await response.text()).slice(0, 220)}`);
 }
 
-async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string }>> {
+async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] }>> {
   const names = await listDocs<{ name?: string }>(call, "BOM Template", ["name"], [], 200).catch(() => []);
   if (!names.length) return [];
   const docs = await Promise.all(names.map(async (row) => {
@@ -347,11 +351,16 @@ export async function resolveProductionLineBom(
   }
   const source = templates.find((template) => template.template_code === resolved.template_code);
   if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);
+  const resolvedWithActuals = mergeBomActualComponents({
+    resolved,
+    actual_components: input.line.bom_actual_components,
+    required_actual_component_keys: source.required_actual_component_keys,
+  });
   const fingerprint = bomFingerprint({
     company: input.company,
     source_warehouse: input.line.source_warehouse,
     output_qty: input.line.output_qty,
-    resolved,
+    resolved: resolvedWithActuals,
   });
   const prior = await existingGeneratedBom(call, fingerprint);
   if (prior) {
@@ -361,7 +370,7 @@ export async function resolveProductionLineBom(
       bom_template_code: resolved.template_code,
       bom_fingerprint: fingerprint,
       materialized: false,
-      components: resolved.components,
+      components: resolvedWithActuals.components,
     };
   }
   if (!input.materialize) {
@@ -371,7 +380,7 @@ export async function resolveProductionLineBom(
       bom_template_code: resolved.template_code,
       bom_fingerprint: fingerprint,
       materialized: false,
-      components: resolved.components,
+      components: resolvedWithActuals.components,
     };
   }
   const revision = await nextRevision(call, input.line.item_code);
@@ -387,7 +396,7 @@ export async function resolveProductionLineBom(
     bom_fingerprint: fingerprint,
     generated_by_configurator: 1,
     configuration_snapshot: input.line.formula_snapshot ?? "{}",
-    items: resolved.components.map((row, index) => ({
+    items: resolvedWithActuals.components.map((row, index) => ({
       row_id: `ROW-${index + 1}`,
       item_code: row.item_code,
       qty: row.qty,
@@ -401,6 +410,6 @@ export async function resolveProductionLineBom(
     bom_template_code: resolved.template_code,
     bom_fingerprint: fingerprint,
     materialized: true,
-    components: resolved.components,
+    components: resolvedWithActuals.components,
   };
 }
