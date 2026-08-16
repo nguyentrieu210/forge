@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -110,5 +111,19 @@ test("Cutting Policy does not contain BOM quantity or pricing formulas", () => {
   const serialized = JSON.stringify(CUTTING_POLICIES).toLocaleLowerCase("vi");
   for (const forbidden of ["đơn giá", "giá bán", "xốp", "ron đáy", "kg/m2", "quantity"]) {
     assert.equal(serialized.includes(forbidden), false, `forbidden cross-layer concern: ${forbidden}`);
+  }
+});
+
+
+test("all Cutting Policy fixtures satisfy required Geometry Profile link", () => {
+  const brief = JSON.parse(readFileSync(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));
+  const fixtures = brief.fixtures.filter((row) => row.type === "Cutting Policy");
+  assert.equal(fixtures.length, 8);
+  for (const fixture of fixtures) assert.ok(fixture.data.geometry_profile, fixture.name);
+  for (const name of ["Cửa Đức — khách lẻ", "Cửa Đức — đại lý"]) {
+    const fixture = fixtures.find((row) => row.name === name);
+    assert.equal(fixture.data.disabled, true);
+    assert.equal(fixture.data.geometry_profile, "GP-CUA-DUC");
+    assert.deepEqual(fixture.data.geometry_rules, []);
   }
 });

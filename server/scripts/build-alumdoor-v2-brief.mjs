@@ -827,6 +827,12 @@ for (const policy of CUTTING_POLICIES) {
   if (!fixture) throw new Error(`Cutting Policy fixture missing: ${policy.name}`);
   Object.assign(fixture.data, cuttingPolicyFixtureData(policy));
 }
+for (const legacyName of ["Cửa Đức — khách lẻ", "Cửa Đức — đại lý"]) {
+  const fixture = brief.fixtures.find((entry) => entry.type === "Cutting Policy" && entry.name === legacyName);
+  if (!fixture) throw new Error(`Cutting Policy legacy fixture missing: ${legacyName}`);
+  fixture.data.geometry_profile = "GP-CUA-DUC";
+  fixture.data.geometry_rules = [];
+}
 note(`Cutting Policy: gắn Geometry Profile + ${CUTTING_POLICIES.reduce((sum, policy) => sum + policy.rules.length, 0)} geometry rules canonical`);
 
 // ────────────────── D1: rate_uom — CHỐNG ĐƠN VỊ NGẦM ──────────────────
