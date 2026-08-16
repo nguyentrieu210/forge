@@ -3,9 +3,14 @@ setlocal EnableExtensions
 REM Safe one-shot GitHub -> local refresh. It only accepts a clean local main.
 REM Pass --bootstrap to run the full local install/build/migrate/start path even
 REM when C:\alumdoor is already on the latest GitHub main commit.
+REM Pass --skip-source-verify only for runtime bootstrap jobs that must not be
+REM blocked by unrelated repo-wide quality gates; runtime build/smoke/install
+REM validation still runs inside run-local.bat.
 set "BOOTSTRAP="
+set "SKIP_SOURCE_VERIFY="
 for %%A in (%*) do (
   if /I "%%~A"=="--bootstrap" set "BOOTSTRAP=1"
+  if /I "%%~A"=="--skip-source-verify" set "SKIP_SOURCE_VERIFY=1"
 )
 
 cd /d C:\alumdoor
@@ -57,6 +62,11 @@ call pnpm install --frozen-lockfile
 if errorlevel 1 (echo [LOI] Dependency khong khop lockfile & exit /b 1)
 
 echo.
-echo === 5. Build, test day du, migrate, cai metadata va khoi dong local ===
-call C:\alumdoor\run-local.bat --noninteractive --verify
+echo === 5. Build, migrate, seed, smoke, cai metadata va khoi dong local ===
+if defined SKIP_SOURCE_VERIFY (
+  echo [INFO] Bo qua repo-wide source verification; van chay toan bo runtime validation.
+  call C:\alumdoor\run-local.bat --noninteractive
+) else (
+  call C:\alumdoor\run-local.bat --noninteractive --verify
+)
 exit /b %ERRORLEVEL%
