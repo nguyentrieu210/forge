@@ -24,19 +24,21 @@ jobs:
         run: |
           python3 server/scripts/_tmp-surface-finish-exclusions.py
           python3 server/scripts/_tmp-surface-finish-exclusions-v2.py
+      - name: Install and build server
+        working-directory: server
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
       - name: Validate metadata and catalog
         working-directory: server
         run: |
           node scripts/forge-app.mjs briefs/alumdoor.json --dry-run
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
           node --test tests/alumdoor-color-catalog.test.mjs tests/alumdoor-color-seed-authority.test.mjs
-      - name: Build and test resolver
+      - name: Test exclusion resolver
         working-directory: server
-        run: |
-          corepack enable
-          pnpm install --frozen-lockfile
-          pnpm run build
-          node --test tests/alumdoor-color-scopes.test.mjs
+        run: node --test tests/alumdoor-color-scopes.test.mjs
       - name: Commit patch
         run: |
           git config user.name "github-actions[bot]"
