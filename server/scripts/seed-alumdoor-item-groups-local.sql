@@ -80,6 +80,7 @@ SELECT
   END,
   CURRENT_TIMESTAMP
 FROM _alumdoor_item_groups g
+WHERE 1=1
 ON CONFLICT(tenant_id, record_type, name) DO UPDATE SET
   disabled=excluded.disabled,
   data_json=excluded.data_json,
@@ -107,6 +108,7 @@ SELECT
     )
   END
 FROM _alumdoor_item_groups g
+WHERE 1=1
 ON CONFLICT(tenant_id, doc_key) DO UPDATE SET
   payload_json=excluded.payload_json,
   modified_at=excluded.modified_at,
@@ -117,6 +119,7 @@ INSERT INTO document_search (tenant_id, doctype, name, title, content, modified_
 SELECT 'demo','Item Group',g.name,g.name,
        g.name || ' ' || COALESCE(g.parent_name,''),CURRENT_TIMESTAMP
 FROM _alumdoor_item_groups g
+WHERE 1=1
 ON CONFLICT(tenant_id, doctype, name) DO UPDATE SET
   title=excluded.title,
   content=excluded.content,
