@@ -104,7 +104,6 @@ test("pricing surcharge seed does not own Item Color and uses canonical wood-gra
   }
 });
 
-
 test("Surface Finish schema exposes group and item exclusions in base and V2 briefs", () => {
   for (const relative of ["server/briefs/alumdoor.json", "server/briefs/alumdoor-v2.json"]) {
     const brief = JSON.parse(readFileSync(join(repoRoot, relative), "utf8"));
@@ -116,4 +115,14 @@ test("Surface Finish schema exposes group and item exclusions in base and V2 bri
     assert.ok(brief.doctypes.some((row) => row.name === "Surface Finish Excluded Group"));
     assert.ok(brief.doctypes.some((row) => row.name === "Surface Finish Excluded Item"));
   }
+});
+
+test("Surface Finish exclusions require Alumdoor V2 metadata version 2.0.43 or newer", () => {
+  const brief = JSON.parse(readFileSync(join(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));
+  const version = String(brief.version).split(".").map(Number);
+  const minimum = [2, 0, 43];
+  assert.ok(version.every(Number.isInteger), `invalid Alumdoor V2 version ${brief.version}`);
+  const current = version[0] * 1_000_000 + version[1] * 1_000 + version[2];
+  const floor = minimum[0] * 1_000_000 + minimum[1] * 1_000 + minimum[2];
+  assert.ok(current >= floor, `Alumdoor V2 ${brief.version} is too old for Surface Finish exclusions`);
 });
