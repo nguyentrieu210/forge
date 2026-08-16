@@ -1,0 +1,86 @@
+name: Temporary Fix Child Grid Enum Labels And Scroll
+
+on:
+  push:
+    branches:
+      - 'fix/child-grid-enum-scroll-20260816'
+    paths:
+      - '.github/workflows/_tmp-fix-child-grid-enum-scroll.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch metadata labels and ChildGrid scroll
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          function replaceOnce(path, before, after, label) {
+            let text = fs.readFileSync(path, 'utf8');
+            const parts = text.split(before);
+            if (parts.length !== 2) throw new Error(`${label}: expected 1 match, got ${parts.length - 1}`);
+            text = parts[0] + after + parts[1];
+            fs.writeFileSync(path, text, 'utf8');
+          }
+
+          const overlay = 'server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs';
+          replaceOnce(overlay, '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", label: "Trục đo", required: true },', '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", optionLabels: { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" }, label: "Trục đo", required: true },', 'overlay axis labels');
+          replaceOnce(overlay, '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", label: "Vai trò", required: true },', '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", optionLabels: { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" }, label: "Vai trò", required: true },', 'overlay role labels');
+
+          const builder = 'server/scripts/build-alumdoor-v2-brief.mjs';
+          replaceOnce(builder, '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", label: "Trục đo", required: true },', '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", optionLabels: { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" }, label: "Trục đo", required: true },', 'builder axis labels');
+          replaceOnce(builder, '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", label: "Vai trò", required: true },', '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", optionLabels: { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" }, label: "Vai trò", required: true },', 'builder role labels');
+
+          const grid = 'client/packages/views/src/form/ChildGrid.tsx';
+          replaceOnce(grid, '<div className="overflow-x-auto rounded-md border border-input [scrollbar-width:thin]">', '<div className={`${expanded ? "overflow-x-auto" : "max-h-[min(52vh,32rem)] overflow-auto"} rounded-md border border-input [scrollbar-width:thin]`}>', 'child grid scroll container');
+          replaceOnce(grid, '<TableHead className="sticky left-0 z-40 w-10 min-w-10 max-w-10 bg-card px-0 text-center" style={{ width: 40 }}>', '<TableHead className="sticky left-0 top-0 z-50 w-10 min-w-10 max-w-10 bg-card px-0 text-center" style={{ width: 40 }}>', 'child grid select header sticky top');
+          replaceOnce(grid, '<TableHead className={`sticky z-40 w-12 min-w-12 max-w-12 bg-card px-0 text-center ${readOnly ? "left-0" : "left-10"}`} style={{ width: 48 }}>#</TableHead>', '<TableHead className={`sticky top-0 z-50 w-12 min-w-12 max-w-12 bg-card px-0 text-center ${readOnly ? "left-0" : "left-10"}`} style={{ width: 48 }}>#</TableHead>', 'child grid index header sticky top');
+          replaceOnce(grid, 'className={`group relative whitespace-pre-line px-1 py-1 text-center text-[12px] leading-tight ${sticky.className}`}', 'className={`group sticky top-0 z-40 whitespace-pre-line bg-card px-1 py-1 text-center text-[12px] leading-tight ${sticky.className}`}', 'child grid data header sticky top');
+          replaceOnce(grid, '{!readOnly ? <TableHead className="w-10" /> : null}', '{!readOnly ? <TableHead className="sticky top-0 z-40 w-10 bg-card" /> : null}', 'child grid action header sticky top');
+
+          const test = 'server/tests/alumdoor-measurement-geometry-master.test.mjs';
+          let testText = fs.readFileSync(test, 'utf8');
+          const anchor = '  assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);\n});';
+          if (!testText.includes(anchor)) throw new Error('geometry test anchor missing');
+          testText = testText.replace(anchor, `  assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);\n  const geometryField = byName.get("Geometry Field");\n  const axis = (geometryField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "axis");\n  assert.deepEqual(axis?.optionLabels, { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" });\n  const geometryProfileField = byName.get("Geometry Profile Field");\n  const role = (geometryProfileField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "role");\n  assert.deepEqual(role?.optionLabels, { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" });\n});`);
+          fs.writeFileSync(test, testText, 'utf8');
+          NODE
+
+          node server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs --write
+
+          node <<'NODE'
+          const fs = require('fs');
+          const grid = fs.readFileSync('client/packages/views/src/form/ChildGrid.tsx', 'utf8');
+          if (!grid.includes('max-h-[min(52vh,32rem)] overflow-auto')) throw new Error('missing child-grid vertical scroll');
+          if (!grid.includes('sticky top-0')) throw new Error('missing sticky child-grid header');
+          const controls = fs.readFileSync('client/packages/controls/src/controls.tsx', 'utf8');
+          if (!controls.includes('const labelOf = (o: string) => labels?.[o] ?? o;')) throw new Error('SelectControl no longer honors optionLabels');
+          NODE
+
+      - name: Run focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test server/tests/alumdoor-measurement-geometry-master.test.mjs
+
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/_tmp-fix-child-grid-enum-scroll.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/packages/views/src/form/ChildGrid.tsx server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs server/scripts/build-alumdoor-v2-brief.mjs server/briefs/alumdoor-v2.json server/tests/alumdoor-measurement-geometry-master.test.mjs .github/workflows/_tmp-fix-child-grid-enum-scroll.yml
+          git commit -m "fix(forms): localize geometry enums and scroll child grids"
+          git push origin HEAD:fix/child-grid-enum-scroll-20260816
