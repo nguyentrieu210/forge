@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.2.5",
+  "version": "2.3.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -756,7 +756,9 @@
       "Stock Reservation",
       "Stock Reconciliation",
       "Lý do huỷ",
-      "Nguyên nhân chênh lệch"
+      "Nguyên nhân chênh lệch",
+      "Geometry Field",
+      "Geometry Profile"
     ]
   },
   "fixtures": [
@@ -1377,75 +1379,6 @@
       }
     },
     {
-      "type": "Measurement Profile",
-      "name": "Hàng thường",
-      "data": {
-        "profile_name": "Hàng thường",
-        "inventory_mode": "Hàng thường",
-        "stock_uom": "Cái"
-      }
-    },
-    {
-      "type": "Measurement Profile",
-      "name": "Nhôm cây/lá",
-      "data": {
-        "profile_name": "Nhôm cây/lá",
-        "inventory_mode": "Nhôm cây/lá",
-        "stock_uom": "Cây",
-        "track_dimension_lot": true,
-        "require_color": true,
-        "require_length": true,
-        "require_piece_qty": true,
-        "track_bundle_qty": true,
-        "_desc": "Tồn nhôm theo số cây/lá có Batch và chiều dài; số bó chỉ để theo dõi; Kg là catch weight/đơn vị mua-định giá."
-      }
-    },
-    {
-      "type": "Measurement Profile",
-      "name": "Tấm/Kính",
-      "data": {
-        "profile_name": "Tấm/Kính",
-        "inventory_mode": "Tấm/Kính",
-        "stock_uom": "Tấm",
-        "track_dimension_lot": true,
-        "require_length": true,
-        "require_width": true,
-        "require_piece_qty": true
-      }
-    },
-    {
-      "type": "Measurement Profile",
-      "name": "Cuộn",
-      "data": {
-        "profile_name": "Cuộn",
-        "inventory_mode": "Cuộn",
-        "stock_uom": "Kg",
-        "track_dimension_lot": true,
-        "require_width": true
-      }
-    },
-    {
-      "type": "Measurement Profile",
-      "name": "Lô/Serial",
-      "data": {
-        "profile_name": "Lô/Serial",
-        "inventory_mode": "Lô/Serial",
-        "stock_uom": "Cái"
-      }
-    },
-    {
-      "type": "Measurement Profile",
-      "name": "Thành phẩm theo m2",
-      "data": {
-        "profile_name": "Thành phẩm theo m2",
-        "inventory_mode": "Thành phẩm theo m2",
-        "stock_uom": "Bộ",
-        "require_color": true,
-        "require_length": true,
-        "require_width": true
-      }
-    },
-    {
       "type": "Account",
       "name": "Phải thu khách hàng",
       "data": {
@@ -1545,24 +1478,6 @@
         "address": "Kho phế",
         "stock_role": "Kho phế",
         "disabled": false
-      }
-    },
-    {
-      "type": "Measurement Profile",
-      "name": "Ống/trục",
-      "data": {
-        "profile_name": "Ống/trục",
-        "inventory_mode": "Nhôm cây/lá",
-        "stock_uom": "Kg",
-        "track_dimension_lot": true,
-        "require_color": false,
-        "require_condition": true,
-        "require_length": true,
-        "require_width": false,
-        "require_piece_qty": true,
-        "track_bundle_qty": true,
-        "weight_tolerance_pct": 13,
-        "note": "Mua và tồn theo Kg; bán theo Mét; số cây và số bó chỉ dùng để theo dõi giao nhận."
       }
     },
     {
@@ -2245,6 +2160,570 @@
         "usage_scope": "Mua & bán",
         "applies_to_groups": [],
         "disabled": false
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Hàng thường",
+      "data": {
+        "profile_name": "Hàng thường",
+        "inventory_mode": "Hàng thường",
+        "stock_uom": "Cái",
+        "track_dimension_lot": false,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": false,
+        "require_width": false,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Nhôm cây/lá",
+      "data": {
+        "profile_name": "Nhôm cây/lá",
+        "inventory_mode": "Nhôm cây/lá",
+        "stock_uom": "Cây",
+        "track_dimension_lot": true,
+        "require_color": true,
+        "require_condition": true,
+        "require_length": true,
+        "require_width": false,
+        "require_piece_qty": true,
+        "track_bundle_qty": true,
+        "weight_tolerance_pct": 13,
+        "note": "Cây/Lá là đơn vị tồn; Kg là catch weight và đơn vị mua/định giá khi áp dụng.",
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Ống/trục",
+      "data": {
+        "profile_name": "Ống/trục",
+        "inventory_mode": "Nhôm cây/lá",
+        "stock_uom": "Kg",
+        "track_dimension_lot": true,
+        "require_color": false,
+        "require_condition": true,
+        "require_length": true,
+        "require_width": false,
+        "require_piece_qty": true,
+        "track_bundle_qty": true,
+        "weight_tolerance_pct": 13,
+        "note": "Mua và tồn theo Kg; chiều dài/số cây là đại lượng theo dõi giao nhận.",
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Tấm/Kính",
+      "data": {
+        "profile_name": "Tấm/Kính",
+        "inventory_mode": "Tấm/Kính",
+        "stock_uom": "Tấm",
+        "track_dimension_lot": true,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": true,
+        "require_width": true,
+        "require_piece_qty": true,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Cuộn",
+      "data": {
+        "profile_name": "Cuộn",
+        "inventory_mode": "Cuộn",
+        "stock_uom": "Kg",
+        "track_dimension_lot": true,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": false,
+        "require_width": true,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Lô/Serial",
+      "data": {
+        "profile_name": "Lô/Serial",
+        "inventory_mode": "Lô/Serial",
+        "stock_uom": "Cái",
+        "track_dimension_lot": false,
+        "require_color": false,
+        "require_condition": false,
+        "require_length": false,
+        "require_width": false,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      }
+    },
+    {
+      "type": "Measurement Profile",
+      "name": "Thành phẩm theo m2",
+      "data": {
+        "profile_name": "Thành phẩm theo m2",
+        "inventory_mode": "Thành phẩm theo m2",
+        "stock_uom": "Bộ",
+        "track_dimension_lot": false,
+        "require_color": true,
+        "require_condition": false,
+        "require_length": true,
+        "require_width": true,
+        "require_piece_qty": false,
+        "track_bundle_qty": false,
+        "note": "Tồn theo Bộ; kích thước bán/geometry không thuộc Measurement Profile.",
+        "disabled": false,
+        "_migration_source": "alumdoor-measurement-profile-canonical-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "PB_CAO",
+      "data": {
+        "field_code": "PB_CAO",
+        "field_name": "Cao phủ bì",
+        "uom": "Mét",
+        "axis": "HEIGHT",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "PB_RAY_RONG",
+      "data": {
+        "field_code": "PB_RAY_RONG",
+        "field_name": "Rộng phủ bì ray",
+        "uom": "Mét",
+        "axis": "WIDTH",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "PB_NHUA_RONG",
+      "data": {
+        "field_code": "PB_NHUA_RONG",
+        "field_name": "Rộng phủ bì nhựa",
+        "uom": "Mét",
+        "axis": "WIDTH",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "CAT_LA_RONG",
+      "data": {
+        "field_code": "CAT_LA_RONG",
+        "field_name": "Rộng cắt lá",
+        "uom": "Mét",
+        "axis": "WIDTH",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "LUOI_CAO",
+      "data": {
+        "field_code": "LUOI_CAO",
+        "field_name": "Cao lưới",
+        "uom": "Mét",
+        "axis": "HEIGHT",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "RAY_DAI",
+      "data": {
+        "field_code": "RAY_DAI",
+        "field_name": "Dài ray",
+        "uom": "Mét",
+        "axis": "LENGTH",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "V4_DAI",
+      "data": {
+        "field_code": "V4_DAI",
+        "field_name": "Dài V4/V5",
+        "uom": "Mét",
+        "axis": "LENGTH",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Field",
+      "name": "TRUC_DAI",
+      "data": {
+        "field_code": "TRUC_DAI",
+        "field_name": "Dài trục",
+        "uom": "Mét",
+        "axis": "LENGTH",
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Profile",
+      "name": "GP-CUA-DUC",
+      "data": {
+        "profile_code": "GP-CUA-DUC",
+        "profile_name": "Cửa Đức",
+        "item_groups": [
+          {
+            "row_id": "GROUP-1",
+            "item_group": "Cửa CN Đức"
+          }
+        ],
+        "fields": [
+          {
+            "row_id": "FIELD-1",
+            "geometry_field": "PB_CAO",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 10
+          },
+          {
+            "row_id": "FIELD-2",
+            "geometry_field": "PB_RAY_RONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 20
+          },
+          {
+            "row_id": "FIELD-3",
+            "geometry_field": "PB_NHUA_RONG",
+            "role": "INPUT",
+            "required": false,
+            "visible": true,
+            "editable": true,
+            "sequence": 30
+          },
+          {
+            "row_id": "FIELD-4",
+            "geometry_field": "CAT_LA_RONG",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 40
+          },
+          {
+            "row_id": "FIELD-5",
+            "geometry_field": "RAY_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 50
+          },
+          {
+            "row_id": "FIELD-6",
+            "geometry_field": "TRUC_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 60
+          }
+        ],
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Profile",
+      "name": "GP-CUA-UC",
+      "data": {
+        "profile_code": "GP-CUA-UC",
+        "profile_name": "Cửa Úc",
+        "item_groups": [
+          {
+            "row_id": "GROUP-1",
+            "item_group": "Cửa tấm liền Úc"
+          }
+        ],
+        "fields": [
+          {
+            "row_id": "FIELD-1",
+            "geometry_field": "PB_CAO",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 10
+          },
+          {
+            "row_id": "FIELD-2",
+            "geometry_field": "PB_RAY_RONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 20
+          },
+          {
+            "row_id": "FIELD-3",
+            "geometry_field": "CAT_LA_RONG",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 30
+          },
+          {
+            "row_id": "FIELD-4",
+            "geometry_field": "RAY_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 40
+          },
+          {
+            "row_id": "FIELD-5",
+            "geometry_field": "TRUC_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 50
+          }
+        ],
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Profile",
+      "name": "GP-CUA-LUOI",
+      "data": {
+        "profile_code": "GP-CUA-LUOI",
+        "profile_name": "Cửa Lưới",
+        "item_groups": [
+          {
+            "row_id": "GROUP-1",
+            "item_group": "Cửa Lưới"
+          }
+        ],
+        "fields": [
+          {
+            "row_id": "FIELD-1",
+            "geometry_field": "PB_CAO",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 10
+          },
+          {
+            "row_id": "FIELD-2",
+            "geometry_field": "PB_RAY_RONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 20
+          },
+          {
+            "row_id": "FIELD-3",
+            "geometry_field": "LUOI_CAO",
+            "role": "INPUT",
+            "required": false,
+            "visible": true,
+            "editable": true,
+            "sequence": 30
+          },
+          {
+            "row_id": "FIELD-4",
+            "geometry_field": "CAT_LA_RONG",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 40
+          },
+          {
+            "row_id": "FIELD-5",
+            "geometry_field": "RAY_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 50
+          },
+          {
+            "row_id": "FIELD-6",
+            "geometry_field": "V4_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 60
+          },
+          {
+            "row_id": "FIELD-7",
+            "geometry_field": "TRUC_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 70
+          }
+        ],
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Profile",
+      "name": "GP-CUA-DAI-LOAN",
+      "data": {
+        "profile_code": "GP-CUA-DAI-LOAN",
+        "profile_name": "Cửa Đài Loan",
+        "item_groups": [
+          {
+            "row_id": "GROUP-1",
+            "item_group": "Cửa Đài Loan"
+          },
+          {
+            "row_id": "GROUP-2",
+            "item_group": "Cửa Đài Loan Inox"
+          }
+        ],
+        "fields": [
+          {
+            "row_id": "FIELD-1",
+            "geometry_field": "PB_CAO",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 10
+          },
+          {
+            "row_id": "FIELD-2",
+            "geometry_field": "PB_RAY_RONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 20
+          },
+          {
+            "row_id": "FIELD-3",
+            "geometry_field": "CAT_LA_RONG",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 30
+          },
+          {
+            "row_id": "FIELD-4",
+            "geometry_field": "RAY_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 40
+          },
+          {
+            "row_id": "FIELD-5",
+            "geometry_field": "V4_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 50
+          },
+          {
+            "row_id": "FIELD-6",
+            "geometry_field": "TRUC_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 60
+          }
+        ],
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Geometry Profile",
+      "name": "GP-CUA-SIEU-TRUONG",
+      "data": {
+        "profile_code": "GP-CUA-SIEU-TRUONG",
+        "profile_name": "Cửa Siêu Trường",
+        "item_groups": [
+          {
+            "row_id": "GROUP-1",
+            "item_group": "Cửa Siêu Trường"
+          }
+        ],
+        "fields": [
+          {
+            "row_id": "FIELD-1",
+            "geometry_field": "PB_CAO",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 10
+          },
+          {
+            "row_id": "FIELD-2",
+            "geometry_field": "PB_RAY_RONG",
+            "role": "INPUT",
+            "required": true,
+            "visible": true,
+            "editable": true,
+            "sequence": 20
+          },
+          {
+            "row_id": "FIELD-3",
+            "geometry_field": "CAT_LA_RONG",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 30
+          }
+        ],
+        "disabled": false,
+        "_migration_source": "alumdoor-geometry-master-2026-08-16"
       }
     }
   ],
@@ -3244,6 +3723,12 @@
           "options": "Measurement Profile",
           "label": "Bộ theo dõi vật tư",
           "required": true
+        },
+        {
+          "fieldname": "geometry_profile",
+          "fieldtype": "Link",
+          "options": "Geometry Profile",
+          "label": "Bộ quy cách hình học"
         },
         "stock_uom:Link(UOM)!=(Cái) Đơn vị TỒN KHO",
         "default_purchase_uom:Link(UOM) ĐVT mua mặc định",
@@ -10450,6 +10935,204 @@
         "fields": [
           "item_code"
         ]
+      }
+    },
+    {
+      "name": "Geometry Field",
+      "label": "Trường hình học",
+      "group": "Danh mục",
+      "naming": "field:field_code",
+      "title": "field_name",
+      "list": [
+        "field_code",
+        "field_name",
+        "uom",
+        "axis",
+        "disabled"
+      ],
+      "search": [
+        "field_code",
+        "field_name"
+      ],
+      "fields": [
+        {
+          "fieldname": "field_code",
+          "fieldtype": "Data",
+          "label": "Mã trường",
+          "required": true
+        },
+        {
+          "fieldname": "field_name",
+          "fieldtype": "Data",
+          "label": "Tên trường",
+          "required": true
+        },
+        {
+          "fieldname": "uom",
+          "fieldtype": "Link",
+          "options": "UOM",
+          "label": "Đơn vị",
+          "required": true
+        },
+        {
+          "fieldname": "axis",
+          "fieldtype": "Select",
+          "options": "WIDTH\nHEIGHT\nLENGTH\nOTHER",
+          "label": "Trục đo",
+          "required": true
+        },
+        {
+          "fieldname": "note",
+          "fieldtype": "Small Text",
+          "label": "Ghi chú"
+        },
+        {
+          "fieldname": "disabled",
+          "fieldtype": "Check",
+          "label": "Ngừng dùng",
+          "default": false
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Sản xuất": "r",
+        "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Geometry Profile Scope",
+      "child": true,
+      "label": "Nhóm hàng của bộ quy cách hình học",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "fields": [
+        {
+          "fieldname": "item_group",
+          "fieldtype": "Link",
+          "options": "Item Group",
+          "label": "Nhóm hàng",
+          "required": true
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Sản xuất": "r",
+        "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Geometry Profile Field",
+      "child": true,
+      "label": "Trường của bộ quy cách hình học",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "fields": [
+        {
+          "fieldname": "geometry_field",
+          "fieldtype": "Link",
+          "options": "Geometry Field",
+          "label": "Trường",
+          "required": true
+        },
+        {
+          "fieldname": "role",
+          "fieldtype": "Select",
+          "options": "INPUT\nCALCULATED\nINFO",
+          "label": "Vai trò",
+          "required": true
+        },
+        {
+          "fieldname": "required",
+          "fieldtype": "Check",
+          "label": "Bắt buộc",
+          "default": false
+        },
+        {
+          "fieldname": "visible",
+          "fieldtype": "Check",
+          "label": "Hiện trên form",
+          "default": true
+        },
+        {
+          "fieldname": "editable",
+          "fieldtype": "Check",
+          "label": "Cho nhập",
+          "default": false
+        },
+        {
+          "fieldname": "sequence",
+          "fieldtype": "Int",
+          "label": "Thứ tự",
+          "default": 0
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Sản xuất": "r",
+        "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Geometry Profile",
+      "label": "Bộ quy cách hình học",
+      "group": "Danh mục",
+      "naming": "field:profile_code",
+      "title": "profile_name",
+      "list": [
+        "profile_code",
+        "profile_name",
+        "disabled"
+      ],
+      "search": [
+        "profile_code",
+        "profile_name"
+      ],
+      "fields": [
+        {
+          "fieldname": "profile_code",
+          "fieldtype": "Data",
+          "label": "Mã bộ quy cách",
+          "required": true
+        },
+        {
+          "fieldname": "profile_name",
+          "fieldtype": "Data",
+          "label": "Tên bộ quy cách",
+          "required": true
+        },
+        {
+          "fieldname": "item_groups",
+          "fieldtype": "Table",
+          "options": "Geometry Profile Scope",
+          "label": "Nhóm hàng áp dụng"
+        },
+        {
+          "fieldname": "fields",
+          "fieldtype": "Table",
+          "options": "Geometry Profile Field",
+          "label": "Trường hiển thị",
+          "required": true
+        },
+        {
+          "fieldname": "note",
+          "fieldtype": "Small Text",
+          "label": "Ghi chú"
+        },
+        {
+          "fieldname": "disabled",
+          "fieldtype": "Check",
+          "label": "Ngừng dùng",
+          "default": false
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Sản xuất": "r",
+        "Kế toán": "r"
       }
     }
   ],

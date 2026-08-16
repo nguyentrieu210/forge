@@ -237,8 +237,10 @@ function buildPayload(entry) {
   const leafWidthMatch = row["Thông số"].match(/Bản lá\s+([\d.,]+)/i);
   const leafDivisorM = leafWidthMatch ? Number(leafWidthMatch[1].replace(",", ".")) / 1000 : 0;
   const stockUom = kgTarget
-    ? "Kg"
-    : old?.["Đơn vị TỒN KHO"]
+    ? "Cây"
+    : inventoryMode === "Thành phẩm theo m2"
+      ? "Bộ"
+      : old?.["Đơn vị TỒN KHO"]
       ? normalizeUom(old["Đơn vị TỒN KHO"])
       : salesUom;
   const materialStage =
@@ -278,25 +280,24 @@ function buildPayload(entry) {
     ...(virtualSaleItem ? {} : {
       measurement_profile: kgTarget?.measurementProfile ?? inventoryMode,
       stock_uom: stockUom,
-      default_purchase_uom: stockUom,
+      default_purchase_uom: kgTarget ? "Kg" : stockUom,
     }),
     ...(kgTarget ? { material_specification: `ĐM-${kgTarget.supplierCode ?? kgTarget.itemCode}` } : {}),
     default_sales_uom: salesUom,
-    ...(kgTarget && salesUom === "Mét"
-      ? {
-        uom_conversions: [{
-          row_id: "UOM-MÉT",
-          uom: "Mét",
-          conversion_factor: kgTarget.kgPerM,
-        }],
-      }
-      : {}),
+    ...(kgTarget ? { uom_conversions: [] } : {}),
     ...(!virtualSaleItem && row["KHO \n(K36-K12)"]
       ? { default_warehouse: normalizeWarehouse(row["KHO \n(K36-K12)"]) }
       : {}),
     valuation_method: "FIFO",
-    has_batch_no: false,
+    has_batch_no: Boolean(kgTarget),
     has_serial_no: false,
+    ...(kgTarget ? {
+      has_catch_weight: true,
+      weight_uom: "Kg",
+      purchase_stock_qty_field: "qty_bar",
+      purchase_allocation_qty_field: "qty_bar",
+      purchase_allocation_uom: "Cây",
+    } : {}),
     allow_negative_stock: false,
     description,
     disabled: old?.["Ngừng kinh doanh"] === "1",

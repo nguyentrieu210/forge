@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";
 import { parseField } from "./lib/compile-brief.mjs";
+import { GEOMETRY_FIELDS, GEOMETRY_PROFILES } from "./lib/alumdoor-geometry-catalog.mjs";
+import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(here, "../briefs/alumdoor.json");
@@ -71,7 +73,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.0.42";
+brief.version = "2.3.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -1531,6 +1533,98 @@ brief.fixtures.push(
   },
 );
 note("G3 · Warehouse: K36/K12 khai stock_role + mỗi kho có một kho đầu thừa con · K0 (phế)");
+
+// ── MEASUREMENT + GEOMETRY MASTER AUTHORITY ──
+{
+  const geometryOwned = new Set(["Geometry Field", "Geometry Profile Scope", "Geometry Profile Field", "Geometry Profile"]);
+  brief.doctypes = brief.doctypes.filter((dt) => !geometryOwned.has(dt.name));
+  brief.doctypes.push(...function geometryDoctypes() {
+  const permissions = { "Chủ xưởng": "rwc", "Kinh doanh": "r", "Sản xuất": "r", "Kế toán": "r" };
+  return [
+    {
+      name: "Geometry Field",
+      label: "Trường hình học",
+      group: "Danh mục",
+      naming: "field:field_code",
+      title: "field_name",
+      list: ["field_code", "field_name", "uom", "axis", "disabled"],
+      search: ["field_code", "field_name"],
+      fields: [
+        { fieldname: "field_code", fieldtype: "Data", label: "Mã trường", required: true },
+        { fieldname: "field_name", fieldtype: "Data", label: "Tên trường", required: true },
+        { fieldname: "uom", fieldtype: "Link", options: "UOM", label: "Đơn vị", required: true },
+        { fieldname: "axis", fieldtype: "Select", options: "WIDTH\nHEIGHT\nLENGTH\nOTHER", label: "Trục đo", required: true },
+        { fieldname: "note", fieldtype: "Small Text", label: "Ghi chú" },
+        { fieldname: "disabled", fieldtype: "Check", label: "Ngừng dùng", default: false },
+      ],
+      permissions,
+    },
+    {
+      name: "Geometry Profile Scope",
+      child: true,
+      label: "Nhóm hàng của bộ quy cách hình học",
+      group: "Danh mục",
+      naming: "autoincrement",
+      fields: [
+        { fieldname: "item_group", fieldtype: "Link", options: "Item Group", label: "Nhóm hàng", required: true },
+      ],
+      permissions,
+    },
+    {
+      name: "Geometry Profile Field",
+      child: true,
+      label: "Trường của bộ quy cách hình học",
+      group: "Danh mục",
+      naming: "autoincrement",
+      fields: [
+        { fieldname: "geometry_field", fieldtype: "Link", options: "Geometry Field", label: "Trường", required: true },
+        { fieldname: "role", fieldtype: "Select", options: "INPUT\nCALCULATED\nINFO", label: "Vai trò", required: true },
+        { fieldname: "required", fieldtype: "Check", label: "Bắt buộc", default: false },
+        { fieldname: "visible", fieldtype: "Check", label: "Hiện trên form", default: true },
+        { fieldname: "editable", fieldtype: "Check", label: "Cho nhập", default: false },
+        { fieldname: "sequence", fieldtype: "Int", label: "Thứ tự", default: 0 },
+      ],
+      permissions,
+    },
+    {
+      name: "Geometry Profile",
+      label: "Bộ quy cách hình học",
+      group: "Danh mục",
+      naming: "field:profile_code",
+      title: "profile_name",
+      list: ["profile_code", "profile_name", "disabled"],
+      search: ["profile_code", "profile_name"],
+      fields: [
+        { fieldname: "profile_code", fieldtype: "Data", label: "Mã bộ quy cách", required: true },
+        { fieldname: "profile_name", fieldtype: "Data", label: "Tên bộ quy cách", required: true },
+        { fieldname: "item_groups", fieldtype: "Table", options: "Geometry Profile Scope", label: "Nhóm hàng áp dụng" },
+        { fieldname: "fields", fieldtype: "Table", options: "Geometry Profile Field", label: "Trường hiển thị", required: true },
+        { fieldname: "note", fieldtype: "Small Text", label: "Ghi chú" },
+        { fieldname: "disabled", fieldtype: "Check", label: "Ngừng dùng", default: false },
+      ],
+      permissions,
+    },
+  ];
+}());
+  const measurement = doctype("Measurement Profile");
+  const movedOut = new Set(["theoretical_kg_per_m", "effective_width_m", "kerf_mm", "scrap_threshold_m"]);
+  measurement.fields = measurement.fields.filter((field) => !movedOut.has(nameOf(field)));
+  const itemMaster = doctype("Item");
+  if (!itemMaster.fields.some((field) => nameOf(field) === "geometry_profile")) {
+    const i = itemMaster.fields.findIndex((field) => nameOf(field) === "measurement_profile");
+    const field = { fieldname: "geometry_profile", fieldtype: "Link", options: "Geometry Profile", label: "Bộ quy cách hình học" };
+    if (i >= 0) itemMaster.fields.splice(i + 1, 0, field); else itemMaster.fields.push(field);
+  }
+  const replaceTypes = new Set(["Measurement Profile", "Geometry Field", "Geometry Profile"]);
+  brief.fixtures = brief.fixtures.filter((fixture) => !replaceTypes.has(fixture.type));
+  brief.fixtures.push(
+    ...MEASUREMENT_PROFILES.map((profile) => ({ type: "Measurement Profile", name: profile.name, data: measurementProfilePayload(profile) })),
+    ...GEOMETRY_FIELDS.map((field) => ({ type: "Geometry Field", name: field.code, data: { field_code: field.code, field_name: field.name, uom: field.uom, axis: field.axis, disabled: false, _migration_source: "alumdoor-geometry-master-2026-08-16" } })),
+    ...GEOMETRY_PROFILES.map((profile) => ({ type: "Geometry Profile", name: profile.code, data: { profile_code: profile.code, profile_name: profile.name, item_groups: profile.itemGroups.map((item_group, index) => ({ row_id: `GROUP-${index + 1}`, item_group })), fields: profile.fields.map((field, index) => ({ row_id: `FIELD-${index + 1}`, geometry_field: field.geometryField, role: field.role, required: field.required, visible: field.visible, editable: field.editable, sequence: field.sequence })), disabled: false, _migration_source: "alumdoor-geometry-master-2026-08-16" } })),
+  );
+  for (const name of ["Geometry Field", "Geometry Profile"]) if (!brief.navigation.items.includes(name)) brief.navigation.items.push(name);
+}
+note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở hữu trường hình học");
 
 // ══════════ CHỐT CHẶN — không để G2 xảy ra lần nữa ══════════
 // G2 lọt được vì thêm trường bắt buộc mà quên fixture, và dry-run KHÔNG bắt (nó biên dịch cấu
