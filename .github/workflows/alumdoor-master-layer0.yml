@@ -8,9 +8,14 @@ on:
       - 'server/tests/alumdoor-uom-catalog.test.mjs'
       - 'server/scripts/lib/alumdoor-color-catalog.mjs'
       - 'server/scripts/build-alumdoor-color-correction.mjs'
-      - 'server/scripts/build-alumdoor-master-data.mjs'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
+      - 'server/scripts/lib/alumdoor-item-group-catalog.mjs'
+      - 'server/scripts/seed-alumdoor-item-groups-local.sql'
+      - 'server/scripts/build-alumdoor-item-only-import.mjs'
+      - 'server/scripts/lib/alumdoor-item-standardization.mjs'
+      - 'server/imports/alumdoor-item-group-bosung-2026-08-15.sql'
+      - 'server/tests/alumdoor-item-group-catalog.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   pull_request:
     paths:
@@ -19,9 +24,14 @@ on:
       - 'server/tests/alumdoor-uom-catalog.test.mjs'
       - 'server/scripts/lib/alumdoor-color-catalog.mjs'
       - 'server/scripts/build-alumdoor-color-correction.mjs'
-      - 'server/scripts/build-alumdoor-master-data.mjs'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
+      - 'server/scripts/lib/alumdoor-item-group-catalog.mjs'
+      - 'server/scripts/seed-alumdoor-item-groups-local.sql'
+      - 'server/scripts/build-alumdoor-item-only-import.mjs'
+      - 'server/scripts/lib/alumdoor-item-standardization.mjs'
+      - 'server/imports/alumdoor-item-group-bosung-2026-08-15.sql'
+      - 'server/tests/alumdoor-item-group-catalog.test.mjs'
       - '.github/workflows/alumdoor-master-layer0.yml'
   workflow_dispatch:
 
@@ -54,3 +64,15 @@ jobs:
         run: node --test server/tests/alumdoor-color-catalog.test.mjs
       - name: Test Alumdoor color seed authority
         run: node --test server/tests/alumdoor-color-seed-authority.test.mjs
+
+  item_group:
+    name: Lock canonical Item Group tree
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test Alumdoor canonical Item Group layer
+        run: node --test server/tests/alumdoor-item-group-catalog.test.mjs
