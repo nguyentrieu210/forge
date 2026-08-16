@@ -1,0 +1,152 @@
+name: Temporary Alumdoor BOM Source Family
+on:
+  push:
+    branches: ['agent/alumdoor-bom-source-family']
+    paths: ['.github/workflows/_tmp-alumdoor-bom-source-family.yml']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: pnpm/action-setup@v4
+        with: { run_install: false }
+      - name: Wire source-SKU allowlists and sync family fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'server/apps-src/alumdoor-worker/src/bom-template-materializer.ts';
+          let text = fs.readFileSync(path, 'utf8');
+          if (!text.includes('actual_component_allowed_items_json?: unknown;')) {
+            text = text.replace(
+              '  required_actual_component_keys_json?: unknown;\n  component_rules?: unknown;',
+              '  required_actual_component_keys_json?: unknown;\n  actual_component_allowed_items_json?: unknown;\n  component_rules?: unknown;'
+            );
+          }
+          if (!text.includes('function stringArrayMap(')) {
+            const anchor = `function stringArray(value: unknown, label: string): string[] {\n  const parsed = parseJson<unknown>(value, [], label);\n  if (!Array.isArray(parsed)) throw new Error(\`${'${label}'}: phải là mảng JSON.\`);\n  return parsed.map((entry) => text(entry)).filter(Boolean);\n}\n`;
+            if (!text.includes(anchor)) throw new Error('stringArray anchor missing');
+            const helper = `${anchor}\nfunction stringArrayMap(value: unknown, label: string): Record<string, string[]> {\n  const parsed = parseJson<unknown>(value, {}, label);\n  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(\`${'${label}'}: phải là object JSON.\`);\n  const output: Record<string, string[]> = {};\n  for (const [rawKey, rawItems] of Object.entries(parsed as Record<string, unknown>)) {\n    const key = text(rawKey);\n    if (!key) throw new Error(\`${'${label}'}: component key không được rỗng.\`);\n    if (!Array.isArray(rawItems)) throw new Error(\`${'${label}.${key}'}: phải là mảng item code.\`);\n    const items = rawItems.map((entry) => text(entry)).filter(Boolean);\n    if (!items.length) throw new Error(\`${'${label}.${key}'}: allowlist không được rỗng.\`);\n    output[key] = [...new Set(items)];\n  }\n  return output;\n}\n`;
+            text = text.replace(anchor, helper);
+          }
+          text = text.replace(
+            'export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] } {',
+            'export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[]; actual_component_allowed_items: Record<string, string[]> } {'
+          );
+          if (!text.includes('actual_component_allowed_items: stringArrayMap(')) {
+            text = text.replace(
+              '    required_actual_component_keys: stringArray(raw.required_actual_component_keys_json, `${templateCode}.required_actual_component_keys_json`),\n    component_rules:',
+              '    required_actual_component_keys: stringArray(raw.required_actual_component_keys_json, `${templateCode}.required_actual_component_keys_json`),\n'
+                + '    actual_component_allowed_items: stringArrayMap(raw.actual_component_allowed_items_json, `${templateCode}.actual_component_allowed_items_json`),\n'
+                + '    component_rules:'
+            );
+          }
+          text = text.replace(
+            'async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] }>> {',
+            'async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[]; actual_component_allowed_items: Record<string, string[]> }>> {'
+          );
+          if (!text.includes('allowed_item_codes_by_key: source.actual_component_allowed_items,')) {
+            text = text.replace(
+              '    required_actual_component_keys: source.required_actual_component_keys,\n  });',
+              '    required_actual_component_keys: source.required_actual_component_keys,\n'
+                + '    allowed_item_codes_by_key: source.actual_component_allowed_items,\n'
+                + '  });'
+            );
+          }
+          fs.writeFileSync(path, text, 'utf8');
+          NODE
+
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { bomSourceFixtureRows } from './server/scripts/lib/alumdoor-bom-template-source-catalog.mjs';
+          const path = 'server/briefs/alumdoor-v2.json';
+          const brief = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const template = brief.doctypes.find((row) => row.name === 'BOM Template');
+          if (!template) throw new Error('BOM Template missing');
+          const nameOf = (entry) => typeof entry === 'string' ? entry.split(':')[0].trim() : entry.fieldname;
+          if (!template.fields.some((entry) => nameOf(entry) === 'actual_component_allowed_items_json')) {
+            const anchor = template.fields.findIndex((entry) => nameOf(entry) === 'required_actual_component_keys_json');
+            template.fields.splice(anchor >= 0 ? anchor + 1 : template.fields.length, 0,
+              'actual_component_allowed_items_json:Code Allowlist vật tư actual theo slot JSON');
+          }
+          const sourceNames = new Set(bomSourceFixtureRows().map((row) => row.name));
+          brief.fixtures = brief.fixtures.filter((row) => row.type !== 'BOM Template' || !row.name.startsWith('SRC-UC-KT-') || sourceNames.has(row.name));
+          for (const fixture of bomSourceFixtureRows()) {
+            const index = brief.fixtures.findIndex((row) => row.type === fixture.type && row.name === fixture.name);
+            if (index >= 0) brief.fixtures[index] = fixture;
+            else brief.fixtures.push(fixture);
+          }
+          fs.writeFileSync(path, JSON.stringify(brief, null, 2) + '\n');
+          NODE
+
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'server/scripts/build-alumdoor-v2-brief.mjs';
+          let text = fs.readFileSync(path, 'utf8');
+          if (!text.includes('"actual_component_allowed_items_json:Code Allowlist vật tư actual theo slot JSON"')) {
+            const anchor = '    "required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON",\n    "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",';
+            if (!text.includes(anchor)) throw new Error('builder actual slot field anchor missing');
+            text = text.replace(anchor,
+              '    "required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON",\n'
+                + '    "actual_component_allowed_items_json:Code Allowlist vật tư actual theo slot JSON",\n'
+                + '    "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",');
+          }
+          fs.writeFileSync(path, text, 'utf8');
+          NODE
+      - name: Install dependencies
+        working-directory: server
+        run: pnpm install --frozen-lockfile
+      - name: Build server
+        working-directory: server
+        run: pnpm run build
+      - name: Run BOM family, actual and regression tests
+        working-directory: server
+        run: |
+          node --test tests/alumdoor-bom-template-core.test.mjs
+          node --test tests/alumdoor-bom-template-materializer.test.mjs
+          node --test tests/alumdoor-bom-actual-components.test.mjs
+          node --test tests/alumdoor-bom-actual-materializer.test.mjs
+          node --test tests/alumdoor-bom-source-catalog.test.mjs
+          node --test tests/alumdoor-cutting-policy-geometry.test.mjs
+      - name: Validate five source fixtures and brief dry-run
+        working-directory: server
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { BOM_TEMPLATE_SOURCE_CATALOG, bomSourceFixtureRows } from './scripts/lib/alumdoor-bom-template-source-catalog.mjs';
+          const brief = JSON.parse(fs.readFileSync('briefs/alumdoor-v2.json', 'utf8'));
+          if (BOM_TEMPLATE_SOURCE_CATALOG.length !== 5) throw new Error('Expected five source templates');
+          for (const expected of bomSourceFixtureRows()) {
+            const actual = brief.fixtures.find((row) => row.type === expected.type && row.name === expected.name);
+            if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`Static fixture drifted: ${expected.name}`);
+          }
+          const template = brief.doctypes.find((row) => row.name === 'BOM Template');
+          const nameOf = (entry) => typeof entry === 'string' ? entry.split(':')[0].trim() : entry.fieldname;
+          if (!template.fields.some((entry) => nameOf(entry) === 'actual_component_allowed_items_json')) throw new Error('BOM Template source item allowlist field missing');
+          NODE
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+      - name: Commit validated family and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/_tmp-alumdoor-bom-source-family.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            server/apps-src/alumdoor-worker/src/bom-actual-components.ts \
+            server/apps-src/alumdoor-worker/src/bom-template-materializer.ts \
+            server/scripts/lib/alumdoor-bom-template-source-catalog.mjs \
+            server/scripts/build-alumdoor-v2-brief.mjs \
+            server/briefs/alumdoor-v2.json \
+            server/tests/alumdoor-bom-actual-components.test.mjs \
+            server/tests/alumdoor-bom-source-catalog.test.mjs \
+            .github/workflows/_tmp-alumdoor-bom-source-family.yml
+          git commit -m 'feat(alumdoor): expand Australian KT BOM source family'
+          git push origin HEAD:agent/alumdoor-bom-source-family
