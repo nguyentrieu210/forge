@@ -8,7 +8,7 @@ import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
 import { Button, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
-import { buildPrintPath, resolveBulkRenderPolicy, useAlumdoorWorkspaceMode, type UrlStateBridge } from "./doctype-workspace-support.js";
+import { buildPrintPath, resolveBulkRenderPolicy, resolveCreateSurface, useAlumdoorWorkspaceMode, type UrlStateBridge } from "./doctype-workspace-support.js";
 
 const AlumdoorSalesOrderCreate = lazy(() => import("./vertical/alumdoor/AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
 const AlumdoorProductionRequestDetail = lazy(() => import("./vertical/alumdoor/AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
@@ -68,16 +68,14 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
     useAlumdoorManufacturingStockEntryContext,
   } = useAlumdoorWorkspaceMode({ doctype, isNew, decoded, bridge });
   /**
-   * Kích cỡ màn tạo mới đi theo PHẠM VI của chứng từ, không phải theo khai báo riêng của từng app.
-   *
-   * Có bảng con nghĩa là người dùng sẽ nhập nhiều dòng, mỗi dòng nhiều cột — việc đó cần cả màn
-   * hình. Không có bảng con thì chỉ vài ô, và một hộp thoại gọn giữ được ngữ cảnh danh sách phía
-   * sau. Suy ra từ chính metadata nên không doctype nào phải khai thêm gì.
+   * Quick Create không còn được suy bằng heuristic "không có bảng con".
+   * Metadata chỉ được mở compact surface khi chính Quick Entry đã bật VÀ không làm mất bất kỳ
+   * field nghiệp vụ editable nào; còn lại fail-safe về full create. Nhờ vậy master cấu hình như
+   * Measurement Profile không thể bị tạo bằng một modal chỉ có vài field required rồi mất phần
+   * cấu hình còn lại.
    */
-  const hasChildTable = useMemo(
-    () => (titleMeta.data?.fields ?? []).some((field) => field.fieldtype === "Table" || field.fieldtype === "Table MultiSelect"),
-    [titleMeta.data],
-  );
+  const createSurface = useMemo(() => resolveCreateSurface(titleMeta.data), [titleMeta.data]);
+  const useFullCreate = createSurface === "full";
   const bulkPolicy = useMemo(() => titleMeta.data ? resolveBulkRenderPolicy(titleMeta.data) : undefined, [titleMeta.data]);
   const bulkEnabled = Boolean(bulkPolicy?.enabled && !isTree);
   const bulkOnly = Boolean(bulkPolicy?.rowSource);
@@ -182,9 +180,9 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
-          className={hasChildTable ? V3_FULL_CREATE_DIALOG_CLASS : V3_QUICK_ENTRY_DIALOG_CLASS}
+          className={useFullCreate ? V3_FULL_CREATE_DIALOG_CLASS : V3_QUICK_ENTRY_DIALOG_CLASS}
           data-ui-version="v3"
-          data-surface={useAlumdoorSalesCreate ? "alumdoor-sales-create" : hasChildTable ? "full-create" : "quick-entry"}
+          data-surface={useAlumdoorSalesCreate ? "alumdoor-sales-create" : useFullCreate ? "full-create" : "quick-entry"}
           onInteractOutside={(event) => {
             event.preventDefault();
             const target = event.detail?.originalEvent?.target;
@@ -200,7 +198,7 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
                 <AlumdoorSalesOrderCreate closeRequest={closeRequest} onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onPreviewCreated={(newName) => onNavigate(printBase === "/print" ? buildPrintPath(doctype, newName) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
               </Suspense>
             ) : (
-              <NewFormContainer doctype={doctype} fullWidth={hasChildTable} presentation={hasChildTable ? "page" : "dialog"} closeRequest={closeRequest} onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onPreviewCreated={(newName) => onNavigate(printBase === "/print" ? buildPrintPath(doctype, newName) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
+              <NewFormContainer doctype={doctype} fullWidth={useFullCreate} presentation={useFullCreate ? "page" : "dialog"} closeRequest={closeRequest} onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onPreviewCreated={(newName) => onNavigate(printBase === "/print" ? buildPrintPath(doctype, newName) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
             )}
           </div>
         </DialogContent>
