@@ -11,6 +11,19 @@ const product = (left, right, multiply = 1) => ({
 const SOURCE_DOCUMENT = "MS LIÊN BS.xlsx";
 const SOURCE_SHEET = "ĐM";
 
+const SPRING_ITEMS = [
+  "NVL-LX-5.5 x 70 x 46V",
+  "NVL-LX-5.5 x 70 x 50V",
+  "NVL-LV-6.0 x 70 x 53V",
+  "NVL-LV-6.5 x 80 x 63V",
+  "NVL-LV-6.5 x 80 x 68V",
+  "NVL-LV-7.0 x 90 x 65V",
+  "NVL-LV-7.0 x 90 x 73V",
+  "NVL-LV-7.0 x 90 x 83V",
+];
+
+const PULL_ROD_ITEMS = ["NVL-INOX", "NVL-NHUA", "NVL-MOC"];
+
 const REQUIRED_ACTUAL_4D = [
   "BOTTOM_SEAL",
   "FOAM_45CM",
@@ -60,7 +73,18 @@ function actualEntry(sourceRow, key, reason, sourceRowsOverride = undefined) {
     : { source_row: sourceRow, key, reason };
 }
 
-function sourceTemplateBase({ name, itemCode, productRow, componentRows, requiredKeys, requiredActualKeys, deferred, rules, note }) {
+function sourceTemplateBase({
+  name,
+  itemCode,
+  productRow,
+  componentRows,
+  requiredKeys,
+  requiredActualKeys,
+  allowedActualItems,
+  deferred,
+  rules,
+  note,
+}) {
   return {
     name,
     source: {
@@ -80,6 +104,7 @@ function sourceTemplateBase({ name, itemCode, productRow, componentRows, require
       required_context_fields_json: "[]",
       required_component_keys_json: JSON.stringify(requiredKeys),
       required_actual_component_keys_json: JSON.stringify(requiredActualKeys),
+      actual_component_allowed_items_json: JSON.stringify(allowedActualItems),
       deferred_components_json: JSON.stringify(deferred),
       note,
       component_rules: rules,
@@ -101,6 +126,16 @@ function makeUcKt4dXnVk() {
       "FLOOR_LOCK_BRACKET_WEIGHT",
     ],
     requiredActualKeys: REQUIRED_ACTUAL_4D,
+    allowedActualItems: {
+      BOTTOM_SEAL: ["NVL-RONDAYUC"],
+      FOAM_45CM: ["NVL-XOP-N45"],
+      PULLEY_34: ["NVL-PULYUC34"],
+      SPRING: SPRING_ITEMS,
+      SPRING_STOP_ARM: ["NVL-VAIHAMXO"],
+      PULL_ROD: PULL_ROD_ITEMS,
+      SCREW_HEAD_PULLEY: ["NVL-VISDD-BANLO"],
+      SCREW_2P_PULLEY: ["NVL-VIS-BANLO2P"],
+    },
     deferred: [
       actualEntry(691, "BOTTOM_SEAL", "Nguồn ghi 'xem lại'; chưa được phép chốt công thức."),
       actualEntry(693, "FOAM_45CM", "Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm."),
@@ -165,6 +200,20 @@ function makeUcKt46Template({ name, itemCode, productRow, leafItem, sourceProduc
     componentRows,
     requiredKeys: ["T_BRACKET", "BOTTOM_SEAL", "PLASTIC_STOP_CLAMP", "STEEL_BEARING", "FLOOR_LOCK_BRACKET_WEIGHT"],
     requiredActualKeys: REQUIRED_ACTUAL_46D,
+    allowedActualItems: {
+      LEAF_SHEET: [leafItem],
+      SPIKE_PULLEY_WEIGHT: ["NVL-PULYGAI"],
+      BOTTOM_BAR_WEIGHT: ["NVL-VDAY-TDU"],
+      RAY_U70_WEIGHT: ["NVL-TOLE1.2x190-KRON"],
+      FOAM_45CM: ["NVL-XOP-N45"],
+      SHAFT_34_WEIGHT: ["NVL-TRUC34"],
+      PULLEY_34: ["NVL-PULYUC34"],
+      SPRING: SPRING_ITEMS,
+      SPRING_STOP_ARM: ["NVL-VAIHAMXO"],
+      PULL_ROD: PULL_ROD_ITEMS,
+      SCREW_HEAD_PULLEY: ["NVL-VISDD-BANLO"],
+      SCREW_2P_PULLEY: ["NVL-VIS-BANLO2P"],
+    },
     deferred: [
       actualEntry(row(1), "LEAF_SHEET", `ĐM ${sourceProductName} có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.`),
       actualEntry(row(3), "SPIKE_PULLEY_WEIGHT", "ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân."),
@@ -174,10 +223,10 @@ function makeUcKt46Template({ name, itemCode, productRow, leafItem, sourceProduc
       actualEntry(row(8), "SHAFT_34_WEIGHT", "ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn."),
       actualEntry(row(9), "PULLEY_34", "Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ."),
       actualEntry(row(10), "SPRING", "SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.", springRows),
-      actualEntry(row(18), "SPRING_STOP_ARM", "Phụ thuộc số lò xo thực tế; nhập actual theo một bộ."),
-      actualEntry(row(19), "PULL_ROD", "Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ."),
-      actualEntry(row(22), "SCREW_HEAD_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
-      actualEntry(row(23), "SCREW_2P_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+      actualEntry(row(19), "SPRING_STOP_ARM", "Phụ thuộc số lò xo thực tế; nhập actual theo một bộ."),
+      actualEntry(row(20), "PULL_ROD", "Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ."),
+      actualEntry(row(23), "SCREW_HEAD_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+      actualEntry(row(24), "SCREW_2P_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
     ],
     rules: [
       sourceRule(row(2), {
@@ -188,15 +237,15 @@ function makeUcKt46Template({ name, itemCode, productRow, leafItem, sourceProduc
         code: "RON-DAY", key: "BOTTOM_SEAL", item: "NVL-RONDAYUC", uom: "KG/M ngang", sequence: 50,
         sourceFormula: "ron đáy = chiều rộng pbray x 0,0077.", quantity: field("PB_RONG", 0.0077),
       }),
-      sourceRule(row(17 + 1), {
+      sourceRule(row(18), {
         code: "CUM-HAM", key: "PLASTIC_STOP_CLAMP", item: "NVL-CHNHUA", uom: "CÁI", sequence: 70,
         sourceFormula: "Định mức nguồn = 2 cái / một bộ.", quantity: fixed(2),
       }),
-      sourceRule(row(20), {
+      sourceRule(row(21), {
         code: "GOI-SAT", key: "STEEL_BEARING", item: "NVL-GOIFE", uom: "CÁI", sequence: 80,
         sourceFormula: "Định mức nguồn = 2 cái / một bộ.", quantity: fixed(2),
       }),
-      sourceRule(row(21), {
+      sourceRule(row(22), {
         code: "BAT-KHOA", key: "FLOOR_LOCK_BRACKET_WEIGHT", item: "NVL-BKAN", uom: "KG/CẶP", sequence: 90,
         sourceFormula: "1 bộ x 4 cặp x 0,1925.", quantity: fixed(0.77),
       }),
@@ -242,7 +291,8 @@ const UC_KT_46_VARIANTS = [
  * Safety rule: a blank/ambiguous source formula never inherits a calculation merely
  * because a neighboring product looks similar. Shared factories may share structure,
  * but only source-explicit calculations become automatic rules; everything else is an
- * explicit actual slot on Sales Order Item.
+ * explicit actual slot on Sales Order Item. Actual slots are also pinned to source SKU
+ * allowlists so a matching slot cannot silently substitute a different material.
  */
 export const BOM_TEMPLATE_SOURCE_CATALOG = [
   makeUcKt4dXnVk(),
