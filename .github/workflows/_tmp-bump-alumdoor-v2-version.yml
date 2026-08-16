@@ -1,4 +1,4 @@
-name: Temporary Bump Alumdoor V2 Version
+name: Temporary Cleanup Alumdoor V2 Bump
 
 on:
   push:
@@ -9,28 +9,17 @@ permissions:
   contents: write
 
 jobs:
-  bump:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: fix/alumdoor-surface-finish-exclusions-v2-version
-      - name: Bump version
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          p = Path('server/briefs/alumdoor-v2.json')
-          data = json.loads(p.read_text(encoding='utf-8'))
-          assert data['version'] == '2.0.42', data['version']
-          data['version'] = '2.0.43'
-          p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-          PY
-      - name: Commit
+          fetch-depth: 0
+      - name: Remove temporary workflow
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add server/briefs/alumdoor-v2.json
-          git diff --cached --check
-          git commit -m "fix(alumdoor): bump V2 for Surface Finish exclusions"
+          git rm .github/workflows/_tmp-bump-alumdoor-v2-version.yml
+          git commit -m "chore(alumdoor): remove temporary V2 bump workflow"
           git push origin HEAD:fix/alumdoor-surface-finish-exclusions-v2-version
