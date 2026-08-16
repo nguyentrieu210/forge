@@ -171,7 +171,7 @@ export function evaluateBomQuantity(
   if (base.kind === "CONSTANT") {
     value = finite(base.value, `${label}.value`);
   } else if (base.kind === "FIELD") {
-    value = readOperand({ field: base.field, offset: base.offset }, values, label);
+    value = readOperand(base.offset === undefined ? { field: base.field } : { field: base.field, offset: base.offset }, values, label);
   } else if (base.kind === "PRODUCT") {
     value = readOperand(base.left, values, `${label}.left`) * readOperand(base.right, values, `${label}.right`);
   } else if (base.kind === "QUOTIENT") {
