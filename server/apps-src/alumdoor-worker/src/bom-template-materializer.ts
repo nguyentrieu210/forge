@@ -6,7 +6,12 @@ import {
   type BomTemplateDefinition,
   type ResolvedBomTemplate,
 } from "./bom-template-core.js";
-import { mergeBomActualComponents, type BomActualComponentInput } from "./bom-actual-components.js";
+import {
+  inspectBomActualComponents,
+  mergeBomActualComponents,
+  type BomActualComponentInput,
+  type BomActualRequirement,
+} from "./bom-actual-components.js";
 
 export type BomMaterializerCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
@@ -77,6 +82,12 @@ export interface BomMaterializationResult {
   bom_fingerprint: string;
   materialized: boolean;
   components: ResolvedBomTemplate["components"];
+}
+
+export interface BomPreviewResult extends BomMaterializationResult {
+  actual_requirements: BomActualRequirement[];
+  missing_actual_component_keys: string[];
+  actual_complete: boolean;
 }
 
 function text(value: unknown): string {
@@ -347,6 +358,66 @@ async function nextRevision(call: BomMaterializerCall, itemCode: string): Promis
     500,
   ).catch(() => []);
   return rows.reduce((max, row) => Math.max(max, Math.trunc(Number(row.revision ?? 0)) || 0), 0) + 1;
+}
+
+export async function previewProductionLineBom(
+  call: BomMaterializerCall,
+  input: { line: BomProductionLineInput; company: string },
+): Promise<BomPreviewResult> {
+  const templates = await loadTemplates(call);
+  if (!templates.length) {
+    throw new Error(`${input.line.item_code}: chưa có BOM tĩnh và chưa cấu hình BOM Template.`);
+  }
+  const { context, values } = bomContextFromProductionLine(input.line);
+  const resolved = resolveBomTemplate({ templates, context, values });
+  if (resolved.item_code !== input.line.item_code) {
+    throw new Error(`${resolved.template_code}: thành phẩm ${resolved.item_code} không khớp dòng bán ${input.line.item_code}.`);
+  }
+  const source = templates.find((template) => template.template_code === resolved.template_code);
+  if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);
+  const inspection = inspectBomActualComponents({
+    template_code: resolved.template_code,
+    ...(input.line.bom_actual_components === undefined ? {} : { actual_components: input.line.bom_actual_components }),
+    required_actual_component_keys: source.required_actual_component_keys,
+    allowed_item_codes_by_key: source.actual_component_allowed_items,
+  });
+  if (!inspection.complete) {
+    return {
+      bom_no: "",
+      bom_template: source.source_name,
+      bom_template_code: resolved.template_code,
+      bom_fingerprint: "",
+      materialized: false,
+      components: resolved.components,
+      actual_requirements: inspection.requirements,
+      missing_actual_component_keys: inspection.missing_component_keys,
+      actual_complete: false,
+    };
+  }
+  const resolvedWithActuals = mergeBomActualComponents({
+    resolved,
+    actual_components: inspection.actual_components,
+    required_actual_component_keys: source.required_actual_component_keys,
+    allowed_item_codes_by_key: source.actual_component_allowed_items,
+  });
+  const fingerprint = bomFingerprint({
+    company: input.company,
+    source_warehouse: input.line.source_warehouse,
+    output_qty: input.line.output_qty,
+    resolved: resolvedWithActuals,
+  });
+  const prior = await existingGeneratedBom(call, fingerprint);
+  return {
+    bom_no: prior,
+    bom_template: source.source_name,
+    bom_template_code: resolved.template_code,
+    bom_fingerprint: fingerprint,
+    materialized: false,
+    components: resolvedWithActuals.components,
+    actual_requirements: inspection.requirements,
+    missing_actual_component_keys: [],
+    actual_complete: true,
+  };
 }
 
 export async function resolveProductionLineBom(

@@ -9,8 +9,12 @@ import {
   type DoorType,
   type SalesMode,
 } from "./door-formulas.js";
-import { resolveProductionLineBom } from "./bom-template-materializer.js";
-import { normalizeBomActualComponents, type BomActualComponentInput } from "./bom-actual-components.js";
+import { previewProductionLineBom, resolveProductionLineBom } from "./bom-template-materializer.js";
+import {
+  normalizeBomActualComponents,
+  type BomActualComponentInput,
+  type BomActualRequirement,
+} from "./bom-actual-components.js";
 
 export type ProductionPlatformCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
@@ -139,6 +143,9 @@ export interface SalesProductionLine extends Json {
   bom_fingerprint?: string;
   bom_materialization_required?: 0 | 1;
   bom_actual_components?: BomActualComponentInput[];
+  bom_actual_requirements?: BomActualRequirement[];
+  missing_actual_component_keys?: string[];
+  bom_actual_complete?: 0 | 1;
   output_qty: number;
   stock_uom: string;
   paint_required: 0 | 1;
@@ -727,15 +734,30 @@ async function resolveMissingLineBoms(
       output.push(line);
       continue;
     }
-    const resolved = await resolveProductionLineBom(call, { line, company, materialize });
-    if (materialize && !resolved.bom_no) throw new Error(`${line.item_code}: resolver không trả về BOM đã ghi sổ.`);
+    if (materialize) {
+      const resolved = await resolveProductionLineBom(call, { line, company, materialize: true });
+      if (!resolved.bom_no) throw new Error(`${line.item_code}: resolver không trả về BOM đã ghi sổ.`);
+      output.push({
+        ...line,
+        bom_no: resolved.bom_no,
+        bom_template: resolved.bom_template,
+        bom_template_code: resolved.bom_template_code,
+        bom_fingerprint: resolved.bom_fingerprint,
+        bom_materialization_required: 0,
+      });
+      continue;
+    }
+    const preview = await previewProductionLineBom(call, { line, company });
     output.push({
       ...line,
-      bom_no: resolved.bom_no,
-      bom_template: resolved.bom_template,
-      bom_template_code: resolved.bom_template_code,
-      bom_fingerprint: resolved.bom_fingerprint,
-      bom_materialization_required: resolved.bom_no ? 0 : 1,
+      bom_no: preview.bom_no,
+      bom_template: preview.bom_template,
+      bom_template_code: preview.bom_template_code,
+      bom_fingerprint: preview.bom_fingerprint,
+      bom_materialization_required: preview.bom_no ? 0 : 1,
+      bom_actual_requirements: preview.actual_requirements,
+      missing_actual_component_keys: preview.missing_actual_component_keys,
+      bom_actual_complete: preview.actual_complete ? 1 : 0,
     });
   }
   return output;
@@ -746,7 +768,11 @@ export async function previewSalesProduction(call: ProductionPlatformCall, args:
     const input = await loadBuildInputs(call, args);
     const draftItems = buildSalesProductionLines(input, { allow_missing_bom: true });
     const items = await resolveMissingLineBoms(call, input, draftItems, false);
-    const warnings = [...new Set(items.map((line) => line.schedule_warning).filter((value): value is string => Boolean(value)))];
+    const warnings = [...new Set([
+      ...items.map((line) => line.schedule_warning).filter((value): value is string => Boolean(value)),
+      ...items.filter((line) => line.bom_actual_complete === 0).map((line) =>
+        `${line.item_code} · bộ ${line.set_no}: thiếu vật tư BOM thực tế ${line.missing_actual_component_keys?.join(", ") || "chưa xác định"}.`),
+    ])];
     return answer({
       sales_order: input.sales.name,
       customer: input.sales.customer,
