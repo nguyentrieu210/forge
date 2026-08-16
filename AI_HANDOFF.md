@@ -10,8 +10,9 @@ Handoff này cố ý ngắn. Resolve exact GitHub state trước; không dùng f
 2. Đọc `SENTRUX_MAP.md` để xác định owner, entrypoint và dependency boundary.
 3. Đọc `CURRENT_STATUS.md`, `NEXT_TASKS.md`, `PROJECT_CONTEXT.md`.
 4. Đọc `docs/ARCHITECTURE.md` và docs domain/evidence đúng scope.
-5. Load skill/routing liên quan trước khi sửa.
-6. Với structural refactor: lưu Sentrux gate baseline, sửa nhỏ theo root cause, rồi rescan/gate + typecheck/test.
+5. Với scope **Alumdoor Sales / Master / BOM / sản xuất / cắt nhôm**, đọc `apps/alumdoor/docs/nguon/SALES-BOM-SOURCE-MAP.md` rồi mở raw extract qua `apps/alumdoor/docs/nguon/00-MUC-LUC.md`; không trả lời hoặc sửa rule từ trí nhớ.
+6. Load skill/routing liên quan trước khi sửa.
+7. Với structural refactor: lưu Sentrux gate baseline, sửa nhỏ theo root cause, rồi rescan/gate + typecheck/test.
 
 ## Invariants cần giữ
 
