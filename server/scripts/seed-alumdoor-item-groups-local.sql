@@ -1,9 +1,8 @@
 -- Canonical Alumdoor Item Group tree for LOCAL development only.
 -- Authority: server/scripts/lib/alumdoor-item-group-catalog.mjs
--- Idempotent: rerunning updates the same records and never duplicates a group.
-BEGIN TRANSACTION;
+-- D1-safe + idempotent: rerunning updates the same records and never duplicates a group.
 
-CREATE TEMP TABLE IF NOT EXISTS _alumdoor_item_groups (
+CREATE TABLE IF NOT EXISTS _alumdoor_item_groups (
   name TEXT PRIMARY KEY,
   parent_name TEXT,
   is_group INTEGER NOT NULL CHECK (is_group IN (0,1))
@@ -149,4 +148,3 @@ WHERE tenant_id='demo' AND doctype='Item Group'
   );
 
 DROP TABLE _alumdoor_item_groups;
-COMMIT;
