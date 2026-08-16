@@ -134,9 +134,9 @@ export function mergeBomActualComponents(input: {
 }): ResolvedBomTemplate {
   const inspection = inspectBomActualComponents({
     template_code: input.resolved.template_code,
-    actual_components: input.actual_components,
-    required_actual_component_keys: input.required_actual_component_keys,
-    allowed_item_codes_by_key: input.allowed_item_codes_by_key,
+    ...(input.actual_components === undefined ? {} : { actual_components: input.actual_components }),
+    ...(input.required_actual_component_keys === undefined ? {} : { required_actual_component_keys: input.required_actual_component_keys }),
+    ...(input.allowed_item_codes_by_key === undefined ? {} : { allowed_item_codes_by_key: input.allowed_item_codes_by_key }),
   });
   if (!inspection.complete) {
     throw new Error(`${input.resolved.template_code}: thiếu vật tư BOM thực tế cho ${inspection.missing_component_keys.join(", ")}; hệ thống không tự đoán.`);
