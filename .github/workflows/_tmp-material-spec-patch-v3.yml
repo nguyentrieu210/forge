@@ -1,0 +1,89 @@
+name: Temporary Material Specification Patch V3
+
+on:
+  push:
+    paths:
+      - '.github/workflows/_tmp-material-spec-patch-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/alumdoor-master-layer-material-specification
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reuse product patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src = Path('.github/workflows/_tmp-material-spec-patch.yml').read_text(encoding='utf-8').splitlines()
+          start = next(i for i,l in enumerate(src) if l.strip() == '- name: Patch canonical Material Specification layer')
+          run = next(i for i in range(start+1, len(src)) if src[i].strip() == 'run: |')
+          end = next(i for i in range(run+1, len(src)) if src[i].startswith('      - name:'))
+          body = [line[10:] if line.startswith('          ') else line for line in src[run+1:end]]
+          Path('/tmp/material-spec-patch.py').write_text('\n'.join(body)+'\n', encoding='utf-8')
+          PY
+          python /tmp/material-spec-patch.py
+      - name: Keep legacy base unchanged and harden only V2 schema
+        shell: python
+        run: |
+          from pathlib import Path
+          import json, subprocess
+          root=Path('.')
+
+          # Base brief 1.27.5 is legacy and intentionally has no item_group/spec_type.
+          # Restore it byte-for-byte instead of widening this layer into a base-brief migration.
+          subprocess.run(['git','checkout','HEAD','--','server/briefs/alumdoor.json'], check=True)
+
+          p=root/'server/briefs/alumdoor-v2.json'
+          data=json.loads(p.read_text(encoding='utf-8'))
+          if data.get('version') != '2.2.5':
+              raise SystemExit(f'unexpected patched V2 version {data.get("version")}')
+          dt=next((x for x in data['doctypes'] if x.get('name')=='Material Specification'),None)
+          if not dt: raise SystemExit('V2 Material Specification missing')
+          for i,field in enumerate(dt['fields']):
+              name=field.split(':')[0].strip() if isinstance(field,str) else field.get('fieldname')
+              if name=='spec_type':
+                  dt['fields'][i]='spec_type:Select(Nhôm cây/lá,Ống/trục,Tấm/Kính,Cuộn,Vật tư tuyến tính,Khác)! Loại quy cách'
+              elif name=='theoretical_kg_per_m':
+                  if not isinstance(field,dict): raise SystemExit('theoretical_kg_per_m must be object in V2')
+                  field['depends_on']="eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Vật tư tuyến tính'"
+              elif name=='scrap_threshold_m':
+                  if not isinstance(field,dict): raise SystemExit('scrap_threshold_m must be object in V2')
+                  field['depends_on']="eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Cuộn' || doc.spec_type == 'Vật tư tuyến tính'"
+          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          test = '''import test from "node:test";\nimport assert from "node:assert/strict";\nimport { readFileSync } from "node:fs";\nimport { dirname, resolve } from "node:path";\nimport { fileURLToPath } from "node:url";\nimport {\n  MATERIAL_SPECIFICATION_TYPES,\n  loadMaterialSpecificationCatalog,\n} from "../scripts/lib/alumdoor-material-specification-catalog.mjs";\nimport { ALUMDOOR_ITEM_GROUP_CATALOG } from "../scripts/lib/alumdoor-item-group-catalog.mjs";\nimport { buildMaterialSpecificationSeed } from "../scripts/seed-alumdoor-material-specifications-local.mjs";\n\nconst repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");\n\ntest("canonical Material Specification catalog has exactly 17 evidence-backed atomic specs", async () => {\n  const rows = await loadMaterialSpecificationCatalog(repoRoot);\n  assert.equal(rows.length, 17);\n  assert.equal(new Set(rows.map((x) => x.specCode)).size, 17);\n  assert.equal(new Set(rows.map((x) => x.itemCode)).size, 17);\n  assert.equal(rows.filter((x) => x.payload.profile_system === "TIẾN ĐẠT").length, 12);\n  assert.deepEqual(\n    rows.filter((x) => x.specType === "Ống/trục").map((x) => x.itemCode).sort(),\n    ["TRỤC 114_1.8LY", "TRỤC 114_2.1LY"],\n  );\n  assert.deepEqual(\n    rows.filter((x) => x.specType === "Vật tư tuyến tính").map((x) => x.itemCode).sort(),\n    ["RNHUA-DR", "RNINOX-DR", "RON-DD"],\n  );\n});\n\ntest("every canonical spec uses a canonical leaf Item Group and owns technical facts only", async () => {\n  const rows = await loadMaterialSpecificationCatalog(repoRoot);\n  const leaves = new Set(ALUMDOOR_ITEM_GROUP_CATALOG.filter((x) => !x.isGroup).map((x) => x.name));\n  for (const row of rows) {\n    assert.ok(leaves.has(row.itemGroup), `${row.itemCode}: non-leaf/unknown group ${row.itemGroup}`);\n    assert.ok(MATERIAL_SPECIFICATION_TYPES.includes(row.specType), `${row.itemCode}: invalid type`);\n    assert.ok(row.kgPerM > 0, `${row.itemCode}: kg/m must be positive`);\n    assert.equal(row.payload.spec_code, row.specCode);\n    assert.equal(row.payload.item_group, row.itemGroup);\n    assert.equal(row.payload.theoretical_kg_per_m, row.kgPerM);\n    for (const forbidden of [\n      "stock_uom", "default_purchase_uom", "inventory_mode", "measurement_profile",\n      "require_color", "require_length", "track_bundle_qty", "leaf_divisor_m",\n      "cutting_policy", "purchase_kg_per_m2", "uom_conversions",\n    ]) assert.equal(forbidden in row.payload, false, `${row.specCode}: must not own ${forbidden}`);\n  }\n});\n\ntest("known technical evidence stays exact", async () => {\n  const rows = await loadMaterialSpecificationCatalog(repoRoot);\n  const byItem = new Map(rows.map((x) => [x.itemCode, x]));\n  assert.equal(byItem.get("TP-RAY HỘP TD U100")?.kgPerM, 1.419);\n  assert.equal(byItem.get("TP-RAYHOP")?.kgPerM, 1.119);\n  assert.equal(byItem.get("RNHUA-DR")?.kgPerM, 0.263);\n  assert.equal(byItem.get("RNINOX-DR")?.kgPerM, 0.124);\n  assert.equal(byItem.get("TRỤC 114_1.8LY")?.payload.section_code, "Φ114");\n  assert.equal(byItem.get("TRỤC 114_1.8LY")?.payload.thickness_mm, 1.8);\n  assert.equal(byItem.get("TRỤC 114_2.1LY")?.payload.thickness_mm, 2.1);\n});\n\ntest("seed writes Material Specification + Item link only, not measurement/UOM/geometry", async () => {\n  const { sql, catalog } = await buildMaterialSpecificationSeed(repoRoot, "demo");\n  assert.equal(catalog.length, 17);\n  assert.match(sql, /Material Specification/);\n  assert.match(sql, /material_specification/);\n  assert.doesNotMatch(sql, /doctype=['\"]Measurement Profile|Measurement Profile:/);\n  assert.doesNotMatch(sql, /stock_uom|default_purchase_uom|inventory_mode|measurement_profile/);\n  assert.doesNotMatch(sql, /leaf_divisor_m|cutting_policy|purchase_kg_per_m2/);\n});\n\ntest("V2 schema exposes linear material specs while legacy base remains untouched", () => {\n  const base = JSON.parse(readFileSync(resolve(repoRoot, "server/briefs/alumdoor.json"), "utf8"));\n  assert.equal(base.version, "1.27.5");\n  const baseSpec = base.doctypes.find((x) => x.name === "Material Specification");\n  assert.equal(baseSpec.fields.some((x) => (typeof x === "string" ? x.split(":")[0].trim() : x.fieldname) === "spec_type"), false);\n\n  const brief = JSON.parse(readFileSync(resolve(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));\n  assert.equal(brief.version, "2.2.5");\n  const dt = brief.doctypes.find((x) => x.name === "Material Specification");\n  const type = dt.fields.find((x) => (typeof x === "string" ? x.split(":")[0].trim() : x.fieldname) === "spec_type");\n  assert.match(String(type), /Vật tư tuyến tính/);\n  const kg = dt.fields.find((x) => typeof x === "object" && x.fieldname === "theoretical_kg_per_m");\n  assert.match(kg.depends_on, /Vật tư tuyến tính/);\n  const scrap = dt.fields.find((x) => typeof x === "object" && x.fieldname === "scrap_threshold_m");\n  assert.match(scrap.depends_on, /Vật tư tuyến tính/);\n});\n\ntest("legacy profile-spec builder delegates to canonical authority instead of maintaining a second map", () => {\n  const source = readFileSync(resolve(repoRoot, "server/scripts/build-alumdoor-profile-specifications.mjs"), "utf8");\n  assert.doesNotMatch(source, /PROFILE_WEIGHT_ITEMS/);\n  assert.match(source, /buildMaterialSpecificationSeed/);\n});\n'''
+          (root/'server/tests/alumdoor-material-specification-catalog.test.mjs').write_text(test,encoding='utf-8')
+      - name: Test patched Material Specification layer
+        run: |
+          node --test server/tests/alumdoor-material-specification-catalog.test.mjs
+          node --test server/tests/alumdoor-item-standardization.test.mjs
+          node server/scripts/seed-alumdoor-material-specifications-local.mjs demo "$RUNNER_TEMP/material-spec.sql" >/dev/null
+          grep -q "Material Specification" "$RUNNER_TEMP/material-spec.sql"
+      - name: Commit product files and self-clean
+        shell: bash
+        run: |
+          git rm .github/workflows/_tmp-material-spec-patch.yml \
+                 .github/workflows/_tmp-material-spec-patch-v2.yml \
+                 .github/workflows/_tmp-inspect-material-spec-schema.yml \
+                 .github/workflows/_tmp-material-spec-patch-v3.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/scripts/lib/alumdoor-material-specification-catalog.mjs \
+                  server/scripts/seed-alumdoor-material-specifications-local.mjs \
+                  server/scripts/build-alumdoor-profile-specifications.mjs \
+                  server/scripts/lib/alumdoor-item-standardization.mjs \
+                  server/briefs/alumdoor-v2.json \
+                  server/tests/alumdoor-material-specification-catalog.test.mjs
+          git commit -m "feat(alumdoor): lock canonical Material Specification layer"
+          git push origin HEAD:fix/alumdoor-master-layer-material-specification
