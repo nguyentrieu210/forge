@@ -6,15 +6,16 @@
     { "id": "hrm", "version": "1.5.0" }
   ],
   "externalDocTypes": [
-    { "name": "Journal Entry", "kind": "doctype", "app": "vn-accounting" },
-    { "name": "Journal Entry Account", "kind": "doctype", "app": "vn-accounting" },
-    { "name": "Payment Entry", "kind": "doctype", "app": "vn-accounting" },
-    { "name": "Payment Entry Reference", "kind": "doctype", "app": "vn-accounting" },
-    { "name": "Warehouse Cash", "kind": "doctype", "app": "vn-accounting" },
-    { "name": "Employee", "kind": "doctype", "app": "hrm" },
-    { "name": "Department", "kind": "doctype", "app": "hrm" },
-    { "name": "Designation", "kind": "doctype", "app": "hrm" },
-    { "name": "Attendance", "kind": "doctype", "app": "hrm" },
-    { "name": "Salary Slip", "kind": "doctype", "app": "hrm" }
+    { "name": "Warehouse Cash Fund", "kind": "master", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Warehouse Cash Voucher", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Warehouse Cash Transfer", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Warehouse Cash Count", "kind": "transaction", "app": "vn-accounting", "version": "1.1.0" },
+    { "name": "Employee", "kind": "master", "app": "hrm", "version": "1.5.0" },
+    { "name": "Account", "kind": "tree", "app": "erpnext" },
+    { "name": "Batch", "kind": "master", "app": "erpnext" },
+    { "name": "Company", "kind": "master", "app": "erpnext" },
+    { "name": "Currency", "kind": "master", "app": "erpnext" },
+    { "name": "Serial and Batch Bundle", "kind": "transaction", "app": "erpnext" },
+    { "name": "User", "kind": "system", "app": "frappe" }
   ]
 }
