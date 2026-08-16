@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { materialSpecificationCodeForTarget, materialSpecificationFromTarget } from "./alumdoor-material-specification-catalog.mjs";
 
 export const MIGRATION_AT = "2026-07-30T16:30:00.000Z";
 export const MIGRATION_SOURCE = "alumdoor-item-standardization-2026-07-30";
@@ -177,10 +178,6 @@ function itemDescription(target) {
   return `Vật tư nguyên tử; mua và tồn theo Kg. ${source} Định mức kg/m chỉ là dữ liệu đối chiếu, không tự tính số lượng mua hoặc tồn.`;
 }
 
-function specCode(target) {
-  return `ĐM-${target.supplierCode ?? target.itemCode}`;
-}
-
 function itemPatch(target) {
   return {
     item_code: target.itemCode,
@@ -207,7 +204,7 @@ function itemPatch(target) {
           }],
         }
       : {}),
-    material_specification: specCode(target),
+    material_specification: materialSpecificationCodeForTarget(target),
     valuation_method: "FIFO",
     has_batch_no: false,
     has_serial_no: false,
@@ -386,25 +383,14 @@ WHERE tenant_id='alu'
   AND COALESCE(json_extract(payload_json,'$.measurement_profile'),'')<>json_extract(payload_json,'$.inventory_mode');`);
 
   for (const target of targets) {
-    const spec = specCode(target);
-    appendPatchUpsert(sql, "Material Specification", spec, {
-      spec_code: spec,
-      spec_name: `Định mức ${target.itemName}`,
-      item_group: target.itemGroup,
-      spec_type: target.specType ?? "Nhôm cây/lá",
-      profile_system: target.supplierCode ? SUPPLIER : "Alumdoor",
-      section_code: target.sectionCode ?? target.supplierCode ?? target.itemCode,
-      theoretical_kg_per_m: target.kgPerM,
-      ...(target.thicknessMm ? { thickness_mm: target.thicknessMm } : {}),
-      note: `Định mức xác nhận: ${target.kgPerM} kg/m. Chỉ lưu để đối chiếu và quy đổi đơn vị; không tự sinh số kg đặt mua.`,
-      disabled: false,
-      _migration_source: MIGRATION_SOURCE,
-    });
+    const specification = materialSpecificationFromTarget(target);
+    const spec = specification.specCode;
+    appendPatchUpsert(sql, "Material Specification", spec, specification.payload);
     appendSearchUpsert(
       sql,
       "Material Specification",
       spec,
-      `Định mức ${target.itemName}`,
+      specification.payload.spec_name,
       `${spec} ${target.itemCode} ${target.supplierCode ?? ""} ${target.kgPerM} kg/m`,
     );
 

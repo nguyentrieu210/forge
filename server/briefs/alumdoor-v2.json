@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -2623,7 +2623,7 @@
           "required": true,
           "link_filters": "{\"is_group\":0,\"disabled\":0}"
         },
-        "spec_type:Select(Nhôm cây/lá,Ống/trục,Tấm/Kính,Cuộn,Khác)! Loại quy cách",
+        "spec_type:Select(Nhôm cây/lá,Ống/trục,Tấm/Kính,Cuộn,Vật tư tuyến tính,Khác)! Loại quy cách",
         "material_grade:Link(Material Grade) Mác vật liệu",
         {
           "fieldname": "profile_system",
@@ -2641,7 +2641,7 @@
           "fieldname": "theoretical_kg_per_m",
           "fieldtype": "Float",
           "label": "Kg/m lý thuyết",
-          "depends_on": "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục'"
+          "depends_on": "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Vật tư tuyến tính'"
         },
         {
           "fieldname": "standard_length_m",
@@ -2671,7 +2671,7 @@
           "fieldname": "scrap_threshold_m",
           "fieldtype": "Float",
           "label": "Ngưỡng phế liệu (m)",
-          "depends_on": "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Cuộn'"
+          "depends_on": "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Cuộn' || doc.spec_type == 'Vật tư tuyến tính'"
         },
         "drawing:Attach Bản vẽ kỹ thuật",
         "note:Small Text Ghi chú",
