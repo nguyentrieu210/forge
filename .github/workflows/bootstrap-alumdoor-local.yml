@@ -49,6 +49,22 @@ jobs:
             throw "C:\alumdoor dang o branch '$branch'. Runner chi cap nhat local main de khong pha working branch."
           }
 
+          # These are generated local-only artifacts seen on the self-hosted machine.
+          # Preserve them on disk, but hide them from Git status so they cannot block a
+          # safe fast-forward. Any other source change still fails the bootstrap.
+          $excludeFile = Join-Path $target '.git\info\exclude'
+          $safeLocalPatterns = @('.sentrux.local-backup/', 'package-lock.json')
+          $existingExcludes = @()
+          if (Test-Path $excludeFile) {
+            $existingExcludes = @(Get-Content $excludeFile -ErrorAction SilentlyContinue)
+          }
+          foreach ($pattern in $safeLocalPatterns) {
+            if ($existingExcludes -notcontains $pattern) {
+              Add-Content -Path $excludeFile -Value $pattern
+              Write-Host "Local-only exclude: $pattern"
+            }
+          }
+
           $dirty = @(git -C $target status --porcelain)
           if ($dirty.Count -gt 0) {
             Write-Host 'Working tree dang co thay doi:'
