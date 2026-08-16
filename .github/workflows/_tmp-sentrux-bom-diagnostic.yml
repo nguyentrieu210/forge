@@ -1,0 +1,50 @@
+name: Temporary BOM Sentrux diagnostic
+on:
+  push:
+    branches: ['agent/alumdoor-bom-template-resolver']
+    paths:
+      - '.github/workflows/_tmp-sentrux-bom-diagnostic.yml'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Sentrux
+        run: |
+          set -euo pipefail
+          curl -L -o /tmp/sentrux https://github.com/sentrux/sentrux/releases/latest/download/sentrux-linux-x86_64
+          chmod +x /tmp/sentrux
+          sudo mv /tmp/sentrux /usr/local/bin/sentrux
+      - name: Capture committed-rule failure
+        shell: bash
+        run: |
+          set +e
+          sentrux check . > /tmp/sentrux-check.log 2>&1
+          status=$?
+          while IFS= read -r line; do
+            safe=${line//'%'/'%25'}
+            safe=${safe//$'\r'/'%0D'}
+            safe=${safe//$'\n'/'%0A'}
+            echo "::notice::$safe"
+          done < /tmp/sentrux-check.log
+          echo "::notice::SENTRUX_CHECK_EXIT=$status"
+          exit 0
+      - name: Capture gate score
+        shell: bash
+        run: |
+          set +e
+          sentrux gate --save . > /tmp/sentrux-gate.log 2>&1
+          status=$?
+          while IFS= read -r line; do
+            safe=${line//'%'/'%25'}
+            safe=${safe//$'\r'/'%0D'}
+            safe=${safe//$'\n'/'%0A'}
+            echo "::notice::$safe"
+          done < /tmp/sentrux-gate.log
+          echo "::notice::SENTRUX_GATE_EXIT=$status"
+          exit 0
