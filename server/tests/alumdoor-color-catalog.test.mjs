@@ -9,6 +9,7 @@ import {
   canonicalAlumdoorColor,
   canonicalAlumdoorFinish,
 } from "../scripts/lib/alumdoor-color-catalog.mjs";
+import { ALUMDOOR_ITEM_GROUP_CATALOG } from "../scripts/lib/alumdoor-item-group-catalog.mjs";
 
 test("Alumdoor surface finish catalogue has exactly 4 canonical entries", () => {
   assert.equal(ALUMDOOR_SURFACE_FINISH_CATALOG.length, 4);
@@ -31,14 +32,30 @@ test("SƠN TĨNH ĐIỆN / MẠ MÀU / SƠN VÂN GỖ: requires_color=true", () 
   }
 });
 
-test("SƠN TĨNH ĐIỆN áp 5 nhóm cửa theo MS.md; SƠN VÂN GỖ chỉ Cửa CN Đức theo bảng giá 31/07", () => {
+test("SƠN TĨNH ĐIỆN áp đủ 6 nhóm theo MS.md; SƠN VÂN GỖ chỉ Cửa CN Đức theo bảng giá 31/07", () => {
   const std = alumdoorSurfaceFinishPayload(ALUMDOOR_SURFACE_FINISH_CATALOG.find((f) => f.code === "SON_TINH_DIEN"));
   assert.deepEqual(
     std.applies_to_groups.map((r) => r.item_group),
-    ["Cửa CN Đức", "Cửa tấm liền Úc", "Cửa Siêu Trường", "Cửa Đài Loan", "Cửa Lưới"],
+    [
+      "Cửa CN Đức",
+      "Cửa tấm liền Úc",
+      "Cửa Siêu Trường",
+      "Cửa Đài Loan",
+      "Cửa Lưới",
+      "Phụ kiện cần sơn tĩnh điện",
+    ],
   );
   const vanGo = alumdoorSurfaceFinishPayload(ALUMDOOR_SURFACE_FINISH_CATALOG.find((f) => f.code === "SON_VAN_GO"));
   assert.deepEqual(vanGo.applies_to_groups.map((r) => r.item_group), ["Cửa CN Đức"]);
+});
+
+test("mọi Surface Finish scope đều trỏ tới Item Group canonical hiện có", () => {
+  const itemGroups = new Set(ALUMDOOR_ITEM_GROUP_CATALOG.map((row) => row.name));
+  for (const finish of ALUMDOOR_SURFACE_FINISH_CATALOG) {
+    for (const group of finish.groups ?? []) {
+      assert.ok(itemGroups.has(group), `${finish.code} trỏ Item Group không canonical: ${group}`);
+    }
+  }
 });
 
 test("Alumdoor color catalogue has exactly 25 canonical colors (24 màu + VÂN GỖ)", () => {
@@ -48,7 +65,6 @@ test("Alumdoor color catalogue has exactly 25 canonical colors (24 màu + VÂN G
   assert.equal(ALUMDOOR_COLOR_CATALOG.filter((color) => color.finish === "SON_TINH_DIEN").length, 18);
   assert.equal(ALUMDOOR_COLOR_CATALOG.filter((color) => color.finish === "MA_MAU").length, 5);
   assert.equal(ALUMDOOR_COLOR_CATALOG.filter((color) => color.finish === "SON_VAN_GO").length, 1);
-  // finish phải luôn là mã khớp catalog Bề mặt — không rơi lại text tự do.
   const finishCodes = new Set(ALUMDOOR_SURFACE_FINISH_CATALOG.map((f) => f.code));
   for (const color of ALUMDOOR_COLOR_CATALOG) assert.ok(finishCodes.has(color.finish), `${color.code} trỏ finish lạ ${color.finish}`);
 });
@@ -67,7 +83,7 @@ test("legacy lot color codes normalize to the names confirmed in the V2 spec", (
   assert.equal(canonicalAlumdoorColor("THÔ"), "THÔ");
 });
 
-test("legacy finish text (Select cũ) quy đổi đúng 4 giá trị đã chốt; Anode/Khác KHÔNG map ngầm", () => {
+test("legacy finish text quy đổi đúng 4 giá trị đã chốt; Anode/Khác KHÔNG map ngầm", () => {
   assert.equal(canonicalAlumdoorFinish("Thô"), "THO");
   assert.equal(canonicalAlumdoorFinish("Sơn tĩnh điện"), "SON_TINH_DIEN");
   assert.equal(canonicalAlumdoorFinish("Mạ"), "MA_MAU");
@@ -77,7 +93,7 @@ test("legacy finish text (Select cũ) quy đổi đúng 4 giá trị đã chốt
   assert.equal(ALUMDOOR_LEGACY_FINISH_MAP.size, 4);
 });
 
-test("canonical colors preserve supplier codes; STĐ không tự thu hẹp thêm ở Item Color (rỗng = kế thừa phạm vi Bề mặt)", () => {
+test("canonical colors preserve supplier codes; STĐ Item Color rỗng = kế thừa phạm vi Bề mặt", () => {
   const white = alumdoorColorPayload(ALUMDOOR_COLOR_CATALOG.find((color) => color.code === "TRẮNG"));
   const burgundy = alumdoorColorPayload(ALUMDOOR_COLOR_CATALOG.find((color) => color.code === "ĐỎ ĐÔ"));
   const plated = alumdoorColorPayload(ALUMDOOR_COLOR_CATALOG.find((color) => color.code === "XANH NGỌC - VÀNG KEM"));
