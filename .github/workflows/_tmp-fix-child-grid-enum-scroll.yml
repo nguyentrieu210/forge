@@ -34,13 +34,27 @@ jobs:
             fs.writeFileSync(path, text, 'utf8');
           }
 
-          const overlay = 'server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs';
-          replaceOnce(overlay, '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", label: "Trục đo", required: true },', '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", optionLabels: { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" }, label: "Trục đo", required: true },', 'overlay axis labels');
-          replaceOnce(overlay, '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", label: "Vai trò", required: true },', '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", optionLabels: { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" }, label: "Vai trò", required: true },', 'overlay role labels');
+          const axisBefore = '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", label: "Trục đo", required: true },';
+          const axisAfter = '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", optionLabels: { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" }, label: "Trục đo", required: true },';
+          const roleBefore = '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", label: "Vai trò", required: true },';
+          const roleAfter = '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", optionLabels: { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" }, label: "Vai trò", required: true },';
 
-          const builder = 'server/scripts/build-alumdoor-v2-brief.mjs';
-          replaceOnce(builder, '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", label: "Trục đo", required: true },', '{ fieldname: "axis", fieldtype: "Select", options: "WIDTH\\nHEIGHT\\nLENGTH\\nOTHER", optionLabels: { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" }, label: "Trục đo", required: true },', 'builder axis labels');
-          replaceOnce(builder, '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", label: "Vai trò", required: true },', '{ fieldname: "role", fieldtype: "Select", options: "INPUT\\nCALCULATED\\nINFO", optionLabels: { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" }, label: "Vai trò", required: true },', 'builder role labels');
+          for (const path of ['server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs', 'server/scripts/build-alumdoor-v2-brief.mjs']) {
+            replaceOnce(path, axisBefore, axisAfter, `${path} axis labels`);
+            replaceOnce(path, roleBefore, roleAfter, `${path} role labels`);
+          }
+
+          const briefPath = 'server/briefs/alumdoor-v2.json';
+          const brief = JSON.parse(fs.readFileSync(briefPath, 'utf8'));
+          const geometryField = brief.doctypes.find((row) => row.name === 'Geometry Field');
+          const axis = geometryField?.fields?.find((field) => field && typeof field === 'object' && field.fieldname === 'axis');
+          if (!axis) throw new Error('brief Geometry Field.axis missing');
+          axis.optionLabels = { WIDTH: 'Chiều rộng', HEIGHT: 'Chiều cao', LENGTH: 'Chiều dài', OTHER: 'Khác' };
+          const geometryProfileField = brief.doctypes.find((row) => row.name === 'Geometry Profile Field');
+          const role = geometryProfileField?.fields?.find((field) => field && typeof field === 'object' && field.fieldname === 'role');
+          if (!role) throw new Error('brief Geometry Profile Field.role missing');
+          role.optionLabels = { INPUT: 'Nhập liệu', CALCULATED: 'Tự tính', INFO: 'Thông tin' };
+          fs.writeFileSync(briefPath, JSON.stringify(brief, null, 2) + '\n', 'utf8');
 
           const grid = 'client/packages/views/src/form/ChildGrid.tsx';
           replaceOnce(grid, '<div className="overflow-x-auto rounded-md border border-input [scrollbar-width:thin]">', '<div className={`${expanded ? "overflow-x-auto" : "max-h-[min(52vh,32rem)] overflow-auto"} rounded-md border border-input [scrollbar-width:thin]`}>', 'child grid scroll container');
@@ -55,15 +69,10 @@ jobs:
           if (!testText.includes(anchor)) throw new Error('geometry test anchor missing');
           testText = testText.replace(anchor, `  assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);\n  const geometryField = byName.get("Geometry Field");\n  const axis = (geometryField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "axis");\n  assert.deepEqual(axis?.optionLabels, { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" });\n  const geometryProfileField = byName.get("Geometry Profile Field");\n  const role = (geometryProfileField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "role");\n  assert.deepEqual(role?.optionLabels, { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" });\n});`);
           fs.writeFileSync(test, testText, 'utf8');
-          NODE
 
-          node server/scripts/apply-alumdoor-measurement-geometry-overlay.mjs --write
-
-          node <<'NODE'
-          const fs = require('fs');
-          const grid = fs.readFileSync('client/packages/views/src/form/ChildGrid.tsx', 'utf8');
-          if (!grid.includes('max-h-[min(52vh,32rem)] overflow-auto')) throw new Error('missing child-grid vertical scroll');
-          if (!grid.includes('sticky top-0')) throw new Error('missing sticky child-grid header');
+          const gridText = fs.readFileSync(grid, 'utf8');
+          if (!gridText.includes('max-h-[min(52vh,32rem)] overflow-auto')) throw new Error('missing child-grid vertical scroll');
+          if (!gridText.includes('sticky top-0')) throw new Error('missing sticky child-grid header');
           const controls = fs.readFileSync('client/packages/controls/src/controls.tsx', 'utf8');
           if (!controls.includes('const labelOf = (o: string) => labels?.[o] ?? o;')) throw new Error('SelectControl no longer honors optionLabels');
           NODE
