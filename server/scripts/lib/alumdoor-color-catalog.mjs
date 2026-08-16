@@ -175,6 +175,14 @@ export function alumdoorSurfaceFinishPayload(finish) {
       row_id: `SCOPE-${String(index + 1).padStart(2, "0")}`,
       item_group: itemGroup,
     })),
+    excluded_groups: (finish.excludedGroups ?? []).map((itemGroup, index) => ({
+      row_id: `EX-GROUP-${String(index + 1).padStart(2, "0")}`,
+      item_group: itemGroup,
+    })),
+    excluded_items: (finish.excludedItems ?? []).map((itemCode, index) => ({
+      row_id: `EX-ITEM-${String(index + 1).padStart(2, "0")}`,
+      item_code: itemCode,
+    })),
     applies_to_all_groups: Boolean(finish.appliesToAllGroups),
     usage_scope: finish.usageScope ?? "Mua & bán",
     disabled: false,

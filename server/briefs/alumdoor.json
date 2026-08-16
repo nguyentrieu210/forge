@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "1.27.4",
+  "version": "1.27.5",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -2000,6 +2000,20 @@
           "label": "Nhóm SP áp dụng"
         },
         "applies_to_all_groups:Check Áp dụng mọi Nhóm hàng (khai tường minh, không suy ngầm từ rỗng)",
+        {
+          "fieldname": "excluded_groups",
+          "fieldtype": "Table",
+          "options": "Surface Finish Excluded Group",
+          "label": "Nhóm SP loại trừ",
+          "description": "Loại cả nhóm và mọi nhóm con, dù nhóm cha đang nằm trong phạm vi áp dụng."
+        },
+        {
+          "fieldname": "excluded_items",
+          "fieldtype": "Table",
+          "options": "Surface Finish Excluded Item",
+          "label": "Mặt hàng loại trừ",
+          "description": "Loại từng Item cụ thể, dù Item thuộc Nhóm SP đang được áp dụng."
+        },
         "usage_scope:Select(Mua hàng,Bán hàng,Mua & bán)!=(Mua & bán) Phạm vi giao dịch",
         "disabled:Check Ngừng dùng"
       ],
@@ -5874,6 +5888,76 @@
         "Thủ kho": "r",
         "Kinh doanh": "r",
         "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Surface Finish Excluded Group",
+      "child": true,
+      "label": "Nhóm SP loại trừ (Bề mặt)",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_group",
+      "list": [
+        "item_group"
+      ],
+      "fields": [
+        {
+          "fieldname": "item_group",
+          "label": "Nhóm hàng",
+          "fieldtype": "Link",
+          "options": "Item Group",
+          "required": true,
+          "link_filters": "{\"is_group\":0,\"disabled\":0}",
+          "surface": "quick"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "item_group"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "item_group"
+        ]
+      }
+    },
+    {
+      "name": "Surface Finish Excluded Item",
+      "child": true,
+      "label": "Mặt hàng loại trừ (Bề mặt)",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": [
+        "item_code"
+      ],
+      "fields": [
+        "item_code:Link(Item)! Mặt hàng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "item_code"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "item_code"
+        ]
       }
     }
   ],

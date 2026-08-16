@@ -32,6 +32,13 @@ test("SƠN TĨNH ĐIỆN / MẠ MÀU / SƠN VÂN GỖ: requires_color=true", () 
   }
 });
 
+
+test("Surface Finish payload hỗ trợ loại trừ theo Nhóm hàng và Item", () => {
+  const payload = alumdoorSurfaceFinishPayload({ code: "TEST", name: "TEST", groups: ["Cửa CN Đức"], excludedGroups: ["Cửa CN Đức thử nghiệm"], excludedItems: ["AL595-BLOCKED"], requiresColor: true });
+  assert.deepEqual(payload.excluded_groups.map((row) => row.item_group), ["Cửa CN Đức thử nghiệm"]);
+  assert.deepEqual(payload.excluded_items.map((row) => row.item_code), ["AL595-BLOCKED"]);
+});
+
 test("SƠN TĨNH ĐIỆN áp đủ 6 nhóm; SƠN VÂN GỖ áp Đức + Úc + Siêu Trường + Đài Loan", () => {
   const std = alumdoorSurfaceFinishPayload(ALUMDOOR_SURFACE_FINISH_CATALOG.find((f) => f.code === "SON_TINH_DIEN"));
   assert.deepEqual(

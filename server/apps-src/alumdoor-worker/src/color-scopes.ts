@@ -89,12 +89,21 @@ async function listFinishes(call: ColorScopePlatformCall): Promise<Json[]> {
   return pending;
 }
 
+function tableRows(value: unknown): Json[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row));
+}
+
+function groupTable(entity: Json, field: "applies_to_groups" | "excluded_groups"): string[] {
+  return tableRows(entity[field]).map((row) => text(row.item_group)).filter(Boolean);
+}
+
+function itemTable(entity: Json, field: "excluded_items"): string[] {
+  return tableRows(entity[field]).map((row) => text(row.item_code)).filter(Boolean);
+}
+
 function scopeGroups(entity: Json): string[] {
-  if (!Array.isArray(entity.applies_to_groups)) return [];
-  return entity.applies_to_groups
-    .filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
-    .map((row) => text(row.item_group))
-    .filter(Boolean);
+  return groupTable(entity, "applies_to_groups");
 }
 
 export function normalizeColorUsage(value: unknown): ColorUsage {
@@ -124,12 +133,16 @@ function allowedForUsage(entity: Json, usage: ColorUsage): boolean {
   return scope !== "Mua hàng";
 }
 
-/** Fail-closed: rỗng + không applies_to_all_groups = KHÔNG áp dụng cho nhóm nào. */
-function finishAppliesToGroups(finish: Json, groupsInLineage: Set<string>): boolean {
-  if (checked(finish.applies_to_all_groups)) return true;
+/** Include fail-closed; exclusion luôn thắng include. */
+function finishAppliesToContext(finish: Json, groupsInLineage: Set<string>, itemCode = ""): boolean {
   const scopes = scopeGroups(finish);
-  if (!scopes.length) return false;
-  return scopes.some((scope) => groupsInLineage.has(scope));
+  const included = checked(finish.applies_to_all_groups)
+    || (scopes.length > 0 && scopes.some((scope) => groupsInLineage.has(scope)));
+  if (!included) return false;
+  if (groupTable(finish, "excluded_groups").some((group) => groupsInLineage.has(group))) return false;
+  const code = text(itemCode);
+  if (code && itemTable(finish, "excluded_items").some((excluded) => excluded === code)) return false;
+  return true;
 }
 
 /**
@@ -176,6 +189,7 @@ export async function allowedFinishesForGroup(
   call: ColorScopePlatformCall,
   itemGroup: string,
   usage: ColorUsage = "internal",
+  itemCode = "",
 ): Promise<Array<{ code: string; name: string; requires_color: boolean }>> {
   const group = text(itemGroup);
   if (!group) return [];
@@ -184,7 +198,7 @@ export async function allowedFinishesForGroup(
   return finishes
     .filter((finish) => !checked(finish.disabled))
     .filter((finish) => allowedForUsage(finish, usage))
-    .filter((finish) => finishAppliesToGroups(finish, groups))
+    .filter((finish) => finishAppliesToContext(finish, groups, itemCode))
     .map((finish) => ({
       code: text(finish.name || finish.finish_code),
       name: text(finish.finish_name || finish.name),
@@ -196,7 +210,7 @@ export async function allowedFinishesForGroup(
 
 /**
  * Màu hợp lệ cho một Nhóm hàng, theo đúng MỘT Bề mặt đã xác định hợp lệ cho nhóm đó
- * (`finishAppliesToGroups` đã pass) — không tự resolve lại Bề mặt, gọi nơi dùng phải tự đảm
+ * (`finishAppliesToContext` đã pass) — không tự resolve lại Bề mặt, gọi nơi dùng phải tự đảm
  * bảo `finishCode` nằm trong `allowedFinishesForGroup`.
  */
 async function scopedColorsForGroupAndFinish(
@@ -239,8 +253,9 @@ export async function allowedColorNamesForGroup(
   call: ColorScopePlatformCall,
   itemGroup: string,
   usage: ColorUsage = "internal",
+  itemCode = "",
 ): Promise<string[]> {
-  const finishes = await allowedFinishesForGroup(call, itemGroup, usage);
+  const finishes = await allowedFinishesForGroup(call, itemGroup, usage, itemCode);
   const perFinish = await Promise.all(
     finishes.map((finish) => scopedColorsForGroupAndFinish(call, itemGroup, finish.code, usage)),
   );
@@ -267,7 +282,7 @@ export async function colorScopeForItem(
   if (!itemGroup) throw new Error(`Mặt hàng ${code} chưa có Nhóm hàng.`);
   return {
     item_group: itemGroup,
-    allowed_colors: await allowedColorNamesForGroup(call, itemGroup, usage),
+    allowed_colors: await allowedColorNamesForGroup(call, itemGroup, usage, code),
   };
 }
 
@@ -299,7 +314,7 @@ export async function finishColorContextForItem(
   const itemGroup = text(item.item_group);
   if (!itemGroup) throw new Error(`Mặt hàng ${code} chưa có Nhóm hàng.`);
 
-  const allowedFinishes = await allowedFinishesForGroup(call, itemGroup, usage);
+  const allowedFinishes = await allowedFinishesForGroup(call, itemGroup, usage, code);
   const finishCode = text(finish);
   const targetFinishes = finishCode
     ? allowedFinishes.filter((entry) => entry.code === finishCode) // fail closed nếu không khớp

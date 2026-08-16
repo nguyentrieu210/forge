@@ -103,3 +103,17 @@ test("pricing surcharge seed does not own Item Color and uses canonical wood-gra
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+
+test("Surface Finish schema exposes group and item exclusions in base and V2 briefs", () => {
+  for (const relative of ["server/briefs/alumdoor.json", "server/briefs/alumdoor-v2.json"]) {
+    const brief = JSON.parse(readFileSync(join(repoRoot, relative), "utf8"));
+    const surface = brief.doctypes.find((row) => row.name === "Surface Finish");
+    assert.ok(surface, `${relative}: missing Surface Finish`);
+    const names = surface.fields.map((field) => typeof field === "string" ? field.split(":")[0].trim() : field.fieldname);
+    assert.ok(names.includes("excluded_groups"), `${relative}: missing excluded_groups`);
+    assert.ok(names.includes("excluded_items"), `${relative}: missing excluded_items`);
+    assert.ok(brief.doctypes.some((row) => row.name === "Surface Finish Excluded Group"));
+    assert.ok(brief.doctypes.some((row) => row.name === "Surface Finish Excluded Item"));
+  }
+});

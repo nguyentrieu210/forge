@@ -18,6 +18,7 @@ import {
 const ITEM_GROUPS = {
   "Cửa thành phẩm": { parent_item_group: "" },
   "Cửa CN Đức": { parent_item_group: "Cửa thành phẩm" },
+  "Cửa CN Đức thử nghiệm": { parent_item_group: "Cửa CN Đức" },
   "Cửa tấm liền Úc": { parent_item_group: "Cửa thành phẩm" },
   "Cửa Đài Loan": { parent_item_group: "Cửa thành phẩm" },
   "Motor & điện": { parent_item_group: "" },
@@ -32,7 +33,7 @@ const FINISHES = [
   { name: "THO", finish_code: "THO", finish_name: "THÔ", requires_color: false, applies_to_all_groups: true, applies_to_groups: [], usage_scope: "Mua hàng", disabled: false },
   { name: "SON_TINH_DIEN", finish_code: "SON_TINH_DIEN", finish_name: "SƠN TĨNH ĐIỆN", requires_color: true, applies_to_all_groups: false, applies_to_groups: scope(["Cửa CN Đức", "Phụ kiện sơn tĩnh điện"]), usage_scope: "Mua & bán", disabled: false },
   { name: "MA_MAU", finish_code: "MA_MAU", finish_name: "MẠ MÀU", requires_color: true, applies_to_all_groups: false, applies_to_groups: scope(["Cửa tấm liền Úc", "Cửa Đài Loan"]), usage_scope: "Mua & bán", disabled: false },
-  { name: "SON_VAN_GO", finish_code: "SON_VAN_GO", finish_name: "SƠN VÂN GỖ", requires_color: true, applies_to_all_groups: false, applies_to_groups: scope(["Cửa CN Đức"]), usage_scope: "Mua & bán", disabled: false },
+  { name: "SON_VAN_GO", finish_code: "SON_VAN_GO", finish_name: "SƠN VÂN GỖ", requires_color: true, applies_to_all_groups: false, applies_to_groups: scope(["Cửa CN Đức"]), excluded_groups: scope(["Cửa CN Đức thử nghiệm"]), excluded_items: [{ row_id: "EX-I1", item_code: "AL595-BLOCKED" }], usage_scope: "Mua & bán", disabled: false },
   { name: "TAT", finish_code: "TAT", finish_name: "BỀ MẶT TẮT", requires_color: true, applies_to_all_groups: true, applies_to_groups: [], usage_scope: "Mua & bán", disabled: true },
 ];
 
@@ -48,6 +49,8 @@ const COLORS = [
 
 const ITEMS = {
   AL548: { item_group: "Cửa CN Đức" },
+  "AL595-BLOCKED": { item_group: "Cửa CN Đức" },
+  "GERMAN-TEST-01": { item_group: "Cửa CN Đức thử nghiệm" },
   "CUA-UC-01": { item_group: "Cửa tấm liền Úc" },
   "CUA-TL-01": { item_group: "Cửa Đài Loan" },
   "MOTOR-01": { item_group: "Mô tơ" },
@@ -168,6 +171,26 @@ test("Phụ kiện được whitelist STĐ qua nhóm riêng → có màu STĐ", 
 test("SƠN VÂN GỖ hiện không có màu nào ngoài VÂN GỖ", async () => {
   const colors = await allowedColorNamesForGroupAndFinish(fakeCall(), "Cửa CN Đức", "SON_VAN_GO", "internal");
   assert.deepEqual(colors, ["VÂN GỖ"]);
+});
+
+
+test("excluded_items thắng group include", async () => {
+  const result = await finishColorContextForItem(fakeCall(), "AL595-BLOCKED", undefined, "internal");
+  assert.ok(!result.allowed_finishes.some((finish) => finish.code === "SON_VAN_GO"));
+  assert.ok(!result.allowed_colors.includes("VÂN GỖ"));
+});
+
+test("excluded_groups thắng group cha include và loại toàn nhánh con", async () => {
+  const finishes = await allowedFinishesForGroup(fakeCall(), "Cửa CN Đức thử nghiệm", "internal");
+  assert.ok(!finishes.some((finish) => finish.code === "SON_VAN_GO"));
+  const item = await finishColorContextForItem(fakeCall(), "GERMAN-TEST-01", undefined, "internal");
+  assert.ok(!item.allowed_finishes.some((finish) => finish.code === "SON_VAN_GO"));
+});
+
+test("exclusion không ảnh hưởng Item khác cùng nhóm", async () => {
+  const result = await finishColorContextForItem(fakeCall(), "AL548", undefined, "internal");
+  assert.ok(result.allowed_finishes.some((finish) => finish.code === "SON_VAN_GO"));
+  assert.ok(result.allowed_colors.includes("VÂN GỖ"));
 });
 
 // ---- finishColorContextForItem: luồng Item → Bề mặt → Màu, colors_by_finish ----
