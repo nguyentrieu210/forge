@@ -9,12 +9,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: bootstrap-alumdoor-local-machine
+  group: bootstrap-alumdoor-local-machine-v2
   cancel-in-progress: false
 
 jobs:
   bootstrap-local:
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: [self-hosted]
     timeout-minutes: 45
     steps:
       - name: Ensure C:\alumdoor source workspace
