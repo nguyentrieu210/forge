@@ -89,7 +89,7 @@ const SUPPLEMENTAL_KG_ITEMS = [
   {
     itemCode: "RON-DD",
     itemName: "RON ĐÁY ĐỨC",
-    itemGroup: "Phụ kiện",
+    itemGroup: "Phụ kiện chung",
     inventoryMode: "Hàng thường",
     isSalesItem: true,
     kgPerM: 0.117,
@@ -98,7 +98,7 @@ const SUPPLEMENTAL_KG_ITEMS = [
   {
     itemCode: "RNHUA-DR",
     itemName: "RON NHỰA",
-    itemGroup: "Phụ kiện",
+    itemGroup: "Phụ kiện chung",
     inventoryMode: "Hàng thường",
     isSalesItem: true,
     kgPerM: 0.263,
@@ -107,7 +107,7 @@ const SUPPLEMENTAL_KG_ITEMS = [
   {
     itemCode: "RNINOX-DR",
     itemName: "RON INOX",
-    itemGroup: "Phụ kiện",
+    itemGroup: "Phụ kiện chung",
     inventoryMode: "Hàng thường",
     isSalesItem: true,
     kgPerM: 0.124,

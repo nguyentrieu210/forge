@@ -160,11 +160,12 @@ function leafItemGroup(row) {
     "Cửa CN Đức",
     "Cửa Lưới",
     "Cửa kéo Đài Loan",
-    "Cửa siêu trường",
+    "Cửa Siêu Trường",
     "Cửa tấm liền Úc",
     "Cửa Đài Loan",
     "Cửa Đài Loan Inox",
   ]);
+  if (sourceGroup === "Cửa siêu trường") return "Cửa Siêu Trường";
   if (doorGroups.has(sourceGroup)) return sourceGroup;
   throw new Error(`Unsupported item group '${sourceGroup}' for ${row["Mã SP"]}`);
 }
@@ -230,7 +231,7 @@ function buildPayload(entry) {
     ["Cửa kéo Đài Loan", "Cửa Đài Loan"],
     ["Cửa Đài Loan", "Cửa Đài Loan"],
     ["Cửa Đài Loan Inox", "Cửa Đài Loan"],
-    ["Cửa siêu trường", "Cửa Siêu Trường"],
+    ["Cửa Siêu Trường", "Cửa Siêu Trường"],
     ["Cửa tấm liền Úc", "Cửa tấm liền Úc"],
   ]).get(group);
   const leafWidthMatch = row["Thông số"].match(/Bản lá\s+([\d.,]+)/i);
