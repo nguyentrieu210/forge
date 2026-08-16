@@ -8,157 +8,245 @@ const product = (left, right, multiply = 1) => ({
   ...(multiply === 1 ? {} : { multiply }),
 });
 
-/**
- * Source-backed BOM normalization catalog.
- *
- * Rule: source ambiguity is data, not permission to guess. A template stays disabled
- * until every production-critical source row is represented deterministically or has
- * an explicit structured input in Sales configuration.
- */
-export const BOM_TEMPLATE_SOURCE_CATALOG = [
-  {
-    name: "SRC-UC-KT-4D-XN-VK",
+const SOURCE_DOCUMENT = "MS LIÊN BS.xlsx";
+const SOURCE_SHEET = "ĐM";
+
+const REQUIRED_ACTUAL_4D = [
+  "BOTTOM_SEAL",
+  "FOAM_45CM",
+  "PULLEY_34",
+  "SPRING",
+  "SPRING_STOP_ARM",
+  "PULL_ROD",
+  "SCREW_HEAD_PULLEY",
+  "SCREW_2P_PULLEY",
+];
+
+const REQUIRED_ACTUAL_46D = [
+  "LEAF_SHEET",
+  "SPIKE_PULLEY_WEIGHT",
+  "BOTTOM_BAR_WEIGHT",
+  "RAY_U70_WEIGHT",
+  "FOAM_45CM",
+  "SHAFT_34_WEIGHT",
+  "PULLEY_34",
+  "SPRING",
+  "SPRING_STOP_ARM",
+  "PULL_ROD",
+  "SCREW_HEAD_PULLEY",
+  "SCREW_2P_PULLEY",
+];
+
+function sourceRows(productRow, count = 24) {
+  return Array.from({ length: count }, (_, index) => productRow + index + 1);
+}
+
+function sourceRule(row, input) {
+  return {
+    rule_code: `SRC-${row}-${input.code}`,
+    component_key: input.key,
+    item_code: input.item,
+    source_row: row,
+    source_uom: input.uom,
+    source_formula: input.sourceFormula,
+    sequence: input.sequence,
+    quantity_formula_json: JSON.stringify(input.quantity),
+  };
+}
+
+function actualEntry(sourceRow, key, reason, sourceRowsOverride = undefined) {
+  return sourceRowsOverride
+    ? { source_rows: sourceRowsOverride, key, reason }
+    : { source_row: sourceRow, key, reason };
+}
+
+function sourceTemplateBase({ name, itemCode, productRow, componentRows, requiredKeys, requiredActualKeys, deferred, rules, note }) {
+  return {
+    name,
     source: {
-      document: "MS LIÊN BS.xlsx",
-      sheet: "ĐM",
-      product_row: 686,
-      component_rows: [687, 688, 689, 690, 691, 692, 693, 694, 695, 696, 697, 698, 699, 700, 701, 702, 703, 705, 706, 707, 708, 709, 710, 711],
+      document: SOURCE_DOCUMENT,
+      sheet: SOURCE_SHEET,
+      product_row: productRow,
+      component_rows: componentRows,
     },
     data: {
-      template_code: "SRC-UC-KT-4D-XN-VK",
-      item_code: "TP-UC KT 4D XN-VK",
-      conditions_json: JSON.stringify({ item_code: "TP-UC KT 4D XN-VK" }),
+      template_code: name,
+      item_code: itemCode,
+      conditions_json: JSON.stringify({ item_code: itemCode }),
       priority: 100,
       disabled: false,
       source_status: "READY_WITH_ACTUALS",
-      source_ref: "MS LIÊN BS.xlsx / ĐM / rows 686-711",
+      source_ref: `${SOURCE_DOCUMENT} / ${SOURCE_SHEET} / rows ${productRow}-${componentRows.at(-1)}`,
       required_context_fields_json: "[]",
-      required_component_keys_json: JSON.stringify([
-        "LEAF_SHEET",
-        "T_BRACKET",
-        "SPIKE_PULLEY_WEIGHT",
-        "BOTTOM_BAR_WEIGHT",
-        "RAY_U70_WEIGHT",
-        "SHAFT_34_WEIGHT",
-        "PLASTIC_STOP_CLAMP",
-        "STEEL_BEARING",
-        "FLOOR_LOCK_BRACKET_WEIGHT",
-      ]),
-      required_actual_component_keys_json: JSON.stringify([
-        "BOTTOM_SEAL",
-        "FOAM_45CM",
-        "PULLEY_34",
-        "SPRING",
-        "SPRING_STOP_ARM",
-        "PULL_ROD",
-        "SCREW_HEAD_PULLEY",
-        "SCREW_2P_PULLEY",
-      ]),
-      deferred_components_json: JSON.stringify([
-        { source_row: 691, key: "BOTTOM_SEAL", reason: "Nguồn ghi 'xem lại'; chưa được phép chốt công thức." },
-        { source_row: 693, key: "FOAM_45CM", reason: "Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm." },
-        { source_row: 695, key: "PULLEY_34", reason: "Nguồn ghi 'trừ thực tế'; cần số puly thực tế từ cấu hình." },
-        { source_rows: [696, 697, 698, 699, 700, 701, 702, 703], key: "SPRING", reason: "SKU và số lượng lò xo chọn theo thực tế; chưa có input cấu trúc." },
-        { source_row: 706, key: "SPRING_STOP_ARM", reason: "Phụ thuộc số lò xo thực tế." },
-        { source_row: 707, key: "PULL_ROD", reason: "Một ô mã nguồn chứa 3 NVL; cần chốt dùng cụm TP hay bung 3 NVL." },
-        { source_row: 710, key: "SCREW_HEAD_PULLEY", reason: "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ." },
-        { source_row: 711, key: "SCREW_2P_PULLEY", reason: "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ." },
-      ]),
-      note: "Pilot chuẩn hóa trực tiếp từ sheet ĐM. Các dòng không đủ công thức được bắt buộc nhập actual có cấu trúc theo một bộ; thiếu slot thì materializer chặn.",
-      component_rules: [
-        {
-          rule_code: "SRC-687-LEAF",
-          component_key: "LEAF_SHEET",
-          item_code: "NVL-TON3.8D-XN-VK",
-          source_row: 687,
-          source_uom: "KG/M2",
-          source_formula: "Caopb x (rpbray-30) x SL x 3,6; Production tách từng bộ nên SL=1.",
-          sequence: 10,
-          quantity_formula_json: JSON.stringify(product({ field: "PB_CAO" }, { field: "PB_RONG", offset: -0.3 }, 3.6)),
-        },
-        {
-          rule_code: "SRC-688-GIA-T",
-          component_key: "T_BRACKET",
-          item_code: "NVL-GIAT",
-          source_row: 688,
-          source_uom: "CẶP",
-          source_formula: "1 bộ 1 cặp.",
-          sequence: 20,
-          quantity_formula_json: JSON.stringify(fixed(1)),
-        },
-        {
-          rule_code: "SRC-689-PULY-GAI",
-          component_key: "SPIKE_PULLEY_WEIGHT",
-          item_code: "NVL-PULYGAI",
-          source_row: 689,
-          source_uom: "KG/M2",
-          source_formula: "Diện tích x SL x 0,126; Production tách từng bộ nên SL=1.",
-          sequence: 30,
-          quantity_formula_json: JSON.stringify(field("billable_area_sqm", 0.126)),
-        },
-        {
-          rule_code: "SRC-690-V-DAY",
-          component_key: "BOTTOM_BAR_WEIGHT",
-          item_code: "NVL-VDAY-TDU",
-          source_row: 690,
-          source_uom: "KG/M",
-          source_formula: "(rộng pbray - 30cm) x 0,6 x SL; Production tách từng bộ nên SL=1.",
-          sequence: 40,
-          quantity_formula_json: JSON.stringify(field("PB_RONG", 0.6, -0.3)),
-        },
-        {
-          rule_code: "SRC-692-RAY-U70",
-          component_key: "RAY_U70_WEIGHT",
-          item_code: "NVL-TOLE1.2x190-KRON",
-          source_row: 692,
-          source_uom: "KG/M",
-          source_formula: "(chiều cao - 10cm) x SL x 2 ray x 1,78; Production tách từng bộ nên SL=1.",
-          sequence: 50,
-          quantity_formula_json: JSON.stringify(field("PB_CAO", 3.56, -0.1)),
-        },
-        {
-          rule_code: "SRC-694-TRUC-34",
-          component_key: "SHAFT_34_WEIGHT",
-          item_code: "NVL-TRUC34",
-          source_row: 694,
-          source_uom: "KG/M",
-          source_formula: "(rộng pbray + 40cm) x 1,7 x SL; Production tách từng bộ nên SL=1.",
-          sequence: 60,
-          quantity_formula_json: JSON.stringify(field("PB_RONG", 1.7, 0.4)),
-        },
-        {
-          rule_code: "SRC-705-CUM-HAM",
-          component_key: "PLASTIC_STOP_CLAMP",
-          item_code: "NVL-CHNHUA",
-          source_row: 705,
-          source_uom: "CÁI",
-          source_formula: "1 bộ x 2 cái.",
-          sequence: 70,
-          quantity_formula_json: JSON.stringify(fixed(2)),
-        },
-        {
-          rule_code: "SRC-708-GOI-SAT",
-          component_key: "STEEL_BEARING",
-          item_code: "NVL-GOIFE",
-          source_row: 708,
-          source_uom: "CÁI",
-          source_formula: "1 bộ x 2 cái.",
-          sequence: 80,
-          quantity_formula_json: JSON.stringify(fixed(2)),
-        },
-        {
-          rule_code: "SRC-709-BAT-KHOA",
-          component_key: "FLOOR_LOCK_BRACKET_WEIGHT",
-          item_code: "NVL-BKAN",
-          source_row: 709,
-          source_uom: "KG/CẶP",
-          source_formula: "1 bộ x 4 cặp x 0,1925.",
-          sequence: 90,
-          quantity_formula_json: JSON.stringify(fixed(0.77)),
-        },
-      ],
+      required_component_keys_json: JSON.stringify(requiredKeys),
+      required_actual_component_keys_json: JSON.stringify(requiredActualKeys),
+      deferred_components_json: JSON.stringify(deferred),
+      note,
+      component_rules: rules,
     },
+  };
+}
+
+function makeUcKt4dXnVk() {
+  const productRow = 686;
+  const componentRows = [687, 688, 689, 690, 691, 692, 693, 694, 695, 696, 697, 698, 699, 700, 701, 702, 703, 705, 706, 707, 708, 709, 710, 711];
+  return sourceTemplateBase({
+    name: "SRC-UC-KT-4D-XN-VK",
+    itemCode: "TP-UC KT 4D XN-VK",
+    productRow,
+    componentRows,
+    requiredKeys: [
+      "LEAF_SHEET", "T_BRACKET", "SPIKE_PULLEY_WEIGHT", "BOTTOM_BAR_WEIGHT",
+      "RAY_U70_WEIGHT", "SHAFT_34_WEIGHT", "PLASTIC_STOP_CLAMP", "STEEL_BEARING",
+      "FLOOR_LOCK_BRACKET_WEIGHT",
+    ],
+    requiredActualKeys: REQUIRED_ACTUAL_4D,
+    deferred: [
+      actualEntry(691, "BOTTOM_SEAL", "Nguồn ghi 'xem lại'; chưa được phép chốt công thức."),
+      actualEntry(693, "FOAM_45CM", "Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm."),
+      actualEntry(695, "PULLEY_34", "Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ."),
+      actualEntry(696, "SPRING", "SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.", [696, 697, 698, 699, 700, 701, 702, 703]),
+      actualEntry(706, "SPRING_STOP_ARM", "Phụ thuộc số lò xo thực tế; nhập actual theo một bộ."),
+      actualEntry(707, "PULL_ROD", "Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ."),
+      actualEntry(710, "SCREW_HEAD_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+      actualEntry(711, "SCREW_2P_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+    ],
+    rules: [
+      sourceRule(687, {
+        code: "LEAF", key: "LEAF_SHEET", item: "NVL-TON3.8D-XN-VK", uom: "KG/M2", sequence: 10,
+        sourceFormula: "Caopb x (rpbray-30) x SL x 3,6; Production tách từng bộ nên SL=1.",
+        quantity: product({ field: "PB_CAO" }, { field: "PB_RONG", offset: -0.3 }, 3.6),
+      }),
+      sourceRule(688, {
+        code: "GIA-T", key: "T_BRACKET", item: "NVL-GIAT", uom: "CẶP", sequence: 20,
+        sourceFormula: "1 bộ 1 cặp.", quantity: fixed(1),
+      }),
+      sourceRule(689, {
+        code: "PULY-GAI", key: "SPIKE_PULLEY_WEIGHT", item: "NVL-PULYGAI", uom: "KG/M2", sequence: 30,
+        sourceFormula: "Diện tích x SL x 0,126; Production tách từng bộ nên SL=1.", quantity: field("billable_area_sqm", 0.126),
+      }),
+      sourceRule(690, {
+        code: "V-DAY", key: "BOTTOM_BAR_WEIGHT", item: "NVL-VDAY-TDU", uom: "KG/M", sequence: 40,
+        sourceFormula: "(rộng pbray - 30cm) x 0,6 x SL; Production tách từng bộ nên SL=1.", quantity: field("PB_RONG", 0.6, -0.3),
+      }),
+      sourceRule(692, {
+        code: "RAY-U70", key: "RAY_U70_WEIGHT", item: "NVL-TOLE1.2x190-KRON", uom: "KG/M", sequence: 50,
+        sourceFormula: "(chiều cao - 10cm) x SL x 2 ray x 1,78; Production tách từng bộ nên SL=1.", quantity: field("PB_CAO", 3.56, -0.1),
+      }),
+      sourceRule(694, {
+        code: "TRUC-34", key: "SHAFT_34_WEIGHT", item: "NVL-TRUC34", uom: "KG/M", sequence: 60,
+        sourceFormula: "(rộng pbray + 40cm) x 1,7 x SL; Production tách từng bộ nên SL=1.", quantity: field("PB_RONG", 1.7, 0.4),
+      }),
+      sourceRule(705, {
+        code: "CUM-HAM", key: "PLASTIC_STOP_CLAMP", item: "NVL-CHNHUA", uom: "CÁI", sequence: 70,
+        sourceFormula: "1 bộ x 2 cái.", quantity: fixed(2),
+      }),
+      sourceRule(708, {
+        code: "GOI-SAT", key: "STEEL_BEARING", item: "NVL-GOIFE", uom: "CÁI", sequence: 80,
+        sourceFormula: "1 bộ x 2 cái.", quantity: fixed(2),
+      }),
+      sourceRule(709, {
+        code: "BAT-KHOA", key: "FLOOR_LOCK_BRACKET_WEIGHT", item: "NVL-BKAN", uom: "KG/CẶP", sequence: 90,
+        sourceFormula: "1 bộ x 4 cặp x 0,1925.", quantity: fixed(0.77),
+      }),
+    ],
+    note: "Chuẩn hóa trực tiếp block ĐM 686-711. Dòng không đủ công thức được bắt buộc nhập actual theo một bộ; thiếu slot thì materializer chặn.",
+  });
+}
+
+function makeUcKt46Template({ name, itemCode, productRow, leafItem, sourceProductName }) {
+  const row = (offset) => productRow + offset;
+  const componentRows = sourceRows(productRow);
+  const springRows = Array.from({ length: 8 }, (_, index) => row(10 + index));
+  return sourceTemplateBase({
+    name,
+    itemCode,
+    productRow,
+    componentRows,
+    requiredKeys: ["T_BRACKET", "BOTTOM_SEAL", "PLASTIC_STOP_CLAMP", "STEEL_BEARING", "FLOOR_LOCK_BRACKET_WEIGHT"],
+    requiredActualKeys: REQUIRED_ACTUAL_46D,
+    deferred: [
+      actualEntry(row(1), "LEAF_SHEET", `ĐM ${sourceProductName} có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.`),
+      actualEntry(row(3), "SPIKE_PULLEY_WEIGHT", "ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân."),
+      actualEntry(row(4), "BOTTOM_BAR_WEIGHT", "ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân."),
+      actualEntry(row(6), "RAY_U70_WEIGHT", "ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn."),
+      actualEntry(row(7), "FOAM_45CM", "ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm."),
+      actualEntry(row(8), "SHAFT_34_WEIGHT", "ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn."),
+      actualEntry(row(9), "PULLEY_34", "Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ."),
+      actualEntry(row(10), "SPRING", "SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.", springRows),
+      actualEntry(row(18), "SPRING_STOP_ARM", "Phụ thuộc số lò xo thực tế; nhập actual theo một bộ."),
+      actualEntry(row(19), "PULL_ROD", "Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ."),
+      actualEntry(row(22), "SCREW_HEAD_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+      actualEntry(row(23), "SCREW_2P_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+    ],
+    rules: [
+      sourceRule(row(2), {
+        code: "GIA-T", key: "T_BRACKET", item: "NVL-GIAT", uom: "CẶP", sequence: 20,
+        sourceFormula: "Định mức nguồn = 1 cặp / một bộ.", quantity: fixed(1),
+      }),
+      sourceRule(row(5), {
+        code: "RON-DAY", key: "BOTTOM_SEAL", item: "NVL-RONDAYUC", uom: "KG/M ngang", sequence: 50,
+        sourceFormula: "ron đáy = chiều rộng pbray x 0,0077.", quantity: field("PB_RONG", 0.0077),
+      }),
+      sourceRule(row(17 + 1), {
+        code: "CUM-HAM", key: "PLASTIC_STOP_CLAMP", item: "NVL-CHNHUA", uom: "CÁI", sequence: 70,
+        sourceFormula: "Định mức nguồn = 2 cái / một bộ.", quantity: fixed(2),
+      }),
+      sourceRule(row(20), {
+        code: "GOI-SAT", key: "STEEL_BEARING", item: "NVL-GOIFE", uom: "CÁI", sequence: 80,
+        sourceFormula: "Định mức nguồn = 2 cái / một bộ.", quantity: fixed(2),
+      }),
+      sourceRule(row(21), {
+        code: "BAT-KHOA", key: "FLOOR_LOCK_BRACKET_WEIGHT", item: "NVL-BKAN", uom: "KG/CẶP", sequence: 90,
+        sourceFormula: "1 bộ x 4 cặp x 0,1925.", quantity: fixed(0.77),
+      }),
+    ],
+    note: `Factory nguồn KT 4.6D từ block ${productRow}-${productRow + 24}. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: ${leafItem}.`,
+  });
+}
+
+const UC_KT_46_VARIANTS = [
+  {
+    name: "SRC-UC-KT-46D-XN-VK",
+    itemCode: "TP-UC KT 4.6D XN-VK",
+    productRow: 731,
+    leafItem: "NVL-TOLE0.42x598-XN-VK",
+    sourceProductName: "CỬA ÚC KT 4.6D XN-VK",
   },
+  {
+    name: "SRC-UC-KT-46D-XR-CF",
+    itemCode: "TP-UC KT 4.6D XR-CF",
+    productRow: 756,
+    leafItem: "NVL-TOLE0.42x598-XR-CF",
+    sourceProductName: "CỬA ÚC KT 4.6D XR-CAFE",
+  },
+  {
+    name: "SRC-UC-KT-46D-TR-XLC",
+    itemCode: "TP-UC KT 4.6D TRẮNG-XLC",
+    productRow: 781,
+    leafItem: "NVL-TOLE0.42x598-TR-XLC",
+    sourceProductName: "CỬA ÚC KT 4.6D TR-XLC",
+  },
+  {
+    name: "SRC-UC-KT-46D-KU-GU",
+    itemCode: "TP-UC KT 4.6D KU-GU",
+    productRow: 806,
+    leafItem: "NVL-TOLE0.42x598-KU-GU",
+    sourceProductName: "CỬA ÚC KT 4.6D KU-GU",
+  },
+];
+
+/**
+ * Source-backed BOM normalization catalog.
+ *
+ * Safety rule: a blank/ambiguous source formula never inherits a calculation merely
+ * because a neighboring product looks similar. Shared factories may share structure,
+ * but only source-explicit calculations become automatic rules; everything else is an
+ * explicit actual slot on Sales Order Item.
+ */
+export const BOM_TEMPLATE_SOURCE_CATALOG = [
+  makeUcKt4dXnVk(),
+  ...UC_KT_46_VARIANTS.map(makeUcKt46Template),
 ];
 
 export function bomSourceFixtureRows() {
