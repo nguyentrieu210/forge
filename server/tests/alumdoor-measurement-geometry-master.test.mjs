@@ -82,7 +82,7 @@ test("item import source is compatible with Cây stock / Kg purchase invariant",
 
 test("static V2 metadata contains Geometry masters and moved ownership", async () => {
   const brief = JSON.parse(await readFile(resolve(repoRoot, "server/briefs/alumdoor-v2.json"), "utf8"));
-  assert.equal(brief.version, "2.3.0");
+  assert.equal(brief.version, "2.4.0");
   const byName = new Map(brief.doctypes.map((row) => [row.name, row]));
   for (const name of ["Geometry Field", "Geometry Profile", "Geometry Profile Scope", "Geometry Profile Field"]) {
     assert.ok(byName.has(name), `thiếu ${name}`);
