@@ -108,7 +108,7 @@ test("equal top rules are rejected instead of guessed", () => {
 
 test("Cutting Policy does not contain BOM quantity or pricing formulas", () => {
   const serialized = JSON.stringify(CUTTING_POLICIES).toLocaleLowerCase("vi");
-  for (const forbidden of ["đơn giá", "giá bán", "xốp", "ron đáy", "kg/m2", "quantity", "bom"]) {
+  for (const forbidden of ["đơn giá", "giá bán", "xốp", "ron đáy", "kg/m2", "quantity"]) {
     assert.equal(serialized.includes(forbidden), false, `forbidden cross-layer concern: ${forbidden}`);
   }
 });

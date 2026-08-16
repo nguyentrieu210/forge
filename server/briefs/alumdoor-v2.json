@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -1204,7 +1204,36 @@
         "leaf_round_threshold": 0.6,
         "leaf_formula": "Kiểu Đức",
         "leaf_height_deduction_m": 0.13,
-        "ray_type": "U75"
+        "ray_type": "U75",
+        "geometry_profile": "GP-CUA-DUC",
+        "geometry_rules": [
+          {
+            "rule_code": "DUC-RCL-DL",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_NHUA_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.02,
+            "customer_group": "Đại lý",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 10,
+            "note": "Đại lý: rộng cắt lá = rộng phủ bì nhựa - 0,02 m."
+          },
+          {
+            "rule_code": "DUC-RCL-LE",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.08,
+            "customer_group": "Lẻ",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 20,
+            "note": "Khách lẻ: rộng cắt lá = rộng phủ bì ray - 0,08 m; 0,06 trong bản quy trình là khoảng cách PB ray→PB nhựa, không phải số trừ cắt."
+          }
+        ]
       }
     },
     {
@@ -1246,7 +1275,36 @@
         ],
         "leaf_formula": "Kiểu Úc",
         "leaf_divisor_source": "Hằng số của chính sách",
-        "leaf_divisor_const": 0.465
+        "leaf_divisor_const": 0.465,
+        "geometry_profile": "GP-CUA-UC",
+        "geometry_rules": [
+          {
+            "rule_code": "UC-RCL",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.03,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 10,
+            "note": "Rộng cắt lá = rộng phủ bì ray - 0,03 m."
+          },
+          {
+            "rule_code": "UC-RAY-U70",
+            "target_field": "RAY_DAI",
+            "source_field": "PB_CAO",
+            "operator": "SUBTRACT",
+            "operand_m": 0.1,
+            "customer_group": "",
+            "ray_type": "Ray sắt U70",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 20,
+            "note": "Ray sắt U70 không ron: dài ray = cao phủ bì - 0,10 m."
+          }
+        ]
       }
     },
     {
@@ -1268,7 +1326,36 @@
         "leaf_rounding": "Làm tròn xuống",
         "leaf_formula": "Kiểu tấm liền Úc",
         "leaf_divisor_source": "Hằng số của chính sách",
-        "leaf_divisor_const": 0.068
+        "leaf_divisor_const": 0.068,
+        "geometry_profile": "GP-CUA-UC",
+        "geometry_rules": [
+          {
+            "rule_code": "TLUC-RCL-U70",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.05,
+            "customer_group": "",
+            "ray_type": "Ray sắt U70",
+            "has_butterfly_bracket": 0,
+            "priority": 10,
+            "sequence": 10,
+            "note": "Đức kéo tay/AL70 dùng ray sắt U70 không ron: rộng cắt lá = PB ray - 0,05 m."
+          },
+          {
+            "rule_code": "TLUC-RCL-U76",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.08,
+            "customer_group": "",
+            "ray_type": "Ray hộp/đơn U76",
+            "has_butterfly_bracket": 0,
+            "priority": 10,
+            "sequence": 20,
+            "note": "Đức kéo tay/AL70 dùng ray hộp U76 hoặc ray đơn U76: rộng cắt lá = PB ray - 0,08 m."
+          }
+        ]
       }
     },
     {
@@ -1289,7 +1376,75 @@
         "purchase_height_basis": "Cao lưới",
         "purchase_width_basis": "Rộng cắt lá",
         "note": "Đại lý tách món chỉ lấy lưới bán theo rộng cắt; trọn bộ và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
-        "leaf_formula": "Kiểu Đài Loan Lưới"
+        "leaf_formula": "Kiểu Đài Loan Lưới",
+        "geometry_profile": "GP-CUA-LUOI",
+        "geometry_rules": [
+          {
+            "rule_code": "LUOI-RCL",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.03,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 10,
+            "note": "Rộng cắt lá = PB ray - 0,03 m."
+          },
+          {
+            "rule_code": "LUOI-RCL-BUOM",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.035,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 1,
+            "priority": 10,
+            "sequence": 20,
+            "note": "Có lá Đài Loan bắn bướm: rộng cắt lá = PB ray - 0,035 m."
+          },
+          {
+            "rule_code": "LUOI-RAY",
+            "target_field": "RAY_DAI",
+            "source_field": "PB_CAO",
+            "operator": "SUBTRACT",
+            "operand_m": 0.1,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 30,
+            "note": "Ray sắt U70: dài ray = cao phủ bì - 0,10 m khi thành phần ray được BOM chọn."
+          },
+          {
+            "rule_code": "LUOI-V4",
+            "target_field": "V4_DAI",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.03,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 40,
+            "note": "V4/V5: dài = PB ray - 0,03 m khi thành phần V4/V5 được BOM chọn."
+          },
+          {
+            "rule_code": "LUOI-TRUC",
+            "target_field": "TRUC_DAI",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.05,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 50,
+            "note": "Trục 114: dài = PB ray - 0,05 m khi thành phần trục được BOM chọn."
+          }
+        ]
       }
     },
     {
@@ -1311,7 +1466,75 @@
         "purchase_height_basis": "Cao lưới",
         "purchase_width_basis": "Rộng cắt lá",
         "note": "Đại lý tách món bán theo rộng cắt; trọn bộ, kéo tay và khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
-        "leaf_formula": "Kiểu Đài Loan Lưới"
+        "leaf_formula": "Kiểu Đài Loan Lưới",
+        "geometry_profile": "GP-CUA-DAI-LOAN",
+        "geometry_rules": [
+          {
+            "rule_code": "DL-RCL",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.03,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 10,
+            "note": "Rộng cắt lá = PB ray - 0,03 m."
+          },
+          {
+            "rule_code": "DL-RCL-BUOM",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.035,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 1,
+            "priority": 10,
+            "sequence": 20,
+            "note": "Có bắn bướm: rộng cắt lá = PB ray - 0,035 m."
+          },
+          {
+            "rule_code": "DL-RAY",
+            "target_field": "RAY_DAI",
+            "source_field": "PB_CAO",
+            "operator": "SUBTRACT",
+            "operand_m": 0.1,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 30,
+            "note": "Ray sắt U70 có ron: dài ray = cao phủ bì - 0,10 m khi BOM chọn ray."
+          },
+          {
+            "rule_code": "DL-V4",
+            "target_field": "V4_DAI",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.03,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 40,
+            "note": "V4/V5: dài = PB ray - 0,03 m khi BOM chọn V4/V5."
+          },
+          {
+            "rule_code": "DL-TRUC",
+            "target_field": "TRUC_DAI",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.05,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 50,
+            "note": "Trục 114-1.8ly: dài = PB ray - 0,05 m khi BOM chọn trục."
+          }
+        ]
       }
     },
     {
@@ -1332,7 +1555,36 @@
         "purchase_height_basis": "Cao lưới",
         "purchase_width_basis": "Rộng cắt lá",
         "note": "Đại lý bán theo rộng cắt; khách lẻ bán theo PB ray. Có bản bướm trừ 0,035.",
-        "leaf_formula": "Kiểu Đức"
+        "leaf_formula": "Kiểu Đức",
+        "geometry_profile": "GP-CUA-SIEU-TRUONG",
+        "geometry_rules": [
+          {
+            "rule_code": "ST-RCL",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.03,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 0,
+            "priority": 0,
+            "sequence": 10,
+            "note": "Rộng cắt lá = PB ray - 0,03 m."
+          },
+          {
+            "rule_code": "ST-RCL-BUOM",
+            "target_field": "CAT_LA_RONG",
+            "source_field": "PB_RAY_RONG",
+            "operator": "SUBTRACT",
+            "operand_m": 0.035,
+            "customer_group": "",
+            "ray_type": "",
+            "has_butterfly_bracket": 1,
+            "priority": 10,
+            "sequence": 20,
+            "note": "Có bắn bướm: rộng cắt lá = PB ray - 0,035 m."
+          }
+        ]
       }
     },
     {
@@ -4312,7 +4564,20 @@
       "fields": [
         "policy_name:Data*! Tên chính sách",
         "door_type:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Loại cửa",
-        "ray_type:Select(U75,U100,Ray sắt U70,Không dùng ray)!=(U75) Loại ray",
+        "ray_type:Select(U75,U100,Ray hộp/đơn U76,Ray sắt U70,Không dùng ray)!=(U75) Loại ray",
+        {
+          "fieldname": "geometry_profile",
+          "fieldtype": "Link",
+          "options": "Geometry Profile",
+          "label": "Bộ quy cách hình học",
+          "required": true
+        },
+        {
+          "fieldname": "geometry_rules",
+          "fieldtype": "Table",
+          "options": "Cutting Policy Rule",
+          "label": "Quy tắc hình học"
+        },
         {
           "fieldname": "item_group",
           "label": "Chỉ áp cho nhóm hàng này (trống = mọi nhóm của loại cửa)",
@@ -11144,6 +11409,88 @@
         "Kinh doanh": "r",
         "Sản xuất": "r",
         "Kế toán": "r"
+      }
+    },
+    {
+      "name": "Cutting Policy Rule",
+      "child": true,
+      "label": "Quy tắc hình học",
+      "group": "Sản xuất",
+      "naming": "autoincrement",
+      "fields": [
+        {
+          "fieldname": "rule_code",
+          "fieldtype": "Data",
+          "label": "Mã quy tắc",
+          "required": true
+        },
+        {
+          "fieldname": "target_field",
+          "fieldtype": "Link",
+          "options": "Geometry Field",
+          "label": "Trường kết quả",
+          "required": true
+        },
+        {
+          "fieldname": "source_field",
+          "fieldtype": "Link",
+          "options": "Geometry Field",
+          "label": "Trường nguồn",
+          "required": true
+        },
+        {
+          "fieldname": "operator",
+          "fieldtype": "Select",
+          "options": "COPY\nSUBTRACT\nADD",
+          "label": "Phép tính",
+          "required": true,
+          "default": "SUBTRACT"
+        },
+        {
+          "fieldname": "operand_m",
+          "fieldtype": "Float",
+          "label": "Giá trị cộng/trừ (m)",
+          "default": 0
+        },
+        {
+          "fieldname": "customer_group",
+          "fieldtype": "Select",
+          "options": "\nĐại lý\nLẻ",
+          "label": "Nhóm khách"
+        },
+        {
+          "fieldname": "ray_type",
+          "fieldtype": "Select",
+          "options": "\nU75\nU100\nRay hộp/đơn U76\nRay sắt U70\nKhông dùng ray",
+          "label": "Loại ray"
+        },
+        {
+          "fieldname": "has_butterfly_bracket",
+          "fieldtype": "Check",
+          "label": "Có bắn bướm"
+        },
+        {
+          "fieldname": "priority",
+          "fieldtype": "Int",
+          "label": "Ưu tiên",
+          "default": 0
+        },
+        {
+          "fieldname": "sequence",
+          "fieldtype": "Int",
+          "label": "Thứ tự",
+          "default": 10
+        },
+        {
+          "fieldname": "note",
+          "fieldtype": "Small Text",
+          "label": "Ghi chú nguồn"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Sản xuất": "r"
       }
     }
   ],

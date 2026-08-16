@@ -15,6 +15,7 @@ import { dirname, resolve } from "node:path";
 import { applyAlumdoorChildPresentation } from "./lib/alumdoor-child-presentation.mjs";
 import { parseField } from "./lib/compile-brief.mjs";
 import { GEOMETRY_FIELDS, GEOMETRY_PROFILES } from "./lib/alumdoor-geometry-catalog.mjs";
+import { CUTTING_POLICIES, cuttingPolicyFixtureData } from "./lib/alumdoor-cutting-policy-catalog.mjs";
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -73,7 +74,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.3.0";
+brief.version = "2.4.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -746,7 +747,10 @@ if (!cp.fields.some((field) => nameOf(field) === "kerf_mm")) {
 replaceField(cp, "door_type",
   "door_type:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Loại cửa");
 addAfter(cp, "door_type",
-  "ray_type:Select(U75,U100,Ray sắt U70,Không dùng ray)!=(U75) Loại ray");
+  "ray_type:Select(U75,U100,Ray hộp/đơn U76,Ray sắt U70,Không dùng ray)!=(U75) Loại ray");
+addAfter(cp, "ray_type",
+  "geometry_profile:Link(Geometry Profile)! Bộ quy cách hình học",
+  "geometry_rules:Table(Cutting Policy Rule) Quy tắc hình học");
 
 // Phần CHIA LÁ — bản cũ không có ở đâu cả (xác nhận trong tài liệu phiên trước).
 addAfter(cp, "butterfly_cut_deduction_m",
@@ -800,6 +804,30 @@ brief.doctypes.push({
   permissions: { "Chủ xưởng": "rwc", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
 });
 note("Cutting Policy: +9 trường (ray_type, chia lá) · +doctype con Leaf Variant");
+
+brief.doctypes.push({
+  name: "Cutting Policy Rule", child: true, label: "Quy tắc hình học", group: "Sản xuất", naming: "autoincrement",
+  fields: [
+    "rule_code:Data*! Mã quy tắc",
+    "target_field:Link(Geometry Field)! Trường kết quả",
+    "source_field:Link(Geometry Field)! Trường nguồn",
+    "operator:Select(COPY,SUBTRACT,ADD)!=(SUBTRACT) Phép tính",
+    "operand_m:Float=(0) Giá trị cộng/trừ (m)",
+    { fieldname: "customer_group", fieldtype: "Select", options: "\nĐại lý\nLẻ", label: "Nhóm khách" },
+    { fieldname: "ray_type", fieldtype: "Select", options: "\nU75\nU100\nRay hộp/đơn U76\nRay sắt U70\nKhông dùng ray", label: "Loại ray" },
+    "has_butterfly_bracket:Check Có bắn bướm",
+    "priority:Int=(0) Ưu tiên",
+    "sequence:Int=(10) Thứ tự",
+    "note:Small Text Ghi chú nguồn",
+  ],
+  permissions: { "Chủ xưởng": "rwc", "Kinh doanh": "r", "Sản xuất": "r" },
+});
+for (const policy of CUTTING_POLICIES) {
+  const fixture = brief.fixtures.find((entry) => entry.type === "Cutting Policy" && entry.name === policy.name);
+  if (!fixture) throw new Error(`Cutting Policy fixture missing: ${policy.name}`);
+  Object.assign(fixture.data, cuttingPolicyFixtureData(policy));
+}
+note(`Cutting Policy: gắn Geometry Profile + ${CUTTING_POLICIES.reduce((sum, policy) => sum + policy.rules.length, 0)} geometry rules canonical`);
 
 // ────────────────── D1: rate_uom — CHỐNG ĐƠN VỊ NGẦM ──────────────────
 // value = qty × rate ở controllers.ts:221. qty của nhôm là số CÂY, còn NCC báo giá đ/KG.
