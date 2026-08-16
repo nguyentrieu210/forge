@@ -94,6 +94,11 @@ const enumTranslations: Readonly<Record<string, string>> = Object.freeze({
   height: "Chiều cao",
   length: "Chiều dài",
 
+  // Cutting Policy operators. Storage stays COPY/SUBTRACT/ADD.
+  copy: "Giữ nguyên",
+  subtract: "Trừ",
+  add: "Cộng",
+
   // Attendance codes shown in Select controls. Values remain SHIFT1/SHIFT2/SHIFT3 in storage.
   shift1: "Ca 1",
   shift2: "Ca 2",
