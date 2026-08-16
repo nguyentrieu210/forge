@@ -55,6 +55,9 @@ test("canonical color seed builder upserts canonical records and only migrates/d
       assert.ok(sql.includes(`Item Color:${canonicalCode}`), `${canonicalCode} must be upserted`);
     }
 
+    assert.ok(sql.includes("Surface Finish:SON_TINH_DIEN"), "SƠN TĨNH ĐIỆN must be upserted");
+    assert.ok(sql.includes("Phụ kiện cần sơn tĩnh điện"), "generated Surface Finish payload must include the canonical accessory scope");
+
     for (const [legacy, canonical] of LEGACY_TO_CANONICAL) {
       assert.equal(sql.includes(`Item Color:${legacy}`), false, `${legacy} must never be inserted as Item Color`);
       assert.ok(sql.includes(`WHEN '${legacy}' THEN '${canonical}'`), `${legacy} must migrate to ${canonical}`);
