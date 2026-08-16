@@ -58,5 +58,5 @@ if errorlevel 1 (echo [LOI] Dependency khong khop lockfile & exit /b 1)
 
 echo.
 echo === 5. Build, test day du, migrate, cai metadata va khoi dong local ===
-call run-local.bat --noninteractive --verify
+call C:\alumdoor\run-local.bat --noninteractive --verify
 exit /b %ERRORLEVEL%
