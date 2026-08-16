@@ -1,0 +1,114 @@
+name: Bootstrap Alumdoor Local C Drive
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bootstrap-alumdoor-local-machine
+  cancel-in-progress: false
+
+jobs:
+  bootstrap-local:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Ensure C:\alumdoor source workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+          $repo = 'https://github.com/nguyentrieu210/forge.git'
+
+          if (-not (Test-Path $target)) {
+            Write-Host "C:\alumdoor chua ton tai - clone main lan dau."
+            git clone --branch main --single-branch $repo $target
+            if ($LASTEXITCODE -ne 0) { throw 'git clone that bai' }
+          } elseif (-not (Test-Path (Join-Path $target '.git'))) {
+            $entries = @(Get-ChildItem -Force $target -ErrorAction SilentlyContinue)
+            if ($entries.Count -gt 0) {
+              throw 'C:\alumdoor da ton tai va co du lieu nhung khong phai Git repo; runner se khong ghi de.'
+            }
+            Write-Host "C:\alumdoor rong - clone main lan dau."
+            git clone --branch main --single-branch $repo $target
+            if ($LASTEXITCODE -ne 0) { throw 'git clone that bai' }
+          }
+
+          $origin = (git -C $target remote get-url origin).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Khong doc duoc git origin trong C:\alumdoor' }
+          if ($origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') {
+            throw "C:\alumdoor dang tro toi repo khac: $origin"
+          }
+
+          $branch = (git -C $target rev-parse --abbrev-ref HEAD).Trim()
+          if ($branch -ne 'main') {
+            throw "C:\alumdoor dang o branch '$branch'. Runner chi cap nhat local main de khong pha working branch."
+          }
+
+          $dirty = @(git -C $target status --porcelain)
+          if ($dirty.Count -gt 0) {
+            Write-Host 'Working tree dang co thay doi:'
+            $dirty | ForEach-Object { Write-Host "  $_" }
+            throw 'Dung bootstrap de tranh mat thay doi local. Commit/stash/sua working tree truoc.'
+          }
+
+          Write-Host 'Workspace hop le:'
+          git -C $target log -1 --oneline
+
+      - name: Sync and fully bootstrap local Alumdoor
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & cmd.exe /d /c "C:\alumdoor\sync-local.bat --bootstrap"
+          if ($LASTEXITCODE -ne 0) {
+            throw "sync-local.bat --bootstrap that bai voi exit code $LASTEXITCODE"
+          }
+
+      - name: Verify local services remain healthy
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          function Wait-NodeHttp {
+            param(
+              [string]$Url,
+              [string]$Mode,
+              [int]$TimeoutSeconds = 120
+            )
+            $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+            do {
+              if ($Mode -eq 'backend') {
+                & node -e "fetch('$Url',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+              } else {
+                & node -e "fetch('$Url',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+              }
+              if ($LASTEXITCODE -eq 0) { return }
+              Start-Sleep -Seconds 2
+            } while ((Get-Date) -lt $deadline)
+            throw "Local service khong healthy sau $TimeoutSeconds giay: $Url"
+          }
+
+          Wait-NodeHttp -Url 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -Mode 'backend'
+          Wait-NodeHttp -Url 'http://127.0.0.1:5173' -Mode 'ui'
+
+          Write-Host '=== LOCAL READY ==='
+          Write-Host 'Desk    : http://localhost:5173'
+          Write-Host 'Backend : http://localhost:8799'
+          git -C C:\alumdoor log -1 --oneline
+
+      - name: Print local logs on failure
+        if: failure()
+        shell: powershell
+        run: |
+          Write-Host '=== run-local.log (tail) ==='
+          if (Test-Path 'C:\alumdoor\run-local.log') {
+            Get-Content 'C:\alumdoor\run-local.log' -Tail 160
+          }
+          Write-Host '=== smoke log ==='
+          if (Test-Path 'C:\alumdoor\run-local.log.smoke') {
+            Get-Content 'C:\alumdoor\run-local.log.smoke' -Tail 160
+          }
