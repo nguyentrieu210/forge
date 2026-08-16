@@ -97,7 +97,7 @@
     { "key": "alumdoor-attendance:month", "label": "Bảng công", "kind": "experience", "icon": "calendar-range", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Attendance Viewer", "AlumDoor Attendance Manager", "AlumDoor Payroll User", "HR Manager", "System Manager"] },
     { "key": "alumdoor-attendance:exceptions", "label": "Ngoại lệ chấm công", "kind": "experience", "icon": "triangle-alert", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Attendance Manager", "HR Manager", "System Manager"] },
     { "key": "alumdoor-attendance:scan", "label": "Quét chấm công", "kind": "experience", "icon": "scan-line", "group": "Nhân sự & Tiền lương" },
-    { "key": "Employee", "label": "Nhân viên", "kind": "doctype", "icon": "users", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
+    { "key": "employee-nav", "label": "Nhân viên", "kind": "route", "route": "/app/Employee", "icon": "users", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
     { "key": "AlumDoor Pay Profile", "label": "Lương cơ bản nhân viên", "kind": "doctype", "icon": "wallet", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Payroll Approver", "HR Manager", "System Manager"] },
     { "key": "AlumDoor Attendance Device", "label": "Thiết bị đã đăng ký", "kind": "doctype", "icon": "smartphone", "group": "Nhân sự & Tiền lương", "required_roles": ["AlumDoor Attendance Manager", "HR Manager", "System Manager"] }
   ],

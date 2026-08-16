@@ -87,7 +87,7 @@ if defined REUSE (
   echo   Dung lai cum Alumdoor worker dang chay tren 8799.
 ) else (
   REM Neu co cum cu/treo tren 8799 thi ket thuc CA CAY tien trinh truoc khi khoi dong lai.
-  call node server\scripts\stop-local-dev.mjs --ports=8799 >> "%LOG%" 2>&1
+  call node scripts\stop-local-dev.mjs --ports=8799 >> "%LOG%" 2>&1
   if errorlevel 1 (echo [LOI] Khong the giai phong cong 8799 - xem %LOG% & call :pause_if_interactive & exit /b 1)
   echo   Khoi dong worker tren cong !PORT! ...
   start "Forge workers Alumdoor (local)" cmd /k "cd /d C:\alumdoor\server && pnpm run dev:alumdoor-local"
