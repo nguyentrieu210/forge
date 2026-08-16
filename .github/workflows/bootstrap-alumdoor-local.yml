@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: bootstrap-alumdoor-local-machine-v2
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   bootstrap-local:
