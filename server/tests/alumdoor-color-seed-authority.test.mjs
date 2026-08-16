@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
   ALUMDOOR_COLOR_CATALOG,
@@ -10,7 +11,7 @@ import {
   ALUMDOOR_SURFACE_FINISH_CATALOG,
 } from "../scripts/lib/alumdoor-color-catalog.mjs";
 
-const repoRoot = resolve(new URL("../..", import.meta.url).pathname);
+const repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const builder = join(repoRoot, "server", "scripts", "build-alumdoor-color-correction.mjs");
 
 const LEGACY_TO_CANONICAL = new Map([
@@ -50,8 +51,8 @@ test("canonical color seed builder upserts canonical records and only migrates/d
     assert.equal(result.canonical_colors, 25);
     const sql = readFileSync(sqlPath, "utf8");
 
-    for (const canonical of ["GHI SẦN", "VÀNG KEM", "CAFÉ", "XÁM XINGFA", "ĐỎ ĐÔ", "VÂN GỖ"]) {
-      assert.match(sql, new RegExp(`Item Color:${canonical.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}`));
+    for (const canonicalCode of ["GHI SẦN", "VÀNG KEM", "CAFÉ", "XÁM XINGFA", "ĐỎ ĐÔ", "VAN_GO"]) {
+      assert.ok(sql.includes(`Item Color:${canonicalCode}`), `${canonicalCode} must be upserted`);
     }
 
     for (const [legacy, canonical] of LEGACY_TO_CANONICAL) {
