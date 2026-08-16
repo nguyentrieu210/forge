@@ -9,6 +9,7 @@ import {
 
 const repoRoot = resolve(new URL("../..", import.meta.url).pathname);
 
+// Guard the tree and every active seed/import consumer together so legacy aliases cannot drift back.
 const byName = new Map(ALUMDOOR_ITEM_GROUP_CATALOG.map((entry) => [entry.name, entry]));
 
 test("Item Group canonical tree has one root, unique names and valid parents", () => {
