@@ -1,0 +1,293 @@
+name: Temporary Alumdoor BOM Actual Components
+on:
+  push:
+    branches: ['agent/alumdoor-bom-actual-components']
+    paths: ['.github/workflows/_tmp-alumdoor-bom-actual-components.yml']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: pnpm/action-setup@v4
+        with: { run_install: false }
+      - name: Wire actual-component runtime, Sales field and active source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          // Runtime materializer: parse declared actual slots, merge them before fingerprint/persist.
+          const materializerPath = 'server/apps-src/alumdoor-worker/src/bom-template-materializer.ts';
+          let materializer = fs.readFileSync(materializerPath, 'utf8');
+          const coreImportEnd = '} from "./bom-template-core.js";\n';
+          const actualImport = 'import { mergeBomActualComponents, type BomActualComponentInput } from "./bom-actual-components.js";\n';
+          if (!materializer.includes(actualImport)) {
+            if (!materializer.includes(coreImportEnd)) throw new Error('materializer import anchor missing');
+            materializer = materializer.replace(coreImportEnd, coreImportEnd + actualImport);
+          }
+          if (!materializer.includes('required_actual_component_keys_json?: unknown;')) {
+            materializer = materializer.replace(
+              '  required_component_keys_json?: unknown;\n  component_rules?: unknown;',
+              '  required_component_keys_json?: unknown;\n  required_actual_component_keys_json?: unknown;\n  component_rules?: unknown;'
+            );
+          }
+          if (!materializer.includes('bom_actual_components?: BomActualComponentInput[];')) {
+            materializer = materializer.replace(
+              '  source_warehouse: string;\n  formula_snapshot?: string;',
+              '  source_warehouse: string;\n  bom_actual_components?: BomActualComponentInput[];\n  formula_snapshot?: string;'
+            );
+          }
+          materializer = materializer.replace(
+            'export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string } {',
+            'export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] } {'
+          );
+          if (!materializer.includes('required_actual_component_keys: stringArray(raw.required_actual_component_keys_json')) {
+            materializer = materializer.replace(
+              '    required_component_keys: stringArray(raw.required_component_keys_json, `${templateCode}.required_component_keys_json`),\n    component_rules:',
+              '    required_component_keys: stringArray(raw.required_component_keys_json, `${templateCode}.required_component_keys_json`),\n'
+                + '    required_actual_component_keys: stringArray(raw.required_actual_component_keys_json, `${templateCode}.required_actual_component_keys_json`),\n'
+                + '    component_rules:'
+            );
+          }
+          materializer = materializer.replace(
+            'async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string }>> {',
+            'async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] }>> {'
+          );
+          const sourceAnchor = '  const source = templates.find((template) => template.template_code === resolved.template_code);\n  if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);\n';
+          if (!materializer.includes('const resolvedWithActuals = mergeBomActualComponents')) {
+            if (!materializer.includes(sourceAnchor)) throw new Error('materializer source anchor missing');
+            materializer = materializer.replace(sourceAnchor, sourceAnchor
+              + '  const resolvedWithActuals = mergeBomActualComponents({\n'
+              + '    resolved,\n'
+              + '    actual_components: input.line.bom_actual_components,\n'
+              + '    required_actual_component_keys: source.required_actual_component_keys,\n'
+              + '  });\n');
+          }
+          materializer = materializer.replace(
+            '    output_qty: input.line.output_qty,\n    resolved,\n  });\n  const prior =',
+            '    output_qty: input.line.output_qty,\n    resolved: resolvedWithActuals,\n  });\n  const prior ='
+          );
+          materializer = materializer.replaceAll('components: resolved.components,', 'components: resolvedWithActuals.components,');
+          materializer = materializer.replace('    items: resolved.components.map((row, index) => ({', '    items: resolvedWithActuals.components.map((row, index) => ({');
+          fs.writeFileSync(materializerPath, materializer, 'utf8');
+
+          // Sales Production: actual quantities are per configured set; each generated line is one set.
+          const salesPath = 'server/apps-src/alumdoor-worker/src/sales-production-core.ts';
+          let sales = fs.readFileSync(salesPath, 'utf8');
+          const materializerImport = 'import { resolveProductionLineBom } from "./bom-template-materializer.js";\n';
+          const salesActualImport = 'import { normalizeBomActualComponents, type BomActualComponentInput } from "./bom-actual-components.js";\n';
+          if (!sales.includes(salesActualImport)) {
+            if (!sales.includes(materializerImport)) throw new Error('sales materializer import anchor missing');
+            sales = sales.replace(materializerImport, materializerImport + salesActualImport);
+          }
+          if (!sales.includes('bom_actual_components?: BomActualComponentInput[];')) {
+            sales = sales.replace(
+              '  bom_materialization_required?: 0 | 1;\n  output_qty: number;',
+              '  bom_materialization_required?: 0 | 1;\n  bom_actual_components?: BomActualComponentInput[];\n  output_qty: number;'
+            );
+          }
+          const paintAnchor = '    const paintRequired = checked(row.paint_required) ? 1 : 0;\n';
+          if (!sales.includes('const bomActualComponents = normalizeBomActualComponents(row.bom_actual_components);')) {
+            if (!sales.includes(paintAnchor)) throw new Error('sales paint anchor missing');
+            sales = sales.replace(paintAnchor, paintAnchor
+              + '    const bomActualComponents = normalizeBomActualComponents(row.bom_actual_components);\n');
+          }
+          if (!sales.includes('bom_actual_components: bomActualComponents,\n        ray_type:')) {
+            sales = sales.replace(
+              '        estimated_minutes: standard.minutes,\n        ray_type: text(chosen.raw.ray_type) || null,',
+              '        estimated_minutes: standard.minutes,\n'
+                + '        bom_actual_components: bomActualComponents,\n'
+                + '        ray_type: text(chosen.raw.ray_type) || null,'
+            );
+          }
+          if (!sales.includes('...(bomActualComponents.length ? { bom_actual_components: bomActualComponents } : {}),')) {
+            sales = sales.replace(
+              '        formula_snapshot: JSON.stringify(snapshot),\n        ...(text(row.accessories)',
+              '        formula_snapshot: JSON.stringify(snapshot),\n'
+                + '        ...(bomActualComponents.length ? { bom_actual_components: bomActualComponents } : {}),\n'
+                + '        ...(text(row.accessories)'
+            );
+          }
+          fs.writeFileSync(salesPath, sales, 'utf8');
+
+          // Source pilot becomes operational only with explicit actual slots.
+          const catalogPath = 'server/scripts/lib/alumdoor-bom-template-source-catalog.mjs';
+          let catalog = fs.readFileSync(catalogPath, 'utf8');
+          catalog = catalog.replace('      disabled: true,\n      source_status: "DEFERRED",', '      disabled: false,\n      source_status: "READY_WITH_ACTUALS",');
+          if (!catalog.includes('required_actual_component_keys_json: JSON.stringify([')) {
+            const anchor = '      deferred_components_json: JSON.stringify([';
+            if (!catalog.includes(anchor)) throw new Error('catalog deferred anchor missing');
+            const requiredActual = `      required_actual_component_keys_json: JSON.stringify([\n        "BOTTOM_SEAL",\n        "FOAM_45CM",\n        "PULLEY_34",\n        "SPRING",\n        "SPRING_STOP_ARM",\n        "PULL_ROD",\n        "SCREW_HEAD_PULLEY",\n        "SCREW_2P_PULLEY",\n      ]),\n`;
+            catalog = catalog.replace(anchor, requiredActual + anchor);
+          }
+          catalog = catalog.replace(
+            '{ source_rows: [710, 711], key: "PULLEY_SCREWS", reason: "Số vít phụ thuộc số puly thực tế." },',
+            '{ source_row: 710, key: "SCREW_HEAD_PULLEY", reason: "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ." },\n'
+              + '        { source_row: 711, key: "SCREW_2P_PULLEY", reason: "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ." },'
+          );
+          catalog = catalog.replace(
+            '      note: "Pilot chuẩn hóa trực tiếp từ sheet ĐM. DISABLED cho đến khi các dòng deferred được cấu trúc hóa; không sinh BOM thiếu vật tư.",',
+            '      note: "Pilot chuẩn hóa trực tiếp từ sheet ĐM. Các dòng không đủ công thức được bắt buộc nhập actual có cấu trúc theo một bộ; thiếu slot thì materializer chặn.",'
+          );
+          fs.writeFileSync(catalogPath, catalog, 'utf8');
+
+          // Update source catalog tests for READY_WITH_ACTUALS semantics.
+          const catalogTestPath = 'server/tests/alumdoor-bom-source-catalog.test.mjs';
+          let catalogTest = fs.readFileSync(catalogTestPath, 'utf8');
+          catalogTest = catalogTest.replace('  assert.equal(source.data.source_status, "DEFERRED");\n  assert.equal(source.data.disabled, true);',
+            '  assert.equal(source.data.source_status, "READY_WITH_ACTUALS");\n  assert.equal(source.data.disabled, false);');
+          catalogTest = catalogTest.replace(
+            'test("source pilot stays fail-closed until deferred rows are resolved", () => {\n  const template = parsedTemplate();\n  assert.throws(\n    () => resolveBomTemplate({\n      templates: [template],\n      context: { item_code: "TP-UC KT 4D XN-VK" },\n      values: { PB_CAO: 3.85, PB_RONG: 3.65, billable_area_sqm: 14.0525 },\n    }),\n    /Không có BOM Template phù hợp/i,\n  );\n});',
+            'test("source pilot resolves deterministic core while declaring explicit actual slots", () => {\n'
+              + '  const template = parsedTemplate();\n'
+              + '  const resolved = resolveBomTemplate({\n'
+              + '    templates: [template],\n'
+              + '    context: { item_code: "TP-UC KT 4D XN-VK" },\n'
+              + '    values: { PB_CAO: 3.85, PB_RONG: 3.65, billable_area_sqm: 14.0525 },\n'
+              + '  });\n'
+              + '  assert.equal(resolved.components.length, 9);\n'
+              + '  assert.deepEqual(template.required_actual_component_keys, ["BOTTOM_SEAL", "FOAM_45CM", "PULLEY_34", "SPRING", "SPRING_STOP_ARM", "PULL_ROD", "SCREW_HEAD_PULLEY", "SCREW_2P_PULLEY"]);\n'
+              + '});'
+          );
+          catalogTest = catalogTest.replace('  assert.equal(rows[0].data.disabled, true);', '  assert.equal(rows[0].data.disabled, false);');
+          catalogTest = catalogTest.replace('  assert.equal(JSON.parse(rows[0].data.deferred_components_json).length, 7);', '  assert.equal(JSON.parse(rows[0].data.deferred_components_json).length, 8);');
+          fs.writeFileSync(catalogTestPath, catalogTest, 'utf8');
+          NODE
+
+          # Metadata: child table on Sales Order Item + template actual-slot field + refreshed source fixture.
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { bomSourceFixtureRows } from './server/scripts/lib/alumdoor-bom-template-source-catalog.mjs';
+
+          const briefPath = 'server/briefs/alumdoor-v2.json';
+          const brief = JSON.parse(fs.readFileSync(briefPath, 'utf8'));
+          const nameOf = (entry) => typeof entry === 'string' ? entry.split(':')[0].trim() : entry.fieldname;
+          const perms = { 'Chủ xưởng': 'rwc', 'Sản xuất': 'rwc', 'Kinh doanh': 'rwc' };
+          if (!brief.doctypes.some((row) => row.name === 'BOM Actual Component')) {
+            brief.doctypes.push({
+              name: 'BOM Actual Component', child: true, label: 'Vật tư BOM thực tế', group: 'Sản xuất', naming: 'autoincrement',
+              fields: [
+                'component_key:Data*! Slot BOM',
+                'item_code:Link(Item)! Vật tư thực tế',
+                'qty:Float! Số lượng / một bộ',
+                'source_row:Int Dòng ĐM',
+                'note:Small Text Ghi chú',
+              ],
+              permissions: perms,
+            });
+          }
+          const salesItem = brief.doctypes.find((row) => row.name === 'Sales Order Item');
+          if (!salesItem) throw new Error('Sales Order Item missing');
+          if (!salesItem.fields.some((entry) => nameOf(entry) === 'bom_actual_components')) {
+            const anchor = salesItem.fields.findIndex((entry) => nameOf(entry) === 'set_count');
+            const field = {
+              fieldname: 'bom_actual_components', fieldtype: 'Table', options: 'BOM Actual Component', label: 'Vật tư BOM thực tế',
+              description: 'Nhập số lượng THỰC TẾ CHO MỘT BỘ. Production tách từng bộ thành một line; thiếu slot mà BOM Template yêu cầu thì chặn sinh BOM.',
+            };
+            salesItem.fields.splice(anchor >= 0 ? anchor + 1 : salesItem.fields.length, 0, field);
+          }
+          const template = brief.doctypes.find((row) => row.name === 'BOM Template');
+          if (!template) throw new Error('BOM Template missing');
+          template.fields = template.fields.map((entry) => nameOf(entry) === 'source_status'
+            ? 'source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn'
+            : entry);
+          if (!template.fields.some((entry) => nameOf(entry) === 'required_actual_component_keys_json')) {
+            const anchor = template.fields.findIndex((entry) => nameOf(entry) === 'required_component_keys_json');
+            template.fields.splice(anchor >= 0 ? anchor + 1 : template.fields.length, 0,
+              'required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON');
+          }
+          for (const fixture of bomSourceFixtureRows()) {
+            const index = brief.fixtures.findIndex((row) => row.type === fixture.type && row.name === fixture.name);
+            if (index >= 0) brief.fixtures[index] = fixture;
+            else brief.fixtures.push(fixture);
+          }
+          fs.writeFileSync(briefPath, JSON.stringify(brief, null, 2) + '\n');
+          NODE
+
+          # Keep the future builder authoritative too; do not run regeneration because unrelated legacy fixtures still block it.
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'server/scripts/build-alumdoor-v2-brief.mjs';
+          let text = fs.readFileSync(path, 'utf8');
+          text = text.replace(
+            '    "source_status:Select(READY,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",',
+            '    "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",'
+          );
+          if (!text.includes('"required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON"')) {
+            text = text.replace(
+              '    "required_component_keys_json:Code Thành phần bắt buộc JSON",\n    "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",',
+              '    "required_component_keys_json:Code Thành phần bắt buộc JSON",\n'
+                + '    "required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON",\n'
+                + '    "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",'
+            );
+          }
+          if (!text.includes('name: "BOM Actual Component"')) {
+            const anchor = '// ────────────────── BATCH (doctype NỀN TẢNG) ──────────────────';
+            if (!text.includes(anchor)) throw new Error('builder batch anchor missing');
+            const block = `brief.doctypes.push({\n  name: "BOM Actual Component", child: true, label: "Vật tư BOM thực tế", group: "Sản xuất", naming: "autoincrement",\n  fields: [\n    "component_key:Data*! Slot BOM",\n    "item_code:Link(Item)! Vật tư thực tế",\n    "qty:Float! Số lượng / một bộ",\n    "source_row:Int Dòng ĐM",\n    "note:Small Text Ghi chú",\n  ],\n  permissions: { "Chủ xưởng": "rwc", "Sản xuất": "rwc", "Kinh doanh": "rwc" },\n});\nensureSalesLineField(doctype("Sales Order Item"), "set_count", {\n  fieldname: "bom_actual_components", fieldtype: "Table", options: "BOM Actual Component", label: "Vật tư BOM thực tế",\n  description: "Nhập số lượng THỰC TẾ CHO MỘT BỘ. Production tách từng bộ thành một line; thiếu slot mà BOM Template yêu cầu thì chặn sinh BOM.",\n});\nnote("Sales Order Item: +BOM Actual Component theo một bộ");\n\n`;
+            text = text.replace(anchor, block + anchor);
+          }
+          fs.writeFileSync(path, text, 'utf8');
+          NODE
+      - name: Install dependencies
+        working-directory: server
+        run: pnpm install --frozen-lockfile
+      - name: Build server
+        working-directory: server
+        run: pnpm run build
+      - name: Run BOM actual/source/base tests
+        working-directory: server
+        run: |
+          node --test tests/alumdoor-bom-template-core.test.mjs
+          node --test tests/alumdoor-bom-template-materializer.test.mjs
+          node --test tests/alumdoor-bom-actual-components.test.mjs
+          node --test tests/alumdoor-bom-actual-materializer.test.mjs
+          node --test tests/alumdoor-bom-source-catalog.test.mjs
+          node --test tests/alumdoor-cutting-policy-geometry.test.mjs
+      - name: Validate metadata and brief dry-run
+        working-directory: server
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { bomSourceFixtureRows } from './scripts/lib/alumdoor-bom-template-source-catalog.mjs';
+          const brief = JSON.parse(fs.readFileSync('briefs/alumdoor-v2.json', 'utf8'));
+          const nameOf = (entry) => typeof entry === 'string' ? entry.split(':')[0].trim() : entry.fieldname;
+          const actual = brief.doctypes.find((row) => row.name === 'BOM Actual Component');
+          const sales = brief.doctypes.find((row) => row.name === 'Sales Order Item');
+          const template = brief.doctypes.find((row) => row.name === 'BOM Template');
+          if (!actual) throw new Error('BOM Actual Component missing');
+          if (!sales.fields.some((entry) => nameOf(entry) === 'bom_actual_components')) throw new Error('Sales Order Item actual table missing');
+          if (!template.fields.some((entry) => nameOf(entry) === 'required_actual_component_keys_json')) throw new Error('BOM Template actual key contract missing');
+          const expected = bomSourceFixtureRows()[0];
+          const fixture = brief.fixtures.find((row) => row.type === expected.type && row.name === expected.name);
+          if (JSON.stringify(fixture) !== JSON.stringify(expected)) throw new Error('Source fixture drifted after actual-slot activation');
+          if (fixture.data.disabled || fixture.data.source_status !== 'READY_WITH_ACTUALS') throw new Error('Source pilot should be active only through required actual slots');
+          NODE
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+      - name: Commit validated actual-component flow and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/_tmp-alumdoor-bom-actual-components.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            server/apps-src/alumdoor-worker/src/bom-actual-components.ts \
+            server/apps-src/alumdoor-worker/src/bom-template-materializer.ts \
+            server/apps-src/alumdoor-worker/src/sales-production-core.ts \
+            server/scripts/lib/alumdoor-bom-template-source-catalog.mjs \
+            server/scripts/build-alumdoor-v2-brief.mjs \
+            server/briefs/alumdoor-v2.json \
+            server/tests/alumdoor-bom-actual-components.test.mjs \
+            server/tests/alumdoor-bom-actual-materializer.test.mjs \
+            server/tests/alumdoor-bom-source-catalog.test.mjs \
+            .github/workflows/_tmp-alumdoor-bom-actual-components.yml
+          git commit -m 'feat(alumdoor): require explicit actual BOM components'
+          git push origin HEAD:agent/alumdoor-bom-actual-components
