@@ -44,8 +44,15 @@ if errorlevel 1 (echo [LOI] Khong the fast-forward main tu GitHub & exit /b 1)
 :bootstrap
 echo.
 echo === 4. Dong bo dependency dung lockfile ===
-call corepack enable >nul 2>&1
-if errorlevel 1 (echo [LOI] Khong bat duoc Corepack. Can Node 22+ & exit /b 1)
+REM Runner service co the khong co quyen corepack enable toan may. Neu pnpm da co
+REM trong PATH thi dung thang; chi fallback sang Corepack khi thuc su thieu pnpm.
+call pnpm --version >nul 2>&1
+if errorlevel 1 (
+  call corepack enable >nul 2>&1
+  if errorlevel 1 (echo [LOI] Khong co pnpm va khong bat duoc Corepack. Can Node 22+ voi pnpm 9. & exit /b 1)
+  call pnpm --version >nul 2>&1
+  if errorlevel 1 (echo [LOI] Corepack da bat nhung pnpm van khong dung duoc. & exit /b 1)
+)
 call pnpm install --frozen-lockfile
 if errorlevel 1 (echo [LOI] Dependency khong khop lockfile & exit /b 1)
 
