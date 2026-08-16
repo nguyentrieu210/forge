@@ -97,4 +97,10 @@ test("static V2 metadata contains Geometry masters and moved ownership", async (
   assert.equal(brief.fixtures.filter((row) => row.type === "Measurement Profile").length, 7);
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Field").length, 8);
   assert.equal(brief.fixtures.filter((row) => row.type === "Geometry Profile").length, 5);
+  const geometryField = byName.get("Geometry Field");
+  const axis = (geometryField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "axis");
+  assert.deepEqual(axis?.optionLabels, { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" });
+  const geometryProfileField = byName.get("Geometry Profile Field");
+  const role = (geometryProfileField.fields ?? []).find((field) => typeof field === "object" && field.fieldname === "role");
+  assert.deepEqual(role?.optionLabels, { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" });
 });

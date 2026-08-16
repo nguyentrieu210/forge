@@ -32,7 +32,7 @@ function geometryDoctypes() {
         { fieldname: "field_code", fieldtype: "Data", label: "Mã trường", required: true },
         { fieldname: "field_name", fieldtype: "Data", label: "Tên trường", required: true },
         { fieldname: "uom", fieldtype: "Link", options: "UOM", label: "Đơn vị", required: true },
-        { fieldname: "axis", fieldtype: "Select", options: "WIDTH\nHEIGHT\nLENGTH\nOTHER", label: "Trục đo", required: true },
+        { fieldname: "axis", fieldtype: "Select", options: "WIDTH\nHEIGHT\nLENGTH\nOTHER", optionLabels: { WIDTH: "Chiều rộng", HEIGHT: "Chiều cao", LENGTH: "Chiều dài", OTHER: "Khác" }, label: "Trục đo", required: true },
         { fieldname: "note", fieldtype: "Small Text", label: "Ghi chú" },
         { fieldname: "disabled", fieldtype: "Check", label: "Ngừng dùng", default: false },
       ],
@@ -57,7 +57,7 @@ function geometryDoctypes() {
       naming: "autoincrement",
       fields: [
         { fieldname: "geometry_field", fieldtype: "Link", options: "Geometry Field", label: "Trường", required: true },
-        { fieldname: "role", fieldtype: "Select", options: "INPUT\nCALCULATED\nINFO", label: "Vai trò", required: true },
+        { fieldname: "role", fieldtype: "Select", options: "INPUT\nCALCULATED\nINFO", optionLabels: { INPUT: "Nhập liệu", CALCULATED: "Tự tính", INFO: "Thông tin" }, label: "Vai trò", required: true },
         { fieldname: "required", fieldtype: "Check", label: "Bắt buộc", default: false },
         { fieldname: "visible", fieldtype: "Check", label: "Hiện trên form", default: true },
         { fieldname: "editable", fieldtype: "Check", label: "Cho nhập", default: false },

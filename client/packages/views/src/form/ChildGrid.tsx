@@ -2002,7 +2002,7 @@ export function ChildGrid(props: ChildGridProps) {
       {/* `border-input` (viền MẠNH) chứ không phải `border` mặc định (`--border` #e1e5ea trên
           card trắng chỉ ~1.27:1 — trên màn hình thật gần như biến mất). Khung bọc cả bảng con
           là ranh giới quan trọng nhất của nó, xứng đáng cùng bậc viền với ô nhập. */}
-      <div className="overflow-x-auto rounded-md border border-input [scrollbar-width:thin]">
+      <div className={`${expanded ? "overflow-x-auto" : "max-h-[min(52vh,32rem)] overflow-auto"} rounded-md border border-input [scrollbar-width:thin]`}>
         {/* Bảng lớn CHIA phần trong khung (`w-full`, không ép min-width) nên 12 cột vừa trọn
             màn hình; bảng gọn vẫn tràn để cuộn vì khung của nó hẹp hơn tổng các cột. */}
         <Table className="mf-child-grid-table w-full table-fixed text-[13px]" style={expanded ? undefined : { minWidth: `${minWidthRem}rem` }}>
@@ -2029,7 +2029,7 @@ export function ChildGrid(props: ChildGridProps) {
           <TableHeader>
             <TableRow className="h-9 hover:bg-transparent">
               {!readOnly ? (
-                <TableHead className="sticky left-0 z-40 w-10 min-w-10 max-w-10 bg-card px-0 text-center" style={{ width: 40 }}>
+                <TableHead className="sticky left-0 top-0 z-50 w-10 min-w-10 max-w-10 bg-card px-0 text-center" style={{ width: 40 }}>
                   <Checkbox
                     checked={rows.length > 0 && selectedRows.length === rows.length}
                     onCheckedChange={() => setSelectedRows(selectedRows.length === rows.length ? [] : rows.map(rowKey))}
@@ -2037,7 +2037,7 @@ export function ChildGrid(props: ChildGridProps) {
                   />
                 </TableHead>
               ) : null}
-              <TableHead className={`sticky z-40 w-12 min-w-12 max-w-12 bg-card px-0 text-center ${readOnly ? "left-0" : "left-10"}`} style={{ width: 48 }}>#</TableHead>
+              <TableHead className={`sticky top-0 z-50 w-12 min-w-12 max-w-12 bg-card px-0 text-center ${readOnly ? "left-0" : "left-10"}`} style={{ width: 48 }}>#</TableHead>
               {cols.map((c) => {
                 const sticky = stickyColumn(c.fieldname, true);
                 const numeric = ["Int", "Float", "Currency", "Percent"].includes(c.fieldtype);
@@ -2070,7 +2070,7 @@ export function ChildGrid(props: ChildGridProps) {
                 return (
                 <TableHead
                   key={c.fieldname}
-                  className={`group relative whitespace-pre-line px-1 py-1 text-center text-[12px] leading-tight ${sticky.className}`}
+                  className={`group sticky top-0 z-40 whitespace-pre-line bg-card px-1 py-1 text-center text-[12px] leading-tight ${sticky.className}`}
                   style={sticky.style}
                   draggable={!readOnly}
                   onDragStart={() => { dragged.current = c.fieldname; }}
@@ -2095,7 +2095,7 @@ export function ChildGrid(props: ChildGridProps) {
                   ) : null}
                 </TableHead>
               );})}
-              {!readOnly ? <TableHead className="w-10" /> : null}
+              {!readOnly ? <TableHead className="sticky top-0 z-40 w-10 bg-card" /> : null}
             </TableRow>
           </TableHeader>
           <TableBody>

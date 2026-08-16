@@ -10979,7 +10979,13 @@
           "fieldtype": "Select",
           "options": "WIDTH\nHEIGHT\nLENGTH\nOTHER",
           "label": "Trục đo",
-          "required": true
+          "required": true,
+          "optionLabels": {
+            "WIDTH": "Chiều rộng",
+            "HEIGHT": "Chiều cao",
+            "LENGTH": "Chiều dài",
+            "OTHER": "Khác"
+          }
         },
         {
           "fieldname": "note",
@@ -11041,7 +11047,12 @@
           "fieldtype": "Select",
           "options": "INPUT\nCALCULATED\nINFO",
           "label": "Vai trò",
-          "required": true
+          "required": true,
+          "optionLabels": {
+            "INPUT": "Nhập liệu",
+            "CALCULATED": "Tự tính",
+            "INFO": "Thông tin"
+          }
         },
         {
           "fieldname": "required",
