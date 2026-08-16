@@ -126,7 +126,7 @@ const GROUP_LAYOUT: Record<string, string> = {
 function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
   const itemsByKey = new Map(items.map((item) => [normalize(item.key), item]));
   const itemsByLabel = new Map(items.map((item) => [normalize(item.label), item]));
-  const rank = new Map(DISPLAY_ORDER.map((id, index) => [id, index]));
+  const rank = new Map<string, number>(DISPLAY_ORDER.map((id, index) => [id, index]));
 
   return MASTER_GROUPS.map((group) => ({
     id: group.id,
