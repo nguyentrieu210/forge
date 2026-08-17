@@ -7,6 +7,8 @@ on:
       - 'sync-local.bat'
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
+      - 'server/scripts/alumdoor-runtime-maintenance.mjs'
+      - 'server/scripts/alumdoor-runtime-maintenance.test.mjs'
       - 'server/scripts/alumdoor-legacy-runtime-migration.mjs'
       - 'server/scripts/test-alumdoor-legacy-runtime-migration.mjs'
       - 'server/scripts/ensure-alumdoor-local-vars.mjs'
@@ -20,6 +22,7 @@ on:
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/*alumdoor-pricing*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/verify-alumdoor-local-persistence.yml'
       - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
       - '.github/workflows/local-runner-import-contract.yml'
@@ -32,6 +35,8 @@ on:
       - 'sync-local.bat'
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
+      - 'server/scripts/alumdoor-runtime-maintenance.mjs'
+      - 'server/scripts/alumdoor-runtime-maintenance.test.mjs'
       - 'server/scripts/alumdoor-legacy-runtime-migration.mjs'
       - 'server/scripts/test-alumdoor-legacy-runtime-migration.mjs'
       - 'server/scripts/ensure-alumdoor-local-vars.mjs'
@@ -45,6 +50,7 @@ on:
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/*alumdoor-pricing*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/verify-alumdoor-local-persistence.yml'
       - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
       - '.github/workflows/local-runner-import-contract.yml'
@@ -72,7 +78,10 @@ jobs:
           node --test \
             scripts/local-runner/contract.test.mjs \
             scripts/local-runner/bootstrap-helper-context.test.mjs \
-            scripts/local-runner/local-mutation-child-context.test.mjs
+            scripts/local-runner/service-verification.test.mjs \
+            scripts/local-runner/bootstrap-hardening-contract.test.mjs \
+            scripts/local-runner/local-mutation-child-context.test.mjs \
+            server/scripts/alumdoor-runtime-maintenance.test.mjs
           node server/scripts/test-alumdoor-managed-process-tree.mjs
           node server/scripts/test-alumdoor-service-control-contract.mjs
           node server/scripts/test-alumdoor-legacy-runtime-migration.mjs
@@ -81,13 +90,16 @@ jobs:
         run: |
           node --check scripts/local-runner/run-local-import.mjs
           node --check scripts/local-runner/run-local-import-core.mjs
+          node --check scripts/local-runner/service-verification.mjs
           node --check scripts/local-runner/pricing-adapter.mjs
           node --check scripts/local-runner/real-purchase-adapter.mjs
+          node --check scripts/local-runner/customer-import-core.mjs
           node --check scripts/local-runner/assert-bootstrap-helper-context.mjs
           node --check scripts/local-runner/assert-local-mutation-child-context.mjs
           node --check scripts/local-runner/assert-ports-quiet.mjs
           node --check scripts/local-runner/audit-local-mutation-entrypoints.mjs
           node --check server/scripts/alumdoor-runtime-service-host.mjs
+          node --check server/scripts/alumdoor-runtime-maintenance.mjs
           node --check server/scripts/alumdoor-legacy-runtime-migration.mjs
           node --check server/scripts/ensure-alumdoor-local-vars.mjs
           node --check server/scripts/lib/alumdoor-managed-process-tree.mjs
@@ -96,6 +108,7 @@ jobs:
           node --check server/scripts/seed-alumdoor-uom-local.mjs
           node --check server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs
           node --check server/scripts/import-alumdoor-pricing-local.mjs
+          node --check server/scripts/import-alumdoor-canonical-bom-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
           node --check server/scripts/test-alumdoor-service-control-contract.mjs
 
@@ -108,7 +121,7 @@ jobs:
       - name: Global local-mutation inventory
         run: node scripts/local-runner/audit-local-mutation-entrypoints.mjs
 
-      - name: Enforce one mutation entry point
+      - name: Enforce one mutation entry point and explicit backend contract
         shell: bash
         run: |
           set -euo pipefail
@@ -120,11 +133,14 @@ jobs:
             .github/workflows/reconcile-alumdoor-local-source-uom.yml
             .github/workflows/alumdoor-real-purchase-import-policy.yml
             .github/workflows/alumdoor-pricing-local-import.yml
+            .github/workflows/alumdoor-bom-local-import.yml
+            .github/workflows/alumdoor-customer-local-import.yml
           )
           for file in "${files[@]}"; do
             grep -q 'group: alumdoor-local-d1-mutation' "$file"
             grep -q 'cancel-in-progress: false' "$file"
             grep -q 'scripts\\local-runner\\run-local-import.mjs' "$file"
+            grep -Eq 'FORGE_LOCAL_REQUIRED_SERVICES:[[:space:]]*backend([[:space:]]|$)' "$file"
             if grep -Eq 'npx[[:space:]]+wrangler|wrangler[[:space:]]+d1[[:space:]]+(execute|migrations)|stop-local-dev\.mjs' "$file"; then
               echo "Bypass mutation/process-control path is forbidden in $file"
               exit 1
@@ -132,6 +148,32 @@ jobs:
           done
           if grep -RInE --include='*.yml' --include='*.yaml' 'sync-local\.bat[[:space:]]+--bootstrap' .github/workflows; then
             echo 'Bootstrap mutation must go through run-local-import.mjs bootstrap'
+            exit 1
+          fi
+
+      - name: Enforce explicit bootstrap and persistence service capabilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          bootstrap=.github/workflows/bootstrap-alumdoor-local.yml
+          persistence=.github/workflows/verify-alumdoor-local-persistence.yml
+          core=scripts/local-runner/run-local-import-core.mjs
+          verifier=scripts/local-runner/service-verification.mjs
+
+          grep -Eq 'FORGE_LOCAL_REQUIRED_SERVICES:[[:space:]]*backend([[:space:]]|$)' "$bootstrap"
+          grep -q 'service-verification.mjs --services=$env:FORGE_LOCAL_REQUIRED_SERVICES' "$bootstrap"
+          grep -q 'FORGE_LOCAL_REQUIRED_SERVICES: backend,frontend' "$persistence"
+          grep -q 'service-verification.mjs --services=$env:FORGE_LOCAL_REQUIRED_SERVICES' "$persistence"
+          grep -q 'required_services:' "$core"
+          grep -q 'REQUIRED_SERVICE_FOREIGN_LISTENER' "$verifier"
+          grep -q 'REQUIRED_SERVICE_LISTENER_MISSING' "$verifier"
+          grep -q 'listener_pids=' "$verifier"
+          if grep -qE "fetch\(['\"]http://127\.0\.0\.1:5173" "$bootstrap"; then
+            echo 'Generic bootstrap must not hard-code frontend health as an undeclared dependency'
+            exit 1
+          fi
+          if grep -qiE 'taskkill|continue-on-error:[[:space:]]*true|\|\|[[:space:]]*true' "$bootstrap" "$persistence" run-local.bat sync-local.bat "$core" "$verifier"; then
+            echo 'Bootstrap hardening must not use blind kill or verification bypasses'
             exit 1
           fi
 
@@ -211,6 +253,8 @@ jobs:
           grep -q 'assertLocalMutationChildContext' server/scripts/seed-alumdoor-uom-local.mjs
           grep -q 'assertLocalMutationChildContext' server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs
           grep -q 'assertLocalMutationChildContext' server/scripts/import-alumdoor-pricing-local.mjs
+          grep -q 'assertLocalMutationChildContext' server/scripts/import-alumdoor-canonical-bom-local.mjs
+          grep -q 'assertLocalMutationChildContext' scripts/local-runner/customer-import-core.mjs
 
       - name: Enforce minimal Windows service-control grant
         shell: bash
