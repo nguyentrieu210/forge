@@ -121,8 +121,8 @@ export const ITEM_SOURCE_ALIASES = Object.freeze({
   "NVL-TD-AL503N26THO": "NVL-AL503-THO",
 });
 
-// Same source code is intentionally one Item identity; finish/color belongs to master dimensions,
-// not to a synthetic code split.
+// Same source code is intentionally one Item identity; the named business dimension belongs to
+// the Item selection/materialization context, not to a synthetic Item-code split.
 export const ITEM_SOURCE_SHARED_IDENTITIES = Object.freeze({
   "NVL-V5_KEM_STD": Object.freeze({
     dimensions: Object.freeze(["surface_finish"]),
@@ -136,11 +136,15 @@ export const ITEM_SOURCE_SHARED_IDENTITIES = Object.freeze({
     dimensions: Object.freeze(["item_color"]),
     reason: "same stock identity appears with more than one color row",
   }),
+  "NVL-TON-ST-1LYx175-_MSK": Object.freeze({
+    dimensions: Object.freeze(["material_specification"]),
+    reason: "same sellable Item code/UOM/price covers 1.2LY and 1.3LY; raw stock identity is selected by material specification",
+  }),
 });
 
-// The source reuses this exact code for distinct numbered products. Numbered product identity must
-// therefore fail closed. The audited stock targets are retained only as evidence for a BOM/reference
-// resolver; they are not permission to rewrite a sellable product's original code.
+// Some legacy BOM/reference spellings need source-row context to resolve the exact raw stock Item.
+// The shared Super Trường sellable identity remains the exact source code; only its BOM/raw-stock
+// reference uses source_index to select 1.2LY versus 1.3LY.
 export const ITEM_SOURCE_CONTEXTUAL_COLLISIONS = Object.freeze({
   "NVL-TON-ST-1LYx175-_MSK": Object.freeze([
     Object.freeze({ source_indexes: Object.freeze([351]), stock_reference_code: "NVL-TON-DL1.2LYx175-STD" }),
@@ -181,12 +185,15 @@ export function classifyAlumdoorItemSourceCode(sourceCode, context = {}) {
 
   const contextualRules = ITEM_SOURCE_CONTEXTUAL_COLLISIONS[sourceCodeOriginal];
   if (contextualRules) {
-    if (sourceRole === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT) {
+    if (
+      sourceRole === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT
+      && ITEM_SOURCE_SHARED_IDENTITIES[sourceCodeOriginal]
+    ) {
       return Object.freeze({
-        status: "blocked",
-        reason: "duplicate_source_code_for_distinct_products",
+        status: "source",
+        reason: "shared_identity_with_dimensions",
         source_code_original: sourceCodeOriginal,
-        canonical_item_code: "",
+        canonical_item_code: sourceCodeOriginal,
       });
     }
     if (sourceRole !== ITEM_SOURCE_ROLES.BOM_REFERENCE) {
