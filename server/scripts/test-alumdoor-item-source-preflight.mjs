@@ -173,12 +173,19 @@ expect(ronDayUc.source_rows[0].code_origin, "explicit_evidence_override_for_blan
 const blockedAudit = preflightAlumdoorItemSourceRecords([
   {
     source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
-    source_sheet: "ĐM",
-    source_row: 2681,
-    source_index: 351,
-    item_code: "NVL-TON-ST-1LYx175-_MSK",
-    item_name: "LÁ SIÊU TRƯỜNG STĐ 1.2LY_MSK",
-    source_uom: "M2",
+    source_sheet: "fixture",
+    source_row: 1,
+    item_code: "TP-DUPLICATE-FIXTURE",
+    item_name: "DUPLICATE A",
+    source_uom: "CÁI",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
+    source_sheet: "fixture",
+    source_row: 2,
+    item_code: "TP-DUPLICATE-FIXTURE",
+    item_name: "DUPLICATE B",
+    source_uom: "CÁI",
   },
   {
     source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
@@ -200,7 +207,7 @@ const blockedAudit = preflightAlumdoorItemSourceRecords([
 
 const reasons = new Set(blockedAudit.blockers.map((blocker) => blocker.reason));
 for (const expectedReason of [
-  "duplicate_source_code_for_distinct_products",
+  "duplicate_sellable_code_for_distinct_names",
   "ambiguous_compound_uom",
   "unresolved_bom_reference",
 ]) {

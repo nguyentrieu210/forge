@@ -7,7 +7,7 @@ function expect(actual, expected, label) {
   if (actual !== expected) throw new Error(`${label}: expected=${expected} actual=${actual}`);
 }
 
-expect(ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS.length, 5, "known defect count");
+expect(ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS.length, 2, "known defect count");
 
 const keys = new Set();
 for (const defect of ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS) {
@@ -21,8 +21,8 @@ for (const defect of ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS) {
 const audit = preflightAlumdoorItemSourceRecords(ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS);
 const partition = partitionAlumdoorItemSourceBlockers(audit.blockers);
 
-expect(audit.blocker_count, 5, "known defect preflight blocker count");
-expect(partition.item_master_blocker_count, 4, "known Item Master blocker count");
+expect(audit.blocker_count, 2, "known defect preflight blocker count");
+expect(partition.item_master_blocker_count, 1, "known Item Master blocker count");
 expect(partition.bom_blocker_count, 1, "known BOM blocker count");
 expect(partition.other_blocker_count, 0, "known other blocker count");
 
@@ -36,4 +36,4 @@ for (const defect of ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS) {
   expect(blocker.reason, defect.expected_reason, `blocker reason row ${defect.source_row}`);
 }
 
-console.log("ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS_PASS item=4 bom=1 total=5");
+console.log("ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS_PASS item=1 bom=1 total=2");
