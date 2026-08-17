@@ -168,6 +168,14 @@
         "create",
         "save"
       ]
+    },
+    {
+      "doctype": "Stock Return",
+      "actions": [
+        "create",
+        "save",
+        "submit"
+      ]
     }
   ],
   "//hooks": [
@@ -229,7 +237,6 @@
       "//do": "Gõ lại là chỗ số đo bị sai: một bộ cửa 4.200×2.800 chép tay thành 4.200×2.080 thì xưởng cắt xong mới biết. Chuyển lần thứ hai bị TỪ CHỐI — hai đơn cho cùng một báo giá là giao hàng hai lần.",
       "name": "bao-gia-thanh-don",
       "label": "Báo giá → Đơn hàng",
-      "menu": false,
       "icon": "file-output",
       "group": "Bán hàng",
       "description": "Chỉ chuyển được báo giá KHÁCH ĐÃ ĐỒNG Ý. Số đo, màu, mô tơ, đơn giá chép nguyên sang đơn.",
@@ -312,7 +319,6 @@
       "//": "ĐƠN BÁN → PHIẾU XUẤT, chỉ phần CÒN LẠI và giữ nguyên quy cách Item.",
       "name": "don-ban-thanh-phieu-xuat",
       "label": "Đơn hàng → Phiếu xuất",
-      "menu": false,
       "icon": "truck",
       "group": "Bán hàng",
       "description": "Tạo phiếu xuất NHÁP cho phần chưa giao; giữ nguyên màu, kích thước, ĐVT bán và số lượng tồn.",
@@ -379,6 +385,31 @@
       ],
       "preview": "alumdoor.sales.preview_production | Xem kế hoạch",
       "commit": "alumdoor.sales.create_production | Tạo yêu cầu và lệnh sản xuất | Tạo Work Order nháp theo từng bộ cửa?",
+      "resultTable": "items"
+    },
+    {
+      "//": "ĐƠN BÁN → HOÁ ĐƠN, chỉ phần CHƯA xuất hoá đơn.",
+      "//do": [
+        "Trước đây Phiếu thu có trên thanh bên còn Hoá đơn thì không, nên xưởng thu được tiền",
+        "mà không lập được chứng từ sinh ra khoản phải thu — công nợ không có gốc để trừ.",
+        "",
+        "Không chép đơn giá sang đây. Nhân đóng băng lại giá từ chính dòng đơn lúc ghi sổ",
+        "(`freezeSalesOrderBillingLines`), nên chép giá ở bước này chỉ tạo ra bản sao thứ hai",
+        "để trôi khỏi bản gốc. Cùng lý do đó, xuất quá phần còn lại bị nhân TỪ CHỐI chứ không",
+        "phải màn hình tự canh."
+      ],
+      "name": "don-ban-thanh-hoa-don",
+      "label": "Đơn hàng → Hoá đơn",
+      "icon": "receipt-text",
+      "group": "Công nợ",
+      "description": "Tạo hoá đơn bán NHÁP cho phần chưa xuất hoá đơn; giá lấy lại từ dòng đơn, kế toán ghi sổ sau khi soát hạn thanh toán.",
+      "permission": "Sales Invoice",
+      "fields": [
+        "sales_order:Link(Sales Order)! Đơn hàng đã ghi sổ",
+        "due_date:Date Hạn thanh toán"
+      ],
+      "preview": "alumdoor.sales.preview_invoice | Xem phần chưa xuất hoá đơn",
+      "commit": "alumdoor.sales.invoice_from_order | Tạo hoá đơn nháp | Tạo hoá đơn nháp cho phần chưa xuất?",
       "resultTable": "items"
     }
   ],
@@ -934,6 +965,28 @@
     },
     {
       "type": "Cutting Policy",
+      "name": "Cửa tấm liền Úc — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa tấm liền Úc — công thức chuẩn",
+        "door_type": "Cửa tấm liền Úc",
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.03,
+        "retail_cut_deduction_m": 0.03,
+        "dealer_split_sales_basis": "Phủ bì ray",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Kg thực tế",
+        "note": "Bán theo Cao PB × PB ray. Chia lá tấm liền: (Cao PB − 0,13) ÷ 0,068.",
+        "leaf_height_deduction_m": 0.13,
+        "leaf_rounding": "Làm tròn xuống",
+        "leaf_formula": "Kiểu tấm liền Úc",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": 0.068
+      }
+    },
+    {
+      "type": "Cutting Policy",
       "name": "Cửa Lưới — công thức chuẩn",
       "data": {
         "policy_name": "Cửa Lưới — công thức chuẩn",
@@ -1167,10 +1220,10 @@
       "data": {
         "color_code": "CAFE",
         "color_name": "[DEPRECATED-CAFE]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1179,10 +1232,10 @@
       "data": {
         "color_code": "XANH_NGOC",
         "color_name": "[DEPRECATED-XANH_NGOC]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1191,10 +1244,10 @@
       "data": {
         "color_code": "MIDNIGHT_BLUE",
         "color_name": "[DEPRECATED-MIDNIGHT_BLUE]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1203,10 +1256,10 @@
       "data": {
         "color_code": "TRANG",
         "color_name": "[DEPRECATED-TRANG]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1215,10 +1268,10 @@
       "data": {
         "color_code": "XAM_MO",
         "color_name": "[DEPRECATED-XAM_MO]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1227,10 +1280,10 @@
       "data": {
         "color_code": "VANG_KEM",
         "color_name": "[DEPRECATED-VANG_KEM]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1239,10 +1292,10 @@
       "data": {
         "color_code": "GHI_SAN",
         "color_name": "[DEPRECATED-GHI_SAN]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1251,10 +1304,10 @@
       "data": {
         "color_code": "NAU_XINGFA",
         "color_name": "[DEPRECATED-NAU_XINGFA]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1263,10 +1316,10 @@
       "data": {
         "color_code": "XAM_XINGFA",
         "color_name": "[DEPRECATED-XAM_XINGFA]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1275,10 +1328,10 @@
       "data": {
         "color_code": "DEN_XINGFA",
         "color_name": "[DEPRECATED-DEN_XINGFA]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1287,10 +1340,10 @@
       "data": {
         "color_code": "VANG_KEM_BONG",
         "color_name": "[DEPRECATED-VANG_KEM_BONG]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1299,10 +1352,10 @@
       "data": {
         "color_code": "XANH_NGOC_BONG",
         "color_name": "[DEPRECATED-XANH_NGOC_BONG]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1311,10 +1364,10 @@
       "data": {
         "color_code": "XANH_LA_CAY",
         "color_name": "[DEPRECATED-XANH_LA_CAY]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1323,10 +1376,10 @@
       "data": {
         "color_code": "XAM_LONG_CHUOT",
         "color_name": "[DEPRECATED-XAM_LONG_CHUOT]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1335,10 +1388,10 @@
       "data": {
         "color_code": "DO_DO",
         "color_name": "[DEPRECATED-DO_DO]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1347,10 +1400,10 @@
       "data": {
         "color_code": "KEM_SUA",
         "color_name": "[DEPRECATED-KEM_SUA]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1359,10 +1412,10 @@
       "data": {
         "color_code": "XANH_DUONG",
         "color_name": "[DEPRECATED-XANH_DUONG]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1371,10 +1424,10 @@
       "data": {
         "color_code": "XANH_NGOC_VANG_KEM_MM",
         "color_name": "[DEPRECATED-XANH_NGOC_VANG_KEM_MM]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1383,10 +1436,10 @@
       "data": {
         "color_code": "XAM_TRANG_MM",
         "color_name": "[DEPRECATED-XAM_TRANG_MM]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1395,10 +1448,10 @@
       "data": {
         "color_code": "GHI_UC_KEM_UC_MM",
         "color_name": "[DEPRECATED-GHI_UC_KEM_UC_MM]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1407,10 +1460,10 @@
       "data": {
         "color_code": "XANH_REU_CAFE_MM",
         "color_name": "[DEPRECATED-XANH_REU_CAFE_MM]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -1419,10 +1472,10 @@
       "data": {
         "color_code": "XAM_XANH_NGOC_MM",
         "color_name": "[DEPRECATED-XAM_XANH_NGOC_MM]",
-        "finish": "THO",
         "usage_scope": "Mua hàng",
         "applies_to_groups": [],
-        "disabled": true
+        "disabled": true,
+        "surface_finish": "THO"
       }
     },
     {
@@ -2065,45 +2118,6 @@
       }
     },
     {
-      "name": "Item Color Scope",
-      "child": true,
-      "label": "Nhóm SP áp dụng (Màu)",
-      "group": "Danh mục",
-      "naming": "autoincrement",
-      "title": "item_group",
-      "list": [
-        "item_group"
-      ],
-      "fields": [
-        {
-          "fieldname": "item_group",
-          "label": "Nhóm hàng",
-          "fieldtype": "Link",
-          "options": "Item Group",
-          "required": true,
-          "link_filters": "{\"is_group\":0,\"disabled\":0}",
-          "surface": "quick"
-        }
-      ],
-      "permissions": {
-        "Chủ xưởng": "rwc",
-        "Thủ kho": "r",
-        "Kế toán": "r",
-        "Sản xuất": "r",
-        "Kinh doanh": "r"
-      },
-      "form": {
-        "fields": [
-          "item_group"
-        ]
-      },
-      "quickEntry": {
-        "fields": [
-          "item_group"
-        ]
-      }
-    },
-    {
       "name": "Item Color",
       "label": "Màu vật tư",
       "icon": "palette",
@@ -2225,15 +2239,25 @@
         "material_grade:Link(Material Grade) Mác vật liệu",
         "profile_system:Data Hệ / dòng profile",
         "section_code:Data Mã tiết diện",
-        "theoretical_kg_per_m:Float Kg/m lý thuyết",
         "standard_length_m:Float Chiều dài chuẩn (m)",
         "width_m:Float Khổ rộng (m)",
         "effective_width_m:Float Bản rộng hữu dụng (m)",
         "thickness_mm:Float Độ dày (mm)",
-        "scrap_threshold_m:Float Ngưỡng phế liệu (m)",
         "drawing:Attach Bản vẽ kỹ thuật",
         "note:Small Text Ghi chú",
-        "disabled:Check Ngừng dùng"
+        "disabled:Check Ngừng dùng",
+        {
+          "fieldname": "theoretical_kg_per_m",
+          "fieldtype": "Float",
+          "label": "Kg/m lý thuyết",
+          "depends_on": "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Vật tư tuyến tính'"
+        },
+        {
+          "fieldname": "scrap_threshold_m",
+          "fieldtype": "Float",
+          "label": "Ngưỡng phế liệu (m)",
+          "depends_on": "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Cuộn' || doc.spec_type == 'Vật tư tuyến tính'"
+        }
       ],
       "permissions": {
         "Chủ xưởng": "rwc",
@@ -2701,7 +2725,7 @@
         "disabled:Check Ngừng kinh doanh"
       ],
       "permissions": {
-        "Chủ xưởng": "rwc",
+        "Chủ xưởng": "r",
         "Kinh doanh": "r",
         "Thủ kho": "rwc",
         "Kế toán": "r",
@@ -2835,7 +2859,23 @@
         "contact_person:Data Người liên hệ",
         "phone:Data Điện thoại",
         "email:Data Email",
-        "address:Small Text Địa chỉ",
+        {
+          "fieldname": "install_province",
+          "fieldtype": "Link",
+          "options": "Tỉnh Thành",
+          "label": "Tỉnh/Thành phố",
+          "allow_create": false
+        },
+        {
+          "fieldname": "install_ward",
+          "fieldtype": "Link",
+          "options": "Phường Xã",
+          "label": "Xã/Phường",
+          "allow_create": false,
+          "link_filters": "{\"province\":\"eval:doc.install_province\"}"
+        },
+        "install_address_line1:Data Địa chỉ (số nhà, tên đường)",
+        "shipping_note:Small Text Ghi chú vận chuyển",
         "tax_id:Data Mã số thuế",
         "credit_limit:Currency Hạn mức công nợ",
         "payment_terms:Select(Trả ngay,7 ngày,15 ngày,30 ngày,45 ngày)=(Trả ngay) Điều khoản thanh toán",
@@ -2871,6 +2911,7 @@
       ],
       "fields": [
         "price_list_name:Data*! Tên bảng giá",
+        "customer_group:Select(Đại lý,Lẻ) Nhóm giá áp dụng",
         "effective_date:Date! Ngày áp dụng",
         "currency:Link(Currency)-!=(VND) Tiền tệ",
         "note:Small Text Áp dụng cho ai / khi nào",
@@ -3310,7 +3351,6 @@
       ],
       "name": "Quotation",
       "label": "Báo giá",
-      "menu": false,
       "icon": "file-text",
       "group": "Bán hàng",
       "naming": "BG-.YYYY.-####",
@@ -3414,7 +3454,8 @@
         "Sản xuất": "r"
       },
       "inboxGroup": "Bán hàng",
-      "inboxLabel": "Báo giá chờ xử lý"
+      "inboxLabel": "Báo giá chờ xử lý",
+      "inbox": false
     },
     {
       "//": "Dòng đơn. `qty` và `rate` là hai tên nhân O2C ĐỌC — đổi tên là mất hết bút toán.",
@@ -3617,6 +3658,15 @@
         "available_stock_uom:Link(UOM)~- ĐVT tồn khả dụng",
         "availability_status:Data~- Tồn và giá",
         "rate:Currency! Đơn giá",
+        {
+          "label": "Chiết khấu (%)",
+          "fieldname": "discount_percentage",
+          "fieldtype": "Percent",
+          "default": 0,
+          "non_negative": true,
+          "description": "Phần trăm chiết khấu nhập trên từng dòng; server tính lại số tiền chiết khấu.",
+          "surface": "expanded"
+        },
         "amount:Currency~ Thành tiền",
         "motor_model:Link(Item) Mô tơ kèm theo",
         "accessories:Small Text Phụ kiện kèm theo",
@@ -3657,6 +3707,15 @@
         "selling_price_list:Link(Price List) Bảng giá áp dụng",
         "payment_method:Select(Tiền mặt,Chuyển khoản,Ghi công nợ)=(Ghi công nợ) Hình thức thanh toán",
         {
+          "fieldname": "bank_account",
+          "label": "Tài khoản ngân hàng",
+          "fieldtype": "Link",
+          "options": "Tài khoản ngân hàng",
+          "link_filters": "{\"disabled\":0}",
+          "depends_on": "eval:doc.payment_method == 'Chuyển khoản'",
+          "form_region": "aside"
+        },
+        {
           "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
           "fieldname": "customer_group",
           "fieldtype": "Select",
@@ -3666,10 +3725,46 @@
           "fetch_from": "customer.price_group"
         },
         {
+          "fieldname": "contact_person",
+          "label": "Người liên hệ",
+          "fieldtype": "Data",
+          "form_region": "main"
+        },
+        {
+          "fieldname": "phone",
+          "label": "SĐT",
+          "fieldtype": "Data",
+          "form_region": "main"
+        },
+        {
+          "fieldname": "install_province",
+          "label": "Tỉnh/TP",
+          "fieldtype": "Link",
+          "options": "Tỉnh Thành",
+          "allow_create": false,
+          "form_region": "main"
+        },
+        {
+          "fieldname": "install_ward",
+          "label": "Xã/Phường",
+          "fieldtype": "Link",
+          "options": "Phường Xã",
+          "allow_create": false,
+          "link_filters": "{\"province\":\"eval:doc.install_province\"}",
+          "form_region": "main"
+        },
+        {
           "fieldname": "install_address",
           "fieldtype": "Small Text",
           "label": "Địa chỉ giao / lắp đặt",
           "fetch_from": "customer.address"
+        },
+        {
+          "fieldname": "shipping_note",
+          "label": "Ghi chú giao hàng",
+          "fieldtype": "Small Text",
+          "form_region": "main",
+          "form_width": "full"
         },
         "items:Table(Sales Order Item)! Dòng hàng",
         "grand_total:Currency~ Tổng tiền",
@@ -4143,7 +4238,6 @@
       "//": "Hoá đơn bán hàng — nơi CÔNG NỢ phát sinh. debit_to là tài khoản phải thu.",
       "name": "Sales Invoice",
       "label": "Hoá đơn bán hàng",
-      "menu": false,
       "icon": "receipt",
       "group": "Công nợ",
       "naming": "HD-.YYYY.-####",
@@ -5214,54 +5308,6 @@
       }
     },
     {
-      "//": "TRẢ HÀNG NCC (phần HIỆN VẬT) — nhôm sai màu, ray cong, mô tơ lỗi.",
-      "//do": [
-        "Hai nửa của một việc, và tách ra là đúng chứ không phải rườm rà: phiếu này trả HÀNG",
-        "(giảm tồn kho), còn Giấy báo Nợ trả TIỀN (giảm công nợ phải trả). Hàng đi về trước, hoá",
-        "đơn điều chỉnh của NCC về sau — hệt như lúc nhập.",
-        "",
-        "Nhân TỪ CHỐI trả quá số đã nhập, và TỪ CHỐI trả về kho khác kho đã nhập; giá vốn xuất trả",
-        "lấy theo giá vốn thật đang có trong kho (`deriveOutgoingValuation`), không lấy giá trên",
-        "phiếu nhập — nếu không thì trả hàng thành chỗ nặn ra lãi.",
-        "`return_type` BẮT BUỘC là 'Purchase'; đặt nhầm 'Sales' là ghi ngược chiều tồn kho."
-      ],
-      "name": "Stock Return",
-      "menu": false,
-      "label": "Trả hàng nhà cung cấp",
-      "icon": "package-x",
-      "group": "Mua hàng",
-      "naming": "THN-.YYYY.-####",
-      "title": "party",
-      "submittable": true,
-      "list": [
-        "party",
-        "posting_at",
-        "return_against",
-        "return_type"
-      ],
-      "search": [
-        "party"
-      ],
-      "fields": [
-        "party:Link(Supplier)! Nhà cung cấp",
-        "return_type:Select(Purchase,Sales)!=(Purchase) Loại trả (giữ nguyên Purchase)",
-        "company:Link(Company)-!=(ALUMDOOR) Công ty",
-        "currency:Link(Currency)-!=(VND) Tiền tệ",
-        "return_against:Link(Purchase Receipt)! Trả theo phiếu nhập nào",
-        "posting_at:Datetime!=(Now) Thời điểm xuất trả",
-        "items:Table(Stock Return Item)! Hàng trả lại",
-        "stock_account:Link(Account)=(Hàng tồn kho) Tài khoản tồn kho",
-        "cogs_or_expense_account:Link(Account)=(Hàng nhận chưa có hoá đơn) Tài khoản đối ứng",
-        "note:Small Text Lý do trả hàng"
-      ],
-      "permissions": {
-        "Chủ xưởng": "rwcsxa",
-        "Thủ kho": "rwcsxa",
-        "Kế toán": "rwcsxa",
-        "Kinh doanh": "r"
-      }
-    },
-    {
       "//": "Dòng giấy báo Nợ. `expense_account` không khai ở dòng — dùng `default_expense_account` đầu phiếu.",
       "name": "Debit Note Item",
       "child": true,
@@ -5957,6 +6003,420 @@
       "quickEntry": {
         "fields": [
           "item_code"
+        ]
+      }
+    },
+    {
+      "name": "Tỉnh Thành",
+      "label": "Tỉnh/Thành phố",
+      "icon": "map-pin",
+      "group": "Danh mục",
+      "naming": "field:province_code",
+      "title": "province_name",
+      "list": [
+        "province_code",
+        "province_name",
+        "province_type"
+      ],
+      "search": [
+        "province_code",
+        "province_name"
+      ],
+      "fields": [
+        "province_code:Data*! Mã tỉnh/thành",
+        "province_name:Data*! Tỉnh/Thành phố",
+        "province_type:Select(Tỉnh,Thành phố) Loại đơn vị",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "r",
+        "Kinh doanh": "r",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "Phường Xã",
+      "label": "Phường/Xã",
+      "icon": "map",
+      "group": "Danh mục",
+      "naming": "field:ward_code",
+      "title": "ward_name",
+      "list": [
+        "ward_code",
+        "ward_name",
+        "province",
+        "ward_type"
+      ],
+      "search": [
+        "ward_code",
+        "ward_name",
+        "province"
+      ],
+      "fields": [
+        "ward_code:Data*! Mã phường/xã",
+        "ward_name:Data*! Phường/Xã",
+        "province:Link(Tỉnh Thành)! Tỉnh/Thành phố",
+        "ward_type:Select(Xã,Phường,Đặc khu) Loại đơn vị",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "r",
+        "Kinh doanh": "r",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "Địa chỉ giao lắp",
+      "label": "Địa chỉ giao/lắp đặt",
+      "icon": "map-pinned",
+      "group": "Danh mục",
+      "naming": "DCL-.#####",
+      "title": "address_line1",
+      "list": [
+        "customer",
+        "address_line1",
+        "ward",
+        "province",
+        "is_default"
+      ],
+      "search": [
+        "customer",
+        "address_line1",
+        "ward",
+        "province",
+        "contact_person",
+        "phone"
+      ],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        {
+          "fieldname": "province",
+          "fieldtype": "Link",
+          "options": "Tỉnh Thành",
+          "label": "Tỉnh/Thành phố",
+          "required": true,
+          "allow_create": false
+        },
+        {
+          "fieldname": "ward",
+          "fieldtype": "Link",
+          "options": "Phường Xã",
+          "label": "Phường/Xã",
+          "required": true,
+          "allow_create": false,
+          "link_filters": "{\"province\":\"eval:doc.province\"}"
+        },
+        {
+          "fieldname": "address_line1",
+          "fieldtype": "Data",
+          "label": "Số nhà, tên đường",
+          "required": true,
+          "form_width": "full"
+        },
+        "contact_person:Data Người liên hệ",
+        "phone:Data SĐT",
+        "is_default:Check Địa chỉ mặc định",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "rwc",
+        "Kế toán": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "name": "Tài khoản ngân hàng",
+      "label": "Tài khoản ngân hàng",
+      "icon": "landmark",
+      "group": "Danh mục",
+      "naming": "field:account_number",
+      "title": "account_number",
+      "list": [
+        "bank_name",
+        "account_number",
+        "account_holder",
+        "is_default"
+      ],
+      "search": [
+        "bank_name",
+        "account_number",
+        "account_holder"
+      ],
+      "fields": [
+        "bank_name:Data*! Ngân hàng",
+        "account_number:Data*! Số tài khoản",
+        "account_holder:Data*! Chủ tài khoản",
+        "branch:Data Chi nhánh",
+        "is_default:Check Tài khoản mặc định",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "rwc"
+      }
+    },
+    {
+      "//": "GIẤY BÁO CÓ KHÁCH HÀNG (phần TIỀN) — giảm công nợ phải thu sau khi khách trả hàng.",
+      "//do": [
+        "Đối xứng đúng với Giấy báo Nợ NCC ở nhánh mua, và tách khỏi phiếu nhập lại kho vì cùng",
+        "một lý do: hàng về trước, điều chỉnh tiền sau. Gộp hai việc vào một chứng từ thì lúc",
+        "khách trả hàng nhưng chưa chốt giảm bao nhiêu tiền, kế toán không có chỗ nào để ghi.",
+        "",
+        "Nhân TỪ CHỐI khi số tiền giảm trừ VƯỢT số CÒN NỢ trên hoá đơn gốc, và TỪ CHỐI khi số",
+        "lượng vượt số đã bán trên chính hoá đơn đó. Hai chốt này là lý do không thể thay bằng",
+        "một phiếu kế toán tay: phiếu tay ghi được bất kỳ số nào, kể cả số biến công nợ thành âm.",
+        "`debit_to` phải là ĐÚNG tài khoản phải thu đã dùng trên hoá đơn gốc, nếu không thì công",
+        "nợ khách giảm ở một tài khoản và treo ở tài khoản kia."
+      ],
+      "name": "Credit Note",
+      "label": "Giấy báo Có KH",
+      "icon": "file-plus",
+      "group": "Công nợ",
+      "naming": "GBC-.YYYY.-####",
+      "title": "customer",
+      "submittable": true,
+      "list": [
+        "customer",
+        "posting_at",
+        "return_against",
+        "grand_total"
+      ],
+      "search": [
+        "customer"
+      ],
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
+        "return_against:Link(Sales Invoice)! Giảm trừ cho hoá đơn bán nào",
+        "warranty_claim:Link(Warranty Claim)- Hồ sơ bảo hành",
+        "posting_at:Datetime!=(Now) Ngày chứng từ",
+        "debit_to:Link(Account)!=(Phải thu khách hàng) Tài khoản phải thu (phải khớp hoá đơn gốc)",
+        "default_income_account:Link(Account)!=(Doanh thu bán hàng) Tài khoản ghi giảm doanh thu",
+        "round_off_account:Link(Account)=(Chênh lệch làm tròn) Tài khoản chênh lệch làm tròn",
+        "items:Table(Credit Note Item)! Hàng giảm trừ",
+        "grand_total:Currency~ Tổng giảm trừ",
+        "note:Small Text Lý do"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwcsxa",
+        "Kế toán": "rwcsxa",
+        "Kinh doanh": "r",
+        "Thủ kho": "r",
+        "General Accountant": "rwcsxa",
+        "Chief Accountant": "rwcsxa",
+        "Kế toán tổng hợp": "rwcsxa",
+        "Kế toán trưởng": "rwcsxa"
+      }
+    },
+    {
+      "//": "Dòng giấy báo Có. `income_account` không khai ở dòng — dùng `default_income_account` đầu phiếu.",
+      "name": "Credit Note Item",
+      "child": true,
+      "label": "Dòng giấy báo Có",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_code",
+      "list": [
+        "item_code",
+        "qty",
+        "rate",
+        "amount"
+      ],
+      "fields": [
+        {
+          "label": "Mã hàng",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "label": "SL",
+          "fieldname": "qty",
+          "fieldtype": "Float",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Đơn giá theo hoá đơn gốc",
+          "fieldname": "rate",
+          "fieldtype": "Currency",
+          "required": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Thành tiền",
+          "fieldname": "amount",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Ghi chú dòng",
+          "fieldname": "note",
+          "fieldtype": "Data",
+          "surface": "expanded"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "item_code",
+          "qty",
+          "rate",
+          "amount",
+          "note"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "item_code",
+          "qty",
+          "rate",
+          "amount"
+        ]
+      }
+    },
+    {
+      "//": "TRẢ HÀNG (phần HIỆN VẬT) — hai chiều: NCC trả về, và KHÁCH trả lại.",
+      "//do": [
+        "Hai nửa của một việc, và tách ra là đúng chứ không phải rườm rà: phiếu này trả HÀNG",
+        "(đụng tồn kho), còn Giấy báo Nợ/Có trả TIỀN (đụng công nợ). Hàng đi trước, chứng từ",
+        "điều chỉnh tiền về sau — hệt như lúc nhập.",
+        "",
+        "Nhân TỪ CHỐI trả quá số trên chứng từ gốc, và TỪ CHỐI trả về kho khác kho gốc. Chiều",
+        "mua: giá vốn xuất trả lấy theo giá vốn thật đang có trong kho (`deriveOutgoingValuation`),",
+        "không lấy giá trên phiếu nhập — nếu không thì trả hàng thành chỗ nặn ra lãi.",
+        "",
+        "`return_type` lái CẢ BA thứ và nhân đọc chính nó: 'Purchase' thì gốc là Phiếu nhập, đối",
+        "tác là NCC, tồn GIẢM; 'Sales' thì gốc là Phiếu xuất, đối tác là Khách, tồn TĂNG. Vì",
+        "Dynamic Link bắt buộc phải đọc tên doctype từ một field khác, `party_doctype` và",
+        "`return_against_doctype` tồn tại như bản dịch của `return_type` — và vì một sự thật viết",
+        "ở ba chỗ sẽ trôi dạt, validator của app chốt lại đúng cặp trước khi ghi."
+      ],
+      "name": "Stock Return",
+      "menu": false,
+      "label": "Trả hàng (NCC / khách)",
+      "icon": "package-x",
+      "group": "Mua hàng",
+      "naming": "THN-.YYYY.-####",
+      "title": "party",
+      "submittable": true,
+      "list": [
+        "party",
+        "posting_at",
+        "return_against",
+        "return_type"
+      ],
+      "search": [
+        "party"
+      ],
+      "fields": [
+        "return_type:Select(Purchase,Sales)!=(Purchase) Loại trả",
+        {
+          "//": "Bản dịch của `return_type` sang tên doctype, chỉ để Dynamic Link đọc. Người dùng không sửa.",
+          "fieldname": "party_doctype",
+          "label": "Loại đối tác",
+          "fieldtype": "Select",
+          "options": "Supplier\nCustomer",
+          "default": "Supplier",
+          "read_only": true,
+          "surface": "internal",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "party",
+          "label": "Đối tác trả hàng",
+          "fieldtype": "Dynamic Link",
+          "options": "party_doctype",
+          "required": true,
+          "surface": "quick"
+        },
+        "company:Link(Company)-!=(ALUMDOOR) Công ty",
+        "currency:Link(Currency)-!=(VND) Tiền tệ",
+        {
+          "//": "Bản dịch của `return_type` sang tên doctype chứng từ gốc. Người dùng không sửa.",
+          "fieldname": "return_against_doctype",
+          "label": "Loại chứng từ gốc",
+          "fieldtype": "Select",
+          "options": "Purchase Receipt\nDelivery Note",
+          "default": "Purchase Receipt",
+          "read_only": true,
+          "surface": "internal",
+          "serverEnforced": true
+        },
+        {
+          "fieldname": "return_against",
+          "label": "Trả theo chứng từ nào",
+          "fieldtype": "Dynamic Link",
+          "options": "return_against_doctype",
+          "required": true,
+          "surface": "quick"
+        },
+        "posting_at:Datetime!=(Now) Thời điểm trả hàng",
+        "items:Table(Stock Return Item)! Hàng trả lại",
+        "stock_account:Link(Account)=(Hàng tồn kho) Tài khoản tồn kho",
+        "cogs_or_expense_account:Link(Account)=(Hàng nhận chưa có hoá đơn) Tài khoản đối ứng",
+        "note:Small Text Lý do trả hàng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwcsxa",
+        "Thủ kho": "rwcsxa",
+        "Kế toán": "rwcsxa",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": "Thay `applies_to` Small Text. Chuỗi tự do không so khớp với nhóm hàng được nên không ép được.",
+      "name": "Item Color Scope",
+      "child": true,
+      "label": "Nhóm SP áp dụng",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "title": "item_group",
+      "list": [
+        "item_group"
+      ],
+      "fields": [
+        {
+          "label": "Nhóm hàng",
+          "fieldname": "item_group",
+          "fieldtype": "Link",
+          "options": "Item Group",
+          "required": true,
+          "link_filters": "{\"is_group\":0,\"disabled\":0}",
+          "surface": "quick"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "item_group"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "item_group"
         ]
       }
     }

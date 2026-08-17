@@ -24,7 +24,8 @@ const SRC = resolve(here, "../briefs/alumdoor.json");
 const OUT = resolve(here, "../briefs/alumdoor-v2.json");
 const ORDER_LOGO = `data:image/png;base64,${readFileSync(resolve(here, "../../client/apps/runtime/public/alumdoor-order-logo.png")).toString("base64")}`;
 
-const brief = JSON.parse(readFileSync(SRC, "utf8"));
+const sourceBrief = JSON.parse(readFileSync(SRC, "utf8"));
+const brief = structuredClone(sourceBrief);
 const log = [];
 const note = (m) => log.push(m);
 
@@ -1805,7 +1806,7 @@ const technicalItemFields = [
 for (const field of technicalItemFields) {
   if (!item.fields.some((existing) => typeof existing === "object" && existing?.fieldname === field.fieldname)) item.fields.push(field);
 }
-const canonicalAluminumProfile = fixture("Measurement Profile", "Nhôm cây/lá").data;
+const canonicalAluminumProfile = { ...fixture("Measurement Profile", "Nhôm cây/lá").data };
 canonicalAluminumProfile.stock_uom = "Cây";
 canonicalAluminumProfile.track_dimension_lot = true;
 canonicalAluminumProfile.require_piece_qty = true;
@@ -1881,6 +1882,114 @@ for (const [dt, entries] of Object.entries(brief.customFields ?? {})) {
   });
 }
 note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nút lá; field cha vẫn chọn nhóm`);
+
+
+// ── SOURCE → GENERATED REPRODUCIBILITY CONVERGENCE ──
+// Historical O2C/master changes had landed directly in alumdoor-v2.json. They now live in
+// alumdoor.json; this final boundary keeps later V2 transforms from dropping them again.
+// Commit 46cff213 retired Sales Option / Sales Package; regenerated metadata must never
+// resurrect sales_option or sales_mode.
+{
+  const sourceDoctype = (name) => {
+    const value = sourceBrief.doctypes.find((entry) => entry.name === name);
+    if (!value) throw new Error(`Nguồn thiếu doctype ${name}`);
+    return value;
+  };
+  const replaceFromSource = (name) => {
+    const index = brief.doctypes.findIndex((entry) => entry.name === name);
+    const value = structuredClone(sourceDoctype(name));
+    if (index >= 0) brief.doctypes[index] = value; else brief.doctypes.push(value);
+  };
+  const sourceField = (doctypeName, fieldname) => {
+    const value = sourceDoctype(doctypeName).fields.find((entry) => nameOf(entry) === fieldname);
+    if (!value) throw new Error(`Nguồn thiếu ${doctypeName}.${fieldname}`);
+    return structuredClone(value);
+  };
+  const upsertSourceField = (doctypeName, fieldname) => {
+    const target = doctype(doctypeName);
+    const value = sourceField(doctypeName, fieldname);
+    const index = target.fields.findIndex((entry) => nameOf(entry) === fieldname);
+    if (index >= 0) target.fields[index] = value; else target.fields.push(value);
+  };
+
+  for (const name of [
+    "Tỉnh Thành", "Phường Xã", "Địa chỉ giao lắp", "Tài khoản ngân hàng",
+    "Credit Note", "Credit Note Item", "Stock Return", "Item Color Scope",
+  ]) replaceFromSource(name);
+
+  for (const fieldname of ["install_province", "install_ward", "install_address_line1", "shipping_note"])
+    upsertSourceField("Customer", fieldname);
+  dropFields(doctype("Customer"), ["address"]);
+  upsertSourceField("Price List", "customer_group");
+  for (const fieldname of ["bank_account", "contact_person", "phone", "install_province", "install_ward", "shipping_note"])
+    upsertSourceField("Sales Order", fieldname);
+  upsertSourceField("Sales Order Item", "discount_percentage");
+  for (const fieldname of ["theoretical_kg_per_m", "scrap_threshold_m"])
+    upsertSourceField("Material Specification", fieldname);
+  {
+    // Cut Order Item is a V2-derived doctype created by this generator (cbc1dae).
+    // d6427f4 added the FIFO source-batch lineage directly to generated V2; keep
+    // that field in the generator rather than pretending the legacy source owns the child.
+    const target = doctype("Cut Order Item");
+    const value = {
+      fieldname: "source_batch_no",
+      label: "Lô nguồn FIFO",
+      fieldtype: "Link",
+      options: "Batch",
+      required: true,
+      read_only: true,
+      surface: "expanded",
+    };
+    const existing = target.fields.findIndex((entry) => nameOf(entry) === "source_batch_no");
+    if (existing >= 0) target.fields[existing] = value;
+    else {
+      const anchor = target.fields.findIndex((entry) => nameOf(entry) === "source_warehouse");
+      target.fields.splice(anchor >= 0 ? anchor + 1 : target.fields.length, 0, value);
+    }
+  }
+  doctype("Item").permissions["Chủ xưởng"] = sourceDoctype("Item").permissions["Chủ xưởng"];
+
+  const sourceAction = sourceBrief.actions.find((entry) => entry.name === "don-ban-thanh-hoa-don");
+  if (!sourceAction) throw new Error("Nguồn thiếu action don-ban-thanh-hoa-don");
+  brief.actions = brief.actions.filter((entry) => entry.name !== "don-ban-thanh-hoa-don");
+  brief.actions.push(structuredClone(sourceAction));
+  for (const actionName of ["bao-gia-thanh-don", "don-ban-thanh-phieu-xuat"]) {
+    const action = brief.actions.find((entry) => entry.name === actionName);
+    if (action) delete action.menu;
+  }
+  const sourceStockReturnValidator = sourceBrief.validators.find((entry) => entry.doctype === "Stock Return");
+  if (!sourceStockReturnValidator) throw new Error("Nguồn thiếu validator Stock Return");
+  brief.validators = brief.validators.filter((entry) => entry.doctype !== "Stock Return");
+  brief.validators.push(structuredClone(sourceStockReturnValidator));
+
+  const quotation = doctype("Quotation");
+  quotation.inbox = false;
+  delete quotation.menu;
+  delete doctype("Sales Invoice").menu;
+
+  for (const target of brief.doctypes) {
+    target.fields = (target.fields ?? []).filter((entry) => !["sales_option", "sales_mode"].includes(nameOf(entry)));
+    if (Array.isArray(target.list)) target.list = target.list.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
+    if (Array.isArray(target.search)) target.search = target.search.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
+  }
+  const itemPrice = doctype("Item Price");
+  const priceVariantIndex = itemPrice.fields.findIndex((entry) => nameOf(entry) === "price_variant");
+  if (priceVariantIndex >= 0 && typeof itemPrice.fields[priceVariantIndex] === "object") {
+    const value = { ...itemPrice.fields[priceVariantIndex] };
+    if (String(value.fetch_from ?? "").startsWith("sales_option.")) delete value.fetch_from;
+    itemPrice.fields[priceVariantIndex] = value;
+  }
+  const salesOrder = doctype("Sales Order");
+  const installAddressIndex = salesOrder.fields.findIndex((entry) => nameOf(entry) === "install_address");
+  if (installAddressIndex >= 0 && typeof salesOrder.fields[installAddressIndex] === "object") {
+    const value = { ...salesOrder.fields[installAddressIndex] };
+    if (value.fetch_from === "customer.address") delete value.fetch_from;
+    salesOrder.fields[installAddressIndex] = value;
+  }
+  if (brief.doctypes.some((entry) => ["Sales Option", "Sales Package"].includes(entry.name)))
+    throw new Error("Generator resurrected deprecated Sales Option/Sales Package DocType");
+  note("REPRO · source-authoritative O2C/master contracts restored; deprecated sales option fields forbidden");
+}
 
 const childPresentation = applyAlumdoorChildPresentation(brief);
 note(`UI ?? child-grid presentation metadata: ${childPresentation.migrated} child DocType`);
