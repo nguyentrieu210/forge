@@ -1,0 +1,85 @@
+name: Alumdoor Real Source Policy
+
+on:
+  pull_request:
+    paths:
+      - 'apps/alumdoor/docs/nguon/ms-lien/**'
+      - 'server/scripts/extract-alumdoor-real-source-records.mjs'
+      - 'server/scripts/lib/alumdoor-source-markdown.mjs'
+      - 'server/scripts/lib/alumdoor-real-source-group.mjs'
+      - 'server/scripts/lib/alumdoor-item-*.mjs'
+      - 'server/scripts/test-alumdoor-real-source-extractor.mjs'
+      - '.github/workflows/alumdoor-real-source-policy.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/alumdoor/docs/nguon/ms-lien/**'
+      - 'server/scripts/extract-alumdoor-real-source-records.mjs'
+      - 'server/scripts/lib/alumdoor-source-markdown.mjs'
+      - 'server/scripts/lib/alumdoor-real-source-group.mjs'
+      - 'server/scripts/lib/alumdoor-item-*.mjs'
+      - 'server/scripts/test-alumdoor-real-source-extractor.mjs'
+      - '.github/workflows/alumdoor-real-source-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-source-item-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test source parser and group resolver
+        run: node server/scripts/test-alumdoor-real-source-extractor.mjs
+      - name: Extract real Item source records
+        run: |
+          mkdir -p /tmp/alumdoor-real
+          node server/scripts/extract-alumdoor-real-source-records.mjs \
+            /tmp/alumdoor-real/item-source-records.json \
+            /tmp/alumdoor-real/extract-report.json
+      - name: Build canonical Item payload from real source
+        run: |
+          node server/scripts/build-alumdoor-item-master-payload.mjs \
+            /tmp/alumdoor-real/item-source-records.json \
+            /tmp/alumdoor-real/item-master-payload.json \
+            /tmp/alumdoor-real/item-master-audit.json
+      - name: Print compact blocker summary
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          async function load(path) { try { return JSON.parse(await readFile(path, 'utf8')); } catch { return null; } }
+          const extract = await load('/tmp/alumdoor-real/extract-report.json');
+          const audit = await load('/tmp/alumdoor-real/item-master-audit.json');
+          if (extract) console.log('EXTRACT_SUMMARY', JSON.stringify({
+            source_record_count: extract.source_record_count,
+            sellable_count: extract.sellable_count,
+            stock_count: extract.stock_count,
+            bom_reference_count: extract.bom_reference_count,
+            unresolved_group_count: extract.unresolved_group_count,
+            group_counts: extract.group_counts,
+          }));
+          if (audit) {
+            const all = [
+              ...(audit.item_master_blockers ?? []),
+              ...(audit.other_blockers ?? []),
+              ...(audit.item_payload_blockers ?? []),
+              ...(audit.bom_blockers_retained ?? []),
+            ];
+            const reasons = {};
+            for (const row of all) reasons[row.reason ?? 'unknown'] = (reasons[row.reason ?? 'unknown'] ?? 0) + 1;
+            console.log('AUDIT_SUMMARY', JSON.stringify({
+              source_record_count: audit.source_record_count,
+              source_identity_count: audit.source_identity_count,
+              item_master_blocker_count: audit.item_master_blocker_count,
+              other_blocker_count: audit.other_blocker_count,
+              item_payload_count: audit.item_payload_count,
+              item_payload_blocker_count: audit.item_payload_blocker_count,
+              bom_blocker_count: audit.bom_blocker_count,
+              blocker_reasons: reasons,
+            }));
+            for (const row of all.slice(0, 40)) console.log('BLOCKER', JSON.stringify(row));
+          }
+          NODE
