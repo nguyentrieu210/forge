@@ -10,6 +10,11 @@ function parseInlineCells(payload) {
   return cells;
 }
 
+function lastCellIndex(cells) {
+  const indexes = Object.keys(cells).map(Number).filter(Number.isFinite);
+  return indexes.length > 0 ? Math.max(...indexes) : null;
+}
+
 export function parseAlumdoorIndexedMarkdownRows(text) {
   const rows = [];
   let current = null;
@@ -26,20 +31,19 @@ export function parseAlumdoorIndexedMarkdownRows(text) {
   };
 
   for (const rawLine of String(text ?? "").split(/\r?\n/)) {
-    // Current committed source extracts use one physical line per spreadsheet
-    // row: "   7 | [0] ... · [1] ...". Parse this format first.
+    // Current committed source extracts use one spreadsheet row prefix:
+    // "   7 | [0] ... · [1] ...". Keep it open until the next row because
+    // long Excel cell values may wrap to the following physical Markdown line.
     const inlineRow = rawLine.match(/^\s*(\d+)\s*\|\s*(.*)$/);
     if (inlineRow) {
       flush();
-      rows.push(Object.freeze({
-        source_row: Number(inlineRow[1]),
-        cells: Object.freeze(parseInlineCells(inlineRow[2])),
-      }));
+      const cells = parseInlineCells(inlineRow[2]);
+      current = { source_row: Number(inlineRow[1]), cells };
+      lastCell = lastCellIndex(cells);
       continue;
     }
 
-    // Keep compatibility with the earlier verbose export used by focused
-    // fixtures: "## Row N" followed by "- [i] value" cells.
+    // Compatibility with the earlier verbose fixture export.
     const rowMatch = rawLine.match(/^##\s+Row\s+(\d+)\s*$/i);
     if (rowMatch) {
       flush();
@@ -56,8 +60,24 @@ export function parseAlumdoorIndexedMarkdownRows(text) {
       continue;
     }
 
-    if (lastCell !== null && rawLine.trim() && !rawLine.startsWith("#")) {
-      current.cells[lastCell] = clean(`${current.cells[lastCell]} ${rawLine}`);
+    if (!rawLine.trim() || rawLine.startsWith("#")) continue;
+
+    // Wrapped committed rows can continue a cell value and then introduce more
+    // indexed cells, e.g. "THÙNG · [6] 1.4 ..." after a prior "[5] KG/".
+    const nextCellOffset = rawLine.search(/\[\d+\]/);
+    if (nextCellOffset >= 0) {
+      const prefix = clean(rawLine.slice(0, nextCellOffset).replace(/·\s*$/, ""));
+      if (prefix && lastCell !== null) {
+        current.cells[lastCell] = clean(`${current.cells[lastCell]}${prefix}`);
+      }
+      const extra = parseInlineCells(rawLine.slice(nextCellOffset));
+      Object.assign(current.cells, extra);
+      lastCell = lastCellIndex(current.cells);
+      continue;
+    }
+
+    if (lastCell !== null) {
+      current.cells[lastCell] = clean(`${current.cells[lastCell]}${rawLine}`);
     }
   }
   flush();
