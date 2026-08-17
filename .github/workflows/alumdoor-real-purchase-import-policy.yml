@@ -65,6 +65,7 @@ jobs:
     timeout-minutes: 45
     env:
       FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
+      FORGE_LOCAL_REQUIRED_SERVICES: backend
       FORGE_ORIGIN: http://127.0.0.1:8799
       FORGE_ADMIN_USER: dev@example.com
       FORGE_ADMIN_PASSWORD: local-dev-password-1
