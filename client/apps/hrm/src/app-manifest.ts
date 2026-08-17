@@ -3,13 +3,13 @@ import type { AppManifest } from "@metaforge/core";
 /**
  * Kairo Nhân sự — app NGHIỆP VỤ, không phải Desk chung.
  *
- * Alumdoor Lite ưu tiên một luồng vận hành nhỏ và tự động:
- * Nhân viên -> ca/lịch làm -> công tự động -> phép -> khoản cộng/trừ -> kỳ lương -> phiếu lương.
+ * Alumdoor Lite ưu tiên một luồng vận hành nhỏ:
+ * Nhân viên -> ca/lịch làm -> công -> phép/tăng ca -> khoản cộng/trừ -> kỳ lương -> phiếu lương.
  *
- * `AlumDoor Attendance Day` là nguồn công chuẩn dùng cho payroll Alumdoor. Generic
- * `Attendance`, `Attendance Request` và `Overtime Request` vẫn tồn tại trong catalog để
- * tương thích HRM chung nhưng không nằm trên navigation Lite. OT của Alumdoor được hệ thống
- * tính trực tiếp từ scan + Shift Assignment, không có màn duyệt OT hay phiếu sửa lương.
+ * `AlumDoor Attendance Day` là nguồn bằng chứng công chuẩn dùng cho payroll Alumdoor.
+ * Phút ngoài ca được lưu là raw OT; chỉ `Overtime Request` đã submit mới biến raw OT thành
+ * phút payable theo min(raw, approved). Generic `Attendance` và `Attendance Request` vẫn tồn
+ * tại trong catalog để tương thích HRM chung nhưng không nằm trên navigation Lite.
  *
  * `Employee Advance` enterprise vẫn còn trong catalog để tương thích nhưng không nằm trên
  * đường vận hành Lite. Tạm ứng đơn giản được ghi như một khoản Deduction trong Additional Salary.
@@ -36,6 +36,7 @@ export const APP_MANIFEST: AppManifest = {
 
     { key: "AlumDoor Attendance Day", label: "Bảng công", kind: "doctype", icon: "calendar-check", group: "Chấm công" },
     { key: "Leave Application", label: "Nghỉ phép", kind: "doctype", icon: "calendar-off", group: "Chấm công" },
+    { key: "Overtime Request", label: "Duyệt tăng ca", kind: "doctype", icon: "clock-3", group: "Chấm công" },
 
     { key: "Additional Salary", label: "Thưởng / khấu trừ / tạm ứng", kind: "doctype", icon: "circle-dollar-sign", group: "Tính lương" },
     { key: "Payroll Entry", label: "Kỳ lương", kind: "doctype", icon: "calculator", group: "Tính lương" },
