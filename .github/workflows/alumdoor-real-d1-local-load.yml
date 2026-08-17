@@ -6,6 +6,7 @@ on:
     paths:
       - 'server/scripts/**alumdoor**'
       - 'server/scripts/lib/alumdoor-**'
+      - 'server/briefs/alumdoor-real-lots.json'
       - 'apps/alumdoor/docs/nguon/**'
       - 'apps/alumdoor/docs/REAL-DATA-D1-LOAD-EXECUTION.md'
       - '.github/workflows/alumdoor-real-d1-local-load.yml'
@@ -49,6 +50,9 @@ jobs:
           if (-not (Test-Path (Join-Path $local 'server\scripts\backup-local-state.mjs'))) {
             throw 'Local state backup script is unavailable.'
           }
+          if (-not (Test-Path (Join-Path $local 'server\scripts\forge-app.mjs'))) {
+            throw 'Canonical Forge metadata installer is unavailable on local main.'
+          }
           Write-Host 'ALUMDOOR_REAL_D1_LOCAL_GUARD_PASS'
 
       - name: Backup local D1 state before mutation
@@ -77,12 +81,15 @@ jobs:
           & node -e "const fs=require('fs'),d=process.argv[1];const i=JSON.parse(fs.readFileSync(d+'\\items.json')),b=JSON.parse(fs.readFileSync(d+'\\boms.json')),l=JSON.parse(fs.readFileSync(d+'\\lots.json'));const c=b.boms.reduce((n,x)=>n+(x.items||[]).length,0);if(!i.item_count||!b.bom_count||!l.lot_count)process.exit(2);console.log('ALUMDOOR_REAL_PAYLOADS_READY items='+i.item_count+' boms='+b.bom_count+' bom_children='+c+' lots='+l.lot_count)" $dir
           if ($LASTEXITCODE -ne 0) { throw 'Payload non-empty guard failed.' }
 
-      - name: Ensure Aluminium Lot local DocType
+      - name: Install and verify Aluminium Lot metadata
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          $brief = Join-Path $env:GITHUB_WORKSPACE 'server\briefs\alumdoor-real-lots.json'
+          & node 'C:\alumdoor\server\scripts\forge-app.mjs' $brief --origin $env:FORGE_ORIGIN --admin $env:FORGE_ADMIN_USER
+          if ($LASTEXITCODE -ne 0) { throw 'Aluminium Lot metadata app install failed.' }
           & node server/scripts/ensure-alumdoor-aluminium-lot-doctype-local.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Aluminium Lot schema ensure failed.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Aluminium Lot metadata verification failed.' }
 
       - name: Import real data first pass
         shell: powershell
