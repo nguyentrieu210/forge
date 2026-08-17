@@ -10,6 +10,11 @@ const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ??
 const adminPassword = process.env.FORGE_ADMIN_PASSWORD ?? process.env.FORGE_AUTH_PASSWORD ?? "";
 const output = process.argv[2] || "";
 
+if (ALUMDOOR_UOM_CATALOG.length !== 19 || !ALUMDOOR_UOM_CATALOG.some(({ name }) => name === "Thùng")) {
+  throw new Error(`Canonical Alumdoor UOM catalog mismatch: count=${ALUMDOOR_UOM_CATALOG.length}`);
+}
+console.log("ALUMDOOR_UOM_CATALOG_19_PASS");
+
 if (!adminUser || !adminPassword) {
   console.error("FORGE_ADMIN_USER/FORGE_ADMIN_PASSWORD are required");
   process.exit(2);
