@@ -1,0 +1,49 @@
+name: Alumdoor Real D1 Load Policy
+
+on:
+  pull_request:
+    paths:
+      - 'apps/alumdoor/docs/nguon/**'
+      - 'server/scripts/extract-alumdoor-real-source-records.mjs'
+      - 'server/scripts/build-alumdoor-item-master-payload.mjs'
+      - 'server/scripts/build-alumdoor-real-bom-payload.mjs'
+      - 'server/scripts/build-alumdoor-real-aluminium-lot-payload.mjs'
+      - 'server/scripts/import-alumdoor-real-bom-local.mjs'
+      - 'server/scripts/import-alumdoor-real-aluminium-lot-local.mjs'
+      - 'server/scripts/ensure-alumdoor-aluminium-lot-doctype-local.mjs'
+      - 'server/scripts/lib/alumdoor-*.mjs'
+      - '.github/workflows/alumdoor-real-d1-load-policy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  real-d1-payload-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build real source and Item payload
+        run: |
+          mkdir -p /tmp/alumdoor-real
+          node server/scripts/extract-alumdoor-real-source-records.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/source-report.json
+          node server/scripts/build-alumdoor-item-master-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/items-audit.json
+      - name: Build real BOM payload
+        run: node server/scripts/build-alumdoor-real-bom-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/boms.json
+      - name: Build real Aluminium Lot payload
+        run: node server/scripts/build-alumdoor-real-aluminium-lot-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/lots.json
+      - name: Validate local importer payload contracts
+        run: |
+          node server/scripts/import-alumdoor-item-master-local.mjs /tmp/alumdoor-real/items.json --validate-only
+          node server/scripts/import-alumdoor-real-bom-local.mjs /tmp/alumdoor-real/boms.json --validate-only
+          node server/scripts/import-alumdoor-real-aluminium-lot-local.mjs /tmp/alumdoor-real/lots.json --validate-only
+          node --check server/scripts/ensure-alumdoor-aluminium-lot-doctype-local.mjs
+      - name: Print payload counts
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          for (const [label,file] of [['items','/tmp/alumdoor-real/items.json'],['boms','/tmp/alumdoor-real/boms.json'],['lots','/tmp/alumdoor-real/lots.json']]) {
+            try { const x=JSON.parse(await readFile(file,'utf8')); console.log(`REAL_${label.toUpperCase()}_COUNT`, x.item_count ?? x.bom_count ?? x.lot_count); } catch (e) { console.log(`REAL_${label.toUpperCase()}_MISSING`, e.message); }
+          }
+          NODE
