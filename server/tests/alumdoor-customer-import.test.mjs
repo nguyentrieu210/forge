@@ -1,6 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { normalizeCustomerImportRow } from "../dist/apps-src/alumdoor-worker/src/customer-import.js";
+
+test("canonical Customer price_group is required and fail-closed", () => {
+  const brief = JSON.parse(readFileSync(new URL("../briefs/alumdoor.json", import.meta.url), "utf8"));
+  const customer = brief.doctypes.find((row) => row.name === "Customer");
+  const field = customer?.fields?.find((row) => row && typeof row === "object" && row.fieldname === "price_group");
+
+  assert.ok(field, "Customer.price_group must exist in canonical Alumdoor brief");
+  assert.equal(field.fieldtype, "Select");
+  assert.equal(field.options, "Đại lý\nLẻ");
+  assert.equal(field.required, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(field, "default"), false);
+});
 
 test("customer import requires canonical customer name and price group", () => {
   const missing = normalizeCustomerImportRow({ customer_name: "  ", price_group: "" });
