@@ -235,3 +235,66 @@ test("Item catalog invariants merge partial saves before checking purchase eligi
   assert.equal(response.status, 422);
   assert.match(await message(response), /Nguồn cung Mua ngoài phải bật Được phép mua/i);
 });
+
+
+function canonicalFinishedDoor() {
+  return {
+    item_code: "FG-M2-SET",
+    item_group: "Thành phẩm",
+    item_nature: "Hàng tồn kho",
+    material_stage: "Thành phẩm",
+    supply_type: "Tự sản xuất",
+    is_stock_item: 1,
+    is_purchase_item: 0,
+    is_sales_item: 1,
+    is_fixed_asset: 0,
+    include_item_in_manufacturing: 1,
+    is_sub_contracted_item: 0,
+    inventory_mode: "Hàng thường",
+    measurement_profile: "Thành phẩm theo m2",
+    stock_uom: "Bộ",
+    default_purchase_uom: "",
+    default_sales_uom: "m2",
+    uom_conversions: [],
+  };
+}
+
+async function validateDocument(doctype, payload, masters = {}) {
+  const request = new Request("https://alumdoor.test/hooks/validate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-cloudforge-tenant": "alu",
+      "x-cloudforge-callback": "https://platform.test/",
+    },
+    body: JSON.stringify({ doctype, name: doctype + "-TEST", action: "create", payload }),
+  });
+  return worker.fetch(
+    request,
+    { PLATFORM: platformFetcher(masters) },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+}
+
+test("Item validator accepts canonical finished-door m2 sales UOM without static conversion", async () => {
+  const response = await validateItem(canonicalFinishedDoor(), {
+    masters: {
+      "Item Group:Thành phẩm": { item_group_name: "Thành phẩm", is_group: 0 },
+    },
+  });
+  assert.equal(response.status, 200, await message(response));
+});
+
+test("Sales transaction accepts m2 commercial UOM for canonical set-stock finished door without static conversion", async () => {
+  const item = canonicalFinishedDoor();
+  const response = await validateDocument("Sales Order", {
+    company: "ALUMDOOR",
+    customer: "KH-TEST",
+    customer_group: "Khách lẻ",
+    items: [{ item_code: item.item_code, qty: 2, uom: "m2" }],
+  }, {
+    ["Item:" + item.item_code]: item,
+    "Customer:KH-TEST": { customer_name: "Khách thử", price_group: "Khách lẻ", disabled: 0 },
+  });
+  assert.equal(response.status, 200, await message(response));
+});

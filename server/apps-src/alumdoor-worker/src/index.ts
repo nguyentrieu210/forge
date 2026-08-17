@@ -368,7 +368,7 @@ async function validateItemMaster(call: PlatformCall, subject: ValidatorSubject)
     if (fieldname === "default_sales_uom" && !checked(doc.is_sales_item)) continue;
     const uom = String(doc[fieldname] ?? "").trim();
     if (!uom || uom === stockUom) continue;
-    const dynamicSquareMetreToSet = mode === "Thành phẩm theo m2"
+    const dynamicSquareMetreToSet = profileName === "Thành phẩm theo m2"
       && ["m2", "m²", "sqm"].includes(normalizedUom(uom))
       && ["bộ", "bo", "set"].includes(normalizedUom(stockUom));
     if (dynamicSquareMetreToSet) continue;
@@ -857,6 +857,7 @@ async function validateTransactionLines(
     const defaultUom = String(side === "purchase" ? item.default_purchase_uom ?? "" : item.default_sales_uom ?? "").trim();
     const uom = String(row.uom ?? (defaultUom || stockUom)).trim();
     const mode = String(item.inventory_mode ?? "Hàng thường");
+    const measurementProfile = String(item.measurement_profile ?? "").trim();
     const linearBasis = side === "sales" ? deriveLinearSalesBasis(item) : undefined;
     const widthQuantityItem = side === "sales" ? isWidthQuantitySalesItem(item) : false;
     const ordinaryQuantityItem = side === "sales" ? isOrdinaryQuantitySalesItem(item) : false;
@@ -864,7 +865,7 @@ async function validateTransactionLines(
     if (side === "purchase" && mode === "Nhôm cây/lá" && selected !== "kg") {
       return refuse(`${line}: nhôm cây/lá phải nhập theo Kg; số cây và chiều dài chỉ là quy cách đối chiếu.`);
     }
-    const dynamicSquareMetreToSet = mode === "Thành phẩm theo m2"
+    const dynamicSquareMetreToSet = measurementProfile === "Thành phẩm theo m2"
       && SALES_AREA_UOMS.has(selected)
       && SALES_SET_UOMS.has(normalizedUom(stockUom));
     const factors = new Map<string, number>();
