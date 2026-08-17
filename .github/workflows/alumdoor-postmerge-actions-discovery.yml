@@ -12,10 +12,10 @@ jobs:
   discover:
     runs-on: ubuntu-latest
     env:
-      EXPECTED_SHA: 9fc90544c46436d90fbf2c245764ef9340f890a3
+      EXPECTED_SHA: 37b88c760d781a4f8642de4006ae015bcde25ad5
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Discover exact-main Bootstrap and follower state
+      - name: Discover or dispatch exact-main Bootstrap
         shell: bash
         run: |
           set -euo pipefail
@@ -31,20 +31,30 @@ jobs:
 
           main_sha="$(curl -fsSL "${headers[@]}" "$api/commits/main" | jq -r .sha)"
           echo "MAIN_SHA=$main_sha"
+          if [ "$main_sha" != "$EXPECTED_SHA" ]; then
+            echo "REFUSE_DISPATCH main_drift expected=$EXPECTED_SHA actual=$main_sha"
+            exit 9
+          fi
 
-          for spec in \
-            'BOOTSTRAP:bootstrap-alumdoor-local.yml' \
-            'PRICING:alumdoor-pricing-local-import.yml' \
-            'REASON:alumdoor-reason-master-local-import.yml' \
-            'BOM:alumdoor-bom-local-import.yml'; do
-            label="${spec%%:*}"; wf="${spec#*:}"
-            echo "=== $label EXACT SHA ==="
-            data="$(curl -fsSL "${headers[@]}" "$workflows/$wf/runs?per_page=50")"
-            jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,name,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$data"
-          done
+          bootstrap="$(curl -fsSL "${headers[@]}" "$workflows/bootstrap-alumdoor-local.yml/runs?branch=main&per_page=50")"
+          echo '=== EXISTING EXACT MAIN BOOTSTRAP ==='
+          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$bootstrap"
 
-          echo '=== ACTIVE ==='
-          curl -fsSL "${headers[@]}" "$root/runs?status=in_progress&per_page=50" | jq -c '.workflow_runs[] | {id,name,status,event,head_branch,head_sha,created_at}'
-          echo '=== QUEUED ==='
-          curl -fsSL "${headers[@]}" "$root/runs?status=queued&per_page=50" | jq -c '.workflow_runs[] | {id,name,status,event,head_branch,head_sha,created_at}'
-          echo 'ALUMDOOR_EXACT_MAIN_ACTION_DISCOVERY_PASS'
+          usable="$(jq -r --arg sha "$EXPECTED_SHA" '[.workflow_runs[] | select(.head_sha==$sha and (.status!="completed" or .conclusion=="success"))] | length' <<<"$bootstrap")"
+          if [ "$usable" -eq 0 ]; then
+            curl -fsSL -X POST "${headers[@]}" -H 'Content-Type: application/json' \
+              "$workflows/bootstrap-alumdoor-local.yml/dispatches" -d '{"ref":"main"}' -o /dev/null
+            echo "BOOTSTRAP_DISPATCH=PASS sha=$EXPECTED_SHA"
+            sleep 3
+            bootstrap="$(curl -fsSL "${headers[@]}" "$workflows/bootstrap-alumdoor-local.yml/runs?branch=main&per_page=50")"
+          else
+            echo "BOOTSTRAP_DISPATCH=SKIP reason=exact-main-run-already-usable count=$usable"
+          fi
+
+          echo '=== EXACT MAIN BOOTSTRAP AFTER DECISION ==='
+          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$bootstrap"
+          echo '=== ACTIVE MUTATION-RELATED RUNS ==='
+          curl -fsSL "${headers[@]}" "$root/runs?status=in_progress&per_page=50" | jq -c '.workflow_runs[] | select(.name|test("Alumdoor|Pricing|Bootstrap|Reason|Purchase|Customer|BOM";"i")) | {id,name,status,event,head_branch,head_sha,created_at}'
+          echo '=== QUEUED MUTATION-RELATED RUNS ==='
+          curl -fsSL "${headers[@]}" "$root/runs?status=queued&per_page=50" | jq -c '.workflow_runs[] | select(.name|test("Alumdoor|Pricing|Bootstrap|Reason|Purchase|Customer|BOM";"i")) | {id,name,status,event,head_branch,head_sha,created_at}'
+          echo 'ALUMDOOR_EXACT_MAIN_BOOTSTRAP_DISCOVERY_PASS'
