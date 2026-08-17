@@ -17,8 +17,10 @@ concurrency:
 jobs:
   audit-item-and-bom-state:
     runs-on: [self-hosted]
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
+      - uses: actions/checkout@v4
+
       - name: Reconcile clean local main by fast-forward only
         shell: powershell
         run: |
@@ -42,6 +44,14 @@ jobs:
           Write-Host "ORIGIN_MAIN=$remote"
           Write-Host "LOCAL_MAIN_AFTER=$after"
           if ($after -ne $remote) { throw 'Local main does not match origin/main after fast-forward.' }
+
+      - name: Test guarded finished-door stock UOM reconciliation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location '${{ github.workspace }}\server'
+          & node scripts\test-alumdoor-item-stock-uom-reconcile.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Finished-door stock UOM reconciliation tests failed.' }
 
       - name: Rebuild canonical real-source records and Item payload
         shell: powershell
@@ -76,25 +86,27 @@ jobs:
             throw 'Canonical Item payload is not zero-blocker.'
           }
 
-      - name: Verify canonical UOM and import Item master twice
+      - name: Reconcile legacy finished-door stock UOM and import Item master twice
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $target = 'C:\alumdoor'
           $server = Join-Path $target 'server'
+          $featureServer = '${{ github.workspace }}\server'
           $imports = Join-Path $target 'local-imports'
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
           $runDir = Join-Path $target "local-backups\item-master-imports\bom-continuation-$stamp"
           New-Item -ItemType Directory -Force -Path $runDir | Out-Null
           $payload = Join-Path $imports 'alumdoor-item-master-payload.json'
           $uomPreimage = Join-Path $runDir 'uom-preimage.json'
+          $reconcilePreimage = Join-Path $runDir 'finished-door-stock-uom-preimage.json'
           $preimage1 = Join-Path $runDir 'item-preimage-first.json'
           $preimage2 = Join-Path $runDir 'item-preimage-rerun.json'
-          Set-Location $server
           $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
           $env:FORGE_ADMIN_USER = 'dev@example.com'
           $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
           try {
+            Set-Location $server
             & node scripts\backup-alumdoor-uom-local.mjs $uomPreimage
             if ($LASTEXITCODE -ne 0) { throw 'Authenticated UOM pre-image failed.' }
             $uom = Get-Content -Raw -LiteralPath $uomPreimage | ConvertFrom-Json
@@ -103,6 +115,16 @@ jobs:
             if ([int]$uom.canonical_count -ne 19 -or [int]$uom.existing_count -ne 19) {
               throw "Canonical UOM set incomplete: existing=$($uom.existing_count) canonical=$($uom.canonical_count)"
             }
+
+            Set-Location $featureServer
+            Write-Host '=== FINISHED DOOR UOM RECONCILE DRY RUN ==='
+            & node scripts\reconcile-alumdoor-item-stock-uom-local.mjs $payload --dry-run
+            if ($LASTEXITCODE -ne 0) { throw 'Finished-door stock UOM reconciliation dry-run failed.' }
+            Write-Host '=== FINISHED DOOR UOM RECONCILE APPLY ==='
+            & node scripts\reconcile-alumdoor-item-stock-uom-local.mjs $payload $reconcilePreimage
+            if ($LASTEXITCODE -ne 0) { throw 'Finished-door stock UOM reconciliation failed.' }
+
+            Set-Location $server
             & node scripts\import-alumdoor-item-master-local.mjs $payload --validate-only
             if ($LASTEXITCODE -ne 0) { throw 'Item importer validate-only failed.' }
             Write-Host '=== ITEM IMPORT FIRST ==='
