@@ -6,6 +6,23 @@ const fold = (value) => clean(value)
   .replace(/[Đ]/g, "D")
   .replace(/\s+/g, " ");
 
+const EXACT_GROUPS = Object.freeze({
+  "TP-LACPHU33_1LO": "Linh kiện motor",
+  "TP-LACPHU36_1LO": "Linh kiện motor",
+  "TP-LACPHU33_3LO": "Linh kiện motor",
+  "TP-LACPHU36_3LO": "Linh kiện motor",
+  "TP-CHONGXOLO": "Phụ kiện chung",
+  "CROMATE 3+": "Phụ kiện cần sơn tĩnh điện",
+  "TẨY NHÔM": "Phụ kiện cần sơn tĩnh điện",
+  "NVL-GOIFE": "Phụ kiện chung",
+  "NVL-GIAT": "Phụ kiện chung",
+  "NVL-CHNHUA": "Phụ kiện chung",
+});
+
+function exactGroup(code) {
+  return EXACT_GROUPS[clean(code)] ?? "";
+}
+
 function containsAny(haystack, needles) {
   return needles.some((needle) => haystack.includes(needle));
 }
@@ -45,6 +62,8 @@ function finishedDoorGroup(category, code, name) {
 }
 
 function materialGroup(code, name) {
+  const direct = exactGroup(code);
+  if (direct) return direct;
   const text = `${fold(code)} | ${fold(name)}`;
   if (containsAny(text, ["RAY", "TRUC", "ONG KEM 34", "ONG KEM34"])) return "Ray và trục";
   if (containsAny(text, [
@@ -57,6 +76,8 @@ function materialGroup(code, name) {
 }
 
 function motorProductGroup(code, name) {
+  const direct = exactGroup(code);
+  if (direct) return direct;
   const text = `${fold(code)} | ${fold(name)}`;
   if (containsAny(text, ["BINH LUU DIEN", "LUU DIEN", " UPS", "UPS-", "UPS_"])) return "Bình lưu điện";
   if (containsAny(text, ["REMOTE", "DIEU KHIEN", "BO DK", "TAY DK", "CONTROL", "PHOTOCELL", "CAM BIEN"])) return "Điều khiển & phụ kiện điện";
@@ -65,6 +86,8 @@ function motorProductGroup(code, name) {
 }
 
 function motorComponentGroup(category, code, name) {
+  const direct = exactGroup(code);
+  if (direct) return direct;
   const text = `${fold(code)} | ${fold(name)}`;
   const branded = containsAny(text, ["ALUMAX", "YHLD", "YHTAIWAN", "TANKER", "J.G", "JG-"]);
   const component = containsAny(text, [
@@ -77,6 +100,8 @@ function motorComponentGroup(category, code, name) {
 }
 
 function accessoryGroup(category, code, name) {
+  const direct = exactGroup(code);
+  if (direct) return direct;
   const text = `${fold(code)} | ${fold(name)}`;
   if (containsAny(text, ["RON", "LONG NHEO", "PHOTLONG", "PULY", "BO ", "BAT ", "BULONG", "VIS", "CON TAN", "BAC DAN"])) {
     return categoryIs(category, ["DUC", "CN DUC"]) ? "Phụ kiện CN Đức" : "Phụ kiện chung";
@@ -86,6 +111,8 @@ function accessoryGroup(category, code, name) {
 }
 
 export function resolveAlumdoorRealSellableGroup({ category, item_code, item_name, source_uom } = {}) {
+  const direct = exactGroup(item_code);
+  if (direct) return direct;
   const categoryText = fold(category);
   const code = fold(item_code);
   const name = fold(item_name);
@@ -114,6 +141,8 @@ export function resolveAlumdoorRealSellableGroup({ category, item_code, item_nam
 }
 
 export function resolveAlumdoorRealStockGroup({ category, item_code, item_name } = {}) {
+  const direct = exactGroup(item_code);
+  if (direct) return direct;
   const categoryText = fold(category);
   const code = fold(item_code);
   const name = fold(item_name);
