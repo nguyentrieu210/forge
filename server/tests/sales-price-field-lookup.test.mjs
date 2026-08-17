@@ -54,6 +54,22 @@ function priceRow(name, overrides = {}) {
   };
 }
 
+function canonicalTestDocument(doctype, record) {
+  return {
+    tenant_id: "demo",
+    doctype,
+    name: record.name,
+    owner: "test@example.com",
+    docstatus: 0,
+    status: "Draft",
+    version: Number(record.version ?? 1),
+    created_at: "2026-07-31T00:00:00.000Z",
+    modified_at: "2026-07-31T00:00:00.000Z",
+    data: record.data,
+    children: [],
+  };
+}
+
 test("sales item preview resolves a valid Item Price even when its record name is noncanonical", async () => {
   const response = await salesItemContext(workerPlatform([priceRow("IP-0007")]), {
     item_code: "ITEM-1",
@@ -92,6 +108,12 @@ function pricingContext(itemPrices, pricingRules = [], named = {}) {
   return {
     command: { tenant_id: "demo" },
     reader: {
+      async getDocument(_tenant, doctype, name) {
+        const record = doctype === "Pricing Rule"
+          ? pricingRules.find((entry) => entry.name === name)
+          : null;
+        return record ? canonicalTestDocument(doctype, record) : null;
+      },
       async getMasterRecordData(_tenant, doctype, name) {
         if (doctype === "Currency" && name === "VND") return { currency_scale: 2 };
         return named[`${doctype}:${name}`] ?? null;
