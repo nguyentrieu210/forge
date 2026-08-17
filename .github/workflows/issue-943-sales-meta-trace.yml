@@ -1,0 +1,23 @@
+name: Issue 943 Sales Meta Trace
+on:
+  push:
+    branches:
+      - agent/alumdoor-tam-lien-ray-geometry
+permissions:
+  contents: read
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate Sales Order Item generator and Work Order lineage
+        run: |
+          echo '=== generator ==='
+          grep -n "Sales Order Item\|Quotation Item\|const soi\|salesOrderItem\|leaf_variant" server/scripts/build-alumdoor-v2-brief.mjs | head -100 || true
+          echo '=== production lineage ray candidates ==='
+          grep -R "formula_snapshot\|production_request_line_key\|sales_order_row_id" -n server/apps-src/alumdoor-worker/src/sales-production-core.ts server/briefs/alumdoor-v2.json | head -160 || true
+          echo '=== current Work Order / Production Request Item fields ==='
+          node <<'NODE'
+          const fs=require('node:fs'); const b=JSON.parse(fs.readFileSync('server/briefs/alumdoor-v2.json','utf8'));
+          for(const n of ['Production Request Item','Work Order']) console.log(n,JSON.stringify(b.doctypes.find(x=>x.name===n)?.fields,null,2));
+          NODE
