@@ -35,39 +35,9 @@ const list = await ok(`/api/resource/Bill%20of%20Materials?fields=${encodeURICom
 const existingRows = list?.data ?? list?.message ?? [];
 const byFingerprint = new Map(existingRows.filter((r)=>r.bom_fingerprint).map((r)=>[String(r.bom_fingerprint),r]));
 
-function writableChild(row){
-  return {
-    doctype:"BOM Item",
-    item_code:String(row?.item_code??"").trim(),
-    qty:Number(row?.qty),
-    uom:String(row?.uom??"").trim(),
-    qty_basis:String(row?.qty_basis??"").trim(),
-    source_note:String(row?.source_note??"").trim(),
-    source_warehouse:String(row?.source_warehouse??"").trim(),
-    note:String(row?.note??"").trim(),
-  };
-}
-function writableBom(bom){
-  const body={
-    doctype:"Bill of Materials",
-    item:String(bom?.item??"").trim(),
-    company:String(bom?.company??"").trim(),
-    quantity:Number(bom?.quantity),
-    items:(bom?.items??[]).map(writableChild),
-    operating_cost:Number(bom?.operating_cost??0),
-    is_active:Number(Boolean(Number(bom?.is_active)||bom?.is_active===true)),
-    note:String(bom?.note??"").trim(),
-    bom_template_code:String(bom?.bom_template_code??"").trim(),
-    bom_fingerprint:String(bom?.bom_fingerprint??"").trim(),
-    generated_by_configurator:Number(Boolean(Number(bom?.generated_by_configurator)||bom?.generated_by_configurator===true)),
-    configuration_snapshot:String(bom?.configuration_snapshot??""),
-  };
-  if (String(bom?.color??"").trim()) body.color=String(bom.color).trim();
-  if (String(bom?.bom_template??"").trim()) body.bom_template=String(bom.bom_template).trim();
-  return body;
-}
+function writableChild(row){return {doctype:"BOM Item",item_code:String(row?.item_code??"").trim(),qty:Number(row?.qty),uom:String(row?.uom??"").trim(),qty_basis:String(row?.qty_basis??"").trim(),source_note:String(row?.source_note??"").trim(),source_warehouse:String(row?.source_warehouse??"").trim(),note:String(row?.note??"").trim()};}
+function writableBom(bom){return {doctype:"Bill of Materials",item:String(bom?.item??"").trim(),color:String(bom?.color??"").trim(),company:String(bom?.company??"").trim(),quantity:Number(bom?.quantity),items:(bom?.items??[]).map(writableChild),operating_cost:Number(bom?.operating_cost??0),is_active:Number(Boolean(Number(bom?.is_active)||bom?.is_active===true)),note:String(bom?.note??"").trim(),bom_template:String(bom?.bom_template??"").trim(),bom_template_code:String(bom?.bom_template_code??"").trim(),bom_fingerprint:String(bom?.bom_fingerprint??"").trim(),generated_by_configurator:Number(Boolean(Number(bom?.generated_by_configurator)||bom?.generated_by_configurator===true)),configuration_snapshot:String(bom?.configuration_snapshot??"")};}
 
-// Preflight all Item links before first BOM mutation.
 const codes = new Set(); for(const bom of payload.boms){codes.add(bom.item);for(const row of bom.items)codes.add(row.item_code);}
 const missingItems=[];for(const code of codes){if(!await getItem(code))missingItems.push(code);}if(missingItems.length)throw new Error(`BOM Item links missing before mutation: ${missingItems.slice(0,20).join(", ")} total=${missingItems.length}`);
 const pre=[];const missing=[];const exact=[];const conflicts=[];
