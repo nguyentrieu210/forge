@@ -13,6 +13,7 @@ import {
   handleMaterialRequestFromAluminumShortage,
   handleReserveAluminumForSales,
 } from "./aluminum-supply-demand.js";
+import { guardCutBomAuthorityRequest } from "./cut-bom-authority.js";
 import { handlePurchaseSupplierDashboard } from "./purchase-supplier-dashboard.js";
 import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement.js";
 import { handleProductionRequestLifecycle } from "./production-request-lifecycle-route.js";
@@ -38,6 +39,10 @@ export default {
 
     if (url.pathname.startsWith("/api/method/")) {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
+      if (request.method === "POST" && (method === "alumdoor.cut.draft" || method === "alumdoor.cut.apply")) {
+        const authorityFailure = await guardCutBomAuthorityRequest(request, env, method);
+        if (authorityFailure) return authorityFailure;
+      }
       if (method === "alumdoor.production_request.lifecycle") return handleProductionRequestLifecycle(request, env);
       if (method === "alumdoor.purchase.supplier_delivery_dashboard") return handlePurchaseSupplierDashboard(request, env);
       if (method === "alumdoor.purchase.supplier_delivery_settlement") return handlePurchaseSupplierSettlement(request, env);
