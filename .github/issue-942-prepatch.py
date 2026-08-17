@@ -1,19 +1,19 @@
-import json
-import subprocess
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-path = root / "server/briefs/alumdoor.json"
-source = json.loads(path.read_text(encoding="utf-8"))
-raw = subprocess.check_output(
-    ["git", "show", "d6427f435fb300f72f790a67f640114d6453cad4:server/briefs/alumdoor-v2.json"],
-    cwd=root,
-    text=True,
-    encoding="utf-8",
-)
-snapshot = json.loads(raw)
-cut_item = next(x for x in snapshot["doctypes"] if x["name"] == "Cut Order Item")
-source["doctypes"] = [x for x in source["doctypes"] if x["name"] != "Cut Order Item"]
-source["doctypes"].append(cut_item)
-path.write_text(json.dumps(source, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-print("restored Cut Order Item source doctype from d6427f4 (creation lineage cbc1dae + latest source_batch_no)")
+path = root / ".github/issue-942-apply.py"
+s = path.read_text(encoding="utf-8")
+
+old = 'upsert_field(srcdt("Cut Order Item"), fld(dt(C, "Cut Order Item"), "source_batch_no"))\n'
+if old in s:
+    s = s.replace(old, "", 1)
+
+old = '  upsertSourceField("Cut Order Item", "source_batch_no");\n'
+new = '''  {\n    // Cut Order Item is a V2-derived doctype created by this generator (cbc1dae).\n    // d6427f4 added the FIFO source-batch lineage directly to generated V2; keep\n    // that field in the generator rather than pretending the legacy source owns the child.\n    const target = doctype("Cut Order Item");\n    const value = {\n      fieldname: "source_batch_no",\n      label: "Lô nguồn FIFO",\n      fieldtype: "Link",\n      options: "Batch",\n      required: true,\n      read_only: true,\n      surface: "expanded",\n    };\n    const existing = target.fields.findIndex((entry) => nameOf(entry) === "source_batch_no");\n    if (existing >= 0) target.fields[existing] = value;\n    else {\n      const anchor = target.fields.findIndex((entry) => nameOf(entry) === "source_warehouse");\n      target.fields.splice(anchor >= 0 ? anchor + 1 : target.fields.length, 0, value);\n    }\n  }\n'''
+if old in s:
+    s = s.replace(old, new, 1)
+elif 'd6427f4 added the FIFO source-batch lineage' not in s:
+    raise RuntimeError('Cut Order Item generator convergence pattern drift')
+
+path.write_text(s, encoding="utf-8")
+print("patched apply script: Cut Order Item remains generator-owned; source_batch_no comes from d6427f4")
