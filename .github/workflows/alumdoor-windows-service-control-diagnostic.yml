@@ -1,0 +1,106 @@
+name: Alumdoor Windows Service Control Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/alumdoor-windows-service-control-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Inspect identity and service control rights without mutation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host '=== CURRENT IDENTITY ==='
+          whoami
+          whoami /user
+          whoami /groups
+          whoami /priv
+
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class ServiceAccessProbe {
+            [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+            public static extern IntPtr OpenSCManager(string machineName, string databaseName, uint desiredAccess);
+            [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+            public static extern IntPtr OpenService(IntPtr scm, string serviceName, uint desiredAccess);
+            [DllImport("advapi32.dll", SetLastError=true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool CloseServiceHandle(IntPtr handle);
+          }
+          '@
+
+          $SC_MANAGER_CONNECT = 0x0001
+          $SERVICE_QUERY_STATUS = 0x0004
+          $SERVICE_START = 0x0010
+          $SERVICE_STOP = 0x0020
+          $READ_CONTROL = 0x00020000
+
+          function Test-ServiceAccess([string]$Name, [uint32]$Mask, [string]$Label) {
+            $scm = [ServiceAccessProbe]::OpenSCManager($null, $null, $SC_MANAGER_CONNECT)
+            if ($scm -eq [IntPtr]::Zero) {
+              Write-Host "SERVICE_ACCESS service=$Name access=$Label result=SCM_DENIED error=$([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+              return
+            }
+            try {
+              $handle = [ServiceAccessProbe]::OpenService($scm, $Name, $Mask)
+              if ($handle -eq [IntPtr]::Zero) {
+                Write-Host "SERVICE_ACCESS service=$Name access=$Label result=DENIED error=$([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+              } else {
+                Write-Host "SERVICE_ACCESS service=$Name access=$Label result=PASS"
+                [ServiceAccessProbe]::CloseServiceHandle($handle) | Out-Null
+              }
+            } finally {
+              [ServiceAccessProbe]::CloseServiceHandle($scm) | Out-Null
+            }
+          }
+
+          Write-Host '=== ACTIONS RUNNER SERVICE ==='
+          $runner = Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'actions.runner.nguyentrieu210-forge.*' } |
+            Select-Object -First 1
+          if ($runner) {
+            Write-Host "RUNNER_SERVICE name=$($runner.Name) start_name=$($runner.StartName) pid=$($runner.ProcessId) state=$($runner.State)"
+            try {
+              $sid = ([Security.Principal.NTAccount]::new($runner.StartName)).Translate([Security.Principal.SecurityIdentifier]).Value
+              Write-Host "RUNNER_SERVICE_SID=$sid"
+            } catch {
+              Write-Host "RUNNER_SERVICE_SID_TRANSLATION=FAILED message=$($_.Exception.Message)"
+            }
+          } else {
+            Write-Host 'RUNNER_SERVICE=NOT_FOUND'
+          }
+
+          foreach ($name in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk')) {
+            Write-Host "=== $name ==="
+            $svc = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
+            if (-not $svc) {
+              Write-Host "SERVICE name=$name present=NO"
+              continue
+            }
+            Write-Host "SERVICE name=$name present=YES start_name=$($svc.StartName) pid=$($svc.ProcessId) state=$($svc.State)"
+            $sddl = (& sc.exe sdshow $name 2>&1) -join ' '
+            Write-Host "SERVICE_SDDL name=$name value=$sddl"
+            Test-ServiceAccess $name $SERVICE_QUERY_STATUS 'QUERY_STATUS'
+            Test-ServiceAccess $name $SERVICE_START 'START'
+            Test-ServiceAccess $name $SERVICE_STOP 'STOP'
+            Test-ServiceAccess $name ($SERVICE_QUERY_STATUS -bor $SERVICE_START -bor $SERVICE_STOP -bor $READ_CONTROL) 'ACCEPTANCE_CONTROL'
+
+            $winsw = "C:\ForgeServices\Alumdoor\$name.exe"
+            if (Test-Path -LiteralPath $winsw) {
+              $status = @(& $winsw status --no-elevate 2>&1)
+              Write-Host "WINSW_STATUS service=$name exit=$LASTEXITCODE output=$($status -join ' | ')"
+              $tree = @(& $winsw dev ps 2>&1)
+              Write-Host "WINSW_DEV_PS service=$name exit=$LASTEXITCODE output=$($tree -join ' | ')"
+            }
+          }
+
+          Write-Host 'ALUMDOOR_WINDOWS_SERVICE_CONTROL_DIAGNOSTIC_PASS'
