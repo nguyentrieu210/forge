@@ -22,6 +22,75 @@ if (!Array.isArray(records)) {
   throw new Error("source-records.json phải là array hoặc object { records: [...] }");
 }
 
+const clean = (value) => String(value ?? "").trim();
+const uomKey = (value) => clean(value).replace(/\s+/g, "").toLocaleUpperCase("vi");
+function positiveNumber(value) {
+  const text = clean(value).replace(",", ".");
+  if (!text) return null;
+  const numeric = Number(text);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+function uniqueNumbers(values) {
+  return [...new Set(values.filter((value) => Number.isFinite(value) && value > 0))];
+}
+
+function deriveExactCodeConversionEvidence(item, rawRecords) {
+  if ((item.conversion_factors ?? []).length > 0) return item;
+  const stockUom = clean(item.stock_uom);
+  const salesUoms = [...new Set((item.sales_uoms ?? []).map(clean).filter(Boolean))];
+  if (!stockUom || salesUoms.length !== 1 || salesUoms[0] === stockUom) return item;
+
+  const exactRows = rawRecords.filter((row) => clean(row.item_code) === clean(item.item_code));
+  if (stockUom === "Kg" && salesUoms[0] === "Mét") {
+    const factors = uniqueNumbers(exactRows
+      .filter((row) => uomKey(row.source_uom) === "KG/M")
+      .map((row) => positiveNumber(row.source_rate_or_quantity ?? row.source_qty_or_formula)));
+    if (factors.length > 0) {
+      return {
+        ...item,
+        requires_conversion: true,
+        conversion_bases: [...new Set([...(item.conversion_bases ?? []), "kg_per_m"])],
+        conversion_factors: factors.map((factor) => ({
+          conversion_basis: "kg_per_m",
+          conversion_factor: factor,
+          source: "real_source_exact_code_kg_per_m",
+        })),
+      };
+    }
+  }
+
+  // NVL-OKHOA is one physical lock per commercial set in the source: the
+  // numbered sellable row is 1 Bộ and the exact BOM component row is also 1 Bộ,
+  // while the physical inventory snapshot counts the same code in Cái. This is
+  // explicit 1:1 source evidence, not a guessed packaging ratio.
+  if (item.item_code === "NVL-OKHOA" && stockUom === "Cái" && salesUoms[0] === "Bộ") {
+    const sellableOne = exactRows.some((row) => (
+      row.source_role === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT
+      && uomKey(row.source_uom) === "BỘ"
+      && positiveNumber(row.source_rate_or_quantity) === 1
+    ));
+    const bomOne = exactRows.some((row) => (
+      row.source_role === ITEM_SOURCE_ROLES.BOM_REFERENCE
+      && uomKey(row.source_uom) === "BỘ"
+      && positiveNumber(row.source_qty_or_formula) === 1
+    ));
+    if (sellableOne && bomOne) {
+      return {
+        ...item,
+        requires_conversion: true,
+        conversion_bases: [...new Set([...(item.conversion_bases ?? []), "piece_per_set"])],
+        conversion_factors: [{
+          conversion_basis: "piece_per_set",
+          conversion_factor: 1,
+          source: "real_source_exact_code_one_lock_per_set",
+        }],
+      };
+    }
+  }
+
+  return item;
+}
+
 const sourcePreflight = preflightAlumdoorItemSourceRecords(records);
 const sourcePartition = partitionAlumdoorItemSourceBlockers(sourcePreflight.blockers);
 
@@ -32,22 +101,25 @@ const sourcePartition = partitionAlumdoorItemSourceBlockers(sourcePreflight.bloc
 // evidence from their direct source rows as before.
 const promotionGroupsByCode = new Map();
 for (const row of sourcePreflight.promotions ?? []) {
-  const group = String(row.source_group ?? "").trim();
+  const group = clean(row.source_group);
   if (!group) continue;
   const list = promotionGroupsByCode.get(row.canonical_item_code) ?? [];
   list.push(group);
   promotionGroupsByCode.set(row.canonical_item_code, list);
 }
-const acceptedWithPromotionGroups = sourcePreflight.accepted.map((item) => {
+const acceptedWithEvidence = sourcePreflight.accepted.map((item) => {
   const roles = new Set(item.source_roles ?? []);
   const hasDirectIdentity = roles.has(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT)
     || roles.has(ITEM_SOURCE_ROLES.STOCK_ITEM);
-  if (hasDirectIdentity) return item;
-  const groups = [...new Set(promotionGroupsByCode.get(item.item_code) ?? [])];
-  return groups.length > 0 ? { ...item, source_groups: groups } : item;
+  let next = item;
+  if (!hasDirectIdentity) {
+    const groups = [...new Set(promotionGroupsByCode.get(item.item_code) ?? [])];
+    if (groups.length > 0) next = { ...next, source_groups: groups };
+  }
+  return deriveExactCodeConversionEvidence(next, records);
 });
 const master = buildCanonicalAlumdoorItemMaster(
-  { ...sourcePreflight, accepted: acceptedWithPromotionGroups },
+  { ...sourcePreflight, accepted: acceptedWithEvidence },
   records,
 );
 
