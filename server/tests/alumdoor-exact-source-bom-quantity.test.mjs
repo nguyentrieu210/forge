@@ -49,6 +49,27 @@ test("exact V4 TOLE75 weight annotations resolve as meter geometry without a gue
   }
 });
 
+test("mesh-hook row 1108 uses source-backed width weight semantics instead of fixed 64 kg", () => {
+  const source = {
+    source_row: 1108,
+    source_sheet: "ĐM",
+    source_uom: "m2",
+    source_qty_or_formula: "64.0",
+    source_formula_text: "64con/M (1KG X 49 CONx16,000/KG)",
+  };
+  assert.deepEqual(resolveExactSourceBomUomOverride(source, "NVL-BOMV"), {
+    runtime_uom: "Kg",
+    reason: "exact_source_row_1108_uom_anomaly",
+  });
+  const quantity = resolveExactSourceBomQuantity(source, { runtime_uom: "Kg" }, "NVL-BOMV");
+  assert.equal(quantity?.status, "runtime_formula");
+  assert.equal(quantity?.formula_kind, "source_row_exact_mv_hook_weight_per_width_cross_evidence_1150");
+  assert.deepEqual(JSON.parse(quantity.quantity_formula_json), {
+    base: { kind: "FIELD", field: "PB_RAY_RONG" },
+    multiply: 64 / 49,
+  });
+});
+
 test("exact V4 profile UOM overrides fail closed when source evidence changes", () => {
   const source = record(1294, "(rpbray-30)x2xTL");
   assert.equal(
