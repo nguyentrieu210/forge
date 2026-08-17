@@ -37,7 +37,7 @@ const NUMERIC_FIELDS = new Set([
   "selling", "buying", "disabled", "rate", "priority", "adjustment_rate", "taxable", "discountable",
 ]);
 const MANAGED_FIELDS = Object.freeze({
-  "Price List": ["price_list_name", "currency", "selling", "buying", "disabled"],
+  "Price List": ["price_list_name", "effective_date", "currency", "disabled"],
   "Item Price": ["price_list", "item_code", "uom", "price_variant", "rate", "currency", "disabled"],
   "Pricing Rule": [
     "disabled", "price_list", "currency", "rule_level", "apply_on", "item_code", "effect_type",

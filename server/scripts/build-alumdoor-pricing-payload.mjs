@@ -323,7 +323,9 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
     format: "alumdoor-pricing-payload/v1",
     managed_price_list: ALUMDOOR_PRICE_LIST,
     source_file: pricingSourceFile?.source_file || "apps/alumdoor/docs/nguon/ms-lien/ĐM.md",
-    price_list: { doctype: "Price List", name: ALUMDOOR_PRICE_LIST, price_list_name: ALUMDOOR_PRICE_LIST, currency: "VND", selling: 1, buying: 0, disabled: 0 },
+    // Alumdoor's Price List schema is not ERPNext's: it has no selling/buying flags
+    // (a list's audience is expressed by customer_group), and effective_date is required.
+    price_list: { doctype: "Price List", name: ALUMDOOR_PRICE_LIST, price_list_name: ALUMDOOR_PRICE_LIST, effective_date: "2026-01-01", currency: "VND", disabled: 0 },
     item_prices: stableSort(itemPrices.values()),
     pricing_rules: stableSort(pricingRules.values()),
     source_summary: {
