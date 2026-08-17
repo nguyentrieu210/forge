@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import process from 'node:process';
+import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -235,6 +236,45 @@ export async function verifyRequiredServices(
   return evidence;
 }
 
+const RETRYABLE_CODES = new Set([
+  'REQUIRED_SERVICE_NOT_RUNNING',
+  'REQUIRED_SERVICE_LISTENER_MISSING',
+  'REQUIRED_SERVICE_UNAVAILABLE',
+  'REQUIRED_SERVICE_UNHEALTHY',
+]);
+
+export function isRetryableVerificationError(error) {
+  return error instanceof ServiceVerificationError && RETRYABLE_CODES.has(error.code);
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function verifyRequiredServicesWithRetry(
+  requiredServices,
+  {
+    timeoutMs = 30000,
+    intervalMs = 500,
+    now = () => Date.now(),
+    sleep = delay,
+    ...verificationOptions
+  } = {},
+) {
+  const deadline = now() + timeoutMs;
+  let lastError = null;
+  do {
+    try {
+      return await verifyRequiredServices(requiredServices, verificationOptions);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableVerificationError(error) || now() >= deadline) throw error;
+      await sleep(intervalMs);
+    }
+  } while (now() <= deadline);
+  throw lastError;
+}
+
 export async function runCli(argv = process.argv.slice(2)) {
   const servicesArg = argv.find((arg) => arg.startsWith('--services='));
   if (!servicesArg || argv.some((arg) => !arg.startsWith('--services='))) {
@@ -248,7 +288,11 @@ export async function runCli(argv = process.argv.slice(2)) {
     throw serviceError('SERVICE_OBSERVATION_FAILED', '', `Windows self-hosted runner required; got ${process.platform}`);
   }
   const services = parseRequiredServices(servicesArg.slice('--services='.length));
-  const evidence = await verifyRequiredServices(services);
+  const timeoutMs = Number(process.env.FORGE_LOCAL_SERVICE_VERIFY_TIMEOUT_MS || 30000);
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+    throw serviceError('INVALID_SERVICE_VERIFY_TIMEOUT', '', `Invalid FORGE_LOCAL_SERVICE_VERIFY_TIMEOUT_MS=${process.env.FORGE_LOCAL_SERVICE_VERIFY_TIMEOUT_MS}`);
+  }
+  const evidence = await verifyRequiredServicesWithRetry(services, { timeoutMs });
   for (const row of evidence) {
     console.log(
       `REQUIRED_SERVICE_VERIFY=PASS service=${row.service} service_name=${row.serviceName} service_pid=${row.servicePid} listener_pids=${row.listenerPids.join(',')} port=${row.port} http_status=${row.httpStatus}`,
@@ -257,7 +301,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   console.log(`REQUIRED_SERVICES_VERIFY=PASS services=${services.join(',')}`);
 }
 
-const isDirect = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+const isDirect = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isDirect) {
   runCli().catch((error) => {
     const code = error?.code || 'SERVICE_VERIFY_FAILED';
