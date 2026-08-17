@@ -121,6 +121,55 @@ async function assertOutwardBundleLineage(call: PlatformCall, input: {
   }
 }
 
+async function assertOffcutBundleLineage(call: PlatformCall, input: {
+  row_id: string;
+  item_code: string;
+  source_batch_no: string;
+  bundle_name: string;
+  sheets_cut: number;
+}): Promise<void> {
+  if (!input.bundle_name) return;
+  const rowLabel = input.row_id || "dòng cắt";
+  const bundle = await readDoc<Json>(call, "Serial and Batch Bundle", input.bundle_name);
+  if (Number(bundle.docstatus) !== 1) {
+    throw new Error(`Bundle đầu thừa ${input.bundle_name} chưa ghi sổ.`);
+  }
+  if (text(bundle.type) !== "Inward") {
+    throw new Error(`Bundle đầu thừa ${input.bundle_name} phải là Inward, hiện là ${text(bundle.type) || "trống"}.`);
+  }
+  if (text(bundle.item_code) !== input.item_code) {
+    throw new Error(`Bundle đầu thừa ${input.bundle_name} thuộc ${text(bundle.item_code) || "mã trống"}, không khớp ${input.item_code}.`);
+  }
+
+  const entries = rows(bundle.entries);
+  if (entries.length !== 1) {
+    throw new Error(`Bundle đầu thừa ${input.bundle_name} phải chứa đúng 1 lô con cho ${rowLabel}.`);
+  }
+  const entry = entries[0] ?? {};
+  const offcutBatchNo = text(entry.batch_no);
+  if (!offcutBatchNo) throw new Error(`Bundle đầu thừa ${input.bundle_name} thiếu batch_no.`);
+  const bundleQty = Number(entry.qty);
+  if (!Number.isFinite(bundleQty) || bundleQty <= 0 || Math.abs(bundleQty - input.sheets_cut) > 1e-9) {
+    throw new Error(`Bundle đầu thừa ${input.bundle_name} có số lá ${bundleQty}, không khớp ${input.sheets_cut} lá của ${rowLabel}.`);
+  }
+
+  const offcutBatch = await readDoc<Json>(call, "Batch", offcutBatchNo);
+  if (text(offcutBatch.item_code) !== input.item_code) {
+    throw new Error(`Lô đầu thừa ${offcutBatchNo} thuộc ${text(offcutBatch.item_code) || "mã trống"}, không khớp ${input.item_code}.`);
+  }
+  if (text(offcutBatch.parent_batch) !== input.source_batch_no) {
+    throw new Error(`Lô đầu thừa ${offcutBatchNo} có lô mẹ ${text(offcutBatch.parent_batch) || "trống"}, không khớp source batch ${input.source_batch_no}.`);
+  }
+  if (Number(offcutBatch.is_offcut) !== 1) {
+    throw new Error(`Lô ${offcutBatchNo} không được đánh dấu là đầu thừa.`);
+  }
+  const bundleWarehouse = text(bundle.warehouse);
+  const receivedWarehouse = text(offcutBatch.received_warehouse);
+  if (!bundleWarehouse || receivedWarehouse !== bundleWarehouse) {
+    throw new Error(`Lô đầu thừa ${offcutBatchNo} nhận tại ${receivedWarehouse || "kho trống"}, không khớp bundle ${bundleWarehouse || "kho trống"}.`);
+  }
+}
+
 export async function validateCutDraftBomAuthority(call: PlatformCall, args: Json): Promise<void> {
   const workOrderName = text(args.work_order);
   if (!workOrderName) return;
@@ -147,6 +196,8 @@ export async function validateCutApplyBomAuthority(call: PlatformCall, args: Jso
   for (const row of rows(cutOrder.items)) {
     const itemCode = text(row.item_code);
     const warehouse = text(row.source_warehouse) || text(cutOrder.source_warehouse);
+    const sourceBatchNo = text(row.source_batch_no);
+    const sheetsCut = Number(row.sheets_cut);
     assertBomMaterial({
       work_order: workOrderName,
       bom_no: authority.bom_no,
@@ -159,9 +210,16 @@ export async function validateCutApplyBomAuthority(call: PlatformCall, args: Jso
       row_id: text(row.row_id),
       item_code: itemCode,
       warehouse,
-      source_batch_no: text(row.source_batch_no),
+      source_batch_no: sourceBatchNo,
       bundle_name: text(row.serial_and_batch_bundle),
-      sheets_cut: Number(row.sheets_cut),
+      sheets_cut: sheetsCut,
+    });
+    await assertOffcutBundleLineage(call, {
+      row_id: text(row.row_id),
+      item_code: itemCode,
+      source_batch_no: sourceBatchNo,
+      bundle_name: text(row.offcut_bundle),
+      sheets_cut: sheetsCut,
     });
   }
 }
