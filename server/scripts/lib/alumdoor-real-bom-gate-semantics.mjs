@@ -63,6 +63,32 @@ function exactSourceConversion(record, item, sourceUom, stockUom) {
   return null;
 }
 
+function exactSourceRuntimeUom(record, item, source, stockUom) {
+  if (clean(record?.source_sheet) !== "ĐM") return null;
+  const compactFormula = fold(record?.source_formula_text).replace(/\s+/g, "");
+  if (
+    Number(record?.source_row) === 1352
+    && clean(record?.item_code) === "NVL-TON-DL5.2Dx124-XNXLC"
+    && clean(item?.item_code) === "NVL-TON-DL5.2Dx124-XNXLC"
+    && source.kind === "ordinary"
+    && source.runtime_uom === "m2"
+    && stockUom === "Kg"
+    && positiveBomNumber(record?.source_qty_or_formula) === 6.32
+    && compactFormula === "C*(R-0,03)*SL*6,32KG/M2"
+  ) {
+    return {
+      status: "accepted",
+      kind: "ordinary",
+      raw_uom: source.raw_uom,
+      runtime_uom: "Kg",
+      stock_uom: "Kg",
+      axis: null,
+      reason: "exact_source_uom_anomaly_formula_authority",
+    };
+  }
+  return null;
+}
+
 export function classifyBomSourceUom(rawValue) {
   const raw = clean(rawValue);
   const key = fold(raw).replace(/\s+/g, "");
@@ -88,6 +114,8 @@ export function resolveBomRuntimeUom(record, item) {
   if (!stockUom || !UOMS.has(stockUom)) return { status: "blocked", reason: "missing_stock_uom", stock_uom: stockUom };
   const source = classifyBomSourceUom(record?.source_uom);
   if (source.status !== "accepted") return { ...source, stock_uom: stockUom };
+  const exactRuntimeUom = exactSourceRuntimeUom(record, item, source, stockUom);
+  if (exactRuntimeUom) return exactRuntimeUom;
   if (source.kind === "rate") {
     if (source.numerator_uom !== stockUom) return { status: "blocked", reason: "rate_uom_stock_mismatch", raw_uom: source.raw_uom, rate_numerator_uom: source.numerator_uom, stock_uom: stockUom };
     return {
