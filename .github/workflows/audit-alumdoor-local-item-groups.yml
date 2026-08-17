@@ -1,0 +1,109 @@
+name: Audit Alumdoor Local Item Groups
+
+on:
+  push:
+    branches:
+      - agent/audit-local-item-groups
+    paths:
+      - .github/workflows/audit-alumdoor-local-item-groups.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-alumdoor-local-item-groups
+  cancel-in-progress: true
+
+jobs:
+  audit-item-groups:
+    runs-on: [self-hosted]
+    timeout-minutes: 10
+    steps:
+      - name: Audit local Item Group records
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+          $server = Join-Path $target 'server'
+          if (-not (Test-Path (Join-Path $target '.git'))) {
+            throw 'C:\alumdoor is not a Git workspace.'
+          }
+          if (-not (Test-Path $server)) {
+            throw 'C:\alumdoor\server is missing.'
+          }
+
+          $branch = (git -C $target rev-parse --abbrev-ref HEAD).Trim()
+          $sha = (git -C $target rev-parse HEAD).Trim()
+          Write-Host "LOCAL_REPO branch=$branch sha=$sha"
+
+          Set-Location $server
+
+          $rowsSql = @"
+          WITH canonical(name) AS (VALUES
+            ('Tất cả mặt hàng'),('Cửa thành phẩm'),('Motor & điện'),('Phụ kiện & vật tư'),
+            ('Cửa CN Đức'),('Cửa tấm liền Úc'),('Cửa Đài Loan'),('Cửa Đài Loan Inox'),
+            ('Cửa Siêu Trường'),('Cửa Lưới'),('Cửa kéo Đài Loan'),('Motor'),('Bình lưu điện'),
+            ('Điều khiển & phụ kiện điện'),('Linh kiện motor'),('Nan/lá cửa'),('Ray và trục'),
+            ('Phụ kiện chung'),('Phụ kiện CN Đức'),('Phụ kiện cần sơn tĩnh điện')
+          ), legacy(name) AS (VALUES
+            ('Bộ lưu điện'),('Cửa cuốn'),('Cửa nhôm kính'),('Dịch vụ'),('Linh kiện & thiết bị'),
+            ('Mô tơ'),('Motor & Bình điện'),('Nguyên vật liệu'),('Phụ kiện'),
+            ('Remote và điều khiển'),('Thành phẩm'),('Cửa siêu trường')
+          )
+          SELECT
+            d.name,
+            CASE WHEN COALESCE(json_extract(d.payload_json,'$.disabled'),0) = 1 THEN 1 ELSE 0 END AS disabled,
+            CASE
+              WHEN c.name IS NOT NULL THEN 'CANONICAL'
+              WHEN l.name IS NOT NULL THEN 'LEGACY'
+              ELSE 'UNEXPECTED'
+            END AS class
+          FROM documents d
+          LEFT JOIN canonical c ON c.name=d.name
+          LEFT JOIN legacy l ON l.name=d.name
+          WHERE d.tenant_id='demo' AND d.doctype='Item Group'
+          ORDER BY class, disabled, d.name;
+          "@
+
+          Write-Host '=== ITEM_GROUP_ROWS ==='
+          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command $rowsSql
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to read local Item Group rows.' }
+
+          $summarySql = @"
+          WITH canonical(name) AS (VALUES
+            ('Tất cả mặt hàng'),('Cửa thành phẩm'),('Motor & điện'),('Phụ kiện & vật tư'),
+            ('Cửa CN Đức'),('Cửa tấm liền Úc'),('Cửa Đài Loan'),('Cửa Đài Loan Inox'),
+            ('Cửa Siêu Trường'),('Cửa Lưới'),('Cửa kéo Đài Loan'),('Motor'),('Bình lưu điện'),
+            ('Điều khiển & phụ kiện điện'),('Linh kiện motor'),('Nan/lá cửa'),('Ray và trục'),
+            ('Phụ kiện chung'),('Phụ kiện CN Đức'),('Phụ kiện cần sơn tĩnh điện')
+          ), legacy(name) AS (VALUES
+            ('Bộ lưu điện'),('Cửa cuốn'),('Cửa nhôm kính'),('Dịch vụ'),('Linh kiện & thiết bị'),
+            ('Mô tơ'),('Motor & Bình điện'),('Nguyên vật liệu'),('Phụ kiện'),
+            ('Remote và điều khiển'),('Thành phẩm'),('Cửa siêu trường')
+          ), classified AS (
+            SELECT d.name,
+                   CASE WHEN COALESCE(json_extract(d.payload_json,'$.disabled'),0)=1 THEN 1 ELSE 0 END AS disabled,
+                   CASE WHEN c.name IS NOT NULL THEN 'CANONICAL'
+                        WHEN l.name IS NOT NULL THEN 'LEGACY'
+                        ELSE 'UNEXPECTED' END AS class
+            FROM documents d
+            LEFT JOIN canonical c ON c.name=d.name
+            LEFT JOIN legacy l ON l.name=d.name
+            WHERE d.tenant_id='demo' AND d.doctype='Item Group'
+          )
+          SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN class='CANONICAL' AND disabled=0 THEN 1 ELSE 0 END) AS canonical_active,
+            SUM(CASE WHEN class='CANONICAL' AND disabled=1 THEN 1 ELSE 0 END) AS canonical_disabled,
+            SUM(CASE WHEN class='LEGACY' AND disabled=1 THEN 1 ELSE 0 END) AS legacy_disabled,
+            SUM(CASE WHEN class='LEGACY' AND disabled=0 THEN 1 ELSE 0 END) AS legacy_active,
+            SUM(CASE WHEN class='UNEXPECTED' THEN 1 ELSE 0 END) AS unexpected
+          FROM classified;
+          "@
+
+          Write-Host '=== ITEM_GROUP_SUMMARY ==='
+          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command $summarySql
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to summarize local Item Group rows.' }
+
+          Write-Host 'ALUMDOOR_LOCAL_ITEM_GROUP_AUDIT_COMPLETE'
