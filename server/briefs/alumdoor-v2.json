@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -4734,7 +4734,7 @@
       "label": "Chính sách giá",
       "icon": "percent",
       "group": "Danh mục",
-      "naming": "CSG-.####",
+      "naming": "format:{title}",
       "title": "title",
       "list": [
         "title",

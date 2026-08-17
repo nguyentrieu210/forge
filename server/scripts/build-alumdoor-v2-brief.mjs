@@ -76,7 +76,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.4.2";
+brief.version = "2.4.3";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
