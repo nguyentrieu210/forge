@@ -22,6 +22,14 @@ export interface AlumDoorPaidLeaveProjection {
   sourceLeaveVersion: number;
 }
 
+export interface AlumDoorOvertimeProjection {
+  employee: string;
+  workDate: string;
+  attendanceDay: string;
+  rawOvertimeMinutes: number;
+  payableOvertimeMinutes: number;
+}
+
 export async function approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput, services: AlumDoorPayrollCoordinatorServices): Promise<JsonObject> {
   assertApprover(input.actor);
   const payrollName = requiredText(input.payrollEntry, "Payroll Entry");
@@ -43,6 +51,7 @@ export async function approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput
   const employees = new Set<string>();
   const slipHashes: Array<{ name: string; input_hash: string }> = [];
   const paidLeaveByKey = new Map<string, AlumDoorPaidLeaveProjection>();
+  const overtimeByKey = new Map<string, AlumDoorOvertimeProjection>();
 
   for (const [index, row] of rows.entries()) {
     const slipName = requiredText(row.salary_slip, `Salary Slip row ${index + 1}`);
@@ -62,6 +71,12 @@ export async function approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput
       if (paidLeaveByKey.has(key)) throw errors.validation(`Duplicate paid leave projection for ${employee} / ${projection.workDate}`);
       paidLeaveByKey.set(key, projection);
     }
+    for (const projection of overtimeProjectionsFromTrace(slip.data.alu_formula_trace_json, employee)) {
+      if (projection.workDate < startDate || projection.workDate > endDate) throw errors.validation(`Overtime projection ${projection.workDate} is outside Payroll Entry ${payrollName}`);
+      const key = attendanceKey(employee, projection.workDate);
+      if (overtimeByKey.has(key)) throw errors.validation(`Duplicate overtime projection for ${employee} / ${projection.workDate}`);
+      overtimeByKey.set(key, projection);
+    }
 
     if (slip.docstatus === 0) commands.push(await command({ tenantId: input.tenantId, actor: systemActor, doctype: SALARY_SLIP, name: slipName, action: "submit", expectedVersion: slip.version, document: { ...slip.data, alu_state: "pending_approval" }, submittedAt: now, commandId: `alu-payroll:${payrollName}:slip:${slipName}:submit` }));
   }
@@ -80,7 +95,12 @@ export async function approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput
     const state = text(day.data.state); const lockedBy = text(day.data.locked_by_payroll);
     if (state === "locked" && lockedBy === payrollName) continue;
     if (!["complete", "approved"].includes(state)) throw errors.validation(`PAYROLL_BLOCKED: Attendance Day ${day.name} is ${state || "invalid"}`);
-    const overtimeMinutes = integer(day.data.overtime_minutes ?? 0, `Attendance Day ${day.name} overtime_minutes`, 0, 1_440);
+    const overtime = overtimeByKey.get(key);
+    if (!overtime) throw errors.validation(`PAYROLL_BLOCKED: Salary Slip trace has no overtime evidence row for ${employee} / ${workDate}`);
+    if (overtime.attendanceDay !== day.name) throw errors.validation(`PAYROLL_BLOCKED: Salary Slip trace points to another Attendance Day for ${employee} / ${workDate}`);
+    const rawOvertimeMinutes = integer(day.data.raw_overtime_minutes ?? day.data.overtime_minutes ?? 0, `Attendance Day ${day.name} raw_overtime_minutes`, 0, 1_440);
+    if (rawOvertimeMinutes !== overtime.rawOvertimeMinutes) throw errors.validation(`PAYROLL_INPUT_CHANGED: Attendance Day ${day.name} raw overtime changed after calculation`);
+    if (overtime.payableOvertimeMinutes > rawOvertimeMinutes) throw errors.validation(`PAYROLL_BLOCKED: Attendance Day ${day.name} payable overtime exceeds raw evidence`);
     const leave = paidLeaveByKey.get(key);
     commands.push(await command({
       tenantId: input.tenantId,
@@ -91,7 +111,8 @@ export async function approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput
       expectedVersion: day.version,
       document: {
         ...day.data,
-        overtime_minutes: overtimeMinutes,
+        raw_overtime_minutes: rawOvertimeMinutes,
+        overtime_minutes: overtime.payableOvertimeMinutes,
         ...(leave ? paidLeaveDocumentFields(leave) : {}),
         state: "locked",
         locked_by_payroll: payrollName,
@@ -124,9 +145,12 @@ export async function approveAlumDoorPayroll(input: AlumDoorPayrollApprovalInput
         scheduled_minutes: projection.scheduledMinutes,
         state: "locked",
         regular_minutes: 0,
+        raw_overtime_minutes: 0,
         overtime_minutes: 0,
+        paid_leave_minutes: projection.paidLeaveMinutes,
+        source_leave_application: projection.sourceLeaveApplication,
+        source_leave_version: projection.sourceLeaveVersion,
         payable_work_fraction_bp: 0,
-        ...paidLeaveDocumentFields(projection),
         locked_by_payroll: payrollName,
         segments: [],
       },
@@ -176,6 +200,34 @@ export function paidLeaveProjectionsFromTrace(traceValue: unknown, employee: str
         sourceLeaveVersion,
       });
     }
+  }
+  return projections;
+}
+
+export function overtimeProjectionsFromTrace(traceValue: unknown, employee: string): AlumDoorOvertimeProjection[] {
+  const trace = parseTrace(traceValue);
+  const approvals = new Map<string, number>();
+  for (const request of arrayObjects(trace.overtime_requests)) {
+    const workDate = requiredDate(request.overtime_date, "Overtime Request trace overtime_date");
+    if (approvals.has(workDate)) throw errors.validation(`Duplicate Overtime Request trace date ${employee} / ${workDate}`);
+    approvals.set(workDate, integer(request.approved_minutes ?? 0, `Overtime Request ${workDate} approved_minutes`, 0, 1_440));
+  }
+
+  const projections: AlumDoorOvertimeProjection[] = [];
+  const seen = new Set<string>();
+  for (const attendance of arrayObjects(trace.attendance)) {
+    const workDate = requiredDate(attendance.work_date, "Attendance trace work_date");
+    if (seen.has(workDate)) throw errors.validation(`Duplicate attendance trace date ${employee} / ${workDate}`);
+    seen.add(workDate);
+    const rawOvertimeMinutes = integer(attendance.raw_overtime_minutes ?? attendance.overtime_minutes ?? 0, `Attendance trace ${workDate} raw_overtime_minutes`, 0, 1_440);
+    const approvedMinutes = approvals.get(workDate) ?? 0;
+    projections.push({
+      employee,
+      workDate,
+      attendanceDay: requiredText(attendance.name, `Attendance trace ${workDate} name`),
+      rawOvertimeMinutes,
+      payableOvertimeMinutes: Math.min(rawOvertimeMinutes, approvedMinutes),
+    });
   }
   return projections;
 }
