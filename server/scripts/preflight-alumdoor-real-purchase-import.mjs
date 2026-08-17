@@ -29,20 +29,23 @@ const report = preflightRealPurchaseRows(rows, {
 await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({
   source_purchase_rows: report.source_purchase_row_count,
+  source_exclusions: report.source_exclusions,
   suppliers: report.supplier,
   item_uom: report.item_uom,
   purchase_order: report.purchase_order,
   purchase_receipt: report.purchase_receipt,
   blocker_codes: report.blocker_codes,
+  submit_blockers: report.submit_blockers,
   output: outputPath,
   verdict: report.verdict,
 }, null, 2));
 
-if (report.verdict !== "PURCHASE_IMPORT_PREFLIGHT_PASS" && !args.includes("--expect-blocked")) {
+const passed = report.verdict === "PURCHASE_IMPORT_DRAFT_PREFLIGHT_PASS";
+if (!passed && !args.includes("--expect-blocked")) {
   throw new Error(`PURCHASE_IMPORT_BLOCKED blockers=${report.blocker_codes.join(",")}`);
 }
-if (report.verdict === "PURCHASE_IMPORT_PREFLIGHT_PASS") {
-  console.log(`PURCHASE_IMPORT_PREFLIGHT_PASS receipts=${report.purchase_receipt.candidate_documents}`);
+if (passed) {
+  console.log(`PURCHASE_IMPORT_DRAFT_PREFLIGHT_PASS receipts=${report.purchase_receipt.candidate_documents} excluded=${report.source_exclusions.row_count}`);
 } else {
-  console.log(`PURCHASE_IMPORT_EXPECTED_BLOCKED receipts=${report.purchase_receipt.candidate_documents}`);
+  console.log(`PURCHASE_IMPORT_EXPECTED_BLOCKED receipts=${report.purchase_receipt.candidate_documents} excluded=${report.source_exclusions.row_count}`);
 }
