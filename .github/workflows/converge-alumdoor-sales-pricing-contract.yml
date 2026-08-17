@@ -22,29 +22,31 @@ jobs:
           node-version: 24
       - name: Align source contract with runtime controller
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = 'server/briefs/alumdoor.json';
-          let source = fs.readFileSync(path, 'utf8');
-          const marker = 'Đơn hàng để TRỐNG `selling_price_list` thì giá gõ tay như cũ';
-          const markerIndex = source.indexOf(marker);
-          if (markerIndex < 0) {
-            console.log('Pricing contract source is already converged.');
-            process.exit(0);
-          }
-          const start = source.lastIndexOf('"//do": [', markerIndex);
-          const endToken = '      ],';
-          const end = source.indexOf(endToken, markerIndex);
-          if (start < 0 || end < 0) throw new Error('Cannot locate Price List //do block around legacy contract marker.');
-          const replacement = `"//do": [
-              "Đơn bán hàng phải resolve được \\`selling_price_list\\` trước khi lưu — controller runtime là authority.",
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("server/briefs/alumdoor.json")
+          source = path.read_text(encoding="utf-8")
+          old = '''      "//do": [
+              "Đơn hàng để TRỐNG `selling_price_list` thì giá gõ tay như cũ — đó là mặc định, và là",
+              "cách xưởng đang làm ('tùy trường hợp'). CHỌN một bảng giá thì giá do SERVER quyết:",
+              "nhân đọc `Item Price` tên `<bảng giá>:<mã hàng>:<ĐVT>`, áp `Pricing Rule` khớp nhất, rồi GHI",
+              "ĐÈ đơn giá trên dòng. Thiếu dòng Item Price cho một mặt hàng thì ĐƠN BỊ TỪ CHỐI, không",
+              "im lặng lấy giá 0 — nhưng cũng có nghĩa là bật bảng giá thì phải nạp đủ giá trước."
+            ],'''
+          new = '''      "//do": [
+              "Đơn bán hàng phải resolve được `selling_price_list` trước khi lưu — controller runtime là authority.",
               "Người lập vẫn được nhập đơn giá/chiết khấu trên dòng; server so với Item Price + Pricing Rule và",
               "đánh dấu cần duyệt khi lệch chính sách. Submit mới là boundary kiểm quyền duyệt thương mại.",
               "Thiếu Item Price phù hợp với bảng giá/mã hàng/ĐVT thì từ chối thay vì im lặng lấy giá 0."
-            ],`;
-          source = source.slice(0, start) + replacement + source.slice(end + endToken.length);
-          fs.writeFileSync(path, source);
-          NODE
+            ],'''
+          if old not in source:
+              if "Đơn bán hàng phải resolve được `selling_price_list`" in source:
+                  print("Pricing contract source is already converged.")
+                  raise SystemExit(0)
+              raise SystemExit("Legacy Price List contract block not found byte-exactly.")
+          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          PY
       - name: Regenerate Alumdoor V2 brief
         run: node server/scripts/build-alumdoor-v2-brief.mjs
       - name: Verify generated diff
