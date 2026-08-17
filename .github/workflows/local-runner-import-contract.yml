@@ -5,16 +5,17 @@ on:
     paths:
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
-      - 'server/scripts/alumdoor-legacy-runtime-migration.mjs'
-      - 'server/scripts/test-alumdoor-legacy-runtime-migration.mjs'
-      - 'server/scripts/ensure-alumdoor-local-vars.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
       - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
+      - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
+      - 'server/scripts/install-alumdoor-runtime-services.ps1'
+      - 'server/scripts/test-alumdoor-service-control-contract.mjs'
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/*alumdoor-pricing*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
       - '.github/workflows/local-runner-import-contract.yml'
       - 'skills/forge-local-runner-import/**'
@@ -24,16 +25,17 @@ on:
     paths:
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
-      - 'server/scripts/alumdoor-legacy-runtime-migration.mjs'
-      - 'server/scripts/test-alumdoor-legacy-runtime-migration.mjs'
-      - 'server/scripts/ensure-alumdoor-local-vars.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
       - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
+      - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
+      - 'server/scripts/install-alumdoor-runtime-services.ps1'
+      - 'server/scripts/test-alumdoor-service-control-contract.mjs'
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/*alumdoor-pricing*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
       - '.github/workflows/local-runner-import-contract.yml'
       - 'skills/forge-local-runner-import/**'
@@ -59,7 +61,7 @@ jobs:
         run: |
           node --test scripts/local-runner/contract.test.mjs
           node server/scripts/test-alumdoor-managed-process-tree.mjs
-          node server/scripts/test-alumdoor-legacy-runtime-migration.mjs
+          node server/scripts/test-alumdoor-service-control-contract.mjs
 
       - name: Syntax check execution sources
         run: |
@@ -68,12 +70,11 @@ jobs:
           node --check scripts/local-runner/pricing-adapter.mjs
           node --check scripts/local-runner/real-purchase-adapter.mjs
           node --check server/scripts/alumdoor-runtime-service-host.mjs
-          node --check server/scripts/alumdoor-legacy-runtime-migration.mjs
-          node --check server/scripts/ensure-alumdoor-local-vars.mjs
           node --check server/scripts/lib/alumdoor-managed-process-tree.mjs
           node --check server/scripts/import-alumdoor-reason-master-local.mjs
           node --check server/scripts/import-alumdoor-pricing-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
+          node --check server/scripts/test-alumdoor-service-control-contract.mjs
 
       - name: Diff hygiene
         shell: bash
@@ -108,41 +109,24 @@ jobs:
             exit 1
           fi
 
-      - name: Enforce source-only legacy bridge and serialized acceptance
+      - name: Enforce legacy bridge and managed-service escalation
         shell: bash
         run: |
           set -euo pipefail
           bootstrap=.github/workflows/bootstrap-alumdoor-local.yml
           reason=.github/workflows/alumdoor-reason-master-local-import.yml
           pricing=.github/workflows/alumdoor-pricing-local-import.yml
-          helper=server/scripts/alumdoor-legacy-runtime-migration.mjs
-          ensure=server/scripts/ensure-alumdoor-local-vars.mjs
           host=server/scripts/alumdoor-runtime-service-host.mjs
 
-          grep -q 'LEGACY_SOURCE_SYNC=PASS' "$bootstrap"
+          grep -q 'LEGACY_SOURCE_TRANSITION=PASS' "$bootstrap"
           grep -q 'LEGACY_SOURCE_LOCK=ACQUIRED' "$bootstrap"
+          grep -q 'LOCAL_STATE_BACKUP_OK' "$bootstrap"
           grep -q 'merge --ff-only origin/main' "$bootstrap"
-          grep -q 'd1_mutation=0' "$bootstrap"
-          grep -q 'legacy-runtime-migration.request.json' "$bootstrap"
-          grep -q 'LEGACY_RUNTIME_MIGRATION=PASS' "$bootstrap"
-          grep -q 'forge-alumdoor-legacy-runtime-migration/v1' "$bootstrap"
-          if grep -qE 'Stop-Service|taskkill|sc\.exe|backup-local-state\.mjs|wrangler[[:space:]]+d1' "$bootstrap"; then
-            echo 'Bootstrap bridge may only converge source and request the fixed LocalSystem migration helper'
-            exit 1
-          fi
-
-          grep -q 'isManagedBackendAuthority' "$helper"
-          grep -q 'ForgeAlumdoorBackend' "$helper"
-          grep -q 'ForgeAlumdoorWorker' "$helper"
-          grep -q 'nssm' "$helper"
-          grep -q 'legacy_target_not_canonical_repo' "$helper"
-          grep -q 'LEGACY_BACKEND_DISABLE=PASS' "$helper"
-          grep -q 'LEGACY_DESK_STOP=PASS' "$helper"
-          grep -q 'reconcileLegacyRuntimeMigration' "$ensure"
-          if grep -qiE 'wrangler[[:space:]]+d1|--remote' "$helper"; then
-            echo 'Legacy runtime helper must never mutate D1 or remote state'
-            exit 1
-          fi
+          grep -q 'mutation_started=0' "$bootstrap"
+          grep -q 'Stop-Service -Name' "$bootstrap"
+          grep -q 'MANAGED_SERVICE_STOP=PASS' "$bootstrap"
+          grep -q 'refusing blind process termination' "$bootstrap"
+          grep -q 'LEGACY_SOURCE_RUNTIME_HANDOFF=PASS maintenance=on' "$bootstrap"
 
           grep -q 'workflow_run:' "$reason"
           grep -q 'Bootstrap Alumdoor Local C Drive' "$reason"
@@ -165,6 +149,28 @@ jobs:
           grep -q 'COREPACK_ENABLE_DOWNLOAD_PROMPT' "$host"
           if grep -q 'taskkill' "$host"; then
             echo 'Managed service host must not use taskkill; terminate only descendants of its owned root PID'
+            exit 1
+          fi
+
+      - name: Enforce minimal Windows service-control grant
+        shell: bash
+        run: |
+          set -euo pipefail
+          grant=server/scripts/grant-alumdoor-runner-service-control.ps1
+          installer=server/scripts/install-alumdoor-runtime-services.ps1
+          prestage=.github/workflows/alumdoor-service-control-remediation-prestage.yml
+
+          grep -q "\$controlMask = '0x000200BD'" "$grant"
+          test "$(grep -c "\$controlMask = '0x000200BD'" "$grant")" -eq 1
+          grep -q 'ALUMDOOR_RUNNER_SERVICE_CONTROL_PASS' "$grant"
+          grep -q 'Win32_ComputerSystem' "$grant"
+          grep -q 'actions.runner.nguyentrieu210-forge' "$grant"
+          grep -q 'grant-alumdoor-runner-service-control.ps1' "$installer"
+          grep -q 'service-control-grant.json' "$installer"
+          grep -q 'SERVICE_CONTROL_REMEDIATION_PRESTAGED=PASS' "$prestage"
+          grep -q 'No elevation was attempted by this workflow' "$prestage"
+          if grep -Eq "\$controlMask[[:space:]]*=[[:space:]]*'0x000F01FF'|\$controlMask[[:space:]]*=[[:space:]]*'0x000F[0-9A-Fa-f]+'" "$grant"; then
+            echo 'Service-control grant mask is broader than the approved local-runner mask'
             exit 1
           fi
 
