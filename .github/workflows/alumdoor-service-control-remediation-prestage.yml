@@ -7,6 +7,13 @@ on:
       - 'server/scripts/test-alumdoor-service-control-contract.mjs'
       - 'server/scripts/install-alumdoor-runtime-services.ps1'
       - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
+      - 'server/scripts/test-alumdoor-service-control-contract.mjs'
+      - 'server/scripts/install-alumdoor-runtime-services.ps1'
+      - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
   workflow_dispatch:
 
 permissions:
@@ -17,10 +24,10 @@ jobs:
     runs-on: [self-hosted]
     timeout-minutes: 5
     steps:
-      - name: Checkout exact PR head for remediation artifact only
+      - name: Checkout exact reviewed source for remediation artifact only
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
