@@ -81,6 +81,16 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $target = 'C:\alumdoor'
 
+          # If the hidden Windows runtime services are installed, put their
+          # Worker/Desk children into maintenance before touching Wrangler state.
+          # On machines that have not installed the services yet this is a no-op.
+          $maintenance = Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs'
+          if (Test-Path $maintenance) {
+            & node $maintenance on
+            if ($LASTEXITCODE -ne 0) { throw 'Khong bat duoc Alumdoor runtime maintenance' }
+            Start-Sleep -Seconds 2
+          }
+
           # Do the safe handoff here instead of trusting an older sync-local.bat
           # that may still be present in C:\alumdoor before the fast-forward.
           & node "$target\server\scripts\stop-local-dev.mjs" --ports=8799,5173
@@ -159,4 +169,14 @@ jobs:
           Write-Host '=== smoke log ==='
           if (Test-Path 'C:\alumdoor\run-local.log.smoke') {
             Get-Content 'C:\alumdoor\run-local.log.smoke' -Tail 160
+          }
+          Write-Host '=== Windows service logs ==='
+          if (Test-Path 'C:\ForgeServices\Alumdoor\logs') {
+            Get-ChildItem 'C:\ForgeServices\Alumdoor\logs' -Recurse -File -ErrorAction SilentlyContinue |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 4 |
+              ForEach-Object {
+                Write-Host "--- $($_.FullName) ---"
+                Get-Content $_.FullName -Tail 80 -ErrorAction SilentlyContinue
+              }
           }
