@@ -64,7 +64,9 @@ jobs:
           });
           fs.writeFileSync(path, JSON.stringify(brief, null, 2) + '\n');
           NODE
-          read added removed < <(git diff --numstat -- server/briefs/alumdoor.json)
+          stats="$(git diff --numstat -- server/briefs/alumdoor.json)"
+          added="$(printf '%s\n' "$stats" | awk 'NR==1 {print $1}')"
+          removed="$(printf '%s\n' "$stats" | awk 'NR==1 {print $2}')"
           echo "alumdoor.json added=$added removed=$removed"
           test "${added:-9999}" -le 80
           test "${removed:-9999}" -le 20
@@ -142,7 +144,7 @@ jobs:
         run: |
           rm .github/workflows/issue-941-apply-source.yml
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "4189822+github-actions[bot]@users.noreply.github.com"
           git add server/briefs/alumdoor.json server/tests/alumdoor-tam-lien-uc-policy-source.test.mjs .github/workflows/issue-941-apply-source.yml
           git commit -m "fix(alumdoor): restore tấm liền Úc source policy [issue-941-source-applied]"
           git push origin HEAD:agent/alumdoor-cutting-policy-tam-lien-uc
