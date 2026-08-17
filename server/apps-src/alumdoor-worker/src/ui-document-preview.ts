@@ -20,16 +20,6 @@ async function readDoc(call: DocumentPreviewCall, doctype: string, name: string)
   return ((await response.json()) as { data?: Json }).data ?? null;
 }
 
-async function listPriceLists(call: DocumentPreviewCall): Promise<Json[]> {
-  const query = new URLSearchParams({
-    fields: JSON.stringify(["name", "price_group", "effective_date", "disabled"]),
-    limit_page_length: "100",
-  });
-  const response = await call(`resource/Price%20List?${query}`);
-  if (!response.ok) return [];
-  return ((await response.json()) as { data?: Json[] }).data ?? [];
-}
-
 function totals(doc: Json): Json {
   const rows = Array.isArray(doc.items) ? doc.items.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row)) : [];
   const subtotal = roundMoney(rows.reduce((sum, row) => {
@@ -46,7 +36,7 @@ function totals(doc: Json): Json {
   const vatAmount = roundMoney(vatBase * vatRate / 100);
   const grandTotal = roundMoney(vatBase + vatAmount);
   const approval = number(doc.additional_discount_percentage) !== 0
-    || rows.some((row) => row.rate_requires_approval === true);
+    || rows.some((row) => row.rate_requires_approval === true || row.rate_requires_approval === 1 || row.rate_requires_approval === "1");
   return {
     total_amount: subtotal,
     discount_amount: discount,
@@ -59,36 +49,64 @@ function totals(doc: Json): Json {
   };
 }
 
+async function authoritativeCustomerPriceList(
+  call: DocumentPreviewCall,
+  customerDoc: Json,
+  customerGroup: string,
+): Promise<string> {
+  const direct = text(customerDoc.default_selling_price_list)
+    || text(customerDoc.selling_price_list)
+    || text(customerDoc.default_price_list);
+  if (direct) return direct;
+  if (!customerGroup) return "";
+  const group = await readDoc(call, "Customer Group", customerGroup);
+  return text(group?.default_selling_price_list) || text(group?.selling_price_list);
+}
+
 async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedField: string): Promise<{ patch: Json; clear: string[] }> {
   const customer = text(doc.customer);
   if (!customer) {
     return changedField === "customer"
-      ? { patch: {}, clear: ["customer_group", "responsible_person", "install_address", "selling_price_list"] }
+      ? {
+          patch: {},
+          clear: [
+            "customer_group",
+            "responsible_person",
+            "contact_person",
+            "phone",
+            "install_province",
+            "install_ward",
+            "install_address",
+            "payment_terms",
+            "selling_price_list",
+          ],
+        }
       : { patch: {}, clear: [] };
   }
   if (changedField && changedField !== "customer" && changedField !== "transaction_date") return { patch: {}, clear: [] };
   const customerDoc = await readDoc(call, "Customer", customer);
   if (!customerDoc) return { patch: {}, clear: [] };
+
   const patch: Json = {};
-  const group = text(customerDoc.price_group);
+  const group = text(customerDoc.price_group) || text(customerDoc.customer_group);
   const manager = text(customerDoc.account_manager);
-  const address = text(customerDoc.address);
-  const preferred = text(customerDoc.default_price_list);
+  const contact = text(customerDoc.contact_person);
+  const phone = text(customerDoc.phone) || text(customerDoc.mobile_no) || text(customerDoc.mobile) || text(customerDoc.phone_no);
+  const province = text(customerDoc.install_province);
+  const ward = text(customerDoc.install_ward);
+  const address = text(customerDoc.install_address_line1) || text(customerDoc.address);
+  const paymentTerms = text(customerDoc.payment_terms);
+  const priceList = await authoritativeCustomerPriceList(call, customerDoc, group);
+
   if (group) patch.customer_group = group;
   if (manager) patch.responsible_person = manager;
+  if (contact) patch.contact_person = contact;
+  if (phone) patch.phone = phone;
+  if (province) patch.install_province = province;
+  if (ward) patch.install_ward = ward;
   if (address) patch.install_address = address;
-  if (preferred) {
-    patch.selling_price_list = preferred;
-    return { patch, clear: [] };
-  }
-  if (!group) return { patch, clear: [] };
-  const date = text(doc.transaction_date);
-  const candidates = (await listPriceLists(call)).filter((priceList) =>
-    text(priceList.price_group) === group
-    && !Boolean(priceList.disabled)
-    && (!date || !text(priceList.effective_date) || text(priceList.effective_date) <= date));
-  candidates.sort((left, right) => text(right.effective_date).localeCompare(text(left.effective_date)));
-  if (candidates[0]?.name) patch.selling_price_list = text(candidates[0].name);
+  if (paymentTerms) patch.payment_terms = paymentTerms;
+  if (priceList) patch.selling_price_list = priceList;
   return { patch, clear: [] };
 }
 
