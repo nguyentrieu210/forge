@@ -19,14 +19,16 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $root = 'C:\alumdoor'
+          $primary = 'C:\alumdoor\server\apps\tenant-worker\.wrangler\state'
           Write-Host "STATE_DIAG_HOST=$env:COMPUTERNAME"
+          Write-Host "STATE_DIAG_NOW_UTC=$([DateTime]::UtcNow.ToString('o'))"
           Write-Host "STATE_DIAG_HEAD=$((git -C $root rev-parse HEAD).Trim())"
           Write-Host "STATE_DIAG_ORIGIN_MAIN=$((git -C $root rev-parse origin/main).Trim())"
 
           $candidates = @(
             'C:\alumdoor\.wrangler\state',
             'C:\alumdoor\server\.wrangler\state',
-            'C:\alumdoor\server\apps\tenant-worker\.wrangler\state',
+            $primary,
             'C:\alumdoor\server\apps-src\alumdoor-worker\.wrangler\state',
             'C:\alumdoor\server\apps-src\alumdoor-worker\.wrangler',
             'C:\alumdoor\server\apps\purchase-qa-callback\.wrangler\state',
@@ -37,15 +39,47 @@ jobs:
               Write-Host "STATE_CANDIDATE exists=0 path=$candidate"
               continue
             }
+            $item = Get-Item -LiteralPath $candidate -Force
             $files = @(Get-ChildItem -LiteralPath $candidate -Recurse -File -Force -ErrorAction SilentlyContinue)
             $bytes = ($files | Measure-Object -Property Length -Sum).Sum
             if ($null -eq $bytes) { $bytes = 0 }
             $sqlite = @($files | Where-Object { $_.Extension -in @('.sqlite','.db','.sqlite3') })
-            Write-Host "STATE_CANDIDATE exists=1 files=$($files.Count) bytes=$bytes sqlite=$($sqlite.Count) path=$candidate"
+            Write-Host "STATE_CANDIDATE exists=1 files=$($files.Count) bytes=$bytes sqlite=$($sqlite.Count) created_utc=$($item.CreationTimeUtc.ToString('o')) modified_utc=$($item.LastWriteTimeUtc.ToString('o')) attributes=$($item.Attributes) path=$candidate"
             foreach ($file in $sqlite | Select-Object -First 20) {
-              Write-Host "STATE_SQLITE bytes=$($file.Length) path=$($file.FullName)"
+              Write-Host "STATE_SQLITE bytes=$($file.Length) created_utc=$($file.CreationTimeUtc.ToString('o')) modified_utc=$($file.LastWriteTimeUtc.ToString('o')) path=$($file.FullName)"
             }
           }
+
+          Write-Host '=== primary ACL ==='
+          if (Test-Path -LiteralPath $primary) {
+            $acl = Get-Acl -LiteralPath $primary
+            Write-Host "STATE_ACL owner=$($acl.Owner) inheritance_protected=$($acl.AreAccessRulesProtected)"
+            foreach ($rule in $acl.Access) {
+              Write-Host "STATE_ACE identity=$($rule.IdentityReference) rights=$($rule.FileSystemRights) type=$($rule.AccessControlType) inherited=$($rule.IsInherited) flags=$($rule.InheritanceFlags)/$($rule.PropagationFlags)"
+            }
+          }
+
+          Write-Host '=== exact Node visibility used by backup helper ==='
+          $nodeProbe = Join-Path $env:RUNNER_TEMP 'alumdoor-state-node-probe.mjs'
+          @'
+          import { existsSync, readdirSync, statSync } from 'node:fs';
+          import path from 'node:path';
+          const root = 'C:\\alumdoor\\server\\apps\\tenant-worker\\.wrangler\\state';
+          let files = 0;
+          let bytes = 0;
+          function walk(dir) {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full);
+              else if (entry.isFile()) { files += 1; bytes += statSync(full).size; }
+            }
+          }
+          console.log(`NODE_STATE_EXISTS=${existsSync(root) ? 1 : 0} path=${root}`);
+          if (existsSync(root)) walk(root);
+          console.log(`NODE_STATE_VISIBLE files=${files} bytes=${bytes}`);
+          '@ | Set-Content -LiteralPath $nodeProbe -Encoding UTF8
+          & node $nodeProbe
+          if ($LASTEXITCODE -ne 0) { throw 'Node state visibility probe failed' }
 
           Write-Host '=== bounded .wrangler discovery under server (excluding node_modules) ==='
           $wranglerDirs = @(Get-ChildItem 'C:\alumdoor\server' -Directory -Filter '.wrangler' -Recurse -Force -ErrorAction SilentlyContinue |
