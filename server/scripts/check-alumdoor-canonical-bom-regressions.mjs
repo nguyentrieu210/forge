@@ -130,6 +130,23 @@ for (const sourceRow of [679, 1129, 2026]) {
   assert.equal(blockers.filter((blocker) => blocker.source_row === sourceRow).length, 0);
 }
 
+const dl632VnLine = lines.find((line) => line.lineage?.source_row === 1346);
+const dl632XlcLine = lines.find((line) => line.lineage?.source_row === 1352);
+assert.ok(dl632VnLine && dl632XlcLine, "both exact 6.32 kg/m² DL 5.2D color variants must resolve");
+for (const line of [dl632VnLine, dl632XlcLine]) {
+  assert.equal(line.uom, "Kg");
+  const formula = JSON.parse(line.quantity_formula_json);
+  assert.equal(formula.base?.kind, "PRODUCT");
+  assert.equal(formula.base?.left?.field, "PB_CAO");
+  assert.equal(formula.base?.right?.field, "PB_RAY_RONG");
+  assert.equal(formula.base?.right?.offset, -0.03);
+  assert.equal(formula.multiply, 6.32);
+}
+assert.equal(dl632XlcLine.item_code, "NVL-TON-DL5.2Dx124-XNXLC");
+assert.equal(dl632XlcLine.lineage?.source_uom, "M2", "row 1352 must retain the anomalous source UOM in lineage");
+assert.equal(dl632XlcLine.lineage?.resolution_reason, "source_exact_dl_leaf_632");
+assert.equal(blockers.filter((blocker) => blocker.source_row === 1352).length, 0);
+
 assert.equal(blockers.filter((blocker) => blocker.type === "parent_missing_conversion").length, 0, "finished-door parent conversion must never be reintroduced");
 const finishedDoorBoms = boms.filter((bom) => itemMap.get(bom.item)?.stock_uom === "Bộ");
 assert.ok(finishedDoorBoms.length > 0, "expected at least one finished-door BOM with stock UOM Bộ");
