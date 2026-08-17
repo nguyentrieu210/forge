@@ -1,0 +1,35 @@
+name: Runtime Gap One Shot Patch
+
+on:
+  push:
+    branches:
+      - chatgpt/runtime-ui-gap-fixes
+    paths:
+      - ".github/scripts/runtime-gap-shell-patch.py"
+      - "client/packages/shell/src/workspace-product-policy.ts"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-shell:
+    if: ${{ !contains(github.event.head_commit.message, '[runtime-gap-autopatch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/runtime-ui-gap-fixes
+          fetch-depth: 0
+      - name: Apply exact-anchor shell policy extraction
+        run: python .github/scripts/runtime-gap-shell-patch.py
+      - name: Commit generated refactor
+        run: |
+          if git diff --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/packages/shell/src/WorkspaceAppShellV2.tsx
+          git commit -m "refactor(shell): isolate product navigation policy [runtime-gap-autopatch]"
+          git push origin HEAD:chatgpt/runtime-ui-gap-fixes
