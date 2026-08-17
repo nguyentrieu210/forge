@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/alumdoor-bom-finish-now.yml'
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -13,12 +15,13 @@ permissions:
 
 jobs:
   enqueue-evidence:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'agent/alumdoor-bom-finish-trigger' }}
     runs-on: ubuntu-latest
     steps:
       - name: Report one-shot enqueue
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           python - <<'PY'
           import json, os, urllib.request
@@ -37,6 +40,7 @@ jobs:
           PY
 
   finish-bom-local:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'agent/alumdoor-bom-finish-trigger' }}
     runs-on: [self-hosted]
     timeout-minutes: 45
     concurrency:
