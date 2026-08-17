@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
@@ -16,4 +17,19 @@ elif 'd6427f4 added the FIFO source-batch lineage' not in s:
     raise RuntimeError('Cut Order Item generator convergence pattern drift')
 
 path.write_text(s, encoding="utf-8")
-print("patched apply script: Cut Order Item remains generator-owned; source_batch_no comes from d6427f4")
+
+# compileCustomFields already passes entry.field to parseField(), and parseField supports
+# both shorthand strings and the canonical $defs.field object form. The JSON Schema was
+# narrower than the compiler and rejected generator-added link_filters on custom fields.
+schema_path = root / "server/briefs/brief.schema.json"
+schema = json.loads(schema_path.read_text(encoding="utf-8"))
+custom_entry = schema["properties"]["customFields"]["additionalProperties"]["items"]["oneOf"][1]
+field_schema = custom_entry["properties"]["field"]
+expected = {"type": "string", "minLength": 3}
+if field_schema == expected:
+    custom_entry["properties"]["field"] = {"$ref": "#/$defs/field"}
+elif field_schema != {"$ref": "#/$defs/field"}:
+    raise RuntimeError(f"customFields field schema drift: {field_schema!r}")
+schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+print("patched apply script: Cut Order Item remains generator-owned; customFields.field reuses canonical field schema")
