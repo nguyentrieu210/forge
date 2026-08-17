@@ -33,5 +33,7 @@ jobs:
         run: pnpm run client:typecheck
       - name: MetaForge build
         run: pnpm run client:build
+      - name: Alumdoor brief check
+        run: pnpm run brief:check
       - name: Diff hygiene
         run: git diff --check origin/main...HEAD
