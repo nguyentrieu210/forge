@@ -87,17 +87,17 @@ test("sales item preview reports duplicate active field matches instead of silen
   assert.match(body.price_error, /Có nhiều đơn giá đang hoạt động/);
 });
 
-function pricingContext(itemPrices) {
+function pricingContext(itemPrices, pricingRules = [], named = {}) {
   return {
     command: { tenant_id: "demo" },
     reader: {
       async getMasterRecordData(_tenant, doctype, name) {
         if (doctype === "Currency" && name === "VND") return { currency_scale: 2 };
-        return null;
+        return named[`${doctype}:${name}`] ?? null;
       },
       async listMasterRecordData(_tenant, doctype) {
         if (doctype === "Item Price") return itemPrices;
-        if (doctype === "Pricing Rule") return [];
+        if (doctype === "Pricing Rule") return pricingRules;
         return [];
       },
     },
@@ -122,4 +122,57 @@ test("authoritative server pricing uses the same field-based Item Price fallback
   assert.equal(result.rate, "125000.00");
   assert.equal(result.item_price, "IP-0007");
   assert.equal(result.uom, "Cái");
+});
+
+test("canonical Item Price plus another active row for the same list/item/UOM fails closed", async () => {
+  const canonicalName = "BANG-GIA:ITEM-1:Cái";
+  const canonical = { uom: "Cái", currency: "VND", rate: "125000", disabled: 0 };
+  const context = pricingContext(
+    [{ name: "IP-0007", data: priceRow("IP-0007", { rate: "126000" }) }],
+    [],
+    { [`Item Price:${canonicalName}`]: canonical },
+  );
+
+  await assert.rejects(() => resolveServerPrice(context, {
+    itemCode: "ITEM-1",
+    qtyMicros: 1_000_000,
+    postingDate: "2026-07-31",
+    priceList: "BANG-GIA",
+    documentCurrency: "VND",
+    uom: "Cái",
+    partyType: "Customer",
+    party: "KH-1",
+    customerGroup: "Đại lý",
+  }), (error) => {
+    assert.match(error.message, /Multiple active Item Price records match/);
+    assert.match(error.message, /BANG-GIA:ITEM-1:Cái/);
+    assert.match(error.message, /IP-0007/);
+    return true;
+  });
+});
+
+test("equal top-priority Pricing Rules fail closed with both rule names", async () => {
+  const itemPrice = priceRow("IP-0007");
+  const rules = [
+    { name: "RULE-A", data: { price_list: "BANG-GIA", item_code: "ITEM-1", priority: 10, discount_percentage: "5" } },
+    { name: "RULE-B", data: { price_list: "BANG-GIA", item_code: "ITEM-1", priority: 10, discount_percentage: "7" } },
+  ];
+  const context = pricingContext([{ name: "IP-0007", data: itemPrice }], rules);
+
+  await assert.rejects(() => resolveServerPrice(context, {
+    itemCode: "ITEM-1",
+    qtyMicros: 1_000_000,
+    postingDate: "2026-07-31",
+    priceList: "BANG-GIA",
+    documentCurrency: "VND",
+    uom: "Cái",
+    partyType: "Customer",
+    party: "KH-1",
+    customerGroup: "Đại lý",
+  }), (error) => {
+    assert.match(error.message, /Ambiguous Pricing Rule match/);
+    assert.match(error.message, /RULE-A/);
+    assert.match(error.message, /RULE-B/);
+    return true;
+  });
 });

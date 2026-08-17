@@ -75,6 +75,14 @@ export class CommercialSalesOrderController extends SalesOrderController {
         continue;
       }
 
+      if (!sellingPriceList) {
+        pricedItems.push({
+          ...item,
+          ...buildManualCommercialLine(item, submittedRate, submittedDiscount, currency.transactionScale, qtyMicros),
+        });
+        continue;
+      }
+
       const facts = trustedCommercialFacts(itemMaster, item, customerGroup, sellingPriceList);
       const resolved = await resolveCommercialLine(context as unknown as ControllerContext<JsonObject>, {
         itemCode: item.item_code,
@@ -88,17 +96,9 @@ export class CommercialSalesOrderController extends SalesOrderController {
         customerGroup,
         facts,
         ...optionalPositiveFacts(item),
-        ...(submittedRate === undefined ? {} : { sellingRateOverride: submittedRate }),
-        ...(submittedDiscount === undefined ? {} : { discountPercentageOverride: submittedDiscount }),
       });
 
       const canonicalRateMinor = canonicalRateFromSnapshot(resolved.base_rate_minor, resolved.pricing_rule_snapshots);
-      const canonicalDiscountMicros = canonicalDiscountFromSnapshot(resolved.pricing_rule_snapshots);
-      const rateChanged = submittedRate !== undefined && resolved.selling_rate_minor !== canonicalRateMinor;
-      const discountChanged = submittedDiscount !== undefined
-        && toScaledInt(submittedDiscount, 6, `${item.item_code}.discount_percentage`) !== canonicalDiscountMicros;
-      if (rateChanged || discountChanged) requiresApproval = true;
-
       pricedItems.push({
         ...item,
         price_variant: resolved.price_variant,
@@ -107,7 +107,7 @@ export class CommercialSalesOrderController extends SalesOrderController {
         standard_rate: fromScaledInt(canonicalRateMinor, currency.transactionScale),
         base_rate: resolved.base_rate,
         base_rate_minor: resolved.base_rate_minor,
-        rate_requires_approval: rateChanged,
+        rate_requires_approval: false,
         item_price: resolved.item_price,
         discount_percentage: resolved.discount_percentage,
         discount_basis_item_price: resolved.discount_basis_item_price,
@@ -227,10 +227,15 @@ async function authoritativePriceList(
     const group = await context.reader.getMasterRecordData(context.command.tenant_id, "Customer Group", customerGroup);
     expected = text(group?.default_selling_price_list) || text(group?.selling_price_list);
   }
+  // Alumdoor canonical contract: blank means manual-price mode. A customer/group default is
+  // an approval baseline only; it must never silently convert a blank document to list pricing.
   const supplied = text(input.selling_price_list);
-  const priceList = supplied || expected;
-  if (!priceList) throw errors.validation("Bảng giá áp dụng là bắt buộc");
-  return { priceList, requiresApproval: Boolean(expected && priceList !== expected) };
+  if (supplied) {
+    const priceList = await context.reader.getMasterRecordData(context.command.tenant_id, "Price List", supplied);
+    if (!priceList) throw errors.reference(`Price List ${supplied} does not exist`);
+    if (masterDisabled(priceList.disabled)) throw errors.reference(`Price List ${supplied} is disabled`);
+  }
+  return { priceList: supplied, requiresApproval: Boolean(supplied && expected && supplied !== expected) };
 }
 
 function trustedCommercialFacts(
@@ -246,8 +251,6 @@ function trustedCommercialFacts(
     inventory_mode: itemMaster.inventory_mode,
     customer_group: customerGroup,
     price_list: priceList,
-    sales_mode: line.sales_mode,
-    sales_option: line.sales_option,
     finish_type: line.finish_type,
     finish_class: line.finish_class,
     color: line.color,
@@ -275,11 +278,6 @@ function optionalPositiveFacts(line: SalesItem): { areaSqm?: number; lengthM?: n
 function canonicalRateFromSnapshot(baseRateMinor: number, snapshots: PricingRuleSnapshot[]): number {
   const rate = snapshots.find((row) => row.effect_type === "RATE_OVERRIDE" && typeof row.rate_minor === "number");
   return rate?.rate_minor ?? baseRateMinor;
-}
-
-function canonicalDiscountFromSnapshot(snapshots: PricingRuleSnapshot[]): number {
-  const discount = snapshots.find((row) => row.effect_type === "DISCOUNT_PERCENT" && typeof row.discount_percentage === "string");
-  return discount?.discount_percentage ? toScaledInt(discount.discount_percentage, 6) : 0;
 }
 
 async function quotationForFreeze(
@@ -318,12 +316,6 @@ function rebuildFrozenQuotationLine(source: SalesItem, target: SalesItem, scale:
   const adjustmentMinor = frozenAdjustmentTotal(source, target, qtyMicros);
   const netMinor = safeAdd(safeAdd(amountMinor, -discountMinor, "frozen net"), adjustmentMinor, "frozen net");
   return {
-    ...(source.sales_option ? { sales_option: source.sales_option } : {}),
-    ...(source.sales_option_code ? { sales_option_code: source.sales_option_code } : {}),
-    ...(source.sales_option_label ? { sales_option_label: source.sales_option_label } : {}),
-    ...(source.sales_option_version ? { sales_option_version: source.sales_option_version } : {}),
-    ...(source.sales_mode ? { sales_mode: source.sales_mode } : {}),
-    ...(source.sales_package ? { sales_package: source.sales_package } : {}),
     ...(source.price_variant ? { price_variant: source.price_variant } : {}),
     rate: fromScaledInt(rateMinor, scale),
     rate_minor: rateMinor,
@@ -349,6 +341,55 @@ function rebuildFrozenQuotationLine(source: SalesItem, target: SalesItem, scale:
     pricing_as_of: source.pricing_as_of,
     pricing_rule_snapshots: structuredClone(source.pricing_rule_snapshots ?? []),
     ...(source.pricing_rule ? { pricing_rule: source.pricing_rule } : {}),
+  };
+}
+
+function buildManualCommercialLine(
+  item: SalesItem,
+  submittedRate: number | undefined,
+  submittedDiscount: number | undefined,
+  scale: number,
+  qtyMicros: number,
+): Partial<SalesItem> {
+  if (submittedRate === undefined) {
+    throw errors.validation(`Đơn giá là bắt buộc cho ${item.item_code} khi không chọn bảng giá`);
+  }
+  const rateMinor = toScaledInt(submittedRate, scale, `${item.item_code}.manual_rate`);
+  if (rateMinor < 0) throw errors.validation(`Đơn giá ${item.item_code} không được âm`);
+  const amountMinor = multiplyMinorByQty(rateMinor, qtyMicros, `${item.item_code}.manual_amount`);
+  const pctMicros = toScaledInt(submittedDiscount ?? 0, 6, `${item.item_code}.manual_discount`);
+  if (pctMicros < 0 || pctMicros > 100_000_000) throw errors.validation("Discount percentage must be from 0 to 100");
+  const discountMinor = percentMinor(amountMinor, pctMicros);
+  const netMinor = safeAdd(amountMinor, -discountMinor, `${item.item_code}.manual_net`);
+  return {
+    rate: fromScaledInt(rateMinor, scale),
+    rate_minor: rateMinor,
+    amount: fromScaledInt(amountMinor, scale),
+    amount_minor: amountMinor,
+    standard_rate: fromScaledInt(rateMinor, scale),
+    base_rate: fromScaledInt(rateMinor, scale),
+    base_rate_minor: rateMinor,
+    rate_requires_approval: false,
+    item_price: "",
+    price_variant: "",
+    pricing_rule: "",
+    pricing_as_of: "",
+    pricing_rule_snapshots: [],
+    discount_percentage: fromScaledInt(pctMicros, 6),
+    discount_basis_item_price: "",
+    discount_basis_variant: "",
+    discount_basis_rate: fromScaledInt(rateMinor, scale),
+    discount_basis_rate_minor: rateMinor,
+    discount_basis_amount: fromScaledInt(amountMinor, scale),
+    discount_basis_amount_minor: amountMinor,
+    discount_amount: fromScaledInt(discountMinor, scale),
+    discount_amount_minor: discountMinor,
+    adjustment_amount: fromScaledInt(0, scale),
+    adjustment_amount_minor: 0,
+    taxable_adjustment_amount: fromScaledInt(0, scale),
+    taxable_adjustment_amount_minor: 0,
+    net_amount: fromScaledInt(netMinor, scale),
+    net_amount_minor: netMinor,
   };
 }
 
@@ -509,6 +550,11 @@ function safeAdd(left: number, right: number, field: string): number {
   const value = left + right;
   if (!Number.isSafeInteger(value)) throw errors.validation(`${field} exceeds safe integer range`);
   return value;
+}
+
+function masterDisabled(value: unknown): boolean {
+  if (value === true || value === 1 || value === "1") return true;
+  return ["true", "yes", "có", "co"].includes(String(value ?? "").trim().toLocaleLowerCase("vi"));
 }
 
 function text(value: unknown): string {
