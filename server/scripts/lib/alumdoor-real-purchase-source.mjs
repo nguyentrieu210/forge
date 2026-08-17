@@ -7,6 +7,8 @@ const number = (v) => { const s = clean(v); if (!s) return null; const n = Numbe
 const hash = (v) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
 
 export const PURCHASE_SOURCE = "apps/alumdoor/docs/nguon/ms-lien/chi-tiết-nhập-hàng-ngày.md";
+const CANONICAL_PURCHASE_UOM = Object.freeze({ KG: "Kg", M: "Mét", CAI: "Cái" });
+const canonicalUomLabel = (value) => CANONICAL_PURCHASE_UOM[fold(value)] ?? clean(value);
 
 export const APPROVED_PURCHASE_SUPPLIERS = Object.freeze({
   "CÔNG TY TNHH TMSX DƯƠNG HỒ": "keep_source_ncc",
@@ -20,30 +22,24 @@ export const APPROVED_PURCHASE_SUPPLIERS = Object.freeze({
 });
 
 export const APPROVED_PURCHASE_ITEM_UOMS = Object.freeze({
-  "CROMATE 3+": "KG",
-  "TẨY NHÔM": "KG",
-  "TP_UPS-E800i": "CÁI",
-  "TP-TD326": "M",
-  "TP-TD325": "M",
-  "MŨI MÀI HỘP KIM": "CÁI",
-  "TP-RAYHOP": "KG",
-  "NVL-VDAY-TDU-KTD": "KG",
-  "NVL-V4-KEM_TOLE75_STD": "KG",
+  "CROMATE 3+": "Kg",
+  "TẨY NHÔM": "Kg",
+  "TP_UPS-E800i": "Cái",
+  "TP-TD326": "Mét",
+  "TP-TD325": "Mét",
+  "MŨI MÀI HỘP KIM": "Cái",
+  "TP-RAYHOP": "Kg",
+  "NVL-VDAY-TDU-KTD": "Kg",
+  "NVL-V4-KEM_TOLE75_STD": "Kg",
 });
 
-// Exact, source-lineaged dispositions only. No fuzzy matching and no guessed quantity.
-// - 534-537: ĐM proves TP-TD325/326 are meter-based; journal supplies length + piece count.
-// - 538: journal says NVL-BO1VIS AL71, but canonical Gate A 587 has no exact code and no approved alias.
-//        Multiple AL71 variants exist, so selecting one would be guesswork; retain the row as evidence only.
-// - 539: source item label "TP RAY HỘP TD" resolves exactly through ĐM to TP-RAYHOP.
-// - 543/544: source quantities are not trustworthy enough to persist; retain as explicit exclusions.
 export const PURCHASE_SOURCE_DISPOSITIONS = Object.freeze({
   534: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD326:M" },
   535: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD326:M" },
   536: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD325:M" },
   537: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD325:M" },
   538: { exclude: true, reason: "SOURCE_ITEM_IDENTITY_NOT_CANONICAL_587", evidence: "GateA587:no_exact_NVL-BO1VIS_AL71" },
-  539: { canonical_item_code: "TP-RAYHOP", canonical_uom: "KG", evidence: "ĐM:TP-RAYHOP" },
+  539: { canonical_item_code: "TP-RAYHOP", canonical_uom: "Kg", evidence: "ĐM:TP-RAYHOP" },
   543: { exclude: true, reason: "SOURCE_QUANTITY_OUTLIER_2834000_KG_UNPROVEN" },
   544: { exclude: true, reason: "SOURCE_QUANTITY_MISSING" },
 });
@@ -62,11 +58,9 @@ function canonicalize(base) {
   const disposition = PURCHASE_SOURCE_DISPOSITIONS[base.source_row] ?? {};
   const sourceQuantity = base.quantity;
   let canonicalQuantity = sourceQuantity;
-  if (disposition.quantity_rule === "LENGTH_M_X_PIECE_COUNT") {
-    canonicalQuantity = Number(base.length_or_height) * Number(sourceQuantity);
-  }
+  if (disposition.quantity_rule === "LENGTH_M_X_PIECE_COUNT") canonicalQuantity = Number(base.length_or_height) * Number(sourceQuantity);
   const canonicalItemCode = clean(disposition.canonical_item_code ?? base.item_code);
-  const canonicalUom = clean(disposition.canonical_uom ?? base.uom);
+  const canonicalUom = canonicalUomLabel(disposition.canonical_uom ?? base.uom);
   return {
     ...base,
     source_item_code: base.item_code,
@@ -110,9 +104,6 @@ export function extractRealPurchaseRows(markdown) {
     });
 }
 
-export function purchaseDocumentKey(row) {
-  return [row.date ?? "INVALID_DATE", row.source_voucher, row.supplier].join("|");
-}
-
+export function purchaseDocumentKey(row) { return [row.date ?? "INVALID_DATE", row.source_voucher, row.supplier].join("|"); }
 export function purchaseFingerprint(value) { return hash(value); }
 export function foldPurchaseValue(value) { return fold(value); }
