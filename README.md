@@ -10,8 +10,10 @@ Forge là nền tảng ERP/enterprise operating platform metadata-driven, multi-
 4. `PROJECT_CONTEXT.md` — các authority/invariant ổn định của sản phẩm.
 5. `docs/README.md` — chỉ mục và retention policy của tài liệu.
 6. `docs/ARCHITECTURE.md` — kiến trúc hệ thống hiện hành.
-7. `skills/forge-enterprise-completion/SKILL.md` — execution policy cho agent.
-8. Tài liệu domain/vertical/evidence liên quan trực tiếp tới task.
+7. `skills/forge-enterprise-completion/SKILL.md` — execution policy cấp platform/domain/vertical cho agent.
+8. `skills/forge-ui-change-routing/SKILL.md` — route thay đổi UI về đúng owner/source-of-truth.
+9. `skills/forge-ui-design/SKILL.md` — thiết kế/polish/review operational UI và custom TSX sau khi đã route đúng owner.
+10. Tài liệu domain/vertical/evidence liên quan trực tiếp tới task.
 
 Không suy live state từ tài liệu cũ, tên branch, số PR, release note hay capability snapshot. Khi có mâu thuẫn: **exact code + migration + tests + GitHub state thắng prose**.
 
@@ -23,7 +25,7 @@ Không suy live state từ tài liệu cũ, tên branch, số PR, release note h
 | `server/` | Workers, Document Kernel, Frappe facade, ERP/domain packages, migrations và release tooling |
 | `apps/` | vertical/app composition ở cấp repo; hiện có Alumdoor |
 | `docs/` | architecture, product/domain contracts, operations và retained evidence |
-| `skills/` | policy/routing cho AI agent |
+| `skills/` | execution policy, UI routing và design/review guidance cho AI agent |
 | `qa/`, `validation/` | verification assets và gates |
 | `.github/workflows/` | CI, validation, release và Sentrux automation |
 | `.sentrux/rules.toml` | machine-readable architecture guardrails cho Sentrux |
