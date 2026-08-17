@@ -1,0 +1,71 @@
+name: Issue 942 Semantic Probe
+
+on:
+  push:
+    branches:
+      - agent/alumdoor-v2-reproducible
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Apply known probe fixes and regenerate
+        run: |
+          python <<'PY'
+          import json
+          p='server/briefs/alumdoor.json'; b=json.load(open(p,encoding='utf-8')); name='Cửa tấm liền Úc — công thức chuẩn'
+          if not any(x.get('type')=='Cutting Policy' and x.get('name')==name for x in b.get('fixtures',[])):
+              anchor=next(i for i,x in enumerate(b['fixtures']) if x.get('type')=='Cutting Policy' and x.get('name')=='Cửa Úc — công thức chuẩn')
+              b['fixtures'].insert(anchor+1,{'type':'Cutting Policy','name':name,'data':{'policy_name':name,'door_type':'Cửa tấm liền Úc','dealer_width_basis':'Phủ bì ray','retail_width_basis':'Phủ bì ray','dealer_cut_deduction_m':0.03,'retail_cut_deduction_m':0.03,'dealer_split_sales_basis':'Phủ bì ray','dealer_full_sales_basis':'Phủ bì ray','retail_sales_basis':'Phủ bì ray','purchase_formula':'Kg thực tế','leaf_height_deduction_m':0.13,'leaf_rounding':'Làm tròn xuống','leaf_formula':'Kiểu tấm liền Úc','leaf_divisor_source':'Hằng số của chính sách','leaf_divisor_const':0.068}})
+          for x in b.get('fixtures',[]):
+              if x.get('type')=='Item Color' and isinstance(x.get('data'),dict) and 'finish' in x['data'] and 'surface_finish' not in x['data']:
+                  x['data']['surface_finish']=x['data'].pop('finish')
+          open(p,'w',encoding='utf-8').write(json.dumps(b,ensure_ascii=False,indent=2)+'\n')
+          gp='server/scripts/build-alumdoor-v2-brief.mjs'; s=open(gp,encoding='utf-8').read(); old='const canonicalAluminumProfile = fixture("Measurement Profile", "Nhôm cây/lá").data;'; new='const canonicalAluminumProfile = { ...fixture("Measurement Profile", "Nhôm cây/lá").data };'
+          if old in s: s=s.replace(old,new,1)
+          open(gp,'w',encoding='utf-8').write(s)
+          PY
+          node server/scripts/build-alumdoor-v2-brief.mjs >/tmp/generator.log
+      - name: Semantic diff paths
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),cp=require('node:child_process');
+          const cur=JSON.parse(cp.execFileSync('git',['show','HEAD:server/briefs/alumdoor-v2.json'],{encoding:'utf8'}));
+          const gen=JSON.parse(fs.readFileSync('server/briefs/alumdoor-v2.json','utf8'));
+          const out=[];
+          const keyFor=(x)=>x&&typeof x==='object'&&!Array.isArray(x)&&(x.name||x.fieldname||x.key||x.type||x.code);
+          function walk(a,b,path){
+            if(Object.is(a,b)) return;
+            if(Array.isArray(a)&&Array.isArray(b)){
+              const keyed=a.length+b.length>0 && [...a,...b].every(x=>!x||typeof x!=='object'||Array.isArray(x)||keyFor(x));
+              if(keyed){
+                const ma=new Map(a.map((x,i)=>[keyFor(x)??`#${i}`,x])), mb=new Map(b.map((x,i)=>[keyFor(x)??`#${i}`,x]));
+                for(const k of new Set([...ma.keys(),...mb.keys()])) walk(ma.get(k),mb.get(k),`${path}[${JSON.stringify(k)}]`);
+                return;
+              }
+              if(JSON.stringify(a)!==JSON.stringify(b)) out.push([path,'ARRAY',a.length,b.length]); return;
+            }
+            if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b)){
+              for(const k of new Set([...Object.keys(a),...Object.keys(b)])) walk(a[k],b[k],path?`${path}.${k}`:k); return;
+            }
+            out.push([path,a===undefined?'ONLY_GENERATED?':b===undefined?'ONLY_CURRENT':'VALUE',a,b]);
+          }
+          walk(cur,gen,'');
+          console.log('semantic-diff-count',out.length);
+          const groups={}; for(const r of out){const root=r[0].split('.').slice(0,3).join('.'); groups[root]=(groups[root]||0)+1;}
+          console.log('top-groups',Object.entries(groups).sort((a,b)=>b[1]-a[1]).slice(0,80));
+          for(const r of out.slice(0,350)) console.log('DIFF',JSON.stringify(r));
+          NODE
