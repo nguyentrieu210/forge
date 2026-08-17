@@ -17,6 +17,7 @@ import { guardCutBomAuthorityRequest } from "./cut-bom-authority.js";
 import { handlePurchaseSupplierDashboard } from "./purchase-supplier-dashboard.js";
 import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement.js";
 import { handleProductionRequestLifecycle } from "./production-request-lifecycle-route.js";
+import { handleCustomerImportRequest } from "./customer-import.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -39,6 +40,9 @@ export default {
 
     if (url.pathname.startsWith("/api/method/")) {
       const method = decodeURIComponent(url.pathname.slice("/api/method/".length));
+      if (method === "alumdoor.customer_import.dry_run" || method === "alumdoor.customer_import.commit") {
+        return handleCustomerImportRequest(request, env, method);
+      }
       if (request.method === "POST" && (method === "alumdoor.cut.draft" || method === "alumdoor.cut.apply")) {
         const authorityFailure = await guardCutBomAuthorityRequest(request, env, method);
         if (authorityFailure) return authorityFailure;
