@@ -57,8 +57,8 @@ jobs:
       - name: Canonical brief deterministic compile
         working-directory: server
         run: |
-          node scripts/forge-app.mjs briefs/alumdoor.json --dry-run --out="$RUNNER_TEMP/alumdoor-compile-1.json"
-          node scripts/forge-app.mjs briefs/alumdoor.json --dry-run --out="$RUNNER_TEMP/alumdoor-compile-2.json"
+          node scripts/forge-app.mjs briefs/alumdoor.json --dry-run --out "$RUNNER_TEMP/alumdoor-compile-1.json"
+          node scripts/forge-app.mjs briefs/alumdoor.json --dry-run --out "$RUNNER_TEMP/alumdoor-compile-2.json"
           cmp "$RUNNER_TEMP/alumdoor-compile-1.json" "$RUNNER_TEMP/alumdoor-compile-2.json"
 
       - name: Canonical brief gate
