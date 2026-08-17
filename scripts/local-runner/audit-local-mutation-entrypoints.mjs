@@ -38,6 +38,7 @@ const canonicalWorkflows = [
   '.github/workflows/alumdoor-real-purchase-import-policy.yml',
   '.github/workflows/alumdoor-pricing-local-import.yml',
   '.github/workflows/alumdoor-bom-local-import.yml',
+  '.github/workflows/alumdoor-customer-local-import.yml',
 ];
 for (const file of canonicalWorkflows) {
   requireFile(file);
@@ -46,6 +47,7 @@ for (const file of canonicalWorkflows) {
   if (!/group:\s*alumdoor-local-d1-mutation/.test(text)) failures.push(`${file}:missing_shared_concurrency`);
   if (!/cancel-in-progress:\s*false/.test(text)) failures.push(`${file}:cancel_in_progress_must_be_false`);
   if (!/scripts\\local-runner\\run-local-import\.mjs/.test(text)) failures.push(`${file}:missing_canonical_entrypoint`);
+  if (!/FORGE_LOCAL_REQUIRED_SERVICES:\s*backend\b/.test(text)) failures.push(`${file}:missing_backend_service_contract`);
   inventory.push({ path: file, class: 'MUTATOR', authority: 'CANONICAL_RUNNER' });
 }
 
@@ -80,6 +82,7 @@ const guardedChildren = [
   ['server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs', /assertLocalMutationChildContext\(\[['"]real-purchase['"]\]\)/, 'real-purchase'],
   ['server/scripts/import-alumdoor-pricing-local.mjs', /assertLocalMutationChildContext\(\[['"]pricing['"]\]\)/, 'pricing'],
   ['server/scripts/import-alumdoor-canonical-bom-local.mjs', /assertLocalMutationChildContext\(\[['"]bom['"]\]\)/, 'bom'],
+  ['scripts/local-runner/customer-import-core.mjs', /assertLocalMutationChildContext\(\[['"]customer['"]\]\)/, 'customer'],
 ];
 for (const [file, pattern, adapters] of guardedChildren) {
   requireFile(file);
@@ -89,6 +92,7 @@ for (const [file, pattern, adapters] of guardedChildren) {
 requireMatch('server/scripts/import-alumdoor-item-master-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'item_validate_only_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-pricing-local.mjs', /if \(!apply\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'pricing_dry_run_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-canonical-bom-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'bom_validate_only_must_remain_prelock');
+requireMatch('scripts/local-runner/customer-import-core.mjs', /if\(!apply\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'customer_dry_run_must_remain_prelock');
 
 for (const stale of [
   'server/scripts/import-alumdoor-item-master-local-impl.mjs',
