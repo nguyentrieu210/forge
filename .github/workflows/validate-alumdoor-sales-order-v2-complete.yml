@@ -1,0 +1,37 @@
+name: Validate Alumdoor Sales Order V2 Complete
+
+on:
+  push:
+    branches:
+      - agent/alumdoor-sales-order-v2-complete
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Focused Sales Order V2 regression
+        run: node --test client/packages/views/tests/alumdoor-sales-order-v2-complete.test.mjs
+      - name: Server build
+        run: pnpm run server:build
+      - name: MetaForge typecheck
+        run: pnpm run client:typecheck
+      - name: MetaForge build
+        run: pnpm run client:build
+      - name: Diff hygiene
+        run: git diff --check origin/main...HEAD
