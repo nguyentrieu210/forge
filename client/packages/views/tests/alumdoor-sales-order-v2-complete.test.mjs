@@ -125,7 +125,7 @@ test("structural line mutations and clearing an item refresh server totals", () 
   assert.match(workbench, /replaceLinesAndRefreshTotals/);
   const duplicateSection = workbench.slice(workbench.indexOf("const duplicateLine"), workbench.indexOf("const validate"));
   assert.match(duplicateSection, /replaceLinesAndRefreshTotals/);
-  const itemSection = workbench.slice(workbench.indexOf("if \(fieldname === \"item_code\"\)"), workbench.indexOf("const commitBomActualComponents"));
+  const itemSection = workbench.slice(workbench.indexOf('if (fieldname === "item_code")'), workbench.indexOf("const commitBomActualComponents"));
   assert.match(itemSection, /refreshDocumentPreview\("items", nextLines\)/);
 });
 
