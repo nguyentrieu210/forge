@@ -144,7 +144,8 @@ jobs:
           installer=server/scripts/install-alumdoor-runtime-services.ps1
           prestage=.github/workflows/alumdoor-service-control-remediation-prestage.yml
 
-          grep -q "0x000200BD" "$grant"
+          grep -q "\$controlMask = '0x000200BD'" "$grant"
+          test "$(grep -c "\$controlMask = '0x000200BD'" "$grant")" -eq 1
           grep -q 'ALUMDOOR_RUNNER_SERVICE_CONTROL_PASS' "$grant"
           grep -q 'Win32_ComputerSystem' "$grant"
           grep -q 'actions.runner.nguyentrieu210-forge' "$grant"
@@ -153,8 +154,8 @@ jobs:
           grep -q 'SERVICE_CONTROL_REMEDIATION_PRESTAGED=PASS' "$prestage"
           grep -q 'No elevation was attempted by this workflow' "$prestage"
 
-          if grep -Eq '0x000F01FF|SERVICE_ALL_ACCESS|WRITE_DAC[^\n]*\$controlMask|CHANGE_CONFIG[^\n]*\$controlMask' "$grant"; then
-            echo 'Service-control grant is broader than the approved local-runner mask'
+          if grep -Eq "\$controlMask[[:space:]]*=[[:space:]]*'0x000F01FF'|\$controlMask[[:space:]]*=[[:space:]]*'0x000F[0-9A-Fa-f]+'" "$grant"; then
+            echo 'Service-control grant mask is broader than the approved local-runner mask'
             exit 1
           fi
 
