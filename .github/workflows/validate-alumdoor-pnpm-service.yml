@@ -1,0 +1,99 @@
+name: Validate Alumdoor Private pnpm Services
+
+on:
+  push:
+    branches:
+      - agent/fix-alumdoor-corepack-service-cache
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate syntax and no Corepack runtime dependency
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node --check server/scripts/alumdoor-runtime-service-host.mjs
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'server/scripts/install-alumdoor-runtime-services.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          $installer = Get-Content 'server/scripts/install-alumdoor-runtime-services.ps1' -Raw
+          if ($installer -match 'COREPACK_HOME|COREPACK_ENABLE_DOWNLOAD_PROMPT') { throw 'service installer still depends on Corepack' }
+          if ($installer -notmatch 'npm install --prefix \$pnpmRuntime') { throw 'private pnpm install path missing' }
+          if ($installer -notmatch '-PnpmPath \$servicePnpm') { throw 'WinSW is not wired to private pnpm' }
+
+      - name: Install and exercise real NetworkService runtimes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'Alumdoor Fake Root'
+          $serviceHome = Join-Path $env:RUNNER_TEMP 'Alumdoor Service Home'
+          New-Item -ItemType Directory -Force -Path `
+            (Join-Path $root '.git'), `
+            (Join-Path $root 'server\scripts'), `
+            (Join-Path $root 'server\apps\tenant-worker\.wrangler'), `
+            (Join-Path $root 'client\apps\runtime') | Out-Null
+
+          Copy-Item server/scripts/alumdoor-runtime-service-host.mjs (Join-Path $root 'server\scripts\alumdoor-runtime-service-host.mjs')
+          Set-Content (Join-Path $root 'server\scripts\alumdoor-runtime-maintenance.mjs') 'process.exit(0);' -Encoding utf8
+          Set-Content (Join-Path $root 'server\scripts\stop-local-dev.mjs') 'process.exit(0);' -Encoding utf8
+          Set-Content (Join-Path $root 'package.json') '{"private":true,"packageManager":"pnpm@9.15.0"}' -Encoding utf8
+          Set-Content (Join-Path $root 'server\package.json') '{"private":true,"scripts":{"dev:alumdoor-local":"node listen.mjs"}}' -Encoding utf8
+          Set-Content (Join-Path $root 'client\apps\runtime\package.json') '{"private":true,"scripts":{"dev":"node listen.mjs"}}' -Encoding utf8
+
+          $backendScript = @(
+            'import net from "node:net";',
+            'const server = net.createServer();',
+            'server.listen(8799, "127.0.0.1");',
+            'setInterval(() => {}, 60000);'
+          )
+          $deskScript = @(
+            'import net from "node:net";',
+            'if (process.env.VITE_FORGE_BACKEND !== "http://127.0.0.1:8799") process.exit(9);',
+            'const server = net.createServer();',
+            'server.listen(5173, "127.0.0.1");',
+            'setInterval(() => {}, 60000);'
+          )
+          Set-Content (Join-Path $root 'server\listen.mjs') $backendScript -Encoding utf8
+          Set-Content (Join-Path $root 'client\apps\runtime\listen.mjs') $deskScript -Encoding utf8
+
+          try {
+            $output = & .\server\scripts\install-alumdoor-runtime-services.ps1 -Root $root -ServiceHome $serviceHome 2>&1
+            $output | ForEach-Object { Write-Host $_ }
+
+            if (($output | Out-String) -notmatch 'ALUMDOOR_WINDOWS_SERVICES_PASS') { throw 'installer success marker missing' }
+            if ((Get-Content (Join-Path $serviceHome 'pnpm-runtime\pnpm-version.txt') -Raw).Trim() -ne '9.15.0') { throw 'private pnpm version marker wrong' }
+            $privatePnpm = Join-Path $serviceHome 'pnpm-runtime\node_modules\.bin\pnpm.cmd'
+            if (-not (Test-Path $privatePnpm)) { throw 'private pnpm shim missing' }
+            if ((& $privatePnpm --version | Select-Object -Last 1).Trim() -ne '9.15.0') { throw 'private pnpm executable version wrong' }
+
+            $ports = Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in 8799,5173 }
+            if (($ports.LocalPort | Sort-Object -Unique) -join ',' -ne '5173,8799') { throw "expected ports 5173,8799, got $($ports.LocalPort -join ',')" }
+
+            $xml = Get-Content (Join-Path $serviceHome 'ForgeAlumdoorBackend.xml') -Raw
+            if ($xml -notmatch [regex]::Escape($privatePnpm)) { throw 'service XML does not point to private pnpm' }
+
+            $logsText = Get-ChildItem (Join-Path $serviceHome 'logs') -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue } | Out-String
+            if ($logsText -match 'Corepack is about to download|Do you want to continue') { throw 'Corepack prompt appeared in service logs' }
+
+            Write-Host 'ALUMDOOR_PRIVATE_PNPM_WINDOWS_PASS'
+          }
+          finally {
+            foreach ($name in 'ForgeAlumdoorBackend','ForgeAlumdoorDesk') {
+              $svc = Get-Service $name -ErrorAction SilentlyContinue
+              if ($svc) {
+                Stop-Service $name -Force -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 500
+                sc.exe delete $name | Out-Null
+              }
+            }
+          }
+
+      - name: Diff hygiene
+        shell: bash
+        run: git diff --check origin/main...HEAD
