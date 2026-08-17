@@ -23,7 +23,8 @@
     { "fieldname": "locked_by_payroll", "label": "Khóa bởi kỳ lương", "fieldtype": "Link", "options": "Payroll Entry", "read_only": true, "in_list_view": true, "in_standard_filter": true },
     { "fieldname": "locked_at", "label": "Khóa lúc", "fieldtype": "Datetime", "read_only": true },
     { "fieldname": "regular_minutes", "label": "Phút công thường", "fieldtype": "Int", "required": true, "default": 0, "non_negative": true, "read_only": true, "in_list_view": true },
-    { "fieldname": "overtime_minutes", "label": "Phút tăng ca tự động", "fieldtype": "Int", "required": true, "default": 0, "non_negative": true, "read_only": true, "in_list_view": true, "description": "Hệ thống tự tính từ bằng chứng chấm công nằm ngoài ca được phân; Alumdoor Lite không dùng phiếu duyệt OT." },
+    { "fieldname": "raw_overtime_minutes", "label": "Phút tăng ca thô", "fieldtype": "Int", "required": true, "default": 0, "non_negative": true, "read_only": true, "in_list_view": true, "description": "Bằng chứng chấm công nằm ngoài ca được phân. Đây chưa phải phút được trả lương." },
+    { "fieldname": "overtime_minutes", "label": "Phút tăng ca được trả", "fieldtype": "Int", "required": true, "default": 0, "non_negative": true, "read_only": true, "in_list_view": true, "description": "Phút OT payable do payroll chốt: min(phút tăng ca thô, phút trên Overtime Request đã submit). Không có phiếu duyệt thì bằng 0." },
     { "fieldname": "paid_leave_minutes", "label": "Phút nghỉ hưởng lương", "fieldtype": "Int", "default": 0, "non_negative": true, "read_only": true, "in_list_view": true, "description": "Nguồn payroll canonical cho phần nghỉ hưởng lương; chỉ hệ thống payroll được ghi và khóa." },
     { "fieldname": "source_leave_application", "label": "Phiếu nghỉ nguồn", "fieldtype": "Link", "options": "Leave Application", "read_only": true, "in_standard_filter": true },
     { "fieldname": "source_leave_version", "label": "Phiên bản phiếu nghỉ nguồn", "fieldtype": "Int", "non_negative": true, "read_only": true },
@@ -34,11 +35,11 @@
   "viewPolicy": {
     "list": {
       "enabled": true,
-      "columns": ["employee", "work_date", "shift_type", "scheduled_minutes", "state", "regular_minutes", "overtime_minutes", "paid_leave_minutes", "payable_work_fraction_bp", "locked_by_payroll", "calculated_at"]
+      "columns": ["employee", "work_date", "shift_type", "scheduled_minutes", "state", "regular_minutes", "raw_overtime_minutes", "overtime_minutes", "paid_leave_minutes", "payable_work_fraction_bp", "locked_by_payroll", "calculated_at"]
     },
     "form": {
       "enabled": true,
-      "fields": ["employee", "company", "branch", "department", "work_date", "policy", "shift_assignment", "shift_type", "scheduled_minutes", "state", "locked_by_payroll", "locked_at", "regular_minutes", "overtime_minutes", "paid_leave_minutes", "source_leave_application", "source_leave_version", "payable_work_fraction_bp", "calculated_at", "segments"]
+      "fields": ["employee", "company", "branch", "department", "work_date", "policy", "shift_assignment", "shift_type", "scheduled_minutes", "state", "locked_by_payroll", "locked_at", "regular_minutes", "raw_overtime_minutes", "overtime_minutes", "paid_leave_minutes", "source_leave_application", "source_leave_version", "payable_work_fraction_bp", "calculated_at", "segments"]
     },
     "quickEntry": {
       "enabled": false,
@@ -56,5 +57,5 @@
     { "role": "HR Manager", "read": true, "report": true, "export": true },
     { "role": "System Manager", "read": true, "report": true, "export": true }
   ],
-  "revision": 8
+  "revision": 9
 }
