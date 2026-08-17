@@ -6,11 +6,14 @@ const password=process.env.FORGE_ADMIN_PASSWORD??"";
 if(!user||!password)throw new Error("Admin credentials required");
 if(!["127.0.0.1","localhost","::1"].includes(new URL(origin).hostname))throw new Error("local-only");
 
-const jar=new Map();let csrf="";
-function remember(response){for(const value of response.headers.getSetCookie?.()??[]){const pair=value.split(";",1)[0],i=pair.indexOf("=");if(i>0)jar.set(pair.slice(0,i).trim(),pair.slice(i+1).trim());}}
-async function call(method,body={}){const response=await fetch(`${origin}/api/method/${method}`,{method:"POST",headers:{"content-type":"application/json",...(jar.size?{cookie:[...jar].map(([k,v])=>`${k}=${v}`).join("; ")} : {}),...(csrf?{"x-frappe-csrf-token":csrf}:{})},body:JSON.stringify(body)});remember(response);csrf=response.headers.get("x-frappe-csrf-token")??csrf;const text=await response.text();let parsed;try{parsed=text?JSON.parse(text):null}catch{parsed=null}if(!response.ok)throw new Error(`${method} HTTP ${response.status}: ${parsed?.message??parsed?.exception??text.slice(0,500)}`);return parsed?.message??parsed;}
-await call("login",{usr:user,pwd:password});
-const meta=await call("metaforge.api.get_meta",{doctype:"Aluminium Lot"});
+const cookies=new Map();let csrf="";
+function remember(response){const raw=response.headers.get("set-cookie");if(!raw)return;for(const part of raw.split(/,(?=[^;,]+=)/)){const pair=part.split(";",1)[0],i=pair.indexOf("=");if(i>0)cookies.set(pair.slice(0,i).trim(),pair.slice(i+1).trim());}}
+async function request(path,options={}){const headers=new Headers(options.headers??{});if(cookies.size)headers.set("cookie",[...cookies].map(([k,v])=>`${k}=${v}`).join("; "));if(csrf&&options.method&&options.method!=="GET")headers.set("x-frappe-csrf-token",csrf);if(options.body!==undefined)headers.set("content-type","application/json");const response=await fetch(`${origin}${path}`,{...options,headers,body:options.body===undefined?undefined:JSON.stringify(options.body)});remember(response);const text=await response.text();let body;try{body=text?JSON.parse(text):null}catch{body=text}return{response,body,text};}
+async function ok(path,options={}){const result=await request(path,options);if(!result.response.ok)throw new Error(`${options.method??"GET"} ${path} ${result.response.status}: ${result.text}`);return result.body;}
+await ok("/api/method/login",{method:"POST",body:{usr:user,pwd:password}});
+const boot=await ok("/api/method/metaforge.api.get_boot");csrf=boot?.message?.csrf_token??boot?.csrf_token??"";
+const body=await ok("/api/resource/DocType/Aluminium%20Lot");
+const meta=body?.data??body?.message??body;
 const fields=meta?.fields??[];
 const fieldMap=new Map(fields.map((field)=>[field.fieldname,field]));
 const expected=[
@@ -40,7 +43,7 @@ const expected=[
   ["is_active","Check",false]
 ];
 const errors=[];
-for(const [name,type,required] of expected){const field=fieldMap.get(name);if(!field){errors.push(`missing:${name}`);continue;}if(String(field.fieldtype??"")!==type)errors.push(`type:${name}:${field.fieldtype}->${type}`);if(required&&!Boolean(Number(field.reqd??field.required??0)||field.reqd===true||field.required===true))errors.push(`required:${name}`);}
+for(const [name,type,required] of expected){const field=fieldMap.get(name);if(!field){errors.push(`missing:${name}`);continue;}if(String(field.fieldtype??"")!==type)errors.push(`type:${name}:${field.fieldtype}->${type}`);if(required&&!Boolean(Number(field.reqd??0)||field.reqd===true))errors.push(`required:${name}`);}
 const sourceKey=fieldMap.get("source_key");if(sourceKey&&!Boolean(Number(sourceKey.unique??0)||sourceKey.unique===true))errors.push("unique:source_key");
 const item=fieldMap.get("item");if(item&&String(item.options??"")!=="Item")errors.push(`options:item:${item.options??""}->Item`);
 if(errors.length)throw new Error(`Aluminium Lot metadata contract invalid: ${errors.join(",")}`);
