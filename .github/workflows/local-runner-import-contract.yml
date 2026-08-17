@@ -87,6 +87,27 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce legacy-to-canonical bootstrap bridge and acceptance ordering
+        shell: bash
+        run: |
+          set -euo pipefail
+          bootstrap=.github/workflows/bootstrap-alumdoor-local.yml
+          reason=.github/workflows/alumdoor-reason-master-local-import.yml
+
+          grep -q 'LEGACY_SOURCE_TRANSITION=PASS' "$bootstrap"
+          grep -q 'LEGACY_SOURCE_LOCK=ACQUIRED' "$bootstrap"
+          grep -q 'LOCAL_STATE_BACKUP_OK' "$bootstrap"
+          grep -q 'merge --ff-only origin/main' "$bootstrap"
+          grep -q 'mutation_started=0' "$bootstrap"
+
+          grep -q 'workflow_run:' "$reason"
+          grep -q 'Bootstrap Alumdoor Local C Drive' "$reason"
+          grep -q 'github.event.workflow_run.head_sha' "$reason"
+          if grep -qE '^[[:space:]]{2}push:' "$reason"; then
+            echo 'Reason Master acceptance must not race bootstrap on the same push'
+            exit 1
+          fi
+
       - name: Enforce local-only Wrangler contract
         shell: bash
         run: |
