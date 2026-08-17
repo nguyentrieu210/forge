@@ -55,8 +55,11 @@ try {
   if (payload.items[0]?.item_code !== "TP-CUA-DUC-PAYLOAD-FIXTURE") {
     throw new Error(`unexpected payload item: ${JSON.stringify(payload.items[0])}`);
   }
-  if (payload.items[0]?.stock_uom !== "Bộ" || payload.items[0]?.default_sales_uom !== "m2") {
+  if (payload.items[0]?.stock_uom !== "m2" || payload.items[0]?.default_sales_uom !== "m2") {
     throw new Error(`door unit policy mismatch: ${JSON.stringify(payload.items[0])}`);
+  }
+  if ((payload.items[0]?.uom_conversions ?? []).length !== 0) {
+    throw new Error(`door must not invent m2/Bộ conversion: ${JSON.stringify(payload.items[0])}`);
   }
   if (audit.item_master_blocker_count !== 0) {
     throw new Error(`unexpected Item source blocker count ${audit.item_master_blocker_count}`);
