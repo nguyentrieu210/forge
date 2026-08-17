@@ -1,0 +1,152 @@
+#!/usr/bin/env node
+import { ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
+import {
+  interpretAlumdoorSourceUom,
+  preflightAlumdoorItemSourceRecords,
+} from "./lib/alumdoor-item-source-preflight.mjs";
+
+function expect(actual, expected, label) {
+  if (actual !== expected) throw new Error(`${label}: expected=${expected} actual=${actual}`);
+}
+
+let uom = interpretAlumdoorSourceUom(ITEM_SOURCE_ROLES.STOCK_ITEM, "KG/M");
+expect(uom.status, "dual_unit_basis", "stock KG/M status");
+expect(uom.canonical_uom, "Kg", "stock KG/M canonical UOM");
+expect(uom.secondary_uom, "Mét", "stock KG/M secondary UOM");
+
+uom = interpretAlumdoorSourceUom(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT, "KG/M");
+expect(uom.canonical_uom, "Mét", "sellable KG/M commercial UOM");
+expect(uom.weight_uom, "Kg", "sellable KG/M weight UOM");
+
+uom = interpretAlumdoorSourceUom(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT, "BỘ/4 CẶP");
+expect(uom.status, "blocked", "ambiguous package UOM must block");
+expect(uom.reason, "ambiguous_compound_uom", "ambiguous package UOM reason");
+
+const cleanAudit = preflightAlumdoorItemSourceRecords([
+  {
+    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
+    source_sheet: "ĐM",
+    source_row: 54,
+    source_index: 24,
+    item_code: "RON-DD",
+    item_name: "TP RON ĐÁY ĐỨC",
+    source_uom: "M",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.STOCK_ITEM,
+    source_sheet: "Trang tính29",
+    source_row: 120,
+    item_code: "NVL-RON-DD",
+    item_name: "RON ĐÁY ĐỨC",
+    source_uom: "KG",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
+    source_sheet: "ĐM",
+    source_row: 165,
+    item_code: "RON-DD",
+    item_name: "Ron đáy đức",
+    source_uom: "KG/M",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.STOCK_ITEM,
+    source_sheet: "Trang tính29",
+    source_row: 86,
+    item_code: "NVL-AL501-VK",
+    item_name: "AL501",
+    source_uom: "KG/M",
+    source_color: "VÀNG KEM",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
+    source_sheet: "ĐM",
+    source_row: 180,
+    item_code: "NVL-TD-AL501N VK",
+    item_name: "Lá ruột AL501N VK",
+    source_uom: "KG/M2",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
+    source_sheet: "ĐM",
+    source_row: 1243,
+    source_index: 247,
+    item_code: "NVL-V5_KEM_STD",
+    item_name: "TP-V5_KẼM",
+    source_uom: "M",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
+    source_sheet: "ĐM",
+    source_row: 1244,
+    source_index: 248,
+    item_code: "NVL-V5_KEM_STD",
+    item_name: "TP-V5_STĐ",
+    source_uom: "M",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
+    source_sheet: "ĐM",
+    source_row: 9000,
+    item_code: "TRU-TP_KHONGBDK_TANKER-ALUMAX",
+    item_name: "Trừ bộ điều khiển",
+    source_uom: "BỘ",
+  },
+]);
+
+expect(cleanAudit.blocker_count, 0, "clean source audit blockers");
+expect(cleanAudit.excluded_count, 1, "clean source audit exclusions");
+expect(cleanAudit.alias_count, 2, "clean source audit aliases");
+expect(cleanAudit.accepted_count, 4, "clean source audit accepted identities");
+
+const ronSellable = cleanAudit.accepted.find((item) => item.item_code === "RON-DD");
+if (!ronSellable) throw new Error("RON-DD sellable identity bị mất");
+expect(ronSellable.sales_uoms[0], "Mét", "RON-DD sellable UOM");
+
+const profile = cleanAudit.accepted.find((item) => item.item_code === "NVL-AL501-VK");
+if (!profile) throw new Error("NVL-AL501-VK stock identity bị mất");
+expect(profile.stock_uom, "Kg", "profile stock UOM must be atomic Kg");
+expect(profile.requires_conversion, true, "profile must retain kg/m conversion requirement");
+
+const shared = cleanAudit.accepted.find((item) => item.item_code === "NVL-V5_KEM_STD");
+if (!shared) throw new Error("V5 shared identity bị mất");
+expect(shared.item_code, "NVL-V5_KEM_STD", "V5 code stays exact");
+
+const blockedAudit = preflightAlumdoorItemSourceRecords([
+  {
+    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
+    source_sheet: "ĐM",
+    source_row: 2681,
+    source_index: 351,
+    item_code: "NVL-TON-ST-1LYx175-_MSK",
+    item_name: "LÁ SIÊU TRƯỜNG STĐ 1.2LY_MSK",
+    source_uom: "M2",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
+    source_sheet: "ĐM",
+    source_row: 731,
+    source_index: 184,
+    item_code: "TP-BKAN",
+    item_name: "TP BÁT KHÓA ÂM NỀN",
+    source_uom: "BỘ/4 CẶP",
+  },
+  {
+    source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
+    source_sheet: "ĐM",
+    source_row: 9999,
+    item_code: "NVL-KHONG-TON-TAI",
+    item_name: "Vật tư chưa có master",
+    source_uom: "CÁI",
+  },
+]);
+
+const reasons = new Set(blockedAudit.blockers.map((blocker) => blocker.reason));
+for (const expectedReason of [
+  "duplicate_source_code_for_distinct_products",
+  "ambiguous_compound_uom",
+  "unresolved_bom_reference",
+]) {
+  if (!reasons.has(expectedReason)) throw new Error(`Thiếu blocker ${expectedReason}`);
+}
+
+console.log("ALUMDOOR_ITEM_SOURCE_PREFLIGHT_V2_PASS");
