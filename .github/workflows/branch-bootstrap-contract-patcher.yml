@@ -1,0 +1,212 @@
+name: Branch Bootstrap Contract Patcher
+
+on:
+  push:
+    branches: [agent/bootstrap-verify-capabilities]
+    paths:
+      - '.github/workflows/branch-bootstrap-contract-patcher.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/bootstrap-verify-capabilities
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply exact capability-contract edits
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def read(p): return Path(p).read_text(encoding='utf-8')
+          def write(p, s): Path(p).write_text(s, encoding='utf-8')
+          def replace_once(p, old, new, label):
+              s = read(p)
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{p}: expected one {label}, found {count}')
+              write(p, s.replace(old, new, 1))
+          def regex_once(p, pattern, replacement, label):
+              s = read(p)
+              s2, count = re.subn(pattern, replacement, s, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'{p}: expected one regex {label}, found {count}')
+              write(p, s2)
+
+          canonical = [
+              '.github/workflows/bootstrap-alumdoor-local.yml',
+              '.github/workflows/alumdoor-master-layer0-local-seed.yml',
+              '.github/workflows/alumdoor-reason-master-local-import.yml',
+              '.github/workflows/import-alumdoor-item-master-local.yml',
+              '.github/workflows/reconcile-alumdoor-local-source-uom.yml',
+              '.github/workflows/alumdoor-real-purchase-import-policy.yml',
+              '.github/workflows/alumdoor-pricing-local-import.yml',
+              '.github/workflows/alumdoor-bom-local-import.yml',
+              '.github/workflows/alumdoor-customer-local-import.yml',
+          ]
+          for p in canonical:
+              s = read(p)
+              if 'FORGE_LOCAL_REQUIRED_SERVICES:' in s:
+                  continue
+              marker = '      FORGE_LOCAL_EXPECTED_SHA:'
+              idx = s.find(marker)
+              if idx < 0:
+                  raise SystemExit(f'{p}: expected SHA env marker not found')
+              end = s.find('\n', idx)
+              if end < 0:
+                  raise SystemExit(f'{p}: malformed SHA env line')
+              s = s[:end+1] + '      FORGE_LOCAL_REQUIRED_SERVICES: backend\n' + s[end+1:]
+              write(p, s)
+
+          bootstrap = '.github/workflows/bootstrap-alumdoor-local.yml'
+          old_legacy = """            $managedBackend = Get-CimInstance Win32_Service -Filter \"Name='ForgeAlumdoorBackend'\" -ErrorAction SilentlyContinue
+            $managedDesk = Get-CimInstance Win32_Service -Filter \"Name='ForgeAlumdoorDesk'\" -ErrorAction SilentlyContinue
+            foreach ($listener in @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799,5173) })) {
+              $chain = @(Process-Ancestry -StartPid ([int]$listener.OwningProcess))
+              $managedPid = if ($listener.LocalPort -eq 8799) { [int]$managedBackend.ProcessId } else { [int]$managedDesk.ProcessId }
+              if ($managedPid -le 0 -or -not ($chain | Where-Object { [int]$_.ProcessId -eq $managedPid })) { return $true }
+            }
+"""
+          new_legacy = """            $managedBackend = Get-CimInstance Win32_Service -Filter \"Name='ForgeAlumdoorBackend'\" -ErrorAction SilentlyContinue
+            foreach ($listener in @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -eq 8799 })) {
+              $chain = @(Process-Ancestry -StartPid ([int]$listener.OwningProcess))
+              $managedPid = [int]$managedBackend.ProcessId
+              if ($managedPid -le 0 -or -not ($chain | Where-Object { [int]$_.ProcessId -eq $managedPid })) { return $true }
+            }
+"""
+          replace_once(bootstrap, old_legacy, new_legacy, 'backend-only legacy listener classification')
+
+          old_verify = "          & node -e \"Promise.all([fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{if(![200,401,403].includes(r.status))throw new Error('backend '+r.status)}),fetch('http://127.0.0.1:5173',{signal:AbortSignal.timeout(5000)}).then(r=>{if(!r.ok)throw new Error('ui '+r.status)})]).catch(e=>{console.error(e);process.exit(1)})\"\n          if ($LASTEXITCODE -ne 0) { throw 'Post-bootstrap local service verification failed' }"
+          new_verify = "          & node scripts\\local-runner\\service-verification.mjs --services=$env:FORGE_LOCAL_REQUIRED_SERVICES\n          if ($LASTEXITCODE -ne 0) { throw 'Post-bootstrap required-service verification failed' }"
+          replace_once(bootstrap, old_verify, new_verify, 'bootstrap shared service verifier')
+          replace_once(bootstrap, '- name: Verify canonical source and local services', '- name: Verify canonical source and declared local services', 'bootstrap verify step title')
+
+          persistence = '.github/workflows/verify-alumdoor-local-persistence.yml'
+          s = read(persistence)
+          if 'FORGE_LOCAL_REQUIRED_SERVICES:' not in s:
+              marker = '    timeout-minutes: 5\n'
+              if marker not in s: raise SystemExit('persistence: timeout marker missing')
+              s = s.replace(marker, marker + '    env:\n      FORGE_LOCAL_REQUIRED_SERVICES: backend,frontend\n', 1)
+              write(persistence, s)
+          regex_once(
+              persistence,
+              r"          function Assert-NodeHttp \{.*?          Assert-NodeHttp -Url 'http://127\.0\.0\.1:5173' -Mode 'ui'\n",
+              "          & node scripts\\local-runner\\service-verification.mjs --services=$env:FORGE_LOCAL_REQUIRED_SERVICES\n          if ($LASTEXITCODE -ne 0) { throw 'Persistent required-service verification failed' }\n",
+              'persistence bespoke HTTP probes',
+          )
+
+          sync = 'sync-local.bat'
+          old_sync = """echo.
+echo === 1. Dua runtime vao maintenance va yeu cau ports quiet ===
+if exist server\\scripts\\alumdoor-runtime-maintenance.mjs (
+  call node server\\scripts\\alumdoor-runtime-maintenance.mjs on
+  if errorlevel 1 (echo [LOI] Khong bat duoc maintenance cho Windows services & exit /b 1)
+)
+call node scripts\\local-runner\\assert-ports-quiet.mjs --ports=8799,5173
+if errorlevel 1 (
+  echo [DUNG] Runtime van co listener. Source sync khong kill process theo port.
+  exit /b 1
+)
+"""
+          new_sync = """echo.
+echo === 1. Dua required runtime vao maintenance va yeu cau ports quiet ===
+set \"MAINTENANCE_SCOPE=all\"
+set \"QUIESCE_PORTS=8799,5173\"
+if defined BOOTSTRAP (
+  set \"MAINTENANCE_SCOPE=backend\"
+  set \"QUIESCE_PORTS=8799\"
+)
+if exist server\\scripts\\alumdoor-runtime-maintenance.mjs (
+  call node server\\scripts\\alumdoor-runtime-maintenance.mjs on %MAINTENANCE_SCOPE%
+  if errorlevel 1 (echo [LOI] Khong bat duoc maintenance cho required Windows services & exit /b 1)
+)
+call node scripts\\local-runner\\assert-ports-quiet.mjs --ports=%QUIESCE_PORTS%
+if errorlevel 1 (
+  echo [DUNG] Required runtime van co listener. Source sync khong kill process theo port.
+  exit /b 1
+)
+"""
+          replace_once(sync, old_sync, new_sync, 'scoped bootstrap source-sync quiesce')
+
+          audit = 'scripts/local-runner/audit-local-mutation-entrypoints.mjs'
+          replace_once(
+              audit,
+              "  '.github/workflows/alumdoor-bom-local-import.yml',\n];",
+              "  '.github/workflows/alumdoor-bom-local-import.yml',\n  '.github/workflows/alumdoor-customer-local-import.yml',\n];",
+              'customer workflow inventory',
+          )
+          replace_once(
+              audit,
+              "  if (!/scripts\\\\local-runner\\\\run-local-import\\.mjs/.test(text)) failures.push(`${file}:missing_canonical_entrypoint`);\n",
+              "  if (!/scripts\\\\local-runner\\\\run-local-import\\.mjs/.test(text)) failures.push(`${file}:missing_canonical_entrypoint`);\n  if (!/FORGE_LOCAL_REQUIRED_SERVICES:\\s*backend/.test(text)) failures.push(`${file}:missing_backend_service_contract`);\n",
+              'workflow service dependency audit',
+          )
+
+          contract = '.github/workflows/local-runner-import-contract.yml'
+          replace_once(
+              contract,
+              "            scripts/local-runner/bootstrap-helper-context.test.mjs \\\n            scripts/local-runner/local-mutation-child-context.test.mjs",
+              "            scripts/local-runner/bootstrap-helper-context.test.mjs \\\n            scripts/local-runner/service-verification.test.mjs \\\n            scripts/local-runner/local-mutation-child-context.test.mjs",
+              'service verification unit test registration',
+          )
+          replace_once(
+              contract,
+              "          node server/scripts/test-alumdoor-legacy-runtime-migration.mjs\n",
+              "          node server/scripts/test-alumdoor-legacy-runtime-migration.mjs\n          node --test server/scripts/alumdoor-runtime-maintenance.test.mjs\n",
+              'maintenance regression test registration',
+          )
+          replace_once(
+              contract,
+              "          node --check scripts/local-runner/run-local-import-core.mjs\n",
+              "          node --check scripts/local-runner/run-local-import-core.mjs\n          node --check scripts/local-runner/service-verification.mjs\n",
+              'service verifier syntax check',
+          )
+          replace_once(
+              contract,
+              "          node --check server/scripts/alumdoor-runtime-service-host.mjs\n",
+              "          node --check server/scripts/alumdoor-runtime-service-host.mjs\n          node --check server/scripts/alumdoor-runtime-maintenance.mjs\n",
+              'maintenance syntax check',
+          )
+          replace_once(
+              contract,
+              "            .github/workflows/alumdoor-pricing-local-import.yml\n          )",
+              "            .github/workflows/alumdoor-pricing-local-import.yml\n            .github/workflows/alumdoor-bom-local-import.yml\n            .github/workflows/alumdoor-customer-local-import.yml\n          )",
+              'full mutating workflow static inventory',
+          )
+          replace_once(
+              contract,
+              "            grep -q 'scripts\\\\local-runner\\\\run-local-import.mjs' \"$file\"\n",
+              "            grep -q 'scripts\\\\local-runner\\\\run-local-import.mjs' \"$file\"\n            grep -q 'FORGE_LOCAL_REQUIRED_SERVICES: backend' \"$file\"\n",
+              'static service dependency gate',
+          )
+
+      - name: Validate contract changes before commit
+        run: |
+          node --check scripts/local-runner/run-local-import-core.mjs
+          node --check scripts/local-runner/service-verification.mjs
+          node --check scripts/local-runner/audit-local-mutation-entrypoints.mjs
+          node --check server/scripts/alumdoor-runtime-maintenance.mjs
+          node --test scripts/local-runner/contract.test.mjs scripts/local-runner/service-verification.test.mjs server/scripts/alumdoor-runtime-maintenance.test.mjs
+          node scripts/local-runner/audit-local-mutation-entrypoints.mjs
+          git diff --check
+
+      - name: Commit capability contract convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add run-local.bat sync-local.bat scripts/local-runner server/scripts/alumdoor-runtime-maintenance.mjs server/scripts/alumdoor-runtime-maintenance.test.mjs .github/workflows
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix(bootstrap): declare runtime service capabilities end to end'
+          git push origin HEAD:agent/bootstrap-verify-capabilities
