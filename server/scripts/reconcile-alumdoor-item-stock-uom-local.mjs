@@ -11,7 +11,9 @@
  *   alumdoor-item-stock-uom-reconcile.mjs
  * - any other mismatch blocks the whole run before the first PUT
  * - writes authenticated pre-image before mutation
- * - PATCH/PUTs only stock_uom, never generic-upserts Item
+ * - re-reads each target immediately before PUT and sends its fresh `modified`
+ *   timestamp so Forge/Frappe optimistic concurrency remains enforced
+ * - PUTs only stock_uom + concurrency metadata, never generic-upserts Item
  * - re-reads every changed Item and requires exact canonical managed fields
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -163,10 +165,32 @@ writeFileSync(preimagePath, `${JSON.stringify({
 console.log(`ALUMDOOR_ITEM_STOCK_UOM_RECONCILE_PREIMAGE_PASS output=${preimagePath}`);
 
 const updated = [];
-for (const { item, classification } of reconcilable) {
+const alreadyExact = [];
+for (const { item } of reconcilable) {
+  // Re-read immediately before mutation. Besides supplying the optimistic-lock
+  // timestamp, this prevents an external change between the full preflight and
+  // this PUT from being silently overwritten.
+  const fresh = await getItem(item.item_code);
+  const freshClassification = classifyFinishedDoorStockUomReconciliation(item, fresh);
+  if (freshClassification.status === "exact") {
+    alreadyExact.push(item.item_code);
+    continue;
+  }
+  if (freshClassification.status !== "reconcile_stock_uom") {
+    throw new Error(
+      `ALUMDOOR_ITEM_STOCK_UOM_RECONCILE_CONCURRENT_BLOCK item=${item.item_code} status=${freshClassification.status}`,
+    );
+  }
+  const modified = String(fresh?.modified ?? "").trim();
+  if (!modified) {
+    throw new Error(`ALUMDOOR_ITEM_STOCK_UOM_RECONCILE_MISSING_MODIFIED item=${item.item_code}`);
+  }
   await requireOk(`/api/resource/Item/${encodeURIComponent(item.item_code)}`, {
     method: "PUT",
-    body: classification.update,
+    body: {
+      ...freshClassification.update,
+      modified,
+    },
   });
   updated.push(item.item_code);
 }
@@ -183,5 +207,5 @@ if (verificationFailures.length > 0) {
 }
 
 console.log(
-  `ALUMDOOR_ITEM_STOCK_UOM_RECONCILE_PASS updated=${updated.length} exact=${exact.length} missing=${missing.length}`,
+  `ALUMDOOR_ITEM_STOCK_UOM_RECONCILE_PASS updated=${updated.length} already_exact=${alreadyExact.length} exact_before=${exact.length} missing=${missing.length}`,
 );
