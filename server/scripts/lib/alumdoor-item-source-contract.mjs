@@ -10,6 +10,12 @@ export const ALUMDOOR_ITEM_SOURCE_AUTHORITY = Object.freeze({
   production_and_cutting_rules: "25.7 QUY TRÌNH (2).docx",
 });
 
+export const ITEM_SOURCE_ROLES = Object.freeze({
+  SELLABLE_PRODUCT: "sellable_product",
+  STOCK_ITEM: "stock_item",
+  BOM_REFERENCE: "bom_reference",
+});
+
 export const ITEM_SOURCE_EXCLUDED_PREFIXES = Object.freeze([
   "TRU-",
   "PHUTHU-",
@@ -22,9 +28,9 @@ export const ITEM_SOURCE_EXCLUDED_CODES = Object.freeze({
   "NVL-INOX, NVL-NHUA, NVL-MOC": "composite_component_list_not_item_code",
 });
 
-// High-confidence source aliases audited against actual stock identities in Trang tính29.
-// Alias resolution never changes the target Item code; it only records that a legacy/BOM spelling
-// points at an already-existing canonical source identity.
+// High-confidence spellings found on unnumbered ĐM BOM/reference rows. They may resolve only
+// when the caller explicitly identifies the row as BOM_REFERENCE. A numbered product row always
+// keeps its own exact source Item code even if the same text also appears in this map.
 export const ITEM_SOURCE_ALIASES = Object.freeze({
   "NVL_TDAL595THO": "NVL-AL595-THO",
   "NVL-TDAL70THO": "NVL-AL70(2LOP)-THO",
@@ -96,16 +102,19 @@ export const ITEM_SOURCE_SHARED_IDENTITIES = Object.freeze({
   }),
 });
 
-// This code cannot be resolved from the code string alone. The source product row/index must be present.
+// The source reuses this exact code for distinct numbered products. Numbered product identity must
+// therefore fail closed. The audited stock targets are retained only as evidence for a BOM/reference
+// resolver; they are not permission to rewrite a sellable product's original code.
 export const ITEM_SOURCE_CONTEXTUAL_COLLISIONS = Object.freeze({
   "NVL-TON-ST-1LYx175-_MSK": Object.freeze([
-    Object.freeze({ source_indexes: Object.freeze([351]), canonical_item_code: "NVL-TON-DL1.2LYx175-STD" }),
-    Object.freeze({ source_indexes: Object.freeze([352, 353]), canonical_item_code: "NVL-TON-DL1.3LYx175-STD" }),
+    Object.freeze({ source_indexes: Object.freeze([351]), stock_reference_code: "NVL-TON-DL1.2LYx175-STD" }),
+    Object.freeze({ source_indexes: Object.freeze([352, 353]), stock_reference_code: "NVL-TON-DL1.3LYx175-STD" }),
   ]),
 });
 
 export function classifyAlumdoorItemSourceCode(sourceCode, context = {}) {
   const sourceCodeOriginal = cleanCode(sourceCode);
+  const sourceRole = cleanCode(context.source_role);
   if (!sourceCodeOriginal) {
     return Object.freeze({
       status: "blocked",
@@ -136,6 +145,22 @@ export function classifyAlumdoorItemSourceCode(sourceCode, context = {}) {
 
   const contextualRules = ITEM_SOURCE_CONTEXTUAL_COLLISIONS[sourceCodeOriginal];
   if (contextualRules) {
+    if (sourceRole === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT) {
+      return Object.freeze({
+        status: "blocked",
+        reason: "duplicate_source_code_for_distinct_products",
+        source_code_original: sourceCodeOriginal,
+        canonical_item_code: "",
+      });
+    }
+    if (sourceRole !== ITEM_SOURCE_ROLES.BOM_REFERENCE) {
+      return Object.freeze({
+        status: "blocked",
+        reason: "source_role_required_for_collision",
+        source_code_original: sourceCodeOriginal,
+        canonical_item_code: "",
+      });
+    }
     const sourceIndex = Number(context.source_index);
     const matched = Number.isFinite(sourceIndex)
       ? contextualRules.find((rule) => rule.source_indexes.includes(sourceIndex))
@@ -150,19 +175,35 @@ export function classifyAlumdoorItemSourceCode(sourceCode, context = {}) {
     }
     return Object.freeze({
       status: "alias",
-      reason: "contextual_source_collision",
+      reason: "contextual_bom_reference",
       source_code_original: sourceCodeOriginal,
-      canonical_item_code: matched.canonical_item_code,
+      canonical_item_code: matched.stock_reference_code,
     });
   }
 
   const aliasTarget = ITEM_SOURCE_ALIASES[sourceCodeOriginal];
   if (aliasTarget) {
+    if (sourceRole === ITEM_SOURCE_ROLES.BOM_REFERENCE) {
+      return Object.freeze({
+        status: "alias",
+        reason: "audited_bom_reference_alias",
+        source_code_original: sourceCodeOriginal,
+        canonical_item_code: aliasTarget,
+      });
+    }
+    if (sourceRole === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT || sourceRole === ITEM_SOURCE_ROLES.STOCK_ITEM) {
+      return Object.freeze({
+        status: "source",
+        reason: "source_role_identity",
+        source_code_original: sourceCodeOriginal,
+        canonical_item_code: sourceCodeOriginal,
+      });
+    }
     return Object.freeze({
-      status: "alias",
-      reason: "audited_source_alias",
+      status: "blocked",
+      reason: "source_role_required_for_alias",
       source_code_original: sourceCodeOriginal,
-      canonical_item_code: aliasTarget,
+      canonical_item_code: "",
     });
   }
 
@@ -189,7 +230,7 @@ export function assertAlumdoorItemSourceContract() {
     if (!rules.length) throw new Error(`Contextual collision không có rule: ${source}`);
     const seenIndexes = new Set();
     for (const rule of rules) {
-      if (!cleanCode(rule.canonical_item_code)) throw new Error(`Contextual collision thiếu target: ${source}`);
+      if (!cleanCode(rule.stock_reference_code)) throw new Error(`Contextual collision thiếu stock reference: ${source}`);
       for (const index of rule.source_indexes) {
         if (seenIndexes.has(index)) throw new Error(`Contextual collision trùng source_index ${index}: ${source}`);
         seenIndexes.add(index);
