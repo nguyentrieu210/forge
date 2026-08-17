@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import { assertCanonicalItemPayload } from "./lib/alumdoor-item-import-policy.mjs";
+import {
+  assertCanonicalItemPayload,
+  assertSourceItemCodePreserved,
+} from "./lib/alumdoor-item-import-policy.mjs";
 
 const shouldPass = [
   {
@@ -23,6 +26,17 @@ const shouldPass = [
   },
 ];
 for (const payload of shouldPass) assertCanonicalItemPayload(payload);
+
+assertSourceItemCodePreserved("NvL-01/A_b", "NvL-01/A_b");
+let changedCodeError = null;
+try {
+  assertSourceItemCodePreserved("NvL-01/A_b", "NVL-01-A-B");
+} catch (error) {
+  changedCodeError = error;
+}
+if (!changedCodeError || !String(changedCodeError.message).includes("khác mã nguồn gốc")) {
+  throw new Error("Item code normalization phải bị chặn khi khác mã nguồn gốc");
+}
 
 const shouldFail = [
   [{ item_code: "BAD-RATE", item_group: "Phụ kiện chung", is_stock_item: true, is_purchase_item: true, stock_uom: "KG/M", default_purchase_uom: "KG/M", default_sales_uom: "Mét" }, "tỷ lệ/định mức BOM"],
