@@ -11,6 +11,7 @@ import {
   assertPathInside,
   classifyExistingLock,
   classifyOutcome,
+  normalizeSpawnInvocation,
   normalizeWinPath,
   parseArgs,
 } from './run-local-import.mjs';
@@ -42,6 +43,28 @@ test('path containment is case insensitive and rejects escape', () => {
   assert.throws(
     () => assertPathInside('C:\\alumdoor\\..\\secret.json', 'C:\\alumdoor\\local-imports'),
     /escapes/,
+  );
+});
+
+test('Windows command shims are routed through ComSpec without shell mode', () => {
+  const command = 'C:\\alumdoor\\server\\node_modules\\.bin\\wrangler.cmd';
+  const args = ['d1', 'execute', 'cloudforge-demo', '--local', '--command', 'SELECT 1'];
+  assert.deepEqual(
+    normalizeSpawnInvocation(command, args, {
+      platform: 'win32',
+      comspec: 'C:\\Windows\\System32\\cmd.exe',
+    }),
+    {
+      command: 'C:\\Windows\\System32\\cmd.exe',
+      args: ['/d', '/c', command, ...args],
+    },
+  );
+  assert.deepEqual(
+    normalizeSpawnInvocation('git', ['status'], {
+      platform: 'win32',
+      comspec: 'C:\\Windows\\System32\\cmd.exe',
+    }),
+    { command: 'git', args: ['status'] },
   );
 });
 
