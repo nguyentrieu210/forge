@@ -68,19 +68,80 @@ export function resolveBomRuntimeUom(record, item) {
 const templateRuleByRow = new Map();
 const templateDeferredByRow = new Map();
 for (const entry of BOM_TEMPLATE_SOURCE_CATALOG) {
-  for (const rule of entry.data.component_rules ?? []) templateRuleByRow.set(Number(rule.source_row), { template_code: entry.data.template_code, rule });
+  const sourceSheet = clean(entry?.source?.sheet || "ĐM");
+  const allowedItems = JSON.parse(entry.data.actual_component_allowed_items_json || "{}");
+  for (const rule of entry.data.component_rules ?? []) {
+    templateRuleByRow.set(Number(rule.source_row), {
+      template_code: entry.data.template_code,
+      source_sheet: sourceSheet,
+      rule,
+      expected_items: [clean(rule.item_code)].filter(Boolean),
+    });
+  }
   for (const deferred of JSON.parse(entry.data.deferred_components_json || "[]")) {
     const rows = deferred.source_rows ?? [deferred.source_row];
-    for (const row of rows) templateDeferredByRow.set(Number(row), { template_code: entry.data.template_code, deferred });
+    const expectedItems = (allowedItems?.[deferred.key] ?? []).map(clean).filter(Boolean);
+    for (const row of rows) {
+      templateDeferredByRow.set(Number(row), {
+        template_code: entry.data.template_code,
+        source_sheet: sourceSheet,
+        deferred,
+        expected_items: expectedItems,
+      });
+    }
   }
 }
 
-export function resolveTemplateLineage(record) {
+function lineageItemMatches(record, canonicalItemCode, expectedItems) {
+  const actual = new Set([clean(record?.item_code), clean(canonicalItemCode)].filter(Boolean));
+  return expectedItems.some((itemCode) => actual.has(clean(itemCode)));
+}
+
+function lineageMismatch(record, canonicalItemCode, mapped, kind) {
+  return {
+    status: "blocked",
+    reason: "template_lineage_item_mismatch",
+    kind,
+    template_code: mapped.template_code,
+    component_key: kind === "formula" ? mapped.rule.component_key : mapped.deferred.key,
+    source_sheet: clean(record?.source_sheet),
+    expected_source_sheet: mapped.source_sheet,
+    source_item_code: clean(record?.item_code),
+    canonical_item_code: clean(canonicalItemCode),
+    expected_item_code: mapped.expected_items.length === 1 ? mapped.expected_items[0] : undefined,
+    expected_item_codes: mapped.expected_items,
+  };
+}
+
+export function resolveTemplateLineage(record, canonicalItemCode = "") {
   const row = Number(record?.source_row);
   const mapped = templateRuleByRow.get(row);
-  if (mapped) return { status: "mapped", kind: "formula", template_code: mapped.template_code, component_key: mapped.rule.component_key, quantity_formula_json: mapped.rule.quantity_formula_json, source_formula: mapped.rule.source_formula };
+  if (mapped) {
+    if (mapped.source_sheet && clean(record?.source_sheet) !== mapped.source_sheet) return { status: "unmapped" };
+    if (!lineageItemMatches(record, canonicalItemCode, mapped.expected_items)) return lineageMismatch(record, canonicalItemCode, mapped, "formula");
+    return {
+      status: "mapped",
+      kind: "formula",
+      template_code: mapped.template_code,
+      component_key: mapped.rule.component_key,
+      expected_item_code: mapped.expected_items[0],
+      quantity_formula_json: mapped.rule.quantity_formula_json,
+      source_formula: mapped.rule.source_formula,
+    };
+  }
   const deferred = templateDeferredByRow.get(row);
-  if (deferred) return { status: "mapped", kind: "deferred_actual", template_code: deferred.template_code, component_key: deferred.deferred.key, reason: deferred.deferred.reason };
+  if (deferred) {
+    if (deferred.source_sheet && clean(record?.source_sheet) !== deferred.source_sheet) return { status: "unmapped" };
+    if (!lineageItemMatches(record, canonicalItemCode, deferred.expected_items)) return lineageMismatch(record, canonicalItemCode, deferred, "deferred_actual");
+    return {
+      status: "mapped",
+      kind: "deferred_actual",
+      template_code: deferred.template_code,
+      component_key: deferred.deferred.key,
+      expected_item_codes: deferred.expected_items,
+      reason: deferred.deferred.reason,
+    };
+  }
   return { status: "unmapped" };
 }
 
@@ -90,9 +151,10 @@ function manualActual(text) {
 }
 function hasGeometry(text) { return /RONG|NGANG|CAO|DIEN TICH|\bDT\b|M2|PBRAY|RCL/.test(fold(text)); }
 
-export function resolveBomQuantity(record, uomResolution, parentItem) {
+export function resolveBomQuantity(record, uomResolution, parentItem, canonicalItemCode = "") {
   void parentItem;
-  const mapped = resolveTemplateLineage(record);
+  const mapped = resolveTemplateLineage(record, canonicalItemCode);
+  if (mapped.status === "blocked") return mapped;
   if (mapped.status === "mapped") {
     if (mapped.kind === "deferred_actual") return { ...mapped, status: "deferred", qty_basis: "Runtime actual" };
     return { ...mapped, status: "runtime_formula", qty_basis: "BOM Template" };
@@ -133,6 +195,6 @@ export function resolveBomParentOutput(parentItem) {
 }
 
 export function blockerClass(type) {
-  if (["unsupported_formula","formula_not_in_template_catalog","geometry_formula_not_in_template_catalog"].includes(type)) return "resolver_defect";
+  if (["unsupported_formula","formula_not_in_template_catalog","geometry_formula_not_in_template_catalog","template_lineage_item_mismatch"].includes(type)) return "resolver_defect";
   return "missing_authoritative_evidence";
 }
