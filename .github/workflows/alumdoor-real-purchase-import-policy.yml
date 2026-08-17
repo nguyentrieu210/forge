@@ -1,18 +1,6 @@
 name: Alumdoor Real Purchase Import Policy
 
 on:
-  push:
-    branches: [agent/alumdoor-real-purchase-import]
-    paths:
-      - 'apps/alumdoor/docs/nguon/ms-lien/chi-tiết-nhập-hàng-ngày.md'
-      - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
-      - 'server/scripts/preflight-alumdoor-real-purchase-import.mjs'
-      - 'server/scripts/audit-alumdoor-real-purchase-local.mjs'
-      - 'server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs'
-      - 'server/scripts/import-alumdoor-real-purchase-local.mjs'
-      - 'server/scripts/verify-alumdoor-real-purchase-audit.mjs'
-      - 'server/scripts/test-alumdoor-real-purchase-import.mjs'
-      - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
   pull_request:
     paths:
       - 'apps/alumdoor/docs/nguon/ms-lien/chi-tiết-nhập-hàng-ngày.md'
@@ -23,6 +11,7 @@ on:
       - 'server/scripts/import-alumdoor-real-purchase-local.mjs'
       - 'server/scripts/verify-alumdoor-real-purchase-audit.mjs'
       - 'server/scripts/test-alumdoor-real-purchase-import.mjs'
+      - 'scripts/local-runner/**'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
   workflow_dispatch:
 
@@ -30,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: alumdoor-real-purchase-import-${{ github.ref }}
+  group: alumdoor-local-d1-mutation
   cancel-in-progress: false
 
 jobs:
@@ -50,154 +39,65 @@ jobs:
           node --check server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs
           node --check server/scripts/import-alumdoor-real-purchase-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
+          node --check scripts/local-runner/real-purchase-adapter.mjs
           node --check server/scripts/test-alumdoor-real-purchase-import.mjs
       - name: Lock source and historical draft contract
         run: node server/scripts/test-alumdoor-real-purchase-import.mjs
       - name: Lock fail-closed operational mode
         run: node server/scripts/preflight-alumdoor-real-purchase-import.mjs /tmp/alumdoor-real-purchase-preflight.json --expect-blocked
+      - name: Reject child-script Wrangler bypass
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -nE 'npx[[:space:]]+wrangler|wrangler[[:space:]]+d1[[:space:]]+(execute|migrations)|execFileSync\([^\n]*wrangler' \
+            server/scripts/audit-alumdoor-real-purchase-local.mjs \
+            server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs \
+            server/scripts/import-alumdoor-real-purchase-local.mjs \
+            server/scripts/verify-alumdoor-real-purchase-audit.mjs; then
+            echo 'Real Purchase child scripts must not bypass the canonical runner Wrangler guard'
+            exit 1
+          fi
 
   purchase-local-import:
-    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: purchase-preflight
     runs-on: [self-hosted]
     timeout-minutes: 45
     env:
+      FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
       FORGE_ORIGIN: http://127.0.0.1:8799
       FORGE_ADMIN_USER: dev@example.com
       FORGE_ADMIN_PASSWORD: local-dev-password-1
     steps:
-      - uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 1
-      - name: Recover local stack if needed
+      - name: Run canonical Real Purchase local import contract
         shell: powershell
+        working-directory: C:\alumdoor
         run: |
           $ErrorActionPreference = 'Stop'
-          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { & cmd.exe /d /c "C:\alumdoor\sync-local.bat --bootstrap --skip-source-verify"; if ($LASTEXITCODE -ne 0) { throw 'Failed to recover local stack.' } }
-      - name: Guard local runtime
-        id: guard
+          & node scripts\local-runner\run-local-import.mjs real-purchase
+          if ($LASTEXITCODE -ne 0) { throw "Real Purchase canonical execution contract failed with exit code $LASTEXITCODE" }
+
+      - name: Print execution evidence on failure
+        if: failure()
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
-          $local = 'C:\alumdoor'
-          if (-not (Test-Path (Join-Path $local '.git'))) { throw 'C:\alumdoor is not a Git checkout.' }
-          $origin = (git -C $local remote get-url origin).Trim()
-          if ($LASTEXITCODE -ne 0 -or $origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') { throw "Unexpected local repository origin: $origin" }
-          $dirty = @(git -C $local status --porcelain=v1)
-          if ($dirty.Count -gt 0) { throw 'C:\alumdoor is dirty.' }
-          $runDir = "C:\alumdoor\local-backups\purchase-imports\$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
-          New-Item -ItemType Directory -Force -Path $runDir | Out-Null
-          "run_dir=$runDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-      - name: Reconcile canonical Item Gate A prerequisite
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $source = 'C:\alumdoor\local-imports\alumdoor-item-source-records.json'
-          if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Gate A source records missing: $source" }
-          Set-Location "$env:GITHUB_WORKSPACE\server"
-          $payload = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-master-payload.json'
-          $audit = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-master-audit.json'
-          $preimage = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-preimage.json'
-          & node scripts\build-alumdoor-item-master-payload.mjs $source $payload $audit
-          if ($LASTEXITCODE -ne 0) { throw 'Gate A payload blocked.' }
-          $r = Get-Content -Raw $audit | ConvertFrom-Json
-          if ([int]$r.item_master_blocker_count -ne 0 -or [int]$r.other_blocker_count -ne 0 -or [int]$r.item_payload_blocker_count -ne 0) { throw 'Gate A audit blocked.' }
-          & node scripts\import-alumdoor-item-master-local.mjs $payload $preimage
-          if ($LASTEXITCODE -ne 0) { throw 'Gate A local reconciliation failed.' }
-          Write-Host "ALUMDOOR_REAL_PURCHASE_GATE_A_PASS items=$($r.item_payload_count)"
-      - name: Audit and reconcile exact Suppliers
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $report = Join-Path '${{ steps.guard.outputs.run_dir }}' 'audit-before-suppliers.json'
-          & node server/scripts/audit-alumdoor-real-purchase-local.mjs $report
-          if ($LASTEXITCODE -ne 0) { throw 'Authority audit failed.' }
-          & node server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs $report
-          if ($LASTEXITCODE -ne 0) { throw 'Supplier reconciliation failed.' }
-          & node server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs $report
-          if ($LASTEXITCODE -ne 0) { throw 'Supplier idempotency failed.' }
-      - name: Build zero-blocker historical draft plan
-        id: plan
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $runDir = '${{ steps.guard.outputs.run_dir }}'
-          $report = Join-Path $runDir 'audit-ready.json'
-          $sqlFile = Join-Path $runDir 'purchase-receipts.sql'
-          $expected = Join-Path $runDir 'expected.json'
-          & node server/scripts/audit-alumdoor-real-purchase-local.mjs $report
-          if ($LASTEXITCODE -ne 0) { throw 'Post-Supplier audit failed.' }
-          & node server/scripts/import-alumdoor-real-purchase-local.mjs receipts-sql $report $sqlFile $expected
-          if ($LASTEXITCODE -ne 0) { throw 'Historical draft plan blocked.' }
-          $e = Get-Content -Raw $expected | ConvertFrom-Json
-          if ([int]$e.receipt_count -ne 6 -or [int]$e.line_count -ne 11) { throw "Expected 6 receipts/11 lines, got $($e.receipt_count)/$($e.line_count)" }
-          $targets = @(Get-Content $sqlFile | Where-Object { $_ -match '^INSERT INTO ' } | ForEach-Object { if ($_ -match '^INSERT INTO ([A-Za-z_]+)') { $Matches[1] } } | Sort-Object -Unique)
-          if (($targets -join ',') -ne 'document_search,documents') { throw "Unexpected D1 write targets: $($targets -join ',')" }
-          $r = Get-Content -Raw $report | ConvertFrom-Json
-          $before = @($r.purchase_receipts | Where-Object { $_.import_marker.format -eq 'alumdoor-real-purchase-history/v1' }).Count
-          "before_count=$before" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "ALUMDOOR_REAL_PURCHASE_PLAN_PASS receipts=6 lines=11 excluded=3 write_targets=document_search,documents before=$before"
-      - name: First-pass local D1 draft migration
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $server = 'C:\alumdoor\server'
-          $runDir = '${{ steps.guard.outputs.run_dir }}'
-          & node "$server\scripts\backup-local-state.mjs"
-          if ($LASTEXITCODE -ne 0) { throw 'Backup failed before first pass.' }
-          Set-Location $server
-          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc "--file=$(Join-Path $runDir 'purchase-receipts.sql')"
-          if ($LASTEXITCODE -ne 0) { throw 'First-pass draft migration failed.' }
-      - name: Verify first pass through canonical API
-        id: first
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $runDir = '${{ steps.guard.outputs.run_dir }}'
-          $audit = Join-Path $runDir 'audit-after-first.json'
-          & node server/scripts/audit-alumdoor-real-purchase-local.mjs $audit
-          if ($LASTEXITCODE -ne 0) { throw 'First-pass API audit failed.' }
-          & node server/scripts/verify-alumdoor-real-purchase-audit.mjs (Join-Path $runDir 'expected.json') $audit
-          if ($LASTEXITCODE -ne 0) { throw 'First-pass verification failed.' }
-          $created = 6 - [int]'${{ steps.plan.outputs.before_count }}'
-          if ($created -lt 0 -or $created -gt 6) { throw "Invalid first-pass create delta $created" }
-          "created=$created" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "ALUMDOOR_REAL_PURCHASE_FIRST_PASS_PASS receipts=6 lines=11 created=$created docstatus=0"
-      - name: Second-pass local D1 replay
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $server = 'C:\alumdoor\server'
-          $runDir = '${{ steps.guard.outputs.run_dir }}'
-          & node "$server\scripts\backup-local-state.mjs"
-          if ($LASTEXITCODE -ne 0) { throw 'Backup failed before second pass.' }
-          Set-Location $server
-          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc "--file=$(Join-Path $runDir 'purchase-receipts.sql')"
-          if ($LASTEXITCODE -ne 0) { throw 'Second-pass draft migration failed.' }
-      - name: Verify second pass idempotency
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $runDir = '${{ steps.guard.outputs.run_dir }}'
-          $second = Join-Path $runDir 'audit-after-second.json'
-          & node server/scripts/audit-alumdoor-real-purchase-local.mjs $second
-          if ($LASTEXITCODE -ne 0) { throw 'Second-pass API audit failed.' }
-          & node server/scripts/verify-alumdoor-real-purchase-audit.mjs (Join-Path $runDir 'expected.json') (Join-Path $runDir 'audit-after-first.json') $second
-          if ($LASTEXITCODE -ne 0) { throw 'Second-pass idempotency failed.' }
-          Write-Host "ALUMDOOR_REAL_PURCHASE_IMPORT_PASS receipts=6 lines=11 excluded=3 created_first=${{ steps.first.outputs.created }} created_second=0 write_targets=document_search,documents stock_write_targets=0 docstatus=0 submit=forbidden"
-      - name: Confirm local service remains healthy
-        if: always()
-        shell: powershell
-        run: |
-          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { throw 'Local service unhealthy after purchase import.' }
+          Write-Host '=== latest Real Purchase execution-layer evidence ==='
+          $root = 'C:\alumdoor\local-backups\execution-layer\real-purchase'
+          if (Test-Path $root) {
+            Get-ChildItem $root -Directory -ErrorAction SilentlyContinue |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 2 |
+              ForEach-Object {
+                Write-Host "--- $($_.FullName) ---"
+                Get-ChildItem $_.FullName -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
+              }
+          }
+
       - name: Upload purchase import evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: alumdoor-real-purchase-import-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ steps.guard.outputs.run_dir }}
+          path: C:\alumdoor\local-backups\execution-layer\real-purchase
           if-no-files-found: warn
           retention-days: 14
