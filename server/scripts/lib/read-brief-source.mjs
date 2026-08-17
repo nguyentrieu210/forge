@@ -130,17 +130,11 @@ function applyViewSidecar(brief, extension, source, briefSource) {
   return { ...brief, ...(extension.version ? { version: extension.version } : {}), doctypes };
 }
 
-/**
- * Cross-app dependencies belong in their own reviewable sidecar. This keeps an industry
- * brief from copying schemas owned by Finance/Stock while still making install order and
- * external DocType ownership explicit. The normal compiler/parser remain authoritative.
- */
 function applyIntegrationSidecar(brief, extension, source, briefSource) {
   assertSidecarObject(extension, source);
   const unsupported = Object.keys(extension).filter((key) => !["version", "requires", "externalDocTypes"].includes(key) && !key.startsWith("//"));
   if (unsupported.length) throw new Error(`${source}: chỉ nhận version, requires, externalDocTypes và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
   if (extension.requires === undefined && extension.externalDocTypes === undefined) throw new Error(`${source}: phải khai requires hoặc externalDocTypes.`);
-
   if (brief.requires !== undefined && !Array.isArray(brief.requires)) throw new Error(`${briefSource}: requires hiện có phải là mảng trước khi ghép integration sidecar.`);
   if (brief.externalDocTypes !== undefined && !Array.isArray(brief.externalDocTypes)) throw new Error(`${briefSource}: externalDocTypes hiện có phải là mảng trước khi ghép integration sidecar.`);
 
@@ -149,9 +143,7 @@ function applyIntegrationSidecar(brief, extension, source, briefSource) {
   if (extension.requires !== undefined) {
     if (!Array.isArray(extension.requires) || extension.requires.length === 0) throw new Error(`${source}: requires phải là mảng không rỗng.`);
     for (const dependency of extension.requires) {
-      if (!dependency || typeof dependency !== "object" || Array.isArray(dependency) || typeof dependency.id !== "string" || !dependency.id || typeof dependency.version !== "string" || !dependency.version) {
-        throw new Error(`${source}: mỗi requires phải có id và version.`);
-      }
+      if (!dependency || typeof dependency !== "object" || Array.isArray(dependency) || typeof dependency.id !== "string" || !dependency.id || typeof dependency.version !== "string" || !dependency.version) throw new Error(`${source}: mỗi requires phải có id và version.`);
       if (dependencyIds.has(dependency.id)) throw new Error(`${source}: dependency trùng id: ${dependency.id}.`);
       dependencyIds.add(dependency.id);
       requires.push(dependency);
@@ -163,9 +155,7 @@ function applyIntegrationSidecar(brief, extension, source, briefSource) {
   if (extension.externalDocTypes !== undefined) {
     if (!Array.isArray(extension.externalDocTypes) || extension.externalDocTypes.length === 0) throw new Error(`${source}: externalDocTypes phải là mảng không rỗng.`);
     for (const doctype of extension.externalDocTypes) {
-      if (!doctype || typeof doctype !== "object" || Array.isArray(doctype) || typeof doctype.name !== "string" || !doctype.name || typeof doctype.kind !== "string" || !doctype.kind || typeof doctype.app !== "string" || !doctype.app) {
-        throw new Error(`${source}: mỗi externalDocTypes phải có name, kind và app.`);
-      }
+      if (!doctype || typeof doctype !== "object" || Array.isArray(doctype) || typeof doctype.name !== "string" || !doctype.name || typeof doctype.kind !== "string" || !doctype.kind || typeof doctype.app !== "string" || !doctype.app) throw new Error(`${source}: mỗi externalDocTypes phải có name, kind và app.`);
       if (externalNames.has(doctype.name)) throw new Error(`${source}: external DocType trùng tên: ${doctype.name}.`);
       externalNames.add(doctype.name);
       externalDocTypes.push(doctype);
@@ -182,9 +172,9 @@ function applyIntegrationSidecar(brief, extension, source, briefSource) {
 
 /**
  * Large operational actions are allowed to live in a sibling file so the business brief
- * stays reviewable. The sidecar only appends actions; the normal brief schema/compiler and
- * server manifest parser still validate the merged result, so this is transport, not a
- * second action contract.
+ * stays reviewable. Entries normally append actions. A reviewed entry may set replace=true
+ * to replace one existing action with the same name in place; replace is transport metadata
+ * and is stripped before canonical brief validation.
  */
 function applyActionSidecar(brief, extension, source, briefSource) {
   assertSidecarObject(extension, source);
@@ -192,16 +182,44 @@ function applyActionSidecar(brief, extension, source, briefSource) {
   if (unsupported.length) throw new Error(`${source}: chỉ nhận version, actions và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
   if (!Array.isArray(extension.actions) || extension.actions.length === 0) throw new Error(`${source}: actions phải là mảng không rỗng.`);
   if (brief.actions !== undefined && !Array.isArray(brief.actions)) throw new Error(`${briefSource}: actions hiện có phải là mảng trước khi ghép sidecar.`);
-  const existingNames = new Set((brief.actions ?? []).map((action) => action?.name).filter(Boolean));
+
+  const actions = [...(brief.actions ?? [])];
+  const baseIndex = new Map(actions.map((action, index) => [action?.name, index]).filter(([name]) => Boolean(name)));
   const sidecarNames = new Set();
-  for (const action of extension.actions) {
-    if (!action || typeof action !== "object" || Array.isArray(action) || typeof action.name !== "string" || !action.name) {
-      throw new Error(`${source}: mỗi action phải là object có name.`);
+  for (const raw of extension.actions) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw) || typeof raw.name !== "string" || !raw.name) throw new Error(`${source}: mỗi action phải là object có name.`);
+    if (sidecarNames.has(raw.name)) throw new Error(`${source}: action trùng tên trong sidecar: ${raw.name}.`);
+    sidecarNames.add(raw.name);
+    const { replace = false, ...action } = raw;
+    const existingIndex = baseIndex.get(action.name);
+    if (replace === true) {
+      if (existingIndex === undefined) throw new Error(`${source}: action replace không tồn tại trong brief gốc: ${action.name}.`);
+      actions[existingIndex] = action;
+      continue;
     }
-    if (existingNames.has(action.name) || sidecarNames.has(action.name)) throw new Error(`${source}: action trùng tên: ${action.name}.`);
-    sidecarNames.add(action.name);
+    if (existingIndex !== undefined) throw new Error(`${source}: action trùng tên: ${action.name}; dùng replace=true nếu chủ đích thay action gốc.`);
+    baseIndex.set(action.name, actions.length);
+    actions.push(action);
   }
-  return { ...brief, ...(extension.version ? { version: extension.version } : {}), actions: [...(brief.actions ?? []), ...extension.actions] };
+  return { ...brief, ...(extension.version ? { version: extension.version } : {}), actions };
+}
+
+function applyFixtureSidecar(brief, extension, source, briefSource) {
+  assertSidecarObject(extension, source);
+  const unsupported = Object.keys(extension).filter((key) => key !== "fixtures" && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: chỉ nhận fixtures và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  if (!Array.isArray(extension.fixtures) || extension.fixtures.length === 0) throw new Error(`${source}: fixtures phải là mảng không rỗng.`);
+  if (brief.fixtures !== undefined && !Array.isArray(brief.fixtures)) throw new Error(`${briefSource}: fixtures hiện có phải là mảng trước khi ghép sidecar.`);
+
+  const identities = new Set((brief.fixtures ?? []).map((fixture) => `${fixture?.type ?? ""}\u0000${fixture?.name ?? ""}`));
+  const sidecarIdentities = new Set();
+  for (const fixture of extension.fixtures) {
+    if (!fixture || typeof fixture !== "object" || Array.isArray(fixture) || typeof fixture.type !== "string" || !fixture.type || typeof fixture.name !== "string" || !fixture.name) throw new Error(`${source}: mỗi fixture phải là object có type và name.`);
+    const identity = `${fixture.type}\u0000${fixture.name}`;
+    if (identities.has(identity) || sidecarIdentities.has(identity)) throw new Error(`${source}: fixture trùng ${fixture.type}/${fixture.name}.`);
+    sidecarIdentities.add(identity);
+  }
+  return { ...brief, fixtures: [...(brief.fixtures ?? []), ...extension.fixtures] };
 }
 
 export async function readBriefSource(source) {
@@ -225,7 +243,10 @@ export async function readBriefSource(source) {
   const actions = await readOptionalJson(actionsSource);
   if (actions) brief = applyActionSidecar(brief, actions, actionsSource, sourcePath);
 
-  // Integration sidecar is applied last so its version represents the complete source package.
+  const fixturesSource = path.join(parsed.dir, `${parsed.name}.fixtures.json`);
+  const fixtures = await readOptionalJson(fixturesSource);
+  if (fixtures) brief = applyFixtureSidecar(brief, fixtures, fixturesSource, sourcePath);
+
   const integrationsSource = path.join(parsed.dir, `${parsed.name}.integrations.json`);
   const integrations = await readOptionalJson(integrationsSource);
   if (integrations) brief = applyIntegrationSidecar(brief, integrations, integrationsSource, sourcePath);

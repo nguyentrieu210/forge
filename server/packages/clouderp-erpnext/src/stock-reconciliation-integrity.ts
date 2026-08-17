@@ -4,6 +4,7 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { reverseStock } from "../../ledger/src/index.js";
 import { StockReconciliationController } from "./alumdoor-inventory.js";
+import { assertCancellationReason, assertVarianceReason } from "./alumdoor-reason-masters.js";
 
 type ReconciliationContext = Parameters<StockReconciliationController["normalize"]>[0];
 type ReconciliationData = Awaited<ReturnType<StockReconciliationController["normalize"]>>;
@@ -73,6 +74,18 @@ async function assertRowWithinScope(
   }
 }
 
+async function assertReconciliationReasons(context: ReconciliationContext, data: ReconciliationData): Promise<void> {
+  for (const row of data.items) {
+    await assertVarianceReason(
+      context as unknown as ControllerContext<JsonObject>,
+      row.variance_reason,
+      row.variance_qty_micros,
+      row.variance_weight_micros,
+      row.variance_note,
+    );
+  }
+}
+
 function assertReversalApprover(context: ReconciliationContext, countedBy: string): void {
   if (!context.command.actor.roles.includes("Chủ xưởng")
     && !context.command.actor.roles.includes("System Manager")
@@ -128,7 +141,9 @@ export class StockReconciliationIntegrityController extends StockReconciliationC
     const previous = context.existing?.data;
     if (!previous) {
       for (const row of input.items) await assertRowWithinScope(context, input, row);
-      return super.normalize(context);
+      const normalized = await super.normalize(context);
+      await assertReconciliationReasons(context, normalized);
+      return normalized;
     }
 
     assertSnapshotEnvelopeImmutable(input, previous);
@@ -161,7 +176,9 @@ export class StockReconciliationIntegrityController extends StockReconciliationC
         document: { ...input, items: [...matched, ...extras] },
       },
     } as ReconciliationContext;
-    return super.normalize(delegated);
+    const normalized = await super.normalize(delegated);
+    await assertReconciliationReasons(delegated, normalized);
+    return normalized;
   }
 
   override async ledger(context: ReconciliationContext, data: ReconciliationData): Promise<ReconciliationLedgers> {
@@ -170,6 +187,11 @@ export class StockReconciliationIntegrityController extends StockReconciliationC
       throw errors.lifecycle("Chỉ phiếu kiểm kê đã ghi sổ mới được đảo");
     }
     assertReversalApprover(context, text(data.counted_by));
+    await assertCancellationReason(
+      context as unknown as ControllerContext<JsonObject>,
+      data.cancel_reason,
+      "Kiểm kê",
+    );
     await assertReversalPeriodOpen(context, data);
 
     const original: StockLedgerEntry[] = await context.reader.getVoucherStockEntries(

@@ -1,0 +1,70 @@
+{
+  "//purpose": "Canonical initial catalogs for cancellation and stock-reconciliation variance reasons. Historical transactions keep their stored codes; disabling a reason only prevents new use.",
+  "fixtures": [
+    {
+      "type": "Lý do huỷ",
+      "name": "GHI_NHAM_CHUNG_TU",
+      "data": { "reason_code": "GHI_NHAM_CHUNG_TU", "reason_name": "Ghi nhầm chứng từ", "applies_to_doctype": "Tất cả", "sort_order": 10, "disabled": 0 }
+    },
+    {
+      "type": "Lý do huỷ",
+      "name": "LAP_LAI_CHUNG_TU",
+      "data": { "reason_code": "LAP_LAI_CHUNG_TU", "reason_name": "Lỗi nghiệp vụ cần lập lại chứng từ", "applies_to_doctype": "Tất cả", "sort_order": 20, "disabled": 0 }
+    },
+    {
+      "type": "Lý do huỷ",
+      "name": "THAY_DOI_KE_HOACH",
+      "data": { "reason_code": "THAY_DOI_KE_HOACH", "reason_name": "Thay đổi kế hoạch", "applies_to_doctype": "Phiếu kho", "sort_order": 30, "disabled": 0 }
+    },
+    {
+      "type": "Lý do huỷ",
+      "name": "CAT_NHAM",
+      "data": { "reason_code": "CAT_NHAM", "reason_name": "Cắt nhầm", "applies_to_doctype": "Phiếu cắt", "sort_order": 40, "disabled": 0 }
+    },
+    {
+      "type": "Lý do huỷ",
+      "name": "KIEM_KE_SAI",
+      "data": { "reason_code": "KIEM_KE_SAI", "reason_name": "Kiểm kê sai cần lập lại", "applies_to_doctype": "Kiểm kê", "sort_order": 50, "disabled": 0 }
+    },
+    {
+      "type": "Lý do huỷ",
+      "name": "KHAC",
+      "data": { "reason_code": "KHAC", "reason_name": "Khác", "applies_to_doctype": "Tất cả", "sort_order": 999, "disabled": 0 }
+    },
+    {
+      "type": "Nguyên nhân chênh lệch",
+      "name": "SAI_SO_DEM",
+      "data": { "reason_code": "SAI_SO_DEM", "reason_name": "Sai số đếm", "variance_kind": "Cả hai", "sort_order": 10, "disabled": 0 }
+    },
+    {
+      "type": "Nguyên nhân chênh lệch",
+      "name": "THO_CAT_SAI_KHONG_BAO",
+      "data": { "reason_code": "THO_CAT_SAI_KHONG_BAO", "reason_name": "Thợ cắt sai không báo", "variance_kind": "Thiếu", "sort_order": 20, "disabled": 0 }
+    },
+    {
+      "type": "Nguyên nhân chênh lệch",
+      "name": "HAO_HUT",
+      "data": { "reason_code": "HAO_HUT", "reason_name": "Hao hụt", "variance_kind": "Thiếu", "sort_order": 30, "disabled": 0 }
+    },
+    {
+      "type": "Nguyên nhân chênh lệch",
+      "name": "HU_HONG",
+      "data": { "reason_code": "HU_HONG", "reason_name": "Hư hỏng", "variance_kind": "Thiếu", "sort_order": 40, "disabled": 0 }
+    },
+    {
+      "type": "Nguyên nhân chênh lệch",
+      "name": "LECH_CAN",
+      "data": { "reason_code": "LECH_CAN", "reason_name": "Lệch cân thực tế", "variance_kind": "Cả hai", "sort_order": 50, "disabled": 0 }
+    },
+    {
+      "type": "Nguyên nhân chênh lệch",
+      "name": "SAI_NHAP_LIEU",
+      "data": { "reason_code": "SAI_NHAP_LIEU", "reason_name": "Sai nhập liệu", "variance_kind": "Cả hai", "sort_order": 60, "disabled": 0 }
+    },
+    {
+      "type": "Nguyên nhân chênh lệch",
+      "name": "KHAC",
+      "data": { "reason_code": "KHAC", "reason_name": "Khác", "variance_kind": "Cả hai", "sort_order": 999, "disabled": 0 }
+    }
+  ]
+}
