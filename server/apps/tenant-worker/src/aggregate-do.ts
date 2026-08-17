@@ -5,9 +5,9 @@ import { D1RolloutPurchaseAllocationDomainStore, DocumentKernel, MutationSerialE
 import { errors } from "../../../packages/core/src/index.js";
 import type { TenantEnv } from "./env.js";
 import {
-  commitAlumDoorAttendanceScan,
   type AlumDoorAttendanceScanInput,
 } from "./attendance-scan-coordinator.js";
+import { commitAlumDoorLiteAttendanceScan } from "./attendance-scan-lite-coordinator.js";
 import {
   reviewAlumDoorAttendanceCorrection,
   submitAlumDoorAttendanceCorrection,
@@ -107,7 +107,7 @@ export class AggregateCoordinator extends DurableObject<TenantEnv> {
       if (recent.length >= 5) throw errors.rateLimited("Đã thử đăng ký thiết bị quá nhiều lần. Vui lòng chờ 15 phút hoặc liên hệ quản lý.");
       await storage.put(key, [...recent, now]);
     }
-    const result = await commitAlumDoorAttendanceScan(input, { kernel, store });
+    const result = await commitAlumDoorLiteAttendanceScan(input, { kernel, store });
     if (registration && result.device_registered === true) {
       const storage = (this.ctx as unknown as { storage: { delete(key: string): Promise<boolean> } }).storage;
       await storage.delete("attendance-registration-attempts");
