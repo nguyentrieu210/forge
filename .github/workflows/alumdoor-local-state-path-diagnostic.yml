@@ -1,0 +1,59 @@
+name: Alumdoor Local State Path Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/alumdoor-local-state-path-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted]
+    timeout-minutes: 5
+    steps:
+      - name: Inspect canonical local persistence paths without mutation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\alumdoor'
+          Write-Host "STATE_DIAG_HOST=$env:COMPUTERNAME"
+          Write-Host "STATE_DIAG_HEAD=$((git -C $root rev-parse HEAD).Trim())"
+          Write-Host "STATE_DIAG_ORIGIN_MAIN=$((git -C $root rev-parse origin/main).Trim())"
+
+          $candidates = @(
+            'C:\alumdoor\.wrangler\state',
+            'C:\alumdoor\server\.wrangler\state',
+            'C:\alumdoor\server\apps\tenant-worker\.wrangler\state',
+            'C:\alumdoor\server\apps-src\alumdoor-worker\.wrangler\state',
+            'C:\alumdoor\server\apps-src\alumdoor-worker\.wrangler',
+            'C:\alumdoor\server\apps\purchase-qa-callback\.wrangler\state',
+            'C:\alumdoor\server\apps\purchase-qa-callback\.wrangler'
+          )
+          foreach ($candidate in $candidates) {
+            if (-not (Test-Path -LiteralPath $candidate)) {
+              Write-Host "STATE_CANDIDATE exists=0 path=$candidate"
+              continue
+            }
+            $files = @(Get-ChildItem -LiteralPath $candidate -Recurse -File -Force -ErrorAction SilentlyContinue)
+            $bytes = ($files | Measure-Object -Property Length -Sum).Sum
+            if ($null -eq $bytes) { $bytes = 0 }
+            $sqlite = @($files | Where-Object { $_.Extension -in @('.sqlite','.db','.sqlite3') })
+            Write-Host "STATE_CANDIDATE exists=1 files=$($files.Count) bytes=$bytes sqlite=$($sqlite.Count) path=$candidate"
+            foreach ($file in $sqlite | Select-Object -First 20) {
+              Write-Host "STATE_SQLITE bytes=$($file.Length) path=$($file.FullName)"
+            }
+          }
+
+          Write-Host '=== bounded .wrangler discovery under server (excluding node_modules) ==='
+          $wranglerDirs = @(Get-ChildItem 'C:\alumdoor\server' -Directory -Filter '.wrangler' -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '\\node_modules\\' })
+          foreach ($dir in $wranglerDirs) {
+            $files = @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -File -Force -ErrorAction SilentlyContinue)
+            $bytes = ($files | Measure-Object -Property Length -Sum).Sum
+            if ($null -eq $bytes) { $bytes = 0 }
+            Write-Host "WRANGLER_DIR files=$($files.Count) bytes=$bytes path=$($dir.FullName)"
+          }
+          Write-Host 'ALUMDOOR_LOCAL_STATE_PATH_DIAGNOSTIC_PASS'
