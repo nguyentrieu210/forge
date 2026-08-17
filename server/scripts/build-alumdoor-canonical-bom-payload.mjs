@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { classifyAlumdoorItemSourceCode, ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
 import { resolveAlumdoorBomEvidenceAlias, resolveAlumdoorBomItemPromotion } from "./lib/alumdoor-item-evidence-overrides.mjs";
 import { classifyExactSourceBomEvidenceGap } from "./lib/alumdoor-exact-source-bom-evidence-gap.mjs";
-import { resolveExactSourceBomQuantity } from "./lib/alumdoor-exact-source-bom-quantity.mjs";
+import { resolveExactSourceBomQuantity, resolveExactSourceBomUomOverride } from "./lib/alumdoor-exact-source-bom-quantity.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
 import { blockerClass, resolveBomParentOutput, resolveBomQuantity, resolveBomRuntimeUom } from "./lib/alumdoor-real-bom-gate-semantics.mjs";
 
@@ -67,7 +67,9 @@ for(const record of records){
     excluded.push({source_row:record.source_row,source_index:index,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,reason:"canonical_self_reference_non_bom"});
     continue;
   }
-  const uom=resolveBomRuntimeUom(record,item);
+  const uomOverride=resolveExactSourceBomUomOverride(record,ref.item_code);
+  const uomRecord=uomOverride?{...record,source_uom:uomOverride.runtime_uom}:record;
+  const uom=resolveBomRuntimeUom(uomRecord,item);
   if(uom.status!=="accepted"){addBlock(uom.reason,record,{canonical_item_code:ref.item_code,runtime_uom:uom.runtime_uom,stock_uom:uom.stock_uom,conversion_factors:uom.conversion_factors});continue;}
   const standardQuantity=resolveBomQuantity(record,uom,parentItem,ref.item_code);
   const exactQuantity=standardQuantity.status==="blocked" && exactSourceFallbackReasons.has(standardQuantity.reason)
