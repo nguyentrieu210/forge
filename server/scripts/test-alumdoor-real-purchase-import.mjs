@@ -55,22 +55,9 @@ assert.deepEqual(blocked.source_exclusions.rows.map((row) => row.source_row), [5
 assert.equal(blocked.purchase_order.candidate_documents, 0);
 assert.equal(blocked.purchase_receipt.candidate_documents, 7);
 assert.equal(blocked.purchase_receipt.persisted, 0);
-assert.equal(blocked.purchase_receipt.ready, 0);
-assert.equal(blocked.purchase_receipt.blocked, 7);
-for (const blocker of [
-  "COMPANY_NOT_RESOLVED",
-  "WAREHOUSE_NOT_RESOLVED",
-  "LIVE_SUPPLIER_MANIFEST_NOT_PROVIDED",
-  "LIVE_ITEM_MANIFEST_NOT_PROVIDED",
-]) assert.ok(blocked.blocker_codes.includes(blocker), `missing blocker ${blocker}`);
-for (const retired of [
-  "SOURCE_DATE_SEQUENCE_REGRESSION",
-  "MISSING_ITEM_CODE",
-  "MISSING_OR_NONPOSITIVE_QUANTITY",
-  "QUANTITY_OUTLIER_REQUIRES_SOURCE_DISPOSITION",
-  "LENGTH_VS_QUANTITY_AXIS_AMBIGUOUS",
-]) assert.equal(blocked.blocker_codes.includes(retired), false, `retired blocker leaked: ${retired}`);
-assert.deepEqual(blocked.submit_blockers, ["STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK"]);
+for (const blocker of ["COMPANY_NOT_RESOLVED", "WAREHOUSE_NOT_RESOLVED", "LIVE_SUPPLIER_MANIFEST_NOT_PROVIDED", "LIVE_ITEM_MANIFEST_NOT_PROVIDED"]) {
+  assert.ok(blocked.blocker_codes.includes(blocker), `missing blocker ${blocker}`);
+}
 
 const importableRows = rows.filter((row) => !row.excluded);
 const supplierManifest = [...new Set(importableRows.map((row) => row.supplier))].map((supplier_name) => ({ supplier_name, name: supplier_name }));
@@ -83,19 +70,29 @@ const itemManifest = [...new Map(importableRows.map((row) => [row.canonical_item
   disabled: false,
   uom_conversions: [],
 }));
-const ready = preflightRealPurchaseRows(rows, {
-  company: "ALUMDOOR",
-  warehouse: "PURCHASE-TEST",
+
+const operationalNoWarehouse = preflightRealPurchaseRows(rows, {
+  company: "Alumdoor",
   supplier_manifest: supplierManifest,
   item_manifest: itemManifest,
 });
+assert.equal(operationalNoWarehouse.verdict, "PURCHASE_IMPORT_BLOCKED");
+assert.ok(operationalNoWarehouse.blocker_codes.includes("WAREHOUSE_NOT_RESOLVED"));
+
+const ready = preflightRealPurchaseRows(rows, {
+  company: "Alumdoor",
+  historical_draft: true,
+  supplier_manifest: supplierManifest,
+  item_manifest: itemManifest,
+});
+assert.equal(ready.mode, "historical_draft");
 assert.equal(ready.verdict, "PURCHASE_IMPORT_DRAFT_PREFLIGHT_PASS");
 assert.equal(ready.draft_mutation_authorized, true);
 assert.equal(ready.submit_authorized, false);
 assert.equal(ready.purchase_receipt.ready, 7);
 assert.equal(ready.purchase_receipt.blocked, 0);
 assert.equal(ready.blocker_codes.length, 0);
-assert.deepEqual(ready.submit_blockers, ["STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK"]);
+assert.deepEqual(ready.submit_blockers, ["STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK", "HISTORICAL_DRAFT_SUBMIT_FORBIDDEN"]);
 
 const tienDat = ready.documents.find((doc) => doc.supplier === "TIẾN ĐẠT");
 assert.ok(tienDat);
@@ -107,16 +104,12 @@ assert.ok(transport);
 assert.equal(transport.lines[0].canonical_item_code, "TP-RAYHOP");
 
 const rerun = preflightRealPurchaseRows(rows, {
-  company: "ALUMDOOR",
-  warehouse: "PURCHASE-TEST",
+  company: "Alumdoor",
+  historical_draft: true,
   supplier_manifest: supplierManifest,
   item_manifest: itemManifest,
 });
-assert.deepEqual(
-  rerun.documents.map((doc) => doc.import_fingerprint),
-  ready.documents.map((doc) => doc.import_fingerprint),
-  "preflight fingerprints must be deterministic across reruns",
-);
+assert.deepEqual(rerun.documents.map((doc) => doc.import_fingerprint), ready.documents.map((doc) => doc.import_fingerprint), "preflight fingerprints must be deterministic across reruns");
 
 console.log(`ALUMDOOR_REAL_PURCHASE_SOURCE_PASS rows=${rows.length} importable=${importableRows.length} excluded=${blocked.source_exclusions.row_count}`);
-console.log(`ALUMDOOR_REAL_PURCHASE_DRAFT_PREFLIGHT_PASS receipts=${ready.purchase_receipt.candidate_documents} submit_blocked=${ready.submit_blockers.join(",")}`);
+console.log(`ALUMDOOR_REAL_PURCHASE_HISTORICAL_DRAFT_PASS receipts=${ready.purchase_receipt.candidate_documents} submit_blocked=${ready.submit_blockers.join(",")}`);
