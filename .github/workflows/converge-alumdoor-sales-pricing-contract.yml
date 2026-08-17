@@ -20,32 +20,41 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Align source contract with runtime controller
+      - name: Align source contract and create capability guard
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          path = Path("server/briefs/alumdoor.json")
-          source = path.read_text(encoding="utf-8")
-          old = '''      "//do": [
-              "Đơn hàng để TRỐNG `selling_price_list` thì giá gõ tay như cũ — đó là mặc định, và là",
-              "cách xưởng đang làm ('tùy trường hợp'). CHỌN một bảng giá thì giá do SERVER quyết:",
-              "nhân đọc `Item Price` tên `<bảng giá>:<mã hàng>:<ĐVT>`, áp `Pricing Rule` khớp nhất, rồi GHI",
-              "ĐÈ đơn giá trên dòng. Thiếu dòng Item Price cho một mặt hàng thì ĐƠN BỊ TỪ CHỐI, không",
-              "im lặng lấy giá 0 — nhưng cũng có nghĩa là bật bảng giá thì phải nạp đủ giá trước."
-            ],'''
-          new = '''      "//do": [
+          brief = Path("server/briefs/alumdoor.json")
+          source = brief.read_text(encoding="utf-8")
+          legacy = "Đơn hàng để TRỐNG `selling_price_list` thì giá gõ tay như cũ"
+          modern = "Đơn bán hàng phải resolve được `selling_price_list` trước khi lưu"
+          if legacy in source:
+              marker = source.index(legacy)
+              start = source.rfind('"//do": [', 0, marker)
+              end_token = "      ],"
+              end = source.find(end_token, marker)
+              if start < 0 or end < 0:
+                  raise SystemExit("Cannot locate legacy Price List //do block.")
+              replacement = '''"//do": [
               "Đơn bán hàng phải resolve được `selling_price_list` trước khi lưu — controller runtime là authority.",
               "Người lập vẫn được nhập đơn giá/chiết khấu trên dòng; server so với Item Price + Pricing Rule và",
               "đánh dấu cần duyệt khi lệch chính sách. Submit mới là boundary kiểm quyền duyệt thương mại.",
               "Thiếu Item Price phù hợp với bảng giá/mã hàng/ĐVT thì từ chối thay vì im lặng lấy giá 0."
             ],'''
-          if old not in source:
-              if "Đơn bán hàng phải resolve được `selling_price_list`" in source:
-                  print("Pricing contract source is already converged.")
-                  raise SystemExit(0)
-              raise SystemExit("Legacy Price List contract block not found byte-exactly.")
-          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+              source = source[:start] + replacement + source[end + len(end_token):]
+              brief.write_text(source, encoding="utf-8")
+          elif modern not in source:
+              raise SystemExit("Neither legacy nor converged Price List contract is present.")
+
+          workbench = Path("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx")
+          ui = workbench.read_text(encoding="utf-8")
+          old = "const formReadOnly = isExisting && (!caps.write || docstatus !== 0);"
+          new = "const formReadOnly = isExisting ? (!caps.write || docstatus !== 0) : !caps.create;"
+          if old in ui:
+              workbench.write_text(ui.replace(old, new, 1), encoding="utf-8")
+          elif new not in ui:
+              raise SystemExit("Sales create capability guard contract not found.")
           PY
       - name: Regenerate Alumdoor V2 brief
         run: node server/scripts/build-alumdoor-v2-brief.mjs
@@ -56,12 +65,12 @@ jobs:
           git status --short
       - name: Commit generated convergence
         run: |
-          if git diff --quiet -- server/briefs/alumdoor.json server/briefs/alumdoor-v2.json; then
-            echo "No pricing contract drift remained."
+          if git diff --quiet -- server/briefs/alumdoor.json server/briefs/alumdoor-v2.json client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx; then
+            echo "No pricing/capability drift remained."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add server/briefs/alumdoor.json server/briefs/alumdoor-v2.json
-          git commit -m "fix(sales): align price list contract [pricing-contract-converged]"
+          git add server/briefs/alumdoor.json server/briefs/alumdoor-v2.json client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx
+          git commit -m "fix(sales): align pricing contract and capability guard [pricing-contract-converged]"
           git push origin HEAD:agent/alumdoor-sales-order-v2-complete
