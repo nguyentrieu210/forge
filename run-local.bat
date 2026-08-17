@@ -18,11 +18,29 @@ for %%A in (%*) do (
   if /I "%%~A"=="--verify" set "VERIFY=1"
 )
 
+set "REQUIRED_SERVICES=%FORGE_LOCAL_REQUIRED_SERVICES%"
+if not defined REQUIRED_SERVICES set "REQUIRED_SERVICES=backend"
+set "MAINTENANCE_SCOPE="
+set "QUIESCE_PORTS="
+set "REQUIRE_FRONTEND="
+if /I "!REQUIRED_SERVICES!"=="backend" (
+  set "MAINTENANCE_SCOPE=backend"
+  set "QUIESCE_PORTS=8799"
+) else if /I "!REQUIRED_SERVICES!"=="backend,frontend" (
+  set "MAINTENANCE_SCOPE=all"
+  set "QUIESCE_PORTS=8799,5173"
+  set "REQUIRE_FRONTEND=1"
+) else (
+  echo [BLOCKED] FORGE_LOCAL_REQUIRED_SERVICES khong hop le: !REQUIRED_SERVICES!
+  exit /b 2
+)
+
 cd /d C:\alumdoor
 if errorlevel 1 (echo [LOI] Khong vao duoc C:\alumdoor & call :pause_if_interactive & exit /b 1)
 set LOG=C:\alumdoor\run-local.log
 echo Forge canonical bootstrap helper - %DATE% %TIME% > "%LOG%"
 echo   Log: %LOG%
+echo   Required services: !REQUIRED_SERVICES!
 
 call node scripts\local-runner\assert-bootstrap-helper-context.mjs >> "%LOG%" 2>&1
 if errorlevel 1 (
@@ -59,11 +77,11 @@ if defined VERIFY (
 )
 
 echo.
-echo === 1.8. Xac nhan runtime dang maintenance va ports da quiet ===
-call node server\scripts\alumdoor-runtime-maintenance.mjs on >> "%LOG%" 2>&1
+echo === 1.8. Xac nhan required runtime dang maintenance va ports da quiet ===
+call node server\scripts\alumdoor-runtime-maintenance.mjs on !MAINTENANCE_SCOPE! >> "%LOG%" 2>&1
 if errorlevel 1 (echo [LOI] Khong bat duoc runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
-call node scripts\local-runner\assert-ports-quiet.mjs --ports=8799,5173 >> "%LOG%" 2>&1
-if errorlevel 1 (echo [LOI] Runtime van co listener; canonical runner phai quiesce truoc - xem %LOG% & call :pause_if_interactive & exit /b 1)
+call node scripts\local-runner\assert-ports-quiet.mjs --ports=!QUIESCE_PORTS! >> "%LOG%" 2>&1
+if errorlevel 1 (echo [LOI] Required runtime van co listener; canonical runner phai quiesce truoc - xem %LOG% & call :pause_if_interactive & exit /b 1)
 
 echo.
 echo === 2. Build server ===
@@ -194,33 +212,41 @@ if defined MISSING (call :pause_if_interactive & exit /b 1)
 echo   Package client da co dist day du.
 
 echo.
-echo === 9. Chay MetaForge Desk ===
-cd /d C:\alumdoor
-call node server\scripts\alumdoor-runtime-maintenance.mjs off desk >> "%LOG%" 2>&1
-if errorlevel 1 (echo [LOI] Khong tat duoc Desk runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
-cd /d C:\alumdoor\client
-set DESK_SERVICE=
-if exist C:\ForgeServices\Alumdoor\ForgeAlumdoorDesk.exe if exist C:\ForgeServices\Alumdoor\ForgeAlumdoorDesk.xml (
-  sc.exe query ForgeAlumdoorDesk >nul 2>&1
-  if not errorlevel 1 set DESK_SERVICE=1
-)
-if defined DESK_SERVICE (
-  echo   Desk duoc quan ly boi Windows Service ForgeAlumdoorDesk.
+if defined REQUIRE_FRONTEND (
+  echo === 9. Chay MetaForge Desk ^(explicit frontend capability^) ===
+  cd /d C:\alumdoor
+  call node server\scripts\alumdoor-runtime-maintenance.mjs off desk >> "%LOG%" 2>&1
+  if errorlevel 1 (echo [LOI] Khong tat duoc Desk runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
+  cd /d C:\alumdoor\client
+  set DESK_SERVICE=
+  if exist C:\ForgeServices\Alumdoor\ForgeAlumdoorDesk.exe if exist C:\ForgeServices\Alumdoor\ForgeAlumdoorDesk.xml (
+    sc.exe query ForgeAlumdoorDesk >nul 2>&1
+    if not errorlevel 1 set DESK_SERVICE=1
+  )
+  if defined DESK_SERVICE (
+    echo   Desk duoc quan ly boi Windows Service ForgeAlumdoorDesk.
+  ) else (
+    call node C:\alumdoor\scripts\local-runner\assert-ports-quiet.mjs --ports=5173 >> "%LOG%" 2>&1
+    if errorlevel 1 (echo [LOI] Cong 5173 do foreign listener chiem; khong kill blind - xem %LOG% & call :pause_if_interactive & exit /b 1)
+    start "Forge Desk (local 5173)" cmd /k "cd /d C:\alumdoor\client\apps\runtime && set \"VITE_FORGE_BACKEND=http://127.0.0.1:!PORT!\" && pnpm run dev"
+  )
 ) else (
-  start "Forge Desk (local 5173)" cmd /k "cd /d C:\alumdoor\client\apps\runtime && set \"VITE_FORGE_BACKEND=http://127.0.0.1:!PORT!\" && pnpm run dev"
+  echo === 9. Bo qua Desk runtime: frontend khong thuoc required-services contract ===
+  echo   Khong start/stop/kill/process-mutate port 5173.
 )
 
 echo.
 echo ==========================================================
 echo   XONG.
 echo.
-echo   Desk    : http://localhost:5173
-echo   Backend : http://localhost:!PORT!   (Desk proxy /api sang day)
+echo   Backend : http://localhost:!PORT!
+if defined REQUIRE_FRONTEND echo   Desk    : http://localhost:5173
+echo   Required: !REQUIRED_SERVICES!
 echo.
 echo   Dang nhap: dev@example.com / local-dev-password-1
 echo.
-if defined BACKEND_SERVICE echo   Runtime : Windows Services, khong can mo CMD worker/Desk.
-if not defined BACKEND_SERVICE echo   Dung lai : dong hai cua so "Forge worker" va "Forge Desk".
+if defined BACKEND_SERVICE echo   Runtime : Windows Services, khong can mo CMD worker.
+if not defined BACKEND_SERVICE echo   Dung lai : dong cua so "Forge worker".
 echo ==========================================================
 echo.
 call :pause_if_interactive
