@@ -27,18 +27,18 @@ const fold = (value) => clean(value).normalize("NFD").replace(/\p{M}/gu, "").toL
 
 function isDmHeader(row) {
   return fold(readAlumdoorCell(row, 1)) === "STT"
-    || fold(readAlumdoorCell(row, 3)).includes("MA SAN PHAM");
+    || fold(readAlumdoorCell(row, 3)).includes("MA VAT TU");
 }
 
 function isStockHeader(row) {
-  return fold(readAlumdoorCell(row, 2)).includes("MA NVL");
+  return fold(readAlumdoorCell(row, 1)).includes("MA NVL");
 }
 
 function makeSellableRecord(row, sourceIndex) {
   const category = readAlumdoorCell(row, 0);
   const itemCode = readAlumdoorCell(row, 3);
   const itemName = readAlumdoorCell(row, 4) || readAlumdoorCell(row, 2) || itemCode;
-  const sourceUom = readAlumdoorCell(row, 6);
+  const sourceUom = readAlumdoorCell(row, 5);
   return {
     source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
     source_sheet: "ĐM",
@@ -54,13 +54,14 @@ function makeSellableRecord(row, sourceIndex) {
       source_uom: sourceUom,
     }),
     source_category: category,
+    source_rate_or_quantity: readAlumdoorCell(row, 6),
   };
 }
 
 function makeBomReferenceRecord(row, parentIndex, parentCode) {
   const itemCode = readAlumdoorCell(row, 3);
-  const itemName = readAlumdoorCell(row, 4) || readAlumdoorCell(row, 2) || itemCode;
-  const sourceUom = readAlumdoorCell(row, 6);
+  const itemName = readAlumdoorCell(row, 2) || itemCode;
+  const sourceUom = readAlumdoorCell(row, 5);
   return {
     source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
     source_sheet: "ĐM",
@@ -72,14 +73,16 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
     source_group: "",
     source_category: readAlumdoorCell(row, 0),
     parent_item_code: parentCode,
-    source_qty_or_formula: readAlumdoorCell(row, 7),
+    source_parent_name: readAlumdoorCell(row, 4),
+    source_qty_or_formula: readAlumdoorCell(row, 6),
+    source_formula: readAlumdoorCell(row, 22),
   };
 }
 
 function makeStockRecord(row) {
-  const category = readAlumdoorCell(row, 1);
-  const itemCode = readAlumdoorCell(row, 2);
-  const itemName = readAlumdoorCell(row, 3) || itemCode;
+  const category = readAlumdoorCell(row, 0);
+  const itemCode = readAlumdoorCell(row, 1);
+  const itemName = readAlumdoorCell(row, 2) || itemCode;
   return {
     source_role: ITEM_SOURCE_ROLES.STOCK_ITEM,
     source_sheet: "Trang tính29",
@@ -87,16 +90,16 @@ function makeStockRecord(row) {
     source_index: null,
     item_code: itemCode,
     item_name: itemName,
-    source_uom: readAlumdoorCell(row, 6),
+    source_uom: readAlumdoorCell(row, 5),
     source_group: resolveAlumdoorRealStockGroup({
       category,
       item_code: itemCode,
       item_name: itemName,
     }),
-    source_color: readAlumdoorCell(row, 4),
+    source_color: readAlumdoorCell(row, 3),
     source_category: category,
-    source_quantity: readAlumdoorCell(row, 5),
-    source_date: readAlumdoorCell(row, 7),
+    source_quantity: readAlumdoorCell(row, 4),
+    source_date: readAlumdoorCell(row, 6),
   };
 }
 
@@ -117,7 +120,7 @@ for (const row of dmRows) {
   const stt = parseAlumdoorSourceIndex(readAlumdoorCell(row, 1));
   const code = readAlumdoorCell(row, 3);
   const name = readAlumdoorCell(row, 4) || readAlumdoorCell(row, 2);
-  const uom = readAlumdoorCell(row, 6);
+  const uom = readAlumdoorCell(row, 5);
 
   if (stt !== null) {
     currentParentIndex = stt;
@@ -129,8 +132,6 @@ for (const row of dmRows) {
     continue;
   }
 
-  // Only code-bearing component rows are BOM references. Text-only notes,
-  // separators and pricing descriptions must not become Item evidence.
   if (code && currentParentIndex !== null && (name || uom)) {
     records.push(makeBomReferenceRecord(row, currentParentIndex, currentParentCode));
     bomReferenceCount += 1;
@@ -140,11 +141,9 @@ for (const row of dmRows) {
 let stockCount = 0;
 for (const row of stockRows) {
   if (isStockHeader(row)) continue;
-  const code = readAlumdoorCell(row, 2);
-  const name = readAlumdoorCell(row, 3);
-  const uom = readAlumdoorCell(row, 6);
-  // Keep named stock rows even when code/UOM is blank so explicit evidence
-  // overrides can resolve known source defects fail-closed.
+  const code = readAlumdoorCell(row, 1);
+  const name = readAlumdoorCell(row, 2);
+  const uom = readAlumdoorCell(row, 5);
   if (!code && !name && !uom) continue;
   records.push(makeStockRecord(row));
   stockCount += 1;
@@ -197,4 +196,10 @@ console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_REPORT ${reportPath}`);
 if (unresolvedGroups.length > 0) {
   console.log("ALUMDOOR_REAL_SOURCE_GROUPS_PENDING");
   for (const row of unresolvedSamples.slice(0, 25)) console.log(JSON.stringify(row));
+}
+
+if (sellableCount === 0 || stockCount === 0 || bomReferenceCount === 0) {
+  throw new Error(
+    `ALUMDOOR_REAL_SOURCE_EMPTY sellable=${sellableCount} stock=${stockCount} bom_reference=${bomReferenceCount}`,
+  );
 }
