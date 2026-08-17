@@ -5,7 +5,7 @@ description: Canonical execution contract for Forge/Alumdoor local data mutation
 
 # Forge Local Runner Import
 
-Use this skill for every task that mutates the local Alumdoor/Forge D1 state, including bootstrap, Item, UOM, Reason Master, Layer 0, Pricing, BOM, and future real-data convergence imports.
+Use this skill for every task that mutates the local Alumdoor/Forge D1 state, including bootstrap, Item, UOM, Reason Master, Layer 0, Real Purchase History, Pricing, BOM, and future real-data convergence imports.
 
 ## Runtime authority
 
@@ -35,6 +35,9 @@ Current adapters:
 - `uom`
 - `item-master --source=C:\alumdoor\local-imports\...json`
 - `reason-master`
+- `real-purchase`
+
+`real-purchase` owns the complete historical purchase convergence lifecycle: canonical Item Gate A reconciliation, exact Supplier reconciliation, historical Draft Purchase Receipt plan, guarded local D1 execution, persisted-D1 verification evidence, and second-pass idempotency. Purchase child scripts may build plans, use the authenticated loopback API, and verify supplied evidence, but they must never spawn Wrangler themselves.
 
 Future Pricing/BOM adapters must be added to this execution layer instead of placing backup, lock, Wrangler, source-sync, process-control, or mutation orchestration directly in workflow YAML.
 
@@ -71,19 +74,19 @@ Lock evidence includes PID, hostname, timestamp, workflow/run identity, command 
 
 ## Backup rule
 
-`server/scripts/backup-local-state.mjs` must succeed after lock acquisition and, for direct D1 mutation, after the runtime is proven quiesced. The wrapper validates `LOCAL_STATE_BACKUP_OK`, the manifest, and non-zero copied state before mutation starts.
+`server/scripts/backup-local-state.mjs` must succeed after lock acquisition and, for direct D1 mutation, after the runtime is proven quiesced when quiescence is applicable. The wrapper validates `LOCAL_STATE_BACKUP_OK`, the manifest, and non-zero copied state before mutation starts.
 
-Import-specific authenticated pre-images remain additive evidence; they do not replace the Wrangler-state backup.
+Import-specific authenticated pre-images remain additive evidence; they do not replace the Wrangler-state backup. Multi-pass adapters may take an additional backup before replay, but no first mutation may occur without the canonical pre-image.
 
 ## Runtime/service rule
 
-Direct D1 mutation must use `server/scripts/alumdoor-runtime-maintenance.mjs` when managed services exist and prove ports 8799/5173 remain quiet before backup/mutation.
+Direct D1 mutation that requires the worker/Desk to be stopped must use `server/scripts/alumdoor-runtime-maintenance.mjs` when managed services exist and prove ports 8799/5173 remain quiet before backup/mutation.
 
-Do not use blind `taskkill`, `stop-local-dev.mjs`, generic Node kills, blind sleeps, or retries inside canonical mutation workflows. If unmanaged/unknown listeners remain, print process ownership evidence and fail closed so the operator can stop the exact process explicitly.
+Do not use blind `taskkill`, `stop-local-dev.mjs`, generic Node kills, blind sleeps, or retries inside canonical mutation workflows. If unmanaged/unknown listeners remain where quiescence is required, print process ownership evidence and fail closed so the operator can stop the exact process explicitly.
 
 Runtime maintenance must be removed in cleanup/finally even when import or verification fails.
 
-API-based importers may keep the local API running but still require exact-SHA preflight, global mutation lock, validated local-state backup, post-verification and idempotency evidence.
+API-based importers may keep the local API running but still require exact-SHA preflight, global mutation lock, validated local-state backup, post-verification and idempotency evidence. If an API runtime view can be stale after guarded direct-D1 work, the runner itself must capture persisted D1 evidence through the pinned local Wrangler invocation and pass that evidence to a pure verifier; the verifier must not invoke Wrangler independently.
 
 ## Failure classification
 
@@ -110,7 +113,12 @@ A local convergence task must not:
 - mutate Cloudflare production as a fallback;
 - delete/reset local state to recover from a failed preflight;
 - bypass a failed gate with `continue-on-error`;
-- mutate through raw Wrangler or `sync-local.bat --bootstrap` directly in a workflow.
+- mutate through raw Wrangler or `sync-local.bat --bootstrap` directly in a workflow;
+- hide a raw Wrangler call inside a child importer or verifier.
+
+## Workflow inventory rule
+
+The contract workflow must enumerate every self-hosted workflow that can mutate the canonical local D1 and assert the shared concurrency group plus the canonical runner call. At the current convergence point the managed mutation inventory is six workflows: bootstrap, Layer 0, Reason Master, Item Master, UOM reconciliation, and Real Purchase History. Adding a seventh mutating workflow requires updating the inventory and routing it through an adapter in the same change.
 
 ## Completion evidence
 
