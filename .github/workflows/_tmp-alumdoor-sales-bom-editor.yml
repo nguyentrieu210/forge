@@ -25,25 +25,29 @@ jobs:
           path = Path('client/packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx')
           text = path.read_text()
 
+          def fail(message):
+              print(f'::error title=Sales BOM patch::{message}')
+              raise SystemExit(message)
+
           def insert_before(anchor, addition):
               global text
               count = text.count(anchor)
               if count != 1:
-                  raise SystemExit(f'before anchor count {count}: {anchor!r}')
+                  fail(f'before anchor count {count}: {anchor!r}')
               text = text.replace(anchor, dedent(addition).lstrip('\n') + anchor, 1)
 
           def insert_after(anchor, addition):
               global text
               count = text.count(anchor)
               if count != 1:
-                  raise SystemExit(f'after anchor count {count}: {anchor!r}')
+                  fail(f'after anchor count {count}: {anchor!r}')
               text = text.replace(anchor, anchor + dedent(addition).lstrip('\n'), 1)
 
           def replace_once(old, new):
               global text
               count = text.count(old)
               if count != 1:
-                  raise SystemExit(f'replace anchor count {count}: {old!r}')
+                  fail(f'replace anchor count {count}: {old!r}')
               text = text.replace(old, new, 1)
 
           insert_after('import { salesItemSearchTerms } from "./sales-item-search.js";\n', '''
@@ -96,13 +100,22 @@ jobs:
 
           ''')
 
-          insert_after('        _splitPackageChecksum: undefined,\n', '''
+          item_reset_start = text.find('    if (field === "item_code") {')
+          if item_reset_start < 0:
+              fail('item_code reset block missing')
+          reset_anchor = '        _splitPackageChecksum: undefined,\n'
+          reset_pos = text.find(reset_anchor, item_reset_start)
+          if reset_pos < 0:
+              fail('item_code reset split checksum anchor missing')
+          reset_end = reset_pos + len(reset_anchor)
+          reset_addition = dedent('''
             bom_actual_components: [],
             _bomActualRequirements: [],
             _bomActualComplete: undefined,
             _bomTemplateCode: undefined,
             _bomActualError: "",
-          ''')
+          ''').lstrip('\n')
+          text = text[:reset_end] + reset_addition + text[reset_end:]
 
           insert_before('  const toggleSplitComponent = useCallback((parentKey: string, component: Json, checked: boolean) => {\n', '''
           const commitBomActualComponents = useCallback((key: string, rows: BomActualComponentRow[]) => {
