@@ -4,6 +4,9 @@ import process from "node:process";
 import { extractRealPurchaseRows, PURCHASE_SOURCE } from "./lib/alumdoor-real-purchase-source.mjs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertLocalMutationChildContext } from "../../scripts/local-runner/assert-local-mutation-child-context.mjs";
+
+assertLocalMutationChildContext(["real-purchase"]);
 
 const clean = (v) => String(v ?? "").normalize("NFC").trim();
 const origin = (process.env.FORGE_ORIGIN ?? "http://127.0.0.1:8799").replace(/\/$/, "");
@@ -31,7 +34,7 @@ function remember(response) {
     if (i > 0) cookies.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
   }
 }
-function cookieHeader() { return [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join("; "); }
+function cookieHeader() { return [...cookies.entries()].map(([k, v])=>`${k}=${v}`).join("; "); }
 async function request(path, options = {}) {
   const headers = new Headers(options.headers ?? {});
   if (cookieHeader()) headers.set("cookie", cookieHeader());
