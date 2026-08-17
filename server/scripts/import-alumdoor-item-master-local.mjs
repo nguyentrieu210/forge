@@ -15,6 +15,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { assertCanonicalItemPayload } from "./lib/alumdoor-item-import-policy.mjs";
+import { assertLocalMutationChildContext } from "../../scripts/local-runner/assert-local-mutation-child-context.mjs";
 
 const args = process.argv.slice(2);
 const validateOnly = args.includes("--validate-only");
@@ -117,6 +118,8 @@ if (validateOnly) {
   console.log("ALUMDOOR_ITEM_LOCAL_IMPORT_VALIDATE_ONLY_PASS");
   process.exit(0);
 }
+
+assertLocalMutationChildContext(["item-master", "real-purchase"]);
 
 const origin = (process.env.FORGE_ORIGIN ?? "http://127.0.0.1:8799").replace(/\/$/, "");
 const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ?? "";

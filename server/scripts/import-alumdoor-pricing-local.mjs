@@ -3,6 +3,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { assertLocalMutationChildContext } from "../../scripts/local-runner/assert-local-mutation-child-context.mjs";
 
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
@@ -251,6 +252,8 @@ if (!apply) {
   console.log("ALUMDOOR_PRICING_DRY_RUN_PASS writes=0");
   process.exit(0);
 }
+
+assertLocalMutationChildContext(["pricing"]);
 
 const result = { created: 0, updated: 0, exact: 0 };
 async function applyOne(doctype, expected) {

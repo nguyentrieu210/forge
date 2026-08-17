@@ -2,6 +2,9 @@
 /** Seed the canonical Alumdoor UOM catalog on a local Forge tenant. */
 import process from "node:process";
 import { ALUMDOOR_UOM_CATALOG } from "./lib/alumdoor-uom-catalog.mjs";
+import { assertLocalMutationChildContext } from "../../scripts/local-runner/assert-local-mutation-child-context.mjs";
+
+assertLocalMutationChildContext(["uom", "layer0"]);
 
 const origin = (process.env.FORGE_ORIGIN ?? "http://127.0.0.1:8799").replace(/\/$/, "");
 const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ?? "";
