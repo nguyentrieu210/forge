@@ -18,7 +18,14 @@ jobs:
     timeout-minutes: 45
     env:
       FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
+      FORGE_LOCAL_REPO_ROOT: C:\alumdoor
     steps:
+      - name: Checkout exact bootstrap source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
       - name: Ensure C:\alumdoor source workspace
         shell: powershell
         run: |
@@ -125,12 +132,20 @@ jobs:
           Write-Host 'Canonical workspace ready for guarded bootstrap:'
           git -C $target log -1 --oneline
 
-      - name: Run canonical bootstrap mutation contract
+      - name: Run exact-SHA bootstrap mutation contract
         shell: powershell
         working-directory: C:\alumdoor
         run: |
           $ErrorActionPreference = 'Stop'
-          & node scripts\local-runner\run-local-import.mjs bootstrap
+          $runner = Join-Path $env:GITHUB_WORKSPACE 'scripts\local-runner\run-local-import.mjs'
+          if (-not (Test-Path -LiteralPath $runner)) {
+            throw "Exact-SHA bootstrap runner is missing: $runner"
+          }
+          $workspaceSha = (git -C $env:GITHUB_WORKSPACE rev-parse HEAD).Trim()
+          if ($workspaceSha -ne $env:FORGE_LOCAL_EXPECTED_SHA) {
+            throw "Bootstrap workspace SHA mismatch expected=$env:FORGE_LOCAL_EXPECTED_SHA actual=$workspaceSha"
+          }
+          & node $runner bootstrap
           if ($LASTEXITCODE -ne 0) {
             throw "Bootstrap execution contract failed with exit code $LASTEXITCODE"
           }
