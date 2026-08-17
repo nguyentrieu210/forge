@@ -42,6 +42,15 @@ addRows([1171], {
   quantity_formula_json: field("PB_RAY_RONG", 1, -0.03),
 });
 
+addRows([1112], {
+  item: "NVL-BAT-MV",
+  uom: "Cái",
+  formula: "BATMACVONG1MNGANGX7CAI",
+  source_qty: 7,
+  qty_basis: "7 cái / m ngang",
+  formula_kind: "source_row_exact_mv_bracket_per_width",
+  quantity_formula_json: field("PB_RAY_RONG", 7),
+});
 addRows([1152], {
   item: "NVL-BAT-MV",
   uom: "Cái",
@@ -59,6 +68,24 @@ addRows([1161, 1172], {
   quantity_formula_json: field("PB_RAY_RONG", 7),
 });
 
+addRows([1113, 1153], {
+  item: "NVL-DINHTAN-MV",
+  uom: "Kg",
+  formula: "0,0015KG/CON(1MNGANGX7CON)",
+  source_qty: 0.0015,
+  qty_basis: "7 con/m ngang × 0,0015 kg/con",
+  formula_kind: "source_row_exact_mv_rivet_weight_per_width",
+  quantity_formula_json: field("PB_RAY_RONG", 0.0105),
+});
+addRows([1114, 1154], {
+  item: "NVL-CONTAN-MV",
+  uom: "Kg",
+  formula: "0,0008KG/CON(1MNGANGX7CON)",
+  source_qty: 0.0008,
+  qty_basis: "7 con/m ngang × 0,0008 kg/con",
+  formula_kind: "source_row_exact_mv_rivet_nut_weight_per_width",
+  quantity_formula_json: field("PB_RAY_RONG", 0.0056),
+});
 addRows([1162, 1173], {
   item: "NVL-DINHTAN-MV",
   uom: "Kg",
@@ -91,6 +118,15 @@ addRows([1165, 1176], {
   qty_basis: "20 cái/m²",
   formula_kind: "source_row_exact_sn_ring_per_area",
   quantity_formula_json: field("billable_area_sqm", 20),
+});
+
+addRows([1208, 1217], {
+  item: "TP-V4_INOX",
+  uom: "Mét",
+  formula: "(RPBRAY-30)*2",
+  qty_basis: "2 × (rộng phủ bì ray - 0,03 m)",
+  formula_kind: "source_row_exact_mesh_v4_two_lengths",
+  quantity_formula_json: field("PB_RAY_RONG", 2, -0.03),
 });
 
 addRows([1256], {
@@ -138,11 +174,39 @@ addRows([1820], {
   quantity_formula_json: field("PB_RAY_RONG", 2, -0.03),
 });
 
+const UOM_OVERRIDES = new Map([
+  [1112, { item: "NVL-BAT-MV", source_uom: "m", runtime_uom: "Cái", formula: "BATMACVONG1MNGANGX7CAI", source_qty: 7 }],
+  [1113, { item: "NVL-DINHTAN-MV", source_uom: "M NGANG", runtime_uom: "Kg", formula: "0,0015KG/CON(1MNGANGX7CON)", source_qty: 0.0015 }],
+  [1153, { item: "NVL-DINHTAN-MV", source_uom: "M NGANG", runtime_uom: "Kg", formula: "0,0015KG/CON(1MNGANGX7CON)", source_qty: 0.0015 }],
+  [1114, { item: "NVL-CONTAN-MV", source_uom: "M NGANG", runtime_uom: "Kg", formula: "0,0008KG/CON(1MNGANGX7CON)", source_qty: 0.0008 }],
+  [1154, { item: "NVL-CONTAN-MV", source_uom: "M NGANG", runtime_uom: "Kg", formula: "0,0008KG/CON(1MNGANGX7CON)", source_qty: 0.0008 }],
+  [1208, { item: "TP-V4_INOX", source_uom: "M2", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
+  [1217, { item: "TP-V4_INOX", source_uom: "", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
+]);
+
 function sourceNumber(value) {
   const normalized = clean(value).replace(",", ".");
   if (!/^[+-]?\d+(?:\.\d+)?$/.test(normalized)) return null;
   const number = Number(normalized);
   return Number.isFinite(number) ? number : null;
+}
+
+function matchesSourceQty(record, expected) {
+  if (expected === undefined) return true;
+  const actual = sourceNumber(record?.source_qty_or_formula);
+  return actual !== null && Math.abs(actual - expected) <= 1e-9;
+}
+
+export function resolveExactSourceBomUomOverride(record, canonicalItemCode) {
+  const row = Number(record?.source_row);
+  const rule = UOM_OVERRIDES.get(row);
+  if (!rule) return null;
+  if (clean(record?.source_sheet || "ĐM") !== "ĐM") return null;
+  if (clean(canonicalItemCode) !== rule.item) return null;
+  if (clean(record?.source_uom) !== rule.source_uom) return null;
+  if (fold(record?.source_formula_text) !== rule.formula) return null;
+  if (!matchesSourceQty(record, rule.source_qty)) return null;
+  return { runtime_uom: rule.runtime_uom, reason: `exact_source_row_${row}_uom_anomaly` };
 }
 
 export function resolveExactSourceBomQuantity(record, uomResolution, canonicalItemCode) {
@@ -153,10 +217,7 @@ export function resolveExactSourceBomQuantity(record, uomResolution, canonicalIt
   if (clean(canonicalItemCode) !== rule.item) return null;
   if (clean(uomResolution?.runtime_uom) !== rule.uom) return null;
   if (fold(record?.source_formula_text) !== rule.formula) return null;
-  if (rule.source_qty !== undefined) {
-    const actual = sourceNumber(record?.source_qty_or_formula);
-    if (actual === null || Math.abs(actual - rule.source_qty) > 1e-9) return null;
-  }
+  if (!matchesSourceQty(record, rule.source_qty)) return null;
   return {
     status: "runtime_formula",
     qty_basis: rule.qty_basis,
