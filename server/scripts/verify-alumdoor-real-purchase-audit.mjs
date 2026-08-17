@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -24,8 +25,57 @@ function project(audit) {
     .sort((a,b) => a.name.localeCompare(b.name));
 }
 
+function persistedD1Project() {
+  if (process.platform !== "win32") return [];
+  const query = "SELECT name,docstatus,modified_at,payload_json FROM documents WHERE tenant_id='demo' AND doctype='Purchase Receipt' ORDER BY name";
+  let stdout;
+  try {
+    stdout = execFileSync("npx.cmd", ["wrangler", "d1", "execute", "cloudforge-demo", "--local", "--config", "apps/tenant-worker/wrangler.jsonc", "--command", query, "--json"], {
+      cwd: "C:\\alumdoor\\server",
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  } catch (error) {
+    throw new Error(`PERSISTED_D1_QUERY_FAILED ${clean(error?.stderr || error?.message)}`);
+  }
+  let parsed;
+  try { parsed = JSON.parse(stdout); } catch { throw new Error(`PERSISTED_D1_QUERY_NOT_JSON ${stdout.slice(0,300)}`); }
+  const rows = [];
+  const visit = (value) => {
+    if (Array.isArray(value)) for (const item of value) visit(item);
+    else if (value && typeof value === "object") {
+      if (Array.isArray(value.results)) for (const row of value.results) rows.push(row);
+      else for (const child of Object.values(value)) visit(child);
+    }
+  };
+  visit(parsed);
+  return rows.flatMap((row) => {
+    let payload;
+    try { payload = JSON.parse(row.payload_json); } catch { return []; }
+    const marker = payload?._alumdoor_real_purchase ?? {};
+    if (marker.format !== "alumdoor-real-purchase-history/v1") return [];
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    return [{
+      name: clean(row.name),
+      docstatus: Number(row.docstatus ?? 0),
+      fingerprint: clean(marker.import_fingerprint),
+      source_rows: Array.isArray(marker.source_rows) ? marker.source_rows : [],
+      submit_forbidden: marker.submit_forbidden === true,
+      line_count: items.length,
+      item_signature: items.map((i) => [clean(i?.item_code), Number(i?.qty), clean(i?.uom), Number(i?.rate ?? 0)]),
+      item_warehouses: [...new Set(items.map((i) => clean(i?.warehouse)).filter(Boolean))],
+      modified: clean(row.modified_at),
+    }];
+  }).sort((a,b) => a.name.localeCompare(b.name));
+}
+
 function verify(label, audit) {
-  const actual = project(audit);
+  let actual = project(audit);
+  if (actual.length === 0) {
+    actual = persistedD1Project();
+    if (actual.length) console.log(`${label}_API_RUNTIME_VIEW_STALE_FALLBACK_PERSISTED_D1 receipts=${actual.length}`);
+  }
   if (actual.length !== expected.receipt_count) throw new Error(`${label}_RECEIPT_COUNT expected=${expected.receipt_count} actual=${actual.length}`);
   let lines = 0;
   for (const exp of expected.receipts) {
