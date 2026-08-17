@@ -32,6 +32,12 @@ function numeric(value) {
 function classify({ stt, itemCode, itemName, price }) {
   const code = fold(itemCode);
   const name = fold(itemName);
+  if (clean(itemCode) === "NVL-INOX, NVL-NHUA, NVL-MOC" && stt === 175) {
+    return {
+      classification: "NON_PRICING",
+      reason: "composite_source_identity_not_canonical_item",
+    };
+  }
   if (code.startsWith("TRU-")) {
     return price < 0
       ? { classification: "DEDUCTION", reason: "explicit_tru_code_negative_price" }
