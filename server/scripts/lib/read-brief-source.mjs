@@ -204,6 +204,31 @@ function applyActionSidecar(brief, extension, source, briefSource) {
   return { ...brief, ...(extension.version ? { version: extension.version } : {}), actions: [...(brief.actions ?? []), ...extension.actions] };
 }
 
+/**
+ * Initial master data can live beside a large business brief without rewriting the brief.
+ * This is only a transport seam: the canonical brief compiler still validates every merged
+ * fixture and the App Installer remains the only persistence authority.
+ */
+function applyFixtureSidecar(brief, extension, source, briefSource) {
+  assertSidecarObject(extension, source);
+  const unsupported = Object.keys(extension).filter((key) => key !== "fixtures" && !key.startsWith("//"));
+  if (unsupported.length) throw new Error(`${source}: chỉ nhận fixtures và khóa ghi chú //; không nhận ${unsupported.join(", ")}.`);
+  if (!Array.isArray(extension.fixtures) || extension.fixtures.length === 0) throw new Error(`${source}: fixtures phải là mảng không rỗng.`);
+  if (brief.fixtures !== undefined && !Array.isArray(brief.fixtures)) throw new Error(`${briefSource}: fixtures hiện có phải là mảng trước khi ghép sidecar.`);
+
+  const identities = new Set((brief.fixtures ?? []).map((fixture) => `${fixture?.type ?? ""}\u0000${fixture?.name ?? ""}`));
+  const sidecarIdentities = new Set();
+  for (const fixture of extension.fixtures) {
+    if (!fixture || typeof fixture !== "object" || Array.isArray(fixture) || typeof fixture.type !== "string" || !fixture.type || typeof fixture.name !== "string" || !fixture.name) {
+      throw new Error(`${source}: mỗi fixture phải là object có type và name.`);
+    }
+    const identity = `${fixture.type}\u0000${fixture.name}`;
+    if (identities.has(identity) || sidecarIdentities.has(identity)) throw new Error(`${source}: fixture trùng ${fixture.type}/${fixture.name}.`);
+    sidecarIdentities.add(identity);
+  }
+  return { ...brief, fixtures: [...(brief.fixtures ?? []), ...extension.fixtures] };
+}
+
 export async function readBriefSource(source) {
   const sourcePath = sourcePathOf(source);
   let brief = parseJson(await readFile(sourcePath, "utf8"), sourcePath);
@@ -224,6 +249,10 @@ export async function readBriefSource(source) {
   const actionsSource = path.join(parsed.dir, `${parsed.name}.actions.json`);
   const actions = await readOptionalJson(actionsSource);
   if (actions) brief = applyActionSidecar(brief, actions, actionsSource, sourcePath);
+
+  const fixturesSource = path.join(parsed.dir, `${parsed.name}.fixtures.json`);
+  const fixtures = await readOptionalJson(fixturesSource);
+  if (fixtures) brief = applyFixtureSidecar(brief, fixtures, fixturesSource, sourcePath);
 
   // Integration sidecar is applied last so its version represents the complete source package.
   const integrationsSource = path.join(parsed.dir, `${parsed.name}.integrations.json`);
