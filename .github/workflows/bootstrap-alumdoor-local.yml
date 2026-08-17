@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 45
     env:
       FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
+      FORGE_LOCAL_REQUIRED_SERVICES: backend
     steps:
       - name: Validate canonical workspace
         shell: powershell
@@ -133,11 +134,12 @@ jobs:
             $legacy = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorWorker'" -ErrorAction SilentlyContinue
             if ($legacy -and $legacy.State -ne 'Stopped') { return $true }
 
+            # Bootstrap/data only owns the backend capability. A Desk/5173 listener
+            # is not evidence of a legacy data runtime and must not be mutated here.
             $managedBackend = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorBackend'" -ErrorAction SilentlyContinue
-            $managedDesk = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorDesk'" -ErrorAction SilentlyContinue
-            foreach ($listener in @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799,5173) })) {
+            foreach ($listener in @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -eq 8799 })) {
               $chain = @(Process-Ancestry -StartPid ([int]$listener.OwningProcess))
-              $managedPid = if ($listener.LocalPort -eq 8799) { [int]$managedBackend.ProcessId } else { [int]$managedDesk.ProcessId }
+              $managedPid = [int]$managedBackend.ProcessId
               if ($managedPid -le 0 -or -not ($chain | Where-Object { [int]$_.ProcessId -eq $managedPid })) { return $true }
             }
             return $false
@@ -200,15 +202,15 @@ jobs:
               [System.IO.File]::WriteAllText($requestPath,$request+"`n",(New-Object System.Text.UTF8Encoding($false)))
               Write-Host "LEGACY_RUNTIME_MIGRATION_REQUEST=CREATED run_id=$transitionRun"
 
-              # The already-running Forge service hosts are LocalSystem. Toggling
-              # their existing maintenance protocol restarts only their own child.
-              # The refreshed child executes the fixed migration helper, which has
-              # a separate authority/ownership allowlist before touching legacy runtime.
-              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') on
-              if ($LASTEXITCODE -ne 0) { throw 'Failed to enable migration handoff maintenance' }
+              # The already-running backend service host is LocalSystem. Toggling
+              # backend maintenance restarts only its owned child. The refreshed
+              # child executes the fixed migration helper, which independently
+              # proves authority before retiring an actual legacy runtime.
+              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') on backend
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to enable backend migration handoff maintenance' }
               Start-Sleep -Seconds 2
-              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') off
-              if ($LASTEXITCODE -ne 0) { throw 'Failed to release migration handoff maintenance' }
+              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') off backend
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to release backend migration handoff maintenance' }
 
               $deadline = (Get-Date).AddSeconds(90)
               $accepted = $false
@@ -256,16 +258,16 @@ jobs:
           & node scripts\local-runner\run-local-import.mjs bootstrap
           if ($LASTEXITCODE -ne 0) { throw "Bootstrap execution contract failed with exit code $LASTEXITCODE" }
 
-      - name: Verify canonical source and local services
+      - name: Verify canonical source and declared local services
         shell: powershell
         working-directory: C:\alumdoor
         run: |
           $ErrorActionPreference = 'Stop'
           $actual = (git rev-parse HEAD).Trim()
           if ($actual -ne $env:FORGE_LOCAL_EXPECTED_SHA) { throw "Post-bootstrap SHA mismatch expected=$env:FORGE_LOCAL_EXPECTED_SHA actual=$actual" }
-          & node -e "Promise.all([fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{if(![200,401,403].includes(r.status))throw new Error('backend '+r.status)}),fetch('http://127.0.0.1:5173',{signal:AbortSignal.timeout(5000)}).then(r=>{if(!r.ok)throw new Error('ui '+r.status)})]).catch(e=>{console.error(e);process.exit(1)})"
-          if ($LASTEXITCODE -ne 0) { throw 'Post-bootstrap local service verification failed' }
-          Write-Host "LOCAL_BOOTSTRAP_ACCEPTED sha=$actual"
+          & node scripts\local-runner\service-verification.mjs --services=$env:FORGE_LOCAL_REQUIRED_SERVICES
+          if ($LASTEXITCODE -ne 0) { throw 'Post-bootstrap required-service verification failed' }
+          Write-Host "LOCAL_BOOTSTRAP_ACCEPTED sha=$actual required_services=$env:FORGE_LOCAL_REQUIRED_SERVICES"
 
       - name: Print local diagnostics on failure
         if: failure()
