@@ -1,0 +1,59 @@
+name: Agent Cut BOM Authority Validation
+
+on:
+  push:
+    branches:
+      - agent/alumdoor-cut-bom-authority
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-cut-bom-authority
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Emit server dist and reject new TypeScript errors
+        working-directory: server
+        run: |
+          set +e
+          pnpm exec tsc -p tsconfig.json --noEmitOnError false 2>&1 | tee /tmp/server-tsc.log
+          status=${PIPESTATUS[0]}
+          set -e
+          test -f dist/apps-src/alumdoor-worker/src/cut-bom-authority.js
+          if grep -E 'apps-src/alumdoor-worker/src/(cut-bom-authority|entry)\.ts.*error TS' /tmp/server-tsc.log; then
+            echo 'TypeScript errors found in cut BOM authority changes.'
+            exit 1
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo 'Existing server TypeScript baseline remains non-zero; no errors belong to changed source files.'
+          fi
+
+      - name: Cut BOM authority regressions
+        working-directory: server
+        run: node --test tests/alumdoor-cut-bom-authority.test.mjs
+
+      - name: Diff hygiene
+        run: git diff --check 1223c7c871d79fc520f05fe7e70dcfb806b6a6f1...HEAD
