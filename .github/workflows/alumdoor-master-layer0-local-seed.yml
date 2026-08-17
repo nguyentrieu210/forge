@@ -1,0 +1,125 @@
+name: Seed Alumdoor Local Master Layer 0
+
+on:
+  workflow_run:
+    workflows:
+      - Bootstrap Alumdoor Local C Drive
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-local-master-layer0-seed
+  cancel-in-progress: false
+
+jobs:
+  seed-layer0:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: [self-hosted]
+    timeout-minutes: 35
+    steps:
+      - name: Guard exact clean local main
+        id: guard
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+          if (-not (Test-Path (Join-Path $target '.git'))) {
+            throw 'C:\alumdoor is not a Git workspace; bootstrap must succeed first.'
+          }
+
+          $branch = (git -C $target rev-parse --abbrev-ref HEAD).Trim()
+          if ($branch -ne 'main') {
+            throw "C:\alumdoor is on '$branch'; layer-0 seed only mutates local main."
+          }
+
+          $dirty = @(git -C $target status --porcelain)
+          if ($dirty.Count -gt 0) {
+            $dirty | ForEach-Object { Write-Host "DIRTY $_" }
+            throw 'C:\alumdoor has source changes; refusing to seed over a dirty workspace.'
+          }
+
+          git -C $target fetch origin main --prune
+          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main failed' }
+          $local = (git -C $target rev-parse HEAD).Trim()
+          $remote = (git -C $target rev-parse origin/main).Trim()
+          if ($local -ne $remote) {
+            Write-Host "Layer-0 seed superseded: local=$local remote=$remote. A newer bootstrap run will handle it."
+            'run_seed=false' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            exit 0
+          }
+
+          Write-Host "LAYER0_SOURCE $local"
+          'run_seed=true' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Backup and seed direct D1 masters
+        if: steps.guard.outputs.run_seed == 'true'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+          $server = Join-Path $target 'server'
+
+          & node "$server\scripts\stop-local-dev.mjs" --ports=8799,5173
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to stop local worker/Desk before D1 mutation.' }
+          & node "$server\scripts\backup-local-state.mjs"
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to back up local Wrangler state.' }
+
+          Set-Location $server
+          $colorSql = Join-Path $env:RUNNER_TEMP 'alumdoor-layer0-color.sql'
+          $materialSql = Join-Path $env:RUNNER_TEMP 'alumdoor-layer0-material-spec.sql'
+          $geometrySql = Join-Path $env:RUNNER_TEMP 'alumdoor-layer0-measurement-geometry.sql'
+
+          & node scripts\build-alumdoor-color-correction.mjs --tenant demo --sql $colorSql
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to generate canonical color/surface seed.' }
+          & node scripts\seed-alumdoor-material-specifications-local.mjs demo $materialSql
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to generate Material Specification seed.' }
+          & node scripts\seed-alumdoor-measurement-geometry-local.mjs demo $geometrySql
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to generate Measurement/Geometry seed.' }
+
+          function Invoke-LocalD1File([string]$file) {
+            & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc "--file=$file"
+            if ($LASTEXITCODE -ne 0) { throw "Local D1 seed failed: $file" }
+          }
+
+          Invoke-LocalD1File 'scripts/seed-alumdoor-item-groups-local.sql'
+          Invoke-LocalD1File $colorSql
+          Invoke-LocalD1File $materialSql
+          Invoke-LocalD1File $geometrySql
+
+          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT doctype, COUNT(*) AS records FROM documents WHERE tenant_id='demo' AND doctype IN ('Item Group','Surface Finish','Item Color','Material Specification','Measurement Profile','Geometry Field','Geometry Profile') GROUP BY doctype ORDER BY doctype;"
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to audit local Layer-0 document counts.' }
+
+      - name: Rebuild and restart local stack
+        if: steps.guard.outputs.run_seed == 'true'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & cmd.exe /d /c "C:\alumdoor\sync-local.bat --bootstrap --skip-source-verify"
+          if ($LASTEXITCODE -ne 0) { throw "Local bootstrap after Layer-0 seed failed with exit code $LASTEXITCODE" }
+
+      - name: Seed canonical UOM through local API
+        if: steps.guard.outputs.run_seed == 'true'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location 'C:\alumdoor\server'
+          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
+          $env:FORGE_ADMIN_USER = 'dev@example.com'
+          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
+          & node scripts\seed-alumdoor-uom-local.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical UOM seed failed.' }
+          Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+
+      - name: Verify local services
+        if: steps.guard.outputs.run_seed == 'true'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local backend is not healthy after Layer-0 seed.' }
+          & node -e "fetch('http://127.0.0.1:5173',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local Desk is not healthy after Layer-0 seed.' }
+          Write-Host 'ALUMDOOR_LOCAL_MASTER_LAYER0_SEED_PASS'
