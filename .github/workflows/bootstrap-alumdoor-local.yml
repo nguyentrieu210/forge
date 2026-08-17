@@ -159,31 +159,47 @@ jobs:
             Write-Host 'Runner does not require Windows service-control permission; maintenance prevents child respawn while port owners are stopped.'
           }
 
-          # The self-hosted runner account can own/stop the runtime child processes but
-          # may not have Service Control Manager rights. Kill the port-owning children
-          # after maintenance is enabled; service hosts then remain idle until the
-          # bootstrap turns maintenance off again.
-          & node "$target\server\scripts\stop-local-dev.mjs" --ports=8799,5173
-          if ($LASTEXITCODE -ne 0) { throw 'Khong dung duoc local runtime children truoc khi sync' }
-
-          $deadline = (Get-Date).AddSeconds(15)
+          # The service host polls maintenance asynchronously. A child can respawn once
+          # between the first kill and the next poll, so keep killing port owners until
+          # both ports have stayed quiet continuously for a stable window.
+          $deadline = (Get-Date).AddSeconds(25)
+          $quietSince = $null
+          $listeners = @()
           do {
+            & node "$target\server\scripts\stop-local-dev.mjs" --ports=8799,5173
+            if ($LASTEXITCODE -ne 0) { throw 'Khong dung duoc local runtime children truoc khi sync' }
+
+            Start-Sleep -Milliseconds 500
             $listeners = @(
               Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
                 Where-Object { $_.LocalPort -in @(8799, 5173) }
             )
-            if ($listeners.Count -eq 0) { break }
-            Start-Sleep -Milliseconds 500
+
+            if ($listeners.Count -eq 0) {
+              if ($null -eq $quietSince) {
+                $quietSince = Get-Date
+                Write-Host 'Runtime ports are quiet; verifying stable maintenance window.'
+              }
+              if (((Get-Date) - $quietSince).TotalSeconds -ge 3) {
+                break
+              }
+            } else {
+              $quietSince = $null
+              $listeners | ForEach-Object {
+                Write-Host "Runtime child respawn observed: port=$($_.LocalPort) pid=$($_.OwningProcess); stopping again."
+              }
+            }
           } while ((Get-Date) -lt $deadline)
 
-          if ($listeners.Count -gt 0) {
-            Write-Host 'Runtime ports van bi chiem sau maintenance + child cleanup:'
+          $stableQuiet = $null -ne $quietSince -and (((Get-Date) - $quietSince).TotalSeconds -ge 3)
+          if (-not $stableQuiet) {
+            Write-Host 'Runtime ports did not remain quiet during maintenance window:'
             $listeners | ForEach-Object {
               Write-Host "  port=$($_.LocalPort) pid=$($_.OwningProcess)"
             }
-            throw 'Khong the giai phong local ports truoc bootstrap.'
+            throw 'Khong the on dinh local runtime ports truoc bootstrap.'
           }
-          Write-Host 'Local runtime children stopped; maintenance is holding managed service hosts idle.'
+          Write-Host 'Local runtime ports stayed quiet for 3 seconds; safe to backup and sync.'
 
           & node "$target\server\scripts\backup-local-state.mjs"
           if ($LASTEXITCODE -ne 0) { throw 'Khong sao luu duoc local Wrangler state' }
