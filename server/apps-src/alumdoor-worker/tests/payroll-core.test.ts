@@ -21,7 +21,7 @@ describe("AlumDoor payroll v3 fixed hourly rate", () => {
     expect(result.netPayVnd).toBe(400_000);
   });
 
-  it("pays 60 automatic overtime minutes at another 50,000 VND", () => {
+  it("pays 60 approved overtime minutes at another 50,000 VND", () => {
     const result = calculate({ regularMinutes: 480, overtimeMinutes: 60 });
     expect(result.basePayVnd).toBe(400_000);
     expect(result.overtimePayVnd).toBe(50_000);
