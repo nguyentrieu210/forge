@@ -1,0 +1,26 @@
+name: Import Alumdoor Canonical BOM Local
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-local-d1-mutation
+  cancel-in-progress: false
+
+jobs:
+  import-local-bom:
+    runs-on: [self-hosted]
+    timeout-minutes: 30
+    env:
+      FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
+    steps:
+      - name: Run canonical BOM local import contract
+        shell: powershell
+        working-directory: C:\alumdoor
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node scripts\local-runner\run-local-import.mjs bom
+          if ($LASTEXITCODE -ne 0) { throw "BOM execution contract failed with exit code $LASTEXITCODE" }
