@@ -11,6 +11,7 @@ const deskMaintenanceFile =
 
 const action = (process.argv[2] || "status").toLowerCase();
 const scope = (process.argv[3] || "all").toLowerCase();
+const validScopes = new Set(["all", "backend", "desk"]);
 
 function installed() {
   return existsSync(serviceHome);
@@ -25,28 +26,33 @@ if (action === "status") {
   process.exit(0);
 }
 
+if (!validScopes.has(scope)) {
+  console.error(`Unknown ${action} scope '${scope}'. Use all, backend, or desk.`);
+  process.exit(2);
+}
+
 if (!installed()) {
   // The repository must remain usable before the optional Windows services are
-  // installed. In that mode run-local.bat falls back to the existing console
-  // launch path and stop-local-dev.mjs owns process cleanup.
+  // installed. In that mode the caller is responsible for its own process lifecycle.
   console.log(`ALUMDOOR_RUNTIME_SERVICES_ABSENT action=${action} scope=${scope}`);
   process.exit(0);
 }
 
 if (action === "on") {
-  mkdirSync(dirname(maintenanceFile), { recursive: true });
   const payload = `maintenance requested ${new Date().toISOString()} pid=${process.pid}\n`;
-  writeFileSync(maintenanceFile, payload, "utf8");
-  writeFileSync(deskMaintenanceFile, payload, "utf8");
-  console.log(`ALUMDOOR_RUNTIME_MAINTENANCE_ON backend=${maintenanceFile} desk=${deskMaintenanceFile}`);
+  if (scope === "all" || scope === "backend") {
+    mkdirSync(dirname(maintenanceFile), { recursive: true });
+    writeFileSync(maintenanceFile, payload, "utf8");
+  }
+  if (scope === "all" || scope === "desk") {
+    mkdirSync(dirname(deskMaintenanceFile), { recursive: true });
+    writeFileSync(deskMaintenanceFile, payload, "utf8");
+  }
+  console.log(`ALUMDOOR_RUNTIME_MAINTENANCE_ON scope=${scope} backend=${maintenanceFile} desk=${deskMaintenanceFile}`);
   process.exit(0);
 }
 
 if (action === "off") {
-  if (!["all", "backend", "desk"].includes(scope)) {
-    console.error(`Unknown off scope '${scope}'. Use all, backend, or desk.`);
-    process.exit(2);
-  }
   if (scope === "all" || scope === "backend") {
     rmSync(maintenanceFile, { force: true });
   }
