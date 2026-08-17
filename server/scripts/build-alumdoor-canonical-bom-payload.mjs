@@ -20,13 +20,14 @@ if (!Array.isArray(records) || !Array.isArray(itemPayload.items)) throw new Erro
 const preflight = preflightAlumdoorItemSourceRecords(records);
 if (preflight.blocker_count !== 0) throw new Error(`BOM build requires zero Item source blockers; got ${preflight.blocker_count}`);
 const clean = (v) => String(v ?? "").trim();
+const parentRowOf = (record) => Number(record?.source_parent_row);
 const itemMap = new Map(itemPayload.items.map((row)=>[clean(row.item_code),row]));
 const itemCodes = new Set(itemMap.keys());
 const blockers=[]; const excluded=[]; const parents=new Map(); const excludedParents=new Map(); const groups=new Map();
 const exactSourceFallbackReasons=new Set(["formula_not_in_template_catalog","geometry_formula_not_in_template_catalog"]);
 
 function addBlock(type, record, extra={}) {
-  blockers.push({ type, classification:blockerClass(type), source_sheet:record?.source_sheet ?? "ĐM", source_row:Number(record?.source_row)||null, source_index:Number(record?.source_index)||null, parent_item_code:clean(record?.parent_item_code), source_item_code:clean(record?.item_code), source_uom:clean(record?.source_uom), source_qty_or_formula:clean(record?.source_qty_or_formula), source_formula_code:clean(record?.source_formula_code), source_formula_text:clean(record?.source_formula_text), ...extra });
+  blockers.push({ type, classification:blockerClass(type), source_sheet:record?.source_sheet ?? "ĐM", source_row:Number(record?.source_row)||null, source_index:Number(record?.source_index)||null, source_parent_row:Number(record?.source_parent_row)||null, parent_item_code:clean(record?.parent_item_code), source_item_code:clean(record?.item_code), source_uom:clean(record?.source_uom), source_qty_or_formula:clean(record?.source_qty_or_formula), source_formula_code:clean(record?.source_formula_code), source_formula_text:clean(record?.source_formula_text), ...extra });
 }
 function canonicalReference(record) {
   const code=clean(record.item_code);
@@ -47,24 +48,28 @@ function canonicalReference(record) {
 for(const record of records){
   if(record.source_role!==ITEM_SOURCE_ROLES.SELLABLE_PRODUCT) continue;
   const index=Number(record.source_index); if(!Number.isFinite(index)) continue;
+  const parentRow=parentRowOf(record);
+  if(!Number.isFinite(parentRow)){addBlock("missing_parent_lineage",record);continue;}
   const code=clean(record.item_code);
-  if(itemCodes.has(code)){parents.set(index,record);continue;}
+  if(itemCodes.has(code)){parents.set(parentRow,record);continue;}
   const classified=classifyAlumdoorItemSourceCode(code,{source_role:ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,source_index:index});
-  if(classified.status==="excluded"){excludedParents.set(index,classified.reason||"source_policy_excluded_parent");continue;}
+  if(classified.status==="excluded"){excludedParents.set(parentRow,classified.reason||"source_policy_excluded_parent");continue;}
   addBlock("missing_parent_item",record,{canonical_item_code:classified.canonical_item_code||code,reason:classified.reason});
 }
 for(const record of records){
   if(record.source_role!==ITEM_SOURCE_ROLES.BOM_REFERENCE) continue;
   const index=Number(record.source_index);
-  if(excludedParents.has(index)){excluded.push({source_row:record.source_row,source_index:index,source_item_code:clean(record.item_code),reason:"excluded_parent"});continue;}
+  const parentRow=parentRowOf(record);
+  if(!Number.isFinite(parentRow)){addBlock("missing_parent_lineage",record);continue;}
+  if(excludedParents.has(parentRow)){excluded.push({source_row:record.source_row,source_index:index,source_parent_row:parentRow,source_item_code:clean(record.item_code),reason:"excluded_parent"});continue;}
   const ref=canonicalReference(record);
-  if(ref.status==="excluded"){excluded.push({source_row:record.source_row,source_index:index,source_item_code:clean(record.item_code),reason:ref.reason});continue;}
+  if(ref.status==="excluded"){excluded.push({source_row:record.source_row,source_index:index,source_parent_row:parentRow,source_item_code:clean(record.item_code),reason:ref.reason});continue;}
   if(ref.status!=="accepted"){addBlock("missing_component_item",record,{reason:ref.reason});continue;}
   const item=itemMap.get(ref.item_code); if(!item){addBlock("missing_component_item",record,{canonical_item_code:ref.item_code});continue;}
-  const parentRecord=parents.get(index); const parentItem=parentRecord?itemMap.get(clean(parentRecord.item_code)):null;
+  const parentRecord=parents.get(parentRow); const parentItem=parentRecord?itemMap.get(clean(parentRecord.item_code)):null;
   if(!parentRecord||!parentItem){addBlock("missing_parent_item",record,{canonical_item_code:ref.item_code});continue;}
   if(ref.item_code===clean(parentItem.item_code)){
-    excluded.push({source_row:record.source_row,source_index:index,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,reason:"canonical_self_reference_non_bom"});
+    excluded.push({source_row:record.source_row,source_index:index,source_parent_row:parentRow,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,reason:"canonical_self_reference_non_bom"});
     continue;
   }
   const uomOverride=resolveExactSourceBomUomOverride(record,ref.item_code);
@@ -102,24 +107,24 @@ for(const record of records){
     ...(quantity.qty?{qty:quantity.qty}:{}),
     ...(quantity.quantity_formula_json?{quantity_formula_json:quantity.quantity_formula_json}:{}),
     ...(quantity.template_code?{bom_template_code:quantity.template_code,component_key:quantity.component_key}:{}),
-    lineage:{source_sheet:clean(record.source_sheet),source_row:Number(record.source_row),source_index:index,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,source_uom:clean(record.source_uom),source_qty_or_formula:clean(record.source_qty_or_formula),source_formula_code:clean(record.source_formula_code),source_formula_text:clean(record.source_formula_text),resolution_reason:quantity.reason||quantity.formula_kind||quantity.kind||"accepted"}
+    lineage:{source_sheet:clean(record.source_sheet),source_row:Number(record.source_row),source_index:index,source_parent_row:parentRow,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,source_uom:clean(record.source_uom),source_qty_or_formula:clean(record.source_qty_or_formula),source_formula_code:clean(record.source_formula_code),source_formula_text:clean(record.source_formula_text),resolution_reason:quantity.reason||quantity.formula_kind||quantity.kind||"accepted"}
   };
-  const list=groups.get(index)||[]; list.push(line); groups.set(index,list);
+  const list=groups.get(parentRow)||[]; list.push(line); groups.set(parentRow,list);
 }
 const boms=[];
-for(const [index,lines] of [...groups.entries()].sort((a,b)=>a[0]-b[0])){
-  const parent=parents.get(index); const parentItem=parent&&itemMap.get(clean(parent.item_code));
-  if(!parent||!parentItem){addBlock("missing_parent_item",parent||{source_index:index});continue;}
+for(const [parentRow,lines] of [...groups.entries()].sort((a,b)=>a[0]-b[0])){
+  const parent=parents.get(parentRow); const parentItem=parent&&itemMap.get(clean(parent.item_code));
+  if(!parent||!parentItem){addBlock("missing_parent_item",parent||{source_parent_row:parentRow});continue;}
   const output=resolveBomParentOutput(parentItem);
   if(output.status!=="accepted"){addBlock(output.reason,parent,{item_code:clean(parent.item_code),stock_uom:output.stock_uom});continue;}
   const normalized=[...lines].sort((a,b)=>(a.lineage.source_row-b.lineage.source_row)||a.item_code.localeCompare(b.item_code,"vi"));
-  const snapshot={schema_version:3,source:"apps/alumdoor/docs/nguon/ms-lien/ĐM.md",source_index:index,source_row:Number(parent.source_row),item:clean(parent.item_code),output,lines:normalized};
+  const snapshot={schema_version:3,source:"apps/alumdoor/docs/nguon/ms-lien/ĐM.md",source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parent.item_code),output,lines:normalized};
   const fingerprint=createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
-  boms.push({source_index:index,source_row:Number(parent.source_row),item:clean(parent.item_code),company:"ALUMDOOR",quantity:1,output_uom:output.output_uom,bom_status:"Draft",bom_fingerprint:fingerprint,lines:normalized,configuration_snapshot:snapshot});
+  boms.push({source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parent.item_code),company:"ALUMDOOR",quantity:1,output_uom:output.output_uom,bom_status:"Draft",bom_fingerprint:fingerprint,lines:normalized,configuration_snapshot:snapshot});
 }
 blockers.sort((a,b)=>(a.source_row??1e9)-(b.source_row??1e9)||a.type.localeCompare(b.type,"vi")||a.source_item_code.localeCompare(b.source_item_code,"vi"));
 excluded.sort((a,b)=>(a.source_row??1e9)-(b.source_row??1e9));
-boms.sort((a,b)=>a.source_index-b.source_index);
+boms.sort((a,b)=>(a.source_row-b.source_row)||a.source_index-b.source_index);
 const counts={}; const classes={};
 for(const b of blockers){counts[b.type]=(counts[b.type]||0)+1; classes[b.classification]=(classes[b.classification]||0)+1;}
 const refs=records.filter((r)=>r.source_role===ITEM_SOURCE_ROLES.BOM_REFERENCE).length;
