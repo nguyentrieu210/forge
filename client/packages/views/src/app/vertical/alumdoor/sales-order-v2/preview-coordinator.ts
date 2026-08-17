@@ -35,9 +35,9 @@ export function applySalesOrderDocumentPreview<T extends Record<string, unknown>
   base: T,
   preview: SalesOrderDocumentPreviewPatch,
 ): T {
-  const next = { ...base, ...preview.patch } as T;
-  for (const field of preview.clear) delete next[field as keyof T];
-  return next;
+  const next: Record<string, unknown> = { ...base, ...preview.patch };
+  for (const field of preview.clear) delete next[field];
+  return next as T;
 }
 
 export function isSalesOrderPersistenceBlocked(clock: SalesOrderPreviewClock, previewError: string): boolean {
