@@ -1,0 +1,127 @@
+name: Import Alumdoor Item Master Local
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_records_path:
+        description: 'Local source-records JSON under C:\alumdoor\local-imports'
+        required: true
+        default: 'C:\alumdoor\local-imports\alumdoor-item-source-records.json'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-local-item-master-import
+  cancel-in-progress: false
+
+jobs:
+  import-item-master:
+    runs-on: [self-hosted]
+    timeout-minutes: 30
+    steps:
+      - name: Guard exact clean local main and source file
+        id: guard
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+          $source = [System.IO.Path]::GetFullPath('${{ inputs.source_records_path }}')
+          $allowedRoot = [System.IO.Path]::GetFullPath('C:\alumdoor\local-imports\')
+          if (-not $source.StartsWith($allowedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "source_records_path must stay under $allowedRoot; got $source"
+          }
+          if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Source records file not found: $source"
+          }
+          if (-not (Test-Path (Join-Path $target '.git'))) {
+            throw 'C:\alumdoor is not a Git workspace.'
+          }
+          $branch = (git -C $target rev-parse --abbrev-ref HEAD).Trim()
+          if ($branch -ne 'main') { throw "Local checkout is on '$branch', expected main." }
+          $dirty = @(git -C $target status --porcelain=v1)
+          if ($dirty.Count -gt 0) {
+            $dirty | ForEach-Object { Write-Host "DIRTY $_" }
+            throw 'Local source is dirty; refusing Item import.'
+          }
+          git -C $target fetch origin main --prune
+          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main failed' }
+          $local = (git -C $target rev-parse HEAD).Trim()
+          $remote = (git -C $target rev-parse origin/main).Trim()
+          if ($local -ne $remote) {
+            throw "Item import requires exact origin/main: local=$local remote=$remote"
+          }
+          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local backend 8799 is not healthy.' }
+
+          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $runDir = "C:\alumdoor\local-backups\item-master-imports\$stamp"
+          New-Item -ItemType Directory -Force -Path $runDir | Out-Null
+          "source=$source" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "run_dir=$runDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "ALUMDOOR_ITEM_IMPORT_GUARD_PASS sha=$local source=$source run_dir=$runDir"
+
+      - name: Verify authenticated canonical UOM 19 pre-image
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location 'C:\alumdoor\server'
+          $output = Join-Path '${{ steps.guard.outputs.run_dir }}' 'uom-preimage.json'
+          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
+          $env:FORGE_ADMIN_USER = 'dev@example.com'
+          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
+          & node scripts\backup-alumdoor-uom-local.mjs $output
+          $exit = $LASTEXITCODE
+          Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+          if ($exit -ne 0) { throw 'Authenticated UOM pre-image failed.' }
+          $uom = Get-Content -Raw -LiteralPath $output | ConvertFrom-Json
+          if ([int]$uom.canonical_count -ne 19 -or [int]$uom.existing_count -ne 19) {
+            throw "Local canonical UOM set is incomplete: existing=$($uom.existing_count) canonical=$($uom.canonical_count)"
+          }
+          $missing = @($uom.records | Where-Object { -not $_.existed })
+          if ($missing.Count -gt 0) {
+            $missing | ForEach-Object { Write-Host "MISSING_UOM $($_.name)" }
+            throw 'Local UOM master is missing approved canonical units.'
+          }
+          Write-Host 'ALUMDOOR_ITEM_IMPORT_UOM_19_PASS'
+
+      - name: Build fail-closed canonical Item payload and audit
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location 'C:\alumdoor\server'
+          $payload = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-master-payload.json'
+          $audit = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-master-audit.json'
+          & node scripts\build-alumdoor-item-master-payload.mjs '${{ steps.guard.outputs.source }}' $payload $audit
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical Item master payload is blocked; no import attempted.' }
+          $report = Get-Content -Raw -LiteralPath $audit | ConvertFrom-Json
+          if ([int]$report.item_master_blocker_count -ne 0 -or [int]$report.other_blocker_count -ne 0 -or [int]$report.item_payload_blocker_count -ne 0) {
+            throw 'Item master audit is not zero-blocker.'
+          }
+          Write-Host "ALUMDOOR_ITEM_IMPORT_PAYLOAD_READY items=$($report.item_payload_count) bom_blockers_retained=$($report.bom_blocker_count)"
+
+      - name: Validate importer without mutation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location 'C:\alumdoor\server'
+          $payload = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-master-payload.json'
+          & node scripts\import-alumdoor-item-master-local.mjs $payload --validate-only
+          if ($LASTEXITCODE -ne 0) { throw 'Local Item importer validation failed.' }
+
+      - name: Import exact-code Item master through local API
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location 'C:\alumdoor\server'
+          $payload = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-master-payload.json'
+          $preimage = Join-Path '${{ steps.guard.outputs.run_dir }}' 'item-preimage.json'
+          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
+          $env:FORGE_ADMIN_USER = 'dev@example.com'
+          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
+          & node scripts\import-alumdoor-item-master-local.mjs $payload $preimage
+          $exit = $LASTEXITCODE
+          Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+          if ($exit -ne 0) { throw 'Local Item master import failed.' }
+          Write-Host "ALUMDOOR_LOCAL_ITEM_MASTER_IMPORT_READY run_dir=${{ steps.guard.outputs.run_dir }}"
