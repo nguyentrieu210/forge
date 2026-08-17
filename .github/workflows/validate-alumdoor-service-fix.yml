@@ -33,13 +33,14 @@ jobs:
           $pnpmDir = Join-Path $env:RUNNER_TEMP 'Program Files\nodejs'
           New-Item -ItemType Directory -Force -Path (Join-Path $root 'server'), (Join-Path $root 'client\apps\runtime'), $serviceHome, $pnpmDir | Out-Null
           $pnpm = Join-Path $pnpmDir 'pnpm.CMD'
-          @'
-@echo off
-> "%TEST_OUTPUT%" echo ARGS:%*
->> "%TEST_OUTPUT%" echo CWD:%CD%
->> "%TEST_OUTPUT%" echo VITE:%VITE_FORGE_BACKEND%
-exit /b 0
-'@ | Set-Content -LiteralPath $pnpm -Encoding ascii
+          $cmdLines = @(
+            '@echo off',
+            '> "%TEST_OUTPUT%" echo ARGS:%*',
+            '>> "%TEST_OUTPUT%" echo CWD:%CD%',
+            '>> "%TEST_OUTPUT%" echo VITE:%VITE_FORGE_BACKEND%',
+            'exit /b 0'
+          )
+          Set-Content -LiteralPath $pnpm -Value $cmdLines -Encoding ascii
 
           function Test-Role([string]$role) {
             $out = Join-Path $env:RUNNER_TEMP "$role-output.txt"
@@ -65,7 +66,6 @@ exit /b 0
               }
             } finally {
               Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-              Get-CimInstance Win32_Process | Where-Object { $_.ParentProcessId -eq $proc.Id } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
             }
           }
 
