@@ -5695,6 +5695,19 @@
           "surface": "quick"
         },
         {
+          "label": "Loại ray",
+          "fieldname": "ray_type",
+          "fieldtype": "Select",
+          "options": "\nRay sắt U70\nRay hộp/đơn U76",
+          "depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'",
+          "mandatory_depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'",
+          "description": "Chọn theo từng dòng đơn. Server dùng Cutting Policy/Geometry Profile đang áp để tính rộng cắt; không dùng số trừ hardcode trên UI.",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
+        },
+        {
           "label": "Cao lưới (m)",
           "fieldname": "mesh_height_m",
           "fieldtype": "Float",
@@ -9498,6 +9511,14 @@
           "read_only": true
         },
         {
+          "fieldname": "ray_type",
+          "fieldtype": "Data",
+          "label": "Loại ray",
+          "read_only": true,
+          "depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'",
+          "surface": "expanded"
+        },
+        {
           "fieldname": "cut_width_m",
           "fieldtype": "Float",
           "label": "Rộng cắt lá (m)",
@@ -9994,6 +10015,14 @@
           "surface": "quick"
         },
         {
+          "label": "Loại ray",
+          "fieldname": "ray_type",
+          "fieldtype": "Data",
+          "read_only": true,
+          "depends_on": "eval:doc.door_type == 'Cửa tấm liền Úc'",
+          "surface": "expanded"
+        },
+        {
           "fieldname": "department",
           "label": "Bộ phận",
           "fieldtype": "Data",
@@ -10212,6 +10241,7 @@
           "item_code",
           "item_group",
           "door_type",
+          "ray_type",
           "department",
           "set_no",
           "set_count",

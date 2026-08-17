@@ -587,6 +587,14 @@ const ensureSalesLineField = (line, anchor, field) => {
   addAfter(line, anchor, field);
 };
 
+const tamLienUcPolicy = CUTTING_POLICIES.find((entry) => entry.code === "CP-CUA-TAM-LIEN-UC");
+if (!tamLienUcPolicy) throw new Error("Catalog thiếu CP-CUA-TAM-LIEN-UC");
+const tamLienRayTypes = [...new Set(
+  tamLienUcPolicy.rules.map((entry) => entry.conditions.ray_type).filter(Boolean),
+)];
+if (tamLienRayTypes.length < 2) throw new Error("CP-CUA-TAM-LIEN-UC chưa khai đủ lựa chọn ray theo dòng");
+const tamLienRayOptions = `\n${tamLienRayTypes.join("\n")}`;
+
 const salesOptionField = {
   fieldname: "sales_option",
   fieldtype: "Link",
@@ -685,11 +693,21 @@ brief.doctypes.push({
   ],
   permissions: { "Chủ xưởng": "rwc", "Sản xuất": "rwc", "Kinh doanh": "rwc" },
 });
+ensureSalesLineField(doctype("Sales Order Item"), "has_butterfly_bracket", {
+  fieldname: "ray_type",
+  fieldtype: "Select",
+  options: tamLienRayOptions,
+  label: "Loại ray",
+  depends_on: "eval:doc.door_type == 'Cửa tấm liền Úc'",
+  mandatory_depends_on: "eval:doc.door_type == 'Cửa tấm liền Úc'",
+  description: "Chọn theo từng dòng đơn. Server dùng Cutting Policy/Geometry Profile đang áp để tính rộng cắt; không dùng số trừ hardcode trên UI.",
+  surface: "expanded",
+});
 ensureSalesLineField(doctype("Sales Order Item"), "set_count", {
   fieldname: "bom_actual_components", fieldtype: "Table", options: "BOM Actual Component", label: "Vật tư BOM thực tế",
   description: "Nhập số lượng THỰC TẾ CHO MỘT BỘ. Production tách từng bộ thành một line; thiếu slot mà BOM Template yêu cầu thì chặn sinh BOM.",
 });
-note("Sales Order Item: +BOM Actual Component theo một bộ");
+note("Sales Order Item: +ray_type theo dòng + BOM Actual Component theo một bộ");
 
 // ────────────────── BATCH (doctype NỀN TẢNG) ──────────────────
 // KHÔNG dựng doctype lô riêng: nền tảng đã có `Batch` (module Stock, autoname field:batch_id).
@@ -1972,6 +1990,26 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
     if (Array.isArray(target.list)) target.list = target.list.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
     if (Array.isArray(target.search)) target.search = target.search.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
   }
+  const ensureRayTrace = (doctypeName, anchor) => {
+    const target = doctype(doctypeName);
+    const field = {
+      fieldname: "ray_type",
+      fieldtype: "Data",
+      label: "Loại ray",
+      read_only: true,
+      depends_on: "eval:doc.door_type == 'Cửa tấm liền Úc'",
+      surface: "expanded",
+    };
+    const index = target.fields.findIndex((entry) => nameOf(entry) === "ray_type");
+    if (index >= 0) target.fields[index] = field;
+    else {
+      const anchorIndex = target.fields.findIndex((entry) => nameOf(entry) === anchor);
+      target.fields.splice(anchorIndex >= 0 ? anchorIndex + 1 : target.fields.length, 0, field);
+    }
+  };
+  ensureRayTrace("Production Request Item", "door_type");
+  ensureRayTrace("Work Order", "door_type");
+
   const itemPrice = doctype("Item Price");
   const priceVariantIndex = itemPrice.fields.findIndex((entry) => nameOf(entry) === "price_variant");
   if (priceVariantIndex >= 0 && typeof itemPrice.fields[priceVariantIndex] === "object") {
