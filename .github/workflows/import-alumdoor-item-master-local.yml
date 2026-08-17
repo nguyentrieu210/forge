@@ -23,6 +23,7 @@ jobs:
     env:
       ITEM_SOURCE_PATH: ${{ inputs.source_records_path }}
       FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
+      FORGE_LOCAL_REQUIRED_SERVICES: backend
     steps:
       - name: Run canonical Item Master local import contract
         shell: powershell
