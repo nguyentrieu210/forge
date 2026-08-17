@@ -5,45 +5,41 @@
  *  - buildServerQuery: ListState → ListOpts cho adapter.getList (server-side, tập lớn).
  *  - applyClientQuery: lọc/sắp/trang IN-MEMORY cho mock (demo) — cùng ngữ nghĩa server.
  */
-import { buildLinkFilters, type DocTypeMeta, type DocField, type Doc, type ListOpts, type Fieldtype, type FilterOperator } from "@metaforge/core";
+import { buildLinkFilters, type DocTypeMeta, type DocField, type Doc, type ListOpts, type Fieldtype, type FilterOperator, type Filters } from "@metaforge/core";
 import { deriveColumns, isStatusField, type ListColumn } from "./columns.js";
 
 export interface StandardFilter {
   fieldname: string;
   label: string;
   fieldtype: Fieldtype;
-  /** cho Select: các lựa chọn (đã tách \n). */
   options?: string[];
   linkDoctype?: string;
-  /** Bộ lọc Link khai báo trong DocType (ví dụ chỉ chọn nhóm lá). */
   linkFilters?: Record<string, unknown> | Array<unknown>;
+}
+
+export interface AdvancedFilterState {
+  /** all = AND with normal filters; any = one OR group (Frappe or_filters). */
+  mode: "all" | "any";
+  rules: Array<[string, FilterOperator, unknown]>;
 }
 
 export interface ListState {
   q: string;
-  /** fieldname → giá trị đã chọn từ toolbar ("" = tất cả). */
   filters: Record<string, string>;
-  /** Filter có operator từ KPI/Process route; giữ nguyên để list/count khớp nguồn số liệu. */
   routeFilters: Array<[string, FilterOperator, unknown]>;
-  /** "field:asc" | "field:desc" | "" (mặc định modified desc). */
+  /** Operator-aware filters authored from the Advanced Filter dialog and persisted in URL. */
+  advancedFilters?: AdvancedFilterState;
   sort: string;
-  page: number; // 1-based
+  page: number;
   pageSize: number;
   selected: string[];
-  /**
-   * Khoảng thời gian đang lọc nhanh (hôm nay/tháng này/quý…).
-   *
-   * Tách riêng khỏi `filters` (một field ↔ một giá trị) vì đây là điều kiện HAI ĐẦU trên cùng một
-   * field, và tách khỏi `routeFilters` để người dùng xoá lọc ngày mà không mất luôn bộ lọc do
-   * route KPI truyền vào.
-   */
   dateRange?: { key: string; field: string; from: string; to: string };
 }
 
 export const DEFAULT_PAGE_SIZE = 20;
 
 export function emptyListState(): ListState {
-  return { q: "", filters: {}, routeFilters: [], sort: "", page: 1, pageSize: DEFAULT_PAGE_SIZE, selected: [], dateRange: undefined };
+  return { q: "", filters: {}, routeFilters: [], advancedFilters: undefined, sort: "", page: 1, pageSize: DEFAULT_PAGE_SIZE, selected: [], dateRange: undefined };
 }
 
 export function deriveStandardFilters(meta: DocTypeMeta): StandardFilter[] {
@@ -75,9 +71,6 @@ export function deriveSearchFields(meta: DocTypeMeta): string[] {
   const fromMeta = (raw ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const fields = meta.fields ?? [];
   const title = meta.title_field && fields.some((f) => f.fieldname === meta.title_field) ? [meta.title_field] : [];
-  // Global search should cover the complete readable table surface, not only the title/code
-  // fields. The server applies the same policy from metadata, so list and mock/demo search stay
-  // aligned for notes, groups, UOM, price fields, and other visible text columns.
   const searchable = fields
     .filter((f: DocField) => [
       "Data", "Small Text", "Text", "Long Text", "Code", "Select", "Link", "Dynamic Link",
@@ -91,21 +84,15 @@ function dedupe(a: string[]): string[] {
   return Array.from(new Set(a));
 }
 
-/** Field cần nạp từ server (name + cột hiển thị + title + image + status + sort). */
 export function queryFields(meta: DocTypeMeta, columns: ListColumn[]): string[] {
   const base = ["name", "modified", "docstatus"];
   const cols = columns.map((c) => c.fieldname);
-  // Ảnh đã được deriveColumns lọc theo hidden + quyền field rồi mới gắn vào title column.
-  // Không đọc thẳng meta.image_field ở đây vì như vậy field bị mask vẫn bị request khỏi server.
   const img = columns.flatMap((column) => column.imageFieldname ? [column.imageFieldname] : []);
   return dedupe([...base, ...cols, ...img]);
 }
 
-/** ListState → ListOpts (server). Search → orFilters LIKE trên search_fields; filter chuẩn → =. */
-export function buildServerQuery(meta: DocTypeMeta, state: ListState, columns: ListColumn[]): ListOpts {
+function baseFilters(meta: DocTypeMeta, state: ListState): Array<[string, FilterOperator, unknown]> {
   const filters: Array<[string, FilterOperator, unknown]> = [...state.routeFilters];
-  // Phải áp Ở CẢ list lẫn count. Thiếu một bên thì tổng số hiện ra không khớp số dòng đang
-  // thấy — người dùng tưởng dữ liệu bị mất.
   if (state.dateRange) filters.push([state.dateRange.field, "between", [state.dateRange.from, state.dateRange.to]]);
   for (const [field, value] of Object.entries(state.filters)) {
     if (value === "" || value == null) continue;
@@ -113,52 +100,43 @@ export function buildServerQuery(meta: DocTypeMeta, state: ListState, columns: L
     if (sf && (sf.fieldtype === "Data" || sf.fieldtype === "Small Text")) filters.push([field, "like", `%${value}%`]);
     else filters.push([field, "=", value]);
   }
+  if (state.advancedFilters?.mode === "all") filters.push(...state.advancedFilters.rules);
+  return filters;
+}
 
-  let orFilters: Array<[string, "like", string]> | undefined;
+function serverOrFilters(meta: DocTypeMeta, state: ListState): Filters | undefined {
+  if (state.advancedFilters?.mode === "any" && state.advancedFilters.rules.length) {
+    return state.advancedFilters.rules;
+  }
   const q = state.q.trim();
-  if (q) orFilters = deriveSearchFields(meta).map((f) => [f, "like", `%${q}%`]);
+  return q ? deriveSearchFields(meta).map((f) => [f, "like", `%${q}%`] as [string, "like", string]) : undefined;
+}
 
+/** ListState → ListOpts (server). */
+export function buildServerQuery(meta: DocTypeMeta, state: ListState, columns: ListColumn[]): ListOpts {
+  const filters = baseFilters(meta, state);
   return {
     fields: queryFields(meta, columns),
     filters: filters.length ? filters : undefined,
-    orFilters,
+    orFilters: serverOrFilters(meta, state),
     orderBy: state.sort ? state.sort.replace(":", " ") : "modified desc",
     limitStart: (state.page - 1) * state.pageSize,
     pageLength: state.pageSize,
   };
 }
 
-/** Phần `filters` chuẩn (KHÔNG gồm search) của count query. */
 export function countFilters(meta: DocTypeMeta, state: ListState): Array<[string, FilterOperator, unknown]> | undefined {
-  const filters: Array<[string, FilterOperator, unknown]> = [...state.routeFilters];
-  // Phải áp Ở CẢ list lẫn count. Thiếu một bên thì tổng số hiện ra không khớp số dòng đang
-  // thấy — người dùng tưởng dữ liệu bị mất.
-  if (state.dateRange) filters.push([state.dateRange.field, "between", [state.dateRange.from, state.dateRange.to]]);
-  for (const [field, value] of Object.entries(state.filters)) {
-    if (value === "" || value == null) continue;
-    const sf = deriveStandardFilters(meta).find((f) => f.fieldname === field);
-    if (sf && (sf.fieldtype === "Data" || sf.fieldtype === "Small Text")) filters.push([field, "like", `%${value}%`]);
-    else filters.push([field, "=", value]);
-  }
+  const filters = baseFilters(meta, state);
   return filters.length ? filters : undefined;
 }
 
-/**
- * P1-10 — Count query KHỚP danh sách: filters chuẩn + orFilters search (đồng bộ buildServerQuery).
- * Đếm phải áp CÙNG điều kiện tìm kiếm với list ⇒ dùng reportview.get_count (nhận or_filters),
- * KHÔNG bỏ search như get_count cũ (khiến "N bản ghi" lệch số dòng hiển thị).
- */
 export function countQuery(
   meta: DocTypeMeta,
   state: ListState,
-): { filters?: Array<[string, FilterOperator, unknown]>; orFilters?: Array<[string, "like", string]> } {
-  const filters = countFilters(meta, state);
-  const q = state.q.trim();
-  const orFilters = q ? deriveSearchFields(meta).map((f) => [f, "like", `%${q}%`] as [string, "like", string]) : undefined;
-  return { filters, orFilters };
+): { filters?: Array<[string, FilterOperator, unknown]>; orFilters?: Filters } {
+  return { filters: countFilters(meta, state), orFilters: serverOrFilters(meta, state) };
 }
 
-/** Mock/demo: lọc + sắp + phân trang in-memory (cùng ngữ nghĩa server). */
 export function applyClientQuery(
   meta: DocTypeMeta,
   allRows: Doc[],
@@ -178,7 +156,12 @@ export function applyClientQuery(
       const value = String(r[state.dateRange.field] ?? "");
       if (value < state.dateRange.from || value > state.dateRange.to) return false;
     }
-    if (q) {
+    const advanced = state.advancedFilters;
+    if (advanced?.rules.length) {
+      const matches = advanced.rules.map(([field, operator, expected]) => matchesFilter(r[field], operator, expected));
+      if (advanced.mode === "all" ? matches.some((hit) => !hit) : !matches.some(Boolean)) return false;
+    }
+    if (q && state.advancedFilters?.mode !== "any") {
       const hit = search.some((f) => String(r[f] ?? "").toLowerCase().includes(q));
       if (!hit) return false;
     }

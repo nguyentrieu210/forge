@@ -5,10 +5,7 @@ import type { Doc } from "@metaforge/core";
 import {
   Badge,
   Button,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  ConfirmDialog,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +15,7 @@ import {
   toast,
 } from "@metaforge/ui";
 import { useMetaForge } from "../../../container/provider.js";
+import { RuntimeLoadingState } from "../../../runtime/AsyncState.js";
 
 type Json = Record<string, unknown>;
 interface MaterialRow extends Json { bom_row_id: string; item_code: string; source_warehouse: string; required_qty: string; issued_qty: string; consumed_qty: string; remaining_to_issue: string; remaining_to_consume: string; }
@@ -87,7 +85,7 @@ export function AlumdoorWorkOrderDetail({ name, onNavigate }: AlumdoorWorkOrderD
     }
   };
 
-  if (!lifecycle && busy) return <div className="grid h-full place-items-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-4 animate-spin" /> Đang đọc lệnh sản xuất…</div>;
+  if (!lifecycle && busy) return <RuntimeLoadingState className="h-full" label="Đang đọc lệnh sản xuất…" />;
   const progress = lifecycle && lifecycle.target_qty_micros > 0 ? Math.max(0, Math.min(100, Math.round(lifecycle.produced_qty_micros * 100 / lifecycle.target_qty_micros))) : 0;
   const canSubmit = Boolean(document && Number(document.docstatus ?? 0) === 0 && caps.submit);
   const canCancel = Boolean(lifecycle?.actions.can_cancel_work_order && caps.cancel);
@@ -124,15 +122,16 @@ export function AlumdoorWorkOrderDetail({ name, onNavigate }: AlumdoorWorkOrderD
       </TableBody></Table></div></div>
     </div>
 
-    <Dialog open={confirmCancel} onOpenChange={setConfirmCancel}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Huỷ phiếu sản xuất {name}?</DialogTitle></DialogHeader>
-        <div className="space-y-4 p-1 text-sm">
-          <p className="text-muted-foreground">Server sẽ chỉ cho huỷ khi lifecycle hiện tại còn cho phép. Không xoá lineage; chứng từ chuyển sang trạng thái huỷ để giữ audit.</p>
-          <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setConfirmCancel(false)} disabled={actionBusy}>Không huỷ</Button><Button variant="destructive" onClick={() => void cancelWorkOrder()} disabled={actionBusy}>{actionBusy ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />} Xác nhận huỷ</Button></div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={confirmCancel}
+      onOpenChange={setConfirmCancel}
+      title={`Huỷ phiếu sản xuất ${name}?`}
+      description="Server sẽ chỉ cho huỷ khi lifecycle hiện tại còn cho phép. Không xoá lineage; chứng từ chuyển sang trạng thái huỷ để giữ audit."
+      cancelLabel="Không huỷ"
+      confirmLabel={actionBusy ? "Đang huỷ…" : "Xác nhận huỷ"}
+      destructive
+      onConfirm={() => { void cancelWorkOrder(); }}
+    />
   </>;
 }
 function lineageLabel(lifecycle: WorkOrderLifecycle): string { if (lifecycle.production_request) return `${lifecycle.production_request}${lifecycle.production_request_line_key ? ` · ${lifecycle.production_request_line_key}` : ""}`; if (lifecycle.production_plan) return `${lifecycle.production_plan}${lifecycle.production_plan_row_id ? ` · ${lifecycle.production_plan_row_id}` : ""}`; if (lifecycle.sales_order) return `${lifecycle.sales_order}${lifecycle.sales_order_row_id ? ` · ${lifecycle.sales_order_row_id}` : ""}`; return "Standalone"; }

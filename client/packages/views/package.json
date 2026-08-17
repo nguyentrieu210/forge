@@ -27,8 +27,12 @@
       "import": "./dist/list-runtime.js"
     },
     "./doctype-workspace": {
-      "types": "./dist/app/DoctypeWorkspace.d.ts",
-      "import": "./dist/app/DoctypeWorkspace.js"
+      "types": "./dist/app/RuntimeDoctypeWorkspace.d.ts",
+      "import": "./dist/app/RuntimeDoctypeWorkspace.js"
+    },
+    "./workspace-extension": {
+      "types": "./dist/app/workspace-extension.d.ts",
+      "import": "./dist/app/workspace-extension.js"
     },
     "./overview": {
       "types": "./dist/overview/OverviewContainer.d.ts",

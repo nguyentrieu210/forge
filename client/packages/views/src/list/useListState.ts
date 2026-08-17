@@ -1,12 +1,10 @@
 /**
  * useListUrlState — trạng thái nội dung List sống trong URL (reload/back giữ nguyên).
  * Sở thích cột nằm riêng trong column-preferences để được scope theo site + user.
- * AC#4/#7: q/filters/sort/page/pageSize/selected qua query-string. Router-agnostic:
- * nhận [searchParams, setSearchParams] (react-router) để package không phụ thuộc cứng router.
  */
 import { useCallback, useMemo } from "react";
 import type { DocTypeMeta, FilterOperator } from "@metaforge/core";
-import { emptyListState, DEFAULT_PAGE_SIZE, type ListState } from "./filters.js";
+import { emptyListState, DEFAULT_PAGE_SIZE, type AdvancedFilterState, type ListState } from "./filters.js";
 import { DATE_RANGE_LABELS, resolveDateRange, type DateRangeKey } from "./date-range.js";
 
 export interface UrlStateBridge {
@@ -14,8 +12,33 @@ export interface UrlStateBridge {
   set(next: Record<string, string | null>): void;
 }
 
+const FILTER_OPERATORS = new Set<FilterOperator>(["=", "!=", ">", "<", ">=", "<=", "like", "not like", "in", "not in", "between", "is"]);
+
+function parseAdvancedFilters(raw: string | null, meta: DocTypeMeta): AdvancedFilterState | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as { mode?: unknown; m?: unknown; rules?: unknown; r?: unknown };
+    const mode = (parsed.mode ?? parsed.m) === "any" ? "any" : "all";
+    const source = parsed.rules ?? parsed.r;
+    if (!Array.isArray(source)) return undefined;
+    const allowed = new Set((meta.fields ?? []).map((field) => field.fieldname));
+    allowed.add("name"); allowed.add("docstatus"); allowed.add("modified");
+    const rules: AdvancedFilterState["rules"] = [];
+    for (const row of source) {
+      if (!Array.isArray(row) || row.length < 3) continue;
+      const field = String(row[0] ?? "");
+      const operator = row[1] as FilterOperator;
+      if (!allowed.has(field) || !FILTER_OPERATORS.has(operator)) continue;
+      rules.push([field, operator, row[2]]);
+    }
+    return rules.length ? { mode, rules } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Đọc ListState từ query-string. Filter chuẩn mã hoá f_<field>=value. */
-export function readState(bridge: UrlStateBridge, meta: DocTypeMeta): ListState {
+export function readState(bridge: UrlStateBridge, meta: DocTypeMeta, extraFilterFields: readonly string[] = []): ListState {
   const s = emptyListState();
   s.q = bridge.get("q") ?? "";
   s.sort = bridge.get("sort") ?? "";
@@ -24,46 +47,31 @@ export function readState(bridge: UrlStateBridge, meta: DocTypeMeta): ListState 
   const sel = bridge.get("sel");
   s.selected = sel ? sel.split(",").filter(Boolean) : [];
   const filters: Record<string, string> = {};
-  // KPI/Process routes có thể truyền `filters=<json object>`; chuẩn hoá về cùng ListState
-  // để click KPI mở ĐÚNG danh sách đã lọc, không chỉ đổi URL rồi bỏ qua điều kiện.
   const routeFilters = bridge.get("filters");
   if (routeFilters) {
     try {
       const parsed = JSON.parse(routeFilters) as Record<string, unknown>;
       const allowed = new Set((meta.fields ?? []).map((field) => field.fieldname));
       allowed.add("name"); allowed.add("docstatus");
-      const operators = new Set<FilterOperator>(["=", "!=", ">", "<", ">=", "<=", "like", "not like", "in", "not in", "between", "is"]);
       for (const [field, value] of Object.entries(parsed ?? {})) {
         if (!allowed.has(field) || value == null || value === "") continue;
-        if (Array.isArray(value) && value.length === 2 && operators.has(value[0] as FilterOperator)) {
+        if (Array.isArray(value) && value.length === 2 && FILTER_OPERATORS.has(value[0] as FilterOperator)) {
           s.routeFilters.push([field, value[0] as FilterOperator, value[1]]);
         } else if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-          // Primitive route filters remain editable through the normal toolbar.
           filters[field] = String(value);
         }
       }
-    } catch { /* URL cũ/sai JSON: bỏ qua, không làm crash list */ }
+    } catch { /* malformed old URL: ignore */ }
   }
-  // Một số bộ lọc được tính ở client nhưng vẫn phải sống trong URL như field thật.
-  // Đơn hàng dùng `_approval_status` để lọc theo cờ duyệt; nếu chỉ đọc meta.fields
-  // thì giá trị vừa chọn sẽ biến mất ngay sau khi URL cập nhật.
-  const filterFieldnames = [
-    ...(meta.fields ?? []).map((field) => field.fieldname),
-    ...(meta.name === "Sales Order" ? ["_approval_status"] : []),
-  ];
+  const filterFieldnames = [...(meta.fields ?? []).map((field) => field.fieldname), ...extraFilterFields];
   for (const fieldname of new Set(filterFieldnames)) {
     const v = bridge.get(`f_${fieldname}`);
     if (v != null && v !== "") filters[fieldname] = v;
   }
   s.filters = filters;
+  s.advancedFilters = parseAdvancedFilters(bridge.get("af"), meta);
+  if (s.advancedFilters?.mode === "any") s.q = "";
 
-  /**
-   * Khoảng thời gian: lưu KHOÁ (`this_month`) chứ không lưu hai mốc ngày, rồi tính lại lúc đọc.
-   *
-   * Lưu sẵn from/to thì một URL đánh dấu "tháng này" sang tháng sau vẫn trỏ vào tháng cũ — người
-   * dùng mở lại thấy số liệu đứng yên và tưởng hệ thống hỏng. Lưu khoá thì "tháng này" luôn là
-   * tháng hiện tại.
-   */
   const dr = bridge.get("dr");
   if (dr) {
     const [key, field] = dr.split(":");
@@ -80,8 +88,9 @@ function clampInt(v: string | null, dflt: number, min: number): number {
   return Number.isFinite(n) && n >= min ? n : dflt;
 }
 
-export function useListUrlState(bridge: UrlStateBridge, meta: DocTypeMeta) {
-  const state = useMemo(() => readState(bridge, meta), [bridge, meta]);
+export function useListUrlState(bridge: UrlStateBridge, meta: DocTypeMeta, extraFilterFields: readonly string[] = []) {
+  const extraKey = extraFilterFields.join("\u0000");
+  const state = useMemo(() => readState(bridge, meta, extraFilterFields), [bridge, meta, extraKey]);
 
   const patch = useCallback(
     (p: Partial<ListState>) => {
@@ -95,20 +104,20 @@ export function useListUrlState(bridge: UrlStateBridge, meta: DocTypeMeta) {
         const obj = Object.fromEntries((p.routeFilters ?? []).map(([field, operator, value]) => [field, [operator, value]]));
         next.filters = Object.keys(obj).length ? JSON.stringify(obj) : null;
       }
-      if ("dateRange" in p) {
-        next.dr = p.dateRange ? `${p.dateRange.key}:${p.dateRange.field}` : null;
+      if ("advancedFilters" in p) {
+        const advanced = p.advancedFilters;
+        next.af = advanced?.rules.length ? JSON.stringify({ m: advanced.mode, r: advanced.rules }) : null;
+        if (advanced?.mode === "any") next.q = null;
       }
+      if ("dateRange" in p) next.dr = p.dateRange ? `${p.dateRange.key}:${p.dateRange.field}` : null;
       if ("filters" in p) {
-        // xoá mọi f_* cũ rồi set lại từ p.filters
-        for (const f of meta.fields ?? []) next[`f_${f.fieldname}`] = null;
-        if (meta.name === "Sales Order") next.f__approval_status = null;
-        for (const [k, v] of Object.entries(p.filters ?? {})) if (v) next[`f_${k}`] = v;
+        for (const fieldname of [...(meta.fields ?? []).map((field) => field.fieldname), ...extraFilterFields]) next[`f_${fieldname}`] = null;
+        for (const [key, value] of Object.entries(p.filters ?? {})) if (value) next[`f_${key}`] = value;
       }
-      // đổi filter/search/sort/pageSize → về trang 1 (trừ khi chính p.page được set)
-      if (("q" in p || "filters" in p || "routeFilters" in p || "dateRange" in p || "sort" in p || "pageSize" in p) && !("page" in p)) next.page = null;
+      if (("q" in p || "filters" in p || "routeFilters" in p || "advancedFilters" in p || "dateRange" in p || "sort" in p || "pageSize" in p) && !("page" in p)) next.page = null;
       bridge.set(next);
     },
-    [bridge, meta],
+    [bridge, meta, extraKey],
   );
 
   return [state, patch] as const;

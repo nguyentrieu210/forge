@@ -1,0 +1,63 @@
+name: Client Runtime Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "client/packages/core/**"
+      - "client/packages/adapter-frappe/**"
+      - "client/packages/ui/**"
+      - "client/packages/controls/**"
+      - "client/packages/shell/**"
+      - "client/packages/views/**"
+      - "client/apps/runtime/**"
+      - "client/pnpm-lock.yaml"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/client-runtime-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: client-runtime-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared client dependencies
+        run: |
+          pnpm --filter @metaforge/core run build
+          pnpm --filter @metaforge/adapter-frappe run build
+          pnpm --filter @metaforge/visual run build
+          pnpm --filter @metaforge/charts run build
+          pnpm --filter @metaforge/ui run build
+          pnpm --filter @metaforge/controls run build
+          pnpm --filter @metaforge/shell run build
+
+      - name: Typecheck shared views
+        run: pnpm --filter @metaforge/views run typecheck
+
+      - name: Build production runtime
+        run: pnpm --filter runtime run build

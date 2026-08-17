@@ -9,20 +9,62 @@ import { applyFormProfile, type DocTypeMeta, type Doc, type DocInfo, type ListOp
 import { type Capabilities, type ListViewSnapshot, type WorkflowTransitionsResult, NO_CAPS } from "@metaforge/adapter-frappe";
 import { useMetaForge } from "./meta-context.js";
 
+function queryAbortError(): Error {
+  const error = new Error("Query cancelled");
+  error.name = "AbortError";
+  return error;
+}
+
+/**
+ * Adapter CRUD calls predate AbortSignal in their public contract. Until transport methods accept
+ * it, honour TanStack cancellation at the query boundary: an aborted request can finish on the
+ * wire, but its result can no longer resolve into the cancelled query. Link search already passes
+ * a real AbortSignal to the adapter and therefore has transport-level cancellation too.
+ */
+function abortable<T>(signal: AbortSignal, task: Promise<T>): Promise<T> {
+  if (signal.aborted) return Promise.reject(queryAbortError());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(queryAbortError());
+    signal.addEventListener("abort", onAbort, { once: true });
+    task.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        if (signal.aborted) reject(queryAbortError());
+        else resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+function sameBoundary(
+  queryKey: readonly unknown[] | undefined,
+  scopeKey: string,
+  kind: "list" | "list-view" | "count",
+  doctype: string,
+  contextKey: string,
+): boolean {
+  if (!queryKey) return false;
+  const contextIndex = kind === "count" ? 5 : 4;
+  return queryKey[0] === scopeKey
+    && queryKey[1] === kind
+    && queryKey[2] === doctype
+    && queryKey[contextIndex] === contextKey;
+}
+
 export function useMeta(doctype: string): UseQueryResult<DocTypeMeta> {
   const { adapter, scopeKey } = useMetaForge();
   return useQuery({
     queryKey: [scopeKey, "meta", doctype],
-    queryFn: () => adapter.getMeta(doctype),
-    staleTime: Infinity, // meta ít đổi; invalidate khi save Customize/Property Setter
+    queryFn: ({ signal }) => abortable(signal, adapter.getMeta(doctype)),
+    staleTime: Infinity,
   });
 }
 
-/**
- * Meta ĐÃ LỌC theo Form Profile của app — dùng cho màn Form. `useMeta` thô vẫn giữ nguyên cho
- * Builder/Report/nơi cần đầy đủ field. Lọc ở tầng hook (không phải trong `useMeta`) để cache
- * react-query vẫn là MỘT bản meta gốc dùng chung; profile chỉ là phép biến đổi thuần trên đó.
- */
+/** Meta filtered by the app Form Profile while the canonical cache keeps the raw metadata. */
 export function useFormMeta(doctype: string): UseQueryResult<DocTypeMeta> {
   const { formProfiles } = useMetaForge();
   const q = useMeta(doctype);
@@ -38,7 +80,7 @@ export function useDoc(doctype: string, name: string): UseQueryResult<{ doc: Doc
   const { adapter, scopeKey } = useMetaForge();
   return useQuery({
     queryKey: [scopeKey, "doc", doctype, name],
-    queryFn: () => adapter.getDoc(doctype, name),
+    queryFn: ({ signal }) => abortable(signal, adapter.getDoc(doctype, name)),
     enabled: Boolean(name),
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
@@ -51,17 +93,16 @@ export function useList(doctype: string, opts: ListOpts = {}, enabled = true): U
   const contextKey = JSON.stringify(businessContext);
   return useQuery({
     queryKey: [scopeKey, "list", doctype, JSON.stringify(opts), contextKey],
-    queryFn: () => Object.keys(businessContext).length
+    queryFn: ({ signal }) => abortable(signal, Object.keys(businessContext).length
       ? adapter.getContextualList(doctype, opts, businessContext)
-      : adapter.getList(doctype, opts),
+      : adapter.getList(doctype, opts)),
     enabled,
-    // Reuse a recent snapshot when moving list → form → list. An invalidated or
-    // genuinely old snapshot may refetch in the background without blanking the
-    // table because its previous data remains available.
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
-    placeholderData: (prev) => prev, // giữ trang cũ khi đổi filter/page → không nháy
+    placeholderData: (previous, previousQuery) => sameBoundary(previousQuery?.queryKey, scopeKey, "list", doctype, contextKey)
+      ? previous
+      : undefined,
   });
 }
 
@@ -70,12 +111,14 @@ export function useListView(doctype: string, opts: ListOpts = {}, enabled = true
   const contextKey = JSON.stringify(businessContext);
   return useQuery({
     queryKey: [scopeKey, "list-view", doctype, JSON.stringify(opts), contextKey],
-    queryFn: () => adapter.getListView(doctype, opts, businessContext),
+    queryFn: ({ signal }) => abortable(signal, adapter.getListView(doctype, opts, businessContext)),
     enabled,
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
-    placeholderData: (previous) => previous,
+    placeholderData: (previous, previousQuery) => sameBoundary(previousQuery?.queryKey, scopeKey, "list-view", doctype, contextKey)
+      ? previous
+      : undefined,
   });
 }
 
@@ -83,44 +126,38 @@ export function useCount(doctype: string, filters?: Filters, orFilters?: Filters
   const { adapter, scopeKey, businessContext } = useMetaForge();
   const contextKey = JSON.stringify(businessContext);
   return useQuery({
-    // P1-10: orFilters + global context là một phần cache key.
     queryKey: [scopeKey, "count", doctype, JSON.stringify(filters ?? null), JSON.stringify(orFilters ?? null), contextKey],
-    queryFn: () => Object.keys(businessContext).length
+    queryFn: ({ signal }) => abortable(signal, Object.keys(businessContext).length
       ? adapter.getContextualCount(doctype, filters, orFilters, businessContext)
-      : adapter.getCount(doctype, filters, orFilters),
+      : adapter.getCount(doctype, filters, orFilters)),
     enabled,
-    // Đi cùng chính sách của useList: tổng số dòng dùng lại cùng snapshot còn mới.
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
-    placeholderData: (prev) => prev,
+    placeholderData: (previous, previousQuery) => sameBoundary(previousQuery?.queryKey, scopeKey, "count", doctype, contextKey)
+      ? previous
+      : undefined,
   });
 }
 
-/** transitions + has_workflow từ server (nguồn sự thật nút workflow, P1-WF-01). has_workflow tách
- * bạch "doctype không có workflow" khỏi "có workflow nhưng hết transition cho state/user hiện tại". */
+/** transitions + has_workflow from the server remain the only workflow action authority. */
 export function useTransitions(doctype: string, name: string, doc?: Doc): UseQueryResult<WorkflowTransitionsResult> {
   const { adapter, scopeKey } = useMetaForge();
   return useQuery({
     queryKey: [scopeKey, "transitions", doctype, name, doc?.modified ?? null, doc?.docstatus ?? null],
-    queryFn: () => adapter.getTransitions(doc!),
+    queryFn: ({ signal }) => abortable(signal, adapter.getTransitions(doc!)),
     enabled: Boolean(doc),
-    // The key already contains modified/docstatus, so this exact result cannot
-    // become stale. A successful mutation produces a new key automatically.
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
 }
 
-/**
- * §9 — Effective capabilities FAIL-CLOSED (P0-05). name bỏ ⇒ new-doc (doctype-level).
- * `.data` chỉ có khi server trả; container PHẢI default `NO_CAPS` khi đang tải/lỗi (không optimistic).
- */
+/** Effective capabilities are fail-closed: callers default missing/error data to NO_CAPS. */
 export function useCapabilities(doctype: string, name?: string): UseQueryResult<Capabilities> {
   const { adapter, scopeKey } = useMetaForge();
   return useQuery({
     queryKey: [scopeKey, "caps", doctype, name ?? "__new__"],
-    queryFn: () => adapter.getCapabilities(doctype, name),
+    queryFn: ({ signal }) => abortable(signal, adapter.getCapabilities(doctype, name)),
     enabled: Boolean(doctype),
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
