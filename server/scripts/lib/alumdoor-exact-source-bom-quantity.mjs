@@ -25,6 +25,14 @@ addRows([1111, 1151], {
   formula_kind: "source_row_exact_leaf_skirt_width_minus_30mm",
   quantity_formula_json: field("PB_RAY_RONG", 1, -0.03),
 });
+addRows([1160], {
+  item: "TP-TD327",
+  uom: "Mét",
+  formula: "1LAXRCL",
+  qty_basis: "1 lá × rộng cắt lá cửa lưới = PB ray - 0,03 m",
+  formula_kind: "source_row_exact_mesh_leaf_skirt_rcl",
+  quantity_formula_json: field("PB_RAY_RONG", 1, -0.03),
+});
 addRows([1171], {
   item: "TP-TD327",
   uom: "Mét",
@@ -119,6 +127,15 @@ addRows([1289, 1301, 1331], {
   qty_basis: "Rộng phủ bì ray - 0,05 m",
   formula_kind: "source_row_exact_v4_width_minus_50mm",
   quantity_formula_json: field("PB_RAY_RONG", 1, -0.05),
+});
+addRows([1820], {
+  item: "NVL-V4_KEM_STD",
+  uom: "Mét",
+  formula: "(RONGPBRAY-30)1,464KG/M*2",
+  source_qty: 1.464,
+  qty_basis: "2 × (rộng phủ bì ray - 0,03 m); 1,464 kg/m là weight annotation, source consumption UOM là Mét",
+  formula_kind: "source_row_exact_dl_v4_two_lengths_1464_weight_annotation",
+  quantity_formula_json: field("PB_RAY_RONG", 2, -0.03),
 });
 
 function sourceNumber(value) {

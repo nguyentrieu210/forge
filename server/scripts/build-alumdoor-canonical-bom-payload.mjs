@@ -22,6 +22,7 @@ const clean = (v) => String(v ?? "").trim();
 const itemMap = new Map(itemPayload.items.map((row)=>[clean(row.item_code),row]));
 const itemCodes = new Set(itemMap.keys());
 const blockers=[]; const excluded=[]; const parents=new Map(); const excludedParents=new Map(); const groups=new Map();
+const exactSourceFallbackReasons=new Set(["formula_not_in_template_catalog","geometry_formula_not_in_template_catalog"]);
 
 function addBlock(type, record, extra={}) {
   blockers.push({ type, classification:blockerClass(type), source_sheet:record?.source_sheet ?? "ĐM", source_row:Number(record?.source_row)||null, source_index:Number(record?.source_index)||null, parent_item_code:clean(record?.parent_item_code), source_item_code:clean(record?.item_code), source_uom:clean(record?.source_uom), source_qty_or_formula:clean(record?.source_qty_or_formula), source_formula_code:clean(record?.source_formula_code), source_formula_text:clean(record?.source_formula_text), ...extra });
@@ -60,7 +61,11 @@ for(const record of records){
   if(!parentRecord||!parentItem){addBlock("missing_parent_item",record,{canonical_item_code:ref.item_code});continue;}
   const uom=resolveBomRuntimeUom(record,item);
   if(uom.status!=="accepted"){addBlock(uom.reason,record,{canonical_item_code:ref.item_code,runtime_uom:uom.runtime_uom,stock_uom:uom.stock_uom,conversion_factors:uom.conversion_factors});continue;}
-  const quantity=resolveExactSourceBomQuantity(record,uom,ref.item_code) ?? resolveBomQuantity(record,uom,parentItem,ref.item_code);
+  const standardQuantity=resolveBomQuantity(record,uom,parentItem,ref.item_code);
+  const exactQuantity=standardQuantity.status==="blocked" && exactSourceFallbackReasons.has(standardQuantity.reason)
+    ? resolveExactSourceBomQuantity(record,uom,ref.item_code)
+    : null;
+  const quantity=exactQuantity ?? standardQuantity;
   if(quantity.status==="blocked"){
     addBlock(quantity.reason||"runtime_contract_invalid",record,{
       canonical_item_code:ref.item_code,
