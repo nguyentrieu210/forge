@@ -724,7 +724,7 @@ function quiesceRuntime(repoRoot) {
     if (listeners.length) {
       throw executionError(
         'PERMISSION',
-        `Unmanaged required local runtime listeners block safe D1 mutation. Stop them explicitly; blind taskkill is forbidden. ${listeners.join(' | ')}`,
+        `Unmanaged required local runtime listeners block safe D1 mutation. Stop them explicitly; blind process termination is forbidden. ${listeners.join(' | ')}`,
       );
     }
     console.log(`RUNTIME_QUIESCE=PASS mode=no-managed-services listeners=0 required_services=${contract.raw}`);
