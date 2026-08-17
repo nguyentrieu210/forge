@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import { basename, dirname } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import { managedProcessTree } from "./lib/alumdoor-managed-process-tree.mjs";
 
 const root = process.env.ALUMDOOR_ROOT || "C:\\alumdoor";
 const serviceHome = process.env.ALUMDOOR_SERVICE_HOME || "C:\\ForgeServices\\Alumdoor";
@@ -30,6 +31,9 @@ const pnpmCommand = basename(pnpm) || "pnpm.cmd";
 const childEnv = {
   ...process.env,
   PATH: `${pnpmDir};${process.env.PATH || ""}`,
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+  COREPACK_HOME: process.env.COREPACK_HOME || `${serviceHome}\\corepack`,
+  CI: process.env.CI || "1",
 };
 
 const config =
@@ -57,16 +61,52 @@ function maintenanceEnabled() {
   return existsSync(maintenanceFile) || (role === "desk" && existsSync(deskMaintenanceFile));
 }
 
-function killTree(pid) {
-  if (!pid) return;
-  const result = spawnSync("taskkill.exe", ["/PID", String(pid), "/T", "/F"], {
-    windowsHide: true,
-    encoding: "utf8",
-  });
+function processSnapshot() {
+  const script =
+    "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Compress";
+  const result = spawnSync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+    { windowsHide: true, encoding: "utf8" },
+  );
   if (result.status !== 0) {
     const output = `${result.stderr || ""}${result.stdout || ""}`.trim();
-    if (output && !/not found|no running instance|not exist/i.test(output)) {
-      console.error(`[${role}] taskkill pid=${pid} failed: ${output}`);
+    throw new Error(`managed process snapshot failed: ${output || `exit=${result.status}`}`);
+  }
+  const text = String(result.stdout || "").trim();
+  if (!text) return [];
+  const parsed = JSON.parse(text);
+  return Array.isArray(parsed) ? parsed : [parsed];
+}
+
+function stopManagedTree(pid, reason) {
+  if (!pid) return;
+  let tree;
+  try {
+    tree = managedProcessTree(processSnapshot(), pid);
+  } catch (error) {
+    console.error(`[${role}] managed tree inspection pid=${pid} failed: ${error.message}`);
+    return;
+  }
+  if (tree.length === 0) {
+    console.log(`[${role}] managed tree already absent root=${pid} reason=${reason}`);
+    return;
+  }
+
+  console.log(
+    `[${role}] managed tree stop root=${pid} reason=${reason} pids=${tree.map((entry) => entry.id).join(",")}`,
+  );
+  for (const processInfo of tree) {
+    try {
+      process.kill(processInfo.id, "SIGTERM");
+      console.log(
+        `[${role}] managed process terminated pid=${processInfo.id} parent=${processInfo.parentId} name=${processInfo.name || "unknown"}`,
+      );
+    } catch (error) {
+      if (error?.code === "ESRCH") continue;
+      console.error(
+        `[${role}] managed process terminate failed pid=${processInfo.id} parent=${processInfo.parentId} name=${processInfo.name || "unknown"}: ${error.message}`,
+      );
     }
   }
 }
@@ -100,8 +140,8 @@ function startChild() {
 function stopChild(reason) {
   if (!child || stoppingChild) return;
   stoppingChild = true;
-  console.log(`[${role}] stopping pid=${child.pid} reason=${reason}`);
-  killTree(child.pid);
+  console.log(`[${role}] stopping managed root pid=${child.pid} reason=${reason}`);
+  stopManagedTree(child.pid, reason);
 }
 
 async function reconcile() {
@@ -122,7 +162,7 @@ function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`[${role}] service host shutting down signal=${signal}`);
-  if (child) killTree(child.pid);
+  if (child) stopManagedTree(child.pid, `service-host-${signal}`);
   setTimeout(() => process.exit(0), 100).unref();
 }
 
@@ -130,11 +170,11 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGHUP", () => shutdown("SIGHUP"));
 process.on("exit", () => {
-  if (child?.pid) killTree(child.pid);
+  if (child?.pid) stopManagedTree(child.pid, "service-host-exit");
 });
 
 console.log(
-  `[${role}] service host ready root=${root} maintenance=${maintenanceFile} deskMaintenance=${deskMaintenanceFile} pnpm=${pnpm}`,
+  `[${role}] service host ready root=${root} maintenance=${maintenanceFile} deskMaintenance=${deskMaintenanceFile} pnpm=${pnpm} corepack_prompt=disabled`,
 );
 await reconcile();
 setInterval(reconcile, 1000).unref();
