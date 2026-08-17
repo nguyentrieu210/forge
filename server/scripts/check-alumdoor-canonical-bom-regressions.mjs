@@ -17,6 +17,7 @@ const records = Array.isArray(source) ? source : source.records;
 const items = itemPayload.items ?? [];
 const boms = bomPayload.boms ?? [];
 const blockers = audit.blockers ?? [];
+const excluded = audit.excluded ?? [];
 const lines = boms.flatMap((bom) => bom.lines ?? []);
 const itemMap = new Map(items.map((item) => [String(item.item_code ?? "").trim(), item]));
 
@@ -28,6 +29,12 @@ function linesForSourceItem(code) {
 }
 function blockersForSourceItem(code) {
   return blockers.filter((blocker) => blocker.source_item_code === code);
+}
+
+for (const bom of boms) {
+  for (const line of bom.lines ?? []) {
+    assert.notEqual(line.item_code, bom.item, `${bom.item} must never contain itself as a canonical BOM component`);
+  }
 }
 
 const boltLines = linesForSourceItem("NVL-BULON12.12");
@@ -103,6 +110,23 @@ for (const [sourceRow, expected] of ratePerOutputRows) {
   assert.equal(line.uom, "Kg");
   assert.equal(line.qty, expected.qty);
   assert.equal(line.lineage?.resolution_reason, "rate_per_parent_output");
+  assert.equal(blockers.filter((blocker) => blocker.source_row === sourceRow).length, 0);
+}
+
+const australiaBottomSealLine = lines.find((line) => line.lineage?.source_row === 686);
+assert.ok(australiaBottomSealLine, "RONDAYUC source row 686 must resolve to the raw bottom-seal Item");
+assert.equal(australiaBottomSealLine.lineage?.source_item_code, "RONDAYUC");
+assert.equal(australiaBottomSealLine.item_code, "NVL-RONDAYUC");
+assert.equal(australiaBottomSealLine.uom, "Kg");
+assert.equal(australiaBottomSealLine.qty, 0.0077);
+assert.equal(australiaBottomSealLine.lineage?.resolution_reason, "rate_per_parent_output");
+assert.equal(blockers.filter((blocker) => blocker.source_row === 686).length, 0);
+
+for (const sourceRow of [679, 1129, 2026]) {
+  assert.ok(
+    excluded.some((entry) => entry.source_row === sourceRow && entry.reason === "canonical_self_reference_non_bom"),
+    `canonical self-reference source row ${sourceRow} must be excluded from BOM construction`,
+  );
   assert.equal(blockers.filter((blocker) => blocker.source_row === sourceRow).length, 0);
 }
 
