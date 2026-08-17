@@ -9,7 +9,7 @@ import { resolveAlumdoorBomEvidenceAlias, resolveAlumdoorBomItemPromotion } from
 import { classifyExactSourceBomEvidenceGap } from "./lib/alumdoor-exact-source-bom-evidence-gap.mjs";
 import { resolveExactSourceBomQuantity, resolveExactSourceBomUomOverride } from "./lib/alumdoor-exact-source-bom-quantity.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
-import { blockerClass, resolveBomParentOutput, resolveBomQuantity, resolveBomRuntimeUom } from "./lib/alumdoor-real-bom-gate-semantics.mjs";
+import { blockerClass, resolveBomParentOutput, resolveBomQuantity, resolveBomRuntimeUom, resolveTemplateLineage } from "./lib/alumdoor-real-bom-gate-semantics.mjs";
 
 const [sourceArg,itemArg,outputArg,auditArg] = process.argv.slice(2);
 if (!sourceArg || !itemArg || !outputArg || !auditArg) throw new Error("Usage: build-alumdoor-canonical-bom-payload.mjs <source.json> <items.json> <payload.json> <audit.json>");
@@ -72,8 +72,10 @@ for(const record of records){
     excluded.push({source_row:record.source_row,source_index:index,source_parent_row:parentRow,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,reason:"canonical_self_reference_non_bom"});
     continue;
   }
+  const templateLineage=resolveTemplateLineage(record,ref.item_code);
+  const deferredActual=templateLineage.status==="mapped" && templateLineage.kind==="deferred_actual";
   const uomOverride=resolveExactSourceBomUomOverride(record,ref.item_code);
-  const uomRecord=uomOverride?{...record,source_uom:uomOverride.runtime_uom}:record;
+  const uomRecord=deferredActual?{...record,source_uom:item.stock_uom}:uomOverride?{...record,source_uom:uomOverride.runtime_uom}:record;
   const uom=resolveBomRuntimeUom(uomRecord,item);
   if(uom.status!=="accepted"){addBlock(uom.reason,record,{canonical_item_code:ref.item_code,runtime_uom:uom.runtime_uom,stock_uom:uom.stock_uom,conversion_factors:uom.conversion_factors});continue;}
   const standardQuantity=resolveBomQuantity(record,uom,parentItem,ref.item_code);
