@@ -42,6 +42,17 @@ export function normalizeCanonicalItemGroup(value) {
   return normalized;
 }
 
+export function assertSourceItemCodePreserved(sourceCode, itemCode, context = "Item") {
+  const source = String(sourceCode ?? "").trim();
+  const target = String(itemCode ?? "").trim();
+  if (!source) throw new Error(`${context}: thiếu mã nguồn để kiểm tra identity`);
+  if (!target) throw new Error(`${context}: thiếu item_code`);
+  if (source !== target) {
+    throw new Error(`${context}: item_code '${target}' khác mã nguồn gốc '${source}'`);
+  }
+  return target;
+}
+
 export function assertAtomicItemUom(value, context = "UOM") {
   const raw = String(value ?? "").trim();
   if (!raw) throw new Error(`${context}: thiếu UOM`);
