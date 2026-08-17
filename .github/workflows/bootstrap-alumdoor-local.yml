@@ -65,11 +65,70 @@ jobs:
             }
           }
 
-          $dirty = @(git -C $target status --porcelain)
+          # Runtime/service installation may leave a very small, known set of generated
+          # wrappers or local rewrites in the source workspace. Back up and clean only
+          # that allowlist so automatic main fast-forward remains safe. Any other local
+          # source edit still blocks bootstrap instead of being overwritten.
+          $runtimeTracked = @(
+            'run-local.bat',
+            'server/scripts/alumdoor-runtime-service-host.mjs',
+            'server/scripts/install-alumdoor-runtime-services.ps1'
+          )
+          $runtimeUntracked = @(
+            'client/start-client.cmd',
+            'server/start-worker.cmd'
+          )
+
+          $dirty = @(git -C $target status --porcelain=v1)
           if ($dirty.Count -gt 0) {
-            Write-Host 'Working tree dang co thay doi:'
-            $dirty | ForEach-Object { Write-Host "  $_" }
-            throw 'Dung bootstrap de tranh mat thay doi local. Commit/stash/sua working tree truoc.'
+            $unexpected = @()
+            foreach ($entry in $dirty) {
+              if ($entry.Length -lt 4) {
+                $unexpected += $entry
+                continue
+              }
+              $status = $entry.Substring(0, 2)
+              $path = $entry.Substring(3).Trim()
+              $knownTracked = $runtimeTracked -contains $path
+              $knownUntracked = ($status -eq '??') -and ($runtimeUntracked -contains $path)
+              if (-not $knownTracked -and -not $knownUntracked) {
+                $unexpected += $entry
+              }
+            }
+
+            if ($unexpected.Count -gt 0) {
+              Write-Host 'Working tree co thay doi ngoai allowlist runtime:'
+              $unexpected | ForEach-Object { Write-Host "  $_" }
+              throw 'Dung bootstrap de tranh mat thay doi local. Commit/stash/sua working tree truoc.'
+            }
+
+            $backupRoot = Join-Path 'C:\ForgeServices\Alumdoor\source-backups' (Get-Date -Format 'yyyyMMdd-HHmmss')
+            New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
+            foreach ($path in @($runtimeTracked + $runtimeUntracked)) {
+              $sourcePath = Join-Path $target ($path -replace '/', '\')
+              if (-not (Test-Path -LiteralPath $sourcePath)) { continue }
+              $backupPath = Join-Path $backupRoot ($path -replace '/', '\')
+              $backupDir = Split-Path $backupPath -Parent
+              New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
+              Copy-Item -LiteralPath $sourcePath -Destination $backupPath -Force
+            }
+            Write-Host "Runtime-generated local source backed up: $backupRoot"
+
+            git -C $target restore --worktree --staged -- @runtimeTracked
+            if ($LASTEXITCODE -ne 0) { throw 'Khong restore duoc tracked runtime-generated files' }
+            foreach ($path in $runtimeUntracked) {
+              $sourcePath = Join-Path $target ($path -replace '/', '\')
+              if (Test-Path -LiteralPath $sourcePath) {
+                Remove-Item -LiteralPath $sourcePath -Force
+              }
+            }
+
+            $remaining = @(git -C $target status --porcelain=v1)
+            if ($remaining.Count -gt 0) {
+              Write-Host 'Working tree van dirty sau runtime cleanup:'
+              $remaining | ForEach-Object { Write-Host "  $_" }
+              throw 'Runtime cleanup khong dua workspace ve trang thai sach.'
+            }
           }
 
           Write-Host 'Workspace hop le:'
