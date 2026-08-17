@@ -31,8 +31,8 @@ const MASTER_AFFINITY: Record<string, string[]> = {
   Customer: ["Bán hàng", "Công nợ", "Bảo hành"], Supplier: ["Mua hàng", "Công nợ", "Bảo hành"],
   "Price List": ["Bán hàng"], "Item Price": ["Bán hàng"], "Pricing Scope": ["Bán hàng"], "Pricing Rule": ["Bán hàng"],
   "Cutting Policy": ["Sản xuất"], "Measurement Profile": ["Kho", "Sản xuất"], "Item Color": ["Kho", "Sản xuất"],
-  "Material Grade": ["Kho", "Sản xuất"], "Material Specification": ["Kho", "Sản xuất"], "Item Attribute": ["Kho", "Sản xuất"],
-  "Supplier Item": ["Mua hàng"], Brand: ["Bán hàng", "Mua hàng"], Manufacturer: ["Mua hàng"], "Lý do huỷ": ["Kho"], "Nguyên nhân chênh lệch": ["Kho"],
+  "Material Specification": ["Kho", "Sản xuất"], "Supplier Item": ["Mua hàng"],
+  "Lý do huỷ": ["Kho"], "Nguyên nhân chênh lệch": ["Kho"],
 };
 
 function catalog(item: NavItem): boolean {
