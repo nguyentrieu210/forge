@@ -185,6 +185,13 @@ function gitHead(repoRoot) {
   return run("git", ["-C", repoRoot, "rev-parse", "HEAD"], "git rev-parse HEAD").trim();
 }
 
+export function classifyMigrationSha(expectedSha, actualSha) {
+  const expected = String(expectedSha ?? "").trim().toLowerCase();
+  const actual = String(actualSha ?? "").trim().toLowerCase();
+  if (expected === actual) return { status: "match", expected_sha: expected, actual_sha: actual };
+  return { status: "stale-request", expected_sha: expected, actual_sha: actual };
+}
+
 function waitForLegacyBackendStopped(timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -257,8 +264,12 @@ export async function reconcileLegacyRuntimeMigration({
   }
 
   const actual = gitHead(repoRoot);
-  if (actual !== request.expected_sha) {
-    throw new Error(`Migration SHA mismatch expected=${request.expected_sha} actual=${actual}`);
+  const shaState = classifyMigrationSha(request.expected_sha, actual);
+  if (shaState.status !== "match") {
+    console.warn(
+      `ALUMDOOR_LEGACY_RUNTIME_MIGRATION_STALE_REQUEST expected=${shaState.expected_sha} actual=${shaState.actual_sha} action=ignore-no-mutation`,
+    );
+    return shaState;
   }
 
   const result = performMigration(snapshot, repoRoot);
