@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { resolveTemplateLineage } from "./lib/alumdoor-real-bom-gate-semantics.mjs";
+
+const [sourceArg,itemArg,bomArg,auditArg] = process.argv.slice(2);
+if (!sourceArg || !itemArg || !bomArg || !auditArg) {
+  throw new Error("Usage: check-alumdoor-canonical-bom-regressions.mjs <source.json> <items.json> <bom.json> <audit.json>");
+}
+const readJson = (arg) => JSON.parse(readFileSync(path.resolve(arg), "utf8"));
+const source = readJson(sourceArg);
+const itemPayload = readJson(itemArg);
+const bomPayload = readJson(bomArg);
+const audit = readJson(auditArg);
+const records = Array.isArray(source) ? source : source.records;
+const items = itemPayload.items ?? [];
+const boms = bomPayload.boms ?? [];
+const blockers = audit.blockers ?? [];
+const lines = boms.flatMap((bom) => bom.lines ?? []);
+const itemMap = new Map(items.map((item) => [String(item.item_code ?? "").trim(), item]));
+
+assert.equal(items.length, 587, "Gate A canonical Item count must remain 587");
+assert.equal(audit.blocker_counts?.missing_component_item ?? 0, 0, "missing_component_item must remain zero");
+
+function linesForSourceItem(code) {
+  return lines.filter((line) => line.lineage?.source_item_code === code);
+}
+function blockersForSourceItem(code) {
+  return blockers.filter((blocker) => blocker.source_item_code === code);
+}
+
+const boltLines = linesForSourceItem("NVL-BULON12.12");
+assert.ok(boltLines.length > 0, "NVL-BULON12.12 must resolve into canonical BOM lines");
+assert.ok(boltLines.every((line) => line.item_code === "NVL-BULON12.12"), "NVL-BULON12.12 canonical identity must be preserved");
+assert.equal(blockersForSourceItem("NVL-BULON12.12").length, 0, "NVL-BULON12.12 must not regress into a blocker");
+
+const rubberLines = linesForSourceItem("RNHUA/LONG-CR");
+assert.ok(rubberLines.length > 0, "RNHUA/LONG-CR must resolve into canonical BOM lines");
+assert.ok(rubberLines.every((line) => line.item_code === "RNHUA/LONG-CR"), "RNHUA/LONG-CR canonical identity must be preserved");
+assert.equal(blockersForSourceItem("RNHUA/LONG-CR").length, 0, "RNHUA/LONG-CR must not regress into a blocker");
+
+const brushBlockers = blockersForSourceItem("NVL-PHOTLONG4X5");
+assert.ok(brushBlockers.length > 0, "NVL-PHOTLONG4X5 must remain fail-closed without metres-per-roll evidence");
+assert.ok(brushBlockers.every((blocker) => blocker.type === "missing_conversion"), "NVL-PHOTLONG4X5 may only be blocked by the authoritative M↔Cuộn evidence gap");
+assert.ok(brushBlockers.every((blocker) => blocker.canonical_item_code === "NVL-PHOTLONG4X5"), "NVL-PHOTLONG4X5 identity must resolve before conversion blocking");
+assert.ok(brushBlockers.every((blocker) => blocker.runtime_uom === "Mét" && blocker.stock_uom === "Cuộn"), "NVL-PHOTLONG4X5 blocker must explicitly remain Mét↔Cuộn");
+assert.equal(linesForSourceItem("NVL-PHOTLONG4X5").length, 0, "NVL-PHOTLONG4X5 must not silently resolve without conversion evidence");
+
+assert.equal(blockers.filter((blocker) => blocker.type === "parent_missing_conversion").length, 0, "finished-door parent conversion must never be reintroduced");
+const finishedDoorBoms = boms.filter((bom) => itemMap.get(bom.item)?.stock_uom === "Bộ");
+assert.ok(finishedDoorBoms.length > 0, "expected at least one finished-door BOM with stock UOM Bộ");
+for (const bom of finishedDoorBoms) {
+  assert.equal(bom.quantity, 1, `${bom.item} parent output quantity must be 1`);
+  assert.equal(bom.output_uom, "Bộ", `${bom.item} parent output UOM must be Bộ`);
+  assert.equal(bom.configuration_snapshot?.output?.quantity, 1, `${bom.item} snapshot output quantity must be 1`);
+  assert.equal(bom.configuration_snapshot?.output?.output_uom, "Bộ", `${bom.item} snapshot output UOM must be Bộ`);
+}
+for (const item of items.filter((row) => row.stock_uom === "Bộ")) {
+  const staticArea = (item.uom_conversions ?? []).filter((row) => /^(m2|m²)$/i.test(String(row.uom ?? "").trim()));
+  assert.equal(staticArea.length, 0, `${item.item_code} must not carry static Bộ↔m² conversion`);
+}
+
+const leafLine = lines.find((line) => line.lineage?.source_row === 688);
+assert.ok(leafLine, "source row 688 must resolve through the corrected 4D template");
+const leafFormula = JSON.parse(leafLine.quantity_formula_json);
+assert.equal(leafFormula.base?.kind, "PRODUCT");
+assert.equal(leafFormula.base?.left?.field, "PB_CAO");
+assert.equal(leafFormula.base?.right?.field, "PB_RAY_RONG");
+assert.equal(leafFormula.base?.right?.offset, -0.03);
+assert.equal(leafFormula.multiply, 3.6);
+
+const bottomBarLine = lines.find((line) => line.lineage?.source_row === 691);
+assert.ok(bottomBarLine, "source row 691 must resolve through the corrected 4D template");
+const bottomBarFormula = JSON.parse(bottomBarLine.quantity_formula_json);
+assert.equal(bottomBarFormula.base?.field, "PB_RAY_RONG");
+assert.equal(bottomBarFormula.base?.offset, -0.03);
+assert.equal(bottomBarFormula.multiply, 0.6);
+
+const validLineage = resolveTemplateLineage({ source_sheet: "ĐM", source_row: 688, item_code: "NVL-TON3.8D-XN-VK" }, "NVL-TOLE0.35x598-XNVK");
+assert.equal(validLineage.status, "mapped");
+assert.equal(validLineage.kind, "formula");
+assert.equal(validLineage.template_code, "SRC-UC-KT-4D-XN-VK");
+
+const mismatchedLineage = resolveTemplateLineage({ source_sheet: "ĐM", source_row: 688, item_code: "NVL-GIAT" }, "NVL-GIAT");
+assert.equal(mismatchedLineage.status, "blocked");
+assert.equal(mismatchedLineage.reason, "template_lineage_item_mismatch");
+assert.equal(mismatchedLineage.expected_item_code, "NVL-TON3.8D-XN-VK");
+
+const wrongRow = resolveTemplateLineage({ source_sheet: "ĐM", source_row: 687, item_code: "NVL-TON3.8D-XN-VK" }, "NVL-TOLE0.35x598-XNVK");
+assert.equal(wrongRow.status, "unmapped", "matching-ish component on the wrong source row must not map to a template formula");
+
+const sourceRows = new Set(records.map((record) => Number(record.source_row)).filter(Number.isFinite));
+assert.ok(sourceRows.has(688) && sourceRows.has(691), "regression source rows must exist in extracted source evidence");
+
+console.log("ALUMDOOR_CANONICAL_BOM_REGRESSIONS_PASS");
