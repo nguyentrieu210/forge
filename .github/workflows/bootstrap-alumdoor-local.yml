@@ -61,7 +61,7 @@ jobs:
             }
           }
 
-          # Preserve only the known service-generated source artifacts. Anything
+          # Preserve only known service-generated source artifacts. Anything
           # outside this allowlist blocks bootstrap instead of being overwritten.
           $runtimeTracked = @(
             'run-local.bat',
@@ -124,6 +124,141 @@ jobs:
 
           Write-Host 'Canonical workspace ready for guarded bootstrap:'
           git -C $target log -1 --oneline
+
+      # Backward-compatible bridge for a machine whose clean local main predates
+      # scripts/local-runner/run-local-import.mjs. This step never mutates D1.
+      # It only performs a guarded source fast-forward after maintenance, an
+      # ownership lock and a validated local-state pre-image. Once the runner is
+      # present this bridge is a no-op and the canonical runner owns bootstrap.
+      - name: Bridge legacy source into canonical runner when missing
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+          $runner = Join-Path $target 'scripts\local-runner\run-local-import.mjs'
+          if (Test-Path -LiteralPath $runner -PathType Leaf) {
+            Write-Host 'LEGACY_SOURCE_TRANSITION=SKIP reason=canonical_runner_present'
+            exit 0
+          }
+
+          $maintenance = Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs'
+          $backup = Join-Path $target 'server\scripts\backup-local-state.mjs'
+          foreach ($required in @($maintenance, $backup)) {
+            if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+              throw "Legacy source transition dependency missing: $required"
+            }
+          }
+
+          git -C $target fetch origin main --prune
+          if ($LASTEXITCODE -ne 0) { throw 'Legacy source transition fetch failed' }
+          $local = (git -C $target rev-parse HEAD).Trim()
+          $remote = (git -C $target rev-parse origin/main).Trim()
+          if ($remote -ne $env:FORGE_LOCAL_EXPECTED_SHA) {
+            throw "Legacy source transition target mismatch expected=$env:FORGE_LOCAL_EXPECTED_SHA origin_main=$remote"
+          }
+          $counts = ((git -C $target rev-list --left-right --count HEAD...origin/main).Trim() -split '\s+')
+          if ($LASTEXITCODE -ne 0 -or $counts.Count -ne 2) { throw 'Cannot classify legacy local main ahead/behind state' }
+          $ahead = [int]$counts[0]
+          $behind = [int]$counts[1]
+          if ($ahead -ne 0) { throw "Legacy local main is ahead by $ahead commit(s); refusing source transition" }
+          if ($behind -le 0) { throw "Canonical runner is missing but local main is not behind: local=$local remote=$remote" }
+
+          $lockDir = Join-Path $target 'local-locks'
+          $lockPath = Join-Path $lockDir 'local-d1-mutation.lock'
+          $transitionRun = "bootstrap-transition-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $lockOwned = $false
+          $maintenanceEnabled = $false
+          New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
+
+          try {
+            $payload = [ordered]@{
+              format = 'forge-bootstrap-source-transition/v1'
+              run_id = $transitionRun
+              adapter = 'bootstrap-source-transition'
+              pid = $PID
+              hostname = $env:COMPUTERNAME
+              started_at = (Get-Date).ToUniversalTime().ToString('o')
+              workflow = $env:GITHUB_WORKFLOW
+              github_run_id = $env:GITHUB_RUN_ID
+              github_run_attempt = $env:GITHUB_RUN_ATTEMPT
+              repo_sha = $local
+              target_sha = $remote
+            } | ConvertTo-Json -Depth 4
+            try {
+              $stream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+              try {
+                $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload + "`n")
+                $stream.Write($bytes, 0, $bytes.Length)
+              } finally {
+                $stream.Dispose()
+              }
+              $lockOwned = $true
+              Write-Host "LEGACY_SOURCE_LOCK=ACQUIRED run_id=$transitionRun path=$lockPath"
+            } catch {
+              throw "Legacy source transition lock is active or ownership is unproven: $lockPath"
+            }
+
+            & node $maintenance on
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to enable maintenance for legacy source transition' }
+            $maintenanceEnabled = $true
+
+            $deadline = (Get-Date).AddSeconds(30)
+            $quietSince = $null
+            do {
+              $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799, 5173) })
+              if ($listeners.Count -eq 0) {
+                if ($null -eq $quietSince) { $quietSince = Get-Date }
+                if (((Get-Date) - $quietSince).TotalSeconds -ge 3) { break }
+              } else {
+                $quietSince = $null
+              }
+              Start-Sleep -Milliseconds 500
+            } while ((Get-Date) -lt $deadline)
+            if ($listeners.Count -gt 0 -or $null -eq $quietSince -or ((Get-Date) - $quietSince).TotalSeconds -lt 3) {
+              foreach ($listener in $listeners) {
+                $process = Get-CimInstance Win32_Process -Filter ("ProcessId=" + $listener.OwningProcess) -ErrorAction SilentlyContinue
+                Write-Host "BLOCKING_LISTENER port=$($listener.LocalPort) pid=$($listener.OwningProcess) name=$($process.Name) parent=$($process.ParentProcessId) exe=$($process.ExecutablePath)"
+              }
+              throw 'Legacy source transition could not prove ports 8799/5173 quiet'
+            }
+            Write-Host 'LEGACY_SOURCE_QUIESCE=PASS'
+
+            $backupOutput = @(& node $backup 2>&1)
+            $backupExit = $LASTEXITCODE
+            $backupOutput | ForEach-Object { Write-Host $_ }
+            if ($backupExit -ne 0) { throw "Legacy source transition backup failed exit=$backupExit" }
+            $backupEvidence = ($backupOutput -join "`n")
+            if ($backupEvidence -notmatch 'LOCAL_STATE_BACKUP_OK path=(.+) bytes=(\d+)') {
+              throw 'Legacy source transition backup did not emit authenticated evidence'
+            }
+            if ([int64]$Matches[2] -le 0) { throw 'Legacy source transition backup is empty' }
+            Write-Host "LEGACY_SOURCE_BACKUP=PASS bytes=$($Matches[2])"
+
+            git -C $target merge --ff-only origin/main
+            if ($LASTEXITCODE -ne 0) { throw 'Legacy source transition ff-only merge failed' }
+            $actual = (git -C $target rev-parse HEAD).Trim()
+            if ($actual -ne $env:FORGE_LOCAL_EXPECTED_SHA) {
+              throw "Legacy source transition exact-SHA failure expected=$env:FORGE_LOCAL_EXPECTED_SHA actual=$actual"
+            }
+            if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) {
+              throw "Canonical runner still missing after transition: $runner"
+            }
+            Write-Host "LEGACY_SOURCE_TRANSITION=PASS from=$local to=$actual mutation_started=0"
+          } finally {
+            if ($maintenanceEnabled) {
+              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') off
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to restore runtime after legacy source transition' }
+              Write-Host 'LEGACY_SOURCE_RUNTIME_RESTORE=PASS'
+            }
+            if ($lockOwned -and (Test-Path -LiteralPath $lockPath)) {
+              $current = Get-Content -Raw $lockPath | ConvertFrom-Json
+              if ($current.run_id -ne $transitionRun) {
+                throw "Refusing to release legacy source lock owned by $($current.run_id)"
+              }
+              Remove-Item -LiteralPath $lockPath -Force
+              Write-Host "LEGACY_SOURCE_LOCK=RELEASED run_id=$transitionRun"
+            }
+          }
 
       - name: Run canonical bootstrap mutation contract
         shell: powershell
