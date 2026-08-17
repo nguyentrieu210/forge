@@ -144,7 +144,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
   const documentName = text(props.name);
   const isExisting = Boolean(documentName);
-  const formReadOnly = isExisting && (!caps.write || docstatus !== 0);
+  const formReadOnly = isExisting ? (!caps.write || docstatus !== 0) : !caps.create;
   const canSave = isExisting ? !formReadOnly : Boolean(caps.create);
   const canSubmit = docstatus === 0 && Boolean(caps.submit) && (isExisting ? !formReadOnly : Boolean(caps.create));
 
