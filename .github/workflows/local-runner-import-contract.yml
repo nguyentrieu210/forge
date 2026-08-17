@@ -7,10 +7,14 @@ on:
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
       - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
+      - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
+      - 'server/scripts/install-alumdoor-runtime-services.ps1'
+      - 'server/scripts/test-alumdoor-service-control-contract.mjs'
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
       - '.github/workflows/local-runner-import-contract.yml'
       - 'skills/forge-local-runner-import/**'
@@ -22,10 +26,14 @@ on:
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
       - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
+      - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
+      - 'server/scripts/install-alumdoor-runtime-services.ps1'
+      - 'server/scripts/test-alumdoor-service-control-contract.mjs'
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
       - '.github/workflows/local-runner-import-contract.yml'
       - 'skills/forge-local-runner-import/**'
@@ -51,6 +59,7 @@ jobs:
         run: |
           node --test scripts/local-runner/contract.test.mjs
           node server/scripts/test-alumdoor-managed-process-tree.mjs
+          node server/scripts/test-alumdoor-service-control-contract.mjs
 
       - name: Syntax check execution sources
         run: |
@@ -60,6 +69,7 @@ jobs:
           node --check server/scripts/lib/alumdoor-managed-process-tree.mjs
           node --check server/scripts/import-alumdoor-reason-master-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
+          node --check server/scripts/test-alumdoor-service-control-contract.mjs
 
       - name: Diff hygiene
         shell: bash
@@ -123,6 +133,28 @@ jobs:
           grep -q 'COREPACK_ENABLE_DOWNLOAD_PROMPT' "$host"
           if grep -q 'taskkill' "$host"; then
             echo 'Managed service host must not use taskkill; terminate only descendants of its owned root PID'
+            exit 1
+          fi
+
+      - name: Enforce minimal Windows service-control grant
+        shell: bash
+        run: |
+          set -euo pipefail
+          grant=server/scripts/grant-alumdoor-runner-service-control.ps1
+          installer=server/scripts/install-alumdoor-runtime-services.ps1
+          prestage=.github/workflows/alumdoor-service-control-remediation-prestage.yml
+
+          grep -q "0x000200BD" "$grant"
+          grep -q 'ALUMDOOR_RUNNER_SERVICE_CONTROL_PASS' "$grant"
+          grep -q 'Win32_ComputerSystem' "$grant"
+          grep -q 'actions.runner.nguyentrieu210-forge' "$grant"
+          grep -q 'grant-alumdoor-runner-service-control.ps1' "$installer"
+          grep -q 'service-control-grant.json' "$installer"
+          grep -q 'SERVICE_CONTROL_REMEDIATION_PRESTAGED=PASS' "$prestage"
+          grep -q 'No elevation was attempted by this workflow' "$prestage"
+
+          if grep -Eq '0x000F01FF|SERVICE_ALL_ACCESS|WRITE_DAC[^\n]*\$controlMask|CHANGE_CONFIG[^\n]*\$controlMask' "$grant"; then
+            echo 'Service-control grant is broader than the approved local-runner mask'
             exit 1
           fi
 
