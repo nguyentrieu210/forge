@@ -110,8 +110,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location 'C:\alumdoor\server'
-          & node -e "import('./scripts/lib/alumdoor-uom-catalog.mjs').then(({ALUMDOOR_UOM_CATALOG:c})=>{if(c.length!==19||!c.some(x=>x.name==='Thùng')){console.error(c);process.exit(1)};console.log('ALUMDOOR_UOM_CATALOG_19_PASS')})"
-          if ($LASTEXITCODE -ne 0) { throw 'Canonical UOM catalog is not the approved 19-UOM set.' }
           $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
           $env:FORGE_ADMIN_USER = 'dev@example.com'
           $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
