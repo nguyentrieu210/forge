@@ -26,7 +26,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Apply issue 943 patch
-        run: python .github/issue-943-apply.py
+        run: |
+          python .github/issue-943-prepatch.py
+          python .github/issue-943-apply.py
       - name: Generate metadata first pass
         run: |
           node server/scripts/build-alumdoor-v2-brief.mjs
@@ -52,6 +54,7 @@ jobs:
       - name: Commit product tree and remove temporary probes
         run: |
           rm -f .github/issue-943-apply.py
+          rm -f .github/issue-943-prepatch.py
           rm -f .github/workflows/issue-943-trace.yml
           rm -f .github/workflows/issue-943-sales-meta-trace.yml
           rm -f .github/workflows/issue-943-runtime-shape.yml
