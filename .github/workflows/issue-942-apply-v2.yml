@@ -25,7 +25,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --prefer-offline
       - name: Apply source and generator convergence
-        run: python .github/issue-942-apply.py
+        run: |
+          python .github/issue-942-prepatch.py
+          python .github/issue-942-apply.py
       - name: Generator first pass
         run: |
           node server/scripts/build-alumdoor-v2-brief.mjs
@@ -36,9 +38,9 @@ jobs:
           node <<'NODE'
           const fs=require('node:fs'); const b=JSON.parse(fs.readFileSync('server/briefs/alumdoor-v2.json','utf8'));
           const nameOf=f=>typeof f==='string'?f.split(':')[0].trim():f.fieldname;
-          const d=n=>{const x=b.doctypes.find(v=>v.name===n); if(!x) throw new Error('missing doctype '+n); return x};
+          const d=n=>{const xs=b.doctypes.filter(v=>v.name===n); if(xs.length!==1) throw new Error(`expected exactly one ${n}, got ${xs.length}`); return xs[0]};
           const has=(dt,f)=>d(dt).fields.some(x=>nameOf(x)===f);
-          for(const n of ['Tỉnh Thành','Phường Xã','Địa chỉ giao lắp','Tài khoản ngân hàng','Credit Note','Credit Note Item','Stock Return']) d(n);
+          for(const n of ['Tỉnh Thành','Phường Xã','Địa chỉ giao lắp','Tài khoản ngân hàng','Credit Note','Credit Note Item','Stock Return','Cut Order Item']) d(n);
           for(const [dt,f] of [['Sales Order Item','discount_percentage'],['Cutting Policy','geometry_profile'],['Cutting Policy','geometry_rules'],['Cut Order Item','source_batch_no'],['Price List','customer_group']]) if(!has(dt,f)) throw new Error(`missing ${dt}.${f}`);
           for(const x of b.doctypes) for(const f of x.fields||[]) if(['sales_option','sales_mode'].includes(nameOf(f))) throw new Error(`deprecated ${x.name}.${nameOf(f)}`);
           if(b.doctypes.some(x=>['Sales Option','Sales Package'].includes(x.name))) throw new Error('deprecated sales doctype resurrected');
@@ -62,6 +64,7 @@ jobs:
       - name: Commit and remove temporary probes
         run: |
           rm -f .github/issue-942-apply.py
+          rm -f .github/issue-942-prepatch.py
           rm -f .github/workflows/issue-942-provenance-probe.yml
           rm -f .github/workflows/issue-942-semantic-probe.yml
           rm -f .github/workflows/issue-942-remaining-provenance.yml
