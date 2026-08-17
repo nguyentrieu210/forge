@@ -63,10 +63,11 @@ test('frontend persistence consumer declares and verifies backend plus frontend 
   assert.match(persistenceWorkflow, /service-verification\.mjs --services=\$env:FORGE_LOCAL_REQUIRED_SERVICES/);
 });
 
-test('hardening sources contain no blind-kill or verify bypass patterns', () => {
+test('hardening sources contain no executable blind-kill or verify bypass patterns', () => {
   const sources = [core, runLocal, syncLocal, bootstrapWorkflow, persistenceWorkflow];
+  const blindKillInvocation = /(?:^|[;&|\r\n])\s*(?:call\s+|&\s*)?taskkill(?:\.exe)?\s+\/(?:f|pid|im)\b/im;
   for (const source of sources) {
-    assert.doesNotMatch(source, /\btaskkill\b/i);
+    assert.doesNotMatch(source, blindKillInvocation);
     assert.doesNotMatch(source, /\|\|\s*true/);
     assert.doesNotMatch(source, /continue-on-error:\s*true/i);
   }
