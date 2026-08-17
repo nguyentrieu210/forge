@@ -16,6 +16,20 @@ if old in s:
 elif 'd6427f4 added the FIFO source-batch lineage' not in s:
     raise RuntimeError('Cut Order Item generator convergence pattern drift')
 
+old = '    if (Array.isArray(target.search)) target.search = target.search.filter((entry) => !["sales_option", "sales_mode"].includes(entry));\n'
+new = '    if (Array.isArray(target.list)) target.list = target.list.filter((entry) => !["sales_option", "sales_mode"].includes(entry));\n    if (Array.isArray(target.search)) target.search = target.search.filter((entry) => !["sales_option", "sales_mode"].includes(entry));\n'
+if old in s:
+    s = s.replace(old, new, 1)
+elif 'Array.isArray(target.list)' not in s:
+    raise RuntimeError('deprecated list/search convergence pattern drift')
+
+old = '    for (const f of dt.fields ?? []) assert.ok(!["sales_option", "sales_mode"].includes(nameOf(f)), `deprecated ${dt.name}.${nameOf(f)}`);\n'
+new = '    for (const f of dt.fields ?? []) assert.ok(!["sales_option", "sales_mode"].includes(nameOf(f)), `deprecated ${dt.name}.${nameOf(f)}`);\n    for (const f of dt.list ?? []) assert.ok(!["sales_option", "sales_mode"].includes(f), `deprecated ${dt.name}.list:${f}`);\n    for (const f of dt.search ?? []) assert.ok(!["sales_option", "sales_mode"].includes(f), `deprecated ${dt.name}.search:${f}`);\n'
+if old in s:
+    s = s.replace(old, new, 1)
+elif 'deprecated ${dt.name}.list' not in s:
+    raise RuntimeError('reproducibility test list/search pattern drift')
+
 path.write_text(s, encoding="utf-8")
 
 # compileCustomFields already passes entry.field to parseField(), and parseField supports
@@ -32,4 +46,4 @@ elif field_schema != {"$ref": "#/$defs/field"}:
     raise RuntimeError(f"customFields field schema drift: {field_schema!r}")
 schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-print("patched apply script: Cut Order Item remains generator-owned; customFields.field reuses canonical field schema")
+print("patched apply script: Cut Order Item generator-owned; customFields schema aligned; deprecated list/search refs removed")
