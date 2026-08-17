@@ -1699,6 +1699,47 @@ _bomActualError: "",
     setSelectedLineKey(next[Math.min(Math.max(index, 0), next.length - 1)]?._key ?? "");
   }, [lines]);
 
+  const expandSalesLineIntoSets = useCallback((key: string, rawCount: unknown) => {
+    const requested = Math.max(1, Math.floor(Number(rawCount) || 1));
+    const currentLines = linesRef.current;
+    const sourceIndex = currentLines.findIndex((line) => line._key === key);
+    if (sourceIndex < 0) return;
+    const sourceLine = currentLines[sourceIndex]!;
+    if (requested === 1) {
+      const single = { ...sourceLine, set_count: 1 } as SalesLine;
+      patchLine(key, { set_count: 1 });
+      if (text(single.item_code)) void previewLine(single, "set_count", { set_count: 1 });
+      return;
+    }
+
+    const expanded = Array.from({ length: requested }, (_, offset) => ({
+      ...sourceLine,
+      name: offset === 0 ? sourceLine.name : undefined,
+      _key: offset === 0 ? sourceLine._key : newLine(currentLines.length + offset)._key,
+      sales_package_group_key: offset === 0
+        ? (text(sourceLine.sales_package_group_key) || salesGroupKey())
+        : salesGroupKey(),
+      set_count: 1,
+      _splitChildren: [],
+      _loading: false,
+      _error: "",
+      _pricingError: "",
+    } as SalesLine));
+
+    const next = [
+      ...currentLines.slice(0, sourceIndex),
+      ...expanded,
+      ...currentLines.slice(sourceIndex + 1),
+    ];
+    linesRef.current = next;
+    setLines(next);
+    setSelectedLineKeys(new Set());
+    setSelectedLineKey(expanded[0]?._key ?? "");
+    for (const clone of expanded) {
+      if (text(clone.item_code)) void previewLine(clone, "set_count", { set_count: 1 });
+    }
+  }, [patchLine, previewLine]);
+
   useEffect(() => {
     if (!lines.length) return;
     if (!selectedLineKey || !lines.some((line) => line._key === selectedLineKey)) {
@@ -2246,548 +2287,335 @@ _bomActualError: "",
 
 <section className="space-y-2" data-section="hardcoded-sales-lines">
   <div className="overflow-hidden rounded-lg border bg-card">
-    <div className="flex h-9 items-center border-b border-primary-foreground/25 bg-primary px-3">
-      <h2 className="text-sm font-semibold text-primary-foreground">Chi tiết bán hàng</h2>
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-b border-primary-foreground/25 bg-primary px-3 py-2">
+      <div>
+        <h2 className="text-sm font-semibold text-primary-foreground">Bộ cửa / vật tư bán hàng</h2>
+        <p className="mt-0.5 text-[11px] text-primary-foreground/80">Mỗi bộ cửa là một dòng. Nhập Số bộ lớn hơn 1 sẽ tự bung thành Bộ 1…n để xưởng kiểm từng bộ.</p>
+      </div>
+      <div className="rounded-md bg-primary-foreground/10 px-2 py-1 text-xs font-medium text-primary-foreground">
+        {lines.length} dòng · {money(displayedTotal)} ₫
+      </div>
     </div>
+
     {lineNotices.length ? (
-      <div className="space-y-0.5 border-b border-destructive/30 bg-destructive/5 px-3 py-2 text-sm font-bold text-destructive" role="alert">
+      <div className="space-y-0.5 border-b border-destructive/30 bg-destructive/5 px-3 py-2 text-sm font-semibold text-destructive" role="alert">
         {lineNotices.map((notice) => <div key={notice.key}>{notice.message}</div>)}
       </div>
     ) : null}
+
     <div className="overflow-x-auto">
       <Table
-      unwrapped
-      className="mf-child-grid-table min-w-[1040px] table-fixed text-[13px] [&_button]:!justify-center [&_input]:!text-center [&_select]:!text-center [&_td]:border-b [&_td]:border-r [&_td]:text-center [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:text-center [&_th:last-child]:border-r-0"
-    >
-      <TableHeader className="[&_th]:bg-accent [&_th]:text-accent-foreground">
-        <TableRow className="hover:bg-transparent">
-          <TableHead className="w-10 px-1 py-2 text-center">
-            <Checkbox
-              checked={selectedLineKeys.size === lines.length ? true : selectedLineKeys.size ? "indeterminate" : false}
-              onCheckedChange={(checked) => toggleAllSalesLines(checked === true)}
-              aria-label="Chọn tất cả dòng bán hàng"
-            />
-          </TableHead>
-          <TableHead className="w-20 whitespace-nowrap px-1 py-2 text-center">STT</TableHead>
-          <TableHead className="w-[23%] px-2 py-2 text-center">Mặt hàng</TableHead>
-          <TableHead className="w-[16%] px-2 py-2 text-center">Cách bán</TableHead>
-          <TableHead className="w-[14%] px-2 py-2 text-center">Đơn giá</TableHead>
-          <TableHead className="w-[8%] px-2 py-2 text-center">ĐVT</TableHead>
-          <TableHead className="w-[11%] px-2 py-2 text-center">Số lượng</TableHead>
-          <TableHead className="w-[9%] px-2 py-2 text-center">Chiết khấu</TableHead>
-          <TableHead className="w-[9%] px-2 py-2 text-center">Phụ thu</TableHead>
-          <TableHead className="w-[12%] px-2 py-2 text-center">Thành tiền</TableHead>
-          <TableHead className="w-20 px-1 py-2" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {gridRows.map((row, rowIndex) => {
-          const line = lines[rowIndex];
-          if (!line) return null;
-          const selected = row.key === selectedLineKey;
-          const detailKind = family(line);
-          const detailArea = isAreaDoor(line);
-          const detailColors = line._allowedColors ?? [];
-          const detailShowWidth = detailArea || fieldVisible(line, "width_m");
-          const detailShowHeight = detailArea || fieldVisible(line, "height_m");
-          const detailShowSets = detailArea || fieldVisible(line, "set_count");
-          const detailShowLength = fieldVisible(line, "length_m") && (fieldRequired(line, "length_m") || line.length_m != null);
-          const detailShowBars = fieldVisible(line, "qty_bar") && (fieldRequired(line, "qty_bar") || line.qty_bar != null);
-          const detailShowLeafVariant = fieldVisible(line, "leaf_variant", detailKind === "australian");
-          const detailShowMeshHeight = detailKind === "mesh" && fieldVisible(line, "mesh_height_m", true);
-          const detailShowButterfly = fieldVisible(line, "has_butterfly_bracket");
-          const hasInlineDetail = Boolean(text(line.item_code) && (
-            detailColors.length > 0
-            || detailShowWidth
-            || detailShowHeight
-            || (detailShowSets && row.quantityField !== "set_count")
-            || detailShowLeafVariant
-            || detailShowMeshHeight
-            || detailShowButterfly
-            || detailShowLength
-            || detailShowBars
-          ));
-          const packageSnapshot = line._commercial?.sales_package_snapshot ?? line.sales_package_snapshot;
-          const packageComponents = packageSnapshot
-            && typeof packageSnapshot === "object"
-            && !Array.isArray(packageSnapshot)
-            && Array.isArray((packageSnapshot as Json).components)
-            ? (packageSnapshot as Json).components as unknown[]
-            : [];
-          const giftComponents = packageComponents.filter((component): component is Json => {
-            if (!component || typeof component !== "object" || Array.isArray(component)) return false;
-            const data = component as Json;
-            return normalized(data.role).includes("tang")
-              || normalized(data.component_key).includes("gift")
-              || normalized(data.item_code).includes("tangray");
-          });
-          const selectableComponents = splitComponents(line);
-          const selectedSplitChildren = new Map((line._splitChildren ?? []).map((child) => [
-            text(child.sales_package_component_key),
-            child,
-          ]));
-          const bomActualRequirements = line._bomActualRequirements ?? [];
-          const hasBomActualRow = Boolean(line._bomTemplateCode || line._bomActualError || bomActualRequirements.length > 0);
-          const hasLinkedRows = hasInlineDetail || hasBomActualRow || giftComponents.length > 0 || selectableComponents.length > 0;
-          const recordTone = rowIndex % 2 === 0 ? "!bg-card" : "!bg-secondary";
-          // Item is a read-only catalog source for fast order entry. Selecting an
-          // entry copies its code into this Sales Order Item; this screen must not
-          // create or mutate Item master records.
-          const itemField: DocField = {
-            ...lineBaseField("item_code", "Mặt hàng", "Link", "Item"),
-            allow_create: false,
-            link_filters: JSON.stringify({
-              is_sales_item: 1,
-              disabled: 0,
-            }),
-          };
-          const syncedLeafVariant = "";
-          const uomField = selectField(
-            childField("uom"),
-            "uom",
-            "ĐVT",
-            row.uomChoices.map((choice) => choice.value),
-            Object.fromEntries(row.uomChoices.map((choice) => [choice.value, choice.label])),
-          );
-          const quantityField = row.quantityField
-            ? lineBaseField(
-                row.quantityField,
-                "Số lượng",
-                row.quantityField === "set_count" ? "Int" : "Float",
-              )
-            : undefined;
+        unwrapped
+        className="mf-child-grid-table min-w-[1580px] table-fixed text-[12px] [&_button]:!justify-center [&_td]:border-b [&_td]:border-r [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:text-center [&_th:last-child]:border-r-0"
+      >
+        <TableHeader className="[&_th]:bg-accent [&_th]:text-accent-foreground">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-10 px-1 py-2">
+              <Checkbox
+                checked={selectedLineKeys.size === lines.length ? true : selectedLineKeys.size ? "indeterminate" : false}
+                onCheckedChange={(checked) => toggleAllSalesLines(checked === true)}
+                aria-label="Chọn tất cả bộ / dòng hàng"
+              />
+            </TableHead>
+            <TableHead className="w-[74px] px-1 py-2">Bộ</TableHead>
+            <TableHead className="w-[250px] px-2 py-2">Tên SP / vật tư</TableHead>
+            <TableHead className="w-[126px] px-2 py-2">Màu sắc</TableHead>
+            <TableHead className="w-[190px] px-2 py-2">Kích thước</TableHead>
+            <TableHead className="w-[112px] px-2 py-2">Số lá</TableHead>
+            <TableHead className="w-[110px] px-2 py-2">Rộng cắt lá</TableHead>
+            <TableHead className="w-[150px] px-2 py-2">Kiểu lá / tự dừng</TableHead>
+            <TableHead className="w-[88px] px-2 py-2">Số KG</TableHead>
+            <TableHead className="w-[78px] px-2 py-2">ĐVT</TableHead>
+            <TableHead className="w-[92px] px-2 py-2">SL / Bộ</TableHead>
+            <TableHead className="w-[118px] px-2 py-2">Đơn giá</TableHead>
+            <TableHead className="w-[106px] px-2 py-2">Chiết khấu</TableHead>
+            <TableHead className="w-[126px] px-2 py-2">Thành tiền</TableHead>
+            <TableHead className="w-[76px] px-1 py-2" />
+          </TableRow>
+        </TableHeader>
 
-          return (
-            <Fragment key={row.key}>
-            <TableRow
-              className={`${recordTone} [&>td]:!bg-inherit ${hasLinkedRows ? "[&>td]:!border-b-0" : ""} ${selected ? "ring-1 ring-inset ring-primary/25" : ""}`}
-              onClick={() => setSelectedLineKey(row.key)}
-              onFocusCapture={() => setSelectedLineKey(row.key)}
-            >
-              <TableCell className="px-1 py-1.5 text-center align-middle">
-                <Checkbox
-                  checked={selectedLineKeys.has(row.key)}
-                  onCheckedChange={(checked) => toggleSalesLineSelection(row.key, checked === true)}
-                  onClick={(event) => event.stopPropagation()}
-                  aria-label={`Chọn dòng ${rowIndex + 1}`}
-                />
-              </TableCell>
-              <TableCell className="px-1 py-1.5 text-center align-middle tabular-nums text-muted-foreground">
-                {rowIndex + 1}
-              </TableCell>
-              <TableCell className="align-top px-2 py-1.5">
-                <StandardField
-                  id={`sales-line-${rowIndex}-item`}
-                  field={itemField}
-                  value={line.item_code}
-                  onChange={(value) => handleGridChange(row.key, "item_code", value)}
-                  registry={registry}
-                  services={salesServices}
-                  parentDoctype="Sales Order Item"
-                  docValues={line}
-                  roles={roles}
-                  required
-                  compact
-                  hideLabel
-                  className="[&_.mf-control]:!min-h-8 [&_button]:!h-8"
-                />
-              </TableCell>
-              <TableCell className="align-top px-2 py-1.5">
-                <div className="flex min-h-8 items-center justify-center px-2 text-center text-sm text-muted-foreground">
-                  Tiêu chuẩn
-                </div>
-              </TableCell>
-              <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums">
-                <span className={row.pricingError ? "text-destructive" : undefined}>
-                  {row.loading ? "Đang tính…" : row.priceLabel || "—"}
-                </span>
-              </TableCell>
-              <TableCell className="px-2 py-1.5 text-center align-middle">
-                {row.uomChoices.length > 1 ? (
-                  <StandardField
-                    id={`sales-line-${rowIndex}-uom`}
-                    field={uomField}
-                    value={line.uom}
-                    onChange={(value) => handleGridChange(row.key, "uom", value)}
-                    registry={registry}
-                    services={services}
-                    parentDoctype="Sales Order Item"
-                    docValues={line}
-                    roles={roles}
-                    compact
-                    hideLabel
-                    className="mx-auto w-full max-w-[120px] [&_.mf-control]:!min-h-8 [&_button]:!relative [&_button]:!h-8 [&_button]:!w-full [&_button]:!justify-center [&_button]:!rounded-md [&_button]:!border [&_button]:!border-input [&_button]:!bg-card [&_button_svg]:!absolute [&_button_svg]:!right-2"
-                  />
-                ) : (
-                  <span className="mx-auto inline-flex h-8 w-full max-w-[120px] items-center justify-center rounded-md border border-input bg-card px-2 text-sm">
-                    {row.uom || "—"}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="px-2 py-1.5 text-center align-middle">
-                {quantityField && row.quantityEditable ? (
-                  <StandardField
-                    id={`sales-line-${rowIndex}-quantity`}
-                    field={quantityField}
-                    value={row.quantity}
-                    onChange={(value) => handleGridChange(row.key, row.quantityField!, value)}
-                    registry={registry}
-                    services={services}
-                    parentDoctype="Sales Order Item"
-                    docValues={line}
-                    roles={roles}
-                    compact
-                    hideLabel
-                    className="mx-auto w-full max-w-[140px] [&_.mf-control]:!min-h-8 [&_.mf-control]:!rounded-md [&_.mf-control]:!border [&_.mf-control]:!border-input [&_.mf-control]:!bg-card [&_input]:!h-8 [&_input]:!appearance-none [&_input]:!text-center [&_input::-webkit-inner-spin-button]:!m-0 [&_input::-webkit-inner-spin-button]:!appearance-none [&_input::-webkit-outer-spin-button]:!m-0 [&_input::-webkit-outer-spin-button]:!appearance-none"
-                  />
-                ) : (
-                  <span className="mx-auto inline-flex h-8 w-full max-w-[140px] items-center justify-center rounded-md border border-input bg-muted px-2 tabular-nums">
-                    {row.quantity == null ? "—" : row.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 6 })}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums text-muted-foreground">
-                {row.discountLabel || "—"}
-              </TableCell>
-              <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums text-muted-foreground">
-                {row.adjustmentLabel || "—"}
-              </TableCell>
-              <TableCell className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
-                {row.amountLabel || "—"}
-              </TableCell>
-              <TableCell className="whitespace-nowrap px-1 py-1.5 text-center align-middle">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground"
-                  onClick={(event) => { event.stopPropagation(); duplicateSalesLine(row.key); }}
-                  aria-label={`Nhân bản dòng ${rowIndex + 1}`}
-                  title="Nhân bản dòng"
+        <TableBody>
+          {gridRows.map((row, rowIndex) => {
+            const line = lines[rowIndex];
+            if (!line) return null;
+            const selected = row.key === selectedLineKey;
+            const areaDoor = isAreaDoor(line);
+            const kind = family(line);
+            const allowedColors = line._allowedColors ?? [];
+            const showWidth = areaDoor || fieldVisible(line, "width_m") || line.width_m != null;
+            const showHeight = areaDoor || fieldVisible(line, "height_m") || line.height_m != null;
+            const showLeafVariant = kind === "australian" || fieldVisible(line, "leaf_variant") || Boolean(text(line.leaf_variant));
+            const isRail = normalized(line._context?.item_group).includes("ray") || normalized(line.item_code).includes("ray");
+            const singleLayerLeafCount = numberValue(line.single_layer_leaf_count) ?? 0;
+            const doubleLayerLeafCount = numberValue(line.double_layer_leaf_count) ?? 0;
+            const leafCount = numberValue(line.leaf_count)
+              ?? (singleLayerLeafCount + doubleLayerLeafCount > 0 ? singleLayerLeafCount + doubleLayerLeafCount : undefined);
+            const cutWidth = numberValue(line.cut_width_m);
+            const estimatedWeight = numberValue(line.estimated_weight_kg);
+            const isAl548 = normalized(line.item_code).includes("al548");
+            const bomActualRequirements = line._bomActualRequirements ?? [];
+            const hasBomActualRow = Boolean(line._bomTemplateCode || line._bomActualError || bomActualRequirements.length > 0);
+            const recordTone = rowIndex % 2 === 0 ? "!bg-card" : "!bg-secondary";
+            const itemField: DocField = {
+              ...lineBaseField("item_code", "Mặt hàng", "Link", "Item"),
+              allow_create: false,
+              link_filters: JSON.stringify({ is_sales_item: 1, disabled: 0 }),
+            };
+            const uomField = selectField(
+              childField("uom"),
+              "uom",
+              "ĐVT",
+              row.uomChoices.map((choice) => choice.value),
+              Object.fromEntries(row.uomChoices.map((choice) => [choice.value, choice.label])),
+            );
+            const setCountField = lineBaseField("set_count", "Số bộ", "Int");
+            const directQtyField = lineBaseField("qty", "Số lượng", "Float");
+
+            return (
+              <Fragment key={row.key}>
+                <TableRow
+                  className={`${recordTone} [&>td]:!bg-inherit ${hasBomActualRow ? "[&>td]:!border-b-0" : "border-b-2"} ${selected ? "ring-1 ring-inset ring-primary/25" : ""}`}
+                  onClick={() => setSelectedLineKey(row.key)}
+                  onFocusCapture={() => setSelectedLineKey(row.key)}
                 >
-                  <Copy />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground hover:text-destructive"
-                  disabled={lines.length <= 1}
-                  onClick={(event) => { event.stopPropagation(); deleteSalesLine(row.key); }}
-                  aria-label={`Xóa dòng ${rowIndex + 1}`}
-                  title="Xóa dòng"
-                >
-                  <Trash2 />
-                </Button>
-              </TableCell>
-            </TableRow>
-            {hasInlineDetail ? (
-              <TableRow className={`${recordTone} ${hasBomActualRow || giftComponents.length || selectableComponents.length ? "[&>td]:!border-b-0" : "border-b-2"} [&>td]:!bg-inherit`} data-section="sales-line-detail-row">
-                <TableCell className="px-1 py-2" />
-                <TableCell className="w-20 whitespace-nowrap px-2 py-2 text-center align-middle font-semibold text-foreground">
-                  Chi tiết
-                </TableCell>
-                <TableCell colSpan={9} className="max-w-0 px-0 py-2 text-left align-middle">
-                  <div className="w-full overflow-x-auto px-3">
-                  <div className="flex min-w-max flex-nowrap items-center gap-4 whitespace-nowrap">
-                    {detailColors.length ? (
-                      <div className="flex min-w-[210px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">Màu:</span>
+                  <TableCell className="px-1 py-1.5 text-center align-middle">
+                    <Checkbox
+                      checked={selectedLineKeys.has(row.key)}
+                      onCheckedChange={(checked) => toggleSalesLineSelection(row.key, checked === true)}
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label={`Chọn dòng ${rowIndex + 1}`}
+                    />
+                  </TableCell>
+
+                  <TableCell className="px-1 py-1.5 text-center align-middle">
+                    <div className="font-semibold text-foreground">{areaDoor ? `Bộ ${rowIndex + 1}` : `${rowIndex + 1}`}</div>
+                    <div className="mt-0.5 text-[10px] text-muted-foreground">{areaDoor ? "1 bộ / dòng" : "Vật tư"}</div>
+                  </TableCell>
+
+                  <TableCell className="align-top px-2 py-1.5">
+                    <StandardField
+                      id={`sales-line-${rowIndex}-item`}
+                      field={itemField}
+                      value={line.item_code}
+                      onChange={(value) => handleGridChange(row.key, "item_code", value)}
+                      registry={registry}
+                      services={salesServices}
+                      parentDoctype="Sales Order Item"
+                      docValues={line}
+                      roles={roles}
+                      required
+                      compact
+                      hideLabel
+                      className="[&_.mf-control]:!min-h-8 [&_button]:!h-8"
+                    />
+                    {row.availability ? <div className="mt-1 truncate text-[10px] text-muted-foreground">{row.availability}</div> : null}
+                  </TableCell>
+
+                  <TableCell className="px-2 py-1.5 align-middle">
+                    {allowedColors.length ? (
+                      <StandardField
+                        id={`sales-line-${rowIndex}-color-owner-grid`}
+                        field={selectField(childField("color"), "color", "Màu", allowedColors)}
+                        value={line.color}
+                        onChange={(value) => commitLine(line._key, "color", text(value) || undefined)}
+                        registry={registry}
+                        services={services}
+                        parentDoctype="Sales Order Item"
+                        docValues={line}
+                        roles={roles}
+                        compact
+                        hideLabel
+                        className="[&_.mf-control]:!min-h-8"
+                      />
+                    ) : <span className="text-muted-foreground">{text(line.color) || "—"}</span>}
+                  </TableCell>
+
+                  <TableCell className="px-2 py-1.5 align-middle">
+                    <div className="grid grid-cols-2 gap-1">
+                      {showWidth && !isRail ? (
                         <StandardField
-                          id={`sales-line-${rowIndex}-color-inline`}
-                          field={selectField(childField("color"), "color", "Màu", detailColors)}
-                          value={line.color}
-                          onChange={(value) => commitLine(line._key, "color", text(value) || undefined)}
-                          registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          compact hideLabel className="min-w-36 flex-1"
-                        />
-                      </div>
-                    ) : null}
-                    {detailShowWidth ? (
-                      <div className="flex min-w-[190px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">{fieldLabel(line, "width_m", "Rộng (m)")}:{(detailArea || fieldRequired(line, "width_m")) ? <span className="text-destructive"> *</span> : null}</span>
-                        <StandardField
-                          id={`sales-line-${rowIndex}-width-inline`}
-                          field={lineBaseField("width_m", fieldLabel(line, "width_m", "Rộng (m)"), "Float")}
+                          id={`sales-line-${rowIndex}-width-owner-grid`}
+                          field={lineBaseField("width_m", "Rộng", "Float")}
                           value={line.width_m}
                           onChange={(value) => patchLine(line._key, { width_m: value == null || value === "" ? undefined : Number(value) })}
                           onCommit={() => commitCurrentLineField(line._key, "width_m")}
                           registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          required={detailArea || fieldRequired(line, "width_m")} readOnly={fieldReadonly(line, "width_m")} compact hideLabel className="min-w-20 flex-1"
+                          required={areaDoor || fieldRequired(line, "width_m")}
+                          readOnly={fieldReadonly(line, "width_m")}
+                          compact hideLabel
+                          className="[&_.mf-control]:!min-h-8 [&_input]:!text-center"
                         />
-                      </div>
-                    ) : null}
-                    {detailShowHeight ? (
-                      <div className="flex min-w-[180px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">{fieldLabel(line, "height_m", "Cao (m)")}:{(detailArea || fieldRequired(line, "height_m")) ? <span className="text-destructive"> *</span> : null}</span>
+                      ) : <span className="grid h-8 place-items-center rounded-md border bg-muted/30 text-muted-foreground">—</span>}
+                      {showHeight ? (
                         <StandardField
-                          id={`sales-line-${rowIndex}-height-inline`}
-                          field={lineBaseField("height_m", fieldLabel(line, "height_m", "Cao (m)"), "Float")}
+                          id={`sales-line-${rowIndex}-height-owner-grid`}
+                          field={lineBaseField("height_m", isRail ? "Cao ray" : "Cao", "Float")}
                           value={line.height_m}
                           onChange={(value) => patchLine(line._key, { height_m: value == null || value === "" ? undefined : Number(value) })}
                           onCommit={() => commitCurrentLineField(line._key, "height_m")}
                           registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          required={detailArea || fieldRequired(line, "height_m")} readOnly={fieldReadonly(line, "height_m")} compact hideLabel className="min-w-20 flex-1"
-                        />
-                      </div>
-                    ) : null}
-                    {detailShowSets && row.quantityField !== "set_count" ? (
-                      <div className="flex min-w-[190px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">{fieldLabel(line, "set_count", detailArea ? "Số bộ" : "Số lượng")}:{(detailArea || fieldRequired(line, "set_count")) ? <span className="text-destructive"> *</span> : null}</span>
-                        <StandardField
-                          id={`sales-line-${rowIndex}-sets-inline`}
-                          field={lineBaseField("set_count", fieldLabel(line, "set_count", detailArea ? "Số bộ" : "Số lượng"), "Int")}
-                          value={line.set_count}
-                          onChange={(value) => patchLine(line._key, { set_count: value == null || value === "" ? undefined : Number(value) })}
-                          onCommit={() => commitCurrentLineField(line._key, "set_count")}
-                          registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          required={detailArea || fieldRequired(line, "set_count")} readOnly={fieldReadonly(line, "set_count")} compact hideLabel className="min-w-16 flex-1"
-                        />
-                      </div>
-                    ) : null}
-                    {detailShowLeafVariant ? (
-                      <div className="flex min-w-[230px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">Kiểu lá / motor:{fieldRequired(line, "leaf_variant") ? <span className="text-destructive"> *</span> : null}</span>
-                        <StandardField
-                          id={`sales-line-${rowIndex}-leaf-variant-inline`}
-                          field={selectField(childField("leaf_variant"), "leaf_variant", "Kiểu lá / motor", leafVariants)}
-                          value={syncedLeafVariant || line.leaf_variant}
-                          onChange={(value) => commitLine(line._key, "leaf_variant", text(value) || undefined)}
-                          registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          required={fieldRequired(line, "leaf_variant")}
-                          readOnly={Boolean(syncedLeafVariant) || fieldReadonly(line, "leaf_variant")}
-                          compact hideLabel className="min-w-36 flex-1"
-                        />
-                      </div>
-                    ) : null}
-                    {detailShowMeshHeight ? (
-                      <div className="flex min-w-[210px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">{fieldLabel(line, "mesh_height_m", "Cao lưới (m)")}:{fieldRequired(line, "mesh_height_m") ? <span className="text-destructive"> *</span> : null}</span>
-                        <StandardField
-                          id={`sales-line-${rowIndex}-mesh-height-inline`}
-                          field={lineBaseField("mesh_height_m", fieldLabel(line, "mesh_height_m", "Cao lưới (m)"), "Float")}
-                          value={line.mesh_height_m}
-                          onChange={(value) => patchLine(line._key, { mesh_height_m: value == null || value === "" ? undefined : Number(value) })}
-                          onCommit={() => commitCurrentLineField(line._key, "mesh_height_m")}
-                          registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          required={fieldRequired(line, "mesh_height_m")} readOnly={fieldReadonly(line, "mesh_height_m")} compact hideLabel className="min-w-20 flex-1"
-                        />
-                      </div>
-                    ) : null}
-                    {detailShowButterfly ? (
-                      <div className="flex min-w-[170px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">{fieldLabel(line, "has_butterfly_bracket", "Có bản bướm")}:</span>
-                        <StandardField
-                          id={`sales-line-${rowIndex}-butterfly-inline`}
-                          field={lineBaseField("has_butterfly_bracket", fieldLabel(line, "has_butterfly_bracket", "Có bản bướm"), "Check")}
-                          value={line.has_butterfly_bracket}
-                          onChange={(value) => commitLine(line._key, "has_butterfly_bracket", value ? 1 : 0)}
-                          registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
+                          required={areaDoor || fieldRequired(line, "height_m")}
+                          readOnly={fieldReadonly(line, "height_m")}
                           compact hideLabel
+                          className="[&_.mf-control]:!min-h-8 [&_input]:!text-center"
                         />
-                      </div>
-                    ) : null}
-                    {detailShowLength ? (
-                      <div className="flex min-w-[210px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">{fieldLabel(line, "length_m", "Dài / cây (m)")}:{fieldRequired(line, "length_m") ? <span className="text-destructive"> *</span> : null}</span>
-                        <StandardField
-                          id={`sales-line-${rowIndex}-length-inline`}
-                          field={lineBaseField("length_m", fieldLabel(line, "length_m", "Dài / cây (m)"), "Float")}
-                          value={line.length_m}
-                          onChange={(value) => patchLine(line._key, { length_m: value == null || value === "" ? undefined : Number(value) })}
-                          onCommit={() => commitCurrentLineField(line._key, "length_m")}
-                          registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          required={fieldRequired(line, "length_m")} readOnly={fieldReadonly(line, "length_m")} compact hideLabel className="min-w-20 flex-1"
-                        />
-                      </div>
-                    ) : null}
-                    {detailShowBars ? (
-                      <div className="flex min-w-[180px] items-center gap-2">
-                        <span className="shrink-0 text-xs font-medium">{fieldLabel(line, "qty_bar", "Số cây")}:{fieldRequired(line, "qty_bar") ? <span className="text-destructive"> *</span> : null}</span>
-                        <StandardField
-                          id={`sales-line-${rowIndex}-bars-inline`}
-                          field={lineBaseField("qty_bar", fieldLabel(line, "qty_bar", "Số cây"), "Int")}
-                          value={line.qty_bar}
-                          onChange={(value) => patchLine(line._key, { qty_bar: value == null || value === "" ? undefined : Number(value) })}
-                          onCommit={() => commitCurrentLineField(line._key, "qty_bar")}
-                          registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                          required={fieldRequired(line, "qty_bar")} readOnly={fieldReadonly(line, "qty_bar")} compact hideLabel className="min-w-16 flex-1"
-                        />
-                      </div>
-                    ) : null}
-                    <div className="flex min-w-[210px] items-center gap-2">
-                      <span className="shrink-0 text-xs font-medium">Chiết khấu (%):</span>
-                      <StandardField
-                        id={`sales-line-${rowIndex}-discount-inline`}
-                        field={lineBaseField("discount_percentage", "Chiết khấu (%)", "Percent")}
-                        value={line.discount_percentage ?? 0}
-                        onChange={(value) => patchLine(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })}
-                        onCommit={() => commitCurrentLineField(line._key, "discount_percentage", 0)}
-                        registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
-                        compact hideLabel className="min-w-16 flex-1"
-                      />
+                      ) : <span className="grid h-8 place-items-center rounded-md border bg-muted/30 text-muted-foreground">—</span>}
                     </div>
-                  </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : null}
-{hasBomActualRow ? (
-  <TableRow
-    className={`${recordTone} ${giftComponents.length || selectableComponents.length ? "[&>td]:!border-b-0" : "border-b-2"} [&>td]:!bg-inherit`}
-    data-section="sales-line-bom-actual-row"
-  >
-    <TableCell className="px-1 py-2" />
-    <TableCell className="w-20 whitespace-nowrap px-2 py-2 text-center align-top font-semibold text-foreground">BOM</TableCell>
-    <TableCell colSpan={9} className="max-w-0 px-3 py-2 text-left align-top">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div className="font-medium text-foreground">
-            {line._bomTemplateCode ? `BOM Template · ${line._bomTemplateCode}` : "Yêu cầu vật tư BOM"}
-          </div>
-          {line._bomActualError ? (
-            <span className="font-medium text-destructive">Không resolve được BOM</span>
-          ) : line._bomActualComplete ? (
-            <span className="font-medium text-foreground">Đủ vật tư thực tế</span>
-          ) : (
-            <span className="font-medium text-destructive">
-              Còn thiếu {bomActualRequirements.filter((requirement) => requirement.missing).map((requirement) => requirement.component_key).join(", ") || "vật tư thực tế"}
-            </span>
-          )}
-        </div>
-        {line._bomActualError ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            {line._bomActualError}
-          </div>
-        ) : null}
-        {bomActualRequirements.length > 0 ? (
-          <AlumdoorBomActualEditor
-            requirements={bomActualRequirements}
-            value={line.bom_actual_components ?? []}
-            disabled={formReadOnly || Boolean(line._loading)}
-            onChange={(rows) => commitBomActualComponents(line._key, rows)}
-          />
-        ) : null}
-      </div>
-    </TableCell>
-  </TableRow>
-) : null}
-            {selectableComponents.map((component, componentIndex) => {
-              const componentKey = text(component.component_key);
-              const child = selectedSplitChildren.get(componentKey);
-              const required = component.required === true || component.required === 1;
-              const childCommercial = child?._commercial ?? {};
-              const childRate = numberValue(childCommercial.selling_rate) ?? numberValue(child?.rate);
-              const childQty = numberValue(component.qty) ?? numberValue(child?.qty);
-              const childDiscount = numberValue(childCommercial.discount_amount) ?? numberValue(child?.discount_amount) ?? 0;
-              const childDiscountPct = numberValue(childCommercial.discount_percentage) ?? numberValue(child?.discount_percentage) ?? 0;
-              const childAdjustment = numberValue(childCommercial.adjustment_amount) ?? numberValue(child?.adjustment_amount) ?? 0;
-              const childNet = child ? lineTotal(child) : undefined;
-              const isLast = componentIndex === selectableComponents.length - 1 && giftComponents.length === 0;
-              return (
-                <TableRow
-                  key={`${row.key}-split-${componentKey || componentIndex}`}
-                  className={`${recordTone} ${isLast ? "border-b-2" : "[&>td]:!border-b-0"} [&>td]:!bg-inherit`}
-                  data-section="sales-line-split-child-row"
-                >
-                  <TableCell className="px-1 py-1.5 text-center align-middle" />
-                  <TableCell className="w-20 whitespace-nowrap px-2 py-1.5 text-center align-middle font-semibold text-foreground">
-                    Món tách
+                    <div className="mt-1 text-center text-[10px] text-muted-foreground">{isRail ? "Cao ray × SL × màu" : "Rộng × Cao (m)"}</div>
                   </TableCell>
-                  <TableCell className="px-2 py-1.5 text-left align-middle">
-                    <label className="flex min-h-8 items-center gap-2 rounded-md border border-input bg-card px-2">
-                      <Checkbox
-                        checked={Boolean(child)}
-                        disabled={required && Boolean(child)}
-                        onCheckedChange={(checked) => toggleSplitComponent(row.key, component, checked === true)}
-                        aria-label={`Chọn món ${text(component.display_label) || text(component.item_code)}`}
-                      />
-                      <span className="min-w-0 truncate font-medium text-foreground">
-                        {text(component.display_label) || text(child?._itemLabel) || text(component.item_code)}
-                      </span>
-                    </label>
-                  </TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle text-xs">
-                    {text(component.role) || "Theo gói"}
-                  </TableCell>
+
                   <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums">
-                    {child?._loading ? "Đang tính…" : childRate === undefined ? "—" : `${money(childRate)} ₫ / ${text(component.uom)}`}
+                    <div className="font-semibold">{leafCount == null ? "—" : leafCount.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}</div>
+                    {isAl548 ? <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground">Lá ruột + 1 lá đầu + 3 lá đáy</div> : null}
                   </TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle">{text(component.uom) || "—"}</TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
-                    {childQty === undefined ? "—" : childQty.toLocaleString("vi-VN", { maximumFractionDigits: 6 })}
+
+                  <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums">
+                    {cutWidth == null ? "—" : `${cutWidth.toLocaleString("vi-VN", { maximumFractionDigits: 4 })} m`}
                   </TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums text-muted-foreground">
-                    {!child || childDiscount <= 0 ? "—" : `-${money(childDiscount)} ₫${childDiscountPct > 0 ? ` · ${childDiscountPct}%` : ""}`}
+
+                  <TableCell className="px-2 py-1.5 align-middle">
+                    {showLeafVariant ? (
+                      <StandardField
+                        id={`sales-line-${rowIndex}-leaf-variant-owner-grid`}
+                        field={selectField(childField("leaf_variant"), "leaf_variant", "Kiểu lá / tự dừng", leafVariants)}
+                        value={line.leaf_variant}
+                        onChange={(value) => commitLine(line._key, "leaf_variant", text(value) || undefined)}
+                        registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
+                        required={fieldRequired(line, "leaf_variant")}
+                        readOnly={fieldReadonly(line, "leaf_variant")}
+                        compact hideLabel
+                        className="[&_.mf-control]:!min-h-8"
+                      />
+                    ) : <span className="block text-center text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums text-muted-foreground">
-                    {!child || childAdjustment === 0 ? "—" : `${money(childAdjustment)} ₫`}
+
+                  <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums">
+                    {estimatedWeight == null ? "—" : estimatedWeight.toLocaleString("vi-VN", { maximumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle font-semibold tabular-nums text-foreground">
-                    {childNet === undefined ? "—" : `${money(childNet)} ₫`}
-                  </TableCell>
-                  <TableCell className="px-1 py-1.5 text-center align-middle text-xs text-muted-foreground">{componentKey}</TableCell>
-                </TableRow>
-              );
-            })}
-            {giftComponents.map((component, giftIndex) => {
-              const giftQty = numberValue(component.qty) ?? 0;
-              const giftUom = text(component.uom);
-              const giftRole = text(component.role) || text(component.component_key);
-              return (
-                <TableRow
-                  key={`${row.key}-gift-${text(component.component_key) || giftIndex}`}
-                  className={`${recordTone} border-b-2 text-muted-foreground [&>td]:!bg-inherit`}
-                  data-section="sales-line-gift-row"
-                >
-                  <TableCell className="px-1 py-1.5" />
-                  <TableCell className="w-20 whitespace-nowrap px-2 py-1.5 text-center align-middle font-semibold text-foreground">
-                    Tặng kèm
-                  </TableCell>
+
                   <TableCell className="px-2 py-1.5 text-center align-middle">
-                    <span className="inline-flex min-h-8 w-full items-center justify-center rounded-md border border-input bg-muted/60 px-2 font-medium text-foreground">
-                      {text(component.item_code)}
-                    </span>
+                    {row.uomChoices.length > 1 ? (
+                      <StandardField
+                        id={`sales-line-${rowIndex}-uom-owner-grid`}
+                        field={uomField}
+                        value={line.uom}
+                        onChange={(value) => handleGridChange(row.key, "uom", value)}
+                        registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
+                        compact hideLabel
+                        className="[&_.mf-control]:!min-h-8"
+                      />
+                    ) : <span>{row.uom || "—"}</span>}
                   </TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle font-medium">{giftRole}</TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle tabular-nums">0 đ / {giftUom}</TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle">{giftUom}</TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle font-medium tabular-nums">
-                    {giftQty.toLocaleString("vi-VN", { maximumFractionDigits: 6 })}
+
+                  <TableCell className="px-2 py-1.5 text-center align-middle">
+                    {areaDoor ? (
+                      <StandardField
+                        id={`sales-line-${rowIndex}-set-count-owner-grid`}
+                        field={setCountField}
+                        value={line.set_count ?? 1}
+                        onChange={(value) => patchLine(line._key, { set_count: value == null || value === "" ? 1 : Number(value) })}
+                        onCommit={() => expandSalesLineIntoSets(line._key, line.set_count ?? 1)}
+                        registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
+                        compact hideLabel
+                        className="mx-auto max-w-[76px] [&_.mf-control]:!min-h-8 [&_input]:!text-center"
+                      />
+                    ) : row.quantityEditable ? (
+                      <StandardField
+                        id={`sales-line-${rowIndex}-qty-owner-grid`}
+                        field={directQtyField}
+                        value={line.qty}
+                        onChange={(value) => patchLine(line._key, { qty: value == null || value === "" ? undefined : Number(value) })}
+                        onCommit={() => commitCurrentLineField(line._key, "qty")}
+                        registry={registry} services={services} parentDoctype="Sales Order Item" docValues={line} roles={roles}
+                        compact hideLabel
+                        className="mx-auto max-w-[76px] [&_.mf-control]:!min-h-8 [&_input]:!text-center"
+                      />
+                    ) : <span>{row.quantity == null ? "—" : row.quantity.toLocaleString("vi-VN", { maximumFractionDigits: 6 })}</span>}
                   </TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle">—</TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle">—</TableCell>
-                  <TableCell className="px-2 py-1.5 text-center align-middle font-semibold tabular-nums text-foreground">0 đ</TableCell>
-                  <TableCell className="px-1 py-1.5 text-center align-middle text-xs">{text(component.component_key)}</TableCell>
+
+                  <TableCell className="px-2 py-1.5 text-right align-middle tabular-nums">
+                    <span className={row.pricingError ? "text-destructive" : "font-medium"}>{row.loading ? "Đang tính…" : row.priceLabel || "—"}</span>
+                  </TableCell>
+                  <TableCell className="px-2 py-1.5 text-right align-middle tabular-nums text-muted-foreground">{row.discountLabel || "—"}</TableCell>
+                  <TableCell className="px-2 py-1.5 text-right align-middle font-semibold tabular-nums">{row.amountLabel || "—"}</TableCell>
+
+                  <TableCell className="whitespace-nowrap px-1 py-1.5 text-center align-middle">
+                    <Button
+                      type="button" variant="ghost" size="icon-sm" className="text-muted-foreground"
+                      onClick={(event) => { event.stopPropagation(); duplicateSalesLine(row.key); }}
+                      aria-label={`Nhân bản dòng ${rowIndex + 1}`} title="Nhân bản bộ / dòng"
+                    ><Copy /></Button>
+                    <Button
+                      type="button" variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive"
+                      disabled={lines.length <= 1}
+                      onClick={(event) => { event.stopPropagation(); deleteSalesLine(row.key); }}
+                      aria-label={`Xóa dòng ${rowIndex + 1}`} title="Xóa bộ / dòng"
+                    ><Trash2 /></Button>
+                  </TableCell>
                 </TableRow>
-              );
-            })}
-            </Fragment>
-          );
-        })}
-      </TableBody>
-    </Table>
+
+                {hasBomActualRow ? (
+                  <TableRow className={`${recordTone} border-b-2 [&>td]:!bg-inherit`} data-section="sales-line-bom-actual-row">
+                    <TableCell className="px-1 py-2" />
+                    <TableCell className="px-2 py-2 text-center align-top font-semibold text-foreground">BOM</TableCell>
+                    <TableCell colSpan={13} className="max-w-0 px-3 py-2 text-left align-top">
+                      <div className="space-y-2 rounded-md border bg-background/70 p-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="font-medium text-foreground">
+                            {line._bomTemplateCode ? `BOM Template · ${line._bomTemplateCode}` : "Yêu cầu vật tư BOM"}
+                          </div>
+                          {line._bomActualError ? (
+                            <span className="font-medium text-destructive">Không resolve được BOM</span>
+                          ) : line._bomActualComplete ? (
+                            <span className="font-medium text-foreground">Đủ vật tư thực tế · sẵn sàng tạo sản xuất</span>
+                          ) : (
+                            <span className="font-medium text-destructive">
+                              Còn thiếu {bomActualRequirements.filter((requirement) => requirement.missing).map((requirement) => requirement.component_key).join(", ") || "vật tư thực tế"}
+                            </span>
+                          )}
+                        </div>
+                        {line._bomActualError ? (
+                          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{line._bomActualError}</div>
+                        ) : null}
+                        {bomActualRequirements.length > 0 ? (
+                          <AlumdoorBomActualEditor
+                            requirements={bomActualRequirements}
+                            value={line.bom_actual_components ?? []}
+                            disabled={formReadOnly || Boolean(line._loading)}
+                            onChange={(rows) => commitBomActualComponents(line._key, rows)}
+                          />
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
-    <div className="flex h-9 items-center gap-2 border-t border-input bg-accent px-2">
-      <div className="flex items-center gap-2">
+
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-t border-input bg-accent px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" size="sm" onClick={addSalesLine}>
-          <Plus className="mr-1 size-3.5" /> Thêm dòng
+          <Plus className="mr-1 size-3.5" /> Thêm bộ / dòng
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={addMultipleSalesLines}>
-          <Plus className="mr-1 size-3.5" /> Thêm 5 dòng
+          <Plus className="mr-1 size-3.5" /> Thêm 5 bộ
         </Button>
         {selectedLineKeys.size ? (
           <>
-          <span className="text-xs font-medium text-accent-foreground">Đã chọn {selectedLineKeys.size}</span>
-          <Button type="button" variant="destructive" size="sm" onClick={deleteSelectedSalesLines}>
-            <Trash2 className="mr-1 size-3.5" /> Xóa đã chọn
-          </Button>
+            <span className="text-xs font-medium text-accent-foreground">Đã chọn {selectedLineKeys.size}</span>
+            <Button type="button" variant="destructive" size="sm" onClick={deleteSelectedSalesLines}>
+              <Trash2 className="mr-1 size-3.5" /> Xóa đã chọn
+            </Button>
           </>
         ) : null}
       </div>
+      <div className="text-[11px] text-muted-foreground">Ray: Cao × SL × màu · Cửa: mỗi bộ một dòng · BOM chỉ là hướng dẫn, lưu nháp vẫn được phép.</div>
     </div>
   </div>
-
 </section>
           </fieldset>
         </div>
