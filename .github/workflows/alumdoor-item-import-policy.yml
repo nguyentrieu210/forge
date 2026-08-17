@@ -1,0 +1,24 @@
+name: Alumdoor Item Import Policy
+
+on:
+  push:
+    paths:
+      - 'server/scripts/lib/alumdoor-item-import-policy.mjs'
+      - 'server/scripts/test-alumdoor-item-import-policy.mjs'
+      - '.github/workflows/alumdoor-item-import-policy.yml'
+  pull_request:
+    paths:
+      - 'server/scripts/lib/alumdoor-item-import-policy.mjs'
+      - 'server/scripts/test-alumdoor-item-import-policy.mjs'
+      - '.github/workflows/alumdoor-item-import-policy.yml'
+  workflow_dispatch:
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node server/scripts/test-alumdoor-item-import-policy.mjs
