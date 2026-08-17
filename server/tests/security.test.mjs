@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import gateway from "../dist/apps/gateway-worker/src/index.js";
+import queryWorker from "../dist/apps/query-worker/src/index.js";
 import {
   createTrustedIdentity,
   deriveIdentityKey,
@@ -97,6 +98,44 @@ test("gateway ignores forged role headers and forwards a signed server identity"
   });
   assert.equal(identity.actor.user_id, "sales@example.com");
   assert.deepEqual(identity.actor.roles, ["Sales User"]);
+  assert.equal(identity.session_epoch, 1);
+});
+
+test("gateway rejects a production bearer credential without a session epoch", async () => {
+  const token = await signJwt({ sub: "sales@example.com", tenant_id: "demo", roles: ["Sales User"], session_epoch: undefined, iss: JWT_ISSUER, aud: JWT_AUDIENCE, exp: Math.floor(Date.now() / 1000) + 300 });
+  let forwarded = false;
+  const response = await gateway.fetch(new Request("https://demo.example.com/api/v1/whoami", { headers: { authorization: `Bearer ${token}` } }), {
+    ROUTES: { async get() { return JSON.stringify({ tenant_id: "demo", worker_name: "tenant-demo", status: "active", routing_version: 1 }); } },
+    DISPATCHER: { get() { return { async fetch() { forwarded = true; return new Response("ok"); } }; } },
+    PLATFORM_SUFFIX: "example.com", AUTH_MODE: "production", JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE, INTERNAL_AUTH_SECRET: INTERNAL_SECRET,
+  });
+  assert.equal(response.status, 401);
+  assert.equal(forwarded, false);
+});
+
+test("query worker rejects a bearer credential after the live session epoch advances", async () => {
+  const token = await signJwt({ sub: "sales@example.com", tenant_id: "demo", roles: ["System Manager"], session_epoch: 1, iss: JWT_ISSUER, aud: JWT_AUDIENCE, exp: Math.floor(Date.now() / 1000) + 300 });
+  let reportTouched = false;
+  const DB = {
+    prepare(sql) {
+      return {
+        bind() {
+          return {
+            async first() {
+              if (String(sql).includes("FROM users")) return { user_id: "sales@example.com", full_name: "Sales", email: "sales@example.com", enabled: 1, user_type: "System User", password_hash: "", session_epoch: 2, language: "vi", time_zone: "Asia/Ho_Chi_Minh" };
+              reportTouched = true; return null;
+            },
+            async all() { reportTouched = true; return { results: [] }; },
+          };
+        },
+      };
+    },
+  };
+  const response = await queryWorker.fetch(new Request("https://query.example.com/api/v1/reports/prepared/nope", { headers: { authorization: `Bearer ${token}` } }), {
+    AUTH_MODE: "production", TENANT_ID: "demo", JWT_SECRET, JWT_ISSUER, JWT_AUDIENCE, DB,
+  });
+  assert.equal(response.status, 401);
+  assert.equal(reportTouched, false);
 });
 
 test("trusted identity is signed with a per-tenant derived key that other tenants cannot verify", async () => {
@@ -206,7 +245,7 @@ test("tampered trusted identity and client actor injection are rejected or ignor
 
 async function signJwt(payload) {
   const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const body = base64url(JSON.stringify(payload));
+  const body = base64url(JSON.stringify({ session_epoch: 1, ...payload }));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(JWT_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${header}.${body}`)));
   return `${header}.${body}.${base64urlBytes(signature)}`;

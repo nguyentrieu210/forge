@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { reconcileLegacyRuntimeMigration } from "./alumdoor-legacy-runtime-migration.mjs";
 
 const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tenantVars = path.join(serverRoot, "apps", "tenant-worker", ".dev.vars");
@@ -64,7 +65,12 @@ export function ensureAttendanceQrSecret(text) {
   return { text: next, created: true };
 }
 
-function main() {
+async function main() {
+  // This is a no-op unless bootstrap has written the one-time request file.
+  // The migration helper itself proves that this process descends from the
+  // LocalSystem ForgeAlumdoorBackend service before it can stop legacy runtime.
+  await reconcileLegacyRuntimeMigration();
+
   if (!existsSync(tenantVars)) {
     console.error(`ALUMDOOR_LOCAL_VARS_MISSING Run ensure-dev-vars.mjs first: ${tenantVars}`);
     process.exit(1);
@@ -91,4 +97,9 @@ function main() {
   console.log(`  Attendance QR local secret ${appQr.created || tenantQr.created ? "created" : "ready"} (not committed).`);
 }
 
-if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) main();
+if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error?.stack ?? error);
+    process.exit(1);
+  });
+}

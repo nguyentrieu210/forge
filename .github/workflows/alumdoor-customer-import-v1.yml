@@ -1,0 +1,94 @@
+name: Alumdoor Customer Import V1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server/apps-src/alumdoor-worker/src/customer-import.ts"
+      - "server/apps-src/alumdoor-worker/src/entry.ts"
+      - "server/briefs/alumdoor.json"
+      - "server/tests/alumdoor-customer-import.test.mjs"
+      - "client/packages/views/src/system/CustomerImport.tsx"
+      - "client/packages/views/src/system/ImportRouter.tsx"
+      - "client/packages/views/package.json"
+      - "client/apps/runtime/src/experiences/AlumdoorMasterDataWithImport.tsx"
+      - "client/apps/runtime/src/experience-registry.tsx"
+      - ".github/workflows/alumdoor-customer-import-v1.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-customer-import-v1-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build server
+        working-directory: server
+        run: pnpm run build
+
+      - name: Customer Import server contract
+        working-directory: server
+        run: node --test tests/alumdoor-customer-import.test.mjs
+
+      - name: Canonical brief deterministic compile
+        working-directory: server
+        run: |
+          node scripts/forge-app.mjs briefs/alumdoor.json --dry-run --out "$RUNNER_TEMP/alumdoor-compile-1.json"
+          node scripts/forge-app.mjs briefs/alumdoor.json --dry-run --out "$RUNNER_TEMP/alumdoor-compile-2.json"
+          cmp "$RUNNER_TEMP/alumdoor-compile-1.json" "$RUNNER_TEMP/alumdoor-compile-2.json"
+
+      - name: Canonical brief gate
+        working-directory: server
+        run: pnpm run brief:check
+
+      - name: Build shared client dependencies
+        run: |
+          pnpm --filter @metaforge/core run build
+          pnpm --filter @metaforge/adapter-frappe run build
+          pnpm --filter @metaforge/visual run build
+          pnpm --filter @metaforge/charts run build
+          pnpm --filter @metaforge/ui run build
+          pnpm --filter @metaforge/controls run build
+          pnpm --filter @metaforge/shell run build
+
+      - name: Shared views typecheck
+        run: pnpm --filter @metaforge/views run typecheck
+
+      - name: Production runtime build
+        run: pnpm --filter runtime run build
+
+      - name: Scope and production-mutation guard
+        run: |
+          set -euo pipefail
+          git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+          changed=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...HEAD")
+          echo "$changed"
+          if echo "$changed" | grep -E '(^|/)(wrangler\.toml|\.dev\.vars|\.env($|\.)|deploy-evidence/|backups/)' ; then
+            echo 'Customer Import candidate crossed production/provider artifact boundary'
+            exit 1
+          fi
+          echo 'ALUMDOOR_CUSTOMER_IMPORT_V1_GATE_PASS'

@@ -40,6 +40,10 @@ export function isAccessAdministrator(actor: Actor): boolean {
     || actor.roles.includes("System Manager");
 }
 
+function isDataAdministrator(actor: Actor): boolean {
+  return actor.user_id === "Administrator" || actor.roles.includes("Administrator");
+}
+
 export function isAccessInspector(actor: Actor): boolean {
   return isAccessAdministrator(actor)
     || actor.roles.includes("Owner")
@@ -138,14 +142,14 @@ export async function evaluatePermissionCapabilities(input: {
 }): Promise<PermissionCapabilityEvaluation> {
   const { actor, tenantId, doctype, meta, document, permissions } = input;
   const trace: PermissionTraceRecord[] = [];
-  const sourceForActor: PermissionTraceSource = isAccessAdministrator(actor) ? "system" : "role";
+  const sourceForActor: PermissionTraceSource = isDataAdministrator(actor) ? "system" : "role";
 
-  if (isAccessAdministrator(actor)) {
+  if (isDataAdministrator(actor)) {
     trace.push({
       source: "system",
       effect: "info",
       label: "Quản trị tenant",
-      detail: "Tài khoản này có quyền superadmin tenant theo quyết định tương thích RBAC D1.",
+      detail: "Administrator là hard data superadmin; System Manager vẫn là quản trị control-plane nhưng không mặc định bypass dữ liệu.",
     });
   } else {
     trace.push({
@@ -189,10 +193,11 @@ export async function evaluatePermissionCapabilities(input: {
   };
 
   const submittable = Boolean(meta.is_submittable);
-  const [read, create, checkedWrite, submit, cancel, amend] = await Promise.all([
+  const [read, create, checkedWrite, checkedDelete, submit, cancel, amend] = await Promise.all([
     check("read"),
     check("create"),
     document ? check("save") : Promise.resolve(false),
+    check("delete"),
     submittable ? check("submit") : Promise.resolve(false),
     submittable ? check("cancel") : Promise.resolve(false),
     submittable ? check("amend") : Promise.resolve(false),
@@ -200,7 +205,7 @@ export async function evaluatePermissionCapabilities(input: {
 
   const write = document
     ? checkedWrite
-    : isAccessAdministrator(actor) || meta.permissions.some((permission) =>
+    : isDataAdministrator(actor) || meta.permissions.some((permission) =>
       permissionAllows(permission, actor, "save"),
     );
 
@@ -216,19 +221,19 @@ export async function evaluatePermissionCapabilities(input: {
   }
 
   const canDelete = document
-    ? (document.docstatus === 0 || (meta.kind === "master" && meta.allow_delete_non_draft === true)) && write
-    : write;
+    ? (document.docstatus === 0 || (meta.kind === "master" && meta.allow_delete_non_draft === true)) && checkedDelete
+    : checkedDelete;
   trace.push({
     source: "document",
     effect: canDelete ? "allow" : "deny",
-    label: `delete: ${canDelete ? "được phép" : "bị từ chối"}`,
+    label: `delete lifecycle: ${canDelete ? "được phép" : "bị từ chối"}`,
     detail: document
       ? (document.docstatus === 0
-        ? "Bản nháp và quyền ghi cho phép xoá."
+        ? "Lifecycle cho phép xoá draft; delete DocPerm đã được kiểm độc lập."
         : meta.kind === "master" && meta.allow_delete_non_draft === true
-          ? "Danh mục cấu hình cho phép xoá sau duyệt; liên kết và sổ cái vẫn được kiểm tra."
-          : "Chỉ bản nháp mới được xoá.")
-      : "Chưa chọn bản ghi; trạng thái sẽ được kiểm tra lại khi xoá.",
+          ? "Master opt-in cho phép xoá non-draft; delete DocPerm, liên kết và ledger vẫn là gate độc lập."
+          : "Lifecycle không cho phép xoá bản ghi này.")
+      : "Chưa chọn bản ghi; delete DocPerm đã được kiểm, lifecycle sẽ được kiểm lại khi xoá.",
   });
 
   return {

@@ -4,6 +4,7 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import { StockReservationController } from "./alumdoor-inventory.js";
+import { assertCancellationReason } from "./alumdoor-reason-masters.js";
 import { withReservationLifecycleReader } from "./reservation-lifecycle-reader.js";
 
 type ReservationContext = Parameters<StockReservationController["normalize"]>[0];
@@ -132,6 +133,13 @@ export class StockReservationIntegrityController extends StockReservationControl
     assertConsumptionIsNotClientDeclared(desiredState);
     const partialRelease = partialReleaseSnapshot(input, previous, desiredState);
     const normalized = await super.normalize(effectiveContext);
+    if (stateOf(normalized.state) === "Đã nhả") {
+      await assertCancellationReason(
+        effectiveContext as unknown as ControllerContext<JsonObject>,
+        normalized.released_reason,
+        "Phiếu kho",
+      );
+    }
     const initialMicros = typeof previous.initial_qty_reserved_micros === "number" ? previous.initial_qty_reserved_micros : toScaledInt(decimalInput(previous.initial_qty_reserved ?? previous.qty_reserved, "initial_qty_reserved"), 6, "initial_qty_reserved");
     const priorReleasedMicros = typeof previous.cumulative_released_qty_micros === "number" ? previous.cumulative_released_qty_micros : 0;
     const cumulativeReleasedMicros = priorReleasedMicros + (partialRelease?.releasedMicros ?? 0);

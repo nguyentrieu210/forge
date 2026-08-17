@@ -151,6 +151,8 @@ export class D1RbacAdministrationService {
     const afterSet = new Set(afterRoles);
     const additions = afterRoles.filter((role) => !beforeSet.has(role));
     const removals = beforeRoles.filter((role) => !afterSet.has(role));
+    if (userId === audit.actorUserId && additions.length > 0) throw errors.validation("Không tự cấp thêm vai trò cho chính mình.");
+    if (additions.length === 0 && removals.length === 0) return afterRoles;
     const statements: D1PreparedStatement[] = [];
 
     // Add first so a last-admin database trigger permits an admin-role transition
@@ -168,7 +170,7 @@ export class D1RbacAdministrationService {
       );
     }
     statements.push(
-      this.db.prepare(`UPDATE users SET modified_at=?3 WHERE tenant_id=?1 AND user_id=?2`)
+      this.db.prepare(`UPDATE users SET session_epoch=session_epoch+1,modified_at=?3 WHERE tenant_id=?1 AND user_id=?2`)
         .bind(tenantId, userId, now),
       this.auditStatement(
         tenantId,
@@ -283,6 +285,7 @@ export class D1RbacAdministrationService {
     audit: RbacAuditContext,
     now: string,
   ): Promise<void> {
+    if (input.user === audit.actorUserId) throw errors.validation("Không tự mở rộng User Permission cho chính mình.");
     const applicableFor = input.applicableForDoctype ?? "";
     const before = await this.db.prepare(
       `SELECT user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants
@@ -340,6 +343,7 @@ export class D1RbacAdministrationService {
     audit: RbacAuditContext,
     now: string,
   ): Promise<boolean> {
+    if (input.user === audit.actorUserId) throw errors.validation("Không tự thay đổi User Permission của chính mình.");
     const applicableFor = input.applicableForDoctype ?? "";
     const before = await this.db.prepare(
       `SELECT user,allow_doctype,allow_name,applicable_for_doctype,is_default,hide_descendants

@@ -9,15 +9,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: bootstrap-alumdoor-local-machine-v2
-  cancel-in-progress: true
+  group: alumdoor-local-d1-mutation
+  cancel-in-progress: false
 
 jobs:
   bootstrap-local:
     runs-on: [self-hosted]
     timeout-minutes: 45
+    env:
+      FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
     steps:
-      - name: Ensure C:\alumdoor source workspace
+      - name: Validate canonical workspace
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -25,269 +27,265 @@ jobs:
           $repo = 'https://github.com/nguyentrieu210/forge.git'
 
           if (-not (Test-Path $target)) {
-            Write-Host "C:\alumdoor chua ton tai - clone main lan dau."
             git clone --branch main --single-branch $repo $target
-            if ($LASTEXITCODE -ne 0) { throw 'git clone that bai' }
+            if ($LASTEXITCODE -ne 0) { throw 'Initial clone to C:\alumdoor failed' }
           } elseif (-not (Test-Path (Join-Path $target '.git'))) {
-            $entries = @(Get-ChildItem -Force $target -ErrorAction SilentlyContinue)
-            if ($entries.Count -gt 0) {
-              throw 'C:\alumdoor da ton tai va co du lieu nhung khong phai Git repo; runner se khong ghi de.'
+            if (@(Get-ChildItem -Force $target -ErrorAction SilentlyContinue).Count -gt 0) {
+              throw 'C:\alumdoor exists with data but is not a Git repo; refusing to overwrite'
             }
-            Write-Host "C:\alumdoor rong - clone main lan dau."
             git clone --branch main --single-branch $repo $target
-            if ($LASTEXITCODE -ne 0) { throw 'git clone that bai' }
+            if ($LASTEXITCODE -ne 0) { throw 'Initial clone to C:\alumdoor failed' }
           }
 
           $origin = (git -C $target remote get-url origin).Trim()
-          if ($LASTEXITCODE -ne 0) { throw 'Khong doc duoc git origin trong C:\alumdoor' }
-          if ($origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') {
-            throw "C:\alumdoor dang tro toi repo khac: $origin"
+          if ($LASTEXITCODE -ne 0 -or $origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') {
+            throw "Unexpected C:\alumdoor origin: $origin"
           }
-
           $branch = (git -C $target rev-parse --abbrev-ref HEAD).Trim()
-          if ($branch -ne 'main') {
-            throw "C:\alumdoor dang o branch '$branch'. Runner chi cap nhat local main de khong pha working branch."
-          }
+          if ($branch -ne 'main') { throw "C:\alumdoor must stay on main; found '$branch'" }
 
-          # These are generated local-only artifacts seen on the self-hosted machine.
-          # Preserve them on disk, but hide them from Git status so they cannot block a
-          # safe fast-forward. Any other source change still fails the bootstrap.
           $excludeFile = Join-Path $target '.git\info\exclude'
-          $safeLocalPatterns = @('.sentrux.local-backup/', 'package-lock.json')
-          $existingExcludes = @()
-          if (Test-Path $excludeFile) {
-            $existingExcludes = @(Get-Content $excludeFile -ErrorAction SilentlyContinue)
-          }
-          foreach ($pattern in $safeLocalPatterns) {
-            if ($existingExcludes -notcontains $pattern) {
+          foreach ($pattern in @('.sentrux.local-backup/', 'package-lock.json')) {
+            if (-not (Select-String -LiteralPath $excludeFile -SimpleMatch $pattern -Quiet -ErrorAction SilentlyContinue)) {
               Add-Content -Path $excludeFile -Value $pattern
-              Write-Host "Local-only exclude: $pattern"
             }
           }
 
-          # Runtime/service installation may leave a very small, known set of generated
-          # wrappers or local rewrites in the source workspace. Back up and clean only
-          # that allowlist so automatic main fast-forward remains safe. Any other local
-          # source edit still blocks bootstrap instead of being overwritten.
+          # Only these service-generated source artifacts may be repaired before
+          # source convergence. Any operator change blocks bootstrap.
           $runtimeTracked = @(
             'run-local.bat',
             'server/scripts/alumdoor-runtime-service-host.mjs',
             'server/scripts/install-alumdoor-runtime-services.ps1'
           )
-          $runtimeUntracked = @(
-            'client/start-client.cmd',
-            'server/start-worker.cmd'
-          )
-
+          $runtimeUntracked = @('client/start-client.cmd', 'server/start-worker.cmd')
           $dirty = @(git -C $target status --porcelain=v1)
           if ($dirty.Count -gt 0) {
             $unexpected = @()
             foreach ($entry in $dirty) {
-              if ($entry.Length -lt 4) {
-                $unexpected += $entry
-                continue
-              }
+              if ($entry.Length -lt 4) { $unexpected += $entry; continue }
               $status = $entry.Substring(0, 2)
               $path = $entry.Substring(3).Trim()
-              $knownTracked = $runtimeTracked -contains $path
-              $knownUntracked = ($status -eq '??') -and ($runtimeUntracked -contains $path)
-              if (-not $knownTracked -and -not $knownUntracked) {
+              if (-not (($runtimeTracked -contains $path) -or (($status -eq '??') -and ($runtimeUntracked -contains $path)))) {
                 $unexpected += $entry
               }
             }
-
             if ($unexpected.Count -gt 0) {
-              Write-Host 'Working tree co thay doi ngoai allowlist runtime:'
-              $unexpected | ForEach-Object { Write-Host "  $_" }
-              throw 'Dung bootstrap de tranh mat thay doi local. Commit/stash/sua working tree truoc.'
+              $unexpected | ForEach-Object { Write-Host "DIRTY $_" }
+              throw 'Bootstrap blocked to protect local source changes'
             }
 
             $backupRoot = Join-Path 'C:\ForgeServices\Alumdoor\source-backups' (Get-Date -Format 'yyyyMMdd-HHmmss')
-            New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
             foreach ($path in @($runtimeTracked + $runtimeUntracked)) {
               $sourcePath = Join-Path $target ($path -replace '/', '\')
               if (-not (Test-Path -LiteralPath $sourcePath)) { continue }
               $backupPath = Join-Path $backupRoot ($path -replace '/', '\')
-              $backupDir = Split-Path $backupPath -Parent
-              New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
+              New-Item -ItemType Directory -Force -Path (Split-Path $backupPath -Parent) | Out-Null
               Copy-Item -LiteralPath $sourcePath -Destination $backupPath -Force
             }
-            Write-Host "Runtime-generated local source backed up: $backupRoot"
-
             git -C $target restore --worktree --staged -- @runtimeTracked
-            if ($LASTEXITCODE -ne 0) { throw 'Khong restore duoc tracked runtime-generated files' }
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot restore tracked runtime-generated files' }
             foreach ($path in $runtimeUntracked) {
-              $sourcePath = Join-Path $target ($path -replace '/', '\')
-              if (Test-Path -LiteralPath $sourcePath) {
-                Remove-Item -LiteralPath $sourcePath -Force
-              }
+              Remove-Item -LiteralPath (Join-Path $target ($path -replace '/', '\')) -Force -ErrorAction SilentlyContinue
             }
-
-            $remaining = @(git -C $target status --porcelain=v1)
-            if ($remaining.Count -gt 0) {
-              Write-Host 'Working tree van dirty sau runtime cleanup:'
-              $remaining | ForEach-Object { Write-Host "  $_" }
-              throw 'Runtime cleanup khong dua workspace ve trang thai sach.'
+            if (@(git -C $target status --porcelain=v1).Count -gt 0) {
+              throw 'Runtime cleanup did not return C:\alumdoor to a clean state'
             }
           }
 
-          Write-Host 'Workspace hop le:'
+          Write-Host 'Canonical workspace validated:'
           git -C $target log -1 --oneline
 
-      - name: Sync and fully bootstrap local Alumdoor
+      - name: Converge source and retire verified legacy runtime
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $target = 'C:\alumdoor'
+          $serviceHome = 'C:\ForgeServices\Alumdoor'
+          $lockDir = Join-Path $target 'local-locks'
+          $lockPath = Join-Path $lockDir 'local-d1-mutation.lock'
+          $requestPath = Join-Path $serviceHome 'legacy-runtime-migration.request.json'
+          $donePath = Join-Path $serviceHome 'legacy-runtime-migration.done.json'
+          $transitionRun = "bootstrap-transition-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $lockOwned = $false
 
-          $maintenance = Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs'
-          $serviceNames = @('ForgeAlumdoorBackend', 'ForgeAlumdoorDesk')
-          $installedServices = @(
-            $serviceNames |
-              ForEach-Object { Get-Service -Name $_ -ErrorAction SilentlyContinue } |
-              Where-Object { $null -ne $_ }
-          )
-          $managedByServices = $installedServices.Count -gt 0
+          New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $serviceHome | Out-Null
 
-          if (Test-Path $maintenance) {
-            & node $maintenance on
-            if ($LASTEXITCODE -ne 0) { throw 'Khong bat duoc Alumdoor runtime maintenance' }
+          function Process-Ancestry([int]$StartPid) {
+            $all = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+            $byId = @{}
+            foreach ($proc in $all) { $byId[[int]$proc.ProcessId] = $proc }
+            $result = @()
+            $seen = @{}
+            $current = $StartPid
+            while ($current -gt 0 -and -not $seen.ContainsKey($current)) {
+              $seen[$current] = $true
+              $proc = $byId[$current]
+              if (-not $proc) { break }
+              $result += $proc
+              $current = [int]$proc.ParentProcessId
+            }
+            return @($result)
           }
 
-          if ($managedByServices) {
-            Write-Host "Windows runtime services detected: $($installedServices.Name -join ', ')"
-            Write-Host 'Maintenance is enabled; managed service hosts must stop their own privileged child processes.'
+          function Legacy-Runtime-Present {
+            $legacy = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorWorker'" -ErrorAction SilentlyContinue
+            if ($legacy -and $legacy.State -ne 'Stopped') { return $true }
 
-            # The service host runs with the privilege required to terminate its child.
-            # The GitHub runner may not have permission to taskkill that process, so do
-            # not call stop-local-dev here. Wait for the host maintenance poll instead.
-            $deadline = (Get-Date).AddSeconds(30)
-            $quietSince = $null
-            $listeners = @()
-            do {
-              $listeners = @(
+            $managedBackend = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorBackend'" -ErrorAction SilentlyContinue
+            $managedDesk = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorDesk'" -ErrorAction SilentlyContinue
+            foreach ($listener in @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799,5173) })) {
+              $chain = @(Process-Ancestry -StartPid ([int]$listener.OwningProcess))
+              $managedPid = if ($listener.LocalPort -eq 8799) { [int]$managedBackend.ProcessId } else { [int]$managedDesk.ProcessId }
+              if ($managedPid -le 0 -or -not ($chain | Where-Object { [int]$_.ProcessId -eq $managedPid })) { return $true }
+            }
+            return $false
+          }
+
+          try {
+            $lockPayload = [ordered]@{
+              format='forge-bootstrap-source-transition/v3'; run_id=$transitionRun; adapter='bootstrap-source-transition';
+              pid=$PID; hostname=$env:COMPUTERNAME; started_at=(Get-Date).ToUniversalTime().ToString('o');
+              workflow=$env:GITHUB_WORKFLOW; github_run_id=$env:GITHUB_RUN_ID; github_run_attempt=$env:GITHUB_RUN_ATTEMPT
+            } | ConvertTo-Json -Depth 4
+            try {
+              $stream = [System.IO.File]::Open($lockPath,[System.IO.FileMode]::CreateNew,[System.IO.FileAccess]::Write,[System.IO.FileShare]::None)
+              try { $bytes=[Text.Encoding]::UTF8.GetBytes($lockPayload+"`n"); $stream.Write($bytes,0,$bytes.Length) } finally { $stream.Dispose() }
+              $lockOwned = $true
+              Write-Host "LEGACY_SOURCE_LOCK=ACQUIRED run_id=$transitionRun"
+            } catch { throw "Transition lock is active or ownership is unproven: $lockPath" }
+
+            git -C $target fetch origin main --prune
+            if ($LASTEXITCODE -ne 0) { throw 'Source transition fetch failed' }
+            $local = (git -C $target rev-parse HEAD).Trim()
+            $remote = (git -C $target rev-parse origin/main).Trim()
+            if ($remote -ne $env:FORGE_LOCAL_EXPECTED_SHA) {
+              throw "Transition target mismatch expected=$env:FORGE_LOCAL_EXPECTED_SHA origin_main=$remote"
+            }
+            $counts = ((git -C $target rev-list --left-right --count HEAD...origin/main).Trim() -split '\s+')
+            if ($LASTEXITCODE -ne 0 -or $counts.Count -ne 2) { throw 'Cannot classify local main ahead/behind state' }
+            if ([int]$counts[0] -ne 0) { throw "Local main is ahead by $($counts[0]); refusing source transition" }
+
+            if ([int]$counts[1] -gt 0) {
+              # This is source-only convergence. No Wrangler/D1 command is allowed
+              # in this bridge; authenticated local-state backup remains owned by
+              # the canonical runner after runtime quiescence is proven.
+              git -C $target merge --ff-only origin/main
+              if ($LASTEXITCODE -ne 0) { throw 'Source transition ff-only merge failed' }
+              Write-Host "LEGACY_SOURCE_SYNC=PASS from=$local to=$remote d1_mutation=0"
+            }
+
+            $actual = (git -C $target rev-parse HEAD).Trim()
+            if ($actual -ne $env:FORGE_LOCAL_EXPECTED_SHA) { throw "Exact-SHA source failure expected=$env:FORGE_LOCAL_EXPECTED_SHA actual=$actual" }
+            foreach ($required in @(
+              'scripts\local-runner\run-local-import.mjs',
+              'server\scripts\alumdoor-legacy-runtime-migration.mjs',
+              'server\scripts\alumdoor-runtime-maintenance.mjs'
+            )) {
+              if (-not (Test-Path -LiteralPath (Join-Path $target $required) -PathType Leaf)) { throw "Post-sync dependency missing: $required" }
+            }
+
+            if (Legacy-Runtime-Present) {
+              if (Test-Path -LiteralPath $requestPath) {
+                throw "Previous legacy migration request is still pending: $requestPath"
+              }
+              Remove-Item -LiteralPath $donePath -Force -ErrorAction SilentlyContinue
+              $request = [ordered]@{
+                format='forge-alumdoor-legacy-runtime-migration/v1';
+                run_id=$transitionRun;
+                expected_sha=$actual;
+                requested_at=(Get-Date).ToUniversalTime().ToString('o')
+              } | ConvertTo-Json -Depth 4
+              [System.IO.File]::WriteAllText($requestPath,$request+"`n",(New-Object System.Text.UTF8Encoding($false)))
+              Write-Host "LEGACY_RUNTIME_MIGRATION_REQUEST=CREATED run_id=$transitionRun"
+
+              # The already-running Forge service hosts are LocalSystem. Toggling
+              # their existing maintenance protocol restarts only their own child.
+              # The refreshed child executes the fixed migration helper, which has
+              # a separate authority/ownership allowlist before touching legacy runtime.
+              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') on
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to enable migration handoff maintenance' }
+              Start-Sleep -Seconds 2
+              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') off
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to release migration handoff maintenance' }
+
+              $deadline = (Get-Date).AddSeconds(90)
+              $accepted = $false
+              do {
+                if (Test-Path -LiteralPath $donePath) {
+                  try {
+                    $done = Get-Content -Raw $donePath | ConvertFrom-Json
+                    if ($done.run_id -eq $transitionRun -and $done.expected_sha -eq $actual) {
+                      $accepted = $true
+                      break
+                    }
+                  } catch {}
+                }
+                Start-Sleep -Milliseconds 500
+              } while ((Get-Date) -lt $deadline)
+
+              if (-not $accepted) {
+                Write-Host '=== migration timeout diagnostics ==='
+                Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+                  Where-Object { $_.Name -in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk','ForgeAlumdoorWorker') } |
+                  ForEach-Object { Write-Host "SERVICE name=$($_.Name) state=$($_.State) start=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)" }
                 Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-                  Where-Object { $_.LocalPort -in @(8799, 5173) }
-              )
-
-              if ($listeners.Count -eq 0) {
-                if ($null -eq $quietSince) {
-                  $quietSince = Get-Date
-                  Write-Host 'Managed runtime ports are quiet; verifying stable maintenance window.'
-                }
-                if (((Get-Date) - $quietSince).TotalSeconds -ge 3) { break }
-              } else {
-                $quietSince = $null
-                $listeners | ForEach-Object {
-                  Write-Host "Waiting for managed service host: port=$($_.LocalPort) pid=$($_.OwningProcess)"
-                }
+                  Where-Object { $_.LocalPort -in @(8799,5173) } |
+                  ForEach-Object { Write-Host "LISTENER port=$($_.LocalPort) pid=$($_.OwningProcess)" }
+                throw 'Ownership-verified legacy runtime migration did not complete'
               }
-              Start-Sleep -Milliseconds 500
-            } while ((Get-Date) -lt $deadline)
-
-            $stableQuiet = $null -ne $quietSince -and (((Get-Date) - $quietSince).TotalSeconds -ge 3)
-            if (-not $stableQuiet) {
-              throw 'Managed Alumdoor service hosts did not quiesce during maintenance window.'
+              Write-Host "LEGACY_RUNTIME_MIGRATION=PASS run_id=$transitionRun"
+            } else {
+              Write-Host 'LEGACY_RUNTIME_MIGRATION=SKIP reason=already-managed-or-quiet'
             }
-            Write-Host 'Managed runtime ports stayed quiet for 3 seconds; safe to backup and sync.'
-          } else {
-            Write-Host 'No managed Windows runtime services detected; stopping legacy/manual local dev processes.'
-            & node "$target\server\scripts\stop-local-dev.mjs" --ports=8799,5173
-            if ($LASTEXITCODE -ne 0) { throw 'Khong dung duoc local dev stack truoc khi sync' }
-
-            $listeners = @(
-              Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-                Where-Object { $_.LocalPort -in @(8799, 5173) }
-            )
-            if ($listeners.Count -gt 0) {
-              $listeners | ForEach-Object {
-                Write-Host "Legacy runtime listener remains: port=$($_.LocalPort) pid=$($_.OwningProcess)"
-              }
-              throw 'Local dev ports are still occupied before bootstrap.'
+          } finally {
+            if ($lockOwned -and (Test-Path -LiteralPath $lockPath)) {
+              $current = Get-Content -Raw $lockPath | ConvertFrom-Json
+              if ($current.run_id -ne $transitionRun) { throw "Refusing to release transition lock owned by $($current.run_id)" }
+              Remove-Item -LiteralPath $lockPath -Force
+              Write-Host "LEGACY_SOURCE_LOCK=RELEASED run_id=$transitionRun"
             }
           }
 
-          & node "$target\server\scripts\backup-local-state.mjs"
-          if ($LASTEXITCODE -ne 0) { throw 'Khong sao luu duoc local Wrangler state' }
-
-          git -C $target fetch origin main --prune
-          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main that bai' }
-
-          $counts = (git -C $target rev-list --left-right --count HEAD...origin/main).Trim() -split '\s+'
-          if ($LASTEXITCODE -ne 0 -or $counts.Count -lt 2) { throw 'Khong tinh duoc ahead/behind cua local main' }
-          $ahead = [int]$counts[0]
-          $behind = [int]$counts[1]
-          if ($ahead -gt 0) {
-            throw "Local main co $ahead commit chua co tren GitHub; runner khong ghi de."
-          }
-          if ($behind -gt 0) {
-            git -C $target merge --ff-only origin/main
-            if ($LASTEXITCODE -ne 0) { throw 'Khong fast-forward duoc C:\alumdoor len origin/main' }
-          }
-
-          Write-Host 'Source sau sync:'
-          git -C $target log -1 --oneline
-
-          # Runtime bootstrap remains strict on dependencies, build, migration,
-          # seed, HTTP smoke, app install and client build. Repo-wide translation
-          # and business-suite gates run in CI separately and must not prevent the
-          # local ERP stack from being initialized.
-          & cmd.exe /d /c "C:\alumdoor\sync-local.bat --bootstrap --skip-source-verify"
-          if ($LASTEXITCODE -ne 0) {
-            throw "sync-local.bat runtime bootstrap that bai voi exit code $LASTEXITCODE"
-          }
-
-      - name: Verify local services remain healthy
+      - name: Run canonical bootstrap mutation contract
         shell: powershell
+        working-directory: C:\alumdoor
         run: |
           $ErrorActionPreference = 'Stop'
+          & node scripts\local-runner\run-local-import.mjs bootstrap
+          if ($LASTEXITCODE -ne 0) { throw "Bootstrap execution contract failed with exit code $LASTEXITCODE" }
 
-          function Wait-NodeHttp {
-            param(
-              [string]$Url,
-              [string]$Mode,
-              [int]$TimeoutSeconds = 120
-            )
-            $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-            do {
-              if ($Mode -eq 'backend') {
-                & node -e "fetch('$Url',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
-              } else {
-                & node -e "fetch('$Url',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-              }
-              if ($LASTEXITCODE -eq 0) { return }
-              Start-Sleep -Seconds 2
-            } while ((Get-Date) -lt $deadline)
-            throw "Local service khong healthy sau $TimeoutSeconds giay: $Url"
-          }
+      - name: Verify canonical source and local services
+        shell: powershell
+        working-directory: C:\alumdoor
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $actual = (git rev-parse HEAD).Trim()
+          if ($actual -ne $env:FORGE_LOCAL_EXPECTED_SHA) { throw "Post-bootstrap SHA mismatch expected=$env:FORGE_LOCAL_EXPECTED_SHA actual=$actual" }
+          & node -e "Promise.all([fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>{if(![200,401,403].includes(r.status))throw new Error('backend '+r.status)}),fetch('http://127.0.0.1:5173',{signal:AbortSignal.timeout(5000)}).then(r=>{if(!r.ok)throw new Error('ui '+r.status)})]).catch(e=>{console.error(e);process.exit(1)})"
+          if ($LASTEXITCODE -ne 0) { throw 'Post-bootstrap local service verification failed' }
+          Write-Host "LOCAL_BOOTSTRAP_ACCEPTED sha=$actual"
 
-          Wait-NodeHttp -Url 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -Mode 'backend'
-          Wait-NodeHttp -Url 'http://127.0.0.1:5173' -Mode 'ui'
-
-          Write-Host '=== LOCAL READY ==='
-          Write-Host 'Desk    : http://localhost:5173'
-          Write-Host 'Backend : http://localhost:8799'
-          git -C C:\alumdoor log -1 --oneline
-
-      - name: Print local logs on failure
+      - name: Print local diagnostics on failure
         if: failure()
         shell: powershell
         run: |
-          Write-Host '=== run-local.log (tail) ==='
-          if (Test-Path 'C:\alumdoor\run-local.log') {
-            Get-Content 'C:\alumdoor\run-local.log' -Tail 160
-          }
-          Write-Host '=== smoke log ==='
-          if (Test-Path 'C:\alumdoor\run-local.log.smoke') {
-            Get-Content 'C:\alumdoor\run-local.log.smoke' -Tail 160
-          }
-          Write-Host '=== Windows service logs ==='
-          if (Test-Path 'C:\ForgeServices\Alumdoor\logs') {
-            Get-ChildItem 'C:\ForgeServices\Alumdoor\logs' -Recurse -File -ErrorAction SilentlyContinue |
-              Sort-Object LastWriteTime -Descending |
-              Select-Object -First 4 |
-              ForEach-Object {
-                Write-Host "--- $($_.FullName) ---"
-                Get-Content $_.FullName -Tail 80 -ErrorAction SilentlyContinue
-              }
+          Write-Host '=== source ==='
+          if (Test-Path 'C:\alumdoor\.git') { git -C C:\alumdoor status --short --branch; git -C C:\alumdoor log -1 --oneline }
+          Write-Host '=== services ==='
+          Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk','ForgeAlumdoorWorker') } |
+            ForEach-Object { Write-Host "SERVICE name=$($_.Name) state=$($_.State) start=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)" }
+          Write-Host '=== listeners ==='
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalPort -in @(8799,5173) } |
+            Format-Table -AutoSize
+          Write-Host '=== latest execution evidence ==='
+          $root = 'C:\alumdoor\local-backups\execution-layer\bootstrap'
+          if (Test-Path $root) {
+            Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 2 | ForEach-Object {
+              Write-Host "--- $($_.FullName) ---"
+              Get-ChildItem $_.FullName -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
+            }
           }

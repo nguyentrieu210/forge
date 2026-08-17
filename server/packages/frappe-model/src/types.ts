@@ -172,19 +172,15 @@ export interface DocTypeViewPolicy extends JsonObject {
 }
 
 /**
- * A DocPerm row.
- *
- * NO `delete`, deliberately. Deleting is a write-class action in this kernel —
- * `deleteDocument` authorises through the write path — so a separate flag would be a rule
- * nothing reads, and a role configured without it would appear unable to delete while
- * actually being able to. `toFrappeDocPerm` reports `delete` to clients as a copy of
- * `write`, which is what the Desk needs to enable its action without lying about policy.
+ * Canonical DocPerm contract. Destructive delete is independent from write/save:
+ * callers must never infer delete from write, and transports must project this bit as-is.
  */
 export interface DocPermissionMeta extends JsonObject {
   role: string;
   read?: boolean;
   write?: boolean;
   create?: boolean;
+  delete?: boolean;
   submit?: boolean;
   cancel?: boolean;
   amend?: boolean;

@@ -63,6 +63,41 @@ export interface AlumDoorPayrollV2Result {
   };
 }
 
+export interface AlumDoorPayrollV3Input {
+  regularMinutes: number;
+  paidLeaveMinutes: number;
+  approvedOvertimeMinutes: number;
+  shiftHourlyRateVnd: number;
+  overtimeRateVndPerHour: number;
+  fixedAllowanceVnd?: number;
+  approvedEarningsVnd?: number;
+  advanceDeductionVnd?: number;
+  approvedDeductionsVnd?: number;
+}
+
+export interface AlumDoorPayrollV3Result {
+  calculationVersion: 3;
+  regularMinutes: number;
+  paidLeaveMinutes: number;
+  payableRegularMinutes: number;
+  approvedOvertimeMinutes: number;
+  shiftHourlyRateVnd: number;
+  overtimeRateVndPerHour: number;
+  basePayVnd: number;
+  overtimePayVnd: number;
+  fixedAllowanceVnd: number;
+  approvedEarningsVnd: number;
+  grossPayVnd: number;
+  advanceDeductionVnd: number;
+  approvedDeductionsVnd: number;
+  totalDeductionVnd: number;
+  netPayVnd: number;
+  trace: {
+    shiftPay: { numerator: string; denominator: "60"; rounding: "HALF_UP_ON_TOTAL" };
+    overtimePay: { numerator: string; denominator: "60"; rounding: "HALF_UP_ON_TOTAL" };
+  };
+}
+
 export class AlumDoorPayrollRuleError extends Error {
   constructor(readonly code: string, message: string) {
     super(message);
@@ -93,11 +128,8 @@ function safeNumber(value: bigint, label: string): number {
 }
 
 /**
- * AlumDoor payroll MVP calculation.
- *
- * Money stays integer VND and ratios stay basis points. No floating-point value is
- * authoritative. DAILY means baseSalaryVnd is one full-day rate. MONTHLY means it is
- * the monthly salary and standardWorkDaysBp is the period's standard paid days × 10000.
+ * Historical AlumDoor payroll v1. Kept unchanged so existing calculation snapshots retain
+ * their original MONTHLY/DAILY meaning.
  */
 export function calculateAlumDoorPayroll(input: AlumDoorPayrollInput): AlumDoorPayrollResult {
   if (input.payMode !== "MONTHLY" && input.payMode !== "DAILY") {
@@ -122,11 +154,6 @@ export function calculateAlumDoorPayroll(input: AlumDoorPayrollInput): AlumDoorP
   const basePay = input.payMode === "DAILY"
     ? roundHalfUpRatio(base * work, 10_000n)
     : roundHalfUpRatio(base * work, standard);
-
-  // hourly = daily / 8; overtime fraction is minutes / 60; multiplier is bp / 10000.
-  // DAILY:   base * minutes * multiplier / (480 * 10000)
-  // MONTHLY: (base * 10000 / standardDaysBp) * minutes * multiplier / (480 * 10000)
-  //          = base * minutes * multiplier / (480 * standardDaysBp)
   const overtimePay = input.payMode === "DAILY"
     ? roundHalfUpRatio(base * otMinutes * otMultiplier, 480n * 10_000n)
     : roundHalfUpRatio(base * otMinutes * otMultiplier, 480n * standard);
@@ -153,12 +180,7 @@ export function calculateAlumDoorPayroll(input: AlumDoorPayrollInput): AlumDoorP
   };
 }
 
-/**
- * AlumDoor HR & Payroll Lite calculation v2.
- *
- * Historical v1 slips keep using `calculateAlumDoorPayroll`. V2 snapshots one fixed
- * company overtime rate and rounds only once after summing all approved minutes.
- */
+/** Historical v2: fixed OT rate, but regular pay still follows MONTHLY/DAILY base salary. */
 export function calculateAlumDoorPayrollV2(input: AlumDoorPayrollV2Input): AlumDoorPayrollV2Result {
   if (input.payMode !== "MONTHLY" && input.payMode !== "DAILY") {
     throw new AlumDoorPayrollRuleError("PAYROLL_INPUT_INVALID", "Cách trả lương không hợp lệ.");
@@ -180,7 +202,7 @@ export function calculateAlumDoorPayrollV2(input: AlumDoorPayrollV2Input): AlumD
   const base = BigInt(baseSalary);
   const work = BigInt(workFraction);
   const standard = BigInt(standardDays);
-  const baseNumerator = input.payMode === "DAILY" ? base * work : base * work;
+  const baseNumerator = base * work;
   const baseDenominator = input.payMode === "DAILY" ? 10_000n : standard;
   const basePay = roundHalfUpRatio(baseNumerator, baseDenominator);
   const overtimeNumerator = BigInt(overtimeMinutes) * BigInt(overtimeRate);
@@ -217,6 +239,61 @@ export function calculateAlumDoorPayrollV2(input: AlumDoorPayrollV2Input): AlumD
       : { numerator: String(BigInt(baseSalary) * 10_000n), denominator: String(standardDays) },
     trace: {
       basePay: { numerator: String(baseNumerator), denominator: String(baseDenominator) },
+      overtimePay: { numerator: String(overtimeNumerator), denominator: "60", rounding: "HALF_UP_ON_TOTAL" },
+    },
+  };
+}
+
+/**
+ * AlumDoor Lite v3: both normal shift work and approved OT are paid at fixed hourly rates.
+ * No monthly/day salary ratio, legal multiplier or floating point amount participates in
+ * the authoritative calculation. Rounding happens once on the total minutes of each bucket.
+ */
+export function calculateAlumDoorPayrollV3(input: AlumDoorPayrollV3Input): AlumDoorPayrollV3Result {
+  const regularMinutes = integer(input.regularMinutes, "Phút công thường", 0, 60 * 24 * 31);
+  const paidLeaveMinutes = integer(input.paidLeaveMinutes, "Phút nghỉ hưởng lương", 0, 60 * 24 * 31);
+  const overtimeMinutes = integer(input.approvedOvertimeMinutes, "Phút tăng ca đã duyệt", 0, 60 * 24 * 31);
+  const shiftHourlyRate = integer(input.shiftHourlyRateVnd, "Mức lương ca", 1, 999_999_999);
+  const overtimeRate = integer(input.overtimeRateVndPerHour, "Mức tăng ca", 1, 999_999_999);
+  const fixedAllowance = integer(input.fixedAllowanceVnd ?? 0, "Phụ cấp cố định", 0, 999_999_999_999);
+  const approvedEarnings = integer(input.approvedEarningsVnd ?? 0, "Khoản cộng đã duyệt", 0, 999_999_999_999);
+  const advance = integer(input.advanceDeductionVnd ?? 0, "Tạm ứng", 0, 999_999_999_999);
+  const deductions = integer(input.approvedDeductionsVnd ?? 0, "Khấu trừ đã duyệt", 0, 999_999_999_999);
+  const payableRegularMinutes = regularMinutes + paidLeaveMinutes;
+  if (!Number.isSafeInteger(payableRegularMinutes) || payableRegularMinutes > 60 * 24 * 31) {
+    throw new AlumDoorPayrollRuleError("PAYROLL_INPUT_INVALID", "Tổng phút công được trả không hợp lệ.");
+  }
+
+  const shiftNumerator = BigInt(payableRegularMinutes) * BigInt(shiftHourlyRate);
+  const overtimeNumerator = BigInt(overtimeMinutes) * BigInt(overtimeRate);
+  const basePay = roundHalfUpRatio(shiftNumerator, 60n);
+  const overtimePay = roundHalfUpRatio(overtimeNumerator, 60n);
+  const gross = basePay + overtimePay + BigInt(fixedAllowance) + BigInt(approvedEarnings);
+  const totalDeduction = BigInt(advance) + BigInt(deductions);
+  if (totalDeduction > gross) {
+    throw new AlumDoorPayrollRuleError("PAYROLL_NEGATIVE_NET", "Tổng tạm ứng và khấu trừ vượt thu nhập kỳ lương.");
+  }
+  const net = gross - totalDeduction;
+
+  return {
+    calculationVersion: 3,
+    regularMinutes,
+    paidLeaveMinutes,
+    payableRegularMinutes,
+    approvedOvertimeMinutes: overtimeMinutes,
+    shiftHourlyRateVnd: shiftHourlyRate,
+    overtimeRateVndPerHour: overtimeRate,
+    basePayVnd: safeNumber(basePay, "Tiền ca"),
+    overtimePayVnd: safeNumber(overtimePay, "Tiền tăng ca"),
+    fixedAllowanceVnd: fixedAllowance,
+    approvedEarningsVnd: approvedEarnings,
+    grossPayVnd: safeNumber(gross, "Tổng thu nhập"),
+    advanceDeductionVnd: advance,
+    approvedDeductionsVnd: deductions,
+    totalDeductionVnd: safeNumber(totalDeduction, "Tổng khấu trừ"),
+    netPayVnd: safeNumber(net, "Thực nhận"),
+    trace: {
+      shiftPay: { numerator: String(shiftNumerator), denominator: "60", rounding: "HALF_UP_ON_TOTAL" },
       overtimePay: { numerator: String(overtimeNumerator), denominator: "60", rounding: "HALF_UP_ON_TOTAL" },
     },
   };

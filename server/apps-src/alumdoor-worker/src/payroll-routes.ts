@@ -1,3 +1,8 @@
+import {
+  ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR,
+  ALUMDOOR_SHIFT_HOURLY_RATE_VND,
+} from "../../../packages/alumdoor-hr-payroll-contract/src/index.js";
+
 export type PayrollPlatformCall = (path: string, init?: RequestInit) => Promise<Response>;
 
 type Json = Record<string, unknown>;
@@ -51,7 +56,7 @@ async function saveDoc(call: PayrollPlatformCall, doc: Json): Promise<Json> {
   return asObject(await method(call, "frappe.client.save", { doc }), "Bản ghi cập nhật");
 }
 
-/** Conservative minimum for overtime on a normal working day: 150% of normal hourly pay. */
+/** Historical v2 helper only. Calculation v3 does not apply an automatic legal multiplier/floor. */
 export function minimumRegularDayOvertimeRateVnd(input: { payMode: string; baseSalaryVnd: number; standardWorkDaysBp: number }): number {
   const baseSalary = integer(input.baseSalaryVnd, "Mức lương", undefined, 1);
   const workDaysBp = input.payMode === "DAILY" ? 10_000 : integer(input.standardWorkDaysBp, "Ngày công chuẩn", undefined, 1, 310_000);
@@ -77,7 +82,7 @@ export async function payrollCreatePeriod(input: { call: PayrollPlatformCall; ar
   } catch (error) { return fail("PAYROLL_CREATE_FAILED", error instanceof Error ? error.message : "Không tạo được kỳ lương."); }
 }
 
-export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall; args: Json; now?: Date; calculationVersion?: 1 | 2 }): Promise<Response> {
+export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall; args: Json; now?: Date; calculationVersion?: 1 | 2 | 3 }): Promise<Response> {
   try {
     const periodName = requiredText(input.args.period, "Kỳ lương");
     const period = await getDoc(input.call, "Payroll Entry", periodName);
@@ -88,6 +93,7 @@ export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall;
     const startDate = date(period.start_date, "Ngày bắt đầu kỳ");
     const endDate = date(period.end_date, "Ngày kết thúc kỳ");
     const standardWorkDaysBp = integer(period.alu_standard_work_days_bp, "Ngày công chuẩn", undefined, 1, 310_000);
+    const calculationVersion = input.calculationVersion ?? 3;
     const profiles = (await listDocs(input.call, "AlumDoor Pay Profile", { company, ...(branch ? { branch } : {}), status: "approved" }))
       .filter((profile) => text(profile.effective_from) <= endDate && (!text(profile.effective_to) || text(profile.effective_to) >= startDate));
     if (!profiles.length) throw new Error("Không có hồ sơ lương đã duyệt trong kỳ.");
@@ -104,9 +110,9 @@ export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall;
         alu_pay_profile: requiredText(profile.name, "Hồ sơ lương"),
         alu_standard_work_days_bp: standardWorkDaysBp,
         alu_state: "draft",
-        alu_calculation_version: input.calculationVersion === 2 ? 2 : integer(existing?.alu_calculation_version, "Phiên bản tính", 0, 0, 1_000_000) + 1,
-        ...(input.calculationVersion === 2 ? {
-          alu_overtime_rate_vnd_per_hour: 50_000,
+        alu_calculation_version: calculationVersion,
+        ...(calculationVersion >= 2 ? { alu_overtime_rate_vnd_per_hour: ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR } : {}),
+        ...(calculationVersion === 2 ? {
           alu_overtime_legal_floor_vnd: minimumRegularDayOvertimeRateVnd({
             payMode: text(profile.pay_mode) || "MONTHLY",
             baseSalaryVnd: integer(profile.base_salary_vnd, "Mức lương", undefined, 1),
@@ -114,12 +120,18 @@ export async function payrollCalculatePeriod(input: { call: PayrollPlatformCall;
           }),
           alu_lite_version: 2,
         } : {}),
+        ...(calculationVersion === 3 ? {
+          alu_shift_hourly_rate_vnd: ALUMDOOR_SHIFT_HOURLY_RATE_VND,
+          alu_overtime_rate_vnd_per_hour: ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR,
+          alu_overtime_legal_floor_vnd: 0,
+          alu_lite_version: 3,
+        } : {}),
       };
       const saved = existing ? await saveDoc(input.call, base) : await insertDoc(input.call, base);
       slipRows.push({ row_id: `ALU-${employee}`, salary_slip: requiredText(saved.name, "Phiếu lương"), employee });
     }
     const calculated = await saveDoc(input.call, { ...period, salary_slips: slipRows, alu_state: "calculated", alu_calculated_at: (input.now ?? new Date()).toISOString() });
-    return json({ period: calculated, employee_count: slipRows.length });
+    return json({ period: calculated, employee_count: slipRows.length, calculation_version: calculationVersion });
   } catch (error) { return fail("PAYROLL_CALCULATE_FAILED", error instanceof Error ? error.message : "Không tính được lương."); }
 }
 

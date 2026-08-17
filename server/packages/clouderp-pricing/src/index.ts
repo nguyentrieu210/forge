@@ -45,6 +45,22 @@ function fieldMatchedPrice(
     && (lineUom ? priceUom === lineUom : !priceUom);
 }
 
+function namedPriceCompatible(
+  data: JsonObject,
+  priceList: string,
+  itemCode: string,
+  lineUom: string,
+  priceVariant: string,
+): boolean {
+  const dataPriceList = normalizedText(data.price_list);
+  const dataItemCode = normalizedText(data.item_code);
+  const priceUom = normalizedText(data.uom);
+  if (dataPriceList && dataPriceList !== priceList) return false;
+  if (dataItemCode && dataItemCode !== itemCode) return false;
+  return itemPriceVariant(data) === priceVariant
+    && (lineUom ? priceUom === lineUom : !priceUom);
+}
+
 function preferredPriceRecordName(priceList: string, itemCode: string, uom: string, variant: string): string {
   const base = `${priceList}:${itemCode}`;
   if (variant === STANDARD_PRICE_VARIANT) return uom ? `${base}:${uom}` : base;
@@ -69,12 +85,11 @@ export async function resolveServerPrice(
   const legacyUom = normalizedText(legacy?.uom);
   const compatibleLegacy = priceVariant === STANDARD_PRICE_VARIANT
     && legacy
-    && itemPriceVariant(legacy) === STANDARD_PRICE_VARIANT
-    && (lineUom ? legacyUom === lineUom : !legacyUom)
+    && namedPriceCompatible(legacy, priceList, itemCode, lineUom, STANDARD_PRICE_VARIANT)
     ? legacy
     : null;
   const compatiblePreferred = preferred
-    && fieldMatchedPrice(preferred, priceList, itemCode, lineUom, priceVariant)
+    && namedPriceCompatible(preferred, priceList, itemCode, lineUom, priceVariant)
     ? preferred
     : null;
 
@@ -82,40 +97,39 @@ export async function resolveServerPrice(
   let itemPrice: JsonObject | null = null;
   let convertedFromUom = "";
   let item: JsonObject | null = null;
-  let listedPrices: Array<{ name: string; data: JsonObject }> | null = null;
+  const listedPrices = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
+  const fieldMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, lineUom, priceVariant));
+  const activeFieldMatches = fieldMatches.filter(({ data }) => !disabled(data.disabled));
+  const exactCandidates = new Map<string, JsonObject>();
   if (compatiblePreferred && !disabled(compatiblePreferred.disabled)) {
-    itemPrice = compatiblePreferred;
-    priceName = preferredPriceName;
+    exactCandidates.set(preferredPriceName, compatiblePreferred);
+  }
+  for (const candidate of activeFieldMatches) {
+    if (candidate.name === legacyPriceName && preferredPriceName !== legacyPriceName) continue;
+    exactCandidates.set(candidate.name, candidate.data);
+  }
+  if (exactCandidates.size > 1) {
+    throw errors.validation(
+      `Multiple active Item Price records match ${priceList} / ${itemCode} / ${lineUom || "(no UOM)"} / ${priceVariant}: ${[...exactCandidates.keys()].sort().join(", ")}`,
+    );
+  }
+  if (exactCandidates.size === 1) {
+    const [candidateName, candidateData] = [...exactCandidates.entries()][0]!;
+    itemPrice = candidateData;
+    priceName = candidateName;
   } else if (compatibleLegacy && !disabled(compatibleLegacy.disabled)) {
     itemPrice = compatibleLegacy;
     priceName = legacyPriceName;
-  }
-
-  let fieldMatches: Array<{ name: string; data: JsonObject }> = [];
-  if (!itemPrice) {
-    listedPrices = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
-    fieldMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, lineUom, priceVariant));
-    const active = fieldMatches.filter(({ data }) => !disabled(data.disabled));
-    if (active.length > 1) {
-      throw errors.validation(
-        `Multiple active Item Price records match ${priceList} / ${itemCode} / ${lineUom || "(no UOM)"} / ${priceVariant}`,
-      );
-    }
-    if (active.length === 1) {
-      itemPrice = active[0]!.data;
-      priceName = active[0]!.name;
-    }
   }
 
   if (!itemPrice && lineUom) {
     item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", itemCode);
     const baseUom = normalizedText(item?.default_sales_uom) || normalizedText(item?.stock_uom);
     if (item && baseUom && baseUom !== lineUom) {
-      listedPrices ??= await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
       const baseMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, baseUom, priceVariant));
       const activeBase = baseMatches.filter(({ data }) => !disabled(data.disabled));
       if (activeBase.length > 1) {
-        throw errors.validation(`Multiple active Item Price records match ${priceList} / ${itemCode} / ${baseUom} / ${priceVariant}`);
+        throw errors.validation(`Multiple active Item Price records match ${priceList} / ${itemCode} / ${baseUom} / ${priceVariant}: ${activeBase.map(({ name }) => name).sort().join(", ")}`);
       }
       if (activeBase.length === 1) {
         itemPrice = activeBase[0]!.data;
@@ -176,6 +190,13 @@ export async function resolveServerPrice(
     const matches = rules
       .filter(({ data }) => matchesRule(data, input))
       .sort((a, b) => ruleScore(b.data) - ruleScore(a.data) || a.name.localeCompare(b.name));
+    if (matches.length > 1) {
+      const topScore = ruleScore(matches[0]!.data);
+      const tied = matches.filter(({ data }) => ruleScore(data) === topScore);
+      if (tied.length > 1) {
+        throw errors.validation(`Ambiguous Pricing Rule match: ${tied.map(({ name }) => name).sort().join(", ")}`);
+      }
+    }
     selected = matches[0];
     if (selected) {
       const data = selected.data;

@@ -5,7 +5,7 @@ import { PermissionService, hasStaticPermissionDefinition } from "../../policy/s
 import type { MetadataStore } from "./store.js";
 import type { DocFieldMeta, DocPermissionMeta, DocTypeMeta, ShareRecord, UserPermissionRecord } from "./types.js";
 
-export type ExtendedPermissionAction = MutationAction | "read" | "print" | "email" | "report" | "import" | "export" | "share" | "amend";
+export type ExtendedPermissionAction = MutationAction | "read" | "delete" | "print" | "email" | "report" | "import" | "export" | "share" | "amend";
 
 export interface DocumentPermissionRequest extends PermissionRequest {
   tenantId?: string;
@@ -219,7 +219,7 @@ export class MetadataPermissionService {
     if (this.hasDirectPermission(meta, request)) {
       const policies = await this.assertRolePolicy(request);
       await this.assertScopedPermissions(request, meta);
-      this.assertFieldPermissions(request, meta, false);
+      await this.assertFieldPermissions(request, meta, false);
       this.assertPolicyFieldPermissions(request, policies);
       return;
     }
@@ -229,7 +229,7 @@ export class MetadataPermissionService {
       if (shareSupports(share, request.action)) {
         const policies = await this.assertRolePolicy(request);
         await this.assertScopedPermissions(request, meta);
-        this.assertFieldPermissions(request, meta, Boolean(share?.write));
+        await this.assertFieldPermissions(request, meta, Boolean(share?.write));
         this.assertPolicyFieldPermissions(request, policies);
         return;
       }
@@ -363,7 +363,7 @@ export class MetadataPermissionService {
     return { ...structuredClone(document), data, children: document.children.filter((row) => tableFields.has(row.fieldname)).map((row) => structuredClone(row)) };
   }
 
-  /** Redacts both static permlevels and dynamic hidden/mask rules before any response leaves the server. */
+  /** Redacts static permlevels and dynamic hidden/mask rules, including every child-row field. */
   async redactDocumentWithPolicies(
     tenantId: string,
     meta: DocTypeMeta,
@@ -372,17 +372,40 @@ export class MetadataPermissionService {
     shared = false,
   ): Promise<CanonicalDocument<JsonObject>> {
     const redacted = this.redactDocument(meta, document, actor, shared);
-    if (isAdmin(actor)) return redacted;
-    const restrictions = fieldRestrictions(await this.rolePolicies(tenantId, actor, meta.name));
-    if (!restrictions.hidden.size) return redacted;
+    const restrictions = isAdmin(actor) ? { hidden: new Set<string>(), readOnly: new Set<string>() } : fieldRestrictions(await this.rolePolicies(tenantId, actor, meta.name));
     const data = { ...redacted.data };
-    for (const fieldname of restrictions.hidden) delete data[fieldname];
-    const children = redacted.children.filter((row) => !restrictions.hidden.has(row.fieldname));
+    for (const fieldname of restrictions.hidden) if (!fieldname.includes(".")) delete data[fieldname];
+    const readableLevels = this.readablePermlevels(meta, actor, document.owner, shared);
+    const childMetaCache = new Map<string, DocTypeMeta | null>();
+    const childPolicyCache = new Map<string, ReturnType<typeof fieldRestrictions>>();
+    const children = [];
+    for (const row of redacted.children) {
+      let childMeta = childMetaCache.get(row.child_doctype);
+      if (childMeta === undefined) {
+        childMeta = await this.metadata.getDocType(tenantId, row.child_doctype);
+        childMetaCache.set(row.child_doctype, childMeta);
+      }
+      if (!childMeta) continue;
+      let childRestrictions = childPolicyCache.get(row.child_doctype);
+      if (!childRestrictions) {
+        childRestrictions = isAdmin(actor) ? { hidden: new Set<string>(), readOnly: new Set<string>() } : fieldRestrictions(await this.rolePolicies(tenantId, actor, row.child_doctype));
+        childPolicyCache.set(row.child_doctype, childRestrictions);
+      }
+      const allowed = new Set(childMeta.fields
+        .filter((field) => field.fieldtype !== "Password")
+        .filter((field) => readableLevels.has(field.permlevel ?? 0))
+        .filter((field) => !childRestrictions!.hidden.has(field.fieldname))
+        .filter((field) => !restrictions.hidden.has(`${row.fieldname}.${field.fieldname}`))
+        .map((field) => field.fieldname));
+      const rowData: JsonObject = {};
+      for (const [key, value] of Object.entries(row.data)) if (allowed.has(key)) rowData[key] = structuredClone(value as JsonValue);
+      children.push({ ...structuredClone(row), data: rowData });
+    }
     return { ...redacted, data, children };
   }
 
   private hasDirectPermission(meta: DocTypeMeta | null, request: DocumentPermissionRequest): boolean {
-    if (hasStaticPermissionDefinition(request.doctype) && ["read", "create", "save", "submit", "cancel"].includes(request.action)) {
+    if (hasStaticPermissionDefinition(request.doctype) && ["read", "create", "save", "delete", "submit", "cancel"].includes(request.action)) {
       try { this.base.assert(request as PermissionRequest); return true; } catch { /* metadata/share fallback */ }
     }
     if (!meta) return false;
@@ -403,17 +426,42 @@ export class MetadataPermissionService {
     return owner ? "owner" : null;
   }
 
-  private assertFieldPermissions(request: DocumentPermissionRequest, meta: DocTypeMeta | null, sharedWrite: boolean): void {
+  private async assertFieldPermissions(request: DocumentPermissionRequest, meta: DocTypeMeta | null, sharedWrite: boolean): Promise<void> {
     if (!meta || !request.data || (request.action !== "create" && request.action !== "save") || isAdmin(request.actor)) return;
     const levels = this.writablePermlevels(meta, request.actor, request.action, request.owner, sharedWrite);
     const fields = new Map(meta.fields.map((field) => [field.fieldname, field]));
     for (const [fieldname, value] of Object.entries(request.data)) {
-      if (fieldname.startsWith("_") || fieldname === "workflow_state") continue;
+      if (fieldname === "_metadata_revision" || fieldname === "workflow_state") continue;
+      if (SERVER_OWNED_MUTATION_FIELDS.has(fieldname) || fieldname.startsWith("_")) {
+        const before = request.existingData?.[fieldname];
+        if (!sameJsonValue(before, value)) throw errors.permission(`Server-owned field cannot be mutated: ${fieldname}`);
+        continue;
+      }
       const field = fields.get(fieldname);
       if (!field) continue;
       const before = request.existingData?.[fieldname];
-      if (!sameJsonValue(before, value) && !levels.has(field.permlevel ?? 0)) {
-        throw errors.permission(`Field permission denied: ${fieldname}`);
+      if (!sameJsonValue(before, value) && !levels.has(field.permlevel ?? 0)) throw errors.permission(`Field permission denied: ${fieldname}`);
+      if ((field.fieldtype !== "Table" && field.fieldtype !== "Table MultiSelect") || !Array.isArray(value)) continue;
+      if (!field.options) throw errors.permission(`Child table metadata missing for ${fieldname}`);
+      const childMeta = await this.metadata.getDocType(request.tenantId!, field.options);
+      if (!childMeta) throw errors.permission(`Child table metadata missing for ${field.options}`);
+      const childFields = new Map(childMeta.fields.map((childField) => [childField.fieldname, childField]));
+      const previousRows = Array.isArray(before) ? before : [];
+      for (let index = 0; index < value.length; index += 1) {
+        const rawRow = value[index];
+        if (!isJsonObject(rawRow as JsonValue)) continue;
+        const row = rawRow as JsonObject;
+        const rowName = typeof row.name === "string" ? row.name : "";
+        const previous = previousRows.find((candidate) => isJsonObject(candidate) && rowName && candidate.name === rowName) ?? previousRows[index];
+        const beforeRow = isJsonObject(previous as JsonValue) ? previous as JsonObject : {};
+        for (const [childFieldname, childValue] of Object.entries(row)) {
+          if (CHILD_FRAMEWORK_FIELDS.has(childFieldname)) continue;
+          const childField = childFields.get(childFieldname);
+          if (!childField) continue;
+          if (!sameJsonValue(beforeRow[childFieldname], childValue) && !levels.has(childField.permlevel ?? 0)) {
+            throw errors.permission(`Child field permission denied: ${fieldname}.${childFieldname}`);
+          }
+        }
       }
     }
   }
@@ -608,6 +656,11 @@ export function matchesUserPermissionConstraints(data: JsonObject, constraints: 
   return true;
 }
 
+const SERVER_OWNED_MUTATION_FIELDS = new Set([
+  "name", "owner", "creation", "created_at", "modified", "modified_at", "modified_by", "docstatus", "doctype", "version", "idx", "parent", "parenttype", "parentfield",
+]);
+const CHILD_FRAMEWORK_FIELDS = new Set(["name", "idx", "doctype", "parent", "parenttype", "parentfield"]);
+
 function sameJsonValue(left: JsonValue | undefined, right: JsonValue | undefined): boolean {
   return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
@@ -621,5 +674,5 @@ function shareSupports(share: ShareGrant | null, action: ExtendedPermissionActio
 }
 
 function isAdmin(actor: Actor): boolean {
-  return actor.user_id === "Administrator" || actor.roles.includes("Administrator") || actor.roles.includes("System Manager");
+  return actor.user_id === "Administrator" || actor.roles.includes("Administrator");
 }

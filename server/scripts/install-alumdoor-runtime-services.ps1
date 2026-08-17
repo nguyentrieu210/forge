@@ -114,7 +114,8 @@ if (-not (Test-Path (Join-Path $Root '.git'))) {
 
 $hostScript = Join-Path $Root 'server\scripts\alumdoor-runtime-service-host.mjs'
 $maintenanceScript = Join-Path $Root 'server\scripts\alumdoor-runtime-maintenance.mjs'
-if (-not (Test-Path $hostScript) -or -not (Test-Path $maintenanceScript)) {
+$serviceControlGrantScript = Join-Path $Root 'server\scripts\grant-alumdoor-runner-service-control.ps1'
+if (-not (Test-Path $hostScript) -or -not (Test-Path $maintenanceScript) -or -not (Test-Path $serviceControlGrantScript)) {
   throw 'Runtime service scripts are missing. Sync C:\alumdoor to the main commit containing the Windows service support first.'
 }
 
@@ -216,6 +217,14 @@ foreach ($definition in $services) {
   if ($LASTEXITCODE -ne 0) { throw "WinSW install failed for $id." }
   Set-Service -Name $id -StartupType Automatic
 }
+
+# The GitHub runner can execute either interactively (medium-integrity console
+# user) or as its Windows service account. Grant only the service-object rights
+# needed to query/start/stop these two local runtime services. Do not grant
+# service reconfiguration or administrator rights.
+$serviceIds = @($services | ForEach-Object { $_.Id })
+& $serviceControlGrantScript -ServiceNames $serviceIds -EvidencePath (Join-Path $ServiceHome 'service-control-grant.json')
+if ($LASTEXITCODE -ne 0) { throw 'Failed to grant minimal Alumdoor service control rights to the local runner principals.' }
 
 Remove-Item -LiteralPath $maintenance -Force -ErrorAction SilentlyContinue
 

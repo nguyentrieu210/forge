@@ -1,6 +1,7 @@
 import type { JsonObject, MutationPlan } from "../../contracts/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { CutOrderController } from "./alumdoor-inventory.js";
+import { assertCancellationReason } from "./alumdoor-reason-masters.js";
 import { withReservationLifecycleReader } from "./reservation-lifecycle-reader.js";
 
 function text(value: unknown): string {
@@ -17,6 +18,9 @@ export class CutOrderReservationIntegrityController implements DocumentControlle
   private readonly delegate = new CutOrderController();
 
   async buildPlan(context: ControllerContext<JsonObject>): Promise<MutationPlan<JsonObject>> {
+    if (context.command.action === "cancel") {
+      await assertCancellationReason(context, context.command.document.cancel_reason, "Phiếu cắt");
+    }
     const document = context.command.action === "cancel" ? context.existing?.data : context.command.document;
     const ownSources = [
       context.command.aggregate.name,

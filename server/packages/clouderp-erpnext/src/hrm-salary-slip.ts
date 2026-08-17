@@ -2,7 +2,7 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { SalarySlipController } from "./enterprise-controllers.js";
 import type { SalarySlipData } from "./enterprise-types.js";
-import { buildAlumDoorSalarySlipInputs } from "./alumdoor-payroll.js";
+import { buildAlumDoorLiteSalarySlipInputs } from "./alumdoor-payroll-lite.js";
 import { buildHrmSalarySlipInputs } from "./hrm-payroll.js";
 
 export class HrmSalarySlipController extends SalarySlipController {
@@ -10,15 +10,16 @@ export class HrmSalarySlipController extends SalarySlipController {
     const input = context.command.document;
     const alumdoorProfile = typeof input.alu_pay_profile === "string" ? input.alu_pay_profile.trim() : "";
 
-    // AlumDoor's three-segment attendance projection is authoritative for its payroll.
-    // Never fall through to standard Attendance for a slip that carries an AlumDoor profile.
+    // AlumDoor Attendance Day is authoritative attendance evidence for Lite payroll.
+    // Raw minutes outside Shift Assignment are not payable by themselves: submitted
+    // Overtime Request approval caps payable OT before the fixed-rate calculation runs.
     if (alumdoorProfile) {
       const sourceDocument = { ...input, earnings: [], deductions: [] } as SalarySlipData;
       const sourceContext: ControllerContext<SalarySlipData> = {
         ...context,
         command: { ...context.command, document: sourceDocument },
       };
-      const generated = await buildAlumDoorSalarySlipInputs(sourceContext, sourceDocument);
+      const generated = await buildAlumDoorLiteSalarySlipInputs(sourceContext, sourceDocument);
       if (!generated) return super.normalize(context);
 
       // The generator trace intentionally records who/when performed a calculation for audit.
