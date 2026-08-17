@@ -141,11 +141,16 @@ function hasKgRateBasis(acceptedItem) {
 }
 
 function resolveStockUom(acceptedItem, itemGroup) {
-  if (MANUFACTURED_FINISHED_GROUPS.has(itemGroup)) return "Bộ";
+  const salesUoms = unique((acceptedItem?.sales_uoms ?? []).map(clean));
+  // Finished-door quantities such as m2 are variable per order. There is no
+  // safe fixed m2↔Bộ conversion, so keep the source commercial UOM as the
+  // stock UOM instead of inventing a static conversion.
+  if (MANUFACTURED_FINISHED_GROUPS.has(itemGroup)) {
+    return salesUoms.length === 1 ? salesUoms[0] : "";
+  }
   const explicit = clean(acceptedItem?.stock_uom);
   if (explicit) return explicit;
   if (hasKgRateBasis(acceptedItem)) return "Kg";
-  const salesUoms = unique((acceptedItem?.sales_uoms ?? []).map(clean));
   return salesUoms.length === 1 ? salesUoms[0] : "";
 }
 
@@ -205,16 +210,6 @@ export function buildCanonicalAlumdoorItemPayload(acceptedItem, rawRecords = [])
     };
   }
 
-  const stockUom = resolveStockUom(acceptedItem, itemGroup);
-  if (!stockUom) {
-    return {
-      status: "blocked",
-      reason: "missing_stock_uom_after_classification",
-      item_code: itemCode,
-      item_group: itemGroup,
-    };
-  }
-
   const salesUoms = unique((acceptedItem?.sales_uoms ?? []).map(clean));
   if (hasSellable && salesUoms.length !== 1) {
     return {
@@ -226,6 +221,16 @@ export function buildCanonicalAlumdoorItemPayload(acceptedItem, rawRecords = [])
     };
   }
   const salesUom = hasSellable ? salesUoms[0] : "";
+
+  const stockUom = resolveStockUom(acceptedItem, itemGroup);
+  if (!stockUom) {
+    return {
+      status: "blocked",
+      reason: "missing_stock_uom_after_classification",
+      item_code: itemCode,
+      item_group: itemGroup,
+    };
+  }
 
   const manufactured = MANUFACTURED_FINISHED_GROUPS.has(itemGroup);
   const purchased = TRADED_GROUPS.has(itemGroup) || MATERIAL_GROUPS.has(itemGroup);
