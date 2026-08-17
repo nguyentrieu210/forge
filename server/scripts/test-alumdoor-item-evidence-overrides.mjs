@@ -31,6 +31,7 @@ const cases = [
   ["NVL-BOSNPHI19", "NVL-BOLSN"],
   ["NVL-MONGNGUASNPHI19", "NVL-BOLSN"],
   ["NVL-TOLEKEM70_8D-YEMMV", "TP-TD327"],
+  ["NVL-TON3.8D-GU KU", "NVL-TOLE0.35x598-XNVK"],
 ];
 
 for (const [source, target] of cases) {
@@ -66,6 +67,9 @@ const promotionCases = [
   ["NVL-LUOISNPHI19_STD", "Kg"],
   ["RONNHUAVANGCẢNHAY_RSU100", "Kg"],
   ["RONNHUAVANGCANHAY_RSU70", "Kg"],
+  ["NVL-LUOIMV_STD", "KG/M"],
+  ["NVL-TRUC114_2.4LY", "KG/M"],
+  ["NVL-TRUC168_5LY", "KG/M"],
 ];
 for (const [source, uom] of promotionCases) {
   const result = resolveAlumdoorBomItemPromotion(source, ITEM_SOURCE_ROLES.BOM_REFERENCE);
@@ -99,10 +103,18 @@ const promotionAudit = preflightAlumdoorItemSourceRecords([
     item_name: "RONNHUAVANGCANHAY_RSU100",
     source_uom: "KG/M",
   },
+  {
+    source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
+    source_sheet: "ĐM",
+    source_row: 1108,
+    item_code: "NVL-LUOIMV_STD",
+    item_name: "LƯỚI MV STĐ",
+    source_uom: "KG/M",
+  },
 ]);
 expect(promotionAudit.blocker_count, 0, "promotion audit blockers");
-expect(promotionAudit.accepted_count, 2, "promotion audit accepted Item count");
-expect(promotionAudit.promotion_count, 2, "promotion audit promotion count");
+expect(promotionAudit.accepted_count, 3, "promotion audit accepted Item count");
+expect(promotionAudit.promotion_count, 3, "promotion audit promotion count");
 const taiwan = promotionAudit.accepted.find((item) => item.item_code === "TP-YHTaiwan-HDK");
 if (!taiwan) throw new Error("TP-YHTaiwan-HDK promotion bị mất");
 expect(taiwan.stock_uom, "Cái", "YHTaiwan Hộp ĐK promoted stock UOM");
@@ -110,6 +122,10 @@ expect(taiwan.source_rows[0].uom_origin, "explicit_bom_item_promotion", "YHTaiwa
 const ron = promotionAudit.accepted.find((item) => item.item_code === "RONNHUAVANGCẢNHAY_RSU100");
 if (!ron) throw new Error("RON U100 promotion bị mất");
 expect(ron.stock_uom, "Kg", "RON U100 must use DANH MỤC KG, not BOM KG/M rate");
+const luoi = promotionAudit.accepted.find((item) => item.item_code === "NVL-LUOIMV_STD");
+if (!luoi) throw new Error("NVL-LUOIMV_STD promotion bị mất");
+expect(luoi.stock_uom, "Kg", "Lưới MV STĐ stock UOM must be atomic Kg");
+expect(luoi.requires_conversion, true, "Lưới MV STĐ KG/M must retain conversion requirement");
 
 const yemAudit = preflightAlumdoorItemSourceRecords([
   {
