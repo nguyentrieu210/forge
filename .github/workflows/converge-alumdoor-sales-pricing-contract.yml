@@ -6,81 +6,24 @@ on:
       - agent/alumdoor-sales-order-v2-complete
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   converge:
-    if: ${{ !contains(github.event.head_commit.message, '[pricing-contract-converged]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Align source contract and create capability guard
+      - name: Report cutting fixtures
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          brief = Path("server/briefs/alumdoor.json")
-          source = brief.read_text(encoding="utf-8")
-          legacy = "Đơn hàng để TRỐNG `selling_price_list` thì giá gõ tay như cũ"
-          modern = "Đơn bán hàng phải resolve được `selling_price_list` trước khi lưu"
-          if legacy in source:
-              marker = source.index(legacy)
-              start = source.rfind('"//do": [', 0, marker)
-              end_token = "      ],"
-              end = source.find(end_token, marker)
-              if start < 0 or end < 0:
-                  raise SystemExit("Cannot locate legacy Price List //do block.")
-              replacement = '''"//do": [
-              "Đơn bán hàng phải resolve được `selling_price_list` trước khi lưu — controller runtime là authority.",
-              "Người lập vẫn được nhập đơn giá/chiết khấu trên dòng; server so với Item Price + Pricing Rule và",
-              "đánh dấu cần duyệt khi lệch chính sách. Submit mới là boundary kiểm quyền duyệt thương mại.",
-              "Thiếu Item Price phù hợp với bảng giá/mã hàng/ĐVT thì từ chối thay vì im lặng lấy giá 0."
-            ],'''
-              source = source[:start] + replacement + source[end + len(end_token):]
-              brief.write_text(source, encoding="utf-8")
-          elif modern not in source:
-              raise SystemExit("Neither legacy nor converged Price List contract is present.")
-
-          workbench = Path("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx")
-          ui = workbench.read_text(encoding="utf-8")
-          old = "const formReadOnly = isExisting && (!caps.write || docstatus !== 0);"
-          new = "const formReadOnly = isExisting ? (!caps.write || docstatus !== 0) : !caps.create;"
-          if old in ui:
-              workbench.write_text(ui.replace(old, new, 1), encoding="utf-8")
-          elif new not in ui:
-              raise SystemExit("Sales create capability guard contract not found.")
-          PY
-      - name: Regenerate Alumdoor V2 brief
-        shell: bash
-        run: |
-          set +e
-          output="$(node server/scripts/build-alumdoor-v2-brief.mjs 2>&1)"
-          status=$?
-          printf '%s\n' "$output"
-          if [ "$status" -ne 0 ]; then
-            compact="$(printf '%s' "$output" | tr '\n' ' ' | cut -c1-4000)"
-            echo "::error title=Alumdoor brief generator failed::$compact"
-            exit "$status"
-          fi
-      - name: Verify generated diff
-        run: |
-          git diff --check
-          git diff --exit-code -- server/scripts/build-alumdoor-v2-brief.mjs
-          git status --short
-      - name: Commit generated convergence
-        run: |
-          if git diff --quiet -- server/briefs/alumdoor.json server/briefs/alumdoor-v2.json client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx; then
-            echo "No pricing/capability drift remained."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add server/briefs/alumdoor.json server/briefs/alumdoor-v2.json client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx
-          git commit -m "fix(sales): align pricing contract and capability guard [pricing-contract-converged]"
-          git push origin HEAD:agent/alumdoor-sales-order-v2-complete
+          node <<'NODE'
+          const fs = require('node:fs');
+          const b = JSON.parse(fs.readFileSync('server/briefs/alumdoor.json','utf8'));
+          const rows=(b.fixtures||[]).filter(x=>x.type==='Cutting Policy').map(x=>({name:x.name,door_type:x.data?.door_type,leaf_formula:x.data?.leaf_formula,ray_type:x.data?.ray_type,leaf_divisor_const:x.data?.leaf_divisor_const,leaf_rounding:x.data?.leaf_rounding,leaf_height_deduction_m:x.data?.leaf_height_deduction_m}));
+          console.log(JSON.stringify(rows,null,2));
+          console.log('COUNT',rows.length);
+          console.log('::error title=Cutting fixture catalog::'+JSON.stringify(rows));
+          NODE
