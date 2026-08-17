@@ -3,9 +3,9 @@
 # SENTRUX_MAP.md is the human/agent ownership map; this file is machine-enforced policy.
 
 [constraints]
-# Verified on this cleanup branch at Quality 6004.
-# Use gate --save/gate for non-regression and raise the floor only with exact-main evidence.
-min_quality = 0.60
+# Exact-main baseline after PR #939: Quality 5188 (signal 0.5188).
+# Keep a narrow baseline-safe floor; raise it only after exact-main evidence improves.
+min_quality = 0.518
 
 # Client -> server currently has four known legacy edges (one runtime catalog import and
 # three parity-test imports). That debt is surfaced by strict CI diagnostics but is not
