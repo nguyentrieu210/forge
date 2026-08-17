@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseAlumdoorIndexedMarkdownRows, readAlumdoorCell } from "./lib/alumdoor-source-markdown.mjs";
 import { ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
+import { resolveAlumdoorLotItemEvidence } from "./lib/alumdoor-aluminium-lot-evidence.mjs";
 
 const [sourceRecordsArg, itemPayloadArg, outputArg] = process.argv.slice(2);
 if (!sourceRecordsArg || !itemPayloadArg || !outputArg) throw new Error("Usage: build-alumdoor-real-aluminium-lot-payload.mjs <source-records.json> <item-payload.json> <lot-payload.json>");
@@ -49,12 +50,26 @@ function candidateProfileKey(row) {
 function mapSpecialItem(sheet, type) {
   if (sheet === "BỘ BA LÁ ĐÁY LÁ ĐẦU") {
     const t=fold(type);
-    if (t.includes("A282") && itemCodes.has("TP-A282")) return "TP-A282";
-    if (t.includes("TD327") && itemCodes.has("TP-TD327")) return "TP-TD327";
+    if (t.includes("A282") && itemCodes.has("TP-A282")) return { code:"TP-A282", origin:"source_type_code", reason:"Physical lot type contains source profile A282.", evidence:"TỒN NHÔM/BỘ BA LÁ ĐÁY + LÁ ĐẦU" };
+    if (t.includes("TD327") && itemCodes.has("TP-TD327")) return { code:"TP-TD327", origin:"source_type_code", reason:"Physical lot type contains source profile TD327.", evidence:"TỒN NHÔM/BỘ BA LÁ ĐÁY + LÁ ĐẦU" };
   }
-  return "";
+  return null;
 }
 function mapProfileItem(sheet, lotColor) {
+  const evidence = resolveAlumdoorLotItemEvidence({ source_sheet: sheet, color: lotColor });
+  if (evidence) {
+    if (!itemCodes.has(evidence.canonical_item_code)) {
+      throw new Error(`Audited Aluminium Lot evidence target missing from Item payload: ${sheet} ${lotColor} -> ${evidence.canonical_item_code}`);
+    }
+    return {
+      code: evidence.canonical_item_code,
+      candidates: [],
+      origin: "explicit_source_evidence",
+      reason: evidence.reason,
+      evidence: evidence.evidence,
+    };
+  }
+
   const pk = profileKey(sheet);
   const ck = colorKey(lotColor);
   const scored=[];
@@ -78,7 +93,15 @@ function mapProfileItem(sheet, lotColor) {
   const best=scored[0].score;
   const bestRows=scored.filter((r)=>r.score===best);
   const distinct=[...new Set(bestRows.map((r)=>r.code))];
-  return distinct.length===1 ? {code:distinct[0],candidates:scored.slice(0,5)} : {code:"",candidates:scored.slice(0,5)};
+  return distinct.length===1
+    ? {
+      code:distinct[0],
+      candidates:scored.slice(0,5),
+      origin:"deterministic_profile_color_match",
+      reason:`Matched physical profile ${sheet} / color ${lotColor || "∅"} to canonical stock identity ${distinct[0]} using source profile/color evidence.`,
+      evidence:"MS LIÊN BS/Trang tính29 + TỒN NHÔM profile sheet",
+    }
+    : {code:"",candidates:scored.slice(0,5)};
 }
 function displaySheet(filename) { return filename.replace(/\.md$/i,"").replace(/---/g," ").replace(/-/g," ").replace(/\s+/g," ").trim(); }
 
@@ -100,8 +123,9 @@ for (const filename of readdirSync(lotRoot).filter((f)=>f.endsWith(".md")&&!skip
     const type=special?readAlumdoorCell(row,1):"";
     const color=special?readAlumdoorCell(row,2):readAlumdoorCell(row,1);
     const condition=special?"":readAlumdoorCell(row,2);
-    let item=mapSpecialItem(sheet,type); let candidates=[];
-    if(!item&&sheet!=="RAY"){const mapped=mapProfileItem(sheet,color);item=mapped.code;candidates=mapped.candidates;}
+    let mapping=mapSpecialItem(sheet,type); let candidates=[];
+    if(!mapping&&sheet!=="RAY"){mapping=mapProfileItem(sheet,color);candidates=mapping.candidates??[];}
+    const item=mapping?.code??"";
     if(!item){blockers.push({source_sheet:sheet,source_file:filename,source_row:row.source_row,type,color,length_m:length,piece_count:pieces,total_kg:kg,candidates:candidates.map((c)=>({code:c.code,score:c.score,source_color:c.row.source_color,item_name:c.row.item_name}))});continue;}
     const status=readAlumdoorCell(row,6); const scrap=readAlumdoorCell(row,8);
     const snapshot={};for(const [idx,value] of Object.entries(row.cells??{}))snapshot[idx]=value;
@@ -109,8 +133,12 @@ for (const filename of readdirSync(lotRoot).filter((f)=>f.endsWith(".md")&&!skip
       source_key:`TN-${slug(sheet)}-${String(row.source_row).padStart(4,"0")}`,
       item,
       profile:sheet,
+      source_file:filename,
       source_sheet:sheet,
       source_row:Number(row.source_row),
+      item_mapping_origin:mapping.origin??"source",
+      item_mapping_reason:mapping.reason??"",
+      item_mapping_evidence:mapping.evidence??"",
       entry_date:dateOnly(readAlumdoorCell(row,0)),
       lot_type:type,
       color_code:color,
