@@ -21,6 +21,12 @@ assert.match(grant, /ALUMDOOR_RUNNER_SERVICE_CONTROL_PASS/);
 assert.doesNotMatch(grant, /\$(?:Name|name):/);
 assert.match(grant, /\$\{Name\}:/);
 assert.match(grant, /\$\{name\}:/);
+assert.match(grant, /RawSecurityDescriptor/);
+assert.match(grant, /QualifiedAce/);
+assert.match(grant, /AceQualifier\]::AccessAllowed/);
+assert.match(grant, /\.AccessMask\s+-band\s+\$RequiredMask/);
+assert.match(grant, /Test-ServiceAceMask/);
+assert.doesNotMatch(grant, /verified\.Contains\(\$expectedAce\)/);
 assert.match(installer, /grant-alumdoor-runner-service-control\.ps1/);
 assert.match(installer, /service-control-grant\.json/);
 
