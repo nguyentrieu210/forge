@@ -30,6 +30,9 @@ function addBlock(type, record, extra={}) {
 }
 function canonicalReference(record) {
   const code=clean(record.item_code);
+  if(code==="RONDAYUC" && clean(record.source_sheet)==="ĐM" && Number(record.source_row)===686) {
+    return {status:"accepted",item_code:"NVL-RONDAYUC",reason:"exact_raw_bottom_seal_bom_identity"};
+  }
   const alias=resolveAlumdoorBomEvidenceAlias(code,ITEM_SOURCE_ROLES.BOM_REFERENCE);
   if(alias) return {status:"accepted",item_code:alias.canonical_item_code,reason:"evidence_alias"};
   const promotion=resolveAlumdoorBomItemPromotion(code,ITEM_SOURCE_ROLES.BOM_REFERENCE);
@@ -60,6 +63,10 @@ for(const record of records){
   const item=itemMap.get(ref.item_code); if(!item){addBlock("missing_component_item",record,{canonical_item_code:ref.item_code});continue;}
   const parentRecord=parents.get(index); const parentItem=parentRecord?itemMap.get(clean(parentRecord.item_code)):null;
   if(!parentRecord||!parentItem){addBlock("missing_parent_item",record,{canonical_item_code:ref.item_code});continue;}
+  if(ref.item_code===clean(parentItem.item_code)){
+    excluded.push({source_row:record.source_row,source_index:index,source_item_code:clean(record.item_code),canonical_item_code:ref.item_code,reason:"canonical_self_reference_non_bom"});
+    continue;
+  }
   const uom=resolveBomRuntimeUom(record,item);
   if(uom.status!=="accepted"){addBlock(uom.reason,record,{canonical_item_code:ref.item_code,runtime_uom:uom.runtime_uom,stock_uom:uom.stock_uom,conversion_factors:uom.conversion_factors});continue;}
   const standardQuantity=resolveBomQuantity(record,uom,parentItem,ref.item_code);
