@@ -1,6 +1,6 @@
 export const CANONICAL_UOMS = new Set([
   "Cái", "Bộ", "Kg", "Mét", "m2", "Cây", "Lá", "Thân", "Thanh",
-  "Sợi", "Cuộn", "Tấm", "Túi", "Hộp", "Bình", "Lít", "Cặp", "Con",
+  "Sợi", "Cuộn", "Tấm", "Túi", "Hộp", "Thùng", "Bình", "Lít", "Cặp", "Con",
 ]);
 
 export const CANONICAL_ITEM_GROUPS = new Set([

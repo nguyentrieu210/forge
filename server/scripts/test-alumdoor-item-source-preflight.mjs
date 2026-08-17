@@ -18,6 +18,11 @@ uom = interpretAlumdoorSourceUom(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT, "KG/M");
 expect(uom.canonical_uom, "Mét", "sellable KG/M commercial UOM");
 expect(uom.weight_uom, "Kg", "sellable KG/M weight UOM");
 
+uom = interpretAlumdoorSourceUom(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT, "KG/THÙNG");
+expect(uom.status, "dual_unit_basis", "sellable KG/THÙNG status");
+expect(uom.canonical_uom, "Thùng", "sellable KG/THÙNG commercial UOM");
+expect(uom.weight_uom, "Kg", "sellable KG/THÙNG weight UOM");
+
 uom = interpretAlumdoorSourceUom(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT, "BỘ/4 CẶP");
 expect(uom.status, "blocked", "ambiguous package UOM must block");
 expect(uom.reason, "ambiguous_compound_uom", "ambiguous package UOM reason");
@@ -189,11 +194,11 @@ const blockedAudit = preflightAlumdoorItemSourceRecords([
   },
   {
     source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
-    source_sheet: "ĐM",
-    source_row: 1902,
-    item_code: "NVL-LAMAU-PHE",
-    item_name: "LÁ MẪU ĐỨC",
-    source_uom: "KG/THÙNG",
+    source_sheet: "fixture",
+    source_row: 3,
+    item_code: "TP-COMPOUND-FIXTURE",
+    item_name: "COMPOUND UOM",
+    source_uom: "BỘ/4 CẶP",
   },
   {
     source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,

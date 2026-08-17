@@ -20,6 +20,7 @@ export const ALUMDOOR_UOM_CATALOG = Object.freeze([
   { name: "Tấm", mustBeWholeNumber: true },
   { name: "Túi", mustBeWholeNumber: true },
   { name: "Hộp", mustBeWholeNumber: true },
+  { name: "Thùng", mustBeWholeNumber: true },
   { name: "Bình", mustBeWholeNumber: true },
   { name: "Lít", mustBeWholeNumber: false },
   { name: "Cặp", mustBeWholeNumber: true },

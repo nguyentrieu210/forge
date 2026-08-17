@@ -5,17 +5,6 @@ import { ITEM_SOURCE_ROLES } from "./alumdoor-item-source-contract.mjs";
 // to make the preflight green.
 export const ALUMDOOR_ITEM_KNOWN_SOURCE_DEFECTS = Object.freeze([
   Object.freeze({
-    scope: "item_master",
-    source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
-    source_sheet: "ĐM",
-    source_row: 1902,
-    item_code: "NVL-LAMAU-PHE",
-    item_name: "LÁ MẪU ĐỨC",
-    source_uom: "KG/THÙNG",
-    expected_reason: "ambiguous_compound_uom",
-    note: "Nguồn ghi KG/THÙNG nhưng giao dịch mô tả theo BỘ; chưa đủ bằng chứng chốt stock/sales UOM.",
-  }),
-  Object.freeze({
     scope: "bom",
     source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
     source_sheet: "ĐM",
