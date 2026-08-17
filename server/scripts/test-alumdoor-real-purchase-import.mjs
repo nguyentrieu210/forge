@@ -56,6 +56,7 @@ assert.equal(blocked.purchase_receipt.persisted, 0);
 for (const blocker of ["COMPANY_NOT_RESOLVED", "WAREHOUSE_NOT_RESOLVED", "LIVE_SUPPLIER_MANIFEST_NOT_PROVIDED", "LIVE_ITEM_MANIFEST_NOT_PROVIDED"]) assert.ok(blocked.blocker_codes.includes(blocker));
 
 const importableRows = rows.filter((row) => !row.excluded);
+assert.equal(importableRows.length, 11);
 const supplierManifest = [...new Set(importableRows.map((row) => row.supplier))].map((supplier_name) => ({ supplier_name, name: supplier_name }));
 const itemManifest = [...new Map(importableRows.map((row) => [row.canonical_item_code, row.canonical_uom])).entries()].map(([item_code, stock_uom]) => ({ item_code, name: item_code, stock_uom, default_purchase_uom: stock_uom, is_purchase_item: true, disabled: false, uom_conversions: [] }));
 
