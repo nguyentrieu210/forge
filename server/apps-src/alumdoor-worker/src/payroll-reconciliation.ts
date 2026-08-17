@@ -4,6 +4,7 @@ export interface PayrollAttendanceDayInput {
   workDate: string;
   scheduledMinutes: number;
   regularMinutes: number;
+  /** Raw scan-derived minutes outside the assigned shift. */
   overtimeMinutes: number;
   payableWorkFractionBp: number;
 }
@@ -14,19 +15,26 @@ export interface PayrollPaidLeaveDayInput {
   payableWorkFractionBp: number;
 }
 
-/** @deprecated AlumDoor Lite ignores OT approval documents; retained only so legacy builders compile. */
 export interface PayrollOvertimeApprovalInput {
   workDate: string;
   approvedMinutes: number;
+}
+
+export interface ReconciledOvertimeDay {
+  workDate: string;
+  rawOvertimeMinutes: number;
+  approvedMinutes: number;
+  payableOvertimeMinutes: number;
 }
 
 export interface ReconciledPayrollDailyInputs {
   regularMinutes: number;
   paidLeaveMinutes: number;
   payableRegularMinutes: number;
+  /** Approved/payable overtime only. */
   overtimeMinutes: number;
-  /** @deprecated Compatibility alias only. Lite uses overtimeMinutes as its single OT authority. */
   rawOvertimeMinutes: number;
+  overtimeByDate: ReconciledOvertimeDay[];
   attendanceWorkFractionBp: number;
   paidLeaveFractionBp: number;
   workFractionBp: number;
@@ -61,24 +69,21 @@ function roundHalfUpRatio(numerator: bigint, denominator: bigint): number {
 /**
  * Reconciles canonical daily payroll inputs for AlumDoor Lite.
  *
- * - `AlumDoor Attendance Day` is the only attendance authority used by payroll.
+ * - `AlumDoor Attendance Day` is the attendance evidence authority used by payroll.
  * - Regular minutes are payable up to the assigned shift duration.
- * - Overtime minutes are already the system-calculated minutes outside the assigned shift;
- *   no Overtime Request or human approval participates in Lite payroll.
+ * - Raw overtime is scan evidence outside the assigned shift; it is never payable by itself.
+ * - Only one submitted Overtime Request may approve a work date.
+ * - Payable OT is `min(raw overtime, approved overtime)`; without an approval it is zero.
  * - Paid leave fills only the unpaid part of the assigned shift, so attendance + leave can
  *   never pay more than the scheduled minutes for one work date.
- *
- * `overtimeApprovals` is intentionally ignored when supplied by a legacy compatibility
- * caller. Its presence can never change an AlumDoor Lite payroll result.
  */
 export function reconcileAlumDoorPayrollDailyInputs(input: {
   attendanceDays: PayrollAttendanceDayInput[];
   paidLeaveDays: PayrollPaidLeaveDayInput[];
   overtimeApprovals?: PayrollOvertimeApprovalInput[];
 }): ReconciledPayrollDailyInputs {
-  const attendanceByDate = new Map<string, { scheduledMinutes: number; regularMinutes: number; overtimeMinutes: number; fractionBp: number }>();
+  const attendanceByDate = new Map<string, { scheduledMinutes: number; regularMinutes: number; rawOvertimeMinutes: number; fractionBp: number }>();
   let regularMinutes = 0;
-  let overtimeMinutes = 0;
   let attendanceWorkFractionBp = 0;
 
   for (const day of input.attendanceDays) {
@@ -88,12 +93,36 @@ export function reconcileAlumDoorPayrollDailyInputs(input: {
     }
     const scheduled = integer(day.scheduledMinutes, "Phút ca chuẩn", 1, 1_440);
     const regular = integer(day.regularMinutes, "Phút công thường", 0, scheduled);
-    const overtime = integer(day.overtimeMinutes, "Phút tăng ca tự động", 0, 1_440);
+    const rawOvertime = integer(day.overtimeMinutes, "Phút tăng ca thô", 0, 1_440);
     const fraction = integer(day.payableWorkFractionBp, "Tỷ lệ công", 0, 10_000);
-    attendanceByDate.set(workDate, { scheduledMinutes: scheduled, regularMinutes: regular, overtimeMinutes: overtime, fractionBp: fraction });
+    attendanceByDate.set(workDate, { scheduledMinutes: scheduled, regularMinutes: regular, rawOvertimeMinutes: rawOvertime, fractionBp: fraction });
     regularMinutes += regular;
-    overtimeMinutes += overtime;
     attendanceWorkFractionBp += fraction;
+  }
+
+  const approvalByDate = new Map<string, number>();
+  for (const approval of input.overtimeApprovals ?? []) {
+    const workDate = date(approval.workDate, "Ngày duyệt tăng ca");
+    if (approvalByDate.has(workDate)) {
+      throw new AlumDoorPayrollRuleError("PAYROLL_INPUT_INVALID", `Trùng duyệt tăng ca ${workDate}.`);
+    }
+    approvalByDate.set(workDate, integer(approval.approvedMinutes, "Phút tăng ca đã duyệt", 0, 1_440));
+  }
+
+  let rawOvertimeMinutes = 0;
+  let overtimeMinutes = 0;
+  const overtimeByDate: ReconciledOvertimeDay[] = [];
+  for (const [workDate, attendance] of attendanceByDate) {
+    const approvedMinutes = approvalByDate.get(workDate) ?? 0;
+    const payableOvertimeMinutes = Math.min(attendance.rawOvertimeMinutes, approvedMinutes);
+    rawOvertimeMinutes += attendance.rawOvertimeMinutes;
+    overtimeMinutes += payableOvertimeMinutes;
+    overtimeByDate.push({
+      workDate,
+      rawOvertimeMinutes: attendance.rawOvertimeMinutes,
+      approvedMinutes,
+      payableOvertimeMinutes,
+    });
   }
 
   const leaveFractionByDate = new Map<string, { scheduledMinutes: number; fractionBp: number }>();
@@ -140,7 +169,8 @@ export function reconcileAlumDoorPayrollDailyInputs(input: {
     paidLeaveMinutes,
     payableRegularMinutes: regularMinutes + paidLeaveMinutes,
     overtimeMinutes,
-    rawOvertimeMinutes: overtimeMinutes,
+    rawOvertimeMinutes,
+    overtimeByDate,
     attendanceWorkFractionBp,
     paidLeaveFractionBp,
     workFractionBp,
