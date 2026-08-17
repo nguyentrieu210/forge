@@ -28,7 +28,22 @@ function makeCall(overrides = {}) {
     "resource/Cut%20Order/CUT-001": {
       name: "CUT-001",
       work_order: "WO-001",
-      items: [{ item_code: "NVL-NHOM-A", source_warehouse: "KHO-NVL" }],
+      items: [{
+        row_id: "ROW-1",
+        item_code: "NVL-NHOM-A",
+        source_warehouse: "KHO-NVL",
+        source_batch_no: "BATCH-A",
+        serial_and_batch_bundle: "BUNDLE-A",
+        sheets_cut: 2,
+      }],
+    },
+    "resource/Serial%20and%20Batch%20Bundle/BUNDLE-A": {
+      name: "BUNDLE-A",
+      docstatus: 1,
+      item_code: "NVL-NHOM-A",
+      warehouse: "KHO-NVL",
+      type: "Outward",
+      entries: [{ row_id: "ROW-1", qty: 2, batch_no: "BATCH-A" }],
     },
     ...overrides,
   };
@@ -107,17 +122,100 @@ test("cut authority rejects an unsubmitted BOM", async () => {
   );
 });
 
+test("cut apply accepts the persisted source batch and submitted outward bundle", async () => {
+  const { call } = makeCall();
+  await validateCutApplyBomAuthority(call, { cut_order: "CUT-001" });
+});
+
 test("cut apply revalidates stored Cut Order rows against BOM authority", async () => {
   const { call } = makeCall({
     "resource/Cut%20Order/CUT-001": {
       name: "CUT-001",
       work_order: "WO-001",
-      items: [{ item_code: "NVL-NGOAI-BOM", source_warehouse: "KHO-NVL" }],
+      items: [{
+        row_id: "ROW-1",
+        item_code: "NVL-NGOAI-BOM",
+        source_warehouse: "KHO-NVL",
+        source_batch_no: "BATCH-A",
+        serial_and_batch_bundle: "BUNDLE-A",
+        sheets_cut: 2,
+      }],
     },
   });
   await assert.rejects(
     () => validateCutApplyBomAuthority(call, { cut_order: "CUT-001" }),
     /NVL-NGOAI-BOM không thuộc BOM BOM-001 của Work Order WO-001/i,
+  );
+});
+
+test("cut apply fails closed when source batch lineage is absent", async () => {
+  const { call } = makeCall({
+    "resource/Cut%20Order/CUT-001": {
+      name: "CUT-001",
+      work_order: "WO-001",
+      items: [{
+        row_id: "ROW-1",
+        item_code: "NVL-NHOM-A",
+        source_warehouse: "KHO-NVL",
+        serial_and_batch_bundle: "BUNDLE-A",
+        sheets_cut: 2,
+      }],
+    },
+  });
+  await assert.rejects(
+    () => validateCutApplyBomAuthority(call, { cut_order: "CUT-001" }),
+    /thiếu source_batch_no/i,
+  );
+});
+
+test("cut apply rejects swapping to another batch inside an otherwise matching bundle", async () => {
+  const { call } = makeCall({
+    "resource/Serial%20and%20Batch%20Bundle/BUNDLE-A": {
+      name: "BUNDLE-A",
+      docstatus: 1,
+      item_code: "NVL-NHOM-A",
+      warehouse: "KHO-NVL",
+      type: "Outward",
+      entries: [{ row_id: "ROW-1", qty: 2, batch_no: "BATCH-KHAC" }],
+    },
+  });
+  await assert.rejects(
+    () => validateCutApplyBomAuthority(call, { cut_order: "CUT-001" }),
+    /BATCH-KHAC.*không khớp source batch BATCH-A/i,
+  );
+});
+
+test("cut apply rejects an inward bundle used as the source bundle", async () => {
+  const { call } = makeCall({
+    "resource/Serial%20and%20Batch%20Bundle/BUNDLE-A": {
+      name: "BUNDLE-A",
+      docstatus: 1,
+      item_code: "NVL-NHOM-A",
+      warehouse: "KHO-NVL",
+      type: "Inward",
+      entries: [{ row_id: "ROW-1", qty: 2, batch_no: "BATCH-A" }],
+    },
+  });
+  await assert.rejects(
+    () => validateCutApplyBomAuthority(call, { cut_order: "CUT-001" }),
+    /BUNDLE-A phải là Outward/i,
+  );
+});
+
+test("cut apply rejects a bundle quantity different from the Cut Order row", async () => {
+  const { call } = makeCall({
+    "resource/Serial%20and%20Batch%20Bundle/BUNDLE-A": {
+      name: "BUNDLE-A",
+      docstatus: 1,
+      item_code: "NVL-NHOM-A",
+      warehouse: "KHO-NVL",
+      type: "Outward",
+      entries: [{ row_id: "ROW-1", qty: 3, batch_no: "BATCH-A" }],
+    },
+  });
+  await assert.rejects(
+    () => validateCutApplyBomAuthority(call, { cut_order: "CUT-001" }),
+    /BUNDLE-A có số lá 3, không khớp 2 lá/i,
   );
 });
 
