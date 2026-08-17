@@ -33,6 +33,12 @@ function blockersForSourceItem(code) {
 function lineForSourceRow(sourceRow) {
   return lines.find((line) => line.lineage?.source_row === sourceRow);
 }
+function bomForSourceRow(sourceRow) {
+  return boms.find((bom) => (bom.lines ?? []).some((line) => line.lineage?.source_row === sourceRow));
+}
+function sourceRecordForRow(sourceRow, sourceRole = undefined) {
+  return records.find((record) => Number(record.source_row) === sourceRow && (!sourceRole || record.source_role === sourceRole));
+}
 function assertFieldFormula(line, field, multiply, offset = undefined) {
   const formula = JSON.parse(line.quantity_formula_json);
   assert.equal(formula.base?.kind, "FIELD");
@@ -41,6 +47,45 @@ function assertFieldFormula(line, field, multiply, offset = undefined) {
   else assert.equal(formula.base?.offset, offset);
   if (multiply === 1) assert.equal(formula.multiply, undefined);
   else assert.equal(formula.multiply, multiply);
+}
+
+const sellableRecords = records.filter((record) => record.source_role === "sellable_product");
+assert.ok(sellableRecords.every((record) => Number(record.source_parent_row) === Number(record.source_row)), "every sellable row must own a unique source_parent_row");
+assert.equal(new Set(sellableRecords.map((record) => Number(record.source_parent_row))).size, sellableRecords.length, "source_parent_row must be unique even when source STT/source_index repeats");
+const falseSectionRefs = records.filter((record) => record.source_role === "bom_reference" && Number(record.source_row) >= 1905 && Number(record.source_row) <= 2024);
+assert.equal(falseSectionRefs.length, 0, "ĐM section after row 1904 is not an HH-CUAKEODL BOM and must not leak as component references");
+
+const parentLineageContracts = new Map([
+  [57, { parentRow: 56, parentItem: "RONNHUA_INOX", outcome: "line" }],
+  [58, { parentRow: 56, parentItem: "RONNHUA_INOX", outcome: "line" }],
+  [395, { parentRow: 394, parentItem: "TP-YHLD-BDK", outcome: "line" }],
+  [396, { parentRow: 394, parentItem: "TP-YHLD-BDK", outcome: "line" }],
+  [521, { parentRow: 520, parentItem: "TP-BUOMSAT-DL", outcome: "blocker" }],
+  [523, { parentRow: 522, parentItem: "TP-BUOMSAT-ST", outcome: "blocker" }],
+  [1897, { parentRow: 1893, parentItem: "NVL-TOLEKEM124_1LY_MSK", outcome: "line" }],
+  [1898, { parentRow: 1893, parentItem: "NVL-TOLEKEM124_1LY_MSK", outcome: "line" }],
+  [2026, { parentRow: 2025, parentItem: "NVL-TON-DL9.2Dx175-XNVK", outcome: "excluded" }],
+]);
+for (const [sourceRow, contract] of parentLineageContracts) {
+  const record = sourceRecordForRow(sourceRow, "bom_reference");
+  assert.ok(record, `source row ${sourceRow} must remain an extracted BOM reference`);
+  assert.equal(Number(record.source_parent_row), contract.parentRow, `source row ${sourceRow} must bind to exact parent source row ${contract.parentRow}`);
+  if (contract.outcome === "line") {
+    const line = lineForSourceRow(sourceRow);
+    const bom = bomForSourceRow(sourceRow);
+    assert.ok(line && bom, `source row ${sourceRow} must resolve under its exact parent`);
+    assert.equal(line.lineage?.source_parent_row, contract.parentRow);
+    assert.equal(bom.item, contract.parentItem, `source row ${sourceRow} must not be stolen by duplicate STT/source_index`);
+  } else if (contract.outcome === "blocker") {
+    const blocker = blockers.find((entry) => entry.source_row === sourceRow);
+    assert.ok(blocker, `source row ${sourceRow} must remain fail-closed under its exact parent`);
+    assert.equal(blocker.source_parent_row, contract.parentRow);
+    assert.equal(blocker.parent_item_code, contract.parentItem);
+  } else {
+    const entry = excluded.find((candidate) => candidate.source_row === sourceRow);
+    assert.ok(entry, `source row ${sourceRow} must remain excluded under its exact parent`);
+    assert.equal(entry.source_parent_row, contract.parentRow);
+  }
 }
 
 for (const bom of boms) {
