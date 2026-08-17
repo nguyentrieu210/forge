@@ -38,9 +38,20 @@ result = classifyAlumdoorItemSourceCode("TRU-TP_KHONGBDK_TANKER-ALUMAX", { sourc
 expect(result.status, "excluded", "TRU adjustment exclusion");
 expect(result.canonical_item_code, "", "TRU adjustment must not become Item");
 
-result = classifyAlumdoorItemSourceCode("PHUTHU-UC<7m²", { source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT });
-expect(result.status, "excluded", "PHUTHU exclusion");
-expect(result.canonical_item_code, "", "PHUTHU must not become Item");
+result = classifyAlumdoorItemSourceCode("PHUTHUCHUYENDOICUAKT", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
+expect(result.status, "excluded", "PHUTHU without hyphen exclusion");
+expect(result.canonical_item_code, "", "PHUTHU without hyphen must not become Item");
+
+result = classifyAlumdoorItemSourceCode("CPSTD_LADL", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
+expect(result.status, "excluded", "CPSTD cost exclusion");
+expect(result.canonical_item_code, "", "CPSTD cost must not become Item");
+
+result = classifyAlumdoorItemSourceCode("CPVC", { source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT });
+expect(result.status, "excluded", "transport cost exclusion");
+expect(result.reason, "service_or_cost_not_stock_item", "transport cost exclusion reason");
+
+result = classifyAlumdoorItemSourceCode("TIỀN CÔNG LẮP ĐẶT", { source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT });
+expect(result.status, "excluded", "installation service exclusion");
 
 result = classifyAlumdoorItemSourceCode("NVL-LD-3LD", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
 expect(result.status, "excluded", "aggregate BOM helper exclusion");
@@ -49,6 +60,26 @@ expect(result.reason, "aggregate_bom_helper", "aggregate BOM helper reason");
 result = classifyAlumdoorItemSourceCode("NVL-INOX, NVL-NHUA, NVL-MOC", { source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT });
 expect(result.status, "excluded", "composite CÂY KÉO code exclusion");
 expect(result.reason, "composite_component_list_not_item_code", "composite CÂY KÉO reason");
+
+result = classifyAlumdoorItemSourceCode("NVL-TRUC114_1.8LY", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
+expect(result.status, "alias", "trục 114 BOM alias status");
+expect(result.canonical_item_code, "NVL-TR114-1.8", "trục 114 BOM alias target");
+
+result = classifyAlumdoorItemSourceCode("NVL-TOLE1.2x190-CORON", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
+expect(result.status, "alias", "ray có ron BOM alias status");
+expect(result.canonical_item_code, "NVL-TOLE1.2x190-RON", "ray có ron BOM alias target");
+
+result = classifyAlumdoorItemSourceCode("NVL-BO2VIS-501-552", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
+expect(result.status, "alias", "bọ 501/552 BOM alias status");
+expect(result.canonical_item_code, "NVL-BO2VIS-501N-552", "bọ 501/552 BOM alias target");
+
+result = classifyAlumdoorItemSourceCode("NVL-ALD-DL652VK", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
+expect(result.status, "alias", "profile no-space alias status");
+expect(result.canonical_item_code, "NVL-AL652-VK", "profile no-space alias target");
+
+result = classifyAlumdoorItemSourceCode("NVL-TRUC114_1.8LY", { source_role: ITEM_SOURCE_ROLES.STOCK_ITEM });
+expect(result.status, "source", "stock identity must not be rewritten by BOM alias");
+expect(result.canonical_item_code, "NVL-TRUC114_1.8LY", "stock source code stays exact");
 
 result = classifyAlumdoorItemSourceCode("NVL-TON-ST-1LYx175-_MSK", { source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT, source_index: 351 });
 expect(result.status, "blocked", "duplicate Super source code must block on numbered product rows");
