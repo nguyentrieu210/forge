@@ -1,0 +1,1 @@
+REAL PURCHASE IMPORT: current source preflight is fail-closed. See preflight-alumdoor-real-purchase-import.mjs and its regression test. No persistence until live Supplier/Item UOM, Company, Warehouse, and common stock cutoff evidence pass.
