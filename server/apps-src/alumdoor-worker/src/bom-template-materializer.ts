@@ -22,6 +22,7 @@ interface RawBomTemplate extends Json {
   required_context_fields_json?: unknown;
   required_component_keys_json?: unknown;
   required_actual_component_keys_json?: unknown;
+  actual_component_allowed_items_json?: unknown;
   component_rules?: unknown;
 }
 
@@ -110,6 +111,21 @@ function stringArray(value: unknown, label: string): string[] {
   return parsed.map((entry) => text(entry)).filter(Boolean);
 }
 
+function stringArrayMap(value: unknown, label: string): Record<string, string[]> {
+  const parsed = parseJson<unknown>(value, {}, label);
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(`${label}: phải là object JSON.`);
+  const output: Record<string, string[]> = {};
+  for (const [rawKey, rawItems] of Object.entries(parsed as Record<string, unknown>)) {
+    const key = text(rawKey);
+    if (!key) throw new Error(`${label}: component key không được rỗng.`);
+    if (!Array.isArray(rawItems)) throw new Error(`${label}.${key}: phải là mảng item code.`);
+    const items = rawItems.map((entry) => text(entry)).filter(Boolean);
+    if (!items.length) throw new Error(`${label}.${key}: allowlist không được rỗng.`);
+    output[key] = [...new Set(items)];
+  }
+  return output;
+}
+
 function conditions(value: unknown, label: string): BomConditions {
   const parsed = parseJson<unknown>(value, {}, label);
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(`${label}: phải là object JSON.`);
@@ -147,7 +163,7 @@ function parseComponentRule(raw: RawBomComponentRule, templateCode: string, inde
   };
 }
 
-export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] } {
+export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[]; actual_component_allowed_items: Record<string, string[]> } {
   const sourceName = text(raw.name);
   const templateCode = text(raw.template_code) || sourceName;
   const itemCode = text(raw.item_code);
@@ -167,6 +183,7 @@ export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefiniti
     required_context_fields: stringArray(raw.required_context_fields_json, `${templateCode}.required_context_fields_json`),
     required_component_keys: stringArray(raw.required_component_keys_json, `${templateCode}.required_component_keys_json`),
     required_actual_component_keys: stringArray(raw.required_actual_component_keys_json, `${templateCode}.required_actual_component_keys_json`),
+    actual_component_allowed_items: stringArrayMap(raw.actual_component_allowed_items_json, `${templateCode}.actual_component_allowed_items_json`),
     component_rules: rows.map((row, index) => parseComponentRule(row, templateCode, index)),
   };
 }
@@ -213,7 +230,7 @@ async function submitDoc(call: BomMaterializerCall, doctype: string, name: strin
   if (!response.ok) throw new Error(`Không ghi sổ được ${doctype} ${name}: ${(await response.text()).slice(0, 220)}`);
 }
 
-async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[] }>> {
+async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[]; actual_component_allowed_items: Record<string, string[]> }>> {
   const names = await listDocs<{ name?: string }>(call, "BOM Template", ["name"], [], 200).catch(() => []);
   if (!names.length) return [];
   const docs = await Promise.all(names.map(async (row) => {
@@ -355,6 +372,7 @@ export async function resolveProductionLineBom(
     resolved,
     actual_components: input.line.bom_actual_components,
     required_actual_component_keys: source.required_actual_component_keys,
+    allowed_item_codes_by_key: source.actual_component_allowed_items,
   });
   const fingerprint = bomFingerprint({
     company: input.company,

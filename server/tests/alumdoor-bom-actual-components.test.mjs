@@ -64,6 +64,41 @@ test("unknown actual slots cannot inject arbitrary material into a source BOM", 
   );
 });
 
+test("declared actual slots can be pinned to source item allowlists", () => {
+  assert.throws(
+    () => mergeBomActualComponents({
+      resolved,
+      actual_components: actual.map((row) => row.component_key === "PULLEY_34" ? { ...row, item_code: "NVL-PULYUC114" } : row),
+      required_actual_component_keys: required,
+      allowed_item_codes_by_key: { PULLEY_34: ["NVL-PULYUC34"] },
+    }),
+    /NVL-PULYUC114 không được phép cho actual slot PULLEY_34.*không thay vật tư nguồn/i,
+  );
+
+  const merged = mergeBomActualComponents({
+    resolved,
+    actual_components: actual,
+    required_actual_component_keys: required,
+    allowed_item_codes_by_key: {
+      PULLEY_34: ["NVL-PULYUC34"],
+      PULL_ROD: ["NVL-INOX", "NVL-NHUA", "NVL-MOC"],
+    },
+  });
+  assert.equal(merged.components.filter((row) => row.component_key === "PULL_ROD").length, 3);
+});
+
+test("allowlist cannot declare a slot outside required actual keys", () => {
+  assert.throws(
+    () => mergeBomActualComponents({
+      resolved,
+      actual_components: actual,
+      required_actual_component_keys: required,
+      allowed_item_codes_by_key: { EXTRA: ["NVL-RANDOM"] },
+    }),
+    /allowlist khai báo slot EXTRA.*không nằm trong required actual keys/i,
+  );
+});
+
 test("multiple actual rows may satisfy one declared source slot such as composite pull rod", () => {
   const merged = mergeBomActualComponents({ resolved, actual_components: actual, required_actual_component_keys: required });
   assert.equal(merged.components.length, 11);

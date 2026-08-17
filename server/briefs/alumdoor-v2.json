@@ -2996,8 +2996,9 @@
         "required_context_fields_json": "[]",
         "required_component_keys_json": "[\"LEAF_SHEET\",\"T_BRACKET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"SHAFT_34_WEIGHT\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
         "required_actual_component_keys_json": "[\"BOTTOM_SEAL\",\"FOAM_45CM\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
-        "deferred_components_json": "[{\"source_row\":691,\"key\":\"BOTTOM_SEAL\",\"reason\":\"Nguồn ghi 'xem lại'; chưa được phép chốt công thức.\"},{\"source_row\":693,\"key\":\"FOAM_45CM\",\"reason\":\"Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":695,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; cần số puly thực tế từ cấu hình.\"},{\"source_rows\":[696,697,698,699,700,701,702,703],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; chưa có input cấu trúc.\"},{\"source_row\":706,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế.\"},{\"source_row\":707,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; cần chốt dùng cụm TP hay bung 3 NVL.\"},{\"source_row\":710,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":711,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Pilot chuẩn hóa trực tiếp từ sheet ĐM. Các dòng không đủ công thức được bắt buộc nhập actual có cấu trúc theo một bộ; thiếu slot thì materializer chặn.",
+        "actual_component_allowed_items_json": "{\"BOTTOM_SEAL\":[\"NVL-RONDAYUC\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
+        "deferred_components_json": "[{\"source_row\":691,\"key\":\"BOTTOM_SEAL\",\"reason\":\"Nguồn ghi 'xem lại'; chưa được phép chốt công thức.\"},{\"source_row\":693,\"key\":\"FOAM_45CM\",\"reason\":\"Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":695,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[696,697,698,699,700,701,702,703],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":706,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":707,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":710,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":711,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Chuẩn hóa trực tiếp block ĐM 686-711. Dòng không đủ công thức được bắt buộc nhập actual theo một bộ; thiếu slot thì materializer chặn.",
         "component_rules": [
           {
             "rule_code": "SRC-687-LEAF",
@@ -3084,6 +3085,290 @@
             "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
             "item_code": "NVL-BKAN",
             "source_row": 709,
+            "source_uom": "KG/CẶP",
+            "source_formula": "1 bộ x 4 cặp x 0,1925.",
+            "sequence": 90,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":0.77}}"
+          }
+        ]
+      }
+    },
+    {
+      "type": "BOM Template",
+      "name": "SRC-UC-KT-46D-XN-VK",
+      "data": {
+        "template_code": "SRC-UC-KT-46D-XN-VK",
+        "item_code": "TP-UC KT 4.6D XN-VK",
+        "conditions_json": "{\"item_code\":\"TP-UC KT 4.6D XN-VK\"}",
+        "priority": 100,
+        "disabled": false,
+        "source_status": "READY_WITH_ACTUALS",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 731-755",
+        "required_context_fields_json": "[]",
+        "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
+        "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
+        "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-XN-VK\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
+        "deferred_components_json": "[{\"source_row\":732,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XN-VK có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":734,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":735,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":737,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":738,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":739,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":740,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[741,742,743,744,745,746,747,748],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":750,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":751,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":754,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":755,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 731-755. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XN-VK.",
+        "component_rules": [
+          {
+            "rule_code": "SRC-733-GIA-T",
+            "component_key": "T_BRACKET",
+            "item_code": "NVL-GIAT",
+            "source_row": 733,
+            "source_uom": "CẶP",
+            "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
+            "sequence": 20,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
+          },
+          {
+            "rule_code": "SRC-736-RON-DAY",
+            "component_key": "BOTTOM_SEAL",
+            "item_code": "NVL-RONDAYUC",
+            "source_row": 736,
+            "source_uom": "KG/M ngang",
+            "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
+            "sequence": 50,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+          },
+          {
+            "rule_code": "SRC-749-CUM-HAM",
+            "component_key": "PLASTIC_STOP_CLAMP",
+            "item_code": "NVL-CHNHUA",
+            "source_row": 749,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 70,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-752-GOI-SAT",
+            "component_key": "STEEL_BEARING",
+            "item_code": "NVL-GOIFE",
+            "source_row": 752,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 80,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-753-BAT-KHOA",
+            "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
+            "item_code": "NVL-BKAN",
+            "source_row": 753,
+            "source_uom": "KG/CẶP",
+            "source_formula": "1 bộ x 4 cặp x 0,1925.",
+            "sequence": 90,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":0.77}}"
+          }
+        ]
+      }
+    },
+    {
+      "type": "BOM Template",
+      "name": "SRC-UC-KT-46D-XR-CF",
+      "data": {
+        "template_code": "SRC-UC-KT-46D-XR-CF",
+        "item_code": "TP-UC KT 4.6D XR-CF",
+        "conditions_json": "{\"item_code\":\"TP-UC KT 4.6D XR-CF\"}",
+        "priority": 100,
+        "disabled": false,
+        "source_status": "READY_WITH_ACTUALS",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 756-780",
+        "required_context_fields_json": "[]",
+        "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
+        "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
+        "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-XR-CF\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
+        "deferred_components_json": "[{\"source_row\":757,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XR-CAFE có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":759,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":760,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":762,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":763,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":764,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":765,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[766,767,768,769,770,771,772,773],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":775,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":776,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":779,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":780,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 756-780. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XR-CF.",
+        "component_rules": [
+          {
+            "rule_code": "SRC-758-GIA-T",
+            "component_key": "T_BRACKET",
+            "item_code": "NVL-GIAT",
+            "source_row": 758,
+            "source_uom": "CẶP",
+            "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
+            "sequence": 20,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
+          },
+          {
+            "rule_code": "SRC-761-RON-DAY",
+            "component_key": "BOTTOM_SEAL",
+            "item_code": "NVL-RONDAYUC",
+            "source_row": 761,
+            "source_uom": "KG/M ngang",
+            "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
+            "sequence": 50,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+          },
+          {
+            "rule_code": "SRC-774-CUM-HAM",
+            "component_key": "PLASTIC_STOP_CLAMP",
+            "item_code": "NVL-CHNHUA",
+            "source_row": 774,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 70,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-777-GOI-SAT",
+            "component_key": "STEEL_BEARING",
+            "item_code": "NVL-GOIFE",
+            "source_row": 777,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 80,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-778-BAT-KHOA",
+            "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
+            "item_code": "NVL-BKAN",
+            "source_row": 778,
+            "source_uom": "KG/CẶP",
+            "source_formula": "1 bộ x 4 cặp x 0,1925.",
+            "sequence": 90,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":0.77}}"
+          }
+        ]
+      }
+    },
+    {
+      "type": "BOM Template",
+      "name": "SRC-UC-KT-46D-TR-XLC",
+      "data": {
+        "template_code": "SRC-UC-KT-46D-TR-XLC",
+        "item_code": "TP-UC KT 4.6D TRẮNG-XLC",
+        "conditions_json": "{\"item_code\":\"TP-UC KT 4.6D TRẮNG-XLC\"}",
+        "priority": 100,
+        "disabled": false,
+        "source_status": "READY_WITH_ACTUALS",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 781-805",
+        "required_context_fields_json": "[]",
+        "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
+        "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
+        "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-TR-XLC\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
+        "deferred_components_json": "[{\"source_row\":782,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D TR-XLC có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":784,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":785,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":787,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":788,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":789,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":790,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[791,792,793,794,795,796,797,798],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":800,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":801,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":804,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":805,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 781-805. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-TR-XLC.",
+        "component_rules": [
+          {
+            "rule_code": "SRC-783-GIA-T",
+            "component_key": "T_BRACKET",
+            "item_code": "NVL-GIAT",
+            "source_row": 783,
+            "source_uom": "CẶP",
+            "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
+            "sequence": 20,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
+          },
+          {
+            "rule_code": "SRC-786-RON-DAY",
+            "component_key": "BOTTOM_SEAL",
+            "item_code": "NVL-RONDAYUC",
+            "source_row": 786,
+            "source_uom": "KG/M ngang",
+            "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
+            "sequence": 50,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+          },
+          {
+            "rule_code": "SRC-799-CUM-HAM",
+            "component_key": "PLASTIC_STOP_CLAMP",
+            "item_code": "NVL-CHNHUA",
+            "source_row": 799,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 70,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-802-GOI-SAT",
+            "component_key": "STEEL_BEARING",
+            "item_code": "NVL-GOIFE",
+            "source_row": 802,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 80,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-803-BAT-KHOA",
+            "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
+            "item_code": "NVL-BKAN",
+            "source_row": 803,
+            "source_uom": "KG/CẶP",
+            "source_formula": "1 bộ x 4 cặp x 0,1925.",
+            "sequence": 90,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":0.77}}"
+          }
+        ]
+      }
+    },
+    {
+      "type": "BOM Template",
+      "name": "SRC-UC-KT-46D-KU-GU",
+      "data": {
+        "template_code": "SRC-UC-KT-46D-KU-GU",
+        "item_code": "TP-UC KT 4.6D KU-GU",
+        "conditions_json": "{\"item_code\":\"TP-UC KT 4.6D KU-GU\"}",
+        "priority": 100,
+        "disabled": false,
+        "source_status": "READY_WITH_ACTUALS",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 806-830",
+        "required_context_fields_json": "[]",
+        "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
+        "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
+        "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-KU-GU\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
+        "deferred_components_json": "[{\"source_row\":807,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D KU-GU có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":809,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":810,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":812,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":813,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":814,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":815,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[816,817,818,819,820,821,822,823],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":825,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":826,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":829,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":830,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 806-830. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-KU-GU.",
+        "component_rules": [
+          {
+            "rule_code": "SRC-808-GIA-T",
+            "component_key": "T_BRACKET",
+            "item_code": "NVL-GIAT",
+            "source_row": 808,
+            "source_uom": "CẶP",
+            "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
+            "sequence": 20,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
+          },
+          {
+            "rule_code": "SRC-811-RON-DAY",
+            "component_key": "BOTTOM_SEAL",
+            "item_code": "NVL-RONDAYUC",
+            "source_row": 811,
+            "source_uom": "KG/M ngang",
+            "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
+            "sequence": 50,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+          },
+          {
+            "rule_code": "SRC-824-CUM-HAM",
+            "component_key": "PLASTIC_STOP_CLAMP",
+            "item_code": "NVL-CHNHUA",
+            "source_row": 824,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 70,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-827-GOI-SAT",
+            "component_key": "STEEL_BEARING",
+            "item_code": "NVL-GOIFE",
+            "source_row": 827,
+            "source_uom": "CÁI",
+            "source_formula": "Định mức nguồn = 2 cái / một bộ.",
+            "sequence": 80,
+            "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
+          },
+          {
+            "rule_code": "SRC-828-BAT-KHOA",
+            "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
+            "item_code": "NVL-BKAN",
+            "source_row": 828,
             "source_uom": "KG/CẶP",
             "source_formula": "1 bộ x 4 cặp x 0,1925.",
             "sequence": 90,
@@ -11659,6 +11944,7 @@
         "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
         "required_component_keys_json:Code Thành phần bắt buộc JSON",
         "required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON",
+        "actual_component_allowed_items_json:Code Allowlist vật tư actual theo slot JSON",
         "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",
         "note:Small Text Ghi chú",
         "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
