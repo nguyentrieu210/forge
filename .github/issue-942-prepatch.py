@@ -5,7 +5,16 @@ root = Path(__file__).resolve().parents[1]
 path = root / ".github/issue-942-apply.py"
 s = path.read_text(encoding="utf-8")
 
+# Cut Order Item and Cutting Policy geometry fields are V2-derived contracts owned by
+# the generator/catalog layer, not by the legacy alumdoor.json source.
 old = 'upsert_field(srcdt("Cut Order Item"), fld(dt(C, "Cut Order Item"), "source_batch_no"))\n'
+if old in s:
+    s = s.replace(old, "", 1)
+old = 'for name in ["geometry_profile", "geometry_rules"]:\n    upsert_field(srcdt("Cutting Policy"), fld(dt(G, "Cutting Policy"), name))\n'
+if old in s:
+    s = s.replace(old, "", 1)
+
+old = '  for (const fieldname of ["geometry_profile", "geometry_rules"])\n    upsertSourceField("Cutting Policy", fieldname);\n'
 if old in s:
     s = s.replace(old, "", 1)
 
@@ -46,4 +55,4 @@ elif field_schema != {"$ref": "#/$defs/field"}:
     raise RuntimeError(f"customFields field schema drift: {field_schema!r}")
 schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-print("patched apply script: Cut Order Item generator-owned; customFields schema aligned; deprecated list/search refs removed")
+print("patched apply script: generator-owned geometry/Cut Order fields preserved; customFields schema aligned; deprecated refs removed")
