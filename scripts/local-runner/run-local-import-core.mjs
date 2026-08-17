@@ -561,7 +561,7 @@ function preflightItem(repoRoot, runDir, sourceArg) {
 
   run(
     process.execPath,
-    [path.join(server, 'scripts', 'import-alumdoor-item-master-local.mjs'), prepared.payload, '--validate-only'],
+    [path.join(server, 'scripts', 'import-alumdoor-item-master-local.mjs'), payload, '--validate-only'],
     {
       cwd: server,
       label: 'Item validate-only',
