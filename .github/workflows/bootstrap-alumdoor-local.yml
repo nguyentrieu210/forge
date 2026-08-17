@@ -156,50 +156,56 @@ jobs:
 
           if ($managedByServices) {
             Write-Host "Windows runtime services detected: $($installedServices.Name -join ', ')"
-            Write-Host 'Runner does not require Windows service-control permission; maintenance prevents child respawn while port owners are stopped.'
-          }
+            Write-Host 'Maintenance is enabled; managed service hosts must stop their own privileged child processes.'
 
-          # The service host polls maintenance asynchronously. A child can respawn once
-          # between the first kill and the next poll, so keep killing port owners until
-          # both ports have stayed quiet continuously for a stable window.
-          $deadline = (Get-Date).AddSeconds(25)
-          $quietSince = $null
-          $listeners = @()
-          do {
+            # The service host runs with the privilege required to terminate its child.
+            # The GitHub runner may not have permission to taskkill that process, so do
+            # not call stop-local-dev here. Wait for the host maintenance poll instead.
+            $deadline = (Get-Date).AddSeconds(30)
+            $quietSince = $null
+            $listeners = @()
+            do {
+              $listeners = @(
+                Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+                  Where-Object { $_.LocalPort -in @(8799, 5173) }
+              )
+
+              if ($listeners.Count -eq 0) {
+                if ($null -eq $quietSince) {
+                  $quietSince = Get-Date
+                  Write-Host 'Managed runtime ports are quiet; verifying stable maintenance window.'
+                }
+                if (((Get-Date) - $quietSince).TotalSeconds -ge 3) { break }
+              } else {
+                $quietSince = $null
+                $listeners | ForEach-Object {
+                  Write-Host "Waiting for managed service host: port=$($_.LocalPort) pid=$($_.OwningProcess)"
+                }
+              }
+              Start-Sleep -Milliseconds 500
+            } while ((Get-Date) -lt $deadline)
+
+            $stableQuiet = $null -ne $quietSince -and (((Get-Date) - $quietSince).TotalSeconds -ge 3)
+            if (-not $stableQuiet) {
+              throw 'Managed Alumdoor service hosts did not quiesce during maintenance window.'
+            }
+            Write-Host 'Managed runtime ports stayed quiet for 3 seconds; safe to backup and sync.'
+          } else {
+            Write-Host 'No managed Windows runtime services detected; stopping legacy/manual local dev processes.'
             & node "$target\server\scripts\stop-local-dev.mjs" --ports=8799,5173
-            if ($LASTEXITCODE -ne 0) { throw 'Khong dung duoc local runtime children truoc khi sync' }
+            if ($LASTEXITCODE -ne 0) { throw 'Khong dung duoc local dev stack truoc khi sync' }
 
-            Start-Sleep -Milliseconds 500
             $listeners = @(
               Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
                 Where-Object { $_.LocalPort -in @(8799, 5173) }
             )
-
-            if ($listeners.Count -eq 0) {
-              if ($null -eq $quietSince) {
-                $quietSince = Get-Date
-                Write-Host 'Runtime ports are quiet; verifying stable maintenance window.'
-              }
-              if (((Get-Date) - $quietSince).TotalSeconds -ge 3) {
-                break
-              }
-            } else {
-              $quietSince = $null
+            if ($listeners.Count -gt 0) {
               $listeners | ForEach-Object {
-                Write-Host "Runtime child respawn observed: port=$($_.LocalPort) pid=$($_.OwningProcess); stopping again."
+                Write-Host "Legacy runtime listener remains: port=$($_.LocalPort) pid=$($_.OwningProcess)"
               }
+              throw 'Local dev ports are still occupied before bootstrap.'
             }
-          } while ((Get-Date) -lt $deadline)
-
-          $stableQuiet = $null -ne $quietSince -and (((Get-Date) - $quietSince).TotalSeconds -ge 3)
-          if (-not $stableQuiet) {
-            Write-Host 'Runtime ports did not remain quiet during maintenance window:'
-            $listeners | ForEach-Object {
-              Write-Host "  port=$($_.LocalPort) pid=$($_.OwningProcess)"
-            }
-            throw 'Khong the on dinh local runtime ports truoc bootstrap.'
           }
-          Write-Host 'Local runtime ports stayed quiet for 3 seconds; safe to backup and sync.'
 
           & node "$target\server\scripts\backup-local-state.mjs"
           if ($LASTEXITCODE -ne 0) { throw 'Khong sao luu duoc local Wrangler state' }
