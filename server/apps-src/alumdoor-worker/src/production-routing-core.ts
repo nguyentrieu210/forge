@@ -216,7 +216,7 @@ export function resolveProductionRouting(
       );
     }
   } else if (routingNames.length === 1) {
-    [routing] = routingNames;
+    routing = routingNames[0]!;
   } else if (routingNames.length === 0) {
     throw new ProductionRoutingError(
       "MISSING_ROUTING_AUTHORITY",
