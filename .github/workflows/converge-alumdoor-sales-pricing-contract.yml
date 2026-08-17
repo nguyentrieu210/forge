@@ -6,24 +6,39 @@ on:
       - agent/alumdoor-sales-order-v2-complete
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   converge:
+    if: ${{ !contains(github.event.head_commit.message, '[capability-guard-applied]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 24
-      - name: Report cutting fixtures
+          fetch-depth: 0
+      - name: Apply new-order create capability guard
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const b = JSON.parse(fs.readFileSync('server/briefs/alumdoor.json','utf8'));
-          const rows=(b.fixtures||[]).filter(x=>x.type==='Cutting Policy').map(x=>({name:x.name,door_type:x.data?.door_type,leaf_formula:x.data?.leaf_formula,ray_type:x.data?.ray_type,leaf_divisor_const:x.data?.leaf_divisor_const,leaf_rounding:x.data?.leaf_rounding,leaf_height_deduction_m:x.data?.leaf_height_deduction_m}));
-          console.log(JSON.stringify(rows,null,2));
-          console.log('COUNT',rows.length);
-          console.log('::error title=Cutting fixture catalog::'+JSON.stringify(rows));
-          NODE
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx')
+          source = path.read_text(encoding='utf-8')
+          old = 'const formReadOnly = isExisting && (!caps.write || docstatus !== 0);'
+          new = 'const formReadOnly = isExisting ? (!caps.write || docstatus !== 0) : !caps.create;'
+          if old in source:
+              path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          elif new not in source:
+              raise SystemExit('Capability guard contract not found')
+          PY
+          git diff --check
+      - name: Commit guard
+        run: |
+          if git diff --quiet -- client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx; then
+            echo 'Guard already applied.'
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx
+          git commit -m "fix(sales): enforce create capability on new orders [capability-guard-applied]"
+          git push origin HEAD:agent/alumdoor-sales-order-v2-complete
