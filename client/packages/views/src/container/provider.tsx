@@ -28,6 +28,8 @@ export interface MetaForgeProviderProps {
   adapter: FrappeAdapter;
   registry: ControlRegistry;
   roles?: string[];
+  /** Explicit installed app/product id. Runtime composition uses this instead of metadata heuristics. */
+  appId?: string;
   /** site|user|lang|version — nếu bỏ, dùng "mock" (app demo mock KHÔNG cần tách cache). */
   scopeKey?: string;
   /** cấu hình locale từ boot sysdefaults (number_format/currency/date_format/precision). */
@@ -39,6 +41,12 @@ export interface MetaForgeProviderProps {
   formGuides?: FormGuideMap;
   queryClient?: QueryClient;
   children: ReactNode;
+}
+
+function runtimeAppId(explicitAppId: string | undefined): string | undefined {
+  if (explicitAppId) return explicitAppId;
+  if (typeof document === "undefined") return undefined;
+  return document.documentElement.dataset.app;
 }
 
 export function MetaForgeProvider(props: MetaForgeProviderProps) {
@@ -86,6 +94,7 @@ export function MetaForgeProvider(props: MetaForgeProviderProps) {
       registry: props.registry,
       services: { ...adapterServices(runtimeAdapter, props.businessContext, props.contextPolicies), quickCreate, fmt: makeLocaleFormat(props.locale ?? {}) },
       roles: props.roles ?? [],
+      appId: runtimeAppId(props.appId),
       scopeKey: props.scopeKey ?? "mock",
       fmt: makeLocaleFormat(props.locale ?? {}),
       businessContext: props.businessContext ?? {},
@@ -94,7 +103,7 @@ export function MetaForgeProvider(props: MetaForgeProviderProps) {
       formGuides: props.formGuides,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [runtimeAdapter, props.registry, props.roles, props.scopeKey, localeKey, JSON.stringify(props.businessContext ?? {}), props.contextPolicies, props.formProfiles, props.formGuides, quickCreate],
+    [runtimeAdapter, props.registry, props.roles, props.appId, props.scopeKey, localeKey, JSON.stringify(props.businessContext ?? {}), props.contextPolicies, props.formProfiles, props.formGuides, quickCreate],
   );
   return (
     <QueryClientProvider client={qc}>
