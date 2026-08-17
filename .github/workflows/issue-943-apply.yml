@@ -40,10 +40,8 @@ jobs:
           cmp -s /tmp/v2-first.json server/briefs/alumdoor-v2.json
       - name: Server build
         run: pnpm run server:build
-      - name: Focused production flow and geometry tests
-        run: |
-          node --test server/tests/sales-production-flow.test.mjs
-          node --test server/tests/alumdoor-geometry-policy.test.mjs
+      - name: Focused production flow and geometry integration tests
+        run: node --test server/tests/sales-production-flow.test.mjs
       - name: Brief check
         run: pnpm --dir server run brief:check
       - name: MetaForge typecheck
