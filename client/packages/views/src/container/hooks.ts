@@ -40,6 +40,21 @@ function abortable<T>(signal: AbortSignal, task: Promise<T>): Promise<T> {
   });
 }
 
+function sameBoundary(
+  queryKey: readonly unknown[] | undefined,
+  scopeKey: string,
+  kind: "list" | "list-view" | "count",
+  doctype: string,
+  contextKey: string,
+): boolean {
+  if (!queryKey) return false;
+  const contextIndex = kind === "count" ? 5 : 4;
+  return queryKey[0] === scopeKey
+    && queryKey[1] === kind
+    && queryKey[2] === doctype
+    && queryKey[contextIndex] === contextKey;
+}
+
 export function useMeta(doctype: string): UseQueryResult<DocTypeMeta> {
   const { adapter, scopeKey } = useMetaForge();
   return useQuery({
@@ -85,7 +100,9 @@ export function useList(doctype: string, opts: ListOpts = {}, enabled = true): U
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
-    placeholderData: (prev) => prev,
+    placeholderData: (previous, previousQuery) => sameBoundary(previousQuery?.queryKey, scopeKey, "list", doctype, contextKey)
+      ? previous
+      : undefined,
   });
 }
 
@@ -99,7 +116,9 @@ export function useListView(doctype: string, opts: ListOpts = {}, enabled = true
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
-    placeholderData: (previous) => previous,
+    placeholderData: (previous, previousQuery) => sameBoundary(previousQuery?.queryKey, scopeKey, "list-view", doctype, contextKey)
+      ? previous
+      : undefined,
   });
 }
 
@@ -115,7 +134,9 @@ export function useCount(doctype: string, filters?: Filters, orFilters?: Filters
     staleTime: 2 * 60_000,
     refetchOnWindowFocus: false,
     gcTime: 30 * 60_000,
-    placeholderData: (prev) => prev,
+    placeholderData: (previous, previousQuery) => sameBoundary(previousQuery?.queryKey, scopeKey, "count", doctype, contextKey)
+      ? previous
+      : undefined,
   });
 }
 
