@@ -39,14 +39,20 @@ if not "%SYNC_RESULT%"=="10" (
 )
 
 echo.
-echo === 1. Dua runtime vao maintenance va yeu cau ports quiet ===
-if exist server\scripts\alumdoor-runtime-maintenance.mjs (
-  call node server\scripts\alumdoor-runtime-maintenance.mjs on
-  if errorlevel 1 (echo [LOI] Khong bat duoc maintenance cho Windows services & exit /b 1)
+echo === 1. Dua required runtime vao maintenance va yeu cau ports quiet ===
+set "MAINTENANCE_SCOPE=all"
+set "QUIESCE_PORTS=8799,5173"
+if defined BOOTSTRAP (
+  set "MAINTENANCE_SCOPE=backend"
+  set "QUIESCE_PORTS=8799"
 )
-call node scripts\local-runner\assert-ports-quiet.mjs --ports=8799,5173
+if exist server\scripts\alumdoor-runtime-maintenance.mjs (
+  call node server\scripts\alumdoor-runtime-maintenance.mjs on %MAINTENANCE_SCOPE%
+  if errorlevel 1 (echo [LOI] Khong bat duoc maintenance cho required Windows services & exit /b 1)
+)
+call node scripts\local-runner\assert-ports-quiet.mjs --ports=%QUIESCE_PORTS%
 if errorlevel 1 (
-  echo [DUNG] Runtime van co listener. Source sync khong kill process theo port.
+  echo [DUNG] Required runtime van co listener. Source sync khong kill process theo port.
   exit /b 1
 )
 
