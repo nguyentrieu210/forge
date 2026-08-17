@@ -18,7 +18,8 @@ export const ITEM_SOURCE_ROLES = Object.freeze({
 
 export const ITEM_SOURCE_EXCLUDED_PREFIXES = Object.freeze([
   "TRU-",
-  "PHUTHU-",
+  "PHUTHU",
+  "CPSTD_",
 ]);
 
 // These source values are useful as BOM/evidence records but must not become canonical Item codes.
@@ -26,6 +27,9 @@ export const ITEM_SOURCE_EXCLUDED_CODES = Object.freeze({
   "NVL-LD-3LD": "aggregate_bom_helper",
   "NVL-LD-3LD-MSK": "aggregate_bom_helper",
   "NVL-INOX, NVL-NHUA, NVL-MOC": "composite_component_list_not_item_code",
+  "CPVC": "service_or_cost_not_stock_item",
+  "TIỀN CÔNG LẮP ĐẶT": "service_or_cost_not_stock_item",
+  "TIỀN CÔNG CẮT LẠI CỬA": "service_or_cost_not_stock_item",
 });
 
 // High-confidence spellings found on unnumbered ĐM BOM/reference rows. They may resolve only
@@ -83,6 +87,38 @@ export const ITEM_SOURCE_ALIASES = Object.freeze({
   "NVL-BO1VIS AL70": "NVL-BO1VIS-AL702LOP",
   "NVL-BO1VIS AL71": "NVL-BO1VIS-503N-71-595",
   "NVL-BO2VIS-548C-501C-AL652": "NVL-BO2VIS-652-548C",
+
+  // Audit crosswalk round 2: exact stock/product targets already present in the canonical source set.
+  "NVL-AL701LOPTHO": "NVL-AL70(1LOP)-THO",
+  "TP_PAT_KHONGDAY": "TP-PAT_KHONGDAY",
+  "NVL-BATMV": "NVL-BAT-MV",
+  "NVL-DINHTANMV": "NVL-DINHTAN-MV",
+  "NVL-CONTANMV": "NVL-CONTAN-MV",
+  "TP-RAYINOX_8P_RON": "TP-RAYINOX-8P-RON",
+  "TP-RAYINOX_6P_RON": "TP-RAYINOX-6P-RON",
+  "NVL-BO2VIS-AL50-VIP50-AL548-ST500": "NVL-BO2VIS AL50-VIP50-548-ST500",
+  "NVL-BO2VIS-501-552": "NVL-BO2VIS-501N-552",
+  "NVL-BO2VIS-752-VIPST700": "NVL-BO2VIS-752-ST700",
+  "NVL-BO1VIS-AL503C": "NVL-BO1VIS-503C",
+  "NVL-BUOMSAT-DL": "NVL-BUOMFE-DL",
+  "NVL-BUOMSAT-ST": "NVL-BUOMFE-ST",
+  "NVL-LX-5.5 x 70 x 46V": "NVL-LX5.5x70x46V",
+  "NVL-TOLE0.42x598-XR-CF": "NVL-TOLE0.42x598-XR-CAFE",
+  "NVL-TOLE1.2x190-CORON": "NVL-TOLE1.2x190-RON",
+  "TRUC114_1.8LY": "NVL-TR114-1.8",
+  "NVL-TRUC114_1.8LY": "NVL-TR114-1.8",
+  "NVL-TON3.8D-XN-VK": "NVL-TOLE0.35x598-XNVK",
+  "NVL-TOLE0.42x598-KU-GU": "NVL-TOLE0.42x598-GUKU",
+  "NVL-TOLE0.48x598-KU-GU": "NVL-TOLE0.48x598-GUKU",
+
+  // Same audited profile families, written without spaces in older BOM rows.
+  "NVL-ALD-DL50GS": "NVL-AL50-GS",
+  "NVL-ALD-DL50THO": "NVL-AL50-THO",
+  "NVL-ALD-DL552THO": "NVL-AL552-THO",
+  "NVL-ALD-DL652GS": "NVL-AL652-GS",
+  "NVL-ALD-DL652THO": "NVL-AL652-THO",
+  "NVL-ALD-DL652VK": "NVL-AL652-VK",
+  "NVL-TD-AL503N26THO": "NVL-AL503-THO",
 });
 
 // Same source code is intentionally one Item identity; finish/color belongs to master dimensions,
