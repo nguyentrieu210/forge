@@ -48,6 +48,47 @@ const brushMetresPerRoll = brushBlockers.filter((blocker) => blocker.runtime_uom
 assert.ok(brushMetresPerRoll.length > 0, "NVL-PHOTLONG4X5 must explicitly retain at least one authoritative Mét↔Cuộn evidence gap");
 assert.equal(linesForSourceItem("NVL-PHOTLONG4X5").length, 0, "NVL-PHOTLONG4X5 must not silently resolve without conversion evidence");
 
+const sealedRayLines = linesForSourceItem("NVL-TOLE1.2x190-CORON")
+  .filter((line) => line.lineage?.source_formula_text === "(CAO PB - 10CM)x2");
+assert.ok(sealedRayLines.length > 0, "exact sealed-ray height formula must resolve from source-backed 1.78 KG/M evidence");
+for (const line of sealedRayLines) {
+  assert.equal(line.item_code, "NVL-TOLE1.2x190-RON", "sealed-ray source alias must preserve canonical item identity");
+  assert.equal(line.uom, "Mét", "sealed-ray runtime quantity must remain in source length UOM");
+  assert.equal(line.conversion_factor, 1.78, "sealed-ray exact source conversion must remain 1.78 KG/M");
+  const formula = JSON.parse(line.quantity_formula_json);
+  assert.equal(formula.base?.field, "PB_CAO");
+  assert.equal(formula.base?.offset, -0.1);
+  assert.equal(formula.multiply, 2);
+}
+assert.equal(
+  blockers.filter((blocker) => blocker.source_item_code === "NVL-TOLE1.2x190-CORON" && blocker.source_formula_text === "(CAO PB - 10CM)x2").length,
+  0,
+  "exact sealed-ray height formula must not regress into a blocker",
+);
+
+const inoxBottomSealRows = new Set([24, 28, 32]);
+const inoxBottomSealLines = lines.filter((line) => inoxBottomSealRows.has(line.lineage?.source_row));
+assert.equal(inoxBottomSealLines.length, 3, "all three exact RNINOX-DR ray rows must resolve");
+for (const line of inoxBottomSealLines) {
+  assert.equal(line.lineage?.source_item_code, "RNINOX-DR");
+  assert.equal(line.item_code, "NVL-RINOX-DR");
+  assert.equal(line.uom, "Mét");
+  assert.equal(line.conversion_factor, 0.124, "RNINOX-DR exact source conversion must remain 0.124 KG/M");
+  const formula = JSON.parse(line.quantity_formula_json);
+  assert.equal(formula.base?.field, "PB_CAO");
+  assert.equal(formula.base?.offset, 0.15);
+}
+assert.equal(
+  blockers.filter((blocker) => inoxBottomSealRows.has(blocker.source_row)).length,
+  0,
+  "RNINOX-DR exact conversion rows must not regress into blockers",
+);
+
+const rubberBottomSealRows = new Set([23, 27, 31]);
+const rubberBottomSealBlockers = blockers.filter((blocker) => rubberBottomSealRows.has(blocker.source_row));
+assert.equal(rubberBottomSealBlockers.length, 3, "RNHUA-DR must remain fail-closed while 0.101 and 0.263 KG/M authorities conflict");
+assert.ok(rubberBottomSealBlockers.every((blocker) => blocker.type === "missing_conversion"));
+
 assert.equal(blockers.filter((blocker) => blocker.type === "parent_missing_conversion").length, 0, "finished-door parent conversion must never be reintroduced");
 const finishedDoorBoms = boms.filter((bom) => itemMap.get(bom.item)?.stock_uom === "Bộ");
 assert.ok(finishedDoorBoms.length > 0, "expected at least one finished-door BOM with stock UOM Bộ");
