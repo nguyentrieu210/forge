@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   load-local-real-data:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 937
+    if: github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted]
     timeout-minutes: 45
     env:
