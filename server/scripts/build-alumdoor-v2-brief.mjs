@@ -2014,7 +2014,15 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
   const priceVariantIndex = itemPrice.fields.findIndex((entry) => nameOf(entry) === "price_variant");
   if (priceVariantIndex >= 0 && typeof itemPrice.fields[priceVariantIndex] === "object") {
     const value = { ...itemPrice.fields[priceVariantIndex] };
-    if (String(value.fetch_from ?? "").startsWith("sales_option.")) delete value.fetch_from;
+    if (String(value.fetch_from ?? "").startsWith("sales_option.")) {
+      delete value.fetch_from;
+      // read_only was only defensible while Sales Option auto-filled this field. With the
+      // fetch source gone, a required + read_only field that also appears in the naming
+      // format ({price_list}:{item_code}:{uom}:{price_variant}) is unreachable: every write
+      // is rejected with "Field is read-only: price_variant", so no non-STANDARD price
+      // variant can be created at all. depends_on:eval:false still keeps it out of the UI.
+      delete value.read_only;
+    }
     itemPrice.fields[priceVariantIndex] = value;
   }
   const salesOrder = doctype("Sales Order");
