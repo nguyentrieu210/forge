@@ -3,6 +3,7 @@ import {
   ITEM_SOURCE_SHARED_IDENTITIES,
   classifyAlumdoorItemSourceCode,
 } from "./alumdoor-item-source-contract.mjs";
+import { resolveAlumdoorDualUnitEvidence } from "./alumdoor-item-dual-unit-evidence.mjs";
 import {
   resolveAlumdoorBlankCodeEvidenceOverride,
   resolveAlumdoorBomEvidenceAlias,
@@ -31,6 +32,7 @@ const ATOMIC_UOM_ALIASES = new Map([
   ["TẤM", "Tấm"],
   ["TÚI", "Túi"],
   ["HỘP", "Hộp"],
+  ["THÙNG", "Thùng"],
   ["BÌNH", "Bình"],
   ["LÍT", "Lít"],
 ]);
@@ -85,6 +87,38 @@ export function interpretAlumdoorSourceUom(sourceRole, sourceUom) {
       canonical_uom: "",
       requires_conversion: true,
       conversion_basis: "kg_per_m",
+    });
+  }
+
+  if (key === "KG/THÙNG") {
+    if (sourceRole === ITEM_SOURCE_ROLES.STOCK_ITEM) {
+      return Object.freeze({
+        status: "dual_unit_basis",
+        source_uom: raw,
+        canonical_uom: "Kg",
+        secondary_uom: "Thùng",
+        weight_uom: "Kg",
+        requires_conversion: true,
+        conversion_basis: "kg_per_thung",
+      });
+    }
+    if (sourceRole === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT) {
+      return Object.freeze({
+        status: "dual_unit_basis",
+        source_uom: raw,
+        canonical_uom: "Thùng",
+        secondary_uom: "Kg",
+        weight_uom: "Kg",
+        requires_conversion: true,
+        conversion_basis: "kg_per_thung",
+      });
+    }
+    return Object.freeze({
+      status: "rate_basis",
+      source_uom: raw,
+      canonical_uom: "",
+      requires_conversion: true,
+      conversion_basis: "kg_per_thung",
     });
   }
 
@@ -152,6 +186,16 @@ function resolveEffectiveUom(record) {
     uom_origin: "explicit_evidence_override",
     uom_override_reason: override.reason,
   };
+}
+
+function attachDualUnitEvidence(record, uom) {
+  const evidence = resolveAlumdoorDualUnitEvidence(record);
+  if (!evidence || evidence.conversion_basis !== uom.conversion_basis) return uom;
+  return Object.freeze({
+    ...uom,
+    conversion_factor: evidence.conversion_factor,
+    conversion_factor_source: evidence.reason,
+  });
 }
 
 function pushBlock(blockers, record, reason, detail = {}) {
@@ -256,14 +300,15 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
     }
 
     const uomEvidence = resolveEffectiveUom(record);
-    const uom = interpretAlumdoorSourceUom(record.source_role, uomEvidence.effective_source_uom);
-    if (uom.status === "blocked") {
-      pushBlock(blockers, record, uom.reason, {
+    const interpretedUom = interpretAlumdoorSourceUom(record.source_role, uomEvidence.effective_source_uom);
+    if (interpretedUom.status === "blocked") {
+      pushBlock(blockers, record, interpretedUom.reason, {
         source_uom: record.source_uom,
         effective_source_uom: uomEvidence.effective_source_uom,
       });
       continue;
     }
+    const uom = attachDualUnitEvidence(record, interpretedUom);
 
     identityRows.push({
       ...record,
@@ -318,6 +363,13 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
     const stockUom = stockUoms[0] ?? "";
     const salesUoms = [...new Set(sellableRows.map((row) => row.uom.canonical_uom).filter(Boolean))];
     const requiresConversion = rows.some((row) => Boolean(row.uom.requires_conversion));
+    const conversionFactors = rows
+      .filter((row) => Number.isFinite(row.uom.conversion_factor))
+      .map((row) => ({
+        conversion_basis: row.uom.conversion_basis,
+        conversion_factor: row.uom.conversion_factor,
+        source: row.uom.conversion_factor_source,
+      }));
 
     accepted.push({
       item_code: itemCode,
@@ -338,12 +390,15 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
         effective_source_uom: row.effective_source_uom,
         uom_origin: row.uom_origin,
         uom_override_reason: row.uom_override_reason,
+        conversion_basis: row.uom.conversion_basis ?? null,
+        conversion_factor: row.uom.conversion_factor ?? null,
         item_name: row.item_name,
       })),
       stock_uom: stockUom,
       sales_uoms: salesUoms,
       requires_conversion: requiresConversion,
       conversion_bases: [...new Set(rows.map((row) => row.uom.conversion_basis).filter(Boolean))],
+      conversion_factors: conversionFactors,
       colors: [...new Set(stockRows.map((row) => row.source_color).filter(Boolean))],
     });
   }
