@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   ancestorChain,
   classifyLegacyBackend,
+  classifyMigrationSha,
   findLegacyDeskRoot,
   isManagedBackendAuthority,
 } from "./alumdoor-legacy-runtime-migration.mjs";
@@ -66,6 +67,20 @@ function baseSnapshot() {
   );
   snapshot.listeners = snapshot.listeners.map((row) => row.LocalPort === 5173 ? { ...row, OwningProcess: 410 } : row);
   assert.deepEqual(findLegacyDeskRoot(snapshot), { action: "none", reason: "already_managed" });
+}
+
+{
+  const current = "c63699a7ec8ebbc92ece15c7b74aa8d82c5a225b";
+  assert.deepEqual(classifyMigrationSha(current.toUpperCase(), current), {
+    status: "match",
+    expected_sha: current,
+    actual_sha: current,
+  });
+  assert.deepEqual(classifyMigrationSha("948e9bdb2b4bf479766221a5178631be2d05da3b", current), {
+    status: "stale-request",
+    expected_sha: "948e9bdb2b4bf479766221a5178631be2d05da3b",
+    actual_sha: current,
+  });
 }
 
 console.log("ALUMDOOR_LEGACY_RUNTIME_MIGRATION_TEST_PASS");
