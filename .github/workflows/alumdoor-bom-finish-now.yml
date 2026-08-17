@@ -11,14 +11,37 @@ permissions:
   contents: read
   issues: write
 
-concurrency:
-  group: alumdoor-bom-finish-now
-  cancel-in-progress: false
-
 jobs:
+  enqueue-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report one-shot enqueue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          body = f"## BOM ONE-SHOT ENQUEUED\n\nhead_sha: `{os.environ['HEAD_SHA']}`"
+          req = urllib.request.Request(
+              'https://api.github.com/repos/nguyentrieu210/forge/issues/951/comments',
+              data=json.dumps({'body': body}).encode(), method='POST',
+              headers={
+                  'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                  'Content-Type': 'application/json',
+              },
+          )
+          urllib.request.urlopen(req).read()
+          PY
+
   finish-bom-local:
     runs-on: [self-hosted]
     timeout-minutes: 45
+    concurrency:
+      group: alumdoor-bom-finish-now
+      cancel-in-progress: false
     steps:
       - name: Bootstrap latest main then import BOM
         shell: powershell
