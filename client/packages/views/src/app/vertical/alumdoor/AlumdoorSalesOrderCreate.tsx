@@ -1,2 +1,2 @@
 /** @jsxImportSource react */
-export { AlumdoorSalesOrderWorkbench as AlumdoorSalesOrderCreate } from "./sales-order-v2/AlumdoorSalesOrderWorkbench.js";
+export { AlumdoorSalesOrderWorkbenchComplete as AlumdoorSalesOrderCreate } from "./sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.js";
