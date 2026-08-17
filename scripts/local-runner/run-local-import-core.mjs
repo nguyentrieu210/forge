@@ -561,7 +561,7 @@ function preflightItem(repoRoot, runDir, sourceArg) {
 
   run(
     process.execPath,
-    [path.join(server, 'scripts', 'import-alumdoor-item-master-local.mjs'), payload, '--validate-only'],
+    [path.join(server, 'scripts', 'import-alumdoor-item-master-local.mjs'), prepared.payload, '--validate-only'],
     {
       cwd: server,
       label: 'Item validate-only',
@@ -647,41 +647,68 @@ function powershell(script, label, failureClass = 'PERMISSION') {
   );
 }
 
-function managedRuntimeServices() {
+function runtimeServiceContract() {
+  const raw = process.env.FORGE_LOCAL_REQUIRED_SERVICES?.trim() || 'backend';
+  if (raw === 'backend') {
+    return {
+      raw,
+      serviceNames: ['ForgeAlumdoorBackend'],
+      ports: [8799],
+      maintenanceScope: 'backend',
+    };
+  }
+  if (raw === 'backend,frontend') {
+    return {
+      raw,
+      serviceNames: ['ForgeAlumdoorBackend', 'ForgeAlumdoorDesk'],
+      ports: [8799, 5173],
+      maintenanceScope: 'all',
+    };
+  }
+  throw executionError(
+    'ENV',
+    `Invalid FORGE_LOCAL_REQUIRED_SERVICES=${JSON.stringify(raw)}; expected backend or backend,frontend`,
+  );
+}
+
+function managedRuntimeServices(contract) {
+  const names = contract.serviceNames.map((name) => `'${name}'`).join(',');
   const script =
-    "$names=@('ForgeAlumdoorBackend','ForgeAlumdoorDesk'); " +
+    `$names=@(${names}); ` +
     "$services=@($names|%{Get-Service -Name $_ -ErrorAction SilentlyContinue}|?{$_}); " +
     "$services|%{Write-Output ($_.Name + '|' + $_.Status)}";
-  const output = powershell(script, 'inspect Alumdoor runtime services', 'PERMISSION');
+  const output = powershell(script, 'inspect required Alumdoor runtime services', 'PERMISSION');
   return output
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => /^ForgeAlumdoor(?:Backend|Desk)\|/.test(line));
 }
 
-function listenerEvidence() {
+function listenerEvidence(contract) {
+  const ports = contract.ports.join(',');
   const script =
     "$listeners=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|" +
-    "?{$_.LocalPort -in @(8799,5173)}); " +
+    `?{$_.LocalPort -in @(${ports})}); ` +
     "$listeners|%{ $p=Get-CimInstance Win32_Process -Filter (\"ProcessId=\" + $_.OwningProcess) " +
     "-ErrorAction SilentlyContinue; Write-Output " +
     "(\"port=\"+$_.LocalPort+\" pid=\"+$_.OwningProcess+\" name=\"+$p.Name+\" parent=\"+$p.ParentProcessId+\" exe=\"+$p.ExecutablePath) }";
-  return powershell(script, 'inspect local runtime listeners', 'PERMISSION')
+  return powershell(script, 'inspect required local runtime listeners', 'PERMISSION')
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 }
 
-function waitForPortsQuiet() {
+function waitForPortsQuiet(contract) {
+  const ports = contract.ports.join(',');
   const script =
     "$deadline=(Get-Date).AddSeconds(30); $quietSince=$null; do { " +
-    "$l=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|?{$_.LocalPort -in @(8799,5173)}); " +
+    `$l=@(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|?{$_.LocalPort -in @(${ports})}); ` +
     "if($l.Count -eq 0){ if($null -eq $quietSince){$quietSince=Get-Date}; " +
     "if(((Get-Date)-$quietSince).TotalSeconds -ge 3){exit 0} } else {$quietSince=$null}; " +
     "Start-Sleep -Milliseconds 500 } while((Get-Date)-lt $deadline); " +
     "$l|%{ $p=Get-CimInstance Win32_Process -Filter (\"ProcessId=\"+$_.OwningProcess) -ErrorAction SilentlyContinue; " +
     "Write-Output (\"BLOCKING_LISTENER port=\"+$_.LocalPort+\" pid=\"+$_.OwningProcess+\" name=\"+$p.Name+\" parent=\"+$p.ParentProcessId+\" exe=\"+$p.ExecutablePath) }; exit 9";
-  powershell(script, 'quiesce managed local runtime', 'PERMISSION');
+  powershell(script, `quiesce required local runtime ports=${ports}`, 'PERMISSION');
 }
 
 function quiesceRuntime(repoRoot) {
@@ -690,39 +717,41 @@ function quiesceRuntime(repoRoot) {
     throw executionError('DEPENDENCY', `Runtime maintenance helper missing: ${maintenance}`);
   }
 
-  const services = managedRuntimeServices();
+  const contract = runtimeServiceContract();
+  const services = managedRuntimeServices(contract);
   if (services.length === 0) {
-    const listeners = listenerEvidence();
+    const listeners = listenerEvidence(contract);
     if (listeners.length) {
       throw executionError(
         'PERMISSION',
-        `Unmanaged local runtime listeners block safe D1 mutation. Stop them explicitly; blind taskkill is forbidden. ${listeners.join(' | ')}`,
+        `Unmanaged required local runtime listeners block safe D1 mutation. Stop them explicitly; blind taskkill is forbidden. ${listeners.join(' | ')}`,
       );
     }
-    console.log('RUNTIME_QUIESCE=PASS mode=no-managed-services listeners=0');
-    return { maintenanceEnabled: false, services: [] };
+    console.log(`RUNTIME_QUIESCE=PASS mode=no-managed-services listeners=0 required_services=${contract.raw}`);
+    return { maintenanceEnabled: false, services: [], maintenanceScope: contract.maintenanceScope };
   }
 
-  run(process.execPath, [maintenance, 'on'], {
+  run(process.execPath, [maintenance, 'on', contract.maintenanceScope], {
     cwd: repoRoot,
-    label: 'enable runtime maintenance',
+    label: 'enable scoped runtime maintenance',
     failureClass: 'PERMISSION',
   });
-  waitForPortsQuiet();
-  console.log(`RUNTIME_QUIESCE=PASS mode=managed services=${services.join(',')}`);
-  return { maintenanceEnabled: true, services };
+  waitForPortsQuiet(contract);
+  console.log(`RUNTIME_QUIESCE=PASS mode=managed services=${services.join(',')} required_services=${contract.raw}`);
+  return { maintenanceEnabled: true, services, maintenanceScope: contract.maintenanceScope };
 }
 
 function restoreRuntime(repoRoot, runtimeState) {
   if (!runtimeState?.maintenanceEnabled) return;
   const maintenance = path.join(repoRoot, 'server', 'scripts', 'alumdoor-runtime-maintenance.mjs');
-  run(process.execPath, [maintenance, 'off'], {
+  const scope = runtimeState.maintenanceScope || 'all';
+  run(process.execPath, [maintenance, 'off', scope], {
     cwd: repoRoot,
-    label: 'disable runtime maintenance',
+    label: 'disable scoped runtime maintenance',
     failureClass: 'PERMISSION',
   });
   runtimeState.maintenanceEnabled = false;
-  console.log('RUNTIME_RESTORE=PASS maintenance=off');
+  console.log(`RUNTIME_RESTORE=PASS maintenance=off scope=${scope}`);
 }
 
 function runReason(repoRoot, wrangler, runDir) {
