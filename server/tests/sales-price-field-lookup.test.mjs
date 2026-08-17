@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { salesItemContext } from "../dist/apps-src/alumdoor-worker/src/sales-item-context.js";
 import { resolveServerPrice } from "../dist/packages/clouderp-pricing/src/index.js";
+import { resolveCommercialPricingPolicy } from "../dist/packages/clouderp-pricing/src/commercial-policy.js";
 
 function workerPlatform(itemPriceRows) {
   const item = {
@@ -175,4 +176,74 @@ test("equal top-priority Pricing Rules fail closed with both rule names", async 
     assert.match(error.message, /RULE-B/);
     return true;
   });
+});
+
+test("commercial pricing policy preserves a signed deduction adjustment", async () => {
+  const rules = [{
+    name: "RULE-DEDUCT",
+    data: {
+      price_list: "BANG-GIA",
+      item_code: "ITEM-1",
+      rule_level: "LINE",
+      effect_type: "ADJUSTMENT",
+      adjustment_basis: "PRICED_QTY",
+      adjustment_rate: "-100",
+      priority: 10,
+      conditions: JSON.stringify([{ field: "price_variant", operator: "eq", value: "NO-CONTROLLER" }]),
+    },
+  }];
+  const result = await resolveCommercialPricingPolicy(pricingContext([], rules), {
+    itemCode: "ITEM-1",
+    priceList: "BANG-GIA",
+    postingDate: "2026-07-31",
+    currency: "VND",
+    currencyScale: 2,
+    qtyMicros: 2_000_000,
+    pricedQtyMicros: 2_000_000,
+    facts: { price_variant: "NO-CONTROLLER" },
+  });
+
+  assert.equal(result.adjustments.length, 1);
+  assert.equal(result.adjustments[0].amount_minor, -20_000);
+  assert.equal(result.adjustments[0].amount, "-200.00");
+});
+
+test("commercial pricing policy enforces server-derived base amount thresholds", async () => {
+  const rules = [{
+    name: "RULE-MINIMUM",
+    data: {
+      price_list: "BANG-GIA",
+      item_code: "ITEM-1",
+      rule_level: "LINE",
+      effect_type: "ADJUSTMENT",
+      adjustment_basis: "FIXED",
+      adjustment_rate: "300000",
+      priority: 10,
+      conditions: JSON.stringify([
+        { field: "price_variant", operator: "eq", value: "DUC-ACCESSORY" },
+        { field: "base_amount", operator: "lt", value: 5000000 },
+      ]),
+    },
+  }];
+  const common = {
+    itemCode: "ITEM-1",
+    priceList: "BANG-GIA",
+    postingDate: "2026-07-31",
+    currency: "VND",
+    currencyScale: 2,
+    qtyMicros: 1_000_000,
+    pricedQtyMicros: 1_000_000,
+  };
+  const matched = await resolveCommercialPricingPolicy(pricingContext([], rules), {
+    ...common,
+    facts: { price_variant: "DUC-ACCESSORY", base_amount: 4_900_000 },
+  });
+  const missed = await resolveCommercialPricingPolicy(pricingContext([], rules), {
+    ...common,
+    facts: { price_variant: "DUC-ACCESSORY", base_amount: 5_000_000 },
+  });
+
+  assert.equal(matched.adjustments.length, 1);
+  assert.equal(matched.adjustments[0].amount, "300000.00");
+  assert.equal(missed.adjustments.length, 0);
 });
