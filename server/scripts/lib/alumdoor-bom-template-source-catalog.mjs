@@ -113,8 +113,9 @@ function sourceTemplateBase({
 }
 
 function makeUcKt4dXnVk() {
-  const productRow = 686;
-  const componentRows = [687, 688, 689, 690, 691, 692, 693, 694, 695, 696, 697, 698, 699, 700, 701, 702, 703, 705, 706, 707, 708, 709, 710, 711];
+  // Real source: product at row 687; components at 688-712 (row 705 is a label-only row).
+  const productRow = 687;
+  const componentRows = [688, 689, 690, 691, 692, 693, 694, 695, 696, 697, 698, 699, 700, 701, 702, 703, 704, 706, 707, 708, 709, 710, 711, 712];
   return sourceTemplateBase({
     name: "SRC-UC-KT-4D-XN-VK",
     itemCode: "TP-UC KT 4D XN-VK",
@@ -137,55 +138,56 @@ function makeUcKt4dXnVk() {
       SCREW_2P_PULLEY: ["NVL-VIS-BANLO2P"],
     },
     deferred: [
-      actualEntry(691, "BOTTOM_SEAL", "Nguồn ghi 'xem lại'; chưa được phép chốt công thức."),
-      actualEntry(693, "FOAM_45CM", "Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm."),
-      actualEntry(695, "PULLEY_34", "Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ."),
-      actualEntry(696, "SPRING", "SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.", [696, 697, 698, 699, 700, 701, 702, 703]),
-      actualEntry(706, "SPRING_STOP_ARM", "Phụ thuộc số lò xo thực tế; nhập actual theo một bộ."),
-      actualEntry(707, "PULL_ROD", "Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ."),
-      actualEntry(710, "SCREW_HEAD_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
-      actualEntry(711, "SCREW_2P_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+      actualEntry(692, "BOTTOM_SEAL", "Nguồn ghi 'xem lại'; chưa được phép chốt công thức."),
+      actualEntry(694, "FOAM_45CM", "Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm."),
+      actualEntry(696, "PULLEY_34", "Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ."),
+      actualEntry(697, "SPRING", "SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.", [697, 698, 699, 700, 701, 702, 703, 704]),
+      actualEntry(707, "SPRING_STOP_ARM", "Phụ thuộc số lò xo thực tế; nhập actual theo một bộ."),
+      actualEntry(708, "PULL_ROD", "Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ."),
+      actualEntry(711, "SCREW_HEAD_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
+      actualEntry(712, "SCREW_2P_PULLEY", "Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ."),
     ],
     rules: [
-      sourceRule(687, {
-        code: "LEAF", key: "LEAF_SHEET", item: "NVL-TON3.8D-XN-VK", uom: "KG/M2", sequence: 10,
-        sourceFormula: "Caopb x (rpbray-30) x SL x 3,6; Production tách từng bộ nên SL=1.",
-        quantity: product({ field: "PB_CAO" }, { field: "PB_RONG", offset: -0.3 }, 3.6),
-      }),
       sourceRule(688, {
+        code: "LEAF", key: "LEAF_SHEET", item: "NVL-TON3.8D-XN-VK", uom: "KG/M2", sequence: 10,
+        sourceFormula: "ĐM: Caopb x (rpbray-30) x SL x 3,6. Project contract chuẩn hóa rộng cắt Úc = PB ray - 0,03 m; Production tách từng bộ nên SL=1.",
+        quantity: product({ field: "PB_CAO" }, { field: "PB_RAY_RONG", offset: -0.03 }, 3.6),
+      }),
+      sourceRule(689, {
         code: "GIA-T", key: "T_BRACKET", item: "NVL-GIAT", uom: "CẶP", sequence: 20,
         sourceFormula: "1 bộ 1 cặp.", quantity: fixed(1),
       }),
-      sourceRule(689, {
+      sourceRule(690, {
         code: "PULY-GAI", key: "SPIKE_PULLEY_WEIGHT", item: "NVL-PULYGAI", uom: "KG/M2", sequence: 30,
         sourceFormula: "Diện tích x SL x 0,126; Production tách từng bộ nên SL=1.", quantity: field("billable_area_sqm", 0.126),
       }),
-      sourceRule(690, {
+      sourceRule(691, {
         code: "V-DAY", key: "BOTTOM_BAR_WEIGHT", item: "NVL-VDAY-TDU", uom: "KG/M", sequence: 40,
-        sourceFormula: "(rộng pbray - 30cm) x 0,6 x SL; Production tách từng bộ nên SL=1.", quantity: field("PB_RONG", 0.6, -0.3),
+        sourceFormula: "ĐM: (rộng pbray-30) x 0,6 x SL. Project contract chuẩn hóa phần trừ = 0,03 m; Production tách từng bộ nên SL=1.",
+        quantity: field("PB_RAY_RONG", 0.6, -0.03),
       }),
-      sourceRule(692, {
+      sourceRule(693, {
         code: "RAY-U70", key: "RAY_U70_WEIGHT", item: "NVL-TOLE1.2x190-KRON", uom: "KG/M", sequence: 50,
         sourceFormula: "(chiều cao - 10cm) x SL x 2 ray x 1,78; Production tách từng bộ nên SL=1.", quantity: field("PB_CAO", 3.56, -0.1),
       }),
-      sourceRule(694, {
+      sourceRule(695, {
         code: "TRUC-34", key: "SHAFT_34_WEIGHT", item: "NVL-TRUC34", uom: "KG/M", sequence: 60,
-        sourceFormula: "(rộng pbray + 40cm) x 1,7 x SL; Production tách từng bộ nên SL=1.", quantity: field("PB_RONG", 1.7, 0.4),
+        sourceFormula: "(rộng pbray + 40cm) x 1,7 x SL; Production tách từng bộ nên SL=1.", quantity: field("PB_RAY_RONG", 1.7, 0.4),
       }),
-      sourceRule(705, {
+      sourceRule(706, {
         code: "CUM-HAM", key: "PLASTIC_STOP_CLAMP", item: "NVL-CHNHUA", uom: "CÁI", sequence: 70,
         sourceFormula: "1 bộ x 2 cái.", quantity: fixed(2),
       }),
-      sourceRule(708, {
+      sourceRule(709, {
         code: "GOI-SAT", key: "STEEL_BEARING", item: "NVL-GOIFE", uom: "CÁI", sequence: 80,
         sourceFormula: "1 bộ x 2 cái.", quantity: fixed(2),
       }),
-      sourceRule(709, {
+      sourceRule(710, {
         code: "BAT-KHOA", key: "FLOOR_LOCK_BRACKET_WEIGHT", item: "NVL-BKAN", uom: "KG/CẶP", sequence: 90,
         sourceFormula: "1 bộ x 4 cặp x 0,1925.", quantity: fixed(0.77),
       }),
     ],
-    note: "Chuẩn hóa trực tiếp block ĐM 686-711. Dòng không đủ công thức được bắt buộc nhập actual theo một bộ; thiếu slot thì materializer chặn.",
+    note: "Chuẩn hóa trực tiếp block ĐM 687-712. Source-row lineage đối chiếu extractor thực tế; dòng không đủ công thức vẫn bắt buộc actual.",
   });
 }
 
@@ -235,7 +237,7 @@ function makeUcKt46Template({ name, itemCode, productRow, leafItem, sourceProduc
       }),
       sourceRule(row(5), {
         code: "RON-DAY", key: "BOTTOM_SEAL", item: "NVL-RONDAYUC", uom: "KG/M ngang", sequence: 50,
-        sourceFormula: "ron đáy = chiều rộng pbray x 0,0077.", quantity: field("PB_RONG", 0.0077),
+        sourceFormula: "ron đáy = chiều rộng pbray x 0,0077.", quantity: field("PB_RAY_RONG", 0.0077),
       }),
       sourceRule(row(18), {
         code: "CUM-HAM", key: "PLASTIC_STOP_CLAMP", item: "NVL-CHNHUA", uom: "CÁI", sequence: 70,
@@ -258,28 +260,28 @@ const UC_KT_46_VARIANTS = [
   {
     name: "SRC-UC-KT-46D-XN-VK",
     itemCode: "TP-UC KT 4.6D XN-VK",
-    productRow: 731,
+    productRow: 732,
     leafItem: "NVL-TOLE0.42x598-XN-VK",
     sourceProductName: "CỬA ÚC KT 4.6D XN-VK",
   },
   {
     name: "SRC-UC-KT-46D-XR-CF",
     itemCode: "TP-UC KT 4.6D XR-CF",
-    productRow: 756,
+    productRow: 757,
     leafItem: "NVL-TOLE0.42x598-XR-CF",
     sourceProductName: "CỬA ÚC KT 4.6D XR-CAFE",
   },
   {
     name: "SRC-UC-KT-46D-TR-XLC",
     itemCode: "TP-UC KT 4.6D TRẮNG-XLC",
-    productRow: 781,
+    productRow: 782,
     leafItem: "NVL-TOLE0.42x598-TR-XLC",
     sourceProductName: "CỬA ÚC KT 4.6D TR-XLC",
   },
   {
     name: "SRC-UC-KT-46D-KU-GU",
     itemCode: "TP-UC KT 4.6D KU-GU",
-    productRow: 806,
+    productRow: 807,
     leafItem: "NVL-TOLE0.42x598-KU-GU",
     sourceProductName: "CỬA ÚC KT 4.6D KU-GU",
   },
@@ -287,12 +289,8 @@ const UC_KT_46_VARIANTS = [
 
 /**
  * Source-backed BOM normalization catalog.
- *
- * Safety rule: a blank/ambiguous source formula never inherits a calculation merely
- * because a neighboring product looks similar. Shared factories may share structure,
- * but only source-explicit calculations become automatic rules; everything else is an
- * explicit actual slot on Sales Order Item. Actual slots are also pinned to source SKU
- * allowlists so a matching slot cannot silently substitute a different material.
+ * Blank/ambiguous formulas never inherit a calculation from a neighboring product.
+ * Source rows are the real Excel/extractor row numbers, not zero-based indexes.
  */
 export const BOM_TEMPLATE_SOURCE_CATALOG = [
   makeUcKt4dXnVk(),
