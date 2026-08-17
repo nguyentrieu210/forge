@@ -227,7 +227,6 @@ test("commercial pricing policy preserves a signed deduction adjustment", async 
 
   assert.equal(result.adjustments.length, 1);
   assert.equal(result.adjustments[0].amount_minor, -20_000);
-  assert.equal(result.adjustments[0].amount, "-200.00");
 });
 
 test("commercial pricing policy enforces server-derived base amount thresholds", async () => {
@@ -266,6 +265,6 @@ test("commercial pricing policy enforces server-derived base amount thresholds",
   });
 
   assert.equal(matched.adjustments.length, 1);
-  assert.equal(matched.adjustments[0].amount, "300000.00");
+  assert.equal(matched.adjustments[0].amount_minor, 30_000_000);
   assert.equal(missed.adjustments.length, 0);
 });
