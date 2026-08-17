@@ -10,6 +10,7 @@ import {
   normalizeWinPath,
   parseArgs,
 } from './run-local-import.mjs';
+import { assertPurchaseSqlTargets } from './real-purchase-adapter.mjs';
 
 test('parse known adapters and source', () => {
   assert.deepEqual(parseArgs(['item-master', '--source=C:\\alumdoor\\local-imports\\items.json']), {
@@ -17,6 +18,7 @@ test('parse known adapters and source', () => {
     options: { source: 'C:\\alumdoor\\local-imports\\items.json' },
   });
   assert.equal(parseArgs(['bootstrap']).adapter, 'bootstrap');
+  assert.equal(parseArgs(['real-purchase']).adapter, 'real-purchase');
 });
 
 test('reject unknown adapter', () => {
@@ -89,6 +91,35 @@ test('Wrangler local guard rejects remote and missing --local', () => {
   );
   assert.doesNotThrow(() =>
     assertLocalWranglerArgs(['d1', 'execute', 'db', '--local', '--command', 'SELECT 1']),
+  );
+});
+
+test('Real Purchase SQL allowlist accepts only canonical draft targets', () => {
+  assert.deepEqual(
+    assertPurchaseSqlTargets(`
+      INSERT INTO documents (tenant_id) SELECT 'demo';
+      INSERT INTO document_search (tenant_id) SELECT 'demo';
+    `),
+    ['document_search', 'documents'],
+  );
+});
+
+test('Real Purchase SQL allowlist rejects extra or destructive targets', () => {
+  assert.throws(
+    () => assertPurchaseSqlTargets(`
+      INSERT INTO documents (tenant_id) SELECT 'demo';
+      INSERT INTO document_search (tenant_id) SELECT 'demo';
+      INSERT INTO master_records (tenant_id) SELECT 'demo';
+    `),
+    /forbidden write target: master_records/,
+  );
+  assert.throws(
+    () => assertPurchaseSqlTargets(`
+      INSERT INTO documents (tenant_id) SELECT 'demo';
+      INSERT INTO document_search (tenant_id) SELECT 'demo';
+      DELETE FROM documents WHERE tenant_id='demo';
+    `),
+    /forbidden mutation verb: DELETE FROM documents/,
   );
 });
 
