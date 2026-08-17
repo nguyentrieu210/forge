@@ -1,0 +1,55 @@
+name: Alumdoor Bootstrap Log Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Read bootstrap failure evidence only
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $repo = 'C:\alumdoor'
+          Write-Host '=== SOURCE ==='
+          git -C $repo rev-parse HEAD
+          git -C $repo status --short --branch
+
+          Write-Host '=== MUTATION LOCK ==='
+          $lock = Join-Path $repo 'local-locks\local-d1-mutation.lock'
+          Write-Host "LOCK_EXISTS=$(Test-Path -LiteralPath $lock)"
+          if (Test-Path -LiteralPath $lock) { Get-Content -Raw $lock }
+
+          Write-Host '=== SERVICES / PORTS ==='
+          Get-Service ForgeAlumdoorBackend,ForgeAlumdoorDesk,ForgeAlumdoorWorker -ErrorAction SilentlyContinue |
+            Format-Table Status,Name,StartType -AutoSize
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalPort -in @(8799,5173) } |
+            Format-Table LocalAddress,LocalPort,OwningProcess -AutoSize
+
+          Write-Host '=== RUN-LOCAL LOG TAIL ==='
+          $log = Join-Path $repo 'run-local.log'
+          if (-not (Test-Path -LiteralPath $log)) { throw "Missing $log" }
+          Get-Content -LiteralPath $log -Tail 320 |
+            ForEach-Object {
+              $_ `
+                -replace '(?i)(password|secret|token|authorization|cookie)(\s*[:=]\s*)[^\s]+', '$1$2[REDACTED]' `
+                -replace '(?i)(local-dev-password-1)', '[REDACTED_PASSWORD]'
+            }
+
+          Write-Host '=== RECENT BOOTSTRAP RUN EVIDENCE ==='
+          $root = Join-Path $repo 'local-backups\execution-layer\bootstrap'
+          if (Test-Path $root) {
+            Get-ChildItem $root -Directory | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 3 | ForEach-Object {
+              Write-Host "DIR=$($_.FullName)"
+              $run = Join-Path $_.FullName 'run.json'
+              if (Test-Path $run) { Get-Content -Raw $run }
+            }
+          }
+          Write-Host 'ALUMDOOR_BOOTSTRAP_LOG_DIAGNOSTICS_PASS'
