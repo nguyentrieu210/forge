@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { assertCanonicalItemPayload, normalizeCanonicalItemGroup } from "./lib/alumdoor-item-import-policy.mjs";
+import {
+  assertCanonicalItemPayload,
+  assertSourceItemCodePreserved,
+  normalizeCanonicalItemGroup,
+} from "./lib/alumdoor-item-import-policy.mjs";
 
 const [sqlArg = "server/imports/alumdoor-item-only-2026-08-11.sql", outputArg = "alumdoor-item-reference-map.json"] = process.argv.slice(2);
 const sqlPath = resolve(sqlArg);
@@ -51,23 +55,38 @@ for (const line of sql.split(/\r?\n/)) {
     continue;
   }
 
+  const sourceCodeOriginal = String(values[3] ?? "").trim();
+  const payloadCode = String(payload.item_code ?? "").trim();
+  try {
+    assertSourceItemCodePreserved(sourceCodeOriginal, payloadCode, "Legacy Item SQL");
+  } catch (error) {
+    invalid.push({
+      source_code_original: sourceCodeOriginal,
+      item_code: payloadCode,
+      issue: "source_item_code_changed",
+      detail: error.message,
+    });
+    continue;
+  }
+
   let canonicalGroup;
   try {
     canonicalGroup = normalizeCanonicalItemGroup(payload.item_group);
   } catch (error) {
-    invalid.push({ item_code: payload.item_code ?? values[3], issue: "noncanonical_item_group", detail: error.message });
+    invalid.push({ item_code: payloadCode, source_code_original: sourceCodeOriginal, issue: "noncanonical_item_group", detail: error.message });
     continue;
   }
   const canonicalPayload = { ...payload, item_group: canonicalGroup };
   try {
     assertCanonicalItemPayload(canonicalPayload);
   } catch (error) {
-    invalid.push({ item_code: payload.item_code ?? values[3], issue: "payload_policy_failure", detail: error.message });
+    invalid.push({ item_code: payloadCode, source_code_original: sourceCodeOriginal, issue: "payload_policy_failure", detail: error.message });
   }
 
-  const code = payload.item_code ?? values[3];
+  const code = payloadCode;
   items[code] = {
     item_code: code,
+    source_code_original: sourceCodeOriginal,
     item_name: payload.item_name ?? "",
     item_group: canonicalGroup,
     stock_uom: payload.stock_uom ?? "",
@@ -93,6 +112,9 @@ const report = {
   source: sqlPath,
   item_count: Object.keys(items).length,
   invalid_count: invalid.length,
+  policy: {
+    preserve_source_item_code: true,
+  },
   group_counts: Object.fromEntries(Object.entries(groupCounts).sort(([a], [b]) => a.localeCompare(b, "vi"))),
   invalid,
   items,
@@ -105,4 +127,5 @@ console.log(JSON.stringify({
   output: outputPath,
 }, null, 2));
 if (report.item_count === 0) throw new Error("Không đọc được Item nào từ SQL tham chiếu");
+if (report.invalid_count > 0) throw new Error(`ALUMDOOR_ITEM_REFERENCE_MAP_BLOCKED invalid=${report.invalid_count}`);
 console.log(`ALUMDOOR_ITEM_REFERENCE_MAP_PASS items=${report.item_count} invalid=${report.invalid_count}`);

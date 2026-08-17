@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
   CANONICAL_ITEM_GROUPS,
   assertAtomicItemUom,
+  assertSourceItemCodePreserved,
   normalizeCanonicalItemGroup,
 } from "./lib/alumdoor-item-import-policy.mjs";
 
@@ -167,7 +168,9 @@ const occurrenceCount = new Map();
 
 for (const row of rows) {
   const name = row["TÊN SP"] ?? "";
-  let code = row["Mã SP"] ?? "";
+  const sourceCodeOriginal = row["Mã SP"] ?? "";
+  let code = sourceCodeOriginal;
+  let codeOrigin = "source";
   const sourceGroup = row["Nhóm SP"] ?? "";
   const sourceUom = row["ĐVT"] ?? "";
 
@@ -182,20 +185,35 @@ for (const row of rows) {
       continue;
     }
     code = override;
+    codeOrigin = "explicit_override_for_blank_source";
     warnings.push({
       excel_row: row.excel_row,
       issue: "filled_known_missing_code",
       item_name: name,
+      source_code_original: null,
       assigned_code: code,
     });
+  } else {
+    try {
+      assertSourceItemCodePreserved(sourceCodeOriginal, code, `Excel row ${row.excel_row}`);
+    } catch (error) {
+      blockers.push({
+        excel_row: row.excel_row,
+        issue: "source_item_code_changed",
+        source_code_original: sourceCodeOriginal,
+        item_code: code,
+        detail: error.message,
+      });
+      continue;
+    }
   }
 
   if (code.startsWith("TRU-")) {
-    excluded.push({ excel_row: row.excel_row, item_code: code, reason: "sales_adjustment" });
+    excluded.push({ excel_row: row.excel_row, item_code: code, source_code_original: sourceCodeOriginal || null, reason: "sales_adjustment" });
     continue;
   }
   if (EXCLUDED_COMPOSITES.has(code)) {
-    excluded.push({ excel_row: row.excel_row, item_code: code, reason: "composite_not_atomic_item" });
+    excluded.push({ excel_row: row.excel_row, item_code: code, source_code_original: sourceCodeOriginal || null, reason: "composite_not_atomic_item" });
     continue;
   }
 
@@ -206,6 +224,7 @@ for (const row of rows) {
       excel_row: row.excel_row,
       issue: "invalid_item_uom",
       item_code: code,
+      source_code_original: sourceCodeOriginal || null,
       item_name: name,
       source_uom: sourceUom,
       detail: error.message,
@@ -221,6 +240,7 @@ for (const row of rows) {
         excel_row: row.excel_row,
         issue: "ambiguous_motor_item_group",
         item_code: code,
+        source_code_original: sourceCodeOriginal || null,
         item_name: name,
         source_group: sourceGroup,
         allowed_groups: [...MOTOR_GROUPS],
@@ -235,6 +255,7 @@ for (const row of rows) {
         excel_row: row.excel_row,
         issue: "invalid_item_group",
         item_code: code,
+        source_code_original: sourceCodeOriginal || null,
         item_name: name,
         source_group: sourceGroup,
         detail: error.message,
@@ -246,6 +267,7 @@ for (const row of rows) {
       excel_row: row.excel_row,
       issue: "unsupported_source_item_group",
       item_code: code,
+      source_code_original: sourceCodeOriginal || null,
       item_name: name,
       source_group: sourceGroup,
     });
@@ -256,7 +278,9 @@ for (const row of rows) {
   occurrenceCount.set(code, occurrence + 1);
   accepted.push({
     excel_row: row.excel_row,
-    source_code: code,
+    source_code_original: sourceCodeOriginal || null,
+    item_code: code,
+    code_origin: codeOrigin,
     occurrence: occurrence + 1,
     item_name: name,
     source_group: sourceGroup,
@@ -282,6 +306,8 @@ const audit = {
   blocker_count: blockers.length,
   warning_count: warnings.length,
   policy: {
+    preserve_source_item_code: true,
+    blank_source_code_requires_explicit_override: true,
     derived_uom_is_blocker: true,
     unknown_item_group_is_blocker: true,
     motor_and_battery_group_requires_explicit_map: true,

@@ -32,6 +32,7 @@ async function runCase(name, tsv, map, shouldPass, expectedIssue) {
   if (!shouldPass && !report.blockers.some((row) => row.issue === expectedIssue)) {
     throw new Error(`${name}: không tìm thấy blocker ${expectedIssue}`);
   }
+  return report;
 }
 
 const header = "Mã SP\tTÊN SP\tNhóm SP\tĐVT\n";
@@ -49,12 +50,38 @@ await runCase(
   false,
   "ambiguous_motor_item_group",
 );
-await runCase(
+const validReport = await runCase(
   "valid-catalog",
   `${header}TP-DOOR-DEMO\tCỬA DEMO\tCửa CN Đức\tM2\nTP-MT-DEMO\tMOTOR DEMO\tMotor & Bình điện\tBỘ\n`,
   { "TP-MT-DEMO": "Motor" },
   true,
   null,
 );
+if (!validReport.policy?.preserve_source_item_code) {
+  throw new Error("Preflight phải công bố preserve_source_item_code=true");
+}
+for (const row of validReport.accepted) {
+  if (row.source_code_original !== row.item_code) {
+    throw new Error(`${row.item_code}: mã canonical phải giữ nguyên mã nguồn`);
+  }
+  if (row.code_origin !== "source") {
+    throw new Error(`${row.item_code}: code_origin phải là source`);
+  }
+}
+
+const exactCode = "NvL-01/A_b";
+const preserveReport = await runCase(
+  "preserve-exact-source-code",
+  `${header}${exactCode}\tPHỤ KIỆN DEMO\tPhụ kiện\tCÁI\n`,
+  null,
+  true,
+  null,
+);
+if (preserveReport.accepted[0]?.item_code !== exactCode) {
+  throw new Error("Không được upper-case, slugify hoặc thay ký tự item_code nguồn");
+}
+if (preserveReport.accepted[0]?.source_code_original !== exactCode) {
+  throw new Error("Audit phải giữ source_code_original chính xác");
+}
 
 console.log("ALUMDOOR_ITEM_CATALOG_PREFLIGHT_TEST_PASS");
