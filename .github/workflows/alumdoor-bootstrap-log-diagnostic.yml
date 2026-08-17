@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   diagnose-bootstrap-log:
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: [self-hosted]
     timeout-minutes: 5
     env:
       EXPECTED_SHA: 37b88c760d781a4f8642de4006ae015bcde25ad5
