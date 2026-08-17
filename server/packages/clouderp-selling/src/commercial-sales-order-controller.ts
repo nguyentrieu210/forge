@@ -90,6 +90,7 @@ export class CommercialSalesOrderController extends SalesOrderController {
         documentCurrency: input.currency,
         postingDate: input.transaction_date,
         ...(priceUom ? { uom: priceUom } : {}),
+        ...(item.price_variant ? { priceVariant: item.price_variant } : {}),
         pricedQty,
         partyType: "Customer",
         party: input.customer,
@@ -535,7 +536,12 @@ function toPositiveMicros(value: unknown): number {
 }
 
 function multiplyMinorByQty(rateMinor: number, qtyMicros: number, field: string): number {
-  const result = Number((BigInt(rateMinor) * BigInt(qtyMicros) + 500_000n) / 1_000_000n);
+  if (!Number.isSafeInteger(rateMinor) || !Number.isSafeInteger(qtyMicros) || qtyMicros < 0) {
+    throw errors.validation(`${field} exceeds safe integer bounds`);
+  }
+  const product = BigInt(rateMinor) * BigInt(qtyMicros);
+  const roundedAbs = ((product < 0n ? -product : product) + 500_000n) / 1_000_000n;
+  const result = Number(product < 0n ? -roundedAbs : roundedAbs);
   if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
   return result;
 }

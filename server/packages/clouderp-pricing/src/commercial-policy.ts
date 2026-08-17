@@ -141,7 +141,7 @@ export async function resolveCommercialPricingPolicy(
 
   for (const candidate of selectedAdjustments) {
     const basis = adjustmentBasis(candidate.data.adjustment_basis ?? candidate.data.basis);
-    const rateMinor = moneyMinor(
+    const rateMinor = signedMoneyMinor(
       candidate.data.adjustment_rate ?? candidate.data.effect_value ?? candidate.data.rate,
       input.currencyScale,
       `${candidate.name}.adjustment_rate`,
@@ -366,10 +366,11 @@ function adjustmentQtyMicros(input: CommercialPricingPolicyInput, basis: Pricing
 }
 
 function multiplyMinorByQuantity(rateMinor: number, qtyMicros: number, field: string): number {
-  if (!Number.isSafeInteger(rateMinor) || rateMinor < 0) throw errors.validation(`${field}: rate must be a non-negative safe integer`);
+  if (!Number.isSafeInteger(rateMinor)) throw errors.validation(`${field}: rate must be a safe integer`);
   if (!Number.isSafeInteger(qtyMicros) || qtyMicros < 0) throw errors.validation(`${field}: quantity must be a non-negative safe integer`);
-  const rounded = (BigInt(rateMinor) * BigInt(qtyMicros) + 500_000n) / 1_000_000n;
-  const value = Number(rounded);
+  const product = BigInt(rateMinor) * BigInt(qtyMicros);
+  const roundedAbs = ((product < 0n ? -product : product) + 500_000n) / 1_000_000n;
+  const value = Number(product < 0n ? -roundedAbs : roundedAbs);
   if (!Number.isSafeInteger(value)) throw errors.validation(`${field}: amount exceeds safe integer range`);
   return value;
 }
@@ -377,6 +378,12 @@ function multiplyMinorByQuantity(rateMinor: number, qtyMicros: number, field: st
 function moneyMinor(value: unknown, scale: number, label: string): number {
   const minor = toScaledInt(numeric(value, label), scale, label);
   if (minor < 0) throw errors.validation(`${label} cannot be negative`);
+  return minor;
+}
+
+function signedMoneyMinor(value: unknown, scale: number, label: string): number {
+  const minor = toScaledInt(numeric(value, label), scale, label);
+  if (!Number.isSafeInteger(minor)) throw errors.validation(`${label} must be a safe monetary integer`);
   return minor;
 }
 
