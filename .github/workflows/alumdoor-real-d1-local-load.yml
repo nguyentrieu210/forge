@@ -94,7 +94,7 @@ jobs:
       - name: Import real data first pass
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = 'Continue'
           $d = $env:ALUMDOOR_REAL_DIR
           $itemLines = @(& node server/scripts/import-alumdoor-item-master-local.mjs (Join-Path $d 'items.json') (Join-Path $d 'preimage-items-1.json') 2>&1)
           $itemExit = $LASTEXITCODE
@@ -121,7 +121,7 @@ jobs:
       - name: Import real data second pass and require idempotency
         shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
+          $ErrorActionPreference = 'Continue'
           $d = $env:ALUMDOOR_REAL_DIR
           $itemLines = @(& node server/scripts/import-alumdoor-item-master-local.mjs (Join-Path $d 'items.json') (Join-Path $d 'preimage-items-2.json') 2>&1)
           $itemExit = $LASTEXITCODE
