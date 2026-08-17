@@ -75,9 +75,19 @@ const dataOf = (body) => body?.data ?? body?.message ?? body;
 async function listExisting() {
   const fields = encodeURIComponent(JSON.stringify(['name','item','company','quantity']));
   const filters = encodeURIComponent(JSON.stringify([['Bill of Materials','company','=','ALUMDOOR']]));
-  const body = await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}?fields=${fields}&filters=${filters}&limit_page_length=5000`);
-  const rows = dataOf(body);
-  return Array.isArray(rows) ? rows : [];
+  // The list endpoint caps a page at 100 rows no matter what limit_page_length asks for, so a
+  // single request silently truncated the existing set and every BOM past the first 100 was
+  // reported as no_exact_persisted_bom. Page until a short page comes back.
+  const pageSize = 100;
+  const all = [];
+  for (let start = 0; ; start += pageSize) {
+    const body = await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}?fields=${fields}&filters=${filters}&limit_page_length=${pageSize}&limit_start=${start}`);
+    const rows = dataOf(body);
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return all;
 }
 async function getBom(name) {
   const body = await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}/${encodeURIComponent(name)}`);
