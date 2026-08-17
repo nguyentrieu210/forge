@@ -65,9 +65,10 @@ function lineBlockers(row, itemManifest, supplierManifest) {
 export function preflightRealPurchaseRows(rows, options = {}) {
   const itemManifest = manifestMap(options.item_manifest, "item_code");
   const supplierManifest = manifestMap(options.supplier_manifest, "supplier_name");
+  const historicalDraft = options.historical_draft === true;
   const globals = [];
   if (!clean(options.company)) globals.push("COMPANY_NOT_RESOLVED");
-  if (!clean(options.warehouse)) globals.push("WAREHOUSE_NOT_RESOLVED");
+  if (!historicalDraft && !clean(options.warehouse)) globals.push("WAREHOUSE_NOT_RESOLVED");
 
   const audited = rows.map((row) => ({
     ...row,
@@ -127,10 +128,14 @@ export function preflightRealPurchaseRows(rows, options = {}) {
   const blockerCodes = unique([...globals, ...importable.flatMap((row) => row.blockers)]);
   const ready = documents.filter((doc) => doc.status === "READY").length;
   const draftAuthorized = blockerCodes.length === 0;
-  const submitBlockers = options.stock_cutoff_frozen === true ? [] : ["STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK"];
+  const submitBlockers = [
+    ...(options.stock_cutoff_frozen === true ? [] : ["STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK"]),
+    ...(historicalDraft ? ["HISTORICAL_DRAFT_SUBMIT_FORBIDDEN"] : []),
+  ];
 
   return {
-    format: "alumdoor-real-purchase-preflight/v2",
+    format: "alumdoor-real-purchase-preflight/v3",
+    mode: historicalDraft ? "historical_draft" : "operational",
     source_purchase_row_count: rows.length,
     classification_counts: {
       PURCHASE_ORDER: 0,
@@ -163,7 +168,7 @@ export function preflightRealPurchaseRows(rows, options = {}) {
     documents,
     mutation_authorized: draftAuthorized,
     draft_mutation_authorized: draftAuthorized,
-    submit_authorized: draftAuthorized && submitBlockers.length === 0,
+    submit_authorized: !historicalDraft && draftAuthorized && submitBlockers.length === 0,
     verdict: draftAuthorized ? "PURCHASE_IMPORT_DRAFT_PREFLIGHT_PASS" : "PURCHASE_IMPORT_BLOCKED",
   };
 }
