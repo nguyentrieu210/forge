@@ -55,10 +55,10 @@ jobs:
           echo 'second-pass generator: ZERO DIFF'
       - name: Focused generator regression
         run: node --test server/tests/alumdoor-v2-generator-reproducibility.test.mjs
-      - name: Brief check
-        run: pnpm --dir server run brief:check
       - name: Server build
         run: pnpm run server:build
+      - name: Brief check
+        run: pnpm --dir server run brief:check
       - name: Diff hygiene
         run: git diff --check
       - name: Commit and remove temporary probes
