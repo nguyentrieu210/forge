@@ -6,6 +6,7 @@ on:
       - 'apps/alumdoor/docs/nguon/**'
       - 'server/scripts/extract-alumdoor-real-source-records.mjs'
       - 'server/scripts/build-alumdoor-item-master-payload.mjs'
+      - 'server/scripts/audit-alumdoor-real-bom-source.mjs'
       - 'server/scripts/build-alumdoor-real-bom-payload.mjs'
       - 'server/scripts/build-alumdoor-real-aluminium-lot-payload.mjs'
       - 'server/scripts/import-alumdoor-real-bom-local.mjs'
@@ -28,6 +29,8 @@ jobs:
           mkdir -p /tmp/alumdoor-real
           node server/scripts/extract-alumdoor-real-source-records.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/source-report.json
           node server/scripts/build-alumdoor-item-master-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/items-audit.json
+      - name: Inventory real BOM formulas and UOMs
+        run: node server/scripts/audit-alumdoor-real-bom-source.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/bom-source-audit.json
       - name: Build real BOM payload
         run: node server/scripts/build-alumdoor-real-bom-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/boms.json
       - name: Build real Aluminium Lot payload
