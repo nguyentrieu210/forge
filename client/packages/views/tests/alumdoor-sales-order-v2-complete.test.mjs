@@ -84,3 +84,12 @@ test("dirty close and keyboard-first data entry are explicit", () => {
   assert.match(grid, /aria-label=\{`Nhân bản dòng/);
   assert.match(grid, /aria-label=\{`Xóa dòng/);
 });
+
+
+test("complete grid consumes canonical ray_type without geometry constants", () => {
+  assert.match(grid, /ray_type: "Loại ray"/);
+  assert.match(grid, /fieldname === "ray_type"/);
+  assert.match(workbench, /ray_type: line\.ray_type/);
+  assert.match(workbench, /ray_type: undefined/);
+  assert.doesNotMatch(grid + workbench, /0\.05|0\.08/);
+});
