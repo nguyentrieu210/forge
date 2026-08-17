@@ -1,0 +1,160 @@
+name: Alumdoor Real D1 Local Load
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/scripts/**alumdoor**'
+      - 'server/scripts/lib/alumdoor-**'
+      - 'apps/alumdoor/docs/nguon/**'
+      - 'apps/alumdoor/docs/REAL-DATA-D1-LOAD-EXECUTION.md'
+      - '.github/workflows/alumdoor-real-d1-local-load.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-real-d1-local-load
+  cancel-in-progress: false
+
+jobs:
+  load-local-real-data:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 937
+    runs-on: [self-hosted]
+    timeout-minutes: 45
+    env:
+      FORGE_ORIGIN: http://127.0.0.1:8799
+      FORGE_ADMIN_USER: dev@example.com
+      FORGE_ADMIN_PASSWORD: local-dev-password-1
+    steps:
+      - name: Checkout approved real-data branch
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 1
+
+      - name: Guard local Alumdoor runtime and repository
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $local = 'C:\alumdoor'
+          if (-not (Test-Path (Join-Path $local '.git'))) { throw 'C:\alumdoor is not a Git checkout.' }
+          $origin = (git -C $local remote get-url origin).Trim()
+          if ($LASTEXITCODE -ne 0 -or $origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') {
+            throw "Unexpected local repository origin: $origin"
+          }
+          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local backend 8799 is not healthy.' }
+          if (-not (Test-Path (Join-Path $local 'server\scripts\backup-local-state.mjs'))) {
+            throw 'Local state backup script is unavailable.'
+          }
+          Write-Host 'ALUMDOOR_REAL_D1_LOCAL_GUARD_PASS'
+
+      - name: Backup local D1 state before mutation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node 'C:\alumdoor\server\scripts\backup-local-state.mjs'
+          if ($LASTEXITCODE -ne 0) { throw 'Local D1/Wrangler backup failed.' }
+          Write-Host 'ALUMDOOR_REAL_D1_BACKUP_PASS'
+
+      - name: Build canonical real-data payloads
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = Join-Path $env:RUNNER_TEMP "alumdoor-real-d1-$env:GITHUB_RUN_ID"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          "ALUMDOOR_REAL_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & node server/scripts/extract-alumdoor-real-source-records.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'source-report.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Real source extraction failed.' }
+          & node server/scripts/build-alumdoor-item-master-payload.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'items.json') (Join-Path $dir 'items-audit.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Real Item payload build failed.' }
+          & node server/scripts/build-alumdoor-real-bom-payload.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'items.json') (Join-Path $dir 'boms.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Real BOM payload build failed.' }
+          & node server/scripts/build-alumdoor-real-aluminium-lot-payload.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'items.json') (Join-Path $dir 'lots.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Real Aluminium Lot payload build failed.' }
+          & node -e "const fs=require('fs'),d=process.argv[1];const i=JSON.parse(fs.readFileSync(d+'\\items.json')),b=JSON.parse(fs.readFileSync(d+'\\boms.json')),l=JSON.parse(fs.readFileSync(d+'\\lots.json'));const c=b.boms.reduce((n,x)=>n+(x.items||[]).length,0);if(!i.item_count||!b.bom_count||!l.lot_count)process.exit(2);console.log('ALUMDOOR_REAL_PAYLOADS_READY items='+i.item_count+' boms='+b.bom_count+' bom_children='+c+' lots='+l.lot_count)" $dir
+          if ($LASTEXITCODE -ne 0) { throw 'Payload non-empty guard failed.' }
+
+      - name: Ensure Aluminium Lot local DocType
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node server/scripts/ensure-alumdoor-aluminium-lot-doctype-local.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Aluminium Lot schema ensure failed.' }
+
+      - name: Import real data first pass
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $d = $env:ALUMDOOR_REAL_DIR
+          $itemLines = @(& node server/scripts/import-alumdoor-item-master-local.mjs (Join-Path $d 'items.json') (Join-Path $d 'preimage-items-1.json') 2>&1)
+          $itemExit = $LASTEXITCODE
+          $itemLines | ForEach-Object { Write-Host $_ }
+          if ($itemExit -ne 0) { throw 'First-pass Item import failed.' }
+          $bomLines = @(& node server/scripts/import-alumdoor-real-bom-local.mjs (Join-Path $d 'boms.json') (Join-Path $d 'preimage-boms-1.json') 2>&1)
+          $bomExit = $LASTEXITCODE
+          $bomLines | ForEach-Object { Write-Host $_ }
+          if ($bomExit -ne 0) { throw 'First-pass BOM import failed.' }
+          $lotLines = @(& node server/scripts/import-alumdoor-real-aluminium-lot-local.mjs (Join-Path $d 'lots.json') (Join-Path $d 'preimage-lots-1.json') 2>&1)
+          $lotExit = $LASTEXITCODE
+          $lotLines | ForEach-Object { Write-Host $_ }
+          if ($lotExit -ne 0) { throw 'First-pass Aluminium Lot import failed.' }
+          Write-Host 'ALUMDOOR_REAL_D1_FIRST_IMPORT_PASS'
+
+      - name: Audit local D1 after first import
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $d = $env:ALUMDOOR_REAL_DIR
+          & node server/scripts/audit-alumdoor-real-d1-local.mjs (Join-Path $d 'items.json') (Join-Path $d 'boms.json') (Join-Path $d 'lots.json')
+          if ($LASTEXITCODE -ne 0) { throw 'First-pass local D1 audit failed.' }
+
+      - name: Import real data second pass and require idempotency
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $d = $env:ALUMDOOR_REAL_DIR
+          $itemLines = @(& node server/scripts/import-alumdoor-item-master-local.mjs (Join-Path $d 'items.json') (Join-Path $d 'preimage-items-2.json') 2>&1)
+          $itemExit = $LASTEXITCODE
+          $itemLines | ForEach-Object { Write-Host $_ }
+          if ($itemExit -ne 0 -or (($itemLines -join "`n") -notmatch 'ALUMDOOR_ITEM_LOCAL_IMPORT_PASS created=0 ')) { throw 'Second-pass Item import is not idempotent.' }
+          $bomLines = @(& node server/scripts/import-alumdoor-real-bom-local.mjs (Join-Path $d 'boms.json') (Join-Path $d 'preimage-boms-2.json') 2>&1)
+          $bomExit = $LASTEXITCODE
+          $bomLines | ForEach-Object { Write-Host $_ }
+          if ($bomExit -ne 0 -or (($bomLines -join "`n") -notmatch 'ALUMDOOR_REAL_BOM_IMPORT_PASS created=0 ')) { throw 'Second-pass BOM import is not idempotent.' }
+          $lotLines = @(& node server/scripts/import-alumdoor-real-aluminium-lot-local.mjs (Join-Path $d 'lots.json') (Join-Path $d 'preimage-lots-2.json') 2>&1)
+          $lotExit = $LASTEXITCODE
+          $lotLines | ForEach-Object { Write-Host $_ }
+          if ($lotExit -ne 0 -or (($lotLines -join "`n") -notmatch 'ALUMDOOR_REAL_ALUMINIUM_LOT_IMPORT_PASS created=0 ')) { throw 'Second-pass Aluminium Lot import is not idempotent.' }
+          Write-Host 'ALUMDOOR_REAL_D1_IDEMPOTENCY_PASS'
+
+      - name: Re-audit and run domain smoke
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $d = $env:ALUMDOOR_REAL_DIR
+          & node server/scripts/audit-alumdoor-real-d1-local.mjs (Join-Path $d 'items.json') (Join-Path $d 'boms.json') (Join-Path $d 'lots.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Second-pass local D1 audit failed.' }
+          & node server/scripts/smoke-alumdoor-real-d1-local.mjs (Join-Path $d 'items.json') (Join-Path $d 'boms.json') (Join-Path $d 'lots.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Real-data domain smoke failed.' }
+          Write-Host 'ALUMDOOR_REAL_D1_FULL_LOAD_PASS'
+
+      - name: Preserve failure diagnostics
+        if: failure()
+        shell: powershell
+        run: |
+          Write-Host '=== local source ==='
+          git -C C:\alumdoor log -1 --oneline
+          Write-Host '=== runtime listeners ==='
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalPort -in @(8799,5173) } |
+            Select-Object LocalAddress,LocalPort,OwningProcess |
+            Format-Table -AutoSize
+          if ($env:ALUMDOOR_REAL_DIR -and (Test-Path $env:ALUMDOOR_REAL_DIR)) {
+            Write-Host "Payload/preimage directory retained for this run: $env:ALUMDOOR_REAL_DIR"
+            Get-ChildItem $env:ALUMDOOR_REAL_DIR -File -ErrorAction SilentlyContinue |
+              Select-Object Name,Length,LastWriteTime |
+              Format-Table -AutoSize
+          }
