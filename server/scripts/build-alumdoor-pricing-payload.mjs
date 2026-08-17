@@ -37,7 +37,10 @@ const stableSort = (rows) => [...rows].sort((a, b) => clean(a.name) < clean(b.na
 export function itemPriceName(priceList, itemCode, uom, variant = STANDARD_VARIANT) {
   const base = `${clean(priceList)}:${clean(itemCode)}`;
   const canonicalVariant = clean(variant).toUpperCase() || STANDARD_VARIANT;
-  if (canonicalVariant === STANDARD_VARIANT) return clean(uom) ? `${base}:${clean(uom)}` : base;
+  // The doctype names itself format:{price_list}:{item_code}:{uom}:{price_variant}, so the
+  // server appends the variant even when it is STANDARD. Dropping the suffix here made every
+  // base row's payload name disagree with the name the row actually gets, which surfaced as
+  // 331 extra_managed_item_price blockers on the next preflight.
   return clean(uom) ? `${base}:${clean(uom)}:${canonicalVariant}` : `${base}:${canonicalVariant}`;
 }
 
