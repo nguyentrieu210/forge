@@ -8,6 +8,8 @@ on:
       - 'apps/alumdoor/docs/nguon/ms-lien/chi-tiết-nhập-hàng-ngày.md'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/preflight-alumdoor-real-purchase-import.mjs'
+      - 'server/scripts/audit-alumdoor-real-purchase-local.mjs'
+      - 'server/scripts/import-alumdoor-real-purchase-local.mjs'
       - 'server/scripts/test-alumdoor-real-purchase-import.mjs'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
   pull_request:
@@ -15,12 +17,18 @@ on:
       - 'apps/alumdoor/docs/nguon/ms-lien/chi-tiết-nhập-hàng-ngày.md'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/preflight-alumdoor-real-purchase-import.mjs'
+      - 'server/scripts/audit-alumdoor-real-purchase-local.mjs'
+      - 'server/scripts/import-alumdoor-real-purchase-local.mjs'
       - 'server/scripts/test-alumdoor-real-purchase-import.mjs'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: alumdoor-real-purchase-import-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   purchase-preflight:
@@ -35,8 +43,42 @@ jobs:
           node --check server/scripts/lib/alumdoor-real-purchase-source.mjs
           node --check server/scripts/lib/alumdoor-real-purchase-preflight.mjs
           node --check server/scripts/preflight-alumdoor-real-purchase-import.mjs
+          node --check server/scripts/audit-alumdoor-real-purchase-local.mjs
           node --check server/scripts/test-alumdoor-real-purchase-import.mjs
       - name: Lock real source and fail-closed contract
         run: node server/scripts/test-alumdoor-real-purchase-import.mjs
       - name: Materialize current blocked preflight evidence
         run: node server/scripts/preflight-alumdoor-real-purchase-import.mjs /tmp/alumdoor-real-purchase-preflight.json --expect-blocked
+
+  purchase-local-audit:
+    needs: purchase-preflight
+    runs-on: [self-hosted]
+    timeout-minutes: 15
+    env:
+      FORGE_ORIGIN: http://127.0.0.1:8799
+      FORGE_ADMIN_USER: dev@example.com
+      FORGE_ADMIN_PASSWORD: local-dev-password-1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 1
+      - name: Guard exact local-only runtime
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $local = 'C:\alumdoor'
+          if (-not (Test-Path (Join-Path $local '.git'))) { throw 'C:\alumdoor is not a Git checkout.' }
+          $origin = (git -C $local remote get-url origin).Trim()
+          if ($LASTEXITCODE -ne 0 -or $origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') { throw "Unexpected local repository origin: $origin" }
+          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local backend 8799 is not healthy.' }
+          Write-Host 'ALUMDOOR_REAL_PURCHASE_LOCAL_GUARD_PASS'
+      - name: Audit live Company Warehouse Supplier Item authority
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $report = Join-Path $env:RUNNER_TEMP "alumdoor-real-purchase-audit-$env:GITHUB_RUN_ID.json"
+          & node server/scripts/audit-alumdoor-real-purchase-local.mjs $report
+          if ($LASTEXITCODE -ne 0) { throw 'Local purchase authority audit failed.' }
+          Write-Host "ALUMDOOR_REAL_PURCHASE_LOCAL_AUDIT_FILE=$report"
