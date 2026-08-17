@@ -1,13 +1,10 @@
 name: Import Alumdoor Reason Masters Local
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/local-runner/**'
-      - 'server/scripts/import-alumdoor-reason-master-local.mjs'
-      - 'server/briefs/alumdoor-v2.fixtures.json'
-      - '.github/workflows/alumdoor-reason-master-local-import.yml'
+  workflow_run:
+    workflows:
+      - Bootstrap Alumdoor Local C Drive
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -19,10 +16,11 @@ concurrency:
 
 jobs:
   import-local-reasons:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: [self-hosted]
     timeout-minutes: 20
     env:
-      FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
+      FORGE_LOCAL_EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
       - name: Run canonical Reason Master local import contract
         shell: powershell
