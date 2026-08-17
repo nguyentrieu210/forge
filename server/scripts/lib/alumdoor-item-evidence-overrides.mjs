@@ -105,7 +105,7 @@ export const ITEM_SOURCE_BOM_ITEM_PROMOTIONS = Object.freeze({
 
   // DANH MỤC gives these exact source codes with purchase UOM KG.
   "RONNHUAVANGCẢNHAY_RSU100": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
-  "RONNHUAVANGCANHẢNHAY_RSU70": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
+  "RONNHUAVANGCANHAY_RSU70": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
 
   // Real transaction/BOM evidence uses these codes with a Kg-per-metre basis. The preflight
   // interprets KG/M as atomic stock Kg + secondary Mét and marks conversion required.
