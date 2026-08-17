@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyAlumdoorItemSourceCode, ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
 import { resolveAlumdoorBomEvidenceAlias, resolveAlumdoorBomItemPromotion } from "./lib/alumdoor-item-evidence-overrides.mjs";
+import { classifyExactSourceBomEvidenceGap } from "./lib/alumdoor-exact-source-bom-evidence-gap.mjs";
 import { resolveExactSourceBomQuantity } from "./lib/alumdoor-exact-source-bom-quantity.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
 import { blockerClass, resolveBomParentOutput, resolveBomQuantity, resolveBomRuntimeUom } from "./lib/alumdoor-real-bom-gate-semantics.mjs";
@@ -67,10 +68,12 @@ for(const record of records){
     : null;
   const quantity=exactQuantity ?? standardQuantity;
   if(quantity.status==="blocked"){
-    addBlock(quantity.reason||"runtime_contract_invalid",record,{
+    const evidenceGap=classifyExactSourceBomEvidenceGap(record,ref.item_code,quantity.reason);
+    addBlock(evidenceGap?.reason||quantity.reason||"runtime_contract_invalid",record,{
       canonical_item_code:ref.item_code,
       runtime_uom:uom.runtime_uom,
       stock_uom:uom.stock_uom,
+      resolver_reason:evidenceGap?.resolver_reason,
       formula_text:quantity.formula_text,
       formula_code:quantity.formula_code,
       template_code:quantity.template_code,
