@@ -9,10 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: alumdoor-local-d1-mutation
+  cancel-in-progress: false
+
 jobs:
   inspect:
     runs-on: [self-hosted]
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Inspect canonical local persistence paths without mutation
         shell: powershell
@@ -25,41 +29,18 @@ jobs:
           Write-Host "STATE_DIAG_HEAD=$((git -C $root rev-parse HEAD).Trim())"
           Write-Host "STATE_DIAG_ORIGIN_MAIN=$((git -C $root rev-parse origin/main).Trim())"
 
-          $candidates = @(
-            'C:\alumdoor\.wrangler\state',
-            'C:\alumdoor\server\.wrangler\state',
-            $primary,
-            'C:\alumdoor\server\apps-src\alumdoor-worker\.wrangler\state',
-            'C:\alumdoor\server\apps-src\alumdoor-worker\.wrangler',
-            'C:\alumdoor\server\apps\purchase-qa-callback\.wrangler\state',
-            'C:\alumdoor\server\apps\purchase-qa-callback\.wrangler'
-          )
-          foreach ($candidate in $candidates) {
-            if (-not (Test-Path -LiteralPath $candidate)) {
-              Write-Host "STATE_CANDIDATE exists=0 path=$candidate"
-              continue
-            }
-            $item = Get-Item -LiteralPath $candidate -Force
-            $files = @(Get-ChildItem -LiteralPath $candidate -Recurse -File -Force -ErrorAction SilentlyContinue)
-            $bytes = ($files | Measure-Object -Property Length -Sum).Sum
-            if ($null -eq $bytes) { $bytes = 0 }
-            $sqlite = @($files | Where-Object { $_.Extension -in @('.sqlite','.db','.sqlite3') })
-            Write-Host "STATE_CANDIDATE exists=1 files=$($files.Count) bytes=$bytes sqlite=$($sqlite.Count) created_utc=$($item.CreationTimeUtc.ToString('o')) modified_utc=$($item.LastWriteTimeUtc.ToString('o')) attributes=$($item.Attributes) path=$candidate"
-            foreach ($file in $sqlite | Select-Object -First 20) {
-              Write-Host "STATE_SQLITE bytes=$($file.Length) created_utc=$($file.CreationTimeUtc.ToString('o')) modified_utc=$($file.LastWriteTimeUtc.ToString('o')) path=$($file.FullName)"
-            }
+          $item = Get-Item -LiteralPath $primary -Force
+          $files = @(Get-ChildItem -LiteralPath $primary -Recurse -File -Force -ErrorAction Stop)
+          $bytes = ($files | Measure-Object -Property Length -Sum).Sum
+          if ($null -eq $bytes) { $bytes = 0 }
+          Write-Host "STATE_PRIMARY exists=1 files=$($files.Count) bytes=$bytes created_utc=$($item.CreationTimeUtc.ToString('o')) modified_utc=$($item.LastWriteTimeUtc.ToString('o')) path=$primary"
+
+          $acl = Get-Acl -LiteralPath $primary
+          Write-Host "STATE_ACL owner=$($acl.Owner) inheritance_protected=$($acl.AreAccessRulesProtected)"
+          foreach ($rule in $acl.Access) {
+            Write-Host "STATE_ACE identity=$($rule.IdentityReference) rights=$($rule.FileSystemRights) type=$($rule.AccessControlType) inherited=$($rule.IsInherited)"
           }
 
-          Write-Host '=== primary ACL ==='
-          if (Test-Path -LiteralPath $primary) {
-            $acl = Get-Acl -LiteralPath $primary
-            Write-Host "STATE_ACL owner=$($acl.Owner) inheritance_protected=$($acl.AreAccessRulesProtected)"
-            foreach ($rule in $acl.Access) {
-              Write-Host "STATE_ACE identity=$($rule.IdentityReference) rights=$($rule.FileSystemRights) type=$($rule.AccessControlType) inherited=$($rule.IsInherited) flags=$($rule.InheritanceFlags)/$($rule.PropagationFlags)"
-            }
-          }
-
-          Write-Host '=== exact Node visibility used by backup helper ==='
           $nodeProbe = Join-Path $env:RUNNER_TEMP 'alumdoor-state-node-probe.mjs'
           @'
           import { existsSync, readdirSync, statSync } from 'node:fs';
@@ -81,13 +62,67 @@ jobs:
           & node $nodeProbe
           if ($LASTEXITCODE -ne 0) { throw 'Node state visibility probe failed' }
 
-          Write-Host '=== bounded .wrangler discovery under server (excluding node_modules) ==='
-          $wranglerDirs = @(Get-ChildItem 'C:\alumdoor\server' -Directory -Filter '.wrangler' -Recurse -Force -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -notmatch '\\node_modules\\' })
-          foreach ($dir in $wranglerDirs) {
-            $files = @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -File -Force -ErrorAction SilentlyContinue)
+      - name: Reproduce backup dry-run after canonical maintenance quiescence
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\alumdoor'
+          $maintenance = Join-Path $root 'server\scripts\alumdoor-runtime-maintenance.mjs'
+          $backup = Join-Path $root 'server\scripts\backup-local-state.mjs'
+          $primary = Join-Path $root 'server\apps\tenant-worker\.wrangler\state'
+          $maintenanceEnabled = $false
+
+          function Measure-State([string]$Label) {
+            if (-not (Test-Path -LiteralPath $primary)) {
+              Write-Host "QUIESCE_STATE label=$Label exists=0 files=0 bytes=0 path=$primary"
+              return
+            }
+            $files = @(Get-ChildItem -LiteralPath $primary -Recurse -File -Force -ErrorAction Stop)
             $bytes = ($files | Measure-Object -Property Length -Sum).Sum
             if ($null -eq $bytes) { $bytes = 0 }
-            Write-Host "WRANGLER_DIR files=$($files.Count) bytes=$bytes path=$($dir.FullName)"
+            Write-Host "QUIESCE_STATE label=$Label exists=1 files=$($files.Count) bytes=$bytes path=$primary"
           }
-          Write-Host 'ALUMDOOR_LOCAL_STATE_PATH_DIAGNOSTIC_PASS'
+
+          function Wait-PortsQuiet([int]$TimeoutSeconds) {
+            $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+            $quietSince = $null
+            do {
+              $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799,5173) })
+              if ($listeners.Count -eq 0) {
+                if ($null -eq $quietSince) { $quietSince = Get-Date }
+                if (((Get-Date) - $quietSince).TotalSeconds -ge 3) { return $true }
+              } else {
+                $quietSince = $null
+              }
+              Start-Sleep -Milliseconds 500
+            } while ((Get-Date) -lt $deadline)
+            foreach ($listener in $listeners) {
+              $process = Get-CimInstance Win32_Process -Filter ("ProcessId=" + $listener.OwningProcess) -ErrorAction SilentlyContinue
+              Write-Host "QUIESCE_BLOCKER port=$($listener.LocalPort) pid=$($listener.OwningProcess) name=$($process.Name) exe=$($process.ExecutablePath)"
+            }
+            return $false
+          }
+
+          try {
+            Measure-State 'before_maintenance'
+            & node $maintenance on
+            if ($LASTEXITCODE -ne 0) { throw 'Could not enable maintenance' }
+            $maintenanceEnabled = $true
+            if (-not (Wait-PortsQuiet 40)) { throw 'Maintenance did not quiesce ports in diagnostic window' }
+            Write-Host 'DIAG_RUNTIME_QUIESCE=PASS'
+            Measure-State 'after_quiesce'
+
+            $dry = @(& node $backup --dry-run 2>&1)
+            $code = $LASTEXITCODE
+            $dry | ForEach-Object { Write-Host "BACKUP_DRYRUN $_" }
+            if ($code -ne 0) { throw "backup --dry-run failed exit=$code" }
+
+            Measure-State 'after_backup_dryrun'
+            Write-Host 'QUIESCED_BACKUP_VISIBILITY_DIAGNOSTIC_PASS'
+          } finally {
+            if ($maintenanceEnabled) {
+              & node $maintenance off
+              if ($LASTEXITCODE -ne 0) { throw 'Could not restore maintenance state' }
+              Write-Host 'DIAG_RUNTIME_RESTORE=PASS'
+            }
+          }
