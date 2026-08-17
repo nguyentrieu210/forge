@@ -1,0 +1,49 @@
+name: Alumdoor Bootstrap Log Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose-bootstrap-log:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+    env:
+      EXPECTED_SHA: 37b88c760d781a4f8642de4006ae015bcde25ad5
+    steps:
+      - name: Read exact-main bootstrap failure evidence
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $repo = 'C:\alumdoor'
+          $log = Join-Path $repo 'run-local.log'
+          $sha = (git -C $repo rev-parse HEAD).Trim()
+          Write-Host "LOCAL_SHA=$sha"
+          if ($sha -ne $env:EXPECTED_SHA) {
+            throw "Diagnostic refuses stale local checkout expected=$env:EXPECTED_SHA actual=$sha"
+          }
+
+          Write-Host '=== RUN-LOCAL LOG TAIL ==='
+          if (-not (Test-Path -LiteralPath $log)) { throw "Missing bootstrap log: $log" }
+          Get-Content -LiteralPath $log -Tail 350
+
+          Write-Host '=== RUNTIME MAINTENANCE ==='
+          & node (Join-Path $repo 'server\scripts\alumdoor-runtime-maintenance.mjs') status
+
+          Write-Host '=== SERVICES ==='
+          Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk','ForgeAlumdoorWorker') } |
+            ForEach-Object { Write-Host "SERVICE name=$($_.Name) state=$($_.State) pid=$($_.ProcessId) path=$($_.PathName)" }
+
+          Write-Host '=== LISTENERS ==='
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalPort -in @(8799,5173) } |
+            ForEach-Object {
+              $p = Get-CimInstance Win32_Process -Filter ("ProcessId=" + $_.OwningProcess) -ErrorAction SilentlyContinue
+              Write-Host "LISTENER port=$($_.LocalPort) pid=$($_.OwningProcess) name=$($p.Name) parent=$($p.ParentProcessId) exe=$($p.ExecutablePath) cmd=$($p.CommandLine)"
+            }
+
+          Write-Host 'ALUMDOOR_BOOTSTRAP_LOG_DIAGNOSTIC_PASS'
