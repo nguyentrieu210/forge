@@ -63,8 +63,8 @@
       "import": "./dist/report/ReportContainer.js"
     },
     "./import": {
-      "types": "./dist/system/Import.d.ts",
-      "import": "./dist/system/Import.js"
+      "types": "./dist/system/ImportRouter.d.ts",
+      "import": "./dist/system/ImportRouter.js"
     },
     "./action": {
       "types": "./dist/action/NativeActionScreen.d.ts",
