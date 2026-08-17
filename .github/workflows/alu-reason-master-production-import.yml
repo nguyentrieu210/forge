@@ -81,69 +81,146 @@ jobs:
       - name: Build installer runtime
         run: pnpm --filter cloudforge run build
 
-      - name: Preflight canonical Alumdoor package
+      - name: Preflight canonical Alumdoor source package
         working-directory: server
         run: node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
 
-      - name: Import canonical reason masters to production
-        working-directory: server
-        run: node scripts/forge-app.mjs briefs/alumdoor-v2.json --origin "$FORGE_ORIGIN" --admin "$FORGE_ADMIN_USER"
-
-      - name: Verify exact live reason fixtures
+      - name: Import only canonical reason fixtures to production
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
-          const origin = process.env.FORGE_ORIGIN.replace(/\/$/, '');
+          const fs = require('node:fs');
+
+          const origin = String(process.env.FORGE_ORIGIN || '').replace(/\/$/, '');
           const user = process.env.FORGE_ADMIN_USER;
           const password = process.env.FORGE_ADMIN_PASSWORD;
+          const source = JSON.parse(fs.readFileSync('server/briefs/alumdoor-v2.fixtures.json', 'utf8'));
+          const managedDoctypes = new Map([
+            ['Lý do huỷ', ['reason_code', 'reason_name', 'applies_to_doctype', 'sort_order', 'disabled']],
+            ['Nguyên nhân chênh lệch', ['reason_code', 'reason_name', 'variance_kind', 'sort_order', 'disabled']],
+          ]);
+          const fixtures = (source.fixtures || []).filter((row) => managedDoctypes.has(row.type));
+          const cancelFixtures = fixtures.filter((row) => row.type === 'Lý do huỷ');
+          const varianceFixtures = fixtures.filter((row) => row.type === 'Nguyên nhân chênh lệch');
+          if (cancelFixtures.length !== 6 || varianceFixtures.length !== 7) {
+            throw new Error(`Refusing import: expected 6 cancellation + 7 variance fixtures, got ${cancelFixtures.length} + ${varianceFixtures.length}`);
+          }
+
           const jar = new Map();
-          function store(response) {
+          let csrfToken = '';
+          function storeCookies(response) {
             for (const value of response.headers.getSetCookie?.() ?? []) {
               const [pair] = value.split(';');
               const i = pair.indexOf('=');
               if (i > 0) jar.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
             }
           }
-          const cookie = () => [...jar].map(([k,v]) => `${k}=${v}`).join('; ');
-          async function post(method, body) {
-            const r = await fetch(`${origin}/api/method/${method}`, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json', ...(jar.size ? { cookie: cookie() } : {}) },
-              body: JSON.stringify(body ?? {}),
+          function cookieHeader() {
+            return [...jar].map(([key, value]) => `${key}=${value}`).join('; ');
+          }
+          async function request(path, { method = 'GET', body, allow404 = false } = {}) {
+            const response = await fetch(`${origin}${path}`, {
+              method,
+              headers: {
+                'cache-control': 'no-cache',
+                ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+                ...(jar.size ? { cookie: cookieHeader() } : {}),
+                ...(csrfToken ? { 'x-frappe-csrf-token': csrfToken } : {}),
+              },
+              ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
             });
-            store(r);
-            const text = await r.text();
-            if (!r.ok) throw new Error(`${method} HTTP ${r.status}: ${text.slice(0, 300)}`);
-            return text ? JSON.parse(text) : {};
+            storeCookies(response);
+            csrfToken = response.headers.get('x-frappe-csrf-token') || csrfToken;
+            const text = await response.text();
+            let parsed = null;
+            try { parsed = text ? JSON.parse(text) : null; } catch {}
+            if (allow404 && response.status === 404) return null;
+            if (!response.ok) {
+              const detail = parsed?.message ?? parsed?.exception ?? text.slice(0, 500);
+              throw new Error(`${method} ${path} -> HTTP ${response.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+            }
+            return parsed;
           }
-          async function list(doctype) {
-            const fields = encodeURIComponent(JSON.stringify(['reason_code','reason_name','disabled']));
-            const url = `${origin}/api/resource/${encodeURIComponent(doctype)}?fields=${fields}&limit_page_length=1000`;
-            const r = await fetch(url, { headers: { cookie: cookie(), 'cache-control': 'no-cache' } });
-            const text = await r.text();
-            if (!r.ok) throw new Error(`${doctype} HTTP ${r.status}: ${text.slice(0, 300)}`);
-            const parsed = JSON.parse(text);
-            return parsed.data ?? parsed.message ?? [];
+          function resourcePath(doctype, name = '') {
+            const root = `/api/resource/${encodeURIComponent(doctype)}`;
+            return name ? `${root}/${encodeURIComponent(name)}` : root;
           }
-          await post('login', { usr: user, pwd: password });
-          const expectedCancel = ['GHI_NHAM_CHUNG_TU','LAP_LAI_CHUNG_TU','THAY_DOI_KE_HOACH','CAT_NHAM','KIEM_KE_SAI','KHAC'];
-          const expectedVariance = ['SAI_SO_DEM','THO_CAT_SAI_KHONG_BAO','HAO_HUT','HU_HONG','LECH_CAN','SAI_NHAP_LIEU','KHAC'];
-          const cancel = await list('Lý do huỷ');
-          const variance = await list('Nguyên nhân chênh lệch');
-          function assertExpected(label, rows, expected) {
-            const active = new Map(rows.filter(r => Number(r.disabled ?? 0) === 0).map(r => [String(r.reason_code), r]));
-            const missing = expected.filter(code => !active.has(code));
-            if (missing.length) throw new Error(`${label} missing active codes: ${missing.join(', ')}`);
-            console.log(`${label}_LIVE_PASS expected=${expected.length} total_rows=${rows.length}`);
+          async function loadMeta(doctype) {
+            const payload = await request(`/api/method/frappe.desk.form.load.getdoctype?doctype=${encodeURIComponent(doctype)}&with_parent=1`);
+            const docs = payload?.docs ?? payload?.message?.docs ?? [];
+            const meta = docs.find((doc) => doc?.name === doctype);
+            if (!meta) throw new Error(`Refusing import: production DocType ${doctype} does not exist`);
+            const names = new Set((meta.fields ?? []).map((field) => field.fieldname));
+            for (const required of managedDoctypes.get(doctype)) {
+              if (!names.has(required)) throw new Error(`Refusing import: production ${doctype}.${required} is missing`);
+            }
           }
-          assertExpected('CANCELLATION_REASON', cancel, expectedCancel);
-          assertExpected('VARIANCE_REASON', variance, expectedVariance);
-          NODE
+          function valueEqual(field, actual, expected) {
+            if (field === 'sort_order' || field === 'disabled') return Number(actual ?? 0) === Number(expected ?? 0);
+            return String(actual ?? '') === String(expected ?? '');
+          }
+          async function getRecord(fixture) {
+            const payload = await request(resourcePath(fixture.type, fixture.name), { allow404: true });
+            return payload?.data ?? payload?.message ?? payload;
+          }
+          async function upsertPass(label) {
+            let created = 0;
+            let updated = 0;
+            let noop = 0;
+            for (const fixture of fixtures) {
+              const fields = managedDoctypes.get(fixture.type);
+              const existing = await getRecord(fixture);
+              if (!existing) {
+                await request(resourcePath(fixture.type), {
+                  method: 'POST',
+                  body: { doctype: fixture.type, name: fixture.name, ...fixture.data },
+                });
+                created += 1;
+                continue;
+              }
+              const patch = {};
+              for (const field of fields) {
+                if (!valueEqual(field, existing[field], fixture.data[field])) patch[field] = fixture.data[field];
+              }
+              if (Object.keys(patch).length) {
+                await request(resourcePath(fixture.type, fixture.name), { method: 'PUT', body: patch });
+                updated += 1;
+              } else {
+                noop += 1;
+              }
+            }
+            console.log(`${label} created=${created} updated=${updated} noop=${noop}`);
+            return { created, updated, noop };
+          }
+          async function verify() {
+            for (const fixture of fixtures) {
+              const record = await getRecord(fixture);
+              if (!record) throw new Error(`Post-verify missing ${fixture.type}/${fixture.name}`);
+              for (const field of managedDoctypes.get(fixture.type)) {
+                if (!valueEqual(field, record[field], fixture.data[field])) {
+                  throw new Error(`Post-verify mismatch ${fixture.type}/${fixture.name}.${field}: actual=${JSON.stringify(record[field])} expected=${JSON.stringify(fixture.data[field])}`);
+                }
+              }
+            }
+            console.log(`CANCELLATION_REASON_LIVE_PASS expected=${cancelFixtures.length}`);
+            console.log(`VARIANCE_REASON_LIVE_PASS expected=${varianceFixtures.length}`);
+          }
 
-      - name: Re-run installer to prove idempotence
-        working-directory: server
-        run: node scripts/forge-app.mjs briefs/alumdoor-v2.json --origin "$FORGE_ORIGIN" --admin "$FORGE_ADMIN_USER"
+          if (!origin || !user || !password) throw new Error('Missing production origin or credentials');
+          await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
+          await loadMeta('Lý do huỷ');
+          await loadMeta('Nguyên nhân chênh lệch');
+
+          const first = await upsertPass('IMPORT_PASS_1');
+          await verify();
+          const second = await upsertPass('IMPORT_PASS_2');
+          if (second.created !== 0 || second.updated !== 0 || second.noop !== fixtures.length) {
+            throw new Error(`Idempotence failed: ${JSON.stringify(second)}`);
+          }
+          await verify();
+          console.log(`REASON_MASTER_IDEMPOTENCE_PASS records=${fixtures.length} first_mutations=${first.created + first.updated}`);
+          NODE
 
       - name: Verify production health
         shell: bash
