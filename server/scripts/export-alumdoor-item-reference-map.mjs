@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import {
   assertCanonicalItemPayload,
   assertSourceItemCodePreserved,
@@ -10,6 +10,15 @@ import {
 const [sqlArg = "server/imports/alumdoor-item-only-2026-08-11.sql", outputArg = "alumdoor-item-reference-map.json"] = process.argv.slice(2);
 const sqlPath = resolve(sqlArg);
 const outputPath = resolve(outputArg);
+
+if (
+  basename(sqlPath) === "alumdoor-item-only-2026-08-11.sql"
+  && process.env.ALUMDOOR_ALLOW_LEGACY_ITEM_SQL !== "1"
+) {
+  throw new Error(
+    "ALUMDOOR_LEGACY_ITEM_SOURCE_RETIRED: server/imports/alumdoor-item-only-2026-08-11.sql is retained for evidence only and must not be used as the canonical Alumdoor Item source. Use the audited MS LIÊN BS / Trang tính29 / TỒN NHÔM source pipeline.",
+  );
+}
 
 function parseSqlTuple(line) {
   let text = line.trim();
