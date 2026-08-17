@@ -55,6 +55,8 @@ function makeSellableRecord(row, sourceIndex) {
     }),
     source_category: category,
     source_rate_or_quantity: readAlumdoorCell(row, 6),
+    source_business_note: readAlumdoorCell(row, 8),
+    source_formula_code: readAlumdoorCell(row, 22),
   };
 }
 
@@ -63,6 +65,8 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
   const itemCode = readAlumdoorCell(row, 3);
   const itemName = readAlumdoorCell(row, 2) || itemCode;
   const sourceUom = readAlumdoorCell(row, 5);
+  const sourceFormulaText = readAlumdoorCell(row, 8);
+  const sourceFormulaCode = readAlumdoorCell(row, 22);
   return {
     source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
     source_sheet: "ĐM",
@@ -71,9 +75,6 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
     item_code: itemCode,
     item_name: itemName,
     source_uom: sourceUom,
-    // Ordinary references never become Item identities. This group is retained
-    // only so an explicitly allowlisted BOM-only promotion can use evidence from
-    // the component's own code/name rather than inheriting the parent Item Group.
     source_group: resolveAlumdoorRealStockGroup({
       category,
       item_code: itemCode,
@@ -83,7 +84,11 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
     parent_item_code: parentCode,
     source_parent_name: readAlumdoorCell(row, 4),
     source_qty_or_formula: readAlumdoorCell(row, 6),
-    source_formula: readAlumdoorCell(row, 22),
+    source_formula_text: sourceFormulaText,
+    source_formula_code: sourceFormulaCode,
+    // Backward-compatible combined field. New BOM semantics must inspect the
+    // dedicated text/code fields so no source evidence is lost.
+    source_formula: sourceFormulaCode || sourceFormulaText,
   };
 }
 
