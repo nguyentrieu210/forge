@@ -62,6 +62,13 @@ jobs:
           $target = 'C:\alumdoor'
           $server = Join-Path $target 'server'
 
+          $maintenance = Join-Path $server 'scripts\alumdoor-runtime-maintenance.mjs'
+          if (Test-Path $maintenance) {
+            & node $maintenance on
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to enable Alumdoor runtime maintenance.' }
+            Start-Sleep -Seconds 2
+          }
+
           & node "$server\scripts\stop-local-dev.mjs" --ports=8799,5173
           if ($LASTEXITCODE -ne 0) { throw 'Failed to stop local worker/Desk before D1 mutation.' }
           & node "$server\scripts\backup-local-state.mjs"
