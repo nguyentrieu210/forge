@@ -55,6 +55,7 @@ jobs:
       cancel-in-progress: false
     env:
       FORGE_LOCAL_EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      FORGE_LOCAL_REQUIRED_SERVICES: backend
     steps:
       - name: Run canonical BOM local import contract
         id: bom_import
