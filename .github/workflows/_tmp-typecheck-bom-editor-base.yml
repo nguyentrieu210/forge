@@ -21,14 +21,14 @@ jobs:
           set +e
           corepack enable
           pnpm install --frozen-lockfile
-          pnpm run typecheck > ../.github/_tmp-bom-editor-typecheck.log 2>&1
+          pnpm run typecheck > ../TYPECHECK_DIAGNOSTIC.txt 2>&1
           status=$?
-          cat ../.github/_tmp-bom-editor-typecheck.log
+          cat ../TYPECHECK_DIAGNOSTIC.txt
           if [ "$status" -ne 0 ]; then
             cd ..
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add .github/_tmp-bom-editor-typecheck.log
+            git add -f TYPECHECK_DIAGNOSTIC.txt
             git commit -m 'ci: capture BOM editor typecheck diagnostics'
             git push origin HEAD:agent/alumdoor-bom-draft-guidance
             exit "$status"
