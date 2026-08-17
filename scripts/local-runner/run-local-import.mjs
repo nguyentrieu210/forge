@@ -77,6 +77,23 @@ function logStatus(kind, status, detail = '') {
   console.log(`${kind}_STATUS=${status}${detail ? ` ${detail}` : ''}`);
 }
 
+export function normalizeSpawnInvocation(
+  command,
+  args,
+  {
+    platform = process.platform,
+    comspec = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe',
+  } = {},
+) {
+  if (platform === 'win32' && /\.(?:cmd|bat)$/i.test(String(command))) {
+    return {
+      command: comspec,
+      args: ['/d', '/c', command, ...args],
+    };
+  }
+  return { command, args };
+}
+
 function run(
   command,
   args,
@@ -88,7 +105,8 @@ function run(
     failureClass = 'OTHER',
   } = {},
 ) {
-  const result = spawnSync(command, args, {
+  const invocation = normalizeSpawnInvocation(command, args);
+  const result = spawnSync(invocation.command, invocation.args, {
     cwd,
     env: { ...process.env, ...env },
     encoding: 'utf8',
@@ -534,7 +552,7 @@ function preflightItem(repoRoot, runDir, sourceArg) {
 
   run(
     process.execPath,
-    [path.join(server, 'scripts', 'import-alumdoor-item-master-local.mjs'), payload, '--validate-only'],
+    [path.join(server, 'scripts', 'import-alumdoor-item-master-local.mjs'), prepared.payload, '--validate-only'],
     {
       cwd: server,
       label: 'Item validate-only',
