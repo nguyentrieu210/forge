@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { approveAlumDoorPayroll } from "../../../apps/tenant-worker/src/payroll-coordinator.js";
+import {
+  approveAlumDoorPayroll,
+  overtimeProjectionsFromTrace,
+} from "../../../apps/tenant-worker/src/payroll-coordinator.js";
 
 const tenantId = "TENANT-1";
 const payrollName = "PAY-2026-08";
@@ -120,6 +123,7 @@ describe("AlumDoor payroll finalize atomic bundle", () => {
         shift_type: "DAY",
         scheduled_minutes: 480,
         regular_minutes: 0,
+        raw_overtime_minutes: 0,
         overtime_minutes: 0,
         paid_leave_minutes: 480,
         source_leave_application: "LEAVE-001",
@@ -138,8 +142,46 @@ describe("AlumDoor payroll finalize atomic bundle", () => {
 
     await expect(approveAlumDoorPayroll({ tenantId, actor: actor as never, payrollEntry: payrollName }, svc)).rejects.toThrow("transaction rollback");
     expect(svc.executeBundle).toHaveBeenCalledTimes(1);
-    // Coordinator only reads from the store before executeBundle; writes are all commands in that bundle.
     expect(svc.storeSpy.getDocument).toHaveBeenCalled();
     expect(svc.storeSpy.listDocumentsByDoctype).toHaveBeenCalled();
+  });
+});
+
+describe("AlumDoor payroll overtime final projection", () => {
+  it("projects zero payable OT when raw attendance has no submitted approval", () => {
+    const result = overtimeProjectionsFromTrace(JSON.stringify({
+      attendance: [{ name: "AAD-001", work_date: "2026-08-17", raw_overtime_minutes: 90 }],
+      overtime_requests: [],
+    }), employee);
+
+    expect(result).toEqual([{
+      employee,
+      workDate: "2026-08-17",
+      attendanceDay: "AAD-001",
+      rawOvertimeMinutes: 90,
+      payableOvertimeMinutes: 0,
+    }]);
+  });
+
+  it("projects min(raw, approved) and never creates payable minutes beyond attendance evidence", () => {
+    const result = overtimeProjectionsFromTrace(JSON.stringify({
+      attendance: [{ name: "AAD-002", work_date: "2026-08-18", raw_overtime_minutes: 60 }],
+      overtime_requests: [{ name: "OT-001", overtime_date: "2026-08-18", approved_minutes: 120 }],
+    }), employee);
+
+    expect(result[0]).toMatchObject({
+      rawOvertimeMinutes: 60,
+      payableOvertimeMinutes: 60,
+    });
+  });
+
+  it("fails closed when two overtime approvals cover the same employee/date", () => {
+    expect(() => overtimeProjectionsFromTrace(JSON.stringify({
+      attendance: [{ name: "AAD-003", work_date: "2026-08-19", raw_overtime_minutes: 60 }],
+      overtime_requests: [
+        { name: "OT-001", overtime_date: "2026-08-19", approved_minutes: 30 },
+        { name: "OT-002", overtime_date: "2026-08-19", approved_minutes: 30 },
+      ],
+    }), employee)).toThrow(/Duplicate Overtime Request trace date/u);
   });
 });
