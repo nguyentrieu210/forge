@@ -3,6 +3,7 @@ name: Sentrux artifact audit
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: agent/sentrux-10k-20260815
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Sentrux
         shell: bash

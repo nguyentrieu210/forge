@@ -4,11 +4,16 @@ import { SlidersHorizontal } from "lucide-react";
 import type { DocTypeMeta } from "@metaforge/core";
 import { Badge, Button, ConfirmDialog, toast } from "@metaforge/ui";
 import { ListContainer, type ListContainerProps } from "../container/ListContainer.js";
-import { useMeta } from "../container/hooks.js";
+import { NO_CAPS, useCapabilities, useMeta } from "../container/hooks.js";
 import { useMetaForge } from "../container/provider.js";
 import { useListUrlState } from "./useListState.js";
 import { AdvancedFilterDialog } from "./AdvancedFilterDialog.js";
-import { actionSupportsSelection, type ListRuntimeAction, type ListRuntimeActionContext } from "./runtime-actions.js";
+import {
+  actionAllowedByCapability,
+  actionSupportsSelection,
+  type ListRuntimeAction,
+  type ListRuntimeActionContext,
+} from "./runtime-actions.js";
 
 const EMPTY_META: DocTypeMeta = { name: "", fields: [], permissions: [] };
 
@@ -24,7 +29,9 @@ export interface ListRuntimeContainerProps extends ListContainerProps {
 export function ListRuntimeContainer({ actions = [], ...props }: ListRuntimeContainerProps) {
   const { adapter } = useMetaForge();
   const metaQ = useMeta(props.doctype);
+  const capsQ = useCapabilities(props.doctype);
   const meta = metaQ.data ?? { ...EMPTY_META, name: props.doctype };
+  const capabilities = capsQ.data ?? NO_CAPS;
   const [state, patch] = useListUrlState(props.bridge, meta);
   const [filterOpen, setFilterOpen] = useState(false);
   const [running, setRunning] = useState<string>();
@@ -35,12 +42,14 @@ export function ListRuntimeContainer({ actions = [], ...props }: ListRuntimeCont
     doctype: props.doctype,
     selected,
     bridge: props.bridge,
+    capabilities,
     clearSelection: () => patch({ selected: [] }),
-  }), [patch, props.bridge, props.doctype, selected]);
-  const visibleActions = actions.filter((action) => actionSupportsSelection(action, selected.length));
+  }), [capabilities, patch, props.bridge, props.doctype, selected]);
+  const visibleActions = actions.filter((action) =>
+    actionSupportsSelection(action, selected.length) && actionAllowedByCapability(action, capabilities));
 
   const execute = async (action: ListRuntimeAction) => {
-    if (action.disabled?.(context) || running) return;
+    if (!actionAllowedByCapability(action, capabilities) || action.disabled?.(context) || running) return;
     setRunning(action.id);
     try {
       await action.run(context);

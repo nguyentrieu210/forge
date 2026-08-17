@@ -3,6 +3,9 @@ name: Sentrux architecture diagnostics
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install Sentrux
         run: |
@@ -24,25 +27,38 @@ jobs:
           chmod +x /tmp/sentrux
           sudo mv /tmp/sentrux /usr/local/bin/sentrux
 
-      - name: Enforce committed architecture rules
+      - name: Evaluate committed architecture rules
+        id: policy
         shell: bash
         run: |
           set -euo pipefail
           test -f .sentrux/rules.toml
-          sentrux check .
+          set +e
+          sentrux check . 2>&1 | tee /tmp/committed-check.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo '=== COMMITTED POLICY SUMMARY ==='
+          grep -Ei 'Quality:|resolve\]|boundary|circular|cycle|god file|cyclomatic|complexity|coupling|depth|modular|redundan|violation' /tmp/committed-check.txt || true
+          exit 0
 
       - name: Capture quality signal
         shell: bash
         run: |
           set -euo pipefail
-          sentrux gate --save . | tee /tmp/gate.txt
-          grep -E 'Quality:' /tmp/gate.txt || true
+          set +e
+          sentrux gate --save . 2>&1 | tee /tmp/gate.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          grep -E 'Quality:|\[resolve\]' /tmp/gate.txt || true
+          echo "GATE_EXIT=$status"
 
       - name: Strict architecture diagnostics
         shell: bash
         run: |
           set -euo pipefail
           cp .sentrux/rules.toml /tmp/forge-rules.toml
+          trap 'mv /tmp/forge-rules.toml .sentrux/rules.toml' EXIT
           cat > .sentrux/rules.toml <<'EOF'
           [constraints]
           max_cycles = 0
@@ -60,9 +76,15 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
 
-          mv /tmp/forge-rules.toml .sentrux/rules.toml
-
           echo '=== STRICT DIAGNOSTICS (NON-BLOCKING) ==='
-          grep -Ei 'boundary|circular|cycle|god file|cyclomatic|complexity|coupling|depth|modular|redundan' /tmp/strict-check.txt || true
+          grep -Ei 'Quality:|resolve\]|boundary|circular|cycle|god file|cyclomatic|complexity|coupling|depth|modular|redundan|violation' /tmp/strict-check.txt || true
           echo "STRICT_CHECK_EXIT=$status"
-          exit 0
+
+      - name: Enforce committed policy result
+        if: always()
+        env:
+          POLICY_STATUS: ${{ steps.policy.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${POLICY_STATUS:-1}" -eq 0

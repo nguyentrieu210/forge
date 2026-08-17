@@ -11,6 +11,8 @@ export interface MetaForgeContextValue {
   services: FieldServices;
   roles: string[];
   scopeKey: string;
+  /** Explicit app/product identity used only at runtime composition boundaries. */
+  appId?: string;
   fmt: BoundFormatters;
   businessContext: BusinessContextSelection;
   contextPolicies?: Record<string, BusinessContextPolicy>;

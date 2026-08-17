@@ -7,14 +7,12 @@ import { alumdoorWorkspaceExtension } from "./vertical/alumdoor/workspace-extens
  * Runtime composition root.
  *
  * The canonical DoctypeWorkspace is vertical-agnostic. This wrapper selects optional product
- * extensions at the edge of the runtime, where tenant/app identity is already known through the
- * provider. Keeping the selection here prevents the generic List/Form implementation from gaining
- * another business branch every time a specialized workbench is added.
+ * extensions at the edge from the explicit app identity carried by the provider. Keeping the
+ * selection here prevents generic List/Form code from learning product-specific branches.
  */
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
-  const { formProfiles } = useMetaForge();
-  const isAlumdoorProfile = Boolean(formProfiles?.["Item Group"]?.keep?.includes("default_measurement_profile"));
-  return <CanonicalDoctypeWorkspace {...props} extension={props.extension ?? (isAlumdoorProfile ? alumdoorWorkspaceExtension : undefined)} />;
+  const { appId } = useMetaForge();
+  return <CanonicalDoctypeWorkspace {...props} extension={props.extension ?? (appId === "alumdoor" ? alumdoorWorkspaceExtension : undefined)} />;
 }
 
 export type { DoctypeWorkspaceProps };
