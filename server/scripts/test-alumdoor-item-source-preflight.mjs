@@ -183,11 +183,10 @@ const blockedAudit = preflightAlumdoorItemSourceRecords([
   {
     source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT,
     source_sheet: "ĐM",
-    source_row: 731,
-    source_index: 184,
-    item_code: "TP-BKAN",
-    item_name: "TP BÁT KHÓA ÂM NỀN",
-    source_uom: "BỘ/4 CẶP",
+    source_row: 1902,
+    item_code: "NVL-LAMAU-PHE",
+    item_name: "LÁ MẪU ĐỨC",
+    source_uom: "KG/THÙNG",
   },
   {
     source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
