@@ -208,17 +208,15 @@ jobs:
           ) + draft_anchor
           replace_once(core, draft_anchor, draft_function)
 
-          sales = 'server/apps-src/alumdoor-worker/src/sales-production.ts'
-          replace_once(
-              sales,
-              '  previewSalesProduction,\n  validateProductionRequest,',
-              '  previewDraftSalesBomRequirements,\n  previewSalesProduction,\n  validateProductionRequest,',
-          )
-          replace_once(
-              sales,
-              '  calculateSalesProductionLine,\n  previewSalesProduction,',
-              '  calculateSalesProductionLine,\n  previewDraftSalesBomRequirements,\n  previewSalesProduction,',
-          )
+          sales_path = Path('server/apps-src/alumdoor-worker/src/sales-production.ts')
+          sales_text = sales_path.read_text()
+          sales_anchor = '  previewSalesProduction,\n'
+          if sales_text.count(sales_anchor) != 2:
+              raise SystemExit(f'sales preview anchor count {sales_text.count(sales_anchor)}')
+          sales_path.write_text(sales_text.replace(
+              sales_anchor,
+              '  previewDraftSalesBomRequirements,\n  previewSalesProduction,\n',
+          ))
 
           index = 'server/apps-src/alumdoor-worker/src/index.ts'
           replace_once(
