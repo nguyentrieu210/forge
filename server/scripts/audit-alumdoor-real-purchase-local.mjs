@@ -15,15 +15,12 @@ const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ??
 const adminPassword = process.env.FORGE_ADMIN_PASSWORD ?? process.env.FORGE_AUTH_PASSWORD ?? "";
 if (!adminUser || !adminPassword) throw new Error("FORGE_ADMIN_USER/FORGE_ADMIN_PASSWORD are required");
 const parsedOrigin = new URL(origin);
-if (!["127.0.0.1", "localhost", "::1"].includes(parsedOrigin.hostname)) {
-  throw new Error(`refusing: purchase audit is local-only, got ${parsedOrigin.hostname}`);
-}
+if (!["127.0.0.1", "localhost", "::1"].includes(parsedOrigin.hostname)) throw new Error(`refusing non-local origin: ${parsedOrigin.hostname}`);
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "..", "..");
 const outputPath = resolve(process.argv[2] || resolve(repoRoot, "local-imports", "alumdoor-real-purchase-local-audit.json"));
-const markdown = await readFile(resolve(repoRoot, PURCHASE_SOURCE), "utf8");
-const rows = extractRealPurchaseRows(markdown);
+const rows = extractRealPurchaseRows(await readFile(resolve(repoRoot, PURCHASE_SOURCE), "utf8"));
 
 const cookies = new Map();
 let csrfToken = "";
@@ -33,17 +30,13 @@ function rememberCookies(response) {
   for (const part of setCookie.split(/,(?=[^;,]+=)/)) {
     const pair = part.split(";", 1)[0];
     const separator = pair.indexOf("=");
-    if (separator <= 0) continue;
-    cookies.set(pair.slice(0, separator).trim(), pair.slice(separator + 1).trim());
+    if (separator > 0) cookies.set(pair.slice(0, separator).trim(), pair.slice(separator + 1).trim());
   }
 }
-function cookieHeader() {
-  return [...cookies.entries()].map(([name, value]) => `${name}=${value}`).join("; ");
-}
+function cookieHeader() { return [...cookies.entries()].map(([name, value]) => `${name}=${value}`).join("; "); }
 async function request(urlPath, options = {}) {
   const headers = new Headers(options.headers ?? {});
-  const cookie = cookieHeader();
-  if (cookie) headers.set("cookie", cookie);
+  if (cookieHeader()) headers.set("cookie", cookieHeader());
   if (csrfToken && options.method && options.method !== "GET") headers.set("x-frappe-csrf-token", csrfToken);
   if (options.body !== undefined && !headers.has("content-type")) headers.set("content-type", "application/json");
   const response = await fetch(`${origin}${urlPath}`, {
@@ -70,14 +63,10 @@ async function login() {
   const message = boot && typeof boot === "object" && "message" in boot ? boot.message : boot;
   csrfToken = message?.csrf_token ?? csrfToken;
 }
-async function listDocs(doctype, fields, filters = [], limit = 200) {
-  const query = new URLSearchParams({
-    fields: JSON.stringify(fields),
-    filters: JSON.stringify(filters),
-    limit_page_length: String(limit),
-  });
+async function listNames(doctype, limit = 500) {
+  const query = new URLSearchParams({ fields: JSON.stringify(["name"]), limit_page_length: String(limit) });
   const body = await requireOk(`/api/resource/${encodeURIComponent(doctype)}?${query}`);
-  return body?.data ?? body?.message ?? [];
+  return (body?.data ?? body?.message ?? []).map((row) => clean(row.name)).filter(Boolean);
 }
 async function getDoc(doctype, name) {
   const result = await request(`/api/resource/${encodeURIComponent(doctype)}/${encodeURIComponent(name)}`);
@@ -87,31 +76,30 @@ async function getDoc(doctype, name) {
 }
 
 await login();
-const companies = await listDocs("Company", ["name", "default_currency"], [], 20);
-const warehouseNames = await listDocs("Warehouse", ["name"], [], 100);
+const companies = [];
+for (const name of await listNames("Company", 50)) {
+  const doc = await getDoc("Company", name);
+  if (doc) companies.push({ name: clean(doc.name), default_currency: clean(doc.default_currency), disabled: doc.disabled });
+}
 const warehouses = [];
-for (const row of warehouseNames) {
-  const doc = await getDoc("Warehouse", clean(row.name));
-  if (!doc) continue;
-  warehouses.push({
-    name: clean(doc.name),
-    company: clean(doc.company),
-    is_group: doc.is_group,
-    disabled: doc.disabled,
-  });
+for (const name of await listNames("Warehouse", 200)) {
+  const doc = await getDoc("Warehouse", name);
+  if (doc) warehouses.push({ name: clean(doc.name), company: clean(doc.company), is_group: doc.is_group, disabled: doc.disabled });
 }
 
-const supplierNames = Object.keys(APPROVED_PURCHASE_SUPPLIERS);
-const suppliers = [];
-for (const supplierName of supplierNames) {
-  const exact = await listDocs("Supplier", ["name", "supplier_name", "disabled"], [["supplier_name", "=", supplierName]], 5);
-  suppliers.push({ source_supplier: supplierName, matches: exact });
+const allSuppliers = [];
+for (const name of await listNames("Supplier", 500)) {
+  const doc = await getDoc("Supplier", name);
+  if (doc) allSuppliers.push({ name: clean(doc.name), supplier_name: clean(doc.supplier_name), disabled: doc.disabled });
 }
+const suppliers = Object.keys(APPROVED_PURCHASE_SUPPLIERS).map((sourceSupplier) => ({
+  source_supplier: sourceSupplier,
+  matches: allSuppliers.filter((doc) => doc.supplier_name === sourceSupplier || doc.name === sourceSupplier),
+}));
 
-const sourceCodes = [...new Set(rows.map((row) => clean(row.item_code)).filter(Boolean))];
-const probeCodes = [...new Set([...sourceCodes, "TP-RAYHOP"])];
+const sourceCodes = [...new Set(rows.filter((row) => !row.excluded).map((row) => clean(row.canonical_item_code)).filter(Boolean))];
 const items = [];
-for (const itemCode of probeCodes) {
+for (const itemCode of sourceCodes) {
   const doc = await getDoc("Item", itemCode);
   items.push({ item_code: itemCode, exists: Boolean(doc), doc: doc ? {
     name: clean(doc.name),
@@ -123,28 +111,17 @@ for (const itemCode of probeCodes) {
     inventory_mode: clean(doc.inventory_mode),
     disabled: doc.disabled,
     is_purchase_item: doc.is_purchase_item,
-    uom_conversions: Array.isArray(doc.uom_conversions) ? doc.uom_conversions.map((entry) => ({
-      uom: clean(entry?.uom),
-      conversion_factor: Number(entry?.conversion_factor),
-    })) : [],
+    uom_conversions: Array.isArray(doc.uom_conversions) ? doc.uom_conversions.map((entry) => ({ uom: clean(entry?.uom), conversion_factor: Number(entry?.conversion_factor) })) : [],
   } : null });
 }
 
-const report = {
-  format: "alumdoor-real-purchase-local-audit/v1",
-  origin,
-  purchase_rows: rows.length,
-  companies,
-  warehouses,
-  suppliers,
-  items,
-};
+const report = { format: "alumdoor-real-purchase-local-audit/v2", origin, purchase_rows: rows.length, companies, warehouses, suppliers, items };
 await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(`ALUMDOOR_REAL_PURCHASE_LOCAL_AUDIT ${JSON.stringify({
-  companies: companies.map((row) => row.name),
+  companies,
   warehouses,
-  suppliers: suppliers.map((row) => ({ source_supplier: row.source_supplier, match_count: row.matches.length, matches: row.matches.map((match) => match.name) })),
-  items: items.map((row) => ({ item_code: row.item_code, exists: row.exists, stock_uom: row.doc?.stock_uom, purchase_uom: row.doc?.default_purchase_uom || row.doc?.purchase_uom, inventory_mode: row.doc?.inventory_mode, conversions: row.doc?.uom_conversions })),
+  suppliers: suppliers.map((row) => ({ source_supplier: row.source_supplier, match_count: row.matches.length, matches: row.matches })),
+  items: items.map((row) => ({ item_code: row.item_code, exists: row.exists, stock_uom: row.doc?.stock_uom, purchase_uom: row.doc?.default_purchase_uom || row.doc?.purchase_uom, inventory_mode: row.doc?.inventory_mode, is_purchase_item: row.doc?.is_purchase_item, disabled: row.doc?.disabled, conversions: row.doc?.uom_conversions })),
   output: outputPath,
 })}`);
 console.log("ALUMDOOR_REAL_PURCHASE_LOCAL_AUDIT_PASS");
