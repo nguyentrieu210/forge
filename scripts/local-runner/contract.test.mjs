@@ -141,11 +141,8 @@ test('bootstrap HTTP smoke lifecycle fixture reaches lifecycle validation after 
     /delete:\s*true/,
     'Field Visit must grant delete so submitted DELETE reaches lifecycle validation instead of failing at DocPerm',
   );
-  assert.match(
-    smoke,
-    /deleted\.status\s*===\s*417\s*&&\s*\/submitted document cannot be deleted\/i,
-    'HTTP smoke must keep asserting Frappe lifecycle ValidationError/417',
-  );
+  assert.match(smoke, /deleted\.status\s*===\s*417/);
+  assert.match(smoke, /submitted document cannot be deleted/i);
 });
 
 test('Real Purchase SQL allowlist accepts only canonical draft targets', () => {
