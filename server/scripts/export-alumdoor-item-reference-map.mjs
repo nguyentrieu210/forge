@@ -80,6 +80,7 @@ for (const line of sql.split(/\r?\n/)) {
     is_sales_item: Boolean(payload.is_sales_item),
     has_catch_weight: Boolean(payload.has_catch_weight),
     weight_uom: payload.weight_uom ?? "",
+    payload: canonicalPayload,
     source: "alumdoor-item-only-2026-08-11.sql",
   };
 }
