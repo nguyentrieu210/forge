@@ -1,6 +1,6 @@
 {
   "version": "2.2.2",
-  "//": "Bulk Transaction v1 và đối soát giao hàng: app compose input/window; canonical controller giữ transaction, quyền và ledger.",
+  "//": "Bulk Transaction v1, đối soát giao hàng và override reviewable cho action đã có trong builder; integration sidecar giữ final package version.",
   "actions": [
     {
       "name": "nhap-nhom-hang-loat",
@@ -37,6 +37,20 @@
         "reason:Small Text! Lý do"
       ],
       "commit": "alumdoor.purchase.supplier_delivery_settlement | Ghi đối soát | Xác nhận ghi đối soát cho kỳ giao hàng này?"
+    },
+    {
+      "replace": true,
+      "name": "nha-giu-cho",
+      "label": "Nhả giữ chỗ",
+      "icon": "bookmark-x",
+      "group": "Kho",
+      "permission": "Stock Reservation",
+      "description": "Trả lại phần đã giữ khi không còn nhu cầu. Lý do phải chọn từ danh mục Lý do huỷ đang hoạt động.",
+      "fields": [
+        "reservation:Link(Stock Reservation)! Phiếu giữ chỗ",
+        "released_reason:Link(Lý do huỷ)! Lý do nhả"
+      ],
+      "commit": "alumdoor.reserve.release | Nhả"
     }
   ]
 }
