@@ -8,20 +8,20 @@ import {
   type AlumDoorGeneratedSalaryInput,
 } from "./alumdoor-payroll.js";
 
-const LEGACY_OVERTIME_REQUEST = "Overtime Request";
 const ATTENDANCE_DAY = "AlumDoor Attendance Day";
 const PAID_LEAVE_PROBE_PREFIX = "__ALU_PAID_LEAVE_PROBE__";
 
 /**
  * Operational AlumDoor Lite payroll seam.
  *
- * Legacy HRM may keep Overtime Request documents, but Lite payroll must not read them and
- * their existence must not affect money or the deterministic input hash. Attendance Day's
- * system-calculated `overtime_minutes` is the sole OT authority.
+ * Attendance Day stores scan-derived raw overtime separately from payable overtime. The
+ * underlying AlumDoor payroll builder reads submitted Overtime Request documents and pays
+ * `min(raw_overtime_minutes, approved_minutes)`; without a submitted request payable OT is 0.
+ * Both regular work and approved payable OT use the fixed AlumDoor hourly rates.
  *
- * Salary Slip is also output-only for Lite money. Legacy manual allowance/advance/deduction
- * fields are stripped before calculation: fixed allowance comes from Pay Profile, while
- * bonus/penalty/advance transactions come from submitted Additional Salary records.
+ * Salary Slip is output-only for Lite money. Legacy manual allowance/advance/deduction fields
+ * are stripped before calculation: fixed allowance comes from Pay Profile, while bonus,
+ * deduction and simple advance adjustments come from submitted Additional Salary records.
  *
  * A leave-only period has no scan-created Attendance Day yet. The legacy builder historically
  * failed before it could evaluate paid leave, so this seam injects one transient zero-work
@@ -39,7 +39,6 @@ export async function buildAlumDoorLiteSalarySlipInputs(
     get(target, property, receiver) {
       if (property === "listDocumentsByDoctype") {
         return async (tenantId: string, doctype: string) => {
-          if (doctype === LEGACY_OVERTIME_REQUEST) return [];
           const documents = await target.listDocumentsByDoctype<JsonObject>(tenantId, doctype);
           if (doctype !== ATTENDANCE_DAY) return documents;
           const hasPeriodAttendance = documents.some((entry) => H.text(entry.data.employee) === input.employee
@@ -70,56 +69,22 @@ export async function buildAlumDoorLiteSalarySlipInputs(
   const generated = await buildAlumDoorSalarySlipInputs({ ...context, reader }, liteInput);
   if (!generated) return null;
 
-  const legacyTrace = parseTrace(generated.alu_formula_trace_json);
-  const { overtime_requests: _ignoredRequests, ...withoutRequests } = legacyTrace;
-  const attendance = arrayObjects(legacyTrace.attendance)
-    .filter((row) => !H.text(row.name).startsWith(PAID_LEAVE_PROBE_PREFIX))
-    .map((row) => {
-      const overtimeMinutes = integer(
-        row.raw_overtime_minutes ?? row.overtime_minutes ?? row.approved_overtime_minutes ?? 0,
-        "Attendance overtime_minutes in payroll trace",
-        0,
-        1_440,
-      );
-      const {
-        raw_overtime_minutes: _legacyRaw,
-        approved_overtime_minutes: _legacyApproved,
-        overtime_minutes: _legacyOvertime,
-        ...rest
-      } = row;
-      return { ...rest, overtime_minutes: overtimeMinutes };
-    });
-
-  const legacyTotals = object(legacyTrace.totals);
-  const overtimeMinutes = integer(
-    legacyTotals.approved_overtime_minutes ?? legacyTotals.raw_overtime_minutes ?? legacyTotals.overtime_minutes ?? generated.alu_overtime_minutes,
-    "Payroll overtime_minutes",
-    0,
-    100_000,
-  );
-  const {
-    raw_overtime_minutes: _legacyRawTotal,
-    approved_overtime_minutes: _legacyApprovedTotal,
-    overtime_minutes: _legacyOvertimeTotal,
-    manual_deduction_vnd: _legacyManualDeductionTotal,
-    ...totalRest
-  } = legacyTotals;
-
+  const sourceTrace = parseTrace(generated.alu_formula_trace_json);
+  const attendance = arrayObjects(sourceTrace.attendance)
+    .filter((row) => !H.text(row.name).startsWith(PAID_LEAVE_PROBE_PREFIX));
   const liteTrace = {
-    ...withoutRequests,
-    reconciliation_version: 5,
-    overtime_authority: "AlumDoor Attendance Day.overtime_minutes",
+    ...sourceTrace,
+    reconciliation_version: 6,
+    overtime_authority: "AlumDoor Attendance Day.raw_overtime_minutes + submitted Overtime Request; payable=min(raw, approved)",
     paid_leave_authority: "validated Leave Application -> canonical AlumDoor Attendance Day projection on finalize",
     salary_override_authority: "Pay Profile + Additional Salary only",
     attendance,
-    totals: { ...totalRest, overtime_minutes: overtimeMinutes, manual_deduction_vnd: 0 },
   };
   const traceJson = JSON.stringify(liteTrace);
   return {
     ...generated,
     rule_trace_json: traceJson,
     alu_formula_trace_json: traceJson,
-    alu_overtime_minutes: overtimeMinutes,
     alu_advance_vnd: 0,
     alu_manual_deduction_vnd: 0,
   };
@@ -198,6 +163,7 @@ async function findPaidLeaveProbe(
           scheduled_minutes: scheduledMinutes,
           state: "complete",
           regular_minutes: 0,
+          raw_overtime_minutes: 0,
           overtime_minutes: 0,
           payable_work_fraction_bp: 0,
         },
@@ -222,10 +188,6 @@ function arrayObjects(value: unknown): JsonObject[] {
   return Array.isArray(value)
     ? value.filter((row): row is JsonObject => Boolean(row) && typeof row === "object" && !Array.isArray(row))
     : [];
-}
-
-function object(value: unknown): JsonObject {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {};
 }
 
 function integer(value: unknown, field: string, min: number, max: number): number {
