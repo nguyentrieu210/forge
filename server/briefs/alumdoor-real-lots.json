@@ -1,0 +1,78 @@
+{
+  "$schema": "./brief.schema.json",
+  "id": "alumdoor-real-lots",
+  "name": "Alumdoor Physical Aluminium Lots",
+  "version": "1.0.0",
+  "module": "Alumdoor",
+  "domain": "alumdoor",
+  "brand": "warm",
+  "roles": [
+    "Chủ xưởng",
+    "Thủ kho"
+  ],
+  "externalDocTypes": [
+    {
+      "name": "Item",
+      "kind": "master",
+      "app": "alumdoor",
+      "version": "2.4.0"
+    }
+  ],
+  "doctypes": [
+    {
+      "name": "Aluminium Lot",
+      "label": "Lô nhôm vật lý",
+      "icon": "layers-3",
+      "group": "Kho",
+      "naming": "field:source_key",
+      "title": "source_key",
+      "search": [
+        "source_key",
+        "item",
+        "profile",
+        "source_sheet",
+        "color_code"
+      ],
+      "list": [
+        "source_key",
+        "item",
+        "profile",
+        "color_code",
+        "condition",
+        "length_m",
+        "piece_count",
+        "stock_status"
+      ],
+      "fields": [
+        "source_key:Data!* Khóa nguồn",
+        "item:Link(Item)! Vật tư",
+        "profile:Data! Profile / vật tư nguồn",
+        "source_file:Data! File nguồn",
+        "source_sheet:Data! Sheet nguồn",
+        "source_row:Int! Dòng nguồn",
+        "item_mapping_origin:Data! Nguồn ánh xạ Item",
+        "item_mapping_reason:Small Text! Lý do ánh xạ Item",
+        "item_mapping_evidence:Small Text! Bằng chứng ánh xạ Item",
+        "entry_date:Date Ngày nhập nhôm",
+        "lot_type:Data Loại",
+        "color_code:Data Màu nguồn",
+        "condition:Data Tình trạng",
+        "length_m:Float! Khổ / chiều dài (m)",
+        "piece_count:Float! Số lá / cây",
+        "reentry_date:Date Ngày nhập lại",
+        "stock_status:Data Theo dõi tồn",
+        "selected_for_cut:Check!=(0) Chọn cắt",
+        "scrap_or_remnant:Data LM / phế",
+        "total_kg:Float Số kg tổng",
+        "source_action:Data Nhập / ghi chú",
+        "source_note:Small Text Ghi chú nguồn",
+        "source_snapshot:Code! Snapshot dòng nguồn",
+        "is_active:Check!=(1) Còn hiệu lực"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "rwc"
+      }
+    }
+  ]
+}
