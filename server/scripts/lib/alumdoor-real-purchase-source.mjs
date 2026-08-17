@@ -25,7 +25,6 @@ export const APPROVED_PURCHASE_ITEM_UOMS = Object.freeze({
   "TP_UPS-E800i": "CÁI",
   "TP-TD326": "M",
   "TP-TD325": "M",
-  "NVL-BO1VIS AL71": "KG",
   "MŨI MÀI HỘP KIM": "CÁI",
   "TP-RAYHOP": "KG",
   "NVL-VDAY-TDU-KTD": "KG",
@@ -34,6 +33,8 @@ export const APPROVED_PURCHASE_ITEM_UOMS = Object.freeze({
 
 // Exact, source-lineaged dispositions only. No fuzzy matching and no guessed quantity.
 // - 534-537: ĐM proves TP-TD325/326 are meter-based; journal supplies length + piece count.
+// - 538: journal says NVL-BO1VIS AL71, but canonical Gate A 587 has no exact code and no approved alias.
+//        Multiple AL71 variants exist, so selecting one would be guesswork; retain the row as evidence only.
 // - 539: source item label "TP RAY HỘP TD" resolves exactly through ĐM to TP-RAYHOP.
 // - 543/544: source quantities are not trustworthy enough to persist; retain as explicit exclusions.
 export const PURCHASE_SOURCE_DISPOSITIONS = Object.freeze({
@@ -41,6 +42,7 @@ export const PURCHASE_SOURCE_DISPOSITIONS = Object.freeze({
   535: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD326:M" },
   536: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD325:M" },
   537: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD325:M" },
+  538: { exclude: true, reason: "SOURCE_ITEM_IDENTITY_NOT_CANONICAL_587", evidence: "GateA587:no_exact_NVL-BO1VIS_AL71" },
   539: { canonical_item_code: "TP-RAYHOP", canonical_uom: "KG", evidence: "ĐM:TP-RAYHOP" },
   543: { exclude: true, reason: "SOURCE_QUANTITY_OUTLIER_2834000_KG_UNPROVEN" },
   544: { exclude: true, reason: "SOURCE_QUANTITY_MISSING" },
