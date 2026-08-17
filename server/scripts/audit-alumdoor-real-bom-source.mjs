@@ -18,7 +18,8 @@ function countBy(values) {
   return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "vi"));
 }
 const uoms = countBy(refs.map((row) => clean(row.source_uom) || "<blank>"));
-const formulas = countBy(refs.map((row) => clean(row.source_formula) || "<blank>"));
+const formulaCodes = countBy(refs.map((row) => clean(row.source_formula_code) || "<blank>"));
+const formulaTexts = countBy(refs.map((row) => clean(row.source_formula_text) || "<blank>"));
 const qtyOrFormula = countBy(refs.map((row) => clean(row.source_qty_or_formula) || "<blank>"));
 const slashUoms = uoms.filter(([uom]) => uom.includes("/"));
 const nonNumericQtyRows = refs.filter((row) => {
@@ -26,17 +27,23 @@ const nonNumericQtyRows = refs.filter((row) => {
   return raw !== "" && !/^[+-]?\d+(?:\.\d+)?$/.test(raw);
 });
 const blankQtyRows = refs.filter((row) => clean(row.source_qty_or_formula) === "");
+const blankQtyWithoutFormulaEvidence = blankQtyRows.filter((row) => (
+  !clean(row.source_formula_code) && !clean(row.source_formula_text)
+));
 const report = {
-  format: "alumdoor-real-bom-source-audit/v1",
+  format: "alumdoor-real-bom-source-audit/v2",
   source_reference_count: refs.length,
   distinct_uom_count: uoms.length,
-  distinct_formula_count: formulas.length,
+  distinct_formula_code_count: formulaCodes.length,
+  distinct_formula_text_count: formulaTexts.length,
   distinct_qty_or_formula_count: qtyOrFormula.length,
   slash_uom_row_count: slashUoms.reduce((sum, [, count]) => sum + count, 0),
   nonnumeric_qty_row_count: nonNumericQtyRows.length,
   blank_qty_row_count: blankQtyRows.length,
+  blank_qty_without_formula_evidence_count: blankQtyWithoutFormulaEvidence.length,
   uoms: uoms.map(([value, count]) => ({ value, count })),
-  formulas: formulas.map(([value, count]) => ({ value, count })),
+  formula_codes: formulaCodes.map(([value, count]) => ({ value, count })),
+  formula_texts: formulaTexts.map(([value, count]) => ({ value, count })),
   slash_uoms: slashUoms.map(([value, count]) => ({ value, count })),
   nonnumeric_qty_samples: nonNumericQtyRows.slice(0, 100).map((row) => ({
     source_row: row.source_row,
@@ -44,20 +51,30 @@ const report = {
     item_code: row.item_code,
     source_uom: row.source_uom,
     source_qty_or_formula: row.source_qty_or_formula,
-    source_formula: row.source_formula,
+    source_formula_code: row.source_formula_code,
+    source_formula_text: row.source_formula_text,
   })),
   blank_qty_samples: blankQtyRows.slice(0, 100).map((row) => ({
     source_row: row.source_row,
     source_index: row.source_index,
     item_code: row.item_code,
     source_uom: row.source_uom,
-    source_formula: row.source_formula,
+    source_formula_code: row.source_formula_code,
+    source_formula_text: row.source_formula_text,
+  })),
+  blank_qty_without_formula_evidence_samples: blankQtyWithoutFormulaEvidence.slice(0, 100).map((row) => ({
+    source_row: row.source_row,
+    source_index: row.source_index,
+    item_code: row.item_code,
+    source_uom: row.source_uom,
   })),
 };
 if (outputArg) writeFileSync(path.resolve(outputArg), `${JSON.stringify(report, null, 2)}\n`);
-console.log(`ALUMDOOR_REAL_BOM_SOURCE_AUDIT refs=${refs.length} distinct_uoms=${uoms.length} distinct_formulas=${formulas.length} slash_uom_rows=${report.slash_uom_row_count} nonnumeric_qty=${nonNumericQtyRows.length} blank_qty=${blankQtyRows.length}`);
+console.log(`ALUMDOOR_REAL_BOM_SOURCE_AUDIT refs=${refs.length} distinct_uoms=${uoms.length} distinct_formula_codes=${formulaCodes.length} distinct_formula_texts=${formulaTexts.length} slash_uom_rows=${report.slash_uom_row_count} nonnumeric_qty=${nonNumericQtyRows.length} blank_qty=${blankQtyRows.length} blank_qty_without_formula=${blankQtyWithoutFormulaEvidence.length}`);
 console.log(`ALUMDOOR_REAL_BOM_UOM_CATALOG ${JSON.stringify(report.uoms)}`);
-console.log(`ALUMDOOR_REAL_BOM_FORMULA_CATALOG ${JSON.stringify(report.formulas)}`);
+console.log(`ALUMDOOR_REAL_BOM_FORMULA_CODE_CATALOG ${JSON.stringify(report.formula_codes)}`);
 console.log(`ALUMDOOR_REAL_BOM_SLASH_UOMS ${JSON.stringify(report.slash_uoms)}`);
+console.log(`ALUMDOOR_REAL_BOM_FORMULA_TEXT_TOP ${JSON.stringify(report.formula_texts.slice(0, 80))}`);
 if (nonNumericQtyRows.length) console.log(`ALUMDOOR_REAL_BOM_NONNUMERIC_QTY_SAMPLES ${JSON.stringify(report.nonnumeric_qty_samples)}`);
 if (blankQtyRows.length) console.log(`ALUMDOOR_REAL_BOM_BLANK_QTY_SAMPLES ${JSON.stringify(report.blank_qty_samples)}`);
+if (blankQtyWithoutFormulaEvidence.length) console.log(`ALUMDOOR_REAL_BOM_BLANK_QTY_WITHOUT_FORMULA ${JSON.stringify(report.blank_qty_without_formula_evidence_samples)}`);
