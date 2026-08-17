@@ -17,61 +17,54 @@ jobs:
     runs-on: [self-hosted]
     timeout-minutes: 10
     steps:
-      - name: Inspect managed services and listener ancestry
+      - name: Inspect runtime authority and legacy ownership
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          Write-Host '=== MANAGED SERVICES ==='
-          $serviceNames = @('ForgeAlumdoorBackend','ForgeAlumdoorDesk')
-          foreach ($name in $serviceNames) {
-            $service = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
-            if ($service) {
-              Write-Host "SERVICE name=$($service.Name) state=$($service.State) start_name=$($service.StartName) pid=$($service.ProcessId) path=$($service.PathName)"
-            } else {
-              Write-Host "SERVICE name=$name state=ABSENT"
-            }
-          }
+          Write-Host "JOB_IDENTITY=$(whoami)"
+          Write-Host "JOB_ELEVATED=$(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
 
-          Write-Host '=== ACTIONS RUNNER SERVICE ==='
+          Write-Host '=== SERVICES ==='
           Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -like 'actions.runner.nguyentrieu210-forge.*' } |
+            Where-Object {
+              $_.Name -in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk') -or
+              $_.Name -like 'actions.runner.nguyentrieu210-forge.*' -or
+              $_.PathName -match '(?i)nssm'
+            } |
+            Sort-Object Name |
             ForEach-Object {
-              Write-Host "RUNNER_SERVICE name=$($_.Name) state=$($_.State) start_name=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)"
+              Write-Host "SERVICE name=$($_.Name) display=$($_.DisplayName) state=$($_.State) start_name=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)"
             }
 
-          function Get-ProcessOwnerLine([int]$ProcessId) {
-            $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction SilentlyContinue
-            if (-not $proc) { return "pid=$ProcessId missing=1" }
-            $owner = $null
-            try { $owner = Invoke-CimMethod -InputObject $proc -MethodName GetOwner -ErrorAction Stop } catch {}
-            $account = if ($owner -and $owner.ReturnValue -eq 0) { "$($owner.Domain)\$($owner.User)" } else { '<unknown>' }
-            $cmd = (($proc.CommandLine -replace '[\r\n]+',' ') -replace '\s+',' ').Trim()
-            if ($cmd.Length -gt 400) { $cmd = $cmd.Substring(0,400) }
-            return "pid=$($proc.ProcessId) parent=$($proc.ParentProcessId) name=$($proc.Name) owner=$account exe=$($proc.ExecutablePath) cmd=$cmd"
+          $all = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+          $byId = @{}
+          foreach ($proc in $all) { $byId[[int]$proc.ProcessId] = $proc }
+
+          function Owner-Of($proc) {
+            if (-not $proc) { return '<missing>' }
+            try {
+              $result = Invoke-CimMethod -InputObject $proc -MethodName GetOwner -ErrorAction Stop
+              if ($result.ReturnValue -eq 0) { return "$($result.Domain)\$($result.User)" }
+            } catch {}
+            return '<unknown>'
           }
 
-          Write-Host '=== LISTENERS + ANCESTRY ==='
+          Write-Host '=== LISTENER ANCESTRY ==='
           $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799,5173) })
-          if ($listeners.Count -eq 0) {
-            Write-Host 'LISTENERS none=1'
-          }
           foreach ($listener in $listeners) {
             Write-Host "LISTENER port=$($listener.LocalPort) pid=$($listener.OwningProcess)"
             $current = [int]$listener.OwningProcess
             $seen = @{}
-            for ($depth = 0; $depth -lt 12 -and $current -gt 0; $depth++) {
+            for ($depth=0; $depth -lt 12 -and $current -gt 0; $depth++) {
               if ($seen.ContainsKey($current)) { break }
               $seen[$current] = $true
-              $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$current" -ErrorAction SilentlyContinue
+              $proc = $byId[$current]
               if (-not $proc) { Write-Host "ANCESTOR depth=$depth pid=$current missing=1"; break }
-              Write-Host "ANCESTOR depth=$depth $(Get-ProcessOwnerLine -ProcessId $current)"
+              $cmd = (($proc.CommandLine -replace '[\r\n]+',' ') -replace '\s+',' ').Trim()
+              if ($cmd.Length -gt 500) { $cmd = $cmd.Substring(0,500) }
+              Write-Host "ANCESTOR depth=$depth pid=$($proc.ProcessId) parent=$($proc.ParentProcessId) name=$($proc.Name) owner=$(Owner-Of $proc) exe=$($proc.ExecutablePath) cmd=$cmd"
               $current = [int]$proc.ParentProcessId
             }
-          }
-
-          Write-Host '=== MAINTENANCE FLAGS ==='
-          foreach ($path in @('C:\ForgeServices\Alumdoor\maintenance.flag','C:\ForgeServices\Alumdoor\desk-maintenance.flag')) {
-            Write-Host "FLAG path=$path exists=$(Test-Path -LiteralPath $path)"
           }
 
           Write-Host 'ALUMDOOR_RUNTIME_OWNERSHIP_DIAGNOSTIC_PASS'
