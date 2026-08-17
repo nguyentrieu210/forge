@@ -34,6 +34,13 @@ function isStockHeader(row) {
   return fold(readAlumdoorCell(row, 1)).includes("MA NVL");
 }
 
+function isDmSectionBoundary(row) {
+  return Number(row?.source_row) === 1904
+    && !clean(readAlumdoorCell(row, 1))
+    && fold(readAlumdoorCell(row, 2)) === "PHU KIEN LA DAI LOAN"
+    && !clean(readAlumdoorCell(row, 3));
+}
+
 function makeSellableRecord(row, sourceIndex) {
   const category = readAlumdoorCell(row, 0);
   const itemCode = readAlumdoorCell(row, 3);
@@ -44,6 +51,7 @@ function makeSellableRecord(row, sourceIndex) {
     source_sheet: "ĐM",
     source_row: row.source_row,
     source_index: sourceIndex,
+    source_parent_row: row.source_row,
     item_code: itemCode,
     item_name: itemName,
     source_uom: sourceUom,
@@ -60,7 +68,7 @@ function makeSellableRecord(row, sourceIndex) {
   };
 }
 
-function makeBomReferenceRecord(row, parentIndex, parentCode) {
+function makeBomReferenceRecord(row, parentIndex, parentCode, parentRow) {
   const category = readAlumdoorCell(row, 0);
   const itemCode = readAlumdoorCell(row, 3);
   const itemName = readAlumdoorCell(row, 2) || itemCode;
@@ -72,6 +80,7 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
     source_sheet: "ĐM",
     source_row: row.source_row,
     source_index: parentIndex,
+    source_parent_row: parentRow,
     item_code: itemCode,
     item_name: itemName,
     source_uom: sourceUom,
@@ -99,6 +108,7 @@ function makeStockRecord(row) {
     source_sheet: "Trang tính29",
     source_row: row.source_row,
     source_index: null,
+    source_parent_row: null,
     item_code: itemCode,
     item_name: itemName,
     source_uom: readAlumdoorCell(row, 5),
@@ -116,10 +126,17 @@ const stockRows = parseAlumdoorIndexedMarkdownRows(stockText);
 const records = [];
 let currentParentIndex = null;
 let currentParentCode = "";
+let currentParentRow = null;
 let sellableCount = 0;
 let bomReferenceCount = 0;
 for (const row of dmRows) {
   if (isDmHeader(row)) continue;
+  if (isDmSectionBoundary(row)) {
+    currentParentIndex = null;
+    currentParentCode = "";
+    currentParentRow = null;
+    continue;
+  }
   const stt = parseAlumdoorSourceIndex(readAlumdoorCell(row, 1));
   const code = readAlumdoorCell(row, 3);
   const name = readAlumdoorCell(row, 4) || readAlumdoorCell(row, 2);
@@ -127,11 +144,12 @@ for (const row of dmRows) {
   if (stt !== null) {
     currentParentIndex = stt;
     currentParentCode = code;
+    currentParentRow = row.source_row;
     if (code || name) { records.push(makeSellableRecord(row, stt)); sellableCount += 1; }
     continue;
   }
-  if (code && currentParentIndex !== null && (name || uom)) {
-    records.push(makeBomReferenceRecord(row, currentParentIndex, currentParentCode));
+  if (code && currentParentRow !== null && (name || uom)) {
+    records.push(makeBomReferenceRecord(row, currentParentIndex, currentParentCode, currentParentRow));
     bomReferenceCount += 1;
   }
 }
@@ -165,7 +183,7 @@ const report = {
   source_authority: {
     sellable: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md numbered rows",
     stock: "apps/alumdoor/docs/nguon/ms-lien/Trang-tính29.md",
-    bom_reference: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md component rows",
+    bom_reference: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md component rows bound by unique parent source row",
   },
   dm_row_count: dmRows.length, stock_row_count: stockRows.length, source_record_count: records.length,
   sellable_count: sellableCount, stock_count: stockCount, bom_reference_count: bomReferenceCount,
