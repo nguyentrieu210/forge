@@ -98,13 +98,14 @@ export const ITEM_SOURCE_BOM_ITEM_PROMOTIONS = Object.freeze({
   "TP-LUOISN13x26_STD": Object.freeze({ canonical_source_uom: "Kg", reason: "consistent_bom_component_uom" }),
   "TP-LUOISNPHI19_INOX": Object.freeze({ canonical_source_uom: "m2", reason: "consistent_bom_component_uom" }),
   "NVL-LUOISNPHI19_STD": Object.freeze({ canonical_source_uom: "Kg", reason: "consistent_bom_component_uom" }),
+  "TP-LUOIMV_INOX": Object.freeze({ canonical_source_uom: "m2", reason: "parent_geometry_and_analog_inox_mesh_uom" }),
 
   "MŨI MÀI HỘP KIM": Object.freeze({ canonical_source_uom: "Cái", reason: "explicit_bom_consumable_identity" }),
   "NVL-CNHUA": Object.freeze({ canonical_source_uom: "Cái", reason: "explicit_bom_component_identity" }),
 
   // DANH MỤC gives these exact source codes with purchase UOM KG.
   "RONNHUAVANGCẢNHAY_RSU100": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
-  "RONNHUAVANGCANHAY_RSU70": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
+  "RONNHUAVANGCANHẢNHAY_RSU70": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
 
   // Real transaction/BOM evidence uses these codes with a Kg-per-metre basis. The preflight
   // interprets KG/M as atomic stock Kg + secondary Mét and marks conversion required.
