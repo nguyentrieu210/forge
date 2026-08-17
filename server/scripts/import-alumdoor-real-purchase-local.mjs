@@ -22,32 +22,25 @@ function supplierPayload(name, audit) {
     if (!field?.fieldname || payload[field.fieldname] !== undefined) continue;
     if (field.default !== null && field.default !== undefined && clean(field.default)) payload[field.fieldname] = field.default;
   }
-  payload._alumdoor_real_purchase = {
-    format: "alumdoor-real-purchase-supplier/v1",
-    mode: "historical_source_identity",
-    source: PURCHASE_SOURCE,
-  };
+  payload._alumdoor_real_purchase = { format: "alumdoor-real-purchase-supplier/v1", mode: "historical_source_identity", source: PURCHASE_SOURCE };
   return payload;
 }
 
 function supplierSql(audit) {
   const suppliers = [...new Set(importableRows.map((row) => row.supplier).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi"));
-  const statements = ["BEGIN TRANSACTION;"];
+  const statements = [];
   for (const name of suppliers) {
     const payload = JSON.stringify(supplierPayload(name, audit));
     statements.push(`INSERT INTO master_records (tenant_id,record_type,name,disabled,data_json,modified_at)\nSELECT 'demo','Supplier',${sql(name)},0,${sql(payload)},CURRENT_TIMESTAMP\nWHERE NOT EXISTS (SELECT 1 FROM master_records WHERE tenant_id='demo' AND record_type='Supplier' AND name=${sql(name)});`);
     statements.push(`INSERT INTO documents (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)\nSELECT 'demo',${sql(`Supplier:${name}`)},'Supplier',${sql(name)},'admin',0,'Draft',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'admin',${sql(payload)}\nWHERE NOT EXISTS (SELECT 1 FROM documents WHERE tenant_id='demo' AND doc_key=${sql(`Supplier:${name}`)});`);
     statements.push(`INSERT INTO document_search (tenant_id,doctype,name,title,content,modified_at)\nSELECT 'demo','Supplier',${sql(name)},${sql(name)},${sql(name)},CURRENT_TIMESTAMP\nWHERE NOT EXISTS (SELECT 1 FROM document_search WHERE tenant_id='demo' AND doctype='Supplier' AND name=${sql(name)});`);
   }
-  statements.push("COMMIT;");
   return { suppliers, text: `${statements.join("\n\n")}\n` };
 }
 
 function liveManifests(audit) {
   const supplierManifest = [];
-  for (const entry of audit?.suppliers ?? []) {
-    for (const match of entry?.matches ?? []) supplierManifest.push({ ...match, supplier_name: clean(match.supplier_name || match.name) });
-  }
+  for (const entry of audit?.suppliers ?? []) for (const match of entry?.matches ?? []) supplierManifest.push({ ...match, supplier_name: clean(match.supplier_name || match.name) });
   const itemManifest = (audit?.items ?? []).filter((entry) => entry?.exists && entry?.doc).map((entry) => entry.doc);
   return { supplierManifest, itemManifest };
 }
@@ -58,28 +51,14 @@ function resolveCompany(audit) {
   return matches[0];
 }
 
-function receiptName(doc) {
-  return `PR-HIST-${hash(doc.source_group_key).slice(0, 12).toUpperCase()}`;
-}
+function receiptName(doc) { return `PR-HIST-${hash(doc.source_group_key).slice(0, 12).toUpperCase()}`; }
 
 function buildReceiptPayload(doc, company) {
   const items = doc.lines.map((line) => {
-    const item = {
-      item_code: line.canonical_item_code,
-      item_name: line.item_name || line.canonical_item_code,
-      qty: line.canonical_quantity,
-      uom: line.canonical_uom,
-    };
+    const item = { item_code: line.canonical_item_code, item_name: line.item_name || line.canonical_item_code, qty: line.canonical_quantity, uom: line.canonical_uom };
     if (Number.isFinite(line.rate)) item.rate = line.rate;
     if (Number.isFinite(line.pre_tax_amount)) item.amount = line.pre_tax_amount;
-    item._alumdoor_source = {
-      row: line.source_row,
-      source_qty: line.source_quantity,
-      source_uom: line.uom,
-      source_rate: line.rate,
-      source_amount: line.pre_tax_amount,
-      canonical_fingerprint: line.canonical_fingerprint,
-    };
+    item._alumdoor_source = { row: line.source_row, source_qty: line.source_quantity, source_uom: line.uom, source_rate: line.rate, source_amount: line.pre_tax_amount, canonical_fingerprint: line.canonical_fingerprint };
     return item;
   });
   return {
@@ -107,33 +86,22 @@ function buildReceiptPayload(doc, company) {
 function receiptSql(audit) {
   const company = resolveCompany(audit);
   const { supplierManifest, itemManifest } = liveManifests(audit);
-  const report = preflightRealPurchaseRows(rows, {
-    company: company.name,
-    historical_draft: true,
-    supplier_manifest: supplierManifest,
-    item_manifest: itemManifest,
-  });
-  if (!report.draft_mutation_authorized || report.purchase_receipt.ready !== 7 || report.source_exclusions.row_count !== 2) {
-    throw new Error(`PURCHASE_IMPORT_DRAFT_PREFLIGHT_BLOCKED blockers=${report.blocker_codes.join(",")} ready=${report.purchase_receipt.ready}`);
+  const report = preflightRealPurchaseRows(rows, { company: company.name, historical_draft: true, supplier_manifest: supplierManifest, item_manifest: itemManifest });
+  if (!report.draft_mutation_authorized || report.purchase_receipt.ready !== report.purchase_receipt.candidate_documents || report.source_exclusions.row_count !== 3) {
+    throw new Error(`PURCHASE_IMPORT_DRAFT_PREFLIGHT_BLOCKED blockers=${report.blocker_codes.join(",")} ready=${report.purchase_receipt.ready} candidates=${report.purchase_receipt.candidate_documents} excluded=${report.source_exclusions.row_count}`);
   }
   if (report.submit_authorized) throw new Error("historical draft must never authorize submit");
   const expected = [];
-  const statements = ["BEGIN TRANSACTION;"];
+  const statements = [];
   for (const doc of report.documents) {
     const name = receiptName(doc);
-    const payload = buildReceiptPayload(doc, company);
-    const payloadJson = JSON.stringify(payload);
+    const payloadJson = JSON.stringify(buildReceiptPayload(doc, company));
     expected.push({ name, fingerprint: doc.import_fingerprint, line_count: doc.line_count, source_rows: doc.source_rows });
     statements.push(`INSERT INTO documents (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)\nSELECT 'demo',${sql(`Purchase Receipt:${name}`)},'Purchase Receipt',${sql(name)},'admin',0,'Draft',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'admin',${sql(payloadJson)}\nWHERE NOT EXISTS (SELECT 1 FROM documents WHERE tenant_id='demo' AND doc_key=${sql(`Purchase Receipt:${name}`)});`);
     const content = `${doc.supplier} ${doc.source_voucher} ${doc.lines.map((line) => line.canonical_item_code).join(" ")}`;
     statements.push(`INSERT INTO document_search (tenant_id,doctype,name,title,content,modified_at)\nSELECT 'demo','Purchase Receipt',${sql(name)},${sql(`${doc.supplier} · ${doc.source_voucher}`)},${sql(content)},CURRENT_TIMESTAMP\nWHERE NOT EXISTS (SELECT 1 FROM document_search WHERE tenant_id='demo' AND doctype='Purchase Receipt' AND name=${sql(name)});`);
   }
-  statements.push("COMMIT;");
-  return {
-    report,
-    expected: { format: "alumdoor-real-purchase-expected/v1", receipt_count: expected.length, line_count: expected.reduce((n, row) => n + row.line_count, 0), receipts: expected },
-    text: `${statements.join("\n\n")}\n`,
-  };
+  return { report, expected: { format: "alumdoor-real-purchase-expected/v1", receipt_count: expected.length, line_count: expected.reduce((n, row) => n + row.line_count, 0), receipts: expected }, text: `${statements.join("\n\n")}\n` };
 }
 
 function flattenResults(value, out = []) {
