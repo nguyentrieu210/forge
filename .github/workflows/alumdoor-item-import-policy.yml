@@ -7,6 +7,8 @@ on:
       - 'server/scripts/lib/alumdoor-item-source-contract.mjs'
       - 'server/scripts/lib/alumdoor-item-evidence-overrides.mjs'
       - 'server/scripts/lib/alumdoor-item-source-preflight.mjs'
+      - 'server/scripts/lib/alumdoor-item-blocker-partition.mjs'
+      - 'server/scripts/lib/alumdoor-item-known-source-defects.mjs'
       - 'server/scripts/preflight-alumdoor-item-catalog.mjs'
       - 'server/scripts/preflight-alumdoor-item-source-records.mjs'
       - 'server/scripts/export-alumdoor-item-reference-map.mjs'
@@ -14,6 +16,7 @@ on:
       - 'server/scripts/test-alumdoor-item-source-contract.mjs'
       - 'server/scripts/test-alumdoor-item-evidence-overrides.mjs'
       - 'server/scripts/test-alumdoor-item-luoimv-inox.mjs'
+      - 'server/scripts/test-alumdoor-item-known-source-defects.mjs'
       - 'server/scripts/test-alumdoor-item-source-preflight.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
@@ -23,6 +26,8 @@ on:
       - 'server/scripts/lib/alumdoor-item-source-contract.mjs'
       - 'server/scripts/lib/alumdoor-item-evidence-overrides.mjs'
       - 'server/scripts/lib/alumdoor-item-source-preflight.mjs'
+      - 'server/scripts/lib/alumdoor-item-blocker-partition.mjs'
+      - 'server/scripts/lib/alumdoor-item-known-source-defects.mjs'
       - 'server/scripts/preflight-alumdoor-item-catalog.mjs'
       - 'server/scripts/preflight-alumdoor-item-source-records.mjs'
       - 'server/scripts/export-alumdoor-item-reference-map.mjs'
@@ -30,6 +35,7 @@ on:
       - 'server/scripts/test-alumdoor-item-source-contract.mjs'
       - 'server/scripts/test-alumdoor-item-evidence-overrides.mjs'
       - 'server/scripts/test-alumdoor-item-luoimv-inox.mjs'
+      - 'server/scripts/test-alumdoor-item-known-source-defects.mjs'
       - 'server/scripts/test-alumdoor-item-source-preflight.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
@@ -47,6 +53,7 @@ jobs:
       - run: node server/scripts/test-alumdoor-item-source-contract.mjs
       - run: node server/scripts/test-alumdoor-item-evidence-overrides.mjs
       - run: node server/scripts/test-alumdoor-item-luoimv-inox.mjs
+      - run: node server/scripts/test-alumdoor-item-known-source-defects.mjs
       - run: node server/scripts/test-alumdoor-item-source-preflight.mjs
       - run: node server/scripts/test-alumdoor-item-catalog-preflight.mjs
       - name: Reject retired legacy Item reference source
