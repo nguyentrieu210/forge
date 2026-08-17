@@ -2,6 +2,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const ALUMDOOR_PRICE_LIST = "ALUMDOOR-SELLING";
 export const STANDARD_VARIANT = "STANDARD";
@@ -114,7 +115,7 @@ function deductionVariant(row) {
 }
 
 function stableSort(rows) {
-  return [...rows].sort((a, b) => clean(a.name).localeCompare(clean(b.name), "vi"));
+  return [...rows].sort((a, b) => clean(a.name) < clean(b.name) ? -1 : clean(a.name) > clean(b.name) ? 1 : 0);
 }
 
 function addUnique(map, doc, kind, blockers) {
@@ -273,7 +274,7 @@ export function payloadFingerprint(payload) {
   return JSON.stringify(payload);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
+if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   const [sourceArg, itemArg, outputArg, reportArg] = process.argv.slice(2);
   if (!sourceArg || !itemArg || !outputArg || !reportArg) {
     throw new Error("Usage: node build-alumdoor-pricing-payload.mjs <pricing-source.json> <item-payload.json> <pricing-payload.json> <report.json>");
@@ -291,5 +292,8 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.
   );
   console.log(`ALUMDOOR_PRICING_PAYLOAD_OUTPUT ${resolve(outputArg)}`);
   console.log(`ALUMDOOR_PRICING_PAYLOAD_REPORT ${resolve(reportArg)}`);
-  if (report.blocker_count > 0) process.exitCode = 1;
+  if (report.blocker_count > 0) {
+    console.error(JSON.stringify({ blockers: report.blockers }, null, 2));
+    process.exitCode = 1;
+  }
 }
