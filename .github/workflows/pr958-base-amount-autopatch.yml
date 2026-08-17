@@ -1,0 +1,31 @@
+name: PR958 Base Amount Autopatch
+
+on:
+  push:
+    branches:
+      - agent/alumdoor-pricing-convergence
+
+permissions:
+  contents: write
+
+jobs:
+  patch-base-amount:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/alumdoor-pricing-convergence
+          fetch-depth: 0
+      - name: Apply derived pricing fact patch
+        run: node server/scripts/patch-pr958-base-amount.mjs
+      - name: Verify and publish patch
+        shell: bash
+        run: |
+          git diff --check
+          grep -F "base_amount: Number(fromScaledInt(baseAmountMinor" server/packages/clouderp-selling/src/commercial-line-resolver.ts
+          git rm .github/workflows/pr958-base-amount-autopatch.yml server/scripts/patch-pr958-base-amount.mjs
+          git add server/packages/clouderp-selling/src/commercial-line-resolver.ts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(pricing): derive trusted base amount policy fact"
+          git push origin HEAD:agent/alumdoor-pricing-convergence
