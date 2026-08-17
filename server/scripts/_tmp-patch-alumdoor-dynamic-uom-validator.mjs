@@ -23,8 +23,10 @@ const txOld = `const dynamicSquareMetreToSet = mode === "Thành phẩm theo m2"\
 const txNew = `const dynamicSquareMetreToSet = measurementProfile === "Thành phẩm theo m2"\n      && SALES_AREA_UOMS.has(selected)\n      && SALES_SET_UOMS.has(normalizedUom(stockUom));`;
 if (!source.includes(txOld)) throw new Error("transaction dynamic-UOM anchor missing");
 source = source.replace(txOld, txNew);
-const stale = (source.match(/mode === "Thành phẩm theo m2"/g) || []).length;
-if (stale !== 0) throw new Error(`stale inventory_mode dynamic-UOM checks remain=${stale}`);
+if (source.includes(masterOld)) throw new Error("master dynamic-UOM legacy authority still present");
+if (source.includes(txOld)) throw new Error("transaction dynamic-UOM legacy authority still present");
+if (!source.includes(masterNew)) throw new Error("master dynamic-UOM measurement-profile authority missing after patch");
+if (!source.includes(txNew)) throw new Error("transaction dynamic-UOM measurement-profile authority missing after patch");
 fs.writeFileSync(indexPath, source, "utf8");
 
 let tests = fs.readFileSync(testPath, "utf8");
