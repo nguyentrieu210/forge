@@ -381,8 +381,17 @@ async function requireApi(origin) {
   );
 }
 
-async function requireUi() {
-  await requireUrl('http://127.0.0.1:5173', [200], 'Local UI');
+function verifyRequiredLocalServices(repoRoot, requiredServices) {
+  const verifier = path.join(repoRoot, 'scripts', 'local-runner', 'service-verification.mjs');
+  if (!existsSync(verifier)) {
+    throw executionError('DEPENDENCY', `Required-service verifier missing: ${verifier}`);
+  }
+  run(process.execPath, [verifier, `--services=${requiredServices}`], {
+    cwd: repoRoot,
+    capture: true,
+    label: 'required local service verification',
+    failureClass: 'VERIFY',
+  });
 }
 
 function runBackup(repoRoot) {
@@ -605,6 +614,7 @@ function preflightLayer0(repoRoot, runDir) {
 function preflightBootstrap(repoRoot) {
   requireFiles(repoRoot, [
     'sync-local.bat',
+    'scripts/local-runner/service-verification.mjs',
     'server/scripts/backup-local-state.mjs',
     'server/scripts/alumdoor-runtime-maintenance.mjs',
   ], 'DEPENDENCY');
@@ -920,7 +930,10 @@ export async function main(argv = process.argv.slice(2)) {
   const origin = process.env.FORGE_ORIGIN || DEFAULT_ORIGIN;
   const d1StatePath = path.join(repoRoot, D1_STATE_RELATIVE);
   const runId = `${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(4).toString('hex')}`;
-  const context = { adapter, repoRoot, origin, d1StatePath, runId };
+  const requiredServices = adapter === 'bootstrap'
+    ? (process.env.FORGE_LOCAL_REQUIRED_SERVICES?.trim() || 'backend')
+    : '';
+  const context = { adapter, repoRoot, origin, d1StatePath, runId, requiredServices };
 
   let stage = 'INFRA';
   let lockPath = '';
@@ -961,7 +974,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (!['layer0', 'bootstrap'].includes(adapter)) await requireApi(origin);
 
     console.log(
-      `RUNNER_EVIDENCE os=${process.platform} host=${os.hostname()} repo=${repoRoot} branch=${preflight.branch} local_sha=${preflight.local} origin_main=${preflight.remote} node=${process.version} wrangler=${JSON.stringify(wranglerVersion)} d1_state=${d1StatePath}`,
+      `RUNNER_EVIDENCE os=${process.platform} host=${os.hostname()} repo=${repoRoot} branch=${preflight.branch} local_sha=${preflight.local} origin_main=${preflight.remote} node=${process.version} wrangler=${JSON.stringify(wranglerVersion)} d1_state=${d1StatePath} required_services=${requiredServices || 'api-only'}`,
     );
     logStatus('INFRA', 'PASS', `sha=${preflight.local} repo=${repoRoot}`);
 
@@ -975,6 +988,7 @@ export async function main(argv = process.argv.slice(2)) {
           expected_sha: process.env.FORGE_LOCAL_EXPECTED_SHA || '',
           local_sha: preflight.local,
           origin_main: preflight.remote,
+          required_services: requiredServices,
           repo_root: repoRoot,
           working_directory: repoRoot,
           d1_state_path: d1StatePath,
@@ -1036,8 +1050,11 @@ export async function main(argv = process.argv.slice(2)) {
 
     stage = 'VERIFY';
     logStatus('VERIFY', 'RUNNING');
-    await requireApi(origin);
-    if (adapter === 'bootstrap') await requireUi();
+    if (adapter === 'bootstrap') {
+      verifyRequiredLocalServices(repoRoot, requiredServices);
+    } else {
+      await requireApi(origin);
+    }
     if (adapter === 'layer0') {
       invokeWranglerLocal(wrangler, repoRoot, [
         'd1',
