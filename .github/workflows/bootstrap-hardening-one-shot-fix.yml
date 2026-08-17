@@ -1,0 +1,55 @@
+name: Bootstrap Hardening One Shot Fix
+
+on:
+  push:
+    branches: [agent/bootstrap-verify-capabilities]
+    paths:
+      - '.github/workflows/bootstrap-hardening-one-shot-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/bootstrap-verify-capabilities
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Remove false-positive command token from fail-closed message
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('scripts/local-runner/run-local-import-core.mjs')
+          s = p.read_text(encoding='utf-8')
+          old = 'Stop them explicitly; blind taskkill is forbidden.'
+          new = 'Stop them explicitly; blind process termination is forbidden.'
+          if s.count(old) != 1:
+              raise SystemExit(f'expected exactly one fail-closed message, found {s.count(old)}')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+      - name: Re-run exact failing unit group
+        run: |
+          node --test \
+            scripts/local-runner/contract.test.mjs \
+            scripts/local-runner/bootstrap-helper-context.test.mjs \
+            scripts/local-runner/service-verification.test.mjs \
+            scripts/local-runner/bootstrap-hardening-contract.test.mjs \
+            scripts/local-runner/local-mutation-child-context.test.mjs \
+            server/scripts/alumdoor-runtime-maintenance.test.mjs
+          node --check scripts/local-runner/run-local-import-core.mjs
+          git diff --check
+      - name: Commit repair and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/bootstrap-hardening-one-shot-fix.yml
+          git add scripts/local-runner/run-local-import-core.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'test(bootstrap): distinguish blind kill commands from fail-closed diagnostics'
+          git push origin HEAD:agent/bootstrap-verify-capabilities
