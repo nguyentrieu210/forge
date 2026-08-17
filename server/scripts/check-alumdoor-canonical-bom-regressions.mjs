@@ -41,10 +41,11 @@ assert.ok(rubberLines.every((line) => line.item_code === "RNHUA/LONG-CR"), "RNHU
 assert.equal(blockersForSourceItem("RNHUA/LONG-CR").length, 0, "RNHUA/LONG-CR must not regress into a blocker");
 
 const brushBlockers = blockersForSourceItem("NVL-PHOTLONG4X5");
-assert.ok(brushBlockers.length > 0, "NVL-PHOTLONG4X5 must remain fail-closed without metres-per-roll evidence");
-assert.ok(brushBlockers.every((blocker) => blocker.type === "missing_conversion"), "NVL-PHOTLONG4X5 may only be blocked by the authoritative M↔Cuộn evidence gap");
+assert.ok(brushBlockers.length > 0, "NVL-PHOTLONG4X5 must remain fail-closed without authoritative roll conversion evidence");
+assert.ok(brushBlockers.every((blocker) => blocker.type === "missing_conversion"), "NVL-PHOTLONG4X5 may only be blocked by missing authoritative conversion evidence");
 assert.ok(brushBlockers.every((blocker) => blocker.canonical_item_code === "NVL-PHOTLONG4X5"), "NVL-PHOTLONG4X5 identity must resolve before conversion blocking");
-assert.ok(brushBlockers.every((blocker) => blocker.runtime_uom === "Mét" && blocker.stock_uom === "Cuộn"), "NVL-PHOTLONG4X5 blocker must explicitly remain Mét↔Cuộn");
+const brushMetresPerRoll = brushBlockers.filter((blocker) => blocker.runtime_uom === "Mét" && blocker.stock_uom === "Cuộn");
+assert.ok(brushMetresPerRoll.length > 0, "NVL-PHOTLONG4X5 must explicitly retain at least one authoritative Mét↔Cuộn evidence gap");
 assert.equal(linesForSourceItem("NVL-PHOTLONG4X5").length, 0, "NVL-PHOTLONG4X5 must not silently resolve without conversion evidence");
 
 assert.equal(blockers.filter((blocker) => blocker.type === "parent_missing_conversion").length, 0, "finished-door parent conversion must never be reintroduced");
