@@ -13,6 +13,7 @@ on:
       - 'server/scripts/test-alumdoor-item-import-policy.mjs'
       - 'server/scripts/test-alumdoor-item-source-contract.mjs'
       - 'server/scripts/test-alumdoor-item-evidence-overrides.mjs'
+      - 'server/scripts/test-alumdoor-item-luoimv-inox.mjs'
       - 'server/scripts/test-alumdoor-item-source-preflight.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
@@ -28,6 +29,7 @@ on:
       - 'server/scripts/test-alumdoor-item-import-policy.mjs'
       - 'server/scripts/test-alumdoor-item-source-contract.mjs'
       - 'server/scripts/test-alumdoor-item-evidence-overrides.mjs'
+      - 'server/scripts/test-alumdoor-item-luoimv-inox.mjs'
       - 'server/scripts/test-alumdoor-item-source-preflight.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
@@ -44,6 +46,7 @@ jobs:
       - run: node server/scripts/test-alumdoor-item-import-policy.mjs
       - run: node server/scripts/test-alumdoor-item-source-contract.mjs
       - run: node server/scripts/test-alumdoor-item-evidence-overrides.mjs
+      - run: node server/scripts/test-alumdoor-item-luoimv-inox.mjs
       - run: node server/scripts/test-alumdoor-item-source-preflight.mjs
       - run: node server/scripts/test-alumdoor-item-catalog-preflight.mjs
       - name: Reject retired legacy Item reference source
