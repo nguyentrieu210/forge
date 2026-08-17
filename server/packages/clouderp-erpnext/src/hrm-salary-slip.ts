@@ -10,8 +10,9 @@ export class HrmSalarySlipController extends SalarySlipController {
     const input = context.command.document;
     const alumdoorProfile = typeof input.alu_pay_profile === "string" ? input.alu_pay_profile.trim() : "";
 
-    // AlumDoor Attendance Day is authoritative for Lite payroll. Overtime is calculated
-    // automatically from scan evidence + Shift Assignment; Overtime Request is not read.
+    // AlumDoor Attendance Day is authoritative attendance evidence for Lite payroll.
+    // Raw minutes outside Shift Assignment are not payable by themselves: submitted
+    // Overtime Request approval caps payable OT before the fixed-rate calculation runs.
     if (alumdoorProfile) {
       const sourceDocument = { ...input, earnings: [], deductions: [] } as SalarySlipData;
       const sourceContext: ControllerContext<SalarySlipData> = {
