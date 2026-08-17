@@ -81,6 +81,10 @@ function pricingRuleDocument({ name, itemCode = "", itemGroup = "", amount, basi
   return {
     doctype: "Pricing Rule",
     name,
+    // Pricing Rule declares title as required. The source rows carry no separate policy
+    // label, so the canonical rule code is the title — it is the identifier the payload
+    // already derives from the source and keeps the row traceable back to it.
+    title: name,
     disabled: 0,
     price_list: ALUMDOOR_PRICE_LIST,
     currency: "VND",
