@@ -28,9 +28,10 @@ function project(audit) {
 function persistedD1Project() {
   if (process.platform !== "win32") return [];
   const query = "SELECT name,docstatus,modified_at,payload_json FROM documents WHERE tenant_id='demo' AND doctype='Purchase Receipt' ORDER BY name";
+  const command = `npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "${query.replaceAll('"', '\\"')}" --json`;
   let stdout;
   try {
-    stdout = execFileSync("npx.cmd", ["wrangler", "d1", "execute", "cloudforge-demo", "--local", "--config", "apps/tenant-worker/wrangler.jsonc", "--command", query, "--json"], {
+    stdout = execFileSync("C:\\Windows\\System32\\cmd.exe", ["/d", "/s", "/c", command], {
       cwd: "C:\\alumdoor\\server",
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
