@@ -1,129 +1,31 @@
 name: Import Alumdoor Pricing Local
 
 on:
+  workflow_run:
+    workflows:
+      - Bootstrap Alumdoor Local C Drive
+    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: alumdoor-local-pricing-import
+  group: alumdoor-local-d1-mutation
   cancel-in-progress: false
 
 jobs:
   import-local-pricing:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: [self-hosted]
     timeout-minutes: 30
+    env:
+      FORGE_LOCAL_EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
-      - name: Guard exact clean Alumdoor workspace
+      - name: Run canonical Pricing local import contract
         shell: powershell
+        working-directory: C:\alumdoor
         run: |
           $ErrorActionPreference = 'Stop'
-          $target = 'C:\alumdoor'
-          if (-not (Test-Path (Join-Path $target '.git'))) { throw 'C:\alumdoor is not a Git workspace.' }
-          $dirty = @(git -C $target status --porcelain)
-          if ($dirty.Count -gt 0) {
-            $dirty | ForEach-Object { Write-Host "DIRTY $_" }
-            throw 'C:\alumdoor has source changes; refusing pricing import over a dirty workspace.'
-          }
-          git -C $target fetch origin agent/alumdoor-pricing-convergence --prune
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to fetch pricing convergence branch.' }
-          git -C $target switch agent/alumdoor-pricing-convergence
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to switch to pricing convergence branch.' }
-          git -C $target merge --ff-only origin/agent/alumdoor-pricing-convergence
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing convergence branch cannot fast-forward cleanly.' }
-          $local = (git -C $target rev-parse HEAD).Trim()
-          $remote = (git -C $target rev-parse origin/agent/alumdoor-pricing-convergence).Trim()
-          if ($local -ne $remote) { throw "Local source mismatch: local=$local remote=$remote" }
-          Write-Host "ALUMDOOR_PRICING_LOCAL_SOURCE $local"
-
-      - name: Require healthy local API
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { throw 'Local Alumdoor API is not healthy on 127.0.0.1:8799.' }
-
-      - name: Generate deterministic real pricing payload
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $root = 'C:\alumdoor'
-          $out = Join-Path $env:RUNNER_TEMP 'alumdoor-pricing'
-          if (Test-Path $out) { Remove-Item -Recurse -Force $out }
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Set-Location $root
-          & node server/scripts/extract-alumdoor-real-source-records.mjs "$out\item-source.json" "$out\item-source.report.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Canonical Item source extraction failed.' }
-          & node server/scripts/build-alumdoor-item-master-payload.mjs "$out\item-source.json" "$out\items.json" "$out\items.audit.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Canonical Item payload rebuild failed.' }
-          & node server/scripts/extract-alumdoor-pricing-source.mjs "$out\pricing-source.json" "$out\pricing-source.report.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing source extraction failed.' }
-          & node server/scripts/build-alumdoor-pricing-payload.mjs "$out\pricing-source.json" "$out\items.json" "$out\pricing-payload-1.json" "$out\pricing-payload-1.report.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing payload build pass 1 failed.' }
-          & node server/scripts/build-alumdoor-pricing-payload.mjs "$out\pricing-source.json" "$out\items.json" "$out\pricing-payload-2.json" "$out\pricing-payload-2.report.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing payload build pass 2 failed.' }
-          $hash1 = (Get-FileHash "$out\pricing-payload-1.json" -Algorithm SHA256).Hash
-          $hash2 = (Get-FileHash "$out\pricing-payload-2.json" -Algorithm SHA256).Hash
-          if ($hash1 -ne $hash2) { throw "Pricing payload is not reproducible: $hash1 != $hash2" }
-          & node server/scripts/validate-alumdoor-pricing-payload.mjs "$out\pricing-source.json" "$out\pricing-payload-1.json" "$out\pricing-payload-1.report.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing payload validation failed.' }
-          Write-Host "ALUMDOOR_PRICING_PAYLOAD_SHA256 $hash1"
-
-      - name: Dry-run authenticated local preflight
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
-          $env:FORGE_ADMIN_USER = 'dev@example.com'
-          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
-          $out = Join-Path $env:RUNNER_TEMP 'alumdoor-pricing'
-          Set-Location 'C:\alumdoor'
-          & node server/scripts/import-alumdoor-pricing-local.mjs "$out\pricing-payload-1.json" "$out\preimage-dry-run.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing local dry-run failed; zero writes allowed.' }
-
-      - name: Backup local Wrangler state before mutation
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location 'C:\alumdoor'
-          & node server/scripts/backup-local-state.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to back up local Wrangler state.' }
-          $backupRoot = Join-Path 'C:\alumdoor' 'local-backups'
-          if (-not (Test-Path $backupRoot)) { throw 'Backup command returned success but local-backups does not exist.' }
-          $latest = Get-ChildItem $backupRoot -Recurse -File | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
-          if (-not $latest) { throw 'Backup command returned success but no backup file exists.' }
-          Write-Host "ALUMDOOR_PRICING_BACKUP_EVIDENCE $($latest.FullName) $($latest.LastWriteTimeUtc.ToString('o'))"
-
-      - name: Apply pass 1 and exact read-back verify
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
-          $env:FORGE_ADMIN_USER = 'dev@example.com'
-          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
-          $out = Join-Path $env:RUNNER_TEMP 'alumdoor-pricing'
-          Set-Location 'C:\alumdoor'
-          & node server/scripts/import-alumdoor-pricing-local.mjs "$out\pricing-payload-1.json" "$out\preimage-pass1.json" --apply
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing local apply pass 1 or read-back verification failed.' }
-
-      - name: Apply pass 2 and prove idempotency
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
-          $env:FORGE_ADMIN_USER = 'dev@example.com'
-          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
-          $out = Join-Path $env:RUNNER_TEMP 'alumdoor-pricing'
-          Set-Location 'C:\alumdoor'
-          & node server/scripts/import-alumdoor-pricing-local.mjs "$out\pricing-payload-1.json" "$out\preimage-pass2.json" --apply --expect-idempotent
-          if ($LASTEXITCODE -ne 0) { throw 'Pricing local idempotency pass failed.' }
-
-      - name: Audit local D1 persistence
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location 'C:\alumdoor\server'
-          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT doctype, COUNT(*) AS records FROM documents WHERE tenant_id='demo' AND doctype IN ('Price List','Item Price','Pricing Rule') GROUP BY doctype ORDER BY doctype;"
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to audit local pricing records in D1.' }
-          Write-Host 'ALUMDOOR_LOCAL_PRICING_IMPORT_PASS'
+          & node scripts\local-runner\run-local-import.mjs pricing
+          if ($LASTEXITCODE -ne 0) { throw "Pricing execution contract failed with exit code $LASTEXITCODE" }
