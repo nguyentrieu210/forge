@@ -70,6 +70,28 @@ test("mesh-hook row 1108 uses source-backed width weight semantics instead of fi
   });
 });
 
+test("TR114 rows 1202/1220 use exact same-source 4.4 kg/m rate evidence", () => {
+  for (const sourceRow of [1202, 1220]) {
+    const source = {
+      source_row: sourceRow,
+      source_sheet: "ĐM",
+      source_uom: "M",
+      source_qty_or_formula: "4.4",
+      source_formula_text: "Rpbray+20cm",
+    };
+    assert.deepEqual(resolveExactSourceBomUomOverride(source, "NVL-TR114-1.8"), {
+      runtime_uom: "Kg",
+      reason: `exact_source_row_${sourceRow}_uom_anomaly`,
+    });
+    const quantity = resolveExactSourceBomQuantity(source, { runtime_uom: "Kg" }, "NVL-TR114-1.8");
+    assert.equal(quantity?.formula_kind, "source_row_exact_tr114_width_plus_20cm_rate_cross_evidence_1183_1191");
+    assert.deepEqual(JSON.parse(quantity.quantity_formula_json), {
+      base: { kind: "FIELD", field: "PB_RAY_RONG", offset: 0.2 },
+      multiply: 4.4,
+    });
+  }
+});
+
 test("exact V4 profile UOM overrides fail closed when source evidence changes", () => {
   const source = record(1294, "(rpbray-30)x2xTL");
   assert.equal(
