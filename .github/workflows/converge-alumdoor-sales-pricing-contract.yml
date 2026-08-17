@@ -1,0 +1,65 @@
+name: Converge Alumdoor Sales Pricing Contract
+
+on:
+  push:
+    branches:
+      - agent/alumdoor-sales-order-v2-complete
+
+permissions:
+  contents: write
+
+jobs:
+  converge:
+    if: ${{ !contains(github.event.head_commit.message, '[pricing-contract-converged]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Align source contract with runtime controller
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'server/briefs/alumdoor.json';
+          let source = fs.readFileSync(path, 'utf8');
+          const marker = 'Đơn hàng để TRỐNG `selling_price_list` thì giá gõ tay như cũ';
+          const markerIndex = source.indexOf(marker);
+          if (markerIndex < 0) {
+            console.log('Pricing contract source is already converged.');
+            process.exit(0);
+          }
+          const start = source.lastIndexOf('"//do": [', markerIndex);
+          const endToken = '      ],';
+          const end = source.indexOf(endToken, markerIndex);
+          if (start < 0 || end < 0) throw new Error('Cannot locate Price List //do block around legacy contract marker.');
+          const replacement = `"//do": [
+              "Đơn bán hàng phải resolve được \\`selling_price_list\\` trước khi lưu — controller runtime là authority.",
+              "Người lập vẫn được nhập đơn giá/chiết khấu trên dòng; server so với Item Price + Pricing Rule và",
+              "đánh dấu cần duyệt khi lệch chính sách. Submit mới là boundary kiểm quyền duyệt thương mại.",
+              "Thiếu Item Price phù hợp với bảng giá/mã hàng/ĐVT thì từ chối thay vì im lặng lấy giá 0."
+            ],`;
+          source = source.slice(0, start) + replacement + source.slice(end + endToken.length);
+          fs.writeFileSync(path, source);
+          NODE
+      - name: Regenerate Alumdoor V2 brief
+        run: node server/scripts/build-alumdoor-v2-brief.mjs
+      - name: Verify generated diff
+        run: |
+          git diff --check
+          git diff --exit-code -- server/scripts/build-alumdoor-v2-brief.mjs
+          git status --short
+      - name: Commit generated convergence
+        run: |
+          if git diff --quiet -- server/briefs/alumdoor.json server/briefs/alumdoor-v2.json; then
+            echo "No pricing contract drift remained."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/briefs/alumdoor.json server/briefs/alumdoor-v2.json
+          git commit -m "fix(sales): align price list contract [pricing-contract-converged]"
+          git push origin HEAD:agent/alumdoor-sales-order-v2-complete
