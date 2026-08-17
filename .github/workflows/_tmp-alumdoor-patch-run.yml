@@ -24,7 +24,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $source = 'C:\alumdoor'
           $work = "C:\alumdoor-worktrees\patch-$env:GITHUB_RUN_ID"
-          Write-Host 'PATCH_ATTEMPT=local-deps-v3'
+          Write-Host 'PATCH_ATTEMPT=customer-fixture-v4'
           git -C $source fetch origin main agent/alumdoor-bom-realdata-continuation --prune
           if ($LASTEXITCODE -ne 0) { throw 'fetch failed' }
           New-Item -ItemType Directory -Force -Path (Split-Path -Parent $work) | Out-Null
