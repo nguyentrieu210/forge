@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import process from 'node:process';
+import { assertLocalMutationChildContext } from '../../scripts/local-runner/assert-local-mutation-child-context.mjs';
+
+assertLocalMutationChildContext(['reason-master']);
 
 const origin = (process.env.FORGE_ORIGIN || 'http://127.0.0.1:8799').replace(/\/$/, '');
 const parsedOrigin = new URL(origin);
