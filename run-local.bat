@@ -53,6 +53,11 @@ if defined VERIFY (
 
 echo.
 echo === 1.8. Dung local server cu truoc khi cap nhat du lieu ===
+REM Windows service hosts stay alive in maintenance mode while their Worker/Desk
+REM children are stopped. Before services are installed this helper is a no-op.
+call node server\scripts\alumdoor-runtime-maintenance.mjs on >> "%LOG%" 2>&1
+if errorlevel 1 (echo [LOI] Khong bat duoc runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
+C:\Windows\System32\timeout.exe /t 2 /nobreak >nul
 REM D1/R2/DO local nam trong .wrangler; khong duoc migrate khi workerd dang ghi state.
 REM Khong chi giet workerd con: Wrangler cha co the giu va chiem lai cong 8799.
 call node server\scripts\stop-local-dev.mjs --ports=8799,5173 >> "%LOG%" 2>&1
@@ -77,26 +82,36 @@ echo === 5. Chay worker ===
 REM Alumdoor validator can ba Worker noi nhau. Cau hinh nay co PUBLIC_ORIGIN co dinh 8799.
 set PORT=8799
 set REUSE=
+set BACKEND_SERVICE=
+REM Release Windows service maintenance only after build/migration/seed are done.
+call node scripts\alumdoor-runtime-maintenance.mjs off >> "%LOG%" 2>&1
+if errorlevel 1 (echo [LOI] Khong tat duoc runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
+sc.exe query ForgeAlumdoorBackend >nul 2>&1
+if not errorlevel 1 set BACKEND_SERVICE=1
 REM GitHub self-hosted runner tu dong don process con co RUNNER_TRACKING_ID sau khi job xong.
 REM Xoa bien nay CHI trong shell local nay de worker/Vite tiep tuc chay tren may C:\alumdoor.
 if defined GITHUB_ACTIONS (
   echo   Runner mode: tach worker/Desk khoi process cleanup cua GitHub Actions.
   set "RUNNER_TRACKING_ID="
 )
-REM Moi ket noi deu co timeout: Workerd treo phai bi thay the, khong duoc lam script dung vo han.
-node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit((r.status===401||r.status===403||r.ok)?0:1)).catch(()=>process.exit(1))" >nul 2>&1
-if not errorlevel 1 (
-  powershell -NoProfile -Command "$ok=Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*wrangler.alumdoor-local.jsonc*' }; if($ok){exit 0}else{exit 1}" >nul 2>&1
-  if not errorlevel 1 set REUSE=1
-)
-if defined REUSE (
-  echo   Dung lai cum Alumdoor worker dang chay tren 8799.
+if defined BACKEND_SERVICE (
+  echo   Backend duoc quan ly boi Windows Service ForgeAlumdoorBackend.
 ) else (
-  REM Neu co cum cu/treo tren 8799 thi ket thuc CA CAY tien trinh truoc khi khoi dong lai.
-  call node scripts\stop-local-dev.mjs --ports=8799 >> "%LOG%" 2>&1
-  if errorlevel 1 (echo [LOI] Khong the giai phong cong 8799 - xem %LOG% & call :pause_if_interactive & exit /b 1)
-  echo   Khoi dong worker tren cong !PORT! ...
-  start "Forge workers Alumdoor (local)" cmd /k "cd /d C:\alumdoor\server && pnpm run dev:alumdoor-local"
+  REM Legacy fallback before the optional Windows services are installed.
+  node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit((r.status===401||r.status===403||r.ok)?0:1)).catch(()=>process.exit(1))" >nul 2>&1
+  if not errorlevel 1 (
+    powershell -NoProfile -Command "$ok=Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*wrangler.alumdoor-local.jsonc*' }; if($ok){exit 0}else{exit 1}" >nul 2>&1
+    if not errorlevel 1 set REUSE=1
+  )
+  if defined REUSE (
+    echo   Dung lai cum Alumdoor worker dang chay tren 8799.
+  ) else (
+    REM Neu co cum cu/treo tren 8799 thi ket thuc CA CAY tien trinh truoc khi khoi dong lai.
+    call node scripts\stop-local-dev.mjs --ports=8799 >> "%LOG%" 2>&1
+    if errorlevel 1 (echo [LOI] Khong the giai phong cong 8799 - xem %LOG% & call :pause_if_interactive & exit /b 1)
+    echo   Khoi dong worker tren cong !PORT! ...
+    start "Forge workers Alumdoor (local)" cmd /k "cd /d C:\alumdoor\server && pnpm run dev:alumdoor-local"
+  )
 )
 
 echo   Cho worker san sang ^(toi da 180 giay^)...
@@ -110,7 +125,8 @@ for /l %%i in (1,1,90) do (
 if not defined READY (
   echo.
   echo [LOI] Worker khong san sang sau 180 giay tren cong !PORT!.
-  echo       Mo cua so "Forge worker" de doc log.
+  if defined BACKEND_SERVICE echo       Xem log Windows Service trong C:\ForgeServices\Alumdoor\logs\ForgeAlumdoorBackend.
+  if not defined BACKEND_SERVICE echo       Mo cua so "Forge worker" de doc log.
   call :pause_if_interactive
   exit /b 1
 )
@@ -175,9 +191,17 @@ echo   Package client da co dist day du.
 
 echo.
 echo === 9. Chay MetaForge Desk ===
-REM Dung dang set "VAR=value" co ngoac kep: neu khong, cmd gan ca khoang trang truoc && vao gia tri
-REM -> URL proxy co space o cuoi -> vite proxy hong -> Desk trang man.
-start "Forge Desk (local 5173)" cmd /k "cd /d C:\alumdoor\client\apps\runtime && set \"VITE_FORGE_BACKEND=http://127.0.0.1:!PORT!\" && pnpm run dev"
+set DESK_SERVICE=
+sc.exe query ForgeAlumdoorDesk >nul 2>&1
+if not errorlevel 1 set DESK_SERVICE=1
+if defined DESK_SERVICE (
+  echo   Desk duoc quan ly boi Windows Service ForgeAlumdoorDesk.
+) else (
+  REM Legacy fallback before the optional Windows services are installed.
+  REM Dung dang set "VAR=value" co ngoac kep: neu khong, cmd gan ca khoang trang truoc && vao gia tri
+  REM -> URL proxy co space o cuoi -> vite proxy hong -> Desk trang man.
+  start "Forge Desk (local 5173)" cmd /k "cd /d C:\alumdoor\client\apps\runtime && set \"VITE_FORGE_BACKEND=http://127.0.0.1:!PORT!\" && pnpm run dev"
+)
 
 echo.
 echo ==========================================================
@@ -191,7 +215,8 @@ echo.
 echo   Da cai: hrm (70 doctype) + alumdoor-attendance (4) + vn-accounting (13) + alumdoor (74, 57 fixture)
 echo   Sales Order render bang MetaForm 4.0 - khong con React bespoke.
 echo.
-echo   Dung lai : dong hai cua so "Forge worker" va "Forge Desk".
+if defined BACKEND_SERVICE echo   Runtime : Windows Services, khong can mo CMD worker/Desk.
+if not defined BACKEND_SERVICE echo   Dung lai : dong hai cua so "Forge worker" va "Forge Desk".
 echo   Lam lai  : rmdir /s /q C:\alumdoor\server\apps\tenant-worker\.wrangler
 echo              roi chay lai file nay.
 echo ==========================================================
