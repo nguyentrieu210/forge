@@ -1,0 +1,35 @@
+name: Inspect Alumdoor Local Doctypes
+
+on:
+  pull_request:
+    paths:
+      - 'server/scripts/inspect-alumdoor-local-doctypes.mjs'
+      - '.github/workflows/inspect-alumdoor-local-doctypes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-local-doctypes:
+    runs-on: [self-hosted]
+    timeout-minutes: 10
+    steps:
+      - name: Guard healthy local backend
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local backend 8799 is not healthy.' }
+      - name: Inspect local DocType metadata from PR script
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $script = Join-Path $env:RUNNER_TEMP 'inspect-alumdoor-local-doctypes.mjs'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/nguyentrieu210/forge/${{ github.event.pull_request.head.sha }}/server/scripts/inspect-alumdoor-local-doctypes.mjs' -OutFile $script
+          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
+          $env:FORGE_ADMIN_USER = 'dev@example.com'
+          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
+          & node $script
+          $exit = $LASTEXITCODE
+          Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+          if ($exit -ne 0) { throw 'DocType metadata inspection failed.' }
