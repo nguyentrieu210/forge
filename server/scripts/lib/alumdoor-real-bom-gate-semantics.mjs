@@ -23,6 +23,46 @@ function itemConversion(item, uom) {
   return { status: "blocked", reason: "missing_conversion" };
 }
 
+function exactSourceConversion(record, item, sourceUom, stockUom) {
+  if (clean(record?.source_sheet) !== "ĐM") return null;
+  const sourceItem = clean(record?.item_code);
+  const canonicalItem = clean(item?.item_code);
+  const formulaCode = clean(record?.source_formula_code);
+  const compactFormula = fold(record?.source_formula_text).replace(/\s+/g, "");
+
+  if (
+    sourceItem === "NVL-TOLE1.2x190-CORON"
+    && canonicalItem === "NVL-TOLE1.2x190-RON"
+    && sourceUom === "Mét"
+    && stockUom === "Kg"
+    && compactFormula === "(CAOPB-10CM)X2"
+  ) {
+    return {
+      status: "accepted",
+      conversion_factor: 1.78,
+      reason: "source_exact_kg_per_m_evidence",
+      evidence_rows: [1123, 1146],
+    };
+  }
+
+  if (
+    sourceItem === "RNINOX-DR"
+    && canonicalItem === "NVL-RINOX-DR"
+    && sourceUom === "Mét"
+    && stockUom === "Kg"
+    && formulaCode === "CAO_CONG_0.15_X_SL"
+  ) {
+    return {
+      status: "accepted",
+      conversion_factor: 0.124,
+      reason: "source_exact_kg_per_m_evidence",
+      evidence_rows: [58, 1144],
+    };
+  }
+
+  return null;
+}
+
 export function classifyBomSourceUom(rawValue) {
   const raw = clean(rawValue);
   const key = fold(raw).replace(/\s+/g, "");
@@ -60,7 +100,10 @@ export function resolveBomRuntimeUom(record, item) {
     };
   }
   if (source.runtime_uom === stockUom) return { ...source, status: "accepted", stock_uom: stockUom };
-  const conversion = itemConversion(item, source.runtime_uom);
+  const itemBacked = itemConversion(item, source.runtime_uom);
+  const conversion = itemBacked.status === "accepted"
+    ? itemBacked
+    : exactSourceConversion(record, item, source.runtime_uom, stockUom) ?? itemBacked;
   if (conversion.status !== "accepted") return { status: "blocked", reason: conversion.reason, raw_uom: source.raw_uom, runtime_uom: source.runtime_uom, stock_uom: stockUom, ...(conversion.conversion_factors ? { conversion_factors: conversion.conversion_factors } : {}) };
   return { ...source, status: "accepted", stock_uom: stockUom, conversion_factor: conversion.conversion_factor };
 }
@@ -172,6 +215,9 @@ function resolveExactSourceGeometry(record, uomResolution, canonicalItemCode, n,
   }
   if (item === "NVL-3X6M" && compact === "M=RONGPBRAY-30" && uomResolution.runtime_uom === "Mét") {
     return { status: "runtime_formula", qty_basis: "Theo rộng phủ bì ray - 0,03 m", formula_kind: "source_exact_uc_width_minus_30mm", quantity_formula_json: formulaField("PB_RAY_RONG", 1, -0.03) };
+  }
+  if (item === "NVL-TOLE1.2x190-RON" && compact === "(CAOPB-10CM)X2" && uomResolution.runtime_uom === "Mét") {
+    return { status: "runtime_formula", qty_basis: "2 × (cao phủ bì - 0,10 m)", formula_kind: "source_exact_ray_two_heights", quantity_formula_json: formulaField("PB_CAO", 2, -0.1) };
   }
   if (item.startsWith("NVL-TON-DL5.2Dx124-") && compact === "C*(R-0,03)*SL*6,32KG/M2" && closeNumber(n, 6.32)) {
     return { status: "runtime_formula", qty_basis: "Cao PB × rộng cắt lá × 6,32 kg/m²", formula_kind: "source_exact_dl_leaf_632", quantity_formula_json: formulaProduct({ field: "PB_CAO" }, { field: "PB_RAY_RONG", offset: -0.03 }, n) };
