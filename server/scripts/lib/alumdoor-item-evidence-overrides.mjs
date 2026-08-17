@@ -98,6 +98,7 @@ export const ITEM_SOURCE_BOM_ITEM_PROMOTIONS = Object.freeze({
   "TP-LUOISN13x26_STD": Object.freeze({ canonical_source_uom: "Kg", reason: "consistent_bom_component_uom" }),
   "TP-LUOISNPHI19_INOX": Object.freeze({ canonical_source_uom: "m2", reason: "consistent_bom_component_uom" }),
   "NVL-LUOISNPHI19_STD": Object.freeze({ canonical_source_uom: "Kg", reason: "consistent_bom_component_uom" }),
+  "TP-LUOIMV_INOX": Object.freeze({ canonical_source_uom: "m2", reason: "parent_geometry_and_analog_inox_mesh_uom" }),
 
   "MŨI MÀI HỘP KIM": Object.freeze({ canonical_source_uom: "Cái", reason: "explicit_bom_consumable_identity" }),
   "NVL-CNHUA": Object.freeze({ canonical_source_uom: "Cái", reason: "explicit_bom_component_identity" }),
