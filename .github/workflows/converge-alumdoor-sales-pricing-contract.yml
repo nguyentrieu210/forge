@@ -57,7 +57,17 @@ jobs:
               raise SystemExit("Sales create capability guard contract not found.")
           PY
       - name: Regenerate Alumdoor V2 brief
-        run: node server/scripts/build-alumdoor-v2-brief.mjs
+        shell: bash
+        run: |
+          set +e
+          output="$(node server/scripts/build-alumdoor-v2-brief.mjs 2>&1)"
+          status=$?
+          printf '%s\n' "$output"
+          if [ "$status" -ne 0 ]; then
+            compact="$(printf '%s' "$output" | tr '\n' ' ' | cut -c1-4000)"
+            echo "::error title=Alumdoor brief generator failed::$compact"
+            exit "$status"
+          fi
       - name: Verify generated diff
         run: |
           git diff --check
