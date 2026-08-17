@@ -32,7 +32,7 @@ jobs:
       - name: Inventory real BOM formulas and UOMs
         run: node server/scripts/audit-alumdoor-real-bom-source.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/bom-source-audit.json
       - name: Build real BOM payload
-        run: node server/scripts/build-alumdoor-real-bom-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/boms.json
+        run: node server/scripts/build-alumdoor-real-bom-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/boms.json /tmp/alumdoor-real/boms-audit.json
       - name: Build real Aluminium Lot payload
         run: node server/scripts/build-alumdoor-real-aluminium-lot-payload.mjs /tmp/alumdoor-real/source.json /tmp/alumdoor-real/items.json /tmp/alumdoor-real/lots.json
       - name: Validate local importer payload contracts
@@ -49,4 +49,5 @@ jobs:
           for (const [label,file] of [['items','/tmp/alumdoor-real/items.json'],['boms','/tmp/alumdoor-real/boms.json'],['lots','/tmp/alumdoor-real/lots.json']]) {
             try { const x=JSON.parse(await readFile(file,'utf8')); console.log(`REAL_${label.toUpperCase()}_COUNT`, x.item_count ?? x.bom_count ?? x.lot_count); } catch (e) { console.log(`REAL_${label.toUpperCase()}_MISSING`, e.message); }
           }
+          try { const a=JSON.parse(await readFile('/tmp/alumdoor-real/boms-audit.json','utf8')); console.log('REAL_BOM_BLOCKER_COUNTS', JSON.stringify(a.blocker_counts ?? {})); } catch (e) { console.log('REAL_BOM_AUDIT_MISSING', e.message); }
           NODE
