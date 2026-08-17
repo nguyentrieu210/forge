@@ -88,7 +88,18 @@ async function getDoc(doctype, name) {
 
 await login();
 const companies = await listDocs("Company", ["name", "default_currency"], [], 20);
-const warehouses = await listDocs("Warehouse", ["name", "company", "is_group", "disabled"], [], 100);
+const warehouseNames = await listDocs("Warehouse", ["name"], [], 100);
+const warehouses = [];
+for (const row of warehouseNames) {
+  const doc = await getDoc("Warehouse", clean(row.name));
+  if (!doc) continue;
+  warehouses.push({
+    name: clean(doc.name),
+    company: clean(doc.company),
+    is_group: doc.is_group,
+    disabled: doc.disabled,
+  });
+}
 
 const supplierNames = Object.keys(APPROVED_PURCHASE_SUPPLIERS);
 const suppliers = [];
@@ -131,7 +142,7 @@ const report = {
 await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(`ALUMDOOR_REAL_PURCHASE_LOCAL_AUDIT ${JSON.stringify({
   companies: companies.map((row) => row.name),
-  warehouses: warehouses.map((row) => ({ name: row.name, company: row.company, is_group: row.is_group, disabled: row.disabled })),
+  warehouses,
   suppliers: suppliers.map((row) => ({ source_supplier: row.source_supplier, match_count: row.matches.length, matches: row.matches.map((match) => match.name) })),
   items: items.map((row) => ({ item_code: row.item_code, exists: row.exists, stock_uom: row.doc?.stock_uom, purchase_uom: row.doc?.default_purchase_uom || row.doc?.purchase_uom, inventory_mode: row.doc?.inventory_mode, conversions: row.doc?.uom_conversions })),
   output: outputPath,
