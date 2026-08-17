@@ -28,6 +28,7 @@ on:
       - 'server/scripts/test-alumdoor-item-local-importer.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
+      - '.github/workflows/import-alumdoor-item-master-local.yml'
   pull_request:
     paths:
       - 'server/scripts/lib/alumdoor-item-import-policy.mjs'
@@ -55,6 +56,7 @@ on:
       - 'server/scripts/test-alumdoor-item-local-importer.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
+      - '.github/workflows/import-alumdoor-item-master-local.yml'
   workflow_dispatch:
 
 jobs:
