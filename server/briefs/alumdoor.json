@@ -2844,6 +2844,7 @@
           "fieldtype": "Select",
           "options": "Đại lý\nLẻ",
           "label": "Nhóm giá",
+          "required": true,
           "in_list_view": true,
           "in_standard_filter": true,
           "description": "Quyết định cách đo bề rộng và giá bán. Đại lý đo phủ bì nhựa, khách lẻ đo phủ bì ray. Công trình và nhà thầu tính như khách lẻ."

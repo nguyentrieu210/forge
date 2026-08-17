@@ -7,4 +7,4 @@ export const DailyDetailedLedger = lazy(() => import("./experiences/DailyDetaile
 export const AlumdoorOperationsCenter = lazy(() => import("./experiences/AlumdoorOperationsCenter.js").then((module) => ({ default: module.AlumdoorOperationsCenter })));
 export const AlumdoorAttendanceScanner = lazy(() => import("./experiences/AlumdoorAttendanceScanner.js").then((module) => ({ default: module.AlumdoorAttendanceScanner })));
 export const AlumdoorAttendanceOperations = lazy(() => import("./experiences/AlumdoorAttendanceOperations.js").then((module) => ({ default: module.AlumdoorAttendanceOperations })));
-export const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataScreen.js").then((module) => ({ default: module.AlumdoorMasterDataScreen })));
+export const AlumdoorMasterDataScreen = lazy(() => import("./experiences/AlumdoorMasterDataWithImport.js").then((module) => ({ default: module.AlumdoorMasterDataWithImport })));
