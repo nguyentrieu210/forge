@@ -87,7 +87,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Local backend 8799 is not healthy.' }
           Write-Host "UOM_SOURCE_SHA $local"
 
-      - name: Save UOM pre-image through local API
+      - name: Save authenticated UOM pre-image through local API
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -95,15 +95,14 @@ jobs:
           New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
           $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
           $output = Join-Path $backupDir "uom-before-$stamp.json"
-          $script = @'
-          const fs=require('fs');
-          const out=process.argv[1];
-          fetch('http://127.0.0.1:8799/api/resource/UOM?limit_page_length=1000',{signal:AbortSignal.timeout(10000)})
-            .then(async r=>{const text=await r.text();fs.writeFileSync(out,text,'utf8');if(![200,401,403].includes(r.status))process.exit(1);})
-            .catch(e=>{console.error(e);process.exit(1)});
-          '@
-          & node -e $script $output
-          if ($LASTEXITCODE -ne 0) { throw 'Unable to save UOM API pre-image.' }
+          Set-Location 'C:\alumdoor\server'
+          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
+          $env:FORGE_ADMIN_USER = 'dev@example.com'
+          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
+          & node scripts\backup-alumdoor-uom-local.mjs $output
+          $exit = $LASTEXITCODE
+          Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
+          if ($exit -ne 0) { throw 'Unable to save authenticated UOM API pre-image.' }
           Write-Host "UOM_PREIMAGE_SAVED $output"
 
       - name: Seed canonical 19 UOM through local API
