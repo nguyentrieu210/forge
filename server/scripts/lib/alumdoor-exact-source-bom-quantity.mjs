@@ -182,6 +182,42 @@ addRows([1820], {
   formula_kind: "source_row_exact_dl_v4_two_lengths_1464_weight_annotation",
   quantity_formula_json: field("PB_RAY_RONG", 2, -0.03),
 });
+addRows([1115], {
+  item: "NVL-V4-KEM_TOLE75_STD",
+  uom: "Mét",
+  formula: "((RONGPBRAY-30)X2)1,312KG/M",
+  source_qty: 1.312,
+  qty_basis: "2 × (rộng phủ bì ray - 0,03 m); 1,312 kg/m là weight annotation",
+  formula_kind: "source_row_exact_v4_tole75_two_lengths_weight_annotation",
+  quantity_formula_json: field("PB_RAY_RONG", 2, -0.03),
+});
+addRows([1179], {
+  item: "NVL-V4-KEM_TOLE75_STD",
+  uom: "Mét",
+  formula: "(RONGPBRAY-3CM)1,312KG/M",
+  source_qty: 1.312,
+  qty_basis: "Rộng phủ bì ray - 0,03 m; 1,312 kg/m là weight annotation",
+  formula_kind: "source_row_exact_v4_tole75_width_minus_3cm_weight_annotation",
+  quantity_formula_json: field("PB_RAY_RONG", 1, -0.03),
+});
+addRows([1188], {
+  item: "NVL-V4-KEM_TOLE75_STD",
+  uom: "Mét",
+  formula: "(RONGPBRAY-30)1,312KG/M",
+  source_qty: 1.312,
+  qty_basis: "Rộng phủ bì ray - 0,03 m; 1,312 kg/m là weight annotation",
+  formula_kind: "source_row_exact_v4_tole75_width_minus_30mm_weight_annotation",
+  quantity_formula_json: field("PB_RAY_RONG", 1, -0.03),
+});
+addRows([1264], {
+  item: "NVL-V4-KEM_TOLE75_STD",
+  uom: "Mét",
+  formula: "(RPBRAY-30)X2XTL",
+  source_qty: 1.312,
+  qty_basis: "2 × (rộng phủ bì ray - 0,03 m); TL 1,312 kg/m là weight annotation",
+  formula_kind: "source_row_exact_v4_tole75_two_lengths_tl_annotation",
+  quantity_formula_json: field("PB_RAY_RONG", 2, -0.03),
+});
 
 const UOM_OVERRIDES = new Map([
   [1112, { item: "NVL-BAT-MV", source_uom: "m", runtime_uom: "Cái", formula: "BATMACVONG1MNGANGX7CAI", source_qty: 7 }],
@@ -192,6 +228,10 @@ const UOM_OVERRIDES = new Map([
   [1150, { item: "NVL-BOMV", source_uom: "bọ", runtime_uom: "Kg", formula: "64CON/MRONG(1KGX49CONX16,000/KG)", source_qty: 64 }],
   [1208, { item: "TP-V4_INOX", source_uom: "M2", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
   [1217, { item: "TP-V4_INOX", source_uom: "", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
+  [1115, { item: "NVL-V4-KEM_TOLE75_STD", source_uom: "KG", runtime_uom: "Mét", formula: "((RONGPBRAY-30)X2)1,312KG/M", source_qty: 1.312 }],
+  [1179, { item: "NVL-V4-KEM_TOLE75_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RONGPBRAY-3CM)1,312KG/M", source_qty: 1.312 }],
+  [1188, { item: "NVL-V4-KEM_TOLE75_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RONGPBRAY-30)1,312KG/M", source_qty: 1.312 }],
+  [1264, { item: "NVL-V4-KEM_TOLE75_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
   [1294, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
   [1306, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
   [1312, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
