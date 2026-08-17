@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   ExecutionError,
   assertLocalWranglerArgs,
@@ -11,6 +15,10 @@ import {
   parseArgs,
 } from './run-local-import.mjs';
 import { assertPurchaseSqlTargets } from './real-purchase-adapter.mjs';
+
+const purchaseVerifier = fileURLToPath(
+  new URL('../../server/scripts/verify-alumdoor-real-purchase-audit.mjs', import.meta.url),
+);
 
 test('parse known adapters and source', () => {
   assert.deepEqual(parseArgs(['item-master', '--source=C:\\alumdoor\\local-imports\\items.json']), {
@@ -121,6 +129,99 @@ test('Real Purchase SQL allowlist rejects extra or destructive targets', () => {
     `),
     /forbidden mutation verb: DELETE FROM documents/,
   );
+});
+
+function purchaseFixture(fingerprint = 'fp-1', modified = '2026-08-18T00:00:00.000Z') {
+  return [
+    {
+      results: [
+        {
+          name: 'PR-HIST-TEST',
+          docstatus: 0,
+          modified_at: modified,
+          payload_json: JSON.stringify({
+            items: [{ item_code: 'NVL-TEST', qty: 1, uom: 'CÁI', rate: 1000 }],
+            _alumdoor_real_purchase: {
+              format: 'alumdoor-real-purchase-history/v1',
+              import_fingerprint: fingerprint,
+              source_rows: [7],
+              submit_forbidden: true,
+            },
+          }),
+        },
+      ],
+    },
+  ];
+}
+
+function withPurchaseVerifierFixture(callback) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'forge-purchase-verifier-'));
+  try {
+    const expected = path.join(dir, 'expected.json');
+    const firstAudit = path.join(dir, 'first.json');
+    const secondAudit = path.join(dir, 'second.json');
+    const firstPersisted = path.join(dir, 'persisted-first.json');
+    const secondPersisted = path.join(dir, 'persisted-second.json');
+    writeFileSync(expected, JSON.stringify({
+      format: 'alumdoor-real-purchase-expected/v1',
+      receipt_count: 1,
+      line_count: 1,
+      receipts: [{
+        name: 'PR-HIST-TEST',
+        fingerprint: 'fp-1',
+        line_count: 1,
+        source_rows: [7],
+      }],
+    }));
+    writeFileSync(firstAudit, JSON.stringify({ purchase_receipts: [] }));
+    writeFileSync(secondAudit, JSON.stringify({ purchase_receipts: [] }));
+    writeFileSync(firstPersisted, JSON.stringify(purchaseFixture()));
+    writeFileSync(secondPersisted, JSON.stringify(purchaseFixture()));
+    callback({ dir, expected, firstAudit, secondAudit, firstPersisted, secondPersisted });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test('Real Purchase verifier consumes runner-supplied persisted D1 evidence', () => {
+  withPurchaseVerifierFixture(({ expected, firstAudit, secondAudit, firstPersisted, secondPersisted }) => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        purchaseVerifier,
+        expected,
+        firstAudit,
+        secondAudit,
+        `--persisted-first=${firstPersisted}`,
+        `--persisted-second=${secondPersisted}`,
+      ],
+      { encoding: 'utf8' },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /FIRST_PERSISTED_D1_EVIDENCE receipts=1/);
+    assert.match(result.stdout, /SECOND_PERSISTED_D1_EVIDENCE receipts=1/);
+    assert.match(result.stdout, /ALUMDOOR_REAL_PURCHASE_IDEMPOTENCY_PASS receipts=1 lines=1/);
+  });
+});
+
+test('Real Purchase verifier fails closed on persisted fingerprint drift', () => {
+  withPurchaseVerifierFixture(({ expected, firstAudit, secondAudit, firstPersisted, secondPersisted }) => {
+    writeFileSync(secondPersisted, JSON.stringify(purchaseFixture('fp-conflict')));
+    const result = spawnSync(
+      process.execPath,
+      [
+        purchaseVerifier,
+        expected,
+        firstAudit,
+        secondAudit,
+        `--persisted-first=${firstPersisted}`,
+        `--persisted-second=${secondPersisted}`,
+      ],
+      { encoding: 'utf8' },
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /SECOND_FINGERPRINT_CONFLICT/);
+  });
 });
 
 test('failure outcome classification keeps data, verify, import and infra distinct', () => {
