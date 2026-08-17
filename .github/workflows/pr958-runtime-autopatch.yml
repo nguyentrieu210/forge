@@ -1,0 +1,115 @@
+name: PR958 Runtime Autopatch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/pr958-runtime-autopatch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-runtime:
+    if: github.event.pull_request.number == 958 && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Apply exact runtime patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          controller = Path('server/packages/clouderp-selling/src/commercial-sales-order-controller.ts')
+          text = controller.read_text(encoding='utf-8')
+          old = '''        ...(priceUom ? { uom: priceUom } : {}),
+                  pricedQty,'''.replace('                  ', '        ')
+          new = '''        ...(priceUom ? { uom: priceUom } : {}),
+                  ...(item.price_variant ? { priceVariant: item.price_variant } : {}),
+                  pricedQty,'''.replace('                  ', '        ')
+          if old not in text:
+              raise SystemExit('controller priceVariant anchor not found')
+          text = text.replace(old, new, 1)
+
+          old_mul = '''function multiplyMinorByQty(rateMinor: number, qtyMicros: number, field: string): number {
+            const result = Number((BigInt(rateMinor) * BigInt(qtyMicros) + 500_000n) / 1_000_000n);
+            if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
+            return result;
+          }'''.replace('          ', '')
+          new_mul = '''function multiplyMinorByQty(rateMinor: number, qtyMicros: number, field: string): number {
+            if (!Number.isSafeInteger(rateMinor) || !Number.isSafeInteger(qtyMicros) || qtyMicros < 0) {
+              throw errors.validation(`${field} exceeds safe integer bounds`);
+            }
+            const product = BigInt(rateMinor) * BigInt(qtyMicros);
+            const roundedAbs = ((product < 0n ? -product : product) + 500_000n) / 1_000_000n;
+            const result = Number(product < 0n ? -roundedAbs : roundedAbs);
+            if (!Number.isSafeInteger(result)) throw errors.validation(`${field} exceeds safe integer range`);
+            return result;
+          }'''.replace('          ', '')
+          if old_mul not in text:
+              raise SystemExit('controller signed multiply anchor not found')
+          controller.write_text(text.replace(old_mul, new_mul, 1), encoding='utf-8')
+
+          policy = Path('server/packages/clouderp-pricing/src/commercial-policy.ts')
+          text = policy.read_text(encoding='utf-8')
+          old_adjust = '''    const rateMinor = moneyMinor(
+                candidate.data.adjustment_rate ?? candidate.data.effect_value ?? candidate.data.rate,
+                input.currencyScale,
+                `${candidate.name}.adjustment_rate`,
+              );'''.replace('                ', '      ')
+          new_adjust = old_adjust.replace('moneyMinor(', 'signedMoneyMinor(', 1)
+          if old_adjust not in text:
+              raise SystemExit('pricing adjustment rate anchor not found')
+          text = text.replace(old_adjust, new_adjust, 1)
+
+          old_policy_mul = '''function multiplyMinorByQuantity(rateMinor: number, qtyMicros: number, field: string): number {
+            if (!Number.isSafeInteger(rateMinor) || rateMinor < 0) throw errors.validation(`${field}: rate must be a non-negative safe integer`);
+            if (!Number.isSafeInteger(qtyMicros) || qtyMicros < 0) throw errors.validation(`${field}: quantity must be a non-negative safe integer`);
+            const rounded = (BigInt(rateMinor) * BigInt(qtyMicros) + 500_000n) / 1_000_000n;
+            const value = Number(rounded);
+            if (!Number.isSafeInteger(value)) throw errors.validation(`${field}: amount exceeds safe integer range`);
+            return value;
+          }'''.replace('          ', '')
+          new_policy_mul = '''function multiplyMinorByQuantity(rateMinor: number, qtyMicros: number, field: string): number {
+            if (!Number.isSafeInteger(rateMinor)) throw errors.validation(`${field}: rate must be a safe integer`);
+            if (!Number.isSafeInteger(qtyMicros) || qtyMicros < 0) throw errors.validation(`${field}: quantity must be a non-negative safe integer`);
+            const product = BigInt(rateMinor) * BigInt(qtyMicros);
+            const roundedAbs = ((product < 0n ? -product : product) + 500_000n) / 1_000_000n;
+            const value = Number(product < 0n ? -roundedAbs : roundedAbs);
+            if (!Number.isSafeInteger(value)) throw errors.validation(`${field}: amount exceeds safe integer range`);
+            return value;
+          }'''.replace('          ', '')
+          if old_policy_mul not in text:
+              raise SystemExit('pricing signed multiply anchor not found')
+          text = text.replace(old_policy_mul, new_policy_mul, 1)
+
+          anchor = '''function moneyMinor(value: unknown, scale: number, label: string): number {
+            const minor = toScaledInt(numeric(value, label), scale, label);
+            if (minor < 0) throw errors.validation(`${label} cannot be negative`);
+            return minor;
+          }'''.replace('          ', '')
+          signed = anchor + '''
+
+function signedMoneyMinor(value: unknown, scale: number, label: string): number {
+  const minor = toScaledInt(numeric(value, label), scale, label);
+  if (!Number.isSafeInteger(minor)) throw errors.validation(`${label} must be a safe monetary integer`);
+  return minor;
+}'''
+          if anchor not in text:
+              raise SystemExit('money helper anchor not found')
+          policy.write_text(text.replace(anchor, signed, 1), encoding='utf-8')
+          PY
+
+          grep -F "priceVariant: item.price_variant" server/packages/clouderp-selling/src/commercial-sales-order-controller.ts
+          grep -F "signedMoneyMinor(" server/packages/clouderp-pricing/src/commercial-policy.ts
+          git rm .github/workflows/pr958-runtime-autopatch.yml
+          git add server/packages/clouderp-selling/src/commercial-sales-order-controller.ts server/packages/clouderp-pricing/src/commercial-policy.ts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(pricing): support explicit variants and signed adjustments"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
