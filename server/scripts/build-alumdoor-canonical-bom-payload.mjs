@@ -57,8 +57,22 @@ for(const record of records){
   if(!parentRecord||!parentItem){addBlock("missing_parent_item",record,{canonical_item_code:ref.item_code});continue;}
   const uom=resolveBomRuntimeUom(record,item);
   if(uom.status!=="accepted"){addBlock(uom.reason,record,{canonical_item_code:ref.item_code,runtime_uom:uom.runtime_uom,stock_uom:uom.stock_uom,conversion_factors:uom.conversion_factors});continue;}
-  const quantity=resolveBomQuantity(record,uom,parentItem);
-  if(quantity.status==="blocked"){addBlock(quantity.reason||"runtime_contract_invalid",record,{canonical_item_code:ref.item_code,runtime_uom:uom.runtime_uom,stock_uom:uom.stock_uom,formula_text:quantity.formula_text,formula_code:quantity.formula_code});continue;}
+  const quantity=resolveBomQuantity(record,uom,parentItem,ref.item_code);
+  if(quantity.status==="blocked"){
+    addBlock(quantity.reason||"runtime_contract_invalid",record,{
+      canonical_item_code:ref.item_code,
+      runtime_uom:uom.runtime_uom,
+      stock_uom:uom.stock_uom,
+      formula_text:quantity.formula_text,
+      formula_code:quantity.formula_code,
+      template_code:quantity.template_code,
+      component_key:quantity.component_key,
+      expected_item_code:quantity.expected_item_code,
+      expected_item_codes:quantity.expected_item_codes,
+      expected_source_sheet:quantity.expected_source_sheet,
+    });
+    continue;
+  }
   const line={
     item_code:ref.item_code,
     uom:uom.runtime_uom,
