@@ -673,6 +673,23 @@ for (const childName of ["Quotation Item", "Sales Order Item"]) {
   ];
 }
 
+brief.doctypes.push({
+  name: "BOM Actual Component", child: true, label: "Vật tư BOM thực tế", group: "Sản xuất", naming: "autoincrement",
+  fields: [
+    "component_key:Data*! Slot BOM",
+    "item_code:Link(Item)! Vật tư thực tế",
+    "qty:Float! Số lượng / một bộ",
+    "source_row:Int Dòng ĐM",
+    "note:Small Text Ghi chú",
+  ],
+  permissions: { "Chủ xưởng": "rwc", "Sản xuất": "rwc", "Kinh doanh": "rwc" },
+});
+ensureSalesLineField(doctype("Sales Order Item"), "set_count", {
+  fieldname: "bom_actual_components", fieldtype: "Table", options: "BOM Actual Component", label: "Vật tư BOM thực tế",
+  description: "Nhập số lượng THỰC TẾ CHO MỘT BỘ. Production tách từng bộ thành một line; thiếu slot mà BOM Template yêu cầu thì chặn sinh BOM.",
+});
+note("Sales Order Item: +BOM Actual Component theo một bộ");
+
 // ────────────────── BATCH (doctype NỀN TẢNG) ──────────────────
 // KHÔNG dựng doctype lô riêng: nền tảng đã có `Batch` (module Stock, autoname field:batch_id).
 // Bản cũ đẻ `Aluminium Lot` song song — chính là quyển sổ thứ hai. V2 phủ Custom Field lên `Batch`.
@@ -874,11 +891,12 @@ brief.doctypes.push({
     "conditions_json:Code Điều kiện áp dụng JSON",
     "priority:Int=(0) Ưu tiên",
     "disabled:Check=(0) Ngừng dùng",
-    "source_status:Select(READY,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
+    "source_status:Select(READY,READY_WITH_ACTUALS,DEFERRED)!=(DEFERRED) Trạng thái chuẩn hóa nguồn",
     "source_ref:Data Tham chiếu nguồn",
     "deferred_components_json:Code Thành phần chờ chuẩn hóa JSON",
     "required_context_fields_json:Code Ngữ cảnh bắt buộc JSON",
     "required_component_keys_json:Code Thành phần bắt buộc JSON",
+    "required_actual_component_keys_json:Code Slot vật tư thực tế bắt buộc JSON",
     "component_rules:Table(BOM Component Rule)! Quy tắc thành phần",
     "note:Small Text Ghi chú"
   ],

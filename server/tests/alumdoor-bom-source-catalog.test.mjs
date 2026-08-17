@@ -27,8 +27,8 @@ test("source catalog preserves exact ĐM row coverage for CỬA ÚC KT 4D XN-VK"
     component_rows: [687, 688, 689, 690, 691, 692, 693, 694, 695, 696, 697, 698, 699, 700, 701, 702, 703, 705, 706, 707, 708, 709, 710, 711],
   });
   assert.equal(source.data.item_code, "TP-UC KT 4D XN-VK");
-  assert.equal(source.data.source_status, "DEFERRED");
-  assert.equal(source.data.disabled, true);
+  assert.equal(source.data.source_status, "READY_WITH_ACTUALS");
+  assert.equal(source.data.disabled, false);
 });
 
 test("all source rows are classified as implemented or deferred; none silently disappear", () => {
@@ -63,16 +63,15 @@ test("implemented source formulas reproduce ĐM semantics for one configured set
   assert.equal(qty("SRC-709-BAT-KHOA"), 0.77);
 });
 
-test("source pilot stays fail-closed until deferred rows are resolved", () => {
+test("source pilot resolves deterministic core while declaring explicit actual slots", () => {
   const template = parsedTemplate();
-  assert.throws(
-    () => resolveBomTemplate({
-      templates: [template],
-      context: { item_code: "TP-UC KT 4D XN-VK" },
-      values: { PB_CAO: 3.85, PB_RONG: 3.65, billable_area_sqm: 14.0525 },
-    }),
-    /Không có BOM Template phù hợp/i,
-  );
+  const resolved = resolveBomTemplate({
+    templates: [template],
+    context: { item_code: "TP-UC KT 4D XN-VK" },
+    values: { PB_CAO: 3.85, PB_RONG: 3.65, billable_area_sqm: 14.0525 },
+  });
+  assert.equal(resolved.components.length, 9);
+  assert.deepEqual(template.required_actual_component_keys, ["BOTTOM_SEAL", "FOAM_45CM", "PULLEY_34", "SPRING", "SPRING_STOP_ARM", "PULL_ROD", "SCREW_HEAD_PULLEY", "SCREW_2P_PULLEY"]);
 });
 
 test("fixture export is deterministic and keeps the template disabled", () => {
@@ -80,7 +79,7 @@ test("fixture export is deterministic and keeps the template disabled", () => {
   assert.equal(rows.length, 1);
   assert.equal(rows[0].type, "BOM Template");
   assert.equal(rows[0].name, "SRC-UC-KT-4D-XN-VK");
-  assert.equal(rows[0].data.disabled, true);
+  assert.equal(rows[0].data.disabled, false);
   assert.equal(rows[0].data.component_rules.length, 9);
-  assert.equal(JSON.parse(rows[0].data.deferred_components_json).length, 7);
+  assert.equal(JSON.parse(rows[0].data.deferred_components_json).length, 8);
 });
