@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: alumdoor-real-d1-local-load
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   load-local-real-data:
