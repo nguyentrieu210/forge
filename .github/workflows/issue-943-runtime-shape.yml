@@ -1,0 +1,21 @@
+name: Issue 943 Runtime Shape
+on:
+  push:
+    branches: [agent/alumdoor-tam-lien-ray-geometry]
+permissions: { contents: read }
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect runtime metadata and test harness
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'); const b=JSON.parse(fs.readFileSync('server/briefs/alumdoor-v2.json','utf8'));
+          for(const n of ['Geometry Profile','Geometry Profile Field','Cutting Policy Rule','Sales Order Item','Production Request Item','Work Order']) {
+            console.log('===',n,'==='); console.log(JSON.stringify(b.doctypes.find(x=>x.name===n),null,2));
+          }
+          console.log('=== GP fixture ==='); console.log(JSON.stringify(b.fixtures.filter(x=>x.type==='Geometry Profile'&&x.name==='GP-CUA-UC'),null,2));
+          NODE
+          echo '=== sales production tests ==='
+          grep -R "previewSalesProduction\|createSalesProduction\|calculateSalesProductionLine\|buildSalesProductionLines\|sales.production" -n server/tests | head -200 || true
