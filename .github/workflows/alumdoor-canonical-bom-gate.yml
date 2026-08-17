@@ -7,6 +7,7 @@ on:
       - 'server/scripts/build-alumdoor-canonical-bom-payload.mjs'
       - 'server/scripts/build-alumdoor-canonical-bom-payload-inferred.mjs'
       - 'server/scripts/check-alumdoor-canonical-bom-inference-regressions.mjs'
+      - 'server/scripts/check-alumdoor-canonical-bom-regressions.mjs'
       - 'server/scripts/lib/alumdoor-bom-engineering-inference.mjs'
       - 'server/scripts/lib/alumdoor-real-bom-gate-semantics.mjs'
       - 'server/scripts/lib/alumdoor-bom-template-source-catalog.mjs'
@@ -37,6 +38,23 @@ jobs:
           D="$RUNNER_TEMP/alumdoor-bom-gate"
           node server/scripts/extract-alumdoor-real-source-records.mjs "$D/source.json" "$D/source-report.json"
           node server/scripts/build-alumdoor-item-master-payload.mjs "$D/source.json" "$D/items.json" "$D/items-audit.json"
+      - name: Inventory strict fail-closed Gate B blockers
+        shell: bash
+        run: |
+          set +e
+          D="$RUNNER_TEMP/alumdoor-bom-gate"
+          node server/scripts/build-alumdoor-canonical-bom-payload.mjs "$D/source.json" "$D/items.json" "$D/strict-bom.json" "$D/strict-audit.json"
+          STRICT_EXIT=$?
+          set -e
+          node - "$D/strict-audit.json" "$STRICT_EXIT" <<'NODE'
+          const fs=require('fs');
+          const audit=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          console.log('STRICT_BOM_EXIT='+process.argv[3]);
+          console.log('STRICT_BOM_BLOCKERS='+audit.blocker_count);
+          console.log('STRICT_BOM_BLOCKER_COUNTS='+JSON.stringify(audit.blocker_counts));
+          console.log('STRICT_BOM_BLOCKER_CLASS_COUNTS='+JSON.stringify(audit.blocker_class_counts));
+          for(const b of audit.blockers) console.log('STRICT_BOM_BLOCKER_INVENTORY '+JSON.stringify(b));
+          NODE
       - name: Build inferred BOM twice and require deterministic bytes
         shell: bash
         run: |
