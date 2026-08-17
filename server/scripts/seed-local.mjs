@@ -70,7 +70,7 @@ const visitMeta = {
   ],
   permissions: [{
     role: "System Manager",
-    read: true, write: true, create: true, submit: true, cancel: true,
+    read: true, write: true, create: true, delete: true, submit: true, cancel: true,
     amend: true, share: true, report: true, export: true, print: true,
   }],
   revision: 1,
