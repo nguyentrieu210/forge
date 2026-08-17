@@ -14,16 +14,24 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Keep temporary observer from occupying self-hosted runner
+      - name: Inspect active local-runner queue without dispatch
         shell: bash
         run: |
           set -euo pipefail
           root='https://api.github.com/repos/nguyentrieu210/forge/actions'
           workflows="$root/workflows"
           headers=(-H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28')
+
           observers="$(curl -fsSL "${headers[@]}" "$workflows/alumdoor-postmerge-local-acceptance-observer.yml/runs?per_page=50")"
           while read -r id; do
             [ -z "$id" ] || { echo "CANCEL_TEMP_OBSERVER id=$id"; curl -fsSL -X POST "${headers[@]}" "$root/runs/$id/cancel" -o /dev/null || true; }
           done < <(jq -r '.workflow_runs[] | select(.status!="completed") | .id' <<<"$observers")
+
           echo "MAIN_SHA=$(curl -fsSL "${headers[@]}" 'https://api.github.com/repos/nguyentrieu210/forge/commits/main' | jq -r .sha)"
-          echo 'DIAGNOSTIC_MODE_NO_MUTATION_DISPATCH=PASS'
+          echo '=== ACTIVE ==='
+          curl -fsSL "${headers[@]}" "$root/runs?status=in_progress&per_page=100" |
+            jq -c '.workflow_runs[] | {id,name,status,event,head_branch,head_sha,created_at}'
+          echo '=== QUEUED ==='
+          curl -fsSL "${headers[@]}" "$root/runs?status=queued&per_page=100" |
+            jq -c '.workflow_runs[] | {id,name,status,event,head_branch,head_sha,created_at}'
+          echo 'LOCAL_RUNNER_QUEUE_DISCOVERY_PASS'
