@@ -1,0 +1,19 @@
+name: Issue 942 Validator Detail
+on:
+  push:
+    branches: [agent/alumdoor-v2-reproducible]
+permissions: { contents: read }
+jobs:
+  detail:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare validator/action identities with generated probe logic
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const b=JSON.parse(fs.readFileSync('server/briefs/alumdoor-v2.json','utf8'));
+          console.log('CURRENT VALIDATORS');
+          for(const [i,v] of (b.validators||[]).entries()) console.log(i,JSON.stringify(v));
+          console.log('CURRENT ACTIONS', (b.actions||[]).map(x=>({name:x.name,menu:x.menu,label:x.label})));
+          NODE
