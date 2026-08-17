@@ -53,6 +53,7 @@ import {
 import {
   calculateSalesProductionLine,
   createSalesProduction,
+  previewDraftSalesBomRequirements,
   previewSalesProduction,
   syncPaintJobsFromCut,
   validateProductionRequest,
@@ -3517,6 +3518,7 @@ export default {
     if (method === "alumdoor.ui.preview_child_row") return await previewChildRow(call, args);
         if (method === "alumdoor.ui.preview_document") return await previewDocument(call, args);
         if (method === "alumdoor.sales.production_line_context") return await calculateSalesProductionLine(call, args);
+        if (method === "alumdoor.sales.preview_bom_requirements") return await previewDraftSalesBomRequirements(call, args);
         if (method === "alumdoor.sales.preview_production") return await previewSalesProduction(call, args);
         if (method === "alumdoor.sales.create_production") return await createSalesProduction(call, args);
         if (method === "alumdoor.door.calculate") return await calculateDoor(call, args);
