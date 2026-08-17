@@ -3,7 +3,7 @@ import { BOM_TEMPLATE_SOURCE_CATALOG } from "./alumdoor-bom-template-source-cata
 
 const UOMS = new Set(ALUMDOOR_UOM_CATALOG.map((row) => row.name));
 const clean = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
-const fold = (v) => clean(v).normalize("NFD").replace(/\p{M}/gu, "").replace(/Đ/g, "D").toLocaleUpperCase("vi");
+const fold = (v) => clean(v).normalize("NFD").replace(/\p{M}/gu, "").toLocaleUpperCase("vi").replace(/Đ/g, "D");
 
 export function positiveBomNumber(value) {
   const raw = clean(value).replace(",", ".");
@@ -150,6 +150,43 @@ function manualActual(text) {
   return value === "THUC TE" || value.includes("TRU THUC TE") || value.includes("XUAT THUC TE") || value.includes("TRU SL THUC TE");
 }
 function hasGeometry(text) { return /RONG|NGANG|CAO|DIEN TICH|\bDT\b|M2|PBRAY|RCL/.test(fold(text)); }
+const formulaField = (field, multiply = 1, offset = undefined) => JSON.stringify({
+  base: { kind: "FIELD", field, ...(offset === undefined ? {} : { offset }) },
+  ...(multiply === 1 ? {} : { multiply }),
+});
+const formulaProduct = (left, right, multiply = 1) => JSON.stringify({
+  base: { kind: "PRODUCT", left, right },
+  ...(multiply === 1 ? {} : { multiply }),
+});
+const closeNumber = (a, b) => Number.isFinite(a) && Math.abs(a - b) < 1e-9;
+
+function resolveExactSourceGeometry(record, uomResolution, canonicalItemCode, n, text) {
+  const compact = fold(text).replace(/\s+/g, "");
+  const item = clean(canonicalItemCode);
+
+  if (item === "NVL-RONDAYUC" && compact === "RONDAY=CHIEURONGPBRAYX0.0077" && closeNumber(n, 0.0077)) {
+    return { status: "runtime_formula", qty_basis: "Theo rộng phủ bì ray", formula_kind: "source_exact_uc_bottom_seal", quantity_formula_json: formulaField("PB_RAY_RONG", n) };
+  }
+  if (["NVL-TRUC34", "NVL-TR114-1.8"].includes(item) && compact === "TRUC=CHIEURONGPBRAY+40CM" && closeNumber(n, 1.7)) {
+    return { status: "runtime_formula", qty_basis: "Theo rộng phủ bì ray + 0,40 m", formula_kind: "source_exact_uc_shaft_plus_40cm", quantity_formula_json: formulaField("PB_RAY_RONG", n, 0.4) };
+  }
+  if (item === "NVL-3X6M" && compact === "M=RONGPBRAY-30" && uomResolution.runtime_uom === "Mét") {
+    return { status: "runtime_formula", qty_basis: "Theo rộng phủ bì ray - 0,03 m", formula_kind: "source_exact_uc_width_minus_30mm", quantity_formula_json: formulaField("PB_RAY_RONG", 1, -0.03) };
+  }
+  if (item.startsWith("NVL-TON-DL5.2Dx124-") && compact === "C*(R-0,03)*SL*6,32KG/M2" && closeNumber(n, 6.32)) {
+    return { status: "runtime_formula", qty_basis: "Cao PB × rộng cắt lá × 6,32 kg/m²", formula_kind: "source_exact_dl_leaf_632", quantity_formula_json: formulaProduct({ field: "PB_CAO" }, { field: "PB_RAY_RONG", offset: -0.03 }, n) };
+  }
+  if (item === "NVL-V4_KEM_STD" && compact === "(RONGPBRAY-30)1,312KG/M" && uomResolution.runtime_uom === "Mét") {
+    return { status: "runtime_formula", qty_basis: "Theo rộng phủ bì ray - 0,03 m", formula_kind: "source_exact_dl_v4_width_minus_30mm", quantity_formula_json: formulaField("PB_RAY_RONG", 1, -0.03) };
+  }
+  if (compact === "(RPBRAY-30)X2XTL" && item === "NVL-V4_KEM_STD" && uomResolution.runtime_uom === "Mét") {
+    return { status: "runtime_formula", qty_basis: "2 × (rộng phủ bì ray - 0,03 m)", formula_kind: "source_exact_dl_v4_two_lengths", quantity_formula_json: formulaField("PB_RAY_RONG", 2, -0.03) };
+  }
+  if (compact === "(RPBRAY-30)X2XTL" && item === "NVL-TR114-1.8" && uomResolution.runtime_uom === "Kg" && closeNumber(n, 1.312)) {
+    return { status: "runtime_formula", qty_basis: "2 × rộng cắt × 1,312 kg/m", formula_kind: "source_exact_dl_shaft_two_lengths_weight", quantity_formula_json: formulaField("PB_RAY_RONG", 2 * n, -0.03) };
+  }
+  return null;
+}
 
 export function resolveBomQuantity(record, uomResolution, parentItem, canonicalItemCode = "") {
   void parentItem;
@@ -172,6 +209,8 @@ export function resolveBomQuantity(record, uomResolution, parentItem, canonicalI
   if (code === "M_X_2" || code === "M_X_4") return { status: "runtime_formula", qty_basis: "Theo chiều dài", formula_kind: code, quantity_formula_json: JSON.stringify({ base:{ kind:"FIELD", field:"RAY_DAI" }, multiply: code === "M_X_2" ? 2 : 4 }), lineage_source_formula_code: code };
   if (code === "CAO_CONG_0.15_X_SL") return { status: "runtime_formula", qty_basis: "Theo chiều cao", formula_kind: code, quantity_formula_json: JSON.stringify({ base:{ kind:"FIELD", field:"PB_CAO", offset:0.15 } }), lineage_source_formula_code: code };
   if (code) return { status: "blocked", reason: "unsupported_formula", formula_code: code };
+  const exactGeometry = resolveExactSourceGeometry(record, uomResolution, canonicalItemCode, n, text);
+  if (exactGeometry) return exactGeometry;
   if (uomResolution.kind === "rate") {
     if (!n) return { status: "blocked", reason: "missing_quantity_evidence" };
     if (uomResolution.rate_axis === "area") return { status: "runtime_formula", qty_basis: "Theo diện tích", quantity_formula_json: JSON.stringify({ base:{ kind:"FIELD", field:"billable_area_sqm" }, multiply:n }), formula_kind:"rate_per_area" };
