@@ -6,12 +6,12 @@ import {
   canonicalAlumdoorUom,
 } from "../scripts/lib/alumdoor-uom-catalog.mjs";
 
-test("Alumdoor UOM catalogue has exactly 18 canonical records", () => {
-  assert.equal(ALUMDOOR_UOM_CATALOG.length, 18);
-  assert.equal(new Set(ALUMDOOR_UOM_CATALOG.map(({ name }) => name)).size, 18);
+test("Alumdoor UOM catalogue has exactly 19 canonical records", () => {
+  assert.equal(ALUMDOOR_UOM_CATALOG.length, 19);
+  assert.equal(new Set(ALUMDOOR_UOM_CATALOG.map(({ name }) => name)).size, 19);
   assert.deepEqual(
     ALUMDOOR_UOM_CATALOG.map(({ name }) => name),
-    ["Cái", "Bộ", "Kg", "Mét", "m2", "Cây", "Lá", "Thân", "Thanh", "Sợi", "Cuộn", "Tấm", "Túi", "Hộp", "Bình", "Lít", "Cặp", "Con"],
+    ["Cái", "Bộ", "Kg", "Mét", "m2", "Cây", "Lá", "Thân", "Thanh", "Sợi", "Cuộn", "Tấm", "Túi", "Hộp", "Thùng", "Bình", "Lít", "Cặp", "Con"],
   );
 });
 
@@ -36,8 +36,13 @@ test("source aliases normalize into canonical UOMs instead of creating duplicate
 });
 
 test("unknown packaging words are not silently promoted to canonical UOMs", () => {
-  for (const value of ["BĂNG", "BẢNG", "VỈ", "THÙNG"]) {
+  for (const value of ["BĂNG", "BẢNG", "VỈ"]) {
     assert.equal(canonicalAlumdoorUom(value), value);
     assert.equal(ALUMDOOR_UOM_CATALOG.some(({ name }) => name === value), false);
   }
+});
+
+
+test("known canonical packaging words normalize to catalog casing", () => {
+  assert.equal(canonicalAlumdoorUom("THÙNG"), "Thùng");
 });

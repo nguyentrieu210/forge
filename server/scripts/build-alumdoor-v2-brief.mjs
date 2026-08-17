@@ -418,7 +418,7 @@ if (!materialSpecification.fields.some((field) => nameOf(field) === "item_group"
   addAfter(materialSpecification, "spec_name", "item_group:Link(Item Group)! Nhóm sản phẩm áp dụng");
 }
 if (!materialSpecification.fields.some((field) => nameOf(field) === "spec_type")) {
-  addAfter(materialSpecification, "item_group", "spec_type:Select(Nhôm cây/lá,Ống/trục,Tấm/Kính,Cuộn,Khác)! Loại quy cách");
+  addAfter(materialSpecification, "item_group", "spec_type:Select(Nhôm cây/lá,Ống/trục,Tấm/Kính,Cuộn,Vật tư tuyến tính,Khác)! Loại quy cách");
 }
 if (!materialSpecification.fields.some((field) => nameOf(field) === "effective_width_m")) {
   addAfter(materialSpecification, "width_m", "effective_width_m:Float Bản rộng hữu dụng (m)");
@@ -433,7 +433,7 @@ replaceField(materialSpecification, "section_code", {
 });
 replaceField(materialSpecification, "theoretical_kg_per_m", {
   fieldname: "theoretical_kg_per_m", fieldtype: "Float", label: "Kg/m lý thuyết",
-  depends_on: "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục'",
+  depends_on: "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Vật tư tuyến tính'",
 });
 replaceField(materialSpecification, "standard_length_m", {
   fieldname: "standard_length_m", fieldtype: "Float", label: "Chiều dài chuẩn (m)",
@@ -453,7 +453,7 @@ replaceField(materialSpecification, "thickness_mm", {
 });
 replaceField(materialSpecification, "scrap_threshold_m", {
   fieldname: "scrap_threshold_m", fieldtype: "Float", label: "Ngưỡng phế liệu (m)",
-  depends_on: "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Cuộn'",
+  depends_on: "eval:doc.spec_type == 'Nhôm cây/lá' || doc.spec_type == 'Ống/trục' || doc.spec_type == 'Cuộn' || doc.spec_type == 'Vật tư tuyến tính'",
 });
 materialSpecification.list = ["spec_code", "spec_name", "item_group", "spec_type", "theoretical_kg_per_m", "standard_length_m"];
 materialSpecification.search = ["spec_code", "spec_name", "item_group", "profile_system"];
