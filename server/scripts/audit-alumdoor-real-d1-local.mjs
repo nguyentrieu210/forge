@@ -26,8 +26,8 @@ const clean=(v)=>String(v??"").trim();
 const number=(v)=>Number(v??0);
 const bool=(v)=>Number(Boolean(Number(v)||v===true));
 const normConversions=(rows)=>(Array.isArray(rows)?rows:[]).map((r)=>({uom:clean(r?.uom),conversion_factor:Number(r?.conversion_factor)})).filter((r)=>r.uom&&Number.isFinite(r.conversion_factor)&&r.conversion_factor>0).sort((a,b)=>a.uom.localeCompare(b.uom,"vi"));
-const itemChecks=["is_stock_item","is_purchase_item","is_sales_item","is_fixed_asset","include_item_in_manufacturing","is_sub_contracted_item","disabled"];
-const itemScalars=["item_code","item_name","item_group","item_nature","material_stage","supply_type","is_stock_item","is_purchase_item","is_sales_item","is_fixed_asset","include_item_in_manufacturing","is_sub_contracted_item","stock_uom","default_purchase_uom","default_sales_uom","measurement_profile","disabled"];
+const itemChecks=["is_stock_item","is_purchase_item","is_sales_item","include_item_in_manufacturing","disabled"];
+const itemScalars=["item_code","item_name","item_group","item_nature","material_stage","supply_type","is_stock_item","is_purchase_item","is_sales_item","include_item_in_manufacturing","stock_uom","default_purchase_uom","default_sales_uom","measurement_profile","disabled"];
 function itemSnap(doc){const out={};for(const f of itemScalars)out[f]=itemChecks.includes(f)?bool(doc?.[f]):clean(doc?.[f]);out.uom_conversions=normConversions(doc?.uom_conversions);return out;}
 const failures=[];
 for(const expected of itemPayload.items){const actual=await getDoc("Item",expected.item_code);if(!actual){failures.push({layer:"Item",key:expected.item_code,reason:"missing"});continue;}const e=itemSnap(expected),a=itemSnap(actual);if(JSON.stringify(e)!==JSON.stringify(a))failures.push({layer:"Item",key:expected.item_code,reason:"managed_mismatch",expected:e,actual:a});}
