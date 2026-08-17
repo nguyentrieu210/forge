@@ -39,6 +39,18 @@ interface CreateProductionResult extends Json {
   idempotent?: boolean;
   message?: string;
 }
+interface BomTrace extends Json {
+  name?: string;
+  item?: string;
+  quantity?: number;
+  revision?: number;
+  bom_template?: string;
+  bom_template_code?: string;
+  bom_fingerprint?: string;
+  generated_by_configurator?: number | boolean;
+  items?: Json[];
+  _error?: string;
+}
 export interface AlumdoorProductionRequestDetailProps { name: string; onNavigate: (path: string) => void; }
 
 const healthLabel: Record<LineHealth, string> = {
@@ -50,6 +62,7 @@ export function AlumdoorProductionRequestDetail({ name, onNavigate }: AlumdoorPr
   const { adapter } = useMetaForge();
   const [document, setDocument] = useState<Json | null>(null);
   const [lifecycle, setLifecycle] = useState<LifecycleResult | null>(null);
+  const [bomTraceByName, setBomTraceByName] = useState<Record<string, BomTrace>>({});
   const [busy, setBusy] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
 
@@ -60,8 +73,19 @@ export function AlumdoorProductionRequestDetail({ name, onNavigate }: AlumdoorPr
         adapter.getDoc("Production Request", name),
         adapter.callPost<LifecycleResult>("alumdoor.production_request.lifecycle", { production_request: name }),
       ]);
-      setDocument(docResult.doc as Json);
+      const nextDocument = docResult.doc as Json;
+      const bomNames = productionBomNames(nextDocument);
+      const bomEntries = await Promise.all(bomNames.map(async (bomNo) => {
+        try {
+          const result = await adapter.getDoc("Bill of Materials", bomNo);
+          return [bomNo, result.doc as BomTrace] as const;
+        } catch (error) {
+          return [bomNo, { name: bomNo, _error: adapter.mapError(error).message } as BomTrace] as const;
+        }
+      }));
+      setDocument(nextDocument);
       setLifecycle(lifecycleResult);
+      setBomTraceByName(Object.fromEntries(bomEntries));
     } catch (error) { toast.error(adapter.mapError(error).message); }
     finally { setBusy(false); }
   }, [adapter, name]);
@@ -79,6 +103,7 @@ export function AlumdoorProductionRequestDetail({ name, onNavigate }: AlumdoorPr
     }
     return map;
   }, [document]);
+  const bomNames = useMemo(() => productionBomNames(document), [document]);
 
   const missingCount = lifecycle?.lines.filter((line) => line.health === "MISSING_WORK_ORDER").length ?? 0;
   const cancelledCount = lifecycle?.lines.filter((line) => line.health === "CANCELLED").length ?? 0;
@@ -129,22 +154,58 @@ export function AlumdoorProductionRequestDetail({ name, onNavigate }: AlumdoorPr
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="flex items-center justify-between border-b px-4 py-3"><div><h3 className="font-medium">Các bộ / dòng sản xuất</h3><p className="text-xs text-muted-foreground">Khóa dòng yêu cầu là lineage authority; không ghép theo mã hàng.</p></div><Factory className="size-5 text-muted-foreground" /></div>
       <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Dòng</TableHead><TableHead>Mặt hàng</TableHead><TableHead>Kích thước / bộ</TableHead><TableHead>BOM / bộ phận</TableHead><TableHead>Work Order</TableHead><TableHead>Trạng thái</TableHead></TableRow></TableHeader><TableBody>
-        {(lifecycle?.lines ?? []).map((line) => { const detail = detailByKey.get(line.request_line_key) ?? {}; return <TableRow key={line.request_line_key}>
+        {(lifecycle?.lines ?? []).map((line) => { const detail = detailByKey.get(line.request_line_key) ?? {}; const bomNo = text(detail.bom_no); const trace = bomTraceByName[bomNo]; return <TableRow key={line.request_line_key}>
           <TableCell><div className="font-mono text-xs">{line.request_line_key}</div><div className="mt-1 text-xs text-muted-foreground">SO: {line.sales_order_row_id || "—"}</div></TableCell>
           <TableCell className="font-medium">{line.item_code}</TableCell>
           <TableCell>{dimensionText(detail)}<div className="text-xs text-muted-foreground">{text(detail.set_no) ? `Bộ ${text(detail.set_no)}` : text(detail.set_count) ? `${text(detail.set_count)} bộ` : ""}</div></TableCell>
-          <TableCell>{text(detail.bom_no) || "—"}<div className="text-xs text-muted-foreground">{text(detail.department) || ""}</div></TableCell>
+          <TableCell>{bomNo ? <button type="button" className="font-medium text-primary hover:underline" onClick={() => onNavigate(`/app/${encodeURIComponent("Bill of Materials")}/${encodeURIComponent(bomNo)}`)}>{bomNo}</button> : "—"}<div className="text-xs text-muted-foreground">{text(trace?.bom_template_code) || text(trace?.bom_template) || text(detail.department) || ""}</div></TableCell>
           <TableCell>{line.work_order ? <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onNavigate(`/app/${encodeURIComponent("Work Order")}/${encodeURIComponent(line.work_order!)}`)}>{line.work_order}<ExternalLink className="size-3.5" /></Button> : line.duplicates?.length ? <div className="space-y-1">{line.duplicates.map((workOrder) => <button key={workOrder} type="button" className="block text-xs text-primary hover:underline" onClick={() => onNavigate(`/app/${encodeURIComponent("Work Order")}/${encodeURIComponent(workOrder)}`)}>{workOrder}</button>)}</div> : "—"}</TableCell>
           <TableCell><HealthBadge health={line.health} status={line.work_order_status} /></TableCell>
         </TableRow>; })}
         {!lifecycle?.lines?.length && <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">Yêu cầu chưa có dòng lineage hợp lệ.</TableCell></TableRow>}
       </TableBody></Table></div>
     </div>
+
+    {bomNames.length > 0 && <BomTraceability bomNames={bomNames} traceByName={bomTraceByName} onNavigate={onNavigate} />}
   </div>;
 }
 
+function BomTraceability({ bomNames, traceByName, onNavigate }: { bomNames: string[]; traceByName: Record<string, BomTrace>; onNavigate: (path: string) => void }) {
+  return <div className="mt-4 space-y-3">
+    <div><h3 className="font-medium">BOM đã đóng băng cho sản xuất</h3><p className="mt-1 text-xs text-muted-foreground">Đọc trực tiếp từ Bill of Materials theo bom_no. Production Request không lưu bản sao vật tư, nên BOM vẫn là nguồn sự thật duy nhất.</p></div>
+    {bomNames.map((bomNo) => {
+      const trace = traceByName[bomNo];
+      const materials = Array.isArray(trace?.items) ? trace.items.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row)) : [];
+      const generated = checked(trace?.generated_by_configurator);
+      return <div key={bomNo} className="overflow-hidden rounded-xl border bg-card">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2"><button type="button" className="font-medium text-primary hover:underline" onClick={() => onNavigate(`/app/${encodeURIComponent("Bill of Materials")}/${encodeURIComponent(bomNo)}`)}>{bomNo}</button><Badge variant="outline">{generated ? "Sinh từ configurator" : "BOM tĩnh"}</Badge>{text(trace?.revision) && <Badge variant="outline">Rev {text(trace?.revision)}</Badge>}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{text(trace?.item) || "—"} · SL đầu ra {numberText(trace?.quantity) || "—"}</div>
+          </div>
+          <Button variant="ghost" size="sm" className="h-8" onClick={() => onNavigate(`/app/${encodeURIComponent("Bill of Materials")}/${encodeURIComponent(bomNo)}`)}>Mở BOM <ExternalLink className="size-3.5" /></Button>
+        </div>
+        {trace?._error ? <div className="flex items-start gap-2 px-4 py-3 text-sm text-destructive"><AlertTriangle className="mt-0.5 size-4 shrink-0" /> Không đọc được BOM authority: {trace._error}</div> : <>
+          <div className="grid gap-3 border-b px-4 py-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
+            <TraceFact label="Template" value={text(trace?.bom_template_code) || text(trace?.bom_template) || (generated ? "—" : "BOM tĩnh")} mono />
+            <TraceFact label="BOM Template nguồn" value={text(trace?.bom_template) || "—"} />
+            <TraceFact label="Fingerprint" value={text(trace?.bom_fingerprint) || "—"} mono />
+          </div>
+          <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Vật tư authority</TableHead><TableHead>SL</TableHead><TableHead>Kho nguồn</TableHead></TableRow></TableHeader><TableBody>
+            {materials.map((material, index) => <TableRow key={text(material.name) || text(material.row_id) || `${bomNo}-${index}`}><TableCell className="font-medium">{text(material.item_code) || "—"}</TableCell><TableCell>{numberText(material.qty) || text(material.qty) || "—"}</TableCell><TableCell className="text-muted-foreground">{text(material.source_warehouse) || "—"}</TableCell></TableRow>)}
+            {!materials.length && <TableRow><TableCell colSpan={3} className="h-20 text-center text-muted-foreground">BOM không có dòng vật tư đọc được.</TableCell></TableRow>}
+          </TableBody></Table></div>
+        </>}
+      </div>;
+    })}
+  </div>;
+}
+
+function TraceFact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) { return <div><div className="text-xs text-muted-foreground">{label}</div><div className={`mt-1 break-all ${mono ? "font-mono text-xs" : "font-medium"}`}>{value}</div></div>; }
 function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-lg border bg-card p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 text-xl font-semibold tabular-nums">{value}</div></div>; }
 function HealthBadge({ health, status }: { health: LineHealth; status?: string }) { const destructive = health === "MISSING_WORK_ORDER" || health === "DUPLICATE_WORK_ORDER"; return <div><Badge variant={destructive ? "destructive" : "outline"}>{healthLabel[health]}</Badge>{status && <div className="mt-1 text-xs text-muted-foreground">{status}</div>}</div>; }
+function productionBomNames(document: Json | null): string[] { const rows = Array.isArray(document?.items) ? document.items : []; return [...new Set(rows.map((row) => row && typeof row === "object" && !Array.isArray(row) ? text((row as Json).bom_no) : "").filter(Boolean))]; }
 function dimensionText(row: Json): string { const width = numberText(row.width_m); const height = numberText(row.height_m); if (width && height) return `${width} × ${height} m`; return width || height || "—"; }
 function numberText(value: unknown): string { const number = Number(value); return Number.isFinite(number) && number > 0 ? new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 4 }).format(number) : ""; }
+function checked(value: unknown): boolean { return value === true || value === 1 || text(value).toLowerCase() === "true" || text(value) === "1"; }
 function text(value: unknown): string { return typeof value === "string" || typeof value === "number" ? String(value).normalize("NFC").trim() : ""; }
