@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   load-local-real-data:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 937
     runs-on: [self-hosted]
     timeout-minutes: 45
     env:
@@ -42,9 +42,7 @@ jobs:
           $local = 'C:\alumdoor'
           if (-not (Test-Path (Join-Path $local '.git'))) { throw 'C:\alumdoor is not a Git checkout.' }
           $origin = (git -C $local remote get-url origin).Trim()
-          if ($LASTEXITCODE -ne 0 -or $origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') {
-            throw "Unexpected local repository origin: $origin"
-          }
+          if ($LASTEXITCODE -ne 0 -or $origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') { throw "Unexpected local repository origin: $origin" }
           & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
           if ($LASTEXITCODE -ne 0) { throw 'Local backend 8799 is not healthy.' }
           if (-not (Test-Path (Join-Path $local 'server\scripts\backup-local-state.mjs'))) { throw 'Local state backup script is unavailable.' }
