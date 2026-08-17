@@ -1,120 +1,26 @@
-name: Reconcile Alumdoor Local Source and UOM
+name: Reconcile Alumdoor Local UOM
 
 on:
-  workflow_run:
-    workflows:
-      - Bootstrap Alumdoor Local C Drive
-    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: alumdoor-local-source-uom-reconcile
+  group: alumdoor-local-d1-mutation
   cancel-in-progress: false
 
 jobs:
-  reconcile-source:
-    runs-on: [self-hosted]
-    timeout-minutes: 10
-    steps:
-      - name: Fast-forward clean local main only
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $target = 'C:\alumdoor'
-          if (-not (Test-Path (Join-Path $target '.git'))) {
-            throw 'C:\alumdoor is not a Git workspace.'
-          }
-
-          $branch = (git -C $target rev-parse --abbrev-ref HEAD).Trim()
-          if ($branch -ne 'main') {
-            throw "C:\alumdoor is on '$branch'; refusing source reconcile."
-          }
-
-          $dirty = @(git -C $target status --porcelain=v1)
-          if ($dirty.Count -gt 0) {
-            $dirty | ForEach-Object { Write-Host "DIRTY $_" }
-            throw 'C:\alumdoor has local source changes; refusing source reconcile.'
-          }
-
-          git -C $target fetch origin main --prune
-          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main failed' }
-
-          $counts = (git -C $target rev-list --left-right --count HEAD...origin/main).Trim() -split '\s+'
-          if ($LASTEXITCODE -ne 0 -or $counts.Count -lt 2) { throw 'Unable to calculate local main divergence.' }
-          $ahead = [int]$counts[0]
-          $behind = [int]$counts[1]
-          if ($ahead -gt 0) {
-            throw "Local main has $ahead commit(s) not on GitHub; refusing overwrite."
-          }
-          if ($behind -gt 0) {
-            git -C $target merge --ff-only origin/main
-            if ($LASTEXITCODE -ne 0) { throw 'Unable to fast-forward C:\alumdoor to origin/main.' }
-          }
-
-          $local = (git -C $target rev-parse HEAD).Trim()
-          $remote = (git -C $target rev-parse origin/main).Trim()
-          if ($local -ne $remote) {
-            throw "Source reconcile incomplete: local=$local remote=$remote"
-          }
-          Write-Host "ALUMDOOR_LOCAL_SOURCE_RECONCILE_PASS sha=$local"
-
   seed-uom-api:
-    needs: reconcile-source
     runs-on: [self-hosted]
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
     steps:
-      - name: Guard exact clean local main and healthy local API
+      - name: Run canonical UOM local import contract
         shell: powershell
+        working-directory: C:\alumdoor
         run: |
           $ErrorActionPreference = 'Stop'
-          $target = 'C:\alumdoor'
-          $dirty = @(git -C $target status --porcelain=v1)
-          if ($dirty.Count -gt 0) {
-            $dirty | ForEach-Object { Write-Host "DIRTY $_" }
-            throw 'Local source became dirty before UOM API seed.'
-          }
-          git -C $target fetch origin main --prune
-          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main failed' }
-          $local = (git -C $target rev-parse HEAD).Trim()
-          $remote = (git -C $target rev-parse origin/main).Trim()
-          if ($local -ne $remote) {
-            throw "UOM seed requires exact origin/main: local=$local remote=$remote"
-          }
-          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
-          if ($LASTEXITCODE -ne 0) { throw 'Local backend 8799 is not healthy.' }
-          Write-Host "UOM_SOURCE_SHA $local"
-
-      - name: Save authenticated UOM pre-image through local API
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $backupDir = 'C:\alumdoor\local-backups\uom-api-preimages'
-          New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-          $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-          $output = Join-Path $backupDir "uom-before-$stamp.json"
-          Set-Location 'C:\alumdoor\server'
-          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
-          $env:FORGE_ADMIN_USER = 'dev@example.com'
-          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
-          & node scripts\backup-alumdoor-uom-local.mjs $output
-          $exit = $LASTEXITCODE
-          Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
-          if ($exit -ne 0) { throw 'Unable to save authenticated UOM API pre-image.' }
-          Write-Host "UOM_PREIMAGE_SAVED $output"
-
-      - name: Seed canonical 19 UOM through local API
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Set-Location 'C:\alumdoor\server'
-          $env:FORGE_ORIGIN = 'http://127.0.0.1:8799'
-          $env:FORGE_ADMIN_USER = 'dev@example.com'
-          $env:FORGE_ADMIN_PASSWORD = 'local-dev-password-1'
-          & node scripts\seed-alumdoor-uom-local.mjs
-          $exit = $LASTEXITCODE
-          Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
-          if ($exit -ne 0) { throw 'Canonical UOM local API seed failed.' }
-          Write-Host 'ALUMDOOR_LOCAL_UOM_19_READY'
+          & node scripts\local-runner\run-local-import.mjs uom
+          if ($LASTEXITCODE -ne 0) { throw "UOM execution contract failed with exit code $LASTEXITCODE" }
