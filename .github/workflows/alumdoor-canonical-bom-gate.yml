@@ -9,6 +9,7 @@ on:
       - 'server/scripts/lib/alumdoor-bom-template-source-catalog.mjs'
       - 'server/scripts/lib/alumdoor-exact-source-bom-quantity.mjs'
       - 'server/scripts/lib/alumdoor-exact-source-bom-evidence-gap.mjs'
+      - 'server/tests/alumdoor-exact-source-bom-quantity.test.mjs'
       - 'apps/alumdoor/docs/nguon/ms-lien/**'
       - '.github/workflows/alumdoor-canonical-bom-gate.yml'
   workflow_dispatch:
@@ -25,6 +26,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Test exact BOM source evidence resolvers
+        run: node --test server/tests/alumdoor-exact-source-bom-quantity.test.mjs
       - name: Build canonical Item evidence
         run: |
           mkdir -p "$RUNNER_TEMP/alumdoor-bom-gate"
