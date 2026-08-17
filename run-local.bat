@@ -83,9 +83,10 @@ REM Alumdoor validator can ba Worker noi nhau. Cau hinh nay co PUBLIC_ORIGIN co 
 set PORT=8799
 set REUSE=
 set BACKEND_SERVICE=
-REM Release Windows service maintenance only after build/migration/seed are done.
-call node scripts\alumdoor-runtime-maintenance.mjs off >> "%LOG%" 2>&1
-if errorlevel 1 (echo [LOI] Khong tat duoc runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
+REM Release only the backend after build/migration/seed. Desk remains held until
+REM client packages are built in step 8.
+call node scripts\alumdoor-runtime-maintenance.mjs off backend >> "%LOG%" 2>&1
+if errorlevel 1 (echo [LOI] Khong tat duoc backend runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
 sc.exe query ForgeAlumdoorBackend >nul 2>&1
 if not errorlevel 1 set BACKEND_SERVICE=1
 REM GitHub self-hosted runner tu dong don process con co RUNNER_TRACKING_ID sau khi job xong.
@@ -191,6 +192,11 @@ echo   Package client da co dist day du.
 
 echo.
 echo === 9. Chay MetaForge Desk ===
+REM Desk service was intentionally held while client packages were rebuilding.
+cd /d C:\alumdoor
+call node server\scripts\alumdoor-runtime-maintenance.mjs off desk >> "%LOG%" 2>&1
+if errorlevel 1 (echo [LOI] Khong tat duoc Desk runtime maintenance - xem %LOG% & call :pause_if_interactive & exit /b 1)
+cd /d C:\alumdoor\client
 set DESK_SERVICE=
 sc.exe query ForgeAlumdoorDesk >nul 2>&1
 if not errorlevel 1 set DESK_SERVICE=1
