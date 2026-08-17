@@ -54,31 +54,47 @@ describe("AlumDoor payroll daily reconciliation", () => {
     expect(result.workFractionBp).toBe(10_000);
   });
 
-  it("pays 60 automatic overtime minutes without any approval request", () => {
+  it("does not pay raw overtime without a submitted approval", () => {
     const result = reconcileAlumDoorPayrollDailyInputs({
       attendanceDays: [{ workDate: "2026-08-13", scheduledMinutes: 480, regularMinutes: 480, overtimeMinutes: 60, payableWorkFractionBp: 10_000 }],
       paidLeaveDays: [],
     });
 
-    expect(result.overtimeMinutes).toBe(60);
+    expect(result.rawOvertimeMinutes).toBe(60);
+    expect(result.overtimeMinutes).toBe(0);
+    expect(result.overtimeByDate).toEqual([{ workDate: "2026-08-13", rawOvertimeMinutes: 60, approvedMinutes: 0, payableOvertimeMinutes: 0 }]);
   });
 
-  it("pays all 120 system-calculated overtime minutes", () => {
+  it("caps payable overtime at the submitted approval", () => {
     const result = reconcileAlumDoorPayrollDailyInputs({
       attendanceDays: [{ workDate: "2026-08-14", scheduledMinutes: 480, regularMinutes: 480, overtimeMinutes: 120, payableWorkFractionBp: 10_000 }],
       paidLeaveDays: [],
+      overtimeApprovals: [{ workDate: "2026-08-14", approvedMinutes: 60 }],
     });
 
-    expect(result.overtimeMinutes).toBe(120);
+    expect(result.rawOvertimeMinutes).toBe(120);
+    expect(result.overtimeMinutes).toBe(60);
   });
 
-  it("ignores legacy overtime approvals even when supplied by a compatibility caller", () => {
+  it("never pays more overtime than the raw attendance evidence", () => {
     const result = reconcileAlumDoorPayrollDailyInputs({
       attendanceDays: [{ workDate: "2026-08-15", scheduledMinutes: 480, regularMinutes: 480, overtimeMinutes: 30, payableWorkFractionBp: 10_000 }],
       paidLeaveDays: [],
-      overtimeApprovals: [{ workDate: "2026-08-15", approvedMinutes: 0 }],
+      overtimeApprovals: [{ workDate: "2026-08-15", approvedMinutes: 120 }],
     });
 
+    expect(result.rawOvertimeMinutes).toBe(30);
     expect(result.overtimeMinutes).toBe(30);
+  });
+
+  it("fails closed on duplicate overtime approvals for one date", () => {
+    expect(() => reconcileAlumDoorPayrollDailyInputs({
+      attendanceDays: [{ workDate: "2026-08-16", scheduledMinutes: 480, regularMinutes: 480, overtimeMinutes: 30, payableWorkFractionBp: 10_000 }],
+      paidLeaveDays: [],
+      overtimeApprovals: [
+        { workDate: "2026-08-16", approvedMinutes: 15 },
+        { workDate: "2026-08-16", approvedMinutes: 15 },
+      ],
+    })).toThrow(/Trùng duyệt tăng ca/u);
   });
 });
