@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: alumdoor-local-d1-mutation
@@ -23,9 +24,71 @@ jobs:
       FORGE_LOCAL_EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
       - name: Run canonical BOM local import contract
+        id: bom_import
         shell: powershell
         working-directory: C:\alumdoor
         run: |
+          $ErrorActionPreference = 'Continue'
+          $logPath = Join-Path $env:RUNNER_TEMP 'alumdoor-bom-import.log'
+          & node scripts\local-runner\run-local-import.mjs bom 2>&1 | Tee-Object -FilePath $logPath
+          $exitCode = $LASTEXITCODE
+          "exit_code=$exitCode" | Set-Content -Path (Join-Path $env:RUNNER_TEMP 'alumdoor-bom-import.status') -Encoding utf8
+          if ($exitCode -ne 0) { throw "BOM execution contract failed with exit code $exitCode" }
+
+      - name: Publish BOM local import evidence to PR 951
+        if: always()
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
           $ErrorActionPreference = 'Stop'
-          & node scripts\local-runner\run-local-import.mjs bom
-          if ($LASTEXITCODE -ne 0) { throw "BOM execution contract failed with exit code $LASTEXITCODE" }
+          $logPath = Join-Path $env:RUNNER_TEMP 'alumdoor-bom-import.log'
+          $statusPath = Join-Path $env:RUNNER_TEMP 'alumdoor-bom-import.status'
+          $exitCode = 'missing'
+          if (Test-Path $statusPath) {
+            $statusLine = (Get-Content $statusPath -Raw).Trim()
+            if ($statusLine -match '^exit_code=(.+)$') { $exitCode = $Matches[1] }
+          }
+          $lines = @()
+          if (Test-Path $logPath) {
+            $patterns = @(
+              'INFRA_STATUS=',
+              'RUNNER_EVIDENCE ',
+              'DATA_STATUS=',
+              'ALUMDOOR_BOM_DATA_READY ',
+              'GLOBAL_D1_LOCK=',
+              'BACKUP_STATUS=',
+              'ALUMDOOR_BOM_LOCAL_IMPORT_PASS ',
+              'ALUMDOOR_LOCAL_BOM_IDEMPOTENCE_PASS ',
+              'FORGE_LOCAL_IMPORT_EXECUTION_PASS ',
+              'EXECUTION_STATUS='
+            )
+            foreach ($line in Get-Content $logPath) {
+              foreach ($pattern in $patterns) {
+                if ($line -like "*$pattern*") { $lines += $line; break }
+              }
+            }
+          }
+          if ($lines.Count -eq 0 -and (Test-Path $logPath)) {
+            $lines = @(Get-Content $logPath | Select-Object -Last 30)
+          }
+          $evidence = ($lines | Select-Object -Last 80) -join "`n"
+          $eventSha = '${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}'
+          $body = @"
+          ## BOM LOCAL IMPORT EXECUTION
+
+          workflow: `${{ github.workflow }}`
+          expected_main_sha: `$eventSha`
+          exit_code: `$exitCode`
+
+          ```text
+          $evidence
+          ```
+          "@
+          $payload = @{ body = $body } | ConvertTo-Json -Depth 4
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          Invoke-RestMethod -Method Post -Uri 'https://api.github.com/repos/nguyentrieu210/forge/issues/951/comments' -Headers $headers -Body $payload -ContentType 'application/json' | Out-Null
