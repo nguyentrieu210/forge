@@ -111,10 +111,11 @@ for (const file of candidateScripts) {
 }
 
 const auditSelf = 'scripts/local-runner/audit-local-mutation-entrypoints.mjs';
+const remoteToken = '--' + 'remote';
 for (const file of walk('scripts/local-runner').filter((file) => /\.mjs$/i.test(file))) {
   if (/\.test\.mjs$/i.test(file)) continue;
   if (file === 'scripts/local-runner/run-local-import-core.mjs' || file === auditSelf) continue;
-  if (/--remote/.test(read(file))) failures.push(`${file}:unexpected_remote_token`);
+  if (read(file).includes(remoteToken)) failures.push(`${file}:unexpected_remote_token`);
 }
 
 for (const row of inventory) console.log(`LOCAL_MUTATION_INVENTORY class=${row.class} authority=${row.authority} path=${row.path}`);
