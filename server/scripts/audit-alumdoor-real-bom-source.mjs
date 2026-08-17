@@ -59,5 +59,5 @@ console.log(`ALUMDOOR_REAL_BOM_SOURCE_AUDIT refs=${refs.length} distinct_uoms=${
 console.log(`ALUMDOOR_REAL_BOM_UOM_CATALOG ${JSON.stringify(report.uoms)}`);
 console.log(`ALUMDOOR_REAL_BOM_FORMULA_CATALOG ${JSON.stringify(report.formulas)}`);
 console.log(`ALUMDOOR_REAL_BOM_SLASH_UOMS ${JSON.stringify(report.slash_uoms)}`);
-if (nonnumericQtyRows.length) console.log(`ALUMDOOR_REAL_BOM_NONNUMERIC_QTY_SAMPLES ${JSON.stringify(report.nonnumeric_qty_samples)}`);
+if (nonNumericQtyRows.length) console.log(`ALUMDOOR_REAL_BOM_NONNUMERIC_QTY_SAMPLES ${JSON.stringify(report.nonnumeric_qty_samples)}`);
 if (blankQtyRows.length) console.log(`ALUMDOOR_REAL_BOM_BLANK_QTY_SAMPLES ${JSON.stringify(report.blank_qty_samples)}`);
