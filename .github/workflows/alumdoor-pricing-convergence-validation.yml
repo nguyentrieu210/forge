@@ -10,6 +10,7 @@ on:
       - "server/scripts/build-alumdoor-pricing-payload.mjs"
       - "server/scripts/validate-alumdoor-pricing-payload.mjs"
       - "server/scripts/import-alumdoor-pricing-local.mjs"
+      - "server/tests/sales-price-field-lookup.test.mjs"
       - "server/packages/clouderp-pricing/**"
       - "server/packages/clouderp-selling/**"
       - ".github/workflows/alumdoor-pricing-convergence-validation.yml"
@@ -23,6 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
 
       - name: Syntax check convergence scripts
         run: |
@@ -70,8 +81,16 @@ jobs:
             /tmp/alumdoor-pricing/pricing-payload-1.json \
             /tmp/alumdoor-pricing/pricing-payload-1.report.json
 
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build server
+        working-directory: server
+        run: pnpm run build
+
       - name: Focused pricing authority regression
-        run: node --test server/tests/sales-price-field-lookup.test.mjs
+        working-directory: server
+        run: node --test tests/sales-price-field-lookup.test.mjs
 
       - name: Preserve generated evidence
         if: always()
