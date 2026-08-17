@@ -1,6 +1,13 @@
 name: Alumdoor Canonical BOM Gate B
 
 on:
+  push:
+    branches:
+      - 'agent/alumdoor-gate-b-canonical-bom'
+    paths:
+      - 'server/scripts/**'
+      - 'apps/alumdoor/docs/nguon/ms-lien/**'
+      - '.github/workflows/alumdoor-canonical-bom-gate.yml'
   pull_request:
     paths:
       - 'server/scripts/extract-alumdoor-real-source-records.mjs'
