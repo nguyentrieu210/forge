@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 const grant = await readFile(new URL('./grant-alumdoor-runner-service-control.ps1', import.meta.url), 'utf8');
 const installer = await readFile(new URL('./install-alumdoor-runtime-services.ps1', import.meta.url), 'utf8');
+const runLocal = await readFile(new URL('../../run-local.bat', import.meta.url), 'utf8');
 
 assert.match(grant, /0x000200BD/);
 assert.match(grant, /SERVICE_QUERY_CONFIG/);
@@ -29,5 +30,7 @@ assert.match(grant, /Test-ServiceAceMask/);
 assert.doesNotMatch(grant, /verified\.Contains\(\$expectedAce\)/);
 assert.match(installer, /grant-alumdoor-runner-service-control\.ps1/);
 assert.match(installer, /service-control-grant\.json/);
+assert.doesNotMatch(runLocal, /timeout\.exe\s+\/t\s+2\s+\/nobreak/i);
+assert.match(runLocal, /setTimeout\(\(\)=>process\.exit\(0\),2000\)/);
 
 console.log('ALUMDOOR_SERVICE_CONTROL_CONTRACT_TEST_PASS');
