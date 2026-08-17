@@ -15,8 +15,19 @@ import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
+import {
+  preflightRealPurchase,
+  runRealPurchase,
+} from './real-purchase-adapter.mjs';
 
-const ADAPTERS = new Set(['bootstrap', 'reason-master', 'item-master', 'uom', 'layer0']);
+const ADAPTERS = new Set([
+  'bootstrap',
+  'reason-master',
+  'item-master',
+  'uom',
+  'layer0',
+  'real-purchase',
+]);
 const DEFAULT_REPO_ROOT = 'C:\\alumdoor';
 const DEFAULT_ORIGIN = 'http://127.0.0.1:8799';
 const D1_STATE_RELATIVE = 'server/apps/tenant-worker/.wrangler/state';
@@ -587,6 +598,15 @@ function preflightData(adapter, repoRoot, runDir, options) {
   if (adapter === 'uom') return preflightUom(repoRoot);
   if (adapter === 'item-master') return preflightItem(repoRoot, runDir, options.source);
   if (adapter === 'layer0') return preflightLayer0(repoRoot, runDir);
+  if (adapter === 'real-purchase') {
+    return preflightRealPurchase({
+      repoRoot,
+      runDir,
+      exec: run,
+      env: authEnv(),
+      fail: executionError,
+    });
+  }
   if (adapter === 'bootstrap') return preflightBootstrap(repoRoot);
   throw executionError('OTHER', `No data preflight registered for adapter=${adapter}`);
 }
@@ -978,6 +998,17 @@ export async function main(argv = process.argv.slice(2)) {
       restoreRuntime(repoRoot, runtimeState);
       await requireApi(origin);
       runUom(repoRoot, runDir);
+    } else if (adapter === 'real-purchase') {
+      runRealPurchase({
+        repoRoot,
+        runDir,
+        prepared,
+        exec: run,
+        env: authEnv(),
+        fail: executionError,
+        invokeWranglerLocal: (args) => invokeWranglerLocal(wrangler, repoRoot, args),
+        runBackup: () => runBackup(repoRoot),
+      });
     } else if (adapter === 'bootstrap') {
       const syncedSha = runBootstrap(repoRoot, preflight);
       preflight.local = syncedSha;
