@@ -5,20 +5,26 @@ on:
     paths:
       - 'server/scripts/lib/alumdoor-item-import-policy.mjs'
       - 'server/scripts/lib/alumdoor-item-source-contract.mjs'
+      - 'server/scripts/lib/alumdoor-item-source-preflight.mjs'
       - 'server/scripts/preflight-alumdoor-item-catalog.mjs'
+      - 'server/scripts/preflight-alumdoor-item-source-records.mjs'
       - 'server/scripts/export-alumdoor-item-reference-map.mjs'
       - 'server/scripts/test-alumdoor-item-import-policy.mjs'
       - 'server/scripts/test-alumdoor-item-source-contract.mjs'
+      - 'server/scripts/test-alumdoor-item-source-preflight.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
   pull_request:
     paths:
       - 'server/scripts/lib/alumdoor-item-import-policy.mjs'
       - 'server/scripts/lib/alumdoor-item-source-contract.mjs'
+      - 'server/scripts/lib/alumdoor-item-source-preflight.mjs'
       - 'server/scripts/preflight-alumdoor-item-catalog.mjs'
+      - 'server/scripts/preflight-alumdoor-item-source-records.mjs'
       - 'server/scripts/export-alumdoor-item-reference-map.mjs'
       - 'server/scripts/test-alumdoor-item-import-policy.mjs'
       - 'server/scripts/test-alumdoor-item-source-contract.mjs'
+      - 'server/scripts/test-alumdoor-item-source-preflight.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
       - '.github/workflows/alumdoor-item-import-policy.yml'
   workflow_dispatch:
@@ -33,6 +39,7 @@ jobs:
           node-version: '20'
       - run: node server/scripts/test-alumdoor-item-import-policy.mjs
       - run: node server/scripts/test-alumdoor-item-source-contract.mjs
+      - run: node server/scripts/test-alumdoor-item-source-preflight.mjs
       - run: node server/scripts/test-alumdoor-item-catalog-preflight.mjs
       - name: Reject retired legacy Item reference source
         shell: bash
