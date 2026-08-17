@@ -88,7 +88,7 @@ export function parseDocTypeMeta(value: unknown, expectedName?: string): DocType
     // evaluate would be a validation rule that appears to exist but never fires.
     if (field.mandatory_depends_on) assertFieldConditionSupported(field.mandatory_depends_on, field.fieldname, "mandatory_depends_on");
   }
-  if (!permissions.length) permissions.push({ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true });
+  if (!permissions.length) permissions.push({ role: "Administrator", read: true, write: true, create: true, delete: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true });
   const searchFields = input.search_fields === undefined ? undefined : array(input.search_fields, "search_fields").map((entry, index) => text(entry, `search_fields[${index}]`, 160));
   for (const field of searchFields ?? []) if (!fields.some((entry) => entry.fieldname === field)) throw errors.validation(`Unknown search field: ${field}`);
   const requestedSortField = input.sort_field === undefined ? undefined : text(input.sort_field, "sort_field", 160);
@@ -373,6 +373,7 @@ function parsePermission(value: unknown, index: number): DocPermissionMeta {
     read: bool(input.read, false),
     write: bool(input.write, false),
     create: bool(input.create, false),
+    delete: bool(input.delete, false),
     submit: bool(input.submit, false),
     cancel: bool(input.cancel, false),
     amend: bool(input.amend, false),

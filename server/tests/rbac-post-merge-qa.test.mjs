@@ -173,8 +173,12 @@ test("post-merge login, role refresh and session revocation work together", asyn
     audit("admin-a@example.com", "replace-worker-roles", "promotion"),
     NOW,
   );
+  await assert.rejects(
+    store.assertSessionStillValid(TENANT_A, "worker@example.com", 0),
+    /Session has been revoked/,
+  );
   assert.deepEqual(
-    (await store.assertSessionStillValid(TENANT_A, "worker@example.com", 0)).roles,
+    (await store.assertSessionStillValid(TENANT_A, "worker@example.com", 1)).roles,
     ["Stock Manager"],
   );
 
@@ -186,13 +190,13 @@ test("post-merge login, role refresh and session revocation work together", asyn
     audit("admin-a@example.com", "reset-worker-password"),
     NOW,
   );
-  assert.equal(nextEpoch, 1);
+  assert.equal(nextEpoch, 2);
   await assert.rejects(
-    store.assertSessionStillValid(TENANT_A, "worker@example.com", 0),
+    store.assertSessionStillValid(TENANT_A, "worker@example.com", 1),
     /Session has been revoked/,
   );
   assert.deepEqual(
-    (await store.assertSessionStillValid(TENANT_A, "worker@example.com", 1)).roles,
+    (await store.assertSessionStillValid(TENANT_A, "worker@example.com", 2)).roles,
     ["Stock Manager"],
   );
   assert.equal((await store.findByLogin(TENANT_A, "worker@example.com")).passwordHash, "worker-hash-v2-secret");
@@ -205,7 +209,7 @@ test("post-merge login, role refresh and session revocation work together", asyn
     NOW,
   );
   await assert.rejects(
-    store.assertSessionStillValid(TENANT_A, "worker@example.com", 1),
+    store.assertSessionStillValid(TENANT_A, "worker@example.com", 2),
     /Account is disabled/,
   );
   assert.equal((await store.findByLogin(TENANT_A, "worker@example.com")).user.enabled, false);

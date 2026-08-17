@@ -1,4 +1,4 @@
-import { staticDevelopmentActor, verifyBearerJwt } from "../../../packages/auth/src/index.js";
+import { D1UserStore, staticDevelopmentActor, verifyBearerJwt } from "../../../packages/auth/src/index.js";
 import type { Actor, JsonObject } from "../../../packages/contracts/src/index.js";
 import { asCloudForgeError, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import {
@@ -211,9 +211,11 @@ async function authenticate(request: Request, env: QueryEnv, tenantId: string): 
     secret: requireConfig(env.JWT_SECRET, "JWT_SECRET"),
     issuer: requireConfig(env.JWT_ISSUER, "JWT_ISSUER"),
     audience: requireConfig(env.JWT_AUDIENCE, "JWT_AUDIENCE"),
+    requireSessionEpoch: true,
   });
   if (claims.tenant_id !== tenantId) throw errors.authentication("Authenticated tenant does not match report tenant");
-  return { user_id: claims.sub, roles: [...claims.roles] };
+  const user = await new D1UserStore(env.DB).assertSessionStillValid(tenantId, claims.sub, claims.session_epoch!);
+  return { user_id: user.user_id, roles: [...user.roles], ...(user.language ? { locale: user.language } : {}), ...(user.time_zone ? { timezone: user.time_zone } : {}) };
 }
 
 function logReadObservation(

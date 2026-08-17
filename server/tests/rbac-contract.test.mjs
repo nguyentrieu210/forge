@@ -92,7 +92,7 @@ test("capabilities and trace are evaluated with the selected actor", async () =>
     async assert(request) {
       calls.push(request);
       assert.equal(request.actor.user_id, USER.user_id);
-      if (["read", "create", "save"].includes(request.action)) return;
+      if (["read", "create", "save", "delete"].includes(request.action)) return;
       throw new Error(`Role is not allowed to ${request.action}`);
     },
   };
@@ -139,7 +139,7 @@ test("capabilities and trace are evaluated with the selected actor", async () =>
 test("an opted-in configuration master can be deleted after approval", async () => {
   const permissions = {
     async assert(request) {
-      if (["read", "save"].includes(request.action)) return;
+      if (["read", "save", "delete"].includes(request.action)) return;
       throw new Error(`Role is not allowed to ${request.action}`);
     },
   };
@@ -185,7 +185,7 @@ test("an opted-in configuration master can be deleted after approval", async () 
     permissions,
   });
   assert.equal(optedIn.capabilities.delete, true);
-  assert.ok(optedIn.trace.some((item) => item.detail.includes("Danh mục cấu hình")));
+  assert.ok(optedIn.trace.some((item) => item.label === "delete lifecycle: được phép" && item.detail.includes("Master opt-in")));
 });
 
 test("user-permission identity is stable, reversible and includes the applicable doctype", () => {

@@ -36,6 +36,8 @@ export interface AuthenticationContext {
 /** Trusted identity plus optional issuer-authenticated evidence for privileged step-up policy. */
 export interface SecurityTrustedIdentity extends TrustedIdentity {
   authentication?: AuthenticationContext;
+  /** Present for externally minted bearer credentials; compared with live D1 state downstream. */
+  session_epoch?: number;
 }
 
 export interface JwtVerificationOptions {
@@ -43,12 +45,16 @@ export interface JwtVerificationOptions {
   issuer?: string;
   audience?: string;
   nowSeconds?: number;
+  /** Require a revocable user credential rather than a free-standing stateless JWT. */
+  requireSessionEpoch?: boolean;
 }
 
 export interface JwtClaims extends JsonObject {
   sub: string;
   tenant_id: string;
   roles: string[];
+  /** User security epoch captured when the bearer credential was minted. */
+  session_epoch?: number;
   exp: number;
   nbf?: number;
   iss?: string;
@@ -82,6 +88,10 @@ export async function verifyHs256Jwt(token: string, options: JwtVerificationOpti
   if (!Array.isArray(claims.roles) || !claims.roles.every((role) => typeof role === "string" && role.length > 0)) {
     throw errors.authentication("Bearer token roles are invalid");
   }
+  if (claims.session_epoch !== undefined && (typeof claims.session_epoch !== "number" || !Number.isInteger(claims.session_epoch) || claims.session_epoch < 0)) {
+    throw errors.authentication("Bearer token session epoch is invalid");
+  }
+  if (options.requireSessionEpoch && claims.session_epoch === undefined) throw errors.authentication("Bearer token is missing session epoch");
   if (typeof claims.exp !== "number" || claims.exp <= now) throw errors.authentication("Bearer token expired");
   if (typeof claims.nbf === "number" && claims.nbf > now + 30) throw errors.authentication("Bearer token is not active");
   if (claims.auth_time !== undefined && (!Number.isInteger(claims.auth_time) || claims.auth_time <= 0 || claims.auth_time > now + 30)) {
@@ -167,11 +177,15 @@ export async function createTrustedIdentity(input: {
   masterSecret: string;
   keyId: string;
   authentication?: AuthenticationContext;
+  sessionEpoch?: number;
   nowSeconds?: number;
   ttlSeconds?: number;
 }): Promise<{ encoded: string; signature: string; identity: SecurityTrustedIdentity }> {
   const issuedAt = input.nowSeconds ?? Math.floor(Date.now() / 1000);
   if (input.authentication) validateAuthenticationContext(input.authentication, issuedAt);
+  if (input.sessionEpoch !== undefined && (!Number.isInteger(input.sessionEpoch) || input.sessionEpoch < 0)) {
+    throw errors.authentication("Trusted identity session epoch is invalid");
+  }
   const identity: SecurityTrustedIdentity = {
     tenant_id: input.tenantId,
     actor: input.actor,
@@ -180,6 +194,7 @@ export async function createTrustedIdentity(input: {
     expires_at: issuedAt + (input.ttlSeconds ?? 60),
     key_id: input.keyId,
     ...(input.authentication ? { authentication: cloneAuthenticationContext(input.authentication) } : {}),
+    ...(input.sessionEpoch !== undefined ? { session_epoch: input.sessionEpoch } : {}),
   };
   const encoded = base64UrlEncode(JSON.stringify(identity));
   const signingKey = await deriveIdentityKey(input.masterSecret, input.tenantId, input.keyId);
@@ -216,6 +231,9 @@ export async function verifyTrustedIdentity(request: Request, input: {
   if (input.traceId && identity.trace_id !== input.traceId) throw errors.authentication("Trusted identity trace mismatch");
   if (!identity.actor || typeof identity.actor.user_id !== "string" || !Array.isArray(identity.actor.roles)) {
     throw errors.authentication("Trusted identity actor is invalid");
+  }
+  if (identity.session_epoch !== undefined && (typeof identity.session_epoch !== "number" || !Number.isInteger(identity.session_epoch) || identity.session_epoch < 0)) {
+    throw errors.authentication("Trusted identity session epoch is invalid");
   }
   if (identity.authentication !== undefined) validateAuthenticationContext(identity.authentication, now);
   return identity as SecurityTrustedIdentity;
