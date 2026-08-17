@@ -69,11 +69,13 @@ jobs:
           rm -f .github/workflows/issue-942-semantic-probe.yml
           rm -f .github/workflows/issue-942-remaining-provenance.yml
           rm -f .github/workflows/issue-942-validator-detail.yml
+          rm -f .github/workflows/issue-942-customfields-probe.yml
+          rm -f .github/workflows/issue-942-schema-probe.yml
           rm -f .github/workflows/issue-942-apply.yml
           rm -f .github/workflows/issue-942-apply-v2.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add server/briefs/alumdoor.json server/briefs/alumdoor-v2.json server/scripts/build-alumdoor-v2-brief.mjs server/tests/alumdoor-v2-generator-reproducibility.test.mjs .github
+          git add server/briefs/alumdoor.json server/briefs/alumdoor-v2.json server/briefs/brief.schema.json server/scripts/build-alumdoor-v2-brief.mjs server/tests/alumdoor-v2-generator-reproducibility.test.mjs .github
           git diff --cached --check
           git commit -m "fix(alumdoor): make V2 brief reproducible [issue-942-applied]"
           git push origin HEAD:agent/alumdoor-v2-reproducible
