@@ -1093,7 +1093,11 @@ export async function main(argv = process.argv.slice(2)) {
   console.log('EXECUTION_STATUS=SUCCESS');
 }
 
-if (process.argv[1]?.endsWith('run-local-import.mjs')) {
+// Only auto-run when this module is the process entry point. Matching the parent
+// wrapper's filename made the core run a second time on every `run-local-import.mjs`
+// invocation: the wrapper already routes to coreMain, so the duplicate run raced the
+// wrapper for the global D1 lock and failed adapters the wrapper owns (pricing/bom/customer).
+if (process.argv[1]?.endsWith('run-local-import-core.mjs')) {
   main().catch((error) => {
     console.error(error?.stack ?? error);
     process.exit(1);
