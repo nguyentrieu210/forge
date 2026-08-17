@@ -13,57 +13,45 @@ jobs:
     runs-on: [self-hosted]
     timeout-minutes: 10
     steps:
-      - name: Probe existing Windows authority without mutation
+      - name: Probe restart handoff prerequisites without mutation
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Write-Host "IDENTITY=$(whoami)"
           Write-Host "ELEVATED=$(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
+          Write-Host '=== PRIVILEGES ==='
+          whoami /priv | ForEach-Object { Write-Host $_ }
 
-          Add-Type @'
-          using System;
-          using System.Runtime.InteropServices;
-          public static class ServiceAccessProbe {
-            [DllImport("advapi32.dll", EntryPoint="OpenSCManagerW", ExactSpelling=true, SetLastError=true)]
-            public static extern IntPtr OpenSCManager(IntPtr machineName, IntPtr databaseName, uint access);
-            [DllImport("advapi32.dll", EntryPoint="OpenServiceW", ExactSpelling=true, SetLastError=true, CharSet=CharSet.Unicode)]
-            public static extern IntPtr OpenService(IntPtr scm, string serviceName, uint access);
-            [DllImport("advapi32.dll", SetLastError=true)]
-            public static extern bool CloseServiceHandle(IntPtr handle);
-          }
-          '@
-          $scm = [ServiceAccessProbe]::OpenSCManager([IntPtr]::Zero, [IntPtr]::Zero, 0x0001)
-          if ($scm -eq [IntPtr]::Zero) { throw "OpenSCManager failed=$([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
-          try {
-            foreach ($name in @('ForgeAlumdoorWorker','ForgeAlumdoorBackend','ForgeAlumdoorDesk')) {
-              foreach ($entry in @(
-                @{label='QUERY'; mask=0x0004},
-                @{label='START'; mask=0x0010},
-                @{label='STOP'; mask=0x0020},
-                @{label='CHANGE_CONFIG'; mask=0x0002}
-              )) {
-                $handle = [ServiceAccessProbe]::OpenService($scm, $name, [uint32]$entry.mask)
-                if ($handle -eq [IntPtr]::Zero) {
-                  Write-Host "SERVICE_ACCESS name=$name right=$($entry.label) allowed=0 error=$([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
-                } else {
-                  Write-Host "SERVICE_ACCESS name=$name right=$($entry.label) allowed=1"
-                  [ServiceAccessProbe]::CloseServiceHandle($handle) | Out-Null
-                }
-              }
-              sc.exe sdshow $name | ForEach-Object { Write-Host "SERVICE_SD name=$name $_" }
+          Write-Host '=== SERVICE BOOT CONTRACT ==='
+          foreach ($name in @('ForgeAlumdoorWorker','ForgeAlumdoorBackend','ForgeAlumdoorDesk')) {
+            $svc = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
+            if ($svc) {
+              Write-Host "SERVICE_BOOT name=$name state=$($svc.State) startMode=$($svc.StartMode) startName=$($svc.StartName) pid=$($svc.ProcessId) path=$($svc.PathName)"
+            } else {
+              Write-Host "SERVICE_BOOT name=$name absent=1"
             }
-          } finally {
-            [ServiceAccessProbe]::CloseServiceHandle($scm) | Out-Null
           }
+          Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'actions.runner.nguyentrieu210-forge.*' } |
+            ForEach-Object {
+              Write-Host "RUNNER_SERVICE_BOOT name=$($_.Name) state=$($_.State) startMode=$($_.StartMode) startName=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)"
+            }
 
-          Write-Host '=== REPO-RELATED SCHEDULED TASKS ==='
-          $tasks = @(Get-ScheduledTask -ErrorAction SilentlyContinue |
-            Where-Object { $_.TaskName -match '(?i)forge|alumdoor|github|runner' -or $_.TaskPath -match '(?i)forge|alumdoor|github|runner' })
-          if ($tasks.Count -eq 0) { Write-Host 'TASK none=1' }
-          foreach ($task in $tasks) {
+          Write-Host '=== RUNNER TASK CONTRACT ==='
+          foreach ($name in @('AlumdoorGitHubRunner','AlumdoorWorkerLocal','AlumdoorClientLocal')) {
+            $task = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
+            if (-not $task) { Write-Host "TASK_BOOT name=$name absent=1"; continue }
             $info = $task | Get-ScheduledTaskInfo -ErrorAction SilentlyContinue
-            Write-Host "TASK path=$($task.TaskPath)$($task.TaskName) state=$($info.State) principal=$($task.Principal.UserId) runLevel=$($task.Principal.RunLevel)"
-            $task.Actions | ForEach-Object { Write-Host "TASK_ACTION execute=$($_.Execute) args=$($_.Arguments) cwd=$($_.WorkingDirectory)" }
+            Write-Host "TASK_BOOT name=$name state=$($info.State) principal=$($task.Principal.UserId) logonType=$($task.Principal.LogonType) runLevel=$($task.Principal.RunLevel)"
+            $task.Triggers | ForEach-Object {
+              $type = $_.CimClass.CimClassName
+              Write-Host "TASK_TRIGGER name=$name type=$type enabled=$($_.Enabled) startBoundary=$($_.StartBoundary) userId=$($_.UserId)"
+            }
+            $task.Actions | ForEach-Object { Write-Host "TASK_ACTION name=$name execute=$($_.Execute) args=$($_.Arguments) cwd=$($_.WorkingDirectory)" }
           }
 
-          Write-Host 'ALUMDOOR_BOOTSTRAP_AUTHORITY_PROBE_PASS'
+          Write-Host '=== AUTO LOGON FLAG (NO SECRET OUTPUT) ==='
+          $winlogon = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -ErrorAction SilentlyContinue
+          Write-Host "AUTO_LOGON enabled=$($winlogon.AutoAdminLogon) defaultUser=$($winlogon.DefaultUserName) defaultDomain=$($winlogon.DefaultDomainName)"
+
+          Write-Host 'ALUMDOOR_RESTART_HANDOFF_PROBE_PASS'
