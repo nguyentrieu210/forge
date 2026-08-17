@@ -1,0 +1,45 @@
+name: Temporary BOM Editor Base Typecheck
+on:
+  push:
+    branches: ['agent/alumdoor-bom-draft-guidance']
+    paths: ['.github/workflows/_tmp-typecheck-bom-editor-base.yml']
+permissions:
+  contents: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Typecheck current branch
+        shell: bash
+        working-directory: client
+        run: |
+          set +e
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run typecheck > ../.github/_tmp-bom-editor-typecheck.log 2>&1
+          status=$?
+          cat ../.github/_tmp-bom-editor-typecheck.log
+          if [ "$status" -ne 0 ]; then
+            cd ..
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add .github/_tmp-bom-editor-typecheck.log
+            git commit -m 'ci: capture BOM editor typecheck diagnostics'
+            git push origin HEAD:agent/alumdoor-bom-draft-guidance
+            exit "$status"
+          fi
+      - name: Remove temporary workflow
+        if: success()
+        shell: bash
+        run: |
+          rm .github/workflows/_tmp-typecheck-bom-editor-base.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/_tmp-typecheck-bom-editor-base.yml
+          git commit -m 'ci: remove BOM editor base typecheck'
+          git push origin HEAD:agent/alumdoor-bom-draft-guidance
