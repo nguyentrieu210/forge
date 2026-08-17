@@ -24,7 +24,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $source = 'C:\alumdoor'
           $work = "C:\alumdoor-worktrees\patch-$env:GITHUB_RUN_ID"
-          Write-Host 'PATCH_ATTEMPT=scoped-authority-v2'
+          Write-Host 'PATCH_ATTEMPT=local-deps-v3'
           git -C $source fetch origin main agent/alumdoor-bom-realdata-continuation --prune
           if ($LASTEXITCODE -ne 0) { throw 'fetch failed' }
           New-Item -ItemType Directory -Force -Path (Split-Path -Parent $work) | Out-Null
@@ -34,6 +34,10 @@ jobs:
             Set-Location $work
             git merge --no-edit origin/main
             if ($LASTEXITCODE -ne 0) { throw 'merge main failed' }
+            $localModules = Join-Path $source 'server\node_modules'
+            $workModules = Join-Path $work 'server\node_modules'
+            if (-not (Test-Path $localModules)) { throw 'local server node_modules missing' }
+            if (-not (Test-Path $workModules)) { New-Item -ItemType Junction -Path $workModules -Target $localModules | Out-Null }
             Set-Location (Join-Path $work 'server')
             node scripts\_tmp-patch-alumdoor-dynamic-uom-validator.mjs
             if ($LASTEXITCODE -ne 0) { throw 'patch script failed' }
@@ -42,6 +46,7 @@ jobs:
             node --test tests\alumdoor-item-validator.test.mjs
             if ($LASTEXITCODE -ne 0) { throw 'focused tests failed' }
             Set-Location $work
+            if (Test-Path $workModules) { Remove-Item $workModules -Force }
             Get-ChildItem '.github\workflows' -Filter '_tmp-alumdoor-*.yml' -File -ErrorAction SilentlyContinue | Remove-Item -Force
             Remove-Item 'server\scripts\_tmp-patch-alumdoor-dynamic-uom-validator.mjs' -Force
             git config user.name 'github-actions[bot]'
