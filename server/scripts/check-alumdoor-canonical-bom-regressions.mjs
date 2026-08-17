@@ -89,6 +89,23 @@ const rubberBottomSealBlockers = blockers.filter((blocker) => rubberBottomSealRo
 assert.equal(rubberBottomSealBlockers.length, 3, "RNHUA-DR must remain fail-closed while 0.101 and 0.263 KG/M authorities conflict");
 assert.ok(rubberBottomSealBlockers.every((blocker) => blocker.type === "missing_conversion"));
 
+const ratePerOutputRows = new Map([
+  [55, { item_code: "NVL-RON-DD", qty: 0.117 }],
+  [57, { item_code: "NVL-RNHUA-DR", qty: 0.101 }],
+  [58, { item_code: "NVL-RINOX-DR", qty: 0.124 }],
+  [1125, { item_code: "NVL-TRUC114_2.4LY", qty: 12.8 }],
+  [1127, { item_code: "NVL-TRUC168_5LY", qty: 15.6 }],
+]);
+for (const [sourceRow, expected] of ratePerOutputRows) {
+  const line = lines.find((entry) => entry.lineage?.source_row === sourceRow);
+  assert.ok(line, `source row ${sourceRow} must resolve as an exact rate per canonical BOM output UOM`);
+  assert.equal(line.item_code, expected.item_code);
+  assert.equal(line.uom, "Kg");
+  assert.equal(line.qty, expected.qty);
+  assert.equal(line.lineage?.resolution_reason, "rate_per_parent_output");
+  assert.equal(blockers.filter((blocker) => blocker.source_row === sourceRow).length, 0);
+}
+
 assert.equal(blockers.filter((blocker) => blocker.type === "parent_missing_conversion").length, 0, "finished-door parent conversion must never be reintroduced");
 const finishedDoorBoms = boms.filter((bom) => itemMap.get(bom.item)?.stock_uom === "Bộ");
 assert.ok(finishedDoorBoms.length > 0, "expected at least one finished-door BOM with stock UOM Bộ");
