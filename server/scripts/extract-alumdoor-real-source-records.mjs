@@ -59,6 +59,7 @@ function makeSellableRecord(row, sourceIndex) {
 }
 
 function makeBomReferenceRecord(row, parentIndex, parentCode) {
+  const category = readAlumdoorCell(row, 0);
   const itemCode = readAlumdoorCell(row, 3);
   const itemName = readAlumdoorCell(row, 2) || itemCode;
   const sourceUom = readAlumdoorCell(row, 5);
@@ -70,8 +71,15 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
     item_code: itemCode,
     item_name: itemName,
     source_uom: sourceUom,
-    source_group: "",
-    source_category: readAlumdoorCell(row, 0),
+    // Ordinary references never become Item identities. This group is retained
+    // only so an explicitly allowlisted BOM-only promotion can use evidence from
+    // the component's own code/name rather than inheriting the parent Item Group.
+    source_group: resolveAlumdoorRealStockGroup({
+      category,
+      item_code: itemCode,
+      item_name: itemName,
+    }),
+    source_category: category,
     parent_item_code: parentCode,
     source_parent_name: readAlumdoorCell(row, 4),
     source_qty_or_formula: readAlumdoorCell(row, 6),
@@ -154,7 +162,7 @@ const unresolvedGroups = records.filter((row) => (
 ));
 const groupCounts = {};
 for (const row of records) {
-  if (!row.source_group) continue;
+  if (!row.source_group || row.source_role === ITEM_SOURCE_ROLES.BOM_REFERENCE) continue;
   groupCounts[row.source_group] = (groupCounts[row.source_group] || 0) + 1;
 }
 const unresolvedSamples = unresolvedGroups.slice(0, 100).map((row) => ({
@@ -166,6 +174,17 @@ const unresolvedSamples = unresolvedGroups.slice(0, 100).map((row) => ({
   item_name: row.item_name,
   source_uom: row.source_uom,
 }));
+const sellableDualUnitEvidence = records
+  .filter((row) => row.source_role === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT && /^KG\//i.test(row.source_uom))
+  .map((row) => ({
+    source_row: row.source_row,
+    source_index: row.source_index,
+    item_code: row.item_code,
+    item_name: row.item_name,
+    source_uom: row.source_uom,
+    conversion_factor: Number(row.source_rate_or_quantity),
+  }))
+  .filter((row) => Number.isFinite(row.conversion_factor) && row.conversion_factor > 0);
 
 const report = {
   source_authority: {
@@ -182,6 +201,7 @@ const report = {
   unresolved_group_count: unresolvedGroups.length,
   group_counts: groupCounts,
   unresolved_group_samples: unresolvedSamples,
+  sellable_dual_unit_evidence: sellableDualUnitEvidence,
 };
 
 await mkdir(dirname(outputPath), { recursive: true });
@@ -197,6 +217,7 @@ if (unresolvedGroups.length > 0) {
   console.log("ALUMDOOR_REAL_SOURCE_GROUPS_PENDING");
   for (const row of unresolvedSamples.slice(0, 25)) console.log(JSON.stringify(row));
 }
+for (const row of sellableDualUnitEvidence) console.log(`DUAL_UNIT_EVIDENCE ${JSON.stringify(row)}`);
 
 if (sellableCount === 0 || stockCount === 0 || bomReferenceCount === 0) {
   throw new Error(
