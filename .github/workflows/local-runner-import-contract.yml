@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'scripts/local-runner/**'
+      - 'server/scripts/alumdoor-runtime-service-host.mjs'
+      - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
+      - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
@@ -16,6 +19,9 @@ on:
     branches: [main]
     paths:
       - 'scripts/local-runner/**'
+      - 'server/scripts/alumdoor-runtime-service-host.mjs'
+      - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
+      - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
@@ -42,12 +48,16 @@ jobs:
           node-version: '22'
 
       - name: Unit test local runner contract
-        run: node --test scripts/local-runner/contract.test.mjs
+        run: |
+          node --test scripts/local-runner/contract.test.mjs
+          node server/scripts/test-alumdoor-managed-process-tree.mjs
 
       - name: Syntax check execution sources
         run: |
           node --check scripts/local-runner/run-local-import.mjs
           node --check scripts/local-runner/real-purchase-adapter.mjs
+          node --check server/scripts/alumdoor-runtime-service-host.mjs
+          node --check server/scripts/lib/alumdoor-managed-process-tree.mjs
           node --check server/scripts/import-alumdoor-reason-master-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
 
@@ -69,42 +79,50 @@ jobs:
             .github/workflows/reconcile-alumdoor-local-source-uom.yml
             .github/workflows/alumdoor-real-purchase-import-policy.yml
           )
-
           for file in "${files[@]}"; do
             grep -q 'group: alumdoor-local-d1-mutation' "$file"
             grep -q 'cancel-in-progress: false' "$file"
             grep -q 'scripts\\local-runner\\run-local-import.mjs' "$file"
-
             if grep -Eq 'npx[[:space:]]+wrangler|wrangler[[:space:]]+d1[[:space:]]+(execute|migrations)|stop-local-dev\.mjs' "$file"; then
               echo "Bypass mutation/process-control path is forbidden in $file"
               exit 1
             fi
           done
-
-          if grep -RInE --include='*.yml' --include='*.yaml' \
-            'sync-local\.bat[[:space:]]+--bootstrap' .github/workflows; then
+          if grep -RInE --include='*.yml' --include='*.yaml' 'sync-local\.bat[[:space:]]+--bootstrap' .github/workflows; then
             echo 'Bootstrap mutation must go through run-local-import.mjs bootstrap'
             exit 1
           fi
 
-      - name: Enforce legacy-to-canonical bootstrap bridge and acceptance ordering
+      - name: Enforce legacy bridge and managed-service escalation
         shell: bash
         run: |
           set -euo pipefail
           bootstrap=.github/workflows/bootstrap-alumdoor-local.yml
           reason=.github/workflows/alumdoor-reason-master-local-import.yml
+          host=server/scripts/alumdoor-runtime-service-host.mjs
 
           grep -q 'LEGACY_SOURCE_TRANSITION=PASS' "$bootstrap"
           grep -q 'LEGACY_SOURCE_LOCK=ACQUIRED' "$bootstrap"
           grep -q 'LOCAL_STATE_BACKUP_OK' "$bootstrap"
           grep -q 'merge --ff-only origin/main' "$bootstrap"
           grep -q 'mutation_started=0' "$bootstrap"
+          grep -q 'Stop-Service -Name' "$bootstrap"
+          grep -q 'MANAGED_SERVICE_STOP=PASS' "$bootstrap"
+          grep -q 'refusing blind process termination' "$bootstrap"
+          grep -q 'LEGACY_SOURCE_RUNTIME_HANDOFF=PASS maintenance=on' "$bootstrap"
 
           grep -q 'workflow_run:' "$reason"
           grep -q 'Bootstrap Alumdoor Local C Drive' "$reason"
           grep -q 'github.event.workflow_run.head_sha' "$reason"
           if grep -qE '^[[:space:]]{2}push:' "$reason"; then
             echo 'Reason Master acceptance must not race bootstrap on the same push'
+            exit 1
+          fi
+
+          grep -q 'managedProcessTree' "$host"
+          grep -q 'COREPACK_ENABLE_DOWNLOAD_PROMPT' "$host"
+          if grep -q 'taskkill' "$host"; then
+            echo 'Managed service host must not use taskkill; terminate only descendants of its owned root PID'
             exit 1
           fi
 
@@ -120,7 +138,6 @@ jobs:
           grep -q "EXECUTION_STATUS=SUCCESS" scripts/local-runner/run-local-import.mjs
           grep -q "real-purchase" scripts/local-runner/run-local-import.mjs
           grep -q "ALUMDOOR_REAL_PURCHASE_IMPORT_PASS" scripts/local-runner/real-purchase-adapter.mjs
-
           if grep -RInE --exclude='run-local-import.mjs' --exclude='*.test.mjs' -- '--remote' scripts/local-runner; then
             echo 'Unexpected --remote token in local runner sources'
             exit 1
