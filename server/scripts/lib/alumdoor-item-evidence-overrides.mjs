@@ -60,10 +60,14 @@ export const ITEM_SOURCE_BOM_EVIDENCE_ALIASES = Object.freeze({
   "NVL-BOSNPHI19": "NVL-BOLSN",
   "NVL-MONGNGUASNPHI19": "NVL-BOLSN",
   "NVL-TOLEKEM70_8D-YEMMV": "TP-TD327",
+
+  // The MTN 4D XN-VK row has the same name/qty as the KT XN-VK material row but a stray GU KU code.
+  // Resolve only the BOM reference to the already-audited 3.8D XN-VK stock identity.
+  "NVL-TON3.8D-GU KU": "NVL-TOLE0.35x598-XNVK",
 });
 
 // Real Item identities that exist only as repeated BOM component codes in the current source set.
-// Promotion is explicit and fail-closed: keep the exact BOM code, attach an audited atomic stock UOM,
+// Promotion is explicit and fail-closed: keep the exact BOM code, attach audited UOM evidence,
 // and allow it to satisfy other BOM references. Nothing outside this allowlist is auto-promoted.
 export const ITEM_SOURCE_BOM_ITEM_PROMOTIONS = Object.freeze({
   "TP-YHTaiwan-HDK": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
@@ -101,6 +105,12 @@ export const ITEM_SOURCE_BOM_ITEM_PROMOTIONS = Object.freeze({
   // DANH MỤC gives these exact source codes with purchase UOM KG.
   "RONNHUAVANGCẢNHAY_RSU100": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
   "RONNHUAVANGCANHAY_RSU70": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
+
+  // Real transaction/BOM evidence uses these codes with a Kg-per-metre basis. The preflight
+  // interprets KG/M as atomic stock Kg + secondary Mét and marks conversion required.
+  "NVL-LUOIMV_STD": Object.freeze({ canonical_source_uom: "KG/M", reason: "transaction_and_bom_dual_unit_basis" }),
+  "NVL-TRUC114_2.4LY": Object.freeze({ canonical_source_uom: "KG/M", reason: "transaction_and_bom_dual_unit_basis" }),
+  "NVL-TRUC168_5LY": Object.freeze({ canonical_source_uom: "KG/M", reason: "bom_dual_unit_basis" }),
 });
 
 // Two numbered YHLD component products have blank UOM cells in ĐM, while their BOM/transaction
