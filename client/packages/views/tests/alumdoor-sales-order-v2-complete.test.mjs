@@ -9,6 +9,7 @@ const read = (path) => readFileSync(`${root}/${path}`, "utf8");
 const entry = read("client/packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx");
 const workbench = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx");
 const grid = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderLineTableComplete.tsx");
+const coordinator = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/preview-coordinator.ts");
 const documentPreview = read("server/apps-src/alumdoor-worker/src/ui-document-preview.ts");
 const production = read("server/apps-src/alumdoor-worker/src/sales-production-core.ts");
 
@@ -85,11 +86,51 @@ test("dirty close and keyboard-first data entry are explicit", () => {
   assert.match(grid, /aria-label=\{`Xóa dòng/);
 });
 
-
 test("complete grid consumes canonical ray_type without geometry constants", () => {
   assert.match(grid, /ray_type: "Loại ray"/);
   assert.match(grid, /fieldname === "ray_type"/);
   assert.match(workbench, /ray_type: line\.ray_type/);
   assert.match(workbench, /ray_type: undefined/);
   assert.doesNotMatch(grid + workbench, /0\.05|0\.08/);
+});
+
+test("all document previews share one revision clock and stale responses cannot apply", () => {
+  assert.match(workbench, /createSalesOrderPreviewClock/);
+  assert.match(workbench, /markSalesOrderDocumentChanged/);
+  assert.match(workbench, /canApplySalesOrderDocumentPreview/);
+  assert.match(coordinator, /clock\.revision === revision/);
+  assert.doesNotMatch(workbench, /headerSeq/);
+  assert.doesNotMatch(workbench, /documentSeq/);
+  assert.match(workbench, /applySalesOrderDocumentPreview\(current, result\)/);
+});
+
+test("line previews are invalidated when document commercial context changes", () => {
+  assert.match(workbench, /const documentRevision = previewClock\.current\.revision/);
+  assert.match(workbench, /canApplySalesOrderDocumentPreview\(previewClock\.current, documentRevision\)/);
+  assert.match(workbench, /markActiveLinesForReprice/);
+  assert.match(workbench, /_loading: true/);
+});
+
+test("save and submit fail closed while document or line previews are unresolved", () => {
+  const validateSection = workbench.slice(workbench.indexOf("const validate"), workbench.indexOf("const buildDocument"));
+  assert.match(validateSection, /previewClock\.current\.pending > 0/);
+  assert.match(validateSection, /headerErrorRef\.current/);
+  assert.match(workbench, /isSalesOrderPersistenceBlocked/);
+  assert.match(workbench, /disabled=\{persistenceBlocked \|\| !canSave\}/);
+  assert.match(workbench, /disabled=\{persistenceBlocked\}/);
+  assert.match(workbench, /fieldset disabled=\{formReadOnly \|\| busy\}/);
+});
+
+test("structural line mutations and clearing an item refresh server totals", () => {
+  assert.match(workbench, /replaceLinesAndRefreshTotals/);
+  const duplicateSection = workbench.slice(workbench.indexOf("const duplicateLine"), workbench.indexOf("const validate"));
+  assert.match(duplicateSection, /replaceLinesAndRefreshTotals/);
+  const itemSection = workbench.slice(workbench.indexOf('if (fieldname === "item_code")'), workbench.indexOf("const commitBomActualComponents"));
+  assert.match(itemSection, /refreshDocumentPreview\("items", nextLines\)/);
+});
+
+test("production action is projected from target Production Request capability", () => {
+  assert.match(workbench, /getCapabilities\("Production Request"\)/);
+  assert.match(workbench, /productionCaps\.read/);
+  assert.match(workbench, /docstatus === 1 && documentName && productionCaps\.read/);
 });

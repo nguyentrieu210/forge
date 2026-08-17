@@ -26,6 +26,16 @@ import type { BomActualComponentRow } from "../AlumdoorBomActualEditor.js";
 import { AlumdoorSalesOrderField, fallbackField } from "./AlumdoorSalesOrderField.js";
 import { AlumdoorSalesOrderLineTableComplete } from "./AlumdoorSalesOrderLineTableComplete.js";
 import {
+  applySalesOrderDocumentPreview,
+  beginSalesOrderDocumentPreview,
+  canApplySalesOrderDocumentPreview,
+  createSalesOrderPreviewClock,
+  finishSalesOrderDocumentPreview,
+  isSalesOrderPersistenceBlocked,
+  markSalesOrderDocumentChanged,
+  type SalesOrderDocumentPreviewPatch,
+} from "./preview-coordinator.js";
+import {
   blankFromMeta,
   hydrateSalesLines,
   isAreaDoor,
@@ -115,6 +125,17 @@ function checked(value: unknown): boolean {
   return value === true || value === 1 || value === "1" || text(value).toLowerCase() === "true";
 }
 
+function commercialHeaderSignature(header: Json): string {
+  return [
+    text(header.customer),
+    text(header.customer_group),
+    text(header.selling_price_list),
+    text(header.transaction_date),
+    text(header.currency),
+    text(header.delivery_date),
+  ].join("\u001f");
+}
+
 export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCreateProps) {
   const { adapter, scopeKey, businessContext, contextPolicies, registry, services, roles } = useMetaForge();
   const queryClient = useQueryClient();
@@ -130,15 +151,17 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const [submitting, setSubmitting] = useState(false);
   const [fatal, setFatal] = useState("");
   const [headerError, setHeaderError] = useState("");
+  const headerErrorRef = useRef("");
+  const [documentPreviewPending, setDocumentPreviewPending] = useState(0);
   const [caps, setCaps] = useState<SalesCaps>({});
+  const [productionCaps, setProductionCaps] = useState<SalesCaps>({});
   const [sourceModified, setSourceModified] = useState("");
   const [docstatus, setDocstatus] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const closeSeen = useRef(props.closeRequest ?? 0);
   const lineSeq = useRef(new Map<string, number>());
-  const headerSeq = useRef(0);
-  const documentSeq = useRef(0);
+  const previewClock = useRef(createSalesOrderPreviewClock());
   const itemNameCache = useRef(new Map<string, string>());
   const didInitialLinePreview = useRef(false);
   const lastCommercialContext = useRef("");
@@ -154,6 +177,24 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     setHeader(next);
   }, []);
 
+  const setHeaderPreviewError = useCallback((message: string) => {
+    headerErrorRef.current = message;
+    setHeaderError(message);
+  }, []);
+
+  const beginDocumentPreview = useCallback(() => {
+    const revision = beginSalesOrderDocumentPreview(previewClock.current);
+    setDocumentPreviewPending(previewClock.current.pending);
+    return revision;
+  }, []);
+
+  const finishDocumentPreview = useCallback(() => {
+    const pending = finishSalesOrderDocumentPreview(previewClock.current);
+    setDocumentPreviewPending(pending);
+  }, []);
+
+  const markDocumentChanged = useCallback(() => markSalesOrderDocumentChanged(previewClock.current), []);
+
   const replaceLines = useCallback((next: SalesLine[], markDirty = false) => {
     const normalizedLines = next.length ? next : [newLine(0)];
     linesRef.current = normalizedLines;
@@ -166,6 +207,21 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     replaceLines(next, markDirty);
     return next;
   }, [replaceLines]);
+
+  const markActiveLinesForReprice = useCallback(() => {
+    const current = linesRef.current;
+    if (!current.some((line) => text(line.item_code))) return;
+    replaceLines(current.map((line) => text(line.item_code)
+      ? { ...line, _loading: true, _pricingError: "" }
+      : line), false);
+  }, [replaceLines]);
+
+  const patchLineFromUser = useCallback((key: string, patch: Partial<SalesLine>) => {
+    markDocumentChanged();
+    const current = linesRef.current.find((line) => line._key === key);
+    const active = Boolean(text(current?.item_code) || text(patch.item_code));
+    patchLine(key, active ? { ...patch, _loading: true } : patch, true);
+  }, [markDocumentChanged, patchLine]);
 
   const salesServices = useMemo<FieldServices>(() => ({
     ...services,
@@ -205,53 +261,67 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     return result;
   }, [childFieldSet, isExisting]);
 
-  const previewDocument = useCallback(async (next: Json, changedField: string, sourceLines = linesRef.current): Promise<Json> => {
+  const requestDocumentPreview = useCallback(async (next: Json, changedField: string, sourceLines = linesRef.current): Promise<SalesOrderDocumentPreviewPatch> => {
     const result = await adapter.callPost<Json>("alumdoor.ui.preview_document", {
       doctype: "Sales Order",
       doc: { ...next, items: sourceLines.filter((line) => text(line.item_code)).map(cleanLine) },
       changed_field: changedField,
     });
-    const patch = result.patch && typeof result.patch === "object" && !Array.isArray(result.patch) ? result.patch as Json : {};
-    const merged = { ...next, ...patch };
-    for (const field of Array.isArray(result.clear) ? result.clear.map(text) : []) delete merged[field];
-    return merged;
+    return {
+      patch: result.patch && typeof result.patch === "object" && !Array.isArray(result.patch) ? result.patch as Json : {},
+      clear: Array.isArray(result.clear) ? result.clear.map(text).filter(Boolean) : [],
+    };
   }, [adapter, cleanLine]);
 
+  const applyInteractiveDocumentPreview = useCallback((result: SalesOrderDocumentPreviewPatch) => {
+    const current = headerRef.current;
+    const next = applySalesOrderDocumentPreview(current, result) as Json;
+    if (commercialHeaderSignature(current) !== commercialHeaderSignature(next)) markActiveLinesForReprice();
+    setHeaderState(next);
+  }, [markActiveLinesForReprice, setHeaderState]);
+
   const refreshDocumentPreview = useCallback(async (changedField = "items", sourceLines = linesRef.current) => {
-    const seq = ++documentSeq.current;
+    const revision = beginDocumentPreview();
+    const snapshot = headerRef.current;
     try {
-      const resolved = await previewDocument(headerRef.current, changedField, sourceLines);
-      if (documentSeq.current !== seq) return;
-      setHeaderError("");
-      setHeaderState(resolved);
+      const result = await requestDocumentPreview(snapshot, changedField, sourceLines);
+      if (!canApplySalesOrderDocumentPreview(previewClock.current, revision)) return;
+      setHeaderPreviewError("");
+      applyInteractiveDocumentPreview(result);
     } catch (error) {
-      if (documentSeq.current !== seq) return;
-      setHeaderError(mapError(error).message);
+      if (!canApplySalesOrderDocumentPreview(previewClock.current, revision)) return;
+      setHeaderPreviewError(mapError(error).message);
+    } finally {
+      finishDocumentPreview();
     }
-  }, [previewDocument, setHeaderState]);
+  }, [applyInteractiveDocumentPreview, beginDocumentPreview, finishDocumentPreview, requestDocumentPreview, setHeaderPreviewError]);
 
   const setHeaderField = useCallback((fieldname: string, value: unknown, preview = false) => {
-    const seq = ++headerSeq.current;
+    markDocumentChanged();
     const current = headerRef.current;
     const next = {
       ...current,
       [fieldname]: value,
       ...(fieldname === "payment_method" && text(value) !== "Chuyển khoản" ? { bank_account: undefined } : {}),
     };
+    if (commercialHeaderSignature(current) !== commercialHeaderSignature(next)) markActiveLinesForReprice();
     setHeaderState(next);
     setDirty(true);
     if (!preview) return;
-    void previewDocument(next, fieldname)
-      .then((resolved) => {
-        if (headerSeq.current !== seq) return;
-        setHeaderError("");
-        setHeaderState(resolved);
+    setHeaderPreviewError("");
+    const revision = beginDocumentPreview();
+    void requestDocumentPreview(next, fieldname)
+      .then((result) => {
+        if (!canApplySalesOrderDocumentPreview(previewClock.current, revision)) return;
+        setHeaderPreviewError("");
+        applyInteractiveDocumentPreview(result);
       })
       .catch((error) => {
-        if (headerSeq.current !== seq) return;
-        setHeaderError(mapError(error).message);
-      });
-  }, [previewDocument, setHeaderState]);
+        if (!canApplySalesOrderDocumentPreview(previewClock.current, revision)) return;
+        setHeaderPreviewError(mapError(error).message);
+      })
+      .finally(finishDocumentPreview);
+  }, [applyInteractiveDocumentPreview, beginDocumentPreview, finishDocumentPreview, markActiveLinesForReprice, markDocumentChanged, requestDocumentPreview, setHeaderPreviewError, setHeaderState]);
 
   const requestClose = useCallback(() => {
     if (dirty) setConfirmDiscard(true);
@@ -278,10 +348,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         const salesMeta = await adapter.getMeta("Sales Order");
         const table = salesMeta.fields.find((field) => field.fieldname === "items" && field.fieldtype === "Table");
         const childDoctype = text(table?.options) || "Sales Order Item";
-        const [itemMeta, boot, capabilities, existingResult] = await Promise.all([
+        const [itemMeta, boot, capabilities, productionCapabilities, existingResult] = await Promise.all([
           adapter.getMeta(childDoctype),
           adapter.getBoot(),
           adapter.getCapabilities("Sales Order", documentName || undefined),
+          adapter.getCapabilities("Production Request").catch(() => ({})),
           documentName ? adapter.getDoc("Sales Order", documentName) : Promise.resolve(null),
         ]);
         if (!active) return;
@@ -299,6 +370,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         setMeta(salesMeta);
         setChildMeta(itemMeta);
         setCaps(capabilities as SalesCaps);
+        setProductionCaps(productionCapabilities as SalesCaps);
         setSourceModified(text(existingDoc?.modified));
         setDocstatus(Number(existingDoc?.docstatus) || 0);
         setHeaderState(initialHeader);
@@ -338,8 +410,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     const row = { ...source, ...patch } as SalesLine;
     const itemCode = text(row.item_code);
     if (!itemCode) return;
+    const documentRevision = previewClock.current.revision;
     const seq = (lineSeq.current.get(row._key) ?? 0) + 1;
     lineSeq.current.set(row._key, seq);
+    const isCurrent = () => lineSeq.current.get(row._key) === seq
+      && canApplySalesOrderDocumentPreview(previewClock.current, documentRevision);
     patchLine(row._key, { ...patch, _loading: true, _error: "", _pricingError: "" }, false);
     try {
       const parent = { ...headerRef.current, items: undefined };
@@ -362,7 +437,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         adapter.callPost<Json>("alumdoor.catalog.allowed_colors", { item_code: itemCode, usage_scope: "sales" }),
         loadItemName(itemCode),
       ]);
-      if (lineSeq.current.get(row._key) !== seq) return;
+      if (!isCurrent()) return;
       const serverPatch = uiPreview.patch && typeof uiPreview.patch === "object" && !Array.isArray(uiPreview.patch) ? uiPreview.patch as Json : {};
       const overrides = uiPreview.field_overrides && typeof uiPreview.field_overrides === "object" && !Array.isArray(uiPreview.field_overrides)
         ? uiPreview.field_overrides as Record<string, FieldOverride> : {};
@@ -398,7 +473,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             customer_group: text(headerRef.current.customer_group),
             facts: commercialFacts(candidate),
           });
-          if (lineSeq.current.get(row._key) !== seq) return;
+          if (!isCurrent()) return;
           const sellingRate = numberValue(commercial.selling_rate ?? commercial.rate);
           const grossAmount = numberValue(commercial.gross_amount);
           const discountPercentage = numberValue(commercial.discount_percentage);
@@ -414,6 +489,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           next._commercial = commercial;
           candidate = { ...candidate, ...next, _commercial: commercial } as SalesLine;
         } catch (error) {
+          if (!isCurrent()) return;
           next._pricingError = mapError(error).message;
         }
       }
@@ -425,12 +501,14 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             customer_group: text(headerRef.current.customer_group),
             delivery_date: text(headerRef.current.delivery_date) || today(),
           });
-          if (lineSeq.current.get(row._key) !== seq) return;
+          if (!isCurrent()) return;
           const components = Array.isArray(bom.components) ? bom.components : [];
           next._bomPreview = { ...bom, components };
           next._bomComponentNames = components.length ? await loadBomComponentNames(components) : {};
+          if (!isCurrent()) return;
           next._bomError = "";
         } catch (error) {
+          if (!isCurrent()) return;
           next._bomPreview = undefined;
           next._bomComponentNames = {};
           next._bomError = mapError(error).message;
@@ -440,10 +518,11 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         next._bomComponentNames = {};
         next._bomError = "";
       }
+      if (!isCurrent()) return;
       const nextLines = patchLine(row._key, next, false);
       if (refreshTotals) await refreshDocumentPreview("items", nextLines);
     } catch (error) {
-      if (lineSeq.current.get(row._key) === seq) patchLine(row._key, { ...patch, _loading: false, _error: mapError(error).message }, false);
+      if (isCurrent()) patchLine(row._key, { ...patch, _loading: false, _error: mapError(error).message }, false);
     }
   }, [adapter, childFieldSet, childFields, childMeta, cleanLine, loadBomComponentNames, loadItemName, patchLine, refreshDocumentPreview]);
 
@@ -458,7 +537,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     void Promise.all(initial.map((line) => previewLine(line, "initial_load", {}, false))).finally(() => void refreshDocumentPreview("items"));
   }, [childMeta, loading, previewLine, refreshDocumentPreview]);
 
-  const commercialContext = [text(header.customer), text(header.customer_group), text(header.selling_price_list), text(header.transaction_date), text(header.currency), text(header.delivery_date)].join("\u001f");
+  const commercialContext = commercialHeaderSignature(header);
   useEffect(() => {
     if (loading || !childMeta) return;
     if (!lastCommercialContext.current) { lastCommercialContext.current = commercialContext; return; }
@@ -471,6 +550,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const commitLine = useCallback((key: string, fieldname: string, value: unknown) => {
     const current = linesRef.current.find((line) => line._key === key);
     if (!current) return;
+    markDocumentChanged();
     setDirty(true);
     if (fieldname === "item_code") {
       const itemCode = text(value);
@@ -486,6 +566,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         _bomError: "",
         _pricingError: "",
         _error: "",
+        _loading: Boolean(itemCode),
         uom: undefined,
         color: undefined,
         ray_type: undefined,
@@ -503,47 +584,67 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         estimated_weight_kg: undefined,
         bom_actual_components: [],
       };
-      patchLine(key, reset, false);
+      const nextLines = patchLine(key, reset, false);
       if (itemCode) void previewLine({ ...current, ...reset } as SalesLine, fieldname, reset);
+      else void refreshDocumentPreview("items", nextLines);
       return;
     }
     const latest = linesRef.current.find((line) => line._key === key) ?? current;
     const resolvedValue = latest[fieldname] !== undefined ? latest[fieldname] : value;
     const patch = { [fieldname]: resolvedValue } as Partial<SalesLine>;
-    patchLine(key, patch, false);
+    patchLine(key, { ...patch, _loading: true }, false);
     void previewLine({ ...latest, ...patch } as SalesLine, fieldname, patch);
-  }, [patchLine, previewLine]);
+  }, [markDocumentChanged, patchLine, previewLine, refreshDocumentPreview]);
 
   const commitBomActualComponents = useCallback((key: string, rows: BomActualComponentRow[]) => {
     const current = linesRef.current.find((line) => line._key === key);
     if (!current) return;
+    markDocumentChanged();
     setDirty(true);
     const patch: Partial<SalesLine> = { bom_actual_components: rows };
-    patchLine(key, patch, false);
+    patchLine(key, { ...patch, _loading: true }, false);
     void previewLine({ ...current, ...patch } as SalesLine, "bom_actual_components", patch);
-  }, [patchLine, previewLine]);
+  }, [markDocumentChanged, patchLine, previewLine]);
 
-  const addLine = useCallback(() => replaceLines([...linesRef.current, newLine(linesRef.current.length)], true), [replaceLines]);
-  const addFive = useCallback(() => replaceLines([...linesRef.current, ...Array.from({ length: 5 }, (_, index) => newLine(linesRef.current.length + index))], true), [replaceLines]);
+  const addLine = useCallback(() => {
+    markDocumentChanged();
+    replaceLines([...linesRef.current, newLine(linesRef.current.length)], true);
+  }, [markDocumentChanged, replaceLines]);
+
+  const addFive = useCallback(() => {
+    markDocumentChanged();
+    replaceLines([...linesRef.current, ...Array.from({ length: 5 }, (_, index) => newLine(linesRef.current.length + index))], true);
+  }, [markDocumentChanged, replaceLines]);
+
+  const replaceLinesAndRefreshTotals = useCallback((next: SalesLine[]) => {
+    markDocumentChanged();
+    replaceLines(next, true);
+    void refreshDocumentPreview("items", next);
+  }, [markDocumentChanged, refreshDocumentPreview, replaceLines]);
+
   const duplicateLine = useCallback((key: string) => {
     const current = linesRef.current;
     const index = current.findIndex((line) => line._key === key);
     if (index < 0) return;
     const source = current[index]!;
     const duplicate = { ...source, name: undefined, doctype: undefined, _key: newLine(current.length)._key, _loading: false, _error: "", _pricingError: "" } as SalesLine;
-    replaceLines([...current.slice(0, index + 1), duplicate, ...current.slice(index + 1)], true);
-  }, [replaceLines]);
+    replaceLinesAndRefreshTotals([...current.slice(0, index + 1), duplicate, ...current.slice(index + 1)]);
+  }, [replaceLinesAndRefreshTotals]);
+
   const deleteLine = useCallback((key: string) => {
-    replaceLines(linesRef.current.filter((line) => line._key !== key), true);
+    replaceLinesAndRefreshTotals(linesRef.current.filter((line) => line._key !== key));
     setSelectedLineKeys((current) => { const next = new Set(current); next.delete(key); return next; });
-  }, [replaceLines]);
+  }, [replaceLinesAndRefreshTotals]);
+
   const deleteSelected = useCallback(() => {
     if (!selectedLineKeys.size) return;
-    replaceLines(linesRef.current.filter((line) => !selectedLineKeys.has(line._key)), true);
+    replaceLinesAndRefreshTotals(linesRef.current.filter((line) => !selectedLineKeys.has(line._key)));
     setSelectedLineKeys(new Set());
-  }, [replaceLines, selectedLineKeys]);
+  }, [replaceLinesAndRefreshTotals, selectedLineKeys]);
 
   const validate = useCallback((): string | null => {
+    if (previewClock.current.pending > 0) return "Đơn đang tính lại dữ liệu từ server, hãy hoàn tất trước khi lưu.";
+    if (text(headerErrorRef.current)) return `Cần xử lý lỗi tính lại trước khi lưu: ${text(headerErrorRef.current)}`;
     if (!text(headerRef.current.customer)) return "Cần chọn khách hàng.";
     if (!text(headerRef.current.transaction_date)) return "Cần ngày đặt hàng.";
     if (!text(headerRef.current.selling_price_list)) return "Cần Bảng giá áp dụng theo commercial contract hiện hành.";
@@ -580,7 +681,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     if (validationError) { toast.error(validationError); return null; }
     if (!meta) return null;
     const document = buildDocument();
-    const finalPreview = await previewDocument(document, "items", linesRef.current);
+    const finalProjection = await requestDocumentPreview(document, "items", linesRef.current);
+    const finalPreview = applySalesOrderDocumentPreview(document, finalProjection) as Json;
     const payload = serializeCreateDocument(meta, finalPreview) as Partial<Doc>;
     const saved = isExisting
       ? await adapter.updateDoc("Sales Order", documentName, payload, sourceModified)
@@ -599,7 +701,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       queryClient.invalidateQueries({ queryKey: [scopeKey, "overview"], refetchType: "none" }),
     ]).catch(() => undefined);
     return saved;
-  }, [adapter, buildDocument, documentName, isExisting, meta, previewDocument, queryClient, replaceLines, scopeKey, setHeaderState, sourceModified, validate]);
+  }, [adapter, buildDocument, documentName, isExisting, meta, queryClient, replaceLines, requestDocumentPreview, scopeKey, setHeaderState, sourceModified, validate]);
 
   const saveDraft = useCallback(async (previewAfterSave = false) => {
     setSaving(true);
@@ -646,9 +748,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   }, [adapter, canSubmit, documentName, isExisting, persistDraft, props, replaceLines, setHeaderState]);
 
   const openProduction = useCallback(() => {
-    if (!documentName || docstatus !== 1) return;
+    if (!documentName || docstatus !== 1 || !productionCaps.read) return;
     window.location.assign(`/app/${encodeURIComponent("Production Request")}?f_sales_order=${encodeURIComponent(documentName)}`);
-  }, [docstatus, documentName]);
+  }, [docstatus, documentName, productionCaps.read]);
 
   if (loading) return <div className="grid h-full place-items-center text-sm text-muted-foreground"><span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Đang mở Sales Workbench…</span></div>;
   if (fatal) return <div className="p-6 text-sm text-destructive">{fatal}</div>;
@@ -664,6 +766,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const bomBlocked = activeLines.filter((line) => line._bomPreview?.actual_complete === false).length;
   const approvalNeeded = checked(header.discount_requires_approval) || activeLines.some((line) => checked(line.rate_requires_approval));
   const busy = saving || submitting;
+  const previewBlocked = isSalesOrderPersistenceBlocked(previewClock.current, headerError);
+  const persistenceBlocked = busy || previewBlocked || unresolvedLines > 0;
+  const recalculating = documentPreviewPending > 0 || unresolvedLines > 0;
 
   const headerControl = (fieldname: string, label: string, fieldtype: DocField["fieldtype"] = "Data", options?: string, readOnly = false, preview = false) => (
     <AlumdoorSalesOrderField
@@ -677,7 +782,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       docValues={header}
       roles={roles}
       required={headerRequired(fieldname)}
-      readOnly={formReadOnly || readOnly}
+      readOnly={formReadOnly || busy || readOnly}
       compact
       className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_button]:!h-8"
     />
@@ -694,18 +799,19 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
               <Badge variant={docstatus === 1 ? "default" : "outline"}>{docstatus === 1 ? "Đã ghi sổ" : "Nháp"}</Badge>
               {formReadOnly && docstatus === 0 ? <Badge variant="outline">Chỉ xem</Badge> : null}
               {approvalNeeded ? <Badge variant="outline">Cần duyệt thương mại</Badge> : null}
+              {recalculating ? <Badge variant="outline"><Loader2 className="mr-1 size-3 animate-spin" /> Đang tính lại</Badge> : null}
               {dirty ? <Badge variant="outline">Chưa lưu</Badge> : null}
             </div>
             <div className="flex items-center gap-1.5">
-              {docstatus === 1 && documentName ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
+              {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
               {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}
             </div>
           </header>
 
           {formReadOnly ? <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">Đơn đã ghi sổ/khóa hoặc tài khoản không có quyền sửa. Giá, BOM và số tiền chỉ hiển thị theo authority server.</div> : null}
-          {headerError ? <div className="flex items-start justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{headerError}</span><Button type="button" variant="outline" size="sm" className="h-7" onClick={() => void refreshDocumentPreview("manual_retry")}>Thử lại</Button></div> : null}
+          {headerError ? <div className="flex items-start justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{headerError}</span><Button type="button" variant="outline" size="sm" className="h-7" disabled={busy} onClick={() => void refreshDocumentPreview("manual_retry")}>Thử lại</Button></div> : null}
 
-          <fieldset disabled={formReadOnly} className="contents">
+          <fieldset disabled={formReadOnly || busy} className="contents">
             <section className="rounded-lg border bg-card p-3" data-section="sales-v2-header-complete">
               <div className="grid gap-x-3 gap-y-2 md:grid-cols-2 xl:grid-cols-6">
                 <div className="xl:col-span-2">{headerControl("customer", "Khách hàng", "Link", "Customer", false, true)}</div>
@@ -732,12 +838,12 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                   registry={registry}
                   services={salesServices}
                   roles={roles}
-                  readOnly={formReadOnly}
+                  readOnly={formReadOnly || busy}
                   selectedKeys={selectedLineKeys}
                   leafVariants={leafVariants}
                   onToggleSelection={(key, checkedValue) => setSelectedLineKeys((current) => { const next = new Set(current); if (checkedValue) next.add(key); else next.delete(key); return next; })}
                   onToggleAll={(checkedValue) => setSelectedLineKeys(checkedValue ? new Set(lines.map((line) => line._key)) : new Set())}
-                  onPatch={(key, patch) => patchLine(key, patch, true)}
+                  onPatch={patchLineFromUser}
                   onCommit={commitLine}
                   onAdd={addLine}
                   onAddFive={addFive}
@@ -760,7 +866,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                     <div className="flex justify-between gap-3"><span className="text-muted-foreground">VAT ({quantity(header.vat_rate ?? 0)}%)</span><span className="tabular-nums">{money(header.vat_amount)} ₫</span></div>
                     <div className="border-t pt-2"><div className="flex items-baseline justify-between gap-3"><span className="font-semibold">Tiền phải thu</span><strong className="text-lg tabular-nums text-primary">{money(header.grand_total)} ₫</strong></div><p className="mt-1 text-[10px] text-muted-foreground">Projection từ `alumdoor.ui.preview_document`; save/submit vẫn normalize lại ở canonical controller.</p></div>
                     {approvalNeeded ? <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Giá/chiết khấu/bảng giá đang cần quyền duyệt khi ghi sổ.</span></div> : null}
-                    {unresolvedLines || bomBlocked ? <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{unresolvedLines ? `${unresolvedLines} dòng chưa resolve xong. ` : ""}{bomBlocked ? `${bomBlocked} dòng còn thiếu vật tư BOM thực tế; vẫn được lưu nháp.` : ""}</span></div> : <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-2 text-[11px]"><CheckCircle2 className="size-3.5" /> Không có blocker preview hiện tại.</div>}
+                    {documentPreviewPending || unresolvedLines || bomBlocked ? <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{documentPreviewPending ? "Đang tính lại tổng đơn từ server. " : ""}{unresolvedLines ? `${unresolvedLines} dòng chưa resolve xong. ` : ""}{bomBlocked ? `${bomBlocked} dòng còn thiếu vật tư BOM thực tế; vẫn được lưu nháp.` : ""}</span></div> : <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-2 text-[11px]"><CheckCircle2 className="size-3.5" /> Không có blocker preview hiện tại.</div>}
                   </div>
                 </section>
 
@@ -776,13 +882,13 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
       <div className="shrink-0 border-t bg-card px-3 py-2 shadow-[0_-4px_14px_rgba(0,0,0,0.035)]">
         <div className="mx-auto flex w-full max-w-[1900px] flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2"><span className="text-muted-foreground">{dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đơn đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Phải thu: {money(header.grand_total)} ₫</strong></div>
+          <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại dữ liệu server" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đơn đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Phải thu: {money(header.grand_total)} ₫</strong></div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Button type="button" variant="ghost" size="sm" onClick={requestClose}>{isExisting ? "Đóng" : "Hủy"}</Button>
             <Button type="button" variant="outline" size="sm" disabled={busy || formReadOnly} onClick={() => { const active = linesRef.current.filter((line) => text(line.item_code)); void Promise.all(active.map((line) => previewLine(line, "manual_refresh", {}, false))).finally(() => void refreshDocumentPreview("manual_refresh")); }}><RefreshCw className="size-3.5" /> Tính lại</Button>
-            {docstatus === 0 ? <Button type="button" variant="outline" size="sm" disabled={busy || !canSave} onClick={() => void saveDraft(false)}>{saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp</Button> : null}
-            {docstatus === 0 && canSubmit ? <Button type="button" size="sm" disabled={busy} onClick={() => void submitOrder()}>{submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn</Button> : null}
-            {docstatus === 0 && isExisting ? <Button type="button" variant="outline" size="sm" disabled={busy || !canSave} onClick={() => void saveDraft(true)}><Eye className="size-3.5" /> Lưu & xem</Button> : null}
+            {docstatus === 0 ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(false)}>{saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp</Button> : null}
+            {docstatus === 0 && canSubmit ? <Button type="button" size="sm" disabled={persistenceBlocked} onClick={() => void submitOrder()}>{submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn</Button> : null}
+            {docstatus === 0 && isExisting ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(true)}><Eye className="size-3.5" /> Lưu & xem</Button> : null}
           </div>
         </div>
       </div>
