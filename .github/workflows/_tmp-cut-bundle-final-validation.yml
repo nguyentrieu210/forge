@@ -1,0 +1,38 @@
+name: Temporary Final Cut Bundle Validation
+
+on:
+  push:
+    branches:
+      - agent/alumdoor-cut-bundle-authority
+    paths:
+      - .github/workflows/_tmp-cut-bundle-final-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate final cut bundle authority
+        run: |
+          cd server
+          pnpm run build
+          node --test tests/alumdoor-cut-bom-authority.test.mjs tests/alumdoor-cut-offcut-lineage.test.mjs
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+          node scripts/verify-alumdoor-meta-completeness.mjs
+          cd ..
+          git diff --check b24cfe64d28d7dd31d15766f4864952cb3fcc53d...HEAD
