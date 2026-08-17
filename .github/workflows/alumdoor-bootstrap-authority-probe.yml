@@ -1,0 +1,68 @@
+name: Alumdoor Bootstrap Authority Probe
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/alumdoor-bootstrap-authority-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted]
+    timeout-minutes: 10
+    steps:
+      - name: Probe existing Windows authority without mutation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "IDENTITY=$(whoami)"
+          Write-Host "ELEVATED=$(([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))"
+
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class ServiceAccessProbe {
+            [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+            public static extern IntPtr OpenSCManager(string machineName, string databaseName, uint access);
+            [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+            public static extern IntPtr OpenService(IntPtr scm, string serviceName, uint access);
+            [DllImport("advapi32.dll", SetLastError=true)]
+            public static extern bool CloseServiceHandle(IntPtr handle);
+          }
+          '@
+          $scm = [ServiceAccessProbe]::OpenSCManager($null, $null, 0x0001)
+          if ($scm -eq [IntPtr]::Zero) { throw "OpenSCManager failed=$([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+          try {
+            foreach ($name in @('ForgeAlumdoorWorker','ForgeAlumdoorBackend','ForgeAlumdoorDesk')) {
+              foreach ($entry in @(
+                @{label='QUERY'; mask=0x0004},
+                @{label='START'; mask=0x0010},
+                @{label='STOP'; mask=0x0020},
+                @{label='CHANGE_CONFIG'; mask=0x0002}
+              )) {
+                $handle = [ServiceAccessProbe]::OpenService($scm, $name, [uint32]$entry.mask)
+                if ($handle -eq [IntPtr]::Zero) {
+                  Write-Host "SERVICE_ACCESS name=$name right=$($entry.label) allowed=0 error=$([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+                } else {
+                  Write-Host "SERVICE_ACCESS name=$name right=$($entry.label) allowed=1"
+                  [ServiceAccessProbe]::CloseServiceHandle($handle) | Out-Null
+                }
+              }
+              sc.exe sdshow $name | ForEach-Object { Write-Host "SERVICE_SD name=$name $_" }
+            }
+          } finally {
+            [ServiceAccessProbe]::CloseServiceHandle($scm) | Out-Null
+          }
+
+          Write-Host '=== REPO-RELATED SCHEDULED TASKS ==='
+          Get-ScheduledTask -ErrorAction SilentlyContinue |
+            Where-Object { $_.TaskName -match '(?i)forge|alumdoor|github|runner' -or $_.TaskPath -match '(?i)forge|alumdoor|github|runner' } |
+            ForEach-Object {
+              $info = $_ | Get-ScheduledTaskInfo -ErrorAction SilentlyContinue
+              Write-Host "TASK path=$($_.TaskPath)$($_.TaskName) state=$($info.State) principal=$($_.Principal.UserId) runLevel=$($_.Principal.RunLevel)"
+              $_.Actions | ForEach-Object { Write-Host "TASK_ACTION execute=$($_.Execute) args=$($_.Arguments) cwd=$($_.WorkingDirectory)" }
+            }
+
+          Write-Host 'ALUMDOOR_BOOTSTRAP_AUTHORITY_PROBE_PASS'
