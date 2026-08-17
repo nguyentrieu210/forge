@@ -15,21 +15,34 @@ jobs:
       EXPECTED_SHA: 683144d74329212492df5a4d78f12a1e7452b3d5
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Discover exact-main Bootstrap and Pricing runs
+      - name: Discover exact-main and active Actions state
         shell: bash
         run: |
           set -euo pipefail
-          api='https://api.github.com/repos/nguyentrieu210/forge/actions/workflows'
+          root='https://api.github.com/repos/nguyentrieu210/forge/actions'
+          workflows="$root/workflows"
           headers=(-H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28')
 
-          bootstrap="$(curl -fsSL "${headers[@]}" "$api/bootstrap-alumdoor-local.yml/runs?branch=main&per_page=30")"
-          pricing="$(curl -fsSL "${headers[@]}" "$api/alumdoor-pricing-local-import.yml/runs?per_page=30")"
-          bom="$(curl -fsSL "${headers[@]}" "$api/alumdoor-bom-local-import.yml/runs?per_page=30")"
+          bootstrap="$(curl -fsSL "${headers[@]}" "$workflows/bootstrap-alumdoor-local.yml/runs?branch=main&per_page=30")"
+          pricing="$(curl -fsSL "${headers[@]}" "$workflows/alumdoor-pricing-local-import.yml/runs?per_page=30")"
+          bom="$(curl -fsSL "${headers[@]}" "$workflows/alumdoor-bom-local-import.yml/runs?per_page=30")"
+          active="$(curl -fsSL "${headers[@]}" "$root/runs?status=in_progress&per_page=50")"
+          queued="$(curl -fsSL "${headers[@]}" "$root/runs?status=queued&per_page=50")"
 
           echo '=== EXACT MAIN BOOTSTRAP RUNS ==='
-          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$bootstrap"
+          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,name,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$bootstrap"
           echo '=== EXACT MAIN PRICING RUNS ==='
-          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$pricing"
+          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,name,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$pricing"
           echo '=== EXACT MAIN BOM RUNS ==='
-          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$bom"
+          jq -c --arg sha "$EXPECTED_SHA" '.workflow_runs[] | select(.head_sha==$sha) | {id,name,status,conclusion,event,run_number,run_attempt,head_sha,created_at,updated_at}' <<<"$bom"
+          echo '=== ACTIVE RUNS ==='
+          jq -c '.workflow_runs[] | {id,name,status,event,head_branch,head_sha,created_at}' <<<"$active"
+          echo '=== QUEUED RUNS ==='
+          jq -c '.workflow_runs[] | {id,name,status,event,head_branch,head_sha,created_at}' <<<"$queued"
+          echo '=== SELF-HOSTED RUNNERS ==='
+          if runners="$(curl -fsSL "${headers[@]}" "$root/runners?per_page=100" 2>/dev/null)"; then
+            jq -c '.runners[] | {id,name,os,status,busy,labels:[.labels[].name]}' <<<"$runners"
+          else
+            echo 'RUNNER_LIST_UNAVAILABLE'
+          fi
           echo 'ALUMDOOR_POSTMERGE_ACTION_DISCOVERY_PASS'
