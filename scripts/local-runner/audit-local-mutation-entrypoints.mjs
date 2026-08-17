@@ -37,6 +37,7 @@ const canonicalWorkflows = [
   '.github/workflows/reconcile-alumdoor-local-source-uom.yml',
   '.github/workflows/alumdoor-real-purchase-import-policy.yml',
   '.github/workflows/alumdoor-pricing-local-import.yml',
+  '.github/workflows/alumdoor-bom-local-import.yml',
 ];
 for (const file of canonicalWorkflows) {
   requireFile(file);
@@ -78,6 +79,7 @@ const guardedChildren = [
   ['server/scripts/seed-alumdoor-uom-local.mjs', /assertLocalMutationChildContext\(\[['"]uom['"],\s*['"]layer0['"]\]\)/, 'uom|layer0'],
   ['server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs', /assertLocalMutationChildContext\(\[['"]real-purchase['"]\]\)/, 'real-purchase'],
   ['server/scripts/import-alumdoor-pricing-local.mjs', /assertLocalMutationChildContext\(\[['"]pricing['"]\]\)/, 'pricing'],
+  ['server/scripts/import-alumdoor-canonical-bom-local.mjs', /assertLocalMutationChildContext\(\[['"]bom['"]\]\)/, 'bom'],
 ];
 for (const [file, pattern, adapters] of guardedChildren) {
   requireFile(file);
@@ -86,6 +88,7 @@ for (const [file, pattern, adapters] of guardedChildren) {
 }
 requireMatch('server/scripts/import-alumdoor-item-master-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'item_validate_only_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-pricing-local.mjs', /if \(!apply\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'pricing_dry_run_must_remain_prelock');
+requireMatch('server/scripts/import-alumdoor-canonical-bom-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'bom_validate_only_must_remain_prelock');
 
 for (const stale of [
   'server/scripts/import-alumdoor-item-master-local-impl.mjs',
