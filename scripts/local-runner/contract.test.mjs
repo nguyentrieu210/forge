@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -20,6 +20,8 @@ import { assertPurchaseSqlTargets } from './real-purchase-adapter.mjs';
 const purchaseVerifier = fileURLToPath(
   new URL('../../server/scripts/verify-alumdoor-real-purchase-audit.mjs', import.meta.url),
 );
+const smokeSeed = fileURLToPath(new URL('../../server/scripts/seed-local.mjs', import.meta.url));
+const httpSmoke = fileURLToPath(new URL('../../server/scripts/http-smoke.mjs', import.meta.url));
 
 test('parse known adapters and source', () => {
   assert.deepEqual(parseArgs(['item-master', '--source=C:\\alumdoor\\local-imports\\items.json']), {
@@ -123,6 +125,26 @@ test('Wrangler local guard rejects remote and missing --local', () => {
   );
   assert.doesNotThrow(() =>
     assertLocalWranglerArgs(['d1', 'execute', 'db', '--local', '--command', 'SELECT 1']),
+  );
+});
+
+test('bootstrap HTTP smoke lifecycle fixture reaches lifecycle validation after DocPerm', () => {
+  const seed = readFileSync(smokeSeed, 'utf8');
+  const smoke = readFileSync(httpSmoke, 'utf8');
+  const permissionBlock = seed.match(
+    /permissions:\s*\[\{([\s\S]*?)\}\],\s*revision:\s*1,\s*\};/,
+  )?.[1] ?? '';
+
+  assert.match(permissionBlock, /role:\s*["']System Manager["']/);
+  assert.match(
+    permissionBlock,
+    /delete:\s*true/,
+    'Field Visit must grant delete so submitted DELETE reaches lifecycle validation instead of failing at DocPerm',
+  );
+  assert.match(
+    smoke,
+    /deleted\.status\s*===\s*417\s*&&\s*\/submitted document cannot be deleted\/i,
+    'HTTP smoke must keep asserting Frappe lifecycle ValidationError/417',
   );
 });
 
