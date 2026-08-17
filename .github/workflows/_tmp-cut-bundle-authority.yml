@@ -35,24 +35,13 @@ jobs:
 
           index_path = Path('server/apps-src/alumdoor-worker/src/index.ts')
           text = index_path.read_text(encoding='utf-8')
-
           interface_anchor = '  source_warehouse?: string;\n'
           if '  source_batch_no?: string;\n' not in text:
               if interface_anchor not in text:
                   raise SystemExit('V2CutOrderItem source_warehouse anchor not found')
-              text = text.replace(
-                  interface_anchor,
-                  interface_anchor + '  source_batch_no?: string;\n',
-                  1,
-              )
-
+              text = text.replace(interface_anchor, interface_anchor + '  source_batch_no?: string;\n', 1)
           draft_anchor = '        item_code: proposal.item_code,\n        serial_and_batch_bundle: outward,\n'
-          draft_replacement = (
-              '        item_code: proposal.item_code,\n'
-              '        source_warehouse: pick.warehouse,\n'
-              '        source_batch_no: pick.batch_no,\n'
-              '        serial_and_batch_bundle: outward,\n'
-          )
+          draft_replacement = '        item_code: proposal.item_code,\n        source_warehouse: pick.warehouse,\n        source_batch_no: pick.batch_no,\n        serial_and_batch_bundle: outward,\n'
           if '        source_batch_no: pick.batch_no,\n' not in text:
               if draft_anchor not in text:
                   raise SystemExit('draft Cut Order item anchor not found')
@@ -61,61 +50,56 @@ jobs:
 
           brief_path = Path('server/briefs/alumdoor-v2.json')
           brief = brief_path.read_text(encoding='utf-8')
-          serial_block = '''        {
-                    "fieldname": "serial_and_batch_bundle",
-                    "label": "Lô đem cắt (bundle Outward)",
-                    "fieldtype": "Link",
-                    "options": "Serial and Batch Bundle",
-                    "required": true,
-                    "surface": "quick"
-                  },
-          '''
-          # The checked-in brief uses 8-space indentation for this block; normalize the anchor directly.
-          serial_block = serial_block.replace('          ', '')
-          serial_block = '''        {
-          "fieldname": "serial_and_batch_bundle",
-          "label": "Lô đem cắt (bundle Outward)",
-          "fieldtype": "Link",
-          "options": "Serial and Batch Bundle",
-          "required": true,
-          "surface": "quick"
-        },
-'''
-          lineage_block = '''        {
-          "fieldname": "source_batch_no",
-          "label": "Lô nguồn FIFO",
-          "fieldtype": "Link",
-          "options": "Batch",
-          "required": true,
-          "read_only": true,
-          "surface": "expanded"
-        },
-'''
+          serial_block = '\n'.join([
+              '        {',
+              '          "fieldname": "serial_and_batch_bundle",',
+              '          "label": "Lô đem cắt (bundle Outward)",',
+              '          "fieldtype": "Link",',
+              '          "options": "Serial and Batch Bundle",',
+              '          "required": true,',
+              '          "surface": "quick"',
+              '        },',
+              '',
+          ])
+          lineage_block = '\n'.join([
+              '        {',
+              '          "fieldname": "source_batch_no",',
+              '          "label": "Lô nguồn FIFO",',
+              '          "fieldtype": "Link",',
+              '          "options": "Batch",',
+              '          "required": true,',
+              '          "read_only": true,',
+              '          "surface": "expanded"',
+              '        },',
+              '',
+          ])
           if '"fieldname": "source_batch_no"' not in brief:
               if serial_block not in brief:
                   raise SystemExit('Cut Order Item serial bundle schema anchor not found')
               brief = brief.replace(serial_block, serial_block + lineage_block, 1)
-
-          form_anchor = '''        "fields": [
-          "serial_and_batch_bundle",
-          "offcut_bundle",
-          "item_code",
-          "source_warehouse",
-'''
-          form_replacement = '''        "fields": [
-          "serial_and_batch_bundle",
-          "source_batch_no",
-          "offcut_bundle",
-          "item_code",
-          "source_warehouse",
-'''
+          form_anchor = '\n'.join([
+              '        "fields": [',
+              '          "serial_and_batch_bundle",',
+              '          "offcut_bundle",',
+              '          "item_code",',
+              '          "source_warehouse",',
+              '',
+          ])
+          form_replacement = '\n'.join([
+              '        "fields": [',
+              '          "serial_and_batch_bundle",',
+              '          "source_batch_no",',
+              '          "offcut_bundle",',
+              '          "item_code",',
+              '          "source_warehouse",',
+              '',
+          ])
           if form_replacement not in brief:
               if form_anchor not in brief:
                   raise SystemExit('Cut Order Item form anchor not found')
               brief = brief.replace(form_anchor, form_replacement, 1)
           brief_path.write_text(brief, encoding='utf-8')
           PY
-
           grep -n "source_batch_no" server/apps-src/alumdoor-worker/src/index.ts
           grep -n "source_batch_no" server/briefs/alumdoor-v2.json
 
