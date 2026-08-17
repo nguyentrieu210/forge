@@ -6,6 +6,7 @@ import {
 import {
   resolveAlumdoorBlankCodeEvidenceOverride,
   resolveAlumdoorBomEvidenceAlias,
+  resolveAlumdoorBomItemPromotion,
   resolveAlumdoorUomEvidenceOverride,
 } from "./alumdoor-item-evidence-overrides.mjs";
 
@@ -174,6 +175,7 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
   const blockers = [];
   const excluded = [];
   const aliases = [];
+  const promotions = [];
   const references = [];
   const identityRows = [];
 
@@ -184,6 +186,7 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
     }
 
     const evidenceAlias = resolveAlumdoorBomEvidenceAlias(record.item_code, record.source_role);
+    const promotion = resolveAlumdoorBomItemPromotion(record.item_code, record.source_role);
     const classification = evidenceAlias ?? classifyAlumdoorItemSourceCode(record.item_code, {
       source_role: record.source_role,
       source_index: record.source_index,
@@ -211,6 +214,36 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
       continue;
     }
 
+    if (promotion) {
+      const uom = interpretAlumdoorSourceUom(promotion.identity_role, promotion.canonical_source_uom);
+      if (uom.status === "blocked") {
+        pushBlock(blockers, record, "invalid_bom_item_promotion_uom", {
+          promotion_uom: promotion.canonical_source_uom,
+          promotion_reason: promotion.reason,
+        });
+        continue;
+      }
+      const promoted = {
+        ...record,
+        identity_role: promotion.identity_role,
+        effective_source_uom: promotion.canonical_source_uom,
+        uom_origin: "explicit_bom_item_promotion",
+        uom_override_reason: promotion.reason,
+        canonical_item_code: promotion.canonical_item_code,
+        source_classification_reason: "audited_bom_item_promotion",
+        uom,
+      };
+      promotions.push({
+        ...record,
+        identity_role: promotion.identity_role,
+        canonical_item_code: promotion.canonical_item_code,
+        canonical_source_uom: promotion.canonical_source_uom,
+        reason: promotion.reason,
+      });
+      identityRows.push(promoted);
+      continue;
+    }
+
     if (record.source_role === ITEM_SOURCE_ROLES.BOM_REFERENCE) {
       const uom = interpretAlumdoorSourceUom(record.source_role, record.source_uom);
       references.push({
@@ -234,6 +267,7 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
 
     identityRows.push({
       ...record,
+      identity_role: record.source_role,
       effective_source_uom: uomEvidence.effective_source_uom,
       uom_origin: uomEvidence.uom_origin,
       uom_override_reason: uomEvidence.uom_override_reason,
@@ -252,8 +286,8 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
 
   const accepted = [];
   for (const [itemCode, rows] of rowsByCode) {
-    const sellableRows = rows.filter((row) => row.source_role === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT);
-    const stockRows = rows.filter((row) => row.source_role === ITEM_SOURCE_ROLES.STOCK_ITEM);
+    const sellableRows = rows.filter((row) => (row.identity_role ?? row.source_role) === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT);
+    const stockRows = rows.filter((row) => (row.identity_role ?? row.source_role) === ITEM_SOURCE_ROLES.STOCK_ITEM);
 
     const sellableNames = [...new Set(sellableRows.map((row) => row.item_name).filter(Boolean))];
     if (
@@ -291,16 +325,19 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
         ?? stockRows.map((row) => row.item_name).find(Boolean)
         ?? itemCode,
       source_roles: [...new Set(rows.map((row) => row.source_role))],
+      identity_roles: [...new Set(rows.map((row) => row.identity_role ?? row.source_role))],
       source_rows: rows.map((row) => ({
         source_sheet: row.source_sheet,
         source_row: row.source_row,
         source_index: row.source_index,
         source_role: row.source_role,
+        identity_role: row.identity_role ?? row.source_role,
         source_code_original: row.source_code_original,
         code_origin: row.code_origin,
         source_uom: row.source_uom,
         effective_source_uom: row.effective_source_uom,
         uom_origin: row.uom_origin,
+        uom_override_reason: row.uom_override_reason,
         item_name: row.item_name,
       })),
       stock_uom: stockUom,
@@ -325,11 +362,13 @@ export function preflightAlumdoorItemSourceRecords(rawRecords) {
     source_record_count: records.length,
     accepted_count: accepted.length,
     alias_count: aliases.length,
+    promotion_count: promotions.length,
     excluded_count: excluded.length,
     reference_count: references.length,
     blocker_count: blockers.length,
     accepted,
     aliases,
+    promotions,
     excluded,
     references,
     blockers,

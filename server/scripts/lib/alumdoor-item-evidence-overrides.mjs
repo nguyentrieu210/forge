@@ -59,6 +59,48 @@ export const ITEM_SOURCE_BOM_EVIDENCE_ALIASES = Object.freeze({
   "NVL-NHANSNPHI19": "NVL-NHAN",
   "NVL-BOSNPHI19": "NVL-BOLSN",
   "NVL-MONGNGUASNPHI19": "NVL-BOLSN",
+  "NVL-TOLEKEM70_8D-YEMMV": "TP-TD327",
+});
+
+// Real Item identities that exist only as repeated BOM component codes in the current source set.
+// Promotion is explicit and fail-closed: keep the exact BOM code, attach an audited atomic stock UOM,
+// and allow it to satisfy other BOM references. Nothing outside this allowlist is auto-promoted.
+export const ITEM_SOURCE_BOM_ITEM_PROMOTIONS = Object.freeze({
+  "TP-YHTaiwan-HDK": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-PATCD": Object.freeze({ canonical_source_uom: "Bộ", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-LaYHTW300-400-500KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-LaYHTW600-700-800KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-LaYHTW1000-1200KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-Than300KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-Than400KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-Than500KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-Than600KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-Than700KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-Than800KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-YHTaiwan-Than1000KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+
+  "TP_JG_PATCD": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-LacJG1000-1500KG": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-LacJG33": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-JG-BDN": Object.freeze({ canonical_source_uom: "Bộ", reason: "consistent_bom_component_uom" }),
+
+  "TP-TANKER_PATCD": Object.freeze({ canonical_source_uom: "Bộ", reason: "consistent_bom_component_uom" }),
+  "TP_YHLD_PATCD": Object.freeze({ canonical_source_uom: "Cái", reason: "consistent_bom_component_uom" }),
+  "TP-ALUMAX_PATCD": Object.freeze({ canonical_source_uom: "Bộ", reason: "consistent_bom_component_uom" }),
+  "TP-HDK_MULLER": Object.freeze({ canonical_source_uom: "Bộ", reason: "consistent_bom_component_uom" }),
+  "NVL_Daydien_PATCD": Object.freeze({ canonical_source_uom: "Mét", reason: "consistent_bom_component_uom" }),
+
+  "TP-LUOISN13x26_INOX": Object.freeze({ canonical_source_uom: "m2", reason: "consistent_bom_component_uom" }),
+  "TP-LUOISN13x26_STD": Object.freeze({ canonical_source_uom: "Kg", reason: "consistent_bom_component_uom" }),
+  "TP-LUOISNPHI19_INOX": Object.freeze({ canonical_source_uom: "m2", reason: "consistent_bom_component_uom" }),
+  "NVL-LUOISNPHI19_STD": Object.freeze({ canonical_source_uom: "Kg", reason: "consistent_bom_component_uom" }),
+
+  "MŨI MÀI HỘP KIM": Object.freeze({ canonical_source_uom: "Cái", reason: "explicit_bom_consumable_identity" }),
+  "NVL-CNHUA": Object.freeze({ canonical_source_uom: "Cái", reason: "explicit_bom_component_identity" }),
+
+  // DANH MỤC gives these exact source codes with purchase UOM KG.
+  "RONNHUAVANGCẢNHAY_RSU100": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
+  "RONNHUAVANGCANHAY_RSU70": Object.freeze({ canonical_source_uom: "Kg", reason: "danh_muc_exact_code_uom" }),
 });
 
 // Two numbered YHLD component products have blank UOM cells in ĐM, while their BOM/transaction
@@ -99,6 +141,20 @@ export function resolveAlumdoorBomEvidenceAlias(sourceCode, sourceRole) {
     reason: "audited_bom_evidence_alias",
     source_code_original: clean(sourceCode),
     canonical_item_code: target,
+  });
+}
+
+export function resolveAlumdoorBomItemPromotion(sourceCode, sourceRole) {
+  if (clean(sourceRole) !== ITEM_SOURCE_ROLES.BOM_REFERENCE) return null;
+  const promotion = ITEM_SOURCE_BOM_ITEM_PROMOTIONS[clean(sourceCode)];
+  if (!promotion) return null;
+  return Object.freeze({
+    status: "promoted_item",
+    reason: promotion.reason,
+    source_code_original: clean(sourceCode),
+    canonical_item_code: clean(sourceCode),
+    canonical_source_uom: promotion.canonical_source_uom,
+    identity_role: ITEM_SOURCE_ROLES.STOCK_ITEM,
   });
 }
 
