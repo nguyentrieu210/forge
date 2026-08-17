@@ -7,11 +7,15 @@ import { ITEM_SOURCE_ROLES } from "./alumdoor-item-source-contract.mjs";
 export const ITEM_SOURCE_BOM_EVIDENCE_ALIASES = Object.freeze({
   "TP-YHLD-HDK": "HH-HDKMT-YH",
   "TP-YHLD_TayDK": "HH-TDKMT-YH",
+  "TP-YHLD-Than300kg": "HH-TMT-YHLD300",
   "TP-YHLD-Than500kg": "HH-TMT-YHLD500",
+  "TP-YHLD-Than800kg": "HH-TMT-YHLD800",
+  "TP-YHLD-Than1000kg": "HH-TMT-YHLD1000",
   "TP-LacYHLD300&500KG": "HH-LMT-YHLD300-500",
 
   "TP-Tanker-Than400kg": "HH-TMT-TK400",
   "TP-Tanker-Than600kg": "HH-TMT-TK600",
+  "TP-Tanker-Than800kg": "HH-TMT-TK800",
   "TP-Tanker-Than1000kg": "HH-TMT-TK1000",
   "TP-Tanker-Alumax-HDK": "HH-HDKMT-TANKER",
   "TP-Tanker-Alumax_TayDK": "HH-TDKMT-TANKER",
@@ -19,10 +23,42 @@ export const ITEM_SOURCE_BOM_EVIDENCE_ALIASES = Object.freeze({
   "TP-Tanker-Alumax-Lac36": "HH-LMT36-TK400-600",
   "TP-Tanker-Lac800&1000KG": "HH-LMT-TK800-1000",
 
+  "TP-Alumax-Than400kg": "HH-TMT-AL400",
+  "TP-Alumax-Than600kg": "HH-TMT-AL600",
+
+  "TP-JG-Than300kg": "HH-TMT-JG300",
+  "TP-JG-Than400kg": "HH-TMT-JG400",
+  "TP-JG-Than500kg": "HH-TMT-JG500",
+  "TP-JG-Than600kg": "HH-TMT-JG600",
+  "TP-JG-Than800kg": "HH-TMT-JG800",
+  "TP-JG-Than1000kg": "HH-TMT-JG1000",
+  "TP-JG-Than1500kg": "HH-TMT-JG1500",
   "TP-JG-HDK": "HH-HDKMT-JG",
+  "TP-LacJG400-500-600KG": "HH-LMT-JG300-600",
+  "TP-LacJG800KG": "HH-LMT-JG800-1000",
+
+  "TP-MTT_BOSTEC-DON_THAN(P)": "HH-TMTDON-BOS-PHAI",
+  "TP-MTT_BOSTEC-DON_THAN(T)": "HH-TMTDON-BOS-TRAI",
+  "TP-MTT_BOSTEC-DOI_THAN(P)": "HH-TMTDOI-BOS-PHAI",
+  "TP-MTT_BOSTEC-DOI_THAN(T)": "HH-TMTDOI-BOS-TRAI",
   "TP-MTT_BOSTEC-HOPDK": "HH-HDKMT-BOS",
   "TP-MTT-BOSTEC-TAYDK": "HH-TDK-BOS",
   "TP-MTT_CHTAIWAN-HOPDK": "HH-HDKMTDON-CH",
+
+  // Raw Đài Loan sheet codes in older BOM rows. Finish/MSK stays a dimension; the stock identity
+  // is the matching raw thickness/width code in Trang tính29.
+  "NVL-TOLEKEM124_6D": "NVL-TON-DL6Dx124-STD",
+  "NVL-TOLEKEM124_6D_MSK": "NVL-TON-DL6Dx124-STD",
+  "NVL-TOLEKEM124_8D": "NVL-TON-DL8Dx124-STD",
+  "NVL-TOLEKEM124_8D_MSK": "NVL-TON-DL8Dx124-STD",
+  "NVL-TOLEKEM124_1LY": "NVL-TON-DL1LYx124-STD",
+
+  // Lưới / phụ kiện exact-name stock identities.
+  "TP-BUOMSAT": "NVL-BANBUOM-FE",
+  "NVL-BATSNPHI19": "NVL-BAT-SN",
+  "NVL-NHANSNPHI19": "NVL-NHAN",
+  "NVL-BOSNPHI19": "NVL-BOLSN",
+  "NVL-MONGNGUASNPHI19": "NVL-BOLSN",
 });
 
 // Two numbered YHLD component products have blank UOM cells in ĐM, while their BOM/transaction
