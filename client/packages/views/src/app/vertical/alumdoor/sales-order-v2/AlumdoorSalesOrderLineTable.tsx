@@ -44,6 +44,7 @@ const SPEC_FALLBACK_LABELS: Record<SpecFieldName, string> = {
   height_m: "Cao PB",
   mesh_height_m: "Cao lưới",
   leaf_variant: "Kiểu lá / motor",
+  ray_type: "Loại ray",
   has_butterfly_bracket: "Bản bướm",
   motor_model: "Mô tơ",
   length_m: "Dài / cây",
@@ -94,7 +95,7 @@ function SpecEditor(props: {
             const fallbackLabel = SPEC_FALLBACK_LABELS[fieldname];
             const label = fieldLabel(props.line, props.childMeta, fieldname, fallbackLabel);
             const metaField = props.childMeta?.fields.find((field) => field.fieldname === fieldname);
-            let field = fieldFromMeta(props.childMeta, fieldname, fallbackLabel, fieldname === "has_butterfly_bracket" ? "Check" : fieldname === "leaf_variant" ? "Select" : fieldname === "motor_model" ? "Link" : "Float");
+            let field = fieldFromMeta(props.childMeta, fieldname, fallbackLabel, fieldname === "has_butterfly_bracket" ? "Check" : (fieldname === "leaf_variant" || fieldname === "ray_type") ? "Select" : fieldname === "motor_model" ? "Link" : "Float");
             if (fieldname === "leaf_variant") {
               field = selectField(metaField, fieldname, label, props.leafVariants);
             }

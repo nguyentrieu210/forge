@@ -8,6 +8,7 @@ import {
 } from "../dist/apps-src/alumdoor-worker/src/sales-production.js";
 
 const brief = JSON.parse(await readFile(new URL("../briefs/alumdoor.json", import.meta.url), "utf8"));
+const generatedBrief = JSON.parse(await readFile(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));
 
 function fixturePolicy(name) {
   const fixture = brief.fixtures.find((entry) => entry.type === "Cutting Policy" && entry.name === name);
@@ -18,6 +19,12 @@ function fixturePolicy(name) {
 function doctype(name) {
   const value = brief.doctypes.find((entry) => entry.name === name);
   assert.ok(value, `missing doctype ${name}`);
+  return value;
+}
+
+function generatedDoctype(name) {
+  const value = generatedBrief.doctypes.find((entry) => entry.name === name);
+  assert.ok(value, `missing generated doctype ${name}`);
   return value;
 }
 
@@ -102,6 +109,74 @@ test("một dòng bán hai bộ sinh hai khóa sản xuất độc lập", () =>
   assert.ok(lines.every((line) => line.bom_no === "BOM-DUC-1" && line.leaf_count > 0));
 });
 
+
+function tamLienProductionInput(rayType) {
+  const base = fixturePolicy("Cửa tấm liền Úc — công thức chuẩn");
+  const policy = {
+    ...base,
+    geometry_profile: "GP-CUA-UC",
+    geometry_rules: [
+      { rule_code: "TLUC-RCL-U70", target_field: "CAT_LA_RONG", source_field: "PB_RAY_RONG", operator: "SUBTRACT", operand_m: 0.05, ray_type: "Ray sắt U70", priority: 10, sequence: 10 },
+      { rule_code: "TLUC-RCL-U76", target_field: "CAT_LA_RONG", source_field: "PB_RAY_RONG", operator: "SUBTRACT", operand_m: 0.08, ray_type: "Ray hộp/đơn U76", priority: 10, sequence: 20 },
+    ],
+  };
+  return {
+    sales: {
+      name: "DH-TLUC",
+      docstatus: 1,
+      customer_group: "Đại lý",
+      delivery_date: "2026-08-10",
+      items: [{
+        row_id: "ROW-TLUC",
+        item_code: "CUA-TLUC-TEST",
+        inventory_mode: "Thành phẩm theo m2",
+        width_m: 4,
+        height_m: 2.856,
+        set_count: 1,
+        ray_type: rayType,
+        single_layer_leaf_count: 4,
+      }],
+    },
+    items: new Map([["CUA-TLUC-TEST", {
+      item_code: "CUA-TLUC-TEST",
+      item_group: "Cửa tấm liền Úc",
+      door_type: "Cửa tấm liền Úc",
+      inventory_mode: "Thành phẩm theo m2",
+      stock_uom: "Bộ",
+      min_area_sqm: 0,
+    }]]),
+    policies: [policy],
+    geometry_profiles: new Map([["GP-CUA-UC", {
+      name: "GP-CUA-UC",
+      fields: [
+        { geometry_field: "PB_CAO", role: "INPUT", required: true },
+        { geometry_field: "PB_RAY_RONG", role: "INPUT", required: true },
+        { geometry_field: "CAT_LA_RONG", role: "CALCULATED" },
+      ],
+    }]]),
+    standards: [],
+    boms: [{ name: "BOM-TLUC-1", item: "CUA-TLUC-TEST", docstatus: 1, bom_status: "Active", revision: 1 }],
+    source_warehouse: "K36",
+    target_warehouse: "K36-TP",
+  };
+}
+
+test("Cửa tấm liền Úc dùng ray từng dòng làm authority rộng cắt", () => {
+  const u70 = buildSalesProductionLines(tamLienProductionInput("Ray sắt U70"));
+  const u76 = buildSalesProductionLines(tamLienProductionInput("Ray hộp/đơn U76"));
+  assert.equal(u70[0].cut_width_m, 3.95);
+  assert.equal(u76[0].cut_width_m, 3.92);
+  assert.equal(u70[0].ray_type, "Ray sắt U70");
+  assert.equal(u76[0].ray_type, "Ray hộp/đơn U76");
+  assert.equal(JSON.parse(u70[0].formula_snapshot).ray_type, "Ray sắt U70");
+  assert.deepEqual(JSON.parse(u70[0].formula_snapshot).geometry_applied_rules, ["TLUC-RCL-U70"]);
+});
+
+test("Cửa tấm liền Úc thiếu hoặc sai ray thì production fail closed", () => {
+  assert.throws(() => buildSalesProductionLines(tamLienProductionInput(undefined)), /cần chọn Loại ray/);
+  assert.throws(() => buildSalesProductionLines(tamLienProductionInput("U75")), /không được .* hỗ trợ/);
+});
+
 test("loại cửa thiếu số chia hoặc cách làm tròn bị chặn, không đoán", () => {
   assert.throws(() => calculateLeafPlan({
     policy_name: "Thiếu cấu hình",
@@ -112,19 +187,21 @@ test("loại cửa thiếu số chia hoặc cách làm tròn bị chặn, không
 });
 
 test("metadata có đủ Production Request, Paint Job và khóa truy vết dòng giao", async () => {
-  const salesLine = fieldNames(doctype("Sales Order Item"));
+  const salesLine = fieldNames(generatedDoctype("Sales Order Item"));
   for (const required of [
-    "door_type", "leaf_variant", "leaf_divisor_m", "leaf_count", "single_layer_leaf_count",
+    "door_type", "ray_type", "leaf_variant", "leaf_divisor_m", "leaf_count", "single_layer_leaf_count",
     "double_layer_leaf_count", "estimated_weight_kg", "estimated_minutes", "formula_version",
   ]) assert.ok(salesLine.has(required), `Sales Order Item missing ${required}`);
 
   const request = doctype("Production Request");
-  const requestLine = doctype("Production Request Item");
+  const requestLine = generatedDoctype("Production Request Item");
   const paint = doctype("Paint Job");
   assert.ok(fieldNames(request).has("sales_order"));
   assert.ok(fieldNames(requestLine).has("request_line_key"));
+  assert.ok(fieldNames(requestLine).has("ray_type"));
   assert.ok(fieldNames(paint).has("cut_order"));
-  assert.ok(fieldNames(doctype("Work Order")).has("leaf_count"));
+  assert.ok(fieldNames(generatedDoctype("Work Order")).has("leaf_count"));
+  assert.ok(fieldNames(generatedDoctype("Work Order")).has("ray_type"));
   assert.ok(fieldNames(doctype("Delivery Note Item")).has("sales_order_row_id"));
   assert.ok(brief.actions.some((action) => action.name === "don-hang-thanh-san-xuat"));
 
@@ -132,4 +209,13 @@ test("metadata có đủ Production Request, Paint Job và khóa truy vết dòn
   assert.match(source, /sales_order_row_id/);
   assert.match(source, /previewSalesProduction/);
   assert.match(source, /syncPaintJobsFromCut/);
+});
+
+
+test("React must not own U70/U76 cut deductions", async () => {
+  const model = await readFile(new URL("../../client/packages/views/src/app/vertical/alumdoor/sales-order-v2/model.ts", import.meta.url), "utf8");
+  const table = await readFile(new URL("../../client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderLineTable.tsx", import.meta.url), "utf8");
+  assert.match(model, /"ray_type"/);
+  assert.match(table, /ray_type: "Loại ray"/);
+  assert.doesNotMatch(model + table, /0\.05|0\.08/);
 });

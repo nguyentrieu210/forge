@@ -104,6 +104,7 @@ export interface SalesLine extends Json {
   mesh_height_m?: number;
   set_count?: number;
   leaf_variant?: string;
+  ray_type?: string;
   has_butterfly_bracket?: number;
   length_m?: number;
   qty_bar?: number;
@@ -131,6 +132,7 @@ export const SPEC_FIELD_ORDER = [
   "height_m",
   "mesh_height_m",
   "leaf_variant",
+  "ray_type",
   "has_butterfly_bracket",
   "motor_model",
   "length_m",

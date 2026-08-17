@@ -294,6 +294,26 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     ["leaf_divisor_m", context.leaf_divisor_m ?? item.leaf_divisor_m],
   ];
   for (const [name, value] of masterPlan) setIfField(patch, fields, name, value);
+  const effectiveDoorType = text(context.door_type ?? item.door_type);
+  if (effectiveDoorType === "Cửa tấm liền Úc") {
+    fieldOverride(overrides, fields, "ray_type", {
+      hidden: 0,
+      reqd: 1,
+      read_only: 0,
+      label: "Loại ray",
+      depends_on: null,
+      mandatory_depends_on: null,
+    });
+  } else {
+    clearIfField(clear, fields, "ray_type");
+    fieldOverride(overrides, fields, "ray_type", {
+      hidden: 1,
+      reqd: 0,
+      read_only: 1,
+      depends_on: null,
+      mandatory_depends_on: null,
+    });
+  }
 
   const allowedColors = await allowedColorNamesForGroup(call, text(item.item_group), "sales");
   const linear = deriveLinearSalesBasis(item);

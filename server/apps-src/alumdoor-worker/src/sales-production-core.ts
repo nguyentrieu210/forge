@@ -10,6 +10,7 @@ import {
   type SalesMode,
 } from "./door-formulas.js";
 import { inspectProductionLineBomRequirements, previewProductionLineBom, resolveProductionLineBom } from "./bom-template-materializer.js";
+import { evaluateGeometryRules, type GeometryPolicyRule } from "./geometry-policy.js";
 import {
   normalizeBomActualComponents,
   type BomActualComponentInput,
@@ -61,6 +62,15 @@ interface RawPolicy extends Json {
   leaf_round_threshold?: unknown;
   leaf_variants?: Array<{ variant_label?: string; addend?: unknown }>;
   ray_type?: string;
+  geometry_profile?: string;
+  geometry_rules?: GeometryPolicyRule[];
+}
+
+interface GeometryProfileDoc extends Json {
+  name?: string;
+  profile_code?: string;
+  fields?: Array<{ geometry_field?: string; role?: string; required?: unknown; visible?: unknown; editable?: unknown; sequence?: unknown }>;
+  disabled?: unknown;
 }
 
 interface ProductionStandard extends Json {
@@ -115,6 +125,7 @@ export interface SalesProductionLine extends Json {
   item_code: string;
   item_group: string;
   door_type: DoorType;
+  ray_type?: string;
   department: string;
   set_no: number;
   set_count: 1;
@@ -159,6 +170,7 @@ interface BuildInputs {
   sales: SalesOrderDoc;
   items: Map<string, ItemDoc>;
   policies: RawPolicy[];
+  geometry_profiles?: Map<string, GeometryProfileDoc>;
   standards: ProductionStandard[];
   boms: BomDoc[];
   source_warehouse: string;
@@ -303,6 +315,8 @@ function policyVersion(policy: RawPolicy): string {
     text(policy.leaf_divisor_const),
     text(policy.leaf_rounding),
     text(policy.leaf_round_threshold),
+    text(policy.geometry_profile),
+    JSON.stringify(policy.geometry_rules ?? []),
     JSON.stringify(policy.leaf_variants ?? []),
   ].join("|");
   let hash = 2166136261;
@@ -427,6 +441,49 @@ function productionDepartment(doorType: DoorType): string {
   return doorType === "Cửa tấm liền Úc" ? "Cửa Úc" : doorType;
 }
 
+function raySpecificGeometry(
+  doorType: DoorType,
+  chosen: { parsed: DoorFormulaPolicy; raw: RawPolicy },
+  profile: GeometryProfileDoc | undefined,
+  row: Json,
+  customerGroup: CustomerGroup,
+  width: number,
+  height: number,
+): { cut_width_m: number; ray_type: string; applied_rules: string[] } | null {
+  if (doorType !== "Cửa tấm liền Úc") return null;
+  const rayType = text(row.ray_type);
+  if (!rayType) throw new Error("Cửa tấm liền Úc cần chọn Loại ray theo từng dòng (Ray sắt U70 hoặc Ray hộp/đơn U76).");
+  const profileName = text(chosen.raw.geometry_profile);
+  if (!profileName) throw new Error(`${chosen.parsed.policy_name}: chưa khai Geometry Profile.`);
+  if (!profile || checked(profile.disabled)) throw new Error(`${chosen.parsed.policy_name}: không đọc được Geometry Profile đang hiệu lực ${profileName}.`);
+  const rules = Array.isArray(chosen.raw.geometry_rules) ? chosen.raw.geometry_rules : [];
+  if (!rules.length) throw new Error(`${chosen.parsed.policy_name}: chưa khai Geometry Rules.`);
+  const supportedRayTypes = [...new Set(
+    rules
+      .filter((rule) => text(rule.target_field) === "CAT_LA_RONG")
+      .map((rule) => text(rule.ray_type))
+      .filter(Boolean),
+  )];
+  if (!supportedRayTypes.includes(rayType)) {
+    throw new Error(`Loại ray ${rayType} không được ${chosen.parsed.policy_name} hỗ trợ. Cho phép: ${supportedRayTypes.join(", ")}.`);
+  }
+  const result = evaluateGeometryRules({
+    policy_name: chosen.parsed.policy_name,
+    geometry_profile: profileName,
+    profile_fields: Array.isArray(profile.fields) ? profile.fields : [],
+    rules,
+    inputs: { PB_CAO: height, PB_RAY_RONG: width },
+    context: {
+      customer_group: customerGroup,
+      ray_type: rayType,
+      has_butterfly_bracket: checked(row.has_butterfly_bracket),
+    },
+    required_targets: ["CAT_LA_RONG"],
+  });
+  const cutWidth = finitePositive(result.values.CAT_LA_RONG, "Rộng cắt lá theo Geometry Policy");
+  return { cut_width_m: round(cutWidth), ray_type: rayType, applied_rules: result.applied_rules.map((entry) => entry.rule_code) };
+}
+
 function selectBom(boms: BomDoc[], itemCode: string, color: string, on: string, allowMissing = false): string {
   const candidates = boms
     .filter((row) => row.item === itemCode && row.docstatus === 1)
@@ -484,6 +541,16 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
       ...(Number(item.purchase_kg_per_m2 ?? 0) > 0 ? { kg_per_m2: Number(item.purchase_kg_per_m2) } : {}),
       purpose: chosen.parsed.purchase_formula === "Barem kg/m2" ? "all" : "sales",
     });
+    const geometry = raySpecificGeometry(
+      doorType,
+      chosen,
+      input.geometry_profiles?.get(text(chosen.raw.geometry_profile)),
+      row,
+      customerGroup,
+      width,
+      height,
+    );
+    const liveCutWidth = geometry?.cut_width_m ?? finitePositive(formula.cut_width_m, "Rộng cắt lá");
     const leaf = calculateLeafPlan(chosen.raw, row);
     const department = productionDepartment(doorType);
     const billablePerSet = round(finitePositive(formula.billable_area_sqm, "Diện tích tính tiền") / sets);
@@ -516,13 +583,14 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         formula_policy: chosen.parsed.policy_name,
         formula_version: formulaVersion,
         width_basis: formula.width_basis,
-        cut_width_m: formula.cut_width_m,
+        cut_width_m: liveCutWidth,
         billable_area_sqm: billablePerSet,
         leaf,
         estimated_weight_kg: estimatedWeightPerSet ?? null,
         estimated_minutes: standard.minutes,
         bom_actual_components: bomActualComponents,
-        ray_type: text(chosen.raw.ray_type) || null,
+        ray_type: geometry?.ray_type ?? null,
+        geometry_applied_rules: geometry?.applied_rules ?? [],
       };
       lines.push({
         request_line_key: lineKey,
@@ -530,6 +598,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         item_code: itemCode,
         item_group: itemGroup,
         door_type: doorType,
+        ...(geometry?.ray_type ? { ray_type: geometry.ray_type } : {}),
         department,
         set_no: setNo,
         set_count: 1,
@@ -542,7 +611,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         formula_policy: chosen.parsed.policy_name,
         formula_version: formulaVersion,
         width_basis: formula.width_basis,
-        cut_width_m: round(Number(formula.cut_width_m)),
+        cut_width_m: round(liveCutWidth),
         billable_area_sqm: billablePerSet,
         leaf_count: leaf.leaf_count,
         ...(leaf.single_layer_leaf_count == null ? {} : { single_layer_leaf_count: leaf.single_layer_leaf_count }),
@@ -596,10 +665,20 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
       "name", "item", "color", "docstatus", "is_active", "bom_status", "effective_from", "effective_to", "revision", "generated_by_configurator",
     ]),
   ]);
+  const fullPolicies = await Promise.all(policies.map(async (policy) => {
+    const name = text(policy.name);
+    return name ? { ...policy, ...await readDoc<RawPolicy>(call, "Cutting Policy", name) } : policy;
+  }));
+  const geometryProfileNames = [...new Set(fullPolicies.map((policy) => text(policy.geometry_profile)).filter(Boolean))];
+  const geometryProfiles = new Map(await Promise.all(geometryProfileNames.map(async (name) => [
+    name,
+    await readDoc<GeometryProfileDoc>(call, "Geometry Profile", name),
+  ] as const)));
   return {
     sales,
     items: new Map(itemRows),
-    policies,
+    policies: fullPolicies,
+    geometry_profiles: geometryProfiles,
     standards,
     boms,
     source_warehouse: sourceWarehouse,
@@ -653,7 +732,18 @@ export async function calculateSalesProductionLine(
         "effective_from", "effective_to", "disabled",
       ]).catch(() => []),
     ]);
-    const chosen = choosePolicy(policies, doorType, text(item.item_group));
+    const chosenSummary = choosePolicy(policies, doorType, text(item.item_group));
+    const chosenRaw = text(chosenSummary.raw.name)
+      ? { ...chosenSummary.raw, ...await readDoc<RawPolicy>(call, "Cutting Policy", text(chosenSummary.raw.name)) }
+      : chosenSummary.raw;
+    const chosen = { parsed: parseDoorPolicy(chosenRaw), raw: chosenRaw };
+    const geometryProfileName = text(chosen.raw.geometry_profile);
+    if (doorType === "Cửa tấm liền Úc" && !geometryProfileName) {
+      throw new Error(`${chosen.parsed.policy_name}: chưa khai Geometry Profile.`);
+    }
+    const geometryProfile = doorType === "Cửa tấm liền Úc"
+      ? await readDoc<GeometryProfileDoc>(call, "Geometry Profile", geometryProfileName)
+      : undefined;
     const sets = positiveInteger(args.set_count ?? 1, "Số bộ");
     const requestedPurpose = text(args.purpose).toLocaleLowerCase("vi");
     const formulaPurpose = requestedPurpose === "bán hàng" || requestedPurpose === "sales"
@@ -676,6 +766,16 @@ export async function calculateSalesProductionLine(
       // có thể báo giá; luồng tạo sản xuất vẫn để `all` và kiểm đủ đầu vào vật tư.
       purpose: formulaPurpose,
     });
+    const geometry = raySpecificGeometry(
+      doorType,
+      chosen,
+      geometryProfile,
+      args,
+      customerGroup,
+      finitePositive(args.width_m, "Rộng"),
+      finitePositive(args.height_m, "Cao"),
+    );
+    const liveCutWidth = geometry?.cut_width_m ?? finitePositive(formula.cut_width_m, "Rộng cắt lá");
     let leaf: LeafPlan | null = null;
     let leafError: string | null = null;
     try {
@@ -693,6 +793,7 @@ export async function calculateSalesProductionLine(
     });
     return answer({
       ...formula,
+      cut_width_m: round(liveCutWidth),
       item_code: itemCode,
       item_group: text(item.item_group),
       door_type: doorType,
@@ -702,7 +803,8 @@ export async function calculateSalesProductionLine(
       leaf_height_deduction_m: leaf?.height_deduction_m ?? chosen.raw.leaf_height_deduction_m ?? null,
       leaf_divisor_m: leaf?.divisor_m ?? args.leaf_divisor_m ?? item.leaf_divisor_m ?? chosen.raw.leaf_divisor_const ?? null,
       leaf_rounding: text(chosen.raw.leaf_rounding),
-      ray_type: text(chosen.raw.ray_type) || null,
+      ray_type: geometry?.ray_type ?? null,
+      geometry_applied_rules: geometry?.applied_rules ?? [],
       leaf_count: leaf?.leaf_count ?? null,
       single_layer_leaf_count: leaf?.single_layer_leaf_count ?? null,
       double_layer_leaf_count: leaf?.double_layer_leaf_count ?? null,
@@ -714,7 +816,7 @@ export async function calculateSalesProductionLine(
       // Không bật checkbox chung cho các loại cửa/ray mà thao tác này không có tác dụng.
       supports_butterfly_bracket: chosen.parsed.butterfly_cut_deduction_m != null,
       formula_version: policyVersion(chosen.raw),
-      formula_explanation: `${formula.explanation}${leaf ? ` ${leaf.explanation}` : ""}`.trim(),
+      formula_explanation: `${formula.explanation}${geometry ? ` Hình học: ${geometry.applied_rules.join(", ")}.` : ""}${leaf ? ` ${leaf.explanation}` : ""}`.trim(),
     });
   } catch (error) {
     return refuse(error instanceof Error ? error.message : "Không tính được chi tiết sản xuất.");
@@ -963,6 +1065,7 @@ export async function createSalesProduction(call: ProductionPlatformCall, args: 
         sales_order_row_id: line.sales_order_row_id,
         set_no: line.set_no,
         door_type: line.door_type,
+        ...(line.ray_type ? { ray_type: line.ray_type } : {}),
         cut_width_m: line.cut_width_m,
         estimated_weight_kg: line.estimated_weight_kg,
         estimated_minutes: line.estimated_minutes,
