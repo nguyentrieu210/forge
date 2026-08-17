@@ -6,6 +6,7 @@ import {
   parseArgs as coreParseArgs,
 } from './run-local-import-core.mjs';
 import { mainPricing } from './pricing-adapter.mjs';
+import { mainBom } from './bom-adapter.mjs';
 
 export { ExecutionError };
 export {
@@ -18,11 +19,11 @@ export {
 } from './run-local-import-core.mjs';
 
 export function parseArgs(argv) {
-  if (argv?.[0] === 'pricing') {
+  if (argv?.[0] === 'pricing' || argv?.[0] === 'bom') {
     if (argv.length !== 1) {
-      throw new ExecutionError('OTHER', 'Usage: node scripts/local-runner/run-local-import.mjs pricing');
+      throw new ExecutionError('OTHER', `Usage: node scripts/local-runner/run-local-import.mjs ${argv[0]}`);
     }
-    return { adapter: 'pricing', options: {} };
+    return { adapter: argv[0], options: {} };
   }
   return coreParseArgs(argv);
 }
@@ -30,6 +31,7 @@ export function parseArgs(argv) {
 export async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv);
   if (parsed.adapter === 'pricing') return mainPricing();
+  if (parsed.adapter === 'bom') return mainBom();
   return coreMain(argv);
 }
 
