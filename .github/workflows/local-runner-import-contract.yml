@@ -1,0 +1,130 @@
+name: Local Runner Import Contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/local-runner/**'
+      - 'server/scripts/import-alumdoor-reason-master-local.mjs'
+      - 'server/scripts/*alumdoor-real-purchase*.mjs'
+      - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
+      - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
+      - '.github/workflows/local-runner-import-contract.yml'
+      - 'skills/forge-local-runner-import/**'
+      - 'AI_HANDOFF.md'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/local-runner/**'
+      - 'server/scripts/import-alumdoor-reason-master-local.mjs'
+      - 'server/scripts/*alumdoor-real-purchase*.mjs'
+      - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
+      - '.github/workflows/*alumdoor*local*.yml'
+      - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
+      - '.github/workflows/local-runner-import-contract.yml'
+      - 'skills/forge-local-runner-import/**'
+      - 'AI_HANDOFF.md'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Unit test local runner contract
+        run: node --test scripts/local-runner/contract.test.mjs
+
+      - name: Syntax check execution sources
+        run: |
+          node --check scripts/local-runner/run-local-import.mjs
+          node --check scripts/local-runner/real-purchase-adapter.mjs
+          node --check server/scripts/import-alumdoor-reason-master-local.mjs
+          node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
+
+      - name: Diff hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check HEAD^
+
+      - name: Enforce one mutation entry point
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            .github/workflows/bootstrap-alumdoor-local.yml
+            .github/workflows/alumdoor-master-layer0-local-seed.yml
+            .github/workflows/alumdoor-reason-master-local-import.yml
+            .github/workflows/import-alumdoor-item-master-local.yml
+            .github/workflows/reconcile-alumdoor-local-source-uom.yml
+            .github/workflows/alumdoor-real-purchase-import-policy.yml
+          )
+
+          for file in "${files[@]}"; do
+            grep -q 'group: alumdoor-local-d1-mutation' "$file"
+            grep -q 'cancel-in-progress: false' "$file"
+            grep -q 'scripts\\local-runner\\run-local-import.mjs' "$file"
+
+            if grep -Eq 'npx[[:space:]]+wrangler|wrangler[[:space:]]+d1[[:space:]]+(execute|migrations)|stop-local-dev\.mjs' "$file"; then
+              echo "Bypass mutation/process-control path is forbidden in $file"
+              exit 1
+            fi
+          done
+
+          if grep -RInE --include='*.yml' --include='*.yaml' \
+            'sync-local\.bat[[:space:]]+--bootstrap' .github/workflows; then
+            echo 'Bootstrap mutation must go through run-local-import.mjs bootstrap'
+            exit 1
+          fi
+
+      - name: Enforce local-only Wrangler contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "Remote mutation guard: --remote is forbidden" scripts/local-runner/run-local-import.mjs
+          grep -q "Wrangler D1 command must include --local" scripts/local-runner/run-local-import.mjs
+          grep -q "GLOBAL_D1_LOCK=ACQUIRED" scripts/local-runner/run-local-import.mjs
+          grep -q "BACKUP_STATUS=PASS" scripts/local-runner/run-local-import.mjs
+          grep -q "RUNTIME_RESTORE=PASS" scripts/local-runner/run-local-import.mjs
+          grep -q "EXECUTION_STATUS=SUCCESS" scripts/local-runner/run-local-import.mjs
+          grep -q "real-purchase" scripts/local-runner/run-local-import.mjs
+          grep -q "ALUMDOOR_REAL_PURCHASE_IMPORT_PASS" scripts/local-runner/real-purchase-adapter.mjs
+
+          if grep -RInE --exclude='run-local-import.mjs' --exclude='*.test.mjs' -- '--remote' scripts/local-runner; then
+            echo 'Unexpected --remote token in local runner sources'
+            exit 1
+          fi
+
+      - name: Reject Real Purchase child-script D1 bypass
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            server/scripts/audit-alumdoor-real-purchase-local.mjs
+            server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs
+            server/scripts/import-alumdoor-real-purchase-local.mjs
+            server/scripts/verify-alumdoor-real-purchase-audit.mjs
+          )
+          if grep -nE 'npx[[:space:]]+wrangler|wrangler[[:space:]]+d1[[:space:]]+(execute|migrations)|execFileSync\([^\n]*wrangler' "${files[@]}"; then
+            echo 'Real Purchase child scripts may not invoke Wrangler directly'
+            exit 1
+          fi
+
+      - name: Enforce skill discovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f skills/forge-local-runner-import/SKILL.md
+          grep -q 'skills/forge-local-runner-import/SKILL.md' AI_HANDOFF.md
+          grep -q 'node scripts\\local-runner\\run-local-import.mjs' skills/forge-local-runner-import/SKILL.md
+          grep -q 'real-purchase' skills/forge-local-runner-import/SKILL.md
