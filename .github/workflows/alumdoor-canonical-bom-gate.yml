@@ -1,0 +1,62 @@
+name: Alumdoor Canonical BOM Gate B
+
+on:
+  pull_request:
+    paths:
+      - 'server/scripts/extract-alumdoor-real-source-records.mjs'
+      - 'server/scripts/build-alumdoor-canonical-bom-payload.mjs'
+      - 'server/scripts/lib/alumdoor-real-bom-gate-semantics.mjs'
+      - 'server/scripts/lib/alumdoor-bom-template-source-catalog.mjs'
+      - 'apps/alumdoor/docs/nguon/ms-lien/**'
+      - '.github/workflows/alumdoor-canonical-bom-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-bom-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build canonical Item evidence
+        run: |
+          mkdir -p "$RUNNER_TEMP/alumdoor-bom-gate"
+          D="$RUNNER_TEMP/alumdoor-bom-gate"
+          node server/scripts/extract-alumdoor-real-source-records.mjs "$D/source.json" "$D/source-report.json"
+          node server/scripts/build-alumdoor-item-master-payload.mjs "$D/source.json" "$D/items.json" "$D/items-audit.json"
+      - name: Build BOM twice and require deterministic bytes
+        shell: bash
+        run: |
+          set +e
+          D="$RUNNER_TEMP/alumdoor-bom-gate"
+          node server/scripts/build-alumdoor-canonical-bom-payload.mjs "$D/source.json" "$D/items.json" "$D/bom-1.json" "$D/audit-1.json"
+          E1=$?
+          node server/scripts/build-alumdoor-canonical-bom-payload.mjs "$D/source.json" "$D/items.json" "$D/bom-2.json" "$D/audit-2.json"
+          E2=$?
+          set -e
+          cmp "$D/bom-1.json" "$D/bom-2.json"
+          cmp "$D/audit-1.json" "$D/audit-2.json"
+          echo "ALUMDOOR_CANONICAL_BOM_DETERMINISTIC_PASS"
+          node - "$D/audit-1.json" "$E1" "$E2" <<'NODE'
+          const fs=require('fs');
+          const audit=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          console.log('BOM_BLOCKERS='+audit.blocker_count);
+          console.log('BOM_BLOCKER_COUNTS='+JSON.stringify(audit.blocker_counts));
+          console.log('BOM_BLOCKER_CLASS_COUNTS='+JSON.stringify(audit.blocker_class_counts));
+          for(const b of audit.blockers) console.log('BOM_BLOCKER_INVENTORY '+JSON.stringify(b));
+          if(Number(process.argv[3])!==Number(process.argv[4])) throw new Error('non-deterministic exit status');
+          if(audit.blocker_count!==0) process.exit(1);
+          if(Number(process.argv[3])!==0) process.exit(1);
+          NODE
+      - name: Upload Gate B diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alumdoor-canonical-bom-gate
+          path: ${{ runner.temp }}/alumdoor-bom-gate/
+          if-no-files-found: error
