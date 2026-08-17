@@ -1,0 +1,42 @@
+name: Alumdoor Real Purchase Import Policy
+
+on:
+  push:
+    branches:
+      - agent/alumdoor-real-purchase-import
+    paths:
+      - 'apps/alumdoor/docs/nguon/ms-lien/chi-tiết-nhập-hàng-ngày.md'
+      - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
+      - 'server/scripts/preflight-alumdoor-real-purchase-import.mjs'
+      - 'server/scripts/test-alumdoor-real-purchase-import.mjs'
+      - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
+  pull_request:
+    paths:
+      - 'apps/alumdoor/docs/nguon/ms-lien/chi-tiết-nhập-hàng-ngày.md'
+      - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
+      - 'server/scripts/preflight-alumdoor-real-purchase-import.mjs'
+      - 'server/scripts/test-alumdoor-real-purchase-import.mjs'
+      - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  purchase-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          node --check server/scripts/lib/alumdoor-real-purchase-source.mjs
+          node --check server/scripts/lib/alumdoor-real-purchase-preflight.mjs
+          node --check server/scripts/preflight-alumdoor-real-purchase-import.mjs
+          node --check server/scripts/test-alumdoor-real-purchase-import.mjs
+      - name: Lock real source and fail-closed contract
+        run: node server/scripts/test-alumdoor-real-purchase-import.mjs
+      - name: Materialize current blocked preflight evidence
+        run: node server/scripts/preflight-alumdoor-real-purchase-import.mjs /tmp/alumdoor-real-purchase-preflight.json --expect-blocked
