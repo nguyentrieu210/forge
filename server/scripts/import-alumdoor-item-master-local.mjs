@@ -35,9 +35,7 @@ const CHECK_FIELDS = new Set([
   "is_stock_item",
   "is_purchase_item",
   "is_sales_item",
-  "is_fixed_asset",
   "include_item_in_manufacturing",
-  "is_sub_contracted_item",
   "disabled",
 ]);
 const MANAGED_SCALARS = [
@@ -50,9 +48,7 @@ const MANAGED_SCALARS = [
   "is_stock_item",
   "is_purchase_item",
   "is_sales_item",
-  "is_fixed_asset",
   "include_item_in_manufacturing",
-  "is_sub_contracted_item",
   "stock_uom",
   "default_purchase_uom",
   "default_sales_uom",
@@ -191,7 +187,6 @@ async function getItem(code) {
 
 await login();
 
-// Phase 1: inspect every code and detect conflicts before any mutation.
 const preimageRecords = [];
 const missing = [];
 const exactExisting = [];
@@ -230,14 +225,12 @@ writeFileSync(preimagePath, `${JSON.stringify({
 }, null, 2)}\n`, "utf8");
 console.log(`ALUMDOOR_ITEM_LOCAL_PREIMAGE_PASS existing=${exactExisting.length} missing=${missing.length} output=${preimagePath}`);
 
-// Phase 2: create only the missing exact-code Items.
 const created = [];
 for (const item of missing) {
   await requireOk("/api/resource/Item", { method: "POST", body: item });
   created.push(item.item_code);
 }
 
-// Phase 3: verify every managed field and conversion after the mutation.
 const verificationFailures = [];
 for (const item of items) {
   const actual = await getItem(item.item_code);
