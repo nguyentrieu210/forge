@@ -1252,6 +1252,7 @@ interface V2CutOrderItem {
   serial_and_batch_bundle?: string;
   offcut_bundle?: string;
   source_warehouse?: string;
+  source_batch_no?: string;
   source_length_m?: number;
   cut_width_m?: number;
   sheets_cut?: number;
@@ -1511,6 +1512,8 @@ async function draftCutV2(call: PlatformCall, args: Record<string, unknown>): Pr
       items.push({
         row_id: `ROW-${index + 1}`,
         item_code: proposal.item_code,
+        source_warehouse: pick.warehouse,
+        source_batch_no: pick.batch_no,
         serial_and_batch_bundle: outward,
         ...(offcutBundle ? { offcut_bundle: offcutBundle } : {}),
         source_length_m: pick.length_m,

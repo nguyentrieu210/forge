@@ -11060,6 +11060,15 @@
           "surface": "quick"
         },
         {
+          "fieldname": "source_batch_no",
+          "label": "Lô nguồn FIFO",
+          "fieldtype": "Link",
+          "options": "Batch",
+          "required": true,
+          "read_only": true,
+          "surface": "expanded"
+        },
+        {
           "label": "Bundle nhập đầu thừa",
           "//": "Mỗi dòng có lô mẹ và kho đầu thừa riêng; đặt trên đầu phiếu làm mất quan hệ khi cắt nhiều mã/kho.",
           "fieldname": "offcut_bundle",
@@ -11226,6 +11235,7 @@
       "form": {
         "fields": [
           "serial_and_batch_bundle",
+          "source_batch_no",
           "offcut_bundle",
           "item_code",
           "source_warehouse",
