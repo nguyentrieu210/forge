@@ -4,6 +4,7 @@ import {
   ServiceVerificationError,
   parseRequiredServices,
   verifyRequiredServices,
+  verifyRequiredServicesWithRetry,
 } from './service-verification.mjs';
 
 function managedObservation(servicePid, listenerPid = servicePid + 100) {
@@ -130,6 +131,60 @@ test('workflow requiring frontend fails closed on foreign listener and never kil
       error.service === 'frontend',
   );
   assert.equal(mutationCalls, 0);
+});
+
+test('required frontend readiness waits for managed listener within bounded timeout', async () => {
+  let attempts = 0;
+  let clock = 0;
+  const evidence = await verifyRequiredServicesWithRetry(['frontend'], {
+    timeoutMs: 1000,
+    intervalMs: 100,
+    now: () => clock,
+    sleep: async (ms) => { clock += ms; },
+    observe: async () => {
+      attempts += 1;
+      if (attempts < 3) {
+        return {
+          serviceExists: true,
+          serviceState: 'Running',
+          servicePid: 2000,
+          listeners: [],
+        };
+      }
+      return managedObservation(2000, 2100);
+    },
+    fetchImpl: async () => response(200),
+  });
+
+  assert.equal(attempts, 3);
+  assert.equal(clock, 200);
+  assert.equal(evidence[0].listenerPids[0], 2100);
+});
+
+test('foreign required listener fails immediately without readiness retries', async () => {
+  let observations = 0;
+  let sleeps = 0;
+  await assert.rejects(
+    verifyRequiredServicesWithRetry(['frontend'], {
+      timeoutMs: 30000,
+      intervalMs: 500,
+      now: () => 0,
+      sleep: async () => { sleeps += 1; },
+      observe: async () => {
+        observations += 1;
+        return {
+          serviceExists: true,
+          serviceState: 'Running',
+          servicePid: 2000,
+          listeners: [{ pid: 9999, ancestry: [9999, 4] }],
+        };
+      },
+      fetchImpl: async () => response(200),
+    }),
+    (error) => error.code === 'REQUIRED_SERVICE_FOREIGN_LISTENER',
+  );
+  assert.equal(observations, 1);
+  assert.equal(sleeps, 0);
 });
 
 test('required-service parser defaults to backend and rejects unknown capabilities', () => {
