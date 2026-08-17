@@ -76,16 +76,21 @@ jobs:
           const origin = 'http://127.0.0.1:8799';
           const user = 'dev@example.com';
           const password = 'local-dev-password-1';
+          // Keep source literals ASCII-only because Windows PowerShell 5 can corrupt
+          // non-ASCII here-string content before Node evaluates it on the self-hosted runner.
+          const CANCELLATION_DOCTYPE = 'L\u00fd do hu\u1ef7';
+          const VARIANCE_DOCTYPE = 'Nguy\u00ean nh\u00e2n ch\u00eanh l\u1ec7ch';
           const source = JSON.parse(fs.readFileSync('C:/alumdoor/server/briefs/alumdoor-v2.fixtures.json', 'utf8'));
           const managedDoctypes = new Map([
-            ['Lý do huỷ', ['reason_code', 'reason_name', 'applies_to_doctype', 'sort_order', 'disabled']],
-            ['Nguyên nhân chênh lệch', ['reason_code', 'reason_name', 'variance_kind', 'sort_order', 'disabled']],
+            [CANCELLATION_DOCTYPE, ['reason_code', 'reason_name', 'applies_to_doctype', 'sort_order', 'disabled']],
+            [VARIANCE_DOCTYPE, ['reason_code', 'reason_name', 'variance_kind', 'sort_order', 'disabled']],
           ]);
           const fixtures = (source.fixtures || []).filter((row) => managedDoctypes.has(row.type));
-          const cancelFixtures = fixtures.filter((row) => row.type === 'Lý do huỷ');
-          const varianceFixtures = fixtures.filter((row) => row.type === 'Nguyên nhân chênh lệch');
+          const cancelFixtures = fixtures.filter((row) => row.type === CANCELLATION_DOCTYPE);
+          const varianceFixtures = fixtures.filter((row) => row.type === VARIANCE_DOCTYPE);
           if (cancelFixtures.length !== 6 || varianceFixtures.length !== 7) {
-            throw new Error(`Refusing local import: expected 6 cancellation + 7 variance fixtures, got ${cancelFixtures.length} + ${varianceFixtures.length}`);
+            const seenTypes = [...new Set((source.fixtures || []).map((row) => JSON.stringify(row.type)))];
+            throw new Error(`Refusing local import: expected 6 cancellation + 7 variance fixtures, got ${cancelFixtures.length} + ${varianceFixtures.length}; fixture_types=${seenTypes.join(',')}`);
           }
 
           const jar = new Map();
@@ -189,8 +194,8 @@ jobs:
           }
 
           await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
-          await loadMeta('Lý do huỷ');
-          await loadMeta('Nguyên nhân chênh lệch');
+          await loadMeta(CANCELLATION_DOCTYPE);
+          await loadMeta(VARIANCE_DOCTYPE);
 
           const first = await upsertPass('LOCAL_IMPORT_PASS_1');
           await verify();
@@ -210,7 +215,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location 'C:\alumdoor\server'
-          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT doctype, COUNT(*) AS records FROM documents WHERE tenant_id='demo' AND doctype IN ('Lý do huỷ','Nguyên nhân chênh lệch') GROUP BY doctype ORDER BY doctype;"
+          # Query by UTF-8 hex so this PowerShell command remains ASCII-only as well.
+          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT hex(doctype) AS doctype_hex, COUNT(*) AS records FROM documents WHERE tenant_id='demo' AND hex(doctype) IN ('4CC3BD20646F206875E1BBB7','4E677579C3AA6E206E68C3A26E206368C3AA6E68206CE1BB876368') GROUP BY hex(doctype) ORDER BY hex(doctype);"
           if ($LASTEXITCODE -ne 0) { throw 'Failed to audit local reason records in D1.' }
 
       - name: Verify local services after import
