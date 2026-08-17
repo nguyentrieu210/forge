@@ -10,10 +10,13 @@ const INTERNAL_SCAN_ROLE = "AlumDoor QR System";
  * AlumDoor Lite attendance authority.
  *
  * The shared three-segment controller remains available for compatibility, while Lite
- * derives payable buckets from the actual scan intervals and the submitted Shift Type:
+ * derives attendance evidence from the actual scan intervals and the submitted Shift Type:
  * minutes inside the assigned shift are regular work (capped by `working_minutes`), and
- * minutes before/after that shift interval are automatic OT. No Overtime Request or human
- * OT approval participates in this projection.
+ * minutes before/after that shift interval are raw OT candidates.
+ *
+ * Raw OT is stored in `raw_overtime_minutes`. It is never payable by itself. Only payroll may
+ * project submitted Overtime Request approval into `overtime_minutes`, capped by the raw
+ * evidence. Normal scan/correction writes always reset payable OT to zero.
  *
  * A paid-leave-only work date is materialized only by the trusted payroll bundle. It is born
  * locked, has no scan evidence, stores zero worked/OT minutes, and records its leave source
@@ -46,12 +49,20 @@ export class AlumDoorLiteAttendanceDayController implements DocumentController<J
       segments: arrayObjects(plan.document.data.segments),
     });
     const leave = paidLeaveOverlay(context.command.document, scheduledMinutes, false);
+    const payrollLock = isPayrollLockSave(context);
+    const payableOvertimeMinutes = payrollLock
+      ? integer(context.command.document.overtime_minutes ?? 0, "Approved overtime_minutes", 0, split.overtimeMinutes)
+      : 0;
+    const requestedRaw = optionalInteger(context.command.document.raw_overtime_minutes);
+    if (payrollLock && requestedRaw !== undefined && requestedRaw !== split.overtimeMinutes) {
+      throw errors.validation("PAYROLL_INPUT_CHANGED: Raw overtime evidence changed before payroll lock");
+    }
 
-    const { raw_overtime_minutes: _legacyRaw, ...withoutLegacyRaw } = plan.document.data;
     const data: JsonObject = {
-      ...withoutLegacyRaw,
+      ...plan.document.data,
       regular_minutes: split.regularMinutes,
-      overtime_minutes: split.overtimeMinutes,
+      raw_overtime_minutes: split.overtimeMinutes,
+      overtime_minutes: payableOvertimeMinutes,
       payable_work_fraction_bp: split.payableWorkFractionBp,
       ...leave,
     };
@@ -60,13 +71,13 @@ export class AlumDoorLiteAttendanceDayController implements DocumentController<J
       const payload = event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
         ? event.payload as JsonObject
         : {};
-      const { raw_overtime_minutes: _eventLegacyRaw, ...eventPayload } = payload;
       return {
         ...event,
         payload: {
-          ...eventPayload,
+          ...payload,
           regular_minutes: split.regularMinutes,
-          overtime_minutes: split.overtimeMinutes,
+          raw_overtime_minutes: split.overtimeMinutes,
+          overtime_minutes: payableOvertimeMinutes,
           payable_work_fraction_bp: split.payableWorkFractionBp,
           ...leave,
         },
@@ -75,16 +86,16 @@ export class AlumDoorLiteAttendanceDayController implements DocumentController<J
     const result = plan.result && typeof plan.result === "object" && !Array.isArray(plan.result)
       ? plan.result as JsonObject
       : {};
-    const { raw_overtime_minutes: _resultLegacyRaw, ...resultPayload } = result;
 
     return {
       ...plan,
       document,
       events,
       result: {
-        ...resultPayload,
+        ...result,
         regular_minutes: split.regularMinutes,
-        overtime_minutes: split.overtimeMinutes,
+        raw_overtime_minutes: split.overtimeMinutes,
+        overtime_minutes: payableOvertimeMinutes,
         payable_work_fraction_bp: split.payableWorkFractionBp,
         ...leave,
       },
@@ -129,13 +140,14 @@ export class AlumDoorLiteAttendanceDayController implements DocumentController<J
       throw errors.reference("Paid leave projection scheduled minutes changed since payroll calculation");
     }
 
-    const { raw_overtime_minutes: _legacyRaw, segments: _syntheticSegments, ...baseData } = plan.document.data;
+    const { segments: _syntheticSegments, ...baseData } = plan.document.data;
     const data: JsonObject = {
       ...baseData,
       state: "locked",
       locked_by_payroll: lockedBy,
       locked_at: context.now,
       regular_minutes: 0,
+      raw_overtime_minutes: 0,
       overtime_minutes: 0,
       payable_work_fraction_bp: 0,
       segments: [],
@@ -158,6 +170,7 @@ export class AlumDoorLiteAttendanceDayController implements DocumentController<J
           state: "locked",
           locked_by_payroll: lockedBy,
           regular_minutes: 0,
+          raw_overtime_minutes: 0,
           overtime_minutes: 0,
           payable_work_fraction_bp: 0,
           ...leave,
@@ -176,6 +189,7 @@ export class AlumDoorLiteAttendanceDayController implements DocumentController<J
         version: document.version,
         state: "locked",
         regular_minutes: 0,
+        raw_overtime_minutes: 0,
         overtime_minutes: 0,
         payable_work_fraction_bp: 0,
         ...leave,
@@ -200,6 +214,13 @@ function isPaidLeaveProjectionCreate(context: ControllerContext<JsonObject>): bo
     && context.command.actor.roles.includes(INTERNAL_PAYROLL_ROLE)
     && integerOrZero(context.command.document.paid_leave_minutes) > 0
     && Boolean(optionalText(context.command.document.source_leave_application));
+}
+
+function isPayrollLockSave(context: ControllerContext<JsonObject>): boolean {
+  return context.command.action === "save"
+    && context.command.actor.roles.includes(INTERNAL_PAYROLL_ROLE)
+    && optionalText(context.command.document.state) === "locked"
+    && Boolean(optionalText(context.command.document.locked_by_payroll));
 }
 
 function paidLeaveOverlay(input: JsonObject, scheduledMinutes: number, required: boolean): JsonObject {
@@ -332,11 +353,15 @@ function integer(value: unknown, field: string, min: number, max: number): numbe
   return result;
 }
 
-function integerOrZero(value: unknown): number {
-  if (value === undefined || value === null || value === "") return 0;
+function optionalInteger(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
   const result = typeof value === "number" ? value : Number(value);
-  if (!Number.isSafeInteger(result) || result < 0) throw errors.validation("Attendance paid-leave integer is invalid");
+  if (!Number.isSafeInteger(result) || result < 0) throw errors.validation("Attendance integer is invalid");
   return result;
+}
+
+function integerOrZero(value: unknown): number {
+  return optionalInteger(value) ?? 0;
 }
 
 function roundHalfUp(numerator: number, denominator: number): number {
