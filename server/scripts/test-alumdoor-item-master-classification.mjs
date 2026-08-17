@@ -34,10 +34,25 @@ expect(door.payload.is_stock_item, 1, "door stock flag");
 expect(door.payload.is_purchase_item, 0, "door purchase flag");
 expect(door.payload.is_sales_item, 1, "door sales flag");
 expect(door.payload.include_item_in_manufacturing, 1, "door manufacturing flag");
-expect(door.payload.stock_uom, "Bộ", "door stock UOM");
+expect(door.payload.stock_uom, "m2", "door stock UOM follows source sales UOM");
 expect(door.payload.default_sales_uom, "m2", "door sales UOM");
 expect(door.payload.measurement_profile, "Thành phẩm theo m2", "door profile");
-expectJson(door.payload.uom_conversions, [], "door dynamic area conversion stays line-level");
+expectJson(door.payload.uom_conversions, [], "door area UOM is source-native without fake Bộ conversion");
+
+const doorBySet = buildCanonicalAlumdoorItemPayload({
+  item_code: "TP-CUA-DUC-BO-FIXTURE",
+  item_name: "Cửa Đức bán bộ fixture",
+  source_groups: ["Cửa CN Đức"],
+  identity_roles: [ITEM_SOURCE_ROLES.SELLABLE_PRODUCT],
+  stock_uom: "",
+  sales_uoms: ["Bộ"],
+  source_rows: [],
+  conversion_factors: [],
+});
+expect(doorBySet.status, "accepted", "door Bộ accepted");
+expect(doorBySet.payload.stock_uom, "Bộ", "door Bộ stock UOM follows source");
+expect(doorBySet.payload.default_sales_uom, "Bộ", "door Bộ sales UOM");
+expectJson(doorBySet.payload.uom_conversions, [], "door Bộ needs no synthetic conversion");
 
 const motor = buildCanonicalAlumdoorItemPayload({
   item_code: "MOTOR-FIXTURE",
