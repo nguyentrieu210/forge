@@ -8,16 +8,13 @@ const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
 const failures = [];
 const inventory = [];
 
-function requireFile(relative) {
-  if (!existsSync(path.join(repoRoot, relative))) failures.push(`missing:${relative}`);
-}
+function exists(relative) { return existsSync(path.join(repoRoot, relative)); }
+function requireFile(relative) { if (!exists(relative)) failures.push(`missing:${relative}`); }
 function requireMatch(relative, pattern, label) {
-  const text = read(relative);
-  if (!pattern.test(text)) failures.push(`${relative}:${label}`);
+  if (exists(relative) && !pattern.test(read(relative))) failures.push(`${relative}:${label}`);
 }
 function rejectMatch(relative, pattern, label) {
-  const text = read(relative);
-  if (pattern.test(text)) failures.push(`${relative}:${label}`);
+  if (exists(relative) && pattern.test(read(relative))) failures.push(`${relative}:${label}`);
 }
 function walk(dir) {
   const absolute = path.join(repoRoot, dir);
@@ -41,10 +38,9 @@ const canonicalWorkflows = [
   '.github/workflows/alumdoor-real-purchase-import-policy.yml',
   '.github/workflows/alumdoor-pricing-local-import.yml',
 ];
-
 for (const file of canonicalWorkflows) {
   requireFile(file);
-  if (!existsSync(path.join(repoRoot, file))) continue;
+  if (!exists(file)) continue;
   const text = read(file);
   if (!/group:\s*alumdoor-local-d1-mutation/.test(text)) failures.push(`${file}:missing_shared_concurrency`);
   if (!/cancel-in-progress:\s*false/.test(text)) failures.push(`${file}:cancel_in_progress_must_be_false`);
@@ -53,7 +49,7 @@ for (const file of canonicalWorkflows) {
 }
 
 const workflowFiles = walk('.github/workflows').filter((file) => /\.ya?ml$/i.test(file));
-const forbiddenWorkflowBypass = [
+const workflowBypasses = [
   [/\bnpx\s+wrangler\b[\s\S]{0,160}\bd1\s+(?:execute|migrations)\b/i, 'direct_npx_wrangler_d1'],
   [/(?:^|\s)wrangler(?:\.cmd)?\s+d1\s+(?:execute|migrations)\b/i, 'direct_wrangler_d1'],
   [/sync-local\.bat[^\r\n]*--bootstrap/i, 'direct_sync_bootstrap'],
@@ -61,23 +57,19 @@ const forbiddenWorkflowBypass = [
 ];
 for (const file of workflowFiles) {
   const text = read(file);
-  for (const [pattern, label] of forbiddenWorkflowBypass) {
-    if (pattern.test(text)) failures.push(`${file}:${label}`);
-  }
+  for (const [pattern, label] of workflowBypasses) if (pattern.test(text)) failures.push(`${file}:${label}`);
 }
 
-const bootstrapHelper = 'run-local.bat';
-const syncHelper = 'sync-local.bat';
-for (const file of [bootstrapHelper, syncHelper]) requireFile(file);
-requireMatch(bootstrapHelper, /assert-bootstrap-helper-context\.mjs/, 'missing_bootstrap_lock_ancestry_guard');
-requireMatch(bootstrapHelper, /server\\node_modules\\\.bin\\wrangler\.cmd/i, 'missing_pinned_wrangler');
-rejectMatch(bootstrapHelper, /\bnpx\s+wrangler\b/i, 'npx_wrangler_forbidden');
-rejectMatch(bootstrapHelper, /stop-local-dev\.mjs/i, 'port_kill_helper_forbidden');
-requireMatch(syncHelper, /assert-bootstrap-helper-context\.mjs/, 'missing_bootstrap_lock_ancestry_guard');
-rejectMatch(syncHelper, /stop-local-dev\.mjs/i, 'port_kill_helper_forbidden');
-rejectMatch(syncHelper, /\bwrangler(?:\.cmd)?\s+d1\b/i, 'raw_d1_forbidden');
-inventory.push({ path: bootstrapHelper, class: 'INTERNAL_MUTATOR_HELPER', authority: 'BOOTSTRAP_LOCK_ANCESTRY' });
-inventory.push({ path: syncHelper, class: 'SOURCE_SYNC_INTERNAL_BOOTSTRAP', authority: 'BOOTSTRAP_LOCK_ANCESTRY' });
+for (const file of ['run-local.bat', 'sync-local.bat']) requireFile(file);
+requireMatch('run-local.bat', /assert-bootstrap-helper-context\.mjs/, 'missing_bootstrap_lock_ancestry_guard');
+requireMatch('run-local.bat', /server\\node_modules\\\.bin\\wrangler\.cmd/i, 'missing_pinned_wrangler');
+rejectMatch('run-local.bat', /\bnpx\s+wrangler\b/i, 'npx_wrangler_forbidden');
+rejectMatch('run-local.bat', /stop-local-dev\.mjs/i, 'port_kill_helper_forbidden');
+requireMatch('sync-local.bat', /assert-bootstrap-helper-context\.mjs/, 'missing_bootstrap_lock_ancestry_guard');
+rejectMatch('sync-local.bat', /stop-local-dev\.mjs/i, 'port_kill_helper_forbidden');
+rejectMatch('sync-local.bat', /\bwrangler(?:\.cmd)?\s+d1\b/i, 'raw_d1_forbidden');
+inventory.push({ path: 'run-local.bat', class: 'INTERNAL_MUTATOR_HELPER', authority: 'BOOTSTRAP_LOCK_ANCESTRY' });
+inventory.push({ path: 'sync-local.bat', class: 'SOURCE_SYNC_INTERNAL_BOOTSTRAP', authority: 'BOOTSTRAP_LOCK_ANCESTRY' });
 inventory.push({ path: 'server/scripts/stop-local-dev.mjs', class: 'INFRA_NON_D1', authority: 'NOT_CANONICAL_MUTATION' });
 
 const guardedChildren = [
@@ -89,20 +81,16 @@ const guardedChildren = [
 ];
 for (const [file, pattern, adapters] of guardedChildren) {
   requireFile(file);
-  if (!existsSync(path.join(repoRoot, file))) continue;
   requireMatch(file, pattern, 'missing_child_lock_ancestry_guard');
   inventory.push({ path: file, class: 'INTERNAL_CHILD_MUTATOR', authority: adapters });
 }
-
 requireMatch('server/scripts/import-alumdoor-item-master-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'item_validate_only_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-pricing-local.mjs', /if \(!apply\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'pricing_dry_run_must_remain_prelock');
 
 for (const stale of [
   'server/scripts/import-alumdoor-item-master-local-impl.mjs',
   'server/scripts/import-alumdoor-pricing-local-impl.mjs',
-]) {
-  if (existsSync(path.join(repoRoot, stale))) failures.push(`${stale}:callable_unguarded_copy_forbidden`);
-}
+]) if (exists(stale)) failures.push(`${stale}:callable_unguarded_copy_forbidden`);
 
 const candidateScripts = walk('server/scripts')
   .filter((file) => /alumdoor/i.test(file) && /local/i.test(file) && /\.mjs$/i.test(file))
@@ -122,10 +110,10 @@ for (const file of candidateScripts) {
   }
 }
 
-const localRunnerFiles = walk('scripts/local-runner').filter((file) => /\.mjs$/i.test(file));
-for (const file of localRunnerFiles) {
+const auditSelf = 'scripts/local-runner/audit-local-mutation-entrypoints.mjs';
+for (const file of walk('scripts/local-runner').filter((file) => /\.mjs$/i.test(file))) {
   if (/\.test\.mjs$/i.test(file)) continue;
-  if (file === 'scripts/local-runner/run-local-import-core.mjs') continue;
+  if (file === 'scripts/local-runner/run-local-import-core.mjs' || file === auditSelf) continue;
   if (/--remote/.test(read(file))) failures.push(`${file}:unexpected_remote_token`);
 }
 
