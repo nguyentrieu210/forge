@@ -136,7 +136,7 @@ async function seed(): Promise<void> {
       { fieldname: "fee", label: "Fee", fieldtype: "Currency", non_negative: true },
       { fieldname: "visit_date", label: "Visit Date", fieldtype: "Date", default: "Today" },
     ],
-    permissions: [{ role: "System Manager", read: true, write: true, create: true, submit: true, cancel: true, amend: true, share: true, report: true }],
+    permissions: [{ role: "System Manager", read: true, write: true, create: true, delete: true, submit: true, cancel: true, amend: true, print: true, email: true, report: true, import: true, export: true, share: true }],
     revision: 1,
   };
   await env.DB.prepare(
@@ -609,10 +609,11 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
   });
 
   it("translates strings, falling back to the source when no translation exists", async () => {
-    const translated = await unwrap(await method("metaforge.api.translate_strings", { strings: ["Subject", "Customer"], lang: "vi" }));
+    const untranslated = "RBAC Untranslated Fixture";
+    const translated = await unwrap(await method("metaforge.api.translate_strings", { strings: ["Subject", untranslated], lang: "vi" }));
     expect(translated.Subject).toBe("Chủ đề");
-    // A missing translation degrades to readable English, never to a blank label.
-    expect(translated.Customer).toBe("Customer");
+    // A missing translation degrades to its readable source, never to a blank label.
+    expect(translated[untranslated]).toBe(untranslated);
   });
 
   it("shares a document and lists the share back", async () => {
@@ -1087,7 +1088,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
       doctypes: [{
         name: "Visit Note", module: "Visits",
         fields: [{ fieldname: "body", label: "Body", fieldtype: "Data", required: true }],
-        permissions: [{ role: "Visit User", read: true, write: true, create: true }],
+        permissions: [{ role: "Visit User", read: true, write: true, create: true, delete: true }],
         revision: 1,
       }],
       fixtures: [{ record_type: "Visit Category", name: "Routine", data: { label: "Routine" } }],
@@ -1101,6 +1102,10 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     const first = await unwrap(await method("forge.apps.install", { app: pkg }));
     expect(first.outcome).toBe("installed");
     expect(first.doctypes).toBe(1);
+    // System Manager is control-plane only: business access requires the app role explicitly.
+    await env.DB.prepare(
+      `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','sales@example.com','Visit User') ON CONFLICT DO NOTHING`,
+    ).run();
 
     // Re-installing the identical bytes must not churn metadata revisions and
     // invalidate every client cache for nothing.
@@ -1158,7 +1163,7 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     // documents as the underlying DocType. Prove both disappear for an actor without
     // read permission, including from the home fallback used immediately after login.
     await env.DB.prepare(
-      `DELETE FROM user_roles WHERE tenant_id='demo' AND user_id='sales@example.com' AND role='System Manager'`,
+      `DELETE FROM user_roles WHERE tenant_id='demo' AND user_id='sales@example.com' AND role IN ('System Manager','Visit User')`,
     ).run();
     try {
       const client = await unwrap(await method("metaforge.api.get_app_manifest", { app: "visits" }, "GET"));
@@ -1168,6 +1173,9 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     } finally {
       await env.DB.prepare(
         `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','sales@example.com','System Manager') ON CONFLICT DO NOTHING`,
+      ).run();
+      await env.DB.prepare(
+        `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','sales@example.com','Visit User') ON CONFLICT DO NOTHING`,
       ).run();
     }
 
@@ -1224,6 +1232,9 @@ describe("frappe facade over real workerd, D1 and Durable Objects", () => {
     // The one that used to fail.
     expect((await unwrap(await method("forge.apps.install", { app: pkg("1.2.0", "Kết thúc") }))).outcome).toBe("upgraded");
     expect((await unwrap(await method("forge.apps.install", { app: pkg("1.3.0", "Chốt") }))).outcome).toBe("upgraded");
+    await env.DB.prepare(
+      `INSERT INTO user_roles(tenant_id,user_id,role) VALUES('demo','sales@example.com','Rev User') ON CONFLICT DO NOTHING`,
+    ).run();
 
     // And the last upgrade's content is what is actually stored — the revision juggling
     // must not have been "fixed" by skipping the write.

@@ -1,0 +1,230 @@
+name: ALU Reason Master Production Import
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/alu-reason-master-production-import.yml"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type ALU_REASON_MASTER_IMPORT to re-run the production import
+        required: true
+        type: string
+      target_sha:
+        description: Exact merged main SHA to import; defaults to selected ref SHA
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-alu-reason-master-import
+  cancel-in-progress: false
+
+jobs:
+  import:
+    name: Import and verify canonical reason masters on ALU
+    if: github.event_name == 'push' || inputs.confirm == 'ALU_REASON_MASTER_IMPORT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      TARGET_SHA: ${{ github.event_name == 'push' && github.sha || inputs.target_sha || github.sha }}
+      FORGE_ORIGIN: https://alu.kairo.vn
+      FORGE_ADMIN_USER: ${{ secrets.FORGE_ADMIN_USER || secrets.ALU_META_ADMIN_USER || 'admin' }}
+      FORGE_ADMIN_PASSWORD: ${{ secrets.FORGE_ADMIN_PASSWORD || secrets.ALU_META_ADMIN_PASSWORD }}
+
+    steps:
+      - name: Checkout exact merged revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require target to be merged into main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git cat-file -e "$TARGET_SHA^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main || {
+            echo "Refusing reason-master import: $TARGET_SHA is not merged into main."
+            exit 1
+          }
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Require production credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FORGE_ADMIN_USER" || { echo "Missing FORGE_ADMIN_USER/ALU_META_ADMIN_USER"; exit 1; }
+          test -n "$FORGE_ADMIN_PASSWORD" || { echo "Missing FORGE_ADMIN_PASSWORD/ALU_META_ADMIN_PASSWORD"; exit 1; }
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build installer runtime
+        run: pnpm --filter cloudforge run build
+
+      - name: Preflight canonical Alumdoor source package
+        working-directory: server
+        run: node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+
+      - name: Import only canonical reason fixtures to production
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          import fs from 'node:fs';
+
+          const origin = String(process.env.FORGE_ORIGIN || '').replace(/\/$/, '');
+          const user = process.env.FORGE_ADMIN_USER;
+          const password = process.env.FORGE_ADMIN_PASSWORD;
+          const source = JSON.parse(fs.readFileSync('server/briefs/alumdoor-v2.fixtures.json', 'utf8'));
+          const managedDoctypes = new Map([
+            ['Lý do huỷ', ['reason_code', 'reason_name', 'applies_to_doctype', 'sort_order', 'disabled']],
+            ['Nguyên nhân chênh lệch', ['reason_code', 'reason_name', 'variance_kind', 'sort_order', 'disabled']],
+          ]);
+          const fixtures = (source.fixtures || []).filter((row) => managedDoctypes.has(row.type));
+          const cancelFixtures = fixtures.filter((row) => row.type === 'Lý do huỷ');
+          const varianceFixtures = fixtures.filter((row) => row.type === 'Nguyên nhân chênh lệch');
+          if (cancelFixtures.length !== 6 || varianceFixtures.length !== 7) {
+            throw new Error(`Refusing import: expected 6 cancellation + 7 variance fixtures, got ${cancelFixtures.length} + ${varianceFixtures.length}`);
+          }
+
+          const jar = new Map();
+          let csrfToken = '';
+          function storeCookies(response) {
+            for (const value of response.headers.getSetCookie?.() ?? []) {
+              const [pair] = value.split(';');
+              const i = pair.indexOf('=');
+              if (i > 0) jar.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
+            }
+          }
+          function cookieHeader() {
+            return [...jar].map(([key, value]) => `${key}=${value}`).join('; ');
+          }
+          async function request(path, { method = 'GET', body, allow404 = false } = {}) {
+            const response = await fetch(`${origin}${path}`, {
+              method,
+              headers: {
+                'cache-control': 'no-cache',
+                ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+                ...(jar.size ? { cookie: cookieHeader() } : {}),
+                ...(csrfToken ? { 'x-frappe-csrf-token': csrfToken } : {}),
+              },
+              ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+            });
+            storeCookies(response);
+            csrfToken = response.headers.get('x-frappe-csrf-token') || csrfToken;
+            const text = await response.text();
+            let parsed = null;
+            try { parsed = text ? JSON.parse(text) : null; } catch {}
+            if (allow404 && response.status === 404) return null;
+            if (!response.ok) {
+              const detail = parsed?.message ?? parsed?.exception ?? text.slice(0, 500);
+              throw new Error(`${method} ${path} -> HTTP ${response.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+            }
+            return parsed;
+          }
+          function resourcePath(doctype, name = '') {
+            const root = `/api/resource/${encodeURIComponent(doctype)}`;
+            return name ? `${root}/${encodeURIComponent(name)}` : root;
+          }
+          async function loadMeta(doctype) {
+            const payload = await request(`/api/method/frappe.desk.form.load.getdoctype?doctype=${encodeURIComponent(doctype)}&with_parent=1`);
+            const docs = payload?.docs ?? payload?.message?.docs ?? [];
+            const meta = docs.find((doc) => doc?.name === doctype);
+            if (!meta) throw new Error(`Refusing import: production DocType ${doctype} does not exist`);
+            const names = new Set((meta.fields ?? []).map((field) => field.fieldname));
+            for (const required of managedDoctypes.get(doctype)) {
+              if (!names.has(required)) throw new Error(`Refusing import: production ${doctype}.${required} is missing`);
+            }
+          }
+          function valueEqual(field, actual, expected) {
+            if (field === 'sort_order' || field === 'disabled') return Number(actual ?? 0) === Number(expected ?? 0);
+            return String(actual ?? '') === String(expected ?? '');
+          }
+          async function getRecord(fixture) {
+            const payload = await request(resourcePath(fixture.type, fixture.name), { allow404: true });
+            return payload?.data ?? payload?.message ?? payload;
+          }
+          async function upsertPass(label) {
+            let created = 0;
+            let updated = 0;
+            let noop = 0;
+            for (const fixture of fixtures) {
+              const fields = managedDoctypes.get(fixture.type);
+              const existing = await getRecord(fixture);
+              if (!existing) {
+                await request(resourcePath(fixture.type), {
+                  method: 'POST',
+                  body: { doctype: fixture.type, name: fixture.name, ...fixture.data },
+                });
+                created += 1;
+                continue;
+              }
+              const patch = {};
+              for (const field of fields) {
+                if (!valueEqual(field, existing[field], fixture.data[field])) patch[field] = fixture.data[field];
+              }
+              if (Object.keys(patch).length) {
+                await request(resourcePath(fixture.type, fixture.name), { method: 'PUT', body: patch });
+                updated += 1;
+              } else {
+                noop += 1;
+              }
+            }
+            console.log(`${label} created=${created} updated=${updated} noop=${noop}`);
+            return { created, updated, noop };
+          }
+          async function verify() {
+            for (const fixture of fixtures) {
+              const record = await getRecord(fixture);
+              if (!record) throw new Error(`Post-verify missing ${fixture.type}/${fixture.name}`);
+              for (const field of managedDoctypes.get(fixture.type)) {
+                if (!valueEqual(field, record[field], fixture.data[field])) {
+                  throw new Error(`Post-verify mismatch ${fixture.type}/${fixture.name}.${field}: actual=${JSON.stringify(record[field])} expected=${JSON.stringify(fixture.data[field])}`);
+                }
+              }
+            }
+            console.log(`CANCELLATION_REASON_LIVE_PASS expected=${cancelFixtures.length}`);
+            console.log(`VARIANCE_REASON_LIVE_PASS expected=${varianceFixtures.length}`);
+          }
+
+          if (!origin || !user || !password) throw new Error('Missing production origin or credentials');
+          await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
+          await loadMeta('Lý do huỷ');
+          await loadMeta('Nguyên nhân chênh lệch');
+
+          const first = await upsertPass('IMPORT_PASS_1');
+          await verify();
+          const second = await upsertPass('IMPORT_PASS_2');
+          if (second.created !== 0 || second.updated !== 0 || second.noop !== fixtures.length) {
+            throw new Error(`Idempotence failed: ${JSON.stringify(second)}`);
+          }
+          await verify();
+          console.log(`REASON_MASTER_IDEMPOTENCE_PASS records=${fixtures.length} first_mutations=${first.created + first.updated}`);
+          NODE
+
+      - name: Verify production health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 15 -H 'Cache-Control: no-cache' "$FORGE_ORIGIN/health" >/dev/null
+          echo "ALU_REASON_MASTER_IMPORT_PASS sha=$TARGET_SHA"

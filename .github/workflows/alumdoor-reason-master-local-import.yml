@@ -1,0 +1,228 @@
+name: Import Alumdoor Reason Masters Local
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/alumdoor-reason-master-local-import.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-local-reason-master-import
+  cancel-in-progress: false
+
+jobs:
+  import-local-reasons:
+    runs-on: [self-hosted]
+    timeout-minutes: 20
+    steps:
+      - name: Guard and fast-forward clean local main
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = 'C:\alumdoor'
+          if (-not (Test-Path (Join-Path $target '.git'))) {
+            throw 'C:\alumdoor is not a Git workspace.'
+          }
+
+          $branch = (git -C $target rev-parse --abbrev-ref HEAD).Trim()
+          if ($branch -ne 'main') {
+            throw "C:\alumdoor is on '$branch'; refusing local reason import."
+          }
+
+          $dirty = @(git -C $target status --porcelain)
+          if ($dirty.Count -gt 0) {
+            $dirty | ForEach-Object { Write-Host "DIRTY $_" }
+            throw 'C:\alumdoor has source changes; refusing to import over a dirty workspace.'
+          }
+
+          git -C $target fetch origin main --prune
+          if ($LASTEXITCODE -ne 0) { throw 'git fetch origin main failed' }
+          git -C $target merge --ff-only origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'C:\alumdoor cannot fast-forward cleanly to origin/main' }
+
+          $local = (git -C $target rev-parse HEAD).Trim()
+          $remote = (git -C $target rev-parse origin/main).Trim()
+          if ($local -ne $remote) {
+            throw "Local source mismatch after fast-forward: local=$local remote=$remote"
+          }
+          Write-Host "LOCAL_REASON_SOURCE $local"
+
+      - name: Require healthy local API
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local Alumdoor API is not healthy on 127.0.0.1:8799.' }
+
+      - name: Backup local Wrangler state
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node 'C:\alumdoor\server\scripts\backup-local-state.mjs'
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to back up local Wrangler state.' }
+
+      - name: Import and verify canonical reason fixtures through local API
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $scriptPath = Join-Path $env:RUNNER_TEMP 'import-alumdoor-reasons-local.mjs'
+          @'
+          import fs from 'node:fs';
+
+          const origin = 'http://127.0.0.1:8799';
+          const user = 'dev@example.com';
+          const password = 'local-dev-password-1';
+          // Keep source literals ASCII-only because Windows PowerShell 5 can corrupt
+          // non-ASCII here-string content before Node evaluates it on the self-hosted runner.
+          const CANCELLATION_DOCTYPE = 'L\u00fd do hu\u1ef7';
+          const VARIANCE_DOCTYPE = 'Nguy\u00ean nh\u00e2n ch\u00eanh l\u1ec7ch';
+          const source = JSON.parse(fs.readFileSync('C:/alumdoor/server/briefs/alumdoor-v2.fixtures.json', 'utf8'));
+          const managedDoctypes = new Map([
+            [CANCELLATION_DOCTYPE, ['reason_code', 'reason_name', 'applies_to_doctype', 'sort_order', 'disabled']],
+            [VARIANCE_DOCTYPE, ['reason_code', 'reason_name', 'variance_kind', 'sort_order', 'disabled']],
+          ]);
+          const fixtures = (source.fixtures || []).filter((row) => managedDoctypes.has(row.type));
+          const cancelFixtures = fixtures.filter((row) => row.type === CANCELLATION_DOCTYPE);
+          const varianceFixtures = fixtures.filter((row) => row.type === VARIANCE_DOCTYPE);
+          if (cancelFixtures.length !== 6 || varianceFixtures.length !== 7) {
+            const seenTypes = [...new Set((source.fixtures || []).map((row) => JSON.stringify(row.type)))];
+            throw new Error(`Refusing local import: expected 6 cancellation + 7 variance fixtures, got ${cancelFixtures.length} + ${varianceFixtures.length}; fixture_types=${seenTypes.join(',')}`);
+          }
+
+          const jar = new Map();
+          let csrfToken = '';
+          function storeCookies(response) {
+            for (const value of response.headers.getSetCookie?.() ?? []) {
+              const [pair] = value.split(';');
+              const i = pair.indexOf('=');
+              if (i > 0) jar.set(pair.slice(0, i).trim(), pair.slice(i + 1).trim());
+            }
+          }
+          function cookieHeader() {
+            return [...jar].map(([key, value]) => `${key}=${value}`).join('; ');
+          }
+          async function request(path, { method = 'GET', body, allow404 = false } = {}) {
+            const response = await fetch(`${origin}${path}`, {
+              method,
+              headers: {
+                'cache-control': 'no-cache',
+                ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+                ...(jar.size ? { cookie: cookieHeader() } : {}),
+                ...(csrfToken ? { 'x-frappe-csrf-token': csrfToken } : {}),
+              },
+              ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+            });
+            storeCookies(response);
+            csrfToken = response.headers.get('x-frappe-csrf-token') || csrfToken;
+            const text = await response.text();
+            let parsed = null;
+            try { parsed = text ? JSON.parse(text) : null; } catch {}
+            if (allow404 && response.status === 404) return null;
+            if (!response.ok) {
+              const detail = parsed?.message ?? parsed?.exception ?? text.slice(0, 500);
+              throw new Error(`${method} ${path} -> HTTP ${response.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+            }
+            return parsed;
+          }
+          function resourcePath(doctype, name = '') {
+            const root = `/api/resource/${encodeURIComponent(doctype)}`;
+            return name ? `${root}/${encodeURIComponent(name)}` : root;
+          }
+          async function loadMeta(doctype) {
+            const payload = await request(`/api/method/frappe.desk.form.load.getdoctype?doctype=${encodeURIComponent(doctype)}&with_parent=1`);
+            const docs = payload?.docs ?? payload?.message?.docs ?? [];
+            const meta = docs.find((doc) => doc?.name === doctype);
+            if (!meta) throw new Error(`Refusing local import: DocType ${doctype} does not exist`);
+            const names = new Set((meta.fields ?? []).map((field) => field.fieldname));
+            for (const required of managedDoctypes.get(doctype)) {
+              if (!names.has(required)) throw new Error(`Refusing local import: ${doctype}.${required} is missing`);
+            }
+          }
+          function valueEqual(field, actual, expected) {
+            if (field === 'sort_order' || field === 'disabled') return Number(actual ?? 0) === Number(expected ?? 0);
+            return String(actual ?? '') === String(expected ?? '');
+          }
+          async function getRecord(fixture) {
+            const payload = await request(resourcePath(fixture.type, fixture.name), { allow404: true });
+            return payload?.data ?? payload?.message ?? payload;
+          }
+          async function upsertPass(label) {
+            let created = 0;
+            let updated = 0;
+            let noop = 0;
+            for (const fixture of fixtures) {
+              const fields = managedDoctypes.get(fixture.type);
+              const existing = await getRecord(fixture);
+              if (!existing) {
+                await request(resourcePath(fixture.type), {
+                  method: 'POST',
+                  body: { doctype: fixture.type, name: fixture.name, ...fixture.data },
+                });
+                created += 1;
+                continue;
+              }
+              const patch = {};
+              for (const field of fields) {
+                if (!valueEqual(field, existing[field], fixture.data[field])) patch[field] = fixture.data[field];
+              }
+              if (Object.keys(patch).length) {
+                await request(resourcePath(fixture.type, fixture.name), { method: 'PUT', body: patch });
+                updated += 1;
+              } else {
+                noop += 1;
+              }
+            }
+            console.log(`${label} created=${created} updated=${updated} noop=${noop}`);
+            return { created, updated, noop };
+          }
+          async function verify() {
+            for (const fixture of fixtures) {
+              const record = await getRecord(fixture);
+              if (!record) throw new Error(`Local post-verify missing ${fixture.type}/${fixture.name}`);
+              for (const field of managedDoctypes.get(fixture.type)) {
+                if (!valueEqual(field, record[field], fixture.data[field])) {
+                  throw new Error(`Local post-verify mismatch ${fixture.type}/${fixture.name}.${field}: actual=${JSON.stringify(record[field])} expected=${JSON.stringify(fixture.data[field])}`);
+                }
+              }
+            }
+            console.log(`LOCAL_CANCELLATION_REASON_PASS expected=${cancelFixtures.length}`);
+            console.log(`LOCAL_VARIANCE_REASON_PASS expected=${varianceFixtures.length}`);
+          }
+
+          await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
+          await loadMeta(CANCELLATION_DOCTYPE);
+          await loadMeta(VARIANCE_DOCTYPE);
+
+          const first = await upsertPass('LOCAL_IMPORT_PASS_1');
+          await verify();
+          const second = await upsertPass('LOCAL_IMPORT_PASS_2');
+          if (second.created !== 0 || second.updated !== 0 || second.noop !== fixtures.length) {
+            throw new Error(`Local idempotence failed: ${JSON.stringify(second)}`);
+          }
+          await verify();
+          console.log(`LOCAL_REASON_MASTER_IDEMPOTENCE_PASS records=${fixtures.length} first_mutations=${first.created + first.updated}`);
+          '@ | Set-Content -Path $scriptPath -Encoding utf8
+
+          & node $scriptPath
+          if ($LASTEXITCODE -ne 0) { throw 'Local reason master import failed.' }
+
+      - name: Audit local D1 persistence
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location 'C:\alumdoor\server'
+          # Query by UTF-8 hex so this PowerShell command remains ASCII-only as well.
+          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT hex(doctype) AS doctype_hex, COUNT(*) AS records FROM documents WHERE tenant_id='demo' AND hex(doctype) IN ('4CC3BD20646F206875E1BBB7','4E677579C3AA6E206E68C3A26E206368C3AA6E68206CE1BB876368') GROUP BY hex(doctype) ORDER BY hex(doctype);"
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to audit local reason records in D1.' }
+
+      - name: Verify local services after import
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & node -e "fetch('http://127.0.0.1:8799/api/method/metaforge.api.get_boot',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit([200,401,403].includes(r.status)?0:1)).catch(()=>process.exit(1))"
+          if ($LASTEXITCODE -ne 0) { throw 'Local backend is unhealthy after reason import.' }
+          Write-Host 'ALUMDOOR_LOCAL_REASON_MASTER_IMPORT_PASS'

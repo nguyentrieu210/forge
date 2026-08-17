@@ -209,7 +209,7 @@ test("trusted identity rejects a signed null authentication context instead of t
 });
 
 async function signJwt(payload) {
-  return signJwtValue(payload);
+  return signJwtValue({ session_epoch: 1, ...payload });
 }
 
 async function signJwtValue(payload) {
