@@ -1,0 +1,121 @@
+name: Alumdoor Postmerge Local Acceptance Observer
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    env:
+      EXPECTED_SHA: 683144d74329212492df5a4d78f12a1e7452b3d5
+    steps:
+      - name: Observe bootstrap and pricing acceptance without mutation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $repo = 'C:\alumdoor'
+          $lock = Join-Path $repo 'local-locks\local-d1-mutation.lock'
+          $bootstrapRoot = Join-Path $repo 'local-backups\execution-layer\bootstrap'
+          $pricingRoot = Join-Path $repo 'local-backups\execution-layer\pricing'
+          $mergeUtc = [DateTime]::Parse('2026-08-17T22:34:45Z').ToUniversalTime()
+          $deadline = (Get-Date).ToUniversalTime().AddMinutes(15)
+
+          function Get-LocalSha {
+            if (-not (Test-Path (Join-Path $repo '.git'))) { return '' }
+            return (git -C $repo rev-parse HEAD 2>$null).Trim()
+          }
+
+          function Get-Listener([int]$Port) {
+            return @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+              Where-Object { $_.LocalPort -eq $Port })
+          }
+
+          function Find-BootstrapEvidence {
+            if (-not (Test-Path $bootstrapRoot)) { return $null }
+            foreach ($dir in @(Get-ChildItem $bootstrapRoot -Directory -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending)) {
+              $runFile = Join-Path $dir.FullName 'run.json'
+              if (-not (Test-Path $runFile)) { continue }
+              try { $run = Get-Content -Raw $runFile | ConvertFrom-Json } catch { continue }
+              if ($run.expected_sha -eq $env:EXPECTED_SHA) {
+                return [pscustomobject]@{ Dir=$dir.FullName; Run=$run; LastWriteTimeUtc=$dir.LastWriteTimeUtc }
+              }
+            }
+            return $null
+          }
+
+          function Find-PricingEvidence {
+            if (-not (Test-Path $pricingRoot)) { return $null }
+            foreach ($dir in @(Get-ChildItem $pricingRoot -Directory -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending)) {
+              if ($dir.LastWriteTimeUtc -lt $mergeUtc) { continue }
+              $p1 = Join-Path $dir.FullName 'persisted-pass1.txt'
+              $p2 = Join-Path $dir.FullName 'persisted-pass2.txt'
+              $pre2 = Join-Path $dir.FullName 'preimage-pass2.json'
+              if ((Test-Path $p1) -and (Test-Path $p2) -and (Test-Path $pre2)) {
+                return [pscustomobject]@{ Dir=$dir.FullName; Pass1=$p1; Pass2=$p2; Pre2=$pre2; LastWriteTimeUtc=$dir.LastWriteTimeUtc }
+              }
+            }
+            return $null
+          }
+
+          $last = ''
+          do {
+            $sha = Get-LocalSha
+            $locked = Test-Path $lock
+            $p8799 = @(Get-Listener 8799).Count
+            $p5173 = @(Get-Listener 5173).Count
+            $boot = Find-BootstrapEvidence
+            $pricing = Find-PricingEvidence
+            $state = "sha=$sha lock=$locked port8799=$p8799 port5173=$p5173 bootstrap=$([bool]$boot) pricing=$([bool]$pricing)"
+            if ($state -ne $last) { Write-Host "OBSERVER_STATE $state"; $last = $state }
+
+            if ($sha -eq $env:EXPECTED_SHA -and -not $locked -and $p8799 -gt 0 -and $p5173 -gt 0 -and $boot -and $pricing) {
+              $same = ((Get-Content -Raw $pricing.Pass1) -ceq (Get-Content -Raw $pricing.Pass2))
+              if (-not $same) { throw "PRICING_PERSISTED_STATE_DRIFT evidence=$($pricing.Dir)" }
+
+              Write-Host "BOOTSTRAP_EVIDENCE=PASS dir=$($boot.Dir) expected_sha=$($boot.Run.expected_sha) github_run_id=$($boot.Run.github_run_id)"
+              Write-Host "PRICING_IDEMPOTENCY_EVIDENCE=PASS dir=$($pricing.Dir) persisted_passes_equal=true"
+
+              $wrangler = Join-Path $repo 'server\node_modules\.bin\wrangler.cmd'
+              if (-not (Test-Path $wrangler)) { throw "Pinned Wrangler missing: $wrangler" }
+              Push-Location (Join-Path $repo 'server')
+              try {
+                $audit = & $wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "SELECT doctype, COUNT(*) AS records FROM documents WHERE tenant_id='demo' AND doctype IN ('Price List','Item Price','Pricing Rule') GROUP BY doctype ORDER BY doctype;" 2>&1 | Out-String
+                $wranglerExit = $LASTEXITCODE
+              } finally { Pop-Location }
+              Write-Host '=== PRICING D1 AUDIT ==='
+              Write-Host $audit
+              if ($wranglerExit -ne 0) { throw "Read-only Pricing D1 audit failed exit=$wranglerExit" }
+              if ($audit -notmatch 'Item Price[^\r\n]*558') { throw 'Expected Item Price count 558 not proven' }
+              if ($audit -notmatch 'Pricing Rule[^\r\n]*83') { throw 'Expected Pricing Rule count 83 not proven' }
+
+              try {
+                $api = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8799/api/method/metaforge.api.get_boot' -TimeoutSec 5 -ErrorAction Stop
+                $apiCode = [int]$api.StatusCode
+              } catch {
+                if ($_.Exception.Response) { $apiCode = [int]$_.Exception.Response.StatusCode } else { throw }
+              }
+              if ($apiCode -notin @(200,401,403)) { throw "Backend API unhealthy HTTP $apiCode" }
+
+              Write-Host "ALUMDOOR_POSTMERGE_LOCAL_ACCEPTANCE_PASS sha=$sha item_price=558 pricing_rule=83 api_http=$apiCode"
+              exit 0
+            }
+
+            Start-Sleep -Seconds 5
+          } while ((Get-Date).ToUniversalTime() -lt $deadline)
+
+          Write-Host '=== FINAL DIAGNOSTICS ==='
+          Write-Host "LOCAL_SHA=$(Get-LocalSha)"
+          if (Test-Path $lock) { Write-Host "LOCK=$(Get-Content -Raw $lock)" }
+          Get-Service ForgeAlumdoorBackend,ForgeAlumdoorDesk,ForgeAlumdoorWorker -ErrorAction SilentlyContinue |
+            Format-Table Status,Name,StartType -AutoSize
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalPort -in @(8799,5173) } |
+            Format-Table LocalAddress,LocalPort,OwningProcess -AutoSize
+          $b = Find-BootstrapEvidence; if ($b) { Write-Host "LATEST_BOOTSTRAP=$($b.Dir)"; Get-Content -Raw (Join-Path $b.Dir 'run.json') }
+          $p = Find-PricingEvidence; if ($p) { Write-Host "LATEST_PRICING=$($p.Dir)" }
+          throw 'Postmerge local acceptance not proven before observer deadline'
