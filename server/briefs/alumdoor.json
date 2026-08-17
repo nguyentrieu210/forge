@@ -934,6 +934,28 @@
     },
     {
       "type": "Cutting Policy",
+      "name": "Cửa tấm liền Úc — công thức chuẩn",
+      "data": {
+        "policy_name": "Cửa tấm liền Úc — công thức chuẩn",
+        "door_type": "Cửa tấm liền Úc",
+        "dealer_width_basis": "Phủ bì ray",
+        "retail_width_basis": "Phủ bì ray",
+        "dealer_cut_deduction_m": 0.03,
+        "retail_cut_deduction_m": 0.03,
+        "dealer_split_sales_basis": "Phủ bì ray",
+        "dealer_full_sales_basis": "Phủ bì ray",
+        "retail_sales_basis": "Phủ bì ray",
+        "purchase_formula": "Kg thực tế",
+        "note": "Bán theo Cao PB × PB ray. Chia lá tấm liền: (Cao PB − 0,13) ÷ 0,068. Hai số trừ 0,03 là dữ liệu tương thích legacy từ migration 0128; hình học cắt hiện do Geometry Rules theo loại ray quyết định.",
+        "leaf_height_deduction_m": 0.13,
+        "leaf_rounding": "Làm tròn xuống",
+        "leaf_formula": "Kiểu tấm liền Úc",
+        "leaf_divisor_source": "Hằng số của chính sách",
+        "leaf_divisor_const": 0.068
+      }
+    },
+    {
+      "type": "Cutting Policy",
       "name": "Cửa Lưới — công thức chuẩn",
       "data": {
         "policy_name": "Cửa Lưới — công thức chuẩn",
