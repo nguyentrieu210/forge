@@ -6,19 +6,18 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import { List, Rows3 } from "lucide-react";
-import { Button, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
+import { Button, ConfirmDialog, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
 import { buildPrintPath, resolveBulkRenderPolicy, resolveCreateSurface, type UrlStateBridge } from "./doctype-workspace-support.js";
 import type { DoctypeWorkspaceExtension } from "./workspace-extension.js";
 import { SplitView } from "../detail/SplitView.js";
-import { ListContainer } from "../container/ListContainer.js";
+import { ListRuntimeContainer } from "../list/ListRuntimeContainer.js";
 import { BulkGridContainer } from "../bulk/BulkGridContainer.js";
 import { FormContainer } from "../container/FormContainer.js";
 import { NewFormContainer } from "../container/NewFormContainer.js";
 import { ContextContainer } from "../container/ContextContainer.js";
 import { TreeContainer } from "../tree/TreeContainer.js";
 import {
-  V3_CONFIRM_DIALOG_CLASS,
   V3_DATA_SURFACE_CLASS,
   V3_FULL_CREATE_DIALOG_CLASS,
   V3_QUICK_ENTRY_DIALOG_CLASS,
@@ -27,7 +26,6 @@ import {
 
 export interface DoctypeWorkspaceProps {
   doctype: string;
-  /** Optional localized screen title when a route represents a richer business center. */
   title?: string;
   name?: string;
   onNavigate: (path: string) => void;
@@ -35,10 +33,7 @@ export interface DoctypeWorkspaceProps {
   contextAiSlot?: ReactNode;
   base?: string;
   printBase?: string;
-  /**
-   * Optional product/workbench extension. Canonical List/Form remains the default and extensions
-   * should only replace surfaces whose interaction model cannot be represented by generic CRUD.
-   */
+  /** Optional business extension; canonical List/Form remains the default. */
   extension?: DoctypeWorkspaceExtension;
 }
 
@@ -69,13 +64,6 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   });
   const extensionHasDetail = Boolean(extension?.hasDetail || extension?.detail);
 
-  /**
-   * Quick Create không còn được suy bằng heuristic "không có bảng con".
-   * Metadata chỉ được mở compact surface khi chính Quick Entry đã bật VÀ không làm mất bất kỳ
-   * field nghiệp vụ editable nào; còn lại fail-safe về full create. Nhờ vậy master cấu hình như
-   * Measurement Profile không thể bị tạo bằng một modal chỉ có vài field required rồi mất phần
-   * cấu hình còn lại.
-   */
   const metadataCreateSurface = useMemo(() => resolveCreateSurface(titleMeta.data), [titleMeta.data]);
   const createSurface = extension?.createSurface ?? metadataCreateSurface;
   const useFullCreate = createSurface === "full";
@@ -125,7 +113,15 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
               list={isTree ? (
                 <TreeContainer doctype={doctype} title={displayTitle} selected={decoded} editable renameField={titleMeta.data?.title_field} onSelect={(nodeName) => onNavigate(`${listPath}/${encodeURIComponent(nodeName)}`)} />
               ) : (
-                <ListContainer doctype={doctype} bridge={bridge} activeRow={decoded} onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)} onCreate={() => onNavigate(`${listPath}/new`)} onSingle={() => { if (!decoded) onNavigate(`${listPath}/${encodeURIComponent(doctype)}`); }} />
+                <ListRuntimeContainer
+                  doctype={doctype}
+                  bridge={bridge}
+                  activeRow={decoded}
+                  actions={extension?.listActions}
+                  onRowClick={(row) => onNavigate(`${listPath}/${encodeURIComponent(String(row.name))}`)}
+                  onCreate={() => onNavigate(`${listPath}/new`)}
+                  onSingle={() => { if (!decoded) onNavigate(`${listPath}/${encodeURIComponent(doctype)}`); }}
+                />
               )}
               detail={detail}
               context={decoded ? (
@@ -139,12 +135,16 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         </div>
       </div>
 
-      <Dialog open={confirmBulkExit} onOpenChange={setConfirmBulkExit}>
-        <DialogContent className={V3_CONFIRM_DIALOG_CLASS}>
-          <DialogHeader className="border-b border-border/70 bg-muted/30 px-5 py-4"><DialogTitle className="text-[15px] font-semibold tracking-tight">Bỏ thay đổi chưa lưu?</DialogTitle></DialogHeader>
-          <div className="space-y-4 px-5 py-4"><p className="text-sm leading-6 text-muted-foreground">Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này.</p><div className="flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => setConfirmBulkExit(false)}>Tiếp tục chỉnh</Button><Button variant="destructive" onClick={() => { setConfirmBulkExit(false); setBulkDirty(false); bridge.set({ view: null }); }}>Bỏ thay đổi</Button></div></div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmBulkExit}
+        onOpenChange={setConfirmBulkExit}
+        title="Bỏ thay đổi chưa lưu?"
+        description="Bulk View đang có thay đổi chưa lưu. Chuyển về danh sách sẽ bỏ các chỉnh sửa này."
+        cancelLabel="Tiếp tục chỉnh"
+        confirmLabel="Bỏ thay đổi"
+        destructive
+        onConfirm={() => { setBulkDirty(false); bridge.set({ view: null }); }}
+      />
 
       <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
         <DialogContent
