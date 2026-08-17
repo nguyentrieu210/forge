@@ -37,6 +37,7 @@ const byFingerprint = new Map(existingRows.filter((r)=>r.bom_fingerprint).map((r
 
 function writableChild(row){
   return {
+    doctype:"BOM Item",
     item_code:String(row?.item_code??"").trim(),
     qty:Number(row?.qty),
     uom:String(row?.uom??"").trim(),
@@ -48,6 +49,7 @@ function writableChild(row){
 }
 function writableBom(bom){
   const body={
+    doctype:"Bill of Materials",
     item:String(bom?.item??"").trim(),
     company:String(bom?.company??"").trim(),
     quantity:Number(bom?.quantity),
