@@ -192,6 +192,18 @@ const UOM_OVERRIDES = new Map([
   [1150, { item: "NVL-BOMV", source_uom: "bọ", runtime_uom: "Kg", formula: "64CON/MRONG(1KGX49CONX16,000/KG)", source_qty: 64 }],
   [1208, { item: "TP-V4_INOX", source_uom: "M2", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
   [1217, { item: "TP-V4_INOX", source_uom: "", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
+  [1294, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1306, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1312, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1318, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1324, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1336, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1342, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1348, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1650, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1658, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1666, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
+  [1674, { item: "NVL-V4_KEM_STD", source_uom: "KG", runtime_uom: "Mét", formula: "(RPBRAY-30)X2XTL", source_qty: 1.312 }],
 ]);
 
 function sourceNumber(value) {
