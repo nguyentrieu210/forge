@@ -5,6 +5,9 @@ on:
     paths:
       - 'server/scripts/extract-alumdoor-real-source-records.mjs'
       - 'server/scripts/build-alumdoor-canonical-bom-payload.mjs'
+      - 'server/scripts/build-alumdoor-canonical-bom-payload-inferred.mjs'
+      - 'server/scripts/check-alumdoor-canonical-bom-inference-regressions.mjs'
+      - 'server/scripts/lib/alumdoor-bom-engineering-inference.mjs'
       - 'server/scripts/lib/alumdoor-real-bom-gate-semantics.mjs'
       - 'server/scripts/lib/alumdoor-bom-template-source-catalog.mjs'
       - 'server/scripts/lib/alumdoor-exact-source-bom-quantity.mjs'
@@ -34,14 +37,14 @@ jobs:
           D="$RUNNER_TEMP/alumdoor-bom-gate"
           node server/scripts/extract-alumdoor-real-source-records.mjs "$D/source.json" "$D/source-report.json"
           node server/scripts/build-alumdoor-item-master-payload.mjs "$D/source.json" "$D/items.json" "$D/items-audit.json"
-      - name: Build BOM twice and require deterministic bytes
+      - name: Build inferred BOM twice and require deterministic bytes
         shell: bash
         run: |
           set +e
           D="$RUNNER_TEMP/alumdoor-bom-gate"
-          node server/scripts/build-alumdoor-canonical-bom-payload.mjs "$D/source.json" "$D/items.json" "$D/bom-1.json" "$D/audit-1.json"
+          node server/scripts/build-alumdoor-canonical-bom-payload-inferred.mjs "$D/source.json" "$D/items.json" "$D/bom-1.json" "$D/audit-1.json"
           E1=$?
-          node server/scripts/build-alumdoor-canonical-bom-payload.mjs "$D/source.json" "$D/items.json" "$D/bom-2.json" "$D/audit-2.json"
+          node server/scripts/build-alumdoor-canonical-bom-payload-inferred.mjs "$D/source.json" "$D/items.json" "$D/bom-2.json" "$D/audit-2.json"
           E2=$?
           set -e
           cmp "$D/bom-1.json" "$D/bom-2.json"
@@ -53,6 +56,10 @@ jobs:
           console.log('BOM_BLOCKERS='+audit.blocker_count);
           console.log('BOM_BLOCKER_COUNTS='+JSON.stringify(audit.blocker_counts));
           console.log('BOM_BLOCKER_CLASS_COUNTS='+JSON.stringify(audit.blocker_class_counts));
+          console.log('BOM_ENGINEERING_INFERENCE_COUNT='+audit.engineering_inference_count);
+          console.log('BOM_PROVISIONAL_ASSUMPTION_COUNT='+audit.provisional_assumption_count);
+          console.log('BOM_CONFIDENCE_COUNTS='+JSON.stringify(audit.confidence_counts));
+          console.log('BOM_RESOLUTION_SOURCE_COUNTS='+JSON.stringify(audit.resolution_source_counts));
           for(const b of audit.blockers) console.log('BOM_BLOCKER_INVENTORY '+JSON.stringify(b));
           if(Number(process.argv[3])!==Number(process.argv[4])) throw new Error('non-deterministic exit status');
           if(audit.blocker_count!==0) process.exit(1);
