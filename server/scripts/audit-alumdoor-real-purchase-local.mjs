@@ -74,6 +74,19 @@ async function getDoc(doctype, name) {
   if (!result.response.ok) throw new Error(`GET ${doctype} ${name} failed (${result.response.status}): ${result.text}`);
   return result.body?.data ?? result.body?.message ?? result.body;
 }
+function schemaSnapshot(doc) {
+  return {
+    name: clean(doc?.name),
+    fields: (Array.isArray(doc?.fields) ? doc.fields : []).map((field) => ({
+      fieldname: clean(field?.fieldname),
+      label: clean(field?.label),
+      fieldtype: clean(field?.fieldtype),
+      options: clean(field?.options),
+      reqd: Boolean(Number(field?.reqd) || field?.reqd === true),
+      default: field?.default ?? null,
+    })).filter((field) => field.fieldname),
+  };
+}
 
 await login();
 const companies = [];
@@ -84,13 +97,13 @@ for (const name of await listNames("Company", 50)) {
 const warehouses = [];
 for (const name of await listNames("Warehouse", 200)) {
   const doc = await getDoc("Warehouse", name);
-  if (doc) warehouses.push({ name: clean(doc.name), company: clean(doc.company), is_group: doc.is_group, disabled: doc.disabled });
+  if (doc) warehouses.push({ name: clean(doc.name), warehouse_name: clean(doc.warehouse_name), parent_warehouse: clean(doc.parent_warehouse), company: clean(doc.company), is_group: doc.is_group, disabled: doc.disabled });
 }
 
 const allSuppliers = [];
 for (const name of await listNames("Supplier", 500)) {
   const doc = await getDoc("Supplier", name);
-  if (doc) allSuppliers.push({ name: clean(doc.name), supplier_name: clean(doc.supplier_name), disabled: doc.disabled });
+  if (doc) allSuppliers.push({ name: clean(doc.name), supplier_name: clean(doc.supplier_name), supplier_group: clean(doc.supplier_group), supplier_type: clean(doc.supplier_type), disabled: doc.disabled });
 }
 const suppliers = Object.keys(APPROVED_PURCHASE_SUPPLIERS).map((sourceSupplier) => ({
   source_supplier: sourceSupplier,
@@ -115,13 +128,38 @@ for (const itemCode of sourceCodes) {
   } : null });
 }
 
-const report = { format: "alumdoor-real-purchase-local-audit/v2", origin, purchase_rows: rows.length, companies, warehouses, suppliers, items };
+const schema = {};
+for (const doctype of ["Supplier", "Warehouse", "Purchase Receipt", "Purchase Receipt Item"]) {
+  const doc = await getDoc("DocType", doctype);
+  schema[doctype] = doc ? schemaSnapshot(doc) : null;
+}
+
+const purchaseReceipts = [];
+for (const name of await listNames("Purchase Receipt", 100)) {
+  const doc = await getDoc("Purchase Receipt", name);
+  if (!doc) continue;
+  purchaseReceipts.push({
+    name: clean(doc.name),
+    supplier: clean(doc.supplier),
+    company: clean(doc.company),
+    currency: clean(doc.currency),
+    posting_at: clean(doc.posting_at || doc.posting_date),
+    supplier_invoice_no: clean(doc.supplier_invoice_no),
+    docstatus: Number(doc.docstatus ?? 0),
+    item_warehouses: [...new Set((Array.isArray(doc.items) ? doc.items : []).map((item) => clean(item?.warehouse)).filter(Boolean))],
+    item_count: Array.isArray(doc.items) ? doc.items.length : 0,
+  });
+}
+
+const report = { format: "alumdoor-real-purchase-local-audit/v3", origin, purchase_rows: rows.length, companies, warehouses, suppliers, items, schema, purchase_receipts: purchaseReceipts };
 await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(`ALUMDOOR_REAL_PURCHASE_LOCAL_AUDIT ${JSON.stringify({
   companies,
   warehouses,
   suppliers: suppliers.map((row) => ({ source_supplier: row.source_supplier, match_count: row.matches.length, matches: row.matches })),
   items: items.map((row) => ({ item_code: row.item_code, exists: row.exists, stock_uom: row.doc?.stock_uom, purchase_uom: row.doc?.default_purchase_uom || row.doc?.purchase_uom, inventory_mode: row.doc?.inventory_mode, is_purchase_item: row.doc?.is_purchase_item, disabled: row.doc?.disabled, conversions: row.doc?.uom_conversions })),
+  required_fields: Object.fromEntries(Object.entries(schema).map(([doctype, meta]) => [doctype, meta?.fields.filter((field) => field.reqd)])),
+  purchase_receipts: purchaseReceipts,
   output: outputPath,
 })}`);
 console.log("ALUMDOOR_REAL_PURCHASE_LOCAL_AUDIT_PASS");
