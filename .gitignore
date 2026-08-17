@@ -11,6 +11,7 @@ client/apps/demo/.*-selfcheck.cjs
 coverage/
 *.tsbuildinfo
 local-backups/
+local-locks/
 .cache-vietnam-divisions/
 __pycache__/
 *.py[cod]

@@ -19,12 +19,13 @@ jobs:
     env:
       FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
     steps:
-      - name: Ensure C:\alumdoor source workspace
+      - name: Validate canonical workspace
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $target = 'C:\alumdoor'
           $repo = 'https://github.com/nguyentrieu210/forge.git'
+
           if (-not (Test-Path $target)) {
             git clone --branch main --single-branch $repo $target
             if ($LASTEXITCODE -ne 0) { throw 'Initial clone to C:\alumdoor failed' }
@@ -50,6 +51,8 @@ jobs:
             }
           }
 
+          # Only these service-generated source artifacts may be repaired before
+          # source convergence. Any operator change blocks bootstrap.
           $runtimeTracked = @(
             'run-local.bat',
             'server/scripts/alumdoor-runtime-service-host.mjs',
@@ -89,158 +92,154 @@ jobs:
               throw 'Runtime cleanup did not return C:\alumdoor to a clean state'
             }
           }
-          Write-Host 'Canonical workspace ready for guarded bootstrap:'
+
+          Write-Host 'Canonical workspace validated:'
           git -C $target log -1 --oneline
 
-      - name: Bridge legacy source into canonical runner when missing
+      - name: Converge source and retire verified legacy runtime
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $target = 'C:\alumdoor'
-          $runner = Join-Path $target 'scripts\local-runner\run-local-import.mjs'
-          if (Test-Path -LiteralPath $runner -PathType Leaf) {
-            Write-Host 'LEGACY_SOURCE_TRANSITION=SKIP reason=canonical_runner_present'
-            exit 0
-          }
-
-          $maintenance = Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs'
-          $backup = Join-Path $target 'server\scripts\backup-local-state.mjs'
-          foreach ($required in @($maintenance, $backup)) {
-            if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Transition dependency missing: $required" }
-          }
-
-          git -C $target fetch origin main --prune
-          if ($LASTEXITCODE -ne 0) { throw 'Legacy source transition fetch failed' }
-          $local = (git -C $target rev-parse HEAD).Trim()
-          $remote = (git -C $target rev-parse origin/main).Trim()
-          if ($remote -ne $env:FORGE_LOCAL_EXPECTED_SHA) {
-            throw "Transition target mismatch expected=$env:FORGE_LOCAL_EXPECTED_SHA origin_main=$remote"
-          }
-          $counts = ((git -C $target rev-list --left-right --count HEAD...origin/main).Trim() -split '\s+')
-          if ($LASTEXITCODE -ne 0 -or $counts.Count -ne 2) { throw 'Cannot classify local main ahead/behind state' }
-          if ([int]$counts[0] -ne 0) { throw "Local main is ahead by $($counts[0]); refusing transition" }
-          if ([int]$counts[1] -le 0) { throw "Runner missing but local main is not behind: local=$local remote=$remote" }
-
-          function Get-Listeners {
-            return @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799, 5173) })
-          }
-          function Wait-PortsQuiet([int]$TimeoutSeconds) {
-            $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-            $quietSince = $null
-            do {
-              $listeners = @(Get-Listeners)
-              if ($listeners.Count -eq 0) {
-                if ($null -eq $quietSince) { $quietSince = Get-Date }
-                if (((Get-Date) - $quietSince).TotalSeconds -ge 3) { return $true }
-              } else { $quietSince = $null }
-              Start-Sleep -Milliseconds 500
-            } while ((Get-Date) -lt $deadline)
-            return $false
-          }
-          function Write-ListenerEvidence {
-            $all = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
-            $byId = @{}
-            foreach ($p in $all) { $byId[[int]$p.ProcessId] = $p }
-            foreach ($listener in @(Get-Listeners)) {
-              $p = $byId[[int]$listener.OwningProcess]
-              $owner = ''
-              if ($p) {
-                try { $ownerResult = Invoke-CimMethod -InputObject $p -MethodName GetOwner -ErrorAction Stop; $owner = "$($ownerResult.Domain)\$($ownerResult.User)" } catch {}
-              }
-              $chain = @()
-              $cursor = $p
-              $seen = @{}
-              while ($cursor -and -not $seen.ContainsKey([int]$cursor.ProcessId)) {
-                $seen[[int]$cursor.ProcessId] = $true
-                $chain += "pid=$($cursor.ProcessId):$($cursor.Name):$($cursor.CommandLine)"
-                $cursor = $byId[[int]$cursor.ParentProcessId]
-              }
-              Write-Host "BLOCKING_LISTENER port=$($listener.LocalPort) pid=$($listener.OwningProcess) name=$($p.Name) parent=$($p.ParentProcessId) owner=$owner exe=$($p.ExecutablePath) ancestry=$($chain -join ' <- ')"
-            }
-          }
-
+          $serviceHome = 'C:\ForgeServices\Alumdoor'
           $lockDir = Join-Path $target 'local-locks'
           $lockPath = Join-Path $lockDir 'local-d1-mutation.lock'
+          $requestPath = Join-Path $serviceHome 'legacy-runtime-migration.request.json'
+          $donePath = Join-Path $serviceHome 'legacy-runtime-migration.done.json'
           $transitionRun = "bootstrap-transition-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
           $lockOwned = $false
-          $maintenanceEnabled = $false
-          $handoffMaintenance = $false
-          $stoppedServices = @()
+
           New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $serviceHome | Out-Null
+
+          function Process-Ancestry([int]$StartPid) {
+            $all = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+            $byId = @{}
+            foreach ($proc in $all) { $byId[[int]$proc.ProcessId] = $proc }
+            $result = @()
+            $seen = @{}
+            $current = $StartPid
+            while ($current -gt 0 -and -not $seen.ContainsKey($current)) {
+              $seen[$current] = $true
+              $proc = $byId[$current]
+              if (-not $proc) { break }
+              $result += $proc
+              $current = [int]$proc.ParentProcessId
+            }
+            return @($result)
+          }
+
+          function Legacy-Runtime-Present {
+            $legacy = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorWorker'" -ErrorAction SilentlyContinue
+            if ($legacy -and $legacy.State -ne 'Stopped') { return $true }
+
+            $managedBackend = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorBackend'" -ErrorAction SilentlyContinue
+            $managedDesk = Get-CimInstance Win32_Service -Filter "Name='ForgeAlumdoorDesk'" -ErrorAction SilentlyContinue
+            foreach ($listener in @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799,5173) })) {
+              $chain = @(Process-Ancestry -StartPid ([int]$listener.OwningProcess))
+              $managedPid = if ($listener.LocalPort -eq 8799) { [int]$managedBackend.ProcessId } else { [int]$managedDesk.ProcessId }
+              if ($managedPid -le 0 -or -not ($chain | Where-Object { [int]$_.ProcessId -eq $managedPid })) { return $true }
+            }
+            return $false
+          }
 
           try {
-            $payload = [ordered]@{
-              format='forge-bootstrap-source-transition/v2'; run_id=$transitionRun; adapter='bootstrap-source-transition';
+            $lockPayload = [ordered]@{
+              format='forge-bootstrap-source-transition/v3'; run_id=$transitionRun; adapter='bootstrap-source-transition';
               pid=$PID; hostname=$env:COMPUTERNAME; started_at=(Get-Date).ToUniversalTime().ToString('o');
-              workflow=$env:GITHUB_WORKFLOW; github_run_id=$env:GITHUB_RUN_ID; github_run_attempt=$env:GITHUB_RUN_ATTEMPT;
-              repo_sha=$local; target_sha=$remote
+              workflow=$env:GITHUB_WORKFLOW; github_run_id=$env:GITHUB_RUN_ID; github_run_attempt=$env:GITHUB_RUN_ATTEMPT
             } | ConvertTo-Json -Depth 4
             try {
               $stream = [System.IO.File]::Open($lockPath,[System.IO.FileMode]::CreateNew,[System.IO.FileAccess]::Write,[System.IO.FileShare]::None)
-              try { $bytes=[Text.Encoding]::UTF8.GetBytes($payload+"`n"); $stream.Write($bytes,0,$bytes.Length) } finally { $stream.Dispose() }
+              try { $bytes=[Text.Encoding]::UTF8.GetBytes($lockPayload+"`n"); $stream.Write($bytes,0,$bytes.Length) } finally { $stream.Dispose() }
               $lockOwned = $true
-              Write-Host "LEGACY_SOURCE_LOCK=ACQUIRED run_id=$transitionRun path=$lockPath"
+              Write-Host "LEGACY_SOURCE_LOCK=ACQUIRED run_id=$transitionRun"
             } catch { throw "Transition lock is active or ownership is unproven: $lockPath" }
 
-            & node $maintenance on
-            if ($LASTEXITCODE -ne 0) { throw 'Failed to enable maintenance for source transition' }
-            $maintenanceEnabled = $true
-
-            if (-not (Wait-PortsQuiet 30)) {
-              Write-Host 'Maintenance flag did not quiesce runtime; escalating only through named managed services.'
-              foreach ($name in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk')) {
-                $service = Get-Service -Name $name -ErrorAction SilentlyContinue
-                if (-not $service) { continue }
-                if ($service.Status -ne 'Stopped') {
-                  Stop-Service -Name $name -Force -ErrorAction Stop
-                  $service.WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
-                  $stoppedServices += $name
-                  Write-Host "MANAGED_SERVICE_STOP=PASS name=$name"
-                }
-              }
-              if (-not (Wait-PortsQuiet 15)) {
-                Write-ListenerEvidence
-                throw 'Named managed services are stopped but ports 8799/5173 are still owned; refusing blind process termination'
-              }
+            git -C $target fetch origin main --prune
+            if ($LASTEXITCODE -ne 0) { throw 'Source transition fetch failed' }
+            $local = (git -C $target rev-parse HEAD).Trim()
+            $remote = (git -C $target rev-parse origin/main).Trim()
+            if ($remote -ne $env:FORGE_LOCAL_EXPECTED_SHA) {
+              throw "Transition target mismatch expected=$env:FORGE_LOCAL_EXPECTED_SHA origin_main=$remote"
             }
-            Write-Host 'LEGACY_SOURCE_QUIESCE=PASS'
+            $counts = ((git -C $target rev-list --left-right --count HEAD...origin/main).Trim() -split '\s+')
+            if ($LASTEXITCODE -ne 0 -or $counts.Count -ne 2) { throw 'Cannot classify local main ahead/behind state' }
+            if ([int]$counts[0] -ne 0) { throw "Local main is ahead by $($counts[0]); refusing source transition" }
 
-            $backupOutput = @(& node $backup 2>&1)
-            $backupExit = $LASTEXITCODE
-            $backupOutput | ForEach-Object { Write-Host $_ }
-            if ($backupExit -ne 0) { throw "Transition backup failed exit=$backupExit" }
-            $backupEvidence = ($backupOutput -join "`n")
-            if ($backupEvidence -notmatch 'LOCAL_STATE_BACKUP_OK path=(.+) bytes=(\d+)') { throw 'Transition backup evidence missing' }
-            if ([int64]$Matches[2] -le 0) { throw 'Transition backup is empty' }
-            Write-Host "LEGACY_SOURCE_BACKUP=PASS bytes=$($Matches[2])"
+            if ([int]$counts[1] -gt 0) {
+              # This is source-only convergence. No Wrangler/D1 command is allowed
+              # in this bridge; authenticated local-state backup remains owned by
+              # the canonical runner after runtime quiescence is proven.
+              git -C $target merge --ff-only origin/main
+              if ($LASTEXITCODE -ne 0) { throw 'Source transition ff-only merge failed' }
+              Write-Host "LEGACY_SOURCE_SYNC=PASS from=$local to=$remote d1_mutation=0"
+            }
 
-            git -C $target merge --ff-only origin/main
-            if ($LASTEXITCODE -ne 0) { throw 'Transition ff-only merge failed' }
             $actual = (git -C $target rev-parse HEAD).Trim()
-            if ($actual -ne $env:FORGE_LOCAL_EXPECTED_SHA) { throw "Exact-SHA failure expected=$env:FORGE_LOCAL_EXPECTED_SHA actual=$actual" }
-            if (-not (Test-Path -LiteralPath $runner -PathType Leaf)) { throw "Canonical runner still missing: $runner" }
+            if ($actual -ne $env:FORGE_LOCAL_EXPECTED_SHA) { throw "Exact-SHA source failure expected=$env:FORGE_LOCAL_EXPECTED_SHA actual=$actual" }
+            foreach ($required in @(
+              'scripts\local-runner\run-local-import.mjs',
+              'server\scripts\alumdoor-legacy-runtime-migration.mjs',
+              'server\scripts\alumdoor-runtime-maintenance.mjs'
+            )) {
+              if (-not (Test-Path -LiteralPath (Join-Path $target $required) -PathType Leaf)) { throw "Post-sync dependency missing: $required" }
+            }
 
-            # Reload any SCM service that had to be stopped while maintenance is
-            # still ON. The new service host reads the newly synced source but
-            # cannot start business children until the canonical runner takes over.
-            foreach ($name in $stoppedServices) {
-              Start-Service -Name $name -ErrorAction Stop
-              (Get-Service -Name $name).WaitForStatus('Running',[TimeSpan]::FromSeconds(30))
-              Write-Host "MANAGED_SERVICE_RELOAD=PASS name=$name maintenance=on"
-            }
-            $stoppedServices = @()
-            $handoffMaintenance = $true
-            Write-Host "LEGACY_SOURCE_TRANSITION=PASS from=$local to=$actual mutation_started=0"
-            Write-Host 'LEGACY_SOURCE_RUNTIME_HANDOFF=PASS maintenance=on'
-          } finally {
-            if (-not $handoffMaintenance -and $maintenanceEnabled) {
-              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') off
-              if ($LASTEXITCODE -ne 0) { Write-Host 'LEGACY_SOURCE_RUNTIME_RESTORE=FAILED' }
-              foreach ($name in $stoppedServices) {
-                try { Start-Service -Name $name -ErrorAction Stop; Write-Host "MANAGED_SERVICE_RESTORE=PASS name=$name" } catch { Write-Host "MANAGED_SERVICE_RESTORE=FAILED name=$name error=$($_.Exception.Message)" }
+            if (Legacy-Runtime-Present) {
+              if (Test-Path -LiteralPath $requestPath) {
+                throw "Previous legacy migration request is still pending: $requestPath"
               }
-              Write-Host 'LEGACY_SOURCE_RUNTIME_RESTORE=PASS'
+              Remove-Item -LiteralPath $donePath -Force -ErrorAction SilentlyContinue
+              $request = [ordered]@{
+                format='forge-alumdoor-legacy-runtime-migration/v1';
+                run_id=$transitionRun;
+                expected_sha=$actual;
+                requested_at=(Get-Date).ToUniversalTime().ToString('o')
+              } | ConvertTo-Json -Depth 4
+              [System.IO.File]::WriteAllText($requestPath,$request+"`n",(New-Object System.Text.UTF8Encoding($false)))
+              Write-Host "LEGACY_RUNTIME_MIGRATION_REQUEST=CREATED run_id=$transitionRun"
+
+              # The already-running Forge service hosts are LocalSystem. Toggling
+              # their existing maintenance protocol restarts only their own child.
+              # The refreshed child executes the fixed migration helper, which has
+              # a separate authority/ownership allowlist before touching legacy runtime.
+              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') on
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to enable migration handoff maintenance' }
+              Start-Sleep -Seconds 2
+              & node (Join-Path $target 'server\scripts\alumdoor-runtime-maintenance.mjs') off
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to release migration handoff maintenance' }
+
+              $deadline = (Get-Date).AddSeconds(90)
+              $accepted = $false
+              do {
+                if (Test-Path -LiteralPath $donePath) {
+                  try {
+                    $done = Get-Content -Raw $donePath | ConvertFrom-Json
+                    if ($done.run_id -eq $transitionRun -and $done.expected_sha -eq $actual) {
+                      $accepted = $true
+                      break
+                    }
+                  } catch {}
+                }
+                Start-Sleep -Milliseconds 500
+              } while ((Get-Date) -lt $deadline)
+
+              if (-not $accepted) {
+                Write-Host '=== migration timeout diagnostics ==='
+                Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+                  Where-Object { $_.Name -in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk','ForgeAlumdoorWorker') } |
+                  ForEach-Object { Write-Host "SERVICE name=$($_.Name) state=$($_.State) start=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)" }
+                Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+                  Where-Object { $_.LocalPort -in @(8799,5173) } |
+                  ForEach-Object { Write-Host "LISTENER port=$($_.LocalPort) pid=$($_.OwningProcess)" }
+                throw 'Ownership-verified legacy runtime migration did not complete'
+              }
+              Write-Host "LEGACY_RUNTIME_MIGRATION=PASS run_id=$transitionRun"
+            } else {
+              Write-Host 'LEGACY_RUNTIME_MIGRATION=SKIP reason=already-managed-or-quiet'
             }
+          } finally {
             if ($lockOwned -and (Test-Path -LiteralPath $lockPath)) {
               $current = Get-Content -Raw $lockPath | ConvertFrom-Json
               if ($current.run_id -ne $transitionRun) { throw "Refusing to release transition lock owned by $($current.run_id)" }
@@ -272,20 +271,21 @@ jobs:
         if: failure()
         shell: powershell
         run: |
-          Write-Host '=== latest execution-layer evidence ==='
+          Write-Host '=== source ==='
+          if (Test-Path 'C:\alumdoor\.git') { git -C C:\alumdoor status --short --branch; git -C C:\alumdoor log -1 --oneline }
+          Write-Host '=== services ==='
+          Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -in @('ForgeAlumdoorBackend','ForgeAlumdoorDesk','ForgeAlumdoorWorker') } |
+            ForEach-Object { Write-Host "SERVICE name=$($_.Name) state=$($_.State) start=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)" }
+          Write-Host '=== listeners ==='
+          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalPort -in @(8799,5173) } |
+            Format-Table -AutoSize
+          Write-Host '=== latest execution evidence ==='
           $root = 'C:\alumdoor\local-backups\execution-layer\bootstrap'
           if (Test-Path $root) {
             Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 2 | ForEach-Object {
               Write-Host "--- $($_.FullName) ---"
               Get-ChildItem $_.FullName -File -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.Name }
-            }
-          }
-          Write-Host '=== current listeners ==='
-          Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(8799,5173) } | Format-Table -AutoSize
-          Write-Host '=== Windows service logs ==='
-          if (Test-Path 'C:\ForgeServices\Alumdoor\logs') {
-            Get-ChildItem 'C:\ForgeServices\Alumdoor\logs' -Recurse -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 4 | ForEach-Object {
-              Write-Host "--- $($_.FullName) ---"
-              Get-Content $_.FullName -Tail 100 -ErrorAction SilentlyContinue
             }
           }

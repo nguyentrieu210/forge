@@ -7,6 +7,9 @@ on:
       - 'sync-local.bat'
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
+      - 'server/scripts/alumdoor-legacy-runtime-migration.mjs'
+      - 'server/scripts/test-alumdoor-legacy-runtime-migration.mjs'
+      - 'server/scripts/ensure-alumdoor-local-vars.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
       - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
       - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
@@ -29,6 +32,9 @@ on:
       - 'sync-local.bat'
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
+      - 'server/scripts/alumdoor-legacy-runtime-migration.mjs'
+      - 'server/scripts/test-alumdoor-legacy-runtime-migration.mjs'
+      - 'server/scripts/ensure-alumdoor-local-vars.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
       - 'server/scripts/test-alumdoor-managed-process-tree.mjs'
       - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
@@ -69,6 +75,7 @@ jobs:
             scripts/local-runner/local-mutation-child-context.test.mjs
           node server/scripts/test-alumdoor-managed-process-tree.mjs
           node server/scripts/test-alumdoor-service-control-contract.mjs
+          node server/scripts/test-alumdoor-legacy-runtime-migration.mjs
 
       - name: Syntax check execution sources
         run: |
@@ -81,6 +88,8 @@ jobs:
           node --check scripts/local-runner/assert-ports-quiet.mjs
           node --check scripts/local-runner/audit-local-mutation-entrypoints.mjs
           node --check server/scripts/alumdoor-runtime-service-host.mjs
+          node --check server/scripts/alumdoor-legacy-runtime-migration.mjs
+          node --check server/scripts/ensure-alumdoor-local-vars.mjs
           node --check server/scripts/lib/alumdoor-managed-process-tree.mjs
           node --check server/scripts/import-alumdoor-reason-master-local.mjs
           node --check server/scripts/import-alumdoor-item-master-local.mjs
@@ -126,24 +135,41 @@ jobs:
             exit 1
           fi
 
-      - name: Enforce legacy bridge and managed-service escalation
+      - name: Enforce source-only legacy bridge and serialized acceptance
         shell: bash
         run: |
           set -euo pipefail
           bootstrap=.github/workflows/bootstrap-alumdoor-local.yml
           reason=.github/workflows/alumdoor-reason-master-local-import.yml
           pricing=.github/workflows/alumdoor-pricing-local-import.yml
+          helper=server/scripts/alumdoor-legacy-runtime-migration.mjs
+          ensure=server/scripts/ensure-alumdoor-local-vars.mjs
           host=server/scripts/alumdoor-runtime-service-host.mjs
 
-          grep -q 'LEGACY_SOURCE_TRANSITION=PASS' "$bootstrap"
+          grep -q 'LEGACY_SOURCE_SYNC=PASS' "$bootstrap"
           grep -q 'LEGACY_SOURCE_LOCK=ACQUIRED' "$bootstrap"
-          grep -q 'LOCAL_STATE_BACKUP_OK' "$bootstrap"
           grep -q 'merge --ff-only origin/main' "$bootstrap"
-          grep -q 'mutation_started=0' "$bootstrap"
-          grep -q 'Stop-Service -Name' "$bootstrap"
-          grep -q 'MANAGED_SERVICE_STOP=PASS' "$bootstrap"
-          grep -q 'refusing blind process termination' "$bootstrap"
-          grep -q 'LEGACY_SOURCE_RUNTIME_HANDOFF=PASS maintenance=on' "$bootstrap"
+          grep -q 'd1_mutation=0' "$bootstrap"
+          grep -q 'legacy-runtime-migration.request.json' "$bootstrap"
+          grep -q 'LEGACY_RUNTIME_MIGRATION=PASS' "$bootstrap"
+          grep -q 'forge-alumdoor-legacy-runtime-migration/v1' "$bootstrap"
+          if grep -qE 'Stop-Service|taskkill|sc\.exe|backup-local-state\.mjs|wrangler[[:space:]]+d1' "$bootstrap"; then
+            echo 'Bootstrap bridge may only converge source and request the fixed LocalSystem migration helper'
+            exit 1
+          fi
+
+          grep -q 'isManagedBackendAuthority' "$helper"
+          grep -q 'ForgeAlumdoorBackend' "$helper"
+          grep -q 'ForgeAlumdoorWorker' "$helper"
+          grep -q 'nssm' "$helper"
+          grep -q 'legacy_target_not_canonical_repo' "$helper"
+          grep -q 'LEGACY_BACKEND_DISABLE=PASS' "$helper"
+          grep -q 'LEGACY_DESK_STOP=PASS' "$helper"
+          grep -q 'reconcileLegacyRuntimeMigration' "$ensure"
+          if grep -qiE 'wrangler[[:space:]]+d1|--remote' "$helper"; then
+            echo 'Legacy runtime helper must never mutate D1 or remote state'
+            exit 1
+          fi
 
           grep -q 'workflow_run:' "$reason"
           grep -q 'Bootstrap Alumdoor Local C Drive' "$reason"
@@ -168,6 +194,23 @@ jobs:
             echo 'Managed service host must not use taskkill; terminate only descendants of its owned root PID'
             exit 1
           fi
+
+      - name: Enforce internal helper and child mutation boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'assert-bootstrap-helper-context.mjs' run-local.bat
+          grep -q 'assert-bootstrap-helper-context.mjs' sync-local.bat
+          grep -q 'server\\node_modules\\.bin\\wrangler.cmd' run-local.bat
+          if grep -Eq 'npx[[:space:]]+wrangler|stop-local-dev\.mjs' run-local.bat sync-local.bat; then
+            echo 'Internal bootstrap helpers may not resolve Wrangler ad-hoc or kill listeners by port'
+            exit 1
+          fi
+          grep -q 'assertLocalMutationChildContext' server/scripts/import-alumdoor-reason-master-local.mjs
+          grep -q 'assertLocalMutationChildContext' server/scripts/import-alumdoor-item-master-local.mjs
+          grep -q 'assertLocalMutationChildContext' server/scripts/seed-alumdoor-uom-local.mjs
+          grep -q 'assertLocalMutationChildContext' server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs
+          grep -q 'assertLocalMutationChildContext' server/scripts/import-alumdoor-pricing-local.mjs
 
       - name: Enforce minimal Windows service-control grant
         shell: bash
