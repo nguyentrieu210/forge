@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { partitionAlumdoorItemSourceBlockers } from "./lib/alumdoor-item-blocker-partition.mjs";
 import { buildCanonicalAlumdoorItemMaster } from "./lib/alumdoor-item-master-classification.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
+import { ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
 
 const [sourceArg, payloadArg, auditArg] = process.argv.slice(2);
 if (!sourceArg || !payloadArg || !auditArg) {
@@ -23,7 +24,32 @@ if (!Array.isArray(records)) {
 
 const sourcePreflight = preflightAlumdoorItemSourceRecords(records);
 const sourcePartition = partitionAlumdoorItemSourceBlockers(sourcePreflight.blockers);
-const master = buildCanonicalAlumdoorItemMaster(sourcePreflight, records);
+
+// An allowlisted BOM-only component is promoted to a stock Item identity by the
+// source contract. It still must not inherit its parent product group. For that
+// narrow case only, carry the component's own audited source_group into master
+// classification. Normal sellable/stock identities continue to derive group
+// evidence from their direct source rows as before.
+const promotionGroupsByCode = new Map();
+for (const row of sourcePreflight.promotions ?? []) {
+  const group = String(row.source_group ?? "").trim();
+  if (!group) continue;
+  const list = promotionGroupsByCode.get(row.canonical_item_code) ?? [];
+  list.push(group);
+  promotionGroupsByCode.set(row.canonical_item_code, list);
+}
+const acceptedWithPromotionGroups = sourcePreflight.accepted.map((item) => {
+  const roles = new Set(item.source_roles ?? []);
+  const hasDirectIdentity = roles.has(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT)
+    || roles.has(ITEM_SOURCE_ROLES.STOCK_ITEM);
+  if (hasDirectIdentity) return item;
+  const groups = [...new Set(promotionGroupsByCode.get(item.item_code) ?? [])];
+  return groups.length > 0 ? { ...item, source_groups: groups } : item;
+});
+const master = buildCanonicalAlumdoorItemMaster(
+  { ...sourcePreflight, accepted: acceptedWithPromotionGroups },
+  records,
+);
 
 const itemCodes = master.payloads.map((item) => item.item_code);
 const uniqueCodes = new Set(itemCodes);
@@ -69,9 +95,6 @@ console.log(JSON.stringify({
   audit: auditPath,
 }, null, 2));
 
-// BOM contradictions remain visible and fail-closed for BOM work, but they do not
-// prevent a clean Item Master from being persisted. Item/other source blockers and
-// payload classification blockers always stop Item import.
 if (
   audit.item_master_blocker_count > 0
   || audit.other_blocker_count > 0
