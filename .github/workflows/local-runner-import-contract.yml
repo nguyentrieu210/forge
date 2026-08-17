@@ -34,6 +34,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -48,6 +50,12 @@ jobs:
           node --check scripts/local-runner/real-purchase-adapter.mjs
           node --check server/scripts/import-alumdoor-reason-master-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
+
+      - name: Diff hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check HEAD^
 
       - name: Enforce one mutation entry point
         shell: bash
