@@ -38,8 +38,8 @@ jobs:
           Write-Host "LOCAL_REPO branch=$branch sha=$sha"
 
           Set-Location $server
-
-          $rowsSql = @"
+          $auditSql = Join-Path $env:RUNNER_TEMP 'audit-alumdoor-local-item-groups.sql'
+          $sql = @"
           WITH canonical(name) AS (VALUES
             ('Tất cả mặt hàng'),('Cửa thành phẩm'),('Motor & điện'),('Phụ kiện & vật tư'),
             ('Cửa CN Đức'),('Cửa tấm liền Úc'),('Cửa Đài Loan'),('Cửa Đài Loan Inox'),
@@ -64,13 +64,7 @@ jobs:
           LEFT JOIN legacy l ON l.name=d.name
           WHERE d.tenant_id='demo' AND d.doctype='Item Group'
           ORDER BY class, disabled, d.name;
-          "@
 
-          Write-Host '=== ITEM_GROUP_ROWS ==='
-          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command $rowsSql
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to read local Item Group rows.' }
-
-          $summarySql = @"
           WITH canonical(name) AS (VALUES
             ('Tất cả mặt hàng'),('Cửa thành phẩm'),('Motor & điện'),('Phụ kiện & vật tư'),
             ('Cửa CN Đức'),('Cửa tấm liền Úc'),('Cửa Đài Loan'),('Cửa Đài Loan Inox'),
@@ -102,8 +96,9 @@ jobs:
           FROM classified;
           "@
 
-          Write-Host '=== ITEM_GROUP_SUMMARY ==='
-          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command $summarySql
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to summarize local Item Group rows.' }
+          [IO.File]::WriteAllText($auditSql, $sql, (New-Object System.Text.UTF8Encoding($false)))
+          Write-Host '=== ITEM_GROUP_AUDIT ==='
+          & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc "--file=$auditSql"
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to audit local Item Group rows.' }
 
           Write-Host 'ALUMDOOR_LOCAL_ITEM_GROUP_AUDIT_COMPLETE'
