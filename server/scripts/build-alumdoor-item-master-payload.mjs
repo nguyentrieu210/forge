@@ -36,12 +36,15 @@ function uniqueNumbers(values) {
 
 function deriveExactCodeConversionEvidence(item, rawRecords) {
   if ((item.conversion_factors ?? []).length > 0) return item;
-  const stockUom = clean(item.stock_uom);
+  const explicitStockUom = clean(item.stock_uom);
   const salesUoms = [...new Set((item.sales_uoms ?? []).map(clean).filter(Boolean))];
-  if (!stockUom || salesUoms.length !== 1 || salesUoms[0] === stockUom) return item;
+  const conversionBases = new Set(item.conversion_bases ?? []);
+  const inferredStockUom = explicitStockUom
+    || (conversionBases.has("kg_per_m") || conversionBases.has("kg_per_thung") ? "Kg" : "");
+  if (salesUoms.length !== 1 || salesUoms[0] === inferredStockUom) return item;
 
   const exactRows = rawRecords.filter((row) => clean(row.item_code) === clean(item.item_code));
-  if (stockUom === "Kg" && salesUoms[0] === "Mét") {
+  if (salesUoms[0] === "Mét" && (inferredStockUom === "Kg" || conversionBases.has("kg_per_m"))) {
     const factors = uniqueNumbers(exactRows
       .filter((row) => uomKey(row.source_uom) === "KG/M")
       .map((row) => positiveNumber(row.source_rate_or_quantity ?? row.source_qty_or_formula)));
@@ -61,9 +64,8 @@ function deriveExactCodeConversionEvidence(item, rawRecords) {
 
   // NVL-OKHOA is one physical lock per commercial set in the source: the
   // numbered sellable row is 1 Bộ and the exact BOM component row is also 1 Bộ,
-  // while the physical inventory snapshot counts the same code in Cái. This is
-  // explicit 1:1 source evidence, not a guessed packaging ratio.
-  if (item.item_code === "NVL-OKHOA" && stockUom === "Cái" && salesUoms[0] === "Bộ") {
+  // while the physical inventory snapshot counts the same code in Cái.
+  if (item.item_code === "NVL-OKHOA" && inferredStockUom === "Cái" && salesUoms[0] === "Bộ") {
     const sellableOne = exactRows.some((row) => (
       row.source_role === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT
       && uomKey(row.source_uom) === "BỘ"
@@ -88,17 +90,39 @@ function deriveExactCodeConversionEvidence(item, rawRecords) {
     }
   }
 
+  // NVL-CHNHUA is sold by Kg but the physical snapshot is counted in Cái.
+  // The real source explicitly records "91 cái /kg" on the numbered sellable
+  // row and repeats 0.0096 kg/cái in BOM notes. Item conversion semantics need
+  // stock units per sales unit, therefore the direct source ratio is 91 Cái/Kg.
+  if (item.item_code === "NVL-CHNHUA" && inferredStockUom === "Cái" && salesUoms[0] === "Kg") {
+    const hasSellableKg = exactRows.some((row) => (
+      row.source_role === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT
+      && uomKey(row.source_uom) === "KG"
+    ));
+    const hasStockPiece = exactRows.some((row) => (
+      row.source_role === ITEM_SOURCE_ROLES.STOCK_ITEM
+      && uomKey(row.source_uom) === "CÁI"
+    ));
+    if (hasSellableKg && hasStockPiece) {
+      return {
+        ...item,
+        requires_conversion: true,
+        conversion_bases: [...new Set([...(item.conversion_bases ?? []), "piece_per_kg"])],
+        conversion_factors: [{
+          conversion_basis: "piece_per_kg",
+          conversion_factor: 91,
+          source: "real_source_numbered_row_91_piece_per_kg",
+        }],
+      };
+    }
+  }
+
   return item;
 }
 
 const sourcePreflight = preflightAlumdoorItemSourceRecords(records);
 const sourcePartition = partitionAlumdoorItemSourceBlockers(sourcePreflight.blockers);
 
-// An allowlisted BOM-only component is promoted to a stock Item identity by the
-// source contract. It still must not inherit its parent product group. For that
-// narrow case only, carry the component's own audited source_group into master
-// classification. Normal sellable/stock identities continue to derive group
-// evidence from their direct source rows as before.
 const promotionGroupsByCode = new Map();
 for (const row of sourcePreflight.promotions ?? []) {
   const group = clean(row.source_group);
