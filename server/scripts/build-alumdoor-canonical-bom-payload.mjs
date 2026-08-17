@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { classifyAlumdoorItemSourceCode, ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
 import { resolveAlumdoorBomEvidenceAlias, resolveAlumdoorBomItemPromotion } from "./lib/alumdoor-item-evidence-overrides.mjs";
+import { resolveExactSourceBomQuantity } from "./lib/alumdoor-exact-source-bom-quantity.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
 import { blockerClass, resolveBomParentOutput, resolveBomQuantity, resolveBomRuntimeUom } from "./lib/alumdoor-real-bom-gate-semantics.mjs";
 
@@ -59,7 +60,7 @@ for(const record of records){
   if(!parentRecord||!parentItem){addBlock("missing_parent_item",record,{canonical_item_code:ref.item_code});continue;}
   const uom=resolveBomRuntimeUom(record,item);
   if(uom.status!=="accepted"){addBlock(uom.reason,record,{canonical_item_code:ref.item_code,runtime_uom:uom.runtime_uom,stock_uom:uom.stock_uom,conversion_factors:uom.conversion_factors});continue;}
-  const quantity=resolveBomQuantity(record,uom,parentItem,ref.item_code);
+  const quantity=resolveExactSourceBomQuantity(record,uom,ref.item_code) ?? resolveBomQuantity(record,uom,parentItem,ref.item_code);
   if(quantity.status==="blocked"){
     addBlock(quantity.reason||"runtime_contract_invalid",record,{
       canonical_item_code:ref.item_code,
