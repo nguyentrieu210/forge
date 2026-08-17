@@ -28,11 +28,12 @@ function project(audit) {
 function persistedD1Project() {
   if (process.platform !== "win32") return [];
   const query = "SELECT name,docstatus,modified_at,payload_json FROM documents WHERE tenant_id='demo' AND doctype='Purchase Receipt' ORDER BY name";
-  const command = `npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command "${query.replaceAll('"', '\\"')}" --json`;
+  const ps = "$ErrorActionPreference='Stop'; Set-Location 'C:\\alumdoor\\server'; & npx wrangler d1 execute cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc --command $env:ALUMDOOR_PURCHASE_QUERY --json; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }";
   let stdout;
   try {
-    stdout = execFileSync("C:\\Windows\\System32\\cmd.exe", ["/d", "/s", "/c", command], {
+    stdout = execFileSync("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], {
       cwd: "C:\\alumdoor\\server",
+      env: { ...process.env, ALUMDOOR_PURCHASE_QUERY: query },
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       maxBuffer: 16 * 1024 * 1024,
