@@ -4,6 +4,7 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
+import { resolveAlumdoorBomItemPromotion } from "./lib/alumdoor-item-evidence-overrides.mjs";
 import {
   parseAlumdoorIndexedMarkdownRows,
   parseAlumdoorSourceIndex,
@@ -39,6 +40,17 @@ function isDmSectionBoundary(row) {
     && !clean(readAlumdoorCell(row, 1))
     && fold(readAlumdoorCell(row, 2)).replace(/\s+/g, " ") === "PHU KIEN LA DAI LOAN"
     && !clean(readAlumdoorCell(row, 3));
+}
+
+function isDetachedBomPromotionEvidence(row) {
+  const code = clean(readAlumdoorCell(row, 3));
+  const promotion = resolveAlumdoorBomItemPromotion(code, ITEM_SOURCE_ROLES.BOM_REFERENCE);
+  return Number(row?.source_row) === 2022
+    && code === "MŨI MÀI HỘP KIM"
+    && fold(readAlumdoorCell(row, 2)) === "MUI MAI HOP KIM"
+    && fold(readAlumdoorCell(row, 5)) === "CAI"
+    && promotion?.canonical_item_code === code
+    && promotion?.canonical_source_uom === "Cái";
 }
 
 function makeSellableRecord(row, sourceIndex) {
@@ -99,6 +111,14 @@ function makeBomReferenceRecord(row, parentIndex, parentCode, parentRow) {
   };
 }
 
+function makeEvidenceOnlyBomRecord(row) {
+  return {
+    ...makeBomReferenceRecord(row, null, "", null),
+    source_evidence_only: true,
+    source_evidence_reason: "detached_allowlisted_bom_item_promotion",
+  };
+}
+
 function makeStockRecord(row) {
   const category = readAlumdoorCell(row, 0);
   const itemCode = readAlumdoorCell(row, 1);
@@ -129,6 +149,7 @@ let currentParentCode = "";
 let currentParentRow = null;
 let sellableCount = 0;
 let bomReferenceCount = 0;
+let bomEvidenceOnlyCount = 0;
 for (const row of dmRows) {
   if (isDmHeader(row)) continue;
   if (isDmSectionBoundary(row)) {
@@ -151,6 +172,11 @@ for (const row of dmRows) {
   if (code && currentParentRow !== null && (name || uom)) {
     records.push(makeBomReferenceRecord(row, currentParentIndex, currentParentCode, currentParentRow));
     bomReferenceCount += 1;
+    continue;
+  }
+  if (code && currentParentRow === null && (name || uom) && isDetachedBomPromotionEvidence(row)) {
+    records.push(makeEvidenceOnlyBomRecord(row));
+    bomEvidenceOnlyCount += 1;
   }
 }
 let stockCount = 0;
@@ -184,16 +210,18 @@ const report = {
     sellable: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md numbered rows",
     stock: "apps/alumdoor/docs/nguon/ms-lien/Trang-tính29.md",
     bom_reference: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md component rows bound by unique parent source row",
+    bom_item_promotion_evidence: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md detached allowlisted evidence rows",
   },
   dm_row_count: dmRows.length, stock_row_count: stockRows.length, source_record_count: records.length,
   sellable_count: sellableCount, stock_count: stockCount, bom_reference_count: bomReferenceCount,
+  bom_evidence_only_count: bomEvidenceOnlyCount,
   unresolved_group_count: unresolvedGroups.length, group_counts: groupCounts,
   unresolved_group_samples: unresolvedSamples, sellable_dual_unit_evidence: sellableDualUnitEvidence,
 };
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(records, null, 2)}\n`, "utf8");
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_EXTRACTED records=${records.length} sellable=${sellableCount} stock=${stockCount} bom_reference=${bomReferenceCount} unresolved_groups=${unresolvedGroups.length}`);
+console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_EXTRACTED records=${records.length} sellable=${sellableCount} stock=${stockCount} bom_reference=${bomReferenceCount} bom_evidence_only=${bomEvidenceOnlyCount} unresolved_groups=${unresolvedGroups.length}`);
 console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_OUTPUT ${outputPath}`);
 console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_REPORT ${reportPath}`);
 if (unresolvedGroups.length > 0) {
