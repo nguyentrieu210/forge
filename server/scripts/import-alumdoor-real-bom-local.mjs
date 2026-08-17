@@ -35,15 +35,45 @@ const list = await ok(`/api/resource/Bill%20of%20Materials?fields=${encodeURICom
 const existingRows = list?.data ?? list?.message ?? [];
 const byFingerprint = new Map(existingRows.filter((r)=>r.bom_fingerprint).map((r)=>[String(r.bom_fingerprint),r]));
 
+function writableChild(row){
+  return {
+    item_code:String(row?.item_code??"").trim(),
+    qty:Number(row?.qty),
+    uom:String(row?.uom??"").trim(),
+    qty_basis:String(row?.qty_basis??"").trim(),
+    source_note:String(row?.source_note??"").trim(),
+    source_warehouse:String(row?.source_warehouse??"").trim(),
+    note:String(row?.note??"").trim(),
+  };
+}
+function writableBom(bom){
+  const body={
+    item:String(bom?.item??"").trim(),
+    company:String(bom?.company??"").trim(),
+    quantity:Number(bom?.quantity),
+    items:(bom?.items??[]).map(writableChild),
+    operating_cost:Number(bom?.operating_cost??0),
+    is_active:Number(Boolean(Number(bom?.is_active)||bom?.is_active===true)),
+    note:String(bom?.note??"").trim(),
+    bom_template_code:String(bom?.bom_template_code??"").trim(),
+    bom_fingerprint:String(bom?.bom_fingerprint??"").trim(),
+    generated_by_configurator:Number(Boolean(Number(bom?.generated_by_configurator)||bom?.generated_by_configurator===true)),
+    configuration_snapshot:String(bom?.configuration_snapshot??""),
+  };
+  if (String(bom?.color??"").trim()) body.color=String(bom.color).trim();
+  if (String(bom?.bom_template??"").trim()) body.bom_template=String(bom.bom_template).trim();
+  return body;
+}
+
 // Preflight all Item links before first BOM mutation.
 const codes = new Set(); for(const bom of payload.boms){codes.add(bom.item);for(const row of bom.items)codes.add(row.item_code);}
 const missingItems=[];for(const code of codes){if(!await getItem(code))missingItems.push(code);}if(missingItems.length)throw new Error(`BOM Item links missing before mutation: ${missingItems.slice(0,20).join(", ")} total=${missingItems.length}`);
 const pre=[];const missing=[];const exact=[];const conflicts=[];
 function managed(doc){return {item:String(doc?.item??""),company:String(doc?.company??""),quantity:Number(doc?.quantity),is_active:Number(Boolean(Number(doc?.is_active)||doc?.is_active===true)),bom_fingerprint:String(doc?.bom_fingerprint??""),bom_template_code:String(doc?.bom_template_code??""),items:(doc?.items??[]).map((r)=>({item_code:String(r.item_code??""),qty:Number(r.qty),uom:String(r.uom??""),qty_basis:String(r.qty_basis??""),source_note:String(r.source_note??""),note:String(r.note??"")}))};}
-for(const bom of payload.boms){const row=byFingerprint.get(bom.bom_fingerprint);if(!row){missing.push(bom);pre.push({fingerprint:bom.bom_fingerprint,existed:false});continue;}const doc=await getBom(row.name);pre.push({fingerprint:bom.bom_fingerprint,existed:true,name:row.name,doc});if(JSON.stringify(managed(doc))===JSON.stringify(managed(bom)))exact.push(row.name);else conflicts.push({name:row.name,fingerprint:bom.bom_fingerprint,expected:managed(bom),actual:managed(doc)});}
+for(const bom of payload.boms){const row=byFingerprint.get(bom.bom_fingerprint);if(!row){missing.push(bom);pre.push({fingerprint:bom.bom_fingerprint,item:bom.item,source_index:bom.source_index,existed:false});continue;}const doc=await getBom(row.name);pre.push({fingerprint:bom.bom_fingerprint,item:bom.item,source_index:bom.source_index,existed:true,name:row.name,doc});if(JSON.stringify(managed(doc))===JSON.stringify(managed(bom)))exact.push(row.name);else conflicts.push({name:row.name,fingerprint:bom.bom_fingerprint,expected:managed(bom),actual:managed(doc)});}
 if(conflicts.length)throw new Error(`ALUMDOOR_REAL_BOM_IMPORT_CONFLICT count=${conflicts.length}`);
 const preimage=path.resolve(preimageArg);mkdirSync(path.dirname(preimage),{recursive:true});writeFileSync(preimage,`${JSON.stringify({format:"alumdoor-real-bom-preimage/v1",created_at:new Date().toISOString(),existing:exact.length,missing:missing.length,records:pre},null,2)}\n`);
-const created=[];for(const bom of missing){const body=await ok("/api/resource/Bill%20of%20Materials",{method:"POST",body:bom});const doc=body?.data??body?.message??body;created.push(doc?.name??bom.bom_fingerprint);}
+const created=[];for(const bom of missing){try{const body=await ok("/api/resource/Bill%20of%20Materials",{method:"POST",body:writableBom(bom)});const doc=body?.data??body?.message??body;created.push(doc?.name??bom.bom_fingerprint);}catch(error){throw new Error(`BOM create failed source_index=${bom.source_index} item=${bom.item} fingerprint=${bom.bom_fingerprint}: ${error.message}`);}}
 const after=await ok(`/api/resource/Bill%20of%20Materials?fields=${encodeURIComponent(JSON.stringify(["name","bom_fingerprint"]))}&limit_page_length=2000`);const afterRows=after?.data??after?.message??[];const afterMap=new Map(afterRows.filter((r)=>r.bom_fingerprint).map((r)=>[String(r.bom_fingerprint),r.name]));const failures=[];for(const bom of payload.boms){const name=afterMap.get(bom.bom_fingerprint);if(!name){failures.push({fingerprint:bom.bom_fingerprint,reason:"missing"});continue;}const doc=await getBom(name);if(JSON.stringify(managed(doc))!==JSON.stringify(managed(bom)))failures.push({name,fingerprint:bom.bom_fingerprint,reason:"mismatch"});}
 if(failures.length)throw new Error(`ALUMDOOR_REAL_BOM_IMPORT_VERIFY_FAILED count=${failures.length}`);
 console.log(`ALUMDOOR_REAL_BOM_IMPORT_PASS created=${created.length} existing=${exact.length} total=${payload.boms.length}`);
