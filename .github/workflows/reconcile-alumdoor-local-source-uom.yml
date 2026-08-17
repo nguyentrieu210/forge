@@ -20,6 +20,8 @@ jobs:
   seed-uom-api:
     runs-on: [self-hosted]
     timeout-minutes: 20
+    env:
+      FORGE_LOCAL_REQUIRED_SERVICES: backend
     steps:
       - name: Checkout isolated candidate source
         if: github.event_name == 'push'
