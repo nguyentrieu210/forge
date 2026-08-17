@@ -3,6 +3,8 @@ name: Local Runner Import Contract
 on:
   pull_request:
     paths:
+      - 'run-local.bat'
+      - 'sync-local.bat'
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
@@ -10,7 +12,7 @@ on:
       - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
       - 'server/scripts/install-alumdoor-runtime-services.ps1'
       - 'server/scripts/test-alumdoor-service-control-contract.mjs'
-      - 'server/scripts/import-alumdoor-reason-master-local.mjs'
+      - 'server/scripts/*alumdoor*local*.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/*alumdoor-pricing*.mjs'
@@ -23,6 +25,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'run-local.bat'
+      - 'sync-local.bat'
       - 'scripts/local-runner/**'
       - 'server/scripts/alumdoor-runtime-service-host.mjs'
       - 'server/scripts/lib/alumdoor-managed-process-tree.mjs'
@@ -30,7 +34,7 @@ on:
       - 'server/scripts/grant-alumdoor-runner-service-control.ps1'
       - 'server/scripts/install-alumdoor-runtime-services.ps1'
       - 'server/scripts/test-alumdoor-service-control-contract.mjs'
-      - 'server/scripts/import-alumdoor-reason-master-local.mjs'
+      - 'server/scripts/*alumdoor*local*.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
       - 'server/scripts/*alumdoor-pricing*.mjs'
@@ -59,7 +63,10 @@ jobs:
 
       - name: Unit test local runner contract
         run: |
-          node --test scripts/local-runner/contract.test.mjs
+          node --test \
+            scripts/local-runner/contract.test.mjs \
+            scripts/local-runner/bootstrap-helper-context.test.mjs \
+            scripts/local-runner/local-mutation-child-context.test.mjs
           node server/scripts/test-alumdoor-managed-process-tree.mjs
           node server/scripts/test-alumdoor-service-control-contract.mjs
 
@@ -69,9 +76,16 @@ jobs:
           node --check scripts/local-runner/run-local-import-core.mjs
           node --check scripts/local-runner/pricing-adapter.mjs
           node --check scripts/local-runner/real-purchase-adapter.mjs
+          node --check scripts/local-runner/assert-bootstrap-helper-context.mjs
+          node --check scripts/local-runner/assert-local-mutation-child-context.mjs
+          node --check scripts/local-runner/assert-ports-quiet.mjs
+          node --check scripts/local-runner/audit-local-mutation-entrypoints.mjs
           node --check server/scripts/alumdoor-runtime-service-host.mjs
           node --check server/scripts/lib/alumdoor-managed-process-tree.mjs
           node --check server/scripts/import-alumdoor-reason-master-local.mjs
+          node --check server/scripts/import-alumdoor-item-master-local.mjs
+          node --check server/scripts/seed-alumdoor-uom-local.mjs
+          node --check server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs
           node --check server/scripts/import-alumdoor-pricing-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
           node --check server/scripts/test-alumdoor-service-control-contract.mjs
@@ -81,6 +95,9 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check HEAD^
+
+      - name: Global local-mutation inventory
+        run: node scripts/local-runner/audit-local-mutation-entrypoints.mjs
 
       - name: Enforce one mutation entry point
         shell: bash
