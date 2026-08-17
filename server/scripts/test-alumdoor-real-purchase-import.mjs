@@ -18,60 +18,105 @@ const rows = extractRealPurchaseRows(markdown);
 assert.equal(rows.length, 14, "real journal must expose exactly 14 purchase rows");
 assert.equal(new Set(rows.map((row) => row.supplier)).size, 8);
 assert.equal(Object.keys(APPROVED_PURCHASE_SUPPLIERS).length, 8);
-assert.equal(rows.filter((row) => row.item_code).length, 13);
 assert.deepEqual(rows.slice(0, 2).map((row) => row.source_row), [531, 532]);
 assert.equal(rows.at(-1).source_row, 544);
-assert.equal(rows.find((row) => row.source_row === 539)?.date, "2026-02-02");
-assert.equal(rows.find((row) => row.source_row === 543)?.quantity, 2834000);
-assert.equal(rows.find((row) => row.source_row === 544)?.quantity, null);
 
-const report = preflightRealPurchaseRows(rows);
-assert.equal(report.verdict, "PURCHASE_IMPORT_BLOCKED");
-assert.equal(report.mutation_authorized, false);
-assert.deepEqual(report.classification_counts, { PURCHASE_ORDER: 0, PURCHASE_RECEIPT: 14 });
-assert.equal(report.supplier.total, 8);
-assert.equal(report.supplier.approved_identity, 8);
-assert.equal(report.item_uom.total_lines, 14);
-assert.equal(report.item_uom.lines_with_item_code, 13);
-assert.equal(report.item_uom.approved_source_identity_uom, 13);
-assert.equal(report.item_uom.missing_item_code, 1);
-assert.equal(report.purchase_order.candidate_documents, 0);
-assert.equal(report.purchase_receipt.candidate_documents, 9);
-assert.equal(report.purchase_receipt.persisted, 0);
-assert.equal(report.purchase_receipt.ready, 0);
-assert.equal(report.purchase_receipt.blocked, 9);
+const row539 = rows.find((row) => row.source_row === 539);
+assert.equal(row539?.date, "2026-02-02");
+assert.equal(row539?.source_item_code, "");
+assert.equal(row539?.canonical_item_code, "TP-RAYHOP");
+assert.equal(row539?.canonical_uom, "KG");
+
+const expectedMeters = new Map([[534, 554.4], [535, 374.4], [536, 381.6], [537, 539]]);
+for (const [sourceRow, expected] of expectedMeters) {
+  const row = rows.find((entry) => entry.source_row === sourceRow);
+  assert.equal(row?.canonical_uom, "M");
+  assert.ok(Math.abs(Number(row?.canonical_quantity) - expected) < 1e-9, `row ${sourceRow} total meters`);
+  assert.equal(row?.source_disposition?.quantity_rule, "LENGTH_M_X_PIECE_COUNT");
+}
+assert.equal(rows.find((row) => row.source_row === 543)?.excluded, true);
+assert.equal(rows.find((row) => row.source_row === 543)?.exclusion_reason, "SOURCE_QUANTITY_OUTLIER_2834000_KG_UNPROVEN");
+assert.equal(rows.find((row) => row.source_row === 544)?.excluded, true);
+assert.equal(rows.find((row) => row.source_row === 544)?.exclusion_reason, "SOURCE_QUANTITY_MISSING");
+
+const blocked = preflightRealPurchaseRows(rows);
+assert.equal(blocked.verdict, "PURCHASE_IMPORT_BLOCKED");
+assert.equal(blocked.mutation_authorized, false);
+assert.deepEqual(blocked.classification_counts, { PURCHASE_ORDER: 0, PURCHASE_RECEIPT: 12, SOURCE_DEFECT_EXCLUDED: 2 });
+assert.equal(blocked.supplier.total, 6);
+assert.equal(blocked.supplier.approved_identity, 6);
+assert.equal(blocked.item_uom.total_lines, 12);
+assert.equal(blocked.item_uom.lines_with_item_code, 12);
+assert.equal(blocked.item_uom.approved_source_identity_uom, 12);
+assert.equal(blocked.item_uom.missing_item_code, 0);
+assert.equal(blocked.source_exclusions.row_count, 2);
+assert.equal(blocked.source_exclusions.document_count, 2);
+assert.deepEqual(blocked.source_exclusions.rows.map((row) => row.source_row), [543, 544]);
+assert.equal(blocked.purchase_order.candidate_documents, 0);
+assert.equal(blocked.purchase_receipt.candidate_documents, 7);
+assert.equal(blocked.purchase_receipt.persisted, 0);
+assert.equal(blocked.purchase_receipt.ready, 0);
+assert.equal(blocked.purchase_receipt.blocked, 7);
 for (const blocker of [
   "COMPANY_NOT_RESOLVED",
   "WAREHOUSE_NOT_RESOLVED",
-  "STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK",
   "LIVE_SUPPLIER_MANIFEST_NOT_PROVIDED",
   "LIVE_ITEM_MANIFEST_NOT_PROVIDED",
+]) assert.ok(blocked.blocker_codes.includes(blocker), `missing blocker ${blocker}`);
+for (const retired of [
   "SOURCE_DATE_SEQUENCE_REGRESSION",
   "MISSING_ITEM_CODE",
   "MISSING_OR_NONPOSITIVE_QUANTITY",
   "QUANTITY_OUTLIER_REQUIRES_SOURCE_DISPOSITION",
   "LENGTH_VS_QUANTITY_AXIS_AMBIGUOUS",
-]) assert.ok(report.blocker_codes.includes(blocker), `missing blocker ${blocker}`);
+]) assert.equal(blocked.blocker_codes.includes(retired), false, `retired blocker leaked: ${retired}`);
+assert.deepEqual(blocked.submit_blockers, ["STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK"]);
 
-const tienDat = report.documents.find((doc) => doc.supplier === "TIẾN ĐẠT");
+const importableRows = rows.filter((row) => !row.excluded);
+const supplierManifest = [...new Set(importableRows.map((row) => row.supplier))].map((supplier_name) => ({ supplier_name, name: supplier_name }));
+const itemManifest = [...new Map(importableRows.map((row) => [row.canonical_item_code, row.canonical_uom])).entries()].map(([item_code, stock_uom]) => ({
+  item_code,
+  name: item_code,
+  stock_uom,
+  default_purchase_uom: stock_uom,
+  is_purchase_item: true,
+  disabled: false,
+  uom_conversions: [],
+}));
+const ready = preflightRealPurchaseRows(rows, {
+  company: "ALUMDOOR",
+  warehouse: "PURCHASE-TEST",
+  supplier_manifest: supplierManifest,
+  item_manifest: itemManifest,
+});
+assert.equal(ready.verdict, "PURCHASE_IMPORT_DRAFT_PREFLIGHT_PASS");
+assert.equal(ready.draft_mutation_authorized, true);
+assert.equal(ready.submit_authorized, false);
+assert.equal(ready.purchase_receipt.ready, 7);
+assert.equal(ready.purchase_receipt.blocked, 0);
+assert.equal(ready.blocker_codes.length, 0);
+assert.deepEqual(ready.submit_blockers, ["STOCK_CUTOFF_NOT_FROZEN_DOUBLE_COUNT_RISK"]);
+
+const tienDat = ready.documents.find((doc) => doc.supplier === "TIẾN ĐẠT");
 assert.ok(tienDat);
 assert.equal(tienDat.line_count, 4);
 assert.deepEqual(tienDat.source_rows, [534, 535, 536, 537]);
-assert.ok(tienDat.blockers.includes("LENGTH_VS_QUANTITY_AXIS_AMBIGUOUS"));
+assert.equal(tienDat.blockers.length, 0);
+const transport = ready.documents.find((doc) => doc.source_rows.includes(539));
+assert.ok(transport);
+assert.equal(transport.lines[0].canonical_item_code, "TP-RAYHOP");
 
-const suspiciousDate = report.documents.find((doc) => doc.source_rows.includes(539));
-assert.ok(suspiciousDate?.blockers.includes("SOURCE_DATE_SEQUENCE_REGRESSION"));
-const outlier = report.documents.find((doc) => doc.source_rows.includes(543));
-assert.ok(outlier?.blockers.includes("QUANTITY_OUTLIER_REQUIRES_SOURCE_DISPOSITION"));
-const missingQty = report.documents.find((doc) => doc.source_rows.includes(544));
-assert.ok(missingQty?.blockers.includes("MISSING_OR_NONPOSITIVE_QUANTITY"));
-
-const rerun = preflightRealPurchaseRows(rows);
+const rerun = preflightRealPurchaseRows(rows, {
+  company: "ALUMDOOR",
+  warehouse: "PURCHASE-TEST",
+  supplier_manifest: supplierManifest,
+  item_manifest: itemManifest,
+});
 assert.deepEqual(
   rerun.documents.map((doc) => doc.import_fingerprint),
-  report.documents.map((doc) => doc.import_fingerprint),
+  ready.documents.map((doc) => doc.import_fingerprint),
   "preflight fingerprints must be deterministic across reruns",
 );
 
-console.log(`ALUMDOOR_REAL_PURCHASE_SOURCE_PASS rows=${rows.length} suppliers=${report.supplier.total} receipts=${report.purchase_receipt.candidate_documents}`);
-console.log(`ALUMDOOR_REAL_PURCHASE_PREFLIGHT_BLOCKED blockers=${report.blocker_codes.join(",")}`);
+console.log(`ALUMDOOR_REAL_PURCHASE_SOURCE_PASS rows=${rows.length} importable=${importableRows.length} excluded=${blocked.source_exclusions.row_count}`);
+console.log(`ALUMDOOR_REAL_PURCHASE_DRAFT_PREFLIGHT_PASS receipts=${ready.purchase_receipt.candidate_documents} submit_blocked=${ready.submit_blockers.join(",")}`);
