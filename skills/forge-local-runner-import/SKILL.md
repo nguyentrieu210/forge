@@ -38,6 +38,10 @@ Current adapters:
 - `real-purchase`
 - `pricing`
 
+`run-local.bat` is an internal bootstrap helper, not a public mutation entry point. Its mutating path is valid only when the process is a proven descendant of the PID owning the active canonical `bootstrap` lock. `sync-local.bat --bootstrap` has the same ancestry requirement. Source-only `sync-local.bat` may remain callable, but it must not perform D1 mutation or kill listeners by port.
+
+Dedicated mutating child importers are also internal. On the canonical Windows runtime they must prove process ancestry under an active local-D1 lock for an allowed adapter before the first write. Read-only modes such as Item `--validate-only` and Pricing without `--apply` remain usable before lock acquisition. Do not create a second callable `*-impl.mjs` copy that bypasses this boundary.
+
 `real-purchase` owns the complete historical purchase convergence lifecycle: canonical Item Gate A reconciliation, exact Supplier reconciliation, historical Draft Purchase Receipt plan, guarded local D1 execution, persisted-D1 verification evidence, and second-pass idempotency. Purchase child scripts may build plans, use the authenticated loopback API, and verify supplied evidence, but they must never spawn Wrangler themselves.
 
 `pricing` owns deterministic real pricing extraction, canonical Item evidence rebuild, pricing payload reproducibility, authenticated zero-write preflight, guarded Price List / Item Price / Pricing Rule apply, persisted local-D1 evidence, and second-pass zero-mutation idempotency. The pricing importer remains API-based and may keep the managed local API running, but lock, backup, persisted-D1 audit, and execution status belong to the canonical runner.
@@ -117,11 +121,14 @@ A local convergence task must not:
 - delete/reset local state to recover from a failed preflight;
 - bypass a failed gate with `continue-on-error`;
 - mutate through raw Wrangler or `sync-local.bat --bootstrap` directly in a workflow;
-- hide a raw Wrangler call inside a child importer or verifier.
+- hide a raw Wrangler call inside a child importer or verifier;
+- invoke a mutating helper or child importer outside the active lock-owner process tree.
 
 ## Workflow inventory rule
 
 The contract workflow must enumerate every self-hosted workflow that can mutate the canonical local D1 and assert the shared concurrency group plus the canonical runner call. At the current convergence point the managed mutation inventory is seven workflows: bootstrap, Layer 0, Reason Master, Item Master, UOM reconciliation, Real Purchase History, and Pricing. Adding another mutating workflow requires updating the inventory and routing it through an adapter in the same change.
+
+`scripts/local-runner/audit-local-mutation-entrypoints.mjs` is the machine-enforced global inventory gate. It must also verify the internal bootstrap helpers, guarded child importers, absence of callable unguarded implementation copies, and absence of workflow-side raw D1/process-control bypasses. Stable state requires `MUTATING_WORKFLOW_BYPASS_COUNT=0` and `CANONICAL_MUTATION_ENTRYPOINT_COUNT=1`.
 
 ## Completion evidence
 
