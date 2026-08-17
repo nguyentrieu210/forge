@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { salesItemContext } from "../dist/apps-src/alumdoor-worker/src/sales-item-context.js";
 import { resolveServerPrice } from "../dist/packages/clouderp-pricing/src/index.js";
+import { resolveCommercialPricingPolicy } from "../dist/packages/clouderp-pricing/src/commercial-policy.js";
 
 function workerPlatform(itemPriceRows) {
   const item = {
@@ -53,6 +54,22 @@ function priceRow(name, overrides = {}) {
   };
 }
 
+function canonicalTestDocument(doctype, record) {
+  return {
+    tenant_id: "demo",
+    doctype,
+    name: record.name,
+    owner: "test@example.com",
+    docstatus: 0,
+    status: "Draft",
+    version: Number(record.version ?? 1),
+    created_at: "2026-07-31T00:00:00.000Z",
+    modified_at: "2026-07-31T00:00:00.000Z",
+    data: record.data,
+    children: [],
+  };
+}
+
 test("sales item preview resolves a valid Item Price even when its record name is noncanonical", async () => {
   const response = await salesItemContext(workerPlatform([priceRow("IP-0007")]), {
     item_code: "ITEM-1",
@@ -87,17 +104,23 @@ test("sales item preview reports duplicate active field matches instead of silen
   assert.match(body.price_error, /Có nhiều đơn giá đang hoạt động/);
 });
 
-function pricingContext(itemPrices) {
+function pricingContext(itemPrices, pricingRules = [], named = {}) {
   return {
     command: { tenant_id: "demo" },
     reader: {
+      async getDocument(_tenant, doctype, name) {
+        const record = doctype === "Pricing Rule"
+          ? pricingRules.find((entry) => entry.name === name)
+          : null;
+        return record ? canonicalTestDocument(doctype, record) : null;
+      },
       async getMasterRecordData(_tenant, doctype, name) {
         if (doctype === "Currency" && name === "VND") return { currency_scale: 2 };
-        return null;
+        return named[`${doctype}:${name}`] ?? null;
       },
       async listMasterRecordData(_tenant, doctype) {
         if (doctype === "Item Price") return itemPrices;
-        if (doctype === "Pricing Rule") return [];
+        if (doctype === "Pricing Rule") return pricingRules;
         return [];
       },
     },
@@ -122,4 +145,126 @@ test("authoritative server pricing uses the same field-based Item Price fallback
   assert.equal(result.rate, "125000.00");
   assert.equal(result.item_price, "IP-0007");
   assert.equal(result.uom, "Cái");
+});
+
+test("canonical Item Price plus another active row for the same list/item/UOM fails closed", async () => {
+  const canonicalName = "BANG-GIA:ITEM-1:Cái";
+  const canonical = { uom: "Cái", currency: "VND", rate: "125000", disabled: 0 };
+  const context = pricingContext(
+    [{ name: "IP-0007", data: priceRow("IP-0007", { rate: "126000" }) }],
+    [],
+    { [`Item Price:${canonicalName}`]: canonical },
+  );
+
+  await assert.rejects(() => resolveServerPrice(context, {
+    itemCode: "ITEM-1",
+    qtyMicros: 1_000_000,
+    postingDate: "2026-07-31",
+    priceList: "BANG-GIA",
+    documentCurrency: "VND",
+    uom: "Cái",
+    partyType: "Customer",
+    party: "KH-1",
+    customerGroup: "Đại lý",
+  }), (error) => {
+    assert.match(error.message, /Multiple active Item Price records match/);
+    assert.match(error.message, /BANG-GIA:ITEM-1:Cái/);
+    assert.match(error.message, /IP-0007/);
+    return true;
+  });
+});
+
+test("equal top-priority Pricing Rules fail closed with both rule names", async () => {
+  const itemPrice = priceRow("IP-0007");
+  const rules = [
+    { name: "RULE-A", data: { price_list: "BANG-GIA", item_code: "ITEM-1", priority: 10, discount_percentage: "5" } },
+    { name: "RULE-B", data: { price_list: "BANG-GIA", item_code: "ITEM-1", priority: 10, discount_percentage: "7" } },
+  ];
+  const context = pricingContext([{ name: "IP-0007", data: itemPrice }], rules);
+
+  await assert.rejects(() => resolveServerPrice(context, {
+    itemCode: "ITEM-1",
+    qtyMicros: 1_000_000,
+    postingDate: "2026-07-31",
+    priceList: "BANG-GIA",
+    documentCurrency: "VND",
+    uom: "Cái",
+    partyType: "Customer",
+    party: "KH-1",
+    customerGroup: "Đại lý",
+  }), (error) => {
+    assert.match(error.message, /Ambiguous Pricing Rule match/);
+    assert.match(error.message, /RULE-A/);
+    assert.match(error.message, /RULE-B/);
+    return true;
+  });
+});
+
+test("commercial pricing policy preserves a signed deduction adjustment", async () => {
+  const rules = [{
+    name: "RULE-DEDUCT",
+    data: {
+      price_list: "BANG-GIA",
+      item_code: "ITEM-1",
+      rule_level: "LINE",
+      effect_type: "ADJUSTMENT",
+      adjustment_basis: "PRICED_QTY",
+      adjustment_rate: "-100",
+      priority: 10,
+      conditions: JSON.stringify([{ field: "price_variant", operator: "eq", value: "NO-CONTROLLER" }]),
+    },
+  }];
+  const result = await resolveCommercialPricingPolicy(pricingContext([], rules), {
+    itemCode: "ITEM-1",
+    priceList: "BANG-GIA",
+    postingDate: "2026-07-31",
+    currency: "VND",
+    currencyScale: 2,
+    qtyMicros: 2_000_000,
+    pricedQtyMicros: 2_000_000,
+    facts: { price_variant: "NO-CONTROLLER" },
+  });
+
+  assert.equal(result.adjustments.length, 1);
+  assert.equal(result.adjustments[0].amount_minor, -20_000);
+});
+
+test("commercial pricing policy enforces server-derived base amount thresholds", async () => {
+  const rules = [{
+    name: "RULE-MINIMUM",
+    data: {
+      price_list: "BANG-GIA",
+      item_code: "ITEM-1",
+      rule_level: "LINE",
+      effect_type: "ADJUSTMENT",
+      adjustment_basis: "FIXED",
+      adjustment_rate: "300000",
+      priority: 10,
+      conditions: JSON.stringify([
+        { field: "price_variant", operator: "eq", value: "DUC-ACCESSORY" },
+        { field: "base_amount", operator: "lt", value: 5000000 },
+      ]),
+    },
+  }];
+  const common = {
+    itemCode: "ITEM-1",
+    priceList: "BANG-GIA",
+    postingDate: "2026-07-31",
+    currency: "VND",
+    currencyScale: 2,
+    qtyMicros: 1_000_000,
+    pricedQtyMicros: 1_000_000,
+  };
+  const matched = await resolveCommercialPricingPolicy(pricingContext([], rules), {
+    ...common,
+    facts: { price_variant: "DUC-ACCESSORY", base_amount: 4_900_000 },
+  });
+  const missed = await resolveCommercialPricingPolicy(pricingContext([], rules), {
+    ...common,
+    facts: { price_variant: "DUC-ACCESSORY", base_amount: 5_000_000 },
+  });
+
+  assert.equal(matched.adjustments.length, 1);
+  assert.equal(matched.adjustments[0].amount_minor, 30_000_000);
+  assert.equal(missed.adjustments.length, 0);
 });

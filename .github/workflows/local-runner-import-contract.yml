@@ -13,6 +13,7 @@ on:
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
+      - 'server/scripts/*alumdoor-pricing*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
       - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
@@ -32,6 +33,7 @@ on:
       - 'server/scripts/import-alumdoor-reason-master-local.mjs'
       - 'server/scripts/*alumdoor-real-purchase*.mjs'
       - 'server/scripts/lib/alumdoor-real-purchase-*.mjs'
+      - 'server/scripts/*alumdoor-pricing*.mjs'
       - '.github/workflows/*alumdoor*local*.yml'
       - '.github/workflows/alumdoor-service-control-remediation-prestage.yml'
       - '.github/workflows/alumdoor-real-purchase-import-policy.yml'
@@ -64,10 +66,13 @@ jobs:
       - name: Syntax check execution sources
         run: |
           node --check scripts/local-runner/run-local-import.mjs
+          node --check scripts/local-runner/run-local-import-core.mjs
+          node --check scripts/local-runner/pricing-adapter.mjs
           node --check scripts/local-runner/real-purchase-adapter.mjs
           node --check server/scripts/alumdoor-runtime-service-host.mjs
           node --check server/scripts/lib/alumdoor-managed-process-tree.mjs
           node --check server/scripts/import-alumdoor-reason-master-local.mjs
+          node --check server/scripts/import-alumdoor-pricing-local.mjs
           node --check server/scripts/verify-alumdoor-real-purchase-audit.mjs
           node --check server/scripts/test-alumdoor-service-control-contract.mjs
 
@@ -88,6 +93,7 @@ jobs:
             .github/workflows/import-alumdoor-item-master-local.yml
             .github/workflows/reconcile-alumdoor-local-source-uom.yml
             .github/workflows/alumdoor-real-purchase-import-policy.yml
+            .github/workflows/alumdoor-pricing-local-import.yml
           )
           for file in "${files[@]}"; do
             grep -q 'group: alumdoor-local-d1-mutation' "$file"
@@ -109,6 +115,7 @@ jobs:
           set -euo pipefail
           bootstrap=.github/workflows/bootstrap-alumdoor-local.yml
           reason=.github/workflows/alumdoor-reason-master-local-import.yml
+          pricing=.github/workflows/alumdoor-pricing-local-import.yml
           host=server/scripts/alumdoor-runtime-service-host.mjs
 
           grep -q 'LEGACY_SOURCE_TRANSITION=PASS' "$bootstrap"
@@ -126,6 +133,15 @@ jobs:
           grep -q 'github.event.workflow_run.head_sha' "$reason"
           if grep -qE '^[[:space:]]{2}push:' "$reason"; then
             echo 'Reason Master acceptance must not race bootstrap on the same push'
+            exit 1
+          fi
+
+          grep -q 'workflow_run:' "$pricing"
+          grep -q 'Bootstrap Alumdoor Local C Drive' "$pricing"
+          grep -q 'github.event.workflow_run.head_sha' "$pricing"
+          grep -q 'run-local-import.mjs pricing' "$pricing"
+          if grep -qE '^[[:space:]]{2}push:' "$pricing"; then
+            echo 'Pricing acceptance must not race bootstrap on the same push'
             exit 1
           fi
 
@@ -153,7 +169,6 @@ jobs:
           grep -q 'service-control-grant.json' "$installer"
           grep -q 'SERVICE_CONTROL_REMEDIATION_PRESTAGED=PASS' "$prestage"
           grep -q 'No elevation was attempted by this workflow' "$prestage"
-
           if grep -Eq "\$controlMask[[:space:]]*=[[:space:]]*'0x000F01FF'|\$controlMask[[:space:]]*=[[:space:]]*'0x000F[0-9A-Fa-f]+'" "$grant"; then
             echo 'Service-control grant mask is broader than the approved local-runner mask'
             exit 1
@@ -163,15 +178,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "Remote mutation guard: --remote is forbidden" scripts/local-runner/run-local-import.mjs
-          grep -q "Wrangler D1 command must include --local" scripts/local-runner/run-local-import.mjs
-          grep -q "GLOBAL_D1_LOCK=ACQUIRED" scripts/local-runner/run-local-import.mjs
-          grep -q "BACKUP_STATUS=PASS" scripts/local-runner/run-local-import.mjs
-          grep -q "RUNTIME_RESTORE=PASS" scripts/local-runner/run-local-import.mjs
-          grep -q "EXECUTION_STATUS=SUCCESS" scripts/local-runner/run-local-import.mjs
-          grep -q "real-purchase" scripts/local-runner/run-local-import.mjs
+          core=scripts/local-runner/run-local-import-core.mjs
+          pricing=scripts/local-runner/pricing-adapter.mjs
+          grep -q "Remote mutation guard: --remote is forbidden" "$core"
+          grep -q "Wrangler D1 command must include --local" "$core"
+          grep -q "GLOBAL_D1_LOCK=ACQUIRED" "$core"
+          grep -q "BACKUP_STATUS=PASS" "$core"
+          grep -q "RUNTIME_RESTORE=PASS" "$core"
+          grep -q "EXECUTION_STATUS=SUCCESS" "$core"
+          grep -q "real-purchase" "$core"
+          grep -q "GLOBAL_D1_LOCK=ACQUIRED" "$pricing"
+          grep -q "BACKUP_STATUS=PASS" "$pricing"
+          grep -q "ALUMDOOR_LOCAL_PRICING_IMPORT_PASS" "$pricing"
+          grep -q "EXECUTION_STATUS=SUCCESS" "$pricing"
+          grep -q "assertLocalWranglerArgs" "$pricing"
           grep -q "ALUMDOOR_REAL_PURCHASE_IMPORT_PASS" scripts/local-runner/real-purchase-adapter.mjs
-          if grep -RInE --exclude='run-local-import.mjs' --exclude='*.test.mjs' -- '--remote' scripts/local-runner; then
+          if grep -RInE --exclude='run-local-import.mjs' --exclude='run-local-import-core.mjs' --exclude='*.test.mjs' -- '--remote' scripts/local-runner; then
             echo 'Unexpected --remote token in local runner sources'
             exit 1
           fi
@@ -199,3 +221,4 @@ jobs:
           grep -q 'skills/forge-local-runner-import/SKILL.md' AI_HANDOFF.md
           grep -q 'node scripts\\local-runner\\run-local-import.mjs' skills/forge-local-runner-import/SKILL.md
           grep -q 'real-purchase' skills/forge-local-runner-import/SKILL.md
+          grep -q 'pricing' skills/forge-local-runner-import/SKILL.md
