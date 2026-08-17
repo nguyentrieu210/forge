@@ -4761,7 +4761,7 @@
         "rule_level:Select(LINE,ORDER)=(LINE) Cấp áp dụng",
         "apply_on:Select(ITEM,ITEM_GROUP)=(ITEM) Áp theo",
         "item_group:Link(Item Group) Chỉ áp cho nhóm hàng",
-        "pricing_scope:Link(Pricing Scope) Phạm vi áp dụng",
+        "pricing_scope:Data Phạm vi áp dụng",
         "effect_type:Select(ADJUSTMENT,DISCOUNT_PERCENT,ORDER_ADJUSTMENT) Kiểu tác động",
         "adjustment_basis:Select(FIXED,AREA_SQM,LENGTH_M,SET_COUNT,PRICED_QTY) Cách tính điều chỉnh",
         "adjustment_rate:Currency Mức điều chỉnh",
