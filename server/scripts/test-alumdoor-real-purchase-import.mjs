@@ -25,12 +25,12 @@ const row539 = rows.find((row) => row.source_row === 539);
 assert.equal(row539?.date, "2026-02-02");
 assert.equal(row539?.source_item_code, "");
 assert.equal(row539?.canonical_item_code, "TP-RAYHOP");
-assert.equal(row539?.canonical_uom, "KG");
+assert.equal(row539?.canonical_uom, "Kg");
 
 const expectedMeters = new Map([[534, 554.4], [535, 374.4], [536, 381.6], [537, 539]]);
 for (const [sourceRow, expected] of expectedMeters) {
   const row = rows.find((entry) => entry.source_row === sourceRow);
-  assert.equal(row?.canonical_uom, "M");
+  assert.equal(row?.canonical_uom, "Mét");
   assert.ok(Math.abs(Number(row?.canonical_quantity) - expected) < 1e-9);
   assert.equal(row?.source_disposition?.quantity_rule, "LENGTH_M_X_PIECE_COUNT");
 }
@@ -80,6 +80,7 @@ assert.deepEqual(tienDat.source_rows, [534, 535, 536, 537]);
 const transport = ready.documents.find((doc) => doc.source_rows.includes(539));
 assert.ok(transport);
 assert.equal(transport.lines[0].canonical_item_code, "TP-RAYHOP");
+assert.equal(transport.lines[0].canonical_uom, "Kg");
 
 const rerun = preflightRealPurchaseRows(rows, { company: "Alumdoor", historical_draft: true, supplier_manifest: supplierManifest, item_manifest: itemManifest });
 assert.deepEqual(rerun.documents.map((doc) => doc.import_fingerprint), ready.documents.map((doc) => doc.import_fingerprint));
