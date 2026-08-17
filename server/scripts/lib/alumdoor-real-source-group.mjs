@@ -23,9 +23,6 @@ function isAreaUom(sourceUom) {
 function finishedDoorGroup(category, code, name) {
   const categoryText = fold(category);
   const text = `${categoryText} | ${fold(code)} | ${fold(name)}`;
-
-  // Source category is the strongest authority. Test Đức before Úc because
-  // folded "ĐỨC" becomes "DUC" and must never be matched by a loose "UC" substring.
   if (categoryIs(categoryText, ["DUC", "CN DUC"])) return "Cửa CN Đức";
   if (categoryIs(categoryText, ["UC", "CUA UC"])) return "Cửa tấm liền Úc";
   if (categoryIs(categoryText, ["SIEU TRUONG"])) return "Cửa Siêu Trường";
@@ -35,8 +32,6 @@ function finishedDoorGroup(category, code, name) {
     if (containsAny(text, ["CUA KEO", "KEO DAI LOAN", "KEO DL"])) return "Cửa kéo Đài Loan";
     return "Cửa Đài Loan";
   }
-
-  // Fallbacks are intentionally specific business phrases, never a bare "UC" token.
   if (containsAny(text, ["SIEU TRUONG", "SIEUTRUONG"])) return "Cửa Siêu Trường";
   if (containsAny(text, ["CUA LUOI", " LUOI ", "LUOI INOX", "LUOI MV"])) return "Cửa Lưới";
   if (containsAny(text, ["CUA KEO", "KEO DAI LOAN", "KEO DL"])) return "Cửa kéo Đài Loan";
@@ -45,19 +40,48 @@ function finishedDoorGroup(category, code, name) {
     return "Cửa Đài Loan";
   }
   if (containsAny(text, ["CUA UC", "TAM LIEN", "UC KT"])) return "Cửa tấm liền Úc";
-  if (containsAny(text, ["CUA DUC", "AL501", "AL503", "AL548", "AL552", "AL652", "AL752", "AL75", "AL70", "AL71", "AL595", "ALVIP", "VIPST"])) {
-    return "Cửa CN Đức";
-  }
+  if (containsAny(text, ["CUA DUC", "AL501", "AL503", "AL548", "AL552", "AL652", "AL752", "AL75", "AL70", "AL71", "AL595", "ALVIP", "VIPST"])) return "Cửa CN Đức";
   return "";
 }
 
-function motorGroup(category, code, name) {
-  const text = `${fold(category)} | ${fold(code)} | ${fold(name)}`;
+function materialGroup(code, name) {
+  const text = `${fold(code)} | ${fold(name)}`;
+  if (containsAny(text, ["RAY", "TRUC", "ONG KEM 34", "ONG KEM34"])) return "Ray và trục";
+  if (containsAny(text, [
+    "TP-A282", "TP-TD327", "TP-TD326", "TP-TD325", "NVL-AL", "TON-", "TOLE",
+    " LA ", "LA DAU", "LA YEM", "LA DAY", "LA TRUNG GIAN", " NAN ", "NAN/",
+    "AL50", "AL70", "AL71", "AL75", "AL595", "AL652", "AL752", "AL552",
+    "AL501", "AL503", "AL548", "ALVIP", "VIPST",
+  ])) return "Nan/lá cửa";
+  return "";
+}
+
+function motorProductGroup(code, name) {
+  const text = `${fold(code)} | ${fold(name)}`;
   if (containsAny(text, ["BINH LUU DIEN", "LUU DIEN", " UPS", "UPS-", "UPS_"])) return "Bình lưu điện";
-  if (containsAny(text, ["REMOTE", "DIEU KHIEN", "BO DK", "TAY DK", "CONTROL", "PHOTOCELL", "CAM BIEN"])) {
-    return "Điều khiển & phụ kiện điện";
+  if (containsAny(text, ["REMOTE", "DIEU KHIEN", "BO DK", "TAY DK", "CONTROL", "PHOTOCELL", "CAM BIEN"])) return "Điều khiển & phụ kiện điện";
+  if (containsAny(text, ["MOTOR", "MO TO", "TP-MT-"])) return "Motor";
+  return "";
+}
+
+function motorComponentGroup(category, code, name) {
+  const text = `${fold(code)} | ${fold(name)}`;
+  const branded = containsAny(text, ["ALUMAX", "YHLD", "YHTAIWAN", "TANKER", "J.G", "JG-"]);
+  const component = containsAny(text, [
+    "PAT", "LAC", "THAN", "NHONG", "PHANH", "TU DIEN", "CUON DAY", "DAY DIEN",
+    "GOI", "BICH", "MACH", "BO MACH", "CONG TAC", "NHONG", "PULY MOTOR",
+  ]);
+  if (branded && component) return "Linh kiện motor";
+  if (categoryIs(category, ["MOTOR", "MO TO"]) && component) return "Linh kiện motor";
+  return "";
+}
+
+function accessoryGroup(category, code, name) {
+  const text = `${fold(code)} | ${fold(name)}`;
+  if (containsAny(text, ["RON", "LONG NHEO", "PHOTLONG", "PULY", "BO ", "BAT ", "BULONG", "VIS", "CON TAN", "BAC DAN"])) {
+    return categoryIs(category, ["DUC", "CN DUC"]) ? "Phụ kiện CN Đức" : "Phụ kiện chung";
   }
-  if (containsAny(text, ["MOTOR", "MO TO", "ALUMAX", "YHLD", "YHTAIWAN", "TANKER", "AUSTDOOR"])) return "Motor";
+  if (containsAny(text, ["GOI", "CUM", "HAM", "VAI", "XOP", "V4", "SAT VUONG", "CAY KEO"])) return "Phụ kiện chung";
   return "";
 }
 
@@ -71,15 +95,21 @@ export function resolveAlumdoorRealSellableGroup({ category, item_code, item_nam
     if (finished) return finished;
   }
 
-  const motor = motorGroup(categoryText, code, name);
-  if (motor) return motor;
+  const material = materialGroup(code, name);
+  if (material) return material;
 
-  if (containsAny(`${categoryText} | ${name}`, ["MOTOR", "MO TO"])) return "Linh kiện motor";
+  const motorProduct = motorProductGroup(code, name);
+  if (motorProduct) return motorProduct;
+
+  const motorComponent = motorComponentGroup(categoryText, code, name);
+  if (motorComponent) return motorComponent;
+
+  const accessory = accessoryGroup(categoryText, code, name);
+  if (accessory) return accessory;
+
+  if (categoryIs(categoryText, ["MOTOR", "MO TO"])) return "Linh kiện motor";
   if (categoryIs(categoryText, ["DUC", "CN DUC"])) return "Phụ kiện CN Đức";
-  if (categoryIs(categoryText, ["LUOI", "CUA LUOI"])) return "Phụ kiện chung";
-  if (categoryIs(categoryText, ["UC", "CUA UC", "DAI LOAN", "DL", "SIEU TRUONG", "PHU KIEN"])) return "Phụ kiện chung";
-
-  // Preserve fail-closed behavior for source categories not yet audited.
+  if (categoryIs(categoryText, ["LUOI", "CUA LUOI", "UC", "CUA UC", "DAI LOAN", "DL", "SIEU TRUONG", "PHU KIEN", "RON", "LON", "BO"])) return "Phụ kiện chung";
   return "";
 }
 
@@ -89,23 +119,15 @@ export function resolveAlumdoorRealStockGroup({ category, item_code, item_name }
   const name = fold(item_name);
   const text = `${categoryText} | ${code} | ${name}`;
 
-  if (containsAny(text, ["RAY", "TRUC"])) return "Ray và trục";
+  const material = materialGroup(code, name);
+  if (material) return material;
 
   if (containsAny(text, [
     "MOTOR", "MO TO", "ALUMAX", "YHLD", "YHTAIWAN", "TANKER",
     "NHONG", "PHANH", "TU DIEN", "CUON DAY", "THAN MOTOR", "BO MACH",
   ])) return "Linh kiện motor";
 
-  if (containsAny(text, [
-    "NVL-AL", "TON-", "TOLE", " NAN ", "NAN/", "LA CUA",
-    "AL50", "AL70", "AL71", "AL75", "AL595", "AL652", "AL752", "AL552",
-    "AL501", "AL503", "AL548", "ALVIP", "VIPST",
-  ])) return "Nan/lá cửa";
-
-  if (containsAny(text, ["SON TINH DIEN", " STD", "-STD", "_STD"])) {
-    return "Phụ kiện cần sơn tĩnh điện";
-  }
-
+  if (containsAny(text, ["SON TINH DIEN", " STD", "-STD", "_STD"])) return "Phụ kiện cần sơn tĩnh điện";
   if (categoryIs(categoryText, ["DUC", "CN DUC"])) return "Phụ kiện CN Đức";
   return "Phụ kiện chung";
 }
