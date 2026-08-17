@@ -37,7 +37,7 @@ function isStockHeader(row) {
 function isDmSectionBoundary(row) {
   return Number(row?.source_row) === 1904
     && !clean(readAlumdoorCell(row, 1))
-    && fold(readAlumdoorCell(row, 2)) === "PHU KIEN LA DAI LOAN"
+    && fold(readAlumdoorCell(row, 2)).replace(/\s+/g, " ") === "PHU KIEN LA DAI LOAN"
     && !clean(readAlumdoorCell(row, 3));
 }
 
