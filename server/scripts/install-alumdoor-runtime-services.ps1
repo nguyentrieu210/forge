@@ -114,37 +114,45 @@ if (-not (Test-Path (Join-Path $Root '.git'))) {
 
 $hostScript = Join-Path $Root 'server\scripts\alumdoor-runtime-service-host.mjs'
 $maintenanceScript = Join-Path $Root 'server\scripts\alumdoor-runtime-maintenance.mjs'
-if (-not (Test-Path $hostScript) -or -not (Test-Path $maintenanceScript)) {
-  throw 'Runtime service scripts are missing. Sync C:\alumdoor to the main commit containing the Windows service support first.'
+$packageJsonPath = Join-Path $Root 'package.json'
+if (-not (Test-Path $hostScript) -or -not (Test-Path $maintenanceScript) -or -not (Test-Path $packageJsonPath)) {
+  throw 'Runtime service scripts or package.json are missing. Sync C:\alumdoor to the main commit containing the Windows service support first.'
 }
 
 $node = (Get-Command node.exe -ErrorAction Stop).Source
-$pnpmCommand = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
-if (-not $pnpmCommand) {
-  $pnpmCommand = Get-Command pnpm -ErrorAction Stop
+$npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+if (-not $npmCommand) {
+  $npmCommand = Get-Command npm -ErrorAction Stop
 }
-$pnpm = $pnpmCommand.Source
+$npm = $npmCommand.Source
+
+$packageJson = Get-Content -LiteralPath $packageJsonPath -Raw | ConvertFrom-Json
+$packageManager = [string]$packageJson.packageManager
+if ($packageManager -notmatch '^pnpm@(?<Version>[^+]+)(?:\+.*)?$') {
+  throw "Expected root packageManager to pin pnpm, got '$packageManager'."
+}
+$pnpmVersion = $Matches.Version
 
 $logs = Join-Path $ServiceHome 'logs'
 $maintenance = Join-Path $ServiceHome 'maintenance.flag'
-New-Item -ItemType Directory -Force -Path $ServiceHome, $logs | Out-Null
+$pnpmRuntime = Join-Path $ServiceHome 'pnpm-runtime'
+$servicePnpm = Join-Path $pnpmRuntime 'node_modules\.bin\pnpm.cmd'
+$pnpmVersionMarker = Join-Path $pnpmRuntime 'pnpm-version.txt'
+New-Item -ItemType Directory -Force -Path $ServiceHome, $logs, $pnpmRuntime | Out-Null
 
-# Grant inheritable Modify at the two roots only. Do not recurse through the
-# checkout: node_modules and build caches can contain hundreds of thousands of
-# entries, while child objects already inherit this ACE as they are created.
+# Grant inheritable Modify at the roots only. Do not recurse through the checkout.
 Write-Host 'Granting NetworkService Modify on Alumdoor roots...'
 & icacls.exe $Root /grant '*S-1-5-20:(OI)(CI)M' /C | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Failed to grant NetworkService access to C:\alumdoor.' }
 & icacls.exe $ServiceHome /grant '*S-1-5-20:(OI)(CI)M' /C | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Failed to grant NetworkService access to the service home.' }
 
-# Explicitly grant the mutable state roots that may already exist with ACLs
-# created by the interactive Administrator before the inheritable root ACE.
 $mutableRoots = @(
   (Join-Path $Root '.git'),
   (Join-Path $Root 'server\apps\tenant-worker\.wrangler'),
   (Join-Path $Root 'client\apps\runtime'),
-  $ServiceHome
+  $ServiceHome,
+  $pnpmRuntime
 )
 foreach ($mutableRoot in $mutableRoots) {
   if (Test-Path $mutableRoot) {
@@ -152,6 +160,32 @@ foreach ($mutableRoot in $mutableRoots) {
     if ($LASTEXITCODE -ne 0) { throw "Failed to grant NetworkService access to $mutableRoot." }
   }
 }
+
+# Runtime services must never depend on Corepack's per-user cache. Install the
+# exact pnpm version pinned by package.json into service-owned state and invoke
+# that shim directly from WinSW children.
+$installedPnpmVersion = if (Test-Path $pnpmVersionMarker) {
+  (Get-Content -LiteralPath $pnpmVersionMarker -Raw).Trim()
+} else {
+  ''
+}
+if (-not (Test-Path $servicePnpm) -or $installedPnpmVersion -ne $pnpmVersion) {
+  Write-Host "Preparing service pnpm $pnpmVersion without Corepack..."
+  if (Test-Path (Join-Path $pnpmRuntime 'node_modules')) {
+    Remove-Item -LiteralPath (Join-Path $pnpmRuntime 'node_modules') -Recurse -Force
+  }
+  & $npm install --prefix $pnpmRuntime --no-save --no-audit --no-fund "pnpm@$pnpmVersion"
+  if ($LASTEXITCODE -ne 0) { throw "npm failed to install service pnpm $pnpmVersion." }
+  Set-Content -LiteralPath $pnpmVersionMarker -Value $pnpmVersion -Encoding ascii
+}
+if (-not (Test-Path $servicePnpm)) {
+  throw "Service pnpm shim was not created at $servicePnpm."
+}
+$actualPnpmVersion = (& $servicePnpm --version | Select-Object -Last 1).Trim()
+if ($LASTEXITCODE -ne 0 -or $actualPnpmVersion -ne $pnpmVersion) {
+  throw "Service pnpm verification failed. Expected $pnpmVersion, got '$actualPnpmVersion'."
+}
+Write-Host "Service pnpm ready: $actualPnpmVersion"
 
 $safeDirectories = @(git config --system --get-all safe.directory 2>$null)
 if ($safeDirectories -notcontains 'C:/alumdoor') {
@@ -206,7 +240,7 @@ foreach ($definition in $services) {
     -Name $definition.Name `
     -Role $definition.Role `
     -NodePath $node `
-    -PnpmPath $pnpm `
+    -PnpmPath $servicePnpm `
     -HostScript $hostScript `
     -ConfigPath $xml `
     -LogsPath $serviceLogPath `
@@ -253,4 +287,5 @@ if ($runner) {
 Write-Host 'Backend : http://localhost:8799'
 Write-Host 'Desk    : http://localhost:5173'
 Write-Host "Logs    : $logs"
+Write-Host "pnpm    : $servicePnpm ($actualPnpmVersion)"
 Write-Host 'ALUMDOOR_WINDOWS_SERVICES_PASS'
