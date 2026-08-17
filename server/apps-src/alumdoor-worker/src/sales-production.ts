@@ -3,6 +3,7 @@ import {
   calculateLeafPlan,
   calculateSalesProductionLine,
   createSalesProduction as createSalesProductionCore,
+  previewDraftSalesBomRequirements,
   previewSalesProduction,
   validateProductionRequest,
   type LeafPlan,
@@ -14,6 +15,7 @@ export {
   buildSalesProductionLines,
   calculateLeafPlan,
   calculateSalesProductionLine,
+  previewDraftSalesBomRequirements,
   previewSalesProduction,
   validateProductionRequest,
 };

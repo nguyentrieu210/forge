@@ -5,6 +5,7 @@ import {
   inspectBomActualComponents,
 } from "../dist/apps-src/alumdoor-worker/src/bom-actual-components.js";
 import {
+  inspectProductionLineBomRequirements,
   previewProductionLineBom,
 } from "../dist/apps-src/alumdoor-worker/src/bom-template-materializer.js";
 
@@ -148,5 +149,16 @@ test("complete preview computes reusable fingerprint but remains read-only", asy
     ["PULLEY", "NVL-PULLEY-34"],
     ["SPRING", "NVL-SPRING-53"],
   ]);
+  assert.equal(requests.some((entry) => entry.init.method === "POST"), false);
+});
+
+
+test("draft requirement inspection resolves source slots without company, warehouse or writes", async () => {
+  const { call, requests } = makeCall();
+  const result = await inspectProductionLineBomRequirements(call, { ...baseLine, source_warehouse: "" });
+  assert.equal(result.bom_template_code, "SRC-GUIDE");
+  assert.equal(result.actual_complete, false);
+  assert.deepEqual(result.missing_actual_component_keys, ["PULLEY", "SPRING"]);
+  assert.equal(result.components.length, 1);
   assert.equal(requests.some((entry) => entry.init.method === "POST"), false);
 });

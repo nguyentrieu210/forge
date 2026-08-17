@@ -9,7 +9,7 @@ import {
   type DoorType,
   type SalesMode,
 } from "./door-formulas.js";
-import { previewProductionLineBom, resolveProductionLineBom } from "./bom-template-materializer.js";
+import { inspectProductionLineBomRequirements, previewProductionLineBom, resolveProductionLineBom } from "./bom-template-materializer.js";
 import {
   normalizeBomActualComponents,
   type BomActualComponentInput,
@@ -702,6 +702,7 @@ export async function calculateSalesProductionLine(
       leaf_height_deduction_m: leaf?.height_deduction_m ?? chosen.raw.leaf_height_deduction_m ?? null,
       leaf_divisor_m: leaf?.divisor_m ?? args.leaf_divisor_m ?? item.leaf_divisor_m ?? chosen.raw.leaf_divisor_const ?? null,
       leaf_rounding: text(chosen.raw.leaf_rounding),
+      ray_type: text(chosen.raw.ray_type) || null,
       leaf_count: leaf?.leaf_count ?? null,
       single_layer_leaf_count: leaf?.single_layer_leaf_count ?? null,
       double_layer_leaf_count: leaf?.double_layer_leaf_count ?? null,
@@ -761,6 +762,104 @@ async function resolveMissingLineBoms(
     });
   }
   return output;
+}
+
+export async function previewDraftSalesBomRequirements(call: ProductionPlatformCall, args: Json): Promise<Response> {
+  try {
+    const itemCode = text(args.item_code);
+    if (!itemCode) throw new Error("Cần chọn mặt hàng cửa.");
+    const customerGroup = text(args.customer_group);
+    if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+      throw new Error("Cần Nhóm giá Đại lý/Lẻ để xem BOM theo đúng công thức bán.");
+    }
+    const [calculationResponse, item, staticBoms] = await Promise.all([
+      calculateSalesProductionLine(call, {
+        ...args,
+        item_code: itemCode,
+        customer_group: customerGroup,
+        set_count: 1,
+        purpose: "sales",
+      }),
+      readDoc<ItemDoc>(call, "Item", itemCode),
+      listDocs<BomDoc>(call, "Bill of Materials", [
+        "name", "item", "color", "docstatus", "is_active", "bom_status",
+        "effective_from", "effective_to", "revision", "generated_by_configurator",
+      ]).catch(() => []),
+    ]);
+    if (!calculationResponse.ok) return calculationResponse;
+    const calculation = await calculationResponse.json() as Json;
+    const staticBom = selectBom(
+      staticBoms, itemCode, text(args.color), dateOnly(args.delivery_date) || new Date().toISOString().slice(0, 10), true,
+    );
+    if (staticBom) {
+      return answer({
+        item_code: itemCode,
+        bom_no: staticBom,
+        bom_template: "",
+        bom_template_code: "",
+        actual_requirements: [],
+        missing_actual_component_keys: [],
+        actual_complete: true,
+        static_bom: true,
+      });
+    }
+    const stockUom = text(item.stock_uom) || "Bộ";
+    const billableArea = finitePositive(calculation.billable_area_sqm, "Diện tích tính tiền");
+    const outputQty = ["m2", "m²", "sqm"].includes(normalized(stockUom)) ? billableArea : 1;
+    const formulaSnapshot = {
+      schema_version: 1,
+      item_code: itemCode,
+      item_group: text(calculation.item_group),
+      door_type: text(calculation.door_type),
+      customer_group: customerGroup,
+      sales_mode: text(args.sales_mode) || "Trọn bộ",
+      width_m: Number(args.width_m),
+      height_m: Number(args.height_m),
+      mesh_height_m: args.mesh_height_m ?? null,
+      formula_policy: calculation.formula_policy,
+      formula_version: calculation.formula_version,
+      width_basis: calculation.width_basis,
+      cut_width_m: calculation.cut_width_m,
+      billable_area_sqm: calculation.billable_area_sqm,
+      leaf_count: calculation.leaf_count,
+      single_layer_leaf_count: calculation.single_layer_leaf_count,
+      double_layer_leaf_count: calculation.double_layer_leaf_count,
+      estimated_weight_kg: calculation.estimated_weight_kg,
+      leaf_variant: calculation.leaf_variant ?? args.leaf_variant ?? null,
+      ray_type: calculation.ray_type ?? null,
+    };
+    const inspection = await inspectProductionLineBomRequirements(call, {
+      item_code: itemCode,
+      output_qty: outputQty,
+      source_warehouse: "",
+      item_group: text(calculation.item_group),
+      door_type: text(calculation.door_type),
+      sales_mode: text(args.sales_mode) || "Trọn bộ",
+      width_m: Number(args.width_m),
+      height_m: Number(args.height_m),
+      ...(args.mesh_height_m == null || args.mesh_height_m === "" ? {} : { mesh_height_m: Number(args.mesh_height_m) }),
+      cut_width_m: Number(calculation.cut_width_m),
+      billable_area_sqm: billableArea,
+      ...(calculation.leaf_count == null ? {} : { leaf_count: Number(calculation.leaf_count) }),
+      ...(calculation.single_layer_leaf_count == null ? {} : { single_layer_leaf_count: Number(calculation.single_layer_leaf_count) }),
+      ...(calculation.double_layer_leaf_count == null ? {} : { double_layer_leaf_count: Number(calculation.double_layer_leaf_count) }),
+      ...(calculation.estimated_weight_kg == null ? {} : { estimated_weight_kg: Number(calculation.estimated_weight_kg) }),
+      ...(text(args.color) ? { color: text(args.color) } : {}),
+      ...(text(args.motor_model) ? { motor_model: text(args.motor_model) } : {}),
+      paint_required: checked(args.paint_required) ? 1 : 0,
+      formula_snapshot: JSON.stringify(formulaSnapshot),
+      ...(args.bom_actual_components === undefined ? {} : { bom_actual_components: normalizeBomActualComponents(args.bom_actual_components) }),
+    });
+    return answer({
+      item_code: itemCode,
+      stock_uom: stockUom,
+      output_qty: outputQty,
+      static_bom: false,
+      ...inspection,
+    });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "Không xem trước được yêu cầu BOM của dòng bán.");
+  }
 }
 
 export async function previewSalesProduction(call: ProductionPlatformCall, args: Json): Promise<Response> {

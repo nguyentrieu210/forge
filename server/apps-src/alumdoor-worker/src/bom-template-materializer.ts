@@ -90,6 +90,15 @@ export interface BomPreviewResult extends BomMaterializationResult {
   actual_complete: boolean;
 }
 
+export interface BomRequirementInspectionResult {
+  bom_template: string;
+  bom_template_code: string;
+  components: ResolvedBomTemplate["components"];
+  actual_requirements: BomActualRequirement[];
+  missing_actual_component_keys: string[];
+  actual_complete: boolean;
+}
+
 function text(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
 }
@@ -358,6 +367,37 @@ async function nextRevision(call: BomMaterializerCall, itemCode: string): Promis
     500,
   ).catch(() => []);
   return rows.reduce((max, row) => Math.max(max, Math.trunc(Number(row.revision ?? 0)) || 0), 0) + 1;
+}
+
+export async function inspectProductionLineBomRequirements(
+  call: BomMaterializerCall,
+  line: BomProductionLineInput,
+): Promise<BomRequirementInspectionResult> {
+  const templates = await loadTemplates(call);
+  if (!templates.length) {
+    throw new Error(`${line.item_code}: chưa có BOM tĩnh và chưa cấu hình BOM Template.`);
+  }
+  const { context, values } = bomContextFromProductionLine(line);
+  const resolved = resolveBomTemplate({ templates, context, values });
+  if (resolved.item_code !== line.item_code) {
+    throw new Error(`${resolved.template_code}: thành phẩm ${resolved.item_code} không khớp dòng bán ${line.item_code}.`);
+  }
+  const source = templates.find((template) => template.template_code === resolved.template_code);
+  if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);
+  const inspection = inspectBomActualComponents({
+    template_code: resolved.template_code,
+    ...(line.bom_actual_components === undefined ? {} : { actual_components: line.bom_actual_components }),
+    required_actual_component_keys: source.required_actual_component_keys,
+    allowed_item_codes_by_key: source.actual_component_allowed_items,
+  });
+  return {
+    bom_template: source.source_name,
+    bom_template_code: resolved.template_code,
+    components: resolved.components,
+    actual_requirements: inspection.requirements,
+    missing_actual_component_keys: inspection.missing_component_keys,
+    actual_complete: inspection.complete,
+  };
 }
 
 export async function previewProductionLineBom(
