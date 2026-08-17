@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { classifyAlumdoorItemSourceCode, ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
 import { resolveAlumdoorBomEvidenceAlias, resolveAlumdoorBomItemPromotion } from "./lib/alumdoor-item-evidence-overrides.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
@@ -108,6 +110,9 @@ const audit={format:"alumdoor-canonical-bom-audit/v3",source_reference_count:ref
 const payload={format:"alumdoor-canonical-bom-payload/v3",source:"apps/alumdoor/docs/nguon/ms-lien/ĐM.md",bom_count:boms.length,source_reference_count:refs,resolved_reference_count:resolved,excluded_reference_count:excluded.length,blocker_count:blockers.length,boms};
 writeFileSync(path.resolve(outputArg),`${JSON.stringify(payload,null,2)}\n`);
 writeFileSync(path.resolve(auditArg),`${JSON.stringify(audit,null,2)}\n`);
+const regressionScript=fileURLToPath(new URL("./check-alumdoor-canonical-bom-regressions.mjs",import.meta.url));
+const regression=spawnSync(process.execPath,[regressionScript,path.resolve(sourceArg),path.resolve(itemArg),path.resolve(outputArg),path.resolve(auditArg)],{stdio:"inherit"});
+if(regression.status!==0) throw new Error(`Canonical BOM regression gate failed with exit ${regression.status}`);
 console.log(`ALUMDOOR_CANONICAL_BOM_GATE refs=${refs} boms=${boms.length} resolved=${resolved} excluded=${excluded.length} blockers=${blockers.length}`);
 console.log(`ALUMDOOR_CANONICAL_BOM_BLOCKER_COUNTS ${JSON.stringify(audit.blocker_counts)}`);
 console.log(`ALUMDOOR_CANONICAL_BOM_CLASS_COUNTS ${JSON.stringify(audit.blocker_class_counts)}`);
