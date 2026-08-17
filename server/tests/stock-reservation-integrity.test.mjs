@@ -35,6 +35,10 @@ function reader({
       if (type === "Item") return { item_code: name, has_batch_no: 1 };
       if (type === "Warehouse") return { stock_role: "Kho chính", is_group: isGroup, disabled, ...(warehouseCompany ? { company: warehouseCompany } : {}) };
       if (type === "Batch") return batches[name] ?? { item_code: "AL548", length_m: "4.6", color: "Ghi", condition: "Đã sơn" };
+      if (type === "Lý do huỷ") {
+        if (name === "THAY_DOI_KE_HOACH") return { reason_code: name, reason_name: "Thay đổi kế hoạch", applies_to_doctype: "Phiếu kho" };
+        if (name === "CAT_NHAM") return { reason_code: name, reason_name: "Cắt nhầm", applies_to_doctype: "Phiếu cắt" };
+      }
       return null;
     },
     async getDocument() {
@@ -58,7 +62,7 @@ function context({ document = reservation(), existing, actor, action = existing 
 
 test("reservation mới không được sinh thẳng ở trạng thái terminal", async () => {
   const controller = new StockReservationIntegrityController();
-  await assert.rejects(() => controller.normalize(context({ document: reservation({ state: "Đã nhả", released_reason: "Huỷ lệnh" }) })), /phải bắt đầu ở trạng thái Đang giữ/);
+  await assert.rejects(() => controller.normalize(context({ document: reservation({ state: "Đã nhả", released_reason: "THAY_DOI_KE_HOACH" }) })), /phải bắt đầu ở trạng thái Đang giữ/);
 });
 
 test("reservation mới chụp số lượng ban đầu do server sở hữu", async () => {
@@ -123,16 +127,24 @@ test("tăng qty vẫn phải qua availability và giữ snapshot ban đầu bấ
   assert.equal(normalized.initial_qty_reserved_micros, 20_000_000);
 });
 
-test("release reservation bắt buộc lý do và terminal record không được hồi sinh", async () => {
+test("release reservation bắt buộc reason master active, đúng scope và terminal record không được hồi sinh", async () => {
   const controller = new StockReservationIntegrityController();
   const existing = reservation();
   await assert.rejects(
     () => controller.normalize(context({ existing, document: reservation({ state: "Đã nhả", released_reason: "" }) })),
     /Phải nhập lý do nhả giữ chỗ/,
   );
-  const released = await controller.normalize(context({ existing, document: reservation({ state: "Đã nhả", released_reason: "Huỷ kế hoạch" }) }));
+  await assert.rejects(
+    () => controller.normalize(context({ existing, document: reservation({ state: "Đã nhả", released_reason: "KHONG_TON_TAI" }) })),
+    /không tồn tại hoặc đã ngừng dùng/,
+  );
+  await assert.rejects(
+    () => controller.normalize(context({ existing, document: reservation({ state: "Đã nhả", released_reason: "CAT_NHAM" }) })),
+    /chỉ áp cho Phiếu cắt, không áp cho Phiếu kho/,
+  );
+  const released = await controller.normalize(context({ existing, document: reservation({ state: "Đã nhả", released_reason: "THAY_DOI_KE_HOACH" }) }));
   assert.equal(released.state, "Đã nhả");
-  assert.equal(released.released_reason, "Huỷ kế hoạch");
+  assert.equal(released.released_reason, "THAY_DOI_KE_HOACH");
   await assert.rejects(
     () => controller.normalize(context({ existing: released, document: { ...released, state: "Đang giữ", qty_reserved: "20" } })),
     /đã kết thúc và không thể sửa/,
