@@ -235,7 +235,6 @@ function resolveExactSourceGeometry(record, uomResolution, canonicalItemCode, n,
 }
 
 export function resolveBomQuantity(record, uomResolution, parentItem, canonicalItemCode = "") {
-  void parentItem;
   const mapped = resolveTemplateLineage(record, canonicalItemCode);
   if (mapped.status === "blocked") return mapped;
   if (mapped.status === "mapped") {
@@ -246,6 +245,21 @@ export function resolveBomQuantity(record, uomResolution, parentItem, canonicalI
   const n = positiveBomNumber(raw);
   const code = clean(record?.source_formula_code);
   const text = clean(record?.source_formula_text);
+  const parentStockUom = canonicalAlumdoorUom(parentItem?.stock_uom);
+  if (
+    uomResolution.kind === "rate"
+    && n
+    && !code
+    && !text
+    && parentStockUom === uomResolution.rate_denominator
+  ) {
+    return {
+      status: "accepted",
+      qty: n,
+      qty_basis: `Theo 1 ${parentStockUom} output`,
+      formula_kind: "rate_per_parent_output",
+    };
+  }
   if (manualActual(`${raw} ${code} ${text}`)) return { status: "deferred", reason: "manual_actual_consumption_source_rule", qty_basis: "Runtime actual" };
   const multipliers = new Map([["SL_X_DM",1],["SL_X2_X_DM",2],["SL_X4_X_DM",4],["SL_X6_X_DM",6]]);
   if (multipliers.has(code)) {
