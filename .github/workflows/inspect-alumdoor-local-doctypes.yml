@@ -33,3 +33,21 @@ jobs:
           $exit = $LASTEXITCODE
           Remove-Item Env:FORGE_ADMIN_PASSWORD -ErrorAction SilentlyContinue
           if ($exit -ne 0) { throw 'DocType metadata inspection failed.' }
+      - name: Probe live Item field control flags
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $probe = Join-Path $env:RUNNER_TEMP 'probe-live-item-field-control.mjs'
+          @'
+          const origin='http://127.0.0.1:8799';
+          const jar=new Map();let csrf='';
+          function remember(r){const raw=r.headers.get('set-cookie');if(!raw)return;for(const p of raw.split(/,(?=[^;,]+=)/)){const q=p.split(';',1)[0],i=q.indexOf('=');if(i>0)jar.set(q.slice(0,i).trim(),q.slice(i+1).trim());}}
+          async function req(path,opt={}){const h=new Headers(opt.headers??{});if(jar.size)h.set('cookie',[...jar].map(([k,v])=>`${k}=${v}`).join('; '));if(csrf&&opt.method&&opt.method!=='GET')h.set('x-frappe-csrf-token',csrf);if(opt.body!==undefined)h.set('content-type','application/json');const r=await fetch(origin+path,{...opt,headers:h,body:opt.body===undefined?undefined:JSON.stringify(opt.body)});remember(r);const t=await r.text();let b;try{b=t?JSON.parse(t):null}catch{b=t}if(!r.ok)throw new Error(`${path} ${r.status}: ${t}`);return b;}
+          await req('/api/method/login',{method:'POST',body:{usr:'dev@example.com',pwd:'local-dev-password-1'}});
+          const boot=await req('/api/method/metaforge.api.get_boot');csrf=boot?.message?.csrf_token??boot?.csrf_token??'';
+          const body=await req('/api/resource/DocType/Item');const meta=body?.data??body?.message??body;
+          const wanted=new Set(['item_code','item_name','item_group','item_nature','material_stage','supply_type','is_stock_item','is_purchase_item','is_sales_item','include_item_in_manufacturing','stock_uom','default_purchase_uom','default_sales_uom','measurement_profile','uom_conversions','disabled']);
+          for(const field of meta?.fields??[]){if(wanted.has(field.fieldname))console.log('ITEM_FIELD_CONTROL '+JSON.stringify(field));}
+          '@ | Set-Content -Path $probe -Encoding utf8
+          & node $probe
+          if ($LASTEXITCODE -ne 0) { throw 'Item field-control probe failed.' }
