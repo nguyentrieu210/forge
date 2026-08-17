@@ -14,6 +14,11 @@ import type { ControlRegistry, FieldServices } from "@metaforge/controls";
 import { Button, Checkbox, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, toast } from "@metaforge/ui";
 import { useMetaForge } from "../../../container/provider.js";
 import { salesItemSearchTerms } from "./sales-item-search.js";
+import {
+  AlumdoorBomActualEditor,
+  type BomActualComponentRow,
+  type BomActualRequirement,
+} from "./AlumdoorBomActualEditor.js";
 
 interface AlumdoorSalesOrderCreateProps {
   /** Có name = mở/sửa đơn hiện có; không có name = tạo đơn mới. */
@@ -59,6 +64,10 @@ interface SalesLine extends Json {
   _selectedItemPrice?: string;
   _splitChildren?: SalesLine[];
   _splitPackageChecksum?: string;
+_bomActualRequirements?: BomActualRequirement[];
+_bomActualComplete?: boolean;
+_bomTemplateCode?: string;
+_bomActualError?: string;
   item_code?: string;
   sales_option?: string;
   color?: string;
@@ -79,6 +88,7 @@ interface SalesLine extends Json {
   has_butterfly_bracket?: number;
   length_m?: number;
   qty_bar?: number;
+bom_actual_components?: BomActualComponentRow[];
   sales_package_group_key?: string;
   sales_package_parent_key?: string;
   sales_package_component_key?: string;
@@ -1269,6 +1279,38 @@ next._pricingError = mapError(error).message;
         }
       }
 
+const bomCandidate = { ...row, ...next, _context: context } as SalesLine;
+if (isAreaDoor(bomCandidate)
+  && numberValue(bomCandidate.width_m) !== undefined
+  && numberValue(bomCandidate.height_m) !== undefined
+  && ["Đại lý", "Lẻ"].includes(text(header.customer_group))) {
+  try {
+    const bomPreview = await adapter.callPost<Json>("alumdoor.sales.preview_bom_requirements", {
+      ...cleanLine(bomCandidate),
+      customer_group: text(header.customer_group),
+      delivery_date: text(header.delivery_date) || today(),
+    });
+    if (lineSeq.current.get(row._key) !== seq) return;
+    const requirements = Array.isArray(bomPreview.actual_requirements)
+      ? bomPreview.actual_requirements.filter((entry): entry is BomActualRequirement => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+      : [];
+    next._bomActualRequirements = requirements;
+    next._bomActualComplete = bomPreview.actual_complete === true || bomPreview.actual_complete === 1;
+    next._bomTemplateCode = text(bomPreview.bom_template_code) || undefined;
+    next._bomActualError = "";
+  } catch (error) {
+    next._bomActualRequirements = [];
+    next._bomActualComplete = false;
+    next._bomTemplateCode = undefined;
+    next._bomActualError = mapError(error).message;
+  }
+} else {
+  next._bomActualRequirements = [];
+  next._bomActualComplete = undefined;
+  next._bomTemplateCode = undefined;
+  next._bomActualError = "";
+}
+
       patchLine(row._key, next);
     } catch (error) {
       if (lineSeq.current.get(row._key) === seq) {
@@ -1362,6 +1404,14 @@ _error: mapError(error).message,
     const current = linesRef.current.find((line) => line._key === key);
     commitLine(key, field, current?.[field] ?? fallback);
   }, [commitLine]);
+
+const commitBomActualComponents = useCallback((key: string, rows: BomActualComponentRow[]) => {
+  const current = linesRef.current.find((line) => line._key === key);
+  if (!current) return;
+  const patch: Partial<SalesLine> = { bom_actual_components: rows };
+  patchLine(key, patch);
+  void previewLine({ ...current, ...patch } as SalesLine, "bom_actual_components", patch);
+}, [patchLine, previewLine]);
 
   const toggleSplitComponent = useCallback((parentKey: string, component: Json, checked: boolean) => {
     const parent = lines.find((line) => line._key === parentKey);
@@ -1468,6 +1518,11 @@ _error: mapError(error).message,
         sales_package_snapshot: undefined,
         _splitChildren: [],
         _splitPackageChecksum: undefined,
+bom_actual_components: [],
+_bomActualRequirements: [],
+_bomActualComplete: undefined,
+_bomTemplateCode: undefined,
+_bomActualError: "",
         discount_percentage: undefined,
         discount_amount: undefined,
         adjustment_amount: undefined,
@@ -1883,7 +1938,7 @@ _error: mapError(error).message,
     };
   });
   const lineNotices = gridRows.flatMap((row, index) => {
-    const message = row.error || row.pricingError;
+    const message = row.error || row.pricingError || lines[index]?._bomActualError;
     const parentNotice = message
       ? [{ key: row.key, message: `Dòng ${index + 1}: ${salesLineErrorInVietnamese(message, lines[index]!)}` }]
       : [];
@@ -2271,7 +2326,9 @@ _error: mapError(error).message,
             text(child.sales_package_component_key),
             child,
           ]));
-          const hasLinkedRows = hasInlineDetail || giftComponents.length > 0 || selectableComponents.length > 0;
+          const bomActualRequirements = line._bomActualRequirements ?? [];
+          const hasBomActualRow = Boolean(line._bomTemplateCode || line._bomActualError || bomActualRequirements.length > 0);
+          const hasLinkedRows = hasInlineDetail || hasBomActualRow || giftComponents.length > 0 || selectableComponents.length > 0;
           const recordTone = rowIndex % 2 === 0 ? "!bg-card" : "!bg-secondary";
           // Item is a read-only catalog source for fast order entry. Selecting an
           // entry copies its code into this Sales Order Item; this screen must not
@@ -2425,7 +2482,7 @@ _error: mapError(error).message,
               </TableCell>
             </TableRow>
             {hasInlineDetail ? (
-              <TableRow className={`${recordTone} ${giftComponents.length || selectableComponents.length ? "[&>td]:!border-b-0" : "border-b-2"} [&>td]:!bg-inherit`} data-section="sales-line-detail-row">
+              <TableRow className={`${recordTone} ${hasBomActualRow || giftComponents.length || selectableComponents.length ? "[&>td]:!border-b-0" : "border-b-2"} [&>td]:!bg-inherit`} data-section="sales-line-detail-row">
                 <TableCell className="px-1 py-2" />
                 <TableCell className="w-20 whitespace-nowrap px-2 py-2 text-center align-middle font-semibold text-foreground">
                   Chi tiết
@@ -2575,6 +2632,46 @@ _error: mapError(error).message,
                 </TableCell>
               </TableRow>
             ) : null}
+{hasBomActualRow ? (
+  <TableRow
+    className={`${recordTone} ${giftComponents.length || selectableComponents.length ? "[&>td]:!border-b-0" : "border-b-2"} [&>td]:!bg-inherit`}
+    data-section="sales-line-bom-actual-row"
+  >
+    <TableCell className="px-1 py-2" />
+    <TableCell className="w-20 whitespace-nowrap px-2 py-2 text-center align-top font-semibold text-foreground">BOM</TableCell>
+    <TableCell colSpan={9} className="max-w-0 px-3 py-2 text-left align-top">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="font-medium text-foreground">
+            {line._bomTemplateCode ? `BOM Template · ${line._bomTemplateCode}` : "Yêu cầu vật tư BOM"}
+          </div>
+          {line._bomActualError ? (
+            <span className="font-medium text-destructive">Không resolve được BOM</span>
+          ) : line._bomActualComplete ? (
+            <span className="font-medium text-foreground">Đủ vật tư thực tế</span>
+          ) : (
+            <span className="font-medium text-destructive">
+              Còn thiếu {bomActualRequirements.filter((requirement) => requirement.missing).map((requirement) => requirement.component_key).join(", ") || "vật tư thực tế"}
+            </span>
+          )}
+        </div>
+        {line._bomActualError ? (
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            {line._bomActualError}
+          </div>
+        ) : null}
+        {bomActualRequirements.length > 0 ? (
+          <AlumdoorBomActualEditor
+            requirements={bomActualRequirements}
+            value={line.bom_actual_components ?? []}
+            disabled={formReadOnly || Boolean(line._loading)}
+            onChange={(rows) => commitBomActualComponents(line._key, rows)}
+          />
+        ) : null}
+      </div>
+    </TableCell>
+  </TableRow>
+) : null}
             {selectableComponents.map((component, componentIndex) => {
               const componentKey = text(component.component_key);
               const child = selectedSplitChildren.get(componentKey);
