@@ -8,7 +8,6 @@ on:
       - 'server/scripts/export-alumdoor-item-reference-map.mjs'
       - 'server/scripts/test-alumdoor-item-import-policy.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
-      - 'server/imports/alumdoor-item-only-2026-08-11.sql'
       - '.github/workflows/alumdoor-item-import-policy.yml'
   pull_request:
     paths:
@@ -17,7 +16,6 @@ on:
       - 'server/scripts/export-alumdoor-item-reference-map.mjs'
       - 'server/scripts/test-alumdoor-item-import-policy.mjs'
       - 'server/scripts/test-alumdoor-item-catalog-preflight.mjs'
-      - 'server/imports/alumdoor-item-only-2026-08-11.sql'
       - '.github/workflows/alumdoor-item-import-policy.yml'
   workflow_dispatch:
 
@@ -31,10 +29,11 @@ jobs:
           node-version: '20'
       - run: node server/scripts/test-alumdoor-item-import-policy.mjs
       - run: node server/scripts/test-alumdoor-item-catalog-preflight.mjs
-      - name: Export Item reference map
-        run: node server/scripts/export-alumdoor-item-reference-map.mjs server/imports/alumdoor-item-only-2026-08-11.sql alumdoor-item-reference-map.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: alumdoor-item-reference-map
-          path: alumdoor-item-reference-map.json
-          if-no-files-found: error
+      - name: Reject retired legacy Item reference source
+        shell: bash
+        run: |
+          if ALUMDOOR_ALLOW_LEGACY_ITEM_SQL=0 node server/scripts/export-alumdoor-item-reference-map.mjs server/imports/alumdoor-item-only-2026-08-11.sql alumdoor-item-reference-map.json; then
+            echo "Retired legacy Item source was unexpectedly accepted" >&2
+            exit 1
+          fi
+          echo "ALUMDOOR_LEGACY_ITEM_SOURCE_RETIRED_PASS"
