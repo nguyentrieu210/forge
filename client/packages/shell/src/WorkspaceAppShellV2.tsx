@@ -16,6 +16,7 @@ import {
   workspaceItemsForTabs,
   type WorkspaceModule,
 } from "./workspace-navigation.js";
+import { productMasterItems, productNavigation, productReportItems } from "./workspace-product-policy.js";
 
 export type { AppShellProps, NavItem, Breadcrumb, NotificationItem } from "./AppShell.js";
 
@@ -24,85 +25,6 @@ const accountAdapter = new FrappeAdapterImpl({});
 
 function normalizedGroup(label: string | undefined): string {
   return (label ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLocaleLowerCase("vi").trim();
-}
-
-const ALUMDOOR_SIDEBAR_GROUPS = new Set([
-  "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
-  "bao cao", "danh muc", "he thong", "quy kho", "luong",
-]);
-
-const ALUMDOOR_HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong qr", "nhan su & tien luong"]);
-/**
- * Thứ tự khai báo ở đây LÀ thứ tự hiển thị trên tab "Nhân sự & Tiền lương" — xem
- * `sortAlumdoorHrItems`. Nhân sự trước, Chấm công/lương sau.
- */
-const ALUMDOOR_HR_KEY_ORDER = [
-  "Employee", "AlumDoor Pay Profile",
-  "AlumDoor Attendance Day", "AlumDoor Attendance Device", "AlumDoor QR Station", "AlumDoor Attendance Policy",
-  "alumdoor-attendance:scan", "alumdoor-attendance:today", "alumdoor-attendance:month",
-  "alumdoor-attendance:exceptions",
-];
-const ALUMDOOR_HR_KEYS = new Set(ALUMDOOR_HR_KEY_ORDER);
-
-function sortAlumdoorHrItems(items: NavItem[]): NavItem[] {
-  return [...items].sort((a, b) => ALUMDOOR_HR_KEY_ORDER.indexOf(a.key) - ALUMDOOR_HR_KEY_ORDER.indexOf(b.key));
-}
-
-const ALUMDOOR_REPORT_WORKSPACES: Record<string, string[]> = {
-  "report:Đơn hàng theo khách": ["Bán hàng"],
-  "report:Báo giá theo khách": ["Bán hàng"],
-  "report:Lắp đặt theo đội": ["Bán hàng"],
-  "report:Mua hàng theo nhà cung cấp": ["Mua hàng"],
-  "report:Đơn mua chưa nhận đủ": ["Mua hàng"],
-  "report:Stock Balance": ["Kho"],
-  "report:Stock Ledger": ["Kho"],
-  "report:Lệnh sản xuất theo mặt hàng": ["Sản xuất"],
-  "report:Work Order Progress": ["Sản xuất"],
-  "report:Công nợ theo khách hàng": ["Công nợ"],
-  "report:Accounts Receivable": ["Công nợ"],
-  "report:Accounts Payable": ["Công nợ"],
-};
-
-const ALUMDOOR_MASTER_WORKSPACES: Record<string, string[]> = {
-  Item: ["Bán hàng", "Kho", "Mua hàng", "Sản xuất", "Bảo hành"],
-  "Item Group": ["Kho", "Sản xuất"],
-  UOM: ["Kho", "Mua hàng", "Sản xuất"],
-  Warehouse: ["Kho", "Mua hàng", "Sản xuất"],
-  Customer: ["Bán hàng", "Công nợ", "Bảo hành"],
-  Supplier: ["Mua hàng", "Công nợ", "Bảo hành"],
-  "Price List": ["Bán hàng"],
-  "Item Price": ["Bán hàng"],
-  "Pricing Scope": ["Bán hàng"],
-  "Pricing Rule": ["Bán hàng"],
-  "Cutting Policy": ["Sản xuất"],
-  "Measurement Profile": ["Kho", "Sản xuất"],
-  "Item Color": ["Kho", "Sản xuất"],
-  "Material Grade": ["Kho", "Sản xuất"],
-  "Material Specification": ["Kho", "Sản xuất"],
-  "Item Attribute": ["Kho", "Sản xuất"],
-  "Supplier Item": ["Mua hàng"],
-  Brand: ["Bán hàng", "Mua hàng"],
-  Manufacturer: ["Mua hàng"],
-  "Lý do huỷ": ["Kho"],
-  "Nguyên nhân chênh lệch": ["Kho"],
-};
-
-function isCatalogNavigation(item: NavItem): boolean {
-  return item.key === "__catalog" || normalizedGroup(item.group).startsWith("ung dung · ");
-}
-
-function isVisibleProductNavigation(item: NavItem): boolean {
-  if (!isAlumdoorSurface()) return !isCatalogNavigation(item);
-  if (item.key === "catalog") return false;
-  const group = normalizedGroup(item.group);
-  if (ALUMDOOR_HR_GROUPS.has(group)) return ALUMDOOR_HR_KEYS.has(item.key);
-  return !isCatalogNavigation(item) && ALUMDOOR_SIDEBAR_GROUPS.has(group);
-}
-
-function scopedWorkspaceMeta(items: NavItem[], module: WorkspaceModule, affinity: Record<string, string[]>): NavItem[] {
-  if (!isAlumdoorSurface()) return items;
-  const target = normalizedGroup(module.label);
-  return items.filter((item) => (affinity[item.key] ?? []).some((workspace) => normalizedGroup(workspace) === target));
 }
 
 function indexHubKey(item: NavItem | undefined): string | undefined {
@@ -314,12 +236,7 @@ export function AppShell(props: AppShellProps) {
    * Alumdoor chỉ nhận các nhóm đã khai trong brief gốc cộng Quỹ kho. Các app cài kèm vẫn
    * giữ route/dữ liệu của chúng, nhưng không được tự biến thành sidebar của sản phẩm này.
    */
-  const sidebarNav = useMemo(() => {
-    const filtered = props.nav.filter(isVisibleProductNavigation);
-    const hrItems = sortAlumdoorHrItems(filtered.filter((item) => ALUMDOOR_HR_KEYS.has(item.key)));
-    let hrCursor = 0;
-    return filtered.map((item) => (ALUMDOOR_HR_KEYS.has(item.key) ? hrItems[hrCursor++]! : item));
-  }, [props.nav]);
+  const sidebarNav = useMemo(() => productNavigation(props.nav), [props.nav]);
   const modules = useMemo(() => buildWorkspaceModules(sidebarNav), [sidebarNav]);
   const activeModule = useMemo(() => findWorkspaceModule(modules, props.activeKey), [modules, props.activeKey]);
   const [selectedLabel, setSelectedLabel] = useState<string | undefined>(() => loadStoredModule());
@@ -404,8 +321,8 @@ export function AppShell(props: AppShellProps) {
     const activeSidebarKey = indexHubKey(sidebarNav.find((item) => item.key === props.activeKey)) ?? props.activeKey;
     const allReportItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "bao cao" && item.key !== "__reports" && !item.disabledReason);
     const allMasterItems = sidebarNav.filter((item) => normalizedGroup(item.group) === "danh muc" && item.key !== "__master-data" && !item.disabledReason);
-    const reportItems = scopedWorkspaceMeta(allReportItems, selectedModule, ALUMDOOR_REPORT_WORKSPACES);
-    const masterItems = scopedWorkspaceMeta(allMasterItems, selectedModule, ALUMDOOR_MASTER_WORKSPACES);
+    const reportItems = productReportItems(allReportItems, selectedModule);
+    const masterItems = productMasterItems(allMasterItems, selectedModule);
 
     shell = (
       <BaseAppShell
