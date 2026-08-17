@@ -29,7 +29,7 @@ function Resolve-Sid([string]$Account) {
 function Read-ServiceSddl([string]$Name) {
   $lines = @(& sc.exe sdshow $Name 2>&1)
   if ($LASTEXITCODE -ne 0) {
-    throw "sc.exe sdshow failed for $Name: $($lines -join ' ')"
+    throw "sc.exe sdshow failed for ${Name}: $($lines -join ' ')"
   }
   $sddl = ($lines | ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ -match '^D:' } | Select-Object -First 1)
   if (-not $sddl) { throw "No DACL SDDL returned for $Name" }
@@ -89,7 +89,7 @@ foreach ($name in $ServiceNames) {
   if ($after -ne $before) {
     $output = @(& sc.exe sdset $name $after 2>&1)
     if ($LASTEXITCODE -ne 0) {
-      throw "sc.exe sdset failed for $name: $($output -join ' ')"
+      throw "sc.exe sdset failed for ${name}: $($output -join ' ')"
     }
   }
 

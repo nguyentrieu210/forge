@@ -18,6 +18,9 @@ assert.doesNotMatch(grant, /WRITE_DAC[^\n]*grant/i);
 assert.match(grant, /Get-CimInstance Win32_ComputerSystem/);
 assert.match(grant, /actions\.runner\.nguyentrieu210-forge\.\*/);
 assert.match(grant, /ALUMDOOR_RUNNER_SERVICE_CONTROL_PASS/);
+assert.doesNotMatch(grant, /\$(?:Name|name):/);
+assert.match(grant, /\$\{Name\}:/);
+assert.match(grant, /\$\{name\}:/);
 assert.match(installer, /grant-alumdoor-runner-service-control\.ps1/);
 assert.match(installer, /service-control-grant\.json/);
 
