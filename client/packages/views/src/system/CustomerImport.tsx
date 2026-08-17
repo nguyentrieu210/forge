@@ -140,6 +140,7 @@ export function CustomerImportContent() {
       const sheetName = workbook.SheetNames[0];
       if (!sheetName) throw new Error("File không có sheet dữ liệu.");
       const sheet = workbook.Sheets[sheetName];
+      if (!sheet) throw new Error("Không đọc được sheet dữ liệu đầu tiên.");
       const matrix = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, raw: false, defval: "" });
       const first = (matrix[0] ?? []).map((cell) => String(cell ?? "").trim());
       if (!first.some(Boolean)) throw new Error("Không đọc được hàng tiêu đề.");
