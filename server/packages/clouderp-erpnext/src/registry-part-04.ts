@@ -3,7 +3,8 @@ import { SalaryBankBatchController } from "./hrm-workforce-finance-controllers.j
 import { SubscriptionController, EInvoiceSubmissionController } from "./enterprise-controllers.js";
 import { WarehouseCashFundController, WarehouseCashVoucherController, WarehouseCashTransferController, WarehouseCashCountController } from "./warehouse-cash.js";
 import { AlumDoorPayProfileController } from "./alumdoor-payroll.js";
-import { AlumDoorAttendanceDayController, AlumDoorAttendanceDeviceController } from "./alumdoor-attendance.js";
+import { AlumDoorAttendanceDeviceController } from "./alumdoor-attendance.js";
+import { AlumDoorLiteAttendanceDayController } from "./alumdoor-attendance-lite.js";
 import { CutOrderReservationIntegrityController } from "./cut-order-reservation-integrity.js";
 import { StockReservationIntegrityController } from "./stock-reservation-integrity.js";
 import { StockReconciliationIntegrityController } from "./stock-reconciliation-integrity.js";
@@ -20,7 +21,7 @@ export function registerErpNextControllersPart04(registry: ControllerRegistry): 
     .register(new WarehouseCashTransferController())
     .register(new WarehouseCashCountController())
     .register(new AlumDoorPayProfileController())
-    .register(new AlumDoorAttendanceDayController())
+    .register(new AlumDoorLiteAttendanceDayController())
     .register(new AlumDoorAttendanceDeviceController())
     .register(new CutOrderReservationIntegrityController())
     .register(new StockReservationIntegrityController())

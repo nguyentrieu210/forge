@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+export const ALUMDOOR_SHIFT_HOURLY_RATE_VND = 50_000 as const;
 export const ALUMDOOR_OVERTIME_RATE_VND_PER_HOUR = 50_000 as const;
 
 const timeOfDaySchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/u, "Giá» chÆ°a há»£p lá»‡");
@@ -47,6 +48,11 @@ export const employeeLiteCreateSchema = z.object({
 
 export type EmployeeLiteCreateInput = z.infer<typeof employeeLiteCreateSchema>;
 
+/**
+ * Compatibility profile for employee scope/effective dates and fixed allowance.
+ * Calculation v3 pays worked/paid-leave minutes at ALUMDOOR_SHIFT_HOURLY_RATE_VND;
+ * base_salary_vnd/pay_mode remain accepted only so existing profiles do not break.
+ */
 export const payProfileLiteSaveSchema = z.object({
   employee: z.string().trim().min(1, "Chọn nhân viên"),
   pay_mode: z.enum(["MONTHLY", "DAILY"], { message: "Chọn cách trả lương" }),

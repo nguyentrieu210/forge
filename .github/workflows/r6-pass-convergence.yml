@@ -1,15 +1,16 @@
 name: R6 Pass Convergence
+
+# Legacy convergence diagnostics only. R6 is no longer an automatic merge gate.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
+
 concurrency:
-  group: r6-pass-convergence-${{ github.event.pull_request.number || github.ref }}
+  group: r6-pass-convergence-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   validate:
     name: Full release build and source safety
@@ -18,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: pnpm/action-setup@v4
@@ -114,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
       - uses: pnpm/action-setup@v4
@@ -125,11 +126,11 @@ jobs:
       - name: Observe E02 and E05 without mutation
         continue-on-error: true
         working-directory: server
-        run: node scripts/r6-provider-readonly.mjs --source-sha "${{ github.event.pull_request.head.sha || github.sha }}" --output "$RUNNER_TEMP/r6-e02-e05.json"
+        run: node scripts/r6-provider-readonly.mjs --source-sha "${{ github.sha }}" --output "$RUNNER_TEMP/r6-e02-e05.json"
       - name: Observe E18 without mutation
         continue-on-error: true
         working-directory: server
-        run: node scripts/r6-convergence-identity-readonly.mjs --tenant alu --origin https://alu.kairo.vn --expected-release-sha "${{ github.event.pull_request.head.sha || github.sha }}" --output "$RUNNER_TEMP/r6-e18.json"
+        run: node scripts/r6-convergence-identity-readonly.mjs --tenant alu --origin https://alu.kairo.vn --expected-release-sha "${{ github.sha }}" --output "$RUNNER_TEMP/r6-e18.json"
       - name: Publish read-only pilot observation
         if: always()
         shell: bash

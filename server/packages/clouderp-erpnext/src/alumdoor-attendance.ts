@@ -1,9 +1,9 @@
 /**
  * AlumDoor's three-segment daily attendance projection.
  *
- * HRM's standard Attendance document deliberately remains untouched: it models one
- * Shift Assignment and one IN/OUT pair. This projection is the only daily document
- * that understands Ca 1, Ca 2 and automatic Ca 3 overtime.
+ * HRM's standard Attendance document deliberately remains untouched. This projection
+ * consumes the same submitted Shift Assignment/Shift Type to decide which scanned
+ * minutes are regular work and which minutes are only raw OT candidates.
  */
 import type { CanonicalDocument, ChildRow, JsonObject, MutationPlan } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
@@ -14,6 +14,7 @@ import {
   assertAttendanceWindows,
   AttendanceRuleError,
   calculateAttendance,
+  type AttendanceSegmentCode,
   type AttendanceSegmentStatus,
   type AttendanceSegmentWindow,
   type SegmentSnapshot,
@@ -34,10 +35,6 @@ export class AlumDoorAttendanceDayController implements DocumentController<JsonO
   readonly doctype = DAY_DOCTYPE;
 
   async buildPlan(context: ControllerContext<JsonObject>): Promise<MutationPlan<JsonObject>> {
-    // Internal roles identify the coordinator that issued this command, not ordinary
-    // user capabilities. An Administrator may carry all declared roles in development;
-    // a QR command must still remain a QR command instead of being misclassified as a
-    // correction/payroll create (both of which correctly reject new attendance days).
     const isScan = context.command.actor.roles.includes(INTERNAL_SCAN_ROLE);
     const isPayroll = !isScan && context.command.actor.roles.includes(INTERNAL_PAYROLL_ROLE);
     const isCorrection = !isScan && !isPayroll && context.command.actor.roles.includes(INTERNAL_CORRECTION_ROLE);
@@ -93,8 +90,12 @@ export class AlumDoorAttendanceDayController implements DocumentController<JsonO
         payload: {
           employee: data.employee,
           work_date: data.work_date,
+          shift_assignment: data.shift_assignment,
+          shift_type: data.shift_type,
+          scheduled_minutes: data.scheduled_minutes,
           state: data.state,
           regular_minutes: data.regular_minutes,
+          raw_overtime_minutes: data.raw_overtime_minutes,
           overtime_minutes: data.overtime_minutes,
           ...(data.locked_by_payroll ? { locked_by_payroll: data.locked_by_payroll } : {}),
         },
@@ -105,6 +106,7 @@ export class AlumDoorAttendanceDayController implements DocumentController<JsonO
         version: document.version,
         state: document.status,
         regular_minutes: data.regular_minutes,
+        raw_overtime_minutes: data.raw_overtime_minutes,
         overtime_minutes: data.overtime_minutes,
       },
     };
@@ -204,11 +206,24 @@ async function normalizeAttendanceDay(context: ControllerContext<JsonObject>, pa
     if (error instanceof AttendanceRuleError) throw errors.validation(error.message, { code: error.code });
     throw error;
   }
-  const regularDailyCapMinutes = H.integer(policy.regular_daily_cap_minutes, 480);
+
+  const assignedShift = await resolveAssignedShift(context, employeeName, workDate, company, branch, windows);
+  const existingShiftAssignment = H.text(context.existing?.data.shift_assignment);
+  if (existingShiftAssignment && existingShiftAssignment !== assignedShift.assignmentName) {
+    throw errors.lifecycle(`Attendance Day is already bound to Shift Assignment ${existingShiftAssignment}`);
+  }
+
   const segments = segmentSnapshots(input.segments);
   let calculated;
   try {
-    calculated = calculateAttendance({ workDate, segments, timeZone: timezone, windows, regularDailyCapMinutes });
+    calculated = calculateAttendance({
+      workDate,
+      segments,
+      timeZone: timezone,
+      windows,
+      regularDailyCapMinutes: assignedShift.scheduledMinutes,
+      regularSegmentCodes: assignedShift.regularSegmentCodes,
+    });
   } catch (error) {
     if (error instanceof AttendanceRuleError) throw errors.validation(error.message, { code: error.code });
     throw error;
@@ -225,6 +240,13 @@ async function normalizeAttendanceDay(context: ControllerContext<JsonObject>, pa
   if (payrollLock && !requestedPayroll) throw errors.validation("Payroll lock requires locked_by_payroll");
   if (existingPayroll && requestedPayroll && existingPayroll !== requestedPayroll) {
     throw errors.lifecycle(`Attendance Day is already locked by Payroll Entry ${existingPayroll}`);
+  }
+  // Raw outside-shift minutes come only from attendance evidence. The canonical
+  // `overtime_minutes` field is zero during scan/correction and is populated only by the
+  // trusted payroll bundle after reconciling a submitted Overtime Request.
+  const approvedOvertimeMinutes = payrollLock ? H.integer(input.overtime_minutes, 0) : 0;
+  if (approvedOvertimeMinutes < 0 || approvedOvertimeMinutes > calculated.overtimeMinutes) {
+    throw errors.validation(`Approved overtime ${approvedOvertimeMinutes} exceeds raw outside-shift evidence ${calculated.overtimeMinutes} on ${workDate}`);
   }
 
   const existingByCode = new Map(
@@ -256,15 +278,75 @@ async function normalizeAttendanceDay(context: ControllerContext<JsonObject>, pa
     ...(department ? { department } : {}),
     work_date: workDate,
     policy: policyName,
+    shift_assignment: assignedShift.assignmentName,
+    shift_type: assignedShift.shiftName,
+    scheduled_minutes: assignedShift.scheduledMinutes,
     state: payrollLock ? "locked" : correction ? "approved" : calculated.state,
     ...(calculated.exceptionCode ? { exception_code: calculated.exceptionCode } : {}),
     ...(payrollLock ? { locked_by_payroll: requestedPayroll, locked_at: context.now } : {}),
     regular_minutes: calculated.regularMinutes,
-    overtime_minutes: calculated.overtimeMinutes,
+    raw_overtime_minutes: calculated.overtimeMinutes,
+    overtime_minutes: approvedOvertimeMinutes,
     payable_work_fraction_bp: calculated.payableWorkFractionBp,
     calculated_at: context.now,
     segments: normalizedSegments,
   };
+}
+
+async function resolveAssignedShift(
+  context: ControllerContext<JsonObject>,
+  employeeName: string,
+  workDate: string,
+  company: string,
+  branch: string,
+  windows: readonly AttendanceSegmentWindow[],
+): Promise<{ assignmentName: string; shiftName: string; scheduledMinutes: number; regularSegmentCodes: AttendanceSegmentCode[] }> {
+  const assignments = (await context.reader.listDocumentsByDoctype<JsonObject>(context.command.tenant_id, "Shift Assignment"))
+    .filter((assignment) => assignment.docstatus === 1
+      && H.text(assignment.data.employee) === employeeName
+      && H.text(assignment.data.start_date) <= workDate
+      && (!H.text(assignment.data.end_date) || H.text(assignment.data.end_date) >= workDate));
+  if (assignments.length !== 1) {
+    throw errors.reference(`Exactly one submitted Shift Assignment is required for ${employeeName} on ${workDate}`);
+  }
+  const assignment = assignments[0]!;
+  if (H.text(assignment.data.company) && H.text(assignment.data.company) !== company) {
+    throw errors.reference(`Shift Assignment ${assignment.name} belongs to another company`);
+  }
+  if (H.text(assignment.data.branch) && H.text(assignment.data.branch) !== branch) {
+    throw errors.reference(`Shift Assignment ${assignment.name} belongs to another branch`);
+  }
+  const shiftName = H.requiredText(assignment.data.shift_type, `Shift Assignment ${assignment.name} shift_type`);
+  const shift = await H.requireRecord(context as H.HrmContext, "Shift Type", shiftName);
+  if (H.truthy(shift.disabled)) throw errors.reference(`Shift Type ${shiftName} is disabled`);
+  const scheduledMinutes = H.integer(shift.working_minutes, 0);
+  if (scheduledMinutes <= 0 || scheduledMinutes > 24 * 60) {
+    throw errors.reference(`Shift Type ${shiftName} has invalid working_minutes`);
+  }
+
+  const shiftStart = timeMinute(H.requiredTime(shift.start_time, `Shift Type ${shiftName} start_time`));
+  const rawShiftEnd = timeMinute(H.requiredTime(shift.end_time, `Shift Type ${shiftName} end_time`));
+  const shiftEnd = rawShiftEnd <= shiftStart ? rawShiftEnd + 24 * 60 : rawShiftEnd;
+  const regularSegmentCodes = windows
+    .filter((window) => {
+      const segmentStart = window.workStartMinute;
+      const segmentEnd = window.workEndMinute <= segmentStart ? window.workEndMinute + 24 * 60 : window.workEndMinute;
+      return Math.max(shiftStart, segmentStart) < Math.min(shiftEnd, segmentEnd);
+    })
+    .map((window) => window.code);
+  if (regularSegmentCodes.length === 0) {
+    throw errors.reference(`Shift Type ${shiftName} does not overlap any AlumDoor attendance segment`);
+  }
+  return { assignmentName: assignment.name, shiftName, scheduledMinutes, regularSegmentCodes };
+}
+
+function timeMinute(value: string): number {
+  // H.requiredTime already validates HH:MM. Slice parsing avoids noUncheckedIndexedAccess
+  // ambiguity from tuple destructuring while keeping this helper branch-free and deterministic.
+  const hour = Number(value.slice(0, 2));
+  const minute = Number(value.slice(3, 5));
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) throw errors.validation("Shift time is invalid");
+  return hour * 60 + minute;
 }
 
 function segmentSnapshots(value: unknown): SegmentInput[] {
