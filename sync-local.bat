@@ -33,6 +33,11 @@ if not "%SYNC_RESULT%"=="10" (
 
 echo.
 echo === 1. Dung server local truoc khi dong vao D1/R2 ===
+if exist server\scripts\alumdoor-runtime-maintenance.mjs (
+  call node server\scripts\alumdoor-runtime-maintenance.mjs on
+  if errorlevel 1 (echo [LOI] Khong bat duoc maintenance cho Windows services & exit /b 1)
+  C:\Windows\System32\timeout.exe /t 2 /nobreak >nul
+)
 call node server\scripts\stop-local-dev.mjs --ports=8799,5173
 if errorlevel 1 (echo [LOI] Khong dung duoc server local & exit /b 1)
 
