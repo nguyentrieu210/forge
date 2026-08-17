@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync } from "node:fs";
+import { basename, dirname } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
 const root = process.env.ALUMDOOR_ROOT || "C:\\alumdoor";
@@ -9,7 +10,7 @@ const maintenanceFile =
   process.env.ALUMDOOR_SERVICE_MAINTENANCE || `${serviceHome}\\maintenance.flag`;
 const deskMaintenanceFile =
   process.env.ALUMDOOR_DESK_MAINTENANCE || `${serviceHome}\\desk-maintenance.flag`;
-const pnpm = process.env.ALUMDOOR_PNPM || "pnpm";
+const pnpm = process.env.ALUMDOOR_PNPM || "pnpm.cmd";
 const comspec = process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe";
 
 const roleIndex = process.argv.indexOf("--role");
@@ -19,15 +20,32 @@ if (!role || !["backend", "desk"].includes(role)) {
   process.exit(2);
 }
 
+// cmd.exe quoting around a fully-qualified *.cmd path containing spaces is
+// fragile when Node serializes argv for CreateProcess. Put the resolved pnpm
+// directory on PATH and invoke only its basename instead. This keeps the cmd
+// command free of nested executable quotes while still pinning the same pnpm
+// shim selected by the installer.
+const pnpmDir = dirname(pnpm);
+const pnpmCommand = basename(pnpm) || "pnpm.cmd";
+const childEnv = {
+  ...process.env,
+  PATH: `${pnpmDir};${process.env.PATH || ""}`,
+};
+
 const config =
   role === "backend"
     ? {
         cwd: `${root}\\server`,
-        command: `"${pnpm}" run dev:alumdoor-local`,
+        command: `${pnpmCommand} run dev:alumdoor-local`,
+        env: childEnv,
       }
     : {
         cwd: `${root}\\client\\apps\\runtime`,
-        command: `set "VITE_FORGE_BACKEND=http://127.0.0.1:8799" && "${pnpm}" run dev`,
+        command: `${pnpmCommand} run dev`,
+        env: {
+          ...childEnv,
+          VITE_FORGE_BACKEND: "http://127.0.0.1:8799",
+        },
       };
 
 let child = null;
@@ -61,9 +79,9 @@ function startChild() {
   }
 
   console.log(`[${role}] starting: ${config.command}`);
-  const next = spawn(comspec, ["/d", "/s", "/c", config.command], {
+  const next = spawn(comspec, ["/d", "/c", config.command], {
     cwd: config.cwd,
-    env: process.env,
+    env: config.env,
     stdio: "inherit",
     windowsHide: true,
   });

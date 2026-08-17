@@ -44,6 +44,21 @@ function Wait-Port {
   throw "Port $Port did not become ready within $TimeoutSeconds seconds."
 }
 
+function Wait-ServiceRemoved {
+  param(
+    [string]$Name,
+    [int]$TimeoutSeconds = 30
+  )
+
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  do {
+    if (-not (Get-Service -Name $Name -ErrorAction SilentlyContinue)) { return }
+    Start-Sleep -Milliseconds 500
+  } while ((Get-Date) -lt $deadline)
+
+  throw "Service $Name is still registered after $TimeoutSeconds seconds."
+}
+
 function Write-ServiceConfig {
   param(
     [string]$Id,
@@ -114,25 +129,36 @@ $logs = Join-Path $ServiceHome 'logs'
 $maintenance = Join-Path $ServiceHome 'maintenance.flag'
 New-Item -ItemType Directory -Force -Path $ServiceHome, $logs | Out-Null
 
-# The GitHub runner and the two runtime services intentionally share the
-# NetworkService identity. Grant it Modify on the local dev checkout so git,
-# Wrangler state, Vite caches and generated assets all have one consistent
-# owner instead of creating cross-account process/file permission failures.
-Write-Host 'Granting NetworkService Modify on C:\alumdoor and service state...'
-& icacls.exe $Root /grant '*S-1-5-20:(OI)(CI)M' /T /C | Out-Null
+# Grant inheritable Modify at the two roots only. Do not recurse through the
+# checkout: node_modules and build caches can contain hundreds of thousands of
+# entries, while child objects already inherit this ACE as they are created.
+Write-Host 'Granting NetworkService Modify on Alumdoor roots...'
+& icacls.exe $Root /grant '*S-1-5-20:(OI)(CI)M' /C | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Failed to grant NetworkService access to C:\alumdoor.' }
-& icacls.exe $ServiceHome /grant '*S-1-5-20:(OI)(CI)M' /T /C | Out-Null
+& icacls.exe $ServiceHome /grant '*S-1-5-20:(OI)(CI)M' /C | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Failed to grant NetworkService access to the service home.' }
 
-# Keep Git happy when the checkout is owned by the interactive administrator
-# while Actions runs as NetworkService.
+# Explicitly grant the mutable state roots that may already exist with ACLs
+# created by the interactive Administrator before the inheritable root ACE.
+$mutableRoots = @(
+  (Join-Path $Root '.git'),
+  (Join-Path $Root 'server\apps\tenant-worker\.wrangler'),
+  (Join-Path $Root 'client\apps\runtime'),
+  $ServiceHome
+)
+foreach ($mutableRoot in $mutableRoots) {
+  if (Test-Path $mutableRoot) {
+    & icacls.exe $mutableRoot /grant '*S-1-5-20:(OI)(CI)M' /C | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Failed to grant NetworkService access to $mutableRoot." }
+  }
+}
+
 $safeDirectories = @(git config --system --get-all safe.directory 2>$null)
 if ($safeDirectories -notcontains 'C:/alumdoor') {
   git config --system --add safe.directory C:/alumdoor
   if ($LASTEXITCODE -ne 0) { throw 'Failed to register C:/alumdoor as a system safe.directory.' }
 }
 
-# Put the runtime into fail-safe maintenance before touching old processes.
 Set-Content -LiteralPath $maintenance -Value "install maintenance $(Get-Date -Format o)" -Encoding UTF8
 
 Write-Host 'Stopping legacy local processes on 8799/5173...'
@@ -162,10 +188,16 @@ foreach ($definition in $services) {
   New-Item -ItemType Directory -Force -Path $serviceLogPath | Out-Null
 
   $existing = Get-Service -Name $id -ErrorAction SilentlyContinue
-  if ($existing -and $existing.Status -ne 'Stopped') {
-    Write-Host "Stopping existing service $id..."
-    Stop-Service -Name $id -Force
-    $existing.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+  if ($existing) {
+    if ($existing.Status -ne 'Stopped') {
+      Write-Host "Stopping existing service $id..."
+      Stop-Service -Name $id -Force
+      $existing.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+    }
+    Write-Host "Removing existing service $id..."
+    & sc.exe delete $id | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Failed to delete existing service $id." }
+    Wait-ServiceRemoved -Name $id -TimeoutSeconds 30
   }
 
   Copy-Item -LiteralPath $winswBase -Destination $exe -Force
@@ -180,13 +212,8 @@ foreach ($definition in $services) {
     -LogsPath $serviceLogPath `
     -MaintenancePath $maintenance
 
-  if ($existing) {
-    & $exe refresh
-    if ($LASTEXITCODE -ne 0) { throw "WinSW refresh failed for $id." }
-  } else {
-    & $exe install
-    if ($LASTEXITCODE -ne 0) { throw "WinSW install failed for $id." }
-  }
+  & $exe install
+  if ($LASTEXITCODE -ne 0) { throw "WinSW install failed for $id." }
   Set-Service -Name $id -StartupType Automatic
 }
 
@@ -203,8 +230,6 @@ Write-Host 'Waiting for hidden runtime services...'
 Wait-Port -Port 8799 -TimeoutSeconds 180
 Wait-Port -Port 5173 -TimeoutSeconds 180
 
-# Return the forge GitHub runner to normal Windows-service mode. This does not
-# touch the separate forge-core runner.
 $runner = Get-Service | Where-Object { $_.Name -like 'actions.runner.nguyentrieu210-forge.*' } | Select-Object -First 1
 if ($runner) {
   Set-Service -Name $runner.Name -StartupType Automatic
