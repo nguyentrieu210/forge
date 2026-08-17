@@ -24,7 +24,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $source = 'C:\alumdoor'
           $work = "C:\alumdoor-worktrees\patch-$env:GITHUB_RUN_ID"
-          Write-Host 'PATCH_ATTEMPT=price-group-fixture-v5'
+          Write-Host 'PATCH_ATTEMPT=safe-junction-cleanup-v6'
           git -C $source fetch origin main agent/alumdoor-bom-realdata-continuation --prune
           if ($LASTEXITCODE -ne 0) { throw 'fetch failed' }
           New-Item -ItemType Directory -Force -Path (Split-Path -Parent $work) | Out-Null
@@ -46,7 +46,10 @@ jobs:
             node --test tests\alumdoor-item-validator.test.mjs
             if ($LASTEXITCODE -ne 0) { throw 'focused tests failed' }
             Set-Location $work
-            if (Test-Path $workModules) { Remove-Item $workModules -Force }
+            if (Test-Path $workModules) {
+              cmd.exe /c "rmdir `"$workModules`""
+              if ($LASTEXITCODE -ne 0) { throw 'junction cleanup failed' }
+            }
             Get-ChildItem '.github\workflows' -Filter '_tmp-alumdoor-*.yml' -File -ErrorAction SilentlyContinue | Remove-Item -Force
             Remove-Item 'server\scripts\_tmp-patch-alumdoor-dynamic-uom-validator.mjs' -Force
             git config user.name 'github-actions[bot]'
