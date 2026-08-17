@@ -63,7 +63,7 @@ jobs:
           Set-Content (Join-Path $root 'client\apps\runtime\listen.mjs') $deskScript -Encoding utf8
 
           try {
-            $output = & .\server\scripts\install-alumdoor-runtime-services.ps1 -Root $root -ServiceHome $serviceHome 2>&1
+            $output = & .\server\scripts\install-alumdoor-runtime-services.ps1 -Root $root -ServiceHome $serviceHome 2>&1 6>&1
             $output | ForEach-Object { Write-Host $_ }
 
             if (($output | Out-String) -notmatch 'ALUMDOOR_WINDOWS_SERVICES_PASS') { throw 'installer success marker missing' }
