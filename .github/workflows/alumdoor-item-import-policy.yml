@@ -5,6 +5,7 @@ on:
     paths:
       - 'server/scripts/lib/alumdoor-item-import-policy.mjs'
       - 'server/scripts/lib/alumdoor-item-source-contract.mjs'
+      - 'server/scripts/lib/alumdoor-item-evidence-overrides.mjs'
       - 'server/scripts/lib/alumdoor-item-source-preflight.mjs'
       - 'server/scripts/preflight-alumdoor-item-catalog.mjs'
       - 'server/scripts/preflight-alumdoor-item-source-records.mjs'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'server/scripts/lib/alumdoor-item-import-policy.mjs'
       - 'server/scripts/lib/alumdoor-item-source-contract.mjs'
+      - 'server/scripts/lib/alumdoor-item-evidence-overrides.mjs'
       - 'server/scripts/lib/alumdoor-item-source-preflight.mjs'
       - 'server/scripts/preflight-alumdoor-item-catalog.mjs'
       - 'server/scripts/preflight-alumdoor-item-source-records.mjs'
