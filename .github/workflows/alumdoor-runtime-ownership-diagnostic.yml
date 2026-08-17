@@ -39,9 +39,9 @@ jobs:
               Write-Host "RUNNER_SERVICE name=$($_.Name) state=$($_.State) start_name=$($_.StartName) pid=$($_.ProcessId) path=$($_.PathName)"
             }
 
-          function Get-ProcessOwnerLine([int]$Pid) {
-            $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$Pid" -ErrorAction SilentlyContinue
-            if (-not $proc) { return "pid=$Pid missing=1" }
+          function Get-ProcessOwnerLine([int]$ProcessId) {
+            $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction SilentlyContinue
+            if (-not $proc) { return "pid=$ProcessId missing=1" }
             $owner = $null
             try { $owner = Invoke-CimMethod -InputObject $proc -MethodName GetOwner -ErrorAction Stop } catch {}
             $account = if ($owner -and $owner.ReturnValue -eq 0) { "$($owner.Domain)\$($owner.User)" } else { '<unknown>' }
@@ -64,7 +64,7 @@ jobs:
               $seen[$current] = $true
               $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$current" -ErrorAction SilentlyContinue
               if (-not $proc) { Write-Host "ANCESTOR depth=$depth pid=$current missing=1"; break }
-              Write-Host "ANCESTOR depth=$depth $(Get-ProcessOwnerLine -Pid $current)"
+              Write-Host "ANCESTOR depth=$depth $(Get-ProcessOwnerLine -ProcessId $current)"
               $current = [int]$proc.ParentProcessId
             }
           }
