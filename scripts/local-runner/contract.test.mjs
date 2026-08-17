@@ -28,10 +28,11 @@ test('parse known adapters and source', () => {
   });
   assert.equal(parseArgs(['bootstrap']).adapter, 'bootstrap');
   assert.equal(parseArgs(['real-purchase']).adapter, 'real-purchase');
+  assert.equal(parseArgs(['pricing']).adapter, 'pricing');
 });
 
 test('reject unknown adapter', () => {
-  assert.throws(() => parseArgs(['pricing']), /Usage:/);
+  assert.throws(() => parseArgs(['not-an-adapter']), /Usage:/);
 });
 
 test('path containment is case insensitive and rejects escape', () => {

@@ -36,10 +36,13 @@ Current adapters:
 - `item-master --source=C:\alumdoor\local-imports\...json`
 - `reason-master`
 - `real-purchase`
+- `pricing`
 
 `real-purchase` owns the complete historical purchase convergence lifecycle: canonical Item Gate A reconciliation, exact Supplier reconciliation, historical Draft Purchase Receipt plan, guarded local D1 execution, persisted-D1 verification evidence, and second-pass idempotency. Purchase child scripts may build plans, use the authenticated loopback API, and verify supplied evidence, but they must never spawn Wrangler themselves.
 
-Future Pricing/BOM adapters must be added to this execution layer instead of placing backup, lock, Wrangler, source-sync, process-control, or mutation orchestration directly in workflow YAML.
+`pricing` owns deterministic real pricing extraction, canonical Item evidence rebuild, pricing payload reproducibility, authenticated zero-write preflight, guarded Price List / Item Price / Pricing Rule apply, persisted local-D1 evidence, and second-pass zero-mutation idempotency. The pricing importer remains API-based and may keep the managed local API running, but lock, backup, persisted-D1 audit, and execution status belong to the canonical runner.
+
+Future BOM adapters must be added to this execution layer instead of placing backup, lock, Wrangler, source-sync, process-control, or mutation orchestration directly in workflow YAML.
 
 ## Required gate order
 
@@ -118,7 +121,7 @@ A local convergence task must not:
 
 ## Workflow inventory rule
 
-The contract workflow must enumerate every self-hosted workflow that can mutate the canonical local D1 and assert the shared concurrency group plus the canonical runner call. At the current convergence point the managed mutation inventory is six workflows: bootstrap, Layer 0, Reason Master, Item Master, UOM reconciliation, and Real Purchase History. Adding a seventh mutating workflow requires updating the inventory and routing it through an adapter in the same change.
+The contract workflow must enumerate every self-hosted workflow that can mutate the canonical local D1 and assert the shared concurrency group plus the canonical runner call. At the current convergence point the managed mutation inventory is seven workflows: bootstrap, Layer 0, Reason Master, Item Master, UOM reconciliation, Real Purchase History, and Pricing. Adding another mutating workflow requires updating the inventory and routing it through an adapter in the same change.
 
 ## Completion evidence
 
@@ -136,4 +139,4 @@ Before calling the execution layer STABLE, retain evidence for:
 - local-only/remote guard;
 - successful execution from the Windows self-hosted runner.
 
-Until that acceptance proof exists, downstream BOM/Pricing convergence may prepare payloads and preflight reports but must not mutate local D1 through an ad-hoc path.
+Until a new adapter has that acceptance proof, downstream convergence may prepare payloads and preflight reports but must not mutate local D1 through an ad-hoc path.

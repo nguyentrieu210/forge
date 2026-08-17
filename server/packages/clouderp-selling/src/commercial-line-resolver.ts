@@ -102,8 +102,11 @@ export async function resolveCommercialLine(
     throw errors.validation("Selling price and discount-basis price must use the same currency and scale");
   }
 
+  const baseAmountMinor = multiplyMinorByQuantity(rawPrice.rate_minor, pricedQtyMicros, "pricing facts base amount");
   const facts = {
     ...optionFacts,
+    base_rate: Number(rawPrice.rate),
+    base_amount: Number(fromScaledInt(baseAmountMinor, rawPrice.currency_scale)),
     price_variant: rawPrice.price_variant,
     discount_basis_variant: discountBasisPrice.price_variant,
   };
