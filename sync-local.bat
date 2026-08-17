@@ -1,11 +1,10 @@
 @echo off
 setlocal EnableExtensions
-REM Safe one-shot GitHub -> local refresh. It only accepts a clean local main.
-REM Pass --bootstrap to run the full local install/build/migrate/start path even
-REM when C:\alumdoor is already on the latest GitHub main commit.
-REM Pass --skip-source-verify only for runtime bootstrap jobs that must not be
-REM blocked by unrelated repo-wide quality gates; runtime build/smoke/install
-REM validation still runs inside run-local.bat.
+REM Safe one-shot GitHub -> local source refresh.
+REM
+REM Source-only sync remains callable on a clean local main. The --bootstrap path
+REM is INTERNAL and requires process ancestry under the active canonical
+REM `run-local-import.mjs bootstrap` lock.
 set "BOOTSTRAP="
 set "SKIP_SOURCE_VERIFY="
 for %%A in (%*) do (
@@ -16,6 +15,14 @@ for %%A in (%*) do (
 cd /d C:\alumdoor
 if errorlevel 1 (echo [LOI] Khong vao duoc C:\alumdoor & exit /b 1)
 
+if defined BOOTSTRAP (
+  call node scripts\local-runner\assert-bootstrap-helper-context.mjs
+  if errorlevel 1 (
+    echo [BLOCKED] sync-local.bat --bootstrap chi duoc goi tu canonical bootstrap runner.
+    exit /b 73
+  )
+)
+
 call node server\scripts\sync-local-from-github.mjs --check
 set "SYNC_RESULT=%ERRORLEVEL%"
 if "%SYNC_RESULT%"=="0" (
@@ -23,7 +30,7 @@ if "%SYNC_RESULT%"=="0" (
     echo [OK] Local da dung commit main tren GitHub. Khong can build lai.
     exit /b 0
   )
-  echo [OK] Source da dung GitHub main. Tiep tuc bootstrap local day du theo yeu cau.
+  echo [OK] Source da dung GitHub main. Tiep tuc canonical bootstrap helper.
   goto :bootstrap
 )
 if not "%SYNC_RESULT%"=="10" (
@@ -32,14 +39,16 @@ if not "%SYNC_RESULT%"=="10" (
 )
 
 echo.
-echo === 1. Dung server local truoc khi dong vao D1/R2 ===
+echo === 1. Dua runtime vao maintenance va yeu cau ports quiet ===
 if exist server\scripts\alumdoor-runtime-maintenance.mjs (
   call node server\scripts\alumdoor-runtime-maintenance.mjs on
   if errorlevel 1 (echo [LOI] Khong bat duoc maintenance cho Windows services & exit /b 1)
-  C:\Windows\System32\timeout.exe /t 2 /nobreak >nul
 )
-call node server\scripts\stop-local-dev.mjs --ports=8799,5173
-if errorlevel 1 (echo [LOI] Khong dung duoc server local & exit /b 1)
+call node scripts\local-runner\assert-ports-quiet.mjs --ports=8799,5173
+if errorlevel 1 (
+  echo [DUNG] Runtime van co listener. Source sync khong kill process theo port.
+  exit /b 1
+)
 
 echo.
 echo === 2. Sao luu D1/R2/DO local ===
@@ -51,7 +60,18 @@ echo === 3. Dong bo main tu GitHub ===
 call node server\scripts\sync-local-from-github.mjs --apply
 if errorlevel 1 (echo [LOI] Khong the fast-forward main tu GitHub & exit /b 1)
 
+if not defined BOOTSTRAP (
+  echo [OK] Source-only sync hoan tat. Runtime van o maintenance; dung canonical bootstrap de build/migrate/start.
+  exit /b 0
+)
+
 :bootstrap
+call node scripts\local-runner\assert-bootstrap-helper-context.mjs
+if errorlevel 1 (
+  echo [BLOCKED] Canonical bootstrap lock context khong con hop le.
+  exit /b 73
+)
+
 echo.
 echo === 4. Dong bo dependency dung lockfile ===
 REM Runner service co the khong co quyen corepack enable toan may. Neu pnpm da co
