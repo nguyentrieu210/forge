@@ -7,6 +7,8 @@ const root = process.env.ALUMDOOR_ROOT || "C:\\alumdoor";
 const serviceHome = process.env.ALUMDOOR_SERVICE_HOME || "C:\\ForgeServices\\Alumdoor";
 const maintenanceFile =
   process.env.ALUMDOOR_SERVICE_MAINTENANCE || `${serviceHome}\\maintenance.flag`;
+const deskMaintenanceFile =
+  process.env.ALUMDOOR_DESK_MAINTENANCE || `${serviceHome}\\desk-maintenance.flag`;
 const pnpm = process.env.ALUMDOOR_PNPM || "pnpm";
 const comspec = process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe";
 
@@ -34,7 +36,7 @@ let stoppingChild = false;
 let reconciling = false;
 
 function maintenanceEnabled() {
-  return existsSync(maintenanceFile);
+  return existsSync(maintenanceFile) || (role === "desk" && existsSync(deskMaintenanceFile));
 }
 
 function killTree(pid) {
@@ -114,7 +116,7 @@ process.on("exit", () => {
 });
 
 console.log(
-  `[${role}] service host ready root=${root} maintenance=${maintenanceFile} pnpm=${pnpm}`,
+  `[${role}] service host ready root=${root} maintenance=${maintenanceFile} deskMaintenance=${deskMaintenanceFile} pnpm=${pnpm}`,
 );
 await reconcile();
 setInterval(reconcile, 1000).unref();
