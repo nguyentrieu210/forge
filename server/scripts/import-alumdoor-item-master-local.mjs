@@ -9,6 +9,7 @@
  * - any same-code master mismatch blocks the whole run before the first POST
  * - exact matches are skipped, missing Items are created
  * - authenticated pre-image is written before mutation
+ * - server-controlled Item fields are not written, but are verified after create
  * - every Item is re-read and compared after mutation
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -37,6 +38,9 @@ const CHECK_FIELDS = new Set([
   "is_sales_item",
   "include_item_in_manufacturing",
   "disabled",
+]);
+const SERVER_CONTROLLED_WRITE_FIELDS = new Set([
+  "is_stock_item",
 ]);
 const MANAGED_SCALARS = [
   "item_code",
@@ -92,6 +96,11 @@ function diffManaged(expectedDoc, actualDoc) {
     });
   }
   return diffs;
+}
+function writableCreateBody(item) {
+  return Object.fromEntries(
+    Object.entries(item).filter(([field]) => !SERVER_CONTROLLED_WRITE_FIELDS.has(field)),
+  );
 }
 
 const items = payloadFile.items;
@@ -227,7 +236,7 @@ console.log(`ALUMDOOR_ITEM_LOCAL_PREIMAGE_PASS existing=${exactExisting.length} 
 
 const created = [];
 for (const item of missing) {
-  await requireOk("/api/resource/Item", { method: "POST", body: item });
+  await requireOk("/api/resource/Item", { method: "POST", body: writableCreateBody(item) });
   created.push(item.item_code);
 }
 
