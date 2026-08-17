@@ -86,6 +86,15 @@ addRows([1114, 1154], {
   formula_kind: "source_row_exact_mv_rivet_nut_weight_per_width",
   quantity_formula_json: field("PB_RAY_RONG", 0.0056),
 });
+addRows([1108], {
+  item: "NVL-BOMV",
+  uom: "Kg",
+  formula: "64CON/M(1KGX49CONX16,000/KG)",
+  source_qty: 64,
+  qty_basis: "64 con/m rộng ÷ 49 con/kg; row 1150 in the same source clarifies the linear axis as width",
+  formula_kind: "source_row_exact_mv_hook_weight_per_width_cross_evidence_1150",
+  quantity_formula_json: field("PB_RAY_RONG", 64 / 49),
+});
 addRows([1150], {
   item: "NVL-BOMV",
   uom: "Kg",
@@ -225,6 +234,7 @@ const UOM_OVERRIDES = new Map([
   [1153, { item: "NVL-DINHTAN-MV", source_uom: "M NGANG", runtime_uom: "Kg", formula: "0,0015KG/CON(1MNGANGX7CON)", source_qty: 0.0015 }],
   [1114, { item: "NVL-CONTAN-MV", source_uom: "M NGANG", runtime_uom: "Kg", formula: "0,0008KG/CON(1MNGANGX7CON)", source_qty: 0.0008 }],
   [1154, { item: "NVL-CONTAN-MV", source_uom: "M NGANG", runtime_uom: "Kg", formula: "0,0008KG/CON(1MNGANGX7CON)", source_qty: 0.0008 }],
+  [1108, { item: "NVL-BOMV", source_uom: "m2", runtime_uom: "Kg", formula: "64CON/M(1KGX49CONX16,000/KG)", source_qty: 64 }],
   [1150, { item: "NVL-BOMV", source_uom: "bọ", runtime_uom: "Kg", formula: "64CON/MRONG(1KGX49CONX16,000/KG)", source_qty: 64 }],
   [1208, { item: "TP-V4_INOX", source_uom: "M2", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
   [1217, { item: "TP-V4_INOX", source_uom: "", runtime_uom: "Mét", formula: "(RPBRAY-30)*2" }],
