@@ -36,9 +36,32 @@ function Read-ServiceSddl([string]$Name) {
   return $sddl
 }
 
-function Add-ServiceAce([string]$Sddl, [string]$Sid, [string]$Mask) {
+function Convert-HexAccessMask([string]$Mask) {
+  if ($Mask -notmatch '^0x[0-9A-Fa-f]{1,8}$') {
+    throw "Invalid hexadecimal service access mask: $Mask"
+  }
+  return [Convert]::ToInt32($Mask.Substring(2), 16)
+}
+
+function Test-ServiceAceMask([string]$Sddl, [string]$Sid, [int]$RequiredMask) {
+  $descriptor = [Security.AccessControl.RawSecurityDescriptor]::new($Sddl)
+  $targetSid = [Security.Principal.SecurityIdentifier]::new($Sid)
+  $dacl = $descriptor.DiscretionaryAcl
+  if (-not $dacl) { return $false }
+
+  foreach ($ace in $dacl) {
+    if ($ace -isnot [Security.AccessControl.QualifiedAce]) { continue }
+    if ($ace.AceQualifier -ne [Security.AccessControl.AceQualifier]::AccessAllowed) { continue }
+    if ($ace.SecurityIdentifier.Value -ne $targetSid.Value) { continue }
+    if (($ace.AccessMask -band $RequiredMask) -eq $RequiredMask) { return $true }
+  }
+  return $false
+}
+
+function Add-ServiceAce([string]$Sddl, [string]$Sid, [string]$Mask, [int]$RequiredMask) {
+  if (Test-ServiceAceMask -Sddl $Sddl -Sid $Sid -RequiredMask $RequiredMask) { return $Sddl }
+
   $ace = "(A;;$Mask;;;$Sid)"
-  if ($Sddl.Contains($ace)) { return $Sddl }
   $saclIndex = $Sddl.IndexOf('S:')
   if ($saclIndex -ge 0) {
     return $Sddl.Insert($saclIndex, $ace)
@@ -54,6 +77,7 @@ Assert-Administrator
 # SERVICE_INTERROGATE (0x80). It does NOT grant CHANGE_CONFIG, WRITE_DAC,
 # WRITE_OWNER, DELETE or SERVICE_ALL_ACCESS.
 $controlMask = '0x000200BD'
+$requiredControlMask = Convert-HexAccessMask $controlMask
 $principals = [ordered]@{}
 
 $invokingIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -83,7 +107,7 @@ foreach ($name in $ServiceNames) {
   $before = Read-ServiceSddl $name
   $after = $before
   foreach ($sid in $uniqueSids) {
-    $after = Add-ServiceAce -Sddl $after -Sid $sid -Mask $controlMask
+    $after = Add-ServiceAce -Sddl $after -Sid $sid -Mask $controlMask -RequiredMask $requiredControlMask
   }
 
   if ($after -ne $before) {
@@ -95,9 +119,8 @@ foreach ($name in $ServiceNames) {
 
   $verified = Read-ServiceSddl $name
   foreach ($sid in $uniqueSids) {
-    $expectedAce = "(A;;$controlMask;;;$sid)"
-    if (-not $verified.Contains($expectedAce)) {
-      throw "Service ACL verification failed for $name sid=$sid"
+    if (-not (Test-ServiceAceMask -Sddl $verified -Sid $sid -RequiredMask $requiredControlMask)) {
+      throw "Service ACL verification failed for $name sid=$sid required_mask=$controlMask sddl=$verified"
     }
   }
 
