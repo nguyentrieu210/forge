@@ -38,7 +38,7 @@ function parseAdvancedFilters(raw: string | null, meta: DocTypeMeta): AdvancedFi
 }
 
 /** Đọc ListState từ query-string. Filter chuẩn mã hoá f_<field>=value. */
-export function readState(bridge: UrlStateBridge, meta: DocTypeMeta): ListState {
+export function readState(bridge: UrlStateBridge, meta: DocTypeMeta, extraFilterFields: readonly string[] = []): ListState {
   const s = emptyListState();
   s.q = bridge.get("q") ?? "";
   s.sort = bridge.get("sort") ?? "";
@@ -63,18 +63,13 @@ export function readState(bridge: UrlStateBridge, meta: DocTypeMeta): ListState 
       }
     } catch { /* malformed old URL: ignore */ }
   }
-  const filterFieldnames = [
-    ...(meta.fields ?? []).map((field) => field.fieldname),
-    ...(meta.name === "Sales Order" ? ["_approval_status"] : []),
-  ];
+  const filterFieldnames = [...(meta.fields ?? []).map((field) => field.fieldname), ...extraFilterFields];
   for (const fieldname of new Set(filterFieldnames)) {
     const v = bridge.get(`f_${fieldname}`);
     if (v != null && v !== "") filters[fieldname] = v;
   }
   s.filters = filters;
   s.advancedFilters = parseAdvancedFilters(bridge.get("af"), meta);
-  // Frappe exposes one OR bucket. `any` owns that bucket, so a stale q parameter must not silently
-  // broaden results by joining search clauses into the same OR expression.
   if (s.advancedFilters?.mode === "any") s.q = "";
 
   const dr = bridge.get("dr");
@@ -93,8 +88,9 @@ function clampInt(v: string | null, dflt: number, min: number): number {
   return Number.isFinite(n) && n >= min ? n : dflt;
 }
 
-export function useListUrlState(bridge: UrlStateBridge, meta: DocTypeMeta) {
-  const state = useMemo(() => readState(bridge, meta), [bridge, meta]);
+export function useListUrlState(bridge: UrlStateBridge, meta: DocTypeMeta, extraFilterFields: readonly string[] = []) {
+  const extraKey = extraFilterFields.join("\u0000");
+  const state = useMemo(() => readState(bridge, meta, extraFilterFields), [bridge, meta, extraKey]);
 
   const patch = useCallback(
     (p: Partial<ListState>) => {
@@ -115,14 +111,13 @@ export function useListUrlState(bridge: UrlStateBridge, meta: DocTypeMeta) {
       }
       if ("dateRange" in p) next.dr = p.dateRange ? `${p.dateRange.key}:${p.dateRange.field}` : null;
       if ("filters" in p) {
-        for (const f of meta.fields ?? []) next[`f_${f.fieldname}`] = null;
-        if (meta.name === "Sales Order") next.f__approval_status = null;
-        for (const [k, v] of Object.entries(p.filters ?? {})) if (v) next[`f_${k}`] = v;
+        for (const fieldname of [...(meta.fields ?? []).map((field) => field.fieldname), ...extraFilterFields]) next[`f_${fieldname}`] = null;
+        for (const [key, value] of Object.entries(p.filters ?? {})) if (value) next[`f_${key}`] = value;
       }
       if (("q" in p || "filters" in p || "routeFilters" in p || "advancedFilters" in p || "dateRange" in p || "sort" in p || "pageSize" in p) && !("page" in p)) next.page = null;
       bridge.set(next);
     },
-    [bridge, meta],
+    [bridge, meta, extraKey],
   );
 
   return [state, patch] as const;
