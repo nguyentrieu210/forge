@@ -156,24 +156,34 @@ jobs:
 
           if ($managedByServices) {
             Write-Host "Windows runtime services detected: $($installedServices.Name -join ', ')"
-            $deadline = (Get-Date).AddSeconds(30)
-            do {
-              $listeners = @(
-                Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
-                  Where-Object { $_.LocalPort -in @(8799, 5173) }
-              )
-              if ($listeners.Count -eq 0) { break }
-              Start-Sleep -Seconds 1
-            } while ((Get-Date) -lt $deadline)
 
+            # Maintenance is advisory to the service host. During bootstrap we need a
+            # deterministic port hand-off before touching the source tree/D1, so stop
+            # the Windows services themselves and then clean up any orphan children.
+            foreach ($service in $installedServices) {
+              $current = Get-Service -Name $service.Name -ErrorAction Stop
+              if ($current.Status -ne 'Stopped') {
+                Write-Host "Stopping Windows service $($service.Name) status=$($current.Status)"
+                Stop-Service -Name $service.Name -Force -ErrorAction Stop
+                $current.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+              }
+            }
+
+            & node "$target\server\scripts\stop-local-dev.mjs" --ports=8799,5173
+            if ($LASTEXITCODE -ne 0) { throw 'Khong dung duoc orphan local dev stack sau khi stop Windows services' }
+
+            $listeners = @(
+              Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+                Where-Object { $_.LocalPort -in @(8799, 5173) }
+            )
             if ($listeners.Count -gt 0) {
-              Write-Host 'Runtime services did not release local ports:'
+              Write-Host 'Runtime ports van bi chiem sau khi stop services/orphans:'
               $listeners | ForEach-Object {
                 Write-Host "  port=$($_.LocalPort) pid=$($_.OwningProcess)"
               }
-              throw 'Alumdoor Windows services khong nha port sau khi bat maintenance.'
+              throw 'Khong the giai phong local ports truoc bootstrap.'
             }
-            Write-Host 'Windows service children are stopped by maintenance.'
+            Write-Host 'Windows runtime services and orphan children are stopped.'
           } else {
             # No managed Windows services: clean up the legacy/manual dev processes.
             & node "$target\server\scripts\stop-local-dev.mjs" --ports=8799,5173
