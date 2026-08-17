@@ -88,10 +88,8 @@ export function toFrappeDocPerm(permission: DocPermissionMeta): JsonObject {
     read: flag(permission.read),
     write: flag(permission.write),
     create: flag(permission.create),
-    // The kernel has no separate delete permission; deleting a document is a
-    // write-class action, so it inherits `write` rather than being reported as
     // permanently denied (which would grey out the UI action for everyone).
-    delete: flag(permission.write),
+    delete: flag(permission.delete),
     submit: flag(permission.submit),
     cancel: flag(permission.cancel),
     amend: flag(permission.amend),

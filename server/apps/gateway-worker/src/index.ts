@@ -126,7 +126,7 @@ export default {
       if (callback) usage.appId = callback.appId;
 
       const principal = callback
-        ? { actor: callback.actor, authentication: undefined }
+        ? { actor: callback.actor, authentication: undefined, sessionEpoch: callback.sessionEpoch }
         : await resolvePrincipal(request, env, url, route.tenant_id);
       const inbound = callback ? new Request(callback.url, request) : request;
       const trusted = await createTrustedIdentity({
@@ -136,6 +136,7 @@ export default {
         masterSecret: env.INTERNAL_AUTH_SECRET,
         keyId: env.INTERNAL_AUTH_KEY_ID ?? "k1",
         ...(principal.authentication ? { authentication: principal.authentication } : {}),
+        ...(principal.sessionEpoch !== undefined ? { sessionEpoch: principal.sessionEpoch } : {}),
       });
       // Freshly minted, and `withPlatformHeaders` strips whatever the caller sent — so
       // the identity the tenant sees is one this gateway just issued, never one an app
@@ -245,7 +246,7 @@ async function resolveAppCallback(
   env: GatewayEnv,
   url: URL,
   tenantId: string,
-): Promise<{ actor: Awaited<ReturnType<typeof verifyTrustedIdentity>>["actor"]; url: URL; appId: string } | null> {
+): Promise<{ actor: Awaited<ReturnType<typeof verifyTrustedIdentity>>["actor"]; url: URL; appId: string; sessionEpoch?: number } | null> {
   if (!url.pathname.startsWith(APP_CALLBACK_PREFIX)) return null;
 
   const appId = request.headers.get("x-cloudforge-app") ?? "";
@@ -261,7 +262,7 @@ async function resolveAppCallback(
 
   const target = new URL(url);
   target.pathname = `/api/${url.pathname.slice(APP_CALLBACK_PREFIX.length)}`;
-  return { actor: identity.actor, url: target, appId };
+  return { actor: identity.actor, url: target, appId, ...(identity.session_epoch !== undefined ? { sessionEpoch: identity.session_epoch } : {}) };
 }
 
 /**
@@ -379,6 +380,7 @@ async function resolvePrincipal(request: Request, env: GatewayEnv, url: URL, ten
     return {
       actor: staticDevelopmentActor(env.DEV_ACTOR_JSON),
       authentication: { auth_time: Math.floor(Date.now() / 1000), amr: ["development"] },
+      sessionEpoch: undefined,
     };
   }
   // `/files/…` is forwarded as GUEST for the same reason as a Frappe path: a product
@@ -387,7 +389,7 @@ async function resolvePrincipal(request: Request, env: GatewayEnv, url: URL, ten
   // tenant worker still decides — a private file is refused there, where the row that says
   // so lives.
   if ((isFrappePath(url.pathname) || isPublicFilePath(url.pathname)) && !request.headers.get("authorization")) {
-    return { actor: { user_id: "Guest", roles: ["Guest"] }, authentication: undefined };
+    return { actor: { user_id: "Guest", roles: ["Guest"] }, authentication: undefined, sessionEpoch: undefined };
   }
   const claims = await verifyBearerJwt(request, {
     secret: requireSecret(env.JWT_SECRET, "JWT_SECRET"),
@@ -396,10 +398,12 @@ async function resolvePrincipal(request: Request, env: GatewayEnv, url: URL, ten
     // the query worker's, which validates the same tokens.
     issuer: requireSecret(env.JWT_ISSUER, "JWT_ISSUER"),
     audience: requireSecret(env.JWT_AUDIENCE, "JWT_AUDIENCE"),
+    requireSessionEpoch: true,
   });
   return {
     actor: claimsToActor(claims, tenantId),
     authentication: authenticationContextFromJwtClaims(claims),
+    sessionEpoch: claims.session_epoch,
   };
 }
 

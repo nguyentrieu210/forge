@@ -23,7 +23,7 @@ import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonRespo
 import {
   D1CollaborationService, D1DocumentAccessStore, D1MetadataStore, D1SearchStore,
   MetadataDocumentListDefinitionResolver, MetadataPermissionService,
-  metadataSummary, parseCsvImport, parseDocTypeMeta, renderPrintFormat, validateWorkflow,
+  blocksSelfApproval, metadataSummary, parseCsvImport, parseDocTypeMeta, renderPrintFormat, validateWorkflow,
 } from "../../../packages/frappe-model/src/index.js";
 import { AggregateCoordinator } from "./aggregate-do.js";
 import { askAssistant, readReceiptImage } from "./ai-assistant.js";
@@ -351,9 +351,13 @@ export default {
               throw errors.validation(`${applicable} has no Link field to ${allowDoctype}`);
             }
           }
-          const record = { user, allow_doctype: allowDoctype, allow_name: allowName, applicable_for_doctype: applicable,
-            is_default: body.is_default === true, hide_descendants: body.hide_descendants === true, created_by: actor.user_id, created_at: new Date().toISOString() };
-          return jsonResponse(await access.putUserPermission(tenantId, record), 200, { "x-cloudforge-trace-id": traceId });
+          const now = new Date().toISOString();
+          await new D1UserStore(env.DB).administration.putUserPermission(tenantId, {
+            user, allowDoctype, allowName, applicableForDoctype: applicable,
+            isDefault: body.is_default === true, hideDescendants: body.hide_descendants === true, createdBy: actor.user_id,
+          }, { actorUserId: actor.user_id, traceId, source: "native:/api/v1/user-permissions" }, now);
+          return jsonResponse({ user, allow_doctype: allowDoctype, allow_name: allowName, applicable_for_doctype: applicable,
+            is_default: body.is_default === true, hide_descendants: body.hide_descendants === true, created_by: actor.user_id, created_at: now }, 200, { "x-cloudforge-trace-id": traceId });
         }
         if (request.method === "DELETE") {
           const user = url.searchParams.get("user")?.trim() ?? "";
@@ -361,8 +365,10 @@ export default {
           const allowName = url.searchParams.get("allow_name")?.trim() ?? "";
           const applicable = url.searchParams.get("applicable_for_doctype")?.trim() ?? "";
           if (!user || !allowDoctype || !allowName) throw errors.validation("user, allow_doctype and allow_name are required");
-          await access.deleteUserPermission(tenantId, user, allowDoctype, allowName, applicable);
-          return jsonResponse({ deleted: true });
+          const deleted = await new D1UserStore(env.DB).administration.removeUserPermission(tenantId, {
+            user, allowDoctype, allowName, applicableForDoctype: applicable,
+          }, { actorUserId: actor.user_id, traceId, source: "native:/api/v1/user-permissions" }, new Date().toISOString());
+          return jsonResponse({ deleted });
         }
       }
 
@@ -406,7 +412,11 @@ export default {
         const workflow = await metadata.getWorkflow(tenantId, doctype);
         if (!workflow) return jsonResponse({ actions: [] });
         const state = String(document.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
-        const actions = workflow.transitions.filter((entry) => entry.state === state && (actor.roles.includes(entry.allowed_role) || isSystemManager(actor))).map((entry) => ({ action: entry.action, next_state: entry.next_state }));
+        const actions = workflow.transitions.filter((entry) => {
+          if (entry.state !== state || (!actor.roles.includes(entry.allowed_role) && !isAdministrator(actor))) return false;
+          const target = workflow.states.find((candidate) => candidate.state === entry.next_state);
+          return !target || !blocksSelfApproval(entry, document.owner, actor.user_id, document.docstatus, target.docstatus);
+        }).map((entry) => ({ action: entry.action, next_state: entry.next_state }));
         return jsonResponse({ state, actions });
       }
 
@@ -421,10 +431,11 @@ export default {
         const workflow = await metadata.getWorkflow(tenantId, doctype);
         if (!workflow) throw errors.validation("No active workflow");
         const state = String(document.data[workflow.state_field] ?? workflow.states[0]?.state ?? "");
-        const transition = workflow.transitions.find((entry) => entry.state === state && entry.action === actionName && (actor.roles.includes(entry.allowed_role) || isSystemManager(actor)));
+        const transition = workflow.transitions.find((entry) => entry.state === state && entry.action === actionName && (actor.roles.includes(entry.allowed_role) || isAdministrator(actor)));
         if (!transition) throw errors.permission("Workflow action is not permitted");
         const target = workflow.states.find((entry) => entry.state === transition.next_state);
         if (!target) throw errors.validation("Workflow target state is invalid");
+        if (blocksSelfApproval(transition, document.owner, actor.user_id, document.docstatus, target.docstatus)) throw errors.permission("You cannot approve a document you created");
         const action = target.docstatus === 2 ? "cancel" : target.docstatus === 1 && document.docstatus === 0 ? "submit" : "save";
         const command: MutationCommand = {
           schema_version: 1,
@@ -438,6 +449,7 @@ export default {
           document: { ...document.data, [workflow.state_field]: transition.next_state, workflow_state: transition.next_state },
         };
         command.payload_hash = await commandPayloadHash(command as unknown as Record<string, unknown>);
+        await organizationSecurity.assertMutation(tenantId, actor, command);
         const stub = env.AGGREGATES.getByName(`${tenantId}:${doctype}:${name}`) as AggregateStub;
         return jsonResponse(typeof stub.mutate === "function" ? await stub.mutate(command) : await callDoFetch(stub, command));
       }
@@ -620,6 +632,16 @@ export default {
         const share = await access.getShare(tenantId, doctype, name, actor.user_id);
         const response = meta ? await permissions.redactDocumentWithPolicies(tenantId, meta, document, actor, Boolean(share?.read)) : document;
         return jsonResponse(response, 200, { "x-cloudforge-trace-id": traceId });
+      }
+      if (request.method === "DELETE" && match) {
+        const doctype = decodeURIComponent(match[1]!);
+        const name = decodeURIComponent(match[2]!);
+        await loadAuthorizedDocument(documentStore, permissions, actor, tenantId, doctype, name, "delete");
+        await assertNoNativeLinkedDocuments(metadata, documentStore, tenantId, doctype, name);
+        const meta = await metadata.getDocType(tenantId, doctype);
+        if (!meta) throw errors.notFound("DocType metadata not found");
+        const deleted = await documentStore.deleteDraftDocument(tenantId, doctype, name, { allowNonDraft: meta.kind === "master" && meta.allow_delete_non_draft === true });
+        return jsonResponse({ doctype, name, deleted }, 200, { "x-cloudforge-trace-id": traceId });
       }
 
       return jsonResponse({ error: { code: "ROUTE_NOT_FOUND" } }, 404);
@@ -1407,7 +1429,17 @@ async function authenticate(request: Request, env: TenantEnv, tenantId: string, 
     // INTERNAL_AUTH_SECRET as the platform master and derive on the fly.
     ...(keys.length > 0 ? { keys } : { masterSecret: env.INTERNAL_AUTH_SECRET }),
   });
-  return identity.actor;
+  const users = new D1UserStore(env.DB);
+  if (identity.session_epoch !== undefined) {
+    const user = await users.assertSessionStillValid(tenantId, identity.actor.user_id, identity.session_epoch);
+    return { user_id: user.user_id, roles: user.roles, ...(user.language ? { locale: user.language } : {}), ...(user.time_zone ? { timezone: user.time_zone } : {}) };
+  }
+  // Internal app callbacks are short-lived derivatives of an already-authenticated request.
+  // They still rehydrate enabled state and live roles, but do not invent an epoch they were never issued with.
+  const user = await users.get(tenantId, identity.actor.user_id);
+  if (!user || !user.enabled) throw errors.authentication("User account is missing or disabled");
+  const roles = await users.listRoles(tenantId, user.user_id);
+  return { user_id: user.user_id, roles, ...(user.language ? { locale: user.language } : {}), ...(user.time_zone ? { timezone: user.time_zone } : {}) };
 }
 
 function trustedIdentityKeys(env: TenantEnv): TrustedIdentityKey[] {
@@ -1430,8 +1462,11 @@ async function callDoFetch(stub: DurableObjectStub, command: MutationCommand): P
 }
 
 
+function isAdministrator(actor: Actor): boolean {
+  return actor.user_id === "Administrator" || actor.roles.includes("Administrator");
+}
 function isSystemManager(actor: Actor): boolean {
-  return actor.user_id === "Administrator" || actor.roles.includes("Administrator") || actor.roles.includes("System Manager");
+  return isAdministrator(actor) || actor.roles.includes("System Manager");
 }
 function requireSystemManager(actor: Actor): void { if (!isSystemManager(actor)) throw errors.permission("System Manager is required"); }
 async function readBoundedBody(request: Request, maxBytes: number): Promise<ArrayBuffer> {
@@ -1457,7 +1492,7 @@ async function loadAuthorizedDocument(
   tenantId: string,
   doctype: string,
   name: string,
-  action: "read" | "save" | "print" | "share",
+  action: "read" | "save" | "delete" | "print" | "share",
   hideUnauthorized = false,
 ): Promise<CanonicalDocument<JsonObject>> {
   const document = await store.getDocument(tenantId, doctype, name);
@@ -1469,6 +1504,22 @@ async function loadAuthorizedDocument(
     throw error;
   }
   return document;
+}
+
+async function assertNoNativeLinkedDocuments(metadata: D1MetadataStore, documents: D1MutationStore, tenantId: string, doctype: string, name: string): Promise<void> {
+  const sources = await metadata.listDocTypes(tenantId);
+  const references: string[] = [];
+  for (const source of sources) {
+    if (source.is_child) continue;
+    const linkFields = source.fields.filter((field) => field.fieldtype === "Link" && field.options === doctype);
+    if (!linkFields.length) continue;
+    const rows = await documents.listDocumentsByDoctype<JsonObject>(tenantId, source.name);
+    for (const field of linkFields) {
+      const count = rows.filter((document) => !(source.name === doctype && document.name === name) && document.data[field.fieldname] === name).length;
+      if (count > 0) references.push(`${source.label ?? source.name}.${field.label ?? field.fieldname} (${count})`);
+    }
+  }
+  if (references.length) throw errors.validation(`Không thể xóa ${doctype} ${name}: còn dữ liệu đang liên kết — ${references.join(", ")}`);
 }
 
 function encodeCsv(fields: string[], rows: Array<Record<string, unknown>>): string {

@@ -843,9 +843,7 @@ async function syncCustomerAsSupplier(doctype: string, customerName: string, pay
 }
 
 async function deleteDocument(doctype: string, name: string, context: FrappeRouterContext): Promise<JsonObject> {
-  // Frappe has no separate delete permission in this kernel; deleting is a
-  // write-class action, matching how the DocPerm rows are reported.
-  await loadWritable(doctype, name, context);
+  await loadWritable(doctype, name, context, "delete");
   await assertNoLinkedDocuments(doctype, name, context);
   const meta = await requireMeta(doctype, context);
   const deleted = await context.documents.deleteDraftDocument(context.tenantId, doctype, name, {
@@ -4297,12 +4295,12 @@ async function loadReadable(doctype: string, name: string, context: FrappeRouter
 }
 
 /** Loads a document the actor may write. A refusal here is reported as a refusal. */
-async function loadWritable(doctype: string, name: string, context: FrappeRouterContext): Promise<CanonicalDocument> {
+async function loadWritable(doctype: string, name: string, context: FrappeRouterContext, action: "save" | "delete" = "save"): Promise<CanonicalDocument> {
   const document = await context.documents.getDocument(context.tenantId, doctype, name);
   if (!document) throw errors.notFound();
   await context.permissions.assert({
     actor: context.actor, tenantId: context.tenantId, doctype, name,
-    owner: document.owner, data: document.data, action: "save",
+    owner: document.owner, data: document.data, action,
   });
   return document;
 }

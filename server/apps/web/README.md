@@ -18,7 +18,7 @@ npm run dev        # http://localhost:5173
 There is **no login / token-minting** in the app (that stays external). On first load the
 app asks for a **bearer JWT** (HS256, tenant `demo`) and stores it in `localStorage`.
 Mint one out-of-band with the gateway's `JWT_SECRET` / `JWT_ISSUER` / `JWT_AUDIENCE`, e.g.
-a Sales-Manager token, then paste it into the token gate.
+a Sales-Manager token, then paste it into the token gate. Production bearer tokens must also carry the user's current integer `session_epoch`; role/password/session revocation increments that epoch, so an older token is rejected on its next request.
 
 ## Connectivity (no CORS in dev)
 
