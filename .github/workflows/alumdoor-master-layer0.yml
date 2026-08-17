@@ -11,7 +11,18 @@ on:
       - 'server/apps-src/alumdoor-worker/src/color-scopes.ts'
       - 'server/briefs/alumdoor.json'
       - 'server/briefs/alumdoor-v2.json'
+      - 'server/briefs/alumdoor-v2.actions.json'
+      - 'server/briefs/alumdoor-v2.fixtures.json'
       - 'server/briefs/alumdoor-v2.integrations.json'
+      - 'server/scripts/lib/read-brief-source.mjs'
+      - 'server/packages/clouderp-erpnext/src/alumdoor-reason-masters.ts'
+      - 'server/packages/clouderp-erpnext/src/cut-order-reservation-integrity.ts'
+      - 'server/packages/clouderp-erpnext/src/stock-reservation-integrity.ts'
+      - 'server/packages/clouderp-erpnext/src/stock-reconciliation-integrity.ts'
+      - 'server/tests/brief-action-sidecar-replace.test.mjs'
+      - 'server/tests/brief-fixture-sidecar.test.mjs'
+      - 'server/tests/stock-reservation-integrity.test.mjs'
+      - 'server/tests/stock-reconciliation-integrity.test.mjs'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
       - 'server/tests/alumdoor-color-scopes.test.mjs'
@@ -47,7 +58,18 @@ on:
       - 'server/apps-src/alumdoor-worker/src/color-scopes.ts'
       - 'server/briefs/alumdoor.json'
       - 'server/briefs/alumdoor-v2.json'
+      - 'server/briefs/alumdoor-v2.actions.json'
+      - 'server/briefs/alumdoor-v2.fixtures.json'
       - 'server/briefs/alumdoor-v2.integrations.json'
+      - 'server/scripts/lib/read-brief-source.mjs'
+      - 'server/packages/clouderp-erpnext/src/alumdoor-reason-masters.ts'
+      - 'server/packages/clouderp-erpnext/src/cut-order-reservation-integrity.ts'
+      - 'server/packages/clouderp-erpnext/src/stock-reservation-integrity.ts'
+      - 'server/packages/clouderp-erpnext/src/stock-reconciliation-integrity.ts'
+      - 'server/tests/brief-action-sidecar-replace.test.mjs'
+      - 'server/tests/brief-fixture-sidecar.test.mjs'
+      - 'server/tests/stock-reservation-integrity.test.mjs'
+      - 'server/tests/stock-reconciliation-integrity.test.mjs'
       - 'server/tests/alumdoor-color-catalog.test.mjs'
       - 'server/tests/alumdoor-color-seed-authority.test.mjs'
       - 'server/tests/alumdoor-color-scopes.test.mjs'
@@ -79,6 +101,25 @@ permissions:
   contents: read
 
 jobs:
+  operational_reasons:
+    name: Lock cancellation and variance reason masters
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build reason authority and dry-run metadata
+        working-directory: server
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm run build
+          node --test tests/brief-action-sidecar-replace.test.mjs tests/brief-fixture-sidecar.test.mjs tests/stock-reservation-integrity.test.mjs tests/stock-reconciliation-integrity.test.mjs
+          node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const b = await readBriefSource('./briefs/alumdoor-v2.json'); if (b.version !== '2.4.1') throw new Error('V2 version drift: ' + b.version); const release = b.actions.find(a => a.name === 'nha-giu-cho'); if (!release?.fields?.includes('released_reason:Link(Lý do huỷ)! Lý do nhả')) throw new Error('release action is not linked to canonical cancellation reason'); const cancellation = b.fixtures.filter(f => f.type === 'Lý do huỷ'); const variance = b.fixtures.filter(f => f.type === 'Nguyên nhân chênh lệch'); if (!cancellation.length || !variance.length) throw new Error('reason fixtures missing'); console.log('OPERATIONAL_REASON_PASS', cancellation.length, variance.length);"
+          node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
+
   uom:
     name: Lock canonical UOM catalog
     runs-on: ubuntu-latest
@@ -190,5 +231,5 @@ jobs:
           pnpm run build
           node --test tests/alumdoor-cutting-policy-geometry.test.mjs
           node --test tests/vietnamese-enum-translations.test.mjs
-          node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const b = await readBriefSource('./briefs/alumdoor-v2.json'); if (b.version !== '2.4.0') throw new Error('V2 version drift: ' + b.version); console.log('V2_VERSION_PASS', b.version);"
+          node --input-type=module -e "import { readBriefSource } from './scripts/lib/read-brief-source.mjs'; const b = await readBriefSource('./briefs/alumdoor-v2.json'); if (b.version !== '2.4.1') throw new Error('V2 version drift: ' + b.version); console.log('V2_VERSION_PASS', b.version);"
           node scripts/forge-app.mjs briefs/alumdoor-v2.json --dry-run
