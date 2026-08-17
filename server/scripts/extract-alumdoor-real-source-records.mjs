@@ -55,6 +55,8 @@ function makeSellableRecord(row, sourceIndex) {
     }),
     source_category: category,
     source_rate_or_quantity: readAlumdoorCell(row, 6),
+    source_business_note: readAlumdoorCell(row, 8),
+    source_formula_code: readAlumdoorCell(row, 22),
   };
 }
 
@@ -63,6 +65,8 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
   const itemCode = readAlumdoorCell(row, 3);
   const itemName = readAlumdoorCell(row, 2) || itemCode;
   const sourceUom = readAlumdoorCell(row, 5);
+  const sourceFormulaText = readAlumdoorCell(row, 8);
+  const sourceFormulaCode = readAlumdoorCell(row, 22);
   return {
     source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE,
     source_sheet: "ĐM",
@@ -71,9 +75,6 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
     item_code: itemCode,
     item_name: itemName,
     source_uom: sourceUom,
-    // Ordinary references never become Item identities. This group is retained
-    // only so an explicitly allowlisted BOM-only promotion can use evidence from
-    // the component's own code/name rather than inheriting the parent Item Group.
     source_group: resolveAlumdoorRealStockGroup({
       category,
       item_code: itemCode,
@@ -83,7 +84,9 @@ function makeBomReferenceRecord(row, parentIndex, parentCode) {
     parent_item_code: parentCode,
     source_parent_name: readAlumdoorCell(row, 4),
     source_qty_or_formula: readAlumdoorCell(row, 6),
-    source_formula: readAlumdoorCell(row, 22),
+    source_formula_text: sourceFormulaText,
+    source_formula_code: sourceFormulaCode,
+    source_formula: sourceFormulaCode || sourceFormulaText,
   };
 }
 
@@ -99,11 +102,7 @@ function makeStockRecord(row) {
     item_code: itemCode,
     item_name: itemName,
     source_uom: readAlumdoorCell(row, 5),
-    source_group: resolveAlumdoorRealStockGroup({
-      category,
-      item_code: itemCode,
-      item_name: itemName,
-    }),
+    source_group: resolveAlumdoorRealStockGroup({ category, item_code: itemCode, item_name: itemName }),
     source_color: readAlumdoorCell(row, 3),
     source_category: category,
     source_quantity: readAlumdoorCell(row, 4),
@@ -111,13 +110,9 @@ function makeStockRecord(row) {
   };
 }
 
-const [dmText, stockText] = await Promise.all([
-  readFile(dmPath, "utf8"),
-  readFile(stockPath, "utf8"),
-]);
+const [dmText, stockText] = await Promise.all([readFile(dmPath, "utf8"), readFile(stockPath, "utf8")]);
 const dmRows = parseAlumdoorIndexedMarkdownRows(dmText);
 const stockRows = parseAlumdoorIndexedMarkdownRows(stockText);
-
 const records = [];
 let currentParentIndex = null;
 let currentParentCode = "";
@@ -129,23 +124,17 @@ for (const row of dmRows) {
   const code = readAlumdoorCell(row, 3);
   const name = readAlumdoorCell(row, 4) || readAlumdoorCell(row, 2);
   const uom = readAlumdoorCell(row, 5);
-
   if (stt !== null) {
     currentParentIndex = stt;
     currentParentCode = code;
-    if (code || name) {
-      records.push(makeSellableRecord(row, stt));
-      sellableCount += 1;
-    }
+    if (code || name) { records.push(makeSellableRecord(row, stt)); sellableCount += 1; }
     continue;
   }
-
   if (code && currentParentIndex !== null && (name || uom)) {
     records.push(makeBomReferenceRecord(row, currentParentIndex, currentParentCode));
     bomReferenceCount += 1;
   }
 }
-
 let stockCount = 0;
 for (const row of stockRows) {
   if (isStockHeader(row)) continue;
@@ -157,60 +146,36 @@ for (const row of stockRows) {
   stockCount += 1;
 }
 
-const unresolvedGroups = records.filter((row) => (
-  row.source_role !== ITEM_SOURCE_ROLES.BOM_REFERENCE && !row.source_group
-));
+const unresolvedGroups = records.filter((row) => row.source_role !== ITEM_SOURCE_ROLES.BOM_REFERENCE && !row.source_group);
 const groupCounts = {};
 for (const row of records) {
   if (!row.source_group || row.source_role === ITEM_SOURCE_ROLES.BOM_REFERENCE) continue;
   groupCounts[row.source_group] = (groupCounts[row.source_group] || 0) + 1;
 }
 const unresolvedSamples = unresolvedGroups.slice(0, 100).map((row) => ({
-  source_sheet: row.source_sheet,
-  source_row: row.source_row,
-  source_index: row.source_index,
-  source_category: row.source_category,
-  item_code: row.item_code,
-  item_name: row.item_name,
-  source_uom: row.source_uom,
+  source_sheet: row.source_sheet, source_row: row.source_row, source_index: row.source_index,
+  source_category: row.source_category, item_code: row.item_code, item_name: row.item_name, source_uom: row.source_uom,
 }));
 const sellableDualUnitEvidence = records
   .filter((row) => row.source_role === ITEM_SOURCE_ROLES.SELLABLE_PRODUCT && /^KG\//i.test(row.source_uom))
-  .map((row) => ({
-    source_row: row.source_row,
-    source_index: row.source_index,
-    item_code: row.item_code,
-    item_name: row.item_name,
-    source_uom: row.source_uom,
-    conversion_factor: Number(row.source_rate_or_quantity),
-  }))
+  .map((row) => ({ source_row: row.source_row, source_index: row.source_index, item_code: row.item_code,
+    item_name: row.item_name, source_uom: row.source_uom, conversion_factor: Number(row.source_rate_or_quantity) }))
   .filter((row) => Number.isFinite(row.conversion_factor) && row.conversion_factor > 0);
-
 const report = {
   source_authority: {
     sellable: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md numbered rows",
     stock: "apps/alumdoor/docs/nguon/ms-lien/Trang-tính29.md",
     bom_reference: "apps/alumdoor/docs/nguon/ms-lien/ĐM.md component rows",
   },
-  dm_row_count: dmRows.length,
-  stock_row_count: stockRows.length,
-  source_record_count: records.length,
-  sellable_count: sellableCount,
-  stock_count: stockCount,
-  bom_reference_count: bomReferenceCount,
-  unresolved_group_count: unresolvedGroups.length,
-  group_counts: groupCounts,
-  unresolved_group_samples: unresolvedSamples,
-  sellable_dual_unit_evidence: sellableDualUnitEvidence,
+  dm_row_count: dmRows.length, stock_row_count: stockRows.length, source_record_count: records.length,
+  sellable_count: sellableCount, stock_count: stockCount, bom_reference_count: bomReferenceCount,
+  unresolved_group_count: unresolvedGroups.length, group_counts: groupCounts,
+  unresolved_group_samples: unresolvedSamples, sellable_dual_unit_evidence: sellableDualUnitEvidence,
 };
-
 await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(records, null, 2)}\n`, "utf8");
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
-
-console.log(
-  `ALUMDOOR_REAL_SOURCE_RECORDS_EXTRACTED records=${records.length} sellable=${sellableCount} stock=${stockCount} bom_reference=${bomReferenceCount} unresolved_groups=${unresolvedGroups.length}`,
-);
+console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_EXTRACTED records=${records.length} sellable=${sellableCount} stock=${stockCount} bom_reference=${bomReferenceCount} unresolved_groups=${unresolvedGroups.length}`);
 console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_OUTPUT ${outputPath}`);
 console.log(`ALUMDOOR_REAL_SOURCE_RECORDS_REPORT ${reportPath}`);
 if (unresolvedGroups.length > 0) {
@@ -218,9 +183,6 @@ if (unresolvedGroups.length > 0) {
   for (const row of unresolvedSamples.slice(0, 25)) console.log(JSON.stringify(row));
 }
 for (const row of sellableDualUnitEvidence) console.log(`DUAL_UNIT_EVIDENCE ${JSON.stringify(row)}`);
-
 if (sellableCount === 0 || stockCount === 0 || bomReferenceCount === 0) {
-  throw new Error(
-    `ALUMDOOR_REAL_SOURCE_EMPTY sellable=${sellableCount} stock=${stockCount} bom_reference=${bomReferenceCount}`,
-  );
+  throw new Error(`ALUMDOOR_REAL_SOURCE_EMPTY sellable=${sellableCount} stock=${stockCount} bom_reference=${bomReferenceCount}`);
 }
