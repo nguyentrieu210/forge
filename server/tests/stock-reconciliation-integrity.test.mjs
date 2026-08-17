@@ -61,6 +61,12 @@ function makeContext(document, existing = baseData()) {
         if (type === "Company") return { default_currency: "VND" };
         if (type === "Currency") return { currency_scale: 0 };
         if (type === "Item") return { item_code: name, item_group: name === "AL99" ? "Khác" : "Nhôm", has_catch_weight: false };
+        if (type === "Nguyên nhân chênh lệch") {
+          if (name === "SAI_SO_DEM") return { reason_code: name, reason_name: "Sai số đếm", variance_kind: "Cả hai" };
+          if (name === "HAO_HUT") return { reason_code: name, reason_name: "Hao hụt", variance_kind: "Thiếu" };
+          if (name === "KIEM_KE_THUA") return { reason_code: name, reason_name: "Kiểm kê thừa", variance_kind: "Thừa" };
+          if (name === "KHAC") return { reason_code: name, reason_name: "Khác", variance_kind: "Cả hai" };
+        }
         return null;
       },
       async listMasterRecordData() { return []; },
@@ -76,7 +82,7 @@ function makeContext(document, existing = baseData()) {
   };
 }
 
-function submittedContext({ actor, cancelReason = "", lockDate = null, tenantId = "tenant-a" } = {}) {
+function submittedContext({ actor, cancelReason = "KIEM_KE_SAI", lockDate = null, tenantId = "tenant-a" } = {}) {
   const submitted = baseData([
     {
       row_id: "ROW-IN",
@@ -89,7 +95,7 @@ function submittedContext({ actor, cancelReason = "", lockDate = null, tenantId 
       counted_qty: "12.000000",
       variance_qty: "2.000000",
       variance_qty_micros: 2_000_000,
-      variance_reason: "Sai số đếm",
+      variance_reason: "SAI_SO_DEM",
     },
     {
       row_id: "ROW-OUT",
@@ -102,7 +108,7 @@ function submittedContext({ actor, cancelReason = "", lockDate = null, tenantId 
       counted_qty: "9.000000",
       variance_qty: "-1.000000",
       variance_qty_micros: -1_000_000,
-      variance_reason: "Sai số đếm",
+      variance_reason: "SAI_SO_DEM",
     },
   ]);
   submitted.recon_state = "Đã ghi sổ";
@@ -168,6 +174,13 @@ function submittedContext({ actor, cancelReason = "", lockDate = null, tenantId 
       nextVersion: 3,
       now: NOW,
       reader: {
+        async getMasterRecordData(_tenantId, type, name) {
+          if (type === "Lý do huỷ") {
+            if (name === "KIEM_KE_SAI") return { reason_code: name, reason_name: "Kiểm kê sai cần lập lại", applies_to_doctype: "Kiểm kê" };
+            if (name === "CAT_NHAM") return { reason_code: name, reason_name: "Cắt nhầm", applies_to_doctype: "Phiếu cắt" };
+          }
+          return null;
+        },
         async getVoucherStockEntries(...args) {
           calls.push(args);
           return structuredClone(originalStock);
@@ -188,14 +201,38 @@ test("reorder keeps frozen book values attached to item and batch identity", asy
   const document = {
     ...existing,
     items: [
-      { ...existing.items[1], counted_qty: "19", variance_reason: "Sai số đếm" },
-      { ...existing.items[0], counted_qty: "9", variance_reason: "Sai số đếm" },
+      { ...existing.items[1], counted_qty: "19", variance_reason: "SAI_SO_DEM" },
+      { ...existing.items[0], counted_qty: "9", variance_reason: "SAI_SO_DEM" },
     ],
   };
   const normalized = await controller.normalize(makeContext(document, existing));
   assert.deepEqual(normalized.items.map((row) => row.row_id), ["ROW-AL71", "ROW-AL72"]);
   assert.deepEqual(normalized.items.map((row) => row.book_qty_micros), [10_000_000, 20_000_000]);
   assert.deepEqual(normalized.items.map((row) => row.variance_qty_micros), [-1_000_000, -1_000_000]);
+});
+
+test("variance reason must exist, match the variance direction, and Khác requires a note", async () => {
+  const controller = new StockReconciliationIntegrityController();
+  const existing = baseData();
+  const row = existing.items[0];
+  await assert.rejects(
+    () => controller.normalize(makeContext({ ...existing, items: [{ ...row, counted_qty: "9", variance_reason: "KHONG_TON_TAI" }, existing.items[1]] }, existing)),
+    /không tồn tại hoặc đã ngừng dùng/,
+  );
+  await assert.rejects(
+    () => controller.normalize(makeContext({ ...existing, items: [{ ...row, counted_qty: "11", variance_reason: "HAO_HUT" }, existing.items[1]] }, existing)),
+    /chỉ áp cho Thiếu, không phù hợp chênh lệch Thừa/,
+  );
+  await assert.rejects(
+    () => controller.normalize(makeContext({ ...existing, items: [{ ...row, counted_qty: "9", variance_reason: "KIEM_KE_THUA" }, existing.items[1]] }, existing)),
+    /chỉ áp cho Thừa, không phù hợp chênh lệch Thiếu/,
+  );
+  await assert.rejects(
+    () => controller.normalize(makeContext({ ...existing, items: [{ ...row, counted_qty: "9", variance_reason: "KHAC" }, existing.items[1]] }, existing)),
+    /Khác.*phải nhập diễn giải/,
+  );
+  const normalized = await controller.normalize(makeContext({ ...existing, items: [{ ...row, counted_qty: "9", variance_reason: "HAO_HUT" }, existing.items[1]] }, existing));
+  assert.equal(normalized.items[0].variance_reason, "HAO_HUT");
 });
 
 test("snapshot envelope cannot move warehouse, scope, snapshot time or counter after capture", async () => {
@@ -245,8 +282,8 @@ test("new physical rows must stay inside the frozen item-group scope", async () 
 test("positive, negative and zero variance produce only authoritative stock-ledger deltas", async () => {
   const controller = new StockReconciliationIntegrityController();
   const data = baseData([
-    { row_id: "PLUS", item_code: "PLUS", book_qty_micros: 10_000_000, book_stock_value_minor: 1_000, counted_qty: "12", variance_qty_micros: 2_000_000, variance_reason: "Sai số đếm" },
-    { row_id: "MINUS", item_code: "MINUS", book_qty_micros: 20_000_000, book_stock_value_minor: 4_000, counted_qty: "15", variance_qty_micros: -5_000_000, variance_reason: "Sai số đếm" },
+    { row_id: "PLUS", item_code: "PLUS", book_qty_micros: 10_000_000, book_stock_value_minor: 1_000, counted_qty: "12", variance_qty_micros: 2_000_000, variance_reason: "SAI_SO_DEM" },
+    { row_id: "MINUS", item_code: "MINUS", book_qty_micros: 20_000_000, book_stock_value_minor: 4_000, counted_qty: "15", variance_qty_micros: -5_000_000, variance_reason: "SAI_SO_DEM" },
     { row_id: "ZERO", item_code: "ZERO", book_qty_micros: 7_000_000, book_stock_value_minor: 700, counted_qty: "7", variance_qty_micros: 0 },
   ]);
   const ctx = makeContext(data, data);
@@ -267,13 +304,13 @@ test("positive, negative and zero variance produce only authoritative stock-ledg
   assert.equal(ledgers.bundleUsages.length, 0);
 });
 
-test("standard cancel reverses exact submitted revision append-only and releases bundle usage", async () => {
+test("standard cancel requires canonical reason and reverses exact submitted revision append-only", async () => {
   const controller = new StockReconciliationIntegrityController();
   const { context, calls } = submittedContext();
   const plan = await controller.buildPlan(context);
   assert.equal(plan.document.docstatus, 2);
   assert.equal(plan.document.status, "Đã đảo kiểm kê");
-  assert.equal(plan.document.data.cancel_reason, undefined);
+  assert.equal(plan.document.data.cancel_reason, "KIEM_KE_SAI");
   assert.deepEqual(calls, [["tenant-a", "Stock Reconciliation", "RECON-1", 2]]);
   assert.deepEqual(
     plan.stock_entries.map((line) => [line.line_key, line.actual_qty_micros, line.stock_value_difference_minor]),
@@ -291,11 +328,20 @@ test("standard cancel reverses exact submitted revision append-only and releases
   );
 });
 
-test("optional cancellation reason is retained in audit document", async () => {
+test("reconciliation cancel rejects missing, unknown and wrong-scope reason", async () => {
   const controller = new StockReconciliationIntegrityController();
-  const { context } = submittedContext({ cancelReason: "Đếm nhầm lô" });
-  const plan = await controller.buildPlan(context);
-  assert.equal(plan.document.data.cancel_reason, "Đếm nhầm lô");
+  await assert.rejects(
+    () => controller.buildPlan(submittedContext({ cancelReason: "" }).context),
+    /Phải chọn lý do huỷ/,
+  );
+  await assert.rejects(
+    () => controller.buildPlan(submittedContext({ cancelReason: "KHONG_TON_TAI" }).context),
+    /không tồn tại hoặc đã ngừng dùng/,
+  );
+  await assert.rejects(
+    () => controller.buildPlan(submittedContext({ cancelReason: "CAT_NHAM" }).context),
+    /chỉ áp cho Phiếu cắt, không áp cho Kiểm kê/,
+  );
 });
 
 test("reconciliation reversal requires authority, separation of duties and open period", async () => {
