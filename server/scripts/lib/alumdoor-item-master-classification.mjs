@@ -66,8 +66,6 @@ export function collectAlumdoorAcceptedSourceGroups(acceptedItem, rawRecords = [
 
   const groups = [];
   for (const row of acceptedItem?.source_rows ?? []) {
-    // A promoted BOM-only component deliberately has no group authority yet.
-    // Never inherit the parent BOM/product group as the component's Item Group.
     if (clean(row.source_role) === ITEM_SOURCE_ROLES.BOM_REFERENCE) continue;
 
     if (clean(row.source_group)) groups.push(clean(row.source_group));
@@ -143,11 +141,7 @@ function hasKgRateBasis(acceptedItem) {
 }
 
 function resolveStockUom(acceptedItem, itemGroup) {
-  if (MANUFACTURED_FINISHED_GROUPS.has(itemGroup)) {
-    // Finished doors are counted as physical sets while commercial dimensions
-    // are calculated per transaction by the "Thành phẩm theo m2" profile.
-    return "Bộ";
-  }
+  if (MANUFACTURED_FINISHED_GROUPS.has(itemGroup)) return "Bộ";
   const explicit = clean(acceptedItem?.stock_uom);
   if (explicit) return explicit;
   if (hasKgRateBasis(acceptedItem)) return "Kg";
@@ -164,12 +158,7 @@ function resolveMeasurementProfile(itemGroup, stockUom) {
 
 function staticSalesConversion(acceptedItem, stockUom, salesUom, itemGroup) {
   if (!salesUom || salesUom === stockUom) return { status: "accepted", rows: [] };
-
-  // Door area-to-set conversion is geometry-dependent per sales/production line,
-  // never a static Item conversion factor.
-  if (MANUFACTURED_FINISHED_GROUPS.has(itemGroup)) {
-    return { status: "accepted", rows: [] };
-  }
+  if (MANUFACTURED_FINISHED_GROUPS.has(itemGroup)) return { status: "accepted", rows: [] };
 
   const factors = unique((acceptedItem?.conversion_factors ?? [])
     .map((row) => Number(row?.conversion_factor))
@@ -202,9 +191,7 @@ export function buildCanonicalAlumdoorItemPayload(acceptedItem, rawRecords = [])
   if (!itemCode) return { status: "blocked", reason: "missing_item_code" };
 
   const groupEvidence = canonicalGroupEvidence(acceptedItem, rawRecords);
-  if (groupEvidence.status !== "accepted") {
-    return { item_code: itemCode, ...groupEvidence };
-  }
+  if (groupEvidence.status !== "accepted") return { item_code: itemCode, ...groupEvidence };
   const itemGroup = groupEvidence.item_group;
   const identityRoles = new Set(acceptedItem?.identity_roles ?? acceptedItem?.source_roles ?? []);
   const hasSellable = identityRoles.has(ITEM_SOURCE_ROLES.SELLABLE_PRODUCT);
@@ -250,9 +237,7 @@ export function buildCanonicalAlumdoorItemPayload(acceptedItem, rawRecords = [])
   const supplyType = manufactured ? "Tự sản xuất" : "Mua ngoài";
 
   const conversion = staticSalesConversion(acceptedItem, stockUom, salesUom, itemGroup);
-  if (conversion.status !== "accepted") {
-    return { item_code: itemCode, item_group: itemGroup, ...conversion };
-  }
+  if (conversion.status !== "accepted") return { item_code: itemCode, item_group: itemGroup, ...conversion };
 
   const payload = {
     doctype: "Item",
@@ -265,9 +250,7 @@ export function buildCanonicalAlumdoorItemPayload(acceptedItem, rawRecords = [])
     is_stock_item: 1,
     is_purchase_item: purchased ? 1 : 0,
     is_sales_item: hasSellable ? 1 : 0,
-    is_fixed_asset: 0,
     include_item_in_manufacturing: 1,
-    is_sub_contracted_item: 0,
     stock_uom: stockUom,
     default_purchase_uom: purchased ? stockUom : "",
     default_sales_uom: salesUom,
@@ -297,9 +280,7 @@ export function buildCanonicalAlumdoorItemPayload(acceptedItem, rawRecords = [])
 }
 
 export function buildCanonicalAlumdoorItemMaster(preflight, rawRecords = []) {
-  if (!preflight || !Array.isArray(preflight.accepted)) {
-    throw new Error("Item preflight phải có accepted array");
-  }
+  if (!preflight || !Array.isArray(preflight.accepted)) throw new Error("Item preflight phải có accepted array");
   if (!Array.isArray(rawRecords)) throw new Error("rawRecords phải là array");
 
   const accepted = [];
