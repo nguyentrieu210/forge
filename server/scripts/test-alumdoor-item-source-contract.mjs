@@ -3,6 +3,7 @@ import {
   ITEM_SOURCE_ALIASES,
   ITEM_SOURCE_CONTEXTUAL_COLLISIONS,
   ITEM_SOURCE_ROLES,
+  ITEM_SOURCE_SHARED_IDENTITIES,
   assertAlumdoorItemSourceContract,
   classifyAlumdoorItemSourceCode,
 } from "./lib/alumdoor-item-source-contract.mjs";
@@ -82,8 +83,12 @@ expect(result.status, "source", "stock identity must not be rewritten by BOM ali
 expect(result.canonical_item_code, "NVL-TRUC114_1.8LY", "stock source code stays exact");
 
 result = classifyAlumdoorItemSourceCode("NVL-TON-ST-1LYx175-_MSK", { source_role: ITEM_SOURCE_ROLES.SELLABLE_PRODUCT, source_index: 351 });
-expect(result.status, "blocked", "duplicate Super source code must block on numbered product rows");
-expect(result.reason, "duplicate_source_code_for_distinct_products", "duplicate Super product block reason");
+expect(result.status, "source", "Super shared sellable identity status");
+expect(result.reason, "shared_identity_with_dimensions", "Super shared sellable identity reason");
+expect(result.canonical_item_code, "NVL-TON-ST-1LYx175-_MSK", "Super shared sellable code must stay exact");
+if (!ITEM_SOURCE_SHARED_IDENTITIES["NVL-TON-ST-1LYx175-_MSK"]?.dimensions.includes("material_specification")) {
+  throw new Error("Super shared identity phải dùng material_specification dimension");
+}
 
 result = classifyAlumdoorItemSourceCode("NVL-TON-ST-1LYx175-_MSK", { source_role: ITEM_SOURCE_ROLES.BOM_REFERENCE });
 expect(result.status, "blocked", "contextual BOM collision must block without source row context");
