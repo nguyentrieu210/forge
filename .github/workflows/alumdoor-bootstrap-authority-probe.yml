@@ -24,15 +24,15 @@ jobs:
           using System;
           using System.Runtime.InteropServices;
           public static class ServiceAccessProbe {
-            [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
-            public static extern IntPtr OpenSCManager(string machineName, string databaseName, uint access);
-            [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+            [DllImport("advapi32.dll", EntryPoint="OpenSCManagerW", ExactSpelling=true, SetLastError=true)]
+            public static extern IntPtr OpenSCManager(IntPtr machineName, IntPtr databaseName, uint access);
+            [DllImport("advapi32.dll", EntryPoint="OpenServiceW", ExactSpelling=true, SetLastError=true, CharSet=CharSet.Unicode)]
             public static extern IntPtr OpenService(IntPtr scm, string serviceName, uint access);
             [DllImport("advapi32.dll", SetLastError=true)]
             public static extern bool CloseServiceHandle(IntPtr handle);
           }
           '@
-          $scm = [ServiceAccessProbe]::OpenSCManager($null, $null, 0x0001)
+          $scm = [ServiceAccessProbe]::OpenSCManager([IntPtr]::Zero, [IntPtr]::Zero, 0x0001)
           if ($scm -eq [IntPtr]::Zero) { throw "OpenSCManager failed=$([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
           try {
             foreach ($name in @('ForgeAlumdoorWorker','ForgeAlumdoorBackend','ForgeAlumdoorDesk')) {
@@ -57,12 +57,13 @@ jobs:
           }
 
           Write-Host '=== REPO-RELATED SCHEDULED TASKS ==='
-          Get-ScheduledTask -ErrorAction SilentlyContinue |
-            Where-Object { $_.TaskName -match '(?i)forge|alumdoor|github|runner' -or $_.TaskPath -match '(?i)forge|alumdoor|github|runner' } |
-            ForEach-Object {
-              $info = $_ | Get-ScheduledTaskInfo -ErrorAction SilentlyContinue
-              Write-Host "TASK path=$($_.TaskPath)$($_.TaskName) state=$($info.State) principal=$($_.Principal.UserId) runLevel=$($_.Principal.RunLevel)"
-              $_.Actions | ForEach-Object { Write-Host "TASK_ACTION execute=$($_.Execute) args=$($_.Arguments) cwd=$($_.WorkingDirectory)" }
-            }
+          $tasks = @(Get-ScheduledTask -ErrorAction SilentlyContinue |
+            Where-Object { $_.TaskName -match '(?i)forge|alumdoor|github|runner' -or $_.TaskPath -match '(?i)forge|alumdoor|github|runner' })
+          if ($tasks.Count -eq 0) { Write-Host 'TASK none=1' }
+          foreach ($task in $tasks) {
+            $info = $task | Get-ScheduledTaskInfo -ErrorAction SilentlyContinue
+            Write-Host "TASK path=$($task.TaskPath)$($task.TaskName) state=$($info.State) principal=$($task.Principal.UserId) runLevel=$($task.Principal.RunLevel)"
+            $task.Actions | ForEach-Object { Write-Host "TASK_ACTION execute=$($_.Execute) args=$($_.Arguments) cwd=$($_.WorkingDirectory)" }
+          }
 
           Write-Host 'ALUMDOOR_BOOTSTRAP_AUTHORITY_PROBE_PASS'
