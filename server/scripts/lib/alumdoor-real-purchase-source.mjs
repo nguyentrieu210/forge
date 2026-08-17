@@ -27,8 +27,23 @@ export const APPROVED_PURCHASE_ITEM_UOMS = Object.freeze({
   "TP-TD325": "M",
   "NVL-BO1VIS AL71": "KG",
   "MŨI MÀI HỘP KIM": "CÁI",
+  "TP-RAYHOP": "KG",
   "NVL-VDAY-TDU-KTD": "KG",
   "NVL-V4-KEM_TOLE75_STD": "KG",
+});
+
+// Exact, source-lineaged dispositions only. No fuzzy matching and no guessed quantity.
+// - 534-537: ĐM proves TP-TD325/326 are meter-based; journal supplies length + piece count.
+// - 539: source item label "TP RAY HỘP TD" resolves exactly through ĐM to TP-RAYHOP.
+// - 543/544: source quantities are not trustworthy enough to persist; retain as explicit exclusions.
+export const PURCHASE_SOURCE_DISPOSITIONS = Object.freeze({
+  534: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD326:M" },
+  535: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD326:M" },
+  536: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD325:M" },
+  537: { quantity_rule: "LENGTH_M_X_PIECE_COUNT", evidence: "ĐM:TP-TD325:M" },
+  539: { canonical_item_code: "TP-RAYHOP", canonical_uom: "KG", evidence: "ĐM:TP-RAYHOP" },
+  543: { exclude: true, reason: "SOURCE_QUANTITY_OUTLIER_2834000_KG_UNPROVEN" },
+  544: { exclude: true, reason: "SOURCE_QUANTITY_MISSING" },
 });
 
 function dateOf(row) {
@@ -41,11 +56,34 @@ function dateOf(row) {
   return dt.toISOString().slice(0, 10);
 }
 
+function canonicalize(base) {
+  const disposition = PURCHASE_SOURCE_DISPOSITIONS[base.source_row] ?? {};
+  const sourceQuantity = base.quantity;
+  let canonicalQuantity = sourceQuantity;
+  if (disposition.quantity_rule === "LENGTH_M_X_PIECE_COUNT") {
+    canonicalQuantity = Number(base.length_or_height) * Number(sourceQuantity);
+  }
+  const canonicalItemCode = clean(disposition.canonical_item_code ?? base.item_code);
+  const canonicalUom = clean(disposition.canonical_uom ?? base.uom);
+  return {
+    ...base,
+    source_item_code: base.item_code,
+    source_quantity: sourceQuantity,
+    canonical_item_code: canonicalItemCode,
+    canonical_uom: canonicalUom,
+    canonical_quantity: Number.isFinite(canonicalQuantity) ? canonicalQuantity : null,
+    source_disposition: disposition,
+    excluded: disposition.exclude === true,
+    exclusion_reason: clean(disposition.reason),
+    classification: disposition.exclude === true ? "SOURCE_DEFECT_EXCLUDED" : "PURCHASE_RECEIPT",
+  };
+}
+
 export function extractRealPurchaseRows(markdown) {
   return parseAlumdoorIndexedMarkdownRows(markdown)
     .filter((row) => fold(readAlumdoorCell(row, 7)).startsWith("MUA HANG"))
     .map((row) => {
-      const base = {
+      const raw = {
         source: PURCHASE_SOURCE,
         source_row: row.source_row,
         date: dateOf(row),
@@ -64,9 +102,9 @@ export function extractRealPurchaseRows(markdown) {
         total_payment: number(readAlumdoorCell(row, 23)),
         transaction_type: clean(readAlumdoorCell(row, 26)),
         owner: clean(readAlumdoorCell(row, 27)),
-        classification: "PURCHASE_RECEIPT",
       };
-      return { ...base, source_fingerprint: hash(base) };
+      const base = canonicalize(raw);
+      return { ...base, source_fingerprint: hash(raw), canonical_fingerprint: hash(base) };
     });
 }
 
