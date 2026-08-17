@@ -1,15 +1,6 @@
 name: Alumdoor Real D1 Local Load
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'server/scripts/**alumdoor**'
-      - 'server/scripts/lib/alumdoor-**'
-      - 'server/briefs/alumdoor-real-lots.json'
-      - 'apps/alumdoor/docs/nguon/**'
-      - 'apps/alumdoor/docs/REAL-DATA-D1-LOAD-EXECUTION.md'
-      - '.github/workflows/alumdoor-real-d1-local-load.yml'
   workflow_dispatch:
 
 permissions:
@@ -21,7 +12,6 @@ concurrency:
 
 jobs:
   load-local-real-data:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 937
     runs-on: [self-hosted]
     timeout-minutes: 45
     env:
@@ -66,7 +56,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Real source extraction failed.' }
           & node server/scripts/build-alumdoor-item-master-payload.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'items.json') (Join-Path $dir 'items-audit.json')
           if ($LASTEXITCODE -ne 0) { throw 'Real Item payload build failed.' }
-          & node server/scripts/build-alumdoor-real-bom-payload.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'items.json') (Join-Path $dir 'boms.json')
+          & node server/scripts/build-alumdoor-real-bom-payload.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'items.json') (Join-Path $dir 'boms.json') (Join-Path $dir 'boms-audit.json')
           if ($LASTEXITCODE -ne 0) { throw 'Real BOM payload build failed.' }
           & node server/scripts/build-alumdoor-real-aluminium-lot-payload.mjs (Join-Path $dir 'source.json') (Join-Path $dir 'items.json') (Join-Path $dir 'lots.json')
           if ($LASTEXITCODE -ne 0) { throw 'Real Aluminium Lot payload build failed.' }
