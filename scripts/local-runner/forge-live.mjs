@@ -147,19 +147,36 @@ function swapRuntimeDist() {
   rmSync(runtimePrevious, { recursive: true, force: true });
 }
 
-let servicesStopped = false;
-let deploySucceeded = false;
-
-try {
-  const currentBranch = capture("git", ["branch", "--show-current"]);
-  if (currentBranch !== branch) {
-    throw new Error(`DEPLOY_LOCAL_WRONG_BRANCH current=${currentBranch || "DETACHED"} expected=${branch}`);
-  }
-
+function alignLiveBranch() {
   const trackedDirty = capture("git", ["status", "--porcelain", "--untracked-files=no"]);
   if (trackedDirty) {
     throw new Error(`DEPLOY_LOCAL_TRACKED_CHANGES_PRESENT: commit/stash tracked edits first\n${trackedDirty}`);
   }
+
+  // Match the permanent live-sync contract: origin/agent-live is the live code
+  // authority, while untracked local state (notably Wrangler D1) is preserved.
+  run("git", ["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`]);
+  const currentBranch = capture("git", ["branch", "--show-current"]);
+  if (currentBranch === branch) return currentBranch;
+
+  const localBranch = run("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
+    capture: true,
+    allowFailure: true,
+  });
+  if (localBranch.status === 0) {
+    run("git", ["switch", branch]);
+  } else {
+    run("git", ["switch", "-c", branch, "--track", `origin/${branch}`]);
+  }
+  console.log(`LOCAL_BRANCH_ALIGN_STATUS=PASS from=${currentBranch || "DETACHED"} to=${branch}`);
+  return currentBranch;
+}
+
+let servicesStopped = false;
+let deploySucceeded = false;
+
+try {
+  alignLiveBranch();
 
   for (const name of services) {
     if (!serviceQuery(name).installed) throw new Error(`LOCAL_RUNTIME_SERVICE_MISSING=${name}`);
@@ -175,7 +192,6 @@ try {
   await Promise.all([waitPort(5173, false, 45_000), waitPort(8799, false, 45_000)]);
   console.log("LOCAL_RUNTIME_STOP_STATUS=PASS");
 
-  run("git", ["fetch", "origin", branch]);
   run("git", ["merge", "--ff-only", `origin/${branch}`]);
   const after = capture("git", ["rev-parse", "HEAD"]);
   console.log(`PULL_STATUS=PASS branch=${branch} before=${before.slice(0, 12)} after=${after.slice(0, 12)}`);
