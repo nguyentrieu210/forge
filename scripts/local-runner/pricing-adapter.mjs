@@ -239,11 +239,41 @@ function invokeWranglerLocal(wrangler, repoRoot, args) {
   });
 }
 
+function normalizePersistedAudit(raw) {
+  const candidates = [raw.trim()];
+  for (let index = raw.lastIndexOf('\n['); index >= 0; index = raw.lastIndexOf('\n[', index - 1)) {
+    candidates.push(raw.slice(index + 1).trim());
+  }
+  let parsed = null;
+  for (const candidate of candidates) {
+    try {
+      const value = JSON.parse(candidate);
+      if (Array.isArray(value)) {
+        parsed = value;
+        break;
+      }
+    } catch {}
+  }
+  if (!parsed) throw fail('VERIFY', 'Pricing persisted D1 audit did not contain parseable Wrangler JSON');
+
+  const rows = parsed
+    .flatMap((batch) => Array.isArray(batch?.results) ? batch.results : [])
+    .filter((row) => ['Price List', 'Item Price', 'Pricing Rule'].includes(row?.doctype))
+    .map((row) => ({ doctype: row.doctype, records: Number(row.records) }))
+    .sort((a, b) => a.doctype.localeCompare(b.doctype));
+
+  if (rows.length !== 3 || rows.some((row) => !Number.isInteger(row.records) || row.records < 0)) {
+    throw fail('VERIFY', `Pricing persisted D1 audit rows invalid: ${JSON.stringify(rows)}`);
+  }
+  return JSON.stringify(rows);
+}
+
 function auditPersisted(wrangler, repoRoot) {
-  return invokeWranglerLocal(wrangler, repoRoot, [
+  const raw = invokeWranglerLocal(wrangler, repoRoot, [
     'd1', 'execute', 'cloudforge-demo', '--local', '--config', 'apps/tenant-worker/wrangler.jsonc',
     '--command', "SELECT doctype, COUNT(*) AS records FROM documents WHERE tenant_id='demo' AND doctype IN ('Price List','Item Price','Pricing Rule') GROUP BY doctype ORDER BY doctype;",
   ]);
+  return { raw, semantic: normalizePersistedAudit(raw) };
 }
 
 export async function mainPricing() {
@@ -285,7 +315,7 @@ export async function mainPricing() {
       failureClass: 'IMPORTER',
     });
     const persisted1 = auditPersisted(wrangler, repoRoot);
-    writeFileSync(path.join(runDir, 'persisted-pass1.txt'), persisted1, 'utf8');
+    writeFileSync(path.join(runDir, 'persisted-pass1.txt'), persisted1.raw, 'utf8');
 
     const pass2 = path.join(runDir, 'preimage-pass2.json');
     run(process.execPath, [importer, prepared.payload, pass2, '--apply', '--expect-idempotent'], {
@@ -295,8 +325,11 @@ export async function mainPricing() {
       failureClass: 'VERIFY',
     });
     const persisted2 = auditPersisted(wrangler, repoRoot);
-    writeFileSync(path.join(runDir, 'persisted-pass2.txt'), persisted2, 'utf8');
-    if (persisted1 !== persisted2) throw fail('VERIFY', 'Pricing persisted D1 audit changed across idempotency pass');
+    writeFileSync(path.join(runDir, 'persisted-pass2.txt'), persisted2.raw, 'utf8');
+    if (persisted1.semantic !== persisted2.semantic) {
+      throw fail('VERIFY', `Pricing persisted D1 audit changed across idempotency pass: pass1=${persisted1.semantic} pass2=${persisted2.semantic}`);
+    }
+    console.log(`ALUMDOOR_PRICING_PERSISTED_AUDIT_PASS counts=${persisted2.semantic}`);
     console.log(`IMPORT_STATUS=PASS run_dir=${runDir}`);
 
     stage = 'VERIFY';
