@@ -1,6 +1,8 @@
 type Json = Record<string, unknown>;
 export type DocumentPreviewCall = ((path: string, init?: RequestInit) => Promise<Response>) & { via?: string };
 
+const ALUMDOOR_SELLING_PRICE_LIST = "ALUMDOOR-SELLING";
+
 const answer = (value: Json, status = 200) => new Response(JSON.stringify(value), {
   status,
   headers: { "content-type": "application/json" },
@@ -30,8 +32,6 @@ function totals(doc: Json): Json {
   const discount = roundMoney(rows.reduce((sum, row) => sum + Math.max(0, number(row.discount_amount)), 0));
   const surcharge = Math.max(0, roundMoney(number(doc.surcharge_amount)));
   const vatRate = Math.min(100, Math.max(0, number(doc.vat_rate)));
-  // Same commercial order as the authoritative Sales Order controller:
-  // gross - line discount + non-discountable surcharge = VAT base; VAT is applied to that base.
   const vatBase = roundMoney(subtotal - discount + surcharge);
   const vatAmount = roundMoney(vatBase * vatRate / 100);
   const grandTotal = roundMoney(vatBase + vatAmount);
@@ -49,25 +49,10 @@ function totals(doc: Json): Json {
   };
 }
 
-async function authoritativeCustomerPriceList(
-  call: DocumentPreviewCall,
-  customerDoc: Json,
-  customerGroup: string,
-): Promise<string> {
-  const direct = text(customerDoc.default_selling_price_list)
-    || text(customerDoc.selling_price_list)
-    || text(customerDoc.default_price_list);
-  if (direct) return direct;
-  if (!customerGroup) return "";
-  const group = await readDoc(call, "Customer Group", customerGroup);
-  return text(group?.default_selling_price_list) || text(group?.selling_price_list);
-}
-
 /**
- * Những field này thuộc HỒ SƠ KHÁCH, nên đổi khách phải thay sạch theo khách mới.
- * `responsible_person` cố ý KHÔNG nằm ở đây: chủ đơn là user hiện tại/Employee của người đang
- * đăng nhập, không phải account_manager của Customer. Đổi khách không được đổi người chịu trách
- * nhiệm của đơn.
+ * Những field này thuộc hồ sơ đối tác và phải thay sạch khi đổi khách.
+ * Bảng giá KHÔNG nằm ở đây: mọi Sales Order Alumdoor dùng duy nhất ALUMDOOR-SELLING;
+ * danh mục giá mua không bao giờ được customer default kéo vào màn bán.
  */
 const CUSTOMER_DERIVED_FIELDS = [
   "customer_group",
@@ -77,7 +62,6 @@ const CUSTOMER_DERIVED_FIELDS = [
   "install_ward",
   "install_address",
   "payment_terms",
-  "selling_price_list",
 ] as const;
 
 async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedField: string): Promise<{ patch: Json; clear: string[] }> {
@@ -99,7 +83,6 @@ async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedFie
   const ward = text(customerDoc.install_ward);
   const address = text(customerDoc.install_address_line1) || text(customerDoc.address);
   const paymentTerms = text(customerDoc.payment_terms);
-  const priceList = await authoritativeCustomerPriceList(call, customerDoc, group);
 
   if (group) patch.customer_group = group;
   if (contact) patch.contact_person = contact;
@@ -108,22 +91,14 @@ async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedFie
   if (ward) patch.install_ward = ward;
   if (address) patch.install_address = address;
   if (paymentTerms) patch.payment_terms = paymentTerms;
-  if (priceList) patch.selling_price_list = priceList;
 
-  // Khi đổi Customer, field nào khách MỚI không có phải bị xoá ngay. Nếu không, contact/địa chỉ
-  // của khách cũ sẽ nằm lại trên đơn mới — lỗi dữ liệu nguy hiểm hơn việc để trống.
   const clear = changedField === "customer"
     ? CUSTOMER_DERIVED_FIELDS.filter((field) => !(field in patch))
     : [];
   return { patch, clear: [...clear] };
 }
 
-/**
- * Server-owned document UX preview.
- *
- * This method never persists anything. Save/submit still passes through the canonical controller,
- * which recalculates price, discount, tax and approval invariants independently.
- */
+/** Read-only UX preview. Save/submit vẫn normalize lại ở canonical controller. */
 export async function previewDocument(call: DocumentPreviewCall, args: Json): Promise<Response> {
   try {
     const doctype = text(args.doctype);
@@ -131,7 +106,12 @@ export async function previewDocument(call: DocumentPreviewCall, args: Json): Pr
     const changedField = text(args.changed_field);
     if (doctype !== "Sales Order") return answer({ patch: {}, clear: [], source: "alumdoor.ui.preview_document" });
     const defaults = await customerDefaults(call, doc, changedField);
-    const patch: Json = { ...defaults.patch, ...totals({ ...doc, ...defaults.patch }) };
+    const effectiveDoc = { ...doc, ...defaults.patch, selling_price_list: ALUMDOOR_SELLING_PRICE_LIST };
+    const patch: Json = {
+      ...defaults.patch,
+      selling_price_list: ALUMDOOR_SELLING_PRICE_LIST,
+      ...totals(effectiveDoc),
+    };
     if (!text(doc.payment_method)) patch.payment_method = "Ghi công nợ";
     return answer({ patch, clear: defaults.clear, source: "alumdoor.ui.preview_document" });
   } catch (error) {
