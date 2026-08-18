@@ -6,6 +6,13 @@ CLIENT_DIR="$ROOT_DIR/client"
 PORT="${FORGE_DEV_PORT:-5173}"
 LOG_FILE="/tmp/forge-vite.log"
 PID_FILE="/tmp/forge-vite.pid"
+SYNC_PID_FILE="/tmp/forge-git-sync.pid"
+SYNC_LOG_FILE="/tmp/forge-git-sync.log"
+
+if [[ ! -f "$SYNC_PID_FILE" ]] || ! kill -0 "$(cat "$SYNC_PID_FILE" 2>/dev/null || echo 0)" 2>/dev/null; then
+  nohup bash "$ROOT_DIR/.devcontainer/auto-sync-github.sh" >"$SYNC_LOG_FILE" 2>&1 &
+  echo $! > "$SYNC_PID_FILE"
+fi
 
 cd "$CLIENT_DIR"
 
