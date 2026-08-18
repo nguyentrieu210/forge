@@ -109,12 +109,13 @@ echo "[forge] applying Codespace-local D1 migrations..."
   --local \
   --config apps/tenant-worker/wrangler.jsonc
 
-# Auth-only is intentional: authoritative app metadata is installed through the
-# App Factory after the backend starts, avoiding demo metadata ownership conflicts.
-echo "[forge] provisioning Codespace-only System Manager account..."
+# Mirror the repo's canonical local bootstrap: seed-local owns the local-only
+# baseline master records (Company/Currency/Warehouse/System Settings) as well as
+# the login account. Do not invent a second Codespace-specific master-data path.
+echo "[forge] provisioning canonical repo local seed + Codespace System Manager account..."
 (
   cd "$ROOT_DIR/server"
-  node scripts/seed-local.mjs --auth-only --user "$CODESPACE_ADMIN_USER" --password "$CODESPACE_ADMIN_PASSWORD"
+  node scripts/seed-local.mjs --user "$CODESPACE_ADMIN_USER" --password "$CODESPACE_ADMIN_PASSWORD"
 )
 
 : > "$BACKEND_LOG"
