@@ -1,16 +1,16 @@
 {
   "name": "Forge Fast Preview",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
   "remoteUser": "node",
   "containerEnv": {
     "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
   },
-  "postCreateCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && cd client && pnpm install --frozen-lockfile",
+  "postCreateCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --frozen-lockfile",
   "postStartCommand": "bash .devcontainer/start-dev.sh",
   "forwardPorts": [5173],
   "portsAttributes": {
     "5173": {
-      "label": "Forge Vite Preview",
+      "label": "Forge Runtime Preview",
       "onAutoForward": "openPreview"
     }
   },
@@ -30,7 +30,7 @@
         "editor.formatOnSave": true,
         "files.autoSave": "afterDelay",
         "files.autoSaveDelay": 800,
-        "terminal.integrated.cwd": "${workspaceFolder}/client"
+        "terminal.integrated.cwd": "${workspaceFolder}"
       }
     }
   }
