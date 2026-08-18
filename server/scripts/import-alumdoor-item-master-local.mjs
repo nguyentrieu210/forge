@@ -132,7 +132,8 @@ if (validateOnly) {
   process.exit(0);
 }
 
-assertLocalMutationChildContext(["item-master", "real-purchase"]);
+// The BOM adapter owns one local-D1 lock/backup for Item prerequisites + BOM + BOM Template.
+assertLocalMutationChildContext(["item-master", "real-purchase", "bom"]);
 
 const origin = (process.env.FORGE_ORIGIN ?? "http://127.0.0.1:8799").replace(/\/$/, "");
 const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ?? "";
