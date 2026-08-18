@@ -20,13 +20,13 @@ function sourcePending(row: BomItem): boolean {
 
 /**
  * Canonical Alumdoor source rows are allowed to exist in a Draft BOM before every
- * engineering value is known.  This is intentionally narrower than making qty
+ * engineering value is known. This is intentionally narrower than making qty
  * optional for every BOM: a row must carry source_value_status=PENDING plus a
- * source_pending_reason.  The component Item itself must already exist.
+ * source_pending_reason. The component Item itself must already exist.
  *
- * As soon as no source-pending rows remain (or on submit), the normal versioned
- * BOM lifecycle runs unchanged and therefore requires positive quantities,
- * authoritative conversions and all of the normal manufacturing invariants.
+ * As soon as no source-pending rows remain, the normal versioned BOM lifecycle runs
+ * unchanged. Submit is rejected explicitly while pending rows remain, so unresolved
+ * Draft evidence can never become an Active manufacturing BOM.
  */
 export class SourceCompleteBillOfMaterialsController extends VersionedBillOfMaterialsController {
   override async normalize(context: ControllerContext<BillOfMaterialsData>): Promise<BillOfMaterialsData> {
@@ -34,7 +34,20 @@ export class SourceCompleteBillOfMaterialsController extends VersionedBillOfMate
     const rows = Array.isArray(input.items) ? input.items : [];
     const pending = rows.filter(sourcePending);
 
-    if (context.command.action === "submit" || pending.length === 0) {
+    if (context.command.action === "submit" && pending.length > 0) {
+      const refs = pending
+        .map((row) => {
+          const raw = row as unknown as JsonObject;
+          return text(raw.source_row) || text(row.row_id) || text(row.item_code);
+        })
+        .filter(Boolean)
+        .join(", ");
+      throw errors.validation(
+        `Cannot submit BOM while source-pending component values remain${refs ? `: ${refs}` : ""}`,
+      );
+    }
+
+    if (pending.length === 0) {
       return super.normalize(context);
     }
 
