@@ -61,6 +61,16 @@ const MANAGED_SCALARS = [
   "disabled",
 ];
 
+// These two flags are retained in the canonical payload contract so historical
+// comparisons remain deterministic, but the current Alumdoor Item DocType no
+// longer exposes them. Sending them through /api/resource is therefore a schema
+// error. Both canonical values are always zero, so omitting them preserves the
+// exact current runtime semantics while keeping old evidence files comparable.
+const API_OMIT_FIELDS = new Set(["is_fixed_asset", "is_sub_contracted_item"]);
+function apiItem(item) {
+  return Object.fromEntries(Object.entries(item).filter(([field]) => !API_OMIT_FIELDS.has(field)));
+}
+
 function normalizeScalar(field, value) {
   if (CHECK_FIELDS.has(field)) return Number(Boolean(Number(value) || value === true));
   return String(value ?? "").trim();
@@ -236,7 +246,7 @@ console.log(`ALUMDOOR_ITEM_LOCAL_PREIMAGE_PASS existing=${exactExisting.length} 
 // Phase 2: create only the missing exact-code Items.
 const created = [];
 for (const item of missing) {
-  await requireOk("/api/resource/Item", { method: "POST", body: item });
+  await requireOk("/api/resource/Item", { method: "POST", body: apiItem(item) });
   created.push(item.item_code);
 }
 
