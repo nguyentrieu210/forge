@@ -112,13 +112,21 @@ echo "[forge] applying Codespace-local D1 migrations..."
   --config apps/tenant-worker/wrangler.jsonc
 
 # Mirror the repo's canonical local bootstrap: seed-local owns the local-only
-# baseline master records (Company/Currency/Warehouse/System Settings) as well as
-# the login account. Do not invent a second Codespace-specific master-data path.
+# baseline metadata and the System Manager account.
 echo "[forge] provisioning canonical repo local seed + Codespace System Manager account..."
 (
   cd "$ROOT_DIR/server"
   node scripts/seed-local.mjs --user "$CODESPACE_ADMIN_USER" --password "$CODESPACE_ADMIN_PASSWORD" \
     | sed -E 's/(password=)[^[:space:]]+/\1[redacted]/g'
+)
+
+# Add Alumdoor's practical tenant masters plus role-specific test accounts. This is
+# also local D1 only; the shared role password is stored in an ignored file and is
+# never printed to Actions output.
+echo "[forge] provisioning Alumdoor Codespace masters + role users..."
+(
+  cd "$ROOT_DIR/server"
+  node scripts/seed-codespace-alumdoor-baseline.mjs
 )
 
 : > "$BACKEND_LOG"
@@ -231,6 +239,7 @@ for _ in $(seq 1 60); do
     echo "[forge] FULL STACK READY: http://127.0.0.1:${FRONTEND_PORT}"
     echo "[forge] Backend: full Alumdoor local stack | Database: Codespace-local D1"
     echo "[forge] Login credential is stored privately in .codespace-admin-credentials"
+    echo "[forge] Role-account credential is stored privately in .codespace-role-credentials"
     exit 0
   fi
   sleep 1
