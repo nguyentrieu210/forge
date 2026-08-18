@@ -63,33 +63,36 @@ async function authoritativeCustomerPriceList(
   return text(group?.default_selling_price_list) || text(group?.selling_price_list);
 }
 
+/**
+ * Những field này thuộc HỒ SƠ KHÁCH, nên đổi khách phải thay sạch theo khách mới.
+ * `responsible_person` cố ý KHÔNG nằm ở đây: chủ đơn là user hiện tại/Employee của người đang
+ * đăng nhập, không phải account_manager của Customer. Đổi khách không được đổi người chịu trách
+ * nhiệm của đơn.
+ */
+const CUSTOMER_DERIVED_FIELDS = [
+  "customer_group",
+  "contact_person",
+  "phone",
+  "install_province",
+  "install_ward",
+  "install_address",
+  "payment_terms",
+  "selling_price_list",
+] as const;
+
 async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedField: string): Promise<{ patch: Json; clear: string[] }> {
   const customer = text(doc.customer);
   if (!customer) {
     return changedField === "customer"
-      ? {
-          patch: {},
-          clear: [
-            "customer_group",
-            "responsible_person",
-            "contact_person",
-            "phone",
-            "install_province",
-            "install_ward",
-            "install_address",
-            "payment_terms",
-            "selling_price_list",
-          ],
-        }
+      ? { patch: {}, clear: [...CUSTOMER_DERIVED_FIELDS] }
       : { patch: {}, clear: [] };
   }
   if (changedField && changedField !== "customer" && changedField !== "transaction_date") return { patch: {}, clear: [] };
   const customerDoc = await readDoc(call, "Customer", customer);
-  if (!customerDoc) return { patch: {}, clear: [] };
+  if (!customerDoc) return { patch: {}, clear: changedField === "customer" ? [...CUSTOMER_DERIVED_FIELDS] : [] };
 
   const patch: Json = {};
   const group = text(customerDoc.price_group) || text(customerDoc.customer_group);
-  const manager = text(customerDoc.account_manager);
   const contact = text(customerDoc.contact_person);
   const phone = text(customerDoc.phone) || text(customerDoc.mobile_no) || text(customerDoc.mobile) || text(customerDoc.phone_no);
   const province = text(customerDoc.install_province);
@@ -99,7 +102,6 @@ async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedFie
   const priceList = await authoritativeCustomerPriceList(call, customerDoc, group);
 
   if (group) patch.customer_group = group;
-  if (manager) patch.responsible_person = manager;
   if (contact) patch.contact_person = contact;
   if (phone) patch.phone = phone;
   if (province) patch.install_province = province;
@@ -107,7 +109,13 @@ async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedFie
   if (address) patch.install_address = address;
   if (paymentTerms) patch.payment_terms = paymentTerms;
   if (priceList) patch.selling_price_list = priceList;
-  return { patch, clear: [] };
+
+  // Khi đổi Customer, field nào khách MỚI không có phải bị xoá ngay. Nếu không, contact/địa chỉ
+  // của khách cũ sẽ nằm lại trên đơn mới — lỗi dữ liệu nguy hiểm hơn việc để trống.
+  const clear = changedField === "customer"
+    ? CUSTOMER_DERIVED_FIELDS.filter((field) => !(field in patch))
+    : [];
+  return { patch, clear: [...clear] };
 }
 
 /**
