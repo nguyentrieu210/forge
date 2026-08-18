@@ -9,6 +9,7 @@ const read = (path) => readFileSync(`${root}/${path}`, "utf8");
 const entry = read("client/packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx");
 const workbench = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderWorkbenchComplete.tsx");
 const grid = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderLineTableComplete.tsx");
+const model = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/model.ts");
 const coordinator = read("client/packages/views/src/app/vertical/alumdoor/sales-order-v2/preview-coordinator.ts");
 const documentPreview = read("server/apps-src/alumdoor-worker/src/ui-document-preview.ts");
 const production = read("server/apps-src/alumdoor-worker/src/sales-production-core.ts");
@@ -35,14 +36,23 @@ test("production remains downstream of submitted Sales Order", () => {
   assert.match(production, /chưa ghi sổ/);
 });
 
-test("commercial row exposes rate and discount inputs while server previews money", () => {
+test("commercial row exposes editable rate and discount while server previews money", () => {
   assert.match(grid, /fieldFromMeta\(props\.childMeta, "rate"/);
   assert.match(grid, /fieldFromMeta\(props\.childMeta, "discount_percentage"/);
   assert.match(grid, /onCommit\(line\._key, "rate"/);
   assert.match(grid, /onCommit\(line\._key, "discount_percentage"/);
+  assert.match(grid, /Tiền phải trả/);
+  assert.match(grid, /Phụ thu/);
   assert.match(workbench, /preview_sales_commercial_line/);
-  assert.match(workbench, /rate_requires_approval/);
-  assert.match(workbench, /Cần duyệt thương mại/);
+  assert.match(model, /lineDiscountNeedsApproval/);
+  assert.match(grid, /khác chính sách .* cần duyệt/);
+});
+
+test("policy discount baseline comes from server snapshots, not the sale override", () => {
+  assert.match(model, /effect_type\).*DISCOUNT_PERCENT/);
+  assert.match(model, /selected\?\.discount_percentage/);
+  assert.match(model, /linePolicyDiscountPercentage/);
+  assert.match(grid, /Chuẩn \{quantity\(policyDiscount\)\}%/);
 });
 
 test("VAT and document totals are server-owned projections", () => {
@@ -55,7 +65,16 @@ test("VAT and document totals are server-owned projections", () => {
   assert.match(documentPreview, /grand_total/);
 });
 
-test("customer and price-list defaults are centralized in server preview", () => {
+test("summary is below the full-width grid and technical projection copy is removed", () => {
+  const gridIndex = workbench.indexOf("<AlumdoorSalesOrderLineTableComplete");
+  const summaryIndex = workbench.indexOf('data-section="sales-v2-summary-complete"');
+  assert.ok(gridIndex >= 0 && summaryIndex > gridIndex);
+  assert.doesNotMatch(workbench, /xl:grid-cols-\[minmax\(0,1fr\)_300px\]/);
+  assert.doesNotMatch(workbench, /Projection từ `alumdoor\.ui\.preview_document`/);
+  assert.doesNotMatch(workbench, /<h1[^>]*>Đơn bán hàng<\/h1>/);
+});
+
+test("customer defaults are centralized in server preview and stale customer data is cleared", () => {
   assert.doesNotMatch(workbench, /getListView\("Price List"/);
   assert.doesNotMatch(workbench, /getDoc\("Customer"/);
   assert.match(documentPreview, /authoritativeCustomerPriceList/);
@@ -63,16 +82,60 @@ test("customer and price-list defaults are centralized in server preview", () =>
   assert.match(documentPreview, /default_selling_price_list/);
   assert.match(documentPreview, /contact_person/);
   assert.match(documentPreview, /install_address/);
+  assert.match(documentPreview, /CUSTOMER_DERIVED_FIELDS/);
+  assert.match(workbench, /CUSTOMER_CONTEXT_FIELDS/);
+  assert.match(workbench, /customerHydrating/);
 });
 
-test("BOM guidance remains draft-safe and production-owned", () => {
+test("responsible person maps current login to active Employee and customer cannot overwrite it", () => {
+  assert.match(workbench, /getList\("Employee"/);
+  assert.match(workbench, /\["user_id", "=", boot\.user\]/);
+  assert.match(workbench, /\["employee_status", "=", "Đang làm việc"\]/);
+  assert.match(workbench, /defaults\.responsible_person = employeeName/);
+  const customerFields = documentPreview.slice(documentPreview.indexOf("CUSTOMER_DERIVED_FIELDS"), documentPreview.indexOf("async function customerDefaults"));
+  assert.doesNotMatch(customerFields, /responsible_person/);
+  assert.doesNotMatch(documentPreview, /customerDoc\.account_manager/);
+});
+
+test("BOM guidance waits for hydrated customer context and stays draft-safe", () => {
   assert.match(workbench, /preview_bom_requirements/);
   assert.match(workbench, /isAreaDoor\(candidate\)/);
+  assert.match(workbench, /&& customerGroup/);
+  assert.match(workbench, /next\._bomError = ""/);
   assert.doesNotMatch(workbench, /isGermanDoor/);
-  assert.doesNotMatch(workbench, /\["Đại lý", "Lẻ"\]/);
-  assert.match(workbench, /vẫn được lưu nháp/);
   const validateSection = workbench.slice(workbench.indexOf("const validate"), workbench.indexOf("const buildDocument"));
   assert.doesNotMatch(validateSection, /_bomError/);
+});
+
+test("grid uses dynamic real specification columns instead of a nested spec editor", () => {
+  for (const field of ["width_m", "height_m", "mesh_height_m", "cut_width_m", "ray_type", "has_butterfly_bracket", "leaf_variant", "motor_model", "length_m", "qty_bar"]) {
+    assert.match(grid, new RegExp(field));
+  }
+  assert.match(grid, /DYNAMIC_FIELD_ORDER\.filter/);
+  assert.match(grid, /fieldVisible\(line, fieldname\)/);
+  assert.match(grid, /Rộng phủ bì/);
+  assert.match(grid, /Cao phủ bì/);
+  assert.doesNotMatch(grid, /SpecEditor/);
+  assert.doesNotMatch(grid, />Diện tích</);
+  assert.match(grid, />Khối lượng</);
+});
+
+test("grid is resizable, remembers widths and keeps row actions below the table", () => {
+  assert.match(grid, /cursor-col-resize/);
+  assert.match(grid, /pointermove/);
+  assert.match(grid, /localStorage\.setItem\(COLUMN_WIDTH_STORAGE_KEY/);
+  assert.match(grid, /FROZEN_COLUMNS/);
+  const tableEnd = grid.indexOf("</Table>");
+  const addLine = grid.lastIndexOf("Thêm dòng");
+  assert.ok(tableEnd >= 0 && addLine > tableEnd);
+});
+
+test("BOM is collapsed by default and rendered below the commercial row", () => {
+  assert.match(grid, /const \[expanded, setExpanded\] = useState<Set<string>>\(\(\) => new Set\(\)\)/);
+  const commercialIndex = grid.indexOf('data-section="sales-v2-commercial-row"');
+  const bomIndex = grid.lastIndexOf("<BomBlock");
+  assert.ok(commercialIndex >= 0 && bomIndex > commercialIndex);
+  assert.match(grid, /BOM ✓/);
 });
 
 test("dirty close and keyboard-first data entry are explicit", () => {
@@ -88,7 +151,7 @@ test("dirty close and keyboard-first data entry are explicit", () => {
 
 test("complete grid consumes canonical ray_type without geometry constants", () => {
   assert.match(grid, /ray_type: "Loại ray"/);
-  assert.match(grid, /fieldname === "ray_type"/);
+  assert.match(grid, /"ray_type"/);
   assert.match(workbench, /ray_type: line\.ray_type/);
   assert.match(workbench, /ray_type: undefined/);
   assert.doesNotMatch(grid + workbench, /0\.05|0\.08/);
@@ -104,16 +167,16 @@ test("all document previews share one revision clock and stale responses cannot 
   assert.match(workbench, /applySalesOrderDocumentPreview\(current, result\)/);
 });
 
-test("line previews are invalidated when document commercial context changes", () => {
+test("line previews wait for complete customer commercial context", () => {
   assert.match(workbench, /const documentRevision = previewClock\.current\.revision/);
   assert.match(workbench, /canApplySalesOrderDocumentPreview\(previewClock\.current, documentRevision\)/);
   assert.match(workbench, /markActiveLinesForReprice/);
-  assert.match(workbench, /_loading: true/);
+  assert.match(workbench, /if \(loading \|\| !childMeta \|\| customerHydrating\) return/);
 });
 
-test("save and submit fail closed while document or line previews are unresolved", () => {
+test("save and submit fail closed while document, customer or line previews are unresolved", () => {
   const validateSection = workbench.slice(workbench.indexOf("const validate"), workbench.indexOf("const buildDocument"));
-  assert.match(validateSection, /previewClock\.current\.pending > 0/);
+  assert.match(validateSection, /previewClock\.current\.pending > 0 \|\| customerHydrating/);
   assert.match(validateSection, /headerErrorRef\.current/);
   assert.match(workbench, /isSalesOrderPersistenceBlocked/);
   assert.match(workbench, /disabled=\{persistenceBlocked \|\| !canSave\}/);
@@ -129,8 +192,10 @@ test("structural line mutations and clearing an item refresh server totals", () 
   assert.match(itemSection, /refreshDocumentPreview\("items", nextLines\)/);
 });
 
-test("production action is projected from target Production Request capability", () => {
+test("production and print actions remain available without the removed top header", () => {
   assert.match(workbench, /getCapabilities\("Production Request"\)/);
   assert.match(workbench, /productionCaps\.read/);
   assert.match(workbench, /docstatus === 1 && documentName && productionCaps\.read/);
+  assert.match(workbench, /Sản xuất/);
+  assert.match(workbench, /In \/ xem/);
 });
