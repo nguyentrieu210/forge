@@ -305,6 +305,40 @@ export function lineAdjustmentAmount(line: SalesLine): number {
     ?? 0;
 }
 
+const PRICING_RULE_LABELS: Record<string, string> = {
+  "DAILOAN-UNDER-8M2": "Phụ thu cửa Đài Loan dưới 8 m²",
+  "DUC-UNDER-8M2": "Phụ thu cửa Đức dưới 8 m²",
+  "UC-UNDER-7M2": "Phụ thu cửa Úc dưới 7 m²",
+  "CUALUOI-UNDER-8M2": "Phụ thu cửa lưới dưới 8 m²",
+  "DUC-WOODGRAIN-SLAT": "Phụ thu lá vân gỗ cửa Đức",
+  "DUC-ACCESSORY-UNDER-5M": "Phụ thu phụ kiện cửa Đức dưới 5 triệu",
+  "UC-ACCESSORY-UNDER-5M": "Phụ thu phụ kiện cửa Úc dưới 5 triệu",
+  "DAILOAN-ACCESSORY-UNDER-3M": "Phụ thu phụ kiện Đài Loan dưới 3 triệu",
+  "CUALUOI-UNDER-3M": "Phụ thu cửa lưới dưới 3 triệu",
+};
+
+/** Nhãn nghiệp vụ cho Pricing Rule: UI không hiện mã kỹ thuật ALUMDOOR-PR:... */
+export function pricingRuleLabel(value: unknown): string {
+  const raw = text(value);
+  if (!raw) return "";
+  const code = raw.replace(/^ALUMDOOR-PR:/i, "");
+  const exact = PRICING_RULE_LABELS[code.toUpperCase()];
+  if (exact) return exact;
+  return code
+    .replace(/DAILOAN/gi, "Cửa Đài Loan")
+    .replace(/CUALUOI/gi, "Cửa lưới")
+    .replace(/DUC/gi, "Cửa Đức")
+    .replace(/UC/gi, "Cửa Úc")
+    .replace(/UNDER-(\d+)-?M2/gi, "dưới $1 m²")
+    .replace(/UNDER-(\d+)-?M/gi, "dưới $1 triệu")
+    .replace(/WOODGRAIN/gi, "vân gỗ")
+    .replace(/ACCESSORY|PK/gi, "phụ kiện")
+    .replace(/SLAT/gi, "lá")
+    .replace(/[-_:]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** % chiết khấu mà policy server thực sự chọn, độc lập với % sale đang override trên dòng. */
 export function linePolicyDiscountPercentage(line: SalesLine): number {
   const snapshots = Array.isArray(line._commercial?.pricing_rule_snapshots)
@@ -319,7 +353,7 @@ export function linePolicyDiscountRule(line: SalesLine): string {
   const snapshots = Array.isArray(line._commercial?.pricing_rule_snapshots)
     ? line._commercial!.pricing_rule_snapshots!
     : [];
-  return text(snapshots.find((snapshot) => text(snapshot.effect_type).toUpperCase() === "DISCOUNT_PERCENT")?.rule_name);
+  return pricingRuleLabel(snapshots.find((snapshot) => text(snapshot.effect_type).toUpperCase() === "DISCOUNT_PERCENT")?.rule_name);
 }
 
 /** Sale được nhập override; khác policy thì vẫn preview nhưng phải hiện cảnh báo/cần duyệt. */
