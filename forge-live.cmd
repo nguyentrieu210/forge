@@ -60,5 +60,20 @@ exit /b %ERRORLEVEL%
 
 :deploylocal
 cd /d "%ROOT%" || exit /b 1
+rem MetaForge workspace packages intentionally call bare `tsc`; make the client
+rem package toolchain visible to recursive pnpm scripts. If a partial/old pnpm
+rem install left the workspace links missing, repair them before the deploy.
+set "PATH=%ROOT%\client\node_modules\.bin;%PATH%"
+if not exist "%ROOT%\client\node_modules\.bin\tsc.cmd" goto :deploydeps
+if not exist "%ROOT%\client\apps\runtime\node_modules\.bin\vite.cmd" goto :deploydeps
+goto :deployrun
+
+:deploydeps
+echo DEPENDENCY_INSTALL_STATUS=START reason=client_tooling_missing
+call pnpm.cmd install --frozen-lockfile
+if errorlevel 1 exit /b %ERRORLEVEL%
+echo DEPENDENCY_INSTALL_STATUS=PASS reason=client_tooling_missing
+
+:deployrun
 node scripts\local-runner\forge-live.mjs deploy-local
 exit /b %ERRORLEVEL%
