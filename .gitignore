@@ -13,6 +13,7 @@ coverage/
 local-backups/
 local-locks/
 .codespace-local-state.json
+.codespace-admin-credentials
 .cache-vietnam-divisions/
 __pycache__/
 *.py[cod]
