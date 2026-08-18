@@ -1,0 +1,16 @@
+-- Alumdoor canonical BOM source-completeness support.
+--
+-- A Draft BOM may retain an exact source component before its engineering qty/UOM
+-- conversion has authoritative evidence.  The component identity is still mandatory;
+-- only source-backed pending values are nullable.  Submit/Active validation remains in
+-- the manufacturing controller and is deliberately NOT relaxed by this migration.
+--
+-- BOM Item has had no later metadata replacement since 0007/0021, so revision 2 is a
+-- complete restatement of that child metadata plus source-evidence fields.  This keeps
+-- the UI/API schema deterministic instead of relying on unknown-field passthrough.
+UPDATE doctype_definitions
+SET revision = 2,
+    metadata_json = json('{"name":"BOM Item","module":"Manufacturing","is_submittable":false,"is_child":true,"track_changes":false,"revision":2,"fields":[{"fieldname":"item_code","label":"Item","fieldtype":"Link","options":"Item","required":true,"in_list_view":true},{"fieldname":"qty","label":"Qty","fieldtype":"Float","required":false,"in_list_view":true},{"fieldname":"uom","label":"UOM","fieldtype":"Link","options":"UOM","in_list_view":true},{"fieldname":"stock_uom","label":"Stock UOM","fieldtype":"Link","options":"UOM","read_only":true},{"fieldname":"conversion_factor","label":"Conversion Factor","fieldtype":"Float"},{"fieldname":"qty_basis","label":"Qty Basis","fieldtype":"Data"},{"fieldname":"quantity_formula_json","label":"Quantity Formula JSON","fieldtype":"Long Text"},{"fieldname":"bom_template_code","label":"BOM Template","fieldtype":"Data"},{"fieldname":"component_key","label":"Component Key","fieldtype":"Data"},{"fieldname":"source_value_status","label":"Source Value Status","fieldtype":"Select","options":"RESOLVED\nPENDING","in_list_view":true},{"fieldname":"source_pending_reason","label":"Pending Reason","fieldtype":"Data"},{"fieldname":"source_value","label":"Raw Source Value","fieldtype":"Data"},{"fieldname":"source_sequence","label":"Source Sequence","fieldtype":"Int"},{"fieldname":"source_sheet","label":"Source Sheet","fieldtype":"Data"},{"fieldname":"source_row","label":"Source Row","fieldtype":"Int"},{"fieldname":"source_index","label":"Source Index","fieldtype":"Int"},{"fieldname":"source_parent_row","label":"Source Parent Row","fieldtype":"Int"},{"fieldname":"source_item_code","label":"Raw Material Source Code","fieldtype":"Data"},{"fieldname":"source_item_name","label":"Raw Material Source Name","fieldtype":"Data"},{"fieldname":"source_uom","label":"Source UOM","fieldtype":"Data"},{"fieldname":"source_qty_or_formula","label":"Source Qty / Formula","fieldtype":"Data"},{"fieldname":"source_formula_code","label":"Source Formula Code","fieldtype":"Data"},{"fieldname":"source_formula_text","label":"Source Formula Text","fieldtype":"Long Text"},{"fieldname":"resolution_reason","label":"Resolution Reason","fieldtype":"Data"},{"fieldname":"rate","label":"Rate","fieldtype":"Currency","read_only":true},{"fieldname":"source_warehouse","label":"Source Warehouse","fieldtype":"Link","options":"Warehouse"}],"permissions":[],"custom":false}'),
+    modified_by = 'migration-0133',
+    modified_at = '2026-08-18T05:10:00.000Z'
+WHERE doctype = 'BOM Item';
