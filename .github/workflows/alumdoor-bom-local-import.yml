@@ -3,7 +3,7 @@ name: Import Alumdoor Canonical BOM Local
 on:
   workflow_run:
     workflows:
-      - Bootstrap Alumdoor Local C Drive
+      - Import Alumdoor Item Master Local
     types: [completed]
   workflow_dispatch:
 
@@ -12,25 +12,25 @@ permissions:
   issues: write
 
 jobs:
-  bootstrap-evidence:
+  upstream-evidence:
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Publish bootstrap evidence to PR 951
+      - name: Publish upstream evidence to PR 951
         env:
           GH_TOKEN: ${{ github.token }}
-          BOOTSTRAP_SHA: ${{ github.event.workflow_run.head_sha }}
-          BOOTSTRAP_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          BOOTSTRAP_RUN_ID: ${{ github.event.workflow_run.id }}
+          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          UPSTREAM_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           python - <<'PY'
           import json, os, urllib.request
           body = "\n".join([
-              "## BOM LOCAL BOOTSTRAP",
+              "## BOM LOCAL UPSTREAM",
               "",
-              f"head_sha: `{os.environ['BOOTSTRAP_SHA']}`",
-              f"conclusion: `{os.environ['BOOTSTRAP_CONCLUSION']}`",
-              f"bootstrap_run_id: `{os.environ['BOOTSTRAP_RUN_ID']}`",
+              f"head_sha: `{os.environ['UPSTREAM_SHA']}`",
+              f"conclusion: `{os.environ['UPSTREAM_CONCLUSION']}`",
+              f"item_master_run_id: `{os.environ['UPSTREAM_RUN_ID']}`",
           ])
           req = urllib.request.Request(
               'https://api.github.com/repos/nguyentrieu210/forge/issues/951/comments',
