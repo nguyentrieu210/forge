@@ -12,14 +12,14 @@ if (process.argv.some((arg) => arg === '--remote' || arg.startsWith('--remote=')
   throw new Error('REMOTE_MUTATION_GUARD: --remote is forbidden; this runner is local-only');
 }
 
-const original = `function queryRows(sql) {
+const originalQueryRows = `function queryRows(sql) {
   const output = runWrangler(['d1', 'execute', database, '--local', '--config', configPath, '--json', '--command', sql], true);
   const parsed = JSON.parse(output);
   const groups = Array.isArray(parsed) ? parsed : [parsed];
   return groups.flatMap((group) => Array.isArray(group?.results) ? group.results : []);
 }`;
 
-const replacement = `function queryRows(sql) {
+const replacementQueryRows = `function queryRows(sql) {
   const queryPath = join(serverRoot, \`.alumdoor-routing-query-\${process.pid}.sql\`);
   writeFileSync(queryPath, \`\${sql.trim()}\\n\`, 'utf8');
   try {
@@ -34,17 +34,32 @@ const replacement = `function queryRows(sql) {
   }
 }`;
 
-const source = readFileSync(sourcePath, 'utf8');
-if (!source.includes(original)) {
-  throw new Error('WINDOWS_PATCH_TARGET_NOT_FOUND: canonical queryRows implementation changed');
+const tenantOriginal = `const tenant = process.env.ALUMDOOR_ROUTING_TENANT || 'alu';`;
+const tenantReplacement = `const tenant = process.env.ALUMDOOR_ROUTING_TENANT || 'demo';`;
+const dataOriginal = `const data = JSON.parse(readFileSync(sourcePath, 'utf8'));`;
+const dataReplacement = `const data = JSON.parse(readFileSync(sourcePath, 'utf8'));
+for (const routing of data.routings) {
+  if (routing.item_group === 'Cửa siêu trường') routing.item_group = 'Cửa Siêu Trường';
+}`;
+
+let source = readFileSync(sourcePath, 'utf8');
+for (const [needle, replacement, label] of [
+  [originalQueryRows, replacementQueryRows, 'queryRows'],
+  [tenantOriginal, tenantReplacement, 'tenant'],
+  [dataOriginal, dataReplacement, 'item-group-normalization'],
+]) {
+  if (!source.includes(needle)) throw new Error(`WINDOWS_PATCH_TARGET_NOT_FOUND: ${label}`);
+  source = source.replace(needle, replacement);
 }
 
-writeFileSync(tempPath, source.replace(original, replacement), 'utf8');
+writeFileSync(tempPath, source, 'utf8');
 try {
+  const env = { ...process.env };
+  if (!env.ALUMDOOR_ROUTING_TENANT) env.ALUMDOOR_ROUTING_TENANT = 'demo';
   const result = spawnSync(process.execPath, [tempPath, ...process.argv.slice(2)], {
     cwd: process.cwd(),
     stdio: 'inherit',
-    env: process.env,
+    env,
   });
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;
