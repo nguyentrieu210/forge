@@ -1,16 +1,16 @@
 {
-  "name": "Forge Fast Preview",
+  "name": "Forge Full-Stack Preview",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
   "remoteUser": "node",
   "containerEnv": {
     "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
   },
-  "postCreateCommand": "corepack pnpm install --filter runtime... --frozen-lockfile",
+  "postCreateCommand": "corepack pnpm install --filter runtime... --filter cloudforge... --frozen-lockfile",
   "postStartCommand": "bash .devcontainer/start-dev.sh",
   "forwardPorts": [5173],
   "portsAttributes": {
     "5173": {
-      "label": "Forge Runtime Preview",
+      "label": "Forge Full-Stack Preview",
       "onAutoForward": "openPreview"
     }
   },
