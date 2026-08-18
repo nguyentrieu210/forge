@@ -111,7 +111,10 @@ test("Select options keep their internal spaces and become newline-separated", (
 
 test("a default may contain spaces when parenthesised", () => {
   assert.equal(field("status:Select(Mới,Đang liên hệ)=(Đang liên hệ) Trạng thái").default, "Đang liên hệ");
-  assert.equal(field("qty:Int=1 Số lượng").default, "1");
+  // Int/Float/Currency/Percent/Rating/Duration/Check defaults are coerced to their JS type
+  // (not left as the authored text) so a document create that relies on the default instead
+  // of sending the field explicitly does not fail the same type check a sent value would pass.
+  assert.equal(field("qty:Int=1 Số lượng").default, 1);
   // Without the parenthesis rule the label and the default are indistinguishable, and the
   // field would silently take the first word of its label as its value.
   assert.equal(field("status:Select(Mới,Đang liên hệ)=Mới Trạng thái").label, "Trạng thái");
