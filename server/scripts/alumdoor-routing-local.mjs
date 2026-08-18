@@ -27,6 +27,11 @@ if (!allowed.has(command)) throw new Error(`Usage: node server/scripts/alumdoor-
 const data = JSON.parse(readFileSync(sourcePath, 'utf8'));
 const q = (value) => value == null ? 'NULL' : `'${String(value).replaceAll("'", "''")}'`;
 const jq = (value) => q(JSON.stringify(value));
+const managedOperationSql = () => data.operations.map((x) => q(x.code)).join(',');
+const managedWorkstationSql = () => data.workstations.map((x) => q(x.name)).join(',');
+const managedRoutingSql = () => data.routings.map((x) => q(x.routing_code)).join(',');
+const costRulesOf = (routing) => Array.isArray(routing.cost_rules) ? routing.cost_rules : [];
+const allCostRules = () => data.routings.flatMap((routing) => costRulesOf(routing).map((rule) => ({ routing, rule })));
 
 function assertUnique(values, label) {
   const seen = new Set();
@@ -63,6 +68,8 @@ function validate() {
     if (!routing.routing_code?.startsWith('RT-') || !routing.routing_name || !routing.source_reference || !Array.isArray(routing.operations) || routing.operations.length === 0) {
       throw new Error(`ROUTING_REQUIRED_FIELD: ${routing.routing_code || '<unknown>'}`);
     }
+    if (!['internal', 'subcontract'].includes(routing.execution_mode)) throw new Error(`ROUTING_EXECUTION_MODE_INVALID: ${routing.routing_code}`);
+    if (routing.execution_mode === 'subcontract' && !routing.source_supplier) throw new Error(`ROUTING_SUBCONTRACT_SUPPLIER_REQUIRED: ${routing.routing_code}`);
     if (routing.needs_time_definition && routing.standard_time_value != null) throw new Error(`ROUTING_FAKE_TIME_GUARD: ${routing.routing_code}`);
     if (!routing.needs_time_definition && routing.standard_time_value == null) throw new Error(`ROUTING_TIME_MISSING: ${routing.routing_code}`);
     if (routing.needs_item_mapping && (routing.item_code || routing.item_group)) throw new Error(`ROUTING_FAKE_MAPPING_GUARD: ${routing.routing_code}`);
@@ -74,13 +81,39 @@ function validate() {
 
     for (const row of routing.operations) {
       if (!operations.has(row.operation)) throw new Error(`ROUTING_OPERATION_REF_INVALID: ${routing.routing_code}:${row.operation}`);
+      if (!['internal', 'subcontract'].includes(row.execution_mode)) throw new Error(`ROUTING_ROW_EXECUTION_MODE_INVALID: ${routing.routing_code}:${row.sequence}`);
+      if (row.execution_mode !== routing.execution_mode) throw new Error(`ROUTING_ROW_EXECUTION_MODE_MISMATCH: ${routing.routing_code}:${row.sequence}`);
+      if (row.execution_mode === 'subcontract' && !row.source_supplier) throw new Error(`ROUTING_ROW_SUBCONTRACT_SUPPLIER_REQUIRED: ${routing.routing_code}:${row.sequence}`);
       if (row.needs_time_definition && row.run_time != null) throw new Error(`ROUTING_FAKE_TIME_GUARD: ${routing.routing_code}:${row.sequence}`);
       if (row.needs_workstation && row.workstation != null) throw new Error(`ROUTING_FAKE_WORKSTATION_GUARD: ${routing.routing_code}:${row.sequence}`);
       if (!row.needs_workstation && row.workstation && !workstations.has(row.workstation)) {
         throw new Error(`ROUTING_WORKSTATION_REF_INVALID: ${routing.routing_code}:${row.workstation}`);
       }
+      if (row.execution_mode === 'subcontract' && row.workstation != null) throw new Error(`ROUTING_SUBCONTRACT_WORKSTATION_FORBIDDEN: ${routing.routing_code}:${row.sequence}`);
+    }
+
+    const costRules = costRulesOf(routing);
+    const costSequences = costRules.map((rule) => Number(rule.sequence));
+    assertUnique(costSequences, `COST_SEQUENCE_${routing.routing_code}`);
+    if (costSequences.some((value) => !Number.isInteger(value) || value <= 0)) throw new Error(`ROUTING_COST_SEQUENCE_INVALID: ${routing.routing_code}`);
+    if (costSequences.some((value, index) => index > 0 && value <= costSequences[index - 1])) throw new Error(`ROUTING_COST_SEQUENCE_ORDER_INVALID: ${routing.routing_code}`);
+    for (const rule of costRules) {
+      if (!operations.has(rule.operation)) throw new Error(`ROUTING_COST_OPERATION_REF_INVALID: ${routing.routing_code}:${rule.sequence}`);
+      if (!['internal', 'subcontract'].includes(rule.execution_mode)) throw new Error(`ROUTING_COST_EXECUTION_MODE_INVALID: ${routing.routing_code}:${rule.sequence}`);
+      if (rule.execution_mode === 'subcontract' && !rule.source_supplier) throw new Error(`ROUTING_COST_SUPPLIER_REQUIRED: ${routing.routing_code}:${rule.sequence}`);
+      if (!rule.scope_value || !rule.calculation_formula || !rule.source_reference) throw new Error(`ROUTING_COST_REQUIRED_FIELD: ${routing.routing_code}:${rule.sequence}`);
+      if (rule.needs_rate_definition && rule.rate_value != null) throw new Error(`ROUTING_FAKE_COST_RATE_GUARD: ${routing.routing_code}:${rule.sequence}`);
+      if (!rule.needs_rate_definition && rule.rate_value == null) throw new Error(`ROUTING_COST_RATE_MISSING: ${routing.routing_code}:${rule.sequence}`);
+      if (rule.rate_value != null && (!Number.isFinite(Number(rule.rate_value)) || Number(rule.rate_value) < 0)) throw new Error(`ROUTING_COST_RATE_INVALID: ${routing.routing_code}:${rule.sequence}`);
     }
   }
+}
+
+function routingComplete(routing) {
+  return !routing.needs_time_definition
+    && !routing.needs_workstation
+    && !routing.needs_item_mapping
+    && costRulesOf(routing).every((rule) => !rule.needs_rate_definition && !rule.needs_item_mapping);
 }
 
 function audit() {
@@ -101,8 +134,8 @@ function audit() {
     if (routing.needs_time_definition) missingRows.push({
       routing: routing.routing_code, operation: null, 'item/group': routing.item_group ?? routing.source_identity ?? null,
       missing_field: 'standard_time', source_reference: routing.source_reference,
-      reason: 'Routing sequence is evidenced but routing-level standard time is absent.',
-      recommended_next_input: `Provide standard time and basis for ${routing.routing_name}.`,
+      reason: 'Routing is evidenced but its standard/lead time is absent.',
+      recommended_next_input: `Provide standard or lead time and basis for ${routing.routing_name}.`,
     });
     if (routing.needs_workstation) missingRows.push({
       routing: routing.routing_code, operation: null, 'item/group': routing.item_group ?? routing.source_identity ?? null,
@@ -114,8 +147,22 @@ function audit() {
       routing: routing.routing_code, operation: null, 'item/group': routing.item_group ?? routing.source_identity ?? null,
       missing_field: 'item_mapping', source_reference: routing.source_reference,
       reason: 'Source does not prove a specific Item/Item Group mapping.',
-      recommended_next_input: `Provide exact Item/Item Group scope for ${routing.routing_name}.`,
+      recommended_next_input: `Provide exact Item/Item Group scope or routing condition for ${routing.routing_name}.`,
     });
+    for (const rule of costRulesOf(routing)) {
+      if (rule.needs_rate_definition) missingRows.push({
+        routing: routing.routing_code, operation: rule.operation, 'item/group': rule.scope_value,
+        missing_field: 'operation_cost_rate', source_reference: rule.source_reference,
+        reason: 'Source provides the calculation formula but leaves the operation rate blank.',
+        recommended_next_input: `Provide the source rate for ${routing.source_supplier || routing.routing_name} / ${rule.scope_value}.`,
+      });
+      if (rule.needs_item_mapping) missingRows.push({
+        routing: routing.routing_code, operation: rule.operation, 'item/group': rule.scope_value,
+        missing_field: 'operation_cost_item_mapping', source_reference: rule.source_reference,
+        reason: 'Source cost scope is a paint-type label, not a proven canonical Item/Item Group mapping.',
+        recommended_next_input: `Map source paint type ${rule.scope_value} to canonical Item/Item Group or an explicit runtime condition.`,
+      });
+    }
   }
 
   const unresolved = data.unresolved_source_rows.map((row) => ({
@@ -127,23 +174,27 @@ function audit() {
     reason: row.reason,
     recommended_next_input: row.recommended_next_input,
   }));
+  const costRules = allCostRules();
 
   return {
-    format: 'alumdoor-production-routing-audit/v1',
+    format: 'alumdoor-production-routing-audit/v2',
     authority_policy: data.authority_policy,
     counters: {
       OPERATIONS_TOTAL: data.operations.length,
       OPERATIONS_COMPLETE: data.operations.filter((x) => !x.needs_time_definition && !x.needs_workstation).length,
       OPERATIONS_NEED_DATA: data.operations.filter((x) => x.needs_time_definition || x.needs_workstation).length,
       ROUTINGS_TOTAL: data.routings.length,
-      ROUTINGS_COMPLETE: data.routings.filter((x) => !x.needs_time_definition && !x.needs_workstation && !x.needs_item_mapping).length,
-      ROUTINGS_NEED_DATA: data.routings.filter((x) => x.needs_time_definition || x.needs_workstation || x.needs_item_mapping).length,
+      ROUTINGS_COMPLETE: data.routings.filter(routingComplete).length,
+      ROUTINGS_NEED_DATA: data.routings.filter((x) => !routingComplete(x)).length,
       MISSING_STANDARD_TIME: data.operations.filter((x) => x.needs_time_definition).length + data.routings.filter((x) => x.needs_time_definition).length,
       MISSING_WORKSTATION: data.operations.filter((x) => x.needs_workstation).length + data.routings.filter((x) => x.needs_workstation).length,
       MISSING_ITEM_MAPPING: data.routings.filter((x) => x.needs_item_mapping).length,
       UNRESOLVED_SOURCE_ROWS: unresolved.length,
+      OPERATION_COST_RULES_TOTAL: costRules.length,
+      OPERATION_COST_RULES_NEED_RATE: costRules.filter(({ rule }) => rule.needs_rate_definition).length,
+      OPERATION_COST_RULES_NEED_ITEM_MAPPING: costRules.filter(({ rule }) => rule.needs_item_mapping).length,
     },
-    complete_routings: data.routings.filter((x) => !x.needs_time_definition && !x.needs_workstation && !x.needs_item_mapping).map((x) => x.routing_code),
+    complete_routings: data.routings.filter(routingComplete).map((x) => x.routing_code),
     missing_rows: missingRows,
     unresolved_source_rows: unresolved,
   };
@@ -178,6 +229,8 @@ function routingPayload(routing) {
     item_code: routing.item_code,
     item_group: routing.item_group,
     source_identity: routing.source_identity,
+    execution_mode: routing.execution_mode,
+    source_supplier: routing.source_supplier,
     standard_time_value: routing.standard_time_value,
     standard_time_uom: routing.standard_time_uom,
     standard_time_basis: routing.standard_time_basis,
@@ -191,7 +244,7 @@ function routingPayload(routing) {
     source_reference: routing.source_reference,
     source_note: routing.source_note,
     is_active: true,
-    _metadata_revision: 3,
+    _metadata_revision: 4,
   };
 }
 
@@ -199,6 +252,8 @@ function childPayload(routing, row) {
   return {
     sequence: row.sequence,
     operation: row.operation,
+    execution_mode: row.execution_mode,
+    source_supplier: row.source_supplier ?? null,
     workstation: row.workstation ?? null,
     setup_time: row.setup_time ?? null,
     run_time: row.run_time ?? null,
@@ -211,6 +266,25 @@ function childPayload(routing, row) {
     needs_workstation: row.needs_workstation,
     source_reference: routing.source_reference,
     source_note: routing.source_note ?? null,
+  };
+}
+
+function costRulePayload(rule) {
+  return {
+    sequence: rule.sequence,
+    operation: rule.operation,
+    execution_mode: rule.execution_mode,
+    source_supplier: rule.source_supplier ?? null,
+    scope_type: rule.scope_type ?? null,
+    scope_value: rule.scope_value,
+    rate_value: rule.rate_value ?? null,
+    currency: rule.currency ?? null,
+    rate_uom: rule.rate_uom ?? null,
+    calculation_formula: rule.calculation_formula,
+    needs_rate_definition: rule.needs_rate_definition,
+    needs_item_mapping: rule.needs_item_mapping,
+    source_reference: rule.source_reference,
+    source_note: rule.source_note ?? null,
   };
 }
 
@@ -241,10 +315,14 @@ function buildSql() {
   for (const routing of data.routings) {
     const docKey = `Manufacturing Routing:${routing.routing_code}`;
     lines.push(`INSERT INTO documents(tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json) VALUES(${q(tenant)},${q(docKey)},'Manufacturing Routing',${q(routing.routing_code)},'admin',0,'Draft',1,${q(now)},${q(now)},'admin',${jq(routingPayload(routing))}) ON CONFLICT(tenant_id,doc_key) DO UPDATE SET payload_json=excluded.payload_json,modified_at=excluded.modified_at,modified_by=excluded.modified_by,version=documents.version+1 WHERE documents.payload_json<>excluded.payload_json;`);
-    lines.push(`DELETE FROM document_children WHERE tenant_id=${q(tenant)} AND parent_key=${q(docKey)} AND fieldname='operations';`);
+    lines.push(`DELETE FROM document_children WHERE tenant_id=${q(tenant)} AND parent_key=${q(docKey)} AND fieldname IN ('operations','cost_rules');`);
     for (const row of routing.operations) {
       const rowId = `OP-${String(row.sequence).padStart(3, '0')}`;
       lines.push(`INSERT INTO document_children(tenant_id,parent_key,fieldname,child_doctype,row_id,idx,payload_json) VALUES(${q(tenant)},${q(docKey)},'operations','Manufacturing Routing Operation',${q(rowId)},${Number(row.sequence)},${jq(childPayload(routing, row))});`);
+    }
+    for (const rule of costRulesOf(routing)) {
+      const rowId = `COST-${String(rule.sequence).padStart(3, '0')}`;
+      lines.push(`INSERT INTO document_children(tenant_id,parent_key,fieldname,child_doctype,row_id,idx,payload_json) VALUES(${q(tenant)},${q(docKey)},'cost_rules','Manufacturing Routing Cost Rule',${q(rowId)},${Number(rule.sequence)},${jq(costRulePayload(rule))});`);
     }
   }
   return `${lines.join('\n')}\n`;
@@ -298,20 +376,25 @@ function queryRows(sql) {
 }
 
 function verificationSql() {
+  const routingScope = managedRoutingSql();
   return `SELECT
-    (SELECT COUNT(*) FROM master_records WHERE tenant_id=${q(tenant)} AND record_type='Operation' AND name LIKE 'OP-%') AS operations,
-    (SELECT COUNT(*) FROM master_records WHERE tenant_id=${q(tenant)} AND record_type='Workstation' AND name IN (${data.workstations.map((x) => q(x.name)).join(',')})) AS workstations,
-    (SELECT COUNT(*) FROM documents WHERE tenant_id=${q(tenant)} AND doctype='Manufacturing Routing' AND name LIKE 'RT-%') AS routings,
-    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations') AS child_rows,
-    (SELECT COUNT(*) FROM master_records o WHERE o.tenant_id=${q(tenant)} AND o.record_type='Operation' AND o.name LIKE 'OP-%' AND (json_extract(o.data_json,'$.operation_name')<>o.name OR COALESCE(json_extract(o.data_json,'$.operation_name_vi'),'')='')) AS invalid_operation_payload_identity,
-    (SELECT COUNT(*) FROM master_records w WHERE w.tenant_id=${q(tenant)} AND w.record_type='Workstation' AND w.name IN (${data.workstations.map((x) => q(x.name)).join(',')}) AND json_extract(w.data_json,'$.workstation_name')<>w.name) AS invalid_workstation_payload_identity,
-    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records o ON o.tenant_id=c.tenant_id AND o.record_type='Operation' AND o.name=json_extract(c.payload_json,'$.operation') WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' AND o.name IS NULL) AS invalid_operation_refs,
-    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records w ON w.tenant_id=c.tenant_id AND w.record_type='Workstation' AND w.name=json_extract(c.payload_json,'$.workstation') WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' AND json_extract(c.payload_json,'$.workstation') IS NOT NULL AND w.name IS NULL) AS invalid_workstation_refs,
-    (SELECT COUNT(*) FROM master_records o LEFT JOIN master_records w ON w.tenant_id=o.tenant_id AND w.record_type='Workstation' AND w.name=json_extract(o.data_json,'$.workstation') WHERE o.tenant_id=${q(tenant)} AND o.record_type='Operation' AND o.name LIKE 'OP-%' AND json_extract(o.data_json,'$.workstation') IS NOT NULL AND w.name IS NULL) AS invalid_operation_workstation_refs,
-    (SELECT COUNT(*) FROM (SELECT c.parent_key,json_extract(c.payload_json,'$.sequence') seq,COUNT(*) n FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' GROUP BY c.parent_key,seq HAVING n>1)) AS duplicate_sequences,
-    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' AND c.idx<>CAST(json_extract(c.payload_json,'$.sequence') AS INTEGER)) AS invalid_sequence_idx,
-    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND json_extract(r.payload_json,'$.item_group') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item Group' AND m.name=json_extract(r.payload_json,'$.item_group')) AND NOT EXISTS(SELECT 1 FROM documents g WHERE g.tenant_id=r.tenant_id AND g.doctype='Item Group' AND g.name=json_extract(r.payload_json,'$.item_group'))) AS invalid_item_group_mappings,
-    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND json_extract(r.payload_json,'$.item_code') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item' AND m.name=json_extract(r.payload_json,'$.item_code')) AND NOT EXISTS(SELECT 1 FROM documents i WHERE i.tenant_id=r.tenant_id AND i.doctype='Item' AND i.name=json_extract(r.payload_json,'$.item_code'))) AS invalid_item_code_mappings;`;
+    (SELECT COUNT(*) FROM master_records WHERE tenant_id=${q(tenant)} AND record_type='Operation' AND name IN (${managedOperationSql()})) AS operations,
+    (SELECT COUNT(*) FROM master_records WHERE tenant_id=${q(tenant)} AND record_type='Workstation' AND name IN (${managedWorkstationSql()})) AS workstations,
+    (SELECT COUNT(*) FROM documents WHERE tenant_id=${q(tenant)} AND doctype='Manufacturing Routing' AND name IN (${routingScope})) AS routings,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='operations') AS child_rows,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='cost_rules') AS cost_rule_rows,
+    (SELECT COUNT(*) FROM master_records o WHERE o.tenant_id=${q(tenant)} AND o.record_type='Operation' AND o.name IN (${managedOperationSql()}) AND (json_extract(o.data_json,'$.operation_name')<>o.name OR COALESCE(json_extract(o.data_json,'$.operation_name_vi'),'')='')) AS invalid_operation_payload_identity,
+    (SELECT COUNT(*) FROM master_records w WHERE w.tenant_id=${q(tenant)} AND w.record_type='Workstation' AND w.name IN (${managedWorkstationSql()}) AND json_extract(w.data_json,'$.workstation_name')<>w.name) AS invalid_workstation_payload_identity,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records o ON o.tenant_id=c.tenant_id AND o.record_type='Operation' AND o.name=json_extract(c.payload_json,'$.operation') WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='operations' AND o.name IS NULL) AS invalid_operation_refs,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records o ON o.tenant_id=c.tenant_id AND o.record_type='Operation' AND o.name=json_extract(c.payload_json,'$.operation') WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='cost_rules' AND o.name IS NULL) AS invalid_cost_operation_refs,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records w ON w.tenant_id=c.tenant_id AND w.record_type='Workstation' AND w.name=json_extract(c.payload_json,'$.workstation') WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='operations' AND json_extract(c.payload_json,'$.workstation') IS NOT NULL AND w.name IS NULL) AS invalid_workstation_refs,
+    (SELECT COUNT(*) FROM master_records o LEFT JOIN master_records w ON w.tenant_id=o.tenant_id AND w.record_type='Workstation' AND w.name=json_extract(o.data_json,'$.workstation') WHERE o.tenant_id=${q(tenant)} AND o.record_type='Operation' AND o.name IN (${managedOperationSql()}) AND json_extract(o.data_json,'$.workstation') IS NOT NULL AND w.name IS NULL) AS invalid_operation_workstation_refs,
+    (SELECT COUNT(*) FROM (SELECT c.parent_key,json_extract(c.payload_json,'$.sequence') seq,COUNT(*) n FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='operations' GROUP BY c.parent_key,seq HAVING n>1)) AS duplicate_sequences,
+    (SELECT COUNT(*) FROM (SELECT c.parent_key,json_extract(c.payload_json,'$.sequence') seq,COUNT(*) n FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='cost_rules' GROUP BY c.parent_key,seq HAVING n>1)) AS duplicate_cost_sequences,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname IN ('operations','cost_rules') AND c.idx<>CAST(json_extract(c.payload_json,'$.sequence') AS INTEGER)) AS invalid_sequence_idx,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='cost_rules' AND ((json_extract(c.payload_json,'$.needs_rate_definition')=1 AND json_extract(c.payload_json,'$.rate_value') IS NOT NULL) OR (json_extract(c.payload_json,'$.needs_rate_definition')=0 AND json_extract(c.payload_json,'$.rate_value') IS NULL))) AS invalid_cost_rate_state,
+    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND r.name IN (${routingScope}) AND json_extract(r.payload_json,'$.item_group') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item Group' AND m.name=json_extract(r.payload_json,'$.item_group')) AND NOT EXISTS(SELECT 1 FROM documents g WHERE g.tenant_id=r.tenant_id AND g.doctype='Item Group' AND g.name=json_extract(r.payload_json,'$.item_group'))) AS invalid_item_group_mappings,
+    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND r.name IN (${routingScope}) AND json_extract(r.payload_json,'$.item_code') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item' AND m.name=json_extract(r.payload_json,'$.item_code')) AND NOT EXISTS(SELECT 1 FROM documents i WHERE i.tenant_id=r.tenant_id AND i.doctype='Item' AND i.name=json_extract(r.payload_json,'$.item_code'))) AS invalid_item_code_mappings;`;
 }
 
 function verifyRows(rows, label) {
@@ -322,6 +405,7 @@ function verifyRows(rows, label) {
     workstations: data.workstations.length,
     routings: data.routings.length,
     child_rows: data.routings.reduce((sum, routing) => sum + routing.operations.length, 0),
+    cost_rule_rows: allCostRules().length,
   };
   for (const [key, value] of Object.entries(expected)) {
     if (Number(row[key]) !== value) throw new Error(`${label}_${key.toUpperCase()} expected=${value} actual=${row[key]}`);
@@ -330,10 +414,13 @@ function verifyRows(rows, label) {
     'invalid_operation_payload_identity',
     'invalid_workstation_payload_identity',
     'invalid_operation_refs',
+    'invalid_cost_operation_refs',
     'invalid_workstation_refs',
     'invalid_operation_workstation_refs',
     'duplicate_sequences',
+    'duplicate_cost_sequences',
     'invalid_sequence_idx',
+    'invalid_cost_rate_state',
     'invalid_item_group_mappings',
     'invalid_item_code_mappings',
   ]) {
@@ -372,7 +459,7 @@ async function selftest() {
 
 validate();
 if (command === 'validate') {
-  console.log(`VALIDATE_STATUS=PASS operations=${data.operations.length} routings=${data.routings.length} workstations=${data.workstations.length}`);
+  console.log(`VALIDATE_STATUS=PASS operations=${data.operations.length} routings=${data.routings.length} workstations=${data.workstations.length} cost_rules=${allCostRules().length}`);
   printCounters();
 } else if (command === 'build') {
   await build();
