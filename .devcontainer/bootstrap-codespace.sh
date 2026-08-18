@@ -25,7 +25,9 @@ cd "$ROOT/server"
 pnpm run build
 
 echo "== Forge Codespaces: migrate LOCAL D1 =="
-pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
+# Codespaces postCreate can expose a TTY even though nobody can answer prompts.
+# Force Wrangler into CI mode so the LOCAL-only migration confirmation is skipped.
+CI=1 pnpm exec wrangler d1 migrations apply cloudforge-demo --local --config apps/tenant-worker/wrangler.jsonc
 
 echo "== Forge Codespaces: seed local login/demo base =="
 pnpm run dev:seed
