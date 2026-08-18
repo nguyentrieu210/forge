@@ -13,10 +13,11 @@
     {"fieldname":"currency","label":"Tiền tệ","fieldtype":"Link","options":"Currency"},
     {"fieldname":"rate_uom","label":"Cơ sở đơn giá","fieldtype":"Data"},
     {"fieldname":"calculation_formula","label":"Công thức tính nguyên văn","fieldtype":"Small Text","required":true},
+    {"fieldname":"needs_rate_definition","label":"Thiếu đơn giá","fieldtype":"Check","default":0},
     {"fieldname":"needs_item_mapping","label":"Thiếu mapping Item/Group","fieldtype":"Check","default":0},
     {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Small Text","required":true},
     {"fieldname":"source_note","label":"Ghi chú nguồn","fieldtype":"Small Text"}
   ],
   "permissions": [],
-  "revision": 1
+  "revision": 2
 }
