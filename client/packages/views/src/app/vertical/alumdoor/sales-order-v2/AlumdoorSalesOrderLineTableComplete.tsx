@@ -54,6 +54,7 @@ import {
   linePricedQuantity,
   money,
   numberValue,
+  pricingRuleLabel,
   primaryQuantityField,
   quantity,
   text,
@@ -147,47 +148,64 @@ const FORCE_READ_ONLY = new Set<DynamicFieldName>([
   "estimated_weight_kg",
 ]);
 
+// Sales grid ưu tiên nhìn được nhiều cột cùng lúc. Các số đo chỉ cần 2–4 chữ số + phần thập phân,
+// nên không dành 110–120px/cột như form thông thường. Mã/tên hàng vẫn được giữ đủ rộng để đọc.
 const DEFAULT_WIDTHS: Record<ColumnId, number> = {
-  select: 42,
-  index: 64,
-  item_code: 170,
-  item_name: 210,
-  color: 125,
-  width_m: 118,
-  height_m: 118,
-  mesh_height_m: 110,
-  cut_width_m: 118,
-  leaf_variant: 135,
-  ray_type: 125,
-  has_butterfly_bracket: 100,
-  motor_model: 145,
-  length_m: 105,
-  qty_bar: 100,
-  leaf_count: 90,
-  single_layer_leaf_count: 110,
-  double_layer_leaf_count: 110,
-  estimated_weight_kg: 110,
-  quantity: 90,
-  uom: 82,
-  priced_qty: 112,
-  rate: 132,
-  actions: 74,
-};
-
-const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
   select: 38,
   index: 52,
-  item_code: 125,
-  item_name: 140,
-  color: 90,
-  quantity: 74,
-  uom: 66,
-  priced_qty: 88,
-  rate: 105,
+  item_code: 150,
+  item_name: 180,
+  color: 102,
+  width_m: 88,
+  height_m: 88,
+  mesh_height_m: 84,
+  cut_width_m: 90,
+  leaf_variant: 110,
+  ray_type: 104,
+  has_butterfly_bracket: 88,
+  motor_model: 128,
+  length_m: 86,
+  qty_bar: 78,
+  leaf_count: 74,
+  single_layer_leaf_count: 82,
+  double_layer_leaf_count: 82,
+  estimated_weight_kg: 92,
+  quantity: 70,
+  uom: 68,
+  priced_qty: 86,
+  rate: 112,
   actions: 68,
 };
 
-const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v3";
+const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
+  select: 36,
+  index: 46,
+  item_code: 120,
+  item_name: 135,
+  color: 82,
+  width_m: 72,
+  height_m: 72,
+  mesh_height_m: 72,
+  cut_width_m: 76,
+  leaf_variant: 92,
+  ray_type: 88,
+  has_butterfly_bracket: 74,
+  motor_model: 105,
+  length_m: 72,
+  qty_bar: 68,
+  leaf_count: 64,
+  single_layer_leaf_count: 72,
+  double_layer_leaf_count: 72,
+  estimated_weight_kg: 78,
+  quantity: 62,
+  uom: 60,
+  priced_qty: 76,
+  rate: 94,
+  actions: 64,
+};
+
+// Tăng version để người đã kéo cột theo layout cũ không bị localStorage giữ lại độ rộng quá lớn.
+const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v4";
 const FROZEN_COLUMNS: ColumnId[] = ["select", "index", "item_code", "item_name"];
 
 function loadStoredWidths(): Record<ColumnId, number> {
@@ -199,7 +217,7 @@ function loadStoredWidths(): Record<ColumnId, number> {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     for (const id of Object.keys(defaults) as ColumnId[]) {
       const value = Number(parsed[id]);
-      if (Number.isFinite(value)) defaults[id] = Math.max(MIN_WIDTHS[id] ?? 84, Math.min(520, value));
+      if (Number.isFinite(value)) defaults[id] = Math.max(MIN_WIDTHS[id] ?? 64, Math.min(520, value));
     }
   } catch {
     // Local preference is optional; a corrupt/private localStorage must never break order entry.
@@ -244,7 +262,7 @@ function GridField(props: {
       data-sales-column-id={props.columnId}
       data-sales-grid-disabled={props.disabled ? "true" : undefined}
       onKeyDownCapture={moveGridFocus}
-      className="min-w-0"
+      className="min-w-0 text-center"
     >
       {props.children}
     </div>
@@ -273,7 +291,7 @@ function appliedRuleNames(line: SalesLine): string[] {
   const snapshots = Array.isArray(line._commercial?.pricing_rule_snapshots)
     ? line._commercial!.pricing_rule_snapshots!
     : [];
-  return [...new Set(snapshots.map((snapshot) => text(snapshot.rule_name)).filter(Boolean))];
+  return [...new Set(snapshots.map((snapshot) => pricingRuleLabel(snapshot.rule_name)).filter(Boolean))];
 }
 
 function BomBlock(props: {
@@ -296,7 +314,7 @@ function BomBlock(props: {
   return (
     <TableRow className="border-b-2 bg-muted/20 hover:bg-muted/20" data-section="sales-v2-bom-block">
       <TableCell colSpan={props.colSpan} className="p-0">
-        <div className="border-l-2 border-primary/20 bg-background/70">
+        <div className="border-l-2 border-primary/30 bg-background/70">
           <button
             type="button"
             className="flex w-full items-center justify-between gap-3 border-b px-3 py-2 text-left hover:bg-muted/40"
@@ -317,16 +335,16 @@ function BomBlock(props: {
                 </div>
               ) : null}
               {components.length ? (
-                <div className="overflow-x-auto rounded-md border">
-                  <div className="grid min-w-[760px] grid-cols-[42px_150px_minmax(180px,1.3fr)_minmax(180px,1fr)_92px_80px] bg-muted/60 text-[10px] font-semibold text-muted-foreground">
-                    <div className="px-2 py-1.5 text-center">#</div><div className="px-2 py-1.5">Mã vật tư</div><div className="px-2 py-1.5">Tên vật tư</div><div className="px-2 py-1.5">Quy cách / nguồn</div><div className="px-2 py-1.5 text-right">SL</div><div className="px-2 py-1.5 text-center">ĐVT</div>
+                <div className="overflow-x-auto rounded-md border-2 border-border">
+                  <div className="grid min-w-[700px] grid-cols-[38px_140px_minmax(160px,1.2fr)_minmax(150px,1fr)_78px_70px] bg-muted text-center text-[10px] font-semibold text-foreground">
+                    <div className="px-2 py-1.5">#</div><div className="px-2 py-1.5">Mã vật tư</div><div className="px-2 py-1.5">Tên vật tư</div><div className="px-2 py-1.5">Quy cách / nguồn</div><div className="px-2 py-1.5">SL</div><div className="px-2 py-1.5">ĐVT</div>
                   </div>
                   {components.map((component, index) => {
                     const itemCode = text(component.item_code);
                     const itemName = text(props.line._bomComponentNames?.[itemCode]) || itemCode;
                     const detail = text(component.note) || text(component.component_key) || text(component.source_rule);
-                    return <div key={`${itemCode}-${text(component.component_key)}-${index}`} className="grid min-w-[760px] grid-cols-[42px_150px_minmax(180px,1.3fr)_minmax(180px,1fr)_92px_80px] border-t text-[11px] first:border-t-0">
-                      <div className="px-2 py-1.5 text-center text-muted-foreground">{index + 1}</div><div className="truncate px-2 py-1.5 font-mono text-[10px]">{itemCode || "—"}</div><div className="truncate px-2 py-1.5">{itemName || "—"}</div><div className="truncate px-2 py-1.5 text-muted-foreground">{detail || "—"}</div><div className="px-2 py-1.5 text-right tabular-nums">{quantity(component.qty)}</div><div className="px-2 py-1.5 text-center">{text(component.stock_uom) || "—"}</div>
+                    return <div key={`${itemCode}-${text(component.component_key)}-${index}`} className="grid min-w-[700px] grid-cols-[38px_140px_minmax(160px,1.2fr)_minmax(150px,1fr)_78px_70px] border-t text-center text-[11px] first:border-t-0">
+                      <div className="px-2 py-1.5 text-muted-foreground">{index + 1}</div><div className="truncate px-2 py-1.5 font-mono text-[10px]">{itemCode || "—"}</div><div className="truncate px-2 py-1.5">{itemName || "—"}</div><div className="truncate px-2 py-1.5 text-muted-foreground">{detail || "—"}</div><div className="px-2 py-1.5 tabular-nums">{quantity(component.qty)}</div><div className="px-2 py-1.5">{text(component.stock_uom) || "—"}</div>
                     </div>;
                   })}
                 </div>
@@ -419,7 +437,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     event.stopPropagation();
     const startX = event.clientX;
     const startWidth = widths[id];
-    const min = MIN_WIDTHS[id] ?? 84;
+    const min = MIN_WIDTHS[id] ?? 64;
     const onMove = (move: PointerEvent) => {
       const next = Math.max(min, Math.min(520, startWidth + move.clientX - startX));
       setWidths((current) => current[id] === next ? current : { ...current, [id]: next });
@@ -432,14 +450,14 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     window.addEventListener("pointerup", onUp, { once: true });
   };
 
-  const head = (id: ColumnId, label: ReactNode, align: "left" | "center" | "right" = "left") => (
+  const head = (id: ColumnId, label: ReactNode) => (
     <TableHead
       key={id}
       style={{ width: widths[id], minWidth: widths[id], maxWidth: widths[id], ...stickyStyle(id, true) }}
-      className={`relative bg-muted/95 px-2 ${align === "center" ? "text-center" : align === "right" ? "text-right" : ""}`}
+      className="relative bg-muted px-1.5 text-center font-semibold text-foreground"
     >
-      <div className="relative flex h-full min-h-9 items-center">
-        <span className={`min-w-0 flex-1 truncate ${align === "center" ? "text-center" : align === "right" ? "text-right" : ""}`}>{label}</span>
+      <div className="relative flex h-full min-h-9 items-center justify-center">
+        <span className="min-w-0 flex-1 truncate text-center">{label}</span>
         {!(["select", "actions"] as ColumnId[]).includes(id) ? (
           <div
             role="separator"
@@ -474,10 +492,10 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
       <TableCell
         key={fieldname}
         style={{ width: widths[fieldname], minWidth: widths[fieldname], maxWidth: widths[fieldname] }}
-        className={`${rowTone} px-2 py-1.5 align-middle`}
+        className={`${rowTone} px-1.5 py-1.5 text-center align-middle`}
       >
         {!visible ? <span aria-label="Không áp dụng" /> : readOnly ? (
-          <div className="flex h-8 items-center truncate tabular-nums" title={dynamicDisplayValue(fieldname, value)}>{dynamicDisplayValue(fieldname, value) || "—"}</div>
+          <div className="flex h-8 items-center justify-center truncate text-center tabular-nums" title={dynamicDisplayValue(fieldname, value)}>{dynamicDisplayValue(fieldname, value) || "—"}</div>
         ) : (
           <GridField rowKey={line._key} columnId={fieldname} disabled={readOnly}>
             <AlumdoorSalesOrderField
@@ -485,9 +503,9 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
               field={field}
               value={value}
               onChange={(nextValue) => {
-                const normalized = normalizeFieldValue(field, nextValue);
-                props.onPatch(line._key, { [fieldname]: normalized });
-                if (["Select", "Link", "Check"].includes(field.fieldtype)) props.onCommit(line._key, fieldname, normalized);
+                const normalizedValue = normalizeFieldValue(field, nextValue);
+                props.onPatch(line._key, { [fieldname]: normalizedValue });
+                if (["Select", "Link", "Check"].includes(field.fieldtype)) props.onCommit(line._key, fieldname, normalizedValue);
               }}
               onCommit={() => props.onCommit(line._key, fieldname, line[fieldname])}
               registry={props.registry}
@@ -499,7 +517,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
               readOnly={readOnly}
               compact
               hideLabel
-              className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_button]:!h-8"
+              className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center"
             />
           </GridField>
         )}
@@ -507,30 +525,30 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
     );
   };
 
-  return <section className="overflow-hidden rounded-lg border bg-card" data-section="sales-v2-lines-complete">
-    <div className="flex min-h-9 items-center justify-between gap-2 border-b px-3 py-1.5">
+  return <section className="overflow-hidden rounded-lg border-2 border-border bg-card" data-section="sales-v2-lines-complete">
+    <div className="flex min-h-9 items-center justify-between gap-2 border-b-2 border-border bg-muted/30 px-3 py-1.5">
       <div className="min-w-0"><h2 className="text-sm font-semibold">Chi tiết bán hàng</h2><p className="truncate text-[10px] text-muted-foreground">Cột quy cách tự hiện theo mặt hàng; kéo mép tiêu đề để đổi độ rộng cột.</p></div>
       <div className="text-[10px] text-muted-foreground">Enter → ô tiếp theo</div>
     </div>
     <div className="overflow-x-auto">
       <Table
         unwrapped
-        className="table-fixed text-[11px] [&_td]:border-r [&_td:last-child]:border-r-0 [&_th]:border-r [&_th:last-child]:border-r-0"
+        className="table-fixed text-center text-[11px] [&_td]:border-r [&_td]:border-border [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-border [&_th:last-child]:border-r-0"
         style={{ width: `max(100%, ${totalWidth}px)` }}
       >
         <colgroup>{columnOrder.map((id) => <col key={id} style={{ width: widths[id] }} />)}</colgroup>
-        <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur">
-          <TableRow className="hover:bg-transparent">
-            {head("select", <Checkbox checked={allSelected ? true : partlySelected ? "indeterminate" : false} onCheckedChange={(checked) => props.onToggleAll(checked === true)} aria-label="Chọn tất cả dòng hàng" />, "center")}
-            {head("index", "STT", "center")}
+        <TableHeader className="sticky top-0 z-30 border-b-2 border-border bg-muted backdrop-blur">
+          <TableRow className="border-b-2 border-border hover:bg-transparent">
+            {head("select", <Checkbox checked={allSelected ? true : partlySelected ? "indeterminate" : false} onCheckedChange={(value) => props.onToggleAll(value === true)} aria-label="Chọn tất cả dòng hàng" />)}
+            {head("index", "STT")}
             {head("item_code", "Mã hàng")}
             {head("item_name", "Tên hàng")}
             {head("color", "Màu")}
             {dynamicColumns.map((fieldname) => head(fieldname, DYNAMIC_FALLBACK_LABELS[fieldname]))}
-            {head("quantity", "SL", "center")}
-            {head("uom", "ĐVT", "center")}
-            {head("priced_qty", "Khối lượng", "right")}
-            {head("rate", "Đơn giá", "right")}
+            {head("quantity", "SL")}
+            {head("uom", "ĐVT")}
+            {head("priced_qty", "Khối lượng")}
+            {head("rate", "Đơn giá")}
             {head("actions", "")}
           </TableRow>
         </TableHeader>
@@ -543,10 +561,10 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             const colorField = selectField(childFieldByName.get("color"), "color", "Màu", allowedColors);
             const uomField = selectField(childFieldByName.get("uom"), "uom", "ĐVT", allowedUoms);
             const quantityDocField = fieldFromMeta(props.childMeta, quantityField, quantityField === "set_count" ? "Số bộ" : "Số lượng", quantityField === "set_count" ? "Int" : "Float");
-            const hasBom = Boolean(line._bomError || (line._bomPreview?.components?.length ?? 0) || (line._bomPreview?.actual_requirements?.length ?? 0));
+            const hasBom = Boolean(line._bomError || line._bomPreview?.bom_no || (line._bomPreview?.components?.length ?? 0) || (line._bomPreview?.actual_requirements?.length ?? 0));
             const rowError = text(line._error) || text(line._pricingError);
             const benefits = Array.isArray(line._commercial?.benefit_items) ? line._commercial!.benefit_items! : [];
-            const rowTone = rowIndex % 2 === 0 ? "bg-card" : "bg-muted/15";
+            const rowTone = rowIndex % 2 === 0 ? "bg-card" : "bg-muted/20";
             const needsApproval = lineCommercialNeedsApproval(line);
             const discountNeedsApproval = lineDiscountNeedsApproval(line);
             const policyDiscount = linePolicyDiscountPercentage(line);
@@ -560,7 +578,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
 
             return <Fragment key={line._key}>
               <TableRow className={`${rowTone} [&>td]:border-b-0`} data-sales-row={line._key}>
-                <TableCell style={{ width: widths.select, ...stickyStyle("select") }} className={`${frozenClass} px-1 py-1.5 text-center`}><Checkbox checked={props.selectedKeys.has(line._key)} onCheckedChange={(checked) => props.onToggleSelection(line._key, checked === true)} aria-label={`Chọn dòng ${rowIndex + 1}`} /></TableCell>
+                <TableCell style={{ width: widths.select, ...stickyStyle("select") }} className={`${frozenClass} px-1 py-1.5 text-center`}><Checkbox checked={props.selectedKeys.has(line._key)} onCheckedChange={(value) => props.onToggleSelection(line._key, value === true)} aria-label={`Chọn dòng ${rowIndex + 1}`} /></TableCell>
                 <TableCell style={{ width: widths.index, ...stickyStyle("index") }} className={`${frozenClass} px-1 py-1.5 text-center tabular-nums`}>
                   <div className="flex items-center justify-center gap-1">
                     {hasBom ? <button type="button" className="grid size-5 place-items-center rounded hover:bg-muted" onClick={() => setExpanded((current) => { const next = new Set(current); if (next.has(line._key)) next.delete(line._key); else next.add(line._key); return next; })} aria-label={`${expanded.has(line._key) ? "Thu gọn" : "Mở"} BOM dòng ${rowIndex + 1}`}>{expanded.has(line._key) ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}</button> : null}
@@ -568,28 +586,31 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                     {line._loading ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : rowError ? <AlertTriangle className="size-3 text-destructive" /> : needsApproval ? <AlertTriangle className="size-3" /> : text(line.item_code) ? <CheckCircle2 className="size-3 text-muted-foreground" /> : null}
                   </div>
                 </TableCell>
-                <TableCell style={{ width: widths.item_code, ...stickyStyle("item_code") }} className={`${frozenClass} px-2 py-1.5 align-middle`}>
-                  <GridField rowKey={line._key} columnId="item_code" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-item-${line._key}`} field={itemField} value={line.item_code} onChange={(value) => props.onCommit(line._key, "item_code", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_button]:!h-8" /></GridField>
+                <TableCell style={{ width: widths.item_code, ...stickyStyle("item_code") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}>
+                  <GridField rowKey={line._key} columnId="item_code" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-item-${line._key}`} field={itemField} value={line.item_code} onChange={(value) => props.onCommit(line._key, "item_code", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField>
                 </TableCell>
-                <TableCell style={{ width: widths.item_name, ...stickyStyle("item_name") }} className={`${frozenClass} px-2 py-1.5 align-middle`}><div className="truncate font-medium leading-4" title={text(line._itemName) || text(line.item_code)}>{text(line._itemName) || text(line.item_code) || "—"}</div>{text(line._context?.availability_status) ? <div className="truncate text-[9px] text-muted-foreground" title={text(line._context?.availability_status)}>{text(line._context?.availability_status)}</div> : null}</TableCell>
-                <TableCell style={{ width: widths.color }} className={`${rowTone} px-2 py-1.5 align-middle`}>{allowedColors.length ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_button]:!h-8" /></GridField> : <div className="flex h-8 items-center truncate text-muted-foreground">{text(line.color)}</div>}</TableCell>
+                <TableCell style={{ width: widths.item_name, ...stickyStyle("item_name") }} className={`${frozenClass} px-1.5 py-1.5 text-center align-middle`}><div className="truncate text-center font-medium leading-4" title={text(line._itemName) || text(line.item_code)}>{text(line._itemName) || text(line.item_code) || "—"}</div>{text(line._context?.availability_status) ? <div className="truncate text-center text-[9px] text-muted-foreground" title={text(line._context?.availability_status)}>{text(line._context?.availability_status)}</div> : null}</TableCell>
+                <TableCell style={{ width: widths.color }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedColors.length ? <GridField rowKey={line._key} columnId="color" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-color-${line._key}`} field={colorField} value={line.color} onChange={(value) => props.onCommit(line._key, "color", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <div className="flex h-8 items-center justify-center truncate text-center text-muted-foreground">{text(line.color)}</div>}</TableCell>
                 {dynamicColumns.map((fieldname) => renderDynamicCell(line, fieldname, rowTone))}
-                <TableCell style={{ width: widths.quantity }} className={`${rowTone} px-2 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="quantity" disabled={props.readOnly || fieldReadonly(line, quantityField)}><AlumdoorSalesOrderField id={`sales-v2-complete-qty-${line._key}`} field={quantityDocField} value={line[quantityField]} onChange={(value) => props.onPatch(line._key, { [quantityField]: value == null || value === "" ? undefined : Number(value) })} onCommit={() => props.onCommit(line._key, quantityField, line[quantityField])} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, quantityField) || isAreaDoor(line)} readOnly={props.readOnly || fieldReadonly(line, quantityField)} compact hideLabel className="mx-auto [&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center" /></GridField></TableCell>
-                <TableCell style={{ width: widths.uom }} className={`${rowTone} px-2 py-1.5 text-center align-middle`}>{allowedUoms.length > 1 ? <GridField rowKey={line._key} columnId="uom" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-uom-${line._key}`} field={uomField} value={line.uom} onChange={(value) => props.onCommit(line._key, "uom", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_button]:!h-8" /></GridField> : <span className="inline-flex h-8 items-center">{text(line.uom) || text(line._context?.selected_uom) || "—"}</span>}</TableCell>
-                <TableCell style={{ width: widths.priced_qty }} className={`${rowTone} px-2 py-1.5 text-right align-middle tabular-nums`}><div className="font-semibold text-primary">{pricedQty === undefined ? "—" : quantity(pricedQty)}</div></TableCell>
-                <TableCell style={{ width: widths.rate }} className={`${rowTone} px-2 py-1.5 align-middle`}><GridField rowKey={line._key} columnId="rate" disabled={props.readOnly || fieldReadonly(line, "rate")}><AlumdoorSalesOrderField id={`sales-v2-complete-rate-${line._key}`} field={rateField} value={line.rate} onChange={(value) => props.onPatch(line._key, { rate: value == null || value === "" ? undefined : Number(value) })} onCommit={() => props.onCommit(line._key, "rate", line.rate)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, "rate") || Boolean(rateField.reqd)} readOnly={props.readOnly || fieldReadonly(line, "rate")} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-right [&_input]:tabular-nums" /></GridField></TableCell>
+                <TableCell style={{ width: widths.quantity }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="quantity" disabled={props.readOnly || fieldReadonly(line, quantityField)}><AlumdoorSalesOrderField id={`sales-v2-complete-qty-${line._key}`} field={quantityDocField} value={line[quantityField]} onChange={(value) => props.onPatch(line._key, { [quantityField]: value == null || value === "" ? undefined : Number(value) })} onCommit={() => props.onCommit(line._key, quantityField, line[quantityField])} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, quantityField) || isAreaDoor(line)} readOnly={props.readOnly || fieldReadonly(line, quantityField)} compact hideLabel className="mx-auto [&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center" /></GridField></TableCell>
+                <TableCell style={{ width: widths.uom }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedUoms.length > 1 ? <GridField rowKey={line._key} columnId="uom" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-uom-${line._key}`} field={uomField} value={line.uom} onChange={(value) => props.onCommit(line._key, "uom", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <span className="inline-flex h-8 items-center justify-center">{text(line.uom) || text(line._context?.selected_uom) || "—"}</span>}</TableCell>
+                <TableCell style={{ width: widths.priced_qty }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><div className="font-semibold text-primary">{pricedQty === undefined ? "—" : quantity(pricedQty)}</div></TableCell>
+                <TableCell style={{ width: widths.rate }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="rate" disabled={props.readOnly || fieldReadonly(line, "rate")}><AlumdoorSalesOrderField id={`sales-v2-complete-rate-${line._key}`} field={rateField} value={line.rate} onChange={(value) => props.onPatch(line._key, { rate: value == null || value === "" ? undefined : Number(value) })} onCommit={() => props.onCommit(line._key, "rate", line.rate)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, "rate") || Boolean(rateField.reqd)} readOnly={props.readOnly || fieldReadonly(line, "rate")} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center [&_input]:tabular-nums" /></GridField></TableCell>
                 <TableCell style={{ width: widths.actions }} className={`${rowTone} px-1 py-1.5 text-center align-middle`}><div className="flex items-center justify-center"><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || !text(line.item_code)} onClick={() => props.onDuplicate(line._key)} title="Nhân bản" aria-label={`Nhân bản dòng ${rowIndex + 1}`}><Copy className="size-3.5" /></Button><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || props.lines.length <= 1} onClick={() => props.onDelete(line._key)} title="Xóa" aria-label={`Xóa dòng ${rowIndex + 1}`}><Trash2 className="size-3.5" /></Button></div></TableCell>
               </TableRow>
 
               {text(line.item_code) ? (
                 <TableRow className={`${rowTone} [&>td]:border-b-0`} data-section="sales-v2-commercial-row">
                   <TableCell colSpan={columnCount} className="px-3 py-2">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 rounded-md border bg-background/75 px-3 py-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-background/75 px-3 py-2">
+                      {ruleNames.length ? <div className="flex flex-wrap items-center gap-1">{ruleNames.slice(0, 4).map((rule) => <Badge key={rule} variant="outline" className="max-w-[220px] truncate text-[9px]">{rule}</Badge>)}{ruleNames.length > 4 ? <Badge variant="outline" className="text-[9px]">+{ruleNames.length - 4}</Badge> : null}</div> : null}
+                      {benefits.map((benefit, benefitIndex) => <span key={`${line._key}-benefit-${benefitIndex}`} className="inline-flex items-center gap-1 text-[10px]"><Gift className="size-3" />{text(benefit.label) || "Tặng kèm"} · {quantity(benefit.qty)} {text(benefit.uom)}</span>)}
+
+                      <div className="ml-auto flex items-center gap-2">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Chiết khấu</span>
-                        <div className="w-[92px]">
+                        <div className="w-[76px]">
                           <GridField rowKey={line._key} columnId="discount_percentage" disabled={props.readOnly || fieldReadonly(line, "discount_percentage")}>
-                            <AlumdoorSalesOrderField id={`sales-v2-complete-discount-${line._key}`} field={discountField} value={line.discount_percentage ?? policyDiscount} onChange={(value) => props.onPatch(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })} onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage ?? policyDiscount)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-right [&_input]:tabular-nums" />
+                            <AlumdoorSalesOrderField id={`sales-v2-complete-discount-${line._key}`} field={discountField} value={line.discount_percentage ?? policyDiscount} onChange={(value) => props.onPatch(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })} onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage ?? policyDiscount)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center [&_input]:tabular-nums" />
                           </GridField>
                         </div>
                         <span className="tabular-nums">−{money(discountAmount)} ₫</span>
@@ -597,15 +618,11 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                       </div>
 
                       <div className="flex items-center gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Phụ thu</span><span className="tabular-nums">{adjustmentAmount >= 0 ? "+" : "−"}{money(Math.abs(adjustmentAmount))} ₫</span></div>
+                      <div className="flex items-baseline gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tiền phải trả</span><strong className="text-sm tabular-nums text-primary">{money(payable)} ₫</strong></div>
 
-                      {ruleNames.length ? <div className="flex flex-wrap items-center gap-1">{ruleNames.slice(0, 4).map((rule) => <Badge key={rule} variant="outline" className="max-w-[180px] truncate text-[9px]">{rule}</Badge>)}{ruleNames.length > 4 ? <Badge variant="outline" className="text-[9px]">+{ruleNames.length - 4}</Badge> : null}</div> : null}
-                      {benefits.map((benefit, benefitIndex) => <span key={`${line._key}-benefit-${benefitIndex}`} className="inline-flex items-center gap-1 text-[10px]"><Gift className="size-3" />{text(benefit.label) || "Tặng kèm"} · {quantity(benefit.qty)} {text(benefit.uom)}</span>)}
-
-                      <div className="ml-auto flex items-baseline gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tiền phải trả</span><strong className="text-sm tabular-nums text-primary">{money(payable)} ₫</strong></div>
-
-                      {discountNeedsApproval ? <div className="basis-full flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-[11px] text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Chiết khấu {quantity(enteredDiscount)}% khác chính sách {quantity(policyDiscount)}% — cần duyệt.</span></div> : null}
-                      {!discountNeedsApproval && needsApproval ? <div className="basis-full flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Đơn giá đang khác chính sách — cần duyệt.</span></div> : null}
-                      {rowError ? <div className="basis-full flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-[11px] text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{rowError}</span></div> : null}
+                      {discountNeedsApproval ? <div className="basis-full flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-left text-[11px] text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Chiết khấu {quantity(enteredDiscount)}% khác chính sách {quantity(policyDiscount)}% — cần duyệt.</span></div> : null}
+                      {!discountNeedsApproval && needsApproval ? <div className="basis-full flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-left text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Đơn giá đang khác chính sách — cần duyệt.</span></div> : null}
+                      {rowError ? <div className="basis-full flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-left text-[11px] text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{rowError}</span></div> : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -617,7 +634,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
         </TableBody>
       </Table>
     </div>
-    <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-1.5">
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-t-2 border-border bg-muted/20 px-3 py-1.5">
       <div className="flex flex-wrap items-center gap-1.5">
         <Button type="button" variant="outline" size="sm" onClick={props.onAdd} disabled={props.readOnly}><Plus className="size-3.5" /> Thêm dòng</Button>
         <Button type="button" variant="outline" size="sm" onClick={props.onAddFive} disabled={props.readOnly}><Plus className="size-3.5" /> Thêm 5</Button>
