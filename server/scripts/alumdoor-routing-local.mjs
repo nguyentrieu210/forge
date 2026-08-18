@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -328,13 +328,31 @@ function buildSql() {
   return `${lines.join('\n')}\n`;
 }
 
+function writeAuditIfChanged(nextAudit) {
+  let current = null;
+  if (existsSync(reportPath)) {
+    try { current = JSON.parse(readFileSync(reportPath, 'utf8')); } catch { /* rewrite malformed/stale report */ }
+  }
+  if (JSON.stringify(current) !== JSON.stringify(nextAudit)) {
+    writeFileSync(reportPath, `${JSON.stringify(nextAudit, null, 2)}\n`, 'utf8');
+    return true;
+  }
+  return false;
+}
+
 async function build() {
   await mkdir(dirname(sqlPath), { recursive: true });
   await mkdir(dirname(reportPath), { recursive: true });
   writeFileSync(sqlPath, buildSql(), 'utf8');
-  writeFileSync(reportPath, `${JSON.stringify(audit(), null, 2)}\n`, 'utf8');
-  console.log(`BUILD_STATUS=PASS sql=${sqlPath} report=${reportPath}`);
+  const reportChanged = writeAuditIfChanged(audit());
+  console.log(`BUILD_STATUS=PASS sql=${sqlPath} report=${reportPath} report_changed=${reportChanged ? 1 : 0}`);
   printCounters();
+}
+
+function cleanupGeneratedSql() {
+  try { unlinkSync(sqlPath); } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
 }
 
 function wranglerBin() {
@@ -466,17 +484,25 @@ if (command === 'validate') {
 } else if (command === 'selftest') {
   await selftest();
 } else if (command === 'import-local') {
-  await build();
-  executeFile(sqlPath);
-  queryLocal('IMPORT_LOCAL_VERIFY');
-  console.log('IMPORT_LOCAL_STATUS=PASS');
+  try {
+    await build();
+    executeFile(sqlPath);
+    queryLocal('IMPORT_LOCAL_VERIFY');
+    console.log('IMPORT_LOCAL_STATUS=PASS');
+  } finally {
+    cleanupGeneratedSql();
+  }
 } else if (command === 'query-local' || command === 'verify-local') {
   queryLocal('VERIFY_LOCAL');
 } else if (command === 'replay-local') {
-  await build();
-  const before = queryLocal('REPLAY_BEFORE');
-  executeFile(sqlPath);
-  const after = queryLocal('REPLAY_AFTER');
-  if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error(`REPLAY_NOT_IDEMPOTENT before=${JSON.stringify(before)} after=${JSON.stringify(after)}`);
-  console.log('REPLAY_LOCAL_STATUS=PASS');
+  try {
+    await build();
+    const before = queryLocal('REPLAY_BEFORE');
+    executeFile(sqlPath);
+    const after = queryLocal('REPLAY_AFTER');
+    if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error(`REPLAY_NOT_IDEMPOTENT before=${JSON.stringify(before)} after=${JSON.stringify(after)}`);
+    console.log('REPLAY_LOCAL_STATUS=PASS');
+  } finally {
+    cleanupGeneratedSql();
+  }
 }
