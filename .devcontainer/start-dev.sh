@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CLIENT_DIR="$ROOT_DIR/client"
 PORT="${FORGE_DEV_PORT:-5173}"
 LOG_FILE="/tmp/forge-vite.log"
 PID_FILE="/tmp/forge-vite.pid"
@@ -10,10 +9,10 @@ SYNC_PID_FILE="/tmp/forge-git-sync.pid"
 SYNC_LOG_FILE="/tmp/forge-git-sync.log"
 
 echo "[forge] workspace: $ROOT_DIR"
-echo "[forge] client:    $CLIENT_DIR"
+echo "[forge] app:       runtime"
 echo "[forge] port:      $PORT"
 
-cd "$CLIENT_DIR"
+cd "$ROOT_DIR"
 
 if ! command -v node >/dev/null 2>&1; then
   echo "[forge] ERROR: node is not available in this Codespace."
@@ -31,7 +30,7 @@ fi
 echo "[forge] pnpm: $(pnpm --version)"
 
 if [[ ! -d node_modules ]]; then
-  echo "[forge] node_modules missing; installing workspace dependencies..."
+  echo "[forge] root node_modules missing; installing root workspace dependencies..."
   pnpm install --frozen-lockfile
 fi
 
@@ -59,14 +58,14 @@ if [[ -f "$PID_FILE" ]]; then
 fi
 
 : > "$LOG_FILE"
-echo "[forge] starting Vite..."
-nohup pnpm --filter @metaforge/demo dev -- --host 0.0.0.0 --port "$PORT" --strictPort >"$LOG_FILE" 2>&1 &
+echo "[forge] starting Forge Runtime Vite..."
+nohup pnpm --filter runtime dev -- --host 0.0.0.0 --port "$PORT" --strictPort >"$LOG_FILE" 2>&1 &
 VITE_PID=$!
 echo "$VITE_PID" > "$PID_FILE"
 
 for _ in $(seq 1 45); do
   if ! kill -0 "$VITE_PID" 2>/dev/null; then
-    echo "[forge] ERROR: Vite exited before opening port ${PORT}."
+    echo "[forge] ERROR: Runtime Vite exited before opening port ${PORT}."
     echo "----- /tmp/forge-vite.log -----"
     cat "$LOG_FILE" || true
     echo "--------------------------------"
@@ -75,13 +74,13 @@ for _ in $(seq 1 45); do
 
   if curl -fsS "http://127.0.0.1:${PORT}" >/dev/null 2>&1; then
     echo "[forge] READY: http://127.0.0.1:${PORT}"
-    echo "[forge] Open the forwarded port ${PORT} from the Codespaces Ports tab."
+    echo "[forge] Open forwarded port ${PORT} from the Codespaces Ports tab."
     exit 0
   fi
   sleep 1
 done
 
-echo "[forge] ERROR: Vite process is alive but port ${PORT} did not become ready."
+echo "[forge] ERROR: Runtime Vite is alive but port ${PORT} did not become ready."
 echo "----- /tmp/forge-vite.log -----"
 cat "$LOG_FILE" || true
 echo "--------------------------------"
