@@ -2,7 +2,7 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const ROOT = process.env.FORGE_LIVE_ROOT || 'C:\\alumdoor';
 const SERVICE_HOME = process.env.FORGE_LIVE_SERVICE_HOME || 'C:\\ForgeServices\\Alumdoor';
@@ -10,13 +10,14 @@ const LIVE_BRANCH = process.env.FORGE_LIVE_BRANCH || 'agent-live';
 const REQUEST_PATH = path.join(ROOT, '.forge-live-command.json');
 const STATUS_PATH = path.join(SERVICE_HOME, 'live-command.status.json');
 const SYNC_LOCK = path.join(SERVICE_HOME, 'live-sync.process.lock');
+const VISIBLE_TASK = 'ForgeAlumdoorLiveCommand';
 const ALLOWED_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer']);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function writeStatus(payload) {
   writeFileSync(STATUS_PATH, `${JSON.stringify({
-    format: 'forge-live-command-status/v2',
+    format: 'forge-live-command-status/v3',
     updated_at: new Date().toISOString(),
     ...payload,
   }, null, 2)}\n`, 'utf8');
@@ -47,43 +48,67 @@ function parseVisibleRequest() {
   });
 }
 
-function quoteCmd(value) {
-  return `"${String(value).replaceAll('"', '""')}"`;
+function psQuote(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function encodePowerShell(script) {
+  return Buffer.from(script, 'utf16le').toString('base64');
 }
 
 function launchVisible(request) {
+  if (process.platform !== 'win32') throw new Error('Interactive live command launcher requires Windows');
+
   const worker = path.resolve(process.argv[1]);
   const title = `Forge Live - ${request.adapter}`;
-  const command = [
-    'start',
-    quoteCmd(title),
-    quoteCmd(process.execPath),
-    quoteCmd(worker),
-    '--visible',
-    `--command-id=${request.id}`,
-    `--adapter=${request.adapter}`,
-  ].join(' ');
+  const visibleScript = [
+    `$Host.UI.RawUI.WindowTitle = ${psQuote(title)}`,
+    `& ${psQuote(process.execPath)} ${psQuote(worker)} '--visible' ${psQuote(`--command-id=${request.id}`)} ${psQuote(`--adapter=${request.adapter}`)}`,
+    'exit $LASTEXITCODE',
+  ].join('; ');
+  const visibleArgs = `-NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encodePowerShell(visibleScript)}`;
+
+  const registerScript = [
+    "$ErrorActionPreference = 'Stop'",
+    `$taskName = ${psQuote(VISIBLE_TASK)}`,
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${psQuote(visibleArgs)}`,
+    '$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name',
+    '$principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited',
+    '$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew',
+    'Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings -Force | Out-Null',
+    'Start-ScheduledTask -TaskName $taskName',
+    'Write-Output "FORGE_LIVE_VISIBLE_TASK_STARTED name=$taskName user=$identity"',
+  ].join('; ');
 
   writeStatus({
     status: 'LAUNCHING_VISIBLE',
     command_id: request.id,
     action: request.action,
     adapter: request.adapter,
+    visible_console: true,
+    launch_mode: 'interactive_scheduled_task',
+    task_name: VISIBLE_TASK,
   });
 
-  const launcher = spawn('cmd.exe', ['/d', '/s', '/c', command], {
+  const result = spawnSync('powershell.exe', [
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-EncodedCommand',
+    encodePowerShell(registerScript),
+  ], {
     cwd: ROOT,
-    detached: true,
-    windowsHide: false,
-    stdio: 'ignore',
-    env: {
-      ...process.env,
-      FORGE_LIVE_ROOT: ROOT,
-      FORGE_LIVE_SERVICE_HOME: SERVICE_HOME,
-      FORGE_LIVE_BRANCH: LIVE_BRANCH,
-    },
+    encoding: 'utf8',
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
-  launcher.unref();
+
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    const detail = `${result.stderr || ''}${result.stdout || ''}`.trim();
+    throw new Error(`Could not start interactive live command task${detail ? `: ${detail}` : ''}`);
+  }
 }
 
 async function ensureSyncRunning() {
@@ -116,6 +141,8 @@ async function runVisible(request) {
     adapter: request.adapter,
     log_path: logPath,
     visible_console: true,
+    launch_mode: 'interactive_scheduled_task',
+    task_name: VISIBLE_TASK,
   });
 
   process.stdout.write(`FORGE_LIVE_COMMAND=${request.id}\r\n`);
@@ -158,6 +185,8 @@ async function runVisible(request) {
       exit_code: exitCode,
       log_path: logPath,
       visible_console: true,
+      launch_mode: 'interactive_scheduled_task',
+      task_name: VISIBLE_TASK,
     });
     process.stderr.write(`\r\nFORGE_LIVE_COMMAND_FAILED exit=${exitCode}\r\n`);
     process.exitCode = exitCode;
@@ -172,6 +201,8 @@ async function runVisible(request) {
     exit_code: 0,
     log_path: logPath,
     visible_console: true,
+    launch_mode: 'interactive_scheduled_task',
+    task_name: VISIBLE_TASK,
   });
   process.stdout.write('\r\nFORGE_LIVE_COMMAND_PASS\r\n');
 }
@@ -198,6 +229,8 @@ main().catch(async (error) => {
       adapter: request?.adapter || null,
       error: error?.message || String(error),
       visible_console: process.argv.includes('--visible'),
+      launch_mode: 'interactive_scheduled_task',
+      task_name: VISIBLE_TASK,
     });
   } catch {}
   console.error(error?.stack || error);
