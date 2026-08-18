@@ -4,20 +4,17 @@ import { LinkControl, type ControlRegistry, type FieldServices } from "@metaforg
 import { toast } from "@metaforge/ui";
 import type { Json } from "./model.js";
 
-const SUPPLIER_OPTION_PREFIX = "__alumdoor_supplier__:";
+const SUPPLIER_OPTION_PREFIX = "NCC · ";
 
 function supplierOptionValue(name: string): string {
-  return `${SUPPLIER_OPTION_PREFIX}${encodeURIComponent(name)}`;
+  return `${SUPPLIER_OPTION_PREFIX}${name}`;
 }
 
 function supplierNameFromOption(value: unknown): string | null {
   const raw = String(value ?? "");
-  if (!raw.startsWith(SUPPLIER_OPTION_PREFIX)) return null;
-  try {
-    return decodeURIComponent(raw.slice(SUPPLIER_OPTION_PREFIX.length));
-  } catch {
-    return raw.slice(SUPPLIER_OPTION_PREFIX.length);
-  }
+  return raw.startsWith(SUPPLIER_OPTION_PREFIX)
+    ? raw.slice(SUPPLIER_OPTION_PREFIX.length).trim()
+    : null;
 }
 
 function salesCounterpartyServices(services: FieldServices): FieldServices {
@@ -52,10 +49,16 @@ function salesCounterpartyServices(services: FieldServices): FieldServices {
       const customerNames = new Set(customers.map((row) => row.value));
       const supplierOptions = suppliers
         .filter((row) => row.value && !customerNames.has(row.value))
-        .map((row) => ({
-          value: supplierOptionValue(row.value),
-          description: `NCC · ${row.description || row.value}`,
-        }));
+        .map((row) => {
+          const display = supplierOptionValue(row.value);
+          return {
+            value: display,
+            // Keep primary === value so the shared Link formatter does not render a second
+            // technical token underneath. Supplier naming is supplier_name, so this is the
+            // human-readable identity the operator expects to see.
+            description: display,
+          };
+        });
       return [...customers, ...supplierOptions];
     },
   };
