@@ -43,13 +43,28 @@ const identity=(v)=>key(v).replace(/\s*(?:\+?84|0)[\d\s().-]{7,}$/u,'').replace(
 const sha256=(file)=>crypto.createHash('sha256').update(readFileSync(file)).digest('hex');
 
 const records=new Map();
-const conflicts=[];
+const unresolvedConflicts=[];
+let resolvedRetailOverrides=0;
 let explicitRows=0, monthlyRows=0, excludedSuppliers=0, excludedUngrouped=0;
 function upsert(id,name,group,source){
   if(!id||!name)return;
   let rec=records.get(id);
   if(!rec){rec={name,group:'',monthly:false,sources:[]};records.set(id,rec);}
-  if(group&&rec.group&&rec.group!==group){conflicts.push({identity:id,group_a:rec.group,group_b:group,source});return;}
+  if(group&&rec.group&&rec.group!==group){
+    const pair=new Set([rec.group,group]);
+    // DS KH-NCC contains one duplicate identity typed once as generic KH and once
+    // as the more specific KH LẺ. Preserve the specific retail classification;
+    // all other disagreements remain hard blockers. Evidence records source rows,
+    // never the customer name, because Actions logs are public.
+    if(pair.size===2&&pair.has('Đại lý')&&pair.has('Lẻ')){
+      rec.group='Lẻ';
+      resolvedRetailOverrides++;
+      rec.sources.push(`resolved-retail:${source}`);
+      return;
+    }
+    unresolvedConflicts.push({group_a:rec.group,group_b:group,source});
+    return;
+  }
   if(group&&!rec.group)rec.group=group;
   if(source.startsWith('month:'))rec.monthly=true;
   rec.sources.push(source);
@@ -72,13 +87,11 @@ for(const sheet of book.SheetNames.filter((n)=>/^T\d{1,2}\.20\d{2}$/i.test(n))){
   for(let i=1;i<m.length;i++){
     const name=clean(m[i]?.[ci]),id=identity(name);if(!id)continue;
     monthlyRows++;
-    // A known retail classification wins. Otherwise an identity appearing on an
-    // actual sales-month sheet is authoritative evidence that it is a Customer.
     upsert(id,name,'',`month:${sheet}:${i+1}`);
     const rec=records.get(id);if(rec&&!rec.group)rec.group='Đại lý';
   }
 }
-if(conflicts.length)throw new Error(`CODESPACE_CUSTOMER_CLASSIFICATION_CONFLICT count=${conflicts.length}`);
+if(unresolvedConflicts.length)throw new Error(`CODESPACE_CUSTOMER_CLASSIFICATION_CONFLICT count=${unresolvedConflicts.length}`);
 
 const payload=[];
 for(const [id,rec] of records){
@@ -102,9 +115,9 @@ const statuses=(dry?.rows??[]).reduce((m,r)=>(m[r.status]=(m[r.status]??0)+1,m),
 const blocked=(dry?.rows??[]).filter((r)=>!['READY_CREATE','DUPLICATE_EXACT'].includes(r.status));
 const ready=Number(statuses.READY_CREATE??0), exact=Number(statuses.DUPLICATE_EXACT??0);
 const evidencePath=path.resolve(evidenceArg);mkdirSync(path.dirname(evidencePath),{recursive:true});
-const evidence={format:'codespace-customer-from-transactions/v1',captured_at:new Date().toISOString(),source:{file:path.basename(txPath),sha256:sha256(txPath),sheets:book.SheetNames.length,explicit_rows:explicitRows,monthly_rows:monthlyRows},canonical_rows:payload.length,groups:{dealer:payload.filter((r)=>r.values.price_group==='Đại lý').length,retail:payload.filter((r)=>r.values.price_group==='Lẻ').length},excluded:{suppliers:excludedSuppliers,ungrouped:excludedUngrouped},preflight:{ready,exact,blocked:blocked.length,statuses},records:payload};
+const evidence={format:'codespace-customer-from-transactions/v1',captured_at:new Date().toISOString(),source:{file:path.basename(txPath),sha256:sha256(txPath),sheets:book.SheetNames.length,explicit_rows:explicitRows,monthly_rows:monthlyRows},canonical_rows:payload.length,groups:{dealer:payload.filter((r)=>r.values.price_group==='Đại lý').length,retail:payload.filter((r)=>r.values.price_group==='Lẻ').length},resolved:{retail_overrides:resolvedRetailOverrides},excluded:{suppliers:excludedSuppliers,ungrouped:excludedUngrouped},preflight:{ready,exact,blocked:blocked.length,statuses},records:payload};
 const save=()=>writeFileSync(evidencePath,`${JSON.stringify(evidence,null,2)}\n`,'utf8');save();
-console.log(`CODESPACE_CUSTOMER_PREFLIGHT canonical=${payload.length} dealer=${evidence.groups.dealer} retail=${evidence.groups.retail} ready=${ready} exact=${exact} blocked=${blocked.length} excluded_ungrouped=${excludedUngrouped}`);
+console.log(`CODESPACE_CUSTOMER_PREFLIGHT canonical=${payload.length} dealer=${evidence.groups.dealer} retail=${evidence.groups.retail} ready=${ready} exact=${exact} blocked=${blocked.length} resolved_retail=${resolvedRetailOverrides} excluded_ungrouped=${excludedUngrouped}`);
 if(blocked.length)throw new Error(`CODESPACE_CUSTOMER_PREFLIGHT_BLOCKED count=${blocked.length}`);
 if(!apply){console.log('CODESPACE_CUSTOMER_DRY_RUN_PASS writes=0');process.exit(0);}
 
