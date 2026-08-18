@@ -2,6 +2,7 @@
 
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const serviceHome = process.env.ALUMDOOR_SERVICE_HOME || "C:\\ForgeServices\\Alumdoor";
 const maintenanceFile =
@@ -11,6 +12,7 @@ const deskMaintenanceFile =
 
 const action = (process.argv[2] || "status").toLowerCase();
 const scope = (process.argv[3] || "all").toLowerCase();
+const managedServices = ["ForgeAlumdoorBackend", "ForgeAlumdoorDesk"];
 
 function installed() {
   return existsSync(serviceHome);
@@ -18,6 +20,47 @@ function installed() {
 
 function statusLine() {
   return `ALUMDOOR_RUNTIME_MAINTENANCE installed=${installed()} backend=${existsSync(maintenanceFile)} desk=${existsSync(deskMaintenanceFile)} home=${serviceHome}`;
+}
+
+function recycleManagedServicesUnderMaintenance() {
+  if (process.platform !== "win32") return;
+
+  // The service hosts normally notice the flag and terminate their managed
+  // children themselves. If a descendant (notably workerd) survives that
+  // transition, the bootstrap runner cannot safely quiesce the D1 runtime.
+  // Recycle only the two known WinSW services while the maintenance flags are
+  // already present. On restart the hosts see maintenance immediately and do
+  // not respawn Worker/Desk children until the matching flag is removed.
+  const names = managedServices.map((name) => `'${name}'`).join(",");
+  const script = [
+    `$names=@(${names})`,
+    "foreach($name in $names){",
+    "  $svc=Get-Service -Name $name -ErrorAction SilentlyContinue",
+    "  if(-not $svc){ continue }",
+    "  if($svc.Status -ne 'Stopped') {",
+    "    Stop-Service -Name $name -Force -ErrorAction Stop",
+    "    (Get-Service -Name $name).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))",
+    "  }",
+    "  Start-Service -Name $name -ErrorAction Stop",
+    "  (Get-Service -Name $name).WaitForStatus('Running',[TimeSpan]::FromSeconds(30))",
+    "  Write-Output ('RECYCLED ' + $name)",
+    "}",
+  ].join("; ");
+
+  const result = spawnSync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+    { encoding: "utf8", windowsHide: true },
+  );
+  if (result.status !== 0) {
+    const output = `${result.stderr || ""}${result.stdout || ""}`.trim();
+    console.error(
+      `ALUMDOOR_RUNTIME_MAINTENANCE_RECYCLE_FAILED ${output || `exit=${result.status}`}`,
+    );
+    process.exit(result.status || 1);
+  }
+  const evidence = String(result.stdout || "").trim().replace(/\r?\n/g, " | ");
+  if (evidence) console.log(`ALUMDOOR_RUNTIME_MAINTENANCE_RECYCLE ${evidence}`);
 }
 
 if (action === "status") {
@@ -38,6 +81,7 @@ if (action === "on") {
   const payload = `maintenance requested ${new Date().toISOString()} pid=${process.pid}\n`;
   writeFileSync(maintenanceFile, payload, "utf8");
   writeFileSync(deskMaintenanceFile, payload, "utf8");
+  recycleManagedServicesUnderMaintenance();
   console.log(`ALUMDOOR_RUNTIME_MAINTENANCE_ON backend=${maintenanceFile} desk=${deskMaintenanceFile}`);
   process.exit(0);
 }
