@@ -10,6 +10,10 @@ const SIDEBAR_GROUPS = new Set([
   "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
   "bao cao", "danh muc", "he thong", "quy kho", "luong",
 ]);
+const ALUMDOOR_SALES_WORKSPACE_KEYS = new Set([
+  "Sales Order",
+  "action:don-ban-thanh-phieu-xuat",
+]);
 const HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong qr", "nhan su & tien luong"]);
 const HR_KEY_ORDER = [
   "Employee", "AlumDoor Pay Profile", "AlumDoor Attendance Day", "AlumDoor Attendance Device",
@@ -46,6 +50,10 @@ export function productNavigation(items: NavItem[]): NavItem[] {
     if (item.key === "catalog") return false;
     const group = normalized(item.group);
     if (HR_GROUPS.has(group)) return HR_KEYS.has(item.key);
+    // Alumdoor sells directly from the order screen. Keep quotation and the raw Delivery Note
+    // callable by deep link/contextual actions, but do not make operators choose between five
+    // overlapping Sales tabs. The workspace itself supplies the separate “Quy trình” tab.
+    if (group === "ban hang") return ALUMDOOR_SALES_WORKSPACE_KEYS.has(item.key);
     return !catalog(item) && SIDEBAR_GROUPS.has(group);
   });
   if (!isAlumdoorSurface()) return visible;
