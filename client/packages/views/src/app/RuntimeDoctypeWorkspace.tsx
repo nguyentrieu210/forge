@@ -6,8 +6,19 @@ import { alumdoorWorkspaceExtension } from "./vertical/alumdoor/workspace-extens
 function activeRuntimeApp(contextAppId?: string): string | undefined {
   const explicit = contextAppId?.trim().toLowerCase();
   if (explicit) return explicit;
-  if (typeof document === "undefined") return undefined;
-  return document.documentElement.dataset.app?.trim().toLowerCase();
+  if (typeof document !== "undefined") {
+    const stamped = document.documentElement.dataset.app?.trim().toLowerCase();
+    if (stamped) return stamped;
+  }
+  if (typeof localStorage !== "undefined") {
+    try {
+      const remembered = localStorage.getItem("metaforge-app")?.trim().toLowerCase();
+      if (remembered) return remembered;
+    } catch {
+      // Private/locked-down browser storage: app identity simply falls through.
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -15,9 +26,9 @@ function activeRuntimeApp(contextAppId?: string): string | undefined {
  *
  * The canonical DoctypeWorkspace is vertical-agnostic. This wrapper selects optional product
  * extensions at the edge from the explicit app identity carried by the provider. The DOM
- * app stamp is also accepted as a runtime fallback because the generic Desk writes it from
- * the installed manifest before mounting the workspace. That keeps Alumdoor's TSX workbench
- * connected even when a host mounts MetaForgeProvider without forwarding appId explicitly.
+ * app stamp is accepted as the primary runtime fallback and the remembered manifest id is a
+ * final fallback for service/Vite restarts where the provider can mount before the stamp is
+ * visible. This keeps Alumdoor's TSX workbench connected without enabling it for other apps.
  */
 export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
   const { appId } = useMetaForge();
