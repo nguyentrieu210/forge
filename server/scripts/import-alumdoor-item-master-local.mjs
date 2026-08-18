@@ -61,12 +61,13 @@ const MANAGED_SCALARS = [
   "disabled",
 ];
 
-// These two flags are retained in the canonical payload contract so historical
-// comparisons remain deterministic, but the current Alumdoor Item DocType no
-// longer exposes them. Sending them through /api/resource is therefore a schema
-// error. Both canonical values are always zero, so omitting them preserves the
-// exact current runtime semantics while keeping old evidence files comparable.
-const API_OMIT_FIELDS = new Set(["is_fixed_asset", "is_sub_contracted_item"]);
+// Historical canonical payloads retain two retired flags and one current hidden
+// server-owned flag. Do not send those through /api/resource: the first two are
+// not in the installed schema and is_stock_item is deliberately server-controlled
+// by the current metadata contract. All canonical source rows in this importer are
+// inventory Items, so the server default (true) is the intended value and is still
+// checked again during post-import verification.
+const API_OMIT_FIELDS = new Set(["is_fixed_asset", "is_sub_contracted_item", "is_stock_item"]);
 function apiItem(item) {
   return Object.fromEntries(Object.entries(item)
     .filter(([field]) => !API_OMIT_FIELDS.has(field))
