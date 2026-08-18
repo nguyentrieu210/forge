@@ -2,10 +2,10 @@
 setlocal
 cd /d C:\alumdoor
 
-node scripts\local-runner\forge-live.mjs deploy-local
+call forge-live.cmd once
 if errorlevel 1 exit /b %errorlevel%
 
-node scripts\local-runner\import-alumdoor-manufacturing-master-local.mjs --apply
+call forge-live.cmd apply manufacturing-master
 if errorlevel 1 exit /b %errorlevel%
 
 echo ALUMDOOR_REMAINING_LOCAL_IMPORT=PASS
