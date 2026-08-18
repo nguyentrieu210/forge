@@ -44,10 +44,11 @@ test('source-complete Draft BOM retains a real component with unresolved qty/UOM
   assert.equal(bom.data.items[1].qty, null);
   assert.equal(bom.data.items[1].uom, null);
   assert.equal(bom.data.items[1].conversion_factor, null);
+  assert.equal(bom.data.items[1].source_value_status, 'PENDING');
   assert.equal(bom.data.items[1].source_pending_reason, 'missing_conversion');
 
   await assert.rejects(
     mutate(kernel, { doctype:'Bill of Materials', name:'BOM-PENDING', document:{...document,bom_status:'Active'}, commandId:'bom-pending-submit', action:'submit', expectedVersion:1 }),
-    /Valid raw material required at row 2|quantity/i,
+    /source-pending component values remain/i,
   );
 });
