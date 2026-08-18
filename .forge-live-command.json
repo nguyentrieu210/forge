@@ -1,6 +1,6 @@
 {
   "format": "forge-live-command/v1",
-  "id": "pricing-retry-20260818-0804c",
+  "id": "customer-import-20260818-0806a",
   "action": "apply",
-  "adapter": "pricing"
+  "adapter": "customer"
 }
