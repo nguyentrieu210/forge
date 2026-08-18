@@ -74,7 +74,7 @@ function launchVisible(request) {
   const launcher = spawn('cmd.exe', ['/d', '/s', '/c', command], {
     cwd: ROOT,
     detached: true,
-    windowsHide: true,
+    windowsHide: false,
     stdio: 'ignore',
     env: {
       ...process.env,
