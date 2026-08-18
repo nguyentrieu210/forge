@@ -37,14 +37,17 @@ for(const name of book.SheetNames){
 const tx=read(txPath);
 const explicit=new Map();
 const monthly=new Map();
+const typeCounts=new Map();
 let explicitRows=0, explicitDealer=0, explicitRetail=0, explicitOther=0, explicitConflicts=0, monthlyRows=0;
 if(tx.Sheets['DS KH-NCC']){
   const m=rows(tx,'DS KH-NCC');
   for(let i=2;i<m.length;i++){
     const name=clean(m[i]?.[0]), id=identity(name), t=key(m[i]?.[2]);
-    if(!id||t.includes('ncc'))continue;
+    if(!id)continue;
+    typeCounts.set(t,(typeCounts.get(t)??0)+1);
+    if(t.includes('ncc'))continue;
     explicitRows++;
-    const g=t==='kh'||t==='dai ly'?'Đại lý':(t.includes('kh le')||t.includes('khach le')?'Lẻ':'');
+    const g=t==='kh'||t==='dai ly'||t==='khach hang'?'Đại lý':(t.includes('kh le')||t.includes('khach le')?'Lẻ':'');
     if(g==='Đại lý')explicitDealer++; else if(g==='Lẻ')explicitRetail++; else explicitOther++;
     const old=explicit.get(id);
     if(old?.group&&g&&old.group!==g) explicitConflicts++;
@@ -63,3 +66,4 @@ for(const s of tx.SheetNames.filter((n)=>/^T\d{1,2}\.20\d{2}$/i.test(n))){
 const union=new Set([...explicit.keys(),...monthly.keys()]);
 let monthlyOnly=0;for(const id of monthly.keys())if(!explicit.has(id))monthlyOnly++;
 console.log(`CUSTOMER_TX_DIAG sheets=${tx.SheetNames.length} explicit_rows=${explicitRows} explicit_unique=${explicit.size} explicit_dealer_rows=${explicitDealer} explicit_retail_rows=${explicitRetail} explicit_other_rows=${explicitOther} explicit_conflicts=${explicitConflicts} monthly_rows=${monthlyRows} monthly_unique=${monthly.size} monthly_only=${monthlyOnly} union_unique=${union.size}`);
+console.log(`CUSTOMER_TX_TYPES ${JSON.stringify(Object.fromEntries([...typeCounts.entries()].sort((a,b)=>b[1]-a[1])))}`);
