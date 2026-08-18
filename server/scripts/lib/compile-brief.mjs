@@ -175,11 +175,17 @@ function compileAction(action, index, doctypeNames) {
     // Compiler của doctype còn trả `unique`/`read_only`; màn thao tác không có hai khái
     // niệm đó, và gửi kèm thì parser của server từ chối cả gói.
     const { fieldname, label, fieldtype, options, required, default: value, description, link_filters } = field;
+    // An action screen's default is always rendered and stored as text (the server contract
+    // is `text(field.default, ..., 160)`, regardless of fieldtype) — unlike a doctype field's
+    // default, which generic-controller.ts assigns straight into a typed document field. Undo
+    // parseField's type coercion here rather than in parseField itself, so doctype fields keep
+    // a properly typed default and action fields keep the text one their contract requires.
+    const actionDefault = value === undefined ? undefined : String(value);
     return {
       fieldname, label, fieldtype,
       ...(options ? { options } : {}),
       ...(required ? { required: true } : {}),
-      ...(value === undefined ? {} : { default: value }),
+      ...(actionDefault === undefined ? {} : { default: actionDefault }),
       ...(description ? { description } : {}),
       ...(link_filters ? { link_filters } : {}),
     };
