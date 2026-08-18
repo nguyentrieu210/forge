@@ -3,13 +3,14 @@ import { appendFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSyn
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const DEFAULT_ROOT = 'C:\\alumdoor';
 const DEFAULT_BRANCH = 'agent-live';
 const DEFAULT_REMOTE = 'origin';
 const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_SERVICE_HOME = 'C:\\ForgeServices\\Alumdoor';
+const ALLOWED_COMMAND_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer']);
 
 function parseArgs(argv) {
   const options = {
@@ -177,6 +178,58 @@ function applyRemote(root, remote, branch, serviceHome, log) {
   return { changed: true, local, remote: remoteSha, files: changedFiles, dependenciesInstalled };
 }
 
+function readCommandRequest(root) {
+  const requestPath = path.join(root, '.forge-live-command.json');
+  if (!existsSync(requestPath)) return null;
+  const request = JSON.parse(readFileSync(requestPath, 'utf8'));
+  if (request?.format !== 'forge-live-command/v1') throw new Error(`Unsupported live command format: ${request?.format}`);
+  if (typeof request.id !== 'string' || !/^[A-Za-z0-9._:-]{8,120}$/.test(request.id)) throw new Error('Invalid live command id');
+  if (request.action !== 'apply') throw new Error(`Unsupported live command action: ${request.action}`);
+  if (!ALLOWED_COMMAND_APPLY.has(request.adapter)) throw new Error(`Unsupported live apply adapter: ${request.adapter}`);
+  return request;
+}
+
+function dispatchPendingCommand(root, serviceHome, branch, log) {
+  const request = readCommandRequest(root);
+  if (!request) return null;
+
+  const markerPath = path.join(serviceHome, 'live-command.last-dispatched.json');
+  if (existsSync(markerPath)) {
+    try {
+      const previous = JSON.parse(readFileSync(markerPath, 'utf8'));
+      if (previous?.command_id === request.id) return null;
+    } catch {}
+  }
+
+  const worker = path.join(root, 'scripts', 'live-sync', 'forge-live-command-worker.mjs');
+  if (!existsSync(worker)) throw new Error(`Live command worker missing: ${worker}`);
+
+  writeJson(markerPath, {
+    format: 'forge-live-command-dispatch/v1',
+    command_id: request.id,
+    action: request.action,
+    adapter: request.adapter,
+    dispatched_at: new Date().toISOString(),
+    sha: git(root, ['rev-parse', 'HEAD']),
+  });
+
+  const child = spawn(process.execPath, [worker], {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+    cwd: root,
+    env: {
+      ...process.env,
+      FORGE_LIVE_ROOT: root,
+      FORGE_LIVE_SERVICE_HOME: serviceHome,
+      FORGE_LIVE_BRANCH: branch,
+    },
+  });
+  child.unref();
+  log(`LIVE_COMMAND_DISPATCHED id=${request.id} action=${request.action} adapter=${request.adapter} worker_pid=${child.pid}`);
+  return request;
+}
+
 function acquireProcessLock(serviceHome) {
   ensureDir(serviceHome);
   const lockPath = path.join(serviceHome, 'live-sync.process.lock');
@@ -234,15 +287,18 @@ async function main() {
       try {
         const result = applyRemote(options.root, options.remote, options.branch, options.serviceHome, log);
         const current = git(options.root, ['rev-parse', 'HEAD']);
+        const command = dispatchPendingCommand(options.root, options.serviceHome, options.branch, log);
         writeStatus(options.serviceHome, {
-          status: 'PASS',
+          status: command ? 'COMMAND_DISPATCHED' : 'PASS',
           root: options.root,
           remote: options.remote,
           branch: options.branch,
           sha: current,
           changed: result.changed,
           changed_files: result.files,
+          command_id: command?.id || null,
         });
+        if (command) stopping = true;
       } catch (error) {
         log(`LIVE_SYNC_RETRY error=${JSON.stringify(error?.message || String(error))}`);
         writeStatus(options.serviceHome, {
