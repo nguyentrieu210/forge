@@ -20,10 +20,12 @@
     {"fieldname":"standard_time_basis","label":"Cơ sở định mức","fieldtype":"Data"},
     {"fieldname":"batch_size","label":"Cỡ mẻ","fieldtype":"Float"},
     {"fieldname":"batch_uom","label":"ĐVT mẻ","fieldtype":"Data"},
+    {"fieldname":"alternate_batch_size","label":"Cỡ mẻ thay thế","fieldtype":"Float"},
+    {"fieldname":"alternate_batch_uom","label":"ĐVT mẻ thay thế","fieldtype":"Data"},
     {"fieldname":"needs_time_definition","label":"Thiếu định mức thời gian","fieldtype":"Check","default":0},
     {"fieldname":"needs_workstation","label":"Thiếu workstation","fieldtype":"Check","default":0},
     {"fieldname":"needs_item_mapping","label":"Thiếu mapping Item/Group","fieldtype":"Check","default":0},
-    {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Data"},
+    {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Small Text"},
     {"fieldname":"source_note","label":"Ghi chú nguồn","fieldtype":"Small Text"},
     {"fieldname":"operations","label":"Công đoạn","fieldtype":"Table","options":"Manufacturing Routing Operation"}
   ],
@@ -32,5 +34,5 @@
     {"role":"Manufacturing Manager","read":true,"write":true,"create":true,"submit":true,"cancel":true,"amend":true,"print":true,"report":true,"export":true,"share":true},
     {"role":"System Manager","read":true,"write":true,"create":true,"submit":true,"cancel":true,"amend":true,"print":true,"report":true,"export":true,"share":true}
   ],
-  "revision": 2
+  "revision": 3
 }
