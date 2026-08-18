@@ -30,8 +30,12 @@ function normalizedText(value: unknown): string {
   return String(value ?? "").normalize("NFC").trim();
 }
 
-function normalizedUom(value: unknown): string {
+function normalizedKey(value: unknown): string {
   return normalizedText(value).toLocaleLowerCase("vi");
+}
+
+function normalizedUom(value: unknown): string {
+  return normalizedKey(value);
 }
 
 const AREA_UOMS = new Set(["m2", "m²", "sqm"]);
@@ -201,9 +205,17 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
 
   const stockUom = normalizedText(item.stock_uom);
   const inventoryMode = normalizedText(item.inventory_mode);
+  const measurementProfile = normalizedText(item.measurement_profile);
+  // Canonical Item Gate A deliberately stores finished doors as physical Bộ while their
+  // commercial UOM is m². Older payloads carried inventory_mode; the current canonical
+  // payload carries measurement_profile. Treat either field as the same area-door authority
+  // so existing local D1 data does not need a destructive re-import just to sell in m².
+  const isAreaFinished = [inventoryMode, measurementProfile]
+    .some((value) => normalizedKey(value) === "thành phẩm theo m2");
+  const effectiveInventoryMode = inventoryMode || (isAreaFinished ? "Thành phẩm theo m2" : "");
   const explicitDoorType = normalizedText(item.door_type);
   const effectiveDoorType = explicitDoorType
-    || (inventoryMode === "thành phẩm theo m2" ? (inferDoorType(undefined, item.item_group) ?? "") : "");
+    || (isAreaFinished ? (inferDoorType(undefined, item.item_group) ?? "") : "");
   const defaultSalesUom = normalizedText(item.default_sales_uom) || stockUom;
   const conversions = Array.isArray(item.uom_conversions)
     ? item.uom_conversions.filter((row): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
@@ -221,7 +233,7 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   // Cửa bán m² nhưng tồn Bộ có hệ số theo TỪNG kích thước dòng, nên Item không được phép
   // khai một conversion tĩnh. Vẫn mở ĐVT bán và tra giá/m²; conversion thật sẽ được máy
   // tính cửa chụp sau khi có rộng, cao và số bộ.
-  const dynamicAreaToSet = inventoryMode === "Thành phẩm theo m2"
+  const dynamicAreaToSet = isAreaFinished
     && AREA_UOMS.has(normalizedUom(defaultSalesUom))
     && SET_UOMS.has(normalizedUom(stockUom));
   if (dynamicAreaToSet && defaultSalesUom && !factorByUom.has(defaultSalesUom)) {
@@ -334,8 +346,8 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
     item_code: itemCode,
     item_group: normalizedText(item.item_group),
     door_type: effectiveDoorType || null,
-    inventory_mode: inventoryMode,
-    measurement_profile: normalizedText(item.measurement_profile) || null,
+    inventory_mode: effectiveInventoryMode,
+    measurement_profile: measurementProfile || null,
     min_area_sqm: Number(item.min_area_sqm ?? 0) || 0,
     purchase_kg_per_m2: positive(item.purchase_kg_per_m2),
     leaf_divisor_m: positive(item.leaf_divisor_m),
