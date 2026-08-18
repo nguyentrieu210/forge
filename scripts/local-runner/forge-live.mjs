@@ -29,12 +29,18 @@ if (process.platform !== "win32") {
 }
 
 function run(program, args, { cwd = repoRoot, env, capture = false, allowFailure = false } = {}) {
+  const windowsCommandShim = process.platform === "win32" && /\.(?:cmd|bat)$/i.test(program);
   const result = spawnSync(program, args, {
     cwd,
     env: { ...process.env, ...env },
     encoding: "utf8",
     stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
     windowsHide: true,
+    // Node cannot execute Windows .cmd/.bat shims directly on every supported
+    // Windows/Node combination (it can return EINVAL before the child starts).
+    // Only those shims go through ComSpec; native executables such as git.exe
+    // and sc.exe remain direct child processes.
+    shell: windowsCommandShim,
   });
   if (result.error) throw result.error;
   if (!allowFailure && result.status !== 0) {
