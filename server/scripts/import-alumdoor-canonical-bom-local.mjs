@@ -174,7 +174,7 @@ async function getItem(code) {
   if (!result.response.ok) throw new Error(`GET Item ${code} failed (${result.response.status}): ${result.text}`);
   return dataOf(result.body);
 }
-function apiBom(bom) {
+function apiBom(bom, modified) {
   return {
     company: 'ALUMDOOR',
     item: bom.item,
@@ -183,11 +183,31 @@ function apiBom(bom) {
     bom_status: 'Draft',
     items: bom.lines.map(apiLine),
     remarks: `Alumdoor canonical source-complete ${bom.import_fingerprint}`,
+    ...(modified ? { modified } : {}),
   };
 }
 function importerManaged(doc) {
   const remarks = clean(doc?.remarks);
   return remarks.startsWith('Alumdoor canonical Gate B ') || remarks.startsWith('Alumdoor canonical source-complete ');
+}
+async function updateBomDraft(name, bom) {
+  const url = `/api/resource/${encodeURIComponent('Bill of Materials')}/${encodeURIComponent(name)}`;
+  let last = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const current = await getBom(name);
+    const modified = clean(current?.modified);
+    if (!modified) throw new Error(`BOM ${name} update requires current modified token`);
+    const result = await request(url, { method:'PUT', body:apiBom(bom, modified) });
+    if (result.response.ok) return result.body;
+    last = result;
+    const mismatch = [409,417].includes(result.response.status)
+      && /TimestampMismatchError|VERSION_CONFLICT|document changed after it was loaded/i.test(result.text);
+    if (!mismatch || attempt === 3) {
+      throw new Error(`PUT ${url} failed (${result.response.status}): ${result.text}`);
+    }
+    console.log(`ALUMDOOR_BOM_PUT_RETRY name=${name} attempt=${attempt} reason=timestamp_mismatch`);
+  }
+  throw new Error(`PUT ${url} failed (${last?.response?.status ?? 'unknown'}): ${last?.text ?? ''}`);
 }
 
 await login();
@@ -264,7 +284,7 @@ for (const plan of plans) {
     const body=await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}`,{method:'POST',body:apiBom(plan.bom)});
     const doc=dataOf(body); created.push({item:plan.bom.item,name:doc?.name??null,import_fingerprint:plan.bom.import_fingerprint});
   } else {
-    const body=await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}/${encodeURIComponent(plan.existing.name)}`,{method:'PUT',body:apiBom(plan.bom)});
+    const body=await updateBomDraft(plan.existing.name, plan.bom);
     const doc=dataOf(body); updated.push({item:plan.bom.item,name:doc?.name??plan.existing.name,import_fingerprint:plan.bom.import_fingerprint});
   }
 }
