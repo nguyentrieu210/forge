@@ -43,14 +43,12 @@ if [[ -f "$ROOT_DIR/.devcontainer/auto-sync-github.sh" ]]; then
   fi
 fi
 
-if curl -fsS "http://127.0.0.1:${PORT}" >/dev/null 2>&1; then
-  echo "[forge] preview already running: http://127.0.0.1:${PORT}"
-  exit 0
-fi
-
+# Always stop the preview process recorded by the previous startup. This is
+# intentional: older Codespaces may still be running @metaforge/demo on 5173.
 if [[ -f "$PID_FILE" ]]; then
   OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
   if [[ -n "$OLD_PID" ]] && kill -0 "$OLD_PID" 2>/dev/null; then
+    echo "[forge] stopping stale preview pid $OLD_PID..."
     kill "$OLD_PID" 2>/dev/null || true
     sleep 1
   fi
