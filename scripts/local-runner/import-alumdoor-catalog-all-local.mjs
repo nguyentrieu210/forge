@@ -14,8 +14,9 @@ const warehouse = path.join(root, 'scripts', 'local-runner', 'import-alumdoor-wa
 const manufacturing = path.join(root, 'scripts', 'local-runner', 'import-alumdoor-manufacturing-master-local.mjs');
 const itemSource = path.join(root, 'local-imports', 'alumdoor-item-source-records.json');
 const includeLayer0 = process.env.FORGE_CATALOG_INCLUDE_LAYER0 === '1';
+const failures = [];
 
-function run(label, args, extraEnv = {}) {
+function execStep(label, args, extraEnv = {}, { required = false } = {}) {
   console.log(`ALUMDOOR_CATALOG_ALL_STEP=RUNNING step=${label}`);
   const result = spawnSync(process.execPath, args, {
     cwd: root,
@@ -24,27 +25,42 @@ function run(label, args, extraEnv = {}) {
     windowsHide: true,
     stdio: 'inherit',
   });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`catalog-all step failed: ${label} exit=${result.status}`);
+  if (result.error) {
+    console.error(`ALUMDOOR_CATALOG_ALL_STEP=FAILED step=${label} error=${JSON.stringify(result.error.message)}`);
+    if (required) throw result.error;
+    failures.push(`${label}:spawn`);
+    return false;
+  }
+  if (result.status !== 0) {
+    console.error(`ALUMDOOR_CATALOG_ALL_STEP=FAILED step=${label} exit=${result.status}`);
+    if (required) throw new Error(`catalog-all prerequisite failed: ${label} exit=${result.status}`);
+    failures.push(`${label}:exit=${result.status}`);
+    return false;
+  }
   console.log(`ALUMDOOR_CATALOG_ALL_STEP=PASS step=${label}`);
+  return true;
 }
 
-// Layer0 uses direct D1 and requires the local runtime to be quiesced. The remaining
-// catalog convergence is API-safe and must not be blocked just because Desk/backend
-// are actively serving the operator. Layer0 can still be requested explicitly with
-// FORGE_CATALOG_INCLUDE_LAYER0=1 when the runtime has been stopped intentionally.
-if (includeLayer0) run('layer0', [runner, 'layer0']);
+// Layer0 uses direct D1 and is intentionally opt-in while the operator is serving Desk/backend.
+if (includeLayer0) execStep('layer0', [runner, 'layer0']);
 else console.log('ALUMDOOR_CATALOG_ALL_STEP=SKIP step=layer0 reason=direct-d1-runtime-active-safe-default');
 
-// Dependency order for remaining catalogs: units/items -> storage/parties -> commercial masters -> BOM -> production.
-run('uom', [runner, 'uom']);
-run('item-master', [runner, 'item-master', `--source=${itemSource}`]);
-run('warehouse-master', [warehouse, '--apply'], { FORGE_LIVE_BRANCH: 'main' });
-run('reason-master', [runner, 'reason-master']);
-run('customer', [runner, 'customer']);
-run('supplier-master', [supplier, '--apply'], { FORGE_LIVE_BRANCH: 'main' });
-run('pricing', [runner, 'pricing']);
-run('bom', [runner, 'bom']);
-run('manufacturing-master', [manufacturing, '--apply'], { FORGE_LIVE_BRANCH: 'main' });
+// BOM and the commercial masters depend on canonical UOM + Item, so only these two are hard prerequisites.
+execStep('uom', [runner, 'uom'], {}, { required: true });
+execStep('item-master', [runner, 'item-master', `--source=${itemSource}`], {}, { required: true });
 
-console.log(`ALUMDOOR_CATALOG_ALL_IMPORT_PASS layer0=${includeLayer0 ? '1' : 'skipped'} uom=1 item_master=1 warehouses=3 reason_master=1 customer=1 suppliers=22 pricing=1 bom=1 manufacturing=1`);
+// From here every domain is independent enough to attempt. One bad catalog must not block Customer/NCC/BOM.
+execStep('warehouse-master', [warehouse, '--apply'], { FORGE_LIVE_BRANCH: 'main' });
+execStep('reason-master', [runner, 'reason-master']);
+execStep('customer', [runner, 'customer']);
+execStep('supplier-master', [supplier, '--apply'], { FORGE_LIVE_BRANCH: 'main' });
+execStep('pricing', [runner, 'pricing']);
+execStep('bom', [runner, 'bom']);
+execStep('manufacturing-master', [manufacturing, '--apply'], { FORGE_LIVE_BRANCH: 'main' });
+
+if (failures.length) {
+  console.error(`ALUMDOOR_CATALOG_ALL_IMPORT_PARTIAL failed_steps=${failures.join(',')}`);
+  process.exitCode = 2;
+} else {
+  console.log(`ALUMDOOR_CATALOG_ALL_IMPORT_PASS layer0=${includeLayer0 ? '1' : 'skipped'} uom=1 item_master=1 warehouses=3 reason_master=1 customer=1 suppliers=22 pricing=1 bom=1 manufacturing=1`);
+}
