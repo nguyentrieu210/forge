@@ -305,6 +305,39 @@ export function lineAdjustmentAmount(line: SalesLine): number {
     ?? 0;
 }
 
+/** % chiết khấu mà policy server thực sự chọn, độc lập với % sale đang override trên dòng. */
+export function linePolicyDiscountPercentage(line: SalesLine): number {
+  const snapshots = Array.isArray(line._commercial?.pricing_rule_snapshots)
+    ? line._commercial!.pricing_rule_snapshots!
+    : [];
+  const selected = snapshots.find((snapshot) => text(snapshot.effect_type).toUpperCase() === "DISCOUNT_PERCENT");
+  return numberValue(selected?.discount_percentage) ?? 0;
+}
+
+/** Tên rule chiết khấu để UI giải thích ngắn gọn, không lộ JSON kỹ thuật. */
+export function linePolicyDiscountRule(line: SalesLine): string {
+  const snapshots = Array.isArray(line._commercial?.pricing_rule_snapshots)
+    ? line._commercial!.pricing_rule_snapshots!
+    : [];
+  return text(snapshots.find((snapshot) => text(snapshot.effect_type).toUpperCase() === "DISCOUNT_PERCENT")?.rule_name);
+}
+
+/** Sale được nhập override; khác policy thì vẫn preview nhưng phải hiện cảnh báo/cần duyệt. */
+export function lineDiscountNeedsApproval(line: SalesLine): boolean {
+  if (!text(line.item_code) || !line._commercial) return false;
+  const entered = numberValue(line.discount_percentage ?? line._commercial.discount_percentage) ?? 0;
+  const allowed = linePolicyDiscountPercentage(line);
+  return Math.abs(entered - allowed) > 0.000001;
+}
+
+export function lineCommercialNeedsApproval(line: SalesLine): boolean {
+  const rateApproval = line.rate_requires_approval === true
+    || line.rate_requires_approval === 1
+    || text(line.rate_requires_approval) === "1"
+    || text(line.rate_requires_approval).toLowerCase() === "true";
+  return rateApproval || lineDiscountNeedsApproval(line);
+}
+
 export function pricingSnapshots(lines: SalesLine[]): PricingRuleSnapshot[] {
   const unique = new Map<string, PricingRuleSnapshot>();
   for (const line of lines) {
