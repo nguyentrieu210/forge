@@ -13,7 +13,8 @@ Forge là nền tảng ERP/enterprise operating platform metadata-driven, multi-
 7. `skills/forge-enterprise-completion/SKILL.md` — execution policy cấp platform/domain/vertical cho agent.
 8. `skills/forge-ui-change-routing/SKILL.md` — route thay đổi UI về đúng owner/source-of-truth.
 9. `skills/forge-ui-design/SKILL.md` — thiết kế/polish/review operational UI và custom TSX sau khi đã route đúng owner.
-10. Tài liệu domain/vertical/evidence liên quan trực tiếp tới task.
+10. `skills/forge-alumdoor-local-deploy/SKILL.md` — deploy code `agent-live` xuống `C:\alumdoor`, build/restart/health local và giữ nguyên D1.
+11. Tài liệu domain/vertical/evidence liên quan trực tiếp tới task.
 
 Không suy live state từ tài liệu cũ, tên branch, số PR, release note hay capability snapshot. Khi có mâu thuẫn: **exact code + migration + tests + GitHub state thắng prose**.
 
