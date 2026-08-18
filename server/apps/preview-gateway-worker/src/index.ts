@@ -3,11 +3,39 @@ interface Env {
   TENANT: Fetcher;
 }
 
+const PREVIEW_PASSWORD_SHA256 = "e15791cb18f4d4f74115b62b307dc0b3ef52e5e96e2d38ef7b1ea683dec69394";
+
 function shouldProxy(pathname: string): boolean {
   return pathname.startsWith("/api/")
     || pathname.startsWith("/files/")
     || pathname.startsWith("/private/")
     || pathname.startsWith("/hooks/");
+}
+
+async function authorized(request: Request): Promise<boolean> {
+  const header = request.headers.get("authorization") ?? "";
+  if (!header.startsWith("Basic ")) return false;
+  try {
+    const decoded = atob(header.slice(6));
+    const separator = decoded.indexOf(":");
+    if (separator < 0) return false;
+    const password = decoded.slice(separator + 1);
+    const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(password));
+    const hex = [...new Uint8Array(bytes)].map((value) => value.toString(16).padStart(2, "0")).join("");
+    return hex === PREVIEW_PASSWORD_SHA256;
+  } catch {
+    return false;
+  }
+}
+
+function challenge(): Response {
+  return new Response("Alumdoor Preview", {
+    status: 401,
+    headers: {
+      "www-authenticate": "Basic realm=\"Alumdoor Preview\", charset=\"UTF-8\"",
+      "cache-control": "no-store",
+    },
+  });
 }
 
 export default {
@@ -22,6 +50,8 @@ export default {
         backend_status: backend.status,
       });
     }
+
+    if (!(await authorized(request))) return challenge();
 
     if (shouldProxy(url.pathname)) return env.TENANT.fetch(request);
 
