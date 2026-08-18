@@ -105,11 +105,13 @@ const viewSourceAliases = [
   ...workspacePackageAliases,
 
   // Explicit subpath aliases remain necessary because packages such as views
-  // intentionally expose multiple dev entry points.
+  // intentionally expose multiple dev entry points. Keep doctype-workspace on
+  // the runtime composition wrapper; aliasing it to canonical DoctypeWorkspace
+  // bypasses product extensions such as Alumdoor's dedicated Sales Order TSX.
   { find: /^@metaforge\/views\/provider$/, replacement: viewSource("container/provider") },
   { find: /^@metaforge\/views\/registry$/, replacement: viewSource("registry") },
   { find: /^@metaforge\/views\/url-state$/, replacement: viewSource("list/useListState") },
-  { find: /^@metaforge\/views\/doctype-workspace$/, replacement: viewSource("app/DoctypeWorkspace") },
+  { find: /^@metaforge\/views\/doctype-workspace$/, replacement: viewSource("app/RuntimeDoctypeWorkspace") },
   { find: /^@metaforge\/views\/overview$/, replacement: viewSource("overview/OverviewContainer") },
   { find: /^@metaforge\/views\/catalog$/, replacement: viewSource("catalog/ApplicationCatalogContainer") },
   { find: /^@metaforge\/views\/permissions$/, replacement: viewSource("access/PermissionCenter") },
