@@ -1,0 +1,21 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-alumdoor-preview",
+  "main": "src/index.ts",
+  "workers_dev": true,
+  "preview_urls": false,
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 }
+  },
+  "assets": {
+    "directory": "../gateway-worker/public",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+  "services": [
+    { "binding": "TENANT", "service": "cloudforge-alumdoor-preview-tenant" }
+  ]
+}

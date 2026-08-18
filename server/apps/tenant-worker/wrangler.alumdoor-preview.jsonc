@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudforge-alumdoor-preview-tenant",
+  "main": "src/index-alumdoor-preview.ts",
+  "workers_dev": true,
+  "preview_urls": false,
+  "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "placement": { "mode": "smart" },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 }
+  },
+  "vars": {
+    "TENANT_ID": "preview",
+    "AUTH_MODE": "development",
+    "PUBLIC_ORIGIN": "__PREVIEW_GATEWAY_ORIGIN__",
+    "JWT_ISSUER": "cloudforge-preview",
+    "JWT_AUDIENCE": "cloudforge-preview-api"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "migrations_dir": "../../migrations/tenant"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES" }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "AGGREGATES", "class_name": "AggregateCoordinator" }
+    ]
+  },
+  "migrations": [
+    { "tag": "preview-v1", "new_sqlite_classes": ["AggregateCoordinator"] }
+  ],
+  "services": [
+    { "binding": "DISPATCHER", "service": "cloudforge-alumdoor-preview-app" }
+  ],
+  "ai": { "binding": "AI" }
+}
