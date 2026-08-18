@@ -44,10 +44,60 @@ need_api() {
   case "$status" in 200|401|403) ;; *) echo "Codespace backend unavailable: HTTP $status" >&2; exit 1;; esac
 }
 
+wrangler_file() {
+  local file="$1"
+  "${PNPM[@]}" --dir "$SERVER_DIR" exec wrangler d1 execute cloudforge-demo \
+    --local \
+    --config apps/tenant-worker/wrangler.jsonc \
+    --file="$file"
+}
+
 need_api
 
 echo "[seed-full] backup local Wrangler state..."
 run_node "$SERVER_DIR/scripts/backup-local-state.mjs"
+
+# Canonical Layer-0 masters are prerequisites for Item creation. In particular,
+# Item validation rejects a row whose Item Group does not already exist. Use the
+# same repo-owned generators/catalogs as the canonical local runner; never invent
+# Codespace-only Item Groups or UOM names.
+echo "[seed-full] canonical Layer0 masters (item groups, colors, material specs, geometry)..."
+COLOR_SQL="$RUN_DIR/layer0-color.sql"
+MATERIAL_SQL="$RUN_DIR/layer0-material-spec.sql"
+GEOMETRY_SQL="$RUN_DIR/layer0-measurement-geometry.sql"
+run_node "$SERVER_DIR/scripts/build-alumdoor-color-correction.mjs" --tenant demo --sql "$COLOR_SQL"
+run_node "$SERVER_DIR/scripts/seed-alumdoor-material-specifications-local.mjs" demo "$MATERIAL_SQL"
+run_node "$SERVER_DIR/scripts/seed-alumdoor-measurement-geometry-local.mjs" demo "$GEOMETRY_SQL"
+for sql in \
+  "$SERVER_DIR/scripts/seed-alumdoor-item-groups-local.sql" \
+  "$COLOR_SQL" \
+  "$MATERIAL_SQL" \
+  "$GEOMETRY_SQL"; do
+  [[ -s "$sql" ]] || { echo "Layer0 SQL missing/empty: $sql" >&2; exit 1; }
+  wrangler_file "$sql"
+done
+
+echo "[seed-full] canonical 19 UOM + reason masters..."
+run_node "$SERVER_DIR/scripts/seed-alumdoor-uom-local.mjs"
+run_node "$SERVER_DIR/scripts/seed-alumdoor-uom-local.mjs"
+run_node "$SERVER_DIR/scripts/backup-alumdoor-uom-local.mjs" "$RUN_DIR/uom-after.json"
+node - "$RUN_DIR/uom-after.json" <<'NODE'
+const fs = require('node:fs');
+const report = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+if (Number(report.canonical_count) !== 19 || Number(report.existing_count) !== 19 || report.records?.some((r) => !r.existed)) {
+  console.error(`UOM prerequisite failed canonical=${report.canonical_count} existing=${report.existing_count}`);
+  process.exit(1);
+}
+console.log('ALUMDOOR_CODESPACE_UOM_VERIFY_PASS canonical=19');
+NODE
+run_node "$SERVER_DIR/scripts/import-alumdoor-reason-master-local.mjs"
+
+# Confirm the exact Item Group that blocked the previous run is now active before
+# spending time rebuilding the 587-row Item payload.
+"${PNPM[@]}" --dir "$SERVER_DIR" exec wrangler d1 execute cloudforge-demo \
+  --local \
+  --config apps/tenant-worker/wrangler.jsonc \
+  --command "SELECT name,disabled FROM master_records WHERE tenant_id='demo' AND record_type='Item Group' AND name='Phụ kiện CN Đức';"
 
 echo "[seed-full] canonical Item source -> 587-item master..."
 SOURCE="$ROOT_DIR/local-imports/alumdoor-item-source-records.json"
