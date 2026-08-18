@@ -1,0 +1,135 @@
+name: Codespace Remote Control
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Safe command to run against the Forge Codespace
+        required: true
+        default: status
+        type: choice
+        options:
+          - status
+          - restart
+          - sync-restart
+          - stop
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: forge-codespace-remote-control
+  cancel-in-progress: false
+
+jobs:
+  control:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.number == 991 &&
+       github.event.comment.user.login == 'nguyentrieu210' &&
+       startsWith(github.event.comment.body, '/codespace '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.CODESPACES_PAT }}
+      CODESPACE_NAME: bookish-computing-machine-jj999xj7ppj7fprq9
+    steps:
+      - name: Resolve command
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            command="${{ inputs.command }}"
+          else
+            command="$(printf '%s' '${{ github.event.comment.body }}' | awk '{print $2}')"
+          fi
+          case "$command" in
+            status|restart|sync-restart|stop) ;;
+            *) echo "Unsupported command: $command" >&2; exit 2 ;;
+          esac
+          echo "command=$command" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Codespaces credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN" || { echo "Missing repository secret CODESPACES_PAT" >&2; exit 2; }
+          gh auth status
+          gh codespace view -c "$CODESPACE_NAME" --json name,state,repository,displayName
+
+      - name: Start Codespace when needed
+        if: steps.resolve.outputs.command != 'stop'
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state)"
+          if [[ "$state" != "Available" ]]; then
+            echo "Starting Codespace (current state: $state)..."
+            gh api --method POST "/user/codespaces/$CODESPACE_NAME/start" >/dev/null
+            for _ in $(seq 1 90); do
+              state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state)"
+              echo "state=$state"
+              [[ "$state" == "Available" ]] && break
+              sleep 5
+            done
+            [[ "$state" == "Available" ]] || { echo "Codespace did not become available" >&2; exit 1; }
+          fi
+
+      - name: Status
+        if: steps.resolve.outputs.command == 'status'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            cd /workspaces/forge
+            echo "=== git ==="
+            git branch --show-current
+            git rev-parse --short HEAD
+            git status --short
+            echo "=== ports ==="
+            ss -ltnp 2>/dev/null | grep -E ":(5173|8799)\\b" || true
+            echo "=== health ==="
+            curl -sS -o /dev/null -w "frontend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:5173/ || true
+            curl -sS -o /dev/null -w "backend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot || true
+            echo "=== recent logs ==="
+            tail -n 30 /tmp/forge-backend.log 2>/dev/null || true
+            tail -n 30 /tmp/forge-vite.log 2>/dev/null || true
+          '\'''
+
+      - name: Restart Forge
+        if: steps.resolve.outputs.command == 'restart'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''cd /workspaces/forge && bash .devcontainer/start-dev.sh'\'''
+
+      - name: Sync main and restart Forge
+        if: steps.resolve.outputs.command == 'sync-restart'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            set -euo pipefail
+            cd /workspaces/forge
+            if [[ -n "$(git status --porcelain)" ]]; then
+              echo "Refusing to overwrite local edits. Commit/stash them first." >&2
+              git status --short >&2
+              exit 3
+            fi
+            git checkout main
+            git fetch origin main
+            git merge --ff-only origin/main
+            bash .devcontainer/start-dev.sh
+          '\'''
+
+      - name: Stop Codespace
+        if: steps.resolve.outputs.command == 'stop'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace stop -c "$CODESPACE_NAME"
