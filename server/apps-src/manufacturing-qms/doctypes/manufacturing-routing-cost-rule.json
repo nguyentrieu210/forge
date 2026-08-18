@@ -1,0 +1,22 @@
+{
+  "name": "Manufacturing Routing Cost Rule",
+  "module": "Manufacturing",
+  "is_child": true,
+  "fields": [
+    {"fieldname":"sequence","label":"Thứ tự","fieldtype":"Int","required":true,"in_list_view":true},
+    {"fieldname":"operation","label":"Công đoạn","fieldtype":"Link","options":"Operation","required":true,"in_list_view":true},
+    {"fieldname":"execution_mode","label":"Cách thực hiện","fieldtype":"Select","options":"internal\nsubcontract","required":true,"in_list_view":true},
+    {"fieldname":"source_supplier","label":"Nhà cung cấp theo nguồn","fieldtype":"Data","in_list_view":true},
+    {"fieldname":"scope_type","label":"Kiểu phạm vi","fieldtype":"Data"},
+    {"fieldname":"scope_value","label":"Phạm vi áp dụng","fieldtype":"Data","required":true,"in_list_view":true},
+    {"fieldname":"rate_value","label":"Đơn giá nguồn","fieldtype":"Currency","non_negative":true,"in_list_view":true},
+    {"fieldname":"currency","label":"Tiền tệ","fieldtype":"Link","options":"Currency"},
+    {"fieldname":"rate_uom","label":"Cơ sở đơn giá","fieldtype":"Data"},
+    {"fieldname":"calculation_formula","label":"Công thức tính nguyên văn","fieldtype":"Small Text","required":true},
+    {"fieldname":"needs_item_mapping","label":"Thiếu mapping Item/Group","fieldtype":"Check","default":0},
+    {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Small Text","required":true},
+    {"fieldname":"source_note","label":"Ghi chú nguồn","fieldtype":"Small Text"}
+  ],
+  "permissions": [],
+  "revision": 1
+}
