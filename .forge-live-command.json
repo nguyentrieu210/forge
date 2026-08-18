@@ -1,6 +1,6 @@
 {
   "format": "forge-live-command/v1",
-  "id": "customer-import-visible-20260818-0820b",
+  "id": "manufacturing-master-20260818-01",
   "action": "apply",
-  "adapter": "customer"
+  "adapter": "manufacturing-master"
 }
