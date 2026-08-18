@@ -2,10 +2,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const ROOT = process.env.FORGE_LIVE_ROOT || 'C:\\alumdoor';
 const SERVICE_HOME = process.env.FORGE_LIVE_SERVICE_HOME || 'C:\\ForgeServices\\Alumdoor';
+const LIVE_BRANCH = process.env.FORGE_LIVE_BRANCH || 'agent-live';
 const REQUEST_PATH = path.join(ROOT, '.forge-live-command.json');
 const STATUS_PATH = path.join(SERVICE_HOME, 'live-command.status.json');
 const SYNC_LOCK = path.join(SERVICE_HOME, 'live-sync.process.lock');
@@ -39,6 +40,22 @@ async function waitForSyncExit() {
   throw new Error(`Live sync process lock did not clear: ${SYNC_LOCK}`);
 }
 
+async function ensureSyncRunning() {
+  for (let i = 0; i < 20; i += 1) {
+    if (existsSync(SYNC_LOCK)) return;
+    await sleep(100);
+  }
+  const syncScript = path.join(ROOT, 'scripts', 'live-sync', 'forge-live-sync.mjs');
+  if (!existsSync(syncScript)) return;
+  const child = spawn(process.execPath, [syncScript, `--root=${ROOT}`, `--branch=${LIVE_BRANCH}`, '--interval=2000', `--service-home=${SERVICE_HOME}`], {
+    cwd: ROOT,
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+  child.unref();
+}
+
 async function main() {
   const request = readRequest();
   writeStatus({ status: 'RUNNING', command_id: request.id, action: request.action, adapter: request.adapter });
@@ -53,6 +70,7 @@ async function main() {
       ...process.env,
       FORGE_LIVE_ROOT: ROOT,
       FORGE_LIVE_SERVICE_HOME: SERVICE_HOME,
+      FORGE_LIVE_BRANCH: LIVE_BRANCH,
       FORGE_LIVE_COMMAND_ID: request.id,
     },
     encoding: 'utf8',
@@ -64,6 +82,7 @@ async function main() {
   const stderr = String(result.stderr || '');
   const logPath = path.join(SERVICE_HOME, `live-command-${request.id.replace(/[^A-Za-z0-9._-]/g, '_')}.log`);
   writeFileSync(logPath, `${stdout}${stderr}`, 'utf8');
+  await ensureSyncRunning();
 
   if (result.error) throw result.error;
   if (result.status !== 0) {
@@ -92,9 +111,10 @@ async function main() {
   process.stderr.write(stderr);
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   let commandId = null;
   try { commandId = readRequest()?.id || null; } catch {}
+  try { await ensureSyncRunning(); } catch {}
   try {
     writeStatus({ status: 'FAILED', command_id: commandId, error: error?.message || String(error) });
   } catch {}
