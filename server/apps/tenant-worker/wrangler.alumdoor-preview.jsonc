@@ -21,11 +21,15 @@
   "d1_databases": [
     {
       "binding": "DB",
+      "database_name": "cloudforge-alumdoor-preview-tenant-db",
       "migrations_dir": "../../migrations/tenant"
     }
   ],
   "r2_buckets": [
-    { "binding": "FILES" }
+    {
+      "binding": "FILES",
+      "bucket_name": "cloudforge-alumdoor-preview-tenant-files"
+    }
   ],
   "durable_objects": {
     "bindings": [

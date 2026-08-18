@@ -2,6 +2,7 @@ import platformWorker from "./index-cf6.js";
 import type { TenantEnv } from "./env.js";
 import { assertInternalService, D1UserStore } from "../../../packages/auth/src/index.js";
 import { AppInstaller } from "../../../packages/app-registry/src/index.js";
+import type { JsonObject } from "../../../packages/contracts/src/index.js";
 import { D1MetadataStore } from "../../../packages/frappe-model/src/index.js";
 import { jsonResponse, readJson } from "../../../packages/core/src/index.js";
 
@@ -18,17 +19,19 @@ export default {
 
     assertInternalService(request, env.PREVIEW_BOOTSTRAP_TOKEN);
     const tenantId = env.TENANT_ID ?? "preview";
-    const body = await readJson<{ app?: unknown; provision_standard?: boolean }>(request, 4_000_000);
-    if (!body.app) return jsonResponse({ ok: false, message: "app package is required" }, 400);
+    const body = await readJson<JsonObject>(request, 4_000_000);
+    const app = body.app;
+    const provisionStandard = body.provision_standard === true;
+    if (!app) return jsonResponse({ ok: false, message: "app package is required" }, 400);
 
     const now = new Date().toISOString();
     const metadata = new D1MetadataStore(env.DB);
-    if (body.provision_standard) {
+    if (provisionStandard) {
       await metadata.provisionStandardCatalog(tenantId, "preview-bootstrap", now);
     }
     const installer = new AppInstaller(env.DB, metadata, new D1UserStore(env.DB));
-    const result = await installer.install(tenantId, body.app, "preview-bootstrap", now);
-    return jsonResponse({ ok: true, result });
+    const result = await installer.install(tenantId, app, "preview-bootstrap", now);
+    return jsonResponse({ ok: true, result: result as unknown as JsonObject });
   },
 
   scheduled(controller: unknown, env: PreviewEnv, ctx: ExecutionContext): Promise<void> | void {
