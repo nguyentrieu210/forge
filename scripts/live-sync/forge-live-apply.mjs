@@ -9,7 +9,17 @@ import { spawn, spawnSync } from 'node:child_process';
 const ROOT = process.env.FORGE_LIVE_ROOT || 'C:\\alumdoor';
 const SERVICE_HOME = process.env.FORGE_LIVE_SERVICE_HOME || 'C:\\ForgeServices\\Alumdoor';
 const LIVE_BRANCH = process.env.FORGE_LIVE_BRANCH || 'agent-live';
-const ALLOWED = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer']);
+const ALLOWED = new Set([
+  'reason-master',
+  'item-master',
+  'uom',
+  'layer0',
+  'real-purchase',
+  'pricing',
+  'bom',
+  'customer',
+  'manufacturing-master',
+]);
 
 function run(command, args, { cwd, capture = true, allowFailure = false, env } = {}) {
   const result = spawnSync(command, args, {
@@ -142,14 +152,19 @@ async function main() {
     run('git', ['-C', ROOT, 'update-ref', 'refs/remotes/origin/main', liveSha], { capture: false });
 
     log(`LIVE_APPLY_AUTHORITY=PASS adapter=${adapter} sha=${liveSha} remote=local-bare`);
-    const runner = path.join(ROOT, 'scripts', 'local-runner', 'run-local-import.mjs');
-    const result = run(process.execPath, [runner, adapter], {
+    const manufacturingMaster = adapter === 'manufacturing-master';
+    const runner = manufacturingMaster
+      ? path.join(ROOT, 'scripts', 'local-runner', 'import-alumdoor-manufacturing-master-local.mjs')
+      : path.join(ROOT, 'scripts', 'local-runner', 'run-local-import.mjs');
+    const runnerArgs = manufacturingMaster ? [runner, '--apply'] : [runner, adapter];
+    const result = run(process.execPath, runnerArgs, {
       cwd: ROOT,
       capture: false,
       allowFailure: true,
       env: {
         FORGE_LOCAL_EXPECTED_SHA: liveSha,
         FORGE_LOCAL_REPO_ROOT: ROOT,
+        ...(manufacturingMaster ? { FORGE_LIVE_BRANCH: 'main' } : {}),
       },
     });
     if (result.status !== 0) throw new Error(`Guarded live apply failed adapter=${adapter} exit=${result.status}`);
