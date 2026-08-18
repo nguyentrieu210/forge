@@ -38,6 +38,8 @@ function assertUnique(values, label) {
 
 function validate() {
   if (data.authority_policy !== 'repo_source_only_no_invention') throw new Error('AUTHORITY_POLICY_INVALID');
+  if (!Array.isArray(data.source_audit) || data.source_audit.length === 0) throw new Error('SOURCE_AUDIT_REQUIRED');
+  assertUnique(data.source_audit.map((x) => x.path), 'SOURCE_PATH');
   assertUnique(data.operations.map((x) => x.code), 'OPERATION');
   assertUnique(data.routings.map((x) => x.routing_code), 'ROUTING');
   assertUnique(data.workstations.map((x) => x.name), 'WORKSTATION');
@@ -46,7 +48,7 @@ function validate() {
   const workstations = new Set(data.workstations.map((x) => x.name));
 
   for (const op of data.operations) {
-    if (!op.code || !op.name_vi || !op.description || !op.operation_type || !op.time_uom || !op.source_reference) {
+    if (!op.code?.startsWith('OP-') || !op.name_vi || !op.description || !op.operation_type || !op.time_uom || !op.source_reference) {
       throw new Error(`OPERATION_REQUIRED_FIELD: ${op.code || '<unknown>'}`);
     }
     if (op.needs_time_definition && op.default_time != null) throw new Error(`OPERATION_FAKE_TIME_GUARD: ${op.code}`);
@@ -58,7 +60,7 @@ function validate() {
   }
 
   for (const routing of data.routings) {
-    if (!routing.routing_code || !routing.routing_name || !routing.source_reference || !Array.isArray(routing.operations)) {
+    if (!routing.routing_code?.startsWith('RT-') || !routing.routing_name || !routing.source_reference || !Array.isArray(routing.operations) || routing.operations.length === 0) {
       throw new Error(`ROUTING_REQUIRED_FIELD: ${routing.routing_code || '<unknown>'}`);
     }
     if (routing.needs_time_definition && routing.standard_time_value != null) throw new Error(`ROUTING_FAKE_TIME_GUARD: ${routing.routing_code}`);
@@ -68,6 +70,7 @@ function validate() {
     const sequences = routing.operations.map((row) => Number(row.sequence));
     assertUnique(sequences, `SEQUENCE_${routing.routing_code}`);
     if (sequences.some((value) => !Number.isInteger(value) || value <= 0)) throw new Error(`ROUTING_SEQUENCE_INVALID: ${routing.routing_code}`);
+    if (sequences.some((value, index) => index > 0 && value <= sequences[index - 1])) throw new Error(`ROUTING_SEQUENCE_ORDER_INVALID: ${routing.routing_code}`);
 
     for (const row of routing.operations) {
       if (!operations.has(row.operation)) throw new Error(`ROUTING_OPERATION_REF_INVALID: ${routing.routing_code}:${row.operation}`);
@@ -148,38 +151,66 @@ function audit() {
 
 function operationPayload(op) {
   return {
-    operation_code: op.code, operation_name: op.name_vi, description: op.description, operation_type: op.operation_type,
-    time_uom: op.time_uom, default_time: op.default_time, workstation: op.workstation, disabled: op.disabled,
-    needs_time_definition: op.needs_time_definition, needs_workstation: op.needs_workstation,
-    batch_size: op.batch_size ?? null, batch_uom: op.batch_uom ?? null,
-    alternate_batch_size: op.alternate_batch_size ?? null, alternate_batch_uom: op.alternate_batch_uom ?? null,
-    source_reference: op.source_reference, source_time_text: op.source_time_text ?? null, _metadata_revision: 1,
+    operation_name: op.code,
+    operation_name_vi: op.name_vi,
+    description: op.description,
+    operation_type: op.operation_type,
+    time_uom: op.time_uom,
+    default_time: op.default_time,
+    workstation: op.workstation,
+    disabled: op.disabled,
+    needs_time_definition: op.needs_time_definition,
+    needs_workstation: op.needs_workstation,
+    batch_size: op.batch_size ?? null,
+    batch_uom: op.batch_uom ?? null,
+    alternate_batch_size: op.alternate_batch_size ?? null,
+    alternate_batch_uom: op.alternate_batch_uom ?? null,
+    source_reference: op.source_reference,
+    source_time_text: op.source_time_text ?? null,
+    _metadata_revision: 2,
   };
 }
 
 function routingPayload(routing) {
   return {
-    routing_code: routing.routing_code, routing_name: routing.routing_name, item_code: routing.item_code,
-    item_group: routing.item_group, source_identity: routing.source_identity,
-    standard_time_value: routing.standard_time_value, standard_time_uom: routing.standard_time_uom,
-    standard_time_basis: routing.standard_time_basis, batch_size: routing.batch_size ?? null,
-    batch_uom: routing.batch_uom ?? null, alternate_batch_size: routing.alternate_batch_size ?? null,
+    routing_code: routing.routing_code,
+    routing_name: routing.routing_name,
+    item_code: routing.item_code,
+    item_group: routing.item_group,
+    source_identity: routing.source_identity,
+    standard_time_value: routing.standard_time_value,
+    standard_time_uom: routing.standard_time_uom,
+    standard_time_basis: routing.standard_time_basis,
+    batch_size: routing.batch_size ?? null,
+    batch_uom: routing.batch_uom ?? null,
+    alternate_batch_size: routing.alternate_batch_size ?? null,
     alternate_batch_uom: routing.alternate_batch_uom ?? null,
-    needs_time_definition: routing.needs_time_definition, needs_workstation: routing.needs_workstation,
-    needs_item_mapping: routing.needs_item_mapping, source_reference: routing.source_reference,
-    source_note: routing.source_note, is_active: true, _metadata_revision: 2,
+    needs_time_definition: routing.needs_time_definition,
+    needs_workstation: routing.needs_workstation,
+    needs_item_mapping: routing.needs_item_mapping,
+    source_reference: routing.source_reference,
+    source_note: routing.source_note,
+    is_active: true,
+    _metadata_revision: 3,
   };
 }
 
 function childPayload(routing, row) {
   return {
-    sequence: row.sequence, operation: row.operation, workstation: row.workstation ?? null,
-    setup_time: row.setup_time ?? null, run_time: row.run_time ?? null,
-    time_uom: row.time_uom ?? null, time_basis: row.time_basis ?? null,
-    batch_size: row.batch_size ?? null, batch_uom: row.batch_uom ?? null,
+    sequence: row.sequence,
+    operation: row.operation,
+    workstation: row.workstation ?? null,
+    setup_time: row.setup_time ?? null,
+    run_time: row.run_time ?? null,
+    time_uom: row.time_uom ?? null,
+    time_basis: row.time_basis ?? null,
+    batch_size: row.batch_size ?? null,
+    batch_uom: row.batch_uom ?? null,
     operation_cost: row.operation_cost ?? null,
-    needs_time_definition: row.needs_time_definition, needs_workstation: row.needs_workstation,
-    source_reference: routing.source_reference, source_note: routing.source_note ?? null,
+    needs_time_definition: row.needs_time_definition,
+    needs_workstation: row.needs_workstation,
+    source_reference: routing.source_reference,
+    source_note: routing.source_note ?? null,
   };
 }
 
@@ -193,8 +224,12 @@ function buildSql() {
 
   for (const workstation of data.workstations) {
     const payload = {
-      workstation_name: workstation.name, name_vi: workstation.name_vi, description: workstation.description,
-      disabled: workstation.disabled, source_reference: workstation.source_reference, _metadata_revision: 1,
+      workstation_name: workstation.name,
+      name_vi: workstation.name_vi,
+      description: workstation.description,
+      disabled: workstation.disabled,
+      source_reference: workstation.source_reference,
+      _metadata_revision: 1,
     };
     lines.push(`INSERT INTO master_records(tenant_id,record_type,name,disabled,data_json,modified_at) VALUES(${q(tenant)},'Workstation',${q(workstation.name)},${workstation.disabled ? 1 : 0},${jq(payload)},${q(now)}) ON CONFLICT(tenant_id,record_type,name) DO UPDATE SET disabled=excluded.disabled,data_json=excluded.data_json,modified_at=excluded.modified_at WHERE master_records.disabled<>excluded.disabled OR master_records.data_json<>excluded.data_json;`);
   }
@@ -265,21 +300,43 @@ function queryRows(sql) {
 function verificationSql() {
   return `SELECT
     (SELECT COUNT(*) FROM master_records WHERE tenant_id=${q(tenant)} AND record_type='Operation' AND name LIKE 'OP-%') AS operations,
+    (SELECT COUNT(*) FROM master_records WHERE tenant_id=${q(tenant)} AND record_type='Workstation' AND name IN (${data.workstations.map((x) => q(x.name)).join(',')})) AS workstations,
     (SELECT COUNT(*) FROM documents WHERE tenant_id=${q(tenant)} AND doctype='Manufacturing Routing' AND name LIKE 'RT-%') AS routings,
     (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations') AS child_rows,
+    (SELECT COUNT(*) FROM master_records o WHERE o.tenant_id=${q(tenant)} AND o.record_type='Operation' AND o.name LIKE 'OP-%' AND (json_extract(o.data_json,'$.operation_name')<>o.name OR COALESCE(json_extract(o.data_json,'$.operation_name_vi'),'')='')) AS invalid_operation_payload_identity,
+    (SELECT COUNT(*) FROM master_records w WHERE w.tenant_id=${q(tenant)} AND w.record_type='Workstation' AND w.name IN (${data.workstations.map((x) => q(x.name)).join(',')}) AND json_extract(w.data_json,'$.workstation_name')<>w.name) AS invalid_workstation_payload_identity,
     (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records o ON o.tenant_id=c.tenant_id AND o.record_type='Operation' AND o.name=json_extract(c.payload_json,'$.operation') WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' AND o.name IS NULL) AS invalid_operation_refs,
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key LEFT JOIN master_records w ON w.tenant_id=c.tenant_id AND w.record_type='Workstation' AND w.name=json_extract(c.payload_json,'$.workstation') WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' AND json_extract(c.payload_json,'$.workstation') IS NOT NULL AND w.name IS NULL) AS invalid_workstation_refs,
+    (SELECT COUNT(*) FROM master_records o LEFT JOIN master_records w ON w.tenant_id=o.tenant_id AND w.record_type='Workstation' AND w.name=json_extract(o.data_json,'$.workstation') WHERE o.tenant_id=${q(tenant)} AND o.record_type='Operation' AND o.name LIKE 'OP-%' AND json_extract(o.data_json,'$.workstation') IS NOT NULL AND w.name IS NULL) AS invalid_operation_workstation_refs,
     (SELECT COUNT(*) FROM (SELECT c.parent_key,json_extract(c.payload_json,'$.sequence') seq,COUNT(*) n FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' GROUP BY c.parent_key,seq HAVING n>1)) AS duplicate_sequences,
-    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND json_extract(r.payload_json,'$.item_group') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item Group' AND m.name=json_extract(r.payload_json,'$.item_group')) AND NOT EXISTS(SELECT 1 FROM documents g WHERE g.tenant_id=r.tenant_id AND g.doctype='Item Group' AND g.name=json_extract(r.payload_json,'$.item_group'))) AS invalid_item_group_mappings;`;
+    (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND c.fieldname='operations' AND c.idx<>CAST(json_extract(c.payload_json,'$.sequence') AS INTEGER)) AS invalid_sequence_idx,
+    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND json_extract(r.payload_json,'$.item_group') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item Group' AND m.name=json_extract(r.payload_json,'$.item_group')) AND NOT EXISTS(SELECT 1 FROM documents g WHERE g.tenant_id=r.tenant_id AND g.doctype='Item Group' AND g.name=json_extract(r.payload_json,'$.item_group'))) AS invalid_item_group_mappings,
+    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND json_extract(r.payload_json,'$.item_code') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item' AND m.name=json_extract(r.payload_json,'$.item_code')) AND NOT EXISTS(SELECT 1 FROM documents i WHERE i.tenant_id=r.tenant_id AND i.doctype='Item' AND i.name=json_extract(r.payload_json,'$.item_code'))) AS invalid_item_code_mappings;`;
 }
 
 function verifyRows(rows, label) {
   const row = rows[0];
   if (!row) throw new Error(`${label}_EMPTY`);
-  const expected = { operations: data.operations.length, routings: data.routings.length, child_rows: data.routings.reduce((sum, routing) => sum + routing.operations.length, 0) };
+  const expected = {
+    operations: data.operations.length,
+    workstations: data.workstations.length,
+    routings: data.routings.length,
+    child_rows: data.routings.reduce((sum, routing) => sum + routing.operations.length, 0),
+  };
   for (const [key, value] of Object.entries(expected)) {
     if (Number(row[key]) !== value) throw new Error(`${label}_${key.toUpperCase()} expected=${value} actual=${row[key]}`);
   }
-  for (const key of ['invalid_operation_refs', 'duplicate_sequences', 'invalid_item_group_mappings']) {
+  for (const key of [
+    'invalid_operation_payload_identity',
+    'invalid_workstation_payload_identity',
+    'invalid_operation_refs',
+    'invalid_workstation_refs',
+    'invalid_operation_workstation_refs',
+    'duplicate_sequences',
+    'invalid_sequence_idx',
+    'invalid_item_group_mappings',
+    'invalid_item_code_mappings',
+  ]) {
     if (Number(row[key]) !== 0) throw new Error(`${label}_${key.toUpperCase()}=${row[key]}`);
   }
   console.log(`${label}_STATUS=PASS ${Object.entries(row).map(([key, value]) => `${key}=${value}`).join(' ')}`);
