@@ -9,6 +9,7 @@ import {
   type Doc,
   type DocField,
   type DocTypeMeta,
+  type Filters,
 } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
 import {
@@ -40,6 +41,7 @@ import {
   hydrateSalesLines,
   isAreaDoor,
   lineBillableArea,
+  lineCommercialNeedsApproval,
   money,
   newLine,
   normalized,
@@ -69,6 +71,17 @@ type SalesCaps = {
   cancel?: boolean;
   amend?: boolean;
 };
+
+const CUSTOMER_CONTEXT_FIELDS = [
+  "customer_group",
+  "contact_person",
+  "phone",
+  "install_province",
+  "install_ward",
+  "install_address",
+  "payment_terms",
+  "selling_price_list",
+] as const;
 
 function itemSearchScore(option: { value: string; description?: string }, query: string): number {
   const needle = normalized(query);
@@ -153,6 +166,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const [headerError, setHeaderError] = useState("");
   const headerErrorRef = useRef("");
   const [documentPreviewPending, setDocumentPreviewPending] = useState(0);
+  const [customerHydrating, setCustomerHydrating] = useState(false);
+  const customerHydrationSeq = useRef(0);
   const [caps, setCaps] = useState<SalesCaps>({});
   const [productionCaps, setProductionCaps] = useState<SalesCaps>({});
   const [sourceModified, setSourceModified] = useState("");
@@ -299,15 +314,24 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const setHeaderField = useCallback((fieldname: string, value: unknown, preview = false) => {
     markDocumentChanged();
     const current = headerRef.current;
-    const next = {
+    const isCustomer = fieldname === "customer";
+    const customerSeq = isCustomer ? ++customerHydrationSeq.current : 0;
+    const next: Json = {
       ...current,
       [fieldname]: value,
       ...(fieldname === "payment_method" && text(value) !== "Chuyển khoản" ? { bank_account: undefined } : {}),
     };
-    if (commercialHeaderSignature(current) !== commercialHeaderSignature(next)) markActiveLinesForReprice();
+    if (isCustomer) {
+      for (const customerField of CUSTOMER_CONTEXT_FIELDS) next[customerField] = undefined;
+      setCustomerHydrating(true);
+    }
+    if (!isCustomer && commercialHeaderSignature(current) !== commercialHeaderSignature(next)) markActiveLinesForReprice();
     setHeaderState(next);
     setDirty(true);
-    if (!preview) return;
+    if (!preview) {
+      if (isCustomer && customerSeq === customerHydrationSeq.current) setCustomerHydrating(false);
+      return;
+    }
     setHeaderPreviewError("");
     const revision = beginDocumentPreview();
     void requestDocumentPreview(next, fieldname)
@@ -320,7 +344,10 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         if (!canApplySalesOrderDocumentPreview(previewClock.current, revision)) return;
         setHeaderPreviewError(mapError(error).message);
       })
-      .finally(finishDocumentPreview);
+      .finally(() => {
+        finishDocumentPreview();
+        if (isCustomer && customerSeq === customerHydrationSeq.current) setCustomerHydrating(false);
+      });
   }, [applyInteractiveDocumentPreview, beginDocumentPreview, finishDocumentPreview, markActiveLinesForReprice, markDocumentChanged, requestDocumentPreview, setHeaderPreviewError, setHeaderState]);
 
   const requestClose = useCallback(() => {
@@ -364,6 +391,21 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         if (!defaults.delivery_date) defaults.delivery_date = today();
         if (!defaults.currency) defaults.currency = boot.sysdefaults.currency || "VND";
         const existingDoc = existingResult?.doc as Json | undefined;
+
+        if (!existingDoc && !text(defaults.responsible_person) && salesMeta.fields.some((field) => field.fieldname === "responsible_person")) {
+          try {
+            const employees = await adapter.getList("Employee", {
+              fields: ["name", "employee_name", "user_id", "employee_status"],
+              filters: [["user_id", "=", boot.user], ["employee_status", "=", "Đang làm việc"]] as Filters,
+              pageLength: 1,
+            });
+            const employeeName = text(employees[0]?.name);
+            if (employeeName) defaults.responsible_person = employeeName;
+          } catch {
+            // No Employee mapping: leave blank rather than storing a display name in Link(Employee).
+          }
+        }
+
         const existingItems = Array.isArray(existingDoc?.items) ? existingDoc!.items as Json[] : [];
         const initialHeader = existingDoc ? { ...defaults, ...existingDoc, items: undefined } : defaults;
         const initialLines = existingDoc ? hydrateSalesLines(existingItems) : [newLine(0)];
@@ -494,11 +536,15 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         }
       }
 
-      if (isAreaDoor(candidate) && positiveNumber(candidate.width_m) !== undefined && positiveNumber(candidate.height_m) !== undefined) {
+      const customerGroup = text(headerRef.current.customer_group);
+      if (isAreaDoor(candidate)
+        && positiveNumber(candidate.width_m) !== undefined
+        && positiveNumber(candidate.height_m) !== undefined
+        && customerGroup) {
         try {
           const bom = await adapter.callPost<BomPreview>("alumdoor.sales.preview_bom_requirements", {
             ...cleanLine(candidate),
-            customer_group: text(headerRef.current.customer_group),
+            customer_group: customerGroup,
             delivery_date: text(headerRef.current.delivery_date) || today(),
           });
           if (!isCurrent()) return;
@@ -539,13 +585,13 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
   const commercialContext = commercialHeaderSignature(header);
   useEffect(() => {
-    if (loading || !childMeta) return;
+    if (loading || !childMeta || customerHydrating) return;
     if (!lastCommercialContext.current) { lastCommercialContext.current = commercialContext; return; }
     if (lastCommercialContext.current === commercialContext) return;
     lastCommercialContext.current = commercialContext;
     const active = linesRef.current.filter((line) => text(line.item_code));
     void Promise.all(active.map((line) => previewLine(line, "parent_context", {}, false))).finally(() => void refreshDocumentPreview("items"));
-  }, [childMeta, commercialContext, loading, previewLine, refreshDocumentPreview]);
+  }, [childMeta, commercialContext, customerHydrating, loading, previewLine, refreshDocumentPreview]);
 
   const commitLine = useCallback((key: string, fieldname: string, value: unknown) => {
     const current = linesRef.current.find((line) => line._key === key);
@@ -643,7 +689,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   }, [replaceLinesAndRefreshTotals, selectedLineKeys]);
 
   const validate = useCallback((): string | null => {
-    if (previewClock.current.pending > 0) return "Đơn đang tính lại dữ liệu từ server, hãy hoàn tất trước khi lưu.";
+    if (previewClock.current.pending > 0 || customerHydrating) return "Đơn đang tính lại dữ liệu từ server, hãy hoàn tất trước khi lưu.";
     if (text(headerErrorRef.current)) return `Cần xử lý lỗi tính lại trước khi lưu: ${text(headerErrorRef.current)}`;
     if (!text(headerRef.current.customer)) return "Cần chọn khách hàng.";
     if (!text(headerRef.current.transaction_date)) return "Cần ngày đặt hàng.";
@@ -661,7 +707,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       }
     }
     return null;
-  }, []);
+  }, [customerHydrating]);
 
   const buildDocument = useCallback((sourceLines = linesRef.current): Json => {
     if (!meta) return {};
@@ -764,11 +810,12 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const totalArea = lines.reduce((sum, line) => sum + (lineBillableArea(line) ?? 0), 0);
   const unresolvedLines = activeLines.filter((line) => line._loading || line._error || line._pricingError).length;
   const bomBlocked = activeLines.filter((line) => line._bomPreview?.actual_complete === false).length;
-  const approvalNeeded = checked(header.discount_requires_approval) || activeLines.some((line) => checked(line.rate_requires_approval));
+  const approvalLines = activeLines.filter(lineCommercialNeedsApproval).length;
+  const approvalNeeded = checked(header.discount_requires_approval) || approvalLines > 0;
   const busy = saving || submitting;
-  const previewBlocked = isSalesOrderPersistenceBlocked(previewClock.current, headerError);
+  const previewBlocked = isSalesOrderPersistenceBlocked(previewClock.current, headerError) || customerHydrating;
   const persistenceBlocked = busy || previewBlocked || unresolvedLines > 0;
-  const recalculating = documentPreviewPending > 0 || unresolvedLines > 0;
+  const recalculating = customerHydrating || documentPreviewPending > 0 || unresolvedLines > 0;
 
   const headerControl = (fieldname: string, label: string, fieldtype: DocField["fieldtype"] = "Data", options?: string, readOnly = false, preview = false) => (
     <AlumdoorSalesOrderField
@@ -791,24 +838,8 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   return <>
     <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-sales-order-v2-complete">
       <div className="min-h-0 flex-1 overflow-auto">
-        <div className="mx-auto w-full max-w-[1900px] space-y-3 px-3 py-3">
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b pb-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-semibold tracking-tight">Đơn bán hàng</h1>
-              <Badge variant="outline">{isExisting ? documentName : "Nháp mới"}</Badge>
-              <Badge variant={docstatus === 1 ? "default" : "outline"}>{docstatus === 1 ? "Đã ghi sổ" : "Nháp"}</Badge>
-              {formReadOnly && docstatus === 0 ? <Badge variant="outline">Chỉ xem</Badge> : null}
-              {approvalNeeded ? <Badge variant="outline">Cần duyệt thương mại</Badge> : null}
-              {recalculating ? <Badge variant="outline"><Loader2 className="mr-1 size-3 animate-spin" /> Đang tính lại</Badge> : null}
-              {dirty ? <Badge variant="outline">Chưa lưu</Badge> : null}
-            </div>
-            <div className="flex items-center gap-1.5">
-              {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
-              {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}
-            </div>
-          </header>
-
-          {formReadOnly ? <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">Đơn đã ghi sổ/khóa hoặc tài khoản không có quyền sửa. Giá, BOM và số tiền chỉ hiển thị theo authority server.</div> : null}
+        <div className="w-full space-y-3 px-3 py-3">
+          {formReadOnly ? <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">Đơn đã ghi sổ/khóa hoặc tài khoản không có quyền sửa. Giá, BOM và số tiền chỉ hiển thị theo dữ liệu server.</div> : null}
           {headerError ? <div className="flex items-start justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{headerError}</span><Button type="button" variant="outline" size="sm" className="h-7" disabled={busy} onClick={() => void refreshDocumentPreview("manual_retry")}>Thử lại</Button></div> : null}
 
           <fieldset disabled={formReadOnly || busy} className="contents">
@@ -828,62 +859,59 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
                 {metaField("install_address") ? <div className="xl:col-span-3">{headerControl("install_address", "Địa chỉ giao / lắp đặt", "Small Text")}</div> : null}
                 {metaField("manual_note") ? <div className="xl:col-span-3">{headerControl("manual_note", "Ghi chú vận hành", "Small Text")}</div> : metaField("shipping_note") ? <div className="xl:col-span-3">{headerControl("shipping_note", "Ghi chú giao hàng", "Small Text")}</div> : null}
               </div>
+              {customerHydrating ? <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Đang nạp Nhóm giá, liên hệ, SĐT, địa chỉ và bảng giá của khách…</div> : null}
             </section>
 
-            <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
-              <div className="min-w-0">
-                <AlumdoorSalesOrderLineTableComplete
-                  lines={lines}
-                  childMeta={childMeta}
-                  registry={registry}
-                  services={salesServices}
-                  roles={roles}
-                  readOnly={formReadOnly || busy}
-                  selectedKeys={selectedLineKeys}
-                  leafVariants={leafVariants}
-                  onToggleSelection={(key, checkedValue) => setSelectedLineKeys((current) => { const next = new Set(current); if (checkedValue) next.add(key); else next.delete(key); return next; })}
-                  onToggleAll={(checkedValue) => setSelectedLineKeys(checkedValue ? new Set(lines.map((line) => line._key)) : new Set())}
-                  onPatch={patchLineFromUser}
-                  onCommit={commitLine}
-                  onAdd={addLine}
-                  onAddFive={addFive}
-                  onDuplicate={duplicateLine}
-                  onDelete={deleteLine}
-                  onDeleteSelected={deleteSelected}
-                  onBomActualChange={commitBomActualComponents}
-                />
+            <AlumdoorSalesOrderLineTableComplete
+              lines={lines}
+              childMeta={childMeta}
+              registry={registry}
+              services={salesServices}
+              roles={roles}
+              readOnly={formReadOnly || busy}
+              selectedKeys={selectedLineKeys}
+              leafVariants={leafVariants}
+              onToggleSelection={(key, checkedValue) => setSelectedLineKeys((current) => { const next = new Set(current); if (checkedValue) next.add(key); else next.delete(key); return next; })}
+              onToggleAll={(checkedValue) => setSelectedLineKeys(checkedValue ? new Set(lines.map((line) => line._key)) : new Set())}
+              onPatch={patchLineFromUser}
+              onCommit={commitLine}
+              onAdd={addLine}
+              onAddFive={addFive}
+              onDuplicate={duplicateLine}
+              onDelete={deleteLine}
+              onDeleteSelected={deleteSelected}
+              onBomActualChange={commitBomActualComponents}
+            />
+
+            <section className="rounded-lg border bg-card" data-section="sales-v2-summary-complete" aria-label="Tóm tắt đơn">
+              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4 xl:grid-cols-7">
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeLines.length}</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Diện tích cửa</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalArea)} m²</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền hàng</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.total_amount)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Chiết khấu</div><div className="mt-0.5 font-semibold tabular-nums">−{money(header.discount_amount)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Phụ thu</div><div className="mt-0.5 font-semibold tabular-nums">+{money(header.surcharge_amount)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">VAT ({quantity(header.vat_rate ?? 0)}%)</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.vat_amount)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tiền phải thu</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(header.grand_total)} ₫</div></div>
               </div>
 
-              <aside className="space-y-3 xl:sticky xl:top-3 xl:self-start" aria-label="Tóm tắt đơn và chính sách giá">
-                <section className="rounded-lg border bg-card">
-                  <div className="border-b px-3 py-2"><h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tóm tắt server</h2></div>
-                  <div className="space-y-2 px-3 py-3 text-xs">
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Dòng hàng</span><span className="font-medium tabular-nums">{activeLines.length}</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Diện tích cửa</span><span className="font-medium tabular-nums">{quantity(totalArea)} m²</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Tiền hàng</span><span className="tabular-nums">{money(header.total_amount)} ₫</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Chiết khấu</span><span className="tabular-nums">−{money(header.discount_amount)} ₫</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">Phụ thu</span><span className="tabular-nums">{money(header.surcharge_amount)} ₫</span></div>
-                    <div className="flex justify-between gap-3"><span className="text-muted-foreground">VAT ({quantity(header.vat_rate ?? 0)}%)</span><span className="tabular-nums">{money(header.vat_amount)} ₫</span></div>
-                    <div className="border-t pt-2"><div className="flex items-baseline justify-between gap-3"><span className="font-semibold">Tiền phải thu</span><strong className="text-lg tabular-nums text-primary">{money(header.grand_total)} ₫</strong></div><p className="mt-1 text-[10px] text-muted-foreground">Projection từ `alumdoor.ui.preview_document`; save/submit vẫn normalize lại ở canonical controller.</p></div>
-                    {approvalNeeded ? <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Giá/chiết khấu/bảng giá đang cần quyền duyệt khi ghi sổ.</span></div> : null}
-                    {documentPreviewPending || unresolvedLines || bomBlocked ? <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{documentPreviewPending ? "Đang tính lại tổng đơn từ server. " : ""}{unresolvedLines ? `${unresolvedLines} dòng chưa resolve xong. ` : ""}{bomBlocked ? `${bomBlocked} dòng còn thiếu vật tư BOM thực tế; vẫn được lưu nháp.` : ""}</span></div> : <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-2 text-[11px]"><CheckCircle2 className="size-3.5" /> Không có blocker preview hiện tại.</div>}
-                  </div>
-                </section>
+              <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px]">
+                {recalculating ? <span className="inline-flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Đang tính lại</span> : unresolvedLines || bomBlocked ? <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5" />{unresolvedLines ? `${unresolvedLines} dòng chưa tính xong` : ""}{unresolvedLines && bomBlocked ? " · " : ""}{bomBlocked ? `${bomBlocked} dòng BOM còn thiếu vật tư thực tế` : ""}</span> : <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5" /> Dữ liệu preview đã sẵn sàng</span>}
+                {approvalNeeded ? <Badge variant="outline">{approvalLines || 1} dòng / thay đổi cần duyệt</Badge> : null}
+                <span className="ml-auto text-muted-foreground">Bảng giá: <strong className="font-medium text-foreground">{text(header.selling_price_list) || "Chưa chọn"}</strong></span>
+              </div>
 
-                <section className="rounded-lg border bg-card">
-                  <div className="border-b px-3 py-2"><h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Chính sách giá</h2></div>
-                  <div className="space-y-2 px-3 py-3 text-xs"><div><div className="text-[10px] text-muted-foreground">Bảng giá</div><div className="mt-0.5 font-medium">{text(header.selling_price_list) || "Chưa resolve"}</div></div>{rules.length ? <div className="space-y-1.5 border-t pt-2">{rules.slice(0, 8).map((rule, index) => <div key={`${text(rule.rule_name)}-${index}`} className="rounded-md bg-muted/45 px-2.5 py-2"><div className="font-medium">{text(rule.rule_name)}</div><div className="mt-0.5 text-[10px] text-muted-foreground">{text(rule.effect_type) || "Pricing Rule"}</div></div>)}{rules.length > 8 ? <div className="text-[10px] text-muted-foreground">+ {rules.length - 8} rule khác</div> : null}</div> : <div className="rounded-md border border-dashed px-2.5 py-2 text-[11px] text-muted-foreground">Chưa có Pricing Rule nào được server áp.</div>}<p className="border-t pt-2 text-[10px] leading-4 text-muted-foreground">Operator có thể sửa giá/CK; server quyết định canonical money và quyền duyệt ở Submit.</p></div>
-                </section>
-              </aside>
-            </div>
+              {rules.length ? <details className="border-t px-3 py-2 text-[11px]"><summary className="cursor-pointer select-none font-medium">Chính sách giá đang áp · {rules.length} quy tắc</summary><div className="mt-2 flex flex-wrap gap-1.5">{rules.map((rule, index) => <Badge key={`${text(rule.rule_name)}-${index}`} variant="outline">{text(rule.rule_name)}</Badge>)}</div></details> : null}
+            </section>
           </fieldset>
         </div>
       </div>
 
-      <div className="shrink-0 border-t bg-card px-3 py-2 shadow-[0_-4px_14px_rgba(0,0,0,0.035)]">
-        <div className="mx-auto flex w-full max-w-[1900px] flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại dữ liệu server" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đơn đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Phải thu: {money(header.grand_total)} ₫</strong></div>
+      <div className="shrink-0 border-t bg-card px-3 py-1.5 shadow-[0_-4px_14px_rgba(0,0,0,0.035)]">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Phải thu: {money(header.grand_total)} ₫</strong></div>
           <div className="flex flex-wrap items-center gap-1.5">
+            {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
+            {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}
             <Button type="button" variant="ghost" size="sm" onClick={requestClose}>{isExisting ? "Đóng" : "Hủy"}</Button>
             <Button type="button" variant="outline" size="sm" disabled={busy || formReadOnly} onClick={() => { const active = linesRef.current.filter((line) => text(line.item_code)); void Promise.all(active.map((line) => previewLine(line, "manual_refresh", {}, false))).finally(() => void refreshDocumentPreview("manual_refresh")); }}><RefreshCw className="size-3.5" /> Tính lại</Button>
             {docstatus === 0 ? <Button type="button" variant="outline" size="sm" disabled={persistenceBlocked || !canSave} onClick={() => void saveDraft(false)}>{saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp</Button> : null}
@@ -897,7 +925,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
       <DialogContent>
         <DialogHeader><DialogTitle>Bỏ thay đổi chưa lưu?</DialogTitle></DialogHeader>
-        <div className="space-y-4 p-1 text-sm"><p className="text-muted-foreground">Đơn đang có thay đổi ở header, dòng hàng, giá/chiết khấu, VAT hoặc BOM thực tế. Đóng bây giờ sẽ bỏ các thay đổi này.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setConfirmDiscard(false)}>Tiếp tục chỉnh</Button><Button variant="destructive" onClick={() => { setConfirmDiscard(false); setDirty(false); props.onCancel(); }}>Bỏ thay đổi</Button></div></div>
+        <div className="space-y-4 p-1 text-sm"><p className="text-muted-foreground">Đơn đang có thay đổi ở thông tin đầu đơn, dòng hàng, giá/chiết khấu, VAT hoặc BOM thực tế. Đóng bây giờ sẽ bỏ các thay đổi này.</p><div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setConfirmDiscard(false)}>Tiếp tục chỉnh</Button><Button variant="destructive" onClick={() => { setConfirmDiscard(false); setDirty(false); props.onCancel(); }}>Bỏ thay đổi</Button></div></div>
       </DialogContent>
     </Dialog>
   </>;
