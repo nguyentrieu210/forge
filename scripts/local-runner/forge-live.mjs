@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, renameSync, rmSync } from "node:fs";
+import { cpSync, existsSync, renameSync, rmSync } from "node:fs";
 import { Socket } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -140,17 +140,39 @@ async function requestStatus(url, accepted, timeoutMs = 10_000) {
   return response.status;
 }
 
+function removeTree(path) {
+  rmSync(path, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
+}
+
 function swapRuntimeDist() {
   if (!existsSync(runtimeNext)) throw new Error(`DESK_BUILD_OUTPUT_MISSING=${runtimeNext}`);
-  rmSync(runtimePrevious, { recursive: true, force: true });
-  if (existsSync(runtimeDist)) renameSync(runtimeDist, runtimePrevious);
+  removeTree(runtimePrevious);
+
+  if (existsSync(runtimeDist)) {
+    renameSync(runtimeDist, runtimePrevious);
+  }
+
   try {
-    renameSync(runtimeNext, runtimeDist);
+    // Renaming a freshly-built directory is intermittently denied on Windows
+    // by Defender/indexers even after Vite has exited. Copying its contents to
+    // a new dist directory is much more reliable while preserving the old dist
+    // as an immediate rollback target.
+    cpSync(runtimeNext, runtimeDist, {
+      recursive: true,
+      force: true,
+      errorOnExist: false,
+      preserveTimestamps: false,
+    });
+    removeTree(runtimeNext);
   } catch (error) {
-    if (existsSync(runtimePrevious) && !existsSync(runtimeDist)) renameSync(runtimePrevious, runtimeDist);
+    removeTree(runtimeDist);
+    if (existsSync(runtimePrevious) && !existsSync(runtimeDist)) {
+      renameSync(runtimePrevious, runtimeDist);
+    }
     throw error;
   }
-  rmSync(runtimePrevious, { recursive: true, force: true });
+
+  removeTree(runtimePrevious);
 }
 
 function alignLiveBranch() {
@@ -216,7 +238,7 @@ try {
   // Rebuild only Runtime's workspace dependencies, then build Runtime itself to
   // a staging directory so a failed Vite build never destroys the last good UI.
   run(pnpm, ["--filter", "runtime^...", "run", "--if-present", "build"]);
-  rmSync(runtimeNext, { recursive: true, force: true });
+  removeTree(runtimeNext);
   run(pnpm, ["exec", "tsc", "-b"], { cwd: runtimeDir });
   run(pnpm, ["exec", "vite", "build", "--outDir", "dist.deploy-next", "--emptyOutDir"], {
     cwd: runtimeDir,
@@ -250,7 +272,7 @@ try {
   console.error(`DEPLOY_LOCAL_STATUS=FAIL error=${String(error?.message || error).replace(/\r?\n/g, " | ")}`);
   process.exitCode = 1;
 } finally {
-  rmSync(runtimeNext, { recursive: true, force: true });
+  removeTree(runtimeNext);
   if (servicesStopped) {
     // Best effort: a failed pull/build must not intentionally leave the local
     // machine stopped. Health remains FAIL, but the services get a chance to
