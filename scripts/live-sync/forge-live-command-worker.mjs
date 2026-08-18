@@ -32,14 +32,6 @@ function readRequest() {
   return request;
 }
 
-async function waitForSyncExit() {
-  for (let i = 0; i < 100; i += 1) {
-    if (!existsSync(SYNC_LOCK)) return;
-    await sleep(100);
-  }
-  throw new Error(`Live sync process lock did not clear: ${SYNC_LOCK}`);
-}
-
 async function ensureSyncRunning() {
   for (let i = 0; i < 20; i += 1) {
     if (existsSync(SYNC_LOCK)) return;
@@ -59,8 +51,10 @@ async function ensureSyncRunning() {
 async function main() {
   const request = readRequest();
   writeStatus({ status: 'RUNNING', command_id: request.id, action: request.action, adapter: request.adapter });
-  await waitForSyncExit();
 
+  // forge-live-apply owns the safe daemon stop/restart lifecycle. Do not wait
+  // for the sync lock here or the worker deadlocks against the daemon that
+  // dispatched it.
   const applyScript = path.join(ROOT, 'scripts', 'live-sync', 'forge-live-apply.mjs');
   if (!existsSync(applyScript)) throw new Error(`Apply script missing: ${applyScript}`);
 
