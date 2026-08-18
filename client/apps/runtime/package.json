@@ -8,7 +8,8 @@
     "dev:matrix-harness": "vite --config vite.matrix-e2e.config.ts",
     "typecheck": "pnpm --workspace-root --filter \"runtime^...\" run build && tsc -b",
     "build": "tsc -b && vite build",
-    "build:matrix-harness": "vite build --config vite.matrix-e2e.config.ts"
+    "build:matrix-harness": "vite build --config vite.matrix-e2e.config.ts",
+    "preview:alumdoor-local": "vite preview --host 127.0.0.1 --port 5173 --strictPort"
   },
   "dependencies": {
     "@cloudforge/alumdoor-hr-payroll-contract": "workspace:*",
