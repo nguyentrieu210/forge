@@ -1,0 +1,6 @@
+{
+  "format": "forge-live-command/v1",
+  "id": "pricing-retry-20260818-0754",
+  "action": "apply",
+  "adapter": "pricing"
+}
