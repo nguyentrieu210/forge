@@ -1,6 +1,6 @@
 {
   "format": "forge-live-command/v1",
-  "id": "customer-import-20260818-0806a",
+  "id": "customer-import-visible-20260818-0810a",
   "action": "apply",
   "adapter": "customer"
 }
