@@ -45,7 +45,7 @@ const config =
       }
     : {
         cwd: `${root}\\client\\apps\\runtime`,
-        command: `${pnpmCommand} run dev`,
+        command: `${pnpmCommand} run preview:alumdoor-local`,
         env: {
           ...childEnv,
           VITE_FORGE_BACKEND: "http://127.0.0.1:8799",
