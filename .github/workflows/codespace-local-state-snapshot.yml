@@ -1,0 +1,70 @@
+name: Snapshot Full Local State for Codespaces
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alumdoor-local-d1-mutation
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: [self-hosted]
+    timeout-minutes: 20
+    env:
+      FORGE_CODESPACE_SNAPSHOT_KEY: ${{ secrets.FORGE_CODESPACE_SNAPSHOT_KEY }}
+    steps:
+      - name: Checkout snapshot tooling
+        uses: actions/checkout@v4
+
+      - name: Validate encryption key
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:FORGE_CODESPACE_SNAPSHOT_KEY) -or $env:FORGE_CODESPACE_SNAPSHOT_KEY.Length -lt 24) {
+            throw 'Repository Actions secret FORGE_CODESPACE_SNAPSHOT_KEY is missing or shorter than 24 characters.'
+          }
+
+      - name: Snapshot canonical local Wrangler state
+        id: backup
+        shell: powershell
+        working-directory: C:\alumdoor
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $lines = & node server\scripts\backup-local-state.mjs
+          $lines | ForEach-Object { Write-Host $_ }
+          $ok = $lines | Where-Object { $_ -match '^LOCAL_STATE_BACKUP_OK path=(.+) bytes=(\d+)$' } | Select-Object -Last 1
+          if (-not $ok) { throw 'backup-local-state.mjs did not emit LOCAL_STATE_BACKUP_OK' }
+          if ($ok -notmatch '^LOCAL_STATE_BACKUP_OK path=(.+) bytes=(\d+)$') { throw 'Could not parse backup result' }
+          $backupPath = $Matches[1]
+          $bytes = [int64]$Matches[2]
+          if ($bytes -le 0) { throw 'Refusing to publish an empty local-state snapshot' }
+          "backup_path=$backupPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "backup_bytes=$bytes" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Pack and encrypt full local state
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'forge-local-state.tar.gz'
+          $encrypted = Join-Path $env:RUNNER_TEMP 'forge-local-state.enc'
+          if (Test-Path $archive) { Remove-Item $archive -Force }
+          if (Test-Path $encrypted) { Remove-Item $encrypted -Force }
+          & tar -czf $archive -C '${{ steps.backup.outputs.backup_path }}' .
+          if ($LASTEXITCODE -ne 0) { throw "tar failed with exit code $LASTEXITCODE" }
+          & node scripts\codespaces\state-crypto.mjs encrypt $archive $encrypted
+          if ($LASTEXITCODE -ne 0) { throw "snapshot encryption failed with exit code $LASTEXITCODE" }
+          $size = (Get-Item $encrypted).Length
+          Write-Host "FORGE_CODESPACE_SNAPSHOT_READY encrypted_bytes=$size source_bytes=${{ steps.backup.outputs.backup_bytes }}"
+
+      - name: Upload encrypted snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-local-state-encrypted
+          path: ${{ runner.temp }}\forge-local-state.enc
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
