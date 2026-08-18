@@ -68,7 +68,9 @@ const MANAGED_SCALARS = [
 // exact current runtime semantics while keeping old evidence files comparable.
 const API_OMIT_FIELDS = new Set(["is_fixed_asset", "is_sub_contracted_item"]);
 function apiItem(item) {
-  return Object.fromEntries(Object.entries(item).filter(([field]) => !API_OMIT_FIELDS.has(field)));
+  return Object.fromEntries(Object.entries(item)
+    .filter(([field]) => !API_OMIT_FIELDS.has(field))
+    .map(([field, value]) => [field, CHECK_FIELDS.has(field) ? Boolean(Number(value) || value === true) : value]));
 }
 
 function normalizeScalar(field, value) {
