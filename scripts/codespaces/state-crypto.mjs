@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import process from "node:process";
 
 const MAGIC = Buffer.from("FORGE-CODESPACE-STATE-V1\0", "utf8");
@@ -44,7 +45,7 @@ export function decryptFile(inputPath, outputPath) {
   writeFileSync(outputPath, plaintext);
 }
 
-if (import.meta.url === `file://${process.argv[1].replace(/\\/g, "/")}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [mode, inputPath, outputPath] = process.argv.slice(2);
   if (!mode || !inputPath || !outputPath || !["encrypt", "decrypt"].includes(mode)) {
     console.error("usage: node state-crypto.mjs <encrypt|decrypt> <input> <output>");
