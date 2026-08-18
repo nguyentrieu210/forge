@@ -1,7 +1,65 @@
 /** @jsxImportSource react */
 import type { DocField } from "@metaforge/core";
-import type { ControlRegistry, FieldServices } from "@metaforge/controls";
+import { LinkControl, type ControlRegistry, type FieldServices } from "@metaforge/controls";
+import { toast } from "@metaforge/ui";
 import type { Json } from "./model.js";
+
+const SUPPLIER_OPTION_PREFIX = "__alumdoor_supplier__:";
+
+function supplierOptionValue(name: string): string {
+  return `${SUPPLIER_OPTION_PREFIX}${encodeURIComponent(name)}`;
+}
+
+function supplierNameFromOption(value: unknown): string | null {
+  const raw = String(value ?? "");
+  if (!raw.startsWith(SUPPLIER_OPTION_PREFIX)) return null;
+  try {
+    return decodeURIComponent(raw.slice(SUPPLIER_OPTION_PREFIX.length));
+  } catch {
+    return raw.slice(SUPPLIER_OPTION_PREFIX.length);
+  }
+}
+
+function salesCounterpartyServices(services: FieldServices): FieldServices {
+  const baseSearch = services.searchLink;
+  if (!baseSearch) return services;
+  return {
+    ...services,
+    searchLink: async (doctype, txt, opts) => {
+      if (doctype !== "Customer") return baseSearch(doctype, txt, opts);
+
+      // Sales Order remains Customer-authoritative for AR/Delivery/Invoice. The picker may
+      // nevertheless surface a Supplier because the same real-world counterparty can buy from
+      // Alumdoor too. We do NOT write a Supplier name into Sales Order.customer: selecting an
+      // NCC routes through Customer quick-create so the operator must explicitly assign the
+      // sales-only price group instead of the client inventing Đại lý/Lẻ.
+      const [customersResult, suppliersResult] = await Promise.allSettled([
+        baseSearch("Customer", txt, { ...opts, pageLength: Math.max(opts?.pageLength ?? 10, 50) }),
+        // Customer link_filters are not valid Supplier fields. Keep only generic search context;
+        // adapterServices will still apply safe tenant/company/permission rules for Supplier.
+        baseSearch("Supplier", txt, {
+          ...opts,
+          filters: undefined,
+          pageLength: Math.max(opts?.pageLength ?? 10, 50),
+        }),
+      ]);
+
+      if (customersResult.status === "rejected" && suppliersResult.status === "rejected") {
+        throw customersResult.reason;
+      }
+      const customers = customersResult.status === "fulfilled" ? customersResult.value : [];
+      const suppliers = suppliersResult.status === "fulfilled" ? suppliersResult.value : [];
+      const customerNames = new Set(customers.map((row) => row.value));
+      const supplierOptions = suppliers
+        .filter((row) => row.value && !customerNames.has(row.value))
+        .map((row) => ({
+          value: supplierOptionValue(row.value),
+          description: `NCC · ${row.description || row.value}`,
+        }));
+      return [...customers, ...supplierOptions];
+    },
+  };
+}
 
 export function fallbackField(
   fieldname: string,
@@ -56,20 +114,59 @@ export function AlumdoorSalesOrderField(props: {
   if (!Control) {
     return <div className={props.className}><div className="text-xs text-destructive">Missing control for {props.field.fieldtype}</div></div>;
   }
-  const control = (
+
+  const isLink = props.field.fieldtype === "Link" || props.field.fieldtype === "Dynamic Link";
+  const isSalesOrderHeaderLink = props.parentDoctype === "Sales Order" && isLink;
+  // `compact` is correct for grid cells, but LinkControl intentionally hides its adjacent `+`
+  // while compact. The Sales Order header had reused that flag merely to reduce height, which
+  // accidentally removed quick-create from Customer, Price List, Employee, Bank Account, etc.
+  const effectiveCompact = isSalesOrderHeaderLink ? false : props.compact;
+  const isSalesCounterparty = props.parentDoctype === "Sales Order"
+    && props.field.fieldname === "customer"
+    && props.field.fieldtype === "Link";
+
+  const onCounterpartyChange = (value: unknown) => {
+    const supplierName = supplierNameFromOption(value);
+    if (!supplierName) {
+      props.onChange(value);
+      return;
+    }
+    void (async () => {
+      if (!props.services.quickCreate) {
+        toast.error("NCC này chưa có vai trò Khách hàng và màn tạo nhanh Khách hàng chưa sẵn sàng.");
+        return;
+      }
+      toast.info(`NCC ${supplierName} chưa có vai trò Khách hàng. Tạo hồ sơ Khách hàng và chọn Nhóm giá Đại lý/Lẻ để dùng trên đơn bán.`);
+      const customerName = await props.services.quickCreate("Customer");
+      if (customerName) props.onChange(customerName);
+    })().catch((error) => {
+      toast.error(error instanceof Error ? error.message : "Không mở được hồ sơ Khách hàng.");
+    });
+  };
+
+  const commonProps = {
+    field: props.field,
+    id: props.id,
+    value: props.value,
+    readOnly: props.readOnly,
+    required: props.required,
+    label,
+    parentDoctype: props.parentDoctype,
+    docValues: props.docValues,
+    roles: props.roles,
+    compact: effectiveCompact,
+  };
+  const control = isSalesCounterparty ? (
+    <LinkControl
+      {...commonProps}
+      services={salesCounterpartyServices(props.services)}
+      onChange={onCounterpartyChange}
+    />
+  ) : (
     <Control
-      field={props.field}
-      id={props.id}
-      value={props.value}
-      onChange={props.onChange}
-      readOnly={props.readOnly}
-      required={props.required}
-      label={label}
+      {...commonProps}
       services={props.services}
-      parentDoctype={props.parentDoctype}
-      docValues={props.docValues}
-      roles={props.roles}
-      compact={props.compact}
+      onChange={props.onChange}
     />
   );
   if (props.field.fieldtype === "Check") {
