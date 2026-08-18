@@ -11,7 +11,7 @@ const DEFAULT_REMOTE = 'origin';
 const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_SERVICE_HOME = 'C:\\ForgeServices\\Alumdoor';
 const SELF_PATH = 'scripts/live-sync/forge-live-sync.mjs';
-const ALLOWED_COMMAND_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer']);
+const ALLOWED_COMMAND_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer', 'manufacturing-master']);
 
 function parseArgs(argv) {
   const options = {
@@ -124,8 +124,6 @@ function ensureBranch(root, remote, branch, log, serviceHome) {
 }
 
 function fetchRemoteBranch(root, remote, branch) {
-  // Always update the remote-tracking ref explicitly. Relying on FETCH_HEAD can
-  // leave origin/<branch> stale with some fetch/refspec configurations.
   git(root, ['fetch', '--quiet', '--prune', remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`]);
 }
 
