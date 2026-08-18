@@ -16,6 +16,9 @@ local-locks/
 __pycache__/
 *.py[cod]
 
+# Local-only manual import helper. The canonical path is forge-live.cmd apply ...
+/import-alumdoor-remaining-local.bat
+
 # Bằng chứng source-exact sinh lại được từ ERPNext (GPL-3.0) / Frappe (MIT)
 server/docs/spec/source-exact/generated/
 server/docs/spec/source-exact/oracle/fixtures/O2C-*.json
