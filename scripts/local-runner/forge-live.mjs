@@ -36,10 +36,6 @@ function run(program, args, { cwd = repoRoot, env, capture = false, allowFailure
     encoding: "utf8",
     stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
     windowsHide: true,
-    // Node cannot execute Windows .cmd/.bat shims directly on every supported
-    // Windows/Node combination (it can return EINVAL before the child starts).
-    // Only those shims go through ComSpec; native executables such as git.exe
-    // and sc.exe remain direct child processes.
     shell: windowsCommandShim,
   });
   if (result.error) throw result.error;
@@ -147,16 +143,8 @@ function removeTree(path) {
 function swapRuntimeDist() {
   if (!existsSync(runtimeNext)) throw new Error(`DESK_BUILD_OUTPUT_MISSING=${runtimeNext}`);
   removeTree(runtimePrevious);
-
-  if (existsSync(runtimeDist)) {
-    renameSync(runtimeDist, runtimePrevious);
-  }
-
+  if (existsSync(runtimeDist)) renameSync(runtimeDist, runtimePrevious);
   try {
-    // Renaming a freshly-built directory is intermittently denied on Windows
-    // by Defender/indexers even after Vite has exited. Copying its contents to
-    // a new dist directory is much more reliable while preserving the old dist
-    // as an immediate rollback target.
     cpSync(runtimeNext, runtimeDist, {
       recursive: true,
       force: true,
@@ -166,36 +154,21 @@ function swapRuntimeDist() {
     removeTree(runtimeNext);
   } catch (error) {
     removeTree(runtimeDist);
-    if (existsSync(runtimePrevious) && !existsSync(runtimeDist)) {
-      renameSync(runtimePrevious, runtimeDist);
-    }
+    if (existsSync(runtimePrevious) && !existsSync(runtimeDist)) renameSync(runtimePrevious, runtimeDist);
     throw error;
   }
-
   removeTree(runtimePrevious);
 }
 
 function alignLiveBranch() {
   const trackedDirty = capture("git", ["status", "--porcelain", "--untracked-files=no"]);
-  if (trackedDirty) {
-    throw new Error(`DEPLOY_LOCAL_TRACKED_CHANGES_PRESENT: commit/stash tracked edits first\n${trackedDirty}`);
-  }
-
-  // Match the permanent live-sync contract: origin/agent-live is the live code
-  // authority, while untracked local state (notably Wrangler D1) is preserved.
+  if (trackedDirty) throw new Error(`DEPLOY_LOCAL_TRACKED_CHANGES_PRESENT: commit/stash tracked edits first\n${trackedDirty}`);
   run("git", ["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`]);
   const currentBranch = capture("git", ["branch", "--show-current"]);
   if (currentBranch === branch) return currentBranch;
-
-  const localBranch = run("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
-    capture: true,
-    allowFailure: true,
-  });
-  if (localBranch.status === 0) {
-    run("git", ["switch", branch]);
-  } else {
-    run("git", ["switch", "-c", branch, "--track", `origin/${branch}`]);
-  }
+  const localBranch = run("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], { capture: true, allowFailure: true });
+  if (localBranch.status === 0) run("git", ["switch", branch]);
+  else run("git", ["switch", "-c", branch, "--track", `origin/${branch}`]);
   console.log(`LOCAL_BRANCH_ALIGN_STATUS=PASS from=${currentBranch || "DETACHED"} to=${branch}`);
   return currentBranch;
 }
@@ -205,15 +178,11 @@ let deploySucceeded = false;
 
 try {
   alignLiveBranch();
-
   for (const name of services) {
     if (!serviceQuery(name).installed) throw new Error(`LOCAL_RUNTIME_SERVICE_MISSING=${name}`);
   }
 
   const before = capture("git", ["rev-parse", "HEAD"]);
-
-  // Stop the actual service hosts, not only their children. This guarantees the
-  // hosts reload any pulled service-command changes when they start again.
   servicesStopped = true;
   await stopService("ForgeAlumdoorDesk");
   await stopService("ForgeAlumdoorBackend");
@@ -235,8 +204,13 @@ try {
   run(pnpm, ["--filter", "cloudforge", "run", "build"]);
   console.log("SERVER_BUILD_STATUS=PASS");
 
-  // Rebuild only Runtime's workspace dependencies, then build Runtime itself to
-  // a staging directory so a failed Vite build never destroys the last good UI.
+  const wrangler = join(repoRoot, "server", "node_modules", ".bin", "wrangler.cmd");
+  if (!existsSync(wrangler)) throw new Error(`LOCAL_WRANGLER_MISSING=${wrangler}`);
+  run(wrangler, ["d1", "migrations", "apply", "cloudforge-demo", "--local", "--config", "apps/tenant-worker/wrangler.jsonc"], {
+    cwd: join(repoRoot, "server"),
+  });
+  console.log("LOCAL_D1_MIGRATION_STATUS=PASS database=cloudforge-demo");
+
   run(pnpm, ["--filter", "runtime^...", "run", "--if-present", "build"]);
   removeTree(runtimeNext);
   run(pnpm, ["exec", "tsc", "-b"], { cwd: runtimeDir });
@@ -274,9 +248,6 @@ try {
 } finally {
   removeTree(runtimeNext);
   if (servicesStopped) {
-    // Best effort: a failed pull/build must not intentionally leave the local
-    // machine stopped. Health remains FAIL, but the services get a chance to
-    // come back on the last available build.
     for (const name of ["ForgeAlumdoorBackend", "ForgeAlumdoorDesk"]) {
       try {
         await startService(name);
@@ -289,7 +260,6 @@ try {
     try {
       renameSync(runtimePrevious, runtimeDist);
     } catch {
-      // Keep the original deployment failure as the primary error.
     }
   }
 }
