@@ -12,12 +12,15 @@ SYNC_PID_FILE="/tmp/forge-git-sync.pid"
 SYNC_LOG_FILE="/tmp/forge-git-sync.log"
 STATE_MARKER="$ROOT_DIR/.codespace-local-state.json"
 TENANT_STATE="$ROOT_DIR/server/apps/tenant-worker/.wrangler/state"
+CREDENTIALS_FILE="$ROOT_DIR/.codespace-admin-credentials"
+CODESPACE_ADMIN_USER="codespace-admin@forge.local"
 PNPM=(corepack pnpm)
 
 echo "[forge] workspace:      $ROOT_DIR"
 echo "[forge] frontend:       $FRONTEND_PORT"
 echo "[forge] backend:        $BACKEND_PORT"
-echo "[forge] database mode:  restored local Wrangler state"
+echo "[forge] database mode:  restored C:\\alumdoor Wrangler state"
+echo "[forge] backend mode:   full Alumdoor local multi-worker stack"
 
 cd "$ROOT_DIR"
 
@@ -36,9 +39,8 @@ echo "[forge] pnpm: $("${PNPM[@]}" --version)"
 echo "[forge] ensuring frontend + backend dependencies..."
 "${PNPM[@]}" install --filter runtime... --filter cloudforge... --frozen-lockfile --prefer-offline
 
-# First Codespace boot: if the encrypted snapshot key is available, restore the
-# latest full local Wrangler state before starting either server. We never seed a
-# synthetic database here; the user's canonical C:\alumdoor state is the source.
+# Restore the exact local Wrangler state captured from the canonical C:\alumdoor
+# runner. Never synthesize business data in this startup path.
 if [[ "${CODESPACES:-}" == "true" && ! -f "$STATE_MARKER" && -n "${FORGE_CODESPACE_SNAPSHOT_KEY:-}" ]]; then
   echo "[forge] restoring latest encrypted C:\\alumdoor snapshot..."
   node "$ROOT_DIR/scripts/codespaces/restore-local-state.mjs"
@@ -47,28 +49,27 @@ fi
 if [[ ! -d "$TENANT_STATE" ]]; then
   echo "[forge] ERROR: full local database snapshot has not been restored."
   echo "[forge] Run GitHub Actions workflow 'Snapshot Full Local State for Codespaces',"
-  echo "[forge] expose the same FORGE_CODESPACE_SNAPSHOT_KEY to this Codespace, then run:"
-  echo "[forge]   node scripts/codespaces/restore-local-state.mjs"
+  echo "[forge] then restore it with scripts/codespaces/restore-local-state.mjs."
   exit 2
 fi
 
-# Local worker secrets are Codespace-local and never committed. They only enable
-# the restored D1 state to run under AUTH_MODE=development; business data remains
-# exactly what came from the snapshot.
+# Codespace-local worker secrets. Business data comes from the snapshot; only the
+# runtime signing/session secrets are local to this Codespace.
 DEV_VARS="$ROOT_DIR/server/apps/tenant-worker/.dev.vars"
 if [[ ! -f "$DEV_VARS" ]]; then
   echo "[forge] creating Codespace-local worker secrets..."
   node - "$DEV_VARS" <<'NODE'
 const { randomBytes } = require('node:crypto');
-const { writeFileSync } = require('node:fs');
+const { mkdirSync, writeFileSync } = require('node:fs');
+const { dirname } = require('node:path');
 const file = process.argv[2];
 const secret = () => randomBytes(32).toString('hex');
+mkdirSync(dirname(file), { recursive: true });
 writeFileSync(file, [
   `JWT_SECRET=${secret()}`,
   'JWT_ISSUER=https://auth.codespace.invalid',
   'JWT_AUDIENCE=cloudforge',
   `INTERNAL_AUTH_SECRET=${secret()}`,
-  'INTERNAL_AUTH_KEY_ID=k1',
   `INTERNAL_SERVICE_TOKEN=${secret()}`,
   `CONTROL_TOKEN=${secret()}`,
   `SESSION_SECRET=${secret()}`,
@@ -78,6 +79,33 @@ writeFileSync(file, [
 ].join('\n'), 'utf8');
 NODE
 fi
+
+# seed-local --auth-only uses the exact production password hashing code but mutates
+# only the restored local D1. Build server once when dist is absent.
+if [[ ! -f "$ROOT_DIR/server/dist/packages/frappe-api/src/index.js" ]]; then
+  echo "[forge] building backend once for local credential provisioning..."
+  "${PNPM[@]}" --dir "$ROOT_DIR/server" run build
+fi
+
+# A separate Codespace-only System Manager avoids depending on whatever password or
+# MFA state happens to exist in the imported local database. Keep its random password
+# in an ignored file so restarts use the same credential.
+if [[ -f "$CREDENTIALS_FILE" ]]; then
+  CODESPACE_ADMIN_PASSWORD="$(sed -n 's/^password=//p' "$CREDENTIALS_FILE" | head -n 1)"
+fi
+if [[ -z "${CODESPACE_ADMIN_PASSWORD:-}" ]]; then
+  CODESPACE_ADMIN_PASSWORD="$(node -e "process.stdout.write(require('node:crypto').randomBytes(18).toString('base64url') + '!A7')")"
+  printf 'user=%s\npassword=%s\n' "$CODESPACE_ADMIN_USER" "$CODESPACE_ADMIN_PASSWORD" > "$CREDENTIALS_FILE"
+  chmod 600 "$CREDENTIALS_FILE" 2>/dev/null || true
+fi
+
+# Always re-apply auth-only after a snapshot restore. This does not touch business
+# records; it only guarantees one known System Manager account in the Codespace copy.
+echo "[forge] provisioning Codespace-only System Manager account..."
+(
+  cd "$ROOT_DIR/server"
+  node scripts/seed-local.mjs --auth-only --user "$CODESPACE_ADMIN_USER" --password "$CODESPACE_ADMIN_PASSWORD"
+)
 
 # Keep this Codespace source synced to GitHub main without overwriting local edits.
 if [[ -f "$ROOT_DIR/.devcontainer/auto-sync-github.sh" ]]; then
@@ -107,37 +135,59 @@ stop_pid_file "$BACKEND_PID_FILE" "backend"
 stop_pid_file "$VITE_PID_FILE" "frontend"
 
 : > "$BACKEND_LOG"
-echo "[forge] starting local Cloudflare Worker backend on $BACKEND_PORT..."
-(
-  cd "$ROOT_DIR/server"
-  nohup "${PNPM[@]}" exec wrangler dev --config apps/tenant-worker/wrangler.jsonc --port "$BACKEND_PORT" --local >"$BACKEND_LOG" 2>&1 &
-  echo $! > "$BACKEND_PID_FILE"
-)
-BACKEND_PID="$(cat "$BACKEND_PID_FILE")"
+echo "[forge] starting full Alumdoor local backend on $BACKEND_PORT..."
+nohup "${PNPM[@]}" --dir "$ROOT_DIR/server" run dev:alumdoor-local >"$BACKEND_LOG" 2>&1 &
+BACKEND_PID=$!
+echo "$BACKEND_PID" > "$BACKEND_PID_FILE"
 
-for _ in $(seq 1 60); do
+BACKEND_READY=0
+for _ in $(seq 1 90); do
   if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-    echo "[forge] ERROR: backend exited before opening port $BACKEND_PORT."
+    echo "[forge] ERROR: Alumdoor backend exited before opening port $BACKEND_PORT."
     echo "----- /tmp/forge-backend.log -----"
-    tail -n 120 "$BACKEND_LOG" || true
+    tail -n 160 "$BACKEND_LOG" || true
     echo "----------------------------------"
     exit 1
   fi
   if curl -sS -o /dev/null "http://127.0.0.1:${BACKEND_PORT}/api/method/metaforge.api.get_boot" 2>/dev/null; then
+    BACKEND_READY=1
     echo "[forge] backend READY: http://127.0.0.1:${BACKEND_PORT}"
     break
   fi
   sleep 1
 done
 
-if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-  echo "[forge] ERROR: backend is not running."
-  tail -n 120 "$BACKEND_LOG" || true
+if [[ "$BACKEND_READY" != "1" ]]; then
+  echo "[forge] ERROR: backend did not become ready on $BACKEND_PORT."
+  tail -n 160 "$BACKEND_LOG" || true
   exit 1
 fi
 
+# Verify the actual login endpoint before telling the user the credential works.
+LOGIN_BODY="/tmp/forge-codespace-login.json"
+LOGIN_COOKIES="/tmp/forge-codespace-login.cookies"
+LOGIN_STATUS="$(curl -sS -o "$LOGIN_BODY" -w '%{http_code}' -c "$LOGIN_COOKIES" \
+  -X POST \
+  --data-urlencode "usr=$CODESPACE_ADMIN_USER" \
+  --data-urlencode "pwd=$CODESPACE_ADMIN_PASSWORD" \
+  "http://127.0.0.1:${BACKEND_PORT}/api/method/login" || true)"
+if [[ "$LOGIN_STATUS" != "200" ]]; then
+  echo "[forge] ERROR: Codespace admin login self-check returned HTTP $LOGIN_STATUS."
+  cat "$LOGIN_BODY" 2>/dev/null || true
+  echo
+  echo "----- /tmp/forge-backend.log -----"
+  tail -n 160 "$BACKEND_LOG" || true
+  echo "----------------------------------"
+  exit 1
+fi
+rm -f "$LOGIN_BODY" "$LOGIN_COOKIES"
+
+echo "[forge] LOGIN VERIFIED"
+echo "[forge] user:     $CODESPACE_ADMIN_USER"
+echo "[forge] password: $CODESPACE_ADMIN_PASSWORD"
+
 : > "$VITE_LOG"
-echo "[forge] starting Forge Runtime Vite against restored backend..."
+echo "[forge] starting Forge Runtime Vite against restored Alumdoor backend..."
 nohup env VITE_FORGE_BACKEND="http://127.0.0.1:${BACKEND_PORT}" "${PNPM[@]}" --filter runtime dev -- --host 0.0.0.0 --port "$FRONTEND_PORT" --strictPort >"$VITE_LOG" 2>&1 &
 VITE_PID=$!
 echo "$VITE_PID" > "$VITE_PID_FILE"
@@ -146,19 +196,20 @@ for _ in $(seq 1 60); do
   if ! kill -0 "$VITE_PID" 2>/dev/null; then
     echo "[forge] ERROR: Runtime Vite exited before opening port ${FRONTEND_PORT}."
     echo "----- /tmp/forge-vite.log -----"
-    tail -n 120 "$VITE_LOG" || true
+    tail -n 160 "$VITE_LOG" || true
     echo "--------------------------------"
     exit 1
   fi
 
   if curl -fsS "http://127.0.0.1:${FRONTEND_PORT}" >/dev/null 2>&1; then
     echo "[forge] FULL STACK READY: http://127.0.0.1:${FRONTEND_PORT}"
-    echo "[forge] Backend: 127.0.0.1:${BACKEND_PORT} | Database: restored C:\\alumdoor local state"
+    echo "[forge] Backend: full Alumdoor local stack | Database: restored C:\\alumdoor state"
+    echo "[forge] Login credential is also stored in .codespace-admin-credentials"
     exit 0
   fi
   sleep 1
 done
 
 echo "[forge] ERROR: Runtime Vite is alive but port ${FRONTEND_PORT} did not become ready."
-tail -n 120 "$VITE_LOG" || true
+tail -n 160 "$VITE_LOG" || true
 exit 1
