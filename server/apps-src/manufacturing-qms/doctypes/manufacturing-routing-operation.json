@@ -1,1 +1,23 @@
-{"name":"Manufacturing Routing Operation","module":"Manufacturing","is_child":true,"fields":[{"fieldname":"sequence","label":"Thứ tự","fieldtype":"Int","required":true,"in_list_view":true},{"fieldname":"operation","label":"Công đoạn","fieldtype":"Link","options":"Operation","required":true,"in_list_view":true},{"fieldname":"workstation","label":"Trạm làm việc","fieldtype":"Link","options":"Workstation","required":true,"in_list_view":true},{"fieldname":"setup_minutes","label":"Phút chuẩn bị","fieldtype":"Float","default":0},{"fieldname":"run_minutes_per_unit","label":"Phút / đơn vị","fieldtype":"Float","required":true}],"permissions":[],"revision":1}
+{
+  "name": "Manufacturing Routing Operation",
+  "module": "Manufacturing",
+  "is_child": true,
+  "fields": [
+    {"fieldname":"sequence","label":"Thứ tự","fieldtype":"Int","required":true,"in_list_view":true},
+    {"fieldname":"operation","label":"Công đoạn","fieldtype":"Link","options":"Operation","required":true,"in_list_view":true},
+    {"fieldname":"workstation","label":"Trạm làm việc","fieldtype":"Link","options":"Workstation","in_list_view":true},
+    {"fieldname":"setup_time","label":"Thời gian chuẩn bị","fieldtype":"Float"},
+    {"fieldname":"run_time","label":"Thời gian chạy","fieldtype":"Float"},
+    {"fieldname":"time_uom","label":"ĐVT thời gian","fieldtype":"Data"},
+    {"fieldname":"time_basis","label":"Cơ sở thời gian","fieldtype":"Data"},
+    {"fieldname":"batch_size","label":"Cỡ mẻ","fieldtype":"Float"},
+    {"fieldname":"batch_uom","label":"ĐVT mẻ","fieldtype":"Data"},
+    {"fieldname":"operation_cost","label":"Chi phí công đoạn","fieldtype":"Currency"},
+    {"fieldname":"needs_time_definition","label":"Thiếu định mức thời gian","fieldtype":"Check","default":0},
+    {"fieldname":"needs_workstation","label":"Thiếu workstation","fieldtype":"Check","default":0},
+    {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Data"},
+    {"fieldname":"source_note","label":"Ghi chú nguồn","fieldtype":"Small Text"}
+  ],
+  "permissions": [],
+  "revision": 2
+}
