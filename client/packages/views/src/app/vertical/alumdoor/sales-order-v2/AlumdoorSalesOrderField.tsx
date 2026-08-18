@@ -2,6 +2,7 @@
 import type { DocField } from "@metaforge/core";
 import { LinkControl, type ControlRegistry, type FieldServices } from "@metaforge/controls";
 import { toast } from "@metaforge/ui";
+import { stashDuplicate } from "../../../../container/duplicate.js";
 import type { Json } from "./model.js";
 
 const SUPPLIER_OPTION_PREFIX = "NCC · ";
@@ -62,6 +63,27 @@ function salesCounterpartyServices(services: FieldServices): FieldServices {
       return [...customers, ...supplierOptions];
     },
   };
+}
+
+function supplierCustomerPrefill(supplierName: string, source?: Record<string, unknown>): Record<string, unknown> {
+  const text = (value: unknown) => String(value ?? "").normalize("NFC").trim();
+  const result: Record<string, unknown> = {
+    customer_name: text(source?.supplier_name) || supplierName,
+  };
+  const mappings: Array<[string, string]> = [
+    ["contact_person", "contact_person"],
+    ["phone", "phone"],
+    ["email", "email"],
+    ["tax_id", "tax_id"],
+    ["address", "install_address_line1"],
+  ];
+  for (const [sourceField, customerField] of mappings) {
+    const value = text(source?.[sourceField]);
+    if (value) result[customerField] = value;
+  }
+  // Deliberately do not set price_group. Customer.price_group is required sales authority and
+  // Supplier has no equivalent evidence, so the operator must explicitly choose Đại lý/Lẻ.
+  return result;
 }
 
 export function fallbackField(
@@ -139,7 +161,15 @@ export function AlumdoorSalesOrderField(props: {
         toast.error("NCC này chưa có vai trò Khách hàng và màn tạo nhanh Khách hàng chưa sẵn sàng.");
         return;
       }
-      toast.info(`NCC ${supplierName} chưa có vai trò Khách hàng. Tạo hồ sơ Khách hàng và chọn Nhóm giá Đại lý/Lẻ để dùng trên đơn bán.`);
+      let supplier: Record<string, unknown> | undefined;
+      if (props.services.fetchDocument) {
+        supplier = await props.services.fetchDocument("Supplier", supplierName).catch(() => undefined);
+      }
+      // NewFormContainer already consumes this one-shot handoff. Reuse it rather than inventing
+      // another quick-create data channel; the Customer form still performs normal permission,
+      // required-field and server validation before returning the new Customer name.
+      stashDuplicate("Customer", supplierCustomerPrefill(supplierName, supplier));
+      toast.info(`NCC ${supplierName} chưa có vai trò Khách hàng. Hồ sơ đã được điền sẵn; chọn Nhóm giá Đại lý/Lẻ rồi lưu để dùng trên đơn bán.`);
       const customerName = await props.services.quickCreate("Customer");
       if (customerName) props.onChange(customerName);
     })().catch((error) => {
