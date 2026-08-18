@@ -6,7 +6,7 @@ import {
   parseArgs as coreParseArgs,
 } from './run-local-import-core.mjs';
 import { mainPricing } from './pricing-adapter.mjs';
-import { mainBom } from './bom-source-complete-adapter.mjs';
+import { mainBom } from './bom-adapter.mjs';
 import { mainBomTemplate } from './bom-template-adapter.mjs';
 import { mainCustomer } from './customer-adapter.mjs';
 
