@@ -41,6 +41,8 @@ export const V3_DATA_SURFACE_CLASS = [
   "[&_.mf-bulk-bar]:!border-primary/20",
   "[&_.mf-bulk-bar]:!bg-primary/5",
   "[&_.mf-bulk-bar]:!shadow-sm",
+  "[&_.mf-list-scroll]:overflow-y-scroll",
+  "[&_.mf-list-scroll]:[scrollbar-gutter:stable]",
   "md:[&_.mf-list-scroll]:m-3",
   "md:[&_.mf-list-scroll]:rounded-lg",
   "md:[&_.mf-list-scroll]:border",
