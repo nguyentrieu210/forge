@@ -150,13 +150,13 @@ async function login() {
   if (!csrfToken) throw new Error('login succeeded but boot returned no CSRF token');
 }
 const dataOf = (body) => body?.data ?? body?.message ?? body;
-async function listExisting() {
-  const fields = encodeURIComponent(JSON.stringify(['name','item','company','quantity','docstatus','status']));
-  const filters = encodeURIComponent(JSON.stringify([['Bill of Materials','company','=','ALUMDOOR']]));
+async function listPaged(doctype, fields, filters = null) {
+  const encodedFields = encodeURIComponent(JSON.stringify(fields));
+  const encodedFilters = filters ? `&filters=${encodeURIComponent(JSON.stringify(filters))}` : '';
   const pageSize = 100;
   const all = [];
   for (let start = 0; ; start += pageSize) {
-    const body = await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}?fields=${fields}&filters=${filters}&limit_page_length=${pageSize}&limit_start=${start}`);
+    const body = await requireOk(`/api/resource/${encodeURIComponent(doctype)}?fields=${encodedFields}${encodedFilters}&limit_page_length=${pageSize}&limit_start=${start}`);
     const rows = dataOf(body);
     if (!Array.isArray(rows) || rows.length === 0) break;
     all.push(...rows);
@@ -164,15 +164,31 @@ async function listExisting() {
   }
   return all;
 }
+async function listExisting() {
+  return listPaged('Bill of Materials', ['name','item','company','quantity','docstatus','status','remarks'], [['Bill of Materials','company','=','ALUMDOOR']]);
+}
+async function listItemCodes() {
+  const rows = await listPaged('Item', ['name','item_code']);
+  return new Set(rows.map((row) => clean(row?.item_code) || clean(row?.name)).filter(Boolean));
+}
 async function getBom(name) {
   const body = await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}/${encodeURIComponent(name)}`);
   return dataOf(body);
 }
-async function getItem(code) {
-  const result = await request(`/api/resource/Item/${encodeURIComponent(code)}`);
-  if (result.response.status === 404) return null;
-  if (!result.response.ok) throw new Error(`GET Item ${code} failed (${result.response.status}): ${result.text}`);
-  return dataOf(result.body);
+async function mapConcurrent(values, limit, mapper) {
+  const out = new Array(values.length);
+  let cursor = 0;
+  async function worker() {
+    for (;;) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= values.length) return;
+      out[index] = await mapper(values[index], index);
+    }
+  }
+  const count = Math.min(Math.max(1, limit), Math.max(1, values.length));
+  await Promise.all(Array.from({ length: count }, () => worker()));
+  return out;
 }
 function apiBom(bom, modified) {
   return {
@@ -195,10 +211,11 @@ async function updateBomDraft(name, bom) {
   let last = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const current = await getBom(name);
+    if (sameBom(bom, current)) return { changed:false, body:current };
     const modified = clean(current?.modified);
     if (!modified) throw new Error(`BOM ${name} update requires current modified token`);
     const result = await request(url, { method:'PUT', body:apiBom(bom, modified) });
-    if (result.response.ok) return result.body;
+    if (result.response.ok) return { changed:true, body:result.body };
     last = result;
     const mismatch = [409,417].includes(result.response.status)
       && /TimestampMismatchError|VERSION_CONFLICT|document changed after it was loaded/i.test(result.text);
@@ -217,20 +234,18 @@ for (const bom of payload.boms) {
   referencedItems.add(clean(bom.item));
   for (const row of bom.lines) referencedItems.add(clean(row.item_code));
 }
-const missingItemRefs = [];
-for (const code of [...referencedItems].sort((a,b)=>a.localeCompare(b,'vi'))) {
-  if (!await getItem(code)) missingItemRefs.push(code);
-}
+console.log(`ALUMDOOR_BOM_PREFLIGHT_START referenced_items=${referencedItems.size} target_boms=${payload.boms.length}`);
+const localItemCodes = await listItemCodes();
+const missingItemRefs = [...referencedItems].filter((code) => !localItemCodes.has(code)).sort((a,b)=>a.localeCompare(b,'vi'));
 if (missingItemRefs.length) {
   throw new Error(`ALUMDOOR_BOM_LOCAL_MISSING_ITEMS count=${missingItemRefs.length} items=${JSON.stringify(missingItemRefs)}`);
 }
-console.log(`ALUMDOOR_BOM_LOCAL_ITEM_PREREQUISITES_PASS unique_items=${referencedItems.size}`);
+console.log(`ALUMDOOR_BOM_LOCAL_ITEM_PREREQUISITES_PASS unique_items=${referencedItems.size} local_items=${localItemCodes.size}`);
 
 const existingList = await listExisting();
-const existingFull = [];
-for (const row of existingList) existingFull.push(await getBom(row.name));
+console.log(`ALUMDOOR_BOM_EXISTING_INDEX_PASS existing=${existingList.length}`);
 const existingByItem = new Map();
-for (const doc of existingFull) {
+for (const doc of existingList) {
   const item = clean(doc?.item);
   if (!item) continue;
   const list = existingByItem.get(item) ?? [];
@@ -243,12 +258,6 @@ const unchanged = [];
 const conflicts = [];
 for (const bom of payload.boms) {
   const candidates = existingByItem.get(clean(bom.item)) ?? [];
-  const exact = candidates.find((doc) => sameBom(bom, doc));
-  if (exact) {
-    unchanged.push({ item: bom.item, name: exact.name });
-    plans.push({ action:'noop', bom, existing: exact });
-    continue;
-  }
   const mutable = candidates.find((doc) => Number(doc?.docstatus ?? 0) === 0 && importerManaged(doc))
     ?? candidates.find((doc) => Number(doc?.docstatus ?? 0) === 0);
   if (mutable) {
@@ -268,30 +277,37 @@ const preimage={
   existing_count:existingList.length,
   planned_create_count:plans.filter((p)=>p.action==='create').length,
   planned_update_count:plans.filter((p)=>p.action==='update').length,
-  unchanged_count:plans.filter((p)=>p.action==='noop').length,
+  unchanged_count:0,
   source_component_count:componentCount,
   pending_value_count:Number(payload.pending_value_count),
   submitted_revision_conflicts:conflicts,
-  existing:existingFull,
+  existing:existingList,
   planned:plans.map((p)=>({action:p.action,item:p.bom.item,name:p.existing?.name??null,import_fingerprint:p.bom.import_fingerprint,components:p.bom.lines.length,pending:p.bom.pending_lines?.length??0})),
 };
 writeFileSync(`${resultPath}.preimage.json`,`${JSON.stringify(preimage,null,2)}\n`,'utf8');
 
 const created=[]; const updated=[];
+console.log(`ALUMDOOR_BOM_WRITE_START total=${plans.length}`);
+let processed = 0;
 for (const plan of plans) {
-  if (plan.action === 'noop') continue;
   if (plan.action === 'create') {
     const body=await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}`,{method:'POST',body:apiBom(plan.bom)});
     const doc=dataOf(body); created.push({item:plan.bom.item,name:doc?.name??null,import_fingerprint:plan.bom.import_fingerprint});
   } else {
-    const body=await updateBomDraft(plan.existing.name, plan.bom);
-    const doc=dataOf(body); updated.push({item:plan.bom.item,name:doc?.name??plan.existing.name,import_fingerprint:plan.bom.import_fingerprint});
+    const outcome=await updateBomDraft(plan.existing.name, plan.bom);
+    const doc=dataOf(outcome.body);
+    if (outcome.changed) updated.push({item:plan.bom.item,name:doc?.name??plan.existing.name,import_fingerprint:plan.bom.import_fingerprint});
+    else unchanged.push({item:plan.bom.item,name:doc?.name??plan.existing.name});
+  }
+  processed += 1;
+  if (processed === plans.length || processed % 10 === 0) {
+    console.log(`ALUMDOOR_BOM_WRITE_PROGRESS processed=${processed}/${plans.length} created=${created.length} updated=${updated.length} unchanged=${unchanged.length}`);
   }
 }
 
 const postList=await listExisting();
-const postFull=[];
-for (const row of postList) postFull.push(await getBom(row.name));
+console.log(`ALUMDOOR_BOM_VERIFY_START existing=${postList.length}`);
+const postFull=await mapConcurrent(postList, 8, (row)=>getBom(row.name));
 const postByItem=new Map();
 for(const doc of postFull){const item=clean(doc?.item);const list=postByItem.get(item)??[];list.push(doc);postByItem.set(item,list);}
 const failures=[];
