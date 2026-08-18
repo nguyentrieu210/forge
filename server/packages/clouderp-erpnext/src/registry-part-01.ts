@@ -2,7 +2,7 @@ import type { ControllerRegistry } from "../../document-kernel/src/index.js";
 import { CreditNoteController, DebitNoteController, AssetController, AssetDepreciationController } from "./controllers.js";
 import { StockReturnIntegrityController } from "./stock-return-integrity.js";
 import { WarehouseScopedDeliveryNoteController, WarehouseScopedPurchaseReceiptController } from "./stock-document-warehouse-integrity.js";
-import { VersionedBillOfMaterialsController } from "./manufacturing-lifecycle.js";
+import { SourceCompleteBillOfMaterialsController } from "./source-complete-bom.js";
 import { StockUomSnapshotWorkOrderController } from "./manufacturing-work-order-guard.js";
 import { StockEntryIntegrityController } from "./stock-entry-integrity.js";
 import { ManufacturingRoutingController, WorkstationCapacityCalendarController, ManufacturingDowntimeController } from "./manufacturing-capacity.js";
@@ -19,7 +19,7 @@ export function registerErpNextControllersPart01(registry: ControllerRegistry): 
     .register(new StockReturnIntegrityController())
     .register(new WarehouseScopedDeliveryNoteController())
     .register(new WarehouseScopedPurchaseReceiptController())
-    .register(new VersionedBillOfMaterialsController())
+    .register(new SourceCompleteBillOfMaterialsController())
     .register(new StockUomSnapshotWorkOrderController())
     .register(new StockEntryIntegrityController())
     .register(new ManufacturingRoutingController())
