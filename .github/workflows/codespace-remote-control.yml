@@ -18,7 +18,7 @@ on:
 
 permissions:
   contents: read
-  issues: read
+  issues: write
 
 concurrency:
   group: forge-codespace-remote-control
@@ -37,6 +37,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.CODESPACES_PAT }}
       CODESPACE_NAME: bookish-computing-machine-jj999xj7ppj7fprq9
+      COMMENT_BODY: ${{ github.event.comment.body }}
     steps:
       - name: Resolve command
         id: resolve
@@ -46,21 +47,22 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             command="${{ inputs.command }}"
           else
-            command="$(printf '%s' '${{ github.event.comment.body }}' | awk '{print $2}')"
+            command="$(printf '%s' "$COMMENT_BODY" | awk '{print $2}')"
           fi
           case "$command" in
             status|restart|sync-restart|stop) ;;
             *) echo "Unsupported command: $command" >&2; exit 2 ;;
           esac
           echo "command=$command" >> "$GITHUB_OUTPUT"
+          echo "command=$command" > /tmp/codespace-result.txt
 
       - name: Verify Codespaces credential
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$GH_TOKEN" || { echo "Missing repository secret CODESPACES_PAT" >&2; exit 2; }
-          gh auth status
-          gh codespace view -c "$CODESPACE_NAME" --json name,state,repository,displayName
+          test -n "$GH_TOKEN" || { echo "Missing repository secret CODESPACES_PAT" | tee -a /tmp/codespace-result.txt >&2; exit 2; }
+          gh auth status 2>&1 | tee -a /tmp/codespace-result.txt
+          gh codespace view -c "$CODESPACE_NAME" --json name,state,repository,displayName 2>&1 | tee -a /tmp/codespace-result.txt
 
       - name: Start Codespace when needed
         if: steps.resolve.outputs.command != 'stop'
@@ -69,7 +71,7 @@ jobs:
           set -euo pipefail
           state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state)"
           if [[ "$state" != "Available" ]]; then
-            echo "Starting Codespace (current state: $state)..."
+            echo "Starting Codespace (current state: $state)..." | tee -a /tmp/codespace-result.txt
             gh api --method POST "/user/codespaces/$CODESPACE_NAME/start" >/dev/null
             for _ in $(seq 1 90); do
               state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state)"
@@ -77,8 +79,9 @@ jobs:
               [[ "$state" == "Available" ]] && break
               sleep 5
             done
-            [[ "$state" == "Available" ]] || { echo "Codespace did not become available" >&2; exit 1; }
+            [[ "$state" == "Available" ]] || { echo "Codespace did not become available" | tee -a /tmp/codespace-result.txt >&2; exit 1; }
           fi
+          echo "Codespace state: $state" | tee -a /tmp/codespace-result.txt
 
       - name: Status
         if: steps.resolve.outputs.command == 'status'
@@ -97,16 +100,16 @@ jobs:
             curl -sS -o /dev/null -w "frontend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:5173/ || true
             curl -sS -o /dev/null -w "backend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot || true
             echo "=== recent logs ==="
-            tail -n 30 /tmp/forge-backend.log 2>/dev/null || true
-            tail -n 30 /tmp/forge-vite.log 2>/dev/null || true
-          '\'''
+            tail -n 20 /tmp/forge-backend.log 2>/dev/null || true
+            tail -n 20 /tmp/forge-vite.log 2>/dev/null || true
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
 
       - name: Restart Forge
         if: steps.resolve.outputs.command == 'restart'
         shell: bash
         run: |
           set -euo pipefail
-          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''cd /workspaces/forge && bash .devcontainer/start-dev.sh'\'''
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''cd /workspaces/forge && bash .devcontainer/start-dev.sh'\''' 2>&1 | tee -a /tmp/codespace-result.txt
 
       - name: Sync main and restart Forge
         if: steps.resolve.outputs.command == 'sync-restart'
@@ -125,11 +128,31 @@ jobs:
             git fetch origin main
             git merge --ff-only origin/main
             bash .devcontainer/start-dev.sh
-          '\'''
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
 
       - name: Stop Codespace
         if: steps.resolve.outputs.command == 'stop'
         shell: bash
         run: |
           set -euo pipefail
-          gh codespace stop -c "$CODESPACE_NAME"
+          gh codespace stop -c "$CODESPACE_NAME" 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Publish result to control issue
+        if: always() && github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="$(tail -c 5500 /tmp/codespace-result.txt 2>/dev/null || true)"
+          {
+            echo "Codespace control result: **$JOB_STATUS**"
+            echo
+            echo '```text'
+            printf '%s\n' "$result"
+            echo '```'
+            echo
+            echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > /tmp/codespace-comment.md
+          gh issue comment 991 --repo "$GITHUB_REPOSITORY" --body-file /tmp/codespace-comment.md
