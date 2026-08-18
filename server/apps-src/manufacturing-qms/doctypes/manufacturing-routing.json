@@ -11,6 +11,7 @@
     {"fieldname":"company","label":"Công ty","fieldtype":"Link","options":"Company"},
     {"fieldname":"item_code","label":"Mã hàng","fieldtype":"Link","options":"Item","in_list_view":true},
     {"fieldname":"item_group","label":"Nhóm hàng","fieldtype":"Link","options":"Item Group","in_list_view":true},
+    {"fieldname":"bom_no","label":"BOM","fieldtype":"Link","options":"Bill of Materials","in_list_view":true},
     {"fieldname":"source_identity","label":"Định danh nguồn","fieldtype":"Data"},
     {"fieldname":"execution_mode","label":"Cách thực hiện","fieldtype":"Select","options":"internal\nsubcontract","in_list_view":true},
     {"fieldname":"source_supplier","label":"Nhà cung cấp theo nguồn","fieldtype":"Data"},
@@ -27,6 +28,7 @@
     {"fieldname":"needs_time_definition","label":"Thiếu định mức thời gian","fieldtype":"Check","default":0},
     {"fieldname":"needs_workstation","label":"Thiếu workstation","fieldtype":"Check","default":0},
     {"fieldname":"needs_item_mapping","label":"Thiếu mapping Item/Group","fieldtype":"Check","default":0},
+    {"fieldname":"needs_bom_mapping","label":"Thiếu mapping BOM","fieldtype":"Check","default":0},
     {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Small Text"},
     {"fieldname":"source_note","label":"Ghi chú nguồn","fieldtype":"Small Text"},
     {"fieldname":"operations","label":"Công đoạn","fieldtype":"Table","options":"Manufacturing Routing Operation"},
@@ -37,5 +39,5 @@
     {"role":"Manufacturing Manager","read":true,"write":true,"create":true,"submit":true,"cancel":true,"amend":true,"print":true,"report":true,"export":true,"share":true},
     {"role":"System Manager","read":true,"write":true,"create":true,"submit":true,"cancel":true,"amend":true,"print":true,"report":true,"export":true,"share":true}
   ],
-  "revision": 4
+  "revision": 5
 }
