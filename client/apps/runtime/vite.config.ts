@@ -16,6 +16,7 @@ const runtimeDependency = (name: string) => fileURLToPath(
 const attendanceIndex = fileURLToPath(new URL("../attendance-mobile/index.html", import.meta.url));
 const attendanceEntry = fileURLToPath(new URL("../attendance-mobile/src/main.tsx", import.meta.url));
 const attendancePublic = fileURLToPath(new URL("../attendance-mobile/public/", import.meta.url));
+const forgeBackend = process.env.VITE_FORGE_BACKEND ?? "http://127.0.0.1:8799";
 
 /**
  * The deployed Gateway mounts the standalone attendance PWA at
@@ -109,9 +110,8 @@ const viewSourceAliases = [
  * Desk chạy cục bộ.
  *
  * `main-base.tsx` khởi tạo `new FrappeAdapterImpl({})` — base rỗng nghĩa là same-origin, nên mọi
- * lời gọi `/api` đi vào chính dev server này. Không có proxy thì Vite trả `index.html` (200,
- * text/html) cho `/api/method/metaforge.api.get_boot`; adapter map thành `not_found` và Desk
- * dừng ở màn "Forge connection — Không tìm thấy bản ghi", dù worker vẫn khoẻ.
+ * lời gọi `/api` đi vào chính Vite server. Cả dev lẫn local build preview đều phải proxy `/api`
+ * sang Worker 8799; nếu không adapter sẽ nhận HTML/404 thay vì JSON và Desk dừng ở màn lỗi.
  *
  * `VITE_FORGE_BACKEND` là cổng chỉnh backend mà `server/RUNBOOK_LOCAL.md` đã nhắc tới; mặc định
  * 8799 khớp cổng worker trong runbook.
@@ -135,7 +135,15 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: process.env.VITE_FORGE_BACKEND ?? "http://127.0.0.1:8799",
+        target: forgeBackend,
+        changeOrigin: true,
+      },
+    },
+  },
+  preview: {
+    proxy: {
+      "/api": {
+        target: forgeBackend,
         changeOrigin: true,
       },
     },
