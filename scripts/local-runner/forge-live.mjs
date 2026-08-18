@@ -169,9 +169,9 @@ try {
 
   // Stop the actual service hosts, not only their children. This guarantees the
   // hosts reload any pulled service-command changes when they start again.
+  servicesStopped = true;
   await stopService("ForgeAlumdoorDesk");
   await stopService("ForgeAlumdoorBackend");
-  servicesStopped = true;
   await Promise.all([waitPort(5173, false, 45_000), waitPort(8799, false, 45_000)]);
   console.log("LOCAL_RUNTIME_STOP_STATUS=PASS");
 
@@ -193,7 +193,7 @@ try {
 
   // Rebuild only Runtime's workspace dependencies, then build Runtime itself to
   // a staging directory so a failed Vite build never destroys the last good UI.
-  run(pnpm, ["--filter", "runtime^...", "--if-present", "run", "build"]);
+  run(pnpm, ["--filter", "runtime^...", "run", "--if-present", "build"]);
   rmSync(runtimeNext, { recursive: true, force: true });
   run(pnpm, ["exec", "tsc", "-b"], { cwd: runtimeDir });
   run(pnpm, ["exec", "vite", "build", "--outDir", "dist.deploy-next", "--emptyOutDir"], {
