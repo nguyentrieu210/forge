@@ -13,6 +13,7 @@ SYNC_LOG_FILE="/tmp/forge-git-sync.log"
 TENANT_STATE="$ROOT_DIR/server/apps/tenant-worker/.wrangler/state"
 BOOTSTRAP_MARKER="$TENANT_STATE/.forge-codespace-bootstrap-v1"
 CREDENTIALS_FILE="$ROOT_DIR/.codespace-admin-credentials"
+CREDENTIALS_VERSION="2"
 CODESPACE_ADMIN_USER="codespace-admin@forge.local"
 PNPM=(corepack pnpm)
 
@@ -91,13 +92,14 @@ if [[ ! -f "$ROOT_DIR/server/dist/packages/frappe-api/src/index.js" ]]; then
   "${PNPM[@]}" --dir "$ROOT_DIR/server" run build
 fi
 
-# Keep one stable Codespace-only System Manager credential across restarts.
-if [[ -f "$CREDENTIALS_FILE" ]]; then
+# Keep one stable Codespace-only System Manager credential across restarts. Version
+# bumps rotate a credential that may have appeared in old public Actions output.
+if [[ -f "$CREDENTIALS_FILE" ]] && grep -qx "version=$CREDENTIALS_VERSION" "$CREDENTIALS_FILE"; then
   CODESPACE_ADMIN_PASSWORD="$(sed -n 's/^password=//p' "$CREDENTIALS_FILE" | head -n 1)"
 fi
 if [[ -z "${CODESPACE_ADMIN_PASSWORD:-}" ]]; then
   CODESPACE_ADMIN_PASSWORD="$(node -e "process.stdout.write(require('node:crypto').randomBytes(18).toString('base64url') + '!A7')")"
-  printf 'user=%s\npassword=%s\n' "$CODESPACE_ADMIN_USER" "$CODESPACE_ADMIN_PASSWORD" > "$CREDENTIALS_FILE"
+  printf 'version=%s\nuser=%s\npassword=%s\n' "$CREDENTIALS_VERSION" "$CODESPACE_ADMIN_USER" "$CODESPACE_ADMIN_PASSWORD" > "$CREDENTIALS_FILE"
   chmod 600 "$CREDENTIALS_FILE" 2>/dev/null || true
 fi
 
@@ -115,7 +117,8 @@ echo "[forge] applying Codespace-local D1 migrations..."
 echo "[forge] provisioning canonical repo local seed + Codespace System Manager account..."
 (
   cd "$ROOT_DIR/server"
-  node scripts/seed-local.mjs --user "$CODESPACE_ADMIN_USER" --password "$CODESPACE_ADMIN_PASSWORD"
+  node scripts/seed-local.mjs --user "$CODESPACE_ADMIN_USER" --password "$CODESPACE_ADMIN_PASSWORD" \
+    | sed -E 's/(password=)[^[:space:]]+/\1[redacted]/g'
 )
 
 : > "$BACKEND_LOG"
@@ -196,11 +199,13 @@ rm -f "$LOGIN_BODY" "$LOGIN_COOKIES"
 
 echo "[forge] LOGIN VERIFIED"
 echo "[forge] user:     $CODESPACE_ADMIN_USER"
-echo "[forge] password: $CODESPACE_ADMIN_PASSWORD"
+echo "[forge] password: [stored privately in .codespace-admin-credentials]"
 
 : > "$VITE_LOG"
 echo "[forge] starting Forge Runtime Vite against Codespace-local Alumdoor backend..."
-nohup env VITE_FORGE_BACKEND="http://127.0.0.1:${BACKEND_PORT}" "${PNPM[@]}" --filter runtime dev -- --host 0.0.0.0 --port "$FRONTEND_PORT" --strictPort >"$VITE_LOG" 2>&1 &
+nohup env VITE_FORGE_BACKEND="http://127.0.0.1:${BACKEND_PORT}" \
+  "${PNPM[@]}" --dir "$ROOT_DIR/client/apps/runtime" exec vite \
+  --host 0.0.0.0 --port "$FRONTEND_PORT" --strictPort >"$VITE_LOG" 2>&1 &
 VITE_PID=$!
 echo "$VITE_PID" > "$VITE_PID_FILE"
 
@@ -225,7 +230,7 @@ for _ in $(seq 1 60); do
 
     echo "[forge] FULL STACK READY: http://127.0.0.1:${FRONTEND_PORT}"
     echo "[forge] Backend: full Alumdoor local stack | Database: Codespace-local D1"
-    echo "[forge] Login credential is also stored in .codespace-admin-credentials"
+    echo "[forge] Login credential is stored privately in .codespace-admin-credentials"
     exit 0
   fi
   sleep 1
