@@ -166,8 +166,8 @@ jobs:
           gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
             set -euo pipefail
             cd /workspaces/forge
-            if [[ -n "$(git status --porcelain)" ]]; then
-              echo "Refusing to overwrite local edits. Commit/stash them first." >&2
+            if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+              echo "Refusing to overwrite tracked local edits. Commit/stash them first." >&2
               git status --short >&2
               exit 3
             fi
@@ -185,8 +185,8 @@ jobs:
           gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
             set -euo pipefail
             cd /workspaces/forge
-            if [[ -n "$(git status --porcelain)" ]]; then
-              echo "Refusing full seed on a dirty worktree." >&2
+            if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+              echo "Refusing full seed on tracked local edits." >&2
               git status --short >&2
               exit 3
             fi
