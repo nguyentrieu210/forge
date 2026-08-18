@@ -1,7 +1,7 @@
 {
   "id": "manufacturing-qms",
   "name": "Manufacturing QMS",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "requires": [],
   "externalDocTypes": [
     {"name":"Operation","kind":"master","app":"erpnext"},
@@ -10,6 +10,127 @@
     {"name":"Job Card","kind":"transaction","app":"erpnext"},
     {"name":"Quality Inspection","kind":"transaction","app":"erpnext"},
     {"name":"Asset","kind":"transaction","app":"erpnext"}
+  ],
+  "custom_fields": [
+    {
+      "name":"Operation-operation_name_vi",
+      "dt":"Operation",
+      "fieldname":"operation_name_vi",
+      "field":{"label":"Tên công đoạn (VI)","fieldtype":"Data","in_list_view":true},
+      "insert_after":"operation_name"
+    },
+    {
+      "name":"Operation-operation_type",
+      "dt":"Operation",
+      "fieldname":"operation_type",
+      "field":{"label":"Loại công đoạn","fieldtype":"Data"},
+      "insert_after":"operation_name_vi"
+    },
+    {
+      "name":"Operation-time_uom",
+      "dt":"Operation",
+      "fieldname":"time_uom",
+      "field":{"label":"ĐVT thời gian","fieldtype":"Data"},
+      "insert_after":"operation_type"
+    },
+    {
+      "name":"Operation-default_time",
+      "dt":"Operation",
+      "fieldname":"default_time",
+      "field":{"label":"Thời gian mặc định","fieldtype":"Float","non_negative":true},
+      "insert_after":"time_uom"
+    },
+    {
+      "name":"Operation-workstation",
+      "dt":"Operation",
+      "fieldname":"workstation",
+      "field":{"label":"Workstation mặc định","fieldtype":"Link","options":"Workstation"},
+      "insert_after":"default_time"
+    },
+    {
+      "name":"Operation-disabled",
+      "dt":"Operation",
+      "fieldname":"disabled",
+      "field":{"label":"Ngừng sử dụng","fieldtype":"Check","default":0},
+      "insert_after":"workstation"
+    },
+    {
+      "name":"Operation-needs_time_definition",
+      "dt":"Operation",
+      "fieldname":"needs_time_definition",
+      "field":{"label":"Thiếu định mức thời gian","fieldtype":"Check","default":0,"read_only":true},
+      "insert_after":"disabled"
+    },
+    {
+      "name":"Operation-needs_workstation",
+      "dt":"Operation",
+      "fieldname":"needs_workstation",
+      "field":{"label":"Thiếu workstation","fieldtype":"Check","default":0,"read_only":true},
+      "insert_after":"needs_time_definition"
+    },
+    {
+      "name":"Operation-batch_size",
+      "dt":"Operation",
+      "fieldname":"batch_size",
+      "field":{"label":"Cỡ mẻ","fieldtype":"Float","non_negative":true},
+      "insert_after":"needs_workstation"
+    },
+    {
+      "name":"Operation-batch_uom",
+      "dt":"Operation",
+      "fieldname":"batch_uom",
+      "field":{"label":"ĐVT mẻ","fieldtype":"Data"},
+      "insert_after":"batch_size"
+    },
+    {
+      "name":"Operation-alternate_batch_size",
+      "dt":"Operation",
+      "fieldname":"alternate_batch_size",
+      "field":{"label":"Cỡ mẻ thay thế","fieldtype":"Float","non_negative":true},
+      "insert_after":"batch_uom"
+    },
+    {
+      "name":"Operation-alternate_batch_uom",
+      "dt":"Operation",
+      "fieldname":"alternate_batch_uom",
+      "field":{"label":"ĐVT mẻ thay thế","fieldtype":"Data"},
+      "insert_after":"alternate_batch_size"
+    },
+    {
+      "name":"Operation-source_time_text",
+      "dt":"Operation",
+      "fieldname":"source_time_text",
+      "field":{"label":"Định mức nguyên văn","fieldtype":"Small Text","read_only":true},
+      "insert_after":"alternate_batch_uom"
+    },
+    {
+      "name":"Operation-source_reference",
+      "dt":"Operation",
+      "fieldname":"source_reference",
+      "field":{"label":"Nguồn / provenance","fieldtype":"Small Text","read_only":true},
+      "insert_after":"source_time_text"
+    },
+    {
+      "name":"Workstation-name_vi",
+      "dt":"Workstation",
+      "fieldname":"name_vi",
+      "field":{"label":"Tên workstation (VI)","fieldtype":"Data"},
+      "insert_after":"workstation_name"
+    },
+    {
+      "name":"Workstation-description",
+      "dt":"Workstation",
+      "fieldname":"description",
+      "field":{"label":"Mô tả","fieldtype":"Small Text"},
+      "insert_after":"name_vi"
+    },
+    {
+      "name":"Workstation-source_reference",
+      "dt":"Workstation",
+      "fieldname":"source_reference",
+      "field":{"label":"Nguồn / provenance","fieldtype":"Small Text","read_only":true},
+      "insert_after":"disabled"
+    }
   ],
   "nav": [
     {"key":"Manufacturing Routing","label":"Quy trình sản xuất","kind":"doctype","icon":"route","group":"Kế hoạch sản xuất"},
