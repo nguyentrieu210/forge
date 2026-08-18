@@ -1,0 +1,32 @@
+{
+  "name": "Forge Alumdoor Full Preview",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "forwardPorts": [5173, 8799],
+  "portsAttributes": {
+    "5173": {
+      "label": "Forge / Alumdoor Desk",
+      "onAutoForward": "openBrowserOnce"
+    },
+    "8799": {
+      "label": "Forge local API",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/bootstrap-codespace.sh",
+  "postStartCommand": "bash .devcontainer/start-codespace.sh",
+  "remoteEnv": {
+    "FORGE_CODESPACES": "1"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}
