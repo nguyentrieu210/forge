@@ -13,6 +13,7 @@ on:
           - restart
           - sync-restart
           - rebuild
+          - snapshot
           - stop
   issue_comment:
     types: [created]
@@ -51,7 +52,7 @@ jobs:
             command="$(printf '%s' "$COMMENT_BODY" | awk '{print $2}')"
           fi
           case "$command" in
-            status|restart|sync-restart|rebuild|stop) ;;
+            status|restart|sync-restart|rebuild|snapshot|stop) ;;
             *) echo "Unsupported command: $command" >&2; exit 2 ;;
           esac
           echo "command=$command" >> "$GITHUB_OUTPUT"
@@ -99,6 +100,34 @@ jobs:
           done
           echo "Codespace did not return to Available after rebuild" | tee -a /tmp/codespace-result.txt >&2
           exit 1
+
+      - name: Snapshot canonical local state, restore and restart
+        if: steps.resolve.outputs.command == 'snapshot'
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow codespace-local-state-snapshot.yml --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
+          echo "Dispatching canonical C:\\alumdoor snapshot workflow..." | tee -a /tmp/codespace-result.txt
+          gh workflow run codespace-local-state-snapshot.yml --repo "$GITHUB_REPOSITORY" --ref main
+          run_id=''
+          for _ in $(seq 1 30); do
+            run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow codespace-local-state-snapshot.yml --event workflow_dispatch --limit 5 --json databaseId --jq "[.[] | select(.databaseId != $before)][0].databaseId // empty")"
+            [[ -n "$run_id" ]] && break
+            sleep 2
+          done
+          [[ -n "$run_id" ]] || { echo "Could not resolve snapshot run" | tee -a /tmp/codespace-result.txt >&2; exit 1; }
+          echo "Snapshot run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}" | tee -a /tmp/codespace-result.txt
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status 2>&1 | tee -a /tmp/codespace-result.txt
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            set -euo pipefail
+            cd /workspaces/forge
+            rm -f .codespace-local-state.json
+            node scripts/codespaces/restore-local-state.mjs
+            bash .devcontainer/start-dev.sh
+            echo "=== health ==="
+            curl -fsS -o /dev/null -w "frontend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:5173/
+            curl -sS -o /dev/null -w "backend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
 
       - name: Status
         if: steps.resolve.outputs.command == 'status'
