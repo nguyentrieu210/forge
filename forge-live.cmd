@@ -22,6 +22,7 @@ echo   forge-live deploy-local     Pull, build, restart local runtime, health ch
 echo   forge-live apply pricing    Explicit guarded data apply using live code
 echo   forge-live apply bom
 echo   forge-live apply customer
+echo   forge-live apply manufacturing-master
 exit /b 2
 
 :install
