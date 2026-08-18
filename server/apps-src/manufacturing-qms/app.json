@@ -1,11 +1,12 @@
 {
   "id": "manufacturing-qms",
   "name": "Manufacturing QMS",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "requires": [],
   "externalDocTypes": [
     {"name":"Operation","kind":"master","app":"erpnext"},
     {"name":"Workstation","kind":"master","app":"erpnext"},
+    {"name":"Bill of Materials","kind":"transaction","app":"erpnext"},
     {"name":"Work Order","kind":"transaction","app":"erpnext"},
     {"name":"Job Card","kind":"transaction","app":"erpnext"},
     {"name":"Quality Inspection","kind":"transaction","app":"erpnext"},
