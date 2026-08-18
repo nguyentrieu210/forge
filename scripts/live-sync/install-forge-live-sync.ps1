@@ -28,7 +28,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $Root '.git'))) {
 
 $origin = (& git -C $Root remote get-url origin).Trim()
 if ($LASTEXITCODE -ne 0 -or $origin -notmatch 'github\.com[:/]nguyentrieu210/forge(?:\.git)?$') {
-  throw "Unexpected origin for $Root: $origin"
+  throw "Unexpected origin for ${Root}: $origin"
 }
 
 New-Item -ItemType Directory -Force -Path $ServiceHome | Out-Null
