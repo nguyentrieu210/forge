@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { CapabilityProfileAdmin } from "./CapabilityProfileAdmin.js";
 import "./styles.css";
+import "./sales-order-v2.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Runtime root element is missing");
