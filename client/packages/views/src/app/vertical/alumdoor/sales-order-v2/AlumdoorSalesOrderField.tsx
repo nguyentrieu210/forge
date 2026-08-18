@@ -1,17 +1,15 @@
 /** @jsxImportSource react */
 import type { DocField } from "@metaforge/core";
 import { LinkControl, type ControlRegistry, type FieldServices } from "@metaforge/controls";
-import { toast } from "@metaforge/ui";
-import { stashDuplicate } from "../../../../container/duplicate.js";
 import type { Json } from "./model.js";
 
-const SUPPLIER_OPTION_PREFIX = "NCC · ";
+export const SUPPLIER_OPTION_PREFIX = "NCC · ";
 
-function supplierOptionValue(name: string): string {
+export function supplierOptionValue(name: string): string {
   return `${SUPPLIER_OPTION_PREFIX}${name}`;
 }
 
-function supplierNameFromOption(value: unknown): string | null {
+export function supplierNameFromOption(value: unknown): string | null {
   const raw = String(value ?? "");
   return raw.startsWith(SUPPLIER_OPTION_PREFIX)
     ? raw.slice(SUPPLIER_OPTION_PREFIX.length).trim()
@@ -26,15 +24,11 @@ function salesCounterpartyServices(services: FieldServices): FieldServices {
     searchLink: async (doctype, txt, opts) => {
       if (doctype !== "Customer") return baseSearch(doctype, txt, opts);
 
-      // Sales Order remains Customer-authoritative for AR/Delivery/Invoice. The picker may
-      // nevertheless surface a Supplier because the same real-world counterparty can buy from
-      // Alumdoor too. We do NOT write a Supplier name into Sales Order.customer: selecting an
-      // NCC routes through Customer quick-create so the operator must explicitly assign the
-      // sales-only price group instead of the client inventing Đại lý/Lẻ.
+      // Picker bán hàng được phép tìm cả Khách hàng lẫn NCC. NCC chỉ là lựa chọn tạm trên UI;
+      // trước khi lưu Workbench sẽ dùng/tạo vai trò Customer tương ứng để giữ đúng authority
+      // của Sales Order -> Delivery Note -> Sales Invoice, nhưng không bắt người dùng nhảy form.
       const [customersResult, suppliersResult] = await Promise.allSettled([
         baseSearch("Customer", txt, { ...opts, pageLength: Math.max(opts?.pageLength ?? 10, 50) }),
-        // Customer link_filters are not valid Supplier fields. Keep only generic search context;
-        // adapterServices will still apply safe tenant/company/permission rules for Supplier.
         baseSearch("Supplier", txt, {
           ...opts,
           filters: undefined,
@@ -52,20 +46,14 @@ function salesCounterpartyServices(services: FieldServices): FieldServices {
         .filter((row) => row.value && !customerNames.has(row.value))
         .map((row) => {
           const display = supplierOptionValue(row.value);
-          return {
-            value: display,
-            // Keep primary === value so the shared Link formatter does not render a second
-            // technical token underneath. Supplier naming is supplier_name, so this is the
-            // human-readable identity the operator expects to see.
-            description: display,
-          };
+          return { value: display, description: display };
         });
       return [...customers, ...supplierOptions];
     },
   };
 }
 
-function supplierCustomerPrefill(supplierName: string, source?: Record<string, unknown>): Record<string, unknown> {
+export function supplierCustomerPrefill(supplierName: string, source?: Record<string, unknown>): Record<string, unknown> {
   const text = (value: unknown) => String(value ?? "").normalize("NFC").trim();
   const result: Record<string, unknown> = {
     customer_name: text(source?.supplier_name) || supplierName,
@@ -81,8 +69,6 @@ function supplierCustomerPrefill(supplierName: string, source?: Record<string, u
     const value = text(source?.[sourceField]);
     if (value) result[customerField] = value;
   }
-  // Deliberately do not set price_group. Customer.price_group is required sales authority and
-  // Supplier has no equivalent evidence, so the operator must explicitly choose Đại lý/Lẻ.
   return result;
 }
 
@@ -142,40 +128,10 @@ export function AlumdoorSalesOrderField(props: {
 
   const isLink = props.field.fieldtype === "Link" || props.field.fieldtype === "Dynamic Link";
   const isSalesOrderHeaderLink = props.parentDoctype === "Sales Order" && isLink;
-  // `compact` is correct for grid cells, but LinkControl intentionally hides its adjacent `+`
-  // while compact. The Sales Order header had reused that flag merely to reduce height, which
-  // accidentally removed quick-create from Customer, Price List, Employee, Bank Account, etc.
   const effectiveCompact = isSalesOrderHeaderLink ? false : props.compact;
   const isSalesCounterparty = props.parentDoctype === "Sales Order"
     && props.field.fieldname === "customer"
     && props.field.fieldtype === "Link";
-
-  const onCounterpartyChange = (value: unknown) => {
-    const supplierName = supplierNameFromOption(value);
-    if (!supplierName) {
-      props.onChange(value);
-      return;
-    }
-    void (async () => {
-      if (!props.services.quickCreate) {
-        toast.error("NCC này chưa có vai trò Khách hàng và màn tạo nhanh Khách hàng chưa sẵn sàng.");
-        return;
-      }
-      let supplier: Record<string, unknown> | undefined;
-      if (props.services.fetchDocument) {
-        supplier = await props.services.fetchDocument("Supplier", supplierName).catch(() => undefined);
-      }
-      // NewFormContainer already consumes this one-shot handoff. Reuse it rather than inventing
-      // another quick-create data channel; the Customer form still performs normal permission,
-      // required-field and server validation before returning the new Customer name.
-      stashDuplicate("Customer", supplierCustomerPrefill(supplierName, supplier));
-      toast.info(`NCC ${supplierName} chưa có vai trò Khách hàng. Hồ sơ đã được điền sẵn; chọn Nhóm giá Đại lý/Lẻ rồi lưu để dùng trên đơn bán.`);
-      const customerName = await props.services.quickCreate("Customer");
-      if (customerName) props.onChange(customerName);
-    })().catch((error) => {
-      toast.error(error instanceof Error ? error.message : "Không mở được hồ sơ Khách hàng.");
-    });
-  };
 
   const commonProps = {
     field: props.field,
@@ -193,7 +149,7 @@ export function AlumdoorSalesOrderField(props: {
     <LinkControl
       {...commonProps}
       services={salesCounterpartyServices(props.services)}
-      onChange={onCounterpartyChange}
+      onChange={props.onChange}
     />
   ) : (
     <Control
