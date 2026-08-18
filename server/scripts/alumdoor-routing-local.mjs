@@ -73,6 +73,7 @@ function validate() {
     if (routing.needs_time_definition && routing.standard_time_value != null) throw new Error(`ROUTING_FAKE_TIME_GUARD: ${routing.routing_code}`);
     if (!routing.needs_time_definition && routing.standard_time_value == null) throw new Error(`ROUTING_TIME_MISSING: ${routing.routing_code}`);
     if (routing.needs_item_mapping && (routing.item_code || routing.item_group)) throw new Error(`ROUTING_FAKE_MAPPING_GUARD: ${routing.routing_code}`);
+    if (routing.needs_bom_mapping && routing.bom_no) throw new Error(`ROUTING_FAKE_BOM_MAPPING_GUARD: ${routing.routing_code}`);
 
     const sequences = routing.operations.map((row) => Number(row.sequence));
     assertUnique(sequences, `SEQUENCE_${routing.routing_code}`);
@@ -113,6 +114,7 @@ function routingComplete(routing) {
   return !routing.needs_time_definition
     && !routing.needs_workstation
     && !routing.needs_item_mapping
+    && !routing.needs_bom_mapping
     && costRulesOf(routing).every((rule) => !rule.needs_rate_definition && !rule.needs_item_mapping);
 }
 
@@ -149,6 +151,12 @@ function audit() {
       reason: 'Source does not prove a specific Item/Item Group mapping.',
       recommended_next_input: `Provide exact Item/Item Group scope or routing condition for ${routing.routing_name}.`,
     });
+    if (routing.needs_bom_mapping) missingRows.push({
+      routing: routing.routing_code, operation: null, 'item/group': routing.item_group ?? routing.source_identity ?? null,
+      missing_field: 'bom_mapping', source_reference: routing.source_reference,
+      reason: 'Routing is grounded by Item Group/source identity but the canonical BOM is not final enough to link safely.',
+      recommended_next_input: `Link the final canonical Bill of Materials to ${routing.routing_name} after BOM convergence.`,
+    });
     for (const rule of costRulesOf(routing)) {
       if (rule.needs_rate_definition) missingRows.push({
         routing: routing.routing_code, operation: rule.operation, 'item/group': rule.scope_value,
@@ -177,7 +185,7 @@ function audit() {
   const costRules = allCostRules();
 
   return {
-    format: 'alumdoor-production-routing-audit/v2',
+    format: 'alumdoor-production-routing-audit/v3',
     authority_policy: data.authority_policy,
     counters: {
       OPERATIONS_TOTAL: data.operations.length,
@@ -189,6 +197,7 @@ function audit() {
       MISSING_STANDARD_TIME: data.operations.filter((x) => x.needs_time_definition).length + data.routings.filter((x) => x.needs_time_definition).length,
       MISSING_WORKSTATION: data.operations.filter((x) => x.needs_workstation).length + data.routings.filter((x) => x.needs_workstation).length,
       MISSING_ITEM_MAPPING: data.routings.filter((x) => x.needs_item_mapping).length,
+      MISSING_BOM_MAPPING: data.routings.filter((x) => x.needs_bom_mapping).length,
       UNRESOLVED_SOURCE_ROWS: unresolved.length,
       OPERATION_COST_RULES_TOTAL: costRules.length,
       OPERATION_COST_RULES_NEED_RATE: costRules.filter(({ rule }) => rule.needs_rate_definition).length,
@@ -228,6 +237,7 @@ function routingPayload(routing) {
     routing_name: routing.routing_name,
     item_code: routing.item_code,
     item_group: routing.item_group,
+    bom_no: routing.bom_no,
     source_identity: routing.source_identity,
     execution_mode: routing.execution_mode,
     source_supplier: routing.source_supplier,
@@ -241,10 +251,11 @@ function routingPayload(routing) {
     needs_time_definition: routing.needs_time_definition,
     needs_workstation: routing.needs_workstation,
     needs_item_mapping: routing.needs_item_mapping,
+    needs_bom_mapping: routing.needs_bom_mapping,
     source_reference: routing.source_reference,
     source_note: routing.source_note,
     is_active: true,
-    _metadata_revision: 4,
+    _metadata_revision: 5,
   };
 }
 
@@ -412,7 +423,8 @@ function verificationSql() {
     (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname IN ('operations','cost_rules') AND c.idx<>CAST(json_extract(c.payload_json,'$.sequence') AS INTEGER)) AS invalid_sequence_idx,
     (SELECT COUNT(*) FROM document_children c JOIN documents d ON d.tenant_id=c.tenant_id AND d.doc_key=c.parent_key WHERE c.tenant_id=${q(tenant)} AND d.doctype='Manufacturing Routing' AND d.name IN (${routingScope}) AND c.fieldname='cost_rules' AND ((json_extract(c.payload_json,'$.needs_rate_definition')=1 AND json_extract(c.payload_json,'$.rate_value') IS NOT NULL) OR (json_extract(c.payload_json,'$.needs_rate_definition')=0 AND json_extract(c.payload_json,'$.rate_value') IS NULL))) AS invalid_cost_rate_state,
     (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND r.name IN (${routingScope}) AND json_extract(r.payload_json,'$.item_group') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item Group' AND m.name=json_extract(r.payload_json,'$.item_group')) AND NOT EXISTS(SELECT 1 FROM documents g WHERE g.tenant_id=r.tenant_id AND g.doctype='Item Group' AND g.name=json_extract(r.payload_json,'$.item_group'))) AS invalid_item_group_mappings,
-    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND r.name IN (${routingScope}) AND json_extract(r.payload_json,'$.item_code') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item' AND m.name=json_extract(r.payload_json,'$.item_code')) AND NOT EXISTS(SELECT 1 FROM documents i WHERE i.tenant_id=r.tenant_id AND i.doctype='Item' AND i.name=json_extract(r.payload_json,'$.item_code'))) AS invalid_item_code_mappings;`;
+    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND r.name IN (${routingScope}) AND json_extract(r.payload_json,'$.item_code') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM master_records m WHERE m.tenant_id=r.tenant_id AND m.record_type='Item' AND m.name=json_extract(r.payload_json,'$.item_code')) AND NOT EXISTS(SELECT 1 FROM documents i WHERE i.tenant_id=r.tenant_id AND i.doctype='Item' AND i.name=json_extract(r.payload_json,'$.item_code'))) AS invalid_item_code_mappings,
+    (SELECT COUNT(*) FROM documents r WHERE r.tenant_id=${q(tenant)} AND r.doctype='Manufacturing Routing' AND r.name IN (${routingScope}) AND json_extract(r.payload_json,'$.bom_no') IS NOT NULL AND NOT EXISTS(SELECT 1 FROM documents b WHERE b.tenant_id=r.tenant_id AND b.doctype='Bill of Materials' AND b.name=json_extract(r.payload_json,'$.bom_no'))) AS invalid_bom_mappings;`;
 }
 
 function verifyRows(rows, label) {
@@ -441,6 +453,7 @@ function verifyRows(rows, label) {
     'invalid_cost_rate_state',
     'invalid_item_group_mappings',
     'invalid_item_code_mappings',
+    'invalid_bom_mappings',
   ]) {
     if (Number(row[key]) !== 0) throw new Error(`${label}_${key.toUpperCase()}=${row[key]}`);
   }
