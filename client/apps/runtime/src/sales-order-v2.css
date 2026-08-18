@@ -1,0 +1,75 @@
+/* Alumdoor Sales Order V2 — compact operational grid overrides.
+ * Keep these view-only so commercial/BOM authority stays in the TSX/server paths.
+ */
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] {
+  border-color: color-mix(in srgb, var(--foreground) 28%, var(--border)) !important;
+}
+
+/* The grid header already explains itself through column names; remove the extra title strip. */
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] > div:first-child {
+  display: none !important;
+}
+
+/* Stronger Excel-like table header and dividers. */
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] thead,
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] thead th {
+  background: color-mix(in srgb, var(--foreground) 12%, var(--card)) !important;
+  border-color: color-mix(in srgb, var(--foreground) 28%, var(--border)) !important;
+  color: var(--foreground) !important;
+  font-weight: 700 !important;
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] tbody td {
+  border-color: color-mix(in srgb, var(--foreground) 18%, var(--border)) !important;
+}
+
+/* Commercial row: policy + discount/surcharge/payable stays readable but takes much less height. */
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-commercial-row"] > td {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-commercial-row"] .mf-control {
+  min-height: 1.45rem !important;
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-commercial-row"] input,
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-commercial-row"] button {
+  min-height: 1.45rem !important;
+  height: 1.45rem !important;
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-commercial-row"] [class*="mt-2"] {
+  margin-top: 0.2rem !important;
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-commercial-row"] [class*="mt-1"] {
+  margin-top: 0.15rem !important;
+}
+
+/* BOM expander row: compact bar; expanded component content keeps its own usable spacing. */
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-bom-block"] > td > div > button {
+  min-height: 1.85rem !important;
+  padding-top: 0.28rem !important;
+  padding-bottom: 0.28rem !important;
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-bom-block"] > td > div > button svg {
+  width: 0.8rem !important;
+  height: 0.8rem !important;
+}
+
+/* Summary should read as a separate final card instead of another pale table row. */
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-summary-complete"] {
+  border-width: 2px !important;
+  border-color: color-mix(in srgb, var(--foreground) 26%, var(--border)) !important;
+  box-shadow: 0 0.35rem 1rem -0.75rem color-mix(in srgb, var(--foreground) 32%, transparent);
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-summary-complete"] > div:first-child > div {
+  background: color-mix(in srgb, var(--muted) 58%, var(--card)) !important;
+}
+
+[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-summary-complete"] > div:first-child > div:last-child {
+  background: color-mix(in srgb, var(--primary) 9%, var(--card)) !important;
+}
