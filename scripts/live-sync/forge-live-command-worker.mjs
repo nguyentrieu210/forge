@@ -11,7 +11,7 @@ const REQUEST_PATH = path.join(ROOT, '.forge-live-command.json');
 const STATUS_PATH = path.join(SERVICE_HOME, 'live-command.status.json');
 const SYNC_LOCK = path.join(SERVICE_HOME, 'live-sync.process.lock');
 const VISIBLE_TASK = 'ForgeAlumdoorLiveCommand';
-const ALLOWED_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer']);
+const ALLOWED_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer', 'manufacturing-master']);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
