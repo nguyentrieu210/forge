@@ -15,9 +15,13 @@ const ALLOWED_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function readJsonOrNull(file) {
+  try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
+}
+
 function writeStatus(payload) {
   writeFileSync(STATUS_PATH, `${JSON.stringify({
-    format: 'forge-live-command-status/v3',
+    format: 'forge-live-command-status/v4',
     updated_at: new Date().toISOString(),
     ...payload,
   }, null, 2)}\n`, 'utf8');
@@ -111,13 +115,9 @@ function launchVisible(request) {
   }
 }
 
-async function ensureSyncRunning() {
-  for (let i = 0; i < 20; i += 1) {
-    if (existsSync(SYNC_LOCK)) return;
-    await sleep(100);
-  }
+function spawnSyncDaemon() {
   const syncScript = path.join(ROOT, 'scripts', 'live-sync', 'forge-live-sync.mjs');
-  if (!existsSync(syncScript)) return;
+  if (!existsSync(syncScript)) return false;
   const child = spawn(process.execPath, [syncScript, `--root=${ROOT}`, `--branch=${LIVE_BRANCH}`, '--interval=2000', `--service-home=${SERVICE_HOME}`], {
     cwd: ROOT,
     detached: true,
@@ -125,6 +125,36 @@ async function ensureSyncRunning() {
     windowsHide: true,
   });
   child.unref();
+  return true;
+}
+
+async function ensureSyncRunning() {
+  for (let i = 0; i < 20; i += 1) {
+    if (existsSync(SYNC_LOCK)) return;
+    await sleep(100);
+  }
+  spawnSyncDaemon();
+}
+
+async function recoverSyncAfterDispatch() {
+  for (let i = 0; i < 60; i += 1) {
+    if (!existsSync(SYNC_LOCK)) {
+      spawnSyncDaemon();
+      return;
+    }
+    await sleep(100);
+  }
+}
+
+async function waitForVisibleHandoff(request) {
+  for (let i = 0; i < 24; i += 1) {
+    await sleep(250);
+    const status = existsSync(STATUS_PATH) ? readJsonOrNull(STATUS_PATH) : null;
+    if (status?.command_id !== request.id) continue;
+    if (['RUNNING', 'PASS', 'FAILED'].includes(status?.status)) return status;
+  }
+  await recoverSyncAfterDispatch();
+  throw new Error(`Interactive live command did not enter RUNNING within 6s task=${VISIBLE_TASK}`);
 }
 
 async function runVisible(request) {
@@ -209,7 +239,9 @@ async function runVisible(request) {
 
 async function main() {
   if (!process.argv.includes('--visible')) {
-    launchVisible(readRequest());
+    const request = readRequest();
+    launchVisible(request);
+    await waitForVisibleHandoff(request);
     return;
   }
   const request = parseVisibleRequest();
@@ -220,7 +252,7 @@ async function main() {
 main().catch(async (error) => {
   let request = null;
   try { request = parseVisibleRequest() || readRequest(); } catch {}
-  try { await ensureSyncRunning(); } catch {}
+  try { await recoverSyncAfterDispatch(); } catch {}
   try {
     writeStatus({
       status: 'FAILED',
