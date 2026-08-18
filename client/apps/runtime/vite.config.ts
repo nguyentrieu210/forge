@@ -1,16 +1,17 @@
-import { fileURLToPath, URL } from "node:url";
+import { existsSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const packagesRoot = fileURLToPath(new URL("../../packages/", import.meta.url));
 const workspaceSource = (name: string) => fileURLToPath(
   new URL(`../../packages/${name}/src/index.ts`, import.meta.url),
 );
 const viewSource = (relativePath: string) => fileURLToPath(
   new URL(`../../packages/views/src/${relativePath}`, import.meta.url),
 );
-const controlsSource = workspaceSource("controls");
 const runtimeDependency = (name: string) => fileURLToPath(
   new URL(`./node_modules/${name}`, import.meta.url),
 );
@@ -75,6 +76,23 @@ function attendanceMobileDev(): Plugin {
   };
 }
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// DEV ONLY: every package under client/packages that exposes src/index.ts is
+// resolved straight to source. Production package.json exports can keep pointing
+// at dist/, while a fresh Codespace needs no package prebuild and gets HMR for
+// workspace edits immediately. This also covers future packages automatically.
+const workspacePackageAliases = readdirSync(packagesRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .flatMap((entry) => {
+    const source = workspaceSource(entry.name);
+    if (!existsSync(source)) return [];
+    return [{
+      find: new RegExp(`^@metaforge\\/${escapeRegExp(entry.name)}$`),
+      replacement: source,
+    }];
+  });
+
 const viewSourceAliases = [
   // The attendance entry lives beside Runtime rather than below its root. Pin
   // bare third-party imports to Runtime's dependency graph so Vite does not
@@ -84,16 +102,10 @@ const viewSourceAliases = [
   { find: /^lucide-react$/, replacement: runtimeDependency("lucide-react") },
   { find: /^jsqr$/, replacement: runtimeDependency("jsqr") },
 
-  // DEV ONLY: resolve MetaForge workspace packages straight to source. Their
-  // production package exports point at dist/, which intentionally may not
-  // exist in a fresh Codespace. Source aliases make first-start preview work
-  // without a monorepo prebuild and make edits HMR immediately.
-  { find: /^@metaforge\/adapter-frappe$/, replacement: workspaceSource("adapter-frappe") },
-  { find: /^@metaforge\/core$/, replacement: workspaceSource("core") },
-  { find: /^@metaforge\/shell$/, replacement: workspaceSource("shell") },
-  { find: /^@metaforge\/ui$/, replacement: workspaceSource("ui") },
-  { find: /^@metaforge\/controls$/, replacement: controlsSource },
-  { find: /^@metaforge\/views$/, replacement: viewSource("index.ts") },
+  ...workspacePackageAliases,
+
+  // Explicit subpath aliases remain necessary because packages such as views
+  // intentionally expose multiple dev entry points.
   { find: /^@metaforge\/views\/provider$/, replacement: viewSource("container/provider") },
   { find: /^@metaforge\/views\/registry$/, replacement: viewSource("registry") },
   { find: /^@metaforge\/views\/url-state$/, replacement: viewSource("list/useListState") },
