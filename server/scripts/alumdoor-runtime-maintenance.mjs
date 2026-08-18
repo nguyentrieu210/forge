@@ -63,6 +63,51 @@ function recycleManagedServicesUnderMaintenance() {
   if (evidence) console.log(`ALUMDOOR_RUNTIME_MAINTENANCE_RECYCLE ${evidence}`);
 }
 
+function managedServiceExists(name) {
+  if (process.platform !== "win32") return false;
+  const escaped = String(name).replace(/'/g, "''");
+  const result = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      `$svc=Get-Service -Name '${escaped}' -ErrorAction SilentlyContinue; if($svc){exit 0}else{exit 3}`,
+    ],
+    { encoding: "utf8", windowsHide: true },
+  );
+  return result.status === 0;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForDeskReady(timeoutMs = 120_000) {
+  if (!managedServiceExists("ForgeAlumdoorDesk")) return;
+  const deadline = Date.now() + timeoutMs;
+  let lastError = "not ready";
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch("http://127.0.0.1:5173", {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (response.ok) {
+        console.log("ALUMDOOR_RUNTIME_DESK_READY url=http://127.0.0.1:5173");
+        return;
+      }
+      lastError = `HTTP ${response.status}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    await sleep(1000);
+  }
+  console.error(
+    `ALUMDOOR_RUNTIME_DESK_NOT_READY timeout_ms=${timeoutMs} error=${JSON.stringify(lastError)}`,
+  );
+  process.exit(1);
+}
+
 if (action === "status") {
   console.log(statusLine());
   process.exit(0);
@@ -98,6 +143,9 @@ if (action === "off") {
     rmSync(deskMaintenanceFile, { force: true });
   }
   console.log(`ALUMDOOR_RUNTIME_MAINTENANCE_OFF scope=${scope}`);
+  if (scope === "all" || scope === "desk") {
+    await waitForDeskReady();
+  }
   process.exit(0);
 }
 
