@@ -12,6 +12,7 @@ on:
           - status
           - restart
           - sync-restart
+          - seed-full
           - rebuild
           - snapshot
           - stop
@@ -35,7 +36,7 @@ jobs:
        github.event.comment.user.login == 'nguyentrieu210' &&
        startsWith(github.event.comment.body, '/codespace '))
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       GH_TOKEN: ${{ secrets.CODESPACES_PAT }}
       CODESPACE_NAME: bookish-computing-machine-jj999xj7ppj7fprq9
@@ -52,7 +53,7 @@ jobs:
             command="$(printf '%s' "$COMMENT_BODY" | awk '{print $2}')"
           fi
           case "$command" in
-            status|restart|sync-restart|rebuild|snapshot|stop) ;;
+            status|restart|sync-restart|seed-full|rebuild|snapshot|stop) ;;
             *) echo "Unsupported command: $command" >&2; exit 2 ;;
           esac
           echo "command=$command" >> "$GITHUB_OUTPUT"
@@ -174,6 +175,29 @@ jobs:
             git fetch origin main
             git merge --ff-only origin/main
             bash .devcontainer/start-dev.sh
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Seed full Alumdoor data
+        if: steps.resolve.outputs.command == 'seed-full'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            set -euo pipefail
+            cd /workspaces/forge
+            if [[ -n "$(git status --porcelain)" ]]; then
+              echo "Refusing full seed on a dirty worktree." >&2
+              git status --short >&2
+              exit 3
+            fi
+            git checkout main
+            git fetch origin main
+            git merge --ff-only origin/main
+            bash .devcontainer/start-dev.sh
+            bash scripts/codespaces/seed-full.sh
+            echo "=== final health ==="
+            curl -fsS -o /dev/null -w "frontend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:5173/
+            curl -sS -o /dev/null -w "backend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot
           '\''' 2>&1 | tee -a /tmp/codespace-result.txt
 
       - name: Stop Codespace
