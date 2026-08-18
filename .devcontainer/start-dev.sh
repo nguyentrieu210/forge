@@ -9,15 +9,43 @@ PID_FILE="/tmp/forge-vite.pid"
 SYNC_PID_FILE="/tmp/forge-git-sync.pid"
 SYNC_LOG_FILE="/tmp/forge-git-sync.log"
 
-if [[ ! -f "$SYNC_PID_FILE" ]] || ! kill -0 "$(cat "$SYNC_PID_FILE" 2>/dev/null || echo 0)" 2>/dev/null; then
-  nohup bash "$ROOT_DIR/.devcontainer/auto-sync-github.sh" >"$SYNC_LOG_FILE" 2>&1 &
-  echo $! > "$SYNC_PID_FILE"
-fi
+echo "[forge] workspace: $ROOT_DIR"
+echo "[forge] client:    $CLIENT_DIR"
+echo "[forge] port:      $PORT"
 
 cd "$CLIENT_DIR"
 
+if ! command -v node >/dev/null 2>&1; then
+  echo "[forge] ERROR: node is not available in this Codespace."
+  exit 1
+fi
+
+echo "[forge] node: $(node --version)"
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "[forge] pnpm missing; enabling Corepack..."
+  corepack enable
+  corepack prepare pnpm@9.15.0 --activate
+fi
+
+echo "[forge] pnpm: $(pnpm --version)"
+
+if [[ ! -d node_modules ]]; then
+  echo "[forge] node_modules missing; installing workspace dependencies..."
+  pnpm install --frozen-lockfile
+fi
+
+# Keep the Codespace synced with GitHub main, but never overwrite local changes.
+if [[ -f "$ROOT_DIR/.devcontainer/auto-sync-github.sh" ]]; then
+  if [[ ! -f "$SYNC_PID_FILE" ]] || ! kill -0 "$(cat "$SYNC_PID_FILE" 2>/dev/null || echo 0)" 2>/dev/null; then
+    nohup bash "$ROOT_DIR/.devcontainer/auto-sync-github.sh" >"$SYNC_LOG_FILE" 2>&1 &
+    echo $! > "$SYNC_PID_FILE"
+    echo "[forge] GitHub auto-sync started (pid $(cat "$SYNC_PID_FILE"))."
+  fi
+fi
+
 if curl -fsS "http://127.0.0.1:${PORT}" >/dev/null 2>&1; then
-  echo "Forge preview already running on port ${PORT}."
+  echo "[forge] preview already running: http://127.0.0.1:${PORT}"
   exit 0
 fi
 
@@ -25,21 +53,36 @@ if [[ -f "$PID_FILE" ]]; then
   OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
   if [[ -n "$OLD_PID" ]] && kill -0 "$OLD_PID" 2>/dev/null; then
     kill "$OLD_PID" 2>/dev/null || true
+    sleep 1
   fi
   rm -f "$PID_FILE"
 fi
 
-nohup pnpm --filter @metaforge/demo dev -- --host 0.0.0.0 --port "$PORT" >"$LOG_FILE" 2>&1 &
-echo $! > "$PID_FILE"
+: > "$LOG_FILE"
+echo "[forge] starting Vite..."
+nohup pnpm --filter @metaforge/demo dev -- --host 0.0.0.0 --port "$PORT" --strictPort >"$LOG_FILE" 2>&1 &
+VITE_PID=$!
+echo "$VITE_PID" > "$PID_FILE"
 
-for _ in $(seq 1 30); do
+for _ in $(seq 1 45); do
+  if ! kill -0 "$VITE_PID" 2>/dev/null; then
+    echo "[forge] ERROR: Vite exited before opening port ${PORT}."
+    echo "----- /tmp/forge-vite.log -----"
+    cat "$LOG_FILE" || true
+    echo "--------------------------------"
+    exit 1
+  fi
+
   if curl -fsS "http://127.0.0.1:${PORT}" >/dev/null 2>&1; then
-    echo "Forge preview ready on port ${PORT}."
+    echo "[forge] READY: http://127.0.0.1:${PORT}"
+    echo "[forge] Open the forwarded port ${PORT} from the Codespaces Ports tab."
     exit 0
   fi
   sleep 1
 done
 
-echo "Forge preview did not become ready. Last Vite output:"
-tail -n 80 "$LOG_FILE" || true
+echo "[forge] ERROR: Vite process is alive but port ${PORT} did not become ready."
+echo "----- /tmp/forge-vite.log -----"
+cat "$LOG_FILE" || true
+echo "--------------------------------"
 exit 1
