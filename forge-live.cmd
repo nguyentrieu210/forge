@@ -10,6 +10,7 @@ if /I "%~1"=="status" goto :status
 if /I "%~1"=="start" goto :start
 if /I "%~1"=="stop" goto :stop
 if /I "%~1"=="apply" goto :apply
+if /I "%~1"=="deploy-local" goto :deploylocal
 
 echo Usage:
 echo   forge-live install          Install/start permanent live sync
@@ -17,6 +18,7 @@ echo   forge-live once             Pull origin/agent-live into C:\alumdoor now
 echo   forge-live status           Show last sync status
 echo   forge-live start            Start scheduled live sync
 echo   forge-live stop             Stop scheduled live sync
+echo   forge-live deploy-local     Pull, build, restart local runtime, health check
 echo   forge-live apply pricing    Explicit guarded data apply using live code
 echo   forge-live apply bom
 echo   forge-live apply customer
@@ -54,4 +56,9 @@ if "%~2"=="" (
 )
 cd /d "%ROOT%" || exit /b 1
 node scripts\live-sync\forge-live-apply.mjs "%~2"
+exit /b %ERRORLEVEL%
+
+:deploylocal
+cd /d "%ROOT%" || exit /b 1
+node scripts\local-runner\forge-live.mjs deploy-local
 exit /b %ERRORLEVEL%
