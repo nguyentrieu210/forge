@@ -5,6 +5,8 @@
   "fields": [
     {"fieldname":"sequence","label":"Thứ tự","fieldtype":"Int","required":true,"in_list_view":true},
     {"fieldname":"operation","label":"Công đoạn","fieldtype":"Link","options":"Operation","required":true,"in_list_view":true},
+    {"fieldname":"execution_mode","label":"Cách thực hiện","fieldtype":"Select","options":"internal\nsubcontract","in_list_view":true},
+    {"fieldname":"source_supplier","label":"Nhà cung cấp theo nguồn","fieldtype":"Data"},
     {"fieldname":"workstation","label":"Trạm làm việc","fieldtype":"Link","options":"Workstation","in_list_view":true},
     {"fieldname":"setup_time","label":"Thời gian chuẩn bị","fieldtype":"Float"},
     {"fieldname":"run_time","label":"Thời gian chạy","fieldtype":"Float"},
@@ -15,9 +17,9 @@
     {"fieldname":"operation_cost","label":"Chi phí công đoạn","fieldtype":"Currency"},
     {"fieldname":"needs_time_definition","label":"Thiếu định mức thời gian","fieldtype":"Check","default":0},
     {"fieldname":"needs_workstation","label":"Thiếu workstation","fieldtype":"Check","default":0},
-    {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Data"},
+    {"fieldname":"source_reference","label":"Nguồn","fieldtype":"Small Text"},
     {"fieldname":"source_note","label":"Ghi chú nguồn","fieldtype":"Small Text"}
   ],
   "permissions": [],
-  "revision": 2
+  "revision": 3
 }
