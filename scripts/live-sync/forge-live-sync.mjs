@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { appendFileSync, existsSync, mkdirSync, openSync, closeSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -10,6 +10,7 @@ const DEFAULT_BRANCH = 'agent-live';
 const DEFAULT_REMOTE = 'origin';
 const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_SERVICE_HOME = 'C:\\ForgeServices\\Alumdoor';
+const SELF_PATH = 'scripts/live-sync/forge-live-sync.mjs';
 const ALLOWED_COMMAND_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'customer']);
 
 function parseArgs(argv) {
@@ -30,9 +31,7 @@ function parseArgs(argv) {
     else if (arg.startsWith('--service-home=')) options.serviceHome = arg.slice('--service-home='.length);
     else throw new Error(`Unknown argument: ${arg}`);
   }
-  if (!Number.isFinite(options.intervalMs) || options.intervalMs < 500) {
-    throw new Error(`--interval must be >= 500ms; got ${options.intervalMs}`);
-  }
+  if (!Number.isFinite(options.intervalMs) || options.intervalMs < 500) throw new Error(`--interval must be >= 500ms; got ${options.intervalMs}`);
   return options;
 }
 
@@ -48,19 +47,11 @@ function run(command, args, { cwd, capture = true, allowFailure = false } = {}) 
     const detail = `${result.stderr || ''}${result.stdout || ''}`.trim();
     throw new Error(`${command} ${args.join(' ')} failed (${result.status})${detail ? `: ${detail}` : ''}`);
   }
-  return {
-    status: result.status,
-    stdout: String(result.stdout || '').trim(),
-    stderr: String(result.stderr || '').trim(),
-  };
+  return { status: result.status, stdout: String(result.stdout || '').trim(), stderr: String(result.stderr || '').trim() };
 }
 
 function git(root, args, options) {
   return run('git', ['-C', root, ...args], options).stdout;
-}
-
-function nowFileStamp() {
-  return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
 function ensureDir(dir) {
@@ -69,6 +60,10 @@ function ensureDir(dir) {
 
 function writeJson(file, value) {
   writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function readJsonOrNull(file) {
+  try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
 }
 
 function makeLogger(serviceHome) {
@@ -84,58 +79,36 @@ function makeLogger(serviceHome) {
 function assertRepo(root) {
   if (!existsSync(path.join(root, '.git'))) throw new Error(`${root} is not a Git repository`);
   const origin = git(root, ['remote', 'get-url', 'origin']);
-  if (!/github\.com[:/]nguyentrieu210\/forge(?:\.git)?$/i.test(origin)) {
-    throw new Error(`Unexpected origin for ${root}: ${origin}`);
-  }
+  if (!/github\.com[:/]nguyentrieu210\/forge(?:\.git)?$/i.test(origin)) throw new Error(`Unexpected origin for ${root}: ${origin}`);
   const major = Number(process.versions.node.split('.')[0]);
   if (!Number.isInteger(major) || major < 22) throw new Error(`Node >=22 required; got ${process.version}`);
 }
 
 function backupDirty(root, serviceHome, log) {
   const dirty = git(root, ['status', '--porcelain=v1']);
-  if (!dirty) return null;
-  const backupDir = path.join(serviceHome, 'live-sync-backups');
-  ensureDir(backupDir);
-  const stamp = nowFileStamp();
-  const patchPath = path.join(backupDir, `${stamp}-${process.pid}.patch`);
-  const statusPath = path.join(backupDir, `${stamp}-${process.pid}.status.txt`);
+  if (!dirty) return;
+  const dir = path.join(serviceHome, 'live-sync-backups');
+  ensureDir(dir);
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const base = path.join(dir, `${stamp}-${process.pid}`);
   const patch = run('git', ['-C', root, 'diff', '--binary', '--no-ext-diff'], { allowFailure: true }).stdout;
-  writeFileSync(statusPath, `${dirty}\n`, 'utf8');
-  writeFileSync(patchPath, patch ? `${patch}\n` : '', 'utf8');
-  log(`LIVE_SYNC_LOCAL_DIRTY_BACKUP status=${statusPath} patch=${patchPath}`);
-  return { patchPath, statusPath };
+  writeFileSync(`${base}.status.txt`, `${dirty}\n`, 'utf8');
+  writeFileSync(`${base}.patch`, patch ? `${patch}\n` : '', 'utf8');
+  log(`LIVE_SYNC_LOCAL_DIRTY_BACKUP base=${base}`);
 }
 
-function dependencyFilesChanged(changedFiles) {
-  return changedFiles.some((file) =>
-    file === 'pnpm-lock.yaml' ||
-    file === 'pnpm-workspace.yaml' ||
-    file === 'package.json' ||
-    file.endsWith('/package.json'),
-  );
+function dependencyFilesChanged(files) {
+  return files.some((file) => file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml' || file === 'package.json' || file.endsWith('/package.json'));
 }
 
-function pendingDependenciesPath(serviceHome) {
-  return path.join(serviceHome, 'live-sync.pending-dependencies.json');
-}
-
-function installDependencies(root, log) {
+function ensureDependencies(root, serviceHome, sha, required, log) {
+  const marker = path.join(serviceHome, 'live-sync.pending-dependencies.json');
+  if (!required && !existsSync(marker)) return false;
+  writeJson(marker, { format: 'forge-live-sync-pending-dependencies/v1', sha, requested_at: new Date().toISOString() });
   log('LIVE_SYNC_DEPENDENCIES=START');
-  const command = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-  run(command, ['install', '--frozen-lockfile'], { cwd: root, capture: false });
+  run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['install', '--frozen-lockfile'], { cwd: root, capture: false });
+  unlinkSync(marker);
   log('LIVE_SYNC_DEPENDENCIES=PASS');
-}
-
-function ensureDependencies(root, serviceHome, sha, requiredByChange, log) {
-  const markerPath = pendingDependenciesPath(serviceHome);
-  if (!requiredByChange && !existsSync(markerPath)) return false;
-  writeJson(markerPath, {
-    format: 'forge-live-sync-pending-dependencies/v1',
-    sha,
-    requested_at: new Date().toISOString(),
-  });
-  installDependencies(root, log);
-  unlinkSync(markerPath);
   return true;
 }
 
@@ -150,38 +123,36 @@ function ensureBranch(root, remote, branch, log, serviceHome) {
   log(`LIVE_SYNC_BRANCH=PASS from=${current} to=${branch}`);
 }
 
-function applyRemote(root, remote, branch, serviceHome, log) {
-  git(root, ['fetch', '--quiet', remote, branch, '--prune']);
-  ensureBranch(root, remote, branch, log, serviceHome);
+function fetchRemoteBranch(root, remote, branch) {
+  // Always update the remote-tracking ref explicitly. Relying on FETCH_HEAD can
+  // leave origin/<branch> stale with some fetch/refspec configurations.
+  git(root, ['fetch', '--quiet', '--prune', remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`]);
+}
 
+function applyRemote(root, remote, branch, serviceHome, log) {
+  fetchRemoteBranch(root, remote, branch);
+  ensureBranch(root, remote, branch, log, serviceHome);
   const local = git(root, ['rev-parse', 'HEAD']);
   const remoteRef = `${remote}/${branch}`;
   const remoteSha = git(root, ['rev-parse', remoteRef]);
   if (local === remoteSha) {
     const dependenciesRecovered = ensureDependencies(root, serviceHome, local, false, log);
-    return { changed: false, local, remote: remoteSha, files: [], dependenciesRecovered };
+    return { changed: false, from: local, to: remoteSha, files: [], dependenciesRecovered };
   }
-
   const changedRaw = git(root, ['diff', '--name-only', `${local}..${remoteSha}`]);
-  const changedFiles = changedRaw ? changedRaw.split(/\r?\n/).filter(Boolean) : [];
+  const files = changedRaw ? changedRaw.split(/\r?\n/).filter(Boolean) : [];
   backupDirty(root, serviceHome, log);
-
-  // C:\alumdoor is a runtime mirror in live mode. Remote agent-live is the
-  // source authority; tracked local edits are backed up above and never block sync.
   git(root, ['reset', '--hard', remoteRef]);
-
-  const depsChanged = dependencyFilesChanged(changedFiles);
-  const dependenciesInstalled = ensureDependencies(root, serviceHome, remoteSha, depsChanged, log);
-
-  log(`LIVE_SYNC_APPLIED from=${local} to=${remoteSha} files=${changedFiles.length} deps=${dependenciesInstalled ? 1 : 0} watcher_reload=automatic`);
-  if (changedFiles.length) log(`LIVE_SYNC_FILES ${changedFiles.join(' | ')}`);
-  return { changed: true, local, remote: remoteSha, files: changedFiles, dependenciesInstalled };
+  const dependenciesInstalled = ensureDependencies(root, serviceHome, remoteSha, dependencyFilesChanged(files), log);
+  log(`LIVE_SYNC_APPLIED from=${local} to=${remoteSha} files=${files.length} deps=${dependenciesInstalled ? 1 : 0} watcher_reload=automatic`);
+  if (files.length) log(`LIVE_SYNC_FILES ${files.join(' | ')}`);
+  return { changed: true, from: local, to: remoteSha, files, dependenciesInstalled };
 }
 
 function readCommandRequest(root) {
-  const requestPath = path.join(root, '.forge-live-command.json');
-  if (!existsSync(requestPath)) return null;
-  const request = JSON.parse(readFileSync(requestPath, 'utf8'));
+  const file = path.join(root, '.forge-live-command.json');
+  if (!existsSync(file)) return null;
+  const request = JSON.parse(readFileSync(file, 'utf8'));
   if (request?.format !== 'forge-live-command/v1') throw new Error(`Unsupported live command format: ${request?.format}`);
   if (typeof request.id !== 'string' || !/^[A-Za-z0-9._:-]{8,120}$/.test(request.id)) throw new Error('Invalid live command id');
   if (request.action !== 'apply') throw new Error(`Unsupported live command action: ${request.action}`);
@@ -189,21 +160,28 @@ function readCommandRequest(root) {
   return request;
 }
 
+function commandAlreadyHandled(serviceHome, request, log) {
+  const markerPath = path.join(serviceHome, 'live-command.last-dispatched.json');
+  const marker = existsSync(markerPath) ? readJsonOrNull(markerPath) : null;
+  if (marker?.command_id !== request.id) return false;
+
+  const statusPath = path.join(serviceHome, 'live-command.status.json');
+  const status = existsSync(statusPath) ? readJsonOrNull(statusPath) : null;
+  if (status?.command_id === request.id && ['RUNNING', 'PASS', 'FAILED'].includes(status?.status)) return true;
+
+  log(`LIVE_COMMAND_ORPHANED_MARKER id=${request.id} action=redispatch`);
+  return false;
+}
+
 function dispatchPendingCommand(root, serviceHome, branch, log) {
   const request = readCommandRequest(root);
   if (!request) return null;
-
-  const markerPath = path.join(serviceHome, 'live-command.last-dispatched.json');
-  if (existsSync(markerPath)) {
-    try {
-      const previous = JSON.parse(readFileSync(markerPath, 'utf8'));
-      if (previous?.command_id === request.id) return null;
-    } catch {}
-  }
+  if (commandAlreadyHandled(serviceHome, request, log)) return null;
 
   const worker = path.join(root, 'scripts', 'live-sync', 'forge-live-command-worker.mjs');
   if (!existsSync(worker)) throw new Error(`Live command worker missing: ${worker}`);
 
+  const markerPath = path.join(serviceHome, 'live-command.last-dispatched.json');
   writeJson(markerPath, {
     format: 'forge-live-command-dispatch/v1',
     command_id: request.id,
@@ -218,12 +196,7 @@ function dispatchPendingCommand(root, serviceHome, branch, log) {
     stdio: 'ignore',
     windowsHide: true,
     cwd: root,
-    env: {
-      ...process.env,
-      FORGE_LIVE_ROOT: root,
-      FORGE_LIVE_SERVICE_HOME: serviceHome,
-      FORGE_LIVE_BRANCH: branch,
-    },
+    env: { ...process.env, FORGE_LIVE_ROOT: root, FORGE_LIVE_SERVICE_HOME: serviceHome, FORGE_LIVE_BRANCH: branch },
   });
   child.unref();
   log(`LIVE_COMMAND_DISPATCHED id=${request.id} action=${request.action} adapter=${request.adapter} worker_pid=${child.pid}`);
@@ -232,16 +205,15 @@ function dispatchPendingCommand(root, serviceHome, branch, log) {
 
 function acquireProcessLock(serviceHome) {
   ensureDir(serviceHome);
-  const lockPath = path.join(serviceHome, 'live-sync.process.lock');
+  const file = path.join(serviceHome, 'live-sync.process.lock');
   const payload = { pid: process.pid, host: os.hostname(), started_at: new Date().toISOString() };
   try {
-    const fd = openSync(lockPath, 'wx');
+    const fd = openSync(file, 'wx');
     try { writeFileSync(fd, `${JSON.stringify(payload)}\n`, 'utf8'); } finally { closeSync(fd); }
-    return lockPath;
+    return file;
   } catch (error) {
     if (error?.code !== 'EEXIST') throw error;
-    let existing = null;
-    try { existing = JSON.parse(readFileSync(lockPath, 'utf8')); } catch {}
+    const existing = readJsonOrNull(file);
     if (existing?.host === os.hostname() && Number.isInteger(existing?.pid)) {
       try {
         process.kill(existing.pid, 0);
@@ -250,23 +222,31 @@ function acquireProcessLock(serviceHome) {
         if (probeError?.code !== 'ESRCH') throw probeError;
       }
     }
-    unlinkSync(lockPath);
-    const fd = openSync(lockPath, 'wx');
+    unlinkSync(file);
+    const fd = openSync(file, 'wx');
     try { writeFileSync(fd, `${JSON.stringify(payload)}\n`, 'utf8'); } finally { closeSync(fd); }
-    return lockPath;
+    return file;
   }
 }
 
-function releaseProcessLock(lockPath) {
-  try { unlinkSync(lockPath); } catch (error) { if (error?.code !== 'ENOENT') throw error; }
+function releaseProcessLock(file) {
+  try { unlinkSync(file); } catch (error) { if (error?.code !== 'ENOENT') throw error; }
 }
 
 function writeStatus(serviceHome, payload) {
-  writeJson(path.join(serviceHome, 'live-sync.status.json'), {
-    format: 'forge-live-sync/v1',
-    updated_at: new Date().toISOString(),
-    ...payload,
+  writeJson(path.join(serviceHome, 'live-sync.status.json'), { format: 'forge-live-sync/v2', updated_at: new Date().toISOString(), pid: process.pid, ...payload });
+}
+
+function spawnReplacement(options, log) {
+  const script = path.join(options.root, SELF_PATH.replaceAll('/', path.sep));
+  const child = spawn(process.execPath, [script, `--root=${options.root}`, `--branch=${options.branch}`, `--remote=${options.remote}`, `--interval=${options.intervalMs}`, `--service-home=${options.serviceHome}`], {
+    cwd: options.root,
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
   });
+  child.unref();
+  log(`LIVE_SYNC_SELF_RESTART_SPAWNED pid=${child.pid}`);
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -277,35 +257,43 @@ async function main() {
   assertRepo(options.root);
   const processLock = acquireProcessLock(options.serviceHome);
   let stopping = false;
+  let restartAfterStop = false;
+  let iteration = 0;
   const stop = () => { stopping = true; };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
 
-  log(`LIVE_SYNC_STARTED root=${options.root} remote=${options.remote} branch=${options.branch} interval_ms=${options.intervalMs} mode=${options.once ? 'once' : 'watch'}`);
+  log(`LIVE_SYNC_STARTED root=${options.root} remote=${options.remote} branch=${options.branch} interval_ms=${options.intervalMs} mode=${options.once ? 'once' : 'watch'} pid=${process.pid}`);
   try {
     do {
+      iteration += 1;
       try {
         const result = applyRemote(options.root, options.remote, options.branch, options.serviceHome, log);
         const current = git(options.root, ['rev-parse', 'HEAD']);
+        const request = readCommandRequest(options.root);
+
+        if (!options.once && result.files.includes(SELF_PATH)) {
+          restartAfterStop = true;
+          stopping = true;
+          writeStatus(options.serviceHome, {
+            status: 'SELF_RESTART', root: options.root, remote: options.remote, branch: options.branch, sha: current,
+            changed: result.changed, changed_files: result.files, iteration, command_request_id: request?.id || null,
+          });
+          log(`LIVE_SYNC_SELF_UPDATE sha=${current} action=restart`);
+          continue;
+        }
+
         const command = dispatchPendingCommand(options.root, options.serviceHome, options.branch, log);
         writeStatus(options.serviceHome, {
-          status: command ? 'COMMAND_DISPATCHED' : 'PASS',
-          root: options.root,
-          remote: options.remote,
-          branch: options.branch,
-          sha: current,
-          changed: result.changed,
-          changed_files: result.files,
-          command_id: command?.id || null,
+          status: command ? 'COMMAND_DISPATCHED' : 'PASS', root: options.root, remote: options.remote, branch: options.branch, sha: current,
+          changed: result.changed, changed_files: result.files, iteration,
+          command_request_id: request?.id || null, command_id: command?.id || null,
         });
         if (command) stopping = true;
       } catch (error) {
         log(`LIVE_SYNC_RETRY error=${JSON.stringify(error?.message || String(error))}`);
         writeStatus(options.serviceHome, {
-          status: 'RETRY',
-          root: options.root,
-          remote: options.remote,
-          branch: options.branch,
+          status: 'RETRY', root: options.root, remote: options.remote, branch: options.branch, iteration,
           error: error?.message || String(error),
         });
         if (options.once) throw error;
@@ -314,7 +302,8 @@ async function main() {
     } while (!options.once && !stopping);
   } finally {
     releaseProcessLock(processLock);
-    log(`LIVE_SYNC_STOPPED code=${process.exitCode || 0}`);
+    log(`LIVE_SYNC_STOPPED code=${process.exitCode || 0} pid=${process.pid}`);
+    if (restartAfterStop) spawnReplacement(options, log);
   }
 }
 
