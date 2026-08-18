@@ -21,7 +21,7 @@ function readJsonOrNull(file) {
 
 function writeStatus(payload) {
   writeFileSync(STATUS_PATH, `${JSON.stringify({
-    format: 'forge-live-command-status/v4',
+    format: 'forge-live-command-status/v5',
     updated_at: new Date().toISOString(),
     ...payload,
   }, null, 2)}\n`, 'utf8');
@@ -67,8 +67,13 @@ function launchVisible(request) {
   const title = `Forge Live - ${request.adapter}`;
   const visibleScript = [
     `$Host.UI.RawUI.WindowTitle = ${psQuote(title)}`,
-    `& ${psQuote(process.execPath)} ${psQuote(worker)} '--visible' ${psQuote(`--command-id=${request.id}`)} ${psQuote(`--adapter=${request.adapter}`)}`,
-    'exit $LASTEXITCODE',
+    '$code = 1',
+    `try { & ${psQuote(process.execPath)} ${psQuote(worker)} '--visible' ${psQuote(`--command-id=${request.id}`)} ${psQuote(`--adapter=${request.adapter}`)}; $code = $LASTEXITCODE } catch { Write-Error $_; $code = 1 }`,
+    "Write-Host ''",
+    "if ($code -eq 0) { Write-Host 'FORGE LIVE COMMAND FINISHED: PASS' -ForegroundColor Green } else { Write-Host ('FORGE LIVE COMMAND FINISHED: FAIL exit=' + $code) -ForegroundColor Red }",
+    "Write-Host 'Window stays open 30 seconds so the result is readable.'",
+    'Start-Sleep -Seconds 30',
+    'exit $code',
   ].join('; ');
   const visibleArgs = `-NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encodePowerShell(visibleScript)}`;
 
