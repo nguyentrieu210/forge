@@ -7,6 +7,7 @@ LOG_FILE="/tmp/forge-vite.log"
 PID_FILE="/tmp/forge-vite.pid"
 SYNC_PID_FILE="/tmp/forge-git-sync.pid"
 SYNC_LOG_FILE="/tmp/forge-git-sync.log"
+PNPM=(corepack pnpm)
 
 echo "[forge] workspace: $ROOT_DIR"
 echo "[forge] app:       runtime"
@@ -18,21 +19,18 @@ if ! command -v node >/dev/null 2>&1; then
   echo "[forge] ERROR: node is not available in this Codespace."
   exit 1
 fi
+if ! command -v corepack >/dev/null 2>&1; then
+  echo "[forge] ERROR: corepack is not available in this Codespace."
+  exit 1
+fi
 
 echo "[forge] node: $(node --version)"
+echo "[forge] pnpm: $("${PNPM[@]}" --version)"
 
-if ! command -v pnpm >/dev/null 2>&1; then
-  echo "[forge] pnpm missing; enabling Corepack..."
-  corepack enable
-  corepack prepare pnpm@9.15.0 --activate
-fi
-
-echo "[forge] pnpm: $(pnpm --version)"
-
-if [[ ! -d node_modules ]]; then
-  echo "[forge] root node_modules missing; installing root workspace dependencies..."
-  pnpm install --frozen-lockfile
-fi
+# Install only the Runtime dependency closure. Calling pnpm through Corepack
+# avoids `corepack enable`, which needs root permission to write /usr/local/bin.
+echo "[forge] ensuring Runtime dependencies..."
+"${PNPM[@]}" install --filter runtime... --frozen-lockfile --prefer-offline
 
 # Keep the Codespace synced with GitHub main, but never overwrite local changes.
 if [[ -f "$ROOT_DIR/.devcontainer/auto-sync-github.sh" ]]; then
@@ -43,8 +41,7 @@ if [[ -f "$ROOT_DIR/.devcontainer/auto-sync-github.sh" ]]; then
   fi
 fi
 
-# Always stop the preview process recorded by the previous startup. This is
-# intentional: older Codespaces may still be running @metaforge/demo on 5173.
+# Always stop the preview process recorded by the previous startup.
 if [[ -f "$PID_FILE" ]]; then
   OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
   if [[ -n "$OLD_PID" ]] && kill -0 "$OLD_PID" 2>/dev/null; then
@@ -57,7 +54,7 @@ fi
 
 : > "$LOG_FILE"
 echo "[forge] starting Forge Runtime Vite..."
-nohup pnpm --filter runtime dev -- --host 0.0.0.0 --port "$PORT" --strictPort >"$LOG_FILE" 2>&1 &
+nohup "${PNPM[@]}" --filter runtime dev -- --host 0.0.0.0 --port "$PORT" --strictPort >"$LOG_FILE" 2>&1 &
 VITE_PID=$!
 echo "$VITE_PID" > "$PID_FILE"
 
