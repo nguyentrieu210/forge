@@ -104,11 +104,11 @@ run_node "$SERVER_DIR/scripts/build-alumdoor-item-master-payload.mjs" "$SOURCE" 
 run_node "$SERVER_DIR/scripts/import-alumdoor-item-master-local.mjs" "$ITEMS" "$ITEM_PREIMAGE"
 run_node "$SERVER_DIR/scripts/import-alumdoor-item-master-local.mjs" "$ITEMS" "$RUN_DIR/items.replay.preimage.json"
 
-echo "[seed-full] canonical Customer master..."
+echo "[seed-full] Customer master from actual order/export transactions..."
 run_node "$ROOT_DIR/scripts/codespaces/inspect-customer-source.mjs"
-run_node "$SERVER_DIR/scripts/import-alumdoor-customer-local.mjs" "$RUN_DIR/customers.preflight.json"
-run_node "$SERVER_DIR/scripts/import-alumdoor-customer-local.mjs" "$RUN_DIR/customers.pass1.json" --apply
-run_node "$SERVER_DIR/scripts/import-alumdoor-customer-local.mjs" "$RUN_DIR/customers.pass2.json" --apply --expect-idempotent
+run_node "$ROOT_DIR/scripts/codespaces/import-customers-from-transactions.mjs" "$RUN_DIR/customers.preflight.json"
+run_node "$ROOT_DIR/scripts/codespaces/import-customers-from-transactions.mjs" "$RUN_DIR/customers.pass1.json" --apply
+run_node "$ROOT_DIR/scripts/codespaces/import-customers-from-transactions.mjs" "$RUN_DIR/customers.pass2.json" --apply
 
 echo "[seed-full] canonical BOM + deferred BOM templates..."
 STRICT_BOM="$RUN_DIR/bom.strict.json"
