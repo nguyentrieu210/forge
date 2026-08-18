@@ -55,6 +55,8 @@ const FIELD_TYPES = new Map([
 
 /** Types whose meaning depends on `options`, so an author cannot forget it. */
 const NEEDS_OPTIONS = new Set(["Link", "Select", "Table", "Table MultiSelect", "Dynamic Link"]);
+const INTEGER_FIELDTYPES = new Set(["Int", "Duration"]);
+const DECIMAL_FIELDTYPES = new Set(["Float", "Currency", "Percent", "Rating"]);
 const LAYOUT_FIELD_TYPES = new Set(["Heading", "Section Break", "Column Break", "HTML", "Tab Break", "Fold", "Button"]);
 
 export class BriefError extends Error {}
@@ -669,6 +671,27 @@ export function parseField(input, index, context) {
    * The fix an author needs is `=(Đang học)`, and saying so here is the difference
    * between a five-second correction and finding it in a screenshot later.
    */
+  /**
+   * A DSL default is always authored text — `Int=(0)`, `Check=(1)` — but a document create
+   * that omits the field takes `field.default` and assigns it verbatim (generic-controller.ts
+   * copies it without running it through the same type check a client-supplied value gets).
+   * Left as the string "0", an Int/Duration field then fails its own "must be an integer"
+   * validation the very first time a caller relies on the default instead of sending the
+   * field explicitly — which is exactly the common case a default exists to serve. Coercing
+   * here, once, for every app that compiles through this function, means the default is
+   * shaped the way a well-behaved client would have sent it.
+   */
+  if (defaultValue !== undefined && INTEGER_FIELDTYPES.has(fieldtype)) {
+    if (!/^-?\d+$/.test(defaultValue)) fail(`${context}: field "${fieldname}" of type ${fieldtype} has a non-integer default "${defaultValue}"`);
+    defaultValue = Number.parseInt(defaultValue, 10);
+  } else if (defaultValue !== undefined && DECIMAL_FIELDTYPES.has(fieldtype)) {
+    if (!/^-?\d+(\.\d+)?$/.test(defaultValue)) fail(`${context}: field "${fieldname}" of type ${fieldtype} has a non-numeric default "${defaultValue}"`);
+    defaultValue = Number.parseFloat(defaultValue);
+  } else if (defaultValue !== undefined && fieldtype === "Check") {
+    if (!["0", "1", "true", "false"].includes(defaultValue)) fail(`${context}: field "${fieldname}" of type Check has a default "${defaultValue}" that is not 0, 1, true or false`);
+    defaultValue = defaultValue === "1" || defaultValue === "true";
+  }
+
   if (choices && defaultValue !== undefined && !choices.includes(defaultValue)) {
     fail(
       `${context}: field "${fieldname}" defaults to "${defaultValue}", which is not one of its options (${choices.join(", ")}).`
