@@ -57,10 +57,6 @@ need_api
 echo "[seed-full] backup local Wrangler state..."
 run_node "$SERVER_DIR/scripts/backup-local-state.mjs"
 
-# Canonical Layer-0 masters are prerequisites for Item creation. In particular,
-# Item validation rejects a row whose Item Group does not already exist. Use the
-# same repo-owned generators/catalogs as the canonical local runner; never invent
-# Codespace-only Item Groups or UOM names.
 echo "[seed-full] canonical Layer0 masters (item groups, colors, material specs, geometry)..."
 COLOR_SQL="$RUN_DIR/layer0-color.sql"
 MATERIAL_SQL="$RUN_DIR/layer0-material-spec.sql"
@@ -92,8 +88,6 @@ console.log('ALUMDOOR_CODESPACE_UOM_VERIFY_PASS canonical=19');
 NODE
 run_node "$SERVER_DIR/scripts/import-alumdoor-reason-master-local.mjs"
 
-# Confirm the exact Item Group that blocked the previous run is now active before
-# spending time rebuilding the 587-row Item payload.
 "${PNPM[@]}" --dir "$SERVER_DIR" exec wrangler d1 execute cloudforge-demo \
   --local \
   --config apps/tenant-worker/wrangler.jsonc \
@@ -111,6 +105,7 @@ run_node "$SERVER_DIR/scripts/import-alumdoor-item-master-local.mjs" "$ITEMS" "$
 run_node "$SERVER_DIR/scripts/import-alumdoor-item-master-local.mjs" "$ITEMS" "$RUN_DIR/items.replay.preimage.json"
 
 echo "[seed-full] canonical Customer master..."
+run_node "$ROOT_DIR/scripts/codespaces/inspect-customer-source.mjs"
 run_node "$SERVER_DIR/scripts/import-alumdoor-customer-local.mjs" "$RUN_DIR/customers.preflight.json"
 run_node "$SERVER_DIR/scripts/import-alumdoor-customer-local.mjs" "$RUN_DIR/customers.pass1.json" --apply
 run_node "$SERVER_DIR/scripts/import-alumdoor-customer-local.mjs" "$RUN_DIR/customers.pass2.json" --apply --expect-idempotent
