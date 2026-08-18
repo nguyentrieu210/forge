@@ -12,6 +12,7 @@ on:
           - status
           - restart
           - sync-restart
+          - rebuild
           - stop
   issue_comment:
     types: [created]
@@ -33,7 +34,7 @@ jobs:
        github.event.comment.user.login == 'nguyentrieu210' &&
        startsWith(github.event.comment.body, '/codespace '))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       GH_TOKEN: ${{ secrets.CODESPACES_PAT }}
       CODESPACE_NAME: bookish-computing-machine-jj999xj7ppj7fprq9
@@ -50,7 +51,7 @@ jobs:
             command="$(printf '%s' "$COMMENT_BODY" | awk '{print $2}')"
           fi
           case "$command" in
-            status|restart|sync-restart|stop) ;;
+            status|restart|sync-restart|rebuild|stop) ;;
             *) echo "Unsupported command: $command" >&2; exit 2 ;;
           esac
           echo "command=$command" >> "$GITHUB_OUTPUT"
@@ -82,6 +83,22 @@ jobs:
             [[ "$state" == "Available" ]] || { echo "Codespace did not become available" | tee -a /tmp/codespace-result.txt >&2; exit 1; }
           fi
           echo "Codespace state: $state" | tee -a /tmp/codespace-result.txt
+
+      - name: Rebuild Codespace
+        if: steps.resolve.outputs.command == 'rebuild'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Rebuilding Codespace with latest devcontainer configuration..." | tee -a /tmp/codespace-result.txt
+          gh codespace rebuild -c "$CODESPACE_NAME" --full 2>&1 | tee -a /tmp/codespace-result.txt
+          for _ in $(seq 1 120); do
+            state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state 2>/dev/null || true)"
+            echo "state=$state" | tee -a /tmp/codespace-result.txt
+            [[ "$state" == "Available" ]] && exit 0
+            sleep 5
+          done
+          echo "Codespace did not return to Available after rebuild" | tee -a /tmp/codespace-result.txt >&2
+          exit 1
 
       - name: Status
         if: steps.resolve.outputs.command == 'status'
