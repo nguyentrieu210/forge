@@ -117,7 +117,7 @@ test("grid uses dynamic real specification columns instead of a nested spec edit
   assert.match(grid, /Cao phủ bì/);
   assert.doesNotMatch(grid, /SpecEditor/);
   assert.doesNotMatch(grid, />Diện tích</);
-  assert.match(grid, />Khối lượng</);
+  assert.match(grid, /"Khối lượng"/);
 });
 
 test("grid is resizable, remembers widths and keeps row actions below the table", () => {
