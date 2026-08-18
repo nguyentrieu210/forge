@@ -104,12 +104,31 @@ function baseFilters(meta: DocTypeMeta, state: ListState): Array<[string, Filter
   return filters;
 }
 
+/**
+ * SQLite/D1 NOCASE and LIKE only case-fold ASCII reliably. Vietnamese text such as
+ * `CỬA` therefore does not match a lowercase `%cửa%` pattern on every runtime.
+ * Expand the user term with JS Unicode casing before it reaches SQL so server-side
+ * pagination still searches the entire dataset instead of falling back to current-page filtering.
+ */
+function searchTermVariants(term: string): string[] {
+  const trimmed = term.trim();
+  if (!trimmed) return [];
+  return dedupe([
+    trimmed,
+    trimmed.toLocaleLowerCase("vi"),
+    trimmed.toLocaleUpperCase("vi"),
+  ]);
+}
+
 function serverOrFilters(meta: DocTypeMeta, state: ListState): Filters | undefined {
   if (state.advancedFilters?.mode === "any" && state.advancedFilters.rules.length) {
     return state.advancedFilters.rules;
   }
-  const q = state.q.trim();
-  return q ? deriveSearchFields(meta).map((f) => [f, "like", `%${q}%`] as [string, "like", string]) : undefined;
+  const terms = searchTermVariants(state.q);
+  if (!terms.length) return undefined;
+  return deriveSearchFields(meta).flatMap((field) =>
+    terms.map((term) => [field, "like", `%${term}%`] as [string, "like", string]),
+  );
 }
 
 /** ListState → ListOpts (server). */
@@ -143,14 +162,14 @@ export function applyClientQuery(
   state: ListState,
 ): { rows: Doc[]; total: number } {
   const search = deriveSearchFields(meta);
-  const q = state.q.trim().toLowerCase();
+  const q = state.q.trim().toLocaleLowerCase("vi");
   let rows = allRows.filter((r) => {
     for (const [field, operator, expected] of state.routeFilters) {
       if (!matchesFilter(r[field], operator, expected)) return false;
     }
     for (const [field, value] of Object.entries(state.filters)) {
       if (value === "" || value == null) continue;
-      if (String(r[field] ?? "").toLowerCase() !== value.toLowerCase()) return false;
+      if (String(r[field] ?? "").toLocaleLowerCase("vi") !== value.toLocaleLowerCase("vi")) return false;
     }
     if (state.dateRange) {
       const value = String(r[state.dateRange.field] ?? "");
@@ -162,7 +181,7 @@ export function applyClientQuery(
       if (advanced.mode === "all" ? matches.some((hit) => !hit) : !matches.some(Boolean)) return false;
     }
     if (q && state.advancedFilters?.mode !== "any") {
-      const hit = search.some((f) => String(r[f] ?? "").toLowerCase().includes(q));
+      const hit = search.some((f) => String(r[f] ?? "").toLocaleLowerCase("vi").includes(q));
       if (!hit) return false;
     }
     return true;
@@ -195,8 +214,8 @@ function matchesFilter(actual: unknown, operator: FilterOperator, expected: unkn
   if (operator === "=") return String(left) === String(expected ?? "");
   if (operator === "!=") return String(left) !== String(expected ?? "");
   if (operator === "like" || operator === "not like") {
-    const needle = String(expected ?? "").replace(/^%|%$/g, "").toLowerCase();
-    const hit = String(left).toLowerCase().includes(needle);
+    const needle = String(expected ?? "").replace(/^%|%$/g, "").toLocaleLowerCase("vi");
+    const hit = String(left).toLocaleLowerCase("vi").includes(needle);
     return operator === "like" ? hit : !hit;
   }
   if (operator === "in" || operator === "not in") {
