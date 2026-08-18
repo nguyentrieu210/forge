@@ -88,6 +88,7 @@ type ColumnId =
   | "uom"
   | "priced_qty"
   | "rate"
+  | "gross_amount"
   | "actions";
 
 const DYNAMIC_FIELD_ORDER: DynamicFieldName[] = [
@@ -174,6 +175,7 @@ const DEFAULT_WIDTHS: Record<ColumnId, number> = {
   uom: 68,
   priced_qty: 86,
   rate: 112,
+  gross_amount: 118,
   actions: 68,
 };
 
@@ -201,11 +203,12 @@ const MIN_WIDTHS: Partial<Record<ColumnId, number>> = {
   uom: 60,
   priced_qty: 76,
   rate: 94,
+  gross_amount: 100,
   actions: 64,
 };
 
-// Tăng version để người đã kéo cột theo layout cũ không bị localStorage giữ lại độ rộng quá lớn.
-const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v4";
+// Tăng version khi thay cấu trúc cột để localStorage cũ không làm lệch vùng tiền.
+const COLUMN_WIDTH_STORAGE_KEY = "alumdoor:sales-order:grid-widths:v5";
 const FROZEN_COLUMNS: ColumnId[] = ["select", "index", "item_code", "item_name"];
 
 function loadStoredWidths(): Record<ColumnId, number> {
@@ -305,12 +308,14 @@ function BomBlock(props: {
   const preview = props.line._bomPreview;
   const components = Array.isArray(preview?.components) ? preview!.components! : [];
   const requirements = Array.isArray(preview?.actual_requirements) ? preview!.actual_requirements! : [];
-  if (!components.length && !requirements.length && !props.line._bomError) return null;
+  if (!text(preview?.bom_no) && !components.length && !requirements.length && !props.line._bomError) return null;
   const status = props.line._bomError
     ? "BOM chưa resolve"
     : preview?.actual_complete === false
       ? `BOM · ${components.length} vật tư · còn thiếu`
-      : `BOM ✓ ${components.length} vật tư`;
+      : components.length
+        ? `BOM ✓ ${components.length} vật tư`
+        : text(preview?.bom_no) ? `BOM ✓ ${text(preview?.bom_no)}` : "BOM đã xác định";
   return (
     <TableRow className="border-b-2 bg-muted/20 hover:bg-muted/20" data-section="sales-v2-bom-block">
       <TableCell colSpan={props.colSpan} className="p-0">
@@ -333,6 +338,9 @@ function BomBlock(props: {
                 <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-foreground">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{props.line._bomError}</span>
                 </div>
+              ) : null}
+              {!components.length && text(preview?.bom_no) ? (
+                <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs">BOM áp dụng: <strong>{text(preview?.bom_no)}</strong></div>
               ) : null}
               {components.length ? (
                 <div className="overflow-x-auto rounded-md border-2 border-border">
@@ -411,7 +419,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
   const columnOrder = useMemo<ColumnId[]>(() => [
     "select", "index", "item_code", "item_name", "color",
     ...dynamicColumns,
-    "quantity", "uom", "priced_qty", "rate", "actions",
+    "quantity", "uom", "priced_qty", "rate", "gross_amount", "actions",
   ], [dynamicColumns]);
   const columnCount = columnOrder.length;
   const totalWidth = columnOrder.reduce((sum, id) => sum + widths[id], 0);
@@ -549,6 +557,7 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             {head("uom", "ĐVT")}
             {head("priced_qty", "Khối lượng")}
             {head("rate", "Đơn giá")}
+            {head("gross_amount", "Thành tiền")}
             {head("actions", "")}
           </TableRow>
         </TableHeader>
@@ -572,9 +581,11 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
             const enteredDiscount = numberValue(line.discount_percentage ?? line._commercial?.discount_percentage) ?? policyDiscount;
             const discountAmount = lineDiscountAmount(line);
             const adjustmentAmount = lineAdjustmentAmount(line);
+            const grossAmount = numberValue(line._commercial?.gross_amount) ?? numberValue(line.amount);
             const payable = lineNetAmount(line);
             const ruleNames = appliedRuleNames(line);
             const frozenClass = `${rowTone} bg-clip-padding`;
+            const commercialLeadSpan = Math.max(1, columnCount - 4);
 
             return <Fragment key={line._key}>
               <TableRow className={`${rowTone} [&>td]:border-b-0`} data-sales-row={line._key}>
@@ -596,35 +607,36 @@ export function AlumdoorSalesOrderLineTableComplete(props: AlumdoorSalesOrderLin
                 <TableCell style={{ width: widths.uom }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle`}>{allowedUoms.length > 1 ? <GridField rowKey={line._key} columnId="uom" disabled={props.readOnly}><AlumdoorSalesOrderField id={`sales-v2-complete-uom-${line._key}`} field={uomField} value={line.uom} onChange={(value) => props.onCommit(line._key, "uom", text(value) || undefined)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!text-center [&_button]:!h-8 [&_button]:!justify-center" /></GridField> : <span className="inline-flex h-8 items-center justify-center">{text(line.uom) || text(line._context?.selected_uom) || "—"}</span>}</TableCell>
                 <TableCell style={{ width: widths.priced_qty }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><div className="font-semibold text-primary">{pricedQty === undefined ? "—" : quantity(pricedQty)}</div></TableCell>
                 <TableCell style={{ width: widths.rate }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle`}><GridField rowKey={line._key} columnId="rate" disabled={props.readOnly || fieldReadonly(line, "rate")}><AlumdoorSalesOrderField id={`sales-v2-complete-rate-${line._key}`} field={rateField} value={line.rate} onChange={(value) => props.onPatch(line._key, { rate: value == null || value === "" ? undefined : Number(value) })} onCommit={() => props.onCommit(line._key, "rate", line.rate)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} required={fieldRequired(line, "rate") || Boolean(rateField.reqd)} readOnly={props.readOnly || fieldReadonly(line, "rate")} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center [&_input]:tabular-nums" /></GridField></TableCell>
+                <TableCell style={{ width: widths.gross_amount }} className={`${rowTone} px-1.5 py-1.5 text-center align-middle tabular-nums`}><strong>{grossAmount === undefined ? "—" : `${money(grossAmount)} ₫`}</strong></TableCell>
                 <TableCell style={{ width: widths.actions }} className={`${rowTone} px-1 py-1.5 text-center align-middle`}><div className="flex items-center justify-center"><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || !text(line.item_code)} onClick={() => props.onDuplicate(line._key)} title="Nhân bản" aria-label={`Nhân bản dòng ${rowIndex + 1}`}><Copy className="size-3.5" /></Button><Button type="button" variant="ghost" size="icon-sm" disabled={props.readOnly || props.lines.length <= 1} onClick={() => props.onDelete(line._key)} title="Xóa" aria-label={`Xóa dòng ${rowIndex + 1}`}><Trash2 className="size-3.5" /></Button></div></TableCell>
               </TableRow>
 
               {text(line.item_code) ? (
-                <TableRow className={`${rowTone} [&>td]:border-b-0`} data-section="sales-v2-commercial-row">
-                  <TableCell colSpan={columnCount} className="px-3 py-2">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-background/75 px-3 py-2">
-                      {ruleNames.length ? <div className="flex flex-wrap items-center gap-1">{ruleNames.slice(0, 4).map((rule) => <Badge key={rule} variant="outline" className="max-w-[220px] truncate text-[9px]">{rule}</Badge>)}{ruleNames.length > 4 ? <Badge variant="outline" className="text-[9px]">+{ruleNames.length - 4}</Badge> : null}</div> : null}
+                <TableRow className={`${rowTone} border-b-2 border-border`} data-section="sales-v2-commercial-row">
+                  <TableCell colSpan={commercialLeadSpan} className="px-2 py-1.5 text-left align-middle">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      {ruleNames.length ? <div className="flex flex-wrap items-center gap-1">{ruleNames.slice(0, 4).map((rule) => <Badge key={rule} variant="outline" className="max-w-[220px] truncate text-[9px]">{rule}</Badge>)}{ruleNames.length > 4 ? <Badge variant="outline" className="text-[9px]">+{ruleNames.length - 4}</Badge> : null}</div> : <span className="text-[10px] text-muted-foreground">Chính sách chuẩn</span>}
                       {benefits.map((benefit, benefitIndex) => <span key={`${line._key}-benefit-${benefitIndex}`} className="inline-flex items-center gap-1 text-[10px]"><Gift className="size-3" />{text(benefit.label) || "Tặng kèm"} · {quantity(benefit.qty)} {text(benefit.uom)}</span>)}
-
-                      <div className="ml-auto flex items-center gap-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Chiết khấu</span>
-                        <div className="w-[76px]">
-                          <GridField rowKey={line._key} columnId="discount_percentage" disabled={props.readOnly || fieldReadonly(line, "discount_percentage")}>
-                            <AlumdoorSalesOrderField id={`sales-v2-complete-discount-${line._key}`} field={discountField} value={line.discount_percentage ?? policyDiscount} onChange={(value) => props.onPatch(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })} onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage ?? policyDiscount)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_input]:!text-center [&_input]:tabular-nums" />
-                          </GridField>
-                        </div>
-                        <span className="tabular-nums">−{money(discountAmount)} ₫</span>
-                        <span className="text-[10px] text-muted-foreground">Chuẩn {quantity(policyDiscount)}%{policyRule ? ` · ${policyRule}` : ""}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Phụ thu</span><span className="tabular-nums">{adjustmentAmount >= 0 ? "+" : "−"}{money(Math.abs(adjustmentAmount))} ₫</span></div>
-                      <div className="flex items-baseline gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tiền phải trả</span><strong className="text-sm tabular-nums text-primary">{money(payable)} ₫</strong></div>
-
-                      {discountNeedsApproval ? <div className="basis-full flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-left text-[11px] text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Chiết khấu {quantity(enteredDiscount)}% khác chính sách {quantity(policyDiscount)}% — cần duyệt.</span></div> : null}
-                      {!discountNeedsApproval && needsApproval ? <div className="basis-full flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-left text-[11px]"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>Đơn giá đang khác chính sách — cần duyệt.</span></div> : null}
-                      {rowError ? <div className="basis-full flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-left text-[11px] text-destructive"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" /><span>{rowError}</span></div> : null}
+                      {discountNeedsApproval ? <span className="inline-flex items-center gap-1 text-[10px] text-destructive"><AlertTriangle className="size-3" />CK {quantity(enteredDiscount)}% khác chuẩn {quantity(policyDiscount)}% — cần duyệt</span> : null}
+                      {!discountNeedsApproval && needsApproval ? <span className="inline-flex items-center gap-1 text-[10px]"><AlertTriangle className="size-3" />Đơn giá khác chính sách — cần duyệt</span> : null}
+                      {rowError ? <span className="inline-flex items-center gap-1 text-[10px] text-destructive"><AlertTriangle className="size-3" />{rowError}</span> : null}
                     </div>
                   </TableCell>
+                  <TableCell style={{ width: widths.priced_qty }} className="bg-background/70 px-1 py-1.5 text-center align-middle">
+                    <div className="text-[9px] font-semibold uppercase text-muted-foreground">Chiết khấu</div>
+                    <div className="mx-auto mt-1 w-[64px]"><GridField rowKey={line._key} columnId="discount_percentage" disabled={props.readOnly || fieldReadonly(line, "discount_percentage")}><AlumdoorSalesOrderField id={`sales-v2-complete-discount-${line._key}`} field={discountField} value={line.discount_percentage ?? policyDiscount} onChange={(value) => props.onPatch(line._key, { discount_percentage: value == null || value === "" ? 0 : Number(value) })} onCommit={() => props.onCommit(line._key, "discount_percentage", line.discount_percentage ?? policyDiscount)} registry={props.registry} services={props.services} parentDoctype="Sales Order Item" docValues={line} roles={props.roles} readOnly={props.readOnly || fieldReadonly(line, "discount_percentage")} compact hideLabel className="[&_.mf-control]:!min-h-7 [&_input]:!h-7 [&_input]:!text-center [&_input]:text-[10px] [&_input]:tabular-nums" /></GridField></div>
+                    <div className="mt-0.5 whitespace-nowrap text-[10px] tabular-nums text-destructive">−{money(discountAmount)} ₫</div>
+                  </TableCell>
+                  <TableCell style={{ width: widths.rate }} className="bg-background/70 px-1 py-1.5 text-center align-middle">
+                    <div className="text-[9px] font-semibold uppercase text-muted-foreground">Phụ thu</div>
+                    <div className="mt-2 whitespace-nowrap text-[11px] font-medium tabular-nums">{adjustmentAmount >= 0 ? "+" : "−"}{money(Math.abs(adjustmentAmount))} ₫</div>
+                    <div className="mt-0.5 truncate text-[9px] text-muted-foreground" title={policyRule ? pricingRuleLabel(policyRule) : ""}>{policyRule ? pricingRuleLabel(policyRule) : "Theo chính sách"}</div>
+                  </TableCell>
+                  <TableCell style={{ width: widths.gross_amount }} className="bg-primary/5 px-1 py-1.5 text-center align-middle">
+                    <div className="text-[9px] font-semibold uppercase text-muted-foreground">Tiền phải trả</div>
+                    <div className="mt-2 whitespace-nowrap text-sm font-bold tabular-nums text-primary">{money(payable)} ₫</div>
+                  </TableCell>
+                  <TableCell style={{ width: widths.actions }} className="bg-background/70 px-1 py-1.5" />
                 </TableRow>
               ) : null}
 
