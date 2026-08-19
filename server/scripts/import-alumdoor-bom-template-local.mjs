@@ -209,8 +209,19 @@ for (const t of templates) {
   for (const doc of candidates) {
     if (doc.name === exact.name) continue;
     if (clean(doc.source_status) !== 'DEFERRED') continue;
-    await requireOk(`/api/resource/${encodeURIComponent('BOM Template')}/${encodeURIComponent(doc.name)}`, { method:'DELETE' });
-    duplicateRemoved.push({template_code:t.template_code,name:doc.name});
+    // NGHỈ HƯU, KHÔNG XOÁ.
+    //
+    // Nền tảng từ chối `DELETE` với "Role is not allowed to delete BOM Template" — và nó từ chối
+    // đúng: bản trùng này vẫn mang lịch sử nguồn (`source_status=DEFERRED`), xoá là mất hẳn.
+    // `disabled` đạt cùng mục đích (thôi được dùng) mà giữ lại dấu vết.
+    //
+    // Phép kiểm bên dưới vì thế phải đếm bản ĐANG DÙNG, không đếm tất cả.
+    await requireOk(`/api/resource/${encodeURIComponent('BOM Template')}/${encodeURIComponent(doc.name)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ disabled: 1, modified: doc.modified }),
+      headers: { 'content-type': 'application/json' },
+    });
+    duplicateRemoved.push({template_code:t.template_code,name:doc.name,action:'disabled'});
   }
 }
 
@@ -219,7 +230,10 @@ const postFull = [];
 for (const row of postList) postFull.push(await getTemplate(row.name));
 const failures = [];
 for (const t of templates) {
-  const matches = postFull.filter((doc) => doc && clean(doc.template_code) === clean(t.template_code) && sameTemplate(t, doc));
+  // Chỉ đếm bản ĐANG DÙNG: bản trùng đã cho nghỉ hưu ở trên vẫn còn trong D1 (cố ý, để giữ dấu
+  // vết), nên đếm cả nó thì phép kiểm luôn báo trùng.
+  const active = (doc) => !(doc.disabled === 1 || doc.disabled === true || doc.disabled === '1');
+  const matches = postFull.filter((doc) => doc && active(doc) && clean(doc.template_code) === clean(t.template_code) && sameTemplate(t, doc));
   if (matches.length !== 1) failures.push({ template_code: t.template_code, reason: matches.length ? 'duplicate_exact_persisted_template' : 'no_exact_persisted_template', match_count:matches.length });
 }
 if (failures.length) {
