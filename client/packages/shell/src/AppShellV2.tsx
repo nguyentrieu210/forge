@@ -361,7 +361,15 @@ export function AppShell(props: AppShellProps) {
             {/* Thứ tự chủ ý: điều hướng → Công ty/Kho → tìm nhanh. Công ty/Kho quyết định TOÀN BỘ dữ
                 liệu đang xem nên phải nằm ngay đầu, trước cả breadcrumb. */}
             {props.businessContext ? <div className="hidden min-w-0 shrink-0 items-center lg:flex">{props.businessContext}</div> : null}
-            <nav className="ml-1 flex min-w-0 items-center gap-1 text-sm"><BreadcrumbTrail items={props.breadcrumbs ?? []} /></nav>
+            {/* `key` theo mắt xích CUỐI: đổi route thì React dựng lại <nav>, nên hiệu ứng
+              * trượt-nghiêng của vben chạy đúng một lần mỗi lần điều hướng chứ không phải
+              * mỗi lần render. */}
+            <nav
+              key={(props.breadcrumbs ?? []).map((b) => b.label).join("/")}
+              className="mf-anim-breadcrumb ml-1 flex min-w-0 items-center gap-1 text-sm"
+            >
+              <BreadcrumbTrail items={props.breadcrumbs ?? []} />
+            </nav>
 
             {/* Ô tìm nhanh CĂN GIỮA topbar: hai khoảng đệm co giãn bằng nhau ở hai bên đẩy nó về đúng
                 tâm, bất kể cụm trái (Công ty/Kho/breadcrumb) hay cụm phải dài ngắn thế nào. */}
