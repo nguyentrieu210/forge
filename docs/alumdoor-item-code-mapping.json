@@ -1,0 +1,6799 @@
+{
+  "format": "alumdoor-item-code-mapping/v1",
+  "generated_at": "2026-08-19T12:40:49.833Z",
+  "convention": "docs/ALUMDOOR-QUY-UOC-MA.md (chốt 2026-07-29)",
+  "summary": {
+    "source_count": 587,
+    "canonical_count": 424,
+    "merged_families": 52,
+    "absorbed": 163,
+    "unresolved_count": 0,
+    "too_long": 13
+  },
+  "needs_owner_decision": {
+    "unresolved_prefix": [],
+    "too_long": [
+      {
+        "item_code": "TP-BO 2VIS 752-VIPST700",
+        "proposed": "NHOM-BO-2VIS-752-VIPST700",
+        "length": 25,
+        "item_name": "BỌ 2VIS 752-VIPST700"
+      },
+      {
+        "item_code": "TP-BO 2VIS AL50-VIP50-AL548-ST500",
+        "proposed": "NHOM-BO-2VIS-AL50-VIP50-AL548-ST500",
+        "length": 35,
+        "item_name": "BỌ 2VIS-AL50-VIP50-AL548-ST500"
+      },
+      {
+        "item_code": "TP-YHTaiwan-LaYHTW300-400-500KG",
+        "proposed": "PK-YHTAIWAN-LAYHTW300-400-500KG",
+        "length": 31,
+        "item_name": "YHTAIWAN_LacYHTW300-400-500KG"
+      },
+      {
+        "item_code": "TP-YHTaiwan-LaYHTW600-700-800KG",
+        "proposed": "PK-YHTAIWAN-LAYHTW600-700-800KG",
+        "length": 31,
+        "item_name": "YHTAIWAN_LacYHTW600-700-800KG"
+      },
+      {
+        "item_code": "TP-YHTaiwan-LaYHTW1000-1200KG",
+        "proposed": "PK-YHTAIWAN-LAYHTW1000-1200KG",
+        "length": 29,
+        "item_name": "YHTAIWAN_LacYHTW1000-1200KG"
+      },
+      {
+        "item_code": "RONNHUAVANGCANHAY_RSU70",
+        "proposed": "PK-RONNHUAVANGCANHAY-RSU70",
+        "length": 26,
+        "item_name": "RONNHUAVANGCANHAY_RSU70"
+      },
+      {
+        "item_code": "NVL-TOLE1.4x270x1.2ly-KRON",
+        "proposed": "RAY-TOLE1.4X270X1.2LY-KRON",
+        "length": 26,
+        "item_name": "RAY SẮT U100-1.2ly (KHÔNG RON)"
+      },
+      {
+        "item_code": "NVL-TOLE1.4x270x1.2ly-CRON",
+        "proposed": "RAY-TOLE1.4X270X1.2LY-CRON",
+        "length": 26,
+        "item_name": "RAY SẮT U100-1.2ly (CÓ RON)"
+      },
+      {
+        "item_code": "RONNHUAVANGCẢNHAY_RSU100",
+        "proposed": "PK-RONNHUAVANGCANHAY-RSU100",
+        "length": 27,
+        "item_name": "RONNHUAVANGCANHAY_RSU100"
+      },
+      {
+        "item_code": "NVL-TOLE1.4x270x1.4ly-KRON",
+        "proposed": "RAY-TOLE1.4X270X1.4LY-KRON",
+        "length": 26,
+        "item_name": "RAY SẮT U100-1.4ly (KHÔNG RON)"
+      },
+      {
+        "item_code": "NVL-TOLE1.4x270x1.4ly-CRON",
+        "proposed": "RAY-TOLE1.4X270X1.4LY-CRON",
+        "length": 26,
+        "item_name": "RAY SẮT U100-1.4ly (CÓ RON)"
+      },
+      {
+        "item_code": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+        "proposed": "RAY-TOLE1.4X270X1.4LY-CRON-TD",
+        "length": 29,
+        "item_name": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)"
+      },
+      {
+        "item_code": "NVL-BO2VIS AL50-VIP50-548-ST500",
+        "proposed": "NHOM-BO2VIS-AL50-VIP50-548-ST500",
+        "length": 32,
+        "item_name": "BỌ 2VIS AL50-VIP50-548-ST500"
+      }
+    ],
+    "still_invalid": []
+  },
+  "merged_families": [
+    {
+      "canonical": "CUA-CUADL6D",
+      "sources": [
+        "TP-CUADL6D XN-VK_TRONBO>10m²",
+        "TP-CUADL6D XN-XLC_TRONBO>10m²",
+        "TP-CUADL6D XN-XLC_TRONBO_9-10m²",
+        "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+        "TP-CUADL6D XN-XLC_TRONBO_8-9m²",
+        "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+        "TP-CUADL6D XN-VK_TRONBO_7-8m²",
+        "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+        "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+        "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+        "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+        "TP-CUADL6D XN-VK_TRONBO_5-6m²",
+        "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+        "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+        "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+        "TP-CUADL6D XN-XLC_TRONBO_3-4m²"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ]
+    },
+    {
+      "canonical": "CUA-CUADL7D",
+      "sources": [
+        "TP-CUADL7D XN-VK_TRONBO>10m²",
+        "TP-CUADL7D XN-XLC_TRONBO>10m²",
+        "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+        "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+        "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+        "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+        "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+        "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+        "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+        "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+        "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+        "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+        "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+        "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+        "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+        "TP-CUADL7D XN-XLC_TRONBO_3-4m²"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ]
+    },
+    {
+      "canonical": "CUA-CUADL8D",
+      "sources": [
+        "TP-CUADL8D XN-VK_TRONBO>10m²",
+        "TP-CUADL8D XN-XLC_TRONBO>10m²",
+        "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+        "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+        "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+        "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+        "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+        "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+        "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+        "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+        "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+        "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+        "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+        "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+        "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+        "TP-CUADL8D XN-XLC_TRONBO_3-4m²"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ]
+    },
+    {
+      "canonical": "CUA-CUADL1LY",
+      "sources": [
+        "TP-CUADL1LY XN-VK_TRONBO>10m²",
+        "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+        "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+        "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+        "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+        "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+        "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+        "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+        "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+        "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+        "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+        "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+        "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+        "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+        "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+        "TP-CUADL1LY XN-XLC_TRONBO_3-4m²"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ]
+    },
+    {
+      "canonical": "CUA-TOLEKEM124-6D",
+      "sources": [
+        "TP-TOLEKEM124_6D",
+        "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
+        "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK",
+        "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK",
+        "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK",
+        "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+        "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK",
+        "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+        "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ]
+    },
+    {
+      "canonical": "CUA-TOLEKEM124-8D",
+      "sources": [
+        "TP-TOLEKEM124_8D",
+        "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
+        "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK",
+        "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK",
+        "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+        "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK",
+        "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+        "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+        "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ]
+    },
+    {
+      "canonical": "CUA-TOLEKEM124-1LY",
+      "sources": [
+        "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
+        "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
+        "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK",
+        "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+        "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK",
+        "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+        "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK",
+        "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+        "NVL-TOLEKEM124_1LY_MSK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ]
+    },
+    {
+      "canonical": "CUA-UC-KT-4.6D",
+      "sources": [
+        "TP-UC KT 4.6D XN-VK",
+        "TP-UC KT 4.6D XR-CF",
+        "TP-UC KT 4.6D TRẮNG-XLC",
+        "TP-UC KT 4.6D KU-GU"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "CUA-AL595",
+      "sources": [
+        "TD-AL595 GS",
+        "TP-TD-AL595 VK",
+        "TP-TD-AL595 THÔ"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-AL70",
+      "sources": [
+        "TP-TD-AL70 THÔ",
+        "TP-TD-AL70 GS",
+        "TP-TD-AL70 VK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-AL71N",
+      "sources": [
+        "TP-TD-AL71N THÔ",
+        "TP-TD-AL71N GS",
+        "TP-TD-AL71N VK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-AL503N26",
+      "sources": [
+        "TP-TD-AL503N26 VK",
+        "TP-TD-AL503N26 GS",
+        "TP-TD-AL503N26 THO"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-548N",
+      "sources": [
+        "TP-ALD-548N GS",
+        "TP-ALD-548N THO",
+        "TP-ALD-548N VK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-AL501N",
+      "sources": [
+        "TP-TD-AL501N VK",
+        "TP-TD-AL501N GS",
+        "TP-TD-AL501NTHO"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-DL552",
+      "sources": [
+        "TP-ALD-DL552 VK",
+        "TP-ALD-DL552 THO",
+        "TP-ALD-DL552 GS"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-AL752N",
+      "sources": [
+        "TP-TD-AL752N GS",
+        "TP-TD-AL752N VK",
+        "TP-TD-AL752N THO"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-AL50",
+      "sources": [
+        "TP-TD-AL50 THO",
+        "TP-TD-AL50 GS",
+        "TP-TD-AL50 VK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-AL75",
+      "sources": [
+        "TP-AL75 THO",
+        "TP-AL75 VK",
+        "TP-AL75 GS"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "PK-PULYUC114",
+      "sources": [
+        "NVL-PULYUC114",
+        "NVL-PULYUC114-CAM",
+        "NVL-PULYUC114-DEN"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "CUA-UC-KT-5.5D",
+      "sources": [
+        "TP-UC KT 5.5D KU-GU",
+        "TP-UC KT 5.5D XN-VK",
+        "TP-UC KT 5.5D XR-CF"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "CUA-UC-MTN-4.6D",
+      "sources": [
+        "TP-UC MTN 4.6D XN-VK",
+        "TP-UC MTN 4.6D XR-CF",
+        "TP-UC MTN 4.6D GU-KU"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "CUA-UC-MTN-5.5D",
+      "sources": [
+        "TP-UC MTN 5.5D XN-VK",
+        "TP-UC MTN 5.5D XR-CF",
+        "TP-UC MTN 5.5D GU-KU"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "RAY-RHM8",
+      "sources": [
+        "NVL-RHM8-GS",
+        "NVL-RHM8-VK",
+        "NVL-RHM8-THÔ"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "RAY-R87A1",
+      "sources": [
+        "NVL-R87A1-GS",
+        "NVL-R87A1-VK",
+        "NVL-R87A1-THÔ"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "RAY-RHU100",
+      "sources": [
+        "NVL-RHU100-GS",
+        "NVL-RHU100-VK",
+        "NVL-RHU100-THÔ"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL595",
+      "sources": [
+        "NVL-AL595-GS",
+        "NVL-AL595-VK",
+        "NVL-AL595-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL71",
+      "sources": [
+        "NVL-AL71-GS",
+        "NVL-AL71-VK",
+        "NVL-AL71-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL503",
+      "sources": [
+        "NVL-AL503-GS",
+        "NVL-AL503-VK",
+        "NVL-AL503-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL548",
+      "sources": [
+        "NVL-AL548-GS",
+        "NVL-AL548-VK",
+        "NVL-AL548-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL501",
+      "sources": [
+        "NVL-AL501-GS",
+        "NVL-AL501-VK",
+        "NVL-AL501-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL652",
+      "sources": [
+        "NVL-AL652-GS",
+        "NVL-AL652-VK",
+        "NVL-AL652-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL552",
+      "sources": [
+        "NVL-AL552-GS",
+        "NVL-AL552-VK",
+        "NVL-AL552-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL752",
+      "sources": [
+        "NVL-AL752-GS",
+        "NVL-AL752-VK",
+        "NVL-AL752-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL50",
+      "sources": [
+        "NVL-AL50-GS",
+        "NVL-AL50-VK",
+        "NVL-AL50-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-ALVIP50",
+      "sources": [
+        "NVL-ALVIP50-GS",
+        "NVL-ALVIP50-VK",
+        "NVL-ALVIP50-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-ALVIPST500",
+      "sources": [
+        "NVL-ALVIPST500-GS",
+        "NVL-ALVIPST500-VK",
+        "NVL-ALVIPST500-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-ALVIPST700",
+      "sources": [
+        "NVL-ALVIPST700-GS",
+        "NVL-ALVIPST700-VK",
+        "NVL-ALVIPST700-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL70-2LOP",
+      "sources": [
+        "NVL-AL70(2LOP)-GS",
+        "NVL-AL70(2LOP)-VK",
+        "NVL-AL70(2LOP)-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL70-1LOP",
+      "sources": [
+        "NVL-AL70(1LOP)-GS",
+        "NVL-AL70(1LOP)-VK",
+        "NVL-AL70(1LOP)-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "NHOM-AL75",
+      "sources": [
+        "NVL-AL75-GS",
+        "NVL-AL75-VK",
+        "NVL-AL75-THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "PK-HTTD",
+      "sources": [
+        "TP-HTTD",
+        "HH-HTTD"
+      ],
+      "dropped": []
+    },
+    {
+      "canonical": "PK-RON-DD",
+      "sources": [
+        "RON-DD",
+        "NVL-RON-DD"
+      ],
+      "dropped": []
+    },
+    {
+      "canonical": "RAY-RNHUA-DR",
+      "sources": [
+        "RNHUA-DR",
+        "NVL-RNHUA-DR"
+      ],
+      "dropped": []
+    },
+    {
+      "canonical": "CUA-AL652",
+      "sources": [
+        "TP-TD-AL652 GS",
+        "TP-TD-AL652 VK"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ]
+    },
+    {
+      "canonical": "CUA-ALVIP50",
+      "sources": [
+        "TP-ALVIP50 GS",
+        "TP-ALVIP50 THO"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "PK-GOIGANG",
+      "sources": [
+        "TP-GOIGANG",
+        "NVL-GOIGANG"
+      ],
+      "dropped": []
+    },
+    {
+      "canonical": "PK-RONDAYUC",
+      "sources": [
+        "RONDAYUC",
+        "NVL-RONDAYUC"
+      ],
+      "dropped": []
+    },
+    {
+      "canonical": "PK-BKAN",
+      "sources": [
+        "TP-BKAN",
+        "NVL-BKAN"
+      ],
+      "dropped": []
+    },
+    {
+      "canonical": "LUOI-SN13X26",
+      "sources": [
+        "TP-LUOI-SN13x26-STD - TRONBO",
+        "TP-LUOI-SN13x26-STD - TACHMON"
+      ],
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán"
+      ]
+    },
+    {
+      "canonical": "LUOI-SN13X26-INOX",
+      "sources": [
+        "TP-LUOI-SN13x26-INOX - TACHMON",
+        "TP-LUOI-SN13x26-INOX - TRONBO"
+      ],
+      "dropped": [
+        "bỏ cách bán"
+      ]
+    },
+    {
+      "canonical": "PK-V4",
+      "sources": [
+        "NVL-V4_KEM_STD",
+        "NVL-V4"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    },
+    {
+      "canonical": "PK-V5",
+      "sources": [
+        "NVL-V5_KEM_STD",
+        "NVL-V5"
+      ],
+      "dropped": [
+        "bỏ token màu"
+      ]
+    }
+  ],
+  "mapping": [
+    {
+      "from": "TP-CON LĂN",
+      "to": "PK-CON-LAN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "CON LĂN"
+    },
+    {
+      "from": "NVL-CNHUA",
+      "to": "PK-CNHUA",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "CỤC NHỰA"
+    },
+    {
+      "from": "TP-PULY 114L",
+      "to": "PK-PULY-114L",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 114L"
+    },
+    {
+      "from": "TP-PULY 114N",
+      "to": "PK-PULY-114N",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 114N"
+    },
+    {
+      "from": "TP-PULY 140",
+      "to": "PK-PULY-140",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 140"
+    },
+    {
+      "from": "TP-PULY 168",
+      "to": "PK-PULY-168",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 168"
+    },
+    {
+      "from": "TP-COI",
+      "to": "PK-COI",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "CÒI"
+    },
+    {
+      "from": "TP-HTTD",
+      "to": "PK-HTTD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "HỆ THỐNG TỰ DỪNG"
+    },
+    {
+      "from": "TRỤC 114_1.8LY",
+      "to": "TRUC-114-1.8LY",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 114_1.8LY"
+    },
+    {
+      "from": "TRỤC 114_2.1LY",
+      "to": "TRUC-114-2.1LY",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 114_2.1LY"
+    },
+    {
+      "from": "TP-RAYHOP",
+      "to": "RAY-RAYHOP",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U76"
+    },
+    {
+      "from": "TP-TD87A1 GS",
+      "to": "RAY-TD87A1",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY ĐƠN TD U76"
+    },
+    {
+      "from": "TP-RAY HỘP TD U100",
+      "to": "RAY-HOP-TD-U100",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U100"
+    },
+    {
+      "from": "TD-AL595 GS",
+      "to": "CUA-AL595",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL595 - GS"
+    },
+    {
+      "from": "TP-A282",
+      "to": "NHOM-A282",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ ĐẦU"
+    },
+    {
+      "from": "TP-TD327",
+      "to": "NHOM-TD327",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ YẾM"
+    },
+    {
+      "from": "TP-TD326",
+      "to": "NHOM-TD326",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ TRUNG GIAN"
+    },
+    {
+      "from": "TP-TD325",
+      "to": "NHOM-TD325",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ ĐÁY LỚN"
+    },
+    {
+      "from": "TP-BO3LADAY",
+      "to": "NHOM-BO3LADAY",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỘ BA LÁ ĐÁY"
+    },
+    {
+      "from": "TP-PHOTLONG4X5X400M",
+      "to": "PK-PHOTLONG4X5X400M",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÔNG NHEO 4X5"
+    },
+    {
+      "from": "TP-PHOTLONG5X6X400M",
+      "to": "PK-PHOTLONG5X6X400M",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÔNG NHEO 5X6"
+    },
+    {
+      "from": "RON-DD",
+      "to": "PK-RON-DD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "RON ĐÁY ĐỨC"
+    },
+    {
+      "from": "RONNHUA_INOX",
+      "to": "PK-INOX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "RON NHỰA + INOX"
+    },
+    {
+      "from": "RNHUA-DR",
+      "to": "RAY-RNHUA-DR",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RON NHỰA ĐÁY RAY"
+    },
+    {
+      "from": "RNINOX-DR",
+      "to": "RAY-RNINOX-DR",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RON INOX ĐÁY RAY"
+    },
+    {
+      "from": "RNHUA/LONG-CR",
+      "to": "RAY-RNHUA-LONG-CR",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RON NHỰA CẠNH RAY"
+    },
+    {
+      "from": "NVL-PHOTLONG12,5X5X120M",
+      "to": "RAY-PHOTLONG12-5X5X120M",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RON LÔNG CẠNH RAY"
+    },
+    {
+      "from": "TP-TD-AL595 VK",
+      "to": "CUA-AL595",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL595 - VK"
+    },
+    {
+      "from": "TP-TD-AL595 THÔ",
+      "to": "CUA-AL595",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL595 - MSK"
+    },
+    {
+      "from": "TP-TD-AL70 THÔ",
+      "to": "CUA-AL70",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL70 (2 LỚP) - MSK"
+    },
+    {
+      "from": "TP-TD-AL70 GS",
+      "to": "CUA-AL70",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL70 (2 LỚP) - GS"
+    },
+    {
+      "from": "TP-TD-AL70 VK",
+      "to": "CUA-AL70",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL70 (2 LỚP) - VK"
+    },
+    {
+      "from": "TP-AL70-1LOP THÔ",
+      "to": "CUA-AL70-1LOP",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL70 (1 LỚP) - MSK"
+    },
+    {
+      "from": "TP-TD-AL71N THÔ",
+      "to": "CUA-AL71N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL71N - MSK"
+    },
+    {
+      "from": "TP-TD-AL71N GS",
+      "to": "CUA-AL71N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL71N - GS"
+    },
+    {
+      "from": "TP-TD-AL71N VK",
+      "to": "CUA-AL71N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL71N - VK"
+    },
+    {
+      "from": "TP-TD-AL503N26 VK",
+      "to": "CUA-AL503N26",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL503N - VK"
+    },
+    {
+      "from": "TP-TD-AL503N26 GS",
+      "to": "CUA-AL503N26",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL503N - GS"
+    },
+    {
+      "from": "TP-TD-AL503N26 THO",
+      "to": "CUA-AL503N26",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL503N - MSK"
+    },
+    {
+      "from": "TP-ALD-548N GS",
+      "to": "CUA-548N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL548N - MSK"
+    },
+    {
+      "from": "TP-ALD-548N THO",
+      "to": "CUA-548N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL548N - MSK"
+    },
+    {
+      "from": "TP-ALD-548N VK",
+      "to": "CUA-548N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL548N - VK"
+    },
+    {
+      "from": "TP-TD-AL501N VK",
+      "to": "CUA-AL501N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL501N- VK"
+    },
+    {
+      "from": "TP-TD-AL501N GS",
+      "to": "CUA-AL501N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL501N- GS"
+    },
+    {
+      "from": "TP-TD-AL501NTHO",
+      "to": "CUA-AL501N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL501N- MSK"
+    },
+    {
+      "from": "TP-ALD-DL552 VK",
+      "to": "CUA-DL552",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL552N- VK"
+    },
+    {
+      "from": "TP-ALD-DL552 THO",
+      "to": "CUA-DL552",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL552N- MSK"
+    },
+    {
+      "from": "TP-ALD-DL552 GS",
+      "to": "CUA-DL552",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL552N- GS"
+    },
+    {
+      "from": "TP-TD-AL752N GS",
+      "to": "CUA-AL752N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL752N- GS"
+    },
+    {
+      "from": "TP-TD-AL752N VK",
+      "to": "CUA-AL752N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL752N- VK"
+    },
+    {
+      "from": "TP-TD-AL752N THO",
+      "to": "CUA-AL752N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL752N- MSK"
+    },
+    {
+      "from": "TP-TD-AL652N THO",
+      "to": "CUA-AL652N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL652- MSK"
+    },
+    {
+      "from": "TP-TD-AL652 GS",
+      "to": "CUA-AL652",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL652- GS"
+    },
+    {
+      "from": "TP-TD-AL652 VK",
+      "to": "CUA-AL652",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL652- VK"
+    },
+    {
+      "from": "TP-TD-AL50 THO",
+      "to": "CUA-AL50",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL50- MSK"
+    },
+    {
+      "from": "TP-TD-AL50 GS",
+      "to": "CUA-AL50",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL50- GS"
+    },
+    {
+      "from": "TP-TD-AL50 VK",
+      "to": "CUA-AL50",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL50- VK"
+    },
+    {
+      "from": "TP-ALVIP50 GS",
+      "to": "CUA-ALVIP50",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL-VIP50- GS"
+    },
+    {
+      "from": "TP-ALVIP50 THO",
+      "to": "CUA-ALVIP50",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL-VIP50- MSK"
+    },
+    {
+      "from": "TP-ALVIPST500 THO",
+      "to": "CUA-ALVIPST500",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL-VIPST500- MSK"
+    },
+    {
+      "from": "TP-ALVIPST700 THO",
+      "to": "CUA-ALVIPST700",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL-VIPST700- MSK"
+    },
+    {
+      "from": "TP-BO 2VIS 752-VIPST700",
+      "to": "NHOM-BO-2VIS-752-VIPST700",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "dài 25 > 24"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 2VIS 752-VIPST700"
+    },
+    {
+      "from": "TP-BO 1VIS AL702LOP",
+      "to": "VT-BO-1VIS-AL702LOP",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 1 VIS-AL702LOP"
+    },
+    {
+      "from": "TP-BO 1VIS AL701LOP",
+      "to": "VT-BO-1VIS-AL701LOP",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 1 VIS-AL701LOP"
+    },
+    {
+      "from": "TP-BO 1VIS AL75",
+      "to": "NHOM-BO-1VIS-AL75",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 1VIS-AL75"
+    },
+    {
+      "from": "TP-BO 2VIS AL50-VIP50-AL548-ST500",
+      "to": "NHOM-BO-2VIS-AL50-VIP50-AL548-ST500",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "dài 35 > 24"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 2VIS-AL50-VIP50-AL548-ST500"
+    },
+    {
+      "from": "TP-BO 1VIS AL503C",
+      "to": "NHOM-BO-1VIS-AL503C",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 1VIS_AL503C"
+    },
+    {
+      "from": "TP-BO 1VIS 503N-71-595",
+      "to": "PK-BO-1VIS-503N-71-595",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 1VIS 503N-71-595"
+    },
+    {
+      "from": "TP-BO 2VIS-501-552",
+      "to": "PK-BO-2VIS-501-552",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 2VIS-501-552"
+    },
+    {
+      "from": "TP-BO 2VIS-652-548C",
+      "to": "PK-BO-2VIS-652-548C",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 2VIS-652-548C"
+    },
+    {
+      "from": "TP-AL75 THO",
+      "to": "CUA-AL75",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL75- MSK"
+    },
+    {
+      "from": "TP-AL75 VK",
+      "to": "CUA-AL75",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL75- VK"
+    },
+    {
+      "from": "TP-AL75 GS",
+      "to": "CUA-AL75",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "ĐỨC AL75- GS"
+    },
+    {
+      "from": "TP-MT-TANKER400KG",
+      "to": "MOTO-TANKER400",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR TANKER 400KG"
+    },
+    {
+      "from": "TP-TANKER_PATCD",
+      "to": "PK-TANKER-PATCD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "TANKER_Phimamtuongcoday"
+    },
+    {
+      "from": "TP-Tanker-Alumax-Lac33",
+      "to": "PK-TANKER-ALUMAX-LAC33",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC TANKER_ALUMAX 33"
+    },
+    {
+      "from": "TP-Tanker-Alumax-Lac36",
+      "to": "PK-TANKER-ALUMAX-LAC36",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC TANKER_ALUMAX 36"
+    },
+    {
+      "from": "TP-Tanker-Lac800&1000KG",
+      "to": "PK-TANKER-LAC800-1000KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC TANKER_800-1000KG"
+    },
+    {
+      "from": "TP-LacYHLD300&500KG",
+      "to": "PK-LACYHLD300-500KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC YH 300_500KG"
+    },
+    {
+      "from": "TP-LacYHLD800&1000KG",
+      "to": "PK-LACYHLD800-1000KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC YH 800_1000KG"
+    },
+    {
+      "from": "TP-YHLD-BDK",
+      "to": "PK-YHLD-BDK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "BỘ ĐIỀU KHIỂN YHLD"
+    },
+    {
+      "from": "TP-YHLD-HDK",
+      "to": "PK-YHLD-HDK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "HỘP ĐIỀU KHIỂN YHLD"
+    },
+    {
+      "from": "TP-YHLD_TayDK",
+      "to": "VT-YHLD-TAYDK",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "YHLD TAY ĐIỀU KHIỂN"
+    },
+    {
+      "from": "NVL_Tanker-nhong",
+      "to": "MOTO-TANKER-NHONG",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [],
+      "item_group": "Motor",
+      "item_name": "NHÔNG MOTOR TANKER"
+    },
+    {
+      "from": "NVL_Longden",
+      "to": "PK-LONG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "LÔNG ĐỀN"
+    },
+    {
+      "from": "NVL_Hoakhe",
+      "to": "PK-HOAKHE",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "HOA KHẾ (3 CHẤU)"
+    },
+    {
+      "from": "NVL_Cot",
+      "to": "PK-COT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "CỐT"
+    },
+    {
+      "from": "NVL_Napchup+Bacdan",
+      "to": "PK-NAPCHUP-BACDAN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BẠC ĐẠN + NẮP CHỤP"
+    },
+    {
+      "from": "TP-BDK-TANKER-ALUMAX",
+      "to": "PK-BDK-TANKER-ALUMAX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "BỘ ĐIỀU KHIỂN TANKER_ALUMAX"
+    },
+    {
+      "from": "TP-MT-YHLD300KG",
+      "to": "MOTO-YHLD300",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHLD 300KG"
+    },
+    {
+      "from": "TP_YHLD_PATCD",
+      "to": "PK-YHLD-PATCD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHLD_Phimamtuongcoday"
+    },
+    {
+      "from": "TP-MT-YHLD500KG",
+      "to": "MOTO-YHLD500",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHLD 500KG"
+    },
+    {
+      "from": "TP-MT-YHLD800KG",
+      "to": "MOTO-YHLD800",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHLD 800KG"
+    },
+    {
+      "from": "TP-MT-YHLD1000KG",
+      "to": "MOTO-YHLD1000",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHLD 1000KG"
+    },
+    {
+      "from": "TP-MT-JG300KG",
+      "to": "MOTO-JG300",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR JG 300KG"
+    },
+    {
+      "from": "TP-LacJG33",
+      "to": "PK-LACJG33",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "JG_LacJG33"
+    },
+    {
+      "from": "TP_JG_PATCD",
+      "to": "PK-JG-PATCD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "JG_Phimamtuongcoday"
+    },
+    {
+      "from": "TP-MT-JG400KG",
+      "to": "MOTO-JG400",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR JG 400KG"
+    },
+    {
+      "from": "TP-MT-JG500KG",
+      "to": "MOTO-JG500",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR JG 500KG"
+    },
+    {
+      "from": "TP-MT-JG600KG",
+      "to": "MOTO-JG600",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR JG 600KG"
+    },
+    {
+      "from": "TP-MT-JG800KG",
+      "to": "MOTO-JG800",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR JG 800KG"
+    },
+    {
+      "from": "TP-MT-JG1000KG",
+      "to": "MOTO-JG1000",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR JG 1000KG"
+    },
+    {
+      "from": "TP-LacJG1000-1500KG",
+      "to": "PK-LACJG1000-1500KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "JG_LacJG1000-1500KG"
+    },
+    {
+      "from": "TP-JG-BDN",
+      "to": "PK-JG-BDN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "JG_Bacdannhao"
+    },
+    {
+      "from": "TP-MT-JG1500KG",
+      "to": "MOTO-JG1500",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR JG 1500KG"
+    },
+    {
+      "from": "TP-MT-TANKER600KG",
+      "to": "MOTO-TANKER600",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR TANKER 600KG"
+    },
+    {
+      "from": "TP-MT-TANKE800KG",
+      "to": "MOTO-TANKE800",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR TANKER 800KG"
+    },
+    {
+      "from": "TP-MT-TANKER1000KG",
+      "to": "MOTO-TANKER1000",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR TANKER 1000KG"
+    },
+    {
+      "from": "TP-LACPHU33_1LO",
+      "to": "PK-LACPHU33-1LO",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC PHỤ 33-1 LỔ"
+    },
+    {
+      "from": "TP-LACPHU36_1LO",
+      "to": "PK-LACPHU36-1LO",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC PHỤ 36-1 LỔ"
+    },
+    {
+      "from": "TP-LACPHU33_3LO",
+      "to": "PK-LACPHU33-3LO",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC PHỤ 33-3 LỔ (ĐÀI LOAN)"
+    },
+    {
+      "from": "TP-LACPHU36_3LO",
+      "to": "PK-LACPHU36-3LO",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC PHỤ 36-3 LỔ (ĐÀI LOAN)"
+    },
+    {
+      "from": "TP-BDKDT_MULLER",
+      "to": "PK-BDKDT-MULLER",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI MULLER"
+    },
+    {
+      "from": "TP-HDK_MULLER",
+      "to": "PK-HDK-MULLER",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HỘP ĐIỀU KHIỂN MULLER"
+    },
+    {
+      "from": "TP-TDK_MULLER",
+      "to": "VT-TDK-MULLER",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI MULLER"
+    },
+    {
+      "from": "TP-GOIGANG",
+      "to": "PK-GOIGANG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "GỐI GANG"
+    },
+    {
+      "from": "TP-BUOMSAT-DL",
+      "to": "CUA-BUOMSAT-DL",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "BẮN BƯỚM SẮT ĐÀI LOAN"
+    },
+    {
+      "from": "TP-BUOMSAT-ST",
+      "to": "CUA-BUOMSAT-ST",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Siêu Trường\"",
+      "dropped": [],
+      "item_group": "Cửa Siêu Trường",
+      "item_name": "BẮN BƯỚM SẮT SIÊU TRƯỜNG"
+    },
+    {
+      "from": "TP-BUOMINOX",
+      "to": "CUA-BUOMINOX",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan Inox\"",
+      "dropped": [],
+      "item_group": "Cửa Đài Loan Inox",
+      "item_name": "BẮN BƯỚM INOX"
+    },
+    {
+      "from": "NVL-LX-5.5 X 70 X 46V",
+      "to": "PK-LX-5.5-X-70-X-46V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 46V"
+    },
+    {
+      "from": "NVL-LX-5.5 x 70 x 50V",
+      "to": "PK-LX-5.5-X-70-X-50V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 50V"
+    },
+    {
+      "from": "NVL-LV-6.0 x 70 x 53V",
+      "to": "PK-LV-6.0-X-70-X-53V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 53V"
+    },
+    {
+      "from": "NVL-LV-6.5 x 80 x 63V",
+      "to": "PK-LV-6.5-X-80-X-63V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 63V"
+    },
+    {
+      "from": "NVL-LV-6.5 x 80 x 68V",
+      "to": "PK-LV-6.5-X-80-X-68V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 68V"
+    },
+    {
+      "from": "NVL-LV-7.0 x 90 x 65V",
+      "to": "PK-LV-7.0-X-90-X-65V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 65V"
+    },
+    {
+      "from": "NVL-LV-7.0 x 90 x 73V",
+      "to": "PK-LV-7.0-X-90-X-73V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 73V"
+    },
+    {
+      "from": "NVL-LV-7.0 x 90 x 83V",
+      "to": "PK-LV-7.0-X-90-X-83V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HH LÒ XO 83V"
+    },
+    {
+      "from": "TP-RAYNHOMUC",
+      "to": "RAY-RAYNHOMUC",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY NHÔM ÚC"
+    },
+    {
+      "from": "NVL-PULYUC34",
+      "to": "PK-PULYUC34",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "PULY ÚC 34"
+    },
+    {
+      "from": "NVL-PULYUC114",
+      "to": "PK-PULYUC114",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "PULY ÚC 114"
+    },
+    {
+      "from": "NVL-3X6M",
+      "to": "PK-3X6M",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "SẮT VUÔNG 3X6M"
+    },
+    {
+      "from": "TP-Tanker-Alumax-HDK",
+      "to": "PK-TANKER-ALUMAX-HDK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "HỘP ĐK TANKER_ALUMAX"
+    },
+    {
+      "from": "TP-TANKER_ALUMAX_BODK",
+      "to": "PK-TANKER-ALUMAX-BODK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "BỘ ĐK TANKER_ALUMAX"
+    },
+    {
+      "from": "TP-Tanker-Alumax_TayDK",
+      "to": "VT-TANKER-ALUMAX-TAYDK",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "TAY ĐIỀU KHIỂN TANKER"
+    },
+    {
+      "from": "TP_PAT_CODAY",
+      "to": "PK-PAT-CODAY",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "PHÍM ÂM TƯỜNG CÓ DÂY"
+    },
+    {
+      "from": "NVL_Daydien_PATCD",
+      "to": "PK-DAYDIEN-PATCD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "Daydien_phimamtuongcoday"
+    },
+    {
+      "from": "TP-PAT_KHONGDAY",
+      "to": "PK-PAT-KHONGDAY",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "PHÍM ÂM TƯỜNG KHÔNG DÂY"
+    },
+    {
+      "from": "TP-MT-ALUMAX400KG",
+      "to": "MOTO-ALUMAX400",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR ALUMAX 400KG"
+    },
+    {
+      "from": "TP-ALUMAX_PATCD",
+      "to": "PK-AX-PATCD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "ALUMAX_Phimamtuongcoday"
+    },
+    {
+      "from": "TP-MT-ALUMAX600KG",
+      "to": "MOTO-ALUMAX600",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR ALUMAX 600KG"
+    },
+    {
+      "from": "TP_UPS-E800i",
+      "to": "PIN-UPS-E800I",
+      "prefix": "PIN",
+      "why": "dòng sản phẩm \"Bình lưu điện\"",
+      "dropped": [],
+      "item_group": "Bình lưu điện",
+      "item_name": "Bình lưu điện Alumax E800i"
+    },
+    {
+      "from": "TP_UPS-E1000i",
+      "to": "PIN-UPS-E1000I",
+      "prefix": "PIN",
+      "why": "dòng sản phẩm \"Bình lưu điện\"",
+      "dropped": [],
+      "item_group": "Bình lưu điện",
+      "item_name": "Bình lưu điện Alumax E1000i"
+    },
+    {
+      "from": "TP_UPS-YH1000",
+      "to": "PIN-UPS-YH1000",
+      "prefix": "PIN",
+      "why": "dòng sản phẩm \"Bình lưu điện\"",
+      "dropped": [],
+      "item_group": "Bình lưu điện",
+      "item_name": "Bình lưu điện YH1000"
+    },
+    {
+      "from": "TP_UPS-YH2000",
+      "to": "PIN-UPS-YH2000",
+      "prefix": "PIN",
+      "why": "dòng sản phẩm \"Bình lưu điện\"",
+      "dropped": [],
+      "item_group": "Bình lưu điện",
+      "item_name": "Bình lưu điện YH2000"
+    },
+    {
+      "from": "TP-JG_TayDK",
+      "to": "PK-JG-TAYDK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "JG_TAY ĐIỀU KHIỂN"
+    },
+    {
+      "from": "JG_BODK",
+      "to": "PK-BODK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "JG_BỘ ĐIỀU KHIỂN"
+    },
+    {
+      "from": "TP-NAPNHIN",
+      "to": "PK-NAPNHIN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "NẮP NHÌN"
+    },
+    {
+      "from": "NVL-GOIFE",
+      "to": "PK-GOIFE",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "GỐI SẮT"
+    },
+    {
+      "from": "NVL-GIAT",
+      "to": "PK-GIAT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "GIÁ T"
+    },
+    {
+      "from": "TP-MTT-BOSTEC-PAT",
+      "to": "PK-MTT-BOSTEC-PAT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "BOSTEC_PHÍM ÂM TƯỜNG"
+    },
+    {
+      "from": "TP-MTT-BOSTEC-TAYDK",
+      "to": "VT-MTT-BOSTEC-TAYDK",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "BOSTEC TAY ĐIỀU KHIỂN"
+    },
+    {
+      "from": "TP_BOSTEC_BODIEUKHIEN",
+      "to": "PK-BOSTEC-BODIEUKHIEN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "BOSTEC BỘ ĐIỀU KHIỂN"
+    },
+    {
+      "from": "TP-MTT-CHTAIWAN-PAT",
+      "to": "PK-MTT-CHTAIWAN-PAT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "CHTAIWAN-PHÍM ÂM TƯỜNG"
+    },
+    {
+      "from": "TP-MTT-CHTAIWAN-TAYDK",
+      "to": "VT-MTT-CHTAIWAN-TAYDK",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "CHTAIWAN-TAY ĐIỀU KHIỂN"
+    },
+    {
+      "from": "TP_CHTAIWAN_BODIEUKHIEN",
+      "to": "PK-CHTAIWAN-BODIEUKHIEN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "CHTAIWAN BỘ ĐIỀU KHIỂN"
+    },
+    {
+      "from": "TP-MTT_BOSTEC-DOI(P)",
+      "to": "PK-MTT-BOSTEC-DOI-P",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT BOSTEC ĐÔI - PHẢI"
+    },
+    {
+      "from": "TP-MTT_BOSTEC-DOI(T)",
+      "to": "PK-MTT-BOSTEC-DOI-T",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT BOSTEC ĐÔI - TRÁI"
+    },
+    {
+      "from": "TP-MTT_BOSTEC-DON(P)",
+      "to": "PK-MTT-BOSTEC-DON-P",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT BOSTEC ĐƠN - PHẢI"
+    },
+    {
+      "from": "TP-MTT_BOSTEC-DON(T)",
+      "to": "PK-MTT-BOSTEC-DON-T",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT BOSTEC ĐƠN - TRÁI"
+    },
+    {
+      "from": "TP-MTT_CHTAIWAN-DOI(T)",
+      "to": "PK-MTT-CHTAIWAN-DOI-T",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT CHTAIWAN ĐÔI - TRÁI"
+    },
+    {
+      "from": "TP-MTT_CHTAIWAN-DOI(P)",
+      "to": "PK-MTT-CHTAIWAN-DOI-P",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT CHTAIWAN ĐÔI - PHẢI"
+    },
+    {
+      "from": "TP-MTT_CHTAIWAN-DON(P)",
+      "to": "PK-MTT-CHTAIWAN-DON-P",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT CHTAIWAN ĐƠN - PHẢI"
+    },
+    {
+      "from": "TP-MTT_CHTAIWAN-DON(T)",
+      "to": "PK-MTT-CHTAIWAN-DON-T",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "MTT CHTAIWAN ĐƠN - TRÁI"
+    },
+    {
+      "from": "TP-MT-YHTAIWAN CH 300KG",
+      "to": "MOTO-YHTAIWAN-CH-300",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHTAIWAN CH 300KG"
+    },
+    {
+      "from": "TP-YHTaiwan-Than300KG",
+      "to": "PK-YHTAIWAN-THAN300KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Thân 300KG"
+    },
+    {
+      "from": "TP-YHTaiwan-LaYHTW300-400-500KG",
+      "to": "PK-YHTAIWAN-LAYHTW300-400-500KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [
+        "dài 31 > 24"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_LacYHTW300-400-500KG"
+    },
+    {
+      "from": "TP-YHTaiwan-HDK",
+      "to": "PK-YHTAIWAN-HDK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_HopDK"
+    },
+    {
+      "from": "TP-YHTaiwan-PATCD",
+      "to": "PK-YHTAIWAN-PATCD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Phimamtuongcoday"
+    },
+    {
+      "from": "TP-MT-YHTAIWAN CH 500KG",
+      "to": "MOTO-YHTAIWAN-CH-500",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHTAIWAN CH 500KG"
+    },
+    {
+      "from": "TP-YHTaiwan-Than500KG",
+      "to": "PK-YHTAIWAN-THAN500KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Thân 500KG"
+    },
+    {
+      "from": "TP-MT-YHTAIWAN CH 400KG",
+      "to": "MOTO-YHTAIWAN-CH-400",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHTAIWAN CH 400KG"
+    },
+    {
+      "from": "TP-YHTaiwan-Than400KG",
+      "to": "PK-YHTAIWAN-THAN400KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Thân 400KG"
+    },
+    {
+      "from": "TP-MT-YHTAIWAN CH 600KG",
+      "to": "MOTO-YHTAIWAN-CH-600",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHTAIWAN CH 600KG"
+    },
+    {
+      "from": "TP-YHTaiwan-Than600KG",
+      "to": "PK-YHTAIWAN-THAN600KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Thân 600KG"
+    },
+    {
+      "from": "TP-YHTaiwan-LaYHTW600-700-800KG",
+      "to": "PK-YHTAIWAN-LAYHTW600-700-800KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [
+        "dài 31 > 24"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_LacYHTW600-700-800KG"
+    },
+    {
+      "from": "TP-MT-YHTAIWAN CH 700KG",
+      "to": "MOTO-YHTAIWAN-CH-700",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHTAIWAN CH 700KG"
+    },
+    {
+      "from": "TP-YHTaiwan-Than700KG",
+      "to": "PK-YHTAIWAN-THAN700KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Thân 700KG"
+    },
+    {
+      "from": "TP-MT-YHTAIWAN CH 800KG",
+      "to": "MOTO-YHTAIWAN-CH-800",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHTAIWAN CH 800KG"
+    },
+    {
+      "from": "TP-YHTaiwan-Than800KG",
+      "to": "PK-YHTAIWAN-THAN800KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Thân 800KG"
+    },
+    {
+      "from": "TP-MT-YHTAIWAN CH 1000KG",
+      "to": "MOTO-YHTAIWAN-CH-1000",
+      "prefix": "MOTO",
+      "why": "dòng sản phẩm \"Motor\"",
+      "dropped": [
+        "bỏ token trùng nghĩa với tiền tố"
+      ],
+      "item_group": "Motor",
+      "item_name": "MOTOR YHTAIWAN CH 1000KG"
+    },
+    {
+      "from": "TP-YHTaiwan-Than1000KG",
+      "to": "PK-YHTAIWAN-THAN1000KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_Thân 1000KG"
+    },
+    {
+      "from": "TP-YHTaiwan-LaYHTW1000-1200KG",
+      "to": "PK-YHTAIWAN-LAYHTW1000-1200KG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [
+        "dài 29 > 24"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "YHTAIWAN_LacYHTW1000-1200KG"
+    },
+    {
+      "from": "TP-YHTaiwan-BODK",
+      "to": "PK-YHTAIWAN-BODK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "YHTAIWAN_BỘ ĐIỀU KHIỂN"
+    },
+    {
+      "from": "TP-YHTaiwan-TayDK",
+      "to": "PK-YHTAIWAN-TAYDK",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Điều khiển & phụ kiện điện\"",
+      "dropped": [],
+      "item_group": "Điều khiển & phụ kiện điện",
+      "item_name": "YHTAIWAN_TAY ĐIỀU KHIỂN"
+    },
+    {
+      "from": "NVL-XOP-N45",
+      "to": "VT-XOP-N45",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "XỐP NHỎ"
+    },
+    {
+      "from": "NVL-XOP-N90",
+      "to": "VT-XOP-N90",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "XỐP LỚN"
+    },
+    {
+      "from": "NVL-CHNHUA",
+      "to": "TRUC-CHNHUA",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "VÒNG NHỰA HÃM TRỤC"
+    },
+    {
+      "from": "NVL-TRUC34",
+      "to": "TRUC-TRUC34",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC PHI 34"
+    },
+    {
+      "from": "NVL-TRUC90",
+      "to": "TRUC-TRUC90",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC PHI 90"
+    },
+    {
+      "from": "NVL-VDAY-TDU-KTD",
+      "to": "PK-VDAY-TDU-KTD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "THANH ĐÁY ÚC_KTD"
+    },
+    {
+      "from": "RONDAYUC",
+      "to": "PK-RONDAYUC",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "RON ĐÁY ÚC"
+    },
+    {
+      "from": "TP-UC KT 4D XN-VK",
+      "to": "CUA-UC-KT-4D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 4D XN-VK"
+    },
+    {
+      "from": "TP-UC MTN 4D XN-VK",
+      "to": "CUA-UC-MTN-4D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 4D XN-VK"
+    },
+    {
+      "from": "TP-KN",
+      "to": "PK-KN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "KHÓA NGANG"
+    },
+    {
+      "from": "NVL-OKHOA",
+      "to": "PK-OKHOA",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "Ổ KHÓA NGANG"
+    },
+    {
+      "from": "NVL-TIINOX",
+      "to": "PK-TIINOX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "TI KHÓA NGANG"
+    },
+    {
+      "from": "TP-BKAN",
+      "to": "PK-BKAN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BÁT KHÓA ÂM NỀN"
+    },
+    {
+      "from": "TP-UC KT 4.6D XN-VK",
+      "to": "CUA-UC-KT-4.6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 4.6D XN-VK"
+    },
+    {
+      "from": "TP-UC KT 4.6D XR-CF",
+      "to": "CUA-UC-KT-4.6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 4.6D XR-CAFE"
+    },
+    {
+      "from": "TP-UC KT 4.6D TRẮNG-XLC",
+      "to": "CUA-UC-KT-4.6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 4.6D TR-XLC"
+    },
+    {
+      "from": "TP-UC KT 4.6D KU-GU",
+      "to": "CUA-UC-KT-4.6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 4.6D KU-GU"
+    },
+    {
+      "from": "TP-UC KT 5.5D KU-GU",
+      "to": "CUA-UC-KT-5.5D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 5.5D KU-GU"
+    },
+    {
+      "from": "TP-UC KT 5.5D TR-XLC",
+      "to": "CUA-UC-KT-5.5D-TR",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 5.5D TR-XLC"
+    },
+    {
+      "from": "TP-UC KT 5.5D XN-VK",
+      "to": "CUA-UC-KT-5.5D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 5.5D XN-VK"
+    },
+    {
+      "from": "TP-UC KT 5.5D XR-CF",
+      "to": "CUA-UC-KT-5.5D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 5.5D XR-CF"
+    },
+    {
+      "from": "TP-UC MTN 4.6D XN-VK",
+      "to": "CUA-UC-MTN-4.6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 4.6D XN-VK"
+    },
+    {
+      "from": "TP-UC MTN 4.6D XR-CF",
+      "to": "CUA-UC-MTN-4.6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 4.6D XR-CF"
+    },
+    {
+      "from": "TP-UC MTN 4.6D TR-XLC",
+      "to": "CUA-UC-MTN-4.6D-TR",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 4.6D TR-XLC"
+    },
+    {
+      "from": "TP-UC MTN 4.6D GU-KU",
+      "to": "CUA-UC-MTN-4.6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 4.6D GU-KU"
+    },
+    {
+      "from": "TP-UC MTN 5.5D XN-VK",
+      "to": "CUA-UC-MTN-5.5D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 5.5D XN-VK"
+    },
+    {
+      "from": "TP-UC MTN 5.5D XR-CF",
+      "to": "CUA-UC-MTN-5.5D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 5.5D XR-CF"
+    },
+    {
+      "from": "TP-UC MTN 5.5D TR-XLC",
+      "to": "CUA-UC-MTN-5.5D-TR",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 5.5D TR-XLC"
+    },
+    {
+      "from": "TP-UC MTN 5.5D GU-KU",
+      "to": "CUA-UC-MTN-5.5D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN 5.5D GU-KU"
+    },
+    {
+      "from": "TP-UC MTN 6D STD MSK",
+      "to": "CUA-UC-MTN-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC MTN STD 6D MSK"
+    },
+    {
+      "from": "TP-UC KT 6D STĐ MSK",
+      "to": "CUA-UC-KT-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa tấm liền Úc\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa tấm liền Úc",
+      "item_name": "CỬA ÚC KT 6D STĐ MSK"
+    },
+    {
+      "from": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+      "to": "CUA-DUC-KT-AL70-2-LOP",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "CỬA ĐỨC KÉO TAY AL70 (2 LỚP)"
+    },
+    {
+      "from": "TP-DUC-KT AL70 STĐ MSK",
+      "to": "CUA-DUC-KT-AL70",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "CỬA ĐỨC KÉO TAY AL70 (1 LỚP)"
+    },
+    {
+      "from": "TP-LUOI-MV-STD - TRONBO",
+      "to": "LUOI-MV",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI MẮT VÕNG STĐ-Trọn bộ"
+    },
+    {
+      "from": "NVL-LUOIMV_STD",
+      "to": "PK-LUOIMV",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện cần sơn tĩnh điện\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện cần sơn tĩnh điện",
+      "item_name": "LƯỚI MV STĐ"
+    },
+    {
+      "from": "RONNHUAVANGCANHAY_RSU70",
+      "to": "PK-RONNHUAVANGCANHAY-RSU70",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [
+        "dài 26 > 24"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "RONNHUAVANGCANHAY_RSU70"
+    },
+    {
+      "from": "TP-TRUC140",
+      "to": "TRUC-TRUC140",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 140"
+    },
+    {
+      "from": "NVL-TRUC114_2.4LY",
+      "to": "TRUC-TRUC114-2.4LY",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC140_2.4LY"
+    },
+    {
+      "from": "TP-TRUC168",
+      "to": "TRUC-TRUC168",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 168"
+    },
+    {
+      "from": "NVL-TRUC168_5LY",
+      "to": "TRUC-TRUC168-5LY",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC168_5LY"
+    },
+    {
+      "from": "NVL-TOLE1.2x190-KRON",
+      "to": "RAY-TOLE1.2X190-KRON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U70 (KHÔNG RON)"
+    },
+    {
+      "from": "NVL-TOLE1.4x270x1.2ly-KRON",
+      "to": "RAY-TOLE1.4X270X1.2LY-KRON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "dài 26 > 24"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U100-1.2ly (KHÔNG RON)"
+    },
+    {
+      "from": "NVL-TOLE1.4x270x1.2ly-CRON",
+      "to": "RAY-TOLE1.4X270X1.2LY-CRON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "dài 26 > 24"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U100-1.2ly (CÓ RON)"
+    },
+    {
+      "from": "RONNHUAVANGCẢNHAY_RSU100",
+      "to": "PK-RONNHUAVANGCANHAY-RSU100",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [
+        "dài 27 > 24"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "RONNHUAVANGCANHAY_RSU100"
+    },
+    {
+      "from": "NVL-TOLE1.4x270x1.4ly-KRON",
+      "to": "RAY-TOLE1.4X270X1.4LY-KRON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "dài 26 > 24"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U100-1.4ly (KHÔNG RON)"
+    },
+    {
+      "from": "NVL-TOLE1.4x270x1.4ly-CRON",
+      "to": "RAY-TOLE1.4X270X1.4LY-CRON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "dài 26 > 24"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U100-1.4ly (CÓ RON)"
+    },
+    {
+      "from": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+      "to": "RAY-TOLE1.4X270X1.4LY-CRON-TD",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "dài 29 > 24"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)"
+    },
+    {
+      "from": "TP-RS7P (CÓ RON)",
+      "to": "RAY-RS7P-CO-RON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U70 (CÓ RON)"
+    },
+    {
+      "from": "TP-LUOI-MV-STD - TM",
+      "to": "LUOI-MV-TM",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI MẮT VÕNG STĐ - TÁCH MÓN"
+    },
+    {
+      "from": "TP-LUOI-SN-STD - TM",
+      "to": "LUOI-SN-TM",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI SN PHI 19 STD - TÁCH MÓN"
+    },
+    {
+      "from": "NVL-LUOISNPHI19_STD",
+      "to": "PK-LUOISNPHI19",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện cần sơn tĩnh điện\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện cần sơn tĩnh điện",
+      "item_name": "LƯỚI SN TRÒN PHI 19 STĐ"
+    },
+    {
+      "from": "TP-LUOI-SN-STD - TRONBO",
+      "to": "LUOI-SN",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI SN PHI 19 STD - TRỌN BỘ"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-STD - TRONBO",
+      "to": "LUOI-SN13X26",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI SN PHI 13x26 STĐ - TRỌN BỘ"
+    },
+    {
+      "from": "TP-LUOISN13x26_STD",
+      "to": "PK-LUOISN13X26",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện cần sơn tĩnh điện\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện cần sơn tĩnh điện",
+      "item_name": "LƯỚI SN VUÔNG PHI 13X26 STĐ"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-STD - TACHMON",
+      "to": "LUOI-SN13X26",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI SN PHI 13x26 STĐ - TÁCH MÓN"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-INOX - TACHMON",
+      "to": "LUOI-SN13X26-INOX",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI SN PHI 13x26 INOX - TÁCH MÓN"
+    },
+    {
+      "from": "TP-LUOISN13x26_INOX",
+      "to": "PK-LUOISN13X26-INOX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LƯỚI SN VUÔNG PHI 13X26 INOX"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-INOX - TRONBO",
+      "to": "LUOI-SN13X26-INOX",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "LƯỚI SN PHI 13X26 INOX - TRỌN BỘ"
+    },
+    {
+      "from": "TP-LUOI-SNPHI19-INOX - TM",
+      "to": "LUOI-SNPHI19-INOX-TM",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI SN PHI 19 STD - TÁCH MÓN"
+    },
+    {
+      "from": "TP-LUOISNPHI19_INOX",
+      "to": "PK-LUOISNPHI19-INOX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LƯỚI SN TRÒN PHI 19 INOX"
+    },
+    {
+      "from": "TP-LUOI-SNPHI19-INOX - TRONBO",
+      "to": "LUOI-SNPHI19-INOX",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI SN PHI 19 INOX- TRỌN BỘ"
+    },
+    {
+      "from": "TP-LUOIMV-INOX- TM",
+      "to": "LUOI-LUOIMV-INOX-TM",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI MẮT VÕNG INOX - TÁCH MÓN"
+    },
+    {
+      "from": "TP-LUOIMV_INOX",
+      "to": "PK-LUOIMV-INOX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LƯỚI MV INOX"
+    },
+    {
+      "from": "TP-LUOIMV-INOX- TRONBO",
+      "to": "LUOI-LUOIMV-INOX",
+      "prefix": "LUOI",
+      "why": "dòng sản phẩm \"Cửa Lưới\"",
+      "dropped": [
+        "bỏ cách bán"
+      ],
+      "item_group": "Cửa Lưới",
+      "item_name": "CỬA LƯỚI MẮT VÕNG INOX - TRỌN BỘ"
+    },
+    {
+      "from": "TP-LADLINOX_6D",
+      "to": "NHOM-LADLINOX-6D",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ ĐL7.5 INOX 6D"
+    },
+    {
+      "from": "TP-LADLINOX_7D",
+      "to": "NHOM-LADLINOX-7D",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ ĐL7.5  INOX 7D"
+    },
+    {
+      "from": "TP-LADLINOX_8D",
+      "to": "NHOM-LADLINOX-8D",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ ĐL7.5  INOX 8D"
+    },
+    {
+      "from": "TP-LADLINOX_1LY",
+      "to": "NHOM-LADLINOX-1LY",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ ĐL7.5  INOX 1LY"
+    },
+    {
+      "from": "TP-V4_INOX",
+      "to": "PK-V4-INOX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "V4_INOX_2ly"
+    },
+    {
+      "from": "TP-V4_INOX_3LY",
+      "to": "PK-V4-INOX-3LY",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "V4_3ly"
+    },
+    {
+      "from": "TP-RAYINOX-6P-RON",
+      "to": "RAY-RAYINOX-6P-RON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY INOX 6P - CÓ RON"
+    },
+    {
+      "from": "TP-RAYINOX-8P-RON",
+      "to": "RAY-RAYINOX-8P-RON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY INOX 8P - CÓ RON"
+    },
+    {
+      "from": "TP-RAYINOX-7P-KHONGRON",
+      "to": "RAY-RAYINOX-7P-KHONGRON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY INOX 7P - KHÔNG RON"
+    },
+    {
+      "from": "NVL-V4-KEM_TOLE75_STD",
+      "to": "NHOM-V4-TOLE75",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "V4_KẼM"
+    },
+    {
+      "from": "NVL-V4_KEM_STD",
+      "to": "PK-V4",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "V4_STĐ"
+    },
+    {
+      "from": "NVL-V5_KEM_STD",
+      "to": "PK-V5",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "V4_KẼM"
+    },
+    {
+      "from": "NVL-TON-DL5.2Dx124-XNVK",
+      "to": "VT-TON-DL5.2DX124-XNVK",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 6D_XN-VK"
+    },
+    {
+      "from": "NVL-TON-DL5.2Dx124-XNXLC",
+      "to": "VT-TON-DL5.2DX124-XNXLC",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 6D_XN-XLC"
+    },
+    {
+      "from": "NVL-TON-DL6.2Dx124-XNVK",
+      "to": "VT-TON-DL6.2DX124-XNVK",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 7D_XN-VK"
+    },
+    {
+      "from": "NVL-TON-DL6.2Dx124-XNXLC",
+      "to": "VT-TON-DL6.2DX124-XNXLC",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 7D_XN-XLC"
+    },
+    {
+      "from": "NVL-TON-DL7.2Dx124-XNVK",
+      "to": "VT-TON-DL7.2DX124-XNVK",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 8D_XN-VK"
+    },
+    {
+      "from": "NVL-TON-DL7.2Dx124-XNXLC",
+      "to": "VT-TON-DL7.2DX124-XNXLC",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 8D_XN-XLC"
+    },
+    {
+      "from": "NVL-TON-DL9.2Dx124-XNVK",
+      "to": "VT-TON-DL9.2DX124-XNVK",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 1LY_XN-VK"
+    },
+    {
+      "from": "NVL-TON-DL9.2Dx124-XNXLC",
+      "to": "VT-TON-DL9.2DX124-XNXLC",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TP LÁ ĐÀI LOAN 1LY_XN-XLC"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "TP LÁ ĐÀI LOAN STĐ 8D"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ 1LY"
+    },
+    {
+      "from": "TP-TOLEKEM124_1.2LY",
+      "to": "CUA-TOLEKEM124-1.2LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ 1.2LY"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO>10m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-VK_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO>10m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_9-10m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-VK_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_8-9m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-VK_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_7-8m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-VK_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-VK_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_5-6m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-VK_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-VK_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+      "to": "CUA-CUADL6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL6D XN-XLC_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO>10m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-VK_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-VK_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-VK_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-VK_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-VK_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-VK_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-VK_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+      "to": "CUA-CUADL7D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL7D XN-XLC_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO>10m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-VK_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-VK_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-VK_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-VK_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-VK_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-VK_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-VK_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+      "to": "CUA-CUADL8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL8D XN-XLC_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-VK_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-VK_TRỌN BỘ_9-10m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-VK_TRỌN BỘ_8-9m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-VK_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_7-8m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-VK_TRỌN BỘ_6-7m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_5-6m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+      "to": "CUA-CUADL1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐL1LY XN-XLC_TRỌN BỘ_3-4m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 9-10m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 8-9m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 7-8m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 6-7m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 5-6m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 4-5m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+      "to": "CUA-TOLEKEM124-6D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 8D_TRỌN BỘ 3-4m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 9-10m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 8-10m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 7-8m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 6-7m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 5-6m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 4-5m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK",
+      "to": "CUA-TOLEKEM124-8D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1LY_TRỌN BỘ 3-4m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "CỬA ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ >10m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 9-10m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 8-9m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 7-8m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 6-7m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 5-6m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 4-5m²"
+    },
+    {
+      "from": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu",
+        "bỏ cách bán",
+        "bỏ bậc diện tích"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²"
+    },
+    {
+      "from": "NVL-TOLEKEM124_1LY_MSK",
+      "to": "CUA-TOLEKEM124-1LY",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN STĐ MSK 1.2LY_TRỌN BỘ 3-4m²"
+    },
+    {
+      "from": "NVL-LAMAU-PHE",
+      "to": "NHOM-LAMAU-PHE",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ MẪU ĐỨC"
+    },
+    {
+      "from": "TP-CHONGXOLO",
+      "to": "PK-CHONGXOLO",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "CHỐNG XỔ LÔ"
+    },
+    {
+      "from": "HH-CUAKEODL",
+      "to": "CUA-CUAKEODL",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa kéo Đài Loan\"",
+      "dropped": [],
+      "item_group": "Cửa kéo Đài Loan",
+      "item_name": "CỬA KÉO ĐL"
+    },
+    {
+      "from": "MŨI MÀI HỘP KIM",
+      "to": "PK-MUI-MAI-HOP-KIM",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "MŨI MÀI HỘP KIM"
+    },
+    {
+      "from": "NVL-TON-DL9.2Dx175-XNVK",
+      "to": "CUA-TON-DL9.2DX175-XNVK",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Siêu Trường\"",
+      "dropped": [],
+      "item_group": "Cửa Siêu Trường",
+      "item_name": "LÁ SIÊU TRƯỜNG 1LY_XN-VK"
+    },
+    {
+      "from": "NVL-TOLEKEM175_8D-9D_STD_MSK",
+      "to": "CUA-TOLEKEM175-8D-9D",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN 1.1LY_MSK"
+    },
+    {
+      "from": "NVL-TON-ST-1LYx175-_MSK",
+      "to": "CUA-TON-ST-1LYX175",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa Đài Loan\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa Đài Loan",
+      "item_name": "LÁ ĐÀI LOAN 1.2LY_MSK"
+    },
+    {
+      "from": "TP LÁ RUỘT  AL71N VK",
+      "to": "CUA-LA-RUOT-AL71N",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "TP LÁ RUỘT  AL71N VK"
+    },
+    {
+      "from": "TP  LÁ ĐỨC AL70 (2 lớp) - GS",
+      "to": "CUA-LA-DUC-AL70-2-LOP",
+      "prefix": "CUA",
+      "why": "dòng sản phẩm \"Cửa CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Cửa CN Đức",
+      "item_name": "TP  LÁ ĐỨC AL70 (2 lớp) - GS"
+    },
+    {
+      "from": "CROMATE 3+",
+      "to": "VT-CROMATE-3",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện cần sơn tĩnh điện",
+      "item_name": "CROMATE 3+"
+    },
+    {
+      "from": "TẨY NHÔM",
+      "to": "VT-TAY-NHOM",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện cần sơn tĩnh điện",
+      "item_name": "TẨY NHÔM"
+    },
+    {
+      "from": "NVL-TOLE0.35x598-XNVK",
+      "to": "VT-TOLE0.35X598-XNVK",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN ÚC 3.8D XN-VK"
+    },
+    {
+      "from": "NVL-TOLE0.42x598-XNVK",
+      "to": "VT-TOLE0.42X598-XNVK",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN ÚC 4.4D XN-VK"
+    },
+    {
+      "from": "NVL-TOLE0.42x598-GUKU",
+      "to": "VT-TOLE0.42X598-GUKU",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN ÚC 4.4D GU-KU"
+    },
+    {
+      "from": "NVL-TOLE0.42x598-XR-CAFE",
+      "to": "VT-TOLE0.42X598-XR-CAFE",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN ÚC 4.4D XR-CF"
+    },
+    {
+      "from": "NVL-TOLE0.42x598-TRXLC",
+      "to": "VT-TOLE0.42X598-TRXLC",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN ÚC 4.4D X-TR"
+    },
+    {
+      "from": "NVL-TOLE0.48x598-GUKU",
+      "to": "VT-TOLE0.48X598-GUKU",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN ÚC 4.8D-5.5D GU-KU"
+    },
+    {
+      "from": "NVL-PULYGAI",
+      "to": "PK-PULYGAI",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "PULY GAI"
+    },
+    {
+      "from": "NVL-VDAY-TDU",
+      "to": "PK-VDAY-TDU",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "V ĐÁY (THANH ĐÁY ÚC)"
+    },
+    {
+      "from": "NVL-TOLE1.2x190-RON",
+      "to": "RAY-TOLE1.2X190-RON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U70 (CÓ RON)"
+    },
+    {
+      "from": "NVL-TOLE1.2X270-KRON",
+      "to": "RAY-TOLE1.2X270-KRON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U100 (KHÔNG RON)"
+    },
+    {
+      "from": "NVL-TOLE1.2X270-RON",
+      "to": "RAY-TOLE1.2X270-RON",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RAY SẮT U100 (CÓ RON)"
+    },
+    {
+      "from": "NVL-VAIHAMXO",
+      "to": "PK-VAIHAMXO",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "VAI HÃM XO"
+    },
+    {
+      "from": "NVL-ONGKEM34",
+      "to": "TRUC-ONGKEM34",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 34"
+    },
+    {
+      "from": "NVL-INOX",
+      "to": "VT-INOX",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "INOX KÉO TAY 6mét"
+    },
+    {
+      "from": "NVL-GOIGANG",
+      "to": "PK-GOIGANG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "GỐI GANG"
+    },
+    {
+      "from": "NVL-BKAN",
+      "to": "PK-BKAN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BÁT KHOÁ ÂM NỀN"
+    },
+    {
+      "from": "NVL-VISDD-BANLO",
+      "to": "VT-VISDD-BANLO",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "VIS ĐẦU DÙ BẮN LÔ"
+    },
+    {
+      "from": "NVL-VIS-BANLO2P",
+      "to": "VT-VIS-BANLO2P",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "VIS BẮN LÔ 2P"
+    },
+    {
+      "from": "NVL-XOP-N95",
+      "to": "VT-XOP-N95",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "XỐP LỚN (90cm)"
+    },
+    {
+      "from": "NVL-PULYUC114-CAM",
+      "to": "PK-PULYUC114",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "PULY ÚC 114 CAM"
+    },
+    {
+      "from": "NVL-PULYUC114-DEN",
+      "to": "PK-PULYUC114",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "PULY ÚC 114 ĐEN"
+    },
+    {
+      "from": "NVL-LX5.5x70x46V",
+      "to": "PK-LX5.5X70X46V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 46 V"
+    },
+    {
+      "from": "NVL-LX5.5x70x50V",
+      "to": "PK-LX5.5X70X50V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 50 V"
+    },
+    {
+      "from": "NVL-LX6.0x70x53V",
+      "to": "PK-LX6.0X70X53V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 53 V"
+    },
+    {
+      "from": "NVL-LX6.5x80x62V",
+      "to": "PK-LX6.5X80X62V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 62 V"
+    },
+    {
+      "from": "NVL-LX6.5x80x63V",
+      "to": "PK-LX6.5X80X63V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 63 V"
+    },
+    {
+      "from": "NVL-LX6.5x80x68V",
+      "to": "PK-LX6.5X80X68V",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 68 V"
+    },
+    {
+      "from": "NVL-LX7.0x90x65",
+      "to": "PK-LX7.0X90X65",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 65 V"
+    },
+    {
+      "from": "NVL-LX7.0x90x73",
+      "to": "PK-LX7.0X90X73",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 73 V"
+    },
+    {
+      "from": "NVL-LX7.0x90x83",
+      "to": "PK-LX7.0X90X83",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LÒ XO 83 V"
+    },
+    {
+      "from": "NVL-RONDAYUC",
+      "to": "PK-RONDAYUC",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "Ron đáy úc"
+    },
+    {
+      "from": "NVL-CLNHUA",
+      "to": "PK-CLNHUA",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "CON LĂN NHỰA"
+    },
+    {
+      "from": "NVL-BATSAT",
+      "to": "PK-BATSAT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BÁT SẮT"
+    },
+    {
+      "from": "NVL-BULON12.12",
+      "to": "PK-BULON12.12",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BÙ LON 12x12"
+    },
+    {
+      "from": "NVL-CONTAN12.12",
+      "to": "PK-CONTAN12.12",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "CON TÁN 12"
+    },
+    {
+      "from": "NVL-BACDAN",
+      "to": "PK-BACDAN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BẠC ĐẠN"
+    },
+    {
+      "from": "HH-PL114-NHO",
+      "to": "PK-PL114-NHO",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 114 NHỎ"
+    },
+    {
+      "from": "HH-PL114-LON",
+      "to": "PK-PL114-LON",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 114 LỚN"
+    },
+    {
+      "from": "HH-PL140",
+      "to": "PK-PL140",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 140"
+    },
+    {
+      "from": "HH-PL168",
+      "to": "PK-PL168",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY 168"
+    },
+    {
+      "from": "NVL-PULY ĐEN",
+      "to": "PK-PULY",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "PULY ĐEN CUỘN CỬA ĐỨC"
+    },
+    {
+      "from": "HH-HTTD",
+      "to": "PK-HTTD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỘ TỰ DỪNG"
+    },
+    {
+      "from": "HH-CBD",
+      "to": "PK-CBD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "CÒI BÁO ĐỘNG"
+    },
+    {
+      "from": "NVL-RHM8-GS",
+      "to": "RAY-RHM8",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U76"
+    },
+    {
+      "from": "NVL-RHM8-VK",
+      "to": "RAY-RHM8",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U76"
+    },
+    {
+      "from": "NVL-RHM8-THÔ",
+      "to": "RAY-RHM8",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U76"
+    },
+    {
+      "from": "NVL-R87A1-GS",
+      "to": "RAY-R87A1",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY ĐƠN TD U76"
+    },
+    {
+      "from": "NVL-R87A1-VK",
+      "to": "RAY-R87A1",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY ĐƠN TD U76"
+    },
+    {
+      "from": "NVL-R87A1-THÔ",
+      "to": "RAY-R87A1",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY ĐƠN TD U76"
+    },
+    {
+      "from": "NVL-RHU100-GS",
+      "to": "RAY-RHU100",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U100"
+    },
+    {
+      "from": "NVL-RHU100-VK",
+      "to": "RAY-RHU100",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U100"
+    },
+    {
+      "from": "NVL-RHU100-THÔ",
+      "to": "RAY-RHU100",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Ray và trục",
+      "item_name": "RAY HỘP TD U100"
+    },
+    {
+      "from": "NVL-RNHUA-DR",
+      "to": "RAY-RNHUA-DR",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RON NHỰA ĐÁY RAY"
+    },
+    {
+      "from": "NVL-RNHUA-CR",
+      "to": "RAY-RNHUA-CR",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RON NHỰA CẠNH RAY"
+    },
+    {
+      "from": "NVL-RINOX-DR",
+      "to": "RAY-RINOX-DR",
+      "prefix": "RAY",
+      "why": "tên chứa RAY",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "RON INOX ĐÁY RAY"
+    },
+    {
+      "from": "NVL-AL595-GS",
+      "to": "NHOM-AL595",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL595"
+    },
+    {
+      "from": "NVL-AL595-VK",
+      "to": "NHOM-AL595",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL595"
+    },
+    {
+      "from": "NVL-AL595-THO",
+      "to": "NHOM-AL595",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL595"
+    },
+    {
+      "from": "NVL-AL71-GS",
+      "to": "NHOM-AL71",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL71"
+    },
+    {
+      "from": "NVL-AL71-VK",
+      "to": "NHOM-AL71",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL71"
+    },
+    {
+      "from": "NVL-AL71-THO",
+      "to": "NHOM-AL71",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL71"
+    },
+    {
+      "from": "NVL-AL503-GS",
+      "to": "NHOM-AL503",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL503"
+    },
+    {
+      "from": "NVL-AL503-VK",
+      "to": "NHOM-AL503",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL503"
+    },
+    {
+      "from": "NVL-AL503-THO",
+      "to": "NHOM-AL503",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL503"
+    },
+    {
+      "from": "NVL-AL548-GS",
+      "to": "NHOM-AL548",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL548"
+    },
+    {
+      "from": "NVL-AL548-VK",
+      "to": "NHOM-AL548",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL548"
+    },
+    {
+      "from": "NVL-AL548-THO",
+      "to": "NHOM-AL548",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL548"
+    },
+    {
+      "from": "NVL-AL501-GS",
+      "to": "NHOM-AL501",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL501"
+    },
+    {
+      "from": "NVL-AL501-VK",
+      "to": "NHOM-AL501",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL501"
+    },
+    {
+      "from": "NVL-AL501-THO",
+      "to": "NHOM-AL501",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL501"
+    },
+    {
+      "from": "NVL-AL652-GS",
+      "to": "NHOM-AL652",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL652"
+    },
+    {
+      "from": "NVL-AL652-VK",
+      "to": "NHOM-AL652",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL652"
+    },
+    {
+      "from": "NVL-AL652-THO",
+      "to": "NHOM-AL652",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL652"
+    },
+    {
+      "from": "NVL-AL552-GS",
+      "to": "NHOM-AL552",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL552"
+    },
+    {
+      "from": "NVL-AL552-VK",
+      "to": "NHOM-AL552",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL552"
+    },
+    {
+      "from": "NVL-AL552-THO",
+      "to": "NHOM-AL552",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL552"
+    },
+    {
+      "from": "NVL-AL752-GS",
+      "to": "NHOM-AL752",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL752"
+    },
+    {
+      "from": "NVL-AL752-VK",
+      "to": "NHOM-AL752",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL752"
+    },
+    {
+      "from": "NVL-AL752-THO",
+      "to": "NHOM-AL752",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL752"
+    },
+    {
+      "from": "NVL-AL50-GS",
+      "to": "NHOM-AL50",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL50"
+    },
+    {
+      "from": "NVL-AL50-VK",
+      "to": "NHOM-AL50",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL50"
+    },
+    {
+      "from": "NVL-AL50-THO",
+      "to": "NHOM-AL50",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL50"
+    },
+    {
+      "from": "NVL-ALVIP50-GS",
+      "to": "NHOM-ALVIP50",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIP50"
+    },
+    {
+      "from": "NVL-ALVIP50-VK",
+      "to": "NHOM-ALVIP50",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIP50"
+    },
+    {
+      "from": "NVL-ALVIP50-THO",
+      "to": "NHOM-ALVIP50",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIP50"
+    },
+    {
+      "from": "NVL-ALVIPST500-GS",
+      "to": "NHOM-ALVIPST500",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIPST500"
+    },
+    {
+      "from": "NVL-ALVIPST500-VK",
+      "to": "NHOM-ALVIPST500",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIPST500"
+    },
+    {
+      "from": "NVL-ALVIPST500-THO",
+      "to": "NHOM-ALVIPST500",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIPST500"
+    },
+    {
+      "from": "NVL-ALVIPST700-GS",
+      "to": "NHOM-ALVIPST700",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIPST700"
+    },
+    {
+      "from": "NVL-ALVIPST700-VK",
+      "to": "NHOM-ALVIPST700",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIPST700"
+    },
+    {
+      "from": "NVL-ALVIPST700-THO",
+      "to": "NHOM-ALVIPST700",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "ALVIPST700"
+    },
+    {
+      "from": "NVL-AL70(2LOP)-GS",
+      "to": "NHOM-AL70-2LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL70 ( 2 LỚP)"
+    },
+    {
+      "from": "NVL-AL70(2LOP)-VK",
+      "to": "NHOM-AL70-2LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL70 ( 2 LỚP)"
+    },
+    {
+      "from": "NVL-AL70(2LOP)-THO",
+      "to": "NHOM-AL70-2LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL70 ( 2 LỚP)"
+    },
+    {
+      "from": "NVL-AL70(1LOP)-GS",
+      "to": "NHOM-AL70-1LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL70 ( 1 LỚP)"
+    },
+    {
+      "from": "NVL-AL70(1LOP)-VK",
+      "to": "NHOM-AL70-1LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL70 ( 1 LỚP)"
+    },
+    {
+      "from": "NVL-AL70(1LOP)-THO",
+      "to": "NHOM-AL70-1LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL70 ( 1 LỚP)"
+    },
+    {
+      "from": "NVL-AL75-GS",
+      "to": "NHOM-AL75",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL75"
+    },
+    {
+      "from": "NVL-AL75-VK",
+      "to": "NHOM-AL75",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL75"
+    },
+    {
+      "from": "NVL-AL75-THO",
+      "to": "NHOM-AL75",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "AL75"
+    },
+    {
+      "from": "NVL-RON-DD",
+      "to": "PK-RON-DD",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "RON ĐÁY ĐỨC"
+    },
+    {
+      "from": "NVL-BO2VIS-752-ST700",
+      "to": "PK-BO2VIS-752-ST700",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 2VIS 752 - ST700"
+    },
+    {
+      "from": "NVL-BO1VIS-AL701LOP",
+      "to": "NHOM-BO1VIS-AL701LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 1VIS 70 (1 LỚP)"
+    },
+    {
+      "from": "NVL-BO1VIS-AL75",
+      "to": "NHOM-BO1VIS-AL75",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 1VIS AL75"
+    },
+    {
+      "from": "NVL-BO2VIS AL50-VIP50-548-ST500",
+      "to": "NHOM-BO2VIS-AL50-VIP50-548-ST500",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [
+        "dài 32 > 24"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 2VIS AL50-VIP50-548-ST500"
+    },
+    {
+      "from": "NVL-BO1VIS-503C",
+      "to": "PK-BO1VIS-503C",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 1VIS 503C"
+    },
+    {
+      "from": "NVL-BO1VIS-AL702LOP",
+      "to": "NHOM-BO1VIS-AL702LOP",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BỌ 1VIS 70 (2 LỚP)"
+    },
+    {
+      "from": "NVL-BO1VIS-503N-71-595",
+      "to": "PK-BO1VIS-503N-71-595",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 1VIS 503N-71-595"
+    },
+    {
+      "from": "NVL-BO2VIS-501N-552",
+      "to": "PK-BO2VIS-501N-552",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 2VIS 501N-552"
+    },
+    {
+      "from": "NVL-BO2VIS-652-548C",
+      "to": "PK-BO2VIS-652-548C",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "BỌ 2VIS 652-548C"
+    },
+    {
+      "from": "NVL-VIS",
+      "to": "VT-VIS",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "Vis"
+    },
+    {
+      "from": "NVL-PHOTLONG4X5",
+      "to": "PK-PHOTLONG4X5",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "LÔNG NHEO NHỎ"
+    },
+    {
+      "from": "NVL-PHOTLONG5X6",
+      "to": "PK-PHOTLONG5X6",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện CN Đức\"",
+      "dropped": [],
+      "item_group": "Phụ kiện CN Đức",
+      "item_name": "LÔNG NHEO LỚN"
+    },
+    {
+      "from": "NVL-OTPHI13.8",
+      "to": "PK-OTPHI13.8",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "ỐNG THÉP PHI 13.8"
+    },
+    {
+      "from": "NVL-BOMV",
+      "to": "PK-BOMV",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BỌ MẮT VÕNG"
+    },
+    {
+      "from": "NVL-TONLAYEM-MVSN",
+      "to": "VT-TONLAYEM-MVSN",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "LÁ YẾM (TÔN LÁ YẾM)"
+    },
+    {
+      "from": "NVL-BAT-MV",
+      "to": "NHOM-BAT-MV",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BÁT (DÙNG BẮT VÀO LÁ YẾM)"
+    },
+    {
+      "from": "NVL-DINHTAN-MV",
+      "to": "PK-DINHTAN-MV",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "ĐINH TÁN"
+    },
+    {
+      "from": "NVL-CONTAN-MV",
+      "to": "PK-CONTAN-MV",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "CON TÁN"
+    },
+    {
+      "from": "NVL-V4",
+      "to": "PK-V4",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "V4"
+    },
+    {
+      "from": "NVL-V5",
+      "to": "PK-V5",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "V5"
+    },
+    {
+      "from": "HH-LACPHU33",
+      "to": "PK-LACPHU33",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LẮC PHỤ 33"
+    },
+    {
+      "from": "HH-LACPHU33-3L",
+      "to": "PK-LACPHU33-3L",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LẮC PHỤ 33 (3 LỖ)"
+    },
+    {
+      "from": "HH-LACPHU36",
+      "to": "PK-LACPHU36",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LẮC PHỤ 36"
+    },
+    {
+      "from": "HH-LACPHU40",
+      "to": "PK-LACPHU40",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LẮC PHỤ 40"
+    },
+    {
+      "from": "HH-LACPHU40-L168",
+      "to": "PK-LACPHU40-L168",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "LẮC PHỤ 40 LỖ 168"
+    },
+    {
+      "from": "NVL-BANBUOM-FE",
+      "to": "PK-BANBUOM-FE",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BẮN BƯỚM (SẮT)"
+    },
+    {
+      "from": "NVL-BANBUOM-INOX",
+      "to": "PK-BANBUOM-INOX",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BẮN BƯỚM (INOX)"
+    },
+    {
+      "from": "NVL-OTPHI19",
+      "to": "PK-OTPHI19",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "ỐNG THÉP PHI 19"
+    },
+    {
+      "from": "NVL-BOLSN",
+      "to": "PK-BOLSN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BỌ LUỚI SONG NGANG - MÓNG NGỰA SONG NGANG"
+    },
+    {
+      "from": "NVL-BAT-SN",
+      "to": "NHOM-BAT-SN",
+      "prefix": "NHOM",
+      "why": "nhóm cấu kiện \"Nan/lá cửa\"",
+      "dropped": [],
+      "item_group": "Nan/lá cửa",
+      "item_name": "BÁT (DÙNG BẮT VÀO LÁ YẾM)"
+    },
+    {
+      "from": "NVL-DINHTAN-SN",
+      "to": "PK-DINHTAN-SN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "ĐINH TÁN"
+    },
+    {
+      "from": "NVL-NHAN",
+      "to": "PK-NHAN",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "NHẪN"
+    },
+    {
+      "from": "NVL-TON-DL6Dx124-STD",
+      "to": "VT-TON-DL6DX124",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 6D STD"
+    },
+    {
+      "from": "NVL-TON-DL8Dx124-STD",
+      "to": "VT-TON-DL8DX124",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 8D STD"
+    },
+    {
+      "from": "NVL-TON-DL1LYx124-STD",
+      "to": "VT-TON-DL1LYX124",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 1LY STD"
+    },
+    {
+      "from": "NVL-TON-DL1LY2x124-STD",
+      "to": "VT-TON-DL1LY2X124",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 1LY2 STD"
+    },
+    {
+      "from": "NVL-BUOMFE-DL",
+      "to": "PK-BUOMFE-DL",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BƯỚM SẮT ĐÀI LOAN"
+    },
+    {
+      "from": "NVL-TON-DL9.2Dx175-XN-VK",
+      "to": "VT-TON-DL9.2DX175",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 1LY XN-VK"
+    },
+    {
+      "from": "NVL-TON-DL8D-9Dx175-STD",
+      "to": "VT-TON-DL8D-9DX175",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 8-9D STD"
+    },
+    {
+      "from": "NVL-TON-DL1LYx175-STD",
+      "to": "VT-TON-DL1LYX175",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 1LY STD"
+    },
+    {
+      "from": "NVL-TON-DL1.2LYx175-STD",
+      "to": "VT-TON-DL1.2LYX175",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 1.2LY STD"
+    },
+    {
+      "from": "NVL-TON-DL1.3LYx175-STD",
+      "to": "VT-TON-DL1.3LYX175",
+      "prefix": "VT",
+      "why": "tôn — vật tư khác theo §2",
+      "dropped": [
+        "bỏ token màu"
+      ],
+      "item_group": "Nan/lá cửa",
+      "item_name": "TÔN KẼM ĐÀI LOAN 1.3LY STD"
+    },
+    {
+      "from": "NVL-BUOMFE-ST",
+      "to": "PK-BUOMFE-ST",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BƯỚM SẮT SIÊU TRƯỜNG"
+    },
+    {
+      "from": "NVL-TR114-1.8",
+      "to": "TRUC-TR114-1.8",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 114 (1.8 mm)"
+    },
+    {
+      "from": "NVL-TR114-2.1",
+      "to": "TRUC-TR114-2.1",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 114 (2.1 mm)"
+    },
+    {
+      "from": "NVL-TR140",
+      "to": "TRUC-TR140",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 140 (2.5 mm)"
+    },
+    {
+      "from": "NVL-TR168",
+      "to": "TRUC-TR168",
+      "prefix": "TRUC",
+      "why": "tên chứa TRỤC",
+      "dropped": [],
+      "item_group": "Ray và trục",
+      "item_name": "TRỤC 168 (4.0 mm)"
+    },
+    {
+      "from": "NVL-PE25",
+      "to": "PK-PE25",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "Màng PE 25 CM"
+    },
+    {
+      "from": "NVL-PE50",
+      "to": "PK-PE50",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "Màng PE 50 CM"
+    },
+    {
+      "from": "NVL-PE2x1.05x150",
+      "to": "PK-PE2X1.05X150",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "MÀNG PE FOAM 2x1.05x150 (CẮT 4)"
+    },
+    {
+      "from": "NVL-PE2x1.05x150CAT2",
+      "to": "PK-PE2X1.05X150CAT2",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "MÀNG PE FOAM 2x1.05x150 (CẮT 2)"
+    },
+    {
+      "from": "NVL-PE3x1.05x100CAT2",
+      "to": "PK-PE3X1.05X100CAT2",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "MÀNG PE FOAM 3x1.05x100 (CẮT 2)"
+    },
+    {
+      "from": "NVL-PE3x1.05x100CAT4",
+      "to": "PK-PE3X1.05X100CAT4",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "MÀNG PE FOAM 3x1.05x100 (CẮT 4)"
+    },
+    {
+      "from": "NVL-BANGKT-5P",
+      "to": "VT-BANGKT-5P",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BĂNG KEO TRONG"
+    },
+    {
+      "from": "NVL-VUONG3",
+      "to": "PK-VUONG3",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "VUÔNG KẼM 30X30X1.2LY"
+    },
+    {
+      "from": "NVL-HOPKEM-1.2LY",
+      "to": "PK-HOPKEM-1.2LY",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HỘP KỄM 30X30X1.2LY"
+    },
+    {
+      "from": "HH-TMT-TK400",
+      "to": "PK-TMT-TK400",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR TANKER 400 KG"
+    },
+    {
+      "from": "HH-LMT33-TK400-600",
+      "to": "PK-LMT33-TK400-600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC 32-33 MOTOR TANKER 400 KG - 600 KG"
+    },
+    {
+      "from": "HH-LMT36-TK400-600",
+      "to": "PK-LMT36-TK400-600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC 36 MOTOR TANKER 400 KG - 600 KG"
+    },
+    {
+      "from": "HH-HDKMT-TANKER",
+      "to": "PK-HDKMT-TANKER",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "HỘP ĐIỀU KHIỂN MOTOR TANKER"
+    },
+    {
+      "from": "HH-TDKMT-TANKER",
+      "to": "VT-KMT-TANKER",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "TAY ĐIỀU KHIỂN MOTOR TANKER"
+    },
+    {
+      "from": "HH-TMT-TK600",
+      "to": "PK-TMT-TK600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR TANKER 600 KG"
+    },
+    {
+      "from": "HH-TMT-TK800",
+      "to": "PK-TMT-TK800",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR TANKER 800 KG"
+    },
+    {
+      "from": "HH-LMT-TK800-1000",
+      "to": "PK-LMT-TK800-1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR TANKER 800 KG -1000 KG"
+    },
+    {
+      "from": "HH-TMT-TK1000",
+      "to": "PK-TMT-TK1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR TANKER 1000 KG"
+    },
+    {
+      "from": "LK-BACDAN-MT",
+      "to": "PK-BACDAN-MT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "BẠC ĐẠN MOTOR"
+    },
+    {
+      "from": "LK-NAPCHUP-MT",
+      "to": "PK-NAPCHUP-MT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "NẮP CHỤP MOTOR"
+    },
+    {
+      "from": "HH-HDKDT",
+      "to": "PK-HDKDT",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "BỘ ĐIỀU KHIỂN ĐIỆN THOẠI"
+    },
+    {
+      "from": "HH-TDKDT",
+      "to": "VT-KDT",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "TAY ĐIỀU KHIỂN ĐIỆN THOẠI"
+    },
+    {
+      "from": "HH-TMT-YHLD300",
+      "to": "PK-TMT-YHLD300",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR YH LD 300KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-LMT-YHLD300-500",
+      "to": "PK-LMT-YHLD300-500",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR YH LD 300/500KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-HDKMT-YH",
+      "to": "PK-HDKMT-YH",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "HỘP ĐIỀU KHIỂN YH"
+    },
+    {
+      "from": "HH-TDKMT-YH",
+      "to": "VT-KMT-YH",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "TAY ĐIỀU KHIỂN YH"
+    },
+    {
+      "from": "HH-TMT-YHLD500",
+      "to": "PK-TMT-YHLD500",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR YH LD 500KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-TMT-YHLD800",
+      "to": "PK-TMT-YHLD800",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-LMT-YHLD800",
+      "to": "PK-LMT-YHLD800",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR YH LD 800KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-TMT-YHLD1000",
+      "to": "PK-TMT-YHLD1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-LMT-YHLD1000",
+      "to": "PK-LMT-YHLD1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR YH LD 1000KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-TMT-YHLD1200",
+      "to": "PK-TMT-YHLD1200",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-LMT-YHLD1200",
+      "to": "PK-LMT-YHLD1200",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR YH LD 1200KG LOẠI 1 (DÂY ĐỒNG)"
+    },
+    {
+      "from": "HH-TMT-AL400",
+      "to": "PK-TMT-AL400",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR ALUMAX 400 KG"
+    },
+    {
+      "from": "HH-LMT-AL400",
+      "to": "PK-LMT-AL400",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR ALUMAX 400 KG"
+    },
+    {
+      "from": "HH-HDKMT-AL",
+      "to": "PK-HDKMT-AL",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "HỘP ĐIỀU KHIỂN MOTOR ALUMAX"
+    },
+    {
+      "from": "HH-TDKMT-AL",
+      "to": "VT-KMT-AL",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "TAY ĐIỀU KHIỂN MOTOR ALUMAX"
+    },
+    {
+      "from": "HH-TMT-AL600",
+      "to": "PK-TMT-AL600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR ALUMAX 600 KG"
+    },
+    {
+      "from": "HH-LMT-AL600",
+      "to": "PK-LMT-AL600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR ALUMAX 600 KG"
+    },
+    {
+      "from": "HH-TMT-JG300",
+      "to": "PK-TMT-JG300",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR JG 300KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-HDKMT-JG",
+      "to": "PK-HDKMT-JG",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "HỘP ĐIỀU KHIỂN MOTOR JG"
+    },
+    {
+      "from": "HH-TDKMT-JG",
+      "to": "VT-KMT-JG",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Linh kiện motor",
+      "item_name": "TAY ĐIỀU KHIỂN MOTOR JG"
+    },
+    {
+      "from": "HH-TMT-JG400",
+      "to": "PK-TMT-JG400",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR JG 400KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-LMT-JG300-600",
+      "to": "PK-LMT-JG300-600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR JG 300KG-600KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-TMT-JG500",
+      "to": "PK-TMT-JG500",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR JG 500KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-LMT-JG500",
+      "to": "PK-LMT-JG500",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR JG 500KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-TMT-JG600",
+      "to": "PK-TMT-JG600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR JG 600KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-LMT-JG600",
+      "to": "PK-LMT-JG600",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR JG 600KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-TMT-JG800",
+      "to": "PK-TMT-JG800",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR JG 800KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-LMT-JG800-1000",
+      "to": "PK-LMT-JG800-1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR JG 800KG-1000KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-TMT-JG1000",
+      "to": "PK-TMT-JG1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR JG 1000KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-LMT-JG1000",
+      "to": "PK-LMT-JG1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR JG 1000KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-TMT-JG1500",
+      "to": "PK-TMT-JG1500",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR JG 1500KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-LMT-JG1500",
+      "to": "PK-LMT-JG1500",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "LẮC MOTOR JG 1500KG (CHÍNH HÃNG)"
+    },
+    {
+      "from": "HH-TMTDON-CH",
+      "to": "PK-TMTDON-CH",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR CH TAIWAN"
+    },
+    {
+      "from": "HH-HDKMTDON-CH",
+      "to": "PK-HDKMTDON-CH",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HỘP ĐIỀU KHIỂN TAIWAN"
+    },
+    {
+      "from": "HH-TDKMTDOI-CH",
+      "to": "VT-KMTDOI-CH",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [
+        "bỏ token nhà cung cấp/màu dính liền"
+      ],
+      "item_group": "Phụ kiện chung",
+      "item_name": "TAY ĐIỀU KHIỂN TAIWAN"
+    },
+    {
+      "from": "HH-PAT-CH",
+      "to": "PK-PAT-CH",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "PHÍM ÂM TƯỜNG CH ÚC (Motor trong)"
+    },
+    {
+      "from": "HH-TMTDON-BOS-TRAI",
+      "to": "PK-TMTDON-BOS-TRAI",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR BOSTECH  ĐƠN TRÁI"
+    },
+    {
+      "from": "HH-TMTDON-BOS-PHAI",
+      "to": "PK-TMTDON-BOS-PHAI",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR BOSTECH ĐƠN PHẢI"
+    },
+    {
+      "from": "HH-TMTDOI-BOS-TRAI",
+      "to": "PK-TMTDOI-BOS-TRAI",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR BOSTECH  ĐÔI TRÁI"
+    },
+    {
+      "from": "HH-TMTDOI-BOS-PHAI",
+      "to": "PK-TMTDOI-BOS-PHAI",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "THÂN MOTOR BOSTECH ĐÔI PHẢI"
+    },
+    {
+      "from": "HH-HDKMT-BOS",
+      "to": "PK-HDKMT-BOS",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "HỘP ĐIỀU KHIỂN BOSTECH"
+    },
+    {
+      "from": "HH-TDK-BOS",
+      "to": "VT-TDK-BOS",
+      "prefix": "VT",
+      "why": "vật tư/hoá chất theo §2",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "TAY ĐIỀU KHIỂN  BOSTECH"
+    },
+    {
+      "from": "HH-PAT-BOS",
+      "to": "PK-PAT-BOS",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "PHÍM ÂM TƯỜNG ÚC BOSTECH"
+    },
+    {
+      "from": "HH-UPS-ALE800",
+      "to": "PK-UPS-ALE800",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "ALUMAX UPS E-800KG"
+    },
+    {
+      "from": "HH-UPS-ALE1000",
+      "to": "PK-UPS-ALE1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Linh kiện motor\"",
+      "dropped": [],
+      "item_group": "Linh kiện motor",
+      "item_name": "ALUMAX UPS E-1000KG"
+    },
+    {
+      "from": "HH-UPS-YH1000",
+      "to": "PK-UPS-YH1000",
+      "prefix": "PK",
+      "why": "nhóm cấu kiện \"Phụ kiện chung\"",
+      "dropped": [],
+      "item_group": "Phụ kiện chung",
+      "item_name": "UPS YH1000i"
+    }
+  ]
+}
