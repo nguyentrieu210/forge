@@ -20,8 +20,18 @@ import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const SRC = resolve(here, "../briefs/alumdoor.json");
-const OUT = resolve(here, "../briefs/alumdoor-v2.json");
+
+// `--src` / `--out` để chạy được mà KHÔNG ghi đè brief trong cây làm việc.
+// Test tái lập trước đây chạy thẳng vào `briefs/alumdoor-v2.json`: lần chạy đầu ghi đè
+// (xoá mất phần sửa tay chưa có trong bộ sinh), lần chạy sau so chính bản vừa ghi nên XANH.
+const argv = process.argv.slice(2);
+const pathArg = (name, fallback) => {
+  const index = argv.indexOf(`--${name}`);
+  const value = index >= 0 ? argv[index + 1] : undefined;
+  return value ? resolve(process.cwd(), value) : fallback;
+};
+const SRC = pathArg("src", resolve(here, "../briefs/alumdoor.json"));
+const OUT = pathArg("out", resolve(here, "../briefs/alumdoor-v2.json"));
 const ORDER_LOGO = `data:image/png;base64,${readFileSync(resolve(here, "../../client/apps/runtime/public/alumdoor-order-logo.png")).toString("base64")}`;
 
 const sourceBrief = JSON.parse(readFileSync(SRC, "utf8"));

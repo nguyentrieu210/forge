@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -12,11 +13,18 @@ const nameOf = (field) => typeof field === "string" ? field.split(":", 1)[0].tri
 const doc = (brief, name) => brief.doctypes.find((entry) => entry.name === name);
 const field = (brief, doctype, fieldname) => doc(brief, doctype)?.fields?.find((entry) => nameOf(entry) === fieldname);
 
-test("alumdoor-v2 generator is idempotent and preserves runtime contracts", () => {
-  const before = readFileSync(GENERATED, "utf8");
-  execFileSync(process.execPath, [GENERATOR], { cwd: ROOT, stdio: "pipe" });
-  const after = readFileSync(GENERATED, "utf8");
-  assert.equal(after, before, "official generator must be a zero-diff second pass");
+test("alumdoor-v2 generator is idempotent and preserves runtime contracts", (t) => {
+  // Sinh ra thư mục tạm: test KHÔNG được ghi đè brief trong cây làm việc. Bản cũ ghi thẳng
+  // vào `briefs/alumdoor-v2.json`, nên một lần chạy là mất phần sửa tay chưa có trong bộ sinh
+  // (màn "Kho giao hàng nhiều đơn", các trường PB ray/nhựa của Quotation Item...) mà vẫn xanh
+  // ở lần chạy kế tiếp vì lúc đó nó so với chính bản nó vừa ghi.
+  const workspace = mkdtempSync(resolve(tmpdir(), "alumdoor-v2-brief-"));
+  t.after(() => rmSync(workspace, { recursive: true, force: true }));
+  const out = resolve(workspace, "alumdoor-v2.json");
+  const committed = readFileSync(GENERATED, "utf8");
+  execFileSync(process.execPath, [GENERATOR, "--out", out], { cwd: ROOT, stdio: "pipe" });
+  const after = readFileSync(out, "utf8");
+  assert.equal(after, committed, "official generator must be a zero-diff second pass");
   const generated = JSON.parse(after);
   for (const required of ["Tỉnh Thành", "Phường Xã", "Địa chỉ giao lắp", "Tài khoản ngân hàng", "Credit Note", "Credit Note Item"])
     assert.ok(doc(generated, required), `missing regenerated ${required}`);

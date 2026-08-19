@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-08-19T10:25:07.521Z",
+  "recorded_at": "2026-08-19T10:31:22.448Z",
   "note": "Tập test ĐỎ SẴN tại gốc nhánh refactor. Chỉ ghi lại khi cố ý dời mốc.",
   "total": 2395,
   "failing": [
@@ -24,6 +24,7 @@
     "tests/alumdoor-bom-source-catalog.test.mjs::implemented 4D source formulas reproduce ĐM semantics for one configured set",
     "tests/alumdoor-bom-source-catalog.test.mjs::source catalog preserves exact ĐM row coverage for CỬA ÚC KT 4D XN-VK",
     "tests/alumdoor-child-presentation.test.mjs::all child doctypes own presentation while conditional required fields stay reachable without blanket quick inflation",
+    "tests/alumdoor-child-presentation.test.mjs::generated AlumDoor brief is materialized from the canonical child-presentation helper",
     "tests/alumdoor-child-presentation.test.mjs::presentation helper migrates every Alumdoor child DocType without changing field order",
     "tests/alumdoor-hr-payroll-lite-coordinator.test.mjs::tests\\alumdoor-hr-payroll-lite-coordinator.test.mjs",
     "tests/alumdoor-hr-payroll-lite-routes.test.mjs::tests\\alumdoor-hr-payroll-lite-routes.test.mjs",
@@ -51,9 +52,11 @@
     "tests/alumdoor-sales-bom-full-set.test.mjs::legacy full-set rows project normalized width into the correct customer PB field",
     "tests/alumdoor-sales-bom-full-set.test.mjs::sales composition hides only the first intermediate TP LA leaf while preserving real components",
     "tests/alumdoor-sales-return.test.mjs::Giấy báo Có đứng cạnh hoá đơn bán trên thanh bên",
+    "tests/alumdoor-sales-summary-metadata.test.mjs::Sales Order materializes metadata-driven commercial summary",
     "tests/alumdoor-ui-rec-02-navigation.test.mjs::UI-REC-02 exposes all P0 operator masters through the Danh mục contract",
     "tests/alumdoor-ui-rec-02-navigation.test.mjs::UI-REC-02 sidebar is deterministic, domain-oriented and free of superseded routes",
     "tests/alumdoor-ui-rec-02-navigation.test.mjs::attendance/payroll IA is sourced from the installed AlumDoor attendance app, not duplicated business logic",
+    "tests/alumdoor-v2-generator-reproducibility.test.mjs::alumdoor-v2 generator is idempotent and preserves runtime contracts",
     "tests/alumdoor-v2-inventory.test.mjs::Cut Order ghi cây + kg đúng batch, nhập đầu thừa theo giá tỷ lệ và hoàn bằng đúng bút toán gốc",
     "tests/alumdoor-v2-inventory.test.mjs::kiểm kê catch-weight ghi đồng thời -2 cây/-20 kg, bắt buộc nguyên nhân và tách người đếm-người duyệt",
     "tests/alumdoor-v2-inventory.test.mjs::kiểm kê chỉ lệch kg vẫn ghi đúng lô với số cây bằng 0 và giá trị bằng 0",
