@@ -109,7 +109,13 @@ for(const record of records){
     continue;
   }
   const line={
-    item_code:ref.item_code,
+    // Mã ĐANG DÙNG, không phải mã canonical của bộ dựng.
+    //
+    // `ref.item_code` là mã do bộ dựng tự chuẩn hoá từ bảng tính (vd `NVL-BATFE` → `NVL-BATSAT`),
+    // và nó vẫn phải giữ nguyên cho các tra cứu phía nguồn bên dưới. Nhưng thứ ĐẨY VÀO D1 phải là
+    // mã mặt hàng thật, nếu không importer báo 347 "mặt hàng không tồn tại" — đo được sau đợt đổi mã.
+    // `lineage.canonical_item_code` bên dưới vẫn giữ mã bộ dựng: đó là bằng chứng, không phải con trỏ.
+    item_code:clean(item.item_code),
     uom:uom.runtime_uom,
     ...(uom.conversion_factor?{conversion_factor:uom.conversion_factor}:{}),
     resolution:quantity.status,
@@ -128,7 +134,8 @@ for(const [parentRow,lines] of [...groups.entries()].sort((a,b)=>a[0]-b[0])){
   const output=resolveBomParentOutput(parentItem);
   if(output.status!=="accepted"){addBlock(output.reason,parent,{item_code:clean(parent.item_code),stock_uom:output.stock_uom});continue;}
   const normalized=[...lines].sort((a,b)=>(a.lineage.source_row-b.lineage.source_row)||a.item_code.localeCompare(b.item_code,"vi"));
-  const snapshot={schema_version:3,source:"apps/alumdoor/docs/nguon/ms-lien/ĐM.md",source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parent.item_code),output,lines:normalized};
+  // Mã cha cũng phải là mã đang dùng, cùng lý do với mã cấu phần ở trên.
+  const snapshot={schema_version:3,source:"apps/alumdoor/docs/nguon/ms-lien/ĐM.md",source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parentItem.item_code),output,lines:normalized};
   const fingerprint=createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
   boms.push({source_index:Number(parent.source_index),source_row:Number(parent.source_row),item:clean(parent.item_code),company:"ALUMDOOR",quantity:1,output_uom:output.output_uom,bom_status:"Draft",bom_fingerprint:fingerprint,lines:normalized,configuration_snapshot:snapshot});
 }
