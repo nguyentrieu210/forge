@@ -10,7 +10,7 @@ import type { UrlStateBridge } from "@metaforge/views/url-state";
 import {
   AppShell, AuthBoundary, BusinessContextBar, BusinessContextProvider, I18nProvider,
   CommandPalette, LoginForm, applyBrand, normalizeBrand, applyDesign, resolveIcon, useBusinessContext, useTheme,
-  ScopeGateBody, resolveScopeState, WorkspaceTabs, useWorkspaceTabs,
+  ScopeGateBody, resolveScopeState,
   type AwesomeRecord, type NavItem,
 } from "@metaforge/shell";
 import { Button, Toaster } from "@metaforge/ui";
@@ -493,21 +493,6 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
     document.title = crumb ? `${crumb} — ${manifest.name}` : manifest.name;
   }, [crumb, manifest.name]);
 
-  /**
-   * Tab bàn làm việc, khoá theo ĐƯỜNG DẪN chứ không theo khoá nav.
-   *
-   * Khoá nav thì mọi đơn bán hàng dùng chung một tab — đúng thứ khiến tab trở nên vô dụng.
-   * Đường dẫn thì mỗi chứng từ một tab, và người bán mở đơn của khách A, tra tồn kho, rồi
-   * quay lại đúng chỗ đang dở.
-   */
-  const location = useLocation();
-  const activeNav = nav.find((item) => item.key === active);
-  const tabState = useWorkspaceTabs({
-    activeKey: location.pathname,
-    label: crumb ?? activeNav?.label ?? manifest.name,
-    icon: activeNav?.icon,
-    pinnedKey: resolveHomeRoute(manifest),
-  });
 
   const palette = useMemo(() => ({
     actions: nav.map((item) => ({
@@ -540,20 +525,6 @@ function Shell({ manifest, boot, logout, nav, active, breadcrumbs = [], children
   return (
     <>
       <AppShell
-        tabs={
-          <WorkspaceTabs
-            tabs={tabState.tabs}
-            activeKey={location.pathname}
-            onSelect={(key) => navigate(key)}
-            onClose={(key) => {
-              // Đóng tab ĐANG mở thì phải nhảy sang tab kề, nếu không bàn làm việc trống trơn.
-              const fallback = key === location.pathname ? tabState.neighbourOf(key) : undefined;
-              tabState.close(key);
-              if (fallback) navigate(fallback);
-            }}
-          />
-        }
-        brand={manifest.name}
         brandMode={brandMode}
         allowBrandChange
         nav={nav}

@@ -67,8 +67,6 @@ export interface AppShellProps {
   /** menu tài khoản: "Đăng xuất khỏi thiết bị khác" (giữ phiên hiện tại) — ẩn nếu app không cấp. */
   onLogoutOtherSessions?: () => void;
   businessContext?: ReactNode;
-  /** Thanh tab bàn làm việc, nằm ngay dưới header. Không truyền thì shell không chừa chỗ. */
-  tabs?: ReactNode;
   children: ReactNode;
 }
 
@@ -433,7 +431,6 @@ export function AppShell(props: AppShellProps) {
           </header>
           {!online ? <div className="shrink-0 border-b border-warning/30 bg-warning/10 px-3 py-1.5 text-center text-xs text-warning-text" role="status">Đang ngoại tuyến. Dữ liệu chưa tải và thao tác lưu cần kết nối mạng.</div> : null}
           {props.businessContext ? <div className="shrink-0 overflow-x-auto border-b bg-muted/20 px-3 py-1.5 lg:hidden">{props.businessContext}</div> : null}
-          {props.tabs}
           <main ref={mainRef} id="mf-main-content" tabIndex={0} className="mf-shell-content min-h-0 flex-1 overflow-auto outline-none">{props.children}</main>
         </div>
       </div>
