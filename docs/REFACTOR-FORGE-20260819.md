@@ -117,8 +117,9 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P2** ✅ | Gom 10 bản `money()` về `formatMoney` của `@metaforge/core`; `money-single-source.test.mjs` ghim 5 kiểu hiển thị | thấp |
 | **P2b** ✅ | Nạp lười 7 biểu đồ nặng + bộ vẽ SVG: chunk `engine` 833 → 662 kB (gzip 285 → 229) | thấp |
 | **P3** ✅ | Bóc sạch vertical khỏi `router.ts`: 6 method → `VERTICAL_METHODS`, hook context → `VerticalRouterHooks`, nhãn "Tài khoản ngân hàng" → `LINK_DISPLAY_RULES`, luật chiết khấu thương mại → `alumdoor-commercial.ts`, `loadReadable`/`loadWritable` → `document-access.ts`. Nhắc `alumdoor`: **63 → 0**, 4530 → 4241 dòng; `router-vertical-free.test.mjs` giữ ranh giới | trung bình |
-| **P4** ⏳ | Tách `client/packages/views/src/app/vertical/alumdoor` (7336/7656 dòng của `app/`) ra package riêng. CHƯA làm: cần đảo chiều phụ thuộc (hiện `RuntimeDoctypeWorkspace` import thẳng vào vertical), mà đảo nửa vời sẽ sinh lỗi im lặng — vertical không đăng ký thì màn Alumdoor biến mất và không cổng nào bắt được. Trong lúc chờ, `vertical-leak-budget.test.mjs` giữ vết loang ở đúng 8 file | trung bình |
-| **P5** | Cắt `router.ts` (4530 dòng) theo trục: REST resource · method dispatch · metadata · storefront | cao |
+| **P4a** ✅ | Đảo chiều phụ thuộc phía client: `app/vertical/registry.ts` làm điểm ráp (import tĩnh, đúng khuôn `vertical-methods.ts` bên server), `RuntimeDoctypeWorkspace` tra bảng thay vì gọi tên | trung bình |
+| **P4b** ⏳ | Dời hẳn 7336 dòng vertical sang package riêng. Ranh giới đã đứng (`vertical-leak-budget.test.mjs` ghim 8 file dùng chung + 1 điểm ráp), bước còn lại là di chuyển file và sửa import | trung bình |
+| **P5** ◐ | Cắt `router.ts`: đã tách `document-access.ts` (đọc/ghi có kiểm quyền), `router-helpers.ts` (5 mẩu dùng 45 nơi), `link-search.ts` (ô chọn link + tra nhãn), `alumdoor-commercial.ts`. **4530 → 4073 dòng**. Còn lại: dispatch method (97 case) và REST resource | cao |
 | **P6** | Cắt `alumdoor-worker/src/index.ts` (3689 dòng) và `ChildGrid.tsx` (2200 dòng) | cao |
 
 Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
