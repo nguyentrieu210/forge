@@ -82,48 +82,72 @@ và chờ chủ xưởng chốt. Ghi trong `lib/alumdoor-slat-catalog.mjs`.
 
 ---
 
-## 4. Đang chặn — cần một quyết định
+## 4. Pha dữ liệu — đã chạy
 
-**Các pha dữ liệu (xoá sạch danh mục demo, dựng lại mã hàng theo quy ước 29/07, nạp lại danh
-mục, nối dữ liệu) CHƯA chạy được.**
+Ba adapter chạy trọn qua runner có bảo vệ, giữ nguyên lock / backup / post-verify / idempotency:
 
-Không phải vì thiếu thời gian, mà vì cổng nguồn của runner canonical:
+| Adapter | Kết quả | Bằng chứng |
+|---|---|---|
+| `layer0` | `EXECUTION_STATUS=SUCCESS` | 25 màu · 4 bề mặt · 17 quy cách · 7 bộ đo · 8+5 hình học · 18 ĐVT |
+| `bom-rule` | `IDEMPOTENT_SECOND_PASS=PASS` | pass 1 và pass 2 đều `templates_updated=0 rules_updated=0 unchanged=780` |
+| `item-master` | `IDEMPOTENCE_PASS` | 587 mặt hàng, `created=0 existing=587`, verify PASS |
 
-```
-run-local-import-core.mjs
-  → STALE_WORKTREE: Local main has N commit(s) not on origin/main; refusing to overwrite
-```
+Đường hợp lệ là `forge-live apply`: nó dựng kho bare cục bộ, trình commit `agent-live` cho
+importer như một `main` local-only, rồi trả nguyên trạng. **Điều kiện duy nhất là local phải
+bằng `origin/agent-live`** — tức push, không phải promote lên `main`. Bản ghi trước của tài liệu
+này đọc nhầm cổng nguồn thành một điểm chặn không gỡ được; nó không phải.
 
-`skills/forge-local-runner-import/SKILL.md` đặt "exact clean `main` matching `origin/main`" làm
-thẩm quyền mutation. Hiện `agent-live` đi trước `origin/main` 78 commit và chưa push. Lách cổng
-này là **weaken đúng cái guard mà đợt này được yêu cầu giữ** — nó chặn việc chạy importer từ một
-cây nguồn chưa ai review.
+### Bảy danh mục hội tụ
 
-Ba đường mở, theo thứ tự em đề nghị:
+`documents` (đang dùng) khớp `master_records` ở cả bảy. Không còn giá trị ma nào.
 
-1. **Push `agent-live` rồi promote lên `main`** — đường sạch nhất, importer chạy đúng hợp đồng.
-2. **Bật lại live-sync** để `forge-live apply <adapter>` bắc cầu: nó trình commit live cho
-   importer như một `main` local-only, giữ nguyên lock/backup/verify. Cần push trước.
-3. Chạy tay với cờ bỏ qua cổng nguồn — **không đề nghị**, và nếu chọn thì phải là quyết định
-   tường minh của chủ dự án, không phải mặc định.
+| Danh mục | Sau | Trước |
+|---|---|---|
+| Item Color | 25 / 25 | `master_records` **47** — 22 slug ASCII |
+| Item Group | 20 / 20 | `master_records` **33** — 13 nhóm ERP tổng quát |
+| UOM | 18 / 18 | `documents` **22** — Thùng, Tấn, m², Chiếc |
+| Surface Finish · Measurement Profile · Geometry Field · Geometry Profile | 4 · 7 · 8 · 5 | đã khớp sẵn |
 
-Trước khi chạy pha dữ liệu, còn một việc bắt buộc: `scripts/local-runner/bom-rule-adapter.mjs`
-đang **fail ở bước idempotency** — pass hai vẫn ghi lại 330 template + 780 rule thay vì đứng yên
-(`assertSecondPass`, dòng 204). Nạp lại BOM Rule khi bước này chưa xanh là nạp mà không biết đã
-hội tụ chưa.
+Đơn vị thừa dùng `disabled` chứ không xoá, theo BRD §2: `Thùng` còn đúng một dòng trỏ tới.
 
----
+Một bẫy suýt sập: `VAN_GO` có dấu gạch dưới nhưng **là mã chuẩn** (màu VÂN GỖ của hai phụ thu
+vân gỗ). Lọc slug theo hình dạng tên sẽ xoá đúng nó và làm chết hai chính sách phụ thu — nên
+luật là "không nằm trong catalog chuẩn", không phải "tên có gạch dưới".
+
+### Sáu lỗi của chính tầng thực thi phải vá mới chạy được
+
+Không cái nào là lỗi dữ liệu. Cả sáu đều là **luật viết ở nhiều nơi rồi trôi dạt**, hoặc
+**hai người ghi giành nhau một trường**.
+
+| # | Lỗi | Bản chất |
+|---|---|---|
+| 1 | `requireApi` bắn một phát 5 giây rồi bỏ cuộc; `restoreRuntime` chỉ chờ Desk, không chờ backend | layer0 ghi D1 xong rồi tự đánh trượt ở bước ngay sau, lần nào cũng hệt nhau |
+| 2 | Hằng số `19` khoá cứng ở **năm** nơi: chốt chặn seed, hậu kiểm layer0, test catalog, tiền kiểm item-master, tiền kiểm real-purchase | Gỡ `Thùng` theo E07 làm cả năm đỏ; một chỗ còn báo hỏng với `canonical=18 existing=18` — hai số khớp nhau |
+| 3 | `bom_rule_formula_snapshot` có hai định dạng, hai người ghi, mỗi bên so cả chuỗi với hình dạng của mình | Vòng ghi đè vô tận: `templates=330 rules=780 unchanged=0` lặp y hệt mọi pass |
+| 4 | `Item.uom_conversions`: item-master coi danh sách rỗng của nguồn là lệnh "xoá hết" | Xoá 9 hệ số do BOM Rule tạo là đẩy 9 dòng BOM sang `pending`, công thức im lặng ngừng quy đổi |
+| 5 | `readDoorPolicies` không lấy `ray_type` | Sau khi resolver lọc theo ray, mọi dòng có khai ray không khớp chính sách nào — hỏng cả U75 |
+| 6 | `forge-live apply` không chuyển tham số xuống runner | `item-master` bắt buộc `--source` nên nằm trong ALLOWED mà không cách nào gọi được |
+
+Luật chung rút ra: **chốt cái bất biến, đừng chốt ảnh chụp.** Một chốt chặn đếm số sẽ đỏ mỗi
+lần danh mục thay đổi hợp lệ, và người sửa chỉ việc nâng con số lên — nó không bảo vệ được gì.
 
 ## 5. Việc chưa đụng tới, có chủ ý
 
-Mã hàng. Quy ước `docs/ALUMDOOR-QUY-UOC-MA.md` chốt 29/07 hiện **chưa được áp dụng chút nào**:
-0% dùng 10 tiền tố chuẩn, 39% nhồi màu vào mã, 96 mã nhồi cả cách bán lẫn bậc diện tích. 587 mã
-thực chất chỉ là 433 mặt hàng.
+**Quy ước mã hàng.** `docs/ALUMDOOR-QUY-UOC-MA.md` chốt 29/07 vẫn **chưa được áp dụng chút nào**:
+0% dùng 10 tiền tố chuẩn, 39% nhồi màu vào mã, 96 mã nhồi cả cách bán lẫn bậc diện tích.
+587 mã thực chất chỉ là 433 mặt hàng.
 
-Đây là việc chạm **danh tính** nên thuộc nhóm bắt buộc, nhưng nó phải đi cùng pha dữ liệu ở §4:
-đổi mã mà không dựng lại dữ liệu là tạo ra tầng ánh xạ thứ ba giữa mã cũ và mã mới. Làm một lượt
-khi được xoá sạch thì rẻ hơn nhiều lần.
+`item-master` đã chạy thành công ở §4, nhưng chạy với payload mang **mã cũ** — nó xác nhận
+587 mặt hàng khớp D1 và idempotent, chứ không đổi mã. Đổi mã là việc riêng và nặng hơn nhiều:
+
+- nó cần một bảng ánh xạ mã cũ → mã mới cho ~430 mặt hàng, mà `QUY-UOC-MA §5` chỉ cho 7 ví dụ;
+- mã là **khoá bản ghi**, nên nó đi vào Item Price, BOM, BOM Rule applicability, lô tồn và
+  mọi chứng từ cũ — đổi mã mà không dựng lại toàn bộ là tạo ra tầng ánh xạ thứ ba;
+- và nó đóng cứng danh tính mặt hàng, nên phải có chủ xưởng duyệt chứ không phải suy từ luật.
 
 Riêng `TRONBO` trong mã cần nói rõ: nhồi cách bán vào mã hàng chính là **dựng lại `Sales Option`
 qua cửa sau** — thứ đã bị xoá ở `46cff213` và audit 16/08 cấm đưa lại. Nằm ở khoá bản ghi là
 hình thức khó gỡ nhất.
+
+**Đề nghị:** làm thành một đợt riêng, bắt đầu bằng bảng ánh xạ sinh tự động rồi chủ xưởng soát,
+chứ không nhét vào cùng đợt hội tụ danh mục này.
