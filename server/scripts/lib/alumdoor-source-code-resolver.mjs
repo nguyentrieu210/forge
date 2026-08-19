@@ -73,3 +73,38 @@ export function translateSourceRecords(records, resolveSourceCode) {
   }
   return { records: translated, changed, unresolved };
 }
+
+/**
+ * Dựng sẵn bộ dịch từ D1 + bảng quy ước, để mỗi bộ dựng payload chỉ cần hai dòng.
+ *
+ * Neo đường dẫn theo VỊ TRÍ FILE NÀY, không theo thư mục làm việc: các adapter gọi những bộ dựng
+ * này từ nhiều thư mục khác nhau, và neo theo `cwd` thì có chỗ lặng lẽ bỏ qua việc dịch rồi vẫn
+ * báo thành công — kiểu hỏng tệ nhất, vì không ai biết để đi tìm.
+ *
+ * Trả `null` khi không có D1 hoặc chưa có bảng quy ước: lúc đó nguồn chính là sự thật.
+ */
+export async function loadCanonicalCodeResolver() {
+  const { existsSync } = await import('node:fs');
+  const { readFile } = await import('node:fs/promises');
+  const { dirname, resolve } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { DatabaseSync } = await import('node:sqlite');
+
+  const here = dirname(fileURLToPath(import.meta.url));
+  const serverRoot = resolve(here, '..', '..');
+  const repoRoot = resolve(serverRoot, '..');
+  const d1Path = process.env.ALUMDOOR_D1_PATH
+    || resolve(serverRoot, 'apps/tenant-worker/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite');
+  const conventionPath = resolve(repoRoot, 'docs/alumdoor-item-code-mapping.json');
+  if (!existsSync(d1Path) || !existsSync(conventionPath)) return null;
+
+  const tenant = process.env.ALUMDOOR_TENANT || 'demo';
+  const db = new DatabaseSync(d1Path, { readOnly: true });
+  const liveCodes = new Set(
+    db.prepare("SELECT name FROM documents WHERE tenant_id=? AND doctype='Item'").all(tenant).map((row) => row.name),
+  );
+  const conventionMap = new Map(
+    JSON.parse(await readFile(conventionPath, 'utf8')).mapping.map((row) => [row.from, row.to]),
+  );
+  return { resolve: createSourceCodeResolver({ conventionMap, liveCodes }), liveCodes };
+}

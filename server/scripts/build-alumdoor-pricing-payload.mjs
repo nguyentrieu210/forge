@@ -116,9 +116,13 @@ function deductionVariant(row) {
 
 function motorFamilyTarget(row, item) {
   const semantic = fold(`${row.item_name} ${row.source_parent_name}`);
-  if (semantic.includes("TANKER_ALUMAX")) return /^(TP-MT-TANKER|TP-MT-ALUMAX)/i.test(item.item_code);
-  if (semantic.includes("YHLD")) return /^TP-MT-YHLD/i.test(item.item_code);
-  if (semantic.includes("JG")) return /^TP-MT-JG/i.test(item.item_code);
+  // Khớp theo mã NGUỒN, không theo mã đang dùng: tiền tố `TP-MT-*` là cách bảng tính đặt mã, và
+  // bảng tính thì không đổi. Khoá theo mã đang dùng thì mỗi đợt đổi mã lại làm luật này im lặng
+  // ngừng khớp — im lặng, vì "không nhận ra motor nào" trông hệt như "đơn này không có motor".
+  const code = clean(item.source_item_code_original) || clean(item.item_code);
+  if (semantic.includes("TANKER_ALUMAX")) return /^(TP-MT-TANKER|TP-MT-ALUMAX)/i.test(code);
+  if (semantic.includes("YHLD")) return /^TP-MT-YHLD/i.test(code);
+  if (semantic.includes("JG")) return /^TP-MT-JG/i.test(code);
   return false;
 }
 
@@ -131,7 +135,23 @@ function addUnique(map, doc, kind, blockers) {
 export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
   const sourceRows = Array.isArray(pricingSourceFile?.records) ? pricingSourceFile.records : [];
   const items = Array.isArray(itemPayloadFile?.items) ? itemPayloadFile.items : [];
-  const itemsByCode = new Map(items.map((item) => [clean(item.item_code), { ...item, item_code: clean(item.item_code) }]));
+  /**
+   * Tra được bằng CẢ HAI mã: mã đang dùng và mã gốc trong bảng tính.
+   *
+   * Dòng giá đến từ bản trích nguồn nên mang mã theo bảng tính, còn danh sách mặt hàng đã được
+   * dịch sang mã đang dùng. Chỉ khoá theo một bên thì 292 dòng giá báo `missing_canonical_item`
+   * — đo được sau đợt đổi mã.
+   *
+   * Không dịch dòng giá: khoá thêm bí danh là một phép thêm, còn dịch là một phép SỬA, và sửa
+   * bản trích nguồn thì mất đường truy về bảng tính.
+   */
+  const itemsByCode = new Map();
+  for (const raw of items) {
+    const item = { ...raw, item_code: clean(raw.item_code) };
+    itemsByCode.set(item.item_code, item);
+    const original = clean(raw.source_item_code_original);
+    if (original && !itemsByCode.has(original)) itemsByCode.set(original, item);
+  }
   const blockers = [];
   const resolutions = [];
   const baseByCode = new Map();
