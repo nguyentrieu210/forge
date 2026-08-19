@@ -1103,7 +1103,7 @@ function SortHeader({
               - rê đúng tay nắm: vạch dày, màu chủ đạo, cao hết ô + hiện bảng hướng dẫn */}
           <span
             className={cn(
-              "w-px rounded-full transition-all",
+              "w-px rounded-full transition-[height,width,background-color]",
               "h-4 bg-border",
               "group-hover/th:h-5 group-hover/th:bg-muted-foreground/60",
               "group-hover/grip:h-full group-hover/grip:w-[3px] group-hover/grip:bg-primary",

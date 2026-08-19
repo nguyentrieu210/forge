@@ -179,7 +179,7 @@ export function SetupWizard({ open, onOpenChange, blocking, onNavigate }: {
               Xong <b className="text-foreground">{doneCount}</b>/{steps.length} bước
             </span>
             <div className="ml-2 h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-              <div className="mf-progress h-full rounded-full bg-primary transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+              <div className="mf-progress h-full rounded-full bg-primary transition-[width]" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
             </div>
           </div>
         </div>

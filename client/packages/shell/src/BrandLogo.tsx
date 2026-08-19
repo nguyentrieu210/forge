@@ -65,7 +65,7 @@ export function ForgeBrandLogo({
     );
   }
 
-  const style = { "--forge-logo-size": `${size}px` } as CSSProperties;
+  const style = { "--mf-logo-size": `${size}px` } as CSSProperties;
   const mark = (
     <svg viewBox="0 0 96 96" role="img" aria-label={title} className="size-full">
       <defs>
@@ -100,7 +100,7 @@ export function ForgeBrandLogo({
     return (
       <span
         className={cn("inline-grid shrink-0 place-items-center", className)}
-        style={{ width: `var(--forge-logo-size)`, height: `var(--forge-logo-size)`, ...style }}
+        style={{ width: `var(--mf-logo-size)`, height: `var(--mf-logo-size)`, ...style }}
       >
         {mark}
       </span>

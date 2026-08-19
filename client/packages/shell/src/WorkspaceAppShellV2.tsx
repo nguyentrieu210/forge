@@ -65,7 +65,7 @@ function WorkspaceTabs({
           size="sm"
           data-kind="process"
           className={cn(
-            "h-8 shrink-0 rounded-lg border border-transparent px-3 text-xs font-semibold transition-all",
+            "h-8 shrink-0 rounded-lg border border-transparent px-3 text-xs font-semibold transition-[color,background-color,border-color,box-shadow]",
             processActive
               ? "border-border bg-card text-primary shadow-sm"
               : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
@@ -87,7 +87,7 @@ function WorkspaceTabs({
               title={item.disabledReason}
               data-kind="doctype"
               className={cn(
-                "h-8 shrink-0 rounded-lg border border-transparent px-3 text-xs font-semibold transition-all",
+                "h-8 shrink-0 rounded-lg border border-transparent px-3 text-xs font-semibold transition-[color,background-color,border-color,box-shadow]",
                 active
                   ? "border-border bg-card text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
@@ -154,10 +154,10 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                       <Button
                         type="button"
                         variant="ghost"
-                        className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border border-transparent px-2 py-2 text-center transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-primary/[0.045] hover:shadow-sm"
+                        className="group h-auto min-h-24 w-full min-w-0 flex-col justify-center whitespace-normal rounded-xl border border-transparent px-2 py-2 text-center transition-[background-color,border-color,box-shadow] hover:border-primary/20 hover:bg-primary/[0.045] hover:shadow-sm"
                         onClick={() => onNavigate(item.key)}
                       >
-                        <span className="relative grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10 transition-transform group-hover:scale-[1.03] [&_svg]:size-5">
+                        <span className="relative grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-4 ring-primary/10 [&_svg]:size-5">
                           {item.icon ?? index + 1}
                           <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full border-2 border-card bg-card text-[9px] font-bold text-primary shadow-sm">{index + 1}</span>
                         </span>
@@ -184,7 +184,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                     <Button
                       key={item.key}
                       variant="ghost"
-                      className="h-auto min-h-16 min-w-0 flex-row justify-start gap-2 rounded-lg border bg-card px-2.5 py-2 whitespace-normal text-left text-xs shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-md sm:flex-col sm:justify-center sm:gap-1.5 sm:px-2 sm:text-center"
+                      className="h-auto min-h-16 min-w-0 flex-row justify-start gap-2 rounded-lg border bg-card px-2.5 py-2 whitespace-normal text-left text-xs shadow-sm transition-[background-color,border-color,box-shadow] hover:border-primary/25 hover:bg-card hover:shadow-md sm:flex-col sm:justify-center sm:gap-1.5 sm:px-2 sm:text-center"
                       onClick={() => onNavigate(item.key)}
                     >
                       <span className="grid size-8 place-items-center rounded-lg bg-primary/[0.08] text-primary [&_svg]:size-4">{item.icon ?? <CheckCircle2 />}</span>
@@ -207,7 +207,7 @@ function ProcessPanel({ module, reports, masters, onNavigate }: { module: Worksp
                 <Button
                   key={item.key}
                   variant="ghost"
-                  className="group h-auto min-h-14 w-full justify-start gap-3 rounded-xl border border-transparent px-2.5 py-2.5 text-left text-sm font-normal transition-all hover:border-border hover:bg-muted/[0.45]"
+                  className="group h-auto min-h-14 w-full justify-start gap-3 rounded-xl border border-transparent px-2.5 py-2.5 text-left text-sm font-normal transition-colors hover:border-border hover:bg-muted/[0.45]"
                   onClick={() => onNavigate(item.key)}
                 >
                   <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/[0.08] text-[10px] font-bold text-primary ring-1 ring-primary/10">{index + 1}</span>

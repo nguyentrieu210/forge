@@ -577,6 +577,26 @@
   --mf-block-padding: 1rem;
   --mf-row-height: 2.5rem;
   --mf-content-max: 100%;
+  /* CHUYỂN ĐỘNG — thang thời lượng theo VIỆC, không theo cảm giác.
+   *
+   * Trước đây thang này chỉ tồn tại trong `v3.css` dưới tên `--forge-motion-*`, tức là nằm ở
+   * file phụ trợ của một chương trình đã bị revert, trong khi `styles.css` — nơi giữ diện mạo
+   * thật — lại chép cứng `120ms ease` ở gần chục chỗ. Nay thang nằm ở đây, cùng nhà với mọi
+   * token khác.
+   *
+   * Nguyên tắc chọn bậc: thao tác người dùng LẶP LẠI nhiều lần/ngày thì càng gần tức thời càng
+   * tốt; chỉ thứ thực sự đổi vị trí trong không gian (overlay, drawer) mới đáng một transition
+   * đủ dài để mắt bám theo. */
+  --mf-motion-instant: 80ms;
+  --mf-motion-micro: 120ms;
+  --mf-motion-micro-slow: 160ms;
+  --mf-motion-nav: 200ms;
+  --mf-motion-workspace: 220ms;
+  --mf-motion-overlay: 240ms;
+  --mf-motion-data: 400ms;
+  --mf-ease-standard: cubic-bezier(.2, .8, .2, 1);
+  --mf-ease-enter: cubic-bezier(.16, 1, .3, 1);
+  --mf-ease-exit: cubic-bezier(.4, 0, 1, 1);
 }
 [data-density="compact"] {
   --mf-topbar-height: 2.75rem;
@@ -752,7 +772,7 @@
     border-radius: var(--mf-control-radius);
     color: var(--foreground);
     font-weight: 500;
-    transition: background-color 120ms ease, color 120ms ease;
+    transition: background-color var(--mf-motion-micro) var(--mf-ease-standard), color var(--mf-motion-micro) var(--mf-ease-standard);
   }
   .mf-shell-nav-item svg { color: var(--muted-foreground); }
   .mf-shell-nav-item:hover { background: var(--secondary); color: var(--foreground); }
@@ -937,7 +957,7 @@
   .mf-list-view td,
   .mf-report td { height: 2.5rem; font-size: 0.79rem; }
   .mf-list-view tbody tr,
-  .mf-report tbody tr { transition: background-color 100ms ease; }
+  .mf-report tbody tr { transition: background-color var(--mf-motion-micro) var(--mf-ease-standard); }
   .mf-list-view tbody tr:hover,
   .mf-report tbody tr:hover { background: var(--secondary); }
   .mf-list-view tbody tr[data-state="selected"] { background: color-mix(in srgb, var(--primary) 7%, var(--card)); }
@@ -1204,8 +1224,12 @@
   .mf-tree-loading { padding-block: 0.35rem; color: var(--muted-foreground); font-size: 0.72rem; }
   .mf-dash { display: flex; flex-direction: column; gap: 1rem; }
   .mf-dash-cards { gap: 0.75rem; }
-  .mf-number-card { transition: transform 120ms ease, border-color 120ms ease; }
-  .mf-number-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--primary) 24%, var(--border)); }
+  /* Thẻ số liệu KHÔNG nhấc lên khi rê chuột: đây là mặt vận hành, người dùng quét mắt qua
+   * hàng chục thẻ mỗi lần mở bảng điều khiển, và một hàng thẻ nhấp nhô làm chậm việc đọc số.
+   * Phản hồi giữ lại bằng viền — không hình học. (Cùng phần tử này trước đây còn bị nhấc lần
+   * thứ hai từ class Tailwind trong `charts/src/kpi.tsx`.) */
+  .mf-number-card { transition: border-color var(--mf-motion-micro) var(--mf-ease-standard); }
+  .mf-number-card:hover { border-color: color-mix(in srgb, var(--primary) 24%, var(--border)); }
   .mf-dash-chart { padding: 0.9rem 1rem 0.6rem; }
   .mf-chart-title { margin: 0 0 0.75rem; color: var(--foreground); font-size: 0.78rem; font-weight: 650; }
   .mf-print { display: grid; min-height: 12rem; place-items: center; }
@@ -1224,7 +1248,7 @@
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     background: var(--card);
-    transition: border-color 120ms ease, background-color 120ms ease;
+    transition: border-color var(--mf-motion-micro) var(--mf-ease-standard), background-color var(--mf-motion-micro) var(--mf-ease-standard);
   }
   .mf-palette-item:hover,
   .mf-db-tile:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); background: var(--accent); }
@@ -1320,7 +1344,7 @@
   padding: 0.55rem 0.75rem;
   font-size: 0.82rem;
   font-weight: 650;
-  transition: translate 120ms ease;
+  transition: translate var(--mf-motion-micro) var(--mf-ease-standard);
 }
 .mf-skip-link:focus { translate: 0; outline: 2px solid var(--ring); outline-offset: 2px; }
 
@@ -1372,7 +1396,7 @@
   .mf-shell .mf-shell-sidebar .mf-shell-nav-item {
     color: var(--sidebar-item);
     border-radius: var(--mf-control-radius);
-    transition: background-color 120ms ease, color 120ms ease;
+    transition: background-color var(--mf-motion-micro) var(--mf-ease-standard), color var(--mf-motion-micro) var(--mf-ease-standard);
   }
   .mf-shell .mf-shell-sidebar .mf-shell-nav-item:hover {
     background: var(--sidebar-hover);
@@ -1440,7 +1464,7 @@
     background: var(--card);
   }
   .mf-shell .mf-list-view tbody tr {
-    transition: background-color 90ms ease;
+    transition: background-color var(--mf-motion-micro) var(--mf-ease-standard);
   }
   /* KHÔNG kẻ sọc ngựa vằn. Sọc + hover + hàng chọn + badge trạng thái = bốn tầng nền chồng nhau
      trên cùng một hàng; ở bảng có nhiều cột số, nền đổi liên tục làm mất khả năng dóng cột. Phân
@@ -1508,7 +1532,7 @@
   .mf-shell .mf-field :is(input, textarea, button[role="combobox"]) {
     border-color: var(--input);
     background: var(--card);
-    transition: border-color 110ms ease, box-shadow 110ms ease;
+    transition: border-color var(--mf-motion-micro) var(--mf-ease-standard), box-shadow var(--mf-motion-micro) var(--mf-ease-standard);
   }
   .mf-shell .mf-field :is(input, textarea, button[role="combobox"]):hover:not(:disabled) {
     border-color: color-mix(in srgb, var(--ring) 45%, var(--input));
@@ -1534,7 +1558,7 @@
     box-shadow: var(--mf-card-shadow);
   }
   .mf-shell :is(.mf-workspace-shortcut, .mf-kanban-card, .mf-number-card) {
-    transition: border-color 120ms ease, background-color 120ms ease;
+    transition: border-color var(--mf-motion-micro) var(--mf-ease-standard), background-color var(--mf-motion-micro) var(--mf-ease-standard);
   }
   /* Hover đổi VIỀN + nền, không nhấc khối lên: ở lưới thẻ dày đặc, mỗi lần rê chuột mà khối nhảy
      lên 2px thì các khối quanh nó trông như bị xô. */
@@ -1628,4 +1652,23 @@
   .mf-shell :is(.mf-workspace-shortcut, .mf-kanban-card, .mf-number-card),
   .mf-shell .mf-list-view tbody tr,
   .mf-shell .mf-field :is(input, textarea, button[role="combobox"]) { transition: none !important; transform: none !important; }
+}
+
+/* Ô tìm kiếm trong sidebar.
+ *
+ * Sidebar là một dải graphite TỐI ở cả light lẫn dark, nên ô nhập nằm trong đó không thể lấy
+ * `--card`/`--input` của vùng làm việc. Luật này cố ý nằm NGOÀI `@layer` để thắng utility
+ * `bg-background` mà primitive Input dùng chung mang theo.
+ *
+ * Trước đây nó sống trong `v3.css` — file phụ trợ của chương trình UI V3 đã bị revert. Dời về
+ * đây cùng lúc với việc gỡ hẳn `v3.css`, vì đây là thứ duy nhất trong đó còn tác dụng thật. */
+.mf-shell .mf-shell-sidebar input[aria-label="Tìm menu"] {
+  border-color: var(--sidebar-border);
+  background-color: var(--sidebar-hover);
+  color: var(--sidebar-foreground);
+}
+
+.mf-shell .mf-shell-sidebar input[aria-label="Tìm menu"]::placeholder {
+  color: var(--sidebar-muted);
+  opacity: 1;
 }

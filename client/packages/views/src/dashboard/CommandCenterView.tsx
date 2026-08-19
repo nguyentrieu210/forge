@@ -50,7 +50,7 @@ export function CommandCenterView({
       <div className="relative z-10 mx-auto flex w-full max-w-[1800px] flex-col gap-4">
         <header className="flex min-w-0 flex-col gap-3 px-1 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <div className="flex items-center gap-2"><span className="h-px w-7 bg-[var(--forge-primary,#ef332d)]" aria-hidden="true" /><span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/38">Forge Operations</span></div>
+            <div className="flex items-center gap-2"><span className="h-px w-7 bg-[var(--primary)]" aria-hidden="true" /><span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/38">Forge Operations</span></div>
             <h1 className="mt-2 truncate text-[clamp(1.35rem,2.5vw,2.25rem)] font-bold tracking-[-0.04em] text-white">{title}</h1>
             {subtitle ? <p className="mt-1 max-w-3xl text-xs leading-5 text-white/42">{subtitle}</p> : null}
           </div>
@@ -66,7 +66,7 @@ export function CommandCenterView({
               const body = <MetricNumber label={card.label} value={card.value} hint={typeof card.trend === "number" ? `${card.trend > 0 ? "↗" : card.trend < 0 ? "↘" : "→"} ${Math.abs(card.trend)}%` : card.description} accent={index === 0} />;
               return (
                 <EdgeFrame key={`${card.label}-${index}`} className="min-w-0">
-                  <div className={`min-h-28 rounded-md border border-white/8 bg-white/[0.025] p-4 ${clickable ? "transition hover:border-[var(--forge-primary,#ef332d)]/35 hover:bg-white/[0.04] motion-reduce:transition-none" : ""}`}>
+                  <div className={`min-h-28 rounded-md border border-white/8 bg-white/[0.025] p-4 ${clickable ? "transition hover:border-[var(--primary)]/35 hover:bg-white/[0.04] motion-reduce:transition-none" : ""}`}>
                     {clickable ? (
                       <Button type="button" variant="ghost" className="h-full w-full items-stretch justify-start whitespace-normal rounded-none p-0 text-left text-inherit hover:bg-transparent focus-visible:ring-white/35" onClick={() => onNavigate?.(card.route!)}>{body}</Button>
                     ) : body}

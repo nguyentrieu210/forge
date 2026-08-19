@@ -366,7 +366,7 @@ function Progress({ value }: { value: number }) {
   const pct = Math.max(0, Math.min(100, value));
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
-      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+      <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${pct}%` }} />
     </div>
   );
 }
