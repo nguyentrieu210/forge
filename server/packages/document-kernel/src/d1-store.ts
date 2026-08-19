@@ -533,11 +533,20 @@ export class D1MutationStore implements MutationStore {
     const oldKey = documentKey(doctype, oldName);
     const newKey = documentKey(doctype, newName);
 
+    // `json_tree`, KHÔNG phải `json_each`: json_each chỉ liệt kê thành viên TẦNG TRÊN CÙNG, nên một
+    // tham chiếu nằm trong mảng con lọt lưới hoàn toàn. Đo trên danh mục Alumdoor 19/08: trong 76 mã
+    // hàng mà guard cũ cho qua, 3 mã đang được `Purchase Receipt.items[].item_code` trỏ tới — đổi tên
+    // xong là ba dòng phiếu nhập trỏ vào mặt hàng không còn tồn tại, và không có gì báo.
+    //
+    // Phép so vẫn là so NGUYÊN giá trị lá (`type='text'`), không phải so chuỗi con: một mô tả có chứa
+    // mã bên trong không bị tính là tham chiếu. Đổi lại, guard cố ý RỘNG TAY — một trường tên trùng y
+    // hệt mã cũng làm nó từ chối. Với thao tác đổi danh tính thì lệch về phía từ chối mới đúng: từ
+    // chối nhầm tốn một lần soát tay, cho qua nhầm thì mất tham chiếu mà không ai biết.
     const referenced = await this.writer.prepare(
       `SELECT (SELECT COUNT(*) FROM documents WHERE tenant_id=?1 AND doc_key<>?2
-                 AND EXISTS(SELECT 1 FROM json_each(payload_json) WHERE json_each.value=?3))
+                 AND EXISTS(SELECT 1 FROM json_tree(payload_json) WHERE json_tree.type='text' AND json_tree.value=?3))
             + (SELECT COUNT(*) FROM document_children WHERE tenant_id=?1 AND parent_key<>?2
-                 AND EXISTS(SELECT 1 FROM json_each(payload_json) WHERE json_each.value=?3))
+                 AND EXISTS(SELECT 1 FROM json_tree(payload_json) WHERE json_tree.type='text' AND json_tree.value=?3))
             + (SELECT COUNT(*) FROM documents WHERE tenant_id=?1 AND doctype=?4 AND amended_from=?3) AS total`,
     ).bind(tenantId, oldKey, oldName, doctype).first<{ total: number }>();
     if (Number(referenced?.total ?? 0) > 0) {
