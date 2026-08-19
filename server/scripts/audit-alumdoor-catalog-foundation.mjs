@@ -205,26 +205,39 @@ for (const dt of doctypes) {
 const CODE_SMELL = [
   ['cach_ban', /TRONBO|TACHMON|TRON_BO|TACH_MON|-TM$|_TM$/i],
   ['bac_dien_tich', /\d+\s*-\s*\d+\s*m²|m²|TREN\d+|DUOI\d+/i],
-  ['mau', /_(GS|VK|THO|TRANG|DEN|NAU|GHI|VANG|XAM)\b|-(GS|VK|THO)$/i],
-  ['do_day', /\d+(\.\d+)?\s*(LY|ly)\b/],
+  ['mau', /_(GS|VK|THO|TRANG|DEN|NAU|GHI|VANG|XAM)|-(GS|VK|THO)$/i],
+  ['do_day', /\d+(\.\d+)?\s*(LY|ly)/],
   ['co_dau_cach', / /],
 ];
+// Chỉ soi mặt hàng ĐANG DÙNG. Mã đã nghỉ hưu không còn hiện ra cho ai chọn, nên đếm nó vào
+// "mã nhồi thuộc tính" là tự thổi phồng con số mình vừa hạ xuống.
+const liveItems = (docsByType.get('Item') ?? []).filter((row) => {
+  const value = row.data?.disabled;
+  return !(value === 1 || value === true || value === '1');
+});
 const codeFindings = [];
 for (const [reason, pattern] of CODE_SMELL) {
-  const hits = (docsByType.get('Item') ?? []).filter((r) => pattern.test(r.name));
+  const hits = liveItems.filter((row) => pattern.test(row.name));
   if (hits.length === 0) continue;
-  codeFindings.push({ reason, count: hits.length, samples: hits.slice(0, 4).map((r) => r.name) });
+  codeFindings.push({ reason, count: hits.length, samples: hits.slice(0, 4).map((row) => row.name) });
 }
-// Trùng tên hàng = nhiều mã cho một món.
+
+/**
+ * Trùng tên chỉ là lỗi khi hai bản ghi thật sự là một thứ, nên phải so TRONG CÙNG NHÓM HÀNG.
+ *
+ * Bản đầu so tên trần và đếm cả mã đã nghỉ hưu, nên nó báo 39 nhóm trong khi bộ đo theo tầng
+ * báo 25 — hai bộ đo cùng dữ liệu mà nói hai số thì không bộ nào đáng tin nữa.
+ */
 const byItemName = new Map();
-for (const row of docsByType.get('Item') ?? []) {
-  const key = String(row.data.item_name ?? '').trim().toUpperCase();
-  if (!key) continue;
-  if (!byItemName.has(key)) byItemName.set(key, []);
-  byItemName.get(key).push(row.name);
+for (const row of liveItems) {
+  const label = String(row.data.item_name ?? '').trim().toUpperCase();
+  if (!label) continue;
+  const key = `${String(row.data.item_group ?? '')} ${label}`;
+  if (!byItemName.has(key)) byItemName.set(key, { item_name: String(row.data.item_name ?? '').trim(), item_group: String(row.data.item_group ?? ''), codes: [] });
+  byItemName.get(key).codes.push(row.name);
 }
-const duplicateNames = [...byItemName.entries()].filter(([, v]) => v.length > 1)
-  .map(([item_name, codes]) => ({ item_name, codes })).sort((a, b) => b.codes.length - a.codes.length);
+const duplicateNames = [...byItemName.values()].filter((entry) => entry.codes.length > 1)
+  .sort((a, b) => b.codes.length - a.codes.length);
 
 // ── E. tầng nhập liệu ─────────────────────────────────────────────────────────
 const LAYERS = {
