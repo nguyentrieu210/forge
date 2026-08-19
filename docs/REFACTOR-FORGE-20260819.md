@@ -116,7 +116,7 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P1** ✅ | Gom `round` (10 bản), `divideRounded` (5 bản), `safeAdd` (19/26 bản) về `@cloudforge/core`; `numeric-single-source.test.mjs` ghim luật + sổ 40 nơi còn giữ hàm cùng tên | thấp |
 | **P2** ✅ | Gom 10 bản `money()` về `formatMoney` của `@metaforge/core`; `money-single-source.test.mjs` ghim 5 kiểu hiển thị | thấp |
 | **P2b** ✅ | Nạp lười 7 biểu đồ nặng + bộ vẽ SVG: chunk `engine` 833 → 662 kB (gzip 285 → 229) | thấp |
-| **P3** ✅ | Bóc khỏi `router.ts`: 6 method `*_alumdoor_*` → `VERTICAL_METHODS`, 4 hook context → `AlumdoorRouterHooks`, nhãn "Tài khoản ngân hàng" → `LINK_DISPLAY_RULES`. Nhắc `alumdoor` 63 → 7 chỗ, 4530 → 4357 dòng | trung bình |
+| **P3** ✅ | Bóc sạch vertical khỏi `router.ts`: 6 method → `VERTICAL_METHODS`, hook context → `VerticalRouterHooks`, nhãn "Tài khoản ngân hàng" → `LINK_DISPLAY_RULES`, luật chiết khấu thương mại → `alumdoor-commercial.ts`, `loadReadable`/`loadWritable` → `document-access.ts`. Nhắc `alumdoor`: **63 → 0**, 4530 → 4241 dòng; `router-vertical-free.test.mjs` giữ ranh giới | trung bình |
 | **P4** ⏳ | Tách `client/packages/views/src/app/vertical/alumdoor` (7336/7656 dòng của `app/`) ra package riêng. CHƯA làm: cần đảo chiều phụ thuộc (hiện `RuntimeDoctypeWorkspace` import thẳng vào vertical), mà đảo nửa vời sẽ sinh lỗi im lặng — vertical không đăng ký thì màn Alumdoor biến mất và không cổng nào bắt được. Trong lúc chờ, `vertical-leak-budget.test.mjs` giữ vết loang ở đúng 8 file | trung bình |
 | **P5** | Cắt `router.ts` (4530 dòng) theo trục: REST resource · method dispatch · metadata · storefront | cao |
 | **P6** | Cắt `alumdoor-worker/src/index.ts` (3689 dòng) và `ChildGrid.tsx` (2200 dòng) | cao |
@@ -140,13 +140,18 @@ Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 
 ## 5. Câu hỏi cần chủ dự án quyết
 
-1. **Brief Alumdoor**: bản sửa tay (`giao-nhieu-don-fifo`, `width_pb_ray_m`, `width_pb_nhua_m`…)
-   là thứ đang chạy thật. Dạy bộ sinh `build-alumdoor-v2-brief.mjs` sinh ra chúng (giữ nguyên
-   hành vi, tốn công) hay chấp nhận bỏ? Trước khi chốt, **không** chạy bộ sinh ghi đè brief.
-2. **Luật chia trong sản xuất**: 4 file (`manufacturing-lifecycle`, `manufacturing-stock-guard`,
-   `manufacturing-work-order-guard`, `manufacturing-capacity`) dùng `(n + d/2) / d` — với BigInt,
-   số âm bị cắt về 0 thay vì làm tròn ra xa 0, khác luật nửa-lên của `@cloudforge/money`.
-   Gom về một luật là **đổi số** ở nhánh sản xuất khi có giá trị âm (hoàn/hụt/đảo bút toán).
+1. ~~**Brief Alumdoor**~~ — ĐÃ XỬ LÝ phần lớn: bộ sinh nay tái lập được 19/20 điểm sửa tay.
+   **Còn đúng một điểm cần quyết**: lineage số dòng nguồn của 7 fixture BOM. Brief đang ship
+   và bộ test đều dùng `686-711` (rule code `SRC-687-*`); riêng module catalog dùng `687-712`
+   (`SRC-688-*`) do commit `ffe8a1049` ngày 18/08 cố ý dịch +1 với lý do "row thật của Excel,
+   không phải index 0-based" — nhưng commit đó **không sửa test nào** và cũng chưa từng sinh
+   lại brief, nên hiện 7 test BOM đỏ trong mốc. Chọn bên nào cũng được, nhưng nếu theo bản
+   `687-712` thì `rule_code` của BOM Template đang chạy sẽ đổi — đó là danh tính dòng dữ liệu
+   trong app thật, tôi không tự đổi.
+2. ~~**Luật chia trong sản xuất**~~ — ĐÃ XỬ LÝ. Test vét cạn (mọi tử số 0..400 trên 10 mẫu số)
+   chứng minh `(n + d/2)/d` và luật nửa-lên cho kết quả **y hệt với mọi đầu vào không âm**;
+   khác biệt chỉ ở số âm, mà các đường vào đó đều chặn số âm từ trước. Đã gom, cổng không
+   nhúc nhích.
 3. **Hiển thị tiền**: mười màn đang in cùng một con số theo **bốn kiểu** — `1.234.567 ₫`,
    `1.234.567₫`, `1.234.567 đ`, `1.234.567`. Refactor đã gom luật nhưng GIỮ NGUYÊN cả bốn
    kiểu để không đổi giao diện. Thống nhất về một kiểu là quyết định giao diện.

@@ -1,7 +1,8 @@
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { FrappeArgs } from "./args.js";
 import type { FrappeRouterContext } from "./router.js";
-import { ALUMDOOR_METHODS } from "./alumdoor-methods.js";
+import { ALUMDOOR_METHODS, type AlumdoorRouterHooks } from "./alumdoor-methods.js";
+import { previewSalesCommercialLine } from "./alumdoor-commercial.js";
 
 /**
  * Bảng đăng ký method của các vertical.
@@ -13,6 +14,10 @@ import { ALUMDOOR_METHODS } from "./alumdoor-methods.js";
  */
 export type VerticalMethod = (args: FrappeArgs, context: FrappeRouterContext) => Promise<JsonObject>;
 
+/** Hook mà tenant Worker cắm vào cho các vertical. Lõi kế thừa cái này, không kế thừa tên khách. */
+export interface VerticalRouterHooks extends AlumdoorRouterHooks {}
+
 export const VERTICAL_METHODS: Record<string, VerticalMethod> = {
   ...ALUMDOOR_METHODS,
+  "metaforge.api.preview_sales_commercial_line": previewSalesCommercialLine,
 };
