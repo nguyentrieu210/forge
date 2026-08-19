@@ -21,7 +21,7 @@
  */
 
 import type { Actor, JsonObject, JsonValue } from "../../contracts/src/index.js";
-import { errors } from "../../core/src/index.js";
+import { errors, roundTo } from "../../core/src/index.js";
 import type { DocTypeMeta } from "../../frappe-model/src/index.js";
 import { visitorKey } from "../../frappe-model/src/index.js";
 
@@ -330,8 +330,9 @@ function sqlPath(field: string): string {
 
 /** Money rounds to whole units here: VND has no minor unit, and the ledger re-derives
  *  every figure from the real Sales Order anyway. This total is what the buyer is shown. */
+// Storefront chốt ở 2 chữ số; luật làm tròn nửa-lên thì dùng chung với cả hệ thống.
 function round(value: number): number {
-  return Math.round(value * 100) / 100;
+  return roundTo(value, 2);
 }
 
 function normalisePhone(value: string): string {

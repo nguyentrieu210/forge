@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 export type GeometryRuleOperator = "COPY" | "SUBTRACT" | "ADD";
 
 export interface GeometryPolicyRule {
@@ -53,11 +54,6 @@ function nonNegative(value: unknown, label: string): number {
   const number = Number(value ?? 0);
   if (!Number.isFinite(number) || number < 0) throw new Error(`${label} không được âm.`);
   return number;
-}
-
-function round(value: number, digits = 6): number {
-  const factor = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 function normalizedConditions(rule: GeometryPolicyRule): Array<[keyof GeometryRuleContext, string | boolean]> {
@@ -141,15 +137,15 @@ export function evaluateGeometryRules(input: {
     const operand = nonNegative(rule.operand_m, `${text(rule.rule_code)}: operand`);
     const output = rule.operator === "SUBTRACT" ? sourceValue - operand : rule.operator === "ADD" ? sourceValue + operand : sourceValue;
     if (!(output > 0)) throw new Error(`${policyName}: ${target} tính ra ${output}, phải lớn hơn 0.`);
-    values[target] = round(output);
+    values[target] = roundTo(output);
     applied.push({
       rule_code: text(rule.rule_code) || `${target}-${rule.operator}`,
       target_field: target,
       source_field: source,
-      source_value_m: round(sourceValue),
+      source_value_m: roundTo(sourceValue),
       operator: rule.operator,
-      operand_m: round(operand),
-      output_value_m: round(output),
+      operand_m: roundTo(operand),
+      output_value_m: roundTo(output),
       ...(text(rule.note) ? { note: text(rule.note) } : {}),
     });
   }

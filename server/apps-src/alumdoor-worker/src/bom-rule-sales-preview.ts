@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 import {
   bomRuleFormulaDisplay,
   evaluateBomRuleMaster,
@@ -25,10 +26,6 @@ function normalizedUom(value: unknown): string {
 function positive(value: unknown): number | undefined {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function round(value: number): number {
-  return Math.round((value + Number.EPSILON) * 1e6) / 1e6;
 }
 
 function quantityText(value: unknown): string {
@@ -103,9 +100,9 @@ function geometryValues(args: Json): Json {
   const cut = positive(args.cut_width_m);
   const totalArea = positive(args.billable_area_sqm);
   const areaPerSet = width && height
-    ? round(width * height)
+    ? roundTo(width * height)
     : totalArea
-      ? round(totalArea / setCount)
+      ? roundTo(totalArea / setCount)
       : undefined;
   const values: Json = {
     width_m: width,
@@ -204,7 +201,7 @@ export async function enrichSalesBomPreviewWithRules(
       const item = itemByCode.get(itemCode) ?? {};
       const conversion = conversionFor(item, result.consumption_uom);
       const stockUom = conversion?.stock_uom ?? text(item.stock_uom);
-      const stockQty = conversion ? round(result.consumption_qty * conversion.factor) : null;
+      const stockQty = conversion ? roundTo(result.consumption_qty * conversion.factor) : null;
       const conversionWarning = conversion || !stockUom || normalizedUom(stockUom) === normalizedUom(result.consumption_uom)
         ? ""
         : `Thiếu quy đổi ${result.consumption_uom} → ${stockUom} trên Item ${itemCode}.`;

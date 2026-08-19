@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 import { salesItemContext, type SalesPlatformCall } from "./sales-item-context.js";
 import { calculateSalesProductionLine, type ProductionPlatformCall } from "./sales-production.js";
 import { allowedColorNamesForGroup } from "./color-scopes.js";
@@ -70,11 +71,6 @@ function checked(value: unknown): boolean {
 function positive(value: unknown): number | null {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : null;
-}
-
-function round(value: number, digits = 6): number {
-  const factor = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 function sameNumber(left: unknown, right: unknown): boolean {
@@ -202,25 +198,25 @@ function salesQuantity(row: Json, item: Json, formula: Json | null): { derived: 
   const linear = deriveLinearSalesBasis(item);
   if (isWidthQuantitySalesItem(item) && METRE_UOMS.has(uom)) {
     const width = positive(row.width_m);
-    return { derived: true, ...(width ? { quantity: round(width * sets) } : {}), policy: "WIDTH_X_PIECES" };
+    return { derived: true, ...(width ? { quantity: roundTo(width * sets) } : {}), policy: "WIDTH_X_PIECES" };
   }
   if (isOrdinaryQuantitySalesItem(item)) {
-    return { derived: true, quantity: round(sets), policy: "PIECES" };
+    return { derived: true, quantity: roundTo(sets), policy: "PIECES" };
   }
   if (linear && METRE_UOMS.has(uom)) {
     const dimension = positive(linear === "RAY" ? row.height_m : row.width_m);
-    return { derived: true, ...(dimension ? { quantity: round(dimension * sets) } : {}), policy: linear };
+    return { derived: true, ...(dimension ? { quantity: roundTo(dimension * sets) } : {}), policy: linear };
   }
   if (isAreaFinishedProduct(item)) {
-    if (SET_UOMS.has(uom)) return { derived: true, quantity: round(sets), policy: "PER_SET" };
+    if (SET_UOMS.has(uom)) return { derived: true, quantity: roundTo(sets), policy: "PER_SET" };
     if (AREA_UOMS.has(uom)) {
       const billable = positive(formula?.billable_area_sqm);
-      if (billable) return { derived: true, quantity: round(billable), policy: "AREA_POLICY" };
+      if (billable) return { derived: true, quantity: roundTo(billable), policy: "AREA_POLICY" };
       const width = positive(row.width_m);
       const height = positive(row.height_m);
       if (width && height && !text(item.door_type)) {
         const minimum = Math.max(0, Number(item.min_area_sqm) || 0);
-        return { derived: true, quantity: round(Math.max(width * height, minimum) * sets), policy: "AREA" };
+        return { derived: true, quantity: roundTo(Math.max(width * height, minimum) * sets), policy: "AREA" };
       }
       return { derived: true, policy: "AREA_POLICY" };
     }
@@ -229,9 +225,9 @@ function salesQuantity(row: Json, item: Json, formula: Json | null): { derived: 
     const pieces = positive(row.qty_bar);
     if (METRE_UOMS.has(uom)) {
       const length = positive(row.length_m);
-      return { derived: true, ...(length && pieces ? { quantity: round(length * pieces) } : {}), policy: "LENGTH_X_PIECES" };
+      return { derived: true, ...(length && pieces ? { quantity: roundTo(length * pieces) } : {}), policy: "LENGTH_X_PIECES" };
     }
-    if (PIECE_UOMS.has(uom)) return { derived: true, ...(pieces ? { quantity: round(pieces) } : {}), policy: "PIECES" };
+    if (PIECE_UOMS.has(uom)) return { derived: true, ...(pieces ? { quantity: roundTo(pieces) } : {}), policy: "PIECES" };
   }
   return { derived: false, policy: "DIRECT" };
 }
@@ -240,7 +236,7 @@ function applyCommonComputed(patch: Json, clear: Set<string>, fields: Set<string
   const qty = positive(row.qty);
   const factor = positive(row.conversion_factor);
   if (fields.has("stock_qty")) {
-    if (qty && factor) patch.stock_qty = round(qty * factor);
+    if (qty && factor) patch.stock_qty = roundTo(qty * factor);
     else clear.add("stock_qty");
   }
   const rate = Number(row.rate);
@@ -271,16 +267,16 @@ function applyAverageWeight(patch: Json, clear: Set<string>, fields: Set<string>
   const totalArea = isArea && width && height && sets ? width * height * sets : null;
   const totalLength = bars && length ? bars * length : length;
   if (fields.has("total_length_m")) {
-    if (totalLength) patch.total_length_m = round(totalLength);
+    if (totalLength) patch.total_length_m = roundTo(totalLength);
     else clear.add("total_length_m");
   }
   if (fields.has("actual_kg_per_sqm")) {
-    if (totalKg && totalArea) patch.actual_kg_per_sqm = round(totalKg / totalArea);
+    if (totalKg && totalArea) patch.actual_kg_per_sqm = roundTo(totalKg / totalArea);
     else clear.add("actual_kg_per_sqm");
   }
   if (fields.has("actual_kg_per_m")) {
     const divisor = totalArea ? null : totalLength || bars || (!isKg ? positive(row.qty) : null);
-    if (totalKg && divisor) patch.actual_kg_per_m = round(totalKg / divisor);
+    if (totalKg && divisor) patch.actual_kg_per_m = roundTo(totalKg / divisor);
     else clear.add("actual_kg_per_m");
   }
 }
@@ -459,8 +455,8 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     const qty = positive(finalRow.qty);
     const sets = positive(finalRow.set_count) ?? 1;
     if (qty) {
-      setIfField(patch, fields, "conversion_factor", round(sets / qty));
-      setIfField(patch, fields, "stock_qty", round(sets));
+      setIfField(patch, fields, "conversion_factor", roundTo(sets / qty));
+      setIfField(patch, fields, "stock_qty", roundTo(sets));
     }
   } else {
     applyCommonComputed(patch, clear, fields, { ...row, ...patch });
@@ -635,7 +631,7 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
     const bars = positive(effective.qty_bar);
     const kgPerM = positive(effective.theoretical_kg_per_m);
     if (length && bars && kgPerM) {
-      const kg = round(length * bars * kgPerM);
+      const kg = roundTo(length * bars * kgPerM);
       patch.theoretical_kg = kg;
       if (fields.has("qty")) patch.qty = kg;
     } else {

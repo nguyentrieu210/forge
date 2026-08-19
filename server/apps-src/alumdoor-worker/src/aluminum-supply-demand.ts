@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 import type { PurchaseFifoEnv } from "./purchase-fifo-receipt.js";
 
 type Json = Record<string, unknown>;
@@ -65,10 +66,6 @@ function norm(value: unknown): string { return text(value).toLocaleLowerCase("vi
 function checked(value: unknown): boolean {
   if (value === true || value === 1 || value === "1") return true;
   return ["true", "yes", "có", "co"].includes(norm(value));
-}
-function round(value: number, digits = 6): number {
-  const factor = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 function positive(value: unknown): number {
   const number = Number(value);
@@ -163,7 +160,7 @@ export function allocateAluminumDemand(
     const availableBefore = position.qty;
     const take = Math.min(remaining, Math.floor(position.qty));
     if (take <= 0) continue;
-    position.qty = round(position.qty - take);
+    position.qty = roundTo(position.qty - take);
     remaining -= take;
     picks.push({ batch_no: position.batch_no, warehouse: position.warehouse, length_m: position.length_m, is_offcut: Boolean(position.is_offcut), take, available_before: availableBefore });
   }

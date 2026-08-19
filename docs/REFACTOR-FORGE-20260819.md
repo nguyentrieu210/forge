@@ -10,7 +10,7 @@ Nhánh: `refactor/forge-core`, tách từ `agent-live` @ `857064139`, làm trong
 
 | Cổng | Kết quả |
 |---|---|
-| `server` unit test | **2395 test, 73 rớt** (147 dòng `✖` gồm cả subtest và test cha), 39 file có ít nhất một test rớt |
+| `server` unit test | **2395 test, 76 rớt** (xem 0b: con số 73 đo lần đầu là sai vì brief đã bị chính bộ test ghi đè) |
 | `client:typecheck` | xanh |
 | `client:test` (`@metaforge/demo selfcheck`) | **rớt** — `field phụ thuộc null không được làm Link rỗng vĩnh viễn` |
 

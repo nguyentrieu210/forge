@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 import type { PurchaseFifoEnv } from "./purchase-fifo-receipt.js";
 
 type Json = Record<string, unknown>;
@@ -72,11 +73,6 @@ function text(value: unknown): string {
 function numeric(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function round(value: number, digits = 6): number {
-  const scale = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * scale) / scale;
 }
 
 function checked(value: unknown): boolean {
@@ -171,8 +167,8 @@ async function loadTimelines(call: PlatformCall, orders: PurchaseDoc[]): Promise
 function materialKey(row: Json): string {
   return [
     text(row.item_code),
-    round(numeric(row.length_m)),
-    round(numeric(row.theoretical_kg_per_m)),
+    roundTo(numeric(row.length_m)),
+    roundTo(numeric(row.theoretical_kg_per_m)),
     text(row.color),
     checked(row.is_stamped) ? "1" : "0",
     text(row.measurement_profile),
@@ -184,8 +180,8 @@ function materialLabel(row: Json): string {
   const parts = [text(row.item_code) || "Không rõ mã"];
   const length = numeric(row.length_m);
   const kgPerM = numeric(row.theoretical_kg_per_m);
-  if (length > 0) parts.push(`${round(length)} m`);
-  if (kgPerM > 0) parts.push(`${round(kgPerM)} kg/m`);
+  if (length > 0) parts.push(`${roundTo(length)} m`);
+  if (kgPerM > 0) parts.push(`${roundTo(kgPerM)} kg/m`);
   const color = text(row.color);
   if (color) parts.push(color);
   parts.push(checked(row.is_stamped) ? "Dập" : "Không dập");
@@ -236,22 +232,22 @@ function fallbackDebtRows(orders: PurchaseDoc[], receipts: PurchaseDoc[]): DebtR
       allocation_uom: "Cây",
       length_m: length || null,
       theoretical_kg_per_m: kgPerM || null,
-      ordered_qty: String(round(row.bars)),
-      received_qty: String(round(delivered.bars)),
-      allocated_qty: String(round(Math.min(row.bars, delivered.bars))),
-      nominal_remaining_qty: String(round(remaining)),
-      unapplied_receipt_qty: String(round(Math.max(0, delivered.bars - row.bars))),
-      ordered_meters: length > 0 ? round(row.bars * length) : null,
-      received_meters: length > 0 ? round(delivered.bars * length) : null,
-      nominal_remaining_meters: length > 0 ? round(remaining * length) : null,
-      ordered_barem_weight_kg: length > 0 && kgPerM > 0 ? round(row.bars * length * kgPerM) : null,
-      received_barem_weight_kg: round(delivered.barem),
-      nominal_remaining_barem_weight_kg: length > 0 && kgPerM > 0 ? round(remaining * length * kgPerM) : null,
+      ordered_qty: String(roundTo(row.bars)),
+      received_qty: String(roundTo(delivered.bars)),
+      allocated_qty: String(roundTo(Math.min(row.bars, delivered.bars))),
+      nominal_remaining_qty: String(roundTo(remaining)),
+      unapplied_receipt_qty: String(roundTo(Math.max(0, delivered.bars - row.bars))),
+      ordered_meters: length > 0 ? roundTo(row.bars * length) : null,
+      received_meters: length > 0 ? roundTo(delivered.bars * length) : null,
+      nominal_remaining_meters: length > 0 ? roundTo(remaining * length) : null,
+      ordered_barem_weight_kg: length > 0 && kgPerM > 0 ? roundTo(row.bars * length * kgPerM) : null,
+      received_barem_weight_kg: roundTo(delivered.barem),
+      nominal_remaining_barem_weight_kg: length > 0 && kgPerM > 0 ? roundTo(remaining * length * kgPerM) : null,
       tolerance: "—",
       oldest_open_po_date: remaining > EPSILON ? row.oldest : null,
       oldest_open_po_age_days: remaining > EPSILON ? ageDays(row.oldest) : null,
-      barem_weight_kg: String(round(delivered.barem)),
-      actual_weight_kg: delivered.actual > 0 ? String(round(delivered.actual)) : null,
+      barem_weight_kg: String(roundTo(delivered.barem)),
+      actual_weight_kg: delivered.actual > 0 ? String(roundTo(delivered.actual)) : null,
     };
   });
 }
@@ -353,24 +349,24 @@ function aggregateMaterialRows(rows: DebtRow[]): Json[] {
       item_code: row.item_code,
       material: row.material,
       allocation_uom: row.allocation_uom,
-      ordered_bars: round(row.ordered),
-      received_bars: round(row.received),
-      allocated_bars: round(row.allocated),
-      remaining_bars: round(remaining),
-      unapplied_bars: round(row.unappliedOpen),
-      ordered_meters: round(row.orderedMeters),
-      received_meters: round(row.receivedMeters),
-      remaining_meters: round(row.remainingMetersOpen),
-      ordered_barem_weight_kg: round(row.orderedBarem),
-      received_barem_weight_kg: round(row.receivedBarem),
-      remaining_barem_weight_kg: round(row.remainingBaremOpen),
+      ordered_bars: roundTo(row.ordered),
+      received_bars: roundTo(row.received),
+      allocated_bars: roundTo(row.allocated),
+      remaining_bars: roundTo(remaining),
+      unapplied_bars: roundTo(row.unappliedOpen),
+      ordered_meters: roundTo(row.orderedMeters),
+      received_meters: roundTo(row.receivedMeters),
+      remaining_meters: roundTo(row.remainingMetersOpen),
+      ordered_barem_weight_kg: roundTo(row.orderedBarem),
+      received_barem_weight_kg: roundTo(row.receivedBarem),
+      remaining_barem_weight_kg: roundTo(row.remainingBaremOpen),
       tolerance: row.latestTolerance,
       oldest_open_po_date: row.oldestOpen,
       overdue_days: row.oldestAge,
-      barem_weight_kg: round(row.receivedBarem),
-      actual_weight_kg: row.hasActual ? round(row.actual) : null,
-      weight_variance_kg: row.hasActual ? round(row.actual - row.receivedBarem) : null,
-      weight_variance_pct: row.hasActual && row.receivedBarem > 0 ? round((row.actual - row.receivedBarem) * 100 / row.receivedBarem, 2) : null,
+      barem_weight_kg: roundTo(row.receivedBarem),
+      actual_weight_kg: row.hasActual ? roundTo(row.actual) : null,
+      weight_variance_kg: row.hasActual ? roundTo(row.actual - row.receivedBarem) : null,
+      weight_variance_pct: row.hasActual && row.receivedBarem > 0 ? roundTo((row.actual - row.receivedBarem) * 100 / row.receivedBarem, 2) : null,
     };
   }).sort((left, right) => numeric(right.remaining_bars) - numeric(left.remaining_bars) || String(left.material).localeCompare(String(right.material), "vi"));
 }
@@ -440,16 +436,16 @@ function buildOrderRows(orders: PurchaseDoc[], receipts: PurchaseDoc[], timeline
       transaction_date: text(order.transaction_date),
       schedule_date: scheduleDate,
       status,
-      ordered_bars: round(orderedBars),
-      received_bars: round(receivedBars),
-      nominal_remaining_bars: round(nominalRemaining),
-      remaining_bars: round(remainingBars),
-      shortage_variance_bars: round(shortageVariance),
+      ordered_bars: roundTo(orderedBars),
+      received_bars: roundTo(receivedBars),
+      nominal_remaining_bars: roundTo(nominalRemaining),
+      remaining_bars: roundTo(remainingBars),
+      shortage_variance_bars: roundTo(shortageVariance),
       receipt_count: receiptCount,
-      received_percentage: orderedBars > 0 ? round(Math.min(receivedBars, orderedBars) * 100 / orderedBars, 2) : 0,
+      received_percentage: orderedBars > 0 ? roundTo(Math.min(receivedBars, orderedBars) * 100 / orderedBars, 2) : 0,
       billed_percentage: numeric(order.billed_percentage),
       overdue_days: status === "Quá hạn" ? dueAge : 0,
-      purchase_value: round(poValue, 2),
+      purchase_value: roundTo(poValue, 2),
     };
   }).sort((left, right) => String(left.transaction_date).localeCompare(String(right.transaction_date)) || String(left.purchase_order).localeCompare(String(right.purchase_order)));
 }
@@ -480,18 +476,18 @@ function buildOrderLineRows(orders: PurchaseDoc[], receipts: PurchaseDoc[], time
         schedule_date: text(order.schedule_date),
         item_code: text(item.item_code),
         material: materialLabel(item),
-        ordered_bars: round(orderedBars),
-        received_bars: round(receivedBars),
-        nominal_remaining_bars: round(nominalRemaining),
-        remaining_bars: round(remaining),
-        ordered_meters: round(orderedBars * length),
-        received_meters: round(receivedBars * length),
-        remaining_meters: round(remaining * length),
-        ordered_barem_weight_kg: round(orderedBars * length * kgPerM),
-        received_barem_weight_kg: round(receivedBars * length * kgPerM),
-        remaining_barem_weight_kg: round(remaining * length * kgPerM),
-        rate: round(numeric(item.rate), 2),
-        amount: round(numeric(item.amount), 2),
+        ordered_bars: roundTo(orderedBars),
+        received_bars: roundTo(receivedBars),
+        nominal_remaining_bars: roundTo(nominalRemaining),
+        remaining_bars: roundTo(remaining),
+        ordered_meters: roundTo(orderedBars * length),
+        received_meters: roundTo(receivedBars * length),
+        remaining_meters: roundTo(remaining * length),
+        ordered_barem_weight_kg: roundTo(orderedBars * length * kgPerM),
+        received_barem_weight_kg: roundTo(receivedBars * length * kgPerM),
+        remaining_barem_weight_kg: roundTo(remaining * length * kgPerM),
+        rate: roundTo(numeric(item.rate), 2),
+        amount: roundTo(numeric(item.amount), 2),
         status: settled ? "Đã đối soát" : remaining <= EPSILON ? "Đã giao đủ" : receivedBars > EPSILON ? "Đang giao" : "Chưa giao",
       });
     }
@@ -519,13 +515,13 @@ function buildReceiptRows(receipts: PurchaseDoc[]): Json[] {
       driver: text(receipt.driver),
       purchase_orders: [...orders],
       line_count: (receipt.items ?? []).length,
-      qty_bar: round(bars),
-      total_length_m: round(meters),
-      barem_weight_kg: round(baremKg),
-      actual_weight_kg: round(actualKg),
-      weight_variance_kg: round(actualKg - baremKg),
-      weight_variance_pct: baremKg > 0 ? round((actualKg - baremKg) * 100 / baremKg, 2) : null,
-      value: round(value, 2),
+      qty_bar: roundTo(bars),
+      total_length_m: roundTo(meters),
+      barem_weight_kg: roundTo(baremKg),
+      actual_weight_kg: roundTo(actualKg),
+      weight_variance_kg: roundTo(actualKg - baremKg),
+      weight_variance_pct: baremKg > 0 ? roundTo((actualKg - baremKg) * 100 / baremKg, 2) : null,
+      value: roundTo(value, 2),
     };
   }).sort((left, right) => String(right.posting_at).localeCompare(String(left.posting_at)) || String(right.purchase_receipt).localeCompare(String(left.purchase_receipt)));
 }
@@ -541,10 +537,10 @@ function buildPriceHistory(orders: PurchaseDoc[]): Json[] {
         transaction_date: text(order.transaction_date),
         item_code: text(item.item_code),
         material: materialLabel(item),
-        rate: round(rate, 2),
-        qty_bar: round(numeric(item.qty_bar)),
-        theoretical_kg: round(numeric(item.theoretical_kg)),
-        amount: round(numeric(item.amount), 2),
+        rate: roundTo(rate, 2),
+        qty_bar: roundTo(numeric(item.qty_bar)),
+        theoretical_kg: roundTo(numeric(item.theoretical_kg)),
+        amount: roundTo(numeric(item.amount), 2),
       });
     }
   }
@@ -555,7 +551,7 @@ function buildPriceHistory(orders: PurchaseDoc[]): Json[] {
     const prior = previous.get(key);
     const rate = numeric(row.rate);
     row.previous_rate = prior ?? null;
-    row.change_pct = prior && prior > 0 ? round((rate - prior) * 100 / prior, 2) : null;
+    row.change_pct = prior && prior > 0 ? roundTo((rate - prior) * 100 / prior, 2) : null;
     previous.set(key, rate);
   }
   return rows.reverse().slice(0, 500);
@@ -596,11 +592,11 @@ async function loadAuthoritativePayable(call: PlatformCall, supplier: string, ge
     return {
       authoritative: true,
       source: "Payment Ledger / Debt Summary",
-      total_outstanding: round(rows.reduce((sum, row) => sum + numeric(row.total_outstanding), 0), 2),
-      due_amount: round(rows.reduce((sum, row) => sum + numeric(row.due_amount), 0), 2),
-      overdue_amount: round(rows.reduce((sum, row) => sum + numeric(row.overdue_amount), 0), 2),
-      advance_balance: round(rows.reduce((sum, row) => sum + numeric(row.advance_balance), 0), 2),
-      net_exposure: round(rows.reduce((sum, row) => sum + numeric(row.net_exposure), 0), 2),
+      total_outstanding: roundTo(rows.reduce((sum, row) => sum + numeric(row.total_outstanding), 0), 2),
+      due_amount: roundTo(rows.reduce((sum, row) => sum + numeric(row.due_amount), 0), 2),
+      overdue_amount: roundTo(rows.reduce((sum, row) => sum + numeric(row.overdue_amount), 0), 2),
+      advance_balance: roundTo(rows.reduce((sum, row) => sum + numeric(row.advance_balance), 0), 2),
+      net_exposure: roundTo(rows.reduce((sum, row) => sum + numeric(row.net_exposure), 0), 2),
       oldest_due_date: dates[0] ?? null,
       currencies: [...new Set(rows.map((row) => text(row.currency)).filter(Boolean))],
       rows,
@@ -616,18 +612,18 @@ function billingSummary(invoices: PurchaseDoc[], receiptRows: Json[], payable: J
   const receivedValue = receiptRows.reduce((sum, row) => sum + numeric(row.value), 0);
   return {
     invoice_count: invoices.length,
-    invoice_total: round(invoiceTotal, 2),
-    received_value: round(receivedValue, 2),
-    received_not_invoiced_hint: round(Math.max(0, receivedValue - invoiceTotal), 2),
-    invoice_outstanding_hint: round(invoiceOutstandingHint, 2),
+    invoice_total: roundTo(invoiceTotal, 2),
+    received_value: roundTo(receivedValue, 2),
+    received_not_invoiced_hint: roundTo(Math.max(0, receivedValue - invoiceTotal), 2),
+    invoice_outstanding_hint: roundTo(invoiceOutstandingHint, 2),
     ...(payable ?? {
       authoritative: false,
       source: "Purchase Invoice fallback",
-      total_outstanding: round(invoiceOutstandingHint, 2),
+      total_outstanding: roundTo(invoiceOutstandingHint, 2),
       due_amount: null,
       overdue_amount: null,
       advance_balance: null,
-      net_exposure: round(invoiceOutstandingHint, 2),
+      net_exposure: roundTo(invoiceOutstandingHint, 2),
       oldest_due_date: null,
       currencies: [...new Set(invoices.map((invoice) => text(invoice.currency)).filter(Boolean))],
       rows: [],
@@ -687,18 +683,18 @@ export async function handlePurchaseSupplierDashboard(request: Request, env: Pur
         material_count: materials.length,
         completed_material_count: completedMaterials.length,
         unsettled_material_count: unsettledMaterials.length,
-        ordered_bars: round(orderedBars),
-        received_bars: round(receivedBars),
-        remaining_bars: round(remainingBars),
-        unapplied_bars: round(unappliedBars),
-        ordered_meters: round(orderedMeters),
-        received_meters: round(receivedMeters),
-        remaining_meters: round(remainingMeters),
-        ordered_barem_weight_kg: round(orderedBarem),
-        received_barem_weight_kg: round(receivedBarem),
-        remaining_barem_weight_kg: round(remainingBarem),
-        actual_received_weight_kg: round(actualKg),
-        purchase_value: round(purchaseValue, 2),
+        ordered_bars: roundTo(orderedBars),
+        received_bars: roundTo(receivedBars),
+        remaining_bars: roundTo(remainingBars),
+        unapplied_bars: roundTo(unappliedBars),
+        ordered_meters: roundTo(orderedMeters),
+        received_meters: roundTo(receivedMeters),
+        remaining_meters: roundTo(remainingMeters),
+        ordered_barem_weight_kg: roundTo(orderedBarem),
+        received_barem_weight_kg: roundTo(receivedBarem),
+        remaining_barem_weight_kg: roundTo(remainingBarem),
+        actual_received_weight_kg: roundTo(actualKg),
+        purchase_value: roundTo(purchaseValue, 2),
         receipt_count: receipts.length,
         payable_outstanding: numeric(billing.total_outstanding),
         payable_overdue: numeric(billing.overdue_amount),

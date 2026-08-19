@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 type Json = Record<string, unknown>;
 type PlatformCall = (path: string, init?: RequestInit) => Promise<Response>;
 
@@ -26,7 +27,6 @@ const MAX_DELIVERY_LINES = 200;
 
 function text(value: unknown): string { return String(value ?? "").trim(); }
 function number(value: unknown): number { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; }
-function round(value: number): number { return Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000; }
 function responseJson(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 }
@@ -87,7 +87,7 @@ async function deliveredQuantities(call: PlatformCall, customer: string, selecte
       const sourceRow = text(line.sales_order_row_id);
       if (!sourceRow) continue;
       const key = `${order}\u0000${sourceRow}`;
-      result.set(key, round((result.get(key) ?? 0) + number(line.qty)));
+      result.set(key, roundTo((result.get(key) ?? 0) + number(line.qty)));
     }
   }
   return result;
@@ -98,7 +98,7 @@ function sourceRowId(line: Json, index: number): string { return text(line.row_i
 function copyDeliveryLine(order: SalesOrderDoc, line: Json, index: number, outstanding: number, warehouse: string): Json {
   const ordered = number(line.qty);
   const orderedStock = number(line.stock_qty ?? line.qty);
-  const stockQty = ordered > 0 ? round(orderedStock * outstanding / ordered) : outstanding;
+  const stockQty = ordered > 0 ? roundTo(orderedStock * outstanding / ordered) : outstanding;
   const sourceRow = sourceRowId(line, index);
   const targetWarehouse = warehouse || text(line.warehouse);
   if (!targetWarehouse) throw new Error(`${order.name} dòng ${sourceRow} chưa có Kho xuất.`);
@@ -110,7 +110,7 @@ function copyDeliveryLine(order: SalesOrderDoc, line: Json, index: number, outst
     sales_order_item: sourceRow,
     delivery_request: text(line.delivery_request),
     ordered_qty: ordered,
-    delivered_qty_before: round(Math.max(0, ordered - outstanding)),
+    delivered_qty_before: roundTo(Math.max(0, ordered - outstanding)),
     outstanding_qty: outstanding,
     delivery_qty: outstanding,
     delivery_stock_qty: stockQty,
@@ -161,7 +161,7 @@ async function buildPlan(call: PlatformCall, args: Json): Promise<Json> {
       const sourceRow = sourceRowId(line, index);
       const ordered = number(line.qty);
       const already = delivered.get(`${order.name}\u0000${sourceRow}`) ?? 0;
-      const outstanding = round(Math.max(0, ordered - already));
+      const outstanding = roundTo(Math.max(0, ordered - already));
       if (outstanding <= 0) continue;
       const candidate = {
         selected: requested.includes(order.name), sales_order: order.name, sales_order_row_id: sourceRow,
@@ -170,7 +170,7 @@ async function buildPlan(call: PlatformCall, args: Json): Promise<Json> {
         material_specification: line.material_specification, warehouse: warehouse || line.warehouse,
         uom: line.uom, stock_uom: line.stock_uom, ordered_qty: ordered, delivered_qty: already,
         outstanding_qty: outstanding, delivery_qty: outstanding,
-        delivery_stock_qty: ordered > 0 ? round(number(line.stock_qty ?? line.qty) * outstanding / ordered) : outstanding,
+        delivery_stock_qty: ordered > 0 ? roundTo(number(line.stock_qty ?? line.qty) * outstanding / ordered) : outstanding,
         conversion_factor: line.conversion_factor, rate: line.rate,
       };
       candidates.push(candidate);

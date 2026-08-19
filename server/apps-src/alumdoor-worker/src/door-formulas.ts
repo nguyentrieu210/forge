@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 /**
  * Công thức hình học và thương mại của một bộ cửa.
  *
@@ -237,11 +238,6 @@ function finiteNonNegative(value: unknown, label: string): number {
   return number;
 }
 
-function round(value: number, digits = 6): number {
-  const scale = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * scale) / scale;
-}
-
 /**
  * Chọn đúng MỘT chính sách. Nhóm Item cụ thể thắng luật chung; priority chỉ phân xử trong
  * cùng mức cụ thể. Hai luật ngang nhau bị từ chối — đoán một luật ở đây là cắt hỏng nhôm.
@@ -303,11 +299,11 @@ export function calculateDoorFormula(policy: DoorFormulaPolicy, input: DoorFormu
     customer_group: input.customer_group,
     sales_mode: mode,
     width_basis: widthBasis,
-    measured_width_m: round(measured),
-    cut_deduction_m: round(deduction),
-    cut_width_m: round(cut),
-    set_count: round(sets),
-    explanation: `Rộng cắt lá = ${widthBasis} ${round(measured)} − ${round(deduction)} = ${round(cut)} m.`,
+    measured_width_m: roundTo(measured),
+    cut_deduction_m: roundTo(deduction),
+    cut_width_m: roundTo(cut),
+    set_count: roundTo(sets),
+    explanation: `Rộng cắt lá = ${widthBasis} ${roundTo(measured)} − ${roundTo(deduction)} = ${roundTo(cut)} m.`,
   };
 
   if (purpose === "sales" || purpose === "all") {
@@ -325,15 +321,15 @@ export function calculateDoorFormula(policy: DoorFormulaPolicy, input: DoorFormu
     const billable = Math.max(rawArea, minimum) * sets;
     Object.assign(result, {
       sales_width_basis: salesBasis,
-      sales_width_m: round(salesWidth),
+      sales_width_m: roundTo(salesWidth),
       sales_height_basis: "Cao phủ bì" as const,
-      sales_height_m: round(coverHeight),
-      area_per_set_sqm: round(rawArea),
-      billable_area_sqm: round(billable),
+      sales_height_m: roundTo(coverHeight),
+      area_per_set_sqm: roundTo(rawArea),
+      billable_area_sqm: roundTo(billable),
       ...(input.selling_rate == null
         ? {}
-        : { sales_amount: round(billable * finiteNonNegative(input.selling_rate, "Đơn giá bán")) }),
-      explanation: `${result.explanation} Bán: ${round(coverHeight)} × ${round(salesWidth)} × ${round(sets)} = ${round(billable)} m2 (${salesBasis}).`,
+        : { sales_amount: roundTo(billable * finiteNonNegative(input.selling_rate, "Đơn giá bán")) }),
+      explanation: `${result.explanation} Bán: ${roundTo(coverHeight)} × ${roundTo(salesWidth)} × ${roundTo(sets)} = ${roundTo(billable)} m2 (${salesBasis}).`,
     });
   }
 
@@ -342,9 +338,9 @@ export function calculateDoorFormula(policy: DoorFormulaPolicy, input: DoorFormu
     if (policy.purchase_formula === "Kg thực tế") {
       if (input.actual_purchase_kg != null && input.actual_purchase_kg !== 0) {
         const kg = finitePositive(input.actual_purchase_kg, "Kg thực tế");
-        result.purchase_kg = round(kg);
-        if (input.purchase_rate != null) result.purchase_amount = round(kg * finiteNonNegative(input.purchase_rate, "Đơn giá mua"));
-        result.explanation += ` Mua: ${round(kg)} kg thực tế${result.purchase_amount == null ? "" : ` × ${round(Number(input.purchase_rate))} = ${result.purchase_amount}`}.`;
+        result.purchase_kg = roundTo(kg);
+        if (input.purchase_rate != null) result.purchase_amount = roundTo(kg * finiteNonNegative(input.purchase_rate, "Đơn giá mua"));
+        result.explanation += ` Mua: ${roundTo(kg)} kg thực tế${result.purchase_amount == null ? "" : ` × ${roundTo(Number(input.purchase_rate))} = ${result.purchase_amount}`}.`;
       } else {
         result.explanation += " Mua: cân Kg thực tế × đơn giá; không suy từ kích thước.";
       }
@@ -361,15 +357,15 @@ export function calculateDoorFormula(policy: DoorFormulaPolicy, input: DoorFormu
       const kg = kgPerSet * sets;
       Object.assign(result, {
         purchase_height_basis: heightBasis,
-        purchase_height_m: round(purchaseHeight),
+        purchase_height_m: roundTo(purchaseHeight),
         purchase_width_basis: purchaseWidthBasis,
-        purchase_width_m: round(purchaseWidth),
-        purchase_kg_per_set: round(kgPerSet),
-        purchase_kg: round(kg),
+        purchase_width_m: roundTo(purchaseWidth),
+        purchase_kg_per_set: roundTo(kgPerSet),
+        purchase_kg: roundTo(kg),
         ...(input.purchase_rate == null
           ? {}
-          : { purchase_amount: round(kg * finiteNonNegative(input.purchase_rate, "Đơn giá mua")) }),
-        explanation: `${result.explanation} Mua: ${round(barem)} kg/m2 × ${round(purchaseHeight)} × ${round(purchaseWidth)} × ${round(sets)} = ${round(kg)} kg.`,
+          : { purchase_amount: roundTo(kg * finiteNonNegative(input.purchase_rate, "Đơn giá mua")) }),
+        explanation: `${result.explanation} Mua: ${roundTo(barem)} kg/m2 × ${roundTo(purchaseHeight)} × ${roundTo(purchaseWidth)} × ${roundTo(sets)} = ${roundTo(kg)} kg.`,
       });
     }
   }

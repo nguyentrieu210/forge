@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 import { handlePurchaseFifoRequest, type PurchaseFifoEnv } from "./purchase-fifo-receipt.js";
 import { handleBulkPurchaseFifoRequest } from "./bulk-purchase-fifo-receipt.js";
 import { allowedColorNamesForGroup } from "./color-scopes.js";
@@ -57,11 +58,6 @@ function checked(value: unknown): boolean {
 function positive(value: unknown): number {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : 0;
-}
-
-function round(value: number, digits = 6): number {
-  const factor = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 function equalNumber(left: unknown, right: unknown, tolerance = 1e-6): boolean {
@@ -235,13 +231,13 @@ export function canonicalizeAluminumPurchaseLine(
   } = line;
   return {
     ...rest,
-    qty: round(commercialQty),
+    qty: roundTo(commercialQty),
     qty_bar: qtyBar,
-    length_m: round(length),
+    length_m: roundTo(length),
     uom: lineUom,
     stock_uom: contract.stock_uom,
     stock_qty: qtyBar,
-    ...(actualWeight ? { actual_weight_kg: round(actualWeight) } : {}),
+    ...(actualWeight ? { actual_weight_kg: roundTo(actualWeight) } : {}),
     ...(norm(lineUom) === "kg" ? { rate_uom: "Kg" } : {}),
     purchase_stock_qty_field: "qty_bar",
     purchase_allocation_qty_field: "qty_bar",
@@ -296,8 +292,8 @@ async function createBatch(call: PlatformCall, receipt: PurchaseDocument, group:
   const deterministicId = `LO-${text(receipt.name).replace(/[^A-Za-z0-9-]/g, "-")}-${group.replace(/[^A-Za-z0-9-]/g, "-")}`;
   const existing = await listDocs<{ name?: string; batch_id?: string }>(call, "Batch", ["name", "batch_id"], [["batch_id", "=", deterministicId]], 2).catch(() => []);
   if (existing[0]?.name) return existing[0].name;
-  const intakeQty = round(lines.reduce((sum, line) => sum + Number(line.qty_bar ?? 0), 0));
-  const intakeKg = round(lines.reduce((sum, line) => sum + Number(line.actual_weight_kg ?? 0), 0));
+  const intakeQty = roundTo(lines.reduce((sum, line) => sum + Number(line.qty_bar ?? 0), 0));
+  const intakeKg = roundTo(lines.reduce((sum, line) => sum + Number(line.actual_weight_kg ?? 0), 0));
   const created = await createDoc(call, "Batch", {
     batch_id: deterministicId, item: itemCode, item_code: itemCode, color, condition, length_m: length,
     intake_qty: intakeQty, ...(intakeKg > 0 ? { intake_kg: intakeKg } : {}), is_stamped: stamped, is_offcut: 0,
@@ -445,7 +441,7 @@ async function validatePurchaseOrderBarem(call: PlatformCall, item: Json, line: 
   const spec = await readDoc<Json>(call, "Material Specification", specName);
   const kgPerM = positive(spec.theoretical_kg_per_m ?? spec.kg_per_m ?? line.theoretical_kg_per_m);
   if (!kgPerM) throw new Error(`${label}: Quy cách vật tư chưa có trọng lượng kg/m.`);
-  const expectedKg = round(positive(line.length_m) * kgPerM * positive(line.qty_bar));
+  const expectedKg = roundTo(positive(line.length_m) * kgPerM * positive(line.qty_bar));
   if (!equalNumber(line.theoretical_kg, expectedKg, 1e-4)) throw new Error(`${label}: Kg barem phải bằng khổ × kg/m × số cây = ${expectedKg}.`);
   if (norm(line.uom) === "kg" && !equalNumber(line.qty, expectedKg, 1e-4)) throw new Error(`${label}: Đơn mua theo Kg phải dùng đúng kg barem ${expectedKg}.`);
   const rate = Number(line.rate ?? 0);

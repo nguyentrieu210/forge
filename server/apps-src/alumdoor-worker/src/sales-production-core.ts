@@ -1,3 +1,4 @@
+import { roundTo } from "../../../packages/core/src/index.js";
 import {
   calculateDoorFormula,
   inferDoorType,
@@ -224,11 +225,6 @@ function positiveInteger(value: unknown, label: string): number {
   return number;
 }
 
-function round(value: number, digits = 6): number {
-  const factor = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
-}
-
 const SALES_AREA_UOMS = new Set(["m2", "m²", "sqm"]);
 const SALES_METRE_UOMS = new Set(["m", "mét", "met", "meter", "metre"]);
 
@@ -303,22 +299,22 @@ function salesCompositionQuantity(
   const height = inheritedPositive(parent, "height_m");
   const linear = salesLinearBasis(item);
   if (isWidthQuantitySalesItem(item) && SALES_METRE_UOMS.has(uom) && width) {
-    return { qty: round(width * setCount), length_m: width };
+    return { qty: roundTo(width * setCount), length_m: width };
   }
   if (isWidthQuantitySalesItem(item) && SALES_METRE_UOMS.has(uom)) return { qty: null };
   if (linear) {
     const length = linear === "RAY" ? height : width;
-    if (length && SALES_METRE_UOMS.has(uom)) return { qty: round(length * setCount), length_m: length };
+    if (length && SALES_METRE_UOMS.has(uom)) return { qty: roundTo(length * setCount), length_m: length };
     if (SALES_METRE_UOMS.has(uom)) return { qty: null };
-    if (length) return { qty: round(setCount), length_m: length };
+    if (length) return { qty: roundTo(setCount), length_m: length };
   }
   if (isAreaFinishedProduct(item) && SALES_AREA_UOMS.has(uom)) {
     const billableArea = inheritedPositive(parent, "billable_area_sqm");
-    if (billableArea) return { qty: round(billableArea) };
-    if (width && height) return { qty: round(width * height * setCount) };
+    if (billableArea) return { qty: roundTo(billableArea) };
+    if (width && height) return { qty: roundTo(width * height * setCount) };
     return { qty: null };
   }
-  return { qty: round(setCount) };
+  return { qty: roundTo(setCount) };
 }
 
 async function enrichSalesBomComponents(
@@ -555,22 +551,22 @@ export function calculateLeafPlan(policy: RawPolicy, line: Json): LeafPlan {
   const result: LeafPlan = {
     leaf_formula: formula,
     ...(leafVariant ? { leaf_variant: leafVariant } : {}),
-    height_basis_m: round(height),
-    height_deduction_m: round(deduction),
-    divisor_m: round(divisor),
-    raw_leaf_count: round(raw),
-    leaf_count: round(count),
-    explanation: `${formula}: (${round(height)} − ${round(deduction)}) ÷ ${round(divisor)}`
-      + (leafVariant ? ` + ${round(addend)} (${leafVariant})` : "")
-      + ` = ${round(raw)} → ${round(count)} lá (${rounding}).`,
+    height_basis_m: roundTo(height),
+    height_deduction_m: roundTo(deduction),
+    divisor_m: roundTo(divisor),
+    raw_leaf_count: roundTo(raw),
+    leaf_count: roundTo(count),
+    explanation: `${formula}: (${roundTo(height)} − ${roundTo(deduction)}) ÷ ${roundTo(divisor)}`
+      + (leafVariant ? ` + ${roundTo(addend)} (${leafVariant})` : "")
+      + ` = ${roundTo(raw)} → ${roundTo(count)} lá (${rounding}).`,
   };
 
   if (formula === "Kiểu tấm liền Úc") {
     const single = finiteNonNegative(line.single_layer_leaf_count ?? 0, "Số lá một lớp");
     if (single > count) throw new Error(`Số lá một lớp ${single} không được lớn hơn tổng ${count}.`);
-    result.single_layer_leaf_count = round(single);
-    result.double_layer_leaf_count = round(count - single);
-    result.explanation += ` AL70: ${round(single)} lá một lớp, ${round(count - single)} lá hai lớp.`;
+    result.single_layer_leaf_count = roundTo(single);
+    result.double_layer_leaf_count = roundTo(count - single);
+    result.explanation += ` AL70: ${roundTo(single)} lá một lớp, ${roundTo(count - single)} lá hai lớp.`;
   }
   return result;
 }
@@ -612,7 +608,7 @@ function findStandard(
   const factor = basis === "m2" ? quantity.area_sqm
     : basis === "batch" ? Math.ceil(quantity.sets / Math.max(1, Number(selected.row.batch_capacity ?? 1)))
       : quantity.sets;
-  return { minutes: round(selected.minutes * factor, 2), basis };
+  return { minutes: roundTo(selected.minutes * factor, 2), basis };
 }
 
 function productionDepartment(doorType: DoorType): string {
@@ -659,7 +655,7 @@ function raySpecificGeometry(
     required_targets: ["CAT_LA_RONG"],
   });
   const cutWidth = finitePositive(result.values.CAT_LA_RONG, "Rộng cắt lá theo Geometry Policy");
-  return { cut_width_m: round(cutWidth), ray_type: rayType, applied_rules: result.applied_rules.map((entry) => entry.rule_code) };
+  return { cut_width_m: roundTo(cutWidth), ray_type: rayType, applied_rules: result.applied_rules.map((entry) => entry.rule_code) };
 }
 
 function bomItemKey(value: unknown): string {
@@ -800,9 +796,9 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
     const liveCutWidth = geometry?.cut_width_m ?? finitePositive(formula.cut_width_m, "Rộng cắt lá");
     const leaf = calculateLeafPlan(chosen.raw, row);
     const department = productionDepartment(doorType);
-    const billablePerSet = round(finitePositive(formula.billable_area_sqm, "Diện tích tính tiền") / sets);
+    const billablePerSet = roundTo(finitePositive(formula.billable_area_sqm, "Diện tích tính tiền") / sets);
     const standard = findStandard(input.standards, doorType, department, on, { area_sqm: billablePerSet, sets: 1 });
-    const estimatedWeightPerSet = formula.purchase_kg == null ? undefined : round(Number(formula.purchase_kg) / sets);
+    const estimatedWeightPerSet = formula.purchase_kg == null ? undefined : roundTo(Number(formula.purchase_kg) / sets);
     const color = text(row.color);
     const bomNo = selectBom(input.boms, itemCode, color, on, Boolean(options.allow_missing_bom));
     const stockUom = text(item.stock_uom) || "Bộ";
@@ -823,9 +819,9 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         door_type: doorType,
         customer_group: customerGroup,
         sales_mode: salesMode,
-        width_m: round(width),
-        height_m: round(height),
-        mesh_height_m: row.mesh_height_m == null || row.mesh_height_m === "" ? null : round(Number(row.mesh_height_m)),
+        width_m: roundTo(width),
+        height_m: roundTo(height),
+        mesh_height_m: row.mesh_height_m == null || row.mesh_height_m === "" ? null : roundTo(Number(row.mesh_height_m)),
         set_no: setNo,
         formula_policy: chosen.parsed.policy_name,
         formula_version: formulaVersion,
@@ -849,16 +845,16 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         department,
         set_no: setNo,
         set_count: 1,
-        width_m: round(width),
-        height_m: round(height),
-        ...(row.mesh_height_m == null || row.mesh_height_m === "" ? {} : { mesh_height_m: round(Number(row.mesh_height_m)) }),
+        width_m: roundTo(width),
+        height_m: roundTo(height),
+        ...(row.mesh_height_m == null || row.mesh_height_m === "" ? {} : { mesh_height_m: roundTo(Number(row.mesh_height_m)) }),
         ...(color ? { color } : {}),
         ...(text(row.motor_model) ? { motor_model: text(row.motor_model) } : {}),
         sales_mode: salesMode,
         formula_policy: chosen.parsed.policy_name,
         formula_version: formulaVersion,
         width_basis: formula.width_basis,
-        cut_width_m: round(liveCutWidth),
+        cut_width_m: roundTo(liveCutWidth),
         billable_area_sqm: billablePerSet,
         leaf_count: leaf.leaf_count,
         ...(leaf.single_layer_leaf_count == null ? {} : { single_layer_leaf_count: leaf.single_layer_leaf_count }),
@@ -869,7 +865,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
         source_warehouse: input.source_warehouse,
         target_warehouse: input.target_warehouse,
         bom_no: bomNo,
-        output_qty: round(outputQty),
+        output_qty: roundTo(outputQty),
         stock_uom: stockUom,
         paint_required: paintRequired as 0 | 1,
         formula_snapshot: JSON.stringify(snapshot),
@@ -933,7 +929,6 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
     target_warehouse: targetWarehouse,
   };
 }
-
 
 export async function calculateSalesProductionLine(
   call: ProductionPlatformCall,
@@ -1042,7 +1037,7 @@ export async function calculateSalesProductionLine(
     });
     return answer({
       ...formula,
-      cut_width_m: round(liveCutWidth),
+      cut_width_m: roundTo(liveCutWidth),
       item_code: itemCode,
       item_group: text(item.item_group),
       door_type: doorType,
@@ -1058,8 +1053,8 @@ export async function calculateSalesProductionLine(
       single_layer_leaf_count: leaf?.single_layer_leaf_count ?? null,
       double_layer_leaf_count: leaf?.double_layer_leaf_count ?? null,
       leaf_error: leafError,
-      estimated_weight_kg: formula.purchase_kg == null ? null : round(Number(formula.purchase_kg), 3),
-      estimated_minutes: round(standard.minutes * sets, 2),
+      estimated_weight_kg: formula.purchase_kg == null ? null : roundTo(Number(formula.purchase_kg), 3),
+      estimated_minutes: roundTo(standard.minutes * sets, 2),
       schedule_warning: standard.warning ?? null,
       // UI chỉ hiện chọn "Có bản bướm" khi chính sách đang áp có số trừ riêng.
       // Không bật checkbox chung cho các loại cửa/ray mà thao tác này không có tác dụng.
@@ -1230,8 +1225,8 @@ export async function previewSalesProduction(call: ProductionPlatformCall, args:
       target_warehouse: input.target_warehouse,
       lines: items.length,
       work_orders: items.length,
-      estimated_minutes: round(items.reduce((sum, line) => sum + line.estimated_minutes, 0), 2),
-      estimated_weight_kg: round(items.reduce((sum, line) => sum + Number(line.estimated_weight_kg ?? 0), 0), 3),
+      estimated_minutes: roundTo(items.reduce((sum, line) => sum + line.estimated_minutes, 0), 2),
+      estimated_weight_kg: roundTo(items.reduce((sum, line) => sum + Number(line.estimated_weight_kg ?? 0), 0), 3),
       warnings,
       items,
     });
