@@ -45,6 +45,7 @@ export { useBrand, applyBrand, isBrandMode, normalizeBrand, BRANDS, BRAND_COLOR_
 export { applyDesign } from "./design.js";
 export { resolveScopeState, ScopeGateBody, type ScopeGateState } from "./scope-gate.js";
 export { WorkspaceTabs, useWorkspaceTabs, type WorkspaceTabItem, type WorkspaceTabsProps } from "./WorkspaceTabs.js";
+export { DesignPreferencePanel, useDesignPreference, type DesignPreference } from "./preferences.js";
 export { resolveIcon } from "./icon.js";
 export {
   BusinessContextProvider, BusinessContextBar, useBusinessContext,

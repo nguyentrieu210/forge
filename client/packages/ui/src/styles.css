@@ -2235,3 +2235,17 @@
 
 /* Mật độ gọn giữ tỉ lệ riêng của Forge — vben không có chế độ này. */
 [data-density="compact"] .mf-shell .mf-page-header { padding-inline: 1rem; padding-block: 0.625rem; }
+
+/* ── Khôi phục biến thể mật độ ────────────────────────────────────────────────
+ * Khối `:root` của tầng vben nằm CUỐI file nên nó đè mất các override
+ * `[data-density="…"]` khai ở trên — cả hai cùng độ ưu tiên (0,1,0), ai sau thắng.
+ * Đo được: bật `touch` mà topbar vẫn 50px và mục menu vẫn 38px, tức là chế độ mật độ rộng
+ * (dành cho máy cảm ứng ở xưởng) im lặng ngừng hoạt động.
+ *
+ * Nêu lại sau tầng vben. Giá trị nền vẫn của vben; hai đầu thang là tỉ lệ của Forge. */
+[data-density="compact"] { --mf-topbar-height: 44px; }
+[data-density="touch"] { --mf-topbar-height: 60px; }
+
+/* Mục menu cũng vậy: luật mới của tôi là (0,3,0) nên phải nêu đủ phạm vi mới thắng lại được. */
+[data-density="touch"] .mf-shell .mf-shell-sidebar .mf-shell-nav-item,
+[data-density="touch"] .mf-shell .mf-shell-nav-item { min-height: 44px; }
