@@ -94,7 +94,8 @@
     "test:action-input-table": "tsc -b && node --test tests/action-input-table.test.mjs",
     "test:door-width-label": "tsc -b && node --test tests/door-width-label.test.mjs",
     "test:form-layout": "tsc -b && node --test tests/form-layout.test.mjs",
-    "test:runtime-actions": "tsc -b && node --test tests/runtime-actions.test.mjs"
+    "test:runtime-actions": "tsc -b && node --test tests/runtime-actions.test.mjs",
+    "test:vertical-leak": "tsc -b && node --test tests/vertical-leak-budget.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

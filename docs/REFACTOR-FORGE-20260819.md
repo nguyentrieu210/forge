@@ -117,7 +117,7 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P2** ✅ | Gom 10 bản `money()` về `formatMoney` của `@metaforge/core`; `money-single-source.test.mjs` ghim 5 kiểu hiển thị | thấp |
 | **P2b** ✅ | Nạp lười 7 biểu đồ nặng + bộ vẽ SVG: chunk `engine` 833 → 662 kB (gzip 285 → 229) | thấp |
 | **P3** ✅ | Bóc khỏi `router.ts`: 6 method `*_alumdoor_*` → `VERTICAL_METHODS`, 4 hook context → `AlumdoorRouterHooks`, nhãn "Tài khoản ngân hàng" → `LINK_DISPLAY_RULES`. Nhắc `alumdoor` 63 → 7 chỗ, 4530 → 4357 dòng | trung bình |
-| **P4** | Tách `client/packages/views/src/app/vertical/alumdoor` ra khỏi package `views` | trung bình |
+| **P4** ⏳ | Tách `client/packages/views/src/app/vertical/alumdoor` (7336/7656 dòng của `app/`) ra package riêng. CHƯA làm: cần đảo chiều phụ thuộc (hiện `RuntimeDoctypeWorkspace` import thẳng vào vertical), mà đảo nửa vời sẽ sinh lỗi im lặng — vertical không đăng ký thì màn Alumdoor biến mất và không cổng nào bắt được. Trong lúc chờ, `vertical-leak-budget.test.mjs` giữ vết loang ở đúng 8 file | trung bình |
 | **P5** | Cắt `router.ts` (4530 dòng) theo trục: REST resource · method dispatch · metadata · storefront | cao |
 | **P6** | Cắt `alumdoor-worker/src/index.ts` (3689 dòng) và `ChildGrid.tsx` (2200 dòng) | cao |
 
