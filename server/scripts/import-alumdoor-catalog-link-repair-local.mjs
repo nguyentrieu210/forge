@@ -200,12 +200,32 @@ if (bomUnresolved.length > 0) {
   throw new Error(`Refusing: ${bomUnresolved.length} định mức trỏ vào mã không tồn tại mà dò không ra đúng một ứng viên: ${JSON.stringify(bomUnresolved.slice(0, 5))}`);
 }
 
+// ── C. đơn vị bán mặc định trỏ vào đơn vị đã gỡ ────────────────────────────
+//
+// `NHOM-LAMAU-PHE` còn để `default_sales_uom = "Thùng"`, mà `Thùng` đã bị gỡ khỏi danh mục đơn
+// vị (E07 cấm). Ô chọn sẽ không tìm ra giá trị đó, nên dòng bán mặt hàng này kẹt ngay từ đầu.
+//
+// Quay về `stock_uom` chứ không đoán: đơn vị tồn kho luôn hợp lệ, và ở ca này nó cũng đúng bằng
+// `default_purchase_uom` — tức cả mua lẫn tồn đều là Kg, chỉ mỗi ô bán lạc.
+const uomFix = [];
+for (const row of await listAll('Item', ['name'])) {
+  const doc = await readDoc('Item', row.name);
+  const current = String(doc?.default_sales_uom ?? '');
+  if (!current || uomNames.has(current)) continue;
+  const fallback = String(doc?.stock_uom ?? '');
+  if (!fallback || !uomNames.has(fallback)) {
+    throw new Error(`Refusing: ${row.name}.default_sales_uom=${current} không hợp lệ và stock_uom=${fallback} cũng không cứu được`);
+  }
+  uomFix.push({ name: row.name, from: current, to: fallback, patch: { default_sales_uom: fallback, modified: doc?.modified } });
+}
+
 // ── ghi ──────────────────────────────────────────────────────────────────────
 //
 // Mọi phép kiểm ở trên đã chạy xong TRƯỚC dòng này. Bản đầu gộp kiểm với ghi nên lần chạy
 // 15:53 đã sửa 3 quy tắc rồi mới dừng ở phiếu định mức — vẫn là trạng thái nửa vời, dù lần đó
 // phần đã ghi tình cờ đúng.
 for (const fix of ruleFixes) await saveDoc('BOM Rule', fix.name, fix.patch);
+for (const fix of uomFix) await saveDoc('Item', fix.name, fix.patch);
 for (const fix of bomFixes) await saveDoc('Bill of Materials', fix.name, fix.patch);
 
 // ── kiểm lại ────────────────────────────────────────────────────────────────
@@ -224,6 +244,8 @@ fs.writeFileSync(outputPath, `${JSON.stringify({
   bom_rule_uom_fixed: ruleFixes.length,
   bom_item_repointed: bomFixes.length,
   bom_item_conflicts: bomConflicts,
+  sales_uom_fixed: uomFix.length,
+  sales_uom_fixes: uomFix.map(({ name, from, to }) => ({ name, from, to })),
   rule_fixes: ruleFixes.map(({ name, from, to }) => ({ name, from, to })),
   bom_fixes: bomFixes.map(({ name, from, to }) => ({ name, from, to })),
   verification_failure_count: failures.length,
@@ -236,4 +258,4 @@ if (bomConflicts.length > 0) {
   // vì "im lặng" và "đã cân nhắc rồi để lại" nhìn giống hệt nhau ở lần đọc log sau.
   console.log(`ALUMDOOR_LINK_REPAIR_BOM_CONFLICT count=${bomConflicts.length} ${bomConflicts.map((row) => `${row.name}→${row.resolves_to}`).join(' ')}`);
 }
-console.log(`ALUMDOOR_LOCAL_LINK_REPAIR_PASS bom_rule_uom=${ruleFixes.length} bom_item=${bomFixes.length} conflicts=${bomConflicts.length}`);
+console.log(`ALUMDOOR_LOCAL_LINK_REPAIR_PASS bom_rule_uom=${ruleFixes.length} bom_item=${bomFixes.length} sales_uom=${uomFix.length} conflicts=${bomConflicts.length}`);

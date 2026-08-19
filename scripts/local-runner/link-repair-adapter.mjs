@@ -93,7 +93,7 @@ export async function mainLinkRepair() {
     const second = path.join(runDir, 'apply-pass2.json');
     run(process.execPath, [importer, second], { cwd: root, env: authEnv(origin), label: 'Link repair pass 2', failureClass: 'VERIFY' });
     const again = JSON.parse(readFileSync(second, 'utf8'));
-    if (Number(again.bom_rule_uom_fixed) !== 0 || Number(again.bom_item_repointed) !== 0) {
+    if (Number(again.bom_rule_uom_fixed) !== 0 || Number(again.bom_item_repointed) !== 0 || Number(again.sales_uom_fixed) !== 0) {
       throw fail('VERIFY', `Link repair idempotency failed: ${JSON.stringify(again)}`);
     }
 

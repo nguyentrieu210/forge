@@ -3425,6 +3425,24 @@
       }
     },
     {
+      "type": "Customer",
+      "name": "CUST-1",
+      "data": {
+        "customer_name": "Acme Corporation",
+        "price_group": "Đại lý",
+        "disabled": true
+      }
+    },
+    {
+      "type": "Customer",
+      "name": "CUST-2",
+      "data": {
+        "customer_name": "Beta Industries",
+        "price_group": "Đại lý",
+        "disabled": true
+      }
+    },
+    {
       "type": "Quy cách cửa",
       "name": "AL71N",
       "data": {

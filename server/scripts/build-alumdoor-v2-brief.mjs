@@ -2075,6 +2075,26 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
     note("DANH MỤC · Warehouse: khai rồi cho ngừng dùng kho mặc định ERP `Stores`");
   }
 
+  /**
+   * `CUST-1` / `CUST-2` — "Acme Corporation" và "Beta Industries".
+   *
+   * Khách hàng mẫu lọt vào lúc dựng máy, y như kho `Stores`. Không nơi nào tham chiếu (đã đo:
+   * 0 chứng từ, 0 dòng con) và thiếu cả `price_group` — trường quyết định giá. Nhưng chúng nằm
+   * trong `master_records` mà brief không khai, nên installer không quản, còn ô chọn khách thì
+   * vẫn mời chúng ra giữa 440 khách thật.
+   *
+   * Khai rồi cho ngừng dùng, không xoá — giữ dấu vết và để installer nắm được.
+   */
+  for (const [code, label] of [["CUST-1", "Acme Corporation"], ["CUST-2", "Beta Industries"]]) {
+    if (brief.fixtures.some((row) => row.type === "Customer" && row.name === code)) continue;
+    brief.fixtures.push({
+      type: "Customer",
+      name: code,
+      data: { customer_name: label, price_group: "Đại lý", disabled: true },
+    });
+  }
+  note("DANH MỤC · Customer: khai rồi cho ngừng dùng 2 khách mẫu lọt vào lúc dựng máy");
+
   // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──
   // `menu: false` chứ không xoá doctype: xoá thì bản ghi cũ thành mồ côi — vẫn nằm trong kho
   // dữ liệu nhưng không còn schema nào mô tả chúng. Cả bốn đang 0 bản ghi nên không mất gì,

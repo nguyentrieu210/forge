@@ -134,19 +134,34 @@ for (const name of LAYERS[layerKey].doctypes) {
     findings.push({ doctype: name, kind: 'thieu_truong_bat_buoc', field, count: rows.length, samples: rows.slice(0, 5) });
   }
 
-  // 3. trùng tên hiển thị
+  // 3. trùng tên hiển thị — TRONG CÙNG MỘT PHẠM VI
+  //
+  // Trùng tên chỉ là lỗi khi hai bản ghi thật sự là một thứ. `Phường Xã` có 243 nhóm trùng tên
+  // nhưng KHÔNG nhóm nào trùng trong cùng một tỉnh — đó là 243 cặp phường khác nhau ở tỉnh khác
+  // nhau, hoàn toàn bình thường. Bản đầu báo hết, tức là chôn hai lỗi thật của `Item` dưới 243
+  // dòng nhiễu.
+  //
+  // Phạm vi lấy trường Link ĐẦU TIÊN của doctype: với phường là tỉnh, với mặt hàng là nhóm hàng.
+  // Thô, nhưng đúng hướng — và khi doctype không có Link nào thì quay về so tên trần.
   const labelField = fields.find((field) => /_(name|ten)$/.test(field.fieldname) && field.fieldtype === 'Data')?.fieldname;
+  const scopeField = fields.find((field) => field.fieldtype === 'Link')?.fieldname;
   if (labelField) {
     const groups = new Map();
-    for (const row of docs) {
-      const key = String(row.data?.[labelField] ?? '').trim().toUpperCase();
-      if (!key) continue;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(row.name);
+    for (const row of docs.filter((entry) => !isDisabled(entry.data))) {
+      const label = String(row.data?.[labelField] ?? '').trim().toUpperCase();
+      if (!label) continue;
+      const scope = scopeField ? String(row.data?.[scopeField] ?? '') : '';
+      const key = `${scope} ${label}`;
+      if (!groups.has(key)) groups.set(key, { label, scope, codes: [] });
+      groups.get(key).codes.push(row.name);
     }
-    const dups = [...groups.entries()].filter(([, rows]) => rows.length > 1);
+    const dups = [...groups.values()].filter((entry) => entry.codes.length > 1);
     if (dups.length > 0) {
-      findings.push({ doctype: name, kind: 'trung_ten', field: labelField, group_count: dups.length, affected: dups.reduce((a, [, rows]) => a + rows.length, 0), samples: dups.slice(0, 5).map(([label, rows]) => ({ label, codes: rows })) });
+      findings.push({
+        doctype: name, kind: 'trung_ten_trong_cung_pham_vi', field: labelField, scope_field: scopeField ?? null,
+        group_count: dups.length, affected: dups.reduce((a, entry) => a + entry.codes.length, 0),
+        samples: dups.slice(0, 5).map((entry) => ({ label: entry.label, scope: entry.scope, codes: entry.codes })),
+      });
     }
   }
 
