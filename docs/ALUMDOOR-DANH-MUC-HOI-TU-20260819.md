@@ -131,23 +131,56 @@ Không cái nào là lỗi dữ liệu. Cả sáu đều là **luật viết ở
 Luật chung rút ra: **chốt cái bất biến, đừng chốt ảnh chụp.** Một chốt chặn đếm số sẽ đỏ mỗi
 lần danh mục thay đổi hợp lệ, và người sửa chỉ việc nâng con số lên — nó không bảo vệ được gì.
 
-## 5. Việc chưa đụng tới, có chủ ý
+## 5. Quy ước mã hàng — đã dựng bộ chuẩn hoá, chờ soát
 
-**Quy ước mã hàng.** `docs/ALUMDOOR-QUY-UOC-MA.md` chốt 29/07 vẫn **chưa được áp dụng chút nào**:
-0% dùng 10 tiền tố chuẩn, 39% nhồi màu vào mã, 96 mã nhồi cả cách bán lẫn bậc diện tích.
-587 mã thực chất chỉ là 433 mặt hàng.
+`docs/ALUMDOOR-QUY-UOC-MA.md` chốt 29/07 nhưng chưa áp: 0% dùng 10 tiền tố chuẩn, 39% nhồi màu,
+96 mã nhồi cả cách bán lẫn bậc diện tích.
 
-`item-master` đã chạy thành công ở §4, nhưng chạy với payload mang **mã cũ** — nó xác nhận
-587 mặt hàng khớp D1 và idempotent, chứ không đổi mã. Đổi mã là việc riêng và nặng hơn nhiều:
+Nay đã có `server/scripts/lib/alumdoor-item-code-convention.mjs` thi hành bốn luật cứng §2, và
+`build-alumdoor-item-code-mapping.mjs` (CHỈ ĐỌC) sinh bảng ánh xạ đầy đủ.
 
-- nó cần một bảng ánh xạ mã cũ → mã mới cho ~430 mặt hàng, mà `QUY-UOC-MA §5` chỉ cho 7 ví dụ;
-- mã là **khoá bản ghi**, nên nó đi vào Item Price, BOM, BOM Rule applicability, lô tồn và
-  mọi chứng từ cũ — đổi mã mà không dựng lại toàn bộ là tạo ra tầng ánh xạ thứ ba;
-- và nó đóng cứng danh tính mặt hàng, nên phải có chủ xưởng duyệt chứ không phải suy từ luật.
+**Kết quả trên 587 mã thật: 587 → 424 mã chuẩn**, 163 mã bị hấp thụ vào 52 họ,
+**0 mã không suy được tiền tố**, 13 mã vượt 24 ký tự.
+
+Bảng để soát: `docs/ALUMDOOR-ANH-XA-MA-HANG-20260819.md` (người đọc) và
+`docs/alumdoor-item-code-mapping.json` (máy đọc).
+
+### Bốn quyết định thiết kế, mỗi cái do dữ liệu thật ép ra
+
+1. **Tiền tố suy từ NHÓM HÀNG, không từ tên.** `TP-TD-AL70` nằm ở nhóm "Cửa CN Đức" với
+   `material_stage = Thành phẩm` ⇒ `CUA`, dù tài liệu có ví dụ `NHOM-AL70` — ví dụ đó nói về
+   nhôm nguyên liệu, một mặt hàng khác.
+2. **Nhóm dòng sản phẩm thắng gợi ý vật liệu trong tên.** 29 mặt hàng `TP-TOLEKEM124*` là CỬA
+   bán theo m², chỉ tình cờ làm bằng tôn.
+3. **Không suy được thì trả `null`, không chọn bừa.** Mã là khoá bản ghi; đoán sai một tiền tố
+   là gán sai danh tính vĩnh viễn.
+4. **Mã quá dài được BÁO chứ không cắt bừa.** Cắt là bịa ra một cái tên xưởng không đọc được.
+
+### Một lỗi thật mà chính bảng ánh xạ bắt được
+
+`NVL-TOLE1.4x270x1.4ly-CRON+TD` bị gộp vào `...CRON`. Nhưng `+TD` ở đuôi là **TỰ DỪNG** — tên
+đầy đủ "RAY SẮT U100-1.4ly (CÓ RON+TỰ DỪNG)" — không phải nhà cung cấp TIẾN ĐẠT. Gộp là mất
+hẳn một biến thể sản phẩm. Nay token nhà cung cấp chỉ bị gỡ khi đứng ĐẦU, và có test ghim.
+
+Đây đúng là lý do phải **sinh bảng để soát** thay vì áp luật mù: một quy tắc đọc trên giấy thì
+hợp lý, chạy trên 587 mã thật mới lộ ra chỗ nó ăn nhầm.
+
+### Ba nhóm cần chủ xưởng quyết trước khi đổi mã
+
+| Nhóm | Số lượng | Vì sao máy không quyết được |
+|---|---:|---|
+| Vượt 24 ký tự | 13 | Rút ngắn là đặt tên, mà tên phải để xưởng đọc được |
+| Họ bị gộp | 52 | Gộp là ĐÍCH (§5 nêu ví dụ 5 mã `AL595` về một), nhưng phải cố ý |
+| Chưa suy được tiền tố | 0 | — |
+
+### Còn lại: bước đổi mã thật
+
+Bộ chuẩn hoá và bảng ánh xạ đã xong; bước **thi hành** thì chưa, và cố ý chưa:
+
+- mã đi vào Item Price, BOM, BOM Rule applicability, lô tồn và mọi chứng từ, nên đổi mã phải
+  là một adapter có bảo vệ riêng, không phải vài câu SQL;
+- và nó đóng cứng danh tính mặt hàng, nên phải chạy **sau khi** chủ xưởng duyệt 13 tên rút gọn
+  và 52 họ gộp ở trên.
 
 Riêng `TRONBO` trong mã cần nói rõ: nhồi cách bán vào mã hàng chính là **dựng lại `Sales Option`
-qua cửa sau** — thứ đã bị xoá ở `46cff213` và audit 16/08 cấm đưa lại. Nằm ở khoá bản ghi là
-hình thức khó gỡ nhất.
-
-**Đề nghị:** làm thành một đợt riêng, bắt đầu bằng bảng ánh xạ sinh tự động rồi chủ xưởng soát,
-chứ không nhét vào cùng đợt hội tụ danh mục này.
+qua cửa sau** — thứ đã bị xoá ở `46cff213` và audit 16/08 cấm đưa lại.
