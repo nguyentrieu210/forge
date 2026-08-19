@@ -2164,3 +2164,36 @@
 .mf-shell [data-radix-popper-content-wrapper] > * {
   box-shadow: var(--mf-overlay-shadow);
 }
+
+/* ── Mục menu theo vben ───────────────────────────────────────────────────────
+ * Số lấy đúng `@core/ui-kit/menu-ui/src/components/menu.vue`:
+ *
+ *   mặc định   cao 38px · bo 0 · tràn hết ngang · cách nhau 2px · đệm ngang 12px
+ *   is-rounded lề ngang 8px · bo 8px
+ *
+ * Forge đang ở dạng bo nên lấy đúng biến thể `is-rounded`, chỉ nâng chiều cao 32 → 38px
+ * cho khớp thang. Màu vẫn là bộ `--sidebar-*` của Forge — sidebar graphite tối là quy ước
+ * ERP đã có, không đổi theo vben.
+ *
+ * Danh sách transition cũng của vben: nó animate cả `padding` vì mục menu đổi đệm khi
+ * sidebar thu gọn — thiếu nó thì lúc thu/mở chữ nhảy giật. */
+/* Phải nêu đủ `.mf-shell-sidebar` vì luật màu của sidebar graphite ở trên có độ ưu tiên
+ * (0,3,0); viết ngắn hơn thì min-height không bao giờ ăn. */
+.mf-shell .mf-shell-sidebar .mf-shell-nav-item,
+.mf-shell .mf-shell-nav-item {
+  min-height: 38px;
+  margin-inline: 8px;
+  margin-block-end: 2px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  font-size: var(--mf-font-menu);
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    padding 150ms ease,
+    border-color 150ms ease;
+}
+
+/* Mật độ gọn vẫn phải gọn hơn: vben không có chế độ này, giữ tỉ lệ của Forge. */
+[data-density="compact"] .mf-shell .mf-shell-sidebar .mf-shell-nav-item,
+[data-density="compact"] .mf-shell .mf-shell-nav-item { min-height: 32px; }
