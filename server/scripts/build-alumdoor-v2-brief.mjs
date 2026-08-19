@@ -2189,6 +2189,104 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
     note(`DANH MỤC · +Bậc diện tích (${TIERS.length} bậc — chiều tra giá rời khỏi mã hàng)`);
   }
 
+
+  // ── Ngưỡng chọn Motor / UPS ──
+  //
+  // `BANG-GIA-CHINH-THUC-31-07-2026 §6` là một BẢNG TRA, và nguồn nói thẳng vì sao nó phải nằm
+  // trong app: "chọn lò xo thế nào thì để thợ tự chọn — motor thì CÓ LUẬT RÕ RÀNG nên app tra được".
+  //
+  // Trước 2026-08-19 luật đó không ở đâu cả. 25 motor đã có trong `Item`, nhưng ngưỡng diện tích
+  // (`<15m²` … `<55m²`) thì chỉ nằm trong đầu người bán. Chọn dư một cấp là khách trả thừa vài
+  // triệu; chọn thiếu một cấp là motor kéo quá tải rồi hỏng trong hạn bảo hành.
+  //
+  // Hai luật KHÁC NHAU nên tách hai trường, không gộp làm một:
+  //   · motor chọn theo DIỆN TÍCH CỬA
+  //   · UPS chọn theo TẢI MOTOR, không theo diện tích
+  if (!hasDoctype("Ngưỡng chọn Motor")) {
+    brief.doctypes.push({
+      "//": [
+        "Bảng tra, không phải bảng giá — giá vẫn ở Item Price. Ở đây chỉ trả lời:",
+        "cửa chừng này m² thì lắp được motor nào.",
+      ],
+      name: "Ngưỡng chọn Motor",
+      label: "Ngưỡng chọn Motor / UPS",
+      icon: "cog",
+      group: "Danh mục",
+      naming: "field:rule_code",
+      title: "item_code",
+      list: ["rule_code", "item_code", "selection_basis", "max_area_sqm", "max_motor_kg", "disabled"],
+      search: ["rule_code", "item_code"],
+      fields: [
+        "rule_code:Data*! Mã luật",
+        "item_code:Link(Item)*! Motor / UPS",
+        {
+          "//": "Motor tra theo diện tích cửa; UPS tra theo tải motor. Hai luật khác nhau, không gộp.",
+          fieldname: "selection_basis", label: "Tra theo", fieldtype: "Select",
+          options: "Diện tích cửa\nTải motor", required: true, default: "Diện tích cửa",
+        },
+        {
+          "//": "Nguồn ghi `<15m²` ⇒ cận trên MỞ: diện tích phải NHỎ HƠN số này, không bằng.",
+          fieldname: "max_area_sqm", label: "Dùng cho cửa dưới (m²)", fieldtype: "Float",
+          depends_on: "eval:doc.selection_basis == 'Diện tích cửa'",
+        },
+        {
+          "//": "Nguồn ghi `motor <600KG` ⇒ cũng là cận trên MỞ.",
+          fieldname: "max_motor_kg", label: "Dùng cho motor dưới (kg)", fieldtype: "Float",
+          depends_on: "eval:doc.selection_basis == 'Tải motor'",
+        },
+        "includes:Small Text Bộ đi kèm",
+        "sort_order:Int=(0) Thứ tự",
+        "nguon:Data*! Nguồn số liệu",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Kinh doanh": "r", "Kế toán": "r", "Thủ kho": "r", "Sản xuất": "r" },
+    });
+
+    // Chép nguyên bảng §6, không thêm bớt. Mã hàng để đúng dạng đang có trong Item.
+    const MOTORS = [
+      ["MOTO-TANKER-400", "TP-MT-TANKER400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-600", "TP-MT-TANKER600KG", 18, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-800", "TP-MT-TANKER800KG", 27, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-ALUMAX-400", "TP-MT-ALUMAX400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-ALUMAX-600", "TP-MT-ALUMAX600KG", 25, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-JG-300", "TP-MT-JG300KG", 18, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-400", "TP-MT-JG400KG", 28, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-600", "TP-MT-JG600KG", 36, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-JG-800", "TP-MT-JG800KG", 42, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-JG-1000", "TP-MT-JG1000KG", 48, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-JG-1500", "TP-MT-JG1500KG", 55, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-300", "TP-MT-YHLD300KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-500", "TP-MT-YHLD500KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-800", "TP-MT-YHLD800KG", 25, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-1000", "TP-MT-YHLD1000KG", 35, "Motor + Lắc 40 + Bộ ĐK"],
+    ];
+    const UPS = [
+      ["PIN-E800", "TP-UPS-E800", 600, "9 AH"],
+      ["PIN-E1000", "TP-UPS-E1000", 1000, "12 AH"],
+    ];
+    const SOURCE = "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)";
+    brief.fixtures.push(
+      ...MOTORS.map(([code, item, area, includes], index) => ({
+        type: "Ngưỡng chọn Motor",
+        name: code,
+        data: {
+          rule_code: code, item_code: item, selection_basis: "Diện tích cửa",
+          max_area_sqm: area, includes, sort_order: (index + 1) * 10, nguon: SOURCE, disabled: false,
+        },
+      })),
+      ...UPS.map(([code, item, kg, includes], index) => ({
+        type: "Ngưỡng chọn Motor",
+        name: code,
+        data: {
+          rule_code: code, item_code: item, selection_basis: "Tải motor",
+          max_motor_kg: kg, includes, sort_order: (MOTORS.length + index + 1) * 10, nguon: SOURCE, disabled: false,
+        },
+      })),
+    );
+    if (!brief.navigation.items.includes("Ngưỡng chọn Motor")) brief.navigation.items.push("Ngưỡng chọn Motor");
+    note(`DANH MỤC · +Ngưỡng chọn Motor (${MOTORS.length} motor theo diện tích + ${UPS.length} UPS theo tải)`);
+  }
+
   // ── Item Price nhận bậc ──
   // Một mặt hàng, tám giá. Trước đây là tám mặt hàng, mỗi cái một giá.
   {

@@ -754,7 +754,8 @@
       "BOM Rule",
       "Quy cách cửa",
       "Nguyên nhân cửa lỗi",
-      "Bậc diện tích"
+      "Bậc diện tích",
+      "Ngưỡng chọn Motor"
     ]
   },
   "fixtures": [
@@ -3638,6 +3639,244 @@
         "min_area_sqm": 10,
         "sort_order": 80,
         "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-TANKER-400",
+      "data": {
+        "rule_code": "MOTO-TANKER-400",
+        "item_code": "TP-MT-TANKER400KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 15,
+        "includes": "Motor + Lắc 32 + Bộ ĐK",
+        "sort_order": 10,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-TANKER-600",
+      "data": {
+        "rule_code": "MOTO-TANKER-600",
+        "item_code": "TP-MT-TANKER600KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 18,
+        "includes": "Motor + Lắc 32 + Bộ ĐK",
+        "sort_order": 20,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-TANKER-800",
+      "data": {
+        "rule_code": "MOTO-TANKER-800",
+        "item_code": "TP-MT-TANKER800KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 27,
+        "includes": "Motor + Lắc 38 + Bộ ĐK",
+        "sort_order": 30,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-ALUMAX-400",
+      "data": {
+        "rule_code": "MOTO-ALUMAX-400",
+        "item_code": "TP-MT-ALUMAX400KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 15,
+        "includes": "Motor + Lắc 32 + Bộ ĐK",
+        "sort_order": 40,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-ALUMAX-600",
+      "data": {
+        "rule_code": "MOTO-ALUMAX-600",
+        "item_code": "TP-MT-ALUMAX600KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 25,
+        "includes": "Motor + Lắc 32 + Bộ ĐK",
+        "sort_order": 50,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-JG-300",
+      "data": {
+        "rule_code": "MOTO-JG-300",
+        "item_code": "TP-MT-JG300KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 18,
+        "includes": "Motor + Lắc 33 + Bộ ĐK",
+        "sort_order": 60,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-JG-400",
+      "data": {
+        "rule_code": "MOTO-JG-400",
+        "item_code": "TP-MT-JG400KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 28,
+        "includes": "Motor + Lắc 33 + Bộ ĐK",
+        "sort_order": 70,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-JG-600",
+      "data": {
+        "rule_code": "MOTO-JG-600",
+        "item_code": "TP-MT-JG600KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 36,
+        "includes": "Motor + Lắc 36 + Bộ ĐK",
+        "sort_order": 80,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-JG-800",
+      "data": {
+        "rule_code": "MOTO-JG-800",
+        "item_code": "TP-MT-JG800KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 42,
+        "includes": "Motor + Lắc 38 + Bộ ĐK",
+        "sort_order": 90,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-JG-1000",
+      "data": {
+        "rule_code": "MOTO-JG-1000",
+        "item_code": "TP-MT-JG1000KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 48,
+        "includes": "Motor + Lắc 40 + Bộ ĐK",
+        "sort_order": 100,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-JG-1500",
+      "data": {
+        "rule_code": "MOTO-JG-1500",
+        "item_code": "TP-MT-JG1500KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 55,
+        "includes": "Motor + Lắc 40 + Bộ ĐK",
+        "sort_order": 110,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-YHLD-300",
+      "data": {
+        "rule_code": "MOTO-YHLD-300",
+        "item_code": "TP-MT-YHLD300KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 15,
+        "includes": "Motor + Lắc 36 + Bộ ĐK",
+        "sort_order": 120,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-YHLD-500",
+      "data": {
+        "rule_code": "MOTO-YHLD-500",
+        "item_code": "TP-MT-YHLD500KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 15,
+        "includes": "Motor + Lắc 36 + Bộ ĐK",
+        "sort_order": 130,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-YHLD-800",
+      "data": {
+        "rule_code": "MOTO-YHLD-800",
+        "item_code": "TP-MT-YHLD800KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 25,
+        "includes": "Motor + Lắc 40 + Bộ ĐK",
+        "sort_order": 140,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "MOTO-YHLD-1000",
+      "data": {
+        "rule_code": "MOTO-YHLD-1000",
+        "item_code": "TP-MT-YHLD1000KG",
+        "selection_basis": "Diện tích cửa",
+        "max_area_sqm": 35,
+        "includes": "Motor + Lắc 40 + Bộ ĐK",
+        "sort_order": 150,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "PIN-E800",
+      "data": {
+        "rule_code": "PIN-E800",
+        "item_code": "TP-UPS-E800",
+        "selection_basis": "Tải motor",
+        "max_motor_kg": 600,
+        "includes": "9 AH",
+        "sort_order": 160,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Ngưỡng chọn Motor",
+      "name": "PIN-E1000",
+      "data": {
+        "rule_code": "PIN-E1000",
+        "item_code": "TP-UPS-E1000",
+        "selection_basis": "Tải motor",
+        "max_motor_kg": 1000,
+        "includes": "12 AH",
+        "sort_order": 170,
+        "nguon": "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)",
         "disabled": false
       }
     }
@@ -13046,6 +13285,68 @@
         "Chủ xưởng": "rwc",
         "Kế toán": "rwc",
         "Kinh doanh": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
+      }
+    },
+    {
+      "//": [
+        "Bảng tra, không phải bảng giá — giá vẫn ở Item Price. Ở đây chỉ trả lời:",
+        "cửa chừng này m² thì lắp được motor nào."
+      ],
+      "name": "Ngưỡng chọn Motor",
+      "label": "Ngưỡng chọn Motor / UPS",
+      "icon": "cog",
+      "group": "Danh mục",
+      "naming": "field:rule_code",
+      "title": "item_code",
+      "list": [
+        "rule_code",
+        "item_code",
+        "selection_basis",
+        "max_area_sqm",
+        "max_motor_kg",
+        "disabled"
+      ],
+      "search": [
+        "rule_code",
+        "item_code"
+      ],
+      "fields": [
+        "rule_code:Data*! Mã luật",
+        "item_code:Link(Item)*! Motor / UPS",
+        {
+          "//": "Motor tra theo diện tích cửa; UPS tra theo tải motor. Hai luật khác nhau, không gộp.",
+          "fieldname": "selection_basis",
+          "label": "Tra theo",
+          "fieldtype": "Select",
+          "options": "Diện tích cửa\nTải motor",
+          "required": true,
+          "default": "Diện tích cửa"
+        },
+        {
+          "//": "Nguồn ghi `<15m²` ⇒ cận trên MỞ: diện tích phải NHỎ HƠN số này, không bằng.",
+          "fieldname": "max_area_sqm",
+          "label": "Dùng cho cửa dưới (m²)",
+          "fieldtype": "Float",
+          "depends_on": "eval:doc.selection_basis == 'Diện tích cửa'"
+        },
+        {
+          "//": "Nguồn ghi `motor <600KG` ⇒ cũng là cận trên MỞ.",
+          "fieldname": "max_motor_kg",
+          "label": "Dùng cho motor dưới (kg)",
+          "fieldtype": "Float",
+          "depends_on": "eval:doc.selection_basis == 'Tải motor'"
+        },
+        "includes:Small Text Bộ đi kèm",
+        "sort_order:Int=(0) Thứ tự",
+        "nguon:Data*! Nguồn số liệu",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "r",
         "Thủ kho": "r",
         "Sản xuất": "r"
       }
