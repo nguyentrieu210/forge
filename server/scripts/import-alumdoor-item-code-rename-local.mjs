@@ -201,9 +201,16 @@ async function renameCompositeNamed(doctype, renames) {
 
 async function pass(label, renames) {
   const existing = await listNames('Item');
-  let renamedItems = 0;
-  let alreadyDone = 0;
+
+  // KIỂM TRƯỚC, GHI SAU.
+  //
+  // Bản đầu gộp hai việc vào một vòng lặp: vừa đổi tên vừa gom danh sách vắng mặt, rồi mới ném
+  // lỗi ở cuối. Lần chạy 14:23 ngày 19/08 vì thế đã đổi 15 mã rồi mới dừng — đúng cái trạng
+  // thái nửa vời mà cả adapter này sinh ra để tránh. Nguyên nhân gốc là lỗi phân trang, nhưng
+  // thứ biến một phép đếm sai thành dữ liệu ghi dở là thứ tự này.
   const missing = [];
+  let alreadyDone = 0;
+  const todo = [];
   for (const [from, to] of renames) {
     if (!existing.has(from)) {
       if (existing.has(to)) { alreadyDone += 1; continue; }
@@ -211,11 +218,16 @@ async function pass(label, renames) {
       continue;
     }
     if (existing.has(to)) throw new Error(`Refusing: both ${from} and ${to} exist; rename would collide`);
-    await renameOnce('Item', from, to, true);
-    renamedItems += 1;
+    todo.push([from, to]);
   }
   if (missing.length > 0) {
     throw new Error(`Refusing: ${missing.length} planned items are absent and their target is absent too (first: ${missing.slice(0, 5).join(', ')})`);
+  }
+
+  let renamedItems = 0;
+  for (const [from, to] of todo) {
+    await renameOnce('Item', from, to, true);
+    renamedItems += 1;
   }
 
   // Đổi tên Item xong thì cascade đã sửa payload; còn TÊN của hai doctype tự đặt tên từ mã hàng
