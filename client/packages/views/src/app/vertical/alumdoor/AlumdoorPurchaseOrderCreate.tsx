@@ -167,13 +167,12 @@ function applyChildPreview(row: PurchaseLine, preview: Json, childMeta: DocTypeM
 }
 
 function clearItemDerived(line: PurchaseLine, itemCode: unknown): PurchaseLine {
-  const preserved: PurchaseLine = {
+  return {
     name: line.name,
     doctype: line.doctype,
     item_code: itemCode,
     qty: 1,
   } as PurchaseLine;
-  return preserved;
 }
 
 function nearlyEqual(left: unknown, right: unknown, tolerance = 0.0001): boolean {
@@ -204,6 +203,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
   const itemCache = useRef(new Map<string, Json>());
   const skipSupplierAutofillOnce = useRef(false);
   const pricingPreviewSeq = useRef(0);
+  const rowPreviewSeq = useRef(new Map<string, number>());
 
   const documentName = text(props.name);
   const isExisting = Boolean(documentName);
@@ -462,24 +462,30 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     const index = currentRows.findIndex((line, lineIndex) => purchaseLineKey(line, lineIndex) === key);
     if (index < 0) return;
     const current = currentRows[index]!;
-    const actualValue = current[fieldname] !== undefined ? current[fieldname] : value;
+    const actualValue = fieldname === "item_code"
+      ? value
+      : current[fieldname] !== undefined ? current[fieldname] : value;
     let changed = { ...current, [fieldname]: actualValue, _loading: true, _error: "" } as PurchaseLine;
-    if (fieldname === "item_code" && text(actualValue) !== text(current.item_code)) changed = { ...clearItemDerived(current, actualValue), _loading: true };
-    if (fieldname === "item_code" && !text(actualValue)) changed = { ...clearItemDerived(current, undefined), _loading: false };
+    if (fieldname === "item_code") {
+      changed = text(actualValue)
+        ? { ...clearItemDerived(current, actualValue), _loading: true, _error: "" }
+        : { ...clearItemDerived(current, undefined), _loading: false, _error: "" };
+    }
     const nextRows = [...currentRows];
     nextRows[index] = changed;
     replaceRows(nextRows);
     if (!text(changed.item_code)) return;
 
-    const seq = ++pricingPreviewSeq.current;
+    const seq = (rowPreviewSeq.current.get(key) ?? 0) + 1;
+    rowPreviewSeq.current.set(key, seq);
     void resolveRowsFromAuthority(nextRows, fieldname, key)
       .then((resolved) => {
-        if (pricingPreviewSeq.current !== seq) return;
+        if (rowPreviewSeq.current.get(key) !== seq) return;
         replaceRows(resolved.rows);
         setHeaderState(resolved.header);
       })
       .catch((error) => {
-        if (pricingPreviewSeq.current !== seq) return;
+        if (rowPreviewSeq.current.get(key) !== seq) return;
         patchLine(key, { _loading: false, _error: mapError(error).message });
       });
   }, [patchLine, replaceRows, resolveRowsFromAuthority, setHeaderState]);
@@ -531,7 +537,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     } catch (error) {
       if (pricingPreviewSeq.current === seq) toast.error(mapError(error).message);
     } finally {
-      if (pricingPreviewSeq.current === seq) setRefreshing(false);
+      setRefreshing(false);
     }
   }, [childMeta, replaceRows, resolveRowsFromAuthority, setHeaderState]);
 
@@ -550,7 +556,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
       void previewPurchaseDocument(rowsRef.current, headerRef.current, "pricing_context")
         .then((resolved) => {
           if (pricingPreviewSeq.current !== seq) return;
-          replaceRows(resolved.rows);
+          replaceRows(resolved.rows.map((row) => ({ ...row, _loading: false })));
           setHeaderState(resolved.header);
         })
         .catch((error) => {
