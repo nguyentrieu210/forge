@@ -30,6 +30,13 @@ function round(value: number): number {
   return Math.round((value + Number.EPSILON) * 1e6) / 1e6;
 }
 
+function quantityText(value: unknown): string {
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? parsed.toLocaleString("vi-VN", { maximumFractionDigits: 6 })
+    : "";
+}
+
 async function listDocs<T extends Json>(
   call: ProductionPlatformCall,
   doctype: string,
@@ -73,22 +80,32 @@ async function loadBomRules(call: ProductionPlatformCall): Promise<BomRuleMaster
   return docs.filter((row): row is BomRuleMaster => Boolean(row && text(row.rule_code)));
 }
 
+/**
+ * Values handed to a BOM Rule are PER ONE parent set. set_count is multiplied only by
+ * evaluateBomRuleMaster afterwards. Sales billable_area_sqm can already include all sets,
+ * so it is never passed through unchanged when a per-set area can be derived.
+ */
 function geometryValues(args: Json): Json {
+  const setCount = positive(args.set_count) ?? 1;
   const width = positive(args.width_m);
   const widthRay = positive(args.width_pb_ray_m) ?? width;
   const widthPlastic = positive(args.width_pb_nhua_m) ?? width;
   const height = positive(args.height_m);
   const cut = positive(args.cut_width_m);
-  const area = positive(args.billable_area_sqm)
-    ?? (width && height ? round(width * height * (positive(args.set_count) ?? 1)) : undefined);
+  const totalArea = positive(args.billable_area_sqm);
+  const areaPerSet = width && height
+    ? round(width * height)
+    : totalArea
+      ? round(totalArea / setCount)
+      : undefined;
   const values: Json = {
     width_m: width,
     height_m: height,
     mesh_height_m: positive(args.mesh_height_m),
     cut_width_m: cut,
-    billable_area_sqm: area,
+    billable_area_sqm: areaPerSet,
     leaf_count: positive(args.leaf_count),
-    set_count: positive(args.set_count) ?? 1,
+    set_count: 1,
     PB_RAY_RONG: widthRay,
     PB_NHUA_RONG: widthPlastic,
     PB_RONG: width,
@@ -110,6 +127,23 @@ function conversionFor(item: ItemDoc, fromUom: string): { factor: number; stock_
   const matched = rows.find((row) => normalizedUom(row.uom) === normalizedUom(fromUom) && positive(row.conversion_factor));
   const factor = positive(matched?.conversion_factor);
   return factor ? { factor, stock_uom: stockUom } : null;
+}
+
+function componentRuleNote(
+  result: ReturnType<typeof evaluateBomRuleMaster>,
+  stockQty: number | null,
+  stockUom: string,
+  warning: string,
+): string {
+  const parts = [
+    `Quy tắc BOM ${result.rule_code} v${result.rule_version}: ${result.formula_display}`,
+    `${quantityText(result.result_per_piece)} ${result.consumption_uom}/đơn vị`,
+    `${quantityText(result.qty_per_set)} đơn vị/bộ`,
+    `${quantityText(result.consumption_qty)} ${result.consumption_uom} tổng tiêu hao`,
+  ];
+  if (stockQty !== null && stockUom) parts.push(`${quantityText(stockQty)} ${stockUom} xuất kho`);
+  if (warning) parts.push(warning);
+  return parts.filter(Boolean).join(" · ");
 }
 
 export async function enrichSalesBomPreviewWithRules(
@@ -152,6 +186,7 @@ export async function enrichSalesBomPreviewWithRules(
         ...component,
         bom_rule_missing: true,
         bom_rule_warning: `Chưa map Quy tắc BOM cho ${itemCode}.`,
+        note: [`Chưa map Quy tắc BOM cho ${itemCode}.`, text(component.note)].filter(Boolean).join(" · "),
       };
     }
 
@@ -159,7 +194,11 @@ export async function enrichSalesBomPreviewWithRules(
       const result = evaluateBomRuleMaster(rule, values, { set_count: setCount });
       const item = itemByCode.get(itemCode) ?? {};
       const conversion = conversionFor(item, result.consumption_uom);
+      const stockUom = conversion?.stock_uom ?? text(item.stock_uom);
       const stockQty = conversion ? round(result.consumption_qty * conversion.factor) : null;
+      const conversionWarning = conversion || !stockUom || normalizedUom(stockUom) === normalizedUom(result.consumption_uom)
+        ? ""
+        : `Thiếu quy đổi ${result.consumption_uom} → ${stockUom} trên Item ${itemCode}.`;
       const {
         width_pb_ray_m: _widthPbRay,
         width_pb_nhua_m: _widthPbNhua,
@@ -167,9 +206,10 @@ export async function enrichSalesBomPreviewWithRules(
         height_m: _height,
         mesh_height_m: _meshHeight,
         cut_width_m: _cutWidth,
+        sales_uom_message: _oldSalesUomMessage,
         ...base
       } = component;
-      void _widthPbRay; void _widthPbNhua; void _width; void _height; void _meshHeight; void _cutWidth;
+      void _widthPbRay; void _widthPbNhua; void _width; void _height; void _meshHeight; void _cutWidth; void _oldSalesUomMessage;
       return {
         ...base,
         bom_rule_code: result.rule_code,
@@ -179,18 +219,20 @@ export async function enrichSalesBomPreviewWithRules(
         formula_snapshot: result.formula_snapshot,
         result_per_piece: result.result_per_piece,
         qty_per_set: result.qty_per_set,
-        set_count: result.set_count,
+        parent_set_count: result.set_count,
         consumption_qty: result.consumption_qty,
         consumption_uom: result.consumption_uom,
+        // Current Sales BOM table reads set_count as the per-set quantity column. Keep that
+        // compatibility projection while the explicit qty_per_set field remains authoritative.
+        set_count: result.qty_per_set,
         qty: result.consumption_qty,
         uom: result.consumption_uom,
         ...(text(rule.result_kind) === "LENGTH" ? { length_m: result.result_per_piece } : {}),
-        stock_uom: conversion?.stock_uom ?? text(item.stock_uom),
+        stock_uom: stockUom,
         stock_qty: stockQty,
         conversion_factor: conversion?.factor ?? null,
-        ...(conversion || !text(item.stock_uom) || normalizedUom(item.stock_uom) === normalizedUom(result.consumption_uom) ? {} : {
-          uom_warning: `Thiếu quy đổi ${result.consumption_uom} → ${text(item.stock_uom)} trên Item ${itemCode}.`,
-        }),
+        note: componentRuleNote(result, stockQty, stockUom, conversionWarning),
+        ...(conversionWarning ? { uom_warning: conversionWarning } : {}),
       };
     } catch (error) {
       return {
@@ -199,6 +241,7 @@ export async function enrichSalesBomPreviewWithRules(
         bom_rule_version: Number(rule.version ?? 1),
         formula_display: text(rule.formula_display),
         quantity_error: error instanceof Error ? error.message : "Không tính được Quy tắc BOM.",
+        note: [text(rule.formula_display), error instanceof Error ? error.message : "Không tính được Quy tắc BOM."].filter(Boolean).join(" · "),
       };
     }
   });
