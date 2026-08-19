@@ -235,8 +235,25 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
    * không tồn tại — đo được 24 dòng như vậy. Quy về một mối tại đây, không bắt từng chỗ gọi nhớ.
    */
   const addRule = (rule) => {
-    const canonical = itemsByCode.get(clean(rule.itemCode))?.item_code;
-    const normalized = canonical && canonical !== rule.itemCode ? { ...rule, itemCode: canonical } : rule;
+    const source = clean(rule.itemCode);
+    const canonical = itemsByCode.get(source)?.item_code;
+    if (!canonical || canonical === source) return addUnique(pricingRules, pricingRuleDocument(rule), "pricing_rule", blockers);
+    // TÊN cũng phải theo mã đang dùng, không chỉ trường mã.
+    //
+    // Tên chính sách là `ALUMDOOR-PR:{mã}:{biến thể}` — nối bằng dấu hai chấm. Chỉ sửa trường mã
+    // mà để tên mang mã nguồn thì D1 (đã đổi tên theo mã mới) và payload gọi CÙNG MỘT luật bằng
+    // hai tên: importer thấy 24 luật "thừa" ở D1 và 24 luật "mới" trong payload.
+    //
+    // Thay theo ĐOẠN, không thay chuỗi con — mã hàng không chứa dấu hai chấm nên phép này chắc.
+    const rename = (value) => (typeof value === "string" && value.includes(":")
+      ? value.split(":").map((part) => (part === source ? canonical : part)).join(":")
+      : value);
+    const normalized = {
+      ...rule,
+      itemCode: canonical,
+      ...(rule.name ? { name: rename(rule.name) } : {}),
+      ...(rule.exclusiveGroup ? { exclusiveGroup: rename(rule.exclusiveGroup) } : {}),
+    };
     return addUnique(pricingRules, pricingRuleDocument(normalized), "pricing_rule", blockers);
   };
   const addGroupVariantPrices = (itemGroup, variant, lineage) => {
