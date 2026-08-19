@@ -28,10 +28,25 @@ test("alumdoor-v2 generator is idempotent and preserves runtime contracts", () =
     ["Cutting Policy", "geometry_profile"], ["Cutting Policy", "geometry_rules"], ["Cut Order Item", "source_batch_no"],
   ]) assert.ok(field(generated, ...required), `missing regenerated ${required.join(".")}`);
   for (const dt of generated.doctypes) {
+    /**
+     * `sales_option` vẫn bị cấm; `sales_mode` thì KHÔNG — hai thứ khác nhau.
+     *
+     * Commit 46cff213 khai tử DANH MỤC "Cách bán" (`Sales Option`/`Sales Package`) cùng package
+     * resolver và split-pricing. Nó không nói gì về `sales_mode`, và `SALES-BOM-SOURCE-MAP §5`
+     * nói ngược lại: "trọn bộ / chỉ lá / tách món quyết định PHẠM VI CẤU PHẦN được giao/sinh
+     * ra, không được mặc định đồng nhất với một danh mục cách bán".
+     *
+     * Bản cũ của test này gộp cả hai. Hệ quả đo được: cách giao không có chỗ trên dòng bán nên
+     * nó bò vào MÃ HÀNG — 94 mặt hàng mang `TRONBO`/`TACHMON` ngay trong mã, mỗi biến thể một
+     * BOM Template riêng. Đó chính là `Sales Package` quay lại ở tầng khó gỡ nhất.
+     *
+     * Từ 2026-08-19 `sales_mode` là Select hai giá trị trên dòng bán, mặc định "Trọn bộ", KHÔNG
+     * Link tới doctype nào. Doctype khai tử vẫn phải vắng mặt — dòng dưới giữ nguyên.
+     */
     assert.ok(!["Sales Option", "Sales Package"].includes(dt.name), `deprecated doctype ${dt.name}`);
-    for (const f of dt.fields ?? []) assert.ok(!["sales_option", "sales_mode"].includes(nameOf(f)), `deprecated ${dt.name}.${nameOf(f)}`);
-    for (const f of dt.list ?? []) assert.ok(!["sales_option", "sales_mode"].includes(f), `deprecated ${dt.name}.list:${f}`);
-    for (const f of dt.search ?? []) assert.ok(!["sales_option", "sales_mode"].includes(f), `deprecated ${dt.name}.search:${f}`);
+    for (const f of dt.fields ?? []) assert.ok(nameOf(f) !== "sales_option", `deprecated ${dt.name}.${nameOf(f)}`);
+    for (const f of dt.list ?? []) assert.ok(f !== "sales_option", `deprecated ${dt.name}.list:${f}`);
+    for (const f of dt.search ?? []) assert.ok(f !== "sales_option", `deprecated ${dt.name}.search:${f}`);
   }
   const stockReturn = doc(generated, "Stock Return");
   for (const required of ["party_doctype", "party", "return_against_doctype", "return_against"])

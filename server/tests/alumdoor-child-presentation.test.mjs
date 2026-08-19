@@ -108,9 +108,14 @@ test("golden Sales and Purchase compact/full policies survive canonical UI-polic
 });
 
 test("current Sales operator contract sells plain Item Price money, never Sales Option/Package authority", () => {
-  // Cách bán/gói bán đã bị loại bỏ khỏi nền tảng: mọi mặt hàng bán theo giá STANDARD
-  // thẳng từ Item Price. `sales_option`/`sales_mode` không còn là field của bất kỳ
-  // doctype dòng bán nào — thấy lại chúng nghĩa là cơ chế cũ đã trôi dạt trở lại.
+  // DANH MỤC "Cách bán" (`Sales Option`/`Sales Package`) đã bị loại bỏ: mọi mặt hàng bán theo
+  // giá STANDARD thẳng từ Item Price, không qua package resolver hay split-pricing. Thấy lại
+  // `sales_option` nghĩa là cơ chế cũ đã trôi dạt trở lại.
+  //
+  // `sales_mode` thì KHÁC và được phép: nó là FACT CỦA DÒNG BÁN (Trọn bộ / Tách món), thứ
+  // `SALES-BOM-SOURCE-MAP §5` bảo "không được mặc định đồng nhất với một danh mục cách bán".
+  // Gộp hai thứ làm một chính là lý do cách giao phải bò vào mã hàng: 94 mặt hàng mang
+  // `TRONBO`/`TACHMON` trong mã, mỗi biến thể một BOM Template riêng.
   const brief = sourceBrief();
   applyAlumdoorChildPresentation(brief);
   const pkg = compileWithUiPolicies(brief);
@@ -118,9 +123,7 @@ test("current Sales operator contract sells plain Item Price money, never Sales 
   for (const name of ["Quotation Item", "Sales Order Item", "Delivery Note Item", "Sales Invoice Item"]) {
     const sales = compiledDoctype(pkg, name);
     const fields = new Map(sales.fields.map((field) => [field.fieldname, field]));
-    for (const fieldname of ["sales_option", "sales_mode"]) {
-      assert.equal(fields.has(fieldname), false, `${name}.${fieldname} phải xóa khỏi schema — cách bán đã bị loại bỏ`);
-    }
+    assert.equal(fields.has("sales_option"), false, `${name}.sales_option phải xóa khỏi schema — danh mục Cách bán đã bị loại bỏ`);
   }
 
   for (const name of ["Quotation Item", "Sales Order Item"]) {
