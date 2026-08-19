@@ -797,9 +797,19 @@ function runUom(repoRoot, runDir) {
   });
 
   const report = JSON.parse(readFileSync(after, 'utf8'));
+  /**
+   * Luật là "MỌI đơn vị chuẩn đều đã tồn tại", không phải "đúng 19 cái".
+   *
+   * Con số 19 khoá cứng ở đây là chỗ thứ ba cùng một hằng số — sau chốt chặn trong
+   * backup-alumdoor-uom-local.mjs và test alumdoor-uom-catalog. Gỡ `Thùng` theo E07 làm cả
+   * ba đỏ, trong đó chỗ này đỏ với thông báo `canonical=18 existing=18` — hai số KHỚP nhau
+   * mà vẫn báo hỏng. Một hậu kiểm nói sai lý do còn tệ hơn không có hậu kiểm.
+   */
+  const canonicalCount = Number(report.canonical_count);
+  const existingCount = Number(report.existing_count);
   if (
-    Number(report.canonical_count) !== 19 ||
-    Number(report.existing_count) !== 19 ||
+    !Number.isInteger(canonicalCount) || canonicalCount <= 0 ||
+    existingCount !== canonicalCount ||
     report.records?.some((row) => !row.existed)
   ) {
     throw executionError(
