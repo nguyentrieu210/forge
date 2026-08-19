@@ -92,7 +92,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.9.0";
+brief.version = "2.10.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -2056,6 +2056,25 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
     if (reparented > 0) note(`DANH MỤC · Item Group: nhặt lại ${reparented} nhóm con mất cha sau khi cho cha ngừng dùng`);
   }
 
+  /**
+   * `Stores` — kho mặc định của ERP lọt vào từ lúc dựng máy.
+   *
+   * Nằm trong `master_records`, KHÔNG có tên kho (trường bắt buộc), không vai trò, không chứng
+   * từ nào nhắc tới. Nhưng brief không khai nên installer không quản, mà picker lại đọc hợp hai
+   * kho — nên nó vẫn hiện ra cho người dùng chọn.
+   *
+   * Gỡ đúng cách là KHAI rồi cho ngừng dùng: có khai thì installer mới nắm, và `disabled` giữ
+   * lại dấu vết thay vì xoá trắng. Cùng lối đã dùng cho 22 màu và 11 nhóm hàng.
+   */
+  if (!brief.fixtures.some((row) => row.type === "Warehouse" && row.name === "Stores")) {
+    brief.fixtures.push({
+      type: "Warehouse",
+      name: "Stores",
+      data: { warehouse_name: "Stores", is_group: false, disabled: true },
+    });
+    note("DANH MỤC · Warehouse: khai rồi cho ngừng dùng kho mặc định ERP `Stores`");
+  }
+
   // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──
   // `menu: false` chứ không xoá doctype: xoá thì bản ghi cũ thành mồ côi — vẫn nằm trong kho
   // dữ liệu nhưng không còn schema nào mô tả chúng. Cả bốn đang 0 bản ghi nên không mất gì,
@@ -2346,27 +2365,36 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
       permissions: { "Chủ xưởng": "rwc", "Kinh doanh": "r", "Kế toán": "r", "Thủ kho": "r", "Sản xuất": "r" },
     });
 
-    // Chép nguyên bảng §6, không thêm bớt. Mã hàng để đúng dạng đang có trong Item.
+    // Chép nguyên bảng §6, không thêm bớt.
+    //
+    // Mã hàng cập nhật 19/08 sau hai đợt đổi mã. Trước đó cả 17 dòng trỏ mã cũ và treo hết:
+    // cascade đổi tên chỉ theo `documents`/`document_children`, KHÔNG theo `master_records` —
+    // mà danh mục này nằm ở đấy. Vá ở D1 là vá vào chỗ sẽ bị đè khi cài lại app, nên sửa nguồn.
+    //
+    // Hai chỗ ghi lại chứ không tự quyết:
+    //   · `MOTO-TANKE800` thiếu chữ R — gần như chắc là lỗi gõ, nhưng đổi mã là đổi danh tính.
+    //   · Bình lưu điện có HAI bộ mã: `PIN-UPS-E800I/E1000I` (đúng nhóm) và `PK-UPS-ALE800/
+    //     ALE1000` (nhóm phụ kiện). Chọn bộ `PIN-`; bộ kia trông như trùng lặp.
     const MOTORS = [
-      ["MOTO-TANKER-400", "TP-MT-TANKER400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-TANKER-600", "TP-MT-TANKER600KG", 18, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-TANKER-800", "TP-MT-TANKER800KG", 27, "Motor + Lắc 38 + Bộ ĐK"],
-      ["MOTO-ALUMAX-400", "TP-MT-ALUMAX400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-ALUMAX-600", "TP-MT-ALUMAX600KG", 25, "Motor + Lắc 32 + Bộ ĐK"],
-      ["MOTO-JG-300", "TP-MT-JG300KG", 18, "Motor + Lắc 33 + Bộ ĐK"],
-      ["MOTO-JG-400", "TP-MT-JG400KG", 28, "Motor + Lắc 33 + Bộ ĐK"],
-      ["MOTO-JG-600", "TP-MT-JG600KG", 36, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-JG-800", "TP-MT-JG800KG", 42, "Motor + Lắc 38 + Bộ ĐK"],
-      ["MOTO-JG-1000", "TP-MT-JG1000KG", 48, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-JG-1500", "TP-MT-JG1500KG", 55, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-YHLD-300", "TP-MT-YHLD300KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-YHLD-500", "TP-MT-YHLD500KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
-      ["MOTO-YHLD-800", "TP-MT-YHLD800KG", 25, "Motor + Lắc 40 + Bộ ĐK"],
-      ["MOTO-YHLD-1000", "TP-MT-YHLD1000KG", 35, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-TANKER-400", "MOTO-TANKER400", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-600", "MOTO-TANKER600", 18, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-800", "MOTO-TANKE800", 27, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-ALUMAX-400", "MOTO-ALUMAX400", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-ALUMAX-600", "MOTO-ALUMAX600", 25, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-JG-300", "MOTO-JG300", 18, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-400", "MOTO-JG400", 28, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-600", "MOTO-JG600", 36, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-JG-800", "MOTO-JG800", 42, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-JG-1000", "MOTO-JG1000", 48, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-JG-1500", "MOTO-JG1500", 55, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-300", "MOTO-YHLD300", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-500", "MOTO-YHLD500", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-800", "MOTO-YHLD800", 25, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-1000", "MOTO-YHLD1000", 35, "Motor + Lắc 40 + Bộ ĐK"],
     ];
     const UPS = [
-      ["PIN-E800", "TP-UPS-E800", 600, "9 AH"],
-      ["PIN-E1000", "TP-UPS-E1000", 1000, "12 AH"],
+      ["PIN-E800", "PIN-UPS-E800I", 600, "9 AH"],
+      ["PIN-E1000", "PIN-UPS-E1000I", 1000, "12 AH"],
     ];
     const SOURCE = "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)";
     brief.fixtures.push(

@@ -95,20 +95,33 @@ for (const name of LAYERS[layerKey].doctypes) {
   const fields = fieldsOf(meta);
 
   // 1. hai kho khớp nhau
-  const docActive = new Set(docs.filter((row) => !isDisabled(row.data)).map((row) => row.name));
-  const masterActive = new Set(masters.filter((row) => !row.disabled).map((row) => row.name));
-  const onlyDoc = [...docActive].filter((row) => !masterActive.has(row));
-  const onlyMaster = [...masterActive].filter((row) => !docActive.has(row));
-  // Danh mục chỉ tồn tại ở MỘT kho là bình thường (fixture thuần, hoặc doctype thuần). Chỉ báo
-  // khi cả hai kho đều có dữ liệu mà lại lệch nhau — đó mới là hai bản ghi tranh nhau.
-  if (docActive.size > 0 && masterActive.size > 0 && (onlyDoc.length || onlyMaster.length)) {
-    findings.push({ doctype: name, kind: 'hai_kho_lech', only_documents: onlyDoc.slice(0, 8), only_master_records: onlyMaster.slice(0, 8), counts: { documents: docActive.size, master_records: masterActive.size } });
+  //
+  // Một tên chỉ có ở MỘT kho là chuyện thường: fixture bổ sung bản ghi mà kho documents không
+  // có, và ngược lại. Bản đầu báo cả những ca đó nên L0 đỏ vì `Currency` chỉ có USD ở fixture —
+  // nhiễu thuần tuý.
+  //
+  // Cái đáng báo là CÙNG MỘT TÊN mà hai kho nói ngược nhau: một bên đang dùng, bên kia đã ngừng.
+  // Picker đọc HỢP hai kho nên bản ghi đó lúc hiện lúc không, tuỳ đường nào chạm tới trước.
+  const docState = new Map(docs.map((row) => [row.name, isDisabled(row.data)]));
+  const masterState = new Map(masters.map((row) => [row.name, Boolean(row.disabled)]));
+  const contradictions = [];
+  for (const [key, docDisabled] of docState) {
+    if (!masterState.has(key)) continue;
+    if (masterState.get(key) !== docDisabled) contradictions.push({ name: key, documents_disabled: docDisabled, master_disabled: masterState.get(key) });
+  }
+  if (contradictions.length > 0) {
+    findings.push({ doctype: name, kind: 'hai_kho_noi_nguoc_nhau', count: contradictions.length, samples: contradictions.slice(0, 5) });
   }
 
   // 2. trường bắt buộc
   const required = fields.filter((field) => field.required);
   const missing = new Map();
-  for (const row of [...docs, ...masters.map((entry) => ({ name: entry.name, data: entry.data }))]) {
+  // Bản ghi đã ngừng dùng thì không phải giữ đủ trường — nó ngoài vòng sử dụng.
+  const liveForRequired = [
+    ...docs.filter((row) => !isDisabled(row.data)),
+    ...masters.filter((row) => !row.disabled).map((entry) => ({ name: entry.name, data: entry.data })),
+  ];
+  for (const row of liveForRequired) {
     for (const field of required) {
       const value = row.data?.[field.fieldname];
       if (value === undefined || value === null || value === '') {
@@ -145,7 +158,13 @@ for (const name of LAYERS[layerKey].doctypes) {
       : activeNames(field.options);
     if (allowed.size === 0) continue;
     const bad = new Map();
-    for (const row of [...docs, ...masters.map((entry) => ({ name: entry.name, data: entry.data }))]) {
+    // Bản ghi đã ngừng dùng trỏ vào bản ghi đã ngừng dùng là bình thường — cả hai đều ngoài
+    // vòng sử dụng. Soi chúng thì mỗi lần cho một nhóm nghỉ hưu lại đẻ ra một loạt báo giả.
+    const liveRows = [
+      ...docs.filter((row) => !isDisabled(row.data)),
+      ...masters.filter((row) => !row.disabled).map((entry) => ({ name: entry.name, data: entry.data })),
+    ];
+    for (const row of liveRows) {
       const value = row.data?.[field.fieldname];
       if (value === undefined || value === null || value === '') continue;
       if (!allowed.has(String(value))) bad.set(String(value), (bad.get(String(value)) ?? 0) + 1);
