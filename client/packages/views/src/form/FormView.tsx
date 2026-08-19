@@ -658,10 +658,19 @@ function Field({ id, rf, width, form, registry, services, docName, parentDoctype
         ) : (
           <Control field={field} id={id} value={f.value} onChange={(v) => { f.onChange(v); if (fieldState.error) form.clearErrors(field.fieldname); }} setFieldValue={(fieldname, value) => form.setValue(fieldname, value, { shouldDirty: true, shouldTouch: true, shouldValidate: true })} readOnly={rf.readOnly} masked={rf.masked} error={fieldState.error?.message} describedBy={fieldState.error ? `${id}-error` : undefined} required={rf.required} label={displayLabel} services={services} docname={docName} linkTarget={linkTarget} parentDoctype={parentDoctype} docValues={controlValues} roles={roles} />
         );
+        /**
+         * Dấu bắt buộc đặt TRƯỚC nhãn, theo vben (`form-render/form-label.vue`: `mr-0.5
+         * text-destructive`).
+         *
+         * Không phải chuyện thẩm mỹ: đặt sau nhãn thì dấu `*` rơi vào một vị trí khác nhau ở
+         * mỗi trường, tuỳ nhãn dài ngắn — muốn biết còn ô nào bắt buộc chưa điền thì phải đọc
+         * hết từng nhãn. Đặt trước thì tất cả thẳng một mép trái, quét dọc một lượt là thấy.
+         * Trên biểu mẫu vài chục trường của ERP, khác biệt đó là thật.
+         */
         const label = (
           <>
+            {rf.required ? <span className="mf-required mr-0.5 text-destructive" aria-hidden="true">*</span> : null}
             {displayLabel}
-            {rf.required ? <span className="mf-required ml-0.5 text-destructive" aria-hidden="true">*</span> : null}
           </>
         );
         const wrapper = cn(
