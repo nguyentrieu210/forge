@@ -567,25 +567,43 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
   const overrides: Record<string, Json> = {};
   if (changed === "item_code") for (const name of ITEM_DERIVED_FIELDS) clearIfField(clear, fields, name);
 
+  const inventoryMode = text(item.inventory_mode) || "Hàng thường";
+  const measurementProfileName = text(item.measurement_profile);
+  const measurementProfile = measurementProfileName
+    ? await readDoc(call, "Measurement Profile", measurementProfileName)
+    : null;
+  const aluminum = inventoryMode === "Nhôm cây/lá";
+  const requireColor = measurementProfile ? checked(measurementProfile.require_color) : aluminum;
+  const requireLength = measurementProfile ? checked(measurementProfile.require_length) : aluminum;
+  const requirePieces = measurementProfile ? checked(measurementProfile.require_piece_qty) : aluminum;
+  const trackBundles = measurementProfile ? checked(measurementProfile.track_bundle_qty) : false;
+
   const plan: Array<[string, unknown]> = [
-    ["stock_uom", item.stock_uom], ["inventory_mode", item.inventory_mode || "Hàng thường"],
+    ["stock_uom", item.stock_uom], ["inventory_mode", inventoryMode],
     ["measurement_profile", item.measurement_profile], ["material_specification", item.material_specification],
     ["item_name", item.item_name], ["description", item.description], ["min_area_sqm", item.min_area_sqm],
     ["door_type", item.door_type], ["purchase_kg_per_m2", item.purchase_kg_per_m2], ["leaf_divisor_m", item.leaf_divisor_m],
   ];
   for (const [name, value] of plan) setIfField(patch, fields, name, value);
+
   const allowedColors = await allowedColorNamesForGroup(call, text(item.item_group), "purchase");
   const currentColor = text(row.color ?? row.colour);
-  if (currentColor && !allowedColors.includes(currentColor)) {
+  if (!requireColor || (currentColor && !allowedColors.includes(currentColor))) {
     clearIfField(clear, fields, "color");
     clearIfField(clear, fields, "colour");
   }
   for (const name of ["color", "colour"]) {
     fieldOverride(overrides, fields, name, {
+      hidden: requireColor ? 0 : 1,
+      reqd: requireColor ? 1 : 0,
+      read_only: requireColor ? 0 : 1,
+      label: "Màu",
+      depends_on: null,
+      mandatory_depends_on: null,
       link_filters: JSON.stringify([["Item Color", "name", "in", allowedColors.length ? allowedColors : ["__NO_ALLOWED_COLOR_CONFIG__"]]]),
     });
   }
-  if (changed === "item_code" && !text(row.color ?? row.colour) && text(item.default_color)) {
+  if (requireColor && changed === "item_code" && !text(row.color ?? row.colour) && text(item.default_color)) {
     setIfField(patch, fields, "color", item.default_color);
     setIfField(patch, fields, "colour", item.default_color);
   }
@@ -612,7 +630,7 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
   }
 
   const effective = { ...row, ...patch };
-  if (text(item.inventory_mode) === "Nhôm cây/lá" && fields.has("theoretical_kg")) {
+  if (aluminum && fields.has("theoretical_kg")) {
     const length = positive(effective.length_m);
     const bars = positive(effective.qty_bar);
     const kgPerM = positive(effective.theoretical_kg_per_m);
@@ -625,10 +643,85 @@ async function previewPurchase(call: PlatformCall, args: Json, row: Json, fields
       clearIfField(clear, fields, "qty");
     }
   }
-  if (text(item.inventory_mode) !== "Nhôm cây/lá") {
+  if (!aluminum) {
     for (const name of ["length_m", "qty_bundle", "qty_bar", "so_no", "total_length_m", "actual_kg_per_m", "material_specification", "theoretical_kg_per_m", "theoretical_kg", "is_stamped"]) clearIfField(clear, fields, name);
   }
-  if (!["Tấm/Kính", "Thành phẩm theo m2"].includes(text(item.inventory_mode))) clearIfField(clear, fields, "actual_kg_per_sqm");
+  if (!["Tấm/Kính", "Thành phẩm theo m2"].includes(inventoryMode)) clearIfField(clear, fields, "actual_kg_per_sqm");
+
+  fieldOverride(overrides, fields, "material_specification", {
+    hidden: aluminum ? 0 : 1,
+    reqd: 0,
+    read_only: 1,
+    label: "Quy cách",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "length_m", {
+    hidden: requireLength ? 0 : 1,
+    reqd: requireLength ? 1 : 0,
+    read_only: requireLength ? 0 : 1,
+    label: "Dài một cây/đoạn (m)",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "theoretical_kg_per_m", {
+    hidden: aluminum ? 0 : 1,
+    reqd: 0,
+    read_only: 1,
+    label: "Kg/m",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "qty_bundle", {
+    hidden: trackBundles ? 0 : 1,
+    reqd: 0,
+    read_only: trackBundles ? 0 : 1,
+    label: "Số bó",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "qty_bar", {
+    hidden: requirePieces ? 0 : 1,
+    reqd: requirePieces ? 1 : 0,
+    read_only: requirePieces ? 0 : 1,
+    label: "Số cây/lá",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "theoretical_kg", {
+    hidden: aluminum ? 0 : 1,
+    reqd: 0,
+    read_only: 1,
+    label: "Kg đặt",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "is_stamped", {
+    hidden: aluminum ? 0 : 1,
+    reqd: aluminum ? 1 : 0,
+    read_only: aluminum ? 0 : 1,
+    label: "Dập",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "qty", {
+    hidden: aluminum ? 1 : 0,
+    reqd: aluminum ? 0 : 1,
+    read_only: aluminum ? 1 : 0,
+    label: aluminum ? "SL tính giá (Kg)" : quantityLabelForUom(transactionUom),
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "uom", {
+    hidden: 0,
+    reqd: 1,
+    read_only: 1,
+    label: "ĐVT",
+    depends_on: null,
+    mandatory_depends_on: null,
+  });
+  fieldOverride(overrides, fields, "rate", { hidden: 0, label: "Đơn giá\n(VNĐ)" });
+  fieldOverride(overrides, fields, "amount", { hidden: 0, read_only: 1, label: "Thành tiền\n(VNĐ)" });
 
   applyAverageWeight(patch, clear, fields, { ...row, ...patch });
   applyCommonComputed(patch, clear, fields, { ...row, ...patch });
