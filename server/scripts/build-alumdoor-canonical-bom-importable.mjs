@@ -26,7 +26,16 @@ if (refs.length !== Number(strictAudit.source_reference_count ?? strict.source_r
   throw new Error(`strict Gate B source reference count mismatch: source=${refs.length} strict=${strictAudit.source_reference_count ?? strict.source_reference_count}`);
 }
 
-const itemMap = new Map(items.items.map((item) => [clean(item.item_code), item]));
+// Tra được bằng CẢ mã đang dùng lẫn mã gốc trong bảng tính: tham chiếu đến từ bản trích nguồn
+// (mã bảng tính) còn danh sách mặt hàng đã dịch sang mã đang dùng. Chỉ khoá một bên là hàng nghìn
+// tham chiếu "mất mặt hàng" dù mặt hàng có đủ.
+const itemMap = new Map();
+for (const item of items.items) {
+  const canonicalCode = String(item.item_code ?? "").trim();
+  itemMap.set(canonicalCode, item);
+  const originalCode = String(item.source_item_code_original ?? "").trim();
+  if (originalCode && !itemMap.has(originalCode)) itemMap.set(originalCode, item);
+}
 const parentMap = new Map(records
   .filter((row) => row?.source_role === 'sellable_product' && Number.isFinite(Number(row.source_parent_row)))
   .map((row) => [Number(row.source_parent_row), row]));

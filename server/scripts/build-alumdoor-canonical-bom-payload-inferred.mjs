@@ -21,7 +21,16 @@ const preflight = preflightAlumdoorItemSourceRecords(records);
 if (preflight.blocker_count !== 0) throw new Error(`BOM build requires zero Item source blockers; got ${preflight.blocker_count}`);
 const clean = (v) => String(v ?? "").trim();
 const parentRowOf = (record) => Number(record?.source_parent_row);
-const itemMap = new Map(itemPayload.items.map((row)=>[clean(row.item_code),row]));
+// Tra được bằng CẢ mã đang dùng lẫn mã gốc trong bảng tính: tham chiếu đến từ bản trích nguồn
+// (mã bảng tính) còn danh sách mặt hàng đã dịch sang mã đang dùng. Chỉ khoá một bên là hàng nghìn
+// tham chiếu "mất mặt hàng" dù mặt hàng có đủ.
+const itemMap = new Map();
+for (const row of itemPayload.items) {
+  const canonicalCode = String(row.item_code ?? "").trim();
+  itemMap.set(canonicalCode, row);
+  const originalCode = String(row.source_item_code_original ?? "").trim();
+  if (originalCode && !itemMap.has(originalCode)) itemMap.set(originalCode, row);
+}
 const itemCodes = new Set(itemMap.keys());
 const blockers=[]; const excluded=[]; const parents=new Map(); const excludedParents=new Map(); const groups=new Map();
 
