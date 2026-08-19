@@ -235,10 +235,10 @@ export function AppShell(props: AppShellProps) {
         {mobileOpen ? <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => { setMobileOpen(false); window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus()); }} aria-hidden="true" /> : null}
         <aside id="mf-primary-navigation" role="navigation" aria-label="Điều hướng ứng dụng" className={cn(
           "mf-shell-sidebar flex shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200",
-          // 17rem, not 15.5. Vietnamese menu labels ("Trung tâm phân quyền", "Danh mục
-          // ứng dụng") plus an icon, a chevron and the pin button's reserved `pr-7` do not
-          // fit in 15.5rem, so they truncated to something the user has to guess at.
-          collapsed ? "w-14" : "w-[17rem]",
+          // Bề rộng do TOKEN quyết (`--mf-sidebar-width` / `--mf-sidebar-collapsed` trong
+          // styles.css), không chép cứng ở đây nữa: trước đây cùng một bề rộng được đặt ở hai
+          // nơi, và luật CSS `[data-collapsed]` lặng lẽ thắng class Tailwind — sửa một chỗ thì
+          // chỗ kia trôi mà không ai báo. Lý do 17rem (nhãn tiếng Việt dài) ghi ở token.
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-[min(19rem,88vw)] max-md:shadow-xl",
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
         )} data-collapsed={collapsed ? "true" : "false"}>

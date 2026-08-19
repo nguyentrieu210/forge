@@ -1693,7 +1693,14 @@
    * Forge trước đây: topbar 3rem (48px), sidebar 13.75rem (220px), thu gọn 3.5rem (56px),
    * và KHÔNG có thanh tab. */
   --mf-topbar-height: 50px;
-  --mf-sidebar-width: 224px;
+  /* vben để 224px, Forge KHÔNG lấy con số đó.
+   *
+   * Nhãn menu tiếng Việt ("Trung tâm phân quyền", "Danh mục ứng dụng") cộng icon, chevron và
+   * chỗ dành cho nút ghim không vừa 224px — chúng bị cắt thành thứ người dùng phải đoán. Đây
+   * là lỗi đã gặp và đã sửa một lần, ghi trong AppShellV2; chép lại số của vben là tái hiện
+   * đúng nó. Bề rộng sidebar phụ thuộc ĐỘ DÀI TỪ của ngôn ngữ, không phải phong cách. */
+  --mf-sidebar-width: 17rem;
+  /* Còn bề rộng thu gọn thì lấy đúng vben: chỉ chứa icon nên không dính chuyện ngôn ngữ. */
   --mf-sidebar-collapsed: 60px;
   --mf-sidebar-mixed: 80px;
   --mf-tabbar-height: 38px;
@@ -1899,7 +1906,14 @@
    * Forge trước đây: topbar 3rem (48px), sidebar 13.75rem (220px), thu gọn 3.5rem (56px),
    * và KHÔNG có thanh tab. */
   --mf-topbar-height: 50px;
-  --mf-sidebar-width: 224px;
+  /* vben để 224px, Forge KHÔNG lấy con số đó.
+   *
+   * Nhãn menu tiếng Việt ("Trung tâm phân quyền", "Danh mục ứng dụng") cộng icon, chevron và
+   * chỗ dành cho nút ghim không vừa 224px — chúng bị cắt thành thứ người dùng phải đoán. Đây
+   * là lỗi đã gặp và đã sửa một lần, ghi trong AppShellV2; chép lại số của vben là tái hiện
+   * đúng nó. Bề rộng sidebar phụ thuộc ĐỘ DÀI TỪ của ngôn ngữ, không phải phong cách. */
+  --mf-sidebar-width: 17rem;
+  /* Còn bề rộng thu gọn thì lấy đúng vben: chỉ chứa icon nên không dính chuyện ngôn ngữ. */
   --mf-sidebar-collapsed: 60px;
   --mf-sidebar-mixed: 80px;
   --mf-tabbar-height: 38px;
