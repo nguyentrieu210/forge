@@ -134,6 +134,7 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P10** ✅ | Chốt hai câu hỏi giao diện treo ở mục 5: luật hiển thị tiền, và số phận khối `design`. Xem mục 10 | thấp |
 | **P11** ✅ | Kéo 56 biến alias + 28 hex thô về token chính danh, gỡ hẳn `v3.css`, `transition-all` 9 → 0. Xem mục 11 | trung bình |
 | **P12** ✅ | Lỗi server về đúng ô gây lỗi; ghim tên truy cập cho nút icon. Xem mục 12 | thấp |
+| **P13** ✅ | Design lần đầu được kiểm chứng trên trình duyệt: chuỗi khởi động, dải tổng trùng, skeleton vô hình, trạng thái rỗng. Xem mục 13 | trung bình |
 
 Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 
@@ -475,3 +476,71 @@ Ghi lại vì cách đo sai còn đáng nhớ hơn kết luận sai:
 client typecheck xanh · `pnpm build` xanh (`main-base` 324.93 kB, không đổi) ·
 baseline **17 rớt / 158 test**, đúng mốc, không rớt mới (mốc cũ báo 2 rớt mới chính là hai test
 mồ côi đã sửa ở P9).
+
+## 13. P13 — design, lần đầu được kiểm chứng trên trình duyệt (19/08)
+
+Khác mọi pha trước, pha này không suy từ code mà **nhìn**. Dựng stack local rồi chụp trước–sau
+trên bản build thật, đăng nhập thật.
+
+### 13.1 Dựng được stack để nhìn — và hai cái bẫy
+
+| Bẫy | Thực tế |
+|---|---|
+| `tenant-worker` trả `401 Missing trusted identity context` | config mặc định là `AUTH_MODE=production`, đòi identity do **gateway** ký; mà gateway lại bind control-plane **remote**. Đường local đúng là `wrangler.alumdoor-local.jsonc` (`AUTH_MODE=development`) |
+| Cổng 8799 có `workerd` không giết được | đó là Windows service `ForgeAlumdoorBackend` đang chạy thật, không phải tiến trình rác. Phải dùng cổng khác |
+| Đăng nhập qua `/api/method/login` trần rồi vẫn 403 | thiếu CSRF token; phải để chính form của app đăng nhập |
+| Tenant trắng | app có chuỗi phụ thuộc: `alumdoor` → `vn-accounting` → `hrm`. Cài ngược lên gốc |
+
+Công cụ chụp giữ lại: `client/e2e-forge/capture-ui-baseline.mjs` + script `capture:ui`, kèm
+runbook đầy đủ trong header file. Ảnh chụp bị `.gitignore` — chúng là bằng chứng của một lần rà
+soát, không phải nguồn.
+
+### 13.2 Mỗi lần tải trang: ba màn toàn khung, hai ngôn ngữ thị giác
+
+Chuỗi quan sát được: nền **đen** "Đang kết nối với Forge…" → nền **xám sáng** một dòng chữ trần
+giữa màn hình → Desk. Chặng giữa `return` TRƯỚC khi Shell kịp render nên khung điều hướng biến
+mất rồi hiện lại.
+
+Tệ hơn: `BusinessContextProvider` **có** khai `error` và `reload` nhưng không nơi nào đọc. Lời
+gọi phạm vi không trả lời thì `loading` ở nguyên `true` và màn hình đứng vĩnh viễn — không lỗi,
+không đường thoát. Quan sát trực tiếp khi worker local treo.
+
+Dòng đó được chép ở **sáu** nơi, gồm `create-metaforge-app/templates.ts` (mọi app sinh mới thừa
+hưởng). Nay `packages/shell/src/scope-gate.tsx` là nhà duy nhất; cả ba trạng thái render BÊN
+TRONG Shell; sau 8 giây có nút thử lại.
+
+### 13.3 Dải "Tổng bản ghi / Đang hiển thị"
+
+Chiếm một băng trên toolbar ở **mọi** màn danh sách của **mọi** app để in hai con số đã có sẵn ở
+thanh phân trang (`1–20 / 587`); phần tổng theo cột thì đã có ở hàng `Σ trang` dưới chân bảng,
+nơi con số nằm đúng dưới cột nó cộng. Gỡ. Ảnh sau khi sửa xác nhận không mất thông tin nào.
+
+### 13.4 Skeleton gần như vô hình
+
+`bg-muted` (#f8f9fb) trên nền `--background` (#f5f6f8) — chênh ~1%. Chính `styles.css` đã tách
+`--muted`/`--secondary` thành hai bậc; skeleton lấy nhầm bậc. Đổi sang `bg-secondary`.
+
+### 13.5 Trạng thái rỗng nói hai kiểu
+
+Danh sách dùng `RuntimeEmptyState` (icon + tiêu đề + giải thích + hành động), báo cáo chỉ in một
+dòng chữ xám. Nay dùng chung.
+
+### 13.6 Màn đăng nhập thôi quảng cáo chương trình đã revert
+
+`LoginForm` in "Forge V3" và "Forge Vben Next" — số hiệu của chương trình bị revert bởi
+`cf5dd0da5`, và tên template admin Vue mà nó mô phỏng.
+
+### 13.7 KHÔNG đụng
+
+Cam/đen là **brand hợp lệ** — `brand.ts` khai 4 brand và Alumdoor chọn `orange`. Không phải di
+chứng V3.
+
+### 13.8 Còn mở
+
+Ảnh cho thấy tiêu đề cột của **báo cáo** có màu thương hiệu còn của **danh sách** thì trung tính
+— trong khi CSS nói ngược lại (`.mf-shell .mf-list-view thead th` mới là bên lấy
+`--header-foreground`). Chưa đo được bằng `getComputedStyle` vì stack local đã tắt; **chưa sửa,
+chưa kết luận**.
+
+Cổng sau P13: client typecheck xanh · `pnpm build` xanh · baseline **17 rớt / 162 test**, đúng
+mốc, không rớt mới.
