@@ -139,3 +139,22 @@ test("TD ở ĐUÔI là TỰ DỪNG, không phải nhà cung cấp — không đ
   const supplier = item({ item_code: "TP-TD-AL595", item_name: "AL595", item_group: "Nan/lá cửa" });
   assert.equal(canonicalItemCode(supplier).code, "NHOM-AL595");
 });
+
+test("gộp bản trọn bộ với bản tách món bị CHẶN — hai bộ cấu phần khác nhau", () => {
+  // Đo trên D1 19/08: `TP-LUOI-SN13x26-STD - TRONBO` có BOM Template 5 cấu phần,
+  // bản `- TACHMON` chỉ có 1. Gộp mã là mất phần trọn bộ.
+  const rows = ["TP-LUOI-SN13x26-STD - TRONBO", "TP-LUOI-SN13x26-STD - TACHMON"]
+    .map((code) => item({ item_code: code, item_name: code, item_group: "Cửa Lưới" }));
+  const mapping = buildCodeMapping(rows);
+  assert.equal(mapping.summary.canonical_count, 1, "hai mã rơi vào cùng một họ");
+  assert.equal(mapping.summary.unsafe_merges, 1, "và họ đó phải bị đánh dấu KHÔNG an toàn");
+  assert.match(mapping.unsafeMerges[0][2].reason, /trọn bộ|cách giao/);
+});
+
+test("gộp các mã chỉ khác màu vẫn AN TOÀN", () => {
+  const rows = ["NVL-AL595-GS", "NVL-AL595-VK", "NVL-AL595-THO"]
+    .map((code) => item({ item_code: code, item_name: "AL595", item_group: "Nan/lá cửa" }));
+  const mapping = buildCodeMapping(rows);
+  assert.equal(mapping.summary.canonical_count, 1);
+  assert.equal(mapping.summary.unsafe_merges, 0);
+});

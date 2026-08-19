@@ -58,8 +58,10 @@ const report = {
   /** Gộp là ĐÍCH, không phải lỗi — nhưng phải cố ý, nên liệt kê đủ mã nguồn của mỗi họ. */
   merged_families: mapping.merged
     .sort((a, b) => b[1].length - a[1].length)
-    .map(([code, group]) => ({
+    .map(([code, group, safety]) => ({
       canonical: code,
+      safe_to_merge: safety.safe,
+      reason: safety.reason,
       sources: group.map((row) => row.original),
       dropped: [...new Set(group.flatMap((row) => row.warnings))],
     })),
@@ -86,7 +88,8 @@ if (markdownOut) {
   lines.push(`- Mã chuẩn sau khi gộp: **${mapping.summary.canonical_count}**`);
   lines.push(`- Bị hấp thụ do trùng sau khi bỏ màu/cách bán/bậc: **${mapping.summary.absorbed}** (${mapping.summary.merged_families} họ)`);
   lines.push(`- Chưa suy được tiền tố: **${mapping.summary.unresolved_count}**`);
-  lines.push(`- Vượt ${ALUMDOOR_CODE_MAX_LENGTH} ký tự, cần đặt tên tay: **${tooLong.length}**`, "");
+  lines.push(`- Vượt ${ALUMDOOR_CODE_MAX_LENGTH} ký tự, cần đặt tên tay: **${tooLong.length}**`);
+  lines.push(`- ⚠️ Họ CHƯA ĐƯỢC gộp vì cấu phần khác nhau: **${mapping.summary.unsafe_merges}**`, "");
   if (mapping.unresolved.length) {
     lines.push("## Chưa suy được tiền tố", "", "| Mã cũ | Nhóm hàng | Lý do |", "|---|---|---|");
     for (const row of mapping.unresolved) lines.push(`| \`${row.original}\` | ${row.item.item_group ?? ""} | ${row.why} |`);
@@ -99,11 +102,25 @@ if (markdownOut) {
     for (const row of tooLong) lines.push(`| \`${row.original}\` | \`${row.code}\` | ${row.code.length} | ${row.item.item_name ?? ""} |`);
     lines.push("");
   }
-  lines.push("## Các họ bị gộp", "",
-    "Gộp là ĐÍCH của đợt này — `QUY-UOC-MA §5` nêu chính ví dụ năm mã `AL595` gộp về một.",
-    "Nhưng gộp phải cố ý, nên đây là toàn bộ danh sách.", "",
+  const unsafe = report.merged_families.filter((f) => !f.safe_to_merge);
+  if (unsafe.length) {
+    lines.push("## ⚠️ CHƯA ĐƯỢC GỘP — cấu phần khác nhau", "",
+      "Gộp mấy họ này là **mất phần trọn bộ**. Đo trên D1 19/08:",
+      "`TP-LUOI-SN13x26-STD - TRONBO` có BOM Template **5 cấu phần**, bản `- TACHMON` chỉ có **1**.",
+      "",
+      "Khi `Sales Package` bị khai tử, fact \"phạm vi cấu phần được giao\" không còn chỗ trên dòng",
+      "bán nên nó bò vào MÃ HÀNG. Phải để BOM phân giải theo `sales_mode` trước, rồi mới gộp mã.",
+      "", "| Mã chuẩn | Số mã cũ | Lý do | Mã nguồn |", "|---|---:|---|---|");
+    for (const family of unsafe) {
+      lines.push(`| \`${family.canonical}\` | ${family.sources.length} | ${family.reason} | ${family.sources.map((s) => `\`${s}\``).join(" · ")} |`);
+    }
+    lines.push("");
+  }
+  const safe = report.merged_families.filter((f) => f.safe_to_merge);
+  lines.push("## Gộp an toàn — chỉ khác màu hoặc nhà cung cấp", "",
+    "Đây là ĐÍCH của đợt này: `QUY-UOC-MA §5` nêu chính ví dụ năm mã `AL595` gộp về một.", "",
     "| Mã chuẩn | Số mã cũ | Mã nguồn |", "|---|---:|---|");
-  for (const family of report.merged_families) {
+  for (const family of safe) {
     lines.push(`| \`${family.canonical}\` | ${family.sources.length} | ${family.sources.map((s) => `\`${s}\``).join(" · ")} |`);
   }
   lines.push("");

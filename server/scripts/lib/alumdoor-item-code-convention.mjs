@@ -303,6 +303,31 @@ export function violatesCodeConvention(code) {
  * đó: năm mã `AL595` khác nhau chỉ vì màu gộp về một `NHOM-AL595`. Nhưng gộp phải CỐ Ý, nên
  * mỗi họ được liệt kê đầy đủ mã nguồn để người duyệt nhìn thấy cái gì đang bị gộp.
  */
+/**
+ * Gộp có AN TOÀN không — phân biệt "chỉ khác màu" với "khác cấu phần".
+ *
+ * Gộp năm mã `AL595` khác màu về một là ĐÍCH (§5). Nhưng gộp `...-TRONBO` với `...-TACHMON`
+ * thì KHÔNG: đo trên D1 19/08, `TP-LUOI-SN13x26-STD - TRONBO` có BOM Template **5 cấu phần**
+ * còn bản `- TACHMON` chỉ có **1**. Hai bộ cấu phần khác nhau thật.
+ *
+ * Nguyên nhân gốc: khi `Sales Package` bị khai tử, fact "phạm vi cấu phần được giao" không có
+ * chỗ nào trên dòng bán nên nó bò vào MÃ HÀNG. Bỏ token đó khỏi mã trước khi `sales_mode` và
+ * BOM biết phân giải theo nó là làm mất luôn phần trọn bộ.
+ *
+ * Cùng lý do với bậc diện tích: các biến thể `3-4m²` … `>10m²` của `TP-TOLEKEM124_6D` có
+ * template 4 hoặc 8 cấu phần khác nhau.
+ */
+const STRUCTURAL_DROPS = new Set(['bỏ cách bán', 'bỏ bậc diện tích']);
+
+function mergeSafety(group) {
+  const structural = group.filter((row) => row.warnings.some((w) => STRUCTURAL_DROPS.has(w)));
+  if (!structural.length) return { safe: true, reason: 'chỉ khác màu hoặc nhà cung cấp' };
+  if (structural.length === group.length && group.length > 1) {
+    return { safe: false, reason: 'gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng' };
+  }
+  return { safe: false, reason: 'gộp bản trọn bộ với bản thường — hai bộ cấu phần khác nhau' };
+}
+
 export function buildCodeMapping(items) {
   const rows = items.map((item) => ({ item, ...canonicalItemCode(item) }));
   const families = new Map();
@@ -312,12 +337,16 @@ export function buildCodeMapping(items) {
     families.get(row.code).push(row);
   }
   const unresolved = rows.filter((row) => !row.code);
-  const merged = [...families.entries()].filter(([, group]) => group.length > 1);
+  const merged = [...families.entries()]
+    .filter(([, group]) => group.length > 1)
+    .map(([code, group]) => [code, group, mergeSafety(group)]);
+  const unsafeMerges = merged.filter(([, , safety]) => !safety.safe);
   return {
     rows,
     families,
     unresolved,
     merged,
+    unsafeMerges,
     summary: {
       source_count: rows.length,
       canonical_count: families.size,
@@ -325,6 +354,8 @@ export function buildCodeMapping(items) {
       absorbed: merged.reduce((sum, [, group]) => sum + group.length - 1, 0),
       unresolved_count: unresolved.length,
       too_long: rows.filter((row) => row.code && row.code.length > ALUMDOOR_CODE_MAX_LENGTH).length,
+      /** Số họ KHÔNG được gộp cho tới khi BOM phân giải theo `sales_mode` thay vì theo mã. */
+      unsafe_merges: unsafeMerges.length,
     },
   };
 }

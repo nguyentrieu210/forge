@@ -1,6 +1,6 @@
 {
   "format": "alumdoor-item-code-mapping/v1",
-  "generated_at": "2026-08-19T12:40:49.833Z",
+  "generated_at": "2026-08-19T12:50:46.491Z",
   "convention": "docs/ALUMDOOR-QUY-UOC-MA.md (chốt 2026-07-29)",
   "summary": {
     "source_count": 587,
@@ -8,7 +8,8 @@
     "merged_families": 52,
     "absorbed": 163,
     "unresolved_count": 0,
-    "too_long": 13
+    "too_long": 13,
+    "unsafe_merges": 9
   },
   "needs_owner_decision": {
     "unresolved_prefix": [],
@@ -97,6 +98,8 @@
   "merged_families": [
     {
       "canonical": "CUA-CUADL6D",
+      "safe_to_merge": false,
+      "reason": "gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng",
       "sources": [
         "TP-CUADL6D XN-VK_TRONBO>10m²",
         "TP-CUADL6D XN-XLC_TRONBO>10m²",
@@ -123,6 +126,8 @@
     },
     {
       "canonical": "CUA-CUADL7D",
+      "safe_to_merge": false,
+      "reason": "gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng",
       "sources": [
         "TP-CUADL7D XN-VK_TRONBO>10m²",
         "TP-CUADL7D XN-XLC_TRONBO>10m²",
@@ -149,6 +154,8 @@
     },
     {
       "canonical": "CUA-CUADL8D",
+      "safe_to_merge": false,
+      "reason": "gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng",
       "sources": [
         "TP-CUADL8D XN-VK_TRONBO>10m²",
         "TP-CUADL8D XN-XLC_TRONBO>10m²",
@@ -175,6 +182,8 @@
     },
     {
       "canonical": "CUA-CUADL1LY",
+      "safe_to_merge": false,
+      "reason": "gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng",
       "sources": [
         "TP-CUADL1LY XN-VK_TRONBO>10m²",
         "TP-CUADL1LY XN-XLC_TRONBO>10m²",
@@ -201,6 +210,8 @@
     },
     {
       "canonical": "CUA-TOLEKEM124-6D",
+      "safe_to_merge": false,
+      "reason": "gộp bản trọn bộ với bản thường — hai bộ cấu phần khác nhau",
       "sources": [
         "TP-TOLEKEM124_6D",
         "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
@@ -220,6 +231,8 @@
     },
     {
       "canonical": "CUA-TOLEKEM124-8D",
+      "safe_to_merge": false,
+      "reason": "gộp bản trọn bộ với bản thường — hai bộ cấu phần khác nhau",
       "sources": [
         "TP-TOLEKEM124_8D",
         "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
@@ -239,6 +252,8 @@
     },
     {
       "canonical": "CUA-TOLEKEM124-1LY",
+      "safe_to_merge": false,
+      "reason": "gộp bản trọn bộ với bản thường — hai bộ cấu phần khác nhau",
       "sources": [
         "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
         "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
@@ -258,6 +273,8 @@
     },
     {
       "canonical": "CUA-UC-KT-4.6D",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-UC KT 4.6D XN-VK",
         "TP-UC KT 4.6D XR-CF",
@@ -270,6 +287,8 @@
     },
     {
       "canonical": "CUA-AL595",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TD-AL595 GS",
         "TP-TD-AL595 VK",
@@ -282,6 +301,8 @@
     },
     {
       "canonical": "CUA-AL70",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-TD-AL70 THÔ",
         "TP-TD-AL70 GS",
@@ -294,6 +315,8 @@
     },
     {
       "canonical": "CUA-AL71N",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-TD-AL71N THÔ",
         "TP-TD-AL71N GS",
@@ -306,6 +329,8 @@
     },
     {
       "canonical": "CUA-AL503N26",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-TD-AL503N26 VK",
         "TP-TD-AL503N26 GS",
@@ -318,6 +343,8 @@
     },
     {
       "canonical": "CUA-548N",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-ALD-548N GS",
         "TP-ALD-548N THO",
@@ -330,6 +357,8 @@
     },
     {
       "canonical": "CUA-AL501N",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-TD-AL501N VK",
         "TP-TD-AL501N GS",
@@ -342,6 +371,8 @@
     },
     {
       "canonical": "CUA-DL552",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-ALD-DL552 VK",
         "TP-ALD-DL552 THO",
@@ -354,6 +385,8 @@
     },
     {
       "canonical": "CUA-AL752N",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-TD-AL752N GS",
         "TP-TD-AL752N VK",
@@ -366,6 +399,8 @@
     },
     {
       "canonical": "CUA-AL50",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-TD-AL50 THO",
         "TP-TD-AL50 GS",
@@ -378,6 +413,8 @@
     },
     {
       "canonical": "CUA-AL75",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-AL75 THO",
         "TP-AL75 VK",
@@ -389,6 +426,8 @@
     },
     {
       "canonical": "PK-PULYUC114",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-PULYUC114",
         "NVL-PULYUC114-CAM",
@@ -400,6 +439,8 @@
     },
     {
       "canonical": "CUA-UC-KT-5.5D",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-UC KT 5.5D KU-GU",
         "TP-UC KT 5.5D XN-VK",
@@ -411,6 +452,8 @@
     },
     {
       "canonical": "CUA-UC-MTN-4.6D",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-UC MTN 4.6D XN-VK",
         "TP-UC MTN 4.6D XR-CF",
@@ -422,6 +465,8 @@
     },
     {
       "canonical": "CUA-UC-MTN-5.5D",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-UC MTN 5.5D XN-VK",
         "TP-UC MTN 5.5D XR-CF",
@@ -433,6 +478,8 @@
     },
     {
       "canonical": "RAY-RHM8",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-RHM8-GS",
         "NVL-RHM8-VK",
@@ -444,6 +491,8 @@
     },
     {
       "canonical": "RAY-R87A1",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-R87A1-GS",
         "NVL-R87A1-VK",
@@ -455,6 +504,8 @@
     },
     {
       "canonical": "RAY-RHU100",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-RHU100-GS",
         "NVL-RHU100-VK",
@@ -466,6 +517,8 @@
     },
     {
       "canonical": "NHOM-AL595",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL595-GS",
         "NVL-AL595-VK",
@@ -477,6 +530,8 @@
     },
     {
       "canonical": "NHOM-AL71",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL71-GS",
         "NVL-AL71-VK",
@@ -488,6 +543,8 @@
     },
     {
       "canonical": "NHOM-AL503",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL503-GS",
         "NVL-AL503-VK",
@@ -499,6 +556,8 @@
     },
     {
       "canonical": "NHOM-AL548",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL548-GS",
         "NVL-AL548-VK",
@@ -510,6 +569,8 @@
     },
     {
       "canonical": "NHOM-AL501",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL501-GS",
         "NVL-AL501-VK",
@@ -521,6 +582,8 @@
     },
     {
       "canonical": "NHOM-AL652",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL652-GS",
         "NVL-AL652-VK",
@@ -532,6 +595,8 @@
     },
     {
       "canonical": "NHOM-AL552",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL552-GS",
         "NVL-AL552-VK",
@@ -543,6 +608,8 @@
     },
     {
       "canonical": "NHOM-AL752",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL752-GS",
         "NVL-AL752-VK",
@@ -554,6 +621,8 @@
     },
     {
       "canonical": "NHOM-AL50",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL50-GS",
         "NVL-AL50-VK",
@@ -565,6 +634,8 @@
     },
     {
       "canonical": "NHOM-ALVIP50",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-ALVIP50-GS",
         "NVL-ALVIP50-VK",
@@ -576,6 +647,8 @@
     },
     {
       "canonical": "NHOM-ALVIPST500",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-ALVIPST500-GS",
         "NVL-ALVIPST500-VK",
@@ -587,6 +660,8 @@
     },
     {
       "canonical": "NHOM-ALVIPST700",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-ALVIPST700-GS",
         "NVL-ALVIPST700-VK",
@@ -598,6 +673,8 @@
     },
     {
       "canonical": "NHOM-AL70-2LOP",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL70(2LOP)-GS",
         "NVL-AL70(2LOP)-VK",
@@ -609,6 +686,8 @@
     },
     {
       "canonical": "NHOM-AL70-1LOP",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL70(1LOP)-GS",
         "NVL-AL70(1LOP)-VK",
@@ -620,6 +699,8 @@
     },
     {
       "canonical": "NHOM-AL75",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-AL75-GS",
         "NVL-AL75-VK",
@@ -631,6 +712,8 @@
     },
     {
       "canonical": "PK-HTTD",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-HTTD",
         "HH-HTTD"
@@ -639,6 +722,8 @@
     },
     {
       "canonical": "PK-RON-DD",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "RON-DD",
         "NVL-RON-DD"
@@ -647,6 +732,8 @@
     },
     {
       "canonical": "RAY-RNHUA-DR",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "RNHUA-DR",
         "NVL-RNHUA-DR"
@@ -655,6 +742,8 @@
     },
     {
       "canonical": "CUA-AL652",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-TD-AL652 GS",
         "TP-TD-AL652 VK"
@@ -666,6 +755,8 @@
     },
     {
       "canonical": "CUA-ALVIP50",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-ALVIP50 GS",
         "TP-ALVIP50 THO"
@@ -676,6 +767,8 @@
     },
     {
       "canonical": "PK-GOIGANG",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-GOIGANG",
         "NVL-GOIGANG"
@@ -684,6 +777,8 @@
     },
     {
       "canonical": "PK-RONDAYUC",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "RONDAYUC",
         "NVL-RONDAYUC"
@@ -692,6 +787,8 @@
     },
     {
       "canonical": "PK-BKAN",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "TP-BKAN",
         "NVL-BKAN"
@@ -700,6 +797,8 @@
     },
     {
       "canonical": "LUOI-SN13X26",
+      "safe_to_merge": false,
+      "reason": "gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng",
       "sources": [
         "TP-LUOI-SN13x26-STD - TRONBO",
         "TP-LUOI-SN13x26-STD - TACHMON"
@@ -711,6 +810,8 @@
     },
     {
       "canonical": "LUOI-SN13X26-INOX",
+      "safe_to_merge": false,
+      "reason": "gộp nhiều biến thể cách giao/bậc diện tích — mỗi biến thể có thể có BOM riêng",
       "sources": [
         "TP-LUOI-SN13x26-INOX - TACHMON",
         "TP-LUOI-SN13x26-INOX - TRONBO"
@@ -721,6 +822,8 @@
     },
     {
       "canonical": "PK-V4",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-V4_KEM_STD",
         "NVL-V4"
@@ -731,6 +834,8 @@
     },
     {
       "canonical": "PK-V5",
+      "safe_to_merge": true,
+      "reason": "chỉ khác màu hoặc nhà cung cấp",
       "sources": [
         "NVL-V5_KEM_STD",
         "NVL-V5"
