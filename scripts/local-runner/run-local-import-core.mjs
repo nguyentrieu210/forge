@@ -546,12 +546,20 @@ function preflightItem(repoRoot, runDir, sourceArg) {
     failureClass: 'DATA',
   });
   const uomReport = JSON.parse(readFileSync(uom, 'utf8'));
-  if (
-    Number(uomReport.canonical_count) !== 19 ||
-    Number(uomReport.existing_count) !== 19 ||
-    uomReport.records?.some((row) => !row.existed)
-  ) {
-    throw executionError('DATA', 'Item import blocked: canonical UOM 19 prerequisite is incomplete');
+  /**
+   * Điều kiện là "MỌI đơn vị chuẩn đã có mặt", không phải "đúng 19 cái" — chỗ thứ TƯ cùng một
+   * hằng số, sau chốt chặn seed, hậu kiểm layer0 và test catalog. Bốn nơi cùng khoá một con
+   * số nghĩa là danh mục đơn vị không thể co giãn nếu không sửa cả bốn; đó không phải bảo vệ,
+   * đó là bê tông. Điều kiện thật cho Item là mỗi đơn vị nó sắp tham chiếu đều tồn tại.
+   */
+  const uomCanonical = Number(uomReport.canonical_count);
+  const uomExisting = Number(uomReport.existing_count);
+  const uomMissing = (uomReport.records ?? []).filter((row) => !row.existed).map((row) => row.name);
+  if (!Number.isInteger(uomCanonical) || uomCanonical <= 0 || uomExisting !== uomCanonical || uomMissing.length) {
+    throw executionError(
+      'DATA',
+      `Item import blocked: thiếu đơn vị tính chuẩn (canonical=${uomCanonical} existing=${uomExisting}${uomMissing.length ? ` missing=${uomMissing.join(', ')}` : ''})`,
+    );
   }
 
   run(

@@ -93,12 +93,16 @@ export function preflightRealPurchase({ repoRoot, runDir, exec, env, fail }) {
     failureClass: 'DATA',
   });
   const uom = readJson(uomPath, fail, 'DATA', 'Real Purchase UOM report');
-  if (
-    Number(uom.canonical_count) !== 19 ||
-    Number(uom.existing_count) !== 19 ||
-    uom.records?.some((row) => !row.existed)
-  ) {
-    throw fail('DATA', 'Real Purchase blocked: canonical UOM 19 prerequisite is incomplete');
+  // Chốt luật, không chốt số — xem ghi chú cùng nội dung ở run-local-import-core (preflightItem).
+  // Danh mục đơn vị co giãn hợp lệ thì điều kiện này không được đỏ theo.
+  const uomCanonical = Number(uom.canonical_count);
+  const uomExisting = Number(uom.existing_count);
+  const uomMissing = (uom.records ?? []).filter((row) => !row.existed).map((row) => row.name);
+  if (!Number.isInteger(uomCanonical) || uomCanonical <= 0 || uomExisting !== uomCanonical || uomMissing.length) {
+    throw fail(
+      'DATA',
+      `Real Purchase blocked: thiếu đơn vị tính chuẩn (canonical=${uomCanonical} existing=${uomExisting}${uomMissing.length ? ` missing=${uomMissing.join(', ')}` : ''})`,
+    );
   }
 
   const itemPayload = path.join(runDir, 'purchase-item-master-payload.json');
