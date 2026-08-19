@@ -2048,6 +2048,177 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
 }
 
 const childPresentation = applyAlumdoorChildPresentation(brief);
+// ────────────────── SHIPPED · phần đã sửa thẳng trong brief đang chạy ──────────────────
+//
+// Những thay đổi dưới đây từng được sửa tay vào `briefs/alumdoor-v2.json` mà không dạy lại
+// bộ sinh. Hậu quả: chạy bộ sinh là xoá mất chúng, nên không ai dám chạy, nên mọi cải tiến
+// của bộ sinh cũng kẹt luôn — một thế bí hai chiều. Khai lại ở đây để bộ sinh tái lập được
+// đúng bản đang chạy, và từ đó chạy nó trở lại an toàn.
+{
+  const quotationItem = doctype("Quotation Item");
+  // Rộng phủ bì đo theo ray (khách Lẻ) và theo nhựa (khách Đại lý) là HAI trường riêng:
+  // dùng chung một ô là gộp hai cách đo khác nhau vào một con số.
+  const pbWidthFields = [
+    {
+      label: "Rộng PB ray (m)",
+      fieldname: "width_pb_ray_m",
+      fieldtype: "Float",
+      depends_on: "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+      description: "Rộng phủ bì đo theo ray cho khách Lẻ; là field riêng, không dùng chung với rộng PB nhựa.",
+      surface: "quick",
+    },
+    {
+      label: "Rộng PB nhựa (m)",
+      fieldname: "width_pb_nhua_m",
+      fieldtype: "Float",
+      depends_on: "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+      description: "Rộng phủ bì đo theo nhựa cho khách Đại lý; là field riêng, không dùng chung với rộng PB ray.",
+      surface: "quick",
+    },
+  ];
+  if (!quotationItem.fields.some((entry) => nameOf(entry) === "width_pb_ray_m")) {
+    addAfter(quotationItem, "color", ...pbWidthFields);
+  }
+  // Đơn giá do server chốt từ bảng giá/ĐVT/biến thể — người nhập không sửa tay được.
+  patchField(quotationItem, "rate", {
+    read_only: true,
+    valueSource: "formula",
+    editMode: "readonly",
+    serverEnforced: true,
+    description: "Đơn giá do server lấy từ bảng giá, Item, ĐVT bán và biến thể; người nhập không được sửa tay.",
+  });
+  const insertBefore = (list, anchor, ...values) => {
+    if (!Array.isArray(list)) return;
+    const missing = values.filter((value) => !list.includes(value));
+    if (!missing.length) return;
+    const index = list.indexOf(anchor);
+    list.splice(index < 0 ? list.length : index, 0, ...missing);
+  };
+  insertBefore(quotationItem.list, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
+  insertBefore(quotationItem.form?.fields, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
+  insertBefore(quotationItem.quickEntry?.fields, "width_m", "width_pb_ray_m", "width_pb_nhua_m");
+  note("SHIPPED · Quotation Item: rộng PB ray/nhựa + đơn giá server-enforced");
+
+  const salesOrder = doctype("Sales Order");
+  // Người phụ trách lấy theo nhân viên gắn với user đang đăng nhập, không lấy theo khách.
+  patchField(salesOrder, "responsible_person", {
+    read_only: true,
+    valueSource: "system",
+    editMode: "readonly",
+    serverEnforced: true,
+    description: "Tự lấy Nhân viên đang làm việc gắn với user đăng nhập.",
+    fetch_from: undefined,
+  });
+  const responsibleIndex = salesOrder.fields.findIndex((entry) => nameOf(entry) === "responsible_person");
+  if (responsibleIndex >= 0 && typeof salesOrder.fields[responsibleIndex] === "object") {
+    const value = { ...salesOrder.fields[responsibleIndex] };
+    delete value.fetch_from;
+    salesOrder.fields[responsibleIndex] = value;
+  }
+  if (salesOrder.form?.fields) {
+    for (const field of ["deposit_amount", "outstanding_amount"]) {
+      if (!salesOrder.form.fields.includes(field)) salesOrder.form.fields.push(field);
+    }
+  }
+  if (salesOrder.form?.previewParentFields) {
+    insertBefore(salesOrder.form.previewParentFields, "additional_discount_percentage", "deposit_amount");
+  }
+  note("SHIPPED · Sales Order: người phụ trách theo user + tiền cọc/còn lại trên form");
+
+  const bomTemplate = doctype("BOM Template");
+  bomTemplate.list ??= ["template_code", "item_code", "source_status", "priority", "disabled"];
+  bomTemplate.search ??= ["template_code", "item_code", "source_ref"];
+  if (!brief.navigation.items.includes("BOM Template")) {
+    const anchor = brief.navigation.items.indexOf("Bill of Materials");
+    brief.navigation.items.splice(anchor < 0 ? brief.navigation.items.length : anchor + 1, 0, "BOM Template");
+  }
+  note("SHIPPED · BOM Template: cột danh sách/ô tìm + mục điều hướng");
+
+  // Màn gộp nhiều đơn bán thành một phiếu giao theo lớp FIFO.
+  if (!brief.actions.some((entry) => entry.name === "giao-nhieu-don-fifo")) {
+    const anchor = brief.actions.findIndex((entry) => entry.name === "don-ban-thanh-phieu-xuat");
+    brief.actions.splice(anchor < 0 ? brief.actions.length : anchor + 1, 0, {
+      "//": "NHIỀU ĐƠN BÁN → MỘT PHIẾU GIAO. Mỗi dòng giữ exact source row; giá vốn xem theo lớp FIFO và được tính lại lúc submit.",
+      name: "giao-nhieu-don-fifo",
+      label: "Kho giao hàng nhiều đơn",
+      menu: true,
+      icon: "truck",
+      group: "Bán hàng",
+      description: "Chọn nhiều Đơn bán cùng khách/công ty/tiền tệ, xem phần còn phải giao và lớp FIFO rồi tạo đúng một Phiếu giao nháp.",
+      permission: "Delivery Note",
+      fields: [
+        "customer:Link(Customer)! Khách hàng",
+        {
+          fieldname: "warehouse",
+          label: "Kho xuất (trống = theo từng dòng đơn)",
+          fieldtype: "Link",
+          options: "Warehouse",
+          link_filters: "{\"is_group\":0,\"disabled\":0}",
+        },
+        "posting_at:Datetime!=(Now) Thời điểm giao",
+        "install_address:Small Text Địa chỉ giao / lắp đặt",
+      ],
+      preview: "alumdoor.sales.preview_bulk_delivery | Tải đơn còn phải giao / xem FIFO",
+      commit: "alumdoor.sales.bulk_delivery | Tạo một Phiếu giao nháp | Tạo một Phiếu giao nháp cho các Đơn bán đã chọn?",
+      resultTable: "source_lines",
+    });
+    note("SHIPPED · action giao-nhieu-don-fifo (Kho giao hàng nhiều đơn)");
+  }
+
+  // `item_group` của Pricing Rule đang ship ở dạng rút gọn, không kèm link_filters.
+  replaceField(doctype("Pricing Rule"), "item_group", "item_group:Link(Item Group) Chỉ áp cho nhóm hàng");
+
+  // Chín trường này đang ship với default dạng CHUỖI. Giá trị y hệt, nhưng kiểu khác nhau
+  // là brief khác nhau, và bộ sinh phải tái lập được đúng bản đang chạy.
+  const stringDefaults = [
+    ["Sales Invoice Item", "set_count"], ["Purchase Invoice Item", "set_count"],
+    ["Production Request Item", "set_count"], ["Warranty Cost Item", "quantity"],
+    ["Cutting Policy Rule", "operand_m"], ["Cutting Policy Rule", "priority"],
+    ["Cutting Policy Rule", "sequence"], ["BOM Component Rule", "priority"],
+    ["BOM Component Rule", "sequence"],
+  ];
+  for (const [doctypeName, fieldname] of stringDefaults) {
+    const target = doctype(doctypeName);
+    const index = target.fields.findIndex((entry) => nameOf(entry) === fieldname);
+    if (index < 0 || typeof target.fields[index] !== "object") continue;
+    const value = target.fields[index];
+    if (typeof value.default === "number") target.fields[index] = { ...value, default: String(value.default) };
+  }
+  // `price_group` đang ship KHÔNG bắt buộc: bật required là chặn lưu mọi khách chưa gán nhóm giá.
+  const customer = doctype("Customer");
+  const priceGroupIndex = customer.fields.findIndex((entry) => nameOf(entry) === "price_group");
+  if (priceGroupIndex >= 0 && typeof customer.fields[priceGroupIndex] === "object") {
+    const value = { ...customer.fields[priceGroupIndex] };
+    delete value.required;
+    customer.fields[priceGroupIndex] = value;
+  }
+
+  // Tiền cọc và phần còn phải thu là hai trường thật trên đơn, không chỉ là ô trên form.
+  if (!salesOrder.fields.some((entry) => nameOf(entry) === "deposit_amount")) {
+    addAfter(salesOrder, "grand_total",
+      {
+        label: "Tiền cọc",
+        fieldname: "deposit_amount",
+        fieldtype: "Currency",
+        default: 0,
+        form_region: "full",
+        form_width: "full",
+        description: "Tiền khách đã đặt cọc cho đơn; không làm giảm doanh thu của đơn.",
+      },
+      {
+        label: "Còn phải thu",
+        fieldname: "outstanding_amount",
+        fieldtype: "Currency",
+        read_only: true,
+        form_region: "full",
+        form_width: "full",
+      },
+    );
+  }
+  patchField(salesOrder, "grand_total", { label: "Tiền phải trả" });
+  note(`SHIPPED · ${stringDefaults.length} trường giữ default dạng chuỗi`);
+}
+
 note(`UI ?? child-grid presentation metadata: ${childPresentation.migrated} child DocType`);
 
 writeFileSync(OUT, JSON.stringify(brief, null, 2) + "\n", "utf8");
