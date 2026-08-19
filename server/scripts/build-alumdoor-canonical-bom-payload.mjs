@@ -21,7 +21,18 @@ const preflight = preflightAlumdoorItemSourceRecords(records);
 if (preflight.blocker_count !== 0) throw new Error(`BOM build requires zero Item source blockers; got ${preflight.blocker_count}`);
 const clean = (v) => String(v ?? "").trim();
 const parentRowOf = (record) => Number(record?.source_parent_row);
-const itemMap = new Map(itemPayload.items.map((row)=>[clean(row.item_code),row]));
+// Tra được bằng CẢ mã đang dùng lẫn mã gốc trong bảng tính.
+//
+// Tham chiếu cấu phần đến từ bản trích nguồn nên mang mã theo bảng tính, còn danh sách mặt hàng
+// đã dịch sang mã đang dùng. Chỉ khoá một bên thì 1.031 cấu phần báo `missing_component_item`
+// dù mặt hàng có đủ — đo được sau đợt đổi mã.
+const itemMap = new Map();
+for (const row of itemPayload.items) {
+  const canonical = clean(row.item_code);
+  itemMap.set(canonical, row);
+  const original = clean(row.source_item_code_original);
+  if (original && !itemMap.has(original)) itemMap.set(original, row);
+}
 const itemCodes = new Set(itemMap.keys());
 const blockers=[]; const excluded=[]; const parents=new Map(); const excludedParents=new Map(); const groups=new Map();
 
