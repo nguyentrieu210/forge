@@ -15,14 +15,87 @@ import {
 } from "@metaforge/ui";
 import { AlumdoorSalesOrderField, fallbackField, selectField } from "./sales-order-v2/AlumdoorSalesOrderField.js";
 
+export interface PurchaseFieldOverride {
+  hidden?: number | boolean;
+  reqd?: number | boolean;
+  read_only?: number | boolean;
+  label?: string;
+  link_filters?: string;
+}
+
 export type PurchaseLine = Doc & {
   _itemName?: string;
   _itemGroup?: string;
   _inventoryMode?: string;
   _materialSpecification?: string;
   _defaultPurchaseUom?: string;
+  _overrides?: Record<string, PurchaseFieldOverride>;
   _loading?: boolean;
   _error?: string;
+};
+
+type DynamicFieldName =
+  | "material_specification"
+  | "color"
+  | "length_m"
+  | "theoretical_kg_per_m"
+  | "qty_bundle"
+  | "qty_bar"
+  | "theoretical_kg"
+  | "is_stamped"
+  | "qty";
+
+const DYNAMIC_FIELD_ORDER: DynamicFieldName[] = [
+  "material_specification",
+  "color",
+  "length_m",
+  "theoretical_kg_per_m",
+  "qty_bundle",
+  "qty_bar",
+  "theoretical_kg",
+  "is_stamped",
+  "qty",
+];
+
+const DYNAMIC_FALLBACK_LABELS: Record<DynamicFieldName, string> = {
+  material_specification: "Quy cách",
+  color: "Màu",
+  length_m: "Dài cây",
+  theoretical_kg_per_m: "Kg/m",
+  qty_bundle: "Số bó",
+  qty_bar: "Số cây/lá",
+  theoretical_kg: "Kg đặt",
+  is_stamped: "Dập",
+  qty: "SL",
+};
+
+const DYNAMIC_TYPES: Record<DynamicFieldName, DocField["fieldtype"]> = {
+  material_specification: "Link",
+  color: "Link",
+  length_m: "Float",
+  theoretical_kg_per_m: "Float",
+  qty_bundle: "Int",
+  qty_bar: "Int",
+  theoretical_kg: "Float",
+  is_stamped: "Select",
+  qty: "Float",
+};
+
+const DYNAMIC_OPTIONS: Partial<Record<DynamicFieldName, string>> = {
+  material_specification: "Material Specification",
+  color: "Item Color",
+};
+
+const DYNAMIC_WIDTHS: Record<DynamicFieldName, string> = {
+  material_specification: "w-36",
+  color: "w-28",
+  length_m: "w-24",
+  theoretical_kg_per_m: "w-24",
+  qty_bundle: "w-20",
+  qty_bar: "w-24",
+  theoretical_kg: "w-28",
+  is_stamped: "w-20",
+  qty: "w-24",
 };
 
 export interface AlumdoorPurchaseOrderItemsGridProps {
@@ -71,9 +144,49 @@ export function isAluminumPurchaseLine(line: PurchaseLine): boolean {
   return text(line._inventoryMode ?? line.inventory_mode) === "Nhôm cây/lá";
 }
 
+export function purchaseFieldOverride(line: PurchaseLine, fieldname: string): PurchaseFieldOverride | undefined {
+  return line._overrides?.[fieldname];
+}
+
+export function purchaseFieldVisible(line: PurchaseLine, fieldname: string): boolean {
+  const override = purchaseFieldOverride(line, fieldname);
+  if (override?.hidden === true || override?.hidden === 1) return false;
+  if (override && (override.hidden === false || override.hidden === 0 || override.reqd !== undefined || override.read_only !== undefined || text(override.label))) return true;
+  return line[fieldname] !== undefined && line[fieldname] !== null && line[fieldname] !== "";
+}
+
+export function purchaseFieldRequired(line: PurchaseLine, fieldname: string): boolean {
+  const override = purchaseFieldOverride(line, fieldname);
+  return override?.reqd === true || override?.reqd === 1;
+}
+
+function purchaseFieldReadonly(line: PurchaseLine, fieldname: string): boolean {
+  const override = purchaseFieldOverride(line, fieldname);
+  return override?.read_only === true || override?.read_only === 1;
+}
+
+function purchaseFieldLabel(line: PurchaseLine, meta: DocTypeMeta, fieldname: DynamicFieldName): string {
+  return text(purchaseFieldOverride(line, fieldname)?.label)
+    || text(meta.fields.find((field) => field.fieldname === fieldname)?.label)
+    || DYNAMIC_FALLBACK_LABELS[fieldname];
+}
+
 function fieldFromMeta(meta: DocTypeMeta, fieldname: string, label: string, type: DocField["fieldtype"] = "Data", options?: string): DocField {
   return meta.fields.find((field) => field.fieldname === fieldname)
     ?? fallbackField(fieldname, label, type, options);
+}
+
+function fieldForLine(meta: DocTypeMeta, line: PurchaseLine, fieldname: DynamicFieldName): DocField {
+  const override = purchaseFieldOverride(line, fieldname);
+  const base = fieldFromMeta(meta, fieldname, DYNAMIC_FALLBACK_LABELS[fieldname], DYNAMIC_TYPES[fieldname], DYNAMIC_OPTIONS[fieldname]);
+  const next: DocField = {
+    ...base,
+    label: text(override?.label) || base.label,
+    reqd: override?.reqd ?? base.reqd,
+    read_only: override?.read_only ?? base.read_only,
+  } as DocField;
+  if (override?.link_filters) next.link_filters = override.link_filters;
+  return next;
 }
 
 function normalizeFieldValue(field: DocField, value: unknown): unknown {
@@ -100,8 +213,10 @@ function ReadOnlyCell(props: { children: ReactNode; strong?: boolean; title?: st
 export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItemsGridProps) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const activeLines = useMemo(() => props.lines.filter((line) => text(line.item_code)), [props.lines]);
-  const hasAluminum = useMemo(() => activeLines.some(isAluminumPurchaseLine), [activeLines]);
-  const hasOrdinary = useMemo(() => activeLines.length === 0 || activeLines.some((line) => !isAluminumPurchaseLine(line)), [activeLines]);
+  const dynamicColumns = useMemo<DynamicFieldName[]>(() => {
+    if (!activeLines.length) return ["qty"];
+    return DYNAMIC_FIELD_ORDER.filter((fieldname) => activeLines.some((line) => purchaseFieldVisible(line, fieldname)));
+  }, [activeLines]);
   const allKeys = useMemo(() => props.lines.map((line, index) => purchaseLineKey(line, index)), [props.lines]);
   const allSelected = allKeys.length > 0 && allKeys.every((key) => selected.has(key));
 
@@ -114,31 +229,32 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
     allow_create: false,
     link_filters: JSON.stringify({ is_purchase_item: 1, disabled: 0 }),
   } as DocField), [props.childMeta]);
-  const colorField = useMemo(() => ({
-    ...fieldFromMeta(props.childMeta, "color", "Màu", "Link", "Item Color"),
-    fieldname: "color",
-    label: "Màu",
-    fieldtype: "Link" as const,
-    options: "Item Color",
-    allow_create: false,
-  }), [props.childMeta]);
-  const stampedField = useMemo(() => selectField(
-    props.childMeta.fields.find((field) => field.fieldname === "is_stamped"),
-    "is_stamped",
-    "Dập",
-    ["Có", "Không"],
-  ), [props.childMeta]);
 
-  const editor = (
-    line: PurchaseLine,
-    key: string,
-    fieldname: string,
-    label: string,
-    type: DocField["fieldtype"],
-    options?: string,
-    readOnly = false,
-  ) => {
-    const field = fieldFromMeta(props.childMeta, fieldname, label, type, options);
+  const head = (className: string, label: ReactNode) => (
+    <TableHead className={`bg-primary px-1.5 text-center font-semibold leading-tight text-primary-foreground whitespace-normal ${className}`}>
+      <div className="flex min-h-10 items-center justify-center py-1">{label}</div>
+    </TableHead>
+  );
+
+  const dynamicHeaderLabel = (fieldname: DynamicFieldName): string => {
+    const contextual = activeLines
+      .filter((line) => purchaseFieldVisible(line, fieldname))
+      .map((line) => purchaseFieldLabel(line, props.childMeta, fieldname))
+      .find(Boolean);
+    return text(contextual).replace(/\s*\([^)]*\)\s*$/i, "").replace(/\s+/g, " ") || DYNAMIC_FALLBACK_LABELS[fieldname];
+  };
+
+  const editor = (line: PurchaseLine, key: string, fieldname: DynamicFieldName, forceReadOnly = false) => {
+    let field = fieldForLine(props.childMeta, line, fieldname);
+    if (fieldname === "is_stamped") {
+      field = selectField(
+        props.childMeta.fields.find((candidate) => candidate.fieldname === "is_stamped"),
+        "is_stamped",
+        text(field.label) || "Dập",
+        ["Có", "Không"],
+      );
+    }
+    const readOnly = props.readOnly || forceReadOnly || purchaseFieldReadonly(line, fieldname) || Boolean(field.read_only);
     return (
       <AlumdoorSalesOrderField
         id={`purchase-grid-${key}-${fieldname}`}
@@ -148,10 +264,11 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
         onCommit={() => props.onCommit(key, fieldname, line[fieldname])}
         registry={props.registry}
         services={props.services}
-        parentDoctype="Purchase Order"
+        parentDoctype={props.childMeta.name}
         docValues={line}
         roles={props.roles}
-        readOnly={props.readOnly || readOnly || Boolean(field.read_only)}
+        required={purchaseFieldRequired(line, fieldname)}
+        readOnly={readOnly}
         compact
         hideLabel
         className="w-full max-w-full [&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!h-8 [&_input]:!w-full [&_input]:!px-2 [&_input]:!text-center [&_button]:!h-8 [&_button]:!max-w-full [&_button]:!justify-center [&_button]:!px-2"
@@ -159,13 +276,23 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
     );
   };
 
-  const head = (className: string, label: ReactNode) => (
-    <TableHead className={`bg-primary px-1.5 text-center font-semibold leading-tight text-primary-foreground whitespace-normal ${className}`}>
-      <div className="flex min-h-10 items-center justify-center py-1">{label}</div>
-    </TableHead>
-  );
+  const renderDynamicCell = (line: PurchaseLine, key: string, fieldname: DynamicFieldName, rowTone: string) => {
+    const visible = purchaseFieldVisible(line, fieldname);
+    if (!visible) return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell>—</ReadOnlyCell></TableCell>;
+    if (fieldname === "material_specification") {
+      const value = text(line._materialSpecification ?? line.material_specification);
+      return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong title={value}>{value || "—"}</ReadOnlyCell></TableCell>;
+    }
+    if (fieldname === "theoretical_kg_per_m") {
+      return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell>{quantity(line.theoretical_kg_per_m)}</ReadOnlyCell></TableCell>;
+    }
+    if (fieldname === "theoretical_kg") {
+      return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong>{quantity(line.theoretical_kg ?? line.qty)}</ReadOnlyCell></TableCell>;
+    }
+    return <TableCell key={fieldname} className={`${rowTone} px-1.5 py-1`}>{editor(line, key, fieldname)}</TableCell>;
+  };
 
-  const columnCount = 5 + (hasAluminum ? 7 : 0) + (hasOrdinary ? 1 : 0) + 4;
+  const columnCount = 5 + dynamicColumns.length + 4;
 
   const deleteSelected = () => {
     for (const key of selected) props.onDelete(key);
@@ -192,16 +319,12 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
               {head("w-44", "Mã hàng")}
               {head("w-48", "Tên hàng")}
               {head("w-32", "Loại hàng")}
-              {hasAluminum ? <>
-                {head("w-36", "Quy cách")}
-                {head("w-28", "Màu")}
-                {head("w-24", <span>Dài cây<br/><span className="text-[9px] font-medium opacity-90">(m)</span></span>)}
-                {head("w-24", "Kg/m")}
-                {head("w-24", "Số cây/lá")}
-                {head("w-28", "Kg đặt")}
-                {head("w-20", "Dập")}
-              </> : null}
-              {hasOrdinary ? head("w-24", "SL") : null}
+              {dynamicColumns.map((fieldname) => head(
+                DYNAMIC_WIDTHS[fieldname],
+                fieldname === "length_m"
+                  ? <span>{dynamicHeaderLabel(fieldname)}<br/><span className="text-[9px] font-medium opacity-90">(m)</span></span>
+                  : dynamicHeaderLabel(fieldname),
+              ))}
               {head("w-20", "ĐVT")}
               {head("w-28", <span>Đơn giá<br/><span className="text-[9px] font-medium opacity-90">(VNĐ)</span></span>)}
               {head("w-32", <span>Thành tiền<br/><span className="text-[9px] font-medium opacity-90">(VNĐ)</span></span>)}
@@ -211,10 +334,8 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
           <TableBody>
             {props.lines.map((line, index) => {
               const key = purchaseLineKey(line, index);
-              const aluminum = isAluminumPurchaseLine(line);
               const itemName = text(line._itemName ?? line.item_name);
               const itemGroup = text(line._itemGroup ?? line.item_group);
-              const materialSpec = text(line._materialSpecification ?? line.material_specification);
               const rowTone = text(line.item_code) ? "bg-primary/[0.035]" : (index % 2 === 0 ? "bg-card" : "bg-muted/20");
               return [
                 <TableRow key={key} className={`${rowTone} border-b hover:bg-muted/20`} data-purchase-row-key={key}>
@@ -239,7 +360,7 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
                       onChange={(value) => props.onCommit(key, "item_code", normalizeFieldValue(itemField, value))}
                       registry={props.registry}
                       services={props.services}
-                      parentDoctype="Purchase Order"
+                      parentDoctype={props.childMeta.name}
                       docValues={line}
                       roles={props.roles}
                       readOnly={props.readOnly}
@@ -250,56 +371,26 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
                   </TableCell>
                   <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong title={itemName}>{line._loading ? <Loader2 className="size-3.5 animate-spin" /> : itemName || "—"}</ReadOnlyCell></TableCell>
                   <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell title={itemGroup}>{itemGroup || "—"}</ReadOnlyCell></TableCell>
-                  {hasAluminum ? <>
-                    <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell title={materialSpec}>{aluminum ? materialSpec || "—" : "—"}</ReadOnlyCell></TableCell>
-                    <TableCell className={`${rowTone} px-1.5 py-1`}>{aluminum ? (
-                      <AlumdoorSalesOrderField
-                        id={`purchase-grid-${key}-color`}
-                        field={colorField}
-                        value={line.color}
-                        onChange={(value) => {
-                          props.onPatch(key, { color: value } as Partial<PurchaseLine>);
-                          props.onCommit(key, "color", value);
-                        }}
-                        registry={props.registry}
-                        services={props.services}
-                        parentDoctype="Purchase Order"
-                        docValues={line}
-                        roles={props.roles}
-                        readOnly={props.readOnly}
-                        compact
-                        hideLabel
-                        className="w-full max-w-full [&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!h-8 [&_input]:!w-full [&_button]:!h-8 [&_button]:!max-w-full [&_button]:!justify-center"
-                      />
-                    ) : <ReadOnlyCell>—</ReadOnlyCell>}</TableCell>
-                    <TableCell className={`${rowTone} px-1.5 py-1`}>{aluminum ? editor(line, key, "length_m", "Dài cây", "Float") : <ReadOnlyCell>—</ReadOnlyCell>}</TableCell>
-                    <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell>{aluminum ? quantity(line.theoretical_kg_per_m) : "—"}</ReadOnlyCell></TableCell>
-                    <TableCell className={`${rowTone} px-1.5 py-1`}>{aluminum ? editor(line, key, "qty_bar", "Số cây/lá", "Int") : <ReadOnlyCell>—</ReadOnlyCell>}</TableCell>
-                    <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong>{aluminum ? quantity(line.theoretical_kg ?? line.qty) : "—"}</ReadOnlyCell></TableCell>
-                    <TableCell className={`${rowTone} px-1.5 py-1`}>{aluminum ? (
-                      <AlumdoorSalesOrderField
-                        id={`purchase-grid-${key}-is_stamped`}
-                        field={stampedField}
-                        value={line.is_stamped}
-                        onChange={(value) => {
-                          props.onPatch(key, { is_stamped: value } as Partial<PurchaseLine>);
-                          props.onCommit(key, "is_stamped", value);
-                        }}
-                        registry={props.registry}
-                        services={props.services}
-                        parentDoctype="Purchase Order"
-                        docValues={line}
-                        roles={props.roles}
-                        readOnly={props.readOnly}
-                        compact
-                        hideLabel
-                        className="w-full max-w-full [&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_button]:!h-8 [&_button]:!max-w-full [&_button]:!justify-center"
-                      />
-                    ) : <ReadOnlyCell>—</ReadOnlyCell>}</TableCell>
-                  </> : null}
-                  {hasOrdinary ? <TableCell className={`${rowTone} px-1.5 py-1`}>{aluminum ? <ReadOnlyCell>—</ReadOnlyCell> : editor(line, key, "qty", "SL", "Float")}</TableCell> : null}
+                  {dynamicColumns.map((fieldname) => renderDynamicCell(line, key, fieldname, rowTone))}
                   <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong>{text(line.uom) || "—"}</ReadOnlyCell></TableCell>
-                  <TableCell className={`${rowTone} px-1.5 py-1`}>{editor(line, key, "rate", "Đơn giá", "Currency", undefined, props.priceLocked)}</TableCell>
+                  <TableCell className={`${rowTone} px-1.5 py-1`}>
+                    <AlumdoorSalesOrderField
+                      id={`purchase-grid-${key}-rate`}
+                      field={fieldFromMeta(props.childMeta, "rate", "Đơn giá", "Currency")}
+                      value={line.rate}
+                      onChange={(value) => props.onPatch(key, { rate: normalizeFieldValue(fieldFromMeta(props.childMeta, "rate", "Đơn giá", "Currency"), value) } as Partial<PurchaseLine>)}
+                      onCommit={() => props.onCommit(key, "rate", line.rate)}
+                      registry={props.registry}
+                      services={props.services}
+                      parentDoctype={props.childMeta.name}
+                      docValues={line}
+                      roles={props.roles}
+                      readOnly={props.readOnly || props.priceLocked}
+                      compact
+                      hideLabel
+                      className="w-full max-w-full [&_.mf-control]:!min-h-8 [&_.mf-control]:!w-full [&_input]:!h-8 [&_input]:!w-full [&_input]:!text-center [&_button]:!h-8 [&_button]:!max-w-full [&_button]:!justify-center"
+                    />
+                  </TableCell>
                   <TableCell className={`${rowTone} px-1.5 py-1`}><ReadOnlyCell strong>{money(line.amount ?? ((numeric(line.qty) ?? 0) * (numeric(line.rate) ?? 0)))}</ReadOnlyCell></TableCell>
                   <TableCell className={`${rowTone} px-1 py-1 text-center`}>
                     <div className="flex items-center justify-center gap-0.5">
