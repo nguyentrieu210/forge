@@ -291,7 +291,7 @@ async function resolvePurchasePrice(
 
   if (!itemPrice && lineUom) {
     item = await readDoc(call, "Item", itemCode);
-    const baseUom = text(item?.default_sales_uom) || text(item?.stock_uom);
+    const baseUom = text(item?.default_purchase_uom) || text(item?.stock_uom);
     if (item && baseUom && baseUom !== lineUom) {
       const activeBase = listedPrices
         .filter((candidate) => fieldMatchedPrice(candidate, priceList, itemCode, baseUom, variant))
