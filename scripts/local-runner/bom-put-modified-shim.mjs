@@ -6,6 +6,7 @@ if (typeof originalFetch !== 'function') throw new Error('BOM PUT shim requires 
 // BOM Templates and Draft BOMs, so all of those local-authority writes need the
 // same optimistic-concurrency refresh that the canonical BOM importer already uses.
 const MODIFIED_AWARE_RESOURCE = /\/api\/resource\/(?:Item|BOM(?:%20| )Rule|BOM(?:%20| )Template|Bill(?:%20| )of(?:%20| )Materials)\/[^/?#]+$/i;
+const BOM_RULE_RESOURCE = /\/api\/resource\/BOM(?:%20| )Rule(?:\/[^/?#]+)?(?:\?[^#]*)?$/i;
 
 function methodOf(input, init) {
   return String(init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
@@ -32,13 +33,35 @@ function responseData(body) {
   return body?.data ?? body?.message ?? body;
 }
 
+function canonicalBomRulePayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+  if (!Object.hasOwn(payload, 'version')) return payload;
+  const next = { ...payload };
+  if (!Object.hasOwn(next, 'rule_version')) next.rule_version = next.version;
+  delete next.version;
+  return next;
+}
+
 globalThis.fetch = async function bomModifiedAwareFetch(input, init = {}) {
   const url = urlOf(input);
-  if (methodOf(input, init) !== 'PUT' || !MODIFIED_AWARE_RESOURCE.test(url)) {
+  const method = methodOf(input, init);
+  const rawPayload = await parseJsonBody(bodyOf(input, init));
+  const payload = BOM_RULE_RESOURCE.test(url) ? canonicalBomRulePayload(rawPayload) : rawPayload;
+
+  // Canonical BOM Rule payloads historically used `version`, but Forge reserves that
+  // document field. Translate only at the API boundary so the persisted master uses
+  // `rule_version` while old canonical/audit files remain readable.
+  if (method === 'POST' && BOM_RULE_RESOURCE.test(url) && payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    return originalFetch(input, {
+      ...init,
+      body: JSON.stringify(payload),
+    });
+  }
+
+  if (method !== 'PUT' || !MODIFIED_AWARE_RESOURCE.test(url)) {
     return originalFetch(input, init);
   }
 
-  const payload = await parseJsonBody(bodyOf(input, init));
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return originalFetch(input, init);
   }
