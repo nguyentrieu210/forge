@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { alumdoorBankAccountLabel } from "../dist/packages/frappe-api/src/router.js";
+import { alumdoorBankAccountLabel } from "../dist/packages/frappe-api/src/alumdoor-display.js";
 
 test("Alumdoor bank account links show bank, account number and holder", () => {
   assert.equal(

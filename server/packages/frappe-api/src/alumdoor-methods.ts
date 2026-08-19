@@ -10,6 +10,38 @@ import type { FrappeRouterContext } from "./router.js";
 // tên một khách hàng cụ thể. Ở đây chúng là một bảng đăng ký; router chỉ tra bảng.
 // Cửa vào vẫn y nguyên: mọi handler đòi callback đã xác minh của đúng app "alumdoor".
 
+/**
+ * Cửa mà tenant Worker cắm vào cho vertical AlumDoor.
+ *
+ * Bốn hook này từng nằm ngay trong `FrappeRouterContext`, nên kiểu context của nền tảng
+ * mang theo chữ "Alumdoor" bốn lần. Khai ở đây rồi cho context lõi kế thừa: nơi cắm và nơi
+ * dùng nằm cạnh nhau, còn lõi không phải biết vertical nào tồn tại.
+ */
+export interface AlumdoorRouterHooks {
+  /** Giao dịch quẹt chấm công gốc, chỉ AlumDoor dùng. */
+  commitAlumdoorAttendanceScan?: (input: {
+    station: string;
+    stationTokenHash: string;
+    requestId: string;
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    deviceId?: string;
+    credentialHash?: string;
+    employeeCode?: string;
+    newCredentialHash?: string;
+    deviceLabel?: string;
+  }) => Promise<JsonObject>;
+  submitAlumdoorAttendanceCorrection?: (input: {
+    workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string;
+    reason: string; attachment?: string;
+  }) => Promise<JsonObject>;
+  reviewAlumdoorAttendanceCorrection?: (input: {
+    request: string; action: "approve" | "reject"; note?: string;
+  }) => Promise<JsonObject>;
+  approveAlumdoorPayroll?: (input: { payrollEntry: string }) => Promise<JsonObject>;
+}
+
 async function commitAlumdoorAttendanceScan(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject> {
   if (context.appCallbackAppId !== "alumdoor" || !context.commitAlumdoorAttendanceScan) {
     throw errors.permission("AlumDoor attendance scan accepts only the verified AlumDoor app callback.");

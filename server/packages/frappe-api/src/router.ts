@@ -25,6 +25,8 @@ import {
 } from "./router-platform.js";
 import { readFrappeArgs, type FrappeArgs } from "./args.js";
 import { VERTICAL_METHODS } from "./vertical-methods.js";
+import type { AlumdoorRouterHooks } from "./alumdoor-methods.js";
+import { LINK_DISPLAY_RULES } from "./vertical-display.js";
 import { assertModifiedMatches, buildCommand, stripServerOwnedFields } from "./command.js";
 import { fromFrappeDoc, toFrappeDoc, toFrappeListRow } from "./doc-shape.js";
 import { faultResponse, methodResponse, resourceResponse, responseFieldsResponse } from "./envelope.js";
@@ -59,7 +61,7 @@ import {
  */
 export const FORGE_CONTRACT_VERSION = "16.0.0-forge.3";
 
-export interface FrappeRouterContext {
+export interface FrappeRouterContext extends AlumdoorRouterHooks {
   tenantId: string;
   actor: Actor;
   traceId: string;
@@ -76,28 +78,6 @@ export interface FrappeRouterContext {
    * sessions and development actors; it is gateway-attributed, never request input.
    */
   appCallbackAppId?: string;
-  /** AlumDoor-only native attendance scan transaction. */
-  commitAlumdoorAttendanceScan?: (input: {
-    station: string;
-    stationTokenHash: string;
-    requestId: string;
-    latitude: number;
-    longitude: number;
-    accuracy: number;
-    deviceId?: string;
-    credentialHash?: string;
-    employeeCode?: string;
-    newCredentialHash?: string;
-    deviceLabel?: string;
-  }) => Promise<JsonObject>;
-  submitAlumdoorAttendanceCorrection?: (input: {
-    workDate: string; segmentCode: string; requestedIn?: string; requestedOut?: string;
-    reason: string; attachment?: string;
-  }) => Promise<JsonObject>;
-  reviewAlumdoorAttendanceCorrection?: (input: {
-    request: string; action: "approve" | "reject"; note?: string;
-  }) => Promise<JsonObject>;
-  approveAlumdoorPayroll?: (input: { payrollEntry: string }) => Promise<JsonObject>;
   now(): string;
   /** Overlay store for Custom Field / Property Setter. */
   customizations: CustomizationStore;
@@ -1500,16 +1480,7 @@ async function transition(action: Extract<MutationAction, "submit" | "cancel">, 
   return toFrappeDoc(await loadReadable(doctype, name, context));
 }
 
-const ALUMDOOR_BANK_ACCOUNT_DOCTYPE = "Tài khoản ngân hàng";
-const ALUMDOOR_BANK_ACCOUNT_DISPLAY_FIELDS = ["bank_name", "account_number", "account_holder"];
 
-export function alumdoorBankAccountLabel(record: JsonObject): string {
-  const bank = typeof record.bank_name === "string" ? record.bank_name.trim() : "";
-  const account = typeof record.account_number === "string" ? record.account_number.trim() : "";
-  const holder = typeof record.account_holder === "string" ? record.account_holder.trim() : "";
-  return [bank, account, holder ? `CTK ${holder}` : ""].filter(Boolean).join(" · ")
-    || String(record.name ?? "");
-}
 
 async function searchLink(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
   const doctype = args.requireText("doctype", 160);
@@ -1535,11 +1506,11 @@ async function searchLink(args: FrappeArgs, context: FrappeRouterContext): Promi
   const titleField = meta.title_field
     || (doctype === "Item" && meta.fields.some((field) => field.fieldname === "item_name") ? "item_name" : undefined);
 
-  const bankAccountDisplay = doctype === ALUMDOOR_BANK_ACCOUNT_DOCTYPE;
+  const linkDisplay = LINK_DISPLAY_RULES[doctype];
   const fields = dedupe([
     "name",
     ...(titleField ? [titleField] : []),
-    ...(bankAccountDisplay ? ALUMDOOR_BANK_ACCOUNT_DISPLAY_FIELDS : []),
+    ...(linkDisplay ? linkDisplay.fields : []),
   ]);
   const stringFieldTypes = new Set([
     "Data", "Small Text", "Text", "Long Text", "Code", "Select", "Link", "Dynamic Link",
@@ -1560,8 +1531,8 @@ async function searchLink(args: FrappeArgs, context: FrappeRouterContext): Promi
   });
   return rows.rows.map((row) => {
     const record = row as JsonObject;
-    if (bankAccountDisplay) {
-      return { value: String(record.name ?? ""), label: alumdoorBankAccountLabel(record), description: "" };
+    if (linkDisplay) {
+      return { value: String(record.name ?? ""), label: linkDisplay.label(record), description: "" };
     }
     const label = titleField && typeof record[titleField] === "string" ? String(record[titleField]) : String(record.name ?? "");
     return { value: String(record.name ?? ""), label, description: label === String(record.name ?? "") ? "" : String(record.name ?? "") };
@@ -1671,20 +1642,21 @@ async function batchDisplayValues(
   await Promise.all([...grouped].map(async ([doctype, nameSet]) => {
     try {
       const meta = await context.metadata.getDocType(context.tenantId, doctype);
-      if (doctype === ALUMDOOR_BANK_ACCOUNT_DOCTYPE && meta) {
+      const displayRule = LINK_DISPLAY_RULES[doctype];
+      if (displayRule && meta) {
         const names = [...nameSet];
         for (let index = 0; index < names.length; index += 50) {
           const chunk = names.slice(index, index + 50);
           const page = await context.listService.list(context.actor, context.tenantId, {
             doctype,
-            fields: ["name", ...ALUMDOOR_BANK_ACCOUNT_DISPLAY_FIELDS],
+            fields: ["name", ...displayRule.fields],
             filters: [{ field: "name", operator: "in", value: chunk }] as unknown as JsonValue,
             limit: chunk.length,
           });
           for (const raw of page.rows) {
             const row = raw as JsonObject;
             const name = typeof row.name === "string" ? row.name : "";
-            if (name) labels.set(`${doctype}\u0000${name}`, alumdoorBankAccountLabel(row));
+            if (name) labels.set(`${doctype}\u0000${name}`, displayRule.label(row));
           }
         }
         return;

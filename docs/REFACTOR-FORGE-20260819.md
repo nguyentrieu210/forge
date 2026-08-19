@@ -116,7 +116,7 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P1** ✅ | Gom `round` (10 bản) và `divideRounded` (5 bản) về `@cloudforge/core`; `numeric-single-source.test.mjs` ghim luật + sổ bản còn riêng | thấp |
 | **P2** ✅ | Gom 10 bản `money()` về `formatMoney` của `@metaforge/core`; `money-single-source.test.mjs` ghim 5 kiểu hiển thị | thấp |
 | **P2b** ✅ | Nạp lười 7 biểu đồ nặng + bộ vẽ SVG: chunk `engine` 833 → 662 kB (gzip 285 → 229) | thấp |
-| **P3** | Bóc 6 method `*_alumdoor_*` khỏi `router.ts` sang bảng đăng ký method của vertical | trung bình |
+| **P3** ✅ | Bóc khỏi `router.ts`: 6 method `*_alumdoor_*` → `VERTICAL_METHODS`, 4 hook context → `AlumdoorRouterHooks`, nhãn "Tài khoản ngân hàng" → `LINK_DISPLAY_RULES`. Nhắc `alumdoor` 63 → 7 chỗ, 4530 → 4357 dòng | trung bình |
 | **P4** | Tách `client/packages/views/src/app/vertical/alumdoor` ra khỏi package `views` | trung bình |
 | **P5** | Cắt `router.ts` (4530 dòng) theo trục: REST resource · method dispatch · metadata · storefront | cao |
 | **P6** | Cắt `alumdoor-worker/src/index.ts` (3689 dòng) và `ChildGrid.tsx` (2200 dòng) | cao |
