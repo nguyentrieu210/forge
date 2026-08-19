@@ -1,0 +1,228 @@
+name: Codespace Remote Control
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Safe command to run against the Forge Codespace
+        required: true
+        default: status
+        type: choice
+        options:
+          - status
+          - restart
+          - sync-restart
+          - seed-full
+          - rebuild
+          - snapshot
+          - stop
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: forge-codespace-remote-control
+  cancel-in-progress: false
+
+jobs:
+  control:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.number == 991 &&
+       github.event.comment.user.login == 'nguyentrieu210' &&
+       startsWith(github.event.comment.body, '/codespace '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ secrets.CODESPACES_PAT }}
+      CODESPACE_NAME: bookish-computing-machine-jj999xj7ppj7fprq9
+      COMMENT_BODY: ${{ github.event.comment.body }}
+    steps:
+      - name: Resolve command
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            command="${{ inputs.command }}"
+          else
+            command="$(printf '%s' "$COMMENT_BODY" | awk '{print $2}')"
+          fi
+          case "$command" in
+            status|restart|sync-restart|seed-full|rebuild|snapshot|stop) ;;
+            *) echo "Unsupported command: $command" >&2; exit 2 ;;
+          esac
+          echo "command=$command" >> "$GITHUB_OUTPUT"
+          echo "command=$command" > /tmp/codespace-result.txt
+
+      - name: Verify Codespaces credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GH_TOKEN" || { echo "Missing repository secret CODESPACES_PAT" | tee -a /tmp/codespace-result.txt >&2; exit 2; }
+          gh auth status 2>&1 | tee -a /tmp/codespace-result.txt
+          gh codespace view -c "$CODESPACE_NAME" --json name,state,repository,displayName 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Start Codespace when needed
+        if: steps.resolve.outputs.command != 'stop'
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state)"
+          if [[ "$state" != "Available" ]]; then
+            echo "Starting Codespace (current state: $state)..." | tee -a /tmp/codespace-result.txt
+            gh api --method POST "/user/codespaces/$CODESPACE_NAME/start" >/dev/null
+            for _ in $(seq 1 90); do
+              state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state)"
+              echo "state=$state"
+              [[ "$state" == "Available" ]] && break
+              sleep 5
+            done
+            [[ "$state" == "Available" ]] || { echo "Codespace did not become available" | tee -a /tmp/codespace-result.txt >&2; exit 1; }
+          fi
+          echo "Codespace state: $state" | tee -a /tmp/codespace-result.txt
+
+      - name: Rebuild Codespace
+        if: steps.resolve.outputs.command == 'rebuild'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Rebuilding Codespace with latest devcontainer configuration..." | tee -a /tmp/codespace-result.txt
+          gh codespace rebuild -c "$CODESPACE_NAME" --full 2>&1 | tee -a /tmp/codespace-result.txt
+          for _ in $(seq 1 120); do
+            state="$(gh codespace view -c "$CODESPACE_NAME" --json state --jq .state 2>/dev/null || true)"
+            echo "state=$state" | tee -a /tmp/codespace-result.txt
+            [[ "$state" == "Available" ]] && exit 0
+            sleep 5
+          done
+          echo "Codespace did not return to Available after rebuild" | tee -a /tmp/codespace-result.txt >&2
+          exit 1
+
+      - name: Snapshot canonical local state, restore and restart
+        if: steps.resolve.outputs.command == 'snapshot'
+        shell: bash
+        run: |
+          set -euo pipefail
+          before="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow codespace-local-state-snapshot.yml --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
+          echo "Dispatching canonical C:\\alumdoor snapshot workflow..." | tee -a /tmp/codespace-result.txt
+          gh workflow run codespace-local-state-snapshot.yml --repo "$GITHUB_REPOSITORY" --ref main
+          run_id=''
+          for _ in $(seq 1 30); do
+            run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow codespace-local-state-snapshot.yml --event workflow_dispatch --limit 5 --json databaseId --jq "[.[] | select(.databaseId != $before)][0].databaseId // empty")"
+            [[ -n "$run_id" ]] && break
+            sleep 2
+          done
+          [[ -n "$run_id" ]] || { echo "Could not resolve snapshot run" | tee -a /tmp/codespace-result.txt >&2; exit 1; }
+          echo "Snapshot run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}" | tee -a /tmp/codespace-result.txt
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status 2>&1 | tee -a /tmp/codespace-result.txt
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            set -euo pipefail
+            cd /workspaces/forge
+            rm -f .codespace-local-state.json
+            node scripts/codespaces/restore-local-state.mjs
+            bash .devcontainer/start-dev.sh
+            echo "=== health ==="
+            curl -fsS -o /dev/null -w "frontend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:5173/
+            curl -sS -o /dev/null -w "backend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Status
+        if: steps.resolve.outputs.command == 'status'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            cd /workspaces/forge
+            echo "=== git ==="
+            git branch --show-current
+            git rev-parse --short HEAD
+            git status --short
+            echo "=== ports ==="
+            ss -ltnp 2>/dev/null | grep -E ":(5173|8799)\\b" || true
+            echo "=== health ==="
+            curl -sS -o /dev/null -w "frontend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:5173/ || true
+            curl -sS -o /dev/null -w "backend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot || true
+            echo "=== recent logs ==="
+            tail -n 20 /tmp/forge-backend.log 2>/dev/null || true
+            tail -n 20 /tmp/forge-vite.log 2>/dev/null || true
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Restart Forge
+        if: steps.resolve.outputs.command == 'restart'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''cd /workspaces/forge && bash .devcontainer/start-dev.sh'\''' 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Sync main and restart Forge
+        if: steps.resolve.outputs.command == 'sync-restart'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            set -euo pipefail
+            cd /workspaces/forge
+            if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+              echo "Refusing to overwrite tracked local edits. Commit/stash them first." >&2
+              git status --short >&2
+              exit 3
+            fi
+            git checkout main
+            git fetch origin main
+            git merge --ff-only origin/main
+            bash .devcontainer/start-dev.sh
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Seed full Alumdoor data
+        if: steps.resolve.outputs.command == 'seed-full'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace ssh -c "$CODESPACE_NAME" 'bash -lc '\''
+            set -euo pipefail
+            cd /workspaces/forge
+            if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+              echo "Refusing full seed on tracked local edits." >&2
+              git status --short >&2
+              exit 3
+            fi
+            git checkout main
+            git fetch origin main
+            git merge --ff-only origin/main
+            bash .devcontainer/start-dev.sh
+            bash scripts/codespaces/seed-full.sh
+            echo "=== final health ==="
+            curl -fsS -o /dev/null -w "frontend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:5173/
+            curl -sS -o /dev/null -w "backend=%{http_code} time=%{time_total}s\\n" http://127.0.0.1:8799/api/method/metaforge.api.get_boot
+          '\''' 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Stop Codespace
+        if: steps.resolve.outputs.command == 'stop'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh codespace stop -c "$CODESPACE_NAME" 2>&1 | tee -a /tmp/codespace-result.txt
+
+      - name: Publish result to control issue
+        if: always() && github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="$(tail -c 5500 /tmp/codespace-result.txt 2>/dev/null || true)"
+          {
+            echo "Codespace control result: **$JOB_STATUS**"
+            echo
+            echo '```text'
+            printf '%s\n' "$result"
+            echo '```'
+            echo
+            echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } > /tmp/codespace-comment.md
+          gh issue comment 991 --repo "$GITHUB_REPOSITORY" --body-file /tmp/codespace-comment.md

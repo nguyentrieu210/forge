@@ -180,11 +180,11 @@ jobs:
           fi
 
           grep -q 'workflow_run:' "$pricing"
-          grep -q 'Bootstrap Alumdoor Local C Drive' "$pricing"
+          grep -q 'Import Alumdoor Item Master Local' "$pricing"
           grep -q 'github.event.workflow_run.head_sha' "$pricing"
           grep -q 'run-local-import.mjs pricing' "$pricing"
           if grep -qE '^[[:space:]]{2}push:' "$pricing"; then
-            echo 'Pricing acceptance must not race bootstrap on the same push'
+            echo 'Pricing acceptance must not race its Item prerequisite workflow'
             exit 1
           fi
 

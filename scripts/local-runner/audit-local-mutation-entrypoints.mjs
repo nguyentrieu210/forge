@@ -75,11 +75,12 @@ inventory.push({ path: 'server/scripts/stop-local-dev.mjs', class: 'INFRA_NON_D1
 
 const guardedChildren = [
   ['server/scripts/import-alumdoor-reason-master-local.mjs', /assertLocalMutationChildContext\(\[?['"]reason-master['"]\]?\)/, 'reason-master'],
-  ['server/scripts/import-alumdoor-item-master-local.mjs', /assertLocalMutationChildContext\(\[['"]item-master['"],\s*['"]real-purchase['"]\]\)/, 'item-master|real-purchase'],
+  ['server/scripts/import-alumdoor-item-master-local.mjs', /assertLocalMutationChildContext\(\[['"]item-master['"],\s*['"]real-purchase['"],\s*['"]bom['"]\]\)/, 'item-master|real-purchase|bom'],
   ['server/scripts/seed-alumdoor-uom-local.mjs', /assertLocalMutationChildContext\(\[['"]uom['"],\s*['"]layer0['"]\]\)/, 'uom|layer0'],
   ['server/scripts/ensure-alumdoor-real-purchase-suppliers-local.mjs', /assertLocalMutationChildContext\(\[['"]real-purchase['"]\]\)/, 'real-purchase'],
   ['server/scripts/import-alumdoor-pricing-local.mjs', /assertLocalMutationChildContext\(\[['"]pricing['"]\]\)/, 'pricing'],
   ['server/scripts/import-alumdoor-canonical-bom-local.mjs', /assertLocalMutationChildContext\(\[['"]bom['"]\]\)/, 'bom'],
+  ['server/scripts/import-alumdoor-bom-template-local.mjs', /assertLocalMutationChildContext\(\[['"]bom-template['"],\s*['"]bom['"]\]\)/, 'bom-template|bom'],
 ];
 for (const [file, pattern, adapters] of guardedChildren) {
   requireFile(file);
@@ -89,6 +90,7 @@ for (const [file, pattern, adapters] of guardedChildren) {
 requireMatch('server/scripts/import-alumdoor-item-master-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'item_validate_only_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-pricing-local.mjs', /if \(!apply\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'pricing_dry_run_must_remain_prelock');
 requireMatch('server/scripts/import-alumdoor-canonical-bom-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'bom_validate_only_must_remain_prelock');
+requireMatch('server/scripts/import-alumdoor-bom-template-local.mjs', /if \(validateOnly\)[\s\S]*process\.exit\(0\);[\s\S]*assertLocalMutationChildContext/, 'bom_template_validate_only_must_remain_prelock');
 
 for (const stale of [
   'server/scripts/import-alumdoor-item-master-local-impl.mjs',

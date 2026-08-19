@@ -1,6 +1,10 @@
 name: Import Alumdoor Item Master Local
 
 on:
+  workflow_run:
+    workflows:
+      - Seed Alumdoor Local Master Layer 0
+    types: [completed]
   workflow_dispatch:
     inputs:
       source_records_path:
@@ -18,12 +22,26 @@ concurrency:
 
 jobs:
   import-item-master:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: [self-hosted]
     timeout-minutes: 40
     env:
-      ITEM_SOURCE_PATH: ${{ inputs.source_records_path }}
-      FORGE_LOCAL_EXPECTED_SHA: ${{ github.sha }}
+      ITEM_SOURCE_PATH: ${{ github.event_name == 'workflow_dispatch' && inputs.source_records_path || 'C:\alumdoor\local-imports\alumdoor-item-source-records.json' }}
+      FORGE_LOCAL_EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
+      - name: Build canonical Item source records
+        shell: powershell
+        working-directory: C:\alumdoor
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceDir = Split-Path -Parent $env:ITEM_SOURCE_PATH
+          New-Item -ItemType Directory -Force -Path $sourceDir | Out-Null
+          $reportPath = "$env:ITEM_SOURCE_PATH.report.json"
+          & node server\scripts\extract-alumdoor-real-source-records.mjs "$env:ITEM_SOURCE_PATH" "$reportPath"
+          if ($LASTEXITCODE -ne 0) { throw "Item source extraction failed with exit code $LASTEXITCODE" }
+          if (-not (Test-Path -LiteralPath $env:ITEM_SOURCE_PATH)) { throw "Item source payload was not created: $env:ITEM_SOURCE_PATH" }
+          if (-not (Test-Path -LiteralPath $reportPath)) { throw "Item source report was not created: $reportPath" }
+
       - name: Run canonical Item Master local import contract
         shell: powershell
         working-directory: C:\alumdoor

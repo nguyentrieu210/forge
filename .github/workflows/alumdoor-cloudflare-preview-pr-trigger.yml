@@ -1,0 +1,48 @@
+name: Alumdoor Cloudflare Preview Trigger
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  trigger-and-wait:
+    if: github.head_ref == 'cloudflare/alumdoor-preview' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - name: Dispatch isolated preview deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run alumdoor-cloudflare-preview.yml --repo "$GITHUB_REPOSITORY" --ref cloudflare/alumdoor-preview
+          echo "Dispatched at $started"
+
+          run_id=""
+          for attempt in $(seq 1 30); do
+            run_id="$(gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow alumdoor-cloudflare-preview.yml \
+              --branch cloudflare/alumdoor-preview \
+              --event workflow_dispatch \
+              --limit 10 \
+              --json databaseId,createdAt \
+              --jq '.[] | select(.createdAt >= "'"$started"'") | .databaseId' | head -n1)"
+            if [ -n "$run_id" ]; then break; fi
+            sleep 2
+          done
+
+          test -n "$run_id" || { echo "Could not resolve dispatched preview run" >&2; exit 1; }
+          echo "Preview deployment run: $run_id"
+          echo "PREVIEW_RUN_ID=$run_id" >> "$GITHUB_ENV"
+
+      - name: Wait for full Cloudflare preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run watch "$PREVIEW_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status --interval 10

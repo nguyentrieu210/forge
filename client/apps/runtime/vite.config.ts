@@ -1,14 +1,16 @@
-import { fileURLToPath, URL } from "node:url";
+import { existsSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const packagesRoot = fileURLToPath(new URL("../../packages/", import.meta.url));
+const workspaceSource = (name: string) => fileURLToPath(
+  new URL(`../../packages/${name}/src/index.ts`, import.meta.url),
+);
 const viewSource = (relativePath: string) => fileURLToPath(
   new URL(`../../packages/views/src/${relativePath}`, import.meta.url),
-);
-const controlsSource = fileURLToPath(
-  new URL("../../packages/controls/src/index.ts", import.meta.url),
 );
 const runtimeDependency = (name: string) => fileURLToPath(
   new URL(`./node_modules/${name}`, import.meta.url),
@@ -75,20 +77,38 @@ function attendanceMobileDev(): Plugin {
   };
 }
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// DEV ONLY: every package under client/packages that exposes src/index.ts is
+// resolved straight to source. Production package.json exports can keep pointing
+// at dist/, while a fresh Codespace needs no package prebuild and gets HMR for
+// workspace edits immediately. This also covers future packages automatically.
+const workspacePackageAliases = readdirSync(packagesRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .flatMap((entry) => {
+    const source = workspaceSource(entry.name);
+    if (!existsSync(source)) return [];
+    return [{
+      find: new RegExp(`^@metaforge\\/${escapeRegExp(entry.name)}$`),
+      replacement: source,
+    }];
+  });
+
 const viewSourceAliases = [
   // The attendance entry lives beside Runtime rather than below its root. Pin
-  // bare imports to Runtime's dependency graph so Vite does not start resolving
-  // from apps/attendance-mobile (which intentionally has no node_modules).
+  // bare third-party imports to Runtime's dependency graph so Vite does not
+  // create duplicate React instances.
   { find: /^react$/, replacement: runtimeDependency("react") },
   { find: /^react-dom$/, replacement: runtimeDependency("react-dom") },
   { find: /^lucide-react$/, replacement: runtimeDependency("lucide-react") },
   { find: /^jsqr$/, replacement: runtimeDependency("jsqr") },
-  { find: /^@metaforge\/adapter-frappe$/, replacement: runtimeDependency("@metaforge/adapter-frappe") },
-  { find: /^@metaforge\/core$/, replacement: runtimeDependency("@metaforge/core") },
-  { find: /^@metaforge\/shell$/, replacement: runtimeDependency("@metaforge/shell") },
-  { find: /^@metaforge\/ui$/, replacement: runtimeDependency("@metaforge/ui") },
-  { find: /^@metaforge\/controls$/, replacement: controlsSource },
-  { find: /^@metaforge\/views$/, replacement: viewSource("index.ts") },
+
+  ...workspacePackageAliases,
+
+  // Explicit subpath aliases remain necessary because packages such as views
+  // intentionally expose multiple dev entry points. Keep doctype-workspace on
+  // the runtime composition wrapper; aliasing it to canonical DoctypeWorkspace
+  // bypasses product extensions such as Alumdoor's dedicated Sales Order TSX.
   { find: /^@metaforge\/views\/provider$/, replacement: viewSource("container/provider") },
   { find: /^@metaforge\/views\/registry$/, replacement: viewSource("registry") },
   { find: /^@metaforge\/views\/url-state$/, replacement: viewSource("list/useListState") },
@@ -115,19 +135,9 @@ const viewSourceAliases = [
  *
  * `VITE_FORGE_BACKEND` là cổng chỉnh backend mà `server/RUNBOOK_LOCAL.md` đã nhắc tới; mặc định
  * 8799 khớp cổng worker trong runbook.
- *
- * DEV ONLY: runtime phải đọc workspace source trực tiếp. Package @metaforge/views export dist
- * cho production, nên nếu không alias ở đây thì sửa TSX trong packages/views/src không thể HMR
- * trên cổng 5173 cho tới khi build lại package. Alias này giữ production exports nguyên vẹn nhưng
- * làm preview local phản ánh source ngay lập tức.
  */
 export default defineConfig({
   plugins: [attendanceMobileDev(), react(), tailwindcss()],
-  // Runtime imports workspace packages through /@fs while its own entry is resolved
-  // from this app. Without dedupe, a local nested pnpm install can hand ReactDOM one
-  // React instance and @metaforge/ui another, producing an invalid-hook-call blank
-  // screen on 5173. One renderer instance is a correctness requirement, not merely
-  // a bundle-size optimization.
   resolve: {
     alias: viewSourceAliases,
     dedupe: ["react", "react-dom"],

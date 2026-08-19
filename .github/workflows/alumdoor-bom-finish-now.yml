@@ -47,7 +47,7 @@ jobs:
       group: alumdoor-bom-finish-now
       cancel-in-progress: false
     steps:
-      - name: Bootstrap latest main then import BOM
+      - name: Bootstrap latest main then reconcile source-complete BOM
         shell: powershell
         working-directory: C:\alumdoor
         run: |
@@ -69,7 +69,7 @@ jobs:
             "BOM_FINISH_IMPORT_EXIT=$bomExit" | Tee-Object -FilePath $logPath -Append
             if ($bomExit -eq 0) { $ok = $true; break }
           }
-          if (-not $ok) { throw 'Canonical BOM local persistence did not complete successfully' }
+          if (-not $ok) { throw 'Canonical source-complete BOM local persistence did not complete successfully' }
 
       - name: Publish final BOM evidence to PR 951
         if: always()
@@ -87,11 +87,32 @@ jobs:
               'RUNNER_EVIDENCE ',
               'INFRA_STATUS=',
               'DATA_STATUS=',
+              'ALUMDOOR_BOM_SOURCE_COMPLETE ',
               'ALUMDOOR_BOM_DATA_READY ',
               'GLOBAL_D1_LOCK=',
               'BACKUP_STATUS=',
+              'ALUMDOOR_ITEM_LOCAL_IMPORT_PASS ',
               'ALUMDOOR_BOM_LOCAL_IMPORT_PASS ',
+              'ALUMDOOR_BOM_TEMPLATE_IMPORT_PASS ',
+              'ALUMDOOR_BOM_D1_SUMMARY ',
+              'ALUMDOOR_BOM_D1_CANONICAL ',
+              'ALUMDOOR_BOM_D1_VERIFY_PASS',
               'ALUMDOOR_LOCAL_BOM_IDEMPOTENCE_PASS ',
+              'BOM_AUDIT_TOTAL=',
+              'BOM_COMPLETE=',
+              'BOM_INCOMPLETE=',
+              'BOM_COMPONENTS_TOTAL=',
+              'MISSING_COMPONENTS=',
+              'MISSING_ITEMS=',
+              'ITEMS_ADDED=',
+              'BOM_CREATED=',
+              'BOM_UPDATED=',
+              'BOM_UNCHANGED=',
+              'BOM_TEMPLATE_CREATED=',
+              'BOM_TEMPLATE_UPDATED=',
+              'IDEMPOTENT_SECOND_PASS=',
+              'PENDING_VALUE_ROWS=',
+              'D1_',
               'FORGE_LOCAL_IMPORT_EXECUTION_PASS ',
               'EXECUTION_STATUS='
             )
@@ -101,10 +122,10 @@ jobs:
               }
             }
           }
-          if ($lines.Count -eq 0 -and (Test-Path $logPath)) { $lines = @(Get-Content $logPath | Select-Object -Last 50) }
-          $evidence = ($lines | Select-Object -Last 120) -join "`n"
+          if ($lines.Count -eq 0 -and (Test-Path $logPath)) { $lines = @(Get-Content $logPath | Select-Object -Last 80) }
+          $evidence = ($lines | Select-Object -Last 220) -join "`n"
           $body = @"
-          ## BOM LOCAL FINAL EXECUTION
+          ## BOM LOCAL SOURCE-COMPLETE FINAL EXECUTION
 
           ```text
           $evidence

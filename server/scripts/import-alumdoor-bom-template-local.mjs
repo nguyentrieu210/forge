@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-// Persists the deferred BOM knowledge that Gate B (import-alumdoor-canonical-bom-local.mjs)
-// deliberately leaves out. Gate B only writes a Bill of Materials line when a component's
-// quantity is a resolved, static number — a formula that depends on a specific door's runtime
-// geometry (e.g. "(CAO PB - 10CM)x2") or a missing unit conversion cannot be turned into that
-// number without inventing one. This script does not invent it either: it records the parent
-// item, the component identity, and the raw source formula/reason verbatim as
-// source_status=DEFERRED on BOM Template, so the catalog structure is queryable even where the
-// quantity is not yet computable. quantity_formula_json is populated with a {kind:"DEFERRED",...}
-// envelope carrying only values already present in the source lineage — never a guessed number.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -19,50 +10,50 @@ const validateOnly = modeArg === '--validate-only';
 if (!payloadArg || (!validateOnly && !resultArg)) throw new Error('Usage: import-alumdoor-bom-template-local.mjs <bom-importable.json> <result.json> [--validate-only]');
 const payloadPath = path.resolve(payloadArg);
 const source = JSON.parse(readFileSync(payloadPath, 'utf8'));
-if (!['alumdoor-canonical-bom-importable/v1', 'alumdoor-canonical-bom-importable/v2'].includes(source?.format) || !Array.isArray(source.boms)) {
-  throw new Error('Expected alumdoor-canonical-bom-importable/v1 or /v2');
-}
+if (source?.format !== 'alumdoor-canonical-bom-importable/v2' || !Array.isArray(source.boms)) throw new Error('Expected alumdoor-canonical-bom-importable/v2');
 
 const clean = (v) => String(v ?? '').normalize('NFC').trim();
+const pendingOf = (bom) => Array.isArray(bom.pending_lines) ? bom.pending_lines : (Array.isArray(bom.blank_lines) ? bom.blank_lines : []);
 
 function buildTemplate(bom) {
-  const blanks = Array.isArray(bom.blank_lines) ? bom.blank_lines : [];
-  if (!blanks.length) return null;
-  const rows = blanks.map((line, index) => {
-    const lineage = line.lineage ?? {};
-    const envelope = {
-      kind: 'DEFERRED',
-      reason: line.blank_reason ?? null,
-      source_formula: lineage.source_formula_text ?? null,
-      source_value: line.source_value ?? null,
-    };
+  const pending = pendingOf(bom);
+  if (!pending.length) return null;
+  const rows = pending.map((line, index) => {
+    const envelope = line.quantity_formula_json
+      ? clean(line.quantity_formula_json)
+      : JSON.stringify({
+          kind: 'DEFERRED',
+          reason: line.source_pending_reason ?? null,
+          source_formula: line.source_formula_text ?? null,
+          source_value: line.source_value ?? null,
+        });
     return {
-      rule_code: `${bom.item}:${line.item_code}:${index + 1}`,
-      component_key: String(line.item_code ?? ''),
-      item_code: String(line.item_code ?? ''),
-      stock_uom: lineage.source_uom ? canonicalAlumdoorUom(lineage.source_uom) : undefined,
+      rule_code: `${bom.item}:SRC-${line.source_row ?? index + 1}`,
+      component_key: clean(line.component_key) || clean(line.item_code),
+      item_code: clean(line.item_code),
+      stock_uom: clean(line.stock_uom) || undefined,
       priority: 0,
-      sequence: index + 1,
-      quantity_formula_json: JSON.stringify(envelope),
-      source_row: Number.isFinite(lineage.source_row) ? lineage.source_row : undefined,
-      source_uom: lineage.source_uom ?? undefined,
-      source_formula: lineage.source_formula_text ?? '',
-      note: line.blank_reason ?? '',
+      sequence: Number(line.source_sequence ?? index + 1),
+      quantity_formula_json: envelope,
+      source_row: Number.isFinite(Number(line.source_row)) ? Number(line.source_row) : undefined,
+      source_uom: clean(line.source_uom) || undefined,
+      source_formula: clean(line.source_formula_text),
+      note: clean(line.source_pending_reason),
     };
   });
-  const rowsWithSource = blanks.filter((l) => Number.isFinite(l.lineage?.source_row));
-  const minRow = rowsWithSource.length ? Math.min(...rowsWithSource.map((l) => l.lineage.source_row)) : null;
-  const maxRow = rowsWithSource.length ? Math.max(...rowsWithSource.map((l) => l.lineage.source_row)) : null;
-  const sheet = blanks.find((l) => l.lineage?.source_sheet)?.lineage?.source_sheet ?? '';
+  const rowsWithSource = pending.filter((l) => Number.isFinite(Number(l.source_row)));
+  const minRow = rowsWithSource.length ? Math.min(...rowsWithSource.map((l) => Number(l.source_row))) : null;
+  const maxRow = rowsWithSource.length ? Math.max(...rowsWithSource.map((l) => Number(l.source_row))) : null;
+  const sheet = clean(pending.find((l) => clean(l.source_sheet))?.source_sheet);
   return {
     doctype: 'BOM Template',
     template_code: bom.item,
     item_code: bom.item,
     source_status: 'DEFERRED',
     source_ref: minRow ? `${sheet} row ${minRow}${maxRow && maxRow !== minRow ? `-${maxRow}` : ''}` : sheet,
-    deferred_components_json: JSON.stringify(blanks),
+    deferred_components_json: JSON.stringify(pending),
     component_rules: rows,
-    note: `Gate B left ${blanks.length} component(s) unresolved (missing_conversion or runtime geometry formula); recorded verbatim, no value invented.`,
+    note: `Canonical source retains ${pending.length} component value gap(s); identity is persisted on Draft BOM and unresolved values remain blank until authoritative evidence exists.`,
   };
 }
 
@@ -76,7 +67,7 @@ for (const t of templates) {
 }
 console.log(`ALUMDOOR_BOM_TEMPLATE_PAYLOAD_VALID templates=${templates.length} component_rules=${templates.reduce((n,t)=>n+t.component_rules.length,0)}`);
 if (validateOnly) { console.log('ALUMDOOR_BOM_TEMPLATE_VALIDATE_ONLY_PASS'); process.exit(0); }
-assertLocalMutationChildContext(['bom-template']);
+assertLocalMutationChildContext(['bom-template', 'bom']);
 
 const origin = (process.env.FORGE_ORIGIN ?? 'http://127.0.0.1:8799').replace(/\/$/, '');
 const parsedOrigin = new URL(origin);
@@ -148,87 +139,104 @@ async function getTemplate(name) {
   if (!result.response.ok) throw new Error(`GET BOM Template ${name} failed (${result.response.status}): ${result.text}`);
   return dataOf(result.body);
 }
+function normalizedDeferred(value) {
+  try { return JSON.stringify(JSON.parse(clean(value) || '[]')); }
+  catch { return clean(value); }
+}
 function sameTemplate(expected, actual) {
   if (!actual) return false;
   if (clean(actual.item_code) !== clean(expected.item_code)) return false;
+  if (clean(actual.template_code) !== clean(expected.template_code)) return false;
   if (clean(actual.source_status) !== 'DEFERRED') return false;
-  const left = JSON.stringify(JSON.parse(clean(actual.deferred_components_json) || '[]'));
-  const right = JSON.stringify(JSON.parse(expected.deferred_components_json));
-  return left === right;
+  if (normalizedDeferred(actual.deferred_components_json) !== normalizedDeferred(expected.deferred_components_json)) return false;
+  return true;
 }
 
 await login();
 const existingList = await listExisting();
+const existingFull = [];
+for (const row of existingList) existingFull.push(await getTemplate(row.name));
 const existingByCode = new Map();
-for (const row of existingList) {
-  const code = clean(row.template_code);
-  if (!code) continue;
+for (const doc of existingFull.filter(Boolean)) {
+  const code = clean(doc.template_code);
   const list = existingByCode.get(code) ?? [];
-  list.push(row.name);
+  list.push(doc);
   existingByCode.set(code, list);
 }
-const planned = [];
-const unchanged = [];
-const conflicts = [];
+const plans = [];
 for (const t of templates) {
-  const existingNames = existingByCode.get(clean(t.template_code)) ?? [];
-  let exactName = null;
-  for (const existingName of existingNames) {
-    const full = await getTemplate(existingName);
-    if (sameTemplate(t, full)) { exactName = existingName; break; }
-  }
-  if (exactName) {
-    unchanged.push({ template_code: t.template_code, name: exactName, duplicate_name_count: existingNames.length });
-  } else if (existingNames.length) {
-    conflicts.push({ template_code: t.template_code, existing_names: existingNames, reason: 'existing_template_differs_from_canonical_source' });
+  const candidates = existingByCode.get(clean(t.template_code)) ?? [];
+  const exact = candidates.find((doc) => sameTemplate(t, doc));
+  if (exact) plans.push({ action:'noop', template:t, existing:exact });
+  else if (candidates.length) plans.push({ action:'update', template:t, existing:candidates[0] });
+  else plans.push({ action:'create', template:t, existing:null });
+}
+const resultPath = path.resolve(resultArg);
+mkdirSync(path.dirname(resultPath), { recursive: true });
+writeFileSync(`${resultPath}.preimage.json`, `${JSON.stringify({
+  format:'alumdoor-bom-template-local-preimage/v2',
+  created_at:new Date().toISOString(),
+  payload:payloadPath,
+  existing_count:existingFull.length,
+  planned_create_count:plans.filter((p)=>p.action==='create').length,
+  planned_update_count:plans.filter((p)=>p.action==='update').length,
+  unchanged_count:plans.filter((p)=>p.action==='noop').length,
+  existing:existingFull,
+}, null, 2)}\n`);
+
+const created = []; const updated = []; const unchanged = [];
+for (const plan of plans) {
+  if (plan.action === 'noop') { unchanged.push({template_code:plan.template.template_code,name:plan.existing.name}); continue; }
+  if (plan.action === 'create') {
+    const body = await requireOk(`/api/resource/${encodeURIComponent('BOM Template')}`, { method: 'POST', body: plan.template });
+    const doc = dataOf(body); created.push({template_code:plan.template.template_code,name:doc?.name??null});
   } else {
-    planned.push(t);
+    const body = await requireOk(`/api/resource/${encodeURIComponent('BOM Template')}/${encodeURIComponent(plan.existing.name)}`, { method: 'PUT', body: plan.template });
+    const doc = dataOf(body); updated.push({template_code:plan.template.template_code,name:doc?.name??plan.existing.name});
   }
 }
-if (conflicts.length) {
-  const resultPath = path.resolve(resultArg);
-  writeFileSync(resultPath, `${JSON.stringify({ conflicts, created_count: 0, unchanged_count: unchanged.length }, null, 2)}\n`);
-  throw new Error(`ALUMDOOR_BOM_TEMPLATE_CONFLICT count=${conflicts.length}`);
+
+// Remove only redundant DEFERRED templates for the same canonical code. This importer owns
+// those records and the local state has already been backed up by the adapter.
+const afterMutationList = await listExisting();
+const afterMutationFull = [];
+for (const row of afterMutationList) afterMutationFull.push(await getTemplate(row.name));
+const duplicateRemoved = [];
+for (const t of templates) {
+  const candidates = afterMutationFull.filter((doc) => doc && clean(doc.template_code) === clean(t.template_code));
+  const exact = candidates.find((doc) => sameTemplate(t, doc));
+  if (!exact) continue;
+  for (const doc of candidates) {
+    if (doc.name === exact.name) continue;
+    if (clean(doc.source_status) !== 'DEFERRED') continue;
+    await requireOk(`/api/resource/${encodeURIComponent('BOM Template')}/${encodeURIComponent(doc.name)}`, { method:'DELETE' });
+    duplicateRemoved.push({template_code:t.template_code,name:doc.name});
+  }
 }
-const created = [];
-for (const t of planned) {
-  const body = await requireOk(`/api/resource/${encodeURIComponent('BOM Template')}`, { method: 'POST', body: t });
-  const doc = dataOf(body);
-  created.push({ template_code: t.template_code, name: doc?.name ?? null });
-}
+
 const postList = await listExisting();
-const postByCode = new Map();
-for (const row of postList) {
-  const code = clean(row.template_code);
-  if (!code) continue;
-  const list = postByCode.get(code) ?? [];
-  list.push(row.name);
-  postByCode.set(code, list);
-}
+const postFull = [];
+for (const row of postList) postFull.push(await getTemplate(row.name));
 const failures = [];
 for (const t of templates) {
-  const names = postByCode.get(clean(t.template_code)) ?? [];
-  let exact = false;
-  for (const name of names) {
-    if (sameTemplate(t, await getTemplate(name))) { exact = true; break; }
-  }
-  if (!exact) failures.push({ template_code: t.template_code, reason: 'no_exact_persisted_template', candidate_count: names.length });
+  const matches = postFull.filter((doc) => doc && clean(doc.template_code) === clean(t.template_code) && sameTemplate(t, doc));
+  if (matches.length !== 1) failures.push({ template_code: t.template_code, reason: matches.length ? 'duplicate_exact_persisted_template' : 'no_exact_persisted_template', match_count:matches.length });
 }
 if (failures.length) {
-  writeFileSync(path.resolve(resultArg), `${JSON.stringify({ failures }, null, 2)}\n`);
+  writeFileSync(resultPath, `${JSON.stringify({ failures }, null, 2)}\n`);
   throw new Error(`ALUMDOOR_BOM_TEMPLATE_VERIFY_FAILED count=${failures.length}`);
 }
 const result = {
-  format: 'alumdoor-bom-template-local-import-result/v1',
+  format: 'alumdoor-bom-template-local-import-result/v2',
   payload: payloadPath,
   created_count: created.length,
+  updated_count: updated.length,
   unchanged_count: unchanged.length,
+  duplicate_removed_count: duplicateRemoved.length,
   template_count: templates.length,
   component_rule_count: templates.reduce((n, t) => n + t.component_rules.length, 0),
   verification_failure_count: 0,
-  conflict_count: conflicts.length,
-  created,
-  unchanged,
+  created, updated, unchanged, duplicate_removed:duplicateRemoved,
 };
-writeFileSync(path.resolve(resultArg), `${JSON.stringify(result, null, 2)}\n`);
-console.log(`ALUMDOOR_BOM_TEMPLATE_IMPORT_PASS created=${created.length} unchanged=${unchanged.length} templates=${templates.length}`);
+writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+console.log(`ALUMDOOR_BOM_TEMPLATE_IMPORT_PASS created=${created.length} updated=${updated.length} unchanged=${unchanged.length} duplicates_removed=${duplicateRemoved.length} templates=${templates.length} rules=${result.component_rule_count}`);

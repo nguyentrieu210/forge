@@ -12,6 +12,10 @@ coverage/
 *.tsbuildinfo
 local-backups/
 local-locks/
+local-imports/
+.codespace-local-state.json
+.codespace-admin-credentials
+.codespace-role-credentials
 .cache-vietnam-divisions/
 __pycache__/
 *.py[cod]

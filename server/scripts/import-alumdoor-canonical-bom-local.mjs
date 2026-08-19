@@ -282,6 +282,7 @@ async function updateBomDraft(name, bom) {
 
 await login();
 
+// Prerequisite gate: every finished/component Item must already exist after the canonical Item import.
 const referencedItems = new Set();
 for (const bom of payload.boms) {
   referencedItems.add(clean(bom.item));

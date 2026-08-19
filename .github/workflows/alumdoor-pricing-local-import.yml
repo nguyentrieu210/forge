@@ -3,7 +3,7 @@ name: Import Alumdoor Pricing Local
 on:
   workflow_run:
     workflows:
-      - Bootstrap Alumdoor Local C Drive
+      - Import Alumdoor Item Master Local
     types: [completed]
   workflow_dispatch:
 

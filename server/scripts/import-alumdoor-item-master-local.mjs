@@ -61,6 +61,19 @@ const MANAGED_SCALARS = [
   "disabled",
 ];
 
+// Historical canonical payloads retain two retired flags and one current hidden
+// server-owned flag. Do not send those through /api/resource: the first two are
+// not in the installed schema and is_stock_item is deliberately server-controlled
+// by the current metadata contract. All canonical source rows in this importer are
+// inventory Items, so the server default (true) is the intended value and is still
+// checked again during post-import verification.
+const API_OMIT_FIELDS = new Set(["is_fixed_asset", "is_sub_contracted_item", "is_stock_item"]);
+function apiItem(item) {
+  return Object.fromEntries(Object.entries(item)
+    .filter(([field]) => !API_OMIT_FIELDS.has(field))
+    .map(([field, value]) => [field, CHECK_FIELDS.has(field) ? Boolean(Number(value) || value === true) : value]));
+}
+
 function normalizeScalar(field, value) {
   if (CHECK_FIELDS.has(field)) return Number(Boolean(Number(value) || value === true));
   return String(value ?? "").trim();
@@ -119,7 +132,8 @@ if (validateOnly) {
   process.exit(0);
 }
 
-assertLocalMutationChildContext(["item-master", "real-purchase"]);
+// The BOM adapter owns one local-D1 lock/backup for Item prerequisites + BOM + BOM Template.
+assertLocalMutationChildContext(["item-master", "real-purchase", "bom"]);
 
 const origin = (process.env.FORGE_ORIGIN ?? "http://127.0.0.1:8799").replace(/\/$/, "");
 const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ?? "";
@@ -236,7 +250,7 @@ console.log(`ALUMDOOR_ITEM_LOCAL_PREIMAGE_PASS existing=${exactExisting.length} 
 // Phase 2: create only the missing exact-code Items.
 const created = [];
 for (const item of missing) {
-  await requireOk("/api/resource/Item", { method: "POST", body: item });
+  await requireOk("/api/resource/Item", { method: "POST", body: apiItem(item) });
   created.push(item.item_code);
 }
 

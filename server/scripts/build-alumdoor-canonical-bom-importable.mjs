@@ -301,6 +301,7 @@ for (const [parentRow, sourceRows] of [...candidatesByParent.entries()].sort((a,
     import_fingerprint: createHash('sha256').update(JSON.stringify(snapshot)).digest('hex'),
     lines: managedLines,
     pending_lines: pendingLines,
+    // Compatibility for the existing BOM Template projection while it is reconciled.
     blank_lines: pendingLines,
     lineage: { source_row: Number(parent.source_row), source_index: Number(parent.source_index), source_parent_row: parentRow },
   });

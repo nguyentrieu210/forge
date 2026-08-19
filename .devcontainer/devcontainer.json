@@ -1,18 +1,26 @@
 {
-  "name": "Forge Fast Preview",
+  "name": "Forge Full-Stack Preview",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "remoteUser": "node",
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": { "version": "latest" }
+  },
+  "containerEnv": { "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0" },
+  "postCreateCommand": "corepack pnpm install --filter runtime... --filter cloudforge... --frozen-lockfile",
+  "postStartCommand": "bash .devcontainer/start-dev.sh",
   "forwardPorts": [5173],
   "portsAttributes": {
-    "5173": {
-      "label": "Forge Vite Preview",
-      "onAutoForward": "openBrowser"
-    }
+    "5173": { "label": "Forge Full-Stack Preview", "onAutoForward": "openPreview" }
   },
-  "postCreateCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --frozen-lockfile",
-  "postStartCommand": "bash .devcontainer/start-preview.sh",
+  "hostRequirements": { "cpus": 2, "memory": "8gb", "storage": "32gb" },
   "customizations": {
     "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "bradlc.vscode-tailwindcss"],
       "settings": {
+        "editor.formatOnSave": true,
+        "files.autoSave": "afterDelay",
+        "files.autoSaveDelay": 800,
+        "terminal.integrated.cwd": "${workspaceFolder}",
         "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
