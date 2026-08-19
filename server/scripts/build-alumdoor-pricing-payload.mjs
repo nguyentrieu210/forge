@@ -179,9 +179,15 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
       blockers.push({ type: "invalid_base_price", item_code: code, rate, row: sourceLineage(row) });
       continue;
     }
-    const prior = baseByCode.get(code);
+    // Khoá theo mã CANONICAL, không theo mã nguồn.
+    //
+    // `code` là mã trong bảng tính, còn `ensureVariant` bên dưới tra bằng `item.item_code` —
+    // mã đang dùng. Trộn hai không gian khoá thì mọi biến thể motor báo `variant_target_missing
+    // _base_price` dù giá gốc có đủ: đo được 179 dòng như vậy sau đợt đổi mã.
+    const baseKey = clean(item.item_code);
+    const prior = baseByCode.get(baseKey);
     if (!prior) {
-      baseByCode.set(code, { item, rate, uom, lineages: [sourceLineage(row)] });
+      baseByCode.set(baseKey, { item, rate, uom, lineages: [sourceLineage(row)] });
       continue;
     }
     if (prior.rate === rate && prior.uom === uom) {
@@ -194,7 +200,7 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
       const incoming = sourceLineage(row);
       if (rate < prior.rate) {
         v5VariantRows.push({ rate: prior.rate, lineage: prior.lineages[0] });
-        baseByCode.set(code, { item, rate, uom, lineages: [incoming] });
+        baseByCode.set(baseKey, { item, rate, uom, lineages: [incoming] });
       } else {
         v5VariantRows.push({ rate, lineage: incoming });
       }
@@ -209,7 +215,10 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
   for (const base of baseByCode.values()) addUnique(itemPrices, itemPriceDocument(base.item, base.rate, STANDARD_VARIANT, { source_rows: base.lineages }), "item_price", blockers);
 
   const ensureVariant = (itemCode, variant, lineage) => {
-    const base = baseByCode.get(clean(itemCode));
+    // Nhận CẢ mã nguồn lẫn mã đang dùng: có chỗ gọi bằng mã bảng tính (`NVL-V5_KEM_STD`), có chỗ
+    // gọi bằng mã canonical. Quy về một mối ngay tại đây thay vì bắt từng chỗ gọi tự nhớ.
+    const resolvedItem = itemsByCode.get(clean(itemCode));
+    const base = baseByCode.get(clean(resolvedItem?.item_code ?? itemCode));
     if (!base) {
       blockers.push({ type: "variant_target_missing_base_price", item_code: clean(itemCode), variant, lineage });
       return null;
