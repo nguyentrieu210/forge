@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, RefreshCw, Save, Send, X } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCw, Save, Send } from "lucide-react";
 import {
   applyContextPolicy,
   mapError,
@@ -64,6 +64,11 @@ function today(): string {
 function money(value: unknown): string {
   const parsed = numberValue(value) ?? 0;
   return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(parsed);
+}
+
+function quantity(value: unknown, digits = 3): string {
+  const parsed = numberValue(value) ?? 0;
+  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: digits }).format(parsed);
 }
 
 function resolveDefault(field: DocField): unknown {
@@ -202,13 +207,14 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
   const closeSeen = useRef(props.closeRequest ?? 0);
   const itemCache = useRef(new Map<string, Json>());
   const skipSupplierAutofillOnce = useRef(false);
-  const pricingPreviewSeq = useRef(0);
   const rowPreviewSeq = useRef(new Map<string, number>());
+  const documentPreviewSeq = useRef(0);
 
   const documentName = text(props.name);
   const isExisting = Boolean(documentName);
-  const formReadOnly = isExisting && (!canWrite || docstatus !== 0);
-  const canSave = isExisting ? !formReadOnly : canCreate;
+  const formReadOnly = isExisting ? (!canWrite || docstatus !== 0) : !canCreate;
+  const canSave = !formReadOnly;
+  const busy = saving || refreshing;
 
   const setHeaderState = useCallback((next: Json) => {
     headerRef.current = next;
@@ -273,11 +279,10 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
       _materialSpecification: text(item.material_specification),
       _defaultPurchaseUom: defaultPurchaseUom,
       item_name: text(item.item_name) || source.item_name,
+      item_group: text(item.item_group) || source.item_group,
       inventory_mode: mode,
       material_specification: text(item.material_specification) || source.material_specification,
     } as PurchaseLine;
-    // Purchase UOM is a master decision, not a free-form line decision. Aluminum in particular
-    // is priced in Kg while qty_bar remains the counted physical quantity.
     if (defaultPurchaseUom && (!text(next.uom) || mode === ALUMINUM_MODE)) next.uom = defaultPurchaseUom;
     return next;
   }, [loadItem]);
@@ -308,6 +313,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
           ...applyContextPolicy("Purchase Order", businessContext, contextPolicies).defaults,
         };
         if (!defaults.transaction_date) defaults.transaction_date = today();
+        if (purchaseMeta.fields.some((field) => field.fieldname === "schedule_date") && !defaults.schedule_date) defaults.schedule_date = today();
         if (!defaults.company && purchaseMeta.fields.some((field) => field.fieldname === "company")) defaults.company = "ALUMDOOR";
         if (!defaults.currency && purchaseMeta.fields.some((field) => field.fieldname === "currency")) defaults.currency = boot.sysdefaults.currency || "VND";
 
@@ -359,7 +365,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     }
     let active = true;
     void adapter.getDoc("Supplier", supplierName).then(({ doc }) => {
-      if (!active) return;
+      if (!active || text(headerRef.current.supplier) !== supplierName) return;
       const supplier = doc as Json;
       setHeaderState({
         ...headerRef.current,
@@ -409,7 +415,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     const nextRows = [...sourceRows];
     positions.forEach((position, activeIndex) => {
       const priced = pricedItems[activeIndex];
-      if (priced) nextRows[position] = { ...nextRows[position], ...priced } as PurchaseLine;
+      if (priced) nextRows[position] = { ...nextRows[position], ...priced, _loading: false, _error: "" } as PurchaseLine;
     });
     const nextHeader = { ...sourceHeader, ...patch };
     delete nextHeader.items;
@@ -435,20 +441,17 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     return { ...resolved, _loading: false, _error: "" };
   }, [adapter, childMeta, hydrateLine]);
 
-  const resolveRowsFromAuthority = useCallback(async (
-    sourceRows: PurchaseLine[],
-    changedField: string,
-    changedKey?: string,
-    sourceHeader = headerRef.current,
-  ): Promise<{ rows: PurchaseLine[]; header: Json }> => {
-    const childResolved = await Promise.all(sourceRows.map(async (row, index) => {
-      if (!text(row.item_code)) return row;
-      const key = purchaseLineKey(row, index);
-      if (changedKey && key !== changedKey) return row;
-      return resolveChildLine(row, changedField);
-    }));
-    return previewPurchaseDocument(childResolved, sourceHeader, changedField);
-  }, [previewPurchaseDocument, resolveChildLine]);
+  const previewLatestRows = useCallback(async (sourceRows: PurchaseLine[], changedField: string, showError = true) => {
+    const seq = ++documentPreviewSeq.current;
+    try {
+      const resolved = await previewPurchaseDocument(sourceRows, headerRef.current, changedField);
+      if (documentPreviewSeq.current !== seq) return;
+      replaceRows(resolved.rows);
+      setHeaderState(resolved.header);
+    } catch (error) {
+      if (documentPreviewSeq.current === seq && showError) toast.error(mapError(error).message);
+    }
+  }, [previewPurchaseDocument, replaceRows, setHeaderState]);
 
   const patchLine = useCallback((key: string, patch: Partial<PurchaseLine>) => {
     const next = rowsRef.current.map((line, index) => purchaseLineKey(line, index) === key
@@ -478,17 +481,18 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
 
     const seq = (rowPreviewSeq.current.get(key) ?? 0) + 1;
     rowPreviewSeq.current.set(key, seq);
-    void resolveRowsFromAuthority(nextRows, fieldname, key)
-      .then((resolved) => {
+    void resolveChildLine(changed, fieldname)
+      .then((resolvedLine) => {
         if (rowPreviewSeq.current.get(key) !== seq) return;
-        replaceRows(resolved.rows);
-        setHeaderState(resolved.header);
+        const latestRows = rowsRef.current.map((line, lineIndex) => purchaseLineKey(line, lineIndex) === key ? resolvedLine : line);
+        replaceRows(latestRows);
+        void previewLatestRows(latestRows, fieldname);
       })
       .catch((error) => {
         if (rowPreviewSeq.current.get(key) !== seq) return;
         patchLine(key, { _loading: false, _error: mapError(error).message });
       });
-  }, [patchLine, replaceRows, resolveRowsFromAuthority, setHeaderState]);
+  }, [patchLine, previewLatestRows, replaceRows, resolveChildLine]);
 
   const addLine = useCallback(() => {
     if (!childMeta) return;
@@ -524,22 +528,25 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     replaceRows(next.length ? next : [newPurchaseLine(childMeta, 0)]);
   }, [childMeta, replaceRows]);
 
+  const resolveAllRows = useCallback(async (sourceRows: PurchaseLine[], changedField: string) => {
+    const childResolved = await Promise.all(sourceRows.map((row) => text(row.item_code) ? resolveChildLine(row, changedField) : row));
+    return previewPurchaseDocument(childResolved, headerRef.current, changedField);
+  }, [previewPurchaseDocument, resolveChildLine]);
+
   const refreshAll = useCallback(async (showToast = true) => {
-    if (!childMeta || !rowsRef.current.some((row) => text(row.item_code))) return;
+    if (!activeRows.length) return;
     setRefreshing(true);
-    const seq = ++pricingPreviewSeq.current;
     try {
-      const resolved = await resolveRowsFromAuthority(rowsRef.current, "manual_refresh");
-      if (pricingPreviewSeq.current !== seq) return;
+      const resolved = await resolveAllRows(rowsRef.current, "manual_refresh");
       replaceRows(resolved.rows);
       setHeaderState(resolved.header);
-      if (showToast) toast.success("Đã tính lại quy cách, giá mua và thành tiền theo dữ liệu hiện tại.");
+      if (showToast) toast.success("Đã tính lại quy cách, giá mua và thành tiền.");
     } catch (error) {
-      if (pricingPreviewSeq.current === seq) toast.error(mapError(error).message);
+      toast.error(mapError(error).message);
     } finally {
       setRefreshing(false);
     }
-  }, [childMeta, replaceRows, resolveRowsFromAuthority, setHeaderState]);
+  }, [activeRows.length, replaceRows, resolveAllRows, setHeaderState]);
 
   const pricingSignature = useMemo(() => [
     text(header.supplier),
@@ -552,25 +559,17 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
   useEffect(() => {
     if (loading || formReadOnly || !activeRows.length) return;
     const timer = window.setTimeout(() => {
-      const seq = ++pricingPreviewSeq.current;
-      void previewPurchaseDocument(rowsRef.current, headerRef.current, "pricing_context")
-        .then((resolved) => {
-          if (pricingPreviewSeq.current !== seq) return;
-          replaceRows(resolved.rows.map((row) => ({ ...row, _loading: false })));
-          setHeaderState(resolved.header);
-        })
-        .catch((error) => {
-          if (pricingPreviewSeq.current === seq) toast.error(mapError(error).message);
-        });
+      void previewLatestRows(rowsRef.current, "pricing_context", true);
     }, 160);
     return () => window.clearTimeout(timer);
-  }, [activeRows.length, formReadOnly, loading, previewPurchaseDocument, pricingSignature, replaceRows, setHeaderState]);
+  }, [activeRows.length, formReadOnly, loading, previewLatestRows, pricingSignature]);
 
   const validateRows = useCallback((resolvedRows: PurchaseLine[], resolvedHeader: Json): string | null => {
     if (!text(resolvedHeader.supplier)) return "Cần chọn nhà cung cấp.";
     if (!text(resolvedHeader.company)) return "Đơn mua chưa có Công ty.";
     if (!text(resolvedHeader.currency)) return "Đơn mua chưa có Tiền tệ.";
     if (!text(resolvedHeader.transaction_date)) return "Cần ngày đặt hàng.";
+    if (meta?.fields.some((field) => field.fieldname === "schedule_date" && field.reqd) && !text(resolvedHeader.schedule_date)) return "Cần ngày giao dự kiến.";
     const active = resolvedRows.filter((row) => text(row.item_code));
     if (!active.length) return "Cần ít nhất một mặt hàng.";
     for (const [index, row] of active.entries()) {
@@ -582,26 +581,24 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
       if (!isAluminumPurchaseLine(row)) continue;
 
       const purchaseUom = text(row._defaultPurchaseUom) || text(row.uom);
-      if (normalized(purchaseUom) !== "kg" || normalized(row.uom) !== "kg") {
-        return `Dòng ${position}: nhôm phải mua theo Kg; số cây/lá được lưu riêng.`;
-      }
+      if (normalized(purchaseUom) !== "kg" || normalized(row.uom) !== "kg") return `Dòng ${position}: nhôm phải mua theo Kg.`;
       const length = positive(row.length_m);
       const bars = positive(row.qty_bar);
       const kgPerM = positive(row.theoretical_kg_per_m);
       if (!length) return `Dòng ${position}: nhôm phải có chiều dài một cây/lá.`;
       if (!bars || !Number.isInteger(bars)) return `Dòng ${position}: số cây/lá phải là số nguyên dương.`;
-      if (!kgPerM) return `Dòng ${position}: chưa có barem kg/m từ Quy cách vật tư.`;
+      if (!kgPerM) return `Dòng ${position}: chưa có barem kg/m từ quy cách.`;
       if (!text(row.color)) return `Dòng ${position}: nhôm phải chọn Màu.`;
-      if (!["Có", "Không"].includes(text(row.is_stamped))) return `Dòng ${position}: nhôm phải chọn trạng thái Dập Có/Không.`;
+      if (!["Có", "Không"].includes(text(row.is_stamped))) return `Dòng ${position}: nhôm phải chọn Dập Có/Không.`;
       const expectedKg = length * bars * kgPerM;
       if (!nearlyEqual(row.theoretical_kg, expectedKg)) return `Dòng ${position}: Kg đặt không khớp Dài cây × Số cây × Kg/m.`;
-      if (!nearlyEqual(row.qty, expectedKg)) return `Dòng ${position}: SL tính tiền Kg không khớp barem ${expectedKg.toFixed(3)} kg.`;
+      if (!nearlyEqual(row.qty, expectedKg)) return `Dòng ${position}: SL tính tiền Kg không khớp barem.`;
       if (row.amount !== undefined && row.amount !== null && row.amount !== "" && !nearlyEqual(row.amount, expectedKg * rate, 0.5)) {
         return `Dòng ${position}: Thành tiền chưa khớp Kg đặt × Đơn giá.`;
       }
     }
     return null;
-  }, []);
+  }, [meta]);
 
   const invalidatePurchaseQueries = useCallback(() => {
     void Promise.all([
@@ -630,7 +627,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     if (!meta || !childMeta || !canSave) return;
     setSaving(true);
     try {
-      const resolved = await resolveRowsFromAuthority(rowsRef.current, "__save__");
+      const resolved = await resolveAllRows(rowsRef.current, "__save__");
       replaceRows(resolved.rows);
       setHeaderState(resolved.header);
       const validationError = validateRows(resolved.rows, resolved.header);
@@ -658,8 +655,6 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
         : await adapter.createDoc("Purchase Order", payload);
       const savedName = text(saved.name) || documentName;
 
-      // Save and submit are two requests. Adopt the successful draft immediately so a failed
-      // submit cannot leave the screen pretending the document was never created/saved.
       await adoptSavedDocument(saved, resolved.rows);
       invalidatePurchaseQueries();
 
@@ -670,7 +665,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
           invalidatePurchaseQueries();
           toast.success(`Đã ghi sổ đơn mua ${savedName}`);
         } catch (submitError) {
-          toast.error(`Đã lưu nháp ${savedName}, nhưng chưa xác nhận được: ${mapError(submitError).message}`);
+          toast.error(`Đã lưu nháp ${savedName}, nhưng chưa ghi sổ được: ${mapError(submitError).message}`);
           if (isExisting) props.onSaved?.(savedName);
           else props.onCreated(savedName);
           return;
@@ -686,7 +681,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
     } finally {
       setSaving(false);
     }
-  }, [adapter, adoptSavedDocument, canSave, childMeta, documentName, invalidatePurchaseQueries, isExisting, meta, props, replaceRows, resolveRowsFromAuthority, setHeaderState, sourceModified, validateRows]);
+  }, [adapter, adoptSavedDocument, canSave, childMeta, documentName, invalidatePurchaseQueries, isExisting, meta, props, replaceRows, resolveAllRows, setHeaderState, sourceModified, validateRows]);
 
   if (loading) {
     return <div className="grid h-full place-items-center text-sm text-muted-foreground"><span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Đang mở màn mua hàng AlumDoor…</span></div>;
@@ -715,49 +710,42 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
         docValues={header}
         roles={roles}
         required={Boolean(field.reqd)}
-        readOnly={formReadOnly || Boolean(field.read_only)}
+        readOnly={formReadOnly || busy || Boolean(field.read_only)}
         compact
-        className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_button]:!h-8"
+        className={`[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_button]:!h-8 ${fieldname === "note" ? "[&_textarea]:!h-8 [&_textarea]:!min-h-8 [&_textarea]:!resize-none [&_textarea]:!py-1" : ""}`}
       />
     );
   };
 
   const hasField = (fieldname: string) => Boolean(metaField(fieldname));
+  const previewReady = activeRows.length > 0 && !rows.some((row) => row._loading || text(row._error));
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-purchase-order-v3">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 bg-primary px-4 text-primary-foreground shadow-sm">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-xl font-semibold">{isExisting ? `Đơn mua hàng ${documentName}` : "Tạo đơn mua hàng"}</h1>
-            <span className="rounded bg-primary-foreground/15 px-2 py-0.5 text-xs">{docstatus === 1 ? "Đã xác nhận" : isExisting ? "Nháp" : "Nhập mới"}</span>
-          </div>
-        </div>
-        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground" onClick={props.onCancel} title="Đóng"><X className="size-4" /></Button>
-      </header>
+    <div className="flex h-full min-h-0 flex-col bg-background" data-surface="alumdoor-purchase-order-v4">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="w-full space-y-3 px-3 py-3">
+          {formReadOnly ? <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">Đơn đã ghi sổ/khóa hoặc tài khoản không có quyền sửa.</div> : null}
 
-      <div className="min-h-0 flex-1 overflow-auto bg-muted/20 p-3">
-        <div className="mx-auto w-full max-w-[1900px] space-y-2">
-          {formReadOnly ? <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs">Đơn đã xác nhận/khóa hoặc tài khoản không có quyền sửa.</div> : null}
-
-          <fieldset disabled={formReadOnly} className="contents">
-            <section className="rounded-lg border bg-card p-3 shadow-sm" data-section="purchase-order-header">
-              <div className="grid gap-x-3 gap-y-2 md:grid-cols-2 xl:grid-cols-6">
-                <div className="xl:col-span-2">{headerControl("supplier", "Nhà cung cấp", "Link", "Supplier")}</div>
-                {headerControl("supplier_group", "Nhóm NCC", "Select", PURCHASE_SUPPLIER_GROUPS.join("\n"))}
-                {headerControl("buying_price_list", "Bảng giá mua", "Link", "Price List")}
-                {headerControl("transaction_date", "Ngày đặt hàng", "Date")}
-                {hasField("schedule_date") ? headerControl("schedule_date", "Ngày giao", "Date") : <div />}
-                {hasField("priority") ? headerControl("priority", "Mức độ", "Select") : null}
-                {hasField("supplier_quotation") ? headerControl("supplier_quotation", "Theo báo giá NCC", "Link", "Supplier Quotation") : null}
-                {hasField("payment_terms") ? headerControl("payment_terms", "Thanh toán", metaField("payment_terms")!.fieldtype, metaField("payment_terms")!.options) : null}
-                {hasField("note") ? <div className="md:col-span-2 xl:col-span-3">{headerControl("note", "Ghi chú", metaField("note")!.fieldtype)}</div> : null}
+          <fieldset disabled={formReadOnly || busy} className="contents">
+            <section className="rounded-lg border bg-card p-2.5" data-section="purchase-order-header">
+              <div className="space-y-2">
+                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(280px,1.35fr)_minmax(165px,0.75fr)_minmax(210px,0.95fr)_minmax(175px,0.8fr)_minmax(175px,0.8fr)]">
+                  {headerControl("supplier", "Nhà cung cấp", "Link", "Supplier")}
+                  {headerControl("supplier_group", "Nhóm NCC", "Select", PURCHASE_SUPPLIER_GROUPS.join("\n"))}
+                  {headerControl("buying_price_list", "Bảng giá mua", "Link", "Price List")}
+                  {headerControl("transaction_date", "Ngày đặt hàng", "Date")}
+                  {hasField("schedule_date") ? headerControl("schedule_date", "Ngày giao dự kiến", "Date") : <div />}
+                </div>
+                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(150px,0.65fr)_minmax(230px,1fr)_minmax(230px,1fr)_minmax(360px,1.6fr)]">
+                  {hasField("priority") ? headerControl("priority", "Mức độ", "Select") : <div />}
+                  {hasField("supplier_quotation") ? headerControl("supplier_quotation", "Theo báo giá NCC", "Link", "Supplier Quotation") : <div />}
+                  {hasField("payment_terms") ? headerControl("payment_terms", "Thanh toán", metaField("payment_terms")!.fieldtype, metaField("payment_terms")!.options) : <div />}
+                  {hasField("note") ? headerControl("note", "Ghi chú", metaField("note")!.fieldtype) : <div />}
+                </div>
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t pt-2 text-[11px] text-muted-foreground">
-                <span>Công ty: <strong className="text-foreground">{text(header.company) || "—"}</strong></span>
-                <span>Tiền tệ: <strong className="text-foreground">{text(header.currency) || "VND"}</strong></span>
-                <span>Mặt hàng: <strong className="text-foreground">chỉ hàng được phép mua + đang hoạt động</strong></span>
-                <span>ĐVT mua lấy từ <strong className="text-foreground">Item master</strong>.</span>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-2 text-[10px] text-muted-foreground">
+                <span>Công ty: <strong className="font-medium text-foreground">{text(header.company) || "—"}</strong></span>
+                <span>Tiền tệ: <strong className="font-medium text-foreground">{text(header.currency) || "VND"}</strong></span>
               </div>
             </section>
 
@@ -767,7 +755,7 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
               registry={registry}
               services={purchaseServices}
               roles={roles}
-              readOnly={formReadOnly}
+              readOnly={formReadOnly || busy}
               priceLocked={Boolean(text(header.buying_price_list))}
               onPatch={patchLine}
               onCommit={commitLine}
@@ -776,44 +764,46 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
               onDuplicate={duplicateLine}
               onDelete={deleteLine}
             />
-          </fieldset>
 
-          <section className="overflow-hidden rounded-lg border bg-card shadow-sm" aria-label="Tóm tắt đơn mua">
-            <div className="grid grid-cols-2 divide-x divide-y md:grid-cols-5 md:divide-y-0">
-              <div className="px-4 py-3"><div className="text-[11px] text-muted-foreground">Dòng hàng</div><div className="mt-1 text-lg font-semibold tabular-nums">{activeRows.length}</div></div>
-              <div className="px-4 py-3"><div className="text-[11px] text-muted-foreground">Dòng nhôm</div><div className="mt-1 text-lg font-semibold tabular-nums">{aluminumRows.length}</div></div>
-              <div className="px-4 py-3"><div className="text-[11px] text-muted-foreground">Số cây/lá đặt</div><div className="mt-1 text-lg font-semibold tabular-nums">{totalAluminumBars.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}</div></div>
-              <div className="px-4 py-3"><div className="text-[11px] text-muted-foreground">Kg nhôm</div><div className="mt-1 text-lg font-semibold tabular-nums">{totalAluminumKg.toLocaleString("vi-VN", { maximumFractionDigits: 3 })} kg</div></div>
-              <div className="bg-primary/5 px-4 py-3"><div className="text-[11px] font-medium text-muted-foreground">Tạm tính</div><div className="mt-1 text-xl font-bold tabular-nums text-primary">{money(grandTotal)} đ</div></div>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-[11px] text-muted-foreground">
-              <span>Nhôm: Kg đặt = Dài một cây × Số cây/lá × Kg/m lý thuyết. Số cây/lá giữ riêng; qty thương mại là Kg.</span>
-              <span>{text(header.buying_price_list) ? <>Giá preview theo <strong className="text-foreground">{text(header.buying_price_list)}</strong> + NCC + ngày đặt.</> : <>Chưa chọn bảng giá: đơn giá được phép nhập tay.</>}</span>
-            </div>
-          </section>
+            <section className="rounded-lg border bg-card" data-section="purchase-order-summary" aria-label="Tóm tắt đơn mua">
+              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3 xl:grid-cols-5">
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeRows.length}</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng nhôm</div><div className="mt-0.5 font-semibold tabular-nums">{aluminumRows.length}</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Số cây/lá đặt</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalAluminumBars, 0)}</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Kg nhôm</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalAluminumKg)} kg</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tạm tính</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(grandTotal)} ₫</div></div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px]">
+                {busy ? <span className="inline-flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" /> Đang tính lại</span>
+                  : previewReady ? <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5" /> Dữ liệu preview đã sẵn sàng</span>
+                    : <span className="text-muted-foreground">{activeRows.length ? "Còn dòng cần hoàn tất" : "Chưa có dòng hàng"}</span>}
+                <span className="ml-auto text-muted-foreground">Bảng giá mua: <strong className="font-medium text-foreground">{text(header.buying_price_list) || "Chưa chọn"}</strong></span>
+              </div>
+            </section>
+          </fieldset>
         </div>
       </div>
 
-      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t bg-background px-4 py-2 shadow-[0_-2px_10px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><CheckCircle2 className="size-3.5" /> Dữ liệu preview đã sẵn sàng</span>
-          <strong className="text-foreground">Tạm tính: {money(grandTotal)} đ</strong>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button type="button" variant="ghost" size="sm" onClick={props.onCancel}>{isExisting ? "Đóng" : "Hủy"}</Button>
-          <Button type="button" variant="outline" size="sm" disabled={saving || refreshing || formReadOnly || !activeRows.length} onClick={() => void refreshAll(true)}>
-            {refreshing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />} Tính lại
-          </Button>
-          <Button type="button" variant="outline" size="sm" disabled={saving || !canSave || !activeRows.length} onClick={() => void save(false)}>
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp
-          </Button>
-          {submitAllowed && !formReadOnly ? (
-            <Button type="button" size="sm" disabled={saving || !canSave || !activeRows.length} onClick={() => void save(true)}>
-              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn
+      <div className="shrink-0 border-t bg-card px-3 py-1.5 shadow-[0_-4px_14px_rgba(0,0,0,0.035)]">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">{docstatus === 1 ? "Đã ghi sổ" : isExisting ? "Nháp đã đồng bộ" : activeRows.length ? "Đơn mua chưa lưu" : "Nhập mặt hàng để bắt đầu"}</span>
+            <strong className="tabular-nums">Tạm tính: {money(grandTotal)} ₫</strong>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button type="button" variant="ghost" size="sm" onClick={props.onCancel}>{isExisting ? "Đóng" : "Hủy"}</Button>
+            <Button type="button" variant="outline" size="sm" disabled={busy || formReadOnly || !activeRows.length} onClick={() => void refreshAll(true)}>
+              {refreshing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />} Tính lại
             </Button>
-          ) : null}
+            {docstatus === 0 ? <Button type="button" variant="outline" size="sm" disabled={busy || !canSave || !activeRows.length} onClick={() => void save(false)}>
+              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />} Lưu nháp
+            </Button> : null}
+            {docstatus === 0 && submitAllowed ? <Button type="button" size="sm" disabled={busy || !canSave || !activeRows.length} onClick={() => void save(true)}>
+              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} Ghi sổ đơn
+            </Button> : null}
+          </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }
