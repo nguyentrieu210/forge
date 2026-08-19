@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - "client/packages/views/src/app/vertical/alumdoor/AlumdoorSalesOrderCreate.tsx"
-      - "client/packages/views/src/app/vertical/alumdoor/sales-order-v2/**"
+      - "client/packages/vertical-alumdoor/src/AlumdoorSalesOrderCreate.tsx"
+      - "client/packages/vertical-alumdoor/src/sales-order-v2/**"
       - "client/packages/views/tests/alumdoor-sales-order-v2-complete.test.mjs"
       - "client/packages/views/tests/sales-order-preview-coordinator.test.mjs"
       - ".github/workflows/alumdoor-sales-order-v2-hardening.yml"

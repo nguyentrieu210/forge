@@ -213,8 +213,8 @@ test("metadata có đủ Production Request, Paint Job và khóa truy vết dòn
 
 
 test("React must not own U70/U76 cut deductions", async () => {
-  const model = await readFile(new URL("../../client/packages/views/src/app/vertical/alumdoor/sales-order-v2/model.ts", import.meta.url), "utf8");
-  const table = await readFile(new URL("../../client/packages/views/src/app/vertical/alumdoor/sales-order-v2/AlumdoorSalesOrderLineTable.tsx", import.meta.url), "utf8");
+  const model = await readFile(new URL("../../client/packages/vertical-alumdoor/src/sales-order-v2/model.ts", import.meta.url), "utf8");
+  const table = await readFile(new URL("../../client/packages/vertical-alumdoor/src/sales-order-v2/AlumdoorSalesOrderLineTable.tsx", import.meta.url), "utf8");
   assert.match(model, /"ray_type"/);
   assert.match(table, /ray_type: "Loại ray"/);
   assert.doesNotMatch(model + table, /0\.05|0\.08/);

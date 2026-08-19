@@ -28,9 +28,9 @@ const ADAPTERS = [
   "apps/runtime/src/website/WebsiteSite.tsx",
   "apps/warehouse-mobile/src/PurchaseFundingScreen.tsx",
   "apps/warehouse-mobile/src/SalesMobileScreens.tsx",
-  "packages/views/src/app/vertical/alumdoor/AlumdoorPurchaseOrderCreateStable.tsx",
-  "packages/views/src/app/vertical/alumdoor/AlumdoorPurchaseOrderItemsGrid.tsx",
-  "packages/views/src/app/vertical/alumdoor/sales-order-v2/model.ts",
+  "packages/vertical-alumdoor/src/AlumdoorPurchaseOrderCreateStable.tsx",
+  "packages/vertical-alumdoor/src/AlumdoorPurchaseOrderItemsGrid.tsx",
+  "packages/vertical-alumdoor/src/sales-order-v2/model.ts",
 ];
 
 const DECLARATION = /^\s*(?:export )?function money\(/;

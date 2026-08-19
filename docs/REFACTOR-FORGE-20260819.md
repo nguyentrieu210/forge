@@ -118,9 +118,9 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P2b** ✅ | Nạp lười 7 biểu đồ nặng + bộ vẽ SVG: chunk `engine` 833 → 662 kB (gzip 285 → 229) | thấp |
 | **P3** ✅ | Bóc sạch vertical khỏi `router.ts`: 6 method → `VERTICAL_METHODS`, hook context → `VerticalRouterHooks`, nhãn "Tài khoản ngân hàng" → `LINK_DISPLAY_RULES`, luật chiết khấu thương mại → `alumdoor-commercial.ts`, `loadReadable`/`loadWritable` → `document-access.ts`. Nhắc `alumdoor`: **63 → 0**, 4530 → 4241 dòng; `router-vertical-free.test.mjs` giữ ranh giới | trung bình |
 | **P4a** ✅ | Đảo chiều phụ thuộc phía client: `app/vertical/registry.ts` làm điểm ráp (import tĩnh, đúng khuôn `vertical-methods.ts` bên server), `RuntimeDoctypeWorkspace` tra bảng thay vì gọi tên | trung bình |
-| **P4b** ⏳ | Dời hẳn 7336 dòng vertical sang package riêng. Ranh giới đã đứng (`vertical-leak-budget.test.mjs` ghim 8 file dùng chung + 1 điểm ráp), bước còn lại là di chuyển file và sửa import | trung bình |
+| **P4b** ✅ | 7325 dòng vertical thành package `@metaforge/vertical-alumdoor`, phụ thuộc NGƯỢC vào views. `vertical-registration.test.mjs` ghim hai vế: nạp package thì bảng có `alumdoor`, và `apps/runtime` nạp nó trước màn làm việc | trung bình |
 | **P5** ◐ | Cắt `router.ts`: đã tách `document-access.ts` (đọc/ghi có kiểm quyền), `router-helpers.ts` (5 mẩu dùng 45 nơi), `link-search.ts` (ô chọn link + tra nhãn), `alumdoor-commercial.ts`. **4530 → 4073 dòng**. Còn lại: dispatch method (97 case) và REST resource | cao |
-| **P6** | Cắt `alumdoor-worker/src/index.ts` (3689 dòng) và `ChildGrid.tsx` (2200 dòng) | cao |
+| **P6** ◐ | `alumdoor-worker/src/index.ts` **3689 → 2815 dòng**: tách `document-validation.ts` (854 dòng luật kiểm tra chứng từ) và `responses.ts`. Còn `ChildGrid.tsx` 2200 dòng | cao |
 
 Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 
