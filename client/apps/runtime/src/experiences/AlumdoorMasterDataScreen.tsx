@@ -29,6 +29,7 @@ interface MasterGroupDefinition {
 }
 
 type ResolvedMasterGroup = Omit<MasterGroupDefinition, "entries"> & {
+  step: number;
   items: Array<AlumdoorMasterItem & { displayLabel: string }>;
 };
 
@@ -138,26 +139,42 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
   },
 ];
 
+/**
+ * Thứ tự này KHÔNG tuỳ ý — nó là thứ tự phải khai, và cũng là thứ tự nhập liệu từ L0 trở đi.
+ *
+ * Không khai đơn vị tính thì không tạo được mặt hàng; không có mặt hàng thì không có bảng giá,
+ * cũng không có định mức. Người dựng hệ lần đầu đi từ trên xuống là xong, đi ngược là kẹt — nên
+ * màn này bày đúng theo chiều đó thay vì gom theo chủ đề.
+ *
+ * Vì bản thân nội dung LÀ một chuỗi, đánh số ở đây mới có nghĩa. Nếu chỉ là các nhóm ngang hàng
+ * thì con số chỉ là trang trí và không nên có.
+ */
 const DISPLAY_ORDER = [
   "materials",
+  "warehouses",
   "selling",
   "sales-configuration",
-  "warehouses",
   "purchasing",
   "addresses",
-  "finance",
   "operations",
+  "finance",
 ] as const;
 
+/**
+ * Bề ngang theo SỐ MỤC thật, không theo thói quen chia đôi màn hình.
+ *
+ * Nhóm một mục mà chiếm bằng nhóm sáu mục thì mắt phải quét những ô gần như trống. Sau đợt
+ * 19/08 `Mua hàng` chỉ còn một mục — Supplier Item rời menu vì rỗng và không nơi nào trỏ tới.
+ */
 const GROUP_LAYOUT: Record<string, string> = {
-  materials: "lg:col-span-7 lg:row-span-2 xl:col-span-8",
-  selling: "lg:col-span-5 xl:col-span-4",
-  "sales-configuration": "lg:col-span-5 xl:col-span-4",
-  warehouses: "lg:col-span-4",
-  purchasing: "lg:col-span-4",
-  addresses: "lg:col-span-4",
-  finance: "lg:col-span-4",
-  operations: "lg:col-span-4",
+  materials: "lg:col-span-7 xl:col-span-8",
+  warehouses: "lg:col-span-5 xl:col-span-4",
+  selling: "lg:col-span-6 xl:col-span-5",
+  "sales-configuration": "lg:col-span-6 xl:col-span-4",
+  purchasing: "lg:col-span-3 xl:col-span-3",
+  addresses: "lg:col-span-4 xl:col-span-4",
+  operations: "lg:col-span-4 xl:col-span-4",
+  finance: "lg:col-span-4 xl:col-span-4",
 };
 
 function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
@@ -177,13 +194,38 @@ function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
   return MASTER_GROUPS.map((group) => ({
     id: group.id,
     title: group.title,
+    step: 0,
     items: group.entries.flatMap((entry) => {
       const item = resolveEntry(entry);
       return item ? [{ ...item, displayLabel: entry.label }] : [];
     }),
   }))
     .filter((group) => group.items.length > 0)
-    .sort((a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER));
+    .sort((a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER))
+    // Đánh số SAU khi lọc quyền, nên bước luôn liền mạch 1,2,3 kể cả khi một nhóm bị chặn hết.
+    // Số nhảy cóc trên màn hình khiến người dùng đi tìm một bước không tồn tại.
+    .map((group, index) => ({ ...group, step: index + 1 }));
+}
+
+/**
+ * Số BƯỚC, không phải số bản ghi.
+ *
+ * Ô này trước đây hiện `group.items.length` — tức đếm số ĐƯỜNG DẪN trong nhóm. Đặt một con số
+ * cạnh tiêu đề "Vật tư & quy cách" thì người đọc hiểu ngay là số mặt hàng, mà thực ra là số mục
+ * menu. Con số hợp lý mà sai là loại tệ nhất: không ai nghi để đi kiểm.
+ *
+ * Không thay bằng số bản ghi thật, vì màn này không nhận dữ liệu đó — bịa ra một con số là quay
+ * lại đúng lỗi vừa bỏ.
+ */
+function StepMarker({ step }: { step: number }) {
+  return (
+    <span
+      className="shrink-0 select-none text-xs font-medium tabular-nums text-muted-foreground/70"
+      aria-hidden="true"
+    >
+      {String(step).padStart(2, "0")}
+    </span>
+  );
 }
 
 function MasterLink({ item, onNavigate, prominent = false }: {
@@ -216,9 +258,9 @@ function MasterGroupSection({ group, onNavigate }: {
   if (isPrimary) {
     return (
       <section className={`${GROUP_LAYOUT[group.id]} rounded-xl border bg-card p-3 shadow-sm sm:p-4`}>
-        <div className="mb-2 flex items-baseline justify-between gap-3 border-b pb-3">
+        <div className="mb-2 flex items-baseline gap-2.5 border-b pb-3">
+          <StepMarker step={group.step} />
           <h2 className="text-base font-semibold tracking-tight">{group.title}</h2>
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{group.items.length}</span>
         </div>
         <nav aria-label={group.title} className="grid min-w-0 gap-x-3 sm:grid-cols-2">
           {group.items.map((item) => (
@@ -231,9 +273,9 @@ function MasterGroupSection({ group, onNavigate }: {
 
   return (
     <section className={`${GROUP_LAYOUT[group.id] ?? "lg:col-span-4"} min-w-0 border-t pt-3`}>
-      <div className="mb-1 flex items-baseline justify-between gap-3 px-2.5">
+      <div className="mb-1 flex items-baseline gap-2.5 px-2.5">
+        <StepMarker step={group.step} />
         <h2 className="text-sm font-semibold tracking-tight">{group.title}</h2>
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{group.items.length}</span>
       </div>
       <nav aria-label={group.title} className="min-w-0">
         {group.items.map((item) => (
