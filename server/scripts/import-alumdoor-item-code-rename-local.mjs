@@ -212,9 +212,68 @@ async function verify(renames) {
   return { item_count: items.size, price_count: prices.size, failures };
 }
 
+/**
+ * Mã hàng còn sống ở dạng thứ ba: NHÚNG bên trong một khoá dẫn xuất.
+ *
+ * Cascade của kernel so nguyên giá trị lá nên cố ý không đụng những chuỗi này — và đúng là không
+ * nên đụng, vì thay chuỗi con là cách chắc chắn nhất để phá dữ liệu. Nhưng hệ quả là đổi mã xong
+ * thì các khoá ấy còn ôm mã đã chết, KHÔNG có gì báo.
+ *
+ * Đo trên D1 demo 19/08 với 359 mã trong kế hoạch:
+ *   rule_code                2.830  — `{mã cha}:{mã con}:{số thứ tự}`
+ *   deferred_components_json   338  — mảng JSON serialize thành chuỗi, item_code nằm bên trong
+ *   item_price / discount_basis_item_price  18+18 — trỏ tới TÊN Item Price, mà tên đó nhúng mã
+ *   spec_code / material_specification       3+3  — `ĐM-{mã}`
+ *
+ * Cả bốn đều sửa được, nhưng mỗi cái cần một luật tái sinh riêng và phải ghi lại 349 BOM Template
+ * kèm dòng con qua API — lớn hơn hẳn phạm vi "đổi tên mặt hàng", và làm dở thì để lại đúng cái đồ
+ * thị link vá nửa vời mà guard đổi tên sinh ra để ngăn.
+ *
+ * Nên: dừng TRƯỚC khi đổi bất cứ thứ gì, và nói rõ còn bao nhiêu.
+ */
+async function auditDerivedKeys(renames) {
+  const codes = [...renames.keys()];
+  const findings = new Map();
+  const inspect = (value, key) => {
+    if (typeof value === 'string') {
+      if (!value || renames.has(value)) return; // nguyên giá trị thì cascade lo được
+      if (!codes.some((code) => value.includes(code))) return;
+      // Chuỗi con của một mã DÀI HƠN không phải khoá dẫn xuất: `TP-CUA` nằm trong `TP-CUADL1LY`
+      // là hai mã khác nhau chứ không phải một mã bị nhúng.
+      const segments = new Set(value.split(':'));
+      const embedded = codes.some((code) => segments.has(code) || value.includes(`"${code}"`));
+      if (embedded) findings.set(key, (findings.get(key) ?? 0) + 1);
+      return;
+    }
+    if (Array.isArray(value)) { for (const entry of value) inspect(entry, key); return; }
+    if (value && typeof value === 'object') { for (const [k, v] of Object.entries(value)) inspect(v, k); }
+  };
+
+  for (const doctype of ['BOM Template', 'Pricing Rule', 'Material Specification']) {
+    const listing = await request(
+      `/api/resource/${encodeURIComponent(doctype)}?limit_page_length=1000&fields=${encodeURIComponent('["name"]')}`,
+    );
+    for (const row of listing?.data ?? []) {
+      const doc = await request(`/api/resource/${encodeURIComponent(doctype)}/${encodeURIComponent(row.name)}`, { allow404: true });
+      const data = doc?.data ?? doc?.message ?? doc;
+      if (data) inspect(data, '');
+    }
+  }
+  return findings;
+}
+
 const renames = new Map(plan.map((entry) => [entry.from, entry.to]));
 
 await request('/api/method/login', { method: 'POST', body: { usr: user, pwd: password } });
+
+const derived = await auditDerivedKeys(renames);
+if (derived.size > 0 && process.env.ALUMDOOR_RENAME_ALLOW_STALE_DERIVED_KEYS !== '1') {
+  const detail = [...derived.entries()].sort((a, b) => b[1] - a[1]).map(([key, count]) => `${key}=${count}`).join(' ');
+  throw new Error(
+    `Refusing rename: ${derived.size} derived key field(s) embed a planned item code and would keep pointing at a dead code — ${detail}. `
+    + 'Mỗi khoá cần một luật tái sinh riêng; chạy tiếp chỉ tạo ra đồ thị link vá nửa vời.',
+  );
+}
 
 const first = await pass('LOCAL_RENAME_PASS_1', renames);
 const verified = await verify(renames);

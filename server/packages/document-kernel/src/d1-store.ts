@@ -655,6 +655,15 @@ export class D1MutationStore implements MutationStore {
     }
 
     await this.writer.batch([
+      // `document_children` khoá ngoại theo doc_key và chỉ khai ON DELETE CASCADE — không có
+      // ON UPDATE. Đổi doc_key của cha trong khi con còn trỏ tên cũ là vi phạm ngay, mà đổi con
+      // trước thì tên mới chưa tồn tại nên cũng vi phạm. Không thứ tự nào đúng, phải hoãn kiểm
+      // tra tới lúc commit.
+      //
+      // Mọi Item đều có dòng con `uom_conversions`, nên trước khi vá thì đường đổi tên coi như
+      // chưa từng chạy được lần nào — và lỗi bị bọc thành HTTP 500 "Storage operation failed"
+      // nên không log nào chỉ ra nguyên nhân.
+      this.writer.prepare('PRAGMA defer_foreign_keys = ON'),
       this.writer.prepare(
         `UPDATE documents
          SET doc_key=?3,
@@ -666,6 +675,11 @@ export class D1MutationStore implements MutationStore {
       ).bind(tenantId, oldKey, newKey, newName, now, actor, namingField ?? "", namingField ? `$.${namingField}` : "$.__unused"),
       this.writer.prepare(`UPDATE document_children SET parent_key=?3 WHERE tenant_id=?1 AND parent_key=?2`).bind(tenantId, oldKey, newKey),
       this.writer.prepare(`UPDATE versions SET doc_key=?3 WHERE tenant_id=?1 AND doc_key=?2`).bind(tenantId, oldKey, newKey),
+      // `document_search` (2.796 dòng) và `document_views` khoá ngoại theo (tenant_id, doctype,
+      // name) chứ không theo doc_key, nên chúng KHÔNG tự đi theo khi tên đổi. Lô lệnh cũ cập nhật
+      // comments/assignments/shares/tags/files nhưng bỏ sót đúng hai bảng CÓ khoá ngoại.
+      this.writer.prepare(`UPDATE document_search SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
+      this.writer.prepare(`UPDATE document_views SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
       this.writer.prepare(`UPDATE document_comments SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
       this.writer.prepare(`UPDATE assignments SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),
       this.writer.prepare(`UPDATE document_shares SET name=?4 WHERE tenant_id=?1 AND doctype=?2 AND name=?3`).bind(tenantId, doctype, oldName, newName),

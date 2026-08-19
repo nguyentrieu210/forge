@@ -52,7 +52,10 @@ class D1Adapter {
         tenant_id TEXT NOT NULL, parent_key TEXT NOT NULL, fieldname TEXT NOT NULL, child_doctype TEXT NOT NULL,
         row_id TEXT NOT NULL, idx INTEGER NOT NULL CHECK (idx > 0),
         payload_json TEXT NOT NULL CHECK (json_valid(payload_json)),
-        PRIMARY KEY (tenant_id, parent_key, fieldname, row_id));
+        PRIMARY KEY (tenant_id, parent_key, fieldname, row_id),
+        -- Dòng này lúc đầu bị bỏ quên khi chép lược đồ, và đó chính là lý do bộ test xanh trong
+        -- khi đổi tên thật hỏng ngay lần chạy đầu: không có khoá ngoại thì không có gì để vi phạm.
+        FOREIGN KEY (tenant_id, parent_key) REFERENCES documents(tenant_id, doc_key) ON DELETE CASCADE);
       CREATE TABLE versions (tenant_id TEXT NOT NULL, doc_key TEXT NOT NULL, version INTEGER NOT NULL,
         command_id TEXT NOT NULL, actor TEXT NOT NULL, action TEXT NOT NULL,
         snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json)), created_at TEXT NOT NULL,
@@ -70,6 +73,15 @@ class D1Adapter {
         name TEXT NOT NULL, PRIMARY KEY (tenant_id,tag_id));
       CREATE TABLE files (tenant_id TEXT NOT NULL, file_id TEXT NOT NULL, attached_to_doctype TEXT,
         attached_to_name TEXT, PRIMARY KEY (tenant_id,file_id));
+      -- Hai bảng khoá ngoại theo (tenant_id, doctype, name) chứ không theo doc_key.
+      CREATE TABLE document_search (tenant_id TEXT NOT NULL, doctype TEXT NOT NULL, name TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', modified_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, doctype, name),
+        FOREIGN KEY (tenant_id, doctype, name) REFERENCES documents(tenant_id, doctype, name) ON DELETE CASCADE);
+      CREATE TABLE document_views (tenant_id TEXT NOT NULL, doctype TEXT NOT NULL, name TEXT NOT NULL,
+        viewer TEXT NOT NULL DEFAULT '', viewed_at TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (tenant_id, doctype, name, viewer),
+        FOREIGN KEY (tenant_id, doctype, name) REFERENCES documents(tenant_id, doctype, name) ON DELETE CASCADE);
     `);
   }
   prepare(sql) { return new StatementAdapter(this.db, sql); }
@@ -237,4 +249,24 @@ test("cascade không vá được cột amended_from thì guard chặn, không g
   a.db.prepare("UPDATE documents SET amended_from='NVL-A' WHERE doctype='Item' AND name='NVL-B'").run();
   await assert.rejects(() => renameCascade(s, "NVL-A", "VT-A"), /referenced elsewhere/);
   assert.equal(a.db.prepare("SELECT name FROM documents WHERE doctype='Item' AND name='NVL-A'").get().name, "NVL-A");
+});
+
+test("đổi tên kéo theo cả document_search và dòng con, không vi phạm khoá ngoại", async () => {
+  // Ca này ĐỎ trước khi vá, vì hai lý do độc lập: `document_search` khoá ngoại theo (doctype,
+  // name) nên không đi theo bản ghi, còn `document_children` khoá ngoại theo doc_key nên không
+  // có thứ tự cập nhật nào hợp lệ nếu không hoãn kiểm tra. Trên D1 thật mọi Item đều có dòng
+  // con `uom_conversions` — nghĩa là đường đổi tên chưa từng chạy được lần nào.
+  const { a, s } = store();
+  seed(a, "Item", "NVL-P", { item_code: "NVL-P" });
+  a.db.prepare("INSERT INTO document_search (tenant_id,doctype,name,modified_at) VALUES ('t','Item','NVL-P','2026-08-19')").run();
+  a.db.prepare(
+    `INSERT INTO document_children (tenant_id,parent_key,fieldname,child_doctype,row_id,idx,payload_json)
+     VALUES ('t','Item:NVL-P','uom_conversions','UOM Conversion','r1',1,?)`,
+  ).run(JSON.stringify({ uom: "Cái", factor: 1 }));
+
+  await rename(s, "NVL-P", "VT-P");
+
+  assert.equal(a.db.prepare("SELECT COUNT(*) c FROM document_search WHERE name='VT-P'").get().c, 1, "search phải đi theo");
+  assert.equal(a.db.prepare("SELECT COUNT(*) c FROM document_children WHERE parent_key='Item:VT-P'").get().c, 1, "dòng con phải đi theo");
+  assert.equal(a.db.prepare("PRAGMA foreign_key_check").all().length, 0, "không được để lại vi phạm khoá ngoại");
 });
