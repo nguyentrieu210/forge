@@ -4,5 +4,4 @@ export type {
   NavItem,
   Breadcrumb,
   NotificationItem,
-  WorkspaceTab,
-} from "./AppShell.js";
+} from "./AppShellV2.js";

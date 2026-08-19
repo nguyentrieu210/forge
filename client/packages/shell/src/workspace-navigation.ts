@@ -1,4 +1,4 @@
-import type { NavItem } from "./AppShell.js";
+import type { NavItem } from "./AppShellV2.js";
 
 export interface WorkspaceModule {
   key: string;

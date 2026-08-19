@@ -8,7 +8,7 @@ import {
   finishSalesOrderDocumentPreview,
   isSalesOrderPersistenceBlocked,
   markSalesOrderDocumentChanged,
-} from "../dist/app/vertical/alumdoor/sales-order-v2/preview-coordinator.js";
+} from "../dist/sales-order-v2/preview-coordinator.js";
 
 test("older preview is stale after a newer document mutation", () => {
   const clock = createSalesOrderPreviewClock();

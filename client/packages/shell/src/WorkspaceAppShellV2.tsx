@@ -6,7 +6,7 @@ import {
   AppShell as BaseAppShell,
   type AppShellProps,
   type NavItem,
-} from "./AppShell.js";
+} from "./AppShellV2.js";
 import { ChangePasswordDialog } from "./auth/ChangePasswordDialog.js";
 import { ForgeBrandLogo, isAlumdoorSurface } from "./BrandLogo.js";
 import { ThemeWelcomeDialog } from "./ThemeWelcomeDialog.js";
@@ -18,7 +18,7 @@ import {
 } from "./workspace-navigation.js";
 import { productMasterItems, productNavigation, productReportItems } from "./workspace-product-policy.js";
 
-export type { AppShellProps, NavItem, Breadcrumb, NotificationItem } from "./AppShell.js";
+export type { AppShellProps, NavItem, Breadcrumb, NotificationItem } from "./AppShellV2.js";
 
 const STORAGE_KEY = "mf-workspace-module";
 const accountAdapter = new FrappeAdapterImpl({});

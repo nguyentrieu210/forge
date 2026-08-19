@@ -1,4 +1,4 @@
-import type { NavItem } from "./AppShell.js";
+import type { NavItem } from "./AppShellV2.js";
 import { isAlumdoorSurface } from "./BrandLogo.js";
 import type { WorkspaceModule } from "./workspace-navigation.js";
 

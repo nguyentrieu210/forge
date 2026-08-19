@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { salesItemSearchTerms } from "../dist/app/vertical/alumdoor/sales-item-search.js";
+import { salesItemSearchTerms } from "../dist/sales-item-search.js";
 
 test("opening the sales item dropdown loads its first page", () => {
   assert.deepEqual(salesItemSearchTerms(""), [""]);

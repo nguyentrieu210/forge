@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { Settings2 } from "lucide-react";
 import { AppShell as WorkspaceAppShell } from "./WorkspaceAppShell.js";
-import type { AppShellProps, NavItem } from "./AppShell.js";
+import type { AppShellProps, NavItem } from "./AppShellV2.js";
 
 /**
  * Reserved platform navigation that is independent from any installed app manifest.

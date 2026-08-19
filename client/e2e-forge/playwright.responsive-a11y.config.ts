@@ -4,19 +4,19 @@ import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appDist = path.join(here, "..", "apps", "runtime", "dist");
-const port = process.env.FORGE_V3_QA_PORT ?? "4192";
+const port = process.env.FORGE_A11Y_QA_PORT ?? "4192";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: "ui-tests/v3-mobile-qa.spec.ts",
-  outputDir: "./test-results/v3-mobile-qa",
+  testMatch: "ui-tests/responsive-a11y.spec.ts",
+  outputDir: "./test-results/responsive-a11y",
   timeout: 20_000,
   expect: { timeout: 5_000 },
   workers: 1,
   fullyParallel: false,
   reporter: [
     ["list"],
-    ["html", { outputFolder: "playwright-report/v3-mobile-qa", open: "never" }],
+    ["html", { outputFolder: "playwright-report/responsive-a11y", open: "never" }],
   ],
   use: {
     baseURL: `http://127.0.0.1:${port}`,
