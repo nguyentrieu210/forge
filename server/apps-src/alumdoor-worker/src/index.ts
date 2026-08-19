@@ -25,6 +25,7 @@ import {
   inferDoorType,
   isManualPullGroup,
   parseDoorPolicy,
+  rayTypeOf,
   selectDoorPolicy,
   type CustomerGroup,
   type DoorFormulaPolicy,
@@ -174,6 +175,7 @@ function checked(value: unknown): boolean {
   const normalized = String(value ?? "").trim().toLocaleLowerCase("vi");
   return normalized === "có" || normalized === "co" || normalized === "yes" || normalized === "true";
 }
+
 
 /**
  * Nhớ bản ghi đã đọc TRONG MỘT LƯỢT kiểm — nguyên nhân thật của lỗi quá hạn 2 giây.
@@ -621,7 +623,10 @@ function calculateDoorBillableArea(
     return refuse(`${line}: Cách bán phải là Tách món hoặc Trọn bộ.`);
   }
   try {
-    const policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""));
+    // `ray_type` của DÒNG BÁN tham gia chọn chính sách: U75 và U100 có hai bộ hằng số trừ
+    // khác nhau (cutting-policy.md §2.1). Trước đây trường này có trên dòng nhưng không ai
+    // đọc, nên đơn U100 lặng lẽ ăn hằng số U75.
+    const policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""), rayTypeOf(row.ray_type));
     const calculated = calculateDoorFormula(policy, {
       door_type: doorType,
       item_group: String(item.item_group ?? ""),
@@ -3421,7 +3426,7 @@ async function calculateDoor(call: PlatformCall, args: Record<string, unknown>):
   const rawMode = String(args.sales_mode ?? "Trọn bộ").trim();
   if (rawMode !== "Tách món" && rawMode !== "Trọn bộ") return refuse("Cách bán phải là Tách món hoặc Trọn bộ.");
   try {
-    const policy = selectDoorPolicy(policies, doorType, String(item.item_group ?? ""));
+    const policy = selectDoorPolicy(policies, doorType, String(item.item_group ?? ""), rayTypeOf(args.ray_type));
     const result = calculateDoorFormula(policy, {
       door_type: doorType,
       item_group: String(item.item_group ?? ""),

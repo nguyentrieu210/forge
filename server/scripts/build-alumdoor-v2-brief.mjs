@@ -18,6 +18,7 @@ import { GEOMETRY_FIELDS, GEOMETRY_PROFILES } from "./lib/alumdoor-geometry-cata
 import { CUTTING_POLICIES, cuttingPolicyFixtureData } from "./lib/alumdoor-cutting-policy-catalog.mjs";
 import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog.mjs";
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
+import { ALUMDOOR_COLOR_CATALOG } from "./lib/alumdoor-color-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(here, "../briefs/alumdoor.json");
@@ -1768,6 +1769,215 @@ note("G3 · Warehouse: K36/K12 khai stock_role + mỗi kho có một kho đầu 
   for (const name of ["Geometry Field", "Geometry Profile"]) if (!brief.navigation.items.includes(name)) brief.navigation.items.push(name);
 }
 note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở hữu trường hình học");
+
+// ══════════ HỘI TỤ DANH MỤC 2026-08-19 ══════════
+// Đợt này đóng bốn lỗ mà audit danh mục 19/08 đo được trên D1 local:
+//
+//   1. `Pricing Scope` KHÔNG được khai ở đâu cả — không brief, không doctype_definitions —
+//      trong khi engine giá đọc nó theo TÊN mỗi lần tính đơn
+//      (clouderp-pricing/commercial-policy.ts, clouderp-selling/order-commercial-policy.ts).
+//      Bốn phạm vi thật đang chi phối phụ thu sơn mà chủ xưởng không sửa được qua giao diện.
+//   2. `BOM Rule` chỉ tồn tại do importer ghi thẳng vào doctype_definitions ⇒ dựng lại
+//      tenant là mất 110 quy tắc. Client phải mang fallbackRoute riêng chỉ vì lý do này.
+//   3. Fixture `Item Color` mang ĐỦ CẢ HAI dạng tên: 22 slug ASCII (TRANG, CAFE, XANH_NGOC)
+//      cạnh 25 tên đúng (TRẮNG, CAFÉ, XANH NGỌC). Ô chọn Link đọc hợp documents ∪
+//      master_records nên người dùng chọn được hai bản ghi cho CÙNG một màu — đúng cái
+//      E07 cảnh báo: "tạo CUỐN bên cạnh Cuộn là chẻ tồn kho làm hai vì một lần gõ nhầm".
+//   4. Bốn doctype rỗng (Material Grade, Item Attribute, Brand, Manufacturer) chiếm chỗ
+//      trong nhóm Danh mục mà không tài liệu Alumdoor nào đòi, và cả bốn đều 0 bản ghi.
+{
+  const perm = doctype("Pricing Rule").permissions;
+  const permMfg = doctype("Cutting Policy").permissions;
+  const hasDoctype = (n) => brief.doctypes.some((d) => d.name === n);
+
+  // ── 1. Phạm vi áp dụng chính sách giá ──
+  // Nguồn: docs/ALUMDOOR_PRICING_SCOPE.md. Luật "phải có ít nhất một dòng thành phần trước
+  // khi dùng" chỉ ép được khi nó là DocType thật — chuỗi tự do thì không có chỗ nào để ép.
+  if (!hasDoctype("Pricing Scope")) {
+    brief.doctypes.push(
+      {
+        "//": "Gom nhiều mặt hàng/nhóm hàng vào một phạm vi để một chính sách giá chỉ khai một lần.",
+        name: "Pricing Scope",
+        label: "Phạm vi áp dụng chính sách",
+        icon: "tags",
+        group: "Danh mục",
+        naming: "field:scope_name",
+        title: "scope_name",
+        list: ["scope_name", "disabled"],
+        search: ["scope_name"],
+        fields: [
+          "scope_name:Data*! Tên phạm vi",
+          {
+            "//": "Phạm vi rỗng thành phần thì KHÔNG làm chính sách giá chạy — fail-closed, không im lặng bỏ qua.",
+            fieldname: "members",
+            fieldtype: "Table",
+            options: "Pricing Scope Member",
+            label: "Mặt hàng / nhóm hàng áp dụng",
+          },
+          "note:Small Text Ghi chú",
+          "disabled:Check Ngừng dùng",
+        ],
+        permissions: perm,
+      },
+      {
+        name: "Pricing Scope Member",
+        child: true,
+        label: "Thành phần phạm vi",
+        group: "Danh mục",
+        naming: "autoincrement",
+        fields: [
+          "member_type:Select(Item,Item Group)*! Áp dụng theo",
+          {
+            fieldname: "item_code", label: "Mặt hàng", fieldtype: "Link", options: "Item",
+            depends_on: "eval:doc.member_type == 'Item'", surface: "quick",
+          },
+          {
+            fieldname: "item_group", label: "Nhóm hàng", fieldtype: "Link", options: "Item Group",
+            link_filters: '{"is_group":0,"disabled":0}',
+            depends_on: "eval:doc.member_type == 'Item Group'", surface: "quick",
+          },
+          "note:Data Ghi chú",
+        ],
+        permissions: perm,
+        form: { fields: ["member_type", "item_code", "item_group", "note"] },
+        quickEntry: { fields: ["member_type", "item_code", "item_group"] },
+      },
+    );
+    // Từ Data sang Link: phạm vi là danh mục thật, không còn là chuỗi khớp theo tên.
+    replaceField(doctype("Pricing Rule"), "pricing_scope", {
+      fieldname: "pricing_scope",
+      label: "Phạm vi áp dụng",
+      fieldtype: "Link",
+      options: "Pricing Scope",
+      link_filters: '{"disabled":0}',
+    });
+    note("DANH MỤC · +Pricing Scope (+child) — pricing_scope đổi Data → Link");
+  }
+
+  // ── 2. Quy tắc BOM ──
+  // authority_type=SOURCE là trạng thái NHÁP CÓ CHỦ ĐÍCH theo audit 2026-08-16. Khai vào
+  // brief KHÔNG có nghĩa là duyệt: mặc định vẫn SOURCE, chủ xưởng mới đổi được.
+  if (!hasDoctype("BOM Rule")) {
+    brief.doctypes.push(
+      {
+        "//": "Trước 19/08 doctype này chỉ sống trong doctype_definitions do importer ghi — dựng lại tenant là mất.",
+        name: "BOM Rule",
+        label: "Quy tắc BOM",
+        icon: "function-square",
+        group: "Danh mục",
+        naming: "field:rule_code",
+        title: "rule_name",
+        list: ["rule_code", "rule_name", "result_kind", "result_uom", "authority_type", "disabled"],
+        search: ["rule_code", "rule_name", "formula_display"],
+        fields: [
+          "rule_code:Data*! Mã quy tắc",
+          "rule_name:Data*! Tên quy tắc",
+          "description:Small Text Mô tả",
+          "result_kind:Select(LENGTH,AREA,COUNT,WEIGHT,CONSTANT)*! Loại kết quả",
+          "result_uom:Link(UOM)*! ĐVT kết quả / tiêu hao",
+          "source_field:Link(Geometry Field) Trường nguồn 1 từ hàng cha",
+          "source_field_offset:Float Cộng/trừ vào nguồn 1 (m)",
+          "source_field_2:Link(Geometry Field) Trường nguồn 2 từ hàng cha",
+          "source_field_2_offset:Float Cộng/trừ vào nguồn 2 (m)",
+          "operator:Select(COPY,ADD,SUBTRACT,MULTIPLY,DIVIDE,PRODUCT,QUOTIENT,CONSTANT)*! Phép tính",
+          "operand:Float Giá trị phép tính",
+          "multiply:Float Hệ số nhân cuối",
+          "divide:Float Hệ số chia cuối",
+          "final_add:Float Cộng/trừ cuối",
+          "qty_per_set:Float*! Số lượng mỗi bộ",
+          "rounding:Select(NONE,ROUND,CEIL,FLOOR) Làm tròn",
+          "precision:Int Số chữ số",
+          "formula_json:Long Text Công thức canonical JSON",
+          "formula_display:Data Công thức hiển thị",
+          "rule_version:Int*! Phiên bản",
+          "applicability:Table(BOM Rule Applicability) Áp dụng cho",
+          {
+            "//": "SOURCE = trích từ bảng tính nguồn, chưa ai duyệt. Không tự đổi sang OWNER_CONFIRMED.",
+            fieldname: "authority_type", label: "Nguồn thẩm quyền", fieldtype: "Select",
+            options: "SOURCE\nOWNER_CONFIRMED\nENGINEERING_INFERENCE",
+            required: true, default: "SOURCE",
+          },
+          "source_sheet:Data Sheet nguồn",
+          "source_row:Int Dòng nguồn",
+          "source_formula_text:Small Text Công thức nguồn gốc",
+          "source_formula_code:Data Mã công thức nguồn",
+          "source_note:Small Text Ghi chú nguồn / xác nhận",
+          "confirmed_by:Data Người xác nhận",
+          "confirmed_at:Datetime Thời điểm xác nhận",
+          "disabled:Check Ngưng dùng",
+        ],
+        permissions: permMfg,
+      },
+      {
+        name: "BOM Rule Applicability",
+        child: true,
+        label: "Áp dụng cho",
+        group: "Danh mục",
+        naming: "autoincrement",
+        fields: [
+          "scope_type:Select(BOM,ITEM,ITEM_GROUP,DOOR_TYPE,GENERIC)*! Phạm vi",
+          {
+            fieldname: "parent_item", label: "Mặt hàng cha", fieldtype: "Link", options: "Item",
+            depends_on: "eval:doc.scope_type == 'ITEM'", surface: "quick",
+          },
+          {
+            fieldname: "parent_item_group", label: "Nhóm hàng cha", fieldtype: "Link", options: "Item Group",
+            link_filters: '{"is_group":0,"disabled":0}',
+            depends_on: "eval:doc.scope_type == 'ITEM_GROUP'", surface: "quick",
+          },
+          {
+            fieldname: "door_type", label: "Loại cửa", fieldtype: "Select",
+            options: "\nCửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường\nCửa tấm liền Úc",
+            depends_on: "eval:doc.scope_type == 'DOOR_TYPE'", surface: "quick",
+          },
+          "component_item:Link(Item)*! Thành phần con",
+          "bom:Link(Bill of Materials) BOM",
+          "priority:Int=(0) Ưu tiên",
+          "effective_from:Date Hiệu lực từ",
+          "effective_to:Date Hiệu lực đến",
+          "note:Data Ghi chú",
+          "disabled:Check Ngưng dùng",
+        ],
+        permissions: permMfg,
+        form: { fields: ["scope_type", "parent_item", "parent_item_group", "door_type", "component_item", "bom", "priority", "effective_from", "effective_to", "note", "disabled"] },
+        quickEntry: { fields: ["scope_type", "component_item"] },
+      },
+    );
+    note("DANH MỤC · +BOM Rule (+child Applicability) — hết sống ngoài brief");
+  }
+
+  // ── 3. Một bảng màu, không hai ──
+  // ALUMDOOR_COLOR_CATALOG là nguồn luật (25 màu: 18 STĐ + 5 mạ + THÔ + VÂN GỖ). Fixture của
+  // brief nguồn còn giữ thêm 22 slug ASCII của CHÍNH các màu đó. Giữ cả hai không phải là
+  // "an toàn hơn": nó tạo hai vị trí tồn cho một màu, và không có gì báo khi ai đó chọn nhầm.
+  {
+    const before = brief.fixtures.filter((f) => f.type === "Item Color").length;
+    const canonical = new Set(ALUMDOOR_COLOR_CATALOG.map((c) => c.code));
+    brief.fixtures = brief.fixtures.filter((f) => f.type !== "Item Color" || canonical.has(f.name));
+    const after = brief.fixtures.filter((f) => f.type === "Item Color").length;
+    note(`DANH MỤC · Item Color: ${before} → ${after} fixture (bỏ ${before - after} bản sao slug ASCII)`);
+  }
+
+  // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──
+  // `menu: false` chứ không xoá doctype: xoá thì bản ghi cũ thành mồ côi — vẫn nằm trong kho
+  // dữ liệu nhưng không còn schema nào mô tả chúng. Cả bốn đang 0 bản ghi nên không mất gì,
+  // nhưng luật vẫn là luật.
+  {
+    const offMenu = ["Material Grade", "Item Attribute", "Brand", "Manufacturer"];
+    for (const name of offMenu) {
+      const d = brief.doctypes.find((x) => x.name === name);
+      if (d) d.menu = false;
+    }
+    const dropped = new Set(offMenu);
+    brief.navigation.items = brief.navigation.items.filter((k) => !dropped.has(k));
+    note(`DANH MỤC · menu:false cho ${offMenu.length} doctype rỗng (không tài liệu nào đòi)`);
+  }
+
+  // ── 5. Nav: mục mới phải có chỗ đứng ──
+  for (const name of ["Pricing Scope", "BOM Rule"]) {
+    if (!brief.navigation.items.includes(name)) brief.navigation.items.push(name);
+  }
+}
 
 // ══════════ CHỐT CHẶN — không để G2 xảy ra lần nữa ══════════
 // G2 lọt được vì thêm trường bắt buộc mà quên fixture, và dry-run KHÔNG bắt (nó biên dịch cấu

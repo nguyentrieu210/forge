@@ -20,8 +20,11 @@ function policy(doorType, itemGroup = "") {
 
 test("danh mục có đúng một công thức hoạt động cho mỗi loại cửa", () => {
   const active = policies.filter((entry) => !entry.disabled);
+  // Sáu, không phải năm: `Cửa tấm liền Úc` là một dòng cửa riêng với công thức chia lá riêng
+  // (`(CPB − 0,13) ÷ 0,068`), không phải biến thể của Cửa Úc (`CPB ÷ 0,465 + k`). Danh sách
+  // này thiếu nó từ lúc dòng cửa được thêm vào catalog, nên test đỏ sẵn và che mất regression.
   assert.deepEqual(active.map((entry) => entry.door_type).sort(), [
-    "Cửa Đức", "Cửa Lưới", "Cửa Siêu Trường", "Cửa Úc", "Cửa Đài Loan",
+    "Cửa Đức", "Cửa Lưới", "Cửa Siêu Trường", "Cửa Úc", "Cửa tấm liền Úc", "Cửa Đài Loan",
   ].sort());
   for (const entry of active) assert.equal(policy(entry.door_type).policy_name, entry.policy_name);
 });
@@ -127,4 +130,47 @@ test("hai chính sách cùng mức bị từ chối, không âm thầm chọn m�
     () => selectDoorPolicy([first, { ...first, policy_name: "Bản sao sai" }], "Cửa Úc"),
     /nhiều Chính sách công thức cùng khớp/,
   );
+});
+
+/**
+ * Loại ray là khoá phân giải, không phải điều kiện phụ.
+ *
+ * Nguồn `docs/brd-v2/brd-entities/cutting-policy.md` §2.1 ghi hai bộ hằng số: Cửa Đức
+ * `RCL = RPBR − 0,08` với ray U75 và `− 0,09` với U100; Đài Loan/Lưới `RLL + 0,11` với U75
+ * và `+ 0,17` với U100. Trước 2026-08-19 resolver không đọc `ray_type`, mà toàn bộ chính
+ * sách trong D1 đều U75 — nên một đơn U100 vẫn "tìm được" chính sách và cắt sai trong im lặng.
+ */
+test("đơn khai ray U100 mà danh mục chỉ có U75 thì TỪ CHỐI, không lùi về U75", () => {
+  const u75 = { ...policy("Cửa Đức"), ray_type: "U75" };
+  assert.equal(selectDoorPolicy([u75], "Cửa Đức", "", "U75").policy_name, u75.policy_name);
+  assert.throws(
+    () => selectDoorPolicy([u75], "Cửa Đức", "", "U100"),
+    /Chưa có Chính sách công thức cho Cửa Đức \/ ray U100/,
+  );
+});
+
+test("thông báo thiếu chính sách nói rõ đang có loại ray nào", () => {
+  const u75 = { ...policy("Cửa Đức"), ray_type: "U75" };
+  assert.throws(() => selectDoorPolicy([u75], "Cửa Đức", "", "U100"), /Hiện chỉ có chính sách cho: U75/);
+});
+
+test("có đủ hai bộ ray thì mỗi bên lấy đúng hằng số của mình", () => {
+  const base = policy("Cửa Đức");
+  const u75 = { ...base, policy_name: "Cửa Đức U75", ray_type: "U75", retail_cut_deduction_m: 0.08 };
+  const u100 = { ...base, policy_name: "Cửa Đức U100", ray_type: "U100", retail_cut_deduction_m: 0.09 };
+  const pick = (ray) => selectDoorPolicy([u75, u100], "Cửa Đức", "", ray);
+  assert.equal(pick("U75").retail_cut_deduction_m, 0.08);
+  assert.equal(pick("U100").retail_cut_deduction_m, 0.09);
+  const cut = (ray) => calculateDoorFormula(pick(ray), {
+    door_type: "Cửa Đức", customer_group: "Lẻ",
+    measured_width_m: 4, cover_height_m: 3, set_count: 1, purpose: "sales",
+  }).cut_width_m;
+  assert.equal(cut("U75"), 3.92);
+  assert.equal(cut("U100"), 3.91);
+});
+
+test("dòng không khai loại ray vẫn chạy — không ép dữ liệu cũ phải điền", () => {
+  const u75 = { ...policy("Cửa Đức"), ray_type: "U75" };
+  assert.equal(selectDoorPolicy([u75], "Cửa Đức").policy_name, u75.policy_name);
+  assert.equal(selectDoorPolicy([u75], "Cửa Đức", "", undefined).policy_name, u75.policy_name);
 });

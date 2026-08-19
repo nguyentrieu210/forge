@@ -23,6 +23,22 @@ export type HeightBasis = "Cao phủ bì" | "Cao lưới";
 export type PurchaseFormula = "Kg thực tế" | "Barem kg/m2";
 export type DoorFormulaPurpose = "sales" | "production" | "purchase" | "all";
 
+/**
+ * Loại ray của ĐƠN HÀNG, không phải thuộc tính của nhóm hàng.
+ *
+ * Giá trị khớp đúng Select `ray_type` trong brief. Nguồn `cutting-policy.md` §2.1 ghi hai bộ
+ * hằng số khác nhau cho U75 và U100 — Đức lệch 0,01 m ở rộng cắt lá, Đài Loan và Lưới lệch
+ * 0,06 m. Một dòng cửa vì thế có thể cần HAI chính sách, phân biệt bằng đúng trường này.
+ */
+export const RAY_TYPES = ["U75", "U100", "Ray hộp/đơn U76", "Ray sắt U70", "Không dùng ray"] as const;
+export type RayType = typeof RAY_TYPES[number];
+
+/** Loại ray khai trên dòng bán. Trống hoặc giá trị lạ ⇒ không lọc theo ray. */
+export function rayTypeOf(value: unknown): RayType | undefined {
+  const text = String(value ?? "").trim();
+  return RAY_TYPES.find((entry) => entry === text);
+}
+
 /** Một dòng trong danh mục Chính sách công thức cửa. */
 export interface DoorFormulaPolicy {
   policy_name: string;
@@ -49,7 +65,7 @@ export interface DoorFormulaPolicy {
   priority?: number;
   disabled?: unknown;
   note?: string;
-  ray_type?: "U75" | "U100" | "Ray sắt U70" | "Không dùng ray";
+  ray_type?: RayType;
   leaf_formula?: "Kiểu Đức" | "Kiểu Úc" | "Kiểu tấm liền Úc" | "Kiểu Đài Loan Lưới";
   leaf_height_deduction_m?: number;
   leaf_divisor_source?: "Bản lá của bộ quy cách" | "Hằng số của chính sách";
@@ -245,15 +261,34 @@ function round(value: number, digits = 6): number {
 /**
  * Chọn đúng MỘT chính sách. Nhóm Item cụ thể thắng luật chung; priority chỉ phân xử trong
  * cùng mức cụ thể. Hai luật ngang nhau bị từ chối — đoán một luật ở đây là cắt hỏng nhôm.
+ *
+ * `rayType` tham gia khoá phân giải, KHÔNG phải điều kiện phụ.
+ *
+ * Trước 2026-08-19 hàm này chỉ lọc `door_type` + `item_group`, trong khi toàn bộ chính sách
+ * trong D1 đều là U75. Hệ quả: một đơn ray U100 vẫn tìm ra chính sách — chính sách của U75 —
+ * rồi tính rộng cắt lá bằng hằng số sai, không một dòng cảnh báo nào. Đức lệch 0,01 m,
+ * Đài Loan và Lưới lệch 0,06 m so với bảng nguồn.
+ *
+ * Không khớp thì NÉM LỖI. Không lùi về U75, không lấy chính sách "gần đúng": thiếu chính sách
+ * là thiếu dữ liệu, còn đoán chính sách là cắt hỏng nhôm — và nhôm cắt rồi không nối lại được.
  */
 export function selectDoorPolicy(
   policies: DoorFormulaPolicy[],
   doorType: DoorType,
   itemGroup = "",
+  rayType?: RayType,
 ): DoorFormulaPolicy {
+  const wantedRay = typeof rayType === "string" && rayType.trim() ? rayType.trim() : "";
   const candidates = policies
     .filter((policy) => enabled(policy.disabled) && policy.door_type === doorType)
     .filter((policy) => !policy.item_group || policy.item_group === itemGroup)
+    /**
+     * Đơn không khai loại ray thì không lọc — dòng hàng cũ và các dòng không dùng ray vẫn chạy.
+     * Đơn CÓ khai thì bắt buộc khớp: một chính sách bỏ trống `ray_type` không được coi là
+     * "hợp mọi loại ray", vì bộ dữ liệu hiện tại bỏ trống nghĩa là "chưa ai điền", không phải
+     * "đã cân nhắc và áp cho mọi ray".
+     */
+    .filter((policy) => !wantedRay || String(policy.ray_type ?? "") === wantedRay)
     .map((policy) => ({
       policy,
       specificity: policy.item_group ? 1 : 0,
@@ -261,7 +296,16 @@ export function selectDoorPolicy(
     }))
     .sort((left, right) => (right.specificity - left.specificity) || (right.priority - left.priority));
 
-  if (!candidates.length) throw new Error(`Chưa có Chính sách công thức cho ${doorType}${itemGroup ? ` / ${itemGroup}` : ""}.`);
+  if (!candidates.length) {
+    const scope = [doorType, itemGroup || null, wantedRay ? `ray ${wantedRay}` : null].filter(Boolean).join(" / ");
+    // Nói rõ đã có chính sách cho loại ray NÀO, để người khai biết phải thêm gì thay vì
+    // chỉ thấy "chưa có chính sách" rồi đi tắt bằng cách đổi loại ray trên đơn.
+    const rays = [...new Set(policies
+      .filter((policy) => enabled(policy.disabled) && policy.door_type === doorType)
+      .map((policy) => String(policy.ray_type ?? "(chưa khai)")))];
+    const hint = wantedRay && rays.length ? ` Hiện chỉ có chính sách cho: ${rays.join(", ")}.` : "";
+    throw new Error(`Chưa có Chính sách công thức cho ${scope}.${hint}`);
+  }
   const first = candidates[0]!;
   const tied = candidates.filter((entry) => entry.specificity === first.specificity && entry.priority === first.priority);
   if (tied.length > 1) {

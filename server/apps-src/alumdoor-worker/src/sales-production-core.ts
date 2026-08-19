@@ -3,6 +3,7 @@ import {
   inferDoorType,
   isManualPullGroup,
   parseDoorPolicy,
+  RAY_TYPES,
   selectDoorPolicy,
   type CustomerGroup,
   type DoorFormulaPolicy,
@@ -465,9 +466,19 @@ function parsedPolicies(raw: RawPolicy[]): Array<{ parsed: DoorFormulaPolicy; ra
   return raw.map((row) => ({ parsed: parseDoorPolicy(row), raw: row }));
 }
 
-function choosePolicy(rawPolicies: RawPolicy[], doorType: DoorType, itemGroup: string): { parsed: DoorFormulaPolicy; raw: RawPolicy } {
+/**
+ * `rayType` là loại ray khai trên DÒNG BÁN, không phải thuộc tính của nhóm hàng — nên nó
+ * phải đi vào đây thay vì được suy ra. Trống thì không lọc, giữ nguyên dữ liệu cũ.
+ */
+function choosePolicy(
+  rawPolicies: RawPolicy[],
+  doorType: DoorType,
+  itemGroup: string,
+  rayType?: string,
+): { parsed: DoorFormulaPolicy; raw: RawPolicy } {
   const pairs = parsedPolicies(rawPolicies);
-  const parsed = selectDoorPolicy(pairs.map((entry) => entry.parsed), doorType, itemGroup);
+  const wantedRay = RAY_TYPES.find((entry) => entry === text(rayType));
+  const parsed = selectDoorPolicy(pairs.map((entry) => entry.parsed), doorType, itemGroup, wantedRay);
   const pair = pairs.find((entry) => entry.parsed.policy_name === parsed.policy_name);
   if (!pair) throw new Error(`Không đọc được chi tiết chính sách ${parsed.policy_name}.`);
   return pair;
@@ -772,7 +783,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
     const sets = positiveInteger(row.set_count ?? 1, `Dòng ${index + 1}: Số bộ`);
     const salesMode = (text(row.sales_mode) || "Trọn bộ") as SalesMode;
     if (salesMode !== "Trọn bộ" && salesMode !== "Tách món") throw new Error(`Dòng ${index + 1}: Cách bán không hợp lệ.`);
-    const chosen = choosePolicy(input.policies, doorType, itemGroup);
+    const chosen = choosePolicy(input.policies, doorType, itemGroup, text(row.ray_type));
     const formula = calculateDoorFormula(chosen.parsed, {
       door_type: doorType,
       item_group: itemGroup,
@@ -981,7 +992,7 @@ export async function calculateSalesProductionLine(
         "effective_from", "effective_to", "disabled",
       ]).catch(() => []),
     ]);
-    const chosenSummary = choosePolicy(policies, doorType, text(item.item_group));
+    const chosenSummary = choosePolicy(policies, doorType, text(item.item_group), text(args.ray_type));
     const chosenRaw = text(chosenSummary.raw.name)
       ? { ...chosenSummary.raw, ...await readDoc<RawPolicy>(call, "Cutting Policy", text(chosenSummary.raw.name)) }
       : chosenSummary.raw;
