@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-08-19T11:49:22.575Z",
+  "recorded_at": "2026-08-19T11:58:09.115Z",
   "note": "Tập test client ĐỎ SẴN. Chỉ ghi lại khi cố ý dời mốc.",
   "total": 135,
   "failing": [
@@ -7,6 +7,8 @@
     "packages/builder/test/decision-rule-decimal.test.mjs::decimal lists stay strings while booleans in literal lists retain JSON type",
     "packages/builder/test/decision-rule-decimal.test.mjs::decimal value stays a decimal string and carries explicit server mode",
     "packages/builder/test/decision-rule-decimal.test.mjs::numeric-looking literal stays a string",
+    "packages/views/tests/alumdoor-sales-order-v2-complete.test.mjs::PB ray and PB plastic are separate persisted fields",
+    "packages/views/tests/alumdoor-sales-order-v2-complete.test.mjs::commercial row keeps rate fixed while discount and server money remain explicit",
     "packages/views/tests/data-surface-v3.test.mjs::DoctypeWorkspace activates V3 without replacing canonical renderers",
     "packages/views/tests/data-surface-v3.test.mjs::V3 quick entry preserves dirty-close guard and reduced-motion behavior",
     "packages/views/tests/grid-parity-convergence.test.mjs::converged AlumDoor Sales metadata exposes operator choice/server money and hides policy snapshots",

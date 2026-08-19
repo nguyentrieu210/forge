@@ -167,3 +167,27 @@ Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
    từ mười bản cũ, nay ghim trong `money-single-source.test.mjs`. Có nên coi cả ba là
    "chưa có số" không?
 
+## 6. Trộn với `agent-live` (19/08)
+
+Trong lúc nhánh này chạy, `agent-live` đi thêm 4 commit và **sửa đúng file tôi đang cắt**
+(`alumdoor-worker/src/index.ts`) — thêm `ray_type` vào khoá chọn chính sách cửa và đọc danh
+mục `Quy cách cửa` thay cho bảng bản lá biên dịch sẵn.
+
+Đã trộn `agent-live` vào nhánh này (không đụng `agent-live`, không đụng `main`). Một cụm
+xung đột duy nhất, giải bằng cách lấy nguyên bản của họ rồi **chạy lại lát cắt** lên đó, nên
+cả hai phía đều còn nguyên: `readSlatCatalog` của họ nằm cùng nhóm đọc master trong
+`document-validation.ts`, hai sửa đổi `ray_type` của họ đi theo đúng hàm đã dời.
+
+Sau khi trộn, cổng báo 4 rớt mới. **Cả bốn đều đỏ sẵn trên `agent-live`** — kiểm bằng cách
+dựng worktree riêng tại `agent-live` và chạy chính hai file test đó:
+
+| Test | Trên nhánh này | Trên `agent-live` |
+|---|---|---|
+| `sales-production-flow::Cửa tấm liền Úc dùng ray từng dòng…` | đỏ | **đỏ** |
+| `sales-production-flow::…thiếu hoặc sai ray thì fail closed` | đỏ | **đỏ** |
+| `alumdoor-sales-order-v2-complete::PB ray and PB plastic…` | đỏ | **đỏ** |
+| `alumdoor-sales-order-v2-complete::commercial row keeps rate fixed…` | đỏ | **đỏ** |
+
+Mốc được chụp lại theo trạng thái sau trộn: **server 75 rớt / 2413**, **client 17 rớt / 135**
+(server bớt một so mốc cũ vì 3 test của họ đã xanh trở lại).
+
