@@ -7,6 +7,7 @@ import { buildCanonicalAlumdoorItemMaster } from "./lib/alumdoor-item-master-cla
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
 import { ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
 import { createSourceCodeResolver, translateSourceRecords } from "./lib/alumdoor-source-code-resolver.mjs";
+import { loadPurchaseCatalog, applyPurchaseCatalog } from "./lib/alumdoor-purchase-catalog.mjs";
 import { DatabaseSync } from "node:sqlite";
 import { existsSync } from "node:fs";
 
@@ -209,6 +210,9 @@ const REPO_ROOT = resolve(SERVER_ROOT, "..");
 const D1_PATH = process.env.ALUMDOOR_D1_PATH
   || resolve(SERVER_ROOT, "apps/tenant-worker/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite");
 const CONVENTION_PATH = resolve(REPO_ROOT, "docs/alumdoor-item-code-mapping.json");
+// Giữ lại bộ dịch mã để lớp danh mục mua dùng lại. Dựng bộ dịch thứ hai là mở đường cho hai
+// bộ trôi dạt khỏi nhau, mà sai lệch giữa chúng thì không có gì báo.
+let resolveSourceCodeForPurchase = (code) => code;
 if (existsSync(D1_PATH) && existsSync(CONVENTION_PATH)) {
   const tenant = process.env.ALUMDOOR_TENANT || "demo";
   const db = new DatabaseSync(D1_PATH, { readOnly: true });
@@ -218,7 +222,9 @@ if (existsSync(D1_PATH) && existsSync(CONVENTION_PATH)) {
   const conventionMap = new Map(
     JSON.parse(await readFile(CONVENTION_PATH, "utf8")).mapping.map((row) => [row.from, row.to]),
   );
-  const translation = translateSourceRecords(payload.items, createSourceCodeResolver({ conventionMap, liveCodes }));
+  const resolveSourceCode = createSourceCodeResolver({ conventionMap, liveCodes });
+  resolveSourceCodeForPurchase = resolveSourceCode;
+  const translation = translateSourceRecords(payload.items, resolveSourceCode);
   payload.items = translation.records;
   const stillMissing = payload.items.filter((item) => !liveCodes.has(item.item_code)).length;
   console.log(`ALUMDOOR_ITEM_PAYLOAD_TRANSLATED changed=${translation.changed} unresolved=${translation.unresolved.size} not_in_d1=${stillMissing} live_items=${liveCodes.size}`);
@@ -266,6 +272,37 @@ if (existsSync(DECISIONS_PATH)) {
     console.log(`ALUMDOOR_CATALOG_DECISIONS_STALE count=${stale.length} codes=${stale.slice(0, 5).join(",")}`);
   }
   console.log(`ALUMDOOR_CATALOG_DECISIONS_APPLIED changes=${applied} retired=${retired.size} overrides=${overrides.size}`);
+}
+
+/**
+ * Áp LỚP DANH MỤC MUA — giá nhập, ĐVT nhập, hệ số quy đổi, nhà cung cấp.
+ *
+ * Nguồn: `apps/alumdoor/docs/nguon/ms-lien/DANH-MỤC.md` (sheet DANH MỤC của MS LIÊN BS.xlsx) và
+ * `data/trong-luong-nhom.json`. Cho tới 2026-08-19 CHƯA script nào đọc file đầu, dù nó là chỗ
+ * duy nhất trong bốn file gốc có GIÁ NHẬP · ĐVT NHẬP · NCC theo từng mã.
+ *
+ * Chạy SAU lớp quyết định vì `default_sales_uom` có thể vừa bị ghi đè, và hệ số quy đổi phải
+ * tính trên `stock_uom` cuối cùng chứ không phải bản trước ghi đè.
+ *
+ * `blocked` KHÔNG chặn payload: mặt hàng thiếu hệ số vẫn giữ nguyên như cũ, chỉ là không nhận
+ * được ĐVT mua. Đó là trạng thái nó đang có sẵn, không phải hồi quy.
+ */
+const purchaseCatalog = await loadPurchaseCatalog(REPO_ROOT);
+if (purchaseCatalog.available) {
+  const applied = applyPurchaseCatalog(payload.items, purchaseCatalog, resolveSourceCodeForPurchase);
+  payload.items = applied.items;
+  payload.purchase_prices = applied.purchase_prices;
+  payload.supplier_items = applied.supplier_items;
+  audit.purchase_catalog = applied.report;
+  console.log(
+    `ALUMDOOR_PURCHASE_CATALOG_APPLIED source_rows=${applied.report.source_row_count} ` +
+      `matched=${applied.report.matched_item_count} changes=${applied.report.change_count} ` +
+      `blocked=${applied.report.blocked_count} conflicts=${applied.report.conflict_count} ` +
+      `prices=${applied.report.purchase_price_count} supplier_items=${applied.report.supplier_item_count} ` +
+      `unmatched_source=${applied.report.unmatched_source_code_count}`,
+  );
+} else {
+  console.log("ALUMDOOR_PURCHASE_CATALOG_APPLIED skipped=no-source");
 }
 
 await writeFile(payloadPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
