@@ -1,13 +1,28 @@
 /** @jsxImportSource react */
 import type { CSSProperties, ReactNode } from "react";
 
-const RED = "var(--forge-primary, #ef332d)";
-const BORDER = "var(--forge-border, #292d33)";
-const MUTED = "var(--forge-muted, #9ca3af)";
+/** Màu nhấn của mặt command center. Tên cũ là `RED` — di chứng brand đỏ đã bỏ; nay nó giữ
+ * `--primary` (navy), nên cái tên đang nói sai về thứ nó chứa. */
+const ACCENT = "var(--primary)";
+const BORDER = "var(--border)";
+const MUTED = "var(--muted-foreground)";
+
+/**
+ * Mặt "command center" cố ý TỐI ở cả hai theme — nó là màn chiếu lên tường phòng điều độ, chữ
+ * luôn trắng. Nên hai nền này là hằng số của riêng nó, không lấy từ bảng token theo theme.
+ *
+ * Đặt tên thay vì rải hex trong class Tailwind tuỳ ý (`bg-[#090909]`), để lần sau đổi tông chỉ
+ * sửa một chỗ.
+ */
+const COMMAND_GROUND = "#090909";
+const COMMAND_PANEL = "#111317";
 
 export function DataPanel({ title, eyebrow, action, children, className = "" }: { title?: string; eyebrow?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`relative min-w-0 overflow-hidden rounded-lg border border-white/10 bg-[#111317]/92 shadow-[0_18px_60px_rgba(0,0,0,.22)] ${className}`}>
+    <section
+      className={`relative min-w-0 overflow-hidden rounded-lg border border-white/10 shadow-[0_18px_60px_rgba(0,0,0,.22)] ${className}`}
+      style={{ background: `color-mix(in srgb, ${COMMAND_PANEL} 92%, transparent)` }}
+    >
       {(title || eyebrow || action) ? <header className="flex min-w-0 items-start gap-3 border-b border-white/8 px-4 py-3">
         <div className="min-w-0 flex-1">{eyebrow ? <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/42">{eyebrow}</div> : null}{title ? <h3 className="truncate text-sm font-semibold tracking-[-0.01em] text-white/92">{title}</h3> : null}</div>
         {action}
@@ -18,7 +33,7 @@ export function DataPanel({ title, eyebrow, action, children, className = "" }: 
 }
 
 export function EdgeFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
-  const corner = "pointer-events-none absolute size-3 border-[var(--forge-primary,#ef332d)] opacity-75";
+  const corner = "pointer-events-none absolute size-3 border-[var(--primary)] opacity-75";
   return (
     <div className={`relative ${className}`}>
       <span className={`${corner} left-0 top-0 border-l border-t`} aria-hidden="true" />
@@ -31,14 +46,14 @@ export function EdgeFrame({ children, className = "" }: { children: ReactNode; c
 }
 
 export function GlowDivider({ className = "" }: { className?: string }) {
-  return <div className={`h-px w-full bg-[linear-gradient(90deg,transparent,var(--forge-primary,#ef332d),transparent)] opacity-50 ${className}`} aria-hidden="true" />;
+  return <div className={`h-px w-full bg-[linear-gradient(90deg,transparent,var(--primary),transparent)] opacity-50 ${className}`} aria-hidden="true" />;
 }
 
 export function MetricNumber({ label, value, suffix, hint, accent = false }: { label?: string; value: string | number; suffix?: string; hint?: string; accent?: boolean }) {
   return (
     <div className="min-w-0">
       {label ? <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/42">{label}</div> : null}
-      <div className={`mt-1 truncate text-[clamp(1.65rem,3vw,2.6rem)] font-bold leading-none tracking-[-0.045em] tabular-nums ${accent ? "text-[var(--forge-primary,#ef332d)]" : "text-white"}`}>{value}{suffix ? <span className="ml-1 text-[0.42em] font-semibold tracking-normal text-white/45">{suffix}</span> : null}</div>
+      <div className={`mt-1 truncate text-[clamp(1.65rem,3vw,2.6rem)] font-bold leading-none tracking-[-0.045em] tabular-nums ${accent ? "text-[var(--primary)]" : "text-white"}`}>{value}{suffix ? <span className="ml-1 text-[0.42em] font-semibold tracking-normal text-white/45">{suffix}</span> : null}</div>
       {hint ? <div className="mt-2 text-[10px] text-white/38">{hint}</div> : null}
     </div>
   );
@@ -51,14 +66,14 @@ export function StatusPulse({ label, active = false, tone = "neutral" }: { label
 
 export function FlowLine({ active = false, direction = "right", className = "" }: { active?: boolean; direction?: "right" | "left"; className?: string }) {
   const points = direction === "right" ? "0,6 92,6 86,2 92,6 86,10" : "92,6 0,6 6,2 0,6 6,10";
-  return <svg className={`h-3 w-full ${className}`} viewBox="0 0 92 12" preserveAspectRatio="none" aria-hidden="true"><polyline points={points} fill="none" stroke={active ? RED : BORDER} strokeWidth={active ? 1.5 : 1} vectorEffect="non-scaling-stroke" /><circle cx={direction === "right" ? 2 : 90} cy="6" r={active ? 2 : 1.4} fill={active ? RED : MUTED} /></svg>;
+  return <svg className={`h-3 w-full ${className}`} viewBox="0 0 92 12" preserveAspectRatio="none" aria-hidden="true"><polyline points={points} fill="none" stroke={active ? ACCENT : BORDER} strokeWidth={active ? 1.5 : 1} vectorEffect="non-scaling-stroke" /><circle cx={direction === "right" ? 2 : 90} cy="6" r={active ? 2 : 1.4} fill={active ? ACCENT : MUTED} /></svg>;
 }
 
 export function GeoConnection({ from = [10, 72], to = [90, 24], active = false, className = "" }: { from?: [number, number]; to?: [number, number]; active?: boolean; className?: string }) {
   const midX = (from[0] + to[0]) / 2;
   const midY = Math.min(from[1], to[1]) - 20;
   const path = `M ${from[0]} ${from[1]} Q ${midX} ${midY} ${to[0]} ${to[1]}`;
-  return <svg className={`h-full w-full ${className}`} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={path} fill="none" stroke={active ? RED : BORDER} strokeWidth={active ? 1.6 : 1} vectorEffect="non-scaling-stroke" /><circle cx={from[0]} cy={from[1]} r="2" fill={active ? RED : MUTED} /><circle cx={to[0]} cy={to[1]} r="2" fill={active ? RED : MUTED} /></svg>;
+  return <svg className={`h-full w-full ${className}`} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d={path} fill="none" stroke={active ? ACCENT : BORDER} strokeWidth={active ? 1.6 : 1} vectorEffect="non-scaling-stroke" /><circle cx={from[0]} cy={from[1]} r="2" fill={active ? ACCENT : MUTED} /><circle cx={to[0]} cy={to[1]} r="2" fill={active ? ACCENT : MUTED} /></svg>;
 }
 
 export function RadarFrame({ rings = 4, spokes = 6, className = "" }: { rings?: number; spokes?: number; className?: string }) {
@@ -71,13 +86,14 @@ export function RadarFrame({ rings = 4, spokes = 6, className = "" }: { rings?: 
 }
 
 export function CommandCenterGrid({ children, fullscreen = false, className = "", style }: { children: ReactNode; fullscreen?: boolean; className?: string; style?: CSSProperties }) {
-  const backgroundImage = "linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px), radial-gradient(circle at 50% 0%, rgba(239,51,45,.09), transparent 34%)";
+  const backgroundImage = "linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px), radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 34%)";
   const gridStyle = {
     "--mf-command-grid-image": backgroundImage,
     "--mf-command-grid-size": "28px 28px, 28px 28px, 100% 100%",
+    backgroundColor: COMMAND_GROUND,
     ...style,
   } as CSSProperties;
-  return <div className={`${fullscreen ? "min-h-screen" : "min-h-[32rem] rounded-xl"} relative overflow-hidden bg-[#090909] [background-image:var(--mf-command-grid-image)] [background-size:var(--mf-command-grid-size)] text-white ${className}`} style={gridStyle}>{children}</div>;
+  return <div className={`${fullscreen ? "min-h-screen" : "min-h-[32rem] rounded-xl"} relative overflow-hidden [background-image:var(--mf-command-grid-image)] [background-size:var(--mf-command-grid-size)] text-white ${className}`} style={gridStyle}>{children}</div>;
 }
 
 export function AlertBeacon({ label, detail, active = false, severity = "warning" }: { label: string; detail?: string; active?: boolean; severity?: "info" | "warning" | "danger" }) {

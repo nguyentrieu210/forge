@@ -297,7 +297,7 @@ export function AppShell(props: AppShellProps) {
                         disabled={Boolean(item.disabledReason)}
                         title={item.disabledReason}
                         className={cn(
-                          "mf-shell-nav-item relative mb-0.5 w-full justify-start gap-2 overflow-hidden border border-transparent font-normal transition-all",
+                          "mf-shell-nav-item relative mb-0.5 w-full justify-start gap-2 overflow-hidden border border-transparent font-normal",
                           collapsed && "justify-center px-0 max-md:justify-start max-md:px-3",
                           !collapsed && "pr-7",
                           active && "bg-primary text-primary-foreground font-semibold shadow-sm hover:bg-primary-hover active:bg-primary-active before:absolute before:inset-y-1 before:left-0 before:w-1 before:rounded-r-full before:bg-primary-foreground/70",

@@ -66,7 +66,7 @@ function ShortcutCard({ title, description, icon, target, onNavigate }: Shortcut
     <Button
       type="button"
       variant="ghost"
-      className="group h-auto min-h-28 w-full items-start justify-start gap-3 whitespace-normal rounded-xl border bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card hover:shadow-md"
+      className="group h-auto min-h-28 w-full items-start justify-start gap-3 whitespace-normal rounded-xl border bg-card p-4 text-left shadow-sm transition-[background-color,border-color,box-shadow] hover:border-primary/40 hover:bg-card hover:shadow-md"
       onClick={() => onNavigate(target)}
     >
       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary [&_svg]:size-5">

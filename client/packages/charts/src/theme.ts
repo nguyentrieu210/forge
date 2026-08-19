@@ -15,35 +15,48 @@ export interface ForgeChartTokens {
   palette: string[];
 }
 
+/**
+ * Fallback khi chưa đọc được biến CSS (SSR, lúc stylesheet chưa vào, host tách khỏi document).
+ *
+ * Chúng PHẢI bám sát `@metaforge/ui/styles.css`. Trước đây thì không: `primary` ở đây là
+ * `#e52521` — màu ĐỎ của một brand đã bỏ từ lâu, trong khi diện mạo đang chạy là navy
+ * `#1e40af`. Fallback lệch brand không bao giờ bị bắt vì đường chạy bình thường luôn đọc được
+ * biến CSS; nó chỉ hiện ra đúng lúc tệ nhất, là lúc có sự cố.
+ */
 const LIGHT: ForgeChartTokens = {
   dark: false,
   background: "#ffffff",
-  surface: "#f6f7f8",
-  text: "#15171a",
-  muted: "#69707d",
-  border: "#dee2e7",
-  primary: "#e52521",
-  success: "#168a4f",
-  warning: "#c47a09",
-  danger: "#d92d20",
-  info: "#2563eb",
-  palette: ["#e52521", "#2563eb", "#168a4f", "#c47a09", "#7c3aed", "#0891b2", "#db2777"],
+  surface: "#f8f9fb",
+  text: "#111827",
+  muted: "#4b5563",
+  border: "#e1e5ea",
+  primary: "#1e40af",
+  success: "#16a34a",
+  warning: "#d97706",
+  danger: "#dc2626",
+  info: "#1e40af",
+  // 5 màu đầu = `--chart-1..5` bản light. Hai màu cuối là phần nối dài cho biểu đồ trên 5
+  // series, giữ nguyên tính chất "hai series cạnh nhau khác cả sắc lẫn độ sáng".
+  palette: ["#1e40af", "#0f766e", "#b45309", "#6d28d9", "#b91c1c", "#0891b2", "#be185d"],
 };
 
 const DARK: ForgeChartTokens = {
   dark: true,
-  background: "#131519",
-  surface: "#191c21",
-  text: "#f7f7f8",
+  background: "#171a21",
+  surface: "#1d212a",
+  text: "#f3f4f6",
   muted: "#9ca3af",
-  border: "#292d33",
-  primary: "#ef332d",
-  success: "#32b36f",
-  warning: "#f0a63a",
-  danger: "#ff514a",
-  info: "#59a5ff",
-  palette: ["#ef332d", "#59a5ff", "#32b36f", "#f0a63a", "#a78bfa", "#22d3ee", "#f472b6"],
+  border: "#303641",
+  primary: "#5b82ff",
+  success: "#22c55e",
+  warning: "#f59e0b",
+  danger: "#f87171",
+  info: "#5b82ff",
+  palette: ["#5b82ff", "#2dd4bf", "#fbbf24", "#a78bfa", "#f87171", "#22d3ee", "#f472b6"],
 };
+
+/** Số màu series được khai thành token trong styles.css (`--chart-1` … `--chart-5`). */
+const CHART_TOKEN_COUNT = 5;
 
 function colorToken(style: CSSStyleDeclaration, names: string[], fallback: string): string {
   for (const name of names) {
@@ -66,21 +79,38 @@ export function resolveForgeChartTokens(host: HTMLElement, mode: ForgeChartTheme
   const base = dark ? DARK : LIGHT;
   if (typeof window === "undefined") return base;
   const style = window.getComputedStyle(host);
-  const primary = colorToken(style, ["--forge-primary", "--primary"], base.primary);
+  const primary = colorToken(style, ["--primary"], base.primary);
   return {
     ...base,
-    background: colorToken(style, ["--forge-surface", "--background", "--card"], base.background),
-    surface: colorToken(style, ["--forge-surface-soft", "--muted"], base.surface),
-    text: colorToken(style, ["--forge-foreground", "--foreground"], base.text),
-    muted: colorToken(style, ["--forge-muted", "--muted-foreground"], base.muted),
-    border: colorToken(style, ["--forge-border", "--border"], base.border),
+    background: colorToken(style, ["--card", "--background"], base.background),
+    surface: colorToken(style, ["--muted"], base.surface),
+    text: colorToken(style, ["--foreground"], base.text),
+    muted: colorToken(style, ["--muted-foreground"], base.muted),
+    border: colorToken(style, ["--border"], base.border),
     primary,
     success: colorToken(style, ["--success"], base.success),
     warning: colorToken(style, ["--warning"], base.warning),
     danger: colorToken(style, ["--destructive"], base.danger),
     info: colorToken(style, ["--info"], base.info),
-    palette: [primary, ...base.palette.slice(1)],
+    palette: chartPalette(style, base),
   };
+}
+
+/**
+ * Dải màu series lấy từ `--chart-1..5` của styles.css.
+ *
+ * TRƯỚC ĐÂY chỉ series ĐẦU bám brand (`[primary, ...base.palette.slice(1)]`), còn series 2..7
+ * luôn là mảng cứng — nên dải "navy → teal → hổ phách → tím → đỏ" mà styles.css chọn có chủ ý
+ * (và `views` đã dùng qua `bg-chart-2`…) chỉ được tôn trọng đúng một nửa: hai hệ cùng nói về
+ * màu biểu đồ mà bất đồng với nhau.
+ *
+ * Nay đọc đủ 5 token; series thứ 6 trở đi mới rơi về phần nối dài trong `base.palette`.
+ */
+function chartPalette(style: CSSStyleDeclaration, base: ForgeChartTokens): string[] {
+  const resolved = base.palette.map((fallback, index) =>
+    index < CHART_TOKEN_COUNT ? colorToken(style, [`--chart-${index + 1}`], fallback) : fallback,
+  );
+  return resolved;
 }
 
 export function compactMetric(value: number, locale = "vi-VN"): string {

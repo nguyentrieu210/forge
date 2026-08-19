@@ -4,11 +4,11 @@ import { ForgeAreaChart, ForgeBarChart, ForgeDonutChart, ForgeLineChart, compact
 import { Button } from "@metaforge/ui";
 
 const CHART_DOT_CLASSES = [
-  "bg-[var(--forge-primary,var(--chart-1,#e52521))]",
-  "bg-[var(--chart-2,#2563eb)]",
-  "bg-[var(--chart-3,#168a4f)]",
-  "bg-[var(--chart-4,#c47a09)]",
-  "bg-[var(--chart-5,#7c3aed)]",
+  "bg-[var(--primary)]",
+  "bg-[var(--chart-2,#0f766e)]",
+  "bg-[var(--chart-3,#b45309)]",
+  "bg-[var(--chart-4,#6d28d9)]",
+  "bg-[var(--chart-5,#b91c1c)]",
 ] as const;
 
 function shortNum(value: unknown): string {
@@ -58,6 +58,6 @@ export function OverviewChartCard({ chart, onNavigate }: { chart: OverviewChart;
 
   const classes = "min-w-0 rounded-lg border bg-card p-4 text-left shadow-[0_1px_0_rgba(0,0,0,.025)] transition-[border-color,box-shadow,transform] motion-reduce:transition-none";
   return chart.route ? (
-    <Button type="button" variant="ghost" onClick={() => onNavigate(chart.route!)} className={`${classes} h-auto w-full items-stretch justify-start whitespace-normal hover:-translate-y-px hover:border-primary/35 hover:bg-card hover:shadow-sm focus-visible:ring-primary/30`}>{content}</Button>
+    <Button type="button" variant="ghost" onClick={() => onNavigate(chart.route!)} className={`${classes} h-auto w-full items-stretch justify-start whitespace-normal hover:border-primary/35 hover:bg-card hover:shadow-sm focus-visible:ring-primary/30`}>{content}</Button>
   ) : <div className={classes}>{content}</div>;
 }

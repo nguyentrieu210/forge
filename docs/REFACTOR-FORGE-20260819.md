@@ -130,8 +130,16 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P6** ✅ | `alumdoor-worker/src/index.ts` **3689 → 2815 dòng** (tách `document-validation.ts` 854 dòng + `responses.ts`); `ChildGrid.tsx` **2200 → 1907 dòng** (tách `child-grid-columns.ts` 313 dòng luật thuần) | cao |
 | **P7** ✅ | Hiệu năng: chuỗi tải lúc mở app đi từ 5 chặng nối đuôi xuống 2 (tải trước theo làn, phát ngay trong `<head>`); vòng lặp dựng-test của repo 19 s → 6 s. Xem mục 7 | trung bình |
 | **P8** ✅ | Hỏi trước phiên + manifest ngay trong `<head>` (sớm hơn ~300 ms); tách trang bán hàng và trang marketing khỏi `main-base` (378 → 325 kB). Xem mục 8 | trung bình |
+| **P9** ✅ | Chôn tầng UI V3 đã revert: 969 dòng chết + 13 prop chết + 2 tài liệu nói sai hiện trạng; gộp hai bản khai trùng của `AppShellProps`. Xem mục 9 | thấp |
+| **P10** ✅ | Chốt hai câu hỏi giao diện treo ở mục 5: luật hiển thị tiền, và số phận khối `design`. Xem mục 10 | thấp |
+| **P11** ✅ | Kéo 56 biến alias + 28 hex thô về token chính danh, gỡ hẳn `v3.css`, `transition-all` 9 → 0. Xem mục 11 | trung bình |
+| **P12** ✅ | Lỗi server về đúng ô gây lỗi; ghim tên truy cập cho nút icon. Xem mục 12 | thấp |
+| **P13** ✅ | Design lần đầu được kiểm chứng trên trình duyệt: chuỗi khởi động, dải tổng trùng, skeleton vô hình, trạng thái rỗng. Xem mục 13 | trung bình |
 
 Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
+
+P9–P12 làm trên nhánh `redesign/ui-runtime` (worktree `C:\alumdoor-worktrees\redesign`),
+tách từ `origin/main` sau khi `refactor/forge-core` đã hội tụ vào `main` tại `1b8610532`.
 
 ## 3. Nguyên tắc trong lúc refactor
 
@@ -149,6 +157,10 @@ Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 | `frappe-api/src/storefront.ts` `round` | 2 chữ số, không `EPSILON` | `roundTo(value, 2)` dùng chung, có `EPSILON` | cùng một tên `round` mà hai luật; bản không `EPSILON` làm `1.005` thành `1.00` do sai số nhị phân |
 | `bootstrap.ts` giải mã đường dẫn | `decodeURIComponent` trần | `safeDecode` trong `boot-route.ts` | một URL có `%` hỏng (ví dụ `/%`) ném lỗi trước khi kịp nạp gì — màn hình trắng, không thông báo |
 | Lời gọi `forge.website.page` | xuất phát sau khi chunk bootstrap tải xong | xuất phát từ script nội tuyến trong `<head>` | cùng một lời gọi, chỉ sớm hơn ~2 chặng mạng; số lần gọi không đổi (nhớ theo `globalThis`) |
+| `formatMoney` với `null` / chuỗi rỗng (P10) | in ra `0` | in ra `—` (giống `undefined`) | trong ERP, 0 là giá trị THẬT (đã trả đủ, số dư bằng không); dựng nó lên từ chỗ trống bắt người dùng đọc một con số mà hệ thống chưa từng có. Số 0 khai tường minh vẫn in 0 |
+| Kiểu tiền `dong-tight` / `dong-lower` (P10) | 4 kiểu cùng sống | còn `plain` / `dong` / `currency` theo ngữ cảnh | hai kiểu kia chỉ khác một dấu cách và một chữ cái — dấu vết trôi dạt, không ngữ cảnh nào cần |
+| Nút chính màn đăng nhập, trạng thái hover/active (P11) | cùng một màu với trạng thái thường | `--primary-hover` / `--primary-active` | `v3.css` map hai alias đó về đúng `var(--primary)`, nên CSS có viết hover/active mà không đổi gì |
+| Nhấc thẻ khi rê chuột ở 6 mặt vận hành (P11) | `translateY(-1px…-0.5)` | không còn chuyển động hình học, giữ phản hồi bằng màu/viền | thẻ số liệu còn bị nhấc hai lần từ hai nơi; hàng thẻ nhấp nhô làm chậm việc quét số |
 
 ## 5. Câu hỏi cần chủ dự án quyết
 
@@ -164,12 +176,7 @@ Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
    chứng minh `(n + d/2)/d` và luật nửa-lên cho kết quả **y hệt với mọi đầu vào không âm**;
    khác biệt chỉ ở số âm, mà các đường vào đó đều chặn số âm từ trước. Đã gom, cổng không
    nhúc nhích.
-3. **Hiển thị tiền**: mười màn đang in cùng một con số theo **bốn kiểu** — `1.234.567 ₫`,
-   `1.234.567₫`, `1.234.567 đ`, `1.234.567`. Refactor đã gom luật nhưng GIỮ NGUYÊN cả bốn
-   kiểu để không đổi giao diện. Thống nhất về một kiểu là quyết định giao diện.
-   Kèm theo: `null` và `""` được tính là `0` còn `undefined` ra `—` — bất đối xứng có sẵn
-   từ mười bản cũ, nay ghim trong `money-single-source.test.mjs`. Có nên coi cả ba là
-   "chưa có số" không?
+3. ~~**Hiển thị tiền**~~ — ĐÃ XỬ LÝ ở P10, xem mục 10.
 
 ## 6. Trộn với `agent-live` (19/08)
 
@@ -321,3 +328,219 @@ Nói cách khác: tải nhiều hơn gấp đôi số file mà vẫn xong gần 
 — thứ quyết định lúc nào vẽ được màn hình — có sớm hơn khoảng **300 ms**.
 
 Cổng sau P8: server **75 rớt / 2414**, client **17 rớt / 146** — đúng mốc, không rớt mới.
+
+## 9. P9 — chôn tầng UI V3 đã revert (19/08)
+
+Forge từng ship trọn một chương trình redesign "UI V3": hàng chục commit, cổng CI riêng, ma
+trận Playwright, hai commit tự nhận *final production release*. Rồi nó bị **revert toàn bộ**
+bằng `cf5dd0da5`, và diện mạo đang chạy hôm nay là V2 cộng đợt theme Graphite làm **sau** đó
+(`0c450b733`).
+
+Phần bị revert chưa bao giờ được gỡ khỏi cây code:
+
+| Hiện vật | Dòng | Trạng thái thật |
+|---|---:|---|
+| `shell/src/ShellV3Chrome.tsx` | 716 | 0 nơi import, không export khỏi `index.ts` |
+| `shell/src/workspace-tab-state.ts` | 148 | 0 consumer |
+| `shell/src/AppShell.tsx` | 105 | 92 dòng là danh sách 13 prop V3; phần chạy chỉ là một spread |
+| `shell/V3_SHELL_RELEASE.md` | 72 | liệt kê "Delivered: App Rail, workspace route tabs…" |
+| `ui/V3_FOUNDATION.md` | — | mô tả "Red / graphite-black identity", trỏ vào `@metaforge/ui/v3.css` |
+
+### Nguy hiểm hơn code chết: hợp đồng khai hai lần
+
+`AppShell.tsx` và `AppShellV2.tsx` **khai độc lập** cùng bốn kiểu (`NavItem`, `Breadcrumb`,
+`NotificationItem`, `AppShellProps`) rồi nối nhau bằng một spread. TypeScript nhận theo cấu
+trúc, nên hai bản trôi dạt bao nhiêu cũng không ai báo — cùng họ với `resolveNavPath` chép
+thiếu `encodeURIComponent`. Đã so từng trường: hai hợp đồng khớp nhau **trừ đúng 13 prop V3**.
+Nay `AppShellV2` là nhà duy nhất; chuỗi shell còn 4 chặng thay vì 5.
+
+`shell/tests/shell-contract.test.mjs` ghim: hợp đồng khai đúng một lần, không tên V3 nào quay lại.
+
+### Không xoá cái còn dùng được
+
+`playwright.v3-mobile-qa.config.ts` thoạt nhìn là rác V3. Đọc kỹ thì spec của nó không kiểm
+chrome V3 mà kiểm **tràn ngang, vùng chạm 44px, thứ tự focus** trên 5 viewport (kể cả
+`reduced-motion-dark`), nhắm màn đăng nhập V2 vẫn đang sống. Nó chỉ bị đặt sai tên — đổi thành
+`responsive-a11y` và thêm script `test:responsive-a11y`.
+
+Rác thật thì có 12 file đã commit ở `e2e-forge` (`dbg.mjs`, `lab2..4.mjs`, `sweep.mjs`,
+`diagnose.mjs`, 5 ảnh chụp) — 0 tham chiếu. Tracked 48 → 36 file.
+
+### Hồi quy bắt được lúc đo mốc
+
+Mốc client báo **2 rớt mới khi chưa sửa gì**. Nguyên nhân: P4b dời vertical sang package riêng
+nhưng bỏ quên hai file test còn trỏ vào `views/dist/app/vertical/alumdoor/…`. Chúng chết âm thầm
+bằng `ERR_MODULE_NOT_FOUND` nên 6 test không chạy lần nào. Đã dời về `vertical-alumdoor/tests/`
+và trỏ lại — 6 test xanh trở lại.
+
+## 10. P10 — hai quyết định giao diện treo ở mục 5 (19/08)
+
+### 10.1 Tiền: một luật theo NGỮ CẢNH, không phải một kiểu thắng
+
+- bảng/lưới dày, tiêu đề cột đã mang đơn vị → `plain` — `1.234.567`
+- số tiền đứng một mình → `dong` — `1.234.567 ₫`
+- tiền không chắc là VND → `currency`
+
+Hai kiểu bỏ đi rơi gọn vào luật: lưới mua hàng (`dong-lower`) có sẵn dòng "(VNĐ)" ngay trên tiêu
+đề cột nên lặp " đ" từng ô chỉ làm loãng cột số; storefront và website (`dong-tight`) in giá
+đứng một mình cỡ `text-3xl` nên giữ ký hiệu, chỉ thêm khoảng cách.
+
+**Đổi hành vi có chủ ý:** `null` và chuỗi rỗng không còn được dựng thành `0`. Trong ERP, 0 là một
+giá trị THẬT (đã trả đủ, số dư bằng không); dựng nó lên từ chỗ trống bắt người dùng đọc một con
+số mà hệ thống chưa từng có. Số 0 khai tường minh vẫn in 0.
+
+### 10.2 `design`: giữ hợp đồng, ghim cả chuỗi
+
+Bản rà soát ban đầu kết luận nhầm rằng khối `design` chết — do chỉ tra `server/briefs/`. Thực tế
+**sáu app App Factory đang khai thật** (`app-factory`, `erp-organization-security`, `logistics`,
+`plastic-erp`, `website`, `workplace`). Hợp đồng còn sống; Alumdoor chỉ là không bật.
+
+Rủi ro thật nằm chỗ khác: chuỗi đi qua **ba cách viết tên** qua bốn tầng —
+`contentWidth` → `content_width` → `data-content-width` — và gõ sai ở bất kỳ mắt nào thì thuộc
+tính không được dán, giao diện về mặc định, **không lỗi nào bật ra**. Trước đây chỉ một mắt
+được canh. `shell/tests/design-contract.test.mjs` canh cả bốn.
+
+KHÔNG tự bật `design` cho Alumdoor: đổi mật độ là đổi mọi màn, phải có bằng chứng trực quan trước.
+
+## 11. P11 — token và chuyển động (19/08)
+
+### 11.1 Dấu vết brand ĐỎ đã bỏ vẫn sống trong đường dự phòng
+
+Diện mạo đang chạy là navy `#1e40af`, nhưng brand đỏ của V3 còn ở ba chỗ, tất cả đều là đường
+fallback nên chỉ hiện ra đúng lúc có sự cố: bảng fallback của `charts/theme.ts`
+(`#e52521`/`#ef332d` + dải cầu vồng cũ), quầng nền command center `rgba(239,51,45,.09)`, và
+fallback `--chart-2..5` trong `OverviewChartCard`. Kèm một hằng số tên `RED` đang giữ navy.
+
+### 11.2 Biểu đồ chỉ tôn trọng một nửa dải màu đã chọn
+
+`styles.css` khai `--chart-1..5` cho từng brand × theme kèm lý do, `views` dùng chúng qua
+`bg-chart-2`… — nhưng bộ vẽ biểu đồ THẬT chỉ đọc series đầu, series 2..7 luôn lấy từ mảng cứng.
+Nay `chartPalette()` đọc đủ 5 token.
+
+### 11.3 Nút đăng nhập không đổi màu khi hover/nhấn
+
+`v3.css` map `--forge-primary-hover` và `--forge-primary-active` về đúng `var(--primary)`, nên
+CSS có viết hover/active mà kết quả là cùng một màu. Nay dùng `--primary-hover` (#1e3a8a) và
+`--primary-active` (#172554).
+
+### 11.4 Gỡ hẳn `v3.css`
+
+56 lời gọi `var(--forge-*)` đổi sang token chính danh (alias vốn chỉ trỏ về đúng token đó nên
+không đổi hành vi). Ba biến `--forge-black`, `--forge-graphite`, `--forge-font-sans` hoá ra
+**chưa từng được khai ở đâu** — `var()` luôn trượt và giá trị thật luôn là hex dự phòng; nay đặt
+tên thành `--mf-auth-*`. Luật ô tìm kiếm sidebar dời sang `styles.css`. Bundle CSS sau build:
+`--forge-` = 0.
+
+Thang chuyển động trước chỉ tồn tại trong `v3.css`, trong khi `styles.css` chép cứng bốn thời
+lượng na ná nhau (90/100/110/120ms) ở 9 chỗ. Nay là `--mf-motion-*` / `--mf-ease-*` trong
+`styles.css`.
+
+### 11.5 transition-all 9 → 0, và nhấc thẻ chỉ giữ nơi có lý do
+
+Đáng chú ý nhất: `styles.css` ĐÃ khai transition đúng phạm vi cho `.mf-shell-nav-item`, class
+Tailwind `transition-all` chỉ là bản trùng lại nới ra mọi thuộc tính — mỗi lần thu sidebar là
+animate cả padding và width.
+
+Bỏ hiệu ứng nhấc thẻ ở 6 mặt vận hành. Thẻ số liệu hoá ra bị nhấc **hai lần** từ hai nơi
+(`kpi.tsx` và `.mf-number-card:hover`). Giữ 3 chỗ có lý do: hai trang công khai (marketing) và
+chip kéo-thả của DocType Builder, nơi nhấc lên chính là tín hiệu "cầm được".
+
+Hex thô ngoài token: 98 → 70; phần còn lại là fallback offline của biểu đồ, màn boot chạy trước
+khi có CSS, gradient của logo và hex trong chú thích.
+
+## 12. P12 — lỗi về đúng chỗ, và ba đính chính (19/08)
+
+### 12.1 Lỗi submit/quy trình không chỉ được ô nào sai
+
+`mapError` tách `_server_messages` thành `fieldErrors` cho MỌI lỗi server, nhưng trong
+`FormContainer` chỉ đường LƯU đọc nó; sáu đường còn lại vứt phần chi tiết đi. Submit hỏng vì
+thiếu một trường bắt buộc thì operator thấy một dòng toast tự tắt rồi tự dò trên biểu mẫu vài
+chục ô. Nay cả bảy đường qua `reportError`, kèm xoá dấu lỗi cũ khi bắt đầu thao tác.
+
+### 12.2 Ba phát hiện của bản rà soát không đứng vững
+
+Ghi lại vì cách đo sai còn đáng nhớ hơn kết luận sai:
+
+- **"69/133 nút icon thiếu tên truy cập"** — sai. Mẫu regex cho thẻ mở cắt ngay tại dấu `>` bên
+  trong `onClick={() => ...}`, nên mọi thuộc tính đứng sau handler đều không nhìn thấy được.
+  Quét lại bằng bộ đếm ngoặc: **1/133**. Repo vốn đã sạch. Test mới giữ mức 133/133 và ghi rõ
+  cái bẫy này.
+- **"7 div/span bấm được"** — 4 chỉ là `stopPropagation` bọc control thật, 1 đã đủ
+  `role`/`tabIndex`/`onKeyDown`, 1 là scrim có `aria-hidden` kèm Escape trả focus. Chỉ còn thẻ
+  widget trong Dashboard Builder thiếu đường bàn phím thật (chưa sửa: cần cơ chế chọn bằng bàn
+  phím cho canvas).
+- **"147 toast.error"** — phần lớn là lỗi cấp thao tác, đúng chỗ cho toast.
+
+### 12.3 Cổng sau P9–P12
+
+client typecheck xanh · `pnpm build` xanh (`main-base` 324.93 kB, không đổi) ·
+baseline **17 rớt / 158 test**, đúng mốc, không rớt mới (mốc cũ báo 2 rớt mới chính là hai test
+mồ côi đã sửa ở P9).
+
+## 13. P13 — design, lần đầu được kiểm chứng trên trình duyệt (19/08)
+
+Khác mọi pha trước, pha này không suy từ code mà **nhìn**. Dựng stack local rồi chụp trước–sau
+trên bản build thật, đăng nhập thật.
+
+### 13.1 Dựng được stack để nhìn — và hai cái bẫy
+
+| Bẫy | Thực tế |
+|---|---|
+| `tenant-worker` trả `401 Missing trusted identity context` | config mặc định là `AUTH_MODE=production`, đòi identity do **gateway** ký; mà gateway lại bind control-plane **remote**. Đường local đúng là `wrangler.alumdoor-local.jsonc` (`AUTH_MODE=development`) |
+| Cổng 8799 có `workerd` không giết được | đó là Windows service `ForgeAlumdoorBackend` đang chạy thật, không phải tiến trình rác. Phải dùng cổng khác |
+| Đăng nhập qua `/api/method/login` trần rồi vẫn 403 | thiếu CSRF token; phải để chính form của app đăng nhập |
+| Tenant trắng | app có chuỗi phụ thuộc: `alumdoor` → `vn-accounting` → `hrm`. Cài ngược lên gốc |
+
+Công cụ chụp giữ lại: `client/e2e-forge/capture-ui-baseline.mjs` + script `capture:ui`, kèm
+runbook đầy đủ trong header file. Ảnh chụp bị `.gitignore` — chúng là bằng chứng của một lần rà
+soát, không phải nguồn.
+
+### 13.2 Mỗi lần tải trang: ba màn toàn khung, hai ngôn ngữ thị giác
+
+Chuỗi quan sát được: nền **đen** "Đang kết nối với Forge…" → nền **xám sáng** một dòng chữ trần
+giữa màn hình → Desk. Chặng giữa `return` TRƯỚC khi Shell kịp render nên khung điều hướng biến
+mất rồi hiện lại.
+
+Tệ hơn: `BusinessContextProvider` **có** khai `error` và `reload` nhưng không nơi nào đọc. Lời
+gọi phạm vi không trả lời thì `loading` ở nguyên `true` và màn hình đứng vĩnh viễn — không lỗi,
+không đường thoát. Quan sát trực tiếp khi worker local treo.
+
+Dòng đó được chép ở **sáu** nơi, gồm `create-metaforge-app/templates.ts` (mọi app sinh mới thừa
+hưởng). Nay `packages/shell/src/scope-gate.tsx` là nhà duy nhất; cả ba trạng thái render BÊN
+TRONG Shell; sau 8 giây có nút thử lại.
+
+### 13.3 Dải "Tổng bản ghi / Đang hiển thị"
+
+Chiếm một băng trên toolbar ở **mọi** màn danh sách của **mọi** app để in hai con số đã có sẵn ở
+thanh phân trang (`1–20 / 587`); phần tổng theo cột thì đã có ở hàng `Σ trang` dưới chân bảng,
+nơi con số nằm đúng dưới cột nó cộng. Gỡ. Ảnh sau khi sửa xác nhận không mất thông tin nào.
+
+### 13.4 Skeleton gần như vô hình
+
+`bg-muted` (#f8f9fb) trên nền `--background` (#f5f6f8) — chênh ~1%. Chính `styles.css` đã tách
+`--muted`/`--secondary` thành hai bậc; skeleton lấy nhầm bậc. Đổi sang `bg-secondary`.
+
+### 13.5 Trạng thái rỗng nói hai kiểu
+
+Danh sách dùng `RuntimeEmptyState` (icon + tiêu đề + giải thích + hành động), báo cáo chỉ in một
+dòng chữ xám. Nay dùng chung.
+
+### 13.6 Màn đăng nhập thôi quảng cáo chương trình đã revert
+
+`LoginForm` in "Forge V3" và "Forge Vben Next" — số hiệu của chương trình bị revert bởi
+`cf5dd0da5`, và tên template admin Vue mà nó mô phỏng.
+
+### 13.7 KHÔNG đụng
+
+Cam/đen là **brand hợp lệ** — `brand.ts` khai 4 brand và Alumdoor chọn `orange`. Không phải di
+chứng V3.
+
+### 13.8 Còn mở
+
+Ảnh cho thấy tiêu đề cột của **báo cáo** có màu thương hiệu còn của **danh sách** thì trung tính
+— trong khi CSS nói ngược lại (`.mf-shell .mf-list-view thead th` mới là bên lấy
+`--header-foreground`). Chưa đo được bằng `getComputedStyle` vì stack local đã tắt; **chưa sửa,
+chưa kết luận**.
+
+Cổng sau P13: client typecheck xanh · `pnpm build` xanh · baseline **17 rớt / 162 test**, đúng
+mốc, không rớt mới.

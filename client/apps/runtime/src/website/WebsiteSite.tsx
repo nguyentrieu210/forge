@@ -326,7 +326,7 @@ function pageHref(slug: string, homePage: string): string {
 }
 
 function money(value: number | string): string {
-  return formatMoney(value, { style: "dong-tight", invalid: String(value) });
+  return formatMoney(value, { style: "dong", invalid: String(value) });
 }
 
 function fontFamily(value: WebsiteSiteData["theme"]["heading_font"]): string {

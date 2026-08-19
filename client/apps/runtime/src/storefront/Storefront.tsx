@@ -56,7 +56,7 @@ const CART_KEY = "forge.storefront.cart";
 const AGE_RESTRICTED = new Set(["Rượu"]);
 
 function money(value: number | string | null | undefined): string {
-  return formatMoney(value ?? 0, { style: "dong-tight" });
+  return formatMoney(value ?? 0, { style: "dong" });
 }
 
 function readCart(): CartLine[] {

@@ -43,7 +43,7 @@ function AuthSignalField() {
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       <div className="mf-auth-grid absolute inset-0 opacity-75" />
       <svg className="absolute inset-0 h-full w-full opacity-40" viewBox="0 0 1000 760" preserveAspectRatio="none">
-        <path d="M-20 520 C 160 390, 260 610, 420 450 S 710 220, 1040 330" fill="none" stroke="var(--forge-primary, #e52521)" strokeWidth="1.25" strokeDasharray="9 12" />
+        <path d="M-20 520 C 160 390, 260 610, 420 450 S 710 220, 1040 330" fill="none" stroke="var(--primary)" strokeWidth="1.25" strokeDasharray="9 12" />
         <path d="M-40 610 C 220 720, 370 470, 540 570 S 790 700, 1040 490" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="1" />
         <path d="M120 -20 C 260 170, 320 220, 530 250 S 810 170, 940 30" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="1" />
       </svg>
@@ -51,12 +51,12 @@ function AuthSignalField() {
         <span
           key={`${left}-${top}`}
           className="mf-auth-node absolute size-1.5 rounded-full"
-          style={{ left, top, background: index % 3 === 0 ? "var(--forge-primary, #e52521)" : "rgba(255,255,255,.48)" }}
+          style={{ left, top, background: index % 3 === 0 ? "var(--primary)" : "rgba(255,255,255,.48)" }}
         />
       ))}
       <div
         className="absolute -left-20 top-[14%] h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "color-mix(in srgb, var(--forge-primary, #e52521) 14%, transparent)" }}
+        style={{ background: "color-mix(in srgb, var(--primary) 14%, transparent)" }}
       />
     </div>
   );
@@ -117,7 +117,7 @@ export function LoginForm({
       </div>
 
       <div className="mb-8">
-        <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--forge-primary, #e52521)" }}>
+        <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--primary)" }}>
           <span className="h-px w-6" style={{ background: "currentColor" }} />
           Forge workspace
         </div>
@@ -209,7 +209,10 @@ export function LoginForm({
       </form>
 
       <div className="mt-7 flex items-center justify-between gap-3 border-t pt-5 text-[11px] text-muted-foreground">
-        <span>Forge V3</span>
+        {/* Trước đây in "Forge V3" — số hiệu của một chương trình giao diện ĐÃ BỊ REVERT
+          * (`cf5dd0da5`), nằm ngay trên màn hình đầu tiên mọi khách nhìn thấy. Bỏ số hiệu
+          * thay vì sửa thành số khác: mặt đăng nhập không có lý do gì phải công bố phiên bản. */}
+        <span>Forge</span>
         <span className="text-right">Enterprise Operating Platform</span>
       </div>
     </div>
@@ -243,8 +246,10 @@ export function LoginForm({
 
         <div className="mf-auth-brand-reveal relative z-10 max-w-xl pb-8 xl:pb-14">
           <div className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/[0.48]">
-            <span className="size-1.5 rounded-full" style={{ background: "var(--forge-primary, #e52521)" }} />
-            Forge Vben Next
+            <span className="size-1.5 rounded-full" style={{ background: "var(--primary)" }} />
+            {/* "Vben" là tên một template admin Vue mà chương trình UI V3 mô phỏng. V3 đã bị
+              * revert, còn dòng chữ thì vẫn nằm trên màn đăng nhập quảng cáo hộ nó. */}
+            Nền tảng vận hành
           </div>
           <h2 className="max-w-lg text-4xl font-semibold leading-[1.04] tracking-[-0.05em] xl:text-[3.35rem]">
             Một workspace cho dữ liệu, quy trình và vận hành doanh nghiệp.
@@ -275,11 +280,11 @@ export function LoginForm({
 
       <section
         className="relative flex min-h-[100svh] items-center justify-center overflow-y-auto px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 lg:px-10 xl:px-14"
-        style={{ background: "var(--forge-surface, var(--background, #ffffff))" }}
+        style={{ background: "var(--card)" }}
       >
         <div
           className="pointer-events-none absolute right-0 top-0 h-40 w-40 opacity-30"
-          style={{ background: "linear-gradient(135deg, transparent 48%, color-mix(in srgb, var(--forge-primary, #e52521) 16%, transparent) 49%, transparent 50%)" }}
+          style={{ background: "linear-gradient(135deg, transparent 48%, color-mix(in srgb, var(--primary) 16%, transparent) 49%, transparent 50%)" }}
           aria-hidden="true"
         />
         {formPanel}

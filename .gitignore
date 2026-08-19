@@ -32,3 +32,7 @@ server/docs/spec/source-exact/runtime/
 
 # Reproducible source-exact checkouts; fetch with server source:fetch when needed
 /upstream/
+
+# Ảnh chụp mốc thị giác do `pnpm --filter e2e-forge capture:ui` sinh ra: bằng chứng của một
+# lần rà soát, không phải nguồn. Trước đây 5 ảnh loại này đã lỡ được commit vào e2e-forge.
+client/e2e-forge/shots*/

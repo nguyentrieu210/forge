@@ -20,7 +20,6 @@ export type {
   NavItem,
   Breadcrumb,
   NotificationItem,
-  WorkspaceTab,
 } from "./WorkspaceAppShell.js";
 export { ForgeBrandLogo, type ForgeBrandLogoProps } from "./BrandLogo.js";
 export { I18nProvider, useI18n, useT, useLocale, type Locale } from "./i18n/index.js";
@@ -44,6 +43,7 @@ export {
 export { ChangePasswordDialog, type ChangePasswordDialogProps } from "./auth/ChangePasswordDialog.js";
 export { useBrand, applyBrand, isBrandMode, normalizeBrand, BRANDS, BRAND_COLOR_COUNT, type BrandMode } from "./brand.js";
 export { applyDesign } from "./design.js";
+export { resolveScopeState, ScopeGateBody, type ScopeGateState } from "./scope-gate.js";
 export { resolveIcon } from "./icon.js";
 export {
   BusinessContextProvider, BusinessContextBar, useBusinessContext,

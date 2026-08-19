@@ -45,7 +45,7 @@ function StageCard({ stage, index, onNavigate }: { stage: ProcessStage; index: n
   const errors = stage.counter?.error ?? 0;
   const blocked = stage.status === "blocked";
   return <Button type="button" variant="ghost" disabled={blocked || !stage.route} onClick={() => onNavigate(stage.route)} className={cn(
-    "group relative flex min-h-52 w-60 flex-col rounded-xl border bg-background p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md disabled:pointer-events-none disabled:opacity-60",
+    "group relative flex min-h-52 w-60 flex-col rounded-xl border bg-background p-4 text-left shadow-sm transition-[border-color,box-shadow] hover:border-primary/50 hover:shadow-md disabled:pointer-events-none disabled:opacity-60",
     (stage.status === "warning" || overdue) && "border-warning/60",
     blocked && "border-destructive/50 bg-destructive/5",
   )}>
