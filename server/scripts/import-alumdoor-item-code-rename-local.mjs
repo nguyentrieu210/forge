@@ -128,16 +128,28 @@ async function request(pathname, { method = 'GET', body, allow404 = false } = {}
   return parsed;
 }
 
+/**
+ * API chặn cứng 100 dòng mỗi trang, bất kể xin bao nhiêu.
+ *
+ * Nên KHÔNG được lấy "trả về ít hơn số xin" làm dấu hiệu hết trang: xin 500 thì luôn nhận 100
+ * và vòng lặp dừng ngay sau trang đầu. Lỗi đó im lặng một cách khó chịu — nó không ném gì, chỉ
+ * làm mọi phép đếm phía sau tính trên 100 bản ghi đầu tiên. Lần chạy 19/08 báo "344 mặt hàng
+ * vắng mặt" trong khi cả 587 đều còn nguyên, và bảng kiểm kê khoá dẫn xuất thì soi đúng
+ * 100/349 BOM Template.
+ *
+ * Cách đúng: đi theo số dòng THỰC NHẬN, và chỉ dừng khi nhận về rỗng.
+ */
+const PAGE_SIZE = 100;
 async function listNames(doctype) {
   const out = new Set();
-  const pageSize = 500;
-  for (let start = 0; ; start += pageSize) {
+  for (let start = 0; ; ) {
     const payload = await request(
-      `/api/resource/${encodeURIComponent(doctype)}?limit_start=${start}&limit_page_length=${pageSize}&fields=${encodeURIComponent('["name"]')}`,
+      `/api/resource/${encodeURIComponent(doctype)}?limit_start=${start}&limit_page_length=${PAGE_SIZE}&fields=${encodeURIComponent('["name"]')}`,
     );
     const rows = payload?.data ?? [];
+    if (rows.length === 0) break;
     for (const row of rows) out.add(row.name);
-    if (rows.length < pageSize) break;
+    start += rows.length;
   }
   return out;
 }
@@ -307,10 +319,8 @@ async function auditDerivedKeys(renames) {
   };
 
   for (const doctype of ['BOM Template', 'Pricing Rule', 'Material Specification']) {
-    const listing = await request(
-      `/api/resource/${encodeURIComponent(doctype)}?limit_page_length=1000&fields=${encodeURIComponent('["name"]')}`,
-    );
-    for (const row of listing?.data ?? []) {
+    for (const name of await listNames(doctype)) {
+      const row = { name };
       const doc = await request(`/api/resource/${encodeURIComponent(doctype)}/${encodeURIComponent(row.name)}`, { allow404: true });
       const data = doc?.data ?? doc?.message ?? doc;
       currentName = row.name;
