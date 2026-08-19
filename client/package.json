@@ -19,7 +19,9 @@
     "clean": "tsc -b --clean",
     "prepare": "node scripts/install-hooks.mjs",
     "product:check": "node scripts/check-product-readiness.mjs",
-    "product:backend": "python3 scripts/check-product-backend.py"
+    "product:backend": "python3 scripts/check-product-backend.py",
+    "baseline": "node scripts/refactor-baseline-client.mjs",
+    "baseline:record": "node scripts/refactor-baseline-client.mjs --record"
   },
   "devDependencies": {
     "typescript": "5.6.3",

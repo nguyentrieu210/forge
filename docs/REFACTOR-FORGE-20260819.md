@@ -32,8 +32,15 @@ Nhóm lỗi có sẵn (mẫu):
 ### Cổng dùng suốt nhánh này
 
 ```
-node scripts/refactor-baseline.mjs --record   # chốt mốc (chỉ chạy khi CỐ Ý dời mốc)
-node scripts/refactor-baseline.mjs            # sau mỗi bước; có RỚT MỚI => exit 1
+# server (chạy trong thư mục server/)
+npm run build                                  # bắt buộc sau khi sửa .ts — test chạy trên dist/
+node scripts/refactor-baseline.mjs --record    # chốt mốc (chỉ khi CỐ Ý dời mốc)
+node scripts/refactor-baseline.mjs             # sau mỗi bước; RỚT MỚI => exit 1
+node scripts/refactor-baseline.mjs --only <chuỗi>   # vài giây thay vì ~4 phút
+
+# client (chạy trong thư mục client/)
+npx tsc -b
+node scripts/refactor-baseline-client.mjs      # mốc: 15 rớt / 135 test
 ```
 
 Mốc nằm ở `server/qa/refactor-baseline.json`. Cổng chỉ chặn **rớt mới**, đồng thời báo test
@@ -120,7 +127,7 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | **P4a** ✅ | Đảo chiều phụ thuộc phía client: `app/vertical/registry.ts` làm điểm ráp (import tĩnh, đúng khuôn `vertical-methods.ts` bên server), `RuntimeDoctypeWorkspace` tra bảng thay vì gọi tên | trung bình |
 | **P4b** ✅ | 7325 dòng vertical thành package `@metaforge/vertical-alumdoor`, phụ thuộc NGƯỢC vào views. `vertical-registration.test.mjs` ghim hai vế: nạp package thì bảng có `alumdoor`, và `apps/runtime` nạp nó trước màn làm việc | trung bình |
 | **P5** ✅ | Cắt `router.ts` **4530 → 3244 dòng (−28%)** thành 5 module có ranh giới: `document-access.ts` (đọc/ghi + quyền), `router-helpers.ts`, `link-search.ts` (ô chọn + nhãn), `desk-surfaces.ts` (7 mặt bàn làm việc), `alumdoor-commercial.ts`. Còn lại trong router đúng phần định tuyến: `dispatchMethod` 362 dòng và REST resource | cao |
-| **P6** ◐ | `alumdoor-worker/src/index.ts` **3689 → 2815 dòng**: tách `document-validation.ts` (854 dòng luật kiểm tra chứng từ) và `responses.ts`. Còn `ChildGrid.tsx` 2200 dòng | cao |
+| **P6** ✅ | `alumdoor-worker/src/index.ts` **3689 → 2815 dòng** (tách `document-validation.ts` 854 dòng + `responses.ts`); `ChildGrid.tsx` **2200 → 1907 dòng** (tách `child-grid-columns.ts` 313 dòng luật thuần) | cao |
 
 Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
 

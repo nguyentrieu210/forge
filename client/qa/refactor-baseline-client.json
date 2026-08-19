@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-08-19T11:49:22.575Z",
+  "note": "Tập test client ĐỎ SẴN. Chỉ ghi lại khi cố ý dời mốc.",
+  "total": 135,
+  "failing": [
+    "packages/builder/test/decision-rule-decimal.test.mjs::builder rejects exponent notation in decimal mode",
+    "packages/builder/test/decision-rule-decimal.test.mjs::decimal lists stay strings while booleans in literal lists retain JSON type",
+    "packages/builder/test/decision-rule-decimal.test.mjs::decimal value stays a decimal string and carries explicit server mode",
+    "packages/builder/test/decision-rule-decimal.test.mjs::numeric-looking literal stays a string",
+    "packages/views/tests/data-surface-v3.test.mjs::DoctypeWorkspace activates V3 without replacing canonical renderers",
+    "packages/views/tests/data-surface-v3.test.mjs::V3 quick entry preserves dirty-close guard and reduced-motion behavior",
+    "packages/views/tests/grid-parity-convergence.test.mjs::converged AlumDoor Sales metadata exposes operator choice/server money and hides policy snapshots",
+    "packages/views/tests/grid-parity-convergence.test.mjs::generic smart-grid source contains no vertical or business-authority literals",
+    "packages/views/tests/metadata-child-grid-runtime.test.mjs::generic metadata grid contains no vertical or business-rule branches",
+    "packages/views/tests/sales-quantity.test.mjs::Ray Hàng thường bán Mét uses Cao × Số lượng",
+    "packages/views/tests/sales-quantity.test.mjs::Trục Hàng thường bán Mét uses Rộng × Số lượng",
+    "packages/views/tests/sales-quantity.test.mjs::only door items default to 15 percent while ray/trục stay at zero",
+    "packages/views/tests/sales-quantity.test.mjs::ordinary accessories keep direct quantity in their selected UOM",
+    "packages/views/tests/sales-quantity.test.mjs::ordinary sales items enter quantity and mirror it to billable weight",
+    "packages/views/tests/sales-quantity.test.mjs::width-based leaf accessories use width times quantity"
+  ]
+}
