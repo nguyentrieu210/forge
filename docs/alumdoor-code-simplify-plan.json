@@ -1,0 +1,604 @@
+{
+  "format": "alumdoor-item-code-mapping/v1",
+  "generated_at": "2026-08-19T15:58:38.672Z",
+  "convention": "chỉ bỏ dấu cách; không đổi hoa/thường, không bỏ dấu tiếng Việt",
+  "summary": {
+    "source_count": 587,
+    "planned_rename_count": 117,
+    "collision_count": 0
+  },
+  "needs_owner_decision": {
+    "unresolved_prefix": 0,
+    "too_long": [],
+    "still_invalid": 0
+  },
+  "merged_families": [],
+  "collisions": [],
+  "mapping": [
+    {
+      "from": "NVL-BO2VIS AL50-VIP50-548-ST500",
+      "to": "NVL-BO2VIS-AL50-VIP50-548-ST500",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TD-AL595 GS",
+      "to": "TD-AL595-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-AL75 GS",
+      "to": "TP-AL75-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-AL75 THO",
+      "to": "TP-AL75-THO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-AL75 VK",
+      "to": "TP-AL75-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALD-548N GS",
+      "to": "TP-ALD-548N-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALD-548N THO",
+      "to": "TP-ALD-548N-THO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALD-548N VK",
+      "to": "TP-ALD-548N-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALD-DL552 GS",
+      "to": "TP-ALD-DL552-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALD-DL552 THO",
+      "to": "TP-ALD-DL552-THO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALD-DL552 VK",
+      "to": "TP-ALD-DL552-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALVIP50 GS",
+      "to": "TP-ALVIP50-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-ALVIP50 THO",
+      "to": "TP-ALVIP50-THO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-BO 2VIS 752-VIPST700",
+      "to": "TP-BO-2VIS-752-VIPST700",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-BO 2VIS AL50-VIP50-AL548-ST500",
+      "to": "TP-BO-2VIS-AL50-VIP50-AL548-ST500",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+      "to": "TP-CUADL1LY-XN-VK_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+      "to": "TP-CUADL1LY-XN-XLC_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO>10m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_5-6m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_7-8m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+      "to": "TP-CUADL6D-XN-VK_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO>10m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_8-9m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL6D XN-XLC_TRONBO_9-10m²",
+      "to": "TP-CUADL6D-XN-XLC_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO>10m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+      "to": "TP-CUADL7D-XN-VK_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+      "to": "TP-CUADL7D-XN-XLC_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO>10m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+      "to": "TP-CUADL8D-XN-VK_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO>10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO_3-4m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO_4-5m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO_5-6m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO_6-7m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO_7-8m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO_8-9m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+      "to": "TP-CUADL8D-XN-XLC_TRONBO_9-10m²",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-INOX - TACHMON",
+      "to": "TP-LUOI-SN13x26-INOX-TACHMON",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-INOX - TRONBO",
+      "to": "TP-LUOI-SN13x26-INOX-TRONBO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-STD - TACHMON",
+      "to": "TP-LUOI-SN13x26-STD-TACHMON",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-LUOI-SN13x26-STD - TRONBO",
+      "to": "TP-LUOI-SN13x26-STD-TRONBO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL50 GS",
+      "to": "TP-TD-AL50-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL50 THO",
+      "to": "TP-TD-AL50-THO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL50 VK",
+      "to": "TP-TD-AL50-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL501N GS",
+      "to": "TP-TD-AL501N-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL501N VK",
+      "to": "TP-TD-AL501N-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL503N26 GS",
+      "to": "TP-TD-AL503N26-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL503N26 THO",
+      "to": "TP-TD-AL503N26-THO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL503N26 VK",
+      "to": "TP-TD-AL503N26-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL595 THÔ",
+      "to": "TP-TD-AL595-THÔ",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL595 VK",
+      "to": "TP-TD-AL595-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL652 GS",
+      "to": "TP-TD-AL652-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL652 VK",
+      "to": "TP-TD-AL652-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL70 GS",
+      "to": "TP-TD-AL70-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL70 THÔ",
+      "to": "TP-TD-AL70-THÔ",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL70 VK",
+      "to": "TP-TD-AL70-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL71N GS",
+      "to": "TP-TD-AL71N-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL71N THÔ",
+      "to": "TP-TD-AL71N-THÔ",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL71N VK",
+      "to": "TP-TD-AL71N-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL752N GS",
+      "to": "TP-TD-AL752N-GS",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL752N THO",
+      "to": "TP-TD-AL752N-THO",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-TD-AL752N VK",
+      "to": "TP-TD-AL752N-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC KT 4.6D KU-GU",
+      "to": "TP-UC-KT-4.6D-KU-GU",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC KT 4.6D TRẮNG-XLC",
+      "to": "TP-UC-KT-4.6D-TRẮNG-XLC",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC KT 4.6D XN-VK",
+      "to": "TP-UC-KT-4.6D-XN-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC KT 4.6D XR-CF",
+      "to": "TP-UC-KT-4.6D-XR-CF",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC KT 5.5D KU-GU",
+      "to": "TP-UC-KT-5.5D-KU-GU",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC KT 5.5D XN-VK",
+      "to": "TP-UC-KT-5.5D-XN-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC KT 5.5D XR-CF",
+      "to": "TP-UC-KT-5.5D-XR-CF",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC MTN 4.6D GU-KU",
+      "to": "TP-UC-MTN-4.6D-GU-KU",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC MTN 4.6D XN-VK",
+      "to": "TP-UC-MTN-4.6D-XN-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC MTN 4.6D XR-CF",
+      "to": "TP-UC-MTN-4.6D-XR-CF",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC MTN 5.5D GU-KU",
+      "to": "TP-UC-MTN-5.5D-GU-KU",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC MTN 5.5D XN-VK",
+      "to": "TP-UC-MTN-5.5D-XN-VK",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    },
+    {
+      "from": "TP-UC MTN 5.5D XR-CF",
+      "to": "TP-UC-MTN-5.5D-XR-CF",
+      "why": "bỏ dấu cách khỏi mã hàng"
+    }
+  ]
+}

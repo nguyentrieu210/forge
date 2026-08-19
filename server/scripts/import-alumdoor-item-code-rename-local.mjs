@@ -18,7 +18,9 @@
  * nhật — 558 dòng giá trùng, pricing ném "Multiple active Item Price records match".
  */
 import fs from 'node:fs';
+import path from 'node:path';
 import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 import { assertLocalMutationChildContext } from '../../scripts/local-runner/assert-local-mutation-child-context.mjs';
 
 const MAX_CODE_LENGTH = 24;
@@ -27,7 +29,14 @@ const outputPath = args.find((value) => !value.startsWith('--'));
 const validateOnly = args.includes('--validate-only');
 if (!outputPath) throw new Error('Usage: import-alumdoor-item-code-rename-local.mjs <output.json> [--validate-only]');
 
-const mappingPath = new URL('../../docs/alumdoor-item-code-mapping.json', import.meta.url);
+// Kế hoạch mặc định là bảng ánh xạ quy ước mã; `--plan=<đường dẫn>` nạp một kế hoạch khác cùng
+// định dạng — ví dụ kế hoạch RÚT GỌN (bỏ dấu cách) do `build-alumdoor-code-simplify-plan.mjs`
+// sinh ra. Dùng chung một đường thi hành: cascade, guard tham chiếu, kiểm lại và bất biến lần
+// hai đều đã chứng minh trên đợt trước, không có lý do dựng đường thứ hai.
+const planArg = args.find((value) => value.startsWith('--plan='));
+const mappingPath = planArg
+  ? pathToFileURL(path.resolve(planArg.slice('--plan='.length)))
+  : new URL('../../docs/alumdoor-item-code-mapping.json', import.meta.url);
 const mapping = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
 if (mapping.format !== 'alumdoor-item-code-mapping/v1') {
   throw new Error(`Refusing: unexpected mapping format ${mapping.format}`);

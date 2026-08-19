@@ -78,10 +78,18 @@ export async function mainItemCodeRename() {
     mkdirSync(runDir, { recursive: true });
     const importer = path.join(root, 'server', 'scripts', 'import-alumdoor-item-code-rename-local.mjs');
     const planPath = path.join(runDir, 'validate-only.json');
-    run(process.execPath, [importer, planPath, '--validate-only'], { cwd: root, label: 'Item code rename validate-only', failureClass: 'DATA' });
+    // `ALUMDOOR_RENAME_PLAN` chọn kế hoạch khác bảng ánh xạ quy ước — ví dụ kế hoạch RÚT GỌN
+    // (bỏ dấu cách). Đi bằng biến môi trường vì runner không chuyển tham số xuống adapter, và
+    // đường dẫn phải nằm trong repo: runner chạy từ một bản checkout sạch, không thấy file lạ.
+    const planFile = process.env.ALUMDOOR_RENAME_PLAN?.trim();
+    if (planFile && !existsSync(path.isAbsolute(planFile) ? planFile : path.join(root, planFile))) {
+      throw fail('DATA', `ALUMDOOR_RENAME_PLAN trỏ vào file không có: ${planFile}`);
+    }
+    const planArgs = planFile ? [`--plan=${path.isAbsolute(planFile) ? planFile : path.join(root, planFile)}`] : [];
+    run(process.execPath, [importer, planPath, '--validate-only', ...planArgs], { cwd: root, label: 'Item code rename validate-only', failureClass: 'DATA' });
     const plan = JSON.parse(readFileSync(planPath, 'utf8'));
     if (Number(plan.planned_rename_count) <= 0) throw fail('DATA', 'Rename plan is empty');
-    console.log(`DATA_STATUS=PASS planned=${plan.planned_rename_count} skipped_merged=${plan.skipped_merged_family_count} skipped_too_long=${plan.skipped_too_long_count}`);
+    console.log(`DATA_STATUS=PASS plan=${planFile || 'quy-uoc-ma'} planned=${plan.planned_rename_count} skipped_merged=${plan.skipped_merged_family_count} skipped_too_long=${plan.skipped_too_long_count}`);
 
     stage = 'LOCK';
     lock = acquireLock(root, runId, repo.local);
@@ -90,7 +98,7 @@ export async function mainItemCodeRename() {
 
     stage = 'IMPORT';
     const applied = path.join(runDir, 'apply.json');
-    run(process.execPath, [importer, applied], { cwd: root, env: authEnv(origin), label: 'Item code rename apply', failureClass: 'IMPORTER' });
+    run(process.execPath, [importer, applied, ...planArgs], { cwd: root, env: authEnv(origin), label: 'Item code rename apply', failureClass: 'IMPORTER' });
     const result = JSON.parse(readFileSync(applied, 'utf8'));
     if (Number(result.verification_failure_count) !== 0) throw fail('VERIFY', `Rename verification failed: ${JSON.stringify(result.verification?.failures ?? [])}`);
     if (Number(result.pass2?.items_renamed ?? -1) !== 0) throw fail('VERIFY', `Rename idempotency failed: ${JSON.stringify(result.pass2)}`);
