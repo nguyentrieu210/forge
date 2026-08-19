@@ -33,7 +33,19 @@ export const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto border bg-popover text-popover-foreground p-6 shadow-lg rounded-lg outline-none focus:outline-none focus-visible:outline-none",
+          /**
+           * Neo ĐỈNH ở 10vh, không căn giữa dọc — theo vben (`popup-ui/src/modal/modal.vue`:
+           * `top-[10vh] ... max-h-[80%]`).
+           *
+           * Căn giữa dọc thì hộp thoại ngắn và hộp thoại dài hiện ở hai độ cao khác nhau, nên
+           * tiêu đề nhảy chỗ mỗi lần mở. Trên ERP mở hàng chục hộp thoại một buổi, mắt phải
+           * đi tìm lại tiêu đề mỗi lần. Neo đỉnh thì tiêu đề luôn ở đúng một chỗ, và hộp thoại
+           * cao chỉ dài xuống dưới chứ không tràn hai đầu.
+           *
+           * `max-h-[80dvh]` thay cho gần-hết-màn: chừa khoảng thở để hộp thoại đọc ra là một
+           * lớp NỔI trên nội dung, không phải một trang mới.
+           */
+          "fixed left-1/2 top-[10vh] z-50 grid max-h-[80dvh] w-full max-w-lg -translate-x-1/2 gap-4 overflow-y-auto border bg-popover text-popover-foreground p-6 shadow-lg rounded-lg outline-none focus:outline-none focus-visible:outline-none",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           // Dialog close is absolutely positioned. Reserve a small right gutter in every dialog
