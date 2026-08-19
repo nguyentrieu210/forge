@@ -124,7 +124,10 @@ export async function resolveServerPrice(
 
   if (!itemPrice && lineUom) {
     item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", itemCode);
-    const baseUom = normalizedText(item?.default_sales_uom) || normalizedText(item?.stock_uom);
+    const transactionDefaultUom = input.partyType === "Supplier"
+      ? normalizedText(item?.default_purchase_uom)
+      : normalizedText(item?.default_sales_uom);
+    const baseUom = transactionDefaultUom || normalizedText(item?.stock_uom);
     if (item && baseUom && baseUom !== lineUom) {
       const baseMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, baseUom, priceVariant));
       const activeBase = baseMatches.filter(({ data }) => !disabled(data.disabled));
@@ -159,7 +162,7 @@ export async function resolveServerPrice(
     && !lineUom
     && legacyUom
   ) {
-    throw errors.validation(`Item Price ${legacyPriceName} declares UOM "${legacyUom}"; the document row must provide a matching selling UOM`);
+    throw errors.validation(`Item Price ${legacyPriceName} declares UOM "${legacyUom}"; the document row must provide a matching transaction UOM`);
   }
   if (!itemPrice) throw errors.reference(`Item Price ${preferredPriceName} does not exist for variant ${priceVariant}`);
   if (disabled(itemPrice.disabled)) throw errors.reference(`Item Price ${priceName} is disabled`);
