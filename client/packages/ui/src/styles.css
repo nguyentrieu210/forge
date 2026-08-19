@@ -2249,3 +2249,14 @@
 /* Mục menu cũng vậy: luật mới của tôi là (0,3,0) nên phải nêu đủ phạm vi mới thắng lại được. */
 [data-density="touch"] .mf-shell .mf-shell-sidebar .mf-shell-nav-item,
 [data-density="touch"] .mf-shell .mf-shell-nav-item { min-height: 44px; }
+
+/* ── Hai chỗ chép cứng còn sót, đo trên app thật mới lộ ──────────────────────
+ * Cùng đúng kiểu trôi dạt "một giá trị hai nơi" mà P1–P13 đã dọn:
+ *
+ * - Header khai `h-12` (48px) bằng class Tailwind, đè token `--mf-topbar-height` (50px).
+ *   Đã bỏ class; chiều cao nay lấy từ token ở đây.
+ * - Sidebar bỏ class `w-[17rem]` để token làm nguồn duy nhất, nhưng `width` trong flex row
+ *   vẫn co được (`flex-shrink` mặc định là 1) — đo trên app thật ra 252px thay vì 272px.
+ *   Class Tailwind cũ vô tình che lỗi này. */
+.mf-shell .mf-shell-topbar { height: var(--mf-topbar-height); }
+.mf-shell-sidebar { flex-shrink: 0; }

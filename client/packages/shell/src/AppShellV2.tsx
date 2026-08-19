@@ -238,13 +238,24 @@ export function AppShell(props: AppShellProps) {
         {mobileOpen ? <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => { setMobileOpen(false); window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus()); }} aria-hidden="true" /> : null}
         <aside id="mf-primary-navigation" role="navigation" aria-label="Điều hướng ứng dụng" className={cn(
           "mf-shell-sidebar flex shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200",
-          // Bề rộng do TOKEN quyết (`--mf-sidebar-width` / `--mf-sidebar-collapsed` trong
-          // styles.css), không chép cứng ở đây nữa: trước đây cùng một bề rộng được đặt ở hai
-          // nơi, và luật CSS `[data-collapsed]` lặng lẽ thắng class Tailwind — sửa một chỗ thì
-          // chỗ kia trôi mà không ai báo. Lý do 17rem (nhãn tiếng Việt dài) ghi ở token.
+          // 17rem, not 15.5. Vietnamese menu labels ("Trung tâm phân quyền", "Danh mục
+          // ứng dụng") plus an icon, a chevron and the pin button's reserved `pr-7` do not
+          // fit in 15.5rem, so they truncated to something the user has to guess at.
+          //
+          // ĐO ĐƯỢC (2026-08-20): trên app thật, sidebar rộng **252px**, không phải 272px —
+          // tức là class `w-[17rem]` ở đây CHƯA BAO GIỜ ăn. Đã kiểm bằng cách thay bằng token
+          // `--mf-sidebar-width`, bằng `w-[var(--…)]`, và bằng `style` nội tuyến: cả ba cho
+          // cùng 252px, rồi trả lại nguyên bản này cũng vẫn 252px. Nên đây là hiện trạng có
+          // sẵn, không phải hồi quy của đợt vben.
+          //
+          // Chưa tìm ra nơi ép 252px (không có luật `width` nào khác khớp selector này trong
+          // nguồn). Để nguyên code đang chạy; ai đụng tới bề rộng sidebar thì ĐO trước, đừng
+          // tin con số trong class.
+          collapsed ? "w-14" : "w-[17rem]",
           "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-[min(19rem,88vw)] max-md:shadow-xl",
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
-        )} data-collapsed={collapsed ? "true" : "false"}>
+        )}
+          data-collapsed={collapsed ? "true" : "false"}>
           <div className={cn("mf-shell-brand flex items-center gap-2 px-3", props.brandLogoOnly ? "h-16" : "h-12")}>
             {/* Logo do APP cấp. Không có thì mới rơi về chữ cái đầu — chữ cái đầu là phương án
                 dự phòng cho app chưa có logo, không phải mặc định nên dùng: nó không khớp favicon
@@ -359,7 +370,7 @@ export function AppShell(props: AppShellProps) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="mf-shell-topbar flex h-12 shrink-0 items-center gap-2 border-b px-3">
+          <header className="mf-shell-topbar flex shrink-0 items-center gap-2 border-b px-3">
             <Button ref={mobileMenuTriggerRef} variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Mở menu" aria-expanded={mobileOpen} aria-controls="mf-primary-navigation"><Menu className="size-4" /></Button>
             {/* Thứ tự chủ ý: điều hướng → Công ty/Kho → tìm nhanh. Công ty/Kho quyết định TOÀN BỘ dữ
                 liệu đang xem nên phải nằm ngay đầu, trước cả breadcrumb. */}
