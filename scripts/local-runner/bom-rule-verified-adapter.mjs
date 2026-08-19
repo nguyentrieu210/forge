@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
@@ -21,9 +22,23 @@ function run(command, args, { cwd, label }) {
   if (result.status !== 0) throw fail(`${label} failed with exit code ${result.status}`);
 }
 
+function resolvePinnedTypeScript(root) {
+  const candidates = [
+    path.join(root, 'client', 'node_modules', 'typescript', 'bin', 'tsc'),
+    path.join(root, 'node_modules', 'typescript', 'bin', 'tsc'),
+  ];
+  const found = candidates.find(existsSync);
+  if (!found) {
+    throw fail(`Pinned TypeScript binary not found; checked: ${candidates.join(', ')}`);
+  }
+  return found;
+}
+
 export function runBomRuleTargetedVerification(root = path.win32.resolve(process.env.FORGE_LOCAL_REPO_ROOT || DEFAULT_REPO_ROOT)) {
   const server = path.join(root, 'server');
   const pnpm = packageManagerCommand();
+  const tsc = resolvePinnedTypeScript(root);
+  const viewsTsconfig = path.join(root, 'client', 'packages', 'views', 'tsconfig.json');
   console.log('BOM_RULE_TARGETED_VERIFY_BEGIN');
   run(pnpm, ['run', 'build'], { cwd: server, label: 'BOM Rule server TypeScript build' });
   run(process.execPath, [
@@ -31,7 +46,7 @@ export function runBomRuleTargetedVerification(root = path.win32.resolve(process
     'tests/alumdoor-bom-rule-core.test.mjs',
     'tests/alumdoor-bom-rule-sales-preview.test.mjs',
   ], { cwd: server, label: 'BOM Rule targeted unit tests' });
-  run(pnpm, ['--filter', '@metaforge/views', 'run', 'build'], { cwd: root, label: 'BOM Rule catalog TSX build' });
+  run(process.execPath, [tsc, '-b', viewsTsconfig], { cwd: root, label: 'BOM Rule catalog TSX build' });
   console.log('BOM_RULE_TARGETED_VERIFY_PASS server_build=PASS unit_tests=PASS views_build=PASS');
 }
 
