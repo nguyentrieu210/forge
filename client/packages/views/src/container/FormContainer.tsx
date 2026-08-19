@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye } from "lucide-react";
-import { resolveFormRenderPolicy, type Doc } from "@metaforge/core";
+import { resolveFormRenderPolicy, type AppError, type Doc } from "@metaforge/core";
 import type { ListViewSnapshot } from "@metaforge/adapter-frappe";
 import { Button, ConfirmDialog, PromptDialog, toast, useT } from "@metaforge/ui";
 import { FormView } from "../form/FormView.js";
@@ -125,6 +125,31 @@ export function FormContainer(props: FormContainerProps) {
     setSubmitPreview(null);
   };
 
+  /**
+   * Đưa lỗi server về ĐÚNG chỗ gây ra nó.
+   *
+   * `mapError` đã tách `_server_messages` thành `fieldErrors` cho MỌI lỗi server, không riêng
+   * lúc lưu — server validate lúc submit và lúc chuyển trạng thái quy trình cũng trả về đúng
+   * cấu trúc đó. Nhưng trước đây chỉ đường lưu đọc nó; sáu đường còn lại (submit, huỷ, sửa đổi,
+   * xoá, đổi tên, quy trình) chỉ `toast.error(...)` rồi vứt `fieldErrors` đi.
+   *
+   * Hệ quả: submit hỏng vì một trường bắt buộc thì operator thấy một dòng toast rồi tự dò xem
+   * ô nào — trên biểu mẫu vài chục trường. Toast lại tự tắt, nên đọc hụt là mất luôn.
+   *
+   * Nay một hàm cho cả bảy đường: ô sai được đánh dấu tại chỗ, toast chỉ còn mang thông điệp
+   * chung. Xung đột phiên bản vẫn đi lối riêng vì nó có UI hoà giải riêng.
+   */
+  const reportError = (e: unknown): AppError => {
+    const err = adapter.mapError(e);
+    if (err.kind === "conflict") {
+      setConflict(true);
+      return err;
+    }
+    setFieldErrors(err.fieldErrors ? { ...err.fieldErrors } : undefined);
+    toast.error(err.message);
+    return err;
+  };
+
   const onSave = async (changed: Record<string, unknown>) => {
     setSaving(true);
     setFieldErrors(undefined);
@@ -137,12 +162,7 @@ export function FormContainer(props: FormContainerProps) {
       props.onSaved?.();
       return true;
     } catch (e) {
-      const err = adapter.mapError(e);
-      if (err.kind === "conflict") setConflict(true);
-      else {
-        if (err.fieldErrors) setFieldErrors({ ...err.fieldErrors });
-        toast.error(err.message);
-      }
+      reportError(e);
       return false;
     } finally {
       setSaving(false);
@@ -165,6 +185,7 @@ export function FormContainer(props: FormContainerProps) {
     if (kind === "print") { props.onPrint?.(); return; }
     if (kind === "submit") {
       setSaving(true);
+      setFieldErrors(undefined);
       try {
         const preview = await adapter.callGet<SubmitPreview | null>(
           "metaforge.api.get_submit_preview",
@@ -173,18 +194,19 @@ export function FormContainer(props: FormContainerProps) {
         if (preview) setSubmitPreview(preview);
         else await submitCurrent();
       } catch (e) {
-        toast.error(adapter.mapError(e).message);
+        reportError(e);
       } finally {
         setSaving(false);
       }
       return;
     }
     setSaving(true);
+    setFieldErrors(undefined);
     try {
       if (kind === "cancel") { const updated = await adapter.cancel(doctype, name); publishMutation(updated); toast.success(t("form.cancelled")); }
       else if (kind === "amend") { await adapter.amend(doctype, name); invalidateCollection(); toast.success(t("form.amended")); props.onSaved?.(); }
     } catch (e) {
-      toast.error(adapter.mapError(e).message);
+      reportError(e);
     } finally {
       setSaving(false);
     }
@@ -192,10 +214,11 @@ export function FormContainer(props: FormContainerProps) {
 
   const confirmSubmit = async () => {
     setSaving(true);
+    setFieldErrors(undefined);
     try {
       await submitCurrent();
     } catch (e) {
-      toast.error(adapter.mapError(e).message);
+      reportError(e);
     } finally {
       setSaving(false);
     }
@@ -221,6 +244,7 @@ export function FormContainer(props: FormContainerProps) {
 
   const doDelete = async () => {
     setSaving(true);
+    setFieldErrors(undefined);
     try {
       await adapter.deleteDoc(doctype, name);
       qc.removeQueries({ queryKey: [scopeKey, "doc", doctype, name] });
@@ -228,7 +252,7 @@ export function FormContainer(props: FormContainerProps) {
       toast.success(t("form.deleted"));
       props.onDeleted?.();
     } catch (e) {
-      toast.error(adapter.mapError(e).message);
+      reportError(e);
     } finally {
       setSaving(false);
     }
@@ -237,6 +261,7 @@ export function FormContainer(props: FormContainerProps) {
   const doRename = async (newName: string) => {
     if (newName === name) return;
     setSaving(true);
+    setFieldErrors(undefined);
     try {
       const finalName = await adapter.rename(doctype, name, newName);
       qc.removeQueries({ queryKey: [scopeKey, "doc", doctype, name] });
@@ -244,7 +269,7 @@ export function FormContainer(props: FormContainerProps) {
       toast.success(t("form.renamed"));
       props.onRenamed?.(finalName);
     } catch (e) {
-      toast.error(adapter.mapError(e).message);
+      reportError(e);
     } finally {
       setSaving(false);
     }
@@ -252,12 +277,13 @@ export function FormContainer(props: FormContainerProps) {
 
   const onWorkflowAction = async (action: string) => {
     setSaving(true);
+    setFieldErrors(undefined);
     try {
       const updated = await adapter.applyWorkflow(doc, action);
       publishMutation(updated);
       toast.success(`${t("form.workflow_done")}: ${action}`);
     } catch (e) {
-      toast.error(adapter.mapError(e).message);
+      reportError(e);
     } finally {
       setSaving(false);
     }
