@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { partitionAlumdoorItemSourceBlockers } from "./lib/alumdoor-item-blocker-partition.mjs";
 import { buildCanonicalAlumdoorItemMaster } from "./lib/alumdoor-item-master-classification.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
@@ -197,9 +198,17 @@ const audit = {
  * Không có D1 (máy khác, hoặc lần dựng đầu khi chưa có gì) thì bỏ qua: lúc đó nguồn chính là sự
  * thật, không có gì để dịch.
  */
+// Neo theo VỊ TRÍ CỦA CHÍNH FILE NÀY, không theo thư mục làm việc.
+//
+// Bốn adapter gọi bộ dựng này từ bốn thư mục khác nhau. Neo theo `process.cwd()` thì `pricing` và
+// `bom` in ra `skipped=no-d1-or-mapping` rồi đi tiếp — tức là lặng lẽ bỏ qua cả việc dịch mã lẫn
+// lớp quyết định, đúng hai thứ vừa dựng để bảo vệ danh mục.
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const SERVER_ROOT = resolve(SCRIPT_DIR, "..");
+const REPO_ROOT = resolve(SERVER_ROOT, "..");
 const D1_PATH = process.env.ALUMDOOR_D1_PATH
-  || resolve(process.cwd(), "apps/tenant-worker/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite");
-const CONVENTION_PATH = resolve(process.cwd(), "../docs/alumdoor-item-code-mapping.json");
+  || resolve(SERVER_ROOT, "apps/tenant-worker/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite");
+const CONVENTION_PATH = resolve(REPO_ROOT, "docs/alumdoor-item-code-mapping.json");
 if (existsSync(D1_PATH) && existsSync(CONVENTION_PATH)) {
   const tenant = process.env.ALUMDOOR_TENANT || "demo";
   const db = new DatabaseSync(D1_PATH, { readOnly: true });
@@ -228,7 +237,7 @@ if (existsSync(D1_PATH) && existsSync(CONVENTION_PATH)) {
  * mỗi mục kèm lý do. Quyết định không có lý do thì lần sau không ai dám đụng, mà cũng không ai
  * biết khi nào nó hết đúng.
  */
-const DECISIONS_PATH = resolve(process.cwd(), "../docs/alumdoor-catalog-decisions.json");
+const DECISIONS_PATH = resolve(REPO_ROOT, "docs/alumdoor-catalog-decisions.json");
 if (existsSync(DECISIONS_PATH)) {
   const decisions = JSON.parse(await readFile(DECISIONS_PATH, "utf8"));
   if (decisions.format !== "alumdoor-catalog-decisions/v1") {
