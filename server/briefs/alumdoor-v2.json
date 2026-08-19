@@ -2,7 +2,7 @@
   "$schema": "./brief.schema.json",
   "id": "alumdoor",
   "name": "Alumdoor",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "module": "Alumdoor",
   "domain": "alumdoor",
   "brand": "warm",
@@ -5527,7 +5527,8 @@
         "Chủ xưởng": "rwc",
         "Kinh doanh": "r",
         "Kế toán": "rwc"
-      }
+      },
+      "allow_rename": true
     },
     {
       "//": "Chính sách giá: giảm theo khách, theo nhóm khách, theo số lượng, theo khoảng ngày.",

@@ -91,7 +91,7 @@ const moveFieldsAfter = (dt, names, anchor) => {
  * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
  * trong file mà không bao giờ vào tenant.
  */
-brief.version = "2.5.0";
+brief.version = "2.6.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -2360,6 +2360,16 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
       // Khoá đặt tên phải mang bậc, không thì tám dòng giá của cùng một mặt hàng đè lên nhau.
       price.naming = "format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}";
       note("SALES · Item Price nhận area_tier — một mặt hàng giữ được thang giá 8 bậc");
+    }
+    // Khoá đặt tên của Item Price NHÚNG mã hàng — 558/558 dòng trên D1 đều vậy. Đổi mã hàng mà
+    // không đổi được tên dòng giá thì tên còn ôm mã đã chết, và lần chạy sau của importer giá sẽ
+    // tính ra một tên khác rồi TẠO MỚI thay vì cập nhật: 558 dòng giá trùng, và pricing ném
+    // "Multiple active Item Price records match" đúng lúc đang bán hàng.
+    //
+    // Đây là kiểu lỗi chỉ lộ ở lần chạy THỨ HAI, nên bật quyền đổi tên trước khi cần đến.
+    if (price.allow_rename !== true) {
+      price.allow_rename = true;
+      note("SALES · Item Price cho phép đổi tên — khoá đặt tên của nó nhúng mã hàng");
     }
   }
 

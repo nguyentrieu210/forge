@@ -11,7 +11,7 @@ const DEFAULT_REMOTE = 'origin';
 const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_SERVICE_HOME = 'C:\\ForgeServices\\Alumdoor';
 const SELF_PATH = 'scripts/live-sync/forge-live-sync.mjs';
-const ALLOWED_COMMAND_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'bom-rule', 'customer', 'manufacturing-master']);
+const ALLOWED_COMMAND_APPLY = new Set(['reason-master', 'item-master', 'uom', 'layer0', 'real-purchase', 'pricing', 'bom', 'bom-rule', 'customer', 'manufacturing-master', 'item-code-rename']);
 
 function parseArgs(argv) {
   const options = {

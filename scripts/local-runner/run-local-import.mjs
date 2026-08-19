@@ -10,6 +10,7 @@ import { mainBom } from './bom-adapter.mjs';
 import { mainBomRuleVerified } from './bom-rule-verified-adapter.mjs';
 import { mainBomTemplate } from './bom-template-adapter.mjs';
 import { mainCustomer } from './customer-adapter.mjs';
+import { mainItemCodeRename } from './item-code-rename-adapter.mjs';
 
 export { ExecutionError };
 export {
@@ -22,7 +23,7 @@ export {
 } from './run-local-import-core.mjs';
 
 export function parseArgs(argv) {
-  if (['pricing', 'bom', 'bom-rule', 'bom-template', 'customer'].includes(argv?.[0])) {
+  if (['pricing', 'bom', 'bom-rule', 'bom-template', 'customer', 'item-code-rename'].includes(argv?.[0])) {
     if (argv.length !== 1) {
       throw new ExecutionError('OTHER', `Usage: node scripts/local-runner/run-local-import.mjs ${argv[0]}`);
     }
@@ -38,6 +39,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (parsed.adapter === 'bom-rule') return mainBomRuleVerified();
   if (parsed.adapter === 'bom-template') return mainBomTemplate();
   if (parsed.adapter === 'customer') return mainCustomer();
+  if (parsed.adapter === 'item-code-rename') return mainItemCodeRename();
   return coreMain(argv);
 }
 

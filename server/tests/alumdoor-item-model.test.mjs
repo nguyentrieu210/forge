@@ -245,7 +245,7 @@ test("purchase rows expose aluminium dimensions only for aluminium items", () =>
 });
 
 test("V2 purchase receipt exposes dimensions and area weight without mixing kg/m", () => {
-  assert.equal(v2Brief.version, "2.5.0");
+  assert.equal(v2Brief.version, "2.6.0");
   const shaftProfile = v2Brief.fixtures.find(
     (entry) => entry.type === "Measurement Profile" && entry.name === "Ống/trục",
   )?.data;
