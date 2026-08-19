@@ -2,7 +2,7 @@ import type {
   AssetDepreciationEntry, CanonicalDocument, ChildRow, GeneralLedgerEntry, JsonObject,
   ManufacturingEntry, MutationPlan, PaymentLedgerEntry, ReturnEntry, StockBundleUsageEntry, StockLedgerEntry,
 } from "../../contracts/src/index.js";
-import { errors } from "../../core/src/index.js";
+import { divideRoundedInt, errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { nextDocStatus } from "../../document-kernel/src/index.js";
 import { reverseGl, reversePayment, reverseStock } from "../../ledger/src/index.js";
@@ -246,4 +246,6 @@ function requireExisting<T extends JsonObject>(context:ControllerContext<T>):Can
 function extractChildren(doctype:string,data:JsonObject):ChildRow[]{const result:ChildRow[]=[];for(const [fieldname,value] of Object.entries(data)){if(!Array.isArray(value))continue;value.forEach((row,index)=>{if(!row||typeof row!=="object"||Array.isArray(row))return;const object=row as JsonObject;result.push({fieldname,child_doctype:`${doctype} ${fieldname}`,row_id:String(object.row_id??`${fieldname}-${index+1}`),idx:index+1,data:structuredClone(object)});});}return result;}
 function decimalValue(value:unknown,label:string):string|number{if(typeof value==="string"||typeof value==="number")return value;throw errors.validation(`${label} must be numeric`);}
 function slug(value:string):string{return value.toLowerCase().replaceAll(" ","_");}
-function divideRounded(numerator:number,denominator:number):number{if(!Number.isSafeInteger(numerator)||!Number.isSafeInteger(denominator)||denominator<=0)throw errors.validation("Arithmetic exceeds safe integer range");const sign=numerator<0?-1:1;const value=Math.abs(numerator);const q=Math.floor(value/denominator);return sign*(q+((value%denominator)*2>=denominator?1:0));}
+function divideRounded(numerator: number, denominator: number): number {
+  return divideRoundedInt(numerator, denominator, "Arithmetic exceeds safe integer range");
+}

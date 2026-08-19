@@ -1,7 +1,7 @@
 import type {
   CanonicalDocument, ChildRow, GeneralLedgerEntry, JsonObject, MutationPlan, PaymentLedgerEntry, ProcurementEntry, StockLedgerEntry, StockBundleUsageEntry, ManufacturingEntry,
 } from "../../contracts/src/index.js";
-import { errors } from "../../core/src/index.js";
+import { divideRoundedInt, errors } from "../../core/src/index.js";
 import type { ControllerContext, DocumentController } from "../../document-kernel/src/index.js";
 import { nextDocStatus } from "../../document-kernel/src/index.js";
 import { reverseGl, reversePayment, reverseStock } from "../../ledger/src/index.js";
@@ -396,4 +396,6 @@ function ratePerUnitMinor(valueMinor:number,qtyMicros:number):number{
   if(!Number.isSafeInteger(result))throw errors.validation("Giá vốn một đơn vị tồn vượt dải số nguyên an toàn");
   return result;
 }
-function divideRounded(numerator:number,denominator:number):number{if(!Number.isSafeInteger(numerator)||!Number.isSafeInteger(denominator)||denominator<=0)throw errors.validation("Arithmetic exceeds safe integer range");const sign=numerator<0?-1:1;const value=Math.abs(numerator);const quotient=Math.floor(value/denominator);return sign*(quotient+((value%denominator)*2>=denominator?1:0));}
+function divideRounded(numerator: number, denominator: number): number {
+  return divideRoundedInt(numerator, denominator, "Arithmetic exceeds safe integer range");
+}

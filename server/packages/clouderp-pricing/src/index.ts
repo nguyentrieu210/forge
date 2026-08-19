@@ -1,5 +1,5 @@
 import type { JsonObject } from "../../contracts/src/index.js";
-import { errors } from "../../core/src/index.js";
+import { divideRoundedInt, errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, multiplyScaled, toScaledInt } from "../../money/src/index.js";
 import type { PricingContext, ResolvedPrice } from "./types.js";
@@ -282,9 +282,5 @@ function multiplyDivideRounded(value: number, multiplier: number, divisor: numbe
 }
 
 function divideRounded(numerator: number, denominator: number): number {
-  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator <= 0) throw errors.validation("Pricing arithmetic exceeds safe integer bounds");
-  const sign = numerator < 0 ? -1 : 1;
-  const absolute = Math.abs(numerator);
-  const quotient = Math.floor(absolute / denominator);
-  return sign * (quotient + ((absolute % denominator) * 2 >= denominator ? 1 : 0));
+  return divideRoundedInt(numerator, denominator, "Pricing arithmetic exceeds safe integer bounds");
 }

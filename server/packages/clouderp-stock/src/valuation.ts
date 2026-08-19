@@ -1,5 +1,5 @@
 import type { StockLedgerEntry } from "../../contracts/src/index.js";
-import { errors } from "../../core/src/index.js";
+import { divideRoundedInt, errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import type { JsonObject } from "../../contracts/src/index.js";
 
@@ -284,14 +284,7 @@ function ratePerUnitMinor(valueMinor: number, qtyMicros: number): number {
 }
 
 function divideRounded(numerator: number, denominator: number): number {
-  if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator <= 0) {
-    throw errors.validation("Valuation arithmetic exceeds safe integer bounds");
-  }
-  const sign = numerator < 0 ? -1 : 1;
-  const absolute = Math.abs(numerator);
-  const quotient = Math.floor(absolute / denominator);
-  const remainder = absolute % denominator;
-  return sign * (quotient + (remainder * 2 >= denominator ? 1 : 0));
+  return divideRoundedInt(numerator, denominator, "Valuation arithmetic exceeds safe integer bounds");
 }
 
 function safeAdd(left: number, right: number): number {

@@ -1,4 +1,4 @@
-import { errors } from "../../core/src/index.js";
+import { divideRoundedBig, errors } from "../../core/src/index.js";
 
 export type DecimalInput = string | number;
 
@@ -92,13 +92,7 @@ function normalizeInput(input: DecimalInput, field: string): string {
 }
 
 function divideRounded(numerator: bigint, denominator: bigint): bigint {
-  if (denominator <= 0n) throw errors.validation("Decimal divisor must be positive");
-  const negative = numerator < 0n;
-  const absolute = negative ? -numerator : numerator;
-  const quotient = absolute / denominator;
-  const remainder = absolute % denominator;
-  const rounded = remainder * 2n >= denominator ? quotient + 1n : quotient;
-  return negative ? -rounded : rounded;
+  return divideRoundedBig(numerator, denominator);
 }
 
 function checkedBigInt(value: bigint, field: string): number {
