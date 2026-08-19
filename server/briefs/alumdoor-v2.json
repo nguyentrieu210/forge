@@ -753,7 +753,8 @@
       "Pricing Scope",
       "BOM Rule",
       "Quy cách cửa",
-      "Nguyên nhân cửa lỗi"
+      "Nguyên nhân cửa lỗi",
+      "Bậc diện tích"
     ]
   },
   "fixtures": [
@@ -3536,6 +3537,109 @@
         "sort_order": 110,
         "disabled": false
       }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-3-4",
+      "data": {
+        "tier_code": "BAC-3-4",
+        "tier_name": "3m² - 4m²",
+        "min_area_sqm": 3,
+        "max_area_sqm": 4,
+        "sort_order": 10,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-4-5",
+      "data": {
+        "tier_code": "BAC-4-5",
+        "tier_name": "4m² - 5m²",
+        "min_area_sqm": 4,
+        "max_area_sqm": 5,
+        "sort_order": 20,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-5-6",
+      "data": {
+        "tier_code": "BAC-5-6",
+        "tier_name": "5m² - 6m²",
+        "min_area_sqm": 5,
+        "max_area_sqm": 6,
+        "sort_order": 30,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-6-7",
+      "data": {
+        "tier_code": "BAC-6-7",
+        "tier_name": "6m² - 7m²",
+        "min_area_sqm": 6,
+        "max_area_sqm": 7,
+        "sort_order": 40,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-7-8",
+      "data": {
+        "tier_code": "BAC-7-8",
+        "tier_name": "7m² - 8m²",
+        "min_area_sqm": 7,
+        "max_area_sqm": 8,
+        "sort_order": 50,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-8-9",
+      "data": {
+        "tier_code": "BAC-8-9",
+        "tier_name": "8m² - 9m²",
+        "min_area_sqm": 8,
+        "max_area_sqm": 9,
+        "sort_order": 60,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-9-10",
+      "data": {
+        "tier_code": "BAC-9-10",
+        "tier_name": "9m² - 10m²",
+        "min_area_sqm": 9,
+        "max_area_sqm": 10,
+        "sort_order": 70,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Bậc diện tích",
+      "name": "BAC-TREN-10",
+      "data": {
+        "tier_code": "BAC-TREN-10",
+        "tier_name": "Trên 10m²",
+        "min_area_sqm": 10,
+        "sort_order": 80,
+        "note": "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        "disabled": false
+      }
     }
   ],
   "doctypes": [
@@ -4848,7 +4952,7 @@
       "label": "Đơn giá theo bảng giá",
       "icon": "circle-dollar-sign",
       "group": "Danh mục",
-      "naming": "format:{price_list}:{item_code}:{uom}:{price_variant}",
+      "naming": "format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}",
       "title": "item_code",
       "list": [
         "price_list",
@@ -4880,6 +4984,17 @@
           "required": true,
           "fetch_from": "item_code.default_sales_uom",
           "description": "Đơn giá chỉ áp dụng khi dòng bán dùng đúng đơn vị này."
+        },
+        {
+          "//": [
+            "Trống = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Có giá trị = chỉ áp cho bậc đó.",
+            "Nhờ vậy một mặt hàng giữ được thang giá 8 bậc mà không cần 8 mã hàng."
+          ],
+          "fieldname": "area_tier",
+          "label": "Bậc diện tích",
+          "fieldtype": "Link",
+          "options": "Bậc diện tích",
+          "link_filters": "{\"disabled\":0}"
         },
         {
           "fieldname": "price_variant",
@@ -11588,6 +11703,16 @@
       "fields": [
         "template_code:Data*! Mã mẫu BOM",
         "item_code:Link(Item)! Thành phẩm",
+        {
+          "//": [
+            "Trống = định mức áp cho mọi cách giao. Có giá trị = chỉ áp khi dòng bán chọn đúng cách đó.",
+            "Đo trên D1: LUOI-SN13x26 trọn bộ có 5 cấu phần, tách món có 1 — hai bộ khác nhau thật."
+          ],
+          "fieldname": "sales_mode",
+          "label": "Chỉ áp cho cách giao",
+          "fieldtype": "Select",
+          "options": "\nTrọn bộ\nTách món"
+        },
         "conditions_json:Code Điều kiện áp dụng JSON",
         "priority:Int=(0) Ưu tiên",
         "disabled:Check=(0) Ngừng dùng",
@@ -12873,6 +12998,56 @@
         "Kế toán": "r",
         "Sản xuất": "r",
         "Kinh doanh": "r"
+      }
+    },
+    {
+      "//": [
+        "Chiều TRA GIÁ, không phải một mặt hàng khác. Trước 2026-08-19 nó nằm trong mã hàng",
+        "(`TP-CUADL1LY XN-VK_TRONBO_4-5m²`) nên 8 bậc thành 8 mã, và bảng giá biến thành danh mục."
+      ],
+      "name": "Bậc diện tích",
+      "label": "Bậc diện tích",
+      "icon": "ruler-dimension-line",
+      "group": "Danh mục",
+      "naming": "field:tier_code",
+      "title": "tier_name",
+      "list": [
+        "tier_code",
+        "tier_name",
+        "min_area_sqm",
+        "max_area_sqm",
+        "sort_order",
+        "disabled"
+      ],
+      "search": [
+        "tier_code",
+        "tier_name"
+      ],
+      "fields": [
+        "tier_code:Data*! Mã bậc",
+        "tier_name:Data*! Tên bậc",
+        {
+          "//": "Cận dưới MỞ: diện tích phải LỚN HƠN số này. Bậc đầu tiên để trống = không có cận dưới.",
+          "fieldname": "min_area_sqm",
+          "label": "Trên (m²)",
+          "fieldtype": "Float"
+        },
+        {
+          "//": "Cận trên ĐÓNG: diện tích nhỏ hơn hoặc BẰNG số này. Bậc cuối để trống = không có trần.",
+          "fieldname": "max_area_sqm",
+          "label": "Đến và bằng (m²)",
+          "fieldtype": "Float"
+        },
+        "sort_order:Int=(0) Thứ tự",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "rwc",
+        "Kinh doanh": "r",
+        "Thủ kho": "r",
+        "Sản xuất": "r"
       }
     }
   ],

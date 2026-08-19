@@ -92,6 +92,7 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
       { key: "Customer", label: "Khách hàng" },
       { key: "Price List", label: "Bảng giá" },
       { key: "Item Price", label: "Đơn giá theo bảng giá" },
+      { key: "Bậc diện tích", label: "Bậc diện tích" },
       { key: "Pricing Scope", label: "Phạm vi áp dụng chính sách" },
       { key: "Pricing Rule", label: "Chính sách giá" },
     ],

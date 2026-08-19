@@ -2107,6 +2107,130 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
   }
 }
 
+
+// ══════════ BA TRỤC RỜI KHỎI MÃ HÀNG ══════════
+//
+// Đo trên D1 2026-08-19: 221/587 mặt hàng mang ít nhất một trong ba chiều màu / kiểu bán /
+// bậc diện tích ngay TRONG MÃ. Các họ lớn nhất là tích Descartes đầy đủ:
+//
+//   TP-CUADL6D  →  2 màu × 1 kiểu bán × 8 bậc = 16 mã, không thiếu ô nào
+//
+// Một tích đầy đủ nhồi vào khoá bản ghi là dấu hiệu kinh điển của chiều bị đặt sai chỗ. Nhưng
+// KHÔNG được gỡ nếu chưa có nhà cho chúng — cả ba đều CHỊU LỰC THẬT:
+//
+//   · bậc diện tích đổi ĐƠN GIÁ — 7/7 họ có thang giá riêng (CUADL1LY: 590k→520k/m²)
+//   · kiểu bán đổi CẤU PHẦN — LUOI-SN13x26 trọn bộ 5 cấu phần, tách món 1
+//   · màu KHÔNG đổi gì — 0/50 họ có giá khác theo màu ⇒ chỉ màu mới gỡ được ngay
+//
+// Khối này dựng nhà cho hai chiều còn lại. `Sales Package` từng giữ chúng; khi nó bị khai tử
+// ở `46cff213` hai fact này không còn chỗ nên bò vào mã hàng — đây là đường về đúng.
+{
+  const hasDoctype = (n) => brief.doctypes.some((d) => d.name === n);
+
+  // ── Bậc diện tích ──
+  // BRD §4.11: "cận trên ĐÓNG, cận dưới MỞ" ⇒ `3 < S ≤ 4`. Cửa đúng 5,0 m² ăn bậc 4-5.
+  // Ghi thành hai cột số để so sánh chạy được, không phải đọc chuỗi "4-5m²".
+  if (!hasDoctype("Bậc diện tích")) {
+    brief.doctypes.push({
+      "//": [
+        "Chiều TRA GIÁ, không phải một mặt hàng khác. Trước 2026-08-19 nó nằm trong mã hàng",
+        "(`TP-CUADL1LY XN-VK_TRONBO_4-5m²`) nên 8 bậc thành 8 mã, và bảng giá biến thành danh mục.",
+      ],
+      name: "Bậc diện tích",
+      label: "Bậc diện tích",
+      icon: "ruler-dimension-line",
+      group: "Danh mục",
+      naming: "field:tier_code",
+      title: "tier_name",
+      list: ["tier_code", "tier_name", "min_area_sqm", "max_area_sqm", "sort_order", "disabled"],
+      search: ["tier_code", "tier_name"],
+      fields: [
+        "tier_code:Data*! Mã bậc",
+        "tier_name:Data*! Tên bậc",
+        {
+          "//": "Cận dưới MỞ: diện tích phải LỚN HƠN số này. Bậc đầu tiên để trống = không có cận dưới.",
+          fieldname: "min_area_sqm", label: "Trên (m²)", fieldtype: "Float",
+        },
+        {
+          "//": "Cận trên ĐÓNG: diện tích nhỏ hơn hoặc BẰNG số này. Bậc cuối để trống = không có trần.",
+          fieldname: "max_area_sqm", label: "Đến và bằng (m²)", fieldtype: "Float",
+        },
+        "sort_order:Int=(0) Thứ tự",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Kế toán": "rwc", "Kinh doanh": "r", "Thủ kho": "r", "Sản xuất": "r" },
+    });
+
+    // Tám bậc đọc thẳng từ mã hàng thật đang chạy, không bịa.
+    const TIERS = [
+      ["BAC-3-4", "3m² - 4m²", 3, 4],
+      ["BAC-4-5", "4m² - 5m²", 4, 5],
+      ["BAC-5-6", "5m² - 6m²", 5, 6],
+      ["BAC-6-7", "6m² - 7m²", 6, 7],
+      ["BAC-7-8", "7m² - 8m²", 7, 8],
+      ["BAC-8-9", "8m² - 9m²", 8, 9],
+      ["BAC-9-10", "9m² - 10m²", 9, 10],
+      ["BAC-TREN-10", "Trên 10m²", 10, null],
+    ];
+    brief.fixtures.push(...TIERS.map(([code, name, min, max], index) => ({
+      type: "Bậc diện tích",
+      name: code,
+      data: {
+        tier_code: code, tier_name: name,
+        min_area_sqm: min,
+        ...(max === null ? {} : { max_area_sqm: max }),
+        sort_order: (index + 1) * 10,
+        note: "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        disabled: false,
+      },
+    })));
+    if (!brief.navigation.items.includes("Bậc diện tích")) brief.navigation.items.push("Bậc diện tích");
+    note(`DANH MỤC · +Bậc diện tích (${TIERS.length} bậc — chiều tra giá rời khỏi mã hàng)`);
+  }
+
+  // ── Item Price nhận bậc ──
+  // Một mặt hàng, tám giá. Trước đây là tám mặt hàng, mỗi cái một giá.
+  {
+    const price = doctype("Item Price");
+    if (!price.fields.some((entry) => nameOf(entry) === "area_tier")) {
+      addAfter(price, "uom", {
+        "//": [
+          "Trống = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Có giá trị = chỉ áp cho bậc đó.",
+          "Nhờ vậy một mặt hàng giữ được thang giá 8 bậc mà không cần 8 mã hàng.",
+        ],
+        fieldname: "area_tier",
+        label: "Bậc diện tích",
+        fieldtype: "Link",
+        options: "Bậc diện tích",
+        link_filters: '{"disabled":0}',
+      });
+      // Khoá đặt tên phải mang bậc, không thì tám dòng giá của cùng một mặt hàng đè lên nhau.
+      price.naming = "format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}";
+      note("SALES · Item Price nhận area_tier — một mặt hàng giữ được thang giá 8 bậc");
+    }
+  }
+
+  // ── BOM Template nhận cách giao ──
+  // Một mặt hàng, hai định mức: trọn bộ và tách món. Trước đây là hai mặt hàng.
+  {
+    const template = doctype("BOM Template");
+    if (!template.fields.some((entry) => nameOf(entry) === "sales_mode")) {
+      addAfter(template, "item_code", {
+        "//": [
+          "Trống = định mức áp cho mọi cách giao. Có giá trị = chỉ áp khi dòng bán chọn đúng cách đó.",
+          "Đo trên D1: LUOI-SN13x26 trọn bộ có 5 cấu phần, tách món có 1 — hai bộ khác nhau thật.",
+        ],
+        fieldname: "sales_mode",
+        label: "Chỉ áp cho cách giao",
+        fieldtype: "Select",
+        options: "\nTrọn bộ\nTách món",
+      });
+      note("SẢN XUẤT · BOM Template nhận sales_mode — một mặt hàng giữ được hai định mức");
+    }
+  }
+}
+
 // ══════════ CHỐT CHẶN — không để G2 xảy ra lần nữa ══════════
 // G2 lọt được vì thêm trường bắt buộc mà quên fixture, và dry-run KHÔNG bắt (nó biên dịch cấu
 // trúc, không chạy validator dữ liệu). Sửa tay một lần thì lần sau vẫn lọt ⇒ viết thành luật
