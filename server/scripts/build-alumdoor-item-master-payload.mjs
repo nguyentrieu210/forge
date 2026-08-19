@@ -217,6 +217,48 @@ if (existsSync(D1_PATH) && existsSync(CONVENTION_PATH)) {
   console.log("ALUMDOOR_ITEM_PAYLOAD_TRANSLATED skipped=no-d1-or-mapping");
 }
 
+/**
+ * Áp LỚP QUYẾT ĐỊNH lên payload.
+ *
+ * Bản trích nguồn chỉ ghi lại bảng tính nói gì — nó không biết gì về những quyết định đã lấy về
+ * danh mục. Không có lớp này thì mỗi lần chạy `catalog-all` sẽ bật lại 21 mã đã cho nghỉ hưu và
+ * trả `default_sales_uom` về một đơn vị đã bị gỡ. Đo được: importer từ chối với đúng 22 xung đột.
+ *
+ * Quyết định là DỮ LIỆU, không phải mã lệnh: nằm trong `docs/alumdoor-catalog-decisions.json`,
+ * mỗi mục kèm lý do. Quyết định không có lý do thì lần sau không ai dám đụng, mà cũng không ai
+ * biết khi nào nó hết đúng.
+ */
+const DECISIONS_PATH = resolve(process.cwd(), "../docs/alumdoor-catalog-decisions.json");
+if (existsSync(DECISIONS_PATH)) {
+  const decisions = JSON.parse(await readFile(DECISIONS_PATH, "utf8"));
+  if (decisions.format !== "alumdoor-catalog-decisions/v1") {
+    throw new Error(`Dinh dang file quyet dinh la: ${decisions.format}`);
+  }
+  const retired = new Set((decisions.retired_items ?? []).map((row) => row.item_code));
+  const overrides = new Map();
+  for (const row of decisions.field_overrides ?? []) overrides.set(`${row.item_code}::${row.field}`, row.value);
+  let applied = 0;
+  payload.items = payload.items.map((item) => {
+    let next = item;
+    if (retired.has(item.item_code) && item.disabled !== 1) { next = { ...next, disabled: 1 }; applied += 1; }
+    for (const field of Object.keys(item)) {
+      const key = `${item.item_code}::${field}`;
+      if (!overrides.has(key)) continue;
+      const value = overrides.get(key);
+      if (String(next[field] ?? "") === String(value)) continue;
+      next = { ...next, [field]: value };
+      applied += 1;
+    }
+    return next;
+  });
+  const stale = [...retired].filter((code) => !payload.items.some((item) => item.item_code === code));
+  if (stale.length > 0) {
+    // Quyet dinh tro vao ma khong con trong payload la quyet dinh da muc - bao chu khong lang le bo.
+    console.log(`ALUMDOOR_CATALOG_DECISIONS_STALE count=${stale.length} codes=${stale.slice(0, 5).join(",")}`);
+  }
+  console.log(`ALUMDOOR_CATALOG_DECISIONS_APPLIED changes=${applied} retired=${retired.size} overrides=${overrides.size}`);
+}
+
 await writeFile(payloadPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 await writeFile(auditPath, `${JSON.stringify(audit, null, 2)}\n`, "utf8");
 
