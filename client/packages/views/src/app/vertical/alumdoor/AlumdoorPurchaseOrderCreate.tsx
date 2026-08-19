@@ -18,6 +18,9 @@ import { AlumdoorSalesOrderField, fallbackField } from "./sales-order-v2/Alumdoo
 
 type Json = Record<string, unknown>;
 
+const PURCHASE_SUPPLIER_GROUPS = ["Nhôm", "Mô tơ", "Sơn", "Phụ kiện", "Vận chuyển", "Khác"];
+const PURCHASE_CONTEXT_FIELDS = new Set(["supplier_group", "buying_price_list"]);
+
 export interface AlumdoorPurchaseOrderCreateProps {
   name?: string;
   closeRequest?: number;
@@ -233,15 +236,15 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
       const supplier = doc as Json;
       setHeader((current) => {
         const next = { ...current };
-        const copyIfPresent = (target: string, ...sources: string[]) => {
-          if (!meta.fields.some((field) => field.fieldname === target)) return;
+        const copyIfSupported = (target: string, ...sources: string[]) => {
+          if (!meta.fields.some((field) => field.fieldname === target) && !PURCHASE_CONTEXT_FIELDS.has(target)) return;
           const value = sources.map((source) => supplier[source]).find((candidate) => text(candidate));
           if (value !== undefined) next[target] = value;
         };
-        copyIfPresent("supplier_group", "supplier_group");
-        copyIfPresent("payment_terms", "payment_terms");
-        copyIfPresent("contact_person", "contact_person");
-        copyIfPresent("buying_price_list", "buying_price_list", "default_buying_price_list");
+        copyIfSupported("supplier_group", "supplier_group");
+        copyIfSupported("payment_terms", "payment_terms");
+        copyIfSupported("contact_person", "contact_person");
+        copyIfSupported("buying_price_list", "buying_price_list", "default_buying_price_list");
         return next;
       });
     }).catch(() => undefined);
@@ -326,6 +329,10 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
         if (field.fieldname === "items") continue;
         const value = fieldValueForServer(field.fieldtype, header[field.fieldname]);
         if (value !== undefined) document[field.fieldname] = value;
+      }
+      for (const fieldname of PURCHASE_CONTEXT_FIELDS) {
+        const value = header[fieldname];
+        if (value !== undefined && value !== null && value !== "") document[fieldname] = value;
       }
       document.items = resolvedRows.map((row) => cleanChildRow(row, childMeta, isExisting));
       const payload = serializeCreateDocument(meta, document) as Partial<Doc>;
@@ -427,8 +434,8 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
                 {headerControl("transaction_date", "Ngày đặt", "Date")}
                 {hasField("schedule_date") ? headerControl("schedule_date", "Ngày giao dự kiến", "Date") : null}
                 {hasField("priority") ? headerControl("priority", "Mức độ", "Select") : null}
-                {hasField("buying_price_list") ? headerControl("buying_price_list", "Bảng giá mua", "Link", "Price List") : null}
-                {hasField("supplier_group") ? headerControl("supplier_group", "Nhóm NCC", metaField("supplier_group")!.fieldtype, metaField("supplier_group")!.options) : null}
+                {headerControl("buying_price_list", "Bảng giá mua", "Link", "Price List")}
+                {headerControl("supplier_group", "Nhóm NCC", "Select", PURCHASE_SUPPLIER_GROUPS.join("\n"))}
                 {hasField("supplier_quotation") ? headerControl("supplier_quotation", "Theo báo giá NCC", "Link", "Supplier Quotation") : null}
                 {hasField("payment_terms") ? headerControl("payment_terms", "Điều khoản thanh toán", metaField("payment_terms")!.fieldtype, metaField("payment_terms")!.options) : null}
                 {hasField("note") ? <div className="xl:col-span-2">{headerControl("note", "Ghi chú", metaField("note")!.fieldtype)}</div> : null}
