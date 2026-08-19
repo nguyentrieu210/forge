@@ -1,7 +1,11 @@
 const originalFetch = globalThis.fetch;
 if (typeof originalFetch !== 'function') throw new Error('BOM PUT shim requires global fetch');
 
-const BOM_RESOURCE = /\/api\/resource\/Bill(?:%20| )of(?:%20| )Materials\/[^/?#]+$/i;
+// The Frappe-compatible facade requires PUT callers to echo the latest `modified`
+// token. BOM Rule reconciliation updates Item conversions, reusable BOM Rules,
+// BOM Templates and Draft BOMs, so all of those local-authority writes need the
+// same optimistic-concurrency refresh that the canonical BOM importer already uses.
+const MODIFIED_AWARE_RESOURCE = /\/api\/resource\/(?:Item|BOM(?:%20| )Rule|BOM(?:%20| )Template|Bill(?:%20| )of(?:%20| )Materials)\/[^/?#]+$/i;
 
 function methodOf(input, init) {
   return String(init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
@@ -30,7 +34,7 @@ function responseData(body) {
 
 globalThis.fetch = async function bomModifiedAwareFetch(input, init = {}) {
   const url = urlOf(input);
-  if (methodOf(input, init) !== 'PUT' || !BOM_RESOURCE.test(url)) {
+  if (methodOf(input, init) !== 'PUT' || !MODIFIED_AWARE_RESOURCE.test(url)) {
     return originalFetch(input, init);
   }
 
@@ -39,9 +43,9 @@ globalThis.fetch = async function bomModifiedAwareFetch(input, init = {}) {
     return originalFetch(input, init);
   }
 
-  // The Frappe facade requires every PUT to echo the latest `modified` token.
-  // The canonical BOM importer is an offline reconciler, so refresh that token
-  // immediately before the write instead of weakening optimistic concurrency.
+  // Refresh the token immediately before the write instead of weakening or
+  // bypassing optimistic concurrency. If another writer races this PUT, retry
+  // with a newly fetched token up to three times.
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const getResponse = await originalFetch(url, {
       method: 'GET',
