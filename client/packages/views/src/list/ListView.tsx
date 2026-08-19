@@ -15,6 +15,7 @@ import {
   Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
   Popover, PopoverTrigger, PopoverContent, Input,
+  EllipsisText,
 } from "@metaforge/ui";
 import { deriveColumns, type ListColumn } from "./columns.js";
 import { renderCell, RowAvatar, formatValue } from "./cells.js";
@@ -872,7 +873,11 @@ function TitleCell({ row, col, centered, imgField, displayValues, onUploadImage 
           : <RowAvatar src={src} alt={text} />
       ) : null}
       <span className={cn("flex min-w-0 flex-col", centered && "items-center")}>
-        <span className="truncate font-medium text-foreground hover:text-primary hover:underline">{text || t("list.untitled", "(không tên)")}</span>
+        {/* `EllipsisText` thay `truncate` trần: tên hàng tiếng Việt ("Nhôm hệ 4200 cây 6m màu
+            ghi mờ") thường xuyên dài hơn cột, và trước đây bị cắt mà KHÔNG có cách xem đủ —
+            người dùng phải mở từng bản ghi ra chỉ để đọc một cái tên. Tooltip chỉ hiện khi
+            thật sự bị cắt, nên ô ngắn không sinh tooltip lặp lại vô nghĩa. */}
+        <EllipsisText className="font-medium text-foreground hover:text-primary hover:underline">{text || t("list.untitled", "(không tên)")}</EllipsisText>
         {showId ? <span className="truncate text-[11px] text-muted-foreground">{id}</span> : null}
       </span>
     </div>
@@ -886,7 +891,7 @@ function LinkCell({ doctype, value, displayValues }: { doctype: string; value: u
   const label = displayValues?.[`${doctype}::${name}`] ?? name;
   return (
     <span className="block min-w-0">
-      <span className="block truncate font-medium">{label}</span>
+      <EllipsisText className="font-medium">{label}</EllipsisText>
       {label !== name ? <span className="block truncate text-[11px] text-muted-foreground">{name}</span> : null}
     </span>
   );
