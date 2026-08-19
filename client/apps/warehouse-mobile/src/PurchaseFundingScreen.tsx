@@ -1,3 +1,4 @@
+import { formatMoney } from "@metaforge/core";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Banknote, CheckCircle2, ClipboardList, Landmark, RefreshCw, Send, WalletCards } from "lucide-react";
 import { FrappeAdapterImpl, type MetaForgeBootDTO } from "@metaforge/adapter-frappe";
@@ -46,7 +47,7 @@ function today() {
 }
 
 function money(value: unknown) {
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(Number(value) || 0);
+  return formatMoney(Number(value) || 0, { style: "currency" });
 }
 
 function isFundingProposal(row: ProposalRow) {

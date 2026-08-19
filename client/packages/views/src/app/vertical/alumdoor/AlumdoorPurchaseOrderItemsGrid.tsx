@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import { formatMoney } from "@metaforge/core";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
 import type { Doc, DocField, DocTypeMeta } from "@metaforge/core";
@@ -140,9 +141,7 @@ function quantity(value: unknown, digits = 3): string {
 }
 
 function money(value: unknown): string {
-  const parsed = numeric(value);
-  if (parsed === undefined) return "—";
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(parsed)} đ`;
+  return formatMoney(numeric(value), { style: "dong-lower" });
 }
 
 export function purchaseLineKey(line: PurchaseLine, index = 0): string {

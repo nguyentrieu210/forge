@@ -113,8 +113,9 @@ an toàn hay không phụ thuộc vào việc đã gom luật lại hay chưa.
 | Pha | Nội dung | Rủi ro |
 |---|---|---|
 | **P0** | Cổng mốc (`refactor-baseline.mjs`) + tài liệu này | không |
-| **P1** | Gom helper số học/băm/ép kiểu về `@cloudforge/core` + `@cloudforge/money`; test liên-codebase ghim mỗi luật một nguồn | thấp |
-| **P2** | Gom helper định dạng phía client (`money`, `round`) về một nơi trong `@metaforge/*` | thấp |
+| **P1** ✅ | Gom `round` (10 bản) và `divideRounded` (5 bản) về `@cloudforge/core`; `numeric-single-source.test.mjs` ghim luật + sổ bản còn riêng | thấp |
+| **P2** ✅ | Gom 10 bản `money()` về `formatMoney` của `@metaforge/core`; `money-single-source.test.mjs` ghim 5 kiểu hiển thị | thấp |
+| **P2b** ✅ | Nạp lười 7 biểu đồ nặng + bộ vẽ SVG: chunk `engine` 833 → 662 kB (gzip 285 → 229) | thấp |
 | **P3** | Bóc 6 method `*_alumdoor_*` khỏi `router.ts` sang bảng đăng ký method của vertical | trung bình |
 | **P4** | Tách `client/packages/views/src/app/vertical/alumdoor` ra khỏi package `views` | trung bình |
 | **P5** | Cắt `router.ts` (4530 dòng) theo trục: REST resource · method dispatch · metadata · storefront | cao |
@@ -146,4 +147,10 @@ Mỗi pha là một commit riêng, chạy cổng mốc trước khi commit.
    `manufacturing-work-order-guard`, `manufacturing-capacity`) dùng `(n + d/2) / d` — với BigInt,
    số âm bị cắt về 0 thay vì làm tròn ra xa 0, khác luật nửa-lên của `@cloudforge/money`.
    Gom về một luật là **đổi số** ở nhánh sản xuất khi có giá trị âm (hoàn/hụt/đảo bút toán).
+3. **Hiển thị tiền**: mười màn đang in cùng một con số theo **bốn kiểu** — `1.234.567 ₫`,
+   `1.234.567₫`, `1.234.567 đ`, `1.234.567`. Refactor đã gom luật nhưng GIỮ NGUYÊN cả bốn
+   kiểu để không đổi giao diện. Thống nhất về một kiểu là quyết định giao diện.
+   Kèm theo: `null` và `""` được tính là `0` còn `undefined` ra `—` — bất đối xứng có sẵn
+   từ mười bản cũ, nay ghim trong `money-single-source.test.mjs`. Có nên coi cả ba là
+   "chưa có số" không?
 

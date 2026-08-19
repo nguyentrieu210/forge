@@ -1,3 +1,4 @@
+import { formatMoney } from "@metaforge/core";
 import type { Doc, DocField, DocTypeMeta } from "@metaforge/core";
 import type { BomActualComponentRow, BomActualRequirement } from "../AlumdoorBomActualEditor.js";
 
@@ -191,10 +192,7 @@ export function positiveNumber(value: unknown): number | undefined {
 }
 
 export function money(value: unknown): string {
-  const parsed = Number(value);
-  return Number.isFinite(parsed)
-    ? parsed.toLocaleString("vi-VN", { maximumFractionDigits: 0 })
-    : "—";
+  return formatMoney(value, { style: "plain" });
 }
 
 export function quantity(value: unknown): string {

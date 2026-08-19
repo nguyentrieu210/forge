@@ -14,6 +14,7 @@
  * published product when the order is placed. This component displays a total so the
  * buyer knows what they are agreeing to; it is not the arithmetic of record.
  */
+import { formatMoney } from "@metaforge/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Minus, PackageSearch, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import type { FrappeAdapter } from "@metaforge/adapter-frappe";
@@ -55,9 +56,7 @@ const CART_KEY = "forge.storefront.cart";
 const AGE_RESTRICTED = new Set(["Rượu"]);
 
 function money(value: number | string | null | undefined): string {
-  const amount = Number(value ?? 0);
-  if (!Number.isFinite(amount)) return "—";
-  return `${amount.toLocaleString("vi-VN")}₫`;
+  return formatMoney(value ?? 0, { style: "dong-tight" });
 }
 
 function readCart(): CartLine[] {

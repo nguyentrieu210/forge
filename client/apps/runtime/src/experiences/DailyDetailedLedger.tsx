@@ -1,3 +1,4 @@
+import { formatMoney } from "@metaforge/core";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { CheckCircle2, FileLock2, Loader2, RefreshCw, Scale, ShieldAlert } from "lucide-react";
 import { useMetaForge } from "@metaforge/views/provider";
@@ -50,7 +51,7 @@ function today(): string {
 }
 
 function money(value: number, currency: string): string {
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: currency || "VND", maximumFractionDigits: 0 }).format(value);
+  return formatMoney(value, { style: "currency", currency });
 }
 
 function quantity(value: number): string {

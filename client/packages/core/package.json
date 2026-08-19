@@ -21,7 +21,8 @@
   },
   "scripts": {
     "typecheck": "tsc -b",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "test": "tsc -b && node --test tests/*.test.mjs"
   },
   "files": [
     "dist",

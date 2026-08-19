@@ -1,3 +1,4 @@
+import { formatMoney } from "@metaforge/core";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import "../styles.css";
@@ -325,8 +326,7 @@ function pageHref(slug: string, homePage: string): string {
 }
 
 function money(value: number | string): string {
-  const amount = Number(value);
-  return Number.isFinite(amount) ? `${amount.toLocaleString("vi-VN")}₫` : String(value);
+  return formatMoney(value, { style: "dong-tight", invalid: String(value) });
 }
 
 function fontFamily(value: WebsiteSiteData["theme"]["heading_font"]): string {

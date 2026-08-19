@@ -1,3 +1,4 @@
+import { formatMoney } from "@metaforge/core";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Banknote, CalendarDays, CheckCircle2, Clock3, Loader2, RefreshCw, ReceiptText,
@@ -91,7 +92,7 @@ function minutes(value: unknown): string {
   return `${Math.floor(total / 60)}g ${String(total % 60).padStart(2, "0")}p`;
 }
 function workDays(bp: unknown): string { return (Math.max(0, Number(bp) || 0) / 10_000).toLocaleString("vi-VN", { maximumFractionDigits: 2 }); }
-function money(value: unknown): string { return `${Math.round(Number(value) || 0).toLocaleString("vi-VN")} ₫`; }
+function money(value: unknown): string { return formatMoney(Math.round(Number(value) || 0), { style: "dong" }); }
 function segmentName(code: string | undefined): string {
   if (code === "SHIFT1") return "Ca 1";
   if (code === "SHIFT2") return "Ca 2";

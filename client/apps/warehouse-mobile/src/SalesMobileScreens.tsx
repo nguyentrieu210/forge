@@ -1,3 +1,4 @@
+import { formatMoney } from "@metaforge/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarDays, ChevronLeft, FileText, RefreshCw, Search, Truck, WalletCards } from "lucide-react";
 import { FrappeAdapterImpl, type MetaForgeBootDTO, type ReportResult } from "@metaforge/adapter-frappe";
@@ -62,11 +63,7 @@ function pick(row: RowRecord, ...keys: string[]): unknown {
 }
 
 function money(value: number, currency = "VND") {
-  try {
-    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: currency || "VND", maximumFractionDigits: 0 }).format(value);
-  } catch {
-    return `${value.toLocaleString("vi-VN")} ${currency || "VND"}`;
-  }
+  return formatMoney(value, { style: "currency", currency });
 }
 
 function overdueDays(dueDate: string): number {

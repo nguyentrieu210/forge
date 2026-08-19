@@ -2,14 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, RefreshCw, Save, Send } from "lucide-react";
-import {
-  applyContextPolicy,
-  mapError,
-  serializeCreateDocument,
-  type Doc,
-  type DocField,
-  type DocTypeMeta,
-} from "@metaforge/core";
+import { applyContextPolicy, formatMoney, mapError, serializeCreateDocument, type Doc, type DocField, type DocTypeMeta } from "@metaforge/core";
 import type { FieldServices } from "@metaforge/controls";
 import { Button, toast } from "@metaforge/ui";
 import { useMetaForge } from "../../../container/provider.js";
@@ -77,8 +70,7 @@ function today(): string {
 }
 
 function money(value: unknown): string {
-  const parsed = numberValue(value) ?? 0;
-  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(parsed);
+  return formatMoney(numberValue(value) ?? 0, { style: "plain" });
 }
 
 function quantity(value: unknown, digits = 3): string {

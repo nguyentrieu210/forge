@@ -1,3 +1,4 @@
+import { formatMoney } from "@metaforge/core";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   AlertTriangle, Facebook, Inbox, Loader2, PackageCheck, RefreshCw,
@@ -399,9 +400,5 @@ function dateTime(value: string) {
 }
 
 function money(minor: number) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(minor);
+  return formatMoney(minor, { style: "currency" });
 }
