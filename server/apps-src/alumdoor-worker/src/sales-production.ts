@@ -4,20 +4,20 @@ import {
   calculateSalesProductionLine,
   createSalesProduction as createSalesProductionCore,
   isFullSetSalesItemCode,
-  previewDraftSalesBomRequirements,
+  previewDraftSalesBomRequirements as previewDraftSalesBomRequirementsCore,
   previewSalesProduction,
   validateProductionRequest,
   type LeafPlan,
   type ProductionPlatformCall,
   type SalesProductionLine,
 } from "./sales-production-core.js";
+import { enrichSalesBomPreviewWithRules } from "./bom-rule-sales-preview.js";
 
 export {
   buildSalesProductionLines,
   calculateLeafPlan,
   calculateSalesProductionLine,
   isFullSetSalesItemCode,
-  previewDraftSalesBomRequirements,
   previewSalesProduction,
   validateProductionRequest,
 };
@@ -169,6 +169,29 @@ async function updateDoc(
     body: JSON.stringify(document),
   });
   if (!response.ok) throw new Error(`Không cập nhật được ${doctype} ${name}: ${(await response.text()).slice(0, 180)}`);
+}
+
+/**
+ * Sales still uses the existing BOM membership/selection path, but the technical child
+ * quantities shown to the seller are now resolved by the reusable BOM Rule master.
+ * Pricing remains on the parent Item; these rows are manufacturing/fulfilment preview only.
+ */
+export async function previewDraftSalesBomRequirements(
+  call: ProductionPlatformCall,
+  args: Json,
+): Promise<Response> {
+  const core = await previewDraftSalesBomRequirementsCore(call, args);
+  if (!core.ok) return core;
+  const payload = (await core.json()) as Json;
+  if (payload.bom_applicable === false) {
+    return new Response(JSON.stringify(payload), { status: core.status, headers: { "content-type": "application/json" } });
+  }
+  try {
+    const enriched = await enrichSalesBomPreviewWithRules(call, args, payload);
+    return new Response(JSON.stringify(enriched), { status: core.status, headers: { "content-type": "application/json" } });
+  } catch (error) {
+    return refuse(error instanceof Error ? error.message : "Không áp dụng được Quy tắc BOM cho dòng bán.");
+  }
 }
 
 export async function createSalesProduction(
