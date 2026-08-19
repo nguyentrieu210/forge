@@ -4,6 +4,7 @@ import { buildPrintPath } from "../../../print/printRoute.js";
 import type { DoctypeWorkspaceExtension } from "../../workspace-extension.js";
 
 const AlumdoorSalesOrderCreate = lazy(() => import("./AlumdoorSalesOrderCreate.js").then((module) => ({ default: module.AlumdoorSalesOrderCreate })));
+const AlumdoorPurchaseOrderCreate = lazy(() => import("./AlumdoorPurchaseOrderCreate.js").then((module) => ({ default: module.AlumdoorPurchaseOrderCreate })));
 const AlumdoorProductionRequestDetail = lazy(() => import("./AlumdoorProductionRequestDetail.js").then((module) => ({ default: module.AlumdoorProductionRequestDetail })));
 const AlumdoorWorkOrderDetail = lazy(() => import("./AlumdoorWorkOrderDetail.js").then((module) => ({ default: module.AlumdoorWorkOrderDetail })));
 const AlumdoorManufacturingStockEntryCreate = lazy(() => import("./AlumdoorManufacturingStockEntryCreate.js").then((module) => ({ default: module.AlumdoorManufacturingStockEntryCreate })));
@@ -52,6 +53,41 @@ export const alumdoorWorkspaceExtension: DoctypeWorkspaceExtension = {
               onSaved={(savedName) => {
                 if (savedName && savedName !== decoded) onNavigate(`${listPath}/${encodeURIComponent(savedName)}`);
               }}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (isNew && doctype === "Purchase Order") {
+      return {
+        createSurface: "full",
+        createDataSurface: "alumdoor-purchase-order-create",
+        suppressBulk: true,
+        create: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở màn mua hàng AlumDoor…</div>}>
+            <AlumdoorPurchaseOrderCreate
+              closeRequest={closeRequest}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onCancel={() => onNavigate(listPath)}
+            />
+          </Suspense>
+        ),
+      };
+    }
+
+    if (decoded && doctype === "Purchase Order") {
+      return {
+        hasDetail: true,
+        suppressBulk: true,
+        detail: (
+          <Suspense fallback={<div className="grid h-full place-items-center text-sm text-muted-foreground">Đang mở đơn mua hàng AlumDoor…</div>}>
+            <AlumdoorPurchaseOrderCreate
+              key={`${doctype}/${decoded}`}
+              name={decoded}
+              onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)}
+              onSaved={() => {}}
               onCancel={() => onNavigate(listPath)}
             />
           </Suspense>
