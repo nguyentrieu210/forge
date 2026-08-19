@@ -20,6 +20,7 @@ interface AlumdoorMasterDataScreenProps {
 interface MasterEntryDefinition {
   key: string;
   label: string;
+  fallbackRoute?: string;
 }
 
 interface MasterGroupDefinition {
@@ -91,7 +92,14 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
     title: "Bán hàng & sản xuất",
     entries: [
       { key: "Cutting Policy", label: "Công thức cửa" },
-      { key: "BOM Rule", label: "Quy tắc BOM" },
+      {
+        key: "BOM Rule",
+        label: "Quy tắc BOM",
+        // BOM Rule có editor TSX riêng trong alumdoorWorkspaceExtension. Giữ route
+        // fallback để nút Danh mục không biến mất trong lúc manifest local đang được
+        // reconcile/import; khi manifest đã có BOM Rule thì route thật vẫn được ưu tiên.
+        fallbackRoute: "/app/BOM%20Rule",
+      },
       { key: "Bill of Materials", label: "Định mức / BOM" },
       { key: "Production Standard", label: "Tiêu chuẩn sản xuất" },
     ],
@@ -128,15 +136,31 @@ function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
   const itemsByKey = new Map(items.map((item) => [normalize(item.key), item]));
   const itemsByLabel = new Map(items.map((item) => [normalize(item.label), item]));
   const rank = new Map<string, number>(DISPLAY_ORDER.map((id, index) => [id, index]));
+  const resolveEntry = (entry: MasterEntryDefinition) => itemsByKey.get(normalize(entry.key))
+    ?? itemsByLabel.get(normalize(entry.label));
 
-  return MASTER_GROUPS.map((group) => ({
-    id: group.id,
-    title: group.title,
-    items: group.entries.flatMap((entry) => {
-      const item = itemsByKey.get(normalize(entry.key)) ?? itemsByLabel.get(normalize(entry.label));
-      return item ? [{ ...item, displayLabel: entry.label }] : [];
-    }),
-  }))
+  return MASTER_GROUPS.map((group) => {
+    // Không dùng fallback để mở ra một nhóm mà tài khoản hoàn toàn không có quyền xem.
+    // Nó chỉ vá mục BOM Rule bị thiếu khỏi manifest trong một nhóm vốn đã khả dụng.
+    const hasVisibleGroupItem = group.entries.some((entry) => Boolean(resolveEntry(entry)));
+    return {
+      id: group.id,
+      title: group.title,
+      items: group.entries.flatMap((entry) => {
+        const item = resolveEntry(entry);
+        if (item) return [{ ...item, displayLabel: entry.label }];
+        if (entry.fallbackRoute && hasVisibleGroupItem) {
+          return [{
+            key: entry.key,
+            label: entry.label,
+            route: entry.fallbackRoute,
+            displayLabel: entry.label,
+          }];
+        }
+        return [];
+      }),
+    };
+  })
     .filter((group) => group.items.length > 0)
     .sort((a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER));
 }
