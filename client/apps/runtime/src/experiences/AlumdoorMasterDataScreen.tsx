@@ -20,7 +20,6 @@ interface AlumdoorMasterDataScreenProps {
 interface MasterEntryDefinition {
   key: string;
   label: string;
-  fallbackRoute?: string;
 }
 
 interface MasterGroupDefinition {
@@ -44,6 +43,15 @@ const normalize = (value: string) => value
  * Danh mục Alumdoor là một menu nghiệp vụ có chủ đích, không phải toàn bộ DocType
  * mang group "Danh mục". Khai tường minh theo key để tên server đổi nhẹ cũng không
  * làm một mục tự nhảy sang nhóm khác.
+ *
+ * ĐỔI LẠI, danh sách trắng này có một cái giá phải trả cho đúng: mục nào có trong nav mà
+ * KHÔNG có ở đây thì biến mất khỏi màn hình — và thanh bên cũng không cứu được, vì
+ * `workspace-navigation.ts` xếp "Danh mục" vào GLOBAL_GROUPS nên nhóm này không xổ menu con.
+ * Tháng 8/2026 có 8 mục rơi vào khe đó, trong đó Phường Xã 3.321 bản ghi và Tỉnh Thành 34
+ * bản ghi là dữ liệu thật đã nhập xong mà không ai vào xem được.
+ *
+ * Vì vậy: THÊM DOCTYPE VÀO NHÓM "Danh mục" CỦA BRIEF THÌ PHẢI THÊM VÀO ĐÂY, hoặc khai
+ * `menu: false` trong brief nếu cố ý không cho lên menu. Không có lựa chọn thứ ba.
  */
 const MASTER_GROUPS: MasterGroupDefinition[] = [
   {
@@ -56,6 +64,7 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
       { key: "Surface Finish", label: "Bề mặt" },
       { key: "Item Color", label: "Màu vật tư" },
       { key: "Material Specification", label: "Quy cách kỹ thuật vật tư" },
+      { key: "Quy cách cửa", label: "Bản lá theo mã nhôm" },
       { key: "Measurement Profile", label: "Bộ theo dõi vật tư" },
       { key: "Geometry Field", label: "Trường quy cách hình học" },
       { key: "Geometry Profile", label: "Bộ quy cách hình học" },
@@ -92,16 +101,28 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
     title: "Bán hàng & sản xuất",
     entries: [
       { key: "Cutting Policy", label: "Công thức cửa" },
-      {
-        key: "BOM Rule",
-        label: "Quy tắc BOM",
-        // BOM Rule có editor TSX riêng trong alumdoorWorkspaceExtension. Giữ route
-        // fallback để nút Danh mục không biến mất trong lúc manifest local đang được
-        // reconcile/import; khi manifest đã có BOM Rule thì route thật vẫn được ưu tiên.
-        fallbackRoute: "/app/BOM%20Rule",
-      },
+      // BOM Rule từng cần một `fallbackRoute` riêng vì nó không có trong brief — chỉ do
+      // importer ghi thẳng vào doctype_definitions. Từ 2026-08-19 nó là DocType thật nên
+      // route thường là đủ; miếng vá đã gỡ cùng lượt.
+      { key: "BOM Rule", label: "Quy tắc BOM" },
       { key: "Bill of Materials", label: "Định mức / BOM" },
       { key: "Production Standard", label: "Tiêu chuẩn sản xuất" },
+    ],
+  },
+  {
+    id: "addresses",
+    title: "Địa bàn & giao lắp",
+    entries: [
+      { key: "Tỉnh Thành", label: "Tỉnh / Thành phố" },
+      { key: "Phường Xã", label: "Phường / Xã" },
+      { key: "Địa chỉ giao lắp", label: "Địa chỉ giao lắp" },
+    ],
+  },
+  {
+    id: "finance",
+    title: "Kế toán",
+    entries: [
+      { key: "Tài khoản ngân hàng", label: "Tài khoản ngân hàng" },
     ],
   },
   {
@@ -110,6 +131,7 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
     entries: [
       { key: "Lý do huỷ", label: "Lý do huỷ" },
       { key: "Nguyên nhân chênh lệch", label: "Nguyên nhân chênh lệch" },
+      { key: "Nguyên nhân cửa lỗi", label: "Nguyên nhân cửa lỗi" },
     ],
   },
 ];
@@ -120,6 +142,8 @@ const DISPLAY_ORDER = [
   "sales-configuration",
   "warehouses",
   "purchasing",
+  "addresses",
+  "finance",
   "operations",
 ] as const;
 
@@ -129,6 +153,8 @@ const GROUP_LAYOUT: Record<string, string> = {
   "sales-configuration": "lg:col-span-5 xl:col-span-4",
   warehouses: "lg:col-span-4",
   purchasing: "lg:col-span-4",
+  addresses: "lg:col-span-4",
+  finance: "lg:col-span-4",
   operations: "lg:col-span-4",
 };
 
@@ -139,28 +165,21 @@ function resolveGroups(items: AlumdoorMasterItem[]): ResolvedMasterGroup[] {
   const resolveEntry = (entry: MasterEntryDefinition) => itemsByKey.get(normalize(entry.key))
     ?? itemsByLabel.get(normalize(entry.label));
 
-  return MASTER_GROUPS.map((group) => {
-    // Không dùng fallback để mở ra một nhóm mà tài khoản hoàn toàn không có quyền xem.
-    // Nó chỉ vá mục BOM Rule bị thiếu khỏi manifest trong một nhóm vốn đã khả dụng.
-    const hasVisibleGroupItem = group.entries.some((entry) => Boolean(resolveEntry(entry)));
-    return {
-      id: group.id,
-      title: group.title,
-      items: group.entries.flatMap((entry) => {
-        const item = resolveEntry(entry);
-        if (item) return [{ ...item, displayLabel: entry.label }];
-        if (entry.fallbackRoute && hasVisibleGroupItem) {
-          return [{
-            key: entry.key,
-            label: entry.label,
-            route: entry.fallbackRoute,
-            displayLabel: entry.label,
-          }];
-        }
-        return [];
-      }),
-    };
-  })
+  /**
+   * Mục nào không giải được thì bỏ hẳn — không dựng route đoán.
+   *
+   * `items` đã được server lọc theo quyền, nên một mục vắng mặt có đúng hai nguyên nhân:
+   * tài khoản không có quyền đọc, hoặc brief chưa khai. Cả hai đều không được chữa bằng một
+   * route bịa ở client: cái đầu là vượt quyền, cái sau dẫn tới màn báo lỗi.
+   */
+  return MASTER_GROUPS.map((group) => ({
+    id: group.id,
+    title: group.title,
+    items: group.entries.flatMap((entry) => {
+      const item = resolveEntry(entry);
+      return item ? [{ ...item, displayLabel: entry.label }] : [];
+    }),
+  }))
     .filter((group) => group.items.length > 0)
     .sort((a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER));
 }

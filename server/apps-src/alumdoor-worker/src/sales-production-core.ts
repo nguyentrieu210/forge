@@ -4,6 +4,7 @@ import {
   inferDoorType,
   isManualPullGroup,
   parseDoorPolicy,
+  RAY_TYPES,
   selectDoorPolicy,
   type CustomerGroup,
   type DoorFormulaPolicy,
@@ -461,9 +462,19 @@ function parsedPolicies(raw: RawPolicy[]): Array<{ parsed: DoorFormulaPolicy; ra
   return raw.map((row) => ({ parsed: parseDoorPolicy(row), raw: row }));
 }
 
-function choosePolicy(rawPolicies: RawPolicy[], doorType: DoorType, itemGroup: string): { parsed: DoorFormulaPolicy; raw: RawPolicy } {
+/**
+ * `rayType` là loại ray khai trên DÒNG BÁN, không phải thuộc tính của nhóm hàng — nên nó
+ * phải đi vào đây thay vì được suy ra. Trống thì không lọc, giữ nguyên dữ liệu cũ.
+ */
+function choosePolicy(
+  rawPolicies: RawPolicy[],
+  doorType: DoorType,
+  itemGroup: string,
+  rayType?: string,
+): { parsed: DoorFormulaPolicy; raw: RawPolicy } {
   const pairs = parsedPolicies(rawPolicies);
-  const parsed = selectDoorPolicy(pairs.map((entry) => entry.parsed), doorType, itemGroup);
+  const wantedRay = RAY_TYPES.find((entry) => entry === text(rayType));
+  const parsed = selectDoorPolicy(pairs.map((entry) => entry.parsed), doorType, itemGroup, wantedRay);
   const pair = pairs.find((entry) => entry.parsed.policy_name === parsed.policy_name);
   if (!pair) throw new Error(`Không đọc được chi tiết chính sách ${parsed.policy_name}.`);
   return pair;
@@ -768,7 +779,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
     const sets = positiveInteger(row.set_count ?? 1, `Dòng ${index + 1}: Số bộ`);
     const salesMode = (text(row.sales_mode) || "Trọn bộ") as SalesMode;
     if (salesMode !== "Trọn bộ" && salesMode !== "Tách món") throw new Error(`Dòng ${index + 1}: Cách bán không hợp lệ.`);
-    const chosen = choosePolicy(input.policies, doorType, itemGroup);
+    const chosen = choosePolicy(input.policies, doorType, itemGroup, text(row.ray_type));
     const formula = calculateDoorFormula(chosen.parsed, {
       door_type: doorType,
       item_group: itemGroup,
@@ -968,7 +979,10 @@ export async function calculateSalesProductionLine(
         "dealer_width_basis", "retail_width_basis", "dealer_cut_deduction_m", "retail_cut_deduction_m",
         "butterfly_cut_deduction_m", "dealer_split_sales_basis", "dealer_full_sales_basis", "retail_sales_basis",
         "manual_pull_sales_basis", "purchase_formula", "purchase_height_basis", "purchase_width_basis",
-        "priority", "disabled", "note",
+        // `ray_type` cũng nằm trong bản rút gọn: nó là trường NỀN của Cutting Policy, không
+        // phải trường mở rộng như nhóm leaf_*. Bỏ nó ở đây thì đường dự phòng trả về chính
+        // sách không mang loại ray, và mọi dòng có khai ray sẽ không khớp được chính sách nào.
+        "priority", "disabled", "note", "ray_type",
       ])),
       listDocs<ProductionStandard>(call, "Production Standard", [
         "name", "department", "door_type", "operation", "minutes_per_set", "minutes_per_unit", "capacity_basis", "batch_capacity",
@@ -976,7 +990,7 @@ export async function calculateSalesProductionLine(
         "effective_from", "effective_to", "disabled",
       ]).catch(() => []),
     ]);
-    const chosenSummary = choosePolicy(policies, doorType, text(item.item_group));
+    const chosenSummary = choosePolicy(policies, doorType, text(item.item_group), text(args.ray_type));
     const chosenRaw = text(chosenSummary.raw.name)
       ? { ...chosenSummary.raw, ...await readDoc<RawPolicy>(call, "Cutting Policy", text(chosenSummary.raw.name)) }
       : chosenSummary.raw;

@@ -17,7 +17,14 @@
  * cùng một lô cùng lúc thì người thứ hai bị TỪ CHỐI vì bản ghi đã đổi — không phải cả hai
  * cùng lọt rồi kho âm. Đó là chốt của nền tảng, không phải của Worker này.
  */
-import { slatCount, australianSlatCount, type AustralianDoor } from "./slats.js";
+import {
+  australianSlatCount,
+  slatCount,
+  slatProfilesFromCatalog,
+  type AustralianDoor,
+  type SlatCatalogRow,
+  type SlatProfileTable,
+} from "./slats.js";
 import { buildRows, extractJson, type OcrRow } from "./ocr.js";
 import { syncLotsFromReceipt } from "./lots-from-receipt.js";
 import {
@@ -25,6 +32,7 @@ import {
   inferDoorType,
   isManualPullGroup,
   parseDoorPolicy,
+  rayTypeOf,
   selectDoorPolicy,
   type CustomerGroup,
   type DoorFormulaPolicy,
@@ -130,6 +138,7 @@ export function checked(value: unknown): boolean {
   return normalized === "có" || normalized === "co" || normalized === "yes" || normalized === "true";
 }
 
+
 /**
  * Nhớ bản ghi đã đọc TRONG MỘT LƯỢT kiểm — nguyên nhân thật của lỗi quá hạn 2 giây.
  *
@@ -207,10 +216,29 @@ export async function warmMasters(call: PlatformCall, doc: Record<string, unknow
  * Một lượt đọc cho cả chứng từ. Không đọc từng policy theo từng dòng: đơn 40 cửa mà làm vậy
  * sẽ vừa chậm vừa có thể thấy hai phiên bản chính sách khác nhau giữa đầu và cuối vòng lặp.
  */
+/**
+ * Bảng bản lá của tenant. Đọc hỏng hoặc danh mục rỗng ⇒ trả bảng rỗng, và `slatCount` lùi về
+ * hạt giống biên dịch sẵn — hai bên sinh ra từ cùng một nguồn và có chốt chặn trong máy sinh
+ * brief giữ chúng khớp nhau, nên lùi về là an toàn chứ không phải đoán.
+ */
+export async function readSlatCatalog(call: PlatformCall): Promise<SlatProfileTable> {
+  const query = new URLSearchParams({
+    fields: JSON.stringify(["ma", "buoc_la_m", "tru_mot_la", "disabled"]),
+    limit_page_length: "200",
+  });
+  const response = await call(`resource/${encodeURIComponent("Quy cách cửa")}?${query}`).catch(() => null);
+  if (!response?.ok) return {};
+  const rows = ((await response.json()) as { data?: SlatCatalogRow[] }).data ?? [];
+  return slatProfilesFromCatalog(rows);
+}
+
 export async function readDoorPolicies(call: PlatformCall): Promise<DoorFormulaPolicy[]> {
   const query = new URLSearchParams({
     fields: JSON.stringify([
-      "policy_name", "door_type", "item_group",
+      // `ray_type` PHẢI có trong danh sách này: nó tham gia khoá chọn chính sách. Thiếu nó
+      // thì mọi chính sách đọc về đều không mang loại ray, và một đơn khai ray sẽ không khớp
+      // được chính sách nào — hỏng cả U75 lẫn U100, không riêng loại thiếu dữ liệu.
+      "policy_name", "door_type", "item_group", "ray_type",
       "dealer_width_basis", "retail_width_basis",
       "dealer_cut_deduction_m", "retail_cut_deduction_m", "butterfly_cut_deduction_m",
       "dealer_split_sales_basis", "dealer_full_sales_basis", "retail_sales_basis", "manual_pull_sales_basis",
@@ -576,7 +604,10 @@ function calculateDoorBillableArea(
     return refuse(`${line}: Cách bán phải là Tách món hoặc Trọn bộ.`);
   }
   try {
-    const policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""));
+    // `ray_type` của DÒNG BÁN tham gia chọn chính sách: U75 và U100 có hai bộ hằng số trừ
+    // khác nhau (cutting-policy.md §2.1). Trước đây trường này có trên dòng nhưng không ai
+    // đọc, nên đơn U100 lặng lẽ ăn hằng số U75.
+    const policy = selectDoorPolicy(doorPolicies, doorType, String(item.item_group ?? ""), rayTypeOf(row.ray_type));
     const calculated = calculateDoorFormula(policy, {
       door_type: doorType,
       item_group: String(item.item_group ?? ""),

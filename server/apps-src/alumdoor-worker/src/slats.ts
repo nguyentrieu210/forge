@@ -62,12 +62,47 @@ export const SLAT_PROFILES: Record<string, SlatProfile> = {
  * Cột `TÌNH TRẠNG` (mới/cũ) trong kho chính là chỗ phân biệt hai đời đó — nên tra công thức
  * phải dùng CẢ mã và đời, không chỉ mã.
  */
-export function profileKey(profile: string, generation: string): string {
+export function profileKey(profile: string, generation: string, table: SlatProfileTable = SLAT_PROFILES): string {
   const code = profile.trim().toUpperCase().replace(/\s+/g, " ");
   const old = generation.trim().toUpperCase() === "CŨ";
-  const direct = SLAT_PROFILES[code] ? code : undefined;
-  if (direct && !SLAT_PROFILES[`${code}N`]) return direct;
+  const direct = table[code] ? code : undefined;
+  if (direct && !table[`${code}N`]) return direct;
   return old ? `${code} (CŨ)` : `${code}N`;
+}
+
+export type SlatProfileTable = Record<string, SlatProfile>;
+
+/** Một dòng danh mục `Quy cách cửa` — chỉ hai trường tham gia tính số lá. */
+export interface SlatCatalogRow {
+  ma?: unknown;
+  buoc_la_m?: unknown;
+  tru_mot_la?: unknown;
+  disabled?: unknown;
+}
+
+/**
+ * Dựng bảng tra từ danh mục `Quy cách cửa`.
+ *
+ * SLAT_PROFILES ở trên là hạt giống của danh mục đó (fixture trong brief sinh ra từ đúng
+ * cùng một bảng, có chốt chặn trong máy sinh brief giữ hai bên khớp nhau). Khi tenant đã cài
+ * thì DANH MỤC THẮNG: chủ xưởng thêm mã lá mới hoặc sửa bản lá là có hiệu lực ngay, không
+ * phải chờ một lần deploy.
+ *
+ * Dòng thiếu mã hoặc bản lá không dương bị bỏ qua thay vì làm hỏng cả bảng — một dòng khai
+ * dở trong danh mục không được phép làm chết công thức của 18 mã còn lại. Bỏ qua ở đây là an
+ * toàn vì `slatCount` vẫn ném lỗi khi tra không thấy mã: mất một dòng thì hỏng ồn ào, không
+ * âm thầm.
+ */
+export function slatProfilesFromCatalog(rows: readonly SlatCatalogRow[]): SlatProfileTable {
+  const table: SlatProfileTable = {};
+  for (const row of rows) {
+    if (row.disabled === true || row.disabled === 1) continue;
+    const code = String(row.ma ?? "").trim();
+    const divisor = Number(row.buoc_la_m);
+    if (!code || !Number.isFinite(divisor) || divisor <= 0) continue;
+    table[code] = { divisor, subtractOne: row.tru_mot_la === true || row.tru_mot_la === 1 };
+  }
+  return table;
 }
 
 export interface SlatCount {
@@ -83,11 +118,17 @@ export interface SlatCount {
  * @param heightM chiều cao PHỦ BÌ, mét.
  * @throws khi mã không có trong bảng — thà từ chối còn hơn đoán một bản lá và cắt hỏng.
  */
-export function slatCount(profile: string, generation: string, heightM: number): SlatCount {
-  const key = profileKey(profile, generation);
-  const spec = SLAT_PROFILES[key];
+export function slatCount(
+  profile: string,
+  generation: string,
+  heightM: number,
+  table: SlatProfileTable = SLAT_PROFILES,
+): SlatCount {
+  const source = Object.keys(table).length ? table : SLAT_PROFILES;
+  const key = profileKey(profile, generation, source);
+  const spec = source[key];
   if (!spec) {
-    throw new Error(`Chưa có công thức chia lá cho "${key}". Mã có công thức: ${Object.keys(SLAT_PROFILES).join(", ")}`);
+    throw new Error(`Chưa có công thức chia lá cho "${key}". Mã có công thức: ${Object.keys(source).join(", ")}`);
   }
   if (!Number.isFinite(heightM) || heightM <= HEAD_ALLOWANCE_M) {
     throw new Error(`Chiều cao phủ bì phải lớn hơn ${HEAD_ALLOWANCE_M} m, nhận được ${heightM}`);

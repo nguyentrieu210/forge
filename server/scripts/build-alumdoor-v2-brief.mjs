@@ -18,6 +18,8 @@ import { GEOMETRY_FIELDS, GEOMETRY_PROFILES } from "./lib/alumdoor-geometry-cata
 import { CUTTING_POLICIES, cuttingPolicyFixtureData } from "./lib/alumdoor-cutting-policy-catalog.mjs";
 import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog.mjs";
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
+import { ALUMDOOR_COLOR_CATALOG } from "./lib/alumdoor-color-catalog.mjs";
+import { ALUMDOOR_SLAT_CATALOG, slatCatalogFixtureData } from "./lib/alumdoor-slat-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -1778,6 +1780,349 @@ note("G3 · Warehouse: K36/K12 khai stock_role + mỗi kho có một kho đầu 
   for (const name of ["Geometry Field", "Geometry Profile"]) if (!brief.navigation.items.includes(name)) brief.navigation.items.push(name);
 }
 note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở hữu trường hình học");
+
+// ══════════ HỘI TỤ DANH MỤC 2026-08-19 ══════════
+// Đợt này đóng bốn lỗ mà audit danh mục 19/08 đo được trên D1 local:
+//
+//   1. `Pricing Scope` KHÔNG được khai ở đâu cả — không brief, không doctype_definitions —
+//      trong khi engine giá đọc nó theo TÊN mỗi lần tính đơn
+//      (clouderp-pricing/commercial-policy.ts, clouderp-selling/order-commercial-policy.ts).
+//      Bốn phạm vi thật đang chi phối phụ thu sơn mà chủ xưởng không sửa được qua giao diện.
+//   2. `BOM Rule` chỉ tồn tại do importer ghi thẳng vào doctype_definitions ⇒ dựng lại
+//      tenant là mất 110 quy tắc. Client phải mang fallbackRoute riêng chỉ vì lý do này.
+//   3. Fixture `Item Color` mang ĐỦ CẢ HAI dạng tên: 22 slug ASCII (TRANG, CAFE, XANH_NGOC)
+//      cạnh 25 tên đúng (TRẮNG, CAFÉ, XANH NGỌC). Ô chọn Link đọc hợp documents ∪
+//      master_records nên người dùng chọn được hai bản ghi cho CÙNG một màu — đúng cái
+//      E07 cảnh báo: "tạo CUỐN bên cạnh Cuộn là chẻ tồn kho làm hai vì một lần gõ nhầm".
+//   4. Bốn doctype rỗng (Material Grade, Item Attribute, Brand, Manufacturer) chiếm chỗ
+//      trong nhóm Danh mục mà không tài liệu Alumdoor nào đòi, và cả bốn đều 0 bản ghi.
+{
+  const perm = doctype("Pricing Rule").permissions;
+  const permMfg = doctype("Cutting Policy").permissions;
+  const hasDoctype = (n) => brief.doctypes.some((d) => d.name === n);
+
+  // ── 1. Phạm vi áp dụng chính sách giá ──
+  // Nguồn: docs/ALUMDOOR_PRICING_SCOPE.md. Luật "phải có ít nhất một dòng thành phần trước
+  // khi dùng" chỉ ép được khi nó là DocType thật — chuỗi tự do thì không có chỗ nào để ép.
+  if (!hasDoctype("Pricing Scope")) {
+    brief.doctypes.push(
+      {
+        "//": "Gom nhiều mặt hàng/nhóm hàng vào một phạm vi để một chính sách giá chỉ khai một lần.",
+        name: "Pricing Scope",
+        label: "Phạm vi áp dụng chính sách",
+        icon: "tags",
+        group: "Danh mục",
+        naming: "field:scope_name",
+        title: "scope_name",
+        list: ["scope_name", "disabled"],
+        search: ["scope_name"],
+        fields: [
+          "scope_name:Data*! Tên phạm vi",
+          {
+            "//": "Phạm vi rỗng thành phần thì KHÔNG làm chính sách giá chạy — fail-closed, không im lặng bỏ qua.",
+            fieldname: "members",
+            fieldtype: "Table",
+            options: "Pricing Scope Member",
+            label: "Mặt hàng / nhóm hàng áp dụng",
+          },
+          "note:Small Text Ghi chú",
+          "disabled:Check Ngừng dùng",
+        ],
+        permissions: perm,
+      },
+      {
+        name: "Pricing Scope Member",
+        child: true,
+        label: "Thành phần phạm vi",
+        group: "Danh mục",
+        naming: "autoincrement",
+        fields: [
+          "member_type:Select(Item,Item Group)*! Áp dụng theo",
+          {
+            fieldname: "item_code", label: "Mặt hàng", fieldtype: "Link", options: "Item",
+            depends_on: "eval:doc.member_type == 'Item'", surface: "quick",
+          },
+          {
+            fieldname: "item_group", label: "Nhóm hàng", fieldtype: "Link", options: "Item Group",
+            link_filters: '{"is_group":0,"disabled":0}',
+            depends_on: "eval:doc.member_type == 'Item Group'", surface: "quick",
+          },
+          "note:Data Ghi chú",
+        ],
+        permissions: perm,
+        form: { fields: ["member_type", "item_code", "item_group", "note"] },
+        quickEntry: { fields: ["member_type", "item_code", "item_group"] },
+      },
+    );
+    // Từ Data sang Link: phạm vi là danh mục thật, không còn là chuỗi khớp theo tên.
+    replaceField(doctype("Pricing Rule"), "pricing_scope", {
+      fieldname: "pricing_scope",
+      label: "Phạm vi áp dụng",
+      fieldtype: "Link",
+      options: "Pricing Scope",
+      link_filters: '{"disabled":0}',
+    });
+    note("DANH MỤC · +Pricing Scope (+child) — pricing_scope đổi Data → Link");
+  }
+
+  // ── 2. Quy tắc BOM ──
+  // authority_type=SOURCE là trạng thái NHÁP CÓ CHỦ ĐÍCH theo audit 2026-08-16. Khai vào
+  // brief KHÔNG có nghĩa là duyệt: mặc định vẫn SOURCE, chủ xưởng mới đổi được.
+  if (!hasDoctype("BOM Rule")) {
+    brief.doctypes.push(
+      {
+        "//": "Trước 19/08 doctype này chỉ sống trong doctype_definitions do importer ghi — dựng lại tenant là mất.",
+        name: "BOM Rule",
+        label: "Quy tắc BOM",
+        icon: "function-square",
+        group: "Danh mục",
+        naming: "field:rule_code",
+        title: "rule_name",
+        list: ["rule_code", "rule_name", "result_kind", "result_uom", "authority_type", "disabled"],
+        search: ["rule_code", "rule_name", "formula_display"],
+        fields: [
+          "rule_code:Data*! Mã quy tắc",
+          "rule_name:Data*! Tên quy tắc",
+          "description:Small Text Mô tả",
+          "result_kind:Select(LENGTH,AREA,COUNT,WEIGHT,CONSTANT)*! Loại kết quả",
+          "result_uom:Link(UOM)*! ĐVT kết quả / tiêu hao",
+          "source_field:Link(Geometry Field) Trường nguồn 1 từ hàng cha",
+          "source_field_offset:Float Cộng/trừ vào nguồn 1 (m)",
+          "source_field_2:Link(Geometry Field) Trường nguồn 2 từ hàng cha",
+          "source_field_2_offset:Float Cộng/trừ vào nguồn 2 (m)",
+          "operator:Select(COPY,ADD,SUBTRACT,MULTIPLY,DIVIDE,PRODUCT,QUOTIENT,CONSTANT)*! Phép tính",
+          "operand:Float Giá trị phép tính",
+          "multiply:Float Hệ số nhân cuối",
+          "divide:Float Hệ số chia cuối",
+          "final_add:Float Cộng/trừ cuối",
+          "qty_per_set:Float*! Số lượng mỗi bộ",
+          "rounding:Select(NONE,ROUND,CEIL,FLOOR) Làm tròn",
+          "precision:Int Số chữ số",
+          "formula_json:Long Text Công thức canonical JSON",
+          "formula_display:Data Công thức hiển thị",
+          "rule_version:Int*! Phiên bản",
+          "applicability:Table(BOM Rule Applicability) Áp dụng cho",
+          {
+            "//": "SOURCE = trích từ bảng tính nguồn, chưa ai duyệt. Không tự đổi sang OWNER_CONFIRMED.",
+            fieldname: "authority_type", label: "Nguồn thẩm quyền", fieldtype: "Select",
+            options: "SOURCE\nOWNER_CONFIRMED\nENGINEERING_INFERENCE",
+            required: true, default: "SOURCE",
+          },
+          "source_sheet:Data Sheet nguồn",
+          "source_row:Int Dòng nguồn",
+          "source_formula_text:Small Text Công thức nguồn gốc",
+          "source_formula_code:Data Mã công thức nguồn",
+          "source_note:Small Text Ghi chú nguồn / xác nhận",
+          "confirmed_by:Data Người xác nhận",
+          "confirmed_at:Datetime Thời điểm xác nhận",
+          "disabled:Check Ngưng dùng",
+        ],
+        permissions: permMfg,
+      },
+      {
+        name: "BOM Rule Applicability",
+        child: true,
+        label: "Áp dụng cho",
+        group: "Danh mục",
+        naming: "autoincrement",
+        fields: [
+          "scope_type:Select(BOM,ITEM,ITEM_GROUP,DOOR_TYPE,GENERIC)*! Phạm vi",
+          {
+            fieldname: "parent_item", label: "Mặt hàng cha", fieldtype: "Link", options: "Item",
+            depends_on: "eval:doc.scope_type == 'ITEM'", surface: "quick",
+          },
+          {
+            fieldname: "parent_item_group", label: "Nhóm hàng cha", fieldtype: "Link", options: "Item Group",
+            link_filters: '{"is_group":0,"disabled":0}',
+            depends_on: "eval:doc.scope_type == 'ITEM_GROUP'", surface: "quick",
+          },
+          {
+            fieldname: "door_type", label: "Loại cửa", fieldtype: "Select",
+            options: "\nCửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường\nCửa tấm liền Úc",
+            depends_on: "eval:doc.scope_type == 'DOOR_TYPE'", surface: "quick",
+          },
+          "component_item:Link(Item)*! Thành phần con",
+          "bom:Link(Bill of Materials) BOM",
+          "priority:Int=(0) Ưu tiên",
+          "effective_from:Date Hiệu lực từ",
+          "effective_to:Date Hiệu lực đến",
+          "note:Data Ghi chú",
+          "disabled:Check Ngưng dùng",
+        ],
+        permissions: permMfg,
+        form: { fields: ["scope_type", "parent_item", "parent_item_group", "door_type", "component_item", "bom", "priority", "effective_from", "effective_to", "note", "disabled"] },
+        quickEntry: { fields: ["scope_type", "component_item"] },
+      },
+    );
+    note("DANH MỤC · +BOM Rule (+child Applicability) — hết sống ngoài brief");
+  }
+
+  // ── 3. Một bảng màu, không hai ──
+  // ALUMDOOR_COLOR_CATALOG là nguồn luật (25 màu: 18 STĐ + 5 mạ + THÔ + VÂN GỖ). Fixture của
+  // brief nguồn còn giữ thêm 22 slug ASCII của CHÍNH các màu đó. Giữ cả hai không phải là
+  // "an toàn hơn": nó tạo hai vị trí tồn cho một màu, và không có gì báo khi ai đó chọn nhầm.
+  {
+    const before = brief.fixtures.filter((f) => f.type === "Item Color").length;
+    const canonical = new Set(ALUMDOOR_COLOR_CATALOG.map((c) => c.code));
+    brief.fixtures = brief.fixtures.filter((f) => f.type !== "Item Color" || canonical.has(f.name));
+    const after = brief.fixtures.filter((f) => f.type === "Item Color").length;
+    note(`DANH MỤC · Item Color: ${before} → ${after} fixture (bỏ ${before - after} bản sao slug ASCII)`);
+  }
+
+  // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──
+  // `menu: false` chứ không xoá doctype: xoá thì bản ghi cũ thành mồ côi — vẫn nằm trong kho
+  // dữ liệu nhưng không còn schema nào mô tả chúng. Cả bốn đang 0 bản ghi nên không mất gì,
+  // nhưng luật vẫn là luật.
+  {
+    const offMenu = ["Material Grade", "Item Attribute", "Brand", "Manufacturer"];
+    for (const name of offMenu) {
+      const d = brief.doctypes.find((x) => x.name === name);
+      if (d) d.menu = false;
+    }
+    const dropped = new Set(offMenu);
+    brief.navigation.items = brief.navigation.items.filter((k) => !dropped.has(k));
+    note(`DANH MỤC · menu:false cho ${offMenu.length} doctype rỗng (không tài liệu nào đòi)`);
+  }
+
+  // ── 5. Nav: mục mới phải có chỗ đứng ──
+  for (const name of ["Pricing Scope", "BOM Rule"]) {
+    if (!brief.navigation.items.includes(name)) brief.navigation.items.push(name);
+  }
+
+  // ── 6. Bản lá ra khỏi code, thành danh mục ──
+  // BRD §4.1 gọi đây là "bảng quyết định sinh tử" và khai nó là danh mục có PK `ma`. Nó đang
+  // là hằng SLAT_PROFILES trong slats.ts ⇒ chủ xưởng không thêm mã lá mới được, và hai
+  // trường BRD đòi (`rong_toi_da_mm`, `trong_luong_kg_m2`) không có chỗ nào để tồn tại.
+  if (!hasDoctype("Quy cách cửa")) {
+    brief.doctypes.push({
+      "//": [
+        "buoc_la_m và be_rong_nan_mm là HAI đại lượng, không được gộp. Bảng giá gọi AL70 là",
+        "'bản lá 70' (bề rộng nan) nhưng chia lá phải dùng 0,068 — lấy nhầm là lệch 2 lá mỗi bộ.",
+      ],
+      name: "Quy cách cửa",
+      label: "Bản lá theo mã nhôm",
+      icon: "ruler",
+      group: "Danh mục",
+      naming: "field:ma",
+      title: "ma",
+      list: ["ma", "dong_cua", "doi", "buoc_la_m", "be_rong_nan_mm", "rong_toi_da_mm", "disabled"],
+      search: ["ma", "ghi_chu"],
+      fields: [
+        "ma:Data*! Mã nhôm",
+        "dong_cua:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Dòng cửa",
+        {
+          "//": "Đời sản phẩm (AL548N vs AL548 CŨ), KHÔNG phải nhôm mới hay đã dùng. Hai đời chênh bản lá tới 10%.",
+          fieldname: "doi", label: "Đời sản phẩm", fieldtype: "Select", options: "\nMỚI\nCŨ\nTĐ",
+        },
+        {
+          "//": "Ước số CHIA khi gài chồng. Đây là con số quyết định số lá — không phải bề rộng nan.",
+          fieldname: "buoc_la_m", label: "Bản lá / ước số chia (m)", fieldtype: "Float", required: true,
+        },
+        {
+          "//": "CHỈ để nhận diện mã và tra giá. Không bao giờ dùng để chia lá.",
+          fieldname: "be_rong_nan_mm", label: "Bề rộng nan (mm)", fieldtype: "Int",
+        },
+        {
+          "//": [
+            "Chặn bán cửa rộng hơn số này. BRD nêu dải 4.000 → 7.600 cho cả bảng nhưng KHÔNG",
+            "cho con số theo từng mã, nên fixture để trống. Trống = chưa chặn, không phải",
+            "'không giới hạn' — điền một con số đại diện ở đây là bịa ra một luật chặn bán.",
+          ],
+          fieldname: "rong_toi_da_mm", label: "Rộng tối đa (mm)", fieldtype: "Int",
+        },
+        {
+          "//": "Lá đầu chiếm chỗ đúng một lá ruột. AL70 và AL71 không trừ vì đếm TỔNG số lá.",
+          fieldname: "tru_mot_la", label: "Trừ một lá", fieldtype: "Check", default: 1,
+        },
+        "trong_luong_kg_m2:Float Trọng lượng (kg/m2) — dùng cho công thức mua vào",
+        "nguon:Data*! Nguồn số liệu",
+        "ghi_chu:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+    });
+    brief.fixtures.push(
+      ...ALUMDOOR_SLAT_CATALOG.map((row) => ({
+        type: "Quy cách cửa",
+        name: row.ma,
+        data: slatCatalogFixtureData(row),
+      })),
+    );
+    if (!brief.navigation.items.includes("Quy cách cửa")) brief.navigation.items.push("Quy cách cửa");
+    note(`DANH MỤC · +Quy cách cửa (${ALUMDOOR_SLAT_CATALOG.length} mã bản lá ra khỏi slats.ts)`);
+  }
+
+  // ── 7. Nguyên nhân cửa lỗi ──
+  // BRD §4.15. Trường quyết định là `ben_chiu_trach_nhiem`: không có nó thì câu hỏi
+  // "tháng này mất bao nhiêu tiền vì cắt sai" — nỗi đau #1 của xưởng — không có dữ liệu
+  // để trả lời. Khác hẳn `Lý do huỷ` (huỷ chứng từ) và `Nguyên nhân chênh lệch` (kiểm kê).
+  if (!hasDoctype("Nguyên nhân cửa lỗi")) {
+    brief.doctypes.push({
+      name: "Nguyên nhân cửa lỗi",
+      label: "Nguyên nhân cửa lỗi",
+      icon: "triangle-alert",
+      group: "Danh mục",
+      naming: "field:reason_code",
+      title: "reason_name",
+      list: ["reason_code", "reason_name", "nhom_nguyen_nhan", "ben_chiu_trach_nhiem", "disabled"],
+      search: ["reason_code", "reason_name"],
+      fields: [
+        "reason_code:Data*! Mã nguyên nhân",
+        "reason_name:Data*! Tên nguyên nhân",
+        "nhom_nguyen_nhan:Select(Sản xuất,Vật tư,Bán hàng,Khách)*! Nhóm nguyên nhân",
+        {
+          "//": "Bên chịu là thứ biến danh mục này thành câu trả lời được bằng tiền, không chỉ là nhãn phân loại.",
+          fieldname: "ben_chiu_trach_nhiem", label: "Bên chịu trách nhiệm", fieldtype: "Select",
+          options: "Xưởng\nNhà cung cấp\nSale\nKhách hàng", required: true,
+        },
+        "chi_phi_uoc_tinh:Currency Chi phí ước tính mặc định",
+        "sort_order:Int=(0) Thứ tự",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+    });
+    // Seed đúng 12 dòng của BRD §4.15, không thêm bớt.
+    const DEFECTS = [
+      ["SX-CAT-SO-LA", "Cắt sai số lá", "Sản xuất", "Xưởng"],
+      ["SX-CAT-KICH-THUOC", "Cắt sai kích thước", "Sản xuất", "Xưởng"],
+      ["SX-SON-LOI", "Sơn lỗi", "Sản xuất", "Xưởng"],
+      ["SX-LAP-SAI-PK", "Lắp sai phụ kiện", "Sản xuất", "Xưởng"],
+      ["VT-NHOM-LOI", "Nhôm lỗi từ nhà cung cấp", "Vật tư", "Nhà cung cấp"],
+      ["VT-PK-LOI", "Phụ kiện lỗi", "Vật tư", "Nhà cung cấp"],
+      ["VT-SON-SAI-MAU", "Sơn không đạt màu", "Vật tư", "Nhà cung cấp"],
+      ["BH-DO-SAI", "Nhận đo sai", "Bán hàng", "Sale"],
+      ["BH-NHAP-SAI-QUY-CACH", "Nhập nhầm quy cách", "Bán hàng", "Sale"],
+      ["KH-DOI-Y", "Khách đổi ý sau khi đã cắt", "Khách", "Khách hàng"],
+      ["KH-DO-SAI-O-CHO", "Khách đo sai ô chờ", "Khách", "Khách hàng"],
+    ];
+    brief.fixtures.push(...DEFECTS.map(([code, name, group, owner], index) => ({
+      type: "Nguyên nhân cửa lỗi",
+      name: code,
+      data: {
+        reason_code: code, reason_name: name, nhom_nguyen_nhan: group,
+        ben_chiu_trach_nhiem: owner, sort_order: (index + 1) * 10, disabled: false,
+      },
+    })));
+    if (!brief.navigation.items.includes("Nguyên nhân cửa lỗi")) brief.navigation.items.push("Nguyên nhân cửa lỗi");
+    note(`DANH MỤC · +Nguyên nhân cửa lỗi (${DEFECTS.length} nguyên nhân, có bên chịu trách nhiệm)`);
+  }
+
+  // ── 8. Chốt chặn: danh mục bản lá KHÔNG được trôi dạt khỏi bảng đang thi hành ──
+  // Đây chính là kiểu lỗi đã sinh ra quyển sổ thứ hai: một luật viết ở hai nơi rồi hai nơi
+  // đi lệch nhau. Danh mục và SLAT_PROFILES phải khớp từng con số, kiểm ngay lúc sinh brief.
+  {
+    const fixtures = brief.fixtures.filter((f) => f.type === "Quy cách cửa");
+    const lệch = [];
+    for (const row of ALUMDOOR_SLAT_CATALOG) {
+      const fx = fixtures.find((f) => f.name === row.ma);
+      if (!fx) { lệch.push(`${row.ma}: thiếu fixture`); continue; }
+      if (fx.data.buoc_la_m !== row.buoc_la_m) lệch.push(`${row.ma}: bản lá ${fx.data.buoc_la_m} ≠ ${row.buoc_la_m}`);
+      if (Boolean(fx.data.tru_mot_la) !== Boolean(row.tru_mot_la)) lệch.push(`${row.ma}: trừ-một-lá lệch`);
+    }
+    if (lệch.length) throw new Error(`Danh mục bản lá lệch bảng thi hành:\n  ${lệch.join("\n  ")}`);
+    note(`chốt chặn: ${fixtures.length} mã bản lá khớp bảng đang thi hành`);
+  }
+}
 
 // ══════════ CHỐT CHẶN — không để G2 xảy ra lần nữa ══════════
 // G2 lọt được vì thêm trường bắt buộc mà quên fixture, và dry-run KHÔNG bắt (nó biên dịch cấu

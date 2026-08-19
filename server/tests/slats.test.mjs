@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { slatCount, australianSlatCount, profileKey, SLAT_PROFILES } from "../dist/apps-src/alumdoor-worker/src/slats.js";
+import { readFile } from "node:fs/promises";
+import { slatCount, australianSlatCount, profileKey, slatProfilesFromCatalog, SLAT_PROFILES } from "../dist/apps-src/alumdoor-worker/src/slats.js";
 
 /**
  * Số lá là chỗ sai một đơn vị thì hỏng một bộ nhôm, và nhôm đã cắt không nối lại được.
@@ -118,4 +119,47 @@ test("cửa Úc motor ngoài có tự dừng dùng hệ số riêng 1,3", () => 
 
 test("cửa Úc: loại cửa lạ bị từ chối", () => {
   assert.throws(() => australianSlatCount("cửa gì đó", 3), /không nhận ra/);
+});
+
+/**
+ * Danh mục `Quy cách cửa` và bảng biên dịch sẵn phải khớp từng con số.
+ *
+ * Đây đúng là kiểu lỗi đã sinh ra quyển sổ thứ hai: một luật viết ở hai nơi rồi hai nơi trôi
+ * dạt. Máy sinh brief đã có chốt chặn cùng nội dung; test này chặn ở chiều còn lại, phòng khi
+ * ai đó sửa SLAT_PROFILES mà quên chạy lại máy sinh.
+ */
+test("fixture bản lá trong brief khớp bảng đang thi hành", async () => {
+  const brief = JSON.parse(await readFile(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));
+  const fixtures = brief.fixtures.filter((entry) => entry.type === "Quy cách cửa");
+  assert.equal(fixtures.length, Object.keys(SLAT_PROFILES).length);
+  for (const fixture of fixtures) {
+    const spec = SLAT_PROFILES[fixture.name];
+    assert.ok(spec, `${fixture.name} có trong danh mục nhưng không có trong bảng thi hành`);
+    assert.equal(fixture.data.buoc_la_m, spec.divisor, `${fixture.name}: bản lá lệch`);
+    assert.equal(Boolean(fixture.data.tru_mot_la), spec.subtractOne, `${fixture.name}: trừ-một-lá lệch`);
+  }
+});
+
+test("danh mục của tenant THẮNG bảng biên dịch sẵn", () => {
+  // Chủ xưởng sửa bản lá trong danh mục là có hiệu lực ngay, không phải chờ deploy.
+  const table = slatProfilesFromCatalog([
+    { ma: "AL548N", buoc_la_m: 0.06, tru_mot_la: 1 },
+  ]);
+  assert.equal(slatCount("AL548", "MỚI", 3, table).divisor, 0.06);
+  assert.equal(slatCount("AL548", "MỚI", 3).divisor, 0.055, "không truyền bảng thì vẫn dùng hạt giống");
+});
+
+test("danh mục rỗng thì lùi về hạt giống chứ không làm chết công thức", () => {
+  assert.equal(slatCount("AL548", "MỚI", 3, {}).divisor, 0.055);
+});
+
+test("dòng danh mục khai dở bị bỏ qua, không kéo đổ cả bảng", () => {
+  const table = slatProfilesFromCatalog([
+    { ma: "", buoc_la_m: 0.05 },
+    { ma: "AL9999", buoc_la_m: 0 },
+    { ma: "AL8888", buoc_la_m: -1 },
+    { ma: "AL7777", buoc_la_m: 0.05, disabled: 1 },
+    { ma: "AL548N", buoc_la_m: 0.055, tru_mot_la: 1 },
+  ]);
+  assert.deepEqual(Object.keys(table), ["AL548N"]);
 });

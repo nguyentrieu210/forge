@@ -2,6 +2,7 @@
 
 ## Unreleased — Alumdoor UI
 
+- Bỏ lối tắt “Nhập khách hàng” khỏi trang Danh mục; chức năng nhập liệu nền vẫn giữ nguyên.
 - Thanh Bán hàng chỉ giữ `Đơn hàng` và `Phiếu giao hàng`; route danh sách Phiếu giao hàng mở thẳng `SalesDeliveryWorkspace.tsx`, còn route có mã phiếu vẫn mở chi tiết chứng từ. Action nhiều Đơn bán đã nối vào Worker local để tải nguồn và xem FIFO.
 - Tách đúng hai field kích thước `Rộng PB ray` và `Rộng PB nhựa` trên dòng bán hàng: khách Lẻ nhập field PB ray, Đại lý nhập field PB nhựa, không còn đổi nhãn chung trên `width_m`; `Cao PB` là cột chiều cao riêng. Backend chỉ chuẩn hoá field đang dùng sang `width_m` để công thức/BOM hiện hữu tiếp tục chạy.
 - Vật tư BOM của dòng bán hàng được xổ trực tiếp thành các dòng trắng cùng bộ cột với mặt hàng chính và STT con `1.1`, `1.2`, nằm trước chiết khấu/phụ thu; ô chọn được gộp dọc thành nhãn `BOM`. SL theo số bộ cửa, ĐVT lấy theo ĐVT bán của vật tư, khối lượng quy đổi từ định mức BOM; ĐVT sản xuất chỉ giữ nội bộ. Kích thước chỉ kế thừa khi quy cách/công thức của chính vật tư cần, màu không còn bị sao chép hàng loạt; đơn giá/thành tiền để `—`. Dòng cha dùng nền nhấn để tách nhóm; nhập Rộng/Cao tự kích hoạt tính BOM sau một nhịp ngắn, không cần rời khỏi ô cuối.

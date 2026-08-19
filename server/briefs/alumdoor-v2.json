@@ -32,8 +32,12 @@
     "   tách chi tiết, PDF nói một lần. Đọc theo cấu tạo cũng hợp: -1 ở các mã khác là vì lá",
     "   đầu chiếm chỗ một lá ruột, còn AL70 đếm TỔNG số lá nên không trừ.",
     "",
-    "2. AL71N — bản lá 0,057, theo cột CÔNG THỨC chứ không theo cột BẢN LÁ (0,055). Cột công",
-    "   thức là thứ kế toán thực sự tính, và 0,057 khớp với AL501N cùng đời N.",
+    "2. AL71N — bản lá 0,055, theo cột BẢN LÁ. ĐẢO LẠI quyết định cũ (0,057) ngày 2026-08-15.",
+    "   Lý do cũ là 'cột công thức mới là thứ kế toán thực sự tính'. Đem chính sổ kế toán ra tra",
+    "   thì nó bác lại: dòng `TP LÁ RUỘT AL71N VK — AL71 9 LÁ RUỘT` ghi cao 0,495 m, tức",
+    "   0,495 / 9 = 0,055. Sổ nhật ký là tiền đã thu, thắng mọi bảng tra.",
+    "   Cửa CPB 3 m: 50 lá với 0,057 và 52 lá với 0,055 — lệch 2 lá mỗi bộ.",
+    "   Nguồn thi hành: server/apps-src/alumdoor-worker/src/slats.ts (SLAT_PROFILES.AL71N).",
     "",
     "3. TÌNH TRẠNG mới/cũ = ĐỜI SẢN PHẨM (AL548N vs AL548 CŨ), không phải nhôm mới hay đã",
     "   dùng. Bằng chứng: bảng công thức phân biệt N/CŨ với bản lá chênh 10% (0,055 và 0,05),",
@@ -376,31 +380,6 @@
       "preview": "alumdoor.sales.preview_delivery | Xem phần chưa giao",
       "commit": "alumdoor.sales.delivery_from_order | Tạo phiếu xuất nháp | Tạo phiếu xuất nháp cho phần hàng còn lại?",
       "resultTable": "items"
-    },
-    {
-      "//": "NHIỀU ĐƠN BÁN → MỘT PHIẾU GIAO. Mỗi dòng giữ exact source row; giá vốn xem theo lớp FIFO và được tính lại lúc submit.",
-      "name": "giao-nhieu-don-fifo",
-      "label": "Kho giao hàng nhiều đơn",
-      "menu": true,
-      "icon": "truck",
-      "group": "Bán hàng",
-      "description": "Chọn nhiều Đơn bán cùng khách/công ty/tiền tệ, xem phần còn phải giao và lớp FIFO rồi tạo đúng một Phiếu giao nháp.",
-      "permission": "Delivery Note",
-      "fields": [
-        "customer:Link(Customer)! Khách hàng",
-        {
-          "fieldname": "warehouse",
-          "label": "Kho xuất (trống = theo từng dòng đơn)",
-          "fieldtype": "Link",
-          "options": "Warehouse",
-          "link_filters": "{\"is_group\":0,\"disabled\":0}"
-        },
-        "posting_at:Datetime!=(Now) Thời điểm giao",
-        "install_address:Small Text Địa chỉ giao / lắp đặt"
-      ],
-      "preview": "alumdoor.sales.preview_bulk_delivery | Tải đơn còn phải giao / xem FIFO",
-      "commit": "alumdoor.sales.bulk_delivery | Tạo một Phiếu giao nháp | Tạo một Phiếu giao nháp cho các Đơn bán đã chọn?",
-      "resultTable": "source_lines"
     },
     {
       "//": "CHỤP ẢNH → DÒNG HÀNG. NCC gửi bảng giá qua Zalo, thợ chụp phiếu giao lúc hàng về.",
@@ -751,7 +730,6 @@
       "Item Group",
       "UOM",
       "Bill of Materials",
-      "BOM Template",
       "Production Standard",
       "action:lap-tai-san-xuat",
       "Warehouse",
@@ -763,19 +741,19 @@
       "Cutting Policy",
       "Measurement Profile",
       "Item Color",
-      "Material Grade",
       "Material Specification",
-      "Item Attribute",
       "Supplier Item",
-      "Brand",
-      "Manufacturer",
       "Cut Order",
       "Stock Reservation",
       "Stock Reconciliation",
       "Lý do huỷ",
       "Nguyên nhân chênh lệch",
       "Geometry Field",
-      "Geometry Profile"
+      "Geometry Profile",
+      "Pricing Scope",
+      "BOM Rule",
+      "Quy cách cửa",
+      "Nguyên nhân cửa lỗi"
     ]
   },
   "fixtures": [
@@ -1716,270 +1694,6 @@
       }
     },
     {
-      "type": "Item Color",
-      "name": "CAFE",
-      "data": {
-        "color_code": "CAFE",
-        "color_name": "[DEPRECATED-CAFE]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XANH_NGOC",
-      "data": {
-        "color_code": "XANH_NGOC",
-        "color_name": "[DEPRECATED-XANH_NGOC]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "MIDNIGHT_BLUE",
-      "data": {
-        "color_code": "MIDNIGHT_BLUE",
-        "color_name": "[DEPRECATED-MIDNIGHT_BLUE]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "TRANG",
-      "data": {
-        "color_code": "TRANG",
-        "color_name": "[DEPRECATED-TRANG]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XAM_MO",
-      "data": {
-        "color_code": "XAM_MO",
-        "color_name": "[DEPRECATED-XAM_MO]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "VANG_KEM",
-      "data": {
-        "color_code": "VANG_KEM",
-        "color_name": "[DEPRECATED-VANG_KEM]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "GHI_SAN",
-      "data": {
-        "color_code": "GHI_SAN",
-        "color_name": "[DEPRECATED-GHI_SAN]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "NAU_XINGFA",
-      "data": {
-        "color_code": "NAU_XINGFA",
-        "color_name": "[DEPRECATED-NAU_XINGFA]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XAM_XINGFA",
-      "data": {
-        "color_code": "XAM_XINGFA",
-        "color_name": "[DEPRECATED-XAM_XINGFA]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "DEN_XINGFA",
-      "data": {
-        "color_code": "DEN_XINGFA",
-        "color_name": "[DEPRECATED-DEN_XINGFA]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "VANG_KEM_BONG",
-      "data": {
-        "color_code": "VANG_KEM_BONG",
-        "color_name": "[DEPRECATED-VANG_KEM_BONG]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XANH_NGOC_BONG",
-      "data": {
-        "color_code": "XANH_NGOC_BONG",
-        "color_name": "[DEPRECATED-XANH_NGOC_BONG]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XANH_LA_CAY",
-      "data": {
-        "color_code": "XANH_LA_CAY",
-        "color_name": "[DEPRECATED-XANH_LA_CAY]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XAM_LONG_CHUOT",
-      "data": {
-        "color_code": "XAM_LONG_CHUOT",
-        "color_name": "[DEPRECATED-XAM_LONG_CHUOT]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "DO_DO",
-      "data": {
-        "color_code": "DO_DO",
-        "color_name": "[DEPRECATED-DO_DO]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "KEM_SUA",
-      "data": {
-        "color_code": "KEM_SUA",
-        "color_name": "[DEPRECATED-KEM_SUA]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XANH_DUONG",
-      "data": {
-        "color_code": "XANH_DUONG",
-        "color_name": "[DEPRECATED-XANH_DUONG]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XANH_NGOC_VANG_KEM_MM",
-      "data": {
-        "color_code": "XANH_NGOC_VANG_KEM_MM",
-        "color_name": "[DEPRECATED-XANH_NGOC_VANG_KEM_MM]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XAM_TRANG_MM",
-      "data": {
-        "color_code": "XAM_TRANG_MM",
-        "color_name": "[DEPRECATED-XAM_TRANG_MM]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "GHI_UC_KEM_UC_MM",
-      "data": {
-        "color_code": "GHI_UC_KEM_UC_MM",
-        "color_name": "[DEPRECATED-GHI_UC_KEM_UC_MM]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XANH_REU_CAFE_MM",
-      "data": {
-        "color_code": "XANH_REU_CAFE_MM",
-        "color_name": "[DEPRECATED-XANH_REU_CAFE_MM]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
-      "type": "Item Color",
-      "name": "XAM_XANH_NGOC_MM",
-      "data": {
-        "color_code": "XAM_XANH_NGOC_MM",
-        "color_name": "[DEPRECATED-XAM_XANH_NGOC_MM]",
-        "usage_scope": "Mua hàng",
-        "applies_to_groups": [],
-        "disabled": true,
-        "surface_finish": "THO"
-      }
-    },
-    {
       "type": "Surface Finish",
       "name": "THO",
       "data": {
@@ -2407,99 +2121,99 @@
         "priority": 100,
         "disabled": false,
         "source_status": "READY_WITH_ACTUALS",
-        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 686-711",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 687-712",
         "required_context_fields_json": "[]",
         "required_component_keys_json": "[\"LEAF_SHEET\",\"T_BRACKET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"SHAFT_34_WEIGHT\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
         "required_actual_component_keys_json": "[\"BOTTOM_SEAL\",\"FOAM_45CM\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"BOTTOM_SEAL\":[\"NVL-RONDAYUC\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
-        "deferred_components_json": "[{\"source_row\":691,\"key\":\"BOTTOM_SEAL\",\"reason\":\"Nguồn ghi 'xem lại'; chưa được phép chốt công thức.\"},{\"source_row\":693,\"key\":\"FOAM_45CM\",\"reason\":\"Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":695,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[696,697,698,699,700,701,702,703],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":706,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":707,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":710,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":711,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Chuẩn hóa trực tiếp block ĐM 686-711. Dòng không đủ công thức được bắt buộc nhập actual theo một bộ; thiếu slot thì materializer chặn.",
+        "deferred_components_json": "[{\"source_row\":692,\"key\":\"BOTTOM_SEAL\",\"reason\":\"Nguồn ghi 'xem lại'; chưa được phép chốt công thức.\"},{\"source_row\":694,\"key\":\"FOAM_45CM\",\"reason\":\"Nguồn có công thức nhưng chưa chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":696,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[697,698,699,700,701,702,703,704],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":707,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":708,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":711,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":712,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Chuẩn hóa trực tiếp block ĐM 687-712. Source-row lineage đối chiếu extractor thực tế; dòng không đủ công thức vẫn bắt buộc actual.",
         "component_rules": [
           {
-            "rule_code": "SRC-687-LEAF",
+            "rule_code": "SRC-688-LEAF",
             "component_key": "LEAF_SHEET",
             "item_code": "NVL-TON3.8D-XN-VK",
-            "source_row": 687,
+            "source_row": 688,
             "source_uom": "KG/M2",
-            "source_formula": "Caopb x (rpbray-30) x SL x 3,6; Production tách từng bộ nên SL=1.",
+            "source_formula": "ĐM: Caopb x (rpbray-30) x SL x 3,6. Project contract chuẩn hóa rộng cắt Úc = PB ray - 0,03 m; Production tách từng bộ nên SL=1.",
             "sequence": 10,
-            "quantity_formula_json": "{\"base\":{\"kind\":\"PRODUCT\",\"left\":{\"field\":\"PB_CAO\"},\"right\":{\"field\":\"PB_RONG\",\"offset\":-0.3}},\"multiply\":3.6}"
+            "quantity_formula_json": "{\"base\":{\"kind\":\"PRODUCT\",\"left\":{\"field\":\"PB_CAO\"},\"right\":{\"field\":\"PB_RAY_RONG\",\"offset\":-0.03}},\"multiply\":3.6}"
           },
           {
-            "rule_code": "SRC-688-GIA-T",
+            "rule_code": "SRC-689-GIA-T",
             "component_key": "T_BRACKET",
             "item_code": "NVL-GIAT",
-            "source_row": 688,
+            "source_row": 689,
             "source_uom": "CẶP",
             "source_formula": "1 bộ 1 cặp.",
             "sequence": 20,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
           },
           {
-            "rule_code": "SRC-689-PULY-GAI",
+            "rule_code": "SRC-690-PULY-GAI",
             "component_key": "SPIKE_PULLEY_WEIGHT",
             "item_code": "NVL-PULYGAI",
-            "source_row": 689,
+            "source_row": 690,
             "source_uom": "KG/M2",
             "source_formula": "Diện tích x SL x 0,126; Production tách từng bộ nên SL=1.",
             "sequence": 30,
             "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"billable_area_sqm\"},\"multiply\":0.126}"
           },
           {
-            "rule_code": "SRC-690-V-DAY",
+            "rule_code": "SRC-691-V-DAY",
             "component_key": "BOTTOM_BAR_WEIGHT",
             "item_code": "NVL-VDAY-TDU",
-            "source_row": 690,
+            "source_row": 691,
             "source_uom": "KG/M",
-            "source_formula": "(rộng pbray - 30cm) x 0,6 x SL; Production tách từng bộ nên SL=1.",
+            "source_formula": "ĐM: (rộng pbray-30) x 0,6 x SL. Project contract chuẩn hóa phần trừ = 0,03 m; Production tách từng bộ nên SL=1.",
             "sequence": 40,
-            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\",\"offset\":-0.3},\"multiply\":0.6}"
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RAY_RONG\",\"offset\":-0.03},\"multiply\":0.6}"
           },
           {
-            "rule_code": "SRC-692-RAY-U70",
+            "rule_code": "SRC-693-RAY-U70",
             "component_key": "RAY_U70_WEIGHT",
             "item_code": "NVL-TOLE1.2x190-KRON",
-            "source_row": 692,
+            "source_row": 693,
             "source_uom": "KG/M",
             "source_formula": "(chiều cao - 10cm) x SL x 2 ray x 1,78; Production tách từng bộ nên SL=1.",
             "sequence": 50,
             "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_CAO\",\"offset\":-0.1},\"multiply\":3.56}"
           },
           {
-            "rule_code": "SRC-694-TRUC-34",
+            "rule_code": "SRC-695-TRUC-34",
             "component_key": "SHAFT_34_WEIGHT",
             "item_code": "NVL-TRUC34",
-            "source_row": 694,
+            "source_row": 695,
             "source_uom": "KG/M",
             "source_formula": "(rộng pbray + 40cm) x 1,7 x SL; Production tách từng bộ nên SL=1.",
             "sequence": 60,
-            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\",\"offset\":0.4},\"multiply\":1.7}"
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RAY_RONG\",\"offset\":0.4},\"multiply\":1.7}"
           },
           {
-            "rule_code": "SRC-705-CUM-HAM",
+            "rule_code": "SRC-706-CUM-HAM",
             "component_key": "PLASTIC_STOP_CLAMP",
             "item_code": "NVL-CHNHUA",
-            "source_row": 705,
+            "source_row": 706,
             "source_uom": "CÁI",
             "source_formula": "1 bộ x 2 cái.",
             "sequence": 70,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-708-GOI-SAT",
+            "rule_code": "SRC-709-GOI-SAT",
             "component_key": "STEEL_BEARING",
             "item_code": "NVL-GOIFE",
-            "source_row": 708,
+            "source_row": 709,
             "source_uom": "CÁI",
             "source_formula": "1 bộ x 2 cái.",
             "sequence": 80,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-709-BAT-KHOA",
+            "rule_code": "SRC-710-BAT-KHOA",
             "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
             "item_code": "NVL-BKAN",
-            "source_row": 709,
+            "source_row": 710,
             "source_uom": "KG/CẶP",
             "source_formula": "1 bộ x 4 cặp x 0,1925.",
             "sequence": 90,
@@ -2518,59 +2232,59 @@
         "priority": 100,
         "disabled": false,
         "source_status": "READY_WITH_ACTUALS",
-        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 731-755",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 732-756",
         "required_context_fields_json": "[]",
         "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-XN-VK\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
-        "deferred_components_json": "[{\"source_row\":732,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XN-VK có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":734,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":735,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":737,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":738,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":739,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":740,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[741,742,743,744,745,746,747,748],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":750,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":751,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":754,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":755,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 731-755. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XN-VK.",
+        "deferred_components_json": "[{\"source_row\":733,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XN-VK có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":735,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":736,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":738,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":739,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":740,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":741,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[742,743,744,745,746,747,748,749],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":751,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":752,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":755,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":756,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 732-756. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XN-VK.",
         "component_rules": [
           {
-            "rule_code": "SRC-733-GIA-T",
+            "rule_code": "SRC-734-GIA-T",
             "component_key": "T_BRACKET",
             "item_code": "NVL-GIAT",
-            "source_row": 733,
+            "source_row": 734,
             "source_uom": "CẶP",
             "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
             "sequence": 20,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
           },
           {
-            "rule_code": "SRC-736-RON-DAY",
+            "rule_code": "SRC-737-RON-DAY",
             "component_key": "BOTTOM_SEAL",
             "item_code": "NVL-RONDAYUC",
-            "source_row": 736,
+            "source_row": 737,
             "source_uom": "KG/M ngang",
             "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
             "sequence": 50,
-            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RAY_RONG\"},\"multiply\":0.0077}"
           },
           {
-            "rule_code": "SRC-749-CUM-HAM",
+            "rule_code": "SRC-750-CUM-HAM",
             "component_key": "PLASTIC_STOP_CLAMP",
             "item_code": "NVL-CHNHUA",
-            "source_row": 749,
+            "source_row": 750,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 70,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-752-GOI-SAT",
+            "rule_code": "SRC-753-GOI-SAT",
             "component_key": "STEEL_BEARING",
             "item_code": "NVL-GOIFE",
-            "source_row": 752,
+            "source_row": 753,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 80,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-753-BAT-KHOA",
+            "rule_code": "SRC-754-BAT-KHOA",
             "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
             "item_code": "NVL-BKAN",
-            "source_row": 753,
+            "source_row": 754,
             "source_uom": "KG/CẶP",
             "source_formula": "1 bộ x 4 cặp x 0,1925.",
             "sequence": 90,
@@ -2589,59 +2303,59 @@
         "priority": 100,
         "disabled": false,
         "source_status": "READY_WITH_ACTUALS",
-        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 756-780",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 757-781",
         "required_context_fields_json": "[]",
         "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-XR-CF\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
-        "deferred_components_json": "[{\"source_row\":757,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XR-CAFE có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":759,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":760,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":762,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":763,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":764,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":765,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[766,767,768,769,770,771,772,773],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":775,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":776,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":779,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":780,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 756-780. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XR-CF.",
+        "deferred_components_json": "[{\"source_row\":758,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D XR-CAFE có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":760,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":761,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":763,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":764,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":765,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":766,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[767,768,769,770,771,772,773,774],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":776,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":777,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":780,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":781,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 757-781. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-XR-CF.",
         "component_rules": [
           {
-            "rule_code": "SRC-758-GIA-T",
+            "rule_code": "SRC-759-GIA-T",
             "component_key": "T_BRACKET",
             "item_code": "NVL-GIAT",
-            "source_row": 758,
+            "source_row": 759,
             "source_uom": "CẶP",
             "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
             "sequence": 20,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
           },
           {
-            "rule_code": "SRC-761-RON-DAY",
+            "rule_code": "SRC-762-RON-DAY",
             "component_key": "BOTTOM_SEAL",
             "item_code": "NVL-RONDAYUC",
-            "source_row": 761,
+            "source_row": 762,
             "source_uom": "KG/M ngang",
             "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
             "sequence": 50,
-            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RAY_RONG\"},\"multiply\":0.0077}"
           },
           {
-            "rule_code": "SRC-774-CUM-HAM",
+            "rule_code": "SRC-775-CUM-HAM",
             "component_key": "PLASTIC_STOP_CLAMP",
             "item_code": "NVL-CHNHUA",
-            "source_row": 774,
+            "source_row": 775,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 70,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-777-GOI-SAT",
+            "rule_code": "SRC-778-GOI-SAT",
             "component_key": "STEEL_BEARING",
             "item_code": "NVL-GOIFE",
-            "source_row": 777,
+            "source_row": 778,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 80,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-778-BAT-KHOA",
+            "rule_code": "SRC-779-BAT-KHOA",
             "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
             "item_code": "NVL-BKAN",
-            "source_row": 778,
+            "source_row": 779,
             "source_uom": "KG/CẶP",
             "source_formula": "1 bộ x 4 cặp x 0,1925.",
             "sequence": 90,
@@ -2660,59 +2374,59 @@
         "priority": 100,
         "disabled": false,
         "source_status": "READY_WITH_ACTUALS",
-        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 781-805",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 782-806",
         "required_context_fields_json": "[]",
         "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-TR-XLC\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
-        "deferred_components_json": "[{\"source_row\":782,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D TR-XLC có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":784,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":785,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":787,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":788,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":789,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":790,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[791,792,793,794,795,796,797,798],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":800,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":801,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":804,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":805,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 781-805. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-TR-XLC.",
+        "deferred_components_json": "[{\"source_row\":783,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D TR-XLC có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":785,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":786,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":788,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":789,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":790,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":791,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[792,793,794,795,796,797,798,799],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":801,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":802,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":805,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":806,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 782-806. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-TR-XLC.",
         "component_rules": [
           {
-            "rule_code": "SRC-783-GIA-T",
+            "rule_code": "SRC-784-GIA-T",
             "component_key": "T_BRACKET",
             "item_code": "NVL-GIAT",
-            "source_row": 783,
+            "source_row": 784,
             "source_uom": "CẶP",
             "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
             "sequence": 20,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
           },
           {
-            "rule_code": "SRC-786-RON-DAY",
+            "rule_code": "SRC-787-RON-DAY",
             "component_key": "BOTTOM_SEAL",
             "item_code": "NVL-RONDAYUC",
-            "source_row": 786,
+            "source_row": 787,
             "source_uom": "KG/M ngang",
             "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
             "sequence": 50,
-            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RAY_RONG\"},\"multiply\":0.0077}"
           },
           {
-            "rule_code": "SRC-799-CUM-HAM",
+            "rule_code": "SRC-800-CUM-HAM",
             "component_key": "PLASTIC_STOP_CLAMP",
             "item_code": "NVL-CHNHUA",
-            "source_row": 799,
+            "source_row": 800,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 70,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-802-GOI-SAT",
+            "rule_code": "SRC-803-GOI-SAT",
             "component_key": "STEEL_BEARING",
             "item_code": "NVL-GOIFE",
-            "source_row": 802,
+            "source_row": 803,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 80,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-803-BAT-KHOA",
+            "rule_code": "SRC-804-BAT-KHOA",
             "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
             "item_code": "NVL-BKAN",
-            "source_row": 803,
+            "source_row": 804,
             "source_uom": "KG/CẶP",
             "source_formula": "1 bộ x 4 cặp x 0,1925.",
             "sequence": 90,
@@ -2731,59 +2445,59 @@
         "priority": 100,
         "disabled": false,
         "source_status": "READY_WITH_ACTUALS",
-        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 806-830",
+        "source_ref": "MS LIÊN BS.xlsx / ĐM / rows 807-831",
         "required_context_fields_json": "[]",
         "required_component_keys_json": "[\"T_BRACKET\",\"BOTTOM_SEAL\",\"PLASTIC_STOP_CLAMP\",\"STEEL_BEARING\",\"FLOOR_LOCK_BRACKET_WEIGHT\"]",
         "required_actual_component_keys_json": "[\"LEAF_SHEET\",\"SPIKE_PULLEY_WEIGHT\",\"BOTTOM_BAR_WEIGHT\",\"RAY_U70_WEIGHT\",\"FOAM_45CM\",\"SHAFT_34_WEIGHT\",\"PULLEY_34\",\"SPRING\",\"SPRING_STOP_ARM\",\"PULL_ROD\",\"SCREW_HEAD_PULLEY\",\"SCREW_2P_PULLEY\"]",
         "actual_component_allowed_items_json": "{\"LEAF_SHEET\":[\"NVL-TOLE0.42x598-KU-GU\"],\"SPIKE_PULLEY_WEIGHT\":[\"NVL-PULYGAI\"],\"BOTTOM_BAR_WEIGHT\":[\"NVL-VDAY-TDU\"],\"RAY_U70_WEIGHT\":[\"NVL-TOLE1.2x190-KRON\"],\"FOAM_45CM\":[\"NVL-XOP-N45\"],\"SHAFT_34_WEIGHT\":[\"NVL-TRUC34\"],\"PULLEY_34\":[\"NVL-PULYUC34\"],\"SPRING\":[\"NVL-LX-5.5 x 70 x 46V\",\"NVL-LX-5.5 x 70 x 50V\",\"NVL-LV-6.0 x 70 x 53V\",\"NVL-LV-6.5 x 80 x 63V\",\"NVL-LV-6.5 x 80 x 68V\",\"NVL-LV-7.0 x 90 x 65V\",\"NVL-LV-7.0 x 90 x 73V\",\"NVL-LV-7.0 x 90 x 83V\"],\"SPRING_STOP_ARM\":[\"NVL-VAIHAMXO\"],\"PULL_ROD\":[\"NVL-INOX\",\"NVL-NHUA\",\"NVL-MOC\"],\"SCREW_HEAD_PULLEY\":[\"NVL-VISDD-BANLO\"],\"SCREW_2P_PULLEY\":[\"NVL-VIS-BANLO2P\"]}",
-        "deferred_components_json": "[{\"source_row\":807,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D KU-GU có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":809,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":810,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":812,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":813,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":814,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":815,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[816,817,818,819,820,821,822,823],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":825,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":826,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":829,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":830,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
-        "note": "Factory nguồn KT 4.6D từ block 806-830. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-KU-GU.",
+        "deferred_components_json": "[{\"source_row\":808,\"key\":\"LEAF_SHEET\",\"reason\":\"ĐM CỬA ÚC KT 4.6D KU-GU có hệ số 4,4 KG/M2 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":810,\"key\":\"SPIKE_PULLEY_WEIGHT\",\"reason\":\"ĐM có hệ số 0,126 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":811,\"key\":\"BOTTOM_BAR_WEIGHT\",\"reason\":\"ĐM có hệ số 0,6 nhưng ô công thức trống; không suy diễn cách nhân.\"},{\"source_row\":813,\"key\":\"RAY_U70_WEIGHT\",\"reason\":\"ĐM ghi chiều cao - 10cm x số lượng nhưng không ghi rõ cách áp hệ số 1,78; nhập actual để tránh suy diễn.\"},{\"source_row\":814,\"key\":\"FOAM_45CM\",\"reason\":\"ĐM ghi (rộng/45cm)*2 nhưng không chỉ rõ quy tắc làm tròn số tấm.\"},{\"source_row\":815,\"key\":\"SHAFT_34_WEIGHT\",\"reason\":\"ĐM ghi rộng + 40cm nhưng không ghi rõ cách áp hệ số 1,7; nhập actual để tránh suy diễn.\"},{\"source_row\":816,\"key\":\"PULLEY_34\",\"reason\":\"Nguồn ghi 'trừ thực tế'; nhập actual theo một bộ.\"},{\"source_rows\":[817,818,819,820,821,822,823,824],\"key\":\"SPRING\",\"reason\":\"SKU và số lượng lò xo chọn theo thực tế; nhập actual theo một bộ.\"},{\"source_row\":826,\"key\":\"SPRING_STOP_ARM\",\"reason\":\"Phụ thuộc số lò xo thực tế; nhập actual theo một bộ.\"},{\"source_row\":827,\"key\":\"PULL_ROD\",\"reason\":\"Một ô mã nguồn chứa 3 NVL; nhập các NVL actual của cụm theo một bộ.\"},{\"source_row\":830,\"key\":\"SCREW_HEAD_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"},{\"source_row\":831,\"key\":\"SCREW_2P_PULLEY\",\"reason\":\"Số vít phụ thuộc số puly thực tế; nhập actual theo một bộ.\"}]",
+        "note": "Factory nguồn KT 4.6D từ block 807-831. Chỉ tự tính các dòng có ngữ nghĩa đủ rõ ngay trong block; các hệ số/công thức thiếu chi tiết bắt buộc nhập actual. Leaf nguồn: NVL-TOLE0.42x598-KU-GU.",
         "component_rules": [
           {
-            "rule_code": "SRC-808-GIA-T",
+            "rule_code": "SRC-809-GIA-T",
             "component_key": "T_BRACKET",
             "item_code": "NVL-GIAT",
-            "source_row": 808,
+            "source_row": 809,
             "source_uom": "CẶP",
             "source_formula": "Định mức nguồn = 1 cặp / một bộ.",
             "sequence": 20,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":1}}"
           },
           {
-            "rule_code": "SRC-811-RON-DAY",
+            "rule_code": "SRC-812-RON-DAY",
             "component_key": "BOTTOM_SEAL",
             "item_code": "NVL-RONDAYUC",
-            "source_row": 811,
+            "source_row": 812,
             "source_uom": "KG/M ngang",
             "source_formula": "ron đáy = chiều rộng pbray x 0,0077.",
             "sequence": 50,
-            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RONG\"},\"multiply\":0.0077}"
+            "quantity_formula_json": "{\"base\":{\"kind\":\"FIELD\",\"field\":\"PB_RAY_RONG\"},\"multiply\":0.0077}"
           },
           {
-            "rule_code": "SRC-824-CUM-HAM",
+            "rule_code": "SRC-825-CUM-HAM",
             "component_key": "PLASTIC_STOP_CLAMP",
             "item_code": "NVL-CHNHUA",
-            "source_row": 824,
+            "source_row": 825,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 70,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-827-GOI-SAT",
+            "rule_code": "SRC-828-GOI-SAT",
             "component_key": "STEEL_BEARING",
             "item_code": "NVL-GOIFE",
-            "source_row": 827,
+            "source_row": 828,
             "source_uom": "CÁI",
             "source_formula": "Định mức nguồn = 2 cái / một bộ.",
             "sequence": 80,
             "quantity_formula_json": "{\"base\":{\"kind\":\"CONSTANT\",\"value\":2}}"
           },
           {
-            "rule_code": "SRC-828-BAT-KHOA",
+            "rule_code": "SRC-829-BAT-KHOA",
             "component_key": "FLOOR_LOCK_BRACKET_WEIGHT",
             "item_code": "NVL-BKAN",
-            "source_row": 828,
+            "source_row": 829,
             "source_uom": "KG/CẶP",
             "source_formula": "1 bộ x 4 cặp x 0,1925.",
             "sequence": 90,
@@ -3311,16 +3025,16 @@
           },
           {
             "row_id": "FIELD-3",
-            "geometry_field": "CAT_LA_RONG",
-            "role": "CALCULATED",
+            "geometry_field": "LUOI_CAO",
+            "role": "INPUT",
             "required": false,
             "visible": true,
-            "editable": false,
+            "editable": true,
             "sequence": 30
           },
           {
             "row_id": "FIELD-4",
-            "geometry_field": "RAY_DAI",
+            "geometry_field": "CAT_LA_RONG",
             "role": "CALCULATED",
             "required": false,
             "visible": true,
@@ -3329,7 +3043,7 @@
           },
           {
             "row_id": "FIELD-5",
-            "geometry_field": "V4_DAI",
+            "geometry_field": "RAY_DAI",
             "role": "CALCULATED",
             "required": false,
             "visible": true,
@@ -3338,12 +3052,21 @@
           },
           {
             "row_id": "FIELD-6",
-            "geometry_field": "TRUC_DAI",
+            "geometry_field": "V4_DAI",
             "role": "CALCULATED",
             "required": false,
             "visible": true,
             "editable": false,
             "sequence": 60
+          },
+          {
+            "row_id": "FIELD-7",
+            "geometry_field": "TRUC_DAI",
+            "role": "CALCULATED",
+            "required": false,
+            "visible": true,
+            "editable": false,
+            "sequence": 70
           }
         ],
         "disabled": false,
@@ -3383,16 +3106,435 @@
           },
           {
             "row_id": "FIELD-3",
+            "geometry_field": "LUOI_CAO",
+            "role": "INPUT",
+            "required": false,
+            "visible": true,
+            "editable": true,
+            "sequence": 30
+          },
+          {
+            "row_id": "FIELD-4",
             "geometry_field": "CAT_LA_RONG",
             "role": "CALCULATED",
             "required": false,
             "visible": true,
             "editable": false,
-            "sequence": 30
+            "sequence": 40
           }
         ],
         "disabled": false,
         "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL71N",
+      "data": {
+        "ma": "AL71N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 57,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Bản lá 0,055 theo cột BẢN LÁ, ĐẢO LẠI quyết định 0,057 ngày 2026-08-15. Sổ nhật ký phân xử: TP LÁ RUỘT AL71N VK — AL71 9 LÁ RUỘT cao 0,495 m ⇒ 0,495/9 = 0,055. Cột [3] và [4] của sheet nguồn đều ghi 57; sổ tiền đã thu thắng bảng tra.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL71 (CŨ)",
+      "data": {
+        "ma": "AL71 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL71C. Không trừ 1 lá, theo đúng PDF công thức.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL70 (2 LỚP)",
+      "data": {
+        "ma": "AL70 (2 LỚP)",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.068,
+        "be_rong_nan_mm": 68,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "KHÔNG trừ 1: đặc tả nêu ba ví dụ và cả ba đều cộng ra 42 lá. AL70 đếm TỔNG số lá nên không có gì để trừ. Bảng giá gọi mã này là 'bản lá 70' — đó là bề rộng nan, không phải ước số chia.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL70 (1 LỚP)",
+      "data": {
+        "ma": "AL70 (1 LỚP)",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.068,
+        "be_rong_nan_mm": 68,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Cùng bản lá với bản 2 lớp; khác nhau ở cấu tạo lá, không ở ước số chia.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL75",
+      "data": {
+        "ma": "AL75",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.067,
+        "be_rong_nan_mm": 67,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL75N trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL595",
+      "data": {
+        "ma": "AL595",
+        "dong_cua": "Cửa Đức",
+        "buoc_la_m": 0.06,
+        "be_rong_nan_mm": 60,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Sheet nguồn chỉ có một đời cho mã này.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL503N",
+      "data": {
+        "ma": "AL503N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL503 (CŨ)",
+      "data": {
+        "ma": "AL503 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL548N",
+      "data": {
+        "ma": "AL548N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Ví dụ kiểm chứng của xưởng: CPB 3 m ⇒ raw 52,18 ⇒ 51 lá ruột.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL548 (CŨ)",
+      "data": {
+        "ma": "AL548 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Chênh 10% so với đời MỚI — đây là lý do đời sản phẩm phải nằm trong khoá tra.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL501N",
+      "data": {
+        "ma": "AL501N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.057,
+        "be_rong_nan_mm": 57,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL501 (CŨ)",
+      "data": {
+        "ma": "AL501 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL552 (CŨ)",
+      "data": {
+        "ma": "AL552 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.057,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "CHỜ CHỦ XƯỞNG CHỐT: sheet nguồn ghi AL552C = 0,05 và AL552N = 0,057, nhưng bảng đang thi hành gắn 0,057 cho đời CŨ và không có đời MỚI. Giữ nguyên giá trị đang tính tiền cho tới khi có xác nhận.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL652",
+      "data": {
+        "ma": "AL652",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL652C trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL752",
+      "data": {
+        "ma": "AL752",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL752C trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL50",
+      "data": {
+        "ma": "AL50",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL50N trong sheet nguồn; AL50C là 0,05 nhưng bảng thi hành chưa khai đời CŨ.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL-VIP50",
+      "data": {
+        "ma": "AL-VIP50",
+        "dong_cua": "Cửa Đài Loan",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "ALVIP50N trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL-VIPST500",
+      "data": {
+        "ma": "AL-VIPST500",
+        "dong_cua": "Cửa Đài Loan",
+        "doi": "MỚI",
+        "buoc_la_m": 0.053,
+        "be_rong_nan_mm": 53,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "VIPST500N. BRD §4.1 liệt mã này trong nhóm có hai số khác nhau: nan 55, chia 0,053.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL-VIPST700",
+      "data": {
+        "ma": "AL-VIPST700",
+        "dong_cua": "Cửa Đài Loan",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "VIPST700 trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-CAT-SO-LA",
+      "data": {
+        "reason_code": "SX-CAT-SO-LA",
+        "reason_name": "Cắt sai số lá",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 10,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-CAT-KICH-THUOC",
+      "data": {
+        "reason_code": "SX-CAT-KICH-THUOC",
+        "reason_name": "Cắt sai kích thước",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 20,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-SON-LOI",
+      "data": {
+        "reason_code": "SX-SON-LOI",
+        "reason_name": "Sơn lỗi",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 30,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-LAP-SAI-PK",
+      "data": {
+        "reason_code": "SX-LAP-SAI-PK",
+        "reason_name": "Lắp sai phụ kiện",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 40,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "VT-NHOM-LOI",
+      "data": {
+        "reason_code": "VT-NHOM-LOI",
+        "reason_name": "Nhôm lỗi từ nhà cung cấp",
+        "nhom_nguyen_nhan": "Vật tư",
+        "ben_chiu_trach_nhiem": "Nhà cung cấp",
+        "sort_order": 50,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "VT-PK-LOI",
+      "data": {
+        "reason_code": "VT-PK-LOI",
+        "reason_name": "Phụ kiện lỗi",
+        "nhom_nguyen_nhan": "Vật tư",
+        "ben_chiu_trach_nhiem": "Nhà cung cấp",
+        "sort_order": 60,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "VT-SON-SAI-MAU",
+      "data": {
+        "reason_code": "VT-SON-SAI-MAU",
+        "reason_name": "Sơn không đạt màu",
+        "nhom_nguyen_nhan": "Vật tư",
+        "ben_chiu_trach_nhiem": "Nhà cung cấp",
+        "sort_order": 70,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "BH-DO-SAI",
+      "data": {
+        "reason_code": "BH-DO-SAI",
+        "reason_name": "Nhận đo sai",
+        "nhom_nguyen_nhan": "Bán hàng",
+        "ben_chiu_trach_nhiem": "Sale",
+        "sort_order": 80,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "BH-NHAP-SAI-QUY-CACH",
+      "data": {
+        "reason_code": "BH-NHAP-SAI-QUY-CACH",
+        "reason_name": "Nhập nhầm quy cách",
+        "nhom_nguyen_nhan": "Bán hàng",
+        "ben_chiu_trach_nhiem": "Sale",
+        "sort_order": 90,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "KH-DOI-Y",
+      "data": {
+        "reason_code": "KH-DOI-Y",
+        "reason_name": "Khách đổi ý sau khi đã cắt",
+        "nhom_nguyen_nhan": "Khách",
+        "ben_chiu_trach_nhiem": "Khách hàng",
+        "sort_order": 100,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "KH-DO-SAI-O-CHO",
+      "data": {
+        "reason_code": "KH-DO-SAI-O-CHO",
+        "reason_name": "Khách đo sai ô chờ",
+        "nhom_nguyen_nhan": "Khách",
+        "ben_chiu_trach_nhiem": "Khách hàng",
+        "sort_order": 110,
+        "disabled": false
       }
     }
   ],
@@ -3491,7 +3633,8 @@
         "Kế toán": "r",
         "Sản xuất": "r",
         "Kinh doanh": "r"
-      }
+      },
+      "menu": false
     },
     {
       "name": "Manufacturer",
@@ -3521,7 +3664,8 @@
         "Kế toán": "r",
         "Sản xuất": "r",
         "Kinh doanh": "r"
-      }
+      },
+      "menu": false
     },
     {
       "//": "Phương pháp/trạng thái hoàn thiện bề mặt — tách khỏi Màu vật tư vì một Bề mặt gồm nhiều màu, và THÔ không phải màu thương mại (không xổ như lựa chọn Sales). Bề mặt giữ phạm vi RỘNG (applies_to_groups); Màu chỉ thu hẹp thêm nếu cần — xem Item Color Scope.",
@@ -3737,7 +3881,8 @@
         "Kế toán": "r",
         "Sản xuất": "rwc",
         "Kinh doanh": "r"
-      }
+      },
+      "menu": false
     },
     {
       "name": "Material Specification",
@@ -3923,7 +4068,8 @@
         "Thủ kho": "r",
         "Sản xuất": "rwc",
         "Kinh doanh": "r"
-      }
+      },
+      "menu": false
     },
     {
       "name": "Item Variant Attribute",
@@ -4616,6 +4762,7 @@
           "fieldtype": "Select",
           "options": "Đại lý\nLẻ",
           "label": "Nhóm giá",
+          "required": true,
           "in_list_view": true,
           "in_standard_filter": true,
           "description": "Quyết định cách đo bề rộng và giá bán. Đại lý đo phủ bì nhựa, khách lẻ đo phủ bì ray. Công trình và nhà thầu tính như khách lẻ."
@@ -4786,8 +4933,20 @@
         "discount_percentage:Percent % giảm",
         "rule_level:Select(LINE,ORDER)=(LINE) Cấp áp dụng",
         "apply_on:Select(ITEM,ITEM_GROUP)=(ITEM) Áp theo",
-        "item_group:Link(Item Group) Chỉ áp cho nhóm hàng",
-        "pricing_scope:Data Phạm vi áp dụng",
+        {
+          "fieldname": "item_group",
+          "label": "Chỉ áp cho nhóm hàng",
+          "fieldtype": "Link",
+          "options": "Item Group",
+          "link_filters": "{\"is_group\":0,\"disabled\":0}"
+        },
+        {
+          "fieldname": "pricing_scope",
+          "label": "Phạm vi áp dụng",
+          "fieldtype": "Link",
+          "options": "Pricing Scope",
+          "link_filters": "{\"disabled\":0}"
+        },
         "effect_type:Select(ADJUSTMENT,DISCOUNT_PERCENT,ORDER_ADJUSTMENT) Kiểu tác động",
         "adjustment_basis:Select(FIXED,AREA_SQM,LENGTH_M,SET_COUNT,PRICED_QTY) Cách tính điều chỉnh",
         "adjustment_rate:Currency Mức điều chỉnh",
@@ -4949,11 +5108,9 @@
       "naming": "autoincrement",
       "title": "item_code",
       "list": [
-    "item_code",
-    "color",
-    "width_pb_ray_m",
-    "width_pb_nhua_m",
-    "width_m",
+        "item_code",
+        "color",
+        "width_m",
         "height_m",
         "set_count",
         "has_butterfly_bracket",
@@ -5037,25 +5194,9 @@
           "depends_on": "eval:doc.inventory_mode != 'Hàng thường'",
           "surface": "quick"
         },
-    {
-      "label": "Rộng PB ray (m)",
-      "fieldname": "width_pb_ray_m",
-      "fieldtype": "Float",
-      "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
-      "description": "Rộng phủ bì đo theo ray cho khách Lẻ; là field riêng, không dùng chung với rộng PB nhựa.",
-      "surface": "quick"
-    },
-    {
-      "label": "Rộng PB nhựa (m)",
-      "fieldname": "width_pb_nhua_m",
-      "fieldtype": "Float",
-      "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
-      "description": "Rộng phủ bì đo theo nhựa cho khách Đại lý; là field riêng, không dùng chung với rộng PB ray.",
-      "surface": "quick"
-    },
-    {
-      "label": "Rộng (m)",
-      "fieldname": "width_m",
+        {
+          "label": "Rộng (m)",
+          "fieldname": "width_m",
           "fieldtype": "Float",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'",
           "surface": "quick"
@@ -5368,12 +5509,7 @@
           "label": "Đơn giá",
           "fieldtype": "Currency",
           "required": true,
-          "read_only": true,
-          "surface": "quick",
-          "valueSource": "formula",
-          "editMode": "readonly",
-          "serverEnforced": true,
-          "description": "Đơn giá do server lấy từ bảng giá, Item, ĐVT bán và biến thể; người nhập không được sửa tay."
+          "surface": "quick"
         },
         {
           "label": "Tiền CK",
@@ -5445,12 +5581,10 @@
       },
       "form": {
         "fields": [
-      "item_code",
-      "color",
-      "height_m",
-      "width_pb_ray_m",
-      "width_pb_nhua_m",
-      "width_m",
+          "item_code",
+          "color",
+          "height_m",
+          "width_m",
           "set_count",
           "has_butterfly_bracket",
           "leaf_variant",
@@ -5479,12 +5613,10 @@
       },
       "quickEntry": {
         "fields": [
-      "item_code",
-      "color",
-      "height_m",
-      "width_pb_ray_m",
-      "width_pb_nhua_m",
-      "width_m",
+          "item_code",
+          "color",
+          "height_m",
+          "width_m",
           "set_count",
           "has_butterfly_bracket",
           "length_m",
@@ -6287,13 +6419,9 @@
           "fieldname": "responsible_person",
           "fieldtype": "Link",
           "options": "Employee",
-          "read_only": true,
+          "fetch_from": "customer.account_manager",
           "link_filters": "{\"employee_status\":\"Đang làm việc\"}",
-          "form_region": "main",
-          "valueSource": "system",
-          "editMode": "readonly",
-          "serverEnforced": true,
-          "description": "Tự lấy Nhân viên đang làm việc gắn với user đăng nhập."
+          "form_region": "main"
         },
         {
           "fieldname": "manual_note",
@@ -6459,25 +6587,8 @@
           "form_width": "full"
         },
         {
-          "label": "Tiền phải trả",
+          "label": "Tiền phải thu",
           "fieldname": "grand_total",
-          "fieldtype": "Currency",
-          "read_only": true,
-          "form_region": "full",
-          "form_width": "full"
-        },
-        {
-          "label": "Tiền cọc",
-          "fieldname": "deposit_amount",
-          "fieldtype": "Currency",
-          "default": 0,
-          "form_region": "full",
-          "form_width": "full",
-          "description": "Tiền khách đã đặt cọc cho đơn; không làm giảm doanh thu của đơn."
-        },
-        {
-          "label": "Còn phải thu",
-          "fieldname": "outstanding_amount",
           "fieldtype": "Currency",
           "read_only": true,
           "form_region": "full",
@@ -6519,9 +6630,7 @@
           "surcharge_amount",
           "vat_rate",
           "vat_amount",
-          "grand_total",
-          "deposit_amount",
-          "outstanding_amount"
+          "grand_total"
         ],
         "previewMethod": "alumdoor.ui.preview_document",
         "previewParentFields": [
@@ -6530,7 +6639,6 @@
           "items",
           "vat_rate",
           "surcharge_amount",
-          "deposit_amount",
           "additional_discount_percentage"
         ]
       }
@@ -7206,7 +7314,7 @@
           "fieldname": "set_count",
           "label": "Số bộ",
           "fieldtype": "Int",
-          "default": "1",
+          "default": 1,
           "surface": "expanded"
         },
         {
@@ -9130,7 +9238,7 @@
           "fieldname": "set_count",
           "label": "Số bộ",
           "fieldtype": "Int",
-          "default": "1",
+          "default": 1,
           "surface": "expanded"
         },
         {
@@ -10127,7 +10235,7 @@
           "label": "Số bộ dòng",
           "fieldtype": "Int",
           "required": true,
-          "default": "1",
+          "default": 1,
           "surface": "quick"
         },
         {
@@ -11012,7 +11120,7 @@
           "label": "Số lượng",
           "fieldtype": "Float",
           "required": true,
-          "default": "1",
+          "default": 1,
           "surface": "quick"
         },
         {
@@ -11223,7 +11331,7 @@
           "fieldname": "operand_m",
           "label": "Giá trị cộng/trừ (m)",
           "fieldtype": "Float",
-          "default": "0",
+          "default": 0,
           "surface": "expanded"
         },
         {
@@ -11250,14 +11358,14 @@
           "fieldname": "priority",
           "label": "Ưu tiên",
           "fieldtype": "Int",
-          "default": "0",
+          "default": 0,
           "surface": "expanded"
         },
         {
           "fieldname": "sequence",
           "label": "Thứ tự",
           "fieldtype": "Int",
-          "default": "10",
+          "default": 10,
           "surface": "expanded"
         },
         {
@@ -11342,14 +11450,14 @@
           "fieldname": "priority",
           "label": "Ưu tiên",
           "fieldtype": "Int",
-          "default": "0",
+          "default": 0,
           "surface": "expanded"
         },
         {
           "fieldname": "sequence",
           "label": "Thứ tự",
           "fieldtype": "Int",
-          "default": "0",
+          "default": 0,
           "surface": "expanded"
         },
         {
@@ -11418,18 +11526,6 @@
       "label": "Mẫu BOM",
       "group": "Sản xuất",
       "naming": "autoincrement",
-      "list": [
-        "template_code",
-        "item_code",
-        "source_status",
-        "priority",
-        "disabled"
-      ],
-      "search": [
-        "template_code",
-        "item_code",
-        "source_ref"
-      ],
       "fields": [
         "template_code:Data*! Mã mẫu BOM",
         "item_code:Link(Item)! Thành phẩm",
@@ -12317,6 +12413,407 @@
         "Kinh doanh": "r",
         "Sản xuất": "r",
         "Kế toán": "r"
+      }
+    },
+    {
+      "//": "Gom nhiều mặt hàng/nhóm hàng vào một phạm vi để một chính sách giá chỉ khai một lần.",
+      "name": "Pricing Scope",
+      "label": "Phạm vi áp dụng chính sách",
+      "icon": "tags",
+      "group": "Danh mục",
+      "naming": "field:scope_name",
+      "title": "scope_name",
+      "list": [
+        "scope_name",
+        "disabled"
+      ],
+      "search": [
+        "scope_name"
+      ],
+      "fields": [
+        "scope_name:Data*! Tên phạm vi",
+        {
+          "//": "Phạm vi rỗng thành phần thì KHÔNG làm chính sách giá chạy — fail-closed, không im lặng bỏ qua.",
+          "fieldname": "members",
+          "fieldtype": "Table",
+          "options": "Pricing Scope Member",
+          "label": "Mặt hàng / nhóm hàng áp dụng"
+        },
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "rwc"
+      }
+    },
+    {
+      "name": "Pricing Scope Member",
+      "child": true,
+      "label": "Thành phần phạm vi",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "fields": [
+        {
+          "fieldname": "member_type",
+          "label": "Áp dụng theo",
+          "fieldtype": "Select",
+          "options": "Item\nItem Group",
+          "required": true,
+          "unique": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Mặt hàng",
+          "fieldname": "item_code",
+          "fieldtype": "Link",
+          "options": "Item",
+          "depends_on": "eval:doc.member_type == 'Item'",
+          "surface": "quick"
+        },
+        {
+          "label": "Nhóm hàng",
+          "fieldname": "item_group",
+          "fieldtype": "Link",
+          "options": "Item Group",
+          "link_filters": "{\"is_group\":0,\"disabled\":0}",
+          "depends_on": "eval:doc.member_type == 'Item Group'",
+          "surface": "quick"
+        },
+        {
+          "fieldname": "note",
+          "label": "Ghi chú",
+          "fieldtype": "Data",
+          "surface": "expanded"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kinh doanh": "r",
+        "Kế toán": "rwc"
+      },
+      "form": {
+        "fields": [
+          "member_type",
+          "item_code",
+          "item_group",
+          "note"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "member_type",
+          "item_code",
+          "item_group"
+        ]
+      }
+    },
+    {
+      "//": "Trước 19/08 doctype này chỉ sống trong doctype_definitions do importer ghi — dựng lại tenant là mất.",
+      "name": "BOM Rule",
+      "label": "Quy tắc BOM",
+      "icon": "function-square",
+      "group": "Danh mục",
+      "naming": "field:rule_code",
+      "title": "rule_name",
+      "list": [
+        "rule_code",
+        "rule_name",
+        "result_kind",
+        "result_uom",
+        "authority_type",
+        "disabled"
+      ],
+      "search": [
+        "rule_code",
+        "rule_name",
+        "formula_display"
+      ],
+      "fields": [
+        "rule_code:Data*! Mã quy tắc",
+        "rule_name:Data*! Tên quy tắc",
+        "description:Small Text Mô tả",
+        "result_kind:Select(LENGTH,AREA,COUNT,WEIGHT,CONSTANT)*! Loại kết quả",
+        "result_uom:Link(UOM)*! ĐVT kết quả / tiêu hao",
+        "source_field:Link(Geometry Field) Trường nguồn 1 từ hàng cha",
+        "source_field_offset:Float Cộng/trừ vào nguồn 1 (m)",
+        "source_field_2:Link(Geometry Field) Trường nguồn 2 từ hàng cha",
+        "source_field_2_offset:Float Cộng/trừ vào nguồn 2 (m)",
+        "operator:Select(COPY,ADD,SUBTRACT,MULTIPLY,DIVIDE,PRODUCT,QUOTIENT,CONSTANT)*! Phép tính",
+        "operand:Float Giá trị phép tính",
+        "multiply:Float Hệ số nhân cuối",
+        "divide:Float Hệ số chia cuối",
+        "final_add:Float Cộng/trừ cuối",
+        "qty_per_set:Float*! Số lượng mỗi bộ",
+        "rounding:Select(NONE,ROUND,CEIL,FLOOR) Làm tròn",
+        "precision:Int Số chữ số",
+        "formula_json:Long Text Công thức canonical JSON",
+        "formula_display:Data Công thức hiển thị",
+        "rule_version:Int*! Phiên bản",
+        "applicability:Table(BOM Rule Applicability) Áp dụng cho",
+        {
+          "//": "SOURCE = trích từ bảng tính nguồn, chưa ai duyệt. Không tự đổi sang OWNER_CONFIRMED.",
+          "fieldname": "authority_type",
+          "label": "Nguồn thẩm quyền",
+          "fieldtype": "Select",
+          "options": "SOURCE\nOWNER_CONFIRMED\nENGINEERING_INFERENCE",
+          "required": true,
+          "default": "SOURCE"
+        },
+        "source_sheet:Data Sheet nguồn",
+        "source_row:Int Dòng nguồn",
+        "source_formula_text:Small Text Công thức nguồn gốc",
+        "source_formula_code:Data Mã công thức nguồn",
+        "source_note:Small Text Ghi chú nguồn / xác nhận",
+        "confirmed_by:Data Người xác nhận",
+        "confirmed_at:Datetime Thời điểm xác nhận",
+        "disabled:Check Ngưng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "BOM Rule Applicability",
+      "child": true,
+      "label": "Áp dụng cho",
+      "group": "Danh mục",
+      "naming": "autoincrement",
+      "fields": [
+        {
+          "fieldname": "scope_type",
+          "label": "Phạm vi",
+          "fieldtype": "Select",
+          "options": "BOM\nITEM\nITEM_GROUP\nDOOR_TYPE\nGENERIC",
+          "required": true,
+          "unique": true,
+          "surface": "quick"
+        },
+        {
+          "label": "Mặt hàng cha",
+          "fieldname": "parent_item",
+          "fieldtype": "Link",
+          "options": "Item",
+          "depends_on": "eval:doc.scope_type == 'ITEM'",
+          "surface": "quick"
+        },
+        {
+          "label": "Nhóm hàng cha",
+          "fieldname": "parent_item_group",
+          "fieldtype": "Link",
+          "options": "Item Group",
+          "link_filters": "{\"is_group\":0,\"disabled\":0}",
+          "depends_on": "eval:doc.scope_type == 'ITEM_GROUP'",
+          "surface": "quick"
+        },
+        {
+          "label": "Loại cửa",
+          "fieldname": "door_type",
+          "fieldtype": "Select",
+          "options": "\nCửa Đức\nCửa Úc\nCửa Lưới\nCửa Đài Loan\nCửa Siêu Trường\nCửa tấm liền Úc",
+          "depends_on": "eval:doc.scope_type == 'DOOR_TYPE'",
+          "surface": "quick"
+        },
+        {
+          "fieldname": "component_item",
+          "label": "Thành phần con",
+          "fieldtype": "Link",
+          "options": "Item",
+          "required": true,
+          "unique": true,
+          "surface": "quick"
+        },
+        {
+          "fieldname": "bom",
+          "label": "BOM",
+          "fieldtype": "Link",
+          "options": "Bill of Materials",
+          "surface": "expanded"
+        },
+        {
+          "fieldname": "priority",
+          "label": "Ưu tiên",
+          "fieldtype": "Int",
+          "default": 0,
+          "surface": "expanded"
+        },
+        {
+          "fieldname": "effective_from",
+          "label": "Hiệu lực từ",
+          "fieldtype": "Date",
+          "surface": "expanded"
+        },
+        {
+          "fieldname": "effective_to",
+          "label": "Hiệu lực đến",
+          "fieldtype": "Date",
+          "surface": "expanded"
+        },
+        {
+          "fieldname": "note",
+          "label": "Ghi chú",
+          "fieldtype": "Data",
+          "surface": "expanded"
+        },
+        {
+          "fieldname": "disabled",
+          "label": "Ngưng dùng",
+          "fieldtype": "Check",
+          "surface": "expanded"
+        }
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      },
+      "form": {
+        "fields": [
+          "scope_type",
+          "parent_item",
+          "parent_item_group",
+          "door_type",
+          "component_item",
+          "bom",
+          "priority",
+          "effective_from",
+          "effective_to",
+          "note",
+          "disabled"
+        ]
+      },
+      "quickEntry": {
+        "fields": [
+          "scope_type",
+          "parent_item",
+          "parent_item_group",
+          "door_type",
+          "component_item"
+        ]
+      }
+    },
+    {
+      "//": [
+        "buoc_la_m và be_rong_nan_mm là HAI đại lượng, không được gộp. Bảng giá gọi AL70 là",
+        "'bản lá 70' (bề rộng nan) nhưng chia lá phải dùng 0,068 — lấy nhầm là lệch 2 lá mỗi bộ."
+      ],
+      "name": "Quy cách cửa",
+      "label": "Bản lá theo mã nhôm",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "naming": "field:ma",
+      "title": "ma",
+      "list": [
+        "ma",
+        "dong_cua",
+        "doi",
+        "buoc_la_m",
+        "be_rong_nan_mm",
+        "rong_toi_da_mm",
+        "disabled"
+      ],
+      "search": [
+        "ma",
+        "ghi_chu"
+      ],
+      "fields": [
+        "ma:Data*! Mã nhôm",
+        "dong_cua:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Dòng cửa",
+        {
+          "//": "Đời sản phẩm (AL548N vs AL548 CŨ), KHÔNG phải nhôm mới hay đã dùng. Hai đời chênh bản lá tới 10%.",
+          "fieldname": "doi",
+          "label": "Đời sản phẩm",
+          "fieldtype": "Select",
+          "options": "\nMỚI\nCŨ\nTĐ"
+        },
+        {
+          "//": "Ước số CHIA khi gài chồng. Đây là con số quyết định số lá — không phải bề rộng nan.",
+          "fieldname": "buoc_la_m",
+          "label": "Bản lá / ước số chia (m)",
+          "fieldtype": "Float",
+          "required": true
+        },
+        {
+          "//": "CHỈ để nhận diện mã và tra giá. Không bao giờ dùng để chia lá.",
+          "fieldname": "be_rong_nan_mm",
+          "label": "Bề rộng nan (mm)",
+          "fieldtype": "Int"
+        },
+        {
+          "//": [
+            "Chặn bán cửa rộng hơn số này. BRD nêu dải 4.000 → 7.600 cho cả bảng nhưng KHÔNG",
+            "cho con số theo từng mã, nên fixture để trống. Trống = chưa chặn, không phải",
+            "'không giới hạn' — điền một con số đại diện ở đây là bịa ra một luật chặn bán."
+          ],
+          "fieldname": "rong_toi_da_mm",
+          "label": "Rộng tối đa (mm)",
+          "fieldtype": "Int"
+        },
+        {
+          "//": "Lá đầu chiếm chỗ đúng một lá ruột. AL70 và AL71 không trừ vì đếm TỔNG số lá.",
+          "fieldname": "tru_mot_la",
+          "label": "Trừ một lá",
+          "fieldtype": "Check",
+          "default": 1
+        },
+        "trong_luong_kg_m2:Float Trọng lượng (kg/m2) — dùng cho công thức mua vào",
+        "nguon:Data*! Nguồn số liệu",
+        "ghi_chu:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Nguyên nhân cửa lỗi",
+      "label": "Nguyên nhân cửa lỗi",
+      "icon": "triangle-alert",
+      "group": "Danh mục",
+      "naming": "field:reason_code",
+      "title": "reason_name",
+      "list": [
+        "reason_code",
+        "reason_name",
+        "nhom_nguyen_nhan",
+        "ben_chiu_trach_nhiem",
+        "disabled"
+      ],
+      "search": [
+        "reason_code",
+        "reason_name"
+      ],
+      "fields": [
+        "reason_code:Data*! Mã nguyên nhân",
+        "reason_name:Data*! Tên nguyên nhân",
+        "nhom_nguyen_nhan:Select(Sản xuất,Vật tư,Bán hàng,Khách)*! Nhóm nguyên nhân",
+        {
+          "//": "Bên chịu là thứ biến danh mục này thành câu trả lời được bằng tiền, không chỉ là nhãn phân loại.",
+          "fieldname": "ben_chiu_trach_nhiem",
+          "label": "Bên chịu trách nhiệm",
+          "fieldtype": "Select",
+          "options": "Xưởng\nNhà cung cấp\nSale\nKhách hàng",
+          "required": true
+        },
+        "chi_phi_uoc_tinh:Currency Chi phí ước tính mặc định",
+        "sort_order:Int=(0) Thứ tự",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
       }
     }
   ],

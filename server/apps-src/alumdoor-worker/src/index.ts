@@ -17,7 +17,14 @@
  * cùng một lô cùng lúc thì người thứ hai bị TỪ CHỐI vì bản ghi đã đổi — không phải cả hai
  * cùng lọt rồi kho âm. Đó là chốt của nền tảng, không phải của Worker này.
  */
-import { slatCount, australianSlatCount, type AustralianDoor } from "./slats.js";
+import {
+  australianSlatCount,
+  slatCount,
+  slatProfilesFromCatalog,
+  type AustralianDoor,
+  type SlatCatalogRow,
+  type SlatProfileTable,
+} from "./slats.js";
 import { buildRows, extractJson, type OcrRow } from "./ocr.js";
 import { syncLotsFromReceipt } from "./lots-from-receipt.js";
 import {
@@ -25,6 +32,7 @@ import {
   inferDoorType,
   isManualPullGroup,
   parseDoorPolicy,
+  rayTypeOf,
   selectDoorPolicy,
   type CustomerGroup,
   type DoorFormulaPolicy,
@@ -88,7 +96,7 @@ interface Env {
 import type { PlatformCall } from "./platform-call.js";
 import { accept, answer, forbidden, refuse } from "./responses.js";
 import {
-  checked, nearlyEqual, normalizedUom, positive, readDoorPolicies, readMaster, validateDocumentColors, validateItemMaster, validatePurchaseMeasurement, validateTransactionLines, validationDocument, warmMasters,
+  checked, nearlyEqual, normalizedUom, positive, readDoorPolicies, readMaster, readSlatCatalog, validateDocumentColors, validateItemMaster, validatePurchaseMeasurement, validateTransactionLines, validationDocument, warmMasters,
   type ValidatorSubject,
 } from "./document-validation.js";
 // Giữ nguyên bề mặt export của worker: deriveLinearSalesBasis vốn được export từ đây.
@@ -2549,7 +2557,7 @@ async function calculateDoor(call: PlatformCall, args: Record<string, unknown>):
   const rawMode = String(args.sales_mode ?? "Trọn bộ").trim();
   if (rawMode !== "Tách món" && rawMode !== "Trọn bộ") return refuse("Cách bán phải là Tách món hoặc Trọn bộ.");
   try {
-    const policy = selectDoorPolicy(policies, doorType, String(item.item_group ?? ""));
+    const policy = selectDoorPolicy(policies, doorType, String(item.item_group ?? ""), rayTypeOf(args.ray_type));
     const result = calculateDoorFormula(policy, {
       door_type: doorType,
       item_group: String(item.item_group ?? ""),
@@ -2599,18 +2607,30 @@ export default {
         const body = (await request.json().catch(() => ({}))) as { args?: Record<string, unknown> };
         const args = body.args ?? {};
 
-        // Chia lá không cần đọc gì của tenant — thuần số học, nên không dựng đường gọi ngược.
+        const call = platformCaller(request, env);
+
+        /**
+         * Chia lá đọc danh mục `Quy cách cửa` trước, bảng biên dịch sẵn chỉ là hạt giống.
+         *
+         * Trước 2026-08-19 chỗ này ghi "không cần đọc gì của tenant — thuần số học" và tra
+         * thẳng hằng SLAT_PROFILES. Nó thuần số học thật, nhưng SỐ thì không phải hằng: bản lá
+         * là dữ liệu của xưởng, và khoá cứng nó nghĩa là chủ xưởng phải chờ một lần deploy mới
+         * thêm được mã lá mới. BRD §4.1 khai đây là danh mục có PK `ma`, không phải hằng số.
+         *
+         * Cửa Úc vẫn thuần số học: luật của nó là hệ số theo loại motor, nằm trong Cutting
+         * Policy chứ không theo mã nhôm.
+         */
         if (method === "alumdoor.slats.compute") {
           try {
             const kind = args.australian_kind ? String(args.australian_kind) as AustralianDoor : null;
             if (kind) return answer({ slats: australianSlatCount(kind, Number(args.height_m)), kind });
-            return answer(slatCount(String(args.profile ?? ""), String(args.generation ?? "MỚI"), Number(args.height_m)));
+            const table = await readSlatCatalog(call);
+            return answer(slatCount(String(args.profile ?? ""), String(args.generation ?? "MỚI"), Number(args.height_m), table));
           } catch (error) {
             return refuse(error instanceof Error ? error.message : "không tính được số lá");
           }
         }
 
-        const call = platformCaller(request, env);
         if (method === "alumdoor.attendance.challenge") return await attendanceChallenge();
         if (method === "alumdoor.attendance.station_qr") return await attendanceStationQr({ request, call, env, args });
         if (method === "alumdoor.attendance.rotate_station_qr") return await attendanceRotateStationQr({ request, call, env, args });

@@ -257,27 +257,19 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     items.push({ key: nav.key, label: nav.label, group: nav.group ?? "Ứng dụng", icon: resolveIcon(nav.icon), route, doctype: (nav.kind ?? "doctype") === "doctype" ? nav.key : undefined });
   }
   /**
-   * Older Alumdoor manifests predate the canonical Pricing Scope navigation contract even
-   * though their metadata and routes are already installed. Use the presence of a
-   * server-filtered Selling/Pricing entry as the permission-aware compatibility signal, then
-   * expose the missing master until those tenants receive the newer manifest.
+   * KHÔNG chèn thêm mục danh mục nào ở đây.
+   *
+   * Chỗ này từng chèn cứng `Pricing Scope` vì brief chưa khai nó — nghĩa là một mục menu trỏ
+   * tới DocType không có metadata, đúng cái bẫy mà chính đoạn này cảnh báo với Sales Option.
+   * Từ 2026-08-19 `Pricing Scope` là DocType thật trong `server/briefs/alumdoor-v2.json`, nên
+   * nó đi vào nav qua đường chung như 95 doctype còn lại và miếng vá này hết lý do tồn tại.
    *
    * Cách bán (Sales Option) và Gói bán hàng (Sales Package) đã bị loại bỏ khỏi Alumdoor
-   * 2026-08-14 — không còn chèn lại ở đây nữa; chèn lại sẽ dẫn tới `/app/Sales Option` mà
-   * brief hiện tại không còn khai, tức một mục menu dẫn tới màn báo lỗi.
+   * 2026-08-14 — chèn lại sẽ dẫn tới một mục menu mở ra màn báo lỗi.
+   *
+   * Nếu một tenant thiếu mục danh mục nào đó, sửa ở brief rồi cài lại; đừng vá ở client, vì
+   * client không có cách nào biết DocType đó có metadata hay không.
    */
-  const isAlumdoor = normalizeGroup(manifest.domain ?? manifest.id) === "alumdoor";
-  const canReadSellingMasters = manifest.nav.some((nav) => ["Sales Order", "Price List", "Pricing Rule"].includes(nav.key));
-  if (isAlumdoor && canReadSellingMasters) {
-    for (const master of [
-      { key: "Pricing Scope", label: "Phạm vi áp dụng chính sách", icon: "tags" },
-    ]) {
-      const route = `/app/${encodeURIComponent(master.key)}`;
-      if (routes.has(route)) continue;
-      routes.add(route);
-      items.push({ ...master, group: "Danh mục", icon: resolveIcon(master.icon), route, doctype: master.key });
-    }
-  }
   return items;
 }
 
