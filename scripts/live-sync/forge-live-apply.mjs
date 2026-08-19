@@ -17,6 +17,7 @@ const ALLOWED = new Set([
   'real-purchase',
   'pricing',
   'bom',
+  'bom-rule',
   'customer',
   'manufacturing-master',
 ]);
