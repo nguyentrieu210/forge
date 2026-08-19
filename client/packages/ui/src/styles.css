@@ -2084,3 +2084,83 @@
   .mf-tab-divider,
   .mf-tab-close { transition: none !important; }
 }
+
+/* ── Bảng theo vben ───────────────────────────────────────────────────────────
+ * Dịch từ `packages/effects/plugins/src/vxe-table/style.css` (vben v5.7.0).
+ *
+ * Khác biệt cấu trúc so với bản Forge trước:
+ *
+ *   |                | Forge trước            | vben                     |
+ *   | header         | --secondary (trung tính)| --accent (wash theo brand)|
+ *   | rê chuột hàng  | --secondary            | --accent-hover           |
+ *   | hàng xen kẽ    | KHÔNG CÓ               | --accent 60%             |
+ *   | hàng đang chọn | primary 7% trộn card   | --accent                 |
+ *
+ * Giá trị vẫn là token của Forge — chỉ đổi TOKEN NÀO được dùng ở đâu, không đổi màu.
+ *
+ * `--accent-hover` là token vben có mà Forge thiếu. Không hardcode cho từng brand × theme
+ * (8 khối) mà dẫn xuất bằng `color-mix` từ chính `--accent`: thêm một chút `--foreground` là
+ * đậm hơn đúng một bậc ở cả light lẫn dark, và tự đúng cho mọi brand.
+ */
+:root {
+  --accent-hover: color-mix(in srgb, var(--foreground) 7%, var(--accent));
+}
+
+/* Hàng xen kẽ: vben bật mặc định. Trên bảng ERP nhiều cột, sọc là thứ giữ mắt đi đúng hàng khi
+ * cuộn ngang — đúng vấn đề mà `--mf-sticky-edge` giải cho chiều dọc.
+ * Dùng `:nth-child(even)` chứ không phải `odd`: hàng đầu giữ nền `--card` để liền với header. */
+.mf-shell .mf-list-view tbody tr:nth-child(even),
+.mf-shell .mf-report tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.mf-shell .mf-list-view thead th,
+.mf-shell .mf-report thead th {
+  background: var(--accent);
+}
+
+.mf-shell .mf-list-view tbody tr:hover,
+.mf-shell .mf-report tbody tr:hover {
+  background: var(--accent-hover);
+}
+
+/* Hàng đang chọn phải thắng cả sọc lẫn hover, nên đặt sau và nêu đủ hai trạng thái. */
+.mf-shell .mf-list-view tbody tr[data-state="selected"],
+.mf-shell .mf-list-view tbody tr[data-state="selected"]:hover {
+  background: var(--accent);
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+/* ── Form theo vben ───────────────────────────────────────────────────────────
+ * vben đặt chữ nền 16px và cỡ điều khiển theo đó. Forge trước để trình duyệt quyết, nên ô
+ * nhập và nhãn nhỏ hơn một bậc so với bản vben.
+ *
+ * Chỉ chỉnh CỠ và NHỊP, không đụng cách Forge dựng form (metadata-driven) — đó là kiến trúc,
+ * không phải diện mạo. */
+.mf-shell .mf-field label,
+.mf-shell .mf-form-view label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.mf-shell .mf-field :is(input, textarea, [role="combobox"]),
+.mf-shell .mf-form-view :is(input, textarea, [role="combobox"]) {
+  font-size: 0.875rem;
+}
+
+/* ── Menu theo vben ───────────────────────────────────────────────────────────
+ * vben: chữ menu = 0.875 × cỡ nền (14px), mục bo góc, mục đang mở tô nền chứ không chỉ đổi chữ.
+ * Forge đã bo góc sẵn; phần thiếu là CỠ CHỮ đúng thang và nhịp dọc gọn hơn. */
+.mf-shell .mf-shell-nav-item {
+  font-size: var(--mf-font-menu);
+}
+
+/* ── Popup theo vben ──────────────────────────────────────────────────────────
+ * vben dùng một bóng sâu cho lớp nổi (dialog/drawer/popover) để tách hẳn khỏi nội dung.
+ * Forge đã có `--mf-overlay-shadow`; ở đây chỉ nối các lớp nổi vào đúng token đó, vì trước
+ * mỗi lớp tự khai bóng riêng. */
+.mf-shell [role="dialog"],
+.mf-shell [data-radix-popper-content-wrapper] > * {
+  box-shadow: var(--mf-overlay-shadow);
+}
