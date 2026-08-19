@@ -1,0 +1,18 @@
+[
+  {
+    "results": [
+      {
+        "name": "DM-2026-0207",
+        "payload_json": "{\"item\":\"TP-CUADL1LY-XN-VK_TRONBO_4-5M\",\"company\":\"ALUMDOOR\",\"quantity\":1,\"items\":[{\"item_code\":\"NVL-TON-DL9.2Dx124-XNVK\",\"qty\":11.64,\"uom\":\"M2\",\"qty_basis\":\"Theo diện tích\",\"source_note\":\"ĐM dòng 1628 | ĐVT M2 | chac_chan | ĐVT theo m2\",\"note\":\"LÁ ĐÀI LOAN 1LY_XN-VK\"},{\"item_code\":\"NVL-V4_KEM_STD\",\"qty\":1.312,\"uom\":\"M\",\"qty_basis\":\"Cố định\",\"source_note\":\"ĐM dòng 1630 | ĐVT M | chua_ro | ĐVT theo mét nhưng không rõ mét theo chiều nào\",\"note\":\"V4_KẼM\"}],\"operating_cost\":0,\"is_active\":true,\"note\":\"Nguồn: sheet ĐM dòng 1627 | Nhóm 1LY | CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²\",\"_migration_source\":\"alumdoor-bom-2026-08-15\"}"
+      },
+      {
+        "name": "DM-2026-0208",
+        "payload_json": "{\"item\":\"TP-CUADL1LY-XN-VK_TRONBO_3-4M\",\"company\":\"ALUMDOOR\",\"quantity\":1,\"items\":[{\"item_code\":\"NVL-TON-DL9.2Dx124-XNVK\",\"qty\":11.64,\"uom\":\"M2\",\"qty_basis\":\"Theo diện tích\",\"source_note\":\"ĐM dòng 1634 | ĐVT M2 | chac_chan | ĐVT theo m2\",\"note\":\"LÁ ĐÀI LOAN 1LY_XN-VK\"},{\"item_code\":\"NVL-V4_KEM_STD\",\"qty\":1.312,\"uom\":\"M\",\"qty_basis\":\"Cố định\",\"source_note\":\"ĐM dòng 1636 | ĐVT M | chua_ro | ĐVT theo mét nhưng không rõ mét theo chiều nào\",\"note\":\"V4_KẼM\"}],\"operating_cost\":0,\"is_active\":true,\"note\":\"Nguồn: sheet ĐM dòng 1633 | Nhóm 1LY | CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²\",\"_migration_source\":\"alumdoor-bom-2026-08-15\"}"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 0
+    }
+  }
+]

@@ -1,0 +1,2360 @@
+
+ ⛅️ wrangler 4.114.0 (update available 4.124.0)
+───────────────────────────────────────────────
+Resource location: local
+
+Use --remote if you want to access the remote instance.
+
+🌀 Executing on local database cloudforge-demo (54f6fcc3-8767-429c-8ecd-5e0c71543d33) from ./apps\tenant-worker\.wrangler\state\v3\d1:
+🌀 To execute on your remote database, add a --remote flag to your wrangler command.
+🚣 1 command executed successfully.
+[
+  {
+    "results": [
+      {
+        "name": "DM-2026-0006",
+        "item": "JG_BODK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b73b2e78e377aed69bd35be9b368c1388cf25a24ec7a3eba4fddf0204ff1a252",
+        "fingerprint": "b73b2e78e377aed69bd35be9b368c1388cf25a24ec7a3eba4fddf0204ff1a252",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:40:00.505Z"
+      },
+      {
+        "name": "DM-2026-0131",
+        "item": "NVL-TOLE1.4x270x1.2ly-CRON",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 57d5d421495f1100f8e7a33f1b8dabbb32018bffbf63e54de21b9396514ddaac",
+        "fingerprint": "57d5d421495f1100f8e7a33f1b8dabbb32018bffbf63e54de21b9396514ddaac",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:10.068Z"
+      },
+      {
+        "name": "DM-2026-0132",
+        "item": "NVL-TOLE1.4x270x1.4ly-CRON",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a0da0454b1c26f27dc625796da4fcd0c75fc878602d41872747ef3c7ad923992",
+        "fingerprint": "a0da0454b1c26f27dc625796da4fcd0c75fc878602d41872747ef3c7ad923992",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:10.247Z"
+      },
+      {
+        "name": "DM-2026-0133",
+        "item": "NVL-TOLE1.4x270x1.4ly-CRON+TD",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 467303b897976b62d2c469baf5cb51bb24536d4a9cf305730b63d14234b0e0aa",
+        "fingerprint": "467303b897976b62d2c469baf5cb51bb24536d4a9cf305730b63d14234b0e0aa",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:40:10.421Z"
+      },
+      {
+        "name": "DM-2026-0239",
+        "item": "NVL-TOLEKEM124_1LY_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 0ad4b2800e38175f87fc2d02e919a980f23ab23c5cc7b7c240f78bc8d832ce8c",
+        "fingerprint": "0ad4b2800e38175f87fc2d02e919a980f23ab23c5cc7b7c240f78bc8d832ce8c",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:40:29.533Z"
+      },
+      {
+        "name": "DM-2026-0123",
+        "item": "NVL-VDAY-TDU-KTD",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete bf7cfca8a424de5f74e62a0bafd48cbcdd53024d63551106fd4b9357e585c8cd",
+        "fingerprint": "bf7cfca8a424de5f74e62a0bafd48cbcdd53024d63551106fd4b9357e585c8cd",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:04.166Z"
+      },
+      {
+        "name": "DM-2026-0007",
+        "item": "RON-DD",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a742d05d1d5bf8970f3d0e1780d94017cc7d3aa3d71cd6fd8be4624620463d27",
+        "fingerprint": "a742d05d1d5bf8970f3d0e1780d94017cc7d3aa3d71cd6fd8be4624620463d27",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:39:46.741Z"
+      },
+      {
+        "name": "DM-2026-0008",
+        "item": "RONDAYUC",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c6e81e06671034db46c730845511ddf5993eb45c5184a8ad44b348b44a76f617",
+        "fingerprint": "c6e81e06671034db46c730845511ddf5993eb45c5184a8ad44b348b44a76f617",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:04.329Z"
+      },
+      {
+        "name": "DM-2026-0009",
+        "item": "RONNHUA_INOX",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 6bc92319390e8aed023a25a212a11621d63bc80a9d8afffda5dde06fde5efe49",
+        "fingerprint": "6bc92319390e8aed023a25a212a11621d63bc80a9d8afffda5dde06fde5efe49",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:46.927Z"
+      },
+      {
+        "name": "DM-2026-0010",
+        "item": "TD-AL595 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c2a590001034e61dbb1f5f1b03d6a70ce4d8ec5dd577146cf66c5beff0b29757",
+        "fingerprint": "c2a590001034e61dbb1f5f1b03d6a70ce4d8ec5dd577146cf66c5beff0b29757",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:46.539Z"
+      },
+      {
+        "name": "DM-2026-0014",
+        "item": "TP-AL70-1LOP THÔ",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 33cd8ced4f25da376bd108cfd52977ca92d93791a78bbfacc8898dcbda53ccd0",
+        "fingerprint": "33cd8ced4f25da376bd108cfd52977ca92d93791a78bbfacc8898dcbda53ccd0",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:48.010Z"
+      },
+      {
+        "name": "DM-2026-0015",
+        "item": "TP-AL75 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8597231018f7c524684c5d357cfaf8f6250994b4a804cc31b012a2120eea9fc8",
+        "fingerprint": "8597231018f7c524684c5d357cfaf8f6250994b4a804cc31b012a2120eea9fc8",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:55.618Z"
+      },
+      {
+        "name": "DM-2026-0016",
+        "item": "TP-AL75 THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 926dc744b31d404c61804721a21416fa1d6fa31130d70b543fe521c00e6b3e91",
+        "fingerprint": "926dc744b31d404c61804721a21416fa1d6fa31130d70b543fe521c00e6b3e91",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:55.258Z"
+      },
+      {
+        "name": "DM-2026-0017",
+        "item": "TP-AL75 VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5cf2abb26e6a81fb449bbf880f7c28ef59f4f91d2a6014370e99be3a78fbe42c",
+        "fingerprint": "5cf2abb26e6a81fb449bbf880f7c28ef59f4f91d2a6014370e99be3a78fbe42c",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:55.433Z"
+      },
+      {
+        "name": "DM-2026-0018",
+        "item": "TP-ALD-548N GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 496ef2e96c94e24dc8f5445c131936616c9c372ce128828f1797f0600982f38e",
+        "fingerprint": "496ef2e96c94e24dc8f5445c131936616c9c372ce128828f1797f0600982f38e",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:49.344Z"
+      },
+      {
+        "name": "DM-2026-0019",
+        "item": "TP-ALD-548N THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5696624d0f72a18509bc8db4b797741665375fee3130a11ed9becaddf79e6dd5",
+        "fingerprint": "5696624d0f72a18509bc8db4b797741665375fee3130a11ed9becaddf79e6dd5",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:49.522Z"
+      },
+      {
+        "name": "DM-2026-0020",
+        "item": "TP-ALD-548N VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete fbc20557f9c497d030342055420528d02946fcc06675509a7eb3bfd0f27ad525",
+        "fingerprint": "fbc20557f9c497d030342055420528d02946fcc06675509a7eb3bfd0f27ad525",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:49.709Z"
+      },
+      {
+        "name": "DM-2026-0021",
+        "item": "TP-ALD-DL552 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 41a91882738247a5685e7326f4a99958a4f683bdb16b6e201ca9947c9afd0563",
+        "fingerprint": "41a91882738247a5685e7326f4a99958a4f683bdb16b6e201ca9947c9afd0563",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:50.836Z"
+      },
+      {
+        "name": "DM-2026-0022",
+        "item": "TP-ALD-DL552 THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 845d569017b8f2d27ed752fd9ed530b56329f142c3aae7a303b8786171cf98c3",
+        "fingerprint": "845d569017b8f2d27ed752fd9ed530b56329f142c3aae7a303b8786171cf98c3",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:50.643Z"
+      },
+      {
+        "name": "DM-2026-0023",
+        "item": "TP-ALD-DL552 VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d0489cd0bfd725b0c68f3d169e039a533c2d318f1eb164293d30ac6fca7d1008",
+        "fingerprint": "d0489cd0bfd725b0c68f3d169e039a533c2d318f1eb164293d30ac6fca7d1008",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:50.479Z"
+      },
+      {
+        "name": "DM-2026-0024",
+        "item": "TP-ALVIP50 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e0bb0e752eb1e36d1a7d3fcf77d8c3487596cf8a97cd5f6344983e04f5e9d0da",
+        "fingerprint": "e0bb0e752eb1e36d1a7d3fcf77d8c3487596cf8a97cd5f6344983e04f5e9d0da",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:52.758Z"
+      },
+      {
+        "name": "DM-2026-0025",
+        "item": "TP-ALVIP50 THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e46a49fde00afcb70850b456b18bc0e7d8950fed94ea27f6767ca974b43991bd",
+        "fingerprint": "e46a49fde00afcb70850b456b18bc0e7d8950fed94ea27f6767ca974b43991bd",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:52.924Z"
+      },
+      {
+        "name": "DM-2026-0026",
+        "item": "TP-ALVIPST500 THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2d3afab0da51151084bccef3a2423a41dfd9d9dda2bca65a8cd613dea7a76445",
+        "fingerprint": "2d3afab0da51151084bccef3a2423a41dfd9d9dda2bca65a8cd613dea7a76445",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:53.118Z"
+      },
+      {
+        "name": "DM-2026-0027",
+        "item": "TP-ALVIPST700 THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 90273416f5a6d9b47ca251900b0e771604a9fbb32b10bcb991425afffc328852",
+        "fingerprint": "90273416f5a6d9b47ca251900b0e771604a9fbb32b10bcb991425afffc328852",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:53.313Z"
+      },
+      {
+        "name": "DM-2026-0028",
+        "item": "TP-BDK-TANKER-ALUMAX",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e5c30536ddf14cfeb2b1b2c2722ef3c662ab0ae38fec668577a2f90b58a85641",
+        "fingerprint": "e5c30536ddf14cfeb2b1b2c2722ef3c662ab0ae38fec668577a2f90b58a85641",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:56.173Z"
+      },
+      {
+        "name": "DM-2026-0029",
+        "item": "TP-BDKDT_MULLER",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 50040b429c84d45c88a4bc9c9648865fd31eaa8509c489f59893d3f5f01c74a5",
+        "fingerprint": "50040b429c84d45c88a4bc9c9648865fd31eaa8509c489f59893d3f5f01c74a5",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:59.202Z"
+      },
+      {
+        "name": "DM-2026-0125",
+        "item": "TP-BKAN",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5e8e09c1eca9b95d18197402820f0f27cb57a77edfb3d7724ded277e711e0df1",
+        "fingerprint": "5e8e09c1eca9b95d18197402820f0f27cb57a77edfb3d7724ded277e711e0df1",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:05.100Z"
+      },
+      {
+        "name": "DM-2026-0030",
+        "item": "TP-BO 1VIS 503N-71-595",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete f0cdb03a8ceac6c02b750dfafc940d064f2a3a30653e41703284bb6a9f8f3166",
+        "fingerprint": "f0cdb03a8ceac6c02b750dfafc940d064f2a3a30653e41703284bb6a9f8f3166",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:54.673Z"
+      },
+      {
+        "name": "DM-2026-0031",
+        "item": "TP-BO 1VIS AL503C",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e9f832130876984c511a87653d14faa7dbe736a6699c5c07d316ec76bf054a5a",
+        "fingerprint": "e9f832130876984c511a87653d14faa7dbe736a6699c5c07d316ec76bf054a5a",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:54.476Z"
+      },
+      {
+        "name": "DM-2026-0032",
+        "item": "TP-BO 1VIS AL701LOP",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a982808f9bc78fa6c8ca79869129869f33239fa8eb71bced81c19c59066f3a6a",
+        "fingerprint": "a982808f9bc78fa6c8ca79869129869f33239fa8eb71bced81c19c59066f3a6a",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:53.891Z"
+      },
+      {
+        "name": "DM-2026-0033",
+        "item": "TP-BO 1VIS AL702LOP",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7176315404df77c9ccd407206d154eecf10018bc695b3abe3eed4ceec0c73aa1",
+        "fingerprint": "7176315404df77c9ccd407206d154eecf10018bc695b3abe3eed4ceec0c73aa1",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:53.703Z"
+      },
+      {
+        "name": "DM-2026-0034",
+        "item": "TP-BO 1VIS AL75",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7f42c62b99c7eba444cf14dbe8ebfa88cd042c26c56404e13b5dba5bdc76e91d",
+        "fingerprint": "7f42c62b99c7eba444cf14dbe8ebfa88cd042c26c56404e13b5dba5bdc76e91d",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:54.069Z"
+      },
+      {
+        "name": "DM-2026-0035",
+        "item": "TP-BO 2VIS 752-VIPST700",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 91a47f0ae2f5072660e48854b3e2364aa9fd2e2208092a00d9da5d189c739111",
+        "fingerprint": "91a47f0ae2f5072660e48854b3e2364aa9fd2e2208092a00d9da5d189c739111",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:53.498Z"
+      },
+      {
+        "name": "DM-2026-0036",
+        "item": "TP-BO 2VIS AL50-VIP50-AL548-ST500",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e430fc559d09683c012607c8f75ab5614c2ecfb35cf288fd58848a5090c1b145",
+        "fingerprint": "e430fc559d09683c012607c8f75ab5614c2ecfb35cf288fd58848a5090c1b145",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:54.264Z"
+      },
+      {
+        "name": "DM-2026-0037",
+        "item": "TP-BO 2VIS-501-552",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e135a366c909057775944c5c2e5f958292a17cb6757999b16de921b3453a2e34",
+        "fingerprint": "e135a366c909057775944c5c2e5f958292a17cb6757999b16de921b3453a2e34",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:54.861Z"
+      },
+      {
+        "name": "DM-2026-0038",
+        "item": "TP-BO 2VIS-652-548C",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c60da7e71937a6d8ff171f86d4bc35fb358f728803d8d29c6b061b5d2ce8866b",
+        "fingerprint": "c60da7e71937a6d8ff171f86d4bc35fb358f728803d8d29c6b061b5d2ce8866b",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:55.051Z"
+      },
+      {
+        "name": "DM-2026-0121",
+        "item": "TP-BUOMSAT-DL",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 4e80d9afac7b6a8f6acaa2a0691ac2d0e58df9681e1b86cad8e437af23a2608e",
+        "fingerprint": "4e80d9afac7b6a8f6acaa2a0691ac2d0e58df9681e1b86cad8e437af23a2608e",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:39:59.383Z"
+      },
+      {
+        "name": "DM-2026-0122",
+        "item": "TP-BUOMSAT-ST",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b024f0b8e89fa602360f5775638dafc886191d3208a0adc59eeede7e2d537ed6",
+        "fingerprint": "b024f0b8e89fa602360f5775638dafc886191d3208a0adc59eeede7e2d537ed6",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:39:59.553Z"
+      },
+      {
+        "name": "DM-2026-0039",
+        "item": "TP-CON LĂN",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 1a0aea7c4cb2a2b9024087b42dedb089df6320e3de9306d80e1465640bbd33a1",
+        "fingerprint": "1a0aea7c4cb2a2b9024087b42dedb089df6320e3de9306d80e1465640bbd33a1",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:45.792Z"
+      },
+      {
+        "name": "DM-2026-0197",
+        "item": "TP-CUADL1LY XN-VK_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 86f2a5e4537bd5fd0b6701bff05f8243fead542b0b07ae77c61541c23442e7e8",
+        "fingerprint": "86f2a5e4537bd5fd0b6701bff05f8243fead542b0b07ae77c61541c23442e7e8",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:22.063Z"
+      },
+      {
+        "name": "DM-2026-0213",
+        "item": "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 930bd7ddcf495ba43b7f88de794316bba6dcd34f20f6ef7842a3ccae05139e07",
+        "fingerprint": "930bd7ddcf495ba43b7f88de794316bba6dcd34f20f6ef7842a3ccae05139e07",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:24.657Z"
+      },
+      {
+        "name": "DM-2026-0212",
+        "item": "TP-CUADL1LY XN-VK_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 0ce41196b516332ec9c3b5b873c04e2ed697e84b89c91eae3117879251f67981",
+        "fingerprint": "0ce41196b516332ec9c3b5b873c04e2ed697e84b89c91eae3117879251f67981",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:24.472Z"
+      },
+      {
+        "name": "DM-2026-0210",
+        "item": "TP-CUADL1LY XN-VK_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cd8eeac02e5d3efcd69156b8faa2e805c6a7f132bfde86d653f041eafe27ea7f",
+        "fingerprint": "cd8eeac02e5d3efcd69156b8faa2e805c6a7f132bfde86d653f041eafe27ea7f",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:24.115Z"
+      },
+      {
+        "name": "DM-2026-0206",
+        "item": "TP-CUADL1LY XN-VK_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ecb592911a4a96cbb7ec10907c2d1d109d761a26ddb44dc6dc472e41829774ac",
+        "fingerprint": "ecb592911a4a96cbb7ec10907c2d1d109d761a26ddb44dc6dc472e41829774ac",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:23.759Z"
+      },
+      {
+        "name": "DM-2026-0203",
+        "item": "TP-CUADL1LY XN-VK_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 16f686df7e33dcfd98044fc4b4cd157943fd85c03e5d12f4e2847d9bb54fd85e",
+        "fingerprint": "16f686df7e33dcfd98044fc4b4cd157943fd85c03e5d12f4e2847d9bb54fd85e",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:23.189Z"
+      },
+      {
+        "name": "DM-2026-0202",
+        "item": "TP-CUADL1LY XN-VK_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 35ee0eae2e233afa9722a38512e4ca8d55bc2cba925f0c5105cbb9e2da36abca",
+        "fingerprint": "35ee0eae2e233afa9722a38512e4ca8d55bc2cba925f0c5105cbb9e2da36abca",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:22.995Z"
+      },
+      {
+        "name": "DM-2026-0200",
+        "item": "TP-CUADL1LY XN-VK_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 619a3d73af62a9f8c6379c5e97760cf19696476cbde5e51660d4f81be17e2227",
+        "fingerprint": "619a3d73af62a9f8c6379c5e97760cf19696476cbde5e51660d4f81be17e2227",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:22.616Z"
+      },
+      {
+        "name": "DM-2026-0198",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 320b81c55a41d0727e73b4268139a491b3d81b87e2af357e28efc0e7e5ff2d13",
+        "fingerprint": "320b81c55a41d0727e73b4268139a491b3d81b87e2af357e28efc0e7e5ff2d13",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:22.266Z"
+      },
+      {
+        "name": "DM-2026-0214",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b0fbd5fbcebe4b1a1e93ee1a081231fdd122a831dbd936210ca599331cdefa24",
+        "fingerprint": "b0fbd5fbcebe4b1a1e93ee1a081231fdd122a831dbd936210ca599331cdefa24",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:24.848Z"
+      },
+      {
+        "name": "DM-2026-0211",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ec9deb4c7701b8ee6bc51ec0ba76a00b4f71feb80e2f19f1731993929b7ecfa4",
+        "fingerprint": "ec9deb4c7701b8ee6bc51ec0ba76a00b4f71feb80e2f19f1731993929b7ecfa4",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:24.287Z"
+      },
+      {
+        "name": "DM-2026-0209",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 10ccbe3f53eb52d8d7702f293176e62f7eb5b500e6f1dda8ec0744ac70e4d14f",
+        "fingerprint": "10ccbe3f53eb52d8d7702f293176e62f7eb5b500e6f1dda8ec0744ac70e4d14f",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:23.926Z"
+      },
+      {
+        "name": "DM-2026-0205",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 3c40bdee58601c1b1d9e0ca7b05c03d4bb29e55723576083ea8403ae4612e428",
+        "fingerprint": "3c40bdee58601c1b1d9e0ca7b05c03d4bb29e55723576083ea8403ae4612e428",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:23.580Z"
+      },
+      {
+        "name": "DM-2026-0204",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete bc21895c2a4b9f905a8e132ed863e3072eb6aa8cd3afe13351f91f731a4defc4",
+        "fingerprint": "bc21895c2a4b9f905a8e132ed863e3072eb6aa8cd3afe13351f91f731a4defc4",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:23.399Z"
+      },
+      {
+        "name": "DM-2026-0201",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5babe06d40056440e8f9ac9f40e83b7fd3c4b9b090d02b7d0bb04e51a3264719",
+        "fingerprint": "5babe06d40056440e8f9ac9f40e83b7fd3c4b9b090d02b7d0bb04e51a3264719",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:22.803Z"
+      },
+      {
+        "name": "DM-2026-0199",
+        "item": "TP-CUADL1LY XN-XLC_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2d26af5b9883c20ff04636cb51ad505bba90eb62eed77c3aca45a27b2ac66e41",
+        "fingerprint": "2d26af5b9883c20ff04636cb51ad505bba90eb62eed77c3aca45a27b2ac66e41",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:22.425Z"
+      },
+      {
+        "name": "DM-2026-0208",
+        "item": "TP-CUADL1LY-XN-VK_TRONBO_3-4M",
+        "company": "ALUMDOOR",
+        "bom_status": null,
+        "note": "Nguồn: sheet ĐM dòng 1633 | Nhóm 1LY | CỬA ĐL1LY XN-VK_TRỌN BỘ_3-4m²",
+        "fingerprint": null,
+        "child_count": 2,
+        "modified_at": "2026-08-15T09:00:00.000Z"
+      },
+      {
+        "name": "DM-2026-0207",
+        "item": "TP-CUADL1LY-XN-VK_TRONBO_4-5M",
+        "company": "ALUMDOOR",
+        "bom_status": null,
+        "note": "Nguồn: sheet ĐM dòng 1627 | Nhóm 1LY | CỬA ĐL1LY XN-VK_TRỌN BỘ_4-5m²",
+        "fingerprint": null,
+        "child_count": 2,
+        "modified_at": "2026-08-15T09:00:00.000Z"
+      },
+      {
+        "name": "DM-2026-0149",
+        "item": "TP-CUADL6D XN-VK_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 0a0f758ef9bf3fc61dd35ed0ed1bb7bbbabcbe610ee9919543eb078590242c1b",
+        "fingerprint": "0a0f758ef9bf3fc61dd35ed0ed1bb7bbbabcbe610ee9919543eb078590242c1b",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:13.299Z"
+      },
+      {
+        "name": "DM-2026-0163",
+        "item": "TP-CUADL6D XN-VK_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ab3bd81c736b37a5f12a20b9cc20299e65a0383be65633540ca6fbf4fec9dc4a",
+        "fingerprint": "ab3bd81c736b37a5f12a20b9cc20299e65a0383be65633540ca6fbf4fec9dc4a",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:15.806Z"
+      },
+      {
+        "name": "DM-2026-0162",
+        "item": "TP-CUADL6D XN-VK_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a6a433a5611dcb38432f5d377b8c0a499bdbaf3a76a121770f7ec26e2b686283",
+        "fingerprint": "a6a433a5611dcb38432f5d377b8c0a499bdbaf3a76a121770f7ec26e2b686283",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:15.613Z"
+      },
+      {
+        "name": "DM-2026-0160",
+        "item": "TP-CUADL6D XN-VK_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d91b0d8687ebe3d33cdde0802c22ffe9cdd854f12a88a38eced707451e500ba2",
+        "fingerprint": "d91b0d8687ebe3d33cdde0802c22ffe9cdd854f12a88a38eced707451e500ba2",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:15.229Z"
+      },
+      {
+        "name": "DM-2026-0158",
+        "item": "TP-CUADL6D XN-VK_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 88059c166908ba418d46cf43dcde09e535bc65179ae4e67d6189a9c2de6773a5",
+        "fingerprint": "88059c166908ba418d46cf43dcde09e535bc65179ae4e67d6189a9c2de6773a5",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:14.871Z"
+      },
+      {
+        "name": "DM-2026-0155",
+        "item": "TP-CUADL6D XN-VK_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7f00eec6f733cc8c0a351bb1206602c4e948435dfec85adc2adc69b147032e18",
+        "fingerprint": "7f00eec6f733cc8c0a351bb1206602c4e948435dfec85adc2adc69b147032e18",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:14.377Z"
+      },
+      {
+        "name": "DM-2026-0154",
+        "item": "TP-CUADL6D XN-VK_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 4679ec3b8ac4934b59337a4578a6edb69a8e9c22e2d566ff4234d51119c3b95d",
+        "fingerprint": "4679ec3b8ac4934b59337a4578a6edb69a8e9c22e2d566ff4234d51119c3b95d",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:14.191Z"
+      },
+      {
+        "name": "DM-2026-0152",
+        "item": "TP-CUADL6D XN-VK_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 01a19e1519ef4a2d1c2c6f5b122a95f64cd3a4f89b9c468a3fa3de860dabff21",
+        "fingerprint": "01a19e1519ef4a2d1c2c6f5b122a95f64cd3a4f89b9c468a3fa3de860dabff21",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:13.823Z"
+      },
+      {
+        "name": "DM-2026-0150",
+        "item": "TP-CUADL6D XN-XLC_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8bbaa1f3938e78371b23a34a32b8d54cfb6d60a51c18fa89d49404500ee5bddd",
+        "fingerprint": "8bbaa1f3938e78371b23a34a32b8d54cfb6d60a51c18fa89d49404500ee5bddd",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:13.467Z"
+      },
+      {
+        "name": "DM-2026-0164",
+        "item": "TP-CUADL6D XN-XLC_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 6c1278af2cd572d0a3becb98ef211803f8740ab2794eed055ef23207c64acf25",
+        "fingerprint": "6c1278af2cd572d0a3becb98ef211803f8740ab2794eed055ef23207c64acf25",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:16.014Z"
+      },
+      {
+        "name": "DM-2026-0161",
+        "item": "TP-CUADL6D XN-XLC_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 3162b9de20230f420505499763430bb18a4b1a243aabcaf178ac33244748b52c",
+        "fingerprint": "3162b9de20230f420505499763430bb18a4b1a243aabcaf178ac33244748b52c",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:15.420Z"
+      },
+      {
+        "name": "DM-2026-0159",
+        "item": "TP-CUADL6D XN-XLC_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete f5897bc227e333931bf55aa9efe96f1d5c4696259db3898f91aa900048a34170",
+        "fingerprint": "f5897bc227e333931bf55aa9efe96f1d5c4696259db3898f91aa900048a34170",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:15.060Z"
+      },
+      {
+        "name": "DM-2026-0157",
+        "item": "TP-CUADL6D XN-XLC_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8cb140061578e0dbb644ee5f4af97e17af822a50a64ac4c504e12137e25f8750",
+        "fingerprint": "8cb140061578e0dbb644ee5f4af97e17af822a50a64ac4c504e12137e25f8750",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:14.704Z"
+      },
+      {
+        "name": "DM-2026-0156",
+        "item": "TP-CUADL6D XN-XLC_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 575e49d419326f1944fadd1870fc5b85bdde0ffc1b8ed1a4c8d9cea8e2544aaa",
+        "fingerprint": "575e49d419326f1944fadd1870fc5b85bdde0ffc1b8ed1a4c8d9cea8e2544aaa",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:14.546Z"
+      },
+      {
+        "name": "DM-2026-0153",
+        "item": "TP-CUADL6D XN-XLC_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete dfabcfc814809939d243d718b188d976692adcb9232893b07a9849c8f998e0df",
+        "fingerprint": "dfabcfc814809939d243d718b188d976692adcb9232893b07a9849c8f998e0df",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:13.998Z"
+      },
+      {
+        "name": "DM-2026-0151",
+        "item": "TP-CUADL6D XN-XLC_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 63d4c5c47a69d4725d47937d07efabe0abd26daf32f7f0fa57ff7b55a6e002b3",
+        "fingerprint": "63d4c5c47a69d4725d47937d07efabe0abd26daf32f7f0fa57ff7b55a6e002b3",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:13.658Z"
+      },
+      {
+        "name": "DM-2026-0165",
+        "item": "TP-CUADL7D XN-VK_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ecc9b6fa3663e345c102acff549a0db0f466792ffd204280dd932d167d100cfc",
+        "fingerprint": "ecc9b6fa3663e345c102acff549a0db0f466792ffd204280dd932d167d100cfc",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:16.185Z"
+      },
+      {
+        "name": "DM-2026-0179",
+        "item": "TP-CUADL7D XN-VK_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 6d93a8d569f947dafa0338b343d032f649a5f7324885e4335891f7cedc5d8e1e",
+        "fingerprint": "6d93a8d569f947dafa0338b343d032f649a5f7324885e4335891f7cedc5d8e1e",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:18.631Z"
+      },
+      {
+        "name": "DM-2026-0178",
+        "item": "TP-CUADL7D XN-VK_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 018c293318a7e46dd2527bd0f71c62d429ec6dad66a8b1740779ce31735f3510",
+        "fingerprint": "018c293318a7e46dd2527bd0f71c62d429ec6dad66a8b1740779ce31735f3510",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:18.478Z"
+      },
+      {
+        "name": "DM-2026-0176",
+        "item": "TP-CUADL7D XN-VK_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete fc53745c504fba3f59904c73f48fdb7adbdc093c71203bc4c2c7ee11986242be",
+        "fingerprint": "fc53745c504fba3f59904c73f48fdb7adbdc093c71203bc4c2c7ee11986242be",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:18.109Z"
+      },
+      {
+        "name": "DM-2026-0174",
+        "item": "TP-CUADL7D XN-VK_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8b7fec4adca1fa39e838fe152c3a8682a19b61c3642264a8cbd7b957068f77b5",
+        "fingerprint": "8b7fec4adca1fa39e838fe152c3a8682a19b61c3642264a8cbd7b957068f77b5",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:17.780Z"
+      },
+      {
+        "name": "DM-2026-0171",
+        "item": "TP-CUADL7D XN-VK_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c2a92ab81aa4385acdef9d3a27a65ce388a97d7e8cd1a3bfd5f3913c6c88737f",
+        "fingerprint": "c2a92ab81aa4385acdef9d3a27a65ce388a97d7e8cd1a3bfd5f3913c6c88737f",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:17.281Z"
+      },
+      {
+        "name": "DM-2026-0170",
+        "item": "TP-CUADL7D XN-VK_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete fc793323f9385c52fde4670a2c019edeed543eae1c1bb54e162ed9adfefe69fe",
+        "fingerprint": "fc793323f9385c52fde4670a2c019edeed543eae1c1bb54e162ed9adfefe69fe",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:17.094Z"
+      },
+      {
+        "name": "DM-2026-0168",
+        "item": "TP-CUADL7D XN-VK_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 65c40d49e0357633ac2d16fff674c68ffd1f4e467d7b20412ea69a860de26fb3",
+        "fingerprint": "65c40d49e0357633ac2d16fff674c68ffd1f4e467d7b20412ea69a860de26fb3",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:16.731Z"
+      },
+      {
+        "name": "DM-2026-0166",
+        "item": "TP-CUADL7D XN-XLC_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 48dcd12fd220a303fd4bd16a92437a4f7d7cb50361f920073d7bc2f92ed92519",
+        "fingerprint": "48dcd12fd220a303fd4bd16a92437a4f7d7cb50361f920073d7bc2f92ed92519",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:16.384Z"
+      },
+      {
+        "name": "DM-2026-0180",
+        "item": "TP-CUADL7D XN-XLC_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 9584db4c975b51fa1d13e8ea47defc61b08bf37c9e6f074415939810a84f5ee3",
+        "fingerprint": "9584db4c975b51fa1d13e8ea47defc61b08bf37c9e6f074415939810a84f5ee3",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:18.808Z"
+      },
+      {
+        "name": "DM-2026-0177",
+        "item": "TP-CUADL7D XN-XLC_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 51a914abcb7298165feb56f1c9293ec875493bf09920971768d00ee0359b09a4",
+        "fingerprint": "51a914abcb7298165feb56f1c9293ec875493bf09920971768d00ee0359b09a4",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:18.296Z"
+      },
+      {
+        "name": "DM-2026-0175",
+        "item": "TP-CUADL7D XN-XLC_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 82bf14da99ca7629aaecfe6d62d094e5f6f51fc02fc735d1f722214c897e92ba",
+        "fingerprint": "82bf14da99ca7629aaecfe6d62d094e5f6f51fc02fc735d1f722214c897e92ba",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:17.938Z"
+      },
+      {
+        "name": "DM-2026-0173",
+        "item": "TP-CUADL7D XN-XLC_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8c3142d82f0414b7f287caa317f70bd53c5637ac559be9113ac697f0b44711e9",
+        "fingerprint": "8c3142d82f0414b7f287caa317f70bd53c5637ac559be9113ac697f0b44711e9",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:17.618Z"
+      },
+      {
+        "name": "DM-2026-0172",
+        "item": "TP-CUADL7D XN-XLC_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 02db928e910ade7273d09df71588b675472b6f3b809fb973f1c203e9aacf9d40",
+        "fingerprint": "02db928e910ade7273d09df71588b675472b6f3b809fb973f1c203e9aacf9d40",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:17.467Z"
+      },
+      {
+        "name": "DM-2026-0169",
+        "item": "TP-CUADL7D XN-XLC_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete da05fb3d7f97c3fb94048cae382c911eea939fb882c76b48f5e488db0c388c8c",
+        "fingerprint": "da05fb3d7f97c3fb94048cae382c911eea939fb882c76b48f5e488db0c388c8c",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:16.908Z"
+      },
+      {
+        "name": "DM-2026-0167",
+        "item": "TP-CUADL7D XN-XLC_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7dd0a4379a3e8786bb771f09f111f1477b09f1a6bdf4037d9e2fd2a3d4f259f5",
+        "fingerprint": "7dd0a4379a3e8786bb771f09f111f1477b09f1a6bdf4037d9e2fd2a3d4f259f5",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:16.563Z"
+      },
+      {
+        "name": "DM-2026-0181",
+        "item": "TP-CUADL8D XN-VK_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 43fefab78f8731f6637eb8243a14756d2a9229ad7a5c3a46190021c1375badef",
+        "fingerprint": "43fefab78f8731f6637eb8243a14756d2a9229ad7a5c3a46190021c1375badef",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:19.005Z"
+      },
+      {
+        "name": "DM-2026-0195",
+        "item": "TP-CUADL8D XN-VK_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cb00bd9cf342f22d64e6f141e35ea2522805042e127e2687417c8183efc42df3",
+        "fingerprint": "cb00bd9cf342f22d64e6f141e35ea2522805042e127e2687417c8183efc42df3",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:21.644Z"
+      },
+      {
+        "name": "DM-2026-0194",
+        "item": "TP-CUADL8D XN-VK_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d9a240aa8d7c7b5a2ad97ad0f0295f73fccc52b1ee0fb3cdb20a9827cff8e55d",
+        "fingerprint": "d9a240aa8d7c7b5a2ad97ad0f0295f73fccc52b1ee0fb3cdb20a9827cff8e55d",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:21.416Z"
+      },
+      {
+        "name": "DM-2026-0192",
+        "item": "TP-CUADL8D XN-VK_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2ad4f1f9b84a623bde3e13534e162bf8decc28118e9f2d3f0bea821291c13c2c",
+        "fingerprint": "2ad4f1f9b84a623bde3e13534e162bf8decc28118e9f2d3f0bea821291c13c2c",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:20.993Z"
+      },
+      {
+        "name": "DM-2026-0190",
+        "item": "TP-CUADL8D XN-VK_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 906f5697e1957900dd91bc05b45b78bc4244b2f1bc9e86e677089bd6982785bb",
+        "fingerprint": "906f5697e1957900dd91bc05b45b78bc4244b2f1bc9e86e677089bd6982785bb",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:20.646Z"
+      },
+      {
+        "name": "DM-2026-0187",
+        "item": "TP-CUADL8D XN-VK_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 4f3c12fa3f60141b2c6118d91f89d609c8c90f2902dcfcf39695017c822676db",
+        "fingerprint": "4f3c12fa3f60141b2c6118d91f89d609c8c90f2902dcfcf39695017c822676db",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:20.104Z"
+      },
+      {
+        "name": "DM-2026-0186",
+        "item": "TP-CUADL8D XN-VK_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 9fc627c25abba8699a6afe7da7edd949c6c9ecb389470e50edb7af901197ab38",
+        "fingerprint": "9fc627c25abba8699a6afe7da7edd949c6c9ecb389470e50edb7af901197ab38",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:19.930Z"
+      },
+      {
+        "name": "DM-2026-0184",
+        "item": "TP-CUADL8D XN-VK_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2c453a62327a1fd6d1eb9cd188154181c794fd01b659564714abb279bd0e03c1",
+        "fingerprint": "2c453a62327a1fd6d1eb9cd188154181c794fd01b659564714abb279bd0e03c1",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:19.560Z"
+      },
+      {
+        "name": "DM-2026-0182",
+        "item": "TP-CUADL8D XN-XLC_TRONBO>10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 027fbc7d1609774e054276a3337fe01ab8e87ba783b307bb544b523876b2e5d9",
+        "fingerprint": "027fbc7d1609774e054276a3337fe01ab8e87ba783b307bb544b523876b2e5d9",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:19.187Z"
+      },
+      {
+        "name": "DM-2026-0196",
+        "item": "TP-CUADL8D XN-XLC_TRONBO_3-4m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8d2899557e7b3fa50e6882f6981d05550d493a95cc3cdd1d689cae17877543ab",
+        "fingerprint": "8d2899557e7b3fa50e6882f6981d05550d493a95cc3cdd1d689cae17877543ab",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:21.861Z"
+      },
+      {
+        "name": "DM-2026-0193",
+        "item": "TP-CUADL8D XN-XLC_TRONBO_4-5m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 6b84bb848b86b261a020d57f7e7f1874163b0975b6f72952ded48ebbdfb63bce",
+        "fingerprint": "6b84bb848b86b261a020d57f7e7f1874163b0975b6f72952ded48ebbdfb63bce",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:21.190Z"
+      },
+      {
+        "name": "DM-2026-0191",
+        "item": "TP-CUADL8D XN-XLC_TRONBO_5-6m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete caaa97b441cd49975c3662d411cd9b0fcd27283618e240644058bffcf424e771",
+        "fingerprint": "caaa97b441cd49975c3662d411cd9b0fcd27283618e240644058bffcf424e771",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:20.804Z"
+      },
+      {
+        "name": "DM-2026-0189",
+        "item": "TP-CUADL8D XN-XLC_TRONBO_6-7m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete f91c62a4e1cf9bdb24ac7cbf232ee1dd0e025ec61f8ae13c297d9d8a0744ba96",
+        "fingerprint": "f91c62a4e1cf9bdb24ac7cbf232ee1dd0e025ec61f8ae13c297d9d8a0744ba96",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:20.485Z"
+      },
+      {
+        "name": "DM-2026-0188",
+        "item": "TP-CUADL8D XN-XLC_TRONBO_7-8m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 05247cdbd7e4a1cdd7bc960d4e41a2d9ffbd886eb35de1f49661f3b203020dd2",
+        "fingerprint": "05247cdbd7e4a1cdd7bc960d4e41a2d9ffbd886eb35de1f49661f3b203020dd2",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:20.294Z"
+      },
+      {
+        "name": "DM-2026-0185",
+        "item": "TP-CUADL8D XN-XLC_TRONBO_8-9m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 1439a784b5e3bb53e64071c35cfd4cf6c4e9c43507298f67480be7dad41ed7d4",
+        "fingerprint": "1439a784b5e3bb53e64071c35cfd4cf6c4e9c43507298f67480be7dad41ed7d4",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:19.767Z"
+      },
+      {
+        "name": "DM-2026-0183",
+        "item": "TP-CUADL8D XN-XLC_TRONBO_9-10m²",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 03b41776a66464f977e17062f3d90c2f3db3e9a92e8bffb0d09cd0f6a7270029",
+        "fingerprint": "03b41776a66464f977e17062f3d90c2f3db3e9a92e8bffb0d09cd0f6a7270029",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:19.369Z"
+      },
+      {
+        "name": "DM-2026-0040",
+        "item": "TP-DUC-KT AL70 (2 LỚP) STĐ MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2a8cb94571643c8c8ff40be8233051754fc8a415bbd7aaa4d05c2c7a928caceb",
+        "fingerprint": "2a8cb94571643c8c8ff40be8233051754fc8a415bbd7aaa4d05c2c7a928caceb",
+        "child_count": 22,
+        "modified_at": "2026-08-19T01:40:09.073Z"
+      },
+      {
+        "name": "DM-2026-0041",
+        "item": "TP-DUC-KT AL70 STĐ MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8dac6a44b060af252a7c5b6dd2cdcea492b4e0a084cc8ff36f8201d98bbac399",
+        "fingerprint": "8dac6a44b060af252a7c5b6dd2cdcea492b4e0a084cc8ff36f8201d98bbac399",
+        "child_count": 22,
+        "modified_at": "2026-08-19T01:40:09.293Z"
+      },
+      {
+        "name": "DM-2026-0042",
+        "item": "TP-KN",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a660f9443f46128384ee7bb2b064cba50ddc4b7e458dc9230c5134cffe893a15",
+        "fingerprint": "a660f9443f46128384ee7bb2b064cba50ddc4b7e458dc9230c5134cffe893a15",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:40:04.925Z"
+      },
+      {
+        "name": "DM-2026-0135",
+        "item": "TP-LUOI-MV-STD - TM",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d82f411b03405e68aedde81fd295dde0a54e8c4570f3928240262199ce4b6773",
+        "fingerprint": "d82f411b03405e68aedde81fd295dde0a54e8c4570f3928240262199ce4b6773",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:40:10.809Z"
+      },
+      {
+        "name": "DM-2026-0130",
+        "item": "TP-LUOI-MV-STD - TRONBO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a2248e86412badd1296a947090852d7306b0ef8bb89578587957787c11f94056",
+        "fingerprint": "a2248e86412badd1296a947090852d7306b0ef8bb89578587957787c11f94056",
+        "child_count": 14,
+        "modified_at": "2026-08-19T01:40:09.515Z"
+      },
+      {
+        "name": "DM-2026-0136",
+        "item": "TP-LUOI-SN-STD - TM",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 4baa88c6ae3b6651d39f4932d60a7b7b6ce36dc9f53055b4c67f4aaa4ffc79f5",
+        "fingerprint": "4baa88c6ae3b6651d39f4932d60a7b7b6ce36dc9f53055b4c67f4aaa4ffc79f5",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:10.989Z"
+      },
+      {
+        "name": "DM-2026-0137",
+        "item": "TP-LUOI-SN-STD - TRONBO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 4ae7da98067fc0811e8cb03fea09a71232d1190eb55ffa87c0e641a7b195db7e",
+        "fingerprint": "4ae7da98067fc0811e8cb03fea09a71232d1190eb55ffa87c0e641a7b195db7e",
+        "child_count": 12,
+        "modified_at": "2026-08-19T01:40:11.154Z"
+      },
+      {
+        "name": "DM-2026-0140",
+        "item": "TP-LUOI-SN13x26-INOX - TACHMON",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 808664bc82c9dd0b32432b5accc64c895fff1908f0d3ea05d03c87edd1a68f99",
+        "fingerprint": "808664bc82c9dd0b32432b5accc64c895fff1908f0d3ea05d03c87edd1a68f99",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:11.710Z"
+      },
+      {
+        "name": "DM-2026-0141",
+        "item": "TP-LUOI-SN13x26-INOX - TRONBO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c86e0fd4a5e09339fe4cc249e11756de9c1ec2f597e00d3e646a6c8788cc6be7",
+        "fingerprint": "c86e0fd4a5e09339fe4cc249e11756de9c1ec2f597e00d3e646a6c8788cc6be7",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:40:11.897Z"
+      },
+      {
+        "name": "DM-2026-0139",
+        "item": "TP-LUOI-SN13x26-STD - TACHMON",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 969af16045eac6e9321879a228ee0eed254c03a5d0b838616b4fb1e01d2624ab",
+        "fingerprint": "969af16045eac6e9321879a228ee0eed254c03a5d0b838616b4fb1e01d2624ab",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:11.537Z"
+      },
+      {
+        "name": "DM-2026-0138",
+        "item": "TP-LUOI-SN13x26-STD - TRONBO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d45925647887b69cd79ac7241158b5151783758c2880ab0ef07739aaabadc7d3",
+        "fingerprint": "d45925647887b69cd79ac7241158b5151783758c2880ab0ef07739aaabadc7d3",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:11.350Z"
+      },
+      {
+        "name": "DM-2026-0142",
+        "item": "TP-LUOI-SNPHI19-INOX - TM",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 3fa0712e6c75e99c43a8bb54a075c05e0197b454205921f2b97f0823bc8be280",
+        "fingerprint": "3fa0712e6c75e99c43a8bb54a075c05e0197b454205921f2b97f0823bc8be280",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:12.080Z"
+      },
+      {
+        "name": "DM-2026-0143",
+        "item": "TP-LUOI-SNPHI19-INOX - TRONBO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c167237989eff919a0c3920a11111ab3525af92df0bbdc543119ce1e1378ea7c",
+        "fingerprint": "c167237989eff919a0c3920a11111ab3525af92df0bbdc543119ce1e1378ea7c",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:40:12.237Z"
+      },
+      {
+        "name": "DM-2026-0144",
+        "item": "TP-LUOIMV-INOX- TM",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 3f06eec98e3f7bb20d6585963471dd392dfe9f67caf66312d36693189678c87c",
+        "fingerprint": "3f06eec98e3f7bb20d6585963471dd392dfe9f67caf66312d36693189678c87c",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:12.434Z"
+      },
+      {
+        "name": "DM-2026-0145",
+        "item": "TP-LUOIMV-INOX- TRONBO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 0e5604f7080b9b4bbc8abae267adbaec08a63289b2d00503c8d37f5d5179eb30",
+        "fingerprint": "0e5604f7080b9b4bbc8abae267adbaec08a63289b2d00503c8d37f5d5179eb30",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:40:12.593Z"
+      },
+      {
+        "name": "DM-2026-0043",
+        "item": "TP-MT-ALUMAX400KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ac7603c684a8ef08ee8c99b7174320d4d07ed974526d593f9a605baa3dcc96ec",
+        "fingerprint": "ac7603c684a8ef08ee8c99b7174320d4d07ed974526d593f9a605baa3dcc96ec",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:40:00.109Z"
+      },
+      {
+        "name": "DM-2026-0044",
+        "item": "TP-MT-ALUMAX600KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8be9154b64932a3991df8cd85e50f14786f2d509033c024c90b6ae116c8d760f",
+        "fingerprint": "8be9154b64932a3991df8cd85e50f14786f2d509033c024c90b6ae116c8d760f",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:40:00.295Z"
+      },
+      {
+        "name": "DM-2026-0045",
+        "item": "TP-MT-JG1000KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8b3a277f8f3b8d1524e27a2629a4ecc0c69ddd696c5350fe3ba20dc9df2bb2e7",
+        "fingerprint": "8b3a277f8f3b8d1524e27a2629a4ecc0c69ddd696c5350fe3ba20dc9df2bb2e7",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:58.239Z"
+      },
+      {
+        "name": "DM-2026-0046",
+        "item": "TP-MT-JG1500KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d539152c18b7cba8be8613bda382153c125efe9d7cd5867dfad1577405d2ceaa",
+        "fingerprint": "d539152c18b7cba8be8613bda382153c125efe9d7cd5867dfad1577405d2ceaa",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:58.437Z"
+      },
+      {
+        "name": "DM-2026-0047",
+        "item": "TP-MT-JG300KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5e1efb8fe63a999f14d95bb0b07bf2ac63c1fe1a07fddf98f5587c066d20bcec",
+        "fingerprint": "5e1efb8fe63a999f14d95bb0b07bf2ac63c1fe1a07fddf98f5587c066d20bcec",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:57.182Z"
+      },
+      {
+        "name": "DM-2026-0048",
+        "item": "TP-MT-JG400KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d27a840f11c0460da95c7be58e6d6b60dcf7edbc58bf4ff7b42ee592c0d0d1e8",
+        "fingerprint": "d27a840f11c0460da95c7be58e6d6b60dcf7edbc58bf4ff7b42ee592c0d0d1e8",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:57.375Z"
+      },
+      {
+        "name": "DM-2026-0049",
+        "item": "TP-MT-JG500KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete f39736f0766fedd271c73551556f45781ced7599a57667d22698323db896c33d",
+        "fingerprint": "f39736f0766fedd271c73551556f45781ced7599a57667d22698323db896c33d",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:57.584Z"
+      },
+      {
+        "name": "DM-2026-0050",
+        "item": "TP-MT-JG600KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8e239e3bc5a068a57365d7ccce17fff1640c512b7772a7e80e9d006e0d863301",
+        "fingerprint": "8e239e3bc5a068a57365d7ccce17fff1640c512b7772a7e80e9d006e0d863301",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:57.783Z"
+      },
+      {
+        "name": "DM-2026-0051",
+        "item": "TP-MT-JG800KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 1e78b41a9d87b3c67b84bf0c31af9685d972bd0df75ed70fcaedc71444857c69",
+        "fingerprint": "1e78b41a9d87b3c67b84bf0c31af9685d972bd0df75ed70fcaedc71444857c69",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:58.010Z"
+      },
+      {
+        "name": "DM-2026-0052",
+        "item": "TP-MT-TANKE800KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ff8f555bf31a683f3c4142602e834f392d38112dad6e7bf4a4ba2ccdc1d3b1a3",
+        "fingerprint": "ff8f555bf31a683f3c4142602e834f392d38112dad6e7bf4a4ba2ccdc1d3b1a3",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:58.827Z"
+      },
+      {
+        "name": "DM-2026-0053",
+        "item": "TP-MT-TANKER1000KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cb1d5dc42cd52f2f190f65926d151ae8ee89377d35222e6e4c77e7056e81b501",
+        "fingerprint": "cb1d5dc42cd52f2f190f65926d151ae8ee89377d35222e6e4c77e7056e81b501",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:59.005Z"
+      },
+      {
+        "name": "DM-2026-0054",
+        "item": "TP-MT-TANKER400KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a561b9bb3d10a02a3bc13287a88e136b0ee299419e233c695f40c14895eb97b8",
+        "fingerprint": "a561b9bb3d10a02a3bc13287a88e136b0ee299419e233c695f40c14895eb97b8",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:55.797Z"
+      },
+      {
+        "name": "DM-2026-0055",
+        "item": "TP-MT-TANKER600KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e2851cb4b55386a961b180e3cb630585ee36d9e19b0a8c96e61c5ec2a771fbfa",
+        "fingerprint": "e2851cb4b55386a961b180e3cb630585ee36d9e19b0a8c96e61c5ec2a771fbfa",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:58.636Z"
+      },
+      {
+        "name": "DM-2026-0056",
+        "item": "TP-MT-YHLD1000KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 86aeb897b319c3e7fa606533452990a8c2af75176a5c12e5e8aec19b6a44108e",
+        "fingerprint": "86aeb897b319c3e7fa606533452990a8c2af75176a5c12e5e8aec19b6a44108e",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:56.964Z"
+      },
+      {
+        "name": "DM-2026-0057",
+        "item": "TP-MT-YHLD300KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 0c5deec48ac9cef65f7e6856939b0d1e289fea395f765332598367f58d478e44",
+        "fingerprint": "0c5deec48ac9cef65f7e6856939b0d1e289fea395f765332598367f58d478e44",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:56.358Z"
+      },
+      {
+        "name": "DM-2026-0058",
+        "item": "TP-MT-YHLD500KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 96767f5222cf745bf825a474891cd4ae023848f93fba7b3b9f53032ea41c0436",
+        "fingerprint": "96767f5222cf745bf825a474891cd4ae023848f93fba7b3b9f53032ea41c0436",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:56.559Z"
+      },
+      {
+        "name": "DM-2026-0059",
+        "item": "TP-MT-YHLD800KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a6c4edf72f04a89d47029431a347f08850654a30350776be8fdbb923149ed8d9",
+        "fingerprint": "a6c4edf72f04a89d47029431a347f08850654a30350776be8fdbb923149ed8d9",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:56.765Z"
+      },
+      {
+        "name": "DM-2026-0060",
+        "item": "TP-MT-YHTAIWAN CH 1000KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e20a07e19272bb4f2d06c179bb2d7e04b441189f0e91c0f2719cc70aa1e4756c",
+        "fingerprint": "e20a07e19272bb4f2d06c179bb2d7e04b441189f0e91c0f2719cc70aa1e4756c",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:03.811Z"
+      },
+      {
+        "name": "DM-2026-0061",
+        "item": "TP-MT-YHTAIWAN CH 300KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c5ecb0c275b9a16b4acbd0740d862744cef482a379c3cab6f62156c0488b51b9",
+        "fingerprint": "c5ecb0c275b9a16b4acbd0740d862744cef482a379c3cab6f62156c0488b51b9",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:02.606Z"
+      },
+      {
+        "name": "DM-2026-0062",
+        "item": "TP-MT-YHTAIWAN CH 400KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7286fceaf4210a73ae32db07df7b5c670047b0184bbbcf468d1645eb1f4bfadd",
+        "fingerprint": "7286fceaf4210a73ae32db07df7b5c670047b0184bbbcf468d1645eb1f4bfadd",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:03.010Z"
+      },
+      {
+        "name": "DM-2026-0063",
+        "item": "TP-MT-YHTAIWAN CH 500KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 3b18d23abe47f205a1314ac096281154ce13f349986fc47d9de6f6ddefb3ef68",
+        "fingerprint": "3b18d23abe47f205a1314ac096281154ce13f349986fc47d9de6f6ddefb3ef68",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:02.812Z"
+      },
+      {
+        "name": "DM-2026-0064",
+        "item": "TP-MT-YHTAIWAN CH 600KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ec2ae29d3f8a2435623f2b487e5ec1638704a8c190941a5c0b6a62c96c557580",
+        "fingerprint": "ec2ae29d3f8a2435623f2b487e5ec1638704a8c190941a5c0b6a62c96c557580",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:03.221Z"
+      },
+      {
+        "name": "DM-2026-0065",
+        "item": "TP-MT-YHTAIWAN CH 700KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 08c9291d92b8cee85b671f2c32a66732aec7d701c7d91f3614a68c0aa9f9265e",
+        "fingerprint": "08c9291d92b8cee85b671f2c32a66732aec7d701c7d91f3614a68c0aa9f9265e",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:03.423Z"
+      },
+      {
+        "name": "DM-2026-0066",
+        "item": "TP-MT-YHTAIWAN CH 800KG",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b1dc9d979e977b3ba6db685bc40e89dd5f9f7d9ecb19a70be4ab2477dbe0e629",
+        "fingerprint": "b1dc9d979e977b3ba6db685bc40e89dd5f9f7d9ecb19a70be4ab2477dbe0e629",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:40:03.606Z"
+      },
+      {
+        "name": "DM-2026-0067",
+        "item": "TP-MTT_BOSTEC-DOI(P)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete fdb12c9812323334a838bdfc3c9a5c5e10de290ccb3bad41e0faf2bfc3c75c26",
+        "fingerprint": "fdb12c9812323334a838bdfc3c9a5c5e10de290ccb3bad41e0faf2bfc3c75c26",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:01.065Z"
+      },
+      {
+        "name": "DM-2026-0068",
+        "item": "TP-MTT_BOSTEC-DOI(T)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ee5ece72b74a793a86d8538efad3d39e5a9f2400c568464552dd17f82644752c",
+        "fingerprint": "ee5ece72b74a793a86d8538efad3d39e5a9f2400c568464552dd17f82644752c",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:01.258Z"
+      },
+      {
+        "name": "DM-2026-0069",
+        "item": "TP-MTT_BOSTEC-DON(P)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 6b5449e87aebb96b8f91626f8a84f69767bc8d8b7c0db2e38361a918cbe28f12",
+        "fingerprint": "6b5449e87aebb96b8f91626f8a84f69767bc8d8b7c0db2e38361a918cbe28f12",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:01.467Z"
+      },
+      {
+        "name": "DM-2026-0070",
+        "item": "TP-MTT_BOSTEC-DON(T)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2e453cb1d3a00e6b3ea8df9ca7240f043fff4e862d9dd09a8e1f616ec5ab9dee",
+        "fingerprint": "2e453cb1d3a00e6b3ea8df9ca7240f043fff4e862d9dd09a8e1f616ec5ab9dee",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:01.660Z"
+      },
+      {
+        "name": "DM-2026-0071",
+        "item": "TP-MTT_CHTAIWAN-DOI(P)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete fdf787b248b2c98c5486bdde9b942310f64345a84958cf06e84a2d2579b63b6c",
+        "fingerprint": "fdf787b248b2c98c5486bdde9b942310f64345a84958cf06e84a2d2579b63b6c",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:40:02.039Z"
+      },
+      {
+        "name": "DM-2026-0072",
+        "item": "TP-MTT_CHTAIWAN-DOI(T)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ee851b6f380dcd55c6122ac640884c8eef58c1130a1ee8736b381c2f82f3321b",
+        "fingerprint": "ee851b6f380dcd55c6122ac640884c8eef58c1130a1ee8736b381c2f82f3321b",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:40:01.858Z"
+      },
+      {
+        "name": "DM-2026-0073",
+        "item": "TP-MTT_CHTAIWAN-DON(P)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a8c268d34d08fdc56455d018166e40a3b677ab45ac9059926587ae04d3632598",
+        "fingerprint": "a8c268d34d08fdc56455d018166e40a3b677ab45ac9059926587ae04d3632598",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:40:02.238Z"
+      },
+      {
+        "name": "DM-2026-0074",
+        "item": "TP-MTT_CHTAIWAN-DON(T)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 69f1e6cd7e20fcd6d8a92998c6264c12aff419481acc9d2c4ede03151a202bb5",
+        "fingerprint": "69f1e6cd7e20fcd6d8a92998c6264c12aff419481acc9d2c4ede03151a202bb5",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:40:02.434Z"
+      },
+      {
+        "name": "DM-2026-0120",
+        "item": "TP-RAY HỘP TD U100",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete bae76148f48904da6dedb0d758d52ce5ad5b6c35d0cb544f7e1171a66b25d1d8",
+        "fingerprint": "bae76148f48904da6dedb0d758d52ce5ad5b6c35d0cb544f7e1171a66b25d1d8",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:39:46.349Z"
+      },
+      {
+        "name": "DM-2026-0118",
+        "item": "TP-RAYHOP",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete f76cf8d610a9a99d84b1eecc96685f47cb5254711df6e73ff01d55c9b14d7ab8",
+        "fingerprint": "f76cf8d610a9a99d84b1eecc96685f47cb5254711df6e73ff01d55c9b14d7ab8",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:39:45.971Z"
+      },
+      {
+        "name": "DM-2026-0134",
+        "item": "TP-RS7P (CÓ RON)",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 52cd4ca3c10888e93d9e7c111dee813ca5fc7d986a84d0fdbfdc90347c4533d1",
+        "fingerprint": "52cd4ca3c10888e93d9e7c111dee813ca5fc7d986a84d0fdbfdc90347c4533d1",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:40:10.643Z"
+      },
+      {
+        "name": "DM-2026-0075",
+        "item": "TP-TANKER_ALUMAX_BODK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2dc4cb2c65a50f9e95a3c61651f743785c1658906bfc44bd9d0724bb07bd772d",
+        "fingerprint": "2dc4cb2c65a50f9e95a3c61651f743785c1658906bfc44bd9d0724bb07bd772d",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:59.750Z"
+      },
+      {
+        "name": "DM-2026-0076",
+        "item": "TP-TD-AL50 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c6d6e824418522b6b97016ec5565995f1b1f712476dc52f03b104ae6755ec77e",
+        "fingerprint": "c6d6e824418522b6b97016ec5565995f1b1f712476dc52f03b104ae6755ec77e",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:52.385Z"
+      },
+      {
+        "name": "DM-2026-0077",
+        "item": "TP-TD-AL50 THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 05efb17f17172ab66b7632863ab014111fc496a53d039b850856da5b2de5acfd",
+        "fingerprint": "05efb17f17172ab66b7632863ab014111fc496a53d039b850856da5b2de5acfd",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:52.182Z"
+      },
+      {
+        "name": "DM-2026-0078",
+        "item": "TP-TD-AL50 VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b41f83435fdfca89494d98db838610ee422942d08e955bcb8feb0ce505b00e0f",
+        "fingerprint": "b41f83435fdfca89494d98db838610ee422942d08e955bcb8feb0ce505b00e0f",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:52.566Z"
+      },
+      {
+        "name": "DM-2026-0079",
+        "item": "TP-TD-AL501N GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5776288471a6241fc2cdcee9fd87c04a5b8e754fa6f46f7600206bbfb56ee323",
+        "fingerprint": "5776288471a6241fc2cdcee9fd87c04a5b8e754fa6f46f7600206bbfb56ee323",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:50.099Z"
+      },
+      {
+        "name": "DM-2026-0080",
+        "item": "TP-TD-AL501N VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b4f60465f24e6fbc1093cfc2f4f6b623c0d4278808e78645af2a31b7875f3ca5",
+        "fingerprint": "b4f60465f24e6fbc1093cfc2f4f6b623c0d4278808e78645af2a31b7875f3ca5",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:49.900Z"
+      },
+      {
+        "name": "DM-2026-0081",
+        "item": "TP-TD-AL501NTHO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 400521a3c40ac8b8672327b40c8850b9d420900e621aa5d91ad618d9dcd74073",
+        "fingerprint": "400521a3c40ac8b8672327b40c8850b9d420900e621aa5d91ad618d9dcd74073",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:50.293Z"
+      },
+      {
+        "name": "DM-2026-0082",
+        "item": "TP-TD-AL503N26 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 22c1b50e4ed75198d70003875633febcbbadea9c9ec17f58579d947647006446",
+        "fingerprint": "22c1b50e4ed75198d70003875633febcbbadea9c9ec17f58579d947647006446",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:48.958Z"
+      },
+      {
+        "name": "DM-2026-0083",
+        "item": "TP-TD-AL503N26 THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cdc0df2e5178da34f75228dc59e6b4368e379f4f470d48498d8ecb00cf177194",
+        "fingerprint": "cdc0df2e5178da34f75228dc59e6b4368e379f4f470d48498d8ecb00cf177194",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:49.142Z"
+      },
+      {
+        "name": "DM-2026-0084",
+        "item": "TP-TD-AL503N26 VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cf90a7a90cd15d196a4e0bda245e967525f302823581e477fdf75525ad96aada",
+        "fingerprint": "cf90a7a90cd15d196a4e0bda245e967525f302823581e477fdf75525ad96aada",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:48.767Z"
+      },
+      {
+        "name": "DM-2026-0085",
+        "item": "TP-TD-AL595 THÔ",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 908cef92402d3168d21a471d7ed73033504ee0bf44262de066885cb75af3af43",
+        "fingerprint": "908cef92402d3168d21a471d7ed73033504ee0bf44262de066885cb75af3af43",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:47.314Z"
+      },
+      {
+        "name": "DM-2026-0086",
+        "item": "TP-TD-AL595 VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a475bd59b2f9ce666de713c0b7e95f344d523e559563c138435b7ca23ce149d9",
+        "fingerprint": "a475bd59b2f9ce666de713c0b7e95f344d523e559563c138435b7ca23ce149d9",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:47.127Z"
+      },
+      {
+        "name": "DM-2026-0087",
+        "item": "TP-TD-AL652 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 810da2fe8a15e8c0b59263a4d567000b7c86c0341f6d240c7954dcb100484574",
+        "fingerprint": "810da2fe8a15e8c0b59263a4d567000b7c86c0341f6d240c7954dcb100484574",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:51.803Z"
+      },
+      {
+        "name": "DM-2026-0088",
+        "item": "TP-TD-AL652 VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a6dc86e0334a7f428cd7205be576c6e83b4a7ccb7788f5243a67b58ecb3b8a7e",
+        "fingerprint": "a6dc86e0334a7f428cd7205be576c6e83b4a7ccb7788f5243a67b58ecb3b8a7e",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:51.987Z"
+      },
+      {
+        "name": "DM-2026-0089",
+        "item": "TP-TD-AL652N THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 82e635ef33adc9e930820d0a66ff65410e313d08120ef21dddaf7d502c391331",
+        "fingerprint": "82e635ef33adc9e930820d0a66ff65410e313d08120ef21dddaf7d502c391331",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:51.615Z"
+      },
+      {
+        "name": "DM-2026-0090",
+        "item": "TP-TD-AL70 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 42f2538f1b8ad70707a8e843f81a43d3bba459e38c74118f970e8face1bf7c00",
+        "fingerprint": "42f2538f1b8ad70707a8e843f81a43d3bba459e38c74118f970e8face1bf7c00",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:47.680Z"
+      },
+      {
+        "name": "DM-2026-0091",
+        "item": "TP-TD-AL70 THÔ",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 4b189ed4e20a6ba133e2b41c0ced31e277b72640a00e54756212cf38af519ce2",
+        "fingerprint": "4b189ed4e20a6ba133e2b41c0ced31e277b72640a00e54756212cf38af519ce2",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:47.508Z"
+      },
+      {
+        "name": "DM-2026-0092",
+        "item": "TP-TD-AL70 VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 157591f25d6afcc3fb2e949e23bb99302c3768426053c9b1836392bb7af7cc98",
+        "fingerprint": "157591f25d6afcc3fb2e949e23bb99302c3768426053c9b1836392bb7af7cc98",
+        "child_count": 5,
+        "modified_at": "2026-08-19T01:39:47.848Z"
+      },
+      {
+        "name": "DM-2026-0093",
+        "item": "TP-TD-AL71N GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 9aabc3d2abcfda23dc97cdc8430e2534d95fb6f19a03bf71c04a6c22c34cddbe",
+        "fingerprint": "9aabc3d2abcfda23dc97cdc8430e2534d95fb6f19a03bf71c04a6c22c34cddbe",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:48.388Z"
+      },
+      {
+        "name": "DM-2026-0094",
+        "item": "TP-TD-AL71N THÔ",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cb4d56e06e2fed3199e029f58f611b68d6b067485d315d5ec6b6d6a416566714",
+        "fingerprint": "cb4d56e06e2fed3199e029f58f611b68d6b067485d315d5ec6b6d6a416566714",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:48.202Z"
+      },
+      {
+        "name": "DM-2026-0095",
+        "item": "TP-TD-AL71N VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 393d2fa257fe8d5e1f82b4b2c5f24cd31fbf8816a9baae9826d7265259e63c85",
+        "fingerprint": "393d2fa257fe8d5e1f82b4b2c5f24cd31fbf8816a9baae9826d7265259e63c85",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:48.558Z"
+      },
+      {
+        "name": "DM-2026-0096",
+        "item": "TP-TD-AL752N GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 73908de2526640cfcd3499fa3daafc6599a98df9cfc1bee7568617de51eb26d3",
+        "fingerprint": "73908de2526640cfcd3499fa3daafc6599a98df9cfc1bee7568617de51eb26d3",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:51.073Z"
+      },
+      {
+        "name": "DM-2026-0097",
+        "item": "TP-TD-AL752N THO",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ae1ab2c645f9404bf9d240e0102e147b32042d83b0907d3f8c19811bdcb5dd48",
+        "fingerprint": "ae1ab2c645f9404bf9d240e0102e147b32042d83b0907d3f8c19811bdcb5dd48",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:51.446Z"
+      },
+      {
+        "name": "DM-2026-0098",
+        "item": "TP-TD-AL752N VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 61ee2abbe5c572a02d261df08ccdf9cca0502f63dbee8ecf2186b6d0a519427b",
+        "fingerprint": "61ee2abbe5c572a02d261df08ccdf9cca0502f63dbee8ecf2186b6d0a519427b",
+        "child_count": 6,
+        "modified_at": "2026-08-19T01:39:51.256Z"
+      },
+      {
+        "name": "DM-2026-0119",
+        "item": "TP-TD87A1 GS",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a911b3ef8ef2d2dd3f9a213e7211472d6abb2a5ea119963b9b50a22db5ef03f1",
+        "fingerprint": "a911b3ef8ef2d2dd3f9a213e7211472d6abb2a5ea119963b9b50a22db5ef03f1",
+        "child_count": 3,
+        "modified_at": "2026-08-19T01:39:46.164Z"
+      },
+      {
+        "name": "DM-2026-0148",
+        "item": "TP-TOLEKEM124_1.2LY",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 6c9a1983d61725f2676e5c400bcd20875c85601ec0949f88c9bbc03afe607065",
+        "fingerprint": "6c9a1983d61725f2676e5c400bcd20875c85601ec0949f88c9bbc03afe607065",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:13.117Z"
+      },
+      {
+        "name": "DM-2026-0231",
+        "item": "TP-TOLEKEM124_1LY_TRONBO>10m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 233100cc78ab7cfb2fc6ed518016d943838022d26445d1674bd7653c1909c88c",
+        "fingerprint": "233100cc78ab7cfb2fc6ed518016d943838022d26445d1674bd7653c1909c88c",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:28.069Z"
+      },
+      {
+        "name": "DM-2026-0238",
+        "item": "TP-TOLEKEM124_1LY_TRONBO_3-4m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a4e20be3b5104bb59750f67889be25bbae6aff5ca975e22dea229d0a09c1a0a8",
+        "fingerprint": "a4e20be3b5104bb59750f67889be25bbae6aff5ca975e22dea229d0a09c1a0a8",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:29.339Z"
+      },
+      {
+        "name": "DM-2026-0237",
+        "item": "TP-TOLEKEM124_1LY_TRONBO_4-5m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 783650a49f31fb5d8ef62d1781fd196e5b249aa46b89f371cecfa53c8d3c92ec",
+        "fingerprint": "783650a49f31fb5d8ef62d1781fd196e5b249aa46b89f371cecfa53c8d3c92ec",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:29.155Z"
+      },
+      {
+        "name": "DM-2026-0236",
+        "item": "TP-TOLEKEM124_1LY_TRONBO_5-6m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete bb89d69b9f87d051de026221bc16609344ef61361e02d6ec0703c1367736b8e7",
+        "fingerprint": "bb89d69b9f87d051de026221bc16609344ef61361e02d6ec0703c1367736b8e7",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:28.961Z"
+      },
+      {
+        "name": "DM-2026-0235",
+        "item": "TP-TOLEKEM124_1LY_TRONBO_6-7m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d3ae524afc456d200888525550ce9b89e9c9c5acd4c3060f80518548268442b2",
+        "fingerprint": "d3ae524afc456d200888525550ce9b89e9c9c5acd4c3060f80518548268442b2",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:28.778Z"
+      },
+      {
+        "name": "DM-2026-0234",
+        "item": "TP-TOLEKEM124_1LY_TRONBO_7-8m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 143e0eb5a3c7fbdb9f4bb5f6c1afb701040ab74e58caae4ea8b48630c1d7b856",
+        "fingerprint": "143e0eb5a3c7fbdb9f4bb5f6c1afb701040ab74e58caae4ea8b48630c1d7b856",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:28.611Z"
+      },
+      {
+        "name": "DM-2026-0233",
+        "item": "TP-TOLEKEM124_1LY_TRONBO_8-9m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cb7a864389367587d8f2049bbf42bc90d00d748693cda0d0d406538c02ba44dc",
+        "fingerprint": "cb7a864389367587d8f2049bbf42bc90d00d748693cda0d0d406538c02ba44dc",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:28.454Z"
+      },
+      {
+        "name": "DM-2026-0232",
+        "item": "TP-TOLEKEM124_1LY_TRONBO_9-10m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete cae9025d8e03588eab65955f27faf5d74a630eadb83074cffb7de13fe957d014",
+        "fingerprint": "cae9025d8e03588eab65955f27faf5d74a630eadb83074cffb7de13fe957d014",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:28.296Z"
+      },
+      {
+        "name": "DM-2026-0146",
+        "item": "TP-TOLEKEM124_6D",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 350c5f43d543a02b455791376204e379d9bd73d7f5925cdff23d99a2f4c30106",
+        "fingerprint": "350c5f43d543a02b455791376204e379d9bd73d7f5925cdff23d99a2f4c30106",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:12.787Z"
+      },
+      {
+        "name": "DM-2026-0215",
+        "item": "TP-TOLEKEM124_6D_TRONBO>10m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 3a19fcb0d35421e46afe9a1da91e0fb7f5fb4032b3c133fbf4b4c9874eea8925",
+        "fingerprint": "3a19fcb0d35421e46afe9a1da91e0fb7f5fb4032b3c133fbf4b4c9874eea8925",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:25.032Z"
+      },
+      {
+        "name": "DM-2026-0222",
+        "item": "TP-TOLEKEM124_6D_TRONBO_3-4m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8b6b4581054371d666d84e25bca2c8a60a32e850d6463950caca332b5715cf23",
+        "fingerprint": "8b6b4581054371d666d84e25bca2c8a60a32e850d6463950caca332b5715cf23",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:26.352Z"
+      },
+      {
+        "name": "DM-2026-0221",
+        "item": "TP-TOLEKEM124_6D_TRONBO_4-5m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b81ca1ef4ffb79e6366726aa322c0eefb8bc1d3a3950641d54241fa3df53f664",
+        "fingerprint": "b81ca1ef4ffb79e6366726aa322c0eefb8bc1d3a3950641d54241fa3df53f664",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:26.140Z"
+      },
+      {
+        "name": "DM-2026-0220",
+        "item": "TP-TOLEKEM124_6D_TRONBO_5-6m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8aa50970994737fb5b5cb145aec0072b6329aa3cb90509ea6f870c6d41aecbb4",
+        "fingerprint": "8aa50970994737fb5b5cb145aec0072b6329aa3cb90509ea6f870c6d41aecbb4",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:25.950Z"
+      },
+      {
+        "name": "DM-2026-0219",
+        "item": "TP-TOLEKEM124_6D_TRONBO_6-7m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete d91580589cfbe3f111ccc56989b861323ea9f44c015d734cb0c343c3318fa845",
+        "fingerprint": "d91580589cfbe3f111ccc56989b861323ea9f44c015d734cb0c343c3318fa845",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:25.779Z"
+      },
+      {
+        "name": "DM-2026-0218",
+        "item": "TP-TOLEKEM124_6D_TRONBO_7-8m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 3478e5c9b198e00a14d09057af60be8dce7c9637fc1ea93a7b549fa3812dd44e",
+        "fingerprint": "3478e5c9b198e00a14d09057af60be8dce7c9637fc1ea93a7b549fa3812dd44e",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:25.602Z"
+      },
+      {
+        "name": "DM-2026-0217",
+        "item": "TP-TOLEKEM124_6D_TRONBO_8-9m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 346a15fc71b25b957dece19baa2a54cead63f31f092f5ffe88d153436bc1d24c",
+        "fingerprint": "346a15fc71b25b957dece19baa2a54cead63f31f092f5ffe88d153436bc1d24c",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:25.410Z"
+      },
+      {
+        "name": "DM-2026-0216",
+        "item": "TP-TOLEKEM124_6D_TRONBO_9-10m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 66f2e8b5a955c1f0b30f157ac58b9ec8511f3f70467d5441ccff2e4dc6ecc2a8",
+        "fingerprint": "66f2e8b5a955c1f0b30f157ac58b9ec8511f3f70467d5441ccff2e4dc6ecc2a8",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:25.225Z"
+      },
+      {
+        "name": "DM-2026-0147",
+        "item": "TP-TOLEKEM124_8D",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b994753b7f6db0a46fc2d32848439096d665d961d6bede6ad98f1b001f1f3b5f",
+        "fingerprint": "b994753b7f6db0a46fc2d32848439096d665d961d6bede6ad98f1b001f1f3b5f",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:12.953Z"
+      },
+      {
+        "name": "DM-2026-0223",
+        "item": "TP-TOLEKEM124_8D_TRONBO>10m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5e15955b330773ac90a9e1f066b5c3f20355497eb22766d918e77fd90375da10",
+        "fingerprint": "5e15955b330773ac90a9e1f066b5c3f20355497eb22766d918e77fd90375da10",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:26.534Z"
+      },
+      {
+        "name": "DM-2026-0230",
+        "item": "TP-TOLEKEM124_8D_TRONBO_3-4m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 18e8c4e38150dbf7b35a47f9452a295a574f5b017b55cfcfcb7a60b6a564b332",
+        "fingerprint": "18e8c4e38150dbf7b35a47f9452a295a574f5b017b55cfcfcb7a60b6a564b332",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:27.862Z"
+      },
+      {
+        "name": "DM-2026-0229",
+        "item": "TP-TOLEKEM124_8D_TRONBO_4-5m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ee91b570455b1c94b73a41749fccb984647033cbfe7f69a5ebcc8f67375c61ec",
+        "fingerprint": "ee91b570455b1c94b73a41749fccb984647033cbfe7f69a5ebcc8f67375c61ec",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:27.696Z"
+      },
+      {
+        "name": "DM-2026-0228",
+        "item": "TP-TOLEKEM124_8D_TRONBO_5-6m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e3c70525b03f57321beaa26ad1c4d0c872debd5b920a5341f3ba3ad8e250abb1",
+        "fingerprint": "e3c70525b03f57321beaa26ad1c4d0c872debd5b920a5341f3ba3ad8e250abb1",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:27.506Z"
+      },
+      {
+        "name": "DM-2026-0227",
+        "item": "TP-TOLEKEM124_8D_TRONBO_6-7m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 356aadd5dab5bd0a6ba7aee6bf0d0386c3c7b556a3ac26080a07bf10b56cb721",
+        "fingerprint": "356aadd5dab5bd0a6ba7aee6bf0d0386c3c7b556a3ac26080a07bf10b56cb721",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:27.327Z"
+      },
+      {
+        "name": "DM-2026-0226",
+        "item": "TP-TOLEKEM124_8D_TRONBO_7-8m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b613b15f2dfad4b52db867452f262a2cec6d094a3b8d03243e47ce8a272ee93c",
+        "fingerprint": "b613b15f2dfad4b52db867452f262a2cec6d094a3b8d03243e47ce8a272ee93c",
+        "child_count": 8,
+        "modified_at": "2026-08-19T01:40:27.116Z"
+      },
+      {
+        "name": "DM-2026-0225",
+        "item": "TP-TOLEKEM124_8D_TRONBO_8-9m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8c48ea4c01fc7f2fb9259365ff36a04e113c33f850db791154dcf990bc77cbd5",
+        "fingerprint": "8c48ea4c01fc7f2fb9259365ff36a04e113c33f850db791154dcf990bc77cbd5",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:26.914Z"
+      },
+      {
+        "name": "DM-2026-0224",
+        "item": "TP-TOLEKEM124_8D_TRONBO_9-10m²_MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c7cc3cb7c398b4c36e2664a28eebf4e7eead38c11b84c93e63aa6ac068898593",
+        "fingerprint": "c7cc3cb7c398b4c36e2664a28eebf4e7eead38c11b84c93e63aa6ac068898593",
+        "child_count": 4,
+        "modified_at": "2026-08-19T01:40:26.724Z"
+      },
+      {
+        "name": "DM-2026-0099",
+        "item": "TP-TRUC140",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7d883f62a529f42d907f1ecc44507131ba026d4e01502bf0838dbe09a3263365",
+        "fingerprint": "7d883f62a529f42d907f1ecc44507131ba026d4e01502bf0838dbe09a3263365",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:09.688Z"
+      },
+      {
+        "name": "DM-2026-0100",
+        "item": "TP-TRUC168",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete f0b142e33a838bb7f704f767632c180f64427cf82dfe89cfcc3d7b8b6a38b9f0",
+        "fingerprint": "f0b142e33a838bb7f704f767632c180f64427cf82dfe89cfcc3d7b8b6a38b9f0",
+        "child_count": 1,
+        "modified_at": "2026-08-19T01:40:09.882Z"
+      },
+      {
+        "name": "DM-2026-0129",
+        "item": "TP-UC KT 4.6D KU-GU",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 646b553c8d1922a6195207947300824332cea3b0c4e0631c35a6ed473bb58be2",
+        "fingerprint": "646b553c8d1922a6195207947300824332cea3b0c4e0631c35a6ed473bb58be2",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:06.011Z"
+      },
+      {
+        "name": "DM-2026-0128",
+        "item": "TP-UC KT 4.6D TRẮNG-XLC",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7e89aa0184106f37780da28392877a16c0587001278291de852b6f430390d802",
+        "fingerprint": "7e89aa0184106f37780da28392877a16c0587001278291de852b6f430390d802",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:05.754Z"
+      },
+      {
+        "name": "DM-2026-0126",
+        "item": "TP-UC KT 4.6D XN-VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 2b389425ee589171e3a78ca52f8b2860efe56e27c7e93222a9ee29ebdee7949a",
+        "fingerprint": "2b389425ee589171e3a78ca52f8b2860efe56e27c7e93222a9ee29ebdee7949a",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:05.273Z"
+      },
+      {
+        "name": "DM-2026-0127",
+        "item": "TP-UC KT 4.6D XR-CF",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 751c059776162dc27b7befba8435a2a6f7536511665c0cdaf0045f7e5ea854cd",
+        "fingerprint": "751c059776162dc27b7befba8435a2a6f7536511665c0cdaf0045f7e5ea854cd",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:05.519Z"
+      },
+      {
+        "name": "DM-2026-0124",
+        "item": "TP-UC KT 4D XN-VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ee8705ed0a7008c0a947c03d1d0c8dbdec1e575be26218bc95e45af4c2a639ce",
+        "fingerprint": "ee8705ed0a7008c0a947c03d1d0c8dbdec1e575be26218bc95e45af4c2a639ce",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:04.508Z"
+      },
+      {
+        "name": "DM-2026-0101",
+        "item": "TP-UC KT 5.5D KU-GU",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5319fcb8b3b3e5b5ec8c003093a534d94280a58184cdf0dbe171574f27764580",
+        "fingerprint": "5319fcb8b3b3e5b5ec8c003093a534d94280a58184cdf0dbe171574f27764580",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:06.237Z"
+      },
+      {
+        "name": "DM-2026-0102",
+        "item": "TP-UC KT 5.5D TR-XLC",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete e285172da4aa45e0dc4e2aca9f3b9eb310f6f0bf4e2a03407d83d8b2475a0782",
+        "fingerprint": "e285172da4aa45e0dc4e2aca9f3b9eb310f6f0bf4e2a03407d83d8b2475a0782",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:06.480Z"
+      },
+      {
+        "name": "DM-2026-0103",
+        "item": "TP-UC KT 5.5D XN-VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 197d149bc5b12ed90fbfb55b78b12f9ece035a9890191d468aa71cf9a1b56045",
+        "fingerprint": "197d149bc5b12ed90fbfb55b78b12f9ece035a9890191d468aa71cf9a1b56045",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:06.707Z"
+      },
+      {
+        "name": "DM-2026-0104",
+        "item": "TP-UC KT 5.5D XR-CF",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b1307d6ad65022222b5b20169cd60dea74930e35b7dcc3e09fe3e041467b7351",
+        "fingerprint": "b1307d6ad65022222b5b20169cd60dea74930e35b7dcc3e09fe3e041467b7351",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:06.915Z"
+      },
+      {
+        "name": "DM-2026-0105",
+        "item": "TP-UC KT 6D STĐ MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 08c41cd72e2b17ef8ab3c33c5b3ec3c93d32ee4429aa97f956b4739c747f2634",
+        "fingerprint": "08c41cd72e2b17ef8ab3c33c5b3ec3c93d32ee4429aa97f956b4739c747f2634",
+        "child_count": 23,
+        "modified_at": "2026-08-19T01:40:08.858Z"
+      },
+      {
+        "name": "DM-2026-0106",
+        "item": "TP-UC MTN 4.6D GU-KU",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c27d9007544435f7ccdcdddba6a1c4f1b917241593b9c0880c679e143c17112f",
+        "fingerprint": "c27d9007544435f7ccdcdddba6a1c4f1b917241593b9c0880c679e143c17112f",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:07.720Z"
+      },
+      {
+        "name": "DM-2026-0107",
+        "item": "TP-UC MTN 4.6D TR-XLC",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete ce2be577670210d258bc841db6903c398369394362eb2cd371919c87996ff3b0",
+        "fingerprint": "ce2be577670210d258bc841db6903c398369394362eb2cd371919c87996ff3b0",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:07.534Z"
+      },
+      {
+        "name": "DM-2026-0108",
+        "item": "TP-UC MTN 4.6D XN-VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 34a52c493e1f0601829bf0a969eac2a851defa451b0b17b68155cf02a586e59b",
+        "fingerprint": "34a52c493e1f0601829bf0a969eac2a851defa451b0b17b68155cf02a586e59b",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:07.134Z"
+      },
+      {
+        "name": "DM-2026-0109",
+        "item": "TP-UC MTN 4.6D XR-CF",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a1a960f618a0ee21aef21a70fd664889b8b268ab1ce7f93c80278f570655a836",
+        "fingerprint": "a1a960f618a0ee21aef21a70fd664889b8b268ab1ce7f93c80278f570655a836",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:07.341Z"
+      },
+      {
+        "name": "DM-2026-0110",
+        "item": "TP-UC MTN 4D XN-VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 63e98156eecccfe647747836044ea36c4c2ee53a19707d2e9095f92413aca2a6",
+        "fingerprint": "63e98156eecccfe647747836044ea36c4c2ee53a19707d2e9095f92413aca2a6",
+        "child_count": 11,
+        "modified_at": "2026-08-19T01:40:04.729Z"
+      },
+      {
+        "name": "DM-2026-0111",
+        "item": "TP-UC MTN 5.5D GU-KU",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete c1e8ce86bd5d2cb0e02f434ce586702dfc1fabce4d82876c81aa5bc19200aa6d",
+        "fingerprint": "c1e8ce86bd5d2cb0e02f434ce586702dfc1fabce4d82876c81aa5bc19200aa6d",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:08.453Z"
+      },
+      {
+        "name": "DM-2026-0112",
+        "item": "TP-UC MTN 5.5D TR-XLC",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete a4b9049ddaee2d20adbc00dffe70ca9e0bd7a5e5a673f31b81a21a1052089f4a",
+        "fingerprint": "a4b9049ddaee2d20adbc00dffe70ca9e0bd7a5e5a673f31b81a21a1052089f4a",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:08.278Z"
+      },
+      {
+        "name": "DM-2026-0113",
+        "item": "TP-UC MTN 5.5D XN-VK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 5be988ecf3ecc5f3010fc85890cc329d7f2e13fe9b848c64130b9e4dae2faa27",
+        "fingerprint": "5be988ecf3ecc5f3010fc85890cc329d7f2e13fe9b848c64130b9e4dae2faa27",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:07.890Z"
+      },
+      {
+        "name": "DM-2026-0114",
+        "item": "TP-UC MTN 5.5D XR-CF",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 7e5337c678ebd0e19b3c3c4be32047607aaefd830679e87f5127e7d259bd48d3",
+        "fingerprint": "7e5337c678ebd0e19b3c3c4be32047607aaefd830679e87f5127e7d259bd48d3",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:08.068Z"
+      },
+      {
+        "name": "DM-2026-0115",
+        "item": "TP-UC MTN 6D STD MSK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8c644f8488a116155c3095c930743eebdf2fff3ec94f9feefea4c0d6970ca34c",
+        "fingerprint": "8c644f8488a116155c3095c930743eebdf2fff3ec94f9feefea4c0d6970ca34c",
+        "child_count": 10,
+        "modified_at": "2026-08-19T01:40:08.659Z"
+      },
+      {
+        "name": "DM-2026-0116",
+        "item": "TP-YHLD-BDK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete b9753883252078b4c5b1b63bab88521162925718e1a263edb1816f26184d6f9f",
+        "fingerprint": "b9753883252078b4c5b1b63bab88521162925718e1a263edb1816f26184d6f9f",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:55.980Z"
+      },
+      {
+        "name": "DM-2026-0117",
+        "item": "TP-YHTaiwan-BODK",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 46a74ba102d16078702a4b8d203cf30f542705b465b1fbdb20015a6dd8ebb215",
+        "fingerprint": "46a74ba102d16078702a4b8d203cf30f542705b465b1fbdb20015a6dd8ebb215",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:40:03.994Z"
+      },
+      {
+        "name": "DM-2026-0011",
+        "item": "TP_BOSTEC_BODIEUKHIEN",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 830e557e62a870703941f8312263199d05ee6414f9b50eee05eea6a6455cf0e8",
+        "fingerprint": "830e557e62a870703941f8312263199d05ee6414f9b50eee05eea6a6455cf0e8",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:40:00.705Z"
+      },
+      {
+        "name": "DM-2026-0012",
+        "item": "TP_CHTAIWAN_BODIEUKHIEN",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 84b5be6abfef556a4f7300a8b2e5dc2988ba31713e63e64984a3ccb810662667",
+        "fingerprint": "84b5be6abfef556a4f7300a8b2e5dc2988ba31713e63e64984a3ccb810662667",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:40:00.883Z"
+      },
+      {
+        "name": "DM-2026-0013",
+        "item": "TP_PAT_CODAY",
+        "company": "ALUMDOOR",
+        "bom_status": "Draft",
+        "note": "Alumdoor canonical source-complete 8724da58cd1aa321ecd38d28c538941d97ed19ef095586162baee8c008235a5f",
+        "fingerprint": "8724da58cd1aa321ecd38d28c538941d97ed19ef095586162baee8c008235a5f",
+        "child_count": 2,
+        "modified_at": "2026-08-19T01:39:59.930Z"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 8
+    }
+  }
+]

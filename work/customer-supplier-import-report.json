@@ -1,0 +1,30 @@
+{
+  "format": "alumdoor-customer-supplier-local-import/v1",
+  "captured_at": "2026-08-19T03:34:57.462Z",
+  "source_audit": "C:\\alumdoor\\work\\customer-only.audit.json",
+  "source_counts": {
+    "customers": 439,
+    "suppliers": 21
+  },
+  "customer_preflight": {
+    "statuses": {
+      "DUPLICATE_EXACT": 439
+    },
+    "service_statuses": {
+      "READY_CREATE": 339,
+      "DUPLICATE_EXACT": 100
+    },
+    "dry_run_token": "7873bfa16f950ac858b76b2c95b032f45c3e86ae5f7b582c27e823712b010a6c"
+  },
+  "supplier_preflight": {
+    "statuses": {
+      "DUPLICATE_EXACT": 21
+    }
+  },
+  "blockers": [],
+  "writes": {
+    "customer_imported": 0,
+    "supplier_created": 0,
+    "supplier_exact": 0
+  }
+}

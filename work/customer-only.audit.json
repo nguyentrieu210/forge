@@ -1,0 +1,4626 @@
+{
+  "format": "cloudforge-alumdoor-remaining-import/v1",
+  "scope": "customer-only",
+  "generated_at": "2026-07-29T00:00:00.000Z",
+  "tenant": "alu",
+  "warehouse_assumption": "K36",
+  "sources": [
+    {
+      "file": "2026 ĐƠN HÀNG - XUẤT HÀNG.xlsx",
+      "sha256": "95fcc0adbf4575b85e6c07da70b437450207090ebb378dabef5f16ad6690b285"
+    },
+    {
+      "file": "TỒN NHÔM 2026 NEW.xlsx",
+      "sha256": "c2e6c8fa2a64dd36ba8ec3f8f64926acfc72529ef609f737efd00e077ca2e20c"
+    },
+    {
+      "file": "CTY SÁU HỒNG.xlsx",
+      "sha256": "bf68dce77e522e3571dbf0be245bab215ba4bf63d746d7cdbd3ec881665a1f9a"
+    }
+  ],
+  "counts": {
+    "customers": 439,
+    "suppliers": 21,
+    "aluminium_profiles": 17,
+    "aluminium_colours": 25,
+    "aluminium_lots": 1257,
+    "aluminium_sheets": 43601,
+    "aluminium_scrap_lots": 106,
+    "aluminium_selected_for_cut_lots": 4,
+    "aluminium_lots_with_remaining_kg": 0,
+    "aluminium_lots_with_intake_note": 163,
+    "aluminium_lots_by_stock_state": {
+      "HẾT": 53,
+      "SẮP HẾT": 55,
+      "TỒN": 1149
+    },
+    "aluminium_empty_rows_skipped": 248,
+    "legacy_orders": 1474,
+    "legacy_order_lines": 4653,
+    "legacy_ledger_lines": 171,
+    "duplicated_monthly_vouchers_collapsed": 120,
+    "legacy_intakes": 254,
+    "legacy_intakes_by_type": {
+      "Mua vào": 45,
+      "Khách hoàn trả": 8,
+      "Nhập khác": 201
+    },
+    "warranty_claims": 86,
+    "production_standards": 6
+  },
+  "supplier_preview": [
+    {
+      "name": "ANH BẢO",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:12"
+    },
+    {
+      "name": "ANH BẢO BỌ - LỘC PHÁT",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: DS KH-NCC:318"
+    },
+    {
+      "name": "ANH ĐẠT MOTOR",
+      "supplier_group": "Mô tơ",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: DS BẢO HÀNH:5, DS BẢO HÀNH:6, DS BẢO HÀNH:12, DS BẢO HÀNH:15"
+    },
+    {
+      "name": "ANH HUY BẠC ĐẠN",
+      "supplier_group": "Phụ kiện",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:8, NHẬP:9, NHẬP:13, NHẬP:14"
+    },
+    {
+      "name": "ANH QUANG HÀ NỘI",
+      "supplier_group": "Mô tơ",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: DS BẢO HÀNH:4, DS BẢO HÀNH:7, DS BẢO HÀNH:8, DS BẢO HÀNH:9"
+    },
+    {
+      "name": "CTY KHÍ ĐỐT NAM SƠN (GAS A TÂM )",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:175"
+    },
+    {
+      "name": "CTY NAM PHÁT",
+      "supplier_group": "Nhôm",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: DS KH-NCC:196, NHẬP:22, NHẬP:23, NHẬP:66"
+    },
+    {
+      "name": "CỬA HÀNG QUỐC HUY 2",
+      "supplier_group": "Phụ kiện",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:49, NHẬP:126, NHẬP:127, NHẬP:128"
+    },
+    {
+      "name": "DUY SƠN",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:154"
+    },
+    {
+      "name": "GAS PETROLIMEX",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:48"
+    },
+    {
+      "name": "GIA HÒA",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:50, NHẬP:190, NHẬP:191, NHẬP:193"
+    },
+    {
+      "name": "GIA KHÁNH",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:150"
+    },
+    {
+      "name": "HÒA AN",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:195, NHẬP:196"
+    },
+    {
+      "name": "INSEE",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:148, NHẬP:149, NHẬP:194"
+    },
+    {
+      "name": "MUA LẺ",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:114"
+    },
+    {
+      "name": "NHỰA APC",
+      "supplier_group": "Phụ kiện",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:10, NHẬP:11, NHẬP:182, NHẬP:183"
+    },
+    {
+      "name": "THÀNH ĐẠT",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:211, NHẬP:212, NHẬP:213"
+    },
+    {
+      "name": "TIẾN ĐẠT",
+      "supplier_group": "Nhôm",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: DS HH NHẬP:2"
+    },
+    {
+      "name": "TRIỂN KIỀU",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:135, NHẬP:136"
+    },
+    {
+      "name": "VIỆT ĐÔNG HƯNG",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:15, NHẬP:17"
+    },
+    {
+      "name": "VIỆT HÙNG",
+      "supplier_group": "Khác",
+      "phone": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:65"
+    }
+  ],
+  "customer_preview": [
+    {
+      "name": "AN ANH KHANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906 991 983 ( A TÂM )",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:36, T3.2026:638, T4.2026:649, T4.2026:650"
+    },
+    {
+      "name": "AN KHANG WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907 033 252",
+      "email": "",
+      "address": "1430 VÕ VĂN KIỆT P.1 ,Q.6 ( CHÀNH CÔ TUYẾT 0908 028 618 )",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:3, T3.2026:584, T3.2026:585, T3.2026:586"
+    },
+    {
+      "name": "AN NAM ĐẮKLẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Nguồn: T6.2026:1095, T6.2026:1096, T6.2026:1097"
+    },
+    {
+      "name": "ANH BẢO",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Nguồn: CTY SÁU HỒNG.xlsx:BÁO GIÁ CHỊ XUYÊN"
+    },
+    {
+      "name": "ANH BẢO BỌ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:181"
+    },
+    {
+      "name": "ANH BẢO KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:401, T6.2026:911, T6.2026:912"
+    },
+    {
+      "name": "ANH BẢO NAM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0903668347",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:345, T5.2026:930"
+    },
+    {
+      "name": "ANH BI NEWDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:271, T4.2026:685, T4.2026:686, T5.2026:87"
+    },
+    {
+      "name": "ANH BI Q12",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "090 455 4470",
+      "email": "",
+      "address": "XƯỞNG 51/8 ĐƯỜNG VƯỜN LÀI NỐI DÀI, AN PHÚ ĐÔNG, Q.12",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:70, T3.2026:138, T3.2026:139, T3.2026:755"
+    },
+    {
+      "name": "ANH BIÊN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0975937881",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:349"
+    },
+    {
+      "name": "ANH BIỂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907 627 145",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:71, T4.2026:207, T4.2026:208, T4.2026:654"
+    },
+    {
+      "name": "ANH BÙI MÙI BH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0818008181",
+      "email": "",
+      "address": "BIÊN HOÀ",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:235"
+    },
+    {
+      "name": "ANH CHÍNH LÂM HÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0913584294",
+      "email": "",
+      "address": "CHÀNH THANH BÌNH XANH 516 QL 1A AN PHÚ ĐÔNG Q12 0974 79 17 53",
+      "note": "CHÀNH TUẤN TÚ Chành Tuấn Tú 118 phan văn khoẻ, p5, q6 - 0988325326 | Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:69, T4.2026:328, T4.2026:329, T4.2026:330"
+    },
+    {
+      "name": "ANH CÔNG BA GÁC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:72, T3.2026:99"
+    },
+    {
+      "name": "ANH CƯỜNG DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:300, T5.2026:195"
+    },
+    {
+      "name": "ANH DANH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0708 523 402",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:37, T3.2026:414, T3.2026:415, T3.2026:416"
+    },
+    {
+      "name": "ANH DIỆN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "039 254 7378",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:73"
+    },
+    {
+      "name": "ANH DŨNG BÌNH DƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0962835128",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:306, T5.2026:269, T5.2026:321, T5.2026:322"
+    },
+    {
+      "name": "ANH DŨNG ĐẮKLẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:283, T4.2026:912, T4.2026:913, T4.2026:914"
+    },
+    {
+      "name": "ANH DUY AN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0948676971",
+      "email": "",
+      "address": "Giao chành xe Tô Châu 887 Kinh Dương Vương 0931 035 856 - Giao về: Long Xuyên, An Giang",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:39, T3.2026:369, T3.2026:370, T3.2026:371"
+    },
+    {
+      "name": "ANH DUY LONG XUYÊN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0948 676 971",
+      "email": "",
+      "address": "CHÀNH VẬN TẢI SÀI GÒN 10A,CƯ XÁ BÀ ĐIỂM ,HẬU LẬU,BÀ ĐIỂM HÓC MÔN",
+      "note": "GIAO VỀ :ANH DUY LONG XUYÊN | Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:38, T6.2026:443"
+    },
+    {
+      "name": "ANH DUY TIỀN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:74"
+    },
+    {
+      "name": "ANH DƯƠNG - 0903378345",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0903378345",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:228, T3.2026:222, T3.2026:223, T3.2026:224"
+    },
+    {
+      "name": "ÁNH DƯƠNG ĐỨC TRỌNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0345 667 890 ( ANH DƯƠNG)",
+      "email": "",
+      "address": "131 Đ. Kênh 19/5, Sơn Kỳ, Tân Phú.(CHÀNH THANH BÌNH XANH)0974 791 753.",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:40, T3.2026:717, T4.2026:795, T4.2026:796"
+    },
+    {
+      "name": "ANH DƯƠNG KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:75"
+    },
+    {
+      "name": "ANH DƯƠNG TATADOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906 500 446",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:76, T3.2026:161, T3.2026:231, T3.2026:232"
+    },
+    {
+      "name": "ANH ĐẠI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:264, T4.2026:509, T5.2026:301, T5.2026:302"
+    },
+    {
+      "name": "ANH ĐẠI ĐỒNG XOÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0394219063",
+      "email": "",
+      "address": "CHÀNH XE THỊNH THÀNH,7979 VÕ VĂN KIỆT, P.16, Q.8.-0913 798 229 GIAO VỀ : ĐỒNG XOÀI)",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:433, T7.2026:713, T7.2026:714, T7.2026:715"
+    },
+    {
+      "name": "ANH ĐẠO ĐẮK LẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0972 957 589",
+      "email": "",
+      "address": "ĐƯỜNG SỐ 1, BÌNH HƯNG HÒA B,BÌNH TÂN(0967 346 759-CHÀNH XE CHU BÁ THÔNG)BÃI XE ĐỒNG HẢI",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:77, T3.2026:71, T3.2026:72, T3.2026:73"
+    },
+    {
+      "name": "ANH ĐẠT MOTOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:182, T3.2026:362, T3.2026:363, T3.2026:463"
+    },
+    {
+      "name": "ANH ĐÌNH LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:284, T4.2026:292, T4.2026:293, T4.2026:294"
+    },
+    {
+      "name": "ANH ĐỨC - 0938459977",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0938459977",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:78, DS KH-NCC:252, T4.2026:305, T4.2026:306"
+    },
+    {
+      "name": "ANH ĐƯỢC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "090 840 8753",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:79, T3.2026:625"
+    },
+    {
+      "name": "ANH GIANG BIÊN HOÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "098 818 8453",
+      "email": "",
+      "address": "1453 VÕ VĂN KIỆT P.1,Q.6 CHÀNH XE PHƯƠNG BẮC BIÊN HÒA 0942 405070 - 0942 50 50 70",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:424, T7.2026:425, T7.2026:426, T7.2026:427"
+    },
+    {
+      "name": "ANH HẢI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:298, T5.2026:193"
+    },
+    {
+      "name": "ANH HẢI ĐẠI NAM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:80, T3.2026:721"
+    },
+    {
+      "name": "ANH HẬU - MEKONGDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932608860/0943608860",
+      "email": "",
+      "address": "CHÀNH CƯỜNG QUYÊN -LONG AN 546 HỒNG BÀNG P.16 , Q11 0913 728 356",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:450, T7.2026:959, T7.2026:960"
+    },
+    {
+      "name": "ANH HIỆP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:286, T5.2026:388"
+    },
+    {
+      "name": "ANH HIỆP CỬA CUỐN MINH HIẾU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906 259 828",
+      "email": "",
+      "address": "43/13 VÕ VÂN VÂN , VĨNH LỌC B, BÌNH CHÁNH",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:81, T5.2026:752"
+    },
+    {
+      "name": "ANH HIẾU BÌNH TÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:418, T7.2026:326, T7.2026:327, T7.2026:328"
+    },
+    {
+      "name": "ANH HIẾU CẦN THƠ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932885252",
+      "email": "",
+      "address": "304 QUỐC LỘ 1A - P.BÌNH HƯNG HOÀ - Q.BÌNH TÂN (CHÀNH VĂN THƯỞNG)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:4, T3.2026:681, T3.2026:682, T3.2026:683"
+    },
+    {
+      "name": "ANH HIẾU HẢI THÔNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0982 313 140",
+      "email": "",
+      "address": "CHÀNH XE ANH PHONG BẾN CẦU (49-5 ĐƯỜNG BÃI SẬY P.1,Q.6 0983 872 623",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:406, T6.2026:977, T6.2026:978, T6.2026:979"
+    },
+    {
+      "name": "ANH HOÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:183"
+    },
+    {
+      "name": "ANH HOÁ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0979090953",
+      "email": "",
+      "address": "QUẬN 9",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:5, T3.2026:714, T3.2026:715"
+    },
+    {
+      "name": "ANH HOÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0964323445",
+      "email": "",
+      "address": "Chành xe Thịnh Thành 1626 Võ Văn Kiệt - 0363455444 -GIAO VỀ :Phương Tân Đồng, đồng xoài Bình Phước củ ( đồng nai)",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:82, T3.2026:710, T3.2026:711"
+    },
+    {
+      "name": "ANH HỒNG CỬA SẮT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:348, T5.2026:963, T5.2026:964, T5.2026:965"
+    },
+    {
+      "name": "ANH HUỆ BẢO LÂM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0989929714",
+      "email": "",
+      "address": "Thịnh Thái sđt xe 091 8007116 -GIAO VỀ: giao về Cổng thôn văn hoá thôn 13 . Lộc thành-bảo lâm- lâm đồng Qua chùa phổ hiền 30m bên tay phải thuộc ql 55",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:83, T3.2026:784, T3.2026:785, T3.2026:786"
+    },
+    {
+      "name": "ANH HÙNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0904651632",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:297, DS KH-NCC:317, T5.2026:172, T5.2026:173"
+    },
+    {
+      "name": "ANH HÙNG - THUÝ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "090 9846306",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:84"
+    },
+    {
+      "name": "ANH HÙNG CỬA CUỐN HÙNG PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 716 7588",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:85, T3.2026:590, T3.2026:591, T3.2026:592"
+    },
+    {
+      "name": "ANH HÙNG CỬA CUỐN MIỀN NAM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907 446 990",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:6, T3.2026:492, T4.2026:187, T4.2026:188"
+    },
+    {
+      "name": "ANH HUY 0366312212",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0366312212",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:383, T6.2026:589, T6.2026:590"
+    },
+    {
+      "name": "ANH HUY BẠC ĐẠN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:184"
+    },
+    {
+      "name": "ANH HÙYNH UY - KHÁCH LẺ",
+      "price_group": "Lẻ",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0949433773",
+      "email": "",
+      "address": "32 đường số 27 phường An Nhơn, Gò Vấp",
+      "note": "Thợ lắp: Anh Phước | Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:237"
+    },
+    {
+      "name": "ANH HƯNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0978457567",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:364, T6.2026:301, T6.2026:302, T6.2026:325"
+    },
+    {
+      "name": "ANH HƯNG VĨNH LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:218, T4.2026:941, T5.2026:158, T6.2026:957"
+    },
+    {
+      "name": "ANH HƯỞNG - KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0987603754",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Thợ lắp: Anh Phước | Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:86, DS KH-NCC:236, T4.2026:411, T4.2026:412"
+    },
+    {
+      "name": "ANH KẾ ĐẠI NAM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:87, T3.2026:642"
+    },
+    {
+      "name": "ANH KHÁNH BÌNH DƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:376, T6.2026:483, T6.2026:484"
+    },
+    {
+      "name": "ANH KHÁNH DĨ AN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 724 2788",
+      "email": "",
+      "address": "DĨ AN BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:41, T3.2026:307, T3.2026:308, T3.2026:309"
+    },
+    {
+      "name": "ANH KHÔI DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0967 639 089",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:7, T3.2026:521, T3.2026:522, T3.2026:614"
+    },
+    {
+      "name": "ANH LÂM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0974559934",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:390, T6.2026:731, T6.2026:732"
+    },
+    {
+      "name": "ANH LẬP VŨNG TÀU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0707 937 205",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:358, T6.2026:234"
+    },
+    {
+      "name": "ANH LÊ NGỌC ANH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0933619850",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:88, T3.2026:405, T3.2026:406"
+    },
+    {
+      "name": "ANH LÊ TRUNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "097 952 2514",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:391, T6.2026:736, T6.2026:811, T6.2026:812"
+    },
+    {
+      "name": "ANH LINH MOTOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0947749977",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:393, T6.2026:753, T6.2026:754, T6.2026:824"
+    },
+    {
+      "name": "ANH LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:341, T5.2026:865, T5.2026:866, T5.2026:867"
+    },
+    {
+      "name": "ANH LONG VỸ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:242, T3.2026:473, T3.2026:474, T3.2026:475"
+    },
+    {
+      "name": "ANH LỘC BÌNH DƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "097 773 9988",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:366, T6.2026:309, T6.2026:310, T6.2026:311"
+    },
+    {
+      "name": "ANH LỘC NHÔM KÍNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:89, T4.2026:315"
+    },
+    {
+      "name": "ANH LỘC PHÁT - ĐÀ NẴNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0911388468",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:35, T4.2026:405, T4.2026:406, T4.2026:407"
+    },
+    {
+      "name": "ANH LƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0962968567",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:90, T4.2026:422, T4.2026:423, T4.2026:441"
+    },
+    {
+      "name": "ANH LƯƠNG ĐẮK LẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0964044242",
+      "email": "",
+      "address": "chành Tiến Đạt về đaklak ,số chành 0935711558 ( 1045 QL1A BÌNH TRỊ ĐÔNG , BÌNH TÂN)",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:91, T4.2026:149, T4.2026:150, T4.2026:151"
+    },
+    {
+      "name": "ANH MẠNH HIỆP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:302, T5.2026:204"
+    },
+    {
+      "name": "ANH MẠNH HOÀNG BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0388 931 996",
+      "email": "",
+      "address": "CHÀNH MINH TRÍ - 46 TRỤC 16 THANH PHÚ VĨNH CỮU ĐỒNG NAI",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:396, T6.2026:808, T6.2026:809, T6.2026:810"
+    },
+    {
+      "name": "ANH MINH KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:243, T3.2026:486"
+    },
+    {
+      "name": "ANH MINH TUẤN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0947749977",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:392, T6.2026:746, T6.2026:747, T6.2026:748"
+    },
+    {
+      "name": "ANH MÙI PMDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0988813430",
+      "email": "",
+      "address": "79 BÌNH TIÊN P.7,Q.6 CHÀNH CƯỜNG SƠN-0909 293 810 ( 0906 302 335 TÀI XÊ) ( TRƯỚC 1H)",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:185, T3.2026:42, T3.2026:43, T3.2026:130"
+    },
+    {
+      "name": "ANH MƯỜI ĐÀ LẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:92, T2.2026:22, T2.2026:23, T2.2026:24"
+    },
+    {
+      "name": "ANH NAM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0986 626 286",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:344, T5.2026:894, T5.2026:895, T5.2026:896"
+    },
+    {
+      "name": "ANH NAM ĐẮKLẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906 504 608",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:411, T7.2026:144, T7.2026:145, T7.2026:146"
+    },
+    {
+      "name": "ANH NĂM BÌNH DƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0978423225",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:382, T6.2026:571, T6.2026:572"
+    },
+    {
+      "name": "ANH NGÀ GIA LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0976 579 176",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:403, T6.2026:937, T6.2026:938, T6.2026:939"
+    },
+    {
+      "name": "ANH NGHĨA - CỬA CUỐN BÌNH AN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:407, T6.2026:996, T6.2026:997, T6.2026:998"
+    },
+    {
+      "name": "ANH NGỌC AUSTDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906736786",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:389, T6.2026:722, T6.2026:723, T6.2026:724"
+    },
+    {
+      "name": "ANH NGỌC CHÂU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0936246293",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:439, T7.2026:799, T7.2026:800, T7.2026:801"
+    },
+    {
+      "name": "ANH NGUYỄN MINH QUÂN - KHÁCH LẺ",
+      "price_group": "Lẻ",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:233, T2.2026:58, T2.2026:59, T2.2026:60"
+    },
+    {
+      "name": "ANH NGUYỄN NHÂN GV",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:93, T2.2026:53, T2.2026:54, T2.2026:55"
+    },
+    {
+      "name": "ANH NGUYỄN TRUNG THÀNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:94, T4.2026:340, T4.2026:341"
+    },
+    {
+      "name": "ANH NHÂN MITIDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:95, T2.2026:48, T3.2026:361, T3.2026:391"
+    },
+    {
+      "name": "ANH NHẬT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:319, T5.2026:584, T5.2026:585"
+    },
+    {
+      "name": "ANH NHUẬN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:96, T2.2026:13, T2.2026:14, T2.2026:15"
+    },
+    {
+      "name": "ANH PHẠM PHONG -0902454866",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0902454866",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:247, T3.2026:724, T3.2026:725"
+    },
+    {
+      "name": "ANH PHÁT VĨNH LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 724 2788",
+      "email": "",
+      "address": "XE TẢI HUY 0918 024 960 GỌI HỎI XE Ở ĐÂU",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:42, T3.2026:668, T3.2026:669, T3.2026:670"
+    },
+    {
+      "name": "ANH PHI ĐỒNG XOÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:97, T3.2026:173, T3.2026:174, T3.2026:175"
+    },
+    {
+      "name": "ANH PHONG - 0907219579",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907219579",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:98, DS KH-NCC:414, T4.2026:201, T4.2026:202"
+    },
+    {
+      "name": "ANH PHONG 0397443787",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0397443787",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:324, T5.2026:635, T5.2026:636, T5.2026:637"
+    },
+    {
+      "name": "ANH PHONG CỬA CUỐN ANH CHÂU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:99, T3.2026:76, T6.2026:1017, T6.2026:1018"
+    },
+    {
+      "name": "ANH PHONG KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:378, T6.2026:509"
+    },
+    {
+      "name": "ANH PHONG NGUYỄN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907219579",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:268, DS KH-NCC:438, T4.2026:586, T4.2026:587"
+    },
+    {
+      "name": "ANH PHÓNG THỢ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:240, T3.2026:323"
+    },
+    {
+      "name": "ANH PHONG VĨNH LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0903 012 933",
+      "email": "",
+      "address": "367 Lê Thị Ngay, Vĩnh Lộc A, Bình Chánh, Thành phố Hồ Chí Minh, Việt Nam",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:100, T2.2026:45, T2.2026:72, T3.2026:33"
+    },
+    {
+      "name": "ANH PHÚC CẦN THƠ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:313, T5.2026:351"
+    },
+    {
+      "name": "ANH PHƯỚC THỢ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:101, T3.2026:44, T3.2026:390, T3.2026:578"
+    },
+    {
+      "name": "ANH PHƯƠNG NEWDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:102, T4.2026:259, T4.2026:260, T7.2026:956"
+    },
+    {
+      "name": "ANH QUANG CỬA CUỐN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:308, T5.2026:289, T5.2026:290"
+    },
+    {
+      "name": "ANH QUANG GIA LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:290, T5.2026:92, T5.2026:93, T5.2026:94"
+    },
+    {
+      "name": "ANH QUANG HÀ NỘI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:186, T6.2026:233, T7.2026:699"
+    },
+    {
+      "name": "ANH QUANG LV",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0985856299",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:363, T6.2026:281, T6.2026:334, T6.2026:335"
+    },
+    {
+      "name": "ANH QUÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0938250802",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:8, T3.2026:142, T3.2026:720, T4.2026:516"
+    },
+    {
+      "name": "ANH QUỐC THỢ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:103, DS KH-NCC:362, T3.2026:523, T3.2026:524"
+    },
+    {
+      "name": "ANH QUYỀN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0909 511 051",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:408, T6.2026:1014, T6.2026:1015, T6.2026:1016"
+    },
+    {
+      "name": "ANH SINH THỦ ĐỨC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:293, T5.2026:126, T5.2026:127, T5.2026:128"
+    },
+    {
+      "name": "ANH SƠN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0937735818",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:104, DS KH-NCC:299, T3.2026:234, T3.2026:341"
+    },
+    {
+      "name": "ANH SƠN CỬA SẮT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:417, T7.2026:323, T7.2026:324, T7.2026:325"
+    },
+    {
+      "name": "ANH SƠN KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:400, T6.2026:888, T6.2026:889, T6.2026:890"
+    },
+    {
+      "name": "ANH SỬ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0973 720 069",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:9, T2.2026:56, T2.2026:57, T4.2026:552"
+    },
+    {
+      "name": "ANH TÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0392441338",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:331, T5.2026:719"
+    },
+    {
+      "name": "ANH TÁM TÔN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:330, T5.2026:701, T5.2026:702, T5.2026:703"
+    },
+    {
+      "name": "ANH THẠCH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:105, T3.2026:273, T3.2026:274, T3.2026:275"
+    },
+    {
+      "name": "ANH THÁI - 0988603785",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0988603785",
+      "email": "",
+      "address": "VÕ VĂN VĂN .VĨNH LỘC B , BÌNH CHÁNH",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:321, T5.2026:593"
+    },
+    {
+      "name": "ANH THÁI BÌNH CHÁNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0914 770 057",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:343, T5.2026:892, T5.2026:893"
+    },
+    {
+      "name": "ANH THÁI BỌ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:187"
+    },
+    {
+      "name": "ANH THÀNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0919534513",
+      "email": "",
+      "address": "SỐ 86 HẺM 127 BÙI MINH TRỰC, BÌNH ĐÔNG, HỒ CHÍ MINH, VIỆT NAM",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:384, T6.2026:591, T6.2026:592, T6.2026:593"
+    },
+    {
+      "name": "ANH THANH - 093 2689848",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 2689848",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:289, T5.2026:74, T5.2026:75, T6.2026:351"
+    },
+    {
+      "name": "ANH THÀNH QUẢNG NAM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "090 6325649",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:409, T6.2026:1071"
+    },
+    {
+      "name": "ANH THÀNH TÔN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:440, T7.2026:830, T7.2026:831"
+    },
+    {
+      "name": "ANH THẢO",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:106, T3.2026:508, T3.2026:509, T3.2026:510"
+    },
+    {
+      "name": "ANH THẮNG BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0915778884",
+      "email": "",
+      "address": "BIÊN HÒA",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:320, T5.2026:590, T5.2026:591, T5.2026:592"
+    },
+    {
+      "name": "ANH THẮNG CẦN THƠ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0979710717",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:332, T5.2026:743, T5.2026:744, T6.2026:103"
+    },
+    {
+      "name": "ANH THÂN ( VÁN HỒNG THÂN)",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "077 909 0390",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:444, T7.2026:872, T7.2026:873, T7.2026:874"
+    },
+    {
+      "name": "ANH THE GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:107"
+    },
+    {
+      "name": "ANH THẾ GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:238, T3.2026:184, T3.2026:185, T6.2026:248"
+    },
+    {
+      "name": "ANH THIỆN KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:333, T5.2026:753, NHẬP:5, NHẬP:6"
+    },
+    {
+      "name": "ANH THIỆU TAM KÌ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:260, T4.2026:456, T4.2026:457, T4.2026:458"
+    },
+    {
+      "name": "ANH THỊNH KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:443, T7.2026:867"
+    },
+    {
+      "name": "ANH THÔNG CỬA SẮT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "034 862 2345",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:336, T5.2026:824, T5.2026:825, DS BẢO HÀNH:34"
+    },
+    {
+      "name": "ANH THU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:442, T7.2026:864, T7.2026:865"
+    },
+    {
+      "name": "ANH THUẬN CAM LÂM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0979 418 347",
+      "email": "",
+      "address": "Giao chành Anh Sơn Cam Lâm 0906 783 935 - 04 Lương Thế Vinh, Tân Phú",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:43, T3.2026:597, T3.2026:598"
+    },
+    {
+      "name": "ANH THUẬN TAVIDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906488012",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:262, T4.2026:486, T4.2026:487, T4.2026:488"
+    },
+    {
+      "name": "ANH THUẬT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0905 091 319",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:347, T5.2026:958, T5.2026:959, T5.2026:960"
+    },
+    {
+      "name": "ANH THUYẾT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0813 082 139",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:10, T4.2026:117, T4.2026:418, T4.2026:419"
+    },
+    {
+      "name": "ANH TIẾN ANH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:108, T2.2026:65, T2.2026:66, T2.2026:67"
+    },
+    {
+      "name": "ANH TIẾN BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:109, T4.2026:136"
+    },
+    {
+      "name": "ANH TIẾN CẦN THƠ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0948 185 504",
+      "email": "",
+      "address": "330 QUỐC LỘ 1A, PHƯỜNG BÌNH HƯNG HÒA B, QUẬN BÌNH TÂN ( CHÀNH XE THÀNH HẢI 0918 388 215)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:11, T3.2026:215, T3.2026:216, T3.2026:217"
+    },
+    {
+      "name": "ANH TIẾN LONG THÀNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0905 168 690/0974765728",
+      "email": "",
+      "address": "SỐ 221 BÌNH TIÊN Q.6,( CHÀNH LONG THÀNH 0903 814 632)",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:274, T4.2026:738, T4.2026:739, T4.2026:740"
+    },
+    {
+      "name": "ANH TIỆP ĐẮKLẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:351, T5.2026:992"
+    },
+    {
+      "name": "ANH TÌNH - PHƯƠNG NAM VĨNH LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "918388248",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:448, T7.2026:941, T7.2026:952, T7.2026:953"
+    },
+    {
+      "name": "ANH TÍNH BẠC LIÊU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0833 800 486",
+      "email": "",
+      "address": "Chành Hui 93 Dương Đình Nghệ, P.8, Q.11 091 399 0386 ,",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:12, T3.2026:67, T6.2026:306, T6.2026:699"
+    },
+    {
+      "name": "ANH TĨNH CỬA CUỐN QUỐC ĐẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:110"
+    },
+    {
+      "name": "ANH TOÀN - 077 6111234",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "077 6111234",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:303, DS KH-NCC:446, T5.2026:216, T5.2026:217"
+    },
+    {
+      "name": "ANH TOÀN BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:221, T5.2026:920, T5.2026:998, T5.2026:999"
+    },
+    {
+      "name": "ÁNH TRĂNG PHAN THIẾT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0972 989 228",
+      "email": "",
+      "address": "GIAO CHÀNH XE NAM PHÁT ( 0333 991 911 - 1610 VÕ VĂN KIỆT .P.7,Q.6",
+      "note": "GIAO VỀ : ÁNH TRĂNG PHÚ TÀI PHAN THIẾT | Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:44, T3.2026:412, T3.2026:413, T4.2026:687"
+    },
+    {
+      "name": "ANH TRẦN HẬU HOẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0824964139",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:421, T7.2026:365, T7.2026:366"
+    },
+    {
+      "name": "ANH TRẦN THÁI NGUYÊN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:111, T3.2026:263, T3.2026:264, T3.2026:265"
+    },
+    {
+      "name": "ANH TRẦN VĂN DƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:112, T3.2026:534, T3.2026:535, T3.2026:536"
+    },
+    {
+      "name": "ANH TRÍ CAI LẬY",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:113, T3.2026:77, T3.2026:78, T3.2026:79"
+    },
+    {
+      "name": "ANH TRÌNH ĐỒNG THÁP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907 890 606",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:398, T6.2026:862, T6.2026:863, T6.2026:864"
+    },
+    {
+      "name": "ANH TRỌNG NHÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:114, T3.2026:430"
+    },
+    {
+      "name": "ANH TRUNG -093 1222779",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 1222779",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:416, T7.2026:288, T7.2026:289, T7.2026:290"
+    },
+    {
+      "name": "ANH TRUNG MT STEEL",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:188"
+    },
+    {
+      "name": "ANH TRUNG NHÔM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:115, T3.2026:152, T3.2026:153, T3.2026:154"
+    },
+    {
+      "name": "ANH TRƯỜNG MÁI XẾP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:350, T5.2026:991, T6.2026:299, T6.2026:303"
+    },
+    {
+      "name": "ANH TRƯỜNG PHÚC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:116, T4.2026:174, T4.2026:175, T4.2026:176"
+    },
+    {
+      "name": "ANH TÚ BÌNH TÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:217, T5.2026:625"
+    },
+    {
+      "name": "ANH TÚ TÂN PHÚ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:296, T5.2026:156"
+    },
+    {
+      "name": "ANH TÚ TOÀN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:117, T3.2026:45, T5.2026:53, T5.2026:54"
+    },
+    {
+      "name": "ANH TUẤN ANH GÒ VẤP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0981 579 893",
+      "email": "",
+      "address": "GÒ VẤP",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:45, T2.2026:51, T2.2026:52, T5.2026:61"
+    },
+    {
+      "name": "ANH TUẤN BẠC LIÊU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:244, T3.2026:487, T3.2026:488, T3.2026:489"
+    },
+    {
+      "name": "ANH TUẤN CỬA CUỐN QUỐC TUẤN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:118, T3.2026:680, T4.2026:461, T4.2026:462"
+    },
+    {
+      "name": "ANH TUẤN DẦU DÂY",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:119, T3.2026:194, T3.2026:195, T3.2026:196"
+    },
+    {
+      "name": "ANH TUẤN ĐỨC TRỌNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:420, T7.2026:358, T7.2026:359, T7.2026:360"
+    },
+    {
+      "name": "ANH TUẤN PHÚ QUỐC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:120, T4.2026:253, T4.2026:440, T5.2026:59"
+    },
+    {
+      "name": "ANH TUẤN Q7",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0944695292",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:121, T2.2026:71, T3.2026:32, T3.2026:746"
+    },
+    {
+      "name": "ANH TÚC CỦ CHI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0933 304 545",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:369, T6.2026:401, DS BẢO HÀNH:38, DANH SÁCH LỖI:21"
+    },
+    {
+      "name": "ANH VĂN HUY",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:122, T4.2026:262, T4.2026:263, T4.2026:264"
+    },
+    {
+      "name": "ANH VINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "090 6955379",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:123, DS KH-NCC:288, T3.2026:515, T3.2026:516"
+    },
+    {
+      "name": "ANH VINH BẾN TRE",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0976481531",
+      "email": "",
+      "address": "CHÀNH XE TÁM LỆ ( BẾN TRE) 23 ĐƯỜNG SỐ 23 KHU BÌNH PHÚ .Q.6",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:437, T7.2026:768, T7.2026:769"
+    },
+    {
+      "name": "ANH VINH CẦN THƠ - ANH THẠCH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0876150190 ANH VINH",
+      "email": "",
+      "address": "GIAO CHÀNH XE THÀNH HẢI ( 330 QUỐC LỘ 1A, PHƯƠNG BÌNH HƯƠNG HÒA QUẬN BÌNH TÂN,0918 388 215)",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:365, T6.2026:320, T6.2026:321, T6.2026:322"
+    },
+    {
+      "name": "ANH VŨ ĐỒNG XOÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0979 956 975",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:355, T5.2026:1057, T6.2026:164, T7.2026:342"
+    },
+    {
+      "name": "ANH VŨ SÓC TRĂNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:124, T3.2026:50"
+    },
+    {
+      "name": "ANH VỸ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:125, T3.2026:118, T3.2026:119, T3.2026:120"
+    },
+    {
+      "name": "ANH XUÂN NICEDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0972 136 928",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:13, T3.2026:389, DS BẢO HÀNH:37, DANH SÁCH LỖI:20"
+    },
+    {
+      "name": "ANH XUYÊN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0918818652",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:394, T6.2026:755, T6.2026:756, T6.2026:757"
+    },
+    {
+      "name": "BẢO AN DOOR GIA LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0979 967 869",
+      "email": "",
+      "address": "Giao chành Vận Tải Tây Nguyên 58/2A Quốc Lộ 1A, Bà Điểm, Hóc Môn 0868 292 909 - Giao về: Bảo Gia Khang, Gia Lai",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:230, T2.2026:2, T2.2026:3, T2.2026:4"
+    },
+    {
+      "name": "BẢO GIA KHANG GIA LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:226, T4.2026:925, T4.2026:926, T4.2026:927"
+    },
+    {
+      "name": "BẢO VIỆT WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0367 35 2572 _ 0916 964023",
+      "email": "",
+      "address": "131 Đ. Kênh 19/5, Sơn Kỳ, Tân Phú.(CHÀNH THANH BÌNH XANH) 0974 791 753. - GIAO VỀ :302 Quốc lộ 20 Lộc Nga TP Bảo Lộc Lâm Đồng",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:316, T5.2026:376, T5.2026:377, T5.2026:378"
+    },
+    {
+      "name": "BIDICA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:189"
+    },
+    {
+      "name": "CDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:224"
+    },
+    {
+      "name": "CHÁNH HOÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:190"
+    },
+    {
+      "name": "CHÂU AN PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 889 5861",
+      "email": "",
+      "address": "Chành Ba Sắc, 119 phạm phú thứ, P3, Q6 , sđt : 0937445568",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:259, T4.2026:443, T4.2026:444, T4.2026:445"
+    },
+    {
+      "name": "CHỊ DƯ BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:126, T3.2026:407, T4.2026:108, T4.2026:109"
+    },
+    {
+      "name": "CHỊ HUỆ - ANH HÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:127, T3.2026:496, T3.2026:497, T3.2026:498"
+    },
+    {
+      "name": "CHỊ KIM HỒNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907358384",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:387, T6.2026:691"
+    },
+    {
+      "name": "CHỊ LAM AUSTDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:128, T3.2026:320, T3.2026:321, T3.2026:322"
+    },
+    {
+      "name": "CHỊ MÂY",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:191"
+    },
+    {
+      "name": "CHỊ NHÀN KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0888757166",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:328, T5.2026:680, T5.2026:782, T5.2026:783"
+    },
+    {
+      "name": "CHỊ QUÂN NASA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:129, T3.2026:743, T4.2026:272, T4.2026:400"
+    },
+    {
+      "name": "CHỊ THẮM BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:130, T3.2026:259, T3.2026:260, T3.2026:261"
+    },
+    {
+      "name": "CHỊ THU - KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:131"
+    },
+    {
+      "name": "CHỊ TRANG BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:132, T3.2026:656, T3.2026:657, T3.2026:658"
+    },
+    {
+      "name": "CHỊ TRANG ĐỨC TRỌNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0822911695",
+      "email": "",
+      "address": "Thanh bình về trạm đức trọng",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:342, T5.2026:877"
+    },
+    {
+      "name": "CHỊ VÂN - HAVADOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:133"
+    },
+    {
+      "name": "CHÍNH ĐẠO VƯƠNG GIA LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0981 101 331 A THẮNG",
+      "email": "",
+      "address": "Chành xe : QUYỀN (Cty Minh Quang) Bãi xe : Nam Sài Gòn 2 Hẻm 238 quốc lộ 22, phường Trung Mỹ tây, quận 12, hcm. Liên hệ : 0976622097",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:14, T4.2026:227, T4.2026:228, T4.2026:229"
+    },
+    {
+      "name": "CHÚ HIẾN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0936155940",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:422, T7.2026:430"
+    },
+    {
+      "name": "CHÚ NGỌC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:134, T3.2026:674, T3.2026:675, T4.2026:30"
+    },
+    {
+      "name": "CHÚ THANH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:192"
+    },
+    {
+      "name": "CÔNG TY ĐĂNG TẤN PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0908984262",
+      "email": "",
+      "address": "BIÊN HÒA",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:323, T5.2026:622, T5.2026:623"
+    },
+    {
+      "name": "CƠ KHÍ LẠC AN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0964 704 847",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:434, T7.2026:722, T7.2026:723, T7.2026:724"
+    },
+    {
+      "name": "CƠ KHÍ THÀNH TÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0937 950 967",
+      "email": "",
+      "address": "ĐỨC HÒA LONG AN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:15, T3.2026:689, T3.2026:690, T3.2026:691"
+    },
+    {
+      "name": "CƠ KHÍ TIẾN HƯNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0933 101 478 - ANH TRÍ",
+      "email": "",
+      "address": "GIAO CHÀNH XE BA SẮC (119 PHẠM PHÚ THỨ, P.13, Q.6 - 098 2222 797 - 0937 445 568)",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:225, T5.2026:104, T5.2026:105, T5.2026:106"
+    },
+    {
+      "name": "CƠ KHÍ XUÂN TRUNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:281, T4.2026:892, T4.2026:893, T4.2026:894"
+    },
+    {
+      "name": "CT WINDOW ĐÀ LẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:135, T3.2026:200, T3.2026:201, T3.2026:202"
+    },
+    {
+      "name": "CT WINDOW ĐẮKLẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0912238251 A DUY",
+      "email": "",
+      "address": "CHÀNH CHỊ PHẤN BÃI XE TRIÊU PHÚ QUÝ C10/29 TÂN KIM, BÌNH CHÁNH- 0945477485",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:136, T5.2026:827, T5.2026:828, T5.2026:829"
+    },
+    {
+      "name": "CTY CÁCH NHIỆT HÀ BẮC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:194"
+    },
+    {
+      "name": "CTY CỔ PHẦN XÂY DỰNG ALPHA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:301, T5.2026:196, T5.2026:197, T5.2026:198"
+    },
+    {
+      "name": "CTY ĐỨC HƯNG THỊNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:195"
+    },
+    {
+      "name": "CTY HẢI THÀNH Q9",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0988890053",
+      "email": "",
+      "address": "QUẬN 9",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:273, T4.2026:722, T4.2026:723, T4.2026:724"
+    },
+    {
+      "name": "CTY LONG VĨ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0919 720 392 (Anh Hiệp)",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:46"
+    },
+    {
+      "name": "CTY NHỰA APC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:197"
+    },
+    {
+      "name": "CTY QUỐC GIA BẢO",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:198"
+    },
+    {
+      "name": "CTY SÁU HỒNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Nguồn: CTY SÁU HỒNG.xlsx:Sheet2, CTY SÁU HỒNG.xlsx:BÁO GIÁ, CTY SÁU HỒNG.xlsx:Sheet1, CTY SÁU HỒNG.xlsx:T4"
+    },
+    {
+      "name": "CTY THÉP TOÀN THẮNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:199"
+    },
+    {
+      "name": "CỬA CUỐN A BÁ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:279, T4.2026:871, T4.2026:872, T5.2026:31"
+    },
+    {
+      "name": "CỬA CUỐN BA SNAG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:248, T4.2026:183"
+    },
+    {
+      "name": "CỬA CUỐN BÌNH AN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:137"
+    },
+    {
+      "name": "CỬA CUỐN BÌNH MINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0903 821 988",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:138, T3.2026:550, T3.2026:551, T3.2026:552"
+    },
+    {
+      "name": "CỬA CUỐN CÔNG THÀNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0976011553",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:16, T3.2026:328, T3.2026:329, T3.2026:330"
+    },
+    {
+      "name": "CỬA CUỐN ĐỨC VIỆT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:370, T6.2026:402, T6.2026:487, T6.2026:488"
+    },
+    {
+      "name": "CỬA CUỐN HẬU TÍN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0365 643 101",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:17, T2.2026:69, T2.2026:70, T3.2026:30"
+    },
+    {
+      "name": "CỬA CUỐN HÒA PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0915 132 579",
+      "email": "",
+      "address": "381 LÊ VĂN KHƯƠNG,P. HIỆP THÀNH ,Q.12 ( CHÀNH QUANG GIẢNG 0935 866 479",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:267, T4.2026:578, T4.2026:579, T4.2026:580"
+    },
+    {
+      "name": "CỬA CUỐN HOÀNG HỮU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0816495594",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:415, T7.2026:270, T7.2026:271"
+    },
+    {
+      "name": "CỬA CUỐN HOÀNG PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0904 151 716",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:18, DS KH-NCC:334, DS BẢO HÀNH:10"
+    },
+    {
+      "name": "CỬA CUỐN HƯNG THỊNH PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0793333261",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:436, T7.2026:752"
+    },
+    {
+      "name": "CỬA CUỐN LONG PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0914 791 280",
+      "email": "",
+      "address": "1610 VÕ VĂN KIỆT P.7,Q.6 ( CHÀNH THÁI MỸ GIA 0945 733 330)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:419, T7.2026:338, T7.2026:339, T7.2026:340"
+    },
+    {
+      "name": "CỬA CUỐN MẠNH HÙNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0916 557 888",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:270, T4.2026:676, T4.2026:677, T5.2026:345"
+    },
+    {
+      "name": "CỬA CUỐN MIỀN NAM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "098 317 3142",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:139, T3.2026:466, T3.2026:467, T3.2026:468"
+    },
+    {
+      "name": "CỬA CUỐN MINH ĐỨC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0329121946",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:388, T6.2026:714, T6.2026:715, T6.2026:716"
+    },
+    {
+      "name": "CỬA CUỐN MINH PHƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:140, T3.2026:297"
+    },
+    {
+      "name": "CỬA CUỐN PHÚC TÍN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0325967896",
+      "email": "",
+      "address": "THỦ DẦU MỘT, BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:19, T3.2026:757, T3.2026:758, T3.2026:759"
+    },
+    {
+      "name": "CỬA CUỐN PHƯƠNG THÚY",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0333 375 463",
+      "email": "",
+      "address": "HẺM 178 HẬU GIANG, PHƯỜNG 6, QUẬN 6 (CHÀNH XE ANH HUỆ - 0913.956.032)",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:266, T4.2026:577, T4.2026:733, T4.2026:734"
+    },
+    {
+      "name": "CỬA CUỐN TÂM ĐỨC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:250, T4.2026:254"
+    },
+    {
+      "name": "CỬA CUỐN THÀNH PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:294, T5.2026:133, T5.2026:134, T5.2026:135"
+    },
+    {
+      "name": "CỬA CUỐN THÀNH PHÁT ĐẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0903 334 672",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:429, T7.2026:581, T7.2026:582, T7.2026:583"
+    },
+    {
+      "name": "CỬA CUỐN THIÊN SƠN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0844879779",
+      "email": "",
+      "address": "1474 VÕ VĂN KIỆT, PHƯỜNG 3, QUẬN 6 (XE A TÂN KHO 278 - 0942.404.810)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:426, T7.2026:511, T7.2026:512"
+    },
+    {
+      "name": "CỬA CUỐN THÚY VINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "085 499 4428",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:257, T4.2026:379, T4.2026:380, T4.2026:381"
+    },
+    {
+      "name": "CỬA CUỐN TRẦN GIA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:141, T3.2026:569, T3.2026:570, T3.2026:571"
+    },
+    {
+      "name": "CỬA CUỐN TRUNG NGHĨA BÌNH ĐỊNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0704433167",
+      "email": "",
+      "address": "Số 39 Tây Thạnh, Tân Phú (Chành xe Hữu Nam - 0985.426.669 A.Hoà)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:20, T2.2026:37, T2.2026:38, T2.2026:39"
+    },
+    {
+      "name": "CỬA HÀ NỘI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0962513333",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:326, T5.2026:658, T5.2026:659, T5.2026:660"
+    },
+    {
+      "name": "CƯẢ MINH CHÂU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "097 8015265",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:399"
+    },
+    {
+      "name": "CỬA MINH CHÂU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "097 8015265",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:346, T5.2026:938, T5.2026:939, T6.2026:877"
+    },
+    {
+      "name": "CỬA THẾ GIỚI MỚI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0372854251 ANH LINH",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:142, T3.2026:382, T5.2026:542, T5.2026:543"
+    },
+    {
+      "name": "CƯỜNG THỊNH NHÀ BÈ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:381, T6.2026:545"
+    },
+    {
+      "name": "CƯỜNG THỊNH Q7",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0909 096 018",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:47, T2.2026:76, T2.2026:77, T3.2026:37"
+    },
+    {
+      "name": "CƯỜNG THUẬN PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0909 743 416",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:435, T7.2026:743, T7.2026:744, T7.2026:745"
+    },
+    {
+      "name": "DK WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0911 609 396 A HẢI",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:48, T3.2026:763, T3.2026:764, T3.2026:765"
+    },
+    {
+      "name": "DUY DƯ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0908 976 529",
+      "email": "",
+      "address": "771 Kinh Dương Vương Phường An Lạc, Quận Bình Tân 0941 920 138",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:263, T4.2026:495, T4.2026:496, T4.2026:497"
+    },
+    {
+      "name": "DƯƠNG PHI LONG - CHỊ HƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:253, T4.2026:325, T4.2026:326, T4.2026:327"
+    },
+    {
+      "name": "DƯƠNG THÀNH ĐỨC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "098 3687287",
+      "email": "",
+      "address": "tổ 1 Bùi Văn Hòa, Kp3, Long Hưng, Đồng Nai, Việt Nam",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:353, T5.2026:1028, T5.2026:1029, T5.2026:1030"
+    },
+    {
+      "name": "ĐẠT THÀNH VĨNH LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0979 558 161",
+      "email": "",
+      "address": "7979 CẦU GẠCH CÂY, VÕ VĂN KIỆT, P.16, Q.8, TP HCM (CHÀNH XE 7 ÚT - 0918 628 533)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:21, T3.2026:761, T3.2026:762, T4.2026:63"
+    },
+    {
+      "name": "ĐĂNG KHOA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:258, T4.2026:424, T4.2026:489, T4.2026:490"
+    },
+    {
+      "name": "ĐĂNG LƯU ĐẮK LẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0911 200 158",
+      "email": "",
+      "address": "BÃI XE CHỢ AN SƯƠNG ( CHÀNH XE LÍT 47 - 079 469 1691)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:22, T3.2026:562, T3.2026:563, T3.2026:564"
+    },
+    {
+      "name": "ĐỨC HOÀNG ĐẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:143, DS KH-NCC:231, T4.2026:359, T4.2026:360"
+    },
+    {
+      "name": "ĐỨC TÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:200, T4.2026:521, T6.2026:507, T6.2026:508"
+    },
+    {
+      "name": "ĐỨC THẮNG VŨNG TÀU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:354, T5.2026:1039, T5.2026:1040, T6.2026:149"
+    },
+    {
+      "name": "ĐỨC TIN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:304, T5.2026:245, T5.2026:246, T5.2026:247"
+    },
+    {
+      "name": "ĐỨC TÍN ĐỒNG XOÀI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:227"
+    },
+    {
+      "name": "ĐỨC TRÍ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0965 456 878",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:144, T3.2026:314, T3.2026:315, T3.2026:316"
+    },
+    {
+      "name": "GIA BẢO TÂY NINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "097 542 5378 ( GIA BẢO)",
+      "email": "",
+      "address": "CHÀNH MINH HIẾU 50 BÃI SẬY,Q.6,091 723 7551",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:145, T2.2026:28, T2.2026:29, T2.2026:46"
+    },
+    {
+      "name": "GIA ĐẠT KIÊN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0943 666 466",
+      "email": "",
+      "address": "102 ĐƯỜNG SỐ 8, KP4, KCN TÂN TẠO, PHƯỜNG TÂN TẠO A, QUẬN BÌNH TÂN(CHÀNH XE PHƯƠNG TÀI)0888999277",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:23, T3.2026:716, T4.2026:343, T4.2026:344"
+    },
+    {
+      "name": "GIA HOÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:201"
+    },
+    {
+      "name": "GIA KHANG Q9",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932005244",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:356, T6.2026:172, T6.2026:173"
+    },
+    {
+      "name": "GIA TẤN PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0976 273 233",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:24, T3.2026:692, T3.2026:693, T3.2026:694"
+    },
+    {
+      "name": "GIẤY ANH TẬP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:202"
+    },
+    {
+      "name": "HẢI KỲ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:203"
+    },
+    {
+      "name": "HIỆU TUẤN PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:386, T6.2026:653, T6.2026:654, T6.2026:655"
+    },
+    {
+      "name": "HOÀNG ANH ĐẮK LẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0914651954 Anh Hoàng",
+      "email": "",
+      "address": "CHÀNH XE 71 Chế Lan Viên Quận Tân Phú - 0988263377",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:146, T3.2026:344, T3.2026:345, T3.2026:346"
+    },
+    {
+      "name": "HOÀNG CUNG WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:282, T4.2026:897, T4.2026:898, T6.2026:601"
+    },
+    {
+      "name": "HOÀNG CƯ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:147, DS KH-NCC:204, T6.2026:1048"
+    },
+    {
+      "name": "HOÀNG GIA ĐÀ LẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0782 676 679 ( ANH TRUNG)",
+      "email": "",
+      "address": "CHÀNH XE TÂN HƯNG ( KHO CHÍN NGHĨA)1610 VÕ VĂN KIỆT ,P.7,Q.6 0913 680 204",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:223, T4.2026:757, T4.2026:758, T4.2026:759"
+    },
+    {
+      "name": "HOÀNG GIA NHÀ BÈ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0908 649 336",
+      "email": "",
+      "address": "NHÀ BÈ",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:49, T3.2026:242, T3.2026:243, T3.2026:244"
+    },
+    {
+      "name": "HOÀNG LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Nguồn: HOÀNG LAI"
+    },
+    {
+      "name": "HOÀNG LAI HÓC MÔN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:222, T5.2026:444, T5.2026:445, T5.2026:446"
+    },
+    {
+      "name": "HOÀNG LIÊN SƠN - DỰ ÁN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:432, T7.2026:634, T7.2026:635, T7.2026:636"
+    },
+    {
+      "name": "HOÀNG LONG ĐỨC TRỌNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0822911695",
+      "email": "",
+      "address": "131 Đ. Kênh 19/5, Sơn Kỳ, Tân Phú.(CHÀNH THANH BÌNH XANH)0974 791 753",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:148, T3.2026:444, T3.2026:445, T4.2026:776"
+    },
+    {
+      "name": "HOÀNG PHÚ KIÊN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0919 775 979 - A PHÚ",
+      "email": "",
+      "address": "102 ĐƯỜNG SỐ 8,KP4 - KCN TÂN TẠO, P.TÂN TẠO A- Q.BÌNH TÂN ( CHÀNH XE PHƯƠNG TÀI)",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:149, T4.2026:172, T4.2026:173, T4.2026:215"
+    },
+    {
+      "name": "HOÀNG QUÂN ALUDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0868 789 522 ( A QUÂN )",
+      "email": "",
+      "address": "CHÀNH MINH HIẾU 49-50 ĐƯỜNG BÃI SẬY,P.1,Q.6 0917 237 551 ( TRƯỚC 12H)",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:50, T3.2026:227, T3.2026:228, T3.2026:229"
+    },
+    {
+      "name": "HOÀNG SƠN AN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0913 136 992",
+      "email": "",
+      "address": "989 NGUYỄN TRÃI PHƯỜNG 16,Q5 CHÀNH KIM LAN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:375, T6.2026:481, T6.2026:482"
+    },
+    {
+      "name": "HOÀNG SƠN NINH THUẬN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0939 255 455",
+      "email": "",
+      "address": "NHÀ XE NAM PHÁT 1610 VÕ VĂN KIỆT P.7,Q.6 0333 991 911",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:374, T6.2026:468, T6.2026:469, T6.2026:470"
+    },
+    {
+      "name": "HOÀNG THÀNH TÍN - BẢO LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0378663944",
+      "email": "",
+      "address": "369A HÙNG VƯƠNG, LỘC THẮNG, BẢO LÂM, LÂM ĐỒNG (gửi chành Thanh Bình Xanh - giao hàng tận nơi)",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:322, T5.2026:606, T5.2026:607, T5.2026:608"
+    },
+    {
+      "name": "HOÀNG THỊNH PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:51, T3.2026:780"
+    },
+    {
+      "name": "HOÀNG TIẾN PHÚC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:269, T4.2026:617, T4.2026:618, T4.2026:774"
+    },
+    {
+      "name": "HOVADOOR CHỊ VÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:246, T3.2026:619"
+    },
+    {
+      "name": "HỒNG PHÁT BÌNH DƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0337 944 539 (Anh Tuấn Anh)",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:52, T3.2026:432, T3.2026:433, T3.2026:434"
+    },
+    {
+      "name": "HỒNG QUANG ALUDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0909 555 590 (Anh Ty)",
+      "email": "",
+      "address": "Giao chành Bình Phước, xe anh Tân, 1474 Võ Văn Kiệt, P. 3, Q. 6 - 0767 396 262 - Anh Phát (giao đi Cửa Cuốn Hồng Quang - Anh Ty)",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:53, T3.2026:583"
+    },
+    {
+      "name": "HÙNG THỊNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:205"
+    },
+    {
+      "name": "HUYNH ĐỆ PHÁT - BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0343 269 843",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:359, T6.2026:235, T6.2026:236, T6.2026:237"
+    },
+    {
+      "name": "HƯƠNG SƠN VŨNG TÀU",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0933 163 639 A THÀNH",
+      "email": "",
+      "address": "GIAO CHÀNH XE BA SẮC (119 PHẠM PHÚ THỨ, P.13, Q.6 - 098 2222 797 - 0937 445 568) -GIAO VỀ:VŨNG TÀU",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:277, T4.2026:778, T4.2026:779, T4.2026:780"
+    },
+    {
+      "name": "HỮU TẤN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 999 0668 ( A TẤN)",
+      "email": "",
+      "address": "330 QUỐC LỘ 1A, PHƯỜNG BÌNH HƯNG HÒA B, QUẬN BÌNH TÂN ( CHÀNH XE THÀNH HẢI 0918 388 215)",
+      "note": "GIAO VỀ : HỮU TẤN VĨNH LONG | Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:54, T2.2026:40, T2.2026:41, T3.2026:9"
+    },
+    {
+      "name": "HỮU THÁI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "097 779 4466",
+      "email": "",
+      "address": "SỐ 1 ,HỒ NGỌC LÃM,0829 35 0999 CHÀNH TRUNG THẢO",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:150, T3.2026:240, T3.2026:241, T3.2026:385"
+    },
+    {
+      "name": "KH HOÀNG ANH ĐẮK LẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:24"
+    },
+    {
+      "name": "KHÁCH LẺ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:55, DS KH-NCC:151, T3.2026:40, T3.2026:41"
+    },
+    {
+      "name": "KIM HƯNG LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:206"
+    },
+    {
+      "name": "KIM SA",
+      "price_group": "Lẻ",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:234, T5.2026:62, T5.2026:163"
+    },
+    {
+      "name": "KÍNH THÀNH DANH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0965954567",
+      "email": "",
+      "address": "Chành Minh Hiếu 50 Bãi Sậy 0917 237 551- 0908 889 298 -TRẢNG BÀNG TÂY NINH",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:152, T4.2026:223, T4.2026:224, T4.2026:225"
+    },
+    {
+      "name": "KTDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:373, T6.2026:455, T6.2026:456, T6.2026:457"
+    },
+    {
+      "name": "KỶ NGUYÊN LONG XUYÊN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:287, T5.2026:168, T5.2026:390, T5.2026:391"
+    },
+    {
+      "name": "LÂM ĐÔ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0965670119",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:335, T5.2026:807, T5.2026:808, T5.2026:809"
+    },
+    {
+      "name": "LÂM NHẬT TUỆ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:325, T5.2026:648, T5.2026:649, T5.2026:650"
+    },
+    {
+      "name": "LÊ THẾ ĐÔN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:232, T2.2026:78, T3.2026:39, T3.2026:465"
+    },
+    {
+      "name": "LINH PHỤNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0914 323 173",
+      "email": "",
+      "address": "CHÀNH THANH BÌNH ,-823 HÙNG VƯƠNG DI LINH LÂM ĐỒNG",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:314, T5.2026:372, T5.2026:373, T5.2026:640"
+    },
+    {
+      "name": "LÒ CHẢ HỒNG HƯƠNG",
+      "price_group": "Lẻ",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0904243536",
+      "email": "",
+      "address": "Tiền Giang",
+      "note": "Thợ lắp: Anh Phước | Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:239"
+    },
+    {
+      "name": "LỘC THÀNH PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0915 865 843",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THỂ ĐÔN | Nguồn: DS KH-NCC:337, T5.2026:830, T5.2026:879, T5.2026:955"
+    },
+    {
+      "name": "LƯƠNG GIA BÌNH PHƯỚC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0826604555",
+      "email": "",
+      "address": "2/7 Tô Ký Tổ 24 Kp2, Tân Chánh Hiệp, Quận 12 ( CHÀNH ĐỒNG XOÀI )091 563 6405",
+      "note": "CHÀNH PHƯỚC DŨNG,18 LÊ QUANG KIM,P.8,Q.8 - 0918103196 | Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:153, T3.2026:186, T3.2026:187, T6.2026:407"
+    },
+    {
+      "name": "LƯƠNG MINH TÂM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0971 505 035",
+      "email": "",
+      "address": "131 Đ. Kênh 19/5, Sơn Kỳ, Tân Phú.(CHÀNH THANH BÌNH XANH)0974 791 753.",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:410, T6.2026:1077, T6.2026:1078, T7.2026:127"
+    },
+    {
+      "name": "MÁI BẠT XẾP HOÀNG KIM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:340, T5.2026:864"
+    },
+    {
+      "name": "MAI LÂM BÙ ĐĂNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0972 886 317 - ANH LÂM",
+      "email": "",
+      "address": "GIAO CHÀNH XE ANH DŨNG (203 AN DƯƠNG VƯƠNG An lạc, bình tân KHO LỢI NAM - 0977 922 062)",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:56, T3.2026:51, T3.2026:52, T3.2026:53"
+    },
+    {
+      "name": "MẠNH HÀO BẢO LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0988209847",
+      "email": "",
+      "address": "CHÀNH THANH BÌNH XANH - VỀ BẢO LỘC",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:276, T4.2026:763, T4.2026:764, T4.2026:765"
+    },
+    {
+      "name": "MINH ĐƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:309, T5.2026:295"
+    },
+    {
+      "name": "MINH HOÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:207"
+    },
+    {
+      "name": "MINH HOÀNG KIÊN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:251, T4.2026:286, T4.2026:287, T7.2026:615"
+    },
+    {
+      "name": "MINH NHẬT PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0933 013 468",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:404, T6.2026:952, T6.2026:953, T6.2026:954"
+    },
+    {
+      "name": "MINH QUYÊN KIÊN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "949393957",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:447, T7.2026:928, T7.2026:929, T7.2026:930"
+    },
+    {
+      "name": "MINH TÂM LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0976 273 233",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:25, T3.2026:285, T3.2026:286, T7.2026:493"
+    },
+    {
+      "name": "MINH TÂM WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0365 859 084",
+      "email": "",
+      "address": "131 Đ. Kênh 19/5, Sơn Kỳ, Tân Phú.(CHÀNH THANH BÌNH XANH)0974 791 753.",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:26, T3.2026:726, T3.2026:727, T3.2026:728"
+    },
+    {
+      "name": "MINH THANH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0389884867",
+      "email": "",
+      "address": "Chành Tuấn Tú - 116 Phan Văn Khỏe Q6 0919669668",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:154, T3.2026:140, T3.2026:141, T3.2026:542"
+    },
+    {
+      "name": "MR SOVANN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:220, T4.2026:261, T6.2026:556, T6.2026:557"
+    },
+    {
+      "name": "MTDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0939 678 051",
+      "email": "",
+      "address": "330 QUỐC LỘ 1A, PHƯỜNG BÌNH HƯNG HÒA B, QUẬN BÌNH TÂN ( CHÀNH XE THÀNH HẢI 0918 388 215)",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:265, T4.2026:522"
+    },
+    {
+      "name": "NAM CHIỀU WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0948 597 172",
+      "email": "",
+      "address": "C10/29A đường quốc lộ 1A, ấp 3 xã Tân Kiên huyện Bình Chánh - Chành xe Phú Quốc 0836994011 (Nhận hàng tối đa 5h chiều)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:430, T7.2026:625, T7.2026:626, T7.2026:627"
+    },
+    {
+      "name": "NAM CƯỜNG ĐOÀN KẾT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 3565653",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:338, T5.2026:839, T6.2026:191, T6.2026:192"
+    },
+    {
+      "name": "NAM HÙNG ĐÀ LẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0911 411 334 (Anh Hùng)",
+      "email": "",
+      "address": "CHÀNH XE TÂN HƯNG( KHO CHÍNH NGHĨA)1610 VÕ VĂN KIỆT, P.7, Q.6 - 0913 680 204",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:57, T2.2026:11, T2.2026:12, T2.2026:42"
+    },
+    {
+      "name": "NAM THÀNH THẮNG - TU PHONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:305, T5.2026:261, T5.2026:262, T5.2026:263"
+    },
+    {
+      "name": "NETPRINT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:208"
+    },
+    {
+      "name": "NGA QUỐC CƯỜNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:255, T4.2026:363, DS BẢO HÀNH:12"
+    },
+    {
+      "name": "NGÂN PHÁT CỦ CHI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0934 199 689 (Anh Lâm)",
+      "email": "",
+      "address": "292A TỈnh Lộ 15, Tân Thạnh Đông, Củ Chi",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:58, T3.2026:702, T3.2026:703, T3.2026:704"
+    },
+    {
+      "name": "NGHĨA TÍN ĐỨC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0918 717 169",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:413, T7.2026:249, T7.2026:250, T7.2026:251"
+    },
+    {
+      "name": "NGỌC ANH WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0973 777 418",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:385, T6.2026:604, T6.2026:605, T6.2026:606"
+    },
+    {
+      "name": "NGỌC BẢO PHAN THIẾT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "091 813 5782 ( ANH CƯỜNG)",
+      "email": "",
+      "address": "CHÀNH XE NGHĨA HÀ 1626 VÕ VĂN KIỆT 7979 P.16, Q.8 091 214 7766 ( ANH HẬU)",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:59, T4.2026:154, T6.2026:1019"
+    },
+    {
+      "name": "NGỌC HIẾU CỦ CHI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:155, T3.2026:303, T3.2026:304, T3.2026:305"
+    },
+    {
+      "name": "NGÔ GIA PHÁT CỦ CHI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:156, T3.2026:100, T3.2026:101, T3.2026:102"
+    },
+    {
+      "name": "NGUYỄN MINH DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932 950 789",
+      "email": "",
+      "address": "LONG AN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:27, T3.2026:146, T3.2026:147, T7.2026:209"
+    },
+    {
+      "name": "NGUYỄN MINH QUÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:157"
+    },
+    {
+      "name": "NHẬT PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932 788 885",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:339, T5.2026:842, T5.2026:843"
+    },
+    {
+      "name": "NHẤT TÂM DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0902705847",
+      "email": "",
+      "address": "LÔ C40-43/I ĐƯỜNG SỐ 7, KCN VĨNH LỘC, VĨNH LỘC A - BÌNH CHÁNH",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:312, T5.2026:337, T5.2026:338, T5.2026:339"
+    },
+    {
+      "name": "NHÔM KÍNH ANH TRÍ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:357, T6.2026:200, T6.2026:201"
+    },
+    {
+      "name": "NHÔM KÍNH DUY LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0985 779 914",
+      "email": "",
+      "address": "1490 VÕ VĂN KIỆT, P.3,Q.6 0918 882 962 ( CHÀNH MINH TRÍ)",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:451, T7.2026:999, T7.2026:1000, T7.2026:1001"
+    },
+    {
+      "name": "NHÔM KÍNH HOÀ LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0919 156 441",
+      "email": "",
+      "address": "79 BÃI SẬY ,P.1,Q.6 ( CHÀNH TUẤN NGỌC 0903 769 748 )",
+      "note": "HỒNG NGỰ ĐỒNG THÁP | Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:428, T7.2026:546, T7.2026:547, T7.2026:548"
+    },
+    {
+      "name": "NHÔM KÍNH HÒA LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:278, T4.2026:836, T4.2026:837, T4.2026:838"
+    },
+    {
+      "name": "NHÔM KÍNH NĂM HÊN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:219, T5.2026:79, T5.2026:80, T5.2026:174"
+    },
+    {
+      "name": "NHÔM KÍNH TÀI LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:241, T3.2026:446, T3.2026:733, T3.2026:734"
+    },
+    {
+      "name": "NHÔM KÍNH THIÊN PHÚ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:158, T3.2026:272, T5.2026:6, T6.2026:6"
+    },
+    {
+      "name": "NHÔM KÍNH THUẬN PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0937 995 852",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:405, T6.2026:966, T6.2026:967, T6.2026:968"
+    },
+    {
+      "name": "NHÔM KÍNH VIỆT TRUNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0975713721",
+      "email": "",
+      "address": "1648B Võ Văn Kiệt, phường 16, quận 8 (CHÀNH XE PHƯỚC VŨ - 0984.539.849)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:28, T4.2026:289, T4.2026:290, T4.2026:857"
+    },
+    {
+      "name": "NHÔM SẮT VĂN LỢI GIA LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0972 402 379",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:368, T6.2026:388, T6.2026:504"
+    },
+    {
+      "name": "NHỨT BẢO PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:307, T5.2026:274, T5.2026:275, T5.2026:276"
+    },
+    {
+      "name": "PHAN LÊ ĐÀ NẴNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0988 617 770",
+      "email": "",
+      "address": "58/11 QL 1A ,P. BÌNH HƯNG HÒA .Q.BÌNH TÂN. ( CHÀNH THIÊN LỘC - 0935330092)",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:159, T3.2026:575, T4.2026:935, T4.2026:936"
+    },
+    {
+      "name": "PHAN SƠN ĐẢ TẺH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:295, T5.2026:148, T5.2026:149, T5.2026:150"
+    },
+    {
+      "name": "PHÁT AN KHANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:209"
+    },
+    {
+      "name": "PHI HÙNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0911 809 318 HÙNG",
+      "email": "",
+      "address": "Chành xe Anh Huệ (176/4A, Hẻm 178 Hậu Giang, Phường 6, Quận 6, TPHCM)",
+      "note": "GIAO VỀ : CỬA SẮC PHI HÙNG | Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:60, T3.2026:278, T3.2026:279, T3.2026:280"
+    },
+    {
+      "name": "PHỤ KIỆN ÔNG GIÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:210"
+    },
+    {
+      "name": "PHÚ XUÂN VIỆT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:211"
+    },
+    {
+      "name": "PHÚC GIÀU LONG XUYÊN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0913010769",
+      "email": "",
+      "address": "989 Nguyễn Trãi phuờng 14 quận 5 (Nhà xe Kim Lan - 0918544509)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:29, T3.2026:46, T3.2026:47, T3.2026:48"
+    },
+    {
+      "name": "PHÚC TÀI XẾ CTY",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:199"
+    },
+    {
+      "name": "PHƯỚC YÊN ĐÀ LẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "091 988 5132 ( ANH YÊN )",
+      "email": "",
+      "address": "CHÀNH XE TÂN HƯNG( KHO CHÍNH NGHĨA)1610 VÕ VĂN KIỆT, P.7, Q.6 - 0913 680 204 -GIAO VỀ : ĐÀ LẠT",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:327, T5.2026:665, T5.2026:666, T5.2026:667"
+    },
+    {
+      "name": "PHƯƠNG KHÁNH ĐỨC HOÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932 112 907",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:449, T7.2026:948, T7.2026:949"
+    },
+    {
+      "name": "QUÁCH TĨNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0903 404 354 - A Sang",
+      "email": "",
+      "address": "52 HOÀNG HỮU NAM, Q9",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:160, T2.2026:26, T2.2026:27, T3.2026:63"
+    },
+    {
+      "name": "QUÁCH TĨNH ( HỢI TIẾN PHÁT)",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0918686069",
+      "email": "",
+      "address": "PQ địa chỉ 3/3 Hồ Ngọc Lãm, Phường 16, quận 8 - 0948.523.344 (A Hiển) - 0907.423.453 (Chị Quý)",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:161, T5.2026:1026, T5.2026:1027, T6.2026:137"
+    },
+    {
+      "name": "QUANG DANH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:285, T5.2026:425, T5.2026:426, T5.2026:427"
+    },
+    {
+      "name": "QUANG LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0972 596 870",
+      "email": "",
+      "address": "CHÀNH ĐỒNG XOÀI 186 AN DƯƠNG VƯƠNG .GIAO VỀ ĐỒNG XOÀI",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:423, T7.2026:453, T7.2026:454, T7.2026:455"
+    },
+    {
+      "name": "QUANG LUẬN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0936 842 627",
+      "email": "",
+      "address": "QL50, Quý Đức, Bình Chánh, Thành phố Hồ Chí Minh",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:162, T3.2026:298, T3.2026:299, T3.2026:300"
+    },
+    {
+      "name": "QUANG TRUNG BÙ ĐĂNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0877 776 456",
+      "email": "",
+      "address": "GIAO CHÀNH XE ANH DŨNG (203 AN DƯƠNG VƯƠNG An lạc, bình tân KHO LỢI NAM - 0977 922 062)",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:61, T3.2026:767, T3.2026:768, T4.2026:65"
+    },
+    {
+      "name": "QUANG VINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0929998292",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:380, T6.2026:541, T6.2026:542, T6.2026:775"
+    },
+    {
+      "name": "QUỐC CƯỜNG ĐỨC TRỌNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0913667450",
+      "email": "",
+      "address": "CHÀNH MINH LỢI 172/6 AN DƯƠNG VƯƠNG, P16, Q8 0918 451 665 => GIAO VỀ ĐỨC TRỌNG",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:163, T3.2026:122, T3.2026:123, T3.2026:124"
+    },
+    {
+      "name": "QUỐC PHONG HƯNG THỊNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0963 104 488",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:62, T2.2026:34, T3.2026:270, T3.2026:601"
+    },
+    {
+      "name": "QUÝ KHÁNH DI LINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:377, T6.2026:496, T6.2026:497, T6.2026:498"
+    },
+    {
+      "name": "SAODOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0359 189 023",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:367, T6.2026:379, T6.2026:380, T6.2026:381"
+    },
+    {
+      "name": "SÁU HỒNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0919807222 A Định",
+      "email": "",
+      "address": "1490 Võ Văn Kiệt F3 Q6 0919772792 -0938 762 903- 0943 972 297 ( Trần Phát Hân)",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:164, T3.2026:266, T3.2026:267, T3.2026:268"
+    },
+    {
+      "name": "SG THÀNH TÂM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:165, T4.2026:342"
+    },
+    {
+      "name": "SỬA CHỮA CỬA CUỐN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:166, T3.2026:335, T5.2026:754, T7.2026:312"
+    },
+    {
+      "name": "SỬA CHỮA LẮP ĐẶT CỬA CUỐN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0984981728",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:431, T7.2026:632"
+    },
+    {
+      "name": "TÀI LỘC WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "093 7319 955",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:30, T6.2026:179, T6.2026:180, T6.2026:181"
+    },
+    {
+      "name": "TÂM BÌNH NHƠN TRẠCH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0983717950",
+      "email": "",
+      "address": "PHÀ CÁT LÁI",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:63, T2.2026:73, T2.2026:74, T3.2026:34"
+    },
+    {
+      "name": "TÂM PHÚC DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0974102211",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:445, T7.2026:921, T7.2026:922, T7.2026:923"
+    },
+    {
+      "name": "TÂM QUANG MINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:292, T5.2026:113, T5.2026:114, T5.2026:115"
+    },
+    {
+      "name": "TẤN DU PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:261, T4.2026:464, T4.2026:465"
+    },
+    {
+      "name": "TẤN ĐẠI HƯNG - CHỊ HÀ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:256, T4.2026:364, T4.2026:890, T4.2026:891"
+    },
+    {
+      "name": "TÂN THÀNH CÔNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "094 908 5111",
+      "email": "",
+      "address": "CHÀNH XE ÚT NHU 211 BÌNH TIÊN P8,Q6 - 0905060732",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:167, T3.2026:373, T3.2026:374, T3.2026:558"
+    },
+    {
+      "name": "TÂN TIẾN PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0946 821 931",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THỂ ĐÔN | Nguồn: DS KH-NCC:425, T7.2026:495, T7.2026:496"
+    },
+    {
+      "name": "TEM LÊ GIA PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:212"
+    },
+    {
+      "name": "THÁI PHÚC LONG AN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0972 270 606",
+      "email": "",
+      "address": "RFMP+RQG, Đức Hòa Đông, Đức Hòa, Long An",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:168, T2.2026:19, T2.2026:20, T2.2026:21"
+    },
+    {
+      "name": "THANH BÌNH BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "098 957 3763",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:372, T6.2026:424, T6.2026:425, T6.2026:426"
+    },
+    {
+      "name": "THÀNH CÔNG KIÊN GIANG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0918 691 691 - 0966 336 139",
+      "email": "",
+      "address": "102 ĐƯỜNG SỐ 8, KP4, KCN TÂN TẠO, PHƯỜNG TÂN TẠO A, QUẬN BÌNH TÂN(CHÀNH XE PHƯƠNG TÀI)0888999277",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:169, T2.2026:35, T2.2026:36, T2.2026:49"
+    },
+    {
+      "name": "THÀNH CÔNG TÂY NINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0327 161 856 CHỊ DUNG",
+      "email": "",
+      "address": "CHÀNH ANH HUỆ ( 176/4A HẺM 178 HẬU GIANG P.6, Q.6 0976 009 835 ANH ĐỒNG",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:64, T3.2026:68, T3.2026:69, T3.2026:70"
+    },
+    {
+      "name": "THÀNH ĐẠT BẢO LỘC",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0931 812 606",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:360, T6.2026:246, T6.2026:247, T7.2026:405"
+    },
+    {
+      "name": "THÀNH LÂM BÌNH CHÁNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0865 755 155",
+      "email": "",
+      "address": "20 Đ. Chánh Hưng, Bình Hưng, Bình Chánh, Hồ Chí Minh",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:315, T5.2026:374, T6.2026:625, T6.2026:626"
+    },
+    {
+      "name": "THÀNH NGÂN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0914613256",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:170, T3.2026:106, T3.2026:107, T3.2026:108"
+    },
+    {
+      "name": "THÀNH TÂM TIẾN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:361, T5.2026:949, T5.2026:950, T5.2026:951"
+    },
+    {
+      "name": "THANH THỊNH WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: CHÍ CƯỜNG | Nguồn: DS KH-NCC:254, T4.2026:350, T4.2026:351, T4.2026:352"
+    },
+    {
+      "name": "THÀNH VŨ LONG KHÁNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0937732325",
+      "email": "",
+      "address": "1648 VÕ VĂN KIỆT.P16,Q6 CHÀNH CHỊ HỒNG -0913846098 .SAU LƯNG CHUNG CƯ KATINA",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:379, T6.2026:539, T6.2026:540"
+    },
+    {
+      "name": "THÀNH VƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:171, T3.2026:162, T3.2026:163, T3.2026:628"
+    },
+    {
+      "name": "THANH XUÂN ĐÀ LẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0933 189 066",
+      "email": "",
+      "address": "CHÀNH TÂN HƯNG VỀ ĐÀ LẠT",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:371, T6.2026:421, T6.2026:422, T6.2026:761"
+    },
+    {
+      "name": "THIÊN ANH DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0965 151 153",
+      "email": "",
+      "address": "CHÀNH XE ĐỨC HUY ĐẮKNÔNG KHO 186 AN DƯƠNG VƯƠNG,P.16, Q.8 0327 11 2222",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:31, T2.2026:17, T2.2026:18, T3.2026:349"
+    },
+    {
+      "name": "THUẬN LỢI ĐÀ LẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "098 755 7476 ANH THỊNH",
+      "email": "",
+      "address": "CHÀNH XE TÂN HƯNG (KHO CHÍN NGHĨA) 1610 VÕ VĂN KIỆT, P7, Q6 - 0913680204",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:172, T3.2026:148, T3.2026:149, T3.2026:150"
+    },
+    {
+      "name": "TIẾN DŨNG DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906 780 293",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:352, T5.2026:993, T5.2026:994, T5.2026:995"
+    },
+    {
+      "name": "TIẾN DUY ĐẮKNÔNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0948 177 886",
+      "email": "",
+      "address": "CHÀNH XE NHUNG TRIỀU( 203 AN DƯƠNG VƯƠNG P.AN LẠC,Q.BÌNH TÂN 0935 546 777 )",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:249, T4.2026:246, T4.2026:247, T4.2026:248"
+    },
+    {
+      "name": "TIẾN DƯƠNG PHÚ MỸ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932 570 583",
+      "email": "",
+      "address": "Chành Ba Sắc, 119 phạm phú thứ, P3, Q6 , sđt : 0937445568 -GIAO VỀ : TIẾN DƯƠNG PHÚ MỸ",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:311, T5.2026:319, T5.2026:320"
+    },
+    {
+      "name": "TIẾN ĐẠT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:213"
+    },
+    {
+      "name": "TIẾN ĐẠT/ANH BIỄN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Nguồn: NHẬP:3"
+    },
+    {
+      "name": "TIẾN HOÀNG BIÊN HÒA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0908910620. Hoàng",
+      "email": "",
+      "address": "BIÊN HÒA",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:310, T5.2026:311, T5.2026:312, T5.2026:313"
+    },
+    {
+      "name": "TIẾN NGA",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "844576777",
+      "email": "",
+      "address": "101/7/12 ĐƯỜNG KÊNH 19/5 SƠN KÌ TÂN PHÚ ( CHÀNH THANH BÌNH 0978 609 479 - 0937 604 679 )",
+      "note": "354/20 LÝ THƯỜNG KIỆT .P14,Q10 0949 747 739 - 02633 74 77 39 ( CHÀNH XE NHƯ VINH) | Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:173, T3.2026:235, T3.2026:236, T3.2026:237"
+    },
+    {
+      "name": "TIẾN PHÁT VĨNH LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906 778 586",
+      "email": "",
+      "address": "Giao chành 9 Hoàng 1650 Võ Văn Kiệt P.16 Q.8 Kho 72 - Giao về: Tiến Nghiệp Vĩnh Long",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:65, T3.2026:699, T3.2026:700"
+    },
+    {
+      "name": "TOÀN PHÁT BÌNH ĐỊNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0936 222 481",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:412, T6.2026:1129, T6.2026:1130, T6.2026:1131"
+    },
+    {
+      "name": "TOÀN PHÁT BUÔN HỒ -ĐẮKLẮK",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0975199357",
+      "email": "",
+      "address": "VẬN TẢI ĐỨC LUÂN -0984329729 XE Ở BẾN XE AN SƯƠNG",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:427, T7.2026:513, T7.2026:514, T7.2026:515"
+    },
+    {
+      "name": "TOÀN PHÁT DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0975199357",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:397, T6.2026:835"
+    },
+    {
+      "name": "TOÀN PHÁT TÂY NINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0909 807 613 ( A.DŨNG)",
+      "email": "",
+      "address": "Hẻm 178 đường Hậu Giang, phường 6, quận 6 - chành anh Huệ 0913.956.032",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:32, T3.2026:245, T3.2026:246, T3.2026:364"
+    },
+    {
+      "name": "TRẦN ĐẠT BẾN TRE",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0913 917 743",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:395, T6.2026:770, T6.2026:771, T6.2026:772"
+    },
+    {
+      "name": "TRẦN TIỆP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0914951699",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:329, T5.2026:696, T5.2026:697, T5.2026:698"
+    },
+    {
+      "name": "TRUNG HẬN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "098 597 9397",
+      "email": "",
+      "address": "BẾN CÁT , BD",
+      "note": "CHÀNH MẠNH DŨNG 093 601 0122 139 TRANG SỬ,P.2 ,Q.6 ( TRƯỚC 1H) | Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:174, T3.2026:110, T3.2026:247, T3.2026:248"
+    },
+    {
+      "name": "TRUNG TÂM CỬA CUỐN GIA LAI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0928704470",
+      "email": "",
+      "address": "90 Luỹ Bán Bích, Phường Tân Thới Hoà, quận Tân Phú (Chành xe Tân Lân - 0913.925.576)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:33, T3.2026:111, T3.2026:112, T3.2026:113"
+    },
+    {
+      "name": "TRUNG TÂM CỬA CUỐN HP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:229, T4.2026:430, T4.2026:431, T4.2026:432"
+    },
+    {
+      "name": "TRUNG THẢO GÒ VẤP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0369 989 739",
+      "email": "",
+      "address": "SÀI GÒN",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:66, T2.2026:5, T2.2026:6, T2.2026:7"
+    },
+    {
+      "name": "TRƯỜNG SANH DI LINH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0913695899 (A Tuấn)",
+      "email": "",
+      "address": "186 đường 44, p10, q6 - 0906614639 CHÀNH XE HÙNG HƯNG",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:275, T4.2026:751, T4.2026:752, T5.2026:919"
+    },
+    {
+      "name": "TRƯỜNG THỊNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:272, T4.2026:690, T4.2026:691, T4.2026:692"
+    },
+    {
+      "name": "TRƯỜNG TUYNH",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0937991462",
+      "email": "",
+      "address": "chành 1452 Võ Văn Kiệt F1 Q6 - 0982879767 CHÀNH XE TRUNG NGHĨA - LONG KHÁNH",
+      "note": "Nguyễn mạnh Trường, đc : 553 đường 21 tháng 4 - phường Xuân Bình - TP Long Khánh - ĐN | Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:175, T2.2026:75, T3.2026:36, T3.2026:135"
+    },
+    {
+      "name": "TUẤN DU PHÁT",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0908 610 335",
+      "email": "",
+      "address": "BIÊN HÒA",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:67, T3.2026:815, T3.2026:816, T3.2026:817"
+    },
+    {
+      "name": "TÚI CANVAS ALUM",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:214"
+    },
+    {
+      "name": "VIETDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0907 635 061",
+      "email": "",
+      "address": "Đ. 6A, Vĩnh Lộc B, Bình Chánh, Thành phố Hồ Chí Minh",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:176, DS KH-NCC:215, T3.2026:408, T3.2026:409"
+    },
+    {
+      "name": "VIETDOOR - ANH NGHĨA ĐỒNG THÁP",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:177"
+    },
+    {
+      "name": "VIỆT ĐÔNG BẾN TRE",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0932 399 364",
+      "email": "",
+      "address": "1650 VÕ VĂN KIỆT ,P16 ,Q.8 ( KHO 72 CHÀNH XE TƯ BIA 0944 618 746)",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:34, T3.2026:787, T3.2026:788, T3.2026:789"
+    },
+    {
+      "name": "VIỆT ĐÔNG HƯNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:216, T5.2026:664"
+    },
+    {
+      "name": "VIỆT MINH LONG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:291, T5.2026:100, T6.2026:666, T6.2026:667"
+    },
+    {
+      "name": "VIỆT WINDOW",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0977 567 713",
+      "email": "",
+      "address": "CHÀNH XE THỊNH THÀNH,7979 VÕ VĂN KIỆT, P.16, Q.8.-0913 798 229",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:280, T4.2026:885, T4.2026:886, T4.2026:887"
+    },
+    {
+      "name": "VŨ PHONG DOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0865 364 828",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LƯ CHÍ CƯỜNG | Nguồn: DS KH-NCC:402, T6.2026:913, T6.2026:914, T6.2026:915"
+    },
+    {
+      "name": "VUA CỬA CUỐN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:245, T3.2026:525, T3.2026:526, T3.2026:527"
+    },
+    {
+      "name": "VƯƠNG THÀNH VŨ",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0906464838 A VƯƠNG",
+      "email": "",
+      "address": "SỐ 2 HỒ NGỌC LÃM P16 Q8 - 0919602959 ( CHÀNH XE HẢI DƯƠNG )ĐỐI DIỆN KHO 6868",
+      "note": "PHÚ GIÁO BÌNH DƯƠNG | Người phụ trách trong file cũ: LÊ THÚY | Nguồn: DS KH-NCC:178, T3.2026:723, T5.2026:670, T5.2026:671"
+    },
+    {
+      "name": "XÂY DỰNG VIỆT TÍN",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0787 223 939",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:441, T7.2026:832, T7.2026:833, T7.2026:834"
+    },
+    {
+      "name": "XUÂN HÙNG BÌNH DƯƠNG",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0986 964 563",
+      "email": "",
+      "address": "BÌNH DƯƠNG",
+      "note": "Người phụ trách trong file cũ: LÊ THẾ ĐÔN | Nguồn: DS KH-NCC:68, T4.2026:155, T4.2026:156, T4.2026:157"
+    },
+    {
+      "name": "XƯỞNG MỚI",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: THÁI SƠN | Nguồn: DS KH-NCC:179, T3.2026:791, T3.2026:792, T3.2026:793"
+    },
+    {
+      "name": "YHDOOR",
+      "price_group": "Đại lý",
+      "account_manager": "",
+      "contact_person": "",
+      "phone": "0909494923 - A Hiếu",
+      "email": "",
+      "address": "",
+      "note": "Người phụ trách trong file cũ: LÊ THUÝ | Nguồn: DS KH-NCC:180, T3.2026:659, T3.2026:660, T3.2026:800"
+    }
+  ],
+  "source_quality": {
+    "blank_party_types_treated_as_customer_other": 116,
+    "unknown_aluminium_generations_defaulted_to_new": 0
+  },
+  "safeguards": [
+    "Customer-only mode writes only Customer documents and Customer search rows.",
+    "Historical orders, intake and warranty records are reference doctypes and do not post stock/accounting ledgers.",
+    "Repeated monthly vouchers keep only the newest sheet copy.",
+    "Aluminium lots use deterministic LN-MIG names and idempotent upsert.",
+    "Rows with zero aluminium sheets are history only and are not imported as current stock.",
+    "Aluminium widths below 0.25 m are retained but marked quality_status=Phế."
+  ],
+  "sql_parts": [
+    {
+      "file": "customer-only.part-001.sql",
+      "bytes": 78661
+    },
+    {
+      "file": "customer-only.part-002.sql",
+      "bytes": 79702
+    },
+    {
+      "file": "customer-only.part-003.sql",
+      "bytes": 70098
+    },
+    {
+      "file": "customer-only.part-004.sql",
+      "bytes": 78415
+    },
+    {
+      "file": "customer-only.part-005.sql",
+      "bytes": 13583
+    }
+  ]
+}
