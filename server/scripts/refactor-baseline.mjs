@@ -22,16 +22,22 @@ const REPORTER = "./scripts/refactor-baseline-reporter.mjs";
 
 // Tự liệt kê file test: cmd.exe không bung glob, và node cũng không nhận được
 // "tests/*.test.mjs" nguyên văn khi đi qua shell trên Windows.
+const argv = process.argv.slice(2);
+const args = new Set(argv);
+const record = args.has("--record");
+const asJson = args.has("--json");
+// `--only <chuỗi>`: chỉ chạy các file test có tên chứa chuỗi đó. Vòng lặp sửa-thử rút từ
+// ~4 phút xuống vài giây; chạy full trước khi commit.
+const onlyIndex = argv.indexOf("--only");
+const only = onlyIndex >= 0 ? argv[onlyIndex + 1] : undefined;
+
 function testFiles() {
   return readdirSync(path.join(SERVER_ROOT, "tests"))
     .filter((name) => name.endsWith(".test.mjs"))
+    .filter((name) => (only ? name.includes(only) : true))
     .sort()
     .map((name) => `tests/${name}`);
 }
-
-const args = new Set(process.argv.slice(2));
-const record = args.has("--record");
-const asJson = args.has("--json");
 
 function run(command, commandArgs, options = {}) {
   return new Promise((resolve, reject) => {
@@ -77,6 +83,11 @@ if (total === 0) {
   process.exit(2);
 }
 
+if (record && only) {
+  console.error("refactor-baseline: --record không đi cùng --only (mốc phải chụp trọn bộ).");
+  process.exit(2);
+}
+
 if (record) {
   mkdirSync(path.dirname(SNAPSHOT), { recursive: true });
   writeFileSync(SNAPSHOT, `${JSON.stringify({
@@ -95,7 +106,9 @@ if (!existsSync(SNAPSHOT)) {
 }
 
 const snapshot = JSON.parse(readFileSync(SNAPSHOT, "utf8"));
-const known = new Set(snapshot.failing);
+// Khi chạy --only, chỉ so với phần mốc thuộc các file đã chạy.
+const scope = (key) => (only ? key.split("::", 1)[0].includes(only) : true);
+const known = new Set(snapshot.failing.filter(scope));
 const introduced = failures.filter((key) => !known.has(key));
 const repaired = [...known].filter((key) => !failures.includes(key) && results.has(key));
 const vanished = [...known].filter((key) => !results.has(key));
@@ -103,7 +116,8 @@ const vanished = [...known].filter((key) => !results.has(key));
 if (asJson) {
   console.log(JSON.stringify({ total, introduced, repaired, vanished }, null, 2));
 } else {
-  console.log(`refactor-baseline: ${total} test, ${failures.length} rớt (mốc: ${snapshot.failing.length}).`);
+  const scopeNote = only ? ` [--only ${only}]` : "";
+  console.log(`refactor-baseline${scopeNote}: ${total} test, ${failures.length} rớt (mốc: ${known.size}).`);
   if (repaired.length) console.log(`  + ${repaired.length} test đã xanh trở lại`);
   if (vanished.length) {
     console.log(`  ! ${vanished.length} test trong mốc không còn tồn tại (đổi tên/xoá?):`);
