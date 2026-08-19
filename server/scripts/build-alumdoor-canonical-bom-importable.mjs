@@ -36,6 +36,19 @@ for (const item of items.items) {
   const originalCode = String(item.source_item_code_original ?? "").trim();
   if (originalCode && !itemMap.has(originalCode)) itemMap.set(originalCode, item);
 }
+
+/**
+ * Quy một mã bất kỳ về mã ĐANG DÙNG.
+ *
+ * Chuỗi này đi qua ba không gian mã — mã bảng tính, mã do bộ dựng tự chuẩn hoá, và mã thật trong
+ * D1. Thứ ĐẨY VÀO D1 phải là mã thật, nếu không importer báo "mặt hàng không tồn tại" hàng loạt.
+ * Không tra được thì trả nguyên mã vào, để lỗi nổi lên đúng chỗ thay vì biến mất.
+ */
+const liveCode = (code) => {
+  const key = String(code ?? "").trim();
+  if (!key) return key;
+  return String(itemMap.get(key)?.item_code ?? key).trim();
+};
 const parentMap = new Map(records
   .filter((row) => row?.source_role === 'sellable_product' && Number.isFinite(Number(row.source_parent_row)))
   .map((row) => [Number(row.source_parent_row), row]));
@@ -103,7 +116,7 @@ function resolvedLine(record, strictLine, sequence) {
     ? (strictLine?.quantity_formula_json ? 'runtime_formula_requires_geometry' : 'missing_or_non_authoritative_source_value')
     : null;
   return {
-    item_code: itemCode || null,
+    item_code: liveCode(itemCode) || null,
     qty: hasNumericQty ? Number(strictLine.qty) : null,
     uom: clean(strictLine?.uom) || null,
     stock_uom: clean(itemMap.get(itemCode)?.stock_uom) || null,
@@ -126,7 +139,7 @@ function blockedLine(record, blockers, sequence) {
   const pendingReason = clean(blocker.type || blocker.reason) || 'strict_source_evidence_gap';
   const sourceQty = pureNumericSourceValue(record?.source_qty_or_formula);
   return {
-    item_code: itemCode || null,
+    item_code: liveCode(itemCode) || null,
     qty: sourceQty,
     uom: clean(blocker.runtime_uom) || clean(record?.source_uom) || null,
     stock_uom: clean(blocker.stock_uom) || clean(itemMap.get(itemCode)?.stock_uom) || null,
@@ -164,7 +177,7 @@ const boms = [];
 const bomAudits = [];
 for (const [parentRow, sourceRows] of [...candidatesByParent.entries()].sort((a, b) => a[0] - b[0])) {
   const parent = parentMap.get(parentRow);
-  const finishedItemCode = clean(parent?.item_code);
+  const finishedItemCode = liveCode(clean(parent?.item_code));
   const finishedItem = itemMap.get(finishedItemCode);
   const localIssues = [];
   if (!parent) {
