@@ -5109,6 +5109,7 @@
       "title": "item_code",
       "list": [
         "item_code",
+        "sales_mode",
         "color",
         "width_m",
         "height_m",
@@ -5215,6 +5216,18 @@
           "default": 1,
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
           "surface": "quick"
+        },
+        {
+          "label": "Cách bán",
+          "fieldname": "sales_mode",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "default": "Trọn bộ",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
         },
         {
           "label": "Có bản bướm",
@@ -5765,6 +5778,7 @@
       "title": "item_code",
       "list": [
         "item_code",
+        "sales_mode",
         "color",
         "width_m",
         "height_m",
@@ -5878,6 +5892,18 @@
           "fieldtype": "Table",
           "options": "BOM Actual Component",
           "description": "Nhập số lượng THỰC TẾ CHO MỘT BỘ. Production tách từng bộ thành một line; thiếu slot mà BOM Template yêu cầu thì chặn sinh BOM.",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
+        },
+        {
+          "label": "Cách bán",
+          "fieldname": "sales_mode",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "default": "Trọn bộ",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
           "surface": "internal",
           "hidden": true,
           "editMode": "hidden",
@@ -6765,6 +6791,18 @@
           "surface": "expanded"
         },
         {
+          "label": "Cách bán",
+          "fieldname": "sales_mode",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "default": "Trọn bộ",
+          "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
+        },
+        {
           "label": "Có bản bướm",
           "fieldname": "has_butterfly_bracket",
           "fieldtype": "Check",
@@ -7316,6 +7354,17 @@
           "fieldtype": "Int",
           "default": 1,
           "surface": "expanded"
+        },
+        {
+          "fieldname": "sales_mode",
+          "label": "Cách bán",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "default": "Trọn bộ",
+          "surface": "internal",
+          "hidden": true,
+          "editMode": "hidden",
+          "serverEnforced": true
         },
         {
           "fieldname": "has_butterfly_bracket",
@@ -10273,6 +10322,14 @@
           "surface": "expanded"
         },
         {
+          "fieldname": "sales_mode",
+          "label": "Cách bán",
+          "fieldtype": "Select",
+          "options": "Trọn bộ\nTách món",
+          "required": true,
+          "surface": "quick"
+        },
+        {
           "fieldname": "formula_policy",
           "label": "Công thức",
           "fieldtype": "Link",
@@ -10444,6 +10501,7 @@
           "mesh_height_m",
           "color",
           "motor_model",
+          "sales_mode",
           "formula_policy",
           "formula_version",
           "width_basis",
@@ -10477,6 +10535,7 @@
           "set_count",
           "width_m",
           "height_m",
+          "sales_mode",
           "formula_policy",
           "formula_version",
           "width_basis",

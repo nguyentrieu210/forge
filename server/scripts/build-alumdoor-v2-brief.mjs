@@ -597,21 +597,14 @@ const tamLienRayTypes = [...new Set(
 if (tamLienRayTypes.length < 2) throw new Error("CP-CUA-TAM-LIEN-UC chưa khai đủ lựa chọn ray theo dòng");
 const tamLienRayOptions = `\n${tamLienRayTypes.join("\n")}`;
 
-const salesOptionField = {
-  fieldname: "sales_option",
-  fieldtype: "Link",
-  options: "Sales Option",
-  label: "Phương án bán",
-  in_list_view: true,
-  surface: "quick",
-};
-
-// 0118 makes Sales Option an operator choice on quotation/order/invoice lines. Keep the same
-// projection in the generated package so authored quickEntry columns do not hide a field added
-// later by tenant migration.
-for (const childName of ["Quotation Item", "Sales Order Item", "Sales Invoice Item"]) {
-  ensureSalesLineField(doctype(childName), "item_code", salesOptionField);
-}
+// `sales_option` KHÔNG được tạo ở đây nữa.
+//
+// Khối cũ dựng một Link tới `Sales Option` cho ba dòng bán, rồi khối hội tụ ở cuối file xoá
+// đúng trường đó đi — code chết, và tệ hơn là code chết TRỎ TỚI một doctype đã khai tử. Ai
+// đọc lướt sẽ tưởng Alumdoor còn dùng Sales Option.
+//
+// Cách giao (Tách món / Trọn bộ) là thứ dòng bán thật sự cần, và nó được khai ở khối hội tụ
+// dưới dạng `sales_mode` — một Select hai giá trị, không Link tới doctype nào.
 
 // 0120 makes these monetary projections server-owned on Quotation/Sales Order. They are display
 // outputs only; discount_percentage remains an audit/compatibility field and is never editable.
@@ -679,7 +672,7 @@ for (const childName of ["Quotation Item", "Sales Order Item"]) {
     description: "Ô máy tính theo quy cách của dòng: cửa = m² đã chốt × số bộ; ray/trục = dài × số cây; phụ kiện = số lượng theo ĐVT bán.",
   });
   line.list = [
-    "item_code", "sales_option", "color", "width_m", "height_m", "set_count", "has_butterfly_bracket",
+    "item_code", "sales_mode", "color", "width_m", "height_m", "set_count", "has_butterfly_bracket",
     "length_m", "qty_bar", "uom", "qty", "rate", "discount_amount", "adjustment_amount", "net_amount",
   ];
 }
@@ -2330,11 +2323,55 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
   delete quotation.menu;
   delete doctype("Sales Invoice").menu;
 
+  /**
+   * Chỉ `sales_option` bị xoá. `sales_mode` KHÔNG — nó không phải cùng một thứ.
+   *
+   * Trước 2026-08-19 chỗ này lọc cả hai với lý do "commit 46cff213 retired Sales Option /
+   * Sales Package". Nhưng thứ bị khai tử là DANH MỤC "Cách bán", còn `sales_mode`
+   * (Tách món / Trọn bộ) là một FACT CỦA DÒNG BÁN. `SALES-BOM-SOURCE-MAP §5` nói rõ:
+   *
+   *   "trọn bộ / chỉ lá / tách món trong nguồn đang quyết định PHẠM VI CẤU PHẦN được
+   *    giao/sinh ra, không được mặc định đồng nhất với một danh mục 'cách bán' hay với
+   *    chính sách giá khách hàng."
+   *
+   * Xoá lây làm fact đó không còn chỗ nào để tồn tại, và hậu quả đo được bằng tiền: worker
+   * vẫn đọc `row.sales_mode` rồi mặc định "Trọn bộ" khi trống, nên MỌI đơn tính như trọn bộ.
+   * Đơn đại lý 4m × 3m mua tách món:
+   *
+   *   Cửa Lưới / Cửa Đài Loan · trọn bộ = Phủ bì ray 12,00 m²
+   *                            · tách món = Rộng cắt lá 11,91 m²   ⇒ thu dư 0,09 m²/bộ
+   *
+   * `Cutting Policy.dealer_split_sales_basis` có sẵn để tính đúng, nhưng không gì truyền cách
+   * bán vào nên nhánh đó KHÔNG BAO GIỜ chạy. Và fact bị lấy khỏi dòng bán thì nó bò sang khoá
+   * bản ghi: 96 mã hàng đang nhồi `TRONBO` vào chính mã — đúng là dựng lại Sales Option qua
+   * cửa sau, ở tầng khó gỡ nhất.
+   *
+   * `sales_mode` trả về là một Select hai giá trị, KHÔNG Link tới doctype nào, nên nó không
+   * hồi sinh `Sales Option`/`Sales Package`. Chốt chặn cuối file vẫn ném lỗi nếu ai dựng lại
+   * hai doctype đó.
+   */
   for (const target of brief.doctypes) {
-    target.fields = (target.fields ?? []).filter((entry) => !["sales_option", "sales_mode"].includes(nameOf(entry)));
-    if (Array.isArray(target.list)) target.list = target.list.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
-    if (Array.isArray(target.search)) target.search = target.search.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
+    target.fields = (target.fields ?? []).filter((entry) => nameOf(entry) !== "sales_option");
+    if (Array.isArray(target.list)) target.list = target.list.filter((entry) => entry !== "sales_option");
+    if (Array.isArray(target.search)) target.search = target.search.filter((entry) => entry !== "sales_option");
   }
+
+  // Trả `sales_mode` về đúng ba dòng bán mà công thức đọc tới.
+  for (const childName of ["Quotation Item", "Sales Order Item", "Sales Invoice Item"]) {
+    const line = doctype(childName);
+    if (line.fields.some((entry) => nameOf(entry) === "sales_mode")) continue;
+    ensureSalesLineField(line, "set_count", {
+      "//": "Fact của dòng, không phải danh mục. Quyết phạm vi cấu phần giao và cơ sở rộng tính tiền.",
+      fieldname: "sales_mode",
+      fieldtype: "Select",
+      options: "Trọn bộ\nTách món",
+      default: "Trọn bộ",
+      label: "Cách giao",
+      in_list_view: true,
+      surface: "quick",
+    });
+  }
+  note("SALES · trả sales_mode về dòng bán (Tách món/Trọn bộ) — KHÔNG phải Sales Option");
   const ensureRayTrace = (doctypeName, anchor) => {
     const target = doctype(doctypeName);
     const field = {
