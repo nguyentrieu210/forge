@@ -174,3 +174,41 @@ test("dòng không khai loại ray vẫn chạy — không ép dữ liệu cũ p
   assert.equal(selectDoorPolicy([u75], "Cửa Đức").policy_name, u75.policy_name);
   assert.equal(selectDoorPolicy([u75], "Cửa Đức", "", undefined).policy_name, u75.policy_name);
 });
+
+/**
+ * Cách giao (Tách món / Trọn bộ) là FACT CỦA DÒNG BÁN, không phải danh mục "Cách bán".
+ *
+ * `Sales Option`/`Sales Package` bị khai tử ở `46cff213` và không được dựng lại. Nhưng máy
+ * sinh brief từng lọc luôn cả `sales_mode` cùng lúc, làm fact này không còn chỗ tồn tại —
+ * trong khi `SALES-BOM-SOURCE-MAP §5` nói rõ nó "quyết định phạm vi cấu phần được giao/sinh ra".
+ *
+ * Hậu quả đo được: worker mặc định "Trọn bộ" khi trống, nên đại lý mua tách món bị tính theo
+ * phủ bì ray thay vì rộng cắt lá — thu dư 0,09 m² mỗi bộ trên đơn 4m × 3m.
+ */
+test("cách giao đổi cơ sở rộng tính tiền — 0,09 m² mỗi bộ", () => {
+  for (const doorType of ["Cửa Lưới", "Cửa Đài Loan"]) {
+    const p = policy(doorType);
+    const bill = (mode) => calculateDoorFormula(p, {
+      door_type: doorType, customer_group: "Đại lý", sales_mode: mode,
+      measured_width_m: 4, cover_height_m: 3, set_count: 1, purpose: "sales",
+    });
+    const full = bill("Trọn bộ");
+    const split = bill("Tách món");
+    assert.equal(full.sales_width_basis, "Phủ bì ray", doorType);
+    assert.equal(split.sales_width_basis, "Rộng cắt lá", doorType);
+    assert.equal(full.billable_area_sqm, 12);
+    assert.equal(split.billable_area_sqm, 11.91);
+  }
+});
+
+test("dòng bán có chỗ khai cách giao — nếu không, nhánh tách món không bao giờ chạy", async () => {
+  const brief = JSON.parse(await readFile(new URL("../briefs/alumdoor-v2.json", import.meta.url), "utf8"));
+  const nameOf = (field) => (typeof field === "string" ? field.split(":")[0].trim() : field.fieldname);
+  for (const line of ["Quotation Item", "Sales Order Item", "Sales Invoice Item"]) {
+    const doc = brief.doctypes.find((entry) => entry.name === line);
+    assert.ok(doc.fields.some((field) => nameOf(field) === "sales_mode"), `${line} thiếu sales_mode`);
+  }
+  // Nhưng danh mục đã khai tử thì vẫn phải chết.
+  assert.equal(brief.doctypes.filter((d) => ["Sales Option", "Sales Package"].includes(d.name)).length, 0);
+  assert.ok(!brief.doctypes.some((d) => d.fields.some((f) => nameOf(f) === "sales_option")));
+});

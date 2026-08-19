@@ -13,7 +13,7 @@ test("Alumdoor reference vertical declares stable package identity and dependenc
   const brief = await canonicalAlumdoorBrief();
 
   assert.equal(brief.id, "alumdoor");
-  assert.equal(brief.version, "2.4.4");
+  assert.equal(brief.version, "2.5.0");
   assert.equal(brief.domain, "alumdoor");
 
   const dependencies = brief.requires ?? [];

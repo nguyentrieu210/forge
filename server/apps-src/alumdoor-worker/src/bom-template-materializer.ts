@@ -28,6 +28,8 @@ interface RawBomTemplate extends Json {
   template_code?: unknown;
   item_code?: unknown;
   conditions_json?: unknown;
+  /** Cột Select trên màn hình; được gộp vào `conditions` khi phân giải. */
+  sales_mode?: unknown;
   priority?: unknown;
   disabled?: unknown;
   required_context_fields_json?: unknown;
@@ -198,6 +200,34 @@ function parseComponentRule(raw: RawBomComponentRule, templateCode: string, inde
   };
 }
 
+/**
+ * Điều kiện áp dụng của một BOM Template — gộp cột `sales_mode` vào cùng cơ chế `conditions`.
+ *
+ * `sales_mode` là cột Select riêng để chủ xưởng chọn được trên màn hình thay vì phải gõ JSON.
+ * Nhưng phân giải thì chỉ được có MỘT cơ chế: nếu cột sống song song với `conditions_json` thì
+ * hai chỗ khai cùng một luật và sớm muộn cũng lệch nhau — đúng kiểu lỗi đã trả giá nhiều lần
+ * trong repo này.
+ *
+ * Trống = áp cho mọi cách giao (giữ nguyên hành vi cũ). Có giá trị = thêm một bậc `specificity`,
+ * nên bản khai rõ cách giao thắng bản chung, đúng luật chọn template sẵn có.
+ *
+ * Vì sao cần: khi `Sales Package` bị khai tử, fact "phạm vi cấu phần được giao" không còn chỗ
+ * nên nó bò vào MÃ HÀNG — `TP-LUOI-SN13x26-STD - TRONBO` (5 cấu phần) và `- TACHMON` (1 cấu
+ * phần) thành hai mặt hàng khác nhau. Đây là đường để một mặt hàng giữ được hai định mức.
+ */
+function templateConditions(raw: RawBomTemplate, templateCode: string): BomConditions {
+  const declared = conditions(raw.conditions_json, `${templateCode}.conditions_json`);
+  const salesMode = text(raw.sales_mode);
+  if (!salesMode) return declared;
+  const existing = declared.sales_mode;
+  if (existing !== undefined && text(existing) !== salesMode) {
+    throw new Error(
+      `${templateCode}: cách giao khai hai nơi lệch nhau — cột sales_mode là "${salesMode}", conditions_json là "${text(existing)}". Sửa một chỗ; hệ thống không đoán.`,
+    );
+  }
+  return { ...declared, sales_mode: salesMode };
+}
+
 export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[]; actual_component_allowed_items: Record<string, string[]> } {
   const sourceName = text(raw.name);
   const templateCode = text(raw.template_code) || sourceName;
@@ -214,7 +244,7 @@ export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefiniti
     ...(text(raw.modified ?? raw.modified_at) ? { modified: text(raw.modified ?? raw.modified_at) } : {}),
     template_code: templateCode,
     item_code: itemCode,
-    conditions: conditions(raw.conditions_json, `${templateCode}.conditions_json`),
+    conditions: templateConditions(raw, templateCode),
     priority: finiteNumber(raw.priority, `${templateCode}.priority`),
     disabled: checked(raw.disabled),
     required_context_fields: stringArray(raw.required_context_fields_json, `${templateCode}.required_context_fields_json`),

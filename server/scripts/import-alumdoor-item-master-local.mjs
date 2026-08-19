@@ -102,7 +102,26 @@ function diffManaged(expectedDoc, actualDoc) {
       diffs.push({ field, expected: expected[field], actual: actual[field] });
     }
   }
-  if (JSON.stringify(expected.uom_conversions) !== JSON.stringify(actual.uom_conversions)) {
+  /**
+   * `uom_conversions`: nguồn xưởng SỞ HỮU hệ số nó khai, KHÔNG sở hữu sự vắng mặt.
+   *
+   * Trường này có hai người ghi. Nguồn xưởng khai hệ số cho 11 mặt hàng; còn
+   * `import-alumdoor-bom-rule-local.mjs` tự tạo hệ số khi ĐVT kết quả của một quy tắc khác
+   * ĐVT tồn của vật tư — projection cần đúng hệ số đó mới quy đổi công thức sang ĐVT tồn.
+   *
+   * So sánh bằng-hệt-nhau biến danh sách RỖNG của nguồn thành lệnh "xoá hết", nên 9 mặt hàng
+   * có hệ số do BOM Rule tạo bị báo xung đột và cả lượt nhập dừng lại — trong khi không mặt
+   * hàng nào thật sự mâu thuẫn. Ép qua còn tệ hơn dừng: xoá 9 hệ số đó là đẩy 9 dòng BOM sang
+   * `pending` và công thức sản xuất của chúng im lặng ngừng quy đổi.
+   *
+   * Luật đúng: MỌI hệ số nguồn khai đều phải có mặt và khớp; hệ số D1 có thêm thì không phải
+   * mâu thuẫn. Cùng luật sở hữu-khoá đã áp cho `bom_rule_formula_snapshot`.
+   */
+  const actualByUom = new Map(actual.uom_conversions.map((row) => [row.uom, row.conversion_factor]));
+  const conflictingConversions = expected.uom_conversions.filter(
+    (row) => actualByUom.get(row.uom) !== row.conversion_factor,
+  );
+  if (conflictingConversions.length > 0) {
     diffs.push({
       field: "uom_conversions",
       expected: expected.uom_conversions,

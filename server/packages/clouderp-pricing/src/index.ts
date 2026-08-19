@@ -29,6 +29,44 @@ function itemPriceVariant(data: JsonObject): string {
   return normalizePriceVariant(data.price_variant);
 }
 
+/**
+ * Bậc diện tích: cận trên ĐÓNG, cận dưới MỞ — `min < S ≤ max`.
+ *
+ * `BRD §4.11` chốt đúng chiều này, và nêu luôn hệ quả: một cửa đúng 5,0 m² ăn bậc `4-5`, không
+ * phải bậc `5-6`. Đảo chiều là lệch một bậc giá trên đúng những đơn nằm ở mép.
+ *
+ * Thiếu cả hai cận thì bậc không ràng buộc gì — coi như không khớp, thay vì khớp mọi thứ.
+ */
+function areaWithinTier(tier: JsonObject, areaSqm: number): boolean {
+  const min = Number(tier.min_area_sqm);
+  const max = Number(tier.max_area_sqm);
+  const hasMin = Number.isFinite(min);
+  const hasMax = Number.isFinite(max);
+  if (!hasMin && !hasMax) return false;
+  if (hasMin && !(areaSqm > min)) return false;
+  if (hasMax && !(areaSqm <= max)) return false;
+  return true;
+}
+
+/**
+ * Dòng giá có gắn bậc chỉ khớp khi diện tích của dòng bán rơi vào đúng bậc đó.
+ *
+ * Fail-closed hai chiều: dòng bán không khai diện tích thì KHÔNG khớp bất kỳ dòng giá có bậc
+ * nào (thà không thấy giá còn hơn lấy nhầm bậc), và bậc không đọc được thì cũng không khớp.
+ */
+async function priceTierMatches(
+  context: ControllerContext<JsonObject>,
+  data: JsonObject,
+  areaSqm: number | undefined,
+): Promise<boolean> {
+  const tierName = normalizedText(data.area_tier);
+  if (!tierName) return true;
+  if (!Number.isFinite(areaSqm) || !((areaSqm as number) > 0)) return false;
+  const tier = await context.reader.getMasterRecordData(context.command.tenant_id, "Bậc diện tích", tierName);
+  if (!tier || disabled(tier.disabled)) return false;
+  return areaWithinTier(tier, areaSqm as number);
+}
+
 function fieldMatchedPrice(
   data: JsonObject,
   priceList: string,
@@ -97,11 +135,28 @@ export async function resolveServerPrice(
   let itemPrice: JsonObject | null = null;
   let convertedFromUom = "";
   let item: JsonObject | null = null;
+  const areaSqm = Number.isFinite(Number(input.billableAreaSqm)) ? Number(input.billableAreaSqm) : undefined;
+  /**
+   * Lọc theo bậc diện tích TRƯỚC khi đếm ứng viên.
+   *
+   * Một mặt hàng bán theo thang giá có tám dòng `Item Price` cùng bảng giá / cùng ĐVT, chỉ khác
+   * `area_tier`. Không lọc bậc trước thì tám dòng đó cùng lọt vào `exactCandidates` và hàm ném
+   * "Multiple active Item Price records match" — tức thang giá vừa dựng lại làm chết chính nó.
+   */
+  const keepByTier = async (rows: Array<{ name: string; data: JsonObject }>) => {
+    const kept: Array<{ name: string; data: JsonObject }> = [];
+    for (const row of rows) if (await priceTierMatches(context, row.data, areaSqm)) kept.push(row);
+    return kept;
+  };
   const listedPrices = await context.reader.listMasterRecordData(context.command.tenant_id, "Item Price");
   const fieldMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, lineUom, priceVariant));
-  const activeFieldMatches = fieldMatches.filter(({ data }) => !disabled(data.disabled));
+  const activeFieldMatches = await keepByTier(fieldMatches.filter(({ data }) => !disabled(data.disabled)));
   const exactCandidates = new Map<string, JsonObject>();
-  if (compatiblePreferred && !disabled(compatiblePreferred.disabled)) {
+  if (
+    compatiblePreferred
+    && !disabled(compatiblePreferred.disabled)
+    && await priceTierMatches(context, compatiblePreferred, areaSqm)
+  ) {
     exactCandidates.set(preferredPriceName, compatiblePreferred);
   }
   for (const candidate of activeFieldMatches) {
@@ -117,7 +172,11 @@ export async function resolveServerPrice(
     const [candidateName, candidateData] = [...exactCandidates.entries()][0]!;
     itemPrice = candidateData;
     priceName = candidateName;
-  } else if (compatibleLegacy && !disabled(compatibleLegacy.disabled)) {
+  } else if (
+    compatibleLegacy
+    && !disabled(compatibleLegacy.disabled)
+    && await priceTierMatches(context, compatibleLegacy, areaSqm)
+  ) {
     itemPrice = compatibleLegacy;
     priceName = legacyPriceName;
   }
@@ -130,7 +189,8 @@ export async function resolveServerPrice(
     const baseUom = transactionDefaultUom || normalizedText(item?.stock_uom);
     if (item && baseUom && baseUom !== lineUom) {
       const baseMatches = listedPrices.filter(({ data }) => fieldMatchedPrice(data, priceList, itemCode, baseUom, priceVariant));
-      const activeBase = baseMatches.filter(({ data }) => !disabled(data.disabled));
+      // Đường lùi về ĐVT gốc cũng phải lọc bậc, không thì nó thành cửa sau bỏ qua thang giá.
+      const activeBase = await keepByTier(baseMatches.filter(({ data }) => !disabled(data.disabled)));
       if (activeBase.length > 1) {
         throw errors.validation(`Multiple active Item Price records match ${priceList} / ${itemCode} / ${baseUom} / ${priceVariant}: ${activeBase.map(({ name }) => name).sort().join(", ")}`);
       }
@@ -142,12 +202,22 @@ export async function resolveServerPrice(
     }
   }
 
+  /**
+   * Đường này tồn tại để báo lỗi TỬ TẾ khi dòng giá duy nhất khớp lại đang ngừng dùng: chọn nó
+   * rồi để kiểm tra ngay dưới ném "Item Price … is disabled", thay vì "does not exist".
+   *
+   * Vì thế nó chỉ được nhận ứng viên ĐANG NGỪNG DÙNG. Bản cũ lấy `fieldMatches[0]` — cả dòng
+   * đang bật — điều mà trước khi có bậc thì không bao giờ xảy ra (một dòng bật đã được chọn ở
+   * trên, nhiều dòng bật thì đã ném). Có bậc rồi thì xảy ra thật: một dòng giá BỊ BẬC LOẠI vẫn
+   * đang bật, và nó lọt qua đây thành giá được dùng. Đơn không khai diện tích sẽ lặng lẽ ăn giá
+   * của bậc đầu tiên trong danh sách.
+   */
   if (!itemPrice) {
-    const disabledCandidate = compatiblePreferred
+    const disabledCandidate = compatiblePreferred && disabled(compatiblePreferred.disabled)
       ? { name: preferredPriceName, data: compatiblePreferred }
-      : compatibleLegacy
+      : compatibleLegacy && disabled(compatibleLegacy.disabled)
         ? { name: legacyPriceName, data: compatibleLegacy }
-        : fieldMatches[0];
+        : fieldMatches.find(({ data }) => disabled(data.disabled));
     if (disabledCandidate) {
       itemPrice = disabledCandidate.data;
       priceName = disabledCandidate.name;

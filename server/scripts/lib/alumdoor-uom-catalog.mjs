@@ -20,7 +20,12 @@ export const ALUMDOOR_UOM_CATALOG = Object.freeze([
   { name: "Tấm", mustBeWholeNumber: true },
   { name: "Túi", mustBeWholeNumber: true },
   { name: "Hộp", mustBeWholeNumber: true },
-  { name: "Thùng", mustBeWholeNumber: true },
+  /**
+   * `Thùng` KHÔNG được tạo — E07 (`docs/brd-v2/brd-entities/danh-muc-nho.md`) xếp nó cùng
+   * `BĂNG` · `BẢNG` · `VỈ` vào nhóm "xem lại, mỗi thứ dùng đúng 1 lần": nhiều khả năng là quy
+   * cách đóng gói của một lần mua lẻ, không phải đơn vị tồn. Đo trên D1 local 2026-08-19 xác
+   * nhận đúng một lần dùng. Không tạo cho tới khi thấy dùng lại.
+   */
   { name: "Bình", mustBeWholeNumber: true },
   { name: "Lít", mustBeWholeNumber: false },
   { name: "Cặp", mustBeWholeNumber: true },

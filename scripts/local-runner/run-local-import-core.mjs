@@ -356,7 +356,7 @@ function releaseLock(lockPath, runId) {
   console.log(`GLOBAL_D1_LOCK=RELEASED path=${lockPath} run_id=${runId}`);
 }
 
-async function requireUrl(url, acceptedStatuses, label) {
+async function probeUrl(url, acceptedStatuses, label) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
@@ -372,17 +372,43 @@ async function requireUrl(url, acceptedStatuses, label) {
   }
 }
 
+/**
+ * `waitMs` — chờ dịch vụ SỐNG LẠI, không phải nới lỏng điều kiện.
+ *
+ * `restoreRuntime` tắt cờ maintenance rồi trả về ngay; nó chỉ chờ sẵn sàng cho Desk
+ * (`ALUMDOOR_RUNTIME_DESK_READY`), không chờ backend. Backend vừa bị recycle nên cần vài
+ * giây mới nghe lại cổng 8799 — mà `requireApi` lại bắn đúng một phát rồi bỏ cuộc. Kết quả:
+ * `layer0` ghi D1 xong, mở maintenance, rồi TỰ ĐÁNH TRƯỢT ở bước ngay sau đó, lần nào cũng
+ * hệt nhau. Đây là chạy đua về thời điểm, không phải hạ tầng hỏng.
+ *
+ * Ngưỡng vẫn là ngưỡng: hết `waitMs` mà chưa lên thì ném đúng lỗi ENV như cũ.
+ */
+async function requireUrl(url, acceptedStatuses, label, { waitMs = 0 } = {}) {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    try {
+      await probeUrl(url, acceptedStatuses, label);
+      return;
+    } catch (error) {
+      if (Date.now() >= deadline) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 async function requireApi(origin) {
   assertLoopbackOrigin(origin);
   await requireUrl(
     `${origin.replace(/\/$/, '')}/api/method/metaforge.api.get_boot`,
     [200, 401, 403],
     'Local API',
+    { waitMs: 90_000 },
   );
 }
 
 async function requireUi() {
-  await requireUrl('http://127.0.0.1:5173', [200], 'Local UI');
+  // Cùng lý do với requireApi: Desk vừa bị recycle thì Vite cần thời gian dựng lại.
+  await requireUrl('http://127.0.0.1:5173', [200], 'Local UI', { waitMs: 90_000 });
 }
 
 function runBackup(repoRoot) {
@@ -520,12 +546,20 @@ function preflightItem(repoRoot, runDir, sourceArg) {
     failureClass: 'DATA',
   });
   const uomReport = JSON.parse(readFileSync(uom, 'utf8'));
-  if (
-    Number(uomReport.canonical_count) !== 19 ||
-    Number(uomReport.existing_count) !== 19 ||
-    uomReport.records?.some((row) => !row.existed)
-  ) {
-    throw executionError('DATA', 'Item import blocked: canonical UOM 19 prerequisite is incomplete');
+  /**
+   * Điều kiện là "MỌI đơn vị chuẩn đã có mặt", không phải "đúng 19 cái" — chỗ thứ TƯ cùng một
+   * hằng số, sau chốt chặn seed, hậu kiểm layer0 và test catalog. Bốn nơi cùng khoá một con
+   * số nghĩa là danh mục đơn vị không thể co giãn nếu không sửa cả bốn; đó không phải bảo vệ,
+   * đó là bê tông. Điều kiện thật cho Item là mỗi đơn vị nó sắp tham chiếu đều tồn tại.
+   */
+  const uomCanonical = Number(uomReport.canonical_count);
+  const uomExisting = Number(uomReport.existing_count);
+  const uomMissing = (uomReport.records ?? []).filter((row) => !row.existed).map((row) => row.name);
+  if (!Number.isInteger(uomCanonical) || uomCanonical <= 0 || uomExisting !== uomCanonical || uomMissing.length) {
+    throw executionError(
+      'DATA',
+      `Item import blocked: thiếu đơn vị tính chuẩn (canonical=${uomCanonical} existing=${uomExisting}${uomMissing.length ? ` missing=${uomMissing.join(', ')}` : ''})`,
+    );
   }
 
   run(
@@ -771,9 +805,19 @@ function runUom(repoRoot, runDir) {
   });
 
   const report = JSON.parse(readFileSync(after, 'utf8'));
+  /**
+   * Luật là "MỌI đơn vị chuẩn đều đã tồn tại", không phải "đúng 19 cái".
+   *
+   * Con số 19 khoá cứng ở đây là chỗ thứ ba cùng một hằng số — sau chốt chặn trong
+   * backup-alumdoor-uom-local.mjs và test alumdoor-uom-catalog. Gỡ `Thùng` theo E07 làm cả
+   * ba đỏ, trong đó chỗ này đỏ với thông báo `canonical=18 existing=18` — hai số KHỚP nhau
+   * mà vẫn báo hỏng. Một hậu kiểm nói sai lý do còn tệ hơn không có hậu kiểm.
+   */
+  const canonicalCount = Number(report.canonical_count);
+  const existingCount = Number(report.existing_count);
   if (
-    Number(report.canonical_count) !== 19 ||
-    Number(report.existing_count) !== 19 ||
+    !Number.isInteger(canonicalCount) || canonicalCount <= 0 ||
+    existingCount !== canonicalCount ||
     report.records?.some((row) => !row.existed)
   ) {
     throw executionError(

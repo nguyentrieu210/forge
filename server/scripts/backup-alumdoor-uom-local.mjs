@@ -10,10 +10,47 @@ const adminUser = process.env.FORGE_ADMIN_USER ?? process.env.FORGE_AUTH_USER ??
 const adminPassword = process.env.FORGE_ADMIN_PASSWORD ?? process.env.FORGE_AUTH_PASSWORD ?? "";
 const output = process.argv[2] || "";
 
-if (ALUMDOOR_UOM_CATALOG.length !== 19 || !ALUMDOOR_UOM_CATALOG.some(({ name }) => name === "Thùng")) {
-  throw new Error(`Canonical Alumdoor UOM catalog mismatch: count=${ALUMDOOR_UOM_CATALOG.length}`);
+/**
+ * Chốt LUẬT của E07, không chốt ảnh chụp.
+ *
+ * Bản cũ khoá cứng `length === 19` và đòi phải CÓ `Thùng` — tức đóng băng đúng thứ mà
+ * `docs/brd-v2/brd-entities/danh-muc-nho.md` §E07 bảo đừng tạo. Một chốt chặn đếm số sẽ đỏ
+ * mỗi lần danh mục thay đổi hợp lệ, và người sửa chỉ việc nâng con số lên — nó không bảo vệ
+ * được gì. Ba luật dưới đây thì có: chúng nêu đúng cái sai mà E07 đã trả giá để phát hiện.
+ */
+{
+  const names = ALUMDOOR_UOM_CATALOG.map(({ name }) => name);
+  const problems = [];
+
+  // E07: "LÁ là đơn vị tự nhiên của lá cửa — thiếu nó là thiếu đơn vị của mặt hàng chính".
+  for (const required of ["Lá", "Thân"]) {
+    if (!names.includes(required)) problems.push(`thiếu đơn vị bắt buộc "${required}"`);
+  }
+
+  // E07: "mỗi thứ dùng đúng 1 lần — nhiều khả năng là quy cách đóng gói của một lần mua lẻ".
+  for (const forbidden of ["Thùng", "Băng", "Bảng", "Vỉ"]) {
+    if (names.some((name) => name.toLocaleUpperCase("vi") === forbidden.toLocaleUpperCase("vi"))) {
+      problems.push(`đơn vị "${forbidden}" đã bị E07 loại, không được seed lại`);
+    }
+  }
+
+  // E07: "tạo CUỐN bên cạnh Cuộn là chẻ tồn kho làm hai vì một lần gõ nhầm".
+  const synonyms = [["m2", "m²"], ["Cái", "Chiếc"], ["Mét", "M"], ["Cuộn", "Cuốn"], ["Tấm", "Tâm"]];
+  for (const pair of synonyms) {
+    const present = pair.filter((candidate) => names.some(
+      (name) => name.toLocaleUpperCase("vi") === candidate.toLocaleUpperCase("vi"),
+    ));
+    if (present.length > 1) problems.push(`hai tên cho cùng một đơn vị: ${present.join(" / ")}`);
+  }
+
+  const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
+  if (duplicates.length) problems.push(`trùng tên: ${[...new Set(duplicates)].join(", ")}`);
+
+  if (problems.length) {
+    throw new Error(`Danh mục đơn vị tính vi phạm E07:\n  - ${problems.join("\n  - ")}`);
+  }
+  console.log(`ALUMDOOR_UOM_CATALOG_PASS count=${names.length}`);
 }
-console.log("ALUMDOOR_UOM_CATALOG_19_PASS");
 
 if (!adminUser || !adminPassword) {
   console.error("FORGE_ADMIN_USER/FORGE_ADMIN_PASSWORD are required");

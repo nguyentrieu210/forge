@@ -92,6 +92,7 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
       { key: "Customer", label: "Khách hàng" },
       { key: "Price List", label: "Bảng giá" },
       { key: "Item Price", label: "Đơn giá theo bảng giá" },
+      { key: "Bậc diện tích", label: "Bậc diện tích" },
       { key: "Pricing Scope", label: "Phạm vi áp dụng chính sách" },
       { key: "Pricing Rule", label: "Chính sách giá" },
     ],
@@ -101,6 +102,7 @@ const MASTER_GROUPS: MasterGroupDefinition[] = [
     title: "Bán hàng & sản xuất",
     entries: [
       { key: "Cutting Policy", label: "Công thức cửa" },
+      { key: "Ngưỡng chọn Motor", label: "Ngưỡng chọn Motor / UPS" },
       // BOM Rule từng cần một `fallbackRoute` riêng vì nó không có trong brief — chỉ do
       // importer ghi thẳng vào doctype_definitions. Từ 2026-08-19 nó là DocType thật nên
       // route thường là đủ; miếng vá đã gỡ cùng lượt.

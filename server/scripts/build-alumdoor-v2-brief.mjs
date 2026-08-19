@@ -20,6 +20,7 @@ import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
 import { ALUMDOOR_COLOR_CATALOG } from "./lib/alumdoor-color-catalog.mjs";
 import { ALUMDOOR_SLAT_CATALOG, slatCatalogFixtureData } from "./lib/alumdoor-slat-catalog.mjs";
+import { ALUMDOOR_ITEM_GROUP_CATALOG } from "./lib/alumdoor-item-group-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -88,7 +89,19 @@ const moveFieldsAfter = (dt, names, anchor) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.4.4";
+/**
+ * 2.5.0 — đợt hội tụ danh mục 2026-08-19.
+ *
+ * Bump MINOR chứ không patch: gói này thêm tám DocType (`Pricing Scope` + child, `BOM Rule` +
+ * child, `Quy cách cửa`, `Nguyên nhân cửa lỗi`, `Bậc diện tích`, `Ngưỡng chọn Motor`) và ba
+ * trường mới trên đường tính tiền (`Item Price.area_tier`, `BOM Template.sales_mode`,
+ * `<dòng bán>.sales_mode`). Đó là năng lực mới, không phải sửa lỗi.
+ *
+ * Version cũng là thứ QUYẾT ĐỊNH bản cài có được ghi lại hay không: installer coi gói là
+ * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
+ * trong file mà không bao giờ vào tenant.
+ */
+brief.version = "2.5.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -607,21 +620,14 @@ const tamLienRayTypes = [...new Set(
 if (tamLienRayTypes.length < 2) throw new Error("CP-CUA-TAM-LIEN-UC chưa khai đủ lựa chọn ray theo dòng");
 const tamLienRayOptions = `\n${tamLienRayTypes.join("\n")}`;
 
-const salesOptionField = {
-  fieldname: "sales_option",
-  fieldtype: "Link",
-  options: "Sales Option",
-  label: "Phương án bán",
-  in_list_view: true,
-  surface: "quick",
-};
-
-// 0118 makes Sales Option an operator choice on quotation/order/invoice lines. Keep the same
-// projection in the generated package so authored quickEntry columns do not hide a field added
-// later by tenant migration.
-for (const childName of ["Quotation Item", "Sales Order Item", "Sales Invoice Item"]) {
-  ensureSalesLineField(doctype(childName), "item_code", salesOptionField);
-}
+// `sales_option` KHÔNG được tạo ở đây nữa.
+//
+// Khối cũ dựng một Link tới `Sales Option` cho ba dòng bán, rồi khối hội tụ ở cuối file xoá
+// đúng trường đó đi — code chết, và tệ hơn là code chết TRỎ TỚI một doctype đã khai tử. Ai
+// đọc lướt sẽ tưởng Alumdoor còn dùng Sales Option.
+//
+// Cách giao (Tách món / Trọn bộ) là thứ dòng bán thật sự cần, và nó được khai ở khối hội tụ
+// dưới dạng `sales_mode` — một Select hai giá trị, không Link tới doctype nào.
 
 // 0120 makes these monetary projections server-owned on Quotation/Sales Order. They are display
 // outputs only; discount_percentage remains an audit/compatibility field and is never editable.
@@ -689,7 +695,7 @@ for (const childName of ["Quotation Item", "Sales Order Item"]) {
     description: "Ô máy tính theo quy cách của dòng: cửa = m² đã chốt × số bộ; ray/trục = dài × số cây; phụ kiện = số lượng theo ĐVT bán.",
   });
   line.list = [
-    "item_code", "sales_option", "color", "width_m", "height_m", "set_count", "has_butterfly_bracket",
+    "item_code", "sales_mode", "color", "width_m", "height_m", "set_count", "has_butterfly_bracket",
     "length_m", "qty_bar", "uom", "qty", "rate", "discount_amount", "adjustment_amount", "net_amount",
   ];
 }
@@ -1962,11 +1968,52 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
   // brief nguồn còn giữ thêm 22 slug ASCII của CHÍNH các màu đó. Giữ cả hai không phải là
   // "an toàn hơn": nó tạo hai vị trí tồn cho một màu, và không có gì báo khi ai đó chọn nhầm.
   {
-    const before = brief.fixtures.filter((f) => f.type === "Item Color").length;
+    /**
+     * NGỪNG DÙNG, không XOÁ khỏi khai báo.
+     *
+     * Bản đầu của khối này lọc thẳng 22 slug ra khỏi `fixtures`. Nền tảng từ chối đúng chỗ đó:
+     *
+     *   alumdoor upgrade removes materialized app objects: Fixture Item Color:CAFE, …
+     *   An explicit reverse migration or uninstall contract is required.
+     *
+     * Guard ấy đúng: bỏ một khai báo mà bản ghi vẫn sống trong tenant thì tạo ra vật thể mồ côi
+     * không gói nào sở hữu, và uninstall/rollback sau này không suy luận được về nó. Uninstall
+     * cũng không phải đường ra — nó từ chối khi doctype còn document.
+     *
+     * `disabled: true` đạt đúng mục tiêu mà không bỏ khai báo: ô chọn Link đọc
+     * `master_records … WHERE disabled=0` nên 22 slug thôi được mời, còn app vẫn sở hữu chúng.
+     * Đây cũng đúng BRD §2 — "không xoá khi còn tham chiếu, chỉ disabled".
+     */
     const canonical = new Set(ALUMDOOR_COLOR_CATALOG.map((c) => c.code));
-    brief.fixtures = brief.fixtures.filter((f) => f.type !== "Item Color" || canonical.has(f.name));
-    const after = brief.fixtures.filter((f) => f.type === "Item Color").length;
-    note(`DANH MỤC · Item Color: ${before} → ${after} fixture (bỏ ${before - after} bản sao slug ASCII)`);
+    let retired = 0;
+    for (const fixture of brief.fixtures) {
+      if (fixture.type !== "Item Color" || canonical.has(fixture.name)) continue;
+      fixture.data = { ...fixture.data, disabled: true };
+      retired += 1;
+    }
+    note(`DANH MỤC · Item Color: ngừng dùng ${retired} bản sao slug ASCII (giữ khai báo, bỏ khỏi ô chọn)`);
+  }
+
+  /**
+   * Cùng luật cho NHÓM HÀNG: ngừng dùng, không xoá khai báo.
+   *
+   * `seed-alumdoor-item-groups-local.sql` xoá 11 nhóm fixture ERP tổng quát (Cửa cuốn, Cửa nhôm
+   * kính, Thành phẩm, Nguyên vật liệu, Dịch vụ…) khỏi `master_records`. Nhưng mỗi lần CÀI LẠI
+   * APP chúng sống dậy, vì khai báo vẫn còn trong fixtures — dọn ở tầng dữ liệu không thắng
+   * được nguồn ở tầng khai báo.
+   *
+   * Chúng không thuộc phân loại thật của Alumdoor và không chính sách giá hay công thức nào bám
+   * vào, nhưng ô chọn Link vẫn mời chúng khi tạo mặt hàng — gán vào "Cửa cuốn" là gán vào hư không.
+   */
+  {
+    const canonicalGroups = new Set(ALUMDOOR_ITEM_GROUP_CATALOG.map((g) => (typeof g === "string" ? g : g.name)));
+    let retiredGroups = 0;
+    for (const fixture of brief.fixtures) {
+      if (fixture.type !== "Item Group" || canonicalGroups.has(fixture.name)) continue;
+      fixture.data = { ...fixture.data, disabled: true };
+      retiredGroups += 1;
+    }
+    note(`DANH MỤC · Item Group: ngừng dùng ${retiredGroups} nhóm ERP tổng quát ngoài cây chuẩn`);
   }
 
   // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──
@@ -2121,6 +2168,228 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
     }
     if (lệch.length) throw new Error(`Danh mục bản lá lệch bảng thi hành:\n  ${lệch.join("\n  ")}`);
     note(`chốt chặn: ${fixtures.length} mã bản lá khớp bảng đang thi hành`);
+  }
+}
+
+
+// ══════════ BA TRỤC RỜI KHỎI MÃ HÀNG ══════════
+//
+// Đo trên D1 2026-08-19: 221/587 mặt hàng mang ít nhất một trong ba chiều màu / kiểu bán /
+// bậc diện tích ngay TRONG MÃ. Các họ lớn nhất là tích Descartes đầy đủ:
+//
+//   TP-CUADL6D  →  2 màu × 1 kiểu bán × 8 bậc = 16 mã, không thiếu ô nào
+//
+// Một tích đầy đủ nhồi vào khoá bản ghi là dấu hiệu kinh điển của chiều bị đặt sai chỗ. Nhưng
+// KHÔNG được gỡ nếu chưa có nhà cho chúng — cả ba đều CHỊU LỰC THẬT:
+//
+//   · bậc diện tích đổi ĐƠN GIÁ — 7/7 họ có thang giá riêng (CUADL1LY: 590k→520k/m²)
+//   · kiểu bán đổi CẤU PHẦN — LUOI-SN13x26 trọn bộ 5 cấu phần, tách món 1
+//   · màu KHÔNG đổi gì — 0/50 họ có giá khác theo màu ⇒ chỉ màu mới gỡ được ngay
+//
+// Khối này dựng nhà cho hai chiều còn lại. `Sales Package` từng giữ chúng; khi nó bị khai tử
+// ở `46cff213` hai fact này không còn chỗ nên bò vào mã hàng — đây là đường về đúng.
+{
+  const hasDoctype = (n) => brief.doctypes.some((d) => d.name === n);
+
+  // ── Bậc diện tích ──
+  // BRD §4.11: "cận trên ĐÓNG, cận dưới MỞ" ⇒ `3 < S ≤ 4`. Cửa đúng 5,0 m² ăn bậc 4-5.
+  // Ghi thành hai cột số để so sánh chạy được, không phải đọc chuỗi "4-5m²".
+  if (!hasDoctype("Bậc diện tích")) {
+    brief.doctypes.push({
+      "//": [
+        "Chiều TRA GIÁ, không phải một mặt hàng khác. Trước 2026-08-19 nó nằm trong mã hàng",
+        "(`TP-CUADL1LY XN-VK_TRONBO_4-5m²`) nên 8 bậc thành 8 mã, và bảng giá biến thành danh mục.",
+      ],
+      name: "Bậc diện tích",
+      label: "Bậc diện tích",
+      icon: "ruler-dimension-line",
+      group: "Danh mục",
+      naming: "field:tier_code",
+      title: "tier_name",
+      list: ["tier_code", "tier_name", "min_area_sqm", "max_area_sqm", "sort_order", "disabled"],
+      search: ["tier_code", "tier_name"],
+      fields: [
+        "tier_code:Data*! Mã bậc",
+        "tier_name:Data*! Tên bậc",
+        {
+          "//": "Cận dưới MỞ: diện tích phải LỚN HƠN số này. Bậc đầu tiên để trống = không có cận dưới.",
+          fieldname: "min_area_sqm", label: "Trên (m²)", fieldtype: "Float",
+        },
+        {
+          "//": "Cận trên ĐÓNG: diện tích nhỏ hơn hoặc BẰNG số này. Bậc cuối để trống = không có trần.",
+          fieldname: "max_area_sqm", label: "Đến và bằng (m²)", fieldtype: "Float",
+        },
+        "sort_order:Int=(0) Thứ tự",
+        "note:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Kế toán": "rwc", "Kinh doanh": "r", "Thủ kho": "r", "Sản xuất": "r" },
+    });
+
+    // Tám bậc đọc thẳng từ mã hàng thật đang chạy, không bịa.
+    const TIERS = [
+      ["BAC-3-4", "3m² - 4m²", 3, 4],
+      ["BAC-4-5", "4m² - 5m²", 4, 5],
+      ["BAC-5-6", "5m² - 6m²", 5, 6],
+      ["BAC-6-7", "6m² - 7m²", 6, 7],
+      ["BAC-7-8", "7m² - 8m²", 7, 8],
+      ["BAC-8-9", "8m² - 9m²", 8, 9],
+      ["BAC-9-10", "9m² - 10m²", 9, 10],
+      ["BAC-TREN-10", "Trên 10m²", 10, null],
+    ];
+    brief.fixtures.push(...TIERS.map(([code, name, min, max], index) => ({
+      type: "Bậc diện tích",
+      name: code,
+      data: {
+        tier_code: code, tier_name: name,
+        min_area_sqm: min,
+        ...(max === null ? {} : { max_area_sqm: max }),
+        sort_order: (index + 1) * 10,
+        note: "Nguồn: bậc trong mã hàng Đài Loan trọn bộ đang chạy + BRD §4.11 (cận trên đóng, cận dưới mở).",
+        disabled: false,
+      },
+    })));
+    if (!brief.navigation.items.includes("Bậc diện tích")) brief.navigation.items.push("Bậc diện tích");
+    note(`DANH MỤC · +Bậc diện tích (${TIERS.length} bậc — chiều tra giá rời khỏi mã hàng)`);
+  }
+
+
+  // ── Ngưỡng chọn Motor / UPS ──
+  //
+  // `BANG-GIA-CHINH-THUC-31-07-2026 §6` là một BẢNG TRA, và nguồn nói thẳng vì sao nó phải nằm
+  // trong app: "chọn lò xo thế nào thì để thợ tự chọn — motor thì CÓ LUẬT RÕ RÀNG nên app tra được".
+  //
+  // Trước 2026-08-19 luật đó không ở đâu cả. 25 motor đã có trong `Item`, nhưng ngưỡng diện tích
+  // (`<15m²` … `<55m²`) thì chỉ nằm trong đầu người bán. Chọn dư một cấp là khách trả thừa vài
+  // triệu; chọn thiếu một cấp là motor kéo quá tải rồi hỏng trong hạn bảo hành.
+  //
+  // Hai luật KHÁC NHAU nên tách hai trường, không gộp làm một:
+  //   · motor chọn theo DIỆN TÍCH CỬA
+  //   · UPS chọn theo TẢI MOTOR, không theo diện tích
+  if (!hasDoctype("Ngưỡng chọn Motor")) {
+    brief.doctypes.push({
+      "//": [
+        "Bảng tra, không phải bảng giá — giá vẫn ở Item Price. Ở đây chỉ trả lời:",
+        "cửa chừng này m² thì lắp được motor nào.",
+      ],
+      name: "Ngưỡng chọn Motor",
+      label: "Ngưỡng chọn Motor / UPS",
+      icon: "cog",
+      group: "Danh mục",
+      naming: "field:rule_code",
+      title: "item_code",
+      list: ["rule_code", "item_code", "selection_basis", "max_area_sqm", "max_motor_kg", "disabled"],
+      search: ["rule_code", "item_code"],
+      fields: [
+        "rule_code:Data*! Mã luật",
+        "item_code:Link(Item)*! Motor / UPS",
+        {
+          "//": "Motor tra theo diện tích cửa; UPS tra theo tải motor. Hai luật khác nhau, không gộp.",
+          fieldname: "selection_basis", label: "Tra theo", fieldtype: "Select",
+          options: "Diện tích cửa\nTải motor", required: true, default: "Diện tích cửa",
+        },
+        {
+          "//": "Nguồn ghi `<15m²` ⇒ cận trên MỞ: diện tích phải NHỎ HƠN số này, không bằng.",
+          fieldname: "max_area_sqm", label: "Dùng cho cửa dưới (m²)", fieldtype: "Float",
+          depends_on: "eval:doc.selection_basis == 'Diện tích cửa'",
+        },
+        {
+          "//": "Nguồn ghi `motor <600KG` ⇒ cũng là cận trên MỞ.",
+          fieldname: "max_motor_kg", label: "Dùng cho motor dưới (kg)", fieldtype: "Float",
+          depends_on: "eval:doc.selection_basis == 'Tải motor'",
+        },
+        "includes:Small Text Bộ đi kèm",
+        "sort_order:Int=(0) Thứ tự",
+        "nguon:Data*! Nguồn số liệu",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Kinh doanh": "r", "Kế toán": "r", "Thủ kho": "r", "Sản xuất": "r" },
+    });
+
+    // Chép nguyên bảng §6, không thêm bớt. Mã hàng để đúng dạng đang có trong Item.
+    const MOTORS = [
+      ["MOTO-TANKER-400", "TP-MT-TANKER400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-600", "TP-MT-TANKER600KG", 18, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-TANKER-800", "TP-MT-TANKER800KG", 27, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-ALUMAX-400", "TP-MT-ALUMAX400KG", 15, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-ALUMAX-600", "TP-MT-ALUMAX600KG", 25, "Motor + Lắc 32 + Bộ ĐK"],
+      ["MOTO-JG-300", "TP-MT-JG300KG", 18, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-400", "TP-MT-JG400KG", 28, "Motor + Lắc 33 + Bộ ĐK"],
+      ["MOTO-JG-600", "TP-MT-JG600KG", 36, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-JG-800", "TP-MT-JG800KG", 42, "Motor + Lắc 38 + Bộ ĐK"],
+      ["MOTO-JG-1000", "TP-MT-JG1000KG", 48, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-JG-1500", "TP-MT-JG1500KG", 55, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-300", "TP-MT-YHLD300KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-500", "TP-MT-YHLD500KG", 15, "Motor + Lắc 36 + Bộ ĐK"],
+      ["MOTO-YHLD-800", "TP-MT-YHLD800KG", 25, "Motor + Lắc 40 + Bộ ĐK"],
+      ["MOTO-YHLD-1000", "TP-MT-YHLD1000KG", 35, "Motor + Lắc 40 + Bộ ĐK"],
+    ];
+    const UPS = [
+      ["PIN-E800", "TP-UPS-E800", 600, "9 AH"],
+      ["PIN-E1000", "TP-UPS-E1000", 1000, "12 AH"],
+    ];
+    const SOURCE = "BANG-GIA-CHINH-THUC-31-07-2026 §6 (bảng có mộc, hiệu lực 31/07/2026)";
+    brief.fixtures.push(
+      ...MOTORS.map(([code, item, area, includes], index) => ({
+        type: "Ngưỡng chọn Motor",
+        name: code,
+        data: {
+          rule_code: code, item_code: item, selection_basis: "Diện tích cửa",
+          max_area_sqm: area, includes, sort_order: (index + 1) * 10, nguon: SOURCE, disabled: false,
+        },
+      })),
+      ...UPS.map(([code, item, kg, includes], index) => ({
+        type: "Ngưỡng chọn Motor",
+        name: code,
+        data: {
+          rule_code: code, item_code: item, selection_basis: "Tải motor",
+          max_motor_kg: kg, includes, sort_order: (MOTORS.length + index + 1) * 10, nguon: SOURCE, disabled: false,
+        },
+      })),
+    );
+    if (!brief.navigation.items.includes("Ngưỡng chọn Motor")) brief.navigation.items.push("Ngưỡng chọn Motor");
+    note(`DANH MỤC · +Ngưỡng chọn Motor (${MOTORS.length} motor theo diện tích + ${UPS.length} UPS theo tải)`);
+  }
+
+  // ── Item Price nhận bậc ──
+  // Một mặt hàng, tám giá. Trước đây là tám mặt hàng, mỗi cái một giá.
+  {
+    const price = doctype("Item Price");
+    if (!price.fields.some((entry) => nameOf(entry) === "area_tier")) {
+      addAfter(price, "uom", {
+        "//": [
+          "Trống = đơn giá áp cho MỌI diện tích (đa số mặt hàng). Có giá trị = chỉ áp cho bậc đó.",
+          "Nhờ vậy một mặt hàng giữ được thang giá 8 bậc mà không cần 8 mã hàng.",
+        ],
+        fieldname: "area_tier",
+        label: "Bậc diện tích",
+        fieldtype: "Link",
+        options: "Bậc diện tích",
+        link_filters: '{"disabled":0}',
+      });
+      // Khoá đặt tên phải mang bậc, không thì tám dòng giá của cùng một mặt hàng đè lên nhau.
+      price.naming = "format:{price_list}:{item_code}:{uom}:{price_variant}:{area_tier}";
+      note("SALES · Item Price nhận area_tier — một mặt hàng giữ được thang giá 8 bậc");
+    }
+  }
+
+  // ── BOM Template nhận cách giao ──
+  // Một mặt hàng, hai định mức: trọn bộ và tách món. Trước đây là hai mặt hàng.
+  {
+    const template = doctype("BOM Template");
+    if (!template.fields.some((entry) => nameOf(entry) === "sales_mode")) {
+      addAfter(template, "item_code", {
+        "//": [
+          "Trống = định mức áp cho mọi cách giao. Có giá trị = chỉ áp khi dòng bán chọn đúng cách đó.",
+          "Đo trên D1: LUOI-SN13x26 trọn bộ có 5 cấu phần, tách món có 1 — hai bộ khác nhau thật.",
+        ],
+        fieldname: "sales_mode",
+        label: "Chỉ áp cho cách giao",
+        fieldtype: "Select",
+        options: "\nTrọn bộ\nTách món",
+      });
+      note("SẢN XUẤT · BOM Template nhận sales_mode — một mặt hàng giữ được hai định mức");
+    }
   }
 }
 
@@ -2340,11 +2609,55 @@ note(`UI Link · ${leafLinkFilterCount} ô Warehouse/Item Group chỉ chọn nú
   delete quotation.menu;
   delete doctype("Sales Invoice").menu;
 
+  /**
+   * Chỉ `sales_option` bị xoá. `sales_mode` KHÔNG — nó không phải cùng một thứ.
+   *
+   * Trước 2026-08-19 chỗ này lọc cả hai với lý do "commit 46cff213 retired Sales Option /
+   * Sales Package". Nhưng thứ bị khai tử là DANH MỤC "Cách bán", còn `sales_mode`
+   * (Tách món / Trọn bộ) là một FACT CỦA DÒNG BÁN. `SALES-BOM-SOURCE-MAP §5` nói rõ:
+   *
+   *   "trọn bộ / chỉ lá / tách món trong nguồn đang quyết định PHẠM VI CẤU PHẦN được
+   *    giao/sinh ra, không được mặc định đồng nhất với một danh mục 'cách bán' hay với
+   *    chính sách giá khách hàng."
+   *
+   * Xoá lây làm fact đó không còn chỗ nào để tồn tại, và hậu quả đo được bằng tiền: worker
+   * vẫn đọc `row.sales_mode` rồi mặc định "Trọn bộ" khi trống, nên MỌI đơn tính như trọn bộ.
+   * Đơn đại lý 4m × 3m mua tách món:
+   *
+   *   Cửa Lưới / Cửa Đài Loan · trọn bộ = Phủ bì ray 12,00 m²
+   *                            · tách món = Rộng cắt lá 11,91 m²   ⇒ thu dư 0,09 m²/bộ
+   *
+   * `Cutting Policy.dealer_split_sales_basis` có sẵn để tính đúng, nhưng không gì truyền cách
+   * bán vào nên nhánh đó KHÔNG BAO GIỜ chạy. Và fact bị lấy khỏi dòng bán thì nó bò sang khoá
+   * bản ghi: 96 mã hàng đang nhồi `TRONBO` vào chính mã — đúng là dựng lại Sales Option qua
+   * cửa sau, ở tầng khó gỡ nhất.
+   *
+   * `sales_mode` trả về là một Select hai giá trị, KHÔNG Link tới doctype nào, nên nó không
+   * hồi sinh `Sales Option`/`Sales Package`. Chốt chặn cuối file vẫn ném lỗi nếu ai dựng lại
+   * hai doctype đó.
+   */
   for (const target of brief.doctypes) {
-    target.fields = (target.fields ?? []).filter((entry) => !["sales_option", "sales_mode"].includes(nameOf(entry)));
-    if (Array.isArray(target.list)) target.list = target.list.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
-    if (Array.isArray(target.search)) target.search = target.search.filter((entry) => !["sales_option", "sales_mode"].includes(entry));
+    target.fields = (target.fields ?? []).filter((entry) => nameOf(entry) !== "sales_option");
+    if (Array.isArray(target.list)) target.list = target.list.filter((entry) => entry !== "sales_option");
+    if (Array.isArray(target.search)) target.search = target.search.filter((entry) => entry !== "sales_option");
   }
+
+  // Trả `sales_mode` về đúng ba dòng bán mà công thức đọc tới.
+  for (const childName of ["Quotation Item", "Sales Order Item", "Sales Invoice Item"]) {
+    const line = doctype(childName);
+    if (line.fields.some((entry) => nameOf(entry) === "sales_mode")) continue;
+    ensureSalesLineField(line, "set_count", {
+      "//": "Fact của dòng, không phải danh mục. Quyết phạm vi cấu phần giao và cơ sở rộng tính tiền.",
+      fieldname: "sales_mode",
+      fieldtype: "Select",
+      options: "Trọn bộ\nTách món",
+      default: "Trọn bộ",
+      label: "Cách giao",
+      in_list_view: true,
+      surface: "quick",
+    });
+  }
+  note("SALES · trả sales_mode về dòng bán (Tách món/Trọn bộ) — KHÔNG phải Sales Option");
   const ensureRayTrace = (doctypeName, anchor) => {
     const target = doctype(doctypeName);
     const field = {

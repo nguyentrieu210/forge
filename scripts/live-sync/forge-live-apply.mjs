@@ -123,8 +123,19 @@ function makeLocalAuthority(liveSha) {
 
 async function main() {
   const adapter = process.argv[2];
+  /**
+   * Tham so sau ten adapter duoc chuyen thang xuong runner.
+   *
+   * `item-master` bat buoc co `--source=<path>` (run-local-import-core: 'item-master requires
+   * --source'), nen truoc day adapter nay khai trong ALLOWED nhung KHONG CACH NAO goi duoc
+   * qua wrapper — mot adapter duoc phep ma khong chay duoc.
+   *
+   * Runner van tu kiem duong dan: `assertPathInside(sourceArg, <root>/local-imports)`. Cho
+   * qua tham so o day khong noi long gi, no chi thoi chan mot adapter hop le.
+   */
+  const passthrough = process.argv.slice(3);
   if (!ALLOWED.has(adapter)) {
-    throw new Error(`Usage: node scripts/live-sync/forge-live-apply.mjs <${[...ALLOWED].join('|')}>`);
+    throw new Error(`Usage: node scripts/live-sync/forge-live-apply.mjs <${[...ALLOWED].join('|')}> [tham so cua adapter]`);
   }
   if (!existsSync(path.join(ROOT, '.git'))) throw new Error(`${ROOT} is not a Git workspace`);
   const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -161,7 +172,7 @@ async function main() {
     const runner = manufacturingMaster
       ? path.join(ROOT, 'scripts', 'local-runner', 'import-alumdoor-manufacturing-master-local.mjs')
       : path.join(ROOT, 'scripts', 'local-runner', 'run-local-import.mjs');
-    const runnerArgs = manufacturingMaster ? [runner, '--apply'] : [runner, adapter];
+    const runnerArgs = manufacturingMaster ? [runner, '--apply', ...passthrough] : [runner, adapter, ...passthrough];
     const result = run(process.execPath, runnerArgs, {
       cwd: ROOT,
       capture: false,

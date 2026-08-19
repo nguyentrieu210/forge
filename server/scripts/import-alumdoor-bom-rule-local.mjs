@@ -238,8 +238,29 @@ function sameRule(expected, actual) {
   return Boolean(actual) && stable(comparableRule(expected)) === stable(comparableRule(actual));
 }
 
-function ruleSnapshot(master) {
-  return JSON.stringify({
+/**
+ * TÁM khoá mà importer này sở hữu trong `bom_rule_formula_snapshot`.
+ *
+ * Cùng một trường còn có người ghi thứ hai: `sync-alumdoor-bom-rule-template-fallback-local.mjs`
+ * ghi snapshot RỘNG HƠN, thêm `rule_name` và ba trường production (`production_stock_factor`,
+ * `production_stock_uom`, `production_formula_json`).
+ *
+ * Trước 2026-08-19 chỗ này so sánh CẢ CHUỖI với đúng hình dạng hẹp của mình, nên hai bên
+ * đá nhau vô tận: importer thấy snapshot rộng "sai" liền ghi đè bằng bản hẹp; projection thấy
+ * bản hẹp thiếu trường production liền ghi lại bản rộng; vòng lặp không bao giờ hội tụ.
+ * Đó chính là `templates_updated=330 rules_updated=780 unchanged=0` lặp lại y hệt ở MỌI pass,
+ * và là lý do `forge-live apply bom-rule` chết ở stage IDEMPOTENCE.
+ *
+ * Nay: mỗi bên chỉ sở hữu khoá của mình. Importer đọc snapshot đang có, kiểm tám khoá của nó,
+ * và khi phải ghi thì GHI ĐÈ LÊN bản cũ để bốn khoá production sống sót.
+ */
+const OWNED_SNAPSHOT_KEYS = [
+  'rule_code', 'version', 'formula_json', 'formula_display',
+  'result_uom', 'qty_per_set', 'authority_type', 'source_formula_text',
+];
+
+function ownedSnapshotFields(master) {
+  return {
     rule_code: clean(master.rule_code),
     version: finite(master.version, 1),
     formula_json: clean(master.formula_json),
@@ -248,7 +269,35 @@ function ruleSnapshot(master) {
     qty_per_set: finite(master.qty_per_set, 1),
     authority_type: clean(master.authority_type),
     source_formula_text: clean(master.source_formula_text),
+  };
+}
+
+function parseSnapshot(value) {
+  const text = clean(value);
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Tám khoá của importer đã đúng chưa — không quan tâm bên kia thêm gì. */
+function ownedSnapshotMatches(existing, master) {
+  const current = parseSnapshot(existing);
+  if (!current) return false;
+  const owned = ownedSnapshotFields(master);
+  return OWNED_SNAPSHOT_KEYS.every((key) => {
+    const want = owned[key];
+    const got = typeof want === 'number' ? finite(current[key]) : clean(current[key]);
+    return got === want;
   });
+}
+
+/** Ghi tám khoá của mình ĐÈ LÊN snapshot đang có, giữ nguyên phần của projection. */
+function ruleSnapshot(master, existing) {
+  return JSON.stringify({ ...(parseSnapshot(existing) ?? {}), ...ownedSnapshotFields(master) });
 }
 
 await login();
@@ -373,16 +422,15 @@ for (const row of templateRows) {
     const master = ruleByCode.get(clean(match.rule_code));
     if (!master) return child;
     templateRowsMapped += 1;
-    const snapshot = ruleSnapshot(master);
     if (clean(child.bom_rule) === clean(match.rule_code)
       && finite(child.bom_rule_version) === finite(master.version, 1)
-      && clean(child.bom_rule_formula_snapshot) === snapshot) return child;
+      && ownedSnapshotMatches(child.bom_rule_formula_snapshot, master)) return child;
     changed = true;
     return {
       ...child,
       bom_rule: clean(match.rule_code),
       bom_rule_version: finite(master.version, 1),
-      bom_rule_formula_snapshot: snapshot,
+      bom_rule_formula_snapshot: ruleSnapshot(master, child.bom_rule_formula_snapshot),
     };
   });
   if (changed) {
@@ -412,16 +460,17 @@ for (const row of bomRows) {
     const master = ruleByCode.get(clean(match.rule_code));
     if (!master) return child;
     bomRowsMapped += 1;
-    const snapshot = ruleSnapshot(master);
+    // Cùng luật sở hữu-khoá như nhánh BOM Template ở trên: dòng BOM hiện chưa có người ghi
+    // thứ hai, nhưng so-sánh-cả-chuỗi là cái bẫy đã sập một lần rồi — không dựng lại nó.
     if (clean(child.bom_rule) === clean(match.rule_code)
       && finite(child.bom_rule_version) === finite(master.version, 1)
-      && clean(child.bom_rule_formula_snapshot) === snapshot) return child;
+      && ownedSnapshotMatches(child.bom_rule_formula_snapshot, master)) return child;
     changed = true;
     return {
       ...child,
       bom_rule: clean(match.rule_code),
       bom_rule_version: finite(master.version, 1),
-      bom_rule_formula_snapshot: snapshot,
+      bom_rule_formula_snapshot: ruleSnapshot(master, child.bom_rule_formula_snapshot),
     };
   });
   if (changed) {
