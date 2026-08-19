@@ -16,6 +16,7 @@ local-imports/
 .codespace-local-state.json
 .codespace-admin-credentials
 .codespace-role-credentials
+.forge-live-command.json
 .cache-vietnam-divisions/
 __pycache__/
 *.py[cod]
