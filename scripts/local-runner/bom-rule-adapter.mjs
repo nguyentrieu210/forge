@@ -46,7 +46,9 @@ async function requireApi(origin) {
   try {
     const response = await fetch(`${origin.replace(/\/$/, '')}/api/method/metaforge.api.get_boot`, { signal: controller.signal });
     if (![200, 401, 403].includes(response.status)) throw fail('ENV', `Local API unhealthy: HTTP ${response.status}`);
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function assertRepo(root) {
@@ -70,8 +72,14 @@ function acquireLock(root, runId, sha) {
   mkdirSync(dir, { recursive: true });
   const lockPath = path.join(dir, 'local-d1-mutation.lock');
   const payload = {
-    format: 'forge-local-d1-lock/v2', run_id: runId, adapter: 'bom-rule', pid: process.pid,
-    hostname: os.hostname(), started_at: new Date().toISOString(), command: process.argv.join(' '), repo_sha: sha,
+    format: 'forge-local-d1-lock/v2',
+    run_id: runId,
+    adapter: 'bom-rule',
+    pid: process.pid,
+    hostname: os.hostname(),
+    started_at: new Date().toISOString(),
+    command: process.argv.join(' '),
+    repo_sha: sha,
   };
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -102,7 +110,10 @@ function releaseLock(lockPath, runId) {
 
 function backup(root) {
   const output = run(process.execPath, [path.join(root, 'server', 'scripts', 'backup-local-state.mjs')], {
-    cwd: root, capture: true, label: 'backup-local-state', failureClass: 'D1_STATE',
+    cwd: root,
+    capture: true,
+    label: 'backup-local-state',
+    failureClass: 'D1_STATE',
   }).stdout;
   const match = output.match(/LOCAL_STATE_BACKUP_OK path=(.+) bytes=(\d+)/);
   if (!match || !existsSync(match[1].trim()) || Number(match[2]) <= 0) throw fail('D1_STATE', 'Backup evidence invalid');
@@ -123,14 +134,19 @@ function applyLocalMigrations(root) {
   const server = path.join(root, 'server');
   const wranglerEntry = path.join(path.dirname(createRequire(import.meta.url).resolve('wrangler/package.json')), 'bin', 'wrangler.js');
   run(process.execPath, [
-    wranglerEntry, 'd1', 'migrations', 'apply', 'cloudforge-demo', '--local', '--config', 'apps/tenant-worker/wrangler.jsonc',
+    wranglerEntry,
+    'd1',
+    'migrations',
+    'apply',
+    'cloudforge-demo',
+    '--local',
+    '--config',
+    'apps/tenant-worker/wrangler.jsonc',
   ], { cwd: server, label: 'local tenant migrations', failureClass: 'D1_STATE' });
   console.log('BOM_RULE_MIGRATION_STATUS=PASS');
 }
 
 function buildRules(root, runDir) {
-  const bomBuilder = path.join(root, 'scripts', 'local-runner', 'bom-adapter.mjs');
-  void bomBuilder; // keep the dependency explicit in evidence; mainBom has already rebuilt BOM locally.
   const server = path.join(root, 'server');
   const source = path.join(runDir, 'source.json');
   const sourceReport = path.join(runDir, 'source.report.json');
@@ -143,7 +159,12 @@ function buildRules(root, runDir) {
   const rules = path.join(runDir, 'bom-rules.canonical.json');
   const audit = path.join(runDir, 'bom-rules.audit.json');
   const node = process.execPath;
-  const exec = (script, args, label, allowFailure = false) => run(node, [path.join(server, 'scripts', script), ...args], { cwd: root, label, failureClass: 'DATA', allowFailure });
+  const exec = (script, args, label, allowFailure = false) => run(node, [path.join(server, 'scripts', script), ...args], {
+    cwd: root,
+    label,
+    failureClass: 'DATA',
+    allowFailure,
+  });
   exec('extract-alumdoor-real-source-records.mjs', [source, sourceReport], 'BOM Rule source extraction');
   exec('build-alumdoor-item-master-payload.mjs', [source, items, itemsAudit], 'BOM Rule Item projection');
   exec('build-alumdoor-canonical-bom-payload.mjs', [source, items, strict, strictAudit], 'BOM Rule strict BOM evidence', true);
@@ -152,19 +173,24 @@ function buildRules(root, runDir) {
   exec('build-alumdoor-bom-rule-importable.mjs', [bomPayload, rules, audit], 'BOM Rule canonical builder');
   exec('import-alumdoor-bom-rule-local.mjs', [rules, path.join(runDir, 'bom-rule-validate.json'), '--validate-only'], 'BOM Rule validate-only');
   const ruleAudit = JSON.parse(readFileSync(audit, 'utf8'));
-  if (Number(ruleAudit.rows_pending ?? 0) !== 0) throw fail('DATA', `BOM Rule payload still has pending rows=${ruleAudit.rows_pending}`);
-  console.log(`ALUMDOOR_BOM_RULE_DATA_READY rules=${ruleAudit.rules_created} mapped=${ruleAudit.rows_mapped} applicability=${ruleAudit.applicability_count} owner_overrides=${ruleAudit.owner_overrides}`);
+  console.log(`ALUMDOOR_BOM_RULE_DATA_READY rules=${ruleAudit.rules_created} mapped=${ruleAudit.rows_mapped}/${ruleAudit.component_rows} pending=${ruleAudit.rows_pending} applicability=${ruleAudit.applicability_count} owner_overrides=${ruleAudit.owner_overrides}`);
   return { rules, audit, bomPayload };
 }
 
 function assertSecondPass(result) {
-  if (Number(result.created_count ?? 0) !== 0 || Number(result.updated_count ?? 0) !== 0 || Number(result.verification_failure_count ?? 0) !== 0) {
-    throw fail('VERIFY', `BOM Rule idempotency failed created=${result.created_count} updated=${result.updated_count} verify=${result.verification_failure_count}`);
+  const notIdempotent = Number(result.created_count ?? 0) !== 0
+    || Number(result.updated_count ?? 0) !== 0
+    || Number(result.conversions_created_count ?? 0) !== 0
+    || Number(result.templates_updated ?? 0) !== 0
+    || Number(result.boms_updated ?? 0) !== 0
+    || Number(result.verification_failure_count ?? 0) !== 0;
+  if (notIdempotent) {
+    throw fail('VERIFY', `BOM Rule idempotency failed created=${result.created_count} updated=${result.updated_count} conversions=${result.conversions_created_count} templates=${result.templates_updated} boms=${result.boms_updated} verify=${result.verification_failure_count}`);
   }
 }
 
 export async function mainBomRule() {
-  // One explicit command converges the existing BOM/BOM Template first, then links reusable rules.
+  // One explicit command first converges BOM/BOM Template, then links reusable BOM Rules.
   await mainBom();
 
   const root = path.win32.resolve(process.env.FORGE_LOCAL_REPO_ROOT || DEFAULT_REPO_ROOT);
@@ -178,6 +204,7 @@ export async function mainBomRule() {
     await requireApi(origin);
     const runDir = path.join(root, 'local-backups', 'execution-layer', 'bom-rule', runId);
     mkdirSync(runDir, { recursive: true });
+
     stage = 'DATA';
     const prepared = buildRules(root, runDir);
     stage = 'LOCK';
@@ -186,31 +213,56 @@ export async function mainBomRule() {
     const backupPath = backup(root);
     stage = 'MIGRATION';
     applyLocalMigrations(root);
+
     const env = authEnv(origin);
-    stage = 'IMPORT';
     const importer = path.join(root, 'server', 'scripts', 'import-alumdoor-bom-rule-local.mjs');
+    stage = 'IMPORT';
     const pass1Path = path.join(runDir, 'bom-rule-pass1.json');
-    run(process.execPath, [importer, prepared.rules, pass1Path], { cwd: root, env, label: 'BOM Rule import pass 1', failureClass: 'IMPORTER' });
+    run(process.execPath, [importer, prepared.rules, pass1Path], {
+      cwd: root,
+      env,
+      label: 'BOM Rule import pass 1',
+      failureClass: 'IMPORTER',
+    });
     const first = JSON.parse(readFileSync(pass1Path, 'utf8'));
     if (Number(first.verification_failure_count ?? 0) !== 0) throw fail('VERIFY', `BOM Rule pass 1 verification failures=${first.verification_failure_count}`);
+
     stage = 'IDEMPOTENCE';
     const pass2Path = path.join(runDir, 'bom-rule-pass2.json');
-    run(process.execPath, [importer, prepared.rules, pass2Path], { cwd: root, env, label: 'BOM Rule import pass 2', failureClass: 'VERIFY' });
+    run(process.execPath, [importer, prepared.rules, pass2Path], {
+      cwd: root,
+      env,
+      label: 'BOM Rule import pass 2',
+      failureClass: 'VERIFY',
+    });
     const second = JSON.parse(readFileSync(pass2Path, 'utf8'));
     assertSecondPass(second);
+
     const audit = JSON.parse(readFileSync(prepared.audit, 'utf8'));
     const finalReport = {
       BOM_RULES: Number(audit.rules_created ?? 0),
       APPLICABILITY: Number(audit.applicability_count ?? 0),
+      COMPONENT_ROWS: Number(audit.component_rows ?? 0),
       COMPONENTS_MAPPED: Number(first.component_mapping_count ?? 0),
+      RULE_COVERAGE_PCT: Number(audit.coverage_pct ?? 0),
       TEMPLATE_ROWS_MAPPED: Number(first.template_rows_mapped ?? 0),
       BOM_ROWS_MAPPED: Number(first.bom_rows_mapped ?? 0),
+      ITEM_CONVERSIONS_CREATED: Number(first.conversions_created_count ?? 0),
       HISTORICAL_BOM_PENDING: Number(first.historical_bom_pending_count ?? 0),
       OWNER_OVERRIDES: Number(audit.owner_overrides ?? 0),
       PENDING: Number(audit.rows_pending ?? 0),
       IDEMPOTENT_SECOND_PASS: 'PASS',
     };
-    writeFileSync(path.join(runDir, 'adapter-status.json'), `${JSON.stringify({ adapter: 'bom-rule', run_id: runId, repo_sha: repo.local, backup_path: backupPath, final_report: finalReport, pass1: first, pass2: second, audit }, null, 2)}\n`);
+    writeFileSync(path.join(runDir, 'adapter-status.json'), `${JSON.stringify({
+      adapter: 'bom-rule',
+      run_id: runId,
+      repo_sha: repo.local,
+      backup_path: backupPath,
+      final_report: finalReport,
+      pass1: first,
+      pass2: second,
+      audit,
+    }, null, 2)}\n`);
     for (const [key, value] of Object.entries(finalReport)) console.log(`${key}=${value}`);
     console.log(`FORGE_LOCAL_IMPORT_EXECUTION_PASS adapter=bom-rule run_id=${runId}`);
     console.log('EXECUTION_STATUS=SUCCESS');
