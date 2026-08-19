@@ -1,6 +1,7 @@
 import {
   evaluateBomQuantity,
   type BomQuantityFormula,
+  type BomQuantityOperand,
   type BomQuantityRounding,
 } from "./bom-template-core.js";
 
@@ -30,10 +31,14 @@ export interface BomRuleMaster {
   result_kind?: BomRuleResultKind | string;
   result_uom?: string;
   source_field?: string;
+  source_field_offset?: number;
+  source_field_2?: string;
+  source_field_2_offset?: number;
   operator?: string;
   operand?: number;
   multiply?: number;
   divide?: number;
+  final_add?: number;
   qty_per_set?: number;
   rounding?: BomQuantityRounding | string;
   precision?: number;
@@ -137,9 +142,8 @@ export function resolveBomRuleMaster(rules: BomRuleMaster[], context: BomRuleCon
   const candidates = rules
     .filter((rule) => !checked(rule.disabled))
     .flatMap((rule) => {
-      const applicability = Array.isArray(rule.applicability) && rule.applicability.length
-        ? rule.applicability
-        : [{ scope_type: "GENERIC" as const, component_item: context.component_item }];
+      // No applicability means "not wired yet", never "generic for every component".
+      const applicability = Array.isArray(rule.applicability) ? rule.applicability : [];
       return applicability
         .filter((row) => activeOn(row, on) && applicabilityMatches(row, context))
         .map((row) => ({
@@ -148,15 +152,12 @@ export function resolveBomRuleMaster(rules: BomRuleMaster[], context: BomRuleCon
           priority: finite(row.priority, 0),
         }));
     })
-    .sort((left, right) => (scopeRank(right.scope) - scopeRank(left.scope))
-      || (right.priority - left.priority)
-      || positive(right.rule.version, 1) - positive(left.rule.version, 1));
+    .sort((left, right) => (scopeRank(right.scope) - scopeRank(left.scope)) || (right.priority - left.priority));
 
   if (!candidates.length) return null;
   const first = candidates[0]!;
   const tied = candidates.filter((entry) => scopeRank(entry.scope) === scopeRank(first.scope)
-    && entry.priority === first.priority
-    && positive(entry.rule.version, 1) === positive(first.rule.version, 1));
+    && entry.priority === first.priority);
   const distinct = [...new Map(tied.map((entry) => [text(entry.rule.rule_code), entry.rule])).values()];
   if (distinct.length > 1) {
     throw new Error(`Có ${distinct.length} Quy tắc BOM cùng mức cho ${text(context.component_item) || "component"}: ${distinct.map((rule) => text(rule.rule_code)).join(", ")}. Hệ thống không tự đoán.`);
@@ -175,9 +176,17 @@ function parseFormulaJson(value: BomRuleMaster["formula_json"]): BomQuantityForm
   }
 }
 
+function fieldOperand(field: unknown, offset: unknown): BomQuantityOperand {
+  const name = text(field);
+  if (!name) throw new Error("Thiếu trường hình học cho công thức BOM Rule.");
+  const delta = finite(offset, 0);
+  return { field: name, ...(delta ? { offset: delta } : {}) };
+}
+
 export function bomRuleFormula(rule: BomRuleMaster): BomQuantityFormula {
   const stored = parseFormulaJson(rule.formula_json);
   if (stored) return stored;
+
   const sourceField = text(rule.source_field);
   const operator = text(rule.operator).toUpperCase() || "COPY";
   const operand = finite(rule.operand, 0);
@@ -188,9 +197,17 @@ export function bomRuleFormula(rule: BomRuleMaster): BomQuantityFormula {
   let formula: BomQuantityFormula;
   if (operator === "CONSTANT") {
     formula = { base: { kind: "CONSTANT", value: operand } };
+  } else if (operator === "PRODUCT" || operator === "QUOTIENT") {
+    const left = fieldOperand(sourceField, rule.source_field_offset);
+    const right = fieldOperand(rule.source_field_2, rule.source_field_2_offset);
+    formula = operator === "PRODUCT"
+      ? { base: { kind: "PRODUCT", left, right } }
+      : { base: { kind: "QUOTIENT", numerator: left, denominator: right } };
   } else {
     if (!sourceField) throw new Error(`${rule.rule_code}: thiếu trường nguồn từ hàng cha.`);
-    const offset = operator === "ADD" ? operand : operator === "SUBTRACT" ? -operand : 0;
+    const explicitOffset = finite(rule.source_field_offset, 0);
+    const operationOffset = operator === "ADD" ? operand : operator === "SUBTRACT" ? -operand : 0;
+    const offset = explicitOffset + operationOffset;
     formula = { base: { kind: "FIELD", field: sourceField, ...(offset ? { offset } : {}) } };
     if (operator === "MULTIPLY") formula.multiply = operand;
     if (operator === "DIVIDE") {
@@ -198,9 +215,12 @@ export function bomRuleFormula(rule: BomRuleMaster): BomQuantityFormula {
       formula.multiply = 1 / operand;
     }
   }
+
   const combinedMultiply = finite(formula.multiply, 1) * multiply / divide;
   if (Math.abs(combinedMultiply - 1) > 1e-12) formula.multiply = combinedMultiply;
   else delete formula.multiply;
+  const finalAdd = finite(rule.final_add, 0);
+  if (finalAdd) formula.add = finalAdd;
   const rounding = text(rule.rounding).toUpperCase();
   if (["NONE", "ROUND", "CEIL", "FLOOR"].includes(rounding)) formula.rounding = rounding as BomQuantityRounding;
   const precision = Number(rule.precision);
@@ -212,17 +232,28 @@ function formatNumber(value: number): string {
   return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 6 }).format(value);
 }
 
+function operandDisplay(operand: BomQuantityOperand): string {
+  if ("value" in operand) return formatNumber(operand.value);
+  const offset = finite(operand.offset, 0);
+  return `${operand.field}${offset > 0 ? ` + ${formatNumber(offset)}` : offset < 0 ? ` - ${formatNumber(Math.abs(offset))}` : ""}`;
+}
+
 export function bomRuleFormulaDisplay(rule: BomRuleMaster): string {
   const formula = bomRuleFormula(rule);
-  if (formula.base.kind === "CONSTANT") return formatNumber(formula.base.value);
-  if (formula.base.kind === "FIELD") {
-    const offset = finite(formula.base.offset, 0);
-    const base = `${formula.base.field}${offset > 0 ? ` + ${formatNumber(offset)}` : offset < 0 ? ` - ${formatNumber(Math.abs(offset))}` : ""}`;
-    const factor = finite(formula.multiply, 1);
-    return Math.abs(factor - 1) > 1e-12 ? `(${base}) × ${formatNumber(factor)}` : base;
-  }
-  if (formula.base.kind === "PRODUCT") return "Tích hai trường hình học";
-  return "Thương hai trường hình học";
+  let base: string;
+  if (formula.base.kind === "CONSTANT") base = formatNumber(formula.base.value);
+  else if (formula.base.kind === "FIELD") base = operandDisplay(formula.base);
+  else if (formula.base.kind === "PRODUCT") base = `${operandDisplay(formula.base.left)} × ${operandDisplay(formula.base.right)}`;
+  else base = `${operandDisplay(formula.base.numerator)} ÷ ${operandDisplay(formula.base.denominator)}`;
+
+  const factor = finite(formula.multiply, 1);
+  if (Math.abs(factor - 1) > 1e-12) base = `(${base}) × ${formatNumber(factor)}`;
+  const add = finite(formula.add, 0);
+  if (add > 0) base = `${base} + ${formatNumber(add)}`;
+  if (add < 0) base = `${base} - ${formatNumber(Math.abs(add))}`;
+  const rounding = text(formula.rounding).toUpperCase();
+  if (rounding && rounding !== "NONE") base = `${rounding}(${base})`;
+  return base;
 }
 
 export function evaluateBomRuleMaster(
