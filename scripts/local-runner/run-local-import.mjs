@@ -7,7 +7,7 @@ import {
 } from './run-local-import-core.mjs';
 import { mainPricing } from './pricing-adapter.mjs';
 import { mainBom } from './bom-adapter.mjs';
-import { mainBomRule } from './bom-rule-adapter.mjs';
+import { mainBomRuleVerified } from './bom-rule-verified-adapter.mjs';
 import { mainBomTemplate } from './bom-template-adapter.mjs';
 import { mainCustomer } from './customer-adapter.mjs';
 
@@ -35,7 +35,7 @@ export async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv);
   if (parsed.adapter === 'pricing') return mainPricing();
   if (parsed.adapter === 'bom') return mainBom();
-  if (parsed.adapter === 'bom-rule') return mainBomRule();
+  if (parsed.adapter === 'bom-rule') return mainBomRuleVerified();
   if (parsed.adapter === 'bom-template') return mainBomTemplate();
   if (parsed.adapter === 'customer') return mainCustomer();
   return coreMain(argv);
