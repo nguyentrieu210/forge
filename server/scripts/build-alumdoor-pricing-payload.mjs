@@ -227,7 +227,18 @@ export function buildPricingPayload(pricingSourceFile, itemPayloadFile) {
     addUnique(itemPrices, document, "item_price", blockers);
     return document;
   };
-  const addRule = (rule) => addUnique(pricingRules, pricingRuleDocument(rule), "pricing_rule", blockers);
+  /**
+   * Chính sách giá phải mang mã ĐANG DÙNG, giống dòng giá.
+   *
+   * Có chỗ gọi bằng mã bảng tính, có chỗ gọi bằng mã canonical. Để lẫn thì bộ kiểm báo
+   * `rule_missing_variant_item_price`: chính sách trỏ vào một dòng giá mà theo mã của nó thì
+   * không tồn tại — đo được 24 dòng như vậy. Quy về một mối tại đây, không bắt từng chỗ gọi nhớ.
+   */
+  const addRule = (rule) => {
+    const canonical = itemsByCode.get(clean(rule.itemCode))?.item_code;
+    const normalized = canonical && canonical !== rule.itemCode ? { ...rule, itemCode: canonical } : rule;
+    return addUnique(pricingRules, pricingRuleDocument(normalized), "pricing_rule", blockers);
+  };
   const addGroupVariantPrices = (itemGroup, variant, lineage) => {
     let count = 0;
     for (const base of baseByCode.values()) {
