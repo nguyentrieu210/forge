@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
 import type { Doc, DocField, DocTypeMeta } from "@metaforge/core";
 import type { ControlRegistry, FieldServices } from "@metaforge/controls";
@@ -86,7 +86,7 @@ function normalizeFieldValue(field: DocField, value: unknown): unknown {
   return value;
 }
 
-function ReadOnlyCell(props: { children: React.ReactNode; strong?: boolean; title?: string }) {
+function ReadOnlyCell(props: { children: ReactNode; strong?: boolean; title?: string }) {
   return (
     <div
       className={`min-h-8 min-w-0 px-1.5 py-1.5 text-center text-xs ${props.strong ? "font-semibold text-foreground" : "text-muted-foreground"}`}
@@ -228,9 +228,8 @@ export function AlumdoorPurchaseOrderItemsGrid(props: AlumdoorPurchaseOrderItems
                       field={itemField}
                       value={line.item_code}
                       onChange={(value) => {
-                        const normalized = normalizeFieldValue(itemField, value);
-                        props.onPatch(key, { item_code: normalized } as Partial<PurchaseLine>);
-                        props.onCommit(key, "item_code", normalized);
+                        const normalizedValue = normalizeFieldValue(itemField, value);
+                        props.onCommit(key, "item_code", normalizedValue);
                       }}
                       registry={props.registry}
                       services={props.services}
