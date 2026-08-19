@@ -5,6 +5,9 @@ import { partitionAlumdoorItemSourceBlockers } from "./lib/alumdoor-item-blocker
 import { buildCanonicalAlumdoorItemMaster } from "./lib/alumdoor-item-master-classification.mjs";
 import { preflightAlumdoorItemSourceRecords } from "./lib/alumdoor-item-source-preflight.mjs";
 import { ITEM_SOURCE_ROLES } from "./lib/alumdoor-item-source-contract.mjs";
+import { createSourceCodeResolver, translateSourceRecords } from "./lib/alumdoor-source-code-resolver.mjs";
+import { DatabaseSync } from "node:sqlite";
+import { existsSync } from "node:fs";
 
 const [sourceArg, payloadArg, auditArg] = process.argv.slice(2);
 if (!sourceArg || !payloadArg || !auditArg) {
@@ -21,6 +24,8 @@ const records = Array.isArray(source) ? source : source.records;
 if (!Array.isArray(records)) {
   throw new Error("source-records.json phải là array hoặc object { records: [...] }");
 }
+
+
 
 const clean = (value) => String(value ?? "").trim();
 const uomKey = (value) => clean(value).replace(/\s+/g, "").toLocaleUpperCase("vi");
@@ -175,6 +180,42 @@ const audit = {
   item_payload_blockers: master.blockers,
   bom_blockers_retained: sourcePartition.bom_blockers,
 };
+
+/**
+ * Dịch mã sang mã ĐANG DÙNG — ở ĐẦU RA, không phải đầu vào.
+ *
+ * Bản trích nguồn giữ mã theo bảng tính gốc và không được sửa (nó là bằng chứng), nhưng danh
+ * mục đã qua hai đợt đổi mã: dựng xong payload thì 476/587 mã trong đó không còn tồn tại. Chạy
+ * lại chuỗi import như vậy là TẠO LẠI 476 mặt hàng mã cũ bên cạnh mã mới — xoá sổ cả hai đợt
+ * đổi mã, và không gì báo.
+ *
+ * VÌ SAO Ở ĐẦU RA: bộ dựng này đã có cơ chế chuẩn hoá riêng (bí danh nguồn, canonical_item_code).
+ * Dịch ở đầu vào là dựng lớp chuẩn hoá THỨ HAI chọi với lớp thứ nhất — thử rồi: 516 tham chiếu
+ * BOM gãy ngay, vì mã mặt hàng đổi mà mã trong dòng định mức thì không. Ở đầu ra, bộ dựng đã làm
+ * xong việc của nó và chỉ còn một phép đổi danh tính cuối cùng.
+ *
+ * Không có D1 (máy khác, hoặc lần dựng đầu khi chưa có gì) thì bỏ qua: lúc đó nguồn chính là sự
+ * thật, không có gì để dịch.
+ */
+const D1_PATH = process.env.ALUMDOOR_D1_PATH
+  || resolve(process.cwd(), "apps/tenant-worker/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/0f70e06fc007ec84591c21ca1daaf09474ca2074a0d42ba21eb2a3fcdbb2cdf8.sqlite");
+const CONVENTION_PATH = resolve(process.cwd(), "../docs/alumdoor-item-code-mapping.json");
+if (existsSync(D1_PATH) && existsSync(CONVENTION_PATH)) {
+  const tenant = process.env.ALUMDOOR_TENANT || "demo";
+  const db = new DatabaseSync(D1_PATH, { readOnly: true });
+  const liveCodes = new Set(
+    db.prepare("SELECT name FROM documents WHERE tenant_id=? AND doctype='Item'").all(tenant).map((row) => row.name),
+  );
+  const conventionMap = new Map(
+    JSON.parse(await readFile(CONVENTION_PATH, "utf8")).mapping.map((row) => [row.from, row.to]),
+  );
+  const translation = translateSourceRecords(payload.items, createSourceCodeResolver({ conventionMap, liveCodes }));
+  payload.items = translation.records;
+  const stillMissing = payload.items.filter((item) => !liveCodes.has(item.item_code)).length;
+  console.log(`ALUMDOOR_ITEM_PAYLOAD_TRANSLATED changed=${translation.changed} unresolved=${translation.unresolved.size} not_in_d1=${stillMissing} live_items=${liveCodes.size}`);
+} else {
+  console.log("ALUMDOOR_ITEM_PAYLOAD_TRANSLATED skipped=no-d1-or-mapping");
+}
 
 await writeFile(payloadPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 await writeFile(auditPath, `${JSON.stringify(audit, null, 2)}\n`, "utf8");
