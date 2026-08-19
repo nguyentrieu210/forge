@@ -173,54 +173,61 @@ hợp lý, chạy trên 587 mã thật mới lộ ra chỗ nó ăn nhầm.
 | Họ bị gộp | 52 | Gộp là ĐÍCH (§5 nêu ví dụ 5 mã `AL595` về một), nhưng phải cố ý |
 | Chưa suy được tiền tố | 0 | — |
 
-### Còn lại: bước đổi mã thật — đo lại 19/08, chặn ở chỗ KHÁC với dự đoán ban đầu
+### Còn lại: bước đổi mã thật — đã dựng đường, đã chạy thử, dừng ở chỗ đo được
 
-Ghi chú cũ ở mục này nói bước thi hành chờ chủ xưởng duyệt. Đo trên D1 thật thì chỗ chặn nằm
-ở nơi khác, và cụ thể hơn nhiều.
+Cập nhật lần ba trong ngày. Mỗi lần chạy thật lại lộ một tầng chặn khác, và không tầng nào
+trùng với chỗ tôi đoán ban đầu ("chờ chủ xưởng duyệt").
 
-**Bề mặt tham chiếu — đã đếm, không ước lượng.** 1.934 dòng `documents` + 19 dòng
-`master_records` có nhắc tới mã hàng. Quan trọng: **mọi bảng giao dịch có cột `item_code` đều
-rỗng** (`stock_ledger_entries`, `sales_order_fulfillment_entries`, `stock_bundle_usage_entries`,
-`return_progress_entries`, `manufacturing_progress_entries`, …). Không có lô tồn nào phải sửa —
-lo ngại "mã đi vào lô tồn" ở bản ghi trước là **sai trên dữ liệu hiện tại**.
+**Đã dựng xong và đã chạy:** adapter `item-code-rename` qua guarded runner (INFRA → DATA →
+LOCK → BACKUP → IMPORT), đổi tên đi qua `frappe.client.rename_doc` với cascade — không có SQL
+thô nào. Lát đem chạy: **359 đổi tên một-đổi-một**, bỏ 215 mã thuộc 52 họ gộp và 13 mã vượt
+24 ký tự.
 
-Chỉ hai DocType có primary key nhúng mã hàng: `Item` (`name` == `item_code`, 587/587) và
-`Item Price` (`{price_list}:{item_code}:{uom}:{variant}`). `BOM Template` và `Bill of Materials`
-đặt tên theo số thứ tự nên không bị kéo theo.
+**Ba lỗi nền tảng phải vá mới chạy được**, cả ba có từ trước và không cái nào lộ ra nếu chỉ
+đọc code:
 
-**Chặn thật: nền tảng CẤM đổi tên document đang được tham chiếu.** `renameDocument` ném
-`errors.reference(...)` chứ không đổi tên xếp tầng. Trong 372 mã đổi tên 1:1 (không gộp, không
-cần đặt tên mới):
+| Lỗi | Đo được | Hệ quả nếu không vá |
+|---|---|---|
+| Guard tham chiếu dùng `json_each` (chỉ tầng trên cùng) | 3/76 mã bị bắt hụt | Đổi tên xong, 3 dòng `Purchase Receipt.items[]` trỏ vào mặt hàng không tồn tại |
+| `document_search` (2.796 dòng) + `document_views` không đi theo khi đổi tên | mọi lần đổi tên | `FOREIGN KEY constraint failed`, bọc thành HTTP 500 "Storage operation failed" |
+| `document_children` khoá ngoại theo doc_key, không có ON UPDATE | mọi Item (đều có `uom_conversions`) | Không thứ tự cập nhật nào hợp lệ — phải `defer_foreign_keys` |
 
-| | Số mã |
-|---|---:|
-| Guard của nền tảng **từ chối** | 296 |
-| Guard **cho qua** | 76 |
-| — trong đó guard **bắt hụt** (có tham chiếu lồng nhau) | 3 |
-| — thật sự không ai trỏ tới | 73 |
+Hai lỗi sau nghĩa là **đường đổi tên document chưa từng chạy được lần nào** trên nền tảng này.
+Bộ test không bắt được vì lược đồ trong test chép thiếu đúng các dòng `FOREIGN KEY` — không có
+ràng buộc thì không có gì để vi phạm. Đã chép đủ; test mới đỏ trên bản chưa vá.
 
-Ba mã bắt hụt là lỗi thật của kernel, **đã vá** (`json_each` → `json_tree`, xem test
-`document-rename-reference-guard.test.mjs`). Nếu không vá mà cứ chạy migration thì ba dòng
-`Purchase Receipt.items[].item_code` sẽ trỏ vào mặt hàng không còn tồn tại, lặng lẽ.
+### Vì sao migration vẫn CHƯA chạy — lần này là con số, không phải phỏng đoán
 
-**Vậy câu hỏi cho chủ xưởng đã đổi.** Không còn là "duyệt 13 tên và 52 họ gộp" — đó vẫn cần,
-nhưng nó không phải chỗ chặn. Chỗ chặn là:
+Cascade so **nguyên giá trị lá**, cố ý không đụng chuỗi con (thay chuỗi con là cách chắc chắn
+nhất để phá dữ liệu: `TP-CUA` nằm trong `TP-CUADL1LY`). Nhưng mã hàng còn sống ở dạng thứ ba —
+**nhúng trong khoá dẫn xuất** — và cascade không với tới:
 
-> Đổi 296 mã đang bị tham chiếu đòi hoặc (a) **đổi tên xếp tầng** dựng thẳng vào kernel, hoặc
-> (b) một migration **SQL thô đi vòng qua chính guard** vừa vá. Chọn (b) là tự tay tắt cái
-> chuông báo vừa lắp.
+| Khoá | Số lần | Dạng |
+|---|---:|---|
+| `rule_code` | 337 | `{mã cha}:{mã con}:{số thứ tự}` |
+| `deferred_components_json` | 100 | mảng JSON serialize thành chuỗi |
+| `title` / `exclusive_group` / `name` (Pricing Rule) | 56 mỗi loại | mã nhúng trong nhãn và khoá |
+| `Item Price.name` | 558 | `{bảng giá}:{mã}:{đvt}:{biến thể}` — **đã xử lý** trong importer |
+| `spec_code`, `material_specification` | 3+3 | `ĐM-{mã}` |
 
-Khuyến nghị: dựng (a). Danh sách trường phải sửa đã đo đủ và đóng — `item_code`, `parent_item`,
-`component_item`, `source_item_code`, `component_key`, `template_code`, `Bill of Materials.item`
-— và **không** đụng `*_name` (đó là tên hiển thị, không phải khoá).
+Adapter **tự chặn** ở đây: lần chạy 19/08 dừng đúng trước khi đổi bất cứ thứ gì, nhả khoá, D1
+nguyên vẹn 587 Item / 558 Item Price / 0 vi phạm khoá ngoại. Đó là hành vi đúng, không phải lỗi.
 
-**Không tự chạy 73 mã "tự do".** Chúng qua được cửa, nhưng đổi 73/587 mã để lại danh mục nửa
-theo quy ước nửa không — tệ hơn là chưa đổi. Đổi mã nên đi một lượt.
+Bốn khoá còn lại đều sửa được (`rule_code` cắt theo dấu hai chấm, `deferred_components_json`
+parse rồi ghi lại), nhưng mỗi cái cần một luật tái sinh riêng và phải ghi lại 349 BOM Template
+kèm dòng con qua API. Đó là việc riêng, lớn hơn hẳn "đổi tên mặt hàng", và làm dở sẽ để lại
+đúng cái đồ thị link vá nửa vời mà guard đổi tên sinh ra để ngăn.
 
-**Một chỗ cố ý không đụng:** `Material Specification.spec_code` = `ĐM-{mã hàng}`. Mã hàng nằm
-NHÚNG trong khoá của chính nó, và đó là danh tính riêng của Material Specification chứ không
-phải trường trỏ Item — không có trường link thật nào ở đây, liên kết chỉ theo quy ước đặt tên.
-Đổi nó là đổi danh tính thứ hai, ngoài phạm vi bảng ánh xạ. 5 bản ghi, cần chủ xưởng xác nhận.
+Muốn bỏ qua cổng chặn: `ALUMDOOR_RENAME_ALLOW_STALE_DERIVED_KEYS=1`. **Đừng dùng** trước khi có
+luật tái sinh — nó chỉ để chạy thử trên bản sao.
+
+### Ba nhóm vẫn cần chủ xưởng quyết
+
+| Nhóm | Số lượng | Vì sao máy không quyết được |
+|---|---:|---|
+| Vượt 24 ký tự | 13 | Rút ngắn là đặt tên, mà tên phải để xưởng đọc được |
+| Họ bị gộp | 52 họ (215 mã) | Gộp là ĐÍCH (§5 nêu ví dụ 5 mã `AL595` về một), nhưng phải cố ý |
+| `Material Specification.spec_code` = `ĐM-{mã}` | 5 | Là danh tính riêng của nó, không phải trường trỏ Item |
 
 Riêng `TRONBO` trong mã cần nói rõ: nhồi cách bán vào mã hàng chính là **dựng lại `Sales Option`
 qua cửa sau** — thứ đã bị xoá ở `46cff213` và audit 16/08 cấm đưa lại.
