@@ -1,4 +1,4 @@
-import { safeAddInt } from "../../core/src/index.js";
+import { divideRoundedBig, safeAddInt } from "../../core/src/index.js";
 import type { JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 
@@ -237,7 +237,5 @@ function safeAdd(left: number, right: number, field: string): number {
 }
 
 function divideRounded(numerator: bigint, denominator: bigint): bigint {
-  const quotient = numerator / denominator;
-  const remainder = numerator % denominator;
-  return remainder * 2n >= denominator ? quotient + 1n : quotient;
+  return divideRoundedBig(numerator, denominator, "Supplier policy divisor must be positive");
 }

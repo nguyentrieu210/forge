@@ -1,4 +1,4 @@
-import { safeAddInt } from "../../core/src/index.js";
+import { divideRoundedBig, safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
@@ -185,13 +185,7 @@ function safeSubtract(left: number, right: number): number {
 }
 
 function divideRounded(numerator: bigint, denominator: bigint): bigint {
-  if (denominator <= 0n) throw errors.validation("Manufacturing cost divisor must be positive");
-  const negative = numerator < 0n;
-  const absolute = negative ? -numerator : numerator;
-  const quotient = absolute / denominator;
-  const remainder = absolute % denominator;
-  const rounded = remainder * 2n >= denominator ? quotient + 1n : quotient;
-  return negative ? -rounded : rounded;
+  return divideRoundedBig(numerator, denominator, "Manufacturing cost divisor must be positive");
 }
 
 function safeNumber(value: bigint): number {

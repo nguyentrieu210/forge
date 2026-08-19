@@ -36,13 +36,13 @@ const LEDGER = {
     "packages/clouderp-pricing/src/index.ts": "adapter",
     "packages/clouderp-stock/src/valuation.ts": "adapter",
     "packages/money/src/index.ts": "adapter",
-    "packages/clouderp-core/src/supplier-policy.ts": "riêng",
-    "packages/clouderp-erpnext/src/manufacturing-capacity.ts": "riêng",
-    "packages/clouderp-erpnext/src/manufacturing-costing-read.ts": "riêng",
-    "packages/clouderp-erpnext/src/manufacturing-lifecycle.ts": "riêng",
+    "packages/clouderp-core/src/supplier-policy.ts": "adapter",
+    "packages/clouderp-erpnext/src/manufacturing-capacity.ts": "adapter",
+    "packages/clouderp-erpnext/src/manufacturing-costing-read.ts": "adapter",
+    "packages/clouderp-erpnext/src/manufacturing-lifecycle.ts": "adapter",
     "packages/clouderp-erpnext/src/manufacturing-mrp.ts": "riêng",
-    "packages/clouderp-erpnext/src/manufacturing-stock-guard.ts": "riêng",
-    "packages/clouderp-erpnext/src/manufacturing-work-order-guard.ts": "riêng",
+    "packages/clouderp-erpnext/src/manufacturing-stock-guard.ts": "adapter",
+    "packages/clouderp-erpnext/src/manufacturing-work-order-guard.ts": "adapter",
     "packages/semantic/src/planning.ts": "riêng",
   },
   safeAdd: {
@@ -130,6 +130,26 @@ test("divideRounded rounds half away from zero on both int and bigint paths", ()
       );
     }
   }
+});
+
+test("the manufacturing shortcut agrees with the shared rule on every non-negative input", () => {
+  // Bốn file sản xuất từng chia bằng (n + d/2) / d. Với số KHÔNG âm phép này cho kết quả y
+  // hệt luật nửa-lên dùng chung, nên gom lại là đổi không hành vi — chứng minh bằng vét cạn.
+  const shortcut = (numerator, denominator) => (numerator + denominator / 2n) / denominator;
+  for (let numerator = 0n; numerator <= 400n; numerator++) {
+    for (const denominator of [1n, 2n, 3n, 4n, 5n, 7n, 8n, 60n, 1000n, 1_000_000n]) {
+      assert.equal(
+        shortcut(numerator, denominator),
+        divideRoundedBig(numerator, denominator),
+        `lệch tại ${numerator}/${denominator}`,
+      );
+    }
+  }
+  // Khác biệt duy nhất nằm ở số ÂM: phép cũ cắt về 0, luật chung làm tròn ra xa 0.
+  assert.equal(shortcut(-3n, 4n), 0n);
+  assert.equal(divideRoundedBig(-3n, 4n), -1n);
+  assert.equal(shortcut(-2n, 4n), 0n);
+  assert.equal(divideRoundedBig(-2n, 4n), -1n);
 });
 
 test("guards reject unusable divisors and integer overflow with the caller's message", () => {

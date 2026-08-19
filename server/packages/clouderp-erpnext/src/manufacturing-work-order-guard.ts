@@ -1,6 +1,6 @@
 import type { JsonObject } from "../../contracts/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
-import { errors } from "../../core/src/index.js";
+import { divideRoundedBig, errors } from "../../core/src/index.js";
 import { fromScaledInt } from "../../money/src/index.js";
 import type { WorkOrderData, WorkOrderRequiredItem } from "./types.js";
 import {
@@ -113,8 +113,7 @@ function scaleMinor(value: number, numerator: number, denominator: number): numb
 }
 
 function divideRounded(numerator: bigint, denominator: bigint): bigint {
-  if (denominator <= 0n) throw new RangeError("denominator must be positive");
-  return (numerator + denominator / 2n) / denominator;
+  return divideRoundedBig(numerator, denominator, "Manufacturing divisor must be positive");
 }
 
 function safeNumber(value: bigint): number {

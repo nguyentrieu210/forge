@@ -1,4 +1,4 @@
-import { safeAddInt } from "../../core/src/index.js";
+import { divideRoundedBig, safeAddInt } from "../../core/src/index.js";
 import type { CanonicalDocument, JsonObject } from "../../contracts/src/index.js";
 import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
@@ -495,8 +495,7 @@ function multiplyMicros(left: number, right: number): number {
 }
 
 function divideRounded(numerator: bigint, denominator: bigint): bigint {
-  if (denominator <= 0n) throw errors.validation("Capacity divisor must be positive");
-  return (numerator + denominator / 2n) / denominator;
+  return divideRoundedBig(numerator, denominator, "Capacity divisor must be positive");
 }
 
 function safeNumber(value: bigint): number {
