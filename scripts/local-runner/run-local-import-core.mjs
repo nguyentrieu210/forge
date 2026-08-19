@@ -356,7 +356,7 @@ function releaseLock(lockPath, runId) {
   console.log(`GLOBAL_D1_LOCK=RELEASED path=${lockPath} run_id=${runId}`);
 }
 
-async function requireUrl(url, acceptedStatuses, label) {
+async function probeUrl(url, acceptedStatuses, label) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
@@ -372,17 +372,43 @@ async function requireUrl(url, acceptedStatuses, label) {
   }
 }
 
+/**
+ * `waitMs` — chờ dịch vụ SỐNG LẠI, không phải nới lỏng điều kiện.
+ *
+ * `restoreRuntime` tắt cờ maintenance rồi trả về ngay; nó chỉ chờ sẵn sàng cho Desk
+ * (`ALUMDOOR_RUNTIME_DESK_READY`), không chờ backend. Backend vừa bị recycle nên cần vài
+ * giây mới nghe lại cổng 8799 — mà `requireApi` lại bắn đúng một phát rồi bỏ cuộc. Kết quả:
+ * `layer0` ghi D1 xong, mở maintenance, rồi TỰ ĐÁNH TRƯỢT ở bước ngay sau đó, lần nào cũng
+ * hệt nhau. Đây là chạy đua về thời điểm, không phải hạ tầng hỏng.
+ *
+ * Ngưỡng vẫn là ngưỡng: hết `waitMs` mà chưa lên thì ném đúng lỗi ENV như cũ.
+ */
+async function requireUrl(url, acceptedStatuses, label, { waitMs = 0 } = {}) {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    try {
+      await probeUrl(url, acceptedStatuses, label);
+      return;
+    } catch (error) {
+      if (Date.now() >= deadline) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 async function requireApi(origin) {
   assertLoopbackOrigin(origin);
   await requireUrl(
     `${origin.replace(/\/$/, '')}/api/method/metaforge.api.get_boot`,
     [200, 401, 403],
     'Local API',
+    { waitMs: 90_000 },
   );
 }
 
 async function requireUi() {
-  await requireUrl('http://127.0.0.1:5173', [200], 'Local UI');
+  // Cùng lý do với requireApi: Desk vừa bị recycle thì Vite cần thời gian dựng lại.
+  await requireUrl('http://127.0.0.1:5173', [200], 'Local UI', { waitMs: 90_000 });
 }
 
 function runBackup(repoRoot) {
