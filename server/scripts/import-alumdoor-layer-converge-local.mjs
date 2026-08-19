@@ -41,7 +41,7 @@ const LAYER_PLAN = {
     alignFields: { Warehouse: ['warehouse_name', 'parent_warehouse'] },
   },
   L1: { retireUndeclared: [], alignFields: {} },
-  L2: { retireUndeclared: [], alignFields: {} },
+  L2: { retireUndeclared: [], alignFields: {}, retireEmptyDuplicateItems: true },
   L3: { retireUndeclared: [], alignFields: {} },
   L4: { retireUndeclared: [], alignFields: {} },
   L5: { retireUndeclared: [], alignFields: {} },
@@ -161,6 +161,80 @@ async function buildReferenceIndex(excludeDoctype) {
   return counts;
 }
 
+/**
+ * Mã trùng tên mà RỖNG HOÀN TOÀN thì cho nghỉ hưu.
+ *
+ * Bối cảnh: `Item` cố ý KHÔNG có trường màu. Màu là thuộc tính của DÒNG chứng từ — mọi dòng
+ * bán/mua/sản xuất đều có `color` Link(Item Color), và có hẳn doctype `Paint Job` vì xưởng sơn
+ * theo đơn. Vậy mà 85 mã hàng nhồi màu vào chính mã, đẻ ra `NVL-RHM8-GS` / `-VK` / `-THÔ` bên
+ * cạnh `RAY-RAYHOP` — bốn mã cho một thanh ray.
+ *
+ * Chỉ động vào ca KHÔNG THỂ NHẦM: trong một nhóm cùng tên + cùng nhóm hàng, có ĐÚNG MỘT mã mang
+ * giá / định mức / đã đi vào chứng từ, còn các mã kia không có gì cả — không giá, không định
+ * mức, không nơi nào nhắc tới. Mã như thế không giữ thông tin nào để mất.
+ *
+ * Nghỉ hưu chứ không xoá: sai thì bật lại một cái là xong, mà mọi dòng chứng từ vẫn chọn được
+ * màu như thiết kế vốn có.
+ */
+async function retireEmptyDuplicateItems() {
+  const items = [];
+  for (const row of await listAll('Item', ['name'])) {
+    const doc = await readDoc('Item', row.name);
+    if (!doc || doc.disabled === 1 || doc.disabled === true) continue;
+    items.push(doc);
+  }
+  const priceCount = new Map();
+  for (const row of await listAll('Item Price', ['name', 'item_code', 'disabled'])) {
+    if (row.disabled === 1 || row.disabled === true) continue;
+    priceCount.set(String(row.item_code ?? ''), (priceCount.get(String(row.item_code ?? '')) ?? 0) + 1);
+  }
+  const bomCount = new Map();
+  for (const row of await listAll('Bill of Materials', ['name', 'item'])) {
+    bomCount.set(String(row.item ?? ''), (bomCount.get(String(row.item ?? '')) ?? 0) + 1);
+  }
+  // Đếm lượt được nhắc tới, bỏ qua chính Item/Item Price/Bill of Materials vì đã đếm riêng.
+  const usage = new Map();
+  for (const meta of brief.doctypes ?? []) {
+    if (meta.is_child || ['Item', 'Item Price', 'Bill of Materials'].includes(meta.name)) continue;
+    let rows; try { rows = await listAll(meta.name, ['name']); } catch { continue; }
+    for (const row of rows) {
+      const doc = await readDoc(meta.name, row.name);
+      if (!doc) continue;
+      const seen = new Set();
+      (function walk(value) {
+        if (typeof value === 'string') { seen.add(value); return; }
+        if (Array.isArray(value)) { for (const entry of value) walk(entry); return; }
+        if (value && typeof value === 'object') for (const entry of Object.values(value)) walk(entry);
+      })(doc);
+      for (const value of seen) usage.set(value, (usage.get(value) ?? 0) + 1);
+    }
+  }
+  const empty = (doc) => (priceCount.get(doc.name) ?? 0) === 0
+    && (bomCount.get(doc.name) ?? 0) === 0
+    && (usage.get(doc.name) ?? 0) === 0;
+
+  const groups = new Map();
+  for (const doc of items) {
+    const label = String(doc.item_name ?? '').trim().toUpperCase();
+    if (!label) continue;
+    const key = `${String(doc.item_group ?? '')} ${label}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(doc);
+  }
+  const out = [];
+  for (const members of groups.values()) {
+    if (members.length < 2) continue;
+    const keepers = members.filter((doc) => !empty(doc));
+    const empties = members.filter((doc) => empty(doc));
+    if (keepers.length !== 1 || empties.length === 0) continue;
+    for (const doc of empties) {
+      await saveDoc('Item', doc.name, { disabled: 1, modified: doc.modified });
+      out.push({ doctype: 'Item', name: doc.name, item_name: doc.item_name, kept: keepers[0].name });
+    }
+  }
+  return out;
+}
+
 const retired = [];
 const keptBecauseUsed = [];
 const aligned = [];
@@ -179,6 +253,8 @@ for (const doctype of plan.retireUndeclared) {
     retired.push({ doctype, name: row.name });
   }
 }
+
+if (plan.retireEmptyDuplicateItems) retired.push(...await retireEmptyDuplicateItems());
 
 for (const [doctype, fields] of Object.entries(plan.alignFields)) {
   const declared = fixtureData(doctype);
