@@ -121,11 +121,14 @@ function backup(root) {
 }
 
 function authEnv(origin) {
+  const previousNodeOptions = process.env.NODE_OPTIONS ?? '';
+  const modifiedShimUrl = new URL('./bom-put-modified-shim.mjs', import.meta.url).href;
   return {
     FORGE_ORIGIN: origin,
     FORGE_ADMIN_USER: process.env.FORGE_ADMIN_USER || 'dev@example.com',
     FORGE_ADMIN_PASSWORD: process.env.FORGE_ADMIN_PASSWORD || 'local-dev-password-1',
     FORGE_LOCAL_REPO_ROOT: process.env.FORGE_LOCAL_REPO_ROOT || DEFAULT_REPO_ROOT,
+    NODE_OPTIONS: [previousNodeOptions, `--import=${modifiedShimUrl}`].filter(Boolean).join(' '),
   };
 }
 
