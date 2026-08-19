@@ -20,6 +20,7 @@ const ALLOWED = new Set([
   'bom-rule',
   'customer',
   'manufacturing-master',
+  'item-code-rename',
 ]);
 
 function run(command, args, { cwd, capture = true, allowFailure = false, env } = {}) {
