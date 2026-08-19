@@ -117,7 +117,7 @@ export function RuntimeLinkControl(props: FieldControlProps) {
   const [open, setOpen] = useState(false);
   const [txt, setTxt] = useState("");
   const [pageLength, setPageLength] = useState(INITIAL_LINK_PAGE);
-  const [options, setOptions] = useState<Array<{ value: string; description?: string }>>([]);
+  const [options, setOptions] = useState<Array<{ value: string; label?: string; description?: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -216,15 +216,23 @@ export function RuntimeLinkControl(props: FieldControlProps) {
               {loading && !options.length ? <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />{t("control.link_searching")}</div> : null}
               {failed ? <div className="px-3 py-3 text-sm text-destructive" role="alert">{t("control.link_load_failed")}</div> : null}
               {!loading && !failed && options.length === 0 ? <CommandEmpty>{t("control.link_no_results")}</CommandEmpty> : null}
-              {options.map((option) => (
-                <CommandItem key={option.value} value={option.value} onSelect={() => { props.onChange(option.value); setPickedDesc(option.description); setOpen(false); }}>
+              {options.map((option) => {
+                const display = props.compact && option.label === option.value && option.description && option.description !== option.value
+                  ? { primary: option.value, secondary: option.description }
+                  : props.compact
+                    ? { primary: option.label || option.description || option.value }
+                    : linkDisplay(option);
+                const picked = props.compact ? (option.label || option.description || option.value) : option.description;
+                return (
+                <CommandItem key={option.value} value={option.value} onSelect={() => { props.onChange(option.value); setPickedDesc(picked); setOpen(false); }}>
                   <Check className={cn("mr-2 size-4 shrink-0", option.value === value ? "opacity-100" : "opacity-0")} />
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate">{linkDisplay(option).primary}</span>
-                    {linkDisplay(option).secondary ? <span className="truncate text-xs text-muted-foreground">{linkDisplay(option).secondary}</span> : null}
+                    <span className="truncate">{display.primary}</span>
+                    {display.secondary ? <span className="truncate text-xs text-muted-foreground">{display.secondary}</span> : null}
                   </span>
                 </CommandItem>
-              ))}
+                );
+              })}
               {hasMore ? (
                 <div className="border-t p-2">
                   <Button type="button" variant="ghost" size="sm" className="w-full" disabled={loading} onClick={() => setPageLength((current) => Math.min(MAX_LINK_PAGE, current + LINK_PAGE_STEP))}>

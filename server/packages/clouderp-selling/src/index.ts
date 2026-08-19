@@ -2,6 +2,7 @@ export * from "./adjustment-policy.js";
 export * from "./commercial-line-resolver.js";
 export * from "./commercial-sales-order-controller.js";
 export * from "./controllers.js";
+export * from "./delivery-allocation-preview.js";
 export * from "./crm-channel-controllers.js";
 export * from "./crm-channel-evidence-controllers.js";
 export * from "./crm-channel-evidence-guards.js";

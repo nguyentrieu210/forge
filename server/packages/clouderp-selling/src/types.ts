@@ -4,6 +4,7 @@ import type { UomLine } from "../../clouderp-core/src/types.js";
 import type { TaxRow } from "../../clouderp-core/src/tax-types.js";
 export type { TaxAddDeduct, TaxChargeType, TaxRow } from "../../clouderp-core/src/tax-types.js";
 import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
+import type { FifoAllocation } from "../../clouderp-stock/src/valuation.js";
 
 export interface SalesItem extends UomLine {
   row_id: string;
@@ -18,6 +19,8 @@ export interface SalesItem extends UomLine {
   valuation_rate?: DecimalInput;
   valuation_rate_minor?: number;
   stock_value_difference_minor?: number;
+  /** Server-owned FIFO layer lineage used by submit preview and audit. */
+  fifo_allocations?: FifoAllocation[];
   income_account?: string;
   delivered_qty?: DecimalInput;
   billed_qty?: DecimalInput;
@@ -38,6 +41,8 @@ export interface SalesItem extends UomLine {
   sales_package_snapshot?: JsonObject;
   /** Exact Sales Order child-row identity used by Delivery/Billing progress. */
   sales_order_row_id?: string;
+  /** Sales Order owning this physical delivery row. Required for multi-order Delivery Notes. */
+  sales_order?: string;
   /** Exact component within a frozen package when the physical line fulfills a package parent. */
   sales_package_component_key?: string;
   /** Stable commercial group key on a package parent row. */
@@ -75,6 +80,15 @@ export interface SalesItem extends UomLine {
   taxable_adjustment_amount_minor?: number;
   pricing_as_of?: string | undefined;
   pricing_rule_snapshots?: PricingRuleSnapshot[];
+  /** Non-monetary commercial entitlements; never included in selling totals or BOM. */
+  benefit_items?: Array<{
+    item_code?: string;
+    item_name?: string;
+    qty: number;
+    uom: string;
+    label: string;
+    source_rule: string;
+  }>;
   /** Source Quotation child row. Required when a Sales Order declares against_quotation. */
   quotation_item?: string;
 }
@@ -105,6 +119,12 @@ interface SalesTotalsData extends JsonObject {
   vat_amount?: DecimalInput | undefined;
   vat_amount_minor?: number;
   vat_base_amount?: DecimalInput | undefined;
+  /** Deposit recorded on the Sales Order; it does not reduce sales revenue. */
+  deposit_amount?: DecimalInput | undefined;
+  deposit_amount_minor?: number;
+  /** Amount still collectible after the order deposit. */
+  outstanding_amount?: DecimalInput | undefined;
+  outstanding_amount_minor?: number;
 }
 
 interface CurrencyContextData extends JsonObject {
@@ -156,6 +176,8 @@ export interface DeliveryNoteData extends JsonObject {
   currency_scale?: number;
   posting_at: string;
   against_sales_order?: string;
+  /** All submitted Sales Orders represented by the child rows (server-derived). */
+  source_sales_orders?: string[];
   issue_purpose?: DeliveryIssuePurpose;
   allow_negative_stock?: boolean;
   items: SalesItem[];

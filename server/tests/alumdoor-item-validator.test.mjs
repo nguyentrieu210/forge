@@ -290,11 +290,25 @@ test("Sales transaction accepts m2 commercial UOM for canonical set-stock finish
   const response = await validateDocument("Sales Order", {
     company: "ALUMDOOR",
     customer: "KH-TEST",
-    customer_group: "Khách lẻ",
-    items: [{ item_code: item.item_code, qty: 2, uom: "m2" }],
+    customer_group: "Lẻ",
+    items: [{ item_code: item.item_code, qty: 2, uom: "m2", width_m: 1, height_m: 2, set_count: 1 }],
   }, {
     ["Item:" + item.item_code]: item,
-    "Customer:KH-TEST": { customer_name: "Khách thử", price_group: "Khách lẻ", disabled: 0 },
+    "Customer:KH-TEST": { customer_name: "Khách thử", price_group: "Lẻ", disabled: 0 },
+  });
+  assert.equal(response.status, 200, await message(response));
+});
+
+test("Sales transaction accepts a valid price group selected differently from the customer default", async () => {
+  const item = canonicalFinishedDoor();
+  const response = await validateDocument("Sales Order", {
+    company: "ALUMDOOR",
+    customer: "KH-TEST",
+    customer_group: "Lẻ",
+    items: [{ item_code: item.item_code, qty: 2, uom: "m2", width_m: 1, height_m: 2, set_count: 1 }],
+  }, {
+    ["Item:" + item.item_code]: item,
+    "Customer:KH-TEST": { customer_name: "Khách thử", price_group: "Đại lý", disabled: 0 },
   });
   assert.equal(response.status, 200, await message(response));
 });

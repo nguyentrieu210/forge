@@ -212,7 +212,10 @@ export async function salesItemContext(call: SalesPlatformCall, args: Json): Pro
   // so existing local D1 data does not need a destructive re-import just to sell in m².
   const isAreaFinished = [inventoryMode, measurementProfile]
     .some((value) => normalizedKey(value) === "thành phẩm theo m2");
-  const effectiveInventoryMode = inventoryMode || (isAreaFinished ? "Thành phẩm theo m2" : "");
+  // Dữ liệu Item cũ có thể chưa chụp inventory_mode. Các mặt hàng đó vẫn đi theo
+  // đường số lượng trực tiếp như mặc định metadata, không được trả context rỗng rồi
+  // làm SL và Khối lượng lệch nhau trên màn bán.
+  const effectiveInventoryMode = isAreaFinished ? "Thành phẩm theo m2" : inventoryMode || "Hàng thường";
   const explicitDoorType = normalizedText(item.door_type);
   const effectiveDoorType = explicitDoorType
     || (isAreaFinished ? (inferDoorType(undefined, item.item_group) ?? "") : "");

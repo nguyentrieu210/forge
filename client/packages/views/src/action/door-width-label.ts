@@ -4,13 +4,11 @@ import type { AppAction, AppActionField } from "@metaforge/core";
 export function actionFieldLabel(
   action: Pick<AppAction, "name">,
   field: Pick<AppActionField, "fieldname" | "label">,
-  values: Record<string, unknown>,
+  _values: Record<string, unknown>,
 ): string {
-  if (action.name !== "tinh-cong-thuc-cua" || field.fieldname !== "width_m") return field.label;
-
-  const customerGroup = String(values.customer_group ?? "").trim();
-  if (customerGroup === "Đại lý") return "Rộng PB nhựa (m)";
-  if (customerGroup === "Lẻ") return "Rộng PB ray (m)";
+  if (action.name !== "tinh-cong-thuc-cua") return field.label;
+  if (field.fieldname === "width_pb_ray_m") return "Rộng PB ray (m)";
+  if (field.fieldname === "width_pb_nhua_m") return "Rộng PB nhựa (m)";
   return field.label;
 }
 
@@ -21,12 +19,13 @@ export function isActionFieldVisible(
 ): boolean {
   if (action.name !== "tinh-cong-thuc-cua") return true;
   const customerGroup = String(values.customer_group ?? "").trim();
+  if (field.fieldname === "width_m") return customerGroup !== "Lẻ" && customerGroup !== "Đại lý";
   if (field.fieldname === "width_pb_ray_m") return customerGroup === "Lẻ";
   if (field.fieldname === "width_pb_nhua_m") return customerGroup === "Đại lý";
   return true;
 }
 
-/** Chuyển hai ô trình bày riêng về width_m mà API công thức đang dùng. */
+/** Chuẩn hoá field PB đang dùng về width_m mà API công thức hiện hữu đọc. */
 export function actionRequestValues(
   action: Pick<AppAction, "name">,
   values: Record<string, unknown>,

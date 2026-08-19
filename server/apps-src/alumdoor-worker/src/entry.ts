@@ -18,6 +18,7 @@ import { handlePurchaseSupplierDashboard } from "./purchase-supplier-dashboard.j
 import { handlePurchaseSupplierSettlement } from "./purchase-supplier-settlement.js";
 import { handleProductionRequestLifecycle } from "./production-request-lifecycle-route.js";
 import { handleCustomerImportRequest } from "./customer-import.js";
+import { handleBulkSalesDelivery } from "./bulk-sales-delivery.js";
 
 type WorkerEnv = Parameters<typeof baseWorker.fetch>[1];
 type WorkerContext = Parameters<typeof baseWorker.fetch>[2];
@@ -54,6 +55,8 @@ export default {
       if (method === "alumdoor.purchase.fifo_receipt") return handleTrackedPurchaseFifoRequest(request, env, true, false);
       if (method === "alumdoor.purchase.preview_bulk_fifo_receipt") return handleTrackedPurchaseFifoRequest(request, env, false, true);
       if (method === "alumdoor.purchase.bulk_fifo_receipt") return handleTrackedPurchaseFifoRequest(request, env, true, true);
+      if (method === "alumdoor.sales.preview_bulk_delivery") return handleBulkSalesDelivery(request, env.PLATFORM, false);
+      if (method === "alumdoor.sales.bulk_delivery") return handleBulkSalesDelivery(request, env.PLATFORM, true);
       if (method === "alumdoor.inventory.plan_sales_order") return handleAluminumSalesPlan(request, env);
       if (method === "alumdoor.inventory.reserve_sales_order") return handleReserveAluminumForSales(request, env);
       if (method === "alumdoor.inventory.material_request_from_shortage") return handleMaterialRequestFromAluminumShortage(request, env);

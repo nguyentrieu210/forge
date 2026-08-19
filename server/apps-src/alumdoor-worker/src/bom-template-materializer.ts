@@ -1,8 +1,12 @@
 import {
   resolveBomTemplate,
+  resolveBomTemplateComposition,
+  resolveBomTemplatePreview,
   type BomComponentRule,
   type BomConditions,
-  type BomQuantityFormula,
+  type PreviewResolvedBomComponent,
+  type ResolvedBomCompositionComponent,
+  type StoredBomQuantityFormula,
   type BomTemplateDefinition,
   type ResolvedBomTemplate,
 } from "./bom-template-core.js";
@@ -19,6 +23,8 @@ type Json = Record<string, unknown>;
 
 interface RawBomTemplate extends Json {
   name?: unknown;
+  modified?: unknown;
+  modified_at?: unknown;
   template_code?: unknown;
   item_code?: unknown;
   conditions_json?: unknown;
@@ -93,7 +99,16 @@ export interface BomPreviewResult extends BomMaterializationResult {
 export interface BomRequirementInspectionResult {
   bom_template: string;
   bom_template_code: string;
-  components: ResolvedBomTemplate["components"];
+  components: PreviewResolvedBomComponent[];
+  actual_requirements: BomActualRequirement[];
+  missing_actual_component_keys: string[];
+  actual_complete: boolean;
+}
+
+export interface SalesBomCompositionInspectionResult {
+  bom_template: string;
+  bom_template_code: string;
+  components: ResolvedBomCompositionComponent[];
   actual_requirements: BomActualRequirement[];
   missing_actual_component_keys: string[];
   actual_complete: boolean;
@@ -159,10 +174,10 @@ function conditions(value: unknown, label: string): BomConditions {
   return output;
 }
 
-function quantityFormula(value: unknown, label: string): BomQuantityFormula {
+function quantityFormula(value: unknown, label: string): StoredBomQuantityFormula {
   const parsed = parseJson<unknown>(value, null, label);
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error(`${label}: phải là object JSON.`);
-  return parsed as BomQuantityFormula;
+  return parsed as StoredBomQuantityFormula;
 }
 
 function parseComponentRule(raw: RawBomComponentRule, templateCode: string, index: number): BomComponentRule {
@@ -193,8 +208,10 @@ export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefiniti
   const rows = Array.isArray(raw.component_rules)
     ? raw.component_rules.filter((entry): entry is RawBomComponentRule => Boolean(entry) && typeof entry === "object")
     : [];
+  const componentRules = rows.map((row, index) => parseComponentRule(row, templateCode, index));
   return {
     source_name: sourceName,
+    ...(text(raw.modified ?? raw.modified_at) ? { modified: text(raw.modified ?? raw.modified_at) } : {}),
     template_code: templateCode,
     item_code: itemCode,
     conditions: conditions(raw.conditions_json, `${templateCode}.conditions_json`),
@@ -204,7 +221,7 @@ export function parseBomTemplateRecord(raw: RawBomTemplate): BomTemplateDefiniti
     required_component_keys: stringArray(raw.required_component_keys_json, `${templateCode}.required_component_keys_json`),
     required_actual_component_keys: stringArray(raw.required_actual_component_keys_json, `${templateCode}.required_actual_component_keys_json`),
     actual_component_allowed_items: stringArrayMap(raw.actual_component_allowed_items_json, `${templateCode}.actual_component_allowed_items_json`),
-    component_rules: rows.map((row, index) => parseComponentRule(row, templateCode, index)),
+    component_rules: componentRules,
   };
 }
 
@@ -221,14 +238,22 @@ async function listDocs<T extends Json>(
   filters: unknown[] = [],
   limit = 500,
 ): Promise<T[]> {
-  const query = new URLSearchParams({
-    fields: JSON.stringify(fields),
-    filters: JSON.stringify(filters),
-    limit_page_length: String(limit),
-  });
-  const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
-  if (!response.ok) throw new Error(`Không đọc được danh sách ${doctype} (HTTP ${response.status}).`);
-  return (((await response.json()) as { data?: T[] }).data ?? []);
+  const output: T[] = [];
+  while (output.length < limit) {
+    const pageLength = Math.min(100, limit - output.length);
+    const query = new URLSearchParams({
+      fields: JSON.stringify(fields),
+      filters: JSON.stringify(filters),
+      limit_start: String(output.length),
+      limit_page_length: String(pageLength),
+    });
+    const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
+    if (!response.ok) throw new Error(`Không đọc được danh sách ${doctype} (HTTP ${response.status}).`);
+    const page = (((await response.json()) as { data?: T[] }).data ?? []);
+    output.push(...page);
+    if (page.length < pageLength) break;
+  }
+  return output.slice(0, limit);
 }
 
 async function createDoc<T extends Json>(call: BomMaterializerCall, doctype: string, document: T): Promise<T & { name: string }> {
@@ -250,8 +275,17 @@ async function submitDoc(call: BomMaterializerCall, doctype: string, name: strin
   if (!response.ok) throw new Error(`Không ghi sổ được ${doctype} ${name}: ${(await response.text()).slice(0, 220)}`);
 }
 
-async function loadTemplates(call: BomMaterializerCall): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[]; actual_component_allowed_items: Record<string, string[]> }>> {
-  const names = await listDocs<{ name?: string }>(call, "BOM Template", ["name"], [], 200).catch(() => []);
+async function loadTemplates(call: BomMaterializerCall, itemCode: string): Promise<Array<BomTemplateDefinition & { source_name: string; required_actual_component_keys: string[]; actual_component_allowed_items: Record<string, string[]> }>> {
+  // The tenant list endpoint caps each response at 100 rows. Filter by the
+  // finished item before reading template documents so an older exact template
+  // cannot disappear behind unrelated catalog rows.
+  const names = await listDocs<{ name?: string }>(
+    call,
+    "BOM Template",
+    ["name"],
+    itemCode ? [["item_code", "=", itemCode]] : [],
+    500,
+  ).catch(() => []);
   if (!names.length) return [];
   const docs = await Promise.all(names.map(async (row) => {
     const name = text(row.name);
@@ -369,20 +403,59 @@ async function nextRevision(call: BomMaterializerCall, itemCode: string): Promis
   return rows.reduce((max, row) => Math.max(max, Math.trunc(Number(row.revision ?? 0)) || 0), 0) + 1;
 }
 
+/**
+ * Sales-only composition lookup. This path selects the same active template
+ * and conditional component rules as production, but deliberately does not
+ * evaluate production quantities. Sales dimensions and quantities are added
+ * later from the parent Sales Order Item and each child Item master.
+ */
+export async function inspectSalesLineBomComposition(
+  call: BomMaterializerCall,
+  line: BomProductionLineInput,
+): Promise<SalesBomCompositionInspectionResult> {
+  const templates = await loadTemplates(call, line.item_code);
+  if (!templates.length) {
+    throw new Error(`${line.item_code}: chưa cấu hình danh sách cấu thành BOM bán hàng.`);
+  }
+  const { context } = bomContextFromProductionLine(line);
+  const resolved = resolveBomTemplateComposition({ templates, context });
+  if (resolved.item_code !== line.item_code) {
+    throw new Error(`${resolved.template_code}: thành phẩm ${resolved.item_code} không khớp dòng bán ${line.item_code}.`);
+  }
+  const source = templates.find((template) => template.source_name === resolved.source_name)
+    ?? templates.find((template) => template.template_code === resolved.template_code);
+  if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);
+  const inspection = inspectBomActualComponents({
+    template_code: resolved.template_code,
+    ...(line.bom_actual_components === undefined ? {} : { actual_components: line.bom_actual_components }),
+    required_actual_component_keys: source.required_actual_component_keys,
+    allowed_item_codes_by_key: source.actual_component_allowed_items,
+  });
+  return {
+    bom_template: source.source_name,
+    bom_template_code: resolved.template_code,
+    components: resolved.components,
+    actual_requirements: inspection.requirements,
+    missing_actual_component_keys: inspection.missing_component_keys,
+    actual_complete: inspection.complete,
+  };
+}
+
 export async function inspectProductionLineBomRequirements(
   call: BomMaterializerCall,
   line: BomProductionLineInput,
 ): Promise<BomRequirementInspectionResult> {
-  const templates = await loadTemplates(call);
+  const templates = await loadTemplates(call, line.item_code);
   if (!templates.length) {
     throw new Error(`${line.item_code}: chưa có BOM tĩnh và chưa cấu hình BOM Template.`);
   }
   const { context, values } = bomContextFromProductionLine(line);
-  const resolved = resolveBomTemplate({ templates, context, values });
+  const resolved = resolveBomTemplatePreview({ templates, context, values });
   if (resolved.item_code !== line.item_code) {
     throw new Error(`${resolved.template_code}: thành phẩm ${resolved.item_code} không khớp dòng bán ${line.item_code}.`);
   }
-  const source = templates.find((template) => template.template_code === resolved.template_code);
+  const source = templates.find((template) => template.source_name === resolved.source_name)
+    ?? templates.find((template) => template.template_code === resolved.template_code);
   if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);
   const inspection = inspectBomActualComponents({
     template_code: resolved.template_code,
@@ -404,7 +477,7 @@ export async function previewProductionLineBom(
   call: BomMaterializerCall,
   input: { line: BomProductionLineInput; company: string },
 ): Promise<BomPreviewResult> {
-  const templates = await loadTemplates(call);
+  const templates = await loadTemplates(call, input.line.item_code);
   if (!templates.length) {
     throw new Error(`${input.line.item_code}: chưa có BOM tĩnh và chưa cấu hình BOM Template.`);
   }
@@ -413,7 +486,8 @@ export async function previewProductionLineBom(
   if (resolved.item_code !== input.line.item_code) {
     throw new Error(`${resolved.template_code}: thành phẩm ${resolved.item_code} không khớp dòng bán ${input.line.item_code}.`);
   }
-  const source = templates.find((template) => template.template_code === resolved.template_code);
+  const source = templates.find((template) => template.source_name === resolved.source_name)
+    ?? templates.find((template) => template.template_code === resolved.template_code);
   if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);
   const inspection = inspectBomActualComponents({
     template_code: resolved.template_code,
@@ -468,7 +542,7 @@ export async function resolveProductionLineBom(
     materialize: boolean;
   },
 ): Promise<BomMaterializationResult> {
-  const templates = await loadTemplates(call);
+  const templates = await loadTemplates(call, input.line.item_code);
   if (!templates.length) {
     throw new Error(`${input.line.item_code}: chưa có BOM tĩnh và chưa cấu hình BOM Template.`);
   }
@@ -477,7 +551,8 @@ export async function resolveProductionLineBom(
   if (resolved.item_code !== input.line.item_code) {
     throw new Error(`${resolved.template_code}: thành phẩm ${resolved.item_code} không khớp dòng bán ${input.line.item_code}.`);
   }
-  const source = templates.find((template) => template.template_code === resolved.template_code);
+  const source = templates.find((template) => template.source_name === resolved.source_name)
+    ?? templates.find((template) => template.template_code === resolved.template_code);
   if (!source) throw new Error(`${resolved.template_code}: không xác định được BOM Template nguồn.`);
   const resolvedWithActuals = mergeBomActualComponents({
     resolved,

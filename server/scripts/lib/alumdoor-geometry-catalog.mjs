@@ -65,10 +65,11 @@ export const GEOMETRY_PROFILES = Object.freeze([
     fields: Object.freeze([
       row("PB_CAO", "INPUT", { required: true, sequence: 10 }),
       row("PB_RAY_RONG", "INPUT", { required: true, sequence: 20 }),
-      row("CAT_LA_RONG", "CALCULATED", { sequence: 30 }),
-      row("RAY_DAI", "CALCULATED", { sequence: 40 }),
-      row("V4_DAI", "CALCULATED", { sequence: 50 }),
-      row("TRUC_DAI", "CALCULATED", { sequence: 60 }),
+      row("LUOI_CAO", "INPUT", { required: false, sequence: 30 }),
+      row("CAT_LA_RONG", "CALCULATED", { sequence: 40 }),
+      row("RAY_DAI", "CALCULATED", { sequence: 50 }),
+      row("V4_DAI", "CALCULATED", { sequence: 60 }),
+      row("TRUC_DAI", "CALCULATED", { sequence: 70 }),
     ]),
   }),
   Object.freeze({
@@ -78,7 +79,8 @@ export const GEOMETRY_PROFILES = Object.freeze([
     fields: Object.freeze([
       row("PB_CAO", "INPUT", { required: true, sequence: 10 }),
       row("PB_RAY_RONG", "INPUT", { required: true, sequence: 20 }),
-      row("CAT_LA_RONG", "CALCULATED", { sequence: 30 }),
+      row("LUOI_CAO", "INPUT", { required: false, sequence: 30 }),
+      row("CAT_LA_RONG", "CALCULATED", { sequence: 40 }),
     ]),
   }),
 ]);

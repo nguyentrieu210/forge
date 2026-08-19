@@ -11,11 +11,13 @@ export async function assertSalesOrderDeliveryLines(
   items: SalesItem[],
 ): Promise<void> {
   const source = sourceLines(salesOrder);
+  const pending = new Map<string, number>();
   for (const [index, item] of items.entries()) {
     const resolved = resolveSourceLine(source, item, `Delivery row ${index + 1}`, salesOrder.name);
     const rowKey = resolved.rowKey;
     const sourceLine = resolved.line;
     item.sales_order_row_id = rowKey;
+    item.sales_order = salesOrder.name;
 
     if (sourceLine.item_code !== item.item_code) throw errors.reference(`Delivery item ${item.item_code} does not match Sales Order row ${rowKey}`);
     if (text(item.uom) !== text(sourceLine.uom)) throw errors.validation(`Delivery row ${index + 1} must preserve Sales Order UOM ${sourceLine.uom}`);
@@ -24,15 +26,40 @@ export async function assertSalesOrderDeliveryLines(
     const prior = await context.reader.getFulfilledLineQuantityMicros(
       context.command.tenant_id, salesOrder.name, "Delivery", rowKey, "",
     );
-    if (prior + requested > ordered) {
+    const inDocument = pending.get(rowKey) ?? 0;
+    if (prior + inDocument + requested > ordered) {
       throw errors.reference(`Delivery quantity exceeds Sales Order row ${rowKey}`, {
         sales_order: salesOrder.name,
         sales_order_row_id: rowKey,
         ordered_qty_micros: ordered,
         already_delivered_qty_micros: prior,
-        requested_qty_micros: requested,
+        requested_qty_micros: inDocument + requested,
       });
     }
+    pending.set(rowKey, inDocument + requested);
+    item.rate = sourceLine.rate;
+    if (sourceLine.rate_minor !== undefined) item.rate_minor = sourceLine.rate_minor;
+    copyCommercialSnapshot(sourceLine, item);
+  }
+}
+
+function copyCommercialSnapshot(source: SalesItem, target: SalesItem): void {
+  const fields: Array<keyof SalesItem> = [
+    "item_price", "price_variant", "base_rate", "base_rate_minor", "standard_rate",
+    "pricing_rule", "pricing_as_of", "pricing_rule_snapshots", "discount_percentage",
+    "discount_basis_item_price", "discount_basis_variant", "discount_basis_rate",
+    "discount_basis_rate_minor", "sales_option", "sales_option_code", "sales_option_label",
+    "sales_option_version", "sales_mode", "sales_package", "sales_package_version",
+    "sales_package_checksum", "sales_package_snapshot", "sales_package_component_key",
+    "sales_package_group_key", "sales_package_parent_key",
+  ];
+  const sourceRecord = source as unknown as Record<string, unknown>;
+  const targetRecord = target as unknown as Record<string, unknown>;
+  for (const field of fields) {
+    const value = sourceRecord[field];
+    if (value !== undefined) targetRecord[field] = typeof value === "object" && value !== null
+      ? structuredClone(value)
+      : value;
   }
 }
 
@@ -147,7 +174,7 @@ export function salesOrderFulfillmentEntries(
     const componentKey = text(item.sales_package_component_key);
     const quantity = kind === "Delivery" ? toScaledInt(item.qty, 6) : pricedQtyMicros(item);
     return {
-      line_key: `${reverse ? "REV-" : ""}${kind === "Delivery" ? "DELIVERY" : "BILLING"}-${item.row_id || index + 1}`,
+      line_key: `${reverse ? "REV-" : ""}${kind === "Delivery" ? "DELIVERY" : "BILLING"}-${salesOrder}-${item.row_id || index + 1}`,
       sales_order: salesOrder,
       kind,
       item_code: item.item_code,

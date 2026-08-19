@@ -9,7 +9,7 @@ import {
   type DoorType,
   type SalesMode,
 } from "./door-formulas.js";
-import { inspectProductionLineBomRequirements, previewProductionLineBom, resolveProductionLineBom } from "./bom-template-materializer.js";
+import { inspectSalesLineBomComposition, previewProductionLineBom, resolveProductionLineBom } from "./bom-template-materializer.js";
 import { evaluateGeometryRules, type GeometryPolicyRule } from "./geometry-policy.js";
 import {
   normalizeBomActualComponents,
@@ -37,10 +37,14 @@ interface SalesOrderDoc extends Json {
 
 interface ItemDoc extends Json {
   item_code?: string;
+  item_name?: string;
   item_group?: string;
   door_type?: string;
   inventory_mode?: string;
   stock_uom?: string;
+  default_sales_uom?: string;
+  sales_qty_basis?: string;
+  uom_conversions?: Json[];
   purchase_kg_per_m2?: number;
   leaf_divisor_m?: number;
   min_area_sqm?: number;
@@ -192,6 +196,11 @@ function normalized(value: unknown): string {
   return text(value).toLocaleLowerCase("vi");
 }
 
+function isAreaFinishedProduct(item: ItemDoc): boolean {
+  return [item.inventory_mode, item.measurement_profile]
+    .some((value) => normalized(value) === normalized("Thành phẩm theo m2"));
+}
+
 function checked(value: unknown): boolean {
   if (value === true || value === 1 || value === "1") return true;
   return ["true", "yes", "có", "co"].includes(normalized(value));
@@ -220,6 +229,165 @@ function round(value: number, digits = 6): number {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
+const SALES_AREA_UOMS = new Set(["m2", "m²", "sqm"]);
+const SALES_METRE_UOMS = new Set(["m", "mét", "met", "meter", "metre"]);
+
+type SalesLinearBasis = "RAY" | "TRUC";
+
+function salesLinearBasis(item: ItemDoc): SalesLinearBasis | undefined {
+  const configured = text(item.sales_qty_basis).toUpperCase();
+  if (["RAY", "HEIGHT_X_SETS"].includes(configured)) return "RAY";
+  if (["TRUC", "WIDTH_X_SETS"].includes(configured)) return "TRUC";
+  const itemName = normalized(item.item_name);
+  const itemCode = normalized(item.item_code);
+  if (itemName.startsWith("ray") || itemCode.includes("ray")) return "RAY";
+  if (itemName.startsWith("trục") || itemName.startsWith("truc")
+    || itemCode.includes("trục") || itemCode.includes("truc")) return "TRUC";
+  return undefined;
+}
+
+function isWidthQuantitySalesItem(item: ItemDoc): boolean {
+  const itemName = normalized(item.item_name);
+  const itemCode = normalized(item.item_code).replace(/[ _-]+/g, "");
+  return itemName.includes("bộ ba lá đáy")
+    || itemName === "lá đầu"
+    || itemCode.includes("bo3laday")
+    || itemCode === "tpa282"
+    || itemCode.includes("ladau");
+}
+
+function isIntermediateFinishedLeafForSales(item: ItemDoc, componentIndex: number): boolean {
+  if (componentIndex !== 0) return false;
+  return normalized(item.item_group) === normalized("Nan/lá cửa")
+    && normalized(item.item_name).startsWith("tp lá ");
+}
+
+function parentSalesWidthField(parent: Json): "width_pb_ray_m" | "width_pb_nhua_m" | null {
+  const doorType = normalized(parent.door_type);
+  const itemGroup = normalized(parent.item_group ?? parent.product_group);
+  const alwaysUsesPbRay = [
+    "cửa úc",
+    "cửa tấm liền úc",
+    "cửa lưới",
+    "cửa đài loan",
+    "cửa siêu trường",
+  ].includes(doorType)
+    || [
+      "cửa tấm liền úc",
+      "cửa lưới",
+      "cửa đài loan",
+      "cửa đài loan inox",
+      "cửa kéo đài loan",
+      "cửa siêu trường",
+    ].includes(itemGroup);
+  if (alwaysUsesPbRay) return "width_pb_ray_m";
+  const customerGroup = text(parent.customer_group);
+  if (customerGroup === "Lẻ") return "width_pb_ray_m";
+  if (customerGroup === "Đại lý") return "width_pb_nhua_m";
+  return null;
+}
+
+function inheritedPositive(parent: Json, fieldname: string): number | undefined {
+  const value = Number(parent[fieldname]);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function salesCompositionQuantity(
+  item: ItemDoc,
+  parent: Json,
+  salesUom: string,
+  setCount: number,
+): { qty: number | null; length_m?: number } {
+  const uom = normalized(salesUom);
+  const width = inheritedPositive(parent, "width_m");
+  const height = inheritedPositive(parent, "height_m");
+  const linear = salesLinearBasis(item);
+  if (isWidthQuantitySalesItem(item) && SALES_METRE_UOMS.has(uom) && width) {
+    return { qty: round(width * setCount), length_m: width };
+  }
+  if (isWidthQuantitySalesItem(item) && SALES_METRE_UOMS.has(uom)) return { qty: null };
+  if (linear) {
+    const length = linear === "RAY" ? height : width;
+    if (length && SALES_METRE_UOMS.has(uom)) return { qty: round(length * setCount), length_m: length };
+    if (SALES_METRE_UOMS.has(uom)) return { qty: null };
+    if (length) return { qty: round(setCount), length_m: length };
+  }
+  if (isAreaFinishedProduct(item) && SALES_AREA_UOMS.has(uom)) {
+    const billableArea = inheritedPositive(parent, "billable_area_sqm");
+    if (billableArea) return { qty: round(billableArea) };
+    if (width && height) return { qty: round(width * height * setCount) };
+    return { qty: null };
+  }
+  return { qty: round(setCount) };
+}
+
+async function enrichSalesBomComponents(
+  call: ProductionPlatformCall,
+  components: Json[],
+  parent: Json,
+): Promise<Json[]> {
+  const setCount = Number(parent.set_count) > 0 ? Number(parent.set_count) : 1;
+  const itemCodes = [...new Set(components.map((row) => text(row.item_code)).filter(Boolean))];
+  const itemEntries = await Promise.all(itemCodes.map(async (itemCode) => [
+    itemCode,
+    await readDoc<ItemDoc>(call, "Item", itemCode),
+  ] as const));
+  const itemByCode = new Map(itemEntries);
+
+  return components.flatMap((component, componentIndex) => {
+    const item = itemByCode.get(text(component.item_code)) ?? {};
+    // The first TP LÁ row is an intermediate production item. Keep it in the
+    // source BOM, but omit it from the sales composition to avoid presenting
+    // it as another sellable child line.
+    if (isIntermediateFinishedLeafForSales(item, componentIndex)) return [];
+    const configuredSalesUom = text(item.default_sales_uom);
+    const calculated = salesCompositionQuantity(item, parent, configuredSalesUom, setCount);
+    const {
+      qty: _productionQty,
+      stock_qty: _productionStockQty,
+      stock_uom: _productionUom,
+      production_qty: _legacyProductionQty,
+      production_uom: _legacyProductionUom,
+      quantity_fields: _productionQuantityFields,
+      quantity_error: _productionQuantityError,
+      uom_warning: _legacyUomWarning,
+      ...composition
+    } = component;
+    void _productionQty;
+    void _productionStockQty;
+    void _productionUom;
+    void _legacyProductionQty;
+    void _legacyProductionUom;
+    void _productionQuantityFields;
+    void _productionQuantityError;
+    void _legacyUomWarning;
+    const normalizedWidth = inheritedPositive(parent, "width_m");
+    const selectedWidthField = parentSalesWidthField(parent);
+    const widthPbRay = inheritedPositive(parent, "width_pb_ray_m")
+      ?? (selectedWidthField === "width_pb_ray_m" ? normalizedWidth : undefined);
+    const widthPbNhua = inheritedPositive(parent, "width_pb_nhua_m")
+      ?? (selectedWidthField === "width_pb_nhua_m" ? normalizedWidth : undefined);
+
+    return [{
+      ...composition,
+      set_count: setCount,
+      uom: configuredSalesUom,
+      qty: calculated.qty,
+      ...(configuredSalesUom ? {} : {
+        sales_uom_missing: true,
+        sales_uom_message: `Vật tư ${text(component.item_code)} chưa cấu hình ĐVT bán trên Item.`,
+      }),
+      ...(widthPbRay ? { width_pb_ray_m: widthPbRay } : {}),
+      ...(widthPbNhua ? { width_pb_nhua_m: widthPbNhua } : {}),
+      ...(normalizedWidth ? { width_m: normalizedWidth } : {}),
+      ...(inheritedPositive(parent, "height_m") ? { height_m: inheritedPositive(parent, "height_m") } : {}),
+      ...(inheritedPositive(parent, "mesh_height_m") ? { mesh_height_m: inheritedPositive(parent, "mesh_height_m") } : {}),
+      ...(inheritedPositive(parent, "cut_width_m") ? { cut_width_m: inheritedPositive(parent, "cut_width_m") } : {}),
+      ...(calculated.length_m ? { length_m: calculated.length_m } : {}),
+    }];
+  });
+}
+
 function dateOnly(value: unknown): string {
   const raw = text(value);
   return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
@@ -245,18 +413,28 @@ async function listDocs<T extends Json>(
   filters: unknown[] = [],
   limit = 500,
 ): Promise<T[]> {
-  const query = new URLSearchParams({
-    fields: JSON.stringify(fields),
-    filters: JSON.stringify(filters),
-    limit_page_length: String(limit),
-  });
-  const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
-  if (!response.ok) {
-    const detail = (await response.text().catch(() => "")).trim().slice(0, 240);
-    throw new Error(`Cutting Policy list failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+  // The Frappe facade clamps one page to 100 rows even when callers request
+  // more.  BOM imports already exceed that threshold, so a single request
+  // silently omitted valid BOMs whose names sorted after the first page.
+  const output: T[] = [];
+  const pageSize = Math.min(Math.max(limit, 1), 100);
+  for (let offset = 0; offset < limit; offset += pageSize) {
+    const query = new URLSearchParams({
+      fields: JSON.stringify(fields),
+      filters: JSON.stringify(filters),
+      limit_page_length: String(Math.min(pageSize, limit - offset)),
+      limit_start: String(offset),
+    });
+    const response = await call(`resource/${encodeURIComponent(doctype)}?${query}`);
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => "")).trim().slice(0, 240);
+      throw new Error(`Không đọc được danh sách ${doctype} (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+    }
+    const page = (((await response.json()) as { data?: T[] }).data ?? []);
+    output.push(...page);
+    if (page.length < Math.min(pageSize, limit - offset)) break;
   }
-  if (!response.ok) throw new Error(`Không đọc được danh sách ${doctype} (HTTP ${response.status}).`);
-  return (((await response.json()) as { data?: T[] }).data ?? []);
+  return output.slice(0, limit);
 }
 
 async function createDoc<T extends Json>(call: ProductionPlatformCall, doctype: string, document: T): Promise<T & { name: string; modified?: string }> {
@@ -484,22 +662,91 @@ function raySpecificGeometry(
   return { cut_width_m: round(cutWidth), ray_type: rayType, applied_rules: result.applied_rules.map((entry) => entry.rule_code) };
 }
 
+function bomItemKey(value: unknown): string {
+  return text(value)
+    .replace(/m²/gi, "M")
+    .replaceAll("㎡", "M")
+    // Catalog imports preserve Vietnamese display names while several legacy
+    // BOM exports use their unaccented equivalents (ĐL/TRỌN BỘ vs DL/TRONBO).
+    // Compare those as the same business code, not as two different products.
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[Đđ]/g, "D")
+    .toLocaleUpperCase("vi")
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+export function isFullSetSalesItemCode(value: unknown): boolean {
+  return bomItemKey(value).includes("TRONBO");
+}
+
+function sameBomItem(left: unknown, right: unknown): boolean {
+  const leftKey = bomItemKey(left);
+  return Boolean(leftKey) && leftKey === bomItemKey(right);
+}
+
+function bomItemSpecificity(candidate: unknown, itemCode: string): number {
+  const candidateCode = text(candidate);
+  if (!candidateCode) return -1;
+  if (candidateCode === text(itemCode)) return 2;
+  if (normalized(candidateCode) === normalized(itemCode)) return 1;
+  return sameBomItem(candidateCode, itemCode) ? 0 : -1;
+}
+
+function compareBomCandidates(left: BomDoc, right: BomDoc, itemCode: string): number {
+  return (bomItemSpecificity(right.item, itemCode) - bomItemSpecificity(left.item, itemCode))
+    || (Number(Boolean(text(right.color))) - Number(Boolean(text(left.color))))
+    || (Number(right.revision ?? 0) - Number(left.revision ?? 0));
+}
+
+function sameBomSelectionLevel(left: BomDoc, right: BomDoc, itemCode: string): boolean {
+  return bomItemSpecificity(left.item, itemCode) === bomItemSpecificity(right.item, itemCode)
+    && Boolean(text(left.color)) === Boolean(text(right.color))
+    && Number(left.revision ?? 0) === Number(right.revision ?? 0);
+}
+
+function bomConflictNames(rows: BomDoc[]): string {
+  return rows.map((row) => text(row.name)).filter(Boolean).join(", ");
+}
+
 function selectBom(boms: BomDoc[], itemCode: string, color: string, on: string, allowMissing = false): string {
   const candidates = boms
-    .filter((row) => row.item === itemCode && row.docstatus === 1)
+    .filter((row) => sameBomItem(row.item, itemCode) && row.docstatus === 1)
     .filter((row) => !checked(row.generated_by_configurator))
-    .filter((row) => !row.color || !color || row.color === color)
+    .filter((row) => color ? !text(row.color) || text(row.color) === color : !text(row.color))
     .filter((row) => (row.bom_status ? row.bom_status === "Active" : checked(row.is_active)))
     .filter((row) => activeOn(row, on))
-    .sort((left, right) => Number(right.revision ?? 0) - Number(left.revision ?? 0));
+    .sort((left, right) => compareBomCandidates(left, right, itemCode));
   if (!candidates.length) {
     if (allowMissing) return "";
     throw new Error(`${itemCode}: chưa có BOM đang hiệu lực${color ? ` cho màu ${color}` : ""}.`);
   }
-  if (candidates.length > 1 && Number(candidates[0]!.revision ?? 0) === Number(candidates[1]!.revision ?? 0)) {
-    throw new Error(`${itemCode}: có nhiều BOM cùng revision đang hiệu lực.`);
+  const conflicts = candidates.filter((row) => sameBomSelectionLevel(row, candidates[0]!, itemCode));
+  if (conflicts.length > 1) {
+    throw new Error(`${itemCode}: có ${conflicts.length} BOM đang hiệu lực cùng mức (${bomConflictNames(conflicts)}); cần tăng revision hoặc vô hiệu hóa bản trùng.`);
   }
   return text(candidates[0]!.name);
+}
+
+function selectPreviewBom(boms: BomDoc[], itemCode: string, color: string, on: string): string {
+  const active = selectBom(boms, itemCode, color, on, true);
+  if (active) return active;
+  const draft = boms
+    // The list API exposes the payload fields only; imported BOMs are drafts
+    // unless a docstatus is explicitly present on the row.
+    .filter((row) => sameBomItem(row.item, itemCode) && Number(row.docstatus ?? 0) === 0)
+    .filter((row) => !checked(row.generated_by_configurator))
+    .filter((row) => color ? !text(row.color) || text(row.color) === color : !text(row.color))
+    .filter((row) => row.bom_status ? row.bom_status === "Draft" : checked(row.is_active))
+    .filter((row) => activeOn(row, on))
+    .sort((left, right) => compareBomCandidates(left, right, itemCode));
+  const conflicts = draft.length
+    ? draft.filter((row) => sameBomSelectionLevel(row, draft[0]!, itemCode))
+    : [];
+  if (conflicts.length > 1) {
+    throw new Error(`${itemCode}: có ${conflicts.length} BOM nháp cùng mức${color ? ` cho màu ${color}` : ""} (${bomConflictNames(conflicts)}); cần tăng revision hoặc vô hiệu hóa bản trùng.`);
+  }
+  return text(draft[0]?.name);
 }
 
 export function buildSalesProductionLines(input: BuildInputs, options: { allow_missing_bom?: boolean } = {}): SalesProductionLine[] {
@@ -515,7 +762,7 @@ export function buildSalesProductionLines(input: BuildInputs, options: { allow_m
     if (!itemCode) continue;
     const item = input.items.get(itemCode);
     if (!item) throw new Error(`Dòng ${index + 1}: không đọc được Item ${itemCode}.`);
-    if (text(item.inventory_mode) !== "Thành phẩm theo m2") continue;
+    if (!isAreaFinishedProduct(item)) continue;
     const doorType = inferDoorType(item.door_type, item.item_group);
     if (!doorType) continue;
     const itemGroup = text(item.item_group);
@@ -662,7 +909,8 @@ async function loadBuildInputs(call: ProductionPlatformCall, args: Json): Promis
       "effective_from", "effective_to", "disabled",
     ]).catch(() => []),
     listDocs<BomDoc>(call, "Bill of Materials", [
-      "name", "item", "color", "docstatus", "is_active", "bom_status", "effective_from", "effective_to", "revision", "generated_by_configurator",
+      "name", "item", "color", "docstatus", "is_active", "bom_status",
+      "effective_from", "effective_to", "revision", "generated_by_configurator",
     ]),
   ]);
   const fullPolicies = await Promise.all(policies.map(async (policy) => {
@@ -695,7 +943,8 @@ export async function calculateSalesProductionLine(
     const itemCode = text(args.item_code);
     if (!itemCode) throw new Error("Cần chọn mặt hàng cửa.");
     const item = await readDoc<ItemDoc>(call, "Item", itemCode);
-    if (text(item.inventory_mode) !== "Thành phẩm theo m2") {
+    const isAreaFinished = isAreaFinishedProduct(item);
+    if (!isAreaFinished) {
       throw new Error(`${itemCode} không phải thành phẩm tính theo m2.`);
     }
     const doorType = inferDoorType(item.door_type, item.item_group);
@@ -870,35 +1119,57 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
   try {
     const itemCode = text(args.item_code);
     if (!itemCode) throw new Error("Cần chọn mặt hàng cửa.");
-    const customerGroup = text(args.customer_group);
-    if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
-      throw new Error("Cần Nhóm giá Đại lý/Lẻ để xem BOM theo đúng công thức bán.");
-    }
-    const [calculationResponse, item, staticBoms] = await Promise.all([
-      calculateSalesProductionLine(call, {
-        ...args,
-        item_code: itemCode,
-        customer_group: customerGroup,
-        set_count: 1,
-        purpose: "sales",
-      }),
-      readDoc<ItemDoc>(call, "Item", itemCode),
-      listDocs<BomDoc>(call, "Bill of Materials", [
-        "name", "item", "color", "docstatus", "is_active", "bom_status",
-        "effective_from", "effective_to", "revision", "generated_by_configurator",
-      ]).catch(() => []),
-    ]);
-    if (!calculationResponse.ok) return calculationResponse;
-    const calculation = await calculationResponse.json() as Json;
-    const staticBom = selectBom(
-      staticBoms, itemCode, text(args.color), dateOnly(args.delivery_date) || new Date().toISOString().slice(0, 10), true,
-    );
-    if (staticBom) {
+    const item = await readDoc<ItemDoc>(call, "Item", itemCode);
+    if (!isFullSetSalesItemCode(itemCode)) {
       return answer({
         item_code: itemCode,
+        bom_applicable: false,
+        bom_no: "",
+        bom_template: "",
+        bom_template_code: "",
+        components: [],
+        actual_requirements: [],
+        missing_actual_component_keys: [],
+        actual_complete: true,
+        pending_fields: [],
+        static_bom: false,
+        reason: "Chỉ mặt hàng có mã TRỌN BỘ mới xổ BOM trên đơn bán hàng.",
+      });
+    }
+    const staticBoms = await listDocs<BomDoc>(call, "Bill of Materials", [
+      "name", "item", "color", "docstatus", "is_active", "bom_status",
+      "effective_from", "effective_to", "revision", "generated_by_configurator",
+    ]).catch(() => []);
+    const on = dateOnly(args.delivery_date) || new Date().toISOString().slice(0, 10);
+    const staticBom = selectPreviewBom(staticBoms, itemCode, text(args.color), on);
+    if (staticBom) {
+      const staticBomDoc: Json = await readDoc<Json>(call, "Bill of Materials", staticBom).catch((): Json => ({}));
+      const staticItems = Array.isArray(staticBomDoc.items)
+        ? staticBomDoc.items.filter((row: unknown): row is Json => Boolean(row) && typeof row === "object" && !Array.isArray(row))
+        : [];
+      const components = await enrichSalesBomComponents(call, staticItems.map((row: Json, index: number) => ({
+        component_key: text(row.item_code) || `static-${index + 1}`,
+        item_code: text(row.item_code),
+        ...(text(row.color) ? { color: text(row.color) } : {}),
+        ...(Number(row.width_pb_ray_m) > 0 ? { width_pb_ray_m: Number(row.width_pb_ray_m) } : {}),
+        ...(Number(row.width_pb_nhua_m) > 0 ? { width_pb_nhua_m: Number(row.width_pb_nhua_m) } : {}),
+        ...(Number(row.width_m) > 0 ? { width_m: Number(row.width_m) } : {}),
+        ...(Number(row.height_m) > 0 ? { height_m: Number(row.height_m) } : {}),
+        ...(Number(row.mesh_height_m) > 0 ? { mesh_height_m: Number(row.mesh_height_m) } : {}),
+        ...(Number(row.cut_width_m) > 0 ? { cut_width_m: Number(row.cut_width_m) } : {}),
+        ...(Number(row.length_m) > 0 ? { length_m: Number(row.length_m) } : {}),
+        stock_uom: text(row.stock_uom) || text(row.uom),
+        qty: Number(row.qty) || 0,
+        note: text(row.note) || text(row.source_note),
+        source_rule: "BOM tĩnh",
+      })), args);
+      return answer({
+        item_code: itemCode,
+        bom_applicable: true,
         bom_no: staticBom,
         bom_template: "",
         bom_template_code: "",
+        components,
         actual_requirements: [],
         missing_actual_component_keys: [],
         actual_complete: true,
@@ -906,58 +1177,36 @@ export async function previewDraftSalesBomRequirements(call: ProductionPlatformC
       });
     }
     const stockUom = text(item.stock_uom) || "Bộ";
-    const billableArea = finitePositive(calculation.billable_area_sqm, "Diện tích tính tiền");
-    const outputQty = ["m2", "m²", "sqm"].includes(normalized(stockUom)) ? billableArea : 1;
-    const formulaSnapshot = {
-      schema_version: 1,
+    const inspection = await inspectSalesLineBomComposition(call, {
       item_code: itemCode,
-      item_group: text(calculation.item_group),
-      door_type: text(calculation.door_type),
-      customer_group: customerGroup,
-      sales_mode: text(args.sales_mode) || "Trọn bộ",
-      width_m: Number(args.width_m),
-      height_m: Number(args.height_m),
-      mesh_height_m: args.mesh_height_m ?? null,
-      formula_policy: calculation.formula_policy,
-      formula_version: calculation.formula_version,
-      width_basis: calculation.width_basis,
-      cut_width_m: calculation.cut_width_m,
-      billable_area_sqm: calculation.billable_area_sqm,
-      leaf_count: calculation.leaf_count,
-      single_layer_leaf_count: calculation.single_layer_leaf_count,
-      double_layer_leaf_count: calculation.double_layer_leaf_count,
-      estimated_weight_kg: calculation.estimated_weight_kg,
-      leaf_variant: calculation.leaf_variant ?? args.leaf_variant ?? null,
-      ray_type: calculation.ray_type ?? null,
-    };
-    const inspection = await inspectProductionLineBomRequirements(call, {
-      item_code: itemCode,
-      output_qty: outputQty,
+      output_qty: 1,
       source_warehouse: "",
-      item_group: text(calculation.item_group),
-      door_type: text(calculation.door_type),
+      item_group: text(item.item_group),
+      door_type: text(item.door_type),
       sales_mode: text(args.sales_mode) || "Trọn bộ",
-      width_m: Number(args.width_m),
-      height_m: Number(args.height_m),
+      ...(Number(args.width_m) > 0 ? { width_m: Number(args.width_m) } : {}),
+      ...(Number(args.height_m) > 0 ? { height_m: Number(args.height_m) } : {}),
       ...(args.mesh_height_m == null || args.mesh_height_m === "" ? {} : { mesh_height_m: Number(args.mesh_height_m) }),
-      cut_width_m: Number(calculation.cut_width_m),
-      billable_area_sqm: billableArea,
-      ...(calculation.leaf_count == null ? {} : { leaf_count: Number(calculation.leaf_count) }),
-      ...(calculation.single_layer_leaf_count == null ? {} : { single_layer_leaf_count: Number(calculation.single_layer_leaf_count) }),
-      ...(calculation.double_layer_leaf_count == null ? {} : { double_layer_leaf_count: Number(calculation.double_layer_leaf_count) }),
-      ...(calculation.estimated_weight_kg == null ? {} : { estimated_weight_kg: Number(calculation.estimated_weight_kg) }),
+      ...(Number(args.cut_width_m) > 0 ? { cut_width_m: Number(args.cut_width_m) } : {}),
+      ...(Number(args.billable_area_sqm) > 0 ? { billable_area_sqm: Number(args.billable_area_sqm) } : {}),
+      ...(Number(args.leaf_count) > 0 ? { leaf_count: Number(args.leaf_count) } : {}),
+      ...(Number(args.single_layer_leaf_count) > 0 ? { single_layer_leaf_count: Number(args.single_layer_leaf_count) } : {}),
+      ...(Number(args.double_layer_leaf_count) > 0 ? { double_layer_leaf_count: Number(args.double_layer_leaf_count) } : {}),
+      ...(Number(args.estimated_weight_kg) > 0 ? { estimated_weight_kg: Number(args.estimated_weight_kg) } : {}),
       ...(text(args.color) ? { color: text(args.color) } : {}),
       ...(text(args.motor_model) ? { motor_model: text(args.motor_model) } : {}),
       paint_required: checked(args.paint_required) ? 1 : 0,
-      formula_snapshot: JSON.stringify(formulaSnapshot),
       ...(args.bom_actual_components === undefined ? {} : { bom_actual_components: normalizeBomActualComponents(args.bom_actual_components) }),
     });
+    const components = await enrichSalesBomComponents(call, inspection.components as unknown as Json[], args);
     return answer({
       item_code: itemCode,
+      bom_applicable: true,
       stock_uom: stockUom,
-      output_qty: outputQty,
+      output_qty: 1,
       static_bom: false,
       ...inspection,
+      components,
     });
   } catch (error) {
     return refuse(error instanceof Error ? error.message : "Không xem trước được yêu cầu BOM của dòng bán.");

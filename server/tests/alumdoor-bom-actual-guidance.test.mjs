@@ -162,3 +162,25 @@ test("draft requirement inspection resolves source slots without company, wareho
   assert.equal(result.components.length, 1);
   assert.equal(requests.some((entry) => entry.init.method === "POST"), false);
 });
+
+test("draft requirement inspection keeps deferred components visible with an unresolved quantity", async () => {
+  const deferredTemplate = {
+    ...templateDoc,
+    component_rules: [{
+      rule_code: "CORE",
+      component_key: "CORE",
+      item_code: "NVL-CORE",
+      quantity_formula_json: JSON.stringify({ kind: "DEFERRED", reason: "missing_conversion", source_value: "11.64" }),
+    }],
+  };
+  const call = async (path) => {
+    if (path.startsWith("resource/BOM%20Template?")) return response({ data: [{ name: "SRC-GUIDE" }] });
+    if (path === "resource/BOM%20Template/SRC-GUIDE") return response({ data: deferredTemplate });
+    return response({ data: [] });
+  };
+  const result = await inspectProductionLineBomRequirements(call, { ...baseLine, source_warehouse: "" });
+  assert.equal(result.components.length, 1);
+  assert.equal(result.components[0].item_code, "NVL-CORE");
+  assert.equal(result.components[0].qty, null);
+  assert.match(result.components[0].quantity_error, /chưa có hệ số quy đổi.*không tự đoán số lượng/i);
+});

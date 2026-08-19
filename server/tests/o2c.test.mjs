@@ -27,6 +27,33 @@ test("Alumdoor Sales Order requires a server-managed price list", async () => {
   );
 });
 
+test("Alumdoor Sales Order persists an explicitly selected valid price group", async () => {
+  const { store, kernel } = setup();
+  store.seedMaster("Company", "ALUMDOOR", "demo", { default_currency: "USD" });
+  store.seedMaster("Customer", "CUST-0001", "demo", { price_group: "Đại lý" });
+  store.seedMaster("Price List", "ALUMDOOR-SELLING", "demo", { currency: "USD", selling: 1 });
+  store.seedMaster("Item Price", "ALUMDOOR-SELLING:ITEM-001", "demo", {
+    item_code: "ITEM-001", price_list: "ALUMDOOR-SELLING", currency: "USD", rate: "25",
+  });
+  await mutate(kernel, {
+    commandId: "so-alumdoor-selected-group",
+    doctype: "Sales Order",
+    name: "SO-ALU-SELECTED-GROUP",
+    action: "create",
+    expectedVersion: null,
+    document: {
+      ...orderDocument("2", "999"),
+      company: "ALUMDOOR",
+      customer_group: "Lẻ",
+      selling_price_list: "ALUMDOOR-SELLING",
+      taxes: [],
+    },
+  });
+  const order = await store.getDocument("demo", "Sales Order", "SO-ALU-SELECTED-GROUP");
+  assert.equal(order.data.customer_group, "Lẻ");
+  assert.equal(order.data.items[0].rate, "25.00");
+});
+
 test("Order-to-Cash posts exact minor-unit GL, stock and receivable allocation", async () => {
   const { store, kernel } = setup();
   await createAndSubmit(kernel, { doctype: "Sales Order", name: "SO-0001", document: orderDocument() });

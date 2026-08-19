@@ -108,6 +108,9 @@ export interface GeneralLedgerEntry {
 /** Quantity uses fixed six-decimal micros; valuation and stock value use currency minor units. */
 export interface StockLedgerEntry {
   line_key: string;
+  source_voucher_type?: string;
+  source_voucher_no?: string;
+  source_voucher_revision?: number;
   item_code: string;
   warehouse: string;
   actual_qty_micros: number;

@@ -12,13 +12,16 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { assertLocalMutationChildContext } from '../../scripts/local-runner/assert-local-mutation-child-context.mjs';
+import { canonicalAlumdoorUom } from './lib/alumdoor-uom-catalog.mjs';
 
 const [payloadArg, resultArg, modeArg] = process.argv.slice(2);
 const validateOnly = modeArg === '--validate-only';
 if (!payloadArg || (!validateOnly && !resultArg)) throw new Error('Usage: import-alumdoor-bom-template-local.mjs <bom-importable.json> <result.json> [--validate-only]');
 const payloadPath = path.resolve(payloadArg);
 const source = JSON.parse(readFileSync(payloadPath, 'utf8'));
-if (source?.format !== 'alumdoor-canonical-bom-importable/v1' || !Array.isArray(source.boms)) throw new Error('Expected alumdoor-canonical-bom-importable/v1');
+if (!['alumdoor-canonical-bom-importable/v1', 'alumdoor-canonical-bom-importable/v2'].includes(source?.format) || !Array.isArray(source.boms)) {
+  throw new Error('Expected alumdoor-canonical-bom-importable/v1 or /v2');
+}
 
 const clean = (v) => String(v ?? '').normalize('NFC').trim();
 
@@ -37,7 +40,7 @@ function buildTemplate(bom) {
       rule_code: `${bom.item}:${line.item_code}:${index + 1}`,
       component_key: String(line.item_code ?? ''),
       item_code: String(line.item_code ?? ''),
-      stock_uom: lineage.source_uom ?? undefined,
+      stock_uom: lineage.source_uom ? canonicalAlumdoorUom(lineage.source_uom) : undefined,
       priority: 0,
       sequence: index + 1,
       quantity_formula_json: JSON.stringify(envelope),
@@ -156,16 +159,36 @@ function sameTemplate(expected, actual) {
 
 await login();
 const existingList = await listExisting();
-const existingByCode = new Map(existingList.map((r) => [clean(r.template_code), r.name]));
+const existingByCode = new Map();
+for (const row of existingList) {
+  const code = clean(row.template_code);
+  if (!code) continue;
+  const list = existingByCode.get(code) ?? [];
+  list.push(row.name);
+  existingByCode.set(code, list);
+}
 const planned = [];
 const unchanged = [];
+const conflicts = [];
 for (const t of templates) {
-  const existingName = existingByCode.get(clean(t.template_code));
-  if (existingName) {
+  const existingNames = existingByCode.get(clean(t.template_code)) ?? [];
+  let exactName = null;
+  for (const existingName of existingNames) {
     const full = await getTemplate(existingName);
-    if (sameTemplate(t, full)) { unchanged.push({ template_code: t.template_code, name: existingName }); continue; }
+    if (sameTemplate(t, full)) { exactName = existingName; break; }
   }
-  planned.push(t);
+  if (exactName) {
+    unchanged.push({ template_code: t.template_code, name: exactName, duplicate_name_count: existingNames.length });
+  } else if (existingNames.length) {
+    conflicts.push({ template_code: t.template_code, existing_names: existingNames, reason: 'existing_template_differs_from_canonical_source' });
+  } else {
+    planned.push(t);
+  }
+}
+if (conflicts.length) {
+  const resultPath = path.resolve(resultArg);
+  writeFileSync(resultPath, `${JSON.stringify({ conflicts, created_count: 0, unchanged_count: unchanged.length }, null, 2)}\n`);
+  throw new Error(`ALUMDOOR_BOM_TEMPLATE_CONFLICT count=${conflicts.length}`);
 }
 const created = [];
 for (const t of planned) {
@@ -174,12 +197,22 @@ for (const t of planned) {
   created.push({ template_code: t.template_code, name: doc?.name ?? null });
 }
 const postList = await listExisting();
-const postByCode = new Map(postList.map((r) => [clean(r.template_code), r.name]));
+const postByCode = new Map();
+for (const row of postList) {
+  const code = clean(row.template_code);
+  if (!code) continue;
+  const list = postByCode.get(code) ?? [];
+  list.push(row.name);
+  postByCode.set(code, list);
+}
 const failures = [];
 for (const t of templates) {
-  const name = postByCode.get(clean(t.template_code));
-  const full = name ? await getTemplate(name) : null;
-  if (!sameTemplate(t, full)) failures.push({ template_code: t.template_code, reason: 'no_exact_persisted_template' });
+  const names = postByCode.get(clean(t.template_code)) ?? [];
+  let exact = false;
+  for (const name of names) {
+    if (sameTemplate(t, await getTemplate(name))) { exact = true; break; }
+  }
+  if (!exact) failures.push({ template_code: t.template_code, reason: 'no_exact_persisted_template', candidate_count: names.length });
 }
 if (failures.length) {
   writeFileSync(path.resolve(resultArg), `${JSON.stringify({ failures }, null, 2)}\n`);
@@ -193,6 +226,7 @@ const result = {
   template_count: templates.length,
   component_rule_count: templates.reduce((n, t) => n + t.component_rules.length, 0),
   verification_failure_count: 0,
+  conflict_count: conflicts.length,
   created,
   unchanged,
 };

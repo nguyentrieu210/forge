@@ -3,13 +3,20 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, multiplyScaled, toScaledInt } from "../../money/src/index.js";
 import { applyUomConversion, pricedQtyMicros } from "../../clouderp-core/src/uom.js";
-import { SalesOrderController, alumdoorOrderTotals } from "./controllers.js";
+import {
+  SalesOrderController,
+  alumdoorCommercialBenefits,
+  alumdoorOrderTotals,
+  defaultAlumdoorDiscountPercent,
+  withAlumdoorDefaultDiscountSnapshot,
+} from "./controllers.js";
 import { resolveCommercialLine } from "./commercial-line-resolver.js";
 import { calculateSalesTotals } from "./totals.js";
 import type { SalesItem, SalesOrderData } from "./types.js";
 import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
 
 const ALUMDOOR_COMPANY = "ALUMDOOR";
+const ALUMDOOR_PRICE_GROUPS = new Set(["Đại lý", "Lẻ"]);
 
 /**
  * Canonical Sales Order pricing path for AlumDoor while preserving the shared legacy
@@ -33,6 +40,7 @@ export class CommercialSalesOrderController extends SalesOrderController {
     const customerGroup = await authoritativeCustomerGroup(context, input, customer);
     const priceListDecision = await authoritativePriceList(context, input, customer, customerGroup);
     const sellingPriceList = priceListDecision.priceList;
+    const responsiblePerson = await responsibleEmployeeForActor(context);
     let requiresApproval = priceListDecision.requiresApproval;
 
     const converted = await applyUomConversion(
@@ -52,6 +60,16 @@ export class CommercialSalesOrderController extends SalesOrderController {
       const pricedQty = Number(fromScaledInt(qtyMicros, 6));
       const submittedRate = submittedNumber(item.rate);
       const submittedDiscount = submittedNumber(item.discount_percentage);
+      const expectedDiscount = defaultAlumdoorDiscountPercent({ ...itemMaster, item_code: item.item_code });
+      const benefitItems = alumdoorCommercialBenefits(
+        { ...itemMaster, item_code: item.item_code },
+        item.billable_area_sqm ?? pricedQty,
+      );
+      if (submittedDiscount !== undefined
+        && toScaledInt(submittedDiscount, 6, `${item.item_code}.discount_percentage`)
+          !== toScaledInt(expectedDiscount, 6, `${item.item_code}.expected_discount_percentage`)) {
+        requiresApproval = true;
+      }
 
       const frozenSource = quotation ? sourceQuotationLine(quotation, item, index) : null;
       if (frozenSource && hasCommercialSnapshot(frozenSource)) {
@@ -76,9 +94,21 @@ export class CommercialSalesOrderController extends SalesOrderController {
       }
 
       if (!sellingPriceList) {
+        const manual = buildManualCommercialLine(
+          item,
+          submittedRate,
+          submittedDiscount ?? expectedDiscount,
+          currency.transactionScale,
+          qtyMicros,
+        );
         pricedItems.push({
           ...item,
-          ...buildManualCommercialLine(item, submittedRate, submittedDiscount, currency.transactionScale, qtyMicros),
+          ...manual,
+          benefit_items: benefitItems,
+          pricing_rule_snapshots: withAlumdoorDefaultDiscountSnapshot(
+            manual.pricing_rule_snapshots ?? [],
+            { ...itemMaster, item_code: item.item_code },
+          ),
         });
         continue;
       }
@@ -96,10 +126,17 @@ export class CommercialSalesOrderController extends SalesOrderController {
         party: input.customer,
         customerGroup,
         facts,
+        ...(submittedDiscount !== undefined || expectedDiscount > 0
+          ? { discountPercentageOverride: submittedDiscount ?? expectedDiscount }
+          : {}),
         ...optionalPositiveFacts(item),
       });
 
       const canonicalRateMinor = canonicalRateFromSnapshot(resolved.base_rate_minor, resolved.pricing_rule_snapshots);
+      const pricingRuleSnapshots = withAlumdoorDefaultDiscountSnapshot(
+        resolved.pricing_rule_snapshots,
+        { ...itemMaster, item_code: item.item_code },
+      );
       pricedItems.push({
         ...item,
         price_variant: resolved.price_variant,
@@ -126,8 +163,9 @@ export class CommercialSalesOrderController extends SalesOrderController {
         net_amount: resolved.net_before_tax,
         net_amount_minor: resolved.net_before_tax_minor,
         pricing_as_of: resolved.pricing_as_of,
-        pricing_rule_snapshots: resolved.pricing_rule_snapshots,
-        ...(resolved.pricing_rule_snapshots[0]?.rule_name ? { pricing_rule: resolved.pricing_rule_snapshots[0].rule_name } : {}),
+        pricing_rule_snapshots: pricingRuleSnapshots,
+        benefit_items: benefitItems,
+        ...(pricingRuleSnapshots[0]?.rule_name ? { pricing_rule: pricingRuleSnapshots[0].rule_name } : {}),
       });
     }
 
@@ -149,22 +187,36 @@ export class CommercialSalesOrderController extends SalesOrderController {
       (sum, row) => safeAdd(sum, row.adjustment_amount_minor ?? 0, "surcharge total"),
       0,
     );
-    const { extraMinor, ...vatProjection } = alumdoorOrderTotals({
-      netTotalMinor: totals.net_total_minor,
+    const netBeforeSurchargeMinor = safeAdd(
+      totals.net_total_minor,
+      -lineAdjustmentMinor,
+      "net total before surcharge",
+    );
+    const { extraMinor: vatAndSurchargeMinor, ...vatProjection } = alumdoorOrderTotals({
+      netTotalMinor: netBeforeSurchargeMinor,
       discountAmountMinor: totals.discount_amount_minor,
       vatRate: input.vat_rate,
-      // Adjustments already sit inside line net. Passing them again would double count.
-      surchargeMinor: 0,
+      surchargeMinor: lineAdjustmentMinor,
       currencyScale: currency.transactionScale,
     });
+    // Line adjustments are already included by calculateSalesTotals. Only VAT is
+    // still missing from its grand total; the projection nevertheless receives the
+    // surcharge separately so total_amount and vat_base_amount keep their meanings.
+    const vatOnlyMinor = safeAdd(vatAndSurchargeMinor, -lineAdjustmentMinor, "VAT total");
     const hasVatProjection = input.vat_rate !== undefined || input.total_amount !== undefined || input.vat_amount !== undefined;
-    const adjustedTotals = extraMinor === 0 ? totals : {
+    const adjustedTotals = vatOnlyMinor === 0 ? totals : {
       ...totals,
-      grand_total_minor: safeAdd(totals.grand_total_minor, extraMinor, "grand total with VAT"),
-      grand_total: fromScaledInt(safeAdd(totals.grand_total_minor, extraMinor, "grand total with VAT"), currency.transactionScale),
-      rounded_total_minor: safeAdd(totals.rounded_total_minor, extraMinor, "rounded total with VAT"),
-      rounded_total: fromScaledInt(safeAdd(totals.rounded_total_minor, extraMinor, "rounded total with VAT"), currency.transactionScale),
+      grand_total_minor: safeAdd(totals.grand_total_minor, vatOnlyMinor, "grand total with VAT"),
+      grand_total: fromScaledInt(safeAdd(totals.grand_total_minor, vatOnlyMinor, "grand total with VAT"), currency.transactionScale),
+      rounded_total_minor: safeAdd(totals.rounded_total_minor, vatOnlyMinor, "rounded total with VAT"),
+      rounded_total: fromScaledInt(safeAdd(totals.rounded_total_minor, vatOnlyMinor, "rounded total with VAT"), currency.transactionScale),
     };
+    const depositMinor = toScaledInt(input.deposit_amount ?? 0, currency.transactionScale, "deposit_amount");
+    if (depositMinor < 0) throw errors.validation("Tiền cọc không được nhỏ hơn 0.");
+    if (depositMinor > adjustedTotals.grand_total_minor) {
+      throw errors.validation("Tiền cọc không được lớn hơn tiền phải trả của đơn.");
+    }
+    const outstandingMinor = safeAdd(adjustedTotals.grand_total_minor, -depositMinor, "outstanding after deposit");
 
     if (context.command.action === "submit") {
       await assertMasterData(context, [
@@ -176,6 +228,7 @@ export class CommercialSalesOrderController extends SalesOrderController {
 
     return {
       ...input,
+      ...(responsiblePerson ? { responsible_person: responsiblePerson } : {}),
       selling_price_list: sellingPriceList,
       customer_group: customerGroup,
       discount_requires_approval: requiresApproval,
@@ -183,6 +236,10 @@ export class CommercialSalesOrderController extends SalesOrderController {
       ...adjustedTotals,
       surcharge_amount_minor: lineAdjustmentMinor,
       surcharge_amount: fromScaledInt(lineAdjustmentMinor, currency.transactionScale),
+      deposit_amount_minor: depositMinor,
+      deposit_amount: fromScaledInt(depositMinor, currency.transactionScale),
+      outstanding_amount_minor: outstandingMinor,
+      outstanding_amount: fromScaledInt(outstandingMinor, currency.transactionScale),
       ...(hasVatProjection ? vatProjection : {}),
       ...baseTotals(adjustedTotals, currency, currency.transactionScale),
       company_currency: currency.companyCurrency,
@@ -193,6 +250,21 @@ export class CommercialSalesOrderController extends SalesOrderController {
       billed_percentage: "0.00",
     };
   }
+}
+
+async function responsibleEmployeeForActor(context: ControllerContext<SalesOrderData>): Promise<string> {
+  const actor = text(context.command.actor.user_id);
+  if (!actor) return "";
+  const employees = await context.reader.listMasterRecordData(context.command.tenant_id, "Employee");
+  const matches = employees.filter(({ data }) => {
+    if (text(data.user_id) !== actor || masterDisabled(data.disabled)) return false;
+    const status = text(data.employee_status || data.status).toLocaleLowerCase("vi");
+    return !status || ["đang làm việc", "đang công tác", "active"].includes(status);
+  });
+  if (matches.length > 1) {
+    throw errors.validation(`User ${actor} đang gắn với nhiều Nhân viên đang làm việc; hãy sửa lại hồ sơ Nhân viên.`);
+  }
+  return matches[0]?.name ?? "";
 }
 
 interface ResolvedCurrencyContext {
@@ -208,11 +280,13 @@ async function authoritativeCustomerGroup(
   customer: JsonObject,
 ): Promise<string> {
   const existing = context.existing?.data;
-  if (existing?.customer === input.customer && text(existing.customer_group)) return text(existing.customer_group);
-  const group = text(customer.price_group) || text(customer.customer_group);
-  if (!group) throw errors.reference(`Customer ${input.customer} must define a pricing/customer group`);
-  if (text(input.customer_group) && text(input.customer_group) !== group) {
-    throw errors.validation("Customer group is server-derived from Customer master and cannot be changed on the document");
+  const selected = text(input.customer_group);
+  const existingSnapshot = existing?.customer === input.customer ? text(existing.customer_group) : "";
+  const customerDefault = text(customer.price_group) || text(customer.customer_group);
+  const group = selected || existingSnapshot || customerDefault;
+  if (!group) throw errors.reference(`Khách hàng ${input.customer} chưa có Nhóm giá; hãy chọn Đại lý hoặc Lẻ trên đơn.`);
+  if (!ALUMDOOR_PRICE_GROUPS.has(group)) {
+    throw errors.validation(`Nhóm giá "${group}" không hợp lệ; chỉ được chọn Đại lý hoặc Lẻ.`);
   }
   return group;
 }
@@ -228,9 +302,10 @@ async function authoritativePriceList(
     const group = await context.reader.getMasterRecordData(context.command.tenant_id, "Customer Group", customerGroup);
     expected = text(group?.default_selling_price_list) || text(group?.selling_price_list);
   }
-  // Alumdoor canonical contract: blank means manual-price mode. A customer/group default is
-  // an approval baseline only; it must never silently convert a blank document to list pricing.
   const supplied = text(input.selling_price_list);
+  // Màn bán Alumdoor luôn định giá từ bảng giá do server kiểm soát; không mở đường
+  // giá tay chỉ bằng cách gửi trống trường này qua API.
+  if (!supplied) throw errors.validation("Bảng giá áp dụng là bắt buộc");
   if (supplied) {
     const priceList = await context.reader.getMasterRecordData(context.command.tenant_id, "Price List", supplied);
     if (!priceList) throw errors.reference(`Price List ${supplied} does not exist`);

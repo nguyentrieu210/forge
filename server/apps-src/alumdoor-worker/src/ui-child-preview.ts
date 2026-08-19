@@ -39,6 +39,15 @@ function normalizedUom(value: unknown): string {
   return normalized(value);
 }
 
+function isAreaFinishedProduct(item: Json): boolean {
+  return [item.inventory_mode, item.measurement_profile]
+    .some((value) => normalized(value) === normalized("Thành phẩm theo m2"));
+}
+
+function effectiveInventoryMode(item: Json): string {
+  return isAreaFinishedProduct(item) ? "Thành phẩm theo m2" : text(item.inventory_mode) || "Hàng thường";
+}
+
 function quantityLabelForUom(value: unknown): string {
   const uom = normalizedUom(value).replace(/\s+/g, "");
   if (["bộ", "bo", "set"].includes(uom)) return "Số bộ";
@@ -125,7 +134,7 @@ function isWidthQuantitySalesItem(item: Json): boolean {
 }
 
 function isOrdinaryQuantitySalesItem(item: Json): boolean {
-  return text(item.inventory_mode) === "Hàng thường"
+  return effectiveInventoryMode(item) === "Hàng thường"
     && !deriveLinearSalesBasis(item)
     && !isWidthQuantitySalesItem(item);
 }
@@ -148,6 +157,45 @@ function fieldOverride(overrides: Record<string, Json>, fields: Set<string>, fie
   if (fields.has(fieldname)) overrides[fieldname] = { ...(overrides[fieldname] ?? {}), ...value };
 }
 
+function customerWidthField(customerGroup: unknown): "width_pb_ray_m" | "width_pb_nhua_m" | null {
+  const group = text(customerGroup);
+  if (group === "Lẻ") return "width_pb_ray_m";
+  if (group === "Đại lý") return "width_pb_nhua_m";
+  return null;
+}
+
+function salesWidthField(
+  doorType: unknown,
+  itemGroup: unknown,
+  customerGroup: unknown,
+): "width_pb_ray_m" | "width_pb_nhua_m" | null {
+  const type = normalized(doorType);
+  const group = normalized(itemGroup);
+  const alwaysUsesPbRay = [
+    "cửa úc",
+    "cửa tấm liền úc",
+    "cửa lưới",
+    "cửa đài loan",
+    "cửa siêu trường",
+  ].includes(type)
+    || [
+      "cửa tấm liền úc",
+      "cửa lưới",
+      "cửa đài loan",
+      "cửa đài loan inox",
+      "cửa kéo đài loan",
+      "cửa siêu trường",
+    ].includes(group);
+  return alwaysUsesPbRay ? "width_pb_ray_m" : customerWidthField(customerGroup);
+}
+
+function usesMeshHeight(doorType: unknown, itemGroup: unknown): boolean {
+  const type = normalized(doorType);
+  const group = normalized(itemGroup);
+  return ["cửa lưới", "cửa đài loan", "cửa siêu trường"].includes(type)
+    || ["cửa lưới", "cửa đài loan", "cửa đài loan inox", "cửa kéo đài loan", "cửa siêu trường"].includes(group);
+}
+
 function salesQuantity(row: Json, item: Json, formula: Json | null): { derived: boolean; quantity?: number; policy: string } {
   const uom = normalizedUom(row.uom);
   const sets = positive(row.set_count) ?? 1;
@@ -163,7 +211,7 @@ function salesQuantity(row: Json, item: Json, formula: Json | null): { derived: 
     const dimension = positive(linear === "RAY" ? row.height_m : row.width_m);
     return { derived: true, ...(dimension ? { quantity: round(dimension * sets) } : {}), policy: linear };
   }
-  if (text(item.inventory_mode) === "Thành phẩm theo m2") {
+  if (isAreaFinishedProduct(item)) {
     if (SET_UOMS.has(uom)) return { derived: true, quantity: round(sets), policy: "PER_SET" };
     if (AREA_UOMS.has(uom)) {
       const billable = positive(formula?.billable_area_sqm);
@@ -238,7 +286,7 @@ function applyAverageWeight(patch: Json, clear: Set<string>, fields: Set<string>
 }
 
 async function formulaPreview(call: PlatformCall, row: Json, parent: Json, item: Json): Promise<Json | null> {
-  if (text(item.inventory_mode) !== "Thành phẩm theo m2") return null;
+  if (!isAreaFinishedProduct(item)) return null;
   if (!positive(row.width_m) || !positive(row.height_m)) return null;
   let customerGroup = text(parent.customer_group);
   // The Sales Order header normally receives this from Customer.price_group. During fast
@@ -287,7 +335,7 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   const context = contextResponse.ok ? await contextResponse.json() as Json : {};
 
   const masterPlan: Array<[string, unknown]> = [
-    ["stock_uom", item.stock_uom], ["inventory_mode", item.inventory_mode || "Hàng thường"],
+    ["stock_uom", item.stock_uom], ["inventory_mode", effectiveInventoryMode(item)],
     ["measurement_profile", item.measurement_profile], ["item_name", item.item_name], ["description", item.description],
     ["min_area_sqm", item.min_area_sqm], ["door_type", context.door_type ?? item.door_type],
     ["purchase_kg_per_m2", context.purchase_kg_per_m2 ?? item.purchase_kg_per_m2],
@@ -364,6 +412,26 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     clearIfField(clear, fields, "discount_percentage");
   }
 
+  // PB ray và PB nhựa là hai số đo nghiệp vụ độc lập. `width_m` chỉ là trường
+  // chuẩn hoá mà công thức/BOM cũ đang đọc; không dùng nó làm ô nhập rồi đổi nhãn.
+  const areaFinishedProduct = isAreaFinishedProduct(item);
+  const selectedWidthField = areaFinishedProduct
+    ? salesWidthField(effectiveDoorType, item.item_group, parent.customer_group)
+    : null;
+  if (selectedWidthField) {
+    const selectedWidth = positive(patch[selectedWidthField] ?? row[selectedWidthField]);
+    const hasSeparateWidth = positive(row.width_pb_ray_m) || positive(row.width_pb_nhua_m);
+    const legacyWidth = !hasSeparateWidth && changed === "initial_load" ? positive(row.width_m) : null;
+    if (selectedWidth) patch.width_m = selectedWidth;
+    else if (legacyWidth) {
+      setIfField(patch, fields, selectedWidthField, legacyWidth);
+      patch.width_m = legacyWidth;
+    } else {
+      patch.width_m = undefined;
+      clearIfField(clear, fields, "width_m");
+    }
+  }
+
   const effectiveRow = { ...row, ...patch };
   const formula = await formulaPreview(call, effectiveRow, parent, item);
   if (formula) {
@@ -386,7 +454,7 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
     else clearIfField(clear, fields, "qty");
   }
   const finalRow = { ...row, ...patch };
-  if (text(item.inventory_mode) === "Thành phẩm theo m2"
+  if (areaFinishedProduct
     && AREA_UOMS.has(normalizedUom(finalRow.uom)) && SET_UOMS.has(normalizedUom(item.stock_uom))) {
     const qty = positive(finalRow.qty);
     const sets = positive(finalRow.set_count) ?? 1;
@@ -413,9 +481,34 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   const finalForFields = { ...row, ...patch };
   const widthBasis = normalized(finalForFields.width_basis);
   const supportsButterflyBracket = formula?.supports_butterfly_bracket === true;
-  if (text(item.inventory_mode) === "Thành phẩm theo m2") {
-    fieldOverride(overrides, fields, "width_m", { label: widthBasis.includes("nhựa") ? "Rộng PB nhựa\n(m)" : widthBasis.includes("ray") ? "Rộng PB ray\n(m)" : text(parent.customer_group) === "Đại lý" ? "Rộng PB nhựa\n(m)" : "Rộng PB ray\n(m)" });
+  if (areaFinishedProduct) {
+    fieldOverride(overrides, fields, "width_pb_ray_m", {
+      hidden: selectedWidthField === "width_pb_ray_m" ? 0 : 1,
+      reqd: selectedWidthField === "width_pb_ray_m" ? 1 : 0,
+      read_only: selectedWidthField === "width_pb_ray_m" ? 0 : 1,
+      label: "Rộng PB ray\n(m)",
+      depends_on: null,
+      mandatory_depends_on: null,
+    });
+    fieldOverride(overrides, fields, "width_pb_nhua_m", {
+      hidden: selectedWidthField === "width_pb_nhua_m" ? 0 : 1,
+      reqd: selectedWidthField === "width_pb_nhua_m" ? 1 : 0,
+      read_only: selectedWidthField === "width_pb_nhua_m" ? 0 : 1,
+      label: "Rộng PB nhựa\n(m)",
+      depends_on: null,
+      mandatory_depends_on: null,
+    });
+    fieldOverride(overrides, fields, "width_m", { hidden: selectedWidthField ? 1 : 0, reqd: selectedWidthField ? 0 : 1, label: widthBasis.includes("nhựa") ? "Rộng PB nhựa\n(m)" : widthBasis.includes("ray") ? "Rộng PB ray\n(m)" : "Rộng PB\n(m)" });
     fieldOverride(overrides, fields, "height_m", { label: "Cao PB\n(m)" });
+    const meshHeightApplicable = usesMeshHeight(effectiveDoorType, item.item_group);
+    fieldOverride(overrides, fields, "mesh_height_m", {
+      hidden: meshHeightApplicable ? 0 : 1,
+      reqd: 0,
+      read_only: meshHeightApplicable ? 0 : 1,
+      label: "Cao lưới\n(m)",
+      depends_on: null,
+      mandatory_depends_on: null,
+    });
   }
   fieldOverride(overrides, fields, "has_butterfly_bracket", {
     hidden: supportsButterflyBracket ? 0 : 1,
@@ -434,9 +527,9 @@ async function previewSales(call: PlatformCall, args: Json, row: Json, parent: J
   fieldOverride(overrides, fields, "amount", { label: "Thành tiền\n(VNĐ)" });
 
   const setsRequired = Boolean(linear || isWidthQuantitySalesItem(item) || isOrdinaryQuantitySalesItem(item)
-    || text(item.inventory_mode) === "Thành phẩm theo m2");
+    || areaFinishedProduct);
   if (setsRequired) {
-    const setCountLabel = text(item.inventory_mode) === "Thành phẩm theo m2"
+    const setCountLabel = areaFinishedProduct
       ? "Số bộ"
       : linear
         ? "Số cây/đoạn"

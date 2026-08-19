@@ -51,14 +51,18 @@ export function toFrappeField(field: string): string {
 }
 
 /** Translates any Frappe filter form into kernel filters. */
-export function toKernelFilters(raw: JsonValue | undefined, doctype: string): ListFilter[] {
+export function toKernelFilters(
+  raw: JsonValue | undefined,
+  doctype: string,
+  options: { stringFields?: ReadonlySet<string> } = {},
+): ListFilter[] {
   if (raw === undefined || raw === null || raw === "") return [];
-  if (Array.isArray(raw)) return raw.map((entry) => fromArrayForm(entry, doctype));
-  if (typeof raw === "object") return fromObjectForm(raw as JsonObject);
+  if (Array.isArray(raw)) return raw.map((entry) => fromArrayForm(entry, doctype, options.stringFields));
+  if (typeof raw === "object") return fromObjectForm(raw as JsonObject, options.stringFields);
   throw errors.validation("filters must be an array or object");
 }
 
-function fromArrayForm(entry: JsonValue, doctype: string): ListFilter {
+function fromArrayForm(entry: JsonValue, doctype: string, stringFields?: ReadonlySet<string>): ListFilter {
   if (!Array.isArray(entry)) throw errors.validation("Each filter must be an array or an object entry");
   // A 4-element filter names the doctype first. Cross-doctype filters would need
   // a join the kernel list does not perform, so a foreign doctype is refused
@@ -71,24 +75,24 @@ function fromArrayForm(entry: JsonValue, doctype: string): ListFilter {
     }
     parts = parts.slice(1);
   }
-  if (parts.length === 2) return build(String(parts[0]), "=", parts[1] ?? null);
-  if (parts.length === 3) return build(String(parts[0]), String(parts[1]), parts[2] ?? null);
+  if (parts.length === 2) return build(String(parts[0]), "=", parts[1] ?? null, stringFields);
+  if (parts.length === 3) return build(String(parts[0]), String(parts[1]), parts[2] ?? null, stringFields);
   throw errors.validation("A filter array must hold [field, operator, value]");
 }
 
-function fromObjectForm(object: JsonObject): ListFilter[] {
+function fromObjectForm(object: JsonObject, stringFields?: ReadonlySet<string>): ListFilter[] {
   const filters: ListFilter[] = [];
   for (const [field, value] of Object.entries(object)) {
     if (Array.isArray(value) && value.length === 2 && typeof value[0] === "string") {
-      filters.push(build(field, value[0], value[1] ?? null));
+      filters.push(build(field, value[0], value[1] ?? null, stringFields));
       continue;
     }
-    filters.push(build(field, "=", value ?? null));
+    filters.push(build(field, "=", value ?? null, stringFields));
   }
   return filters;
 }
 
-function build(field: string, rawOperator: string, value: JsonValue): ListFilter {
+function build(field: string, rawOperator: string, value: JsonValue, stringFields?: ReadonlySet<string>): ListFilter {
   const operator = rawOperator.trim().toLowerCase();
   if (UNSUPPORTED.has(operator)) throw errors.validation(`Filter operator is not supported: ${rawOperator}`);
 
@@ -109,7 +113,7 @@ function build(field: string, rawOperator: string, value: JsonValue): ListFilter
     if (!values.length) throw errors.validation(`Filter "in" on ${field} requires at least one value`);
     return { field: kernelField, operator: "in", value: values as JsonValue };
   }
-  return { field: kernelField, operator: mapped, value: normalizeScalar(value) };
+  return { field: kernelField, operator: mapped, value: normalizeScalar(value, stringFields?.has(kernelField) === true) };
 }
 
 /**
@@ -117,7 +121,8 @@ function build(field: string, rawOperator: string, value: JsonValue): ListFilter
  * string. The kernel validates values against each field's declared type, so a
  * numeric-looking string would be rejected as the wrong type.
  */
-function normalizeScalar(value: JsonValue): JsonValue {
+function normalizeScalar(value: JsonValue, preserveString = false): JsonValue {
+  if (preserveString && (typeof value === "string" || typeof value === "number")) return String(value).trim();
   if (typeof value === "boolean") return value ? 1 : 0;
   if (typeof value === "string") {
     const trimmed = value.trim();

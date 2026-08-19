@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   evaluateBomQuantity,
+  resolveBomTemplateComposition,
   resolveBomTemplate,
+  resolveBomTemplatePreview,
 } from "../dist/apps-src/alumdoor-worker/src/bom-template-core.js";
 
 function component(rule_code, item_code, quantity, extra = {}) {
@@ -54,6 +56,53 @@ test("equal top BOM Templates fail closed instead of guessing", () => {
       { template_code: "B", item_code: "CUA-UC", conditions: { product_group: "Cửa Úc" }, component_rules: [] },
     ],
   }), /BOM Template cùng mức.*Hệ thống không đoán/i);
+});
+
+test("equal-level active BOM Templates select the most recently modified document", () => {
+  const result = resolveBomTemplatePreview({
+    context: { item_code: "TP-CUADL1LY XN-VK_TRONBO_3-4m²" },
+    templates: [
+      {
+        source_name: "24",
+        modified: "2026-08-18T01:34:23.995Z",
+        template_code: "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+        item_code: "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+        component_rules: [component("OLD", "NVL-OLD", fixed(1))],
+      },
+      {
+        source_name: "328",
+        modified: "2026-08-19T01:42:01.805Z",
+        template_code: "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+        item_code: "TP-CUADL1LY XN-VK_TRONBO_3-4m²",
+        component_rules: [component("NEW", "NVL-NEW", fixed(1))],
+      },
+    ],
+  });
+
+  assert.equal(result.source_name, "328");
+  assert.equal(result.components.length, 1);
+  assert.equal(result.components[0].item_code, "NVL-NEW");
+});
+
+test("equal-level templates with the same modified time still fail closed and identify source documents", () => {
+  assert.throws(() => resolveBomTemplate({
+    context: { item_code: "TP-DOOR" },
+    templates: [
+      { source_name: "24", modified: "2026-08-19T01:42:01.805Z", template_code: "TP-DOOR", item_code: "TP-DOOR", component_rules: [component("A", "NVL-A", fixed(1))] },
+      { source_name: "328", modified: "2026-08-19T01:42:01.805Z", template_code: "TP-DOOR", item_code: "TP-DOOR", component_rules: [component("B", "NVL-B", fixed(1))] },
+    ],
+  }), /cùng thời điểm cập nhật.*\[24\].*\[328\].*không đoán/i);
+});
+
+test("runtime item code gates templates before generic conditions are compared", () => {
+  const result = resolveBomTemplate({
+    context: { item_code: "CUA-UC-01", product_group: "Cửa Úc" },
+    templates: [
+      { template_code: "WRONG", item_code: "CUA-UC-02", conditions: {}, component_rules: [] },
+      { template_code: "RIGHT", item_code: "CUA-UC-01", conditions: {}, component_rules: [] },
+    ],
+  });
+  assert.equal(result.template_code, "RIGHT");
 });
 
 test("required BOM context fails closed before component generation", () => {
@@ -148,6 +197,70 @@ test("missing quantity inputs and missing required component slots never become 
       component_rules: [component("UC-LEAF", "AL-LEAF", fixed(1), { component_key: "LEAF" })],
     }],
   }), /thiếu BOM Component Rule phù hợp cho RAY.*không tự bỏ vật tư bắt buộc/i);
+});
+
+test("sales BOM preview exposes deferred source components without inventing quantity", () => {
+  const template = {
+    template_code: "DL-DEFERRED",
+    item_code: "CUA-DL",
+    conditions: { item_code: "CUA-DL" },
+    component_rules: [component("TOLE", "NVL-TOLE", {
+      kind: "DEFERRED",
+      reason: "missing_conversion",
+      source_value: "11.64",
+    })],
+  };
+
+  const preview = resolveBomTemplatePreview({ templates: [template], context: { item_code: "CUA-DL" } });
+  assert.equal(preview.components[0].item_code, "NVL-TOLE");
+  assert.equal(preview.components[0].qty, null);
+  assert.match(preview.components[0].quantity_error, /chưa có hệ số quy đổi.*không tự đoán số lượng/i);
+
+  assert.throws(
+    () => resolveBomTemplate({ templates: [template], context: { item_code: "CUA-DL" } }),
+    /chưa có hệ số quy đổi.*trước khi sản xuất.*không tự đoán số lượng/i,
+  );
+});
+
+test("sales composition resolves only parent-child membership and never evaluates production quantity", () => {
+  const template = {
+    template_code: "DL-COMPOSITION",
+    item_code: "CUA-DL-TRONBO",
+    conditions: { item_code: "CUA-DL-TRONBO" },
+    required_component_keys: ["LEAF", "RAY"],
+    component_rules: [
+      component("LEAF", "NVL-TOLE", {}, { component_key: "LEAF", sequence: 10 }),
+      component("RAY", "NVL-RAY", {
+        kind: "DEFERRED",
+        reason: "missing_conversion",
+      }, { component_key: "RAY", sequence: 20 }),
+    ],
+  };
+
+  const result = resolveBomTemplateComposition({
+    templates: [template],
+    context: { item_code: "CUA-DL-TRONBO" },
+  });
+
+  assert.equal(result.template_code, "DL-COMPOSITION");
+  assert.deepEqual(result.components, [
+    { component_key: "LEAF", item_code: "NVL-TOLE", source_rule: "LEAF" },
+    { component_key: "RAY", item_code: "NVL-RAY", source_rule: "RAY" },
+  ]);
+  assert.equal("qty" in result.components[0], false);
+  assert.equal("quantity_error" in result.components[1], false);
+
+  assert.throws(
+    () => resolveBomTemplate({ templates: [template], context: { item_code: "CUA-DL-TRONBO" } }),
+    /công thức số lượng BOM thiếu base/i,
+  );
+});
+
+test("malformed non-deferred quantity reports a business configuration error instead of reading kind", () => {
+  assert.throws(
+    () => evaluateBomQuantity({}, {}),
+    /công thức số lượng BOM thiếu base.*không tự đoán/i,
+  );
 });
 
 test("quantity DSL supports area and refuses non-positive material quantities", () => {

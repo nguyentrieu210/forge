@@ -17,6 +17,7 @@ import { addMinor, fromScaledInt, multiplyScaled, negateMinor, toScaledInt } fro
 import { domainEvent } from "../../outbox/src/index.js";
 import { buildTrackedStockLines, deriveOutgoingValuation } from "../../clouderp-stock/src/index.js";
 import { resolveServerPrice } from "../../clouderp-pricing/src/index.js";
+import type { PricingRuleSnapshot } from "../../clouderp-pricing/src/commercial-policy.js";
 import { applyUomConversion, pricedQtyMicros, stockQtyMicros } from "../../clouderp-core/src/uom.js";
 import { assertCurrencyScale, calculateSalesTotals } from "./totals.js";
 import type { DeliveryIssuePurpose, DeliveryNoteData, PaymentEntryData, SalesInvoiceData, SalesItem, SalesOrderData } from "./types.js";
@@ -230,13 +231,8 @@ export class SalesOrderController extends BaseController<SalesOrderData> {
   }
 }
 
-const ALUMDOOR_DOOR_TYPES = new Set([
-  "cửa đức", "cửa úc", "cửa lưới", "cửa đài loan", "cửa siêu trường", "cửa tấm liền úc",
-]);
-const ALUMDOOR_DOOR_GROUPS = new Set([
-  "cửa cn đức", "cửa tấm liền úc", "cửa lưới", "cửa đài loan", "cửa đài loan inox",
-  "cửa kéo đài loan", "cửa siêu trường",
-]);
+const ALUMDOOR_GERMAN_DOOR_TYPES = new Set(["cửa đức"]);
+const ALUMDOOR_GERMAN_DOOR_GROUPS = new Set(["cửa cn đức"]);
 
 const normalizedAlumdoorText = (value: unknown) => String(value ?? "").normalize("NFC").trim().toLocaleLowerCase("vi");
 
@@ -291,11 +287,56 @@ export function alumdoorOrderTotals(input: {
 /** Chỉ mã cửa mặc định 15%; ray/trục và các phụ kiện mặc định 0%. */
 export function defaultAlumdoorDiscountPercent(item: Record<string, unknown>): number {
   if (isAlumdoorLinearItem(item)) return 0;
-  if (ALUMDOOR_DOOR_TYPES.has(normalizedAlumdoorText(item.door_type))) return 15;
-  return normalizedAlumdoorText(item.inventory_mode) === "thành phẩm theo m2"
-    && ALUMDOOR_DOOR_GROUPS.has(normalizedAlumdoorText(item.item_group))
+  if (ALUMDOOR_GERMAN_DOOR_TYPES.has(normalizedAlumdoorText(item.door_type))) return 15;
+  const measurementMode = normalizedAlumdoorText(item.inventory_mode || item.measurement_profile);
+  return measurementMode === "thành phẩm theo m2"
+    && ALUMDOOR_GERMAN_DOOR_GROUPS.has(normalizedAlumdoorText(item.item_group))
     ? 15
     : 0;
+}
+
+export interface AlumdoorBenefitItem extends JsonObject {
+  label: string;
+  qty: number;
+  uom: string;
+  source_rule: string;
+}
+
+const ALUMDOOR_GERMAN_DISCOUNT_RULE = "ALUMDOOR-PR:DUC-DISCOUNT-15";
+const ALUMDOOR_GERMAN_GIFT_RAIL_RULE = "ALUMDOOR-PR:DUC-GIFT-RAIL-8M2";
+
+/** Preserve an auditable policy snapshot when the tenant has not received the equivalent rule yet. */
+export function withAlumdoorDefaultDiscountSnapshot(
+  snapshots: PricingRuleSnapshot[],
+  item: Record<string, unknown>,
+): PricingRuleSnapshot[] {
+  const expected = defaultAlumdoorDiscountPercent(item);
+  if (expected <= 0 || snapshots.some((snapshot) => snapshot.effect_type === "DISCOUNT_PERCENT")) return snapshots;
+  return [...snapshots, {
+    rule_name: ALUMDOOR_GERMAN_DISCOUNT_RULE,
+    effect_type: "DISCOUNT_PERCENT",
+    priority: 100,
+    discount_percentage: String(expected),
+  }];
+}
+
+/**
+ * Non-monetary entitlement from the stamped 31/07/2026 price sheet. This is not a
+ * BOM component and never participates in the line total. The exact rail SKU and
+ * cutting length remain fulfilment data, because the price sheet does not specify them.
+ */
+export function alumdoorCommercialBenefits(
+  item: Record<string, unknown>,
+  areaSqm: unknown,
+): AlumdoorBenefitItem[] {
+  const area = Number(areaSqm);
+  if (defaultAlumdoorDiscountPercent(item) !== 15 || !Number.isFinite(area) || area < 8) return [];
+  return [{
+    label: "Tặng ray cửa Đức từ 8 m²",
+    qty: 1,
+    uom: "Bộ",
+    source_rule: ALUMDOOR_GERMAN_GIFT_RAIL_RULE,
+  }];
 }
 
 /**
@@ -336,12 +377,16 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
   async normalize(context: ControllerContext<DeliveryNoteData>): Promise<DeliveryNoteData> {
     const input = context.command.document;
     if (!input.company || !input.currency) throw errors.validation("Company and currency are required");
-    const issuePurpose = input.issue_purpose ?? (input.against_sales_order ? "Bán hàng" : undefined);
+    const requestedSources = deliverySourceGroups(input);
+    const issuePurpose = input.issue_purpose ?? (requestedSources.size > 0 ? "Bán hàng" : undefined);
     if (!issuePurpose || !DELIVERY_ISSUE_PURPOSES.has(issuePurpose)) {
       throw errors.validation("A valid issue purpose is required");
     }
-    if (issuePurpose === "Bán hàng" && (!input.customer || !input.against_sales_order)) {
-      throw errors.validation("Customer and Sales Order are required for a sales delivery");
+    if (issuePurpose === "Bán hàng" && (!input.customer || requestedSources.size === 0)) {
+      throw errors.validation("Customer and Sales Order source are required for a sales delivery");
+    }
+    if (issuePurpose !== "Bán hàng" && requestedSources.size > 0) {
+      throw errors.validation("Sales Order sources are only allowed when issue purpose is Bán hàng");
     }
     let normalizedCustomer = input.customer;
     if (input.items.length === 0) throw errors.validation("At least one delivery item is required");
@@ -364,8 +409,8 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
         ...items.map((item): [string, string] => ["Warehouse", item.warehouse!]),
       ]);
       await assertPostingUnlocked(context, input.company, input.posting_at);
-      if (input.against_sales_order) {
-        const salesOrder = await requireSubmittedDocument<SalesOrderData>(context, "Sales Order", input.against_sales_order);
+      for (const [salesOrderName, sourceItems] of requestedSources) {
+        const salesOrder = await requireSubmittedDocument<SalesOrderData>(context, "Sales Order", salesOrderName);
         normalizedCustomer ??= salesOrder.data.customer;
         assertSameCommercialContext(
           { customer: normalizedCustomer, company: input.company, currency: input.currency },
@@ -376,8 +421,13 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
         await assertSalesOrderDeliveryLines(
           context as unknown as ControllerContext<JsonObject>,
           salesOrder,
-          items,
+          sourceItems.map((sourceItem) => items[sourceItem.index]!),
         );
+        const orderDate = String(salesOrder.data.transaction_date ?? "").slice(0, 10);
+        const postingDate = String(input.posting_at ?? "").slice(0, 10);
+        if (orderDate && postingDate && orderDate > postingDate) {
+          throw errors.reference(`Sales Order ${salesOrderName} is dated after Delivery Note posting date`);
+        }
       }
       if (!allowNegativeStock) {
         for (const item of items) {
@@ -394,17 +444,59 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
     }
     let valuedItems = items;
     if (context.command.action === "submit") {
-      valuedItems = await Promise.all(items.map(async (item, index) => {
+      valuedItems = [];
+      const priorIssues = new Map<string, StockLedgerEntry[]>();
+      for (const [index, item] of items.entries()) {
         const qty = stockQtyMicros(item);
+        const stockKey = `${item.item_code}\u0000${item.warehouse!}`;
         const valuation = await deriveOutgoingValuation(context as unknown as ControllerContext<JsonObject>, {
-          itemCode: item.item_code, warehouse: item.warehouse!, qtyMicros: qty, postingAt: input.posting_at, currencyScale,
+          itemCode: item.item_code,
+          warehouse: item.warehouse!,
+          qtyMicros: qty,
+          postingAt: input.posting_at,
+          currencyScale,
+          dimensions: {
+            ...(item.color ? { color: String(item.color) } : {}),
+            ...(typeof item.length_m === "string" || typeof item.length_m === "number" ? { length_m: item.length_m } : {}),
+            ...(item.condition ? { condition: String(item.condition) } : {}),
+            ...(typeof item.is_stamped === "string" || typeof item.is_stamped === "number" || typeof item.is_stamped === "boolean" ? { is_stamped: item.is_stamped } : {}),
+          },
+          ...(!item.serial_and_batch_bundle ? { priorIssues: priorIssues.get(stockKey) ?? [] } : {}),
         });
-        return { ...item, valuation_rate_minor: valuation.valuation_rate_minor, valuation_rate: fromScaledInt(valuation.valuation_rate_minor, currencyScale), stock_value_difference_minor: valuation.stock_value_difference_minor };
-      }));
+        const valuedItem: SalesItem = {
+          ...item,
+          valuation_rate_minor: valuation.valuation_rate_minor,
+          valuation_rate: fromScaledInt(valuation.valuation_rate_minor, currencyScale),
+          stock_value_difference_minor: valuation.stock_value_difference_minor,
+          ...(!item.serial_and_batch_bundle && valuation.fifo_allocations?.length
+            ? { fifo_allocations: valuation.fifo_allocations }
+            : {}),
+        };
+        valuedItems.push(valuedItem);
+        if (!item.serial_and_batch_bundle) {
+          const planned: StockLedgerEntry = {
+            line_key: `PREVIEW-ITEM-${item.row_id || index + 1}`,
+            item_code: item.item_code,
+            warehouse: item.warehouse!,
+            actual_qty_micros: -qty,
+            valuation_rate_minor: valuation.valuation_rate_minor,
+            stock_value_difference_minor: valuation.stock_value_difference_minor,
+            qty_scale: 6,
+            currency_scale: currencyScale,
+            currency: input.currency,
+            posting_at: input.posting_at,
+          };
+          priorIssues.set(stockKey, [...(priorIssues.get(stockKey) ?? []), planned]);
+        }
+      }
     }
+    const sourceSalesOrders = [...deliverySourceGroups({ ...input, items: valuedItems }).keys()].sort();
+    const { against_sales_order: _legacySource, source_sales_orders: _legacySources, ...rest } = input;
     return {
-      ...input,
+      ...rest,
       ...(normalizedCustomer ? { customer: normalizedCustomer } : {}),
+      ...(sourceSalesOrders.length === 1 ? { against_sales_order: sourceSalesOrders[0] } : {}),
+      ...(sourceSalesOrders.length ? { source_sales_orders: sourceSalesOrders } : {}),
       issue_purpose: issuePurpose,
       currency_scale: currencyScale,
       allow_negative_stock: allowNegativeStock,
@@ -433,9 +525,7 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
       if (originalStock.length === 0) {
         throw errors.reference(`Original stock posting for ${this.doctype} ${context.command.aggregate.name} was not found`);
       }
-      const fulfillment = data.against_sales_order
-        ? salesOrderFulfillmentEntries(data.against_sales_order, "Delivery", data.items, data.posting_at, true)
-        : [];
+      const fulfillment = deliveryFulfillmentEntries(data, true);
       const stockBundleUsages = data.items.flatMap((item, index): StockBundleUsageEntry[] => (
         item.serial_and_batch_bundle
           ? [{
@@ -462,7 +552,7 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
       const qty = stockQtyMicros(item);
       const valuationRateMinor = item.valuation_rate_minor ?? toScaledInt(item.valuation_rate ?? item.rate,currencyScale);
       const value = Math.abs(item.stock_value_difference_minor ?? multiplyScaled(fromScaledInt(qty,6),6,item.valuation_rate ?? item.rate,6,currencyScale));
-      const tracked = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, { itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency,currencyScale,valuationRateMinor,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.weight_micros !== undefined ? { weightMicros:item.weight_micros } : {}),...(item.serial_and_batch_bundle ? { bundleName:item.serial_and_batch_bundle } : {}),allowNegativeStock:Boolean(data.allow_negative_stock) });
+      const tracked = await buildTrackedStockLines(context as unknown as ControllerContext<JsonObject>, { itemCode:item.item_code,warehouse:item.warehouse!,qtyMicros:qty,direction:"Outward",postingAt:data.posting_at,currency:data.currency,currencyScale,valuationRateMinor,stockValueMinor:value,lineKey:`ITEM-${item.row_id||index+1}`,...(item.weight_micros !== undefined ? { weightMicros:item.weight_micros } : {}),...(item.serial_and_batch_bundle ? { bundleName:item.serial_and_batch_bundle } : {}),...(!item.serial_and_batch_bundle && item.fifo_allocations?.length ? { automaticFifoAllocations:item.fifo_allocations } : {}),allowNegativeStock:Boolean(data.allow_negative_stock) });
       normal.push(...tracked.stock); usages.push(...tracked.usages);
       // Giá vốn ghi sổ cái LẤY TỪ sổ kho, không dùng lại `value` tính trước khi gọi.
       // Định giá theo từng lô làm tổng khác con số tính theo cả dòng; giữ `value` ở đây là
@@ -475,19 +565,35 @@ export class DeliveryNoteController extends BaseController<DeliveryNoteData> {
         || (typeof company?.default_cogs_account==="string"?company.default_cogs_account:"");
       if(stockAccount&&cogsAccount){gl.push({line_key:`COGS-${item.row_id||index+1}`,account:cogsAccount,debit_minor:postedValue,credit_minor:0,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at},{line_key:`STOCK-${item.row_id||index+1}`,account:stockAccount,debit_minor:0,credit_minor:postedValue,currency:data.currency,currency_scale:currencyScale,posting_at:data.posting_at});}
     }
-    const fulfillment = data.against_sales_order
-      ? salesOrderFulfillmentEntries(data.against_sales_order, "Delivery", data.items, data.posting_at)
-      : [];
+    const fulfillment = deliveryFulfillmentEntries(data);
     return { gl,stock:normal,fulfillment,stockBundleUsages:usages };
   }
 
   eventTypes(context: ControllerContext<DeliveryNoteData>): string[] {
     const data = context.command.action === "cancel" ? context.existing?.data : context.command.document;
-    const progressesSalesOrder = typeof data?.against_sales_order === "string" && data.against_sales_order.length > 0;
+    const progressesSalesOrder = data ? deliverySourceGroups(data).size > 0 : false;
     if (context.command.action === "submit") return ["stock.posted", "delivery.updated", ...(progressesSalesOrder ? ["sales_order.progressed"] : [])];
     if (context.command.action === "cancel") return ["stock.reversed", "delivery.cancelled", ...(progressesSalesOrder ? ["sales_order.progressed"] : [])];
     return ["delivery.updated"];
   }
+}
+
+function deliverySourceGroups(data: Pick<DeliveryNoteData, "against_sales_order" | "items">): Map<string, Array<{ item: SalesItem; index: number }>> {
+  const groups = new Map<string, Array<{ item: SalesItem; index: number }>>();
+  for (const [index, item] of data.items.entries()) {
+    const source = String(item.sales_order ?? data.against_sales_order ?? "").trim();
+    if (!source) continue;
+    const rows = groups.get(source) ?? [];
+    rows.push({ item, index });
+    groups.set(source, rows);
+  }
+  return groups;
+}
+
+function deliveryFulfillmentEntries(data: DeliveryNoteData, reverse = false): FulfillmentEntry[] {
+  if (data.issue_purpose !== "Bán hàng") return [];
+  return [...deliverySourceGroups(data)].flatMap(([salesOrder, rows]) =>
+    salesOrderFulfillmentEntries(salesOrder, "Delivery", rows.map((row) => row.item), data.posting_at, reverse));
 }
 
 export class SalesInvoiceController extends BaseController<SalesInvoiceData> {

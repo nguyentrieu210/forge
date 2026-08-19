@@ -289,6 +289,13 @@ test("numeric-looking filter values from a query string are coerced so typed fie
   assert.deepEqual(toKernelFilters({ docstatus: "1" }, "Sales Order"), [{ field: "docstatus", operator: "eq", value: 1 }]);
 });
 
+test("numeric-looking Link identifiers remain strings when metadata marks the field textual", () => {
+  assert.deepEqual(
+    toKernelFilters({ province: "79" }, "Phường Xã", { stringFields: new Set(["province"]) }),
+    [{ field: "province", operator: "eq", value: "79" }],
+  );
+});
+
 test("unsupported filter operators are rejected, never silently dropped", () => {
   // A dropped filter would show the user every row while the UI claims a filter is active.
   for (const operator of ["not like", "not in", "between", "descendants of"]) {

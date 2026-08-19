@@ -118,6 +118,10 @@ test("preview resolves BOM Template but does not create or submit a BOM", async 
   assert.equal(result.bom_template_code, "DUC-01");
   assert.deepEqual(result.components.map((row) => [row.item_code, row.qty]), [["AL-LEAF", 51], ["RAY-U75", 2]]);
   assert.equal(requests.some((entry) => entry.init.method === "POST"), false);
+  const templateList = requests.find((entry) => entry.path.startsWith("resource/BOM%20Template?"));
+  assert.ok(templateList);
+  const filters = JSON.parse(new URL(`https://local/${templateList.path}`).searchParams.get("filters"));
+  assert.deepEqual(filters, [["item_code", "=", "CUA-DUC"]]);
 });
 
 test("materialization creates revisioned Bill of Materials and submits it before Work Order use", async () => {

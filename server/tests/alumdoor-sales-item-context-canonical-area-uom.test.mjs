@@ -46,5 +46,5 @@ test("canonical finished door may sell by m2 while stock UOM is Bộ using measu
   assert.equal(body.conversion_factor, null);
   assert.equal(body.inventory_mode, "Thành phẩm theo m2");
   assert.equal(body.measurement_profile, "Thành phẩm theo m2");
-  assert.equal(body.door_type, "Cửa CN Đức");
+  assert.equal(body.door_type, "Cửa Đức");
 });

@@ -40,6 +40,8 @@ import {
   blankFromMeta,
   hydrateSalesLines,
   isAreaDoor,
+  isDirectOrdinaryQuantityLine,
+  isFullSetSalesItem,
   lineBillableArea,
   lineCommercialNeedsApproval,
   money,
@@ -50,6 +52,7 @@ import {
   positiveNumber,
   pricingSnapshots,
   quantity,
+  salesWidthInputField,
   text,
   today,
   type AlumdoorSalesOrderCreateProps,
@@ -83,11 +86,34 @@ const CUSTOMER_CONTEXT_FIELDS = [
   "selling_price_list",
 ] as const;
 
-function itemSearchScore(option: { value: string; description?: string }, query: string): number {
+function hydrateSavedLines(rows: Json[], previous: SalesLine[]): SalesLine[] {
+  const hydrated = hydrateSalesLines(rows);
+  return hydrated.map((line, index) => {
+    const prior = previous.find((candidate) => text(candidate.name) && text(candidate.name) === text(line.name))
+      ?? previous[index];
+    if (!prior || text(prior.item_code) !== text(line.item_code)) return line;
+    return {
+      ...line,
+      _itemName: prior._itemName,
+      _context: prior._context,
+      _allowedColors: prior._allowedColors,
+      _overrides: prior._overrides,
+      _commercial: prior._commercial,
+      _bomPreview: prior._bomPreview,
+      _bomComponentNames: prior._bomComponentNames,
+      _bomError: prior._bomError,
+      _loading: false,
+      _error: "",
+      _pricingError: prior._pricingError,
+    };
+  });
+}
+
+function itemSearchScore(option: { value: string; label?: string; description?: string }, query: string): number {
   const needle = normalized(query);
   if (!needle) return 0;
   const code = normalized(option.value);
-  const label = normalized(option.description);
+  const label = normalized(option.label || option.description);
   const haystack = `${label} ${code}`;
   const tokens = needle.split(/\s+/).filter(Boolean);
   let score = 0;
@@ -118,6 +144,8 @@ function commercialFacts(line: SalesLine): Json {
     item_group: line._context?.item_group,
     door_type: line._context?.door_type,
     inventory_mode: line._context?.inventory_mode,
+    width_pb_ray_m: line.width_pb_ray_m,
+    width_pb_nhua_m: line.width_pb_nhua_m,
     width_m: line.width_m,
     height_m: line.height_m,
     mesh_height_m: line.mesh_height_m,
@@ -136,6 +164,21 @@ function commercialFacts(line: SalesLine): Json {
 
 function checked(value: unknown): boolean {
   return value === true || value === 1 || value === "1" || text(value).toLowerCase() === "true";
+}
+
+function salesOrderErrorMessage(error: unknown): string {
+  const message = text(mapError(error).message);
+  const key = normalized(message);
+  if (!message || key.includes("failed to fetch") || key.includes("networkerror") || key.includes("network request failed")) {
+    return "Không kết nối được máy chủ local 8799. Hãy bật backend rồi bấm Thử lại.";
+  }
+  if (key.includes("item price") && key.includes("does not exist")) {
+    return "Không tìm thấy đơn giá đúng Bảng giá, Mặt hàng, ĐVT và biến thể. Hãy kiểm tra Item Price rồi tính lại.";
+  }
+  if (key.includes("unauthorized") || key.includes("session") && key.includes("expired")) {
+    return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại rồi thử lại.";
+  }
+  return message;
 }
 
 function commercialHeaderSignature(header: Json): string {
@@ -163,6 +206,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fatal, setFatal] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [headerError, setHeaderError] = useState("");
   const headerErrorRef = useRef("");
   const [documentPreviewPending, setDocumentPreviewPending] = useState(0);
@@ -227,7 +271,20 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     const current = linesRef.current;
     if (!current.some((line) => text(line.item_code))) return;
     replaceLines(current.map((line) => text(line.item_code)
-      ? { ...line, _loading: true, _pricingError: "" }
+      ? {
+          ...line,
+          _loading: true,
+          _pricingError: "",
+          _commercial: undefined,
+          _bomPreview: undefined,
+          _bomComponentNames: {},
+          _bomError: "",
+          rate: undefined,
+          amount: undefined,
+          discount_amount: undefined,
+          adjustment_amount: undefined,
+          net_amount: undefined,
+        }
       : line), false);
   }, [replaceLines]);
 
@@ -235,17 +292,25 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     markDocumentChanged();
     const current = linesRef.current.find((line) => line._key === key);
     const active = Boolean(text(current?.item_code) || text(patch.item_code));
-    patchLine(key, active ? { ...patch, _loading: true } : patch, true);
+    // Không giữ priced_qty của preview cũ sau khi người dùng vừa đổi SL/quy cách.
+    // Trong lúc request mới chạy, cột Khối lượng sẽ rơi về qty hiện tại thay vì đứng im.
+    patchLine(key, active ? { ...patch, _loading: true, _commercial: undefined } : patch, true);
   }, [markDocumentChanged, patchLine]);
 
   const salesServices = useMemo<FieldServices>(() => ({
     ...services,
     searchLink: async (doctype, query, options) => {
+      // Dữ liệu cũ của danh mục này chưa lưu `disabled: 0`; filter metadata
+      // `disabled = 0` vừa loại nhầm tài khoản đang dùng, vừa không thuộc tập
+      // filter được công bố của list service. Backend vẫn kiểm tra quyền đọc.
+      if (doctype === "Tài khoản ngân hàng" && services.searchLink) {
+        return services.searchLink(doctype, query, { ...options, filters: undefined });
+      }
       if (doctype !== "Item" || !services.searchLink) return services.searchLink?.(doctype, query, options) ?? [];
       const raw = text(query);
       const terms = salesItemSearchTerms(raw);
       const batches = await Promise.allSettled(terms.map((term) => services.searchLink!(doctype, term, { ...options, pageLength: 100 })));
-      const merged = new Map<string, { value: string; description?: string }>();
+      const merged = new Map<string, { value: string; label?: string; description?: string }>();
       let firstFailure: unknown;
       let fulfilledCount = 0;
       for (const batch of batches) {
@@ -255,10 +320,47 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         } else if (firstFailure === undefined) firstFailure = batch.reason;
       }
       if (!fulfilledCount) throw firstFailure ?? new Error("Không tải được danh sách mặt hàng.");
-      return [...merged.values()]
+      const candidates = [...merged.values()]
+        .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw) || left.value.localeCompare(right.value, "vi"))
+        .slice(0, 200);
+      const labels = new Map<string, string>();
+      if (services.callPost && candidates.length) {
+        try {
+          const resolved = await services.callPost<Array<{ name?: string; label?: string }>>(
+            "metaforge.api.resolve_display_values",
+            { items: JSON.stringify(candidates.map((option) => ({ doctype: "Item", name: option.value }))) },
+          );
+          for (const item of resolved) {
+            const name = text(item.name);
+            const label = text(item.label);
+            if (name && label && label !== name) labels.set(name, label);
+          }
+        } catch {
+          // Search_link vẫn dùng được theo mã nếu batch title tạm lỗi.
+        }
+      }
+      const displayOptions = candidates
+        // Trong danh sách: mã trước + tên sau để tìm đúng hàng. Sau khi chọn, resolveDisplay
+        // bên dưới vẫn trả đúng mã vì Tên hàng đã có cột riêng ngay bên cạnh.
+        .map((option) => {
+          const label = labels.get(option.value) || text(option.label);
+          const description = text(option.description);
+          const itemName = label && label !== option.value
+            ? label
+            : description && description !== option.value ? description : "";
+          return { value: option.value, label: option.value, ...(itemName ? { description: itemName } : {}) };
+        })
         .sort((left, right) => itemSearchScore(right, raw) - itemSearchScore(left, raw) || left.value.localeCompare(right.value, "vi"))
         .slice(0, 100);
+      return displayOptions;
     },
+    resolveDisplay: async (doctype, name) => doctype === "Item"
+      ? { label: name }
+      : services.resolveDisplay?.(doctype, name) ?? { label: name },
+  }), [services]);
+  const readOnlyAdministrativeServices = useMemo<FieldServices>(() => ({
+    ...services,
+    quickCreate: undefined,
   }), [services]);
 
   const childFields = useMemo(() => childMeta?.fields.map((field) => field.fieldname).filter(Boolean) ?? [], [childMeta]);
@@ -305,7 +407,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       applyInteractiveDocumentPreview(result);
     } catch (error) {
       if (!canApplySalesOrderDocumentPreview(previewClock.current, revision)) return;
-      setHeaderPreviewError(mapError(error).message);
+      setHeaderPreviewError(salesOrderErrorMessage(error));
     } finally {
       finishDocumentPreview();
     }
@@ -320,6 +422,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       ...current,
       [fieldname]: value,
       ...(fieldname === "payment_method" && text(value) !== "Chuyển khoản" ? { bank_account: undefined } : {}),
+      ...(fieldname === "install_province" ? { install_ward: undefined } : {}),
     };
     if (isCustomer) {
       for (const customerField of CUSTOMER_CONTEXT_FIELDS) next[customerField] = undefined;
@@ -342,7 +445,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       })
       .catch((error) => {
         if (!canApplySalesOrderDocumentPreview(previewClock.current, revision)) return;
-        setHeaderPreviewError(mapError(error).message);
+        setHeaderPreviewError(salesOrderErrorMessage(error));
       })
       .finally(() => {
         finishDocumentPreview();
@@ -392,15 +495,16 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         if (!defaults.currency) defaults.currency = boot.sysdefaults.currency || "VND";
         const existingDoc = existingResult?.doc as Json | undefined;
 
-        if (!existingDoc && !text(defaults.responsible_person) && salesMeta.fields.some((field) => field.fieldname === "responsible_person")) {
+        let currentEmployee = "";
+        if (salesMeta.fields.some((field) => field.fieldname === "responsible_person")) {
           try {
             const employees = await adapter.getList("Employee", {
               fields: ["name", "employee_name", "user_id", "employee_status"],
               filters: [["user_id", "=", boot.user], ["employee_status", "=", "Đang làm việc"]] as Filters,
               pageLength: 1,
             });
-            const employeeName = text(employees[0]?.name);
-            if (employeeName) defaults.responsible_person = employeeName;
+            currentEmployee = text(employees[0]?.name);
+            if (currentEmployee) defaults.responsible_person = currentEmployee;
           } catch {
             // No Employee mapping: leave blank rather than storing a display name in Link(Employee).
           }
@@ -408,6 +512,9 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
         const existingItems = Array.isArray(existingDoc?.items) ? existingDoc!.items as Json[] : [];
         const initialHeader = existingDoc ? { ...defaults, ...existingDoc, items: undefined } : defaults;
+        // Người phụ trách thuộc user đang thao tác, không kế thừa người cũ từ khách hàng
+        // hoặc từ payload của một phiên trước.
+        if (currentEmployee) initialHeader.responsible_person = currentEmployee;
         const initialLines = existingDoc ? hydrateSalesLines(existingItems) : [newLine(0)];
         setMeta(salesMeta);
         setChildMeta(itemMeta);
@@ -419,13 +526,13 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         replaceLines(initialLines, false);
         setDirty(false);
       } catch (error) {
-        if (active) setFatal(mapError(error).message);
+        if (active) setFatal(salesOrderErrorMessage(error));
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [adapter, businessContext, contextPolicies, documentName, replaceLines, setHeaderState]);
+  }, [adapter, businessContext, contextPolicies, documentName, loadAttempt, replaceLines, setHeaderState]);
 
   const loadItemName = useCallback(async (itemCode: string): Promise<string> => {
     const cached = itemNameCache.current.get(itemCode);
@@ -457,6 +564,13 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     lineSeq.current.set(row._key, seq);
     const isCurrent = () => lineSeq.current.get(row._key) === seq
       && canApplySalesOrderDocumentPreview(previewClock.current, documentRevision);
+    const abortIfStale = () => {
+      if (isCurrent()) return false;
+      // Một preview document khác có thể tăng revision trong lúc request BOM đang bay.
+      // Không để dòng kẹt `_loading`; lifecycle bên dưới sẽ gọi lại nếu BOM vẫn chưa resolve.
+      if (lineSeq.current.get(row._key) === seq) patchLine(row._key, { _loading: false }, false);
+      return true;
+    };
     patchLine(row._key, { ...patch, _loading: true, _error: "", _pricingError: "" }, false);
     try {
       const parent = { ...headerRef.current, items: undefined };
@@ -479,7 +593,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
         adapter.callPost<Json>("alumdoor.catalog.allowed_colors", { item_code: itemCode, usage_scope: "sales" }),
         loadItemName(itemCode),
       ]);
-      if (!isCurrent()) return;
+      if (abortIfStale()) return;
       const serverPatch = uiPreview.patch && typeof uiPreview.patch === "object" && !Array.isArray(uiPreview.patch) ? uiPreview.patch as Json : {};
       const overrides = uiPreview.field_overrides && typeof uiPreview.field_overrides === "object" && !Array.isArray(uiPreview.field_overrides)
         ? uiPreview.field_overrides as Record<string, FieldOverride> : {};
@@ -500,6 +614,14 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       for (const field of Array.isArray(uiPreview.clear) ? uiPreview.clear.map(text) : []) if (childFieldSet.has(field)) next[field] = undefined;
       if (!text(row.uom) && !text(next.uom) && text(context.selected_uom)) next.uom = text(context.selected_uom);
       if (!text(row.color) && !text(next.color) && text(context.default_color)) next.color = text(context.default_color);
+      const customerGroup = text(headerRef.current.customer_group);
+      if (normalized(context.inventory_mode) === normalized("Thành phẩm theo m2")) {
+        const widthField = salesWidthInputField({ ...row, ...next, _context: context } as SalesLine, customerGroup);
+        const businessWidth = widthField
+          ? positiveNumber(next[widthField] ?? row[widthField])
+          : undefined;
+        if (businessWidth !== undefined) next.width_m = businessWidth;
+      }
 
       let candidate = { ...row, ...next, _context: context } as SalesLine;
       const pricedQty = positiveNumber(candidate.qty);
@@ -515,7 +637,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             customer_group: text(headerRef.current.customer_group),
             facts: commercialFacts(candidate),
           });
-          if (!isCurrent()) return;
+          if (abortIfStale()) return;
           const sellingRate = numberValue(commercial.selling_rate ?? commercial.rate);
           const grossAmount = numberValue(commercial.gross_amount);
           const discountPercentage = numberValue(commercial.discount_percentage);
@@ -531,44 +653,42 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           next._commercial = commercial;
           candidate = { ...candidate, ...next, _commercial: commercial } as SalesLine;
         } catch (error) {
-          if (!isCurrent()) return;
-          next._pricingError = mapError(error).message;
+          if (abortIfStale()) return;
+          next._pricingError = salesOrderErrorMessage(error);
         }
       }
 
-      const customerGroup = text(headerRef.current.customer_group);
-      if (isAreaDoor(candidate)
-        && positiveNumber(candidate.width_m) !== undefined
-        && positiveNumber(candidate.height_m) !== undefined
-        && customerGroup) {
+      const bomEligible = isFullSetSalesItem(candidate);
+      if (bomEligible) {
         try {
           const bom = await adapter.callPost<BomPreview>("alumdoor.sales.preview_bom_requirements", {
             ...cleanLine(candidate),
             customer_group: customerGroup,
             delivery_date: text(headerRef.current.delivery_date) || today(),
           });
-          if (!isCurrent()) return;
+          if (abortIfStale()) return;
           const components = Array.isArray(bom.components) ? bom.components : [];
           next._bomPreview = { ...bom, components };
           next._bomComponentNames = components.length ? await loadBomComponentNames(components) : {};
-          if (!isCurrent()) return;
+          if (abortIfStale()) return;
           next._bomError = "";
         } catch (error) {
-          if (!isCurrent()) return;
+          if (abortIfStale()) return;
           next._bomPreview = undefined;
           next._bomComponentNames = {};
-          next._bomError = mapError(error).message;
+          next._bomError = salesOrderErrorMessage(error);
         }
       } else {
         next._bomPreview = undefined;
         next._bomComponentNames = {};
         next._bomError = "";
       }
-      if (!isCurrent()) return;
+      if (abortIfStale()) return;
       const nextLines = patchLine(row._key, next, false);
       if (refreshTotals) await refreshDocumentPreview("items", nextLines);
     } catch (error) {
-      if (isCurrent()) patchLine(row._key, { ...patch, _loading: false, _error: mapError(error).message }, false);
+      if (isCurrent()) patchLine(row._key, { ...patch, _loading: false, _error: salesOrderErrorMessage(error) }, false);
+      else abortIfStale();
     }
   }, [adapter, childFieldSet, childFields, childMeta, cleanLine, loadBomComponentNames, loadItemName, patchLine, refreshDocumentPreview]);
 
@@ -582,6 +702,36 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     }
     void Promise.all(initial.map((line) => previewLine(line, "initial_load", {}, false))).finally(() => void refreshDocumentPreview("items"));
   }, [childMeta, loading, previewLine, refreshDocumentPreview]);
+
+  useEffect(() => {
+    if (loading || !childMeta || customerHydrating) return;
+    const unresolved = lines.filter((line) => {
+      if (!isFullSetSalesItem(line) || line._loading || line._bomPreview || text(line._bomError)) return false;
+      return true;
+    });
+    if (!unresolved.length) return;
+    const timer = window.setTimeout(() => {
+      void Promise.all(unresolved.map((line) => previewLine(line, "bom_lifecycle", {}, false)))
+        .finally(() => void refreshDocumentPreview("items"));
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [childMeta, customerHydrating, header.customer_group, lines, loading, previewLine, refreshDocumentPreview]);
+
+  useEffect(() => {
+    if (loading || !childMeta || customerHydrating) return;
+    const inconsistent = lines.filter((line) => {
+      if (!text(line.item_code) || line._loading || !isDirectOrdinaryQuantityLine(line)) return false;
+      const entered = positiveNumber(line.set_count);
+      const priced = positiveNumber(line.qty);
+      return entered !== undefined && entered !== priced;
+    });
+    if (!inconsistent.length) return;
+    const timer = window.setTimeout(() => {
+      void Promise.all(inconsistent.map((line) => previewLine(line, "quantity_lifecycle", {}, false)))
+        .finally(() => void refreshDocumentPreview("items"));
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [childMeta, customerHydrating, lines, loading, previewLine, refreshDocumentPreview]);
 
   const commercialContext = commercialHeaderSignature(header);
   useEffect(() => {
@@ -694,6 +844,10 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     if (!text(headerRef.current.customer)) return "Cần chọn khách hàng.";
     if (!text(headerRef.current.transaction_date)) return "Cần ngày đặt hàng.";
     if (!text(headerRef.current.selling_price_list)) return "Cần Bảng giá áp dụng theo commercial contract hiện hành.";
+    const depositAmount = numberValue(headerRef.current.deposit_amount) ?? 0;
+    const grandTotal = numberValue(headerRef.current.grand_total) ?? 0;
+    if (depositAmount < 0) return "Tiền cọc không được nhỏ hơn 0.";
+    if (depositAmount > grandTotal) return "Tiền cọc không được lớn hơn tiền phải trả của đơn.";
     const currentLines = linesRef.current.filter((line) => text(line.item_code));
     if (!currentLines.length) return "Cần ít nhất một dòng hàng.";
     for (const [index, line] of currentLines.entries()) {
@@ -738,7 +892,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     setDocstatus(Number(saved.docstatus) || 0);
     setHeaderState({ ...headerRef.current, ...saved, items: undefined });
     const savedItems = Array.isArray(saved.items) ? saved.items as Json[] : [];
-    if (savedItems.length) replaceLines(hydrateSalesLines(savedItems), false);
+    if (savedItems.length) replaceLines(hydrateSavedLines(savedItems, linesRef.current), false);
     setDirty(false);
     void Promise.all([
       queryClient.invalidateQueries({ queryKey: [scopeKey, "list-view", "Sales Order"], refetchType: "active" }),
@@ -760,7 +914,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       else if (isExisting) props.onSaved?.(savedName);
       else props.onCreated(savedName);
     } catch (error) {
-      toast.error(mapError(error).message);
+      toast.error(salesOrderErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -780,14 +934,14 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
       setSourceModified(text(doc.modified));
       setHeaderState({ ...headerRef.current, ...doc, items: undefined });
       const submittedItems = Array.isArray(doc.items) ? doc.items as Json[] : [];
-      if (submittedItems.length) replaceLines(hydrateSalesLines(submittedItems), false);
+      if (submittedItems.length) replaceLines(hydrateSavedLines(submittedItems, linesRef.current), false);
       setCaps(await adapter.getCapabilities("Sales Order", savedName) as SalesCaps);
       setDirty(false);
       toast.success(`Đã ghi sổ đơn ${savedName}.`);
       if (!isExisting) props.onCreated(savedName);
       else props.onSaved?.(savedName);
     } catch (error) {
-      toast.error(mapError(error).message);
+      toast.error(salesOrderErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -799,7 +953,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
   }, [docstatus, documentName, productionCaps.read]);
 
   if (loading) return <div className="grid h-full place-items-center text-sm text-muted-foreground"><span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Đang mở Sales Workbench…</span></div>;
-  if (fatal) return <div className="p-6 text-sm text-destructive">{fatal}</div>;
+  if (fatal) return <div className="grid h-full place-items-center p-6"><div className="max-w-md space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"><div className="flex items-start gap-2 text-destructive"><AlertTriangle className="mt-0.5 size-4 shrink-0" /><span>{fatal}</span></div><Button type="button" variant="outline" size="sm" onClick={() => { setFatal(""); setLoading(true); setLoadAttempt((value) => value + 1); }}><RefreshCw className="size-3.5" /> Thử kết nối lại</Button></div></div>;
   if (!meta || !childMeta) return <div className="p-6 text-sm text-muted-foreground">Không đọc được cấu trúc Sales Order.</div>;
 
   const metaField = (fieldname: string) => meta.fields.find((field) => field.fieldname === fieldname);
@@ -821,17 +975,24 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
     <AlumdoorSalesOrderField
       id={`sales-v2-complete-header-${fieldname}`}
       field={headerField(fieldname, label, fieldtype, options)}
+      label={label}
       value={header[fieldname]}
       onChange={(value) => setHeaderField(fieldname, fieldValueForServer(headerField(fieldname, label, fieldtype, options).fieldtype, value), preview)}
       registry={registry}
-      services={services}
+      services={["install_province", "install_ward"].includes(fieldname)
+        ? readOnlyAdministrativeServices
+        : fieldname === "bank_account" ? salesServices : services}
       parentDoctype="Sales Order"
       docValues={header}
       roles={roles}
       required={headerRequired(fieldname)}
       readOnly={formReadOnly || busy || readOnly}
       compact
-      className="[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_button]:!h-8"
+      className={`[&_.mf-control]:!min-h-8 [&_input]:!h-8 [&_button]:!h-8 ${
+        ["install_address", "manual_note", "shipping_note"].includes(fieldname)
+          ? "[&_textarea]:!h-8 [&_textarea]:!min-h-8 [&_textarea]:!resize-none [&_textarea]:!py-1"
+          : ""
+      }`}
     />
   );
 
@@ -843,27 +1004,42 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
           {headerError ? <div className="flex items-start justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"><span className="flex items-start gap-2"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{headerError}</span><Button type="button" variant="outline" size="sm" className="h-7" disabled={busy} onClick={() => void refreshDocumentPreview("manual_retry")}>Thử lại</Button></div> : null}
 
           <fieldset disabled={formReadOnly || busy} className="contents">
-            <section className="rounded-lg border bg-card p-3" data-section="sales-v2-header-complete">
-              <div className="grid gap-x-3 gap-y-2 md:grid-cols-2 xl:grid-cols-6">
-                <div className="xl:col-span-2">{headerControl("customer", "Khách hàng", "Link", "Customer", false, true)}</div>
-                {metaField("customer_group") ? headerControl("customer_group", "Nhóm giá", metaField("customer_group")!.fieldtype, metaField("customer_group")!.options, true) : null}
-                {headerControl("selling_price_list", "Bảng giá", "Link", "Price List", false, true)}
-                {headerControl("transaction_date", "Ngày đơn", "Date", undefined, false, true)}
-                {headerControl("delivery_date", "Ngày giao", "Date", undefined, false, true)}
-                {metaField("responsible_person") ? headerControl("responsible_person", "Người phụ trách", "Link", "Employee") : null}
-                {metaField("contact_person") ? headerControl("contact_person", "Người liên hệ") : null}
-                {metaField("phone") ? headerControl("phone", "SĐT") : null}
-                {metaField("payment_method") ? headerControl("payment_method", "Thanh toán", "Select", paymentOptions.join("\n"), false, true) : null}
-                {text(header.payment_method) === "Chuyển khoản" && metaField("bank_account") ? headerControl("bank_account", "Tài khoản ngân hàng", "Link", text(metaField("bank_account")?.options) || "Tài khoản ngân hàng") : null}
-                {metaField("vat_rate") ? headerControl("vat_rate", "% VAT", "Percent", undefined, false, true) : null}
-                {metaField("install_address") ? <div className="xl:col-span-3">{headerControl("install_address", "Địa chỉ giao / lắp đặt", "Small Text")}</div> : null}
-                {metaField("manual_note") ? <div className="xl:col-span-3">{headerControl("manual_note", "Ghi chú vận hành", "Small Text")}</div> : metaField("shipping_note") ? <div className="xl:col-span-3">{headerControl("shipping_note", "Ghi chú giao hàng", "Small Text")}</div> : null}
+            <section className="rounded-lg border bg-card p-2.5" data-section="sales-v2-header-complete">
+              <div className="space-y-2">
+                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(280px,1.35fr)_minmax(165px,0.75fr)_minmax(210px,0.95fr)_minmax(175px,0.8fr)_minmax(175px,0.8fr)]">
+                  {headerControl("customer", "Khách hàng", "Link", "Customer", false, true)}
+                  {metaField("customer_group") ? headerControl("customer_group", "Nhóm giá", metaField("customer_group")!.fieldtype, metaField("customer_group")!.options, false, true) : null}
+                  {headerControl("selling_price_list", "Bảng giá", "Link", "Price List", false, true)}
+                  {headerControl("transaction_date", "Ngày đơn", "Date", undefined, false, true)}
+                  {headerControl("delivery_date", "Ngày giao", "Date", undefined, false, true)}
+                </div>
+                <div className={`grid gap-x-2 gap-y-2 md:grid-cols-2 ${
+                  text(header.payment_method) === "Chuyển khoản" && metaField("bank_account")
+                    ? "xl:grid-cols-[minmax(200px,1.2fr)_minmax(125px,0.72fr)_minmax(210px,1.2fr)_minmax(112px,0.66fr)_minmax(215px,1.25fr)_minmax(120px,0.72fr)_minmax(82px,0.48fr)]"
+                    : "xl:grid-cols-[minmax(210px,1.3fr)_minmax(130px,0.78fr)_minmax(220px,1.3fr)_minmax(115px,0.68fr)_minmax(125px,0.76fr)_minmax(82px,0.48fr)]"
+                }`}>
+                  {metaField("contact_person") ? headerControl("contact_person", "Người liên hệ") : null}
+                  {metaField("phone") ? headerControl("phone", "SĐT") : null}
+                  {metaField("responsible_person") ? headerControl("responsible_person", "Người phụ trách", "Link", "Employee", true) : null}
+                  {metaField("payment_method") ? headerControl("payment_method", "Thanh toán", "Select", paymentOptions.join("\n"), false, true) : null}
+                  {text(header.payment_method) === "Chuyển khoản" && metaField("bank_account") ? headerControl("bank_account", "Tài khoản ngân hàng", "Link", text(metaField("bank_account")?.options) || "Tài khoản ngân hàng") : null}
+                  {metaField("deposit_amount") ? headerControl("deposit_amount", "Tiền cọc", "Currency", undefined, false, true) : null}
+                  {metaField("vat_rate") ? headerControl("vat_rate", "% VAT", "Percent", undefined, false, true) : null}
+                </div>
+                <div className="grid gap-x-2 gap-y-2 md:grid-cols-2 xl:grid-cols-[minmax(125px,0.58fr)_minmax(155px,0.72fr)_minmax(210px,1fr)_minmax(245px,1.15fr)_minmax(245px,1.15fr)]">
+                  {metaField("install_province") ? <div>{headerControl("install_province", "Tỉnh/TP", "Link", text(metaField("install_province")?.options) || "Tỉnh Thành")}</div> : null}
+                  {metaField("install_ward") ? <div>{headerControl("install_ward", "Xã/Phường", "Link", text(metaField("install_ward")?.options) || "Phường Xã")}</div> : null}
+                  {metaField("install_address") ? <div>{headerControl("install_address", "Số nhà / đường", "Small Text")}</div> : null}
+                  {metaField("shipping_note") ? <div>{headerControl("shipping_note", "Ghi chú vận chuyển", "Small Text")}</div> : null}
+                  {metaField("manual_note") ? <div>{headerControl("manual_note", "Ghi chú vận hành", "Small Text")}</div> : null}
+                </div>
               </div>
               {customerHydrating ? <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Đang nạp Nhóm giá, liên hệ, SĐT, địa chỉ và bảng giá của khách…</div> : null}
             </section>
 
             <AlumdoorSalesOrderLineTableComplete
               lines={lines}
+              customerGroup={text(header.customer_group)}
               childMeta={childMeta}
               registry={registry}
               services={salesServices}
@@ -884,14 +1060,16 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
             />
 
             <section className="rounded-lg border bg-card" data-section="sales-v2-summary-complete" aria-label="Tóm tắt đơn">
-              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4 xl:grid-cols-7">
+              <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4 xl:grid-cols-9">
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Dòng hàng</div><div className="mt-0.5 font-semibold tabular-nums">{activeLines.length}</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Diện tích cửa</div><div className="mt-0.5 font-semibold tabular-nums">{quantity(totalArea)} m²</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền hàng</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.total_amount)} ₫</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Chiết khấu</div><div className="mt-0.5 font-semibold tabular-nums">−{money(header.discount_amount)} ₫</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Phụ thu</div><div className="mt-0.5 font-semibold tabular-nums">+{money(header.surcharge_amount)} ₫</div></div>
                 <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">VAT ({quantity(header.vat_rate ?? 0)}%)</div><div className="mt-0.5 font-semibold tabular-nums">{money(header.vat_amount)} ₫</div></div>
-                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tiền phải thu</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(header.grand_total)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Tiền phải trả</div><div className="mt-0.5 font-bold tabular-nums text-primary">{money(header.grand_total)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] text-muted-foreground">Tiền cọc</div><div className="mt-0.5 font-semibold tabular-nums">−{money(header.deposit_amount)} ₫</div></div>
+                <div className="bg-card px-3 py-2"><div className="text-[10px] font-semibold text-muted-foreground">Còn phải thu</div><div className="mt-0.5 text-lg font-bold tabular-nums text-primary">{money(header.outstanding_amount ?? header.grand_total)} ₫</div></div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2 text-[11px]">
@@ -908,7 +1086,7 @@ export function AlumdoorSalesOrderWorkbenchComplete(props: AlumdoorSalesOrderCre
 
       <div className="shrink-0 border-t bg-card px-3 py-1.5 shadow-[0_-4px_14px_rgba(0,0,0,0.035)]">
         <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Phải thu: {money(header.grand_total)} ₫</strong></div>
+          <div className="flex items-center gap-2"><span className="text-muted-foreground">{recalculating ? "Đang tính lại" : dirty ? "Có thay đổi chưa lưu" : docstatus === 1 ? "Đã ghi sổ" : "Nháp đã đồng bộ"}</span><strong className="tabular-nums">Còn phải thu: {money(header.outstanding_amount ?? header.grand_total)} ₫</strong></div>
           <div className="flex flex-wrap items-center gap-1.5">
             {docstatus === 1 && documentName && productionCaps.read ? <Button type="button" variant="outline" size="sm" onClick={openProduction}><Factory className="size-3.5" /> Sản xuất</Button> : null}
             {isExisting ? <Button type="button" variant="outline" size="sm" onClick={() => props.onPreviewCreated(documentName)}><Eye className="size-3.5" /> In / xem</Button> : null}

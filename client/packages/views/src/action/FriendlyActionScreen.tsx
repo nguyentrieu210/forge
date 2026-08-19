@@ -4,8 +4,10 @@ import type { AppActionField, DocField, Fieldtype } from "@metaforge/core";
 import { Button, Input, Label } from "@metaforge/ui";
 import { useMetaForge } from "../container/provider.js";
 import { ActionScreen as BaseActionScreen, type ActionScreenProps } from "./ActionScreen.js";
+import { SalesDeliveryWorkspace } from "./SalesDeliveryWorkspace.js";
 
 const RECEIPT_ACTION = "nhap-nhom-fifo";
+const MULTI_DELIVERY_ACTION = "giao-nhieu-don-fifo";
 const DASHBOARD_METHOD = "alumdoor.purchase.supplier_delivery_dashboard";
 const BULK_PREVIEW_METHOD = "alumdoor.purchase.preview_bulk_fifo_receipt";
 const BULK_COMMIT_METHOD = "alumdoor.purchase.bulk_fifo_receipt";
@@ -821,6 +823,7 @@ function SupplierDeliveryWorkspace({ action, onOpen }: ActionScreenProps) {
 }
 
 export function ActionScreen(props: ActionScreenProps) {
+  if (props.action.name === MULTI_DELIVERY_ACTION) return <SalesDeliveryWorkspace {...props} />;
   if (props.action.name !== RECEIPT_ACTION) return <BaseActionScreen {...props} />;
   return <SupplierDeliveryWorkspace {...props} />;
 }

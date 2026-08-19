@@ -23,6 +23,26 @@ const LINK_PAGE_LENGTH = 10;
 const MASK = "••••••";
 const BLANK = "__blank__"; // Radix Select cấm value rỗng → sentinel
 
+function optionDisplay(
+  option: { value: string; label?: string; description?: string },
+  compact?: boolean,
+): { primary: string; secondary?: string } {
+  if (!compact) return linkDisplay(option);
+  // Grid Mã hàng truyền label=mã, description=tên: hiện cả hai để chọn.
+  if (option.label === option.value && option.description && option.description !== option.value) {
+    return { primary: option.value, secondary: option.description };
+  }
+  // Link hành chính lưu bằng mã nhưng ở giao diện compact chỉ hiện tên, không lộ mã.
+  return { primary: option.label || option.description || option.value };
+}
+
+function pickedOptionDisplay(
+  option: { value: string; label?: string; description?: string },
+  compact?: boolean,
+): string | undefined {
+  return compact ? (option.label || option.description || option.value) : option.description;
+}
+
 function labelId(p: FieldControlProps): string {
   return p.id ?? `mf-${p.field.fieldname}`;
 }
@@ -1168,11 +1188,11 @@ export function LinkCombobox({
                 {visibleRecent.length > 0 ? (
                   <CommandGroup heading={t("control.link_recent")}>
                     {visibleRecent.map((o) => (
-                      <CommandItem key={`recent-${o.value}`} value={`recent-${o.value}`} onSelect={() => { onChange(o.value); setPickedDesc(o.description); recordRecentLink(target, o); setOpen(false); }}>
+                      <CommandItem key={`recent-${o.value}`} value={`recent-${o.value}`} onSelect={() => { onChange(o.value); setPickedDesc(pickedOptionDisplay(o, compact)); recordRecentLink(target, o); setOpen(false); }}>
                         <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
                         <span className="flex min-w-0 flex-col">
-                          <span className="truncate">{linkDisplay(o).primary}</span>
-                          {linkDisplay(o).secondary ? <span className="truncate text-xs text-muted-foreground">{linkDisplay(o).secondary}</span> : null}
+                          <span className="truncate">{optionDisplay(o, compact).primary}</span>
+                          {optionDisplay(o, compact).secondary ? <span className="truncate text-xs text-muted-foreground">{optionDisplay(o, compact).secondary}</span> : null}
                         </span>
                       </CommandItem>
                     ))}
@@ -1180,11 +1200,11 @@ export function LinkCombobox({
                 ) : null}
                 {opts.length === 0 && !quickCreate ? <CommandEmpty>{t("control.link_no_results")}</CommandEmpty> : null}
                 {visibleOptions.map((o) => (
-                  <CommandItem key={o.value} value={o.value} onSelect={() => { onChange(o.value); setPickedDesc(o.description); recordRecentLink(target, o); setOpen(false); }}>
+                  <CommandItem key={o.value} value={o.value} onSelect={() => { onChange(o.value); setPickedDesc(pickedOptionDisplay(o, compact)); recordRecentLink(target, o); setOpen(false); }}>
                     <Check className={cn("mr-2 size-4 shrink-0", o.value === value ? "opacity-100" : "opacity-0")} />
                     <span className="flex min-w-0 flex-col">
-                      <span className="truncate">{linkDisplay(o).primary}</span>
-                      {linkDisplay(o).secondary ? <span className="truncate text-xs text-muted-foreground">{linkDisplay(o).secondary}</span> : null}
+                      <span className="truncate">{optionDisplay(o, compact).primary}</span>
+                      {optionDisplay(o, compact).secondary ? <span className="truncate text-xs text-muted-foreground">{optionDisplay(o, compact).secondary}</span> : null}
                     </span>
                   </CommandItem>
                 ))}

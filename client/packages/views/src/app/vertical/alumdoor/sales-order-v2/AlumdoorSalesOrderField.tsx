@@ -128,7 +128,14 @@ export function AlumdoorSalesOrderField(props: {
 
   const isLink = props.field.fieldtype === "Link" || props.field.fieldtype === "Dynamic Link";
   const isSalesOrderHeaderLink = props.parentDoctype === "Sales Order" && isLink;
-  const effectiveCompact = isSalesOrderHeaderLink ? false : props.compact;
+  const isAdministrativeLink = props.parentDoctype === "Sales Order"
+    && ["install_province", "install_ward"].includes(props.field.fieldname);
+  const isCompositeBankLink = props.parentDoctype === "Sales Order"
+    && props.field.fieldname === "bank_account";
+  // Tỉnh/xã lưu bằng mã ổn định nhưng người dùng chỉ cần thấy tên hành chính.
+  // Tài khoản ngân hàng đã có nhãn ghép Ngân hàng · STK · CTK nên cũng không
+  // nối thêm document name (chính là STK) lần thứ hai.
+  const effectiveCompact = isAdministrativeLink || isCompositeBankLink ? true : isSalesOrderHeaderLink ? false : props.compact;
   const isSalesCounterparty = props.parentDoctype === "Sales Order"
     && props.field.fieldname === "customer"
     && props.field.fieldtype === "Link";
@@ -161,7 +168,7 @@ export function AlumdoorSalesOrderField(props: {
   if (props.field.fieldtype === "Check") {
     return (
       <div className={`min-w-0 ${props.className ?? ""}`}>
-        <div className="flex min-h-8 items-center gap-2">
+        <div className={`flex min-h-8 items-center ${props.hideLabel ? "justify-center" : "gap-2"}`}>
           {control}
           {!props.hideLabel ? (
             <label htmlFor={props.id} className="cursor-pointer text-[11px] font-medium text-foreground">

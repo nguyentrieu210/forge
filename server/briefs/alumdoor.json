@@ -459,7 +459,6 @@
       "Item Group",
       "UOM",
       "Bill of Materials",
-      "BOM Template",
       "Production Standard",
       "Warehouse",
       "Customer",
@@ -3730,13 +3729,12 @@
           "form_region": "aside"
         },
         {
-          "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
+          "//": "Nạp mặc định từ hồ sơ khách nhưng được phép chọn lại trên từng đơn; giá và công thức dùng snapshot này.",
           "fieldname": "customer_group",
           "fieldtype": "Select",
           "options": "Đại lý\nLẻ",
           "label": "Nhóm khách hàng",
-          "read_only": true,
-          "fetch_from": "customer.price_group"
+          "form_region": "main"
         },
         {
           "fieldname": "contact_person",

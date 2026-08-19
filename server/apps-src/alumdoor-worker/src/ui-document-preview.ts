@@ -30,11 +30,19 @@ function totals(doc: Json): Json {
     return sum + number(row.qty) * number(row.rate);
   }, 0));
   const discount = roundMoney(rows.reduce((sum, row) => sum + Math.max(0, number(row.discount_amount)), 0));
-  const surcharge = Math.max(0, roundMoney(number(doc.surcharge_amount)));
+  // Commercial preview owns line-level policy adjustments. Rebuild the document
+  // surcharge from those canonical results; `doc.surcharge_amount` is only a
+  // compatibility fallback for older documents that do not carry the line field.
+  const hasLineAdjustments = rows.some((row) => row.adjustment_amount !== undefined && row.adjustment_amount !== null && row.adjustment_amount !== "");
+  const surcharge = roundMoney(hasLineAdjustments
+    ? rows.reduce((sum, row) => sum + number(row.adjustment_amount), 0)
+    : Math.max(0, number(doc.surcharge_amount)));
   const vatRate = Math.min(100, Math.max(0, number(doc.vat_rate)));
   const vatBase = roundMoney(subtotal - discount + surcharge);
   const vatAmount = roundMoney(vatBase * vatRate / 100);
   const grandTotal = roundMoney(vatBase + vatAmount);
+  const depositAmount = roundMoney(Math.max(0, number(doc.deposit_amount)));
+  const outstandingAmount = roundMoney(Math.max(0, grandTotal - depositAmount));
   const approval = number(doc.additional_discount_percentage) !== 0
     || rows.some((row) => row.rate_requires_approval === true || row.rate_requires_approval === 1 || row.rate_requires_approval === "1");
   return {
@@ -45,14 +53,17 @@ function totals(doc: Json): Json {
     vat_base_amount: vatBase,
     vat_amount: vatAmount,
     grand_total: grandTotal,
+    deposit_amount: depositAmount,
+    outstanding_amount: outstandingAmount,
     discount_requires_approval: approval,
   };
 }
 
 /**
- * Những field này thuộc hồ sơ đối tác và phải thay sạch khi đổi khách.
- * Bảng giá KHÔNG nằm ở đây: mọi Sales Order Alumdoor dùng duy nhất ALUMDOOR-SELLING;
- * danh mục giá mua không bao giờ được customer default kéo vào màn bán.
+ * Những field này được nạp mặc định từ hồ sơ đối tác và phải thay sạch khi đổi khách.
+ * Nhóm giá vẫn được phép chọn lại trên đơn sau khi đã nạp mặc định. Bảng giá KHÔNG nằm
+ * ở đây: mọi Sales Order Alumdoor dùng duy nhất ALUMDOOR-SELLING; danh mục giá mua
+ * không bao giờ được customer default kéo vào màn bán.
  */
 const CUSTOMER_DERIVED_FIELDS = [
   "customer_group",
@@ -71,7 +82,9 @@ async function customerDefaults(call: DocumentPreviewCall, doc: Json, changedFie
       ? { patch: {}, clear: [...CUSTOMER_DERIVED_FIELDS] }
       : { patch: {}, clear: [] };
   }
-  if (changedField && changedField !== "customer" && changedField !== "transaction_date") return { patch: {}, clear: [] };
+  // Chỉ đổi khách mới được nạp lại Nhóm giá. Đổi ngày hoặc field khác phải giữ lựa
+  // chọn tay hiện tại, nếu không preview muộn sẽ âm thầm kéo đơn về nhóm trên master.
+  if (changedField && changedField !== "customer") return { patch: {}, clear: [] };
   const customerDoc = await readDoc(call, "Customer", customer);
   if (!customerDoc) return { patch: {}, clear: changedField === "customer" ? [...CUSTOMER_DERIVED_FIELDS] : [] };
 

@@ -9,7 +9,12 @@ export type {
   Actor, CanonicalDocument, JsonObject, JsonValue, MutationAction, MutationCommand, MutationReceipt,
 } from "../../contracts/src/index.js";
 export { errors, sha256Hex } from "../../core/src/index.js";
-export { resolveCommercialLine } from "../../clouderp-selling/src/index.js";
+export {
+  alumdoorCommercialBenefits,
+  defaultAlumdoorDiscountPercent,
+  resolveCommercialLine,
+  withAlumdoorDefaultDiscountSnapshot,
+} from "../../clouderp-selling/src/index.js";
 export type { D1MutationStore, DocumentListService, ListFilter } from "../../document-kernel/src/index.js";
 export {
   blocksSelfApproval, mergeCustomizations, parseCsvImport, parseCustomField, parseDocTypeMeta,

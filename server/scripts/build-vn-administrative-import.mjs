@@ -1,20 +1,25 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const [provinceArg, wardArg, tenantId, outputArg] = process.argv.slice(2);
-if (!provinceArg || !wardArg || !tenantId || !outputArg) {
-  throw new Error("usage: node build-vn-administrative-import.mjs <province.json> <commune.json> <tenant> <output.sql>");
+const [sourceArg, tenantId, outputArg] = process.argv.slice(2);
+if (!sourceArg || !tenantId || !outputArg) {
+  throw new Error("usage: node build-vn-administrative-import.mjs <api-v2-depth-2.json> <tenant> <output.sql>");
 }
 
-const provinces = JSON.parse(await readFile(resolve(provinceArg), "utf8"));
-const wards = JSON.parse(await readFile(resolve(wardArg), "utf8"));
+const provinces = JSON.parse(await readFile(resolve(sourceArg), "utf8"));
+const wards = provinces.flatMap((province) => (province.wards ?? []).map((ward) => ({ ...ward, province })));
 if (provinces.length !== 34 || wards.length !== 3321) {
   throw new Error("expected 34 provinces and 3321 wards, received " + provinces.length + "/" + wards.length);
 }
 
 const sql = (value) => "'" + String(value).replaceAll("'", "''") + "'";
-const now = "2026-08-13T00:00:00.000Z";
-const toType = (name) => name.startsWith("Phường ") ? "Phường" : name.startsWith("Đặc khu ") ? "Đặc khu" : "Xã";
+const now = "2026-08-18T00:00:00.000Z";
+const provinceCode = (value) => String(value).padStart(2, "0");
+const wardCode = (value) => String(value).padStart(5, "0");
+const toProvinceType = (value) => String(value).toLocaleLowerCase("vi").includes("thành phố") ? "Thành phố" : "Tỉnh";
+const toWardType = (value) => String(value).toLocaleLowerCase("vi").includes("phường")
+  ? "Phường"
+  : String(value).toLocaleLowerCase("vi").includes("đặc khu") ? "Đặc khu" : "Xã";
 const row = (doctype, name, data) => "  (" + [
   tenantId,
   doctype + ":" + name,
@@ -30,34 +35,27 @@ const row = (doctype, name, data) => "  (" + [
   JSON.stringify({ ...data, disabled: false, _migration_source: "vn-administrative-2025" }),
 ].map(sql).join(",") + ")";
 
-// Use readable names for Link values. Codes remain in payload only, as stable
-// internal identifiers, and are therefore never shown in the form.
-const provinceRows = provinces.map((province) => row("Tỉnh Thành", province.name, {
-  province_code: province.idProvince,
+// Document names follow the authoritative administrative codes. The picker
+// displays title_field (province_name/ward_name), so users see readable names
+// while saved links remain stable if labels are corrected later.
+const provinceRows = provinces.map((province) => row("Tỉnh Thành", provinceCode(province.code), {
+  province_code: provinceCode(province.code),
   province_name: province.name,
-  province_type: province.placeType.includes("Thành phố") ? "Thành phố" : "Tỉnh",
+  province_type: toProvinceType(province.division_type),
 }));
-const provinceNames = new Map(provinces.map((province) => [province.idProvince, province.name]));
 const wardRows = wards.map((ward) => {
-  const provinceName = provinceNames.get(ward.idProvince);
-  // Names of wards are not nationwide unique. Keep a readable suffix instead
-  // of exposing the numeric administrative code in a Link picker.
-  return row("Phường Xã", `${ward.name} — ${provinceName}`, {
-  ward_code: ward.idCommune,
-  ward_name: ward.name,
-  province: provinceName,
-  ward_type: toType(ward.name),
+  return row("Phường Xã", wardCode(ward.code), {
+    ward_code: wardCode(ward.code),
+    ward_name: ward.name,
+    province: provinceCode(ward.province.code),
+    ward_type: toWardType(ward.division_type),
   });
 });
 
 const insertBatch = (rows) => "INSERT INTO documents\n"
   + "  (tenant_id,doc_key,doctype,name,owner,docstatus,status,version,created_at,modified_at,modified_by,payload_json)\n"
   + "VALUES\n" + rows.join(",\n") + "\n"
-  + "ON CONFLICT(tenant_id,doc_key) DO UPDATE SET\n"
-  + "  payload_json=excluded.payload_json,\n"
-  + "  modified_at=excluded.modified_at,\n"
-  + "  modified_by=excluded.modified_by,\n"
-  + "  version=documents.version+1;\n";
+  + "ON CONFLICT(tenant_id,doc_key) DO NOTHING;\n";
 const insert = (rows) => {
   const chunks = [];
   for (let index = 0; index < rows.length; index += 200) {
@@ -67,10 +65,10 @@ const insert = (rows) => {
 };
 
 await writeFile(resolve(outputArg), [
-  "DELETE FROM documents WHERE tenant_id=" + sql(tenantId) + " AND doctype IN ('Tỉnh Thành', 'Phường Xã');",
-  "",
   "-- Vietnam administrative units effective 2025-07-01 (QĐ 19/2025/QĐ-TTg).",
-  "-- Idempotent: 34 Tỉnh/Thành phố and 3321 Phường/Xã/Đặc khu for tenant alu.",
+  "-- Source snapshot: https://provinces.open-api.vn/api/v2/?depth=2",
+  "-- Additive and idempotent: never deletes or overwrites an existing local document.",
+  "-- Expected result: 34 Tỉnh/Thành phố and 3321 Phường/Xã/Đặc khu.",
   "",
   insert(provinceRows),
   insert(wardRows),

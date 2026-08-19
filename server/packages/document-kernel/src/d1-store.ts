@@ -288,7 +288,7 @@ export class D1MutationStore implements MutationStore {
     const values: unknown[] = [tenantId, itemCode, warehouse];
     if (throughPostingAt) { conditions.push(`posting_at<=?${values.length + 1}`); values.push(throughPostingAt); }
     if (batchNo) { conditions.push(`batch_no=?${values.length + 1}`); values.push(batchNo); }
-    const sql = `SELECT line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
+    const sql = `SELECT voucher_type,voucher_no,voucher_revision,line_key,item_code,warehouse,actual_qty_micros,actual_weight_micros,valuation_rate_minor,stock_value_difference_minor,
       qty_scale,currency_scale,currency,posting_at,batch_no,serial_no,allow_negative_stock
       FROM stock_ledger_entries WHERE ${conditions.join(" AND ")}
       ORDER BY posting_at,rowid`;
@@ -1166,6 +1166,9 @@ export class D1MutationStore implements MutationStore {
 function mapStockLedgerRow(row: Record<string, unknown>): StockLedgerEntry {
   return {
     line_key: String(row.line_key), item_code: String(row.item_code), warehouse: String(row.warehouse),
+    ...(row.voucher_type != null ? { source_voucher_type: String(row.voucher_type) } : {}),
+    ...(row.voucher_no != null ? { source_voucher_no: String(row.voucher_no) } : {}),
+    ...(row.voucher_revision != null ? { source_voucher_revision: Number(row.voucher_revision) } : {}),
     actual_qty_micros: Number(row.actual_qty_micros),
     // `!= null` bắt cả null lẫn undefined mà VẪN giữ số 0 — `row.x ? …` sẽ nuốt mất cân 0.
     ...(row.actual_weight_micros != null ? { actual_weight_micros: Number(row.actual_weight_micros) } : {}),

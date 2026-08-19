@@ -5,18 +5,14 @@
   border-color: color-mix(in srgb, var(--foreground) 28%, var(--border)) !important;
 }
 
-/* The grid header already explains itself through column names; remove the extra title strip. */
-[data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] > div:first-child {
-  display: none !important;
-}
-
 /* Stronger Excel-like table header and dividers. */
 [data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] thead,
 [data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] thead th {
-  background: color-mix(in srgb, var(--foreground) 12%, var(--card)) !important;
-  border-color: color-mix(in srgb, var(--foreground) 28%, var(--border)) !important;
-  color: var(--foreground) !important;
+  background: var(--primary) !important;
+  border-color: color-mix(in srgb, var(--primary-foreground) 34%, var(--primary)) !important;
+  color: var(--primary-foreground) !important;
   font-weight: 700 !important;
+  box-shadow: inset 0 3px 0 var(--primary), inset 0 -1px 0 color-mix(in srgb, var(--primary) 48%, var(--border));
 }
 
 [data-surface="alumdoor-sales-order-v2-complete"] [data-section="sales-v2-lines-complete"] tbody td {

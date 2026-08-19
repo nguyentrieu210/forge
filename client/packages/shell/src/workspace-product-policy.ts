@@ -10,6 +10,21 @@ const SIDEBAR_GROUPS = new Set([
   "dieu hanh", "ban hang", "kho", "mua hang", "san xuat", "cong no", "bao hanh",
   "bao cao", "danh muc", "he thong", "quy kho", "luong",
 ]);
+const ALUMDOOR_SALES_WORKSPACE_KEYS = new Set([
+  "Sales Order",
+  "Delivery Note",
+]);
+const ALUMDOOR_PURCHASE_ROUTE_ALIASES = new Set([
+  "action:don-mua-thanh-phieu-nhap",
+  "action:nhap-nhom-fifo",
+]);
+const ALUMDOOR_NAV_SENTINELS = new Set([
+  "action:don-ban-thanh-phieu-xuat",
+  "action:giao-nhieu-don-fifo",
+  "action:nhap-nhom-fifo",
+  "action:cat-nhom",
+  "Cutting Policy",
+]);
 const HR_GROUPS = new Set(["nhan su", "vong doi nhan su", "cham cong qr", "nhan su & tien luong"]);
 const HR_KEY_ORDER = [
   "Employee", "AlumDoor Pay Profile", "AlumDoor Attendance Day", "AlumDoor Attendance Device",
@@ -39,23 +54,30 @@ function catalog(item: NavItem): boolean {
   return item.key === "__catalog" || normalized(item.group).startsWith("ung dung · ");
 }
 
+function isAlumdoorProduct(items: NavItem[]): boolean {
+  return isAlumdoorSurface() || items.some((item) => ALUMDOOR_NAV_SENTINELS.has(item.key));
+}
+
 /** Product-specific sidebar filtering/sorting kept outside the generic shell composition. */
 export function productNavigation(items: NavItem[]): NavItem[] {
+  const alumdoor = isAlumdoorProduct(items);
   const visible = items.filter((item) => {
-    if (!isAlumdoorSurface()) return !catalog(item);
+    if (!alumdoor) return !catalog(item);
     if (item.key === "catalog") return false;
     const group = normalized(item.group);
     if (HR_GROUPS.has(group)) return HR_KEYS.has(item.key);
+    if (group === "ban hang") return ALUMDOOR_SALES_WORKSPACE_KEYS.has(item.key);
+    if (group === "mua hang") return !ALUMDOOR_PURCHASE_ROUTE_ALIASES.has(item.key);
     return !catalog(item) && SIDEBAR_GROUPS.has(group);
   });
-  if (!isAlumdoorSurface()) return visible;
+  if (!alumdoor) return visible;
   const hr = [...visible.filter((item) => HR_KEYS.has(item.key))].sort((a, b) => HR_KEY_ORDER.indexOf(a.key) - HR_KEY_ORDER.indexOf(b.key));
   let cursor = 0;
   return visible.map((item) => HR_KEYS.has(item.key) ? hr[cursor++]! : item);
 }
 
 function scoped(items: NavItem[], module: WorkspaceModule, affinity: Record<string, string[]>): NavItem[] {
-  if (!isAlumdoorSurface()) return items;
+  if (!isAlumdoorProduct(items)) return items;
   const target = normalized(module.label);
   return items.filter((item) => (affinity[item.key] ?? []).some((workspace) => normalized(workspace) === target));
 }

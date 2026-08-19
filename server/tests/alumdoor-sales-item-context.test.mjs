@@ -82,6 +82,7 @@ test("sales item context returns exact UOM price and converted warehouse stock",
   assert.equal(result.body.available_qty, 3.5);
   assert.equal(result.body.rate, 1200000);
   assert.equal(result.body.price_missing, false);
+  assert.equal(result.body.inventory_mode, "Hàng thường");
   assert.match(result.body.availability_status, /Còn 3,5 Thùng/);
   assert.match(result.body.availability_status, /Giá Thùng: 1\.200\.000 VND/);
 });

@@ -378,6 +378,31 @@
       "resultTable": "items"
     },
     {
+      "//": "NHIỀU ĐƠN BÁN → MỘT PHIẾU GIAO. Mỗi dòng giữ exact source row; giá vốn xem theo lớp FIFO và được tính lại lúc submit.",
+      "name": "giao-nhieu-don-fifo",
+      "label": "Kho giao hàng nhiều đơn",
+      "menu": true,
+      "icon": "truck",
+      "group": "Bán hàng",
+      "description": "Chọn nhiều Đơn bán cùng khách/công ty/tiền tệ, xem phần còn phải giao và lớp FIFO rồi tạo đúng một Phiếu giao nháp.",
+      "permission": "Delivery Note",
+      "fields": [
+        "customer:Link(Customer)! Khách hàng",
+        {
+          "fieldname": "warehouse",
+          "label": "Kho xuất (trống = theo từng dòng đơn)",
+          "fieldtype": "Link",
+          "options": "Warehouse",
+          "link_filters": "{\"is_group\":0,\"disabled\":0}"
+        },
+        "posting_at:Datetime!=(Now) Thời điểm giao",
+        "install_address:Small Text Địa chỉ giao / lắp đặt"
+      ],
+      "preview": "alumdoor.sales.preview_bulk_delivery | Tải đơn còn phải giao / xem FIFO",
+      "commit": "alumdoor.sales.bulk_delivery | Tạo một Phiếu giao nháp | Tạo một Phiếu giao nháp cho các Đơn bán đã chọn?",
+      "resultTable": "source_lines"
+    },
+    {
       "//": "CHỤP ẢNH → DÒNG HÀNG. NCC gửi bảng giá qua Zalo, thợ chụp phiếu giao lúc hàng về.",
       "//do": [
         "Máy đọc ảnh là để KHỎI GÕ, không phải để khỏi nhìn. Nên màn này luôn dừng ở chứng từ",
@@ -4924,9 +4949,11 @@
       "naming": "autoincrement",
       "title": "item_code",
       "list": [
-        "item_code",
-        "color",
-        "width_m",
+    "item_code",
+    "color",
+    "width_pb_ray_m",
+    "width_pb_nhua_m",
+    "width_m",
         "height_m",
         "set_count",
         "has_butterfly_bracket",
@@ -5010,9 +5037,25 @@
           "depends_on": "eval:doc.inventory_mode != 'Hàng thường'",
           "surface": "quick"
         },
-        {
-          "label": "Rộng (m)",
-          "fieldname": "width_m",
+    {
+      "label": "Rộng PB ray (m)",
+      "fieldname": "width_pb_ray_m",
+      "fieldtype": "Float",
+      "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+      "description": "Rộng phủ bì đo theo ray cho khách Lẻ; là field riêng, không dùng chung với rộng PB nhựa.",
+      "surface": "quick"
+    },
+    {
+      "label": "Rộng PB nhựa (m)",
+      "fieldname": "width_pb_nhua_m",
+      "fieldtype": "Float",
+      "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2'",
+      "description": "Rộng phủ bì đo theo nhựa cho khách Đại lý; là field riêng, không dùng chung với rộng PB ray.",
+      "surface": "quick"
+    },
+    {
+      "label": "Rộng (m)",
+      "fieldname": "width_m",
           "fieldtype": "Float",
           "depends_on": "eval:doc.inventory_mode == 'Thành phẩm theo m2' || doc.inventory_mode == 'Tấm/Kính'",
           "surface": "quick"
@@ -5325,7 +5368,12 @@
           "label": "Đơn giá",
           "fieldtype": "Currency",
           "required": true,
-          "surface": "quick"
+          "read_only": true,
+          "surface": "quick",
+          "valueSource": "formula",
+          "editMode": "readonly",
+          "serverEnforced": true,
+          "description": "Đơn giá do server lấy từ bảng giá, Item, ĐVT bán và biến thể; người nhập không được sửa tay."
         },
         {
           "label": "Tiền CK",
@@ -5397,10 +5445,12 @@
       },
       "form": {
         "fields": [
-          "item_code",
-          "color",
-          "height_m",
-          "width_m",
+      "item_code",
+      "color",
+      "height_m",
+      "width_pb_ray_m",
+      "width_pb_nhua_m",
+      "width_m",
           "set_count",
           "has_butterfly_bracket",
           "leaf_variant",
@@ -5429,10 +5479,12 @@
       },
       "quickEntry": {
         "fields": [
-          "item_code",
-          "color",
-          "height_m",
-          "width_m",
+      "item_code",
+      "color",
+      "height_m",
+      "width_pb_ray_m",
+      "width_pb_nhua_m",
+      "width_m",
           "set_count",
           "has_butterfly_bracket",
           "length_m",
@@ -6235,9 +6287,13 @@
           "fieldname": "responsible_person",
           "fieldtype": "Link",
           "options": "Employee",
-          "fetch_from": "customer.account_manager",
+          "read_only": true,
           "link_filters": "{\"employee_status\":\"Đang làm việc\"}",
-          "form_region": "main"
+          "form_region": "main",
+          "valueSource": "system",
+          "editMode": "readonly",
+          "serverEnforced": true,
+          "description": "Tự lấy Nhân viên đang làm việc gắn với user đăng nhập."
         },
         {
           "fieldname": "manual_note",
@@ -6279,12 +6335,10 @@
         },
         {
           "label": "Nhóm khách hàng",
-          "//": "Ảnh chụp nhóm giá của khách — xem chú thích cùng trường ở Báo giá.",
+          "//": "Nạp mặc định từ hồ sơ khách nhưng được phép chọn lại trên từng đơn; giá và công thức dùng snapshot này.",
           "fieldname": "customer_group",
           "fieldtype": "Select",
           "options": "Đại lý\nLẻ",
-          "read_only": true,
-          "fetch_from": "customer.price_group",
           "form_region": "main"
         },
         {
@@ -6405,8 +6459,25 @@
           "form_width": "full"
         },
         {
-          "label": "Tiền phải thu",
+          "label": "Tiền phải trả",
           "fieldname": "grand_total",
+          "fieldtype": "Currency",
+          "read_only": true,
+          "form_region": "full",
+          "form_width": "full"
+        },
+        {
+          "label": "Tiền cọc",
+          "fieldname": "deposit_amount",
+          "fieldtype": "Currency",
+          "default": 0,
+          "form_region": "full",
+          "form_width": "full",
+          "description": "Tiền khách đã đặt cọc cho đơn; không làm giảm doanh thu của đơn."
+        },
+        {
+          "label": "Còn phải thu",
+          "fieldname": "outstanding_amount",
           "fieldtype": "Currency",
           "read_only": true,
           "form_region": "full",
@@ -6448,7 +6519,9 @@
           "surcharge_amount",
           "vat_rate",
           "vat_amount",
-          "grand_total"
+          "grand_total",
+          "deposit_amount",
+          "outstanding_amount"
         ],
         "previewMethod": "alumdoor.ui.preview_document",
         "previewParentFields": [
@@ -6457,6 +6530,7 @@
           "items",
           "vat_rate",
           "surcharge_amount",
+          "deposit_amount",
           "additional_discount_percentage"
         ]
       }
@@ -11344,6 +11418,18 @@
       "label": "Mẫu BOM",
       "group": "Sản xuất",
       "naming": "autoincrement",
+      "list": [
+        "template_code",
+        "item_code",
+        "source_status",
+        "priority",
+        "disabled"
+      ],
+      "search": [
+        "template_code",
+        "item_code",
+        "source_ref"
+      ],
       "fields": [
         "template_code:Data*! Mã mẫu BOM",
         "item_code:Link(Item)! Thành phẩm",

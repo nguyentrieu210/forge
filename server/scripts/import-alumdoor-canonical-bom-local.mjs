@@ -16,6 +16,7 @@ if (Number(payload.component_reference_count) !== Number(payload.expected_compon
 }
 
 const clean = (value) => String(value ?? '').normalize('NFC').trim();
+const QUANTITY_BASES = new Set(['Cố định', 'Theo chiều cao', 'Theo chiều rộng', 'Theo diện tích', 'Theo số lá']);
 const optionalNumber = (value) => {
   if (value === null || value === undefined || clean(value) === '') return null;
   const parsed = Number(value);
@@ -30,6 +31,10 @@ function managedLine(row) {
   const out = {};
   for (const field of LINE_FIELDS) {
     if (['qty','conversion_factor','source_sequence','source_row','source_index','source_parent_row'].includes(field)) out[field] = optionalNumber(row?.[field]);
+    else if (field === 'qty_basis') {
+      const basis = clean(row?.[field]);
+      out[field] = QUANTITY_BASES.has(basis) ? basis : 'Cố định';
+    }
     else out[field] = clean(row?.[field]) || null;
   }
   return out;
@@ -48,15 +53,30 @@ function normalizedLines(rows) {
       || Number(a.source_row ?? 1e12) - Number(b.source_row ?? 1e12)
       || clean(a.item_code).localeCompare(clean(b.item_code), 'vi'));
 }
+function persistedOutputUom(doc) {
+  const direct = clean(doc?.output_uom);
+  if (direct) return direct;
+  const raw = clean(doc?.configuration_snapshot);
+  if (!raw) return null;
+  try { return clean(JSON.parse(raw)?.output?.output_uom) || null; } catch { return null; }
+}
 function bomSnapshot(doc) {
   return {
     item: clean(doc?.item),
     company: clean(doc?.company),
     quantity: Number(doc?.quantity ?? 1),
-    output_uom: clean(doc?.output_uom) || null,
+    output_uom: persistedOutputUom(doc),
     bom_status: clean(doc?.bom_status) || 'Draft',
+    configuration_snapshot: clean(doc?.configuration_snapshot) || null,
     items: normalizedLines(doc?.items),
   };
+}
+function configurationSnapshot(bom) {
+  return JSON.stringify({
+    format: 'alumdoor-canonical-bom/v2',
+    output: { quantity: 1, output_uom: clean(bom.output_uom) || null },
+    pending_value_count: Array.isArray(bom.pending_lines) ? bom.pending_lines.length : 0,
+  });
 }
 function expectedSnapshot(bom) {
   return {
@@ -65,11 +85,25 @@ function expectedSnapshot(bom) {
     quantity: 1,
     output_uom: clean(bom.output_uom) || null,
     bom_status: 'Draft',
+    configuration_snapshot: configurationSnapshot(bom),
     items: normalizedLines(bom.lines),
   };
 }
+function comparisonSnapshot(snapshot) {
+  return {
+    ...snapshot,
+    items: snapshot.items.map((line) => ({
+      ...line,
+      // The BOM controller defaults a blank conversion factor to 1. The
+      // source-complete payload intentionally keeps unresolved conversions
+      // blank, so this is an equivalence rule for post-write convergence,
+      // not a source-data fill-in.
+      conversion_factor: line.conversion_factor === null ? 1 : line.conversion_factor,
+    })),
+  };
+}
 function sameBom(expected, actual) {
-  return JSON.stringify(expectedSnapshot(expected)) === JSON.stringify(bomSnapshot(actual));
+  return JSON.stringify(comparisonSnapshot(expectedSnapshot(expected))) === JSON.stringify(comparisonSnapshot(bomSnapshot(actual)));
 }
 function validateBom(bom) {
   if (!clean(bom?.item)) throw new Error('BOM parent item is blank');
@@ -165,7 +199,7 @@ async function listPaged(doctype, fields, filters = null) {
   return all;
 }
 async function listExisting() {
-  return listPaged('Bill of Materials', ['name','item','company','quantity','docstatus','status','remarks'], [['Bill of Materials','company','=','ALUMDOOR']]);
+  return listPaged('Bill of Materials', ['name','item','company','quantity','docstatus','status','note','bom_fingerprint'], [['Bill of Materials','company','=','ALUMDOOR']]);
 }
 async function listItemCodes() {
   const rows = await listPaged('Item', ['name','item_code']);
@@ -174,6 +208,23 @@ async function listItemCodes() {
 async function getBom(name) {
   const body = await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}/${encodeURIComponent(name)}`);
   return dataOf(body);
+}
+async function createBomWithCollisionRetry(bom) {
+  const body = apiBom(bom);
+  for (let attempt = 1; attempt <= 20; attempt += 1) {
+    const result = await request(`/api/resource/${encodeURIComponent('Bill of Materials')}`, { method: 'POST', body });
+    if (result.response.ok) return dataOf(result.body);
+    if (result.response.status !== 417 || !/DuplicateEntryError|Document already exists/i.test(result.text)) {
+      throw new Error(`POST /api/resource/${encodeURIComponent('Bill of Materials')} failed (${result.response.status}): ${result.text}`);
+    }
+    const next = await request('/api/v1/naming/next', {
+      method: 'POST',
+      body: { doctype: 'Bill of Materials', document: { company: 'ALUMDOOR' } },
+    });
+    if (!next.response.ok) throw new Error(`POST /api/v1/naming/next failed (${next.response.status}): ${next.text}`);
+    console.log(`ALUMDOOR_BOM_NAME_COLLISION_SKIP attempt=${attempt} allocated=${JSON.stringify(dataOf(next.body)?.name ?? null)}`);
+  }
+  throw new Error('POST Bill of Materials exhausted naming collision retries');
 }
 async function mapConcurrent(values, limit, mapper) {
   const out = new Array(values.length);
@@ -198,13 +249,15 @@ function apiBom(bom, modified) {
     output_uom: bom.output_uom || undefined,
     bom_status: 'Draft',
     items: bom.lines.map(apiLine),
-    remarks: `Alumdoor canonical source-complete ${bom.import_fingerprint}`,
+    configuration_snapshot: configurationSnapshot(bom),
+    note: `Alumdoor canonical source-complete ${bom.import_fingerprint}`,
+    bom_fingerprint: bom.import_fingerprint,
     ...(modified ? { modified } : {}),
   };
 }
 function importerManaged(doc) {
-  const remarks = clean(doc?.remarks);
-  return remarks.startsWith('Alumdoor canonical Gate B ') || remarks.startsWith('Alumdoor canonical source-complete ');
+  const note = clean(doc?.note);
+  return note.startsWith('Alumdoor canonical Gate B ') || note.startsWith('Alumdoor canonical source-complete ');
 }
 async function updateBomDraft(name, bom) {
   const url = `/api/resource/${encodeURIComponent('Bill of Materials')}/${encodeURIComponent(name)}`;
@@ -291,8 +344,8 @@ console.log(`ALUMDOOR_BOM_WRITE_START total=${plans.length}`);
 let processed = 0;
 for (const plan of plans) {
   if (plan.action === 'create') {
-    const body=await requireOk(`/api/resource/${encodeURIComponent('Bill of Materials')}`,{method:'POST',body:apiBom(plan.bom)});
-    const doc=dataOf(body); created.push({item:plan.bom.item,name:doc?.name??null,import_fingerprint:plan.bom.import_fingerprint});
+    const doc=await createBomWithCollisionRetry(plan.bom);
+    created.push({item:plan.bom.item,name:doc?.name??null,import_fingerprint:plan.bom.import_fingerprint});
   } else {
     const outcome=await updateBomDraft(plan.existing.name, plan.bom);
     const doc=dataOf(outcome.body);

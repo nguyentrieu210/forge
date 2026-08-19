@@ -18,6 +18,7 @@ import type { TrustedIdentityKey } from "../../../packages/auth/src/index.js";
 import type { Actor, CanonicalDocument, DomainEvent, JsonObject, MutationCommand, MutationReceipt } from "../../../packages/contracts/src/index.js";
 import { parseMutationCommandInput } from "../../../packages/contracts/src/index.js";
 import { previewPurchaseReceiptSubmission } from "../../../packages/clouderp-core/src/index.js";
+import { previewDeliveryNoteSubmission } from "../../../packages/clouderp-selling/src/index.js";
 import { D1CommercialReconciliationService, D1DocumentListStore, D1MutationStore, D1PurchaseAllocationTimelineService, D1RolloutPurchaseAllocationDomainStore, DocumentListService } from "../../../packages/document-kernel/src/index.js";
 import { asCloudForgeError, commandPayloadHash, errorResponse, errors, jsonResponse, randomId, readJson } from "../../../packages/core/src/index.js";
 import {
@@ -1138,7 +1139,7 @@ async function serveFrappeApiInner(
   if (request.method === "GET" && url.pathname === "/api/method/metaforge.api.get_submit_preview") {
     const doctype = requireShortText(url.searchParams.get("doctype"), "doctype", 160);
     const name = requireShortText(url.searchParams.get("name"), "name", 320);
-    if (doctype !== "Purchase Receipt") return jsonResponse({ message: null });
+    if (doctype !== "Purchase Receipt" && doctype !== "Delivery Note") return jsonResponse({ message: null });
 
     const document = await documents.getDocument(tenantId, doctype, name);
     if (!document) throw errors.notFound(`${doctype} ${name} was not found`);
@@ -1154,13 +1155,21 @@ async function serveFrappeApiInner(
       data: document.data,
       action: "submit",
     });
-    const preview = await previewPurchaseReceiptSubmission({
-      tenantId,
-      actor,
-      document,
-      reader: new D1RolloutPurchaseAllocationDomainStore(requestDb),
-      now: now(),
-    });
+    const preview = doctype === "Purchase Receipt"
+      ? await previewPurchaseReceiptSubmission({
+          tenantId,
+          actor,
+          document,
+          reader: new D1RolloutPurchaseAllocationDomainStore(requestDb),
+          now: now(),
+        })
+      : await previewDeliveryNoteSubmission({
+          tenantId,
+          actor,
+          document,
+          reader: documents,
+          now: now(),
+        });
     return jsonResponse({ message: preview });
   }
 
@@ -1185,6 +1194,38 @@ async function serveFrappeApiInner(
     const timeline = await new D1PurchaseAllocationTimelineService(requestDb)
       .getTimeline(tenantId, requestedDoctype, name);
     return jsonResponse({ message: timeline });
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/method/metaforge.api.preview_delivery_document") {
+    const body = await readJson<JsonObject>(request, 256_000);
+    const data = body.document;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      throw errors.validation("document is required");
+    }
+    await permissions.assert({ actor, tenantId, doctype: "Delivery Note", action: "create" });
+    await permissions.assert({ actor, tenantId, doctype: "Delivery Note", owner: actor.user_id, data, action: "submit" });
+    const previewAt = now();
+    const virtualDocument: CanonicalDocument<JsonObject> = {
+      tenant_id: tenantId,
+      doctype: "Delivery Note",
+      name: `PREVIEW-${traceId}`,
+      owner: actor.user_id,
+      docstatus: 0,
+      status: "Draft",
+      version: 1,
+      created_at: previewAt,
+      modified_at: previewAt,
+      data,
+      children: [],
+    };
+    const preview = await previewDeliveryNoteSubmission({
+      tenantId,
+      actor,
+      document: virtualDocument,
+      reader: documents,
+      now: previewAt,
+    });
+    return jsonResponse({ message: preview });
   }
 
   const installedApps = new AppInstaller(requestDb, metadata, users);

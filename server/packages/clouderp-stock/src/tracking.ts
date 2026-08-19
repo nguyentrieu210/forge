@@ -3,7 +3,7 @@ import { errors } from "../../core/src/index.js";
 import type { ControllerContext } from "../../document-kernel/src/index.js";
 import { fromScaledInt, toScaledInt } from "../../money/src/index.js";
 import type { SerialBatchBundleData, SerialBatchBundleRow } from "./types.js";
-import { deriveOutgoingValuation } from "./valuation.js";
+import { deriveOutgoingValuation, type FifoAllocation } from "./valuation.js";
 
 export interface TrackedStockRequest {
   itemCode: string;
@@ -24,6 +24,7 @@ export interface TrackedStockRequest {
   stockValueMinor: number;
   lineKey: string;
   bundleName?: string;
+  automaticFifoAllocations?: FifoAllocation[];
   allowNegativeStock?: boolean;
 }
 
@@ -58,7 +59,12 @@ export async function buildTrackedStockLines(
   const item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", request.itemCode);
   const tracked = isTrackedItem(item);
   if (!request.bundleName) {
-    if (tracked && context.command.action === "submit") throw errors.reference(`Serial and Batch Bundle is required for tracked Item ${request.itemCode}`);
+    if (tracked && context.command.action === "submit") {
+      if (request.direction === "Outward" && request.automaticFifoAllocations?.length) {
+        return automaticTrackedFifo(context, request, item ?? null);
+      }
+      throw errors.reference(`Serial and Batch Bundle is required for tracked Item ${request.itemCode}`);
+    }
     return { stock: [baseLine(request)], usages: [], stockValueMinor: Math.abs(request.stockValueMinor) };
   }
 
@@ -92,6 +98,40 @@ export async function buildTrackedStockLines(
     usages: [{ line_key: `BUNDLE-${request.lineKey}`, bundle_name: request.bundleName, item_code: request.itemCode, warehouse: request.warehouse, direction: request.direction, usage_delta: 1, posting_at: request.postingAt }],
     bundle,
   };
+}
+
+async function automaticTrackedFifo(
+  context: ControllerContext<JsonObject>,
+  request: TrackedStockRequest,
+  item: JsonObject | null,
+): Promise<TrackedStockResult> {
+  const allocations = request.automaticFifoAllocations ?? [];
+  const hasBatch = item?.has_batch_no === true || item?.has_batch_no === 1;
+  const hasSerial = item?.has_serial_no === true || item?.has_serial_no === 1;
+  const total = allocations.reduce((sum, allocation) => sum + allocation.qty_micros, 0);
+  if (total !== request.qtyMicros) throw errors.reference("Automatic FIFO allocation quantity does not match stock row");
+  const stock: StockLedgerEntry[] = [];
+  let stockValueMinor = 0;
+  for (const [index, allocation] of allocations.entries()) {
+    if (hasBatch && !allocation.batch_no) throw errors.reference(`FIFO layer ${allocation.source_line_key} has no Batch`);
+    if (hasSerial && !allocation.serial_no) throw errors.reference(`FIFO layer ${allocation.source_line_key} has no Serial No`);
+    if (hasSerial && allocation.qty_micros !== 1_000_000) throw errors.reference(`FIFO serial layer ${allocation.source_line_key} must equal one`);
+    const row: SerialBatchBundleRow = {
+      row_id: `AUTO-${index + 1}`,
+      qty: fromScaledInt(allocation.qty_micros, 6),
+      qty_micros: allocation.qty_micros,
+      ...(allocation.batch_no ? { batch_no: allocation.batch_no } : {}),
+      ...(allocation.serial_no ? { serial_no: allocation.serial_no } : {}),
+    };
+    await assertOutgoingRowAvailable(context, request, row, allocation.qty_micros);
+    const absoluteValue = Math.abs(allocation.value_minor);
+    stockValueMinor += absoluteValue;
+    stock.push(buildBundleStockLine(request, row, index, allocation.qty_micros, true, {
+      absoluteValue,
+      rowRateMinor: allocation.valuation_rate_minor,
+    }, null));
+  }
+  return { stock, usages: [], stockValueMinor };
 }
 
 function isTrackedItem(item: JsonObject | null | undefined): boolean {

@@ -583,8 +583,15 @@ function isWidthQuantitySalesItem(item: { item_name?: unknown; item_code?: unkno
     || itemCode.includes("ladau");
 }
 
-function isOrdinaryQuantitySalesItem(item: { item_name?: unknown; item_code?: unknown; inventory_mode?: unknown }): boolean {
-  return String(item.inventory_mode ?? "").normalize("NFC").trim() === "Hàng thường"
+function isOrdinaryQuantitySalesItem(item: {
+  item_name?: unknown;
+  item_code?: unknown;
+  inventory_mode?: unknown;
+  measurement_profile?: unknown;
+}): boolean {
+  const inventoryMode = String(item.inventory_mode ?? "").normalize("NFC").trim() || "Hàng thường";
+  return inventoryMode === "Hàng thường"
+    && normalizedUom(item.measurement_profile) !== normalizedUom("Thành phẩm theo m2")
     && !deriveLinearSalesBasis(item)
     && !isWidthQuantitySalesItem(item);
 }
@@ -824,18 +831,16 @@ async function validateTransactionLines(
   const items = new Map(pairs);
   const persistedCustomer = String(persistedDocument?.customer ?? "").trim();
   const persistedCustomerGroup = String(persistedDocument?.customer_group ?? "").trim();
-  const masterCustomerGroup = String(customer?.price_group ?? "").trim();
-  // Cùng khách trên chứng từ cũ thì giữ snapshot lịch sử. Tạo mới hoặc đổi khách phải lấy
-  // master hiện tại. Payload không được tự chọn group vì nó đổi cả giá lẫn PB ray/PB nhựa.
-  const customerGroup = persistedCustomer === customerName && persistedCustomerGroup
-    ? persistedCustomerGroup
-    : masterCustomerGroup;
+  const masterCustomerGroup = String(customer?.price_group ?? customer?.customer_group ?? "").trim();
+  // Hồ sơ khách là mặc định, còn Nhóm giá trên đơn là snapshot nghiệp vụ được phép chọn lại.
+  // Với payload cũ không gửi group, giữ snapshot đã lưu rồi mới rơi về master khách.
+  const customerGroup = declaredCustomerGroup
+    || (persistedCustomer === customerName ? persistedCustomerGroup : "")
+    || masterCustomerGroup;
   if (side === "sales" && customerName) {
     if (!customer) return refuse(`Khách hàng ${customerName} không tồn tại hoặc đã ngừng dùng.`);
-    if (declaredCustomerGroup !== customerGroup) {
-      return refuse(
-        `Nhóm giá trên chứng từ phải là "${customerGroup || "(trống)"}" theo hồ sơ khách ${customerName}; không được chọn tay.`,
-      );
+    if (customerGroup !== "Đại lý" && customerGroup !== "Lẻ") {
+      return refuse(`Nhóm giá "${customerGroup || "(trống)"}" không hợp lệ; hãy chọn Đại lý hoặc Lẻ.`);
     }
   }
 
@@ -856,8 +861,12 @@ async function validateTransactionLines(
     const stockUom = String(item.stock_uom ?? "").trim();
     const defaultUom = String(side === "purchase" ? item.default_purchase_uom ?? "" : item.default_sales_uom ?? "").trim();
     const uom = String(row.uom ?? (defaultUom || stockUom)).trim();
-    const mode = String(item.inventory_mode ?? "Hàng thường");
+    const inventoryMode = String(item.inventory_mode ?? "").trim();
     const measurementProfile = String(item.measurement_profile ?? "").trim();
+    const mode = [inventoryMode, measurementProfile]
+      .some((value) => normalizedUom(value) === normalizedUom("Thành phẩm theo m2"))
+      ? "Thành phẩm theo m2"
+      : inventoryMode || "Hàng thường";
     const linearBasis = side === "sales" ? deriveLinearSalesBasis(item) : undefined;
     const widthQuantityItem = side === "sales" ? isWidthQuantitySalesItem(item) : false;
     const ordinaryQuantityItem = side === "sales" ? isOrdinaryQuantitySalesItem(item) : false;

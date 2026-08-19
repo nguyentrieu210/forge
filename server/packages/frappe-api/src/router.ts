@@ -14,7 +14,8 @@
 import {
   appMethodTarget, blocksSelfApproval, combinedNavigation, dispatchAppMethod, errors, mergeCustomizations,
   navItemPath, parseCsvImport, parseCustomField, parseDocTypeMeta, parsePropertySetter, parseQueryRequest,
-  permissionAllows, renderPrintFormat, resolveAutoname, resolveCommercialLine, sha256Hex, validateWorkflow,
+  alumdoorCommercialBenefits, defaultAlumdoorDiscountPercent, permissionAllows, renderPrintFormat, resolveAutoname, resolveCommercialLine, sha256Hex, validateWorkflow,
+  withAlumdoorDefaultDiscountSnapshot,
   type Actor, type AppInstaller, type AppMethodEnv, type AppReportService, type AppReportSpec,
   type CanonicalDocument, type CustomFieldRecord, type CustomizationStore, type D1CollaborationService,
   type D1MutationStore, type D1ReportService, type D1SearchStore, type D1UserStore, type DocTypeMeta,
@@ -1644,6 +1645,17 @@ async function transition(action: Extract<MutationAction, "submit" | "cancel">, 
   return toFrappeDoc(await loadReadable(doctype, name, context));
 }
 
+const ALUMDOOR_BANK_ACCOUNT_DOCTYPE = "Tài khoản ngân hàng";
+const ALUMDOOR_BANK_ACCOUNT_DISPLAY_FIELDS = ["bank_name", "account_number", "account_holder"];
+
+export function alumdoorBankAccountLabel(record: JsonObject): string {
+  const bank = typeof record.bank_name === "string" ? record.bank_name.trim() : "";
+  const account = typeof record.account_number === "string" ? record.account_number.trim() : "";
+  const holder = typeof record.account_holder === "string" ? record.account_holder.trim() : "";
+  return [bank, account, holder ? `CTK ${holder}` : ""].filter(Boolean).join(" · ")
+    || String(record.name ?? "");
+}
+
 async function searchLink(args: FrappeArgs, context: FrappeRouterContext): Promise<JsonObject[]> {
   const doctype = args.requireText("doctype", 160);
   const text = args.text("txt") ?? "";
@@ -1661,10 +1673,29 @@ async function searchLink(args: FrappeArgs, context: FrappeRouterContext): Promi
       }));
   }
   const meta = await requireMeta(doctype, context);
-  const titleField = meta.title_field;
+  // Item data imported from legacy ERPNext snapshots is not guaranteed to carry
+  // `title_field`, while `item_name` is still the canonical human-readable title.
+  // Link results must therefore degrade to that real field instead of showing the
+  // item code twice in the sales picker.
+  const titleField = meta.title_field
+    || (doctype === "Item" && meta.fields.some((field) => field.fieldname === "item_name") ? "item_name" : undefined);
 
-  const fields = dedupe(["name", ...(titleField ? [titleField] : [])]);
-  const filters = toKernelFilters(args.json("filters"), doctype);
+  const bankAccountDisplay = doctype === ALUMDOOR_BANK_ACCOUNT_DOCTYPE;
+  const fields = dedupe([
+    "name",
+    ...(titleField ? [titleField] : []),
+    ...(bankAccountDisplay ? ALUMDOOR_BANK_ACCOUNT_DISPLAY_FIELDS : []),
+  ]);
+  const stringFieldTypes = new Set([
+    "Data", "Small Text", "Text", "Long Text", "Code", "Select", "Link", "Dynamic Link",
+    "Attach", "Attach Image", "Text Editor", "Markdown Editor", "HTML Editor", "Autocomplete",
+    "Read Only", "Barcode", "Icon", "Image", "Signature", "Phone", "Color",
+  ]);
+  const stringFields = new Set([
+    "name", "status", "owner",
+    ...meta.fields.filter((field) => stringFieldTypes.has(field.fieldtype)).map((field) => field.fieldname),
+  ]);
+  const filters = toKernelFilters(args.json("filters"), doctype, { stringFields });
   const rows = await context.listService.list(context.actor, context.tenantId, {
     doctype,
     fields,
@@ -1674,6 +1705,9 @@ async function searchLink(args: FrappeArgs, context: FrappeRouterContext): Promi
   });
   return rows.rows.map((row) => {
     const record = row as JsonObject;
+    if (bankAccountDisplay) {
+      return { value: String(record.name ?? ""), label: alumdoorBankAccountLabel(record), description: "" };
+    }
     const label = titleField && typeof record[titleField] === "string" ? String(record[titleField]) : String(record.name ?? "");
     return { value: String(record.name ?? ""), label, description: label === String(record.name ?? "") ? "" : String(record.name ?? "") };
   });
@@ -1782,7 +1816,26 @@ async function batchDisplayValues(
   await Promise.all([...grouped].map(async ([doctype, nameSet]) => {
     try {
       const meta = await context.metadata.getDocType(context.tenantId, doctype);
-      const titleField = meta?.title_field;
+      if (doctype === ALUMDOOR_BANK_ACCOUNT_DOCTYPE && meta) {
+        const names = [...nameSet];
+        for (let index = 0; index < names.length; index += 50) {
+          const chunk = names.slice(index, index + 50);
+          const page = await context.listService.list(context.actor, context.tenantId, {
+            doctype,
+            fields: ["name", ...ALUMDOOR_BANK_ACCOUNT_DISPLAY_FIELDS],
+            filters: [{ field: "name", operator: "in", value: chunk }] as unknown as JsonValue,
+            limit: chunk.length,
+          });
+          for (const raw of page.rows) {
+            const row = raw as JsonObject;
+            const name = typeof row.name === "string" ? row.name : "";
+            if (name) labels.set(`${doctype}\u0000${name}`, alumdoorBankAccountLabel(row));
+          }
+        }
+        return;
+      }
+      const titleField = meta?.title_field
+        || (doctype === "Item" && meta?.fields.some((field) => field.fieldname === "item_name") ? "item_name" : undefined);
       if (!meta || !titleField) return;
 
       const firstHop = new Map<string, string>();
@@ -4432,6 +4485,11 @@ async function previewSalesCommercialLine(args: FrappeArgs, context: FrappeRoute
       sqm2: effectiveArea,
     }),
   };
+  const requestedDiscount = Number(line.discount_percentage);
+  const expectedDiscount = defaultAlumdoorDiscountPercent({
+    ...item.data,
+    item_code: itemCode,
+  });
   const kernelContext = {
     command: fakeCommand,
     existing: null,
@@ -4450,15 +4508,21 @@ async function previewSalesCommercialLine(args: FrappeArgs, context: FrappeRoute
     ...(args.text("customer") ? { party: args.text("customer")! } : {}),
     ...(args.text("customer_group") ? { customerGroup: args.text("customer_group")! } : {}),
     facts,
-    ...(Number.isFinite(Number(line.discount_percentage))
-      ? { discountPercentageOverride: Number(line.discount_percentage) }
+    ...(Number.isFinite(requestedDiscount) || expectedDiscount > 0
+      ? { discountPercentageOverride: Number.isFinite(requestedDiscount) ? requestedDiscount : expectedDiscount }
       : {}),
     ...(effectiveArea === undefined ? {} : { areaSqm: effectiveArea }),
     ...(Number.isFinite(Number(line.length_m)) ? { lengthM: Number(line.length_m) } : {}),
     ...(Number.isFinite(Number(line.set_count)) ? { setCount: Number(line.set_count) } : {}),
   });
+  const pricingRuleSnapshots = withAlumdoorDefaultDiscountSnapshot(resolved.pricing_rule_snapshots, {
+    ...item.data,
+    item_code: itemCode,
+  });
   return {
     ...resolved,
+    pricing_rule_snapshots: pricingRuleSnapshots,
+    benefit_items: alumdoorCommercialBenefits({ ...item.data, item_code: itemCode }, effectiveArea ?? qty),
     rate: resolved.selling_rate,
     amount: resolved.net_before_tax,
     net_amount: resolved.net_before_tax,

@@ -64,3 +64,20 @@ Không được dựng lại `Sales Option` hoặc `Sales Package` như một l�
 - Không dùng BOM làm một bundle thương mại.
 - Không tái tạo `Sales Option` / `Sales Package` chỉ vì migration/doc cũ vẫn còn tên chúng.
 - Exact current code/brief/test thắng tài liệu lịch sử khi có xung đột.
+
+## Sales BOM composition contract (19/08/2026)
+
+Trên `Sales Order`, BOM chỉ là snapshot quan hệ cha–con cho Item có mã `TRỌN BỘ`:
+
+- nguồn chỉ quyết định thành phẩm cha có những Item con nào và thứ tự của chúng;
+- không đọc `qty`, `stock_uom`, hệ số quy đổi hay công thức định mức sản xuất;
+- `SL` dòng con lấy theo số bộ của dòng cha;
+- Rộng PB ray, Rộng PB nhựa, Cao PB, rộng chuẩn hóa và rộng cắt lá lấy từ dòng cha;
+- ray lấy chiều dài theo Cao PB, trục lấy chiều dài theo Rộng PB; nếu ĐVT bán là mét thì khối lượng bằng chiều dài nhân số bộ;
+- `ĐVT` lấy từ `Item.default_sales_uom`; không thay bằng ĐVT tồn kho/BOM sản xuất;
+- khối lượng hiển thị được tính theo quy tắc bán của Item con và quy cách dòng cha;
+- đơn giá/thành tiền phần con luôn là `—` và không tham gia tổng tiền đơn.
+
+Đường sản xuất vẫn dùng resolver BOM nghiêm ngặt riêng. Thiếu định mức sản xuất phải chặn tạo BOM/Work Order, nhưng không được chặn việc xổ danh sách cấu thành trên đơn bán hàng.
+
+Dữ liệu local được thay qua adapter `bom-template`: sao lưu D1 và xuất preimage, xóa toàn bộ BOM nháp/template cũ, sau đó nạp đúng một composition template cho mỗi Item `TRỌN BỘ`. Không chạy importer trực tiếp ngoài runner contract.

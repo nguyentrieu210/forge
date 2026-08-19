@@ -20,6 +20,7 @@ import { AlumdoorSalesOrderLineTable } from "./AlumdoorSalesOrderLineTable.js";
 import {
   blankFromMeta,
   hydrateSalesLines,
+  isFullSetSalesItem,
   lineAdjustmentAmount,
   lineBillableArea,
   lineDiscountAmount,
@@ -92,10 +93,6 @@ function commercialFacts(line: SalesLine): Json {
     leaf_count: line.leaf_count,
     color: line.color,
   };
-}
-
-function isGermanDoor(line: SalesLine): boolean {
-  return normalized(line._context?.door_type) === normalized("Cửa Đức");
 }
 
 export function AlumdoorSalesOrderWorkbench(props: AlumdoorSalesOrderCreateProps) {
@@ -418,11 +415,7 @@ export function AlumdoorSalesOrderWorkbench(props: AlumdoorSalesOrderCreateProps
         }
       }
 
-      const canPreviewBom = Boolean(text(context.door_type))
-        && positiveNumber(candidate.width_m) !== undefined
-        && positiveNumber(candidate.height_m) !== undefined
-        && ["Đại lý", "Lẻ"].includes(text(header.customer_group));
-      if (canPreviewBom && !isGermanDoor(candidate)) {
+      if (isFullSetSalesItem(candidate)) {
         try {
           const bom = await adapter.callPost<BomPreview>("alumdoor.sales.preview_bom_requirements", {
             ...cleanLine(candidate),
@@ -721,7 +714,7 @@ export function AlumdoorSalesOrderWorkbench(props: AlumdoorSalesOrderCreateProps
                 {headerControl("delivery_date", "Ngày giao", "Date", undefined, false, true)}
                 {metaField("responsible_person") ? headerControl("responsible_person", "Người phụ trách", "Data") : null}
 
-                {metaField("customer_group") ? headerControl("customer_group", "Nhóm giá", metaField("customer_group")!.fieldtype, metaField("customer_group")!.options, true) : null}
+                {metaField("customer_group") ? headerControl("customer_group", "Nhóm giá", metaField("customer_group")!.fieldtype, metaField("customer_group")!.options, false, true) : null}
                 {metaField("contact_person") ? headerControl("contact_person", "Người liên hệ") : null}
                 {metaField("phone") ? headerControl("phone", "SĐT") : null}
                 {metaField("payment_method") ? headerControl("payment_method", "Thanh toán", "Select", paymentOptions.join("\n")) : null}

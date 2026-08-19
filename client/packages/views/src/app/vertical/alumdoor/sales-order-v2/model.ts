@@ -59,13 +59,38 @@ export interface CommercialPreview extends Json {
 export interface BomPreviewComponent extends Json {
   component_key?: string;
   item_code?: string;
+  color?: string;
+  width_pb_ray_m?: number;
+  width_pb_nhua_m?: number;
+  width_m?: number;
+  height_m?: number;
+  mesh_height_m?: number;
+  cut_width_m?: number;
+  length_m?: number;
+  set_count?: number;
+  uom?: string;
   stock_uom?: string;
-  qty?: number;
+  stock_qty?: number | null;
+  production_uom?: string;
+  production_qty?: number | null;
+  qty?: number | null;
+  quantity_fields?: string[];
+  quantity_error?: string;
+  uom_warning?: string;
+  sales_uom_missing?: boolean;
+  sales_uom_message?: string;
   note?: string;
   source_rule?: string;
+  rate?: number;
+  gross_amount?: number;
+  net_amount?: number;
+  pricing_error?: string;
 }
 
 export interface BomPreview extends Json {
+  bom_applicable?: boolean;
+  reason?: string;
+  pending_fields?: string[];
   bom_no?: string;
   bom_template?: string;
   bom_template_code?: string;
@@ -100,6 +125,8 @@ export interface SalesLine extends Json {
   adjustment_amount?: number;
   net_amount?: number;
   width_m?: number;
+  width_pb_ray_m?: number;
+  width_pb_nhua_m?: number;
   height_m?: number;
   mesh_height_m?: number;
   set_count?: number;
@@ -236,6 +263,42 @@ export function isAreaDoor(line: SalesLine): boolean {
   return normalized(line._context?.inventory_mode) === normalized("Thành phẩm theo m2");
 }
 
+export type SalesWidthInputField = "width_pb_ray_m" | "width_pb_nhua_m";
+
+export function salesWidthInputField(line: SalesLine, customerGroup: string): SalesWidthInputField | undefined {
+  const doorType = normalized(line._context?.door_type ?? line.door_type);
+  const itemGroup = normalized(line._context?.item_group ?? line.item_group);
+  const alwaysUsesPbRay = [
+    "cua uc",
+    "cua tam lien uc",
+    "cua luoi",
+    "cua dai loan",
+    "cua sieu truong",
+  ].includes(doorType)
+    || [
+      "cua tam lien uc",
+      "cua luoi",
+      "cua dai loan",
+      "cua dai loan inox",
+      "cua keo dai loan",
+      "cua sieu truong",
+    ].includes(itemGroup);
+  if (alwaysUsesPbRay) return "width_pb_ray_m";
+  if (text(customerGroup) === "Lẻ") return "width_pb_ray_m";
+  if (text(customerGroup) === "Đại lý") return "width_pb_nhua_m";
+  return undefined;
+}
+
+export function isFullSetSalesItem(line: Pick<SalesLine, "item_code">): boolean {
+  return text(line.item_code)
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[Đđ]/g, "D")
+    .toLocaleUpperCase("vi")
+    .replace(/[^\p{L}\p{N}]/gu, "")
+    .includes("TRONBO");
+}
+
 export function primaryQuantityField(line: SalesLine): "set_count" | "qty" {
   if (isAreaDoor(line) || fieldVisible(line, "set_count")) return "set_count";
   return "qty";
@@ -265,6 +328,12 @@ export function fieldReadonly(line: SalesLine, fieldname: string): boolean {
   return override?.read_only === true || override?.read_only === 1;
 }
 
+export function isDirectOrdinaryQuantityLine(line: SalesLine): boolean {
+  return primaryQuantityField(line) === "set_count"
+    && normalized(line._context?.inventory_mode || line.inventory_mode || "Hàng thường") === normalized("Hàng thường")
+    && !["width_m", "height_m", "length_m", "qty_bar"].some((fieldname) => fieldRequired(line, fieldname));
+}
+
 export function fieldLabel(line: SalesLine, meta: DocTypeMeta | null, fieldname: string, fallback: string): string {
   return text(fieldOverride(line, fieldname)?.label)
     || text(meta?.fields.find((field) => field.fieldname === fieldname)?.label)
@@ -279,7 +348,11 @@ export function lineBillableArea(line: SalesLine): number | undefined {
 }
 
 export function linePricedQuantity(line: SalesLine): number | undefined {
-  return numberValue(line._commercial?.priced_qty) ?? numberValue(line.qty);
+  // Hàng thường tính theo SL của ĐVT bán: phản hồi ngay khi gõ, không chờ preview cũ
+  // bị thay thế. Cửa theo diện tích vẫn ưu tiên priced_qty đã chuẩn hóa từ server.
+  return isAreaDoor(line)
+    ? numberValue(line._commercial?.priced_qty) ?? numberValue(line.qty)
+    : numberValue(line.qty) ?? numberValue(line._commercial?.priced_qty);
 }
 
 export function lineSellingRate(line: SalesLine): number | undefined {
@@ -308,6 +381,8 @@ export function lineAdjustmentAmount(line: SalesLine): number {
 const PRICING_RULE_LABELS: Record<string, string> = {
   "DAILOAN-UNDER-8M2": "Phụ thu cửa Đài Loan dưới 8 m²",
   "DUC-UNDER-8M2": "Phụ thu cửa Đức dưới 8 m²",
+  "DUC-DISCOUNT-15": "Chiết khấu cửa Đức 15%",
+  "DUC-GIFT-RAIL-8M2": "Tặng ray cửa Đức từ 8 m²",
   "UC-UNDER-7M2": "Phụ thu cửa Úc dưới 7 m²",
   "CUALUOI-UNDER-8M2": "Phụ thu cửa lưới dưới 8 m²",
   "DUC-WOODGRAIN-SLAT": "Phụ thu lá vân gỗ cửa Đức",

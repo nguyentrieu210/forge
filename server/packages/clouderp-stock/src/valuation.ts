@@ -10,9 +10,27 @@ export interface ValuationResult {
   stock_value_difference_minor: number;
   available_qty_micros: number;
   current_stock_value_minor: number;
+  fifo_allocations?: FifoAllocation[];
 }
 
-interface FifoLayer { qty_micros: number; value_minor: number }
+export interface FifoAllocation extends JsonObject {
+  source_line_key: string;
+  source_voucher_type?: string;
+  source_voucher_no?: string;
+  source_voucher_revision?: number;
+  posting_at: string;
+  batch_no?: string;
+  serial_no?: string;
+  qty_micros: number;
+  value_minor: number;
+  valuation_rate_minor: number;
+}
+
+interface FifoLayer {
+  qty_micros: number;
+  value_minor: number;
+  source: StockLedgerEntry;
+}
 
 /**
  * Tên phương pháp giá vốn được CHẤP NHẬN, viết rõ từng cái.
@@ -63,14 +81,26 @@ export async function getItemValuationMethod(
 
 export async function deriveOutgoingValuation(
   context: ControllerContext<JsonObject>,
-  input: { itemCode: string; warehouse: string; qtyMicros: number; postingAt: string; currencyScale: number; batchNo?: string },
+  input: {
+    itemCode: string;
+    warehouse: string;
+    qtyMicros: number;
+    postingAt: string;
+    currencyScale: number;
+    batchNo?: string;
+    priorIssues?: StockLedgerEntry[];
+    dimensions?: { color?: string; length_m?: string | number; condition?: string; is_stamped?: string | number | boolean };
+  },
 ): Promise<ValuationResult> {
   // Có `batchNo` thì phát lại CHỈ trên lô đó — xem `MutationStore.getStockLedgerHistory`.
-  const history = await context.reader.getStockLedgerHistory(
+  let history = await context.reader.getStockLedgerHistory(
     context.command.tenant_id, input.itemCode, input.warehouse, input.postingAt, input.batchNo,
   );
+  if (!input.batchNo && input.dimensions && Object.values(input.dimensions).some((value) => value !== undefined && value !== "")) {
+    history = await filterBatchDimensions(context, history, input.itemCode, input.dimensions);
+  }
   const method = await getItemValuationMethod(context, input.itemCode);
-  return valueIssue(history, input.qtyMicros, method, input.currencyScale);
+  return valueIssue([...history, ...(input.priorIssues ?? [])], input.qtyMicros, method, input.currencyScale);
 }
 
 export function valueIssue(
@@ -96,12 +126,25 @@ export function valueIssue(
   const layers = state.layers.map((layer) => ({ ...layer }));
   let remaining = qtyMicros;
   let issueValue = 0;
+  const allocations: FifoAllocation[] = [];
   while (remaining > 0) {
     const layer = layers[0];
     if (!layer) throw errors.reference("FIFO valuation layers are incomplete");
     const take = Math.min(remaining, layer.qty_micros);
     const value = take === layer.qty_micros ? layer.value_minor : divideRounded(layer.value_minor * take, layer.qty_micros);
     issueValue = safeAdd(issueValue, value);
+    allocations.push({
+      source_line_key: layer.source.line_key,
+      ...(layer.source.source_voucher_type ? { source_voucher_type: layer.source.source_voucher_type } : {}),
+      ...(layer.source.source_voucher_no ? { source_voucher_no: layer.source.source_voucher_no } : {}),
+      ...(layer.source.source_voucher_revision !== undefined ? { source_voucher_revision: layer.source.source_voucher_revision } : {}),
+      posting_at: layer.source.posting_at,
+      ...(layer.source.batch_no ? { batch_no: layer.source.batch_no } : {}),
+      ...(layer.source.serial_no ? { serial_no: layer.source.serial_no } : {}),
+      qty_micros: take,
+      value_minor: value,
+      valuation_rate_minor: ratePerUnitMinor(value, take),
+    });
     layer.qty_micros -= take;
     layer.value_minor -= value;
     remaining -= take;
@@ -112,7 +155,41 @@ export function valueIssue(
     stock_value_difference_minor: -issueValue,
     available_qty_micros: state.qty_micros,
     current_stock_value_minor: state.value_minor,
+    fifo_allocations: allocations,
   };
+}
+
+async function filterBatchDimensions(
+  context: ControllerContext<JsonObject>,
+  history: StockLedgerEntry[],
+  itemCode: string,
+  requested: { color?: string; length_m?: string | number; condition?: string; is_stamped?: string | number | boolean },
+): Promise<StockLedgerEntry[]> {
+  const item = await context.reader.getMasterRecordData(context.command.tenant_id, "Item", itemCode);
+  const batchManaged = item?.has_batch_no === true || item?.has_batch_no === 1;
+  if (!batchManaged) return history;
+  const batches = new Map<string, JsonObject | null>();
+  const result: StockLedgerEntry[] = [];
+  for (const entry of history) {
+    if (!entry.batch_no) continue;
+    let batch = batches.get(entry.batch_no);
+    if (batch === undefined) {
+      batch = await context.reader.getMasterRecordData(context.command.tenant_id, "Batch", entry.batch_no);
+      batches.set(entry.batch_no, batch);
+    }
+    if (!batch) continue;
+    if (requested.color && String(batch.color ?? "") !== requested.color) continue;
+    if (requested.condition && String(batch.condition ?? "") !== requested.condition) continue;
+    if (requested.length_m !== undefined && requested.length_m !== ""
+      && Math.abs(Number(batch.length_m) - Number(requested.length_m)) > 0.000001) continue;
+    if (requested.is_stamped !== undefined && requested.is_stamped !== "") {
+      const wanted = [true, 1, "1", "Có", "Yes"].includes(requested.is_stamped);
+      const actual = [true, 1, "1", "Có", "Yes"].includes(batch.is_stamped as never);
+      if (wanted !== actual) continue;
+    }
+    result.push(entry);
+  }
+  return result;
 }
 
 export function replayValuation(
@@ -131,7 +208,7 @@ export function replayValuation(
         ? entry.stock_value_difference_minor
         : divideRounded(entry.valuation_rate_minor * delta, 1_000_000);
       qty = safeAdd(qty, delta); value = safeAdd(value, incomingValue);
-      if (method === "FIFO") layers.push({ qty_micros: delta, value_minor: incomingValue });
+      if (method === "FIFO") layers.push({ qty_micros: delta, value_minor: incomingValue, source: entry });
       continue;
     }
     if (delta < 0) {

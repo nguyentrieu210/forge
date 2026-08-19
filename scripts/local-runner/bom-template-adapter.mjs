@@ -68,17 +68,23 @@ export async function mainBomTemplate() {
     stage = 'DATA';
     const runDir = path.join(root, 'local-backups', 'execution-layer', 'bom-template', runId);
     mkdirSync(runDir, { recursive: true });
-    // Reuses the same Gate B pipeline as the bom adapter: same extraction, same strict/blank
-    // classification, so a template's deferred_components_json always matches what Gate B itself
-    // decided it could not resolve — this script does not run a second, divergent extraction.
+    // Reuse Gate B only as the authoritative parent-child source. The importer
+    // replaces legacy production BOM drafts/templates with one sales composition
+    // template per TRỌN BỘ Item and deliberately ignores production quantities.
     const prepared = buildImportable(root, runDir, origin);
+    run(process.execPath, [
+      path.join(root, 'server', 'scripts', 'import-alumdoor-sales-bom-composition-local.mjs'),
+      prepared.payload,
+      path.join(runDir, 'validate-only.json'),
+      '--validate-only',
+    ], { cwd: root, label: 'Sales BOM composition validate-only', failureClass: 'DATA' });
     console.log('DATA_STATUS=PASS');
     stage = 'LOCK';
     lock = acquireLock(root, runId, repo.local);
     stage = 'BACKUP';
     const backupPath = backup(root);
     stage = 'IMPORT';
-    const importer = path.join(root, 'server', 'scripts', 'import-alumdoor-bom-template-local.mjs');
+    const importer = path.join(root, 'server', 'scripts', 'import-alumdoor-sales-bom-composition-local.mjs');
     const pass1 = path.join(runDir, 'import-pass1.json');
     run(process.execPath, [importer, prepared.payload, pass1], { cwd: root, env: authEnv(origin), label: 'BOM Template import pass 1', failureClass: 'IMPORTER' });
     const first = JSON.parse(readFileSync(pass1, 'utf8'));
@@ -88,7 +94,7 @@ export async function mainBomTemplate() {
     const second = JSON.parse(readFileSync(pass2, 'utf8'));
     if (Number(second.created_count) !== 0 || Number(second.verification_failure_count) !== 0) throw fail('VERIFY', `BOM Template idempotency failed created=${second.created_count} verify=${second.verification_failure_count}`);
     writeFileSync(path.join(runDir, 'adapter-status.json'), `${JSON.stringify({ adapter: 'bom-template', run_id: runId, repo_sha: repo.local, backup_path: backupPath, pass1: first, pass2: second }, null, 2)}\n`);
-    console.log(`ALUMDOOR_LOCAL_BOM_TEMPLATE_IDEMPOTENCE_PASS created_pass1=${first.created_count} created_pass2=0 templates=${first.template_count}`);
+    console.log(`ALUMDOOR_LOCAL_BOM_TEMPLATE_IDEMPOTENCE_PASS created_pass1=${first.created_count} created_pass2=0 templates=${first.template_count} components=${first.component_rule_count}`);
     console.log(`FORGE_LOCAL_IMPORT_EXECUTION_PASS adapter=bom-template run_id=${runId}`);
     console.log('EXECUTION_STATUS=SUCCESS');
   } catch (error) {

@@ -24,6 +24,10 @@ import {
   AlumdoorAttendanceOperations,
   AlumdoorMasterDataScreen,
 } from "./experience-registry.js";
+import {
+  alumdoorOperationalRouteForAction,
+  alumdoorOperationalRouteForDoctype,
+} from "./alumdoor-operational-routes.js";
 import "./styles.css";
 
 const ApplicationCatalogContainer = lazy(() => import("@metaforge/views/catalog").then((module) => ({ default: module.ApplicationCatalogContainer })));
@@ -235,6 +239,11 @@ function buildNavigation(manifest: AppManifest, catalog: ApplicationCatalog | un
     }
   }
   for (const nav of manifest.nav) {
+    if (
+      (nav.kind ?? "doctype") === "experience"
+      && nav.key.startsWith("action:")
+      && alumdoorOperationalRouteForAction(manifest, nav.key.slice("action:".length))
+    ) continue;
     if (!isRenderableExperience(nav, manifest)) continue;
     const route = manifestRoute(nav);
     if (!route || routes.has(route) || ["overview", "process"].includes(nav.kind ?? "")) continue;
@@ -621,10 +630,16 @@ function ExperienceScreen({ manifest, boot, logout, nav }: ScreenProps) {
    * nhôm, hoàn cắt), người dùng vẫn cần sidebar để đi tiếp sang đơn hàng hay kho.
    */
   if (kind === "action") {
-    const name = experienceKey.slice("action:".length);
+    const requestedName = experienceKey.slice("action:".length);
+    const operationalRoute = alumdoorOperationalRouteForAction(manifest, requestedName);
+    const name = operationalRoute?.action ?? requestedName;
     const action = (manifest.actions ?? []).find((candidate) => candidate.name === name);
+    const active = operationalRoute?.doctype ?? experienceKey;
+    const label = operationalRoute
+      ? manifest.nav.find((item) => item.key === operationalRoute.doctype)?.label ?? action?.label ?? name
+      : action?.label ?? name;
     return (
-      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={experienceKey} breadcrumbs={[{ label: action?.label ?? name }]}>
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={[{ label }]}>
         <div className="h-full overflow-auto p-4">
           {action
             ? <ActionScreen action={action} onOpen={(doctype, docname) => navigate(`/app/${encodeURIComponent(doctype)}/${encodeURIComponent(docname)}`)} />
@@ -763,6 +778,22 @@ function DoctypeScreen({ manifest, boot, logout, nav }: ScreenProps) {
   useEffect(() => {
     setAssistantContext({ man_hinh: title, doctype, ban_ghi: name ?? null });
   }, [title, doctype, name]);
+  const operationalRoute = !name ? alumdoorOperationalRouteForDoctype(manifest, doctype) : undefined;
+  const operationalAction = operationalRoute
+    ? (manifest.actions ?? []).find((action) => action.name === operationalRoute.action)
+    : undefined;
+  if (operationalAction) {
+    return (
+      <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={breadcrumbs}>
+        <div className="h-full overflow-auto p-3 md:p-4">
+          <ActionScreen
+            action={operationalAction}
+            onOpen={(targetDoctype, docname) => navigate(`/app/${encodeURIComponent(targetDoctype)}/${encodeURIComponent(docname)}`)}
+          />
+        </div>
+      </Shell>
+    );
+  }
   return <Shell manifest={manifest} boot={boot} logout={logout} nav={nav} active={active} breadcrumbs={breadcrumbs}><div className="h-full p-3 md:p-4"><DoctypeWorkspace doctype={doctype} name={name} bridge={bridge} onNavigate={navigateKeepingListState} /></div></Shell>;
 }
 function PrintScreen(props: ScreenProps) {
