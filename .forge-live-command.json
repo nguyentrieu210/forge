@@ -1,6 +1,6 @@
 {
   "format": "forge-live-command/v1",
-  "id": "bom-rule-20260819-1250a",
+  "id": "bom-rule-20260819-1250b",
   "action": "apply",
   "adapter": "bom-rule"
 }
