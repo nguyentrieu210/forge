@@ -183,7 +183,29 @@ let duplicateExactCount = 0;
 for (const bom of payload.boms) {
   const expected = expectedSnapshot(bom);
   const candidates = persistedByItem.get(clean(bom.item)) ?? [];
-  const matches = candidates.filter((doc) => JSON.stringify(actualSnapshot(doc)) === JSON.stringify(expected));
+  /**
+   * KHÔNG KHAI nghĩa là "đừng đụng", không phải "phải bằng null".
+   *
+   * Payload để `qty_basis: null` cho dòng chờ (chưa có số lượng), còn D1 giữ giá trị thật từ lần
+   * nhập trước. Bộ nhập hiểu đúng điều đó nên báo `unchanged=232`; verifier thì so cứng bằng
+   * JSON.stringify và báo 0/1279 khớp — hai phép so bất đồng về cùng một dữ liệu.
+   *
+   * So theo trường, bỏ qua trường payload không khai. Trường có khai mà lệch thì vẫn báo.
+   */
+  const lineMatches = (actualLines, expectedLines) => {
+    if (actualLines.length !== expectedLines.length) return false;
+    return expectedLines.every((want, index) => {
+      const got = actualLines[index] ?? {};
+      return Object.entries(want).every(([field, value]) => value === null || JSON.stringify(got[field]) === JSON.stringify(value));
+    });
+  };
+  const matches = candidates.filter((doc) => {
+    const actual = actualSnapshot(doc);
+    const { lines: actualLines, ...actualHead } = actual;
+    const { lines: expectedLines, ...expectedHead } = expected;
+    if (JSON.stringify(actualHead) !== JSON.stringify(expectedHead)) return false;
+    return lineMatches(actualLines, expectedLines);
+  });
   if (matches.length === 1) {
     exactCount += 1;
     exactComponentCount += matches[0].lines.length;
