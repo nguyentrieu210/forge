@@ -166,8 +166,29 @@ function inferCondition(line: Json): string {
   return ["thô", "tho"].some((token) => norm(line.color).includes(token)) ? "Thô" : "Đã sơn";
 }
 
+function itemColorRequiredByProfile(item: Json): boolean {
+  // Measurement Profile Ống/trục is the canonical no-color aluminium case.
+  // Other profiles stay color-required unless the profile master explicitly says otherwise in the hook below.
+  return norm(item.measurement_profile) !== "ống/trục";
+}
+
+async function purchaseColorRequired(call: PlatformCall, item: Json): Promise<boolean> {
+  const profileName = text(item.measurement_profile);
+  if (!profileName) return itemColorRequiredByProfile(item);
+  const profile = await readDoc<Json>(call, "Measurement Profile", profileName).catch(() => null);
+  if (profile && profile.require_color !== undefined && profile.require_color !== null && profile.require_color !== "") {
+    return checked(profile.require_color);
+  }
+  return itemColorRequiredByProfile(item);
+}
+
 /** Commercial/priced quantity stays Kg; exact counted pieces become canonical stock quantity. */
-export function canonicalizeAluminumPurchaseLine(line: Json, item: Json, doctype = "Purchase Receipt"): Json {
+export function canonicalizeAluminumPurchaseLine(
+  line: Json,
+  item: Json,
+  doctype = "Purchase Receipt",
+  requireColor = itemColorRequiredByProfile(item),
+): Json {
   const contract = aluminumItemContract(item);
   if (!contract.ok) throw new Error(`${text(line.item_code)}: ${contract.issues.join("; ")}`);
   const qtyBar = positive(line.qty_bar);
@@ -175,7 +196,7 @@ export function canonicalizeAluminumPurchaseLine(line: Json, item: Json, doctype
   const length = positive(line.length_m);
   if (!length) throw new Error(`${text(line.item_code)}: Chiều dài cây/lá phải lớn hơn 0.`);
   const color = text(line.color);
-  if (!color) throw new Error(`${text(line.item_code)}: phải chọn Màu.`);
+  if (requireColor && !color) throw new Error(`${text(line.item_code)}: phải chọn Màu.`);
   const stamped = text(line.is_stamped);
   if (stamped !== "Có" && stamped !== "Không") throw new Error(`${text(line.item_code)}: Dập phải là Có hoặc Không.`);
 
@@ -225,8 +246,8 @@ export function canonicalizeAluminumPurchaseLine(line: Json, item: Json, doctype
     purchase_stock_qty_field: "qty_bar",
     purchase_allocation_qty_field: "qty_bar",
     purchase_allocation_uom: contract.stock_uom,
-    color,
-    condition: inferCondition(line),
+    color: color || undefined,
+    condition: text(line.condition) || (color ? inferCondition(line) : "Thô"),
     is_stamped: stamped,
   };
 }
@@ -452,9 +473,10 @@ export async function validateAluminumPurchaseHook(request: Request, env: Purcha
       if (text(item.inventory_mode) !== "Nhôm cây/lá") continue;
       const label = `Dòng ${index + 1} (${code})`;
       if (item.is_purchase_item !== undefined && !checked(item.is_purchase_item)) throw new Error(`${label}: Item không được phép mua.`);
-      await validateAllowedColor(call, item, line, label);
+      const requireColor = await purchaseColorRequired(call, item);
+      if (requireColor || text(line.color)) await validateAllowedColor(call, item, line, label);
       if (subject.doctype === "Purchase Order") await validatePurchaseOrderBarem(call, item, line, label);
-      const normalized = canonicalizeAluminumPurchaseLine(line, item, subject.doctype);
+      const normalized = canonicalizeAluminumPurchaseLine(line, item, subject.doctype, requireColor);
       if (line.stock_qty !== undefined && line.stock_qty !== null && line.stock_qty !== "" && !equalNumber(line.stock_qty, normalized.stock_qty)) {
         throw new Error(`${label}: stock_qty phải bằng số cây/lá ${normalized.stock_qty}.`);
       }
