@@ -21,6 +21,7 @@ const ALLOWED = new Set([
   'customer',
   'manufacturing-master',
   'item-code-rename',
+  'link-repair',
 ]);
 
 function run(command, args, { cwd, capture = true, allowFailure = false, env } = {}) {
