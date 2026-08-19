@@ -5,7 +5,7 @@
  * được thêm tab Nhập hàng loạt dùng chung renderer, không sinh page riêng theo từng nghiệp vụ.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import { List, Rows3 } from "lucide-react";
+import { List, Rows3, X } from "lucide-react";
 import { Button, ConfirmDialog, chromeFill, chromeText, cn, Dialog, DialogContent, DialogHeader, DialogTitle, useT } from "@metaforge/ui";
 import { useMeta } from "../container/hooks.js";
 import { buildPrintPath, resolveBulkRenderPolicy, resolveCreateSurface, type UrlStateBridge } from "./doctype-workspace-support.js";
@@ -99,6 +99,8 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
     <div className="grid h-full place-items-center bg-card px-6 text-center text-sm text-muted-foreground">{t("common.choose_prefix")} {displayTitle.toLocaleLowerCase("vi")}</div>
   ) : null);
 
+  const requestCreateClose = () => setCloseRequest((value) => value + 1);
+
   return (
     <>
       <div className={V3_DATA_SURFACE_CLASS} data-ui-version="v3" data-surface="doctype-workspace">
@@ -146,8 +148,9 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
         onConfirm={() => { setBulkDirty(false); bridge.set({ view: null }); }}
       />
 
-      <Dialog open={isNew} onOpenChange={(open) => { if (!open) setCloseRequest((value) => value + 1); }}>
+      <Dialog open={isNew} onOpenChange={(open) => { if (!open) requestCreateClose(); }}>
         <DialogContent
+          hideClose={useFullCreate}
           className={useFullCreate ? V3_FULL_CREATE_DIALOG_CLASS : V3_QUICK_ENTRY_DIALOG_CLASS}
           data-ui-version="v3"
           data-surface={extension?.createDataSurface ?? (useFullCreate ? "full-create" : "quick-entry")}
@@ -155,11 +158,23 @@ export function DoctypeWorkspace(props: DoctypeWorkspaceProps) {
             event.preventDefault();
             const target = event.detail?.originalEvent?.target;
             if (target instanceof Element && target.closest('[role="dialog"],[role="listbox"],[data-radix-popper-content-wrapper]')) return;
-            setCloseRequest((value) => value + 1);
+            requestCreateClose();
           }}
-          onEscapeKeyDown={(event) => { event.preventDefault(); setCloseRequest((value) => value + 1); }}
+          onEscapeKeyDown={(event) => { event.preventDefault(); requestCreateClose(); }}
         >
-          <DialogHeader className={cn("shrink-0 border-b border-border/70 px-5 py-4", chromeFill, chromeText)}><DialogTitle className="text-xl font-semibold tracking-tight">{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle></DialogHeader>
+          <DialogHeader className={cn("relative shrink-0 border-b border-border/70 px-5 py-4", chromeFill, chromeText)}>
+            <DialogTitle className="pr-14 text-xl font-semibold tracking-tight">{t("form.create_title_prefix")} {displayTitle.toLocaleLowerCase("vi")}</DialogTitle>
+            {useFullCreate ? (
+              <button
+                type="button"
+                aria-label={t("common.close")}
+                className="pointer-events-auto absolute right-4 top-1/2 z-[100] grid size-9 -translate-y-1/2 place-items-center rounded-md bg-background/80 text-foreground shadow-sm ring-1 ring-border/70 transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={requestCreateClose}
+              >
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            ) : null}
+          </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
             {extension?.create ?? (
               <NewFormContainer doctype={doctype} fullWidth={useFullCreate} presentation={useFullCreate ? "page" : "dialog"} closeRequest={closeRequest} onCreated={(newName) => onNavigate(`${listPath}/${encodeURIComponent(newName)}`)} onPreviewCreated={(newName) => onNavigate(printBase === "/print" ? buildPrintPath(doctype, newName) : `${printBase}/${encodeURIComponent(doctype)}/${encodeURIComponent(newName)}`)} onCancel={() => onNavigate(listPath)} />
