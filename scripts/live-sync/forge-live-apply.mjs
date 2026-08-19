@@ -70,6 +70,10 @@ async function stopLiveSync() {
     log(`LIVE_APPLY_SYNC_STOP pid=${info.pid}`);
     try { process.kill(info.pid, 'SIGTERM'); } catch {}
     for (let i = 0; i < 30 && pidAlive(info.pid); i += 1) await wait(100);
+    if (pidAlive(info.pid) && process.platform === 'win32') {
+      try { spawnSync('taskkill', ['/pid', String(info.pid), '/f', '/t']); } catch {}
+      for (let i = 0; i < 10 && pidAlive(info.pid); i += 1) await wait(100);
+    }
     if (pidAlive(info.pid)) throw new Error(`Live sync did not stop cleanly pid=${info.pid}`);
   }
   if (existsSync(lockPath)) {
