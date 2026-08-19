@@ -17,6 +17,7 @@ import { salesItemSearchTerms } from "./sales-item-search.js";
 import {
   AlumdoorPurchaseOrderItemsGrid,
   isAluminumPurchaseLine,
+  purchaseFieldRequired,
   purchaseLineKey,
   type PurchaseLine,
 } from "./AlumdoorPurchaseOrderItemsGrid.js";
@@ -168,6 +169,12 @@ function applyChildPreview(row: PurchaseLine, preview: Json, childMeta: DocTypeM
   for (const [fieldname, value] of Object.entries(patch)) {
     if (fields.has(fieldname)) next[fieldname] = value;
   }
+  const rawOverrides = preview.field_overrides && typeof preview.field_overrides === "object" && !Array.isArray(preview.field_overrides)
+    ? preview.field_overrides as Record<string, unknown>
+    : {};
+  next._overrides = Object.fromEntries(Object.entries(rawOverrides)
+    .filter(([fieldname, value]) => fields.has(fieldname) && Boolean(value) && typeof value === "object" && !Array.isArray(value))
+    .map(([fieldname, value]) => [fieldname, value as Record<string, unknown>])) as PurchaseLine["_overrides"];
   return next;
 }
 
@@ -585,11 +592,12 @@ export function AlumdoorPurchaseOrderCreate(props: AlumdoorPurchaseOrderCreatePr
       const length = positive(row.length_m);
       const bars = positive(row.qty_bar);
       const kgPerM = positive(row.theoretical_kg_per_m);
-      if (!length) return `Dòng ${position}: nhôm phải có chiều dài một cây/lá.`;
-      if (!bars || !Number.isInteger(bars)) return `Dòng ${position}: số cây/lá phải là số nguyên dương.`;
+      if (purchaseFieldRequired(row, "length_m") && !length) return `Dòng ${position}: nhôm phải có chiều dài một cây/lá.`;
+      if (purchaseFieldRequired(row, "qty_bar") && (!bars || !Number.isInteger(bars))) return `Dòng ${position}: số cây/lá phải là số nguyên dương.`;
       if (!kgPerM) return `Dòng ${position}: chưa có barem kg/m từ quy cách.`;
-      if (!text(row.color)) return `Dòng ${position}: nhôm phải chọn Màu.`;
-      if (!["Có", "Không"].includes(text(row.is_stamped))) return `Dòng ${position}: nhôm phải chọn Dập Có/Không.`;
+      if (purchaseFieldRequired(row, "color") && !text(row.color)) return `Dòng ${position}: phải chọn Màu.`;
+      if (purchaseFieldRequired(row, "is_stamped") && !["Có", "Không"].includes(text(row.is_stamped))) return `Dòng ${position}: phải chọn Dập Có/Không.`;
+      if (!length || !bars) return `Dòng ${position}: chưa đủ kích thước/số cây để tính Kg đặt.`;
       const expectedKg = length * bars * kgPerM;
       if (!nearlyEqual(row.theoretical_kg, expectedKg)) return `Dòng ${position}: Kg đặt không khớp Dài cây × Số cây × Kg/m.`;
       if (!nearlyEqual(row.qty, expectedKg)) return `Dòng ${position}: SL tính tiền Kg không khớp barem.`;
