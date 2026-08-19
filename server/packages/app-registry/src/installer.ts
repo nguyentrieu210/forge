@@ -13,6 +13,17 @@ import type { MetadataStore } from "../../frappe-model/src/index.js";
 import type { D1UserStore } from "../../auth/src/index.js";
 import { navItemPath, parseAppManifest, satisfiesVersion, type AppManifest } from "./manifest.js";
 
+/**
+ * Cờ ngừng dùng của một fixture, đọc từ chính dữ liệu nó khai.
+ *
+ * Chấp nhận cả `true` lẫn `1` vì hai dạng đó cùng xuất hiện trong brief thật. Mọi giá trị khác
+ * — kể cả thiếu — đều là đang dùng, giữ nguyên mặc định cũ.
+ */
+function fixtureDisabled(data: JsonObject | undefined): number {
+  const value = data?.disabled;
+  return value === true || value === 1 ? 1 : 0;
+}
+
 export interface InstalledAppRecord {
   app_id: string;
   app_name: string;
@@ -268,14 +279,32 @@ export class AppInstaller {
       ).bind(tenantId, manifest.id, manifest.name, manifest.version, contentHash, JSON.stringify(manifest), actor, now),
     );
 
+    /**
+     * `disabled` của fixture được TÔN TRỌNG, không ép về 0.
+     *
+     * Bản cũ khoá cứng `disabled=0` trong ON CONFLICT, nên một app KHÔNG THỂ ship một bản ghi
+     * nền đã ngừng dùng: mỗi lần cài lại là nó sống dậy. Đó không phải chuyện lý thuyết —
+     * Alumdoor cần cho 22 tên màu dạng slug (`TRANG`, `CAFE`, `XANH_NGOC`) ngừng dùng vì chúng
+     * là bản sao của chính 24 màu chuẩn, và ô chọn Link đọc `WHERE disabled=0` nên người dùng
+     * chọn được hai bản ghi cho cùng một màu.
+     *
+     * Xoá hẳn khai báo thì không được: `assertAppUpgradeMaterializationCompatible` từ chối
+     * đúng như thế, vì bỏ khai báo mà bản ghi còn sống là tạo vật thể mồ côi. Nên đường duy
+     * nhất là ngừng dùng — và nó phải chạy được.
+     */
     appendRows(
       manifest.fixtures.map((fixture) => [
-        tenantId, fixture.record_type, fixture.name, JSON.stringify(fixture.data), now,
+        tenantId,
+        fixture.record_type,
+        fixture.name,
+        fixtureDisabled(fixture.data),
+        JSON.stringify(fixture.data),
+        now,
       ]),
       20,
-      "INSERT INTO master_records(tenant_id,record_type,name,data_json,modified_at) VALUES",
+      "INSERT INTO master_records(tenant_id,record_type,name,disabled,data_json,modified_at) VALUES",
       ` ON CONFLICT(tenant_id,record_type,name) DO UPDATE SET
-          data_json=excluded.data_json,disabled=0,modified_at=excluded.modified_at`,
+          data_json=excluded.data_json,disabled=excluded.disabled,modified_at=excluded.modified_at`,
     );
 
     // Custom Fields, plus a revision bump for every doctype they touch. The bump is not

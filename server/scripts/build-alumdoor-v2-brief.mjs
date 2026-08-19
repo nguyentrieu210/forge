@@ -78,7 +78,19 @@ const moveFieldsAfter = (dt, names, anchor) => {
 };
 
 // ─────────────────────────── HEADER ───────────────────────────
-brief.version = "2.4.4";
+/**
+ * 2.5.0 — đợt hội tụ danh mục 2026-08-19.
+ *
+ * Bump MINOR chứ không patch: gói này thêm tám DocType (`Pricing Scope` + child, `BOM Rule` +
+ * child, `Quy cách cửa`, `Nguyên nhân cửa lỗi`, `Bậc diện tích`, `Ngưỡng chọn Motor`) và ba
+ * trường mới trên đường tính tiền (`Item Price.area_tier`, `BOM Template.sales_mode`,
+ * `<dòng bán>.sales_mode`). Đó là năng lực mới, không phải sửa lỗi.
+ *
+ * Version cũng là thứ QUYẾT ĐỊNH bản cài có được ghi lại hay không: installer coi gói là
+ * `unchanged` khi manifest byte-identical, nên giữ nguyên số cũ là mọi sửa đổi metadata nằm im
+ * trong file mà không bao giờ vào tenant.
+ */
+brief.version = "2.5.0";
 brief.locale.dateFormat = "dd/mm/yyyy"; // Q11 — chủ xưởng chốt gạch chéo
 for (const role of ["General Accountant", "Chief Accountant", "Director", "Kế toán tổng hợp", "Kế toán trưởng", "Giám đốc"]) {
   if (!brief.roles.includes(role)) brief.roles.push(role);
@@ -1945,11 +1957,30 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
   // brief nguồn còn giữ thêm 22 slug ASCII của CHÍNH các màu đó. Giữ cả hai không phải là
   // "an toàn hơn": nó tạo hai vị trí tồn cho một màu, và không có gì báo khi ai đó chọn nhầm.
   {
-    const before = brief.fixtures.filter((f) => f.type === "Item Color").length;
+    /**
+     * NGỪNG DÙNG, không XOÁ khỏi khai báo.
+     *
+     * Bản đầu của khối này lọc thẳng 22 slug ra khỏi `fixtures`. Nền tảng từ chối đúng chỗ đó:
+     *
+     *   alumdoor upgrade removes materialized app objects: Fixture Item Color:CAFE, …
+     *   An explicit reverse migration or uninstall contract is required.
+     *
+     * Guard ấy đúng: bỏ một khai báo mà bản ghi vẫn sống trong tenant thì tạo ra vật thể mồ côi
+     * không gói nào sở hữu, và uninstall/rollback sau này không suy luận được về nó. Uninstall
+     * cũng không phải đường ra — nó từ chối khi doctype còn document.
+     *
+     * `disabled: true` đạt đúng mục tiêu mà không bỏ khai báo: ô chọn Link đọc
+     * `master_records … WHERE disabled=0` nên 22 slug thôi được mời, còn app vẫn sở hữu chúng.
+     * Đây cũng đúng BRD §2 — "không xoá khi còn tham chiếu, chỉ disabled".
+     */
     const canonical = new Set(ALUMDOOR_COLOR_CATALOG.map((c) => c.code));
-    brief.fixtures = brief.fixtures.filter((f) => f.type !== "Item Color" || canonical.has(f.name));
-    const after = brief.fixtures.filter((f) => f.type === "Item Color").length;
-    note(`DANH MỤC · Item Color: ${before} → ${after} fixture (bỏ ${before - after} bản sao slug ASCII)`);
+    let retired = 0;
+    for (const fixture of brief.fixtures) {
+      if (fixture.type !== "Item Color" || canonical.has(fixture.name)) continue;
+      fixture.data = { ...fixture.data, disabled: true };
+      retired += 1;
+    }
+    note(`DANH MỤC · Item Color: ngừng dùng ${retired} bản sao slug ASCII (giữ khai báo, bỏ khỏi ô chọn)`);
   }
 
   // ── 4. Bốn doctype rỗng rời khỏi menu, KHÔNG bị xoá ──
