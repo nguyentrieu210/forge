@@ -751,7 +751,9 @@
       "Geometry Field",
       "Geometry Profile",
       "Pricing Scope",
-      "BOM Rule"
+      "BOM Rule",
+      "Quy cách cửa",
+      "Nguyên nhân cửa lỗi"
     ]
   },
   "fixtures": [
@@ -3123,6 +3125,416 @@
         ],
         "disabled": false,
         "_migration_source": "alumdoor-geometry-master-2026-08-16"
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL71N",
+      "data": {
+        "ma": "AL71N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 57,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Bản lá 0,055 theo cột BẢN LÁ, ĐẢO LẠI quyết định 0,057 ngày 2026-08-15. Sổ nhật ký phân xử: TP LÁ RUỘT AL71N VK — AL71 9 LÁ RUỘT cao 0,495 m ⇒ 0,495/9 = 0,055. Cột [3] và [4] của sheet nguồn đều ghi 57; sổ tiền đã thu thắng bảng tra.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL71 (CŨ)",
+      "data": {
+        "ma": "AL71 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL71C. Không trừ 1 lá, theo đúng PDF công thức.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL70 (2 LỚP)",
+      "data": {
+        "ma": "AL70 (2 LỚP)",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.068,
+        "be_rong_nan_mm": 68,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "KHÔNG trừ 1: đặc tả nêu ba ví dụ và cả ba đều cộng ra 42 lá. AL70 đếm TỔNG số lá nên không có gì để trừ. Bảng giá gọi mã này là 'bản lá 70' — đó là bề rộng nan, không phải ước số chia.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL70 (1 LỚP)",
+      "data": {
+        "ma": "AL70 (1 LỚP)",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.068,
+        "be_rong_nan_mm": 68,
+        "tru_mot_la": 0,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Cùng bản lá với bản 2 lớp; khác nhau ở cấu tạo lá, không ở ước số chia.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL75",
+      "data": {
+        "ma": "AL75",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.067,
+        "be_rong_nan_mm": 67,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL75N trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL595",
+      "data": {
+        "ma": "AL595",
+        "dong_cua": "Cửa Đức",
+        "buoc_la_m": 0.06,
+        "be_rong_nan_mm": 60,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Sheet nguồn chỉ có một đời cho mã này.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL503N",
+      "data": {
+        "ma": "AL503N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL503 (CŨ)",
+      "data": {
+        "ma": "AL503 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL548N",
+      "data": {
+        "ma": "AL548N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Ví dụ kiểm chứng của xưởng: CPB 3 m ⇒ raw 52,18 ⇒ 51 lá ruột.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL548 (CŨ)",
+      "data": {
+        "ma": "AL548 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "Chênh 10% so với đời MỚI — đây là lý do đời sản phẩm phải nằm trong khoá tra.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL501N",
+      "data": {
+        "ma": "AL501N",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.057,
+        "be_rong_nan_mm": 57,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL501 (CŨ)",
+      "data": {
+        "ma": "AL501 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL552 (CŨ)",
+      "data": {
+        "ma": "AL552 (CŨ)",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.057,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "CHỜ CHỦ XƯỞNG CHỐT: sheet nguồn ghi AL552C = 0,05 và AL552N = 0,057, nhưng bảng đang thi hành gắn 0,057 cho đời CŨ và không có đời MỚI. Giữ nguyên giá trị đang tính tiền cho tới khi có xác nhận.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL652",
+      "data": {
+        "ma": "AL652",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL652C trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL752",
+      "data": {
+        "ma": "AL752",
+        "dong_cua": "Cửa Đức",
+        "doi": "CŨ",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL752C trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL50",
+      "data": {
+        "ma": "AL50",
+        "dong_cua": "Cửa Đức",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "AL50N trong sheet nguồn; AL50C là 0,05 nhưng bảng thi hành chưa khai đời CŨ.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL-VIP50",
+      "data": {
+        "ma": "AL-VIP50",
+        "dong_cua": "Cửa Đài Loan",
+        "doi": "MỚI",
+        "buoc_la_m": 0.055,
+        "be_rong_nan_mm": 55,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "ALVIP50N trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL-VIPST500",
+      "data": {
+        "ma": "AL-VIPST500",
+        "dong_cua": "Cửa Đài Loan",
+        "doi": "MỚI",
+        "buoc_la_m": 0.053,
+        "be_rong_nan_mm": 53,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "VIPST500N. BRD §4.1 liệt mã này trong nhóm có hai số khác nhau: nan 55, chia 0,053.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Quy cách cửa",
+      "name": "AL-VIPST700",
+      "data": {
+        "ma": "AL-VIPST700",
+        "dong_cua": "Cửa Đài Loan",
+        "buoc_la_m": 0.05,
+        "be_rong_nan_mm": 50,
+        "tru_mot_la": 1,
+        "nguon": "GHI CHÚ (MS LIÊN BS.xlsx) + slats.ts SLAT_PROFILES (2026-08-19)",
+        "ghi_chu": "VIPST700 trong sheet nguồn.",
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-CAT-SO-LA",
+      "data": {
+        "reason_code": "SX-CAT-SO-LA",
+        "reason_name": "Cắt sai số lá",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 10,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-CAT-KICH-THUOC",
+      "data": {
+        "reason_code": "SX-CAT-KICH-THUOC",
+        "reason_name": "Cắt sai kích thước",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 20,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-SON-LOI",
+      "data": {
+        "reason_code": "SX-SON-LOI",
+        "reason_name": "Sơn lỗi",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 30,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "SX-LAP-SAI-PK",
+      "data": {
+        "reason_code": "SX-LAP-SAI-PK",
+        "reason_name": "Lắp sai phụ kiện",
+        "nhom_nguyen_nhan": "Sản xuất",
+        "ben_chiu_trach_nhiem": "Xưởng",
+        "sort_order": 40,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "VT-NHOM-LOI",
+      "data": {
+        "reason_code": "VT-NHOM-LOI",
+        "reason_name": "Nhôm lỗi từ nhà cung cấp",
+        "nhom_nguyen_nhan": "Vật tư",
+        "ben_chiu_trach_nhiem": "Nhà cung cấp",
+        "sort_order": 50,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "VT-PK-LOI",
+      "data": {
+        "reason_code": "VT-PK-LOI",
+        "reason_name": "Phụ kiện lỗi",
+        "nhom_nguyen_nhan": "Vật tư",
+        "ben_chiu_trach_nhiem": "Nhà cung cấp",
+        "sort_order": 60,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "VT-SON-SAI-MAU",
+      "data": {
+        "reason_code": "VT-SON-SAI-MAU",
+        "reason_name": "Sơn không đạt màu",
+        "nhom_nguyen_nhan": "Vật tư",
+        "ben_chiu_trach_nhiem": "Nhà cung cấp",
+        "sort_order": 70,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "BH-DO-SAI",
+      "data": {
+        "reason_code": "BH-DO-SAI",
+        "reason_name": "Nhận đo sai",
+        "nhom_nguyen_nhan": "Bán hàng",
+        "ben_chiu_trach_nhiem": "Sale",
+        "sort_order": 80,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "BH-NHAP-SAI-QUY-CACH",
+      "data": {
+        "reason_code": "BH-NHAP-SAI-QUY-CACH",
+        "reason_name": "Nhập nhầm quy cách",
+        "nhom_nguyen_nhan": "Bán hàng",
+        "ben_chiu_trach_nhiem": "Sale",
+        "sort_order": 90,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "KH-DOI-Y",
+      "data": {
+        "reason_code": "KH-DOI-Y",
+        "reason_name": "Khách đổi ý sau khi đã cắt",
+        "nhom_nguyen_nhan": "Khách",
+        "ben_chiu_trach_nhiem": "Khách hàng",
+        "sort_order": 100,
+        "disabled": false
+      }
+    },
+    {
+      "type": "Nguyên nhân cửa lỗi",
+      "name": "KH-DO-SAI-O-CHO",
+      "data": {
+        "reason_code": "KH-DO-SAI-O-CHO",
+        "reason_name": "Khách đo sai ô chờ",
+        "nhom_nguyen_nhan": "Khách",
+        "ben_chiu_trach_nhiem": "Khách hàng",
+        "sort_order": 110,
+        "disabled": false
       }
     }
   ],
@@ -12283,6 +12695,125 @@
           "door_type",
           "component_item"
         ]
+      }
+    },
+    {
+      "//": [
+        "buoc_la_m và be_rong_nan_mm là HAI đại lượng, không được gộp. Bảng giá gọi AL70 là",
+        "'bản lá 70' (bề rộng nan) nhưng chia lá phải dùng 0,068 — lấy nhầm là lệch 2 lá mỗi bộ."
+      ],
+      "name": "Quy cách cửa",
+      "label": "Bản lá theo mã nhôm",
+      "icon": "ruler",
+      "group": "Danh mục",
+      "naming": "field:ma",
+      "title": "ma",
+      "list": [
+        "ma",
+        "dong_cua",
+        "doi",
+        "buoc_la_m",
+        "be_rong_nan_mm",
+        "rong_toi_da_mm",
+        "disabled"
+      ],
+      "search": [
+        "ma",
+        "ghi_chu"
+      ],
+      "fields": [
+        "ma:Data*! Mã nhôm",
+        "dong_cua:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Dòng cửa",
+        {
+          "//": "Đời sản phẩm (AL548N vs AL548 CŨ), KHÔNG phải nhôm mới hay đã dùng. Hai đời chênh bản lá tới 10%.",
+          "fieldname": "doi",
+          "label": "Đời sản phẩm",
+          "fieldtype": "Select",
+          "options": "\nMỚI\nCŨ\nTĐ"
+        },
+        {
+          "//": "Ước số CHIA khi gài chồng. Đây là con số quyết định số lá — không phải bề rộng nan.",
+          "fieldname": "buoc_la_m",
+          "label": "Bản lá / ước số chia (m)",
+          "fieldtype": "Float",
+          "required": true
+        },
+        {
+          "//": "CHỈ để nhận diện mã và tra giá. Không bao giờ dùng để chia lá.",
+          "fieldname": "be_rong_nan_mm",
+          "label": "Bề rộng nan (mm)",
+          "fieldtype": "Int"
+        },
+        {
+          "//": [
+            "Chặn bán cửa rộng hơn số này. BRD nêu dải 4.000 → 7.600 cho cả bảng nhưng KHÔNG",
+            "cho con số theo từng mã, nên fixture để trống. Trống = chưa chặn, không phải",
+            "'không giới hạn' — điền một con số đại diện ở đây là bịa ra một luật chặn bán."
+          ],
+          "fieldname": "rong_toi_da_mm",
+          "label": "Rộng tối đa (mm)",
+          "fieldtype": "Int"
+        },
+        {
+          "//": "Lá đầu chiếm chỗ đúng một lá ruột. AL70 và AL71 không trừ vì đếm TỔNG số lá.",
+          "fieldname": "tru_mot_la",
+          "label": "Trừ một lá",
+          "fieldtype": "Check",
+          "default": 1
+        },
+        "trong_luong_kg_m2:Float Trọng lượng (kg/m2) — dùng cho công thức mua vào",
+        "nguon:Data*! Nguồn số liệu",
+        "ghi_chu:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
+      }
+    },
+    {
+      "name": "Nguyên nhân cửa lỗi",
+      "label": "Nguyên nhân cửa lỗi",
+      "icon": "triangle-alert",
+      "group": "Danh mục",
+      "naming": "field:reason_code",
+      "title": "reason_name",
+      "list": [
+        "reason_code",
+        "reason_name",
+        "nhom_nguyen_nhan",
+        "ben_chiu_trach_nhiem",
+        "disabled"
+      ],
+      "search": [
+        "reason_code",
+        "reason_name"
+      ],
+      "fields": [
+        "reason_code:Data*! Mã nguyên nhân",
+        "reason_name:Data*! Tên nguyên nhân",
+        "nhom_nguyen_nhan:Select(Sản xuất,Vật tư,Bán hàng,Khách)*! Nhóm nguyên nhân",
+        {
+          "//": "Bên chịu là thứ biến danh mục này thành câu trả lời được bằng tiền, không chỉ là nhãn phân loại.",
+          "fieldname": "ben_chiu_trach_nhiem",
+          "label": "Bên chịu trách nhiệm",
+          "fieldtype": "Select",
+          "options": "Xưởng\nNhà cung cấp\nSale\nKhách hàng",
+          "required": true
+        },
+        "chi_phi_uoc_tinh:Currency Chi phí ước tính mặc định",
+        "sort_order:Int=(0) Thứ tự",
+        "disabled:Check Ngừng dùng"
+      ],
+      "permissions": {
+        "Chủ xưởng": "rwc",
+        "Thủ kho": "r",
+        "Kế toán": "r",
+        "Sản xuất": "r",
+        "Kinh doanh": "r"
       }
     }
   ],

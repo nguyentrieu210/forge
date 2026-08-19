@@ -19,6 +19,7 @@ import { CUTTING_POLICIES, cuttingPolicyFixtureData } from "./lib/alumdoor-cutti
 import { bomSourceFixtureRows } from "./lib/alumdoor-bom-template-source-catalog.mjs";
 import { MEASUREMENT_PROFILES, measurementProfilePayload } from "./lib/alumdoor-measurement-profile-catalog.mjs";
 import { ALUMDOOR_COLOR_CATALOG } from "./lib/alumdoor-color-catalog.mjs";
+import { ALUMDOOR_SLAT_CATALOG, slatCatalogFixtureData } from "./lib/alumdoor-slat-catalog.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(here, "../briefs/alumdoor.json");
@@ -1976,6 +1977,140 @@ note("MASTER · Measurement Profile chỉ đo/tồn; Geometry Field/Profile sở
   // ── 5. Nav: mục mới phải có chỗ đứng ──
   for (const name of ["Pricing Scope", "BOM Rule"]) {
     if (!brief.navigation.items.includes(name)) brief.navigation.items.push(name);
+  }
+
+  // ── 6. Bản lá ra khỏi code, thành danh mục ──
+  // BRD §4.1 gọi đây là "bảng quyết định sinh tử" và khai nó là danh mục có PK `ma`. Nó đang
+  // là hằng SLAT_PROFILES trong slats.ts ⇒ chủ xưởng không thêm mã lá mới được, và hai
+  // trường BRD đòi (`rong_toi_da_mm`, `trong_luong_kg_m2`) không có chỗ nào để tồn tại.
+  if (!hasDoctype("Quy cách cửa")) {
+    brief.doctypes.push({
+      "//": [
+        "buoc_la_m và be_rong_nan_mm là HAI đại lượng, không được gộp. Bảng giá gọi AL70 là",
+        "'bản lá 70' (bề rộng nan) nhưng chia lá phải dùng 0,068 — lấy nhầm là lệch 2 lá mỗi bộ.",
+      ],
+      name: "Quy cách cửa",
+      label: "Bản lá theo mã nhôm",
+      icon: "ruler",
+      group: "Danh mục",
+      naming: "field:ma",
+      title: "ma",
+      list: ["ma", "dong_cua", "doi", "buoc_la_m", "be_rong_nan_mm", "rong_toi_da_mm", "disabled"],
+      search: ["ma", "ghi_chu"],
+      fields: [
+        "ma:Data*! Mã nhôm",
+        "dong_cua:Select(Cửa Đức,Cửa Úc,Cửa Lưới,Cửa Đài Loan,Cửa Siêu Trường,Cửa tấm liền Úc)! Dòng cửa",
+        {
+          "//": "Đời sản phẩm (AL548N vs AL548 CŨ), KHÔNG phải nhôm mới hay đã dùng. Hai đời chênh bản lá tới 10%.",
+          fieldname: "doi", label: "Đời sản phẩm", fieldtype: "Select", options: "\nMỚI\nCŨ\nTĐ",
+        },
+        {
+          "//": "Ước số CHIA khi gài chồng. Đây là con số quyết định số lá — không phải bề rộng nan.",
+          fieldname: "buoc_la_m", label: "Bản lá / ước số chia (m)", fieldtype: "Float", required: true,
+        },
+        {
+          "//": "CHỈ để nhận diện mã và tra giá. Không bao giờ dùng để chia lá.",
+          fieldname: "be_rong_nan_mm", label: "Bề rộng nan (mm)", fieldtype: "Int",
+        },
+        {
+          "//": [
+            "Chặn bán cửa rộng hơn số này. BRD nêu dải 4.000 → 7.600 cho cả bảng nhưng KHÔNG",
+            "cho con số theo từng mã, nên fixture để trống. Trống = chưa chặn, không phải",
+            "'không giới hạn' — điền một con số đại diện ở đây là bịa ra một luật chặn bán.",
+          ],
+          fieldname: "rong_toi_da_mm", label: "Rộng tối đa (mm)", fieldtype: "Int",
+        },
+        {
+          "//": "Lá đầu chiếm chỗ đúng một lá ruột. AL70 và AL71 không trừ vì đếm TỔNG số lá.",
+          fieldname: "tru_mot_la", label: "Trừ một lá", fieldtype: "Check", default: 1,
+        },
+        "trong_luong_kg_m2:Float Trọng lượng (kg/m2) — dùng cho công thức mua vào",
+        "nguon:Data*! Nguồn số liệu",
+        "ghi_chu:Small Text Ghi chú",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+    });
+    brief.fixtures.push(
+      ...ALUMDOOR_SLAT_CATALOG.map((row) => ({
+        type: "Quy cách cửa",
+        name: row.ma,
+        data: slatCatalogFixtureData(row),
+      })),
+    );
+    if (!brief.navigation.items.includes("Quy cách cửa")) brief.navigation.items.push("Quy cách cửa");
+    note(`DANH MỤC · +Quy cách cửa (${ALUMDOOR_SLAT_CATALOG.length} mã bản lá ra khỏi slats.ts)`);
+  }
+
+  // ── 7. Nguyên nhân cửa lỗi ──
+  // BRD §4.15. Trường quyết định là `ben_chiu_trach_nhiem`: không có nó thì câu hỏi
+  // "tháng này mất bao nhiêu tiền vì cắt sai" — nỗi đau #1 của xưởng — không có dữ liệu
+  // để trả lời. Khác hẳn `Lý do huỷ` (huỷ chứng từ) và `Nguyên nhân chênh lệch` (kiểm kê).
+  if (!hasDoctype("Nguyên nhân cửa lỗi")) {
+    brief.doctypes.push({
+      name: "Nguyên nhân cửa lỗi",
+      label: "Nguyên nhân cửa lỗi",
+      icon: "triangle-alert",
+      group: "Danh mục",
+      naming: "field:reason_code",
+      title: "reason_name",
+      list: ["reason_code", "reason_name", "nhom_nguyen_nhan", "ben_chiu_trach_nhiem", "disabled"],
+      search: ["reason_code", "reason_name"],
+      fields: [
+        "reason_code:Data*! Mã nguyên nhân",
+        "reason_name:Data*! Tên nguyên nhân",
+        "nhom_nguyen_nhan:Select(Sản xuất,Vật tư,Bán hàng,Khách)*! Nhóm nguyên nhân",
+        {
+          "//": "Bên chịu là thứ biến danh mục này thành câu trả lời được bằng tiền, không chỉ là nhãn phân loại.",
+          fieldname: "ben_chiu_trach_nhiem", label: "Bên chịu trách nhiệm", fieldtype: "Select",
+          options: "Xưởng\nNhà cung cấp\nSale\nKhách hàng", required: true,
+        },
+        "chi_phi_uoc_tinh:Currency Chi phí ước tính mặc định",
+        "sort_order:Int=(0) Thứ tự",
+        "disabled:Check Ngừng dùng",
+      ],
+      permissions: { "Chủ xưởng": "rwc", "Thủ kho": "r", "Kế toán": "r", "Sản xuất": "r", "Kinh doanh": "r" },
+    });
+    // Seed đúng 12 dòng của BRD §4.15, không thêm bớt.
+    const DEFECTS = [
+      ["SX-CAT-SO-LA", "Cắt sai số lá", "Sản xuất", "Xưởng"],
+      ["SX-CAT-KICH-THUOC", "Cắt sai kích thước", "Sản xuất", "Xưởng"],
+      ["SX-SON-LOI", "Sơn lỗi", "Sản xuất", "Xưởng"],
+      ["SX-LAP-SAI-PK", "Lắp sai phụ kiện", "Sản xuất", "Xưởng"],
+      ["VT-NHOM-LOI", "Nhôm lỗi từ nhà cung cấp", "Vật tư", "Nhà cung cấp"],
+      ["VT-PK-LOI", "Phụ kiện lỗi", "Vật tư", "Nhà cung cấp"],
+      ["VT-SON-SAI-MAU", "Sơn không đạt màu", "Vật tư", "Nhà cung cấp"],
+      ["BH-DO-SAI", "Nhận đo sai", "Bán hàng", "Sale"],
+      ["BH-NHAP-SAI-QUY-CACH", "Nhập nhầm quy cách", "Bán hàng", "Sale"],
+      ["KH-DOI-Y", "Khách đổi ý sau khi đã cắt", "Khách", "Khách hàng"],
+      ["KH-DO-SAI-O-CHO", "Khách đo sai ô chờ", "Khách", "Khách hàng"],
+    ];
+    brief.fixtures.push(...DEFECTS.map(([code, name, group, owner], index) => ({
+      type: "Nguyên nhân cửa lỗi",
+      name: code,
+      data: {
+        reason_code: code, reason_name: name, nhom_nguyen_nhan: group,
+        ben_chiu_trach_nhiem: owner, sort_order: (index + 1) * 10, disabled: false,
+      },
+    })));
+    if (!brief.navigation.items.includes("Nguyên nhân cửa lỗi")) brief.navigation.items.push("Nguyên nhân cửa lỗi");
+    note(`DANH MỤC · +Nguyên nhân cửa lỗi (${DEFECTS.length} nguyên nhân, có bên chịu trách nhiệm)`);
+  }
+
+  // ── 8. Chốt chặn: danh mục bản lá KHÔNG được trôi dạt khỏi bảng đang thi hành ──
+  // Đây chính là kiểu lỗi đã sinh ra quyển sổ thứ hai: một luật viết ở hai nơi rồi hai nơi
+  // đi lệch nhau. Danh mục và SLAT_PROFILES phải khớp từng con số, kiểm ngay lúc sinh brief.
+  {
+    const fixtures = brief.fixtures.filter((f) => f.type === "Quy cách cửa");
+    const lệch = [];
+    for (const row of ALUMDOOR_SLAT_CATALOG) {
+      const fx = fixtures.find((f) => f.name === row.ma);
+      if (!fx) { lệch.push(`${row.ma}: thiếu fixture`); continue; }
+      if (fx.data.buoc_la_m !== row.buoc_la_m) lệch.push(`${row.ma}: bản lá ${fx.data.buoc_la_m} ≠ ${row.buoc_la_m}`);
+      if (Boolean(fx.data.tru_mot_la) !== Boolean(row.tru_mot_la)) lệch.push(`${row.ma}: trừ-một-lá lệch`);
+    }
+    if (lệch.length) throw new Error(`Danh mục bản lá lệch bảng thi hành:\n  ${lệch.join("\n  ")}`);
+    note(`chốt chặn: ${fixtures.length} mã bản lá khớp bảng đang thi hành`);
   }
 }
 

@@ -984,7 +984,10 @@ export async function calculateSalesProductionLine(
         "dealer_width_basis", "retail_width_basis", "dealer_cut_deduction_m", "retail_cut_deduction_m",
         "butterfly_cut_deduction_m", "dealer_split_sales_basis", "dealer_full_sales_basis", "retail_sales_basis",
         "manual_pull_sales_basis", "purchase_formula", "purchase_height_basis", "purchase_width_basis",
-        "priority", "disabled", "note",
+        // `ray_type` cũng nằm trong bản rút gọn: nó là trường NỀN của Cutting Policy, không
+        // phải trường mở rộng như nhóm leaf_*. Bỏ nó ở đây thì đường dự phòng trả về chính
+        // sách không mang loại ray, và mọi dòng có khai ray sẽ không khớp được chính sách nào.
+        "priority", "disabled", "note", "ray_type",
       ])),
       listDocs<ProductionStandard>(call, "Production Standard", [
         "name", "department", "door_type", "operation", "minutes_per_set", "minutes_per_unit", "capacity_basis", "batch_capacity",
