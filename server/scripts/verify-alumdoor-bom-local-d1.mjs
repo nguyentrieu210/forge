@@ -28,9 +28,21 @@ function d1(sql) {
     '--config', config,
     '--json',
     '--command', sql,
-  ], { cwd: serverRoot, encoding:'utf8', windowsHide:true, stdio:['ignore','pipe','pipe'] });
+  ], {
+    cwd: serverRoot, encoding:'utf8', windowsHide:true, stdio:['ignore','pipe','pipe'],
+    // `spawnSync` mặc định chỉ đệm 1 MB. Truy vấn ở đây kéo về `payload_json` của hàng trăm định
+    // mức, nên vượt ngưỡng là tiến trình bị GIẾT và `status` thành `null` — thông báo lỗi khi đó
+    // là "local D1 query failed (null)" kèm một đống JSON, trông hệt lỗi cú pháp SQL.
+    maxBuffer: 256 * 1024 * 1024,
+  });
   if (result.status !== 0) {
-    throw new Error(`local D1 query failed (${result.status}): ${(result.stderr || result.stdout || '').trim()}`);
+    // `status === null` nghĩa là tiến trình bị giết chứ không phải SQL sai — nói thẳng ra, vì hai
+    // thứ đó cần hai cách xử lý hoàn toàn khác nhau.
+    const killed = result.status === null;
+    const detail = (result.stderr || result.stdout || '').trim().slice(0, 2000);
+    throw new Error(killed
+      ? `local D1 query was killed (signal=${result.signal ?? 'unknown'}) — nhiều khả năng vượt maxBuffer: ${detail}`
+      : `local D1 query failed (${result.status}): ${detail}`);
   }
   let parsed;
   try { parsed = JSON.parse(result.stdout); }
