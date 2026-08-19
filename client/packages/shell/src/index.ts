@@ -44,6 +44,7 @@ export { ChangePasswordDialog, type ChangePasswordDialogProps } from "./auth/Cha
 export { useBrand, applyBrand, isBrandMode, normalizeBrand, BRANDS, BRAND_COLOR_COUNT, type BrandMode } from "./brand.js";
 export { applyDesign } from "./design.js";
 export { resolveScopeState, ScopeGateBody, type ScopeGateState } from "./scope-gate.js";
+export { WorkspaceTabs, useWorkspaceTabs, type WorkspaceTabItem, type WorkspaceTabsProps } from "./WorkspaceTabs.js";
 export { resolveIcon } from "./icon.js";
 export {
   BusinessContextProvider, BusinessContextBar, useBusinessContext,
