@@ -1,6 +1,6 @@
 {
   "format": "forge-live-command/v1",
-  "id": "catalog-all-20260818-1455b",
+  "id": "bom-rule-20260819-1250a",
   "action": "apply",
-  "adapter": "manufacturing-master"
+  "adapter": "bom-rule"
 }
